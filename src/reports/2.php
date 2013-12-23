@@ -23,29 +23,29 @@ echo '<div style="text-align: center">
 </div>
 <p style="font-size: 30px;">Zadanie 1</p>
 <div class="submit_status">
-<pre>Status: Sprawdzono</pre>
-<pre>Wynik: 0/100</pre>
+<pre>Score: 0/100
+Status: Judged</pre>
 <table style="margin-top: 5px" class="table results">
 <thead>
 <tr>
-  <th style="min-width: 70px">Test</th>
-  <th style="min-width: 180px">Wynik</th>
-  <th style="min-width: 90px">Czas/Limit</th>
-  <th style="min-width: 60px">Punkty</th>
+<th style="min-width: 70px">Test</th>
+<th style="min-width: 180px">Result</th>
+<th style="min-width: 90px">Time</th>
+<th style="min-width: 60px">Result</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>1</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.00/3.00</td>
-  <td rowspan="1" class="groupscore">0/50</td>
+<td>1</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/3.00</td>
+<td class="groupscore">0/50</td>
 </tr>
 <tr>
-  <td>2</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.00/3.00</td>
-  <td rowspan="1" class="groupscore">0/50</td>
+<td>2</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/3.00</td>
+<td class="groupscore">0/50</td>
 </tr>
 </tbody>
 </table>

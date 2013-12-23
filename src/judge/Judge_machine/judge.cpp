@@ -33,7 +33,9 @@ return w;
 string task::check_on_test(const string& test, const string& time_limit)
 {
 	string command="ulimit -v "+this->memory_limit+"; timeout "+time_limit+" chroot --userspec=1001 chroot/ ./exec.e < "+this->_name+"tests/"+test+".in > "+outf_name+" ", output="<td>";
+#ifdef SHOW_LOGS
 	cerr << command << endl;
+#endif
 	output+=test;
 	output+="</td>\n";
 	// runtime
@@ -128,9 +130,13 @@ return output;
 string task::judge()
 {
 	fstream config((this->_name+"conf.cfg").c_str(), ios::in);
+#ifdef SHOW_LOGS
 	cerr << "Openig file: " << this->_name << "conf.cfg" << endl;
+#endif
 	if(!config.good()) return "<pre>Judge Error</pre>";
+#ifdef SHOW_LOGS
 	cerr << "Success!" << endl;
+#endif
 	config >> this->memory_limit;
 	string out="<table style=\"margin-top: 5px\" class=\"table results\">\n<thead>\n<tr>\n<th style=\"min-width: 70px\">Test</th>\n<th style=\"min-width: 180px\">Result</th>\n<th style=\"min-width: 90px\">Time</th>\n<th style=\"min-width: 60px\">Result</th>\n</tr>\n</thead>\n<tbody>\n";
 	long long max_score=0, total_score=0, group_score;
@@ -146,7 +152,7 @@ string task::judge()
 			max_score+=group_score;
 			out+="<tr>\n";
 			out+=this->check_on_test(test_name, time_limit);
-			out+="<td"+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
+			out+="<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
 			group_buffer="";
 		}
 		else

@@ -40,9 +40,11 @@ namespace reports_queue
 				if(*current_file->d_name!='.')
 					reports.push_back(current_file->d_name);
 		sort(reports.begin(), reports.end(), compare());
+	#ifdef SHOW_LOGS
 		cerr << ' ' << reports.size() << ":\n";
 		for(vector<string>::reverse_iterator i=reports.rbegin(); i!=reports.rend(); ++i)
 			cerr << *i << endl;
+	#endif
 	}
 
 	bool empty()

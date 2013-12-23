@@ -39,13 +39,13 @@ Status: Judged</pre>
 <td>bar0</td>
 <td class="wa">Wrong answer</td>
 <td>0.00/1.00</td>
-<td>0/0</td>
+<td class="groupscore">0/0</td>
 </tr>
 <tr>
 <td>bar1a</td>
 <td class="wa">Wrong answer</td>
 <td>0.00/1.00</td>
-<td rowspan="5">0/10</td>
+<td class="groupscore" rowspan="5">0/10</td>
 </tr>
 <tr>
 <td>bar1b</td>
@@ -71,7 +71,7 @@ Status: Judged</pre>
 <td>bar2a</td>
 <td class="wa">Wrong answer</td>
 <td>0.00/1.00</td>
-<td rowspan="3">0/10</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
 <td>bar2b</td>
@@ -87,7 +87,7 @@ Status: Judged</pre>
 <td>bar3a</td>
 <td class="tl_re">Time limit</td>
 <td>1.00/1.00</td>
-<td rowspan="4">0/10</td>
+<td class="groupscore" rowspan="4">0/10</td>
 </tr>
 <tr>
 <td>bar3b</td>
@@ -108,7 +108,7 @@ Status: Judged</pre>
 <td>bar4a</td>
 <td class="tl_re">Time limit</td>
 <td>1.00/1.00</td>
-<td rowspan="3">0/10</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
 <td>bar4b</td>
@@ -123,8 +123,8 @@ Status: Judged</pre>
 <tr>
 <td>bar5a</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
-<td rowspan="2">0/10</td>
+<td>1.02/1.00</td>
+<td class="groupscore" rowspan="2">0/10</td>
 </tr>
 <tr>
 <td>bar5b</td>
@@ -135,7 +135,7 @@ Status: Judged</pre>
 <td>bar6a</td>
 <td class="tl_re">Time limit</td>
 <td>1.00/1.00</td>
-<td rowspan="3">0/10</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
 <td>bar6b</td>
@@ -145,13 +145,13 @@ Status: Judged</pre>
 <tr>
 <td>bar6c</td>
 <td class="wa">Wrong answer</td>
-<td>0.03/1.00</td>
+<td>0.05/1.00</td>
 </tr>
 <tr>
 <td>bar7a</td>
 <td class="tl_re">Time limit</td>
 <td>1.00/1.00</td>
-<td rowspan="4">0/10</td>
+<td class="groupscore" rowspan="4">0/10</td>
 </tr>
 <tr>
 <td>bar7b</td>
@@ -161,7 +161,7 @@ Status: Judged</pre>
 <tr>
 <td>bar7c</td>
 <td class="wa">Wrong answer</td>
-<td>0.07/1.00</td>
+<td>0.11/1.00</td>
 </tr>
 <tr>
 <td>bar7d</td>
@@ -171,55 +171,55 @@ Status: Judged</pre>
 <tr>
 <td>bar8a</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
-<td rowspan="3">0/10</td>
+<td>1.50/1.50</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
 <td>bar8b</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
+<td>1.50/1.50</td>
 </tr>
 <tr>
 <td>bar8c</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
+<td>1.50/1.50</td>
 </tr>
 <tr>
 <td>bar9a</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
-<td rowspan="4">0/10</td>
+<td>3.00/3.00</td>
+<td class="groupscore" rowspan="4">0/10</td>
 </tr>
 <tr>
 <td>bar9b</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
+<td>3.00/3.00</td>
 </tr>
 <tr>
 <td>bar9c</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
+<td>3.00/3.00</td>
 </tr>
 <tr>
 <td>bar9d</td>
 <td class="wa">Wrong answer</td>
-<td>0.26/1.00</td>
+<td>0.32/3.00</td>
 </tr>
 <tr>
 <td>bar10a</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
-<td rowspan="3">0/10</td>
+<td>3.00/3.00</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
 <td>bar10b</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
+<td>3.00/3.00</td>
 </tr>
 <tr>
 <td>bar10c</td>
 <td class="tl_re">Time limit</td>
-<td>1.00/1.00</td>
+<td>3.00/3.00</td>
 </tr>
 </tbody>
 </table>

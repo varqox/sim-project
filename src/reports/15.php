@@ -39,13 +39,13 @@ Status: Judged</pre>
 <td>bar0</td>
 <td class="ok">OK</td>
 <td>0.00/1.00</td>
-<td>0/0</td>
+<td class="groupscore">0/0</td>
 </tr>
 <tr>
 <td>bar1a</td>
 <td class="ok">OK</td>
 <td>0.00/1.00</td>
-<td rowspan="5">10/10</td>
+<td class="groupscore" rowspan="5">10/10</td>
 </tr>
 <tr>
 <td>bar1b</td>
@@ -71,7 +71,7 @@ Status: Judged</pre>
 <td>bar2a</td>
 <td class="ok">OK</td>
 <td>0.00/1.00</td>
-<td rowspan="3">10/10</td>
+<td class="groupscore" rowspan="3">10/10</td>
 </tr>
 <tr>
 <td>bar2b</td>
@@ -87,7 +87,7 @@ Status: Judged</pre>
 <td>bar3a</td>
 <td class="ok">OK</td>
 <td>0.00/1.00</td>
-<td rowspan="4">10/10</td>
+<td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
 <td>bar3b</td>
@@ -107,13 +107,13 @@ Status: Judged</pre>
 <tr>
 <td>bar4a</td>
 <td class="ok">OK</td>
-<td>0.00/1.00</td>
-<td rowspan="3">10/10</td>
+<td>0.01/1.00</td>
+<td class="groupscore" rowspan="3">10/10</td>
 </tr>
 <tr>
 <td>bar4b</td>
 <td class="ok">OK</td>
-<td>0.00/1.00</td>
+<td>0.01/1.00</td>
 </tr>
 <tr>
 <td>bar4c</td>
@@ -124,7 +124,7 @@ Status: Judged</pre>
 <td>bar5a</td>
 <td class="ok">OK</td>
 <td>0.00/1.00</td>
-<td rowspan="2">10/10</td>
+<td class="groupscore" rowspan="2">10/10</td>
 </tr>
 <tr>
 <td>bar5b</td>
@@ -134,92 +134,92 @@ Status: Judged</pre>
 <tr>
 <td>bar6a</td>
 <td class="ok">OK</td>
-<td>0.01/1.00</td>
-<td rowspan="3">10/10</td>
+<td>0.02/1.00</td>
+<td class="groupscore" rowspan="3">10/10</td>
 </tr>
 <tr>
 <td>bar6b</td>
 <td class="ok">OK</td>
-<td>0.02/1.00</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
 <td>bar6c</td>
 <td class="ok">OK</td>
-<td>0.01/1.00</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
 <td>bar7a</td>
 <td class="ok">OK</td>
-<td>0.02/1.00</td>
-<td rowspan="4">10/10</td>
+<td>0.03/1.00</td>
+<td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
 <td>bar7b</td>
 <td class="ok">OK</td>
-<td>0.04/1.00</td>
+<td>0.05/1.00</td>
 </tr>
 <tr>
 <td>bar7c</td>
 <td class="ok">OK</td>
-<td>0.03/1.00</td>
+<td>0.05/1.00</td>
 </tr>
 <tr>
 <td>bar7d</td>
 <td class="ok">OK</td>
-<td>0.03/1.00</td>
+<td>0.04/1.00</td>
 </tr>
 <tr>
 <td>bar8a</td>
 <td class="ok">OK</td>
-<td>0.04/1.00</td>
-<td rowspan="3">10/10</td>
+<td>0.06/1.50</td>
+<td class="groupscore" rowspan="3">10/10</td>
 </tr>
 <tr>
 <td>bar8b</td>
 <td class="ok">OK</td>
-<td>0.10/1.00</td>
+<td>0.13/1.50</td>
 </tr>
 <tr>
 <td>bar8c</td>
 <td class="ok">OK</td>
-<td>0.09/1.00</td>
+<td>0.12/1.50</td>
 </tr>
 <tr>
 <td>bar9a</td>
 <td class="ok">OK</td>
-<td>0.11/1.00</td>
-<td rowspan="4">10/10</td>
+<td>0.14/3.00</td>
+<td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
 <td>bar9b</td>
 <td class="ok">OK</td>
-<td>0.21/1.00</td>
+<td>0.23/3.00</td>
 </tr>
 <tr>
 <td>bar9c</td>
 <td class="ok">OK</td>
-<td>0.23/1.00</td>
+<td>0.27/3.00</td>
 </tr>
 <tr>
 <td>bar9d</td>
 <td class="ok">OK</td>
-<td>0.13/1.00</td>
+<td>0.16/3.00</td>
 </tr>
 <tr>
 <td>bar10a</td>
 <td class="ok">OK</td>
-<td>0.12/1.00</td>
-<td rowspan="3">10/10</td>
+<td>0.15/3.00</td>
+<td class="groupscore" rowspan="3">10/10</td>
 </tr>
 <tr>
 <td>bar10b</td>
 <td class="ok">OK</td>
-<td>0.23/1.00</td>
+<td>0.27/3.00</td>
 </tr>
 <tr>
 <td>bar10c</td>
 <td class="ok">OK</td>
-<td>0.25/1.00</td>
+<td>0.28/3.00</td>
 </tr>
 </tbody>
 </table>
