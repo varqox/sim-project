@@ -23,203 +23,203 @@ echo '<div style="text-align: center">
 </div>
 <p style="font-size: 30px;">Zadanie 2</p>
 <div class="submit_status">
-<pre>Status: Sprawdzono</pre>
-<pre>Wynik: 0/100</pre>
+<pre>Score: 0/100
+Status: Judged</pre>
 <table style="margin-top: 5px" class="table results">
 <thead>
 <tr>
-  <th style="min-width: 70px">Test</th>
-  <th style="min-width: 180px">Wynik</th>
-  <th style="min-width: 90px">Czas/Limit</th>
-  <th style="min-width: 60px">Punkty</th>
+<th style="min-width: 70px">Test</th>
+<th style="min-width: 180px">Result</th>
+<th style="min-width: 90px">Time</th>
+<th style="min-width: 60px">Result</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-  <td>bar0</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.04/1.00</td>
-  <td rowspan="1" class="groupscore">0/0</td>
+<td>bar0</td>
+<td class="wa">Wrong answer</td>
+<td>0.01/1.00</td>
+<td class="groupscore">0/0</td>
 </tr>
 <tr>
-  <td>bar1a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
-  <td rowspan="5" class="groupscore">0/10</td>
+<td>bar1a</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
+<td class="groupscore" rowspan="5">0/10</td>
 </tr>
 <tr>
-  <td>bar1b</td>
-  <td class="ok">OK</td>
-  <td>0.02/1.00</td>
+<td>bar1b</td>
+<td class="ok">OK</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar1c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar1c</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar1d</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar1d</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar1e</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar1e</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar2a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
-  <td rowspan="3" class="groupscore">0/10</td>
+<td>bar2a</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
-  <td>bar2b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.02/1.00</td>
+<td>bar2b</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar2c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar2c</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar3a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
-  <td rowspan="4" class="groupscore">0/10</td>
+<td>bar3a</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
+<td class="groupscore" rowspan="4">0/10</td>
 </tr>
 <tr>
-  <td>bar3b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar3b</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar3c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar3c</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar3d</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar3d</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar4a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.02/1.00</td>
-  <td rowspan="3" class="groupscore">0/10</td>
+<td>bar4a</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
-  <td>bar4b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar4b</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar4c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar4c</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar5a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
-  <td rowspan="2" class="groupscore">0/10</td>
+<td>bar5a</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
+<td class="groupscore" rowspan="2">0/10</td>
 </tr>
 <tr>
-  <td>bar5b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.01/1.00</td>
+<td>bar5b</td>
+<td class="wa">Wrong answer</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
-  <td>bar6a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.03/1.00</td>
-  <td rowspan="3" class="groupscore">0/10</td>
+<td>bar6a</td>
+<td class="wa">Wrong answer</td>
+<td>0.02/1.00</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
-  <td>bar6b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.02/1.00</td>
+<td>bar6b</td>
+<td class="wa">Wrong answer</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
-  <td>bar6c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.03/1.00</td>
+<td>bar6c</td>
+<td class="wa">Wrong answer</td>
+<td>0.01/1.00</td>
 </tr>
 <tr>
-  <td>bar7a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.04/1.00</td>
-  <td rowspan="4" class="groupscore">0/10</td>
+<td>bar7a</td>
+<td class="wa">Wrong answer</td>
+<td>0.03/1.00</td>
+<td class="groupscore" rowspan="4">0/10</td>
 </tr>
 <tr>
-  <td>bar7b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.04/1.00</td>
+<td>bar7b</td>
+<td class="wa">Wrong answer</td>
+<td>0.02/1.00</td>
 </tr>
 <tr>
-  <td>bar7c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.04/1.00</td>
+<td>bar7c</td>
+<td class="wa">Wrong answer</td>
+<td>0.02/1.00</td>
 </tr>
 <tr>
-  <td>bar7d</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.03/1.00</td>
+<td>bar7d</td>
+<td class="wa">Wrong answer</td>
+<td>0.02/1.00</td>
 </tr>
 <tr>
-  <td>bar8a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.05/1.00</td>
-  <td rowspan="3" class="groupscore">0/10</td>
+<td>bar8a</td>
+<td class="wa">Wrong answer</td>
+<td>0.04/1.50</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
-  <td>bar8b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.07/1.00</td>
+<td>bar8b</td>
+<td class="wa">Wrong answer</td>
+<td>0.05/1.50</td>
 </tr>
 <tr>
-  <td>bar8c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.08/1.00</td>
+<td>bar8c</td>
+<td class="wa">Wrong answer</td>
+<td>0.05/1.50</td>
 </tr>
 <tr>
-  <td>bar9a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.10/1.00</td>
-  <td rowspan="4" class="groupscore">0/10</td>
+<td>bar9a</td>
+<td class="wa">Wrong answer</td>
+<td>0.09/3.00</td>
+<td class="groupscore" rowspan="4">0/10</td>
 </tr>
 <tr>
-  <td>bar9b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.10/1.00</td>
+<td>bar9b</td>
+<td class="wa">Wrong answer</td>
+<td>0.09/3.00</td>
 </tr>
 <tr>
-  <td>bar9c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.12/1.00</td>
+<td>bar9c</td>
+<td class="wa">Wrong answer</td>
+<td>0.10/3.00</td>
 </tr>
 <tr>
-  <td>bar9d</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.10/1.00</td>
+<td>bar9d</td>
+<td class="wa">Wrong answer</td>
+<td>0.08/3.00</td>
 </tr>
 <tr>
-  <td>bar10a</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.11/1.00</td>
-  <td rowspan="3" class="groupscore">0/10</td>
+<td>bar10a</td>
+<td class="wa">Wrong answer</td>
+<td>0.10/3.00</td>
+<td class="groupscore" rowspan="3">0/10</td>
 </tr>
 <tr>
-  <td>bar10b</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.12/1.00</td>
+<td>bar10b</td>
+<td class="wa">Wrong answer</td>
+<td>0.10/3.00</td>
 </tr>
 <tr>
-  <td>bar10c</td>
-  <td class="wa">Zła odpowiedź</td>
-  <td>0.12/1.00</td>
+<td>bar10c</td>
+<td class="wa">Wrong answer</td>
+<td>0.10/3.00</td>
 </tr>
 </tbody>
 </table>

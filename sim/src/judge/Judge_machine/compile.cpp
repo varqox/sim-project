@@ -11,7 +11,9 @@ namespace compile
 	// Report ID, exec_name in chroot/
 	bool run(const string& report_id, const string& exec)
 	{
+	#ifdef SHOW_LOGS
 		fprintf(stderr, "Compilation: %s to: %s\n", report_id.c_str(), exec.c_str());
+	#endif
 		compile_errors="";
 		int ret=system(("(cd ../solutions && timeout 15 g++ "+report_id+".cpp -s -O2 -static -lm -m32 -o ../judge/chroot/"+exec+") 2> errors.log").c_str());
 		if(!ret)

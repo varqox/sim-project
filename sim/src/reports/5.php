@@ -39,13 +39,13 @@ Status: Judged</pre>
 <td>1</td>
 <td class="ok">OK</td>
 <td>0.00/3.00</td>
-<td>50/50</td>
+<td class="groupscore">50/50</td>
 </tr>
 <tr>
 <td>2</td>
 <td class="ok">OK</td>
 <td>0.00/3.00</td>
-<td>50/50</td>
+<td class="groupscore">50/50</td>
 </tr>
 </tbody>
 </table>

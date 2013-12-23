@@ -23,10 +23,13 @@ echo '<div style="text-align: center">
 </div>
 <p style="font-size: 30px;">Zadanie 2</p>
 <div class="submit_status">
-<pre>Status: Compile error</pre>
-<pre>Wynik: 0</pre>
-<pre>10.cpp: In function \'int main()\':
-10.cpp:20:16: error: \'system\' was not declared in this scope</pre>
+<pre>Status: Compilation failed</pre>
+<pre>Points: 0<pre>
+<pre>10.cpp: In function ‘int main()’:
+10.cpp:20:16: error: ‘system’ was not declared in this scope
+ system ("pause");
+                ^
+</pre>
 </div>
 </div>';
 

@@ -23,9 +23,12 @@ echo '<div style="text-align: center">
 </div>
 <p style="font-size: 30px;">Zadanie 2</p>
 <div class="submit_status">
-<pre>Status: Compile error</pre>
-<pre>Wynik: 0</pre>
-<pre>7.cpp:1:1: error: \'Pin\' does not name a type</pre>
+<pre>Status: Compilation failed</pre>
+<pre>Points: 0<pre>
+<pre>7.cpp:1:1: error: ‘Pin’ does not name a type
+ Pin 2.13 kit 61147
+ ^
+</pre>
 </div>
 </div>';
 

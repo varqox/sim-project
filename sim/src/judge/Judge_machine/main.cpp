@@ -15,43 +15,61 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 	unsigned start=0, deep=1, finish=file_content.size(); // Deep od <div>
 	for(int i=0; i<div_begins.size(); ++i)
 	{
+	#ifdef SHOW_LOGS
 		cerr << div_begins[i] << " " << string(file_content.begin()+div_begins[i]+1, file_content.begin()+div_begins[i]+24) << endl;
+	#endif
 		if(file_content.compare(div_begins[i]+1, 23, " class=\"submit_status\">")==0)
 		{
 			start=div_begins[i]+24;
+		#ifdef SHOW_LOGS
 			cerr << "get: " << start << endl;
+		#endif
 			div_begins.erase(div_begins.begin(), div_begins.begin()+i+1);
 			break;
 		}
 	}
+#ifdef SHOW_LOGS
 	for(int i=0; i<div_begins.size(); ++i)
 		cerr << ' ' << div_begins[i];
 	cerr << endl;
 	for(int i=0; i<div_ends.size(); ++i)
 		cerr << ' ' << div_ends[i];
 	cerr << endl;
+#endif
 	while(!div_ends.empty() && div_ends.front()<start)
 		div_ends.pop_front();
+#ifdef SHOW_LOGS
 	cerr << "[[[ " << div_ends.size() << " ]]]" << endl;
+#endif
 	while(!div_ends.empty() && deep>0)
 	{
+	#ifdef SHOW_LOGS
 		cerr << div_begins.front() << ' ' << div_ends.front() << ' ' << deep << ' ';
+	#endif
 		if(!div_begins.empty() && div_begins.front()<div_ends.front())
 		{
+		#ifdef SHOW_LOGS
 			cerr << "first: ";
+		#endif
 			++deep;
 			div_begins.pop_front();
 		}
 		else
 		{
+		#ifdef SHOW_LOGS
 			cerr << "second: ";
+		#endif
 			--deep;
 			finish=div_ends.front()-6;
 			div_ends.pop_front();
 		}
+	#ifdef SHOW_LOGS
 		cerr << deep << endl;
+	#endif
 	}
+#ifdef SHOW_LOGS
 	cerr << finish << " ;; " << file_content.size() << endl;
+#endif
 	file_content[finish]='\n';
 	template_front.assign(file_content.begin(), file_content.begin()+start);
 	template_front+='\n';
@@ -61,17 +79,12 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 int main(int argc, char** argv)
 {
 	// check if this process isn't oldest
-	// if(system(("if test `pgrep -x --oldest judge` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
-	/*if(argc<3)
-	{
-		cerr << "Usage: spr <task name> <exec name> [test names...]\n";
-		return 1;
-	}
-	task judge(argv[1]);
-	judge.judge(argc-2, argv+2);*/
+	if(system(("if test `pgrep -x --oldest judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
 	while(!reports_queue::empty())
 	{
+	#ifdef SHOW_LOGS
 		cerr << reports_queue::front() << endl;
+	#endif
 		string report_id, task_id;
 		fstream queue_file(("queue/"+reports_queue::front()).c_str(), ios::in);
 		if(queue_file.good())

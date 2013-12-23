@@ -15,3 +15,5 @@
 #others
 build/
 sim.tar.gz
+src/judge/judge_machine
+src/judge/CTH
