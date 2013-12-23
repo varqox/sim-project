@@ -1,4 +1,4 @@
 sim
 ===
 
-SIM is open source platform for carrying out algorithmics contests
+SIM is open source platform for carrying out algorithmic contests
