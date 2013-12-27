@@ -4,7 +4,7 @@ $user="guest";
 
 require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 
-template_begin('Wysyłanie rozwiązań',$user);
+template_begin('SIM - Platforma do trzaskania zadań',$user);
 
 echo '<div style="text-align: center">
 <img src="/kit/img/SIM-logo.png" width="20%" height=20%"/>
