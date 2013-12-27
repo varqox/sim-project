@@ -29,8 +29,11 @@ endif
 # Rest
 .PHONY: all install clean force-clean package help
 
-all:
+all: chmod-default
 	make -C judge $(MFLAGS)
+
+chmod-default: chmod-default.cpp
+	$(LINK) $< $(LFLAGS) -o $@
 
 install: all
 	# Echo log
@@ -44,7 +47,9 @@ install: all
 	# $(UPDATE) tasks/ $(OUTPUT_DIR)
 	$(MKDIR) $(OUTPUT_DIR)/judge/chroot/ $(OUTPUT_DIR)/judge/queue/
 	$(UPDATE) judge/judge_machine judge/CTH judge/checkers/ $(OUTPUT_DIR)/judge/
-	chmod -R 0755 $(OUTPUT_DIR)
+	# chmod -R 0755 $(OUTPUT_DIR)
+	./chmod-default $(OUTPUT_DIR)
+	chmod 0755 $(OUTPUT_DIR)/judge/CTH $(OUTPUT_DIR)/judge/judge_machine
 	chown -R www-data:www-data $(OUTPUT_DIR)
 	grep 'ALL ALL = (root) NOPASSWD: $(OUTPUT_DIR)judge/judge_machine' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(OUTPUT_DIR)judge/judge_machine >> /etc/sudoers; fi
 	printf "<VirtualHost 127.2.2.2:80>\n	ServerAdmin webmaster@sim.localhost\n	ServerName sim.localhost\n\n	DocumentRoot %s\n	<Directory />\n		Options FollowSymLinks\n		AllowOverride All\n	</Directory>\n	<Directory %s>\n		Options Indexes FollowSymLinks MultiViews\n		AllowOverride All\n		Order allow,deny\n		allow from all\n		Require all granted\n	</Directory>\n	CustomLog \$${APACHE_LOG_DIR}/access.log combined\n</VirtualHost>" $(OUTPUT_DIR)/public/ $(OUTPUT_DIR)/public/ > /etc/apache2/sites-available/sim.conf
@@ -53,7 +58,7 @@ install: all
 	@sh -c 'service apache2 reload; exit 0'
 
 clean:
-	$(RM) *.o
+	$(RM) *.o chmod-default
 	make clean -C judge $(MFLAGS)
 
 force-clean: clean
