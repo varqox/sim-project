@@ -1,6 +1,6 @@
 <?php
 if(isset($_GET['download']))
-{header('Content-type: application/text');header('Content-Disposition: attchment; filename="10.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/solutions/10.cpp");exit;}
+{header('Content-type: application/text');header('Content-Disposition: attchment; filename="10.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/../solutions/10.cpp");exit;}
 
 $user="none";
 require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
@@ -9,7 +9,7 @@ template_begin('Zgłoszenie 10',$user);
 
 if(isset($_GET['source']))
 {
-echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/solutions/10.cpp"), '
+echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/10.cpp"), '
 </div>';
 template_end();
 exit;
@@ -27,8 +27,6 @@ echo '<div style="text-align: center">
 <pre>Points: 0<pre>
 <pre>10.cpp: In function ‘int main()’:
 10.cpp:20:16: error: ‘system’ was not declared in this scope
- system ("pause");
-                ^
 </pre>
 </div>
 </div>';
