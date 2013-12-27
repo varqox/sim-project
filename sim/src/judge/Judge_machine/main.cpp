@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <csignal>
 
 using namespace std;
 
@@ -76,8 +77,50 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 	template_back.assign(file_content.begin()+finish, file_content.end());
 }
 
+set<string> temporary_files;
+string *public_report_name, *public_report_front, *public_report_back;
+
+void control_exit(int ___nothing)
+{
+	// Repair status of current report
+	fstream report;
+	if(report.open(public_report_name->c_str(), ios::out), report.good())
+	{
+		report << *public_report_front << "<pre>Status: Waiting for judge...</pre>" << *public_report_back;
+		report.close();
+	}
+#ifdef SHOW_LOGS
+	cerr << "Removing temporary files" << endl;
+#endif
+	while(!temporary_files.empty())
+	{
+		remove(temporary_files.begin()->c_str());
+		temporary_files.erase(temporary_files.begin());
+	}
+	exit(1);
+}
+
 int main(int argc, char** argv)
 {
+	// signal control
+	signal(SIGHUP, control_exit);
+	signal(SIGINT, control_exit);
+	signal(SIGQUIT, control_exit);
+	signal(SIGILL, control_exit);
+	signal(SIGTRAP, control_exit);
+	signal(SIGABRT, control_exit);
+	signal(SIGIOT, control_exit);
+	signal(SIGBUS, control_exit);
+	signal(SIGFPE, control_exit);
+	signal(SIGKILL, control_exit); // We won't block SIGKILL
+	signal(SIGUSR1, control_exit);
+	signal(SIGSEGV, control_exit);
+	signal(SIGUSR2, control_exit);
+	signal(SIGPIPE, control_exit);
+	signal(SIGALRM, control_exit);
+	signal(SIGTERM, control_exit);
+	signal(SIGSTKFLT, control_exit);
+	signal(_NSIG, control_exit);
 	// check if this process isn't oldest
 	if(system(("if test `pgrep -x --oldest judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
 	while(!reports_queue::empty())
@@ -95,6 +138,9 @@ int main(int argc, char** argv)
 		}
 		string report_front, report_back, report_name="../public/reports/"+report_id+".php";
 		GetTemplateOfReport(report_front, report_back, report_name);
+		public_report_name=&report_name;
+		public_report_front=&report_front;
+		public_report_back=&report_back;
 		fstream report;
 		if(!compile::run(report_id, "exec.e"))
 		{
