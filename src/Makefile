@@ -39,18 +39,15 @@ install: all
 	# Installation
 	@if test `whoami` != "root"; then echo You have to run it as root!; exit 1; fi
 	$(MKDIR) $(OUTPUT_DIR)
-	$(UPDATE) files/ $(OUTPUT_DIR)
-	$(UPDATE) kit/ $(OUTPUT_DIR)
-	$(UPDATE) reports/ $(OUTPUT_DIR)
-	$(UPDATE) solutions/ $(OUTPUT_DIR)
-	$(UPDATE) tasks/ $(OUTPUT_DIR)
-	$(MKDIR) $(OUTPUT_DIR)/judge/chroot/ $(OUTPUT_DIR)/judge/queue/ $(OUTPUT_DIR)/judge/checkers/
-	$(UPDATE) judge/judge_machine judge/.htaccess judge/CTH judge/checkers $(OUTPUT_DIR)/judge/
-	$(CP) *.php $(OUTPUT_DIR)
+	$(UPDATE) public/ solutions/ tasks/ $(OUTPUT_DIR)
+	# $(UPDATE) solutions/ $(OUTPUT_DIR)
+	# $(UPDATE) tasks/ $(OUTPUT_DIR)
+	$(MKDIR) $(OUTPUT_DIR)/judge/chroot/ $(OUTPUT_DIR)/judge/queue/
+	$(UPDATE) judge/judge_machine judge/CTH judge/checkers/ $(OUTPUT_DIR)/judge/
 	chmod -R 0755 $(OUTPUT_DIR)
 	chown -R www-data:www-data $(OUTPUT_DIR)
 	grep 'ALL ALL = (root) NOPASSWD: $(OUTPUT_DIR)judge/judge_machine' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(OUTPUT_DIR)judge/judge_machine >> /etc/sudoers; fi
-	printf "<VirtualHost 127.2.2.2:80>\n	ServerAdmin webmaster@sim.localhost\n	ServerName sim.localhost\n\n	DocumentRoot %s\n	<Directory />\n		Options FollowSymLinks\n		AllowOverride All\n	</Directory>\n	<Directory %s>\n		Options Indexes FollowSymLinks MultiViews\n		AllowOverride All\n		Order allow,deny\n		allow from all\n		Require all granted\n	</Directory>\n	CustomLog \$${APACHE_LOG_DIR}/access.log combined\n</VirtualHost>" $(OUTPUT_DIR) $(OUTPUT_DIR) > /etc/apache2/sites-available/sim.conf
+	printf "<VirtualHost 127.2.2.2:80>\n	ServerAdmin webmaster@sim.localhost\n	ServerName sim.localhost\n\n	DocumentRoot %s\n	<Directory />\n		Options FollowSymLinks\n		AllowOverride All\n	</Directory>\n	<Directory %s>\n		Options Indexes FollowSymLinks MultiViews\n		AllowOverride All\n		Order allow,deny\n		allow from all\n		Require all granted\n	</Directory>\n	CustomLog \$${APACHE_LOG_DIR}/access.log combined\n</VirtualHost>" $(OUTPUT_DIR)/public/ $(OUTPUT_DIR)/public/ > /etc/apache2/sites-available/sim.conf
 	a2ensite sim
 	echo service apache2 reload
 	@sh -c 'service apache2 reload; exit 0'

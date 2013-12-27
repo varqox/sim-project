@@ -93,14 +93,14 @@ int main(int argc, char** argv)
 			getline(queue_file, task_id);
 			queue_file.close();
 		}
-		string report_front, report_back, report_name="../reports/"+report_id+".php";
+		string report_front, report_back, report_name="../public/reports/"+report_id+".php";
 		GetTemplateOfReport(report_front, report_back, report_name);
 		fstream report;
 		if(!compile::run(report_id, "exec.e"))
 		{
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{
-				report << report_front << "<pre>Status: Compilation failed</pre>\n<pre>Points: 0<pre>\n<pre>" << make_safe_php_string(make_safe_html_string(compile::compile_errors)) << "</pre>" << report_back;
+				report << report_front << "<pre>Status: Compilation failed</pre>\n<pre>Points: 0<pre>\n<pre>" << make_safe_php_string(make_safe_html_string(compile::run.GetCompileErrors())) << "</pre>" << report_back;
 				report.close();
 			}
 		}

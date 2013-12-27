@@ -1,22 +1,22 @@
 <?php
 if(isset($_GET['download']))
-{header('Content-type: application/text');header('Content-Disposition: attchment; filename="13.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/solutions/13.cpp");exit;}
+{header('Content-type: application/text');header('Content-Disposition: attchment; filename="4.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/../solutions/4.cpp");exit;}
 
 $user="none";
 require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 
-template_begin('Zgłoszenie 13',$user);
+template_begin('Zgłoszenie 4',$user);
 
 if(isset($_GET['source']))
 {
-echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/solutions/13.cpp"), '
+echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/4.cpp"), '
 </div>';
 template_end();
 exit;
 }
 
 echo '<div style="text-align: center">
-<p style="padding: 15px 0 0 200px;font-size: 35px;text-align: left">Zgłoszenie 13</p>
+<p style="padding: 15px 0 0 200px;font-size: 35px;text-align: left">Zgłoszenie 4</p>
 <div class ="btn-toolbar">
 <a class="btn-small" href="?source">View source</a>
 <a class="btn-small" href="?download">Download</a>
@@ -150,23 +150,23 @@ Status: Judged</pre>
 <tr>
 <td>bar7a</td>
 <td class="ok">OK</td>
-<td>0.03/1.00</td>
+<td>0.02/1.00</td>
 <td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
 <td>bar7b</td>
 <td class="ok">OK</td>
-<td>0.06/1.00</td>
+<td>0.04/1.00</td>
 </tr>
 <tr>
 <td>bar7c</td>
 <td class="ok">OK</td>
-<td>0.06/1.00</td>
+<td>0.05/1.00</td>
 </tr>
 <tr>
 <td>bar7d</td>
 <td class="ok">OK</td>
-<td>0.04/1.00</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
 <td>bar8a</td>
@@ -193,12 +193,12 @@ Status: Judged</pre>
 <tr>
 <td>bar9b</td>
 <td class="ok">OK</td>
-<td>0.23/3.00</td>
+<td>0.20/3.00</td>
 </tr>
 <tr>
 <td>bar9c</td>
 <td class="ok">OK</td>
-<td>0.27/3.00</td>
+<td>0.24/3.00</td>
 </tr>
 <tr>
 <td>bar9d</td>
@@ -208,18 +208,18 @@ Status: Judged</pre>
 <tr>
 <td>bar10a</td>
 <td class="ok">OK</td>
-<td>0.16/3.00</td>
+<td>0.13/3.00</td>
 <td class="groupscore" rowspan="3">10/10</td>
 </tr>
 <tr>
 <td>bar10b</td>
 <td class="ok">OK</td>
-<td>0.26/3.00</td>
+<td>0.22/3.00</td>
 </tr>
 <tr>
 <td>bar10c</td>
 <td class="ok">OK</td>
-<td>0.28/3.00</td>
+<td>0.24/3.00</td>
 </tr>
 </tbody>
 </table>

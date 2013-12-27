@@ -4,6 +4,10 @@
 #include <vector>
 #include <cstdio>
 
+#ifdef SHOW_LOGS
+#include <iostream>
+#endif
+
 using namespace std;
 
 namespace reports_queue
@@ -20,7 +24,7 @@ namespace reports_queue
 	string extract();
 	const string& front();
 }
-#include <iostream>
+
 namespace reports_queue
 {
 	struct compare

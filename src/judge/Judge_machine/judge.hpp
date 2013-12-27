@@ -15,7 +15,7 @@ public:
 	{
 		if(*this->_name.rbegin()!='/') this->_name+='/';
 		// get name of temporary file
-		char tmp[L_tmpnam]="/tmp/judge_m.XXXXXX";
+		char tmp[]="judge_machine.XXXXXX";
 		mkstemp(tmp);
 		this->outf_name=tmp;
 	}

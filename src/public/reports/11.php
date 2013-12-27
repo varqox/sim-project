@@ -1,6 +1,6 @@
 <?php
 if(isset($_GET['download']))
-{header('Content-type: application/text');header('Content-Disposition: attchment; filename="11.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/solutions/11.cpp");exit;}
+{header('Content-type: application/text');header('Content-Disposition: attchment; filename="11.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/../solutions/11.cpp");exit;}
 
 $user="none";
 require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
@@ -9,7 +9,7 @@ template_begin('Zgłoszenie 11',$user);
 
 if(isset($_GET['source']))
 {
-echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/solutions/11.cpp"), '
+echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/11.cpp"), '
 </div>';
 template_end();
 exit;
@@ -86,18 +86,18 @@ Status: Judged</pre>
 <tr>
 <td>bar3a</td>
 <td class="ok">OK</td>
-<td>0.03/1.00</td>
+<td>0.04/1.00</td>
 <td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
 <td>bar3b</td>
 <td class="ok">OK</td>
-<td>0.05/1.00</td>
+<td>0.08/1.00</td>
 </tr>
 <tr>
 <td>bar3c</td>
 <td class="ok">OK</td>
-<td>0.05/1.00</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
 <td>bar3d</td>
@@ -113,17 +113,17 @@ Status: Judged</pre>
 <tr>
 <td>bar4b</td>
 <td class="ok">OK</td>
-<td>0.14/1.00</td>
+<td>0.19/1.00</td>
 </tr>
 <tr>
 <td>bar4c</td>
 <td class="ok">OK</td>
-<td>0.04/1.00</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
 <td>bar5a</td>
 <td class="ok">OK</td>
-<td>0.05/1.00</td>
+<td>0.04/1.00</td>
 <td class="groupscore" rowspan="2">10/10</td>
 </tr>
 <tr>
