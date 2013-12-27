@@ -1,3 +1,4 @@
+#include "main.hpp"
 #include <vector>
 #include <string>
 #include <cstdio>
@@ -18,10 +19,14 @@ public:
 		char tmp[]="judge_machine.XXXXXX";
 		mkstemp(tmp);
 		this->outf_name=tmp;
+		temporary_files.insert(this->outf_name);
 	}
 
 	~task()
-	{remove(this->outf_name.c_str());}
+	{
+		remove(this->outf_name.c_str());
+		temporary_files.insert(this->outf_name);
+	}
 
 	const std::string& name() const
 	{return this->_name;}

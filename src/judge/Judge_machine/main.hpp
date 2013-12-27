@@ -1,11 +1,15 @@
 #include <string>
 #include <deque>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <set>
 
 #pragma once
 
 // main.cpp
+extern std::set<std::string> temporary_files;
 
 // other_functions.cpp
 std::string myto_string(long long int a);
@@ -25,8 +29,14 @@ private:
 	{
 		memcpy(this->file_compile_errors, "/tmp/compile_errors.XXXXXX", sizeof(char)*27);
 		mkstemp(this->file_compile_errors);
+		temporary_files.insert(this->file_compile_errors);
 	}
 	compile(const compile&){}
+	~compile()
+	{
+		remove(file_compile_errors);
+		temporary_files.erase(this->file_compile_errors);
+	}
 
 public:
 	static compile run;

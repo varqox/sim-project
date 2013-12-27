@@ -1,5 +1,4 @@
 #include "judge.hpp"
-#include "main.hpp"
 #include <sys/time.h>
 #include <cmath>
 #include <cstdlib>
