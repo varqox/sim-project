@@ -136,6 +136,9 @@ string task::judge()
 #ifdef SHOW_LOGS
 	cerr << "Success!" << endl;
 #endif
+	string trashes;
+	getline(config, trashes); // Task tag
+	getline(config, trashes); // Task name
 	config >> this->memory_limit;
 	string out="<table style=\"margin-top: 5px\" class=\"table results\">\n<thead>\n<tr>\n<th style=\"min-width: 70px\">Test</th>\n<th style=\"min-width: 180px\">Result</th>\n<th style=\"min-width: 90px\">Time</th>\n<th style=\"min-width: 60px\">Result</th>\n</tr>\n</thead>\n<tbody>\n";
 	long long max_score=0, total_score=0, group_score;
