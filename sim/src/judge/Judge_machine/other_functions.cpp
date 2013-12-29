@@ -1,8 +1,24 @@
 #include <fstream>
 #include <string>
 #include <deque>
+#include <cstdlib>
+#include <dirent.h>
+#include <cstring>
 
 using namespace std;
+
+void remove_r(const char* path)
+{
+	DIR* directory;
+	dirent* current_file;
+	string tmp_dir_path=path;
+	if(*tmp_dir_path.rbegin()!='/') tmp_dir_path+='/';
+	if((directory=opendir(path)))
+		while((current_file=readdir(directory)))
+			if(strcmp(current_file->d_name, ".") && strcmp(current_file->d_name, ".."))
+				remove_r((tmp_dir_path+current_file->d_name).c_str());
+	remove(path);
+}
 
 string myto_string(long long int a)
 {

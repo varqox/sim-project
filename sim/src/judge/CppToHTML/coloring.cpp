@@ -28,7 +28,7 @@ namespace coloring
 		_aho.find(code);
 		for(int c_len=code.size(), i=0; i<c_len; ++i)
 		{
-			if(_aho[i]!=-1 && (_aho.pattern(_aho[i]).second==span::operators || i==0 || (!is_true_name[static_cast<unsigned char>(code[i-1])] && !is_true_name[code[i+_aho.pattern(_aho[i]).first.size()]])))
+			if(_aho[i]!=-1 && (_aho.pattern(_aho[i]).second==span::operators || i==0 || (!is_true_name[static_cast<unsigned char>(code[i-1])] && !is_true_name[static_cast<unsigned char>(code[i+_aho.pattern(_aho[i]).first.size()])])))
 			{
 				out+=_aho.pattern(_aho[i]).second;
 				out+=safe_string(_aho.pattern(_aho[i]).first);

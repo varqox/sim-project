@@ -15,7 +15,8 @@ return str;
 
 void change(string name)
 {
-	char* tmp_file_name=tmpnam(NULL);
+	char tmp_file_name[]="/tmp/chmod_default.XXXXXX";
+	mkstemp(tmp_file_name);
 	system(("chmod 0755 "+name+" && ls -p -1 "+name+string(" > ")+tmp_file_name).c_str());
 	cout << name << endl;
 	fstream tmp_file(tmp_file_name, ios_base::in);

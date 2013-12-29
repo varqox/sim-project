@@ -14,7 +14,7 @@ RM = rm -f
 MKDIR = mkdir -p
 
 # Installation settings
-INSTALL_DIR =
+INSTALL_DIR = $(shell pwd)/../build/
 ifneq ($(shell printf "%c" $(INSTALL_DIR)), $(shell printf "/"))
 TMP_OUTPUT_DIR = $(shell pwd)/$(INSTALL_DIR)
 else
