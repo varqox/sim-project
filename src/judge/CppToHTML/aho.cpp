@@ -5,10 +5,10 @@ int aho::class_trie::add_word(const string& word, int id)
 	int ver=0; // actual node (vertex)
 	for(int s=word.size(), i=0; i<s; ++i)
 	{
-		if(this->graph[ver].E[word[i]]!=0) ver=this->graph[ver].E[word[i]]; // actual view node = next node
+		if(this->graph[ver].E[static_cast<unsigned char>(word[i])]!=0) ver=this->graph[ver].E[static_cast<unsigned char>(word[i])]; // actual view node = next node
 		else
 		{
-			ver=this->graph[ver].E[word[i]]=this->graph.size(); // add id of new node
+			ver=this->graph[ver].E[static_cast<unsigned char>(word[i])]=this->graph.size(); // add id of new node
 			this->graph.push_back(node(word[i])); // add new node
 		}
 	}
@@ -74,10 +74,10 @@ void aho::find(const vector<string>& patterns, const string& text)
 	int act=0, pat; // actual node - root
 	for(int s=text.size(), i=0; i<s; ++i)
 	{
-		while(act>0 && this->trie.graph[act].E[text[i]]==0)
+		while(act>0 && this->trie.graph[act].E[static_cast<unsigned char>(text[i])]==0)
 			act=this->trie.graph[act].fail; // while we can't add text[i] to path, go to fail node
-		if(this->trie.graph[act].E[text[i]]!=0) // if we can add text[i] to path
-			act=this->trie.graph[act].E[text[i]];
+		if(this->trie.graph[act].E[static_cast<unsigned char>(text[i])]!=0) // if we can add text[i] to path
+			act=this->trie.graph[act].E[static_cast<unsigned char>(text[i])];
 		if(this->trie.graph[act].is_pattern) // if actual node is pattern, then add it to fin
 			this->fin[this->trie.graph[act].pattern_id]->push_back(i);
 		pat=this->trie.graph[act].long_sh_pat; // go to the pattern node
@@ -94,10 +94,10 @@ int special_aho::class_trie::add_word(const string& word, int id)
 	int ver=0; // actual node (vertex)
 	for(int s=word.size(), i=0; i<s; ++i)
 	{
-		if(this->graph[ver].E[word[i]]!=0) ver=this->graph[ver].E[word[i]]; // actual view node = next node
+		if(this->graph[ver].E[static_cast<unsigned char>(word[i])]!=0) ver=this->graph[ver].E[static_cast<unsigned char>(word[i])]; // actual view node = next node
 		else
 		{
-			ver=this->graph[ver].E[word[i]]=this->graph.size(); // add id of new node
+			ver=this->graph[ver].E[static_cast<unsigned char>(word[i])]=this->graph.size(); // add id of new node
 			this->graph.push_back(node(word[i])); // add new node
 		}
 	}
@@ -162,10 +162,10 @@ void special_aho::find(const string& text)
 	int act=0, pat; // actual node - root
 	for(int s=text.size(), i=0; i<s; ++i)
 	{
-		while(act>0 && this->trie.graph[act].E[text[i]]==0)
+		while(act>0 && this->trie.graph[act].E[static_cast<unsigned char>(text[i])]==0)
 			act=this->trie.graph[act].fail; // while we can't add text[i] to path, go to fail node
-		if(this->trie.graph[act].E[text[i]]!=0) // if we can add text[i] to path
-			act=this->trie.graph[act].E[text[i]];
+		if(this->trie.graph[act].E[static_cast<unsigned char>(text[i])]!=0) // if we can add text[i] to path
+			act=this->trie.graph[act].E[static_cast<unsigned char>(text[i])];
 		this->fin[i]=-1;
 		if(this->trie.graph[act].is_pattern) // if actual node is pattern, then add it to fin
 			this->fin[i-this->patterns[this->trie.graph[act].pattern_id].first.size()+1]=this->trie.graph[act].pattern_id;

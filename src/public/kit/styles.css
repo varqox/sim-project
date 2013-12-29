@@ -72,11 +72,20 @@ table{
 input{
 	padding-left: 3px;
 }
+a{
+	color: #0088cc;
+	text-decoration: none;
+}
+a:hover{
+	color: #005580;
+	text-decoration: underline;
+}
 .btn-toolbar{
 	margin: -30px 80px 0 0;
 	float: right;
 }
 .btn-small{
+	color: #000000;
 	margin-left: 5px;
 	display: inline-block;
 	padding: 4px 10px;
@@ -84,11 +93,16 @@ input{
 	background-image: linear-gradient(to bottom, #ffffff, #e6e6e6);
 	border: 1px solid #cccccc;
 	border-radius: 4px;
+	text-decoration: none;
 }
 .btn-small:hover{
+	color: #000000;
+	text-decoration: none;
 	background-image: linear-gradient(to bottom, #e6e6e6, #e6e6e6);
 }
 .btn-small:active{
+	color: #000000;
+	text-decoration: none;
 	background-image: linear-gradient(to bottom, #cccccc, #e6e6e6);
 }
 .table{
@@ -135,17 +149,21 @@ input{
 	line-height: 20px;
 }
 .navbar-body a{
+	color: #999999;
 	float: left;
 	padding: 10px 10px 10px;
+	text-decoration: none;
 }
 .navbar-body a:hover{
 	color: #ffffff;
+	text-decoration: none;
 }
 .brand{
 	margin-left: -20px;
 	font-size: 20px;
 	padding: 10px 20px 10px !important;
-	color: #ffffff;
+	color: #ffffff !important;
+	text-decoration: none;
 }
 .body-main{
 	margin-top: 50px;

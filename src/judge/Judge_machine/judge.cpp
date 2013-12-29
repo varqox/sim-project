@@ -9,13 +9,6 @@
 
 using namespace std;
 
-void remove_trailing_spaces(string& str)
-{
-	string::iterator erase_begin=str.end();
-	while(erase_begin!=str.begin() && isspace(*(erase_begin-1))) --erase_begin;
-	str.erase(erase_begin, str.end());
-}
-
 string f_time(int a)
 {
 	string w;
@@ -31,7 +24,7 @@ return w;
 
 string task::check_on_test(const string& test, const string& time_limit)
 {
-	string command="ulimit -v "+this->memory_limit+"; timeout "+time_limit+" chroot --userspec=1001 chroot/ ./exec.e < "+this->_name+"tests/"+test+".in > "+outf_name+" ", output="<td>";
+	string command="ulimit -v "+this->memory_limit+"; timeout "+time_limit+" chroot --userspec=1001 chroot/ ./"+this->exec+" < "+this->_name+"tests/"+test+".in > "+outf_name+" ", output="<td>";
 #ifdef SHOW_LOGS
 	cerr << command << endl;
 #endif
@@ -56,60 +49,24 @@ string task::check_on_test(const string& test, const string& time_limit)
 	}
 	else // checking answer
 	{
-		fstream out(outf_name.c_str(), ios_base::in), ans((this->_name+"tests/"+test+".out").c_str(), ios_base::in);
-		if(!out.good() && !ans.good())
-		{
-			output+="<td style=\"background: #ff7b7b\">Evaluation failure</td>\n<td>";
-			goto end_part;
-		}
-		deque<string> out_in, ans_in;
-		string out_tmp, ans_tmp;
-		while(out.good() && ans.good())
-		{
-			getline(out, out_tmp);
-			getline(ans, ans_tmp);
-			remove_trailing_spaces(out_tmp);
-			remove_trailing_spaces(ans_tmp);
-			out_in.push_back(out_tmp);
-			ans_in.push_back(ans_tmp);
-		}
-		while(!out_in.empty() && out_in.back().empty()) out_in.pop_back();
-		while(!ans_in.empty() && ans_in.back().empty()) ans_in.pop_back();
-		int line=-1;
-		while(++line<out_in.size() && line<ans_in.size())
-			if(ans_in[line]!=out_in[line])
-			{
-				output+="<td class=\"wa\">Wrong answer</td>\n<td>";
-				this->min_group_ratio=0;
-				goto end_part;
-				/*cout << test << ": Wrong! time - " << fixed;
-				cout.precision(3);
-				cout << cl << "s >> line: " << line+1 << endl;
-				if(wrongs_info)
-				{
-					cout << "Get:\n'" << out_in[line] << "'\nExpected:\n'" << ans_in[line] << '\'' << endl;;
-				}
-				remove(this->outf_name.c_str());
-				return 1;*/
-			}
-		if(ans_in.size()>out_in.size())
+		int judge_status=system((this->checker+this->_name.substr(2)+"tests/"+test+".in "+this->_name.substr(2)+"tests/"+test+".out /judge/"+this->outf_name).c_str())/256;
+	#ifdef SHOW_LOGS
+		cerr << '\t' << this->checker+this->_name.substr(2)+"tests/"+test+".in "+this->_name.substr(2)+"tests/"+test+".out /judge/"+this->outf_name << endl;
+		cerr << "Checker return: " << judge_status << endl;
+	#endif
+		if(judge_status==0)
+			output+="<td class=\"ok\">OK</td>\n<td>";
+		else if(judge_status==1)
 		{
 			output+="<td class=\"wa\">Wrong answer</td>\n<td>";
 			this->min_group_ratio=0;
-			goto end_part;
-			/*cout << test << ": Wrong! time - " << fixed;
-			cout.precision(3);
-			cout << cl << "s >> line: " << line+1 << endl;
-			if(wrongs_info)
-			{
-				cout << "Get:\n'EOF'\nExpected:\n'" << ans_in[line] << '\'' << endl;
-			}
-			remove(this->outf_name.c_str());
-			return 1;*/
 		}
-		output+="<td class=\"ok\">OK</td>\n<td>";
+		else
+		{
+			output+="<td style=\"background: #ff7b7b\">Evaluation failure</td>\n<td>";
+			this->min_group_ratio=0;
+		}
 	} // end of checking answer
-end_part:
 	output+=f_time(static_cast<int>(cl*100));
 	output+="/";
 	output+=f_time(static_cast<int>(dtime_limit*100));
@@ -126,19 +83,34 @@ end_part:
 return output;
 }
 
-string task::judge()
+string task::judge(const string& exec_name)
 {
+	this->exec=exec_name;
 	fstream config((this->_name+"conf.cfg").c_str(), ios::in);
 #ifdef SHOW_LOGS
 	cerr << "Openig file: " << this->_name << "conf.cfg" << endl;
 #endif
-	if(!config.good()) return "<pre>Judge Error</pre>";
+	if(!config.good())
+		return "<pre>Judge Error</pre>";
 #ifdef SHOW_LOGS
 	cerr << "Success!" << endl;
 #endif
-	string trashes;
+	string trashes, checker_name;
 	getline(config, trashes); // Task tag
 	getline(config, trashes); // Task name
+	// Checker
+	config >> checker_name;
+	string checker_exec=string(tmp_dir)+"checker";
+#ifdef SHOW_LOGS
+	cerr << checker_exec << endl;
+#endif
+	if(system(("timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null").c_str())!=0)
+		return "<pre>Judge Error (checker compilation)</pre>";
+#ifdef SHOW_LOGS
+	cerr << "Compilation command: "  << "timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null" << endl;
+#endif
+	this->checker="timeout 20 chroot --userspec=1001 ../ /judge/"+checker_exec+" ";
+	// Rest
 	config >> this->memory_limit;
 	string out="<table style=\"margin-top: 5px\" class=\"table results\">\n<thead>\n<tr>\n<th style=\"min-width: 70px\">Test</th>\n<th style=\"min-width: 180px\">Result</th>\n<th style=\"min-width: 90px\">Time</th>\n<th style=\"min-width: 60px\">Result</th>\n</tr>\n</thead>\n<tbody>\n";
 	long long max_score=0, total_score=0, group_score;
@@ -172,31 +144,5 @@ string task::judge()
 		}
 	}
 	out+="</tbody>\n</table>";
-	/*this->_total_time=this->_max_time=0;
-	this->_longest_test="";
-	vector<string>().swap(this->_test_names);
-	vector<string>().swap(this->WA);
-	bool show_wrongs_info=argc!=1;
-	if(argc==1) this->make_list_of_tests();
-	else
-	for(int i=1; i<argc; ++i)
-		this->_test_names.push_back(argv[i]);
-	for(vector<string>::iterator current_test=this->_test_names.begin(); current_test!=this->_test_names.end(); ++current_test)
-	{
-		if(this->check_on_test(*current_test, argv[0], show_wrongs_info))
-			this->WA.push_back(*current_test);
-	}
-	if(!this->WA.empty())
-	{
-		cout << "Wrong tests: " << this->WA.front();
-		for(vector<string>::iterator i=this->WA.begin()+1; i!=this->WA.end(); ++i)
-			cout << ", " << *i;
-		cout << endl;
-	}
-	cout << "Total time - " << fixed;
-	cout.precision(3);
-	cout << this->_total_time << "s\nMax time - " << fixed;
-	cout.precision(3);
-	cout << this->_max_time << "s : " << this->_longest_test << endl;*/
-return "<pre>Score: "+myto_string(total_score)+"/"+myto_string(max_score)+"\nStatus: Judged</pre>\n"+out;
+	return "<pre>Score: "+myto_string(total_score)+"/"+myto_string(max_score)+"\nStatus: Judged</pre>\n"+out;
 }

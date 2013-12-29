@@ -38,7 +38,6 @@ namespace reports_queue
 		reports.clear();
 		DIR* directory;
 		dirent* current_file;
-		int	name_lenght;
 		if((directory=opendir(QUEUE_DIR)))
 			while((current_file=readdir(directory)))
 				if(*current_file->d_name!='.')

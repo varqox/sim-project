@@ -1,10 +1,10 @@
 #include "main.hpp"
 #include "judge.hpp"
 #include <unistd.h> // getpid()
-#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <csignal>
+#include <dirent.h>
 
 using namespace std;
 
@@ -77,10 +77,10 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 	template_back.assign(file_content.begin()+finish, file_content.end());
 }
 
-set<string> temporary_files;
+temporary_directory tmp_dir("judge_machine.XXXXXX\0");
 string *public_report_name, *public_report_front, *public_report_back;
 
-void control_exit(int ___nothing)
+void control_exit(int ___nothing=0)
 {
 	// Repair status of current report
 	fstream report;
@@ -90,13 +90,9 @@ void control_exit(int ___nothing)
 		report.close();
 	}
 #ifdef SHOW_LOGS
-	cerr << "Removing temporary files" << endl;
+	cerr << "Removing temporary directory" << endl;
 #endif
-	while(!temporary_files.empty())
-	{
-		remove(temporary_files.begin()->c_str());
-		temporary_files.erase(temporary_files.begin());
-	}
+	remove_r(tmp_dir);
 	exit(1);
 }
 
@@ -123,6 +119,7 @@ int main(int argc, char** argv)
 	signal(_NSIG, control_exit);
 	// check if this process isn't oldest
 	if(system(("if test `pgrep -x --oldest judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
+	// checking reports
 	while(!reports_queue::empty())
 	{
 	#ifdef SHOW_LOGS
@@ -142,7 +139,15 @@ int main(int argc, char** argv)
 		public_report_front=&report_front;
 		public_report_back=&report_back;
 		fstream report;
-		if(!compile::run(report_id, "exec.e"))
+		char exec[]="chroot/exec.XXXXXX";
+		if(-1==mkstemp(exec))
+		{
+			cerr << "Cannot create exec file in chroot/";
+			control_exit();
+		}
+		else
+			remove(exec);
+		if(!compile::run(report_id, exec))
 		{
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{
@@ -158,13 +163,13 @@ int main(int argc, char** argv)
 				report.close();
 			}
 			task rated_task("../tasks/"+task_id);
-			string tmp=rated_task.judge();
+			string tmp=rated_task.judge(string(exec+7, exec+18));
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{
 				report << report_front << tmp << report_back;
 				report.close();
 			}
-			remove("chroot/exec.e");
+			remove(exec);
 		}
 		reports_queue::pop();
 	}
