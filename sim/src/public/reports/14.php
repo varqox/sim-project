@@ -97,7 +97,7 @@ Status: Judged</pre>
 <tr>
 <td>bar3c</td>
 <td class="wa">Wrong answer</td>
-<td>0.01/1.00</td>
+<td>0.00/1.00</td>
 </tr>
 <tr>
 <td>bar3d</td>
@@ -145,7 +145,7 @@ Status: Judged</pre>
 <tr>
 <td>bar6c</td>
 <td class="wa">Wrong answer</td>
-<td>0.05/1.00</td>
+<td>0.03/1.00</td>
 </tr>
 <tr>
 <td>bar7a</td>
@@ -161,7 +161,7 @@ Status: Judged</pre>
 <tr>
 <td>bar7c</td>
 <td class="wa">Wrong answer</td>
-<td>0.09/1.00</td>
+<td>0.08/1.00</td>
 </tr>
 <tr>
 <td>bar7d</td>
@@ -203,7 +203,7 @@ Status: Judged</pre>
 <tr>
 <td>bar9d</td>
 <td class="wa">Wrong answer</td>
-<td>0.27/3.00</td>
+<td>0.26/3.00</td>
 </tr>
 <tr>
 <td>bar10a</td>
