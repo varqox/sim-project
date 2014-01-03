@@ -1,6 +1,8 @@
 #include "main.hpp"
 #include <vector>
 
+#pragma once
+
 class task
 {
 	std::string _name, outf_name, memory_limit, checker, exec;
