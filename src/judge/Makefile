@@ -5,6 +5,8 @@ export LINK
 export CFLAGS
 export CXXFLAGS
 export LFLAGS
+
+# Shell commands
 export RM
 
 .PHONY: all clean force-clean judge_machine CTH
