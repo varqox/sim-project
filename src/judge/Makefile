@@ -1,11 +1,11 @@
 # Compile commands
-CC = gcc
-CXX = g++
-LINK = g++
-CFLAGS = -O3
-CXXFLAGS = -O3 -c
-LFLAGS = -s -O3
-RM = rm -f
+export CC
+export CXX
+export LINK
+export CFLAGS
+export CXXFLAGS
+export LFLAGS
+export RM
 
 .PHONY: all clean force-clean judge_machine CTH
 

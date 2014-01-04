@@ -1,17 +1,27 @@
 # Compile commands
-CC = gcc
-CXX = g++
-LINK = g++
-CFLAGS = -O3
-CXXFLAGS = -O3 -c
-LFLAGS = -s -O3
+ifeq ($(shell clang > /dev/null 2> /dev/null; echo $$?), $(shell echo 1))
+export CC = clang
+else
+export CC = gcc
+endif
+ifeq ($(shell clang++ > /dev/null 2> /dev/null; echo $$?), $(shell echo 1))
+export CXX = clang++
+export LINK = clang++
+else
+export CXX = g++
+export LINK = g++
+endif
+
+export CFLAGS = -O3
+export CXXFLAGS = -O3 -c
+export LFLAGS = -s -O3
 
 # Shell commands
-MV = mv -f
-CP = cp -f -r
-UPDATE = $(CP) -u
-RM = rm -f
-MKDIR = mkdir -p
+export MV = mv -f
+export CP = cp -f -r
+export UPDATE = $(CP) -u
+export RM = rm -f
+export MKDIR = mkdir -p
 
 # Installation settings
 INSTALL_DIR = $(shell pwd)/../build/
@@ -27,7 +37,7 @@ OUTPUT_DIR=$(TMP_OUTPUT_DIR)
 endif
 
 # Rest
-.PHONY: all install clean force-clean package help
+.PHONY: all install clean dist-clean package help
 
 all: chmod-default
 	make -C judge $(MFLAGS)
@@ -61,6 +71,6 @@ clean:
 	$(RM) *.o chmod-default
 	make clean -C judge $(MFLAGS)
 
-force-clean: clean
-	make force-clean -C judge $(MFLAGS)
+dist-clean: clean
+	make dist-clean -C judge $(MFLAGS)
 	$(RM) sim.tar.gz
