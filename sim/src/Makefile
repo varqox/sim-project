@@ -12,9 +12,9 @@ export CXX = g++
 export LINK = g++
 endif
 
-export CFLAGS = -O3
-export CXXFLAGS = -O3 -c
-export LFLAGS = -s -O3
+export CFLAGS = -Wall -O3 -c
+export CXXFLAGS = -Wall -O3 -c
+export LFLAGS = -Wall -s -O3
 
 # Shell commands
 export MV = mv -f
