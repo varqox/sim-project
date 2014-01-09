@@ -12,9 +12,9 @@ export CXX = g++
 export LINK = g++
 endif
 
-export CFLAGS = -Wall -O3 -c
-export CXXFLAGS = -Wall -O3 -c
-export LFLAGS = -Wall -s -O3
+export CFLAGS = -Wall -W -Wabi -Weffc++ -Wformat -Wshadow -Wsequence-point -Wuninitialized -Wfloat-equal -O3 -c
+export CXXFLAGS = -Wall -W -Wabi -Weffc++ -Wformat -Wshadow -Wsequence-point -Wuninitialized -Wfloat-equal -O3 -c
+export LFLAGS = -Wall -W -Wabi -Weffc++ -Wformat -Wshadow -Wsequence-point -Wuninitialized -Wfloat-equal -s -O3
 
 # Shell commands
 export MV = mv -f

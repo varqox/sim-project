@@ -35,7 +35,7 @@ return w;
 string make_safe_php_string(const string& str)
 {
 	string out;
-	for(int i=0; i<str.size(); ++i)
+	for(unsigned i=0; i<str.size(); ++i)
 	{
 		if(str[i]=='\'') out+="\\'";
 		else if(str[i]=='\\') out+="\\\\";
@@ -47,7 +47,7 @@ return out;
 string make_safe_html_string(const string& str)
 {
 	string out;
-	for(int i=0; i<str.size(); ++i)
+	for(unsigned i=0; i<str.size(); ++i)
 	{
 		if(str[i]=='<') out+="&lt;";
 		if(str[i]=='>') out+="&gt;";
@@ -57,9 +57,9 @@ string make_safe_html_string(const string& str)
 return out;
 }
 
-deque<int> kmp(const string& text, const string& pattern)
+deque<unsigned> kmp(const string& text, const string& pattern)
 {
-	deque<int> out;
+	deque<unsigned> out;
 	int *P=new int[pattern.size()], k=0, pl=pattern.size();
 	P[0]=0;
 	for(int i=1; i<pl; ++i)
