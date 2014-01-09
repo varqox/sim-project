@@ -67,7 +67,7 @@ void aho::find(const vector<string>& patterns, const string& text)
 	for(int i=patterns.size()-1; i>=0; --i) // add patterns to trie
 	{
 		tmp=this->trie.add_word(patterns[i], i);
-		if(tmp==i) this->fin[i]=new vector<unsigned>;
+		if(tmp==static_cast<unsigned>(i)) this->fin[i]=new vector<unsigned>;
 		else this->fin[i]=this->fin[tmp];
 	}
 	this->trie.add_fails(); // add fails edges

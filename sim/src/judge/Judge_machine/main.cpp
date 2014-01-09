@@ -12,9 +12,9 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 {
 	template_front=template_back="";
 	string file_content=file_get_contents(file);
-	deque<int> div_begins=kmp(file_content, "<div"), div_ends=kmp(file_content, "</div>");
+	deque<unsigned> div_begins=kmp(file_content, "<div"), div_ends=kmp(file_content, "</div>");
 	unsigned start=0, deep=1, finish=file_content.size(); // Deep od <div>
-	for(int i=0; i<div_begins.size(); ++i)
+	for(unsigned i=0; i<div_begins.size(); ++i)
 	{
 	#ifdef SHOW_LOGS
 		cerr << div_begins[i] << " " << string(file_content.begin()+div_begins[i]+1, file_content.begin()+div_begins[i]+24) << endl;
@@ -80,7 +80,7 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 temporary_directory tmp_dir("judge_machine.XXXXXX\0");
 string *public_report_name, *public_report_front, *public_report_back;
 
-void control_exit(int ___nothing=0)
+void control_exit(int=0)
 {
 	// Repair status of current report
 	fstream report;
@@ -96,7 +96,7 @@ void control_exit(int ___nothing=0)
 	exit(1);
 }
 
-int main(int argc, char** argv)
+int main()
 {
 	// signal control
 	signal(SIGHUP, control_exit);
