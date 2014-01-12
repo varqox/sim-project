@@ -16,6 +16,12 @@ public:
 	{
 		memcpy(this->_M_str, _str, strlen(_str)+1);
 	}
+	const_string(const const_string& _cstr): _M_str(_cstr._M_str) {}
+	const_string& operator=(const const_string& _cstr)
+	{
+		this->_M_str=_cstr._M_str;
+	return *this;
+	}
 	~const_string(){}
 
 	const char* str() const
@@ -90,7 +96,7 @@ class aho
 			int E[256], fail, long_sh_pat, pattern_id; // fail pointer, max shorter pattern, pattern id
 			bool is_pattern; // is pattern end in this vertex
 			unsigned char character; // this node character
-			node(unsigned char letter=0): is_pattern(false), character(letter)
+			node(unsigned char letter=0): fail(), long_sh_pat(), pattern_id(), is_pattern(false), character(letter)
 			{
 				for(int i=0; i<256; ++i)
 					E[i]=0;
@@ -117,6 +123,9 @@ class aho
 	vector<vector<unsigned>* > fin; // finding patterns
 
 public:
+	aho(): trie(), fin(){}
+	~aho(){}
+
 	vector<vector<unsigned>* >::size_type size()
 	{return this->fin.size();}
 
@@ -146,7 +155,7 @@ class special_aho
 			bool is_pattern; // is pattern end in this vertex
 			// unsigned char color; // highlight color
 			unsigned char character; // this node character
-			node(unsigned char letter=0): is_pattern(false), character(letter)
+			node(unsigned char letter=0): fail(), long_sh_pat(), pattern_id(), is_pattern(false), character(letter)
 			{
 				for(int i=0; i<256; ++i)
 					E[i]=0;
@@ -174,6 +183,9 @@ class special_aho
 	vector<int> fin; // finding patterns
 
 public:
+	special_aho(): trie(), patterns(), fin(){}
+	~special_aho(){}
+
 	vector<int>::size_type size()
 	{return this->fin.size();}
 
