@@ -21,6 +21,8 @@ std::string file_get_contents(const std::string& file_name);
 class temporary_directory
 {
 	char* _M_name;
+	temporary_directory(const temporary_directory&): _M_name(NULL){}
+	temporary_directory& operator=(const temporary_directory&){return *this;}
 public:
 	explicit temporary_directory(const char* new_name): _M_name(new char[strlen(new_name)+2])
 	{
@@ -59,8 +61,8 @@ class compile
 {
 private:
 	std::string compile_errors, file_compile_errors;
-	compile(): file_compile_errors(std::string(tmp_dir)+"compile_errors"){}
-	compile(const compile&){}
+	compile(): compile_errors(),file_compile_errors(std::string(tmp_dir)+"compile_errors"){}
+	compile(const compile&): compile_errors(),file_compile_errors(){}
 	~compile()
 	{
 		remove(file_compile_errors.c_str());;

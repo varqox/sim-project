@@ -11,7 +11,7 @@ class task
 	std::string check_on_test(const std::string& test, const std::string& time_limit);
 
 public:
-	task(const std::string& str): _name(str)
+	task(const std::string& str): _name(str), outf_name(), memory_limit(), checker(), exec(),  min_group_ratio()
 	{
 		if(*this->_name.rbegin()!='/') this->_name+='/';
 		this->outf_name=std::string(tmp_dir)+"exec_out";
