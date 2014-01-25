@@ -66,7 +66,8 @@ inline string safe_character(char _c)
 	if(_c=='<') return "&lt";
 	if(_c=='>') return "&gt";
 	if(_c=='&') return "&amp";
-	return string(&_c, 1);
+	if(_c=='\r') return "";
+	return string(1, _c);
 }
 
 inline string safe_string(const string& str)
