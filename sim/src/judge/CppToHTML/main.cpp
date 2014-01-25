@@ -29,7 +29,7 @@ int main(int argc, char** argv)
 			getline(file, tmp);
 			input+=tmp;
 		}
-		cout << "</pre>\n</td>\n<td style=\"padding: 0\">\n<pre style=\"text-align: left;margin: 0;padding: 5px 5px 5px 1em\">\n";
+		cout << "</pre>\n</td>\n<td style=\"padding: 0\">\n<pre style=\"text-align: left;tab-size: 4;margin: 0;padding: 5px 5px 5px 1em\">\n";
 		coloring::color_code(input, cout);
 		cout << "</pre></td></tr></tbody></table>";
 	}
