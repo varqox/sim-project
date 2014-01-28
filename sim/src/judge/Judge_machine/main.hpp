@@ -27,31 +27,31 @@ public:
 	explicit temporary_directory(const char* new_name): _M_name(new char[strlen(new_name)+2])
 	{
 		unsigned size=strlen(new_name);
-		memcpy(this->_M_name, new_name, size);
-		this->_M_name[size]=this->_M_name[size+1]='\0';
-		if(NULL==mkdtemp(this->_M_name))
+		memcpy(_M_name, new_name, size);
+		_M_name[size]=_M_name[size+1]='\0';
+		if(NULL==mkdtemp(_M_name))
 		{
 			struct exception : std::exception
 			{
-				const char* what() const _GLIBCXX_USE_NOEXCEPT {return "Cannot create tmp directory\n";}
+				const char* what() const throw() {return "Cannot create tmp directory\n";}
 			};
 			throw exception();
 		}
-		this->_M_name[size]='/';
-		chmod(this->_M_name, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+		_M_name[size]='/';
+		chmod(_M_name, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	}
 
 	~temporary_directory()
 	{
-		remove_r(this->_M_name);
-		delete[] this->_M_name;
+		remove_r(_M_name);
+		delete[] _M_name;
 	}
 
 	const char* name() const
-	{return this->_M_name;}
+	{return _M_name;}
 
 	operator const char*() const
-	{return this->_M_name;}
+	{return _M_name;}
 };
 
 extern temporary_directory tmp_dir;
@@ -75,10 +75,10 @@ public:
 	bool operator()(const std::string& report_id, const std::string& exec);
 
 	const char* NameOfCompileErrorsFile()
-	{return this->file_compile_errors.c_str();}
+	{return file_compile_errors.c_str();}
 
 	const std::string& GetCompileErrors() const
-	{return this->compile_errors;}
+	{return compile_errors;}
 };
 
 // reports_queue.cpp

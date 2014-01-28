@@ -13,21 +13,21 @@ class task
 public:
 	task(const std::string& str): _name(str), outf_name(), memory_limit(), checker(), exec(),  min_group_ratio()
 	{
-		if(*this->_name.rbegin()!='/') this->_name+='/';
-		this->outf_name=std::string(tmp_dir)+"exec_out";
+		if(*_name.rbegin()!='/') _name+='/';
+		outf_name=std::string(tmp_dir)+"exec_out";
 	}
 
 	~task()
 	{
-		remove(this->outf_name.c_str());
+		remove(outf_name.c_str());
 	}
 
 	const std::string& name() const
-	{return this->_name;}
+	{return _name;}
 
 	void swap(task& _t)
 	{
-		this->_name.swap(_t._name);
+		_name.swap(_t._name);
 	}
 
 	std::string judge(const std::string& exec_name);

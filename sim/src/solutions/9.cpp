@@ -109,7 +109,7 @@ namespace unlimited_int
         num(const num& _n): w(_n.w){}
         lli size() const;
         void kas0();
-        void swap(num& _n){this->w.swap(_n.w);}
+        void swap(num& _n){w.swap(_n.w);}
         num& operator++();
         num& operator--();
         num& operator+=(const num&);
@@ -135,7 +135,7 @@ namespace unlimited_int
 
     lli unlint::num::size() const
     {
-        lli w=(this->w.size()-1)*LEN, end=this->w[this->w.size()-1];
+        lli w=(w.size()-1)*LEN, end=w[w.size()-1];
         if(end<1000000000LL)
         {
             if(end<10000LL)
@@ -207,68 +207,68 @@ namespace unlimited_int
 
     void unlint::num::kas0()
     {
-        vector<lli>::iterator i=this->w.end()-1;
-        while(i!=this->w.begin() && *i==0) --i;
+        vector<lli>::iterator i=w.end()-1;
+        while(i!=w.begin() && *i==0) --i;
         ++i;
-        this->w.erase(i, this->w.end());
+        w.erase(i, w.end());
     }
 
     unlint::num& unlint::num::operator++()
     {
-        vector<lli>::iterator i=this->w.begin();
-        while(i!=this->w.end())
+        vector<lli>::iterator i=w.begin();
+        while(i!=w.end())
         {
             ++*i;
             if(*i<BASE) return *this;
             *i-=BASE;
             ++i;
         }
-        this->w.push_back(1);
+        w.push_back(1);
     return *this;
     }
 
     unlint::num& unlint::num::operator--()
     {
-        vector<lli>::iterator i=this->w.begin();
-        while(i!=this->w.end())
+        vector<lli>::iterator i=w.begin();
+        while(i!=w.end())
         {
             --*i;
             if(*i>=0) break;
             *i+=BASE;
             ++i;
         }
-        this->kas0();
+        kas0();
     return *this;
     }
 
     unlint::num& unlint::num::operator+=(const num& _n)
     {
         unsigned int s=_n.w.size(), i=0;
-        if(s>this->w.size()) this->w.resize(s);
+        if(s>w.size()) w.resize(s);
         bool add=false;
         for(; i<s; ++i)
         {
-            this->w[i]+=_n.w[i];
-            if(add) ++this->w[i];
-            if(this->w[i]>=BASE)
+            w[i]+=_n.w[i];
+            if(add) ++w[i];
+            if(w[i]>=BASE)
             {
-                this->w[i]-=BASE;
+                w[i]-=BASE;
                 add=true;
             }
             else add=false;
         }
         if(add)
         {
-            if(i==this->w.size()) this->w.push_back(add);
+            if(i==w.size()) w.push_back(add);
             else
             {
-                for(;i<this->w.size(); ++i)
+                for(;i<w.size(); ++i)
                 {
-                    ++this->w[i];
-                    if(this->w[i]<BASE) break;
-                    this->w[i]-=BASE;
+                    ++w[i];
+                    if(w[i]<BASE) break;
+                    w[i]-=BASE;
                 }
-                if(i==this->w.size()) this->w.push_back(add);
+                if(i==w.size()) w.push_back(add);
             }
         }
     return *this;
@@ -280,34 +280,34 @@ namespace unlimited_int
         bool add=false;
         for(; i<s; ++i)
         {
-            this->w[i]-=_n.w[i];
-            if(add) --this->w[i];
-            if(this->w[i]<0)
+            w[i]-=_n.w[i];
+            if(add) --w[i];
+            if(w[i]<0)
             {
-                this->w[i]+=BASE;
+                w[i]+=BASE;
                 add=true;
             }
             else add=false;
         }
         if(add)
         {
-            s=this->w.size();
+            s=w.size();
             for(;i<s; ++i)
             {
-                --this->w[i];
-                if(this->w[i]>=0) break;
-                this->w[i]+=BASE;
+                --w[i];
+                if(w[i]>=0) break;
+                w[i]+=BASE;
             }
         }
-        this->kas0();
+        kas0();
     return *this;
     }
 
     unlint::num& unlint::num::operator*=(const lli& _lcb)
     {
-        if(_lcb==0){vector<lli>(1).swap(this->w);return *this;}
+        if(_lcb==0){vector<lli>(1).swap(w);return *this;}
         lli p1=_lcb/BS2, p2=_lcb-p1*BS2, add=0, pom1, pom2, pom3, add1;
-        for(vector<lli>::iterator i=this->w.begin(); i!=this->w.end(); ++i)
+        for(vector<lli>::iterator i=w.begin(); i!=w.end(); ++i)
         {
             pom1=*i/BS2;
             pom2=*i-pom1*BS2;
@@ -324,43 +324,43 @@ namespace unlimited_int
             }
             add+=pom3+pom1*p1;
         }
-        if(add) this->w.push_back(add);
+        if(add) w.push_back(add);
     return *this;
     }
 
     void unlint::num::gen_mod(vector<num::fmod>& _k) const
     {
-        int wl=this->w.size();
+        int wl=w.size();
         _k.resize(wl);
         for(int i=0; i<wl; ++i)
         {
-            _k[i].pom1=this->w[i]/BS2;
-            _k[i].pom2=this->w[i]-_k[i].pom1*BS2;
+            _k[i].pom1=w[i]/BS2;
+            _k[i].pom2=w[i]-_k[i].pom1*BS2;
         }
     }
 
     unlint::num& unlint::num::mult(const lli& _lcb, const vector<num::fmod>& _t)
     {
-        if(_lcb==0){vector<lli>(1).swap(this->w);return *this;}
+        if(_lcb==0){vector<lli>(1).swap(w);return *this;}
         int tl=_t.size();
-        this->w.resize(tl);
+        w.resize(tl);
         lli p1=_lcb/BS2, p2=_lcb-p1*BS2, add=0, pom3, add1;
         for(int i=0; i<tl; ++i)
         {
-            this->w[i]=add+p2*_t[i].pom2;
+            w[i]=add+p2*_t[i].pom2;
             add1=add=0;
-            if(this->w[i]>=BASE){++add;this->w[i]-=BASE;}
+            if(w[i]>=BASE){++add;w[i]-=BASE;}
             add1=_t[i].pom1*p2+_t[i].pom2*p1;
             pom3=add1/BS2;
-            this->w[i]+=(add1-pom3*BS2)*BS2;
-            while(this->w[i]>=BASE)
+            w[i]+=(add1-pom3*BS2)*BS2;
+            while(w[i]>=BASE)
             {
                 ++add;
-                this->w[i]-=BASE;
+                w[i]-=BASE;
             }
             add+=pom3+_t[i].pom1*p1;
         }
-        if(add) this->w.push_back(add);
+        if(add) w.push_back(add);
     return *this;
     }
 
@@ -374,12 +374,12 @@ namespace unlimited_int
 
     void unlint::num::to_old_type(vector<int>& _n) const
     {
-        int wl=this->w.size();
+        int wl=w.size();
         _n.resize(wl<<1);
         for(int i=0; i<wl; ++i)
         {
-            _n[(i<<1)+1]=this->w[i]/BS2;
-            _n[(i<<1)]=this->w[i]-_n[(i<<1)+1]*BS2;
+            _n[(i<<1)+1]=w[i]/BS2;
+            _n[(i<<1)]=w[i]-_n[(i<<1)+1]*BS2;
         }
         old_kas0(_n);
     }
@@ -387,7 +387,7 @@ namespace unlimited_int
     unlint::num& unlint::num::from_old_type(vector<int>& _n)
     {
         int nl=_n.size();
-        this->w.resize((nl+1)>>1);
+        w.resize((nl+1)>>1);
         for(int i=0; i<nl; i+=2)
             w[i>>1]=_n[i];
         for(int i=1; i<nl; i+=2)
@@ -583,7 +583,7 @@ namespace unlimited_int
         /*num lol=0, _n;
         vector<num::fmod> t;
         b.gen_mod(t);
-        for(unsigned int q=0; q<this->w.size(); ++q)
+        for(unsigned int q=0; q<w.size(); ++q)
         {
             _n.mult(w[q], t);//k.w.insert(k.w.begin(),i,0);//lol+=k;
             unsigned int s=_n.w.size(), i=0;
@@ -615,8 +615,8 @@ namespace unlimited_int
                 }
             }
         }
-        this->swap(lol);
-        this->kas0();*/
+        swap(lol);
+        kas0();*/
     return *this;
     }
 
@@ -853,27 +853,27 @@ namespace unlimited_int
     unlint::num& unlint::num::operator/=(const num& _n)
     {
         vector<int> a,b;
-        this->to_old_type(a);
+        to_old_type(a);
         _n.to_old_type(b);
         div(a,b);
-        this->from_old_type(a);
+        from_old_type(a);
     return *this;
     }
 
     unlint::num& unlint::num::operator%=(const num& _n)
     {
         vector<int> a,b;
-        this->to_old_type(a);
+        to_old_type(a);
         _n.to_old_type(b);
         mod(a,b);
-        this->from_old_type(a);
+        from_old_type(a);
     return *this;
     }
 
     unlint::num& unlint::num::nwd(const num& _n)
     {
         vector<int> a, b, c;
-        this->to_old_type(a);
+        to_old_type(a);
         _n.to_old_type(b);
         while(!(b.size()==1 && b[0]==0))
         {
@@ -884,7 +884,7 @@ namespace unlimited_int
         }
         vector<int>().swap(b);
         vector<int>().swap(c);
-        this->from_old_type(a);
+        from_old_type(a);
     return *this;
     }
 
@@ -892,7 +892,7 @@ namespace unlimited_int
     {
         if(_n.w.size()==1 && _n.w[0]==0)
         {
-            vector<lli>(1,1).swap(this->w);
+            vector<lli>(1,1).swap(w);
             return *this;
         }
         vector<lli> k(_n.w);
@@ -913,8 +913,8 @@ namespace unlimited_int
         }
         while(!bin.empty())
         {
-            this->operator*=(*this);
-            if(bin.top()) this->operator*=(pow1);
+            operator*=(*this);
+            if(bin.top()) operator*=(pow1);
             bin.pop();
         }
     return *this;
@@ -922,14 +922,14 @@ namespace unlimited_int
 
     bool unlint::num::operator<(const num& _n) const
     {
-        int i=this->w.size();
+        int i=w.size();
         if(static_cast<unsigned int>(i)<_n.w.size()) return true;
         else if(static_cast<unsigned int>(i)>_n.w.size()) return false;
         --i;
-        while(i>=0 && this->w[i]==_n.w[i])
+        while(i>=0 && w[i]==_n.w[i])
             --i;
         if(i<0) return false;
-        if(this->w[i]>_n.w[i]) return false;
+        if(w[i]>_n.w[i]) return false;
     return true;
     }
 
@@ -945,15 +945,15 @@ namespace unlimited_int
 
     bool unlint::num::operator>=(const num& _n) const
     {
-    return !this->operator<(_n);
+    return !operator<(_n);
     }
 
     bool unlint::num::operator==(const num& _n) const
     {
-        int i=this->w.size();
+        int i=w.size();
         if(static_cast<unsigned int>(i)!=_n.w.size()) return false;
         --i;
-        while(i>=0 && this->w[i]==_n.w[i])
+        while(i>=0 && w[i]==_n.w[i])
             --i;
         if(i<0) return true;
     return false;
@@ -961,7 +961,7 @@ namespace unlimited_int
 
     bool unlint::num::operator!=(const num& _n) const
     {
-    return !this->operator==(_n);
+    return !operator==(_n);
     }
 
     string to_string(lli a)
@@ -993,12 +993,12 @@ namespace unlimited_int
     {
         if(k<0)
         {
-            this->z=false;
+            z=false;
             k=-k;
         }
         lli f=k/BASE;
-        if(f>0) this->w->w.push_back(f);
-        this->w->w[0]=k-f*BASE;
+        if(f>0) w->w.push_back(f);
+        w->w[0]=k-f*BASE;
     }
 
     unlint::unlint(const char* cstr): z(true), w(new num)
@@ -1006,7 +1006,7 @@ namespace unlimited_int
         int lenght=strlen(cstr), begin=0, idx=0;
         lli k;
         if(cstr[0]=='-'){z=false;begin=1;}
-        this->w->w.resize(1+(lenght-begin)/LEN);
+        w->w.resize(1+(lenght-begin)/LEN);
         for(int i=lenght-1; i>=begin; i-=LEN, ++idx)
         {
             k=0;
@@ -1015,10 +1015,10 @@ namespace unlimited_int
                 k*=10;
                 k+=cstr[j]-'0';
             }
-            this->w->w[idx]=k;
+            w->w[idx]=k;
         }
-        this->w->kas0();
-        if(this->w->w.size()==1 && this->w->w[0]==0) this->z=true;
+        w->kas0();
+        if(w->w.size()==1 && w->w[0]==0) z=true;
     }
 
     unlint::unlint(const string& str): z(true), w(new num)
@@ -1026,7 +1026,7 @@ namespace unlimited_int
         int lenght=str.size(), begin=0, idx=0;
         lli k;
         if(str[0]=='-'){z=false;begin=1;}
-        this->w->w.resize(1+(lenght-begin)/LEN);
+        w->w.resize(1+(lenght-begin)/LEN);
         for(int i=lenght-1; i>=begin; i-=LEN, ++idx)
         {
             k=0;
@@ -1035,10 +1035,10 @@ namespace unlimited_int
                 k*=10;
                 k+=str[j]-'0';
             }
-            this->w->w[idx]=k;
+            w->w[idx]=k;
         }
-        this->w->kas0();
-        if(this->w->w.size()==1 && this->w->w[0]==0) this->z=true;
+        w->kas0();
+        if(w->w.size()==1 && w->w[0]==0) z=true;
     }
 
     unlint::unlint(const unlint& uli): z(uli.z), w(new num(*uli.w))
@@ -1051,27 +1051,27 @@ namespace unlimited_int
     }
 
     lli unlint::size() const
-    {return this->w->size();}
+    {return w->size();}
 
     void unlint::swap(unlint& uli)
     {
         bool k;
-        k=this->z;
-        this->z=uli.z;
+        k=z;
+        z=uli.z;
         uli.z=k;
-        this->w->swap(*uli.w);
+        w->swap(*uli.w);
     }
 
     string unlint::str() const
     {
         lli k;
-        bool begin=this->z ? false:true;
-        string str(this->size()+begin, '0');
+        bool begin=z ? false:true;
+        string str(size()+begin, '0');
         if(begin) str[0]='-';
         for(int idx=0, j, i=str.size()-1; i>=begin; i-=LEN, ++idx)
         {
             j=i;
-            k=this->w->w[idx];
+            k=w->w[idx];
             while(k>0)
             {
                 str[j]+=k%10;
@@ -1084,43 +1084,43 @@ namespace unlimited_int
 
     unlint& unlint::operator++()
     {
-        if(this->z) this->w->operator++();
-        else this->w->operator--();
-        if(this->w->w.size()==1 && this->w->w[0]==0) this->z=true;
+        if(z) w->operator++();
+        else w->operator--();
+        if(w->w.size()==1 && w->w[0]==0) z=true;
     return *this;
     }
 
     unlint& unlint::operator--()
     {
-        if(this->w->w.size()==1 && this->w->w[0]==0)
+        if(w->w.size()==1 && w->w[0]==0)
         {
-            this->z=false;
-            this->w->w[0]=1;
+            z=false;
+            w->w[0]=1;
         }
-        else if(this->z) this->w->operator--();
-        else this->w->operator++();
+        else if(z) w->operator--();
+        else w->operator++();
     return *this;
     }
 
     unlint unlint::operator++(int)
     {
         unlint k(*this);
-        if(this->z) this->w->operator++();
-        else this->w->operator--();
-        if(this->w->w.size()==1 && this->w->w[0]==0) this->z=true;
+        if(z) w->operator++();
+        else w->operator--();
+        if(w->w.size()==1 && w->w[0]==0) z=true;
     return k;
     }
 
     unlint unlint::operator--(int)
     {
         unlint k(*this);
-        if(this->w->w.size()==1 && this->w->w[0]==0)
+        if(w->w.size()==1 && w->w[0]==0)
         {
-            this->z=false;
-            this->w->w[0]=1;
+            z=false;
+            w->w[0]=1;
         }
-        else if(this->z) this->w->operator--();
-        else this->w->operator++();
+        else if(z) w->operator--();
+        else w->operator++();
     return k;
     }
 
@@ -1146,18 +1146,18 @@ namespace unlimited_int
 
     unlint& unlint::operator+=(const unlint& _n)
     {
-        if(this->z==_n.z) this->w->operator+=(*_n.w);
+        if(z==_n.z) w->operator+=(*_n.w);
         else
         {
-            if(this->w->operator>(*_n.w))
-                this->w->operator-=(*_n.w);
+            if(w->operator>(*_n.w))
+                w->operator-=(*_n.w);
             else
             {
                 num emp(*_n.w);
-                emp-=*this->w;
-                this->w->swap(emp);
-                if(this->w->w.size()==1 && this->w->w[0]==0) this->z=true;
-                else this->z=!this->z;
+                emp-=*w;
+                w->swap(emp);
+                if(w->w.size()==1 && w->w[0]==0) z=true;
+                else z=!z;
             }
         }
     return *this;
@@ -1185,18 +1185,18 @@ namespace unlimited_int
 
     unlint& unlint::operator-=(const unlint& _n)
     {
-        if(this->z!=_n.z) this->w->operator+=(*_n.w);
+        if(z!=_n.z) w->operator+=(*_n.w);
         else
         {
-            if(this->w->operator>(*_n.w))
-                this->w->operator-=(*_n.w);
+            if(w->operator>(*_n.w))
+                w->operator-=(*_n.w);
             else
             {
                 num emp(*_n.w);
-                emp-=*this->w;
-                this->w->swap(emp);
-                if(this->w->w.size()==1 && this->w->w[0]==0) this->z=true;
-                else this->z=!this->z;
+                emp-=*w;
+                w->swap(emp);
+                if(w->w.size()==1 && w->w[0]==0) z=true;
+                else z=!z;
             }
         }
     return *this;
@@ -1214,10 +1214,10 @@ namespace unlimited_int
 
     unlint& unlint::operator*=(const unlint& _n)
     {
-        if(this->z==_n.z) this->z=true;
-        else this->z=false;
-        this->w->operator*=(*_n.w);
-        if(*this->w==0) this->z=true;
+        if(z==_n.z) z=true;
+        else z=false;
+        w->operator*=(*_n.w);
+        if(*w==0) z=true;
     return *this;
     }
 
@@ -1233,10 +1233,10 @@ namespace unlimited_int
 
     unlint& unlint::operator/=(const unlint& _n)
     {
-        if(this->z==_n.z) this->z=true;
-        else this->z=false;
-        this->w->operator/=(*_n.w);
-        if(*this->w==0) this->z=true;
+        if(z==_n.z) z=true;
+        else z=false;
+        w->operator/=(*_n.w);
+        if(*w==0) z=true;
     return *this;
     }
 
@@ -1250,49 +1250,49 @@ namespace unlimited_int
 
     unlint& unlint::operator%=(const unlint& _n)
     {
-        this->w->operator%=(*_n.w);
-        if(!this->z && !(this->w->w.size()==1 && this->w->w[0]==0)) this->operator+=(_n<0LL ? -_n:_n);
+        w->operator%=(*_n.w);
+        if(!z && !(w->w.size()==1 && w->w[0]==0)) operator+=(_n<0LL ? -_n:_n);
     return *this;
     }
 
     bool unlint::operator>(const unlint& _n) const
     {
-        if(this->z!=_n.z) return this->z;
-        if(this->z) return this->w->operator>(*_n.w);
-    return this->w->operator<(*_n.w);
+        if(z!=_n.z) return z;
+        if(z) return w->operator>(*_n.w);
+    return w->operator<(*_n.w);
     }
 
     bool unlint::operator<(const unlint& _n) const
     {
-        if(this->z!=_n.z) return _n.z;
-        if(this->z) return this->w->operator<(*_n.w);
-    return this->w->operator>(*_n.w);
+        if(z!=_n.z) return _n.z;
+        if(z) return w->operator<(*_n.w);
+    return w->operator>(*_n.w);
     }
 
     bool unlint::operator>=(const unlint& _n) const
     {
         
-        if(this->z!=_n.z) return this->z;
-        if(this->z) return this->w->operator>=(*_n.w);
-    return this->w->operator<=(*_n.w);
+        if(z!=_n.z) return z;
+        if(z) return w->operator>=(*_n.w);
+    return w->operator<=(*_n.w);
     }
 
     bool unlint::operator<=(const unlint& _n) const
     {
-        if(this->z!=_n.z) return _n.z;
-        if(this->z) return this->w->operator<=(*_n.w);
-    return this->w->operator>=(*_n.w);
+        if(z!=_n.z) return _n.z;
+        if(z) return w->operator<=(*_n.w);
+    return w->operator>=(*_n.w);
     }
 
     bool unlint::operator==(const unlint& _n) const
     {
-        if(this->z==_n.z && this->w->operator==(*_n.w)) return true;
+        if(z==_n.z && w->operator==(*_n.w)) return true;
     return false;
     }
 
     bool unlint::operator!=(const unlint& _n) const
     {
-        if(this->z==_n.z && this->w->operator==(*_n.w)) return false;
+        if(z==_n.z && w->operator==(*_n.w)) return false;
     return true;
     }
 
@@ -1300,22 +1300,22 @@ namespace unlimited_int
     {
         if(_n.w->w.size()==1 && _n.w->w[0]==0)
         {
-            this->z=true;
-            vector<lli>(1,1).swap(this->w->w);
+            z=true;
+            vector<lli>(1,1).swap(w->w);
             return *this;
         }
-        else if(this->w->w.size()==1 && this->w->w[0]==1)
+        else if(w->w.size()==1 && w->w[0]==1)
         {
-            if(!this->z && __builtin_ctz(_n.w->w[0])) this->z=true;
+            if(!z && __builtin_ctz(_n.w->w[0])) z=true;
             return *this;
         }
-        if(!this->z && __builtin_ctz(_n.w->w[0])) this->z=true;
+        if(!z && __builtin_ctz(_n.w->w[0])) z=true;
         if(!_n.z)
         {
-            this->z=true;
-            vector<lli>(1,0).swap(this->w->w);
+            z=true;
+            vector<lli>(1,0).swap(w->w);
         }
-        else this->w->pow(*_n.w);
+        else w->pow(*_n.w);
     return *this;
     }
 
@@ -1323,7 +1323,7 @@ namespace unlimited_int
     {
         num mx(1), i(2);
         vector<num> lst;
-        this->w->swap(mx);
+        w->swap(mx);
         while(i<=mx)
         {
             lst.push_back(i);
@@ -1339,8 +1339,8 @@ namespace unlimited_int
             (lst.end()-2)->operator*=(*(--lst.end()));
             lst.pop_back();
         }
-        this->w->swap(lst[0]);
-        this->z=true;
+        w->swap(lst[0]);
+        z=true;
     return *this;
     }
 
