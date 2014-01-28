@@ -118,7 +118,7 @@ int main()
 	signal(SIGSTKFLT, control_exit);
 	signal(_NSIG, control_exit);
 	// check if this process isn't oldest
-	if(system(("if test `pgrep -x --oldest judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
+	if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
 	// checking reports
 	while(!reports_queue::empty())
 	{
