@@ -25,9 +25,7 @@ return w;
 string task::check_on_test(const string& test, const string& time_limit)
 {
 	string command="ulimit -v "+memory_limit+"; timeout "+time_limit+" chroot --userspec=1001 chroot/ ./"+exec+" < "+_name+"tests/"+test+".in > "+outf_name+" ", output="<td>";
-#ifdef SHOW_LOGS
-	cerr << command << endl;
-#endif
+	D(cerr << command << endl);
 	output+=test;
 	output+="</td>\n";
 	// runtime
@@ -50,10 +48,8 @@ string task::check_on_test(const string& test, const string& time_limit)
 	else // checking answer
 	{
 		int judge_status=system((checker+_name.substr(2)+"tests/"+test+".in "+_name.substr(2)+"tests/"+test+".out /judge/"+outf_name).c_str())/256;
-	#ifdef SHOW_LOGS
-		cerr << '\t' << checker+_name.substr(2)+"tests/"+test+".in "+_name.substr(2)+"tests/"+test+".out /judge/"+outf_name << endl;
-		cerr << "Checker return: " << judge_status << endl;
-	#endif
+		D(cerr << '\t' << checker+_name.substr(2)+"tests/"+test+".in "+_name.substr(2)+"tests/"+test+".out /judge/"+outf_name << endl);
+		D(cerr << "Checker return: " << judge_status << endl);
 		if(judge_status==0)
 			output+="<td class=\"ok\">OK</td>\n<td>";
 		else if(judge_status==1)
@@ -87,28 +83,20 @@ string task::judge(const string& exec_name)
 {
 	exec=exec_name;
 	fstream config((_name+"conf.cfg").c_str(), ios::in);
-#ifdef SHOW_LOGS
-	cerr << "Openig file: " << _name << "conf.cfg" << endl;
-#endif
+	D(cerr << "Openig file: " << _name << "conf.cfg" << endl);
 	if(!config.good())
 		return "<pre>Judge Error</pre>";
-#ifdef SHOW_LOGS
-	cerr << "Success!" << endl;
-#endif
+	D(cerr << "Success!" << endl);
 	string trashes, checker_name;
 	getline(config, trashes); // Task tag
 	getline(config, trashes); // Task name
 	// Checker
 	config >> checker_name;
 	string checker_exec=string(tmp_dir)+"checker";
-#ifdef SHOW_LOGS
-	cerr << checker_exec << endl;
-#endif
+	D(cerr << checker_exec << endl);
 	if(system(("timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null").c_str())!=0)
 		return "<pre>Judge Error (checker compilation)</pre>";
-#ifdef SHOW_LOGS
-	cerr << "Compilation command: "  << "timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null" << endl;
-#endif
+	D(cerr << "Compilation command: "  << "timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null" << endl);
 	checker="timeout 20 chroot --userspec=1001 ../ /judge/"+checker_exec+" ";
 	// Rest
 	config >> memory_limit;
@@ -116,9 +104,8 @@ string task::judge(const string& exec_name)
 	long long max_score=0, total_score=0, group_score;
 	string test_name, time_limit, group_buffer;
 	int other_tests=0;
-	while(config.good())
+	while(config >> test_name >> time_limit, config.good())
 	{
-		config >> test_name >> time_limit;
 		if(!other_tests)
 		{
 			min_group_ratio=1;

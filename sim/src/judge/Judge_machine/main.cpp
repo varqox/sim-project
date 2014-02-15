@@ -16,61 +16,45 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 	unsigned start=0, deep=1, finish=file_content.size(); // Deep od <div>
 	for(unsigned i=0; i<div_begins.size(); ++i)
 	{
-	#ifdef SHOW_LOGS
-		cerr << div_begins[i] << " " << string(file_content.begin()+div_begins[i]+1, file_content.begin()+div_begins[i]+24) << endl;
-	#endif
+		D(cerr << div_begins[i] << " " << string(file_content.begin()+div_begins[i]+1, file_content.begin()+div_begins[i]+24) << endl);
 		if(file_content.compare(div_begins[i]+1, 23, " class=\"submit_status\">")==0)
 		{
 			start=div_begins[i]+24;
-		#ifdef SHOW_LOGS
-			cerr << "get: " << start << endl;
-		#endif
+			D(cerr << "get: " << start << endl);
 			div_begins.erase(div_begins.begin(), div_begins.begin()+i+1);
 			break;
 		}
 	}
-#ifdef SHOW_LOGS
-	for(int i=0; i<div_begins.size(); ++i)
+#ifdef DEBUG
+	for(size_t i=0; i<div_begins.size(); ++i)
 		cerr << ' ' << div_begins[i];
 	cerr << endl;
-	for(int i=0; i<div_ends.size(); ++i)
+	for(size_t i=0; i<div_ends.size(); ++i)
 		cerr << ' ' << div_ends[i];
 	cerr << endl;
 #endif
 	while(!div_ends.empty() && div_ends.front()<start)
 		div_ends.pop_front();
-#ifdef SHOW_LOGS
-	cerr << "[[[ " << div_ends.size() << " ]]]" << endl;
-#endif
+	D(cerr << "[[[ " << div_ends.size() << " ]]]" << endl);
 	while(!div_ends.empty() && deep>0)
 	{
-	#ifdef SHOW_LOGS
-		cerr << div_begins.front() << ' ' << div_ends.front() << ' ' << deep << ' ';
-	#endif
+		D(cerr << div_begins.front() << ' ' << div_ends.front() << ' ' << deep << ' ');
 		if(!div_begins.empty() && div_begins.front()<div_ends.front())
 		{
-		#ifdef SHOW_LOGS
-			cerr << "first: ";
-		#endif
+			D(cerr << "first: ");
 			++deep;
 			div_begins.pop_front();
 		}
 		else
 		{
-		#ifdef SHOW_LOGS
-			cerr << "second: ";
-		#endif
+			D(cerr << "second: ");
 			--deep;
 			finish=div_ends.front()-6;
 			div_ends.pop_front();
 		}
-	#ifdef SHOW_LOGS
-		cerr << deep << endl;
-	#endif
+		D(cerr << deep << endl);
 	}
-#ifdef SHOW_LOGS
-	cerr << finish << " ;; " << file_content.size() << endl;
-#endif
+	D(cerr << finish << " ;; " << file_content.size() << endl);
 	file_content[finish]='\n';
 	template_front.assign(file_content.begin(), file_content.begin()+start);
 	template_front+='\n';
@@ -89,9 +73,7 @@ void control_exit(int=0)
 		report << *public_report_front << "<pre>Status: Waiting for judge...</pre>" << *public_report_back;
 		report.close();
 	}
-#ifdef SHOW_LOGS
-	cerr << "Removing temporary directory" << endl;
-#endif
+	D(cerr << "Removing temporary directory" << endl);
 	remove_r(tmp_dir);
 	exit(1);
 }
@@ -122,9 +104,7 @@ int main()
 	// checking reports
 	while(!reports_queue::empty())
 	{
-	#ifdef SHOW_LOGS
-		cerr << reports_queue::front() << endl;
-	#endif
+		D(cerr << reports_queue::front() << endl);
 		string report_id, task_id;
 		fstream queue_file(("queue/"+reports_queue::front()).c_str(), ios::in);
 		if(queue_file.good())
