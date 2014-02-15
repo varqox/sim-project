@@ -6,6 +6,12 @@
 #include <sys/stat.h> // chmod()
 #include <set>
 
+#ifdef DEBUG
+#define D(x) x
+#else
+#define D(x)
+#endif
+
 #pragma once
 
 // other_functions.cpp

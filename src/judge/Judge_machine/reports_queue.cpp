@@ -4,8 +4,11 @@
 #include <vector>
 #include <cstdio>
 
-#ifdef SHOW_LOGS
+#ifdef DEBUG
 #include <iostream>
+#define D(x) x
+#else
+#define D(x)
 #endif
 
 using namespace std;
@@ -43,7 +46,7 @@ namespace reports_queue
 				if(*current_file->d_name!='.')
 					reports.push_back(current_file->d_name);
 		sort(reports.begin(), reports.end(), compare());
-	#ifdef SHOW_LOGS
+	#ifdef DEBUG
 		cerr << ' ' << reports.size() << ":\n";
 		for(vector<string>::reverse_iterator i=reports.rbegin(); i!=reports.rend(); ++i)
 			cerr << *i << endl;

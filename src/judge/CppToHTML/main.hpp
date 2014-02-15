@@ -63,9 +63,9 @@ extern const bool is_name[], is_true_name[];
 
 inline string safe_character(char _c)
 {
-	if(_c=='<') return "&lt";
-	if(_c=='>') return "&gt";
-	if(_c=='&') return "&amp";
+	if(_c=='<') return "&lt;";
+	if(_c=='>') return "&gt;";
+	if(_c=='&') return "&amp;";
 	if(_c=='\r') return "";
 	return string(1, _c);
 }
