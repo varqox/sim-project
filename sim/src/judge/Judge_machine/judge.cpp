@@ -95,7 +95,7 @@ string task::judge(const string& exec_name)
 	string checker_exec=string(tmp_dir)+"checker";
 	D(cerr << checker_exec << endl);
 	if(system(("timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null").c_str())!=0)
-		return "<pre>Judge Error (checker compilation)</pre>";
+		D({cerr << "Judge Error (checker compilation)" << endl;)return "<pre>Judge Error (checker compilation)</pre>";D(});
 	D(cerr << "Compilation command: "  << "timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null" << endl);
 	checker="timeout 20 chroot --userspec=1001 ../ /judge/"+checker_exec+" ";
 	// Rest
@@ -104,7 +104,7 @@ string task::judge(const string& exec_name)
 	long long max_score=0, total_score=0, group_score;
 	string test_name, time_limit, group_buffer;
 	int other_tests=0;
-	while(config >> test_name >> time_limit, config.good())
+	while(config >> test_name >> time_limit)
 	{
 		if(!other_tests)
 		{

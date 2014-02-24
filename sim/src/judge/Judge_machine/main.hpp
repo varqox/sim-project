@@ -7,9 +7,9 @@
 #include <set>
 
 #ifdef DEBUG
-#define D(x) x
+#define D(...) __VA_ARGS__
 #else
-#define D(x)
+#define D(...)
 #endif
 
 #pragma once
