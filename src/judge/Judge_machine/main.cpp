@@ -129,6 +129,7 @@ int main()
 			remove(exec);
 		if(!compile::run(report_id, exec))
 		{
+			D(cerr << "Compilation failed" << endl);
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{
 				report << report_front << "<pre>Status: Compilation failed</pre>\n<pre>Points: 0<pre>\n<pre>" << make_safe_php_string(make_safe_html_string(compile::run.GetCompileErrors())) << "</pre>" << report_back;
@@ -137,6 +138,7 @@ int main()
 		}
 		else
 		{
+			D(cerr << "Compilation success" << endl);
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{
 				report << report_front << "<pre>Status: Judging...</pre>" << report_back;
