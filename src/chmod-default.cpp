@@ -41,7 +41,7 @@ void change(string name)
 	}
 }
 
-int main(int argc, char** argv)
+int main(int argc, char const **argv)
 {
 	ios_base::sync_with_stdio(false);
 	if(argc<2) cout << "Usage: <files...>" << endl;
