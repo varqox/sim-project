@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 	{
 		coloring::init();
 		// fstream out((file_name+".html").c_str(), ios::out);
-		cout << "<table style=\"background: #f5f5f5;border-spacing: 0;\ndisplay: inline-block;\nfont-size: 14px;\nfont-family: monospace;\nline-height: 17px;\nborder: 1px solid #afafaf;\nborder-radius: 4px;\">\n<tbody>\n<tr>\n<td style=\"padding: 0\">\n<pre style=\"color: #4c4c4c;\nmargin: 0;\ntext-align: right;\npadding: 5px 5px 5px 7px;border-right: 1px solid #afafaf\">\n1\n";
+		cout << "<table style=\"background: #f5f5f5;border-spacing: 0;\ndisplay: inline-block;\nfont-size: 15px;\nfont-family: 'DejaVu Sans Mono';\nline-height: 18px;\nborder: 1px solid #afafaf;\nborder-radius: 4px;\">\n<tbody>\n<tr>\n<td style=\"padding: 0\">\n<pre style=\"color: #4c4c4c;\nmargin: 0;\ntext-align: right;\npadding: 5px 5px 5px 7px;border-right: 1px solid #afafaf\">\n1\n";
 		string input, tmp;
 		getline(file, input);
 		unsigned line=1;
