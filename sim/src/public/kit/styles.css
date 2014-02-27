@@ -22,7 +22,8 @@ blockquote, q{
 	quotes: none;
 }
 body{
-	font-family: Helvetica, Arial, sans-serif;
+	/*font-family: Helvetica, Arial, sans-serif;*/
+	font-family: Ubuntu;
 }
 /*-------------------------------------------*/
 div:after{
@@ -40,6 +41,24 @@ html[xmlns] div{
 	display: block;
 }
 /*-------------------------------------------*/
+@font-face{
+	font-family: Ubuntu;
+	src: url("/kit/fonts/Ubuntu-R.ttf");
+}
+@font-face{
+	font-family: "Ubuntu Mono";
+	src: url("/kit/fonts/UbuntuMono-R.ttf");
+}
+@font-face{
+	font-family: "Ubuntu Mono";
+	src: url("/kit/fonts/UbuntuMono-RI.ttf");
+	font-style: italic;
+}
+@font-face{
+	font-family: "Ubuntu Mono";
+	src: url("/kit/fonts/UbuntuMono-B.ttf");
+	font-weight: bold;
+}
 button{
 	padding: 3px 8px 3px 8px;
 	border: 1px solid #9c9c9c;
@@ -259,4 +278,32 @@ a:hover{
 }
 .tl_re{
 	background: #ffd27b;
+}
+.code_view{
+	background: #f5f5f5;
+	display: inline-block;
+	border-spacing: 0;
+	font-family: "Ubuntu Mono";
+	border: 1px solid #afafaf;
+	border-radius: 4px;
+}
+.code_view td{
+	padding: 0;
+}
+.code_view pre, .code_view span{
+	font-size: 16px;
+	line-height: 19px;
+}
+.code_view tr td:first-child pre{
+	color: #4c4c4c;
+	margin: 0;
+	text-align: right;
+	padding: 5px 5px 5px 7px;
+	border-right: 1px solid #afafaf;
+}
+.code_view tr td:last-child pre{
+	margin: 0;
+	text-align: left;
+	padding: 5px 5px 5px 1em;
+	tab-size: 4;
 }
