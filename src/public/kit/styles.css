@@ -46,6 +46,11 @@ html[xmlns] div{
 	src: url("/kit/fonts/Ubuntu-R.ttf");
 }
 @font-face{
+	font-family: Ubuntu;
+	src: url("/kit/fonts/Ubuntu-B.ttf");
+	font-weight: bold;
+}
+@font-face{
 	font-family: "Ubuntu Mono";
 	src: url("/kit/fonts/UbuntuMono-R.ttf");
 }
