@@ -19,10 +19,10 @@ all: ../CTH
 main.o: main.cpp main.hpp
 	$(CXX) $< $(CXXFLAGS) -o $@
 
-coloring.o: coloring.cpp main.hpp
+coloring.o: coloring.cpp main.hpp aho.hpp
 	$(CXX) $< $(CXXFLAGS) -o $@
 
-aho.o: aho.cpp main.hpp
+aho.o: aho.cpp main.hpp aho.hpp
 	$(CXX) $< $(CXXFLAGS) -o $@
 
 clean:

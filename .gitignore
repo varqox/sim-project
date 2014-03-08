@@ -12,7 +12,7 @@
 *.la
 *.a
 
-#others
+# Others
 build/
 sim.tar.gz
 src/judge/judge_machine
