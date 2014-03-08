@@ -1,8 +1,9 @@
 #include "main.hpp"
+#include "aho.hpp"
 
 namespace coloring
 {
-	special_aho _aho;
+	special_aho<const_string> _aho;
 
 	void init()
 	{
