@@ -1,22 +1,24 @@
+export
 # Installation settings
-INSTALL_DIR = $(shell pwd)/build/
+# INSTALL_DIR is set in 'src/Makefile'
+INSTALL_DIR =
 
 # Rest
-.PHONY: all install clean dist-clean package help
+.PHONY: all install clean mrproper package help
 
 all:
-	make -C src/ $(MFLAGS)
+	make -C src/
 
 install: all
-	make install -C src/ INSTALL_DIR\=$(INSTALL_DIR) $(MFLAGS)
+	make install -C src/
 
 clean:
-	make clean -C src/ $(MFLAGS)
+	make clean -C src/
 
-dist-clean: clean
-	make dist-clean -C src/ $(MFLAGS)
+mrproper: clean
+	make mrproper -C src/
 
-package: dist-clean
+package: mrproper
 	tar --exclude=build -czf sim.tar.gz *
 
 help:

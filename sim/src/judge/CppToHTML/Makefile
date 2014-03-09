@@ -1,15 +1,5 @@
-# Compile commands
-export CC
-export CXX
-export LINK
-export CFLAGS
-export CXXFLAGS
-export LFLAGS
 
-# Shell commands
-export RM
-
-.PHONY: all clean dist-clean
+.PHONY: all clean mrproper
 
 all: ../CTH
 
@@ -28,5 +18,5 @@ aho.o: aho.cpp main.hpp aho.hpp
 clean:
 	$(RM) *.o
 
-dist-clean:
+mrproper:
 	$(RM) *.o

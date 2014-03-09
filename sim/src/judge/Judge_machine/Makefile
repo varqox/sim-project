@@ -1,15 +1,5 @@
-# Compile commands
-export CC
-export CXX
-export LINK
-export CFLAGS
-export CXXFLAGS
-export LFLAGS
 
-# Shell commands
-export RM
-
-.PHONY: all clean force-clean
+.PHONY: all clean mrproper
 
 all: ../judge_machine
 
@@ -34,5 +24,5 @@ judge.o: judge.cpp judge.hpp main.hpp
 clean:
 	$(RM) *.o
 
-force-clean:
+mrproper:
 	$(RM) *.o
