@@ -1,27 +1,28 @@
+export
 # Compile commands
 ifeq ($(shell clang > /dev/null 2> /dev/null; echo $$?), $(shell echo 1))
-export CC = clang
+CC = clang
 else
-export CC = gcc
+CC = gcc
 endif
 ifeq ($(shell clang++ > /dev/null 2> /dev/null; echo $$?), $(shell echo 1))
-export CXX = clang++
-export LINK = clang++
+CXX = clang++
+LINK = clang++
 else
-export CXX = g++
-export LINK = g++
+CXX = g++
+LINK = g++
 endif
 
-export CFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -O3 -c
-export CXXFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -O3 -c
-export LFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -s -O3
+CFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -O3 -c
+CXXFLAGS := $(CFLAGS)
+LFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -s -O3
 
 # Shell commands
-export MV = mv -f
-export CP = cp -f -r
-export UPDATE = $(CP) -u
-export RM = rm -f
-export MKDIR = mkdir -p
+MV = mv -f
+CP = cp -f -r
+UPDATE = $(CP) -u
+RM = rm -f
+MKDIR = mkdir -p
 
 # Installation settings
 INSTALL_DIR = $(shell pwd)/../build/
@@ -31,16 +32,16 @@ else
 TMP_OUTPUT_DIR = $(INSTALL_DIR)
 endif
 ifneq ($(shell printf $(INSTALL_DIR) | tail -c 1), $(shell printf "/"))
-OUTPUT_DIR=$(TMP_OUTPUT_DIR)/
+OUTPUT_DIR = $(TMP_OUTPUT_DIR)/
 else
-OUTPUT_DIR=$(TMP_OUTPUT_DIR)
+OUTPUT_DIR = $(TMP_OUTPUT_DIR)
 endif
 
 # Rest
-.PHONY: all install clean dist-clean package help
+.PHONY: all install clean mrproper package help
 
 all: chmod-default
-	make -C judge $(MFLAGS)
+	make -C judge
 
 chmod-default: chmod-default.cpp
 	$(LINK) $< $(LFLAGS) -o $@
@@ -69,8 +70,8 @@ install: all
 
 clean:
 	$(RM) *.o chmod-default
-	make clean -C judge $(MFLAGS)
+	make clean -C judge
 
-dist-clean: clean
-	make dist-clean -C judge $(MFLAGS)
+mrproper: clean
+	make mrproper -C judge
 	$(RM) sim.tar.gz

@@ -1,31 +1,21 @@
-# Compile commands
-export CC
-export CXX
-export LINK
-export CFLAGS
-export CXXFLAGS
-export LFLAGS
 
-# Shell commands
-export RM
-
-.PHONY: all clean force-clean judge_machine CTH
+.PHONY: all clean mrproper judge_machine CTH
 
 all: judge_machine CTH
 
 judge_machine:
-	make -C Judge_machine $(MFLAGS)
+	make -C Judge_machine
 
 CTH:
-	make -C CppToHTML $(MFLAGS)
+	make -C CppToHTML
 
 clean:
 	$(RM) *.o
-	make clean -C Judge_machine $(MFLAGS)
-	make clean -C CppToHTML $(MFLAGS)
+	make clean -C Judge_machine
+	make clean -C CppToHTML
 
-force-clean:
+mrproper:
 	$(RM) *.o
 	$(RM) judge_machine CTH test
-	make force-clean -C Judge_machine $(MFLAGS)
-	make force-clean -C CppToHTML $(MFLAGS)
+	make mrproper -C Judge_machine
+	make mrproper -C CppToHTML
