@@ -1,51 +1,50 @@
-#include <iostream>
-#include <fstream>
-#include <cstdlib>
+#include <string>
 #include <cstdio>
+#include <sys/stat.h> // chmod()
+#include <dirent.h>
+#include <cstring>
 
 using namespace std;
 
-string without_end_after_slash(const string& str)
-{
-	int i=str.size();
-	while(--i>=0 && str[i]!='/');
-	if(i>=0 && str[i]=='/') return string(str, 0, i+1);
-return str;
-}
+//         file -> 0644     dir -> 0755
+const int file_mod = 420, dir_mod = 493;
 
-void change(string name)
+void def_chmod_r(const char* path, bool show_info = false)
 {
-	char tmp_file_name[]="/tmp/chmod_default.XXXXXX";
-	mkstemp(tmp_file_name);
-	system(("chmod 0755 "+name+" && ls -p -1 "+name+string(" > ")+tmp_file_name).c_str());
-	cout << name << endl;
-	fstream tmp_file(tmp_file_name, ios_base::in);
-	if(tmp_file.good())
+	DIR* directory;
+	dirent* current_file;
+	string tmp_dir_path = path;
+	if(*tmp_dir_path.rbegin() != '/') tmp_dir_path += '/';
+	if((directory = opendir(path)))
 	{
-		string new_name;
-		while(!tmp_file.eof())
-		{
-			getline(tmp_file, new_name);
-			if(new_name.empty()) continue;
-			if(*--new_name.end()=='/')
-			{
-				system(("chmod 0755 "+name+new_name).c_str());
-				change(name+new_name);
-			}
-			else
-				system(("chmod 0644 "+name+new_name).c_str());
-			cout << name+" : "+new_name+";" << endl;
-		}
-		tmp_file.close();
-		remove(tmp_file_name);
+		while((current_file = readdir(directory)))
+			if(strcmp(current_file->d_name, ".") && strcmp(current_file->d_name, ".."))
+					def_chmod_r((tmp_dir_path+current_file->d_name).c_str(), show_info);
+		if(show_info)
+			printf("chmod 0755 -> %s\n", path);
+		chmod(path, dir_mod);
+	}
+	else
+	{
+		if(show_info)
+			printf("chmod 0644 -> %s\n", path);
+		chmod(path, file_mod);
 	}
 }
 
 int main(int argc, char const **argv)
 {
-	ios_base::sync_with_stdio(false);
-	if(argc<2) cout << "Usage: <files...>" << endl;
-	for(int i=1; i<argc; ++i)
-		change(argv[i]);
+	if(argc < 2)
+		printf("Usage: chmod-default [option] <files...>\nOptions:\n  --show-info - enable printing info about changed files\n  --no-show-info - disable --show-info\n");
+	bool show_info = false;
+	for(int i = 1; i < argc; ++i)
+	{
+		if(0 == strcmp(argv[i], "--show-info"))
+			show_info = true;
+		else if(0 == strcmp(argv[i], "--no-show-info"))
+			show_info = true;
+		else
+			def_chmod_r(argv[i], show_info);
+	}
 return 0;
 }
