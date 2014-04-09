@@ -31,7 +31,7 @@ int main(int argc, char const **argv)
 			getline(file, tmp);
 			input+=tmp;
 		}
-		cout << "</pre>\n</td>\n<td>\n<pre>\n";
+		cout << "</pre>\n</td>\n<td>\n<pre>";
 		coloring::color_code(input, cout);
 		cout << "</pre></td></tr></tbody></table>";
 	}
