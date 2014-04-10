@@ -16,17 +16,21 @@ exit;
 }
 
 echo '<div style="text-align: center">
-<p style="padding: 15px 0 0 200px;font-size: 35px;text-align: left">Zgłoszenie 10</p>
-<div class ="btn-toolbar">
+<div class="report-info">
+<h1>Zgłoszenie 10</h1>
+<div class="btn-toolbar">
 <a class="btn-small" href="?source">View source</a>
 <a class="btn-small" href="?download">Download</a>
 </div>
-<p style="font-size: 30px;">Zadanie 2</p>
-<div class="submit_status">
+<h2>Zadanie 2</h2>
+</div>
+<div class="submit-status">
 <pre>Status: Compilation failed</pre>
 <pre>Points: 0<pre>
-<pre>10.cpp: In function ‘int main()’:
-10.cpp:20:16: error: ‘system’ was not declared in this scope
+<pre>10.cpp: In function \'int main()\':
+10.cpp:20:16: error: \'system\' was not declared in this scope
+ system ("pause");
+                ^
 </pre>
 </div>
 </div>';

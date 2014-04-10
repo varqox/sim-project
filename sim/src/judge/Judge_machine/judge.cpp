@@ -39,10 +39,10 @@ string task::check_on_test(const string& test, const string& time_limit)
 	cl=floor(cl)/100;
 	double dtime_limit=strtod(time_limit.c_str(), NULL);
 	if(cl>=dtime_limit) // Time limit
-		output+="<td class=\"tl_re\">Time limit</td>\n<td>";
+		output+="<td class=\"tl-re\">Time limit</td>\n<td>";
 	else if(ret!=0) // Runtime error
 	{
-		output+="<td class=\"tl_re\">Runtime error</td>\n<td>";
+		output+="<td class=\"tl-re\">Runtime error</td>\n<td>";
 		min_group_ratio=0;
 	}
 	else // checking answer
@@ -100,7 +100,7 @@ string task::judge(const string& exec_name)
 	checker="timeout 20 chroot --userspec=1001 ../ /judge/"+checker_exec+" ";
 	// Rest
 	config >> memory_limit;
-	string out="<table style=\"margin-top: 5px\" class=\"table results\">\n<thead>\n<tr>\n<th style=\"min-width: 70px\">Test</th>\n<th style=\"min-width: 180px\">Result</th>\n<th style=\"min-width: 90px\">Time</th>\n<th style=\"min-width: 60px\">Result</th>\n</tr>\n</thead>\n<tbody>\n";
+	string out="<table style=\"margin-top: 5px\" class=\"table results\">\n<thead>\n<tr>\n<th style=\"min-width: 80px\">Test</th>\n<th style=\"min-width: 190px\">Result</th>\n<th style=\"min-width: 100px\">Time</th>\n<th style=\"min-width: 70px\">Result</th>\n</tr>\n</thead>\n<tbody>\n";
 	long long max_score=0, total_score=0, group_score;
 	string test_name, time_limit, group_buffer;
 	int other_tests=0;
