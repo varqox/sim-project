@@ -6,7 +6,6 @@ include $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 template_begin('Konkursy',$user,'',
 '.tasks{
 	line-height: 30px;
-	font-size: 20px;
 	margin-left: auto;
 	margin-right: auto;
 	borderspacing: 0;

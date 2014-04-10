@@ -20,7 +20,7 @@ int main(int argc, char const **argv)
 	{
 		coloring::init();
 		// fstream out((file_name+".html").c_str(), ios::out);
-		cout << "<table class=\"code_view\">\n<tbody>\n<tr>\n<td>\n<pre>\n1\n";
+		cout << "<table class=\"code-view\">\n<tbody>\n<tr>\n<td>\n<pre>\n1\n";
 		string input, tmp;
 		getline(file, input);
 		unsigned line=1;

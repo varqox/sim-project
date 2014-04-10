@@ -16,22 +16,24 @@ exit;
 }
 
 echo '<div style="text-align: center">
-<p style="padding: 15px 0 0 200px;font-size: 35px;text-align: left">Zgłoszenie 13</p>
-<div class ="btn-toolbar">
+<div class="report-info">
+<h1>Zgłoszenie 13</h1>
+<div class="btn-toolbar">
 <a class="btn-small" href="?source">View source</a>
 <a class="btn-small" href="?download">Download</a>
 </div>
-<p style="font-size: 30px;">Zadanie 2</p>
-<div class="submit_status">
+<h2>Zadanie 2</h2>
+</div>
+<div class="submit-status">
 <pre>Score: 100/100
 Status: Judged</pre>
 <table style="margin-top: 5px" class="table results">
 <thead>
 <tr>
-<th style="min-width: 70px">Test</th>
-<th style="min-width: 180px">Result</th>
-<th style="min-width: 90px">Time</th>
-<th style="min-width: 60px">Result</th>
+<th style="min-width: 80px">Test</th>
+<th style="min-width: 190px">Result</th>
+<th style="min-width: 100px">Time</th>
+<th style="min-width: 70px">Result</th>
 </tr>
 </thead>
 <tbody>
@@ -86,7 +88,7 @@ Status: Judged</pre>
 <tr>
 <td>bar3a</td>
 <td class="ok">OK</td>
-<td>0.01/1.00</td>
+<td>0.00/1.00</td>
 <td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
@@ -123,7 +125,7 @@ Status: Judged</pre>
 <tr>
 <td>bar5a</td>
 <td class="ok">OK</td>
-<td>0.00/1.00</td>
+<td>0.01/1.00</td>
 <td class="groupscore" rowspan="2">10/10</td>
 </tr>
 <tr>
@@ -150,7 +152,7 @@ Status: Judged</pre>
 <tr>
 <td>bar7a</td>
 <td class="ok">OK</td>
-<td>0.03/1.00</td>
+<td>0.04/1.00</td>
 <td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
@@ -166,7 +168,7 @@ Status: Judged</pre>
 <tr>
 <td>bar7d</td>
 <td class="ok">OK</td>
-<td>0.04/1.00</td>
+<td>0.05/1.00</td>
 </tr>
 <tr>
 <td>bar8a</td>
@@ -182,28 +184,28 @@ Status: Judged</pre>
 <tr>
 <td>bar8c</td>
 <td class="ok">OK</td>
-<td>0.12/1.50</td>
+<td>0.11/1.50</td>
 </tr>
 <tr>
 <td>bar9a</td>
 <td class="ok">OK</td>
-<td>0.14/3.00</td>
+<td>0.13/3.00</td>
 <td class="groupscore" rowspan="4">10/10</td>
 </tr>
 <tr>
 <td>bar9b</td>
 <td class="ok">OK</td>
-<td>0.24/3.00</td>
+<td>0.23/3.00</td>
 </tr>
 <tr>
 <td>bar9c</td>
 <td class="ok">OK</td>
-<td>0.28/3.00</td>
+<td>0.30/3.00</td>
 </tr>
 <tr>
 <td>bar9d</td>
 <td class="ok">OK</td>
-<td>0.17/3.00</td>
+<td>0.15/3.00</td>
 </tr>
 <tr>
 <td>bar10a</td>
@@ -214,7 +216,7 @@ Status: Judged</pre>
 <tr>
 <td>bar10b</td>
 <td class="ok">OK</td>
-<td>0.27/3.00</td>
+<td>0.26/3.00</td>
 </tr>
 <tr>
 <td>bar10c</td>

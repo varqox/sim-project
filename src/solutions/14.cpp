@@ -135,37 +135,37 @@ namespace unlimited_int
 
     lli unlint::num::size() const
     {
-        lli w=(w.size()-1)*LEN, end=w[w.size()-1];
+        lli res=(w.size()-1)*LEN, end=w[w.size()-1];
         if(end<1000000000LL)
         {
             if(end<10000LL)
             {
                 if(end<100LL)
                 {
-                    if(end<10LL) ++w;
-                    else w+=2;
+                    if(end<10LL) ++res;
+                    else res+=2;
                 }
                 else
                 {
-                    if(end<1000LL) w+=3;
-                    else w+=4;
+                    if(end<1000LL) res+=3;
+                    else res+=4;
                 }
             }
             else
             {
                 if(end<1000000LL)
                 {
-                    if(end<100000LL) w+=5;
-                    else w+=6;
+                    if(end<100000LL) res+=5;
+                    else res+=6;
                 }
                 else
                 {
                     if(end<100000000LL)
                     {
-                        if(end<10000000LL) w+=7;
-                        else w+=8;
+                        if(end<10000000LL) res+=7;
+                        else res+=8;
                     }
-                    else w+=9;
+                    else res+=9;
                 }
             }
         }
@@ -175,34 +175,34 @@ namespace unlimited_int
             {
                 if(end<100000000000LL)
                 {
-                    if(end<10000000000LL) w+=10;
-                    else w+=11;
+                    if(end<10000000000LL) res+=10;
+                    else res+=11;
                 }
                 else
                 {
-                    if(end<1000000000000LL) w+=12;
-                    else w+=13;
+                    if(end<1000000000000LL) res+=12;
+                    else res+=13;
                 }
             }
             else
             {
                 if(end<1000000000000000LL)
                 {
-                    if(end<100000000000000LL) w+=14;
-                    else w+=15;
+                    if(end<100000000000000LL) res+=14;
+                    else res+=15;
                 }
                 else
                 {
                     if(end<100000000000000000LL)
                     {
-                        if(end<10000000000000000LL) w+=16;
-                        else w+=17;
+                        if(end<10000000000000000LL) res+=16;
+                        else res+=17;
                     }
-                    else w+=18;
+                    else res+=18;
                 }
             }
         }
-    return w;
+    return res;
     }
 
     void unlint::num::kas0()
@@ -404,19 +404,19 @@ namespace unlimited_int
         typedef double D;
         static std::complex<D> *w;
         static int d;
-         
+
         static void omega(const int& n, bool t)
         {
             int to=n>>1;
-            if(t) 
+            if(t)
                 for(int i=0; i<to; ++i)
-                { 
+                {
                     w[i]=std::complex<D>(cos(2*M_PI*i/n),sin(2*M_PI*i/n));
                     w[i+to]=std::complex<D>(-w[i].real(),-w[i].imag());
                 }
             else
                 for(int i=0; i<to; ++i)
-                { 
+                {
                     w[i]=std::complex<D>(cos(2*M_PI*i/n),sin(-2*M_PI*i/n));
                     w[i+to]=std::complex<D>(-w[i].real(),-w[i].imag());
                 }
@@ -547,7 +547,7 @@ namespace unlimited_int
             a.w[0]=0;
             for(int i=0; i<d; ++i, ++idx)
             {
-                if(idx==5) 
+                if(idx==5)
                 {
                     ++j;
                     a.w[j]=add;
@@ -1271,7 +1271,7 @@ namespace unlimited_int
 
     bool unlint::operator>=(const unlint& _n) const
     {
-        
+
         if(z!=_n.z) return z;
         if(z) return w->operator>=(*_n.w);
     return w->operator<=(*_n.w);

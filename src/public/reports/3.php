@@ -16,16 +16,20 @@ exit;
 }
 
 echo '<div style="text-align: center">
-<p style="padding: 15px 0 0 200px;font-size: 35px;text-align: left">Zgłoszenie 3</p>
-<div class ="btn-toolbar">
+<div class="report-info">
+<h1>Zgłoszenie 3</h1>
+<div class="btn-toolbar">
 <a class="btn-small" href="?source">View source</a>
 <a class="btn-small" href="?download">Download</a>
 </div>
-<p style="font-size: 30px;">Zadanie 1</p>
-<div class="submit_status">
+<h2>Zadanie 1</h2>
+</div>
+<div class="submit-status">
 <pre>Status: Compilation failed</pre>
 <pre>Points: 0<pre>
-<pre>3.cpp:1:1: error: ‘Pin’ does not name a type
+<pre>3.cpp:1:1: error: \'Pin\' does not name a type
+ Pin 2.13 kit 61147
+ ^
 </pre>
 </div>
 </div>';

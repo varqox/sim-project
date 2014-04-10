@@ -16,22 +16,24 @@ exit;
 }
 
 echo '<div style="text-align: center">
-<p style="padding: 15px 0 0 200px;font-size: 35px;text-align: left">Zgłoszenie 6</p>
-<div class ="btn-toolbar">
+<div class="report-info">
+<h1>Zgłoszenie 6</h1>
+<div class="btn-toolbar">
 <a class="btn-small" href="?source">View source</a>
 <a class="btn-small" href="?download">Download</a>
 </div>
-<p style="font-size: 30px;">Zadanie 2</p>
-<div class="submit_status">
+<h2>Zadanie 2</h2>
+</div>
+<div class="submit-status">
 <pre>Score: 0/100
 Status: Judged</pre>
 <table style="margin-top: 5px" class="table results">
 <thead>
 <tr>
-<th style="min-width: 70px">Test</th>
-<th style="min-width: 180px">Result</th>
-<th style="min-width: 90px">Time</th>
-<th style="min-width: 60px">Result</th>
+<th style="min-width: 80px">Test</th>
+<th style="min-width: 190px">Result</th>
+<th style="min-width: 100px">Time</th>
+<th style="min-width: 70px">Result</th>
 </tr>
 </thead>
 <tbody>

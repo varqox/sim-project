@@ -17,7 +17,7 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 	for(unsigned i=0; i<div_begins.size(); ++i)
 	{
 		D(cerr << div_begins[i] << " " << string(file_content.begin()+div_begins[i]+1, file_content.begin()+div_begins[i]+24) << endl);
-		if(file_content.compare(div_begins[i]+1, 23, " class=\"submit_status\">")==0)
+		if(file_content.compare(div_begins[i]+1, 23, " class=\"submit-status\">")==0)
 		{
 			start=div_begins[i]+24;
 			D(cerr << "get: " << start << endl);
