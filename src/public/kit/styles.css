@@ -723,6 +723,9 @@ a:hover{
 	font-size: 16px;
 	line-height: 19px;
 }
+.code-view pre::before{
+	content: "";
+}
 .code-view tr td:first-child pre{
 	color: #4c4c4c;
 	margin: 0;
