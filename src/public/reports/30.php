@@ -9,7 +9,7 @@ template_begin('Zgłoszenie 30',$user);
 
 if(isset($_GET['source']))
 {
-echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/30.cpp"), '
+echo '<div style="margin: 60px 0 0 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/30.cpp"), '
 </div>';
 template_end();
 exit;

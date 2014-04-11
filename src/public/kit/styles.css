@@ -436,27 +436,27 @@ th {
 }
 /*End of resering styles*/
 @font-face{
-	font-family: Ubuntu;
-	src: url("/kit/fonts/Ubuntu-R.ttf");
+	font-family: 'Ubuntu';
+	src: url('/kit/fonts/Ubuntu-R.ttf');
 }
 @font-face{
-	font-family: Ubuntu;
-	src: url("/kit/fonts/Ubuntu-B.ttf");
+	font-family: 'Ubuntu';
 	font-weight: bold;
+	src: url('/kit/fonts/Ubuntu-B.ttf');
 }
 @font-face{
-	font-family: "Ubuntu Mono";
-	src: url("/kit/fonts/UbuntuMono-R.ttf");
+	font-family: 'Ubuntu Mono';
+	src: url('/kit/fonts/UbuntuMono-R.ttf');
 }
 @font-face{
-	font-family: "Ubuntu Mono";
-	src: url("/kit/fonts/UbuntuMono-RI.ttf");
+	font-family: 'Ubuntu Mono';
 	font-style: italic;
+	src: url('/kit/fonts/UbuntuMono-RI.ttf');
 }
 @font-face{
-	font-family: "Ubuntu Mono";
-	src: url("/kit/fonts/UbuntuMono-B.ttf");
+	font-family: 'Ubuntu Mono';
 	font-weight: bold;
+	src: url('/kit/fonts/UbuntuMono-B.ttf');
 }
 button{
 	padding: 3px 8px 3px 8px;
@@ -605,7 +605,7 @@ a:hover{
 	text-decoration: none;
 }
 .body-main{
-	margin-top: 50px;
+	margin: 50px 0 10px 0;
 }
 #clock{
 	float: left;
@@ -624,7 +624,7 @@ a:hover{
 	background: #ffffff;
 	position: absolute;
 	right: 0;
-	margin: 45px 20px;
+	margin: 45px 20px 0 0;
 	border: 1px solid #cccccc;
 	-webkit-border-radius: 10px;
 	-moz-border-radius: 10px;
@@ -711,6 +711,7 @@ a:hover{
 	background: #f5f5f5;
 	display: table;
 	font-family: "Ubuntu Mono";
+	margin: 0 10px 10px 0;
 	border: 1px solid #afafaf;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
@@ -725,6 +726,9 @@ a:hover{
 }
 .code-view pre::before{
 	content: "";
+}
+.code-view pre span[style*="font-weight"]{
+	vertical-align: top;
 }
 .code-view tr td:first-child pre{
 	color: #4c4c4c;
