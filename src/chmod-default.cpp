@@ -20,6 +20,7 @@ void def_chmod_r(const char* path, bool show_info = false)
 		while((current_file = readdir(directory)))
 			if(strcmp(current_file->d_name, ".") && strcmp(current_file->d_name, ".."))
 					def_chmod_r((tmp_dir_path+current_file->d_name).c_str(), show_info);
+		closedir(directory);
 		if(show_info)
 			printf("chmod 0755 -> %s\n", path);
 		chmod(path, dir_mod);
