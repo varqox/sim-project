@@ -1,11 +1,11 @@
 <?php
-$user="guest";
 
-include $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
+
+include $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 
 function PrintError($value)
 {
-	template_begin('...',$user);
+	template_begin('...');
 	echo $value;
 	template_end();
 }

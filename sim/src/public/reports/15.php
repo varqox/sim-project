@@ -2,14 +2,14 @@
 if(isset($_GET['download']))
 {header('Content-type: application/text');header('Content-Disposition: attchment; filename="15.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/../solutions/15.cpp");exit;}
 
-$user="none";
-require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 
-template_begin('Zgłoszenie 15',$user);
+require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
+
+template_begin('Zgłoszenie 15');
 
 if(isset($_GET['source']))
 {
-echo '<div style="margin: 60px 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/15.cpp"), '
+echo '<div style="margin: 60px 0 0 50px">', shell_exec($_SERVER['DOCUMENT_ROOT']."/../judge/CTH ".$_SERVER['DOCUMENT_ROOT']."/../solutions/15.cpp"), '
 </div>';
 template_end();
 exit;

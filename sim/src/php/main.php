@@ -1,4 +1,21 @@
 <?php
+require_once 'session.php';
+
+function check_loged_in()
+{
+	if(!isset($_COOKIE['session']))
+		return false;
+	session::start();
+	if(!isset($_SESSION) || $_SESSION['user_agent_ip'] != $_SERVER['HTTP_USER_AGENT'].$_SERVER['REMOTE_ADDR'])
+	{
+		setcookie('session', null, -1, '/');
+		unset($_COOKIE['session']);
+		session::write_close();
+		return false;
+	}
+	// session::write_close();
+	return true;
+}
 
 function template_begin($title, $scripts='', $styles='')
 {
@@ -21,20 +38,24 @@ echo '<!DOCTYPE html>
 <a href="/files/">Files</a>
 <a href="/reports/">Reports</a>
 <div class="dropdown">
-<span id="clock"></span>
-<a onclick="f(this);" class="user"><strong>','</strong><b class="caret"></b></a>
-<ul>
-<li><a href="/index.php">logout</a></li>
-<li><a href="/bodzio.php">bodzio</a></li>
-<li><a href="/add_report.php">Submit a solution</a></li>
-<li><a href="/test.php">test</a></li>
-<li><a href="/trol.php">troll</a></li>
-</ul>
-</div>
+<span id="clock"></span>';
+if(check_loged_in())
+{
+	echo '<a onclick="f(this);" class="user"><strong>',$_SESSION['username'],'</strong><b class="caret"></b></a>
+	<ul>
+	<li><a href="/logout.php">logout</a></li>
+	<li><a href="/bodzio.php">bodzio</a></li>
+	<li><a href="/add_report.php">Submit a solution</a></li>
+	<li><a href="/test.php">test</a></li>
+	<li><a href="/trol.php">troll</a></li>
+	</ul>';
+}
+else
+	echo '<a href="/login.php" class="user"><strong>Log in</strong></a>';
+echo '</div>
 </div>
 </div>
 <div class="body-main">
-
 ';
 }
 

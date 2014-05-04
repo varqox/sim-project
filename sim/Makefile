@@ -12,6 +12,9 @@ all:
 install: all
 	make install -C src/
 
+reinstall: all
+	make reinstall -C src/
+
 clean:
 	make clean -C src/
 
