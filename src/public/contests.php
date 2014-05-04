@@ -1,9 +1,9 @@
 <?php
-$user="guest";
 
-include $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 
-template_begin('Konkursy',$user,'',
+include $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
+
+template_begin('Konkursy','',
 '.tasks{
 	line-height: 30px;
 	margin-left: auto;

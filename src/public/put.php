@@ -1,9 +1,9 @@
 <?php
-$user="";
 
-require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 
-template_begin('Zgłoszenie',$user);
+require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
+
+template_begin('Zgłoszenie');
 
 echo '<div style="text-align: center">
 <div class="submit_status">

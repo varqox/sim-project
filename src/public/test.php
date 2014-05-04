@@ -1,9 +1,9 @@
 <?php
-$user="guest";
 
-require_once $_SERVER['DOCUMENT_ROOT']."/kit/main.php";
 
-template_begin('Trololo',$user);
+require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
+
+template_begin('Trololo');
 
 echo '
 <center>
