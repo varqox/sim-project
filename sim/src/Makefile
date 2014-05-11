@@ -43,8 +43,6 @@ endif
 all: chmod-default
 	make -C judge
 
-try:
-
 chmod-default: chmod-default.cpp
 	$(LINK) $< $(LFLAGS) -o $@
 

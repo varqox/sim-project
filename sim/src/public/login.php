@@ -3,9 +3,9 @@ require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'], $_POST['password']))
 {
-	$stmt = DB::pdo()->prepare("SELECT username, first_name, last_name, type FROM users WHERE username = :username AND password = :password");
-	$stmt->bindValue(':username', $_POST['username'], PDO::PARAM_STR);
-	$stmt->bindValue(':password', hash('sha256', $_POST['password']), PDO::PARAM_STR);
+	$stmt = DB::pdo()->prepare("SELECT username, first_name, last_name, type FROM users WHERE username = ? AND password = ?");
+	$stmt->bindValue(1, $_POST['username'], PDO::PARAM_STR);
+	$stmt->bindValue(2, hash('sha256', $_POST['password']), PDO::PARAM_STR);
 	$stmt->execute();
 	if($row = $stmt->fetch())
 	{
@@ -26,11 +26,16 @@ if(check_loged_in())
 else
 {
 	template_begin('Login page');
-	echo '<form method="post"  style="margin-left: auto;margin-right: auto">
-<input type="text" name="username"/>
-<input type="password" name="password"/>
+	echo '<div class="form-container">
+<h1>Log in</h1>
+<form method="post">
+<label>Username</label>
+<input class="input-block" type="text" name="username"/>
+<label>Password</label>
+<input class="input-block" type="password" name="password"/>
 <input type="submit" value="Log in"/>
-</form>';
+</form>
+</div>';
 	template_end();
 }
 ?>

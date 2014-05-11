@@ -19,12 +19,15 @@ return $out;
 template_begin('Submit a solution');
 
 echo '
-<div style="text-align: center">
-<p style="font-size: 35px">Submit a solution<p>
-<form enctype="multipart/form-data"  action="" method="POST">
-Report ID: <input type="text" name="report_id"><br/>
-Task ID: <input type="text" name="task_id"><br/>
-<input type="file" name="solution"><br/>
+<div class="form-container">
+<h1>Submit a solution</h1>
+<form enctype="multipart/form-data" action method="POST">
+<label>Report ID</label>
+<input class="input-block" type="text" name="report_id">
+<label>Task ID</label>
+<input class="input-block" type="text" name="task_id">
+<label>File</label>
+<input class="input-block" type="file" name="solution">
 <input type="submit" name="submit" value="Submit" >
 </form>
 </div>';

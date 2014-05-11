@@ -1,4 +1,4 @@
-function f(w){w.parentNode.setAttribute('class',(w.parentNode.getAttribute('class')=='dropdown'?'dropdown-open':'dropdown'));}
+// function f(w){w.parentNode.setAttribute('class',(w.parentNode.getAttribute('class')=='dropdown'?'dropdown-open':'dropdown'));}
 function updateClock()
 {
 	if(load<0) time_difference=Date.parse(Date())-(start_time += load=  window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart);
@@ -15,3 +15,19 @@ function updateClock()
 	document.getElementById("clock").innerHTML = currentTimeString;
 	setTimeout(function(){updateClock()},200);
 }
+$(document).ready(function(){
+	$('.dropdown > a').click(function(event){
+		event.preventDefault();
+		if($(this).parent().is('.open'))
+			$(this).parent().removeClass('open');
+		else
+		{
+			$('.dropdown.open').removeClass('open');
+			$(this).parent().addClass('open');
+		}
+	});
+	$(document).click(function(event){
+		if(!$(event.target).is('.open > a, .open > a *'))
+			$('.dropdown.open').removeClass('open');
+	});
+});
