@@ -52,10 +52,10 @@ class session
 
 	function __destruct()
 	{
-		$stmt = DB::pdo()->prepare("INSERT INTO session (id, data, time) VALUES (:id, :data, :time) ON DUPLICATE KEY UPDATE data=VALUES(data), time=VALUES(time)");
-		$stmt->bindValue(':id', $this->id, PDO::PARAM_STR);
-		$stmt->bindValue(':data', json_encode($_SESSION), PDO::PARAM_STR);
-		$stmt->bindValue(':time', date("Y-m-d H:i:s"), PDO::PARAM_STR);
+		$stmt = DB::pdo()->prepare("INSERT INTO session (id, data, time) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data), time=VALUES(time)");
+		$stmt->bindValue(1, $this->id, PDO::PARAM_STR);
+		$stmt->bindValue(2, json_encode($_SESSION), PDO::PARAM_STR);
+		$stmt->bindValue(3, date("Y-m-d H:i:s"), PDO::PARAM_STR);
 		$stmt->execute();
 	}
 
