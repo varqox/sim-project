@@ -42,20 +42,20 @@ echo '<!DOCTYPE html>
 if(check_loged_in())
 {
 	echo '<div class="dropdown">
-	<a href="#" class="user"><strong>',$_SESSION['username'],'</strong><b class="caret"></b></a>
-	<ul>
-	<li><a href="/logout.php">logout</a></li>
-	<li><a href="/bodzio.php">bodzio</a></li>
-	<li><a href="/add_report.php">Submit a solution</a></li>
-	<li><a href="/test.php">test</a></li>
-	<li><a href="/trol.php">troll</a></li>
-	</ul>
-	</div>';
+<a href="#" class="user"><strong>',$_SESSION['username'],'</strong><b class="caret"></b></a>
+<ul>
+<li><a href="/logout.php">logout</a></li>
+<li><a href="/bodzio.php">bodzio</a></li>
+<li><a href="/add_report.php">Submit a solution</a></li>
+<li><a href="/test.php">test</a></li>
+<li><a href="/trol.php">troll</a></li>
+</ul>
+</div>';
 }
 else
 	echo '<a href="/login.php"><strong>Log in</strong></a>
-	<a href="/register.php">Register</a>';
-echo '</div>
+<a href="/register.php">Register</a>';
+	echo '</div>
 </div>
 </div>
 <div class="body-main">
