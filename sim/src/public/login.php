@@ -19,10 +19,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'], $_POST['pas
 	$stmt->closeCursor();
 }
 if(check_loged_in())
-{
-	// echo "<p>Yeah! You're logged in ", $_SESSION['first_name'], " ", $_SESSION['last_name'], " (", $_SESSION['username'], ")</p>";
 	header('Location: /');
-}
 else
 {
 	template_begin('Login page');

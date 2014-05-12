@@ -491,7 +491,6 @@ input[type="submit"]:hover{
 	border-color: #ccc;
 	background-color: #dddddd;
 	background-image: linear-gradient(#eee, #ddd);
-	/*box-shadow: none;*/
 }
 button:active,
 html input[type="button"]:active,
@@ -805,10 +804,8 @@ form{
 }
 form label{
 	font-size: 14px;
-	/*text-align: left;*/
 }
 form .input-block{
-	/*font-size: 14px;*/
 	margin: 5px 0 15px;
 	display: block;
 	width: 100%;
