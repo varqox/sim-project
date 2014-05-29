@@ -65,7 +65,6 @@ else
 function template_end()
 {
 echo '
-
 </div>
 </body>
 </html>';

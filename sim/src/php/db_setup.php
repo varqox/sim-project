@@ -2,7 +2,7 @@
 require_once 'db.php';
 
 DB::pdo()->exec("CREATE TABLE IF NOT EXISTS `users` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
   `username` varchar(30) COLLATE utf8_bin NOT NULL,
   `first_name` varchar(60) COLLATE utf8_bin NOT NULL,
   `last_name` varchar(60) COLLATE utf8_bin NOT NULL,
@@ -11,7 +11,7 @@ DB::pdo()->exec("CREATE TABLE IF NOT EXISTS `users` (
   `type` enum('normal','teacher','admin') COLLATE utf8_bin NOT NULL DEFAULT 'normal',
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
-  KEY `type` (`type`)
+  KEY (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE IF NOT EXISTS `session` (
@@ -19,7 +19,51 @@ CREATE TABLE IF NOT EXISTS `session` (
   `data` text COLLATE utf8_bin NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `time` (`time`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;");
+  KEY (`time`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE IF NOT EXISTS `tasks` (
+  `id` int unsigned NOT NULL,
+  `checker` varchar(32) NOT NULL DEFAULT 'default',
+  `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
+  PRIMARY KEY (`id`),
+  KEY (`added`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE IF NOT EXISTS `reports` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `round_id` int unsigned NOT NULL,
+  `task_id` int unsigned NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('ok','error','c_error','judging','waiting') COLLATE utf8_bin NOT NULL DEFAULT 'waiting',
+  PRIMARY KEY (`id`),
+  KEY (`user_id`),
+  KEY (`round_id`),
+  KEY (`task_id`),
+  KEY (`status`),
+  KEY (`time`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE IF NOT EXISTS `rounds` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `parent` int unsigned NOT NULL DEFAULT 1,
+  `begin_time` timestamp NOT NULL DEFAULT 0,
+  `full_judge_time` timestamp NOT NULL DEFAULT 0,
+  `end_time` timestamp NOT NULL DEFAULT 0,
+  `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
+  PRIMARY KEY (`id`),
+  KEY (`parent`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+INSERT IGNORE INTO `rounds` (`id`) VALUES(1);
+
+CREATE TABLE IF NOT EXISTS `ranks` (
+  `user_id` int unsigned NOT NULL,
+  `round_id` int unsigned NOT NULL,
+  `points` int unsigned,
+  PRIMARY KEY (`user_id`,`round_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+");
 
 ?>
