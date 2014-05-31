@@ -58,7 +58,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
 	$_SESSION['user_agent_ip'] = $_SERVER['HTTP_USER_AGENT'].$_SERVER['REMOTE_ADDR'];
 	$info.="<p>Sometime later write it...</p></pre>";
 }
-if(check_loged_in())
+if(check_logged_in())
 {
 	template_begin('Register page');
 	echo $info,"<p>Yeah! You're logged in ", $_SESSION['first_name'], " ", $_SESSION['last_name'], " (", $_SESSION['username'], ")</p>";

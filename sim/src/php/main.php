@@ -1,7 +1,7 @@
 <?php
 require_once 'session.php';
 
-function check_loged_in()
+function check_logged_in()
 {
 	if(!isset($_COOKIE['session']))
 		return false;
@@ -34,12 +34,12 @@ echo '<!DOCTYPE html>
 <div class="navbar">
 <div class="navbar-body">
 <a href="/" class="brand">SIM</a>
-<a href="/contests.php">Konkursy</a>
+<a href="/contests.php">Contests</a>
 <a href="/files/">Files</a>
 <a href="/reports/">Reports</a>
 <div style="float:right">
 <span id="clock"></span>';
-if(check_loged_in())
+if(check_logged_in())
 {
 	echo '<div class="dropdown">
 <a href="#" class="user"><strong>',$_SESSION['username'],'</strong><b class="caret"></b></a>
@@ -68,5 +68,30 @@ echo '
 </div>
 </body>
 </html>';
+}
+
+function E_404()
+{
+	header('HTTP/1.0 404 Not Found');
+	template_begin('404 Not Found');
+	echo "<center><h1 style=\"font-size:25px;font-weight:normal;\">404 &mdash; Page not found</h1></center>";
+	template_end();
+	exit;
+}
+function E_403()
+{
+	header('HTTP/1.0 403 Forbidden');
+	template_begin('403 Forbidden');
+	echo "<center><h1 style=\"font-size:25px;font-weight:normal;\">403 &mdash; Sorry, but you're not allowed to see anything here.</h1></center>";
+	template_end();
+	exit;
+}
+function privileges($x)
+{
+	if($x == 'admin')
+		return 1;
+	if($x == 'teacher')
+		return 2;
+	return 3;
 }
 ?>

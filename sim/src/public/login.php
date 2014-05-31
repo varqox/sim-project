@@ -3,7 +3,7 @@ require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'], $_POST['password']))
 {
-	$stmt = DB::pdo()->prepare("SELECT username, first_name, last_name, type FROM users WHERE username = ? AND password = ?");
+	$stmt = DB::pdo()->prepare("SELECT username, first_name, last_name FROM users WHERE username = ? AND password = ?");
 	$stmt->bindValue(1, $_POST['username'], PDO::PARAM_STR);
 	$stmt->bindValue(2, hash('sha256', $_POST['password']), PDO::PARAM_STR);
 	$stmt->execute();
@@ -13,12 +13,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'], $_POST['pas
 		$_SESSION['username'] = $row['username'];
 		$_SESSION['first_name'] = $row['first_name'];
 		$_SESSION['last_name'] = $row['last_name'];
-		$_SESSION['type'] = $row['type'];
 		$_SESSION['user_agent_ip'] = $_SERVER['HTTP_USER_AGENT'].$_SERVER['REMOTE_ADDR'];
 	}
 	$stmt->closeCursor();
 }
-if(check_loged_in())
+if(check_logged_in())
 	header('Location: /');
 else
 {
