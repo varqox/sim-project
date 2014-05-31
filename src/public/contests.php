@@ -1,9 +1,7 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 
-
-include $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
-
-template_begin('Konkursy','',
+template_begin('Contests','',
 '.tasks{
 	line-height: 30px;
 	margin-left: auto;

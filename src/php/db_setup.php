@@ -24,11 +24,13 @@ CREATE TABLE IF NOT EXISTS `session` (
 
 CREATE TABLE IF NOT EXISTS `tasks` (
   `id` int unsigned NOT NULL,
+  `name` VARCHAR(128) NOT NULL,
   `checker` varchar(32) NOT NULL DEFAULT 'default',
   `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
   PRIMARY KEY (`id`),
-  KEY (`added`)
+  KEY (`added`),
+  KEY (`checker`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE IF NOT EXISTS `reports` (
@@ -37,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
   `round_id` int unsigned NOT NULL,
   `task_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` enum('ok','error','c_error','judging','waiting') COLLATE utf8_bin NOT NULL DEFAULT 'waiting',
+  `status` enum('ok','error','c_error','waiting') COLLATE utf8_bin,
   PRIMARY KEY (`id`),
   KEY (`user_id`),
   KEY (`round_id`),
@@ -48,15 +50,17 @@ CREATE TABLE IF NOT EXISTS `reports` (
 
 CREATE TABLE IF NOT EXISTS `rounds` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(128) NOT NULL,
   `parent` int unsigned NOT NULL DEFAULT 1,
   `begin_time` timestamp NOT NULL DEFAULT 0,
   `full_judge_time` timestamp NOT NULL DEFAULT 0,
   `end_time` timestamp NOT NULL DEFAULT 0,
   `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
+  `task_id` int unsigned,
   PRIMARY KEY (`id`),
   KEY (`parent`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-INSERT IGNORE INTO `rounds` (`id`) VALUES(1);
+INSERT IGNORE INTO `rounds` (`id`,`name`,`parent`) VALUES(1,'',0);
 
 CREATE TABLE IF NOT EXISTS `ranks` (
   `user_id` int unsigned NOT NULL,
