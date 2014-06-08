@@ -810,3 +810,9 @@ form .input-block{
 	display: block;
 	width: 100%;
 }
+.round{
+	margin-left: 70px;
+}
+.round-info{
+	margin-left: 40px;
+}

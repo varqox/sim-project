@@ -31,16 +31,13 @@ class session
 			setcookie($this->name, $this->id, 0, "/");
 			$_COOKIE[$this->name] = $this->id;
 		}
-		$stmt = DB::pdo()->query("SELECT s.* FROM session s WHERE s.id = '".$this->id."'");
+		$stmt = DB::pdo()->query("SELECT data,time FROM session WHERE id = '".$this->id."'");
 		if($row = $stmt->fetch())
 		{
 			if(time() - strtotime($row['time']) > session_maxlifetime)
 			{
 				$stmt->closeCursor();
 				self::clean_up();
-				while(0 >= DB::pdo()->exec("INSERT INTO session (id, data) VALUES ('".($this->id = self::generate_id(30))."', '[]')"));
-				setcookie($this->name, $this->id, 0, "/");
-				$_COOKIE[$this->name] = $this->id;
 				return;
 			}
 			$_SESSION = json_decode($row['data'], true);
@@ -52,10 +49,10 @@ class session
 
 	function __destruct()
 	{
-		$stmt = DB::pdo()->prepare("INSERT INTO session (id, data, time) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data), time=VALUES(time)");
-		$stmt->bindValue(1, $this->id, PDO::PARAM_STR);
-		$stmt->bindValue(2, json_encode($_SESSION), PDO::PARAM_STR);
-		$stmt->bindValue(3, date("Y-m-d H:i:s"), PDO::PARAM_STR);
+		$stmt = DB::pdo()->prepare("UPDATE session SET data=?, time=? WHERE id=?");
+		$stmt->bindValue(1, json_encode($_SESSION), PDO::PARAM_STR);
+		$stmt->bindValue(2, date("Y-m-d H:i:s"), PDO::PARAM_STR);
+		$stmt->bindValue(3, $this->id, PDO::PARAM_STR);
 		$stmt->execute();
 	}
 

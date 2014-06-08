@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
 
 CREATE TABLE IF NOT EXISTS `rounds` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `author` int unsigned NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `parent` int unsigned NOT NULL DEFAULT 1,
   `begin_time` timestamp NOT NULL DEFAULT 0,
