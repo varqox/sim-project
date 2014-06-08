@@ -34,7 +34,7 @@ echo '<!DOCTYPE html>
 <div class="navbar">
 <div class="navbar-body">
 <a href="/" class="brand">SIM</a>
-<a href="/contests.php">Contests</a>
+<a href="/round.php?id=1">Contests</a>
 <a href="/files/">Files</a>
 <a href="/reports/">Reports</a>
 <div style="float:right">
