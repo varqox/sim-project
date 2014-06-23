@@ -43,6 +43,9 @@ endif
 all: chmod-default
 	make -C judge
 
+debug:
+	make CC="$(CC) -DDEBUG" CXX="$(CXX) -DDEBUG" all
+
 chmod-default: chmod-default.cpp
 	$(LINK) $< $(LFLAGS) -o $@
 

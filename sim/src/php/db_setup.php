@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `session` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE IF NOT EXISTS `tasks` (
-  `id` int unsigned NOT NULL,
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(128) NOT NULL,
   `checker` varchar(32) NOT NULL DEFAULT 'default',
   `added` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
   `task_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `status` enum('ok','error','c_error','waiting') COLLATE utf8_bin,
+  `points` int unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY (`user_id`),
   KEY (`round_id`),
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
 
 CREATE TABLE IF NOT EXISTS `rounds` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `order` int unsigned NOT NULL,
   `author` int unsigned NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `parent` int unsigned NOT NULL DEFAULT 1,
