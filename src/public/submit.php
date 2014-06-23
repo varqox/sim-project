@@ -60,6 +60,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 			$stmt = DB::pdo()->prepare("UPDATE reports SET status='waiting' WHERE id=?");
 			$stmt->bindValue(1,$lII, PDO::PARAM_INT);
 			$stmt->execute();
+			shell_exec("(cd ".$_SERVER['DOCUMENT_ROOT']."../judge ; sudo ./judge_machine) > /dev/null 2> /dev/null &");
 			header("Location: /reports/".$lII.".php");
 		}
 	}

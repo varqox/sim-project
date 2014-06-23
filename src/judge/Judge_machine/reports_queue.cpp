@@ -4,6 +4,13 @@
 #include <vector>
 #include <cstdio>
 
+#include "db.hpp"
+
+DB DB::obj;
+
+// public
+#include "reports_queue.hpp"
+
 #ifdef DEBUG
 #include <iostream>
 #define D(x) x
@@ -13,44 +20,49 @@
 
 using namespace std;
 
+D(
+std::ostream& operator<<(std::ostream& os, const reports_queue::report& r)
+{return os << "(" << r.id() << ", " << r.task_id() << ")";}
+)
+
+string myto_string(long long int a);
+
 namespace reports_queue
 {
+	void report::set(report_status st, int points) const
+	{
+		sql::Statement *stmt = DB::mysql()->createStatement();
+		stmt->execute("UPDATE reports SET status='"+to_str(st)+"',points="+myto_string(points)+" WHERE id="+_id);
+		delete stmt;
+	}
+
 // private
-	const char* const QUEUE_DIR="queue/";
-	vector<string> reports;
-
+	vector<report> reports;
 	void search_new();
-
-// public
-	bool empty();
-	void pop();
-	string extract();
-	const string& front();
-}
-
-namespace reports_queue
-{
+// --------------------------
 	struct compare
 	{
-		bool operator()(const string& s1, const string& s2) const
-		{return (s1.size()==s2.size() ? s1>s2:s1.size()>s2.size());}
+		bool operator()(const report& a, const report& b) const
+		{return (a.id().size()==b.id().size() ? a.id()>b.id():a.id().size()>b.id().size());}
 	};
 
 	void search_new()
 	{
 		reports.clear();
-		DIR* directory;
-		dirent* current_file;
-		if((directory=opendir(QUEUE_DIR)))
-			while((current_file=readdir(directory)))
-				if(*current_file->d_name!='.')
-					reports.push_back(current_file->d_name);
+
+		sql::Statement *stmt = DB::mysql()->createStatement();
+		sql::ResultSet *res;
+		res = stmt->executeQuery("SELECT id,task_id FROM reports WHERE status='waiting' LIMIT 30");
+		while(res->next())
+			reports.push_back(report(res->getString(1), res->getString(2)));
+		delete res;
+		delete stmt;
 		sort(reports.begin(), reports.end(), compare());
-	#ifdef DEBUG
+		D(
 		cerr << ' ' << reports.size() << ":\n";
-		for(vector<string>::reverse_iterator i=reports.rbegin(); i!=reports.rend(); ++i)
+		for(vector<report>::reverse_iterator i=reports.rbegin(); i!=reports.rend(); ++i)
 			cerr << *i << endl;
-	#endif
+		)
 	}
 
 	bool empty()
@@ -61,22 +73,19 @@ namespace reports_queue
 	}
 
 	void pop()
-	{
-		remove((QUEUE_DIR+reports.back()).c_str());
-		reports.pop_back();
-	}
+	{reports.pop_back();}
 
-	string extract()
+	report extract()
 	{
 		if(!empty())
 		{
-			string out=reports.back();
-			pop();
+			report out=reports.back();
+			reports.pop_back();
 			return out;
 		}
-	return "";
+	return report("", "");
 	}
 
-	const string& front()
+	const report& front()
 	{return reports.back();}
 }

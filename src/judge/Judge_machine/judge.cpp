@@ -131,5 +131,6 @@ string task::judge(const string& exec_name)
 		}
 	}
 	out+="</tbody>\n</table>";
+	reports_queue::front().set(reports_queue::OK, total_score);
 	return "<pre>Score: "+myto_string(total_score)+"/"+myto_string(max_score)+"\nStatus: Judged</pre>\n"+out;
 }

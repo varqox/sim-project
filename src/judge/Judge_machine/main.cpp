@@ -104,16 +104,16 @@ int main()
 	// checking reports
 	while(!reports_queue::empty())
 	{
-		D(cerr << reports_queue::front() << endl);
-		string report_id, task_id;
-		fstream queue_file(("queue/"+reports_queue::front()).c_str(), ios::in);
-		if(queue_file.good())
-		{
-			getline(queue_file, report_id);
-			getline(queue_file, task_id);
-			queue_file.close();
-		}
-		string report_front, report_back, report_name="../public/reports/"+report_id+".php";
+		D(cerr << "JUDGING:\n" << reports_queue::front() << endl;)
+		reports_queue::report const & rep = reports_queue::front();
+		// fstream queue_file(("queue/"+reports_queue::front().id()).c_str(), ios::in);
+		// if(queue_file.good())
+		// {
+		// 	getline(queue_file, report_id);
+		// 	getline(queue_file, task_id);
+		// 	queue_file.close();
+		// }
+		string report_front, report_back, report_name="../public/reports/"+rep.id()+".php";
 		GetTemplateOfReport(report_front, report_back, report_name);
 		public_report_name=&report_name;
 		public_report_front=&report_front;
@@ -127,12 +127,13 @@ int main()
 		}
 		else
 			remove(exec);
-		if(!compile::run(report_id, exec))
+		if(!compile::run(rep.id(), exec))
 		{
 			D(cerr << "Compilation failed" << endl);
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{
 				report << report_front << "<pre>Status: Compilation failed</pre>\n<pre>Points: 0<pre>\n<pre>" << make_safe_php_string(make_safe_html_string(compile::run.GetCompileErrors())) << "</pre>" << report_back;
+				reports_queue::front().set(reports_queue::C_ERROR, 0);
 				report.close();
 			}
 		}
@@ -144,7 +145,7 @@ int main()
 				report << report_front << "<pre>Status: Judging...</pre>" << report_back;
 				report.close();
 			}
-			task rated_task("../tasks/"+task_id);
+			task rated_task("../tasks/"+rep.task_id());
 			string tmp=rated_task.judge(string(exec+7, exec+18));
 			if(report.open(report_name.c_str(), ios::out), report.good())
 			{

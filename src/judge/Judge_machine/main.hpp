@@ -87,11 +87,4 @@ public:
 	{return compile_errors;}
 };
 
-// reports_queue.cpp
-namespace reports_queue
-{
-	bool empty();
-	std::string extract();
-	const std::string& front();
-	void pop();
-}
+#include "reports_queue.hpp"
