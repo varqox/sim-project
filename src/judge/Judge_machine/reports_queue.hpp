@@ -19,6 +19,7 @@ namespace reports_queue
 			case C_ERROR: return "c_error";
 			case WAITING: return "waiting";
 		}
+		return "";
 	}
 
 	class report

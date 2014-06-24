@@ -1,22 +1,23 @@
 
-.PHONY: all clean mrproper
-
+PHONY := all
 all: ../CTH
 
 ../CTH: main.o coloring.o aho.o
-	$(LINK) $^ $(LFLAGS) -o $@
+	$(Q)$(P_LINK)$(LINK) $^ $(LFLAGS) -o $@
 
-main.o: main.cpp main.hpp
-	$(CXX) $< $(CXXFLAGS) -o $@
+.PHONY: $(PHONY)
 
-coloring.o: coloring.cpp main.hpp aho.hpp
-	$(CXX) $< $(CXXFLAGS) -o $@
+-include $(shell ls | grep "\.cpp$$" | sed s/.cpp$$/.mkdep/)
+-include $(shell ls | grep "\.c$$" | sed s/.c$$/.mkdep/)
 
-aho.o: aho.cpp main.hpp aho.hpp
-	$(CXX) $< $(CXXFLAGS) -o $@
+%.o: %.c
+	$(Q)$(P_CC)$(CC) $< $(CFLAGS) -o $@
 
-clean:
-	$(RM) *.o
+%.o: %.cpp
+	$(Q)$(P_CXX)$(CXX) $< $(CXXFLAGS) -o $@
 
-mrproper:
-	$(RM) *.o
+%.mkdep: %.c
+	$(Q)$(P_CC)$(CC) -MM $< -o $@
+
+%.mkdep: %.cpp
+	$(Q)$(P_CC)$(CC) -MM $< -o $@
