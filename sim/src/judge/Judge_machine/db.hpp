@@ -8,6 +8,11 @@ class DB
 {
 private:
 	sql::Connection * con;
+
+	DB(const DB&);
+
+	DB& operator=(const DB&);
+
 	DB(): con(get_driver_instance()->connect("localhost", "sim", "net117working"))
 	{con->setSchema("sim");}
 
@@ -21,4 +26,4 @@ public:
 	{return obj.con;}
 };
 
-//
+// DB::obj is declared in reports_queue.cpp

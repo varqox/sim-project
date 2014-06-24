@@ -12,6 +12,9 @@
 *.la
 *.a
 
+# GNU Make dependences
+*.mkdep
+
 # Others
 build/
 sim.tar.gz

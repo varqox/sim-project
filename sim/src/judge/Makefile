@@ -1,21 +1,17 @@
 
-.PHONY: all clean mrproper judge_machine CTH
-
+PHONY := all
 all: judge_machine CTH
 
+PHONY += judge_machine
 judge_machine:
-	make -C Judge_machine
+	$(Q)$(MAKE) -C Judge_machine
 
+PHONY += CTH
 CTH:
-	make -C CppToHTML
+	$(Q)$(MAKE) -C CppToHTML
 
-clean:
-	$(RM) *.o
-	make clean -C Judge_machine
-	make clean -C CppToHTML
-
+PHONY += mrproper
 mrproper:
-	$(RM) *.o
-	$(RM) judge_machine CTH test
-	make mrproper -C Judge_machine
-	make mrproper -C CppToHTML
+	$(Q)$(RM) judge_machine CTH test
+
+.PHONY: $(PHONY)
