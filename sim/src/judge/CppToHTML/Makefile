@@ -5,19 +5,21 @@ all: ../CTH
 ../CTH: main.o coloring.o aho.o
 	$(Q)$(P_LINK)$(LINK) $^ $(LFLAGS) -o $@
 
+PHONY += dep-s
+dep-s: $(shell ls | egrep -i ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
+
 .PHONY: $(PHONY)
 
--include $(shell ls | grep "\.cpp$$" | sed s/.cpp$$/.mkdep/)
--include $(shell ls | grep "\.c$$" | sed s/.c$$/.mkdep/)
+include $(shell ls | grep ".dep-s$$")
 
 %.o: %.c
-	$(Q)$(P_CC)$(CC) $< $(CFLAGS) -o $@
+	$(Q)$(call P,CC,$<.dep-s)$(CC) -MM $< -o $<.dep-s
+	$(Q)$(call P,CC,$@)$(CC) $< $(CXXFLAGS) -o $@
 
 %.o: %.cpp
-	$(Q)$(P_CXX)$(CXX) $< $(CXXFLAGS) -o $@
+	$(Q)$(call P,CC,$<.dep-s)$(CC) -MM $< -o $<.dep-s
+	$(Q)$(call P,CXX,$@)$(CXX) $< $(CXXFLAGS) -o $@
 
-%.mkdep: %.c
-	$(Q)$(P_CC)$(CC) -MM $< -o $@
+%.dep-s: %
+	$(Q)$(call P,CC,$@)$(CC) -MM $< -o $@
 
-%.mkdep: %.cpp
-	$(Q)$(P_CC)$(CC) -MM $< -o $@
