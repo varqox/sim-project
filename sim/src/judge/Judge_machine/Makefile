@@ -6,19 +6,19 @@ all: ../judge_machine
 	$(Q)$(P_LINK)$(LINK) $^ $(LFLAGS) -o $@ -lmysqlcppconn
 
 PHONY += dep-s
-dep-s: $(shell ls | egrep -i ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
+dep-s: $(shell ls | egrep ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
 
 .PHONY: $(PHONY)
 
 include $(shell ls | grep ".dep-s$$")
 
 %.o: %.c
-	$(Q)$(call P,CC,$<.dep-s)$(CC) -MM $< -o $<.dep-s
 	$(Q)$(call P,CC,$@)$(CC) $< $(CXXFLAGS) -o $@
 
 %.o: %.cpp
-	$(Q)$(call P,CC,$<.dep-s)$(CC) -MM $< -o $<.dep-s
 	$(Q)$(call P,CXX,$@)$(CXX) $< $(CXXFLAGS) -o $@
 
-%.dep-s: %
-	$(Q)$(call P,CC,$@)$(CC) -MM $< -o $@
+$(foreach xx, $(shell ls | egrep ".dep-s$$"), $(eval $(xx): $(shell cat $(xx) | sed s/.*://)))
+
+%.dep-s:
+	$(Q)$(call P,CC,$@)$(CC) -MM $* -o $@
