@@ -1,4 +1,3 @@
-troll = $(shell ls | grep '.cpp')
 
 PHONY := all
 all: ../judge_machine
@@ -6,19 +5,20 @@ all: ../judge_machine
 ../judge_machine: main.o compile.o other_functions.o reports_queue.o judge.o
 	$(Q)$(P_LINK)$(LINK) $^ $(LFLAGS) -o $@ -lmysqlcppconn
 
+PHONY += dep-s
+dep-s: $(shell ls | egrep -i ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
+
 .PHONY: $(PHONY)
 
--include $(shell ls | grep "\.cpp$$" | sed s/.cpp$$/.mkdep/)
--include $(shell ls | grep "\.c$$" | sed s/.c$$/.mkdep/)
+include $(shell ls | grep ".dep-s$$")
 
 %.o: %.c
-	$(Q)$(P_CC)$(CC) $< $(CFLAGS) -o $@
+	$(Q)$(call P,CC,$<.dep-s)$(CC) -MM $< -o $<.dep-s
+	$(Q)$(call P,CC,$@)$(CC) $< $(CXXFLAGS) -o $@
 
 %.o: %.cpp
-	$(Q)$(P_CXX)$(CXX) $< $(CXXFLAGS) -o $@
+	$(Q)$(call P,CC,$<.dep-s)$(CC) -MM $< -o $<.dep-s
+	$(Q)$(call P,CXX,$@)$(CXX) $< $(CXXFLAGS) -o $@
 
-%.mkdep: %.c
-	$(Q)$(P_CC)$(CC) -MM $< -o $@
-
-%.mkdep: %.cpp
-	$(Q)$(P_CC)$(CC) -MM $< -o $@
+%.dep-s: %
+	$(Q)$(call P,CC,$@)$(CC) -MM $< -o $@

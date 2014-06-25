@@ -13,7 +13,7 @@
 *.a
 
 # GNU Make dependences
-*.mkdep
+*.dep-s
 
 # Others
 build/
