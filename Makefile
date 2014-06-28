@@ -49,9 +49,9 @@ else
 endif
 
 PHONY := all
-all: src/chmod-default
-	$(Q)$(MAKE) $(MFLAGS) -C src/judge/ dep-s
-	$(Q)$(MAKE) $(MFLAGS) -C src/judge/
+all:
+	$(Q)$(MAKE) $(MFLAGS) -C src/cpp/ dep-s
+	$(Q)$(MAKE) $(MFLAGS) -C src/cpp/
 	@printf "\033[;32mBuild finished\033[0m\n"
 
 PHONY += debug
@@ -59,13 +59,13 @@ debug: CXX += -DDEBUG
 debug: CC += -DDEBUG
 debug: all
 
-src/chmod-default: src/chmod-default.cpp
-ifeq ($(VERBOSE),1)
-	$(Q)$(LINK) $< $(LFLAGS) -o $@
-else
-	$(Q)printf "   LINK\t $(subst $(ROOT),,$(abspath $@))\n";\
-		$(LINK) $< $(LFLAGS) -o $@
-endif
+PHONY += hard-debug
+hard-debug: CXX += -DDEBUG
+hard-debug: CC += -DDEBUG
+hard-debug: CFLAGS = -O0 -g -c
+hard-debug: CXXFLAGS = -O0 -g -c
+hard-debug: LFLAGS = -O0 -g
+hard-debug: all
 
 PHONY += install
 install: all
@@ -77,26 +77,23 @@ install: all
 	$(MKDIR) $(INSTALL_DIR)
 	$(UPDATE) src/public/ src/solutions/ src/tasks/ $(INSTALL_DIR)
 	$(MKDIR) $(INSTALL_DIR)judge/chroot/ $(INSTALL_DIR)php/
-	$(UPDATE) src/judge/judge_machine src/judge/CTH src/judge/checkers/ $(INSTALL_DIR)judge/
+	$(UPDATE) src/cpp/judge_machine src/cpp/CTH src/checkers/ $(INSTALL_DIR)judge/
 
 	# Setup php and database
-	$(UPDATE) `find src/php/* ! -name db.php` $(INSTALL_DIR)php
-	@bash -c 'if [ -a $(INSTALL_DIR)php/db.php ]; then\
-			db_php=`head -n5 $(INSTALL_DIR)php/db.php`;\
-		else\
+	$(UPDATE) src/php/ $(INSTALL_DIR)
+	@bash -c 'if [ ! -e $(INSTALL_DIR)php/db.pass ]; then\
 			echo Type your MySQL username \(for SIM\):; read mysql_username;\
 			echo Type your password for $$mysql_username:; read -s mysql_password;\
 			echo Type your database which SIM will use:; read db_name;\
-			db_php=`printf "<?php\ndefine('"'"'mysql_host'"'"', '"'"'localhost'"'"');\ndefine('"'"'mysql_username'"'"', '"'"'$$mysql_username'"'"');\ndefine('"'"'mysql_password'"'"', '"'"'$$mysql_password'"'"');\ndefine('"'"'database'"'"', '"'"'$$db_name'"'"');"`;\
-		fi;\
-		echo "$$db_php" > $(INSTALL_DIR)php/db.php; tail -n+6 src/php/db.php >> $(INSTALL_DIR)php/db.php'
-	php $(INSTALL_DIR)php/db_setup.php
+			printf "$$mysql_username\n$$mysql_password\n$$db_name\n" > $(INSTALL_DIR)php/db.pass;\
+		fi'
+	echo | php -B '$$_SERVER["DOCUMENT_ROOT"]="$(INSTALL_DIR)public/";' -F $(INSTALL_DIR)php/db_setup.php
 	$(RM) $(INSTALL_DIR)php/db_setup.php
 
-	# chmod -R 0755 $(INSTALL_DIR)
-	src/chmod-default $(INSTALL_DIR)
+	src/cpp/chmod-default $(INSTALL_DIR)
 	chmod 0755 $(INSTALL_DIR)judge/CTH $(INSTALL_DIR)judge/judge_machine
 	chown -R www-data:www-data $(INSTALL_DIR)
+	chmod 0750 $(INSTALL_DIR)php/
 	@grep 'ALL ALL = (root) NOPASSWD: $(INSTALL_DIR)judge/judge_machine' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(INSTALL_DIR)judge/judge_machine >> /etc/sudoers; fi
 	@printf "<VirtualHost 127.2.2.2:80>\n	ServerName sim.localhost\n\n	DocumentRoot %s\n	<Directory />\n		Options FollowSymLinks\n		AllowOverride All\n	</Directory>\n	<Directory %s>\n		Options Indexes FollowSymLinks MultiViews\n		AllowOverride All\n		Order allow,deny\n		allow from all\n		Require all granted\n	</Directory>\n	CustomLog \$${APACHE_LOG_DIR}/access.log combined\n</VirtualHost>" $(INSTALL_DIR)public/ $(INSTALL_DIR)public/ > /etc/apache2/sites-available/sim.conf
 	a2ensite sim
@@ -104,16 +101,16 @@ install: all
 
 PHONY += reinstall
 reinstall:
-	$(RM) -r $(INSTALL_DIR)/php
-	$(MAKE) $(MFLAGS) intall
+	$(RM) -r $(INSTALL_DIR)php
+	$(MAKE) install
 
 PHONY += clean
 clean:
-	$(Q)$(RM) `find -regex '.*\.\(o\|dep-s\)$$'` src/chmod-default
+	$(Q)$(RM) `find src/ -regex '.*\.\(o\|dep-s\)$$'`
 
 PHONY += mrproper
 mrproper: clean
-	$(Q)$(MAKE) $(MFLAGS) mrproper -C src/judge/
+	$(Q)$(MAKE) $(MFLAGS) mrproper -C src/cpp/
 	$(Q)$(RM) sim.tar.gz
 
 PHONY += help

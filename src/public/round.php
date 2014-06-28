@@ -5,7 +5,10 @@ if(!isset($_GET['id']) || !is_numeric($_GET['id']))
 	E_404();
 
 if(!check_logged_in())
+{
 	header("Location: /login.php");
+	exit;
+}
 
 $data = array();
 

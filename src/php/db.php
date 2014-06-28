@@ -1,9 +1,4 @@
 <?php
-define('mysql_host', 'localhost');
-define('mysql_username', 'sim');
-define('mysql_password', 'sim');
-define('database', 'sim');
-// --------------
 class DB
 {
 	private static $obj;
@@ -13,7 +8,8 @@ class DB
 	{
 		try
 		{
-			$this->pdo = new PDO('mysql:host='.mysql_host.';dbname='.database, mysql_username, mysql_password, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+			$f = @file($_SERVER['DOCUMENT_ROOT']."/../php/db.pass");
+			$this->pdo = new PDO('mysql:host=localhost;dbname='.substr($f[2], 0, -1), substr($f[0], 0, -1), substr($f[1], 0, -1), array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
 		}
 		catch(PDOException $e)
 		{

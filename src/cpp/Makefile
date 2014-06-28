@@ -1,6 +1,6 @@
 
 PHONY := all
-all: judge_machine CTH
+all: chmod-default judge_machine CTH
 
 PHONY += judge_machine
 judge_machine:
@@ -12,9 +12,12 @@ CTH:
 	$(Q)$(MAKE) -C CppToHTML dep-s
 	$(Q)$(MAKE) -C CppToHTML
 
+chmod-default: chmod-default.cpp
+	$(Q)$(call P,LINK,$@)$(LINK) $^ $(LFLAGS) -o $@
+
 PHONY += mrproper
 mrproper:
-	$(Q)$(RM) judge_machine CTH test
+	$(Q)$(RM) chmod-default judge_machine CTH
 
 PHONY += dep-s
 dep-s:
