@@ -16,8 +16,6 @@
 *.dep-s
 
 # Others
-build/
-sim.tar.gz
-src/judge/judge_machine
-src/judge/CTH
-src/chmod-default
+src/cpp/judge_machine
+src/cpp/CTH
+src/cpp/chmod-default

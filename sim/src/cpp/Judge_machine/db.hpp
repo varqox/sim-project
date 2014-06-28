@@ -13,8 +13,7 @@ private:
 
 	DB& operator=(const DB&);
 
-	DB(): con(get_driver_instance()->connect("localhost", "sim", "net117working"))
-	{con->setSchema("sim");}
+	DB();
 
 	~DB()
 	{delete con;}
@@ -25,5 +24,3 @@ public:
 	static sql::Connection* mysql()
 	{return obj.con;}
 };
-
-// DB::obj is declared in reports_queue.cpp

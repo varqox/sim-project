@@ -6,8 +6,6 @@
 
 #include "db.hpp"
 
-DB DB::obj;
-
 // public
 #include "reports_queue.hpp"
 

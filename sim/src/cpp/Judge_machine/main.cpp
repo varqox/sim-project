@@ -119,10 +119,15 @@ int main()
 		public_report_front=&report_front;
 		public_report_back=&report_back;
 		fstream report;
+		if(report.open(report_name.c_str(), ios::out), report.good())
+		{
+			report << report_front << "<pre>Status: Judging...</pre>" << report_back;
+			report.close();
+		}
 		char exec[]="chroot/exec.XXXXXX";
 		if(-1==mkstemp(exec))
 		{
-			cerr << "Cannot create exec file in chroot/";
+			cerr << "Cannot create exec file in chroot/" << endl;
 			control_exit();
 		}
 		else
@@ -140,11 +145,6 @@ int main()
 		else
 		{
 			D(cerr << "Compilation success" << endl);
-			if(report.open(report_name.c_str(), ios::out), report.good())
-			{
-				report << report_front << "<pre>Status: Judging...</pre>" << report_back;
-				report.close();
-			}
 			task rated_task("../tasks/"+rep.task_id());
 			string tmp=rated_task.judge(string(exec+7, exec+18));
 			if(report.open(report_name.c_str(), ios::out), report.good())
