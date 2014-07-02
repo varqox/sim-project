@@ -75,8 +75,8 @@ install: all
 	# Installation
 	@if test `whoami` != "root"; then printf "\033[01;31mYou have to run it as root!\033[0m\n"; exit 1; fi
 	$(MKDIR) $(INSTALL_DIR)
-	$(UPDATE) src/public/ src/solutions/ src/tasks/ $(INSTALL_DIR)
-	$(MKDIR) $(INSTALL_DIR)judge/chroot/ $(INSTALL_DIR)php/
+	$(UPDATE) src/public/ src/tasks/ $(INSTALL_DIR)
+	$(MKDIR) $(INSTALL_DIR)judge/chroot/ $(INSTALL_DIR)php/ $(INSTALL_DIR)solutions/
 	$(UPDATE) src/cpp/judge_machine src/cpp/CTH src/checkers/ $(INSTALL_DIR)judge/
 
 	# Setup php and database

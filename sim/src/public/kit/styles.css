@@ -466,11 +466,11 @@ html input[type="button"],
 input[type="reset"],
 input[type="submit"]{
 	padding: 7px 11px;
-	border: 1px solid #d5d5d5;
+	border: 1px solid #cccccc;
 	margin: 2px;
 	outline: none;
-	background-color: #eeeeee;
-	background-image: linear-gradient(#fcfcfc, #eee);
+	background-color: #dddddd;
+	background-image: linear-gradient(#fafafa, #dddddd);
 	cursor: pointer;
 	-webkit-border-radius: 3px;
 	-moz-border-radius: 3px;
@@ -488,17 +488,17 @@ button:hover,
 html input[type="button"]:hover,
 input[type="reset"]:hover,
 input[type="submit"]:hover{
-	border-color: #ccc;
-	background-color: #dddddd;
-	background-image: linear-gradient(#eee, #ddd);
+	border-color: #bbbbbb;
+	background-color: #d3d3d3;
+	background-image: linear-gradient(#dddddd, #d3d3d3);
 }
 button:active,
 html input[type="button"]:active,
 input[type="reset"]:active,
 input[type="submit"]:active{
-	background-color: #dcdcdc;
+	background-color: #d3d3d3;
 	background-image: none;
-	border-color: #b5b5b5;
+	border-color: #b3b3b3;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
 textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"]{
@@ -720,13 +720,11 @@ a:focus{
 	margin: -30px 80px 0 0;
 	text-align: right;
 }
-.results th
-{
+.results th{
 	padding: 6px;
 	line-height: 20px;
 }
-.results td
-{
+.results td{
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 }
@@ -798,6 +796,12 @@ a:focus{
 	font-weight: normal;
 	text-align: center;
 }
+.form-container h4{
+	font-size: 19px;
+	font-weight: normal;
+	text-align: center;
+	margin: -10px 7px 7px;
+}
 form{
 	margin-top: -20px;
 	padding: 20px;
@@ -815,4 +819,17 @@ form .input-block{
 }
 .round-info{
 	margin-left: 40px;
+}
+.submissions{
+	margin: 0 auto;
+	display: inline-table;
+}
+.submissions th{
+	padding: 6px;
+	line-height: 20px;
+}
+.submissions td{
+	border-top: 1px solid #bbbbbb;
+	padding: 4px 24px 4px 8px;
+	line-height: 20px;
 }

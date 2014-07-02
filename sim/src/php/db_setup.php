@@ -12,10 +12,10 @@ DB::pdo()->exec("CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY (`type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE IF NOT EXISTS `session` (
-  `id` char(60) COLLATE utf8_bin NOT NULL,
+  `id` char(10) COLLATE utf8_bin NOT NULL,
   `data` text COLLATE utf8_bin NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS `reports` (
   `round_id` int unsigned NOT NULL,
   `task_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` enum('ok','error','c_error','waiting') COLLATE utf8_bin,
-  `points` int unsigned NOT NULL,
+  `status` enum('ok','error','c_error','waiting') DEFAULT NULL COLLATE utf8_bin,
+  `points` int unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY (`user_id`),
   KEY (`round_id`),
@@ -49,17 +49,25 @@ CREATE TABLE IF NOT EXISTS `reports` (
   KEY (`time`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+CREATE TABLE IF NOT EXISTS `reports_to_rounds` (
+  `round_id` int unsigned NOT NULL,
+  `report_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`round_id`, `user_id`,`report_id`),
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE IF NOT EXISTS `rounds` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `order` int unsigned NOT NULL,
+  `item` int unsigned NOT NULL,
   `author` int unsigned NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `parent` int unsigned NOT NULL DEFAULT 1,
-  `begin_time` timestamp NOT NULL DEFAULT 0,
-  `full_judge_time` timestamp NOT NULL DEFAULT 0,
-  `end_time` timestamp NOT NULL DEFAULT 0,
+  `begin_time` timestamp DEFAULT NULL,
+  `full_judge_time` timestamp DEFAULT NULL,
+  `end_time` timestamp DEFAULT NULL,
   `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
-  `task_id` int unsigned,
+  `task_id` int unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY (`parent`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
@@ -68,7 +76,7 @@ INSERT IGNORE INTO `rounds` (`id`,`name`,`parent`) VALUES(1,'',0);
 CREATE TABLE IF NOT EXISTS `ranks` (
   `user_id` int unsigned NOT NULL,
   `round_id` int unsigned NOT NULL,
-  `points` int unsigned,
+  `points` int unsigned DEFAULT NULL,
   PRIMARY KEY (`user_id`,`round_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 ");

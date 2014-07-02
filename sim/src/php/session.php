@@ -27,11 +27,11 @@ class session
 		else
 		{
 			self::clean_up();
-			while(0 >= DB::pdo()->exec("INSERT INTO session (id, data) VALUES ('".($this->id = self::generate_id(30))."', '[]')"));
+			while(0 >= DB::pdo()->exec("INSERT INTO session (id,data) VALUES('".($this->id = self::generate_id(10))."', '[]')"));
 			setcookie($this->name, $this->id, 0, "/");
 			$_COOKIE[$this->name] = $this->id;
 		}
-		$stmt = DB::pdo()->query("SELECT data,time FROM session WHERE id = '".$this->id."'");
+		$stmt = DB::pdo()->query("SELECT data,time FROM session WHERE id='".$this->id."'");
 		if($row = $stmt->fetch())
 		{
 			if(time() - strtotime($row['time']) > session_maxlifetime)
@@ -60,7 +60,7 @@ class session
 	{
 		try
 		{
-			DB::pdo()->exec("DELETE FROM session WHERE time < '".date("Y-m-d H:i:s", time() - session_maxlifetime)."'");
+			DB::pdo()->exec("DELETE FROM session WHERE time<'".date("Y-m-d H:i:s", time() - session_maxlifetime)."'");
 		}
 		catch(PDOExeption $e)
 		{
@@ -85,8 +85,8 @@ class session
 
 	static public function regenerate_id()
 	{
-		DB::pdo()->exec("DELETE FROM session WHERE id = '".self::$obj->id."'");
-		while(0 >= DB::pdo()->exec("INSERT INTO session (id, data) VALUES ('".(self::$obj->id = self::generate_id(30))."', '[]')"));
+		DB::pdo()->exec("DELETE FROM session WHERE id='".self::$obj->id."'");
+		while(0 >= DB::pdo()->exec("INSERT INTO session (id,data) VALUES('".(self::$obj->id = self::generate_id(10))."', '[]')"));
 		setcookie(self::$obj->name, self::$obj->id, 0, "/");
 		$_COOKIE[self::$obj->name] = self::$obj->id;
 	}
@@ -104,7 +104,7 @@ class session
 		$id = $tmp->id;
 		unset($tmp);
 		self::$obj = null;
-		DB::pdo()->exec("DELETE FROM session WHERE id = '".$id."'");
+		DB::pdo()->exec("DELETE FROM session WHERE id='".$id."'");
 	}
 }
 
