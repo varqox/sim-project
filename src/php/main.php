@@ -36,7 +36,7 @@ echo '<!DOCTYPE html>
 <a href="/" class="brand">SIM</a>
 <a href="/round.php?id=1">Contests</a>
 <a href="/files/">Files</a>
-<a href="/reports/">Reports</a>
+<a href="/submissions/">Submissions</a>
 <div style="float:right">
 <span id="clock"></span>';
 if(check_logged_in())
@@ -45,10 +45,6 @@ if(check_logged_in())
 <a href="#" class="user"><strong>',$_SESSION['username'],'</strong><b class="caret"></b></a>
 <ul>
 <li><a href="/logout.php">logout</a></li>
-<li><a href="/bodzio.php">bodzio</a></li>
-<li><a href="/add_report.php">Submit a solution</a></li>
-<li><a href="/test.php">test</a></li>
-<li><a href="/trol.php">troll</a></li>
 </ul>
 </div>';
 }

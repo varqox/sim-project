@@ -113,7 +113,7 @@ int main()
 		// 	getline(queue_file, task_id);
 		// 	queue_file.close();
 		// }
-		string report_front, report_back, report_name="../public/reports/"+rep.id()+".php";
+		string report_front, report_back, report_name="../public/submissions/"+rep.id()+".php";
 		GetTemplateOfReport(report_front, report_back, report_name);
 		public_report_name=&report_name;
 		public_report_front=&report_front;

@@ -2,7 +2,7 @@
 require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 
 if(!isset($_GET['id']) || !is_numeric($_GET['id']))
-	E_404();
+	$_GET['id']=1;
 
 if(!check_logged_in())
 {
@@ -10,57 +10,59 @@ if(!check_logged_in())
 	exit;
 }
 
-$data = array();
+$stmt = DB::pdo()->prepare("SELECT type FROM users WHERE id=?");
+$stmt->bindValue(1, $_SESSION['id'], PDO::PARAM_STR);
+$stmt->execute();
+if(!($row = $stmt->fetch()))
+	E_403();
+$user_privileges = privileges($row[0]);
+$stmt->closeCursor();
 
-$stmt = DB::pdo()->prepare("SELECT name,parent,privileges,task_id,begin_time,end_time FROM rounds WHERE id=?");
+$stmt = DB::pdo()->prepare("SELECT name,parent,privileges,begin_time,end_time,author FROM rounds WHERE id=?");
 $stmt->bindValue(1, $_GET['id'], PDO::PARAM_INT);
 $stmt->execute();
 if(1 > $stmt->rowCount())
 	E_404();
+$time = time();
 $row = $stmt->fetch();
-if(isset($row[3]))
-	$data['task_id'] = $row[3];
-$data['parent'] = $row[1];
-$data['privileges'] = privileges($row[2]);
-$data['begin'] = $row[4];
-$data['end'] = $row[5];
-$path = $row[0]."</div>";
+$path = "<a href=\"/round.php?id=".$_GET['id']."\">$row[0]</a>";
+$parent = $row[1];
+if(privileges($row[2]) < $user_privileges)
+	E_403();
+if(isset($row[3]) && $_SESSION['id'] != $row[5] && privileges($row[2]) == $user_privileges)
+{
+	if($time < strtotime($row[3]))
+		E_403();
+	if($time > strtotime($row[4]))
+		$round_is_closed = true;
+}
 $stmt->closeCursor();
 
 $stmt = DB::pdo()->prepare("SELECT name,parent,privileges FROM rounds WHERE id=?");
-while($data['parent'] > 1)
+while($parent > 1)
 {
-	$stmt->bindValue(1, $data['parent'], PDO::PARAM_INT);
+	$stmt->bindValue(1, $parent, PDO::PARAM_INT);
 	$stmt->execute();
 	$row = $stmt->fetch();
-	$path = "<a href=\"?id=".$data['parent']."\">".$row[0]."</a>/".$path;
-	$data['parent'] = $row[1];
-	$data['privileges'] = min($data['privileges'], privileges($row[2]));
+	$path = "<a href=\"/round.php?id=$parent\">$row[0]</a> / $path";
+	$parent = $row[1];
+	if(privileges($row[2]) < $user_privileges)
+		E_403();
 	$stmt->closeCursor();
 }
 
-$path = "<div class=\"round-info\">".$path;
-
-$stmt = DB::pdo()->prepare("SELECT type FROM users WHERE id=?");
-$stmt->bindValue(1, $_SESSION['id'], PDO::PARAM_STR);
-$stmt->execute();
-$user_privilages = 3;
-if(!($row = $stmt->fetch()) || ($user_privileges = privileges($row[0])) > $data['privileges'] || time() < strtotime($data['begin']))
-	E_403();
-$stmt->closeCursor();
-
-if(isset($data['task_id']))
+// Move it somewhere else or write better
+/*if(isset($data['task_id']))
 {
 	header('Content-type: application/pdf');
 	header('Content-Disposition: filename="'.substr(file($_SERVER['DOCUMENT_ROOT']."/../tasks/".$data['task_id']."/conf.cfg")[0], 0, -1).'.pdf"');
 	readfile($_SERVER['DOCUMENT_ROOT']."/../tasks/".$data['task_id']."/content.pdf");
 	exit;
-}
+}*/
 
-template_begin('Contests');
+template_begin('Round');
 
-echo "<pre>";print_r($data);echo "</pre>";
-echo '<div class="round">',$path;
+echo '<div class="round-info">',$path,"</div>";
 
 $stmt = DB::pdo()->prepare("SELECT r.id,t.name FROM rounds r, tasks t WHERE r.parent=? AND r.task_id=t.id");
 $stmt->bindValue(1, $_GET['id'], PDO::PARAM_INT);
