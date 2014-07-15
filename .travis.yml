@@ -19,3 +19,6 @@ branches:
 os:
   - linux
   - osx
+
+notifications:
+  email: false
