@@ -4,18 +4,18 @@ compiler:
   - gcc
   - clang
 
-os:
-  - linux
-  - osx
-
-before_install:
+install:
   - time sudo apt-get update -qq
   - time sudo apt-get install -qq libmysqlcppconn-dev
 
-install:
+script:
   - make
 
 branches:
   only:
     - master
     - beta
+
+os:
+  - linux
+  - osx
