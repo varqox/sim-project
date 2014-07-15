@@ -3,8 +3,10 @@ compiler:
   - gcc
   - clang
 before_install:
-  - make
+  - time sudo apt-get update -qq
+  - time sudo apt-get install -qq apache2 php5 php5-mysql libapache2-mod-php5 mysql-server libapache2-mod-auth-mysql libmysqlcppconn-dev
 install:
+  - make
   - sudo make install
 branches:
   only:
