@@ -7,7 +7,7 @@ before_install:
   - time sudo apt-get install -qq apache2 php5 php5-mysql libapache2-mod-php5 mysql-server libapache2-mod-auth-mysql libmysqlcppconn-dev
 install:
   - make
-  - sudo make install
+  - printf "sim\nsim\nsim\n" | sudo make install
 branches:
   only:
     - master
