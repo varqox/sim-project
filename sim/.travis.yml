@@ -9,16 +9,15 @@ install:
   - time sudo apt-get install -qq libmysqlcppconn-dev
 
 script:
-  - make
+  - make -j
 
 branches:
   only:
     - master
     - beta
 
-os:
-  - linux
-  - osx
-
 notifications:
   email: false
+
+matrix:
+  fast_finish: true
