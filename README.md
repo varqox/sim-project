@@ -1,10 +1,9 @@
-sim
-===
+# sim [![Build Status](https://travis-ci.org/krzyk240/sim.svg?branch=master)](https://travis-ci.org/krzyk240/sim)
 
 SIM is open source platform for carrying out algorithmic contests
 
-Dependencies:
-=============
+# Dependencies:
+
 - gcc/g++ (32 bit version)
 - Apache2 (>= 2.4, Ubuntu package: _apache2_)
 - PHP5 (Ubuntu paskages: _php5 php5-mysql libapache2-mod-php5_)
