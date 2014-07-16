@@ -18,13 +18,13 @@ if(!($row = $stmt->fetch()))
 $user_privileges = privileges($row[0]);
 $stmt->closeCursor();
 
-$stmt = DB::pdo()->prepare("SELECT r.parent,r.task_id,t.name,r.privileges,r.begin_time,r.end_time,r.author FROM rounds r, tasks t WHERE r.id=? AND r.task_id=t.id");
+$stmt = DB::pdo()->prepare("SELECT r.parent,r.task_id,r.name,r.privileges,r.begin_time,r.end_time,r.author,t.name FROM rounds r, tasks t WHERE r.id=? AND r.task_id=t.id");
 $stmt->bindValue(1, $_GET['round'], PDO::PARAM_INT);
 $stmt->execute();
 if(!($row = $stmt->fetch()) || !isset($row[1]))
 	E_404();
 $time = time();
-$task = array('id' => $row[1], 'name' => $row[2]);
+$task = array('id' => $row[1], 'name' => $row[7]);
 $rounds = array(0 => $_GET['round']);
 $parent = $row[0];
 $path = "<a href=\"/round.php?id=".$_GET['round']."\">$row[2]</a>";
@@ -49,7 +49,9 @@ while($parent >= 1)
 	$stmt->closeCursor();
 }
 
-template_begin('Submit a solution');
+template_begin('Submit a solution','','.body{margin-left:150px}');
+
+echo '<ul class="menu"><li><a href="/round.php?id=',$_GET['round'],'">View round</a></li><li><a href="/submissions/?id=',$_GET['round'],'">Submissions</a></li></ul>';
 
 global $info, $lII;
 
@@ -90,7 +92,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 	}
 }
 
-echo '<div class="round-info">',$path,"</div>",$info,'<div class="form-container">
+echo '<div class="path">',$path,"</div>",$info,'<div class="form-container">
 <h1>Submit a solution</h1>
 <h4>Problem: <a href="/round.php?id=',$_GET['round'],'">',$task['name'],'</a></h4>
 <form enctype="multipart/form-data" action method="POST">

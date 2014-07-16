@@ -34,7 +34,7 @@ echo '<!DOCTYPE html>
 <div class="navbar">
 <div class="navbar-body">
 <a href="/" class="brand">SIM</a>
-<a href="/round.php?id=1">Contests</a>
+<a href="/round.php">Contests</a>
 <a href="/files/">Files</a>
 <a href="/submissions/">Submissions</a>
 <div style="float:right">
@@ -54,7 +54,7 @@ else
 	echo '</div>
 </div>
 </div>
-<div class="body-main">
+<div class="body">
 ';
 }
 

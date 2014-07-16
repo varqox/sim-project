@@ -16,6 +16,7 @@
 *.dep-s
 
 # Others
+build
 src/cpp/judge_machine
 src/cpp/CTH
 src/cpp/chmod-default

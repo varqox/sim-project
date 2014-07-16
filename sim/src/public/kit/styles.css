@@ -524,8 +524,9 @@ a{
 	color: #0088cc;
 	text-decoration: none;
 }
-a:hover,
-a:focus{
+a:focus,
+a:hover
+{
 	color: #005580;
 	text-decoration: underline;
 }
@@ -539,6 +540,7 @@ a:focus{
 	top: 0;
 	left: 0;
 	right: 0;
+	z-index: 2;
 	color: #999999;
 	min-height: 40px;
 	background-color: #1b1b1b;
@@ -566,8 +568,8 @@ a:focus{
 	color: #ffffff !important;
 	text-decoration: none;
 }
-.body-main{
-	margin: 50px 0 10px;
+.body{
+	margin: 50px 0 0;
 }
 #clock{
 	float: left;
@@ -656,6 +658,11 @@ a:focus{
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 	text-decoration: none;
+}
+.rounds .btn-small{
+	padding: 2px 5px;
+	font-size: 12px;
+	line-height: 14px;
 }
 .btn-small:hover,
 .btn-small:focus{
@@ -817,8 +824,32 @@ form .input-block{
 .round{
 	margin-left: 70px;
 }
-.round-info{
-	margin-left: 40px;
+.round-info p{
+	margin: 4px 0;
+}
+.menu{
+	position: fixed;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	background: #f5f5f5;
+	margin: 0;
+	padding: 60px 10px 0;
+	border-right: 1px solid #ccc;
+	height: 100%;
+	width: 128px;
+	z-index: 1;
+}
+.menu > li{
+	list-style: none;
+}
+.menu > li > a{
+	display: block;
+	padding: 7px 0 7px 5px;
+}
+.menu > li > a:focus, .menu > li > a:hover{
+	text-decoration: none;
+	background: #e7e7e7;
 }
 .submissions{
 	margin: 0 auto;
@@ -829,7 +860,7 @@ form .input-block{
 	line-height: 20px;
 }
 .submissions td{
-	border-top: 1px solid #bbbbbb;
+	border-top: 1px solid #bbb;
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 }

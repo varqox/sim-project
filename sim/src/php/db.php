@@ -13,7 +13,7 @@ class DB
 		}
 		catch(PDOException $e)
 		{
-			echo "DB connection error!";
+			echo "DB connection error!\n";
 			exit;
 		}
 	}

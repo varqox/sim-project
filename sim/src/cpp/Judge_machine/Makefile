@@ -3,7 +3,7 @@ PHONY := all
 all: ../judge_machine
 
 ../judge_machine: main.o compile.o other_functions.o reports_queue.o judge.o db.o
-	$(Q)$(call P,LINK,$@)$(LINK) $^ $(LFLAGS) -o $@ -lmysqlcppconn
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn
 
 PHONY += dep-s
 dep-s: $(shell ls | egrep ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
