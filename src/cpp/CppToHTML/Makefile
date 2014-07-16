@@ -3,7 +3,7 @@ PHONY := all
 all: ../CTH
 
 ../CTH: main.o coloring.o aho.o
-	$(Q)$(call P,LINK,$@)$(LINK) $^ $(LFLAGS) -o $@
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
 
 PHONY += dep-s
 dep-s: $(shell ls | egrep ".c$$|.cpp$$" | sed "s/$$/.dep-s/")

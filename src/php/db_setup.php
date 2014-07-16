@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `reports_to_rounds` (
 CREATE TABLE IF NOT EXISTS `rounds` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `item` int unsigned NOT NULL,
+  `visible` BOOLEAN NOT NULL DEFAULT FALSE,
   `author` int unsigned NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `parent` int unsigned NOT NULL DEFAULT 1,

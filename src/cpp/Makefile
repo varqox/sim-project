@@ -13,7 +13,7 @@ CTH:
 	$(Q)$(MAKE) -C CppToHTML
 
 chmod-default: chmod-default.cpp
-	$(Q)$(call P,LINK,$@)$(LINK) $^ $(LFLAGS) -o $@
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
 
 PHONY += mrproper
 mrproper:
