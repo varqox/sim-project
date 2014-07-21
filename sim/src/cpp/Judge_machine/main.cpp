@@ -90,7 +90,7 @@ int main()
 	signal(SIGIOT, control_exit);
 	signal(SIGBUS, control_exit);
 	signal(SIGFPE, control_exit);
-	signal(SIGKILL, control_exit); // We won't block SIGKILL
+	// signal(SIGKILL, control_exit); // We won't block SIGKILL
 	signal(SIGUSR1, control_exit);
 	signal(SIGSEGV, control_exit);
 	signal(SIGUSR2, control_exit);

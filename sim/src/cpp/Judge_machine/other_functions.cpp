@@ -20,7 +20,7 @@ void remove_r(const char* path)
 	remove(path);
 }
 
-string myto_string(long long int a)
+string myto_string(long long a)
 {
 	string w;
 	while(a>0)

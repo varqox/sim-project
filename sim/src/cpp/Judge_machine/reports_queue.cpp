@@ -27,7 +27,7 @@ string myto_string(long long int a);
 
 namespace reports_queue
 {
-	void report::set(report_status st, int points) const
+	void report::set(report_status st, long long points) const
 	{
 		sql::Statement *stmt = DB::mysql()->createStatement();
 		stmt->execute("UPDATE reports SET status='"+to_str(st)+"',points="+myto_string(points)+" WHERE id="+_id);

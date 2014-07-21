@@ -6,6 +6,8 @@
 #include <sys/stat.h> // chmod()
 #include <set>
 
+#define eprint(...) fprintf(stderr, __VA_ARGS__)
+
 #ifdef DEBUG
 #define D(...) __VA_ARGS__
 #else
@@ -17,7 +19,6 @@
 // other_functions.cpp
 void remove_r(const char* path);
 std::string myto_string(long long int a);
-std::string f_time(int a);
 std::string make_safe_php_string(const std::string& str);
 std::string make_safe_html_string(const std::string& str);
 std::deque<unsigned> kmp(const std::string& text, const std::string& pattern);

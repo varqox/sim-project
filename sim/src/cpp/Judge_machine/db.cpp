@@ -2,7 +2,7 @@
 #include <cstring>
 #include "db.hpp"
 
-DB::DB(): con()
+DB::DB(): con(), user(NULL), password(NULL), database(NULL)
 {
 	FILE *f = fopen("../php/db.pass", "r");
 	if(f == NULL)
@@ -10,21 +10,26 @@ DB::DB(): con()
 		printf("#1\n");
 		exit(1);
 	}
-	char *user = NULL, *password = NULL, *database = NULL;
 	size_t x;
 	if(getline(&user, &x, f) == -1 || getline(&password, &x, f) == -1 || getline(&database, &x, f) == -1)
 	{
 		printf("%p\n%p\n%p\n", user, password, database);
 		exit(1);
 	}
+	fclose(f);
 	user[strlen(user)-1] = password[strlen(password)-1] = database[strlen(database)-1] = '\0';
-	printf("%s\n%s\n%s\n", user, password, database);
+#ifdef DEBUG
+	printf("mysql_user: %s\nmysql_password: %s\ndatabase: %s\n", user, password, database);
+#endif
+	connect();
+}
+
+void DB::connect()
+{
+	if(con)
+		delete con;
 	con = get_driver_instance()->connect("localhost", user, password);
 	con->setSchema(database);
-	free(user);
-	free(password);
-	free(database);
-	fclose(f);
 }
 
 DB DB::obj;
