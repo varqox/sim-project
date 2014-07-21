@@ -8,6 +8,7 @@ class DB
 {
 private:
 	sql::Connection * con;
+	char *user, *password, *database;
 
 	DB(const DB&);
 
@@ -15,12 +16,23 @@ private:
 
 	DB();
 
+	void connect();
+
 	~DB()
-	{delete con;}
+	{
+		delete con;
+		free(user);
+		free(password);
+		free(database);
+	}
 
 	static DB obj;
 
 public:
 	static sql::Connection* mysql()
-	{return obj.con;}
+	{
+		if(obj.con->isClosed())
+			obj.connect();
+		return obj.con;
+	}
 };

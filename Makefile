@@ -43,16 +43,16 @@ all:
 	@printf "\033[;32mBuild finished\033[0m\n"
 
 PHONY += debug
-debug: CXX += -DDEBUG
-debug: CC += -DDEBUG
+debug: override CXX += -DDEBUG
+debug: override CC += -DDEBUG
 debug: all
 
 PHONY += hard-debug
-hard-debug: CXX += -DDEBUG
-hard-debug: CC += -DDEBUG
-hard-debug: CFLAGS = -O0 -g -c
-hard-debug: CXXFLAGS = -O0 -g -c
-hard-debug: LFLAGS = -O0 -g
+hard-debug: override CXX += -DDEBUG
+hard-debug: override CC += -DDEBUG
+hard-debug: override CFLAGS = -O0 -g -c
+hard-debug: override CXXFLAGS = -O0 -g -c
+hard-debug: override LFLAGS = -O0 -g
 hard-debug: all
 
 PHONY += install

@@ -19,7 +19,7 @@ namespace reports_queue
 			case C_ERROR: return "c_error";
 			case WAITING: return "waiting";
 		}
-		return "";
+		return "error";
 	}
 
 	class report
@@ -37,7 +37,7 @@ namespace reports_queue
 		const std::string& task_id() const
 		{return _task_id;}
 
-		void set(report_status st, int points) const;
+		void set(report_status st, long long points) const;
 	};
 
 	bool empty();
