@@ -287,6 +287,6 @@ string task::judge(const string& exec_name)
 	}
 	out+="</tbody>\n</table>";
 	D(eprint("=================================================================\nScore: %lli / %lli\n", total_score, max_score);)
-	reports_queue::front().set(status_ok ? reports_queue::OK : reports_queue::ERROR, total_score);
+	submissions_queue::front().set(status_ok ? submissions_queue::OK : submissions_queue::ERROR, total_score);
 	return "<pre>Score: "+myto_string(total_score)+"/"+myto_string(max_score)+"\nStatus: Judged</pre>\n"+out;
 }
