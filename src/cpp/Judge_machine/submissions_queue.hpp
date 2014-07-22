@@ -6,11 +6,11 @@
 
 #pragma once
 
-namespace reports_queue
+namespace submissions_queue
 {
-	enum report_status{OK, ERROR, C_ERROR, WAITING};
+	enum submission_status{OK, ERROR, C_ERROR, WAITING};
 
-	inline std::string to_str(report_status st)
+	inline std::string to_str(submission_status st)
 	{
 		switch(st)
 		{
@@ -22,13 +22,13 @@ namespace reports_queue
 		return "error";
 	}
 
-	class report
+	class submission
 	{
 	private:
 		std::string _id, _task_id;
 
 	public:
-		report(const std::string& nid, const std::string& ntid): _id(nid), _task_id(ntid)
+		submission(const std::string& nid, const std::string& ntid): _id(nid), _task_id(ntid)
 		{}
 
 		const std::string& id() const
@@ -37,15 +37,15 @@ namespace reports_queue
 		const std::string& task_id() const
 		{return _task_id;}
 
-		void set(report_status st, long long points) const;
+		void set(submission_status st, long long points) const;
 	};
 
 	bool empty();
 	void pop();
-	report extract();
-	const report& front();
+	submission extract();
+	const submission& front();
 }
 
 #ifdef DEBUG
-std::ostream& operator<<(std::ostream& os, const reports_queue::report& r);
+std::ostream& operator<<(std::ostream& os, const submissions_queue::submission& r);
 #endif

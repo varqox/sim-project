@@ -8,7 +8,7 @@
 
 using namespace std;
 
-void GetTemplateOfReport(string& template_front, string& template_back, const string& file)
+void GetTemplateOfSubmission(string& template_front, string& template_back, const string& file)
 {
 	template_front=template_back="";
 	string file_content=file_get_contents(file);
@@ -62,16 +62,16 @@ void GetTemplateOfReport(string& template_front, string& template_back, const st
 }
 
 temporary_directory tmp_dir("judge_machine.XXXXXX\0");
-string *public_report_name, *public_report_front, *public_report_back;
+string *public_submission_name, *public_submission_front, *public_submission_back;
 
 void control_exit(int=0)
 {
-	// Repair status of current report
-	fstream report;
-	if(report.open(public_report_name->c_str(), ios::out), report.good())
+	// Repair status of current submission
+	fstream submission;
+	if(submission.open(public_submission_name->c_str(), ios::out), submission.good())
 	{
-		report << *public_report_front << "<pre>Status: Waiting for judge...</pre>" << *public_report_back;
-		report.close();
+		submission << *public_submission_front << "<pre>Status: Waiting for judge...</pre>" << *public_submission_back;
+		submission.close();
 	}
 	D(cerr << "Removing temporary directory" << endl);
 	remove_r(tmp_dir);
@@ -101,28 +101,28 @@ int main()
 	signal(_NSIG, control_exit);
 	// check if this process isn't oldest
 	if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
-	// checking reports
-	while(!reports_queue::empty())
+	// checking submissions
+	while(!submissions_queue::empty())
 	{
-		D(cerr << "JUDGING:\n" << reports_queue::front() << endl;)
-		reports_queue::report const & rep = reports_queue::front();
-		// fstream queue_file(("queue/"+reports_queue::front().id()).c_str(), ios::in);
+		D(cerr << "JUDGING:\n" << submissions_queue::front() << endl;)
+		submissions_queue::submission const & rep = submissions_queue::front();
+		// fstream queue_file(("queue/"+submissions_queue::front().id()).c_str(), ios::in);
 		// if(queue_file.good())
 		// {
-		// 	getline(queue_file, report_id);
+		// 	getline(queue_file, submission_id);
 		// 	getline(queue_file, task_id);
 		// 	queue_file.close();
 		// }
-		string report_front, report_back, report_name="../public/submissions/"+rep.id()+".php";
-		GetTemplateOfReport(report_front, report_back, report_name);
-		public_report_name=&report_name;
-		public_report_front=&report_front;
-		public_report_back=&report_back;
-		fstream report;
-		if(report.open(report_name.c_str(), ios::out), report.good())
+		string submission_front, submission_back, submission_name="../public/submissions/"+rep.id()+".php";
+		GetTemplateOfSubmission(submission_front, submission_back, submission_name);
+		public_submission_name=&submission_name;
+		public_submission_front=&submission_front;
+		public_submission_back=&submission_back;
+		fstream submission;
+		if(submission.open(submission_name.c_str(), ios::out), submission.good())
 		{
-			report << report_front << "<pre>Status: Judging...</pre>" << report_back;
-			report.close();
+			submission << submission_front << "<pre>Status: Judging...</pre>" << submission_back;
+			submission.close();
 		}
 		char exec[]="chroot/exec.XXXXXX";
 		if(-1==mkstemp(exec))
@@ -135,11 +135,11 @@ int main()
 		if(!compile::run(rep.id(), exec))
 		{
 			D(cerr << "Compilation failed" << endl);
-			if(report.open(report_name.c_str(), ios::out), report.good())
+			if(submission.open(submission_name.c_str(), ios::out), submission.good())
 			{
-				report << report_front << "<pre>Status: Compilation failed</pre>\n<pre>Points: 0<pre>\n<pre>" << make_safe_php_string(make_safe_html_string(compile::run.GetCompileErrors())) << "</pre>" << report_back;
-				reports_queue::front().set(reports_queue::C_ERROR, 0);
-				report.close();
+				submission << submission_front << "<pre>Status: Compilation failed</pre>\n<pre>Points: 0<pre>\n<pre>" << make_safe_php_string(make_safe_html_string(compile::run.GetCompileErrors())) << "</pre>" << submission_back;
+				submissions_queue::front().set(submissions_queue::C_ERROR, 0);
+				submission.close();
 			}
 		}
 		else
@@ -147,14 +147,14 @@ int main()
 			D(cerr << "Compilation success" << endl);
 			task rated_task("../tasks/"+rep.task_id());
 			string tmp=rated_task.judge(string(exec+7, exec+18));
-			if(report.open(report_name.c_str(), ios::out), report.good())
+			if(submission.open(submission_name.c_str(), ios::out), submission.good())
 			{
-				report << report_front << tmp << report_back;
-				report.close();
+				submission << submission_front << tmp << submission_back;
+				submission.close();
 			}
 			remove(exec);
 		}
-		reports_queue::pop();
+		submissions_queue::pop();
 	}
 return 0;
 }

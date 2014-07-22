@@ -51,7 +51,7 @@ template_begin('My Submissions','','.body{margin-left:150px}');
 echo '<ul class="menu"><li><a href="/round.php?id=',$_GET['id'],'">View round</a></li></ul>';
 
 echo '<div class="path">',$path," / Submissions</div>";
-$stmt = DB::pdo()->prepare("SELECT rr.report_id, rr.time, t.name, r.status, r.points FROM reports_to_rounds rr, reports r, tasks t WHERE rr.round_id=? AND rr.user_id=? AND rr.report_id=r.id AND r.task_id=t.id ORDER BY rr.report_id DESC");
+$stmt = DB::pdo()->prepare("SELECT sr.submission_id, sr.time, t.name, s.status, s.points FROM submissions_to_rounds sr, submissions s, tasks t WHERE sr.round_id=? AND sr.user_id=? AND sr.submission_id=s.id AND s.task_id=t.id ORDER BY sr.submission_id DESC");
 $stmt->bindValue(1,$_GET['id'], PDO::PARAM_STR);
 $stmt->bindValue(2,$_SESSION['id'], PDO::PARAM_STR);
 $stmt->execute();

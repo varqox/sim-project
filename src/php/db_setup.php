@@ -33,28 +33,29 @@ CREATE TABLE IF NOT EXISTS `tasks` (
   KEY (`checker`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-CREATE TABLE IF NOT EXISTS `reports` (
+CREATE TABLE IF NOT EXISTS `submissions` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int unsigned NOT NULL,
   `round_id` int unsigned NOT NULL,
   `task_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `status` enum('ok','error','c_error','waiting') DEFAULT NULL COLLATE utf8_bin,
+  `queued` timestamp NOT NULL,
   `points` int unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY (`user_id`),
   KEY (`round_id`),
   KEY (`task_id`),
-  KEY (`status`),
+  KEY (`status`,`queued`),
   KEY (`time`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-CREATE TABLE IF NOT EXISTS `reports_to_rounds` (
+CREATE TABLE IF NOT EXISTS `submissions_to_rounds` (
   `round_id` int unsigned NOT NULL,
-  `report_id` int unsigned NOT NULL,
+  `submission_id` int unsigned NOT NULL,
   `user_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`round_id`, `user_id`,`report_id`),
+  PRIMARY KEY (`round_id`, `user_id`,`submission_id`),
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE IF NOT EXISTS `rounds` (

@@ -6,14 +6,14 @@ using namespace std;
 
 compile compile::run;
 
-bool compile::operator()(const string& report_id, const string& exec)
+bool compile::operator()(const string& submission_id, const string& exec)
 {
 	compile_errors="";
 	D(
-		fprintf(stderr, "Compilation: %s to: %s\n", report_id.c_str(), exec.c_str());
-		fprintf(stderr, "COMMAND:\n%s\n", ("(cd ../solutions && timeout 15 g++ "+report_id+".cpp -s -O2 -static -lm -m32 -o ../judge/"+exec+") 2> "+string(file_compile_errors)).c_str());
+		fprintf(stderr, "Compilation: %s to: %s\n", submission_id.c_str(), exec.c_str());
+		fprintf(stderr, "COMMAND:\n%s\n", ("(cd ../solutions && timeout 15 g++ "+submission_id+".cpp -s -O2 -static -lm -m32 -o ../judge/"+exec+") 2> "+string(file_compile_errors)).c_str());
 	)
-	int ret=system(("(cd ../solutions && timeout 15 g++ "+report_id+".cpp -s -O2 -static -lm -m32 -o ../judge/"+exec+") 2> "+string(file_compile_errors)).c_str());
+	int ret=system(("(cd ../solutions && timeout 15 g++ "+submission_id+".cpp -s -O2 -static -lm -m32 -o ../judge/"+exec+") 2> "+string(file_compile_errors)).c_str());
 	if(!ret)
 	{
 		remove(file_compile_errors.c_str());

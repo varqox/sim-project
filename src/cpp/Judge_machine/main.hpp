@@ -78,8 +78,8 @@ private:
 public:
 	static compile run;
 
-	// Report ID, exec_name in chroot/
-	bool operator()(const std::string& report_id, const std::string& exec);
+	// Submission ID, exec_name in chroot/
+	bool operator()(const std::string& submission_id, const std::string& exec);
 
 	const char* NameOfCompileErrorsFile()
 	{return file_compile_errors.c_str();}
@@ -88,4 +88,4 @@ public:
 	{return compile_errors;}
 };
 
-#include "reports_queue.hpp"
+#include "submissions_queue.hpp"
