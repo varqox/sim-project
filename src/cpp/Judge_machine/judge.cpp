@@ -66,9 +66,13 @@ namespace runtime
 				exit(-1);
 
 			// Set virtual memory limit
-			struct rlimit memlimit;
-			memlimit.rlim_max = memlimit.rlim_cur = memory_limit;
-			prlimit(getpid(), RLIMIT_AS, &memlimit, NULL);
+			struct rlimit limit;
+			limit.rlim_max = limit.rlim_cur = memory_limit;
+			prlimit(getpid(), RLIMIT_AS, &limit, NULL);
+
+			// Set processes creating limit
+			limit.rlim_max = limit.rlim_cur = 0;
+			prlimit(getpid(), RLIMIT_NPROC, &limit, NULL);
 
 			char *arg[] = {NULL};
 			execve(exec, arg, arg);
@@ -108,9 +112,13 @@ namespace runtime
 					exit(-1);
 
 				// Set virtual memory limit
-				struct rlimit memlimit;
-				memlimit.rlim_max = memlimit.rlim_cur = 128 * 1024 * 1024;
-				prlimit(getpid(), RLIMIT_AS, &memlimit, NULL);
+				struct rlimit limit;
+				limit.rlim_max = limit.rlim_cur = 128 * 1024 * 1024;
+				prlimit(getpid(), RLIMIT_AS, &limit, NULL);
+
+				// Set processes creating limit
+				limit.rlim_max = limit.rlim_cur = 0;
+				prlimit(getpid(), RLIMIT_NPROC, &limit, NULL);
 
 				char *arg[] = {checker, input, output, answer, NULL}, *env[] = {NULL};
 				execve(checker, arg, env);
@@ -213,10 +221,12 @@ string task::check_on_test(const string& test, const string& time_limit)
 
 	output += "<td>";
 	tmp = myto_string(runtime::cl/10000);
-	tmp.insert(0, 3-tmp.size(), '0').insert(tmp.size()-2, 1, '.');
+	tmp.insert(0, 3-tmp.size(), '0');
+	tmp.insert(tmp.size()-2, 1, '.');
 	output += tmp + "/";
 	tmp = myto_string(runtime::time_limit/10000);
-	tmp.insert(0, 3-tmp.size(), '0').insert(tmp.size()-2, 1, '.');
+	tmp.insert(0, 3-tmp.size(), '0');
+	tmp.insert(tmp.size()-2, 1, '.');
 	output += tmp + "</td>";
 
 	// Calculate ratio for current test
@@ -233,7 +243,11 @@ string task::judge(const string& exec_name)
 	fstream config((_name+"conf.cfg").c_str(), ios::in);
 	D(cerr << "Openig file: " << _name << "conf.cfg" << endl);
 	if(!config.good())
-		return "<pre>Judge Error</pre>";
+	{
+		// Judge Error
+		submissions_queue::front().set(submissions_queue::ERROR, 0);
+		return "";
+	}
 	D(cerr << "Success!" << endl);
 	string trashes, checker_name;
 	getline(config, trashes); // Task tag
@@ -243,13 +257,16 @@ string task::judge(const string& exec_name)
 	string checker_exec=string(tmp_dir)+"checker";
 	D(cerr << checker_exec << endl);
 	if(system(("timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null").c_str())!=0)
-		D({cerr << "Judge Error (checker compilation failed)" << endl;)
-		return "<pre>Judge Error (checker compilation)</pre>";D(})
+	{
+		D(cerr << "Judge Error (checker compilation failed)" << endl;)
+		submissions_queue::front().set(submissions_queue::ERROR, 0);
+		return "";
+	}
 	D(cerr << "Compilation command: "  << "timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null" << endl);
 	checker="/judge/"+checker_exec;
 	// Rest
 	config >> memory_limit;
-	string out="<table style=\"margin-top: 5px\" class=\"table results\">\n<thead>\n<tr>\n<th style=\"min-width: 80px\">Test</th>\n<th style=\"min-width: 190px\">Result</th>\n<th style=\"min-width: 100px\">Time</th>\n<th style=\"min-width: 70px\">Result</th>\n</tr>\n</thead>\n<tbody>\n";
+	string out;
 	long long max_score=0, total_score=0, group_score;
 	string test_name, time_limit, group_buffer;
 	int other_tests=0;
@@ -262,7 +279,7 @@ string task::judge(const string& exec_name)
 			min_group_ratio=1;
 			config >> other_tests >> group_score;
 			max_score+=group_score;
-			out+="<tr>\n";
+			out+="<tr>";
 			out+=check_on_test(test_name, time_limit);
 			if(runtime::res_stat != runtime::RES_OK)
 				status_ok = false;
@@ -271,7 +288,7 @@ string task::judge(const string& exec_name)
 		}
 		else
 		{
-			group_buffer+="<tr>\n";
+			group_buffer+="<tr>";
 			group_buffer+=check_on_test(test_name, time_limit);
 			if(runtime::res_stat != runtime::RES_OK)
 				status_ok = false;
@@ -281,12 +298,11 @@ string task::judge(const string& exec_name)
 		if(!other_tests)
 		{
 			total_score+=group_score*min_group_ratio;
-			out+=myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td>\n</tr>\n";
+			out+=myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td></tr>\n";
 			out+=group_buffer;
 		}
 	}
-	out+="</tbody>\n</table>";
 	D(eprint("=================================================================\nScore: %lli / %lli\n", total_score, max_score);)
 	submissions_queue::front().set(status_ok ? submissions_queue::OK : submissions_queue::ERROR, total_score);
-	return "<pre>Score: "+myto_string(total_score)+"/"+myto_string(max_score)+"\nStatus: Judged</pre>\n"+out;
+	return out;
 }

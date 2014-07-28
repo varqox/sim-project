@@ -32,7 +32,7 @@ ifeq ($(VERBOSE),1)
 else
 	Q := @
 	P = printf "   $$(1)\t $$(subst $(ROOT),,$$(abspath $$(2)))\n";
-	MFLAGS += -s
+	override MFLAGS += --no-print-directory -s
 endif
 
 PHONY := all
