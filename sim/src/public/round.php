@@ -28,6 +28,7 @@ $row = $stmt->fetch();
 $name = $row[0];
 $path = "<a href=\"/round.php?id=".$_GET['id']."\">$name</a>";
 $parent = $row[1];
+$author = $row[5];
 $task_id = $row[6];
 $begin_time = $row[3];
 $end_time = $row[4];
@@ -65,7 +66,7 @@ if(isset($task_id))
 		// Need to write good task view
 		template_begin('Round','','.body{margin-left:150px}');
 		echo '<ul class="menu"><li><a href="submissions/?id=',$_GET['id'],'">Submissions</a></li></ul>';
-		echo '<div class="path">',$path,"</div><div class=\"round-info\"><p style=\"font-size:30px;margin:10px 0\">$name</p><p>Beginning: ",(isset($begin_time) ? $begin_time : "whenever"),"</p><p>End: ",(isset($end_time) ? $end_time : "never"),'</p></div><a class="btn-small" href="?id=',$_GET['id'],'&content">View content</a>',($round_privileges == $user_privileges && isset($end_time) && $time > $end_time ? "" : '<a class="btn-small" href="submit.php?round='.$_GET['id'].'">Submit solution</a>');
+		echo '<div class="path">',$path,"</div><div class=\"round-info\"><p style=\"font-size:30px;margin:10px 0\">$name</p><p>Beginning: ",(isset($begin_time) ? $begin_time : "whenever"),"</p><p>End: ",(isset($end_time) ? $end_time : "never"),'</p></div><a class="btn-small" href="?id=',$_GET['id'],'&content">View content</a>',($round_privileges == $user_privileges && $_SESSION['id'] != $author && isset($end_time) && $time > $end_time ? "" : '<a class="btn-small" href="submit.php?round='.$_GET['id'].'">Submit solution</a>');
 		template_end();
 		exit;
 	}
@@ -97,7 +98,7 @@ while($row = $stmt->fetch())
 		if(!isset($col_rounds[$row[1]]))
 			$col_rounds[$row[1]] = array();
 		if(isset($row[8]))
-			$col_rounds[$row[1]][] = "<tr><td><a href=\"?id=$row[0]&content\">$row[4]</a></td><td>".(isset($row[5]) ? $row[5] : "whenever")."</td><td>".(isset($row[6]) ? $row[6] : "never")."</td><td>".(privileges($row[7]) == $user_privileges && isset($row[6]) && $time > strtotime($row[6]) ? "" : "<a class=\"btn-small\" href=\"submit.php?round=$row[0]\">Submit solution</a>")."<a class=\"btn-small\" href=\"?id=$row[0]\">View as round</a></td></tr>";
+			$col_rounds[$row[1]][] = "<tr><td><a href=\"?id=$row[0]&content\">$row[4]</a></td><td>".(isset($row[5]) ? $row[5] : "whenever")."</td><td>".(isset($row[6]) ? $row[6] : "never")."</td><td>".(privileges($row[7]) == $user_privileges && $_SESSION['id'] != $row[3] && isset($row[6]) && $time > strtotime($row[6]) ? "" : "<a class=\"btn-small\" href=\"submit.php?round=$row[0]\">Submit solution</a>")."<a class=\"btn-small\" href=\"?id=$row[0]\">View as round</a></td></tr>";
 		else
 			$col_rounds[$row[1]][] = "<tr><td><a href=\"?id=$row[0]\">$row[4]</a></td><td>".(isset($row[5]) ? $row[5] : "whenever")."</td><td>".(isset($row[6]) ? $row[6] : "never")."</td><td></td></tr>";
 

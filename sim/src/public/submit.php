@@ -63,13 +63,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 		$info.="<p>Error occurred.</p>";
 	else
 	{
-		$stmt = DB::pdo()->prepare("INSERT INTO submissions (user_id,round_id,task_id,time,queued) VALUES(?,?,?,FROM_UNIXTIME(?)),CURRENT_TIMESTAMP");
+		$stmt = DB::pdo()->prepare("INSERT INTO submissions (user_id,round_id,task_id,time,queued) VALUES(?,?,?,FROM_UNIXTIME(?),NOW())");
 		$stmt->bindValue(1,$_SESSION['id'], PDO::PARAM_STR);
 		$stmt->bindValue(2,$_GET['round'], PDO::PARAM_INT);
 		$stmt->bindValue(3,$task['id'], PDO::PARAM_INT);
 		$stmt->bindValue(4,$time, PDO::PARAM_STR);
 		$stmt->execute();
-		if(1 > $stmt->rowCount() || !copy($_FILES['solution']['tmp_name'], $_SERVER['DOCUMENT_ROOT'].'/../solutions/'.($lII=DB::pdo()->lastInsertID()).'.cpp') || !file_put_contents($_SERVER['DOCUMENT_ROOT']."/submissions/".$lII.".php", "<?php\nif(isset(\$_GET['download']))\n{header('Content-type: application/text');header('Content-Disposition: attchment; filename=\"".$lII.".cpp\"');readfile(\$_SERVER['DOCUMENT_ROOT'].\"/../solutions/".$lII.".cpp\");exit;}\n\nrequire_once \$_SERVER['DOCUMENT_ROOT'].\"/../php/main.php\";\ntemplate_begin('Zgłoszenie ".$lII."');\nif(isset(\$_GET['source']))\n{echo '<div style=\"margin: 60px 0 0 10px\">', shell_exec(\$_SERVER['DOCUMENT_ROOT'].\"/../judge/CTH \".\$_SERVER['DOCUMENT_ROOT'].\"/../solutions/".$lII.".cpp\"), '</div>';template_end();exit;}\n\necho '<div style=\"text-align: center\">\n<div class=\"submission-info\">\n<h1>Zgłoszenie ".$lII."</h1>\n<div class=\"btn-toolbar\">\n<a class=\"btn-small\" href=\"?source\">View source</a>\n<a class=\"btn-small\" href=\"?download\">Download</a>\n</div>\n<h2>Zadanie ".$task['id'].": ".$task['name']."</h2>\n</div>\n<div class=\"submit-status\">\n<pre>Status: Waiting for judge...</pre>\n</div>\n</div>';\ntemplate_end();\n?>"))
+		if(1 > $stmt->rowCount() || !copy($_FILES['solution']['tmp_name'], $_SERVER['DOCUMENT_ROOT'].'/../solutions/'.($lII=DB::pdo()->lastInsertID()).'.cpp') || !file_put_contents($_SERVER['DOCUMENT_ROOT']."/submissions/".$lII.".php", "<?php\nrequire_once \$_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(".$lII.");\n?>"))
 			$info.="<p>Error occurred.</p>";
 		else
 		{

@@ -75,21 +75,13 @@ else
 		echo '<tr>
 <td><a href="/submissions/',$row[0],'.php">',$row[1],'</a></td>
 <td>',$row[2],'</td>
-<td ';
+<td';
 	switch($row[3])
 	{
-		case "ok":
-			echo 'class="ok">OK';
-			break;
-		case "error":
-			echo 'class="wa">Error';
-			break;
-		case "c_error":
-			echo 'class="wa">Compilation failed';
-			break;
-		case "waiting":
-			echo '>Pending';
-			break;
+		case "ok": echo ' class="ok">Initial tests: OK';break;
+		case "error": echo ' class="wa">Initial tests: Error';break;
+		case "c_error": echo ' class="wa">Compilation failed';break;
+		case "waiting": echo '>Pending';break;
 	}
 	echo '</td>
 <td>',$row[4],'</td>
