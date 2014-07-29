@@ -50,11 +50,21 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
 		$info.="<p>Username taken</p></pre>";
 		goto form;
 	}
+
 	session::start();
+
+	$stmt = DB::pdo()->prepare("SELECT id FROM users WHERE username = ?");
+	$stmt->bindValue(1, $_POST['username'], PDO::PARAM_STR);
+	$stmt->execute();
+	if($row = $stmt->fetch())
+	{
+		$_SESSION['id'] = $row[0];
+		$stmt->closeCursor();
+	}
+
 	$_SESSION['username'] = $_POST['username'];
 	$_SESSION['first_name'] = $_POST['first_name'];
 	$_SESSION['last_name'] = $_POST['last_name'];
-	$_SESSION['type'] = 'normal';
 	$_SESSION['user_agent_ip'] = $_SERVER['HTTP_USER_AGENT'].$_SERVER['REMOTE_ADDR'];
 	$info.="<p>Sometime later write it...</p></pre>";
 }
