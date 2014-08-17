@@ -11,7 +11,7 @@ if(!check_logged_in())
 }
 
 $stmt = DB::pdo()->prepare("SELECT type FROM users WHERE id=?");
-$stmt->bindValue(1, $_SESSION['id'], PDO::PARAM_STR);
+$stmt->bindValue(1, $_SESSION['id']);
 $stmt->execute();
 if(!($row = $stmt->fetch()))
 	E_403();
@@ -19,7 +19,7 @@ $user_privileges = privileges($row[0]);
 $stmt->closeCursor();
 
 $stmt = DB::pdo()->prepare("SELECT r.parent,r.task_id,r.name,r.privileges,r.begin_time,r.end_time,r.author,t.name FROM rounds r, tasks t WHERE r.id=? AND r.task_id=t.id");
-$stmt->bindValue(1, $_GET['round'], PDO::PARAM_INT);
+$stmt->bindValue(1, $_GET['round']);
 $stmt->execute();
 if(!($row = $stmt->fetch()) || !isset($row[1]))
 	E_404();
@@ -36,7 +36,7 @@ $stmt->closeCursor();
 $stmt = DB::pdo()->prepare("SELECT parent,privileges,name FROM rounds WHERE id=?");
 while($parent >= 1)
 {
-	$stmt->bindValue(1, $parent, PDO::PARAM_INT);
+	$stmt->bindValue(1, $parent);
 	$stmt->execute();
 	if(!($row = $stmt->fetch()))
 		E_404();
@@ -64,26 +64,26 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 	else
 	{
 		$stmt = DB::pdo()->prepare("INSERT INTO submissions (user_id,round_id,task_id,time,queued) VALUES(?,?,?,FROM_UNIXTIME(?),NOW())");
-		$stmt->bindValue(1,$_SESSION['id'], PDO::PARAM_STR);
-		$stmt->bindValue(2,$_GET['round'], PDO::PARAM_INT);
-		$stmt->bindValue(3,$task['id'], PDO::PARAM_INT);
-		$stmt->bindValue(4,$time, PDO::PARAM_STR);
+		$stmt->bindValue(1,$_SESSION['id']);
+		$stmt->bindValue(2,$_GET['round']);
+		$stmt->bindValue(3,$task['id']);
+		$stmt->bindValue(4,$time);
 		$stmt->execute();
-		if(1 > $stmt->rowCount() || !copy($_FILES['solution']['tmp_name'], $_SERVER['DOCUMENT_ROOT'].'/../solutions/'.($lII=DB::pdo()->lastInsertID()).'.cpp') || !file_put_contents($_SERVER['DOCUMENT_ROOT']."/submissions/".$lII.".php", "<?php\nrequire_once \$_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(".$lII.");\n?>"))
+		if(1 > $stmt->rowCount() || !move_uploaded_file($_FILES['solution']['tmp_name'], $_SERVER['DOCUMENT_ROOT'].'/../solutions/'.($lII=DB::pdo()->lastInsertID()).'.cpp') || !file_put_contents($_SERVER['DOCUMENT_ROOT']."/submissions/".$lII.".php", "<?php\nrequire_once \$_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(".$lII.");\n?>"))
 			$info.="<p>Error occurred.</p>";
 		else
 		{
 			$stmt->closeCursor();
 			$stmt = DB::pdo()->prepare("UPDATE submissions SET status='waiting' WHERE id=?");
-			$stmt->bindValue(1,$lII, PDO::PARAM_INT);
+			$stmt->bindValue(1,$lII);
 			$stmt->execute();
 			$stmt = DB::pdo()->prepare("INSERT INTO submissions_to_rounds (round_id,submission_id,user_id,time) VALUES(?,?,?,FROM_UNIXTIME(?))");
 			foreach($rounds as $i)
 			{
-				$stmt->bindValue(1,$i,PDO::PARAM_STR);
-				$stmt->bindValue(2,$lII,PDO::PARAM_STR);
-				$stmt->bindValue(3,$_SESSION['id'],PDO::PARAM_STR);
-				$stmt->bindValue(4,$time,PDO::PARAM_STR);
+				$stmt->bindValue(1,$i);
+				$stmt->bindValue(2,$lII);
+				$stmt->bindValue(3,$_SESSION['id']);
+				$stmt->bindValue(4,$time);
 				$stmt->execute();
 			}
 			shell_exec("(cd ".$_SERVER['DOCUMENT_ROOT']."../judge ; sudo ./judge_machine) > /dev/null 2> /dev/null &");

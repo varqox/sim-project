@@ -38,7 +38,6 @@ endif
 PHONY := all
 all:
 	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
-	$(Q)$(MAKE) $(MFLAGS) -C src/cpp/ dep-s
 	$(Q)$(MAKE) $(MFLAGS) -C src/cpp/
 	@printf "\033[;32mBuild finished\033[0m\n"
 

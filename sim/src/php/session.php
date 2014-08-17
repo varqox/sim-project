@@ -50,9 +50,9 @@ class session
 	function __destruct()
 	{
 		$stmt = DB::pdo()->prepare("UPDATE session SET data=?, time=? WHERE id=?");
-		$stmt->bindValue(1, json_encode($_SESSION), PDO::PARAM_STR);
-		$stmt->bindValue(2, date("Y-m-d H:i:s"), PDO::PARAM_STR);
-		$stmt->bindValue(3, $this->id, PDO::PARAM_STR);
+		$stmt->bindValue(1, json_encode($_SESSION));
+		$stmt->bindValue(2, date("Y-m-d H:i:s"));
+		$stmt->bindValue(3, $this->id);
 		$stmt->execute();
 	}
 

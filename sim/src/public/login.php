@@ -4,8 +4,8 @@ require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'], $_POST['password']))
 {
 	$stmt = DB::pdo()->prepare("SELECT id,username,first_name,last_name FROM users WHERE username = ? AND password = ?");
-	$stmt->bindValue(1, $_POST['username'], PDO::PARAM_STR);
-	$stmt->bindValue(2, hash('sha256', $_POST['password']), PDO::PARAM_STR);
+	$stmt->bindValue(1, $_POST['username']);
+	$stmt->bindValue(2, hash('sha256', $_POST['password']));
 	$stmt->execute();
 	if($row = $stmt->fetch())
 	{

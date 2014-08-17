@@ -11,7 +11,7 @@ if(!check_logged_in())
 }
 
 $stmt = DB::pdo()->prepare("SELECT type FROM users WHERE id=?");
-$stmt->bindValue(1, $_SESSION['id'], PDO::PARAM_STR);
+$stmt->bindValue(1, $_SESSION['id']);
 $stmt->execute();
 if(!($row = $stmt->fetch()))
 	E_403();
@@ -19,7 +19,7 @@ $user_privileges = privileges($row[0]);
 $stmt->closeCursor();
 
 $stmt = DB::pdo()->prepare("SELECT name,parent,privileges,begin_time,end_time,author,task_id FROM rounds WHERE id=?");
-$stmt->bindValue(1, $_GET['id'], PDO::PARAM_INT);
+$stmt->bindValue(1, $_GET['id']);
 $stmt->execute();
 if(1 > $stmt->rowCount())
 	E_404();
@@ -42,7 +42,7 @@ $stmt->closeCursor();
 $stmt = DB::pdo()->prepare("SELECT name,parent,privileges FROM rounds WHERE id=?");
 while($parent > 1)
 {
-	$stmt->bindValue(1, $parent, PDO::PARAM_INT);
+	$stmt->bindValue(1, $parent);
 	$stmt->execute();
 	$row = $stmt->fetch();
 	$path = "<a href=\"/round.php?id=$parent\">$row[0]</a> / $path";
@@ -56,10 +56,14 @@ if(isset($task_id))
 {
 	if(isset($_GET['content']))
 	{
-		header('Content-type: application/pdf');
-		header('Content-Disposition: filename="'.substr(file($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/conf.cfg")[0], 0, -1).'.pdf"');
-		readfile($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/content.pdf");
-		exit;
+		if(file_exists($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/content.pdf"))
+		{
+			header('Content-type: application/pdf');
+			header('Content-Disposition: filename="'.substr(file($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/conf.cfg")[0], 0, -1).'.pdf"');
+			readfile($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/content.pdf");
+			exit;
+		}
+		E_404();
 	}
 	else
 	{
@@ -81,7 +85,7 @@ if($_GET['id'] != 1)
 // Here we will take care on printing subrounds...
 // First we need to select all subrounds (problems too)
 $stmt = DB::pdo()->prepare("SELECT id,item,visible,author,name,begin_time,end_time,privileges,task_id FROM rounds WHERE parent=?");
-$stmt->bindValue(1, $_GET['id'], PDO::PARAM_INT);
+$stmt->bindValue(1, $_GET['id']);
 $stmt->execute();
 
 // Here we will select all rounds to print
