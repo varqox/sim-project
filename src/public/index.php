@@ -8,9 +8,9 @@ template_begin('SIM - Platforma do trzaskania zadań');
 
 echo '<div style="text-align: center">
 <img src="/kit/img/SIM-logo.png" width="260" height="336" alt=""/>
-<p style="font-size: 30px">W trakcie tworzenia...</p>
+<p style="font-size: 30px">Welcome to SIM</p>
 <hr/>
-<p>Witam na stronie głównej serwisu SIM używanego do przeprowadzania konkursów w programowaniu</p>
+<p>SIM is open source platform for carrying out algorithmic contests</p>
 </div>';
 
 template_end();

@@ -13,7 +13,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 
 	// User privileges
 	$stmt = DB::pdo()->prepare("SELECT type FROM users WHERE id=?");
-	$stmt->bindValue(1, $_SESSION['id'], PDO::PARAM_STR);
+	$stmt->bindValue(1, $_SESSION['id']);
 	$stmt->execute();
 	if(!($row = $stmt->fetch()))
 		E_403();
@@ -22,7 +22,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 
 	// Submission
 	$stmt = DB::pdo()->prepare("SELECT user_id,round_id,task_id,time,status,points FROM submissions WHERE id=?");
-	$stmt->bindValue(1, $sid, PDO::PARAM_STR);
+	$stmt->bindValue(1, $sid);
 	$stmt->execute();
 	if(!($submission = $stmt->fetch()))
 		E_403();
@@ -30,7 +30,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 
 	// Round
 	$stmt = DB::pdo()->prepare("SELECT parent,privileges,begin_time,end_time,author,full_judge_time FROM rounds WHERE id=?");
-	$stmt->bindValue(1, $submission[1], PDO::PARAM_INT);
+	$stmt->bindValue(1, $submission[1]);
 	$stmt->execute();
 	if(1 > $stmt->rowCount())
 		E_404();
@@ -54,7 +54,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 	$stmt = DB::pdo()->prepare("SELECT parent,privileges FROM rounds WHERE id=?");
 	while($parent > 1)
 	{
-		$stmt->bindValue(1, $parent, PDO::PARAM_INT);
+		$stmt->bindValue(1, $parent);
 		$stmt->execute();
 		$row = $stmt->fetch();
 		$parent = $row[0];
@@ -70,7 +70,8 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 
 	if(isset($_GET['download']))
 	{
-		header('Content-type: application/text');header('Content-Disposition: attchment; filename="'.$sid.'.cpp"');readfile($_SERVER['DOCUMENT_ROOT']."/../solutions/".$sid.".cpp");
+		header('Content-type: application/text');header('Content-Disposition: attchment; filename="'.$sid.'.cpp"');
+		readfile($_SERVER['DOCUMENT_ROOT']."/../solutions/".$sid.".cpp");
 		exit;
 	}
 
@@ -83,10 +84,10 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 
 	template_begin('Submission '.$sid,'','.body{margin-left:150px}');
 
-	echo '<ul class="menu"><li><a href="/round.php?id=',$submission[1],'">View round</a></li><li><a href="/submissions/?id=',$submission[1],'">Submissions</a></li>',(!$superuser_access && ((isset($begin_time) && strtotime($begin_time) > $time) || (isset($end_time) && $time > strtotime($end_time))) ? "" : '<li><a href="/submit.php?round='.$submission[1].'">Submit a solution</a></li>'),'</ul>';
+	echo '<ul class="menu"><li><a href="/round.php?id=',$submission[1],'">View round</a></li><li><a href="/submissions/?id=',$submission[1],'">Submissions</a></li><li><a href="/round.php?id=',$submission[1],'&content">Task content</a></li>',(!$superuser_access && ((isset($begin_time) && strtotime($begin_time) > $time) || (isset($end_time) && $time > strtotime($end_time))) ? "" : '<li><a href="/submit.php?round='.$submission[1].'">Submit a solution</a></li>'),'</ul>';
 
 	$stmt = DB::pdo()->prepare("SELECT name FROM tasks WHERE id=?");
-	$stmt->bindValue(1, $submission[2], PDO::PARAM_STR);
+	$stmt->bindValue(1, $submission[2]);
 	$stmt->execute();
 	$task_name = "";
 	if($row = $stmt->fetch())

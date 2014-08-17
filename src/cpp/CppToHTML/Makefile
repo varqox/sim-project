@@ -5,12 +5,9 @@ all: ../CTH
 ../CTH: main.o coloring.o aho.o
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
 
-PHONY += dep-s
-dep-s: $(shell ls | egrep ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
-
 .PHONY: $(PHONY)
 
-include $(shell ls | grep ".dep-s$$")
+-include $(shell ls | egrep ".c$$|.cpp$$" | sed "s/$$/.dep-s/")
 
 %.o: %.c
 	$(Q)$(call P,CC,$@)$(CC) $< $(CXXFLAGS) -o $@
@@ -18,7 +15,6 @@ include $(shell ls | grep ".dep-s$$")
 %.o: %.cpp
 	$(Q)$(call P,CXX,$@)$(CXX) $< $(CXXFLAGS) -o $@
 
-$(foreach xx, $(shell ls | egrep ".dep-s$$"), $(eval $(xx): $(shell cat $(xx) | sed s/.*://)))
-
 %.dep-s:
-	$(Q)$(call P,CC,$@)$(CC) -MM $* -o $@
+	$(Q) echo -n "$@ " > $@
+	$(Q)$(call P,CC,$@)$(CC) -MM $* >> $@

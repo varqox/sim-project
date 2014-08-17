@@ -38,12 +38,12 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
 	$info.="<pre>";
 	// print_r($_POST);
 	$stmt = DB::pdo()->prepare("INSERT INTO users (username, first_name, last_name, email, password) SELECT ?, ?, ?, ?, ? FROM users WHERE NOT EXISTS (SELECT id FROM users WHERE username=?) LIMIT 1");
-	$stmt->bindValue(1, $_POST['username'], PDO::PARAM_STR);
-	$stmt->bindValue(2, $_POST['first_name'], PDO::PARAM_STR);
-	$stmt->bindValue(3, $_POST['last_name'], PDO::PARAM_STR);
-	$stmt->bindValue(4, $_POST['email'], PDO::PARAM_STR);
-	$stmt->bindValue(5, hash('sha256', $_POST['password1']), PDO::PARAM_STR);
-	$stmt->bindValue(6, $_POST['username'], PDO::PARAM_STR);
+	$stmt->bindValue(1, $_POST['username']);
+	$stmt->bindValue(2, $_POST['first_name']);
+	$stmt->bindValue(3, $_POST['last_name']);
+	$stmt->bindValue(4, $_POST['email']);
+	$stmt->bindValue(5, hash('sha256', $_POST['password1']));
+	$stmt->bindValue(6, $_POST['username']);
 	$stmt->execute();
 	if(1 > $stmt->rowCount())
 	{
@@ -54,7 +54,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST')
 	session::start();
 
 	$stmt = DB::pdo()->prepare("SELECT id FROM users WHERE username = ?");
-	$stmt->bindValue(1, $_POST['username'], PDO::PARAM_STR);
+	$stmt->bindValue(1, $_POST['username']);
 	$stmt->execute();
 	if($row = $stmt->fetch())
 	{
