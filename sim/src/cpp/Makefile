@@ -10,7 +10,7 @@ PHONY += CTH
 CTH:
 	$(Q)$(MAKE) -C CppToHTML
 
-chmod-default: chmod-default.cpp
+chmod-default: ../Algorithms/other/chmod-default.cpp
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
 
 PHONY += mrproper
