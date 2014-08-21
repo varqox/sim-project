@@ -1,0 +1,3 @@
+[submodule "src/Algorithms"]
+	path = src/Algorithms
+	url = https://github.com/krzyk240/Algorithms

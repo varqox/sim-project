@@ -4,7 +4,7 @@ $path="./";
 
 require_once $_SERVER['DOCUMENT_ROOT']."/../php/main.php";
 
-template_begin('SIM - Platforma do trzaskania zadań');
+template_begin('SIM - Platform for carrying out algorithmic contests');
 
 echo '<div style="text-align: center">
 <img src="/kit/img/SIM-logo.png" width="260" height="336" alt=""/>
