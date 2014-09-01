@@ -1,8 +1,17 @@
 export
 
-CFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -O3 -c
-CXXFLAGS := $(CFLAGS)
-LFLAGS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result -s -O3
+# Extra options to compile project with
+EXTRA_OPTIONS = -O3
+
+# Extra options to link project with
+EXTRA_LD_OPTIONS = -s -O3
+
+# Warnings options to compile project with
+WARNING_OPTIONS = -Wall -Wextra -Wabi -Weffc++ -Wshadow -Wfloat-equal -Wno-unused-result
+
+CFLAGS = $(WARNING_OPTIONS) $(EXTRA_OPTIONS) -c
+CXXFLAGS = $(CFLAGS)
+LFLAGS = $(WARNING_OPTIONS) $(EXTRA_LD_OPTIONS)
 
 # Shell commands
 MV = mv -f
@@ -42,17 +51,23 @@ all:
 	@printf "\033[;32mBuild finished\033[0m\n"
 
 PHONY += debug
-debug: override CXX += -DDEBUG
 debug: override CC += -DDEBUG
-debug: all
+debug: override CXX += -DDEBUG
+debug:
+	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
+	$(Q)$(MAKE) $(MFLAGS) -C src/cpp/
+	@printf "\033[;32mBuild finished\033[0m\n"
 
 PHONY += hard-debug
-hard-debug: override CXX += -DDEBUG
 hard-debug: override CC += -DDEBUG
-hard-debug: override CFLAGS = -O0 -g -c
-hard-debug: override CXXFLAGS = -O0 -g -c
-hard-debug: override LFLAGS = -O0 -g
-hard-debug: all
+hard-debug: override CXX += -DDEBUG
+hard-debug: override CFLAGS = $(WARNING_OPTIONS) -g -c
+hard-debug: override CXXFLAGS = $(WARNING_OPTIONS) -g -c
+hard-debug: override LFLAGS = $(WARNING_OPTIONS) -g
+hard-debug:
+	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
+	$(Q)$(MAKE) $(MFLAGS) -C src/cpp/
+	@printf "\033[;32mBuild finished\033[0m\n"
 
 PHONY += install
 install: all
