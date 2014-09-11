@@ -30,5 +30,5 @@ public:
 		_name.swap(_t._name);
 	}
 
-	std::string judge(const std::string& exec_name);
+	std::pair<std::string, std::string> judge(const std::string& exec_name);
 };

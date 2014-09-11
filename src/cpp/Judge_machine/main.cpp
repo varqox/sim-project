@@ -79,10 +79,10 @@ int main()
 		{
 			D(cerr << "Compilation success" << endl);
 			task rated_task("../tasks/"+rep.task_id());
-			string tmp=rated_task.judge(string(exec+7, exec+18));
+			pair<string, string> tmp=rated_task.judge(string(exec+7, exec+18));
 			if(submission.open(submission_name.c_str(), ios::out), submission.good())
 			{
-				submission << "<?php\nrequire_once $_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(" << rep.id() << ",NULL,'" << tmp << "');\n?>";
+				submission << "<?php\nrequire_once $_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(" << rep.id() << "," << (tmp.first.empty() ? "NULL" : "'" << tmp.first << "'") << ",'" << tmp.second << "');\n?>";
 				submission.close();
 			}
 			remove(exec);

@@ -123,7 +123,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 		case "c_error": echo ' class="wa">Compilation failed';break;
 		case "waiting": echo '>Pending';break;
 	}
-	echo '</td><td>',$submission[5],'</td></tr></tbody></table></div>';
+	echo '</td><td>',($show_final ? $submission[5] : ''),'</td></tr></tbody></table></div>';
 
 	// Echo final_tests
 	if($show_final && isset($final_tests))
