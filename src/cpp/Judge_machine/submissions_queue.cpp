@@ -7,7 +7,7 @@
 #include "db.hpp"
 
 // public
-#include "submissions_queue.hpp"
+#include "submissions_queue.h"
 
 #ifdef DEBUG
 #include <iostream>

@@ -10,6 +10,7 @@
 #include <sys/resource.h>
 #include <csignal>
 #include <unistd.h>
+#include "main.h"
 
 using namespace std;
 
@@ -256,7 +257,7 @@ pair<string, string> task::judge(const string& exec_name)
 	config >> checker_name;
 	string checker_exec=string(tmp_dir)+"checker";
 	D(cerr << checker_exec << endl);
-	if(system(("timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null").c_str())!=0)
+	if(0 != compile("checkers/" << checker_name << ".cpp", checker_exec))
 	{
 		D(cerr << "Judge Error (checker compilation failed)" << endl;)
 		submissions_queue::front().set(submissions_queue::ERROR, 0);
