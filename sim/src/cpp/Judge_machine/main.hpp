@@ -8,6 +8,10 @@
 
 #define eprint(...) fprintf(stderr, __VA_ARGS__)
 
+template<class C>
+inline std::string& operator<<(const std::string& s, const C& x)
+{return const_cast<std::string&>(s) += x;}
+
 #ifdef DEBUG
 #define D(...) __VA_ARGS__
 #else

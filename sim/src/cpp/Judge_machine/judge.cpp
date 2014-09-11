@@ -237,7 +237,7 @@ string task::check_on_test(const string& test, const string& time_limit)
 	return output;
 }
 
-string task::judge(const string& exec_name)
+pair<string, string> task::judge(const string& exec_name)
 {
 	exec=exec_name;
 	fstream config((_name+"conf.cfg").c_str(), ios::in);
@@ -246,7 +246,7 @@ string task::judge(const string& exec_name)
 	{
 		// Judge Error
 		submissions_queue::front().set(submissions_queue::ERROR, 0);
-		return "";
+		return make_pair("", "");
 	}
 	D(cerr << "Success!" << endl);
 	string trashes, checker_name;
@@ -260,13 +260,13 @@ string task::judge(const string& exec_name)
 	{
 		D(cerr << "Judge Error (checker compilation failed)" << endl;)
 		submissions_queue::front().set(submissions_queue::ERROR, 0);
-		return "";
+		return make_pair("", "");
 	}
 	D(cerr << "Compilation command: "  << "timeout 20 g++ checkers/"+checker_name+".cpp -s -O2 -static -lm -m32 -o "+checker_exec+" > /dev/null 2> /dev/null" << endl);
 	checker="/judge/"+checker_exec;
 	// Rest
 	config >> memory_limit;
-	string out;
+	pair<string, string> out;
 	long long max_score=0, total_score=0, group_score;
 	string test_name, time_limit, group_buffer;
 	int other_tests=0;
@@ -279,18 +279,27 @@ string task::judge(const string& exec_name)
 			min_group_ratio=1;
 			config >> other_tests >> group_score;
 			max_score+=group_score;
-			out+="<tr>";
-			out+=check_on_test(test_name, time_limit);
-			if(runtime::res_stat != runtime::RES_OK)
+			if(group_score == 0) {
+				out.first += "<tr>";
+				out.first += check_on_test(test_name, time_limit);
+			} else {
+				out.second += "<tr>";
+				out.second += check_on_test(test_name, time_limit);
+			}
+			if(runtime::res_stat != runtime::RES_OK && group_score == 0)
 				status_ok = false;
-			out+="<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
+			if(group_score == 0) {
+				out.first += "<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
+			} else {
+				out.second += "<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
+			}
 			group_buffer="";
 		}
 		else
 		{
 			group_buffer+="<tr>";
 			group_buffer+=check_on_test(test_name, time_limit);
-			if(runtime::res_stat != runtime::RES_OK)
+			if(runtime::res_stat != runtime::RES_OK && group_score == 0)
 				status_ok = false;
 			group_buffer+="</tr>\n";
 		}
@@ -298,8 +307,13 @@ string task::judge(const string& exec_name)
 		if(!other_tests)
 		{
 			total_score+=group_score*min_group_ratio;
-			out+=myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td></tr>\n";
-			out+=group_buffer;
+			if (group_score == 0) {
+				out.first += myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td></tr>\n";
+				out.first += group_buffer;
+			} else {
+				out.second += myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td></tr>\n";
+				out.second += group_buffer;
+			}
 		}
 	}
 	D(eprint("=================================================================\nScore: %lli / %lli\n", total_score, max_score);)
