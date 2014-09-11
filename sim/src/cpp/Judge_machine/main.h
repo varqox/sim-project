@@ -1,3 +1,5 @@
+#include "other_functions.h"
+#include "submissions_queue.h"
 #include <string>
 #include <deque>
 #include <cstdio>
@@ -5,6 +7,7 @@
 #include <cstring>
 #include <sys/stat.h> // chmod()
 #include <set>
+#include <iostream>
 
 #define eprint(...) fprintf(stderr, __VA_ARGS__)
 
@@ -20,20 +23,13 @@ inline std::string& operator<<(const std::string& s, const C& x)
 
 #pragma once
 
-// other_functions.cpp
-void remove_r(const char* path);
-std::string myto_string(long long int a);
-std::string make_safe_php_string(const std::string& str);
-std::string make_safe_html_string(const std::string& str);
-std::deque<unsigned> kmp(const std::string& text, const std::string& pattern);
-std::string file_get_contents(const std::string& file_name);
-
 // main.cpp
 class temporary_directory
 {
 	char* _M_name;
 	temporary_directory(const temporary_directory&): _M_name(NULL){}
 	temporary_directory& operator=(const temporary_directory&){return *this;}
+
 public:
 	explicit temporary_directory(const char* new_name): _M_name(new char[strlen(new_name)+2])
 	{
@@ -54,6 +50,7 @@ public:
 
 	~temporary_directory()
 	{
+		D(std::cerr << "\033[1;31mRemoving tmp_dir \033[0m\n" << this << std::endl);
 		remove_r(_M_name);
 		delete[] _M_name;
 	}
@@ -67,29 +64,13 @@ public:
 
 extern temporary_directory tmp_dir;
 
-// compile.cpp
-class compile
-{
+class CompileClass {
 private:
-	std::string compile_errors, file_compile_errors;
-	compile(): compile_errors(),file_compile_errors(std::string(tmp_dir)+"compile_errors"){}
-	compile(const compile&): compile_errors(),file_compile_errors(){}
-	~compile()
-	{
-		remove(file_compile_errors.c_str());;
-	}
+	std::string errors_;
 
 public:
-	static compile run;
-
-	// Submission ID, exec_name in chroot/
-	bool operator()(const std::string& submission_id, const std::string& exec);
-
-	const char* NameOfCompileErrorsFile()
-	{return file_compile_errors.c_str();}
-
-	const std::string& GetCompileErrors() const
-	{return compile_errors;}
+	int operator()(const std::string& source_file, const std::string& exec_file);
+	std::string getErrors() { return errors_; }
 };
 
-#include "submissions_queue.hpp"
+extern CompileClass compile;

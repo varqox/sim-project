@@ -1,29 +1,40 @@
 #include <cstdlib>
 #include <cstdio>
-#include "main.hpp"
+#include "main.h"
+
+#include <unistd.h>
+#include <sys/wait.h>
 
 using namespace std;
 
-compile compile::run;
+CompileClass compile;
 
-bool compile::operator()(const string& submission_id, const string& exec)
-{
-	compile_errors="";
+int CompileClass::operator()(const std::string& source_file, const std::string& exec_file) {
 	D(
-		fprintf(stderr, "Compilation: %s to: %s\n", submission_id.c_str(), exec.c_str());
-		fprintf(stderr, "COMMAND:\n%s\n", ("(cd ../solutions && timeout 15 g++ "+submission_id+".cpp -s -O2 -static -lm -m32 -o ../judge/"+exec+") 2> "+string(file_compile_errors)).c_str());
+		fprintf(stderr, "Compilation: %s to: %s\n", source_file.c_str(), exec_file.c_str());
 	)
-	int ret=system(("(cd ../solutions && timeout 15 g++ "+submission_id+".cpp -s -O2 -static -lm -m32 -o ../judge/"+exec+") 2> "+string(file_compile_errors)).c_str());
-	if(!ret)
-	{
-		remove(file_compile_errors.c_str());
-		return true;
+	pid_t cpid;
+	if((cpid = fork()) == 0) {
+		// Set up enviroment
+		freopen("/dev/null", "r", stdin);
+		freopen("/dev/null", "w", stdout);
+		freopen((string(tmp_dir) << "compile_errors").c_str(), "w", stderr);
+
+		string command = "(cd ../solutions && timeout 20 g++ ../judge/" << source_file << " -s -O2 -static -lm -m32 -o ../judge/" << exec_file << ")";
+
+		char *arg[] = {getusershell(), const_cast<char*>("-c"), const_cast<char*>(command.c_str()), NULL};
+		execve(arg[0], arg, __environ);
+		_exit(-1);
 	}
-	compile_errors=file_get_contents(file_compile_errors);
-	D(
-		fprintf(stderr, "ERRORS:\n%s\n", compile_errors.c_str());
-	)
-	if(compile_errors.empty()) compile_errors="Compile time limit";
-	remove(file_compile_errors.c_str());
-return false;
+	int ret;
+	waitpid(cpid, &ret, 0);
+	errors_.clear();
+	if(ret != 0) {
+		errors_ = file_get_contents(string(tmp_dir) << "compile_errors");
+		D(fprintf(stderr, "Errors:\n%s\n", errors_.c_str()));
+		if(errors_.empty())
+			errors_ = "Compile time limit";
+	}
+	remove((string(tmp_dir) << "compile_errors").c_str());
+	return ret;
 }

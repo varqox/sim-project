@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "main.h"
 #include "judge.hpp"
 #include <unistd.h> // getpid()
 #include <iostream>
@@ -11,41 +11,35 @@ using namespace std;
 temporary_directory tmp_dir("judge_machine.XXXXXX\0");
 string *public_submission_name, *public_submission_front, *public_submission_back;
 
-void control_exit(int=0)
-{
-	// Repair status of current submission
-	fstream submission;
-	if(submission.open(public_submission_name->c_str(), ios::out), submission.good())
-	{
-		submission << *public_submission_front << "<pre>Status: Waiting for judge...</pre>" << *public_submission_back;
-		submission.close();
-	}
-	D(cerr << "Removing temporary directory" << endl);
-	remove_r(tmp_dir);
-	exit(1);
-}
+// void control_exit(int=0)
+// {
+// 	// Repair status of current submission
+// 	D(cerr << "Removing temporary directory" << endl);
+// 	remove_r(tmp_dir);
+// 	exit(1);
+// }
 
 int main()
 {
 	// signal control
-	signal(SIGHUP, control_exit);
-	signal(SIGINT, control_exit);
-	signal(SIGQUIT, control_exit);
-	signal(SIGILL, control_exit);
-	signal(SIGTRAP, control_exit);
-	signal(SIGABRT, control_exit);
-	signal(SIGIOT, control_exit);
-	signal(SIGBUS, control_exit);
-	signal(SIGFPE, control_exit);
-	// signal(SIGKILL, control_exit); // We won't block SIGKILL
-	signal(SIGUSR1, control_exit);
-	signal(SIGSEGV, control_exit);
-	signal(SIGUSR2, control_exit);
-	signal(SIGPIPE, control_exit);
-	signal(SIGALRM, control_exit);
-	signal(SIGTERM, control_exit);
-	signal(SIGSTKFLT, control_exit);
-	signal(_NSIG, control_exit);
+	signal(SIGHUP, exit);
+	signal(SIGINT, exit);
+	signal(SIGQUIT, exit);
+	signal(SIGILL, exit);
+	signal(SIGTRAP, exit);
+	signal(SIGABRT, exit);
+	signal(SIGIOT, exit);
+	signal(SIGBUS, exit);
+	signal(SIGFPE, exit);
+	// signal(SIGKILL, exit); // We won't block SIGKILL
+	signal(SIGUSR1, exit);
+	signal(SIGSEGV, exit);
+	signal(SIGUSR2, exit);
+	signal(SIGPIPE, exit);
+	signal(SIGALRM, exit);
+	signal(SIGTERM, exit);
+	signal(SIGSTKFLT, exit);
+	signal(_NSIG, exit);
 	// check if this process isn't oldest
 	// if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
 	// checking submissions
@@ -66,11 +60,11 @@ int main()
 		if(-1==mkstemp(exec))
 		{
 			cerr << "Cannot create exec file in chroot/" << endl;
-			control_exit();
+			exit(2);
 		}
 		else
 			remove(exec);
-		if(!compile::run(rep.id(), exec))
+		if(0 != compile("../solutions/" << rep.id() << ".cpp", exec))
 		{
 			D(cerr << "Compilation failed" << endl);
 			submissions_queue::front().set(submissions_queue::C_ERROR, 0);
