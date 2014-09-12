@@ -66,6 +66,7 @@ private:
 	std::string errors_;
 
 public:
+	CompileClass(): errors_() {}
 	int operator()(const std::string& source_file, const std::string& exec_file);
 	std::string getErrors() { return errors_; }
 };

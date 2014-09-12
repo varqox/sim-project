@@ -231,7 +231,7 @@ string task::check_on_test(const string& test, const string& time_limit)
 	output += tmp + "</td>";
 
 	// Calculate ratio for current test
-	double current_ratio = 2.0 - 2.0 * runtime::cl / runtime::time_limit;
+	double current_ratio = 2.0 - 2.0 * floor(runtime::cl/10000) / floor(runtime::time_limit/10000);
 	if(current_ratio < min_group_ratio)
 		min_group_ratio = current_ratio;
 	remove(outf_name.c_str());
