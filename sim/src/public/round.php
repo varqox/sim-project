@@ -56,11 +56,11 @@ if(isset($task_id))
 {
 	if(isset($_GET['content']))
 	{
-		if(file_exists($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/content.pdf"))
+		if(file_exists($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/statement.pdf"))
 		{
 			header('Content-type: application/pdf');
 			header('Content-Disposition: filename="'.substr(file($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/conf.cfg")[0], 0, -1).'.pdf"');
-			readfile($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/content.pdf");
+			readfile($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/statement.pdf");
 			exit;
 		}
 		E_404();
