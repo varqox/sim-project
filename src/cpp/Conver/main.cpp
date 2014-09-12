@@ -166,6 +166,7 @@ using std::endl;
 using std::string;
 using std::fstream;
 using std::vector;
+using Trie::CompressedTrie;
 
 temporary_directory tmp_dir("conver.XXXXXX\0");
 
@@ -503,18 +504,19 @@ namespace tests {
 		delete[] runtime::output;
 		delete[] runtime::exec;
 
-		tmp = myto_string(ceil(runtime::cl*4/10000));
+		tmp = myto_string(ceil(runtime::cl/10000)*4);
 		tmp.insert(0, 3-tmp.size(), '0');
-		if(*tmp.rbegin() == '0' && *++tmp.rbegin() == '0') {
-			if(tmp == "000")
-				tmp = "0.02";
-			else
-				tmp.erase(tmp.end()-2, tmp.end());
-		}
-		else
+		if(*tmp.rbegin() == '0' && *++tmp.rbegin() == '0')
+			tmp.erase(tmp.end()-2, tmp.end());
+		else {
 			tmp.insert(tmp.size()-2, 1, '.');
+			while(*tmp.rbegin() == '0')
+				tmp.erase(tmp.end()-1, tmp.end());
+		}
+		if(tmp == "0" || tmp == "0.01")
+			tmp = "0.02";
 
-		printf("\t%.2lf / %s", runtime::cl/1000000.0, tmp.c_str());
+		printf("\t%.2lf / %s", runtime::cl/10000/100.0, tmp.c_str());
 		config << tmp;
 
 		switch(runtime::res_stat)
