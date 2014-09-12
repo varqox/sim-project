@@ -64,7 +64,7 @@ namespace runtime
 			freopen(answer, "w", stdout);
 			freopen("/dev/null", "w", stderr);
 			if(chroot("chroot") != 0 || chdir("/") != 0 || (setgid((gid_t)1001) || setuid((uid_t)1001)))
-				exit(-1);
+				_exit(-1);
 
 			// Set virtual memory limit
 			struct rlimit limit;
@@ -77,7 +77,7 @@ namespace runtime
 
 			char *arg[] = {NULL};
 			execve(exec, arg, arg);
-			exit(-1);
+			_exit(-1);
 		}
 		waitpid(cpid, &r_val, 0);
 		setitimer(ITIMER_REAL, &zero, &timer);
@@ -110,7 +110,7 @@ namespace runtime
 				freopen("/dev/null", "w", stdout);
 				freopen("/dev/null", "w", stderr);
 				if(chroot("..") != 0 || chdir("/judge") != 0 || (setgid((gid_t)1001) || setuid((uid_t)1001)))
-					exit(-1);
+					_exit(-1);
 
 				// Set virtual memory limit
 				struct rlimit limit;
@@ -123,7 +123,7 @@ namespace runtime
 
 				char *arg[] = {checker, input, output, answer, NULL}, *env[] = {NULL};
 				execve(checker, arg, env);
-				exit(-1);
+				_exit(-1);
 			}
 			int status;
 			waitpid(cpid, &status, 0);
