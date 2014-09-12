@@ -94,7 +94,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 		$task_name = $row[0];
 	$stmt->closeCursor();
 
-	echo '<div style="text-align: center">
+	echo '<div style="text-align:center;margin-left:-20px">
 <div class="submission-info">
 <h1>Zgłoszenie ',$sid,'</h1>
 <div class="btn-toolbar">
