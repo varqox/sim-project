@@ -241,7 +241,7 @@ namespace doc {
 	void selectStatement() {
 		if(statements.empty()) {
 			struct : std::exception {
-			  const char* what() throw() {return "There is no statement to choose!\n";}
+			  const char* what() const throw() {return "There is no statement to choose!\n";}
 			} exc;
 			throw exc;
 		}
