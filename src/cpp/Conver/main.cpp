@@ -202,7 +202,7 @@ namespace sol{
 	void selectSolution() {
 		if(solutions.empty()) {
 			struct : std::exception {
-			  const char* what() const _GLIBCXX_USE_NOEXCEPT {return "There is no solutions to choose!\n";}
+			  const char* what() const throw() {return "There is no solutions to choose!\n";}
 			} exc;
 			throw exc;
 		}
@@ -241,7 +241,7 @@ namespace doc {
 	void selectStatement() {
 		if(statements.empty()) {
 			struct : std::exception {
-			  const char* what() const _GLIBCXX_USE_NOEXCEPT {return "There is no statement to choose!\n";}
+			  const char* what() throw() {return "There is no statement to choose!\n";}
 			} exc;
 			throw exc;
 		}
