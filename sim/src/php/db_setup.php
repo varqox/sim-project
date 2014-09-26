@@ -13,6 +13,7 @@ DB::pdo()->exec("CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `username` (`username`),
   KEY (`type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+INSERT IGNORE INTO `users` (`id`) VALUES(1);
 
 CREATE TABLE IF NOT EXISTS `session` (
   `id` char(10) COLLATE utf8_bin NOT NULL,
@@ -55,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `submissions_to_rounds` (
   `submission_id` int unsigned NOT NULL,
   `user_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`round_id`, `user_id`,`submission_id`),
+  PRIMARY KEY (`round_id`, `user_id`,`submission_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE IF NOT EXISTS `rounds` (
@@ -65,9 +66,9 @@ CREATE TABLE IF NOT EXISTS `rounds` (
   `author` int unsigned NOT NULL,
   `name` VARCHAR(128) NOT NULL,
   `parent` int unsigned NOT NULL DEFAULT 1,
-  `begin_time` timestamp DEFAULT NULL,
-  `full_judge_time` timestamp DEFAULT NULL,
-  `end_time` timestamp DEFAULT NULL,
+  `begin_time` timestamp NULL DEFAULT NULL,
+  `full_judge_time` timestamp NULL DEFAULT NULL,
+  `end_time` timestamp NULL DEFAULT NULL,
   `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
   `task_id` int unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
