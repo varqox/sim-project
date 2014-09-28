@@ -92,14 +92,45 @@ install: all
 	echo | php -B '$$_SERVER["DOCUMENT_ROOT"]="$(INSTALL_DIR)public/";' -F $(INSTALL_DIR)php/db_setup.php
 	$(RM) $(INSTALL_DIR)php/db_setup.php
 
+	# Right owner, group and permission bits
 	src/cpp/chmod-default $(INSTALL_DIR)
 	chmod 0755 $(INSTALL_DIR)judge/CTH $(INSTALL_DIR)judge/judge_machine
 	chown -R www-data:www-data $(INSTALL_DIR)
 	chmod 0750 $(INSTALL_DIR)php/
+
+	# Add judge_machine to sudoers
 	@grep 'ALL ALL = (root) NOPASSWD: $(INSTALL_DIR)judge/judge_machine' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(INSTALL_DIR)judge/judge_machine >> /etc/sudoers; fi
-	@printf "<VirtualHost 127.2.2.2:80>\n	ServerName sim.localhost\n\n	DocumentRoot %s\n	<Directory />\n		Options FollowSymLinks\n		AllowOverride All\n	</Directory>\n	<Directory %s>\n		Options Indexes FollowSymLinks MultiViews\n		AllowOverride All\n		Order allow,deny\n		allow from all\n		Require all granted\n	</Directory>\n	CustomLog \$${APACHE_LOG_DIR}/access.log combined\n</VirtualHost>" $(INSTALL_DIR)public/ $(INSTALL_DIR)public/ > /etc/apache2/sites-available/sim.conf
-	a2ensite sim
-	-service apache2 reload
+
+	# Configure nginx
+	@echo "server {" > /etc/nginx/sites-available/sim
+	@echo "    listen 127.2.2.2:80 default; ## listen for ipv4" >> /etc/nginx/sites-available/sim
+	@echo "    # listen [::]:80 default ipv6only=on; ## listen for ipv6" >> /etc/nginx/sites-available/sim
+	@echo "" >> /etc/nginx/sites-available/sim
+	@echo "    # server_name localhost;" >> /etc/nginx/sites-available/sim
+	@echo "    server_name_in_redirect off;" >> /etc/nginx/sites-available/sim
+	@echo "" >> /etc/nginx/sites-available/sim
+	@echo "    charset utf-8;" >> /etc/nginx/sites-available/sim
+	@echo "" >> /etc/nginx/sites-available/sim
+	@echo "    access_log "'$(INSTALL_DIR)'"access.log;" >> /etc/nginx/sites-available/sim
+	@echo "    error_log "'$(INSTALL_DIR)'"error.log;" >> /etc/nginx/sites-available/sim
+	@echo "" >> /etc/nginx/sites-available/sim
+	@echo "    root "'$(INSTALL_DIR)'"public/;" >> /etc/nginx/sites-available/sim
+	@echo "    index index.php index.html index.htm;" >> /etc/nginx/sites-available/sim
+	@echo "" >> /etc/nginx/sites-available/sim
+	@echo "    location / {" >> /etc/nginx/sites-available/sim
+	@echo "        try_files \$$uri \$$uri/ =404;" >> /etc/nginx/sites-available/sim
+	@echo "    }" >> /etc/nginx/sites-available/sim
+	@echo "" >> /etc/nginx/sites-available/sim
+	@echo "    location ~ \\.php\$$ {" >> /etc/nginx/sites-available/sim
+	@echo "        try_files \$$uri =404;" >> /etc/nginx/sites-available/sim
+	@echo "        fastcgi_split_path_info ^(.+\\.php)(/.+)\$$;" >> /etc/nginx/sites-available/sim
+	@echo "        fastcgi_pass "$(shell var=`grep "listen =" /etc/php5/fpm/pool.d/www.conf | tail -c+10`; first=`echo $${var} | head -c1`; if [ "$$first" = "/" ]; then echo "unix:$$var"; else echo $$var; fi)";"  >> /etc/nginx/sites-available/sim
+	@echo "        fastcgi_index index.php;" >> /etc/nginx/sites-available/sim
+	@echo "        include fastcgi_params;" >> /etc/nginx/sites-available/sim
+	@echo "    }" >> /etc/nginx/sites-available/sim
+	@echo "}" >> /etc/nginx/sites-available/sim
+	ln -fs /etc/nginx/sites-available/sim /etc/nginx/sites-enabled/
+	-nginx -s reload
 
 PHONY += reinstall
 reinstall:
