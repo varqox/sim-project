@@ -86,7 +86,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 				$stmt->bindValue(4,$time);
 				$stmt->execute();
 			}
-			shell_exec("(cd ".$_SERVER['DOCUMENT_ROOT']."../judge ; sudo ./judge_machine) > /dev/null 2> /dev/null &");
+			shell_exec("(cd ".$_SERVER['DOCUMENT_ROOT']."/../judge ; sudo ./judge_machine) > /dev/null 2> /dev/null &");
 			header("Location: /submissions/".$lII.".php");
 		}
 	}
