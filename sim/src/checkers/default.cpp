@@ -13,27 +13,27 @@ void remove_trailing_spaces(string& str)
 int main(int argc, char **argv) // argv[0] command, argv[1] test_in, argv[2] test_out (right answer), argv[3] answer to check
 {
 	ios_base::sync_with_stdio(false);
-	fstream out(argv[3], ios_base::in), ans(argv[2], ios_base::in);
-	if(!out.good() && !ans.good())
+	fstream out(argv[2], ios_base::in), ans(argv[3], ios_base::in);
+	if(!ans.good() && !out.good())
 		return 2;// Evaluation failure
-	deque<string> out_in, ans_in;
-	string out_tmp, ans_tmp;
-	while(out.good() && ans.good())
+	deque<string> ans_in, out_in;
+	string ans_tmp, out_tmp;
+	while(ans.good() && out.good())
 	{
-		getline(out, out_tmp);
 		getline(ans, ans_tmp);
-		remove_trailing_spaces(out_tmp);
+		getline(out, out_tmp);
 		remove_trailing_spaces(ans_tmp);
-		out_in.push_back(out_tmp);
+		remove_trailing_spaces(out_tmp);
 		ans_in.push_back(ans_tmp);
+		out_in.push_back(out_tmp);
 	}
-	while(!out_in.empty() && out_in.back().empty()) out_in.pop_back();
 	while(!ans_in.empty() && ans_in.back().empty()) ans_in.pop_back();
+	while(!out_in.empty() && out_in.back().empty()) out_in.pop_back();
 	int line=-1;
-	while(++line<out_in.size() && line<ans_in.size())
-		if(ans_in[line]!=out_in[line])
+	while(++line<ans_in.size() && line<out_in.size())
+		if(out_in[line]!=ans_in[line])
 			return 1; // Wrong answer
-	if(ans_in.size()>out_in.size())
+	if(out_in.size()>ans_in.size())
 		return 1; // Wrong answer
 return 0; // OK
 }
