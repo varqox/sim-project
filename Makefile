@@ -123,10 +123,11 @@ install: all
 	@echo "" >> /etc/nginx/sites-available/sim
 	@echo "    location ~ \\.php\$$ {" >> /etc/nginx/sites-available/sim
 	@echo "        try_files \$$uri =404;" >> /etc/nginx/sites-available/sim
+	@echo "        include /etc/nginx/fastcgi_params;" >> /etc/nginx/sites-available/sim
 	@echo "        fastcgi_split_path_info ^(.+\\.php)(/.+)\$$;" >> /etc/nginx/sites-available/sim
 	@echo "        fastcgi_pass "$(shell var=`grep "listen =" /etc/php5/fpm/pool.d/www.conf | tail -c+10`; first=`echo $${var} | head -c1`; if [ "$$first" = "/" ]; then echo "unix:$$var"; else echo $$var; fi)";"  >> /etc/nginx/sites-available/sim
 	@echo "        fastcgi_index index.php;" >> /etc/nginx/sites-available/sim
-	@echo "        include fastcgi_params;" >> /etc/nginx/sites-available/sim
+	@echo "        fastcgi_param SCRIPT_FILENAME \$$document_root\$$fastcgi_script_name;" >> /etc/nginx/sites-available/sim
 	@echo "    }" >> /etc/nginx/sites-available/sim
 	@echo "}" >> /etc/nginx/sites-available/sim
 	ln -fs /etc/nginx/sites-available/sim /etc/nginx/sites-enabled/
