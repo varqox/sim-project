@@ -168,6 +168,8 @@ using std::fstream;
 using std::vector;
 using Trie::CompressedTrie;
 
+bool VERBOSE = false;
+
 temporary_directory tmp_dir("conver.XXXXXX\0");
 
 const int /*file_mod = 0644,*/ dir_mod = 0755;
@@ -344,7 +346,8 @@ namespace runtime
 		else
 			// Shouldn't happen. Unknown status...
 			r_val = EXIT_FAILURE;
-		D(eprint("\tReturned %i\ttime: %.6lf s\n", r_val, cl/1000000.0);)
+		if (VERBOSE)
+			eprint("\tReturned %i\ttime: %.6lf s\n", r_val, cl/1000000.0);
 		if(r_val == 0)
 		{
 /*			// Set right handler
@@ -495,7 +498,8 @@ namespace tests {
 		runtime::time_limit = 20.0 * 1000000;
 
 		// Runtime
-		D(eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), runtime::time_limit/1000000.0, runtime::memory_limit >> 10);)
+		if (VERBOSE)
+			eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), runtime::time_limit/1000000.0, runtime::memory_limit >> 10);
 		pid_t pid = clone(runtime::run, (char*)malloc(128 * 1024 * 1024) + 128 * 1024 * 1024, CLONE_VM | SIGCHLD, NULL);
 		waitpid(pid, NULL, 0);
 
@@ -571,9 +575,29 @@ namespace tests {
 	}
 } // namespace tests
 
+void parseOptions(int& argc, char **argv) {
+	int new_argc = 0;
+	for (int i = 0; i < argc; ++i) {
+		if (argv[i][0] == '-') {
+			if (0 == strcmp(argv[i], "-v") || 0 == strcmp(argv[i], "--verbose"))
+				VERBOSE = true;
+			else if (0 == strcmp(argv[i], "-n") && i + 1 < argc)
+				name = argv[++i];
+			else if (0 == comparePrefix(argv[i], "--name="))
+				name = string(argv[i]).substr(7);
+			else
+				eprintf("Unknown argument: '%s'\n", argv[i]);
+		} else
+			argv[new_argc++] = argv[i];
+	}
+	argc = new_argc;
+}
+
 int main(int argc, char **argv) {
+	parseOptions(argc, argv);
+
 	if(argc < 3) {
-		eprintf("Usage: conver task_package out_package [mem_limit] [checker]\n\ntask_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
+		eprintf("Usage: conver [options] task_package out_package [mem_limit] [checker]\n\nOptions:\n  -v, --verbose		Verbose mode\n  -n NAME, --name=NAME		Set task name to NAME\n\ntask_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
 		return 1;
 	}
 
@@ -614,7 +638,8 @@ int main(int argc, char **argv) {
 		sscanf(argv[3], "%llu", &mem_limit);
 	if(argc > 4)
 		checker = argv[4];
-	name = in_path;
+	if (name.empty()) // If not set with options
+		name = in_path;
 	in_path = tmp_dir.name() + in_path;
 	out_path = in_path + "1/";
 	in_path << "/";
@@ -626,25 +651,23 @@ int main(int argc, char **argv) {
 		eprintf("Cannot create config file\n");
 		return 1;
 	}
-	config << (name.size() < 4 ? name : name.substr(0, 3)) << "\n" << name << "\n" << checker << "\n" << mem_limit << endl;
+	config << tolower(name.size() < 4 ? name : name.substr(0, 3)) << "\n" << name << "\n" << checker << "\n" << mem_limit << endl;
 	doc::findStatements();
 	doc::selectStatement();
 	sol::findSolutions();
 	sol::selectSolution();
-	D(cerr << "Problem statement: " << problem_statement << "\nSolution: " << solution << endl;)
+	cerr << "Task name: '" << name << "'\n" << "Problem statement: " << problem_statement << "\nSolution: " << solution << endl;
 	rename((in_path + problem_statement).c_str(), (out_path + "statement.pdf").c_str());
 	rename((in_path + solution).c_str(), (out_path + "prog/" + name + ".cpp").c_str());
-	D(cerr << "Compile: " << solution << endl;)
+	cerr << "Compile: " << solution << endl;
 	if(0 != compile(out_path + "prog/" + name + ".cpp", tmp_dir.sname() + "exec")) {
 		eprintf("Solution compilation failed:\n");
 		cerr << compile.getErrors() << endl;
 		return 2;
 	}
-	D(
-		else {
-			cerr << "Success!" << endl;
-		}
-	)
+	else {
+		cerr << "Success!" << endl;
+	}
 	tests::findTests();
 	mkdir((out_path + "tests/").c_str(), dir_mod);
 	tests::moveTests();
@@ -659,8 +682,8 @@ int main(int argc, char **argv) {
 		if(0 != ret)
 			return ret;
 	} else {
-		int ret = system(("mv " << out_path << " " << result).c_str());
-		D(cerr << ("mv " << out_path << " " << result) << endl;)
+		int ret = system(("rm -rf " << result << "; mv " << out_path << " " << result).c_str());
+		D(cerr << ("rm -rf " << result << "; mv " << out_path << " " << result) << endl;)
 		if(0 != ret)
 			return ret;
 	}
