@@ -12,6 +12,8 @@ install:
 script:
   - make -j
   - echo | sudo make install
+  - wget http://127.2.2.2/
+  - cat index.html
 
 branches:
   only:
