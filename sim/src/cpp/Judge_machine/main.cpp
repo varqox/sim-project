@@ -41,7 +41,7 @@ int main()
 	signal(SIGSTKFLT, exit);
 	signal(_NSIG, exit);
 	// check if this process isn't oldest
-	// if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
+	if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
 	// checking submissions
 	while(!submissions_queue::empty())
 	{
