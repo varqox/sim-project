@@ -1,39 +1,52 @@
-#include <fstream>
-#include <deque>
+extern "C" {
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <assert.h>
 
-using namespace std;
-
-void remove_trailing_spaces(string& str)
-{
-	string::iterator erase_begin=str.end();
-	while(erase_begin!=str.begin() && isspace(*(erase_begin-1))) --erase_begin;
-	str.erase(erase_begin, str.end());
+int areEqual(char *s1, size_t l1, char *s2, size_t l2) {
+  while (l1 && isspace(s1[l1 - 1])) --l1;
+  while (l2 && isspace(s2[l2 - 1])) --l2;
+  s1[l1] = s2[l2] = '\0';
+  return strcmp(s1, s2);
 }
 
-int main(int argc, char **argv) // argv[0] command, argv[1] test_in, argv[2] test_out (right answer), argv[3] answer to check
-{
-	ios_base::sync_with_stdio(false);
-	fstream out(argv[2], ios_base::in), ans(argv[3], ios_base::in);
-	if(!ans.good() && !out.good())
-		return 2;// Evaluation failure
-	deque<string> ans_in, out_in;
-	string ans_tmp, out_tmp;
-	while(ans.good() && out.good())
-	{
-		getline(ans, ans_tmp);
-		getline(out, out_tmp);
-		remove_trailing_spaces(ans_tmp);
-		remove_trailing_spaces(out_tmp);
-		ans_in.push_back(ans_tmp);
-		out_in.push_back(out_tmp);
-	}
-	while(!ans_in.empty() && ans_in.back().empty()) ans_in.pop_back();
-	while(!out_in.empty() && out_in.back().empty()) out_in.pop_back();
-	int line=-1;
-	while(++line<ans_in.size() && line<out_in.size())
-		if(out_in[line]!=ans_in[line])
-			return 1; // Wrong answer
-	if(out_in.size()>ans_in.size())
-		return 1; // Wrong answer
-return 0; // OK
+int main(int argc, char *argv[]) {
+  // argv[0] command (ignored)
+  // argv[1] test_in
+  // argv[2] test_out (right answer)
+  // argv[3] answer to check
+  assert(argc == 4);
+  FILE *fout = fopen(argv[2], "r"), *fans = fopen(argv[3], "r");
+  assert(fout && fans);  // Open has not failed
+
+  size_t len1 = 0, len2 = 0, line = 0;
+  ssize_t read1, read2;
+  char *lout = NULL, *lans = NULL;
+  while (read1 = getline(&lout, &len1, fout),
+         read2 = getline(&lans, &len2, fans), read1 != -1 && read2 != -1) {
+    ++line;
+    if (0 != areEqual(lout, read1, lans, read2)) {
+      printf("Line %zu: Read: '%s', Expected: '%s'\n", line, lans, lout);
+      return 1;
+    }
+  }
+  while (read1 != -1) {
+    if (0 != areEqual(lout, read1, lans, 0)) {
+      printf("Line %zu: Read: EOF, Expected: '%s'\n", line, lout);
+      return 1;
+    }
+    read1 = getline(&lout, &len1, fout);
+    ++line;
+  }
+  while (read2 != -1) {
+    if (0 != areEqual(lans, read2, lout, 0)) {
+      printf("Line %zu: Read: '%s', Expected: EOF\n", line, lans);
+      return 1;
+    }
+    read2 = getline(&lans, &len2, fans);
+    ++line;
+  }
+  return 0;
 }
+}  // extern "C"
