@@ -47,13 +47,7 @@ int main()
 	{
 		D(cerr << "JUDGING:\n" << submissions_queue::front() << endl;)
 		submissions_queue::submission const & rep = submissions_queue::front();
-		// fstream queue_file(("queue/"+submissions_queue::front().id()).c_str(), ios::in);
-		// if(queue_file.good())
-		// {
-		// 	getline(queue_file, submission_id);
-		// 	getline(queue_file, task_id);
-		// 	queue_file.close();
-		// }
+
 		string submission_name="../public/submissions/"+rep.id()+".php";
 		fstream submission;
 		char exec[]="chroot/exec.XXXXXX";
@@ -73,10 +67,10 @@ int main()
 		{
 			D(cerr << "Compilation success" << endl);
 			task rated_task("../tasks/"+rep.task_id());
-			pair<string, string> tmp=rated_task.judge(string(exec+7, exec+18));
+			task::JudgeResult res = rated_task.judge(string(exec+7, exec+18));
 			if(submission.open(submission_name.c_str(), ios::out), submission.good())
 			{
-				submission << "<?php\nrequire_once $_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(" << rep.id() << "," << (tmp.first.empty() ? "NULL" : "'" << tmp.first << "'") << ",'" << tmp.second << "');\n?>";
+				submission << "<?php\nrequire_once $_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(" << rep.id() << ",'" << make_safe_php_string(res.initial.tests) << "','" << make_safe_php_string(res.initial.comments) << "','" << make_safe_php_string(res.final.tests) << "','" << make_safe_php_string(res.final.comments) << "');\n?>";
 				submission.close();
 			}
 			remove(exec);

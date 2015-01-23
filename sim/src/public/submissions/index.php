@@ -60,7 +60,7 @@ while($parent > 1)
 	$stmt->closeCursor();
 }
 
-template_begin('My Submissions','','.body{margin-left:150px}');
+template_begin('My Submissions','','.body{margin-left:180px}');
 
 echo '<ul class="menu"><li><a href="/round.php?id=',$_GET['id'],'">View round</a></li>',($admin_view ? '<li><a href="?id='.$_GET['id'].'">User view</a></li>' : ($show_admin_view ? '<li><a href="?id='.$_GET['id'].'&admin">Admin view</a></li>' : '')),'</ul>';
 

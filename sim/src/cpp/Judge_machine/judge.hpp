@@ -5,10 +5,18 @@
 
 class task
 {
+public:
+	struct JudgeResult {
+		struct Group {
+			std::string tests, comments;
+		} initial, final;
+	};
+
+private:
 	std::string _name, outf_name, memory_limit, checker, exec;
 	double min_group_ratio;
 
-	std::string check_on_test(const std::string& test, const std::string& time_limit);
+	JudgeResult::Group check_on_test(const std::string& test, const std::string& time_limit);
 
 public:
 	task(const std::string& str): _name(str), outf_name(), memory_limit(), checker(), exec(),  min_group_ratio()
@@ -30,5 +38,5 @@ public:
 		_name.swap(_t._name);
 	}
 
-	std::pair<std::string, std::string> judge(const std::string& exec_name);
+	JudgeResult judge(const std::string& exec_name);
 };
