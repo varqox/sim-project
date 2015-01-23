@@ -16,6 +16,8 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 
+#define ST first
+#define ND second
 
 // To erase <<<--------------------------------------------------------------------------------
 #include <bits/stdc++.h>
@@ -174,7 +176,7 @@ temporary_directory tmp_dir("conver.XXXXXX\0");
 
 const int /*file_mod = 0644,*/ dir_mod = 0755;
 
-string in_path, out_path, name, solution, problem_statement;
+string in_path, out_path, name, tag_name, solution, problem_statement;
 fstream config;
 
 bool has_suffix(const string& str, const string& suffix) {
@@ -239,7 +241,7 @@ namespace doc {
 		statements.clear();
 		findFilesInTmpDir("doc/", statements, ".pdf");
 		if (access((in_path + "statement.pdf").c_str(), F_OK) == 0)
-			statements.push_back(in_path + "statement.pdf");
+			statements.push_back("statement.pdf");
 	}
 
 	void selectStatement() {
@@ -415,26 +417,35 @@ namespace runtime
 namespace tests {
 	vector<pair<string, string> > tests;
 
-	pair<string, string> _getId(const string& str) {
-		pair<string, string> res;
+	struct TestId {
+		string ST, ND;
+	};
+
+	// Extract test id e.g. "test1abc" -> ("1", "abc")
+	TestId _getId(const string& str) {
+		TestId res;
 		string::const_reverse_iterator i = str.rbegin();
 		while(i != str.rend() && isalpha(*i))
-			res.second += *i++;
+			res.ND += *i++;
 		while(i != str.rend() && isdigit(*i))
-			res.first += *i++;
-		std::reverse(res.first.begin(), res.first.end());
-		std::reverse(res.second.begin(), res.second.end());
+			res.ST += *i++;
+		std::reverse(res.ST.begin(), res.ST.end());
+		std::reverse(res.ND.begin(), res.ND.end());
 		return res;
 	}
 
-	string getId(const string& str) {
-		pair<string, string> x = _getId(str);
-		return x.first + x.second;
+	// Extract test id e.g. "test1abc" -> "1abc"
+	inline string getId(const TestId& id) {
+		return id.ST + id.ND;
+	}
+
+	inline string getId(const string& str) {
+		return getId(_getId(str));
 	}
 
 	bool comparator(const pair<string, string>& a, const pair<string, string>& b) {
-		pair<string, string> x = _getId(a.first), y = _getId(b.first);
-		return (x.first.size() == y.first.size() ? (x.first == y.first ? x.second < y.second : x.first < y.first) : x.first.size() < y.first.size());
+		TestId x = _getId(a.ST), y = _getId(b.ST);
+		return (x.ST.size() == y.ST.size() ? (x.ST == y.ST ? x.ND < y.ND : x.ST < y.ST) : x.ST.size() < y.ST.size());
 	}
 
 	void findTests() {
@@ -465,8 +476,8 @@ namespace tests {
 
 	void moveTests(){
 		for (vector<pair<string,string> >::iterator i = tests.begin(); i != tests.end(); ++i) {
-			rename((in_path + i->ST + ".in").c_str(),(out_path + "tests/" + name + getId(i->ST) + ".in").c_str());
-			rename((in_path + i->ND + ".out").c_str(),(out_path + "tests/" + name + getId(i->ND) + ".out").c_str());
+			rename((in_path + i->ST + ".in").c_str(),(out_path + "tests/" + tag_name + getId(i->ST) + ".in").c_str());
+			rename((in_path + i->ND + ".out").c_str(),(out_path + "tests/" + tag_name + getId(i->ND) + ".out").c_str());
 		}
 	}
 
@@ -525,7 +536,10 @@ namespace tests {
 		if (tmp < "0.10")
 			tmp = "0.10";
 
-		printf("\t%.2lf / %s", runtime::cl/10000/100.0, tmp.c_str());
+		if (VERBOSE)
+			printf("\t%.2lf / %s", runtime::cl/10000/100.0, tmp.c_str());
+		else
+			printf("  %-15s%.2lf / %s", test.c_str(), runtime::cl/10000/100.0, tmp.c_str());
 		config << tmp;
 
 		switch(runtime::res_stat)
@@ -547,31 +561,63 @@ namespace tests {
 		}
 	}
 
+	inline bool is0PointTest(const TestId& id) {
+		return (id.ST == "0" || id.ND == "ocen");
+	}
+
 	void setLimits(unsigned long long memory_limit) {
 		runtime::memory_limit = memory_limit << 10;
-		size_t begin = 0, end = 0, groups = _getId(tests[0].first).first != "0";
+		TestId last_id = _getId(tests[0].ST), current_id; // last_id have to contain non-0 points test
+		vector<TestId> initial_ids, rest_ids; // Initial tests are 0-points tests
+		size_t begin = 0, end = 0, groups = 0;
+		if (is0PointTest(last_id)) { // We have to set an impossible value
+			initial_ids.push_back(last_id);
+			last_id.ST = "";
+		} else {
+			rest_ids.push_back(last_id);
+			groups = 1;
+		}
+		// groups is numer of tests groups for which you get non-0 points
 		long long points = 100;
-		while (++begin < tests.size())
-			if (_getId(tests[begin].first).first != "0" && _getId(tests[begin - 1].first).first != _getId(tests[begin].first).first)
-				++groups;
+		while (++begin < tests.size()) {
+			current_id = _getId(tests[begin].ST);
+			if (!is0PointTest(current_id)) {
+				rest_ids.push_back(current_id);
+				if (last_id.ST != current_id.ST)
+					++groups;
+				last_id = current_id;
+			} else
+				initial_ids.push_back(current_id);
+		}
 		LOGN(groups);
-		begin = 0;
-		while (begin < tests.size()) {
-			string test_name;
-			pair<string, string> id = _getId(tests[begin].first);
-
-			while(++end < tests.size() && id.first == _getId(tests[end].first).first) {}
-
-			test_name = name + id.first + id.second;
+		string test_name; // Name in output directory
+		// Take care of initial tests (set limits)
+		test_name = tag_name + getId(initial_ids[begin = 0]);
+		config << test_name << ' ';
+		run_on_test(test_name);
+		config << ' ' << initial_ids.size() << " 0\n";
+		while (++begin < initial_ids.size()) {
+			test_name = tag_name + getId(initial_ids[begin]);
 			config << test_name << ' ';
 			run_on_test(test_name);
-			config << ' ' << end - begin << ' ' << (id.first != "0" ? points / groups : 0) << endl;
+			config << endl;
+		}
+		// Now set limits for each non-0 points group of tests
+		begin = 0;
+		while (begin < rest_ids.size()) {
+			// Move end until [begin, end) contain whole group of tests
+			while (++end < rest_ids.size() && rest_ids[begin].ST == rest_ids[end].ST) {}
 
-			if(id.first != "0")
-				points -= points / groups--;
+			// Run on first test and manage group config
+			test_name = tag_name + getId(rest_ids[begin]);
+			config << test_name << ' ';
+			run_on_test(test_name);
+			config << ' ' << end - begin << ' ' << points / groups << endl;
 
-			while(++begin < end) {
-				test_name = name + id.first + _getId(tests[begin].first).second;
+			points -= points / groups--;
+
+			while (++begin < end) {
+				test_name = tag_name + getId(rest_ids[begin]);
 				config << test_name << ' ';
 				run_on_test(test_name);
 				config << endl;
@@ -656,16 +702,19 @@ int main(int argc, char **argv) {
 		eprintf("Cannot create config file\n");
 		return 1;
 	}
-	config << tolower(name.size() < 4 ? name : name.substr(0, 3)) << "\n" << name << "\n" << checker << "\n" << mem_limit << endl;
+	tag_name = tolower(name.size() < 4 ? name : name.substr(0, 3));
+	config << tag_name << "\n" << name << "\n" << checker << "\n" << mem_limit << endl;
 	doc::findStatements();
 	doc::selectStatement();
 	sol::findSolutions();
 	sol::selectSolution();
-	cerr << "Task name: '" << name << "'\n" << "Problem statement: " << problem_statement << "\nSolution: " << solution << endl;
-	rename((in_path + problem_statement).c_str(), (out_path + "statement.pdf").c_str());
-	rename((in_path + solution).c_str(), (out_path + "prog/" + name + ".cpp").c_str());
-	cerr << "Compile: " << solution << endl;
-	if(0 != compile(out_path + "prog/" + name + ".cpp", tmp_dir.sname() + "exec")) {
+	cerr << "Task name: '" << name << "'\nTag name: '" << tag_name << "'\nProblem statement: " << problem_statement << "\nSolution: " << solution << endl;
+	if(0 != rename((in_path + problem_statement).c_str(), (out_path + "statement.pdf").c_str()) )
+		cerr << "Error moving: " << in_path << problem_statement << " -> " << out_path << "statement.pdf" << endl;
+	if(0 != rename((in_path + solution).c_str(), (out_path + "prog/" + tag_name + ".cpp").c_str()) )
+		cerr << "Error moving: " << in_path << solution << " -> " << out_path << "prog/" << tag_name << ".cpp" << endl;
+	cerr << "Compile: " << out_path << "prog/" << tag_name << ".cpp" << endl;
+	if(0 != compile(out_path + "prog/" + tag_name + ".cpp", tmp_dir.sname() + "exec")) {
 		eprintf("Solution compilation failed:\n");
 		cerr << compile.getErrors() << endl;
 		return 2;
