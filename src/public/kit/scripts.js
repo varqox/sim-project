@@ -1,5 +1,5 @@
 // function f(w){w.parentNode.setAttribute('class',(w.parentNode.getAttribute('class')=='dropdown'?'dropdown-open':'dropdown'));}
-function updateClock()
+window.onload = function updateClock()
 {
 	if(load<0) time_difference=Date.parse(Date())-(start_time += load=  window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart);
 	var currentTime = new Date(Date.parse(Date())-time_difference);

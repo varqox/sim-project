@@ -688,6 +688,11 @@ a:hover
 }
 
 /* Submission */
+.submission-info{
+	width: 85%;
+	margin-left: -20px;
+	text-align: center;
+}
 .submission-info h1, .submission-info h2{
 	margin: 0;
 	font-weight: normal;
@@ -708,7 +713,7 @@ a:hover
 	line-height: 20px;
 }
 .btn-toolbar{
-	margin: -30px 80px 30px 0;
+	margin: -30px 0 30px;
 	text-align: right;
 }
 .results th{
@@ -732,6 +737,23 @@ a:hover
 }
 .tl-re{
 	background: #ffd27b;
+}
+.test-comments ul, .test-comments li{
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	color: #999999;
+}
+.test-comments{
+	margin: 20px 0;
+	padding: 0;
+	text-align: left;
+	line-height: 20px;
+}
+.test-comments .test-id{
+	font-size: 85%;
+	vertical-align: super;
+	padding-right: 5px;
 }
 
 /* Source code view */
@@ -821,7 +843,7 @@ form .input-block{
 	padding: 60px 10px 0;
 	border-right: 1px solid #ccc;
 	height: 100%;
-	width: 128px;
+	width: 150px;
 	z-index: 1;
 }
 .menu > li{

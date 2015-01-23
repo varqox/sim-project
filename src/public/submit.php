@@ -49,7 +49,7 @@ while($parent >= 1)
 	$stmt->closeCursor();
 }
 
-template_begin('Submit a solution','','.body{margin-left:150px}');
+template_begin('Submit a solution','','.body{margin-left:180px}');
 
 echo '<ul class="menu"><li><a href="/round.php?id=',$_GET['round'],'">View round</a></li><li><a href="/submissions/?id=',$_GET['round'],'">Submissions</a></li></ul>';
 

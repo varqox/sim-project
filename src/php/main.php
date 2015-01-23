@@ -27,10 +27,10 @@ echo '<!DOCTYPE html>
 <link rel="stylesheet" href="/kit/styles.css">
 <script src="/kit/jquery.js"></script>
 <script src="/kit/scripts.js"></script>
-<script> var start_time=', round(microtime(true) * 1000), ', load=-1, time_difference;</script>
+<script>var start_time=', round(microtime(true) * 1000), ', load=-1, time_difference;</script>
 <link rel="shortcut icon" href="/kit/img/favicon.png">',(strlen($scripts)==1 ? '':"\n<script>".$scripts.'</script>'),(strlen($styles)==0 ? '':"\n<style>".$styles.'</style>'),'
 </head>
-<body onload="updateClock()">
+<body>
 <div class="navbar">
 <div class="navbar-body">
 <a href="/" class="brand">SIM</a>
@@ -38,7 +38,7 @@ echo '<!DOCTYPE html>
 <a href="/files/">Files</a>
 <a href="/submissions/">Submissions</a>
 <div style="float:right">
-<span id="clock"></span>';
+<span id="clock">',date("H:i:s"),'</span>';
 if(check_logged_in())
 {
 	echo '<div class="dropdown">

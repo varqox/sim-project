@@ -71,7 +71,7 @@ if(isset($task_id))
 	else
 	{
 		// Need to write good task view
-		template_begin('Round','','.body{margin-left:150px}');
+		template_begin('Round','','.body{margin-left:180px}');
 		echo '<ul class="menu"><li><a href="submissions/?id=',$_GET['id'],'">Submissions</a></li></ul>';
 		echo '<div class="path">',$path,"</div><div class=\"round-info\"><p style=\"font-size:30px;margin:10px 0\">$name</p><p>Beginning: ",(isset($begin_time) ? $begin_time : "whenever"),"</p><p>End: ",(isset($end_time) ? $end_time : "never"),'</p></div><a class="btn-small" href="?id=',$_GET['id'],'&content">View content</a>',($round_privileges == $user_privileges && $_SESSION['id'] != $author && isset($end_time) && $time > $end_time ? "" : '<a class="btn-small" href="submit.php?round='.$_GET['id'].'">Submit solution</a>');
 		template_end();
@@ -79,7 +79,7 @@ if(isset($task_id))
 	}
 }
 
-template_begin('Round','','.body{margin-left:150px}');
+template_begin('Round','','.body{margin-left:180px}');
 echo '<ul class="menu"><li><a href="submissions/?id=',$_GET['id'],'">Submissions</a></li></ul>';
 
 if($_GET['id'] != 1)

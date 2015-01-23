@@ -1,7 +1,7 @@
 <?php
 require_once "main.php";
 
-function template($sid, $initial_tests = NULL, $final_tests = NULL)
+function template($sid, $initial_tests = NULL, $initial_tests_comments = NULL, $final_tests = NULL, $final_tests_comments = NULL)
 {
 	if(!check_logged_in())
 	{
@@ -82,7 +82,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 		exit;
 	}
 
-	template_begin('Submission '.$sid,'','.body{margin-left:150px}');
+	template_begin('Submission '.$sid,'','.body{margin-left:180px}');
 
 	echo '<ul class="menu"><li><a href="/round.php?id=',$submission[1],'">View round</a></li><li><a href="/submissions/?id=',$submission[1],'">Submissions</a></li><li><a href="/round.php?id=',$submission[1],'&content">Task content</a></li>',(!$superuser_access && ((isset($begin_time) && strtotime($begin_time) > $time) || (isset($end_time) && $time > strtotime($end_time))) ? "" : '<li><a href="/submit.php?round='.$submission[1].'">Submit a solution</a></li>'),'</ul>';
 
@@ -94,7 +94,7 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 		$task_name = $row[0];
 	$stmt->closeCursor();
 
-	echo '<div style="text-align:center;margin-left:-20px">
+	echo '<div style="margin-left:25px">
 <div class="submission-info">
 <h1>Zgłoszenie ',$sid,'</h1>
 <div class="btn-toolbar">
@@ -126,30 +126,39 @@ function template($sid, $initial_tests = NULL, $final_tests = NULL)
 	echo '</td><td>',($show_final ? $submission[5] : ''),'</td></tr></tbody></table></div>';
 
 	// Echo final_tests
-	if($show_final && isset($final_tests))
+	if($show_final && !empty($final_tests)) {
 		echo '<h3 style="font-size:20px;font-weight:normal">Final testing report</h3><table style="margin-top: -15px" class="table results">
 <thead>
 <tr>
 <th style="min-width: 80px">Test</th>
 <th style="min-width: 190px">Result</th>
-<th style="min-width: 100px">Time</th>
+<th style="min-width: 100px">Time [s]</th>
 <th style="min-width: 70px">Result</th>
 </tr>
 </thead>
 <tbody>',$final_tests,'</tbody></table>';
 
+		if (!empty($final_tests_comments))
+			echo '<ul class="test-comments">', $final_tests_comments, '</ul>';
+	}
+
 	// Echo initial_tests
-	if(isset($initial_tests))
+	if(!empty($initial_tests)) {
 		echo '<h3 style="font-size:20px;font-weight:normal">Initial testing report</h3><table style="margin-top: -15px" class="table results">
 <thead>
 <tr>
 <th style="min-width: 80px">Test</th>
 <th style="min-width: 190px">Result</th>
-<th style="min-width: 100px">Time</th>
+<th style="min-width: 100px">Time [s]</th>
 <th style="min-width: 70px">Result</th>
 </tr>
 </thead>
-<tbody>',$initial_tests,'</tbody></table></div>';
+<tbody>',$initial_tests,'</tbody></table>';
+
+		if (!empty($initial_tests_comments))
+			echo '<ul class="test-comments">', $initial_tests_comments, '</ul>';
+	}
+	echo '</div>';
 
 	template_end();
 }

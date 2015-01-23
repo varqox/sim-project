@@ -19,7 +19,7 @@ DB::DB(): con(), user(NULL), password(NULL), database(NULL)
 	fclose(f);
 	user[strlen(user)-1] = password[strlen(password)-1] = database[strlen(database)-1] = '\0';
 #ifdef DEBUG
-	printf("mysql_user: %s\nmysql_password: %s\ndatabase: %s\n", user, password, database);
+	printf("mysql_user: %s\nmysql_password: %s\ndatabase: %s\n", user, "****"/*password*/, database);
 #endif
 	connect();
 }
