@@ -238,6 +238,8 @@ namespace doc {
 	void findStatements() {
 		statements.clear();
 		findFilesInTmpDir("doc/", statements, ".pdf");
+		if (access((in_path + "statement.pdf").c_str(), F_OK) == 0)
+			statements.push_back(in_path + "statement.pdf");
 	}
 
 	void selectStatement() {
@@ -519,6 +521,9 @@ namespace tests {
 		}
 		if(tmp == "0" || tmp == "0.01")
 			tmp = "0.02";
+		// It has to be here if not using instrumentation like Pintool
+		if (tmp < "0.10")
+			tmp = "0.10";
 
 		printf("\t%.2lf / %s", runtime::cl/10000/100.0, tmp.c_str());
 		config << tmp;
