@@ -20,7 +20,7 @@ using namespace std;
 
 D(
 std::ostream& operator<<(std::ostream& os, const submissions_queue::submission& r)
-{return os << "(" << r.id() << ", " << r.task_id() << ")";}
+{return os << "(" << r.id() << ", " << r.problem_id() << ")";}
 )
 
 string myto_string(long long int a);
@@ -50,7 +50,7 @@ namespace submissions_queue
 
 		sql::Statement *stmt = DB::mysql()->createStatement();
 		sql::ResultSet *res;
-		res = stmt->executeQuery("SELECT id,task_id FROM submissions WHERE status='waiting' ORDER BY queued LIMIT 30");
+		res = stmt->executeQuery("SELECT id,problem_id FROM submissions WHERE status='waiting' ORDER BY queued LIMIT 30");
 		while(res->next())
 			submissions.push_back(submission(res->getString(1), res->getString(2)));
 		delete res;

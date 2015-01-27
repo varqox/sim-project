@@ -14,7 +14,7 @@
 - You have normal access if you are author of submission
 - You have superuser access if you have superuser access to round (to which submission belongs)
 
-## Tasks
+## Problems
 - Max name length is 128 characters
 
 ## Checkers

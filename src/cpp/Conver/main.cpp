@@ -648,7 +648,7 @@ int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
 	if(argc < 3) {
-		eprintf("Usage: conver [options] task_package out_package [mem_limit] [checker]\n\nOptions:\n  -v, --verbose		Verbose mode\n  -n NAME, --name=NAME		Set task name to NAME\n\ntask_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
+		eprintf("Usage: conver [options] problem_package out_package [mem_limit] [checker]\n\nOptions:\n  -v, --verbose		Verbose mode\n  -n NAME, --name=NAME		Set problem name to NAME\n\nproblem_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
 		return 1;
 	}
 
@@ -708,7 +708,7 @@ int main(int argc, char **argv) {
 	doc::selectStatement();
 	sol::findSolutions();
 	sol::selectSolution();
-	cerr << "Task name: '" << name << "'\nTag name: '" << tag_name << "'\nProblem statement: " << problem_statement << "\nSolution: " << solution << endl;
+	cerr << "Problem name: '" << name << "'\nTag name: '" << tag_name << "'\nProblem statement: " << problem_statement << "\nSolution: " << solution << endl;
 	if(0 != rename((in_path + problem_statement).c_str(), (out_path + "statement.pdf").c_str()) )
 		cerr << "Error moving: " << in_path << problem_statement << " -> " << out_path << "statement.pdf" << endl;
 	if(0 != rename((in_path + solution).c_str(), (out_path + "prog/" + tag_name + ".cpp").c_str()) )

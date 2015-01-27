@@ -18,7 +18,7 @@ if(!($row = $stmt->fetch()))
 $user_privileges = privileges($row[0]);
 $stmt->closeCursor();
 
-$stmt = DB::pdo()->prepare("SELECT name,parent,privileges,begin_time,end_time,author,task_id FROM rounds WHERE id=?");
+$stmt = DB::pdo()->prepare("SELECT name,parent,privileges,begin_time,end_time,author,problem_id FROM rounds WHERE id=?");
 $stmt->bindValue(1, $_GET['id']);
 $stmt->execute();
 if(1 > $stmt->rowCount())
@@ -29,7 +29,7 @@ $name = $row[0];
 $path = "<a href=\"/round.php?id=".$_GET['id']."\">$name</a>";
 $parent = $row[1];
 $author = $row[5];
-$task_id = $row[6];
+$problem_id = $row[6];
 $begin_time = $row[3];
 $end_time = $row[4];
 $round_privileges = privileges($row[2]);
@@ -52,25 +52,25 @@ while($parent > 1)
 	$stmt->closeCursor();
 }
 
-if(isset($task_id))
+if(isset($problem_id))
 {
 	if(isset($_GET['content']))
 	{
-		if(file_exists($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/statement.pdf"))
+		if(file_exists($_SERVER['DOCUMENT_ROOT']."/../problems/".$problem_id."/statement.pdf"))
 		{
 			header('Content-type: application/pdf');
-			$conf = file($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/conf.cfg");
+			$conf = file($_SERVER['DOCUMENT_ROOT']."/../problems/".$problem_id."/conf.cfg");
 			if (!isset($conf[0]))
 				$conf[0] = "statement";
 			header('Content-Disposition: filename="'.substr($conf[0], 0, -1).'.pdf"');
-			readfile($_SERVER['DOCUMENT_ROOT']."/../tasks/".$task_id."/statement.pdf");
+			readfile($_SERVER['DOCUMENT_ROOT']."/../problems/".$problem_id."/statement.pdf");
 			exit;
 		}
 		E_404();
 	}
 	else
 	{
-		// Need to write good task view
+		// Need to write good problem view
 		template_begin('Round','','.body{margin-left:180px}');
 		echo '<ul class="menu"><li><a href="submissions/?id=',$_GET['id'],'">Submissions</a></li></ul>';
 		echo '<div class="path">',$path,"</div><div class=\"round-info\"><p style=\"font-size:30px;margin:10px 0\">$name</p><p>Beginning: ",(isset($begin_time) ? $begin_time : "whenever"),"</p><p>End: ",(isset($end_time) ? $end_time : "never"),'</p></div><a class="btn-small" href="?id=',$_GET['id'],'&content">View content</a>',($round_privileges == $user_privileges && $_SESSION['id'] != $author && isset($end_time) && $time > $end_time ? "" : '<a class="btn-small" href="submit.php?round='.$_GET['id'].'">Submit solution</a>');
@@ -87,7 +87,7 @@ if($_GET['id'] != 1)
 
 // Here we will take care on printing subrounds...
 // First we need to select all subrounds (problems too)
-$stmt = DB::pdo()->prepare("SELECT id,item,visible,author,name,begin_time,end_time,privileges,task_id FROM rounds WHERE parent=?");
+$stmt = DB::pdo()->prepare("SELECT id,item,visible,author,name,begin_time,end_time,privileges,problem_id FROM rounds WHERE parent=?");
 $stmt->bindValue(1, $_GET['id']);
 $stmt->execute();
 

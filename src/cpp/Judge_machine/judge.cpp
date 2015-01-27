@@ -181,7 +181,7 @@ namespace runtime
 					line[--read] = '\0';
 
 				if (read > 0) {
-					comments.assign(line, line + min(read, 200));
+					comments.assign(line, line + min(read, ssize_t(200)));
 					if (read > 200)
 						comments += "...";
 				}
@@ -204,7 +204,7 @@ namespace runtime
 	}
 }
 
-task::JudgeResult::Group task::check_on_test(const string& test, const string& time_limit)
+Problem::JudgeResult::Group Problem::check_on_test(const string& test, const string& time_limit)
 {
 	// Setup runtime variables
 	string tmp = _name+"tests/"+test+".in";
@@ -295,7 +295,7 @@ task::JudgeResult::Group task::check_on_test(const string& test, const string& t
 	return output;
 }
 
-task::JudgeResult task::judge(const string& exec_name)
+Problem::JudgeResult Problem::judge(const string& exec_name)
 {
 	exec=exec_name;
 	fstream config((_name+"conf.cfg").c_str(), ios::in);
@@ -308,8 +308,8 @@ task::JudgeResult task::judge(const string& exec_name)
 	}
 	D(cerr << "Success!" << endl);
 	string trashes, checker_name;
-	getline(config, trashes); // Task tag
-	getline(config, trashes); // Task name
+	getline(config, trashes); // Problem tag
+	getline(config, trashes); // Problem name
 	// Checker
 	config >> checker_name;
 	string checker_exec=string(tmp_dir)+"checker";

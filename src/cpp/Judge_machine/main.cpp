@@ -66,8 +66,8 @@ int main()
 		else
 		{
 			D(cerr << "Compilation success" << endl);
-			task rated_task("../tasks/"+rep.task_id());
-			task::JudgeResult res = rated_task.judge(string(exec+7, exec+18));
+			Problem rated_problem("../problems/"+rep.problem_id());
+			Problem::JudgeResult res = rated_problem.judge(string(exec+7, exec+18));
 			if(submission.open(submission_name.c_str(), ios::out), submission.good())
 			{
 				submission << "<?php\nrequire_once $_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(" << rep.id() << ",'" << make_safe_php_string(res.initial.tests) << "','" << make_safe_php_string(res.initial.comments) << "','" << make_safe_php_string(res.final.tests) << "','" << make_safe_php_string(res.final.comments) << "');\n?>";

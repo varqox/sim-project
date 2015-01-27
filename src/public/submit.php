@@ -18,13 +18,13 @@ if(!($row = $stmt->fetch()))
 $user_privileges = privileges($row[0]);
 $stmt->closeCursor();
 
-$stmt = DB::pdo()->prepare("SELECT r.parent,r.task_id,r.name,r.privileges,r.begin_time,r.end_time,r.author,t.name FROM rounds r, tasks t WHERE r.id=? AND r.task_id=t.id");
+$stmt = DB::pdo()->prepare("SELECT r.parent,r.problem_id,r.name,r.privileges,r.begin_time,r.end_time,r.author,t.name FROM rounds r, problems t WHERE r.id=? AND r.problem_id=t.id");
 $stmt->bindValue(1, $_GET['round']);
 $stmt->execute();
 if(!($row = $stmt->fetch()) || !isset($row[1]))
 	E_404();
 $time = time();
-$task = array('id' => $row[1], 'name' => $row[7]);
+$problem = array('id' => $row[1], 'name' => $row[7]);
 $rounds = array(0 => $_GET['round']);
 $parent = $row[0];
 $path = "<a href=\"/round.php?id=".$_GET['round']."\">$row[2]</a>";
@@ -63,10 +63,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 		$info.="<p>Error occurred.</p>";
 	else
 	{
-		$stmt = DB::pdo()->prepare("INSERT INTO submissions (user_id,round_id,task_id,time,queued) VALUES(?,?,?,FROM_UNIXTIME(?),NOW())");
+		$stmt = DB::pdo()->prepare("INSERT INTO submissions (user_id,round_id,problem_id,time,queued) VALUES(?,?,?,FROM_UNIXTIME(?),NOW())");
 		$stmt->bindValue(1,$_SESSION['id']);
 		$stmt->bindValue(2,$_GET['round']);
-		$stmt->bindValue(3,$task['id']);
+		$stmt->bindValue(3,$problem['id']);
 		$stmt->bindValue(4,$time);
 		$stmt->execute();
 		if(1 > $stmt->rowCount() || !move_uploaded_file($_FILES['solution']['tmp_name'], $_SERVER['DOCUMENT_ROOT'].'/../solutions/'.($lII=DB::pdo()->lastInsertID()).'.cpp') || !file_put_contents($_SERVER['DOCUMENT_ROOT']."/submissions/".$lII.".php", "<?php\nrequire_once \$_SERVER['DOCUMENT_ROOT'].\"/../php/submission.php\";\ntemplate(".$lII.");\n?>"))
@@ -94,7 +94,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['solution']))
 
 echo '<div class="path">',$path,"</div>",$info,'<div class="form-container">
 <h1>Submit a solution</h1>
-<h4>Problem: <a href="/round.php?id=',$_GET['round'],'">',$task['name'],'</a></h4>
+<h4>Problem: <a href="/round.php?id=',$_GET['round'],'">',$problem['name'],'</a></h4>
 <form enctype="multipart/form-data" action method="POST">
 <label>File</label>
 <input class="input-block" type="file" name="solution">

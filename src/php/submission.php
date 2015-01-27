@@ -21,7 +21,7 @@ function template($sid, $initial_tests = NULL, $initial_tests_comments = NULL, $
 	$stmt->closeCursor();
 
 	// Submission
-	$stmt = DB::pdo()->prepare("SELECT user_id,round_id,task_id,time,status,points FROM submissions WHERE id=?");
+	$stmt = DB::pdo()->prepare("SELECT user_id,round_id,problem_id,time,status,points FROM submissions WHERE id=?");
 	$stmt->bindValue(1, $sid);
 	$stmt->execute();
 	if(!($submission = $stmt->fetch()))
@@ -84,14 +84,14 @@ function template($sid, $initial_tests = NULL, $initial_tests_comments = NULL, $
 
 	template_begin('Submission '.$sid,'','.body{margin-left:180px}');
 
-	echo '<ul class="menu"><li><a href="/round.php?id=',$submission[1],'">View round</a></li><li><a href="/submissions/?id=',$submission[1],'">Submissions</a></li><li><a href="/round.php?id=',$submission[1],'&content">Task content</a></li>',(!$superuser_access && ((isset($begin_time) && strtotime($begin_time) > $time) || (isset($end_time) && $time > strtotime($end_time))) ? "" : '<li><a href="/submit.php?round='.$submission[1].'">Submit a solution</a></li>'),'</ul>';
+	echo '<ul class="menu"><li><a href="/round.php?id=',$submission[1],'">View round</a></li><li><a href="/submissions/?id=',$submission[1],'">Submissions</a></li><li><a href="/round.php?id=',$submission[1],'&content">Problem content</a></li>',(!$superuser_access && ((isset($begin_time) && strtotime($begin_time) > $time) || (isset($end_time) && $time > strtotime($end_time))) ? "" : '<li><a href="/submit.php?round='.$submission[1].'">Submit a solution</a></li>'),'</ul>';
 
-	$stmt = DB::pdo()->prepare("SELECT name FROM tasks WHERE id=?");
+	$stmt = DB::pdo()->prepare("SELECT name FROM problems WHERE id=?");
 	$stmt->bindValue(1, $submission[2]);
 	$stmt->execute();
-	$task_name = "";
+	$problem_name = "";
 	if($row = $stmt->fetch())
-		$task_name = $row[0];
+		$problem_name = $row[0];
 	$stmt->closeCursor();
 
 	echo '<div style="margin-left:25px">
@@ -112,7 +112,7 @@ function template($sid, $initial_tests = NULL, $initial_tests_comments = NULL, $
 </thead>
 <tbody>
 <tr>
-<td>',$task_name,'</td>
+<td>',$problem_name,'</td>
 <td>',$submission[3],'</td>
 <td';
 	$show_final = $superuser_access || strtotime($full_judge_time) <= $time;
