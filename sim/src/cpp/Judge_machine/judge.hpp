@@ -3,7 +3,7 @@
 
 #pragma once
 
-class task
+class Problem
 {
 public:
 	struct JudgeResult {
@@ -19,13 +19,13 @@ private:
 	JudgeResult::Group check_on_test(const std::string& test, const std::string& time_limit);
 
 public:
-	task(const std::string& str): _name(str), outf_name(), memory_limit(), checker(), exec(),  min_group_ratio()
+	Problem(const std::string& str): _name(str), outf_name(), memory_limit(), checker(), exec(),  min_group_ratio()
 	{
 		if(*_name.rbegin()!='/') _name+='/';
 		outf_name=std::string(tmp_dir)+"exec_out";
 	}
 
-	~task()
+	~Problem()
 	{
 		remove(outf_name.c_str());
 	}
@@ -33,7 +33,7 @@ public:
 	const std::string& name() const
 	{return _name;}
 
-	void swap(task& _t)
+	void swap(Problem& _t)
 	{
 		_name.swap(_t._name);
 	}

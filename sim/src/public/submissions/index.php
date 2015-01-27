@@ -67,7 +67,7 @@ echo '<ul class="menu"><li><a href="/round.php?id=',$_GET['id'],'">View round</a
 echo '<div class="path">',$path," / Submissions</div>";
 if($admin_view)
 {
-	$stmt = DB::pdo()->prepare("SELECT sr.submission_id, sr.time, t.name, s.status, s.points, r.full_judge_time, u.username FROM submissions_to_rounds sr, submissions s, tasks t, rounds r, users u WHERE sr.round_id=? AND sr.user_id=u.id AND sr.submission_id=s.id AND s.round_id=r.id AND s.task_id=t.id ORDER BY sr.submission_id DESC");
+	$stmt = DB::pdo()->prepare("SELECT sr.submission_id, sr.time, t.name, s.status, s.points, r.full_judge_time, u.username FROM submissions_to_rounds sr, submissions s, problems t, rounds r, users u WHERE sr.round_id=? AND sr.user_id=u.id AND sr.submission_id=s.id AND s.round_id=r.id AND s.problem_id=t.id ORDER BY sr.submission_id DESC");
 	$stmt->bindValue(1,$_GET['id']);
 	$stmt->execute();
 	if(1 > $stmt->rowCount())
@@ -111,7 +111,7 @@ if($admin_view)
 }
 else
 {
-	$stmt = DB::pdo()->prepare("SELECT sr.submission_id, sr.time, t.name, s.status, s.points, r.full_judge_time FROM submissions_to_rounds sr, submissions s, tasks t, rounds r WHERE sr.round_id=? AND sr.user_id=? AND sr.submission_id=s.id AND s.round_id=r.id AND s.task_id=t.id ORDER BY sr.submission_id DESC");
+	$stmt = DB::pdo()->prepare("SELECT sr.submission_id, sr.time, t.name, s.status, s.points, r.full_judge_time FROM submissions_to_rounds sr, submissions s, problems t, rounds r WHERE sr.round_id=? AND sr.user_id=? AND sr.submission_id=s.id AND s.round_id=r.id AND s.problem_id=t.id ORDER BY sr.submission_id DESC");
 	$stmt->bindValue(1,$_GET['id']);
 	$stmt->bindValue(2,$_SESSION['id']);
 	$stmt->execute();

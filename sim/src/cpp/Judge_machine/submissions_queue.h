@@ -25,17 +25,17 @@ namespace submissions_queue
 	class submission
 	{
 	private:
-		std::string _id, _task_id;
+		std::string _id, _problem_id;
 
 	public:
-		submission(const std::string& nid, const std::string& ntid): _id(nid), _task_id(ntid)
+		submission(const std::string& nid, const std::string& ntid): _id(nid), _problem_id(ntid)
 		{}
 
 		const std::string& id() const
 		{return _id;}
 
-		const std::string& task_id() const
-		{return _task_id;}
+		const std::string& problem_id() const
+		{return _problem_id;}
 
 		void set(submission_status st, long long points) const;
 	};

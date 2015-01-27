@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `session` (
   KEY (`time`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
-CREATE TABLE IF NOT EXISTS `tasks` (
+CREATE TABLE IF NOT EXISTS `problems` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(128) NOT NULL,
   `checker` varchar(32) NOT NULL DEFAULT 'default',
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `submissions` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int unsigned NOT NULL,
   `round_id` int unsigned NOT NULL,
-  `task_id` int unsigned NOT NULL,
+  `problem_id` int unsigned NOT NULL,
   `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `status` enum('ok','error','c_error','waiting') DEFAULT NULL COLLATE utf8_bin,
   `queued` timestamp NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS `submissions` (
   PRIMARY KEY (`id`),
   KEY (`user_id`),
   KEY (`round_id`),
-  KEY (`task_id`),
+  KEY (`problem_id`),
   KEY (`status`,`queued`),
   KEY (`time`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS `rounds` (
   `full_judge_time` timestamp NULL DEFAULT NULL,
   `end_time` timestamp NULL DEFAULT NULL,
   `privileges` enum('admin','teacher','all') COLLATE utf8_bin NOT NULL DEFAULT 'all',
-  `task_id` int unsigned DEFAULT NULL,
+  `problem_id` int unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY (`parent`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
