@@ -13,10 +13,12 @@ void remove_r(const char* path)
 	dirent* current_file;
 	string tmp_dir_path=path;
 	if(*tmp_dir_path.rbegin()!='/') tmp_dir_path+='/';
-	if((directory=opendir(path)))
+	if((directory=opendir(path))) {
 		while((current_file=readdir(directory)))
 			if(strcmp(current_file->d_name, ".") && strcmp(current_file->d_name, ".."))
 				remove_r((tmp_dir_path+current_file->d_name).c_str());
+		closedir(directory);
+	}
 	remove(path);
 }
 
