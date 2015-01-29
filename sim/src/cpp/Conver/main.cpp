@@ -15,6 +15,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #define ST first
 #define ND second
@@ -186,10 +187,12 @@ bool has_suffix(const string& str, const string& suffix) {
 void findFilesInTmpDir(const string& path, vector<string>& v, const string& extension) {
 		DIR *directory;
 		dirent *current_file;
-		if ((directory = opendir((in_path + path).c_str())))
+		if ((directory = opendir((in_path + path).c_str()))) {
 			while ((current_file = readdir(directory)))
 				if (strcmp(current_file->d_name, ".") && strcmp(current_file->d_name, "..") && has_suffix(current_file->d_name, extension))
 					v.push_back(path + current_file->d_name);
+			closedir(directory);
+		}
 }
 
 struct empty {};
@@ -287,6 +290,7 @@ namespace runtime
 
 	void on_timelimit(int)
 	{
+		cerr << "KILLED\n";
 		if(kill(cpid, SIGKILL) == 0)
 			res_stat = RES_TL,
 			r_val = 137;
@@ -294,6 +298,7 @@ namespace runtime
 
 	void on_checker_timelimit(int)
 	{
+		cerr << "KILLED\n";
 		if(kill(cpid, SIGKILL) == 0)
 			res_stat = RES_EVF;
 	}
@@ -419,6 +424,7 @@ namespace tests {
 
 	struct TestId {
 		string ST, ND;
+		TestId(): ST(), ND() {}
 	};
 
 	// Extract test id e.g. "test1abc" -> ("1", "abc")
@@ -513,16 +519,24 @@ namespace tests {
 		// Runtime
 		if (VERBOSE)
 			eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), runtime::time_limit/1000000.0, runtime::memory_limit >> 10);
-		pid_t pid = clone(runtime::run, (char*)malloc(128 * 1024 * 1024) + 128 * 1024 * 1024, CLONE_VM | SIGCHLD, NULL);
+		const int stack_size = 2 * 1024 * 1024;
+		void *stack = malloc(stack_size);
+		if (stack == NULL) {
+			perror("Cannot allocate memory\n");
+			return;
+		}
+		pid_t pid = clone(runtime::run, (char*)stack + stack_size, CLONE_VM | SIGCHLD, NULL);
 		waitpid(pid, NULL, 0);
+		free(stack);
 
 		// Free resources
 		delete[] runtime::input;
 		delete[] runtime::output;
 		delete[] runtime::exec;
 
-		tmp = myto_string(ceil(runtime::cl/10000)*4);
-		tmp.insert(0, 3-tmp.size(), '0');
+		tmp = myto_string(runtime::cl/(10000/4));
+		if (tmp.size() < 3)
+			tmp.insert(0, 3-tmp.size(), '0');
 		if(*tmp.rbegin() == '0' && *++tmp.rbegin() == '0')
 			tmp.erase(tmp.end()-2, tmp.end());
 		else {
@@ -647,8 +661,8 @@ void parseOptions(int& argc, char **argv) {
 int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
-	if(argc < 3) {
-		eprintf("Usage: conver [options] problem_package out_package [mem_limit] [checker]\n\nOptions:\n  -v, --verbose		Verbose mode\n  -n NAME, --name=NAME		Set problem name to NAME\n\nproblem_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
+	if(argc < 2 ) {
+		eprintf("Usage: conver [options] problem_package [out_package_dir] [mem_limit] [checker]\n\nOptions:\n  -v, --verbose		Verbose mode\n  -n NAME, --name=NAME		Set problem name to NAME\n\nproblem_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
 		return 1;
 	}
 
@@ -728,18 +742,35 @@ int main(int argc, char **argv) {
 	tests::setLimits(mem_limit);
 	config.close();
 	remove_r(in_path.c_str());
-	string result = argv[2];
-	if(result.size() > 3 && 0 == result.compare(result.size()-4, 4, ".zip")) {
-		result.erase(result.size()-4, 4);
-		int ret = system((string("mv ") << out_path << " " << tmp_dir << result << "; (cd " << tmp_dir << "; zip -r ../" << result << ".zip " << result << ")").c_str());
-		D(cerr << (string("mv ") << out_path << " " << tmp_dir << result << "; (cd " << tmp_dir << "; zip -r ../" << result << ".zip " << result << ")") << endl;)
-		if(0 != ret)
-			return ret;
+
+	string target_path = (argc > 2 ? argv[2] : "./");
+	if (*--target_path.end() != '/')
+		target_path += '/';
+	if(true) {
+		if (VERBOSE)
+			cerr << "zip: '" << out_path << "' -> '" << out_path << tmp_dir << tag_name << "'.zip\n";
+		pid_t cpid = fork();
+		if (cpid == 0) {
+			execlp("zip", "zip", "-r", (char*)(tmp_dir.sname() + tag_name + ".zip").c_str(), (char*)out_path.c_str(), NULL);
+			exit(-1);
+		}
+		int r;
+		waitpid(cpid, &r, 0);
+		if (r) {
+			cerr << "Error zip: '" << tmp_dir << tag_name << ".zip' -> '" << out_path << "'\n";
+			D(abort();)
+			return 1;
+		}
+		if (0 != rename((tmp_dir.sname() + tag_name + ".zip").c_str(), (target_path + tag_name + ".zip").c_str())) {
+			cerr << "Error moving: '" << out_path << "' -> '" << target_path << "'\n";
+			D(abort();)
+			return 1;
+		}
 	} else {
-		int ret = system(("rm -rf " << result << "; mv " << out_path << " " << result).c_str());
-		D(cerr << ("rm -rf " << result << "; mv " << out_path << " " << result) << endl;)
-		if(0 != ret)
-			return ret;
+		// int ret = system(("rm -rf " << result << "; mv " << out_path << " " << result).c_str());
+		// D(cerr << ("rm -rf " << result << "; mv " << out_path << " " << result) << endl;)
+		// if(0 != ret)
+			// return ret;
 	}
 	return 0;
 }

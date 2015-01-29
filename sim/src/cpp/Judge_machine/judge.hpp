@@ -9,7 +9,11 @@ public:
 	struct JudgeResult {
 		struct Group {
 			std::string tests, comments;
+
+			Group(): tests(), comments() {}
 		} initial, final;
+
+		JudgeResult(): initial(), final() {}
 	};
 
 private:
