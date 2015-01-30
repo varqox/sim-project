@@ -175,7 +175,7 @@ using Trie::CompressedTrie;
 
 bool VERBOSE = false;
 
-temporary_directory tmp_dir("conver.XXXXXX\0");
+temporary_directory tmp_dir("conver.XXXXXX");
 
 const int /*file_mod = 0644,*/ dir_mod = 0755;
 
@@ -288,7 +288,7 @@ struct RuntimeInfo {
 	//        ^ in usec   ^ in bytes
 	ResultStatusSet res_stat;
 
-	RuntimeInfo(const string in, const string out, const string ec,
+	RuntimeInfo(const string& in, const string& out, const string& ec,
 			long long tl, long long ml,	ResultStatusSet rs = RES_OK)
 		: time_limit(tl), memory_limit(ml), res_stat(rs) {
 			strcpy(in_file, in.c_str());
@@ -302,18 +302,17 @@ namespace runtime
 	RuntimeInfo *rt_stat;
 	int r_val;
 	pid_t cpid;
-	char *answer, *checker;
 
 	void on_timelimit(int)
 	{
-		D(perror("KILLED\n");)
+		D(eprintf("KILLED\n");)
 		if(kill(cpid, SIGKILL) == 0)
 			r_val = 137;
 	}
 
 	void on_checker_timelimit(int)
 	{
-		D(perror("Checker: KILLED\n");)
+		D(eprintf("Checker: KILLED\n");)
 		if(kill(cpid, SIGKILL) == 0)
 			rt_stat->res_stat = RuntimeInfo::RES_EVF;
 	}
@@ -496,14 +495,14 @@ namespace tests {
 		// Create shared memory segment (only once)
 		static SharedMemorySegment shm_sgmt(sizeof(RuntimeInfo));
 		if (shm_sgmt.addr() == NULL) {
-			perror("Failed to get shared memory segment\n");
+			eprintf("Failed to get shared memory segment\n");
 			return;
 		}
 		// Setup runtime variables (time_limit: 20s)
-		RuntimeInfo *rt_stat = new (shm_sgmt.addr()) RuntimeInfo(out_path + "tests/" + test + ".in", out_path + "tests/" + test + ".out", tmp_dir.sname() + "exec", 20 * 1000000, mem_limit);
+		RuntimeInfo *rt_stat = new (shm_sgmt.addr()) RuntimeInfo(out_path + "tests/" + test + ".in", out_path + "tests/" + test + ".out", tmp_dir.sname() + "exec", 20 * 1000000, mem_limit << 10);
 		// Runtime
 		if (VERBOSE)
-			eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), rt_stat->time_limit/1000000.0, rt_stat->memory_limit >> 10);
+			eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), rt_stat->time_limit/1000000.0, rt_stat->memory_limit);
 
 		pid_t cpid = fork();
 		if (cpid == 0) {
@@ -588,12 +587,12 @@ namespace tests {
 		// Take care of initial tests (set limits)
 		test_name = tag_name + getId(initial_ids[begin = 0]);
 		config << test_name << ' ';
-		run_on_test(test_name, memory_limit << 10);
+		run_on_test(test_name, memory_limit);
 		config << ' ' << initial_ids.size() << " 0\n";
 		while (++begin < initial_ids.size()) {
 			test_name = tag_name + getId(initial_ids[begin]);
 			config << test_name << ' ';
-			run_on_test(test_name, memory_limit << 10);
+			run_on_test(test_name, memory_limit);
 			config << endl;
 		}
 		// Now set limits for each non-0 points group of tests
@@ -605,7 +604,7 @@ namespace tests {
 			// Run on first test and manage group config
 			test_name = tag_name + getId(rest_ids[begin]);
 			config << test_name << ' ';
-			run_on_test(test_name, memory_limit << 10);
+			run_on_test(test_name, memory_limit);
 			config << ' ' << end - begin << ' ' << points / groups << endl;
 
 			points -= points / groups--;
@@ -613,7 +612,7 @@ namespace tests {
 			while (++begin < end) {
 				test_name = tag_name + getId(rest_ids[begin]);
 				config << test_name << ' ';
-				run_on_test(test_name, memory_limit << 10);
+				run_on_test(test_name, memory_limit);
 				config << endl;
 			}
 		}
@@ -638,10 +637,10 @@ void parseOptions(int& argc, char **argv) {
 				name = string(argv[i]).substr(7);
 			else if (0 == strcmp(argv[i], "-m") && i + 1 < argc) {
 				if (1 > sscanf(argv[++i], "%lli", &memory_limit))
-					perror("Wrong memory limit format\n");
+					eprintf("Wrong memory limit format\n");
 			} else if (0 == comparePrefix(argv[i], "--memory-limit=")) {
 				if (1 > sscanf(argv[i] + 15, "%lli", &memory_limit))
-					perror("Wrong memory limit format\n");
+					eprintf("Wrong memory limit format\n");
 			} else if (0 == comparePrefix(argv[i], "--checker="))
 				checker = string(argv[i]).substr(11);
 			else
@@ -656,16 +655,16 @@ int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
 	if(argc < 2 ) {
-		perror("Usage: conver [options] problem_package [out_package_dir]\n");
-		perror("Convert problem_package to SIM package.\n");
-		perror("	problem_package have to be .zip or directory\n");
-		perror("	out_package_dir is target directory to which done package will be moved\n\n");
-		perror("Options:\n");
-		perror("  -z, --zip                                  Zip final package\n");
-		perror("  -v, --verbose                              Verbose mode\n");
-		perror("  -n NAME, --name=NAME                       Set problem name to NAME\n");
-		perror("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT	 Set problem memory limit to MEM_LIMIT in kB\n");
-		perror("  --checker=CHECKER	                         Set problem checker to CHECKER\n");
+		eprintf("Usage: conver [options] problem_package [out_package_dir]\n");
+		eprintf("Convert problem_package to SIM package.\n");
+		eprintf("	problem_package have to be .zip or directory\n");
+		eprintf("	out_package_dir is target directory to which done package will be moved\n\n");
+		eprintf("Options:\n");
+		eprintf("  -z, --zip                                  Zip final package\n");
+		eprintf("  -v, --verbose                              Verbose mode\n");
+		eprintf("  -n NAME, --name=NAME                       Set problem name to NAME\n");
+		eprintf("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT	 Set problem memory limit to MEM_LIMIT in kB\n");
+		eprintf("  --checker=CHECKER	                         Set problem checker to CHECKER\n");
 		return 1;
 	}
 
@@ -738,7 +737,7 @@ int main(int argc, char **argv) {
 			execlp("zip", "zip", "-r", (char*)(tmp_dir.sname() + tag_name + ".zip").c_str(), (char*)out_path.c_str(), NULL);
 			_exit(-1);
 		} else if (cpid == -1)
-			perror("fork() failed\n");
+			eprintf("fork() failed\n");
 		int r;
 		waitpid(cpid, &r, 0);
 		if (r) {
