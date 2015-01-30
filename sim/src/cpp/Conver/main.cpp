@@ -16,6 +16,8 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <linux/limits.h> // PATH_MAX
+#include <sys/shm.h>
 
 #define ST first
 #define ND second
@@ -278,33 +280,53 @@ namespace doc {
 	}
 } // namespace doc
 
+struct RuntimeInfo {
+	enum ResultStatusSet {RES_OK, RES_WA, RES_TL, RES_RTE, RES_EVF};
+
+	char in_file[PATH_MAX], out_file[PATH_MAX], exec[PATH_MAX];
+	long long time_limit, memory_limit;
+	//        ^ in usec   ^ in bytes
+	ResultStatusSet res_stat;
+
+	RuntimeInfo(const string in, const string out, const string ec,
+			long long tl, long long ml,	ResultStatusSet rs = RES_OK)
+		: time_limit(tl), memory_limit(ml), res_stat(rs) {
+			strcpy(in_file, in.c_str());
+			strcpy(out_file, out.c_str());
+			strcpy(exec, ec.c_str());
+		}
+};
+
 namespace runtime
 {
-	enum res_stat_set {RES_OK, RES_WA, RES_TL, RES_RTE, RES_EVF};
-	res_stat_set res_stat = RES_OK;
+	RuntimeInfo *rt_stat;
 	int r_val;
-	long long cl, time_limit, memory_limit;
-	//                        ^ in bytes
 	pid_t cpid;
-	char *input, *output, *answer, *exec, *checker;
+	char *answer, *checker;
 
 	void on_timelimit(int)
 	{
-		cerr << "KILLED\n";
+		D(perror("KILLED\n");)
 		if(kill(cpid, SIGKILL) == 0)
-			res_stat = RES_TL,
 			r_val = 137;
 	}
 
 	void on_checker_timelimit(int)
 	{
-		cerr << "KILLED\n";
+		D(perror("Checker: KILLED\n");)
 		if(kill(cpid, SIGKILL) == 0)
-			res_stat = RES_EVF;
+			rt_stat->res_stat = RuntimeInfo::RES_EVF;
 	}
 
-	int run(void*)
+	void run(int shm_key)
 	{
+		// Attach shared memory segment
+		rt_stat = (RuntimeInfo*)shmat(shm_key, NULL, 0);
+		if (rt_stat == (void*)-1) {
+			eprintf("%s: filed to attach shared memory segment\n", __PRETTY_FUNCTION__);
+			return;
+		}
+
 		struct sigaction sa;
 		struct itimerval timer, zero;
 
@@ -313,10 +335,10 @@ namespace runtime
 		sa.sa_handler = &on_timelimit;
 		sigaction(SIGALRM, &sa, NULL);
 
-		cl = time_limit;
+		long long cl = rt_stat->time_limit;
 		// Set timer
-		timer.it_value.tv_sec = time_limit / 1000000;
-		timer.it_value.tv_usec = time_limit - timer.it_value.tv_sec * 1000000;
+		timer.it_value.tv_sec = rt_stat->time_limit / 1000000;
+		timer.it_value.tv_usec = rt_stat->time_limit - timer.it_value.tv_sec * 1000000;
 		timer.it_interval.tv_sec = timer.it_interval.tv_usec = 0;
 		memset(&zero, 0, sizeof(zero));
 
@@ -326,7 +348,7 @@ namespace runtime
 		if((cpid = fork()) == 0)
 		{
 			// Set up enviroment
-			freopen(input, "r", stdin);
+			freopen(rt_stat->in_file, "r", stdin);
 			freopen("/dev/null", "w", stdout);
 			freopen("/dev/null", "w", stderr);
 			// if(chroot("chroot") != 0 || chdir("/") != 0 || (setgid((gid_t)1001) || setuid((uid_t)1001)))
@@ -334,7 +356,7 @@ namespace runtime
 
 			// Set virtual memory limit
 			struct rlimit limit;
-			limit.rlim_max = limit.rlim_cur = memory_limit;
+			limit.rlim_max = limit.rlim_cur = rt_stat->memory_limit;
 			prlimit(getpid(), RLIMIT_AS, &limit, NULL);
 
 			// Set processes creating limit
@@ -342,8 +364,14 @@ namespace runtime
 			prlimit(getpid(), RLIMIT_NPROC, &limit, NULL);
 
 			char *arg[] = {NULL};
-			execve(exec, arg, arg);
+			execve(rt_stat->exec, arg, arg);
 			_exit(-1);
+		} else if (cpid == -1) {
+			eprintf("%s: filed to fork()\n", __PRETTY_FUNCTION__);
+			rt_stat->res_stat = RuntimeInfo::RES_RTE;
+			rt_stat->time_limit = cl;
+			shmdt(rt_stat); // Detach shared memory segment
+			return;
 		}
 		waitpid(cpid, &r_val, 0);
 		setitimer(ITIMER_REAL, &zero, &timer);
@@ -357,67 +385,43 @@ namespace runtime
 			r_val = EXIT_FAILURE;
 		if (VERBOSE)
 			eprint("\tReturned %i\ttime: %.6lf s\n", r_val, cl/1000000.0);
+
 		if(r_val == 0)
-		{
-/*			// Set right handler
-			sa.sa_handler = &on_checker_timelimit;
-			sigaction(SIGALRM, &sa, NULL);
-
-			// Set timer
-			timer.it_value.tv_sec = 20;
-			timer.it_value.tv_usec = timer.it_interval.tv_sec = timer.it_interval.tv_usec = 0;
-
-			// Run timer (time limit)
-			setitimer(ITIMER_REAL, &timer, NULL);
-
-			if((cpid = fork()) == 0)
-			{
-				// Set up enviroment
-				freopen("/dev/null", "r", stdin);
-				freopen("/dev/null", "w", stdout);
-				freopen("/dev/null", "w", stderr);
-				// if(chroot("..") != 0 || chdir("/judge") != 0 || (setgid((gid_t)1001) || setuid((uid_t)1001)))
-					// _exit(-1);
-
-				// Set virtual memory limit
-				struct rlimit limit;
-				limit.rlim_max = limit.rlim_cur = 128 * 1024 * 1024;
-				prlimit(getpid(), RLIMIT_AS, &limit, NULL);
-
-				// Set processes creating limit
-				limit.rlim_max = limit.rlim_cur = 0;
-				prlimit(getpid(), RLIMIT_NPROC, &limit, NULL);
-
-				char *arg[] = {checker, input, output, answer, NULL}, *env[] = {NULL};
-				execve(checker, arg, env);
-				_exit(-1);
-			}
-			int status;
-			waitpid(cpid, &status, 0);
-			setitimer(ITIMER_REAL, &zero, &timer);
-			if(WIFEXITED(status))
-			{
-				if(WEXITSTATUS(status) == 0)*/
-					res_stat = RES_OK;
-/*				else if(WEXITSTATUS(status) == 1)
-					res_stat = RES_WA;
-				else
-					res_stat = RES_EVF;
-				D(status = WEXITSTATUS(status);)
-			}
-			else
-				D(status = WTERMSIG(status) + 128,)
-				res_stat = RES_EVF;
-			D(eprint("\tChecker returned: %i\ttime: %.6lf s\n", status, 20.0 - timer.it_value.tv_sec - timer.it_value.tv_usec/1000000.0);)*/
-
-		}
-		else if(cl == time_limit)
-			res_stat = RES_TL;
+					rt_stat->res_stat = RuntimeInfo::RES_OK;
+		else if(cl == rt_stat->time_limit)
+			rt_stat->res_stat = RuntimeInfo::RES_TL;
 		else
-			res_stat = RES_RTE;
-		return 0;
+			rt_stat->res_stat = RuntimeInfo::RES_RTE;
+		rt_stat->time_limit = cl;
+		shmdt(rt_stat); // Detach shared memory segment
 	}
 }
+
+class SharedMemorySegment {
+private:
+	int id_;
+	void* addr_;
+	SharedMemorySegment(const SharedMemorySegment&);
+	SharedMemorySegment& operator=(const SharedMemorySegment&);
+
+public:
+	SharedMemorySegment(size_t size): id_(shmget(IPC_PRIVATE, size, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR)), addr_(NULL) {
+		if (id_ != -1) {
+			if ((addr_ = shmat(id_, NULL, 0)) == (void*)-1)
+				addr_ = NULL;
+			shmctl(id_, IPC_RMID, NULL);
+		}
+	}
+
+	~SharedMemorySegment() {
+		if (addr_)
+			shmdt(addr_);
+	}
+
+	int key() const { return id_; }
+
+	void* addr() const { return addr_; }
+};
 
 namespace tests {
 	vector<pair<string, string> > tests;
@@ -488,53 +492,30 @@ namespace tests {
 	}
 
 
-	void run_on_test(const string& test) {
-		// Setup runtime variables
-		string tmp = out_path+"tests/"+test+".in";
-		runtime::input = new char[tmp.size()+1];
-		strcpy(runtime::input, tmp.c_str());
-
-		tmp = out_path+"tests/"+test+".out";
-		runtime::output = new char[tmp.size()+1];
-		strcpy(runtime::output, tmp.c_str());
-
-		// runtime::answer = const_cast<char*>(outf_name.c_str());
-
-		tmp = string(tmp_dir) + "exec";
-		runtime::exec = new char[tmp.size()+1];
-		strcpy(runtime::exec, tmp.c_str());
-
-		// runtime::checker = const_cast<char*>(checker.c_str());
-
-		// Convert memory limit format from string (KB) to long long (B)
-		// runtime::memory_limit = 0;
-		// for(int len = memory_limit.size(), i = 0; i < len; ++i)
-		// 	runtime::memory_limit *= 10,
-		// 	runtime::memory_limit += memory_limit[i] - '0';
-		// runtime::memory_limit *= 1024;
-
-		// Time limit
-		runtime::time_limit = 20.0 * 1000000;
-
-		// Runtime
-		if (VERBOSE)
-			eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), runtime::time_limit/1000000.0, runtime::memory_limit >> 10);
-		const int stack_size = 2 * 1024 * 1024;
-		void *stack = malloc(stack_size);
-		if (stack == NULL) {
-			perror("Cannot allocate memory\n");
+	void run_on_test(const string& test, long long mem_limit) {
+		// Create shared memory segment (only once)
+		static SharedMemorySegment shm_sgmt(sizeof(RuntimeInfo));
+		if (shm_sgmt.addr() == NULL) {
+			perror("Failed to get shared memory segment\n");
 			return;
 		}
-		pid_t pid = clone(runtime::run, (char*)stack + stack_size, CLONE_VM | SIGCHLD, NULL);
-		waitpid(pid, NULL, 0);
-		free(stack);
+		// Setup runtime variables (time_limit: 20s)
+		RuntimeInfo *rt_stat = new (shm_sgmt.addr()) RuntimeInfo(out_path + "tests/" + test + ".in", out_path + "tests/" + test + ".out", tmp_dir.sname() + "exec", 20 * 1000000, mem_limit);
+		// Runtime
+		if (VERBOSE)
+			eprint("\nRunning on: %s\tlimits -> (TIME: %lf s, MEM: %lli KB)\n", test.c_str(), rt_stat->time_limit/1000000.0, rt_stat->memory_limit >> 10);
 
-		// Free resources
-		delete[] runtime::input;
-		delete[] runtime::output;
-		delete[] runtime::exec;
+		pid_t cpid = fork();
+		if (cpid == 0) {
+			runtime::run(shm_sgmt.key());
+			_exit(0);
+		} else if (cpid == -1) {
+			eprintf("%s: filed to fork()\n", __PRETTY_FUNCTION__);
+			abort();
+		}
+		waitpid(cpid, NULL, 0);
 
-		tmp = myto_string(runtime::cl/(10000/4));
+		string tmp = myto_string(rt_stat->time_limit/(10000/4));
 		if (tmp.size() < 3)
 			tmp.insert(0, 3-tmp.size(), '0');
 		if(*tmp.rbegin() == '0' && *++tmp.rbegin() == '0')
@@ -551,26 +532,26 @@ namespace tests {
 			tmp = "0.10";
 
 		if (VERBOSE)
-			printf("\t%.2lf / %s", runtime::cl/10000/100.0, tmp.c_str());
+			printf("\t%.2lf / %s", rt_stat->time_limit/10000/100.0, tmp.c_str());
 		else
-			printf("  %-15s%.2lf / %s", test.c_str(), runtime::cl/10000/100.0, tmp.c_str());
+			printf("  %-15s%.2lf / %s", test.c_str(), rt_stat->time_limit/10000/100.0, tmp.c_str());
 		config << tmp;
 
-		switch(runtime::res_stat)
+		switch(rt_stat->res_stat)
 		{
-			case runtime::RES_OK:
+			case RuntimeInfo::RES_OK:
 				printf("\tStatus: \033[1;32mOK\033[0m\n");
 				break;
-			case runtime::RES_WA:
+			case RuntimeInfo::RES_WA:
 				printf("\tStatus: \033[1;31mWrong answer\033[0m\n");
 				break;
-			case runtime::RES_TL:
+			case RuntimeInfo::RES_TL:
 				printf("\tStatus: \033[1;33mTime limit\033[0m\n");
 				break;
-			case runtime::RES_RTE:
+			case RuntimeInfo::RES_RTE:
 				printf("\tStatus: \033[1;33mRuntime error\033[0m\n");
 				break;
-			case runtime::RES_EVF:
+			case RuntimeInfo::RES_EVF:
 				printf("\tStatus: \033[1;31mEvaluation failure\033[0m\n");
 		}
 	}
@@ -579,8 +560,7 @@ namespace tests {
 		return (id.ST == "0" || id.ND == "ocen");
 	}
 
-	void setLimits(unsigned long long memory_limit) {
-		runtime::memory_limit = memory_limit << 10;
+	void setLimits(long long memory_limit) {
 		TestId last_id = _getId(tests[0].ST), current_id; // last_id have to contain non-0 points test
 		vector<TestId> initial_ids, rest_ids; // Initial tests are 0-points tests
 		size_t begin = 0, end = 0, groups = 0;
@@ -608,12 +588,12 @@ namespace tests {
 		// Take care of initial tests (set limits)
 		test_name = tag_name + getId(initial_ids[begin = 0]);
 		config << test_name << ' ';
-		run_on_test(test_name);
+		run_on_test(test_name, memory_limit << 10);
 		config << ' ' << initial_ids.size() << " 0\n";
 		while (++begin < initial_ids.size()) {
 			test_name = tag_name + getId(initial_ids[begin]);
 			config << test_name << ' ';
-			run_on_test(test_name);
+			run_on_test(test_name, memory_limit << 10);
 			config << endl;
 		}
 		// Now set limits for each non-0 points group of tests
@@ -625,7 +605,7 @@ namespace tests {
 			// Run on first test and manage group config
 			test_name = tag_name + getId(rest_ids[begin]);
 			config << test_name << ' ';
-			run_on_test(test_name);
+			run_on_test(test_name, memory_limit << 10);
 			config << ' ' << end - begin << ' ' << points / groups << endl;
 
 			points -= points / groups--;
@@ -633,12 +613,16 @@ namespace tests {
 			while (++begin < end) {
 				test_name = tag_name + getId(rest_ids[begin]);
 				config << test_name << ' ';
-				run_on_test(test_name);
+				run_on_test(test_name, memory_limit << 10);
 				config << endl;
 			}
 		}
 	}
 } // namespace tests
+
+long long memory_limit = 1 << 17; // in kb -> 128MB
+bool ZIP = false;
+string checker = "default";
 
 void parseOptions(int& argc, char **argv) {
 	int new_argc = 0;
@@ -646,10 +630,20 @@ void parseOptions(int& argc, char **argv) {
 		if (argv[i][0] == '-') {
 			if (0 == strcmp(argv[i], "-v") || 0 == strcmp(argv[i], "--verbose"))
 				VERBOSE = true;
+			else if (0 == strcmp(argv[i], "-z") || 0 == strcmp(argv[i], "--zip"))
+				ZIP = true;
 			else if (0 == strcmp(argv[i], "-n") && i + 1 < argc)
 				name = argv[++i];
 			else if (0 == comparePrefix(argv[i], "--name="))
 				name = string(argv[i]).substr(7);
+			else if (0 == strcmp(argv[i], "-m") && i + 1 < argc) {
+				if (1 > sscanf(argv[++i], "%lli", &memory_limit))
+					perror("Wrong memory limit format\n");
+			} else if (0 == comparePrefix(argv[i], "--memory-limit=")) {
+				if (1 > sscanf(argv[i] + 15, "%lli", &memory_limit))
+					perror("Wrong memory limit format\n");
+			} else if (0 == comparePrefix(argv[i], "--checker="))
+				checker = string(argv[i]).substr(11);
 			else
 				eprintf("Unknown argument: '%s'\n", argv[i]);
 		} else
@@ -662,29 +656,26 @@ int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
 	if(argc < 2 ) {
-		eprintf("Usage: conver [options] problem_package [out_package_dir] [mem_limit] [checker]\n\nOptions:\n  -v, --verbose		Verbose mode\n  -n NAME, --name=NAME		Set problem name to NAME\n\nproblem_package and out_package have to be .zip or directory\nmem_limit is in kB\n");
+		perror("Usage: conver [options] problem_package [out_package_dir]\n");
+		perror("Convert problem_package to SIM package.\n");
+		perror("	problem_package have to be .zip or directory\n");
+		perror("	out_package_dir is target directory to which done package will be moved\n\n");
+		perror("Options:\n");
+		perror("  -z, --zip                                  Zip final package\n");
+		perror("  -v, --verbose                              Verbose mode\n");
+		perror("  -n NAME, --name=NAME                       Set problem name to NAME\n");
+		perror("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT	 Set problem memory limit to MEM_LIMIT in kB\n");
+		perror("  --checker=CHECKER	                         Set problem checker to CHECKER\n");
 		return 1;
 	}
 
-	// signal control
-	/*signal(SIGHUP, exit);
-	signal(SIGINT, exit);
-	signal(SIGQUIT, exit);
-	signal(SIGILL, exit);
-	signal(SIGTRAP, exit);
-	signal(SIGABRT, exit);
-	signal(SIGIOT, exit);
-	signal(SIGBUS, exit);
-	signal(SIGFPE, exit);
-	signal(SIGUSR1, exit);
-	signal(SIGSEGV, exit);
-	signal(SIGUSR2, exit);
-	signal(SIGPIPE, exit);
-	signal(SIGALRM, exit);
-	signal(SIGTERM, exit);
-	signal(SIGSTKFLT, exit);
-	signal(_NSIG, exit);*/
-	// signal(SIGKILL, exit); // We won't block SIGKILL
+	// Signal control
+	struct sigaction sa;
+	memset (&sa, 0, sizeof(sa));
+	sa.sa_handler = &exit;
+
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
 
 	in_path = argv[1];
 	if(in_path.size() > 3 && 0 == in_path.compare(in_path.size()-4, 4, ".zip")) {
@@ -697,12 +688,6 @@ int main(int argc, char **argv) {
 		if(0 != ret)
 			return ret;
 	}
-	unsigned long long mem_limit = 131072;
-	string checker = "default";
-	if(argc > 3)
-		sscanf(argv[3], "%llu", &mem_limit);
-	if(argc > 4)
-		checker = argv[4];
 	if (name.empty()) // If not set with options
 		name = in_path;
 	in_path = tmp_dir.name() + in_path;
@@ -717,7 +702,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	tag_name = tolower(name.size() < 4 ? name : name.substr(0, 3));
-	config << tag_name << "\n" << name << "\n" << checker << "\n" << mem_limit << endl;
+	config << tag_name << "\n" << name << "\n" << checker << "\n" << memory_limit << endl;
 	doc::findStatements();
 	doc::selectStatement();
 	sol::findSolutions();
@@ -733,44 +718,49 @@ int main(int argc, char **argv) {
 		cerr << compile.getErrors() << endl;
 		return 2;
 	}
-	else {
-		cerr << "Success!" << endl;
-	}
+	else
+		cerr << "Succeeded!" << endl;
 	tests::findTests();
 	mkdir((out_path + "tests/").c_str(), dir_mod);
 	tests::moveTests();
-	tests::setLimits(mem_limit);
+	tests::setLimits(memory_limit);
 	config.close();
 	remove_r(in_path.c_str());
 
 	string target_path = (argc > 2 ? argv[2] : "./");
 	if (*--target_path.end() != '/')
 		target_path += '/';
-	if(true) {
+	if(ZIP) {
 		if (VERBOSE)
-			cerr << "zip: '" << out_path << "' -> '" << out_path << tmp_dir << tag_name << "'.zip\n";
+			cerr << "zip: '" << out_path << "' -> '" << out_path << tmp_dir << tag_name << ".zip'\n";
 		pid_t cpid = fork();
 		if (cpid == 0) {
 			execlp("zip", "zip", "-r", (char*)(tmp_dir.sname() + tag_name + ".zip").c_str(), (char*)out_path.c_str(), NULL);
-			exit(-1);
-		}
+			_exit(-1);
+		} else if (cpid == -1)
+			perror("fork() failed\n");
 		int r;
 		waitpid(cpid, &r, 0);
 		if (r) {
-			cerr << "Error zip: '" << tmp_dir << tag_name << ".zip' -> '" << out_path << "'\n";
+			cerr << "Error zip: '" << out_path << "' -> '" << out_path << tmp_dir << tag_name << ".zip'\n";
 			D(abort();)
 			return 1;
 		}
+		if (VERBOSE)
+			cerr << "Moving: '" << out_path << out_path << tmp_dir << tag_name << ".zip'" << "' -> '" << target_path << tag_name << ".zip'\n";
 		if (0 != rename((tmp_dir.sname() + tag_name + ".zip").c_str(), (target_path + tag_name + ".zip").c_str())) {
-			cerr << "Error moving: '" << out_path << "' -> '" << target_path << "'\n";
+			cerr << "Error moving: '" << out_path << out_path << tmp_dir << tag_name << ".zip'" << "' -> '" << target_path << tag_name << ".zip'\n";
 			D(abort();)
 			return 1;
 		}
 	} else {
-		// int ret = system(("rm -rf " << result << "; mv " << out_path << " " << result).c_str());
-		// D(cerr << ("rm -rf " << result << "; mv " << out_path << " " << result) << endl;)
-		// if(0 != ret)
-			// return ret;
+		if (VERBOSE)
+			cerr << "Moving: '" << out_path << "' -> '" << target_path << tag_name << "'\n";
+		if (0 != rename(out_path.c_str(), (target_path + tag_name).c_str())) {
+			cerr << "Error moving: '" << out_path << "' -> '" << target_path << tag_name << "'\n";
+			D(abort();)
+			return 1;
+		}
 	}
 	return 0;
 }
