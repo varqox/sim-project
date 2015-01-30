@@ -8,41 +8,27 @@
 
 using namespace std;
 
-temporary_directory tmp_dir("judge_machine.XXXXXX\0");
+temporary_directory tmp_dir("judge_machine.XXXXXX");
 string *public_submission_name, *public_submission_front, *public_submission_back;
-
-// void control_exit(int=0)
-// {
-// 	// Repair status of current submission
-// 	D(cerr << "Removing temporary directory" << endl);
-// 	remove_r(tmp_dir);
-// 	exit(1);
-// }
 
 int main()
 {
-	// signal control
-	signal(SIGHUP, exit);
-	signal(SIGINT, exit);
-	signal(SIGQUIT, exit);
-	signal(SIGILL, exit);
-	signal(SIGTRAP, exit);
-	signal(SIGABRT, exit);
-	signal(SIGIOT, exit);
-	signal(SIGBUS, exit);
-	signal(SIGFPE, exit);
-	// signal(SIGKILL, exit); // We won't block SIGKILL
-	signal(SIGUSR1, exit);
-	signal(SIGSEGV, exit);
-	signal(SIGUSR2, exit);
-	signal(SIGPIPE, exit);
-	signal(SIGALRM, exit);
-	signal(SIGTERM, exit);
-	signal(SIGSTKFLT, exit);
-	signal(_NSIG, exit);
-	// check if this process isn't oldest
-	if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str())) return 1;
-	// checking submissions
+	// Signal control
+	struct sigaction sa;
+	memset (&sa, 0, sizeof(sa));
+	sa.sa_handler = &exit;
+
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);
+	sigaction(SIGABRT, &sa, NULL);
+	sigaction(SIGFPE, &sa, NULL);
+
+	// Check if this process isn't oldest
+	if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str()))
+		return 1;
+
+	// Checking submissions
 	while(!submissions_queue::empty())
 	{
 		D(cerr << "JUDGING:\n" << submissions_queue::front() << endl;)
