@@ -27,14 +27,14 @@ int main(int argc, char *argv[]) {
          read2 = getline(&lans, &len2, fans), read1 != -1 && read2 != -1) {
     ++line;
     if (0 != areEqual(lout, read1, lans, read2)) {
-      printf("Line %zu: Read: '%.77s%s', Expected: '%.77s%s'\n", line, lans, (strlen(lans) > 77 ? "..." : ""), lout, (strlen(lout) > 77 ? "..." : ""));
+      printf("Line %zu: read: '%.77s%s', expected: '%.77s%s'\n", line, lans, (strlen(lans) > 77 ? "..." : ""), lout, (strlen(lout) > 77 ? "..." : ""));
       return 1;
     }
   }
   while (read1 != -1) {
     ++line;
     if (0 != areEqual(lout, read1, lans, 0)) {
-      printf("Line %zu: Read: EOF, Expected: '%.157s'\n", line, lout, (strlen(lout) > 157 ? "..." : ""));
+      printf("Line %zu: read: EOF, expected: '%.157s'\n", line, lout, (strlen(lout) > 157 ? "..." : ""));
       return 1;
     }
     read1 = getline(&lout, &len1, fout);
@@ -42,13 +42,11 @@ int main(int argc, char *argv[]) {
   while (read2 != -1) {
     ++line;
     if (0 != areEqual(lans, read2, lout, 0)) {
-      printf("Line %zu: Read: '%.157s', Expected: EOF\n", line, lans, (strlen(lans) > 157 ? "..." : ""));
+      printf("Line %zu: read: '%.157s', expected: EOF\n", line, lans, (strlen(lans) > 157 ? "..." : ""));
       return 1;
     }
     read2 = getline(&lans, &len2, fans);
   }
-  delete[] lout;
-  delete[] lans;
   return 0;
 }
 } // extern "C"
