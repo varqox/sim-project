@@ -621,7 +621,7 @@ namespace tests {
 
 long long memory_limit = 1 << 17; // in kb -> 128MB
 bool ZIP = false;
-string checker = "default";
+string checker = "default", target_path = "./";
 
 void parseOptions(int& argc, char **argv) {
 	int new_argc = 0;
@@ -635,6 +635,8 @@ void parseOptions(int& argc, char **argv) {
 				name = argv[++i];
 			else if (0 == comparePrefix(argv[i], "--name="))
 				name = string(argv[i]).substr(7);
+			else if (0 == strcmp(argv[i], "-o") && i + 1 < argc)
+				target_path = argv[++i];
 			else if (0 == strcmp(argv[i], "-m") && i + 1 < argc) {
 				if (1 > sscanf(argv[++i], "%lli", &memory_limit))
 					eprintf("Wrong memory limit format\n");
@@ -655,16 +657,16 @@ int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
 	if(argc < 2 ) {
-		eprintf("Usage: conver [options] problem_package [out_package_dir]\n");
+		eprintf("Usage: conver [options] problem_package\n");
 		eprintf("Convert problem_package to SIM package.\n");
-		eprintf("	problem_package have to be .zip or directory\n");
-		eprintf("	out_package_dir is target directory to which done package will be moved\n\n");
+		eprintf("  problem_package have to be .zip or directory\n\n");
 		eprintf("Options:\n");
 		eprintf("  -z, --zip                                  Zip final package\n");
 		eprintf("  -v, --verbose                              Verbose mode\n");
 		eprintf("  -n NAME, --name=NAME                       Set problem name to NAME\n");
-		eprintf("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT	 Set problem memory limit to MEM_LIMIT in kB\n");
-		eprintf("  --checker=CHECKER	                         Set problem checker to CHECKER\n");
+		eprintf("  -o OUT_DIR                                 Set target directory to which done package will be moved\n");
+		eprintf("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT     Set problem memory limit to MEM_LIMIT in kB\n");
+		eprintf("  --checker=CHECKER                          Set problem checker to CHECKER\n");
 		return 1;
 	}
 
@@ -726,7 +728,6 @@ int main(int argc, char **argv) {
 	config.close();
 	remove_r(in_path.c_str());
 
-	string target_path = (argc > 2 ? argv[2] : "./");
 	if (*--target_path.end() != '/')
 		target_path += '/';
 	if(ZIP) {
