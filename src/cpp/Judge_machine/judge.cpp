@@ -164,11 +164,7 @@ namespace runtime
 			{
 				// Set up enviroment
 				freopen("/dev/null", "r", stdin);
-				// Change stdout
-				int stdout_d = fileno(stdout);
-				close(stdout_d); // Close stdout
-				dup2(checker_out, stdout_d); // Replace it with file
-
+				dup2(checker_out, STDOUT_FILENO); // Replace stdout with file
 				freopen("/dev/null", "w", stderr);
 
 				if(chroot("..") != 0 || chdir("/judge") != 0 || (setgid((gid_t)1001) || setuid((uid_t)1001)))
