@@ -104,16 +104,6 @@ string file_get_contents(const string& file_name)
 return out;
 }
 
-int comparePrefix(const string& str, const string& prefix) {
-	for (size_t i = 0, len = min(str.size(), prefix.size()); i < len; ++i) {
-		if (str[i] < prefix[i])
-			return -1;
-		if (str[i] > prefix[i])
-			return 1;
-	}
-	return 0;
-}
-
 string tolower(string str) {
 	for (size_t i = 0, s = str.size(); i < s; ++i)
 		str[i] = tolower(str[i]);
