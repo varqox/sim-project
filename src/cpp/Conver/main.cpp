@@ -623,6 +623,19 @@ long long memory_limit = 1 << 17; // in kb -> 128MB
 bool ZIP = false;
 string checker = "default", target_path = "./";
 
+void help() {
+	eprintf("Usage: conver [options] problem_package\n");
+	eprintf("Convert problem_package to SIM package.\n");
+	eprintf("  problem_package have to be .zip or directory\n\n");
+	eprintf("Options:\n");
+	eprintf("  -z, --zip                                  Zip final package\n");
+	eprintf("  -v, --verbose                              Verbose mode\n");
+	eprintf("  -n NAME, --name=NAME                       Set problem name to NAME\n");
+	eprintf("  -o OUT_DIR                                 Set target directory to which done package will be moved\n");
+	eprintf("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT     Set problem memory limit to MEM_LIMIT in kB\n");
+	eprintf("  --checker=CHECKER                          Set problem checker to CHECKER\n");
+}
+
 void parseOptions(int& argc, char **argv) {
 	int new_argc = 0;
 	for (int i = 0; i < argc; ++i) {
@@ -631,19 +644,22 @@ void parseOptions(int& argc, char **argv) {
 				VERBOSE = true;
 			else if (0 == strcmp(argv[i], "-z") || 0 == strcmp(argv[i], "--zip"))
 				ZIP = true;
-			else if (0 == strcmp(argv[i], "-n") && i + 1 < argc)
+			else if (0 == strcmp(argv[i], "-h") || 0 == strcmp(argv[i], "--help")) {
+				help();
+				exit(0);
+			} else if (0 == strcmp(argv[i], "-n") && i + 1 < argc)
 				name = argv[++i];
-			else if (0 == comparePrefix(argv[i], "--name="))
+			else if (isPrefix(argv[i], "--name="))
 				name = string(argv[i]).substr(7);
 			else if (0 == strcmp(argv[i], "-o") && i + 1 < argc)
 				target_path = argv[++i];
 			else if (0 == strcmp(argv[i], "-m") && i + 1 < argc) {
 				if (1 > sscanf(argv[++i], "%lli", &memory_limit))
 					eprintf("Wrong memory limit format\n");
-			} else if (0 == comparePrefix(argv[i], "--memory-limit=")) {
+			} else if (isPrefix(argv[i], "--memory-limit=")) {
 				if (1 > sscanf(argv[i] + 15, "%lli", &memory_limit))
 					eprintf("Wrong memory limit format\n");
-			} else if (0 == comparePrefix(argv[i], "--checker="))
+			} else if (isPrefix(argv[i], "--checker="))
 				checker = string(argv[i]).substr(11);
 			else
 				eprintf("Unknown argument: '%s'\n", argv[i]);
@@ -657,16 +673,7 @@ int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
 	if(argc < 2 ) {
-		eprintf("Usage: conver [options] problem_package\n");
-		eprintf("Convert problem_package to SIM package.\n");
-		eprintf("  problem_package have to be .zip or directory\n\n");
-		eprintf("Options:\n");
-		eprintf("  -z, --zip                                  Zip final package\n");
-		eprintf("  -v, --verbose                              Verbose mode\n");
-		eprintf("  -n NAME, --name=NAME                       Set problem name to NAME\n");
-		eprintf("  -o OUT_DIR                                 Set target directory to which done package will be moved\n");
-		eprintf("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT     Set problem memory limit to MEM_LIMIT in kB\n");
-		eprintf("  --checker=CHECKER                          Set problem checker to CHECKER\n");
+		help();
 		return 1;
 	}
 

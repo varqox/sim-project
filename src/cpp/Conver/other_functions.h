@@ -9,5 +9,8 @@ std::string make_safe_php_string(const std::string& str);
 std::string make_safe_html_string(const std::string& str);
 std::deque<unsigned> kmp(const std::string& text, const std::string& pattern);
 std::string file_get_contents(const std::string& file_name);
-int comparePrefix(const std::string& str, const std::string& prefix);
 std::string tolower(std::string str);
+
+inline bool isPrefix(const std::string& str, const std::string& prefix) {
+	return str.compare(0, prefix.size(), prefix) == 0;
+}
