@@ -1,5 +1,5 @@
 #include "main.hpp"
-#include "../../Algorithms/text/aho.hpp"
+#include "../Algorithms/text/aho.hpp"
 
 namespace coloring
 {
