@@ -13,11 +13,12 @@
 *.a
 
 # GNU Make dependences
-*.dep-s
+*.deps
 
 # Others
-build
-src/cpp/judge_machine
-src/cpp/CTH
-src/cpp/chmod-default
-src/cpp/conver
+build/
+src/judge_machine
+src/CTH
+src/chmod-default
+src/conver
+src/sim-server

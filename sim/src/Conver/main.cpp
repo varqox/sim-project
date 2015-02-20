@@ -1,6 +1,6 @@
 #include "main.h"
 #include "other_functions.h"
-#include "../../Algorithms/text/trie.hpp"
+#include "../Algorithms/text/trie.hpp"
 #include <cstdio>
 #include <iostream>
 #include <fstream>
