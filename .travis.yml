@@ -6,8 +6,7 @@ compiler:
 
 install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq nginx mysql-server mysql-client php5-cli php5-fpm php5-mysql libmysqlcppconn-dev
-  - sudo nginx
+  - sudo apt-get install -qq mysql-server mysql-client libmysqlcppconn-dev
 
 script:
   - make -j

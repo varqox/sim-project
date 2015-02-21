@@ -10,7 +10,7 @@ public:
 	std::string content;
 
 	HttpResponse(ContentType con_type = TEXT) : content_type(con_type),
-			headers(), content() {}
+			headers(), cookies(), content() {}
 
 	void setCookie(const std::string& name, const std::string& val,
 			time_t expire = -1, const std::string& path = "", const std::string& domain ="",
