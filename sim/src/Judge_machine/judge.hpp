@@ -1,7 +1,7 @@
+#pragma once
+
 #include "main.h"
 #include <vector>
-
-#pragma once
 
 class Problem
 {

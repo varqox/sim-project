@@ -1,3 +1,5 @@
+#pragma once
+
 #include "other_functions.h"
 #include <iostream>
 #include <cstdlib>
@@ -5,8 +7,6 @@
 #include <sys/stat.h> // chmod()
 #include <cstdio>
 #include <cstring>
-
-#pragma once
 
 #ifdef DEBUG
 #define D(...) __VA_ARGS__

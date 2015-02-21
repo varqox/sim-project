@@ -4,7 +4,7 @@ include ../../Makefile.config
 all: ../conver
 
 ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cpp$$" | sed "s/$$/\.deps/")
+-include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
 ../conver: main.o other_functions.o compile.o

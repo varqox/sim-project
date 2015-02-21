@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "main.h"
 
 // is_name: [_A-Za-z]
 // is_true_name: [_A-Za-z0-9]

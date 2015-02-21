@@ -1,3 +1,5 @@
+#pragma once
+
 #include "other_functions.h"
 #include "submissions_queue.h"
 #include <string>
@@ -20,8 +22,6 @@ inline std::string& operator<<(const std::string& s, const C& x)
 #else
 #define D(...)
 #endif
-
-#pragma once
 
 // main.cpp
 class temporary_directory

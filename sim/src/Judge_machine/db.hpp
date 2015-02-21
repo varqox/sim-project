@@ -1,3 +1,5 @@
+#pragma once
+
 #include <mysql_connection.h>
 #include <cppconn/driver.h>
 #include <cppconn/exception.h>
