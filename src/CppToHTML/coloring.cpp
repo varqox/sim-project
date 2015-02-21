@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "main.h"
 #include "../Algorithms/text/aho.hpp"
 
 namespace coloring

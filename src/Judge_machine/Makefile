@@ -4,7 +4,7 @@ include ../../Makefile.config
 all: ../judge_machine
 
 ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cpp$$" | sed "s/$$/\.deps/")
+-include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
 ../judge_machine: main.o compile.o other_functions.o submissions_queue.o judge.o db.o

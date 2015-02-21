@@ -1,15 +1,15 @@
 include ../../Makefile.config
 
 .PHONY: all
-all: ../CTH
+all: libsim.a
 
 ifneq ($(MAKECMDGOALS), clean)
 -include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
-../CTH: main.o coloring.o aho.o
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
+libsim.a: string.o
+	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps ../CTH
+	$(Q)$(RM) *.o *.deps libsim.a

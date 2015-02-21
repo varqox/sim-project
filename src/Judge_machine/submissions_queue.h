@@ -1,10 +1,10 @@
+#pragma once
+
 #include <string>
 
 #ifdef DEBUG
 #include <ostream>
 #endif
-
-#pragma once
 
 namespace submissions_queue
 {

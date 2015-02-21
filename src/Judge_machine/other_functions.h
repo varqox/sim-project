@@ -1,9 +1,9 @@
+#pragma once
+
 #include <string>
 #include <deque>
 #include <sys/shm.h>
 #include <sys/stat.h>
-
-#pragma once
 
 void remove_r(const char* path);
 std::string myto_string(long long int a);
