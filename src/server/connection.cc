@@ -551,11 +551,8 @@ void Connection::send(const char* str, size_t len) {
 }
 
 void Connection::sendResponse(const HttpResponse& res) {
-	string str;
-	if (res.headers.find("location") != res.headers.end())
-		str += "HTTP/1.1 302 Moved Temporarily\r\n";
-	else
-		str += "HTTP/1.1 200 OK\r\n";
+	string str = "HTTP/1.1 ";
+	str.append(res.status_code).append("\r\n");
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
 	for (HttpHeaders::const_iterator i = res.headers.begin(); i != res.headers.end(); ++i) {
