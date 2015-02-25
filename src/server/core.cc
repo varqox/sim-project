@@ -11,6 +11,7 @@
 #include "../include/debug.h"
 #include "../include/string.h"
 #include "connection.h"
+#include "sim_main.h"
 
 using std::cerr;
 
@@ -29,36 +30,10 @@ static void* worker(void*) {
 		eprintf("\nConnection accepted: %lu\n", pthread_self());
 
 		conn.assign(client_socket_fd);
-		while (conn.state() == Connection::OK) {
-			conn.clear();
-			HttpRequest req = conn.getRequest();
-			eprintf("\nContent: '%s'\n", req.content.c_str());
-			if (req.method == HttpRequest::POST) {
-				// cerr << "form_data: " << req.form_data.other << endl;
-				// cerr << "form_data -> files: " << req.form_data.files << endl;
-			}
-			if (conn.state() == Connection::OK) {
-				HttpResponse resp;
-				resp.headers["Content-Type"] = "text/html; charset=utf-8";
-				resp.content = "<!DOCTYPE html>\n"
-					"<html>\n"
-					"<head>\n"
-						"<title>Form</title>\n"
-					"</head>\n"
-					"<body>\n"
-						// "<form method=\"POST\" enctype=\"text/plain\" action=\"http://127.7.7.7:8080\">\n"
-						"<form method=\"POST\" enctype=\"multipart/form-data\" action=\"http://127.7.7.7:8080\">\n"
-							"<input type=\"file\" name=\"file\">\n"
-							"<input type=\"file\" name=\"file11\">\n"
-							"<input type=\"text\" name=\"text\" value=\"golka = 1 12 = '\">\n"
-							"<input type=\"submit\" value=\"Submit\">\n"
-						"</form>\n"
-					"</body>\n"
-					"</html>";
-				conn.sendResponse(resp);
-			}
-			break;
-		}
+
+		HttpRequest req = conn.getRequest();
+		if (conn.state() == Connection::OK)
+			conn.sendResponse(sim::main(req));
 
 		printf("Closing...");
 		fflush(stdout);

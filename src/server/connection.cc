@@ -14,6 +14,7 @@ using std::cerr;
 using std::endl;
 
 namespace server {
+
 int Connection::peek() {
 	if (state_ == CLOSED)
 		return -1;
@@ -619,4 +620,5 @@ void Connection::sendResponse(const HttpResponse& res) {
 	}
 	state_ = CLOSED;
 }
+
 } // namespace server
