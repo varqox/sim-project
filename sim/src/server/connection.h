@@ -7,6 +7,7 @@
 #include <string>
 
 namespace server {
+
 class Connection {
 private:
 	static const size_t BUFFER_SIZE = 1 << 16;
@@ -84,4 +85,5 @@ public:
 	void send(const std::string& str) { send(str.c_str(), str.size()); }
 	void sendResponse(const HttpResponse& res);
 };
+
 } // namespace server

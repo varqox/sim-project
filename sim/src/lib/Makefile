@@ -7,7 +7,7 @@ ifneq ($(MAKECMDGOALS), clean)
 -include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
-libsim.a: string.o
+libsim.a: string.o time.o
 	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
 
 .PHONY: clean

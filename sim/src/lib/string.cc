@@ -44,6 +44,15 @@ size_t strtosize_t(const string& s) {
 	return res;
 }
 
+size_t find(const string& str, char c, size_t beg, size_t end) {
+	if (end > str.size())
+		end = str.size();
+	for (; beg < end; ++beg)
+		if (str[beg] == c)
+			return beg;
+	return string::npos;
+}
+
 string encodeURI(const string& str, size_t beg, size_t end) {
 	// a-z A-Z 0-9 - _ . ~
 	static bool is_safe[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -52,7 +61,7 @@ string encodeURI(const string& str, size_t beg, size_t end) {
 		0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 		1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1};
-	if (end == string::npos)
+	if (end > str.size())
 		end = str.size();
 	string ret;
 	for (; beg < end; ++beg) {
@@ -69,7 +78,7 @@ string encodeURI(const string& str, size_t beg, size_t end) {
 }
 
 string decodeURI(const string& str, size_t beg, size_t end) {
-	if (end == string::npos)
+	if (end > str.size())
 		end = str.size();
 	string ret;
 	for (; beg < end; ++beg) {
@@ -87,4 +96,26 @@ string tolower(string str) {
 	for (size_t i = 0, s = str.size(); i < s; ++i)
 		str[i] = tolower(str[i]);
 	return str;
+}
+
+string abspath(const string& path, size_t beg, size_t end, string root) {
+	if (end > path.size())
+		end = path.size();
+	while (beg < end) {
+		while (beg < end && path[beg] == '/')
+			++beg;
+		size_t next_slash = std::min(end, find(path, '/', beg, end));
+		// If [beg, next_slash) == ("." or "..")
+		if ((next_slash - beg == 1 && path[beg] == '.') ||
+				(next_slash - beg == 2 && path[beg] == '.' &&
+				path[beg + 1] == '.')) {
+			beg = next_slash;
+			continue;
+		}
+		if (*--root.end() != '/')
+			root += '/';
+		root.append(path, beg, next_slash - beg);
+		beg = next_slash;
+	}
+	return root;
 }
