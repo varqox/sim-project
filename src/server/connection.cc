@@ -590,7 +590,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 			return;
 		}
 
-		str += "Accept-Ranges: bytes\r\n";
+		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
 		str += myto_string((size_t)fsize);
 		str += "\r\n\r\n";
