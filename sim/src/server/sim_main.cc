@@ -3,7 +3,9 @@
 #include "sim_errors.h"
 #include "../include/string.h"
 #include "../include/debug.h"
+#include "../include/time.h"
 
+#include <sys/stat.h>
 #include <unistd.h>
 
 using std::string;
@@ -20,7 +22,7 @@ server::HttpResponse main(const server::HttpRequest& req) {
 		return error404();
 }
 
-server::HttpResponse mainPage(const server::HttpRequest& req) {
+server::HttpResponse mainPage(const server::HttpRequest&) {
 	server::HttpResponse resp;
 	sim::Template templ(resp, "Main page");
 	templ << "<div style=\"text-align: center\">\n"
@@ -41,7 +43,25 @@ server::HttpResponse getStaticFile(const server::HttpRequest& req) {
 	// If file doesn't exist
 	if (access(file.c_str(), F_OK) == -1)
 		return error404();
+
+	// Get file stat
 	server::HttpResponse resp(server::HttpResponse::FILE);
+	struct stat attr;
+	if (stat(file.c_str(), &attr) != -1) {
+		// Extract time of last modification
+		resp.headers["Last-Modified"] = date("%a, %d %b %Y %H:%M:%S GMT", attr.st_mtime);
+		server::HttpHeaders::const_iterator it = req.headers.find("if-modified-since");
+		struct tm client_mtime;
+
+		// If "If-Modified-Since" header is set and its value is not lower than attr.st_mtime
+		if (it != req.headers.end() && NULL != strptime(it->second.c_str(),
+				"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) &&
+				timegm(&client_mtime) >= attr.st_mtime) {
+			resp.status_code = "304 Not Modified";
+			resp.content_type = server::HttpResponse::TEXT;
+			return resp;
+		}
+	}
 	resp.content = file;
 	return resp;
 }

@@ -6,7 +6,7 @@
 namespace sim {
 
 server::HttpResponse main(const server::HttpRequest& req);
-server::HttpResponse mainPage(const server::HttpRequest& req);
+server::HttpResponse mainPage(const server::HttpRequest&);
 server::HttpResponse getStaticFile(const server::HttpRequest& req);
 
 } // namespace sim
