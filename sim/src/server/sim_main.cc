@@ -37,6 +37,7 @@ SIM::SIM() : db_conn_(NULL), req_(NULL), resp_(server::HttpResponse::TEXT) {
 	try {
 		db_conn_ = new DB::Connection(host, user, password, database);
 	} catch (...) {
+		eprintf("Failed to connect to database\n");
 		db_conn_ = NULL;
 	}
 

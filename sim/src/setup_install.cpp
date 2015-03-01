@@ -39,45 +39,50 @@ int main(int argc, char *argv[]) {
 	user[strlen(user)-1] = password[strlen(password)-1] = '\0';
 	database[strlen(database)-1] = host[strlen(host)-1] = '\0';
 
-	DB::Connection conn(host, user, password, database);
+	try {
+		DB::Connection conn(host, user, password, database);
 
-	delete[] user;
-	delete[] password;
-	delete[] database;
-	delete[] host;
+		delete[] user;
+		delete[] password;
+		delete[] database;
+		delete[] host;
 
-	sql::Statement *stmt = conn.mysql()->createStatement();
+		sql::Statement *stmt = conn.mysql()->createStatement();
 
-	if (stmt->execute("CREATE TABLE IF NOT EXISTS `users` (\n"
-				"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
-				"`username` varchar(30) COLLATE utf8_bin NOT NULL,\n"
-				"`first_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-				"`last_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-				"`email` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-				"`password` char(64) COLLATE utf8_bin NOT NULL,\n"
-				"`type` enum('normal','teacher','admin') COLLATE utf8_bin NOT NULL DEFAULT 'normal',\n"
-				"PRIMARY KEY (`id`),\n"
-				"UNIQUE KEY `username` (`username`)\n"
-			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n")) {
-		eprintf("Failed to create table `users`\n");
-		return 4;
+		if (stmt->execute("CREATE TABLE IF NOT EXISTS `users` (\n"
+					"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
+					"`username` varchar(30) COLLATE utf8_bin NOT NULL,\n"
+					"`first_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
+					"`last_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
+					"`email` varchar(60) COLLATE utf8_bin NOT NULL,\n"
+					"`password` char(64) COLLATE utf8_bin NOT NULL,\n"
+					"`type` enum('normal','teacher','admin') COLLATE utf8_bin NOT NULL DEFAULT 'normal',\n"
+					"PRIMARY KEY (`id`),\n"
+					"UNIQUE KEY `username` (`username`)\n"
+				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n")) {
+			eprintf("Failed to create table `users`\n");
+			return 4;
+		}
+		// stmt->execute("INSERT IGNORE INTO `users` (`id`) VALUES(1)\n");
+
+		if (stmt->execute("CREATE TABLE IF NOT EXISTS `session` (\n"
+					"`id` char(10) COLLATE utf8_bin NOT NULL,\n"
+					"`user_id` int unsigned NOT NULL,\n"
+					"`data` text COLLATE utf8_bin NOT NULL,\n"
+					"`user_agent` text COLLATE utf8_bin NOT NULL,\n"
+					"`time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n"
+					"PRIMARY KEY (`id`),\n"
+					"KEY (`user_id`),\n"
+					"KEY (`time`)\n"
+				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n")) {
+			eprintf("Failed to create table `session`\n");
+			return 4;
+		}
+
+		delete stmt;
+	} catch(...) {
+		eprintf("Failed to connect to database\n");
+		return 5;
 	}
-	// stmt->execute("INSERT IGNORE INTO `users` (`id`) VALUES(1)\n");
-
-	if (stmt->execute("CREATE TABLE IF NOT EXISTS `session` (\n"
-				"`id` char(10) COLLATE utf8_bin NOT NULL,\n"
-				"`user_id` int unsigned NOT NULL,\n"
-				"`data` text COLLATE utf8_bin NOT NULL,\n"
-				"`user_agent` text COLLATE utf8_bin NOT NULL,\n"
-				"`time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n"
-				"PRIMARY KEY (`id`),\n"
-				"KEY (`user_id`),\n"
-				"KEY (`time`)\n"
-			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n")) {
-		eprintf("Failed to create table `session`\n");
-		return 4;
-	}
-
-	delete stmt;
 	return 0;
 }

@@ -11,7 +11,7 @@ install:
 script:
   - make -j
   - echo | sudo make install
-  - (cd build && ./sim-server)&
+  - (cd build && sudo -u sim ./sim-server)&
   - wget http://127.7.7.7:8080/
   - cat index.html
 
