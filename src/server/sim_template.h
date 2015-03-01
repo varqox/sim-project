@@ -1,11 +1,8 @@
 #pragma once
 
-#include "http_response.h"
-#include "../include/time.h"
+#include "sim.h"
 
-namespace sim {
-
-class Template {
+class SIM::Template {
 private:
 	Template(const Template&);
 	Template& operator=(const Template&);
@@ -17,6 +14,7 @@ public:
 			const std::string& styles = "");
 
 	Template& operator<<(char c) { resp_->content += c; return *this; }
+
 	Template& operator<<(const char* str) {
 		resp_->content += str;
 		return *this;
@@ -27,17 +25,9 @@ public:
 		return *this;
 	}
 
-	void close() {
-		resp_->content += "</div>\n"
-		"</body>\n"
-		"</html>\n";
-		resp_ = NULL;
-	}
-
 	~Template() {
-		if (resp_)
-			close();
+		*this << "</div>\n"
+			"</body>\n"
+			"</html>\n";
 	}
 };
-
-} // namesapce sim

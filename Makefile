@@ -18,26 +18,37 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
 	$(MKDIR) $(abspath $(DESTDIR)/judge/chroot/)
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
+	$(MKDIR) $(abspath $(DESTDIR)/public/)
+	$(UPDATE) src/public $(abspath $(DESTDIR))
 	$(UPDATE) src/judge_machine src/CTH src/checkers/ $(abspath $(DESTDIR)/judge/)
+	$(UPDATE) src/sim-server $(abspath $(DESTDIR))
 
 	# Set database pass
 	@bash -c 'if [ ! -e $(abspath $(DESTDIR)/db.config) ]; then\
 			echo Type your MySQL username \(for SIM\):; read mysql_username;\
 			echo Type your password for $$mysql_username:; read -s mysql_password;\
 			echo Type your database which SIM will use:; read db_name;\
-			printf "$$mysql_username\n$$mysql_password\n$$db_name\n" > $(abspath $(DESTDIR)/db.config);\
+			echo Type your user_host:; read user_host;\
+			printf "$$mysql_username\n$$mysql_password\n$$db_name\n$$user_host\n" > $(abspath $(DESTDIR)/db.config);\
 		fi'
-#	echo | php -B '$$_SERVER["DOCUMENT_ROOT"]="$(abspath $(DESTDIR)/public/)";' -F $(abspath $(DESTDIR)/php/db_setup.php)
-#	$(RM) $(abspath $(DESTDIR)/php/db_setup.php)
+
+	# Setup install
+	- src/setup_install $(abspath $(DESTDIR))
 
 	# Right owner, group and permission bits
-	src/chmod-default $(DESTDIR)
+	- useradd -M -r -s /usr/sbin/nologin sim
+	src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/db.config)
-	chmod 0755 $(abspath $(DESTDIR)/judge/CTH) $(abspath $(DESTDIR)/judge/judge_machine)
-	chown -R www-data:www-data $(DESTDIR)
+	chmod 0755 $(abspath $(DESTDIR)/judge/CTH) $(abspath $(DESTDIR)/judge/judge_machine) $(abspath $(DESTDIR)/sim-server)
+	chown -R sim:sim $(abspath $(DESTDIR))
 
 	# Add judge_machine to sudoers
 	@grep 'ALL ALL = (root) NOPASSWD: $(abspath $(DESTDIR)/judge/judge_machine)' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(abspath $(DESTDIR)/judge/judge_machine) >> /etc/sudoers; fi
+
+.PHONY: reinstall
+reinstall:
+	$(RM) $(abspath $(DESTDIR)/db.config)
+	$(MAKE) install
 
 .PHONY: clean
 clean:

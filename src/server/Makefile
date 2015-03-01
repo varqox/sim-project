@@ -7,8 +7,8 @@ ifneq ($(MAKECMDGOALS), clean)
 -include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
-../sim-server: core.o connection.o http_request.o http_response.o sim_main.o sim_template.o ../lib/libsim.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lpthread
+../sim-server: core.o connection.o http_request.o http_response.o sim_main.o sim_template.o sim_errors.o ../lib/libsim.a
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lpthread -lmysqlcppconn
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)

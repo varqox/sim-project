@@ -11,7 +11,7 @@
 #include "../include/debug.h"
 #include "../include/string.h"
 #include "connection.h"
-#include "sim_main.h"
+#include "sim.h"
 
 using std::cerr;
 
@@ -22,6 +22,7 @@ namespace server {
 static void* worker(void*) {
 	sockaddr_in name;
 	Connection conn(-1);
+	SIM sim_worker;
 	for (;;) {
 		socklen_t client_name_len = sizeof(name);
 		// accept the connection
@@ -33,7 +34,7 @@ static void* worker(void*) {
 
 		HttpRequest req = conn.getRequest();
 		if (conn.state() == Connection::OK)
-			conn.sendResponse(sim::main(req));
+			conn.sendResponse(sim_worker.handle(req));
 
 		printf("Closing...");
 		fflush(stdout);
