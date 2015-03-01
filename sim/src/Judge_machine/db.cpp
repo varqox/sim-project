@@ -2,7 +2,7 @@
 #include <cstring>
 #include "db.hpp"
 
-DB::DB(): con(), user(NULL), password(NULL), database(NULL)
+DB::DB(): con(NULL), user(NULL), password(NULL), database(NULL)
 {
 	FILE *f = fopen("../php/db.pass", "r");
 	if(f == NULL)

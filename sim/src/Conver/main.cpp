@@ -475,7 +475,7 @@ namespace tests {
 			i->erase(i->end()-4, i->end());
 			string x = *i;
 			x.erase(0, x.find("/"));
-			typeof(trie.end()) it;
+			__typeof(trie.end()) it;
 			if((it = trie.find(x)) != trie.end())
 				tests.push_back(MP(**it, *i));
 		}

@@ -3,6 +3,7 @@
 using std::string;
 
 namespace server {
+
 void HttpResponse::setCookie(const string& name, const string& val, time_t expire,
 		const string& path, const string& domain, bool http_only,
 		bool secure) {
@@ -23,4 +24,5 @@ void HttpResponse::setCookie(const string& name, const string& val, time_t expir
 		value.append("; Secure");
 	cookies[name] = value;
 }
+
 } // namespace server

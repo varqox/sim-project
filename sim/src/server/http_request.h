@@ -23,5 +23,7 @@ public:
 
 		~Form();
 	} form_data;
+
+	std::string getCookie(const std::string& name) const;
 };
 } // namespace server

@@ -10,7 +10,7 @@ public:
 	HttpHeaders headers, cookies;
 	std::string content;
 
-	HttpResponse(ContentType con_type = TEXT,
+	explicit HttpResponse(ContentType con_type = TEXT,
 			const std::string& stat_code = "200 OK")
 			: content_type(con_type), status_code(stat_code), headers(),
 			cookies(), content() {}
