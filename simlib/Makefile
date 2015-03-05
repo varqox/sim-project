@@ -44,6 +44,7 @@ install: all
 
 	# Add judge_machine to sudoers
 	@grep 'ALL ALL = (root) NOPASSWD: $(abspath $(DESTDIR)/judge/judge_machine)' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(abspath $(DESTDIR)/judge/judge_machine) >> /etc/sudoers; fi
+	@printf "\033[;32mInstall finished\033[0m\n"
 
 .PHONY: reinstall
 reinstall:
