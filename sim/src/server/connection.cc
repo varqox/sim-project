@@ -22,16 +22,16 @@ int Connection::peek() {
 	if (pos_ >= buff_size_) {
 		// wait for data
 		pollfd pfd = {sock_fd_, POLLIN, 0};
-		D(eprintf("peek(): polling... ");)
+		E("peek(): polling... ");
 		if (poll(&pfd, 1, POLL_TIMEOUT) <= 0) {
-			D(eprintf("peek(): No response\n");)
+			E("peek(): No response\n");
 			error408();
 			return -1;
 		}
-		D(eprintf("peek(): OK\n");)
+		E("peek(): OK\n");
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
-		D(eprintf("peek(): Reading completed; buff_size: %i\n", buff_size_);)
+		E("peek(): Reading completed; buff_size: %i\n", buff_size_);
 		if (buff_size_ <= 0) {
 			state_ = CLOSED;
 			return -1; // Failed
@@ -543,7 +543,7 @@ void Connection::send(const char* str, size_t len) {
 	ssize_t written;
 	while (pos < len) {
 		written = write(sock_fd_, str + pos, len - pos);
-		D(eprintf("written: %zi\n", written);)
+		E("written: %zi\n", written);
 		if (written == -1) {
 			state_ = CLOSED;
 			break;
