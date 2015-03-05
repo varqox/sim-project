@@ -20,18 +20,19 @@ string HttpRequest::getCookie(const string& name) const {
 
 	const string &cookie = it->second;
 
-	for (size_t beg = 0; beg < cookie.size(); beg = cookie.find(';')) {
-		if (cookie[beg] == ';' && beg + 1 < cookie.size())
-			++beg;
+	for (size_t beg = 0; beg < cookie.size();) {
 		if (cookie[beg] == ' ' && beg + 1 < cookie.size())
 			++beg;
-		if (0 == name.compare(beg, name.size(), name) &&
+		if (0 == cookie.compare(beg, name.size(), name) &&
 				beg + name.size() < cookie.size() &&
 				cookie[beg + name.size()] == '=') {
 			beg += name.size() + 1;
 			size_t next = std::min(cookie.size(), find(cookie, ';', beg));
 			return cookie.substr(beg, next - beg);
 		}
+		beg = find(cookie, ';', beg);
+		if (beg < cookie.size())
+			++beg;
 	}
 	return "";
 }

@@ -1,5 +1,6 @@
 #include "sim.h"
 #include "sim_template.h"
+#include "sim_session.h"
 
 #include "../include/string.h"
 #include "../include/debug.h"
@@ -11,7 +12,8 @@
 
 using std::string;
 
-SIM::SIM() : db_conn_(NULL), req_(NULL), resp_(server::HttpResponse::TEXT) {
+SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
+		resp_(server::HttpResponse::TEXT), session(new Session(*this)) {
 	char *host, *user, *password, *database;
 
 	FILE *conf = fopen("db.config", "r");
@@ -42,36 +44,49 @@ SIM::SIM() : db_conn_(NULL), req_(NULL), resp_(server::HttpResponse::TEXT) {
 	}
 
 	// Free resources
-	delete[] host;
-	delete[] user;
-	delete[] password;
-	delete[] database;
+	free(host);
+	free(user);
+	free(password);
+	free(database);
 }
 
 SIM::~SIM() {
 	if (db_conn_)
 		delete db_conn_;
+	delete session;
 }
 
-server::HttpResponse SIM::handle(const server::HttpRequest& req) {
+server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& req) {
+	client_ip_.swap(client_ip);
 	req_ = &req;
 	resp_ = server::HttpResponse(server::HttpResponse::TEXT);
 
-	D(eprintf("%s\n", req.target.c_str()));
+	E("%s\n", req.target.c_str());
 
-	if (isPrefix(req.target, "/kit"))
-		getStaticFile();
-	// else if (isPrefix(req.target, "/login"))
-		// return login();
-	else if (req.target.size() == 1 || req.target[1] == '?')
-		mainPage();
-	else
-		error404();
+	try {
+		if (isPrefix(req.target, "/kit"))
+			getStaticFile();
+		else if (isPrefix(req.target, "/login"))
+			login();
+		else if (isPrefix(req.target, "/logout"))
+			logout();
+		else if (isPrefix(req.target, "/signup"))
+			signUp();
+		else if (req.target.size() == 1 || req.target[1] == '?')
+			mainPage();
+		else
+			error404();
+	} catch (...) {
+		E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+		error500();
+	}
+	// Make sure that session is closed
+	session->close();
 	return resp_;
 }
 
 void SIM::mainPage() {
-	Template templ(resp_, "Main page");
+	Template templ(*this, "Main page");
 	templ << "<div style=\"text-align: center\">\n"
 				"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" alt=\"\"/>\n"
 				"<p style=\"font-size: 30px\">Welcome to SIM</p>\n"
@@ -83,7 +98,7 @@ void SIM::mainPage() {
 void SIM::getStaticFile() {
 	string file = "public";
 	file += abspath(decodeURI(req_->target, 1, req_->target.find('?'))); // Extract path ignoring query
-	D(eprintf("%s\n", file.c_str()));
+	E("%s\n", file.c_str());
 
 	// If file doesn't exist
 	if (access(file.c_str(), F_OK) == -1)

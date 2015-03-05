@@ -15,27 +15,48 @@ private:
 	class Template;
 
 	DB::Connection *db_conn_;
+	std::string client_ip_;
 	const server::HttpRequest *req_;
 	server::HttpResponse resp_;
+	Session *session;
 
+	// sim_errors.cc
 	void error403();
+
 	void error404();
 
+	void error500();
+
+	// sim_main.cc
 	void mainPage();
+
 	void getStaticFile();
 
+	// sim_user.cc
 	void login();
-	void logout();
-	void singUp();
 
+	void logout();
+
+	void signUp();
+
+	// sim_contest.cc
 	void contest();
+
 	void problems();
+
 	void submit();
+
 	void submission();
+
 	void submissions();
+
 	void rank();
+
 public:
 	SIM();
-	server::HttpResponse handle(const server::HttpRequest& req);
+
 	~SIM();
+
+	server::HttpResponse handle(std::string client_ip,
+			const server::HttpRequest& req);
 };

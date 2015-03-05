@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 	db_config += "/db.config";
 	db_config = abspath(db_config, 0, string::npos, db_config[0] == '/' ? "/" : ".");
 
-	D(eprintf("db_config: '%s'\n", db_config.c_str());)
+	E("db_config: '%s'\n", db_config.c_str());
 
 	FILE *conf = fopen(db_config.c_str(), "r");
 	if (conf == NULL) {
@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
 					"`id` char(10) COLLATE utf8_bin NOT NULL,\n"
 					"`user_id` int unsigned NOT NULL,\n"
 					"`data` text COLLATE utf8_bin NOT NULL,\n"
+					"`ip` char(15) COLLATE utf8_bin NOT NULL,\n"
 					"`user_agent` text COLLATE utf8_bin NOT NULL,\n"
 					"`time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n"
 					"PRIMARY KEY (`id`),\n"

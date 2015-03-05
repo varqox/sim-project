@@ -1,13 +1,17 @@
 #include "sim_template.h"
+#include "sim_session.h"
 
+#include "../include/debug.h"
 #include "../include/time.h"
+#include "../include/memory.h"
 
+#include <cppconn/prepared_statement.h>
 #include <cstring>
 
-SIM::Template::Template(server::HttpResponse& resp, const std::string& title, const std::string& scripts,
-			const std::string& styles) : resp_(&resp) {
-	resp_->headers["Content-Type"] = "text/html; charset=utf-8";
-	resp_->content = "";
+SIM::Template::Template(SIM& sim, const std::string& title, const std::string& scripts,
+			const std::string& styles) : sim_(sim) {
+	sim_.resp_.headers["Content-Type"] = "text/html; charset=utf-8";
+	sim_.resp_.content = "";
 	*this << "<!DOCTYPE html>\n"
 		"<html lang=\"en\">\n"
 			"<head>\n"
@@ -36,10 +40,39 @@ SIM::Template::Template(server::HttpResponse& resp, const std::string& title, co
 						"<a href=\"/files/\">Files</a>\n"
 						"<a href=\"/submissions/\">Submissions</a>\n"
 						"<div style=\"float:right\">\n"
-							"<span id=\"clock\">"
-		<< date("%H:%M:%S") << "</span><a href=\"/login\"><strong>Log in</strong></a>\n"
-						"<a href=\"/register\">Register</a></div>\n"
-					"</div>\n"
-				"</div>\n"
-				"<div class=\"body\">\n";
+							"<span id=\"clock\">" << date("%H:%M:%S") << "</span>";
+	if (sim_.session->open() == Session::OK) {
+		try {
+			UniquePtr<sql::PreparedStatement> pstmt = sim_.db_conn_->mysql()
+					->prepareStatement("SELECT username FROM `users` WHERE id=?");
+			pstmt->setString(1, sim_.session->user_id);
+			pstmt->execute();
+
+			UniquePtr<sql::ResultSet> res = pstmt->getResultSet();
+
+			if (res->next()) {
+				*this << "<div class=\"dropdown\">\n"
+						"<a href=\"#\" class=\"user\"><strong>"
+					<< res->getString(1) << "</strong><b class=\"caret\"></b></a>\n"
+						"<ul>\n"
+						"<li><a href=\"/logout\">logout</a></li>\n"
+						"</ul>\n"
+						"</div>";
+			} else {
+				sim_.session->destroy();
+				goto else_label;
+			}
+		} catch (...) {
+			sim_.session->destroy();
+			E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+		}
+	} else {
+	else_label:
+		*this << "<a href=\"/login\"><strong>Log in</strong></a>\n"
+			"<a href=\"/signup\">Sign up</a>";
+	}
+	*this << "</div>\n"
+		"</div>\n"
+		"</div>\n"
+		"<div class=\"body\">\n";
 }

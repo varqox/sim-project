@@ -15,7 +15,7 @@
 
 using std::cerr;
 
-#define WORKERS 3
+#define WORKERS 1
 static int socket_fd;
 
 namespace server {
@@ -28,13 +28,17 @@ static void* worker(void*) {
 		// accept the connection
 		int client_socket_fd = accept(socket_fd, (sockaddr*)&name, &client_name_len);
 
-		eprintf("\nConnection accepted: %lu\n", pthread_self());
+		char ip[INET_ADDRSTRLEN];
+
+		inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN); // extract ip
+
+		eprintf("\nConnection accepted: %lu form %s\n", pthread_self(), ip);
 
 		conn.assign(client_socket_fd);
 
 		HttpRequest req = conn.getRequest();
 		if (conn.state() == Connection::OK)
-			conn.sendResponse(sim_worker.handle(req));
+			conn.sendResponse(sim_worker.handle(ip, req));
 
 		printf("Closing...");
 		fflush(stdout);
@@ -46,6 +50,7 @@ static void* worker(void*) {
 } // namespace server
 
 int main() {
+	srand(time(NULL));
 	// Signal control
 	struct sigaction sa;
 	memset (&sa, 0, sizeof(sa));
