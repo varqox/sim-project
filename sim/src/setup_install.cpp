@@ -26,11 +26,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Get password
-	size_t x;
+	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
 	char *user = NULL, *password = NULL, *database = NULL, *host = NULL;
-	if (getline(&user, &x, conf) == -1 || getline(&password, &x, conf) == -1 ||
-			getline(&database, &x, conf) == -1 ||
-			getline(&host, &x, conf) == -1) {
+	if (getline(&user, &x1, conf) == -1 || getline(&password, &x2, conf) == -1 ||
+			getline(&database, &x3, conf) == -1 ||
+			getline(&host, &x4, conf) == -1) {
 		eprintf("Failed to get config\n");
 		fclose(conf);
 		return 3;
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
 		sql::Statement *stmt = conn.mysql()->createStatement();
 
-		if (stmt->execute("CREATE TABLE IF NOT EXISTS `users` (\n"
+		if (stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `users` (\n"
 					"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
 					"`username` varchar(30) COLLATE utf8_bin NOT NULL,\n"
 					"`first_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 		}
 		// stmt->execute("INSERT IGNORE INTO `users` (`id`) VALUES(1)\n");
 
-		if (stmt->execute("CREATE TABLE IF NOT EXISTS `session` (\n"
+		if (stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `session` (\n"
 					"`id` char(10) COLLATE utf8_bin NOT NULL,\n"
 					"`user_id` int unsigned NOT NULL,\n"
 					"`data` text COLLATE utf8_bin NOT NULL,\n"

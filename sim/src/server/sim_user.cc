@@ -29,7 +29,7 @@ void SIM::login() {
 
 			if (res->next()) {
 				session->create(res->getString(1));
-				resp_.status_code = "307 Temporary Redirect";
+				resp_.status_code = "302 Moved Temporarily";
 				resp_.headers["Location"] = "/";
 				return;
 			}
@@ -51,13 +51,13 @@ void SIM::login() {
 void SIM::logout() {
 	session->open();
 	session->destroy();
-	resp_.status_code = "307 Temporary Redirect";
+	resp_.status_code = "302 Moved Temporarily";
 	resp_.headers["Location"] = "/login";
 }
 
 void SIM::signUp() {
 	if (session->open() == Session::OK) {
-		resp_.status_code = "307 Temporary Redirect";
+		resp_.status_code = "302 Moved Temporarily";
 		resp_.headers["Location"] = "/";
 		return;
 	}
@@ -97,13 +97,12 @@ void SIM::signUp() {
 		try {
 			if (info.empty()) {
 				UniquePtr<sql::PreparedStatement> pstmt = db_conn_->mysql()
-						->prepareStatement("INSERT INTO `users` (username, first_name, last_name, email, password) SELECT ?, ?, ?, ?, ? FROM `users` WHERE NOT EXISTS (SELECT id FROM `users` WHERE username=?) LIMIT 1");
+						->prepareStatement("INSERT IGNORE INTO `users` (username, first_name, last_name, email, password) VALUES(?, ?, ?, ?, ?)");
 				pstmt->setString(1, username);
 				pstmt->setString(2, first_name);
 				pstmt->setString(3, last_name);
 				pstmt->setString(4, email);
 				pstmt->setString(5, sha256(password1));
-				pstmt->setString(6, username);
 
 				if (pstmt->executeUpdate() == 1) {
 					pstmt.reset(db_conn_->mysql()->prepareStatement("SELECT id FROM `users` WHERE username=?"));
@@ -115,7 +114,7 @@ void SIM::signUp() {
 
 					if (res->next()) {
 						session->create(res->getString(1));
-						resp_.status_code = "307 Temporary Redirect";
+						resp_.status_code = "302 Moved Temporarily";
 						resp_.headers["Location"] = "/";
 						return;
 					}
