@@ -23,10 +23,10 @@ SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
 	}
 
 	// Get pass
-	size_t x;
-	if (getline(&user, &x, conf) == -1 || getline(&password, &x, conf) == -1 ||
-			getline(&database, &x, conf) == -1 ||
-			getline(&host, &x, conf) == -1) {
+	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
+	if (getline(&user, &x1, conf) == -1 || getline(&password, &x2, conf) == -1 ||
+			getline(&database, &x3, conf) == -1 ||
+			getline(&host, &x4, conf) == -1) {
 		eprintf("Failed to get database config\n");
 		fclose(conf);
 		return;
