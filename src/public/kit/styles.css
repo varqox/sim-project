@@ -15,6 +15,7 @@ html {
   -ms-text-size-adjust: 100%; /* 2 */
   -webkit-text-size-adjust: 100%; /* 2 */
   font-size: 14px;
+  line-height: 20px;
 }
 
 /**
@@ -442,7 +443,8 @@ button,
 html input[type="button"],
 input[type="reset"],
 input[type="submit"]{
-	padding: 7px 11px;
+	/*line-height: 16px;*/
+	padding: 4px 11px;
 	border: 1px solid #cccccc;
 	margin: 2px;
 	outline: none;
@@ -636,7 +638,7 @@ a:hover
 	border-radius: 4px;
 	text-decoration: none;
 }
-.rounds .btn-small{
+/*.rounds .btn-small{
 	padding: 2px 5px;
 	font-size: 12px;
 	line-height: 14px;
@@ -651,10 +653,7 @@ a:hover
 	color: #000000;
 	text-decoration: none;
 	background-image: linear-gradient(to bottom, #cccccc, #e6e6e6);
-}
-.submit-status pre{
-	margin: 0;
-}
+}*/
 .table{
 	border: 1px solid #a2a2a2;
 	-webkit-border-radius: 4px;
@@ -685,6 +684,95 @@ a:hover
 }
 .table tbody:last-child tr:last-child td:first-child{
 	border-bottom-left-radius: 4px;
+}
+
+/* Contest */
+.menu{
+	position: fixed;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	background: #f5f5f5;
+	margin: 0;
+	padding: 55px 10px 0;
+	border-right: 1px solid #ccc;
+	height: 100%;
+	width: 160px;
+	z-index: 1;
+}
+.menu > li{
+	list-style: none;
+}
+.menu > li > a{
+	display: block;
+	padding: 7px 0 7px 5px;
+}
+.menu > li > a:focus, .menu > li > a:hover{
+	text-decoration: none;
+	background: #e7e7e7;
+}
+.menu > .separator{
+	display: block;
+	margin-top: 5px;
+	font-size: 12px;
+	color: #555555;
+	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
+}
+.contests{
+	width: 60em;
+	margin-left: auto;
+	margin-right: auto;
+}
+.contests li{
+	list-style: none;
+}
+.round-view{
+	margin: 0 auto;
+}
+.round-view td a{
+	padding: 5px;
+}
+.round-view th a{
+	padding: 7px;
+	line-height: 12px;
+}
+.round-view tr a{
+	display: block;
+}
+.round-view tr a:hover, .round-view tr a:focus{
+	text-decoration: none;
+	background: #eeeeee;
+}
+.round-view th, .round-view td{
+	border-left: 1px solid #a2a2a2;
+	border-bottom: 1px solid #a2a2a2;
+	min-width: 100px;
+	vertical-align: middle;
+	text-align: center;
+}
+.round-view .blank{
+	border: 0;
+}
+.round-view td.blank.with-left-border{
+	border-left: 1px solid #a2a2a2;
+}
+.round-view thead tr:last-child th{
+	border-bottom: 2px solid #a2a2a2;
+}
+.round-view thead tr:first-child th:first-child{
+	border-top: 1px solid #a2a2a2;
+	-webkit-border-top-left-radius: 4px;
+	-moz-border-top-left-radius: 4px;
+	border-top-left-radius: 4px;
+	-webkit-border-top-right-radius: 4px;
+	-moz-border-top-right-radius: 4px;
+	border-top-right-radius: 4px;
+}
+.round-view thead tr th:last-child{
+	border-right: 1px solid #a2a2a2;
+}
+.round-view tbody tr td:last-of-type:not(.blank){
+	border-right: 1px solid #a2a2a2;
 }
 
 /* Submission */
@@ -797,7 +885,7 @@ a:hover
 /* Forms */
 .form-container{
 	background: #fdfdfd;
-	width: 400px;
+	width: 432px;
 	margin: 70px auto 0;
 	border: 1px solid #dddddd;
 	-webkit-border-radius: 4px;
@@ -808,54 +896,42 @@ a:hover
 	font-size: 35px;
 	font-weight: normal;
 	text-align: center;
+	line-height: normal;
 }
 .form-container h4{
 	font-size: 19px;
 	font-weight: normal;
 	text-align: center;
+	line-height: normal;
 	margin: -10px 7px 7px;
 }
-form{
+.form-container form{
 	margin-top: -20px;
 	padding: 20px;
 }
-form label{
-	font-size: 14px;
+.form-container .field-group {
+	margin-bottom: 15px;
 }
-form .input-block{
-	margin: 5px 0 15px;
+.form-container form .field-group label{
+	float: left;
+	width: 120px;
+	text-align: right;
+	font-size: 14px;
+	margin: 5px 0;
+}
+.form-container form input{
 	display: block;
-	width: 100%;
+	margin-left: 140px;
+	height: 30px;
+}
+.form-container form .input-block{
+	width: 250px;
 }
 .round{
 	margin-left: 70px;
 }
 .round-info p{
 	margin: 4px 0;
-}
-.menu{
-	position: fixed;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	background: #f5f5f5;
-	margin: 0;
-	padding: 60px 10px 0;
-	border-right: 1px solid #ccc;
-	height: 100%;
-	width: 150px;
-	z-index: 1;
-}
-.menu > li{
-	list-style: none;
-}
-.menu > li > a{
-	display: block;
-	padding: 7px 0 7px 5px;
-}
-.menu > li > a:focus, .menu > li > a:hover{
-	text-decoration: none;
-	background: #e7e7e7;
 }
 .submissions{
 	margin: 0 auto;

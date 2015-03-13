@@ -4,7 +4,7 @@
 
 class SIM::Session {
 public:
-	enum State { OK, CLOSED };
+	enum State { OK, FAIL, CLOSED };
 	std::string user_id, data;
 
 private:
@@ -18,10 +18,8 @@ private:
 	std::string id_;
 
 	Session(SIM& sim): user_id(), data(), sim_(sim), state_(CLOSED), id_() {}
-	~Session() {
-		if (state_ == OK)
-			close();
-	}
+
+	~Session() { close(); }
 
 public:
 	State open();

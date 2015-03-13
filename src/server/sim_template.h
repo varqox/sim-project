@@ -11,7 +11,7 @@ private:
 
 public:
 	Template(SIM& sim, const std::string& title,
-			const std::string& scripts = "", const std::string& styles = "");
+			const std::string& styles = "", const std::string& scripts = "");
 
 	Template& operator<<(char c) { sim_.resp_.content += c; return *this; }
 
@@ -25,7 +25,7 @@ public:
 		return *this;
 	}
 
-	~Template() {
+	virtual ~Template() {
 		*this << "</div>\n"
 			"</body>\n"
 			"</html>\n";

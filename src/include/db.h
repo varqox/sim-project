@@ -28,6 +28,10 @@ public:
 			connect();
 		return conn_;
 	}
+
+	sql::Connection& operator*() { return *mysql(); }
+
+	sql::Connection* operator->() { return mysql(); }
 };
 
 } // namespace DB

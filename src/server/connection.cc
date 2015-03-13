@@ -3,6 +3,7 @@
 #include "../include/debug.h"
 #include "../include/string.h"
 
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
@@ -311,7 +312,7 @@ void Connection::error408() {
 		"Server: sim-server\r\n"
 		"Connection: close\r\n"
 		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 128\r\n"
+		"Content-Length: 124\r\n"
 		"\r\n"
 		"<html>\n"
 		"<head><title>408 Request Timeout</title></head>\n"
@@ -322,12 +323,44 @@ void Connection::error408() {
 	state_ = CLOSED;
 }
 
+void Connection::error403() {
+	send("HTTP/1.1 403 Forbidden\r\n"
+		"Server: sim-server\r\n"
+		"Connection: close\r\n"
+		"Content-Type: text/html; charset=utf-8\r\n"
+		"Content-Length: 112\r\n"
+		"\r\n"
+		"<html>\n"
+		"<head><title>403 Forbidden</title></head>\n"
+		"<body>\n"
+		"<center><h1>403 Forbidden</h1></center>\n"
+		"</body>\n"
+		"</html>\n");
+	state_ = CLOSED;
+}
+
+void Connection::error404() {
+	send("HTTP/1.1 404 Not Found\r\n"
+		"Server: sim-server\r\n"
+		"Connection: close\r\n"
+		"Content-Type: text/html; charset=utf-8\r\n"
+		"Content-Length: 112\r\n"
+		"\r\n"
+		"<html>\n"
+		"<head><title>404 Not Found</title></head>\n"
+		"<body>\n"
+		"<center><h1>404 Not Found</h1></center>\n"
+		"</body>\n"
+		"</html>\n");
+	state_ = CLOSED;
+}
+
 void Connection::error413() {
 	send("HTTP/1.1 413 Request Entity Too Large\r\n"
 		"Server: sim-server\r\n"
 		"Connection: close\r\n"
 		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 146\r\n"
+		"Content-Length: 142\r\n"
 		"\r\n"
 		"<html>\n"
 		"<head><title>413 Request Entity Too Large</title></head>\n"
@@ -343,7 +376,7 @@ void Connection::error415() {
 		"Server: sim-server\r\n"
 		"Connection: close\r\n"
 		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 142\r\n"
+		"Content-Length: 138\r\n"
 		"\r\n"
 		"<html>\n"
 		"<head><title>415 Unsupported Media Type</title></head>\n"
@@ -359,7 +392,7 @@ void Connection::error431() {
 		"Server: sim-server\r\n"
 		"Connection: close\r\n"
 		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 160\r\n"
+		"Content-Length: 156\r\n"
 		"\r\n"
 		"<html>\n"
 		"<head><title>431 Request Header Fields Too Large</title></head>\n"
@@ -581,15 +614,22 @@ void Connection::sendResponse(const HttpResponse& res) {
 	} else { // content _type == FILE
 		int fd = open(res.content.c_str(), O_RDONLY);
 		if (fd == -1) {
-			error500();
+			error404();
 			return;
 		}
 
-		off_t fsize = lseek(fd, 0, SEEK_END);
-		if (fsize == (off_t)-1 || lseek(fd, 0, SEEK_SET) == (off_t)-1) {
+		struct stat sb;
+
+		if (fstat(fd, &sb) == -1) {
 			error500();
 			return;
 		}
+		if (!S_ISREG(sb.st_mode)) {
+			error403();
+			return;
+		}
+
+		off_t fsize = sb.st_size;
 
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";

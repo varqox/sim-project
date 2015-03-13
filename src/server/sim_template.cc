@@ -8,8 +8,8 @@
 #include <cppconn/prepared_statement.h>
 #include <cstring>
 
-SIM::Template::Template(SIM& sim, const std::string& title, const std::string& scripts,
-			const std::string& styles) : sim_(sim) {
+SIM::Template::Template(SIM& sim, const std::string& title,
+	const std::string& styles, const std::string& scripts) : sim_(sim) {
 	sim_.resp_.headers["Content-Type"] = "text/html; charset=utf-8";
 	sim_.resp_.content = "";
 	*this << "<!DOCTYPE html>\n"
@@ -36,19 +36,17 @@ SIM::Template::Template(SIM& sim, const std::string& title, const std::string& s
 				"<div class=\"navbar\">\n"
 					"<div class=\"navbar-body\">\n"
 						"<a href=\"/\" class=\"brand\">SIM</a>\n"
-						"<a href=\"/round\">Contests</a>\n"
-						"<a href=\"/files/\">Files</a>\n"
-						"<a href=\"/submissions/\">Submissions</a>\n"
+						"<a href=\"/c/\">Contests</a>\n"
 						"<div style=\"float:right\">\n"
 							"<span id=\"clock\">" << date("%H:%M:%S") << "</span>";
 	if (sim_.session->open() == Session::OK) {
 		try {
-			UniquePtr<sql::PreparedStatement> pstmt = sim_.db_conn_->mysql()
-					->prepareStatement("SELECT username FROM `users` WHERE id=?");
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
+					->prepareStatement("SELECT username FROM `users` WHERE id=?"));
 			pstmt->setString(1, sim_.session->user_id);
 			pstmt->execute();
 
-			UniquePtr<sql::ResultSet> res = pstmt->getResultSet();
+			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 
 			if (res->next()) {
 				*this << "<div class=\"dropdown\">\n"
@@ -64,7 +62,7 @@ SIM::Template::Template(SIM& sim, const std::string& title, const std::string& s
 			}
 		} catch (...) {
 			sim_.session->destroy();
-			E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+			E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 		}
 	} else {
 	else_label:
