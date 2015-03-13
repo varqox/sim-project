@@ -19,19 +19,21 @@ void SIM::login() {
 		// Check if all fields exist
 		if ((username = form.find("username")) != form.end() &&
 				(password = form.find("password")) != form.end()) {
-			UniquePtr<sql::PreparedStatement> pstmt = db_conn_->mysql()
-					->prepareStatement("SELECT id FROM `users` WHERE username=? AND password=?");
-			pstmt->setString(1, username->second);
-			pstmt->setString(2, sha256(password->second));
-			pstmt->execute();
+			try {
+				UniquePtr<sql::PreparedStatement> pstmt(db_conn()
+						->prepareStatement("SELECT id FROM `users` WHERE username=? AND password=?"));
+				pstmt->setString(1, username->second);
+				pstmt->setString(2, sha256(password->second));
+				pstmt->execute();
 
-			UniquePtr<sql::ResultSet> res = pstmt->getResultSet();
+				UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 
-			if (res->next()) {
-				session->create(res->getString(1));
-				resp_.status_code = "302 Moved Temporarily";
-				resp_.headers["Location"] = "/";
-				return;
+				if (res->next()) {
+					session->create(res->getString(1));
+					return redirect("/");
+				}
+			} catch(...) {
+				E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 			}
 		}
 	}
@@ -39,11 +41,15 @@ void SIM::login() {
 	templ << "<div class=\"form-container\">\n"
 				"<h1>Log in</h1>\n"
 				"<form method=\"post\">\n"
-					"<label>Username</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"username\"/>\n"
-					"<label>Password</label>\n"
-					"<input class=\"input-block\" type=\"password\" name=\"password\"/>\n"
-					"<input type=\"submit\" value=\"Log in\"/>\n"
+					"<div class=\"field-group\">\n"
+						"<label>Username</label>\n"
+						"<input class=\"input-block\" type=\"text\" name=\"username\">\n"
+					"<div class=\"field-group\">\n"
+					"</div>\n"
+						"<label>Password</label>\n"
+						"<input class=\"input-block\" type=\"password\" name=\"password\">\n"
+					"</div>\n"
+					"<input type=\"submit\" value=\"Log in\">\n"
 				"</form>\n"
 				"</div>\n";
 }
@@ -51,16 +57,12 @@ void SIM::login() {
 void SIM::logout() {
 	session->open();
 	session->destroy();
-	resp_.status_code = "302 Moved Temporarily";
-	resp_.headers["Location"] = "/login";
+	redirect("/login");
 }
 
 void SIM::signUp() {
-	if (session->open() == Session::OK) {
-		resp_.status_code = "302 Moved Temporarily";
-		resp_.headers["Location"] = "/";
-		return;
-	}
+	if (session->open() == Session::OK)
+		return redirect("/");
 
 	string info, username, first_name, last_name, email, password1, password2;
 	if (req_->method == server::HttpRequest::POST) {
@@ -68,7 +70,7 @@ void SIM::signUp() {
 		const std::map<string, string> &form = req_->form_data.other;
 		std::map<string, string>::const_iterator it;
 
-		// Check if all fields exist
+		// Validate all fields
 		if ((it = form.find("username")) == form.end() || it->second.empty())
 			info += "<p>Username cannot be blank</p>";
 		else
@@ -93,11 +95,11 @@ void SIM::signUp() {
 				(it = form.find("password2")) == form.end()) || (password2 = it->second, password1 != password2))
 			info += "<p>Passwords don't match</p>";
 
-		// If all field are ok
-		try {
-			if (info.empty()) {
-				UniquePtr<sql::PreparedStatement> pstmt = db_conn_->mysql()
-						->prepareStatement("INSERT IGNORE INTO `users` (username, first_name, last_name, email, password) VALUES(?, ?, ?, ?, ?)");
+		// If all fields are ok
+		if (info.empty())
+			try {
+				UniquePtr<sql::PreparedStatement> pstmt(db_conn()
+						->prepareStatement("INSERT IGNORE INTO `users` (username, first_name, last_name, email, password) VALUES(?, ?, ?, ?, ?)"));
 				pstmt->setString(1, username);
 				pstmt->setString(2, first_name);
 				pstmt->setString(3, last_name);
@@ -105,43 +107,56 @@ void SIM::signUp() {
 				pstmt->setString(5, sha256(password1));
 
 				if (pstmt->executeUpdate() == 1) {
-					pstmt.reset(db_conn_->mysql()->prepareStatement("SELECT id FROM `users` WHERE username=?"));
+					pstmt.reset(db_conn()->prepareStatement("SELECT id FROM `users` WHERE username=?"));
 
 					pstmt->setString(1, username);
 					pstmt->execute();
 
-					UniquePtr<sql::ResultSet> res = pstmt->getResultSet();
+					UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 
 					if (res->next()) {
 						session->create(res->getString(1));
-						resp_.status_code = "302 Moved Temporarily";
-						resp_.headers["Location"] = "/";
-						return;
+						return redirect("/");
 					}
 				} else
 					info += "<p>Username taken</p>";
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 			}
-		} catch (...) {
-			E("Catched exception: %s:%d\n", __FILE__, __LINE__);
-		}
 	}
 	Template templ(*this, "Register");
 	templ << info << "<div class=\"form-container\">\n"
 		"<h1>Register</h1>\n"
 		"<form method=\"post\">\n"
-			"<label>Username</label>\n"
-			"<input class=\"input-block\" type=\"text\" value=\"" << username << "\" name=\"username\"/>\n"
-			"<label>First name</label>\n"
-			"<input class=\"input-block\" type=\"text\" value=\"" << first_name << "\" name=\"first_name\"/>\n"
-			"<label>Last name</label>\n"
-			"<input class=\"input-block\" type=\"text\" value=\"" << last_name << "\" name=\"last_name\"/>\n"
-			"<label>Email</label>\n"
-			"<input class=\"input-block\" type=\"text\" value=\"" << email << "\" name=\"email\"/>\n"
-			"<label>Password</label>\n"
-			"<input class=\"input-block\" type=\"password\" name=\"password1\"/>\n"
-			"<label>Repeat password</label>\n"
-			"<input class=\"input-block\" type=\"password\" name=\"password2\"/>\n"
-			"<input type=\"submit\" value=\"Sign up\"/>\n"
+			"<div class=\"field-group\">\n"
+				"<label>Username</label>\n"
+				"<input class=\"input-block\" type=\"text\" name=\"username\" value=\""
+					<< htmlSpecialChars(username) << "\">\n"
+			"</div>\n"
+			"<div class=\"field-group\">\n"
+				"<label>First name</label>\n"
+				"<input class=\"input-block\" type=\"text\" name=\"first_name\" value=\""
+					<< htmlSpecialChars(first_name) << "\">\n"
+			"</div>\n"
+			"<div class=\"field-group\">\n"
+				"<label>Last name</label>\n"
+				"<input class=\"input-block\" type=\"text\" name=\"last_name\" value=\""
+					<< htmlSpecialChars(last_name) << "\">\n"
+			"</div>\n"
+			"<div class=\"field-group\">\n"
+				"<label>Email</label>\n"
+				"<input class=\"input-block\" type=\"text\" name=\"email\" value=\""
+					<< htmlSpecialChars(email) << "\">\n"
+			"</div>\n"
+			"<div class=\"field-group\">\n"
+				"<label>Password</label>\n"
+				"<input class=\"input-block\" type=\"password\" name=\"password1\">\n"
+			"</div>\n"
+			"<div class=\"field-group\">\n"
+				"<label>Repeat password</label>\n"
+				"<input class=\"input-block\" type=\"password\" name=\"password2\">\n"
+			"</div>\n"
+			"<input type=\"submit\" value=\"Sign up\">\n"
 		"</form>\n"
 		"</div>\n";
 }

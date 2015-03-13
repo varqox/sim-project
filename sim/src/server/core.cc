@@ -40,10 +40,10 @@ static void* worker(void*) {
 		if (conn.state() == Connection::OK)
 			conn.sendResponse(sim_worker.handle(ip, req));
 
-		printf("Closing...");
+		eprintf("Closing...");
 		fflush(stdout);
 		close(client_socket_fd);
-		printf(" done.\n");
+		eprintf(" done.\n");
 	}
 	return NULL;
 }

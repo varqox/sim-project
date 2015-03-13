@@ -64,20 +64,22 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 	E("%s\n", req.target.c_str());
 
 	try {
-		if (isPrefix(req.target, "/kit"))
+		if (0 == compareTo(req.target, 1, '/', "kit"))
 			getStaticFile();
-		else if (isPrefix(req.target, "/login"))
+		else if (0 == compareTo(req.target, 1, '/', "login"))
 			login();
-		else if (isPrefix(req.target, "/logout"))
+		else if (0 == compareTo(req.target, 1, '/', "logout"))
 			logout();
-		else if (isPrefix(req.target, "/signup"))
+		else if (0 == compareTo(req.target, 1, '/', "signup"))
 			signUp();
-		else if (req.target.size() == 1 || req.target[1] == '?')
+		else if (0 == compareTo(req.target, 1, '/', "c"))
+			contest();
+		else if (0 == compareTo(req.target, 1, '/', ""))
 			mainPage();
 		else
 			error404();
 	} catch (...) {
-		E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 		error500();
 	}
 	// Make sure that session is closed
@@ -88,9 +90,9 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 void SIM::mainPage() {
 	Template templ(*this, "Main page");
 	templ << "<div style=\"text-align: center\">\n"
-				"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" alt=\"\"/>\n"
+				"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" alt=\"\">\n"
 				"<p style=\"font-size: 30px\">Welcome to SIM</p>\n"
-				"<hr/>\n"
+				"<hr>\n"
 				"<p>SIM is open source platform for carrying out algorithmic contests</p>\n"
 			"</div>\n";
 }
@@ -99,10 +101,6 @@ void SIM::getStaticFile() {
 	string file = "public";
 	file += abspath(decodeURI(req_->target, 1, req_->target.find('?'))); // Extract path ignoring query
 	E("%s\n", file.c_str());
-
-	// If file doesn't exist
-	if (access(file.c_str(), F_OK) == -1)
-		return error404();
 
 	resp_.content_type = server::HttpResponse::FILE;
 
@@ -124,4 +122,9 @@ void SIM::getStaticFile() {
 		}
 	}
 	resp_.content = file;
+}
+
+void SIM::redirect(const string& location) {
+	resp_.status_code = "302 Moved Temporarily";
+	resp_.headers["Location"] = location;
 }

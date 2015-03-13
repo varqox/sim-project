@@ -32,6 +32,10 @@ private:
 
 	void getStaticFile();
 
+	DB::Connection& db_conn() const { return *db_conn_; }
+
+	void redirect(const std::string& location);
+
 	// sim_user.cc
 	void login();
 
@@ -40,17 +44,11 @@ private:
 	void signUp();
 
 	// sim_contest.cc
+	friend class Contest;
+
 	void contest();
 
-	void problems();
-
-	void submit();
-
 	void submission();
-
-	void submissions();
-
-	void rank();
 
 public:
 	SIM();

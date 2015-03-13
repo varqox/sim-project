@@ -10,25 +10,25 @@
 using std::string;
 
 SIM::Session::State SIM::Session::open() {
-	if (state_ == OK)
-		return OK;
+	if (state_ != CLOSED)
+		return state_;
 
-	state_ = CLOSED;
+	state_ = FAIL;
 
 	id_ = sim_.req_->getCookie("session");
 	// Cookie doesn't exist (or have no value)
 	if (id_.empty())
-		return CLOSED;
+		return FAIL;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt = sim_.db_conn_->mysql()
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
 				->prepareStatement(
-				"SELECT user_id,data,ip,user_agent FROM `session` WHERE id=? AND time>=?");
+				"SELECT user_id,data,ip,user_agent FROM `session` WHERE id=? AND time>=?"));
 		pstmt->setString(1, id_);
 		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S", time(NULL) - SESSION_MAX_LIFETIME));
 		pstmt->execute();
 
-		UniquePtr<sql::ResultSet> res = pstmt->getResultSet();
+		UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 		if (res->next()) {
 			user_id = res->getString(1);
 			data = res->getString(2);
@@ -39,11 +39,11 @@ SIM::Session::State SIM::Session::open() {
 				return (state_ = OK);
 		}
 	} catch (...) {
-		E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
-	return CLOSED;
+	return FAIL;
 }
 
 static string generate_id() {
@@ -57,11 +57,11 @@ static string generate_id() {
 SIM::Session::State SIM::Session::create(const string& _user_id) {
 	close();
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt = sim_.db_conn_->mysql()
-				->prepareStatement("INSERT INTO `session` (id,user_id,ip,user_agent,time) VALUES(?,?,?,?,?)");
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
+				->prepareStatement("INSERT INTO `session` (id,user_id,ip,user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions
-		UniquePtr<sql::Statement>(sim_.db_conn_->mysql()->createStatement())
+		UniquePtr<sql::Statement>(sim_.db_conn()->createStatement())
 				->executeUpdate(string("DELETE FROM `session` WHERE time<'")
 					.append(date("%Y-%m-%d %H:%M:%S'",
 						time(NULL) - SESSION_MAX_LIFETIME)));
@@ -80,43 +80,45 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 				continue;
 			}
 		}
+
 		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME, "", "", true);
-		return (state_ = OK);
+		state_ = OK;
 	} catch (...) {
-		E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+		state_ = FAIL;
 	}
-	return CLOSED;
+	return state_;
 }
 
 void SIM::Session::destroy() {
-	if (state_ == CLOSED)
+	if (state_ != OK)
 		return;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt = sim_.db_conn_->mysql()
-				->prepareStatement("DELETE FROM `session` WHERE id=?");
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
+				->prepareStatement("DELETE FROM `session` WHERE id=?"));
 		pstmt->setString(1, id_);
 		pstmt->executeUpdate();
 
 		sim_.resp_.setCookie("session", "", 0); // Delete cookie
 	} catch (...) {
-		E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 	}
 	state_ = CLOSED;
 }
 
 void SIM::Session::close() {
-	if (state_ == CLOSED)
-		return;
-	try {
-		UniquePtr<sql::PreparedStatement> pstmt = sim_.db_conn_->mysql()
-				->prepareStatement("UPDATE `session` SET data=?, time=? WHERE id=?");
-		pstmt->setString(1, data);
-		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
-		pstmt->setString(3, id_);
-		pstmt->executeUpdate();
-	} catch (...) {
-		E("Catched exception: %s:%d\n", __FILE__, __LINE__);
+	if (state_ == OK) {
+		try {
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
+					->prepareStatement("UPDATE `session` SET data=?, time=? WHERE id=?"));
+			pstmt->setString(1, data);
+			pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
+			pstmt->setString(3, id_);
+			pstmt->executeUpdate();
+		} catch (...) {
+			E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+		}
 	}
 	state_ = CLOSED;
 }

@@ -15,6 +15,7 @@ setup_install: setup_install.cpp lib/libsim.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn
 
 lib/libsim.a: lib
+	@
 
 .PHONY: clean
 clean:

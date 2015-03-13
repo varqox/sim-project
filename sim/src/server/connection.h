@@ -71,6 +71,8 @@ public:
 	}
 
 	void error400();
+	void error403();
+	void error404();
 	void error408();
 	void error413();
 	void error415();

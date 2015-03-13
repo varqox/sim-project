@@ -44,6 +44,35 @@ size_t strtosize_t(const string& s) {
 	return res;
 }
 
+int strtosize_t(size_t& x, const string& s, size_t beg, size_t end) {
+	if (end > s.size())
+		end = s.size();
+	if (beg > end)
+		beg = end;
+
+	x = 0;
+	for (size_t i = beg; i < end; ++i) {
+		if (isdigit(s[i]))
+			x = x * 10 + s[i] - '0';
+		else
+			return -1;
+	}
+	return end - beg;
+}
+
+int strtonum(string& x, const string& s, size_t beg, size_t end) {
+	if (end > s.size())
+		end = s.size();
+	if (beg > end)
+		beg = end;
+
+	for (size_t i = beg; i < end; ++i)
+		if (!isdigit(s[i]))
+			return -1;
+	s.substr(beg, end - beg).swap(x);
+	return end - beg;
+}
+
 size_t find(const string& str, char c, size_t beg, size_t end) {
 	if (end > str.size())
 		end = str.size();
@@ -118,4 +147,18 @@ string abspath(const string& path, size_t beg, size_t end, string root) {
 		beg = next_slash;
 	}
 	return root;
+}
+
+string htmlSpecialChars(const string& s) {
+	string res;
+	for (size_t i = 0; i < s.size(); ++i)
+		switch (s[i]) {
+			case '&': res += "&amp;";
+			case '"': res += "&quot;";
+			case '\'': res += "&apos;";
+			case '<': res += "&lt;";
+			case '>': res += "&gt;";
+			default: res += s[i];
+		}
+	return res;
 }

@@ -6,6 +6,7 @@ window.onload = function updateClock()
 	var currentHours = currentTime.getHours ( );
 	var currentMinutes = currentTime.getMinutes ( );
 	var currentSeconds = currentTime.getSeconds ( );
+	currentHours = ( currentHours < 10 ? "0" : "" ) + currentHours;
 	currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
 	currentSeconds = ( currentSeconds < 10 ? "0" : "" ) + currentSeconds;
 	// Compose the string for display
