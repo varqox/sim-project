@@ -53,9 +53,9 @@ std::string decodeURI(const std::string& str, size_t beg = 0, size_t end = std::
 
 std::string tolower(std::string str);
 
-inline int hextodec(char c) {
+inline int hextodec(int c) {
 	c = tolower(c);
-	return (c > 'a' ? 10 + c - 'a' : c - '0');
+	return (c >= 'a' ? 10 + c - 'a' : c - '0');
 }
 
 inline char dectohex(int x) { return x > 9 ? 'A' + x - 10 : x + '0'; }

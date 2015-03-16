@@ -29,7 +29,13 @@ void SIM::login() {
 				UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 
 				if (res->next()) {
+					// Delete old sessions
+					session->open();
+					session->destroy();
+					// Create new
 					session->create(res->getString(1));
+					if (req_->target.size() > 6)
+						return redirect(req_->target.substr(6));
 					return redirect("/");
 				}
 			} catch(...) {
@@ -41,10 +47,12 @@ void SIM::login() {
 	templ << "<div class=\"form-container\">\n"
 				"<h1>Log in</h1>\n"
 				"<form method=\"post\">\n"
+					// Username
 					"<div class=\"field-group\">\n"
 						"<label>Username</label>\n"
 						"<input class=\"input-block\" type=\"text\" name=\"username\">\n"
 					"<div class=\"field-group\">\n"
+					// Password
 					"</div>\n"
 						"<label>Password</label>\n"
 						"<input class=\"input-block\" type=\"password\" name=\"password\">\n"
@@ -128,30 +136,36 @@ void SIM::signUp() {
 	templ << info << "<div class=\"form-container\">\n"
 		"<h1>Register</h1>\n"
 		"<form method=\"post\">\n"
+			// Username
 			"<div class=\"field-group\">\n"
 				"<label>Username</label>\n"
 				"<input class=\"input-block\" type=\"text\" name=\"username\" value=\""
 					<< htmlSpecialChars(username) << "\">\n"
 			"</div>\n"
+			// First Name
 			"<div class=\"field-group\">\n"
 				"<label>First name</label>\n"
 				"<input class=\"input-block\" type=\"text\" name=\"first_name\" value=\""
 					<< htmlSpecialChars(first_name) << "\">\n"
 			"</div>\n"
+			// Last name
 			"<div class=\"field-group\">\n"
 				"<label>Last name</label>\n"
 				"<input class=\"input-block\" type=\"text\" name=\"last_name\" value=\""
 					<< htmlSpecialChars(last_name) << "\">\n"
 			"</div>\n"
+			// Email
 			"<div class=\"field-group\">\n"
 				"<label>Email</label>\n"
-				"<input class=\"input-block\" type=\"text\" name=\"email\" value=\""
+				"<input class=\"input-block\" type=\"email\" name=\"email\" value=\""
 					<< htmlSpecialChars(email) << "\">\n"
 			"</div>\n"
+			// Password
 			"<div class=\"field-group\">\n"
 				"<label>Password</label>\n"
 				"<input class=\"input-block\" type=\"password\" name=\"password1\">\n"
 			"</div>\n"
+			// Repeat password
 			"<div class=\"field-group\">\n"
 				"<label>Repeat password</label>\n"
 				"<input class=\"input-block\" type=\"password\" name=\"password2\">\n"

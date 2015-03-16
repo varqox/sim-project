@@ -16,6 +16,20 @@ struct Round {
 	string id, parent, problem_id, access, name, owner, visible, begins, ends, full_results;
 };
 
+struct StringOrNull {
+	bool is_null;
+	string str;
+
+	StringOrNull(bool nulled = true) : is_null(nulled), str() {}
+
+	void setNull() { is_null = true; }
+
+	void setString(string s) {
+		is_null = false;
+		s.swap(str);
+	}
+};
+
 enum RoundType { CONTEST, ROUND, PROBLEM };
 
 class RoundPath {
@@ -88,7 +102,6 @@ private:
 void SIM::contest() {
 	size_t arg_beg = 3;
 
-
 	if (0 == compareTo(req_->target, arg_beg, '/', "add"))
 		return Contest::addContest(*this);
 
@@ -99,12 +112,14 @@ void SIM::contest() {
 			UniquePtr<sql::PreparedStatement> pstmt(db_conn()
 					->prepareStatement(session->open() != Session::OK ?
 						("SELECT id, name FROM rounds WHERE parent IS NULL AND access='public' ORDER BY id")
-						: ("(SELECT id, name FROM rounds WHERE parent IS NULL AND access='public')"
+						: ("(SELECT id, name FROM rounds WHERE parent IS NULL AND (access='public' OR owner=?))"
 						" UNION "
 						"(SELECT id, name FROM rounds, users_to_rounds WHERE user_id=? AND round_id=id)"
 						"ORDER BY id")));
-			if (session->open() == Session::OK)
+			if (session->open() == Session::OK) {
 				pstmt->setString(1, session->user_id);
+				pstmt->setString(2, session->user_id);
+			}
 			pstmt->execute();
 
 			// List them
@@ -210,11 +225,13 @@ void Contest::addContest(SIM& sim) {
 	templ << info << "<div class=\"form-container\">\n"
 			"<h1>Add contest</h1>\n"
 			"<form method=\"post\">\n"
+				// Name
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"name\" value=\""
+					"<input class=\"input-block\" type=\"text\" name=\"name\" maxlength=\"128\" value=\""
 						<< htmlSpecialChars(name) << "\">\n"
 				"</div>\n"
+				// Public
 				"<div class=\"field-group\">\n"
 					"<label>Public</label>\n"
 					"<input type=\"checkbox\" name=\"public\""
@@ -229,9 +246,143 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 	if (!rp.admin_access)
 		return sim.error403();
 
+	const std::map<string, string> &form = sim.req_->form_data.other;
+	std::map<string, string>::const_iterator it;
+
+	string info, name;
+	bool is_visible = false;
+	StringOrNull begins, full_results, ends;
+
+	if (sim.req_->method == server::HttpRequest::POST) {
+		// Validate all fields
+		if ((it = form.find("name")) == form.end() || it->second.empty())
+			info += "<p>Round name cannot be blank</p>";
+		else
+			name = it->second;
+
+		is_visible = form.count("visible");
+
+		if (rp.type == CONTEST) {
+			begins.is_null = form.count("begins_null");
+			ends.is_null = form.count("ends_null");
+			full_results.is_null = form.count("full_results_null");
+
+			if (!begins.is_null) {
+				if ((it = form.find("begins")) == form.end() || !is_datetime(it->second))
+					info += "<p>Begins: invalid value</p>";
+				begins.str = (it == form.end() ? "" : it->second);
+			}
+
+			if (!ends.is_null) {
+				if ((it = form.find("ends")) == form.end() || !is_datetime(it->second))
+					info += "<p>Ends: invalid value</p>";
+				ends.str = (it == form.end() ? "" : it->second);
+			}
+
+			if (!full_results.is_null) {
+				if ((it = form.find("full_results")) == form.end() || !is_datetime(it->second))
+					info += "<p>Full_results: invalid value</p>";
+				full_results.str = (it == form.end() ? "" : it->second);
+			}
+			std::cerr << begins.str << std::endl;
+		}
+
+		// If all fields are ok
+		if (info.empty())
+			try {
+				UniquePtr<sql::PreparedStatement> pstmt;
+
+				if (rp.type == CONTEST) {
+					pstmt.reset(sim.db_conn()->prepareStatement(
+							"INSERT INTO rounds (parent, name, owner, item, visible, begins, ends, full_results) "
+							"SELECT ?, ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds WHERE parent=?"));
+					pstmt->setString(1, rp.round_id);
+					pstmt->setString(2, name);
+					pstmt->setString(3, sim.session->user_id);
+					pstmt->setBoolean(4, is_visible);
+					// Begins
+					if (begins.is_null)
+						pstmt->setNull(5, 0);
+					else
+						pstmt->setString(5, begins.str);
+					// endss
+					if (ends.is_null)
+						pstmt->setNull(6, 0);
+					else
+						pstmt->setString(6, ends.str);
+					// Full_results
+					if (full_results.is_null)
+						pstmt->setNull(7, 0);
+					else
+						pstmt->setString(7, full_results.str);
+
+					pstmt->setString(8, rp.round_id);
+				}
+
+				if (pstmt->executeUpdate() == 1) {
+					UniquePtr<sql::Statement> stmt(sim.db_conn()->createStatement());
+					UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
+					if (res->next())
+						sim.redirect("/c/" + res->getString(1));
+				}
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+			}
+	}
+
 	TemplateWithMenu templ(sim, "Add round", rp.round_id, rp.admin_access);
-	printRoundPath(templ, rp, "add");
-	templ << "<h1>Add round</h1>\n";
+	printRoundPath(templ, rp, "");
+	if (rp.type == CONTEST) {
+		templ << info << "<div class=\"form-container\">\n"
+			"<h1>Add round</h1>\n"
+			"<form method=\"post\">\n"
+				// Name
+				"<div class=\"field-group\">\n"
+					"<label>Contest name</label>\n"
+					"<input class=\"input-block\" type=\"text\" name=\"name\""
+						"maxlength=\"128\" value=\""
+						<< name << "\">\n"
+				"</div>\n"
+				// Visible
+				"<div class=\"field-group\">\n"
+					"<label>Visible</label>\n"
+					"<input type=\"checkbox\" name=\"visible\""
+						<< (is_visible ? " checked" : "") << ">\n"
+				"</div>\n"
+				// Begins
+				"<div class=\"field-group\">\n"
+					"<label>Begins</label>\n"
+					"<input class=\"input-block\" type=\"text\" name=\"begins\""
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
+						<< begins.str << "\">\n"
+					"<label>Null: </label>\n"
+					"<input type=\"checkbox\" name=\"begins_null\""
+						<< (begins.is_null ? " checked" : "") << ">\n"
+				"</div>\n"
+				// Ends
+				"<div class=\"field-group\">\n"
+					"<label>Ends</label>\n"
+					"<input class=\"input-block\" type=\"text\" name=\"ends\""
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
+						<< ends.str << "\">\n"
+					"<label>Null: </label>\n"
+					"<input type=\"checkbox\" name=\"ends_null\""
+						<< (ends.is_null ? " checked" : "") << ">\n"
+				"</div>\n"
+				// Full_results
+				"<div class=\"field-group\">\n"
+					"<label>Full_results</label>\n"
+					"<input class=\"input-block\" type=\"text\" name=\"full_results\""
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
+						<< full_results.str << "\">\n"
+					"<label>Null: </label>\n"
+					"<input type=\"checkbox\" name=\"full_results_null\""
+						<< (full_results.is_null ? " checked" : "") << ">\n"
+				"</div>\n"
+				"<input type=\"submit\" value=\"Save\">\n"
+			"</form>\n"
+		"</div>\n";
+	}
 }
 
 void Contest::editRound(SIM& sim, const RoundPath& rp) {
@@ -393,7 +544,7 @@ bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 			if (res->rowsCount() == 2) {
-				int owner_type, user_type;
+				int owner_type = 0, user_type = 4;
 				for (int i = 0; i < 2; ++i) {
 					res->next();
 					if (res->getString(1) == rp.contest->owner)
@@ -459,12 +610,12 @@ struct Problem {
 	string id, parent, name;
 };
 
-struct Comparator {
+/*struct Comparator {
 	// Compare string like numbers
 	bool operator()(const string& a, const string& b) const {
 		return a.size() == b.size() ? a < b : a.size() < b.size();
 	}
-};
+};*/
 
 void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 		const RoundPath& rp, bool link_to_problem_statement, bool admin_view) {
@@ -504,129 +655,95 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 			pstmt->execute();
 
 			res.reset(pstmt->getResultSet());
-			std::map<string, vector<Problem>, Comparator> problems; // (item, problems)
-			{
-				std::map<string, vector<Problem>& > problems_ref; // (round_id, problems)
-				// Fill with all subrounds
-				for (size_t i = 0; i < subrounds.size(); ++i)
-					problems_ref.insert(
-						std::pair<string, vector<Problem>&>(subrounds[i].id,
-							problems[subrounds[i].item]));
 
-				// Colect results
-				while (res->next()) {
-					// Get reference to proper vector<Problem>
-					__typeof(problems_ref.begin()) it =
-							problems_ref.find(res->getString(2));
-					if (it == problems_ref.end()) // Problem parent isn't visible or database error
-						continue; // Ignore
-					vector<Problem>& prob = it->second;
-
-					prob.push_back(Problem());
-					prob.back().id = res->getString(1);
-					prob.back().parent = res->getString(2);
-					prob.back().name = res->getString(3);
-				}
-			}
-			size_t longest_column_size = 0;
-			// Get longest_column_size
-			for (__typeof(problems.begin()) i = problems.begin(); i != problems.end(); ++i)
-				if (i->second.size() > longest_column_size)
-					longest_column_size = i->second.size();
-
-			// Construct table
-			templ << "<table class=\"round-view\">\n"
-				"<thead>\n"
-				"<tr>\n"
-					"<th colspan=\"" << myto_string(subrounds.size())
-					<< "\"><a href=\"/c/" << rp.contest->id << "\"" << ">"
-					<< htmlSpecialChars(rp.contest->name) << "</a></th>\n"
-				"</tr>\n"
-				"<tr>\n";
-			// Head
+			std::map<string, vector<Problem> > problems; // (round_id, problems)
+			// Fill with all subrounds
 			for (size_t i = 0; i < subrounds.size(); ++i)
-				templ << "<th><a href=\"/c/" << subrounds[i].id << "\">"
-					<< htmlSpecialChars(subrounds[i].name) << "</a></th>\n";
-			templ << "</tr>\n"
-				"</thead>\n"
-				"<tbody>\n";
-			// Body
-			for (size_t i = 0; i < longest_column_size; ++i) {
-				templ << "<tr>\n";
-				// For each left column
-				bool do_left_border = false;
-				for (__typeof(problems.begin()) it = problems.begin(); it != problems.end(); ++it) {
-					if (it->second.size() <= i) {
-						templ << "<td class=\"blank";
-						if (do_left_border)
-							templ << " with-left-border";
-						templ << "\"></td>\n";
-						do_left_border = false;
-						continue;
-					}
-					do_left_border = true;
-					templ << "<td><a href=\"/c/" << it->second[i].id;
+				problems[subrounds[i].id];
+			// Colect results
+			while (res->next()) {
+				// Get reference to proper vector<Problem>
+				__typeof(problems.begin()) it =
+						problems.find(res->getString(2));
+				if (it == problems.end()) // Problem parent isn't visible or database error
+					continue; // Ignore
+				vector<Problem>& prob = it->second;
+
+				prob.push_back(Problem());
+				prob.back().id = res->getString(1);
+				prob.back().parent = res->getString(2);
+				prob.back().name = res->getString(3);
+			}
+			// Construct "table"
+			templ << "<div class=\"round-view\">\n"
+				"<a href=\"/c/" << rp.contest->id << "\"" << ">"
+					<< htmlSpecialChars(rp.contest->name) << "</a>\n"
+				"<div>\n";
+			// For each subround list all problems
+			for (size_t i = 0; i < subrounds.size(); ++i) {
+				// Round
+				templ << "<div>\n"
+					"<a href=\"/c/" << subrounds[i].id << "\">"
+					<< htmlSpecialChars(subrounds[i].name) << "</a>\n";
+				// List problems
+				vector<Problem>& prob = problems[subrounds[i].id];
+				for (size_t j = 0; j < prob.size(); ++j) {
+					templ << "<a href=\"/c/" << prob[j].id;
 					if (link_to_problem_statement)
 						templ << "/statement";
-					templ << "\">" << htmlSpecialChars(it->second[i].name)
-						<< "</a></td>\n";
+					templ << "\">" << htmlSpecialChars(prob[j].name)
+						<< "</a>\n";
 				}
-				templ << "</tr>\n";
+				templ << "</div>\n";
 			}
-			templ << "</tbody>\n"
-				"</table>\n";
+			templ << "</div>\n"
+				"</div>\n";
 		} else if (rp.type == ROUND) {
-			// Construct table
-			templ << "<table class=\"round-view\">\n"
-				"<thead>\n"
-				"<tr>\n"
-				"<th><a href=\"/c/" << rp.contest->id << "\">"
-					<< htmlSpecialChars(rp.contest->name) << "</a></th>\n"
-				"</tr>\n"
-				"<tr>\n"
-				"<th><a href=\"/c/" << rp.round->id << "\">"
-					<< htmlSpecialChars(rp.round->name) << "</a></th>\n"
-				"</tr>\n"
-				"</thead>\n"
-				"<tbody>\n";
+			// Construct "table"
+			templ << "<div class=\"round-view\">\n"
+				"<a href=\"/c/" << rp.contest->id << "\"" << ">"
+					<< htmlSpecialChars(rp.contest->name) << "</a>\n"
+				"<div>\n";
+			// Round
+			templ << "<div>\n"
+				"<a href=\"/c/" << rp.round->id << "\">"
+					<< htmlSpecialChars(rp.round->name) << "</a>\n";
+
+			// Select problems
 			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 					->prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
 			pstmt->setString(1, rp.round->id);
 			pstmt->execute();
 
+			// List problems
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 			while (res->next()) {
-				templ << "<tr>\n"
-						"<td><a href=\"/c/" << res->getString(1);
+				templ << "<a href=\"/c/" << res->getString(1);
 				if (link_to_problem_statement)
 					templ << "/statement";
-				templ << "\">" << htmlSpecialChars(res->getString(2)) << "</a></td>\n"
-					"</tr>\n";
+				templ << "\">" << htmlSpecialChars(res->getString(2))
+					<< "</a>\n";
 			}
-			templ << "</tbody>\n"
-				"</table>\n";
+			templ << "</div>\n"
+				"</div>\n"
+				"</div>\n";
 		} else { // rp.type == PROBLEM
-			// Construct table
-			templ << "<table class=\"round-view\">\n"
-				"<thead>\n"
-					"<tr>\n"
-						"<th><a href=\"/c/" << rp.contest->id << "\">"
-						<< htmlSpecialChars(rp.contest->name) << "</a></th>\n"
-					"</tr>\n"
-					"<tr>\n"
-						"<th><a href=\"/c/" << rp.round->id << "\">"
-						<< htmlSpecialChars(rp.round->name) << "</a></th>\n"
-					"</tr>\n"
-				"</thead>\n"
-				"<tbody>\n"
-				"<tr>\n"
-					"<td><a href=\"/c/" << rp.problem->id;
+			// Construct "table"
+			templ << "<div class=\"round-view\">\n"
+				"<a href=\"/c/" << rp.contest->id << "\"" << ">"
+					<< htmlSpecialChars(rp.contest->name) << "</a>\n"
+				"<div>\n";
+			// Round
+			templ << "<div>\n"
+				"<a href=\"/c/" << rp.round->id << "\">"
+					<< htmlSpecialChars(rp.round->name) << "</a>\n"
+				"<a href=\"/c/" << rp.problem->id;
 			if (link_to_problem_statement)
 				templ << "/statement";
-			templ << "\">" << htmlSpecialChars(rp.problem->name) << "</a></td>\n"
-					"</tr>\n"
-				"</tbody>\n"
-				"</table>\n";
+			templ << "\">" << htmlSpecialChars(rp.problem->name) << "</a>\n"
+					"</div>\n"
+				"</div>\n"
+				"</div>\n";
 		}
 	} catch(...) {
 		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
