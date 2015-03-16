@@ -81,7 +81,7 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 			}
 		}
 
-		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME, "", "", true);
+		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME, "/", "", true);
 		state_ = OK;
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);

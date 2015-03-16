@@ -549,6 +549,9 @@ a:hover
 }
 .body{
 	margin: 50px 0 15px;
+	display: flex;
+	-webkit-flex-direction: column;
+	flex-direction: column;
 }
 #clock{
 	float: left;
@@ -726,53 +729,54 @@ a:hover
 .contests li{
 	list-style: none;
 }
-.round-view{
-	margin: 0 auto;
+
+.round-view {
+	margin: auto;
+	display: flex;
+	-webkit-flex-direction: column;
+	flex-direction: column;
 }
-.round-view td a{
+.round-view > :first-child {
+	margin-bottom: -1px;
+	-webkit-border-radius: 4px 4px 0 0;
+	border-radius: 4px 4px 0 0;
+}
+.round-view > div {
+	display: flex;
+}
+.round-view > div > div {
+	display: flex;
+	-webkit-flex-direction: column;
+	flex-direction: column;
+	padding: 0;
+	margin: 0;
+}
+.round-view > div > div:not(:first-child) {
+	margin-left: -1px;
+}
+.round-view > div > div > a, .round-view > :first-child {
+	border: 1px solid #a2a2a2;
+	border-top: 0px;
+	min-width: 100px;
 	padding: 5px;
+	text-align: center;
+	display: block;
 }
-.round-view th a{
+.round-view > div > div > a:first-child, .round-view > :first-child {
+	border: 1px solid #a2a2a2;
+	border-bottom: 2px solid #a2a2a2;
+}
+.round-view > div > div > a:first-child, .round-view > :first-child {
+	font-weight: bold;
 	padding: 7px;
 	line-height: 12px;
 }
-.round-view tr a{
-	display: block;
-}
-.round-view tr a:hover, .round-view tr a:focus{
+.round-view > div > div > a:hover,
+.round-view > div > div > a:focus,
+.round-view > :first-child:hover,
+.round-view > :first-child:focus {
 	text-decoration: none;
 	background: #eeeeee;
-}
-.round-view th, .round-view td{
-	border-left: 1px solid #a2a2a2;
-	border-bottom: 1px solid #a2a2a2;
-	min-width: 100px;
-	vertical-align: middle;
-	text-align: center;
-}
-.round-view .blank{
-	border: 0;
-}
-.round-view td.blank.with-left-border{
-	border-left: 1px solid #a2a2a2;
-}
-.round-view thead tr:last-child th{
-	border-bottom: 2px solid #a2a2a2;
-}
-.round-view thead tr:first-child th:first-child{
-	border-top: 1px solid #a2a2a2;
-	-webkit-border-top-left-radius: 4px;
-	-moz-border-top-left-radius: 4px;
-	border-top-left-radius: 4px;
-	-webkit-border-top-right-radius: 4px;
-	-moz-border-top-right-radius: 4px;
-	border-top-right-radius: 4px;
-}
-.round-view thead tr th:last-child{
-	border-right: 1px solid #a2a2a2;
-}
-.round-view tbody tr td:last-of-type:not(.blank){
-	border-right: 1px solid #a2a2a2;
 }
 
 /* Submission */

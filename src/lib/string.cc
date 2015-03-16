@@ -111,9 +111,10 @@ string decodeURI(const string& str, size_t beg, size_t end) {
 		end = str.size();
 	string ret;
 	for (; beg < end; ++beg) {
-		if (str[beg] == '%' && beg + 2 < end)
-			ret += static_cast<char>((hextodec(str[beg+1]) << 4) + hextodec(str[beg+2])), beg += 2;
-		else if (str[beg] == '+')
+		if (str[beg] == '%' && beg + 2 < end) {
+			ret += static_cast<char>((hextodec(str[beg+1]) << 4) + hextodec(str[beg+2]));
+			beg += 2;
+		} else if (str[beg] == '+')
 			ret += ' ';
 		else
 			ret += str[beg];
