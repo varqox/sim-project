@@ -3,9 +3,9 @@ window.onload = function updateClock()
 {
 	if(load<0) time_difference=Date.parse(Date())-(start_time += load=  window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart);
 	var currentTime = new Date(Date.parse(Date())-time_difference);
-	var currentHours = currentTime.getHours ( );
-	var currentMinutes = currentTime.getMinutes ( );
-	var currentSeconds = currentTime.getSeconds ( );
+	var currentHours = currentTime.getUTCHours ();
+	var currentMinutes = currentTime.getUTCMinutes ();
+	var currentSeconds = currentTime.getUTCSeconds ();
 	currentHours = ( currentHours < 10 ? "0" : "" ) + currentHours;
 	currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
 	currentSeconds = ( currentSeconds < 10 ? "0" : "" ) + currentSeconds;
@@ -28,7 +28,7 @@ $(document).ready(function(){
 		}
 	});
 	$(document).click(function(event){
-		if(!$(event.target).is('.open > a, .open > a *'))
+		if(!$(event.target).is('.open > a.user, .open > a.user *'))
 			$('.dropdown.open').removeClass('open');
 	});
 });
