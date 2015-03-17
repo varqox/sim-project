@@ -305,7 +305,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 						pstmt->setNull(5, 0);
 					else
 						pstmt->setString(5, begins.str);
-					// endss
+					// ends
 					if (ends.is_null)
 						pstmt->setNull(6, 0);
 					else

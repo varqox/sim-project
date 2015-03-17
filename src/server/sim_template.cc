@@ -34,11 +34,10 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 	*this << "</head>\n"
 			"<body>\n"
 				"<div class=\"navbar\">\n"
-					"<div class=\"navbar-body\">\n"
-						"<a href=\"/\" class=\"brand\">SIM</a>\n"
-						"<a href=\"/c/\">Contests</a>\n"
-						"<div style=\"float:right\">\n"
-							"<span id=\"clock\">" << date("%H:%M:%S") << "</span>";
+					"<a href=\"/\" class=\"brand\">SIM</a>\n"
+					"<a href=\"/c/\">Contests</a>\n"
+					"<div class=\"rightbar\">\n"
+						"<span id=\"clock\">" << date("%H:%M:%S") << "</span>";
 	if (sim_.session->open() == Session::OK) {
 		try {
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
@@ -53,7 +52,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 						"<a href=\"#\" class=\"user\"><strong>"
 					<< res->getString(1) << "</strong><b class=\"caret\"></b></a>\n"
 						"<ul>\n"
-						"<li><a href=\"/logout\">logout</a></li>\n"
+						"<a href=\"/logout\">logout</a>\n"
 						"</ul>\n"
 						"</div>";
 			} else {
@@ -70,7 +69,6 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 			"<a href=\"/signup\">Sign up</a>";
 	}
 	*this << "</div>\n"
-		"</div>\n"
 		"</div>\n"
 		"<div class=\"body\">\n";
 }
