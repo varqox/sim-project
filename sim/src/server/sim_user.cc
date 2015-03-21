@@ -9,12 +9,13 @@
 #include <cppconn/prepared_statement.h>
 
 using std::string;
+using std::map;
 
 void SIM::login() {
 	if (req_->method == server::HttpRequest::POST) {
 		// Try to login
-		const std::map<string, string> &form = req_->form_data.other;
-		std::map<string, string>::const_iterator username, password;
+		const map<string, string> &form = req_->form_data.other;
+		map<string, string>::const_iterator username, password;
 
 		// Check if all fields exist
 		if ((username = form.find("username")) != form.end() &&
@@ -50,12 +51,12 @@ void SIM::login() {
 					// Username
 					"<div class=\"field-group\">\n"
 						"<label>Username</label>\n"
-						"<input class=\"input-block\" type=\"text\" name=\"username\">\n"
-					"<div class=\"field-group\">\n"
-					// Password
+						"<input type=\"text\" name=\"username\">\n"
 					"</div>\n"
+					// Password
+					"<div class=\"field-group\">\n"
 						"<label>Password</label>\n"
-						"<input class=\"input-block\" type=\"password\" name=\"password\">\n"
+						"<input type=\"password\" name=\"password\">\n"
 					"</div>\n"
 					"<input type=\"submit\" value=\"Log in\">\n"
 				"</form>\n"
@@ -75,8 +76,8 @@ void SIM::signUp() {
 	string info, username, first_name, last_name, email, password1, password2;
 	if (req_->method == server::HttpRequest::POST) {
 		// Try to login
-		const std::map<string, string> &form = req_->form_data.other;
-		std::map<string, string>::const_iterator it;
+		const map<string, string> &form = req_->form_data.other;
+		map<string, string>::const_iterator it;
 
 		// Validate all fields
 		if ((it = form.find("username")) == form.end() || it->second.empty())
@@ -139,36 +140,36 @@ void SIM::signUp() {
 			// Username
 			"<div class=\"field-group\">\n"
 				"<label>Username</label>\n"
-				"<input class=\"input-block\" type=\"text\" name=\"username\" value=\""
+				"<input type=\"text\" name=\"username\" value=\""
 					<< htmlSpecialChars(username) << "\">\n"
 			"</div>\n"
 			// First Name
 			"<div class=\"field-group\">\n"
 				"<label>First name</label>\n"
-				"<input class=\"input-block\" type=\"text\" name=\"first_name\" value=\""
+				"<input type=\"text\" name=\"first_name\" value=\""
 					<< htmlSpecialChars(first_name) << "\">\n"
 			"</div>\n"
 			// Last name
 			"<div class=\"field-group\">\n"
 				"<label>Last name</label>\n"
-				"<input class=\"input-block\" type=\"text\" name=\"last_name\" value=\""
+				"<input type=\"text\" name=\"last_name\" value=\""
 					<< htmlSpecialChars(last_name) << "\">\n"
 			"</div>\n"
 			// Email
 			"<div class=\"field-group\">\n"
 				"<label>Email</label>\n"
-				"<input class=\"input-block\" type=\"email\" name=\"email\" value=\""
+				"<input type=\"email\" name=\"email\" value=\""
 					<< htmlSpecialChars(email) << "\">\n"
 			"</div>\n"
 			// Password
 			"<div class=\"field-group\">\n"
 				"<label>Password</label>\n"
-				"<input class=\"input-block\" type=\"password\" name=\"password1\">\n"
+				"<input type=\"password\" name=\"password1\">\n"
 			"</div>\n"
 			// Repeat password
 			"<div class=\"field-group\">\n"
 				"<label>Repeat password</label>\n"
-				"<input class=\"input-block\" type=\"password\" name=\"password2\">\n"
+				"<input type=\"password\" name=\"password2\">\n"
 			"</div>\n"
 			"<input type=\"submit\" value=\"Sign up\">\n"
 		"</form>\n"

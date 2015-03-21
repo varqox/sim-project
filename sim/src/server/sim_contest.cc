@@ -228,7 +228,7 @@ void Contest::addContest(SIM& sim) {
 				// Name
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"name\" maxlength=\"128\" value=\""
+					"<input type=\"text\" name=\"name\" maxlength=\"128\" value=\""
 						<< htmlSpecialChars(name) << "\">\n"
 				"</div>\n"
 				// Public
@@ -339,7 +339,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				// Name
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"name\""
+					"<input type=\"text\" name=\"name\""
 						"maxlength=\"128\" value=\""
 						<< name << "\">\n"
 				"</div>\n"
@@ -352,7 +352,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				// Begins
 				"<div class=\"field-group\">\n"
 					"<label>Begins</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"begins\""
+					"<input type=\"text\" name=\"begins\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
 						<< begins.str << "\">\n"
 					"<label>Null: </label>\n"
@@ -362,7 +362,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				// Ends
 				"<div class=\"field-group\">\n"
 					"<label>Ends</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"ends\""
+					"<input type=\"text\" name=\"ends\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
 						<< ends.str << "\">\n"
 					"<label>Null: </label>\n"
@@ -372,7 +372,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				// Full_results
 				"<div class=\"field-group\">\n"
 					"<label>Full_results</label>\n"
-					"<input class=\"input-block\" type=\"text\" name=\"full_results\""
+					"<input type=\"text\" name=\"full_results\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
 						<< full_results.str << "\">\n"
 					"<label>Null: </label>\n"

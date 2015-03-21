@@ -454,6 +454,7 @@ input[type="submit"]{
 	-webkit-border-radius: 3px;
 	-moz-border-radius: 3px;
 	border-radius: 3px;
+	align-self: center;
 }
 button:focus,
 html input[type="button"]:focus,
@@ -882,12 +883,14 @@ a:hover
 /* Forms */
 .form-container{
 	background: #fdfdfd;
-	width: 432px;
+	min-width: 430px;
 	margin: 70px auto 0;
 	border: 1px solid #dddddd;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
+	display: flex;
+	flex-flow: column nowrap;
 }
 .form-container h1{
 	font-size: 35px;
@@ -905,24 +908,24 @@ a:hover
 .form-container form{
 	margin-top: -20px;
 	padding: 20px;
+	display: flex;
+	flex-flow: column nowrap;
 }
 .form-container .field-group {
 	margin-bottom: 15px;
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: center;
+	min-height: 30px;
 }
-.form-container form .field-group label{
-	float: left;
-	width: 120px;
+.form-container form .field-group *{
+	margin-left: 10px;
+}
+.form-container form .field-group :first-child{
+	margin: 0 5px 0 0;
+	min-width: 120px;
 	text-align: right;
 	font-size: 14px;
-	margin: 5px 0;
-}
-.form-container form input{
-	display: block;
-	margin-left: 140px;
-	height: 30px;
-}
-.form-container form .input-block{
-	width: 250px;
 }
 .round{
 	margin-left: 70px;
