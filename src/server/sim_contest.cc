@@ -1,6 +1,7 @@
 #include "sim.h"
 #include "sim_template.h"
 #include "sim_session.h"
+#include "form_validator.h"
 
 #include "../include/debug.h"
 #include "../include/memory.h"
@@ -186,23 +187,18 @@ void Contest::addContest(SIM& sim) {
 			getUserRank(sim, sim.session->user_id) > 1)
 		return sim.error403();
 
-	const std::map<string, string> &form = sim.req_->form_data.other;
-	std::map<string, string>::const_iterator it;
-
-	string info, name;
+	FormValidator fv(sim.req_->form_data);
+	string name;
 	bool is_public = false;
 
 	if (sim.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
-		if ((it = form.find("name")) == form.end() || it->second.empty())
-			info += "<p>Contest name cannot be blank</p>";
-		else
-			name = it->second;
+		fv.validateNotBlank(name, "name", "Contest name", 128);
 
-		is_public = form.count("public");
+		is_public = fv.exist("public");
 
 		// If all fields are ok
-		if (info.empty())
+		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 						->prepareStatement("INSERT INTO rounds (access, name, owner, item) "
@@ -222,14 +218,14 @@ void Contest::addContest(SIM& sim) {
 	}
 
 	SIM::Template templ(sim, "Add contest", ".body{margin-left:30px}");
-	templ << info << "<div class=\"form-container\">\n"
+	templ << fv.errors() << "<div class=\"form-container\">\n"
 			"<h1>Add contest</h1>\n"
 			"<form method=\"post\">\n"
 				// Name
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
-					"<input type=\"text\" name=\"name\" maxlength=\"128\" value=\""
-						<< htmlSpecialChars(name) << "\">\n"
+					"<input type=\"text\" name=\"name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\">\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
@@ -246,49 +242,32 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 	if (!rp.admin_access)
 		return sim.error403();
 
-	const std::map<string, string> &form = sim.req_->form_data.other;
-	std::map<string, string>::const_iterator it;
-
-	string info, name;
+	FormValidator fv(sim.req_->form_data);
+	string name;
 	bool is_visible = false;
 	StringOrNull begins, full_results, ends;
 
 	if (sim.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
-		if ((it = form.find("name")) == form.end() || it->second.empty())
-			info += "<p>Round name cannot be blank</p>";
-		else
-			name = it->second;
+		fv.validateNotBlank(name, "name", "Round name", 128);
 
-		is_visible = form.count("visible");
+		is_visible = fv.exist("visible");
 
 		if (rp.type == CONTEST) {
-			begins.is_null = form.count("begins_null");
-			ends.is_null = form.count("ends_null");
-			full_results.is_null = form.count("full_results_null");
+			begins.is_null = fv.exist("begins_null");
+			ends.is_null = fv.exist("ends_null");
+			full_results.is_null = fv.exist("full_results_null");
 
-			if (!begins.is_null) {
-				if ((it = form.find("begins")) == form.end() || !is_datetime(it->second))
-					info += "<p>Begins: invalid value</p>";
-				begins.str = (it == form.end() ? "" : it->second);
-			}
-
-			if (!ends.is_null) {
-				if ((it = form.find("ends")) == form.end() || !is_datetime(it->second))
-					info += "<p>Ends: invalid value</p>";
-				ends.str = (it == form.end() ? "" : it->second);
-			}
-
-			if (!full_results.is_null) {
-				if ((it = form.find("full_results")) == form.end() || !is_datetime(it->second))
-					info += "<p>Full_results: invalid value</p>";
-				full_results.str = (it == form.end() ? "" : it->second);
-			}
-			std::cerr << begins.str << std::endl;
+			if (!begins.is_null)
+				fv.validateNotBlank(begins.str, "begins", "Ends", is_datetime, "Begins: invalid value");
+			if (!ends.is_null)
+				fv.validateNotBlank(ends.str, "ends", "Ends", is_datetime, "Ends: invalid value");
+			if (!full_results.is_null)
+				fv.validateNotBlank(full_results.str, "full_results", "Ends", is_datetime, "Full_results: invalid value");
 		}
 
 		// If all fields are ok
-		if (info.empty())
+		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt;
 
@@ -333,15 +312,14 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 	TemplateWithMenu templ(sim, "Add round", rp.round_id, rp.admin_access);
 	printRoundPath(templ, rp, "");
 	if (rp.type == CONTEST) {
-		templ << info << "<div class=\"form-container\">\n"
+		templ << fv.errors() << "<div class=\"form-container\">\n"
 			"<h1>Add round</h1>\n"
 			"<form method=\"post\">\n"
 				// Name
 				"<div class=\"field-group\">\n"
-					"<label>Contest name</label>\n"
-					"<input type=\"text\" name=\"name\""
-						"maxlength=\"128\" value=\""
-						<< name << "\">\n"
+					"<label>Round name</label>\n"
+					"<input type=\"text\" name=\"name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\">\n"
 				"</div>\n"
 				// Visible
 				"<div class=\"field-group\">\n"
@@ -353,8 +331,8 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				"<div class=\"field-group\">\n"
 					"<label>Begins</label>\n"
 					"<input type=\"text\" name=\"begins\""
-						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
-						<< begins.str << "\">\n"
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+						<< htmlSpecialChars(begins.str) << "\" size=\"19\" maxlength=\"19\">\n"
 					"<label>Null: </label>\n"
 					"<input type=\"checkbox\" name=\"begins_null\""
 						<< (begins.is_null ? " checked" : "") << ">\n"
@@ -363,8 +341,8 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				"<div class=\"field-group\">\n"
 					"<label>Ends</label>\n"
 					"<input type=\"text\" name=\"ends\""
-						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
-						<< ends.str << "\">\n"
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+						<< htmlSpecialChars(ends.str) << "\" size=\"19\" maxlength=\"19\">\n"
 					"<label>Null: </label>\n"
 					"<input type=\"checkbox\" name=\"ends_null\""
 						<< (ends.is_null ? " checked" : "") << ">\n"
@@ -373,8 +351,8 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				"<div class=\"field-group\">\n"
 					"<label>Full_results</label>\n"
 					"<input type=\"text\" name=\"full_results\""
-						"placeholder=\"yyyy-mm-dd HH:MM:SS\" maxlength=\"19\" value=\""
-						<< full_results.str << "\">\n"
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+						<< htmlSpecialChars(full_results.str) << "\" size=\"19\" maxlength=\"19\">\n"
 					"<label>Null: </label>\n"
 					"<input type=\"checkbox\" name=\"full_results_null\""
 						<< (full_results.is_null ? " checked" : "") << ">\n"

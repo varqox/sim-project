@@ -7,7 +7,7 @@ ifneq ($(MAKECMDGOALS), clean)
 -include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
-../sim-server: core.o connection.o http_request.o http_response.o
+../sim-server: core.o connection.o http_request.o http_response.o form_validator.o
 ../sim-server: sim_main.o sim_template.o sim_session.o
 ../sim-server: sim_errors.o sim_user.o sim_contest.o
 ../sim-server: ../lib/libsim.a
