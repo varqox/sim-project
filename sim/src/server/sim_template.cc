@@ -17,7 +17,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 			"<head>\n"
 				"<meta charset=\"utf-8\">\n"
 				"<title>"
-		<< title << "</title>\n"
+		<< htmlSpecialChars(title) << "</title>\n"
 				"<link rel=\"stylesheet\" href=\"/kit/styles.css\">\n"
 				"<script src=\"/kit/jquery.js\"></script>\n"
 				"<script src=\"/kit/scripts.js\"></script>\n"
@@ -50,7 +50,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 			if (res->next()) {
 				*this << "<div class=\"dropdown\">\n"
 						"<a href=\"#\" class=\"user\"><strong>"
-					<< res->getString(1) << "</strong><b class=\"caret\"></b></a>\n"
+					<< htmlSpecialChars(res->getString(1)) << "</strong><b class=\"caret\"></b></a>\n"
 						"<ul>\n"
 						"<a href=\"/logout\">logout</a>\n"
 						"</ul>\n"

@@ -1,6 +1,7 @@
 #include "sim.h"
 #include "sim_session.h"
 #include "sim_template.h"
+#include "form_validator.h"
 
 #include "../include/debug.h"
 #include "../include/memory.h"
@@ -51,12 +52,12 @@ void SIM::login() {
 					// Username
 					"<div class=\"field-group\">\n"
 						"<label>Username</label>\n"
-						"<input type=\"text\" name=\"username\">\n"
+						"<input type=\"text\" name=\"username\" size=\"24\" maxlength=\"30\">\n"
 					"</div>\n"
 					// Password
 					"<div class=\"field-group\">\n"
 						"<label>Password</label>\n"
-						"<input type=\"password\" name=\"password\">\n"
+						"<input type=\"password\" name=\"password\" size=\"24\">\n"
 					"</div>\n"
 					"<input type=\"submit\" value=\"Log in\">\n"
 				"</form>\n"
@@ -73,39 +74,25 @@ void SIM::signUp() {
 	if (session->open() == Session::OK)
 		return redirect("/");
 
-	string info, username, first_name, last_name, email, password1, password2;
+	FormValidator fv(req_->form_data);
+	string username, first_name, last_name, email, password1, password2;
 	if (req_->method == server::HttpRequest::POST) {
-		// Try to login
-		const map<string, string> &form = req_->form_data.other;
-		map<string, string>::const_iterator it;
-
 		// Validate all fields
-		if ((it = form.find("username")) == form.end() || it->second.empty())
-			info += "<p>Username cannot be blank</p>";
-		else
-			username = it->second;
+		fv.validateNotBlank(username, "username", "Username", 30);
 
-		if ((it = form.find("first_name")) == form.end() || it->second.empty())
-			info += "<p>First name cannot be blank</p>";
-		else
-			first_name = it->second;
+		fv.validateNotBlank(first_name, "first_name", "First Name");
 
-		if ((it = form.find("last_name")) == form.end() || it->second.empty())
-			info += "<p>Last name cannot be blank</p>";
-		else
-			last_name = it->second;
+		fv.validateNotBlank(last_name, "last_name", "Last Name", 60);
 
-		if ((it = form.find("email")) == form.end() || it->second.empty())
-			info += "<p>Email cannot be blank</p>";
-		else
-			email = it->second;
+		fv.validateNotBlank(email, "email", "Email", 60);
 
-		if ((it = form.find("password1")) == form.end() || (password1 = it->second,
-				(it = form.find("password2")) == form.end()) || (password2 = it->second, password1 != password2))
-			info += "<p>Passwords don't match</p>";
+		if (fv.validate(password1, "password1", "Password") &&
+				fv.validate(password2, "password2", "Password (repeat)") &&
+				password1 != password2)
+			fv.error("Passwords don't match");
 
 		// If all fields are ok
-		if (info.empty())
+		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(db_conn()
 						->prepareStatement("INSERT IGNORE INTO `users` (username, first_name, last_name, email, password) VALUES(?, ?, ?, ?, ?)"));
@@ -128,48 +115,48 @@ void SIM::signUp() {
 						return redirect("/");
 					}
 				} else
-					info += "<p>Username taken</p>";
+					fv.error("Username taken");
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 			}
 	}
 	Template templ(*this, "Register");
-	templ << info << "<div class=\"form-container\">\n"
+	templ << fv.errors() << "<div class=\"form-container\">\n"
 		"<h1>Register</h1>\n"
 		"<form method=\"post\">\n"
 			// Username
 			"<div class=\"field-group\">\n"
 				"<label>Username</label>\n"
 				"<input type=\"text\" name=\"username\" value=\""
-					<< htmlSpecialChars(username) << "\">\n"
+					<< htmlSpecialChars(username) << "\" size=\"24\" maxlength=\"30\">\n"
 			"</div>\n"
 			// First Name
 			"<div class=\"field-group\">\n"
 				"<label>First name</label>\n"
 				"<input type=\"text\" name=\"first_name\" value=\""
-					<< htmlSpecialChars(first_name) << "\">\n"
+					<< htmlSpecialChars(first_name) << "\" size=\"24\" maxlength=\"60\">\n"
 			"</div>\n"
 			// Last name
 			"<div class=\"field-group\">\n"
 				"<label>Last name</label>\n"
 				"<input type=\"text\" name=\"last_name\" value=\""
-					<< htmlSpecialChars(last_name) << "\">\n"
+					<< htmlSpecialChars(last_name) << "\" size=\"24\" maxlength=\"60\">\n"
 			"</div>\n"
 			// Email
 			"<div class=\"field-group\">\n"
 				"<label>Email</label>\n"
 				"<input type=\"email\" name=\"email\" value=\""
-					<< htmlSpecialChars(email) << "\">\n"
+					<< htmlSpecialChars(email) << "\" size=\"24\" maxlength=\"60\">\n"
 			"</div>\n"
 			// Password
 			"<div class=\"field-group\">\n"
 				"<label>Password</label>\n"
-				"<input type=\"password\" name=\"password1\">\n"
+				"<input type=\"password\" name=\"password1\" size=\"24\">\n"
 			"</div>\n"
-			// Repeat password
+			// Password (repeat)
 			"<div class=\"field-group\">\n"
-				"<label>Repeat password</label>\n"
-				"<input type=\"password\" name=\"password2\">\n"
+				"<label>password (repeat)</label>\n"
+				"<input type=\"password\" name=\"password2\" size=\"24\">\n"
 			"</div>\n"
 			"<input type=\"submit\" value=\"Sign up\">\n"
 		"</form>\n"
