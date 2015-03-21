@@ -1,4 +1,5 @@
 #include "../include/string.h"
+#include "../include/debug.h"
 
 #include <algorithm>
 
@@ -154,11 +155,11 @@ string htmlSpecialChars(const string& s) {
 	string res;
 	for (size_t i = 0; i < s.size(); ++i)
 		switch (s[i]) {
-			case '&': res += "&amp;";
-			case '"': res += "&quot;";
-			case '\'': res += "&apos;";
-			case '<': res += "&lt;";
-			case '>': res += "&gt;";
+			case '&': res += "&amp;"; break;
+			case '"': res += "&quot;"; break;
+			case '\'': res += "&apos;"; break;
+			case '<': res += "&lt;"; break;
+			case '>': res += "&gt;"; break;
 			default: res += s[i];
 		}
 	return res;
