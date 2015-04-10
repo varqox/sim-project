@@ -89,7 +89,7 @@ void SIM::signUp() {
 		if (fv.validate(password1, "password1", "Password") &&
 				fv.validate(password2, "password2", "Password (repeat)") &&
 				password1 != password2)
-			fv.error("Passwords don't match");
+			fv.addError("Passwords don't match");
 
 		// If all fields are ok
 		if (fv.noErrors())
@@ -115,7 +115,7 @@ void SIM::signUp() {
 						return redirect("/");
 					}
 				} else
-					fv.error("Username taken");
+					fv.addError("Username taken");
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
 			}

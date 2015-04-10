@@ -55,7 +55,7 @@ public:
 		return 0 != form_.other.count(name);
 	}
 
-	void error(const std::string& error) {
+	void addError(const std::string& error) {
 		errors_.append("<p>").append(htmlSpecialChars(error)).append("</p>\n");
 	}
 
