@@ -139,7 +139,7 @@ namespace runtime
 		if(r_val == 0) {
 			int checker_out = open((string(tmp_dir) + "checker_out").c_str(),  O_CREAT|O_RDWR|O_TRUNC, S_IRUSR | S_IWUSR);
 			if (checker_out == -1) {
-			error_chck_out:
+			 error_chck_out:
 				rt_stat->res_stat = RuntimeInfo::RES_EVF;
 				strcpy(rt_stat->comments, "Cannot open/create file: checker_out");
 

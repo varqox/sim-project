@@ -3,6 +3,7 @@
 #include "http_headers.h"
 
 namespace server {
+
 class HttpRequest {
 public:
 	enum Method { GET, POST, HEAD } method;
@@ -12,7 +13,7 @@ public:
 	class Form {
 	public:
 		// files: name (this from form) => tmp_filename
-		// other: name => value; if field is file, value = client filename
+		// other: name => value; for file: name => client_filename
 		std::map<std::string, std::string> files, other;
 
 		operator std::map<std::string, std::string>&() {
@@ -26,4 +27,5 @@ public:
 
 	std::string getCookie(const std::string& name) const;
 };
+
 } // namespace server

@@ -8,7 +8,8 @@ using std::string;
 namespace server {
 
 HttpRequest::Form::~Form() {
-	for (map<string, string>::iterator i = files.begin(); i != files.end(); ++i)
+	for (map<string, string>::iterator i = files.begin(), end = files.end();
+			i != end; ++i)
 		unlink(i->second.c_str());
 }
 
@@ -23,6 +24,7 @@ string HttpRequest::getCookie(const string& name) const {
 	for (size_t beg = 0; beg < cookie.size();) {
 		if (cookie[beg] == ' ' && beg + 1 < cookie.size())
 			++beg;
+
 		if (0 == cookie.compare(beg, name.size(), name) &&
 				beg + name.size() < cookie.size() &&
 				cookie[beg + name.size()] == '=') {
@@ -30,10 +32,12 @@ string HttpRequest::getCookie(const string& name) const {
 			size_t next = std::min(cookie.size(), find(cookie, ';', beg));
 			return cookie.substr(beg, next - beg);
 		}
+
 		beg = find(cookie, ';', beg);
 		if (beg < cookie.size())
 			++beg;
 	}
+
 	return "";
 }
 

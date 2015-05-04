@@ -204,7 +204,7 @@ ExitStat run(const string& exec, vector<string> args,
 	for (;;) {
 		// Into syscall
 		if (wait_for_syscall(&status)) {
-		exit_normaly:
+		 exit_normaly:
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
 			gettimeofday(&tend, NULL); // Get finish time

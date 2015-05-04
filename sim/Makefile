@@ -21,7 +21,7 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
 	$(UPDATE) src/public $(abspath $(DESTDIR))
 	$(UPDATE) src/judge_machine $(abspath $(DESTDIR)/judge/)
-	$(UPDATE) src/sim-server $(abspath $(DESTDIR))
+	$(UPDATE) src/sim-server src/conver $(abspath $(DESTDIR))
 
 	# Set database pass
 	@bash -c 'if [ ! -e $(abspath $(DESTDIR)/db.config) ]; then\
@@ -39,7 +39,7 @@ install: all
 	- useradd -M -r -s /usr/sbin/nologin sim
 	src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/db.config)
-	chmod 0755 $(abspath $(DESTDIR)/judge/CTH) $(abspath $(DESTDIR)/judge/judge_machine) $(abspath $(DESTDIR)/sim-server)
+	chmod +x $(abspath $(DESTDIR)/judge/CTH) $(abspath $(DESTDIR)/judge/judge_machine) $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver)
 	chown -R sim:sim $(abspath $(DESTDIR))
 
 	# Add judge_machine to /etc/sudoers

@@ -17,39 +17,23 @@ public:
 
 	// if valid returns true
 	bool validate(std::string& var, const std::string& name,
-			const std::string& name_to_print);
-
-	bool validate(std::string& var, const std::string& name,
-			const std::string& name_to_print, size_t max_size);
+			const std::string& name_to_print, size_t max_size = -1);
 
 	// validate field + check it by comp
 	template<class Checker>
 	bool validate(std::string& var, const std::string& name,
 			const std::string& name_to_print, Checker check,
-			const std::string& error);
-
-	template<class Checker>
-	bool validate(std::string& var, const std::string& name,
-			const std::string& name_to_print, Checker check, size_t max_size,
-			const std::string& error);
+			const std::string& error, size_t max_size = -1);
 
 	// Like validate but also validate not blank
 	bool validateNotBlank(std::string& var, const std::string& name,
-			const std::string& name_to_print);
-
-	bool validateNotBlank(std::string& var, const std::string& name,
-			const std::string& name_to_print, size_t max_size);
+			const std::string& name_to_print, size_t max_size = -1);
 
 	// validate field + check it by comp
 	template<class Checker>
 	bool validateNotBlank(std::string& var, const std::string& name,
 			const std::string& name_to_print, Checker check,
-			const std::string& error);
-
-	template<class Checker>
-	bool validateNotBlank(std::string& var, const std::string& name,
-			const std::string& name_to_print, Checker check, size_t max_size,
-			const std::string& error);
+			const std::string& error, size_t max_size = -1);
 
 	bool exist(const std::string& name) {
 		return 0 != form_.other.count(name);
@@ -58,6 +42,15 @@ public:
 	void addError(const std::string& error) {
 		errors_.append("<p>").append(htmlSpecialChars(error)).append("</p>\n");
 	}
+
+
+	std::string getFilePath(const std::string& name) {
+		const std::map<std::string, std::string>& form = form_.files;
+
+		__typeof(form.begin()) it = form.find(name);
+		return it == form.end() ? "" : it->second;
+	}
+
 
 	std::string errors() const { return errors_; }
 
@@ -68,47 +61,30 @@ public:
 template<class Checker>
 inline bool FormValidator::validate(std::string& var, const std::string& name,
 		const std::string& name_to_print, Checker check,
-		const std::string& error) {
-	if (validate(var, name, name_to_print)) {
-		if (check(var))
-			return true;
-		errors_.append("<p>").append(htmlSpecialChars(error))
-			.append("</p>\n");
-	}
-	return false;
-}
+		const std::string& error, size_t max_size) {
 
-template<class Checker>
-inline bool FormValidator::validate(std::string& var, const std::string& name,
-		const std::string& name_to_print, Checker check, size_t max_size,
-		const std::string& error) {
 	if (validate(var, name, name_to_print, max_size)) {
 		if (check(var))
 			return true;
-		errors_.append("<p>").append(htmlSpecialChars(error))
+
+		errors_.append("<p>").append(htmlSpecialChars(
+				error.empty() ? (name_to_print + " validation error") : error))
 			.append("</p>\n");
 	}
+
 	return false;
 }
 
 // Like validate but also validate not blank
 inline bool FormValidator::validateNotBlank(std::string& var, const std::string& name,
-		const std::string& name_to_print) {
-	if (validate(var, name, name_to_print) && var.empty()) {
-		errors_.append("<p>").append(name_to_print)
-			.append(" cannot be blank</p>\n");
-		return false;
-	}
-	return true;
-}
-
-inline bool FormValidator::validateNotBlank(std::string& var, const std::string& name,
 		const std::string& name_to_print, size_t max_size) {
+
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
 		errors_.append("<p>").append(name_to_print)
 			.append(" cannot be blank</p>\n");
 		return false;
 	}
+
 	return true;
 }
 
@@ -116,25 +92,16 @@ inline bool FormValidator::validateNotBlank(std::string& var, const std::string&
 template<class Checker>
 inline bool FormValidator::validateNotBlank(std::string& var, const std::string& name,
 		const std::string& name_to_print, Checker check,
-		const std::string& error) {
-	if (validateNotBlank(var, name, name_to_print)) {
-		if (check(var))
-			return true;
-		errors_.append("<p>").append(htmlSpecialChars(error))
-			.append("</p>\n");
-	}
-	return false;
-}
+		const std::string& error, size_t max_size) {
 
-template<class Checker>
-inline bool FormValidator::validateNotBlank(std::string& var, const std::string& name,
-		const std::string& name_to_print, Checker check, size_t max_size,
-		const std::string& error) {
 	if (validateNotBlank(var, name, name_to_print, max_size)) {
 		if (check(var))
 			return true;
-		errors_.append("<p>").append(htmlSpecialChars(error))
+
+		errors_.append("<p>").append(htmlSpecialChars(
+				error.empty() ? (name_to_print + " validation error") : error))
 			.append("</p>\n");
 	}
+
 	return false;
 }

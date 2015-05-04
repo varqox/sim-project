@@ -3,12 +3,12 @@
 #include "../include/debug.h"
 #include "../include/string.h"
 
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <poll.h>
 #include <cstdlib>
+#include <fcntl.h>
 #include <iostream>
+#include <poll.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 using std::string;
 using std::pair;
@@ -20,40 +20,49 @@ namespace server {
 int Connection::peek() {
 	if (state_ == CLOSED)
 		return -1;
+
 	if (pos_ >= buff_size_) {
 		// wait for data
 		pollfd pfd = {sock_fd_, POLLIN, 0};
 		E("peek(): polling... ");
+
 		if (poll(&pfd, 1, POLL_TIMEOUT) <= 0) {
 			E("peek(): No response\n");
 			error408();
 			return -1;
 		}
 		E("peek(): OK\n");
+
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
 		E("peek(): Reading completed; buff_size: %i\n", buff_size_);
+
 		if (buff_size_ <= 0) {
 			state_ = CLOSED;
 			return -1; // Failed
 		}
 	}
+
 	return buffer_[pos_];
 }
 
 string Connection::getHeaderLine() {
 	string line;
 	int c;
+
 	while ((c = getChar()) != -1) {
 		if (c == '\n' && *--line.end() == '\r') {
 			line.erase(--line.end());
 			break;
+
 		} else if (line.size() > MAX_HEADER_LENGTH) {
 			error431();
 			return "";
+
 		} else
 			line += c;
 	}
+
 	return (state_ == OK ? line : "");
 }
 
@@ -63,30 +72,32 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 		error400();
 		return pair<string, string>();
 	}
+
 	// Check for whitespace in field-name
 	end = header.find(' ');
 	if (end != string::npos && end < beg) {
 		error400();
 		return pair<string, string>();
 	}
+
 	string ret = header.substr(0, beg);
 	// Erase leading whitespace
 	end = header.size();
 	while (isspace(header[end - 1]))
 		--end;
+
 	// Erase trailing whitespace
 	while (++beg < header.size() && isspace(header[beg])) {}
+
 	return make_pair(ret, header.substr(beg, end - beg));
 }
 
 void Connection::readPOST(HttpRequest& req) {
-	size_t content_length = strtosize_t(req.headers["Content-Length"]);
-
+	size_t content_length = strtoull(req.headers["Content-Length"]);
 	int c = '\0';
 	string field_name, field_content;
 	bool is_name;
 	string &con_type = req.headers["Content-Type"];
-
 	LimitedReader reader(*this, content_length);
 
 	if (isPrefix(con_type, "text/plain")) {
@@ -94,12 +105,14 @@ void Connection::readPOST(HttpRequest& req) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
+
 			while ((c = reader.getChar()) != -1) {
 				if (c == '\r') {
 					if (peek() == '\n')
 						c = reader.getChar();
 					break;
 				}
+
 				if (is_name && c == '=')
 					is_name = false;
 				else if (is_name)
@@ -109,16 +122,20 @@ void Connection::readPOST(HttpRequest& req) {
 			}
 			if (state_ == CLOSED)
 				return;
+
 			req.form_data[field_name] = field_content;
 		}
+
 	} else if (isPrefix(con_type, "application/x-www-form-urlencoded")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
+
 			while ((c = reader.getChar()) != -1) {
 				if (c == '&')
 					break;
+
 				if (is_name && c == '=')
 					is_name = false;
 				else if (is_name)
@@ -128,27 +145,34 @@ void Connection::readPOST(HttpRequest& req) {
 			}
 			if (state_ == CLOSED)
 				return;
+
 			req.form_data[decodeURI(field_name)] = decodeURI(field_content);
 		}
+
 	} else if (isPrefix(con_type, "multipart/form-data")) {
 		size_t beg = con_type.find("boundary=");
 		if (beg == string::npos || beg + 9 >= con_type.size()) {
 			error400();
 			return;
 		}
-		string boundary = "\r\n--"; // this is always in request expect beginning
+
+		string boundary = "\r\n--"; // always is in request expect beginning
 		boundary += con_type.substr(beg + 9);
+
 		// Compute p array for KMP algorithm
 		int p[boundary.size()];
 		size_t k = 0;
 		p[0] = 0;
+
 		for (size_t i = 1; i < boundary.size(); ++i) {
 			while (k > 0 && boundary[k] != boundary[i])
 				k = p[k - 1];
+
 			if (boundary[k] == boundary[i])
 				++k;
 			p[i] = k;
 		}
+
 		// Search for boundary
 		int fd = -1;
 		FILE *tmp_file = NULL;
@@ -163,30 +187,38 @@ void Connection::readPOST(HttpRequest& req) {
 
 			if (boundary[k] == c)
 				++k;
-
 			// If we have found boundary
 			if (k == boundary.size()) {
 				if (first_boundary)
 					first_boundary = false;
+
 				else {
 					// Manage last field
 					if (fd == -1) {
-						// This was normal variable
-						// Guarantee that pos is >= 0
-						// +1 because we didn't append last character to boundary
-						field_content.erase((field_content.size() < boundary.size()
-								? 0 : field_content.size() - boundary.size() + 1));
+						/*
+						* This was normal variable
+						* Guarantee that pos is >= 0
+						* +1 because we did not append last character to
+						* boundary
+						*/
+						field_content.erase((field_content.size() <
+							boundary.size() ? 0 :
+								field_content.size() - boundary.size() + 1));
 						req.form_data[field_name] = field_content;
+
 					} else {
 						// We had file
 						fflush(tmp_file);
-
 						fseek(tmp_file, 0, SEEK_END);
 						size_t tmp_file_size = ftell(tmp_file);
-						// Guarantee that length is >= 0
-						// +1 because we didn't append last character to boundary
-						ftruncate(fileno(tmp_file), (tmp_file_size < boundary.size()
-								? 0 : tmp_file_size - boundary.size() + 1));
+						/*
+						* Guarantee that length is >= 0
+						* +1 because we did not append last character to
+						* boundary
+						*/
+						ftruncate(fileno(tmp_file),
+							(tmp_file_size < boundary.size() ? 0 :
+								tmp_file_size - boundary.size() + 1));
 
 						fclose(tmp_file);
 						fd = -1;
@@ -203,26 +235,31 @@ void Connection::readPOST(HttpRequest& req) {
 				// Headers
 				for (;;) {
 					field_content = ""; // In this case header
+
 					while ((c = reader.getChar()) != -1) {
 						// Found CRLF
 						if (c == '\n' && *--field_content.end() == '\r') {
 							field_content.erase(--field_content.end());
 							break;
+
 						} else if (field_content.size() > MAX_HEADER_LENGTH) {
 							error431();
 							goto safe_return;
+
 						} else
 							field_content += c;
 					}
-					if (state_ != OK) // Something wnt wrong
+
+					if (state_ != OK) // Something went wrong
 						goto safe_return;
+
 					if (field_content.empty()) // End of headers
 						break;
 
-					D(cerr << "header: '" << field_content << '\'' << endl;)
-
-					pair<string, string> header = parseHeaderline(field_content);
-					if (state_ != OK) // Something wnt wrong
+					E("header: '%s'\n", field_content.c_str());
+					pair<string, string> header =
+							parseHeaderline(field_content);
+					if (state_ != OK) // Something went wrong
 						goto safe_return;
 
 					if (tolower(header.first) == "content-disposition") {
@@ -234,27 +271,35 @@ void Connection::readPOST(HttpRequest& req) {
 						char tmp_filename[] = "/tmp/sim-server-tmp.XXXXXX";
 
 						// extract all variables from header content
-						while ((last = header.second.find(';', st)) != string::npos) {
+						while ((last = header.second.find(';', st)) !=
+								string::npos) {
 							while (isblank(header.second[st]))
 								++st;
-							var_name = var_val = "";
 
+							var_name = var_val = "";
 							// extract var_name
-							while (st < last && !isblank(header.second[st]) && header.second[st] != '=')
+							while (st < last && !isblank(header.second[st]) &&
+									header.second[st] != '=')
 								var_name += header.second[st++];
 
 							// extract var_val
 							if (header.second[st] == '=') {
+								// this is safe because last character always is
+								// ';'
 								++st;
-								// this is safe because lst characer is always ';'
+
 								if (header.second[st] == '"')
-									while (++st < last && header.second[st] != '"') {
+									while (++st < last &&
+											header.second[st] != '"') {
 										if (header.second[st] == '\\')
-											++st; // safe because last character is ';'
+											++st; // safe because last character
+												  // is ';'
 										var_val += header.second[st];
 									}
+
 								else
-									while (st < last && !isblank(header.second[st]))
+									while (st < last &&
+											!isblank(header.second[st]))
 										var_val += header.second[st++];
 							}
 							st = last + 1;
@@ -266,7 +311,10 @@ void Connection::readPOST(HttpRequest& req) {
 									error507();
 									goto safe_return;
 								}
-								field_content = var_val; // store client filename
+
+								// store client filename
+								field_content = var_val;
+
 							} else if (var_name == "name")
 								field_name = var_val;
 						}
@@ -275,24 +323,29 @@ void Connection::readPOST(HttpRequest& req) {
 						if (fd != -1) {
 							tmp_file = fdopen(fd, "w");
 							req.form_data.files[field_name] = tmp_filename;
-							req.form_data[field_name] = field_content; // field_name => client filename
+							// field_name => client filename
+							req.form_data[field_name] = field_content;
 						}
 					}
 				}
 				k = p[k - 1];
+
 			} else if (fd == -1) {
 				field_content += c;
 				if (field_content.size() > MAX_CONTENT_LENGTH) {
 					error413();
 					goto safe_return;
 				}
+
 			} else
 				putc(c, tmp_file);
 		}
-	safe_return:
+
+	 safe_return:
 		// Remove trash
 		if (fd != -1)
 			fclose(tmp_file);
+
 	} else
 		error415();
 }
@@ -474,14 +527,17 @@ HttpRequest Connection::getRequest() {
 	string request_line = getHeaderLine(), tmp;
 	while (state_ == OK && request_line.empty())
 		request_line = getHeaderLine();
+
 	if (state_ == CLOSED)
 		return req;
-	D(cerr << "\nREQUEST: " << request_line << endl;)
 
+	E("\nREQUEST: %s\n", request_line.c_str());
 	// Extract method
 	size_t beg = 0, end = 0;
+
 	while (end < request_line.size() && !isspace(request_line[end]))
 		++end;
+
 	if (request_line.compare(0, end, "GET") == 0)
 		req.method = HttpRequest::GET;
 	else if (request_line.compare(0, end, "POST") == 0)
@@ -499,6 +555,7 @@ HttpRequest Connection::getRequest() {
 	beg = end;
 	while (end < request_line.size() && !isspace(request_line[end]))
 		++end;
+
 	req.target = request_line.substr(beg, end - beg);
 	if (req.target.compare(0, 1, "/") != 0) {
 		error400();
@@ -511,6 +568,7 @@ HttpRequest Connection::getRequest() {
 	beg = end;
 	while (end < request_line.size() && !isspace(request_line[end]))
 		++end;
+
 	req.http_version = request_line.substr(beg, end - beg);
 	if (req.http_version.compare(0, 7, "HTTP/1.") != 0 ||
 		(req.http_version.compare(7, string::npos, "0") != 0 &&
@@ -522,15 +580,19 @@ HttpRequest Connection::getRequest() {
 	// Read headers
 	req.headers["Content-Length"] = "0";
 	string header;
-	D(cerr << "HEADERS: \n";)
+
+	E("HEADERS: \n");
 	while ((header = getHeaderLine()).size()) {
-		D(cerr << '\t' << header << endl;)
+		E("\t%s\n", header.c_str());
 		pair<string, string> hdr = parseHeaderline(header);
+
 		if (state_ == CLOSED)
 			return req;
+
 		req.headers[hdr.first] = hdr.second;
 	}
-	D(cerr << "\n";)
+	E("\n");
+
 	if (state_ == CLOSED)
 		return req;
 
@@ -540,7 +602,7 @@ HttpRequest Connection::getRequest() {
 		return req;
 	}
 
-	end = strtosize_t(req.headers["Content-Length"]);
+	end = strtoull(req.headers["Content-Length"]);
 	if (end > 0) {
 		if (end > MAX_CONTENT_LENGTH) {
 			error413();
@@ -554,33 +616,40 @@ HttpRequest Connection::getRequest() {
 		}
 
 		beg = -1;
-
 		while (++beg < end) {
 			int c = getChar();
+
 			if (c == -1) {
 				delete[] s;
 				return req;
 			}
+
 			s[beg] = c;
 		}
+
 		req.content = s;
 		delete[] s;
 	}
+
 	return req;
 }
 
 void Connection::send(const char* str, size_t len) {
 	if (state_ == CLOSED)
 		return;
+
 	size_t pos = 0;
 	ssize_t written;
+
 	while (pos < len) {
 		written = write(sock_fd_, str + pos, len - pos);
 		E("written: %zi\n", written);
+
 		if (written == -1) {
 			state_ = CLOSED;
 			break;
 		}
+
 		pos += written;
 	}
 }
@@ -590,28 +659,38 @@ void Connection::sendResponse(const HttpResponse& res) {
 	str.append(res.status_code).append("\r\n");
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
-	for (HttpHeaders::const_iterator i = res.headers.begin(); i != res.headers.end(); ++i) {
-		if (i->first == "server" || i->first == "connection" || i->first == "content-length")
+
+	for (HttpHeaders::const_iterator i = res.headers.begin(),
+			end = res.headers.end(); i != end; ++i) {
+		if (i->first == "server" || i->first == "connection" ||
+				i->first == "content-length")
 			continue;
+
 		str += i->first;
 		str += ": ";
 		str += i->second;
 		str += "\r\n";
 	}
-	for (HttpHeaders::const_iterator i = res.cookies.begin(); i != res.cookies.end(); ++i) {
+
+	for (HttpHeaders::const_iterator i = res.cookies.begin(),
+			end = res.cookies.end(); i != end; ++i) {
 		str += "Set-Cookie: ";
 		str += i->first;
 		str += "=";
 		str += i->second;
 		str += "\r\n";
 	}
-	if (res.content_type == HttpResponse::TEXT) {
+
+	switch (res.content_type) {
+	case HttpResponse::TEXT:
 		str += "Content-Length: ";
-		str += myto_string(res.content.size());
+		str += toString(res.content.size());
 		str += "\r\n\r\n";
 		str += res.content;
 		send(str);
-	} else { // content _type == FILE
+		break;
+
+	case HttpResponse::FILE:
 		int fd = open(res.content.c_str(), O_RDONLY);
 		if (fd == -1) {
 			error404();
@@ -619,21 +698,20 @@ void Connection::sendResponse(const HttpResponse& res) {
 		}
 
 		struct stat sb;
-
 		if (fstat(fd, &sb) == -1) {
 			error500();
 			return;
 		}
+
 		if (!S_ISREG(sb.st_mode)) {
 			error403();
 			return;
 		}
 
 		off_t fsize = sb.st_size;
-
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
-		str += myto_string((size_t)fsize);
+		str += toString((size_t)fsize);
 		str += "\r\n\r\n";
 
 		const size_t buff_length = 1 << 20;
@@ -642,6 +720,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 			error507();
 			return;
 		}
+
 		send(str);
 		if (state_ == CLOSED) {
 			delete[] buff;
@@ -651,7 +730,8 @@ void Connection::sendResponse(const HttpResponse& res) {
 		// Read from file and write to socket
 		off_t pos = 0;
 		ssize_t read_len;
-		while (pos < fsize && state_ == OK && (read_len = read(fd, buff, buff_length)) != -1) {
+		while (pos < fsize && state_ == OK &&
+				(read_len = read(fd, buff, buff_length)) != -1) {
 			send(buff, read_len);
 			pos += read_len;
 		}
@@ -659,6 +739,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		delete[] buff;
 		close(fd);
 	}
+
 	state_ = CLOSED;
 }
 

@@ -1,8 +1,8 @@
 #include "sim_session.h"
 
-#include "../include/random.h"
 #include "../include/debug.h"
 #include "../include/memory.h"
+#include "../include/random.h"
 #include "../include/time.h"
 
 #include <cppconn/prepared_statement.h>
@@ -38,8 +38,9 @@ SIM::Session::State SIM::Session::open() {
 					sim_.req_->headers.isEqualTo("User-Agent", res->getString(4)))
 				return (state_ = OK);
 		}
+
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -49,8 +50,10 @@ SIM::Session::State SIM::Session::open() {
 static string generate_id() {
 	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	string res(10, '0');
+
 	for (int i = 0; i < 10; ++i)
 		res[i] = t[getRandom(0, sizeof(t) - 1)];
+
 	return res;
 }
 
@@ -73,9 +76,11 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 		for (;;) {
 			id_ = generate_id();
 			pstmt->setString(1, id_);
+
 			try {
 				pstmt->executeUpdate();
 				break;
+
 			} catch (...) {
 				continue;
 			}
@@ -83,10 +88,12 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 
 		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME, "/", "", true);
 		state_ = OK;
+
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		state_ = FAIL;
 	}
+
 	return state_;
 }
 
@@ -101,9 +108,11 @@ void SIM::Session::destroy() {
 		pstmt->executeUpdate();
 
 		sim_.resp_.setCookie("session", "", 0); // Delete cookie
+
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
+
 	state_ = CLOSED;
 }
 
@@ -116,9 +125,11 @@ void SIM::Session::close() {
 			pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
 			pstmt->setString(3, id_);
 			pstmt->executeUpdate();
+
 		} catch (...) {
-			E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		}
 	}
+
 	state_ = CLOSED;
 }

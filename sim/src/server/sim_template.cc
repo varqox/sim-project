@@ -1,9 +1,9 @@
-#include "sim_template.h"
 #include "sim_session.h"
+#include "sim_template.h"
 
 #include "../include/debug.h"
-#include "../include/time.h"
 #include "../include/memory.h"
+#include "../include/time.h"
 
 #include <cppconn/prepared_statement.h>
 #include <cstring>
@@ -12,6 +12,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 	const std::string& styles, const std::string& scripts) : sim_(sim) {
 	sim_.resp_.headers["Content-Type"] = "text/html; charset=utf-8";
 	sim_.resp_.content = "";
+
 	*this << "<!DOCTYPE html>\n"
 		"<html lang=\"en\">\n"
 			"<head>\n"
@@ -22,7 +23,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 				"<script src=\"/kit/jquery.js\"></script>\n"
 				"<script src=\"/kit/scripts.js\"></script>\n"
 				"<script>var start_time="
-		<< myto_string(microtime()/1000) << ", load=-1, time_difference;</script>\n"
+		<< toString(microtime()/1000) << ", load=-1, time_difference;</script>\n"
 				"<link rel=\"shortcut icon\" href=\"/kit/img/favicon.png\">\n";
 
 	if (scripts.size())
@@ -38,6 +39,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 					"<a href=\"/c/\">Contests</a>\n"
 					"<div class=\"rightbar\">\n"
 						"<span id=\"clock\">" << date("%H:%M:%S") << "</span>";
+
 	if (sim_.session->open() == Session::OK) {
 		try {
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
@@ -46,7 +48,6 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 			pstmt->execute();
 
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
-
 			if (res->next()) {
 				*this << "<div class=\"dropdown\">\n"
 						"<a href=\"#\" class=\"user\"><strong>"
@@ -59,15 +60,18 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 				sim_.session->destroy();
 				goto else_label;
 			}
+
 		} catch (...) {
 			sim_.session->destroy();
-			E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		}
+
 	} else {
-	else_label:
+	 else_label:
 		*this << "<a href=\"/login\"><strong>Log in</strong></a>\n"
 			"<a href=\"/signup\">Sign up</a>";
 	}
+
 	*this << "</div>\n"
 		"</div>\n"
 		"<div class=\"body\">\n";

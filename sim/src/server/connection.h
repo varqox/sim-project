@@ -43,6 +43,7 @@ private:
 		int getChar() {
 			if (read_limit_ == 0)
 				return -1;
+
 			--read_limit_;
 			return conn_.getChar();
 		}
