@@ -151,7 +151,7 @@ static void parseOptions(int &argc, char **argv) {
 			}
 
 			// Generate out
-			if (0 == strcmp(argv[i], "-g") ||
+			else if (0 == strcmp(argv[i], "-g") ||
 					0 == strcmp(argv[i], "--gen-out") ||
 					0 == strcmp(argv[i], "--generate-out"))
 				GEN_OUT = true;
