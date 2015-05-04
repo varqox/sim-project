@@ -29,6 +29,12 @@ public:
 		ref.insert(ref.end(), x);
 		return *this;
 	}
+
+	template<class A>
+	Appender& operator << (const A& x) {
+		ref.insert(ref.end(), x);
+		return *this;
+	}
 };
 
 template<>
@@ -41,6 +47,12 @@ public:
 
 	template<class A>
 	Appender& operator()(const A& x) {
+		ref += x;
+		return *this;
+	}
+
+	template<class A>
+	Appender& operator <<(const A& x) {
 		ref += x;
 		return *this;
 	}
