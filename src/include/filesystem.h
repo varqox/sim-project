@@ -304,11 +304,23 @@ inline std::string getFileContents(const std::string& file) {
 }
 
 const int GFBL_IGNORE_NEW_LINES = 1; // Do not append '\n' to each line
-std::vector<std::string> getFileByLines(const char* file, int flags = 0);
+/**
+ * @brief Get file contents by lines in range [first, last)
+ *
+ * @param file filename
+ * @param flags if set GFBL_IGNORE_NEW_LINES then '\n' is not appended to each
+ * line
+ * @param first number of first line to fetch
+ * @param last number of first line not to fetch
+ *
+ * @return vector<string> containing fetched lines
+ */
+std::vector<std::string> getFileByLines(const char* file, int flags = 0,
+	size_t first = 0, size_t last = -1);
 
 inline std::vector<std::string> getFileByLines(const std::string& file,
-		int flags = 0) {
-	return getFileByLines(file.c_str(), flags);
+		int flags = 0, size_t first = 0, size_t last = -1) {
+	return getFileByLines(file.c_str(), flags, first, last);
 }
 
 int putFileContents(const char* file, const char* data, size_t len = -1);

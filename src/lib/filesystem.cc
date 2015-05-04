@@ -436,19 +436,26 @@ string getFileContents(const char* file) {
 	return res;
 }
 
-vector<string> getFileByLines(const char* file, int flags) {
+vector<string> getFileByLines(const char* file, int flags, size_t first,
+		size_t last) {
 	vector<string> res;
+
 	FILE *f = fopen(file, "r");
 	if (f == NULL)
 		return res;
 
 	char *buff = NULL;
-	size_t n = 0;
+	size_t n = 0, line = 0;
 	ssize_t read;
+
 	while ((read = getline(&buff, &n, f)) != -1) {
 		if ((flags & GFBL_IGNORE_NEW_LINES) && buff[read - 1] == '\n')
 			buff[read - 1] = '\0';
-		res.push_back(buff);
+
+		if (line >= first && line < last)
+			res.push_back(buff);
+
+		++line;
 	}
 
 	fclose(f);

@@ -1,24 +1,25 @@
 #include "sim.h"
-#include "sim_template.h"
 #include "sim_session.h"
+#include "sim_template.h"
 
-#include "../include/string.h"
 #include "../include/debug.h"
+#include "../include/filesystem.h"
 #include "../include/time.h"
 
+#include <cerrno>
+#include <cstring>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <cstring>
 
 using std::string;
 
 SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
 		resp_(server::HttpResponse::TEXT), session(new Session(*this)) {
-	char *host, *user, *password, *database;
+	char *host = NULL, *user = NULL, *password = NULL, *database = NULL;
 
 	FILE *conf = fopen("db.config", "r");
 	if (conf == NULL) {
-		eprintf("Cannot open file: 'db.config'\n");
+		eprintf("Cannot open file: 'db.config' - %s\n", strerror(errno));
 		return;
 	}
 
@@ -31,6 +32,7 @@ SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
 		fclose(conf);
 		return;
 	}
+
 	fclose(conf);
 	user[strlen(user)-1] = password[strlen(password)-1] = '\0';
 	database[strlen(database)-1] = host[strlen(host)-1] = '\0';
@@ -38,6 +40,7 @@ SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
 	// Connect
 	try {
 		db_conn_ = new DB::Connection(host, user, password, database);
+
 	} catch (...) {
 		eprintf("Failed to connect to database\n");
 		db_conn_ = NULL;
@@ -66,22 +69,30 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 	try {
 		if (0 == compareTo(req.target, 1, '/', "kit"))
 			getStaticFile();
+
 		else if (0 == compareTo(req.target, 1, '/', "login"))
 			login();
+
 		else if (0 == compareTo(req.target, 1, '/', "logout"))
 			logout();
+
 		else if (0 == compareTo(req.target, 1, '/', "signup"))
 			signUp();
+
 		else if (0 == compareTo(req.target, 1, '/', "c"))
 			contest();
+
 		else if (0 == compareTo(req.target, 1, '/', ""))
 			mainPage();
+
 		else
 			error404();
+
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[0m\n", __FILE__, __LINE__);
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		error500();
 	}
+
 	// Make sure that session is closed
 	session->close();
 	return resp_;
@@ -99,10 +110,9 @@ void SIM::mainPage() {
 
 void SIM::getStaticFile() {
 	string file = "public";
-	file += abspath(decodeURI(req_->target, 1, req_->target.find('?'))); // Extract path ignoring query
+	// Extract path (ignore query)
+	file += abspath(decodeURI(req_->target, 1, req_->target.find('?')));
 	E("%s\n", file.c_str());
-
-	resp_.content_type = server::HttpResponse::FILE;
 
 	// Get file stat
 	struct stat attr;
@@ -121,7 +131,9 @@ void SIM::getStaticFile() {
 			return;
 		}
 	}
+
 	resp_.content = file;
+	resp_.content_type = server::HttpResponse::FILE;
 }
 
 void SIM::redirect(const string& location) {

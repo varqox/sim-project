@@ -696,22 +696,19 @@ a:hover
 	padding: 55px 10px 0;
 	border-right: 1px solid #ccc;
 	height: 100%;
-	width: 160px;
-	z-index: 1;
+	display: flex;
+	-webkit-flex-flow: column wrap;
+	flex-flow: column wrap;
 }
-.menu > li{
-	list-style: none;
-}
-.menu > li > a{
-	display: block;
+.menu > a{
 	padding: 7px 0 7px 5px;
 }
-.menu > li > a:focus, .menu > li > a:hover{
+.menu > a:focus, .menu > a:hover{
 	text-decoration: none;
 	background: #e7e7e7;
 }
-.menu > .separator{
-	display: block;
+.menu > span{
+	padding-right: 7px;
 	margin-top: 5px;
 	font-size: 12px;
 	color: #555555;
