@@ -20,8 +20,8 @@
 #if !defined (STD_SHA_256_INCLUDED)
 #define STD_SHA_256_INCLUDED
 
-#include <string>
 #include <stdint.h>
+#include <string>
 
 //=============================================================================
     class STD_SHA_256

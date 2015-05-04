@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdio>
+#include <sys/shm.h>
+#include <sys/stat.h>
+
 template<class T>
 class UniquePtr {
 private:
@@ -62,3 +66,32 @@ template<class A, class B>
 inline bool operator!=(const UniquePtr<A>& x, const UniquePtr<B>& y) {
 	return x.get() != y.get();
 }
+
+class SharedMemorySegment {
+private:
+	int id_;
+	void* addr_;
+	SharedMemorySegment(const SharedMemorySegment&);
+	SharedMemorySegment& operator=(const SharedMemorySegment&);
+
+public:
+	SharedMemorySegment(size_t size): id_(shmget(IPC_PRIVATE, size,
+				IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR)),
+			addr_(NULL) {
+
+		if (id_ != -1) {
+			if ((addr_ = shmat(id_, NULL, 0)) == (void*)-1)
+				addr_ = NULL;
+			shmctl(id_, IPC_RMID, NULL);
+		}
+	}
+
+	~SharedMemorySegment() {
+		if (addr_)
+			shmdt(addr_);
+	}
+
+	int key() const { return id_; }
+
+	void* addr() const { return addr_; }
+};
