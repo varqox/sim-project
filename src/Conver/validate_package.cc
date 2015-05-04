@@ -49,7 +49,8 @@ int validateConf(string package_path) {
 	if (f.size() < 3 || f[2].empty())
 		eprintf("Warning: conf.cfg: Missing statement\n");
 
-	else if (access(package_path + "doc/" + f[2], F_OK) == -1) {
+	else if (f[2].find('/') != string::npos ||
+			access(package_path + "doc/" + f[2], F_OK) == -1) {
 		eprintf("Error: conf.cfg: Invalid statement: 'doc/%s' - %s\n",
 			f[2].c_str(), strerror(errno));
 		return -1;
@@ -61,7 +62,8 @@ int validateConf(string package_path) {
 		return -1;
 	}
 
-	if (access(package_path + "check/" + f[3], F_OK) == -1) {
+	if (f[3].find('/') != string::npos ||
+			access(package_path + "check/" + f[3], F_OK) == -1) {
 		eprintf("Error: conf.cfg: Invalid checker: 'check/%s' - %s\n",
 			f[3].c_str(), strerror(errno));
 		return -1;
@@ -71,7 +73,8 @@ int validateConf(string package_path) {
 	if (f.size() < 5 || f[4].empty())
 		eprintf("Warning: conf.cfg: Missing solution\n");
 
-	else if (access(package_path + "prog/" + f[4], F_OK) == -1) {
+	else if (f[4].find('/') != string::npos ||
+			access(package_path + "prog/" + f[4], F_OK) == -1) {
 		eprintf("Error: conf.cfg: Invalid solution: 'prog/%s' - %s\n",
 			f[4].c_str(), strerror(errno));
 		return -1;
@@ -126,7 +129,8 @@ int validateConf(string package_path) {
 		}
 
 		// Test name
-		if (access((package_path + "tests/" + line[0] + ".in"), F_OK) == -1) {
+		if (line[0].find('/') != string::npos ||
+				access((package_path + "tests/" + line[0] + ".in"), F_OK) == -1) {
 			eprintf("Error: conf.cfg: Invalid test: '%s' - %s\n",
 				line[0].c_str(), strerror(errno));
 			return -1;
