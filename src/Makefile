@@ -19,7 +19,7 @@ lib/libsim.a: lib
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps chmod-default sim-server
+	$(Q)$(RM) *.o *.deps chmod-default sim-server setup_install
 	$(Q)$(MAKE) clean -C lib/
 	$(Q)$(MAKE) clean -C Conver/
 	$(Q)$(MAKE) clean -C CppToHTML/
