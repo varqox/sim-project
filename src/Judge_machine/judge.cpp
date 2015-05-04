@@ -10,7 +10,7 @@
 #include <sys/resource.h>
 #include <csignal>
 #include <cassert>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <linux/limits.h> // PATH_MAX
 #include "main.h"
@@ -93,7 +93,7 @@ namespace runtime
 
 		if((cpid = fork()) == 0)
 		{
-			// Set up enviroment
+			// Set up environment
 			freopen(rt_stat->in_file, "r", stdin);
 			freopen(rt_stat->ans_file, "w", stdout);
 			freopen("/dev/null", "w", stderr);
@@ -128,7 +128,7 @@ namespace runtime
 			r_val = WEXITSTATUS(r_val);
 		else if(WIFSIGNALED(r_val)) {
 			r_val = WTERMSIG(r_val) + 128;
-			strcpy(rt_stat->comments, ("Process exited due to signal " + myto_string(r_val - 128)).c_str());
+			strcpy(rt_stat->comments, ("Process exited due to signal " + toString(r_val - 128)).c_str());
 		}
 		else
 			// Shouldn't happen. Unknown status...
@@ -162,7 +162,7 @@ namespace runtime
 
 			if((cpid = fork()) == 0)
 			{
-				// Set up enviroment
+				// Set up environment
 				freopen("/dev/null", "r", stdin);
 				dup2(checker_out, STDOUT_FILENO); // Replace stdout with file
 				freopen("/dev/null", "w", stderr);
@@ -240,7 +240,7 @@ namespace runtime
 		} else {
 			rt_stat->res_stat = RuntimeInfo::RES_RTE;
 			if (strlen(rt_stat->comments) == 0) // No signal detected
-				strcpy(rt_stat->comments, ("Runtime error: exit code " + myto_string(rt_stat->res_stat)).c_str());
+				strcpy(rt_stat->comments, ("Runtime error: exit code " + toString(rt_stat->res_stat)).c_str());
 		}
 		rt_stat->time_limit = cl;
 		shmdt(rt_stat); // Detach shared memory segment
@@ -265,7 +265,7 @@ Problem::JudgeResult::Group Problem::check_on_test(const string& test, const str
 		min_group_ratio=0;
 
 		output.tests += "<td>0.00/";
-		string tmp = myto_string(time_limit_ll/10000);
+		string tmp = toString(time_limit_ll/10000);
 		if (tmp.size() < 3)
 			tmp.insert(0, 3-tmp.size(), '0');
 		tmp.insert(tmp.size()-2, 1, '.');
@@ -324,12 +324,12 @@ Problem::JudgeResult::Group Problem::check_on_test(const string& test, const str
 	}
 
 	output.tests += "<td>";
-	string tmp = myto_string(rt_stat->time_limit/10000);
+	string tmp = toString(rt_stat->time_limit/10000);
 	if (tmp.size() < 3)
 		tmp.insert(0, 3-tmp.size(), '0');
 	tmp.insert(tmp.size()-2, 1, '.');
 	output.tests += tmp + "/";
-	tmp = myto_string(time_limit_ll/10000);
+	tmp = toString(time_limit_ll/10000);
 	if (tmp.size() < 3)
 		tmp.insert(0, 3-tmp.size(), '0');
 	tmp.insert(tmp.size()-2, 1, '.');
@@ -401,9 +401,9 @@ Problem::JudgeResult Problem::judge(const string& exec_name)
 			if(runtime_res_stat != RuntimeInfo::RES_OK && group_score == 0)
 				status_ok = false;
 			if(group_score == 0)
-				result.initial.tests += "<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
+				result.initial.tests += "<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+toString(other_tests)+"\"":"")+">";
 			else
-				result.final.tests += "<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+myto_string(other_tests)+"\"":"")+">";
+				result.final.tests += "<td class=\"groupscore\""+string(other_tests>1 ? " rowspan=\""+toString(other_tests)+"\"":"")+">";
 			group_buffer = "";
 		}
 		else
@@ -424,10 +424,10 @@ Problem::JudgeResult Problem::judge(const string& exec_name)
 		{
 			total_score += group_score*min_group_ratio;
 			if (group_score == 0) {
-				result.initial.tests += myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td></tr>\n";
+				result.initial.tests += toString(group_score*min_group_ratio)+"/"+toString(group_score)+"</td></tr>\n";
 				result.initial.tests += group_buffer;
 			} else {
-				result.final.tests += myto_string(group_score*min_group_ratio)+"/"+myto_string(group_score)+"</td></tr>\n";
+				result.final.tests += toString(group_score*min_group_ratio)+"/"+toString(group_score)+"</td></tr>\n";
 				result.final.tests += group_buffer;
 			}
 		}

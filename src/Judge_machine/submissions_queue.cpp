@@ -23,14 +23,14 @@ std::ostream& operator<<(std::ostream& os, const submissions_queue::submission& 
 {return os << "(" << r.id() << ", " << r.problem_id() << ")";}
 )
 
-string myto_string(long long int a);
+string toString(long long int a);
 
 namespace submissions_queue
 {
 	void submission::set(submission_status st, long long points) const
 	{
 		sql::Statement *stmt = DB::mysql()->createStatement();
-		stmt->execute("UPDATE submissions SET status='"+to_str(st)+"',points="+myto_string(points)+" WHERE id="+_id);
+		stmt->execute("UPDATE submissions SET status='"+to_str(st)+"',points="+toString(points)+" WHERE id="+_id);
 		delete stmt;
 	}
 

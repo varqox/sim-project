@@ -25,7 +25,7 @@ int main()
 	sigaction(SIGFPE, &sa, NULL);
 
 	// Check if this process isn't oldest
-	if(system(("if test `pgrep -x -o judge_machine` = "+myto_string(getpid())+" ; then exit 0; else exit 1; fi").c_str()))
+	if(system(("if test `pgrep -x -o judge_machine` = "+toString(getpid())+" ; then exit 0; else exit 1; fi").c_str()))
 		return 1;
 
 	// Checking submissions
