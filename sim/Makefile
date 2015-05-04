@@ -20,7 +20,7 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
 	$(UPDATE) src/public $(abspath $(DESTDIR))
-	$(UPDATE) src/judge_machine src/CTH src/checkers/ $(abspath $(DESTDIR)/judge/)
+	$(UPDATE) src/judge_machine $(abspath $(DESTDIR)/judge/)
 	$(UPDATE) src/sim-server $(abspath $(DESTDIR))
 
 	# Set database pass
@@ -32,7 +32,7 @@ install: all
 			printf "$$mysql_username\n$$mysql_password\n$$db_name\n$$user_host\n" > $(abspath $(DESTDIR)/db.config);\
 		fi'
 
-	# Setup install
+	# Set up install
 	- src/setup_install $(abspath $(DESTDIR))
 
 	# Right owner, group and permission bits
@@ -42,7 +42,7 @@ install: all
 	chmod 0755 $(abspath $(DESTDIR)/judge/CTH) $(abspath $(DESTDIR)/judge/judge_machine) $(abspath $(DESTDIR)/sim-server)
 	chown -R sim:sim $(abspath $(DESTDIR))
 
-	# Add judge_machine to sudoers
+	# Add judge_machine to /etc/sudoers
 	@grep 'ALL ALL = (root) NOPASSWD: $(abspath $(DESTDIR)/judge/judge_machine)' /etc/sudoers > /dev/null; if test $$? != 0; then printf "ALL ALL = (root) NOPASSWD: %s\n" $(abspath $(DESTDIR)/judge/judge_machine) >> /etc/sudoers; fi
 	@printf "\033[;32mInstallation finished\033[0m\n"
 
