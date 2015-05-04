@@ -9,7 +9,7 @@ install:
   - sudo apt-get install -qq mysql-server mysql-client libmysqlcppconn-dev
 
 script:
-  - make -j
+  - make -kj
   - echo | sudo make install
   - (cd build && sudo -u sim ./sim-server)&
   - wget http://127.7.7.7:8080/

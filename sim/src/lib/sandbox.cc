@@ -174,8 +174,12 @@ ExitStat run(const string& exec, vector<string> args,
 
 	int status;
 	waitpid(cpid, &status, 0);
+#ifdef PTRACE_O_EXITKILL
 	ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD |
 		PTRACE_O_EXITKILL);
+#else
+	ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD);
+#endif
 
 	// Set up timer
 	// Set handler
