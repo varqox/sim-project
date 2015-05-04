@@ -1,8 +1,8 @@
-#include "include/debug.h"
-#include "include/sha.h"
 #include "include/db.h"
-#include "include/string.h"
+#include "include/debug.h"
+#include "include/filesystem.h"
 #include "include/memory.h"
+#include "include/sha.h"
 
 #include <cstring>
 
@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
 	E("db_config: '%s'\n", db_config.c_str());
 
 	FILE *conf = fopen(db_config.c_str(), "r");
+
 	if (conf == NULL) {
 		eprintf("Cannot open file: '%s'\n", db_config.c_str());
 		return 2;
@@ -31,13 +32,15 @@ int main(int argc, char *argv[]) {
 	// Get password
 	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
 	char *user = NULL, *password = NULL, *database = NULL, *host = NULL;
+
 	if (getline(&user, &x1, conf) == -1 || getline(&password, &x2, conf) == -1 ||
 			getline(&database, &x3, conf) == -1 ||
 			getline(&host, &x4, conf) == -1) {
-		eprintf("\e[31mFailed to get config\e[0m\n");
+		eprintf("\e[31mFailed to get config\e[m\n");
 		fclose(conf);
 		return 3;
 	}
+
 	fclose(conf);
 	user[strlen(user)-1] = password[strlen(password)-1] = '\0';
 	database[strlen(database)-1] = host[strlen(host)-1] = '\0';
@@ -70,8 +73,9 @@ int main(int argc, char *argv[]) {
 					->prepareStatement("INSERT IGNORE INTO users (username, password, type) VALUES ('sim', ?, 'admin')"));
 				pstmt->setString(1, sha256("sim"));
 				pstmt->executeUpdate();
+
 		} catch(...) {
-			eprintf("\e[31mFailed to create table `users`\e[0m\n");
+			eprintf("\e[31mFailed to create table `users`\e[m\n");
 			return 5;
 		}
 
@@ -87,8 +91,9 @@ int main(int argc, char *argv[]) {
 					"KEY (`user_id`),\n"
 					"KEY (`time`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n");
+
 		} catch(...) {
-			eprintf("\e[31mFailed to create table `session`\e[0m\n");
+			eprintf("\e[31mFailed to create table `session`\e[m\n");
 			return 5;
 		}
 
@@ -102,8 +107,9 @@ int main(int argc, char *argv[]) {
 					"PRIMARY KEY (`id`),\n"
 					"KEY (`owner`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+
 		} catch(...) {
-			eprintf("\e[31mFailed to create table `problems`\e[0m\n");
+			eprintf("\e[31mFailed to create table `problems`\e[m\n");
 			return 5;
 		}
 
@@ -128,8 +134,9 @@ int main(int argc, char *argv[]) {
 					"KEY (`grandparent`, `item`),\n"
 					"KEY (`owner`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+
 		} catch(...) {
-			eprintf("\e[31mFailed to create table `rounds`\e[0m\n");
+			eprintf("\e[31mFailed to create table `rounds`\e[m\n");
 			return 5;
 		}
 
@@ -140,13 +147,16 @@ int main(int argc, char *argv[]) {
 					"PRIMARY KEY (`user_id`, `round_id`),\n"
 					"KEY (`round_id`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+
 		} catch(...) {
-			eprintf("\e[31mFailed to create table `users_to_rounds`\e[0m\n");
+			eprintf("\e[31mFailed to create table `users_to_rounds`\e[m\n");
 			return 5;
 		}
+
 	} catch(...) {
-		eprintf("\e[31mFailed to connect to database\e[0m\n");
+		eprintf("\e[31mFailed to connect to database\e[m\n");
 		return 4;
 	}
+
 	return 0;
 }
