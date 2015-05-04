@@ -15,6 +15,9 @@
 # GNU Make dependences
 *.deps
 
+# Generated files
+src/Conver/default_checker_dump.c
+
 # Others
 build/
 src/judge_machine
