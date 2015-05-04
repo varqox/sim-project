@@ -15,7 +15,7 @@ int CompileClass::operator()(const std::string& source_file, const std::string& 
 	)
 	pid_t cpid;
 	if((cpid = fork()) == 0) {
-		// Set up enviroment
+		// Set up environment
 		freopen("/dev/null", "r", stdin);
 		freopen("/dev/null", "w", stdout);
 		freopen((string(tmp_dir) << "compile_errors").c_str(), "w", stderr);

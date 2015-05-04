@@ -12,6 +12,7 @@ Connection::Connection(const std::string& host, const std::string& user,
 void Connection::connect() {
 	if(conn_)
 		delete conn_;
+
 	conn_ = get_driver_instance()->connect(host_, user_, password_);
 	conn_->setSchema(database_);
 }

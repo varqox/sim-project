@@ -1,6 +1,7 @@
 #pragma once
 
 #include "STD_SHA_256.h"
+
 #include <string>
 
 namespace sha {
