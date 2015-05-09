@@ -186,6 +186,7 @@ ExitStat run(const string& exec, vector<string> args,
 	struct sigaction sa, sa_old;
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &handle_timeout;
+	sa.sa_flags = SA_RESTART;
 	sigaction(SIGALRM, &sa, &sa_old);
 
 	// Set timer
