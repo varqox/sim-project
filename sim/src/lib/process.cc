@@ -9,7 +9,10 @@
 using std::string;
 using std::vector;
 
-int spawn(const string& exec, const vector<string>& args) {
+const spawn_opts default_spawn_opts = { NULL, NULL, NULL };
+
+int spawn(const string& exec, const vector<string>& args,
+		const struct spawn_opts *opts) {
 	pid_t cpid = fork();
 	if (cpid == -1) {
 		eprintf("%s:%i: %s: Failed to fork() - %s\n", __FILE__, __LINE__,
@@ -25,6 +28,22 @@ int spawn(const string& exec, const vector<string>& args) {
 		for (size_t i = 0; i < len; ++i)
 			arg[i] = const_cast<char*>(args[i].c_str());
 
+		// Change stdin
+		if (opts->new_stdin) {
+			dup2(fileno(opts->new_stdin), STDIN_FILENO);
+			fclose(opts->new_stdin);
+		}
+		// Change stdout
+		if (opts->new_stdout) {
+			dup2(fileno(opts->new_stdout), STDOUT_FILENO);
+			fclose(opts->new_stdout);
+		}
+		// Change stderr
+		if (opts->new_stderr) {
+			dup2(fileno(opts->new_stderr), STDERR_FILENO);
+			fclose(opts->new_stderr);
+		}
+
 		execvp(exec.c_str(), arg);
 		_exit(-1);
 	}
@@ -34,7 +53,8 @@ int spawn(const string& exec, const vector<string>& args) {
 	return status;
 }
 
-int spawn(const string& exec, size_t argc, string *args) {
+int spawn(const string& exec, size_t argc, string *args,
+		const struct spawn_opts *opts) {
 	pid_t cpid = fork();
 	if (cpid == -1) {
 		eprintf("%s:%i: %s: Failed to fork() - %s\n", __FILE__, __LINE__,
@@ -48,6 +68,22 @@ int spawn(const string& exec, size_t argc, string *args) {
 
 		for (size_t i = 0; i < argc; ++i)
 			arg[i] = const_cast<char*>(args[i].c_str());
+
+		// Change stdin
+		if (opts->new_stdin) {
+			dup2(fileno(opts->new_stdin), STDIN_FILENO);
+			fclose(opts->new_stdin);
+		}
+		// Change stdout
+		if (opts->new_stdout) {
+			dup2(fileno(opts->new_stdout), STDOUT_FILENO);
+			fclose(opts->new_stdout);
+		}
+		// Change stderr
+		if (opts->new_stderr) {
+			dup2(fileno(opts->new_stderr), STDERR_FILENO);
+			fclose(opts->new_stderr);
+		}
 
 		execvp(exec.c_str(), arg);
 		_exit(-1);
