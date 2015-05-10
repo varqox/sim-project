@@ -28,10 +28,6 @@ static int compile(const string& in, const string& out) {
 	if (VERBOSE)
 		printf("Compiling: '%s' ", (in).c_str());
 
-	// Change stderr
-	int stderr_backup = dup(STDERR_FILENO);
-	dup2(fileno(cef), STDERR_FILENO);
-
 	// Run compiler
 	vector<string> args;
 	append(args)("g++")("-O2")("-static")("-lm")(in)("-o")(out);
@@ -49,11 +45,8 @@ static int compile(const string& in, const string& out) {
 		printf("')\n");
 	}
 
-	int compile_status = spawn(args[0], args);
-
-	// Change back stderr
-	dup2(stderr_backup, STDERR_FILENO);
-	close(stderr_backup);
+	spawn_opts sopts = { NULL, NULL, cef };
+	int compile_status = spawn(args[0], args, &sopts);
 
 	// Check for errors
 	if (compile_status != 0) {
