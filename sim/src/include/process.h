@@ -4,9 +4,9 @@
 #include <vector>
 
 struct spawn_opts {
-	FILE *new_stdin; // NULL - left value unchanged
-	FILE *new_stdout; // NULL - left value unchanged
-	FILE *new_stderr; // NULL - left value unchanged
+	FILE *new_stdin; // NULL - do not change
+	FILE *new_stdout; // NULL - do not change
+	FILE *new_stderr; // NULL - do not change
 };
 
 extern const spawn_opts default_spawn_opts; // { NULL, NULL, NULL }
