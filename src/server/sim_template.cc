@@ -50,7 +50,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
 			if (res->next()) {
 				*this << "<div class=\"dropdown\">\n"
-						"<a href=\"#\" class=\"user\"><strong>"
+						"<a class=\"user\"><strong>"
 					<< htmlSpecialChars(res->getString(1)) << "</strong><b class=\"caret\"></b></a>\n"
 						"<ul>\n"
 						"<a href=\"/logout\">logout</a>\n"

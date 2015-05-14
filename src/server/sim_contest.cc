@@ -19,9 +19,8 @@ using std::vector;
 
 void SIM::contest() {
 	size_t arg_beg = 3;
-	if (0 == compareTo(req_->target, arg_beg, '/', "add"))
-		return Contest::addContest(*this);
 
+	// Select contest
 	if (0 == compareTo(req_->target, arg_beg, '/', "")) {
 		Template templ(*this, "Select contest");
 		try {
@@ -42,18 +41,24 @@ void SIM::contest() {
 
 			// List them
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
-			templ << "<div class=\"contests\"><ul>\n";
+			templ << "<div class=\"contests-list\">\n"
+				"<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
 			while (res->next())
-				templ << "<li><a href=\"/c/" << htmlSpecialChars(res->getString(1)) << "\">"
-					<< htmlSpecialChars(res->getString(2)) << "</a></li>\n";
-			templ << "</ul></div>\n";
+				templ << "<a href=\"/c/" << htmlSpecialChars(res->getString(1)) << "\">"
+					<< htmlSpecialChars(res->getString(2)) << "</a>\n";
+			templ << "</div>\n";
 
 		} catch (...) {
 			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		}
 
-	} else {
+	// Add contest
+	} else if (0 == compareTo(req_->target, arg_beg, '/', "add"))
+		Contest::addContest(*this);
+
+	// Other pages which need round id
+	else {
 		// Extract round id
 		string round_id;
 		{
@@ -120,6 +125,7 @@ void SIM::contest() {
 		if (0 == compareTo(req_->target, arg_beg, '/', "submissions"))
 			return Contest::submissions(*this, *path, admin_view);
 
+		// Contest dashboard
 		Contest::TemplateWithMenu templ(*this, "Contest dashboard", *path);
 		Contest::printRoundPath(templ, *path, "");
 		Contest::printRoundView(*this, templ, *path, false, admin_view);
