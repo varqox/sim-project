@@ -378,20 +378,54 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 				if (name.size())
 					append(args) << "-n" << name;
 
+				// Conver stdin, stdout, stderr
+				char tmp_filename[] = "/tmp/sim-conver-errors.XXXXXX";
+				spawn_opts sopt = {
+					fopen("/dev/null", "r"),
+					fopen("/dev/null", "w"),
+					fdopen(mkstemp(tmp_filename), "w")
+				};
+
 				// Convert package
-				if (0 != spawn("./conver", args)) {
-					fv.addError("Conver failed");
-					// Here should be checker error printing...
+				if (0 != spawn("./conver", args, &sopt)) {
+					fv.addError("Conver failed - " + (sopt.new_stderr ?
+						getFileContents(tmp_filename) : ""));
 
 					// Remove problem
-					pstmt.reset(sim.db_conn()->prepareStatement("DELETE FROM problems WHERE id=?"));
-					pstmt->setString(1, problem_id);
-					pstmt->executeUpdate();
+					try {
+						pstmt.reset(sim.db_conn()->prepareStatement("DELETE FROM problems WHERE id=?"));
+						pstmt->setString(1, problem_id);
+						pstmt->executeUpdate();
 
+					// Suppress all exceptions
+					} catch (...) {}
+
+					// Clean
 					remove(new_package_file.c_str());
+
+					if (sopt.new_stdin)
+						fclose(sopt.new_stdin);
+					if (sopt.new_stdout)
+						fclose(sopt.new_stdout);
+					if (sopt.new_stderr) {
+						unlink(tmp_filename);
+						fclose(sopt.new_stderr);
+					}
+
 					goto form;
 				}
+
+				// Clean
 				remove(new_package_file.c_str());
+
+				if (sopt.new_stdin)
+					fclose(sopt.new_stdin);
+				if (sopt.new_stdout)
+					fclose(sopt.new_stdout);
+				if (sopt.new_stderr) {
+					unlink(tmp_filename);
+					fclose(sopt.new_stderr);
+				}
 
 				// Update problem name
 				name = getFileByLines("problems/" + problem_id + "/conf.cfg",

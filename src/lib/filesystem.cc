@@ -82,7 +82,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) 
 }
 
 TemporaryDirectory::~TemporaryDirectory() {
-	E("\e[1;31mRemoving tmp_dir \e[m -> %p\n", this);
+	E("\e[1;31mRemoving tmp_dir\e[m -> %p\n", this);
 	remove_r(path.c_str());
 	free(name_);
 }
