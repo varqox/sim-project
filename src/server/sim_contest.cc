@@ -41,8 +41,23 @@ void SIM::contest() {
 
 			// List them
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
-			templ << "<div class=\"contests-list\">\n"
-				"<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
+			templ << "<div class=\"contests-list\">\n";
+
+			// Add contest button (admins and teachers)
+			if (session->state() == Session::OK) {
+				try {
+					// Check if user has more privileges to create contest
+					pstmt.reset(db_conn()->prepareStatement("SELECT type FROM users WHERE id=?"));
+					pstmt->setString(1, session->user_id);
+					pstmt->execute();
+
+					UniquePtr<sql::ResultSet> res1(pstmt->getResultSet());
+					if (res1->next() && Contest::getUserRank(res1->getString(1)) < 2)
+						templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
+
+				// Suppress all exceptions
+				} catch (...) {}
+			}
 
 			while (res->next())
 				templ << "<a href=\"/c/" << htmlSpecialChars(res->getString(1)) << "\">"

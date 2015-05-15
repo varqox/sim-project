@@ -115,7 +115,7 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 			}
 		}
 
-	} catch(...) {
+	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		delete rp;
 		return NULL;
@@ -145,7 +145,7 @@ int Contest::getUserRank(SIM& sim, const string& id) {
 		if (res->next())
 			return getUserRank(res->getString(1));
 
-	} catch(...) {
+	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
 
@@ -183,7 +183,7 @@ bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 				return owner_type > user_type;
 			}
 
-		} catch(...) {
+		} catch (...) {
 			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		}
 	}
@@ -402,7 +402,7 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 				"</div>\n";
 		}
 
-	} catch(...) {
+	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
 }

@@ -708,7 +708,7 @@ a.btn{
 	flex-flow: column wrap;
 }
 .menu > a{
-	padding: 7px 0 7px 5px;
+	padding: 7px 5px 7px 5px;
 }
 .menu > a:focus, .menu > a:hover{
 	text-decoration: none;
@@ -726,13 +726,13 @@ a.btn{
 	margin-left: auto;
 	margin-right: auto;
 }
-.contests-list > a:not(:first-child){
+.contests-list > a:not(.btn){
 	display: flex;
 	padding: 5px;
 	border-top: 1px solid #ccc;
 }
-.contests-list > a:not(:first-child):hover,
-.contests-list > a:not(:first-child):focus{
+.contests-list > a:not(.btn):hover,
+.contests-list > a:not(.btn):focus{
 	background: #e7e7e7;
 	text-decoration: none;
 }
