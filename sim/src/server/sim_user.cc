@@ -44,7 +44,7 @@ void SIM::login() {
 					return redirect("/");
 				}
 
-			} catch(...) {
+			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
 		}
