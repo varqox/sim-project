@@ -10,7 +10,7 @@ int main(int argc, char const **argv)
 	ios_base::sync_with_stdio(false);
 	if(argc<2)
 	{
-		cerr << "Usage:\ncr <file name>" << endl;
+		cerr << "Usage: CTH <file name>" << endl;
 		return 1;
 	}
 	string file_name=argv[1];

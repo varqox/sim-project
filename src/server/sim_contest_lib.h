@@ -4,8 +4,12 @@
 #include "sim_template.h"
 
 struct Round {
-	std::string id, parent, problem_id, access, name, owner, visible, begins;
-	std::string ends, full_results;
+	std::string id, parent, problem_id, access, name, owner, visible;
+	std::string begins, ends, full_results;
+};
+
+struct Problem {
+	std::string id, parent, name;
 };
 
 struct StringOrNull {
@@ -70,11 +74,12 @@ private:
 
 	static void editProblem(SIM& sim, const RoundPath& rp);
 
-	static void problems(SIM& sim, const RoundPath& rp,
-			bool admin_view = true);
+	static void problems(SIM& sim, const RoundPath& rp, bool admin_view = true);
+
+	static void submit(SIM& sim, const RoundPath& rp, bool admin_view = true);
 
 	static void submissions(SIM& sim, const RoundPath& rp,
-			bool admin_view = true);
+		bool admin_view = true);
 
 	// Functions
 	static RoundPath* getRoundPath(SIM& sim, const std::string& round_id);

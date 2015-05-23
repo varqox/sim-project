@@ -10,17 +10,6 @@ extern unsigned long long HARD_TIME_LIMIT, TIME_LIMIT; // in usec
 extern UniquePtr<directory_tree::node> package_tree_root;
 
 /**
- * @brief Converts usec (ULL) to sec (double as string)
- *
- * @param x usec value
- * @param prec precision (maximum number of digits after '.')
- * @param trim_nulls set whether trim trailing nulls
- * @return floating-point x in sec as string
- */
-std::string usecToSec(unsigned long long x, unsigned prec,
-	bool trim_nulls = true);
-
-/**
  * @brief ProblemConfig holds SIM package config
  * @details Holds problem name, problem tag, problem statement, checker,
  * solution, memory limit and grouped tests with time limit for each

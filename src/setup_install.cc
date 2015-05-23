@@ -4,15 +4,14 @@
 #include "include/memory.h"
 #include "include/sha.h"
 
-#include <cstring>
-
 #include <cppconn/prepared_statement.h>
+#include <cstring>
 
 using std::string;
 
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
-		eprintf("Usage: setup_install INSTALL_DIR\n");
+		eprintf("Usage: setup-install INSTALL_DIR\n");
 		return 1;
 	}
 
@@ -23,7 +22,6 @@ int main(int argc, char *argv[]) {
 	E("db_config: '%s'\n", db_config.c_str());
 
 	FILE *conf = fopen(db_config.c_str(), "r");
-
 	if (conf == NULL) {
 		eprintf("Cannot open file: '%s'\n", db_config.c_str());
 		return 2;
@@ -42,8 +40,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	fclose(conf);
-	user[strlen(user)-1] = password[strlen(password)-1] = '\0';
-	database[strlen(database)-1] = host[strlen(host)-1] = '\0';
+	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
+	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
 
 	try {
 		DB::Connection conn(host, user, password, database);
@@ -53,8 +51,10 @@ int main(int argc, char *argv[]) {
 		delete[] database;
 		delete[] host;
 
+		bool error = false;
 		UniquePtr<sql::Statement> stmt(conn->createStatement());
 
+		// users
 		try {
 			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `users` (\n"
 					"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
@@ -74,11 +74,12 @@ int main(int argc, char *argv[]) {
 				pstmt->setString(1, sha256("sim"));
 				pstmt->executeUpdate();
 
-		} catch (...) {
-			eprintf("\e[31mFailed to create table `users`\e[m\n");
-			return 5;
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `users`\e[m - %s\n", e.what());
+			error = true;
 		}
 
+		// session
 		try {
 			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `session` (\n"
 					"`id` char(10) COLLATE utf8_bin NOT NULL,\n"
@@ -92,11 +93,12 @@ int main(int argc, char *argv[]) {
 					"KEY (`time`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n");
 
-		} catch (...) {
-			eprintf("\e[31mFailed to create table `session`\e[m\n");
-			return 5;
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `session`\e[m - %s\n", e.what());
+			error = true;
 		}
 
+		// problems
 		try {
 			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `problems` (\n"
 					"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
@@ -108,11 +110,12 @@ int main(int argc, char *argv[]) {
 					"KEY (`owner`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (...) {
-			eprintf("\e[31mFailed to create table `problems`\e[m\n");
-			return 5;
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `problems`\e[m - %s\n", e.what());
+			error = true;
 		}
 
+		// rounds
 		try {
 			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `rounds` (\n"
 					"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
@@ -135,11 +138,12 @@ int main(int argc, char *argv[]) {
 					"KEY (`owner`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (...) {
-			eprintf("\e[31mFailed to create table `rounds`\e[m\n");
-			return 5;
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `rounds`\e[m - %s\n", e.what());
+			error = true;
 		}
 
+		// users_to_rounds
 		try {
 			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `users_to_rounds` (\n"
 					"`user_id` int unsigned NOT NULL,\n"
@@ -148,10 +152,58 @@ int main(int argc, char *argv[]) {
 					"KEY (`round_id`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (...) {
-			eprintf("\e[31mFailed to create table `users_to_rounds`\e[m\n");
-			return 5;
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `users_to_rounds`\e[m - %s\n", e.what());
+			error = true;
 		}
+
+		// submissions
+		try {
+			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `submissions` (\n"
+					"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
+					"`user_id` int unsigned NOT NULL,\n"
+					"`problem_id` int unsigned NOT NULL,\n"
+					"`round_id` int unsigned NOT NULL,\n"
+					"`parent_round_id` int unsigned NOT NULL,\n"
+					"`contest_round_id` int unsigned NOT NULL,\n"
+					"`final` BOOLEAN NOT NULL DEFAULT FALSE,\n"
+					"`submit_time` datetime NOT NULL,\n"
+					"`status` enum('ok','error','c_error','waiting') NULL DEFAULT NULL COLLATE utf8_bin,\n"
+					"`score` int NULL DEFAULT NULL,\n"
+					"`queued` datetime NOT NULL,\n"
+					"PRIMARY KEY (`id`),\n"
+					"KEY (`status`, `queued`),\n"
+					"KEY (`user_id`, `round_id`, `final`)\n"
+				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `submissions`\e[m - %s\n", e.what());
+			error = true;
+		}
+
+		// submissions_to_rounds
+		try {
+			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `submissions_to_rounds` (\n"
+					"`submission_id` int unsigned NOT NULL,\n"
+					"`round_id` int unsigned NOT NULL,\n"
+					"`user_id` int unsigned NOT NULL,\n"
+					"`submit_time` datetime NOT NULL,\n"
+					"`final` BOOLEAN NOT NULL DEFAULT FALSE,\n"
+					"PRIMARY KEY (`round_id`, `submission_id`),\n"
+					"KEY (`submission_id`),\n"
+					"KEY (`round_id`, `user_id`, `submit_time`),\n"
+					"KEY (`round_id`, `user_id`, `final`, `submit_time`),\n"
+					"KEY (`round_id`, `submit_time`),\n"
+					"KEY (`round_id`, `final`, `submit_time`)\n"
+				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+
+		} catch (std::exception& e) {
+			eprintf("\e[31mFailed to create table `submissions_to_rounds`\e[m - %s\n", e.what());
+			error = true;
+		}
+
+		if (error)
+			return 5;
 
 	} catch (...) {
 		eprintf("\e[31mFailed to connect to database\e[m\n");

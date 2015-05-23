@@ -13,6 +13,10 @@
 
 #include <cppconn/prepared_statement.h>
 #include <vector>
+#include <utime.h>
+
+#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
+	i ##__end = x.end(); i != i ##__end; ++i)
 
 using std::string;
 using std::vector;
@@ -25,18 +29,29 @@ void SIM::contest() {
 		Template templ(*this, "Select contest");
 		try {
 			// Get available contests
-			UniquePtr<sql::PreparedStatement> pstmt(db_conn()
-					->prepareStatement(session->open() != Session::OK ?
-						("SELECT id, name FROM rounds WHERE parent IS NULL AND access='public' ORDER BY id")
-						: ("(SELECT id, name FROM rounds WHERE parent IS NULL AND (access='public' OR owner=?))"
+			UniquePtr<sql::PreparedStatement> pstmt;
+			if (session->open() == Session::OK) {
+				string lower_owners;
+				int rank = Contest::getUserRank(*this, session->user_id);
+				if (rank < 2) {
+					lower_owners += "OR u.type='normal'";
+					if (rank < 1)
+						lower_owners += " OR u.type='teacher'";
+				}
+
+				pstmt.reset(db_conn()->prepareStatement(
+						"(SELECT r.id, r.name FROM rounds r, users u WHERE parent IS NULL AND r.owner=u.id AND "
+							"(r.access='public' OR r.owner=? " + lower_owners + "))"
 						" UNION "
 						"(SELECT id, name FROM rounds, users_to_rounds WHERE user_id=? AND round_id=id)"
-						"ORDER BY id")));
-
-			if (session->open() == Session::OK) {
+						"ORDER BY id"));
 				pstmt->setString(1, session->user_id);
 				pstmt->setString(2, session->user_id);
-			}
+
+			} else
+				pstmt.reset(db_conn()->prepareStatement(
+					"SELECT id, name FROM rounds WHERE parent IS NULL AND access='public' ORDER BY id"));
+
 			pstmt->execute();
 
 			// List them
@@ -136,6 +151,10 @@ void SIM::contest() {
 		if (0 == compareTo(req_->target, arg_beg, '/', "problems"))
 			return Contest::problems(*this, *path, admin_view);
 
+		// Submit
+		if (0 == compareTo(req_->target, arg_beg, '/', "submit"))
+			return Contest::submit(*this, *path, admin_view);
+
 		// Submissions
 		if (0 == compareTo(req_->target, arg_beg, '/', "submissions"))
 			return Contest::submissions(*this, *path, admin_view);
@@ -177,7 +196,7 @@ void Contest::addContest(SIM& sim) {
 					UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
 
 					if (res->next())
-						sim.redirect("/c/" + res->getString(1));
+						return sim.redirect("/c/" + res->getString(1));
 				}
 
 			} catch (...) {
@@ -273,7 +292,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 					UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
 
 					if (res->next())
-						sim.redirect("/c/" + res->getString(1));
+						return sim.redirect("/c/" + res->getString(1));
 				}
 
 			} catch (...) {
@@ -468,7 +487,7 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 				if (!res->next())
 					return sim.error500();
 
-				sim.redirect("/c/" + res->getString(1));
+				return sim.redirect("/c/" + res->getString(1));
 
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -479,29 +498,29 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 	TemplateWithMenu templ(sim, "Add problem", rp);
 	printRoundPath(templ, rp, "");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
-		"<h1>Add problem</h1>\n"
-		"<form method=\"post\" enctype=\"multipart/form-data\">\n"
-			// Name
-			"<div class=\"field-group\">\n"
-				"<label>Problem name</label>\n"
-				"<input type=\"text\" name=\"name\" value=\""
-					<< htmlSpecialChars(name) << "\" size=\"24\""
-				"maxlength=\"128\" placeholder=\"Detect from conf.cfg\">\n"
-			"</div>\n"
-			// Force auto limit
-			"<div class=\"field-group\">\n"
-				"<label>Automatic time limit setting</label>\n"
-				"<input type=\"checkbox\" name=\"force-auto-limit\""
-					<< (force_auto_limit ? " checked" : "") << ">\n"
-			"</div>\n"
-			// Package
-			"<div class=\"field-group\">\n"
-				"<label>Package</label>\n"
-				"<input type=\"file\" name=\"package\">\n"
-			"</div>\n"
-			"<input type=\"submit\" value=\"Add\">\n"
-		"</form>\n"
-	"</div>\n";
+			"<h1>Add problem</h1>\n"
+			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+				// Name
+				"<div class=\"field-group\">\n"
+					"<label>Problem name</label>\n"
+					"<input type=\"text\" name=\"name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\""
+					"maxlength=\"128\" placeholder=\"Detect from conf.cfg\">\n"
+				"</div>\n"
+				// Force auto limit
+				"<div class=\"field-group\">\n"
+					"<label>Automatic time limit setting</label>\n"
+					"<input type=\"checkbox\" name=\"force-auto-limit\""
+						<< (force_auto_limit ? " checked" : "") << ">\n"
+				"</div>\n"
+				// Package
+				"<div class=\"field-group\">\n"
+					"<label>Package</label>\n"
+					"<input type=\"file\" name=\"package\">\n"
+				"</div>\n"
+				"<input type=\"submit\" value=\"Add\">\n"
+			"</form>\n"
+		"</div>\n";
 }
 
 void Contest::editContest(SIM& sim, const RoundPath& rp) {
@@ -537,6 +556,534 @@ void Contest::problems(SIM& sim, const RoundPath& rp, bool admin_view) {
 	printRoundView(sim, templ, rp, true, admin_view);
 }
 
+namespace {
+
+struct Subround {
+	string id, name;
+};
+
+} // anonymous namespace
+
+void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
+	if (sim.session->open() != SIM::Session::OK)
+		return sim.redirect("/login" + sim.req_->target);
+
+	FormValidator fv(sim.req_->form_data);
+
+	if (sim.req_->method == server::HttpRequest::POST) {
+		string solution, problem_round_id;
+
+		// Validate all fields
+		fv.validateNotBlank(solution, "solution", "Solution file field");
+
+		fv.validateNotBlank(problem_round_id, "round-id", "Problem");
+
+		if (!isInteger(problem_round_id))
+			fv.addError("Wrong problem round id");
+
+		// If all fields are ok
+		if (fv.noErrors()) {
+			UniquePtr<RoundPath> path;
+			const RoundPath *prp = &rp;
+
+			if (rp.type != PROBLEM) {
+				// Get parent rounds of problem round
+				path.reset(getRoundPath(sim, problem_round_id));
+				if (path.isNull())
+					return;
+
+				if (path->type != PROBLEM) {
+					fv.addError("Wrong problem round id");
+					goto form;
+				}
+
+				prp = path.get();
+			}
+
+			string solution_tmp_path = fv.getFilePath("solution");
+			struct stat sb;
+			stat(solution_tmp_path.c_str(), &sb);
+
+			// Check if solution is too big
+			if (sb.st_size > 100 << 10) { // 100kB
+				fv.addError("Solution file to big (max 100kB)");
+				goto form;
+			}
+
+			try {
+				string current_date = date("%Y-%m-%d %H:%M:%S");
+				// Insert submission to `submissions`
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
+					->prepareStatement("INSERT INTO submissions (user_id, problem_id, round_id, parent_round_id, contest_round_id, submit_time, queued) VALUES(?, ?, ?, ?, ?, ?, ?)"));
+				pstmt->setString(1, sim.session->user_id);
+				pstmt->setString(2, prp->problem->problem_id);
+				pstmt->setString(3, prp->problem->id);
+				pstmt->setString(4, prp->round->id);
+				pstmt->setString(5, prp->contest->id);
+				pstmt->setString(6, current_date);
+				pstmt->setString(7, current_date);
+
+				if (1 != pstmt->executeUpdate()) {
+					fv.addError("Database error - failed to insert submission");
+					goto form;
+				}
+
+				// Get inserted submission id
+				UniquePtr<sql::Statement> stmt(sim.db_conn()->createStatement());
+				UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
+
+				if (!res->next()) {
+					fv.addError("Database error - failed to get inserted submission id");
+					goto form;
+				}
+
+				string submission_id = res->getString(1);
+
+				// Copy solution
+				copy(solution_tmp_path, "solutions/" + submission_id + ".cpp");
+
+				// Change submission status to 'waiting'
+				stmt->executeUpdate("UPDATE submissions SET status='waiting' WHERE id=" + submission_id);
+
+				// Insert submission to `submissions_to_rounds`
+				pstmt.reset(sim.db_conn()->prepareStatement(
+						"INSERT INTO submissions_to_rounds (submission_id, user_id, round_id, submit_time) VALUES(?, ?, ?, ?)"));
+
+				const string arr[] = { prp->problem->id, prp->round->id,
+					prp->contest->id };
+				for (size_t i = 0; i < sizeof(arr) / sizeof(*arr); ++i) {
+					pstmt->setString(1, submission_id);
+					pstmt->setString(2, sim.session->user_id);
+					pstmt->setString(3, arr[i]);
+					pstmt->setString(4, current_date);
+					pstmt->executeUpdate();
+				}
+
+				// Notify judge-machine
+				utime("judge-machine.notify", NULL);
+
+				return sim.redirect("/s/" + submission_id);
+
+			} catch (...) {
+				fv.addError("Internal server error");
+				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			}
+		}
+	}
+
+ form:
+	TemplateWithMenu templ(sim, "Submit a solution", rp);
+	printRoundPath(templ, rp, "");
+	string buffer;
+	append(buffer) << fv.errors() << "<div class=\"form-container\">\n"
+			"<h1>Submit a solution</h1>\n"
+			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+				// Round id
+				"<div class=\"field-group\">\n"
+					"<label>Problem</label>\n"
+					"<select name=\"round-id\">";
+
+	// List problems
+	try {
+		string current_date = date("%Y-%m-%d %H:%M:%S");
+		if (rp.type == CONTEST) {
+			// Select subrounds
+			// Admin -> All problems from all subrounds
+			// Normal -> All problems from subrounds which have begun and
+			// have not ended
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
+					->prepareStatement(admin_view ?
+						"SELECT id, name FROM rounds WHERE parent=? ORDER BY item"
+						: "SELECT id, name FROM rounds WHERE parent=? AND (begins IS NULL OR begins<=?) AND (ends IS NULL OR ?<ends) ORDER BY item"));
+			pstmt->setString(1, rp.contest->id);
+			if (!admin_view) {
+				pstmt->setString(2, current_date);
+				pstmt->setString(3, current_date);
+			}
+			pstmt->execute();
+
+			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			vector<Subround> subrounds;
+			// For performance
+			subrounds.reserve(res->rowsCount());
+
+			// Collect results
+			while (res->next()) {
+				subrounds.push_back(Subround());
+				subrounds.back().id = res->getString(1);
+				subrounds.back().name = res->getString(2);
+			}
+
+			// Select problems
+			pstmt.reset(sim.db_conn()
+					->prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
+			pstmt->setString(1, rp.contest->id);
+			pstmt->execute();
+
+			res.reset(pstmt->getResultSet());
+			std::map<string, vector<Problem> > problems; // (round_id, problems)
+
+			// Fill with all subrounds
+			for (size_t i = 0; i < subrounds.size(); ++i)
+				problems[subrounds[i].id];
+
+			// Collect results
+			while (res->next()) {
+				// Get reference to proper vector<Problem>
+				__typeof(problems.begin()) it =
+						problems.find(res->getString(2));
+				// If problem parent isn't visible or database error
+				if (it == problems.end())
+					continue; // Ignore
+
+				vector<Problem>& prob = it->second;
+				prob.push_back(Problem());
+				prob.back().id = res->getString(1);
+				prob.back().parent = res->getString(2);
+				prob.back().name = res->getString(3);
+			}
+
+			// For each subround list all problems
+			foreach (subround, subrounds) {
+				vector<Problem>& prob = problems[subround->id];
+
+				foreach (problem, prob)
+					append(buffer) << "<option value=\"" << problem->id << "\">"
+						<< htmlSpecialChars(problem->name) << " ("
+						<< htmlSpecialChars(subround->name) << ")</option>\n";
+			}
+
+		// Admin -> All problems
+		// Normal -> if round has begun and has not ended
+		} else if (rp.type == ROUND && (admin_view || (
+				rp.round->begins <= current_date && // "" <= everything
+				(rp.round->ends.empty() || current_date < rp.round->ends)))) {
+			// Select problems
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
+					->prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
+			pstmt->setString(1, rp.round->id);
+			pstmt->execute();
+
+			// List problems
+			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			while (res->next())
+				append(buffer) << "<option value=\"" << res->getString(1)
+					<< "\">" << htmlSpecialChars(res->getString(2)) << " ("
+					<< htmlSpecialChars(rp.round->name) << ")</option>\n";
+
+		// Admin -> Current problem
+		// Normal -> if parent round has begun and has not ended
+		} else if (rp.type == PROBLEM && (admin_view || (
+				rp.round->begins <= current_date && // "" <= everything
+				(rp.round->ends.empty() || current_date < rp.round->ends)))) {
+			append(buffer) << "<option value=\"" << rp.problem->id << "\">"
+				<< htmlSpecialChars(rp.problem->name) << " ("
+				<< htmlSpecialChars(rp.round->name) << ")</option>\n";
+		}
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
+
+	if (isSuffix(buffer, "</option>\n"))
+		templ << buffer << "</select>"
+					"</div>\n"
+					// Solution file
+					"<div class=\"field-group\">\n"
+						"<label>Solution</label>\n"
+						"<input type=\"file\" name=\"solution\">\n"
+					"</div>\n"
+					"<input type=\"submit\" value=\"Submit\">\n"
+				"</form>\n"
+			"</div>\n";
+
+	else
+		templ << "<p>There are no problems for which you can submit a solution...</p>";
+}
+
+static string submissionStatus(const string& status) {
+	if (status == "ok")
+		return "Initial tests: OK";
+
+	if (status == "error")
+		return "Initial tests: Error";
+
+	if (status == "c_error")
+		return "Compilation failed";
+
+	if (status == "waiting")
+		return "Pending";
+
+	return "Unknown";
+}
+
 void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
+	if (sim.session->open() != SIM::Session::OK)
+		return sim.redirect("/login" + sim.req_->target);
+
 	TemplateWithMenu templ(sim, "Submissions", rp);
+	printRoundPath(templ, rp, "submissions");
+
+	try {
+		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
+			admin_view ? "SELECT s.id, str.submit_time, r2.id, r2.name, r.id, r.name, s.status, s.score, str.final, u.username "
+				"FROM submissions_to_rounds str, submissions s, users u, rounds r, rounds r2 "
+				"WHERE str.submission_id=s.id AND s.round_id=r.id AND r.parent=r2.id "
+					"AND str.round_id=? AND str.user_id=u.id "
+				"ORDER BY str.submit_time DESC"
+			: "SELECT s.id, str.submit_time, r3.id, r3.name, r2.id, r2.name, s.status, s.score, str.final, r3.full_results "
+				"FROM submissions_to_rounds str, submissions s, rounds r, rounds r2, rounds r3 "
+				"WHERE str.submission_id=s.id AND r.id=str.round_id AND s.round_id=r2.id "
+					"AND r2.parent=r3.id AND str.round_id=? AND str.user_id=? "
+				"ORDER BY str.submit_time DESC"));
+		pstmt->setString(1, rp.round_id);
+		if (!admin_view)
+			pstmt->setString(2, sim.session->user_id);
+
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		if (res->rowsCount() == 0) {
+			templ << "<p>There are no submissions to show</p>";
+			return;
+		}
+
+		templ << "<table class=\"submissions\">\n"
+			"<thead>\n"
+				"<tr>"
+					<< (admin_view ? "<th class=\"user\">User</th>" : "")
+					<< "<th class=\"time\">Submission time</th>"
+					"<th class=\"problem\">Problem</th>"
+					"<th class=\"status\">Status</th>"
+					"<th class=\"score\">Score</th>"
+					"<th class=\"final\">Final</th>"
+				"</tr>\n"
+			"</thead>\n"
+			"<tbody>\n";
+
+		struct Local {
+			static string statusRow(const string& status) {
+				string ret = "<td";
+
+				if (status == "ok")
+					ret += " class=\"ok\">";
+				else if (status == "error" || status == "c_error")
+					ret += " class=\"wa\">";
+				else
+					ret += ">";
+
+				return ret.append(submissionStatus(status)).append("</td>");
+			}
+		};
+
+		string current_date = date("%Y-%m-%d %H:%M:%S");
+		while (res->next()) {
+			templ << "<tr>";
+			// User
+			if (admin_view)
+				templ << "<td>" << htmlSpecialChars(res->getString(10))
+					<< "</td>";
+			// Rest
+			templ << "<td><a href=\"/s/" << res->getString(1) << "\">"
+					<< res->getString(2) << "</a></td>"
+					"<td><a href=\"/c/" << res->getString(3) << "\">"
+						<< htmlSpecialChars(res->getString(4)) << "</a>"
+						" -> <a href=\"/c/" << res->getString(5) << "\">"
+						<< htmlSpecialChars(res->getString(6)) << "</a></td>"
+					<< Local::statusRow(res->getString(7))
+					<< "<td>" << (admin_view ||
+						string(res->getString(10)) <= current_date ?
+						res->getString(8) : "") << "</td>"
+					"<td>" << (res->getBoolean(9) ? "Yes" : "") << "</td>"
+				"<tr>\n";
+		}
+
+		templ << "</tbody>\n"
+			"</table>\n";
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
+
+}
+
+static string convertStringBack(const string& str) {
+	string res;
+	foreach (i, str) {
+		if (*i == '\\') {
+			if (*++i == 'n') {
+				res += '\n';
+				continue;
+			}
+
+			--i;
+		}
+
+		res += *i;
+	}
+
+	return res;
+}
+
+void SIM::submission() {
+	if (session->open() != Session::OK)
+		return redirect("/login" + req_->target);
+
+	size_t arg_beg = 3;
+
+	// Extract round id
+	string submission_id;
+	{
+		int res_code = strtonum(submission_id, req_->target, arg_beg,
+				find(req_->target, '/', arg_beg));
+		if (res_code == -1)
+			return error404();
+
+		arg_beg += res_code + 1;
+	}
+
+	try {
+		// Get submission
+		UniquePtr<sql::PreparedStatement> pstmt(db_conn()
+			->prepareStatement("SELECT user_id, round_id, submit_time, status, score, name FROM submissions s, problems p WHERE s.id=? AND s.problem_id=p.id"));
+		pstmt->setString(1, submission_id);
+
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		if (!res->next())
+			return error404();
+
+		string submission_user_id = res->getString(1);
+		string round_id = res->getString(2);
+		string submit_time = res->getString(3);
+		string submission_status = res->getString(4);
+		string score = res->getString(5);
+		string problem_name = res->getString(6);
+
+		// Get parent rounds
+		UniquePtr<RoundPath> path(Contest::getRoundPath(*this, round_id));
+		if (path.isNull())
+			return;
+
+		if (!path->admin_access && session->user_id != submission_user_id)
+			return error403();
+
+		// Check if user forces observer view
+		bool admin_view = path->admin_access;
+		if (0 == compareTo(req_->target, arg_beg, '/', "n")) {
+			admin_view = false;
+			arg_beg += 2;
+		}
+
+		// Download solution
+		if (0 == compareTo(req_->target, arg_beg, '/', "download")) {
+			resp_.headers["Content-type"] = "application/text";
+			resp_.headers["Content-Disposition"] = "attchment; filename=" +
+				submission_id + ".cpp";
+
+			resp_.content = "solutions/" + submission_id + ".cpp";
+			resp_.content_type = server::HttpResponse::FILE;
+
+			return;
+		}
+
+		Contest::TemplateWithMenu templ(*this, "Submission " + submission_id,
+			*path);
+		Contest::printRoundPath(templ, *path, "");
+
+		// View source
+		if (0 == compareTo(req_->target, arg_beg, '/', "source")) {
+			vector<string> args;
+			append(args)("./CTH")("solutions/" + submission_id + ".cpp");
+
+			char tmp_filename[] = "/tmp/sim-server-tmp.XXXXXX";
+			spawn_opts sopt = {
+				fopen("/dev/null", "r"),
+				fdopen(mkstemp(tmp_filename), "w"),
+				fopen("/dev/null", "w")
+			};
+
+			if (sopt.new_stdin != NULL && sopt.new_stdout != NULL) {
+				spawn(args[0], args, &sopt);
+				templ << getFileContents(tmp_filename);
+			}
+
+			unlink(tmp_filename);
+			if (sopt.new_stdin)
+				fclose(sopt.new_stdin);
+			if (sopt.new_stdout)
+				fclose(sopt.new_stdout);
+			if (sopt.new_stderr)
+				fclose(sopt.new_stderr);
+
+			return;
+		}
+
+		templ << "<div class=\"submission-info\">\n"
+			"<div>\n"
+				"<h1>Submission " << submission_id << "</h1>\n"
+				"<div>\n"
+					"<a class=\"btn-small\" href=\""
+						<< req_->target.substr(0, arg_beg - 1)
+						<< "/source\">View source</a>\n"
+					"<a class=\"btn-small\" href=\""
+						<< req_->target.substr(0, arg_beg - 1)
+						<< "/download\">Download</a>\n"
+				"</div>\n"
+			"</div>\n"
+			"<table style=\"width: 100%\">\n"
+				"<thead>\n"
+					"<tr>"
+						"<th style=\"min-width:120px\">Problem</th>"
+						"<th style=\"min-width:150px\">Submission time</th>"
+						"<th style=\"min-width:150px\">Status</th>"
+						"<th style=\"min-width:90px\">Score</th>"
+					"</tr>\n"
+				"</thead>\n"
+				"<tbody>\n"
+					"<tr>"
+						"<td>" << htmlSpecialChars(problem_name) << "</td>"
+						"<td>" << htmlSpecialChars(submit_time) << "</td>"
+						"<td";
+
+		if (submission_status == "ok")
+			templ << " class=\"ok\"";
+		else if (submission_status == "error" || submission_status == "c_error")
+			templ << " class=\"wa\"";
+
+		templ <<			">" << submissionStatus(submission_status)
+							<< "</td>"
+						"<td>" << (admin_view ||
+							path->round->full_results.empty() ||
+							path->round->full_results <=
+								date("%Y-%m-%d %H:%M:%S") ? score : "")
+							<< "</td>"
+					"</tr>\n"
+				"</tbody>\n"
+			"</table>\n"
+			<< "</div>\n";
+
+		// Show testing report
+		vector<string> submission_file =
+			getFileByLines("submissions/" + submission_id,
+				GFBL_IGNORE_NEW_LINES);
+
+		templ << "<div class=\"results\">";
+		if (submission_status == "c_error" && submission_file.size() > 0) {
+			templ << "<h2>Compilation failed</h2>"
+				"<pre class=\"compile-errors\">"
+				<< convertStringBack(submission_file[0])
+				<< "</pre>";
+
+		} else if (submission_file.size() > 1) {
+			if (admin_view || path->round->full_results.empty() ||
+					path->round->full_results <= date("%Y-%m-%d %H:%M:%S"))
+				templ << "<h2>Final testing report</h2>"
+					<< convertStringBack(submission_file[0]);
+
+			templ << "<h2>Initial testing report</h2>"
+				<< convertStringBack(submission_file[1]);
+		}
+		templ << "</div>";
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
 }
