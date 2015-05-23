@@ -167,6 +167,17 @@ inline unsigned long long strtoull(const std::string& s, size_t beg = 0,
 }
 
 /**
+ * @brief Converts usec (ULL) to sec (double as string)
+ *
+ * @param x usec value
+ * @param prec precision (maximum number of digits after '.')
+ * @param trim_nulls set whether trim trailing nulls
+ * @return floating-point x in sec as string
+ */
+std::string usecToSecStr(unsigned long long x, unsigned prec,
+	bool trim_nulls = true);
+
+/**
  * @brief String comparator
  * @details Compares strings like numbers
  */

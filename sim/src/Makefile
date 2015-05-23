@@ -1,7 +1,7 @@
 include ../Makefile.config
 
 .PHONY: all
-all: chmod-default Conver CppToHTML Judge_machine server lib setup_install
+all: chmod-default Conver CppToHTML Judge_machine server lib setup-install
 
 .PHONY: Conver CppToHTML Judge_machine server lib
 Conver CppToHTML Judge_machine server: lib
@@ -11,7 +11,7 @@ Conver CppToHTML Judge_machine server lib:
 chmod-default: Algorithms/other/chmod-default.cpp
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
 
-setup_install: setup_install.cpp lib/libsim.a
+setup-install: setup_install.cc lib/libsim.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn
 
 lib/libsim.a: lib
@@ -19,7 +19,7 @@ lib/libsim.a: lib
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps chmod-default sim-server setup_install
+	$(Q)$(RM) *.o *.deps chmod-default sim-server setup-install
 	$(Q)$(MAKE) clean -C lib/
 	$(Q)$(MAKE) clean -C Conver/
 	$(Q)$(MAKE) clean -C CppToHTML/

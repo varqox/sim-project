@@ -25,7 +25,7 @@ using std::vector;
 
 namespace sandbox {
 
-DefaultCallback::DefaultCallback() : functor_call(0), architecture(-1) {
+DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 	// i386
 	append(limited_syscalls[0])
 		((Pair){  11, 1 }) // SYS_execve
@@ -71,13 +71,13 @@ DefaultCallback::DefaultCallback() : functor_call(0), architecture(-1) {
 };
 
 int DefaultCallback::operator()(int pid, int syscall) {
-	// Detect architecture (first call - before exec, second - after exec)
+	// Detect arch (first call - before exec, second - after exec)
 	if (++functor_call < 3) {
 		string filename = "/proc/" + toString((long long)pid) + "/exe";
 
 		int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {
-			architecture = 0;
+			arch = 0;
 			E("Error: '%s' - %s\n", filename.c_str(), strerror(errno));
 		} else {
 			// Read fourth byte and detect if 32 or 64 bit
@@ -86,21 +86,21 @@ int DefaultCallback::operator()(int pid, int syscall) {
 
 			int ret = read(fd, &c, 1);
 			if (ret == 1 && c == 2)
-				architecture = 1; // x86_64
+				arch = 1; // x86_64
 			else
-				architecture = 0; // i386
+				arch = 0; // i386
 
 			close(fd);
 		}
 	}
 
 	// Check if syscall is allowed
-	foreach (i, allowed_syscalls[architecture])
+	foreach (i, allowed_syscalls[arch])
 		if (syscall == *i)
 			return 0;
 
 	// Check if syscall is limited
-	foreach (i, limited_syscalls[architecture])
+	foreach (i, limited_syscalls[arch])
 		if (syscall == i->syscall)
 			return --i->limit < 0;
 

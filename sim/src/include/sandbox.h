@@ -34,7 +34,7 @@ struct DefaultCallback {
 		int limit;
 	};
 
-	int functor_call, architecture;
+	int functor_call, arch; // arch - architecture: 0 - i386, 1 - x86_64
 	std::vector<Pair> limited_syscalls[2]; // 0 - i386, 1 - x86_64
 	std::vector<int> allowed_syscalls[2]; // 0 - i386, 1 - x86_64
 

@@ -18,7 +18,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
-static int compile(const string& in, const string& out) {
+static int compile(const string& source, const string& exec) {
 	FILE *cef = fopen("compile_errors", "w");
 	if (cef == NULL) {
 		eprintf("Failed to open 'compile_errors' - %s\n", strerror(errno));
@@ -26,11 +26,11 @@ static int compile(const string& in, const string& out) {
 	}
 
 	if (VERBOSE)
-		printf("Compiling: '%s' ", (in).c_str());
+		printf("Compiling: '%s' ", (source).c_str());
 
 	// Run compiler
 	vector<string> args;
-	append(args)("g++")("-O2")("-static")("-lm")(in)("-o")(out);
+	append(args)("g++")("-O2")("-static")("-lm")(source)("-o")(exec);
 
 	/* Compile as 32 bit executable (not essential but if checker will be x86_63
 	*  and Conver i386 then checker won't work, with it its more secure (see
@@ -52,6 +52,8 @@ static int compile(const string& in, const string& out) {
 	if (compile_status != 0) {
 		eprintf("Compile errors:\n%s\n", getFileContents("compile_errors")
 			.c_str());
+
+		fclose(cef);
 		return 2;
 
 	} else if (VERBOSE)
@@ -71,6 +73,7 @@ static void assignPoints() {
 			TestNameCompatator::extractTag(group->tests[0].name);
 		if (tag.first == "0" || tag.second == "ocen") {
 			group->points = 0;
+			--groups_left;
 			continue;
 		}
 
@@ -90,7 +93,7 @@ int setLimits(const string& package) {
 			foreach (test, group->tests) {
 				test->time_limit = TIME_LIMIT;
 				printf("  %-11s --- / %-4s\n", test->name.c_str(),
-					usecToSec(test->time_limit, 2, false).c_str());
+					usecToSecStr(test->time_limit, 2, false).c_str());
 			}
 
 		assignPoints();
@@ -107,6 +110,7 @@ int setLimits(const string& package) {
 			return 2;
 
 	// Set limits
+	// Prepare runtime environment
 	sandbox::options sb_opt = {
 		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
 		conf_cfg.memory_limit << 10,
@@ -123,6 +127,7 @@ int setLimits(const string& package) {
 		sb_opt.new_stderr // fopen("/dev/null", "w")
 	};
 
+	// Check for errors
 	if (sb_opt.new_stdin == NULL) {
 		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
 		return 3;
@@ -218,8 +223,9 @@ int setLimits(const string& package) {
 					std::max(es.runtime * 4, 100000ull);
 
 			if (!QUIET) {
-				printf("%4s / %-4s    Status: ", usecToSec(es.runtime, 2, false)
-					.c_str(), usecToSec(test->time_limit, 2, false).c_str());
+				printf("%4s / %-4s    Status: ",
+					usecToSecStr(es.runtime, 2, false).c_str(),
+					usecToSecStr(test->time_limit, 2, false).c_str());
 
 				if (es.code == 0)
 					printf("\e[1;32mOK\e[m");
@@ -230,7 +236,7 @@ int setLimits(const string& package) {
 
 				if (VERBOSE)
 					printf("   Exited with %i [ %s ]", es.code,
-						usecToSec(es.runtime, 6, false).c_str());
+						usecToSecStr(es.runtime, 6, false).c_str());
 			}
 
 			// Validate output
@@ -284,7 +290,7 @@ int setLimits(const string& package) {
 
 					if (VERBOSE)
 						printf("   Exited with %i [ %s ]", es.code,
-							usecToSec(es.runtime, 6, false).c_str());
+							usecToSecStr(es.runtime, 6, false).c_str());
 				}
 			}
 

@@ -83,30 +83,32 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 
 		// Check access
 		rp->admin_access = isAdmin(sim, *rp);
-		if (rp->contest->access == "private" && !rp->admin_access) {
-			// Check access to contest
-			if (sim.session->open() != SIM::Session::OK) {
-				sim.redirect("/login" + sim.req_->target);
-				delete rp;
-				return NULL;
+		if (!rp->admin_access) {
+			if (rp->contest->access == "private") {
+				// Check access to contest
+				if (sim.session->open() != SIM::Session::OK) {
+					sim.redirect("/login" + sim.req_->target);
+					delete rp;
+					return NULL;
+				}
+
+				pstmt.reset(sim.db_conn()
+						->prepareStatement("SELECT user_id FROM users_to_rounds WHERE user_id=? AND round_id=?"));
+				pstmt->setString(1, sim.session->user_id);
+				pstmt->setString(2, rp->contest->id);
+				pstmt->execute();
+
+				res.reset(pstmt->getResultSet());
+				if (!res->next()) {
+					// User is not assigned to this contest
+					sim.error403();
+					delete rp;
+					return NULL;
+				}
 			}
 
-			pstmt.reset(sim.db_conn()
-					->prepareStatement("SELECT user_id FROM users_to_rounds WHERE user_id=? AND round_id=?"));
-			pstmt->setString(1, sim.session->user_id);
-			pstmt->setString(2, rp->contest->id);
-			pstmt->execute();
-
-			res.reset(pstmt->getResultSet());
-			if (!res->next()) {
-				// User is not assigned to this contest
-				sim.error403();
-				delete rp;
-				return NULL;
-			}
-
-			// Check access to round - check if began
-			// If not null and hasn't began, error403
+			// Check access to round - check if round has begun
+			// If begin time is not null and round has not begun, error403
 			if (rp->type != CONTEST && rp->round->begins.size() &&
 					date("%Y-%m-%d %H:%M:%S") < rp->round->begins) {
 				sim.error403();
@@ -155,12 +157,12 @@ int Contest::getUserRank(SIM& sim, const string& id) {
 bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 	// If is logged in
 	if (sim.session->open() == SIM::Session::OK) {
-		// User is owner of the contest
+		// User is the owner of the contest
 		if (rp.contest->owner == sim.session->user_id)
 			return true;
 
 		try {
-			// Check if user has more privileges than owner
+			// Check if user has more privileges than the owner
 			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 					->prepareStatement("SELECT id, type FROM users WHERE id=? OR id=?"));
 			pstmt->setString(1, rp.contest->owner);
@@ -215,6 +217,7 @@ Contest::TemplateWithMenu::TemplateWithMenu(SIM& sim, const string& title,
 
 		*this << "<a href=\"/c/" << rp.round_id << "\">Dashboard</a>\n"
 				"<a href=\"/c/" << rp.round_id << "/problems\">Problems</a>\n"
+				"<a href=\"/c/" << rp.round_id << "/submit\">Submit a solution</a>\n"
 				"<a href=\"/c/" << rp.round_id << "/submissions\">Submissions</a>\n"
 				"<span>OBSERVER MENU</span>\n";
 	}
@@ -222,8 +225,16 @@ Contest::TemplateWithMenu::TemplateWithMenu(SIM& sim, const string& title,
 	*this << "<a href=\"/c/" << rp.round_id << (rp.admin_access ? "/n" : "")
 				<< "\">Dashboard</a>\n"
 			"<a href=\"/c/" << rp.round_id << (rp.admin_access ? "/n" : "")
-				<< "/problems\">Problems</a>\n"
-			"<a href=\"/c/" << rp.round_id << (rp.admin_access ? "/n" : "")
+				<< "/problems\">Problems</a>\n";
+
+	string current_date = date("%Y-%m-%d %H:%M:%S");
+	if (rp.type == CONTEST || (
+			(rp.round->begins.empty() || rp.round->begins <= current_date) &&
+			(rp.round->ends.empty() || current_date < rp.round->ends)))
+		*this << "<a href=\"/c/" << rp.round_id << (rp.admin_access ? "/n" : "")
+				<< "/submit\">Submit a solution</a>\n";
+
+	*this << "<a href=\"/c/" << rp.round_id << (rp.admin_access ? "/n" : "")
 				<< "/submissions\">Submissions</a>\n"
 		"</ul>";
 }
@@ -253,10 +264,6 @@ struct Subround {
 	string id, name, item, visible, begins, ends, full_results;
 };
 
-struct Problem {
-	string id, parent, name;
-};
-
 } // anonymous namespace
 
 void Contest::printRoundView(SIM& sim, SIM::Template& templ,
@@ -264,7 +271,6 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 
 	try {
 		if (rp.type == CONTEST) {
-			string curent_date = date("%Y-%m-%d %H:%M:%S");
 			// Select subrounds
 			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 					->prepareStatement(admin_view ?
@@ -272,7 +278,7 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 						: "SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? AND (visible=1 OR begins IS NULL OR begins<=?) ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
 			if (!admin_view)
-				pstmt->setString(2, curent_date);
+				pstmt->setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
 			pstmt->execute();
 
 			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
@@ -305,7 +311,7 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 			for (size_t i = 0; i < subrounds.size(); ++i)
 				problems[subrounds[i].id];
 
-			// Colect results
+			// Collect results
 			while (res->next()) {
 				// Get reference to proper vector<Problem>
 				__typeof(problems.begin()) it =

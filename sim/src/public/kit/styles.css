@@ -630,12 +630,11 @@ a.btn{
 	-webkit-flex-direction: column;
 	flex-direction: column;
 }
-/*.btn-small{
+.btn-small{
 	color: #000000;
-	margin-left: 5px;
 	outline: none;
 	display: inline-block;
-	padding: 4px 10px;
+	padding: 2px 10px;
 	background-color: #f5f5f5;
 	background-image: linear-gradient(to bottom, #ffffff, #e6e6e6);
 	border: 1px solid #cccccc;
@@ -643,11 +642,6 @@ a.btn{
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 	text-decoration: none;
-}
-.rounds .btn-small{
-	padding: 2px 5px;
-	font-size: 12px;
-	line-height: 14px;
 }
 .btn-small:hover,
 .btn-small:focus{
@@ -659,7 +653,7 @@ a.btn{
 	color: #000000;
 	text-decoration: none;
 	background-image: linear-gradient(to bottom, #cccccc, #e6e6e6);
-}*/
+}
 .table{
 	border: 1px solid #a2a2a2;
 	-webkit-border-radius: 4px;
@@ -793,41 +787,80 @@ a.btn{
 /* Submission */
 .submission-info{
 	width: 85%;
-	margin-left: -20px;
-	text-align: center;
+	margin: 15px 0 0 20px;
+	display: flex;
+	flex-flow: column nowrap;
+	/*text-align: center;*/
 }
-.submission-info h1, .submission-info h2{
-	margin: 0;
-	font-weight: normal;
+.submission-info > div:first-child {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: space-between;
+}
+.submission-info > div:first-child .btn-small {
+	margin-left: 5px;
 }
 .submission-info h1{
+	margin: 0;
 	font-size: 35px;
-	padding: 15px 0 0 200px;
-	text-align: left;
+	font-weight: normal;
+	line-height: 26px;
 }
-.submission-info h2{
+/*.submission-info h2{
+	margin: 0;
 	font-size: 30px;
+	font-weight: normal;
+	line-height: 23px;
+}*/
+.submission-info table{
+	margin-top: 30px;
 }
 .submission-info table td{
-	line-height: 20px;
 	padding: 10px;
+	text-align: center;
 }
-.submission-info table th{
-	line-height: 20px;
+.compile-errors{
+	display: inline-block;
+	background: #f5f5f5;
+	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
+	margin: 0;
+	padding: 8px;
+	border: 1px solid #afafaf;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
 }
-.btn-toolbar{
-	margin: -30px 0 30px;
-	text-align: right;
+.results {
+	margin-left: 10px;
 }
-.results th{
+.results > h2 {
+	font-size: 20px;
+	font-weight: normal;
+}
+.results > table {
+	margin-left: 0;
+}
+.results > table th.test{
+	min-width: 80px;
+}
+.results > table th.result{
+	min-width: 190px;
+}
+.results > table th.time{
+	min-width: 100px;
+}
+.results > table th.points{
+	min-width: 70px;
+}
+.results > table th{
 	padding: 6px;
 	line-height: 20px;
 }
-.results td{
+.results > table td{
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 }
-.results td.groupscore{
+.results > table td.groupscore{
 	padding-right: 8px;
 	text-align: right;
 	vertical-align: middle;
@@ -860,41 +893,74 @@ a.btn{
 }
 
 /* Source code view */
-.code-view{
+table.code-view{
 	background: #f5f5f5;
 	display: table;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
-	margin: 0 10px;
+	margin: 10px;
 	border: 1px solid #afafaf;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
-.code-view td{
+table.code-view td{
 	vertical-align: top;
 }
-.code-view pre{
+table.code-view pre{
 	font-size: 16px;
 	line-height: 19px;
 }
-.code-view pre::before{
+table.code-view pre::before{
 	content: "";
 }
-.code-view pre span[style*="font-weight"]{
+table.code-view pre span[style*="font-weight"]{
 	vertical-align: top;
 }
-.code-view tr td:first-child pre{
+table.code-view tr td:first-child pre{
 	color: #4c4c4c;
 	margin: 0;
 	text-align: right;
 	padding: 5px 5px 5px 7px;
 	border-right: 1px solid #afafaf;
 }
-.code-view tr td:last-child pre{
+table.code-view tr td:last-child pre{
 	margin: 0;
 	text-align: left;
 	padding: 5px 5px 5px 1em;
 	tab-size: 4;
+}
+
+/* Submissions */
+table.submissions{
+	margin: 0;
+	display: inline-table;
+}
+table.submissions th.user {
+	min-width: 60px;
+}
+table.submissions th.time {
+	min-width: 150px;
+}
+table.submissions th.problem {
+	min-width: 120px;
+}
+table.submissions th.status {
+	min-width: 200px;
+}
+table.submissions th.score {
+	min-width: 60px;
+}
+table.submissions th.final {
+	min-width: 60px;
+}
+table.submissions th{
+	padding: 6px;
+	line-height: 20px;
+}
+table.submissions td{
+	border-top: 1px solid #bbb;
+	padding: 4px 24px 4px 8px;
+	line-height: 20px;
 }
 
 /* Forms */
@@ -950,23 +1016,4 @@ a.btn{
 }
 .form-container form input[type="submit"]{
 	margin-left: 140px;
-}
-.round{
-	margin-left: 70px;
-}
-.round-info p{
-	margin: 4px 0;
-}
-.submissions{
-	margin: 0 auto;
-	display: inline-table;
-}
-.submissions th{
-	padding: 6px;
-	line-height: 20px;
-}
-.submissions td{
-	border-top: 1px solid #bbb;
-	padding: 4px 24px 4px 8px;
-	line-height: 20px;
 }

@@ -20,9 +20,9 @@ src/Conver/default_checker_dump.c
 
 # Others
 build/
-src/judge_machine
+src/judge-machine
 src/CTH
 src/chmod-default
 src/conver
 src/sim-server
-src/setup_install
+src/setup-install

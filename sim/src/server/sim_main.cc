@@ -34,8 +34,8 @@ SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
 	}
 
 	fclose(conf);
-	user[strlen(user)-1] = password[strlen(password)-1] = '\0';
-	database[strlen(database)-1] = host[strlen(host)-1] = '\0';
+	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
+	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
 
 	// Connect
 	try {
@@ -81,6 +81,9 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 
 		else if (0 == compareTo(req.target, 1, '/', "c"))
 			contest();
+
+		else if (0 == compareTo(req.target, 1, '/', "s"))
+			submission();
 
 		else if (0 == compareTo(req.target, 1, '/', ""))
 			mainPage();

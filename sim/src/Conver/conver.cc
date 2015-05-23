@@ -34,31 +34,6 @@ ProblemConfig conf_cfg;
 static bool SET_MEMORY_LIMIT = false; // true if is set in options
 static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;
 
-string usecToSec(unsigned long long x, unsigned prec, bool trim_nulls) {
-	unsigned long long y = x / 1000000;
-	string res = toString(y);
-
-	y = x - y * 1000000;
-	char t[7] = "000000";
-	for (int i = 5; i >= 0; --i) {
-		t[i] = '0' + y % 10;
-		y /= 10;
-	}
-
-	// Truncate trailing zeros
-	if (trim_nulls)
-		for (int i = std::min(5u, prec - 1); i >= 0 && t[i] == '0'; --i)
-			t[i] = '\0';
-
-	if (prec < 6)
-		t[prec] = '\0';
-
-	if (t[0] != '\0')
-		res.append(".").append(t);
-
-	return res;
-};
-
 string ProblemConfig::dump() {
 	string res;
 	Appender<string> app(res);
@@ -73,12 +48,12 @@ string ProblemConfig::dump() {
 
 		sort(i->tests.begin(), i->tests.end(), ProblemConfig::TestCmp());
 		app('\n')(i->tests[0].name)(' ')
-			(usecToSec(i->tests[0].time_limit, 2))(' ')(toString(i->points))
+			(usecToSecStr(i->tests[0].time_limit, 2))(' ')(toString(i->points))
 			('\n');
 
 		for (vector<Test>::iterator j = ++i->tests.begin(); j != i->tests.end();
 				++j)
-			app(j->name)(' ')(usecToSec(j->time_limit, 2))('\n');
+			app(j->name)(' ')(usecToSecStr(j->time_limit, 2))('\n');
 	}
 	return res;
 }

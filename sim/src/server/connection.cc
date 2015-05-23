@@ -691,24 +691,32 @@ void Connection::sendResponse(const HttpResponse& res) {
 		break;
 
 	case HttpResponse::FILE:
-		int fd = open(res.content.c_str(), O_RDONLY);
+		int fd = open(res.content.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {
 			error404();
 			return;
 		}
 
+#ifdef __x86_64__
 		struct stat sb;
 		if (fstat(fd, &sb) == -1) {
 			error500();
 			return;
 		}
+#else
+		struct stat64 sb;
+		if (fstat64(fd, &sb) == -1) {
+			error500();
+			return;
+		}
+#endif
 
 		if (!S_ISREG(sb.st_mode)) {
 			error403();
 			return;
 		}
 
-		off_t fsize = sb.st_size;
+		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
 		str += toString((size_t)fsize);
@@ -728,7 +736,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		}
 
 		// Read from file and write to socket
-		off_t pos = 0;
+		off64_t pos = 0;
 		ssize_t read_len;
 		while (pos < fsize && state_ == OK &&
 				(read_len = read(fd, buff, buff_length)) != -1) {
