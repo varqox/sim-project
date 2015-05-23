@@ -50,29 +50,40 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) 
 			throw exception();
 		}
 
-		char *buff = get_current_dir_name();
-		if (buff == NULL || strlen(buff) == 0) {
-			if (buff != NULL) // strlen(buff) == 0
-				errno = ENOENT;
+		// If name_ is absolute
+		if (name_[0] == '/')
+			path = name_;
 
-			free(name_);
+		// If name_ is not absolute
+		else {
+			char *buff = get_current_dir_name();
+			if (buff == NULL || strlen(buff) == 0) {
+				if (buff != NULL) // strlen(buff) == 0
+					errno = ENOENT;
+
+				free(name_);
+				free(buff);
+
+				struct exception : std::exception {
+					const char* what() const throw() {
+						return (string("Cannot get current working directory - ") +
+							strerror(errno) + "\n").c_str();
+					}
+				};
+				throw exception();
+			}
+
+			path = buff;
 			free(buff);
 
-			struct exception : std::exception {
-				const char* what() const throw() {
-					return (string("Cannot get current working directory - ") +
-						strerror(errno) + "\n").c_str();
-				}
-			};
-			throw exception();
+			path += '/';
+			path += name_;
+
 		}
 
-		path = buff;
-		free(buff);
-
-		if (*--path.end() != '/')
-			path += '/';
-		path += name_;
+		// Make path absolute
+		abspath(path).swap(path);
+		path += '/';
 
 		name_[size] = '/';
 
@@ -83,7 +94,8 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) 
 
 TemporaryDirectory::~TemporaryDirectory() {
 	E("\e[1;31mRemoving tmp_dir\e[m -> %p\n", this);
-	remove_r(path.c_str());
+	if (-1 == remove_r(path.c_str()))
+		eprintf("Error: remove_r() - %s\n", strerror(errno));
 	free(name_);
 }
 
@@ -385,7 +397,7 @@ string abspath(const string& path, size_t beg, size_t end, string root) {
 			beg = next_slash;
 			continue;
 		}
-		if (*--root.end() != '/' && root.size() > 0)
+		if (root.size() > 0 && *--root.end() != '/')
 			root += '/';
 
 		root.append(path, beg, next_slash - beg);
@@ -395,44 +407,87 @@ string abspath(const string& path, size_t beg, size_t end, string root) {
 	return root;
 }
 
-string getFileContents(const char* file) {
-	FILE* f = fopen(file, "r");
-	if (f == NULL)
-		return "";
-
-	// Determine file size
-	if (fseek(f, 0, SEEK_END) == -1) {
-		fclose(f);
-		return "";
-	}
-
-	long long size = ftell(f), pos = 0, read = 1;
-	if (size == -1L) {
-		fclose(f);
-		return "";
-	}
-
-	char* content = (char*)malloc(size);
-	if (content == NULL) {
-		fclose(f);
-		return "";
-	}
-
-	rewind(f);
-	while (pos < size && read != 0) {
-		read = fread(content, sizeof(char), size, f);
-		pos += read;
-	}
-	fclose(f);
+string getFileContents(int fd) {
+	const size_t buff_len = 1 << 16;
+	char buff[buff_len];
 
 	string res;
-	try {
-		res.assign(content, content + pos);
-	} catch (...) {
-		res.clear();
+	ssize_t len;
+	for (;;) {
+		len = read(fd, buff, buff_len);
+		// Interrupted by signal
+		if (len < 0 && errno == EINTR)
+			continue;
+		// EOF or error
+		if (len <= 0)
+			break;
+
+		res.append(buff, len);
 	}
 
-	free(content);
+	return res;
+}
+
+string getFileContents(int fd, off64_t beg, off64_t end) {
+	const size_t buff_len = 1 << 16;
+	char buff[buff_len];
+
+	off64_t size = lseek64(fd, 0, SEEK_END);
+	if (size == (off64_t)-1 || beg < 0 || beg > size)
+		return "";
+
+	// Change end to the valid value
+	if (size < end || end < 0)
+		end = size;
+
+	if (end < beg)
+		end = beg;
+	// Reposition to beg
+	if (beg != lseek64(fd, beg, SEEK_SET))
+		return "";
+
+	off64_t bytes_left = end - beg;
+	string res;
+	ssize_t len;
+	while (bytes_left > 0) {
+		len = read(fd, buff, std::min<off64_t>(buff_len, bytes_left));
+		// Interrupted by signal
+		if (len < 0 && errno == EINTR)
+			continue;
+		// EOF or error
+		if (len <= 0)
+			break;
+
+		bytes_left -= len;
+		res.append(buff, len);
+	}
+
+	return res;
+}
+
+string getFileContents(const char* file) {
+	int fd;
+	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
+
+	if (fd == -1)
+		return "";
+
+	string res = getFileContents(fd);
+	while (close(fd) == -1 && errno == EINTR) {}
+
+	return res;
+}
+
+string getFileContents(const char* file, off64_t beg, off64_t end) {
+	int fd;
+	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
+
+	if (fd == -1)
+		return "";
+
+	string res = getFileContents(fd, beg, end);
+	while (close(fd) == -1 && errno == EINTR) {}
+
 	return res;
 }
 

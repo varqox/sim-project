@@ -286,7 +286,7 @@ inline node* dumpDirectoryTree(const std::string& path) {
 
 
 /* Returns an absolute path that does not contain any . or .. components,
-*  nor any repeated path separators (/) and / at end
+*  nor any repeated path separators (/) nor / at end
 *  root can be empty
 */
 std::string abspath(const std::string& path, size_t beg = 0,
@@ -297,13 +297,70 @@ inline std::string getExtension(const std::string file) {
 	return file.substr(file.find_last_of('.') + 1);
 }
 
+/**
+ * @brief Reads until end of file
+ *
+ * @param fd file descriptor to read from
+ *
+ * @return read contents
+ *
+ * @errors The same that occur for read(2)
+ */
+std::string getFileContents(int fd);
+
+/**
+ * @brief Reads form @p fd from beg to end
+ *
+ * @param fd file descriptor to read from
+ * @param beg begin offset
+ * @param end end offset (@p end < 0 means size of file)
+ *
+ * @return read contents
+ *
+ * @errors The same that occur for lseek64(3), read(2)
+ */
+std::string getFileContents(int fd, off64_t beg, off64_t end = -1);
+
+/**
+ * @brief Reads until end of file
+ *
+ * @param file file to read from
+ *
+ * @return read contents
+ *
+ * @errors The same that occur for open(2), read(2), close(2)
+ */
 std::string getFileContents(const char* file);
 
+/**
+ * @brief Reads form @p file from beg to end
+ *
+ * @param file file to read from
+ * @param beg begin offset
+ * @param end end offset (@p end < 0 means size of file)
+ *
+ * @return read contents
+ *
+ * @errors The same that occur for open(2), lseek64(3), read(2), close(2)
+ */
+std::string getFileContents(const char* file, off64_t beg, off64_t end = -1);
+
+/**
+ * Alias to getFileContents(const char*)
+ */
 inline std::string getFileContents(const std::string& file) {
 	return getFileContents(file.c_str());
 }
 
-const int GFBL_IGNORE_NEW_LINES = 1; // Do not append '\n' to each line
+/**
+ * Alias to getFileContents(const char*, off64_t, off64_t)
+ */
+inline std::string getFileContents(const std::string& file, off64_t beg,
+		off64_t end = -1) {
+	return getFileContents(file.c_str(), beg, end);
+}
+
+const int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
 /**
  * @brief Get file contents by lines in range [first, last)
  *
@@ -313,7 +370,7 @@ const int GFBL_IGNORE_NEW_LINES = 1; // Do not append '\n' to each line
  * @param first number of first line to fetch
  * @param last number of first line not to fetch
  *
- * @return vector<string> containing fetched lines
+ * @return vector<std::string> containing fetched lines
  */
 std::vector<std::string> getFileByLines(const char* file, int flags = 0,
 	size_t first = 0, size_t last = -1);

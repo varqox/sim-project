@@ -191,3 +191,28 @@ bool isReal(const std::string& s, size_t beg, size_t end) {
 
 	return true;
 }
+
+string usecToSecStr(unsigned long long x, unsigned prec, bool trim_nulls) {
+	unsigned long long y = x / 1000000;
+	string res = toString(y);
+
+	y = x - y * 1000000;
+	char t[7] = "000000";
+	for (int i = 5; i >= 0; --i) {
+		t[i] = '0' + y % 10;
+		y /= 10;
+	}
+
+	// Truncate trailing zeros
+	if (trim_nulls)
+		for (int i = std::min(5u, prec - 1); i >= 0 && t[i] == '0'; --i)
+			t[i] = '\0';
+
+	if (prec < 6)
+		t[prec] = '\0';
+
+	if (t[0] != '\0')
+		res.append(".").append(t);
+
+	return res;
+};
