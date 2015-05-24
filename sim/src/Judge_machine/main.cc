@@ -87,12 +87,16 @@ static void handleSubmissionQueue() {
 					pstmt->setString(4, submission_id);
 					pstmt->executeUpdate();
 
-				} catch (...) {
-					E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__,
-						__LINE__);
+				} catch (const std::exception& e) {
+					E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+						__LINE__, e.what());
 				}
 			}
 		}
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -135,6 +139,10 @@ int main() {
 	// Connect
 	try {
 		db_conn = new DB::Connection(host, user, password, database);
+
+	} catch (const std::exception& e) {
+		eprintf("Failed to connect to database - %s\n", e.what());
+		return 1;
 
 	} catch (...) {
 		eprintf("Failed to connect to database\n");

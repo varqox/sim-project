@@ -52,32 +52,24 @@ void SIM::contest() {
 				pstmt.reset(db_conn()->prepareStatement(
 					"SELECT id, name FROM rounds WHERE parent IS NULL AND access='public' ORDER BY id"));
 
-			pstmt->execute();
 
 			// List them
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			templ << "<div class=\"contests-list\">\n";
 
-			// Add contest button (admins and teachers)
-			if (session->state() == Session::OK) {
-				try {
-					// Check if user has more privileges to create contest
-					pstmt.reset(db_conn()->prepareStatement("SELECT type FROM users WHERE id=?"));
-					pstmt->setString(1, session->user_id);
-					pstmt->execute();
-
-					UniquePtr<sql::ResultSet> res1(pstmt->getResultSet());
-					if (res1->next() && Contest::getUserRank(res1->getString(1)) < 2)
-						templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
-
-				// Suppress all exceptions
-				} catch (...) {}
-			}
+			// Add contest button (admins and teachers only)
+			if (session->state() == Session::OK &&
+					Contest::getUserRank(*this, session->user_id) < 2)
+				templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
 			while (res->next())
 				templ << "<a href=\"/c/" << htmlSpecialChars(res->getString(1)) << "\">"
 					<< htmlSpecialChars(res->getString(2)) << "</a>\n";
 			templ << "</div>\n";
+
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
 		} catch (...) {
 			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -199,6 +191,10 @@ void Contest::addContest(SIM& sim) {
 						return sim.redirect("/c/" + res->getString(1));
 				}
 
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
@@ -294,6 +290,10 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 					if (res->next())
 						return sim.redirect("/c/" + res->getString(1));
 				}
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
 
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -489,6 +489,10 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 
 				return sim.redirect("/c/" + res->getString(1));
 
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
@@ -664,6 +668,11 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 
 				return sim.redirect("/s/" + submission_id);
 
+			} catch (const std::exception& e) {
+				fv.addError("Internal server error");
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
 			} catch (...) {
 				fv.addError("Internal server error");
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -700,9 +709,8 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 				pstmt->setString(2, current_date);
 				pstmt->setString(3, current_date);
 			}
-			pstmt->execute();
 
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			vector<Subround> subrounds;
 			// For performance
 			subrounds.reserve(res->rowsCount());
@@ -718,9 +726,8 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 			pstmt.reset(sim.db_conn()
 					->prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
-			pstmt->execute();
 
-			res.reset(pstmt->getResultSet());
+			res.reset(pstmt->executeQuery());
 			std::map<string, vector<Problem> > problems; // (round_id, problems)
 
 			// Fill with all subrounds
@@ -762,10 +769,9 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 					->prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
 			pstmt->setString(1, rp.round->id);
-			pstmt->execute();
 
 			// List problems
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			while (res->next())
 				append(buffer) << "<option value=\"" << res->getString(1)
 					<< "\">" << htmlSpecialChars(res->getString(2)) << " ("
@@ -780,6 +786,10 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 				<< htmlSpecialChars(rp.problem->name) << " ("
 				<< htmlSpecialChars(rp.round->name) << ")</option>\n";
 		}
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -898,6 +908,10 @@ void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
 
 		templ << "</tbody>\n"
 			"</table>\n";
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -1082,6 +1096,10 @@ void SIM::submission() {
 				<< convertStringBack(submission_file[1]);
 		}
 		templ << "</div>";
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);

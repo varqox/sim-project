@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 				pstmt->setString(1, sha256("sim"));
 				pstmt->executeUpdate();
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `users`\e[m - %s\n", e.what());
 			error = true;
 		}
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 					"KEY (`time`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n");
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `session`\e[m - %s\n", e.what());
 			error = true;
 		}
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 					"KEY (`owner`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `problems`\e[m - %s\n", e.what());
 			error = true;
 		}
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
 					"KEY (`owner`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `rounds`\e[m - %s\n", e.what());
 			error = true;
 		}
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
 					"KEY (`round_id`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `users_to_rounds`\e[m - %s\n", e.what());
 			error = true;
 		}
@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
 					"KEY (`user_id`, `round_id`, `final`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `submissions`\e[m - %s\n", e.what());
 			error = true;
 		}
@@ -197,13 +197,17 @@ int main(int argc, char *argv[]) {
 					"KEY (`round_id`, `final`, `submit_time`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `submissions_to_rounds`\e[m - %s\n", e.what());
 			error = true;
 		}
 
 		if (error)
 			return 5;
+
+	} catch (const std::exception& e) {
+		eprintf("\e[31mFailed to connect to database\e[m - %s\n", e.what());
+		return 4;
 
 	} catch (...) {
 		eprintf("\e[31mFailed to connect to database\e[m\n");

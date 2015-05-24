@@ -45,9 +45,8 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
 					->prepareStatement("SELECT username FROM `users` WHERE id=?"));
 			pstmt->setString(1, sim_.session->user_id);
-			pstmt->execute();
 
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			if (res->next()) {
 				*this << "<div class=\"dropdown\">\n"
 						"<a class=\"user\"><strong>"
@@ -60,6 +59,11 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 				sim_.session->destroy();
 				goto else_label;
 			}
+
+		} catch (const std::exception& e) {
+			sim_.session->destroy();
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
 		} catch (...) {
 			sim_.session->destroy();
