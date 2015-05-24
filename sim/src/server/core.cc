@@ -31,7 +31,7 @@ static void* worker(void*) {
 		int client_socket_fd = accept(socket_fd, (sockaddr*)&name, &client_name_len);
 		char ip[INET_ADDRSTRLEN];
 
-		inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN); // extract ip
+		inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN); // extract IP
 		eprintf("\nConnection accepted: %lu form %s\n", pthread_self(), ip);
 
 		conn.assign(client_socket_fd);
@@ -62,7 +62,7 @@ int main() {
 	sigaction(SIGINT, &sa, NULL);
 
 	sockaddr_in name;
-	name.sin_addr.s_addr = inet_addr("127.7.7.7"); //htonl(INADDR_ANY); // server address
+	name.sin_addr.s_addr = inet_addr("127.7.7.7"); // htonl(INADDR_ANY); // server address
 	name.sin_port = htons(8080); // server port
 	name.sin_family = AF_INET;
 

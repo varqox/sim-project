@@ -73,7 +73,7 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 		return pair<string, string>();
 	}
 
-	// Check for whitespace in field-name
+	// Check for white space in field-name
 	end = header.find(' ');
 	if (end != string::npos && end < beg) {
 		error400();
@@ -81,12 +81,12 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 	}
 
 	string ret = header.substr(0, beg);
-	// Erase leading whitespace
+	// Erase leading white space
 	end = header.size();
 	while (isspace(header[end - 1]))
 		--end;
 
-	// Erase trailing whitespace
+	// Erase trailing white space
 	while (++beg < header.size() && isspace(header[beg])) {}
 
 	return make_pair(ret, header.substr(beg, end - beg));
@@ -177,7 +177,7 @@ void Connection::readPOST(HttpRequest& req) {
 		int fd = -1;
 		FILE *tmp_file = NULL;
 		bool first_boundary = true;
-		k = 2; // because "\r\n" don't have to exist at beginning
+		k = 2; // because "\r\n" do not have to exist at beginning
 
 		// While we can read
 		// In each loop pass parse EXACTLY one field
@@ -549,7 +549,7 @@ HttpRequest Connection::getRequest() {
 		return req;
 	}
 
-	// Exract target
+	// Extract target
 	while (end < request_line.size() && isspace(request_line[end]))
 		++end;
 	beg = end;

@@ -46,10 +46,10 @@ int main(int argc, char *argv[]) {
 	try {
 		DB::Connection conn(host, user, password, database);
 
-		delete[] user;
-		delete[] password;
-		delete[] database;
-		delete[] host;
+		free(user);
+		free(password);
+		free(database);
+		free(host);
 
 		bool error = false;
 		UniquePtr<sql::Statement> stmt(conn->createStatement());

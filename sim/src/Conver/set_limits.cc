@@ -120,7 +120,7 @@ int setLimits(const string& package) {
 	};
 
 	sandbox::options check_sb_opt = {
-		10000000ull, // 10s
+		10 * 1000000, // 10s
 		256 << 20, // 256 MB
 		fopen("/dev/null", "r"),
 		fopen("checker_out", "w"),

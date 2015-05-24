@@ -17,7 +17,7 @@ SIM::Session::State SIM::Session::open() {
 	state_ = FAIL;
 
 	id_ = sim_.req_->getCookie("session");
-	// Cookie doesn't exist (or have no value)
+	// Cookie does not exist (or have no value)
 	if (id_.empty())
 		return FAIL;
 

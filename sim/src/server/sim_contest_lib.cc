@@ -48,7 +48,7 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 
 		int rows = res->rowsCount();
-		// If round doesn't exist
+		// If round does not exist
 		if (rows == 0) {
 			sim.error404();
 			delete rp;
@@ -317,7 +317,7 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 				// Get reference to proper vector<Problem>
 				__typeof(problems.begin()) it =
 						problems.find(res->getString(2));
-				if (it == problems.end()) // Problem parent isn't visible or database error
+				if (it == problems.end()) // Problem parent is not visible or database error
 					continue; // Ignore
 
 				vector<Problem>& prob = it->second;

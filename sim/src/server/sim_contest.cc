@@ -739,7 +739,7 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 				// Get reference to proper vector<Problem>
 				__typeof(problems.begin()) it =
 						problems.find(res->getString(2));
-				// If problem parent isn't visible or database error
+				// If problem parent is not visible or database error
 				if (it == problems.end())
 					continue; // Ignore
 
