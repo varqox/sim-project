@@ -11,11 +11,11 @@ inline std::string toString(size_t a) {
 	return toString(static_cast<unsigned long long>(a));
 }
 
-// Like strtou but places number into x
+// Like strtou() but places number into x
 int strtonum(std::string& x, const std::string& s, size_t beg = 0,
 	size_t end = std::string::npos);
 
-// Like string::find but searches in [beg, end)
+// Like string::find() but searches in [beg, end)
 size_t find(const std::string& str, char c, size_t beg = 0,
 	size_t end = std::string::npos);
 
@@ -106,7 +106,7 @@ bool isReal(const std::string& s, size_t beg = 0,
 *  if beg > end then beg = end
 *  if x == NULL then only validate
 *  Return value: -1 if s: [beg, end) is not number
-*    otherwise number of chracters parsed
+*    otherwise number of characters parsed
 */
 template<class T>
 int strtoi(const std::string& s, T *x, size_t beg = 0,
