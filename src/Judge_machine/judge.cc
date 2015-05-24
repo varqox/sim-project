@@ -52,8 +52,8 @@ static int compile(const string& source, const string& exec, string* c_errors,
 	vector<string> args;
 	append(args)("g++")("-O2")("-static")("-lm")(source)("-o")(exec);
 
-	/* Compile as 32 bit executable (not essential but if checker/judge-machine
-	*  will be x86_63 and Conver i386 then checker won't work, with it its more
+	/* Compile as 32 bit executable (not essential but if checker will be x86_63
+	*  and Conver/Judge_machine i386 then checker won't work, with it its more
 	*  secure (see making i386 syscall from x86_64))
 	*/
 	append(args)("-m32");
@@ -348,7 +348,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 	};
 
 	sandbox::options check_sb_opt = {
-		10000000ull, // 10s
+		10 * 1000000, // 10s
 		256 << 20, // 256 MB
 		fopen("/dev/null", "r"),
 		fopen((tmp_dir->sname() + "checker_out").c_str(), "w"),

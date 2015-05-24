@@ -53,7 +53,7 @@ struct options {
 
 /**
  * @brief Runs @p exec with arguments @p args with limits @p opts->time_limit
- * and @p opts->memory_limit under ptrace
+ * and @p opts->memory_limit under ptrace(2)
  * @details @p func is called on every syscall entry called by exec with
  * parameters: child pid, syscall number, @p data.
  * @p func must return 0 - syscall is allowed  non-zero
@@ -68,7 +68,7 @@ struct options {
  * new_stdin, new_stdout, new_stderr equal to NULL disables change of
  * respectively stdin, stdout, stderr of child process)
  * @param func pointer to callback function
- * @param data pointer which will be passed to func as last argument
+ * @param data pointer which will be passed to @p func as last argument
  * @return Returns ExitStat structure with fields: code is -1 on error, or
  * return status (in the format specified in wait(2)).
  */

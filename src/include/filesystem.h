@@ -370,7 +370,7 @@ const int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
  * @param first number of first line to fetch
  * @param last number of first line not to fetch
  *
- * @return vector<std::string> containing fetched lines
+ * @return vector<string> containing fetched lines
  */
 std::vector<std::string> getFileByLines(const char* file, int flags = 0,
 	size_t first = 0, size_t last = -1);

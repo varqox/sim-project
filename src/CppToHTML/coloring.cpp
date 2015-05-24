@@ -64,7 +64,7 @@ namespace coloring
 				--i;
 				output << span::end;
 			}
-			else if(i+1<code_len && code[i]=='/' && code[i+1]=='/') // oneline comment
+			else if(i+1<code_len && code[i]=='/' && code[i+1]=='/') // one-line comment
 			{
 				output << synax_highlight(to_syn_high);
 				to_syn_high="";
@@ -74,7 +74,7 @@ namespace coloring
 				--i;
 				output << span::end;
 			}
-			else if(i+1<code_len && code[i]=='/' && code[i+1]=='*') // multiline comment
+			else if(i+1<code_len && code[i]=='/' && code[i+1]=='*') // multi-line comment
 			{
 				output << synax_highlight(to_syn_high);
 				to_syn_high="";
