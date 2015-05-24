@@ -6,6 +6,7 @@
 #include "../include/time.h"
 
 #include <cppconn/prepared_statement.h>
+#include <cstring>
 
 using std::string;
 
@@ -23,12 +24,12 @@ SIM::Session::State SIM::Session::open() {
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
 				->prepareStatement(
-				"SELECT user_id,data,ip,user_agent FROM `session` WHERE id=? AND time>=?"));
+				"SELECT user_id, data, ip, user_agent FROM session WHERE id=? AND time>=?"));
 		pstmt->setString(1, id_);
-		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S", time(NULL) - SESSION_MAX_LIFETIME));
-		pstmt->execute();
+		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
+				time(NULL) - SESSION_MAX_LIFETIME));
 
-		UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 		if (res->next()) {
 			user_id = res->getString(1);
 			data = res->getString(2);
@@ -38,6 +39,10 @@ SIM::Session::State SIM::Session::open() {
 					sim_.req_->headers.isEqualTo("User-Agent", res->getString(4)))
 				return (state_ = OK);
 		}
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -49,10 +54,12 @@ SIM::Session::State SIM::Session::open() {
 
 static string generate_id() {
 	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	string res(10, '0');
+	const size_t len = strlen(t), SESSION_ID_LENGTH = 10;
 
-	for (int i = 0; i < 10; ++i)
-		res[i] = t[getRandom(0, sizeof(t) - 1)];
+	string res(SESSION_ID_LENGTH, '0');
+
+	for (size_t i = 0; i < SESSION_ID_LENGTH; ++i)
+		res[i] = t[getRandom(0, len - 1)];
 
 	return res;
 }
@@ -61,7 +68,7 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 	close();
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-				->prepareStatement("INSERT INTO `session` (id,user_id,ip,user_agent,time) VALUES(?,?,?,?,?)"));
+				->prepareStatement("INSERT INTO session (id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions
 		UniquePtr<sql::Statement>(sim_.db_conn()->createStatement())
@@ -89,6 +96,11 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME, "/", "", true);
 		state_ = OK;
 
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+		state_ = FAIL;
+
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		state_ = FAIL;
@@ -103,11 +115,15 @@ void SIM::Session::destroy() {
 
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-				->prepareStatement("DELETE FROM `session` WHERE id=?"));
+				->prepareStatement("DELETE FROM session WHERE id=?"));
 		pstmt->setString(1, id_);
 		pstmt->executeUpdate();
 
 		sim_.resp_.setCookie("session", "", 0); // Delete cookie
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -120,11 +136,15 @@ void SIM::Session::close() {
 	if (state_ == OK) {
 		try {
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-					->prepareStatement("UPDATE `session` SET data=?, time=? WHERE id=?"));
+					->prepareStatement("UPDATE session SET data=?, time=? WHERE id=?"));
 			pstmt->setString(1, data);
 			pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
 			pstmt->setString(3, id_);
 			pstmt->executeUpdate();
+
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
 		} catch (...) {
 			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);

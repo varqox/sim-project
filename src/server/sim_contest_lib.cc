@@ -22,6 +22,9 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 	try {
 		struct Local {
 			static void copyData(Round*& r, UniquePtr<sql::ResultSet>& res) {
+				if (r)
+					delete r;
+
 				r = new Round;
 				r->id = res->getString(1);
 				r->parent = res->getString(2);
@@ -34,51 +37,45 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 				r->ends = res->getString(9);
 				r->full_results = res->getString(10);
 			}
-
-			static void selectRound(Round*& r,
-						UniquePtr<sql::PreparedStatement>& pstmt,
-						const string& id) {
-				pstmt->setString(1, id);
-				pstmt->execute();
-
-				// Set results
-				UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
-
-				if (res->next())
-					copyData(r, res);
-
-				else
-					throw std::exception(); // There is error in database...
-			}
 		};
 
 		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-				->prepareStatement("SELECT id, parent, problem_id, access, name, owner, visible, begins, ends, full_results FROM rounds WHERE id=?"));
+				->prepareStatement("SELECT id, parent, problem_id, access, name, owner, visible, begins, ends, full_results FROM rounds WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR id=(SELECT grandparent FROM rounds WHERE id=?)"));
 		pstmt->setString(1, round_id);
-		pstmt->execute();
+		pstmt->setString(2, round_id);
+		pstmt->setString(3, round_id);
 
-		UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
-		// Round doesn't exist
-		if (!res->next()) {
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+
+		int rows = res->rowsCount();
+		// If round doesn't exist
+		if (rows == 0) {
 			sim.error404();
 			delete rp;
 			return NULL;
 		}
 
-		if (res->isNull(2)) { // parent IS NULL
-			rp->type = CONTEST;
-			Local::copyData(rp->contest, res);
+		rp->type = (rows == 1 ? CONTEST : (rows == 2 ? ROUND : PROBLEM));
 
-		} else if (res->isNull(3)) { // problem_id IS NULL
-			rp->type = ROUND;
-			Local::copyData(rp->round, res);
-			Local::selectRound(rp->contest, pstmt, rp->round->parent);
+		while (res->next()) {
+			if (res->isNull(2))
+				Local::copyData(rp->contest, res);
+			else if (res->isNull(3)) // problem_id IS NULL
+				Local::copyData(rp->round, res);
+			else
+				Local::copyData(rp->problem, res);
+		}
 
-		} else {
-			rp->type = PROBLEM;
-			Local::copyData(rp->problem, res);
-			Local::selectRound(rp->round, pstmt, rp->problem->parent);
-			Local::selectRound(rp->contest, pstmt, rp->round->parent);
+		// Check rounds hierarchy
+		if (!rp->contest || (rows > 1 && !rp->round) ||
+				(rows > 2 && !rp->problem)) {
+			abort();
+			struct exception : std::exception {
+				const char* what() const throw() {
+					return "Database error (rounds hierarchy)";
+				}
+			};
+			throw exception();
 		}
 
 		// Check access
@@ -96,9 +93,8 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 						->prepareStatement("SELECT user_id FROM users_to_rounds WHERE user_id=? AND round_id=?"));
 				pstmt->setString(1, sim.session->user_id);
 				pstmt->setString(2, rp->contest->id);
-				pstmt->execute();
 
-				res.reset(pstmt->getResultSet());
+				res.reset(pstmt->executeQuery());
 				if (!res->next()) {
 					// User is not assigned to this contest
 					sim.error403();
@@ -117,8 +113,9 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 			}
 		}
 
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 		delete rp;
 		return NULL;
 	}
@@ -141,11 +138,14 @@ int Contest::getUserRank(SIM& sim, const string& id) {
 		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 				->prepareStatement("SELECT type FROM users WHERE id=?"));
 		pstmt->setString(1, id);
-		pstmt->execute();
 
-		UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 		if (res->next())
 			return getUserRank(res->getString(1));
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -167,9 +167,8 @@ bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 					->prepareStatement("SELECT id, type FROM users WHERE id=? OR id=?"));
 			pstmt->setString(1, rp.contest->owner);
 			pstmt->setString(2, sim.session->user_id);
-			pstmt->execute();
 
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			if (res->rowsCount() == 2) {
 				int owner_type = 0, user_type = 4;
 
@@ -184,6 +183,10 @@ bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 
 				return owner_type > user_type;
 			}
+
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
 		} catch (...) {
 			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -279,9 +282,8 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 			pstmt->setString(1, rp.contest->id);
 			if (!admin_view)
 				pstmt->setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
-			pstmt->execute();
 
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			vector<Subround> subrounds;
 			// For performance
 			subrounds.reserve(res->rowsCount());
@@ -302,9 +304,8 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 			pstmt.reset(sim.db_conn()
 					->prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
-			pstmt->execute();
 
-			res.reset(pstmt->getResultSet());
+			res.reset(pstmt->executeQuery());
 			std::map<string, vector<Problem> > problems; // (round_id, problems)
 
 			// Fill with all subrounds
@@ -370,10 +371,9 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
 					->prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
 			pstmt->setString(1, rp.round->id);
-			pstmt->execute();
 
 			// List problems
-			UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			while (res->next()) {
 				templ << "<a href=\"/c/" << res->getString(1);
 
@@ -407,6 +407,10 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 				"</div>\n"
 				"</div>\n";
 		}
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);

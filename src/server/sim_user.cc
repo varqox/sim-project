@@ -26,9 +26,8 @@ void SIM::login() {
 						->prepareStatement("SELECT id FROM `users` WHERE username=? AND password=?"));
 				pstmt->setString(1, username->second);
 				pstmt->setString(2, sha256(password->second));
-				pstmt->execute();
 
-				UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 
 				if (res->next()) {
 					// Delete old sessions
@@ -43,6 +42,10 @@ void SIM::login() {
 
 					return redirect("/");
 				}
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
 
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
@@ -107,9 +110,8 @@ void SIM::signUp() {
 				if (pstmt->executeUpdate() == 1) {
 					pstmt.reset(db_conn()->prepareStatement("SELECT id FROM `users` WHERE username=?"));
 					pstmt->setString(1, username);
-					pstmt->execute();
 
-					UniquePtr<sql::ResultSet> res(pstmt->getResultSet());
+					UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 					if (res->next()) {
 						session->create(res->getString(1));
 						return redirect("/");
@@ -117,6 +119,10 @@ void SIM::signUp() {
 
 				} else
 					fv.addError("Username taken");
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
 
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);

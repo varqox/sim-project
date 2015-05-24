@@ -41,6 +41,10 @@ SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
 	try {
 		db_conn_ = new DB::Connection(host, user, password, database);
 
+	} catch (const std::exception& e) {
+		eprintf("Failed to connect to database - %s\n", e.what());
+		db_conn_ = NULL;
+
 	} catch (...) {
 		eprintf("Failed to connect to database\n");
 		db_conn_ = NULL;
@@ -90,6 +94,11 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 
 		else
 			error404();
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+		error500();
 
 	} catch (...) {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
