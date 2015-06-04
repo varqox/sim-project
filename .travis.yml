@@ -4,6 +4,8 @@ compiler:
   - gcc
   - clang
 
+cache: apt
+
 install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq mysql-server mysql-client libmysqlcppconn-dev
