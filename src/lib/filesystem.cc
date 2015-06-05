@@ -188,9 +188,8 @@ int copy(const char* src, const char* dest) {
 	if (in == -1)
 		return -1;
 
-	// (mode: 0644/rw-r--r--)
-	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR |
-			S_IRGRP | S_IROTH);
+	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC,
+		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // (mode: 0644/rw-r--r--)
 	if (out == -1) {
 		close(in);
 		return -1;
@@ -207,9 +206,8 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
 	if (in == -1)
 		return -1;
 
-	// (mode: 0644/rw-r--r--)
-	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR |
-			S_IWUSR | S_IRGRP | S_IROTH);
+	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC,
+		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // (mode: 0644/rw-r--r--)
 	if (out == -1) {
 		close(in);
 		return -1;

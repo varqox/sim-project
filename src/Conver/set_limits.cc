@@ -91,7 +91,8 @@ int setLimits(const string& package) {
 		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
 		conf_cfg.memory_limit << 10,
 		-1,
-		open("answer", O_WRONLY | O_CREAT | O_TRUNC),
+		open("answer", O_WRONLY | O_CREAT | O_TRUNC,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
 		-1
 	};
 
@@ -106,7 +107,8 @@ int setLimits(const string& package) {
 		10 * 1000000, // 10s
 		256 << 20, // 256 MB
 		-1,
-		open("checker_out", O_WRONLY | O_CREAT | O_TRUNC),
+		open("checker_out", O_WRONLY | O_CREAT | O_TRUNC,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
 		-1
 	};
 
@@ -154,7 +156,8 @@ int setLimits(const string& package) {
 			// Open sb_opts.new_stdout_fd
 			if (GEN_OUT && (sb_opts.new_stdout_fd = open(
 					(package + "tests/" + test->name + ".out").c_str(),
-					O_WRONLY | O_CREAT | O_TRUNC)) == -1) {
+					O_WRONLY | O_CREAT | O_TRUNC, // (mode: 0644/rw-r--r--)
+					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
 					(package + "tests/" + test->name + ".out").c_str(),
 					strerror(errno));
