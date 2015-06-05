@@ -4,12 +4,16 @@
 #include <vector>
 
 struct spawn_opts {
-	FILE *new_stdin; // NULL - do not change
-	FILE *new_stdout; // NULL - do not change
-	FILE *new_stderr; // NULL - do not change
+	int new_stdin_fd; // negative - close, STDIN_FILENO - do not change
+	int new_stdout_fd; // negative - close, STDOUT_FILENO - do not change
+	int new_stderr_fd; // negative - close, STDERR_FILENO - do not change
 };
 
-extern const spawn_opts default_spawn_opts; // { NULL, NULL, NULL }
+extern const spawn_opts default_spawn_opts; /* = {
+	STDIN_FILENO,
+	STDOUT_FILENO,
+	STDERR_FILENO
+}; */
 
 /**
  * @brief Runs exec using execvp(3) with arguments @p args
@@ -17,7 +21,7 @@ extern const spawn_opts default_spawn_opts; // { NULL, NULL, NULL }
  * @param exec file to execute
  * @param args arguments
  * @param sopt spawn options - defines to what change stdin, stdout and stderr
- * NULL field means to left value unchanged form parent
+ * negative field means to close stream
  *
  * @return exit code on success, -1 on error
  */
@@ -31,7 +35,7 @@ int spawn(const std::string& exec, const std::vector<std::string>& args,
  * @param argc number of arguments
  * @param args arguments
  * @param sopt spawn options - defines to what change stdin, stdout and stderr
- * NULL field means to left value unchanged form parent
+ * negative field means to close stream
  *
  * @return exit code on success, -1 on error
  */
