@@ -69,17 +69,30 @@ static void handleSubmissionQueue() {
 					// Update submission
 					pstmt.reset(conn()->prepareStatement("UPDATE submissions SET status=?, score=?, final=? WHERE id=?"));
 
-					if (jres.status == JudgeResult::OK)
+					switch (jres.status) {
+					case JudgeResult::OK:
 						pstmt->setString(1, "ok");
-					else if (jres.status == JudgeResult::ERROR)
-						pstmt->setString(1, "error");
+						break;
 
-					if (jres.status == JudgeResult::CERROR) {
+					case JudgeResult::ERROR:
+						pstmt->setString(1, "error");
+						break;
+
+					case JudgeResult::CERROR:
 						pstmt->setString(1, "c_error");
 						pstmt->setNull(2, 0);
 						pstmt->setBoolean(3, false);
+						break;
 
-					} else {
+					case JudgeResult::JUDGE_ERROR:
+						pstmt->setString(1, "judge_error");
+						pstmt->setNull(2, 0);
+						pstmt->setBoolean(3, false);
+
+					}
+
+					if (jres.status != JudgeResult::CERROR &&
+							jres.status != JudgeResult::JUDGE_ERROR) {
 						pstmt->setString(2, toString(jres.score));
 						pstmt->setBoolean(3, true);
 					}

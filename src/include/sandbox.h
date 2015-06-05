@@ -46,9 +46,9 @@ struct DefaultCallback {
 struct options {
 	unsigned long long time_limit; // in usec
 	unsigned long long memory_limit; // in bytes
-	FILE *new_stdin;
-	FILE *new_stdout;
-	FILE *new_stderr;
+	int new_stdin_fd; // negative - close, STDIN_FILENO - do not change
+	int new_stdout_fd; // negative - close, STDOUT_FILENO - do not change
+	int new_stderr_fd; // negative - close, STDERR_FILENO - do not change
 };
 
 /**
@@ -65,8 +65,9 @@ struct options {
  * @param args arguments passed to exec
  * @param opts options (time_limit set to 0 disables time limit,
  * memory_limit set to 0 disables memory limit,
- * new_stdin, new_stdout, new_stderr equal to NULL disables change of
- * respectively stdin, stdout, stderr of child process)
+ * new_stdin_fd, new_stdout_fd, new_stderr_fd - file descriptors to which
+ * respectively stdin, stdout, stderr of child process will be changed or if
+ * negative closed
  * @param func pointer to callback function
  * @param data pointer which will be passed to @p func as last argument
  * @return Returns ExitStat structure with fields: code is -1 on error, or

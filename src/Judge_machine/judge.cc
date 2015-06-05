@@ -1,8 +1,8 @@
 #include "judge.h"
 #include "main.h"
 
+#include "../include/compile.h"
 #include "../include/debug.h"
-#include "../include/process.h"
 #include "../include/sandbox.h"
 #include "../include/sandbox_checker_callback.h"
 #include "../include/string.h"
@@ -10,9 +10,7 @@
 
 #include <cerrno>
 #include <cmath>
-#include <cstdio>
 #include <cstring>
-#include <vector>
 
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)
@@ -34,60 +32,6 @@ static string convertString(const string& str) {
 	}
 
 	return res;
-}
-
-static int compile(const string& source, const string& exec, string* c_errors,
-		size_t c_errors_max_len = -1) {
-	FILE *cef = fopen(c_errors == NULL ? "/dev/null" :
-			(tmp_dir->sname() + "compile_errors").c_str(), "w");
-	if (cef == NULL) {
-		eprintf("Failed to open 'compile_errors' - %s\n", strerror(errno));
-		return 1;
-	}
-
-	if (VERBOSE)
-		printf("Compiling: '%s' ", (source).c_str());
-
-	// Run compiler
-	vector<string> args;
-	append(args)("g++")("-O2")("-static")("-lm")(source)("-o")(exec);
-
-	/* Compile as 32 bit executable (not essential but if checker will be x86_63
-	*  and Conver/Judge_machine i386 then checker won't work, with it its more
-	*  secure (see making i386 syscall from x86_64))
-	*/
-	append(args)("-m32");
-
-	if (VERBOSE) {
-		printf("(Command: '%s", args[0].c_str());
-		for (size_t i = 1, end = args.size(); i < end; ++i)
-			printf(" %s", args[i].c_str());
-		printf("')\n");
-	}
-
-	spawn_opts sopts = { NULL, NULL, cef };
-	int compile_status = spawn(args[0], args, &sopts);
-
-	// Check for errors
-	if (compile_status != 0) {
-		if (VERBOSE)
-			eprintf("Failed.\n");
-
-		if (c_errors)
-			*c_errors = getFileContents(tmp_dir->sname() + "compile_errors", 0,
-				c_errors_max_len);
-
-		fclose(cef);
-		return 2;
-
-	} else if (VERBOSE)
-		printf("Completed successfully.\n");
-
-	if (c_errors)
-		*c_errors = "";
-
-	fclose(cef);
-	return 0;
 }
 
 namespace {
@@ -293,21 +237,23 @@ namespace {
 
 struct TestResult {
 	const string* name;
-	enum Status { ERROR, OK, WA, TLE, RTE } status;
+	enum Status { ERROR, CHECKER_ERROR, OK, WA, TLE, RTE } status;
 	string time;
 
 	static string statusToTdString(Status s) {
 		switch (s) {
 		case ERROR:
 			return "<td class=\"wa\">Error</td>";
+		case CHECKER_ERROR:
+			return "<td class=\"tl-rte\">Checker error</td>";
 		case OK:
 			return "<td class=\"ok\">OK</td>";
 		case WA:
 			return "<td class=\"wa\">Wrong answer</td>";
 		case TLE:
-			return "<td class=\"tl-re\">Time limit exceeded</td>";
+			return "<td class=\"tl-rte\">Time limit exceeded</td>";
 		case RTE:
-			return "<td class=\"tl-re\">Runtime error</td>";
+			return "<td class=\"tl-rte\">Runtime error</td>";
 		}
 
 		return "<td>Unknown</td>";
@@ -322,66 +268,76 @@ JudgeResult judge(string submission_id, string problem_id) {
 	// Load config
 	ProblemConfig pconf;
 	if (pconf.loadConfig(package_path) == -1)
-		return (JudgeResult){ JudgeResult::ERROR, 0, "" };
+		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
 
 	// Compile solution
+	if (VERBOSE)
+		printf("Compiling solution...\n");
+
 	string compile_errors;
 	if (0 != compile("solutions/" + submission_id + ".cpp",
 			tmp_dir->sname() + "exec", &compile_errors,
-			COMPILE_ERRORS_MAX_LENGTH))
+			COMPILE_ERRORS_MAX_LENGTH)) {
+		if (VERBOSE)
+			printf("Failed.\n");
+
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			convertString(htmlSpecialChars(compile_errors)) };
+	}
+
+	if (VERBOSE)
+		printf("Completed successfully.\n");
 
 	// Compile checker
+	if (VERBOSE)
+		printf("Compiling checker...\n");
+
 	if (0 != compile(package_path + "check/" + pconf.checker,
-			tmp_dir->sname() + "checker", NULL))
+			tmp_dir->sname() + "checker")) {
+		if (VERBOSE)
+			printf("Failed.\n");
+
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			"Checker compilation error" };
+	}
+
+	if (VERBOSE)
+		printf("Completed successfully.\n");
 
 	// Prepare runtime environment
-	sandbox::options sb_opt = {
+	sandbox::options sb_opts = {
 		0, // Will be set separately for each test
 		pconf.memory_limit << 10,
-		NULL,
-		fopen((tmp_dir->sname() + "answer").c_str(), "w"),
-		fopen("/dev/null", "w")
-	};
-
-	sandbox::options check_sb_opt = {
-		10 * 1000000, // 10s
-		256 << 20, // 256 MB
-		fopen("/dev/null", "r"),
-		fopen((tmp_dir->sname() + "checker_out").c_str(), "w"),
-		sb_opt.new_stderr
+		-1,
+		open((tmp_dir->sname() + "answer").c_str(),
+			O_WRONLY | O_CREAT | O_TRUNC),
+		-1
 	};
 
 	// Check for errors
-	if (sb_opt.new_stderr == NULL) {
-		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
-		return (JudgeResult){ JudgeResult::ERROR, 0, "" };
-	}
-
-	if (check_sb_opt.new_stdout == NULL) {
+	if (sb_opts.new_stdout_fd < 0) {
 		eprintf("Failed to open '%sanswer' - %s\n", tmp_dir->name(),
 			strerror(errno));
-		fclose(sb_opt.new_stderr);
-		return (JudgeResult){ JudgeResult::ERROR, 0, "" };
+		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
 	}
 
-	if (check_sb_opt.new_stdin == NULL) {
-		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
-		fclose(sb_opt.new_stderr);
-		fclose(sb_opt.new_stdout);
-		return (JudgeResult){ JudgeResult::ERROR, 0, "" };
-	}
+	sandbox::options checker_sb_opts = {
+		10 * 1000000, // 10s
+		256 << 20, // 256 MB
+		-1,
+		open((tmp_dir->sname() + "checker_out").c_str(),
+			O_WRONLY | O_CREAT | O_TRUNC),
+		-1
+	};
 
-	if (check_sb_opt.new_stdout == NULL) {
+	// Check for errors
+	if (checker_sb_opts.new_stdout_fd < 0) {
 		eprintf("Failed to open '%schecker_out' - %s\n", tmp_dir->name(),
 			strerror(errno));
-		fclose(sb_opt.new_stderr);
-		fclose(sb_opt.new_stdout);
-		fclose(check_sb_opt.new_stdin);
-		return (JudgeResult){ JudgeResult::ERROR, 0, "" };
+
+		// Close file descriptors
+		while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
 	}
 
 	vector<string> exec_args, checker_args(4);
@@ -419,23 +375,31 @@ JudgeResult judge(string submission_id, string problem_id) {
 		vector<TestResult> group_result;
 
 		foreach (test, group->tests) {
-			sb_opt.time_limit = test->time_limit;
+			sb_opts.time_limit = test->time_limit;
 
-			// Reopening sb_opt.new_stdin
-			if (sb_opt.new_stdin)
-				fclose(sb_opt.new_stdin);
+			// Reopen sb_opts.new_stdin
+			// Close sb_opts.new_stdin_fd
+			if (sb_opts.new_stdin_fd >= 0)
+				while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
 
-			if ((sb_opt.new_stdin = fopen((package_path + "tests/" +
-					test->name + ".in").c_str(), "r")) == NULL) {
+			// Open sb_opts.new_stdin_fd
+			if ((sb_opts.new_stdin_fd = open(
+					(package_path + "tests/" + test->name + ".in").c_str(),
+					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
 					(package_path + "tests/" + test->name + ".in").c_str(),
 					strerror(errno));
-				return (JudgeResult){ JudgeResult::ERROR, 0, "" };
+
+				// Close file descriptors
+				while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+				while (close(checker_sb_opts.new_stdout_fd) == -1 &&
+					errno == EINTR) {}
+				return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
 			}
 
-			// Truncate sb_opt.new_stdout
-			ftruncate(fileno(sb_opt.new_stdout), 0);
-			rewind(sb_opt.new_stdout);
+			// Truncate sb_opts.new_stdout
+			ftruncate(sb_opts.new_stdout_fd, 0);
+			lseek(sb_opts.new_stdout_fd, 0, SEEK_SET);
 
 			if (VERBOSE) {
 				printf("  %-11s ", test->name.c_str());
@@ -444,7 +408,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 			// Run
 			sandbox::ExitStat es = sandbox::run(tmp_dir->sname() + "exec",
-				exec_args, &sb_opt);
+				exec_args, &sb_opts);
 
 			// Update ratio
 			ratio = std::min(ratio, 2.0 - 2.0 * (es.runtime / 10000) /
@@ -462,7 +426,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 			// Runtime error
 			else if (es.runtime < test->time_limit) {
 				group_result.back().status = TestResult::RTE;
-				judge_test_report.status = JudgeResult::ERROR;
+				if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
+					judge_test_report.status = JudgeResult::ERROR;
 				ratio = 0.0;
 
 				// Add test comment
@@ -480,7 +445,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 			// Time limit exceeded
 			} else {
 				group_result.back().status = TestResult::TLE;
-				judge_test_report.status = JudgeResult::ERROR;
+				if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
+					judge_test_report.status = JudgeResult::ERROR;
 				ratio = 0.0;
 
 				// Add test comment
@@ -518,12 +484,12 @@ JudgeResult judge(string submission_id, string problem_id) {
 					fflush(stdout);
 				}
 
-				// Truncate check_sb_opt.new_stdout
-				ftruncate(fileno(check_sb_opt.new_stdout), 0);
-				rewind(check_sb_opt.new_stdout);
+				// Truncate checker_sb_opt.new_stdout
+				ftruncate(checker_sb_opts.new_stdout_fd, 0);
+				lseek(checker_sb_opts.new_stdout_fd, 0, SEEK_SET);
 
 				es = sandbox::run(tmp_dir->sname() + "checker", checker_args,
-					&check_sb_opt, sandbox::CheckerCallback(
+					&checker_sb_opts, sandbox::CheckerCallback(
 						vector<string>(checker_args.begin() + 1,
 							checker_args.end())));
 
@@ -534,7 +500,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 				// Wrong answer
 				} else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
 					group_result.back().status = TestResult::WA;
-					judge_test_report.status = JudgeResult::ERROR;
+					if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
+						judge_test_report.status = JudgeResult::ERROR;
 					ratio = 0.0;
 
 					if (VERBOSE)
@@ -567,11 +534,21 @@ JudgeResult judge(string submission_id, string problem_id) {
 						printf(" \"%s\"", buff);
 
 				} else if (es.runtime < test->time_limit) {
+					group_result.back().status = TestResult::CHECKER_ERROR;
+					judge_test_report.status = JudgeResult::JUDGE_ERROR;
+					ratio = 0.0;
+
 					if (VERBOSE)
 						printf("\e[1;33mRTE\e[m (%s)", es.message.c_str());
 
-				} else if (VERBOSE)
-					printf("\e[1;33mTLE\e[m");
+				} else {
+					group_result.back().status = TestResult::CHECKER_ERROR;
+					judge_test_report.status = JudgeResult::JUDGE_ERROR;
+					ratio = 0.0;
+
+					if (VERBOSE)
+						printf("\e[1;33mTLE\e[m");
+				}
 
 				if (VERBOSE)
 					printf("   Exited with %i [ %s ]", es.code,
@@ -583,8 +560,15 @@ JudgeResult judge(string submission_id, string problem_id) {
 		}
 
 		// group_result cannot be empty but for sure...
-		if (group_result.empty())
-			return (JudgeResult){ JudgeResult::ERROR, 0, "" };
+		if (group_result.empty()) {
+			// Close file descriptors
+			if (sb_opts.new_stdin_fd)
+				while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
+			while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+			while (close(checker_sb_opts.new_stdout_fd) == -1 && errno == EINTR)
+				{}
+			return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+		}
 
 		// Update score
 		total_score += round(group->points * ratio);
@@ -622,14 +606,11 @@ JudgeResult judge(string submission_id, string problem_id) {
 	final.tests.append("</tbody>\n"
 		"</table>\n");
 
-	// Close files
-	if (sb_opt.new_stdin)
-		fclose(sb_opt.new_stdin);
-
-	fclose(sb_opt.new_stdout);
-	fclose(sb_opt.new_stderr);
-	fclose(check_sb_opt.new_stdin);
-	fclose(check_sb_opt.new_stdout);
+	// Close file descriptors
+	if (sb_opts.new_stdin_fd)
+		while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
+	while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+	while (close(checker_sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
 
 	return (JudgeResult){
 		initial.status,
