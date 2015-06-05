@@ -310,7 +310,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 		pconf.memory_limit << 10,
 		-1,
 		open((tmp_dir->sname() + "answer").c_str(),
-			O_WRONLY | O_CREAT | O_TRUNC),
+			O_WRONLY | O_CREAT | O_TRUNC,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
 		-1
 	};
 
@@ -326,7 +327,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 		256 << 20, // 256 MB
 		-1,
 		open((tmp_dir->sname() + "checker_out").c_str(),
-			O_WRONLY | O_CREAT | O_TRUNC),
+			O_WRONLY | O_CREAT | O_TRUNC,
+			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
 		-1
 	};
 
