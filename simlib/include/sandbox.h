@@ -67,7 +67,7 @@ struct options {
  * memory_limit set to 0 disables memory limit,
  * new_stdin_fd, new_stdout_fd, new_stderr_fd - file descriptors to which
  * respectively stdin, stdout, stderr of child process will be changed or if
- * negative closed
+ * negative, closed
  * @param func pointer to callback function
  * @param data pointer which will be passed to @p func as last argument
  * @return Returns ExitStat structure with fields: code is -1 on error, or
