@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 					"`contest_round_id` int unsigned NOT NULL,\n"
 					"`final` BOOLEAN NOT NULL DEFAULT FALSE,\n"
 					"`submit_time` datetime NOT NULL,\n"
-					"`status` enum('ok','error','c_error','waiting') NULL DEFAULT NULL COLLATE utf8_bin,\n"
+					"`status` enum('ok','error','c_error','judge_error','waiting') NULL DEFAULT NULL COLLATE utf8_bin,\n"
 					"`score` int NULL DEFAULT NULL,\n"
 					"`queued` datetime NOT NULL,\n"
 					"PRIMARY KEY (`id`),\n"

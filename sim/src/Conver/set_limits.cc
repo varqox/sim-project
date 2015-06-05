@@ -1,6 +1,7 @@
 #include "convert_package.h"
 #include "set_limits.h"
 
+#include "../include/compile.h"
 #include "../include/debug.h"
 #include "../include/process.h"
 #include "../include/sandbox.h"
@@ -17,51 +18,6 @@
 using std::pair;
 using std::string;
 using std::vector;
-
-static int compile(const string& source, const string& exec) {
-	FILE *cef = fopen("compile_errors", "w");
-	if (cef == NULL) {
-		eprintf("Failed to open 'compile_errors' - %s\n", strerror(errno));
-		return 1;
-	}
-
-	if (VERBOSE)
-		printf("Compiling: '%s' ", (source).c_str());
-
-	// Run compiler
-	vector<string> args;
-	append(args)("g++")("-O2")("-static")("-lm")(source)("-o")(exec);
-
-	/* Compile as 32 bit executable (not essential but if checker will be x86_63
-	*  and Conver i386 then checker won't work, with it its more secure (see
-	*  making i386 syscall from x86_64))
-	*/
-	append(args)("-m32");
-
-	if (VERBOSE) {
-		printf("(Command: '%s", args[0].c_str());
-		for (size_t i = 1, end = args.size(); i < end; ++i)
-			printf(" %s", args[i].c_str());
-		printf("')\n");
-	}
-
-	spawn_opts sopts = { NULL, NULL, cef };
-	int compile_status = spawn(args[0], args, &sopts);
-
-	// Check for errors
-	if (compile_status != 0) {
-		eprintf("Compile errors:\n%s\n", getFileContents("compile_errors")
-			.c_str());
-
-		fclose(cef);
-		return 2;
-
-	} else if (VERBOSE)
-		printf("Completed successfully.\n");
-
-	fclose(cef);
-	return 0;
-}
 
 static void assignPoints() {
 	int points = 100, groups_left = conf_cfg.test_groups.size();
@@ -84,8 +40,18 @@ static void assignPoints() {
 
 int setLimits(const string& package) {
 	// Compile checker
-	if (compile(package + "check/" + conf_cfg.checker, "checker") != 0)
-			return 1;
+	if (VERBOSE)
+		printf("Compiling checker...\n");
+
+	if (compile(package + "check/" + conf_cfg.checker, "checker") != 0) {
+		if (VERBOSE)
+			printf("Failed.\n");
+
+		return 1;
+	}
+
+	if (VERBOSE)
+		printf("Completed successfully.\n");
 
 	if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
 		// Set time limits on tests
@@ -106,74 +72,53 @@ int setLimits(const string& package) {
 		return 2;
 	}
 
-	if (compile(package + "prog/" + conf_cfg.solution, "exec") != 0)
-			return 2;
+	if (VERBOSE)
+		printf("Compiling solution...\n");
+
+	if (compile(package + "prog/" + conf_cfg.solution, "exec") != 0) {
+		if (VERBOSE)
+			printf("Failed.\n");
+
+		return 2;
+	}
+
+	if (VERBOSE)
+		printf("Completed successfully.\n");
 
 	// Set limits
 	// Prepare runtime environment
-	sandbox::options sb_opt = {
+	sandbox::options sb_opts = {
 		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
 		conf_cfg.memory_limit << 10,
-		fopen("/dev/null", "r"),
-		fopen("answer", "w"),
-		fopen("/dev/null", "w")
-	};
-
-	sandbox::options check_sb_opt = {
-		10 * 1000000, // 10s
-		256 << 20, // 256 MB
-		fopen("/dev/null", "r"),
-		fopen("checker_out", "w"),
-		sb_opt.new_stderr // fopen("/dev/null", "w")
+		-1,
+		open("answer", O_WRONLY | O_CREAT | O_TRUNC),
+		-1
 	};
 
 	// Check for errors
-	if (sb_opt.new_stdin == NULL) {
-		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
-		return 3;
-	}
-
-	if (sb_opt.new_stdout == NULL) {
+	if (sb_opts.new_stdout_fd < 0) {
 		eprintf("Failed to open '%sanswer' - %s\n", tmp_dir->name(),
 			strerror(errno));
-		fclose(sb_opt.new_stdin);
 		return 3;
 	}
 
-	if (sb_opt.new_stderr == NULL) {
-		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
-		fclose(sb_opt.new_stdin);
-		fclose(sb_opt.new_stdout);
-		return 3;
-	}
+	sandbox::options checker_sb_opts = {
+		10 * 1000000, // 10s
+		256 << 20, // 256 MB
+		-1,
+		open("checker_out", O_WRONLY | O_CREAT | O_TRUNC),
+		-1
+	};
 
-	if (check_sb_opt.new_stdin == NULL) {
-		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
-		fclose(sb_opt.new_stdin);
-		fclose(sb_opt.new_stdout);
-		fclose(sb_opt.new_stderr);
-		return 3;
-	}
-
-	if (check_sb_opt.new_stdout == NULL) {
+	// Check for errors
+	if (checker_sb_opts.new_stdout_fd < 0) {
 		eprintf("Failed to open '%schecker_out' - %s\n", tmp_dir->name(),
 			strerror(errno));
-		fclose(sb_opt.new_stdin);
-		fclose(sb_opt.new_stdout);
-		fclose(sb_opt.new_stderr);
-		fclose(check_sb_opt.new_stdin);
+
+		// Close file descriptors
+		while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
 		return 3;
 	}
-
-	/*if (check_sb_opt.new_stderr == NULL) {
-		eprintf("Failed to open '/dev/null' - %s\n", strerror(errno));
-		fclose(sb_opt.new_stdin);
-		fclose(sb_opt.new_stdout);
-		fclose(sb_opt.new_stderr);
-		fclose(check_sb_opt.new_stdin);
-		fclose(check_sb_opt.new_stdout);
-		return 3;
-	}*/
 
 	vector<string> exec_args, checker_args(4);
 
@@ -181,32 +126,49 @@ int setLimits(const string& package) {
 	foreach (group, conf_cfg.test_groups)
 		foreach (test, group->tests) {
 			if (USE_CONF && !FORCE_AUTO_LIMIT)
-				sb_opt.time_limit = test->time_limit;
-			// Reopening sb_opt.new_stdin
-			if (freopen((package + "tests/" + test->name + ".in").c_str(), "r",
-					sb_opt.new_stdin) == NULL) {
+				sb_opts.time_limit = test->time_limit;
+
+			// Reopen file descriptors
+			// Close sb_opts.new_stdin_fd
+			if (sb_opts.new_stdin_fd >= 0)
+				while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
+
+			// If !GEN_OUT, close sb_opts.new_stdout_fd
+			if (GEN_OUT)
+				while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+
+			// Open sb_opts.new_stdin_fd
+			if ((sb_opts.new_stdin_fd = open(
+					(package + "tests/" + test->name + ".in").c_str(),
+					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
 					(package + "tests/" + test->name + ".in").c_str(),
 					strerror(errno));
-				fclose(sb_opt.new_stdout);
-				fclose(sb_opt.new_stderr);
-				return 4;
-			}
-			// Reopening sb_opt.new_stdout
-			if (GEN_OUT && freopen((package + "tests/" + test->name + ".out")
-					.c_str(), "w", sb_opt.new_stdout) == NULL) {
-				eprintf("Failed to open: '%s' - %s\n",
-					(package + "tests/" + test->name + ".out").c_str(),
-					strerror(errno));
-				fclose(sb_opt.new_stdin);
-				fclose(sb_opt.new_stderr);
+
+				// Close file descriptors
+				while (close(checker_sb_opts.new_stdout_fd) == -1 &&
+					errno == EINTR) {}
 				return 4;
 			}
 
-			// Truncate sb_opt.new_stdout
+			// Open sb_opts.new_stdout_fd
+			if (GEN_OUT && (sb_opts.new_stdout_fd = open(
+					(package + "tests/" + test->name + ".out").c_str(),
+					O_WRONLY | O_CREAT | O_TRUNC)) == -1) {
+				eprintf("Failed to open: '%s' - %s\n",
+					(package + "tests/" + test->name + ".out").c_str(),
+					strerror(errno));
+
+				// Close file descriptors
+				while (close(checker_sb_opts.new_stdout_fd) == -1 &&
+					errno == EINTR) {}
+				return 4;
+			}
+
+			// If !GEN_OUT, truncate sb_opts.new_stdout_fd ("answer" file)
 			if (!GEN_OUT) {
-				ftruncate(fileno(sb_opt.new_stdout), 0);
-				rewind(sb_opt.new_stdout);
+				ftruncate(sb_opts.new_stdout_fd, 0);
+				lseek(sb_opts.new_stdout_fd, 0, SEEK_SET);
 			}
 
 			if (!QUIET) {
@@ -215,7 +177,7 @@ int setLimits(const string& package) {
 			}
 
 			// Run
-			sandbox::ExitStat es = sandbox::run("./exec", exec_args, &sb_opt);
+			sandbox::ExitStat es = sandbox::run("./exec", exec_args, &sb_opts);
 
 			// Set time_limit (minimum time_limit is 0.1s unless TIME_LIMIT > 0)
 			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONF))
@@ -250,11 +212,11 @@ int setLimits(const string& package) {
 					fflush(stdout);
 				}
 
-				// Truncate check_sb_opt.new_stdout
-				ftruncate(fileno(check_sb_opt.new_stdout), 0);
-				rewind(check_sb_opt.new_stdout);
+				// Truncate checker_sb_opts.new_stdout_fd
+				ftruncate(checker_sb_opts.new_stdout_fd, 0);
+				lseek(checker_sb_opts.new_stdout_fd, 0, SEEK_SET);
 
-				es = sandbox::run("./checker", checker_args, &check_sb_opt,
+				es = sandbox::run("./checker", checker_args, &checker_sb_opts,
 					sandbox::CheckerCallback(
 						vector<string>(checker_args.begin() + 1,
 							checker_args.end())));
@@ -298,12 +260,11 @@ int setLimits(const string& package) {
 				printf("\n");
 		}
 
-	fclose(sb_opt.new_stdin);
-	fclose(sb_opt.new_stdout);
-	fclose(sb_opt.new_stderr);
-	fclose(check_sb_opt.new_stdin);
-	fclose(check_sb_opt.new_stdout);
-	// fclose(check_sb_opt.new_stderr);
+	// Close file descriptors
+	if (sb_opts.new_stdin_fd)
+		while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
+	while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+	while (close(checker_sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
 
 	if (!USE_CONF)
 		assignPoints();

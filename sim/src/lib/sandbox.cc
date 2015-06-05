@@ -150,20 +150,31 @@ ExitStat run(const string& exec, vector<string> args,
 		}
 
 		// Change stdin
-		if (opts->new_stdin) {
-			dup2(fileno(opts->new_stdin), STDIN_FILENO);
-			fclose(opts->new_stdin);
-		}
+		if (opts->new_stdin_fd < 0)
+			while (close(STDIN_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stdin_fd != STDIN_FILENO)
+			while (dup2(opts->new_stdin_fd, STDIN_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
+
 		// Change stdout
-		if (opts->new_stdout) {
-			dup2(fileno(opts->new_stdout), STDOUT_FILENO);
-			fclose(opts->new_stdout);
-		}
+		if (opts->new_stdout_fd < 0)
+			while (close(STDOUT_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stdout_fd != STDOUT_FILENO)
+			while (dup2(opts->new_stdout_fd, STDOUT_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
+
 		// Change stderr
-		if (opts->new_stderr) {
-			dup2(fileno(opts->new_stderr), STDERR_FILENO);
-			fclose(opts->new_stderr);
-		}
+		if (opts->new_stderr_fd < 0)
+			while (close(STDERR_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stderr_fd != STDERR_FILENO)
+			while (dup2(opts->new_stderr_fd, STDERR_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
 
 		ptrace(PTRACE_TRACEME);
 		kill(getpid(), SIGSTOP);

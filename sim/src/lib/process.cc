@@ -9,7 +9,11 @@
 using std::string;
 using std::vector;
 
-const spawn_opts default_spawn_opts = { NULL, NULL, NULL };
+const spawn_opts default_spawn_opts = {
+	STDIN_FILENO,
+	STDOUT_FILENO,
+	STDERR_FILENO
+};
 
 int spawn(const string& exec, const vector<string>& args,
 		const struct spawn_opts *opts) {
@@ -29,20 +33,31 @@ int spawn(const string& exec, const vector<string>& args,
 			arg[i] = const_cast<char*>(args[i].c_str());
 
 		// Change stdin
-		if (opts->new_stdin) {
-			dup2(fileno(opts->new_stdin), STDIN_FILENO);
-			fclose(opts->new_stdin);
-		}
+		if (opts->new_stdin_fd < 0)
+			while (close(STDIN_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stdin_fd != STDIN_FILENO)
+			while (dup2(opts->new_stdin_fd, STDIN_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
+
 		// Change stdout
-		if (opts->new_stdout) {
-			dup2(fileno(opts->new_stdout), STDOUT_FILENO);
-			fclose(opts->new_stdout);
-		}
+		if (opts->new_stdout_fd < 0)
+			while (close(STDOUT_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stdout_fd != STDOUT_FILENO)
+			while (dup2(opts->new_stdout_fd, STDOUT_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
+
 		// Change stderr
-		if (opts->new_stderr) {
-			dup2(fileno(opts->new_stderr), STDERR_FILENO);
-			fclose(opts->new_stderr);
-		}
+		if (opts->new_stderr_fd < 0)
+			while (close(STDERR_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stderr_fd != STDERR_FILENO)
+			while (dup2(opts->new_stderr_fd, STDERR_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
 
 		execvp(exec.c_str(), arg);
 		_exit(-1);
@@ -70,20 +85,31 @@ int spawn(const string& exec, size_t argc, string *args,
 			arg[i] = const_cast<char*>(args[i].c_str());
 
 		// Change stdin
-		if (opts->new_stdin) {
-			dup2(fileno(opts->new_stdin), STDIN_FILENO);
-			fclose(opts->new_stdin);
-		}
+		if (opts->new_stdin_fd < 0)
+			while (close(STDIN_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stdin_fd != STDIN_FILENO)
+			while (dup2(opts->new_stdin_fd, STDIN_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
+
 		// Change stdout
-		if (opts->new_stdout) {
-			dup2(fileno(opts->new_stdout), STDOUT_FILENO);
-			fclose(opts->new_stdout);
-		}
+		if (opts->new_stdout_fd < 0)
+			while (close(STDOUT_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stdout_fd != STDOUT_FILENO)
+			while (dup2(opts->new_stdout_fd, STDOUT_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
+
 		// Change stderr
-		if (opts->new_stderr) {
-			dup2(fileno(opts->new_stderr), STDERR_FILENO);
-			fclose(opts->new_stderr);
-		}
+		if (opts->new_stderr_fd < 0)
+			while (close(STDERR_FILENO) == -1 && errno == EINTR) {}
+
+		else if (opts->new_stderr_fd != STDERR_FILENO)
+			while (dup2(opts->new_stderr_fd, STDERR_FILENO) == -1)
+				if (errno != EINTR)
+					_exit(-1);
 
 		execvp(exec.c_str(), arg);
 		_exit(-1);

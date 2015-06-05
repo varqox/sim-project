@@ -2,9 +2,9 @@
 extern "C" {
 #endif
 
-#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int areEqual(char *s1, size_t l1, char *s2, size_t l2) {
@@ -18,14 +18,22 @@ int areEqual(char *s1, size_t l1, char *s2, size_t l2) {
   return strcmp(s1, s2);
 }
 
+#ifdef NDEBUG
+# define my_assert(...) ((void)0)
+#else
+# define my_assert(expr) \
+  ((expr) ? (void)0 : (fprintf(stderr, "%s:%i %s: Assertion `%s' failed.\n", \
+    __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr), exit(-1)))
+#endif
+
 int main(int argc, char *argv[]) {
   // argv[0] command (ignored)
   // argv[1] test_in
   // argv[2] test_out (right answer)
   // argv[3] answer to check
-  assert(argc == 4);
+  my_assert(argc == 4);
   FILE *fout = fopen(argv[2], "r"), *fans = fopen(argv[3], "r");
-  assert(fout && fans);  // Open has not failed
+  my_assert(fout && fans);  // Open has not failed
 
   size_t len1 = 0, len2 = 0, line = 0;
   ssize_t read1, read2;
@@ -47,7 +55,7 @@ int main(int argc, char *argv[]) {
     ++line;
 
     if (0 != areEqual(lout, read1, lans, 0)) {
-      printf("Line %zu: read: EOF, expected: '%.157s'\n", line, lout,
+      printf("Line %zu: read: EOF, expected: '%.157s%s'\n", line, lout,
         (strlen(lout) > 157 ? "..." : ""));
       return 1;
     }
@@ -59,7 +67,7 @@ int main(int argc, char *argv[]) {
     ++line;
 
     if (0 != areEqual(lans, read2, lout, 0)) {
-      printf("Line %zu: read: '%.157s', expected: EOF\n", line, lans,
+      printf("Line %zu: read: '%.157s%s', expected: EOF\n", line, lans,
         (strlen(lans) > 157 ? "..." : ""));
       return 1;
     }

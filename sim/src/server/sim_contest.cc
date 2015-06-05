@@ -11,9 +11,10 @@
 #include "../include/time.h"
 #include "../include/utility.h"
 
+#include <cerrno>
 #include <cppconn/prepared_statement.h>
-#include <vector>
 #include <utime.h>
+#include <vector>
 
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)
@@ -415,14 +416,14 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 				// Conver stdin, stdout, stderr
 				char tmp_filename[] = "/tmp/sim-conver-errors.XXXXXX";
 				spawn_opts sopt = {
-					fopen("/dev/null", "r"),
-					fopen("/dev/null", "w"),
-					fdopen(mkstemp(tmp_filename), "w")
+					-1,
+					-1,
+					mkstemp(tmp_filename)
 				};
 
 				// Convert package
 				if (0 != spawn("./conver", args, &sopt)) {
-					fv.addError("Conver failed - " + (sopt.new_stderr ?
+					fv.addError("Conver failed - " + (sopt.new_stderr_fd ?
 						getFileContents(tmp_filename) : ""));
 
 					// Remove problem
@@ -437,13 +438,10 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 					// Clean
 					remove(new_package_file.c_str());
 
-					if (sopt.new_stdin)
-						fclose(sopt.new_stdin);
-					if (sopt.new_stdout)
-						fclose(sopt.new_stdout);
-					if (sopt.new_stderr) {
+					if (sopt.new_stderr_fd >= 0) {
 						unlink(tmp_filename);
-						fclose(sopt.new_stderr);
+						while (close(sopt.new_stderr_fd) == -1 &&
+								errno == EINTR) {}
 					}
 
 					goto form;
@@ -452,13 +450,9 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 				// Clean
 				remove(new_package_file.c_str());
 
-				if (sopt.new_stdin)
-					fclose(sopt.new_stdin);
-				if (sopt.new_stdout)
-					fclose(sopt.new_stdout);
-				if (sopt.new_stderr) {
+				if (sopt.new_stderr_fd >= 0) {
 					unlink(tmp_filename);
-					fclose(sopt.new_stderr);
+					while (close(sopt.new_stderr_fd) == -1 && errno == EINTR) {}
 				}
 
 				// Update problem name
@@ -821,6 +815,9 @@ static string submissionStatus(const string& status) {
 	if (status == "c_error")
 		return "Compilation failed";
 
+	if (status == "judge_error")
+		return "Judge error";
+
 	if (status == "waiting")
 		return "Pending";
 
@@ -875,8 +872,10 @@ void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
 
 				if (status == "ok")
 					ret += " class=\"ok\">";
-				else if (status == "error" || status == "c_error")
+				else if (status == "error")
 					ret += " class=\"wa\">";
+				else if (status == "c_error" || status == "judge_error")
+					ret += " class=\"tl-rte\">";
 				else
 					ret += ">";
 
@@ -1009,23 +1008,18 @@ void SIM::submission() {
 
 			char tmp_filename[] = "/tmp/sim-server-tmp.XXXXXX";
 			spawn_opts sopt = {
-				fopen("/dev/null", "r"),
-				fdopen(mkstemp(tmp_filename), "w"),
-				fopen("/dev/null", "w")
+				-1,
+				mkstemp(tmp_filename),
+				-1
 			};
 
-			if (sopt.new_stdin != NULL && sopt.new_stdout != NULL) {
-				spawn(args[0], args, &sopt);
+			spawn(args[0], args, &sopt);
+			if (sopt.new_stdout_fd >= 0)
 				templ << getFileContents(tmp_filename);
-			}
 
 			unlink(tmp_filename);
-			if (sopt.new_stdin)
-				fclose(sopt.new_stdin);
-			if (sopt.new_stdout)
-				fclose(sopt.new_stdout);
-			if (sopt.new_stderr)
-				fclose(sopt.new_stderr);
+			if (sopt.new_stdout_fd >= 0)
+				while (close(sopt.new_stderr_fd) == -1 && errno == EINTR) {}
 
 			return;
 		}
@@ -1059,8 +1053,11 @@ void SIM::submission() {
 
 		if (submission_status == "ok")
 			templ << " class=\"ok\"";
-		else if (submission_status == "error" || submission_status == "c_error")
+		else if (submission_status == "error")
 			templ << " class=\"wa\"";
+		else if (submission_status == "c_error" ||
+				submission_status == "judge_error")
+			templ << " class=\"tl-rte\"";
 
 		templ <<			">" << submissionStatus(submission_status)
 							<< "</td>"
