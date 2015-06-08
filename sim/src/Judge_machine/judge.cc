@@ -486,7 +486,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					fflush(stdout);
 				}
 
-				// Truncate checker_sb_opt.new_stdout
+				// Truncate checker_sb_opts.new_stdout
 				ftruncate(checker_sb_opts.new_stdout_fd, 0);
 				lseek(checker_sb_opts.new_stdout_fd, 0, SEEK_SET);
 
