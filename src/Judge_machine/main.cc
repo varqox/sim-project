@@ -18,7 +18,7 @@ using std::string;
 static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1s
 static DB::Connection *db_conn = NULL;
 UniquePtr<TemporaryDirectory> tmp_dir;
-bool VERBOSE = true;
+unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static inline DB::Connection& conn() { return *db_conn; }
 

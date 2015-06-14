@@ -40,18 +40,9 @@ static void assignPoints() {
 
 int setLimits(const string& package) {
 	// Compile checker
-	if (VERBOSE)
-		printf("Compiling checker...\n");
-
-	if (compile(package + "check/" + conf_cfg.checker, "checker") != 0) {
-		if (VERBOSE)
-			printf("Failed.\n");
-
+	if (compile(package + "check/" + conf_cfg.checker, "checker", VERBOSITY) !=
+			0)
 		return 1;
-	}
-
-	if (VERBOSE)
-		printf("Completed successfully.\n");
 
 	if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
 		// Set time limits on tests
@@ -72,18 +63,9 @@ int setLimits(const string& package) {
 		return 2;
 	}
 
-	if (VERBOSE)
-		printf("Compiling solution...\n");
-
-	if (compile(package + "prog/" + conf_cfg.solution, "exec") != 0) {
-		if (VERBOSE)
-			printf("Failed.\n");
-
+	if (compile(package + "prog/" + conf_cfg.solution, "exec", VERBOSITY) !=
+			0)
 		return 2;
-	}
-
-	if (VERBOSE)
-		printf("Completed successfully.\n");
 
 	// Set limits
 	// Prepare runtime environment
@@ -174,7 +156,7 @@ int setLimits(const string& package) {
 				lseek(sb_opts.new_stdout_fd, 0, SEEK_SET);
 			}
 
-			if (!QUIET) {
+			if (VERBOSITY > 0) {
 				printf("  %-11s ", test->name.c_str());
 				fflush(stdout);
 			}
@@ -187,7 +169,7 @@ int setLimits(const string& package) {
 				test->time_limit = TIME_LIMIT > 0 ? TIME_LIMIT :
 					std::max(es.runtime * 4, 100000ull);
 
-			if (!QUIET) {
+			if (VERBOSITY > 0) {
 				printf("%4s / %-4s    Status: ",
 					usecToSecStr(es.runtime, 2, false).c_str(),
 					usecToSecStr(test->time_limit, 2, false).c_str());
@@ -199,7 +181,7 @@ int setLimits(const string& package) {
 				else
 					printf("\e[1;33mTLE\e[m");
 
-				if (VERBOSE)
+				if (VERBOSITY > 1)
 					printf("   Exited with %i [ %s ]", es.code,
 						usecToSecStr(es.runtime, 6, false).c_str());
 			}
@@ -210,7 +192,7 @@ int setLimits(const string& package) {
 				checker_args[2] = package + "tests/" + test->name + ".out";
 				checker_args[3] = GEN_OUT ? checker_args[2] : "answer";
 
-				if (!QUIET) {
+				if (VERBOSITY > 0) {
 					printf("  Output validation... ");
 					fflush(stdout);
 				}
@@ -224,7 +206,7 @@ int setLimits(const string& package) {
 						vector<string>(checker_args.begin() + 1,
 							checker_args.end())));
 
-				if (!QUIET) {
+				if (VERBOSITY > 0) {
 					if (es.code == 0)
 						printf("\e[1;32mPASSED\e[m");
 
@@ -253,13 +235,13 @@ int setLimits(const string& package) {
 					else
 						printf("\e[1;33mTLE\e[m");
 
-					if (VERBOSE)
+					if (VERBOSITY > 1)
 						printf("   Exited with %i [ %s ]", es.code,
 							usecToSecStr(es.runtime, 6, false).c_str());
 				}
 			}
 
-			if (!QUIET)
+			if (VERBOSITY > 0)
 				printf("\n");
 		}
 

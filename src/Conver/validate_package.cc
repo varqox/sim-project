@@ -25,7 +25,7 @@ int validateConf(string package_path) {
 	vector<string> f = getFileByLines(package_path + "conf.cfg",
 		GFBL_IGNORE_NEW_LINES);
 
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("Validating conf.cfg...\n");
 
 	// Problem name
@@ -161,7 +161,7 @@ int validateConf(string package_path) {
 		conf_cfg.test_groups.back().tests.push_back(test);
 	}
 
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("Validation passed.\n");
 
 	return 0;
