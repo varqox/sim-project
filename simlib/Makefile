@@ -36,7 +36,7 @@ install: all
 	# Right owner, group and permission bits
 	- useradd -M -r -s /usr/sbin/nologin sim
 	src/chmod-default $(abspath $(DESTDIR))
-	chmod 0700 $(abspath $(DESTDIR)/db.config)
+	chmod 0700 $(abspath $(DESTDIR)/db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
 	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/CTH)
 	chown -R sim:sim $(abspath $(DESTDIR))
 
