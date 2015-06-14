@@ -404,14 +404,14 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 
 				rename(package_file.c_str(), new_package_file.c_str());
 
-				append(args) << new_package_file << "-o"
-					<< "problems/" + problem_id << "-uc" << "-q";
+				append(args)(new_package_file)("-o")("problems/" + problem_id)
+					("-uc")("-q");
 
 				if (force_auto_limit)
 					args.push_back("-fal");
 
 				if (name.size())
-					append(args) << "-n" << name;
+					append(args)("-n")(name);
 
 				// Conver stdin, stdout, stderr
 				char tmp_filename[] = "/tmp/sim-conver-errors.XXXXXX";

@@ -40,8 +40,8 @@ static void assignPoints() {
 
 int setLimits(const string& package) {
 	// Compile checker
-	if (compile(package + "check/" + conf_cfg.checker, "checker", VERBOSITY) !=
-			0)
+	if (compile(package + "check/" + conf_cfg.checker, "checker",
+			(VERBOSITY >> 1) + 1) != 0)
 		return 1;
 
 	if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
@@ -63,8 +63,8 @@ int setLimits(const string& package) {
 		return 2;
 	}
 
-	if (compile(package + "prog/" + conf_cfg.solution, "exec", VERBOSITY) !=
-			0)
+	if (compile(package + "prog/" + conf_cfg.solution, "exec",
+			(VERBOSITY >> 1) + 1) != 0)
 		return 2;
 
 	// Set limits
