@@ -99,7 +99,7 @@ int convertPackage(string tmp_package, string out_package) {
 					conf_cfg.solution = *i;
 			}
 
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("checker: '%s'\nstatement: '%s'\nsolution: '%s'\n",
 			conf_cfg.checker.c_str(), conf_cfg.statement.c_str(),
 			conf_cfg.solution.c_str());

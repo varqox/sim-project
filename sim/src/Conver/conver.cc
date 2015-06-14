@@ -23,8 +23,9 @@ using std::vector;
 
 // Global variables
 UniquePtr<TemporaryDirectory> tmp_dir;
-bool VERBOSE = false, QUIET = false, GEN_OUT = false, VALIDATE_OUT = false;
-bool USE_CONF = false, FORCE_AUTO_LIMIT = false;
+bool GEN_OUT = false, VALIDATE_OUT = false, USE_CONF = false;
+bool FORCE_AUTO_LIMIT = false;
+unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
 unsigned long long MEMORY_LIMIT = 64 << 10; // 64 MB (in kB)
 unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10s
 unsigned long long TIME_LIMIT = 0; // Not set
@@ -186,10 +187,8 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Quiet mode
 			else if (0 == strcmp(argv[i], "-q") ||
-					0 == strcmp(argv[i], "--quiet")) {
-				QUIET = true;
-				VERBOSE = false;
-			}
+					0 == strcmp(argv[i], "--quiet"))
+				VERBOSITY = 0;
 
 			// Tag
 			else if ((0 == strcmp(argv[i], "-t") ||
@@ -216,10 +215,8 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Verbose mode
 			else if (0 == strcmp(argv[i], "-v") ||
-					0 == strcmp(argv[i], "--verbose")) {
-				QUIET = false;
-				VERBOSE = true;
-			}
+					0 == strcmp(argv[i], "--verbose"))
+				VERBOSITY = 2;
 
 			// Use conf.cfg
 			else if (0 == strcmp(argv[i], "-uc") ||
@@ -256,7 +253,7 @@ static void extractPackage(const string& source, const string& dest,
 	mkdir(dest);
 
 	if (S_ISDIR(sb.st_mode)) { // Directory
-		if (VERBOSE)
+		if (VERBOSITY > 1)
 			printf("Copying package...\n");
 
 		// If copy error
@@ -265,7 +262,7 @@ static void extractPackage(const string& source, const string& dest,
 			exit(3);
 		}
 
-		if (VERBOSE)
+		if (VERBOSITY > 1)
 			printf("Completed successfully.\n");
 
 	} else if (S_ISREG(sb.st_mode)) { // File
@@ -276,14 +273,14 @@ static void extractPackage(const string& source, const string& dest,
 		// Detect compression type (based on extension)
 		// zip
 		if (extension == "zip")
-			append(args)("unzip")(VERBOSE ? "-o" : "-oq")(source)("-d")
+			append(args)("unzip")(VERBOSITY > 1 ? "-o" : "-oq")(source)("-d")
 				(dest);
 		// 7zip
 		else if (extension == "7z")
 			append(args)("7z")("x")("-y")(source)("-o" + dest);
 		// tar.gz
 		else if (extension == "tgz" || isSuffix(source, ".tar.gz"))
-			append(args)("tar")(VERBOSE ? "xvzf" : "xzf")(source)("-C")
+			append(args)("tar")(VERBOSITY > 1 ? "xvzf" : "xzf")(source)("-C")
 				(dest);
 		// Unknown
 		else {
@@ -291,7 +288,7 @@ static void extractPackage(const string& source, const string& dest,
 			exit(4);
 		}
 
-		if (VERBOSE)
+		if (VERBOSITY > 1)
 			printf("Unpacking package...\n");
 
 		int exit_code = spawn(args[0], args);
@@ -310,7 +307,7 @@ static void extractPackage(const string& source, const string& dest,
 			exit(4);
 		}
 
-		if (VERBOSE)
+		if (VERBOSITY > 1)
 			printf("Completed successfully.\n");
 
 	} else { // Unknown
@@ -356,7 +353,7 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGTERM, &sa, NULL);
 
 	string in_package = argv[1];
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("in_package: %s\n", in_package.c_str());
 
 	// Check in_package
@@ -453,7 +450,7 @@ int main(int argc, char *argv[]) {
 
 	// zip
 	if (extension == "zip")
-		append(args)("zip")(VERBOSE ? "-r" : "-rq")(DEST_NAME)
+		append(args)("zip")(VERBOSITY > 1 ? "-r" : "-rq")(DEST_NAME)
 			(out_package);
 
 	// 7zip
@@ -463,7 +460,7 @@ int main(int argc, char *argv[]) {
 
 	// tar.gz
 	else if (extension == "tgz" || isSuffix(DEST_NAME, ".tar.gz"))
-		append(args)("tar")(VERBOSE ? "cvzf" : "czf")(DEST_NAME)
+		append(args)("tar")(VERBOSITY > 1 ? "cvzf" : "czf")(DEST_NAME)
 			(out_package);
 
 	// Directory

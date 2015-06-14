@@ -91,7 +91,7 @@ int ProblemConfig::loadConfig(string package_path) {
 	vector<string> f = getFileByLines(package_path + "conf.cfg",
 		GFBL_IGNORE_NEW_LINES);
 
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("Validating conf.cfg...\n");
 
 	// Problem name
@@ -227,7 +227,7 @@ int ProblemConfig::loadConfig(string package_path) {
 		test_groups.back().tests.push_back(test);
 	}
 
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("Validation passed.\n");
 
 	return 0;
@@ -271,38 +271,18 @@ JudgeResult judge(string submission_id, string problem_id) {
 		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
 
 	// Compile solution
-	if (VERBOSE)
-		printf("Compiling solution...\n");
-
 	string compile_errors;
 	if (0 != compile("solutions/" + submission_id + ".cpp",
-			tmp_dir->sname() + "exec", &compile_errors,
-			COMPILE_ERRORS_MAX_LENGTH)) {
-		if (VERBOSE)
-			printf("Failed.\n");
-
+			tmp_dir->sname() + "exec", VERBOSITY, &compile_errors,
+			COMPILE_ERRORS_MAX_LENGTH))
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			convertString(htmlSpecialChars(compile_errors)) };
-	}
-
-	if (VERBOSE)
-		printf("Completed successfully.\n");
 
 	// Compile checker
-	if (VERBOSE)
-		printf("Compiling checker...\n");
-
 	if (0 != compile(package_path + "check/" + pconf.checker,
-			tmp_dir->sname() + "checker")) {
-		if (VERBOSE)
-			printf("Failed.\n");
-
+			tmp_dir->sname() + "checker", VERBOSITY))
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			"Checker compilation error" };
-	}
-
-	if (VERBOSE)
-		printf("Completed successfully.\n");
 
 	// Prepare runtime environment
 	sandbox::options sb_opts = {
@@ -403,7 +383,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 			ftruncate(sb_opts.new_stdout_fd, 0);
 			lseek(sb_opts.new_stdout_fd, 0, SEEK_SET);
 
-			if (VERBOSE) {
+			if (VERBOSITY > 1) {
 				printf("  %-11s ", test->name.c_str());
 				fflush(stdout);
 			}
@@ -458,7 +438,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					"Time limit exceeded</li>\n";
 			}
 
-			if (VERBOSE) {
+			if (VERBOSITY > 1) {
 				printf("%4s / %-4s    Status: ",
 					usecToSecStr(es.runtime, 2, false).c_str(),
 					usecToSecStr(test->time_limit, 2, false).c_str());
@@ -481,7 +461,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				checker_args[2] = package_path + "tests/" + test->name + ".out";
 				checker_args[3] = tmp_dir->sname() + "answer";
 
-				if (VERBOSE) {
+				if (VERBOSITY > 1) {
 					printf("  Output validation... ");
 					fflush(stdout);
 				}
@@ -496,7 +476,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 							checker_args.end())));
 
 				if (es.code == 0) {
-					if (VERBOSE)
+					if (VERBOSITY > 1)
 						printf("\e[1;32mPASSED\e[m");
 
 				// Wrong answer
@@ -506,7 +486,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						judge_test_report.status = JudgeResult::ERROR;
 					ratio = 0.0;
 
-					if (VERBOSE)
+					if (VERBOSITY > 1)
 						printf("\e[1;31mFAILED\e[m");
 
 					// Get checker output
@@ -532,7 +512,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						<< htmlSpecialChars(test->name) << "</span>"
 						<< htmlSpecialChars(buff) << "</li>\n";
 
-					if (VERBOSE)
+					if (VERBOSITY > 1)
 						printf(" \"%s\"", buff);
 
 				} else if (es.runtime < test->time_limit) {
@@ -540,7 +520,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					judge_test_report.status = JudgeResult::JUDGE_ERROR;
 					ratio = 0.0;
 
-					if (VERBOSE)
+					if (VERBOSITY > 1)
 						printf("\e[1;33mRTE\e[m (%s)", es.message.c_str());
 
 				} else {
@@ -548,16 +528,16 @@ JudgeResult judge(string submission_id, string problem_id) {
 					judge_test_report.status = JudgeResult::JUDGE_ERROR;
 					ratio = 0.0;
 
-					if (VERBOSE)
+					if (VERBOSITY > 1)
 						printf("\e[1;33mTLE\e[m");
 				}
 
-				if (VERBOSE)
+				if (VERBOSITY > 1)
 					printf("   Exited with %i [ %s ]", es.code,
 						usecToSecStr(es.runtime, 6, false).c_str());
 			}
 
-			if (VERBOSE)
+			if (VERBOSITY > 1)
 				printf("\n");
 		}
 
@@ -575,7 +555,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 		// Update score
 		total_score += round(group->points * ratio);
 
-		if (VERBOSE)
+		if (VERBOSITY > 1)
 			printf("  Score: %lli / %lli (ratio: %.3lf)\n\n",
 				(long long)round(group->points * ratio), group->points, ratio);
 
@@ -599,7 +579,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				"</tr>\n";
 	}
 
-	if (VERBOSE)
+	if (VERBOSITY > 1)
 		printf("Total score: %lli\n", total_score);
 
 	// Complete reports

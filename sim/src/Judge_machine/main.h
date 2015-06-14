@@ -4,4 +4,4 @@
 #include "../include/memory.h"
 
 extern UniquePtr<TemporaryDirectory> tmp_dir;
-extern bool VERBOSE;
+extern unsigned VERBOSITY; // 0 - quiet, 1 - normal, 2 or more - verbose
