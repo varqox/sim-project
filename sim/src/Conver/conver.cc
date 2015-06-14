@@ -35,30 +35,6 @@ ProblemConfig conf_cfg;
 static bool SET_MEMORY_LIMIT = false; // true if is set in options
 static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;
 
-string ProblemConfig::dump() {
-	string res;
-	Appender<string> app(res);
-	app(name)('\n')(tag)('\n')(statement)('\n')(checker)('\n')(solution)('\n')
-		(toString(memory_limit))('\n');
-
-	// Tests
-	for (vector<Group>::iterator i = test_groups.begin(),
-			end = test_groups.end(); i != end; ++i) {
-		if (i->tests.empty())
-			continue;
-
-		sort(i->tests.begin(), i->tests.end(), ProblemConfig::TestCmp());
-		app('\n')(i->tests[0].name)(' ')
-			(usecToSecStr(i->tests[0].time_limit, 2))(' ')(toString(i->points))
-			('\n');
-
-		for (vector<Test>::iterator j = ++i->tests.begin(); j != i->tests.end();
-				++j)
-			app(j->name)(' ')(usecToSecStr(j->time_limit, 2))('\n');
-	}
-	return res;
-}
-
 /**
  * @brief Displays help
  */

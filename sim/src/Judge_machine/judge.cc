@@ -5,6 +5,7 @@
 #include "../include/debug.h"
 #include "../include/sandbox.h"
 #include "../include/sandbox_checker_callback.h"
+#include "../include/sim_problem.h"
 #include "../include/string.h"
 #include "../include/utility.h"
 
@@ -32,205 +33,6 @@ static string convertString(const string& str) {
 	}
 
 	return res;
-}
-
-namespace {
-
-/**
- * @brief ProblemConfig holds SIM package config
- * @details Holds problem name, problem tag, problem statement, checker,
- * solution, memory limit and grouped tests with time limit for each
- */
-class ProblemConfig {
-public:
-	std::string name, tag, statement, checker, solution;
-	unsigned long long memory_limit; // in kB
-
-	/**
-	 * @brief Holds test
-	 */
-	struct Test {
-		std::string name;
-		unsigned long long time_limit; // in usec
-	};
-
-	/**
-	 * @brief Holds group of tests
-	 * @details Holds group of tests and points for them
-	 */
-	struct Group {
-		std::vector<Test> tests;
-		long long points;
-	};
-
-	std::vector<Group> test_groups;
-
-	ProblemConfig() : name(), tag(), statement(), checker(), solution(),
-		memory_limit(0), test_groups() {}
-
-	~ProblemConfig() {}
-
-	/**
-	 * @brief loads and validates config file from problem package
-	 * @p package_path
-	 * @details Validates problem config (memory limits, tests existence etc.)
-	 *
-	 * @param package_path Path to problem package directory
-	 * @return 0 on success, -1 on error
-	 */
-	int loadConfig(string package_path);
-};
-
-} // anonymous namespace
-
-int ProblemConfig::loadConfig(string package_path) {
-	// Add slash to package_path
-	if (package_path.size() > 0 && *--package_path.end() != '/')
-		package_path += '/';
-
-	vector<string> f = getFileByLines(package_path + "conf.cfg",
-		GFBL_IGNORE_NEW_LINES);
-
-	if (VERBOSITY > 1)
-		printf("Validating conf.cfg...\n");
-
-	// Problem name
-	if (f.size() < 1) {
-		eprintf("Error: conf.cfg: Missing problem name\n");
-		return -1;
-	}
-
-	// Problem tag
-	if (f.size() < 2) {
-		eprintf("Error: conf.cfg: Missing problem tag\n");
-		return -1;
-	}
-
-	if (f[1].size() > 4) {
-		eprintf("Error: conf.cfg: Problem tag too long (max 4 characters)\n");
-		return -1;
-	}
-
-	// Statement
-	if (f.size() < 3 || f[2].empty())
-		eprintf("Warning: conf.cfg: Missing statement\n");
-
-	else if (f[2].find('/') != string::npos ||
-			access(package_path + "doc/" + f[2], F_OK) == -1) {
-		eprintf("Error: conf.cfg: Invalid statement: 'doc/%s' - %s\n",
-			f[2].c_str(), strerror(errno));
-		return -1;
-	}
-
-	// Checker
-	if (f.size() < 4) {
-		eprintf("Error: conf.cfg: Missing checker\n");
-		return -1;
-	}
-
-	if (f[3].find('/') != string::npos ||
-			access(package_path + "check/" + f[3], F_OK) == -1) {
-		eprintf("Error: conf.cfg: Invalid checker: 'check/%s' - %s\n",
-			f[3].c_str(), strerror(errno));
-		return -1;
-	}
-
-	// Solution
-	if (f.size() < 5 || f[4].empty())
-		eprintf("Warning: conf.cfg: Missing solution\n");
-
-	else if (f[4].find('/') != string::npos ||
-			access(package_path + "prog/" + f[4], F_OK) == -1) {
-		eprintf("Error: conf.cfg: Invalid solution: 'prog/%s' - %s\n",
-			f[4].c_str(), strerror(errno));
-		return -1;
-	}
-
-	// Memory limit (in kB)
-	if (f.size() < 6) {
-		eprintf("Error: conf.cfg: Missing memory limit\n");
-		return -1;
-	}
-
-	if (strtou(f[5], &memory_limit) == -1) {
-		eprintf("Error: conf.cfg: Invalid memory limit: '%s'\n", f[5].c_str());
-		return -1;
-	}
-
-	name = f[0];
-	tag = f[1];
-	statement = f[2];
-	checker = f[3];
-	solution = f[4];
-
-	test_groups.clear();
-
-	// Tests
-	vector<string> line;
-	for (int i = 6, flen = f.size(); i < flen; ++i) {
-		size_t beg = 0, end = 0, len = f[i].size();
-		line.clear();
-
-		// Get line split on spaces and tabs
-		do {
-			end = beg + strcspn(f[i].c_str() + beg, " \t");
-			line.push_back(string(f[i].begin() + beg, f[i].begin() + end));
-
-			// Remove blank strings (created by multiple separators)
-			if (line.back().empty())
-				line.pop_back();
-
-			beg = ++end;
-		} while (end < len);
-
-		// Ignore empty lines
-		if (line.empty())
-			continue;
-
-		// Validate line
-		if (line.size() != 2 && line.size() != 3) {
-			eprintf("Error: conf.cfg: Tests - invalid line format (line %i)\n",
-				i);
-			return -1;
-		}
-
-		// Test name
-		if (line[0].find('/') != string::npos ||
-				access((package_path + "tests/" + line[0] + ".in"), F_OK) == -1) {
-			eprintf("Error: conf.cfg: Invalid test: '%s' - %s\n",
-				line[0].c_str(), strerror(errno));
-			return -1;
-		}
-
-		ProblemConfig::Test test = { line[0], 0 };
-
-		// Time limit
-		if (!isReal(line[1])) {
-			eprintf("Error: conf.cfg: Invalid time limit: '%s' (line %i)\n",
-				line[1].c_str(), i);
-			return -1;
-		}
-
-		test.time_limit = round(strtod(line[1].c_str(), NULL) * 1000000LL);
-
-		// Points
-		if (line.size() == 3) {
-			test_groups.push_back(ProblemConfig::Group());
-
-			if (strtoi(line[2], &test_groups.back().points) == -1) {
-				eprintf("Error: conf.cfg: Invalid points for group: '%s' "
-					"(line %i)\n", line[2].c_str(), i);
-				return -1;
-			}
-		}
-
-		test_groups.back().tests.push_back(test);
-	}
-
-	if (VERBOSITY > 1)
-		printf("Validation passed.\n");
-
-	return 0;
 }
 
 namespace {
@@ -267,20 +69,20 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	// Load config
 	ProblemConfig pconf;
-	if (pconf.loadConfig(package_path) == -1)
+	if (pconf.loadConfig(package_path, (VERBOSITY >> 1) + 1) == -1)
 		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
 
 	// Compile solution
 	string compile_errors;
 	if (0 != compile("solutions/" + submission_id + ".cpp",
-			tmp_dir->sname() + "exec", VERBOSITY, &compile_errors,
+			tmp_dir->sname() + "exec", (VERBOSITY >> 1) + 1, &compile_errors,
 			COMPILE_ERRORS_MAX_LENGTH))
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			convertString(htmlSpecialChars(compile_errors)) };
 
 	// Compile checker
 	if (0 != compile(package_path + "check/" + pconf.checker,
-			tmp_dir->sname() + "checker", VERBOSITY))
+			tmp_dir->sname() + "checker", (VERBOSITY >> 1) + 1))
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			"Checker compilation error" };
 
