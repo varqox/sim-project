@@ -55,6 +55,10 @@ int convertPackage(string tmp_package, string out_package) {
 	D(package_tree_root->print(stderr);)
 
 	// check/
+	if (USE_CONF && conf_cfg.checker.size())
+		copy(tmp_package + "check/" + conf_cfg.checker, out_package + "check/" +
+			conf_cfg.checker);
+
 	directory_tree::node *folder = package_tree_root->dir("check");
 	if (folder != NULL)
 		foreach (i, folder->files)
@@ -70,6 +74,10 @@ int convertPackage(string tmp_package, string out_package) {
 			}
 
 	// doc/
+	if (USE_CONF && conf_cfg.statement.size())
+		copy(tmp_package + "doc/" + conf_cfg.statement, out_package + "doc/" +
+			conf_cfg.statement);
+
 	folder = package_tree_root->dir("doc");
 	if (folder != NULL)
 		foreach (i, folder->files)
@@ -85,6 +93,10 @@ int convertPackage(string tmp_package, string out_package) {
 			}
 
 	// prog/
+	if (USE_CONF && conf_cfg.solution.size())
+		copy(tmp_package + "prog/" + conf_cfg.solution, out_package + "prog/" +
+			conf_cfg.solution);
+
 	folder = package_tree_root->dir("prog");
 	if (folder != NULL)
 		foreach (i, folder->files)
