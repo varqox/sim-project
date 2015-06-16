@@ -114,9 +114,12 @@ void SIM::contest() {
 
 			if (isSuffix(statement, ".pdf"))
 				resp_.headers["Content-type"] = "application/pdf";
-			else
+			else if (isSuffix(statement, ".html") ||
+					isSuffix(statement, ".htm"))
+				resp_.headers["Content-type"] = "text/html";
+			else if (isSuffix(statement, ".txt") || isSuffix(statement, ".md"))
 				resp_.headers["Content-type"] = "text/plain; charset=utf-8";
-		
+
 			resp_.content_type = server::HttpResponse::FILE;
 			resp_.content.clear();
 			resp_.content.append("problems/").append(path->problem->problem_id).

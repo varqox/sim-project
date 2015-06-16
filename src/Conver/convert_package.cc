@@ -50,7 +50,13 @@ int convertPackage(string tmp_package, string out_package) {
 
 	// Copy all suitable files to out_package
 	const char solution_extensions[][10] = { ".c", ".cc", ".cpp" };
-	const char statement_extensions[][10] = { ".pdf", ".html", ".txt" };
+	const char statement_extensions[][10] = {
+		".pdf",
+		".html",
+		".htm",
+		".txt",
+		".md"
+	};
 
 	D(package_tree_root->print(stderr);)
 
