@@ -108,13 +108,19 @@ void SIM::contest() {
 		// Problem statement
 		if (path->type == PROBLEM &&
 				0 == compareTo(req_->target, arg_beg, '/', "statement")) {
-			resp_.headers["Content-type"] = "application/pdf";
+			string statement = getFileByLines("problems/" +
+				path->problem->problem_id + "/conf.cfg", GFBL_IGNORE_NEW_LINES,
+				2, 3)[0];
+
+			if (isSuffix(statement, ".pdf"))
+				resp_.headers["Content-type"] = "application/pdf";
+			else
+				resp_.headers["Content-type"] = "text/plain; charset=utf-8";
+		
 			resp_.content_type = server::HttpResponse::FILE;
 			resp_.content.clear();
 			resp_.content.append("problems/").append(path->problem->problem_id).
-				append("/doc/").append(getFileByLines("problems/" +
-					path->problem->problem_id + "/conf.cfg" ,
-					GFBL_IGNORE_NEW_LINES, 2, 3)[0]);
+				append("/doc/").append(statement);
 			return;
 		}
 
