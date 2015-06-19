@@ -42,6 +42,15 @@ public:
 	RoundPath(const std::string& rid): admin_access(false), type(CONTEST),
 			round_id(rid), contest(NULL), round(NULL), problem(NULL) {}
 
+	void swap(RoundPath& rp) {
+		std::swap(admin_access, rp.admin_access);
+		std::swap(type, rp.type);
+		std::swap(round_id, rp.round_id);
+		std::swap(contest, rp.contest);
+		std::swap(round, rp.round);
+		std::swap(problem, rp.problem);
+	}
+
 	~RoundPath() {
 		if (contest)
 			delete contest;
