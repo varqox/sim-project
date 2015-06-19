@@ -180,7 +180,6 @@ void Contest::addContest(SIM& sim) {
 	if (sim.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", 128);
-
 		is_public = fv.exist("public");
 
 		// If all fields are ok
@@ -242,8 +241,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 
 	if (sim.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(name, "name", "Round name", 128);
-
+		fv.validateNotBlank(name, "name", "Round name", 128); 
 		is_visible = fv.exist("visible");
 
 		begins.is_null = fv.exist("begins_null");
@@ -535,8 +533,80 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 		return sim.error403();
 
 	FormValidator fv(sim.req_->form_data);
+	string name, owner;
+	bool is_public = false;
+
+	if (sim.req_->method == server::HttpRequest::POST) {
+		// Validate all fields
+		fv.validateNotBlank(name, "name", "Contest name", 128);
+		fv.validateNotBlank(owner, "owner", "Owner username", 30);
+		is_public = fv.exist("public");
+
+		// If all fields are ok
+		if (fv.noErrors())
+			try {
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
+					->prepareStatement("UPDATE rounds r, (SELECT id FROM users WHERE username=?) u SET name=?, owner=u.id, access=? WHERE r.id=?"));
+				pstmt->setString(1, owner);
+				pstmt->setString(2, name);
+				pstmt->setString(3, is_public ? "public" : "private");
+				pstmt->setString(4, rp.round_id);
+
+				if (pstmt->executeUpdate() == 1) {
+					fv.addError("Update successful");
+					// Update rp
+					UniquePtr<RoundPath> new_rp(getRoundPath(sim, rp.round_id));
+					const_cast<RoundPath&>(rp).swap(*new_rp);
+				} else
+					fv.addError("Update failed");
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			}
+	}
+
+	// Get contest information
+	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
+		->prepareStatement("SELECT r.name, u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id;"));
+	pstmt->setString(1, rp.round_id);
+
+	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+	if (res->next()) {
+		name = res->getString(1);
+		owner = res->getString(2);
+		is_public = res->getString(3) == "public";
+	}
 
 	TemplateWithMenu templ(sim, "Edit contest", rp);
+	printRoundPath(templ, rp, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+			"<h1>Edit contest</h1>\n"
+			"<form method=\"post\">\n"
+				// Name
+				"<div class=\"field-group\">\n"
+					"<label>Contest name</label>\n"
+					"<input type=\"text\" name=\"name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\">\n"
+				"</div>\n"
+				// Owner
+				"<div class=\"field-group\">\n"
+					"<label>Owner username</label>\n"
+					"<input type=\"text\" name=\"owner\" value=\""
+						<< htmlSpecialChars(owner) << "\" size=\"24\" maxlength=\"30\">\n"
+				"</div>\n"
+				// Public
+				"<div class=\"field-group\">\n"
+					"<label>Public</label>\n"
+					"<input type=\"checkbox\" name=\"public\""
+						<< (is_public ? " checked" : "") << ">\n"
+				"</div>\n"
+				"<input type=\"submit\" value=\"Update\">\n"
+			"</form>\n"
+		"</div>\n";
 }
 
 void Contest::editRound(SIM& sim, const RoundPath& rp) {
