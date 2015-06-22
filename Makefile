@@ -21,6 +21,13 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
 	$(UPDATE) src/public src/sim-server src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
 
+	# Install PRoot
+ifeq ($(shell uname -m), x86_64)
+	$(UPDATE) bin/proot-x86_64 /usr/local/bin/proot
+else
+	$(UPDATE) bin/proot-x86 /usr/local/bin/proot
+endif
+
 	# Set database pass
 	@bash -c 'if [ ! -e $(abspath $(DESTDIR)/db.config) ]; then\
 			echo Type your MySQL username \(for SIM\):; read mysql_username;\
