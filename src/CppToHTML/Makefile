@@ -8,7 +8,7 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 ../CTH: main.o coloring.o aho.o
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@
 
 .PHONY: clean
 clean:

@@ -18,7 +18,7 @@ using std::string;
 static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1s
 static DB::Connection *db_conn = NULL;
 UniquePtr<TemporaryDirectory> tmp_dir;
-unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
+unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static inline DB::Connection& conn() { return *db_conn; }
 
@@ -181,6 +181,7 @@ int main() {
 	}
 
 	// If "judge-machine.notify" file does not exist create it
+	// DO SOMETHING WITH IT !!!
 	if (access("judge-machine.notify", F_OK) == -1)
 		close(creat("judge-machine.notify", S_IRUSR));
 
