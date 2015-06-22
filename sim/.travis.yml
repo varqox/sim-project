@@ -19,8 +19,9 @@ script:
 
 branches:
   only:
-    - master
     - beta
+    - develop
+    - master
 
 notifications:
   email: false

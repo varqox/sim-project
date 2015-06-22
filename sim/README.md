@@ -5,7 +5,6 @@ SIM is open source platform for carrying out algorithmic contests
 # Dependencies:
 
 - gcc/g++ (32 bit version)
-- PRoot (Debian package: _proot_)
 - MySQL (Debian packages: _mysql-server mysql-client_)
 - [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
 
