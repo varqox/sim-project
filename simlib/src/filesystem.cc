@@ -93,7 +93,6 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) 
 }
 
 TemporaryDirectory::~TemporaryDirectory() {
-	E("\e[1;31mRemoving tmp_dir\e[m -> %p\n", this);
 	if (-1 == remove_r(path.c_str()))
 		eprintf("Error: remove_r() - %s\n", strerror(errno));
 	free(name_);

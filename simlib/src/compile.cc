@@ -1,8 +1,6 @@
-#include "../include/compile.h"
 #include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/process.h"
-#include "../include/utility.h"
 
 #include <cerrno>
 #include <vector>
@@ -25,26 +23,44 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		}
 	}
 
+	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
+	if (copy(source, tmp_dir.sname() + "a.cpp") == -1) {
+		if (verbosity > 0)
+			eprintf("Failed to copy source file - %s\n", strerror(errno));
+
+		return 1;
+	}
+
 	if (verbosity > 1)
 		printf("Compiling: '%s' ", (source).c_str());
 
-	// Run compiler
-	vector<string> args;
-	append(args)("g++")("-O2")("-static")("-lm")(source)("-o")(exec);
-
-	/* Compile as 32 bit executable (not essential but if checker will be x86_63
+	/* Compile as 32 bit executable (not essential but if checker will be x86_64
 	*  and Conver/Judge_machine i386 then checker won't work, with it its more
 	*  secure (see making i386 syscall from x86_64))
+	*  proot compiler to make compilation safer (e.g. including unwanted
+	*  files)
 	*/
-	append(args)("-m32");
+	const char* args[] = {
+		"proot",
+		"-v", "-1",
+		"-r", tmp_dir.name(),
+		"-b", "/usr",
+		"-b", "/bin",
+		"-b", "/lib",
+		"-b", "/lib32",
+		"-b", "/libx32",
+		"-b", "/lib64",
+		"g++", // Invoke compiler
+		"a.cpp",
+		"-o", "exec",
+		"-O2",
+		"-static",
+		"-lm",
+		"-m32",
+		NULL,
+	};
 
-	if (verbosity > 1) {
-		printf("(Command: '%s", args[0].c_str());
-		for (size_t i = 1, end = args.size(); i < end; ++i)
-			printf(" %s", args[i].c_str());
-		printf("')\n");
-	}
-
+	// Run compiler
 	spawn_opts sopts = { -1, -1, cef };
 	int compile_status = spawn(args[0], args, &sopts);
 
@@ -56,10 +72,10 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		if (c_errors)
 			*c_errors = getFileContents(cef, 0, c_errors_max_len);
 
+		// Clean up
 		if (cef >= 0)
 			while (close(cef) == -1 && errno == EINTR) {}
 		return 2;
-
 	}
 
 	if (verbosity > 1)
@@ -68,7 +84,17 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	if (c_errors)
 		*c_errors = "";
 
+	// Clean up
 	if (cef >= 0)
 		while (close(cef) == -1 && errno == EINTR) {}
+
+	// Move exec
+	if (move(tmp_dir.sname() + "exec", exec) == -1) {
+		if (verbosity > 0)
+			eprintf("Failed to move exec - %s\n", strerror(errno));
+
+		return 1;
+	}
+
 	return 0;
 }
