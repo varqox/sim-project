@@ -9,10 +9,10 @@ Conver CppToHTML Judge_machine server lib:
 	$(Q)$(MAKE) -C $@/
 
 chmod-default: Algorithms/other/chmod-default.cpp
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@
 
 setup-install: setup_install.cc lib/libsim.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lmysqlcppconn
 
 lib/libsim.a: lib
 	@

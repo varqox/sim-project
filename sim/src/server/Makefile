@@ -12,7 +12,7 @@ endif
 ../sim-server: sim_errors.o sim_user.o sim_contest.o sim_contest_lib.o
 ../sim-server: ../lib/libsim.a
 ../sim-server:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lpthread -lmysqlcppconn
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lpthread -lmysqlcppconn
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)

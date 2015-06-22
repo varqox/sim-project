@@ -10,7 +10,7 @@ endif
 ../judge-machine: main.o judge.o
 ../judge-machine: ../lib/libsim.a
 ../judge-machine:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lmysqlcppconn
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)

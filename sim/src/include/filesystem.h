@@ -99,7 +99,7 @@ inline int remove_r(const char* pathname) {
 int blast(int infd, int outfd);
 
 /**
- * @brief Copy file from @p src to @p dest
+ * @brief Copies (overrides) file from @p src to @p dest
  * @details Needs directory containing @p dest to exist
  *
  * @param src source file
@@ -112,7 +112,7 @@ int blast(int infd, int outfd);
 int copy(const char* src, const char* dest);
 
 /**
- * @brief Copy file from @p src to @p dest
+ * @brief Copies (overrides) file from @p src to @p dest
  * @details Needs directory containing @p dest to exist
  *
  * @param src source file
@@ -127,7 +127,8 @@ inline int copy(const std::string& src, const std::string& dest) {
 }
 
 /**
- * @brief Copies file @p src to @p dest relative to a directory file descriptor
+ * @brief Copies (overrides) file @p src to @p dest relative to a directory file
+ * descriptor
  *
  * @param dirfd1 directory file descriptor
  * @param src source file (relative to @p dirfd1)
@@ -141,8 +142,8 @@ inline int copy(const std::string& src, const std::string& dest) {
 int copyat(int dirfd1, const char* src, int dirfd2, const char* dest);
 
 /**
- * @brief Copies file/directory @p src to @p dest relative to a directory file
- * descriptor
+ * @brief Copies (overrides) file/directory @p src to @p dest relative to a
+ * directory file descriptor
  *
  * @param dirfd1 directory file descriptor
  * @param src source file/directory (relative to @p dirfd1)
@@ -157,7 +158,7 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest);
 int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest);
 
 /**
- * @brief Copy recursively files and folders
+ * @brief Copies (overrides) recursively files and folders
  * @details Uses copy_rat()
  *
  * @param src source file/directory
@@ -172,7 +173,7 @@ inline int copy_r(const std::string& src, const std::string& dest) {
 }
 
 /**
- * @brief Copy recursively files and folders
+ * @brief Copies (overrides) recursively files and folders
  * @details Uses copy_rat()
  *
  * @param src source file/directory
@@ -189,7 +190,9 @@ inline int access(const std::string& pathname, int mode) {
 }
 
 inline int move(const std::string& oldpath, const std::string& newpath) {
-	mkdir_r(newpath.substr(0, newpath.find_last_of('/')).c_str());
+	size_t x = newpath.find_last_of('/');
+	if (x != std::string::npos)
+		mkdir_r(newpath.substr(0, x).c_str());
 	return rename(oldpath.c_str(), newpath.c_str());
 }
 
