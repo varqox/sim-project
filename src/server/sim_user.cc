@@ -13,19 +13,22 @@ using std::string;
 using std::map;
 
 void SIM::login() {
+	FormValidator fv(req_->form_data);
+	string username;
+
 	if (req_->method == server::HttpRequest::POST) {
 		// Try to login
-		const map<string, string> &form = req_->form_data.other;
-		map<string, string>::const_iterator username, password;
+		string password;
+		// Validate all fields
+		fv.validate(username, "username", "Username", 30);
+		fv.validate(password, "password", "Password");
 
-		// Check if all fields exist
-		if ((username = form.find("username")) != form.end() &&
-				(password = form.find("password")) != form.end()) {
+		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(db_conn()
 						->prepareStatement("SELECT id FROM `users` WHERE username=? AND password=?"));
-				pstmt->setString(1, username->second);
-				pstmt->setString(2, sha256(password->second));
+				pstmt->setString(1, username);
+				pstmt->setString(2, sha256(password));
 
 				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 
@@ -50,17 +53,17 @@ void SIM::login() {
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
-		}
 	}
 
 	Template templ(*this, "Login");
-	templ << "<div class=\"form-container\">\n"
+	templ << fv.errors() << "<div class=\"form-container\">\n"
 				"<h1>Log in</h1>\n"
 				"<form method=\"post\">\n"
 					// Username
 					"<div class=\"field-group\">\n"
 						"<label>Username</label>\n"
-						"<input type=\"text\" name=\"username\" size=\"24\" maxlength=\"30\">\n"
+						"<input type=\"text\" name=\"username\" value=\""
+							<< htmlSpecialChars(username) << "\" size=\"24\" maxlength=\"30\" required>\n"
 					"</div>\n"
 					// Password
 					"<div class=\"field-group\">\n"
@@ -137,25 +140,25 @@ void SIM::signUp() {
 			"<div class=\"field-group\">\n"
 				"<label>Username</label>\n"
 				"<input type=\"text\" name=\"username\" value=\""
-					<< htmlSpecialChars(username) << "\" size=\"24\" maxlength=\"30\">\n"
+					<< htmlSpecialChars(username) << "\" size=\"24\" maxlength=\"30\" required>\n"
 			"</div>\n"
 			// First Name
 			"<div class=\"field-group\">\n"
 				"<label>First name</label>\n"
 				"<input type=\"text\" name=\"first_name\" value=\""
-					<< htmlSpecialChars(first_name) << "\" size=\"24\" maxlength=\"60\">\n"
+					<< htmlSpecialChars(first_name) << "\" size=\"24\" maxlength=\"60\" required>\n"
 			"</div>\n"
 			// Last name
 			"<div class=\"field-group\">\n"
 				"<label>Last name</label>\n"
 				"<input type=\"text\" name=\"last_name\" value=\""
-					<< htmlSpecialChars(last_name) << "\" size=\"24\" maxlength=\"60\">\n"
+					<< htmlSpecialChars(last_name) << "\" size=\"24\" maxlength=\"60\" required>\n"
 			"</div>\n"
 			// Email
 			"<div class=\"field-group\">\n"
 				"<label>Email</label>\n"
 				"<input type=\"email\" name=\"email\" value=\""
-					<< htmlSpecialChars(email) << "\" size=\"24\" maxlength=\"60\">\n"
+					<< htmlSpecialChars(email) << "\" size=\"24\" maxlength=\"60\" required>\n"
 			"</div>\n"
 			// Password
 			"<div class=\"field-group\">\n"

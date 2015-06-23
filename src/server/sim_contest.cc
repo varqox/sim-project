@@ -224,7 +224,7 @@ void Contest::addContest(SIM& sim) {
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\""
-						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\">\n"
+						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
@@ -244,59 +244,45 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 	FormValidator fv(sim.req_->form_data);
 	string name;
 	bool is_visible = false;
-	StringOrNull begins, full_results, ends;
+	string begins, full_results, ends;
 
 	if (sim.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", 128);
 		is_visible = fv.exist("visible");
-
-		begins.is_null = fv.exist("begins_null");
-		ends.is_null = fv.exist("ends_null");
-		full_results.is_null = fv.exist("full_results_null");
-
-		if (!begins.is_null)
-			fv.validateNotBlank(begins.str, "begins", "Ends", is_datetime, "Begins: invalid value");
-
-		if (!ends.is_null)
-			fv.validateNotBlank(ends.str, "ends", "Ends", is_datetime, "Ends: invalid value");
-
-		if (!full_results.is_null)
-			fv.validateNotBlank(full_results.str, "full_results", "Ends", is_datetime, "Full_results: invalid value");
+		fv.validate(begins, "begins", "Begins", isDatetimeOrBlank, "Begins: invalid value");
+		fv.validate(ends, "ends", "Ends", isDatetimeOrBlank, "Ends: invalid value");
+		fv.validate(full_results, "full_results", "Ends", isDatetimeOrBlank, "Full_results: invalid value");
 
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
-						"INSERT INTO rounds (parent, name, owner, item, visible, begins, ends, full_results) "
-						"SELECT ?, ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds WHERE parent=?"));
+						"INSERT INTO rounds (parent, name, item, visible, begins, ends, full_results) "
+						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds WHERE parent=?"));
 				pstmt->setString(1, rp.round_id);
 				pstmt->setString(2, name);
-				pstmt->setString(3, sim.session->user_id);
-				pstmt->setBoolean(4, is_visible);
+				pstmt->setBoolean(3, is_visible);
 
 				// Begins
-				if (begins.is_null)
-					pstmt->setNull(5, 0);
-
+				if (begins.empty())
+					pstmt->setNull(4, 0);
 				else
-					pstmt->setString(5, begins.str);
+					pstmt->setString(4, begins);
 
 				// ends
-				if (ends.is_null)
-					pstmt->setNull(6, 0);
-
+				if (ends.empty())
+					pstmt->setNull(5, 0);
 				else
-					pstmt->setString(6, ends.str);
+					pstmt->setString(5, ends);
 
 				// Full_results
-				if (full_results.is_null)
-					pstmt->setNull(7, 0);
-
+				if (full_results.empty())
+					pstmt->setNull(6, 0);
 				else
-					pstmt->setString(7, full_results.str);
+					pstmt->setString(6, full_results);
 
-				pstmt->setString(8, rp.round_id);
+				pstmt->setString(7, rp.round_id);
 
 				if (pstmt->executeUpdate() == 1) {
 					UniquePtr<sql::Statement> stmt(sim.db_conn()->createStatement());
@@ -324,7 +310,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 			"<div class=\"field-group\">\n"
 				"<label>Round name</label>\n"
 				"<input type=\"text\" name=\"name\" value=\""
-					<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\">\n"
+					<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
 			"</div>\n"
 			// Visible
 			"<div class=\"field-group\">\n"
@@ -337,30 +323,21 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 				"<label>Begins</label>\n"
 				"<input type=\"text\" name=\"begins\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(begins.str) << "\" size=\"19\" maxlength=\"19\">\n"
-				"<label>Null: </label>\n"
-				"<input type=\"checkbox\" name=\"begins_null\""
-					<< (begins.is_null ? " checked" : "") << ">\n"
+					<< htmlSpecialChars(begins) << "\" size=\"19\" maxlength=\"19\">\n"
 			"</div>\n"
 			// Ends
 			"<div class=\"field-group\">\n"
 				"<label>Ends</label>\n"
 				"<input type=\"text\" name=\"ends\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(ends.str) << "\" size=\"19\" maxlength=\"19\">\n"
-				"<label>Null: </label>\n"
-				"<input type=\"checkbox\" name=\"ends_null\""
-					<< (ends.is_null ? " checked" : "") << ">\n"
+					<< htmlSpecialChars(ends) << "\" size=\"19\" maxlength=\"19\">\n"
 			"</div>\n"
 			// Full_results
 			"<div class=\"field-group\">\n"
 				"<label>Full_results</label>\n"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(full_results.str) << "\" size=\"19\" maxlength=\"19\">\n"
-				"<label>Null: </label>\n"
-				"<input type=\"checkbox\" name=\"full_results_null\""
-					<< (full_results.is_null ? " checked" : "") << ">\n"
+					<< htmlSpecialChars(full_results) << "\" size=\"19\" maxlength=\"19\">\n"
 			"</div>\n"
 			"<input type=\"submit\" value=\"Add\">\n"
 		"</form>\n"
@@ -528,7 +505,7 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 				// Package
 				"<div class=\"field-group\">\n"
 					"<label>Package</label>\n"
-					"<input type=\"file\" name=\"package\">\n"
+					"<input type=\"file\" name=\"package\" required>\n"
 				"</div>\n"
 				"<input type=\"submit\" value=\"Add\">\n"
 			"</form>\n"
@@ -578,7 +555,7 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 
 	// Get contest information
 	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-		->prepareStatement("SELECT r.name, u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id;"));
+		->prepareStatement("SELECT r.name, u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id"));
 	pstmt->setString(1, rp.round_id);
 
 	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
@@ -597,13 +574,13 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\""
-						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\">\n"
+						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
 				"</div>\n"
 				// Owner
 				"<div class=\"field-group\">\n"
 					"<label>Owner username</label>\n"
 					"<input type=\"text\" name=\"owner\" value=\""
-						<< htmlSpecialChars(owner) << "\" size=\"24\" maxlength=\"30\">\n"
+						<< htmlSpecialChars(owner) << "\" size=\"24\" maxlength=\"30\" required>\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
@@ -621,8 +598,118 @@ void Contest::editRound(SIM& sim, const RoundPath& rp) {
 		return sim.error403();
 
 	FormValidator fv(sim.req_->form_data);
+	string name;
+	bool is_visible = false;
+	string begins, full_results, ends;
+
+	if (sim.req_->method == server::HttpRequest::POST) {
+		// Validate all fields
+		fv.validateNotBlank(name, "name", "Round name", 128);
+		is_visible = fv.exist("visible");
+		fv.validate(begins, "begins", "Begins", isDatetimeOrBlank, "Begins: invalid value");
+		fv.validate(ends, "ends", "Ends", isDatetimeOrBlank, "Ends: invalid value");
+		fv.validate(full_results, "full_results", "Ends", isDatetimeOrBlank, "Full_results: invalid value");
+
+		// If all fields are ok
+		if (fv.noErrors())
+			try {
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
+						"UPDATE rounds SET name=?, visible=?, begins=?, ends=?, full_results=? WHERE id=?"));
+				pstmt->setString(1, name);
+				pstmt->setBoolean(2, is_visible);
+
+				// Begins
+				if (begins.empty())
+					pstmt->setNull(3, 0);
+				else
+					pstmt->setString(3, begins);
+
+				// ends
+				if (ends.empty())
+					pstmt->setNull(4, 0);
+				else
+					pstmt->setString(4, ends);
+
+				// Full_results
+				if (full_results.empty())
+					pstmt->setNull(5, 0);
+				else
+					pstmt->setString(5, full_results);
+
+				pstmt->setString(6, rp.round_id);
+
+				if (pstmt->executeUpdate() == 1) {
+					fv.addError("Update successful");
+					// Update rp
+					UniquePtr<RoundPath> new_rp(getRoundPath(sim, rp.round_id));
+					const_cast<RoundPath&>(rp).swap(*new_rp);
+				} else
+					fv.addError("Update failed");
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			}
+	}
+
+	// Get round information
+	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
+		->prepareStatement("SELECT name, visible, begins, ends, full_results FROM rounds WHERE id=?"));
+	pstmt->setString(1, rp.round_id);
+
+	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+	if (res->next()) {
+		name = res->getString(1);
+		is_visible = res->getBoolean(2);
+		begins = res->getString(3);
+		ends = res->getString(4);
+		full_results = res->getString(5);
+	}
 
 	TemplateWithMenu templ(sim, "Edit round", rp);
+	printRoundPath(templ, rp, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+		"<h1>Edit round</h1>\n"
+		"<form method=\"post\">\n"
+			// Name
+			"<div class=\"field-group\">\n"
+				"<label>Round name</label>\n"
+				"<input type=\"text\" name=\"name\" value=\""
+					<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
+			"</div>\n"
+			// Visible
+			"<div class=\"field-group\">\n"
+				"<label>Visible</label>\n"
+				"<input type=\"checkbox\" name=\"visible\""
+					<< (is_visible ? " checked" : "") << ">\n"
+			"</div>\n"
+			// Begins
+			"<div class=\"field-group\">\n"
+				"<label>Begins</label>\n"
+				"<input type=\"text\" name=\"begins\""
+					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+					<< htmlSpecialChars(begins) << "\" size=\"19\" maxlength=\"19\">\n"
+			"</div>\n"
+			// Ends
+			"<div class=\"field-group\">\n"
+				"<label>Ends</label>\n"
+				"<input type=\"text\" name=\"ends\""
+					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+					<< htmlSpecialChars(ends) << "\" size=\"19\" maxlength=\"19\">\n"
+			"</div>\n"
+			// Full_results
+			"<div class=\"field-group\">\n"
+				"<label>Full_results</label>\n"
+				"<input type=\"text\" name=\"full_results\""
+					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+					<< htmlSpecialChars(full_results) << "\" size=\"19\" maxlength=\"19\">\n"
+			"</div>\n"
+			"<input type=\"submit\" value=\"Update\">\n"
+		"</form>\n"
+	"</div>\n";
 }
 
 void Contest::editProblem(SIM& sim, const RoundPath& rp) {
@@ -882,7 +969,7 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 					// Solution file
 					"<div class=\"field-group\">\n"
 						"<label>Solution</label>\n"
-						"<input type=\"file\" name=\"solution\">\n"
+						"<input type=\"file\" name=\"solution\" required>\n"
 					"</div>\n"
 					"<input type=\"submit\" value=\"Submit\">\n"
 				"</form>\n"

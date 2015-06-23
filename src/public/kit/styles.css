@@ -1011,10 +1011,10 @@ table.submissions td{
 	align-items: center;
 	min-height: 30px;
 }
-.form-container form .field-group *{
+.form-container form .field-group > *{
 	margin-left: 10px;
 }
-.form-container form .field-group :first-child{
+.form-container form .field-group > :first-child{
 	margin: 0 10px 0 0;
 	min-width: 120px;
 	text-align: right;
