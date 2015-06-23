@@ -919,6 +919,24 @@ void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
 	templ << "<h1>Submissions</h1>";
 	printRoundPath(templ, rp, "submissions");
 
+	templ << "<h3>Submission queue size: ";
+	try {
+		UniquePtr<sql::Statement> stmt(sim.db_conn()->createStatement());
+		UniquePtr<sql::ResultSet> res(stmt->executeQuery(
+			"SELECT COUNT(*) FROM submissions WHERE status='waiting';"));
+		if (res->next())
+			templ << res->getString(1);
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
+
+	templ <<  "</h3>";
+
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
 			admin_view ? "SELECT s.id, str.submit_time, r2.id, r2.name, r.id, r.name, s.status, s.score, str.final, u.username "
