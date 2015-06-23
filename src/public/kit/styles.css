@@ -636,6 +636,11 @@ a.btn{
 	font-weight: normal;
 	line-height: 45px;
 }
+.body h3{
+	margin: 5px 0;
+	font-size: 16px;
+	font-weight: normal;
+}
 .btn-small{
 	color: #000000;
 	outline: none;
