@@ -23,8 +23,8 @@ string date(const string& str, time_t cur_time) {
 	return buff;
 }
 
-bool is_datetime(const string& str) {
+bool isDatetime(const string& str) {
 	struct tm t;
-	return str.size() == 19 && NULL !=
-		strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t);
+	return str.size() == 19 &&
+		NULL != strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t);
 }
