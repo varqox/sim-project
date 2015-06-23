@@ -630,6 +630,12 @@ a.btn{
 	-webkit-flex-direction: column;
 	flex-direction: column;
 }
+.body h1{
+	margin: 0;
+	font-size: 35px;
+	font-weight: normal;
+	line-height: 45px;
+}
 .btn-small{
 	color: #000000;
 	outline: none;
@@ -801,9 +807,6 @@ a.btn{
 	margin-left: 5px;
 }
 .submission-info h1{
-	margin: 0;
-	font-size: 35px;
-	font-weight: normal;
 	line-height: 26px;
 }
 /*.submission-info h2{
@@ -977,10 +980,8 @@ table.submissions td{
 	flex-flow: column nowrap;
 }
 .form-container h1{
-	font-size: 35px;
-	font-weight: normal;
 	text-align: center;
-	line-height: normal;
+	margin: 0.67em 0;
 }
 .form-container h4{
 	font-size: 19px;

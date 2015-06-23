@@ -163,8 +163,15 @@ void SIM::contest() {
 
 		// Contest dashboard
 		Contest::TemplateWithMenu templ(*this, "Contest dashboard", *path);
+
+		templ << "<h1>Dashboard</h1>";
 		Contest::printRoundPath(templ, *path, "");
 		Contest::printRoundView(*this, templ, *path, false, admin_view);
+
+		if (path->type == PROBLEM)
+			templ << "<a class=\"btn\" href=\"/c/" << path->round_id
+				<< "/statement\" style=\"margin:5px auto 5px auto\">"
+				"View statement</a>\n";
 	}
 }
 
@@ -241,7 +248,7 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 
 	if (sim.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(name, "name", "Round name", 128); 
+		fv.validateNotBlank(name, "name", "Round name", 128);
 		is_visible = fv.exist("visible");
 
 		begins.is_null = fv.exist("begins_null");
@@ -629,6 +636,7 @@ void Contest::editProblem(SIM& sim, const RoundPath& rp) {
 
 void Contest::problems(SIM& sim, const RoundPath& rp, bool admin_view) {
 	TemplateWithMenu templ(sim, "Problems", rp);
+	templ << "<h1>Problems</h1>";
 	printRoundPath(templ, rp, "problems");
 	printRoundView(sim, templ, rp, true, admin_view);
 }
@@ -908,6 +916,7 @@ void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
 		return sim.redirect("/login" + sim.req_->target);
 
 	TemplateWithMenu templ(sim, "Submissions", rp);
+	templ << "<h1>Submissions</h1>";
 	printRoundPath(templ, rp, "submissions");
 
 	try {
