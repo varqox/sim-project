@@ -292,7 +292,7 @@ select {
  */
 
 button,
-html input[type="button"], /* 1 */
+input[type="button"], /* 1 */
 input[type="reset"],
 input[type="submit"] {
   -webkit-appearance: button; /* 2 */
@@ -304,7 +304,7 @@ input[type="submit"] {
  */
 
 button[disabled],
-html input[disabled] {
+input[disabled] {
   cursor: default;
 }
 
@@ -440,7 +440,7 @@ th {
  * Major styles
 */
 button,
-html input[type="button"],
+input[type="button"],
 input[type="reset"],
 input[type="submit"],
 .btn{
@@ -460,7 +460,7 @@ input[type="submit"],
 	height: 30px;
 }
 button:focus,
-html input[type="button"]:focus,
+input[type="button"]:focus,
 input[type="reset"]:focus,
 input[type="submit"]:focus,
 .btn:focus{
@@ -469,7 +469,7 @@ input[type="submit"]:focus,
 	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
 }
 button:hover,
-html input[type="button"]:hover,
+input[type="button"]:hover,
 input[type="reset"]:hover,
 input[type="submit"]:hover,
 .btn:hover{
@@ -478,13 +478,47 @@ input[type="submit"]:hover,
 	background-image: linear-gradient(#dddddd, #d3d3d3);
 }
 button:active,
-html input[type="button"]:active,
+input[type="button"]:active,
 input[type="reset"]:active,
 input[type="submit"]:active,
 .btn:active{
 	background-color: #d3d3d3;
 	background-image: none;
 	border-color: #b3b3b3;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+.btn-danger{
+	color: #ffffff;
+	/*line-height: 16px;*/
+	padding: 4px 11px;
+	border: 1px solid #bd362f;
+	margin: 2px;
+	outline: none;
+	background-color: #da4f49;
+	background-image: linear-gradient(#ee5f5b, #bd362f);
+	cursor: pointer;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	-webkit-align-self: flex-start;
+	align-self: flex-start;
+	height: 30px;
+}
+.btn-danger:focus{
+	border-color: #bd362f;
+	background-color: #bd362f;
+	outline: none;
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(189, 54, 47, 0.6);
+}
+.btn-danger:hover{
+	border-color: #bd362f;
+	background-color: #bd362f;
+	background-image: linear-gradient(#bd362f, #b32c25);
+}
+.btn-danger:active{
+	background-color: #bd362f;
+	background-image: none;
+	border-color: #bd362f;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
 textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"]{
@@ -518,6 +552,12 @@ a:hover
 }
 a.btn{
 	color: inherit;
+	text-decoration: none;
+	display: inline-block;
+}
+a.btn-danger{
+	color: #ffffff;
+	display: inline-block;
 	text-decoration: none;
 }
 .pos-center{
@@ -1022,4 +1062,8 @@ table.submissions td{
 }
 .form-container form input[type="submit"]{
 	margin-left: 140px;
+}
+.form-container form div.submit-yes-no{
+	margin-left: auto;
+	margin-right: auto;
 }

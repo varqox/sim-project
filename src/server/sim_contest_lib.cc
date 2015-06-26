@@ -90,7 +90,7 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 				}
 
 				pstmt.reset(sim.db_conn()
-						->prepareStatement("SELECT user_id FROM users_to_rounds WHERE user_id=? AND round_id=?"));
+						->prepareStatement("SELECT user_id FROM users_to_contests WHERE user_id=? AND contest_id=?"));
 				pstmt->setString(1, sim.session->user_id);
 				pstmt->setString(2, rp->contest->id);
 
