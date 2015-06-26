@@ -143,13 +143,13 @@ int main(int argc, char *argv[]) {
 			error = true;
 		}
 
-		// users_to_rounds
+		// users_to_contests
 		try {
-			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `users_to_rounds` (\n"
+			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `users_to_contests` (\n"
 					"`user_id` int unsigned NOT NULL,\n"
-					"`round_id` int unsigned NOT NULL,\n"
-					"PRIMARY KEY (`user_id`, `round_id`),\n"
-					"KEY (`round_id`)\n"
+					"`contest_id` int unsigned NOT NULL,\n"
+					"PRIMARY KEY (`user_id`, `contest_id`),\n"
+					"KEY (`contest_id`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {

@@ -44,7 +44,7 @@ void SIM::contest() {
 						"(SELECT r.id, r.name FROM rounds r, users u WHERE parent IS NULL AND r.owner=u.id AND "
 							"(r.access='public' OR r.owner=? " + lower_owners + "))"
 						" UNION "
-						"(SELECT id, name FROM rounds, users_to_rounds WHERE user_id=? AND round_id=id)"
+						"(SELECT id, name FROM rounds, users_to_contests WHERE user_id=? AND contest_id=id)"
 						"ORDER BY id"));
 				pstmt->setString(1, session->user_id);
 				pstmt->setString(2, session->user_id);
@@ -147,6 +147,17 @@ void SIM::contest() {
 				return Contest::editRound(*this, *path);
 
 			return Contest::editProblem(*this, *path);
+		}
+
+		// Delete
+		if (0 == compareTo(req_->target, arg_beg, '/', "delete")) {
+			if (path->type == CONTEST)
+				return Contest::deleteContest(*this, *path);
+
+			if (path->type == ROUND)
+				return Contest::deleteRound(*this, *path);
+
+			return Contest::deleteProblem(*this, *path);
 		}
 
 		// Problems
@@ -257,8 +268,8 @@ void Contest::addRound(SIM& sim, const RoundPath& rp) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
-						"INSERT INTO rounds (parent, name, item, visible, begins, ends, full_results) "
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("INSERT INTO rounds (parent, name, item, visible, begins, ends, full_results) "
 						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds WHERE parent=?"));
 				pstmt->setString(1, rp.round_id);
 				pstmt->setString(2, name);
@@ -554,15 +565,15 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 	}
 
 	// Get contest information
+	name = rp.contest->name;
 	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-		->prepareStatement("SELECT r.name, u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id"));
+		->prepareStatement("SELECT u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id"));
 	pstmt->setString(1, rp.round_id);
 
 	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 	if (res->next()) {
-		name = res->getString(1);
-		owner = res->getString(2);
-		is_public = res->getString(3) == "public";
+		owner = res->getString(1);
+		is_public = res->getString(2) == "public";
 	}
 
 	TemplateWithMenu templ(sim, "Edit contest", rp);
@@ -588,7 +599,11 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 					"<input type=\"checkbox\" name=\"public\""
 						<< (is_public ? " checked" : "") << ">\n"
 				"</div>\n"
-				"<input type=\"submit\" value=\"Update\">\n"
+				"<div>\n"
+					"<input type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+						<< rp.round_id << "/delete\">Delete contest</a>\n"
+				"</div>\n"
 			"</form>\n"
 		"</div>\n";
 }
@@ -613,8 +628,8 @@ void Contest::editRound(SIM& sim, const RoundPath& rp) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
-						"UPDATE rounds SET name=?, visible=?, begins=?, ends=?, full_results=? WHERE id=?"));
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("UPDATE rounds SET name=?, visible=?, begins=?, ends=?, full_results=? WHERE id=?"));
 				pstmt->setString(1, name);
 				pstmt->setBoolean(2, is_visible);
 
@@ -656,18 +671,11 @@ void Contest::editRound(SIM& sim, const RoundPath& rp) {
 	}
 
 	// Get round information
-	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-		->prepareStatement("SELECT name, visible, begins, ends, full_results FROM rounds WHERE id=?"));
-	pstmt->setString(1, rp.round_id);
-
-	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-	if (res->next()) {
-		name = res->getString(1);
-		is_visible = res->getBoolean(2);
-		begins = res->getString(3);
-		ends = res->getString(4);
-		full_results = res->getString(5);
-	}
+	name = rp.round->name;
+	is_visible = rp.round->visible != "0";
+	begins = rp.round->begins;
+	ends = rp.round->ends;
+	full_results = rp.round->full_results;
 
 	TemplateWithMenu templ(sim, "Edit round", rp);
 	printRoundPath(templ, rp, "");
@@ -719,6 +727,81 @@ void Contest::editProblem(SIM& sim, const RoundPath& rp) {
 	FormValidator fv(sim.req_->form_data);
 
 	TemplateWithMenu templ(sim, "Edit problem", rp);
+}
+
+void Contest::deleteContest(SIM& sim, const RoundPath& rp) {
+	if (!rp.admin_access)
+		return sim.error403();
+
+	FormValidator fv(sim.req_->form_data);
+	if (sim.req_->method == server::HttpRequest::POST)
+		if (fv.exist("delete"))
+			try {
+				// Delete rounds
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("DELETE FROM rounds WHERE id=? OR parent=? OR grandparent=?"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->setString(2, rp.round_id);
+				pstmt->setString(3, rp.round_id);
+
+				if (pstmt->executeUpdate() == 0) {
+					fv.addError("Deletion failed");
+					goto form;
+				}
+
+				// Delete submissions
+				pstmt.reset(sim.db_conn()->prepareStatement(
+					"DELETE FROM submissions, submissions_to_rounds "
+					"USING submissions INNER JOIN submissions_to_rounds "
+					"WHERE contest_round_id=? AND id=submission_id"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->executeUpdate();
+
+				// Delete from users_to_contests
+				pstmt.reset(sim.db_conn()->prepareStatement(
+					"DELETE FROM users_to_contests WHERE contest_id=?"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->executeUpdate();
+
+				return sim.redirect("/c");
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			}
+form:
+	TemplateWithMenu templ(sim, "Delete contest", rp);
+	printRoundPath(templ, rp, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+		"<h1>Delete contest</h1>\n"
+		"<form method=\"post\">\n"
+			"<div class=\"field-group\">\n"
+				"<label>Are you sure to delete contest <a href=\"/c/"
+					<< rp.round_id << "\">"
+					<< htmlSpecialChars(rp.contest->name) << "</a>, all "
+				"subrounds and submissions?</label>\n"
+			"</div>\n"
+			"<div class=\"submit-yes-no\">\n"
+				"<button class=\"btn-danger\" type=\"submit\" name=\"delete\">"
+					"Yes, I'm sure</button>\n"
+				"<a class=\"btn\" href=\"/c/" << rp.round_id << "/edit\">"
+					"No, go back</a>\n"
+			"</div>\n"
+		"</form>\n"
+	"</div>\n";
+}
+
+void Contest::deleteRound(SIM& sim, const RoundPath& rp) {
+	if (!rp.admin_access)
+		return sim.error403();
+}
+
+void Contest::deleteProblem(SIM& sim, const RoundPath& rp) {
+	if (!rp.admin_access)
+		return sim.error403();
 }
 
 void Contest::problems(SIM& sim, const RoundPath& rp, bool admin_view) {

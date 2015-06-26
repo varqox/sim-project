@@ -83,6 +83,12 @@ private:
 
 	static void editProblem(SIM& sim, const RoundPath& rp);
 
+	static void deleteContest(SIM& sim, const RoundPath& rp);
+
+	static void deleteRound(SIM& sim, const RoundPath& rp);
+
+	static void deleteProblem(SIM& sim, const RoundPath& rp);
+
 	static void problems(SIM& sim, const RoundPath& rp, bool admin_view = true);
 
 	static void submit(SIM& sim, const RoundPath& rp, bool admin_view = true);
