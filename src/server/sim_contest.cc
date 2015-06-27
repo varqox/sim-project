@@ -715,7 +715,11 @@ void Contest::editRound(SIM& sim, const RoundPath& rp) {
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
 					<< htmlSpecialChars(full_results) << "\" size=\"19\" maxlength=\"19\">\n"
 			"</div>\n"
-			"<input type=\"submit\" value=\"Update\">\n"
+			"<div>\n"
+				"<input type=\"submit\" value=\"Update\">\n"
+				"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+					<< rp.round_id << "/delete\">Delete round</a>\n"
+			"</div>\n"
 		"</form>\n"
 	"</div>\n";
 }
@@ -797,6 +801,59 @@ form:
 void Contest::deleteRound(SIM& sim, const RoundPath& rp) {
 	if (!rp.admin_access)
 		return sim.error403();
+
+	FormValidator fv(sim.req_->form_data);
+	if (sim.req_->method == server::HttpRequest::POST)
+		if (fv.exist("delete"))
+			try {
+				// Delete rounds
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("DELETE FROM rounds WHERE id=? OR parent=?"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->setString(2, rp.round_id);
+
+				if (pstmt->executeUpdate() == 0) {
+					fv.addError("Deletion failed");
+					goto form;
+				}
+
+				// Delete submissions
+				pstmt.reset(sim.db_conn()->prepareStatement(
+					"DELETE FROM submissions, submissions_to_rounds "
+					"USING submissions INNER JOIN submissions_to_rounds "
+					"WHERE parent_round_id=? AND id=submission_id"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->executeUpdate();
+
+				return sim.redirect("/c/" + rp.contest->id);
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			}
+form:
+	TemplateWithMenu templ(sim, "Delete round", rp);
+	printRoundPath(templ, rp, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+		"<h1>Delete round</h1>\n"
+		"<form method=\"post\">\n"
+			"<div class=\"field-group\">\n"
+				"<label>Are you sure to delete round <a href=\"/c/"
+					<< rp.round_id << "\">"
+					<< htmlSpecialChars(rp.round->name) << "</a>, all "
+				"subrounds and submissions?</label>\n"
+			"</div>\n"
+			"<div class=\"submit-yes-no\">\n"
+				"<button class=\"btn-danger\" type=\"submit\" name=\"delete\">"
+					"Yes, I'm sure</button>\n"
+				"<a class=\"btn\" href=\"/c/" << rp.round_id << "/edit\">"
+					"No, go back</a>\n"
+			"</div>\n"
+		"</form>\n"
+	"</div>\n";
 }
 
 void Contest::deleteProblem(SIM& sim, const RoundPath& rp) {
