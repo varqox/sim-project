@@ -33,7 +33,7 @@ void SIM::contest() {
 			UniquePtr<sql::PreparedStatement> pstmt;
 			if (session->open() == Session::OK) {
 				string lower_owners;
-				int rank = Contest::getUserRank(*this, session->user_id);
+				int rank = getUserRank(session->user_id);
 				if (rank < 2) {
 					lower_owners += "OR u.type='normal'";
 					if (rank < 1)
@@ -60,7 +60,7 @@ void SIM::contest() {
 
 			// Add contest button (admins and teachers only)
 			if (session->state() == Session::OK &&
-					Contest::getUserRank(*this, session->user_id) < 2)
+					getUserRank(session->user_id) < 2)
 				templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
 			while (res->next())
@@ -188,7 +188,7 @@ void SIM::contest() {
 
 void Contest::addContest(SIM& sim) {
 	if (sim.session->open() != SIM::Session::OK ||
-			getUserRank(sim, sim.session->user_id) > 1)
+			sim.getUserRank(sim.session->user_id) > 1)
 		return sim.error403();
 
 	FormValidator fv(sim.req_->form_data);
@@ -203,9 +203,9 @@ void Contest::addContest(SIM& sim) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-						->prepareStatement("INSERT INTO rounds (access, name, owner, item) "
-							"SELECT ?, ?, ?, MAX(item)+1 FROM rounds WHERE parent IS NULL"));
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("INSERT INTO rounds (access, name, owner, item) "
+						"SELECT ?, ?, ?, MAX(item)+1 FROM rounds WHERE parent IS NULL"));
 				pstmt->setString(1, is_public ? "public" : "private");
 				pstmt->setString(2, name);
 				pstmt->setString(3, sim.session->user_id);
@@ -493,8 +493,8 @@ void Contest::addProblem(SIM& sim, const RoundPath& rp) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
 	}
- form:
 
+ form:
 	TemplateWithMenu templ(sim, "Add problem", rp);
 	printRoundPath(templ, rp, "");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
@@ -540,8 +540,8 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement("UPDATE rounds r, (SELECT id FROM users WHERE username=?) u SET name=?, owner=u.id, access=? WHERE r.id=?"));
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("UPDATE rounds r, (SELECT id FROM users WHERE username=?) u SET name=?, owner=u.id, access=? WHERE r.id=?"));
 				pstmt->setString(1, owner);
 				pstmt->setString(2, name);
 				pstmt->setString(3, is_public ? "public" : "private");
@@ -552,8 +552,7 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 					// Update rp
 					UniquePtr<RoundPath> new_rp(getRoundPath(sim, rp.round_id));
 					const_cast<RoundPath&>(rp).swap(*new_rp);
-				} else
-					fv.addError("Update failed");
+				}
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -566,8 +565,8 @@ void Contest::editContest(SIM& sim, const RoundPath& rp) {
 
 	// Get contest information
 	name = rp.contest->name;
-	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-		->prepareStatement("SELECT u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id"));
+	UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+		prepareStatement("SELECT u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id"));
 	pstmt->setString(1, rp.round_id);
 
 	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
@@ -658,8 +657,7 @@ void Contest::editRound(SIM& sim, const RoundPath& rp) {
 					// Update rp
 					UniquePtr<RoundPath> new_rp(getRoundPath(sim, rp.round_id));
 					const_cast<RoundPath&>(rp).swap(*new_rp);
-				} else
-					fv.addError("Update failed");
+				}
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -741,20 +739,9 @@ void Contest::deleteContest(SIM& sim, const RoundPath& rp) {
 	if (sim.req_->method == server::HttpRequest::POST)
 		if (fv.exist("delete"))
 			try {
-				// Delete rounds
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
-					prepareStatement("DELETE FROM rounds WHERE id=? OR parent=? OR grandparent=?"));
-				pstmt->setString(1, rp.round_id);
-				pstmt->setString(2, rp.round_id);
-				pstmt->setString(3, rp.round_id);
-
-				if (pstmt->executeUpdate() == 0) {
-					fv.addError("Deletion failed");
-					goto form;
-				}
-
 				// Delete submissions
-				pstmt.reset(sim.db_conn()->prepareStatement(
+				UniquePtr<sql::PreparedStatement> pstmt(
+					sim.db_conn()->prepareStatement(
 					"DELETE FROM submissions, submissions_to_rounds "
 					"USING submissions INNER JOIN submissions_to_rounds "
 					"WHERE contest_round_id=? AND id=submission_id"));
@@ -767,7 +754,15 @@ void Contest::deleteContest(SIM& sim, const RoundPath& rp) {
 				pstmt->setString(1, rp.round_id);
 				pstmt->executeUpdate();
 
-				return sim.redirect("/c");
+				// Delete rounds
+				pstmt.reset(sim.db_conn()->
+					prepareStatement("DELETE FROM rounds WHERE id=? OR parent=? OR grandparent=?"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->setString(2, rp.round_id);
+				pstmt->setString(3, rp.round_id);
+
+				if (pstmt->executeUpdate() > 0)
+					return sim.redirect("/c");
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -776,7 +771,7 @@ void Contest::deleteContest(SIM& sim, const RoundPath& rp) {
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
-form:
+
 	TemplateWithMenu templ(sim, "Delete contest", rp);
 	printRoundPath(templ, rp, "");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
@@ -806,26 +801,23 @@ void Contest::deleteRound(SIM& sim, const RoundPath& rp) {
 	if (sim.req_->method == server::HttpRequest::POST)
 		if (fv.exist("delete"))
 			try {
-				// Delete rounds
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
-					prepareStatement("DELETE FROM rounds WHERE id=? OR parent=?"));
-				pstmt->setString(1, rp.round_id);
-				pstmt->setString(2, rp.round_id);
-
-				if (pstmt->executeUpdate() == 0) {
-					fv.addError("Deletion failed");
-					goto form;
-				}
-
 				// Delete submissions
-				pstmt.reset(sim.db_conn()->prepareStatement(
+				UniquePtr<sql::PreparedStatement> pstmt(
+					sim.db_conn()->prepareStatement(
 					"DELETE FROM submissions, submissions_to_rounds "
 					"USING submissions INNER JOIN submissions_to_rounds "
 					"WHERE parent_round_id=? AND id=submission_id"));
 				pstmt->setString(1, rp.round_id);
 				pstmt->executeUpdate();
 
-				return sim.redirect("/c/" + rp.contest->id);
+				// Delete rounds
+				pstmt.reset(sim.db_conn()->prepareStatement(
+					"DELETE FROM rounds WHERE id=? OR parent=?"));
+				pstmt->setString(1, rp.round_id);
+				pstmt->setString(2, rp.round_id);
+
+				if (pstmt->executeUpdate() > 0)
+					return sim.redirect("/c/" + rp.contest->id);
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -834,7 +826,7 @@ void Contest::deleteRound(SIM& sim, const RoundPath& rp) {
 			} catch (...) {
 				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 			}
-form:
+
 	TemplateWithMenu templ(sim, "Delete round", rp);
 	printRoundPath(templ, rp, "");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
@@ -925,8 +917,8 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 			try {
 				string current_date = date("%Y-%m-%d %H:%M:%S");
 				// Insert submission to `submissions`
-				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement("INSERT INTO submissions (user_id, problem_id, round_id, parent_round_id, contest_round_id, submit_time, queued) VALUES(?, ?, ?, ?, ?, ?, ?)"));
+				UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+					prepareStatement("INSERT INTO submissions (user_id, problem_id, round_id, parent_round_id, contest_round_id, submit_time, queued) VALUES(?, ?, ?, ?, ?, ?, ?)"));
 				pstmt->setString(1, sim.session->user_id);
 				pstmt->setString(2, prp->problem->problem_id);
 				pstmt->setString(3, prp->problem->id);
@@ -1008,10 +1000,10 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 			// Admin -> All problems from all subrounds
 			// Normal -> All problems from subrounds which have begun and
 			// have not ended
-			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement(admin_view ?
-						"SELECT id, name FROM rounds WHERE parent=? ORDER BY item"
-						: "SELECT id, name FROM rounds WHERE parent=? AND (begins IS NULL OR begins<=?) AND (ends IS NULL OR ?<ends) ORDER BY item"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+				prepareStatement(admin_view ?
+					"SELECT id, name FROM rounds WHERE parent=? ORDER BY item"
+					: "SELECT id, name FROM rounds WHERE parent=? AND (begins IS NULL OR begins<=?) AND (ends IS NULL OR ?<ends) ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
 			if (!admin_view) {
 				pstmt->setString(2, current_date);
@@ -1031,8 +1023,8 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 			}
 
 			// Select problems
-			pstmt.reset(sim.db_conn()
-					->prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
+			pstmt.reset(sim.db_conn()->
+					prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
 
 			res.reset(pstmt->executeQuery());
@@ -1074,8 +1066,8 @@ void Contest::submit(SIM& sim, const RoundPath& rp, bool admin_view) {
 				rp.round->begins <= current_date && // "" <= everything
 				(rp.round->ends.empty() || current_date < rp.round->ends)))) {
 			// Select problems
-			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+				prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
 			pstmt->setString(1, rp.round->id);
 
 			// List problems
@@ -1166,7 +1158,7 @@ void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
 
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
-			admin_view ? "SELECT s.id, str.submit_time, r2.id, r2.name, r.id, r.name, s.status, s.score, str.final, u.username "
+			admin_view ? "SELECT s.id, str.submit_time, r2.id, r2.name, r.id, r.name, s.status, s.score, str.final, str.user_id, u.username "
 				"FROM submissions_to_rounds str, submissions s, users u, rounds r, rounds r2 "
 				"WHERE str.submission_id=s.id AND s.round_id=r.id AND r.parent=r2.id "
 					"AND str.round_id=? AND str.user_id=u.id "
@@ -1221,8 +1213,8 @@ void Contest::submissions(SIM& sim, const RoundPath& rp, bool admin_view) {
 			templ << "<tr>";
 			// User
 			if (admin_view)
-				templ << "<td>" << htmlSpecialChars(res->getString(10))
-					<< "</td>";
+				templ << "<td><a href=\"/u/" << res->getString(10) << "\">"
+						<< htmlSpecialChars(res->getString(11)) << "</a></td>";
 			// Rest
 			templ << "<td><a href=\"/s/" << res->getString(1) << "\">"
 					<< res->getString(2) << "</a></td>"
@@ -1288,8 +1280,8 @@ void SIM::submission() {
 
 	try {
 		// Get submission
-		UniquePtr<sql::PreparedStatement> pstmt(db_conn()
-			->prepareStatement("SELECT user_id, round_id, submit_time, status, score, name FROM submissions s, problems p WHERE s.id=? AND s.problem_id=p.id"));
+		UniquePtr<sql::PreparedStatement> pstmt(db_conn()->
+			prepareStatement("SELECT user_id, round_id, submit_time, status, score, name FROM submissions s, problems p WHERE s.id=? AND s.problem_id=p.id"));
 		pstmt->setString(1, submission_id);
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());

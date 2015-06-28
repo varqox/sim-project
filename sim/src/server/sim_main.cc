@@ -4,9 +4,11 @@
 
 #include "../include/debug.h"
 #include "../include/filesystem.h"
+#include "../include/memory.h"
 #include "../include/time.h"
 
 #include <cerrno>
+#include <cppconn/prepared_statement.h>
 #include <cstring>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -83,6 +85,9 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 		else if (0 == compareTo(req.target, 1, '/', "signup"))
 			signUp();
 
+		else if (0 == compareTo(req.target, 1, '/', "u"))
+			userProfile();
+
 		else if (0 == compareTo(req.target, 1, '/', "c"))
 			contest();
 
@@ -151,4 +156,35 @@ void SIM::getStaticFile() {
 void SIM::redirect(const string& location) {
 	resp_.status_code = "302 Moved Temporarily";
 	resp_.headers["Location"] = location;
+}
+
+int SIM::userTypeToRank(const string& type) {
+	if (type == "admin")
+		return 0;
+
+	if (type == "teacher")
+		return 1;
+
+	return 2;
+}
+
+int SIM::getUserRank(const string& user_id) {
+	try {
+		UniquePtr<sql::PreparedStatement> pstmt(db_conn()->
+			prepareStatement("SELECT type FROM users WHERE id=?"));
+		pstmt->setString(1, user_id);
+
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		if (res->next())
+			return userTypeToRank(res->getString(1));
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
+
+	return 3;
 }

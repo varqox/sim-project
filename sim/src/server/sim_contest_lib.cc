@@ -39,8 +39,8 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 			}
 		};
 
-		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-				->prepareStatement("SELECT id, parent, problem_id, access, name, owner, visible, begins, ends, full_results FROM rounds WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR id=(SELECT grandparent FROM rounds WHERE id=?)"));
+		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+			prepareStatement("SELECT id, parent, problem_id, access, name, owner, visible, begins, ends, full_results FROM rounds WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR id=(SELECT grandparent FROM rounds WHERE id=?)"));
 		pstmt->setString(1, round_id);
 		pstmt->setString(2, round_id);
 		pstmt->setString(3, round_id);
@@ -89,8 +89,8 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 					return NULL;
 				}
 
-				pstmt.reset(sim.db_conn()
-						->prepareStatement("SELECT user_id FROM users_to_contests WHERE user_id=? AND contest_id=?"));
+				pstmt.reset(sim.db_conn()->
+					prepareStatement("SELECT user_id FROM users_to_contests WHERE user_id=? AND contest_id=?"));
 				pstmt->setString(1, sim.session->user_id);
 				pstmt->setString(2, rp->contest->id);
 
@@ -123,37 +123,6 @@ RoundPath* Contest::getRoundPath(SIM& sim, const string& round_id) {
 	return rp;
 }
 
-int Contest::getUserRank(const string& type) {
-	if (type == "admin")
-		return 0;
-
-	if (type == "teacher")
-		return 1;
-
-	return 2;
-}
-
-int Contest::getUserRank(SIM& sim, const string& id) {
-	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-				->prepareStatement("SELECT type FROM users WHERE id=?"));
-		pstmt->setString(1, id);
-
-		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-		if (res->next())
-			return getUserRank(res->getString(1));
-
-	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-	}
-
-	return 3;
-}
-
 bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 	// If is logged in
 	if (sim.session->open() == SIM::Session::OK) {
@@ -163,25 +132,25 @@ bool Contest::isAdmin(SIM& sim, const RoundPath& rp) {
 
 		try {
 			// Check if user has more privileges than the owner
-			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement("SELECT id, type FROM users WHERE id=? OR id=?"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+				prepareStatement("SELECT id, type FROM users WHERE id=? OR id=?"));
 			pstmt->setString(1, rp.contest->owner);
 			pstmt->setString(2, sim.session->user_id);
 
 			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			if (res->rowsCount() == 2) {
-				int owner_type = 0, user_type = 4;
+				int owner_rank = 0, user_rank = 4;
 
 				for (int i = 0; i < 2; ++i) {
 					res->next();
 
 					if (res->getString(1) == rp.contest->owner)
-						owner_type = getUserRank(res->getString(2));
+						owner_rank = SIM::userTypeToRank(res->getString(2));
 					else
-						user_type = getUserRank(res->getString(2));
+						user_rank = SIM::userTypeToRank(res->getString(2));
 				}
 
-				return owner_type > user_type;
+				return owner_rank > user_rank;
 			}
 
 		} catch (const std::exception& e) {
@@ -275,10 +244,10 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 	try {
 		if (rp.type == CONTEST) {
 			// Select subrounds
-			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement(admin_view ?
-						"SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? ORDER BY item"
-						: "SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? AND (visible=1 OR begins IS NULL OR begins<=?) ORDER BY item"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+				prepareStatement(admin_view ?
+					"SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? ORDER BY item"
+					: "SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? AND (visible=1 OR begins IS NULL OR begins<=?) ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
 			if (!admin_view)
 				pstmt->setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
@@ -301,8 +270,8 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 			}
 
 			// Select problems
-			pstmt.reset(sim.db_conn()
-					->prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
+			pstmt.reset(sim.db_conn()->
+				prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
 			pstmt->setString(1, rp.contest->id);
 
 			res.reset(pstmt->executeQuery());
@@ -368,8 +337,8 @@ void Contest::printRoundView(SIM& sim, SIM::Template& templ,
 					<< htmlSpecialChars(rp.round->name) << "</a>\n";
 
 			// Select problems
-			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()
-					->prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
+				prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
 			pstmt->setString(1, rp.round->id);
 
 			// List problems

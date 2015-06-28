@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n");
 
 				// Add default user sim with password sim
-				UniquePtr<sql::PreparedStatement> pstmt(conn
-					->prepareStatement("INSERT IGNORE INTO users (username, password, type) VALUES ('sim', ?, 'admin')"));
+				UniquePtr<sql::PreparedStatement> pstmt(conn->
+					prepareStatement("INSERT IGNORE INTO users (username, password, type) VALUES ('sim', ?, 'admin')"));
 				pstmt->setString(1, sha256("sim"));
 				pstmt->executeUpdate();
 
