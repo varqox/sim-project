@@ -22,9 +22,8 @@ SIM::Session::State SIM::Session::open() {
 		return FAIL;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-				->prepareStatement(
-				"SELECT user_id, data, ip, user_agent FROM session WHERE id=? AND time>=?"));
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			prepareStatement("SELECT user_id, data, ip, user_agent FROM session WHERE id=? AND time>=?"));
 		pstmt->setString(1, id_);
 		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
 				time(NULL) - SESSION_MAX_LIFETIME));
@@ -67,14 +66,14 @@ static string generate_id() {
 SIM::Session::State SIM::Session::create(const string& _user_id) {
 	close();
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-				->prepareStatement("INSERT INTO session (id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			prepareStatement("INSERT INTO session (id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions
-		UniquePtr<sql::Statement>(sim_.db_conn()->createStatement())
-				->executeUpdate(string("DELETE FROM `session` WHERE time<'")
-					.append(date("%Y-%m-%d %H:%M:%S'",
-						time(NULL) - SESSION_MAX_LIFETIME)));
+		UniquePtr<sql::Statement>(sim_.db_conn()->createStatement())->
+			executeUpdate(string("DELETE FROM `session` WHERE time<'").
+				append(date("%Y-%m-%d %H:%M:%S'",
+					time(NULL) - SESSION_MAX_LIFETIME)));
 		pstmt->setString(2, _user_id);
 		pstmt->setString(3, sim_.client_ip_);
 		pstmt->setString(4, sim_.req_->headers.get("User-Agent"));
@@ -114,8 +113,8 @@ void SIM::Session::destroy() {
 		return;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-				->prepareStatement("DELETE FROM session WHERE id=?"));
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			prepareStatement("DELETE FROM session WHERE id=?"));
 		pstmt->setString(1, id_);
 		pstmt->executeUpdate();
 
@@ -135,8 +134,8 @@ void SIM::Session::destroy() {
 void SIM::Session::close() {
 	if (state_ == OK) {
 		try {
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-					->prepareStatement("UPDATE session SET data=?, time=? WHERE id=?"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("UPDATE session SET data=?, time=? WHERE id=?"));
 			pstmt->setString(1, data);
 			pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
 			pstmt->setString(3, id_);

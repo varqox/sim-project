@@ -23,7 +23,7 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 				"<script src=\"/kit/jquery.js\"></script>\n"
 				"<script src=\"/kit/scripts.js\"></script>\n"
 				"<script>var start_time="
-		<< toString(microtime()/1000) << ", load=-1, time_difference;</script>\n"
+		<< toString(microtime()/1000) << ", load=-1;</script>\n"
 				"<link rel=\"shortcut icon\" href=\"/kit/img/favicon.png\">\n";
 
 	if (scripts.size())
@@ -38,21 +38,25 @@ SIM::Template::Template(SIM& sim, const std::string& title,
 					"<a href=\"/\" class=\"brand\">SIM</a>\n"
 					"<a href=\"/c/\">Contests</a>\n"
 					"<div class=\"rightbar\">\n"
-						"<span id=\"clock\">" << date("%H:%M:%S") << "</span>";
+						"<span id=\"clock\">" << date("%H:%M:%S")
+							<< " UTC</span>";
 
 	if (sim_.session->open() == Session::OK) {
 		try {
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()
-					->prepareStatement("SELECT username FROM `users` WHERE id=?"));
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("SELECT username FROM `users` WHERE id=?"));
 			pstmt->setString(1, sim_.session->user_id);
 
 			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			if (res->next()) {
 				*this << "<div class=\"dropdown\">\n"
 						"<a class=\"user\"><strong>"
-					<< htmlSpecialChars(res->getString(1)) << "</strong><b class=\"caret\"></b></a>\n"
+					<< htmlSpecialChars(res->getString(1)) << "</strong>"
+						"<b class=\"caret\"></b></a>\n"
 						"<ul>\n"
-						"<a href=\"/logout\">logout</a>\n"
+							"<a href=\"/u/" << sim_.session->user_id
+								<< "\">Edit profile</a>\n"
+							"<a href=\"/logout\">Logout</a>\n"
 						"</ul>\n"
 						"</div>";
 			} else {

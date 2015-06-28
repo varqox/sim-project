@@ -1,5 +1,7 @@
 #include "form_validator.h"
 
+#include "../include/utility.h"
+
 using std::string;
 
 bool FormValidator::validate(string& var, const string& name,
@@ -9,14 +11,13 @@ bool FormValidator::validate(string& var, const string& name,
 	__typeof(form.begin()) it = form.find(name);
 
 	if (it == form.end()) {
-		errors_.append("<p>Invalid ").append(htmlSpecialChars(name_to_print))
-			.append("</p>\n");
+		append(errors_) << "<p>Invalid " << htmlSpecialChars(name_to_print)
+			<< "</p>\n";
 		return false;
 
 	} else if (it->second.size() > max_size) {
-		errors_.append("<p>").append(htmlSpecialChars(name_to_print))
-			.append(" cannot be longer than ").append(toString(max_size))
-			.append("</p>\n");
+		append(errors_) << "<p>" << htmlSpecialChars(name_to_print)
+			<< " cannot be longer than " << toString(max_size) << "</p>\n";
 		return false;
 	}
 

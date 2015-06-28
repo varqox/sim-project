@@ -10,7 +10,7 @@ window.onload = function updateClock()
 	currentMinutes = ( currentMinutes < 10 ? "0" : "" ) + currentMinutes;
 	currentSeconds = ( currentSeconds < 10 ? "0" : "" ) + currentSeconds;
 	// Compose the string for display
-	var currentTimeString = currentHours + ":" + currentMinutes + ":" + currentSeconds;
+	var currentTimeString = currentHours + ":" + currentMinutes + ":" + currentSeconds + " UTC";
 	var loadTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
 	// Update the time display
 	document.getElementById("clock").innerHTML = currentTimeString;

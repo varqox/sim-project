@@ -99,16 +99,6 @@ private:
 	// Functions
 	static RoundPath* getRoundPath(SIM& sim, const std::string& round_id);
 
-	/**
-	 * @brief Converts @p type to int
-	 *
-	 * @param type "admin" or "teacher" or "normal"
-	 * @return 0 if type is "admin", 1 if type is "teacher", 2 in other case
-	 */
-	static int getUserRank(const std::string& type);
-
-	static int getUserRank(SIM& sim, const std::string& id);
-
 	// Returns whether user has admin access
 	static bool isAdmin(SIM& sim, const RoundPath& rp);
 

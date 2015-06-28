@@ -3,6 +3,7 @@
 #include "http_request.h"
 
 #include "../include/string.h"
+#include "../include/utility.h"
 
 class FormValidator {
 private:
@@ -40,7 +41,7 @@ public:
 	}
 
 	void addError(const std::string& error) {
-		errors_.append("<p>").append(htmlSpecialChars(error)).append("</p>\n");
+		append(errors_) << "<p>" << htmlSpecialChars(error) << "</p>\n";
 	}
 
 
@@ -67,21 +68,20 @@ inline bool FormValidator::validate(std::string& var, const std::string& name,
 		if (check(var))
 			return true;
 
-		errors_.append("<p>").append(htmlSpecialChars(
-				error.empty() ? (name_to_print + " validation error") : error))
-			.append("</p>\n");
+		append(errors_) << "<p>" << htmlSpecialChars(error.empty() ?
+				(name_to_print + " validation error") : error) << "</p>\n";
 	}
 
 	return false;
 }
 
 // Like validate but also validate not blank
-inline bool FormValidator::validateNotBlank(std::string& var, const std::string& name,
-		const std::string& name_to_print, size_t max_size) {
+inline bool FormValidator::validateNotBlank(std::string& var,
+		const std::string& name, const std::string& name_to_print,
+		size_t max_size) {
 
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
-		errors_.append("<p>").append(name_to_print)
-			.append(" cannot be blank</p>\n");
+		append(errors_) << "<p>" << name_to_print << " cannot be blank</p>\n";
 		return false;
 	}
 
@@ -90,17 +90,16 @@ inline bool FormValidator::validateNotBlank(std::string& var, const std::string&
 
 // validate field + check it by comp
 template<class Checker>
-inline bool FormValidator::validateNotBlank(std::string& var, const std::string& name,
-		const std::string& name_to_print, Checker check,
-		const std::string& error, size_t max_size) {
+inline bool FormValidator::validateNotBlank(std::string& var,
+		const std::string& name, const std::string& name_to_print,
+		Checker check, const std::string& error, size_t max_size) {
 
 	if (validateNotBlank(var, name, name_to_print, max_size)) {
 		if (check(var))
 			return true;
 
-		errors_.append("<p>").append(htmlSpecialChars(
-				error.empty() ? (name_to_print + " validation error") : error))
-			.append("</p>\n");
+		append(errors_) << "<p>" << htmlSpecialChars(error.empty() ?
+				(name_to_print + " validation error") : error) << "</p>\n";
 	}
 
 	return false;

@@ -260,8 +260,8 @@ ExitStat run(const string& exec, vector<string> args,
 			return ExitStat(status, runtime/*opts->time_limit -
 						timer.it_value.tv_sec * 1000000LL -
 						timer.it_value.tv_usec*/,
-					string("forbidden syscall: ")
-					.append(toString((unsigned long long)syscall)));
+					string("forbidden syscall: ").append(toString(
+						(unsigned long long)syscall)));
 		}
 
 		// syscall returns

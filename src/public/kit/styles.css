@@ -540,6 +540,10 @@ textarea:focus, input[type="text"]:focus, input[type="password"]:focus, input[ty
 input{
 	padding-left: 3px;
 }
+input[disabled], select[disabled], textarea[disabled], input[readonly], select[readonly], textarea[readonly] {
+	cursor: not-allowed;
+	background-color: #eeeeee;
+}
 a{
 	color: #0088cc;
 	text-decoration: none;

@@ -295,7 +295,7 @@ inline node* dumpDirectoryTree(const std::string& path) {
 std::string abspath(const std::string& path, size_t beg = 0,
 		size_t end = std::string::npos, std::string root = "/");
 
-// returns extension (with dot) ex. ".cc"
+// returns extension (with dot) e.g. ".cc"
 inline std::string getExtension(const std::string file) {
 	return file.substr(file.find_last_of('.') + 1);
 }
