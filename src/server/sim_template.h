@@ -2,15 +2,16 @@
 
 #include "sim.h"
 
-class SIM::Template {
+class Sim::Template {
 private:
 	Template(const Template&);
 	Template& operator=(const Template&);
 
-	SIM& sim_;
+protected:
+	Sim& sim_;
 
 public:
-	Template(SIM& sim, const std::string& title,
+	Template(Sim& sim, const std::string& title,
 			const std::string& styles = "", const std::string& scripts = "");
 
 	Template& operator<<(char c) { sim_.resp_.content += c; return *this; }

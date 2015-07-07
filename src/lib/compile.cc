@@ -3,7 +3,6 @@
 #include "../include/process.h"
 
 #include <cerrno>
-#include <vector>
 #include <cstring>
 
 using std::string;

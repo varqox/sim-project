@@ -13,14 +13,18 @@ private:
 	T* p_;
 
 public:
-	explicit UniquePtr(T* ptr = NULL): p_(ptr) {}
+	explicit UniquePtr(T* ptr = NULL) : p_(ptr) {}
 
 	~UniquePtr() {
 		if (p_)
 			delete p_;
 	}
 
-	void swap(UniquePtr<T>& up) { swap(p_, up.p_); }
+	void swap(UniquePtr<T>& up) {
+		T* tmp = p_;
+		p_ = up.p_;
+		up.p_ = tmp;
+	}
 
 	T* get() const { return p_; }
 
@@ -75,7 +79,7 @@ private:
 	SharedMemorySegment& operator=(const SharedMemorySegment&);
 
 public:
-	SharedMemorySegment(size_t size): id_(shmget(IPC_PRIVATE, size,
+	SharedMemorySegment(size_t size) : id_(shmget(IPC_PRIVATE, size,
 				IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR)),
 			addr_(NULL) {
 

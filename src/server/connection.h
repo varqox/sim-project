@@ -3,9 +3,6 @@
 #include "http_request.h"
 #include "http_response.h"
 
-#include <map>
-#include <string>
-
 namespace server {
 
 class Connection {

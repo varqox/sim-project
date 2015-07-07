@@ -8,8 +8,8 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 ../sim-server: core.o connection.o http_request.o http_response.o form_validator.o
-../sim-server: sim_main.o sim_template.o sim_session.o
-../sim-server: sim_errors.o sim_user.o sim_contest.o sim_contest_lib.o
+../sim-server: sim.o sim_template.o sim_errors.o
+../sim-server: sim_session.o sim_user.o sim_contest.o sim_contest_utility.o
 ../sim-server: ../lib/libsim.a
 ../sim-server:
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lpthread -lmysqlcppconn

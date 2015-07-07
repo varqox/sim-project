@@ -1,12 +1,7 @@
 #include "convert_package.h"
 
 #include "../include/debug.h"
-#include "../include/filesystem.h"
-#include "../include/string.h"
 
-#include <cerrno>
-#include <climits>
-#include <cstring>
 
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)

@@ -5,14 +5,11 @@
 #include "../include/utility.h"
 
 #include <cerrno>
-#include <csignal>
-#include <cstdio>
 #include <cstring>
 #include <fcntl.h>
 #include <sys/ptrace.h>
 #include <sys/reg.h>
 #include <sys/resource.h>
-#include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <unistd.h>

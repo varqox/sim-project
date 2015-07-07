@@ -1,4 +1,3 @@
-#include "conver.h"
 #include "convert_package.h"
 #include "default_checker_dump.h"
 #include "set_limits.h"
@@ -6,17 +5,11 @@
 
 #include "../include/debug.h"
 #include "../include/process.h"
-#include "../include/string.h"
 #include "../include/utility.h"
 
-#include <algorithm>
 #include <cerrno>
 #include <csignal>
 #include <cstring>
-#include <dirent.h>
-#include <string>
-#include <sys/stat.h>
-#include <unistd.h>
 
 using std::string;
 using std::vector;
@@ -38,9 +31,12 @@ static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;
 /**
  * @brief Displays help
  */
-static void help() {
-	eprintf("\
-Usage: conver [options] problem_package\n\
+static void help(const char* program_name) {
+	if (program_name == NULL)
+		program_name = "conver";
+
+	printf("Usage: %s [options] problem_package\n", program_name);
+	printf("\
 Convert problem_package to sim_problem_package\n\
   problem_package have to be archive (.zip, .tar.gz, .tgz, .7z) or directory\n\
 \n\
@@ -111,7 +107,7 @@ static void parseOptions(int &argc, char **argv) {
 			// Help
 			else if (0 == strcmp(argv[i], "-h") ||
 					0 == strcmp(argv[i], "--help")) {
-				help();
+				help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 			}
 
@@ -315,7 +311,7 @@ int main(int argc, char *argv[]) {
 	parseOptions(argc, argv);
 
 	if(argc < 2) {
-		help();
+		help(argc > 0 ? argv[0] : NULL);
 		return 1;
 	}
 

@@ -2,13 +2,11 @@
 #include "sim_template.h"
 
 #include "../include/debug.h"
-#include "../include/memory.h"
 #include "../include/time.h"
 
 #include <cppconn/prepared_statement.h>
-#include <cstring>
 
-SIM::Template::Template(SIM& sim, const std::string& title,
+Sim::Template::Template(Sim& sim, const std::string& title,
 	const std::string& styles, const std::string& scripts) : sim_(sim) {
 	sim_.resp_.headers["Content-Type"] = "text/html; charset=utf-8";
 	sim_.resp_.content = "";

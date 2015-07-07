@@ -1,7 +1,6 @@
 #include "connection.h"
 
 #include "../include/debug.h"
-#include "../include/string.h"
 
 #include <cstdlib>
 #include <fcntl.h>
@@ -609,7 +608,7 @@ HttpRequest Connection::getRequest() {
 			return req;
 		}
 
-		char *s = new char[end];
+		char *s = (char*)malloc(end);
 		if (s == NULL) {
 			error507();
 			return req;
@@ -618,9 +617,8 @@ HttpRequest Connection::getRequest() {
 		beg = -1;
 		while (++beg < end) {
 			int c = getChar();
-
 			if (c == -1) {
-				delete[] s;
+				free(s);
 				return req;
 			}
 
@@ -628,7 +626,7 @@ HttpRequest Connection::getRequest() {
 		}
 
 		req.content = s;
-		delete[] s;
+		free(s);
 	}
 
 	return req;
@@ -723,7 +721,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		str += "\r\n\r\n";
 
 		const size_t buff_length = 1 << 20;
-		char *buff = new char[buff_length];
+		char *buff = (char*)malloc(buff_length);
 		if (buff == NULL) {
 			error507();
 			return;
@@ -731,7 +729,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 
 		send(str);
 		if (state_ == CLOSED) {
-			delete[] buff;
+			free(buff);
 			return;
 		}
 
@@ -744,7 +742,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 			pos += read_len;
 		}
 
-		delete[] buff;
+		free(buff);
 		close(fd);
 	}
 
