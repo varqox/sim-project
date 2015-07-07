@@ -2,16 +2,11 @@
 #include "sim.h"
 
 #include "../include/debug.h"
-#include "../include/string.h"
 
 #include <arpa/inet.h>
 #include <cerrno>
 #include <csignal>
-#include <cstdlib>
 #include <cstring>
-#include <pthread.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 using std::cerr;
 
@@ -21,29 +16,40 @@ static int socket_fd;
 namespace server {
 
 static void* worker(void*) {
-	sockaddr_in name;
-	Connection conn(-1);
-	SIM sim_worker;
+	try {
+		sockaddr_in name;
+		Connection conn(-1);
+		Sim sim_worker;
 
-	for (;;) {
-		socklen_t client_name_len = sizeof(name);
-		// accept the connection
-		int client_socket_fd = accept(socket_fd, (sockaddr*)&name, &client_name_len);
-		char ip[INET_ADDRSTRLEN];
+		for (;;) {
+			socklen_t client_name_len = sizeof(name);
+			// accept the connection
+			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
+				&client_name_len);
+			char ip[INET_ADDRSTRLEN];
 
-		inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN); // extract IP
-		eprintf("\nConnection accepted: %lu form %s\n", pthread_self(), ip);
+			// extract IP
+			inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN);
+			eprintf("\nConnection accepted: %lu form %s\n", pthread_self(), ip);
 
-		conn.assign(client_socket_fd);
-		HttpRequest req = conn.getRequest();
+			conn.assign(client_socket_fd);
+			HttpRequest req = conn.getRequest();
 
-		if (conn.state() == Connection::OK)
-			conn.sendResponse(sim_worker.handle(ip, req));
+			if (conn.state() == Connection::OK)
+				conn.sendResponse(sim_worker.handle(ip, req));
 
-		eprintf("Closing...");
-		fflush(stdout);
-		close(client_socket_fd);
-		eprintf(" done.\n");
+			eprintf("Closing...");
+			fflush(stdout);
+			close(client_socket_fd);
+			eprintf(" done.\n");
+		}
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
 
 	return NULL;

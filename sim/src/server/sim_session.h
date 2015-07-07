@@ -2,7 +2,7 @@
 
 #include "sim.h"
 
-class SIM::Session {
+class Sim::Session {
 public:
 	enum State { OK, FAIL, CLOSED };
 	std::string user_id, data;
@@ -13,11 +13,12 @@ private:
 	Session(const Session&);
 	Session& operator=(const Session&);
 
-	SIM& sim_;
+	Sim& sim_;
 	State state_;
 	std::string id_;
 
-	Session(SIM& sim): user_id(), data(), sim_(sim), state_(CLOSED), id_() {}
+	explicit Session(Sim& sim) : user_id(), data(), sim_(sim), state_(CLOSED),
+		id_() {}
 
 	~Session() { close(); }
 
@@ -32,6 +33,6 @@ public:
 
 	void close();
 
-	friend SIM::SIM();
-	friend SIM::~SIM();
+	friend Sim::Sim();
+	friend Sim::~Sim();
 };

@@ -1,71 +1,42 @@
-#include "sim.h"
+#include "sim_contest.h"
 #include "sim_session.h"
 #include "sim_template.h"
+#include "sim_user.h"
 
 #include "../include/debug.h"
 #include "../include/filesystem.h"
-#include "../include/memory.h"
 #include "../include/time.h"
 
-#include <cerrno>
 #include <cppconn/prepared_statement.h>
-#include <cstring>
-#include <sys/stat.h>
-#include <unistd.h>
 
 using std::string;
 
-SIM::SIM() : db_conn_(NULL), client_ip_(), req_(NULL),
-		resp_(server::HttpResponse::TEXT), session(new Session(*this)) {
-	char *host = NULL, *user = NULL, *password = NULL, *database = NULL;
-
-	FILE *conf = fopen("db.config", "r");
-	if (conf == NULL) {
-		eprintf("Cannot open file: 'db.config' - %s\n", strerror(errno));
-		return;
-	}
-
-	// Get pass
-	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
-	if (getline(&user, &x1, conf) == -1 || getline(&password, &x2, conf) == -1 ||
-			getline(&database, &x3, conf) == -1 ||
-			getline(&host, &x4, conf) == -1) {
-		eprintf("Failed to get database config\n");
-		fclose(conf);
-		return;
-	}
-
-	fclose(conf);
-	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
-	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
-
-	// Connect
+Sim::Sim() : db_conn_(DB::createConnectionUsingPassFile("db.config")),
+		client_ip_(), req_(NULL), resp_(server::HttpResponse::TEXT),
+		contest(NULL), session(NULL), user(NULL) {
+	// Because of exception safety (we do not want to make memory leak)
 	try {
-		db_conn_ = new DB::Connection(host, user, password, database);
-
-	} catch (const std::exception& e) {
-		eprintf("Failed to connect to database - %s\n", e.what());
-		db_conn_ = NULL;
+		contest = new Contest(*this);
+		session = new Session(*this);
+		user = new User(*this);
 
 	} catch (...) {
-		eprintf("Failed to connect to database\n");
-		db_conn_ = NULL;
+		// Clean up
+		delete contest;
+		delete session;
+		delete user;
+		throw;
 	}
-
-	// Free resources
-	free(host);
-	free(user);
-	free(password);
-	free(database);
 }
 
-SIM::~SIM() {
-	if (db_conn_)
-		delete db_conn_;
+Sim::~Sim() {
+	delete contest;
 	delete session;
+	delete user;
 }
 
-server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& req) {
+server::HttpResponse Sim::handle(string client_ip,
+		const server::HttpRequest& req) {
 	client_ip_.swap(client_ip);
 	req_ = &req;
 	resp_ = server::HttpResponse(server::HttpResponse::TEXT);
@@ -77,22 +48,22 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 			getStaticFile();
 
 		else if (0 == compareTo(req.target, 1, '/', "login"))
-			login();
+			user->login();
 
 		else if (0 == compareTo(req.target, 1, '/', "logout"))
-			logout();
+			user->logout();
 
 		else if (0 == compareTo(req.target, 1, '/', "signup"))
-			signUp();
+			user->signUp();
 
 		else if (0 == compareTo(req.target, 1, '/', "u"))
-			userProfile();
+			user->handle();
 
 		else if (0 == compareTo(req.target, 1, '/', "c"))
-			contest();
+			contest->handle();
 
 		else if (0 == compareTo(req.target, 1, '/', "s"))
-			submission();
+			contest->submission();
 
 		else if (0 == compareTo(req.target, 1, '/', ""))
 			mainPage();
@@ -115,7 +86,7 @@ server::HttpResponse SIM::handle(string client_ip, const server::HttpRequest& re
 	return resp_;
 }
 
-void SIM::mainPage() {
+void Sim::mainPage() {
 	Template templ(*this, "Main page");
 	templ << "<div style=\"text-align: center\">\n"
 				"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" alt=\"\">\n"
@@ -125,7 +96,7 @@ void SIM::mainPage() {
 			"</div>\n";
 }
 
-void SIM::getStaticFile() {
+void Sim::getStaticFile() {
 	string file = "public";
 	// Extract path (ignore query)
 	file += abspath(decodeURI(req_->target, 1, req_->target.find('?')));
@@ -153,12 +124,12 @@ void SIM::getStaticFile() {
 	resp_.content_type = server::HttpResponse::FILE;
 }
 
-void SIM::redirect(const string& location) {
+void Sim::redirect(const string& location) {
 	resp_.status_code = "302 Moved Temporarily";
 	resp_.headers["Location"] = location;
 }
 
-int SIM::userTypeToRank(const string& type) {
+int Sim::userTypeToRank(const string& type) {
 	if (type == "admin")
 		return 0;
 
@@ -168,7 +139,7 @@ int SIM::userTypeToRank(const string& type) {
 	return 2;
 }
 
-int SIM::getUserRank(const string& user_id) {
+int Sim::getUserRank(const string& user_id) {
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(db_conn()->
 			prepareStatement("SELECT type FROM users WHERE id=?"));

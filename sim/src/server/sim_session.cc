@@ -1,7 +1,6 @@
 #include "sim_session.h"
 
 #include "../include/debug.h"
-#include "../include/memory.h"
 #include "../include/random.h"
 #include "../include/time.h"
 
@@ -10,7 +9,7 @@
 
 using std::string;
 
-SIM::Session::State SIM::Session::open() {
+Sim::Session::State Sim::Session::open() {
 	if (state_ != CLOSED)
 		return state_;
 
@@ -63,7 +62,7 @@ static string generate_id() {
 	return res;
 }
 
-SIM::Session::State SIM::Session::create(const string& _user_id) {
+Sim::Session::State Sim::Session::create(const string& _user_id) {
 	close();
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
@@ -108,7 +107,7 @@ SIM::Session::State SIM::Session::create(const string& _user_id) {
 	return state_;
 }
 
-void SIM::Session::destroy() {
+void Sim::Session::destroy() {
 	if (state_ != OK)
 		return;
 
@@ -131,7 +130,7 @@ void SIM::Session::destroy() {
 	state_ = CLOSED;
 }
 
-void SIM::Session::close() {
+void Sim::Session::close() {
 	if (state_ == OK) {
 		try {
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->

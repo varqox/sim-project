@@ -9,7 +9,6 @@
 #include <cppconn/prepared_statement.h>
 #include <csignal>
 #include <cstring>
-#include <fcntl.h>
 #include <limits.h>
 #include <sys/inotify.h>
 
@@ -29,7 +28,8 @@ static void handleSubmissionQueue() {
 		// While submission queue is not empty
 		for (;;) {
 			UniquePtr<sql::ResultSet> res(stmt->executeQuery(
-				"SELECT id, user_id, round_id, problem_id FROM submissions WHERE status='waiting' ORDER BY queued LIMIT 10"));
+				"SELECT id, user_id, round_id, problem_id FROM submissions "
+				"WHERE status='waiting' ORDER BY queued LIMIT 10"));
 			if (res->rowsCount() == 0)
 				return; // Queue is empty
 
@@ -44,7 +44,8 @@ static void handleSubmissionQueue() {
 					JudgeResult jres = judge(submission_id, problem_id);
 
 					// Update submission
-					putFileContents("submissions/" + submission_id, jres.content);
+					putFileContents("submissions/" + submission_id,
+						jres.content);
 
 					// Update final
 					UniquePtr<sql::PreparedStatement> pstmt;
@@ -57,17 +58,22 @@ static void handleSubmissionQueue() {
 						pstmt->executeUpdate();
 
 						// From submissions
-						pstmt.reset(conn()->prepareStatement("UPDATE submissions SET final=false WHERE round_id=? AND user_id=? AND final=true"));
+						pstmt.reset(conn()->prepareStatement(
+							"UPDATE submissions SET final=false "
+							"WHERE round_id=? AND user_id=? AND final=true"));
 						pstmt->setString(1, round_id);
 						pstmt->setString(2, user_id);
 						pstmt->executeUpdate();
 
 						// Set new final in submissions_to_rounds
-						stmt->executeUpdate("UPDATE submissions_to_rounds SET final=true WHERE submission_id=" + submission_id);
+						stmt->executeUpdate("UPDATE submissions_to_rounds "
+							"SET final=true WHERE submission_id=" +
+								submission_id);
 					}
 
 					// Update submission
-					pstmt.reset(conn()->prepareStatement("UPDATE submissions SET status=?, score=?, final=? WHERE id=?"));
+					pstmt.reset(conn()->prepareStatement("UPDATE submissions "
+						"SET status=?, score=?, final=? WHERE id=?"));
 
 					switch (jres.status) {
 					case JudgeResult::OK:
@@ -127,46 +133,18 @@ int main() {
 	sigaction(SIGTERM, &sa, NULL);
 
 	// Connect to database
-	char *host = NULL, *user = NULL, *password = NULL, *database = NULL;
-
-	FILE *conf = fopen("db.config", "r");
-	if (conf == NULL) {
-		eprintf("Cannot open file: 'db.config' - %s\n", strerror(errno));
-		return 1;
-	}
-
-	// Get pass
-	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
-	if (getline(&user, &x1, conf) == -1 || getline(&password, &x2, conf) == -1 ||
-			getline(&database, &x3, conf) == -1 ||
-			getline(&host, &x4, conf) == -1) {
-		eprintf("Failed to get database config\n");
-		fclose(conf);
-		return 1;
-	}
-
-	fclose(conf);
-	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
-	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
-
-	// Connect
 	try {
-		db_conn = new DB::Connection(host, user, password, database);
+		db_conn = DB::createConnectionUsingPassFile("db.config");
 
 	} catch (const std::exception& e) {
-		eprintf("Failed to connect to database - %s\n", e.what());
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
 		return 1;
 
 	} catch (...) {
-		eprintf("Failed to connect to database\n");
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 		return 1;
 	}
-
-	// Free resources
-	free(host);
-	free(user);
-	free(password);
-	free(database);
 
 	// Create tmp_dir
 	tmp_dir.reset(new TemporaryDirectory("/tmp/sim-judge-machine.XXXXXX"));
@@ -181,7 +159,7 @@ int main() {
 	}
 
 	// If "judge-machine.notify" file does not exist create it
-	// DO SOMETHING WITH IT !!!
+	// TODO: separate to a function
 	if (access("judge-machine.notify", F_OK) == -1)
 		close(creat("judge-machine.notify", S_IRUSR));
 

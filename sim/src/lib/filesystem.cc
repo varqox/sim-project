@@ -2,13 +2,10 @@
 #include "../include/filesystem.h"
 #include "../include/string.h"
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <stdexcept>
 
 using std::string;
 using std::vector;
@@ -25,29 +22,23 @@ int getUnlinkedTmpFile(const string& templ) {
 	return fd;
 }
 
-TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) {
+TemporaryDirectory::TemporaryDirectory(const char* templ)
+		: path(), name_(NULL) {
 	size_t size = strlen(templ);
 	if (size > 0) {
 		// Fill name_
 		if (templ[size - 1] == '/')
 			--size;
 
-		name_ = (char*)malloc(size + 2);
-		if (name_ == NULL)
-			throw std::bad_alloc();
+		name_ = new char[size + 2];
 
 		memcpy(name_, templ, size);
 		name_[size] = name_[size + 1] = '\0';
 
 		// Create directory
 		if (NULL == mkdtemp(name_)) {
-
-			struct exception : std::exception {
-				const char* what() const throw() {
-					return "Cannot create temporary directory\n";
-				}
-			};
-			throw exception();
+			delete[] name_;
+			throw std::runtime_error("Cannot create temporary directory\n");
 		}
 
 		// If name_ is absolute
@@ -61,16 +52,12 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) 
 				if (buff != NULL) // strlen(buff) == 0
 					errno = ENOENT;
 
-				free(name_);
+				delete[] name_;
 				free(buff);
 
-				struct exception : std::exception {
-					const char* what() const throw() {
-						return (string("Cannot get current working directory - ") +
-							strerror(errno) + "\n").c_str();
-					}
-				};
-				throw exception();
+				throw std::runtime_error(
+					string("Cannot get current working directory - ") +
+					strerror(errno) + "\n");
 			}
 
 			path = buff;
@@ -78,7 +65,6 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) : path(), name_(NULL) 
 
 			path += '/';
 			path += name_;
-
 		}
 
 		// Make path absolute

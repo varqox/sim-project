@@ -4,7 +4,6 @@
 #include "../include/string.h"
 #include "../include/utility.h"
 
-#include <algorithm>
 #include <cerrno>
 #include <cmath>
 #include <cstring>
