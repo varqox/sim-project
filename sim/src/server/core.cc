@@ -68,7 +68,7 @@ int main() {
 	sigaction(SIGINT, &sa, NULL);
 
 	sockaddr_in name;
-	name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
+	name.sin_addr.s_addr = inet_addr("127.7.7.7"); // htonl(INADDR_ANY); // server address
 	name.sin_port = htons(8080); // server port
 	name.sin_family = AF_INET;
 
