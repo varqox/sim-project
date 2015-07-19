@@ -10,9 +10,12 @@ install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq mysql-server mysql-client libmysqlcppconn-dev
 
+before_script:
+  - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
+
 script:
   - make -kj
-  - echo | sudo make install
+  - printf "sim\nsim\nsim\nlocalhost\n" | sudo make install
   - (cd build && sudo -u sim ./sim-server)&
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
   - cat index.html
