@@ -62,14 +62,14 @@ int main(int argc, char *argv[]) {
 					"`last_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
 					"`email` varchar(60) COLLATE utf8_bin NOT NULL,\n"
 					"`password` char(64) COLLATE utf8_bin NOT NULL,\n"
-					"`type` enum('normal','teacher','admin') COLLATE utf8_bin NOT NULL DEFAULT 'normal',\n"
+					"`type` tinyint(1) unsigned NOT NULL DEFAULT 2,\n"
 					"PRIMARY KEY (`id`),\n"
 					"UNIQUE KEY `username` (`username`)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n");
 
 				// Add default user sim with password sim
 				UniquePtr<sql::PreparedStatement> pstmt(conn->
-					prepareStatement("INSERT IGNORE INTO users (username, password, type) VALUES ('sim', ?, 'admin')"));
+					prepareStatement("INSERT IGNORE INTO users (username, password, type) VALUES ('sim', ?, 0)"));
 				pstmt->setString(1, sha256("sim"));
 				pstmt->executeUpdate();
 

@@ -49,21 +49,12 @@ private:
 	void redirect(const std::string& location);
 
 	/**
-	 * @brief Converts @p type to int
-	 *
-	 * @param type "admin" or "teacher" or "normal"
-	 * @return 0 if type is "admin", 1 if type is "teacher", 2 in other case
-	 */
-	static int userTypeToRank(const std::string& type);
-
-	/**
 	 * @brief Returns user type
-	 * @details Uses userTypeToRank()
 	 *
 	 * @param user_id user id
-	 * @return user rank
+	 * @return user type
 	 */
-	int getUserRank(const std::string& user_id);
+	int getUserType(const std::string& user_id);
 
 public:
 	Sim();

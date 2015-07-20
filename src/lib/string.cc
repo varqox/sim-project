@@ -57,6 +57,21 @@ int strtonum(string& x, const string& s, size_t beg, size_t end) {
 	return end - beg;
 }
 
+int strToNum(std::string& x, const std::string& s, size_t beg, char c) {
+	if (beg > s.size()) {
+		x.clear();
+		return 0;
+	}
+
+	size_t end = beg;
+	for (size_t i = beg, len = s.size(); i < len && s[i] != c; ++i, ++end)
+		if (!isdigit(s[i]))
+			return -1;
+
+	s.substr(beg, end - beg).swap(x);
+	return end - beg;
+}
+
 size_t find(const string& str, char c, size_t beg, size_t end) {
 	if (end > str.size())
 		end = str.size();

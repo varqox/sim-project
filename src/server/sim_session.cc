@@ -22,7 +22,9 @@ Sim::Session::State Sim::Session::open() {
 
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-			prepareStatement("SELECT user_id, data, ip, user_agent FROM session WHERE id=? AND time>=?"));
+			prepareStatement(
+				"SELECT user_id, data, type, username, ip, user_agent "
+				"FROM session s, users u WHERE s.id=? AND time>=? AND u.id=s.user_id"));
 		pstmt->setString(1, id_);
 		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
 				time(NULL) - SESSION_MAX_LIFETIME));
@@ -31,10 +33,13 @@ Sim::Session::State Sim::Session::open() {
 		if (res->next()) {
 			user_id = res->getString(1);
 			data = res->getString(2);
+			user_type = res->getUInt(3);
+			username = res->getString(4);
 
 			// If no session injection
-			if (sim_.client_ip_ == res->getString(3) &&
-					sim_.req_->headers.isEqualTo("User-Agent", res->getString(4)))
+			if (sim_.client_ip_ == res->getString(5) &&
+					sim_.req_->headers.isEqualTo("User-Agent",
+						res->getString(6)))
 				return (state_ = OK);
 		}
 
@@ -66,7 +71,8 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 	close();
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-			prepareStatement("INSERT INTO session (id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
+			prepareStatement("INSERT INTO session "
+				"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions
 		UniquePtr<sql::Statement>(sim_.db_conn()->createStatement())->
