@@ -166,18 +166,18 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 
 			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			if (res->rowsCount() == 2) {
-				int owner_rank = 0, user_rank = 4;
+				int owner_type = 0, user_type = 4;
 
 				for (int i = 0; i < 2; ++i) {
 					res->next();
 
 					if (res->getString(1) == r_path.contest->owner)
-						owner_rank = Sim::userTypeToRank(res->getString(2));
+						owner_type = res->getUInt(2);
 					else
-						user_rank = Sim::userTypeToRank(res->getString(2));
+						user_type = res->getUInt(2);
 				}
 
-				return owner_rank > user_rank;
+				return owner_type > user_type;
 			}
 
 		} catch (const std::exception& e) {

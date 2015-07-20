@@ -13,6 +13,8 @@ private:
 
 	~User() {}
 
+	struct Data;
+
 	// Pages
 	void login();
 
@@ -20,7 +22,9 @@ private:
 
 	void signUp();
 
-	void userProfile();
+	void editProfile(Data& data);
+
+	void deleteAccount(Data& data);
 
 public:
 	/**

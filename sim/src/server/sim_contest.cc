@@ -30,21 +30,17 @@ void Sim::Contest::handle() {
 			UniquePtr<sql::PreparedStatement> pstmt;
 			if (sim_.session->open() == Session::OK) {
 				string lower_owners;
-				int rank = sim_.getUserRank(sim_.session->user_id);
-				if (rank < 2) {
-					lower_owners += "OR u.type='normal'";
-					if (rank < 1)
-						lower_owners += " OR u.type='teacher'";
-				}
 
 				pstmt.reset(sim_.db_conn()->prepareStatement(
-						"(SELECT r.id, r.name FROM rounds r, users u WHERE parent IS NULL AND r.owner=u.id AND "
-							"(r.access='public' OR r.owner=? " + lower_owners + "))"
-						" UNION "
-						"(SELECT id, name FROM rounds, users_to_contests WHERE user_id=? AND contest_id=id)"
-						"ORDER BY id"));
+					"(SELECT r.id, r.name FROM rounds r, users u "
+						"WHERE parent IS NULL AND r.owner=u.id AND "
+							"(r.access='public' OR r.owner=? OR u.type>?))"
+					" UNION "
+					"(SELECT id, name FROM rounds, users_to_contests "
+						"WHERE user_id=? AND contest_id=id) ORDER BY id"));
 				pstmt->setString(1, sim_.session->user_id);
-				pstmt->setString(2, sim_.session->user_id);
+				pstmt->setUInt(2, sim_.session->user_type);
+				pstmt->setString(3, sim_.session->user_id);
 
 			} else
 				pstmt.reset(sim_.db_conn()->prepareStatement(
@@ -57,7 +53,7 @@ void Sim::Contest::handle() {
 
 			// Add contest button (admins and teachers only)
 			if (sim_.session->state() == Session::OK &&
-					sim_.getUserRank(sim_.session->user_id) < 2)
+					sim_.session->user_type < 2)
 				templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
 			while (res->next())
@@ -81,14 +77,11 @@ void Sim::Contest::handle() {
 	else {
 		// Extract round id
 		string round_id;
-		{
-			int res_code = strtonum(round_id, sim_.req_->target, arg_beg,
-					find(sim_.req_->target, '/', arg_beg));
-			if (res_code == -1)
-				return sim_.error404();
+		int res_code = strToNum(round_id, sim_.req_->target, arg_beg, '/');
+		if (res_code == -1)
+			return sim_.error404();
 
-			arg_beg += res_code + 1;
-		}
+		arg_beg += res_code + 1;
 
 		// Get parent rounds
 		delete r_path_;
@@ -185,8 +178,7 @@ void Sim::Contest::handle() {
 }
 
 void Sim::Contest::addContest() {
-	if (sim_.session->open() != Sim::Session::OK ||
-			sim_.getUserRank(sim_.session->user_id) > 1)
+	if (sim_.session->open() != Sim::Session::OK || sim_.session->user_type > 1)
 		return sim_.error403();
 
 	FormValidator fv(sim_.req_->form_data);
@@ -1119,14 +1111,11 @@ void Sim::Contest::submission() {
 
 	// Extract round id
 	string submission_id;
-	{
-		int res_code = strtonum(submission_id, sim_.req_->target, arg_beg,
-				find(sim_.req_->target, '/', arg_beg));
-		if (res_code == -1)
-			return sim_.error404();
+	int res_code = strToNum(submission_id, sim_.req_->target, arg_beg, '/');
+	if (res_code == -1)
+		return sim_.error404();
 
-		arg_beg += res_code + 1;
-	}
+	arg_beg += res_code + 1;
 
 	try {
 		// Get submission

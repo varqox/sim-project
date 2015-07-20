@@ -39,44 +39,21 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 						"<span id=\"clock\">" << date("%H:%M:%S")
 							<< " UTC</span>";
 
-	if (sim_.session->open() == Session::OK) {
-		try {
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-				prepareStatement("SELECT username FROM `users` WHERE id=?"));
-			pstmt->setString(1, sim_.session->user_id);
+	if (sim_.session->open() == Session::OK)
+		*this << "<div class=\"dropdown\">\n"
+				"<a class=\"user\"><strong>"
+			<< htmlSpecialChars(sim_.session->username) << "</strong>"
+				"<b class=\"caret\"></b></a>\n"
+				"<ul>\n"
+					"<a href=\"/u/" << sim_.session->user_id
+						<< "\">Edit profile</a>\n"
+					"<a href=\"/logout\">Logout</a>\n"
+				"</ul>\n"
+				"</div>";
 
-			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-			if (res->next()) {
-				*this << "<div class=\"dropdown\">\n"
-						"<a class=\"user\"><strong>"
-					<< htmlSpecialChars(res->getString(1)) << "</strong>"
-						"<b class=\"caret\"></b></a>\n"
-						"<ul>\n"
-							"<a href=\"/u/" << sim_.session->user_id
-								<< "\">Edit profile</a>\n"
-							"<a href=\"/logout\">Logout</a>\n"
-						"</ul>\n"
-						"</div>";
-			} else {
-				sim_.session->destroy();
-				goto else_label;
-			}
-
-		} catch (const std::exception& e) {
-			sim_.session->destroy();
-			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-				e.what());
-
-		} catch (...) {
-			sim_.session->destroy();
-			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-		}
-
-	} else {
-	 else_label:
+	else
 		*this << "<a href=\"/login\"><strong>Log in</strong></a>\n"
 			"<a href=\"/signup\">Sign up</a>";
-	}
 
 	*this << "</div>\n"
 		"</div>\n"

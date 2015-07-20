@@ -129,17 +129,7 @@ void Sim::redirect(const string& location) {
 	resp_.headers["Location"] = location;
 }
 
-int Sim::userTypeToRank(const string& type) {
-	if (type == "admin")
-		return 0;
-
-	if (type == "teacher")
-		return 1;
-
-	return 2;
-}
-
-int Sim::getUserRank(const string& user_id) {
+int Sim::getUserType(const string& user_id) {
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(db_conn()->
 			prepareStatement("SELECT type FROM users WHERE id=?"));
@@ -147,7 +137,7 @@ int Sim::getUserRank(const string& user_id) {
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 		if (res->next())
-			return userTypeToRank(res->getString(1));
+			return res->getUInt(1);
 
 	} catch (const std::exception& e) {
 		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,

@@ -5,7 +5,8 @@
 class Sim::Session {
 public:
 	enum State { OK, FAIL, CLOSED };
-	std::string user_id, data;
+	std::string user_id, data, username;
+	int user_type;
 
 private:
 	static const int SESSION_MAX_LIFETIME = 24 * 60 * 60; // in sec
@@ -17,8 +18,8 @@ private:
 	State state_;
 	std::string id_;
 
-	explicit Session(Sim& sim) : user_id(), data(), sim_(sim), state_(CLOSED),
-		id_() {}
+	explicit Session(Sim& sim) : user_id(), data(), username(), user_type(),
+		sim_(sim), state_(CLOSED), id_() {}
 
 	~Session() { close(); }
 
