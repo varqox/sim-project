@@ -12,8 +12,11 @@ inline std::string toString(size_t a) {
 }
 
 // Like strtou() but places number into x
-int strtonum(std::string& x, const std::string& s, size_t beg = 0,
+int strToNum(std::string& x, const std::string& s, size_t beg = 0,
 	size_t end = std::string::npos);
+
+// Like strToNum() but ends on first occurrence of @p c or @p s end
+int strToNum(std::string& x, const std::string& s, size_t beg, char c);
 
 // Like string::find() but searches in [beg, end)
 size_t find(const std::string& str, char c, size_t beg = 0,
