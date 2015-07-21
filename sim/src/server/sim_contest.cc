@@ -905,7 +905,10 @@ void Sim::Contest::submit(bool admin_view) {
 				string current_date = date("%Y-%m-%d %H:%M:%S");
 				// Insert submission to `submissions`
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-					prepareStatement("INSERT INTO submissions (user_id, problem_id, round_id, parent_round_id, contest_round_id, submit_time, queued) VALUES(?, ?, ?, ?, ?, ?, ?)"));
+					prepareStatement("INSERT INTO submissions "
+						"(user_id, problem_id, round_id, parent_round_id, "
+							"contest_round_id, submit_time, queued) "
+						"VALUES(?, ?, ?, ?, ?, ?, ?)"));
 				pstmt->setString(1, sim_.session->user_id);
 				pstmt->setString(2, problem_r_path->problem->problem_id);
 				pstmt->setString(3, problem_r_path->problem->id);
@@ -938,21 +941,25 @@ void Sim::Contest::submit(bool admin_view) {
 
 				// Insert submission to `submissions_to_rounds`
 				pstmt.reset(sim_.db_conn()->prepareStatement(
-						"INSERT INTO submissions_to_rounds (submission_id, user_id, round_id, submit_time) VALUES(?, ?, ?, ?)"));
+						"INSERT INTO submissions_to_rounds "
+						"(submission_id, user_id, round_id, submit_time) "
+						"VALUES(?, ?, ?, ?),(?, ?, ?, ?),(?, ?, ?, ?)"));
 
-				const string arr[] = {
-					problem_r_path->problem->id,
-					problem_r_path->round->id,
-					problem_r_path->contest->id
-				};
-				// TODO: merge to one query
-				for (size_t i = 0; i < sizeof(arr) / sizeof(*arr); ++i) {
-					pstmt->setString(1, submission_id);
-					pstmt->setString(2, sim_.session->user_id);
-					pstmt->setString(3, arr[i]);
-					pstmt->setString(4, current_date);
-					pstmt->executeUpdate();
-				}
+				pstmt->setString(1, submission_id);
+				pstmt->setString(2, sim_.session->user_id);
+				pstmt->setString(3, problem_r_path->problem->id);
+				pstmt->setString(4, current_date);
+
+				pstmt->setString(5, submission_id);
+				pstmt->setString(6, sim_.session->user_id);
+				pstmt->setString(7, problem_r_path->round->id);
+				pstmt->setString(8, current_date);
+
+				pstmt->setString(9, submission_id);
+				pstmt->setString(10, sim_.session->user_id);
+				pstmt->setString(11, problem_r_path->contest->id);
+				pstmt->setString(12, current_date);
+				pstmt->executeUpdate();
 
 				// Notify judge-machine
 				utime("judge-machine.notify", NULL);
