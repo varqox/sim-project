@@ -86,7 +86,7 @@ TemporaryDirectory::~TemporaryDirectory() {
 
 int mkdir_r(const char* path, mode_t mode) {
 	string dir(path);
-	// Remove ending slash (if exists)
+	// Remove ending slash (if it exists)
 	if (dir.size() && *--dir.end() == '/')
 		dir.erase(--dir.end());
 

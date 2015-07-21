@@ -6,7 +6,7 @@
 /**
  * @brief ProblemConfig holds SIM package config
  * @details Holds problem name, problem tag, problem statement, checker,
- * solution, memory limit and grouped tests with time limit for each one
+ * solution, memory limit and grouped tests, with time limit for each one
  */
 class ProblemConfig {
 public:
@@ -33,7 +33,7 @@ public:
 
 	/**
 	 * @brief Holds group of tests
-	 * @details Holds group of tests and points for them
+	 * @details Holds group of tests and their point information
 	 */
 	struct Group {
 		std::vector<Test> tests;

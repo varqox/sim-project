@@ -59,7 +59,7 @@ struct options {
  * @p func must return 0 - syscall is allowed  non-zero
  * @p exec is called via execvp()
  * This function is not thread-safe
- * Nowadays executed program must have the same architecture as parent
+ * As of now, the executed program must have the same architecture as its parent
  *
  * @param exec file that is to be executed
  * @param args arguments passed to exec
@@ -67,7 +67,7 @@ struct options {
  * memory_limit set to 0 disables memory limit,
  * new_stdin_fd, new_stdout_fd, new_stderr_fd - file descriptors to which
  * respectively stdin, stdout, stderr of child process will be changed or if
- * negative, closed
+ * negative, closed)
  * @param func pointer to callback function
  * @param data pointer which will be passed to @p func as last argument
  * @return Returns ExitStat structure with fields: code is -1 on error, or
