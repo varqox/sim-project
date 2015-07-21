@@ -196,6 +196,18 @@ inline int move(const std::string& oldpath, const std::string& newpath) {
 	return rename(oldpath.c_str(), newpath.c_str());
 }
 
+/**
+ * @brief Creates file pathname with access mode @p mode
+ *
+ * @param pathname pathname for a file
+ * @param mode access mode
+ *
+ * @return 0 on success, -1 on error
+ *
+ * @errors The same that occur for creat(2), close(2)
+ */
+int createFile(const char* pathname, mode_t mode);
+
 namespace directory_tree {
 
 // Node is a directory
