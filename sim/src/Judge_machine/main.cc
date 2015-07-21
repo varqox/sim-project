@@ -21,7 +21,7 @@ unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static inline DB::Connection& conn() { return *db_conn; }
 
-static void handleSubmissionQueue() {
+static void processSubmissionQueue() {
 	try {
 		UniquePtr<sql::Statement> stmt(conn()->createStatement());
 
@@ -122,6 +122,19 @@ static void handleSubmissionQueue() {
 	}
 }
 
+void startWatching(int inotify_fd, int& wd) {
+	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
+			IN_ATTRIB)) == -1) {
+		eprintf("Error: inotify_add_watch() - %s\n", strerror(errno));
+		// Run tests
+		processSubmissionQueue();
+		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
+
+		if (access("judge-machine.notify", F_OK) == -1)
+			createFile("judge-machine.notify", S_IRUSR);
+	}
+}
+
 int main() {
 	// Install signal handlers
 	struct sigaction sa;
@@ -154,32 +167,22 @@ int main() {
 	while ((inotify_fd = inotify_init()) == -1) {
 		eprintf("Error: inotify_init() - %s\n", strerror(errno));
 		// Run tests
-		handleSubmissionQueue();
+		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
 	}
 
 	// If "judge-machine.notify" file does not exist create it
-	// TODO: separate to a function
 	if (access("judge-machine.notify", F_OK) == -1)
-		close(creat("judge-machine.notify", S_IRUSR));
+		createFile("judge-machine.notify", S_IRUSR);
 
-	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
-				IN_ATTRIB)) == -1) {
-		eprintf("Error: inotify_add_watch() - %s\n", strerror(errno));
-		// Run tests
-		handleSubmissionQueue();
-		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
-
-		if (access("judge-machine.notify", F_OK) == -1)
-			close(creat("judge-machine.notify", S_IRUSR));
-	}
+	startWatching(inotify_fd, wd);
 
 	// Inotify buffer
 	ssize_t len;
 	char inotify_buff[sizeof(inotify_event) + NAME_MAX + 1];
 
 	// Run tests before waiting for notification
-	handleSubmissionQueue();
+	processSubmissionQueue();
 
 	// Wait for notification
 	for (;;) {
@@ -191,24 +194,14 @@ int main() {
 
 		// If notify file disappear
 		if (access("judge-machine.notify", F_OK) == -1) {
-			close(creat("judge-machine.notify", S_IRUSR));
+			createFile("judge-machine.notify", S_IRUSR);
 
 			inotify_rm_watch(inotify_fd, wd);
-
-			while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
-						IN_ATTRIB)) == -1) {
-				eprintf("Error: inotify_add_watch() - %s\n", strerror(errno));
-				// Run tests
-				handleSubmissionQueue();
-				usleep(OLD_WATCH_METHOD_SLEEP); // sleep
-
-				if (access("judge-machine.notify", F_OK) == -1)
-					close(creat("judge-machine.notify", S_IRUSR));
-			}
+			startWatching(inotify_fd, wd);
 		}
 
 		// Run tests
-		handleSubmissionQueue();
+		processSubmissionQueue();
 	}
 	return 0;
 }

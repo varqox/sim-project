@@ -279,6 +279,19 @@ int copy_r(const char* src, const char* dest) {
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
+
+int createFile(const char* pathname, mode_t mode) {
+	int fd = creat(pathname, mode);
+	if (fd == -1)
+		return -1;
+
+	while (close(fd) == -1)
+		if (errno != EINTR)
+			return -1;
+
+	return 0;
+}
+
 namespace directory_tree {
 
 void node::__print(FILE *stream, string buff) {
