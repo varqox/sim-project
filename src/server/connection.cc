@@ -155,7 +155,8 @@ void Connection::readPOST(HttpRequest& req) {
 			return;
 		}
 
-		string boundary = "\r\n--"; // always is in request expect beginning
+		string boundary = "\r\n--"; // Is always part of a request, except at
+		                            // the beginning
 		boundary += con_type.substr(beg + 9);
 
 		// Compute p array for KMP algorithm
@@ -176,7 +177,7 @@ void Connection::readPOST(HttpRequest& req) {
 		int fd = -1;
 		FILE *tmp_file = NULL;
 		bool first_boundary = true;
-		k = 2; // because "\r\n" do not have to exist at beginning
+		k = 2; // Because "\r\n" may not exist at the beginning
 
 		// While we can read
 		// In each loop pass parse EXACTLY one field
@@ -186,7 +187,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 			if (boundary[k] == c)
 				++k;
-			// If we have found boundary
+			// If we have found a boundary
 			if (k == boundary.size()) {
 				if (first_boundary)
 					first_boundary = false;
@@ -195,9 +196,9 @@ void Connection::readPOST(HttpRequest& req) {
 					// Manage last field
 					if (fd == -1) {
 						/*
-						* This was normal variable
+						* This was a normal variable
 						* Guarantee that pos is >= 0
-						* +1 because we did not append last character to
+						* +1 because we did not append the last character to the
 						* boundary
 						*/
 						field_content.erase((field_content.size() <
@@ -206,13 +207,13 @@ void Connection::readPOST(HttpRequest& req) {
 						req.form_data[field_name] = field_content;
 
 					} else {
-						// We had file
+						// This was a file
 						fflush(tmp_file);
 						fseek(tmp_file, 0, SEEK_END);
 						size_t tmp_file_size = ftell(tmp_file);
 						/*
 						* Guarantee that length is >= 0
-						* +1 because we did not append last character to
+						* +1 because we did not append the last character to the
 						* boundary
 						*/
 						ftruncate(fileno(tmp_file),
@@ -233,7 +234,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 				// Headers
 				for (;;) {
-					field_content = ""; // In this case header
+					field_content = ""; // Header in this case
 
 					while ((c = reader.getChar()) != -1) {
 						// Found CRLF
@@ -283,7 +284,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 							// extract var_val
 							if (header.second[st] == '=') {
-								// this is safe because last character always is
+								// this is safe because last character is always
 								// ';'
 								++st;
 

@@ -50,7 +50,7 @@ static void processSubmissionQueue() {
 					// Update final
 					UniquePtr<sql::PreparedStatement> pstmt;
 					if (jres.status != JudgeResult::CERROR) {
-						// Remove old final
+						// Remove old final:
 						// From submissions_to_rounds
 						pstmt.reset(conn()->prepareStatement("UPDATE submissions_to_rounds SET final=false WHERE submission_id=(SELECT id FROM submissions WHERE round_id=? AND user_id=? AND final=true LIMIT 1)"));
 						pstmt->setString(1, round_id);
@@ -192,7 +192,7 @@ int main() {
 			continue;
 		}
 
-		// If notify file disappear
+		// If notify file disappeared
 		if (access("judge-machine.notify", F_OK) == -1) {
 			createFile("judge-machine.notify", S_IRUSR);
 

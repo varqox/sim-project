@@ -40,7 +40,7 @@ endif
 	# Set up install
 	- src/setup-install $(abspath $(DESTDIR))
 
-	# Right owner, group and permission bits
+	# Set owner, group and permission bits
 	- useradd -M -r -s /usr/sbin/nologin sim
 	src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)

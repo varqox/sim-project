@@ -20,8 +20,8 @@ extern const spawn_opts default_spawn_opts; /* = {
  *
  * @param exec file to execute
  * @param args arguments (last has to be NULL)
- * @param sopt spawn options - defines to what change stdin, stdout and stderr
- * negative field means to close stream
+ * @param sopt spawn options - defines what to change stdin, stdout and
+ * stderr to (negative field closes the stream)
  *
  * @return exit code on success, -1 on error
  */
@@ -33,8 +33,8 @@ int spawn(const char* exec, const char* args[],
  *
  * @param exec file to execute
  * @param args arguments (last has to be NULL)
- * @param sopt spawn options - defines to what change stdin, stdout and stderr
- * negative field means to close stream
+ * @param sopt spawn options - defines what to change stdin, stdout and
+ * stderr to (negative field closes the stream)
  *
  * @return exit code on success, -1 on error
  */
@@ -48,8 +48,8 @@ inline int spawn(const std::string& exec, const char* args[],
  *
  * @param exec file to execute
  * @param args arguments
- * @param sopt spawn options - defines to what change stdin, stdout and stderr
- * negative field means to close stream
+ * @param sopt spawn options - defines what to change stdin, stdout and
+ * stderr to (negative field closes the stream)
  *
  * @return exit code on success, -1 on error
  */
@@ -62,8 +62,8 @@ int spawn(const std::string& exec, const std::vector<std::string>& args,
  * @param exec file to execute
  * @param argc number of arguments
  * @param args arguments
- * @param sopt spawn options - defines to what change stdin, stdout and stderr
- * negative field means to close stream
+ * @param sopt spawn options - defines what to change stdin, stdout and
+ * stderr to (negative field closes the stream)
  *
  * @return exit code on success, -1 on error
  */

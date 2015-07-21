@@ -58,8 +58,8 @@ inline int mkdir_r(const std::string& pathname, mode_t mode = S_IRWXU |
 }
 
 /**
- * @brief Removes recursively file/directory @p pathname relative to a directory
- * file descriptor @p dirfd
+ * @brief Removes recursively file/directory @p pathname relative to the
+ * directory file descriptor @p dirfd
  *
  * @param dirfd directory file descriptor
  * @param pathname file/directory pathname (relative to @p dirfd)
@@ -99,7 +99,7 @@ inline int remove_r(const char* pathname) {
 int blast(int infd, int outfd);
 
 /**
- * @brief Copies (overrides) file from @p src to @p dest
+ * @brief Copies (overwrites) file from @p src to @p dest
  * @details Needs directory containing @p dest to exist
  *
  * @param src source file
@@ -113,7 +113,7 @@ int copy(const char* src, const char* dest);
 
 /**
  * @brief Copies (overrides) file from @p src to @p dest
- * @details Needs directory containing @p dest to exist
+ * @details Requires for a directory containing @p dest to exist
  *
  * @param src source file
  * @param dest destination file
@@ -210,7 +210,7 @@ int createFile(const char* pathname, mode_t mode);
 
 namespace directory_tree {
 
-// Node is a directory
+// Node represents a directory
 class node {
 private:
 	node(const node&);
@@ -239,7 +239,7 @@ public:
 	 * @brief Get subdirectory
 	 *
 	 * @param pathname name to search (cannot contain '/')
-	 * @return pointer to subdirectory or NULL if not exits
+	 * @return pointer to subdirectory or NULL if it does not exist
 	 */
 	node* dir(const std::string& pathname);
 
@@ -247,7 +247,7 @@ public:
 	 * @brief Checks if file exists in this node
 	 *
 	 * @param pathname file to check (cannot contain '/')
-	 * @return if exists true, else false
+	 * @return true if exists, false otherwise
 	 */
 	bool fileExists(const std::string& pathname) {
 		return std::binary_search(files.begin(), files.end(), pathname);
@@ -261,7 +261,7 @@ public:
 	/**
 	 * @brief Prints tree rooted in *this
 	 *
-	 * @param stream file to which write (if NULL returns immediately)
+	 * @param stream file to write to (if NULL returns immediately)
 	 */
 	inline void print(FILE *stream) {
 		if (stream != NULL)
@@ -301,7 +301,7 @@ inline node* dumpDirectoryTree(const std::string& path) {
 
 
 /* Returns an absolute path that does not contain any . or .. components,
-*  nor any repeated path separators (/) nor / at end
+*  nor any repeated path separators (/), and does not end with /
 *  root can be empty
 */
 std::string abspath(const std::string& path, size_t beg = 0,

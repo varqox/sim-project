@@ -33,11 +33,11 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	if (verbosity > 1)
 		printf("Compiling: '%s' ", (source).c_str());
 
-	/* Compile as 32 bit executable (not essential but if checker will be x86_64
-	*  and Conver/Judge_machine i386 then checker won't work, with it its more
-	*  secure (see making i386 syscall from x86_64))
-	*  proot compiler to make compilation safer (e.g. including unwanted
-	*  files)
+	/* Compile as a 32-bit executable (not essential, but if the checker is
+	*  x86_64 and Conver/Judge_machine is i386, then the checker will not work -
+	*  this method is more secure (see making i386 syscall from x86_64))
+	*  proot compiler to make compilation safer (e.g. prevent from including
+	*  unwanted files)
 	*/
 	const char* args[] = {
 		"proot",

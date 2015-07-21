@@ -25,7 +25,7 @@ unsigned long long TIME_LIMIT = 0; // Not set
 UniquePtr<directory_tree::node> package_tree_root;
 ProblemConfig conf_cfg;
 
-static bool SET_MEMORY_LIMIT = false; // true if is set in options
+static bool SET_MEMORY_LIMIT = false; // true if set in options
 static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;
 
 /**
@@ -80,8 +80,9 @@ sim_problem_package tree:\n\
 }
 
 /**
- * Pareses options passed to Conver via arguments
- * @param argc like in main (will be modified to hold number of no-arguments)
+ * Parses options passed to Conver via arguments
+ * @param argc like in main (will be modified to hold the number of non-option
+ * parameters)
  * @param argv like in main (holds arguments)
  */
 static void parseOptions(int &argc, char **argv) {

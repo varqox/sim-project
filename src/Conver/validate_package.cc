@@ -50,7 +50,7 @@ string validatePackage(string pathname) {
 		abort(); // This is probably a bug
 	}
 
-	// Checkout conf.cfg
+	// Validate conf.cfg
 	if (!USE_CONF || !std::binary_search(package_tree_root->files.begin(),
 			package_tree_root->files.end(), "conf.cfg") ||
 			conf_cfg.loadConfig(pathname, (VERBOSITY >> 1) + 1) != 0)

@@ -88,7 +88,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	// Prepare runtime environment
 	sandbox::options sb_opts = {
-		0, // Will be set separately for each test
+		0, // Will be set separately for each test later
 		pconf.memory_limit << 10,
 		-1,
 		open((tmp_dir->sname() + "answer").c_str(),
@@ -343,7 +343,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				printf("\n");
 		}
 
-		// group_result cannot be empty but for sure...
+		// assert that group_result is not empty
 		if (group_result.empty()) {
 			// Close file descriptors
 			if (sb_opts.new_stdin_fd)
