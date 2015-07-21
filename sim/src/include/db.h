@@ -37,7 +37,7 @@ public:
  * @brief Creates Connection using file @p filename
  * @details File format: "USER\nPASSWORD\nDATABASE\nHOST"
  *
- * @param filename file to load pass from
+ * @param filename file to load credentials from
  * @return valid pointer (on error throws std::runtime_error)
  */
 Connection* createConnectionUsingPassFile(const char* filename) throw();

@@ -14,7 +14,7 @@ pair<string, string> TestNameCompatator::extractTag(const string& str) {
 	size_t end, i = str.size();
 	pair<string, string> res;
 
-	// Tests id
+	// Test id
 	while (i > 0 && isalpha(str[i - 1]))
 		--i;
 	res.second = str.substr(i);
@@ -37,7 +37,7 @@ int convertPackage(string tmp_package, string out_package) {
 
 	E("in -> '%s'\nout -> '%s'\n", tmp_package.c_str(), out_package.c_str());
 
-	// Make package structure
+	// Create package structure
 	mkdir_r(out_package + "check");
 	mkdir(out_package + "doc");
 	mkdir(out_package + "prog");

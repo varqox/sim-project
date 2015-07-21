@@ -4,8 +4,8 @@
 
 /**
  * @brief Validates whole package
- * @details Check if there is only one main folder and validates conf.cfg if
- * exists and flag USE_CONF is set
+ * @details Check if there is only one main folder and validate the config file,
+ * but only if it exists and the USE_CONF flag is set
  *
  * @param pathname path to package (not main folder)
  * @return path to main folder (based on pathname)

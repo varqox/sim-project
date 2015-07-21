@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   // argv[3] answer to check
   my_assert(argc == 4);
   FILE *fout = fopen(argv[2], "r"), *fans = fopen(argv[3], "r");
-  my_assert(fout && fans);  // Open has not failed
+  my_assert(fout && fans);  // Open was successful
 
   size_t len1 = 0, len2 = 0, line = 0;
   ssize_t read1, read2;

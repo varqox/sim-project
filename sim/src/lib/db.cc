@@ -28,7 +28,7 @@ Connection* createConnectionUsingPassFile(const char* filename) throw() {
 		throw std::runtime_error(string("Cannot open file: '") + filename +
 			"' - " + strerror(errno));
 
-	// Get pass
+	// Get credentials
 	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
 	if (getline(&user, &x1, conf) == -1 ||
 			getline(&password, &x2, conf) == -1 ||

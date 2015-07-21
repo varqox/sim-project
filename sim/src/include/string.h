@@ -108,8 +108,8 @@ bool isReal(const std::string& s, size_t beg = 0,
 *  if end > s.size() or end == string::npos then end = s.size()
 *  if beg > end then beg = end
 *  if x == NULL then only validate
-*  Return value: -1 if s: [beg, end) is not number
-*    otherwise number of characters parsed
+*  Return value: -1 if s: [beg, end) is not a number
+*    otherwise return the number of characters parsed
 */
 template<class T>
 int strtoi(const std::string& s, T *x, size_t beg = 0,
@@ -174,7 +174,7 @@ inline unsigned long long strtoull(const std::string& s, size_t beg = 0,
  *
  * @param x usec value
  * @param prec precision (maximum number of digits after '.')
- * @param trim_nulls set whether trim trailing nulls
+ * @param trim_nulls set whether to trim trailing nulls
  * @return floating-point x in sec as string
  */
 std::string usecToSecStr(unsigned long long x, unsigned prec,

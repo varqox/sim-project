@@ -213,7 +213,7 @@ ExitStat run(const string& exec, vector<string> args,
 	for (;;) {
 		// Into syscall
 		if (wait_for_syscall(&status)) {
-		 exit_normaly:
+		 exit_normally:
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
 			gettimeofday(&tend, NULL); // Get finish time
@@ -240,7 +240,7 @@ ExitStat run(const string& exec, vector<string> args,
 			gettimeofday(&tend, NULL); // Get finish time
 			sigaction(SIGALRM, &sa_old, NULL);
 
-			// Kill process if still exist
+			// Kill process if it still exists
 			kill(cpid, SIGKILL);
 			waitpid(cpid, &status, 0);
 
@@ -263,7 +263,7 @@ ExitStat run(const string& exec, vector<string> args,
 
 		// syscall returns
 		if (wait_for_syscall(&status))
-			goto exit_normaly;
+			goto exit_normally;
 	}
 }
 

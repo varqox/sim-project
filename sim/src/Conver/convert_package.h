@@ -10,7 +10,7 @@ struct TestNameCompatator {
 	 * @details Test name: str tag = str group_id test_id = .*[0-9]+[a-z]*
 	 * e.g. "test1abc" -> ("1", "abc")
 	 *
-	 * @param str string from which tag will be extracted
+	 * @param str string from which the tag will be extracted
 	 * @return (group_id, test_id)
 	 */
 	static std::pair<std::string, std::string>
@@ -38,7 +38,8 @@ struct TestNameCompatator {
  * @brief Converts package @p tmp_package to @p sim_package
  *
  * @param tmp_package input package which will be converted (main folder)
- * @param out_package output pathname in which converted package will be placed
+ * @param out_package output pathname in which the converted package will be
+ * placed
  * @return 0 on success, -1 on error
  */
 int convertPackage(std::string tmp_package, std::string out_package);

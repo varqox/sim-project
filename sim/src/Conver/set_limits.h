@@ -3,9 +3,9 @@
 #include "conver.h"
 
 /**
- * @brief Runs automatic tests on @p package
+ * @brief Runs automatic tests on @p package_path
  *
- * @param package path to package main folder
+ * @param package_path main package folder path
  * @return 0 on success, -1 on error
  */
-int setLimits(const std::string& package);
+int setLimits(const std::string& package_path);

@@ -35,9 +35,9 @@ static void assignPoints() {
 	}
 }
 
-int setLimits(const string& package) {
+int setLimits(const string& package_path) {
 	// Compile checker
-	if (compile(package + "check/" + conf_cfg.checker, "checker",
+	if (compile(package_path + "check/" + conf_cfg.checker, "checker",
 			(VERBOSITY >> 1) + 1) != 0)
 		return 1;
 
@@ -60,7 +60,7 @@ int setLimits(const string& package) {
 		return 2;
 	}
 
-	if (compile(package + "prog/" + conf_cfg.solution, "exec",
+	if (compile(package_path + "prog/" + conf_cfg.solution, "exec",
 			(VERBOSITY >> 1) + 1) != 0)
 		return 2;
 
@@ -120,10 +120,10 @@ int setLimits(const string& package) {
 
 			// Open sb_opts.new_stdin_fd
 			if ((sb_opts.new_stdin_fd = open(
-					(package + "tests/" + test->name + ".in").c_str(),
+					(package_path + "tests/" + test->name + ".in").c_str(),
 					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
-					(package + "tests/" + test->name + ".in").c_str(),
+					(package_path + "tests/" + test->name + ".in").c_str(),
 					strerror(errno));
 
 				// Close file descriptors
@@ -134,11 +134,11 @@ int setLimits(const string& package) {
 
 			// Open sb_opts.new_stdout_fd
 			if (GEN_OUT && (sb_opts.new_stdout_fd = open(
-					(package + "tests/" + test->name + ".out").c_str(),
+					(package_path + "tests/" + test->name + ".out").c_str(),
 					O_WRONLY | O_CREAT | O_TRUNC, // (mode: 0644/rw-r--r--)
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
-					(package + "tests/" + test->name + ".out").c_str(),
+					(package_path + "tests/" + test->name + ".out").c_str(),
 					strerror(errno));
 
 				// Close file descriptors
@@ -185,8 +185,8 @@ int setLimits(const string& package) {
 
 			// Validate output
 			if (VALIDATE_OUT) {
-				checker_args[1] = package + "tests/" + test->name + ".in";
-				checker_args[2] = package + "tests/" + test->name + ".out";
+				checker_args[1] = package_path + "tests/" + test->name + ".in";
+				checker_args[2] = package_path + "tests/" + test->name + ".out";
 				checker_args[3] = GEN_OUT ? checker_args[2] : "answer";
 
 				if (VERBOSITY > 0) {
