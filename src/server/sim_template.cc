@@ -47,6 +47,8 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 				"<ul>\n"
 					"<a href=\"/u/" << sim_.session->user_id
 						<< "\">Edit profile</a>\n"
+					"<a href=\"/u/" << sim_.session->user_id
+						<< "/change-password\">Change password</a>\n"
 					"<a href=\"/logout\">Logout</a>\n"
 				"</ul>\n"
 				"</div>";
