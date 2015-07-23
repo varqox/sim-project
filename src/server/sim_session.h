@@ -6,7 +6,7 @@ class Sim::Session {
 public:
 	enum State { OK, FAIL, CLOSED };
 	std::string user_id, data, username;
-	int user_type;
+	unsigned user_type;
 
 private:
 	static const int SESSION_MAX_LIFETIME = 24 * 60 * 60; // in sec

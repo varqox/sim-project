@@ -198,7 +198,7 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 }
 
 Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
-		const string& title, const string& styles, const string& scripts)
+	const string& title, const string& styles, const string& scripts)
 		: Sim::Template(sim_contest.sim_, title,
 			".body{margin-left:190px}" + styles, scripts) {
 

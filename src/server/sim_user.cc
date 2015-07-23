@@ -13,7 +13,7 @@ using std::map;
 
 struct Sim::User::Data {
 	string user_id, username, first_name, last_name, email;
-	int user_type;
+	unsigned user_type;
 	enum ViewType { FULL, READ_ONLY } view_type;
 };
 
@@ -48,8 +48,9 @@ Sim::User::TemplateWithMenu::TemplateWithMenu(Sim& sim, const string& user_id,
 }
 
 void Sim::User::TemplateWithMenu::printUser(const Data& data) {
-	*this << "<h4><a href=\"/u/" << data.user_id << "\">" << data.username << "</a>"
-		<< " (" << data.first_name << " " << data.last_name << ")</h4>\n";
+	*this << "<h4><a href=\"/u/" << data.user_id << "\">" << data.username
+		<< "</a>" << " (" << data.first_name << " " << data.last_name
+		<< ")</h4>\n";
 }
 
 void Sim::User::handle() {
@@ -364,12 +365,18 @@ void Sim::User::changePassword(Data& data) {
 }
 
 void Sim::User::editProfile(Data& data) {
+	// The ability to change user type
+	bool can_change_user_type = data.user_id != "1" &&
+		sim_.session->user_type == 0 && (data.user_type > 0 ||
+			sim_.session->user_id == "1");
+
 	FormValidator fv(sim_.req_->form_data);
 	if (sim_.req_->method == server::HttpRequest::POST &&
 			data.view_type == Data::FULL) {
-		string new_username;
+		string new_username, user_type;
 		// Validate all fields
 		fv.validateNotBlank(new_username, "username", "Username", 30);
+		fv.validateNotBlank(user_type, "type", "Account type");
 		fv.validateNotBlank(data.first_name, "first_name", "First Name");
 		fv.validateNotBlank(data.last_name, "last_name", "Last Name", 60);
 		fv.validateNotBlank(data.email, "email", "Email", 60);
@@ -379,18 +386,26 @@ void Sim::User::editProfile(Data& data) {
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
 					prepareStatement("UPDATE IGNORE users "
-					"SET username=?, first_name=?, last_name=?, email=? "
-					"WHERE id=?"));
+					"SET username=?, first_name=?, last_name=?, email=?, "
+					"type=? WHERE id=?"));
 				pstmt->setString(1, new_username);
 				pstmt->setString(2, data.first_name);
 				pstmt->setString(3, data.last_name);
 				pstmt->setString(4, data.email);
-				pstmt->setString(5, data.user_id);
+				pstmt->setUInt(5, can_change_user_type ? (user_type == "0" ? 0
+						: user_type == "1" ? 1 : 2) : data.user_type);
+				pstmt->setString(6, data.user_id);
 
 				if (pstmt->executeUpdate() == 1) {
 					fv.addError("Update successful");
+					// Update user info
 					data.username = new_username;
+					data.user_type = (user_type == "0" ? 0
+						: user_type == "1" ? 1 : 2);
+
 					if (data.user_id == sim_.session->user_id)
+						// We do not have to actualise user_type because nobody
+						// can change their account type
 						sim_.session->username = new_username;
 
 				} else if (data.username != new_username)
@@ -417,6 +432,19 @@ void Sim::User::editProfile(Data& data) {
 					<< htmlSpecialChars(data.username) << "\" size=\"24\" "
 					"maxlength=\"30\" " << (data.view_type == Data::READ_ONLY ?
 						"readonly" : "required") <<  ">\n"
+			"</div>\n"
+			// Account type
+			"<div class=\"field-group\">\n"
+				"<label>Account type</label>\n"
+				"<select name=\"type\"" << (can_change_user_type ? ""
+					: " disabled") << ">"
+					"<option value=\"0\"" << (data.user_type == 0 ? " selected"
+						: "") << ">Admin</option>"
+					"<option value=\"1\"" << (data.user_type == 1 ? " selected"
+						: "") << ">Teacher</option>"
+					"<option value=\"2\"" << (data.user_type > 1 ? " selected"
+						: "") << ">Normal</option>"
+				"</select>\n"
 			"</div>\n"
 			// First Name
 			"<div class=\"field-group\">\n"
