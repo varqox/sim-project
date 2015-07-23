@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	string db_config = argv[1];
-	db_config += "/db.config";
+	db_config += "/.db.config";
 	db_config = abspath(db_config, 0, string::npos, db_config[0] == '/' ? "/" : ".");
 
 	E("db_config: '%s'\n", db_config.c_str());

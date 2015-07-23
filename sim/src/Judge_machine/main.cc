@@ -147,7 +147,7 @@ int main() {
 
 	// Connect to database
 	try {
-		db_conn = DB::createConnectionUsingPassFile("db.config");
+		db_conn = DB::createConnectionUsingPassFile(".db.config");
 
 	} catch (const std::exception& e) {
 		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,

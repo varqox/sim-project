@@ -11,7 +11,7 @@
 
 using std::string;
 
-Sim::Sim() : db_conn_(DB::createConnectionUsingPassFile("db.config")),
+Sim::Sim() : db_conn_(DB::createConnectionUsingPassFile(".db.config")),
 		client_ip_(), req_(NULL), resp_(server::HttpResponse::TEXT),
 		contest(NULL), session(NULL), user(NULL) {
 	// Because of exception safety (we do not want to make memory leak)
