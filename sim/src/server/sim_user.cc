@@ -17,6 +17,41 @@ struct Sim::User::Data {
 	enum ViewType { FULL, READ_ONLY } view_type;
 };
 
+class Sim::User::TemplateWithMenu : public Template {
+public:
+	TemplateWithMenu(Sim& sim, const string& user_id, const std::string& title,
+		const std::string& styles = "", const std::string& scripts = "");
+
+	void printUser(const Data& data);
+};
+
+Sim::User::TemplateWithMenu::TemplateWithMenu(Sim& sim, const string& user_id,
+	const string& title, const string& styles, const string& scripts)
+		: Sim::Template(sim, title, ".body{margin-left:190px}" + styles,
+			scripts) {
+	if (sim.session->open() != Session::OK)
+		return;
+
+	*this << "<ul class=\"menu\">\n"
+			"<span>YOUR ACCOUNT</span>"
+			"<a href=\"/u/" << sim.session->user_id << "\">Edit profile</a>\n"
+			"<a href=\"/u/" << sim.session->user_id << "/change-password\">"
+				"Change password</a>\n";
+
+	if (sim.session->user_id != user_id)
+		*this << "<span>VIEWED ACCOUNT</span>"
+			"<a href=\"/u/" << user_id << "\">Edit profile</a>\n"
+			"<a href=\"/u/" << user_id << "/change-password\">Change password"
+				"</a>\n";
+
+	*this << "</ul>";
+}
+
+void Sim::User::TemplateWithMenu::printUser(const Data& data) {
+	*this << "<h4><a href=\"/u/" << data.user_id << "\">" << data.username << "</a>"
+		<< " (" << data.first_name << " " << data.last_name << ")</h4>\n";
+}
+
 void Sim::User::handle() {
 	if (sim_.session->open() != Session::OK)
 		return sim_.redirect("/login" + sim_.req_->target);
@@ -67,13 +102,16 @@ void Sim::User::handle() {
 				(sim_.session->user_type == 0 && sim_.session->user_id != "1"))
 		data.view_type = Data::READ_ONLY;
 
+	// Change password
+	if (compareTo(sim_.req_->target, arg_beg, '/', "change-password") == 0)
+		return changePassword(data);
+
 	// Delete account
 	if (compareTo(sim_.req_->target, arg_beg, '/', "delete") == 0)
-		deleteAccount(data);
+		return deleteAccount(data);
 
 	// Edit account
-	else
-		editProfile(data);
+	editProfile(data);
 }
 
 void Sim::User::login() {
@@ -122,24 +160,24 @@ void Sim::User::login() {
 
 	Template templ(sim_, "Login");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
-				"<h1>Log in</h1>\n"
-				"<form method=\"post\">\n"
-					// Username
-					"<div class=\"field-group\">\n"
-						"<label>Username</label>\n"
-						"<input type=\"text\" name=\"username\" value=\""
-							<< htmlSpecialChars(username) << "\" size=\"24\" "
-							"maxlength=\"30\" required>\n"
-					"</div>\n"
-					// Password
-					"<div class=\"field-group\">\n"
-						"<label>Password</label>\n"
-						"<input type=\"password\" name=\"password\" "
-							"size=\"24\">\n"
-					"</div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Log in\">\n"
-				"</form>\n"
-				"</div>\n";
+			"<h1>Log in</h1>\n"
+			"<form method=\"post\">\n"
+				// Username
+				"<div class=\"field-group\">\n"
+					"<label>Username</label>\n"
+					"<input type=\"text\" name=\"username\" value=\""
+						<< htmlSpecialChars(username) << "\" size=\"24\" "
+						"maxlength=\"30\" required>\n"
+				"</div>\n"
+				// Password
+				"<div class=\"field-group\">\n"
+					"<label>Password</label>\n"
+					"<input type=\"password\" name=\"password\" "
+						"size=\"24\">\n"
+				"</div>\n"
+				"<input class=\"btn\" type=\"submit\" value=\"Log in\">\n"
+			"</form>\n"
+		"</div>\n";
 }
 
 void Sim::User::logout() {
@@ -204,48 +242,124 @@ void Sim::User::signUp() {
 
 	Template templ(sim_, "Register");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
-		"<h1>Register</h1>\n"
-		"<form method=\"post\">\n"
-			// Username
-			"<div class=\"field-group\">\n"
-				"<label>Username</label>\n"
-				"<input type=\"text\" name=\"username\" value=\""
-					<< htmlSpecialChars(username) << "\" size=\"24\" "
-					"maxlength=\"30\" required>\n"
-			"</div>\n"
-			// First Name
-			"<div class=\"field-group\">\n"
-				"<label>First name</label>\n"
-				"<input type=\"text\" name=\"first_name\" value=\""
-					<< htmlSpecialChars(first_name) << "\" size=\"24\" "
-					"maxlength=\"60\" required>\n"
-			"</div>\n"
-			// Last name
-			"<div class=\"field-group\">\n"
-				"<label>Last name</label>\n"
-				"<input type=\"text\" name=\"last_name\" value=\""
-					<< htmlSpecialChars(last_name) << "\" size=\"24\" "
-					"maxlength=\"60\" required>\n"
-			"</div>\n"
-			// Email
-			"<div class=\"field-group\">\n"
-				"<label>Email</label>\n"
-				"<input type=\"email\" name=\"email\" value=\""
-					<< htmlSpecialChars(email) << "\" size=\"24\" "
-					"maxlength=\"60\" required>\n"
-			"</div>\n"
-			// Password
-			"<div class=\"field-group\">\n"
-				"<label>Password</label>\n"
-				"<input type=\"password\" name=\"password1\" size=\"24\">\n"
-			"</div>\n"
-			// Password (repeat)
-			"<div class=\"field-group\">\n"
-				"<label>password (repeat)</label>\n"
-				"<input type=\"password\" name=\"password2\" size=\"24\">\n"
-			"</div>\n"
-			"<input class=\"btn\" type=\"submit\" value=\"Sign up\">\n"
-		"</form>\n"
+			"<h1>Register</h1>\n"
+			"<form method=\"post\">\n"
+				// Username
+				"<div class=\"field-group\">\n"
+					"<label>Username</label>\n"
+					"<input type=\"text\" name=\"username\" value=\""
+						<< htmlSpecialChars(username) << "\" size=\"24\" "
+						"maxlength=\"30\" required>\n"
+				"</div>\n"
+				// First Name
+				"<div class=\"field-group\">\n"
+					"<label>First name</label>\n"
+					"<input type=\"text\" name=\"first_name\" value=\""
+						<< htmlSpecialChars(first_name) << "\" size=\"24\" "
+						"maxlength=\"60\" required>\n"
+				"</div>\n"
+				// Last name
+				"<div class=\"field-group\">\n"
+					"<label>Last name</label>\n"
+					"<input type=\"text\" name=\"last_name\" value=\""
+						<< htmlSpecialChars(last_name) << "\" size=\"24\" "
+						"maxlength=\"60\" required>\n"
+				"</div>\n"
+				// Email
+				"<div class=\"field-group\">\n"
+					"<label>Email</label>\n"
+					"<input type=\"email\" name=\"email\" value=\""
+						<< htmlSpecialChars(email) << "\" size=\"24\" "
+						"maxlength=\"60\" required>\n"
+				"</div>\n"
+				// Password
+				"<div class=\"field-group\">\n"
+					"<label>Password</label>\n"
+					"<input type=\"password\" name=\"password1\" size=\"24\">\n"
+				"</div>\n"
+				// Password (repeat)
+				"<div class=\"field-group\">\n"
+					"<label>Password (repeat)</label>\n"
+					"<input type=\"password\" name=\"password2\" size=\"24\">\n"
+				"</div>\n"
+				"<input class=\"btn\" type=\"submit\" value=\"Sign up\">\n"
+			"</form>\n"
+		"</div>\n";
+}
+
+void Sim::User::changePassword(Data& data) {
+	if (data.view_type == Data::READ_ONLY)
+		return sim_.error403();
+
+	FormValidator fv(sim_.req_->form_data);
+	if (sim_.req_->method == server::HttpRequest::POST) {
+		// Validate all fields
+		string old_password, password1, password2;
+		fv.validate(old_password, "old_password", "Old password");
+		if (fv.validate(password1, "password1", "New password") &&
+				fv.validate(password2, "password2", "New password (repeat)") &&
+				password1 != password2)
+			fv.addError("Passwords don't match");
+
+		// If all fields are ok
+		if (fv.noErrors())
+			try {
+				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+					prepareStatement("SELECT password FROM users WHERE id=?"));
+				pstmt->setString(1, data.user_id);
+
+				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+				if (!res->next())
+					fv.addError("Cannot get user password");
+
+				else if (sha256(old_password) != res->getString(1))
+						fv.addError("Wrong password");
+
+				else {
+					pstmt.reset(sim_.db_conn()->prepareStatement(
+						"UPDATE users SET password=? WHERE id=?"));
+					pstmt->setString(1, sha256(password1));
+					pstmt->setString(2, data.user_id);
+
+					if (pstmt->executeUpdate() == 1 ||
+							old_password == password1)
+						fv.addError("Update successful");
+					else
+						fv.addError("Update failed");
+				}
+
+			} catch (const std::exception& e) {
+				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+					__LINE__, e.what());
+
+			} catch (...) {
+				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			}
+	}
+
+	TemplateWithMenu templ(sim_, data.user_id, "Change password");
+	templ.printUser(data);
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+			"<h1>Change password</h1>\n"
+			"<form method=\"post\">\n"
+				// Old password
+				"<div class=\"field-group\">\n"
+					"<label>Old password</label>\n"
+					"<input type=\"password\" name=\"old_password\" "
+						"size=\"24\">\n"
+				"</div>\n"
+				// New password
+				"<div class=\"field-group\">\n"
+					"<label>New password</label>\n"
+					"<input type=\"password\" name=\"password1\" size=\"24\">\n"
+				"</div>\n"
+				// New password (repeat)
+				"<div class=\"field-group\">\n"
+					"<label>New password (repeat)</label>\n"
+					"<input type=\"password\" name=\"password2\" size=\"24\">\n"
+				"</div>\n"
+				"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
+			"</form>\n"
 		"</div>\n";
 }
 
@@ -291,7 +405,8 @@ void Sim::User::editProfile(Data& data) {
 			}
 	}
 
-	Template templ(sim_, "");
+	TemplateWithMenu templ(sim_, data.user_id, "Edit profile");
+	templ.printUser(data);
 	templ << fv.errors() << "<div class=\"form-container\">\n"
 		"<h1>Edit account</h1>\n"
 		"<form method=\"post\">\n"
@@ -344,7 +459,8 @@ void Sim::User::deleteAccount(Data& data) {
 	FormValidator fv(sim_.req_->form_data);
 	// Deleting "root" account (id 1) is forbidden
 	if (data.user_id == "1") {
-		Template templ(sim_, "Delete account");
+		TemplateWithMenu templ(sim_, data.user_id, "Delete account");
+		templ.printUser(data);
 		templ << "<h1>You cannot delete SIM root account</h1>";
 		return;
 	}
@@ -398,17 +514,16 @@ void Sim::User::deleteAccount(Data& data) {
 					__LINE__);
 			}
 
-	Template templ(sim_, "Delete account");
+	TemplateWithMenu templ(sim_, data.user_id, "Delete account");
+	templ.printUser(data);
 	templ << fv.errors() << "<div class=\"form-container\">\n"
 			"<h1>Delete account</h1>\n"
 			"<form method=\"post\">\n"
-				"<div class=\"field-group\">\n"
-					"<label>Are you sure to delete account <a href=\"/u/"
-						<< data.user_id << "\">"
-						<< htmlSpecialChars(data.username) << "</a>, all its "
-						"submissions and change owner of its contests and "
-						"problems to SIM root?</label>\n"
-				"</div>\n"
+				"<label class=\"field\">Are you sure to delete account "
+					"<a href=\"/u/" << data.user_id << "\">"
+					<< htmlSpecialChars(data.username) << "</a>, all its "
+					"submissions and change owner of its contests and "
+					"problems to SIM root?</label>\n"
 				"<div class=\"submit-yes-no\">\n"
 					"<button class=\"btn-danger\" type=\"submit\" "
 						"name=\"delete\">Yes, I'm sure</button>\n"

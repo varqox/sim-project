@@ -15,12 +15,16 @@ private:
 
 	struct Data;
 
+	class TemplateWithMenu;
+
 	// Pages
 	void login();
 
 	void logout();
 
 	void signUp();
+
+	void changePassword(Data& data);
 
 	void editProfile(Data& data);
 

@@ -72,7 +72,10 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		};
 
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-			prepareStatement("SELECT id, parent, problem_id, access, name, owner, visible, begins, ends, full_results FROM rounds WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR id=(SELECT grandparent FROM rounds WHERE id=?)"));
+			prepareStatement("SELECT id, parent, problem_id, access, name, "
+				"owner, visible, begins, ends, full_results FROM rounds "
+				"WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR "
+					"id=(SELECT grandparent FROM rounds WHERE id=?)"));
 		pstmt->setString(1, round_id);
 		pstmt->setString(2, round_id);
 		pstmt->setString(3, round_id);
@@ -120,7 +123,8 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 				}
 
 				pstmt.reset(sim_.db_conn()->
-					prepareStatement("SELECT user_id FROM users_to_contests WHERE user_id=? AND contest_id=?"));
+					prepareStatement("SELECT user_id FROM users_to_contests "
+						"WHERE user_id=? AND contest_id=?"));
 				pstmt->setString(1, sim_.session->user_id);
 				pstmt->setString(2, r_path->contest->id);
 
@@ -160,7 +164,8 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 		try {
 			// Check if user has more privileges than the owner
 			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
-				prepareStatement("SELECT id, type FROM users WHERE id=? OR id=?"));
+				prepareStatement("SELECT id, type FROM users "
+					"WHERE id=? OR id=?"));
 			pstmt->setString(1, r_path.contest->owner);
 			pstmt->setString(2, sim.session->user_id);
 
@@ -217,12 +222,15 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 				"<a href=\"/c/" << round_id << "/edit\">Edit round</a>\n";
 
 		else // sim_contest.r_path_.type == PROBLEM
-			*this << "<a href=\"/c/" << round_id << "/edit\">Edit problem</a>\n";
+			*this << "<a href=\"/c/" << round_id << "/edit\">Edit problem</a>"
+				"\n";
 
 		*this << "<a href=\"/c/" << round_id << "\">Dashboard</a>\n"
 				"<a href=\"/c/" << round_id << "/problems\">Problems</a>\n"
-				"<a href=\"/c/" << round_id << "/submit\">Submit a solution</a>\n"
-				"<a href=\"/c/" << round_id << "/submissions\">Submissions</a>\n"
+				"<a href=\"/c/" << round_id << "/submit\">Submit a solution</a>"
+					"\n"
+				"<a href=\"/c/" << round_id << "/submissions\">Submissions</a>"
+					"\n"
 				"<span>OBSERVER MENU</span>\n";
 	}
 
@@ -245,8 +253,9 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 
 void Sim::Contest::TemplateWithMenu::printRoundPath(const RoundPath& r_path,
 		const string& page) {
-	*this << "<div class=\"round-path\"><a href=\"/c/" << r_path.contest->id << "/"
-		<< page << "\">" << htmlSpecialChars(r_path.contest->name) << "</a>";
+	*this << "<div class=\"round-path\"><a href=\"/c/" << r_path.contest->id <<
+		"/" << page << "\">" << htmlSpecialChars(r_path.contest->name)
+		<< "</a>";
 
 	if (r_path.type != CONTEST) {
 		*this << " -> <a href=\"/c/" << r_path.round->id << "/" << page << "\">"
@@ -270,15 +279,18 @@ struct SubroundExtended {
 } // anonymous namespace
 
 void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
-	bool link_to_problem_statement, bool admin_view) {
-
+		bool link_to_problem_statement, bool admin_view) {
 	try {
 		if (r_path.type == CONTEST) {
 			// Select subrounds
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
 				prepareStatement(admin_view ?
-					"SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? ORDER BY item"
-					: "SELECT id, name, item, visible, begins, ends, full_results FROM rounds WHERE parent=? AND (visible=1 OR begins IS NULL OR begins<=?) ORDER BY item"));
+					"SELECT id, name, item, visible, begins, ends, "
+						"full_results FROM rounds WHERE parent=? ORDER BY item"
+					: "SELECT id, name, item, visible, begins, ends, "
+						"full_results FROM rounds WHERE parent=? AND "
+							"(visible=1 OR begins IS NULL OR begins<=?) "
+						"ORDER BY item"));
 			pstmt->setString(1, r_path.contest->id);
 			if (!admin_view)
 				pstmt->setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
@@ -302,7 +314,8 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 
 			// Select problems
 			pstmt.reset(sim_.db_conn()->
-				prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
+				prepareStatement("SELECT id, parent, name FROM rounds "
+					"WHERE grandparent=? ORDER BY item"));
 			pstmt->setString(1, r_path.contest->id);
 
 			res.reset(pstmt->executeQuery());
@@ -316,8 +329,9 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 			while (res->next()) {
 				// Get reference to proper vector<Problem>
 				__typeof(problems.begin()) it =
-						problems.find(res->getString(2));
-				if (it == problems.end()) // Problem parent is not visible or database error
+					problems.find(res->getString(2));
+				// If problem parent is not visible or database error
+				if (it == problems.end())
 					continue; // Ignore
 
 				vector<Problem>& prob = it->second;
@@ -369,7 +383,8 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 
 			// Select problems
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-				prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
+				prepareStatement("SELECT id, name FROM rounds WHERE parent=? "
+					"ORDER BY item"));
 			pstmt->setString(1, r_path.round->id);
 
 			// List problems

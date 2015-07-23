@@ -672,6 +672,11 @@ a.btn-danger{
 	font-size: 16px;
 	font-weight: normal;
 }
+.body h4{
+	margin: 5px 0;
+	font-size: 14px;
+	font-weight: normal;
+}
 .btn-small{
 	color: #000000;
 	outline: none;
@@ -739,12 +744,13 @@ a.btn-danger{
 	padding: 55px 10px 0;
 	border-right: 1px solid #ccc;
 	height: 100%;
+	min-width: 160px;
 	display: flex;
 	-webkit-flex-flow: column wrap;
 	flex-flow: column wrap;
 }
 .menu > a{
-	padding: 7px 5px 7px 5px;
+	padding: 7px 10px 7px 5px;
 }
 .menu > a:focus, .menu > a:hover{
 	text-decoration: none;
@@ -756,6 +762,9 @@ a.btn-danger{
 	font-size: 12px;
 	color: #555555;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
+}
+.menu > span:first-child {
+	margin-top: 0;
 }
 .contests-list{
 	min-width: 25em;
@@ -1017,7 +1026,7 @@ table.submissions td{
 }
 .form-container h1{
 	text-align: center;
-	margin: 0.67em 0;
+	margin: 0.67em 0.7em;
 }
 .form-container h4{
 	font-size: 19px;
@@ -1033,7 +1042,10 @@ table.submissions td{
 	-webkit-flex-flow: column nowrap;
 	flex-flow: column nowrap;
 }
-.form-container .field-group {
+.form-container form > .field{
+	margin-bottom: 15px;
+}
+.form-container form > .field-group{
 	margin-bottom: 15px;
 	display: flex;
 	-webkit-flex-flow: row nowrap;
@@ -1042,12 +1054,12 @@ table.submissions td{
 	align-items: center;
 	min-height: 30px;
 }
-.form-container form .field-group > *{
+.form-container form > .field-group > *{
 	margin-left: 10px;
 }
-.form-container form .field-group > :first-child{
+.form-container form > .field-group > :first-child{
 	margin: 0 10px 0 0;
-	min-width: 120px;
+	width: 120px;
 	text-align: right;
 	font-size: 14px;
 }
