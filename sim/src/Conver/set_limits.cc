@@ -38,8 +38,11 @@ static void assignPoints() {
 int setLimits(const string& package_path) {
 	// Compile checker
 	if (compile(package_path + "check/" + conf_cfg.checker, "checker",
-			(VERBOSITY >> 1) + 1) != 0)
+			(VERBOSITY >> 1) + 1, NULL, 0, PROOT_PATH) != 0) {
+		if (VERBOSITY == 1)
+			eprintf("Checker compilation failed.\n");
 		return 1;
+	}
 
 	if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
 		// Set time limits on tests
@@ -61,8 +64,11 @@ int setLimits(const string& package_path) {
 	}
 
 	if (compile(package_path + "prog/" + conf_cfg.solution, "exec",
-			(VERBOSITY >> 1) + 1) != 0)
+			(VERBOSITY >> 1) + 1, NULL, 0, PROOT_PATH) != 0) {
+		if (VERBOSITY == 1)
+			eprintf("Solution compilation failed.\n");
 		return 2;
+	}
 
 	// Set limits
 	// Prepare runtime environment

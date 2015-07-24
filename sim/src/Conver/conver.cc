@@ -22,6 +22,7 @@ unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
 unsigned long long MEMORY_LIMIT = 64 << 10; // 64 MB (in kB)
 unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10s
 unsigned long long TIME_LIMIT = 0; // Not set
+string PROOT_PATH = "proot"; // Search for PRoot in system
 UniquePtr<directory_tree::node> package_tree_root;
 ProblemConfig conf_cfg;
 
@@ -355,6 +356,10 @@ int main(int argc, char *argv[]) {
 		free(buff);
 	}
 	E("CWD: '%s'\n", old_working_dir.c_str());
+
+	// If PRoot is available locally, change PROOT_PATH
+	if (access("proot", F_OK) == 0)
+		PROOT_PATH = old_working_dir + "proot";
 
 	// Change current working directory to tmp_dir
 	if (chdir(tmp_dir->name()) == -1) {
