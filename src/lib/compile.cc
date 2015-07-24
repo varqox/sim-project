@@ -9,7 +9,7 @@ using std::string;
 using std::vector;
 
 int compile(const string& source, const string& exec, unsigned verbosity,
-		string* c_errors, size_t c_errors_max_len) {
+		string* c_errors, size_t c_errors_max_len, const string& proot_path) {
 	int cef = -1;
 	if (c_errors) {
 		cef = getUnlinkedTmpFile();
@@ -40,7 +40,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	*  unwanted files)
 	*/
 	const char* args[] = {
-		"proot",
+		proot_path.c_str(),
 		"-v", "-1",
 		"-r", tmp_dir.name(),
 		"-b", "/usr",
@@ -56,9 +56,10 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"-static",
 		"-lm",
 		"-m32",
-		NULL,
+		NULL
 	};
 
+	// TODO: add compilation time limit
 	// Run compiler
 	spawn_opts sopts = { -1, -1, cef };
 	int compile_status = spawn(args[0], args, &sopts);
@@ -66,7 +67,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	// Check for errors
 	if (compile_status != 0) {
 		if (verbosity > 1)
-			printf("Failed.\n");
+			printf("Failed with code: %i.\n", compile_status);
 
 		if (c_errors)
 			*c_errors = getFileContents(cef, 0, c_errors_max_len);

@@ -76,13 +76,14 @@ JudgeResult judge(string submission_id, string problem_id) {
 	string compile_errors;
 	if (0 != compile("solutions/" + submission_id + ".cpp",
 			tmp_dir->sname() + "exec", (VERBOSITY >> 1) + 1, &compile_errors,
-			COMPILE_ERRORS_MAX_LENGTH))
+			COMPILE_ERRORS_MAX_LENGTH, "./proot"))
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			convertString(htmlSpecialChars(compile_errors)) };
 
 	// Compile checker
 	if (0 != compile(package_path + "check/" + pconf.checker,
-			tmp_dir->sname() + "checker", (VERBOSITY >> 1) + 1))
+			tmp_dir->sname() + "checker", (VERBOSITY >> 1) + 1, NULL, 0,
+			"./proot"))
 		return (JudgeResult){ JudgeResult::CERROR, 0,
 			"Checker compilation error" };
 

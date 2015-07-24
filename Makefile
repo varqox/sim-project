@@ -14,7 +14,6 @@ install: all
 	@printf "\033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
 	# Installation
-	@if test `whoami` != "root"; then printf "\033[01;31mYou have to run it as root!\033[0m\n"; exit 1; fi
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/submissions/)
@@ -23,9 +22,9 @@ install: all
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
-	$(UPDATE) bin/proot-x86_64 /usr/local/bin/proot
+	$(UPDATE) bin/proot-x86_64 $(abspath $(DESTDIR)/proot)
 else
-	$(UPDATE) bin/proot-x86 /usr/local/bin/proot
+	$(UPDATE) bin/proot-x86 $(abspath $(DESTDIR)/proot)
 endif
 
 	# Set database pass
@@ -41,11 +40,9 @@ endif
 	- src/setup-install $(abspath $(DESTDIR))
 
 	# Set owner, group and permission bits
-	- useradd -M -r -s /usr/sbin/nologin sim
 	src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
-	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/CTH)
-	chown -R sim:sim $(abspath $(DESTDIR))
+	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/CTH) $(abspath $(DESTDIR)/proot)
 
 	@printf "\033[;32mInstallation finished\033[0m\n"
 
@@ -53,6 +50,11 @@ endif
 reinstall:
 	$(RM) $(abspath $(DESTDIR)/.db.config)
 	$(MAKE) install
+
+.PHONY: run
+run:
+	cd $(DESTDIR) && ./judge-machine&
+	cd $(DESTDIR) && ./sim-server&
 
 .PHONY: clean
 clean:
