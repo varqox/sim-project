@@ -42,4 +42,42 @@ public:
  */
 Connection* createConnectionUsingPassFile(const char* filename) throw();
 
+/**
+ * @brief Transaction wrapper
+ */
+class Transaction {
+	static const int AUTOCOMMIT = 1;
+	static const int COMMIT = 2;
+	char flag;
+	Connection& conn;
+
+public:
+	/**
+	 * @brief Construct transaction
+	 *
+	 * @param c connection to use
+	 * @param to_commit whether commit at destruction or not
+	 */
+	Transaction(Connection& c, bool to_commit = false)
+		: flag((c.mysql()->getAutoCommit() ? AUTOCOMMIT : 0) |
+			(to_commit ? COMMIT : 0)), conn(c) {
+		c.mysql()->setAutoCommit(false);
+	}
+
+	// Set transaction to commit at destruction
+	void toCommit() { flag |= COMMIT; }
+
+	// Set transaction to rollback at destruction
+	void toRollback() { flag &= ~COMMIT; }
+
+	~Transaction() {
+		if (flag & COMMIT)
+			conn.mysql()->commit();
+		else
+			conn.mysql()->rollback();
+
+		conn.mysql()->setAutoCommit(flag & AUTOCOMMIT);
+	}
+};
+
 } // namespace DB

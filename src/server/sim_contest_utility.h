@@ -4,8 +4,9 @@
 #include "sim_template.h"
 
 struct Sim::Contest::Round {
-	std::string id, parent, problem_id, access, name, owner, visible;
+	std::string id, parent, problem_id, access, name, owner;
 	std::string begins, ends, full_results;
+	bool visible;
 };
 
 struct Sim::Contest::Subround {

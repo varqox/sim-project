@@ -135,7 +135,6 @@ void Sim::User::login() {
 				pstmt->setString(2, sha256(password));
 
 				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-
 				if (res->next()) {
 					// Delete old sessions
 					sim_.session->open();

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fcntl.h>
 #include <string>
 #include <sys/stat.h>
@@ -189,6 +190,17 @@ inline int access(const std::string& pathname, int mode) {
 	return access(pathname.c_str(), mode);
 }
 
+
+/**
+ * @brief Moves file from @p oldpath to @p newpath
+ * @details First creates directory containing @p newpath and then uses
+ * rename(2) to move file/directory
+ *
+ * @param oldpath path to file/directory
+ * @param newpath location
+ *
+ * @return Return value of rename(2)
+ */
 inline int move(const std::string& oldpath, const std::string& newpath) {
 	size_t x = newpath.find_last_of('/');
 	if (x != std::string::npos)
@@ -400,3 +412,60 @@ int putFileContents(const char* file, const char* data, size_t len = -1);
 inline int putFileContents(const std::string& file, const std::string& data) {
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
+
+template<int (*func)(const char*)>
+class RemoverBase {
+	char* name;
+
+	RemoverBase(const RemoverBase&);
+	RemoverBase& operator=(const RemoverBase&);
+
+public:
+	explicit RemoverBase(const char* str) : name(strdup(str)) {}
+
+	explicit RemoverBase(const std::string& str) {
+		size_t len = str.size();
+		name = new char[len + 1];
+		name[len] = '\0';
+		strncpy(name, str.data(), len);
+	}
+
+	RemoverBase(const char* str, size_t len) {
+		name = new char[len + 1];
+		strncpy(name, str, len + 1);
+	}
+
+	~RemoverBase() { func(name); }
+
+	void cancel() {
+		free(name);
+		name = NULL;
+	}
+
+	void reset(const char* str) {
+		if (name)
+			free(name);
+		name = strdup(str);
+	}
+
+	void reset(const char* str, size_t len) {
+		if (name)
+			free(name);
+		name = new char[len + 1];
+		strncpy(name, str, len + 1);
+	}
+
+	void reset(const std::string& str) {
+		if (name)
+			free(name);
+		size_t len = str.size();
+		name = new char[len + 1];
+		name[len] = '\0';
+		strncpy(name, str.data(), len);
+	}
+
+	int removeTarget() { return func(name); }
+};
+
+typedef RemoverBase<unlink> FileRemover;
+typedef RemoverBase<remove_r> DirectoryRemover;

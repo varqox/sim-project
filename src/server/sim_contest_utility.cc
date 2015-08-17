@@ -64,7 +64,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 				r->access = res->getString(4);
 				r->name = res->getString(5);
 				r->owner = res->getString(6);
-				r->visible = res->getString(7);
+				r->visible = res->getBoolean(7);
 				r->begins = res->getString(8);
 				r->ends = res->getString(9);
 				r->full_results = res->getString(10);
@@ -155,43 +155,38 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 }
 
 bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
-	// If is logged in
-	if (sim.session->open() == Sim::Session::OK) {
-		// User is the owner of the contest
-		if (r_path.contest->owner == sim.session->user_id)
-			return true;
+	// If is not logged in, he cannot be admin
+	if (sim.session->open() != Sim::Session::OK)
+		return false;
 
-		try {
-			// Check if user has more privileges than the owner
-			UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->
-				prepareStatement("SELECT id, type FROM users "
-					"WHERE id=? OR id=?"));
-			pstmt->setString(1, r_path.contest->owner);
-			pstmt->setString(2, sim.session->user_id);
+	// User is the owner of the contest
+	if (r_path.contest->owner == sim.session->user_id)
+		return true;
 
-			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-			if (res->rowsCount() == 2) {
-				int owner_type = 0, user_type = 4;
+	try {
+		// Check if user has more privileges than the owner
+		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
+			"SELECT id, type FROM users WHERE id=? OR id=?"));
+		pstmt->setString(1, r_path.contest->owner);
+		pstmt->setString(2, sim.session->user_id);
 
-				for (int i = 0; i < 2; ++i) {
-					res->next();
-
-					if (res->getString(1) == r_path.contest->owner)
-						owner_type = res->getUInt(2);
-					else
-						user_type = res->getUInt(2);
-				}
-
-				return owner_type > user_type;
-			}
-
-		} catch (const std::exception& e) {
-			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-				e.what());
-
-		} catch (...) {
-			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		int owner_type = 0, user_type = 4;
+		for (int i = 0; i < 2 && res->next(); ++i) {
+			if (res->getString(1) == r_path.contest->owner)
+				owner_type = res->getUInt(2);
+			else
+				user_type = res->getUInt(2);
 		}
+
+		return owner_type > user_type;
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
 
 	return false;
@@ -273,7 +268,8 @@ void Sim::Contest::TemplateWithMenu::printRoundPath(const RoundPath& r_path,
 namespace {
 
 struct SubroundExtended {
-	string id, name, item, visible, begins, ends, full_results;
+	string id, name, item, begins, ends, full_results;
+	bool visible;
 };
 
 } // anonymous namespace
@@ -306,7 +302,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 				subrounds.back().id = res->getString(1);
 				subrounds.back().name = res->getString(2);
 				subrounds.back().item = res->getString(3);
-				subrounds.back().visible = res->getString(4);
+				subrounds.back().visible = res->getBoolean(4);
 				subrounds.back().begins = res->getString(5);
 				subrounds.back().ends = res->getString(6);
 				subrounds.back().full_results = res->getString(7);

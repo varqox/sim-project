@@ -69,7 +69,8 @@ int main(int argc, char *argv[]) {
 
 				// Add default user sim with password sim
 				UniquePtr<sql::PreparedStatement> pstmt(conn->
-					prepareStatement("INSERT IGNORE INTO users (username, password, type) VALUES ('sim', ?, 0)"));
+					prepareStatement("INSERT IGNORE INTO users "
+						"(username, password, type) VALUES ('sim', ?, 0)"));
 				pstmt->setString(1, sha256("sim"));
 				pstmt->executeUpdate();
 
@@ -93,7 +94,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n");
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `session`\e[m - %s\n", e.what());
+			eprintf("\e[31mFailed to create table `session`\e[m - %s\n",
+				e.what());
 			error = true;
 		}
 
@@ -110,7 +112,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `problems`\e[m - %s\n", e.what());
+			eprintf("\e[31mFailed to create table `problems`\e[m - %s\n",
+				e.what());
 			error = true;
 		}
 
@@ -138,7 +141,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `rounds`\e[m - %s\n", e.what());
+			eprintf("\e[31mFailed to create table `rounds`\e[m - %s\n",
+				e.what());
 			error = true;
 		}
 
@@ -152,7 +156,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `users_to_rounds`\e[m - %s\n", e.what());
+			eprintf("\e[31mFailed to create table `users_to_rounds`\e[m - %s\n",
+				e.what());
 			error = true;
 		}
 
@@ -176,7 +181,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `submissions`\e[m - %s\n", e.what());
+			eprintf("\e[31mFailed to create table `submissions`\e[m - %s\n",
+				e.what());
 			error = true;
 		}
 
@@ -197,7 +203,8 @@ int main(int argc, char *argv[]) {
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `submissions_to_rounds`\e[m - %s\n", e.what());
+			eprintf("\e[31mFailed to create table `submissions_to_rounds`"
+				"\e[m - %s\n", e.what());
 			error = true;
 		}
 

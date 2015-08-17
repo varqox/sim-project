@@ -67,7 +67,7 @@ SIM is open source platform for carrying out algorithmic contests
   make run DESTDIR=where-you-installed-SIM
   ```
 
-  You can combine installation and running command into:
+  You can combine installation and running commands into:
   ```sh
   make install run
 ```
