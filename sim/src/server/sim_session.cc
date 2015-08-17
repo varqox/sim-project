@@ -24,10 +24,11 @@ Sim::Session::State Sim::Session::open() {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
 			prepareStatement(
 				"SELECT user_id, data, type, username, ip, user_agent "
-				"FROM session s, users u WHERE s.id=? AND time>=? AND u.id=s.user_id"));
+				"FROM session s, users u "
+				"WHERE s.id=? AND time>=? AND u.id=s.user_id"));
 		pstmt->setString(1, id_);
 		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
-				time(NULL) - SESSION_MAX_LIFETIME));
+			time(NULL) - SESSION_MAX_LIFETIME));
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 		if (res->next()) {
@@ -56,7 +57,8 @@ Sim::Session::State Sim::Session::open() {
 }
 
 static string generate_id() {
-	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"0123456789";
 	const size_t len = strlen(t), SESSION_ID_LENGTH = 10;
 
 	string res(SESSION_ID_LENGTH, '0');
@@ -97,7 +99,8 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 			}
 		}
 
-		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME, "/", "", true);
+		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME,
+			"/", "", true);
 		state_ = OK;
 
 	} catch (const std::exception& e) {
@@ -123,8 +126,6 @@ void Sim::Session::destroy() {
 		pstmt->setString(1, id_);
 		pstmt->executeUpdate();
 
-		sim_.resp_.setCookie("session", "", 0); // Delete cookie
-
 	} catch (const std::exception& e) {
 		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
 			e.what());
@@ -133,27 +134,28 @@ void Sim::Session::destroy() {
 		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
 	}
 
+	sim_.resp_.setCookie("session", "", 0); // Delete cookie
 	state_ = CLOSED;
 }
 
 void Sim::Session::close() {
-	if (state_ == OK) {
-		try {
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-				prepareStatement("UPDATE session SET data=?, time=? WHERE id=?"));
-			pstmt->setString(1, data);
-			pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
-			pstmt->setString(3, id_);
-			pstmt->executeUpdate();
-
-		} catch (const std::exception& e) {
-			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-				e.what());
-
-		} catch (...) {
-			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-		}
-	}
-
 	state_ = CLOSED;
+	if (state_ != OK)
+		return;
+
+	try {
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			prepareStatement("UPDATE session SET data=?, time=? WHERE id=?"));
+		pstmt->setString(1, data);
+		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
+		pstmt->setString(3, id_);
+		pstmt->executeUpdate();
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
 }

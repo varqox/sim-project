@@ -179,6 +179,7 @@ void Connection::readPOST(HttpRequest& req) {
 		bool first_boundary = true;
 		k = 2; // Because "\r\n" may not exist at the beginning
 
+		// TODO: consider changing structure of while below
 		// While we can read
 		// In each loop pass parse EXACTLY one field
 		while ((c = reader.getChar()) != -1) {
@@ -192,30 +193,25 @@ void Connection::readPOST(HttpRequest& req) {
 				if (first_boundary)
 					first_boundary = false;
 
+				// Manage last field
 				else {
-					// Manage last field
+					// Normal variable
 					if (fd == -1) {
-						/*
-						* This was a normal variable
-						* Guarantee that pos is >= 0
-						* +1 because we did not append the last character to the
-						* boundary
-						*/
-						field_content.erase((field_content.size() <
-							boundary.size() ? 0 :
+						// Erase boundary: +1 because we did not append the last
+						// character to the boundary
+						field_content.erase(
+							(field_content.size() < boundary.size() ? 0 :
 								field_content.size() - boundary.size() + 1));
 						req.form_data[field_name] = field_content;
 
+					// File
 					} else {
-						// This was a file
+						// Get file size
 						fflush(tmp_file);
 						fseek(tmp_file, 0, SEEK_END);
 						size_t tmp_file_size = ftell(tmp_file);
-						/*
-						* Guarantee that length is >= 0
-						* +1 because we did not append the last character to the
-						* boundary
-						*/
+						// Erase boundary: +1 because we did not append the last
+						// character to the boundary
 						ftruncate(fileno(tmp_file),
 							(tmp_file_size < boundary.size() ? 0 :
 								tmp_file_size - boundary.size() + 1));
@@ -227,7 +223,8 @@ void Connection::readPOST(HttpRequest& req) {
 
 				// Prepare next field
 				// Ignore LFCR or "--"
-				if (reader.getChar() == -1 || reader.getChar() == -1) {
+				reader.getChar();
+				if (reader.getChar() == -1) {
 					error400();
 					goto safe_return;
 				}
@@ -245,9 +242,9 @@ void Connection::readPOST(HttpRequest& req) {
 						} else if (field_content.size() > MAX_HEADER_LENGTH) {
 							error431();
 							goto safe_return;
+						}
 
-						} else
-							field_content += c;
+						field_content += c;
 					}
 
 					if (state_ != OK) // Something went wrong
@@ -258,7 +255,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 					E("header: '%s'\n", field_content.c_str());
 					pair<string, string> header =
-							parseHeaderline(field_content);
+						parseHeaderline(field_content);
 					if (state_ != OK) // Something went wrong
 						goto safe_return;
 
@@ -284,9 +281,8 @@ void Connection::readPOST(HttpRequest& req) {
 
 							// extract var_val
 							if (header.second[st] == '=') {
-								// this is safe because last character is always
-								// ';'
-								++st;
+								++st; // this is safe because last character is
+								      // always ';'
 
 								if (header.second[st] == '"')
 									while (++st < last &&
@@ -306,8 +302,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 							// Check for specific values
 							if (var_name == "filename" && fd == -1) {
-								fd = mkstemp(tmp_filename);
-								if (fd == -1) {
+								if ((fd = mkstemp(tmp_filename)) == -1) {
 									error507();
 									goto safe_return;
 								}
@@ -319,7 +314,7 @@ void Connection::readPOST(HttpRequest& req) {
 								field_name = var_val;
 						}
 
-						// Add field to req.form_data
+						// Add file field to req.form_data
 						if (fd != -1) {
 							tmp_file = fdopen(fd, "w");
 							req.form_data.files[field_name] = tmp_filename;

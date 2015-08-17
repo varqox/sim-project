@@ -44,7 +44,8 @@ void Sim::Contest::handle() {
 
 			} else
 				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"SELECT id, name FROM rounds WHERE parent IS NULL AND access='public' ORDER BY id"));
+					"SELECT id, name FROM rounds "
+					"WHERE parent IS NULL AND access='public' ORDER BY id"));
 
 
 			// List them
@@ -57,8 +58,8 @@ void Sim::Contest::handle() {
 				templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
 			while (res->next())
-				templ << "<a href=\"/c/" << htmlSpecialChars(res->getString(1)) << "\">"
-					<< htmlSpecialChars(res->getString(2)) << "</a>\n";
+				templ << "<a href=\"/c/" << htmlSpecialChars(res->getString(1))
+					<< "\">" << htmlSpecialChars(res->getString(2)) << "</a>\n";
 			templ << "</div>\n";
 
 		} catch (const std::exception& e) {
@@ -100,8 +101,8 @@ void Sim::Contest::handle() {
 		if (r_path_->type == PROBLEM &&
 				0 == compareTo(sim_.req_->target, arg_beg, '/', "statement")) {
 			string statement = getFileByLines("problems/" +
-				r_path_->problem->problem_id + "/conf.cfg", GFBL_IGNORE_NEW_LINES,
-				2, 3)[0];
+				r_path_->problem->problem_id + "/conf.cfg",
+				GFBL_IGNORE_NEW_LINES, 2, 3)[0];
 
 			if (isSuffix(statement, ".pdf"))
 				sim_.resp_.headers["Content-type"] = "application/pdf";
@@ -109,12 +110,14 @@ void Sim::Contest::handle() {
 					isSuffix(statement, ".htm"))
 				sim_.resp_.headers["Content-type"] = "text/html";
 			else if (isSuffix(statement, ".txt") || isSuffix(statement, ".md"))
-				sim_.resp_.headers["Content-type"] = "text/plain; charset=utf-8";
+				sim_.resp_.headers["Content-type"] =
+					"text/plain; charset=utf-8";
 
 			sim_.resp_.content_type = server::HttpResponse::FILE;
 			sim_.resp_.content.clear();
-			sim_.resp_.content.append("problems/").append(r_path_->problem->problem_id).
-				append("/doc/").append(statement);
+			sim_.resp_.content.append("problems/").
+				append(r_path_->problem->problem_id).append("/doc/").
+				append(statement);
 			return;
 		}
 
@@ -194,19 +197,26 @@ void Sim::Contest::addContest() {
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-					prepareStatement("INSERT INTO rounds (access, name, owner, item) "
-						"SELECT ?, ?, ?, MAX(item)+1 FROM rounds WHERE parent IS NULL"));
+					prepareStatement("INSERT INTO rounds"
+							"(access, name, owner, item) "
+						"SELECT ?, ?, ?, MAX(item)+1 FROM rounds "
+							"WHERE parent IS NULL"));
 				pstmt->setString(1, is_public ? "public" : "private");
 				pstmt->setString(2, name);
 				pstmt->setString(3, sim_.session->user_id);
 
-				if (pstmt->executeUpdate() == 1) {
-					UniquePtr<sql::Statement> stmt(sim_.db_conn()->createStatement());
-					UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
+				if (pstmt->executeUpdate() != 1)
+					throw std::runtime_error("Failed to insert round");
 
-					if (res->next())
-						return sim_.redirect("/c/" + res->getString(1));
-				}
+				UniquePtr<sql::Statement> stmt(sim_.db_conn()->
+					createStatement());
+				UniquePtr<sql::ResultSet> res(stmt->
+					executeQuery("SELECT LAST_INSERT_ID()"));
+
+				if (res->next())
+					return sim_.redirect("/c/" + res->getString(1));
+
+				return sim_.redirect("/c");
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -225,7 +235,8 @@ void Sim::Contest::addContest() {
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\""
-						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
+						<< htmlSpecialChars(name) << "\" size=\"24\" "
+						"maxlength=\"128\" required>\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
@@ -251,16 +262,22 @@ void Sim::Contest::addRound() {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", 128);
 		is_visible = fv.exist("visible");
-		fv.validate(begins, "begins", "Begins", isDatetimeOrBlank, "Begins: invalid value");
-		fv.validate(ends, "ends", "Ends", isDatetimeOrBlank, "Ends: invalid value");
-		fv.validate(full_results, "full_results", "Ends", isDatetimeOrBlank, "Full_results: invalid value");
+		fv.validate(begins, "begins", "Begins", isDatetimeOrBlank,
+			"Begins: invalid value");
+		fv.validate(ends, "ends", "Ends", isDatetimeOrBlank,
+			"Ends: invalid value");
+		fv.validate(full_results, "full_results", "Ends", isDatetimeOrBlank,
+			"Full_results: invalid value");
 
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-					prepareStatement("INSERT INTO rounds (parent, name, item, visible, begins, ends, full_results) "
-						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds WHERE parent=?"));
+					prepareStatement("INSERT INTO rounds"
+							"(parent, name, item, visible, begins, ends, "
+								"full_results) "
+						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
+							"WHERE parent=?"));
 				pstmt->setString(1, r_path_->round_id);
 				pstmt->setString(2, name);
 				pstmt->setBoolean(3, is_visible);
@@ -285,13 +302,18 @@ void Sim::Contest::addRound() {
 
 				pstmt->setString(7, r_path_->round_id);
 
-				if (pstmt->executeUpdate() == 1) {
-					UniquePtr<sql::Statement> stmt(sim_.db_conn()->createStatement());
-					UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
+				if (pstmt->executeUpdate() != 1)
+					throw std::runtime_error("Failed to insert round");
 
-					if (res->next())
-						return sim_.redirect("/c/" + res->getString(1));
-				}
+				UniquePtr<sql::Statement> stmt(sim_.db_conn()->
+					createStatement());
+				UniquePtr<sql::ResultSet> res(stmt->
+					executeQuery("SELECT LAST_INSERT_ID()"));
+
+				if (res->next())
+					return sim_.redirect("/c/" + res->getString(1));
+
+				return sim_.redirect("/c/" + r_path_->round_id);
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -311,7 +333,8 @@ void Sim::Contest::addRound() {
 			"<div class=\"field-group\">\n"
 				"<label>Round name</label>\n"
 				"<input type=\"text\" name=\"name\" value=\""
-					<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
+					<< htmlSpecialChars(name) << "\" size=\"24\" "
+					"maxlength=\"128\" required>\n"
 			"</div>\n"
 			// Visible
 			"<div class=\"field-group\">\n"
@@ -324,21 +347,24 @@ void Sim::Contest::addRound() {
 				"<label>Begins</label>\n"
 				"<input type=\"text\" name=\"begins\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(begins) << "\" size=\"19\" maxlength=\"19\">\n"
+					<< htmlSpecialChars(begins) << "\" size=\"19\" "
+					"maxlength=\"19\">\n"
 			"</div>\n"
 			// Ends
 			"<div class=\"field-group\">\n"
 				"<label>Ends</label>\n"
 				"<input type=\"text\" name=\"ends\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(ends) << "\" size=\"19\" maxlength=\"19\">\n"
+					<< htmlSpecialChars(ends) << "\" size=\"19\" "
+					"maxlength=\"19\">\n"
 			"</div>\n"
 			// Full_results
 			"<div class=\"field-group\">\n"
 				"<label>Full_results</label>\n"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(full_results) << "\" size=\"19\" maxlength=\"19\">\n"
+					<< htmlSpecialChars(full_results) << "\" size=\"19\" "
+					"maxlength=\"19\">\n"
 			"</div>\n"
 			"<input class=\"btn\" type=\"submit\" value=\"Add\">\n"
 		"</form>\n"
@@ -364,40 +390,30 @@ void Sim::Contest::addProblem() {
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				// Assert that file exists
 				string package_file = fv.getFilePath("package");
 
-				if (0 != access(package_file, R_OK))
-					return sim_.error500();
-
-				// Insert problem
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->prepareStatement(
-						"INSERT INTO problems (owner, added) VALUES(?, ?)"));
-				pstmt->setString(1, sim_.session->user_id);
-				pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
-
-				if (1 != pstmt->executeUpdate())
-					return sim_.error500();
-
-				// Get problem_id
-				UniquePtr<sql::Statement> stmt(sim_.db_conn()->createStatement());
-				UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
-
-				if (!res->next())
-					return sim_.error500();
-
-				string problem_id = res->getString(1);
-
-				// Construct Conver arguments
-				vector<string> args(1, "./conver");
+				// Rename package file that it will end with original extension
 				string new_package_file = package_file + '.' +
 					(isSuffix(user_package_file, ".tar.gz") ? "tar.gz"
 						: getExtension(user_package_file));
+				if (link(package_file.c_str(), new_package_file.c_str()))
+					throw std::runtime_error(string("Error: link() - ") +
+						strerror(errno));
 
-				rename(package_file.c_str(), new_package_file.c_str());
+				FileRemover file_rm(new_package_file);
 
-				append(args)(new_package_file)("-o")("problems/" + problem_id)
-					("-uc")("-q");
+				// Create temporary directory for holding package
+				char package_tmp_dir[] = "/tmp/sim-problem.XXXXXX";
+				if (mkdtemp(package_tmp_dir) == NULL)
+					throw std::runtime_error(string("Error: mkdtemp() - ") +
+						strerror(errno));
+
+				DirectoryRemover rm_tmp_dir(package_tmp_dir);
+
+				// Construct Conver arguments
+				vector<string> args(1, "./conver");
+				append(args)(new_package_file)("-o")(package_tmp_dir)("-uc")
+					("-q");
 
 				if (force_auto_limit)
 					args.push_back("-fal");
@@ -406,74 +422,93 @@ void Sim::Contest::addProblem() {
 					append(args)("-n")(name);
 
 				// Conver stdin, stdout, stderr
-				char tmp_filename[] = "/tmp/sim-conver-errors.XXXXXX";
 				spawn_opts sopt = {
 					-1,
 					-1,
-					mkstemp(tmp_filename)
+					getUnlinkedTmpFile()
 				};
+
+				if (sopt.new_stderr_fd == -1)
+					throw std::runtime_error(
+						string("Error: getUnlinkedTmpFile(): ") +
+						strerror(errno));
 
 				// Convert package
 				if (0 != spawn("./conver", args, &sopt)) {
-					fv.addError("Conver failed - " + (sopt.new_stderr_fd ?
-						getFileContents(tmp_filename) : ""));
-
-					// Remove problem
-					try {
-						pstmt.reset(sim_.db_conn()->prepareStatement("DELETE FROM problems WHERE id=?"));
-						pstmt->setString(1, problem_id);
-						pstmt->executeUpdate();
-
-					// Suppress all exceptions
-					} catch (...) {}
-
-					// Clean
-					remove(new_package_file.c_str());
-
-					if (sopt.new_stderr_fd >= 0) {
-						unlink(tmp_filename);
-						while (close(sopt.new_stderr_fd) == -1 &&
-								errno == EINTR) {}
-					}
-
+					fv.addError("Conver failed - " +
+						getFileContents(sopt.new_stderr_fd));
 					goto form;
 				}
 
-				// Clean
-				remove(new_package_file.c_str());
+				UniquePtr<sql::Statement> stmt(sim_.db_conn()->
+					createStatement());
+				UniquePtr<sql::ResultSet> res;
 
-				if (sopt.new_stderr_fd >= 0) {
-					unlink(tmp_filename);
-					while (close(sopt.new_stderr_fd) == -1 && errno == EINTR) {}
-				}
+				// 'Transaction' begin
+				// Insert problem
+				if (1 != stmt->executeUpdate(
+						"INSERT INTO problems(name, owner, added) "
+						"VALUES('', 0, '')"))
+					throw std::runtime_error("Failed to problem");
 
-				// Update problem name
-				name = getFileByLines("problems/" + problem_id + "/conf.cfg",
-					GFBL_IGNORE_NEW_LINES, 0, 1)[0];
-				pstmt.reset(sim_.db_conn()->prepareStatement("UPDATE problems SET name=? WHERE id=?"));
-				pstmt->setString(1, name);
-				pstmt->setString(2, problem_id);
-				pstmt->executeUpdate();
+				// Get problem_id
+				res.reset(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
+				if (!res->next())
+					throw std::runtime_error("Failed to get LAST_INSERT_ID()");
+
+				string problem_id = res->getString(1);
 
 				// Insert round
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"INSERT INTO rounds (parent, grandparent, name, item, problem_id) "
-					"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds WHERE parent=?"));
-				pstmt->setString(1, r_path_->round->id);
-				pstmt->setString(2, r_path_->contest->id);
-				pstmt->setString(3, name);
-				pstmt->setString(4, problem_id);
-				pstmt->setString(5, r_path_->round->id);
+				if (1 != stmt->executeUpdate(
+						"INSERT INTO rounds(name, owner, item) "
+						"VALUES('', 0, 0)"))
+					throw std::runtime_error("Failed to round");
 
-				if (1 != pstmt->executeUpdate())
-					return sim_.error500();
-
+				// Get round_id
 				res.reset(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
-
 				if (!res->next())
-					return sim_.error500();
+					throw std::runtime_error("Failed to get LAST_INSERT_ID()");
 
-				return sim_.redirect("/c/" + res->getString(1));
+				string round_id = res->getString(1);
+
+				// Get problem name
+				name = getFileByLines(string(package_tmp_dir) +
+					"/conf.cfg", GFBL_IGNORE_NEW_LINES, 0, 1)[0];
+				// Move package folder to problems/
+				if (rename(package_tmp_dir, ("problems/" + problem_id).c_str()))
+					throw std::runtime_error(string("Error: rename() - ") +
+						strerror(errno));
+
+				rm_tmp_dir.reset("problems/" + problem_id);
+
+				// Commit - update problem and round
+				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+					prepareStatement("UPDATE problems p, rounds r,"
+							"(SELECT MAX(item)+1 x FROM rounds "
+								"WHERE parent=?) t "
+						"SET p.name=?, p.owner=?, p.added=?, "
+							"parent=?, grandparent=?, r.name=?, item=t.x, "
+							"problem_id=? "
+						"WHERE p.id=? AND r.id=?"));
+
+				pstmt->setString(1, r_path_->round->id);
+				pstmt->setString(2, name);
+				pstmt->setString(3, sim_.session->user_id);
+				pstmt->setString(4, date("%Y-%m-%d %H:%M:%S"));
+				pstmt->setString(5, r_path_->round->id);
+				pstmt->setString(6, r_path_->contest->id);
+				pstmt->setString(7, name);
+				pstmt->setString(8, problem_id);
+				pstmt->setString(9, problem_id);
+				pstmt->setString(10, round_id);
+
+				if (2 != pstmt->executeUpdate())
+					throw std::runtime_error("Failed to update");
+
+				// Cancel folder deletion
+				rm_tmp_dir.cancel();
+
+				return sim_.redirect("/c/" + round_id);
 
 			} catch (const std::exception& e) {
 				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
@@ -531,7 +566,9 @@ void Sim::Contest::editContest() {
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-					prepareStatement("UPDATE rounds r, (SELECT id FROM users WHERE username=?) u SET name=?, owner=u.id, access=? WHERE r.id=?"));
+					prepareStatement("UPDATE rounds r, (SELECT id FROM users "
+							"WHERE username=?) u "
+						"SET name=?, owner=u.id, access=? WHERE r.id=?"));
 				pstmt->setString(1, owner);
 				pstmt->setString(2, name);
 				pstmt->setString(3, is_public ? "public" : "private");
@@ -558,7 +595,8 @@ void Sim::Contest::editContest() {
 	// Get contest information
 	name = r_path_->contest->name;
 	UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-		prepareStatement("SELECT u.username, r.access FROM rounds r, users u WHERE r.id=? AND r.owner=u.id"));
+		prepareStatement("SELECT u.username, r.access FROM rounds r, users u "
+			"WHERE r.id=? AND r.owner=u.id"));
 	pstmt->setString(1, r_path_->round_id);
 
 	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
@@ -576,13 +614,15 @@ void Sim::Contest::editContest() {
 				"<div class=\"field-group\">\n"
 					"<label>Contest name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\""
-						<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
+						<< htmlSpecialChars(name) << "\" size=\"24\" "
+						"maxlength=\"128\" required>\n"
 				"</div>\n"
 				// Owner
 				"<div class=\"field-group\">\n"
 					"<label>Owner username</label>\n"
 					"<input type=\"text\" name=\"owner\" value=\""
-						<< htmlSpecialChars(owner) << "\" size=\"24\" maxlength=\"30\" required>\n"
+						<< htmlSpecialChars(owner) << "\" size=\"24\" "
+						"maxlength=\"30\" required>\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
@@ -612,15 +652,19 @@ void Sim::Contest::editRound() {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", 128);
 		is_visible = fv.exist("visible");
-		fv.validate(begins, "begins", "Begins", isDatetimeOrBlank, "Begins: invalid value");
-		fv.validate(ends, "ends", "Ends", isDatetimeOrBlank, "Ends: invalid value");
-		fv.validate(full_results, "full_results", "Ends", isDatetimeOrBlank, "Full_results: invalid value");
+		fv.validate(begins, "begins", "Begins", isDatetimeOrBlank,
+			"Begins: invalid value");
+		fv.validate(ends, "ends", "Ends", isDatetimeOrBlank,
+			"Ends: invalid value");
+		fv.validate(full_results, "full_results", "Ends", isDatetimeOrBlank,
+			"Full_results: invalid value");
 
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-					prepareStatement("UPDATE rounds SET name=?, visible=?, begins=?, ends=?, full_results=? WHERE id=?"));
+					prepareStatement("UPDATE rounds SET name=?, visible=?, "
+							"begins=?, ends=?, full_results=? WHERE id=?"));
 				pstmt->setString(1, name);
 				pstmt->setBoolean(2, is_visible);
 
@@ -664,7 +708,7 @@ void Sim::Contest::editRound() {
 
 	// Get round information
 	name = r_path_->round->name;
-	is_visible = r_path_->round->visible != "0";
+	is_visible = r_path_->round->visible;
 	begins = r_path_->round->begins;
 	ends = r_path_->round->ends;
 	full_results = r_path_->round->full_results;
@@ -678,7 +722,8 @@ void Sim::Contest::editRound() {
 			"<div class=\"field-group\">\n"
 				"<label>Round name</label>\n"
 				"<input type=\"text\" name=\"name\" value=\""
-					<< htmlSpecialChars(name) << "\" size=\"24\" maxlength=\"128\" required>\n"
+					<< htmlSpecialChars(name) << "\" size=\"24\" "
+					"maxlength=\"128\" required>\n"
 			"</div>\n"
 			// Visible
 			"<div class=\"field-group\">\n"
@@ -691,21 +736,24 @@ void Sim::Contest::editRound() {
 				"<label>Begins</label>\n"
 				"<input type=\"text\" name=\"begins\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(begins) << "\" size=\"19\" maxlength=\"19\">\n"
+					<< htmlSpecialChars(begins) << "\" size=\"19\" "
+					"maxlength=\"19\">\n"
 			"</div>\n"
 			// Ends
 			"<div class=\"field-group\">\n"
 				"<label>Ends</label>\n"
 				"<input type=\"text\" name=\"ends\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(ends) << "\" size=\"19\" maxlength=\"19\">\n"
+					<< htmlSpecialChars(ends) << "\" size=\"19\" "
+					"maxlength=\"19\">\n"
 			"</div>\n"
 			// Full_results
 			"<div class=\"field-group\">\n"
 				"<label>Full_results</label>\n"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(full_results) << "\" size=\"19\" maxlength=\"19\">\n"
+					<< htmlSpecialChars(full_results) << "\" size=\"19\" "
+					"maxlength=\"19\">\n"
 			"</div>\n"
 			"<div>\n"
 				"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
@@ -751,7 +799,8 @@ void Sim::Contest::deleteContest() {
 
 				// Delete rounds
 				pstmt.reset(sim_.db_conn()->
-					prepareStatement("DELETE FROM rounds WHERE id=? OR parent=? OR grandparent=?"));
+					prepareStatement("DELETE FROM rounds "
+						"WHERE id=? OR parent=? OR grandparent=?"));
 				pstmt->setString(1, r_path_->round_id);
 				pstmt->setString(2, r_path_->round_id);
 				pstmt->setString(3, r_path_->round_id);
@@ -869,6 +918,7 @@ void Sim::Contest::submit(bool admin_view) {
 			fv.addError("Wrong problem round id");
 
 		// If all fields are ok
+		// TODO: "transaction"
 		if (fv.noErrors()) {
 			UniquePtr<RoundPath> path;
 			const RoundPath* problem_r_path = r_path_;
@@ -919,11 +969,14 @@ void Sim::Contest::submit(bool admin_view) {
 				}
 
 				// Get inserted submission id
-				UniquePtr<sql::Statement> stmt(sim_.db_conn()->createStatement());
-				UniquePtr<sql::ResultSet> res(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
+				UniquePtr<sql::Statement> stmt(sim_.db_conn()->
+					createStatement());
+				UniquePtr<sql::ResultSet> res(stmt->
+					executeQuery("SELECT LAST_INSERT_ID()"));
 
 				if (!res->next()) {
-					fv.addError("Database error - failed to get inserted submission id");
+					fv.addError("Database error - failed to get inserted "
+						"submission id");
 					goto form;
 				}
 
@@ -933,7 +986,8 @@ void Sim::Contest::submit(bool admin_view) {
 				copy(solution_tmp_path, "solutions/" + submission_id + ".cpp");
 
 				// Change submission status to 'waiting'
-				stmt->executeUpdate("UPDATE submissions SET status='waiting' WHERE id=" + submission_id);
+				stmt->executeUpdate("UPDATE submissions SET status='waiting' "
+					"WHERE id=" + submission_id);
 
 				// Insert submission to `submissions_to_rounds`
 				pstmt.reset(sim_.db_conn()->prepareStatement(
@@ -997,7 +1051,9 @@ void Sim::Contest::submit(bool admin_view) {
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
 				prepareStatement(admin_view ?
 					"SELECT id, name FROM rounds WHERE parent=? ORDER BY item"
-					: "SELECT id, name FROM rounds WHERE parent=? AND (begins IS NULL OR begins<=?) AND (ends IS NULL OR ?<ends) ORDER BY item"));
+					: "SELECT id, name FROM rounds WHERE parent=? "
+						"AND (begins IS NULL OR begins<=?) "
+						"AND (ends IS NULL OR ?<ends) ORDER BY item"));
 			pstmt->setString(1, r_path_->contest->id);
 			if (!admin_view) {
 				pstmt->setString(2, current_date);
@@ -1017,8 +1073,9 @@ void Sim::Contest::submit(bool admin_view) {
 			}
 
 			// Select problems
-			pstmt.reset(sim_.db_conn()->
-					prepareStatement("SELECT id, parent, name FROM rounds WHERE grandparent=? ORDER BY item"));
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"SELECT id, parent, name FROM rounds WHERE grandparent=? "
+				"ORDER BY item"));
 			pstmt->setString(1, r_path_->contest->id);
 			res.reset(pstmt->executeQuery());
 
@@ -1059,10 +1116,12 @@ void Sim::Contest::submit(bool admin_view) {
 		// Normal -> if round has begun and has not ended
 		} else if (r_path_->type == ROUND && (admin_view || (
 				r_path_->round->begins <= current_date && // "" <= everything
-				(r_path_->round->ends.empty() || current_date < r_path_->round->ends)))) {
+				(r_path_->round->ends.empty() ||
+					current_date < r_path_->round->ends)))) {
 			// Select problems
 			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-				prepareStatement("SELECT id, name FROM rounds WHERE parent=? ORDER BY item"));
+				prepareStatement("SELECT id, name FROM rounds "
+					"WHERE parent=? ORDER BY item"));
 			pstmt->setString(1, r_path_->round->id);
 
 			// List problems
@@ -1076,9 +1135,10 @@ void Sim::Contest::submit(bool admin_view) {
 		// Normal -> if parent round has begun and has not ended
 		} else if (r_path_->type == PROBLEM && (admin_view || (
 				r_path_->round->begins <= current_date && // "" <= everything
-				(r_path_->round->ends.empty() || current_date < r_path_->round->ends)))) {
-			append(buffer) << "<option value=\"" << r_path_->problem->id << "\">"
-				<< htmlSpecialChars(r_path_->problem->name) << " ("
+				(r_path_->round->ends.empty() ||
+					current_date < r_path_->round->ends)))) {
+			append(buffer) << "<option value=\"" << r_path_->problem->id
+				<< "\">" << htmlSpecialChars(r_path_->problem->name) << " ("
 				<< htmlSpecialChars(r_path_->round->name) << ")</option>\n";
 		}
 
@@ -1103,7 +1163,8 @@ void Sim::Contest::submit(bool admin_view) {
 			"</div>\n";
 
 	else
-		templ << "<p>There are no problems for which you can submit a solution...</p>";
+		templ << "<p>There are no problems for which you can submit a "
+			"solution...</p>";
 }
 
 void Sim::Contest::submission() {
@@ -1123,7 +1184,9 @@ void Sim::Contest::submission() {
 	try {
 		// Get submission
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-			prepareStatement("SELECT user_id, round_id, submit_time, status, score, name FROM submissions s, problems p WHERE s.id=? AND s.problem_id=p.id"));
+			prepareStatement("SELECT user_id, round_id, submit_time, status, "
+					"score, name FROM submissions s, problems p "
+				"WHERE s.id=? AND s.problem_id=p.id"));
 		pstmt->setString(1, submission_id);
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
@@ -1143,7 +1206,8 @@ void Sim::Contest::submission() {
 		if (r_path_ == NULL)
 			return;
 
-		if (!r_path_->admin_access && sim_.session->user_id != submission_user_id)
+		if (!r_path_->admin_access &&
+				sim_.session->user_id != submission_user_id)
 			return sim_.error403();
 
 		// Check if user forces observer view
@@ -1297,16 +1361,23 @@ void Sim::Contest::submissions(bool admin_view) {
 	templ <<  "</h3>";
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->prepareStatement(
-			admin_view ? "SELECT s.id, str.submit_time, r2.id, r2.name, r.id, r.name, s.status, s.score, str.final, str.user_id, u.username "
-				"FROM submissions_to_rounds str, submissions s, users u, rounds r, rounds r2 "
-				"WHERE str.submission_id=s.id AND s.round_id=r.id AND r.parent=r2.id "
-					"AND str.round_id=? AND str.user_id=u.id "
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			prepareStatement(admin_view ? "SELECT s.id, str.submit_time, "
+					"r2.id, r2.name, r.id, r.name, s.status, s.score, "
+					"str.final, str.user_id, u.username "
+				"FROM submissions_to_rounds str, submissions s, users u, "
+					"rounds r, rounds r2 "
+				"WHERE str.submission_id=s.id AND s.round_id=r.id "
+					"AND r.parent=r2.id AND str.round_id=? "
+					"AND str.user_id=u.id "
 				"ORDER BY str.submit_time DESC"
-			: "SELECT s.id, str.submit_time, r3.id, r3.name, r2.id, r2.name, s.status, s.score, str.final, r3.full_results "
-				"FROM submissions_to_rounds str, submissions s, rounds r, rounds r2, rounds r3 "
-				"WHERE str.submission_id=s.id AND r.id=str.round_id AND s.round_id=r2.id "
-					"AND r2.parent=r3.id AND str.round_id=? AND str.user_id=? "
+			: "SELECT s.id, str.submit_time, r3.id, r3.name, r2.id, r2.name, "
+					"s.status, s.score, str.final, r3.full_results "
+				"FROM submissions_to_rounds str, submissions s, rounds r, "
+					"rounds r2, rounds r3 "
+				"WHERE str.submission_id=s.id AND r.id=str.round_id "
+					"AND s.round_id=r2.id AND r2.parent=r3.id "
+					"AND str.round_id=? AND str.user_id=? "
 				"ORDER BY str.submit_time DESC"));
 		pstmt->setString(1, r_path_->round_id);
 		if (!admin_view)

@@ -48,8 +48,9 @@ static void processSubmissionQueue() {
 						jres.content);
 
 					// Update final
+					// TODO: Combine into one update query
 					UniquePtr<sql::PreparedStatement> pstmt;
-					if (jres.status != JudgeResult::CERROR) {
+					if (jres.status != JudgeResult::COMPILE_ERROR) {
 						// Remove old final:
 						// From submissions_to_rounds
 						pstmt.reset(conn()->prepareStatement("UPDATE submissions_to_rounds SET final=false WHERE submission_id=(SELECT id FROM submissions WHERE round_id=? AND user_id=? AND final=true LIMIT 1)"));
@@ -84,7 +85,7 @@ static void processSubmissionQueue() {
 						pstmt->setString(1, "error");
 						break;
 
-					case JudgeResult::CERROR:
+					case JudgeResult::COMPILE_ERROR:
 						pstmt->setString(1, "c_error");
 						pstmt->setNull(2, 0);
 						pstmt->setBoolean(3, false);
@@ -97,7 +98,7 @@ static void processSubmissionQueue() {
 
 					}
 
-					if (jres.status != JudgeResult::CERROR &&
+					if (jres.status != JudgeResult::COMPILE_ERROR &&
 							jres.status != JudgeResult::JUDGE_ERROR) {
 						pstmt->setString(2, toString(jres.score));
 						pstmt->setBoolean(3, true);
