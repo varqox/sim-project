@@ -1,10 +1,10 @@
 #include "form_validator.h"
-#include "sim_user.h"
 #include "sim_session.h"
 #include "sim_template.h"
+#include "sim_user.h"
 
-#include "../include/debug.h"
-#include "../include/sha.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/sha.h"
 
 #include <cppconn/prepared_statement.h>
 

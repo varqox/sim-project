@@ -3,9 +3,9 @@
 #include "set_limits.h"
 #include "validate_package.h"
 
-#include "../include/debug.h"
-#include "../include/process.h"
-#include "../include/utility.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/process.h"
+#include "../simlib/include/utility.h"
 
 #include <cerrno>
 #include <csignal>

@@ -1,8 +1,8 @@
 #include "sim_session.h"
 #include "sim_template.h"
 
-#include "../include/debug.h"
-#include "../include/time.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
 

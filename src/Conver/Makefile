@@ -10,16 +10,16 @@ endif
 
 ../conver: conver.o validate_package.o convert_package.o set_limits.o
 ../conver: default_checker_dump.o
-../conver: ../lib/libsim.a
+../conver: ../simlib/simlib.a
 ../conver:
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@
 
 default_checker_dump.c: default_checker.c
 	$(Q)$(call P,GEN,$@)xxd -i $< > $@
 
-../lib/%: FORCE
+../simlib/%: FORCE
 ifeq ($(MAKELEVEL), 0)
-	$(Q)$(MAKE) -C ../lib/
+	$(Q)$(MAKE) -C ../simlib/
 endif
 
 .PHONY: clean

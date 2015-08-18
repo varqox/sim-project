@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../include/filesystem.h"
-#include "../include/memory.h"
-#include "../include/sim_problem.h"
+#include "../simlib/include/filesystem.h"
+#include "../simlib/include/memory.h"
+#include "../simlib/include/sim_problem.h"
 
 extern UniquePtr<TemporaryDirectory> tmp_dir;
 extern bool GEN_OUT, VALIDATE_OUT, USE_CONF, FORCE_AUTO_LIMIT;

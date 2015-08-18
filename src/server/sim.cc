@@ -3,9 +3,9 @@
 #include "sim_template.h"
 #include "sim_user.h"
 
-#include "../include/debug.h"
-#include "../include/filesystem.h"
-#include "../include/time.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/filesystem.h"
+#include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
 

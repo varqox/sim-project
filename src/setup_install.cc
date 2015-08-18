@@ -1,7 +1,7 @@
+#include "simlib/include/debug.h"
+#include "simlib/include/filesystem.h"
+#include "simlib/include/sha.h"
 #include "include/db.h"
-#include "include/debug.h"
-#include "include/filesystem.h"
-#include "include/sha.h"
 
 #include <cppconn/prepared_statement.h>
 #include <cstring>

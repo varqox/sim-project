@@ -8,13 +8,18 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 ../judge-machine: main.o judge.o
-../judge-machine: ../lib/libsim.a
+../judge-machine: ../lib/sim.a ../simlib/simlib.a
 ../judge-machine:
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lmysqlcppconn
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)
 	$(Q)$(MAKE) -C ../lib/
+endif
+
+../simlib/%: FORCE
+ifeq ($(MAKELEVEL), 0)
+	$(Q)$(MAKE) -C ../simlib/
 endif
 
 .PHONY: clean

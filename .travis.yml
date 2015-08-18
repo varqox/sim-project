@@ -35,12 +35,6 @@ script:
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
   - cat index.html
 
-branches:
-  only:
-    - beta
-    - develop
-    - master
-
 notifications:
   email: false
 

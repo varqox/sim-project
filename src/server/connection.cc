@@ -1,6 +1,6 @@
 #include "connection.h"
 
-#include "../include/debug.h"
+#include "../simlib/include/debug.h"
 
 #include <cstdlib>
 #include <fcntl.h>

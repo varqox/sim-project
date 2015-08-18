@@ -2,10 +2,10 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
-#include "../include/debug.h"
-#include "../include/filesystem.h"
-#include "../include/process.h"
-#include "../include/time.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/filesystem.h"
+#include "../simlib/include/process.h"
+#include "../simlib/include/time.h"
 
 #include <cerrno>
 #include <cppconn/prepared_statement.h>
