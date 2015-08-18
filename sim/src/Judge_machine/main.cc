@@ -2,8 +2,8 @@
 #include "main.h"
 
 #include "../include/db.h"
-#include "../include/debug.h"
-#include "../include/string.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/string.h"
 
 #include <cerrno>
 #include <cppconn/prepared_statement.h>

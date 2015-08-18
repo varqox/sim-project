@@ -1,9 +1,9 @@
 #include "convert_package.h"
 
-#include "../include/compile.h"
-#include "../include/debug.h"
-#include "../include/sandbox.h"
-#include "../include/sandbox_checker_callback.h"
+#include "../simlib/include/compile.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/sandbox.h"
+#include "../simlib/include/sandbox_checker_callback.h"
 
 #include <cassert>
 #include <cerrno>

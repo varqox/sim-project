@@ -1,6 +1,6 @@
 #include "validate_package.h"
 
-#include "../include/debug.h"
+#include "../simlib/include/debug.h"
 
 #include <cerrno>
 #include <cstring>

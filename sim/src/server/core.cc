@@ -1,7 +1,7 @@
 #include "connection.h"
 #include "sim.h"
 
-#include "../include/debug.h"
+#include "../simlib/include/debug.h"
 
 #include <arpa/inet.h>
 #include <cerrno>

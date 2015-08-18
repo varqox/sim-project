@@ -2,7 +2,7 @@
 
 #include "conver.h"
 
-#include "../include/string.h"
+#include "../simlib/include/string.h"
 
 struct TestNameCompatator {
 	/**

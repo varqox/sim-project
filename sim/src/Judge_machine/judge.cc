@@ -1,13 +1,13 @@
 #include "judge.h"
 #include "main.h"
 
-#include "../include/compile.h"
-#include "../include/debug.h"
-#include "../include/sandbox.h"
-#include "../include/sandbox_checker_callback.h"
-#include "../include/sim_problem.h"
-#include "../include/string.h"
-#include "../include/utility.h"
+#include "../simlib/include/compile.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/sandbox.h"
+#include "../simlib/include/sandbox_checker_callback.h"
+#include "../simlib/include/sim_problem.h"
+#include "../simlib/include/string.h"
+#include "../simlib/include/utility.h"
 
 #include <cerrno>
 #include <cmath>

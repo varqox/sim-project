@@ -1,8 +1,8 @@
 #include "sim_session.h"
 
-#include "../include/debug.h"
-#include "../include/random.h"
-#include "../include/time.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/random.h"
+#include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
 #include <cstring>
