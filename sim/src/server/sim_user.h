@@ -1,7 +1,5 @@
 #pragma once
 
-#include "sim.h"
-
 class Sim::User {
 private:
 	User(const User&);

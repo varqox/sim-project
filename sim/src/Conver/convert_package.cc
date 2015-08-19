@@ -2,7 +2,6 @@
 
 #include "../simlib/include/debug.h"
 
-
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)
 

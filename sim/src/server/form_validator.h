@@ -43,14 +43,12 @@ public:
 		append(errors_) << "<p>" << htmlSpecialChars(error) << "</p>\n";
 	}
 
-
 	std::string getFilePath(const std::string& name) {
 		const std::map<std::string, std::string>& form = form_.files;
 
 		__typeof(form.begin()) it = form.find(name);
 		return it == form.end() ? "" : it->second;
 	}
-
 
 	std::string errors() const { return errors_; }
 

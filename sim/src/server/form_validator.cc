@@ -1,6 +1,5 @@
 #include "form_validator.h"
 
-
 using std::string;
 
 bool FormValidator::validate(string& var, const string& name,

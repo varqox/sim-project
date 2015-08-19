@@ -3,7 +3,6 @@
 #include "../simlib/include/debug.h"
 
 #include <cerrno>
-#include <cstring>
 #include <dirent.h>
 
 using std::string;
