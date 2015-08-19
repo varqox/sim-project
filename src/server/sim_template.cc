@@ -1,10 +1,7 @@
 #include "sim_session.h"
 #include "sim_template.h"
 
-#include "../simlib/include/debug.h"
 #include "../simlib/include/time.h"
-
-#include <cppconn/prepared_statement.h>
 
 Sim::Template::Template(Sim& sim, const std::string& title,
 	const std::string& styles, const std::string& scripts) : sim_(sim) {

@@ -47,7 +47,6 @@ void Sim::Contest::handle() {
 					"SELECT id, name FROM rounds "
 					"WHERE parent IS NULL AND access='public' ORDER BY id"));
 
-
 			// List them
 			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			templ << "<div class=\"contests-list\">\n";

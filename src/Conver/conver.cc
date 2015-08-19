@@ -9,7 +9,6 @@
 
 #include <cerrno>
 #include <csignal>
-#include <cstring>
 
 using std::string;
 using std::vector;

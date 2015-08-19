@@ -4,7 +4,6 @@
 #include "include/db.h"
 
 #include <cppconn/prepared_statement.h>
-#include <cstring>
 
 using std::string;
 

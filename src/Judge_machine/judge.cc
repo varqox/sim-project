@@ -11,7 +11,6 @@
 
 #include <cerrno>
 #include <cmath>
-#include <cstring>
 
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)

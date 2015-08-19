@@ -8,7 +8,6 @@
 #include <cerrno>
 #include <cppconn/prepared_statement.h>
 #include <csignal>
-#include <cstring>
 #include <limits.h>
 #include <sys/inotify.h>
 
