@@ -6,7 +6,6 @@
 
 #include <cerrno>
 #include <cmath>
-#include <cstring>
 
 using std::string;
 using std::vector;

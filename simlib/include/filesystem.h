@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <string>
@@ -190,7 +189,6 @@ inline int access(const std::string& pathname, int mode) {
 	return access(pathname.c_str(), mode);
 }
 
-
 /**
  * @brief Moves file from @p oldpath to @p newpath
  * @details First creates directory containing @p newpath and then uses
@@ -310,7 +308,6 @@ inline node* dumpDirectoryTree(const std::string& path) {
 }
 
 } // namespace directory_tree
-
 
 /* Returns an absolute path that does not contain any . or .. components,
 *  nor any repeated path separators (/), and does not end with /

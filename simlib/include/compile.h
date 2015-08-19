@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 /**
  * @brief Compiles C++ @p source to @p exec using g++ via PRoot
  * @details If compilation is not successful then errors are placed if c_errors

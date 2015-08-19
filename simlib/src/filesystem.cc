@@ -3,7 +3,6 @@
 #include "../include/string.h"
 
 #include <cerrno>
-#include <cstring>
 #include <dirent.h>
 #include <stdexcept>
 
@@ -263,7 +262,6 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) {
 	if (S_ISDIR(sb.st_mode))
 		return __copy_rat(dirfd1, src, dirfd2, dest);
 
-
 	return copyat(dirfd1, src, dirfd2, dest);
 }
 
@@ -278,7 +276,6 @@ int copy_r(const char* src, const char* dest) {
 
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
-
 
 int createFile(const char* pathname, mode_t mode) {
 	int fd = creat(pathname, mode);

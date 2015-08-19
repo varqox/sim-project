@@ -2,8 +2,6 @@
 
 #include "STD_SHA_256.h"
 
-#include <string>
-
 namespace sha {
 
 inline std::string sha256(const std::string& str) {
