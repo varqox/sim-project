@@ -80,7 +80,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ)
 TemporaryDirectory::~TemporaryDirectory() {
 	if (-1 == remove_r(path.c_str()))
 		eprintf("Error: remove_r() - %s\n", strerror(errno));
-	free(name_);
+	delete[] name_;
 }
 
 int mkdir_r(const char* path, mode_t mode) {

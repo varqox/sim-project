@@ -418,50 +418,57 @@ class RemoverBase {
 	RemoverBase& operator=(const RemoverBase&);
 
 public:
-	explicit RemoverBase(const char* str) : name(strdup(str)) {}
+	explicit RemoverBase(const char* str) {
+		size_t len = strlen(str);
+		name = new char[len + 1];
+		strncpy(name, str, len + 1);
+	}
 
-	explicit RemoverBase(const std::string& str) {
+	explicit RemoverBase(const std::string& str) : name(NULL) {
 		size_t len = str.size();
 		name = new char[len + 1];
 		name[len] = '\0';
 		strncpy(name, str.data(), len);
 	}
 
-	RemoverBase(const char* str, size_t len) {
+	RemoverBase(const char* str, size_t len) : name(NULL) {
 		name = new char[len + 1];
 		strncpy(name, str, len + 1);
 	}
 
-	~RemoverBase() { func(name); }
+	~RemoverBase() {
+		if (name) {
+			func(name);
+			delete[] name;
+		}
+	}
 
 	void cancel() {
-		free(name);
+		delete[] name;
 		name = NULL;
 	}
 
-	void reset(const char* str) {
-		if (name)
-			free(name);
-		name = strdup(str);
-	}
+	void reset(const char* str) { reset(str, strlen(str)); }
 
 	void reset(const char* str, size_t len) {
-		if (name)
-			free(name);
+		cancel();
 		name = new char[len + 1];
 		strncpy(name, str, len + 1);
 	}
 
 	void reset(const std::string& str) {
-		if (name)
-			free(name);
+		cancel();
 		size_t len = str.size();
 		name = new char[len + 1];
 		name[len] = '\0';
 		strncpy(name, str.data(), len);
 	}
 
-	int removeTarget() { return func(name); }
+	int removeTarget() {
+		int rc = func(name);
+		cancel();
+		return rc;
+	}
 };
 
 typedef RemoverBase<unlink> FileRemover;
