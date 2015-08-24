@@ -4,6 +4,88 @@
 
 using std::string;
 
+StringView::size_type StringView::find(const StringView& s) const {
+	if (s.len == 0)
+		return 0;
+
+	// KMP algorithm
+	size_type p[s.len], k = p[0] = 0;
+	// Fill p
+	for (size_type i = 1; i < s.len; ++i) {
+		while (k > 0 && s[i] != s[k])
+			k = p[k - 1];
+		if (s[i] == s[k])
+			++k;
+		p[i] = k;
+	}
+
+
+	k = 0;
+	for (size_type i = 0; i < len; ++i) {
+		while (k > 0 && str[i] != s[k])
+			k = p[k - 1];
+		if (str[i] == s[k]) {
+			++k;
+			if (k == s.len)
+				return i - s.len + 1;
+		}
+	}
+
+	return npos;
+}
+
+StringView::size_type StringView::find(char c, size_t beg, size_t endi) const {
+	if (endi > len)
+		endi = len;
+
+	for (; beg < endi; ++beg)
+		if (str[beg] == c)
+			return beg;
+
+	return npos;
+}
+
+StringView::size_type StringView::rfind(const StringView& s) const {
+	if (s.len == 0)
+		return 0;
+
+	// KMP algorithm
+	size_type p[s.len], slen1 = s.len - 1, k = p[slen1] = slen1;
+	// Fill p
+	for (size_type i = slen1 - 1; i != npos; --i) {
+		while (k < slen1 && s[i] != s[k])
+			k = p[k + 1];
+		if (s[i] == s[k])
+			--k;
+		p[i] = k;
+	}
+
+
+	k = slen1;
+	for (size_type i = len - 1; i != npos; --i) {
+		while (k < slen1 && str[i] != s[k])
+			k = p[k + 1];
+		if (str[i] == s[k]) {
+			--k;
+			if (k == npos)
+				return i;
+		}
+	}
+
+	return npos;
+}
+
+StringView::size_type StringView::rfind(char c, size_t beg, size_t endi) const {
+	if (endi > len)
+		endi = len;
+
+	for (--endi; endi >= beg; --endi)
+		if (str[endi] == c)
+			return endi;
+
+	return npos;
+}
+
 string toString(long long a) {
 	string w;
 	bool minus = false;
@@ -43,7 +125,7 @@ string toString(unsigned long long a) {
 	return w;
 }
 
-int strtonum(string& x, const string& s, size_t beg, size_t end) {
+int strtonum(string& x, const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
 	if (beg > end)
@@ -53,11 +135,11 @@ int strtonum(string& x, const string& s, size_t beg, size_t end) {
 		if (!isdigit(s[i]))
 			return -1;
 
-	s.substr(beg, end - beg).swap(x);
+	s.substr(beg, end - beg).to_string().swap(x);
 	return end - beg;
 }
 
-int strToNum(std::string& x, const std::string& s, size_t beg, char c) {
+int strToNum(string& x, const StringView& s, size_t beg, char c) {
 	if (beg > s.size()) {
 		x.clear();
 		return 0;
@@ -68,22 +150,11 @@ int strToNum(std::string& x, const std::string& s, size_t beg, char c) {
 		if (!isdigit(s[i]))
 			return -1;
 
-	s.substr(beg, end - beg).swap(x);
+	s.substr(beg, end - beg).to_string().swap(x);
 	return end - beg;
 }
 
-size_t find(const string& str, char c, size_t beg, size_t end) {
-	if (end > str.size())
-		end = str.size();
-
-	for (; beg < end; ++beg)
-		if (str[beg] == c)
-			return beg;
-
-	return string::npos;
-}
-
-string encodeURI(const string& str, size_t beg, size_t end) {
+string encodeURI(const StringView& str, size_t beg, size_t end) {
 	// a-z A-Z 0-9 - _ . ~
 	static bool is_safe[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -111,7 +182,7 @@ string encodeURI(const string& str, size_t beg, size_t end) {
 	return ret;
 }
 
-string decodeURI(const string& str, size_t beg, size_t end) {
+string decodeURI(const StringView& str, size_t beg, size_t end) {
 	if (end > str.size())
 		end = str.size();
 
@@ -137,7 +208,7 @@ string tolower(string str) {
 	return str;
 }
 
-string htmlSpecialChars(const string& s) {
+string htmlSpecialChars(const StringView& s) {
 	string res;
 
 	for (size_t i = 0; i < s.size(); ++i)
@@ -169,13 +240,13 @@ string htmlSpecialChars(const string& s) {
 	return res;
 }
 
-bool isInteger(const std::string& s, size_t beg, size_t end) {
+bool isInteger(const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
 	if (beg > end)
 		beg = end;
 
-	if (beg < end && s[beg] == '-')
+	if (beg < end && (s[beg] == '-' || s[beg] == '+'))
 		++beg;
 
 	for (; beg < end; ++beg)
@@ -185,13 +256,13 @@ bool isInteger(const std::string& s, size_t beg, size_t end) {
 	return true;
 }
 
-bool isReal(const std::string& s, size_t beg, size_t end) {
+bool isReal(const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
 	if (beg > end)
 		beg = end;
 
-	if (beg < end && s[beg] == '-')
+	if (beg < end && (s[beg] == '-' || s[beg] == '+'))
 		++beg;
 
 	bool dot = false;
