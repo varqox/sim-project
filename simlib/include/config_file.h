@@ -59,7 +59,11 @@ public:
 
 		using runtime_error::what;
 
-		virtual ~ParseError() _GLIBCXX_USE_NOEXCEPT {}
+#if __cplusplus >= 201103L
+		virtual ~ParseError() {}
+#else
+		virtual ~ParseError() throw() {}
+#endif
 	};
 
 	struct Variable {
