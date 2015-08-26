@@ -36,7 +36,7 @@ set all_graphs {
       {boolean}
   }
   string-literal {
-    line {toploop {or /letter /digit . : _ + -}}
+    line {toploop {or /letter /digit . : _ + - *}}
   }
   single-quoted-string-literal {
     line ' {opt {toploop {or /anything-except-newline-and-single-quote {line ' '}}}} '

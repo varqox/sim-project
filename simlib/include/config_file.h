@@ -161,8 +161,8 @@ public:
 		return isalnum(c) || c == '-' || c == '_' || c == '.';
 	}
 
-	// Check if character is one of these [a-zA-Z0-9\-_.+:]
+	// Check if character is one of these [a-zA-Z0-9\-_.+:\*]
 	static int isStringLiteral(int c) {
-		return isName(c) || c == '+' || c == ':';
+		return isName(c) || c == '+' || c == ':' || c == '*';
 	}
 };

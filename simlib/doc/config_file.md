@@ -47,7 +47,7 @@ Perl regular expression with explanation:
 				|
 					"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*" double-quoted
 				|
-					[a-zA-Z0-9\.:_+\-]+ string-literal
+					[a-zA-Z0-9\.:_+\-\*]+ string-literal
 				|
 					[0-9]+(\.[0-9]+)? numeric-literal
 				|
@@ -66,7 +66,7 @@ Perl regular expression with explanation:
 					|
 						"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*" double-quoted
 					|
-						[a-zA-Z0-9.:_+\-]+ string-literal
+						[a-zA-Z0-9.:_+\-\*]+ string-literal
 					|
 						[0-9]+(\.[0-9]+)? numeric-literal
 					|
@@ -89,7 +89,7 @@ Perl regular expression with explanation:
 						|
 							"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*" double-quoted
 						|
-							[a-zA-Z0-9.:_+\-]+ string-literal
+							[a-zA-Z0-9.:_+\-\*]+ string-literal
 						|
 							[0-9]+(\.[0-9]+)? numeric-literal
 						|
@@ -128,5 +128,5 @@ Valid Perl regular expression (config-file):
 To get below regex from above regex use: `(\s+([a-zA-Z-]*\s*)*)` and delete matches.
 -->
 ```
-(^(([^\S\n]*[a-zA-Z0-9\-_]+[^\S\n]*(=|:)[^\S\n]*(('([^'\n]|'')*'|"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*"|[a-zA-Z0-9\.:_+\-]+|[0-9]+(\.[0-9]+)?|((?i)(on|off|true|false)))?|\[(\s|#[^\n]*\n)*(('([^'\n]|'')*'|"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*"|[a-zA-Z0-9.:_+\-]+|[0-9]+(\.[0-9]+)?|((?i)(on|off|true|false)))(\s|#[^\n]*\n)*(,(\s|#[^\n]*\n)*('([^'\n]|'')*'|"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*"|[a-zA-Z0-9.:_+\-]+|[0-9]+(\.[0-9]+)?|((?i)(on|off|true|false)))(\s|#[^\n]*\n)*)*)?\])[^\S\n]*(#[^\n]*\n|\n))|([^\S\n]*(#[^\n]*\n|\n))))*
+(^(([^\S\n]*[a-zA-Z0-9\-_]+[^\S\n]*(=|:)[^\S\n]*(('([^'\n]|'')*'|"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*"|[a-zA-Z0-9\.:_+\-\*]+|[0-9]+(\.[0-9]+)?|((?i)(on|off|true|false)))?|\[(\s|#[^\n]*\n)*(('([^'\n]|'')*'|"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*"|[a-zA-Z0-9.:_+\-\*]+|[0-9]+(\.[0-9]+)?|((?i)(on|off|true|false)))(\s|#[^\n]*\n)*(,(\s|#[^\n]*\n)*('([^'\n]|'')*'|"([^"\n\\]|\\(['"?\\abfnrtv]|x[0-9a-fA-F]{2}))*"|[a-zA-Z0-9.:_+\-\*]+|[0-9]+(\.[0-9]+)?|((?i)(on|off|true|false)))(\s|#[^\n]*\n)*)*)?\])[^\S\n]*(#[^\n]*\n|\n))|([^\S\n]*(#[^\n]*\n|\n))))*
 ```

@@ -170,7 +170,7 @@ public:
 
 	// Returns a StringView of the substring [pos, pos + count)
 	StringView substr(size_type pos = 0, size_type count = npos) const {
-		if (pos >= len)
+		if (pos > len)
 			throw std::out_of_range("StringView::substr");
 
 		return StringView(str + pos, std::min(count, len - pos));
@@ -232,7 +232,7 @@ int strToNum(std::string& x, const StringView& s, size_t beg, char c);
 inline size_t find(const StringView& str, char c, size_t beg = 0,
 	size_t end = StringView::npos) { return str.find(c, beg, end); }
 
-// Compares two strings: @ pstr[beg, end) and @p s
+// Compares two strings: @p str[beg, end) and @p s
 inline int compare(const StringView& str, size_t beg, size_t end,
 		const StringView& s) {
 	if (end > str.size())
@@ -243,9 +243,10 @@ inline int compare(const StringView& str, size_t beg, size_t end,
 	return str.compare(beg, end - beg, s);
 }
 
+// Compares @p str[pos, str.find(c, pos)) and @p s
 inline int compareTo(const StringView& str, size_t pos, char c,
 		const StringView& s) {
-	return compare(str, pos, str.find(c, pos) - pos, s);
+	return compare(str, pos, str.find(c, pos), s);
 }
 
 std::string encodeURI(const StringView& str, size_t beg = 0,
