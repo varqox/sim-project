@@ -1,9 +1,7 @@
 #pragma once
 
 #include <cstring>
-#include <iosfwd>
 #include <stdexcept>
-#include <string>
 
 class StringView {
 public:
@@ -228,7 +226,6 @@ int strToNum(std::string& x, const StringView& s, size_t beg, char c);
 // Like string::find() but searches in [beg, end)
 inline size_t find(const StringView& str, char c, size_t beg = 0,
 	size_t end = StringView::npos) { return str.find(c, beg, end); }
-
 
 // Compares two strings: @ pstr[beg, end) and @p s
 inline int compare(const StringView& str, size_t beg, size_t end,

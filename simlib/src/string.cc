@@ -19,7 +19,6 @@ StringView::size_type StringView::find(const StringView& s) const {
 		p[i] = k;
 	}
 
-
 	k = 0;
 	for (size_type i = 0; i < len; ++i) {
 		while (k > 0 && str[i] != s[k])
@@ -59,7 +58,6 @@ StringView::size_type StringView::rfind(const StringView& s) const {
 			--k;
 		p[i] = k;
 	}
-
 
 	k = slen1;
 	for (size_type i = len - 1; i != npos; --i) {

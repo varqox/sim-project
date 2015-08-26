@@ -4,7 +4,6 @@
 
 #include <cerrno>
 #include <dirent.h>
-#include <stdexcept>
 
 using std::string;
 using std::vector;

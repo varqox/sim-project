@@ -5,7 +5,6 @@
 #include "../include/utility.h"
 
 #include <cerrno>
-#include <cstring>
 #include <fcntl.h>
 #include <sys/ptrace.h>
 #include <sys/reg.h>
