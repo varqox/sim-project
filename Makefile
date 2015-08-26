@@ -15,14 +15,14 @@ endif
 .PHONY: install
 install: all
 	# Echo log
-	@printf "\033[01;34m$(abspath $(DESTDIR))\033[0m\n"
+	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
 	# Installation
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/submissions/)
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
-	$(UPDATE) src/public src/sim-server src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
+	$(UPDATE) src/public src/sim-server src/server.conf src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)

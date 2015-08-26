@@ -5,7 +5,6 @@
 #include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
-#include <cstring>
 
 using std::string;
 

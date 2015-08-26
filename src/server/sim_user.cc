@@ -364,7 +364,15 @@ void Sim::User::changePassword(Data& data) {
 }
 
 void Sim::User::editProfile(Data& data) {
-	// The ability to change user type
+	/* The ability to change user type
+	* +---------------+---------+-------+-------+
+	* | user \ viewer | id == 1 | admin | other |
+	* +---------------+---------+-------+-------+
+	* |    id == 1    |   NO    |  NO   |  NO   |
+	* |    admin      |   YES   |  NO   |  NO   |
+	* |    other      |   YES   |  YES  |  NO   |
+	* +---------------+---------+-------+-------+
+	*/
 	bool can_change_user_type = data.user_id != "1" &&
 		sim_.session->user_type == 0 && (data.user_type > 0 ||
 			sim_.session->user_id == "1");
