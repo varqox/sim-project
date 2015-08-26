@@ -30,6 +30,11 @@ public:
 		: str(s.data() + std::min(beg, s.size())),
 		len(std::min(s.size(), endi)) {}
 
+	template<class T>
+	StringView(const T& x, size_type beg = 0, size_type endi = npos) {
+		operator=(StringView(std::string(x), beg, endi));
+	}
+
 	~StringView() {}
 
 	StringView& operator=(const StringView& s) {
