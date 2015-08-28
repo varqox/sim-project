@@ -52,12 +52,12 @@ int convertPackage(string tmp_package, string out_package) {
 		".md"
 	};
 
-	D(package_tree_root->print(stderr);)
+	// D(package_tree_root->print(stderr);)
 
 	// check/
-	if (USE_CONF && conf_cfg.checker.size())
-		copy(tmp_package + "check/" + conf_cfg.checker, out_package + "check/" +
-			conf_cfg.checker);
+	if (USE_CONFIG && config_conf.checker.size())
+		copy(tmp_package + "check/" + config_conf.checker, out_package + "check/" +
+			config_conf.checker);
 
 	directory_tree::node *folder = package_tree_root->dir("check");
 	if (folder != NULL)
@@ -68,15 +68,15 @@ int convertPackage(string tmp_package, string out_package) {
 
 				copy(tmp_package + "check/" + *i, out_package + "check/" + *i);
 
-				if (!USE_CONF && conf_cfg.checker.find_last_of('.') >
+				if (!USE_CONFIG && config_conf.checker.find_last_of('.') >
 						i->find_last_of('.'))
-					conf_cfg.checker = *i;
+					config_conf.checker = *i;
 			}
 
 	// doc/
-	if (USE_CONF && conf_cfg.statement.size())
-		copy(tmp_package + "doc/" + conf_cfg.statement, out_package + "doc/" +
-			conf_cfg.statement);
+	if (USE_CONFIG && config_conf.statement.size())
+		copy(tmp_package + "doc/" + config_conf.statement, out_package + "doc/" +
+			config_conf.statement);
 
 	folder = package_tree_root->dir("doc");
 	if (folder != NULL)
@@ -87,15 +87,15 @@ int convertPackage(string tmp_package, string out_package) {
 
 				copy(tmp_package + "doc/" + *i, out_package + "doc/" + *i);
 
-				if (!USE_CONF && conf_cfg.statement.find_last_of('.') >
+				if (!USE_CONFIG && config_conf.statement.find_last_of('.') >
 						i->find_last_of('.'))
-					conf_cfg.statement = *i;
+					config_conf.statement = *i;
 			}
 
 	// prog/
-	if (USE_CONF && conf_cfg.solution.size())
-		copy(tmp_package + "prog/" + conf_cfg.solution, out_package + "prog/" +
-			conf_cfg.solution);
+	if (USE_CONFIG) // Copy all solutions
+		foreach (i, config_conf.solutions)
+			copy(tmp_package + "prog/" + *i, out_package + "prog/" + *i);
 
 	folder = package_tree_root->dir("prog");
 	if (folder != NULL)
@@ -105,20 +105,27 @@ int convertPackage(string tmp_package, string out_package) {
 					sizeof(*solution_extensions))) {
 
 				copy(tmp_package + "prog/" + *i, out_package + "prog/" + *i);
+				if (!USE_CONFIG)
+					config_conf.solutions.push_back(*i);
 
-				if (!USE_CONF && conf_cfg.solution.find_last_of('.') >
+				if (!USE_CONFIG && config_conf.main_solution.find_last_of('.') >
 						i->find_last_of('.'))
-					conf_cfg.solution = *i;
+					config_conf.main_solution = *i;
 			}
 
-	if (VERBOSITY > 1)
-		printf("checker: '%s'\nstatement: '%s'\nsolution: '%s'\n",
-			conf_cfg.checker.c_str(), conf_cfg.statement.c_str(),
-			conf_cfg.solution.c_str());
+	if (VERBOSITY > 1) {
+		printf("checker: '%s'\nstatement: '%s'\nmain_solution: '%s'\n"
+			"solutions: [", config_conf.checker.c_str(),
+			config_conf.statement.c_str(), config_conf.main_solution.c_str());
+		foreach (i, config_conf.solutions)
+			printf((i == config_conf.solutions.begin() ? "'%s'" : ", '%s'"),
+				i->c_str());
+		printf("]\n");
+	}
 
 	// tests/
-	if (USE_CONF) {
-		foreach (i, conf_cfg.test_groups)
+	if (USE_CONFIG) {
+		foreach (i, config_conf.test_groups)
 			foreach (test, i->tests) {
 				copy(tmp_package + "tests/" + test->name + ".in",
 					out_package + "tests/" + test->name + ".in");
@@ -145,6 +152,11 @@ int convertPackage(string tmp_package, string out_package) {
 					tests.push_back(it->substr(0, it->size() - 3));
 				}
 
+	if (tests.empty()) { // No tests
+		config_conf.test_groups.clear();
+		return 0;
+	}
+
 	sort(tests.begin(), tests.end());
 
 	// Search for .out and copy them (only if appropriate .in exists)
@@ -158,21 +170,24 @@ int convertPackage(string tmp_package, string out_package) {
 						out_package + "tests/" + *it);
 				}
 
-	// Add tests to conf_cfg
+	// Add tests to config_conf
 	sort(tests.begin(), tests.end(), TestNameCompatator());
 
-	conf_cfg.test_groups.assign(1, ProblemConfig::Group());
-	ProblemConfig::Group *group = &conf_cfg.test_groups.back();
-	string last_group = TestNameCompatator::extractTag(tests[0]).first;
-	pair<string, string> curr_tag;
+	config_conf.test_groups.assign(1, ProblemConfig::Group());
+	ProblemConfig::Group *group = &config_conf.test_groups.back();
+	pair<string, string> curr_group,
+		last_group = TestNameCompatator::extractTag(tests[0]);
 
 	foreach (i, tests) {
-		curr_tag = TestNameCompatator::extractTag(*i);
-
-		if (curr_tag.first != last_group) {
-			conf_cfg.test_groups.push_back(ProblemConfig::Group());
-			group = &conf_cfg.test_groups.back();
-			last_group = curr_tag.first;
+		curr_group = TestNameCompatator::extractTag(*i);
+		// Next group (it is strongly based on test order - see
+		// TestNameComparator)
+		if (curr_group.first != last_group.first &&
+				!(curr_group.second == "ocen" &&
+					(last_group.first == "0" || last_group.second == "ocen"))) {
+			config_conf.test_groups.push_back(ProblemConfig::Group());
+			group = &config_conf.test_groups.back();
+			last_group = curr_group;
 		}
 
 		group->tests.push_back((ProblemConfig::Test){ *i, 0 });

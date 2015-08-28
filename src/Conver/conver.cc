@@ -15,15 +15,15 @@ using std::vector;
 
 // Global variables
 UniquePtr<TemporaryDirectory> tmp_dir;
-bool GEN_OUT = false, VALIDATE_OUT = false, USE_CONF = false;
+bool GEN_OUT = false, VALIDATE_OUT = false, USE_CONFIG = true;
 bool FORCE_AUTO_LIMIT = false;
 unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
-unsigned long long MEMORY_LIMIT = 64 << 10; // 64 MB (in kB)
+unsigned long long MEMORY_LIMIT = 0; // in kB
 unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10s
 unsigned long long TIME_LIMIT = 0; // Not set
 string PROOT_PATH = "proot"; // Search for PRoot in system
 UniquePtr<directory_tree::node> package_tree_root;
-ProblemConfig conf_cfg;
+ProblemConfig config_conf;
 
 static bool SET_MEMORY_LIMIT = false; // true if set in options
 static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;
@@ -46,6 +46,7 @@ Options:\n\
   -g, --gen-out, --generate-out\n\
                          Generate .out files (tests), if exist override, disables -vo\n\
   -h, --help             Display this information\n\
+  -ic, --ignore-config   Ignore config.conf (enables automatic time limit setting)\n\
   -m MEM_LIMIT, --memory-limit=MEM_LIMIT\n\
                          Set problem memory limit MEM_LIMIT in kB\n\
   -mt <VAL>, --max-time-limit=<VAL>\n\
@@ -56,7 +57,6 @@ Options:\n\
   -t TAG, --tag=TAG      Set problem tag to TAG (cannot be empty)\n\
   -tl VAL, --time-limit=VAL\n\
                          Set time limit VAL in usec on every test, disables automatic time limit setting (only if VAL > 0)\n\
-  -uc, --use-conf        If package has valid conf.cfg, use it (disables automatic time limit setting unless one or more option of -g, -vo or -tl is set)\n\
   -v, --verbose          Verbose mode\n\
   -vo, --validate-out    Validate solution output on .out (by checker)\n\
 \n\
@@ -68,7 +68,7 @@ problem_package tree:\n\
    |-- prog/             Solutions folder - holds solutions (optional but without solutions automatic time limit setting will be disabled)\n\
    |-- out/              Tests folder - holds tests (optional)\n\
    |-- tests/            Tests folder - holds tests (optional)\n\
-   `-- conf.cfg          sim_problem_package config file - holds package config (optional)\n\
+   `-- config.conf          sim_problem_package config file - holds package config (optional)\n\
 \n\
 sim_problem_package tree:\n\
    main/                 Root package folder\n\
@@ -76,9 +76,10 @@ sim_problem_package tree:\n\
    |-- check/            Checker folder - holds checker\n\
    |-- prog/             Solutions folder - holds solutions\n\
    |-- tests/            Tests folder - holds tests\n\
-   `-- conf.cfg          sim_problem_package config file - holds package config\n");
+   `-- config.conf          sim_problem_package config file - holds package config\n");
 }
 
+// TODO: change sscanf to something else
 /**
  * Parses options passed to Conver via arguments
  * @param argc like in main (will be modified to hold the number of non-option
@@ -112,20 +113,27 @@ static void parseOptions(int &argc, char **argv) {
 				exit(0);
 			}
 
+			// Ignore config.conf
+			else if (0 == strcmp(argv[i], "-ic") ||
+					0 == strcmp(argv[i], "--ignore-config"))
+				USE_CONFIG = false;
+
 			// Memory limit
 			else if ((0 == strcmp(argv[i], "-m") ||
 					0 == strcmp(argv[i], "--memory-limit")) && i + 1 < argc) {
-				if (1 > sscanf(argv[++i], "%llu", &tmp))
+				if (1 > sscanf(argv[++i], "%llu", &tmp)) {
 					eprintf("Wrong memory limit\n");
-				else {
+					exit(-1);
+				} else {
 					MEMORY_LIMIT = tmp;
 					SET_MEMORY_LIMIT = true;
 				}
 
 			} else if (isPrefix(argv[i], "--memory-limit=")) {
-				if (1 > sscanf(argv[i] + 15, "%llu", &tmp))
+				if (1 > sscanf(argv[i] + 15, "%llu", &tmp)) {
 					eprintf("Wrong memory limit\n");
-				else {
+					exit(-1);
+				} else {
 					MEMORY_LIMIT = tmp;
 					SET_MEMORY_LIMIT = true;
 				}
@@ -134,15 +142,17 @@ static void parseOptions(int &argc, char **argv) {
 			// Max time limit
 			else if ((0 == strcmp(argv[i], "-mt") ||
 					0 == strcmp(argv[i], "--max-time-limit")) && i + 1 < argc) {
-				if (1 > sscanf(argv[++i], "%llu", &tmp))
+				if (1 > sscanf(argv[++i], "%llu", &tmp)) {
 					eprintf("Wrong max time limit\n");
-				else
+					exit(-1);
+				} else
 					HARD_TIME_LIMIT = tmp;
 
 			} else if (isPrefix(argv[i], "--max-time-limit=")) {
-				if (1 > sscanf(argv[i] + 17, "%llu", &tmp))
+				if (1 > sscanf(argv[i] + 17, "%llu", &tmp)) {
 					eprintf("Wrong max time limit\n");
-				else
+					exit(-1);
+				} else
 					HARD_TIME_LIMIT = tmp;
 			}
 
@@ -165,8 +175,13 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Tag
 			else if ((0 == strcmp(argv[i], "-t") ||
-					0 == strcmp(argv[i], "--tag")) && i + 1 < argc)
+					0 == strcmp(argv[i], "--tag")) && i + 1 < argc) {
 				PROBLEM_TAG = argv[++i];
+				if (PROBLEM_TAG.size() > 4) {
+					eprintf("Problem tag too long (max 4 characters)\n");
+					exit(-1);
+				}
+			}
 
 			else if (isPrefix(argv[i], "--tag="))
 				PROBLEM_TAG = string(argv[i]).substr(6);
@@ -174,15 +189,17 @@ static void parseOptions(int &argc, char **argv) {
 			// Time limit
 			else if ((0 == strcmp(argv[i], "-tl") ||
 					0 == strcmp(argv[i], "--time-limit")) && i + 1 < argc) {
-				if (1 > sscanf(argv[++i], "%llu", &tmp))
+				if (1 > sscanf(argv[++i], "%llu", &tmp)) {
 					eprintf("Wrong time limit\n");
-				else
+					exit(-1);
+				} else
 					TIME_LIMIT = tmp;
 
 			} else if (isPrefix(argv[i], "--time-limit=")) {
-				if (1 > sscanf(argv[i] + 17, "%llu", &tmp))
+				if (1 > sscanf(argv[i] + 17, "%llu", &tmp)) {
 					eprintf("Wrong time limit\n");
-				else
+					exit(-1);
+				} else
 					TIME_LIMIT = tmp;
 			}
 
@@ -190,11 +207,6 @@ static void parseOptions(int &argc, char **argv) {
 			else if (0 == strcmp(argv[i], "-v") ||
 					0 == strcmp(argv[i], "--verbose"))
 				VERBOSITY = 2;
-
-			// Use conf.cfg
-			else if (0 == strcmp(argv[i], "-uc") ||
-					0 == strcmp(argv[i], "--use-conf"))
-				USE_CONF = true;
 
 			// Validate out
 			else if (0 == strcmp(argv[i], "-vo") ||
@@ -264,6 +276,7 @@ static void extractPackage(const string& source, const string& dest,
 		if (VERBOSITY > 1)
 			printf("Unpacking package...\n");
 
+		// Unpack package
 		int exit_code = spawn(args[0], args);
 		if (exit_code != 0) {
 			eprintf("Unpacking error: %s ", args[0].c_str());
@@ -289,30 +302,18 @@ static void extractPackage(const string& source, const string& dest,
 	}
 }
 
-/**
- * @brief Makes tag from @p str
- * @details Tag is lower of 3 first not blank characters from @p str
- *
- * @param str string to make tag from it
- * @return tag
- */
-static string getTag(const string& str) {
-	string tag;
-	for (size_t i = 0, len = str.size(); tag.size() < 3 && i < len; ++i)
-		if (!isblank(str[i]))
-			tag += tolower(str[i]);
-
-	if (tag.empty())
-		tag = "tag";
-
-	return tag;
-}
-
 int main(int argc, char *argv[]) {
 	parseOptions(argc, argv);
 
-	if(argc < 2) {
+	if(argc != 2) {
 		help(argc > 0 ? argv[0] : NULL);
+		return 1;
+	}
+
+	// Problem name and memory limit are essential
+	if (!USE_CONFIG && (PROBLEM_NAME.empty() || !SET_MEMORY_LIMIT)) {
+		eprintf("Error: Package without config.conf requires problem name and "
+			"memory limit (See options -n and -m)\n");
 		return 1;
 	}
 
@@ -329,7 +330,7 @@ int main(int argc, char *argv[]) {
 	if (VERBOSITY > 1)
 		printf("in_package: %s\n", in_package.c_str());
 
-	// Check in_package
+	// Stat in_package
 	struct stat sb;
 	if (stat(in_package.c_str(), &sb) == -1) {
 		eprintf("Error: stat(%s) - %s\n", in_package.c_str(), strerror(errno));
@@ -366,7 +367,7 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	// Update in_package - make absolute path
+	// Update in_package - make absolute
 	if (in_package[0] != '/')
 		in_package = old_working_dir + in_package;
 
@@ -380,48 +381,57 @@ int main(int argc, char *argv[]) {
 	// Validate
 	tmp_package = validatePackage(tmp_package);
 
-	// Update config
+	// Problem name and memory limit are essential
+	if (!USE_CONFIG && (PROBLEM_NAME.empty() || !SET_MEMORY_LIMIT)) {
+		eprintf("Error: Package with invalid (or without) config.conf requires "
+			"problem name and memory limit (See options -n and -m)\n");
+		return -1;
+	}
+
+	// Problem name
 	if (PROBLEM_NAME.size())
-		conf_cfg.name = PROBLEM_NAME;
-	else if (!USE_CONF)
-		conf_cfg.name = "Unnamed";
+		config_conf.name = PROBLEM_NAME;
 
-	if (!USE_CONF)
-		conf_cfg.tag = getTag(conf_cfg.name);
+	// Problem tag
+	if (PROBLEM_TAG.size())
+		config_conf.tag = PROBLEM_TAG;
+	else if (!USE_CONFIG)
+		config_conf.tag = getTag(config_conf.name);
 
-	if (SET_MEMORY_LIMIT || !USE_CONF)
-		conf_cfg.memory_limit = MEMORY_LIMIT;
+	// Memory limit
+	if (SET_MEMORY_LIMIT || !USE_CONFIG)
+		config_conf.memory_limit = MEMORY_LIMIT;
 
-	// Convert (out_package - after conversion)
-	string out_package = conf_cfg.tag + "/";
+	// Convert package (out_package - path to package after conversion)
+	string out_package = config_conf.tag + "/";
 	E("out_package: %s\n", out_package.c_str());
 	if (convertPackage(tmp_package, out_package) != 0)
 		return 7;
 
-	// If no checker set, set default checker
-	if (conf_cfg.checker.empty()) {
+	// If no checker is set, set default checker
+	if (config_conf.checker.empty()) {
 		putFileContents((out_package + "check/checker.c").c_str(),
 			(const char*)default_checker_c, default_checker_c_len);
-		conf_cfg.checker = "checker.c";
+		config_conf.checker = "checker.c";
 	}
 
 	// Set limits
-	if ((!USE_CONF || GEN_OUT || TIME_LIMIT > 0 || VALIDATE_OUT ||
+	if ((!USE_CONFIG || GEN_OUT || TIME_LIMIT > 0 || VALIDATE_OUT ||
 				FORCE_AUTO_LIMIT) &&
 			setLimits(out_package) != 0)
 		return 8;
 
 	// Write config
-	putFileContents(out_package + "conf.cfg", conf_cfg.dump());
+	putFileContents(out_package + "config.conf", config_conf.dump());
 
 	if (DEST_NAME.empty())
-		DEST_NAME = conf_cfg.tag;
+		DEST_NAME = config_conf.tag;
 
 	// Update DEST_NAME - make absolute
 	if (DEST_NAME[0] != '/')
 		DEST_NAME = old_working_dir + DEST_NAME;
 
-	// Detect compression type (based on extension)
+	// Detect compression type (based on extension) of DEST_NAME
 	string extension = getExtension(DEST_NAME);
 	vector<string> args;
 
@@ -452,6 +462,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
+	// Compress package
 	int exit_code = spawn(args[0], args);
 	if (exit_code != 0) {
 		eprintf("Error: %s ", args[0].c_str());

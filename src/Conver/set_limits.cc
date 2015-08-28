@@ -16,9 +16,9 @@ using std::string;
 using std::vector;
 
 static void assignPoints() {
-	int points = 100, groups_left = conf_cfg.test_groups.size();
+	int points = 100, groups_left = config_conf.test_groups.size();
 
-	foreach (group, conf_cfg.test_groups) {
+	foreach (group, config_conf.test_groups) {
 		assert(!group->tests.empty());
 
 		pair<string, string> tag =
@@ -36,7 +36,7 @@ static void assignPoints() {
 
 int setLimits(const string& package_path) {
 	// Compile checker
-	if (compile(package_path + "check/" + conf_cfg.checker, "checker",
+	if (compile(package_path + "check/" + config_conf.checker, "checker",
 			(VERBOSITY >> 1) + 1, NULL, 0, PROOT_PATH) != 0) {
 		if (VERBOSITY == 1)
 			eprintf("Checker compilation failed.\n");
@@ -45,7 +45,7 @@ int setLimits(const string& package_path) {
 
 	if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
 		// Set time limits on tests
-		foreach (group, conf_cfg.test_groups)
+		foreach (group, config_conf.test_groups)
 			foreach (test, group->tests) {
 				test->time_limit = TIME_LIMIT;
 				printf("  %-11s --- / %-4s\n", test->name.c_str(),
@@ -57,12 +57,12 @@ int setLimits(const string& package_path) {
 	}
 
 	// Compile solution
-	if (conf_cfg.solution.empty()) {
-		eprintf("Error: Solution not found\n");
+	if (config_conf.main_solution.empty()) {
+		eprintf("Error: main solution not found\n");
 		return 2;
 	}
 
-	if (compile(package_path + "prog/" + conf_cfg.solution, "exec",
+	if (compile(package_path + "prog/" + config_conf.main_solution, "exec",
 			(VERBOSITY >> 1) + 1, NULL, 0, PROOT_PATH) != 0) {
 		if (VERBOSITY == 1)
 			eprintf("Solution compilation failed.\n");
@@ -73,7 +73,7 @@ int setLimits(const string& package_path) {
 	// Prepare runtime environment
 	sandbox::options sb_opts = {
 		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
-		conf_cfg.memory_limit << 10,
+		config_conf.memory_limit << 10,
 		-1,
 		open("answer", O_WRONLY | O_CREAT | O_TRUNC,
 			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
@@ -109,9 +109,9 @@ int setLimits(const string& package_path) {
 	vector<string> exec_args, checker_args(4);
 
 	// Set time limits on tests
-	foreach (group, conf_cfg.test_groups)
+	foreach (group, config_conf.test_groups)
 		foreach (test, group->tests) {
-			if (USE_CONF && !FORCE_AUTO_LIMIT)
+			if (USE_CONFIG && !FORCE_AUTO_LIMIT)
 				sb_opts.time_limit = test->time_limit;
 
 			// Reopen file descriptors
@@ -167,7 +167,7 @@ int setLimits(const string& package_path) {
 			sandbox::ExitStat es = sandbox::run("./exec", exec_args, &sb_opts);
 
 			// Set time_limit (minimum time_limit is 0.1s unless TIME_LIMIT > 0)
-			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONF))
+			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONFIG))
 				test->time_limit = TIME_LIMIT > 0 ? TIME_LIMIT :
 					std::max(es.runtime * 4, 100000ull);
 
@@ -253,7 +253,7 @@ int setLimits(const string& package_path) {
 	while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
 	while (close(checker_sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
 
-	if (!USE_CONF)
+	if (!USE_CONFIG)
 		assignPoints();
 	return 0;
 }
