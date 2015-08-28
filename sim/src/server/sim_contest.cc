@@ -2,6 +2,7 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
+#include "../simlib/include/config_file.h"
 #include "../simlib/include/debug.h"
 #include "../simlib/include/filesystem.h"
 #include "../simlib/include/process.h"
@@ -99,9 +100,21 @@ void Sim::Contest::handle() {
 		// Problem statement
 		if (r_path_->type == PROBLEM &&
 				0 == compareTo(sim_.req_->target, arg_beg, '/', "statement")) {
-			string statement = getFileByLines("problems/" +
-				r_path_->problem->problem_id + "/conf.cfg",
-				GFBL_IGNORE_NEW_LINES, 2, 3)[0];
+			// Get statement path
+			ConfigFile problem_config;
+			problem_config.addVar("statement");
+			problem_config.loadConfigFromFile("problems/" +
+				r_path_->problem->problem_id + "/config.conf");
+
+			string statement = problem_config.getString("statement");
+			// No statement
+			if (statement.empty()) {
+				TemplateWithMenu templ(*this, "Problems");
+				templ << "<h1>Problems</h1>";
+				templ.printRoundPath(*r_path_, "problems");
+				templ << "<p>This problem has no statement...</p>";
+				return;
+			}
 
 			if (isSuffix(statement, ".pdf"))
 				sim_.resp_.headers["Content-type"] = "application/pdf";
@@ -375,12 +388,14 @@ void Sim::Contest::addProblem() {
 		return sim_.error403();
 
 	FormValidator fv(sim_.req_->form_data);
-	string name, user_package_file;
+	string name, memory_limit, user_package_file;
 	bool force_auto_limit = false;
 
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validate(name, "name", "Problem name", 128);
+
+		fv.validate(memory_limit, "memory-limit", "Memory limit");
 
 		force_auto_limit = fv.exist("force-auto-limit");
 
@@ -411,14 +426,16 @@ void Sim::Contest::addProblem() {
 
 				// Construct Conver arguments
 				vector<string> args(1, "./conver");
-				append(args)(new_package_file)("-o")(package_tmp_dir)("-uc")
-					("-q");
+				append(args)(new_package_file)("-o")(package_tmp_dir)("-q");
 
 				if (force_auto_limit)
 					args.push_back("-fal");
 
 				if (name.size())
 					append(args)("-n")(name);
+
+				if (memory_limit.size())
+					append(args)("-m")(memory_limit);
 
 				// Conver stdin, stdout, stderr
 				spawn_opts sopt = {
@@ -434,6 +451,9 @@ void Sim::Contest::addProblem() {
 
 				// Convert package
 				if (0 != spawn("./conver", args, &sopt)) {
+					// Move offset to begging
+					lseek(sopt.new_stderr_fd, 0, SEEK_SET);
+
 					fv.addError("Conver failed - " +
 						getFileContents(sopt.new_stderr_fd));
 					goto form;
@@ -471,8 +491,15 @@ void Sim::Contest::addProblem() {
 				string round_id = res->getString(1);
 
 				// Get problem name
-				name = getFileByLines(string(package_tmp_dir) +
-					"/conf.cfg", GFBL_IGNORE_NEW_LINES, 0, 1)[0];
+				ConfigFile problem_config;
+				problem_config.addVar("name");
+				problem_config.loadConfigFromFile(string(package_tmp_dir) +
+					"/config.conf");
+
+				name = problem_config.getString("name");
+				if (name.empty())
+					throw std::runtime_error("Failed to get problem name");
+
 				// Move package folder to problems/
 				if (rename(package_tmp_dir, ("problems/" + problem_id).c_str()))
 					throw std::runtime_error(string("Error: rename() - ") +
@@ -529,7 +556,16 @@ void Sim::Contest::addProblem() {
 					"<label>Problem name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\""
 						<< htmlSpecialChars(name) << "\" size=\"24\""
-					"maxlength=\"128\" placeholder=\"Detect from conf.cfg\">\n"
+					"maxlength=\"128\" placeholder=\"Detect from config.conf\">"
+					"\n"
+				"</div>\n"
+				// Memory limit
+				"<div class=\"field-group\">\n"
+					"<label>Memory limit (in kB)</label>\n"
+					"<input type=\"text\" name=\"memory-limit\" value=\""
+						<< htmlSpecialChars(memory_limit) << "\" size=\"24\""
+					"placeholder=\"Detect from config.conf\">"
+					"\n"
 				"</div>\n"
 				// Force auto limit
 				"<div class=\"field-group\">\n"

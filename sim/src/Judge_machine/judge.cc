@@ -68,8 +68,18 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	// Load config
 	ProblemConfig pconf;
-	if (pconf.loadConfig(package_path, (VERBOSITY >> 1) + 1) == -1)
+	try {
+		if (VERBOSITY > 1)
+			printf("Validating config.conf...\n");
+		pconf.loadConfig(package_path);
+		if (VERBOSITY > 1)
+			printf("Validation passed.\n");
+
+	} catch (std::exception& e) {
+		if (VERBOSITY > 0)
+			eprintf("Error: %s\n", e.what());
 		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+	}
 
 	// Compile solution
 	string compile_errors;
@@ -152,7 +162,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	// Run judge on tests
 	foreach (group, pconf.test_groups) {
-		double ratio = 1.0;
+		double ratio = 1.0; // group ratio
 		JudgeTestsReport &judge_test_report = group->points == 0 ?
 			initial : final;
 
