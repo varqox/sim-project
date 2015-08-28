@@ -93,6 +93,8 @@ CheckerCallback::CheckerCallback(vector<string> files)
 		(90) // SYS_mmap
 		(91) // SYS_munmap
 		(108) // SYS_fstat
+		(125) // SYS_mprotect
+		(175) // SYS_rt_sigprocmask
 		(192) // SYS_mmap2
 		(197) // SYS_fstat64
 		(252) // SYS_exit_group
@@ -113,8 +115,10 @@ CheckerCallback::CheckerCallback(vector<string> files)
 		(3) // SYS_close
 		(5) // SYS_fstat
 		(9) // SYS_mmap
+		(10) // SYS_mprotect
 		(11) // SYS_munmap
 		(12) // SYS_brk
+		(14) // SYS_rt_sigprocmask
 		(16) // SYS_ioctl
 		(32) // SYS_dup
 		(33) // SYS_dup2

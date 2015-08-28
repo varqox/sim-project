@@ -1,5 +1,9 @@
 #pragma once
 
+#include "string.h"
+
+#include <vector>
+
 /**
  * @brief ProblemConfig holds SIM package config
  * @details Holds problem name, problem tag, problem statement, checker,
@@ -7,7 +11,8 @@
  */
 class ProblemConfig {
 public:
-	std::string name, tag, statement, checker, solution;
+	std::string name, tag, statement, checker, main_solution;
+	std::vector<std::string> solutions;
 	unsigned long long memory_limit; // in kB
 
 	/**
@@ -16,16 +21,6 @@ public:
 	struct Test {
 		std::string name;
 		unsigned long long time_limit; // in usec
-	};
-
-	/**
-	 * @brief Test comparator
-	 * @details Used to compare two Test objects
-	 */
-	struct TestCmp {
-		bool operator()(const Test& a, const Test& b) const {
-			return a.name < b.name;
-		}
 	};
 
 	/**
@@ -39,8 +34,8 @@ public:
 
 	std::vector<Group> test_groups;
 
-	ProblemConfig() : name(), tag(), statement(), checker(), solution(),
-		memory_limit(0), test_groups() {}
+	ProblemConfig() : name(), tag(), statement(), checker(), main_solution(),
+		solutions(), memory_limit(0), test_groups() {}
 
 	~ProblemConfig() {}
 
@@ -48,17 +43,52 @@ public:
 	 * @brief Dumps object to string
 	 * @return dumped config (can be placed in file)
 	 */
-	std::string dump();
+	std::string dump() const;
 
 	/**
 	 * @brief loads and validates config file from problem package
 	 * @p package_path
 	 * @details Validates problem config (memory limits, tests existence etc.)
+	 * loaded via ConfigFile
 	 *
-	 * @param package_path Path to problem package main directory
-	 * @param verbosity verbosity level: 0 - quiet (no output),
-	 * 1 - (errors only), 2 or more - verbose mode
-	 * @return 0 on success, -1 on error
+	 * Fields:
+	 *   - name
+	 *   - tag (optional, max length = 4)
+	 *   - memory_limit (in kB)
+	 *   - checker (optional)
+	 *   - statement (optional)
+	 *   - solutions (optional)
+	 *   - main_solution (optional)
+	 *   - tests (optional)
+	 *
+	 * @param package_path path to problem package main directory
+	 *
+	 * @errors Throw an exception if an error occurs
 	 */
-	int loadConfig(std::string package_path, unsigned verbosity);
+	void loadConfig(std::string package_path);
+
+	/**
+	 * @brief Converts string @p str that it can be safely placed in problem
+	 * config
+	 * @details If @p str is string literal then it will be returned, if @p str
+	 * contain '\n' then it will be escaped as double quoted string, otherwise
+	 * as single quoted string. For example:
+	 * "foo-bar" -> "foo-bar" (string literal)
+	 * "line: 1\nabc d E\n" -> "\"line: 1\\nabc d E\\n\"" (double quoted string)
+	 * "My awesome text" -> "'My awesome text'" (single quoted string)
+	 * "\\\\\\\\" -> '\\\\' (single quoted string)
+	 *
+	 * @param str input string
+	 * @return escaped (and quoted) string
+	 */
+	static std::string makeSafeString(const StringView& str);
 };
+
+/**
+ * @brief Makes tag from @p str
+ * @details Tag is lower of 3 first not blank characters from @p str
+ *
+ * @param str string to make tag from it
+ * @return tag
+ */
+std::string getTag(const std::string& str);

@@ -1,3 +1,4 @@
+#include "../include/config_file.h"
 #include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/sim_problem.h"
@@ -7,211 +8,198 @@
 #include <cerrno>
 #include <cmath>
 
+#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
+	i ##__end = x.end(); i != i ##__end; ++i)
+
 using std::string;
 using std::vector;
 
-string ProblemConfig::dump() {
+string ProblemConfig::dump() const {
 	string res;
-	append(res) << name << '\n'
-		<< tag << '\n'
-		<< statement << '\n'
-		<< checker << '\n'
-		<< solution << '\n'
-		<< toString(memory_limit) << '\n';
+	append(res) << "name: " << makeSafeString(name) << '\n'
+		<< "tag: " << makeSafeString(tag) << '\n'
+		<< "statement: " << makeSafeString(statement) << '\n'
+		<< "checker: " << makeSafeString(checker) << '\n'
+		<< "memory_limit: " << toString(memory_limit) << '\n'
+		<< "main_solution: " << makeSafeString(main_solution) << '\n';
+
+	// Solutions
+	res += "solutions: [";
+	foreach (i, solutions)
+		append(res) << (i == solutions.begin() ? "" : ", ")
+			<< makeSafeString(*i);
+	res += "]\n";
 
 	// Tests
-	for (vector<Group>::iterator i = test_groups.begin(),
-			end = test_groups.end(); i != end; ++i) {
+	res += "tests: [";
+	bool first_test = true;
+	foreach (i, test_groups) {
 		if (i->tests.empty())
 			continue;
 
-		sort(i->tests.begin(), i->tests.end(), TestCmp());
-		append(res) << '\n' << i->tests[0].name << ' '
+		if (first_test)
+			first_test = false;
+		else
+			res += ",\n";
+		append(res) << "\n\t'" << i->tests[0].name << ' '
 			<< usecToSecStr(i->tests[0].time_limit, 2) << ' '
-			<< toString(i->points) << '\n';
+			<< toString(i->points) << '\'';
 
-		for (vector<Test>::iterator j = ++i->tests.begin(); j != i->tests.end();
-				++j)
-			append(res) << j->name << ' ' << usecToSecStr(j->time_limit, 2)
-				<< '\n';
+		for (vector<Test>::const_iterator j = ++i->tests.begin(),
+				end = i->tests.end(); j != end; ++j)
+			append(res) << ",\n\t'" << j->name << ' '
+				<< usecToSecStr(j->time_limit, 2) << '\'';
 	}
+	res += "\n]\n";
 	return res;
 }
 
-int ProblemConfig::loadConfig(string package_path, unsigned verbosity) {
-	// Add slash to package_path
+void ProblemConfig::loadConfig(string package_path) {
+	// Append slash to package_path
 	if (package_path.size() > 0 && *--package_path.end() != '/')
 		package_path += '/';
 
-	vector<string> f = getFileByLines(package_path + "conf.cfg",
-		GFBL_IGNORE_NEW_LINES);
+	ConfigFile config;
+	config.addVar("name");
+	config.addVar("tag");
+	config.addVar("statement");
+	config.addVar("checker");
+	config.addVar("memory_limit");
+	config.addVar("solutions");
+	config.addVar("main_solution");
+	config.addVar("tests");
 
-	if (verbosity > 1)
-		printf("Validating conf.cfg...\n");
+	config.loadConfigFromFile(package_path + "config.conf");
 
 	// Problem name
-	if (f.size() < 1) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Missing problem name\n");
-
-		return -1;
-	}
+	name = config.getString("name");
+	if (name.empty())
+		throw std::runtime_error("config.conf: Missing problem name");
 
 	// Problem tag
-	if (f.size() < 2) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Missing problem tag\n");
-
-		return -1;
-	}
-
-	if (f[1].size() > 4) {
-		if (verbosity > 0)
-			eprintf(
-				"Error: conf.cfg: Problem tag too long (max 4 characters)\n");
-
-		return -1;
-	}
+	tag = config.getString("tag");
+	if (tag.size() > 4) // Invalid tag
+		throw std::runtime_error("conf.cfg: Problem tag too long "
+			"(max 4 characters)");
 
 	// Statement
-	if (f.size() < 3 || f[2].empty()) {
-		if (verbosity > 0)
-			eprintf("Warning: conf.cfg: Missing statement\n");
+	statement = config.getString("statement");
+	if (statement.size()) {
+		if (statement.find('/') < statement.size())
+			throw std::runtime_error("config.conf: statement cannot contain "
+				"'/' character");
 
-	} else if (f[2].find('/') != string::npos ||
-			access(package_path + "doc/" + f[2], F_OK) == -1) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Invalid statement: 'doc/%s' - %s\n",
-				f[2].c_str(), strerror(errno));
-
-		return -1;
+		if (access(package_path + "doc/" + statement, F_OK) == -1)
+			throw std::runtime_error("config.conf: invalid statement '" +
+				statement + "': 'doc/" + statement + "' - " + strerror(errno));
 	}
 
 	// Checker
-	if (f.size() < 4) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Missing checker\n");
+	checker = config.getString("checker");
+	if (checker.size()) {
+		if (checker.find('/') < checker.size())
+			throw std::runtime_error("config.conf: checker cannot contain "
+				"'/' character");
 
-		return -1;
+		if (access(package_path + "check/" + checker, F_OK) == -1)
+			throw std::runtime_error("config.conf: invalid checker '" +
+				checker + "': 'check/" + checker + "' - " + strerror(errno));
 	}
 
-	if (f[3].find('/') != string::npos ||
-			access(package_path + "check/" + f[3], F_OK) == -1) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Invalid checker: 'check/%s' - %s\n",
-				f[3].c_str(), strerror(errno));
+	// Solutions
+	solutions = config.getArray("solutions");
+	foreach (i, solutions) {
+		if (i->find('/') < i->size())
+			throw std::runtime_error("config.conf: solution cannot contain "
+				"'/' character");
 
-		return -1;
+		if (access(package_path + "prog/" + *i, F_OK) == -1)
+			throw std::runtime_error("config.conf: invalid solution '" +
+				*i + "': 'prog/" + *i + "' - " + strerror(errno));
 	}
 
-	// Solution
-	if (f.size() < 5 || f[4].empty())
-		eprintf("Warning: conf.cfg: Missing solution\n");
-
-	else if (f[4].find('/') != string::npos ||
-			access(package_path + "prog/" + f[4], F_OK) == -1) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Invalid solution: 'prog/%s' - %s\n",
-				f[4].c_str(), strerror(errno));
-
-		return -1;
-	}
+	// Main solution
+	main_solution = config.getString("main_solution");
+	if (std::find(solutions.begin(), solutions.end(), main_solution) ==
+			solutions.end())
+		throw std::runtime_error("config.conf: main_solution has to be set in "
+			"solutions");
 
 	// Memory limit (in kB)
-	if (f.size() < 6) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Missing memory limit\n");
+	if (!config.isSet("memory_limit"))
+		throw std::runtime_error("config.conf: missing memory limit\n");
 
-		return -1;
-	}
-
-	if (strtou(f[5], &memory_limit) == -1) {
-		if (verbosity > 0)
-			eprintf("Error: conf.cfg: Invalid memory limit: '%s'\n",
-				f[5].c_str());
-
-		return -1;
-	}
-
-	name = f[0];
-	tag = f[1];
-	statement = f[2];
-	checker = f[3];
-	solution = f[4];
-
-	test_groups.clear();
+	if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
+		throw std::runtime_error("config.conf: invalid memory limit\n");
 
 	// Tests
-	vector<string> line;
-	for (int i = 6, flen = f.size(); i < flen; ++i) {
-		size_t beg = 0, end = 0, len = f[i].size();
-		line.clear();
-
-		// Get line split on spaces and tabs
-		do {
-			end = beg + strcspn(f[i].c_str() + beg, " \t");
-			line.push_back(string(f[i].begin() + beg, f[i].begin() + end));
-
-			// Remove blank strings (created by multiple separators)
-			if (line.back().empty())
-				line.pop_back();
-
-			beg = ++end;
-		} while (end < len);
-
-		// Ignore empty lines
-		if (line.empty())
-			continue;
-
-		// Validate line
-		if (line.size() != 2 && line.size() != 3) {
-			if (verbosity > 0)
-				eprintf(
-					"Error: conf.cfg: Tests - invalid line format (line %i)\n",
-					i);
-
-			return -1;
-		}
+	test_groups.clear();
+	vector<string> tests = config.getArray("tests");
+	foreach (i, tests) {
+		*i += '\0'; // i->data() is now null-terminated
+		Test test;
 
 		// Test name
-		if (line[0].find('/') != string::npos ||
-				access((package_path + "tests/" + line[0] + ".in"), F_OK) == -1) {
-			if (verbosity > 0)
-				eprintf("Error: conf.cfg: Invalid test: '%s' - %s\n",
-					line[0].c_str(), strerror(errno));
+		size_t pos = 0;
+		while (pos < i->size() && !isspace((*i)[pos]))
+			++pos;
+		test.name.assign(*i, 0, pos);
 
-			return -1;
-		}
+		if (test.name.find('/') != string::npos)
+			throw std::runtime_error("config.conf: test name cannot contain "
+				"'/' character");
 
-		Test test = { line[0], 0 };
+		if (access(package_path + "tests/" + test.name + ".in", F_OK) == -1)
+			throw std::runtime_error("config.conf: invalid test name '" +
+				test.name + "': 'tests/" + test.name + ".in' - " +
+				strerror(errno));
 
 		// Time limit
-		if (!isReal(line[1])) {
-			if (verbosity > 0)
-				eprintf("Error: conf.cfg: Invalid time limit: '%s' (line %i)\n",
-					line[1].c_str(), i);
-			return -1;
-		}
+		errno = 0;
+		char *ptr;
+		test.time_limit = round(strtod(i->data() + pos, &ptr) * 1000000LL);
+		if (errno)
+			throw std::runtime_error("config.conf: " + test.name +
+				": invalid time limit");
+		pos = ptr - i->data();
+		i->erase(i->size() - 1); // Remove trailing '\0'
 
-		test.time_limit = round(strtod(line[1].c_str(), NULL) * 1000000LL);
+		while (pos < i->size() && isspace((*i)[pos]))
+			++pos;
 
 		// Points
-		if (line.size() == 3) {
+		if (pos < i->size()) {
 			test_groups.push_back(Group());
 
-			if (strtoi(line[2], &test_groups.back().points) == -1) {
-				if (verbosity > 0)
-					eprintf("Error: conf.cfg: Invalid points for group: '%s' "
-					"(line %i)\n", line[2].c_str(), i);
-				return -1;
-			}
+			// Remove trailing white spaces
+			size_t end = i->size();
+			while (end > pos && isspace((*i)[end - 1]))
+				--end;
+
+			if (strtoi(*i, &test_groups.back().points, pos, end) <= 0)
+				throw std::runtime_error("config.conf: " + test.name +
+					": invalid points");
 		}
 
 		test_groups.back().tests.push_back(test);
 	}
+}
 
-	if (verbosity > 1)
-		printf("Validation passed.\n");
+string ProblemConfig::makeSafeString(const StringView &str) {
+	if (ConfigFile::isStringLiteral(str))
+		return str.to_string();
 
-	return 0;
+	if (str.find('\n') != StringView::npos)
+		return '"' + ConfigFile::safeDoubleQuotedString(str) + '"';
+
+	return '\'' + ConfigFile::safeSingleQuotedString(str) + '\'';
+}
+
+string getTag(const string& str) {
+	string tag;
+	for (size_t i = 0, len = str.size(); tag.size() < 3 && i < len; ++i)
+		if (!isblank(str[i]))
+			tag += tolower(str[i]);
+
+	return tag;
 }

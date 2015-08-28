@@ -157,12 +157,33 @@ public:
 	std::vector<std::string> getArray(const StringView& name) const;
 
 	// Check if character is one of these [a-zA-Z0-9\-_.]
-	static int isName(int c) {
+	static bool isName(int c) {
 		return isalnum(c) || c == '-' || c == '_' || c == '.';
 	}
 
 	// Check if character is one of these [a-zA-Z0-9\-_.+:\*]
-	static int isStringLiteral(int c) {
+	static bool isStringLiteral(int c) {
 		return isName(c) || c == '+' || c == ':' || c == '*';
 	}
+
+	// Check if string is a valid string literal
+	static bool isStringLiteral(const StringView& str);
+
+	/**
+	 * @brief Escapes unsafe sequences in str
+	 * @details '\'' replaces with "''"
+	 *
+	 * @param str input string
+	 * @return escaped string
+	 */
+	static std::string safeSingleQuotedString(const StringView& str);
+
+	/**
+	 * @brief Escapes unsafe sequences in str
+	 * @details '\'' replaces with "''"
+	 *
+	 * @param str input string
+	 * @return escaped string
+	 */
+	static std::string safeDoubleQuotedString(const StringView& str);
 };

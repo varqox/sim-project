@@ -40,6 +40,8 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 		(90) // SYS_mmap
 		(91) // SYS_munmap
 		(108) // SYS_fstat
+		(125) // SYS_mprotect
+		(175) // SYS_rt_sigprocmask
 		(192) // SYS_mmap2
 		(197) // SYS_fstat64
 		(252); // SYS_exit_group
@@ -59,8 +61,10 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 		(3) // SYS_close
 		(5) // SYS_fstat
 		(9) // SYS_mmap
+		(10) // SYS_mprotect
 		(11) // SYS_munmap
 		(12) // SYS_brk
+		(14) // SYS_rt_sigprocmask
 		(16) // SYS_ioctl
 		(60) // SYS_exit
 		(231); // SYS_exit_group

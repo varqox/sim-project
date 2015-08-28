@@ -410,6 +410,23 @@ inline int putFileContents(const std::string& file, const std::string& data) {
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
 
+// Closes file descriptor automatically
+class Closer {
+	int fd_;
+public:
+	Closer(int fd) : fd_(fd) {}
+
+	void cancel() { fd_ = -1; }
+
+	/**
+	 * @brief Closes file descriptor
+	 * @return 0 on success, -1 on error
+	 */
+	int close();
+
+	~Closer() { close(); }
+};
+
 template<int (*func)(const char*)>
 class RemoverBase {
 	char* name;

@@ -313,8 +313,10 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 		size_t end = StringView::npos) {
 	if (end > s.size())
 		end = s.size();
-	if (beg > end)
-		beg = end;
+	if (beg >= end) {
+		*x = 0;
+		return 0;
+	}
 
 	if (x == NULL)
 		return isInteger(s, beg, end) ? end - beg : -1;
@@ -345,8 +347,10 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 		size_t end = StringView::npos) {
 	if (end > s.size())
 		end = s.size();
-	if (beg > end)
-		beg = end;
+	if (beg >= end) {
+		*x = 0;
+		return 0;
+	}
 
 	if (x == NULL)
 		return s[beg] != '-' && isInteger(s, beg, end) ? end - beg : -1;

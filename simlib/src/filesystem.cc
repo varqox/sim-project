@@ -527,3 +527,12 @@ int putFileContents(const char* file, const char* data, size_t len) {
 	fclose(f);
 	return pos;
 }
+
+int Closer::close() {
+	if (fd_ >= 0)
+		while (::close(fd_) == -1)
+			if (errno != EINTR)
+				return -1;
+
+	return 0;
+}

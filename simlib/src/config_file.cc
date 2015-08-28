@@ -267,3 +267,64 @@ std::vector<std::string> ConfigFile::getArray(const StringView& name) const {
 	map<string, Variable>::const_iterator it = vars.find(name.to_string());
 	return (it == vars.end() ? vector<string>() : it->second.a);
 }
+
+bool ConfigFile::isStringLiteral(const StringView& str) {
+	for (size_t i = 0; i < str.size(); ++i)
+		if (!isStringLiteral(str[i]))
+			return false;
+
+	return true;
+}
+
+string ConfigFile::safeSingleQuotedString(const StringView& str) {
+	string res;
+	res.reserve(str.size());
+	for (size_t i = 0; i < str.size(); ++i) {
+		if (str[i] == '\'')
+			res += '\'';
+		res += str[i];
+	}
+	return res;
+}
+
+string ConfigFile::safeDoubleQuotedString(const StringView& str) {
+	string res;
+	res.reserve(str.size());
+	for (size_t i = 0; i < str.size(); ++i)
+		switch (str[i]) {
+		case '\\':
+			res += "\\\\";
+			break;
+		case '"':
+			res += "\\\"";
+			break;
+		case '?':
+			res += "\\?";
+			break;
+		case '\a':
+			res += "\\a";
+			break;
+		case '\b':
+			res += "\\b";
+			break;
+		case '\f':
+			res += "\\f";
+			break;
+		case '\n':
+			res += "\\n";
+			break;
+		case '\r':
+			res += "\\r";
+			break;
+		case '\t':
+			res += "\\t";
+			break;
+		case '\v':
+			res += "\\v";
+			break;
+		default:
+			res += str[i];
+		}
+
+	return res;
+}
