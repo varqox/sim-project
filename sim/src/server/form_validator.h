@@ -19,13 +19,13 @@ public:
 	bool validate(std::string& var, const std::string& name,
 			const std::string& name_to_print, size_t max_size = -1);
 
-	// validate field + check it by comp
+	// validate field + (if not blank) check it by comp
 	template<class Checker>
 	bool validate(std::string& var, const std::string& name,
 			const std::string& name_to_print, Checker check,
 			const std::string& error, size_t max_size = -1);
 
-	// Like validate but also validate not blank
+	// Like validate() but also validate not blank
 	bool validateNotBlank(std::string& var, const std::string& name,
 			const std::string& name_to_print, size_t max_size = -1);
 
@@ -55,14 +55,14 @@ public:
 	bool noErrors() const { return errors_.empty(); }
 };
 
-// validate field + check it by comp
+// validate field + (if not blank) check it by comp
 template<class Checker>
 inline bool FormValidator::validate(std::string& var, const std::string& name,
 		const std::string& name_to_print, Checker check,
 		const std::string& error, size_t max_size) {
 
 	if (validate(var, name, name_to_print, max_size)) {
-		if (check(var))
+		if (var.empty() || check(var))
 			return true;
 
 		append(errors_) << "<p>" << htmlSpecialChars(error.empty() ?
