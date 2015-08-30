@@ -241,11 +241,25 @@ string htmlSpecialChars(const StringView& s) {
 bool isInteger(const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
-	if (beg > end)
-		beg = end;
+	if (beg >= end)
+		return false; // empty string is not integer
 
-	if (beg < end && (s[beg] == '-' || s[beg] == '+'))
-		++beg;
+	if (s[beg] == '-' || s[beg] == '+')
+		if (++beg == end)
+			return false; // sign is not integer
+
+	for (; beg < end; ++beg)
+		if (!isdigit(s[beg]))
+			return false;
+
+	return true;
+}
+
+bool isDigit(const StringView& s, size_t beg, size_t end) {
+	if (end > s.size())
+		end = s.size();
+	if (beg >= end)
+		return false;
 
 	for (; beg < end; ++beg)
 		if (!isdigit(s[beg]))

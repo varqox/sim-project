@@ -313,6 +313,9 @@ void node::__print(FILE *stream, string buff) {
 }
 
 node* node::dir(const string& pathname) {
+	if (dirs.empty())
+		return NULL;
+
 	vector<node*>::iterator down = dirs.begin(), up = --dirs.end(), mid;
 
 	while (down < up) {
@@ -509,7 +512,7 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 	return res;
 }
 
-int putFileContents(const char* file, const char* data, size_t len) {
+size_t putFileContents(const char* file, const char* data, size_t len) {
 	FILE *f = fopen(file, "w");
 	if (f == NULL)
 		return -1;

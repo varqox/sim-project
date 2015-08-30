@@ -404,9 +404,27 @@ inline std::vector<std::string> getFileByLines(const std::string& file,
 	return getFileByLines(file.c_str(), flags, first, last);
 }
 
-int putFileContents(const char* file, const char* data, size_t len = -1);
+/**
+ * @brief Writes @p data to file @p file
+ * @details Writes all data or nothing
+ *
+ * @param file file to write to
+ * @param data data to write
+ *
+ * @return bytes written on success, -1 on error
+ */
+size_t putFileContents(const char* file, const char* data, size_t len = -1);
 
-inline int putFileContents(const std::string& file, const std::string& data) {
+/**
+ * @brief Writes @p data to file @p file
+ * @details Writes all data or nothing
+ *
+ * @param file file to write to
+ * @param data data to write
+ *
+ * @return bytes written on success, -1 on error
+ */
+inline size_t putFileContents(const std::string& file, const std::string& data) {
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
 

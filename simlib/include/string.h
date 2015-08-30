@@ -295,8 +295,26 @@ bool isSuffixIn(const StringView& str, Iter beg, Iter end) {
 
 std::string htmlSpecialChars(const StringView& s);
 
+/**
+ * @brief Check whether string @p s[beg, end) is an integer
+ * @details Equivalent to check id string matches regex [+\-]?[0-9]+
+ * Notes:
+ * - empty string is not an integer
+ * - sign is not an integer
+ *
+ * @param s string
+ * @param beg beginning
+ * @param end position of first character not to check
+ * @return result - whether string @p s[beg, end) is an integer
+ */
 bool isInteger(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos);
+
+// Checks whether string @p s[beg, end) consist only of digits
+bool isDigit(const StringView& s, size_t beg, size_t end = StringView::npos);
+
+// Checks whether string @p s consist only of digits
+inline bool isDigit(const StringView& s) { return isDigit(s, 0); }
 
 bool isReal(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos);

@@ -156,17 +156,17 @@ public:
 	// Returns variable @p name as array (empty on error)
 	std::vector<std::string> getArray(const StringView& name) const;
 
-	// Check if character is one of these [a-zA-Z0-9\-_.]
+	// Check whether character is one of these [a-zA-Z0-9\-_.]
 	static bool isName(int c) {
 		return isalnum(c) || c == '-' || c == '_' || c == '.';
 	}
 
-	// Check if character is one of these [a-zA-Z0-9\-_.+:\*]
+	// Check whether character is one of these [a-zA-Z0-9\-_.+:\*]
 	static bool isStringLiteral(int c) {
 		return isName(c) || c == '+' || c == ':' || c == '*';
 	}
 
-	// Check if string is a valid string literal
+	// Check whether string is a valid string literal
 	static bool isStringLiteral(const StringView& str);
 
 	/**
