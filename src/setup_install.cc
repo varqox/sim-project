@@ -186,6 +186,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// submissions_to_rounds
+		// TODO: maybe this table is unnecessary...
 		try {
 			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `submissions_to_rounds` (\n"
 					"`submission_id` int unsigned NOT NULL,\n"
