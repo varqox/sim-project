@@ -16,7 +16,7 @@
  * @param templ the same as template in mkstemp(3)
  * @return file descriptor on success, -1 on error
  */
-int getUnlinkedTmpFile(const std::string& templ = "tmp_fileXXXXXX");
+int getUnlinkedTmpFile(const std::string& templ = "/tmp/tmp_fileXXXXXX");
 
 class TemporaryDirectory
 {

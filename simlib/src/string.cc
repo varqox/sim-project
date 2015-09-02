@@ -244,8 +244,7 @@ bool isInteger(const StringView& s, size_t beg, size_t end) {
 	if (beg >= end)
 		return false; // empty string is not integer
 
-	if (s[beg] == '-' || s[beg] == '+')
-		if (++beg == end)
+	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
 			return false; // sign is not integer
 
 	for (; beg < end; ++beg)

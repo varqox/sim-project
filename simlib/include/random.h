@@ -1,8 +1,14 @@
 #pragma once
 
-#include <cstdlib>
+#include "ncg.h"
 
 // Get random from [a, b]
 inline int getRandom(int a, int b) {
-	return a + rand() % (b - a + 1);
+	return a + pull() % (b - a + 1);
+}
+
+template<class Iter>
+void randomShuffle (Iter begin, Iter end) {
+	for (__typeof(end - begin) n = end - begin, i = n - 1; i > 0; --i)
+		std::swap(begin[i], begin[getRandom(0, i)]);
 }
