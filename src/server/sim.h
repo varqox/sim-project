@@ -5,6 +5,8 @@
 
 #include "../include/db.h"
 
+#include <utime.h>
+
 // Every object is independent, thread-safe
 class Sim {
 private:
@@ -54,6 +56,9 @@ private:
 	 * @return user type
 	 */
 	int getUserType(const std::string& user_id);
+
+	// Notifies judge server that there are submissions to judge
+	static void notifyJudgeServer() { utime("judge-machine.notify", NULL); }
 
 public:
 	Sim();

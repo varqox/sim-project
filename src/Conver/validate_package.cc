@@ -23,8 +23,8 @@ string validatePackage(string pathname) {
 	// Check whether package has exactly one main folder
 	string main_folder;
 	while ((file = readdir(dir))) {
-		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, ".."))
-			if ((subdir = opendir((pathname + file->d_name).c_str()))) {
+		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")
+			&& (subdir = opendir((pathname + file->d_name).c_str()))) {
 				if (main_folder.size()) {
 					eprintf("Error: More than one package main folder found\n");
 					exit(6);

@@ -12,8 +12,9 @@ private:
 
 	Sim& sim_;
 	RoundPath *r_path_;
+	size_t arg_beg;
 
-	explicit Contest(Sim& sim) : sim_(sim), r_path_(NULL) {}
+	explicit Contest(Sim& sim) : sim_(sim), r_path_(NULL), arg_beg(0) {}
 
 	~Contest();
 

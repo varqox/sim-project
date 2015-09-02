@@ -11,7 +11,6 @@
 
 #include <cerrno>
 #include <cppconn/prepared_statement.h>
-#include <utime.h>
 
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)
@@ -22,7 +21,7 @@ using std::vector;
 Sim::Contest::~Contest() { delete r_path_; }
 
 void Sim::Contest::handle() {
-	size_t arg_beg = 3;
+	arg_beg = 3;
 
 	// Select contest
 	if (0 == compareTo(sim_.req_->target, arg_beg, '/', "")) {
@@ -101,6 +100,7 @@ void Sim::Contest::handle() {
 		// Problem statement
 		if (r_path_->type == PROBLEM &&
 				0 == compareTo(sim_.req_->target, arg_beg, '/', "statement")) {
+			arg_beg += 10;
 			// Get statement path
 			ConfigFile problem_config;
 			problem_config.addVar("statement");
@@ -136,6 +136,7 @@ void Sim::Contest::handle() {
 
 		// Add
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "add")) {
+			arg_beg += 4;
 			if (r_path_->type == CONTEST)
 				return addRound();
 
@@ -147,6 +148,7 @@ void Sim::Contest::handle() {
 
 		// Edit
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "edit")) {
+			arg_beg += 5;
 			if (r_path_->type == CONTEST)
 				return editContest();
 
@@ -158,6 +160,7 @@ void Sim::Contest::handle() {
 
 		// Delete
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete")) {
+			arg_beg += 7;
 			if (r_path_->type == CONTEST)
 				return deleteContest();
 
@@ -168,16 +171,22 @@ void Sim::Contest::handle() {
 		}
 
 		// Problems
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "problems"))
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "problems")) {
+			arg_beg += 9;
 			return problems(admin_view);
+		}
 
 		// Submit
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "submit"))
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "submit")) {
+			arg_beg += 6;
 			return submit(admin_view);
+		}
 
 		// Submissions
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "submissions"))
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "submissions")) {
+			arg_beg += 12;
 			return submissions(admin_view);
+		}
 
 		// Contest dashboard
 		TemplateWithMenu templ(*this, "Contest dashboard");
@@ -389,7 +398,7 @@ void Sim::Contest::addProblem() {
 
 	FormValidator fv(sim_.req_->form_data);
 	string name, memory_limit, user_package_file;
-	bool force_auto_limit = false;
+	bool force_auto_limit = true;
 
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
@@ -751,57 +760,80 @@ void Sim::Contest::editRound() {
 	TemplateWithMenu templ(*this, "Edit round");
 	templ.printRoundPath(*r_path_, "");
 	templ << fv.errors() << "<div class=\"form-container\">\n"
-		"<h1>Edit round</h1>\n"
-		"<form method=\"post\">\n"
-			// Name
-			"<div class=\"field-group\">\n"
-				"<label>Round name</label>\n"
-				"<input type=\"text\" name=\"name\" value=\""
-					<< htmlSpecialChars(name) << "\" size=\"24\" "
-					"maxlength=\"128\" required>\n"
-			"</div>\n"
-			// Visible
-			"<div class=\"field-group\">\n"
-				"<label>Visible</label>\n"
-				"<input type=\"checkbox\" name=\"visible\""
-					<< (is_visible ? " checked" : "") << ">\n"
-			"</div>\n"
-			// Begins
-			"<div class=\"field-group\">\n"
-				"<label>Begins</label>\n"
-				"<input type=\"text\" name=\"begins\""
-					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(begins) << "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
-			// Ends
-			"<div class=\"field-group\">\n"
-				"<label>Ends</label>\n"
-				"<input type=\"text\" name=\"ends\""
-					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(ends) << "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
-			// Full_results
-			"<div class=\"field-group\">\n"
-				"<label>Full_results</label>\n"
-				"<input type=\"text\" name=\"full_results\""
-					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
-					<< htmlSpecialChars(full_results) << "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
-			"<div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-				"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
-					<< r_path_->round_id << "/delete\">Delete round</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n";
+			"<h1>Edit round</h1>\n"
+			"<form method=\"post\">\n"
+				// Name
+				"<div class=\"field-group\">\n"
+					"<label>Round name</label>\n"
+					"<input type=\"text\" name=\"name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\" "
+						"maxlength=\"128\" required>\n"
+				"</div>\n"
+				// Visible
+				"<div class=\"field-group\">\n"
+					"<label>Visible</label>\n"
+					"<input type=\"checkbox\" name=\"visible\""
+						<< (is_visible ? " checked" : "") << ">\n"
+				"</div>\n"
+				// Begins
+				"<div class=\"field-group\">\n"
+					"<label>Begins</label>\n"
+					"<input type=\"text\" name=\"begins\""
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+						<< htmlSpecialChars(begins) << "\" size=\"19\" "
+						"maxlength=\"19\">\n"
+				"</div>\n"
+				// Ends
+				"<div class=\"field-group\">\n"
+					"<label>Ends</label>\n"
+					"<input type=\"text\" name=\"ends\""
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+						<< htmlSpecialChars(ends) << "\" size=\"19\" "
+						"maxlength=\"19\">\n"
+				"</div>\n"
+				// Full_results
+				"<div class=\"field-group\">\n"
+					"<label>Full_results</label>\n"
+					"<input type=\"text\" name=\"full_results\""
+						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\""
+						<< htmlSpecialChars(full_results) << "\" size=\"19\" "
+						"maxlength=\"19\">\n"
+				"</div>\n"
+				"<div>\n"
+					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+						<< r_path_->round_id << "/delete\">Delete round</a>\n"
+				"</div>\n"
+			"</form>\n"
+		"</div>\n";
 }
 
 void Sim::Contest::editProblem() {
 	if (!r_path_->admin_access)
 		return sim_.error403();
+
+	// Rejudge
+	if (0 == compareTo(sim_.req_->target, arg_beg, '/', "rejudge")) {
+		try {
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("UPDATE submissions "
+				"SET status='waiting', queued=? WHERE problem_id=?"));
+			pstmt->setString(1, date("%Y-%m-%d %H:%M:%S"));
+			pstmt->setString(2, r_path_->problem->problem_id);
+
+			pstmt->executeUpdate();
+			notifyJudgeServer();
+
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
+
+		} catch (...) {
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		}
+
+		return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
+	}
 
 	FormValidator fv(sim_.req_->form_data);
 	string round_name, name, tag, memory_limit;
@@ -875,46 +907,51 @@ void Sim::Contest::editProblem() {
 
 	TemplateWithMenu templ(*this, "Edit problem");
 	templ.printRoundPath(*r_path_, "");
-	templ << fv.errors() << "<div class=\"form-container\">\n"
-		"<h1>Edit problem</h1>\n"
-		"<form method=\"post\">\n"
-			// Problem round name
-			"<div class=\"field-group\">\n"
-				"<label>Problem round name</label>\n"
-				"<input type=\"text\" name=\"round-name\" value=\""
-					<< htmlSpecialChars(round_name) << "\" size=\"24\" "
-					"maxlength=\"128\" required>\n"
-			"</div>\n"
-			// Problem name
-			"<div class=\"field-group\">\n"
-				"<label>Problem name</label>\n"
-				"<input type=\"text\" name=\"name\" value=\""
-					<< htmlSpecialChars(name) << "\" size=\"24\" "
-					"maxlength=\"128\" required>\n"
-			"</div>\n"
-			// Tag
-			"<div class=\"field-group\">\n"
-				"<label>Problem tag</label>\n"
-				"<input type=\"text\" name=\"tag\" value=\""
-					<< htmlSpecialChars(tag) << "\" size=\"24\" "
-					"maxlength=\"4\" required>\n"
-			"</div>\n"
-			// TODO: Checker
-			// Memory limit
-			"<div class=\"field-group\">\n"
-				"<label>Memory limit (in kB)</label>\n"
-				"<input type=\"text\" name=\"memory-limit\" value=\""
-					<< htmlSpecialChars(memory_limit) << "\" size=\"24\" "
-					"required>\n"
-			"</div>\n"
-			// TODO: Main solution
-			"<div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-				"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
-					<< r_path_->round_id << "/delete\">Delete problem</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n";
+	templ << fv.errors() << "<div class=\"right-flow\" style=\"width:85%\">"
+			"<a class=\"btn-small\" href=\""
+				<< sim_.req_->target.substr(0, arg_beg - 1)
+				<< "/rejudge\">Rejudge all submissions</a>\n"
+		"</div>\n"
+		"<div class=\"form-container\">\n"
+			"<h1>Edit problem</h1>\n"
+			"<form method=\"post\">\n"
+				// Problem round name
+				"<div class=\"field-group\">\n"
+					"<label>Problem round name</label>\n"
+					"<input type=\"text\" name=\"round-name\" value=\""
+						<< htmlSpecialChars(round_name) << "\" size=\"24\" "
+						"maxlength=\"128\" required>\n"
+				"</div>\n"
+				// Problem name
+				"<div class=\"field-group\">\n"
+					"<label>Problem name</label>\n"
+					"<input type=\"text\" name=\"name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\" "
+						"maxlength=\"128\" required>\n"
+				"</div>\n"
+				// Tag
+				"<div class=\"field-group\">\n"
+					"<label>Problem tag</label>\n"
+					"<input type=\"text\" name=\"tag\" value=\""
+						<< htmlSpecialChars(tag) << "\" size=\"24\" "
+						"maxlength=\"4\" required>\n"
+				"</div>\n"
+				// TODO: Checker
+				// Memory limit
+				"<div class=\"field-group\">\n"
+					"<label>Memory limit (in kB)</label>\n"
+					"<input type=\"text\" name=\"memory-limit\" value=\""
+						<< htmlSpecialChars(memory_limit) << "\" size=\"24\" "
+						"required>\n"
+				"</div>\n"
+				// TODO: Main solution
+				"<div>\n"
+					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+						<< r_path_->round_id << "/delete\">Delete problem</a>\n"
+				"</div>\n"
+			"</form>\n"
+		"</div>\n";
 }
 
 void Sim::Contest::deleteContest() {
@@ -922,42 +959,38 @@ void Sim::Contest::deleteContest() {
 		return sim_.error403();
 
 	FormValidator fv(sim_.req_->form_data);
-	if (sim_.req_->method == server::HttpRequest::POST)
-		if (fv.exist("delete"))
-			try {
-				// Delete submissions
-				UniquePtr<sql::PreparedStatement> pstmt(
-					sim_.db_conn()->prepareStatement(
-						"DELETE s, str "
-						"FROM submissions s, submissions_to_rounds str "
-						"WHERE contest_round_id=? AND id=submission_id"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->executeUpdate();
+	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
+		try {
+			// Delete submissions
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("DELETE FROM submissions "
+					"WHERE contest_round_id=?"));
+			pstmt->setString(1, r_path_->round_id);
+			pstmt->executeUpdate();
 
-				// Delete from users_to_contests
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"DELETE FROM users_to_contests WHERE contest_id=?"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->executeUpdate();
+			// Delete from users_to_contests
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"DELETE FROM users_to_contests WHERE contest_id=?"));
+			pstmt->setString(1, r_path_->round_id);
+			pstmt->executeUpdate();
 
-				// Delete rounds
-				pstmt.reset(sim_.db_conn()->
-					prepareStatement("DELETE FROM rounds "
-						"WHERE id=? OR parent=? OR grandparent=?"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->setString(2, r_path_->round_id);
-				pstmt->setString(3, r_path_->round_id);
+			// Delete rounds
+			pstmt.reset(sim_.db_conn()->prepareStatement("DELETE FROM rounds "
+				"WHERE id=? OR parent=? OR grandparent=?"));
+			pstmt->setString(1, r_path_->round_id);
+			pstmt->setString(2, r_path_->round_id);
+			pstmt->setString(3, r_path_->round_id);
 
-				if (pstmt->executeUpdate() > 0)
-					return sim_.redirect("/c");
+			if (pstmt->executeUpdate() > 0)
+				return sim_.redirect("/c");
 
-			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-			}
+		} catch (...) {
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		}
 
 	TemplateWithMenu templ(*this, "Delete contest");
 	templ.printRoundPath(*r_path_, "");
@@ -983,34 +1016,31 @@ void Sim::Contest::deleteRound() {
 		return sim_.error403();
 
 	FormValidator fv(sim_.req_->form_data);
-	if (sim_.req_->method == server::HttpRequest::POST)
-		if (fv.exist("delete"))
-			try {
-				// Delete submissions
-				UniquePtr<sql::PreparedStatement> pstmt(
-					sim_.db_conn()->prepareStatement(
-						"DELETE s, str "
-						"FROM submissions s, submissions_to_rounds str "
-						"WHERE parent_round_id=? AND id=submission_id"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->executeUpdate();
+	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
+		try {
+			// Delete submissions
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("DELETE FROM submissions "
+					"WHERE parent_round_id=?"));
+			pstmt->setString(1, r_path_->round_id);
+			pstmt->executeUpdate();
 
-				// Delete rounds
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"DELETE FROM rounds WHERE id=? OR parent=?"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->setString(2, r_path_->round_id);
+			// Delete rounds
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"DELETE FROM rounds WHERE id=? OR parent=?"));
+			pstmt->setString(1, r_path_->round_id);
+			pstmt->setString(2, r_path_->round_id);
 
-				if (pstmt->executeUpdate() > 0)
-					return sim_.redirect("/c/" + r_path_->contest->id);
+			if (pstmt->executeUpdate() > 0)
+				return sim_.redirect("/c/" + r_path_->contest->id);
 
-			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-			}
+		} catch (...) {
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		}
 
 	TemplateWithMenu templ(*this, "Delete round");
 	templ.printRoundPath(*r_path_, "");
@@ -1036,33 +1066,29 @@ void Sim::Contest::deleteProblem() {
 		return sim_.error403();
 
 	FormValidator fv(sim_.req_->form_data);
-	if (sim_.req_->method == server::HttpRequest::POST)
-		if (fv.exist("delete"))
-			try {
-				// Delete submissions
-				UniquePtr<sql::PreparedStatement> pstmt(
-					sim_.db_conn()->prepareStatement(
-						"DELETE s, str "
-						"FROM submissions s, submissions_to_rounds str "
-						"WHERE s.round_id=? AND id=submission_id"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->executeUpdate();
+	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
+		try {
+			// Delete submissions
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("DELETE FROM submissions WHERE round_id=?"));
+			pstmt->setString(1, r_path_->round_id);
+			pstmt->executeUpdate();
 
-				// Delete problem round
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"DELETE FROM rounds WHERE id=?"));
-				pstmt->setString(1, r_path_->round_id);
+			// Delete problem round
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"DELETE FROM rounds WHERE id=?"));
+			pstmt->setString(1, r_path_->round_id);
 
-				if (pstmt->executeUpdate() > 0)
-					return sim_.redirect("/c/" + r_path_->round->id);
+			if (pstmt->executeUpdate() > 0)
+				return sim_.redirect("/c/" + r_path_->round->id);
 
-			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
 
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-			}
+		} catch (...) {
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		}
 
 	TemplateWithMenu templ(*this, "Delete problem");
 	templ.printRoundPath(*r_path_, "");
@@ -1179,30 +1205,7 @@ void Sim::Contest::submit(bool admin_view) {
 				stmt->executeUpdate("UPDATE submissions SET status='waiting' "
 					"WHERE id=" + submission_id);
 
-				// Insert submission to `submissions_to_rounds`
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-						"INSERT INTO submissions_to_rounds "
-						"(submission_id, user_id, round_id, submit_time) "
-						"VALUES(?, ?, ?, ?),(?, ?, ?, ?),(?, ?, ?, ?)"));
-
-				pstmt->setString(1, submission_id);
-				pstmt->setString(2, sim_.session->user_id);
-				pstmt->setString(3, problem_r_path->problem->id);
-				pstmt->setString(4, current_date);
-
-				pstmt->setString(5, submission_id);
-				pstmt->setString(6, sim_.session->user_id);
-				pstmt->setString(7, problem_r_path->round->id);
-				pstmt->setString(8, current_date);
-
-				pstmt->setString(9, submission_id);
-				pstmt->setString(10, sim_.session->user_id);
-				pstmt->setString(11, problem_r_path->contest->id);
-				pstmt->setString(12, current_date);
-				pstmt->executeUpdate();
-
-				// Notify judge-machine
-				utime("judge-machine.notify", NULL);
+				notifyJudgeServer();
 
 				return sim_.redirect("/s/" + submission_id);
 
@@ -1361,7 +1364,7 @@ void Sim::Contest::submission() {
 	if (sim_.session->open() != Session::OK)
 		return sim_.redirect("/login" + sim_.req_->target);
 
-	size_t arg_beg = 3;
+	arg_beg = 3;
 
 	// Extract round id
 	string submission_id;
@@ -1407,6 +1410,98 @@ void Sim::Contest::submission() {
 			arg_beg += 2;
 		}
 
+		// Delete
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete")) {
+			if (!admin_view)
+				return sim_.error403();
+
+			FormValidator fv(sim_.req_->form_data);
+			if (sim_.req_->method == server::HttpRequest::POST
+					&& fv.exist("delete"))
+				try {
+					// Delete submission
+					pstmt.reset(sim_.db_conn()->prepareStatement(
+						"DELETE FROM submissions WHERE id=?"));
+					pstmt->setString(1, submission_id);
+
+					if (pstmt->executeUpdate() == 0) {
+						fv.addError("Deletion failed");
+						goto delete_form;
+					}
+
+					// Restore `final` status
+					// TODO: try to simplify following UPDATE (see judge
+					// machine submission update)
+					pstmt.reset(sim_.db_conn()->prepareStatement(
+						"UPDATE submissions SET final=IF(id IN (SELECT id FROM "
+							"(SELECT id FROM submissions "
+								"WHERE user_id=? AND round_id=? AND "
+									"status IN ('ok', 'error') "
+								"ORDER BY id DESC LIMIT 1) x), 1, 0) "
+						"WHERE id IN "
+							"(SELECT id FROM "
+								"(SELECT id FROM submissions "
+									"WHERE user_id=? AND round_id=? AND "
+										"status IN ('ok', 'error') "
+									"ORDER BY id DESC LIMIT 1) x) "
+							"OR user_id=? AND round_id=? AND final=1"));
+					pstmt->setString(1, submission_user_id);
+					pstmt->setString(2, round_id);
+					pstmt->setString(3, submission_user_id);
+					pstmt->setString(4, round_id);
+					pstmt->setString(5, submission_user_id);
+					pstmt->setString(6, round_id);
+					pstmt->executeUpdate();
+
+					return sim_.redirect("/c/" + round_id + "/submissions");
+
+				} catch (const std::exception& e) {
+					E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
+						__LINE__, e.what());
+
+				} catch (...) {
+					E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__,
+						__LINE__);
+				}
+
+		delete_form:
+			TemplateWithMenu templ(*this, "Delete submission");
+			templ.printRoundPath(*r_path_, "");
+			templ << fv.errors() << "<div class=\"form-container\">\n"
+				"<h1>Delete submission</h1>\n"
+				"<form method=\"post\">\n"
+					"<label class=\"field\">Are you sure to delete submission "
+					"<a href=\"/c/" << submission_id << "\">" << submission_id
+						<< "</a>?</label>\n"
+					"<div class=\"submit-yes-no\">\n"
+						"<button class=\"btn-danger\" type=\"submit\" "
+							"name=\"delete\">Yes, I'm sure</button>\n"
+						"<a class=\"btn\" href=\""
+							<< sim_.req_->target.substr(0, arg_beg - 1) << "\">"
+							"No, go back</a>\n"
+					"</div>\n"
+				"</form>\n"
+			"</div>\n";
+
+			return;
+		}
+
+		// Rejudge
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "rejudge")) {
+			if (!admin_view)
+				return sim_.error403();
+
+			pstmt.reset(sim_.db_conn()->prepareStatement("UPDATE submissions "
+				"SET status='waiting', queued=? WHERE id=?"));
+			pstmt->setString(1, date("%Y-%m-%d %H:%M:%S"));
+			pstmt->setString(2, submission_id);
+
+			pstmt->executeUpdate();
+			notifyJudgeServer();
+
+			return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
+		}
+
 		// Download solution
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "download")) {
 			sim_.resp_.headers["Content-type"] = "application/text";
@@ -1427,21 +1522,22 @@ void Sim::Contest::submission() {
 			vector<string> args;
 			append(args)("./CTH")("solutions/" + submission_id + ".cpp");
 
-			char tmp_filename[] = "/tmp/sim-server-tmp.XXXXXX";
 			spawn_opts sopt = {
 				-1,
-				mkstemp(tmp_filename),
+				getUnlinkedTmpFile(),
 				-1
 			};
 
+			if (sopt.new_stdout_fd < 0)
+				return sim_.error500();
+
+			// Run CTH
 			spawn(args[0], args, &sopt);
-			if (sopt.new_stdout_fd >= 0)
-				templ << getFileContents(tmp_filename);
+			// Print source code
+			lseek(sopt.new_stdout_fd, 0, SEEK_SET);
+			templ << getFileContents(sopt.new_stdout_fd);
 
-			unlink(tmp_filename);
-			if (sopt.new_stdout_fd >= 0)
-				while (close(sopt.new_stderr_fd) == -1 && errno == EINTR) {}
-
+			Closer(sopt.new_stdout_fd);
 			return;
 		}
 
@@ -1454,8 +1550,15 @@ void Sim::Contest::submission() {
 						<< "/source\">View source</a>\n"
 					"<a class=\"btn-small\" href=\""
 						<< sim_.req_->target.substr(0, arg_beg - 1)
-						<< "/download\">Download</a>\n"
-				"</div>\n"
+						<< "/download\">Download</a>\n";
+		if (admin_view)
+			templ << "<a class=\"btn-small\" href=\""
+					<< sim_.req_->target.substr(0, arg_beg - 1)
+					<< "/rejudge\">Rejudge</a>\n"
+				"<a class=\"btn-small-danger\" href=\""
+					<< sim_.req_->target.substr(0, arg_beg - 1)
+					<< "/delete\">Delete</a>\n";
+		templ << "</div>\n"
 			"</div>\n"
 			"<table style=\"width: 100%\">\n"
 				"<thead>\n"
@@ -1551,24 +1654,21 @@ void Sim::Contest::submissions(bool admin_view) {
 	templ <<  "</h3>";
 
 	try {
+		string param_column = (r_path_->type == CONTEST ? "contest_round_id"
+			: (r_path_->type == ROUND ? "parent_round_id" : "round_id"));
+
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-			prepareStatement(admin_view ? "SELECT s.id, str.submit_time, "
-					"r2.id, r2.name, r.id, r.name, s.status, s.score, "
-					"str.final, str.user_id, u.username "
-				"FROM submissions_to_rounds str, submissions s, users u, "
-					"rounds r, rounds r2 "
-				"WHERE str.submission_id=s.id AND s.round_id=r.id "
-					"AND r.parent=r2.id AND str.round_id=? "
-					"AND str.user_id=u.id "
-				"ORDER BY str.submit_time DESC"
-			: "SELECT s.id, str.submit_time, r3.id, r3.name, r2.id, r2.name, "
-					"s.status, s.score, str.final, r3.full_results "
-				"FROM submissions_to_rounds str, submissions s, rounds r, "
-					"rounds r2, rounds r3 "
-				"WHERE str.submission_id=s.id AND r.id=str.round_id "
-					"AND s.round_id=r2.id AND r2.parent=r3.id "
-					"AND str.round_id=? AND str.user_id=? "
-				"ORDER BY str.submit_time DESC"));
+			prepareStatement(admin_view ? "SELECT s.id, s.submit_time, r2.id, "
+					"r2.name, r.id, r.name, s.status, s.score, s.final, "
+					"s.user_id, u.username "
+				"FROM submissions s, rounds r, rounds r2, users u "
+				"WHERE s." + param_column + "=? AND s.round_id=r.id "
+					"AND r.parent=r2.id AND s.user_id=u.id ORDER BY s.id DESC"
+			: "SELECT s.id, s.submit_time, r2.id, r2.name, r.id, r.name, "
+					"s.status, s.score, s.final, r2.full_results "
+				"FROM submissions s, rounds r, rounds r2 "
+				"WHERE s." + param_column + "=? AND s.round_id=r.id "
+					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC"));
 		pstmt->setString(1, r_path_->round_id);
 		if (!admin_view)
 			pstmt->setString(2, sim_.session->user_id);

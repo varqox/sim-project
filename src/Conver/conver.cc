@@ -68,7 +68,7 @@ problem_package tree:\n\
    |-- prog/             Solutions folder - holds solutions (optional but without solutions automatic time limit setting will be disabled)\n\
    |-- out/              Tests folder - holds tests (optional)\n\
    |-- tests/            Tests folder - holds tests (optional)\n\
-   `-- config.conf          sim_problem_package config file - holds package config (optional)\n\
+   `-- config.conf       sim_problem_package config file - holds package config (optional)\n\
 \n\
 sim_problem_package tree:\n\
    main/                 Root package folder\n\
@@ -76,7 +76,7 @@ sim_problem_package tree:\n\
    |-- check/            Checker folder - holds checker\n\
    |-- prog/             Solutions folder - holds solutions\n\
    |-- tests/            Tests folder - holds tests\n\
-   `-- config.conf          sim_problem_package config file - holds package config\n");
+   `-- config.conf       sim_problem_package config file - holds package config\n");
 }
 
 // TODO: change sscanf to something else
@@ -412,8 +412,7 @@ int main(int argc, char *argv[]) {
 	if (config_conf.checker.empty()) {
 		config_conf.checker = "checker.c";
 		if (putFileContents((out_package + "check/checker.c").c_str(),
-				(const char*)default_checker_c,
-				default_checker_c_len) == size_t(-1)) {
+				(const char*)default_checker_c,default_checker_c_len) == size_t(-1)) {
 			eprintf("Error: putFileContents()\n");
 			return -1;
 		}
