@@ -138,8 +138,9 @@ void Sim::Session::destroy() {
 }
 
 void Sim::Session::close() {
+	State old_state = state_;
 	state_ = CLOSED;
-	if (state_ != OK)
+	if (old_state != OK)
 		return;
 
 	try {

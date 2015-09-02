@@ -174,37 +174,30 @@ int main(int argc, char *argv[]) {
 					"`status` enum('ok','error','c_error','judge_error','waiting') NULL DEFAULT NULL COLLATE utf8_bin,\n"
 					"`score` int NULL DEFAULT NULL,\n"
 					"`queued` datetime NOT NULL,\n"
-					"PRIMARY KEY (`id`),\n"
-					"KEY (`status`, `queued`),\n"
-					"KEY (`user_id`, `round_id`, `final`)\n"
+					"PRIMARY KEY (id),\n"
+					// Judge server
+					"KEY (status, queued),\n"
+					// Update final
+					"KEY (round_id, user_id, status, id),\n"
+					// Contest::submissions() - view all
+					"KEY (round_id, id),\n"
+					"KEY (round_id, user_id, id),\n"
+					"KEY (parent_round_id, id),\n"
+					"KEY (parent_round_id, user_id, id),\n"
+					"KEY (contest_round_id, id),\n"
+					"KEY (contest_round_id, user_id, id),\n"
+					// Contest::submissions() - view only finals
+					"KEY (round_id, final, id),\n"
+					"KEY (round_id, user_id, final, id),\n"
+					"KEY (parent_round_id, final, id),\n"
+					"KEY (parent_round_id, user_id, final, id),\n"
+					"KEY (contest_round_id, final, id),\n"
+					"KEY (contest_round_id, user_id, final, id)\n"
 				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 		} catch (const std::exception& e) {
 			eprintf("\e[31mFailed to create table `submissions`\e[m - %s\n",
 				e.what());
-			error = true;
-		}
-
-		// submissions_to_rounds
-		// TODO: maybe this table is unnecessary...
-		try {
-			stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `submissions_to_rounds` (\n"
-					"`submission_id` int unsigned NOT NULL,\n"
-					"`round_id` int unsigned NOT NULL,\n"
-					"`user_id` int unsigned NOT NULL,\n"
-					"`submit_time` datetime NOT NULL,\n"
-					"`final` BOOLEAN NOT NULL DEFAULT FALSE,\n"
-					"PRIMARY KEY (`round_id`, `submission_id`),\n"
-					"KEY (`submission_id`),\n"
-					"KEY (`round_id`, `user_id`, `submit_time`),\n"
-					"KEY (`round_id`, `user_id`, `final`, `submit_time`),\n"
-					"KEY (`round_id`, `submit_time`),\n"
-					"KEY (`round_id`, `final`, `submit_time`)\n"
-				") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
-
-		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to create table `submissions_to_rounds`"
-				"\e[m - %s\n", e.what());
 			error = true;
 		}
 

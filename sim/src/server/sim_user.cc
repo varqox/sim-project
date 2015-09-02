@@ -503,51 +503,47 @@ void Sim::User::deleteAccount(Data& data) {
 	if (data.view_type == Data::READ_ONLY)
 		return sim_.error403();
 
-	if (sim_.req_->method == server::HttpRequest::POST)
-		if (fv.exist("delete"))
-			try {
-				// Change contests and problems owner id to 1
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-					prepareStatement("UPDATE rounds r, problems p "
-					"SET r.owner=1, p.owner=1 "
-					"WHERE r.owner=? OR p.owner=?"));
-				pstmt->setString(1, data.user_id);
-				pstmt->setString(2, data.user_id);
-				pstmt->executeUpdate();
+	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
+		try {
+			// Change contests and problems owner id to 1
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				prepareStatement("UPDATE rounds r, problems p "
+				"SET r.owner=1, p.owner=1 "
+				"WHERE r.owner=? OR p.owner=?"));
+			pstmt->setString(1, data.user_id);
+			pstmt->setString(2, data.user_id);
+			pstmt->executeUpdate();
 
-				// Delete submissions
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"DELETE FROM submissions, submissions_to_rounds "
-					"USING submissions INNER JOIN submissions_to_rounds "
-					"WHERE submissions.user_id=? AND id=submission_id"));
-				pstmt->setString(1, data.user_id);
-				pstmt->executeUpdate();
+			// Delete submissions
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"DELETE FROM submissions WHERE user_id=?"));
+			pstmt->setString(1, data.user_id);
+			pstmt->executeUpdate();
 
-				// Delete from users_to_contests
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"DELETE FROM users_to_contests WHERE user_id=?"));
-				pstmt->setString(1, data.user_id);
-				pstmt->executeUpdate();
+			// Delete from users_to_contests
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"DELETE FROM users_to_contests WHERE user_id=?"));
+			pstmt->setString(1, data.user_id);
+			pstmt->executeUpdate();
 
-				// Delete user
-				pstmt.reset(sim_.db_conn()->prepareStatement(
-					"DELETE FROM users WHERE id=?"));
-				pstmt->setString(1, data.user_id);
+			// Delete user
+			pstmt.reset(sim_.db_conn()->prepareStatement(
+				"DELETE FROM users WHERE id=?"));
+			pstmt->setString(1, data.user_id);
 
-				if (pstmt->executeUpdate() > 0) {
-					if (data.user_id == sim_.session->user_id)
-						sim_.session->destroy();
-					return sim_.redirect("/");
-				}
-
-			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
-
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__,
-					__LINE__);
+			if (pstmt->executeUpdate() > 0) {
+				if (data.user_id == sim_.session->user_id)
+					sim_.session->destroy();
+				return sim_.redirect("/");
 			}
+
+		} catch (const std::exception& e) {
+			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+				e.what());
+
+		} catch (...) {
+			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		}
 
 	TemplateWithMenu templ(sim_, data.user_id, "Delete account");
 	templ.printUser(data);

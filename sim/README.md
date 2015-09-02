@@ -82,6 +82,7 @@ SIM is open source platform for carrying out algorithmic contests
 If you have just one working SIM installation just type
 ```sh
 git pull
+git submodule update
 make -j && (killall sim-server judge-machine || true) && make install run
 ```
 

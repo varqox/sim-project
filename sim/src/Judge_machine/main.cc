@@ -29,88 +29,65 @@ static void processSubmissionQueue() {
 			UniquePtr<sql::ResultSet> res(stmt->executeQuery(
 				"SELECT id, user_id, round_id, problem_id FROM submissions "
 				"WHERE status='waiting' ORDER BY queued LIMIT 10"));
-			if (res->rowsCount() == 0)
+			if (!res->next())
 				return; // Queue is empty
 
-			while (res->next()) {
-				try {
-					string submission_id = res->getString(1);
-					string user_id = res->getString(2);
-					string round_id = res->getString(3);
-					string problem_id = res->getString(4);
+			do {
+				string submission_id = res->getString(1);
+				string user_id = res->getString(2);
+				string round_id = res->getString(3);
+				string problem_id = res->getString(4);
 
-					// Judge
-					JudgeResult jres = judge(submission_id, problem_id);
+				// Judge
+				JudgeResult jres = judge(submission_id, problem_id);
 
-					// Update submission
-					putFileContents("submissions/" + submission_id,
-						jres.content);
+				// Update submission
+				if (putFileContents("submissions/" + submission_id,
+						jres.content) == size_t(-1))
+					throw std::runtime_error("putFileContents(): -1");
 
-					// Update final
-					// TODO: Combine into one update query
-					UniquePtr<sql::PreparedStatement> pstmt;
-					if (jres.status != JudgeResult::COMPILE_ERROR) {
-						// Remove old final:
-						// From submissions_to_rounds
-						pstmt.reset(conn()->prepareStatement("UPDATE submissions_to_rounds SET final=false WHERE submission_id=(SELECT id FROM submissions WHERE round_id=? AND user_id=? AND final=true LIMIT 1)"));
-						pstmt->setString(1, round_id);
-						pstmt->setString(2, user_id);
-						pstmt->executeUpdate();
-
-						// From submissions
-						pstmt.reset(conn()->prepareStatement(
-							"UPDATE submissions SET final=false "
-							"WHERE round_id=? AND user_id=? AND final=true"));
-						pstmt->setString(1, round_id);
-						pstmt->setString(2, user_id);
-						pstmt->executeUpdate();
-
-						// Set new final in submissions_to_rounds
-						stmt->executeUpdate("UPDATE submissions_to_rounds "
-							"SET final=true WHERE submission_id=" +
-								submission_id);
-					}
-
-					// Update submission
+				// Update final
+				UniquePtr<sql::PreparedStatement> pstmt;
+				if (jres.status == JudgeResult::COMPILE_ERROR ||
+						jres.status == JudgeResult::JUDGE_ERROR) {
 					pstmt.reset(conn()->prepareStatement("UPDATE submissions "
-						"SET status=?, score=?, final=? WHERE id=?"));
+						"SET final=false, status=?, score=? WHERE id=?"));
+					pstmt->setString(1,
+						(jres.status == JudgeResult::COMPILE_ERROR
+							? "c_error" : "judge_error"));
+					pstmt->setNull(2, 0);
+					pstmt->setString(3, submission_id);
 
-					switch (jres.status) {
-					case JudgeResult::OK:
-						pstmt->setString(1, "ok");
-						break;
-
-					case JudgeResult::ERROR:
-						pstmt->setString(1, "error");
-						break;
-
-					case JudgeResult::COMPILE_ERROR:
-						pstmt->setString(1, "c_error");
-						pstmt->setNull(2, 0);
-						pstmt->setBoolean(3, false);
-						break;
-
-					case JudgeResult::JUDGE_ERROR:
-						pstmt->setString(1, "judge_error");
-						pstmt->setNull(2, 0);
-						pstmt->setBoolean(3, false);
-
-					}
-
-					if (jres.status != JudgeResult::COMPILE_ERROR &&
-							jres.status != JudgeResult::JUDGE_ERROR) {
-						pstmt->setString(2, toString(jres.score));
-						pstmt->setBoolean(3, true);
-					}
-
+				} else {
+					pstmt.reset(conn()->prepareStatement(
+						"UPDATE submissions s, "
+							"((SELECT id FROM submissions "
+									"WHERE user_id=? AND round_id=? "
+										"AND final=1) "
+								"UNION "
+									"(SELECT ? AS id) "
+								"LIMIT 1) x "
+						"SET s.final=IF(s.id=?, "
+								"IF(x.id<=s.id, 1, 0), "
+								"IF(s.id>?, 1, 0)), "
+							"s.status=IF(s.id=?, ?, s.status),"
+							"s.score=IF(s.id=?, ?, s.score)"
+						"WHERE s.id=x.id OR s.id=?"));
+					pstmt->setString(1, user_id);
+					pstmt->setString(2, round_id);
+					pstmt->setString(3, submission_id);
 					pstmt->setString(4, submission_id);
-					pstmt->executeUpdate();
-
-				} catch (const std::exception& e) {
-					E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-						__LINE__, e.what());
+					pstmt->setString(5, submission_id);
+					pstmt->setString(6, submission_id);
+					pstmt->setString(7, (jres.status == JudgeResult::OK
+						? "ok" : "error"));
+					pstmt->setString(8, submission_id);
+					pstmt->setInt64(9, jres.score);
+					pstmt->setString(10, submission_id);
 				}
-			}
+
+				pstmt->executeUpdate();
+			} while (res->next());
 		}
 
 	} catch (const std::exception& e) {
