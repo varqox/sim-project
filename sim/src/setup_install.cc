@@ -177,8 +177,8 @@ int main(int argc, char *argv[]) {
 					"PRIMARY KEY (id),\n"
 					// Judge server
 					"KEY (status, queued),\n"
-					// Update final
-					"KEY (round_id, user_id, status, id),\n"
+					// Update final, delete account
+					"KEY (user_id, round_id, status, id),\n"
 					// Contest::submissions() - view all
 					"KEY (round_id, id),\n"
 					"KEY (round_id, user_id, id),\n"
