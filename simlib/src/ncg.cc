@@ -41,8 +41,8 @@ void push(uint32_t seed) {
 
   for (S = seed, i = 0; i < SIZE; i++) {
     // Reinforcement
-    G[M(i)] ^= (S * I - I ^ S) >> 16;
-    G[M(i)] ^= (S * I + I ^ S) >> 00;
+    G[M(i)] ^= ((I * (S - 1)) ^ S) >> 16;
+    G[M(i)] ^= ((I * (S + 1)) ^ S) >> 00;
 
     // Finalization
     I ^= ((G[M(I - 1)] + G[M(i)]) << 16)
