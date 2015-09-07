@@ -6,7 +6,7 @@
 struct Sim::Contest::Round {
 	std::string id, parent, problem_id, access, name, owner;
 	std::string begins, ends, full_results;
-	bool visible;
+	bool visible, show_ranking;
 };
 
 struct Sim::Contest::Subround {

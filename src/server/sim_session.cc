@@ -145,10 +145,9 @@ void Sim::Session::close() {
 
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
-			prepareStatement("UPDATE session SET data=?, time=? WHERE id=?"));
+			prepareStatement("UPDATE session SET data=? WHERE id=?"));
 		pstmt->setString(1, data);
-		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S"));
-		pstmt->setString(3, id_);
+		pstmt->setString(2, id_);
 		pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {

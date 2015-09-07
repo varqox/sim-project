@@ -45,6 +45,8 @@ private:
 
 	void submissions(bool admin_view);
 
+	void ranking(bool admin_view);
+
 	// Utility (sim_contest_utility.cc)
 	struct Round;
 	struct Subround;
