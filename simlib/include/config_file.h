@@ -183,7 +183,9 @@ public:
 	 * @details '\'' replaces with "''"
 	 *
 	 * @param str input string
+	 * @param escape_unprintable whether escape unprintable characters via \xnn
 	 * @return escaped string
 	 */
-	static std::string safeDoubleQuotedString(const StringView& str);
+	static std::string safeDoubleQuotedString(const StringView& str,
+		bool escape_unprintable = false);
 };

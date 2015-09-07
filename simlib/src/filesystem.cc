@@ -497,7 +497,7 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 	char *buff = NULL;
 	size_t n = 0, line = 0;
 	ssize_t read;
-
+	// TODO: getline fails on '\0' ??? - check it out
 	while ((read = getline(&buff, &n, f)) != -1) {
 		if ((flags & GFBL_IGNORE_NEW_LINES) && buff[read - 1] == '\n')
 			buff[read - 1] = '\0';

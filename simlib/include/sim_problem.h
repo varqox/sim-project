@@ -79,9 +79,12 @@ public:
 	 * "\\\\\\\\" -> '\\\\' (single quoted string)
 	 *
 	 * @param str input string
+	 * @param escape_unprintable whether escape unprintable via
+	 * ConfigFile::safeDoubleQoutedString()
 	 * @return escaped (and quoted) string
 	 */
-	static std::string makeSafeString(const StringView& str);
+	static std::string makeSafeString(const StringView& str,
+		bool escape_unprintable = false);
 };
 
 /**

@@ -2,6 +2,8 @@
 
 #include "ncg.h"
 
+#include <algorithm>
+
 // Get random from [a, b]
 inline int getRandom(int a, int b) {
 	return a + pull() % (b - a + 1);

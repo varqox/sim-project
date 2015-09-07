@@ -280,20 +280,24 @@ string ConfigFile::safeSingleQuotedString(const StringView& str) {
 	string res;
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i) {
+		res += str[i];
 		if (str[i] == '\'')
 			res += '\'';
-		res += str[i];
 	}
 	return res;
 }
 
-string ConfigFile::safeDoubleQuotedString(const StringView& str) {
+string ConfigFile::safeDoubleQuotedString(const StringView& str,
+		bool escape_unprintable) {
 	string res;
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i)
 		switch (str[i]) {
 		case '\\':
 			res += "\\\\";
+			break;
+		case '\0':
+			res += "\\0";
 			break;
 		case '"':
 			res += "\\\"";
@@ -323,7 +327,12 @@ string ConfigFile::safeDoubleQuotedString(const StringView& str) {
 			res += "\\v";
 			break;
 		default:
-			res += str[i];
+			if (escape_unprintable && !isprint(str[i])) {
+				res += "\\x";
+				res += dectohex(static_cast<unsigned char>(str[i]) >> 4);
+				res += dectohex(static_cast<unsigned char>(str[i]) & 15);
+			} else
+				res += str[i];
 		}
 
 	return res;

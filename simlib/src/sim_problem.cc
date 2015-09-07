@@ -185,12 +185,19 @@ void ProblemConfig::loadConfig(string package_path) {
 	}
 }
 
-string ProblemConfig::makeSafeString(const StringView &str) {
+string ProblemConfig::makeSafeString(const StringView& str,
+		bool escape_unprintable) {
 	if (ConfigFile::isStringLiteral(str))
 		return str.to_string();
 
-	if (str.find('\n') != StringView::npos)
-		return '"' + ConfigFile::safeDoubleQuotedString(str) + '"';
+	if (escape_unprintable) {
+		for (size_t i = 0; i < str.size(); ++i)
+			if (!isprint(str[i]))
+				return '"' + ConfigFile::safeDoubleQuotedString(str, true)
+					+ '"';
+
+	} else if (str.find('\n') != StringView::npos)
+		return '"' + ConfigFile::safeDoubleQuotedString(str, false) + '"';
 
 	return '\'' + ConfigFile::safeSingleQuotedString(str) + '\'';
 }

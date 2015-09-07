@@ -20,7 +20,7 @@ private:
 	size_type len;
 
 public:
-	StringView(const char* s) : str(s), len(strlen(s)) {}
+	StringView(const char* s = "") : str(s), len(strlen(s)) {}
 
 	StringView(const char* s, size_type n) : str(s), len(n) {}
 
@@ -29,11 +29,6 @@ public:
 	StringView(const std::string& s, size_type beg = 0, size_type endi = npos)
 		: str(s.data() + std::min(beg, s.size())),
 		len(std::min(s.size(), endi)) {}
-
-	template<class T>
-	StringView(const T& x, size_type beg = 0, size_type endi = npos) {
-		operator=(StringView(std::string(x), beg, endi));
-	}
 
 	~StringView() {}
 
