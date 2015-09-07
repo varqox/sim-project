@@ -15,6 +15,7 @@
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
 	i ##__end = x.end(); i != i ##__end; ++i)
 
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -58,8 +59,10 @@ void Sim::Contest::handle() {
 				templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
 			while (res->next())
-				templ << "<a href=\"/c/" << htmlSpecialChars(res->getString(1))
-					<< "\">" << htmlSpecialChars(res->getString(2)) << "</a>\n";
+				templ << "<a href=\"/c/"
+					<< htmlSpecialChars(StringView(res->getString(1))) << "\">"
+					<< htmlSpecialChars(StringView(res->getString(2)))
+					<< "</a>\n";
 			templ << "</div>\n";
 
 		} catch (const std::exception& e) {
@@ -186,6 +189,12 @@ void Sim::Contest::handle() {
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "submissions")) {
 			arg_beg += 12;
 			return submissions(admin_view);
+		}
+
+		// Ranking
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "ranking")) {
+			arg_beg += 8;
+			return ranking(admin_view);
 		}
 
 		// Contest dashboard
@@ -503,12 +512,15 @@ void Sim::Contest::addProblem() {
 				// Get problem name
 				ConfigFile problem_config;
 				problem_config.addVar("name");
+				problem_config.addVar("tag");
 				problem_config.loadConfigFromFile(string(package_tmp_dir) +
 					"/config.conf");
 
 				name = problem_config.getString("name");
 				if (name.empty())
 					throw std::runtime_error("Failed to get problem name");
+
+				string tag = problem_config.getString("tag");
 
 				// Move package folder to problems/
 				if (rename(package_tmp_dir, ("problems/" + problem_id).c_str()))
@@ -522,21 +534,22 @@ void Sim::Contest::addProblem() {
 					prepareStatement("UPDATE problems p, rounds r,"
 							"(SELECT MAX(item)+1 x FROM rounds "
 								"WHERE parent=?) t "
-						"SET p.name=?, p.owner=?, p.added=?, "
+						"SET p.name=?, p.tag=?, p.owner=?, p.added=?, "
 							"parent=?, grandparent=?, r.name=?, item=t.x, "
 							"problem_id=? "
 						"WHERE p.id=? AND r.id=?"));
 
 				pstmt->setString(1, r_path_->round->id);
 				pstmt->setString(2, name);
-				pstmt->setString(3, sim_.session->user_id);
-				pstmt->setString(4, date("%Y-%m-%d %H:%M:%S"));
-				pstmt->setString(5, r_path_->round->id);
-				pstmt->setString(6, r_path_->contest->id);
-				pstmt->setString(7, name);
-				pstmt->setString(8, problem_id);
+				pstmt->setString(3, tag);
+				pstmt->setString(4, sim_.session->user_id);
+				pstmt->setString(5, date("%Y-%m-%d %H:%M:%S"));
+				pstmt->setString(6, r_path_->round->id);
+				pstmt->setString(7, r_path_->contest->id);
+				pstmt->setString(8, name);
 				pstmt->setString(9, problem_id);
-				pstmt->setString(10, round_id);
+				pstmt->setString(10, problem_id);
+				pstmt->setString(11, round_id);
 
 				if (2 != pstmt->executeUpdate())
 					throw std::runtime_error("Failed to update");
@@ -869,11 +882,12 @@ void Sim::Contest::editProblem() {
 				// Update database
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
 					prepareStatement("UPDATE rounds r, problems p "
-						"SET r.name=?, p.name=? WHERE r.id=? AND p.id=?"));
+						"SET r.name=?, p.name=?, p.tag=? WHERE r.id=? AND p.id=?"));
 				pstmt->setString(1, round_name);
 				pstmt->setString(2, name);
-				pstmt->setString(3, r_path_->round_id);
-				pstmt->setString(4, r_path_->problem->problem_id);
+				pstmt->setString(3, tag);
+				pstmt->setString(4, r_path_->round_id);
+				pstmt->setString(5, r_path_->problem->problem_id);
 
 				if (pstmt->executeUpdate() > 0) {
 					// Update r_path_
@@ -1321,8 +1335,9 @@ void Sim::Contest::submit(bool admin_view) {
 			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			while (res->next())
 				append(buffer) << "<option value=\"" << res->getString(1)
-					<< "\">" << htmlSpecialChars(res->getString(2)) << " ("
-					<< htmlSpecialChars(r_path_->round->name) << ")</option>\n";
+					<< "\">" << htmlSpecialChars(StringView(res->getString(2)))
+					<< " (" << htmlSpecialChars(r_path_->round->name)
+					<< ")</option>\n";
 
 		// Admin -> Current problem
 		// Normal -> if parent round has begun and has not ended
@@ -1715,14 +1730,16 @@ void Sim::Contest::submissions(bool admin_view) {
 			// User
 			if (admin_view)
 				templ << "<td><a href=\"/u/" << res->getString(10) << "\">"
-						<< htmlSpecialChars(res->getString(11)) << "</a></td>";
+					<< htmlSpecialChars(StringView(res->getString(11)))
+					<< "</a></td>";
 			// Rest
 			templ << "<td><a href=\"/s/" << res->getString(1) << "\">"
 					<< res->getString(2) << "</a></td>"
 					"<td><a href=\"/c/" << res->getString(3) << "\">"
-						<< htmlSpecialChars(res->getString(4)) << "</a>"
-						" -> <a href=\"/c/" << res->getString(5) << "\">"
-						<< htmlSpecialChars(res->getString(6)) << "</a></td>"
+						<< htmlSpecialChars(StringView(res->getString(4)))
+						<< "</a> -> <a href=\"/c/" << res->getString(5) << "\">"
+						<< htmlSpecialChars(StringView(res->getString(6)))
+						<< "</a></td>"
 					<< Local::statusRow(res->getString(7))
 					<< "<td>" << (admin_view ||
 						string(res->getString(10)) <= current_date ?
@@ -1732,6 +1749,260 @@ void Sim::Contest::submissions(bool admin_view) {
 		}
 
 		templ << "</tbody>\n"
+			"</table>\n";
+
+	} catch (const std::exception& e) {
+		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
+			e.what());
+
+	} catch (...) {
+		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+	}
+}
+
+namespace {
+
+struct RankingProblem {
+	unsigned long long id;
+	string tag;
+};
+
+struct RankingRound {
+	string id, name, item;
+	vector<RankingProblem> problems;
+
+	bool operator<(const RankingRound& x) const {
+		return StrNumCompare()(item, x.item);
+	}
+};
+
+struct RankingField {
+	string submission_id, round_id, score;
+};
+
+struct RankingRow {
+	string user_id, name;
+	long long score;
+	vector<RankingField> fields;
+};
+
+struct cmp {
+	bool operator()(const RankingRound* a, const RankingRound* b) const {
+		return a->id < b->id;
+	}
+
+	bool operator()(const RankingRow* a, const RankingRow* b) const {
+		return a->score > b->score;
+	}
+};
+
+template<class T>
+typename T::const_iterator findWithId(const T& x, const string& id) {
+	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
+	while (beg != end) {
+		mid = beg + ((end - beg) >> 1);
+		if ((*mid)->id < id)
+			beg = ++mid;
+		else
+			end = mid;
+	}
+	return (beg != x.end() && (*beg)->id == id ? beg : x.end());
+}
+
+} // anonymous namespace
+
+void Sim::Contest::ranking(bool admin_view) {
+	if (!admin_view && !r_path_->contest->show_ranking)
+		return sim_.error403();
+
+	TemplateWithMenu templ(*this, "Ranking");
+	templ << "<h1>Ranking</h1>";
+	templ.printRoundPath(*r_path_, "ranking");
+
+	try {
+		UniquePtr<sql::PreparedStatement> pstmt;
+		UniquePtr<sql::ResultSet> res;
+		// TODO: consider rounds visibility
+		// Select rounds
+		string column = (r_path_->type == CONTEST ? "parent" : "id");
+		pstmt.reset(sim_.db_conn()->prepareStatement(
+			"SELECT id, name, item FROM rounds WHERE " + column + "=?"));
+		pstmt->setString(1, r_path_->type == CONTEST ? r_path_->round_id
+			: r_path_->round->id);
+		res.reset(pstmt->executeQuery());
+
+		vector<RankingRound> rounds;
+		rounds.reserve(res->rowsCount()); // Need for pointers validity
+		vector<RankingRound*> rounds_by_id;
+		while (res->next()) {
+			rounds.push_back((RankingRound){
+				res->getString(1),
+				res->getString(2),
+				res->getString(3),
+				vector<RankingProblem>()
+			});
+			rounds_by_id.push_back(&rounds.back());
+		}
+		if (rounds.empty()) {
+			templ << "<p>There is no one in the ranking yet...</p>";
+			return;
+		}
+
+		sort(rounds_by_id.begin(), rounds_by_id.end(), cmp());
+
+		// Select problems
+		column = (r_path_->type == CONTEST ? "grandparent" :
+			(r_path_->type == ROUND ? "parent" : "id"));
+		pstmt.reset(sim_.db_conn()->prepareStatement(
+			"SELECT r.id, tag, parent FROM rounds r, problems p "
+			"WHERE r." + column + "=? AND problem_id=p.id ORDER BY item"));
+		pstmt->setString(1, r_path_->round_id);
+		res.reset(pstmt->executeQuery());
+
+		// Add problems to rounds
+		while (res->next()) {
+			vector<RankingRound*>::const_iterator it =
+				findWithId(rounds_by_id, res->getString(3));
+			if (it == rounds_by_id.end())
+				continue; // Ignore invalid rounds hierarchy
+
+			(*it)->problems.push_back((RankingProblem){
+				res->getUInt64(1),
+				res->getString(2)
+			});
+		}
+
+		rounds_by_id.clear(); // Free unused memory
+		sort(rounds.begin(), rounds.end());
+
+		// Select submissions
+		column = (r_path_->type == CONTEST ? "contest_round_id" :
+			(r_path_->type == ROUND ? "parent_round_id" : "round_id"));
+		pstmt.reset(sim_.db_conn()->prepareStatement("SELECT s.id, "
+				"user_id, u.first_name, u.last_name, round_id, score "
+			"FROM submissions s, users u "
+			"WHERE s." + column + "=? AND final=1 AND user_id=u.id "
+			"ORDER BY user_id"));
+		pstmt->setString(1, r_path_->round_id);
+		res.reset(pstmt->executeQuery());
+		// Construct rows
+		vector<RankingRow> rows;
+		string last_user_id;
+		while (res->next()) {
+			// Next user
+			if (last_user_id != res->getString(2)) {
+				rows.push_back((RankingRow){
+					res->getString(2),
+					res->getString(3) + " " + res->getString(4),
+					0,
+					vector<RankingField>()
+				});
+			}
+			last_user_id = rows.back().user_id;
+
+			rows.back().score += res->getInt(6);
+			rows.back().fields.push_back((RankingField){
+				res->getString(1),
+				res->getString(5),
+				res->getString(6)
+			});
+		}
+		// Sort rows
+		vector<RankingRow*> sorted_rows(rows.size());
+		for (size_t i = 0; i < rows.size(); ++i)
+			sorted_rows[i] = &rows[i];
+		sort(sorted_rows.begin(), sorted_rows.end(), cmp());
+
+		// Print rows
+		if (rows.empty()) {
+			templ << "<p>There is no one in the ranking yet...</p>";
+			return;
+		}
+		// Make problem index
+		size_t idx = 0;
+		vector<pair<size_t, size_t> > index_of; // (problem_id, index)
+		foreach (i, rounds)
+			foreach (j, i->problems)
+				index_of.push_back(pair<size_t, size_t>(j->id, idx++));
+		sort(index_of.begin(), index_of.end());
+
+		// Table head
+		templ << "<table class=\"table ranking\">\n"
+				"<thead>\n"
+					"<tr>\n"
+						"<th rowspan=\"2\">#</th>\n"
+						"<th rowspan=\"2\">User</th>\n";
+		// Rounds
+		foreach (i, rounds) {
+			if (i->problems.empty())
+				continue;
+
+			templ << "<th";
+			if (i->problems.size() > 1)
+				templ << " colspan=\"" << toString(i->problems.size())
+					<< "\"";
+			templ << "><a href=\"/c/" << i->id << "\">"
+				<< htmlSpecialChars(i->name) << "</a></th>\n";
+		}
+		// Problems
+		templ << "<th rowspan=\"2\">Sum</th>\n"
+			"</tr>\n"
+			"<tr>\n";
+		foreach (i, rounds)
+			foreach (j, i->problems)
+				templ << "<th><a href=\"/c/" << toString(j->id)
+					<< "/statement\">" << htmlSpecialChars(j->tag)
+					<< "</a></th>";
+		templ << "</tr>\n"
+			"</thead>\n"
+			"<tbody>\n";
+		// Rows
+		assert(sorted_rows.size());
+		size_t place = 1; // User place
+		long long last_user_score = sorted_rows.front()->score;
+		vector<RankingField*> row_points(idx); // idx is now number of problems
+		foreach (i, sorted_rows) {
+			RankingRow& row = **i;
+			// Place
+			if (last_user_score != row.score)
+				++place;
+			last_user_score = row.score;
+			templ << "<tr>\n"
+					"<td>" << toString(place) << "</td>\n";
+			// Name
+			if (admin_view)
+				templ << "<td><a href=\"/u/" << row.user_id << "\">"
+					<< htmlSpecialChars(row.name) << "</a></td>\n";
+			else
+				templ << "<td>" << htmlSpecialChars(row.name) << "</td>\n";
+
+			// Fields
+			fill(row_points.begin(), row_points.end(), (RankingField*)NULL);
+			foreach (j, row.fields) {
+				vector<pair<size_t, size_t> >::const_iterator it =
+					binaryFindBy(index_of, &pair<size_t, size_t>::first,
+						strtoull(j->round_id));
+				if (it == index_of.end())
+					throw std::runtime_error("Failed to get index of");
+
+				row_points[it->second] = &*j;
+			}
+			foreach (j, row_points) {
+				if (*j == NULL)
+					templ << "<td></td>\n";
+				else if (admin_view || (sim_.session->state() == Session::OK &&
+						row.user_id == sim_.session->user_id))
+					templ << "<td><a href=\"/s/" << (*j)->submission_id << "\">"
+						<< (*j)->score << "</a></td>\n";
+				else
+					templ << "<td>" << (*j)->score << "</td>\n";
+			}
+
+			templ << "<td>" << toString(row.score) << "</td>"
+				"</tr>\n";
+		}
+		templ << "</tbody>\n"
+				"</thead>\n"
 			"</table>\n";
 
 	} catch (const std::exception& e) {

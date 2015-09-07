@@ -733,8 +733,6 @@ a.btn-danger{
 }
 .table{
 	border: 1px solid #a2a2a2;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
 	border-radius: 4px;
 	margin: 0 auto;
 	display: inline-table;
@@ -752,15 +750,16 @@ a.btn-danger{
 	text-align: left;
 	vertical-align: middle;
 	border-left: 1px solid #a2a2a2;
+	border-top: 1px solid #a2a2a2;
+}
+.table thead tr:first-child th{
+	border-top: none;
 }
 .table tbody tr td:first-child, .table thead tr th:first-child{
-	border-left: 0;
+	border-left: none;
 }
-.table thead:first-child tr:first-child th:first-child{
-	border-top-left-radius: 4px;
-}
-.table tbody:last-child tr:last-child td:first-child{
-	border-bottom-left-radius: 4px;
+.ranking > thead > tr:nth-child(2) > th:first-child {
+	border-left: 1px solid #a2a2a2;
 }
 
 /* Contest */

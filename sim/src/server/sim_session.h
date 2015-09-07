@@ -9,7 +9,7 @@ public:
 	unsigned user_type;
 
 private:
-	static const int SESSION_MAX_LIFETIME = 24 * 60 * 60; // in sec
+	static const int SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days (in sec)
 
 	Session(const Session&);
 	Session& operator=(const Session&);

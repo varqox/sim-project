@@ -65,15 +65,17 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 				r->name = res->getString(5);
 				r->owner = res->getString(6);
 				r->visible = res->getBoolean(7);
-				r->begins = res->getString(8);
-				r->ends = res->getString(9);
-				r->full_results = res->getString(10);
+				r->show_ranking = res->getBoolean(8);
+				r->begins = res->getString(9);
+				r->ends = res->getString(10);
+				r->full_results = res->getString(11);
 			}
 		};
 
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
 			prepareStatement("SELECT id, parent, problem_id, access, name, "
-				"owner, visible, begins, ends, full_results FROM rounds "
+					"owner, visible, show_ranking, begins, ends, full_results "
+				"FROM rounds "
 				"WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR "
 					"id=(SELECT grandparent FROM rounds WHERE id=?)"));
 		pstmt->setString(1, round_id);
@@ -226,6 +228,7 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 					"\n"
 				"<a href=\"/c/" << round_id << "/submissions\">Submissions</a>"
 					"\n"
+				"<a href=\"/c/" << round_id << "/ranking\">Ranking</a>\n"
 				"<span>OBSERVER MENU</span>\n";
 	}
 
@@ -239,11 +242,16 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 			(round->begins.empty() || round->begins <= current_date) &&
 			(round->ends.empty() || current_date < round->ends)))
 		*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
-				<< "/submit\">Submit a solution</a>\n";
+			<< "/submit\">Submit a solution</a>\n";
 
 	*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
-				<< "/submissions\">Submissions</a>\n"
-		"</ul>";
+		<< "/submissions\">Submissions</a>\n";
+
+	if (sim_contest.r_path_->contest->show_ranking)
+		*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
+			<< "/ranking\">Ranking</a>\n";
+
+	*this << "</ul>";
 }
 
 void Sim::Contest::TemplateWithMenu::printRoundPath(const RoundPath& r_path,
@@ -391,8 +399,8 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 				if (link_to_problem_statement)
 					*this << "/statement";
 
-				*this << "\">" << htmlSpecialChars(res->getString(2))
-					<< "</a>\n";
+				*this << "\">" << htmlSpecialChars(StringView(
+						res->getString(2))) << "</a>\n";
 			}
 			*this << "</div>\n"
 				"</div>\n"
