@@ -270,16 +270,16 @@ bool isDigit(const StringView& s, size_t beg, size_t end) {
 bool isReal(const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
-	if (beg > end)
-		beg = end;
+	if (beg >= end || s[beg] == '.')
+		return false;
 
-	if (beg < end && (s[beg] == '-' || s[beg] == '+'))
+	if (s[beg] == '-' || s[beg] == '+')
 		++beg;
 
 	bool dot = false;
 	for (; beg < end; ++beg)
 		if (!isdigit(s[beg])) {
-			if (s[beg] == '.' && !dot)
+			if (s[beg] == '.' && !dot && beg + 1 < end)
 				dot = true;
 			else
 				return false;

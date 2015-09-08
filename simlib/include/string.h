@@ -311,8 +311,9 @@ bool isDigit(const StringView& s, size_t beg, size_t end = StringView::npos);
 // Checks whether string @p s consist only of digits
 inline bool isDigit(const StringView& s) { return isDigit(s, 0); }
 
-bool isReal(const StringView& s, size_t beg = 0,
-	size_t end = StringView::npos);
+bool isReal(const StringView& s, size_t beg, size_t end = StringView::npos);
+
+inline bool isReal(const StringView& s) { return isReal(s, 0); }
 
 /* Converts s: [beg, end) to size_t
 *  if end > s.size() or enStringViewnpos then end = s.size()
