@@ -41,7 +41,7 @@ endif
 		fi'
 
 	# Set up install
-	- src/setup-install $(abspath $(DESTDIR))
+	src/setup-install $(abspath $(DESTDIR))
 
 	# Set owner, group and permission bits
 	src/chmod-default $(abspath $(DESTDIR))

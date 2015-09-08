@@ -20,7 +20,7 @@ bool FORCE_AUTO_LIMIT = false;
 unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
 unsigned long long MEMORY_LIMIT = 0; // in kB
 unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10s
-unsigned long long TIME_LIMIT = 0; // Not set
+unsigned long long TIME_LIMIT = 0; // Not set (in usec)
 string PROOT_PATH = "proot"; // Search for PRoot in system
 UniquePtr<directory_tree::node> package_tree_root;
 ProblemConfig config_conf;
