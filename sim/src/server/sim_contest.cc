@@ -419,8 +419,8 @@ void Sim::Contest::addProblem() {
 
 		fv.validate<bool(*)(const StringView&)>(time_limit, "time-limit",
 			"Time limit", isReal, "Time limit: invalid value");
-		unsigned long long tl = (time_limit.empty() ? 0 : round(strtod(
-			time_limit.c_str(), NULL) * 1000000LL)); // Time limit in usec
+		unsigned long long tl = round(strtod(time_limit.c_str(), NULL) *
+			1000000LL); // Time limit in usec
 		if (time_limit.size() && tl == 0)
 			fv.addError("Global time limit cannot be lower than 0.000001");
 
