@@ -451,8 +451,11 @@ void Sim::User::editProfile(Data& data) {
 						: "") << ">Teacher</option>"
 					"<option value=\"2\"" << (data.user_type > 1 ? " selected"
 						: "") << ">Normal</option>"
-				"</select>\n"
-			"</div>\n"
+				"</select>\n";
+	if (!can_change_user_type)
+		templ << "<input type=\"hidden\" name=\"type\" value=\""
+			<< toString((unsigned long long)data.user_type) << "\">\n";
+	templ << "</div>\n"
 			// First Name
 			"<div class=\"field-group\">\n"
 				"<label>First name</label>\n"

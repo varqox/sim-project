@@ -10,6 +10,7 @@
 #include "../simlib/include/time.h"
 
 #include <cerrno>
+#include <cmath>
 #include <cppconn/prepared_statement.h>
 
 #define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
@@ -406,7 +407,7 @@ void Sim::Contest::addProblem() {
 		return sim_.error403();
 
 	FormValidator fv(sim_.req_->form_data);
-	string name, memory_limit, user_package_file;
+	string name, memory_limit, user_package_file, time_limit;
 	bool force_auto_limit = true;
 
 	if (sim_.req_->method == server::HttpRequest::POST) {
@@ -415,6 +416,13 @@ void Sim::Contest::addProblem() {
 
 		fv.validate<bool(*)(const StringView&)>(memory_limit, "memory-limit",
 			"Memory limit", isDigit, "Memory limit: invalid value");
+
+		fv.validate<bool(*)(const StringView&)>(time_limit, "time-limit",
+			"Time limit", isReal, "Time limit: invalid value");
+		unsigned long long tl = (time_limit.empty() ? 0 : round(strtod(
+			time_limit.c_str(), NULL) * 1000000LL)); // Time limit in usec
+		if (time_limit.size() && tl == 0)
+			fv.addError("Global time limit cannot be lower than 0.000001");
 
 		force_auto_limit = fv.exist("force-auto-limit");
 
@@ -455,6 +463,9 @@ void Sim::Contest::addProblem() {
 
 				if (memory_limit.size())
 					append(args)("-m")(memory_limit);
+
+				if (time_limit.size())
+					append(args)("-tl")(toString(tl));
 
 				// Conver stdin, stdout, stderr
 				spawn_opts sopt = {
@@ -588,6 +599,14 @@ void Sim::Contest::addProblem() {
 					"<input type=\"text\" name=\"memory-limit\" value=\""
 						<< htmlSpecialChars(memory_limit) << "\" size=\"24\""
 					"placeholder=\"Detect from config.conf\">"
+					"\n"
+				"</div>\n"
+				// Global time limit
+				"<div class=\"field-group\">\n"
+					"<label>Global time limit in sec (for each test)</label>\n"
+					"<input type=\"text\" name=\"time-limit\" value=\""
+						<< htmlSpecialChars(time_limit) << "\" size=\"24\""
+					"placeholder=\"No global time limit\">"
 					"\n"
 				"</div>\n"
 				// Force auto limit
