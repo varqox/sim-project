@@ -44,7 +44,7 @@ endif
 	src/setup-install $(abspath $(DESTDIR))
 
 	# Set owner, group and permission bits
-	src/chmod-default $(abspath $(DESTDIR))
+	# src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
 	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/CTH) $(abspath $(DESTDIR)/proot)
 

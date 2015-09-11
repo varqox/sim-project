@@ -202,7 +202,7 @@ void Sim::User::signUp() {
 		if (fv.validate(password1, "password1", "Password") &&
 				fv.validate(password2, "password2", "Password (repeat)") &&
 				password1 != password2)
-			fv.addError("Passwords don't match");
+			fv.addError("Passwords do not match");
 
 		// If all fields are ok
 		if (fv.noErrors())
@@ -299,7 +299,7 @@ void Sim::User::changePassword(Data& data) {
 		if (fv.validate(password1, "password1", "New password") &&
 				fv.validate(password2, "password2", "New password (repeat)") &&
 				password1 != password2)
-			fv.addError("Passwords don't match");
+			fv.addError("Passwords do not match");
 
 		// If all fields are ok
 		if (fv.noErrors())
