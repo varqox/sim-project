@@ -286,6 +286,9 @@ static void extractPackage(const string& source, const string& dest,
 			else if (WIFSIGNALED(exit_code))
 				eprintf("killed by signal %i - %s\n", WTERMSIG(exit_code),
 					strsignal(WTERMSIG(exit_code)));
+			else if (WIFSTOPPED(exit_code))
+				eprintf("killed by signal %i - %s\n", WSTOPSIG(exit_code),
+					strsignal(WSTOPSIG(exit_code)));
 			else
 				eprintf("returned %i\n", WIFEXITED(exit_code) ?
 					WEXITSTATUS(exit_code) : exit_code);
@@ -479,6 +482,9 @@ int main(int argc, char *argv[]) {
 		else if (WIFSIGNALED(exit_code))
 			eprintf("killed by signal %i - %s\n", WTERMSIG(exit_code),
 				strsignal(WTERMSIG(exit_code)));
+		else if (WIFSTOPPED(exit_code))
+			eprintf("killed by signal %i - %s\n", WSTOPSIG(exit_code),
+				strsignal(WSTOPSIG(exit_code)));
 		else
 			eprintf("returned %i\n", WIFEXITED(exit_code) ?
 				WEXITSTATUS(exit_code) : exit_code);
