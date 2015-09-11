@@ -1,4 +1,5 @@
 #include "../include/debug.h"
+#include "../include/sandbox.h"
 #include "../include/sandbox_checker_callback.h"
 #include "../include/string.h"
 #include "../include/utility.h"
@@ -7,7 +8,6 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <limits.h>
-#include <stdint.h>
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -17,56 +17,6 @@
 
 using std::string;
 using std::vector;
-
-struct i386_user_regs_struct {
-	uint32_t ebx;
-	uint32_t ecx;
-	uint32_t edx;
-	uint32_t esi;
-	uint32_t edi;
-	uint32_t ebp;
-	uint32_t eax;
-	uint32_t xds;
-	uint32_t xes;
-	uint32_t xfs;
-	uint32_t xgs;
-	uint32_t orig_eax;
-	uint32_t eip;
-	uint32_t xcs;
-	uint32_t eflags;
-	uint32_t esp;
-	uint32_t xss;
-};
-
-struct x86_64_user_regs_struct {
-	unsigned long long int r15;
-	unsigned long long int r14;
-	unsigned long long int r13;
-	unsigned long long int r12;
-	unsigned long long int rbp;
-	unsigned long long int rbx;
-	unsigned long long int r11;
-	unsigned long long int r10;
-	unsigned long long int r9;
-	unsigned long long int r8;
-	unsigned long long int rax;
-	unsigned long long int rcx;
-	unsigned long long int rdx;
-	unsigned long long int rsi;
-	unsigned long long int rdi;
-	unsigned long long int orig_rax;
-	unsigned long long int rip;
-	unsigned long long int cs;
-	unsigned long long int eflags;
-	unsigned long long int rsp;
-	unsigned long long int ss;
-	unsigned long long int fs_base;
-	unsigned long long int gs_base;
-	unsigned long long int ds;
-	unsigned long long int es;
-	unsigned long long int fs;
-	unsigned long long int gs;
-};
 
 namespace sandbox {
 
@@ -94,10 +44,15 @@ CheckerCallback::CheckerCallback(vector<string> files)
 		(91) // SYS_munmap
 		(108) // SYS_fstat
 		(125) // SYS_mprotect
+		(145) // SYS_readv
+		(146) // SYS_writev
+		(174) // SYS_rt_sigaction
 		(175) // SYS_rt_sigprocmask
 		(192) // SYS_mmap2
 		(197) // SYS_fstat64
+		(224) // SYS_gettid
 		(252) // SYS_exit_group
+		(270) // SYS_tgkill
 		(330); // SYS_dup3
 
 	// x86_64
@@ -118,16 +73,21 @@ CheckerCallback::CheckerCallback(vector<string> files)
 		(10) // SYS_mprotect
 		(11) // SYS_munmap
 		(12) // SYS_brk
+		(13) // SYS_rt_sigaction
 		(14) // SYS_rt_sigprocmask
 		(16) // SYS_ioctl
+		(19) // SYS_readv
+		(20) // SYS_writev
 		(32) // SYS_dup
 		(33) // SYS_dup2
 		(60) // SYS_exit
+		(186) // SYS_gettid
 		(231) // SYS_exit_group
+		(234) // SYS_tgkill
 		(292); // SYS_dup3
 };
 
-int CheckerCallback::operator()(int pid, int syscall) {
+int CheckerCallback::operator()(pid_t pid, int syscall) {
 	// Detect arch (first call - before exec, second - after exec)
 	if (++functor_call < 3) {
 		string filename = "/proc/" + toString((long long)pid) + "/exe";
@@ -161,50 +121,7 @@ int CheckerCallback::operator()(int pid, int syscall) {
 		if (syscall == i->syscall)
 			return --i->limit < 0;
 
-	const int sys_open[2] = {
-		5, // SYS_open - i386
-		2 // SYS_open - x86_64
-	};
-
-	if (syscall == sys_open[arch]) {
-		union user_regs_union {
-			i386_user_regs_struct i386_regs;
-			x86_64_user_regs_struct x86_64_regs;
-		} user_regs;
-
-#define USER_REGS (arch ? user_regs.x86_64_regs : user_regs.i386_regs)
-#define ARG1 (arch ? user_regs.x86_64_regs.rdi : user_regs.i386_regs.ebx)
-#define ARG2 (arch ? user_regs.x86_64_regs.rsi : user_regs.i386_regs.ecx)
-#define ARG3 (arch ? user_regs.x86_64_regs.rdx : user_regs.i386_regs.edx)
-#define ARG4 (arch ? user_regs.x86_64_regs.r10 : user_regs.i386_regs.esi)
-#define ARG5 (arch ? user_regs.x86_64_regs.r8 : user_regs.i386_regs.edi)
-#define ARG6 (arch ? user_regs.x86_64_regs.r9 : user_regs.i386_regs.ebp)
-
-		struct iovec ivo = {
-			&user_regs,
-			sizeof(user_regs),
-		};
-		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
-			return 1; // Error occurred
-
-		if (ARG1 == 0)
-			return 0;
-
-		char path[PATH_MAX] = {};
-		struct iovec local, remote;
-		local.iov_base = path;
-		remote.iov_base = (void*)ARG1;
-		local.iov_len = remote.iov_len = PATH_MAX - 1;
-
-		ssize_t len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
-		if (len == -1)
-			return 1; // Error occurred
-
-		path[len] = '\0';
-		return !binary_search(allowed_files.begin(), allowed_files.end(), path);
-	}
-
-	return 1;
+	return !allowedCall(pid, arch, syscall, allowed_files);
 }
 
 } // namespace sandbox

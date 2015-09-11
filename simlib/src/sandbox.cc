@@ -4,12 +4,15 @@
 #include "../include/string.h"
 #include "../include/utility.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/ptrace.h>
 #include <sys/reg.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/uio.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -22,6 +25,8 @@ using std::vector;
 namespace sandbox {
 
 DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
+	append(allowed_files)
+		("/proc/meminfo");
 	// i386
 	append(limited_syscalls[0])
 		((Pair){  11, 1 }) // SYS_execve
@@ -41,9 +46,14 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 		(91) // SYS_munmap
 		(108) // SYS_fstat
 		(125) // SYS_mprotect
+		(145) // SYS_readv
+		(146) // SYS_writev
+		(174) // SYS_rt_sigaction
 		(175) // SYS_rt_sigprocmask
 		(192) // SYS_mmap2
 		(197) // SYS_fstat64
+		(224) // SYS_gettid
+		(270) // SYS_tgkill
 		(252); // SYS_exit_group
 
 	// x86_64
@@ -64,13 +74,18 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 		(10) // SYS_mprotect
 		(11) // SYS_munmap
 		(12) // SYS_brk
+		(13) // SYS_rt_sigaction
 		(14) // SYS_rt_sigprocmask
 		(16) // SYS_ioctl
+		(19) // SYS_readv
+		(20) // SYS_writev
 		(60) // SYS_exit
-		(231); // SYS_exit_group
+		(186) // SYS_gettid
+		(231) // SYS_exit_group
+		(234); // SYS_tgkill
 };
 
-int DefaultCallback::operator()(int pid, int syscall) {
+int DefaultCallback::operator()(pid_t pid, int syscall) {
 	// Detect arch (first call - before exec, second - after exec)
 	if (++functor_call < 3) {
 		string filename = "/proc/" + toString((long long)pid) + "/exe";
@@ -104,7 +119,56 @@ int DefaultCallback::operator()(int pid, int syscall) {
 		if (syscall == i->syscall)
 			return --i->limit < 0;
 
-	return 1;
+	return !allowedCall(pid, arch, syscall, allowed_files);
+}
+
+bool allowedCall(pid_t pid, int arch, int syscall,
+		const vector<string>& allowed_files) {
+	const int sys_open[2] = {
+		5, // SYS_open - i386
+		2 // SYS_open - x86_64
+	};
+
+	// SYS_open
+	if (syscall == sys_open[arch]) {
+		union user_regs_union {
+			i386_user_regs_struct i386_regs;
+			x86_64_user_regs_struct x86_64_regs;
+		} user_regs;
+
+#define USER_REGS (arch ? user_regs.x86_64_regs : user_regs.i386_regs)
+#define ARG1 (arch ? user_regs.x86_64_regs.rdi : user_regs.i386_regs.ebx)
+#define ARG2 (arch ? user_regs.x86_64_regs.rsi : user_regs.i386_regs.ecx)
+#define ARG3 (arch ? user_regs.x86_64_regs.rdx : user_regs.i386_regs.edx)
+#define ARG4 (arch ? user_regs.x86_64_regs.r10 : user_regs.i386_regs.esi)
+#define ARG5 (arch ? user_regs.x86_64_regs.r8 : user_regs.i386_regs.edi)
+#define ARG6 (arch ? user_regs.x86_64_regs.r9 : user_regs.i386_regs.ebp)
+
+		struct iovec ivo = {
+			&user_regs,
+			sizeof(user_regs),
+		};
+		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
+			return false; // Error occurred
+
+		if (ARG1 == 0)
+			return false;
+
+		char path[PATH_MAX] = {};
+		struct iovec local, remote;
+		local.iov_base = path;
+		remote.iov_base = (void*)ARG1;
+		local.iov_len = remote.iov_len = PATH_MAX - 1;
+
+		ssize_t len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
+		if (len == -1)
+			return false; // Error occurred
+
+		path[len] = '\0';
+		return binary_search(allowed_files.begin(), allowed_files.end(), path);
+	}
+
+	return false;
 }
 
 static pid_t cpid;
@@ -114,8 +178,20 @@ static int wait_for_syscall(int* status) {
 		ptrace(PTRACE_SYSCALL, cpid, 0, 0);
 		waitpid(cpid, status, 0);
 
-		if (WIFSTOPPED(*status) && WSTOPSIG(*status) == (SIGTRAP | 0x80))
-			return 0;
+		if (WIFSTOPPED(*status)) {
+			switch (WSTOPSIG(*status)) {
+			case SIGTRAP | 0x80:
+				return 0;
+
+			case SIGTRAP:
+			case SIGSTOP:
+			case SIGCONT:
+				break;
+
+			default:
+				return -1;
+			}
+		}
 
 		if (WIFEXITED(*status) || WIFSIGNALED(*status))
 			return -1;
@@ -225,9 +301,29 @@ ExitStat run(const string& exec, vector<string> args,
 			runtime = (tend.tv_sec - tbeg.tv_sec) * 1000000LL + tend.tv_usec -
 				tbeg.tv_usec;
 
-			return ExitStat(status, runtime/*opts->time_limit -
-						timer.it_value.tv_sec * 1000000LL -
-						timer.it_value.tv_usec*/);
+			// Kill process if it still exists
+			kill(cpid, SIGKILL);
+			waitpid(cpid, NULL, 0);
+
+			string message;
+			if (status) {
+				if (status == -1)
+					message = "failed to execute";
+
+				else if (WIFEXITED(status))
+					message = "returned " +
+						toString((long long)WEXITSTATUS(status));
+
+				else if (WIFSIGNALED(status))
+					message = "killed by signal " +
+						toString((long long)WTERMSIG(status));
+
+				else if (WIFSTOPPED(status))
+					message = "killed by signal " +
+						toString((long long)WSTOPSIG(status));
+			}
+
+			return ExitStat(status, runtime, message);
 		}
 #ifdef __x86_64__
 		int syscall = ptrace(PTRACE_PEEKUSER, cpid, sizeof(long)*ORIG_RAX);

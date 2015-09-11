@@ -1,9 +1,60 @@
 #pragma once
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 
 namespace sandbox {
+
+struct i386_user_regs_struct {
+	uint32_t ebx;
+	uint32_t ecx;
+	uint32_t edx;
+	uint32_t esi;
+	uint32_t edi;
+	uint32_t ebp;
+	uint32_t eax;
+	uint32_t xds;
+	uint32_t xes;
+	uint32_t xfs;
+	uint32_t xgs;
+	uint32_t orig_eax;
+	uint32_t eip;
+	uint32_t xcs;
+	uint32_t eflags;
+	uint32_t esp;
+	uint32_t xss;
+};
+
+struct x86_64_user_regs_struct {
+	unsigned long long int r15;
+	unsigned long long int r14;
+	unsigned long long int r13;
+	unsigned long long int r12;
+	unsigned long long int rbp;
+	unsigned long long int rbx;
+	unsigned long long int r11;
+	unsigned long long int r10;
+	unsigned long long int r9;
+	unsigned long long int r8;
+	unsigned long long int rax;
+	unsigned long long int rcx;
+	unsigned long long int rdx;
+	unsigned long long int rsi;
+	unsigned long long int rdi;
+	unsigned long long int orig_rax;
+	unsigned long long int rip;
+	unsigned long long int cs;
+	unsigned long long int eflags;
+	unsigned long long int rsp;
+	unsigned long long int ss;
+	unsigned long long int fs_base;
+	unsigned long long int gs_base;
+	unsigned long long int ds;
+	unsigned long long int es;
+	unsigned long long int fs;
+	unsigned long long int gs;
+};
 
 struct ExitStat {
 	int code;
@@ -34,13 +85,27 @@ struct DefaultCallback {
 	};
 
 	int functor_call, arch; // arch - architecture: 0 - i386, 1 - x86_64
+	std::vector<std::string> allowed_files; // sorted list of files allowed to
+	                                        // open
 	std::vector<Pair> limited_syscalls[2]; // 0 - i386, 1 - x86_64
 	std::vector<int> allowed_syscalls[2]; // 0 - i386, 1 - x86_64
 
 	DefaultCallback();
 
-	int operator()(int pid, int syscall);
+	int operator()(pid_t pid, int syscall);
 };
+
+/**
+ * @brief Invokes ptr as function with parameters @p a, @p b
+ *
+ * @param pid traced process (via ptrace) pid
+ * @param arch architecture: 0 - i386, 1 - x86_64
+ * @param syscall currently invoked syscall
+ * @param allowed_filed files which can be opened
+ * @return true if call is allowed, false otherwise
+ */
+bool allowedCall(pid_t pid, int arch, int syscall,
+	const std::vector<std::string>& allowed_files);
 
 struct options {
 	unsigned long long time_limit; // in usec

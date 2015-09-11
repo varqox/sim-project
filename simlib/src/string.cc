@@ -211,6 +211,9 @@ string htmlSpecialChars(const StringView& s) {
 
 	for (size_t i = 0; i < s.size(); ++i)
 		switch (s[i]) {
+		case ' ':
+			res += "&nbsp;";
+			break;
 		case '&':
 			res += "&amp;";
 			break;
