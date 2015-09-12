@@ -52,7 +52,7 @@ Options:\n\
   -mt <VAL>, --max-time-limit=<VAL>\n\
                          Set hard max time limit VAL in usec\n\
   -n NAME, --name=NAME   Set problem name to NAME (cannot be empty)\n\
-  -o DESTNAME            Set DESTNAME to which final package will be renamed (default problem_tag), compression is deduced from extension\n\
+  -o DESTNAME            Set DESTNAME to which final package will be placed (default problem_tag), compression is deduced from extension\n\
   -q, --quiet            Quiet mode\n\
   -t TAG, --tag=TAG      Set problem tag to TAG (cannot be empty)\n\
   -tl VAL, --time-limit=VAL\n\
