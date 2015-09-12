@@ -33,6 +33,8 @@ install:
   - rm -rf download downloads.list
 
 before_script:
+  - export CC="$CC -Werror"
+  - export CXX="$CXX -Werror"
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
