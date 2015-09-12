@@ -84,6 +84,11 @@ inline int remove_r(const char* pathname) {
 	return remove_rat(AT_FDCWD, pathname);
 }
 
+// The same as remove_r(const char*)
+inline int remove_r(const std::string& pathname) {
+	return remove_rat(AT_FDCWD, pathname.c_str());
+}
+
 /**
  * @brief Fast copies file from @p infd to @p outfd
  * @details Reads from @p infd form it's offset and writes to @p outfd from its
@@ -163,14 +168,13 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest);
  *
  * @param src source file/directory
  * @param dest destination file/directory
+ * @param create_subdirs whether create subdirectories or not
  *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for copy_rat()
  */
-inline int copy_r(const std::string& src, const std::string& dest) {
-	return copy_r(src.c_str(), dest.c_str());
-}
+int copy_r(const char* src, const char* dest, bool create_subdirs = true);
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -178,12 +182,16 @@ inline int copy_r(const std::string& src, const std::string& dest) {
  *
  * @param src source file/directory
  * @param dest destination file/directory
+ * @param create_subdirs whether create subdirectories or not
  *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for copy_rat()
  */
-int copy_r(const char* src, const char* dest);
+inline int copy_r(const std::string& src, const std::string& dest,
+		bool create_subdirs = true) {
+	return copy_r(src.c_str(), dest.c_str(), create_subdirs);
+}
 
 inline int access(const std::string& pathname, int mode) {
 	return access(pathname.c_str(), mode);
@@ -191,20 +199,18 @@ inline int access(const std::string& pathname, int mode) {
 
 /**
  * @brief Moves file from @p oldpath to @p newpath
- * @details First creates directory containing @p newpath and then uses
- * rename(2) to move file/directory
+ * @details First creates directory containing @p newpath
+ * (if @p create_subdirs is true) and then uses rename(2) to move file/directory
+ * or copy_r() and remove_r() if rename(2) fails with errno == EXDEV
  *
  * @param oldpath path to file/directory
  * @param newpath location
+ * @param create_subdirs whether create @p newpath subdirectories or not
  *
- * @return Return value of rename(2)
+ * @return Return value of rename(2) or copy_r() or remove_r()
  */
-inline int move(const std::string& oldpath, const std::string& newpath) {
-	size_t x = newpath.find_last_of('/');
-	if (x != std::string::npos)
-		mkdir_r(newpath.substr(0, x).c_str());
-	return rename(oldpath.c_str(), newpath.c_str());
-}
+int move(const std::string& oldpath, const std::string& newpath,
+		bool create_subdirs = true);
 
 /**
  * @brief Creates file pathname with access mode @p mode

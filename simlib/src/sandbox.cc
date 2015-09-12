@@ -25,8 +25,6 @@ using std::vector;
 namespace sandbox {
 
 DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
-	append(allowed_files)
-		("/proc/meminfo");
 	// i386
 	append(limited_syscalls[0])
 		((Pair){  11, 1 }) // SYS_execve
@@ -119,7 +117,7 @@ int DefaultCallback::operator()(pid_t pid, int syscall) {
 		if (syscall == i->syscall)
 			return --i->limit < 0;
 
-	return !allowedCall(pid, arch, syscall, allowed_files);
+	return !allowedCall(pid, arch, syscall, vector<string>());
 }
 
 bool allowedCall(pid_t pid, int arch, int syscall,
@@ -146,7 +144,7 @@ bool allowedCall(pid_t pid, int arch, int syscall,
 
 		struct iovec ivo = {
 			&user_regs,
-			sizeof(user_regs),
+			sizeof(user_regs)
 		};
 		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
 			return false; // Error occurred
@@ -165,7 +163,21 @@ bool allowedCall(pid_t pid, int arch, int syscall,
 			return false; // Error occurred
 
 		path[len] = '\0';
-		return binary_search(allowed_files.begin(), allowed_files.end(), path);
+		if (binary_search(allowed_files.begin(), allowed_files.end(), path))
+			return true; // File is allowed to open
+
+		// Set NULL as first argument to open
+		if (arch)
+			user_regs.x86_64_regs.rdi = 0;
+		else
+			user_regs.i386_regs.ebx = 0;
+
+		// Update traced process registers
+		ivo.iov_base = &user_regs;
+		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
+			return false; // Failed to alter traced process registers
+
+		return true; // Allow to open NULL
 	}
 
 	return false;

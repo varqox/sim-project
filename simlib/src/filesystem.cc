@@ -264,16 +264,34 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) {
 	return copyat(dirfd1, src, dirfd2, dest);
 }
 
-int copy_r(const char* src, const char* dest) {
+int copy_r(const char* src, const char* dest, bool create_subdirs) {
 	string tmp(dest);
 	// Extract containing directory
 	size_t pos = tmp.find_last_of('/');
 	if (pos < tmp.size())
 		tmp.resize(pos);
 
-	mkdir_r(tmp.c_str()); // Ensure that exists
+	if (create_subdirs)
+		mkdir_r(tmp.c_str()); // Ensure that exists
 
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
+}
+
+int move(const string& oldpath, const string& newpath, bool create_subdirs) {
+	if (create_subdirs) {
+		size_t x = newpath.find_last_of('/');
+		if (x != string::npos)
+			mkdir_r(newpath.substr(0, x).c_str());
+	}
+
+	if (rename(oldpath.c_str(), newpath.c_str()) == -1) {
+		if (errno == EXDEV && copy_r(oldpath, newpath, false) == 0)
+			return remove_r(oldpath.c_str());
+
+		return -1;
+	}
+
+	return 0;
 }
 
 int createFile(const char* pathname, mode_t mode) {
