@@ -952,6 +952,9 @@ a.btn-danger{
 .tl-rte{
 	background: #ffd27b;
 }
+.judge-error{
+	background: #7abfff;
+}
 .test-comments ul, .test-comments li{
 	margin: 0;
 	padding: 0;

@@ -46,7 +46,7 @@ struct TestResult {
 		case ERROR:
 			return "<td class=\"wa\">Error</td>";
 		case CHECKER_ERROR:
-			return "<td class=\"tl-rte\">Checker error</td>";
+			return "<td class=\"judge-error\">Checker error</td>";
 		case OK:
 			return "<td class=\"ok\">OK</td>";
 		case WA:

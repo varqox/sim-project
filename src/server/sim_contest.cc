@@ -534,8 +534,8 @@ void Sim::Contest::addProblem() {
 				string tag = problem_config.getString("tag");
 
 				// Move package folder to problems/
-				if (rename(package_tmp_dir, ("problems/" + problem_id).c_str()))
-					throw std::runtime_error(string("Error: rename() - ") +
+				if (move(package_tmp_dir, ("problems/" + problem_id).c_str()))
+					throw std::runtime_error(string("Error: move() - ") +
 						strerror(errno));
 
 				rm_tmp_dir.reset("problems/" + problem_id);
@@ -944,6 +944,7 @@ void Sim::Contest::editProblem() {
 			"<a class=\"btn-small\" href=\""
 				<< sim_.req_->target.substr(0, arg_beg - 1)
 				<< "/rejudge\">Rejudge all submissions</a>\n"
+			// TODO: add downloading package
 		"</div>\n"
 		"<div class=\"form-container\">\n"
 			"<h1>Edit problem</h1>\n"
@@ -1613,9 +1614,10 @@ void Sim::Contest::submission() {
 			templ << " class=\"ok\"";
 		else if (submission_status == "error")
 			templ << " class=\"wa\"";
-		else if (submission_status == "c_error" ||
-				submission_status == "judge_error")
+		else if (submission_status == "c_error")
 			templ << " class=\"tl-rte\"";
+		else if (submission_status == "judge_error")
+			templ << " class=\"judge-error\"";
 
 		templ <<			">" << submissionStatus(submission_status)
 							<< "</td>"
@@ -1734,8 +1736,10 @@ void Sim::Contest::submissions(bool admin_view) {
 					ret += " class=\"ok\">";
 				else if (status == "error")
 					ret += " class=\"wa\">";
-				else if (status == "c_error" || status == "judge_error")
+				else if (status == "c_error")
 					ret += " class=\"tl-rte\">";
+				else if (status == "judge_error")
+					ret += " class=\"judge-error\">";
 				else
 					ret += ">";
 
@@ -1980,11 +1984,11 @@ void Sim::Contest::ranking(bool admin_view) {
 		size_t place = 1; // User place
 		long long last_user_score = sorted_rows.front()->score;
 		vector<RankingField*> row_points(idx); // idx is now number of problems
-		foreach (i, sorted_rows) {
-			RankingRow& row = **i;
+		for (size_t i = 0, end = sorted_rows.size(); i < end; ++i) {
+			RankingRow& row = *sorted_rows[i];
 			// Place
 			if (last_user_score != row.score)
-				++place;
+				place = i + 1;
 			last_user_score = row.score;
 			templ << "<tr>\n"
 					"<td>" << toString(place) << "</td>\n";
