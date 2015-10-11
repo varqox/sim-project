@@ -16,6 +16,8 @@ sudo: false
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
     packages:
     - g++-4.8-multilib
     - clang-3.6
