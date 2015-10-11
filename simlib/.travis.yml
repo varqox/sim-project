@@ -20,7 +20,12 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - g++-4.8-multilib
-    - clang-3.5
+    - clang-3.4
+
+install:
+  # Compiler
+  - if [ "$CXX" = "gcc" ]; then export CXX="gcc-4.8"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
 
 before_script:
   - export CC="$CC -Werror"
