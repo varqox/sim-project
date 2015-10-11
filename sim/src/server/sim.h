@@ -18,7 +18,7 @@ private:
 	class Template;
 	class User;
 
-	UniquePtr<DB::Connection> db_conn_;
+	DB::Connection db_conn;
 	std::string client_ip_;
 	const server::HttpRequest* req_;
 	server::HttpResponse resp_;
@@ -26,8 +26,6 @@ private:
 	Contest *contest;
 	Session *session;
 	User *user;
-
-	DB::Connection& db_conn() const { return *db_conn_; }
 
 	// sim_errors.cc
 	void error403();
@@ -58,7 +56,7 @@ private:
 	int getUserType(const std::string& user_id);
 
 	// Notifies judge server that there are submissions to judge
-	static void notifyJudgeServer() { utime("judge-machine.notify", NULL); }
+	static void notifyJudgeServer() { utime("judge-machine.notify", nullptr); }
 
 public:
 	Sim();

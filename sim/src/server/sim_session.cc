@@ -1,6 +1,7 @@
 #include "sim_session.h"
 
 #include "../simlib/include/debug.h"
+#include "../simlib/include/logger.h"
 #include "../simlib/include/random.h"
 #include "../simlib/include/time.h"
 
@@ -20,14 +21,14 @@ Sim::Session::State Sim::Session::open() {
 		return FAIL;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement(
 				"SELECT user_id, data, type, username, ip, user_agent "
 				"FROM session s, users u "
 				"WHERE s.id=? AND time>=? AND u.id=s.user_id"));
 		pstmt->setString(1, id_);
 		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
-			time(NULL) - SESSION_MAX_LIFETIME));
+			time(nullptr) - SESSION_MAX_LIFETIME));
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 		if (res->next()) {
@@ -44,11 +45,8 @@ Sim::Session::State Sim::Session::open() {
 		}
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -70,16 +68,17 @@ static string generate_id() {
 
 Sim::Session::State Sim::Session::create(const string& _user_id) {
 	close();
+	state_ = FAIL;
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("INSERT INTO session "
 				"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions
-		UniquePtr<sql::Statement>(sim_.db_conn()->createStatement())->
+		UniquePtr<sql::Statement>(sim_.db_conn->createStatement())->
 			executeUpdate(string("DELETE FROM `session` WHERE time<'").
 				append(date("%Y-%m-%d %H:%M:%S'",
-					time(NULL) - SESSION_MAX_LIFETIME)));
+					time(nullptr) - SESSION_MAX_LIFETIME)));
 		pstmt->setString(2, _user_id);
 		pstmt->setString(3, sim_.client_ip_);
 		pstmt->setString(4, sim_.req_->headers.get("User-Agent"));
@@ -90,7 +89,7 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 			pstmt->setString(1, id_);
 
 			try {
-				pstmt->executeUpdate();
+				pstmt->executeUpdate(); // TODO: INSERT IGNORE
 				break;
 
 			} catch (...) {
@@ -98,18 +97,13 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 			}
 		}
 
-		sim_.resp_.setCookie("session", id_, time(NULL) + SESSION_MAX_LIFETIME,
-			"/", "", true);
+		sim_.resp_.setCookie("session", id_, time(nullptr) +
+			SESSION_MAX_LIFETIME, "/", "", true);
 		state_ = OK;
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-		state_ = FAIL;
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
-		state_ = FAIL;
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 
 	return state_;
@@ -120,17 +114,14 @@ void Sim::Session::destroy() {
 		return;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("DELETE FROM session WHERE id=?"));
 		pstmt->setString(1, id_);
 		pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -144,17 +135,14 @@ void Sim::Session::close() {
 		return;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("UPDATE session SET data=? WHERE id=?"));
 		pstmt->setString(1, data);
 		pstmt->setString(2, id_);
 		pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 }

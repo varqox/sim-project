@@ -11,13 +11,13 @@ string validatePackage(string pathname) {
 	DIR *dir = opendir(pathname.c_str()), *subdir;
 	dirent *file;
 
-	if (dir == NULL) {
+	if (dir == nullptr) {
 		eprintf("Error: Failed to open directory: '%s' - %s\n",
 			pathname.c_str(), strerror(errno));
 		abort(); // Should not happen
 	}
 
-	if (*--pathname.end() != '/')
+	if (pathname.back() != '/')
 		pathname += '/';
 
 	// Check whether package has exactly one main folder
@@ -34,6 +34,7 @@ string validatePackage(string pathname) {
 				main_folder = file->d_name;
 			}
 	}
+	closedir(dir);
 
 	if (main_folder.empty()) {
 		eprintf("Error: No main folder found in package\n");
@@ -41,7 +42,7 @@ string validatePackage(string pathname) {
 	}
 
 	pathname.append(main_folder);
-	if (*--pathname.end() != '/')
+	if (pathname.back() != '/')
 		pathname +='/';
 
 	// Get package file structure

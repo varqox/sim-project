@@ -1,7 +1,7 @@
 include ../Makefile.config
 
 .PHONY: all
-all: chmod-default Conver CppToHTML Judge_machine server lib setup-install
+all: killinstc Conver CppToHTML Judge_machine server lib setup-installation
 
 .PHONY: Conver CppToHTML Judge_machine server lib simlib
 Conver Judge_machine server lib: simlib
@@ -9,10 +9,10 @@ Judge_machine server: lib
 Conver CppToHTML Judge_machine server lib simlib:
 	$(Q)$(MAKE) -C $@/
 
-chmod-default: Algorithms/other/chmod-default.cpp
+killinstc: killinstc.cc simlib/simlib.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@
 
-setup-install: setup_install.cc lib/sim.a simlib/simlib.a
+setup-installation: setup_installation.cc lib/sim.a simlib/simlib.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lmysqlcppconn
 
 lib/sim.a: lib
@@ -23,7 +23,7 @@ simlib/simlib.a: simlib
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps chmod-default sim-server setup-install
+	$(Q)$(RM) *.o *.deps killinstc sim-server setup-installation
 	$(Q)$(MAKE) clean -C lib/
 	$(Q)$(MAKE) clean -C simlib/
 	$(Q)$(MAKE) clean -C Conver/

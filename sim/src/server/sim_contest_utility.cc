@@ -2,13 +2,11 @@
 #include "sim_session.h"
 
 #include "../simlib/include/debug.h"
+#include "../simlib/include/logger.h"
 #include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
 #include <vector>
-
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
 
 using std::string;
 using std::vector;
@@ -34,19 +32,14 @@ string Sim::Contest::submissionStatus(const string& status) {
 
 string Sim::Contest::convertStringBack(const string& str) {
 	string res;
-	foreach (i, str) {
-		if (*i == '\\') {
-			if (*++i == 'n') {
-				res += '\n';
-				continue;
-			}
-
-			--i;
+	for (auto i = str.begin(); i != str.end(); ++i) {
+		if (*i == '\\' && ++i != str.end() && *i == 'n') {
+			res += '\n';
+			continue;
 		}
 
 		res += *i;
 	}
-
 	return res;
 }
 
@@ -72,7 +65,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 			}
 		};
 
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("SELECT id, parent, problem_id, access, name, "
 					"owner, visible, show_ranking, begins, ends, full_results "
 				"FROM rounds "
@@ -88,7 +81,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		// If round does not exist
 		if (rows == 0) {
 			sim_.error404();
-			return NULL;
+			return nullptr;
 		}
 
 		r_path->type = (rows == 1 ? CONTEST : (rows == 2 ? ROUND : PROBLEM));
@@ -104,15 +97,8 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 
 		// Check rounds hierarchy
 		if (r_path->contest.isNull() || (rows > 1 && r_path->round.isNull())
-				|| (rows > 2 && r_path->problem.isNull())) {
-			abort();
-			struct exception : std::exception {
-				const char* what() const throw() {
-					return "Database error (rounds hierarchy)";
-				}
-			};
-			throw exception();
-		}
+				|| (rows > 2 && r_path->problem.isNull()))
+			throw std::runtime_error("Database error (rounds hierarchy)");
 
 		// Check access
 		r_path->admin_access = isAdmin(sim_, *r_path);
@@ -121,10 +107,10 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 				// Check access to contest
 				if (sim_.session->open() != Sim::Session::OK) {
 					sim_.redirect("/login" + sim_.req_->target);
-					return NULL;
+					return nullptr;
 				}
 
-				pstmt.reset(sim_.db_conn()->
+				pstmt.reset(sim_.db_conn->
 					prepareStatement("SELECT user_id FROM users_to_contests "
 						"WHERE user_id=? AND contest_id=?"));
 				pstmt->setString(1, sim_.session->user_id);
@@ -134,7 +120,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 				if (!res->next()) {
 					// User is not assigned to this contest
 					sim_.error403();
-					return NULL;
+					return nullptr;
 				}
 			}
 
@@ -143,14 +129,14 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 			if (r_path->type != CONTEST && r_path->round->begins.size() &&
 					date("%Y-%m-%d %H:%M:%S") < r_path->round->begins) {
 				sim_.error403();
-				return NULL;
+				return nullptr;
 			}
 		}
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-		return NULL;
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
+		return nullptr;
 	}
 
 	return r_path.release();
@@ -167,7 +153,7 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 
 	try {
 		// Check if user has more privileges than the owner
-		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn()->prepareStatement(
+		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn->prepareStatement(
 			"SELECT id, type FROM users WHERE id=? OR id=?"));
 		pstmt->setString(1, r_path.contest->owner);
 		pstmt->setString(2, sim.session->user_id);
@@ -184,11 +170,8 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 		return owner_type > user_type;
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 
 	return false;
@@ -287,7 +270,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 	try {
 		if (r_path.type == CONTEST) {
 			// Select subrounds
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 				prepareStatement(admin_view ?
 					"SELECT id, name, item, visible, begins, ends, "
 						"full_results FROM rounds WHERE parent=? ORDER BY item"
@@ -306,7 +289,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 
 			// Collect results
 			while (res->next()) {
-				subrounds.push_back(SubroundExtended());
+				subrounds.emplace_back();
 				subrounds.back().id = res->getString(1);
 				subrounds.back().name = res->getString(2);
 				subrounds.back().item = res->getString(3);
@@ -317,7 +300,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 			}
 
 			// Select problems
-			pstmt.reset(sim_.db_conn()->
+			pstmt.reset(sim_.db_conn->
 				prepareStatement("SELECT id, parent, name FROM rounds "
 					"WHERE grandparent=? ORDER BY item"));
 			pstmt->setString(1, r_path.contest->id);
@@ -339,7 +322,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 					continue; // Ignore
 
 				vector<Problem>& prob = it->second;
-				prob.push_back(Problem());
+				prob.emplace_back();
 				prob.back().id = res->getString(1);
 				prob.back().parent = res->getString(2);
 				prob.back().name = res->getString(3);
@@ -386,7 +369,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 					<< htmlSpecialChars(r_path.round->name) << "</a>\n";
 
 			// Select problems
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 				prepareStatement("SELECT id, name FROM rounds WHERE parent=? "
 					"ORDER BY item"));
 			pstmt->setString(1, r_path.round->id);
@@ -428,10 +411,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 		}
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 }

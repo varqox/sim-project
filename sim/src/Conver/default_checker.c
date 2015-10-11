@@ -26,7 +26,7 @@ int areEqual(char *s1, size_t l1, char *s2, size_t l2) {
     __FILE__, __LINE__, __PRETTY_FUNCTION__, #expr), exit(-1)))
 #endif
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
   // argv[0] command (ignored)
   // argv[1] test_in
   // argv[2] test_out (right answer)

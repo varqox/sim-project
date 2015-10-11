@@ -1,4 +1,5 @@
 #include "../include/db.h"
+#include "../simlib/include/logger.h"
 
 #include <cerrno>
 #include <cppconn/driver.h>
@@ -9,8 +10,8 @@ using std::string;
 namespace DB {
 
 Connection::Connection(const string& host, const string& user,
-			const string& password, const string& database)
-			: conn_(NULL), host_(host), user_(user), password_(password),
+		const string& password, const string& database)
+		: conn_(nullptr), host_(host), user_(user), password_(password),
 			database_(database) {
 	connect();
 }
@@ -20,13 +21,14 @@ void Connection::connect() {
 	conn_->setSchema(database_);
 }
 
-Connection* createConnectionUsingPassFile(const char* filename) throw() {
-	char *host = NULL, *user = NULL, *password = NULL, *database = NULL;
+Connection createConnectionUsingPassFile(const string& filename) {
+	char *host = nullptr, *user = nullptr, *password = nullptr,
+		*database = nullptr;
 
-	FILE *conf = fopen(filename, "r");
-	if (conf == NULL)
-		throw std::runtime_error(string("Cannot open file: '") + filename +
-			"' - " + strerror(errno));
+	FILE *conf = fopen(filename.c_str(), "r");
+	if (conf == nullptr)
+		throw std::runtime_error(concat("Cannot open file: '", filename, '\'',
+			error(errno)));
 
 	// Get credentials
 	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
@@ -51,7 +53,7 @@ Connection* createConnectionUsingPassFile(const char* filename) throw() {
 
 	// Connect
 	try {
-		return new DB::Connection(host, user, password, database);
+		return DB::Connection(host, user, password, database);
 
 	} catch (const std::exception& e) {
 		// Free resources
@@ -60,8 +62,8 @@ Connection* createConnectionUsingPassFile(const char* filename) throw() {
 		free(password);
 		free(database);
 
-		throw std::runtime_error(string("Failed to connect to database - ") +
-			e.what());
+		throw std::runtime_error(concat("Failed to connect to database - ",
+			e.what()));
 
 	} catch (...) {
 		// Free resources
