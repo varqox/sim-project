@@ -1,5 +1,7 @@
 #include "../include/debug.h"
 #include "../include/filesystem.h"
+#include "../include/logger.h"
+#include "../include/process.h"
 #include "../include/string.h"
 
 #include <cerrno>
@@ -12,6 +14,7 @@ int getUnlinkedTmpFile(const string& templ) {
 	char name[templ.size() + 1];
 	strcpy(name, templ.c_str());
 
+	umask(077); // Only owner can access this temporary file
 	int fd = mkstemp(name);
 	if (fd == -1)
 		return -1;
@@ -20,73 +23,47 @@ int getUnlinkedTmpFile(const string& templ) {
 	return fd;
 }
 
-TemporaryDirectory::TemporaryDirectory(const char* templ)
-		: path(), name_(NULL) {
+TemporaryDirectory::TemporaryDirectory(const char* templ) {
 	size_t size = strlen(templ);
 	if (size > 0) {
 		// Fill name_
 		if (templ[size - 1] == '/')
 			--size;
 
-		name_ = new char[size + 2];
+		name_.reset(new char[size + 2]);
 
-		memcpy(name_, templ, size);
+		memcpy(name_.get(), templ, size);
 		name_[size] = name_[size + 1] = '\0';
 
-		// Create directory
-		if (NULL == mkdtemp(name_)) {
-			delete[] name_;
+		// Create directory with permissions (mode: 0700/rwx------)
+		if (mkdtemp(name_.get()) == nullptr)
 			throw std::runtime_error("Cannot create temporary directory\n");
-		}
 
-		// If name_ is absolute
+		// name_ is absolute
 		if (name_[0] == '/')
-			path = name_;
+			path_ = name();
+		// name_ is not absolute
+		else
+			path_ = concat(getCWD(), name());
 
-		// If name_ is not absolute
-		else {
-			char *buff = get_current_dir_name();
-			if (buff == NULL || strlen(buff) == 0) {
-				if (buff != NULL) // strlen(buff) == 0
-					errno = ENOENT;
-
-				delete[] name_;
-				free(buff);
-
-				throw std::runtime_error(
-					string("Cannot get current working directory - ") +
-					strerror(errno) + "\n");
-			}
-
-			path = buff;
-			free(buff);
-
-			path += '/';
-			path += name_;
-		}
-
-		// Make path absolute
-		abspath(path).swap(path);
-		path += '/';
+		// Make path_ absolute
+		abspath(path_).swap(path_);
+		path_ += '/';
 
 		name_[size] = '/';
-
-		// Change permissions (mode: 0755/rwxr-xr-x)
-		chmod(name_, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	}
 }
 
 TemporaryDirectory::~TemporaryDirectory() {
-	if (-1 == remove_r(path.c_str()))
-		eprintf("Error: remove_r() - %s\n", strerror(errno));
-	delete[] name_;
+	if (path_.size() && remove_r(path_) == -1)
+		error_log("Error: remove_r()", error(errno)); // TODO: it is not so good
 }
 
 int mkdir_r(const char* path, mode_t mode) {
 	string dir(path);
 	// Remove ending slash (if it exists)
-	if (dir.size() && *--dir.end() == '/')
-		dir.erase(--dir.end());
+	if (dir.size() && dir.back() == '/')
+		dir.pop_back();
 
 	size_t end = 0;
 	int res;
@@ -121,7 +98,7 @@ int __remove_rat(int dirfd, const char* path) {
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 
 	DIR *dir = fdopendir(fd);
-	if (dir == NULL) {
+	if (dir == nullptr) {
 		close(fd);
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 	}
@@ -233,7 +210,7 @@ static int __copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest)
 	}
 
 	DIR *src_dir = fdopendir(src_fd);
-	if (src_dir == NULL) {
+	if (src_dir == nullptr) {
 		close(src_fd);
 		close(dest_fd);
 		return -1;
@@ -332,7 +309,7 @@ void node::__print(FILE *stream, string buff) {
 
 node* node::dir(const string& pathname) {
 	if (dirs.empty())
-		return NULL;
+		return nullptr;
 
 	vector<node*>::iterator down = dirs.begin(), up = --dirs.end(), mid;
 
@@ -345,7 +322,7 @@ node* node::dir(const string& pathname) {
 			up = mid;
 	}
 
-	return (*down)->name == pathname ? *down : NULL;
+	return (*down)->name == pathname ? *down : nullptr;
 }
 
 static node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
@@ -361,7 +338,7 @@ static node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 		return root;
 
 	DIR *dir = fdopendir(fd);
-	if (dir == NULL) {
+	if (dir == nullptr) {
 		close(fd);
 		return root;
 	}
@@ -386,16 +363,20 @@ node* dumpDirectoryTree(const char* path) {
 	struct stat64 sb;
 	if (stat64(path, &sb) == -1 ||
 			!S_ISDIR(sb.st_mode))
-		return NULL;
+		return nullptr;
 
 	return __dumpDirectoryTreeAt(AT_FDCWD, path);
 }
 
 } // namespace directory_tree
 
-string abspath(const string& path, size_t beg, size_t end, string root) {
+string abspath(const string& path, size_t beg, size_t end, string curr_dir) {
 	if (end > path.size())
 		end = path.size();
+
+	// path begin with '/'
+	if (beg < end && path[beg] == '/')
+		curr_dir = "/";
 
 	while (beg < end) {
 		while (beg < end && path[beg] == '/')
@@ -403,21 +384,36 @@ string abspath(const string& path, size_t beg, size_t end, string root) {
 
 		size_t next_slash = std::min(end, find(path, '/', beg, end));
 
-		// If [beg, next_slash) == ("." or "..")
-		if ((next_slash - beg == 1 && path[beg] == '.') ||
-				(next_slash - beg == 2 && path[beg] == '.' &&
-				path[beg + 1] == '.')) {
+		// If [beg, next_slash) == "."
+		if (next_slash - beg == 1 && path[beg] == '.') {
+			beg = next_slash;
+			continue;
+
+		// If [beg, next_slash) == ".."
+		} else if (next_slash - beg == 2 && path[beg] == '.' &&
+				path[beg + 1] == '.') {
+			// Erase last path component
+			size_t new_size = curr_dir.size();
+
+			while (new_size > 0 && curr_dir[new_size - 1] != '/')
+				--new_size;
+			// If updated curr_dir != "/" erase trailing '/'
+			if (new_size > 1)
+				--new_size;
+			curr_dir.resize(new_size);
+
 			beg = next_slash;
 			continue;
 		}
-		if (root.size() > 0 && *--root.end() != '/')
-			root += '/';
 
-		root.append(path, beg, next_slash - beg);
+		if (curr_dir.size() && curr_dir.back() != '/')
+			curr_dir += '/';
+
+		curr_dir.append(path, beg, next_slash - beg);
 		beg = next_slash;
 	}
 
-	return root;
+	return curr_dir;
 }
 
 string getFileContents(int fd) {
@@ -486,7 +482,7 @@ string getFileContents(const char* file) {
 		return "";
 
 	string res = getFileContents(fd);
-	while (close(fd) == -1 && errno == EINTR) {}
+	sclose(fd);
 
 	return res;
 }
@@ -499,7 +495,7 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 		return "";
 
 	string res = getFileContents(fd, beg, end);
-	while (close(fd) == -1 && errno == EINTR) {}
+	sclose(fd);
 
 	return res;
 }
@@ -509,10 +505,10 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 	vector<string> res;
 
 	FILE *f = fopen(file, "r");
-	if (f == NULL)
+	if (f == nullptr)
 		return res;
 
-	char *buff = NULL;
+	char *buff = nullptr;
 	size_t n = 0, line = 0;
 	ssize_t read;
 	// TODO: getline fails on '\0' ??? - check it out
@@ -532,7 +528,7 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 
 size_t putFileContents(const char* file, const char* data, size_t len) {
 	FILE *f = fopen(file, "w");
-	if (f == NULL)
+	if (f == nullptr)
 		return -1;
 
 	if (len == size_t(-1))
@@ -547,13 +543,4 @@ size_t putFileContents(const char* file, const char* data, size_t len) {
 
 	fclose(f);
 	return pos;
-}
-
-int Closer::close() {
-	if (fd_ >= 0)
-		while (::close(fd_) == -1)
-			if (errno != EINTR)
-				return -1;
-
-	return 0;
 }

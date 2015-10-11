@@ -1,6 +1,8 @@
 #include "../include/debug.h"
 #include "../include/filesystem.h"
+#include "../include/logger.h"
 #include "../include/process.h"
+#include "../include/string.h"
 
 #include <cerrno>
 
@@ -12,25 +14,18 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	int cef = -1;
 	if (c_errors) {
 		cef = getUnlinkedTmpFile();
-		if (cef == -1) {
-			if (verbosity > 0)
-				eprintf("Failed to open 'compile_errors' - %s\n",
-					strerror(errno));
-
-			return 1;
-		}
+		if (cef == -1)
+			throw std::runtime_error(concat("Failed to open 'compile_errors'",
+				error(errno)));
 	}
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
-	if (copy(source, tmp_dir.sname() + "a.cpp") == -1) {
-		if (verbosity > 0)
-			eprintf("Failed to copy source file - %s\n", strerror(errno));
-
-		return 1;
-	}
+	if (copy(source, concat(tmp_dir.name(), "a.cpp")) == -1)
+		throw std::runtime_error(concat("Failed to copy source file",
+			error(errno)));
 
 	if (verbosity > 1)
-		printf("Compiling: '%s' ", (source).c_str());
+		stdlog("Compiling: '", source, "' ");
 
 	/* Compile as a 32-bit executable (not essential, but if the checker is
 	*  x86_64 and Conver/Judge_machine is i386, then the checker will not work -
@@ -55,7 +50,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"-static",
 		"-lm",
 		"-m32",
-		NULL
+		nullptr
 	};
 
 	// TODO: add compilation time limit
@@ -66,34 +61,30 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	// Check for errors
 	if (compile_status != 0) {
 		if (verbosity > 1)
-			printf("Failed with code: %i.\n", compile_status);
+			stdlog("Failed with code: ", toString(compile_status), '.');
 
 		if (c_errors)
 			*c_errors = getFileContents(cef, 0, c_errors_max_len);
 
 		// Clean up
 		if (cef >= 0)
-			while (close(cef) == -1 && errno == EINTR) {}
+			sclose(cef);
 		return 2;
 	}
 
 	if (verbosity > 1)
-		printf("Completed successfully.\n");
+		stdlog("Completed successfully.");
 
 	if (c_errors)
 		*c_errors = "";
 
 	// Clean up
 	if (cef >= 0)
-		while (close(cef) == -1 && errno == EINTR) {}
+		sclose(cef);
 
 	// Move exec
-	if (move(tmp_dir.sname() + "exec", exec) == -1) {
-		if (verbosity > 0)
-			eprintf("Failed to move exec - %s\n", strerror(errno));
-
-		return 1;
-	}
+	if (move(concat(tmp_dir.name(), "exec"), exec) == -1)
+		throw std::runtime_error(concat("Failed to move exec", error(errno)));
 
 	return 0;
 }

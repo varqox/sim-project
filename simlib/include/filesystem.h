@@ -1,6 +1,9 @@
 #pragma once
 
+#include "memory.h"
+
 #include <algorithm>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -21,19 +24,37 @@ int getUnlinkedTmpFile(const std::string& templ = "/tmp/tmp_fileXXXXXX");
 class TemporaryDirectory
 {
 private:
-	std::string path; // absolute path
-	char* name_;
-	TemporaryDirectory(const TemporaryDirectory&);
-	TemporaryDirectory& operator=(const TemporaryDirectory&);
+	std::string path_; // absolute path
+	UniquePtr<char> name_;
+
+	TemporaryDirectory(const TemporaryDirectory&) = delete;
+	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
 
 public:
+	TemporaryDirectory() = default;
+
 	explicit TemporaryDirectory(const char* templ);
+
+	TemporaryDirectory(TemporaryDirectory&& td) : path_(std::move(td.path_)),
+		name_(td.name_.release()) {}
+
+	TemporaryDirectory& operator=(TemporaryDirectory&& td) {
+		path_ = std::move(td.path_);
+		name_.reset(td.name_.release());
+
+		return *this;
+	}
 
 	~TemporaryDirectory();
 
-	const char* name() const { return name_; }
+	// Directory name with trailing '/'
+	const char* name() const { return name_.get(); }
 
-	std::string sname() const { return name_; }
+	// Directory name with trailing '/'
+	std::string sname() const { return name_.get(); }
+
+	// Directory absolute path with trailing '/'
+	std::string path() const { return path_; }
 };
 
 // creates directory (not recursively) (mode: 0755/rwxr-xr-x)
@@ -280,7 +301,7 @@ public:
 	 * @param stream file to write to (if NULL returns immediately)
 	 */
 	inline void print(FILE *stream) {
-		if (stream != NULL)
+		if (stream != nullptr)
 			return __print(stream);
 	}
 
@@ -315,12 +336,13 @@ inline node* dumpDirectoryTree(const std::string& path) {
 
 } // namespace directory_tree
 
-/* Returns an absolute path that does not contain any . or .. components,
+/*
+*  Returns an absolute path that does not contain any . or .. components,
 *  nor any repeated path separators (/), and does not end with /
-*  root can be empty
+*  curr_dir can be empty. If path begin with / then curr_dir is ignored.
 */
 std::string abspath(const std::string& path, size_t beg = 0,
-		size_t end = std::string::npos, std::string root = "/");
+		size_t end = std::string::npos, std::string curr_dir = "/");
 
 // returns extension (with dot) e.g. ".cc"
 inline std::string getExtension(const std::string file) {
@@ -434,6 +456,22 @@ inline size_t putFileContents(const std::string& file, const std::string& data) 
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
 
+/**
+ * @brief Behaves like close(2) but cannot be interrupted by signal
+ *
+ * @param fd file descriptor to close
+ * @return 0 on success, -1 on error
+ *
+ * @errors The same that occur for close(2) expect EINTR
+ */
+inline int sclose(int fd) {
+	while (close(fd) == -1)
+		if (errno != EINTR)
+			return -1;
+
+	return 0;
+}
+
 // Closes file descriptor automatically
 class Closer {
 	int fd_;
@@ -445,68 +483,52 @@ public:
 	/**
 	 * @brief Closes file descriptor
 	 * @return 0 on success, -1 on error
+	 * @errors The same that occur to sclose()
 	 */
-	int close();
+	int close() { return sclose(fd_); }
 
 	~Closer() { close(); }
 };
 
 template<int (*func)(const char*)>
 class RemoverBase {
-	char* name;
+	UniquePtr<char> name;
 
-	RemoverBase(const RemoverBase&);
-	RemoverBase& operator=(const RemoverBase&);
+	RemoverBase(const RemoverBase&) = delete;
+	RemoverBase& operator=(const RemoverBase&) = delete;
+	RemoverBase(const RemoverBase&&) = delete;
+	RemoverBase& operator=(const RemoverBase&&) = delete;
 
 public:
-	explicit RemoverBase(const char* str) {
-		size_t len = strlen(str);
-		name = new char[len + 1];
-		strncpy(name, str, len + 1);
-	}
+	explicit RemoverBase(const char* str) : RemoverBase(str, strlen(str)) {}
 
-	explicit RemoverBase(const std::string& str) : name(NULL) {
-		size_t len = str.size();
-		name = new char[len + 1];
-		name[len] = '\0';
-		strncpy(name, str.data(), len);
-	}
+	explicit RemoverBase(const std::string& str)
+		: RemoverBase(str.data(), str.size()) {}
 
-	RemoverBase(const char* str, size_t len) : name(NULL) {
-		name = new char[len + 1];
-		strncpy(name, str, len + 1);
+	RemoverBase(const char* str, size_t len) : name(nullptr) {
+		name.reset(new char[len + 1]);
+		strncpy(name.get(), str, len + 1);
 	}
 
 	~RemoverBase() {
-		if (name) {
-			func(name);
-			delete[] name;
-		}
+		if (!name.isNull())
+			func(name.get());
 	}
 
-	void cancel() {
-		delete[] name;
-		name = NULL;
-	}
+	void cancel() { name.reset(); }
 
 	void reset(const char* str) { reset(str, strlen(str)); }
 
+	void reset(const std::string& str) { reset(str.data(), str.size()); }
+
 	void reset(const char* str, size_t len) {
 		cancel();
-		name = new char[len + 1];
-		strncpy(name, str, len + 1);
-	}
-
-	void reset(const std::string& str) {
-		cancel();
-		size_t len = str.size();
-		name = new char[len + 1];
-		name[len] = '\0';
-		strncpy(name, str.data(), len);
+		name.reset(new char[len + 1]);
+		strncpy(name.get(), str, len + 1);
 	}
 
 	int removeTarget() {
-		int rc = func(name);
+		int rc = func(name.get());
 		cancel();
 		return rc;
 	}

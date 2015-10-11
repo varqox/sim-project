@@ -1,4 +1,6 @@
 #include "../include/debug.h"
+#include "../include/filesystem.h"
+#include "../include/logger.h"
 #include "../include/memory.h"
 #include "../include/sandbox.h"
 #include "../include/string.h"
@@ -6,18 +8,15 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cstddef>
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/ptrace.h>
-#include <sys/reg.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
 
 using std::string;
 using std::vector;
@@ -91,11 +90,16 @@ int DefaultCallback::operator()(pid_t pid, int syscall) {
 		int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {
 			arch = 0;
-			E("Error: '%s' - %s\n", filename.c_str(), strerror(errno));
+			error_log("Error: open('", filename, "')", error(errno));
+			return 1;
+
 		} else {
 			// Read fourth byte and detect if 32 or 64 bit
 			unsigned char c;
-			lseek(fd, 4, SEEK_SET);
+			if (lseek(fd, 4, SEEK_SET) == (off_t)-1) {
+				sclose(fd);
+				return 1;
+			}
 
 			int ret = read(fd, &c, 1);
 			if (ret == 1 && c == 2)
@@ -103,19 +107,19 @@ int DefaultCallback::operator()(pid_t pid, int syscall) {
 			else
 				arch = 0; // i386
 
-			close(fd);
+			sclose(fd);
 		}
 	}
 
 	// Check if syscall is allowed
-	foreach (i, allowed_syscalls[arch])
-		if (syscall == *i)
+	for (auto& i : allowed_syscalls[arch])
+		if (syscall == i)
 			return 0;
 
 	// Check if syscall is limited
-	foreach (i, limited_syscalls[arch])
-		if (syscall == i->syscall)
-			return --i->limit < 0;
+	for (auto& i : limited_syscalls[arch])
+		if (syscall == i.syscall)
+			return --i.limit < 0;
 
 	return !allowedCall(pid, arch, syscall, vector<string>());
 }
@@ -149,8 +153,8 @@ bool allowedCall(pid_t pid, int arch, int syscall,
 		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
 			return false; // Error occurred
 
-		if (ARG1 == 0)
-			return false;
+		if (ARG1 == 0) // NULL is first argument
+			return true;
 
 		char path[PATH_MAX] = {};
 		struct iovec local, remote;
@@ -225,7 +229,7 @@ ExitStat run(const string& exec, vector<string> args,
 		// Convert args
 		const size_t len = args.size();
 		char *arg[len + 1];
-		arg[len] = NULL;
+		arg[len] = nullptr;
 
 		for (size_t i = 0; i < len; ++i)
 			arg[i] = const_cast<char*>(args[i].c_str());
@@ -234,12 +238,12 @@ ExitStat run(const string& exec, vector<string> args,
 		if (opts->memory_limit > 0) {
 			struct rlimit limit;
 			limit.rlim_max = limit.rlim_cur = opts->memory_limit;
-			prlimit(getpid(), RLIMIT_AS, &limit, NULL);
+			prlimit(getpid(), RLIMIT_AS, &limit, nullptr);
 		}
 
 		// Change stdin
 		if (opts->new_stdin_fd < 0)
-			while (close(STDIN_FILENO) == -1 && errno == EINTR) {}
+			sclose(STDIN_FILENO);
 
 		else if (opts->new_stdin_fd != STDIN_FILENO)
 			while (dup2(opts->new_stdin_fd, STDIN_FILENO) == -1)
@@ -248,7 +252,7 @@ ExitStat run(const string& exec, vector<string> args,
 
 		// Change stdout
 		if (opts->new_stdout_fd < 0)
-			while (close(STDOUT_FILENO) == -1 && errno == EINTR) {}
+			sclose(STDOUT_FILENO);
 
 		else if (opts->new_stdout_fd != STDOUT_FILENO)
 			while (dup2(opts->new_stdout_fd, STDOUT_FILENO) == -1)
@@ -257,7 +261,7 @@ ExitStat run(const string& exec, vector<string> args,
 
 		// Change stderr
 		if (opts->new_stderr_fd < 0)
-			while (close(STDERR_FILENO) == -1 && errno == EINTR) {}
+			sclose(STDERR_FILENO);
 
 		else if (opts->new_stderr_fd != STDERR_FILENO)
 			while (dup2(opts->new_stderr_fd, STDERR_FILENO) == -1)
@@ -298,7 +302,7 @@ ExitStat run(const string& exec, vector<string> args,
 	// Run timer (time limit)
 	struct timeval tbeg, tend;
 	unsigned long long runtime;
-	gettimeofday(&tbeg, NULL); // Get start time
+	gettimeofday(&tbeg, nullptr); // Get start time
 	setitimer(ITIMER_REAL, &timer, &old_timer);
 
 	for (;;) {
@@ -307,15 +311,15 @@ ExitStat run(const string& exec, vector<string> args,
 		 exit_normally:
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
-			gettimeofday(&tend, NULL); // Get finish time
-			sigaction(SIGALRM, &sa_old, NULL);
+			gettimeofday(&tend, nullptr); // Get finish time
+			sigaction(SIGALRM, &sa_old, nullptr);
 
 			runtime = (tend.tv_sec - tbeg.tv_sec) * 1000000LL + tend.tv_usec -
 				tbeg.tv_usec;
 
 			// Kill process if it still exists
 			kill(cpid, SIGKILL);
-			waitpid(cpid, NULL, 0);
+			waitpid(cpid, nullptr, 0);
 
 			string message;
 			if (status) {
@@ -337,10 +341,14 @@ ExitStat run(const string& exec, vector<string> args,
 
 			return ExitStat(status, runtime, message);
 		}
+
+		// TODO: what if tracer is different architecture than tracee?
 #ifdef __x86_64__
-		int syscall = ptrace(PTRACE_PEEKUSER, cpid, sizeof(long)*ORIG_RAX);
+		int syscall = ptrace(PTRACE_PEEKUSER, cpid,
+			offsetof ( x86_64_user_regs_struct, orig_rax ) );
 #else
-		int syscall = ptrace(PTRACE_PEEKUSER, cpid, sizeof(long)*ORIG_EAX);
+		int syscall = ptrace(PTRACE_PEEKUSER, cpid,
+			offsetof(i386_user_regs_struct, eax));
 #endif
 
 		// If syscall is not allowed
@@ -348,8 +356,8 @@ ExitStat run(const string& exec, vector<string> args,
 
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
-			gettimeofday(&tend, NULL); // Get finish time
-			sigaction(SIGALRM, &sa_old, NULL);
+			gettimeofday(&tend, nullptr); // Get finish time
+			sigaction(SIGALRM, &sa_old, nullptr);
 
 			// Kill process if it still exists
 			kill(cpid, SIGKILL);
@@ -368,8 +376,9 @@ ExitStat run(const string& exec, vector<string> args,
 			return ExitStat(status, runtime/*opts->time_limit -
 						timer.it_value.tv_sec * 1000000LL -
 						timer.it_value.tv_usec*/,
-					string("forbidden syscall: ").append(toString(
-						(unsigned long long)syscall)));
+					(syscall == -1 ? "failed to get syscall"
+						: concat("forbidden syscall: ",
+							toString<uint>(syscall))));
 		}
 
 		// syscall returns
@@ -388,11 +397,12 @@ ExitStat thread_safe_run(const string& exec, vector<string> args,
 	};
 
 	SharedMemorySegment shm_sgmt(sizeof(RuntimeInfo));
-	if (shm_sgmt.addr() == NULL)
+	if (shm_sgmt.addr() == nullptr)
 		return ExitStat(-1, 0, string("Failed to create shared memory segment")
 			+ strerror(errno));
 
 	RuntimeInfo *rt_info = new (shm_sgmt.addr()) RuntimeInfo;
+	*rt_info = (RuntimeInfo) { 0, 0, "" };
 
 	pid_t child = fork();
 	if (child == -1)
@@ -400,7 +410,7 @@ ExitStat thread_safe_run(const string& exec, vector<string> args,
 
 	else if (child == 0) {
 		ExitStat es = run(exec, args, opts, func, data);
-		rt_info = (RuntimeInfo*)shmat(shm_sgmt.key(), NULL, 0);
+		rt_info = (RuntimeInfo*)shmat(shm_sgmt.key(), nullptr, 0);
 
 		rt_info->code = es.code;
 		rt_info->runtime = es.runtime;
@@ -411,7 +421,7 @@ ExitStat thread_safe_run(const string& exec, vector<string> args,
 		_exit(0);
 	}
 
-	waitpid(child, NULL, 0);
+	waitpid(child, nullptr, 0);
 	return ExitStat(rt_info->code, rt_info->runtime, rt_info->message);
 }
 

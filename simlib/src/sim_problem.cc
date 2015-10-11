@@ -1,15 +1,13 @@
 #include "../include/config_file.h"
 #include "../include/debug.h"
 #include "../include/filesystem.h"
+#include "../include/logger.h"
 #include "../include/sim_problem.h"
 #include "../include/string.h"
 #include "../include/utility.h"
 
 #include <cerrno>
 #include <cmath>
-
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
 
 using std::string;
 using std::vector;
@@ -25,7 +23,7 @@ string ProblemConfig::dump() const {
 
 	// Solutions
 	res += "solutions: [";
-	foreach (i, solutions)
+	for (auto i = solutions.begin(); i != solutions.end(); ++i)
 		append(res) << (i == solutions.begin() ? "" : ", ")
 			<< makeSafeString(*i);
 	res += "]\n";
@@ -33,20 +31,19 @@ string ProblemConfig::dump() const {
 	// Tests
 	res += "tests: [";
 	bool first_test = true;
-	foreach (i, test_groups) {
-		if (i->tests.empty())
+	for (auto& i : test_groups) {
+		if (i.tests.empty())
 			continue;
 
 		if (first_test)
 			first_test = false;
 		else
 			res += ",\n";
-		append(res) << "\n\t'" << i->tests[0].name << ' '
-			<< usecToSecStr(i->tests[0].time_limit, 2) << ' '
-			<< toString(i->points) << '\'';
+		append(res) << "\n\t'" << i.tests[0].name << ' '
+			<< usecToSecStr(i.tests[0].time_limit, 2) << ' '
+			<< toString(i.points) << '\'';
 
-		for (vector<Test>::const_iterator j = ++i->tests.begin(),
-				end = i->tests.end(); j != end; ++j)
+		for (auto j = ++i.tests.begin(); j != i.tests.end(); ++j)
 			append(res) << ",\n\t'" << j->name << ' '
 				<< usecToSecStr(j->time_limit, 2) << '\'';
 	}
@@ -56,7 +53,7 @@ string ProblemConfig::dump() const {
 
 void ProblemConfig::loadConfig(string package_path) {
 	// Append slash to package_path
-	if (package_path.size() > 0 && *--package_path.end() != '/')
+	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
 
 	ConfigFile config;
@@ -89,9 +86,9 @@ void ProblemConfig::loadConfig(string package_path) {
 			throw std::runtime_error("config.conf: statement cannot contain "
 				"'/' character");
 
-		if (access(package_path + "doc/" + statement, F_OK) == -1)
-			throw std::runtime_error("config.conf: invalid statement '" +
-				statement + "': 'doc/" + statement + "' - " + strerror(errno));
+		if (access(concat(package_path, "doc/", statement), F_OK) == -1)
+			throw std::runtime_error(concat("config.conf: invalid statement '",
+				statement, "': 'doc/", statement, '\'', error(errno)));
 	}
 
 	// Checker
@@ -101,21 +98,21 @@ void ProblemConfig::loadConfig(string package_path) {
 			throw std::runtime_error("config.conf: checker cannot contain "
 				"'/' character");
 
-		if (access(package_path + "check/" + checker, F_OK) == -1)
-			throw std::runtime_error("config.conf: invalid checker '" +
-				checker + "': 'check/" + checker + "' - " + strerror(errno));
+		if (access(concat(package_path, "check/", checker), F_OK) == -1)
+			throw std::runtime_error(concat("config.conf: invalid checker '",
+				checker, "': 'check/", checker, '\'', error(errno)));
 	}
 
 	// Solutions
 	solutions = config.getArray("solutions");
-	foreach (i, solutions) {
-		if (i->find('/') < i->size())
+	for (auto& i : solutions) {
+		if (i.find('/') < i.size())
 			throw std::runtime_error("config.conf: solution cannot contain "
 				"'/' character");
 
-		if (access(package_path + "prog/" + *i, F_OK) == -1)
-			throw std::runtime_error("config.conf: invalid solution '" +
-				*i + "': 'prog/" + *i + "' - " + strerror(errno));
+		if (access(concat(package_path, "prog/", i), F_OK) == -1)
+			throw std::runtime_error(concat("config.conf: invalid solution '",
+				i, "': 'prog/", i, '\'', error(errno)));
 	}
 
 	// Main solution
@@ -135,15 +132,14 @@ void ProblemConfig::loadConfig(string package_path) {
 	// Tests
 	test_groups.clear();
 	vector<string> tests = config.getArray("tests");
-	foreach (i, tests) {
-		*i += '\0'; // i->data() is now null-terminated
+	for (auto& i : tests) {
 		Test test;
 
 		// Test name
 		size_t pos = 0;
-		while (pos < i->size() && !isspace((*i)[pos]))
+		while (pos < i.size() && !isspace(i[pos]))
 			++pos;
-		test.name.assign(*i, 0, pos);
+		test.name.assign(i, 0, pos);
 
 		if (test.name.find('/') != string::npos)
 			throw std::runtime_error("config.conf: test name cannot contain "
@@ -157,26 +153,25 @@ void ProblemConfig::loadConfig(string package_path) {
 		// Time limit
 		errno = 0;
 		char *ptr;
-		test.time_limit = round(strtod(i->data() + pos, &ptr) * 1000000LL);
+		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
 		if (errno)
 			throw std::runtime_error("config.conf: " + test.name +
 				": invalid time limit");
-		pos = ptr - i->data();
-		i->erase(i->size() - 1); // Remove trailing '\0'
+		pos = ptr - i.data();
 
-		while (pos < i->size() && isspace((*i)[pos]))
+		while (pos < i.size() && isspace(i[pos]))
 			++pos;
 
 		// Points
-		if (pos < i->size()) {
+		if (pos < i.size()) {
 			test_groups.push_back(Group());
 
 			// Remove trailing white spaces
-			size_t end = i->size();
-			while (end > pos && isspace((*i)[end - 1]))
+			size_t end = i.size();
+			while (end > pos && isspace(i[end - 1]))
 				--end;
 
-			if (strtoi(*i, &test_groups.back().points, pos, end) <= 0)
+			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
 				throw std::runtime_error("config.conf: " + test.name +
 					": invalid points");
 		}

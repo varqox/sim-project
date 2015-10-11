@@ -1,4 +1,6 @@
 #include "../include/debug.h"
+#include "../include/filesystem.h"
+#include "../include/logger.h"
 #include "../include/sandbox.h"
 #include "../include/sandbox_checker_callback.h"
 #include "../include/string.h"
@@ -11,9 +13,6 @@
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 #include <unistd.h>
-
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
 
 using std::string;
 using std::vector;
@@ -95,11 +94,16 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 		int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {
 			arch = 0;
-			E("Error: '%s' - %s\n", filename.c_str(), strerror(errno));
+			error_log("Error: open('", filename, "')", error(errno));
+			return 1;
+
 		} else {
 			// Read fourth byte and detect if 32 or 64 bit
 			unsigned char c;
-			lseek(fd, 4, SEEK_SET);
+			if (lseek(fd, 4, SEEK_SET) == (off_t)-1) {
+				sclose(fd);
+				return 1;
+			}
 
 			int ret = read(fd, &c, 1);
 			if (ret == 1 && c == 2)
@@ -107,19 +111,19 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 			else
 				arch = 0; // i386
 
-			close(fd);
+			sclose(fd);
 		}
 	}
 
 	// Check if syscall is allowed
-	foreach (i, allowed_syscalls[arch])
-		if (syscall == *i)
+	for (auto& i : allowed_syscalls[arch])
+		if (syscall == i)
 			return 0;
 
 	// Check if syscall is limited
-	foreach (i, limited_syscalls[arch])
-		if (syscall == i->syscall)
-			return --i->limit < 0;
+	for (auto& i : limited_syscalls[arch])
+		if (syscall == i.syscall)
+			return --i.limit < 0;
 
 	return !allowedCall(pid, arch, syscall, allowed_files);
 }

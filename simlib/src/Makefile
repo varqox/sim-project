@@ -9,6 +9,7 @@ endif
 
 ../simlib.a: string.o time.o filesystem.o STD_SHA_256.o process.o sandbox.o
 ../simlib.a: sandbox_checker_callback.o compile.o sim_problem.o config_file.o
+../simlib.a: logger.o
 ../simlib.a: ncg.o
 	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
 

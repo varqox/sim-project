@@ -89,4 +89,4 @@ void ncg(uint32_t seed) {
 }
 
 // Initialise generator on program start up
-static int startup = (ncg(time(NULL)), 0);
+static int startup = (ncg(time(nullptr)), 0); // TODO: better seed

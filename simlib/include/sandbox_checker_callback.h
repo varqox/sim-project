@@ -20,6 +20,7 @@ struct CheckerCallback {
 	CheckerCallback(
 		std::vector<std::string> files = std::vector<std::string>());
 
+	// Returns 0 on success, non-zero value on error
 	int operator()(pid_t pid, int syscall);
 };
 

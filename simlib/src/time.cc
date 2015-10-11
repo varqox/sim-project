@@ -7,7 +7,7 @@ using std::string;
 
 long long microtime() {
 	timeval mtime;
-	gettimeofday(&mtime, NULL);
+	gettimeofday(&mtime, nullptr);
 	return (mtime.tv_sec * 1000000LL) + mtime.tv_usec;
 }
 
@@ -27,5 +27,5 @@ string date(const string& str, time_t cur_time) {
 bool isDatetime(const string& str) {
 	struct tm t;
 	return str.size() == 19 &&
-		NULL != strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t);
+		strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr;
 }

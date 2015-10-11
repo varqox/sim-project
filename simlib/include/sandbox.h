@@ -27,33 +27,33 @@ struct i386_user_regs_struct {
 };
 
 struct x86_64_user_regs_struct {
-	unsigned long long int r15;
-	unsigned long long int r14;
-	unsigned long long int r13;
-	unsigned long long int r12;
-	unsigned long long int rbp;
-	unsigned long long int rbx;
-	unsigned long long int r11;
-	unsigned long long int r10;
-	unsigned long long int r9;
-	unsigned long long int r8;
-	unsigned long long int rax;
-	unsigned long long int rcx;
-	unsigned long long int rdx;
-	unsigned long long int rsi;
-	unsigned long long int rdi;
-	unsigned long long int orig_rax;
-	unsigned long long int rip;
-	unsigned long long int cs;
-	unsigned long long int eflags;
-	unsigned long long int rsp;
-	unsigned long long int ss;
-	unsigned long long int fs_base;
-	unsigned long long int gs_base;
-	unsigned long long int ds;
-	unsigned long long int es;
-	unsigned long long int fs;
-	unsigned long long int gs;
+	uint64_t r15;
+	uint64_t r14;
+	uint64_t r13;
+	uint64_t r12;
+	uint64_t rbp;
+	uint64_t rbx;
+	uint64_t r11;
+	uint64_t r10;
+	uint64_t r9;
+	uint64_t r8;
+	uint64_t rax;
+	uint64_t rcx;
+	uint64_t rdx;
+	uint64_t rsi;
+	uint64_t rdi;
+	uint64_t orig_rax;
+	uint64_t rip;
+	uint64_t cs;
+	uint64_t eflags;
+	uint64_t rsp;
+	uint64_t ss;
+	uint64_t fs_base;
+	uint64_t gs_base;
+	uint64_t ds;
+	uint64_t es;
+	uint64_t fs;
+	uint64_t gs;
 };
 
 struct ExitStat {
@@ -90,6 +90,7 @@ struct DefaultCallback {
 
 	DefaultCallback();
 
+	// Returns 0 on success, non-zero value on error
 	int operator()(pid_t pid, int syscall);
 };
 

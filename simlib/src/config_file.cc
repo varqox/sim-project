@@ -3,9 +3,6 @@
 
 #include <cerrno>
 
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
-
 using std::map;
 using std::string;
 using std::vector;
@@ -84,7 +81,7 @@ size_t ConfigFile::parseDoubleQuotedString(const StringView& in, string& out,
 				throw ParseError(line, string("unknown escape sequence \\") +
 					in[i]);
 			}
-			continue; // Should never reach here
+			// Should never reach here
 		}
 		out += in[i];
 	}
@@ -117,7 +114,7 @@ void ConfigFile::loadConfigFromFile(const string& pathname, bool load_all) {
 			strerror(errno));
 
 	string contents = getFileContents(fd);
-	while (close(fd) == -1 && errno == EINTR) {}
+	sclose(fd);
 
 	loadConfigFromString(contents, load_all);
 }
@@ -128,8 +125,8 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 			++beg;
 
 	// Set all variables as unused
-	foreach (i, vars)
-		i->second.flag = 0;
+	for (auto& i : vars)
+		i.second.flag = 0;
 
 	Variable tmp; // Used for ignored variables
 	size_t beg, end = -1, x, line = 0;
@@ -255,7 +252,7 @@ bool ConfigFile::getBool(const StringView &name) const {
 
 double ConfigFile::getReal(const StringView &name) const {
 	map<string, Variable>::const_iterator it = vars.find(name.to_string());
-	return (it == vars.end() ? 0 : strtod(it->second.s.c_str(), NULL));
+	return (it == vars.end() ? 0 : strtod(it->second.s.c_str(), nullptr));
 }
 
 std::string ConfigFile::getString(const StringView &name) const {

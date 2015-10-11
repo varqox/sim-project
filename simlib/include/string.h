@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 
@@ -30,13 +31,16 @@ public:
 		: str(s.data() + std::min(beg, s.size())),
 		len(std::min(s.size(), endi)) {}
 
-	~StringView() {}
+	StringView(StringView&& s) = default;
+	StringView& operator=(StringView&& s) = default;
 
 	StringView& operator=(const StringView& s) {
 		str = s.str;
 		len = s.len;
 		return *this;
 	}
+
+	~StringView() {}
 
 	// Returns whether the StringView is empty (size() == 0)
 	bool empty() const { return len == 0; }
@@ -112,7 +116,7 @@ public:
 	int compare(const StringView& s) const {
 		size_type clen = std::min(len, s.len);
 		int rc = strncmp(str, s.str, clen);
-		return rc != 0 ? rc : (len == s.len ? 0 : (len < s.len) ? -1 : 1);
+		return rc != 0 ? rc : (len == s.len ? 0 : ((len < s.len) ? -1 : 1));
 	}
 
 	int compare(size_type pos, size_type count, const StringView& s) const {
@@ -205,15 +209,41 @@ std::basic_ostream<CharT, Traits>& operator<<(
 	return os.write(s.data(), s.size());
 }
 
-// Converts long long to std::string
-std::string toString(long long a);
+// Converts T to std::string
+template<class T>
+std::string toString(T x) {
+	std::string res;
+	bool minus = false;
 
-// Converts unsigned long long to std::string
-std::string toString(unsigned long long a);
+	if (x < T()) {
+		minus = true;
+		x = -x;
+	}
 
-// Converts size_t to std::string
-inline std::string toString(size_t a) {
-	return toString(static_cast<unsigned long long>(a));
+	while (x > 0) {
+		res += static_cast<char>(x % 10 + '0');
+		x /= 10;
+	}
+
+	if (minus)
+		res += "-";
+	else if (res.empty())
+		res = "0";
+	else
+		std::reverse(res.begin(), res.end());
+
+	return res;
+}
+
+// TODO
+inline std::string toString(double x, int precision = 6) {
+	constexpr int buff_size = 300;
+	char buff[buff_size];
+	int rc = snprintf(buff, buff_size, "%.*lf", precision, x);
+	if (0 < rc && rc < buff_size)
+		return buff;
+
+	return std::to_string(x);
 }
 
 // Like strtou() but places number into x
@@ -259,12 +289,17 @@ inline int hextodec(int c) {
 
 inline char dectohex(int x) { return x > 9 ? 'A' + x - 10 : x + '0'; }
 
-inline bool isPrefix(const StringView& str, const StringView& prefix) {
-	return str.compare(0, prefix.size(), prefix) == 0;
+inline bool isPrefix(const StringView& str, const StringView& prefix) noexcept {
+	try {
+		return str.compare(0, prefix.size(), prefix) == 0;
+	} catch (const std::out_of_range& e) {
+		// This is a bug (ignore it; Coverity has a problem with that...)
+		return false;
+	}
 }
 
 template<class Iter>
-bool isPrefixIn(const StringView& str, Iter beg, Iter end) {
+bool isPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
 		if (isPrefix(str, *beg))
 			return true;
@@ -273,13 +308,18 @@ bool isPrefixIn(const StringView& str, Iter beg, Iter end) {
 	return false;
 }
 
-inline bool isSuffix(const StringView& str, const StringView& suffix) {
-	return str.size() >= suffix.size() &&
-		str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+inline bool isSuffix(const StringView& str, const StringView& suffix) noexcept {
+	try {
+		return str.size() >= suffix.size() &&
+			str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+	} catch (const std::out_of_range& e) {
+		// This is a bug (ignore it; Coverity has a problem with that...)
+		return false;
+	}
 }
 
 template<class Iter>
-bool isSuffixIn(const StringView& str, Iter beg, Iter end) {
+bool isSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
 		if (isSuffix(str, *beg))
 			return true;
@@ -318,7 +358,7 @@ inline bool isReal(const StringView& s) { return isReal(s, 0); }
 /* Converts s: [beg, end) to size_t
 *  if end > s.size() or enStringViewnpos then end = s.size()
 *  if beg > end then beg = end
-*  if x == NULL then only validate
+*  if x == nullptr then only validate
 *  Return value: -1 if s: [beg, end) is not a number
 *    otherwise return the number of characters parsed
 */
@@ -332,7 +372,7 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 		return 0;
 	}
 
-	if (x == NULL)
+	if (x == nullptr)
 		return isInteger(s, beg, end) ? end - beg : -1;
 
 	*x = 0;
@@ -366,7 +406,7 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 		return 0;
 	}
 
-	if (x == NULL)
+	if (x == nullptr)
 		return s[beg] != '-' && isInteger(s, beg, end) ? end - beg : -1;
 
 	*x = 0;
@@ -419,3 +459,50 @@ struct StrNumCompare {
 		return a.size() == b.size() ? a < b : a.size() < b.size();
 	}
 };
+
+template<class T>
+inline size_t string_length(const T& x) { return x.size(); }
+
+template<class T>
+inline size_t string_length(T* x) { return strlen(x); }
+
+inline size_t string_length(char) { return 1; }
+
+/**
+ * @brief Concentrates @p args into std::string
+ *
+ * @param args string-like objects
+ * @return concentration of @p args
+ */
+template<class... T>
+inline std::string concat(const T&... args) {
+	size_t total_length = 0;
+	int foo[] = {(total_length += string_length(args), 0)...};
+	(void)foo;
+
+	std::string res;
+	res.reserve(total_length);
+	int bar[] = {(res += args, 0)...};
+	(void)bar;
+	return res;
+}
+
+enum Adjustment { LEFT, RIGHT };
+
+/**
+ * @brief Returns wided string
+ * @details Examples:
+ * widedString("abc", 5) -> "  abc"
+ * widedString("abc", 5, false) -> "abc  "
+ * widedString("1234", 7, true, '0') -> "0001234"
+ * widedString("1234", 4, true, '0') -> "1234"
+ * widedString("1234", 2, true, '0') -> "1234"
+ *
+ * @param s string
+ * @param len length of result string
+ * @param left whether adjust to left or right
+ * @param fill character used to fill blank fields
+ * @return formatted string
+ */
+std::string widedString(const StringView& s, size_t len, Adjustment adj = RIGHT,
+	char fill = ' ');

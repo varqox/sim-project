@@ -84,45 +84,6 @@ StringView::size_type StringView::rfind(char c, size_t beg, size_t endi) const {
 	return npos;
 }
 
-string toString(long long a) {
-	string w;
-	bool minus = false;
-
-	if (a < 0) {
-		minus = true;
-		a = -a;
-	}
-
-	while (a > 0) {
-		w += static_cast<char>(a % 10 + '0');
-		a /= 10;
-	}
-
-	if (minus)
-		w += "-";
-	else if (w.empty())
-		w = "0";
-	else
-		std::reverse(w.begin(), w.end());
-
-	return w;
-}
-
-string toString(unsigned long long a) {
-	string w;
-	while (a > 0) {
-		w += static_cast<char>(a % 10 + '0');
-		a /= 10;
-	}
-
-	if (w.empty())
-		w = "0";
-	else
-		std::reverse(w.begin(), w.end());
-
-	return w;
-}
-
 int strtonum(string& x, const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
@@ -315,3 +276,18 @@ string usecToSecStr(unsigned long long x, unsigned prec, bool trim_nulls) {
 
 	return res;
 };
+
+string widedString(const StringView& s, size_t len, Adjustment adj, char fill) {
+	string res;
+	if (adj == LEFT && len > s.size()) {
+		res.assign(s.data(), s.size());
+		res.resize(res.size() + len - s.size(), fill);
+
+	} else {
+		if (len > s.size())
+			res.resize(len - s.size(), fill);
+		res.append(s.data(), s.size());
+	}
+
+	return res;
+}
