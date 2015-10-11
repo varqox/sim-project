@@ -41,7 +41,7 @@ endif
 		fi'
 
 	# Set up install
-	src/setup-install $(abspath $(DESTDIR))
+	src/setup-installation $(abspath $(DESTDIR))
 
 	# Set owner, group and permission bits
 	# src/chmod-default $(abspath $(DESTDIR))
@@ -57,8 +57,12 @@ reinstall:
 
 .PHONY: run
 run:
-	cd $(DESTDIR) && ./judge-machine&
-	cd $(DESTDIR) && ./sim-server&
+	# Kill sim-server and judge-machine
+	src/killinstc $(abspath $(DESTDIR)/sim-server)
+	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+	# Run
+	$(abspath $(DESTDIR)/judge-machine)&
+	$(abspath $(DESTDIR)/sim-server)&
 
 .PHONY: clean
 clean:

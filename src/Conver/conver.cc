@@ -32,7 +32,7 @@ static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;
  * @brief Displays help
  */
 static void help(const char* program_name) {
-	if (program_name == NULL)
+	if (program_name == nullptr)
 		program_name = "conver";
 
 	printf("Usage: %s [options] problem_package\n", program_name);
@@ -233,11 +233,15 @@ static void parseOptions(int &argc, char **argv) {
  * @param stat stat on source
  */
 static void extractPackage(const string& source, const string& dest,
-		struct stat sb) {
+		const struct stat* sb) {
 
-	mkdir(dest);
+	if (mkdir_r(dest) == -1) {
+		eprintf("Error: cannot create directory: mkdir() - %s\n",
+			strerror(errno));
+		exit(3);
+	}
 
-	if (S_ISDIR(sb.st_mode)) { // Directory
+	if (S_ISDIR(sb->st_mode)) { // Directory
 		if (VERBOSITY > 1)
 			printf("Copying package...\n");
 
@@ -250,7 +254,7 @@ static void extractPackage(const string& source, const string& dest,
 		if (VERBOSITY > 1)
 			printf("Completed successfully.\n");
 
-	} else if (S_ISREG(sb.st_mode)) { // File
+	} else if (S_ISREG(sb->st_mode)) { // File
 		string extension = getExtension(source);
 		vector<string> args;
 		E("extension: '%s'\n", extension.c_str());
@@ -305,11 +309,11 @@ static void extractPackage(const string& source, const string& dest,
 	}
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
 	parseOptions(argc, argv);
 
 	if(argc != 2) {
-		help(argc > 0 ? argv[0] : NULL);
+		help(argc > 0 ? argv[0] : nullptr);
 		return 1;
 	}
 
@@ -325,9 +329,9 @@ int main(int argc, char *argv[]) {
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, NULL);
-	sigaction(SIGQUIT, &sa, NULL);
-	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGINT, &sa, nullptr);
+	sigaction(SIGQUIT, &sa, nullptr);
+	sigaction(SIGTERM, &sa, nullptr);
 
 	string in_package = argv[1];
 	if (VERBOSITY > 1)
@@ -340,25 +344,26 @@ int main(int argc, char *argv[]) {
 		return 2;
 	}
 
-	tmp_dir.reset(new TemporaryDirectory("/tmp/conver.XXXXXX"));
+	try {
+		// Create tmp_dir
+		tmp_dir.reset(new TemporaryDirectory("/tmp/conver.XXXXXX"));
 
-	// Get current working directory
-	string old_working_dir;
-	{
-		char *buff;
-		buff = get_current_dir_name();
-		if (NULL == buff || strlen(buff) == 0) {
-			eprintf("Error: get_current_dir_name() - %s\n", strerror(errno));
-			return -1;
-		}
-
-		old_working_dir = buff;
-		if (*--old_working_dir.end() != '/')
-			old_working_dir += '/';
-
-		free(buff);
+	} catch (const std::exception& e) {
+		eprintf("Error: Caught exception: %s:%d - %s", __FILE__, __LINE__,
+			e.what());
+		return 1;
 	}
-	E("CWD: '%s'\n", old_working_dir.c_str());
+
+	string old_working_dir;
+	try {
+		// Get current working directory
+		old_working_dir = getCWD();
+		E("CWD: '%s'\n", old_working_dir.c_str());
+
+	} catch(const std::exception& e) {
+		eprintf("%s\n", e.what());
+		return -1;
+	}
 
 	// If PRoot is available locally, change PROOT_PATH
 	if (access("proot", F_OK) == 0)
@@ -379,7 +384,7 @@ int main(int argc, char *argv[]) {
 	E("tmp_package: %s\n", tmp_package.c_str());
 
 	// Extract
-	extractPackage(in_package, tmp_package, sb);
+	extractPackage(in_package, tmp_package, &sb);
 
 	// Validate
 	tmp_package = validatePackage(tmp_package);

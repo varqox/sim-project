@@ -6,38 +6,7 @@
 
 using namespace std;
 
-class const_string
-{
-	char* _M_str;
-public:
-	explicit const_string(const char* _str): _M_str(new char[strlen(_str)+1])
-	{
-		memcpy(_M_str, _str, strlen(_str)+1);
-	}
-	const_string(const const_string& _cstr): _M_str(_cstr._M_str) {}
-	const_string& operator=(const const_string& _cstr)
-	{
-		_M_str=_cstr._M_str;
-	return *this;
-	}
-	~const_string(){}
-
-	const char* str() const
-	{return _M_str;}
-
-	bool operator==(const const_string& _cstr)
-	{return this==&_cstr;}
-
-	bool operator!=(const const_string& _cstr)
-	{return this!=&_cstr;}
-
-	template<class ostream_type>
-	friend ostream_type& operator<<(ostream_type& os, const const_string& _cstr)
-	{return os << _cstr._M_str;}
-
-	operator const char*() const
-	{return _M_str;}
-};
+typedef const char* const_string;
 
 namespace span
 {

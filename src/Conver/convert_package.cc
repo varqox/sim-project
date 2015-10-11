@@ -1,9 +1,7 @@
 #include "convert_package.h"
 
 #include "../simlib/include/debug.h"
-
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
+#include "../simlib/include/logger.h"
 
 using std::pair;
 using std::string;
@@ -28,19 +26,35 @@ pair<string, string> TestNameCompatator::extractTag(const string& str) {
 }
 
 int convertPackage(string tmp_package, string out_package) {
-	if (tmp_package.size() && *--tmp_package.end() != '/')
+	if (tmp_package.size() && tmp_package.back() != '/')
 		tmp_package += '/';
 
-	if (out_package.size() && *--out_package.end() != '/')
+	if (out_package.size() && out_package.back() != '/')
 		out_package += '/';
 
 	E("in -> '%s'\nout -> '%s'\n", tmp_package.c_str(), out_package.c_str());
 
 	// Create package structure
-	mkdir_r(out_package + "check");
-	mkdir(out_package + "doc");
-	mkdir(out_package + "prog");
-	mkdir(out_package + "tests");
+	// TODO: these lines look to similarly
+	if (mkdir_r(out_package + "check") == -1) {
+		eprintf("Failed to create check/: chmod()%s\n", error(errno).c_str());
+		return -1;
+	}
+
+	if (mkdir(out_package + "doc") == -1) {
+		eprintf("Failed to create doc/: chmod()%s\n", error(errno).c_str());
+		return -1;
+	}
+
+	if (mkdir(out_package + "prog") == -1) {
+		eprintf("Failed to create prog/: chmod()%s\n", error(errno).c_str());
+		return -1;
+	}
+
+	if (mkdir(out_package + "tests") == -1) {
+		eprintf("Failed to create tests/: chmod()%s\n", error(errno).c_str());
+		return -1;
+	}
 
 	// Copy all suitable files to out_package
 	const char solution_extensions[][10] = { ".c", ".cc", ".cpp" };
@@ -60,17 +74,18 @@ int convertPackage(string tmp_package, string out_package) {
 			config_conf.checker);
 
 	directory_tree::node *folder = package_tree_root->dir("check");
-	if (folder != NULL)
-		foreach (i, folder->files)
-			if (isSuffixIn(*i, solution_extensions, solution_extensions +
+	if (folder != nullptr)
+		for (auto& i : folder->files)
+			if (isSuffixIn(i, solution_extensions, solution_extensions +
 					sizeof(solution_extensions) /
 					sizeof(*solution_extensions))) {
 
-				copy(tmp_package + "check/" + *i, out_package + "check/" + *i);
+				copy(concat(tmp_package, "check/", i),
+					concat(out_package, "check/", i));
 
 				if (!USE_CONFIG && config_conf.checker.find_last_of('.') >
-						i->find_last_of('.'))
-					config_conf.checker = *i;
+						i.find_last_of('.'))
+					config_conf.checker = i;
 			}
 
 	// doc/
@@ -79,58 +94,64 @@ int convertPackage(string tmp_package, string out_package) {
 			config_conf.statement);
 
 	folder = package_tree_root->dir("doc");
-	if (folder != NULL)
-		foreach (i, folder->files)
-			if (isSuffixIn(*i, statement_extensions, statement_extensions +
+	if (folder != nullptr)
+		for (auto& i : folder->files)
+			if (isSuffixIn(i, statement_extensions, statement_extensions +
 					sizeof(statement_extensions) /
 					sizeof(*statement_extensions))) {
 
-				copy(tmp_package + "doc/" + *i, out_package + "doc/" + *i);
+				copy(concat(tmp_package, "doc/", i),
+					concat(out_package, "doc/", i));
 
 				if (!USE_CONFIG && config_conf.statement.find_last_of('.') >
-						i->find_last_of('.'))
-					config_conf.statement = *i;
+						i.find_last_of('.'))
+					config_conf.statement = i;
 			}
 
 	// prog/
 	if (USE_CONFIG) // Copy all solutions
-		foreach (i, config_conf.solutions)
-			copy(tmp_package + "prog/" + *i, out_package + "prog/" + *i);
+		for (auto& i : config_conf.solutions)
+			copy(concat(tmp_package, "prog/", i),
+				concat(out_package, "prog/", i));
 
 	folder = package_tree_root->dir("prog");
-	if (folder != NULL)
-		foreach (i, folder->files)
-			if (isSuffixIn(*i, solution_extensions, solution_extensions +
+	if (folder != nullptr)
+		for (auto& i : folder->files)
+			if (isSuffixIn(i, solution_extensions, solution_extensions +
 					sizeof(solution_extensions) /
 					sizeof(*solution_extensions))) {
 
-				copy(tmp_package + "prog/" + *i, out_package + "prog/" + *i);
+				copy(concat(tmp_package, "prog/", i),
+					concat(out_package, "prog/", i));
 				if (!USE_CONFIG)
-					config_conf.solutions.push_back(*i);
+					config_conf.solutions.push_back(i);
 
 				if (!USE_CONFIG && config_conf.main_solution.find_last_of('.') >
-						i->find_last_of('.'))
-					config_conf.main_solution = *i;
+						i.find_last_of('.'))
+					config_conf.main_solution = i;
 			}
 
 	if (VERBOSITY > 1) {
 		printf("checker: '%s'\nstatement: '%s'\nmain_solution: '%s'\n"
 			"solutions: [", config_conf.checker.c_str(),
 			config_conf.statement.c_str(), config_conf.main_solution.c_str());
-		foreach (i, config_conf.solutions)
+
+		for (auto i = config_conf.solutions.begin();
+				i != config_conf.solutions.end(); ++i)
 			printf((i == config_conf.solutions.begin() ? "'%s'" : ", '%s'"),
 				i->c_str());
+
 		printf("]\n");
 	}
 
 	// tests/
 	if (USE_CONFIG) {
-		foreach (i, config_conf.test_groups)
-			foreach (test, i->tests) {
-				copy(tmp_package + "tests/" + test->name + ".in",
-					out_package + "tests/" + test->name + ".in");
-				copy(tmp_package + "tests/" + test->name + ".out",
-					out_package + "tests/" + test->name + ".out");
+		for (auto& i : config_conf.test_groups)
+			for (auto& test : i.tests) {
+				copy(concat(tmp_package, "tests/", test.name, ".in"),
+					concat(out_package, "tests/", test.name, ".in"));
+				copy(concat(tmp_package, "tests/", test.name, ".out"),
+					concat(out_package, "tests/", test.name, ".out"));
 			}
 		return 0;
 	}
@@ -143,13 +164,13 @@ int convertPackage(string tmp_package, string out_package) {
 	};
 
 	// Search for .in and copy them
-	for (int i = 0, end = sizeof(folders) / sizeof(*folders); i < end; ++i)
-		if (folders[i] != NULL)
-			foreach (it, folders[i]->files)
-				if (isSuffix(*it, ".in")) {
-					copy(tmp_package + folders[i]->name + "/" + *it,
-						out_package + "tests/" + *it);
-					tests.push_back(it->substr(0, it->size() - 3));
+	for (auto& dir : folders)
+		if (dir != nullptr)
+			for (auto& file : dir->files)
+				if (isSuffix(file, ".in")) {
+					copy(concat(tmp_package, dir->name, '/', file),
+						concat(out_package, "tests/", file));
+					tests.push_back(file.substr(0, file.size() - 3));
 				}
 
 	if (tests.empty()) { // No tests
@@ -160,14 +181,13 @@ int convertPackage(string tmp_package, string out_package) {
 	sort(tests.begin(), tests.end());
 
 	// Search for .out and copy them (only if appropriate .in exists)
-	for (int i = 0, end = sizeof(folders) / sizeof(*folders); i < end; ++i)
-		if (folders[i] != NULL)
-			foreach (it, folders[i]->files)
-				if (isSuffix(*it, ".out") &&
-						binary_search(tests.begin(), tests.end(),
-							it->substr(0, it->size() - 4))) {
-					copy(tmp_package + folders[i]->name + "/" + *it,
-						out_package + "tests/" + *it);
+	for (auto& dir : folders)
+		if (dir != nullptr)
+			for (auto& file : dir->files)
+				if (isSuffix(file, ".out") && binary_search(tests.begin(),
+						tests.end(), file.substr(0, file.size() - 4))) {
+					copy(concat(tmp_package, dir->name, '/', file),
+						concat(out_package, "tests/", file));
 				}
 
 	// Add tests to config_conf
@@ -178,8 +198,8 @@ int convertPackage(string tmp_package, string out_package) {
 	pair<string, string> curr_group,
 		last_group = TestNameCompatator::extractTag(tests[0]);
 
-	foreach (i, tests) {
-		curr_group = TestNameCompatator::extractTag(*i);
+	for (auto& i : tests) {
+		curr_group = TestNameCompatator::extractTag(i);
 		// Next group (it is strongly based on test order - see
 		// TestNameComparator)
 		if (curr_group.first != last_group.first &&
@@ -190,7 +210,7 @@ int convertPackage(string tmp_package, string out_package) {
 			last_group = curr_group;
 		}
 
-		group->tests.push_back((ProblemConfig::Test){ *i, 0 });
+		group->tests.push_back((ProblemConfig::Test){ i, 0 });
 	}
 	return 0;
 }

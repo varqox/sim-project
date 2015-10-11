@@ -8,9 +8,6 @@
 #include <cassert>
 #include <cerrno>
 
-#define foreach(i,x) for (__typeof(x.begin()) i = x.begin(), \
-	i ##__end = x.end(); i != i ##__end; ++i)
-
 using std::pair;
 using std::string;
 using std::vector;
@@ -18,55 +15,61 @@ using std::vector;
 static void assignPoints() {
 	int points = 100, groups_left = config_conf.test_groups.size();
 
-	foreach (group, config_conf.test_groups) {
-		assert(!group->tests.empty());
+	for (auto& group : config_conf.test_groups) {
+		assert(!group.tests.empty());
 
 		pair<string, string> tag =
-			TestNameCompatator::extractTag(group->tests[0].name);
+			TestNameCompatator::extractTag(group.tests[0].name);
 		if (tag.first == "0" || tag.second == "ocen") {
-			group->points = 0;
+			group.points = 0;
 			--groups_left;
 			continue;
 		}
 
-		group->points = points / groups_left--;
-		points -= group->points;
+		group.points = points / groups_left--;
+		points -= group.points;
 	}
 }
 
 int setLimits(const string& package_path) {
-	// Compile checker
-	if (compile(package_path + "check/" + config_conf.checker, "checker",
-			(VERBOSITY >> 1) + 1, NULL, 0, PROOT_PATH) != 0) {
-		if (VERBOSITY == 1)
-			eprintf("Checker compilation failed.\n");
+	try {
+		// Compile checker
+		if (compile(package_path + "check/" + config_conf.checker, "checker",
+				(VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
+			if (VERBOSITY == 1)
+				eprintf("Checker compilation failed.\n");
+			return 1;
+		}
+
+		if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
+			// Set time limits on tests
+			for (auto& group : config_conf.test_groups)
+				for (auto& test : group.tests) {
+					test.time_limit = TIME_LIMIT;
+					printf("  %-11s --- / %-4s\n", test.name.c_str(),
+						usecToSecStr(test.time_limit, 2, false).c_str());
+				}
+
+			assignPoints();
+			return 0;
+		}
+
+		// Compile solution
+		if (config_conf.main_solution.empty()) {
+			eprintf("Error: main solution not found\n");
+			return 2;
+		}
+
+		if (compile(package_path + "prog/" + config_conf.main_solution, "exec",
+				(VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
+			if (VERBOSITY == 1)
+				eprintf("Solution compilation failed.\n");
+			return 2;
+		}
+
+	} catch (const std::exception& e) {
+		eprintf("Compilation failed %s\n", e.what());
 		return 1;
-	}
-
-	if (TIME_LIMIT > 0 && !GEN_OUT && !VALIDATE_OUT) {
-		// Set time limits on tests
-		foreach (group, config_conf.test_groups)
-			foreach (test, group->tests) {
-				test->time_limit = TIME_LIMIT;
-				printf("  %-11s --- / %-4s\n", test->name.c_str(),
-					usecToSecStr(test->time_limit, 2, false).c_str());
-			}
-
-		assignPoints();
-		return 0;
-	}
-
-	// Compile solution
-	if (config_conf.main_solution.empty()) {
-		eprintf("Error: main solution not found\n");
-		return 2;
-	}
-
-	if (compile(package_path + "prog/" + config_conf.main_solution, "exec",
-			(VERBOSITY >> 1) + 1, NULL, 0, PROOT_PATH) != 0) {
-		if (VERBOSITY == 1)
-			eprintf("Solution compilation failed.\n");
-		return 2;
 	}
 
 	// Set limits
@@ -102,53 +105,51 @@ int setLimits(const string& package_path) {
 			strerror(errno));
 
 		// Close file descriptors
-		while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+		sclose(sb_opts.new_stdout_fd);
 		return 3;
 	}
 
 	vector<string> exec_args, checker_args(4);
 
 	// Set time limits on tests
-	foreach (group, config_conf.test_groups)
-		foreach (test, group->tests) {
+	for (auto& group : config_conf.test_groups)
+		for (auto& test : group.tests) {
 			if (USE_CONFIG && !FORCE_AUTO_LIMIT)
-				sb_opts.time_limit = test->time_limit;
+				sb_opts.time_limit = test.time_limit;
 
 			// Reopen file descriptors
 			// Close sb_opts.new_stdin_fd
 			if (sb_opts.new_stdin_fd >= 0)
-				while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
+				sclose(sb_opts.new_stdin_fd);
 
 			// If !GEN_OUT, close sb_opts.new_stdout_fd
 			if (GEN_OUT)
-				while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+				sclose(sb_opts.new_stdout_fd);
 
 			// Open sb_opts.new_stdin_fd
 			if ((sb_opts.new_stdin_fd = open(
-					(package_path + "tests/" + test->name + ".in").c_str(),
+					concat(package_path, "tests/", test.name, ".in").c_str(),
 					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
-					(package_path + "tests/" + test->name + ".in").c_str(),
+					(package_path + "tests/" + test.name + ".in").c_str(),
 					strerror(errno));
 
 				// Close file descriptors
-				while (close(checker_sb_opts.new_stdout_fd) == -1 &&
-					errno == EINTR) {}
+				sclose(checker_sb_opts.new_stdout_fd);
 				return 4;
 			}
 
 			// Open sb_opts.new_stdout_fd
 			if (GEN_OUT && (sb_opts.new_stdout_fd = open(
-					(package_path + "tests/" + test->name + ".out").c_str(),
+					concat(package_path, "tests/", test.name, ".out").c_str(),
 					O_WRONLY | O_CREAT | O_TRUNC, // (mode: 0644/rw-r--r--)
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
-					(package_path + "tests/" + test->name + ".out").c_str(),
+					concat(package_path, "tests/", test.name, ".out").c_str(),
 					strerror(errno));
 
 				// Close file descriptors
-				while (close(checker_sb_opts.new_stdout_fd) == -1 &&
-					errno == EINTR) {}
+				sclose(checker_sb_opts.new_stdout_fd);
 				return 4;
 			}
 
@@ -159,7 +160,7 @@ int setLimits(const string& package_path) {
 			}
 
 			if (VERBOSITY > 0) {
-				printf("  %-11s ", test->name.c_str());
+				printf("  %-11s ", test.name.c_str());
 				fflush(stdout);
 			}
 
@@ -168,17 +169,17 @@ int setLimits(const string& package_path) {
 
 			// Set time_limit (minimum time_limit is 0.1s unless TIME_LIMIT > 0)
 			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONFIG))
-				test->time_limit = TIME_LIMIT > 0 ? TIME_LIMIT :
+				test.time_limit = TIME_LIMIT > 0 ? TIME_LIMIT :
 					std::max(es.runtime * 4, 100000ull);
 
 			if (VERBOSITY > 0) {
 				printf("%4s / %-4s    Status: ",
 					usecToSecStr(es.runtime, 2, false).c_str(),
-					usecToSecStr(test->time_limit, 2, false).c_str());
+					usecToSecStr(test.time_limit, 2, false).c_str());
 
 				if (es.code == 0)
 					printf("\e[1;32mOK\e[m");
-				else if (es.runtime < test->time_limit)
+				else if (es.runtime < test.time_limit)
 					printf("\e[1;33mRTE\e[m (%s)", es.message.c_str());
 				else
 					printf("\e[1;33mTLE\e[m");
@@ -190,9 +191,9 @@ int setLimits(const string& package_path) {
 
 			// Validate output
 			if (VALIDATE_OUT) {
-				checker_args[1] = package_path + "tests/" + test->name + ".in";
-				checker_args[2] = package_path + "tests/" + test->name + ".out";
-				checker_args[3] = GEN_OUT ? checker_args[2] : "answer";
+				checker_args[1] = concat(package_path, "tests/", test.name, ".in");
+				checker_args[2] = concat(package_path, "tests/", test.name, ".out");
+				checker_args[3] = (GEN_OUT ? checker_args[2] : "answer");
 
 				if (VERBOSITY > 0) {
 					printf("  Output validation... ");
@@ -216,7 +217,7 @@ int setLimits(const string& package_path) {
 						printf("\e[1;31mFAILED\e[m");
 
 						FILE *f = fopen("checker_out", "r");
-						if (f != NULL) {
+						if (f != nullptr) {
 							char buff[204] = {};
 							ssize_t ret = fread(buff, 1, 204, f);
 
@@ -231,7 +232,7 @@ int setLimits(const string& package_path) {
 							fclose(f);
 						}
 
-					} else if (es.runtime < test->time_limit)
+					} else if (es.runtime < test.time_limit)
 						printf("\e[1;33mRTE\e[m (%s)", es.message.c_str());
 
 					else
@@ -249,9 +250,9 @@ int setLimits(const string& package_path) {
 
 	// Close file descriptors
 	if (sb_opts.new_stdin_fd)
-		while (close(sb_opts.new_stdin_fd) == -1 && errno == EINTR) {}
-	while (close(sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
-	while (close(checker_sb_opts.new_stdout_fd) == -1 && errno == EINTR) {}
+		sclose(sb_opts.new_stdin_fd);
+	sclose(sb_opts.new_stdout_fd);
+	sclose(checker_sb_opts.new_stdout_fd);
 
 	if (!USE_CONFIG)
 		assignPoints();

@@ -5,15 +5,16 @@
 
 #include "../simlib/include/debug.h"
 #include "../simlib/include/filesystem.h"
+#include "../simlib/include/logger.h"
 #include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
 
 using std::string;
 
-Sim::Sim() : db_conn_(DB::createConnectionUsingPassFile(".db.config")),
-		client_ip_(), req_(NULL), resp_(server::HttpResponse::TEXT),
-		contest(NULL), session(NULL), user(NULL) {
+Sim::Sim() : db_conn(DB::createConnectionUsingPassFile(".db.config")),
+		client_ip_(), req_(nullptr), resp_(server::HttpResponse::TEXT),
+		contest(nullptr), session(nullptr), user(nullptr) {
 	// Because of exception safety (we do not want to make memory leak)
 	try {
 		contest = new Contest(*this);
@@ -41,7 +42,7 @@ server::HttpResponse Sim::handle(string client_ip,
 	req_ = &req;
 	resp_ = server::HttpResponse(server::HttpResponse::TEXT);
 
-	E("%s\n", req.target.c_str());
+	stdlog(req.target);
 
 	try {
 		if (0 == compareTo(req.target, 1, '/', "kit"))
@@ -72,12 +73,12 @@ server::HttpResponse Sim::handle(string client_ip,
 			error404();
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 		error500();
 
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
 		error500();
 	}
 
@@ -100,7 +101,7 @@ void Sim::getStaticFile() {
 	string file = "public";
 	// Extract path (ignore query)
 	file += abspath(decodeURI(req_->target, 1, req_->target.find('?')));
-	E("%s\n", file.c_str());
+	D(stdlog(file);)
 
 	// Get file stat
 	struct stat attr;
@@ -110,9 +111,10 @@ void Sim::getStaticFile() {
 		server::HttpHeaders::const_iterator it = req_->headers.find("if-modified-since");
 		struct tm client_mtime;
 
-		// If "If-Modified-Since" header is set and its value is not lower than attr.st_mtime
-		if (it != req_->headers.end() && NULL != strptime(it->second.c_str(),
-				"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) &&
+		// If "If-Modified-Since" header is set and its value is not lower than
+		// attr.st_mtime
+		if (it != req_->headers.end() && strptime(it->second.c_str(),
+				"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
 				timegm(&client_mtime) >= attr.st_mtime) {
 			resp_.status_code = "304 Not Modified";
 			resp_.content_type = server::HttpResponse::TEXT;
@@ -131,7 +133,7 @@ void Sim::redirect(const string& location) {
 
 int Sim::getUserType(const string& user_id) {
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(db_conn()->
+		UniquePtr<sql::PreparedStatement> pstmt(db_conn->
 			prepareStatement("SELECT type FROM users WHERE id=?"));
 		pstmt->setString(1, user_id);
 
@@ -140,11 +142,8 @@ int Sim::getUserType(const string& user_id) {
 			return res->getUInt(1);
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 	}
 
 	return 3;

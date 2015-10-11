@@ -7,16 +7,56 @@ private:
 	Contest(const Contest&);
 	Contest& operator=(const Contest&);
 
-	class RoundPath;
+	struct Round {
+		std::string id, parent, problem_id, access, name, owner;
+		std::string begins, ends, full_results;
+		bool visible, show_ranking;
+	};
+
+	struct Subround {
+		std::string id, name;
+	};
+
+	struct Problem {
+		std::string id, parent, name;
+	};
+
 	enum RoundType { CONTEST, ROUND, PROBLEM };
 
+	class RoundPath {
+	private:
+		RoundPath(const RoundPath&);
+		RoundPath& operator=(const RoundPath&);
+
+	public:
+		bool admin_access;
+		RoundType type;
+		std::string round_id;
+		UniquePtr<Round> contest, round, problem;
+
+		RoundPath(const std::string& rid) : admin_access(false), type(CONTEST),
+				round_id(rid), contest(nullptr), round(nullptr),
+				problem(nullptr) {}
+
+		void swap(RoundPath& rp) {
+			std::swap(admin_access, rp.admin_access);
+			std::swap(type, rp.type);
+			round_id.swap(rp.round_id);
+			contest.swap(rp.contest);
+			round.swap(rp.round);
+			problem.swap(rp.problem);
+		}
+
+		~RoundPath() {}
+	};
+
 	Sim& sim_;
-	RoundPath *r_path_;
+	UniquePtr<RoundPath> r_path_;
 	size_t arg_beg;
 
-	explicit Contest(Sim& sim) : sim_(sim), r_path_(NULL), arg_beg(0) {}
+	explicit Contest(Sim& sim) : sim_(sim), arg_beg(0) {}
 
-	~Contest();
+	~Contest() {}
 
 	// Pages (sim_contest.cc)
 	void addContest();
@@ -48,10 +88,6 @@ private:
 	void ranking(bool admin_view);
 
 	// Utility (sim_contest_utility.cc)
-	struct Round;
-	struct Subround;
-	struct Problem;
-
 	class TemplateWithMenu;
 
 	static std::string submissionStatus(const std::string& status);

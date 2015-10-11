@@ -11,14 +11,31 @@ private:
 	UniquePtr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
 
-	Connection(const Connection&);
-	Connection& operator=(const Connection&);
+	Connection(const Connection&) = delete;
+	Connection& operator=(const Connection&) = delete;
 
 	void connect();
 
 public:
+	Connection() = default;
+
 	Connection(const std::string& host, const std::string& user,
 			const std::string& password, const std::string& database);
+
+	Connection(Connection&& conn) : conn_(conn.conn_.release()),
+		host_(std::move(conn.host_)), user_(std::move(conn.user_)),
+		password_(std::move(conn.password_)),
+		database_(std::move(conn.database_)) {}
+
+	Connection& operator=(Connection&& conn) {
+		conn_.reset(conn.conn_.release());
+		host_ = std::move(conn.host_);
+		user_ = std::move(conn.user_);
+		password_ = std::move(conn.password_);
+		database_ = std::move(conn.database_);
+
+		return *this;
+	}
 
 	~Connection() {}
 
@@ -40,7 +57,7 @@ public:
  * @param filename file to load credentials from
  * @return valid pointer (on error throws std::runtime_error)
  */
-Connection* createConnectionUsingPassFile(const char* filename) throw();
+Connection createConnectionUsingPassFile(const std::string& filename);
 
 /**
  * @brief Transaction wrapper

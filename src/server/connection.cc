@@ -1,6 +1,8 @@
 #include "connection.h"
 
 #include "../simlib/include/debug.h"
+#include "../simlib/include/filesystem.h"
+#include "../simlib/include/logger.h"
 
 #include <cstdlib>
 #include <fcntl.h>
@@ -23,18 +25,19 @@ int Connection::peek() {
 	if (pos_ >= buff_size_) {
 		// wait for data
 		pollfd pfd = {sock_fd_, POLLIN, 0};
-		E("peek(): polling... ");
+		D(stdlog("peek(): polling... ");)
 
 		if (poll(&pfd, 1, POLL_TIMEOUT) <= 0) {
-			E("peek(): No response\n");
+			D(stdlog("peek(): No response");)
 			error408();
 			return -1;
 		}
-		E("peek(): OK\n");
+		D(stdlog("peek(): OK");)
 
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
-		E("peek(): Reading completed; buff_size: %i\n", buff_size_);
+		D(stdlog("peek(): Reading completed; buff_size: ",
+			toString(buff_size_));)
 
 		if (buff_size_ <= 0) {
 			state_ = CLOSED;
@@ -50,8 +53,8 @@ string Connection::getHeaderLine() {
 	int c;
 
 	while ((c = getChar()) != -1) {
-		if (c == '\n' && *--line.end() == '\r') {
-			line.erase(--line.end());
+		if (c == '\n' && line.size() && line.back() == '\r') {
+			line.pop_back();
 			break;
 
 		} else if (line.size() > MAX_HEADER_LENGTH) {
@@ -175,7 +178,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 		// Search for boundary
 		int fd = -1;
-		FILE *tmp_file = NULL;
+		FILE *tmp_file = nullptr;
 		bool first_boundary = true;
 		k = 2; // Because "\r\n" may not exist at the beginning
 
@@ -217,13 +220,14 @@ void Connection::readPOST(HttpRequest& req) {
 								tmp_file_size - boundary.size() + 1));
 
 						fclose(tmp_file);
+						tmp_file = nullptr;
 						fd = -1;
 					}
 				}
 
 				// Prepare next field
 				// Ignore LFCR or "--"
-				reader.getChar();
+				(void)reader.getChar();
 				if (reader.getChar() == -1) {
 					error400();
 					goto safe_return;
@@ -235,8 +239,9 @@ void Connection::readPOST(HttpRequest& req) {
 
 					while ((c = reader.getChar()) != -1) {
 						// Found CRLF
-						if (c == '\n' && *--field_content.end() == '\r') {
-							field_content.erase(--field_content.end());
+						if (c == '\n' && field_content.size() &&
+								field_content.back() == '\r') {
+							field_content.pop_back();
 							break;
 
 						} else if (field_content.size() > MAX_HEADER_LENGTH) {
@@ -253,7 +258,7 @@ void Connection::readPOST(HttpRequest& req) {
 					if (field_content.empty()) // End of headers
 						break;
 
-					E("header: '%s'\n", field_content.c_str());
+					D(stdlog("header: '", field_content, "'");)
 					pair<string, string> header =
 						parseHeaderline(field_content);
 					if (state_ != OK) // Something went wrong
@@ -302,6 +307,8 @@ void Connection::readPOST(HttpRequest& req) {
 
 							// Check for specific values
 							if (var_name == "filename" && fd == -1) {
+								umask(077); // Only we can access temporary
+								            // files
 								if ((fd = mkstemp(tmp_filename)) == -1) {
 									error507();
 									goto safe_return;
@@ -316,6 +323,11 @@ void Connection::readPOST(HttpRequest& req) {
 
 						// Add file field to req.form_data
 						if (fd != -1) {
+							if (tmp_file) {
+								fclose(tmp_file);
+								tmp_file = nullptr;
+							}
+
 							tmp_file = fdopen(fd, "w");
 							req.form_data.files[field_name] = tmp_filename;
 							// field_name => client filename
@@ -526,7 +538,7 @@ HttpRequest Connection::getRequest() {
 	if (state_ == CLOSED)
 		return req;
 
-	E("\nREQUEST: %s\n", request_line.c_str());
+	D(stdlog("REQUEST: ", request_line);)
 	// Extract method
 	size_t beg = 0, end = 0;
 
@@ -540,6 +552,7 @@ HttpRequest Connection::getRequest() {
 	else if (request_line.compare(0, end, "HEAD") == 0)
 		req.method = HttpRequest::HEAD;
 	else {
+		req.method = HttpRequest::NONE;
 		error400();
 		return req;
 	}
@@ -576,9 +589,9 @@ HttpRequest Connection::getRequest() {
 	req.headers["Content-Length"] = "0";
 	string header;
 
-	E("HEADERS: \n");
+	D(auto tmplog = stdlog("HEADERS:\n");)
 	while ((header = getHeaderLine()).size()) {
-		E("\t%s\n", header.c_str());
+		D(tmplog("\t", header, "\n");)
 		pair<string, string> hdr = parseHeaderline(header);
 
 		if (state_ == CLOSED)
@@ -586,7 +599,7 @@ HttpRequest Connection::getRequest() {
 
 		req.headers[hdr.first] = hdr.second;
 	}
-	E("\n");
+	D(tmplog.flush();)
 
 	if (state_ == CLOSED)
 		return req;
@@ -605,7 +618,7 @@ HttpRequest Connection::getRequest() {
 		}
 
 		char *s = (char*)malloc(end);
-		if (s == NULL) {
+		if (s == nullptr) {
 			error507();
 			return req;
 		}
@@ -637,7 +650,7 @@ void Connection::send(const char* str, size_t len) {
 
 	while (pos < len) {
 		written = write(sock_fd_, str + pos, len - pos);
-		E("written: %zi\n", written);
+		D(stdlog("written: ", toString(written));)
 
 		if (written == -1) {
 			state_ = CLOSED;
@@ -690,6 +703,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 			error404();
 			return;
 		}
+		Closer make_close(fd);
 
 #ifdef __x86_64__
 		struct stat sb;
@@ -713,12 +727,12 @@ void Connection::sendResponse(const HttpResponse& res) {
 		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
-		str += toString((size_t)fsize);
+		str += toString<uint64_t>(fsize);
 		str += "\r\n\r\n";
 
 		const size_t buff_length = 1 << 20;
 		char *buff = (char*)malloc(buff_length);
-		if (buff == NULL) {
+		if (buff == nullptr) {
 			error507();
 			return;
 		}
@@ -739,7 +753,6 @@ void Connection::sendResponse(const HttpResponse& res) {
 		}
 
 		free(buff);
-		close(fd);
 	}
 
 	state_ = CLOSED;

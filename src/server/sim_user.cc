@@ -4,6 +4,7 @@
 #include "sim_user.h"
 
 #include "../simlib/include/debug.h"
+#include "../simlib/include/logger.h"
 #include "../simlib/include/sha.h"
 
 #include <cppconn/prepared_statement.h>
@@ -68,7 +69,7 @@ void Sim::User::handle() {
 	arg_beg += res_code + 1;
 
 	// Get user information
-	UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->prepareStatement(
+	UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
 		"SELECT username, first_name, last_name, email, type "
 		"FROM users WHERE id=?"));
 	pstmt->setString(1, data.user_id);
@@ -128,7 +129,7 @@ void Sim::User::login() {
 
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("SELECT id FROM `users` "
 						"WHERE username=? AND password=?"));
 				pstmt->setString(1, username);
@@ -136,9 +137,9 @@ void Sim::User::login() {
 
 				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 				if (res->next()) {
-					// Delete old sessions
-					sim_.session->open();
-					sim_.session->destroy();
+					// Delete old session
+					if (sim_.session->open() == Session::OK)
+						sim_.session->destroy();
 					// Create new
 					sim_.session->create(res->getString(1));
 
@@ -150,11 +151,8 @@ void Sim::User::login() {
 				}
 
 			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
-
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+				error_log("Caught exception: ", __FILE__, ':',
+					toString(__LINE__), " - ", e.what());
 			}
 	}
 
@@ -181,8 +179,8 @@ void Sim::User::login() {
 }
 
 void Sim::User::logout() {
-	sim_.session->open();
-	sim_.session->destroy();
+	if (sim_.session->open() == Session::OK)
+		sim_.session->destroy();
 	sim_.redirect("/login");
 }
 
@@ -207,7 +205,8 @@ void Sim::User::signUp() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				// TODO: add password salt
+				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("INSERT IGNORE INTO `users` "
 						"(username, first_name, last_name, email, password) "
 						"VALUES(?, ?, ?, ?, ?)"));
@@ -218,7 +217,7 @@ void Sim::User::signUp() {
 				pstmt->setString(5, sha256(password1));
 
 				if (pstmt->executeUpdate() == 1) {
-					pstmt.reset(sim_.db_conn()->prepareStatement(
+					pstmt.reset(sim_.db_conn->prepareStatement(
 						"SELECT id FROM `users` WHERE username=?"));
 					pstmt->setString(1, username);
 
@@ -232,11 +231,8 @@ void Sim::User::signUp() {
 					fv.addError("Username taken");
 
 			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
-
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+				error_log("Caught exception: ", __FILE__, ':',
+					toString(__LINE__), " - ", e.what());
 			}
 	}
 
@@ -304,7 +300,7 @@ void Sim::User::changePassword(Data& data) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("SELECT password FROM users WHERE id=?"));
 				pstmt->setString(1, data.user_id);
 
@@ -316,7 +312,7 @@ void Sim::User::changePassword(Data& data) {
 						fv.addError("Wrong password");
 
 				else {
-					pstmt.reset(sim_.db_conn()->prepareStatement(
+					pstmt.reset(sim_.db_conn->prepareStatement(
 						"UPDATE users SET password=? WHERE id=?"));
 					pstmt->setString(1, sha256(password1));
 					pstmt->setString(2, data.user_id);
@@ -329,11 +325,8 @@ void Sim::User::changePassword(Data& data) {
 				}
 
 			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
-
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+				error_log("Caught exception: ", __FILE__, ':',
+					toString(__LINE__), " - ", e.what());
 			}
 	}
 
@@ -391,7 +384,7 @@ void Sim::User::editProfile(Data& data) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("UPDATE IGNORE users "
 					"SET username=?, first_name=?, last_name=?, email=?, "
 					"type=? WHERE id=?"));
@@ -419,11 +412,8 @@ void Sim::User::editProfile(Data& data) {
 					fv.addError("Username '" + new_username + "' is taken");
 
 			} catch (const std::exception& e) {
-				E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__,
-					__LINE__, e.what());
-
-			} catch (...) {
-				E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+				error_log("Caught exception: ", __FILE__, ':',
+					toString(__LINE__), " - ", e.what());
 			}
 	}
 
@@ -454,7 +444,7 @@ void Sim::User::editProfile(Data& data) {
 				"</select>\n";
 	if (!can_change_user_type)
 		templ << "<input type=\"hidden\" name=\"type\" value=\""
-			<< toString((unsigned long long)data.user_type) << "\">\n";
+			<< toString<uint64_t>(data.user_type) << "\">\n";
 	templ << "</div>\n"
 			// First Name
 			"<div class=\"field-group\">\n"
@@ -509,7 +499,7 @@ void Sim::User::deleteAccount(Data& data) {
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
 			// Change contests and problems owner id to 1
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn()->
+			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 				prepareStatement("UPDATE rounds r, problems p "
 				"SET r.owner=1, p.owner=1 "
 				"WHERE r.owner=? OR p.owner=?"));
@@ -518,19 +508,19 @@ void Sim::User::deleteAccount(Data& data) {
 			pstmt->executeUpdate();
 
 			// Delete submissions
-			pstmt.reset(sim_.db_conn()->prepareStatement(
+			pstmt.reset(sim_.db_conn->prepareStatement(
 				"DELETE FROM submissions WHERE user_id=?"));
 			pstmt->setString(1, data.user_id);
 			pstmt->executeUpdate();
 
 			// Delete from users_to_contests
-			pstmt.reset(sim_.db_conn()->prepareStatement(
+			pstmt.reset(sim_.db_conn->prepareStatement(
 				"DELETE FROM users_to_contests WHERE user_id=?"));
 			pstmt->setString(1, data.user_id);
 			pstmt->executeUpdate();
 
 			// Delete user
-			pstmt.reset(sim_.db_conn()->prepareStatement(
+			pstmt.reset(sim_.db_conn->prepareStatement(
 				"DELETE FROM users WHERE id=?"));
 			pstmt->setString(1, data.user_id);
 
@@ -541,11 +531,8 @@ void Sim::User::deleteAccount(Data& data) {
 			}
 
 		} catch (const std::exception& e) {
-			E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-				e.what());
-
-		} catch (...) {
-			E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 		}
 
 	TemplateWithMenu templ(sim_, data.user_id, "Delete account");

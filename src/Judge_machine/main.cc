@@ -3,7 +3,9 @@
 
 #include "../include/db.h"
 #include "../simlib/include/debug.h"
-#include "../simlib/include/string.h"
+#include "../simlib/include/logger.h"
+#include "../simlib/include/process.h"
+#include "../simlib/include/utility.h"
 
 #include <cerrno>
 #include <cppconn/prepared_statement.h>
@@ -14,18 +16,17 @@
 using std::string;
 
 static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1s
-static DB::Connection *db_conn = NULL;
-UniquePtr<TemporaryDirectory> tmp_dir;
+static DB::Connection db_conn;
+TemporaryDirectory tmp_dir;
 unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
-
-static inline DB::Connection& conn() { return *db_conn; }
 
 static void processSubmissionQueue() {
 	try {
-		UniquePtr<sql::Statement> stmt(conn()->createStatement());
+		UniquePtr<sql::Statement> stmt(db_conn->createStatement());
 
 		// While submission queue is not empty
 		for (;;) {
+			// TODO: fix bug (rejudged submissions)
 			UniquePtr<sql::ResultSet> res(stmt->executeQuery(
 				"SELECT id, user_id, round_id, problem_id FROM submissions "
 				"WHERE status='waiting' ORDER BY queued LIMIT 10"));
@@ -50,7 +51,7 @@ static void processSubmissionQueue() {
 				UniquePtr<sql::PreparedStatement> pstmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
 						jres.status == JudgeResult::JUDGE_ERROR) {
-					pstmt.reset(conn()->prepareStatement("UPDATE submissions "
+					pstmt.reset(db_conn->prepareStatement("UPDATE submissions "
 						"SET final=false, status=?, score=? WHERE id=?"));
 					pstmt->setString(1,
 						(jres.status == JudgeResult::COMPILE_ERROR
@@ -59,7 +60,7 @@ static void processSubmissionQueue() {
 					pstmt->setString(3, submission_id);
 
 				} else {
-					pstmt.reset(conn()->prepareStatement(
+					pstmt.reset(db_conn->prepareStatement(
 						"UPDATE submissions s, "
 							"((SELECT id FROM submissions "
 									"WHERE user_id=? AND round_id=? "
@@ -91,18 +92,18 @@ static void processSubmissionQueue() {
 		}
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
 	}
 }
 
 void startWatching(int inotify_fd, int& wd) {
 	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
 			IN_ATTRIB)) == -1) {
-		eprintf("Error: inotify_add_watch() - %s\n", strerror(errno));
+		error_log("Error: inotify_add_watch()", error(errno));
 		// Run tests
 		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
@@ -113,36 +114,52 @@ void startWatching(int inotify_fd, int& wd) {
 }
 
 int main() {
+	// Change directory to process executable directory
+	string cwd;
+	try {
+		cwd = chdirToExecDir();
+	} catch (const std::exception& e) {
+		error_log("Failed to change working directory: ", e.what());
+	}
+
+	// Loggers
+	try {
+		stdlog.open("judge-machine.log");
+	} catch (const std::exception& e) {
+		error_log("Failed to open 'judge-machine.log': ", e.what());
+	}
+
+	try {
+		error_log.open("judge-machine_error.log");
+	} catch (const std::exception& e) {
+		error_log("Failed to open 'judge-machine_error.log': ", e.what());
+	}
+
 	// Install signal handlers
 	struct sigaction sa;
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, NULL);
-	sigaction(SIGQUIT, &sa, NULL);
-	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGINT, &sa, nullptr);
+	sigaction(SIGQUIT, &sa, nullptr);
+	sigaction(SIGTERM, &sa, nullptr);
 
-	// Connect to database
 	try {
+		// Connect to database
 		db_conn = DB::createConnectionUsingPassFile(".db.config");
+		// Create tmp_dir
+		tmp_dir = TemporaryDirectory("/tmp/sim-judge-machine.XXXXXX");
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
-		return 1;
-
-	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caugqht exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 		return 1;
 	}
-
-	// Create tmp_dir
-	tmp_dir.reset(new TemporaryDirectory("/tmp/sim-judge-machine.XXXXXX"));
 
 	// Initialise inotify
 	int inotify_fd, wd;
 	while ((inotify_fd = inotify_init()) == -1) {
-		eprintf("Error: inotify_init() - %s\n", strerror(errno));
+		error_log("Error: inotify_init()", error(errno));
 		// Run tests
 		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
@@ -165,7 +182,7 @@ int main() {
 	for (;;) {
 		len = read(inotify_fd, inotify_buff, sizeof(inotify_buff));
 		if (len < 1) {
-			eprintf("Error: read() - %s\n", strerror(errno));
+			error_log("Error: read()", error(errno));
 			continue;
 		}
 

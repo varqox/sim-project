@@ -1,8 +1,12 @@
 #include "connection.h"
 #include "sim.h"
 
-#include "../simlib/include/debug.h"
 #include "../simlib/include/config_file.h"
+#include "../simlib/include/debug.h"
+#include "../simlib/include/filesystem.h"
+#include "../simlib/include/logger.h"
+#include "../simlib/include/process.h"
+#include "../simlib/include/utility.h"
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -17,19 +21,22 @@ namespace server {
 static void* worker(void*) {
 	try {
 		sockaddr_in name;
+		socklen_t client_name_len = sizeof(name);
+		char ip[INET_ADDRSTRLEN];
 		Connection conn(-1);
 		Sim sim_worker;
 
 		for (;;) {
-			socklen_t client_name_len = sizeof(name);
 			// accept the connection
 			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
 				&client_name_len);
-			char ip[INET_ADDRSTRLEN];
+			if (client_socket_fd == -1)
+				continue;
 
 			// extract IP
 			inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN);
-			eprintf("\nConnection accepted: %lu form %s\n", pthread_self(), ip);
+			stdlog("Connection accepted: ", toString(pthread_self()), " form ",
+				ip);
 
 			conn.assign(client_socket_fd);
 			HttpRequest req = conn.getRequest();
@@ -37,43 +44,65 @@ static void* worker(void*) {
 			if (conn.state() == Connection::OK)
 				conn.sendResponse(sim_worker.handle(ip, req));
 
-			eprintf("Closing...");
-			fflush(stdout);
-			close(client_socket_fd);
-			eprintf(" done.\n");
+			stdlog("Closing...");
+			sclose(client_socket_fd);
+			stdlog("Closed");
 		}
 
 	} catch (const std::exception& e) {
-		E("\e[31mCaught exception: %s:%d\e[m - %s\n", __FILE__, __LINE__,
-			e.what());
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" - ", e.what());
 
 	} catch (...) {
-		E("\e[31mCaught exception: %s:%d\e[m\n", __FILE__, __LINE__);
+		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 } // namespace server
 
 int main() {
-	srand(time(NULL));
+	// Init server
+	srand(time(nullptr));
+	// Change directory to process executable directory
+	string cwd;
+	try {
+		cwd = chdirToExecDir();
+	} catch (const std::exception& e) {
+		error_log("Failed to change working directory: ", e.what());
+	}
+
+	// Loggers
+	try {
+		stdlog.open("server.log");
+	} catch (const std::exception& e) {
+		error_log("Failed to open 'server.log': ", e.what());
+	}
+
+	try {
+		error_log.open("server_error.log");
+	} catch (const std::exception& e) {
+		error_log("Failed to open 'server_error.log': ", e.what());
+	}
 
 	// Signal control
 	struct sigaction sa;
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGINT, &sa, nullptr);
+	sigaction(SIGTERM, &sa, nullptr);
+	sigaction(SIGQUIT, &sa, nullptr);
 
 	ConfigFile config;
-	config.addVar("address");
-	config.addVar("workers");
-
 	try {
+		config.addVar("address");
+		config.addVar("workers");
+
 		config.loadConfigFromFile("server.conf");
 	} catch (const std::exception& e) {
-		eprintf("Failed to load server.config: %s\n", e.what());
+		error_log("Failed to load server.config: ", e.what());
 		return 5;
 	}
 
@@ -81,19 +110,21 @@ int main() {
 	int workers = config.getInt("workers");
 
 	if (workers < 1) {
-		eprintf("sim.config: Number of workers cannot be lower than 1\n");
+		error_log("sim.config: Number of workers cannot be lower than 1");
 		return 6;
 	}
 
 	sockaddr_in name;
 	name.sin_family = AF_INET;
+	memset(name.sin_zero, 0, sizeof(name.sin_zero));
+
 	// Extract port from address
 	unsigned port = 80; // server port
 	size_t colon_pos = address.find(':');
 	// Colon found
 	if (colon_pos < address.size()) {
 		if (strtou(address, &port, colon_pos + 1) <= 0) {
-			eprintf("sim.config: wrong port number\n");
+			error_log("sim.config: incorrect port number");
 			return 7;
 		}
 		address[colon_pos] = '\0'; // need to extract IPv4 address
@@ -107,40 +138,40 @@ int main() {
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
 	else if (address.empty() ||
 			inet_aton(address.data(), &name.sin_addr) == 0) {
-		eprintf("sim.config: wrong IPv4 address\n");
+		error_log("sim.config: incorrect IPv4 address");
 		return 8;
 	}
 
-	E("address: %s:%u\n", address.data(), port);
-	E("workers: %i\n", workers);
+	stdlog("address: ", address.data(), ':', toString(port));
+	stdlog("workers: ", toString(workers));
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		eprintf("Failed to create socket - %s\n", strerror(errno));
+		error_log("Failed to create socket", error(errno));
 		return 1;
 	}
 
-	bool true_ = 1;
+	bool true_ = true;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &true_, sizeof(int))) {
-		eprintf("Failed to setopt - %s\n", strerror(errno));
+		error_log("Failed to setopt", error(errno));
 		return 2;
 	}
 
 	if (bind(socket_fd, (sockaddr*)&name, sizeof(name))) {
-		eprintf("Failed to bind - %s\n", strerror(errno));
+		error_log("Failed to bind", error(errno));
 		return 3;
 	}
 
 	if (listen(socket_fd, 10)) {
-		eprintf("Failed to listen - %s\n", strerror(errno));
+		error_log("Failed to listen", error(errno));
 		return 4;
 	}
 
 	pthread_t threads[workers];
 	for (int i = 1; i < workers; ++i)
-		pthread_create(threads + i, NULL, server::worker, NULL);
+		pthread_create(threads + i, nullptr, server::worker, nullptr);
 	threads[0] = pthread_self();
-	server::worker(NULL);
+	server::worker(nullptr);
 
-	close(socket_fd);
+	sclose(socket_fd);
 	return 0;
 }
