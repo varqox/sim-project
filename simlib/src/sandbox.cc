@@ -85,7 +85,7 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 int DefaultCallback::operator()(pid_t pid, int syscall) {
 	// Detect arch (first call - before exec, second - after exec)
 	if (++functor_call < 3) {
-		string filename = "/proc/" + toString((long long)pid) + "/exe";
+		string filename = concat("/proc/", toString<int64_t>(pid), "/exe");
 
 		int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {

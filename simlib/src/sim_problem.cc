@@ -164,7 +164,7 @@ void ProblemConfig::loadConfig(string package_path) {
 
 		// Points
 		if (pos < i.size()) {
-			test_groups.push_back(Group());
+			test_groups.emplace_back();
 
 			// Remove trailing white spaces
 			size_t end = i.size();

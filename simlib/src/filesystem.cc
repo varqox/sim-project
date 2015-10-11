@@ -99,7 +99,7 @@ int __remove_rat(int dirfd, const char* path) {
 
 	DIR *dir = fdopendir(fd);
 	if (dir == nullptr) {
-		close(fd);
+		sclose(fd);
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 	}
 
@@ -151,13 +151,13 @@ int copy(const char* src, const char* dest) {
 	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC,
 		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // (mode: 0644/rw-r--r--)
 	if (out == -1) {
-		close(in);
+		sclose(in);
 		return -1;
 	}
 
 	int res = blast(in, out);
-	close(in);
-	close(out);
+	sclose(in);
+	sclose(out);
 	return res;
 }
 
@@ -169,13 +169,13 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
 	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC,
 		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // (mode: 0644/rw-r--r--)
 	if (out == -1) {
-		close(in);
+		sclose(in);
 		return -1;
 	}
 
 	int res = blast(in, out);
-	close(in);
-	close(out);
+	sclose(in);
+	sclose(out);
 	return res;
 }
 
@@ -205,14 +205,14 @@ static int __copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest)
 	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_NOCTTY | O_NONBLOCK |
 			O_LARGEFILE | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 	if (dest_fd == -1) {
-		close(src_fd);
+		sclose(src_fd);
 		return -1;
 	}
 
 	DIR *src_dir = fdopendir(src_fd);
 	if (src_dir == nullptr) {
-		close(src_fd);
-		close(dest_fd);
+		sclose(src_fd);
+		sclose(dest_fd);
 		return -1;
 	}
 
@@ -226,7 +226,7 @@ static int __copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest)
 		}
 
 	closedir(src_dir);
-	close(dest_fd);
+	sclose(dest_fd);
 	return 0;
 }
 
@@ -276,11 +276,7 @@ int createFile(const char* pathname, mode_t mode) {
 	if (fd == -1)
 		return -1;
 
-	while (close(fd) == -1)
-		if (errno != EINTR)
-			return -1;
-
-	return 0;
+	return sclose(fd);
 }
 
 namespace directory_tree {
@@ -339,7 +335,7 @@ static node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 
 	DIR *dir = fdopendir(fd);
 	if (dir == nullptr) {
-		close(fd);
+		sclose(fd);
 		return root;
 	}
 
