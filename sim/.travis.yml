@@ -21,14 +21,13 @@ addons:
     packages:
     - g++-4.8-multilib
     - clang-3.4
-    - clang
     - mysql-server
     - mysql-client
     - libboost-dev # Needed for MySQL Connector/C++
 
 install:
   # Compiler
-  - if [ "$CC" = "gcc" ]; then export CXX="gcc-4.8"; fi
+  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.8"; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
   # libmysqlcppconn-dev
   - apt-get --print-uris --yes install libmysqlcppconn-dev | grep ^\' | cut -d\' -f2 > downloads.list
