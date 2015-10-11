@@ -78,7 +78,7 @@ SIM is open source platform for carrying out algorithmic contests
   password: sim
   ```
 
-7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/server.conf` in which are server parameters like ADDRESS etc. There are log files `*.log` which you would find useful if something did not work. Feel free to report bugs and irregularities.
+7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/server.conf` in which are server parameters like ADDRESS etc. There are also log files `*.log` which you would find useful if something did not work. Feel free to report bugs and irregularities.
 
 ### Upgrading
 Just type (be aware of incompatible database (and other inner) changes)
