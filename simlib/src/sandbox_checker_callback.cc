@@ -1,18 +1,8 @@
-#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/sandbox.h"
 #include "../include/sandbox_checker_callback.h"
-#include "../include/string.h"
 #include "../include/utility.h"
-
-#include <algorithm>
-#include <cerrno>
-#include <fcntl.h>
-#include <limits.h>
-#include <sys/ptrace.h>
-#include <sys/uio.h>
-#include <unistd.h>
 
 using std::string;
 using std::vector;
@@ -96,23 +86,19 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 			arch = 0;
 			error_log("Error: open('", filename, "')", error(errno));
 			return 1;
-
-		} else {
-			// Read fourth byte and detect if 32 or 64 bit
-			unsigned char c;
-			if (lseek(fd, 4, SEEK_SET) == (off_t)-1) {
-				sclose(fd);
-				return 1;
-			}
-
-			int ret = read(fd, &c, 1);
-			if (ret == 1 && c == 2)
-				arch = 1; // x86_64
-			else
-				arch = 0; // i386
-
-			sclose(fd);
 		}
+
+		Closer closer(fd);
+		// Read fourth byte and detect if 32 or 64 bit
+		unsigned char c;
+		if (lseek(fd, 4, SEEK_SET) == (off_t)-1)
+			return 1;
+
+		int ret = read(fd, &c, 1);
+		if (ret == 1 && c == 2)
+			arch = 1; // x86_64
+		else
+			arch = 0; // i386
 	}
 
 	// Check if syscall is allowed

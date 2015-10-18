@@ -1,13 +1,8 @@
 #include "../include/config_file.h"
-#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/sim_problem.h"
-#include "../include/string.h"
 #include "../include/utility.h"
-
-#include <cerrno>
-#include <cmath>
 
 using std::string;
 using std::vector;

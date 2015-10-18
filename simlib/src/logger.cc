@@ -1,8 +1,5 @@
 #include "../include/logger.h"
-#include "../include/string.h"
 #include "../include/time.h"
-
-#include <stdexcept>
 
 using std::string;
 

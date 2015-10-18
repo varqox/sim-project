@@ -11,6 +11,6 @@ inline int getRandom(int a, int b) {
 
 template<class Iter>
 void randomShuffle (Iter begin, Iter end) {
-	for (__typeof(end - begin) n = end - begin, i = n - 1; i > 0; --i)
+	for (auto n = end - begin, i = n - 1; i > 0; --i)
 		std::swap(begin[i], begin[getRandom(0, i)]);
 }

@@ -1,10 +1,6 @@
-#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/process.h"
-#include "../include/string.h"
-
-#include <cerrno>
 
 using std::string;
 using std::vector;
@@ -18,6 +14,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 			throw std::runtime_error(concat("Failed to open 'compile_errors'",
 				error(errno)));
 	}
+	Closer closer(cef);
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
 	if (copy(source, concat(tmp_dir.name(), "a.cpp")) == -1)
@@ -66,9 +63,6 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		if (c_errors)
 			*c_errors = getFileContents(cef, 0, c_errors_max_len);
 
-		// Clean up
-		if (cef >= 0)
-			sclose(cef);
 		return 2;
 	}
 
@@ -77,10 +71,6 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 
 	if (c_errors)
 		*c_errors = "";
-
-	// Clean up
-	if (cef >= 0)
-		sclose(cef);
 
 	// Move exec
 	if (move(concat(tmp_dir.name(), "exec"), exec) == -1)

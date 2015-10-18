@@ -1,20 +1,6 @@
 #pragma once
 
-#include <cstdarg>
 #include <vector>
-
-template<class T>
-std::vector<T> construct_vector(unsigned n, ...) {
-	std::vector<T> res(n);
-	va_list vl;
-	va_start(vl,n);
-
-	for (unsigned i = 0; i < n; ++i)
-		res[i] = va_arg(vl, T);
-
-	va_end(vl);
-	return res;
-}
 
 template<class T>
 class Appender {
@@ -67,7 +53,7 @@ class less {
 };
 
 template<class T, class C>
-typename T::const_iterator binaryFind(const T& x, const C& val) {
+typename T::const_iterator binaryFind(const T& x, const C& val) noexcept {
 	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
 	while (beg != end) {
 		mid = beg + ((end - beg) >> 1);
@@ -80,7 +66,8 @@ typename T::const_iterator binaryFind(const T& x, const C& val) {
 }
 
 template<class T, class C, class Comp>
-typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp) {
+typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp)
+		noexcept {
 	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
 	while (beg != end) {
 		mid = beg + ((end - beg) >> 1);
@@ -94,7 +81,7 @@ typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp) {
 
 template<class T, typename B, class C>
 typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-		const C& val) {
+		const C& val) noexcept {
 	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
 	while (beg != end) {
 		mid = beg + ((end - beg) >> 1);
@@ -108,7 +95,7 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 
 template<class T, typename B, class C, class Comp>
 typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-		const C& val, Comp comp) {
+		const C& val, Comp comp) noexcept {
 	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
 	while (beg != end) {
 		mid = beg + ((end - beg) >> 1);

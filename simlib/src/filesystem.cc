@@ -1,10 +1,7 @@
-#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/process.h"
-#include "../include/string.h"
 
-#include <cerrno>
 #include <dirent.h>
 
 using std::string;
@@ -477,8 +474,8 @@ string getFileContents(const char* file) {
 	if (fd == -1)
 		return "";
 
+	Closer closer(fd); // Exceptions can be thrown
 	string res = getFileContents(fd);
-	sclose(fd);
 
 	return res;
 }
@@ -490,8 +487,8 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 	if (fd == -1)
 		return "";
 
+	Closer closer(fd); // Exceptions can be thrown
 	string res = getFileContents(fd, beg, end);
-	sclose(fd);
 
 	return res;
 }
@@ -513,12 +510,20 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 			buff[read - 1] = '\0';
 
 		if (line >= first && line < last)
-			res.push_back(buff);
+			try {
+				res.push_back(buff);
+			} catch (...) {
+				fclose(f);
+				free(buff);
+				throw;
+			}
 
 		++line;
 	}
 
 	fclose(f);
+	free(buff);
+
 	return res;
 }
 

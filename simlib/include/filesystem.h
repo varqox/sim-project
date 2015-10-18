@@ -464,7 +464,7 @@ inline size_t putFileContents(const std::string& file, const std::string& data) 
  *
  * @errors The same that occur for close(2) expect EINTR
  */
-inline int sclose(int fd) {
+inline int sclose(int fd) noexcept {
 	while (close(fd) == -1)
 		if (errno != EINTR)
 			return -1;
@@ -485,7 +485,11 @@ public:
 	 * @return 0 on success, -1 on error
 	 * @errors The same that occur to sclose()
 	 */
-	int close() { return sclose(fd_); }
+	int close() noexcept {
+		int rc = sclose(fd_);
+		fd_ = -1;
+		return rc;
+	}
 
 	~Closer() { close(); }
 };

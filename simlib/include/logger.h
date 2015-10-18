@@ -2,10 +2,7 @@
 
 #include "string.h"
 
-#include <cerrno>
 #include <cstdio>
-#include <cstring>
-#include <string>
 
 class Logger {
 private:

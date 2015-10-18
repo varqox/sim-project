@@ -1,7 +1,5 @@
 #include "../include/string.h"
 
-#include <algorithm>
-
 using std::string;
 
 StringView::size_type StringView::find(const StringView& s) const {
@@ -161,9 +159,8 @@ string decodeURI(const StringView& str, size_t beg, size_t end) {
 }
 
 string tolower(string str) {
-	for (size_t i = 0, s = str.size(); i < s; ++i)
-		str[i] = tolower(str[i]);
-
+	for (auto& c : str)
+		c = tolower(c);
 	return str;
 }
 

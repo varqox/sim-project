@@ -1,13 +1,9 @@
-#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/process.h"
 
-#include <cerrno>
-#include <cstring>
 #include <dirent.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 using std::string;
 using std::vector;
@@ -90,18 +86,15 @@ int spawn(const string& exec, size_t argc, string *args,
 }
 
 std::string getCWD() {
-	char *buff = get_current_dir_name();
-	if (buff == nullptr || *buff != '/') {
-		if (buff) {
+	AutoFree<char> buff(get_current_dir_name());
+	if (buff.isNull() || *buff != '/') {
+		if (!buff.isNull())
 			errno = ENOENT; // Improper path, but get_current_dir_name() succeed
-			free(buff);
-		}
 
 		throw std::runtime_error(concat("Failed to get CWD", error(errno)));
 	}
 
-	string res(buff);
-	free(buff);
+	string res(buff.get());
 	if (res.back() != '/')
 		res += '/';
 

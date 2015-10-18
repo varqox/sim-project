@@ -1,8 +1,6 @@
 #include "../include/config_file.h"
 #include "../include/filesystem.h"
 
-#include <cerrno>
-
 using std::map;
 using std::string;
 using std::vector;
@@ -113,8 +111,8 @@ void ConfigFile::loadConfigFromFile(const string& pathname, bool load_all) {
 		throw std::runtime_error("Failed to open '" + pathname + "' - " +
 			strerror(errno));
 
+	Closer closer(fd);
 	string contents = getFileContents(fd);
-	sclose(fd);
 
 	loadConfigFromString(contents, load_all);
 }
