@@ -7,7 +7,6 @@
 #include "../simlib/include/process.h"
 #include "../simlib/include/utility.h"
 
-#include <cerrno>
 #include <csignal>
 
 using std::string;

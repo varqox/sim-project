@@ -3,7 +3,6 @@
 #include "sim_template.h"
 #include "sim_user.h"
 
-#include "../simlib/include/debug.h"
 #include "../simlib/include/logger.h"
 #include "../simlib/include/sha.h"
 
