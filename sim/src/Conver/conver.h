@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../simlib/include/filesystem.h"
-#include "../simlib/include/memory.h"
 #include "../simlib/include/sim_problem.h"
 
 extern UniquePtr<TemporaryDirectory> tmp_dir;

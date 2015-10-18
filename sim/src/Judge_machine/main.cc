@@ -2,12 +2,9 @@
 #include "main.h"
 
 #include "../include/db.h"
-#include "../simlib/include/debug.h"
 #include "../simlib/include/logger.h"
 #include "../simlib/include/process.h"
-#include "../simlib/include/utility.h"
 
-#include <cerrno>
 #include <cppconn/prepared_statement.h>
 #include <csignal>
 #include <limits.h>

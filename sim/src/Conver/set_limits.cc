@@ -6,7 +6,6 @@
 #include "../simlib/include/sandbox_checker_callback.h"
 
 #include <cassert>
-#include <cerrno>
 
 using std::pair;
 using std::string;

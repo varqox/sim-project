@@ -1,23 +1,28 @@
 #include "../include/db.h"
 #include "../simlib/include/logger.h"
 
-#include <cerrno>
 #include <cppconn/driver.h>
-#include <cstring>
 
 using std::string;
 
 namespace DB {
 
+std::mutex Connection::create_connection_lock;
+
 Connection::Connection(const string& host, const string& user,
 		const string& password, const string& database)
-		: conn_(nullptr), host_(host), user_(user), password_(password),
+		: conn_(), host_(host), user_(user), password_(password),
 			database_(database) {
 	connect();
 }
 
 void Connection::connect() {
+	// We have to serialize creating connections, because MySQL Connector C++
+	// can crush if we won't guard it
+	create_connection_lock.lock();
 	conn_.reset(get_driver_instance()->connect(host_, user_, password_));
+	create_connection_lock.unlock();
+
 	conn_->setSchema(database_);
 }
 
@@ -51,27 +56,17 @@ Connection createConnectionUsingPassFile(const string& filename) {
 	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
 	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
 
+	AutoFree<char> f1(user), f2(password), f3(database), f(host);
+
 	// Connect
 	try {
-		return DB::Connection(host, user, password, database);
+		return Connection(host, user, password, database);
 
 	} catch (const std::exception& e) {
-		// Free resources
-		free(host);
-		free(user);
-		free(password);
-		free(database);
-
 		throw std::runtime_error(concat("Failed to connect to database - ",
 			e.what()));
 
 	} catch (...) {
-		// Free resources
-		free(host);
-		free(user);
-		free(password);
-		free(database);
-
 		throw std::runtime_error("Failed to connect to database");
 	}
 }

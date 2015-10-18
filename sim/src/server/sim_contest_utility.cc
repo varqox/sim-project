@@ -1,12 +1,10 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
-#include "../simlib/include/debug.h"
 #include "../simlib/include/logger.h"
 #include "../simlib/include/time.h"
 
 #include <cppconn/prepared_statement.h>
-#include <vector>
 
 using std::string;
 using std::vector;
@@ -256,15 +254,6 @@ void Sim::Contest::TemplateWithMenu::printRoundPath(const RoundPath& r_path,
 	*this << "</div>\n";
 }
 
-namespace {
-
-struct SubroundExtended {
-	string id, name, item, begins, ends, full_results;
-	bool visible;
-};
-
-} // anonymous namespace
-
 void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 		bool link_to_problem_statement, bool admin_view) {
 	try {
@@ -281,6 +270,11 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 			pstmt->setString(1, r_path.contest->id);
 			if (!admin_view)
 				pstmt->setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
+
+			struct SubroundExtended {
+				string id, name, item, begins, ends, full_results;
+				bool visible;
+			};
 
 			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 			vector<SubroundExtended> subrounds;
@@ -315,8 +309,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 			// Collect results
 			while (res->next()) {
 				// Get reference to proper vector<Problem>
-				__typeof(problems.begin()) it =
-					problems.find(res->getString(2));
+				auto it = problems.find(res->getString(2));
 				// If problem parent is not visible or database error
 				if (it == problems.end())
 					continue; // Ignore

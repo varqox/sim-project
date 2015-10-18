@@ -25,6 +25,8 @@ public:
 		std::string &cookie = cookies[name];
 		return cookie.substr(0, cookie.find(';'));
 	}
+
+	~HttpResponse() {}
 };
 
 } // namespace server

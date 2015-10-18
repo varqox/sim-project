@@ -8,6 +8,8 @@ namespace server {
 
 class HttpHeaders : public std::map<std::string, std::string> {
 public:
+	HttpHeaders() = default;
+
 	std::string& operator[](const std::string& key) {
 		return std::map<std::string, std::string>::operator[](tolower(key));
 	}
@@ -21,6 +23,8 @@ public:
 		const_iterator it = find(tolower(key));
 		return it == end() ? std::string() : it->second;
 	}
+
+	virtual ~HttpHeaders() {}
 };
 
 } // namespace server

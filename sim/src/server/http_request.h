@@ -6,7 +6,7 @@ namespace server {
 
 class HttpRequest {
 public:
-	enum Method { GET, POST, HEAD, NONE } method;
+	enum Method { GET, POST, HEAD } method;
 	HttpHeaders headers;
 	std::string target, http_version, content;
 
@@ -26,6 +26,8 @@ public:
 	} form_data;
 
 	std::string getCookie(const std::string& name) const;
+
+	~HttpRequest() {}
 };
 
 } // namespace server

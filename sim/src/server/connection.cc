@@ -4,12 +4,8 @@
 #include "../simlib/include/filesystem.h"
 #include "../simlib/include/logger.h"
 
-#include <cstdlib>
-#include <fcntl.h>
 #include <iostream>
 #include <poll.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 using std::string;
 using std::pair;
@@ -95,7 +91,10 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 }
 
 void Connection::readPOST(HttpRequest& req) {
-	size_t content_length = strtoull(req.headers["Content-Length"]);
+	size_t content_length;
+	if (strtou(req.headers["Content-Length"], &content_length) < 0)
+		return error400();
+
 	int c = '\0';
 	string field_name, field_content;
 	bool is_name;
@@ -367,22 +366,6 @@ void Connection::error400() {
 	state_ = CLOSED;
 }
 
-void Connection::error408() {
-	send("HTTP/1.1 408 Request Timeout\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 124\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>408 Request Timeout</title></head>\n"
-		"<body>\n"
-		"<center><h1>408 Request Timeout</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
-	state_ = CLOSED;
-}
-
 void Connection::error403() {
 	send("HTTP/1.1 403 Forbidden\r\n"
 		"Server: sim-server\r\n"
@@ -410,6 +393,22 @@ void Connection::error404() {
 		"<head><title>404 Not Found</title></head>\n"
 		"<body>\n"
 		"<center><h1>404 Not Found</h1></center>\n"
+		"</body>\n"
+		"</html>\n");
+	state_ = CLOSED;
+}
+
+void Connection::error408() {
+	send("HTTP/1.1 408 Request Timeout\r\n"
+		"Server: sim-server\r\n"
+		"Connection: close\r\n"
+		"Content-Type: text/html; charset=utf-8\r\n"
+		"Content-Length: 124\r\n"
+		"\r\n"
+		"<html>\n"
+		"<head><title>408 Request Timeout</title></head>\n"
+		"<body>\n"
+		"<center><h1>408 Request Timeout</h1></center>\n"
 		"</body>\n"
 		"</html>\n");
 	state_ = CLOSED;
@@ -552,7 +551,7 @@ HttpRequest Connection::getRequest() {
 	else if (request_line.compare(0, end, "HEAD") == 0)
 		req.method = HttpRequest::HEAD;
 	else {
-		req.method = HttpRequest::NONE;
+		req.method = HttpRequest::GET; // Do not care - worker will handle error
 		error400();
 		return req;
 	}
@@ -610,32 +609,31 @@ HttpRequest Connection::getRequest() {
 		return req;
 	}
 
-	end = strtoull(req.headers["Content-Length"]);
+	if (strtou(req.headers["Content-Length"], &end) < 0) {
+		error400();
+		return req;
+	}
+
 	if (end > 0) {
 		if (end > MAX_CONTENT_LENGTH) {
 			error413();
 			return req;
 		}
 
-		char *s = (char*)malloc(end);
-		if (s == nullptr) {
+		try {
+			req.content.resize(end);
+		} catch (...) {
 			error507();
 			return req;
 		}
 
-		beg = -1;
-		while (++beg < end) {
+		for (beg = 0; beg < end; ++beg) {
 			int c = getChar();
-			if (c == -1) {
-				free(s);
+			if (c == -1)
 				return req;
-			}
 
-			s[beg] = c;
+			req.content[beg] = c;
 		}
-
-		req.content = s;
-		free(s);
 	}
 
 	return req;
@@ -730,18 +728,12 @@ void Connection::sendResponse(const HttpResponse& res) {
 		str += toString<uint64_t>(fsize);
 		str += "\r\n\r\n";
 
-		const size_t buff_length = 1 << 20;
-		char *buff = (char*)malloc(buff_length);
-		if (buff == nullptr) {
-			error507();
-			return;
-		}
+		constexpr size_t buff_length = 1 << 20;
+		char buff[buff_length];
 
 		send(str);
-		if (state_ == CLOSED) {
-			free(buff);
+		if (state_ == CLOSED)
 			return;
-		}
 
 		// Read from file and write to socket
 		off64_t pos = 0;
@@ -752,7 +744,6 @@ void Connection::sendResponse(const HttpResponse& res) {
 			pos += read_len;
 		}
 
-		free(buff);
 	}
 
 	state_ = CLOSED;

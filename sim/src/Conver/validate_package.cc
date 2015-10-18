@@ -2,7 +2,6 @@
 
 #include "../simlib/include/debug.h"
 
-#include <cerrno>
 #include <dirent.h>
 
 using std::string;

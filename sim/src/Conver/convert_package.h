@@ -2,8 +2,6 @@
 
 #include "conver.h"
 
-#include "../simlib/include/string.h"
-
 struct TestNameCompatator {
 	/**
 	 * @brief Extracts tag from @p str

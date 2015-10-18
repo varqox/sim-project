@@ -2,16 +2,11 @@
 #include "main.h"
 
 #include "../simlib/include/compile.h"
-#include "../simlib/include/debug.h"
 #include "../simlib/include/logger.h"
 #include "../simlib/include/sandbox.h"
 #include "../simlib/include/sandbox_checker_callback.h"
 #include "../simlib/include/sim_problem.h"
-#include "../simlib/include/string.h"
 #include "../simlib/include/utility.h"
-
-#include <cerrno>
-#include <cmath>
 
 using std::string;
 using std::vector;

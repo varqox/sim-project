@@ -2,14 +2,11 @@
 #include "sim.h"
 
 #include "../simlib/include/config_file.h"
-#include "../simlib/include/debug.h"
 #include "../simlib/include/filesystem.h"
 #include "../simlib/include/logger.h"
 #include "../simlib/include/process.h"
-#include "../simlib/include/utility.h"
 
 #include <arpa/inet.h>
-#include <cerrno>
 #include <csignal>
 
 using std::string;
@@ -30,6 +27,7 @@ static void* worker(void*) {
 			// accept the connection
 			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
 				&client_name_len);
+			Closer closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;
 
@@ -45,7 +43,7 @@ static void* worker(void*) {
 				conn.sendResponse(sim_worker.handle(ip, req));
 
 			stdlog("Closing...");
-			sclose(client_socket_fd);
+			closer.close();
 			stdlog("Closed");
 		}
 
@@ -142,8 +140,10 @@ int main() {
 		return 8;
 	}
 
-	stdlog("address: ", address.data(), ':', toString(port));
-	stdlog("workers: ", toString(workers));
+	stdlog("Server launch:\n"
+		"PID: ", toString(getpid()), "\n"
+		"workers: ", toString(workers), "\n"
+		"address: ", address.data(), ':', toString(port));
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		error_log("Failed to create socket", error(errno));

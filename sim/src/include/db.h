@@ -3,11 +3,14 @@
 #include "../simlib/include/memory.h"
 
 #include <mysql_connection.h>
+#include <mutex>
 
 namespace DB {
 
 class Connection {
 private:
+	static std::mutex create_connection_lock;
+
 	UniquePtr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
 

@@ -3,15 +3,12 @@
 #include "sim_session.h"
 
 #include "../simlib/include/config_file.h"
-#include "../simlib/include/debug.h"
 #include "../simlib/include/filesystem.h"
 #include "../simlib/include/logger.h"
 #include "../simlib/include/process.h"
 #include "../simlib/include/sim_problem.h"
 #include "../simlib/include/time.h"
 
-#include <cerrno>
-#include <cmath>
 #include <cppconn/prepared_statement.h>
 
 using std::pair;
@@ -210,24 +207,31 @@ void Sim::Contest::addContest() {
 
 	FormValidator fv(sim_.req_->form_data);
 	string name;
-	bool is_public = false;
+	bool is_public = false, show_ranking = false;
 
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", 128);
 		is_public = fv.exist("public");
+		// Only admins can create public contests
+		if (sim_.session->user_type > 0) {
+			is_public = false;
+			fv.addError("Only admins can create public contests");
+		}
+		show_ranking = fv.exist("show-ranking");
 
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("INSERT INTO rounds"
-							"(access, name, owner, item) "
-						"SELECT ?, ?, ?, MAX(item)+1 FROM rounds "
+							"(access, name, owner, item, show_ranking) "
+						"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
 							"WHERE parent IS NULL"));
 				pstmt->setString(1, is_public ? "public" : "private");
 				pstmt->setString(2, name);
 				pstmt->setString(3, sim_.session->user_id);
+				pstmt->setBoolean(4, show_ranking);
 
 				if (pstmt->executeUpdate() != 1)
 					throw std::runtime_error("Failed to insert round");
@@ -263,9 +267,16 @@ void Sim::Contest::addContest() {
 				"<div class=\"field-group\">\n"
 					"<label>Public</label>\n"
 					"<input type=\"checkbox\" name=\"public\""
-						<< (is_public ? " checked" : "") << ">\n"
+						<< (is_public ? " checked" : "")
+						<< (sim_.session->user_type > 0 ? " disabled" : "")
+						<< ">\n"
 				"</div>\n"
-				// TODO: add show_ranking
+				// Show ranking
+				"<div class=\"field-group\">\n"
+					"<label>Show ranking</label>\n"
+					"<input type=\"checkbox\" name=\"show-ranking\""
+						<< (show_ranking ? " checked" : "") << ">\n"
+				"</div>\n"
 				"<input class=\"btn\" type=\"submit\" value=\"Add\">\n"
 			"</form>\n"
 		"</div>\n";
@@ -615,25 +626,47 @@ void Sim::Contest::editContest() {
 
 	FormValidator fv(sim_.req_->form_data);
 	string name, owner;
-	bool is_public = false;
+	bool is_public, show_ranking;
 
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", 128);
 		fv.validateNotBlank(owner, "owner", "Owner username", 30);
 		is_public = fv.exist("public");
+		show_ranking = fv.exist("show-ranking");
 
-		// If all fields are ok
-		if (fv.noErrors())
-			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("UPDATE rounds r, (SELECT id FROM users "
-							"WHERE username=?) u "
-						"SET name=?, owner=u.id, access=? WHERE r.id=?"));
+		try {
+			UniquePtr<sql::PreparedStatement> pstmt;
+			// Check if user has the ability to make contest public
+			if (is_public && sim_.session->user_type > 0) {
+				pstmt.reset(sim_.db_conn->prepareStatement(
+					"SELECT access FROM rounds WHERE id=?"));
+				pstmt->setString(1, r_path_->round_id);
+
+				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+				if (!res->next())
+					throw std::runtime_error("Failed to get contest access "
+						"field");
+
+				// Only admins can make contest public
+				if (res->getString(1) == "private") {
+					is_public = false;
+					fv.addError("Only admins can make contest public");
+				}
+			}
+
+			// If all fields are ok
+			if (fv.noErrors()) {
+				pstmt.reset(sim_.db_conn->prepareStatement(
+					"UPDATE rounds r, "
+						"(SELECT id FROM users WHERE username=?) u "
+					"SET name=?, owner=u.id, access=?, show_ranking=? "
+					"WHERE r.id=?"));
 				pstmt->setString(1, owner);
 				pstmt->setString(2, name);
 				pstmt->setString(3, is_public ? "public" : "private");
-				pstmt->setString(4, r_path_->round_id);
+				pstmt->setBoolean(4, show_ranking);
+				pstmt->setString(5, r_path_->round_id);
 
 				if (pstmt->executeUpdate() == 1) {
 					fv.addError("Update successful");
@@ -642,25 +675,29 @@ void Sim::Contest::editContest() {
 					if (r_path_.isNull())
 						return;
 				}
-
-			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
 			}
+
+		} catch (const std::exception& e) {
+			error_log("Caught exception: ", __FILE__, ':',
+				toString(__LINE__), " - ", e.what());
+		}
 	}
 
 	// Get contest information
-	name = r_path_->contest->name;
 	UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 		prepareStatement("SELECT u.username, r.access FROM rounds r, users u "
 			"WHERE r.id=? AND r.owner=u.id"));
 	pstmt->setString(1, r_path_->round_id);
 
 	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-	if (res->next()) {
-		owner = res->getString(1);
-		is_public = res->getString(2) == "public";
-	}
+	if (!res->next())
+		throw std::runtime_error(concat(__PRETTY_FUNCTION__, ": Failed to get "
+			"contest and owner info"));
+
+	name = r_path_->contest->name;
+	owner = res->getString(1);
+	is_public = res->getString(2) == "public";
+	show_ranking = r_path_->contest->show_ranking;
 
 	TemplateWithMenu templ(*this, "Edit contest");
 	templ.printRoundPath(*r_path_, "");
@@ -685,9 +722,16 @@ void Sim::Contest::editContest() {
 				"<div class=\"field-group\">\n"
 					"<label>Public</label>\n"
 					"<input type=\"checkbox\" name=\"public\""
-						<< (is_public ? " checked" : "") << ">\n"
+						<< (is_public ? " checked"
+							: (sim_.session->user_type > 0 ? " disabled" : ""))
+						<< ">\n"
 				"</div>\n"
-				// TODO: add show_ranking
+				// Show ranking
+				"<div class=\"field-group\">\n"
+					"<label>Show ranking</label>\n"
+					"<input type=\"checkbox\" name=\"show-ranking\""
+						<< (show_ranking ? " checked" : "") << ">\n"
+				"</div>\n"
 				"<div>\n"
 					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
 					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
@@ -1273,8 +1317,7 @@ void Sim::Contest::submit(bool admin_view) {
 			// Collect results
 			while (res->next()) {
 				// Get reference to proper vector<Problem>
-				__typeof(problems_table.begin()) it =
-						problems_table.find(res->getString(2));
+				auto it = problems_table.find(res->getString(2));
 				// If problem parent is not visible or database error
 				if (it == problems_table.end())
 					continue; // Ignore
@@ -1515,13 +1558,14 @@ void Sim::Contest::submission() {
 			if (sopt.new_stdout_fd < 0)
 				return sim_.error500();
 
+			Closer closer(sopt.new_stdout_fd);
+
 			// Run CTH
 			spawn(args[0], args, &sopt);
 			// Print source code
 			lseek(sopt.new_stdout_fd, 0, SEEK_SET);
 			templ << getFileContents(sopt.new_stdout_fd);
 
-			sclose(sopt.new_stdout_fd);
 			return;
 		}
 
@@ -1723,56 +1767,19 @@ void Sim::Contest::submissions(bool admin_view) {
 	}
 }
 
-namespace {
-
-struct RankingProblem {
-	unsigned long long id;
-	string tag;
-};
-
-struct RankingRound {
-	string id, name, item;
-	vector<RankingProblem> problems;
-
-	bool operator<(const RankingRound& x) const {
-		return StrNumCompare()(item, x.item);
-	}
-};
-
-struct RankingField {
-	string submission_id, round_id, score;
-};
-
-struct RankingRow {
-	string user_id, name;
-	long long score;
-	vector<RankingField> fields;
-};
-
-struct cmp {
-	bool operator()(const RankingRound* a, const RankingRound* b) const {
-		return a->id < b->id;
-	}
-
-	bool operator()(const RankingRow& a, const RankingRow& b) const {
-		return a.score > b.score;
-	}
-};
-
 template<class T>
-typename T::const_iterator findWithId(const T& x, const string& id) {
+static typename T::const_iterator findWithId(const T& x, const string& id)
+		noexcept {
 	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
 	while (beg != end) {
 		mid = beg + ((end - beg) >> 1);
-		if ((*mid)->id < id)
+		if (mid->get().id < id)
 			beg = ++mid;
 		else
 			end = mid;
 	}
-	return (beg != x.end() && (*beg)->id == id ? beg : x.end());
+	return (beg != x.end() && beg->get().id == id ? beg : x.end());
 }
-
-} // anonymous namespace
 
 void Sim::Contest::ranking(bool admin_view) {
 	if (!admin_view && !r_path_->contest->show_ranking)
@@ -1782,21 +1789,62 @@ void Sim::Contest::ranking(bool admin_view) {
 	templ << "<h1>Ranking</h1>";
 	templ.printRoundPath(*r_path_, "ranking");
 
+	struct RankingProblem {
+		unsigned long long id;
+		string tag;
+	};
+
+	struct RankingRound {
+		string id, name, item;
+		vector<RankingProblem> problems;
+
+		bool operator<(const RankingRound& x) const {
+			return StrNumCompare()(item, x.item);
+		}
+	};
+
+	struct RankingField {
+		string submission_id, round_id, score;
+	};
+
+	struct RankingRow {
+		string user_id, name;
+		long long score;
+		vector<RankingField> fields;
+	};
+
+	struct cmp {
+		bool operator()(const RankingRound& a, const RankingRound& b) const {
+			return a.id < b.id;
+		}
+
+		bool operator()(const RankingRow& a, const RankingRow& b) const {
+			return a.score > b.score;
+		}
+	};
+
 	try {
 		UniquePtr<sql::PreparedStatement> pstmt;
 		UniquePtr<sql::ResultSet> res;
-		// TODO: consider rounds visibility
+		string current_time = date("%Y-%m-%d %H:%M:%S");
+
 		// Select rounds
-		string column = (r_path_->type == CONTEST ? "parent" : "id");
-		pstmt.reset(sim_.db_conn->prepareStatement(
-			"SELECT id, name, item FROM rounds WHERE " + column + "=?"));
-		pstmt->setString(1, r_path_->type == CONTEST ? r_path_->round_id
+		const char* column = (r_path_->type == CONTEST ? "parent" : "id");
+		pstmt.reset(sim_.db_conn->prepareStatement(admin_view ?
+			concat("SELECT id, name, item FROM rounds WHERE ", column, "=?")
+			: concat("SELECT id, name, item FROM rounds WHERE ", column, "=? "
+				"AND (full_results IS NULL OR full_results<=?)")));
+
+		pstmt->setString(1, r_path_->type == CONTEST
+			? r_path_->round_id
 			: r_path_->round->id);
+		if (!admin_view)
+			pstmt->setString(2, current_time);
 		res.reset(pstmt->executeQuery());
 
 		vector<RankingRound> rounds;
 		rounds.reserve(res->rowsCount()); // Need for pointers validity
-		vector<RankingRound*> rounds_by_id;
+		vector<std::reference_wrapper<RankingRound>> rounds_by_id;
 		while (res->next()) {
 			rounds.push_back((RankingRound){
 				res->getString(1),
@@ -1804,7 +1852,7 @@ void Sim::Contest::ranking(bool admin_view) {
 				res->getString(3),
 				vector<RankingProblem>()
 			});
-			rounds_by_id.push_back(&rounds.back());
+			rounds_by_id.emplace_back(rounds.back());
 		}
 		if (rounds.empty()) {
 			templ << "<p>There is no one in the ranking yet...</p>";
@@ -1816,20 +1864,26 @@ void Sim::Contest::ranking(bool admin_view) {
 		// Select problems
 		column = (r_path_->type == CONTEST ? "grandparent" :
 			(r_path_->type == ROUND ? "parent" : "id"));
-		pstmt.reset(sim_.db_conn->prepareStatement(
-			"SELECT r.id, tag, parent FROM rounds r, problems p "
-			"WHERE r." + column + "=? AND problem_id=p.id ORDER BY item"));
+		pstmt.reset(sim_.db_conn->prepareStatement(admin_view ?
+			concat("SELECT r.id, tag, parent FROM rounds r, problems p "
+				"WHERE r.", column, "=? AND problem_id=p.id ORDER BY item")
+			: concat("SELECT r.id, tag, r.parent "
+				"FROM rounds r, rounds r1, problems p "
+				"WHERE r.", column, "=? AND r.problem_id=p.id "
+					"AND r.parent=r1.id "
+					"AND (r1.full_results IS NULL OR r1.full_results<=?)")));
 		pstmt->setString(1, r_path_->round_id);
+		if (!admin_view)
+			pstmt->setString(2, current_time);
 		res.reset(pstmt->executeQuery());
 
 		// Add problems to rounds
 		while (res->next()) {
-			vector<RankingRound*>::const_iterator it =
-				findWithId(rounds_by_id, res->getString(3));
+			auto it = findWithId(rounds_by_id, res->getString(3));
 			if (it == rounds_by_id.end())
 				continue; // Ignore invalid rounds hierarchy
 
-			(*it)->problems.push_back((RankingProblem){
+			it->get().problems.push_back((RankingProblem){
 				res->getUInt64(1),
 				res->getString(2)
 			});
@@ -1841,13 +1895,24 @@ void Sim::Contest::ranking(bool admin_view) {
 		// Select submissions
 		column = (r_path_->type == CONTEST ? "contest_round_id" :
 			(r_path_->type == ROUND ? "parent_round_id" : "round_id"));
-		pstmt.reset(sim_.db_conn->prepareStatement("SELECT s.id, "
-				"user_id, u.first_name, u.last_name, round_id, score "
-			"FROM submissions s, users u "
-			"WHERE s." + column + "=? AND final=1 AND user_id=u.id "
-			"ORDER BY user_id"));
+		pstmt.reset(sim_.db_conn->prepareStatement(admin_view ?
+			concat("SELECT s.id, user_id, u.first_name, u.last_name, round_id, "
+					"score "
+				"FROM submissions s, users u "
+				"WHERE s.", column, "=? AND final=1 AND user_id=u.id "
+				"ORDER BY user_id")
+			: concat("SELECT s.id, user_id, u.first_name, u.last_name, "
+					"round_id, score "
+				"FROM submissions s, users u, rounds r "
+				"WHERE s.", column, "=? AND final=1 AND user_id=u.id "
+					"AND r.id=parent_round_id "
+					"AND (full_results IS NULL OR full_results<=?) "
+				"ORDER BY user_id")));
 		pstmt->setString(1, r_path_->round_id);
+		if (!admin_view)
+			pstmt->setString(2, current_time);
 		res.reset(pstmt->executeQuery());
+
 		// Construct rows
 		vector<RankingRow> rows;
 		string last_user_id;
@@ -1870,6 +1935,7 @@ void Sim::Contest::ranking(bool admin_view) {
 				res->getString(6)
 			});
 		}
+
 		// Sort rows
 		vector<std::reference_wrapper<RankingRow> > sorted_rows;
 		sorted_rows.reserve(rows.size());
@@ -1947,7 +2013,7 @@ void Sim::Contest::ranking(bool admin_view) {
 					binaryFindBy(index_of, &pair<size_t, size_t>::first,
 						strtoull(j.round_id));
 				if (it == index_of.end())
-					throw std::runtime_error("Failed to get index of");
+					throw std::runtime_error("Failed to get index of problem");
 
 				row_points[it->second] = &j;
 			}
