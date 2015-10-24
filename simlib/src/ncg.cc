@@ -93,7 +93,7 @@ void ncg(uint32_t seed) {
 static uint32_t getSeed() noexcept {
   uint32_t seed;
   if (readRandomBytes_nothrow(&seed, sizeof(seed)) == -1)
-    seed = time(nullptr) ^ getpid() + errno;
+    seed = (time(nullptr) * errno) ^ getpid();
 
   return seed;
 }
