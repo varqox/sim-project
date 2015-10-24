@@ -17,8 +17,6 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 				"<link rel=\"stylesheet\" href=\"/kit/styles.css\">\n"
 				"<script src=\"/kit/jquery.js\"></script>\n"
 				"<script src=\"/kit/scripts.js\"></script>\n"
-				"<script>var start_time="
-		<< toString(microtime()/1000) << ", load=-1;</script>\n"
 				"<link rel=\"shortcut icon\" href=\"/kit/img/favicon.png\">\n";
 
 	if (scripts.size())
@@ -33,8 +31,8 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 					"<a href=\"/\" class=\"brand\">SIM</a>\n"
 					"<a href=\"/c/\">Contests</a>\n"
 					"<div class=\"rightbar\">\n"
-						"<span id=\"clock\">" << date("%H:%M:%S")
-							<< " UTC</span>";
+						"<time id=\"clock\">" << date("%H:%M:%S")
+							<< " UTC</time>";
 
 	if (sim_.session->open() == Session::OK)
 		*this << "<div class=\"dropdown\">\n"
@@ -57,4 +55,12 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 	*this << "</div>\n"
 		"</div>\n"
 		"<div class=\"body\">\n";
+}
+
+Sim::Template::~Template() {
+	*this << "</div>\n"
+			"<script>var start_time="
+		<< toString(microtime() / 1000) << ";</script>\n"
+			"</body>\n"
+			"</html>\n";
 }

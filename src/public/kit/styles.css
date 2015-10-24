@@ -758,6 +758,12 @@ a.btn-danger{
 .table tbody tr td:first-child, .table thead tr th:first-child{
 	border-left: none;
 }
+.ranking > tbody > tr:nth-child(3n) {
+	background: #eaeaea;
+}
+.ranking > tbody > tr > td:first-child {
+	text-align: right;
+}
 .ranking > thead > tr:nth-child(2) > th:first-child {
 	border-left: 1px solid #a2a2a2;
 }
