@@ -6,9 +6,11 @@ worldwide. This software is distributed without any warranty.
 
 See <http://creativecommons.org/publicdomain/zero/1.0/>.  */
 
+#include "../include/random.h"
+
 #include <cstring>
 #include <ctime>
-#include <stdint.h>
+#include <unistd.h>
 
 // S - seed, I - increment, t - mask, i - temporary
 static uint32_t S, I, t, i;
@@ -88,5 +90,13 @@ void ncg(uint32_t seed) {
   push(seed);
 }
 
+static uint32_t getSeed() noexcept {
+  uint32_t seed;
+  if (readRandomBytes_nothrow(&seed, sizeof(seed)) == -1)
+    seed = time(nullptr) ^ getpid() + errno;
+
+  return seed;
+}
+
 // Initialise generator on program start up
-static int startup = (ncg(time(nullptr)), 0); // TODO: better seed
+static int startup = (ncg(getSeed()), 0);

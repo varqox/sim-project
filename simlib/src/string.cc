@@ -111,6 +111,14 @@ int strToNum(string& x, const StringView& s, size_t beg, char c) {
 	return end - beg;
 }
 
+bool slowEqual(const char* str1, const char* str2, size_t len) noexcept {
+	char rc = 0;
+	for (size_t i = 0; i < len; ++i)
+		rc |= str1[i] ^ str2[i];
+
+	return rc == 0;
+}
+
 string encodeURI(const StringView& str, size_t beg, size_t end) {
 	// a-z A-Z 0-9 - _ . ~
 	static bool is_safe[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -162,6 +170,17 @@ string tolower(string str) {
 	for (auto& c : str)
 		c = tolower(c);
 	return str;
+}
+
+string toHex(const char* str, size_t len) noexcept(false) {
+	string res(len << 1, '\0');
+	size_t i = -1;
+	for (unsigned char c = *str; len-- > 0; c = *++str) {
+		res[++i] = dectohex2(c >> 4);
+		res[++i] = dectohex2(c & 15);
+	}
+
+	return res;
 }
 
 string htmlSpecialChars(const StringView& s) {

@@ -274,6 +274,17 @@ inline int compareTo(const StringView& str, size_t pos, char c,
 	return compare(str, pos, str.find(c, pos), s);
 }
 
+// Returns true if str1[0...len-1] == str2[0...len-1], false otherwise
+// Comparison always takes O(len) iterations (that is why it is slow);
+// it applies to security
+bool slowEqual(const char* str1, const char* str2, size_t len) noexcept;
+
+inline bool slowEqual(const std::string& str1, const std::string& str2)
+		noexcept {
+	return slowEqual(str1.data(), str2.data(),
+		std::min(str1.size(), str2.size())) && str1.size() == str2.size();
+}
+
 std::string encodeURI(const StringView& str, size_t beg = 0,
 	size_t end = StringView::npos);
 
@@ -287,7 +298,17 @@ inline int hextodec(int c) {
 	return (c >= 'a' ? 10 + c - 'a' : c - '0');
 }
 
-inline char dectohex(int x) { return x > 9 ? 'A' + x - 10 : x + '0'; }
+inline char dectohex(int x) { return x > 9 ? 'A' - 10 + x : x + '0'; }
+
+inline char dectohex2(int x) { return x > 9 ? 'a' - 10 + x : x + '0'; }
+
+// Converts each byte of @p str to two hex digits using dectohex2()
+std::string toHex(const char* str, size_t len) noexcept(false);
+
+// Converts each byte of @p str to two hex digits using dectohex2()
+inline std::string toHex(const std::string& str) noexcept(false) {
+	return toHex(str.data(), str.size());
+}
 
 inline bool isPrefix(const StringView& str, const StringView& prefix) noexcept {
 	try {
