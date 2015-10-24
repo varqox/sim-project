@@ -4,6 +4,7 @@
 #include "sim_user.h"
 
 #include "../simlib/include/logger.h"
+#include "../simlib/include/random.h"
 #include "../simlib/include/sha.h"
 
 #include <cppconn/prepared_statement.h>
@@ -129,13 +130,16 @@ void Sim::User::login() {
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("SELECT id FROM `users` "
-						"WHERE username=? AND password=?"));
+					prepareStatement("SELECT id, salt, password FROM `users` "
+						"WHERE username=?"));
 				pstmt->setString(1, username);
-				pstmt->setString(2, sha256(password));
 
 				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 				if (res->next()) {
+					if (!slowEqual(sha3_512(res->getString(2) + password),
+							res->getString(3)))
+						goto label_invalid;
+
 					// Delete old session
 					if (sim_.session->open() == Session::OK)
 						sim_.session->destroy();
@@ -147,6 +151,10 @@ void Sim::User::login() {
 						return sim_.redirect(sim_.req_->target.substr(6));
 
 					return sim_.redirect("/");
+
+				} else {
+				label_invalid:
+					fv.addError("Invalid username or password");
 				}
 
 			} catch (const std::exception& e) {
@@ -204,16 +212,21 @@ void Sim::User::signUp() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				// TODO: add password salt
+				char salt_bin[32];
+				readRandomBytes(salt_bin, 32);
+				string salt = toHex(salt_bin, 32);
+
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("INSERT IGNORE INTO `users` "
-						"(username, first_name, last_name, email, password) "
-						"VALUES(?, ?, ?, ?, ?)"));
+						"(username, first_name, last_name, email, salt, "
+							"password) "
+						"VALUES(?, ?, ?, ?, ?, ?)"));
 				pstmt->setString(1, username);
 				pstmt->setString(2, first_name);
 				pstmt->setString(3, last_name);
 				pstmt->setString(4, email);
-				pstmt->setString(5, sha256(password1));
+				pstmt->setString(5, salt);
+				pstmt->setString(6, sha3_512(salt + password1));
 
 				if (pstmt->executeUpdate() == 1) {
 					pstmt.reset(sim_.db_conn->prepareStatement(
@@ -221,13 +234,13 @@ void Sim::User::signUp() {
 					pstmt->setString(1, username);
 
 					UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-					if (res->next()) {
+					if (res->next())
 						sim_.session->create(res->getString(1));
-						return sim_.redirect("/");
-					}
 
-				} else
-					fv.addError("Username taken");
+					return sim_.redirect("/");
+				}
+
+				fv.addError("Username taken");
 
 			} catch (const std::exception& e) {
 				error_log("Caught exception: ", __FILE__, ':',
@@ -300,27 +313,31 @@ void Sim::User::changePassword(Data& data) {
 		if (fv.noErrors())
 			try {
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("SELECT password FROM users WHERE id=?"));
+					prepareStatement("SELECT salt, password FROM users "
+						"WHERE id=?"));
 				pstmt->setString(1, data.user_id);
 
 				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
 				if (!res->next())
 					fv.addError("Cannot get user password");
 
-				else if (sha256(old_password) != res->getString(1))
-						fv.addError("Wrong password");
+				else if (!slowEqual(sha3_512(res->getString(1) + old_password),
+						res->getString(2)))
+					fv.addError("Wrong password");
 
 				else {
-					pstmt.reset(sim_.db_conn->prepareStatement(
-						"UPDATE users SET password=? WHERE id=?"));
-					pstmt->setString(1, sha256(password1));
-					pstmt->setString(2, data.user_id);
+					char salt_bin[32];
+					readRandomBytes(salt_bin, 32);
+					string salt = toHex(salt_bin, 32);
 
-					if (pstmt->executeUpdate() == 1 ||
-							old_password == password1)
-						fv.addError("Update successful");
-					else
-						fv.addError("Update failed");
+					pstmt.reset(sim_.db_conn->prepareStatement(
+						"UPDATE users SET salt=?, password=? WHERE id=?"));
+					pstmt->setString(1, salt);
+					pstmt->setString(2, sha3_512(salt + password1));
+					pstmt->setString(3, data.user_id);
+
+					if (pstmt->executeUpdate() == 1)
+						fv.addError("Password changed");
 				}
 
 			} catch (const std::exception& e) {

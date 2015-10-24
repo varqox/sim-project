@@ -23,22 +23,12 @@ addons:
     - clang-3.4
     - mysql-server
     - mysql-client
-    - libboost-dev # Needed for MySQL Connector/C++
+    - libmysqlcppconn-dev
 
 install:
   # Compiler
   - if [ "$CC" = "gcc" ]; then export CC="gcc-4.8"; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
-  # libmysqlcppconn-dev
-  - apt-get --print-uris --yes install libmysqlcppconn-dev | grep ^\' | cut -d\' -f2 > downloads.list
-  - mkdir downloads
-  - (cd downloads && wget --input-file ../downloads.list)
-  - (cd downloads && for i in `ls`; do dpkg -x $i ../deb; done)
-  - export CC="$CC -isystem $PWD/deb/usr/include -L $PWD/deb/usr/lib -Wno-unused-command-line-argument"
-  - export CXX="$CXX -isystem $PWD/deb/usr/include -L $PWD/deb/usr/lib -Wno-unused-command-line-argument"
-  - export LD_LIBRARY_PATH="$PWD/deb/usr/lib"
-  # Clean
-  - rm -rf download downloads.list
 
 before_script:
   - export CC="$CC -Werror"

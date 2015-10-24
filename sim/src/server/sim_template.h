@@ -26,9 +26,5 @@ public:
 		return *this;
 	}
 
-	virtual ~Template() {
-		*this << "</div>\n"
-			"</body>\n"
-			"</html>\n";
-	}
+	virtual ~Template();
 };

@@ -72,11 +72,9 @@ int main() {
 	}
 
 	// Loggers
-	try {
-		stdlog.open("server.log");
-	} catch (const std::exception& e) {
-		error_log("Failed to open 'server.log': ", e.what());
-	}
+	// stdlog like everything writes to stderr
+	if (freopen("server.log", "a", stderr) == NULL)
+		error_log("Failed to open 'server.log'", error(errno));
 
 	try {
 		error_log.open("server_error.log");

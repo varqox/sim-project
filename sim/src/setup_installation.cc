@@ -1,5 +1,6 @@
 #include "include/db.h"
 #include "simlib/include/debug.h"
+#include "simlib/include/random.h"
 #include "simlib/include/sha.h"
 #include "simlib/include/string.h"
 
@@ -36,17 +37,23 @@ int main(int argc, char **argv) {
 				"`first_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
 				"`last_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
 				"`email` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-				"`password` char(64) COLLATE utf8_bin NOT NULL,\n"
+				"`salt` char(64) COLLATE utf8_bin NOT NULL,\n"
+				"`password` char(128) COLLATE utf8_bin NOT NULL,\n"
 				"`type` tinyint(1) unsigned NOT NULL DEFAULT 2,\n"
 				"PRIMARY KEY (`id`),\n"
 				"UNIQUE KEY `username` (`username`)\n"
 			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n");
 
 			// Add default user sim with password sim
+			char salt_bin[32];
+			readRandomBytes(salt_bin, 32);
+			string salt = toHex(salt_bin, 32);
+
 			UniquePtr<sql::PreparedStatement> pstmt(conn->
 				prepareStatement("INSERT IGNORE INTO users "
-					"(username, password, type) VALUES ('sim', ?, 0)"));
-			pstmt->setString(1, sha256("sim"));
+					"(username, salt, password, type) VALUES ('sim', ?, ?, 0)"));
+			pstmt->setString(1, salt);
+			pstmt->setString(2, sha3_512(salt + "sim"));
 			pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {
