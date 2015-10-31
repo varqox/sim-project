@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
 			// Add default user sim with password sim
 			char salt_bin[32];
-			readRandomBytes(salt_bin, 32);
+			fillRandomly(salt_bin, 32);
 			string salt = toHex(salt_bin, 32);
 
 			UniquePtr<sql::PreparedStatement> pstmt(conn->

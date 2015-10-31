@@ -55,12 +55,12 @@ Sim::Session::State Sim::Session::open() {
 static string generate_id() {
 	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"0123456789";
-	const size_t len = strlen(t), SESSION_ID_LENGTH = 10;
+	constexpr size_t len = sizeof(t) - 1;
 
-	string res(SESSION_ID_LENGTH, '0');
-
-	for (size_t i = 0; i < SESSION_ID_LENGTH; ++i)
-		res[i] = t[getRandom(0, len - 1)];
+	// Generate random id of length 10
+	string res(10, '0');
+	for (auto& c : res)
+		c = t[getRandom(0, len - 1)];
 
 	return res;
 }
