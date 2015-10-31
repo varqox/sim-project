@@ -44,6 +44,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"a.cpp",
 		"-o", "exec",
 		"-O2",
+		"-std=c++11",
 		"-static",
 		"-lm",
 		"-m32",
@@ -52,7 +53,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 
 	// TODO: add compilation time limit
 	// Run compiler
-	spawn_opts sopts = { -1, -1, cef };
+	spawn_opts sopts = { -1, cef, cef };
 	int compile_status = spawn(args[0], args, &sopts);
 
 	// Check for errors

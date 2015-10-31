@@ -1,13 +1,13 @@
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/sandbox.h"
+#include "../include/time.h"
 #include "../include/utility.h"
 
 #include <cstddef>
 #include <limits.h>
 #include <sys/ptrace.h>
 #include <sys/resource.h>
-#include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/wait.h>
 
@@ -286,12 +286,12 @@ ExitStat run(const string& exec, vector<string> args,
 	memset(&timer, 0, sizeof(timer));
 
 	timer.it_value.tv_sec = opts->time_limit / 1000000;
-	timer.it_value.tv_usec = opts->time_limit - timer.it_value.tv_sec * 1000000;
+	timer.it_value.tv_usec = opts->time_limit - timer.it_value.tv_sec *
+		1000000LL;
 
 	// Run timer (time limit)
-	struct timeval tbeg, tend;
+	Stopwatch stopwatch;
 	unsigned long long runtime;
-	gettimeofday(&tbeg, nullptr); // Get start time
 	setitimer(ITIMER_REAL, &timer, &old_timer);
 
 	for (;;) {
@@ -300,11 +300,8 @@ ExitStat run(const string& exec, vector<string> args,
 		 exit_normally:
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
-			gettimeofday(&tend, nullptr); // Get finish time
+			runtime = stopwatch.microtime();
 			sigaction(SIGALRM, &sa_old, nullptr);
-
-			runtime = (tend.tv_sec - tbeg.tv_sec) * 1000000LL + tend.tv_usec -
-				tbeg.tv_usec;
 
 			// Kill process if it still exists
 			kill(cpid, SIGKILL);
@@ -342,32 +339,22 @@ ExitStat run(const string& exec, vector<string> args,
 
 		// If syscall is not allowed
 		if (syscall == -1 || func(cpid, syscall, data) != 0) {
-
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
-			gettimeofday(&tend, nullptr); // Get finish time
+			runtime = stopwatch.microtime();
 			sigaction(SIGALRM, &sa_old, nullptr);
 
 			// Kill process if it still exists
 			kill(cpid, SIGKILL);
 			waitpid(cpid, &status, 0);
 
-			runtime = (tend.tv_sec - tbeg.tv_sec) * 1000000LL + tend.tv_usec -
-				tbeg.tv_usec;
-
 			// If time limit exceeded
-			// if (timer.it_value.tv_sec == 0 && timer.it_value.tv_usec == 0)
 			if (runtime >= opts->time_limit)
-				return ExitStat(status, runtime/*opts->time_limit -
-						timer.it_value.tv_sec * 1000000LL -
-						timer.it_value.tv_usec*/);
+				return ExitStat(status, runtime);
 
-			return ExitStat(status, runtime/*opts->time_limit -
-						timer.it_value.tv_sec * 1000000LL -
-						timer.it_value.tv_usec*/,
-					(syscall == -1 ? "failed to get syscall"
-						: concat("forbidden syscall: ",
-							toString<uint>(syscall))));
+			return ExitStat(status, runtime, (syscall == -1
+				? "failed to get syscall" : concat("forbidden syscall: ",
+					toString<uint>(syscall))));
 		}
 
 		// syscall returns
