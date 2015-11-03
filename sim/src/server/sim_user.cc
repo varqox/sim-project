@@ -213,7 +213,7 @@ void Sim::User::signUp() {
 		if (fv.noErrors())
 			try {
 				char salt_bin[32];
-				readRandomBytes(salt_bin, 32);
+				fillRandomly(salt_bin, 32);
 				string salt = toHex(salt_bin, 32);
 
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
@@ -299,6 +299,7 @@ void Sim::User::changePassword(Data& data) {
 	if (data.view_type == Data::READ_ONLY)
 		return sim_.error403();
 
+	// TODO: admins can change others passwords
 	FormValidator fv(sim_.req_->form_data);
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
@@ -327,7 +328,7 @@ void Sim::User::changePassword(Data& data) {
 
 				else {
 					char salt_bin[32];
-					readRandomBytes(salt_bin, 32);
+					fillRandomly(salt_bin, 32);
 					string salt = toHex(salt_bin, 32);
 
 					pstmt.reset(sim_.db_conn->prepareStatement(
