@@ -191,32 +191,45 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 		*this <<  "<a href=\"/c/add\">Add contest</a>\n"
 			"<span>CONTEST ADMINISTRATION</span>\n";
 
-		if (sim_contest.r_path_->type == CONTEST)
-			*this << "<a href=\"/c/" << round_id << "/add\">Add round</a>\n"
-				"<a href=\"/c/" << round_id << "/edit\">Edit contest</a>\n";
+		// Adding
+		if (sim_contest.r_path_->type >= CONTEST)
+			*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+					<< "/add\">Add round</a>\n";
+		if (sim_contest.r_path_->type >= ROUND)
+			*this << "<a href=\"/c/" << sim_contest.r_path_->round->id
+					<< "/add\">Add problem</a>\n";
 
-		else if (sim_contest.r_path_->type == ROUND)
-			*this << "<a href=\"/c/" << round_id << "/add\">Add problem</a>\n"
-				"<a href=\"/c/" << round_id << "/edit\">Edit round</a>\n";
+		// Editing
+		if (sim_contest.r_path_->type >= CONTEST)
+			*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+				<< "/edit\">Edit contest</a>\n";
+		if (sim_contest.r_path_->type >= ROUND)
+			*this << "<a href=\"/c/" << sim_contest.r_path_->round->id
+				<< "/edit\">Edit round</a>\n";
+		if (sim_contest.r_path_->type == PROBLEM)
+			*this << "<a href=\"/c/" << round_id
+				<< "/edit\">Edit problem</a>\n";
 
-		else // sim_contest.r_path_.type == PROBLEM
-			*this << "<a href=\"/c/" << round_id << "/edit\">Edit problem</a>"
-				"\n";
-
-		*this << "<a href=\"/c/" << round_id << "\">Dashboard</a>\n"
-				"<a href=\"/c/" << round_id << "/problems\">Problems</a>\n"
+		*this << "<hr/>"
+				"<a href=\"/c/" << sim_contest.r_path_->contest->id
+					<< "\">Contest dashboard</a>\n"
+				"<a href=\"/c/" << sim_contest.r_path_->contest->id
+					<< "/problems\">Problems</a>\n"
 				"<a href=\"/c/" << round_id << "/submit\">Submit a solution</a>"
 					"\n"
-				"<a href=\"/c/" << round_id << "/submissions\">Submissions</a>"
-					"\n"
-				"<a href=\"/c/" << round_id << "/ranking\">Ranking</a>\n"
+				"<a href=\"/c/" << sim_contest.r_path_->contest->id
+					<< "/submissions\">Submissions</a>\n"
+				"<a href=\"/c/" << round_id
+					<< "/submissions\">Local submissions</a>\n"
+				"<a href=\"/c/" << sim_contest.r_path_->contest->id
+					<< "/ranking\">Ranking</a>\n"
 				"<span>OBSERVER MENU</span>\n";
 	}
 
-	*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
-				<< "\">Dashboard</a>\n"
-			"<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
-				<< "/problems\">Problems</a>\n";
+	*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+			<< (admin_access ? "/n" : "") << "\">Contest dashboard</a>\n"
+		"<a href=\"/c/" << sim_contest.r_path_->contest->id
+			<< (admin_access ? "/n" : "") << "/problems\">Problems</a>\n";
 
 	string current_date = date("%Y-%m-%d %H:%M:%S");
 	if (sim_contest.r_path_->type == CONTEST || (
@@ -225,29 +238,33 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 		*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
 			<< "/submit\">Submit a solution</a>\n";
 
+	*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+		<< (admin_access ? "/n" : "") << "/submissions\">Submissions</a>\n";
+
 	*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
-		<< "/submissions\">Submissions</a>\n";
+		<< "/submissions\">Local submissions</a>\n";
 
 	if (sim_contest.r_path_->contest->show_ranking)
-		*this << "<a href=\"/c/" << round_id << (admin_access ? "/n" : "")
-			<< "/ranking\">Ranking</a>\n";
+		*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+			<< (admin_access ? "/n" : "") << "/ranking\">Ranking</a>\n";
 
 	*this << "</ul>";
 }
 
 void Sim::Contest::TemplateWithMenu::printRoundPath(const RoundPath& r_path,
-		const string& page) {
-	*this << "<div class=\"round-path\"><a href=\"/c/" << r_path.contest->id <<
-		"/" << page << "\">" << htmlSpecialChars(r_path.contest->name)
-		<< "</a>";
+		const string& page, bool force_normal) {
+	*this << "<div class=\"round-path\"><a href=\"/c/" << r_path.contest->id
+		<< (force_normal ? "/n/" : "/") << page << "\">"
+		<< htmlSpecialChars(r_path.contest->name) << "</a>";
 
 	if (r_path.type != CONTEST) {
-		*this << " -> <a href=\"/c/" << r_path.round->id << "/" << page << "\">"
+		*this << " -> <a href=\"/c/" << r_path.round->id
+			<< (force_normal ? "/n/" : "/") << page << "\">"
 			<< htmlSpecialChars(r_path.round->name) << "</a>";
 
 		if (r_path.type == PROBLEM)
-			*this << " -> <a href=\"/c/" << r_path.problem->id << "/" << page
-				<< "\">"
+			*this << " -> <a href=\"/c/" << r_path.problem->id
+				<< (force_normal ? "/n/" : "/") << page << "\">"
 				<< htmlSpecialChars(r_path.problem->name) << "</a>";
 	}
 
