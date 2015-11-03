@@ -62,7 +62,6 @@ static void* worker(void*) {
 
 int main() {
 	// Init server
-	srand(time(nullptr));
 	// Change directory to process executable directory
 	string cwd;
 	try {

@@ -21,7 +21,11 @@ private:
 		std::string id, parent, name;
 	};
 
-	enum RoundType { CONTEST, ROUND, PROBLEM };
+	enum RoundType {
+		CONTEST = 0,
+		ROUND = 1,
+		PROBLEM = 2
+	};
 
 	class RoundPath {
 	private:
@@ -87,7 +91,7 @@ private:
 
 	void ranking(bool admin_view);
 
-	// Utility (sim_contest_utility.cc)
+	// Contest utilities (sim_contest_utility.cc)
 	class TemplateWithMenu;
 
 	static std::string submissionStatus(const std::string& status);
