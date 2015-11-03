@@ -1659,7 +1659,7 @@ void Sim::Contest::submissions(bool admin_view) {
 
 	TemplateWithMenu templ(*this, "Submissions");
 	templ << "<h1>Submissions</h1>";
-	templ.printRoundPath(*r_path_, "submissions");
+	templ.printRoundPath(*r_path_, "submissions", !admin_view);
 
 	templ << "<h3>Submission queue size: ";
 	try {
@@ -1787,7 +1787,7 @@ void Sim::Contest::ranking(bool admin_view) {
 
 	TemplateWithMenu templ(*this, "Ranking");
 	templ << "<h1>Ranking</h1>";
-	templ.printRoundPath(*r_path_, "ranking");
+	templ.printRoundPath(*r_path_, "ranking", !admin_view);
 
 	struct RankingProblem {
 		unsigned long long id;
@@ -1971,7 +1971,8 @@ void Sim::Contest::ranking(bool admin_view) {
 			if (i.problems.size() > 1)
 				templ << " colspan=\"" << toString(i.problems.size())
 					<< "\"";
-			templ << "><a href=\"/c/" << i.id << "\">"
+			templ << "><a href=\"/c/" << i.id
+				<< (admin_view ? "/ranking\">" : "/n/ranking\">")
 				<< htmlSpecialChars(i.name) << "</a></th>\n";
 		}
 		// Problems
@@ -1981,8 +1982,8 @@ void Sim::Contest::ranking(bool admin_view) {
 		for (auto& i : rounds)
 			for (auto& j : i.problems)
 				templ << "<th><a href=\"/c/" << toString(j.id)
-					<< "/statement\">" << htmlSpecialChars(j.tag)
-					<< "</a></th>";
+					<< (admin_view ? "/ranking\">" : "/n/ranking\">")
+					<< htmlSpecialChars(j.tag) << "</a></th>";
 		templ << "</tr>\n"
 			"</thead>\n"
 			"<tbody>\n";
