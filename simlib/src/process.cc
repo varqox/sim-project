@@ -14,7 +14,8 @@ const spawn_opts default_spawn_opts = {
 	STDERR_FILENO
 };
 
-int spawn(const char* exec, const char* args[], const struct spawn_opts *opts) {
+int spawn(const char* exec, const char* args[], const struct spawn_opts *opts,
+		const char* working_dir) {
 	pid_t cpid = fork();
 	if (cpid == -1) {
 		// TODO: Maybe throw an exception
@@ -23,6 +24,13 @@ int spawn(const char* exec, const char* args[], const struct spawn_opts *opts) {
 		return -1;
 
 	} else if (cpid == 0) {
+		// Change working directory
+		if (working_dir != nullptr && working_dir[0] != '\0' &&
+			strcmp(working_dir, ".") != 0 && strcmp(working_dir, "./") != 0) {
+			if (chdir(working_dir) == -1)
+				_exit(-1);
+		}
+
 		// Change stdin
 		if (opts->new_stdin_fd < 0)
 			sclose(STDIN_FILENO);
@@ -60,7 +68,7 @@ int spawn(const char* exec, const char* args[], const struct spawn_opts *opts) {
 };
 
 int spawn(const string& exec, const vector<string>& args,
-		const struct spawn_opts *opts) {
+		const struct spawn_opts *opts, const string& working_dir) {
 	// Convert args
 	const size_t len = args.size();
 	const char *argv[len + 1];
@@ -69,11 +77,11 @@ int spawn(const string& exec, const vector<string>& args,
 	for (size_t i = 0; i < len; ++i)
 		argv[i] = args[i].c_str();
 
-	return spawn(exec.c_str(), argv, opts);
+	return spawn(exec.c_str(), argv, opts, working_dir.c_str());
 }
 
 int spawn(const string& exec, size_t argc, string *args,
-		const struct spawn_opts *opts) {
+		const struct spawn_opts *opts, const string& working_dir) {
 	// Convert args
 	const size_t len = argc;
 	const char *argv[len + 1];
@@ -82,7 +90,7 @@ int spawn(const string& exec, size_t argc, string *args,
 	for (size_t i = 0; i < len; ++i)
 		argv[i] = args[i].c_str();
 
-	return spawn(exec.c_str(), argv, opts);
+	return spawn(exec.c_str(), argv, opts, working_dir.c_str());
 }
 
 std::string getCWD() {

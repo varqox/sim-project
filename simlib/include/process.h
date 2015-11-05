@@ -22,11 +22,14 @@ extern const spawn_opts default_spawn_opts; /* = {
  * @param args arguments (last has to be NULL)
  * @param sopt spawn options - defines what to change stdin, stdout and
  * stderr to (negative field closes the stream)
+ * @param working_dir directory at which exec will be run, nullptr - do not
+ * change
  *
  * @return exit code on success, -1 on error
  */
 int spawn(const char* exec, const char* args[],
-	const struct spawn_opts *opts = &default_spawn_opts);
+	const struct spawn_opts *opts = &default_spawn_opts,
+	const char* working_dir = nullptr);
 
 /**
  * @brief Runs exec using execvp(3) with arguments @p args
@@ -35,12 +38,14 @@ int spawn(const char* exec, const char* args[],
  * @param args arguments (last has to be NULL)
  * @param sopt spawn options - defines what to change stdin, stdout and
  * stderr to (negative field closes the stream)
+ * @param working_dir directory at which exec will be run
  *
  * @return exit code on success, -1 on error
  */
 inline int spawn(const std::string& exec, const char* args[],
-		const struct spawn_opts *opts = &default_spawn_opts) {
-	return spawn(exec.c_str(), args, opts);
+		const struct spawn_opts *opts = &default_spawn_opts,
+		const std::string& working_dir = ".") {
+	return spawn(exec.c_str(), args, opts, working_dir);
 }
 
 /**
@@ -50,11 +55,13 @@ inline int spawn(const std::string& exec, const char* args[],
  * @param args arguments
  * @param sopt spawn options - defines what to change stdin, stdout and
  * stderr to (negative field closes the stream)
+ * @param working_dir directory at which exec will be run
  *
  * @return exit code on success, -1 on error
  */
 int spawn(const std::string& exec, const std::vector<std::string>& args,
-	const struct spawn_opts *opts = &default_spawn_opts);
+	const struct spawn_opts *opts = &default_spawn_opts,
+	const std::string& working_dir = ".");
 
 /**
  * @brief Runs exec using execvp(3) with arguments @p args
@@ -64,11 +71,13 @@ int spawn(const std::string& exec, const std::vector<std::string>& args,
  * @param args arguments
  * @param sopt spawn options - defines what to change stdin, stdout and
  * stderr to (negative field closes the stream)
+ * @param working_dir directory at which exec will be run
  *
  * @return exit code on success, -1 on error
  */
 int spawn(const std::string& exec, size_t argc, std::string *args,
-	const struct spawn_opts *opts = &default_spawn_opts);
+	const struct spawn_opts *opts = &default_spawn_opts,
+	const std::string& working_dir = ".");
 
 /**
  * @brief Get current working directory
@@ -116,4 +125,4 @@ std::vector<pid_t> findProcessesByExec(std::string exec,
  * @errors Exceptions from getExec() or if chdir(2) fails then
  * std::runtime_error will be thrown
  */
-std::string chdirToExecDir() noexcept(false);;
+std::string chdirToExecDir() noexcept(false);

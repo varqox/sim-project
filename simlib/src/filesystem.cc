@@ -527,7 +527,7 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 	return res;
 }
 
-size_t putFileContents(const char* file, const char* data, size_t len) {
+ssize_t putFileContents(const char* file, const char* data, size_t len) {
 	FILE *f = fopen(file, "w");
 	if (f == nullptr)
 		return -1;

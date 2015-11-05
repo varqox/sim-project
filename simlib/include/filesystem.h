@@ -441,7 +441,7 @@ inline std::vector<std::string> getFileByLines(const std::string& file,
  *
  * @return bytes written on success, -1 on error
  */
-size_t putFileContents(const char* file, const char* data, size_t len = -1);
+ssize_t putFileContents(const char* file, const char* data, size_t len = -1);
 
 /**
  * @brief Writes @p data to file @p file
@@ -452,7 +452,8 @@ size_t putFileContents(const char* file, const char* data, size_t len = -1);
  *
  * @return bytes written on success, -1 on error
  */
-inline size_t putFileContents(const std::string& file, const std::string& data) {
+inline ssize_t putFileContents(const std::string& file,
+		const std::string& data) {
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
 
@@ -504,14 +505,17 @@ class RemoverBase {
 	RemoverBase& operator=(const RemoverBase&&) = delete;
 
 public:
-	explicit RemoverBase(const char* str) : RemoverBase(str, strlen(str)) {}
+	explicit RemoverBase(const char* str) : RemoverBase(str, str == nullptr
+		? 0 : strlen(str)) {}
 
 	explicit RemoverBase(const std::string& str)
 		: RemoverBase(str.data(), str.size()) {}
 
 	RemoverBase(const char* str, size_t len) : name(nullptr) {
-		name.reset(new char[len + 1]);
-		strncpy(name.get(), str, len + 1);
+		if (str != nullptr) {
+			name.reset(new char[len + 1]);
+			strncpy(name.get(), str, len + 1);
+		}
 	}
 
 	~RemoverBase() {
