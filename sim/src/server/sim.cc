@@ -122,8 +122,8 @@ void Sim::getStaticFile() {
 		}
 	}
 
-	resp_.content = file;
 	resp_.content_type = server::HttpResponse::FILE;
+	resp_.content = file;
 }
 
 void Sim::redirect(const string& location) {

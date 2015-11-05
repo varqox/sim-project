@@ -696,6 +696,9 @@ void Connection::sendResponse(const HttpResponse& res) {
 		break;
 
 	case HttpResponse::FILE:
+	case HttpResponse::FILE_TO_REMOVE:
+		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
+			? res.content.c_str() : nullptr);
 		int fd = open(res.content.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {
 			error404();
