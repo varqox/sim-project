@@ -27,7 +27,7 @@ window.onload = function updateClock()
 	setTimeout(function(){ updateClock() }, 200);
 }
 $(document).ready(function(){
-	$('.dropdown > a').click(function(event){
+	$('.dropdown > .dropdown-toggle').click(function(event){
 		event.preventDefault();
 		if($(this).parent().is('.open'))
 			$(this).parent().removeClass('open');
@@ -38,7 +38,7 @@ $(document).ready(function(){
 		}
 	});
 	$(document).click(function(event){
-		if(!$(event.target).is('.open > a.user, .open > a.user *'))
+		if(!$(event.target).is('.dropdown-toggle, .dropdown-toggle *'))
 			$('.dropdown.open').removeClass('open');
 	});
 });

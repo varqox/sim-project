@@ -419,7 +419,7 @@ int main(int argc, char **argv) {
 	if (config_conf.checker.empty()) {
 		config_conf.checker = "checker.c";
 		if (putFileContents((out_package + "check/checker.c").c_str(),
-				(const char*)default_checker_c,default_checker_c_len) == size_t(-1)) {
+				(const char*)default_checker_c,default_checker_c_len) == -1) {
 			eprintf("Error: putFileContents()\n");
 			return -1;
 		}
@@ -432,8 +432,8 @@ int main(int argc, char **argv) {
 		return 8;
 
 	// Write config
-	if (putFileContents(out_package + "config.conf",
-			config_conf.dump()) == size_t(-1)) {
+	if (putFileContents(concat(out_package, "config.conf"), config_conf.dump())
+			== -1) {
 		eprintf("Error: putFileContents()\n");
 		return -1;
 	}
@@ -456,7 +456,7 @@ int main(int argc, char **argv) {
 
 	// 7zip
 	else if (extension == "7z")
-		append(args)("7z")("a")("-y")("-mx9")(DEST_NAME)
+		append(args)("7z")("a")("-y")("-m0=lzma2")(DEST_NAME)
 			(out_package);
 
 	// tar.gz

@@ -440,7 +440,7 @@ th {
  * Major styles
 */
 .btn{
-	height: 30px;
+	min-height: 30px;
 	padding: 4px 11px;
 	margin: 2px;
 	/*line-height: 16px;*/
@@ -478,6 +478,7 @@ th {
 	display: inline-block;
 	height: 26px;
 	padding: 2px 10px;
+	cursor: pointer;
 	color: #000000;
 	text-decoration: none;
 	background-color: #f5f5f5;
@@ -487,6 +488,7 @@ th {
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 	outline: none;
+	white-space: nowrap;
 }
 .btn-small:hover,
 .btn-small:focus{
@@ -500,7 +502,7 @@ th {
 	background-image: linear-gradient(to bottom, #cccccc, #e6e6e6);
 }
 .btn-danger{
-	height: 30px;
+	min-height: 30px;
 	padding: 4px 11px;
 	margin: 2px;
 	color: #ffffff;
@@ -608,6 +610,59 @@ a.btn-danger{
 .pos-center{
 	text-align: center;
 }
+.dropdown{
+	position: relative;
+}
+.dropdown > ul{
+	display: none;
+}
+.dropdown > .dropdown-toggle{
+	cursor: pointer;
+	white-space: nowrap;
+}
+.dropdown > .dropdown-toggle .caret{
+	display: inline-block;
+	width: 0;
+	height: 0;
+	vertical-align: middle;
+	margin-left: 3px;
+	border-top: 4px dashed;
+	border-right: 4px solid transparent;
+	border-left: 4px solid transparent;
+}
+.dropdown.open > ul{
+	position: absolute;
+	display: block !important;
+	min-width: 100%;
+	padding: 0;
+	margin: 5px 0 0 0;
+	list-style: none;
+	background: #ffffff;
+	border: 1px solid #cccccc;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+	box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+.dropdown.open > ul > a{
+	display: flex;
+	padding: 2px 30px 2px 25px;
+	margin: -1px;
+	color: #999999;
+	text-decoration: none;
+	border: 1px solid rgba(0, 0, 0, 0);
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+	white-space: nowrap;
+}
+.dropdown.open > ul > a:hover,
+.dropdown.open > ul > a:focus{
+	color: #999999;
+	background: rgba(82, 168, 236, 0.2);
+	border: 1px solid #cccccc;
+	border-color: #51a7e8;
+}
 
 /* Navigation bar */
 .navbar{
@@ -654,57 +709,21 @@ a.btn-danger{
 	padding: 10px;
 	color: #999999;
 }
-.navbar .dropdown > ul{
-	display: none;
-}
 .navbar .user{
 	padding: 10px 15px !important;
 	cursor: pointer;
 }
-.navbar .caret{
-	display: inline-block;
-	margin: 9px 0 0 6px;
-	vertical-align: top;
-	border-top: 4px solid #999999;
-	border-right: 4px solid transparent;
-	border-left: 4px solid transparent;
+.navbar .user > .caret{
+	margin-left: 5px;
 }
-.navbar .open > ul{
-	position: absolute;
+.navbar .dropdown.open > ul{
 	right: 0;
-	display: block !important;
-	padding: 0;
-	margin: 45px 20px 0 0;
-	list-style: none;
-	background: #ffffff;
-	border: 1px solid #cccccc;
-	-webkit-border-radius: 10px;
-	-moz-border-radius: 10px;
-	border-radius: 10px;
-	box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+	margin: 45px 5px 0 0;
 }
-.navbar .open > ul > a{
-	display: flex;
-	padding: 2px 30px 2px 25px;
-	margin: -1px;
-	color: #999999;
-	text-decoration: none;
-	border: 1px solid rgba(0, 0, 0, 0);
-	-webkit-border-radius: 10px;
-	-moz-border-radius: 10px;
-	border-radius: 10px;
-}
-.navbar .open > ul > a:hover,
-.navbar .open > ul > a:focus{
-	color: #999999;
-	background: rgba(82, 168, 236, 0.2);
-	border: 1px solid #cccccc;
-	border-color: #51a7e8;
-}
-.navbar .open .user{
+.navbar .dropdown.open .user{
 	color: #ffffff;
 }
-.navbar .open .caret,
+.navbar .dropdown.open .caret,
 .navbar .user:hover > .caret,
 .navbar .user:focus > .caret{
 	border-top-color: #ffffff;
