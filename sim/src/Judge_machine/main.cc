@@ -40,8 +40,8 @@ static void processSubmissionQueue() {
 				JudgeResult jres = judge(submission_id, problem_id);
 
 				// Update submission
-				if (putFileContents("submissions/" + submission_id,
-						jres.content) == size_t(-1))
+				if (putFileContents(concat("submissions/", submission_id),
+						jres.content) == -1)
 					throw std::runtime_error("putFileContents(): -1");
 
 				// Update final
