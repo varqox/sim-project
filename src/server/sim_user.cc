@@ -299,7 +299,7 @@ void Sim::User::changePassword(Data& data) {
 	if (data.view_type == Data::READ_ONLY)
 		return sim_.error403();
 
-	// TODO: admins can change others passwords
+	// TODO: allow admins to change other's passwords
 	FormValidator fv(sim_.req_->form_data);
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields

@@ -36,7 +36,7 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 
 	if (sim_.session->open() == Session::OK)
 		*this << "<div class=\"dropdown\">\n"
-				"<a class=\"user\"><strong>"
+				"<a class=\"user dropdown-toggle\"><strong>"
 			<< htmlSpecialChars(sim_.session->username) << "</strong>"
 				"<b class=\"caret\"></b></a>\n"
 				"<ul>\n"

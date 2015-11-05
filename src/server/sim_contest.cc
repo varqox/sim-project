@@ -451,7 +451,7 @@ void Sim::Contest::addProblem() {
 
 				// Construct Conver arguments
 				vector<string> args(1, "./conver");
-				append(args)(new_package_file)("-o")(package_tmp_dir)("-q");
+				append(args)(new_package_file)("-o")(package_tmp_dir);
 
 				if (force_auto_limit)
 					args.push_back("-fal");
@@ -885,6 +885,95 @@ void Sim::Contest::editProblem() {
 		return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
 	}
 
+	// Download
+	while (0 == compareTo(sim_.req_->target, arg_beg, '/', "download")) {
+		arg_beg += 9;
+
+		constexpr unsigned char empty_zip_file[] = {
+			0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+		};
+		constexpr unsigned char empty_7z_file[] = {
+			0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c, 0x00, 0x03, 0x8d, 0x9b, 0xd5,
+			0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+		};
+
+		const char* _zip = ".zip";
+		const char* _7z = ".7z";
+		const char* _tgz = ".tar.gz";
+		const char* extension;
+		// Get extension
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "zip"))
+			extension = _zip;
+		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "7z"))
+			extension = _7z;
+		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "tgz"))
+			extension = _tgz;
+		else
+			break;
+
+		// Create temporary file
+		char tmp_file[] = "/tmp/sim-problem.XXXXXX";
+		umask(077); // Only owner can access this temporary file
+		if (mkstemp(tmp_file) == -1)
+			throw std::runtime_error(concat("Error: mkstemp()", error(errno)));
+
+		FileRemover remover(tmp_file);
+		vector<string> args;
+		// zip
+		if (extension == _zip) {
+			append(args)("zip")("-rq")(tmp_file)(r_path_->problem->problem_id);
+			if (putFileContents(tmp_file, (const char*)empty_zip_file,
+					sizeof(empty_zip_file)) == -1)
+				throw std::runtime_error(concat("Error: putFileContents()",
+					error(errno)));
+
+		// 7zip
+		} else if (extension == _7z) {
+			append(args)("7z")("a")("-y")("-m0=lzma2")(tmp_file)
+				(r_path_->problem->problem_id);
+			if (putFileContents(tmp_file, (const char*)empty_7z_file,
+					sizeof(empty_7z_file)) == -1)
+				throw std::runtime_error(concat("Error: putFileContents()",
+					error(errno)));
+
+		// tar.gz
+		} else // extension == tgz
+			append(args)("tar")("czf")(tmp_file)(r_path_->problem->problem_id);
+
+		// Compress package
+		// TODO: add time limit
+		// TODO: better error handling
+		spawn_opts opts = { -1, STDERR_FILENO, STDERR_FILENO };
+		int exit_code = spawn(args[0], args, &opts, "problems");
+		if (exit_code != 0) {
+			auto message = error_log("Error: ", args[0], " ");
+
+			if (exit_code == -1)
+				message("Failed to execute");
+			else if (WIFSIGNALED(exit_code))
+				message("killed by signal ", toString(WTERMSIG(exit_code)),
+					" - ", strsignal(WTERMSIG(exit_code)));
+			else if (WIFSTOPPED(exit_code))
+				message("killed by signal ", toString(WSTOPSIG(exit_code)),
+					" - ", strsignal(WSTOPSIG(exit_code)));
+			else
+				message("returned ", toString(WIFEXITED(exit_code) ?
+					WEXITSTATUS(exit_code) : exit_code));
+
+			return sim_.error500();
+		}
+
+		sim_.resp_.content_type = server::HttpResponse::FILE_TO_REMOVE;
+		sim_.resp_.headers["Content-Disposition"] =
+			concat("attchment; filename=", r_path_->problem->problem_id,
+				extension);
+		sim_.resp_.content = tmp_file;
+		remover.cancel();
+		return;
+	}
+
 	FormValidator fv(sim_.req_->form_data);
 	string round_name, name, tag, memory_limit;
 
@@ -911,8 +1000,10 @@ void Sim::Contest::editProblem() {
 				pconfig.tag = tag;
 				pconfig.memory_limit = strtoull(memory_limit);
 
-				if (putFileContents("problems/" + r_path_->problem->problem_id
-						+ "/config.conf", pconfig.dump()) == size_t(-1))
+				if (putFileContents(
+						concat("problems/", r_path_->problem->problem_id,
+							"/config.conf"),
+						pconfig.dump()) == -1)
 					throw std::runtime_error("Failed to update problem " +
 						r_path_->problem->problem_id + " config");
 
@@ -958,7 +1049,18 @@ void Sim::Contest::editProblem() {
 			"<a class=\"btn-small\" href=\""
 				<< sim_.req_->target.substr(0, arg_beg - 1)
 				<< "/rejudge\">Rejudge all submissions</a>\n"
-			// TODO: add package download
+			"<div class=\"dropdown\" style=\"margin-left:5px\">"
+				"<a class=\"btn-small dropdown-toggle\">"
+					"Download package as<span class=\"caret\"></span></a>"
+				"<ul>"
+					"<a href=\"" << sim_.req_->target.substr(0, arg_beg - 1)
+						<< "/download/zip\">.zip</a>"
+					"<a href=\"" << sim_.req_->target.substr(0, arg_beg - 1)
+						<< "/download/tgz\">.tar.gz</a>"
+					"<a href=\"" << sim_.req_->target.substr(0, arg_beg - 1)
+						<< "/download/7z\">.7z</a>"
+				"</ul>"
+			"</div>\n"
 		"</div>\n"
 		"<div class=\"form-container\">\n"
 			"<h1>Edit problem</h1>\n"
@@ -1532,10 +1634,10 @@ void Sim::Contest::submission() {
 		// Download solution
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "download")) {
 			sim_.resp_.headers["Content-type"] = "application/text";
-			sim_.resp_.headers["Content-Disposition"] = "attchment; filename=" +
-				submission_id + ".cpp";
+			sim_.resp_.headers["Content-Disposition"] =
+				concat("attchment; filename=", submission_id, ".cpp");
 
-			sim_.resp_.content = "solutions/" + submission_id + ".cpp";
+			sim_.resp_.content = concat("solutions/", submission_id, ".cpp");
 			sim_.resp_.content_type = server::HttpResponse::FILE;
 
 			return;
@@ -1561,7 +1663,25 @@ void Sim::Contest::submission() {
 			Closer closer(sopt.new_stdout_fd);
 
 			// Run CTH
-			spawn(args[0], args, &sopt);
+			int exit_code = spawn(args[0], args, &sopt);
+			if (exit_code != 0) {
+				auto message = error_log("Error: ", args[0], " ");
+
+				if (exit_code == -1)
+					message("Failed to execute");
+				else if (WIFSIGNALED(exit_code))
+					message("killed by signal ", toString(WTERMSIG(exit_code)),
+						" - ", strsignal(WTERMSIG(exit_code)));
+				else if (WIFSTOPPED(exit_code))
+					message("killed by signal ", toString(WSTOPSIG(exit_code)),
+						" - ", strsignal(WSTOPSIG(exit_code)));
+				else
+					message("returned ", toString(WIFEXITED(exit_code) ?
+						WEXITSTATUS(exit_code) : exit_code));
+
+				return sim_.error500();
+			}
+
 			// Print source code
 			lseek(sopt.new_stdout_fd, 0, SEEK_SET);
 			templ << getFileContents(sopt.new_stdout_fd);
