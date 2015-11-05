@@ -915,6 +915,7 @@ void Sim::Contest::editProblem() {
 
 		// Create temporary file
 		char tmp_file[] = "/tmp/sim-problem.XXXXXX";
+		umask(077); // Only owner can access this temporary file
 		if (mkstemp(tmp_file) == -1)
 			throw std::runtime_error(concat("Error: mkstemp()", error(errno)));
 
@@ -1662,7 +1663,25 @@ void Sim::Contest::submission() {
 			Closer closer(sopt.new_stdout_fd);
 
 			// Run CTH
-			spawn(args[0], args, &sopt);
+			int exit_code = spawn(args[0], args, &sopt);
+			if (exit_code != 0) {
+				auto message = error_log("Error: ", args[0], " ");
+
+				if (exit_code == -1)
+					message("Failed to execute");
+				else if (WIFSIGNALED(exit_code))
+					message("killed by signal ", toString(WTERMSIG(exit_code)),
+						" - ", strsignal(WTERMSIG(exit_code)));
+				else if (WIFSTOPPED(exit_code))
+					message("killed by signal ", toString(WSTOPSIG(exit_code)),
+						" - ", strsignal(WSTOPSIG(exit_code)));
+				else
+					message("returned ", toString(WIFEXITED(exit_code) ?
+						WEXITSTATUS(exit_code) : exit_code));
+
+				return sim_.error500();
+			}
+
 			// Print source code
 			lseek(sopt.new_stdout_fd, 0, SEEK_SET);
 			templ << getFileContents(sopt.new_stdout_fd);
