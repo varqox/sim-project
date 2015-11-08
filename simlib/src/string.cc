@@ -222,10 +222,10 @@ bool isInteger(const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end)
-		return false; // empty string is not integer
+		return false; // empty string is not a number
 
 	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
-			return false; // sign is not integer
+			return false; // sign is not a number
 
 	for (; beg < end; ++beg)
 		if (!isdigit(s[beg]))
@@ -253,8 +253,8 @@ bool isReal(const StringView& s, size_t beg, size_t end) {
 	if (beg >= end || s[beg] == '.')
 		return false;
 
-	if (s[beg] == '-' || s[beg] == '+')
-		++beg;
+	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
+			return false; // sign is not a number
 
 	bool dot = false;
 	for (; beg < end; ++beg)

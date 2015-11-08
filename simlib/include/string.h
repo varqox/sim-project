@@ -397,13 +397,10 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 		return isInteger(s, beg, end) ? end - beg : -1;
 
 	*x = 0;
-	bool minus = false;
-	if (s[beg] == '+')
-		++beg;
-	else if (s[beg] == '-') {
-		minus = true;
-		++beg;
-	}
+	bool minus = (s[beg] == '-');
+	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
+			return -1; // sign is not a number
+
 	for (size_t i = beg; i < end; ++i) {
 		if (isdigit(s[i]))
 			*x = *x * 10 + s[i] - '0';
@@ -431,8 +428,8 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 		return s[beg] != '-' && isInteger(s, beg, end) ? end - beg : -1;
 
 	*x = 0;
-	if (s[beg] == '+')
-		++beg;
+	if (s[beg] == '+' && ++beg == end)
+		return -1; // sign is not a number
 
 	for (size_t i = beg; i < end; ++i) {
 		if (isdigit(s[i]))
