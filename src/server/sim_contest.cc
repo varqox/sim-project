@@ -916,9 +916,11 @@ void Sim::Contest::editProblem() {
 		// Create temporary file
 		char tmp_file[] = "/tmp/sim-problem.XXXXXX";
 		umask(077); // Only owner can access this temporary file
-		if (mkstemp(tmp_file) == -1)
+		int fd = mkstemp(tmp_file);
+		if (fd == -1)
 			throw std::runtime_error(concat("Error: mkstemp()", error(errno)));
 
+		sclose(fd);
 		FileRemover remover(tmp_file);
 		vector<string> args;
 		// zip
@@ -967,7 +969,7 @@ void Sim::Contest::editProblem() {
 
 		sim_.resp_.content_type = server::HttpResponse::FILE_TO_REMOVE;
 		sim_.resp_.headers["Content-Disposition"] =
-			concat("attchment; filename=", r_path_->problem->problem_id,
+			concat("attachment; filename=", r_path_->problem->problem_id,
 				extension);
 		sim_.resp_.content = tmp_file;
 		remover.cancel();
@@ -1635,7 +1637,7 @@ void Sim::Contest::submission() {
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "download")) {
 			sim_.resp_.headers["Content-type"] = "application/text";
 			sim_.resp_.headers["Content-Disposition"] =
-				concat("attchment; filename=", submission_id, ".cpp");
+				concat("attachment; filename=", submission_id, ".cpp");
 
 			sim_.resp_.content = concat("solutions/", submission_id, ".cpp");
 			sim_.resp_.content_type = server::HttpResponse::FILE;
