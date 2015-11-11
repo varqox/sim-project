@@ -7,16 +7,24 @@
 using std::string;
 using std::vector;
 
-int getUnlinkedTmpFile(const string& templ) {
-	char name[templ.size() + 1];
-	strcpy(name, templ.c_str());
+int getUnlinkedTmpFile(int flags) noexcept {
+	int fd;
+#ifdef O_TMPFILE
+	fd = open("/tmp", O_TMPFILE | O_RDWR | flags, S_IRUSR | S_IWUSR);
+	if (fd != -1)
+		return fd;
 
+	if (errno != EINVAL)
+		return -1;
+#endif
+
+	char name[] = "/tmp/tmp_unlinked_file.XXXXXX";
 	umask(077); // Only owner can access this temporary file
-	int fd = mkstemp(name);
+	fd = mkostemp(name, flags);
 	if (fd == -1)
 		return -1;
 
-	unlink(name);
+	(void)unlink(name);
 	return fd;
 }
 

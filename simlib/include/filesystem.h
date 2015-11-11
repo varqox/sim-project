@@ -14,12 +14,16 @@
 
 /**
  * @brief Creates unlinked temporary file
- * @details Uses mkstemp(3)
+ * @details Uses open(3) if O_TMPFILE is defined, or mkstemp(3)
  *
- * @param templ the same as template in mkstemp(3)
+ * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or passed
+ * to mkostemp(3)
  * @return file descriptor on success, -1 on error
+ *
+ * @errors The same that occur for open(2) (if O_TMPFILE is defined) or
+ * mkstemp(3)
  */
-int getUnlinkedTmpFile(const std::string& templ = "/tmp/tmp_fileXXXXXX");
+int getUnlinkedTmpFile(int flags = 0) noexcept;
 
 class TemporaryDirectory
 {
