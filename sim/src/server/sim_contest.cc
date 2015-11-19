@@ -899,15 +899,13 @@ void Sim::Contest::editProblem() {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 		};
 
+		// TODO: Simplify extension
 		const char* _zip = ".zip";
-		const char* _7z = ".7z";
 		const char* _tgz = ".tar.gz";
 		const char* extension;
 		// Get extension
 		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "zip"))
 			extension = _zip;
-		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "7z"))
-			extension = _7z;
 		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "tgz"))
 			extension = _tgz;
 		else
@@ -930,16 +928,6 @@ void Sim::Contest::editProblem() {
 					sizeof(empty_zip_file)) == -1)
 				throw std::runtime_error(concat("Error: putFileContents()",
 					error(errno)));
-
-		// 7zip
-		} else if (extension == _7z) {
-			append(args)("7z")("a")("-y")("-m0=lzma2")(tmp_file)
-				(r_path_->problem->problem_id);
-			if (putFileContents(tmp_file, (const char*)empty_7z_file,
-					sizeof(empty_7z_file)) == -1)
-				throw std::runtime_error(concat("Error: putFileContents()",
-					error(errno)));
-
 		// tar.gz
 		} else // extension == tgz
 			append(args)("tar")("czf")(tmp_file)(r_path_->problem->problem_id);
@@ -1059,8 +1047,6 @@ void Sim::Contest::editProblem() {
 						<< "/download/zip\">.zip</a>"
 					"<a href=\"" << sim_.req_->target.substr(0, arg_beg - 1)
 						<< "/download/tgz\">.tar.gz</a>"
-					"<a href=\"" << sim_.req_->target.substr(0, arg_beg - 1)
-						<< "/download/7z\">.7z</a>"
 				"</ul>"
 			"</div>\n"
 		"</div>\n"
@@ -1514,8 +1500,9 @@ void Sim::Contest::submission() {
 		// Get submission
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("SELECT user_id, round_id, submit_time, status, "
-					"score, name FROM submissions s, problems p "
-				"WHERE s.id=? AND s.problem_id=p.id"));
+					"score, name, tag, first_name, last_name "
+				"FROM submissions s, problems p, users u "
+				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id"));
 		pstmt->setString(1, submission_id);
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
@@ -1528,6 +1515,8 @@ void Sim::Contest::submission() {
 		string submission_status = res->getString(4);
 		string score = res->getString(5);
 		string problem_name = res->getString(6);
+		string problem_tag = res->getString(7);
+		string user_name = concat(res->getString(8), ' ', res->getString(9));
 
 		// Get parent rounds
 		r_path_.reset(getRoundPath(round_id));
@@ -1712,16 +1701,26 @@ void Sim::Contest::submission() {
 			"</div>\n"
 			"<table style=\"width: 100%\">\n"
 				"<thead>\n"
-					"<tr>"
-						"<th style=\"min-width:120px\">Problem</th>"
+					"<tr>";
+
+		if (admin_view)
+			templ << "<th style=\"min-width:120px\">User</th>";
+
+		templ << "<th style=\"min-width:120px\">Problem</th>"
 						"<th style=\"min-width:150px\">Submission time</th>"
 						"<th style=\"min-width:150px\">Status</th>"
 						"<th style=\"min-width:90px\">Score</th>"
 					"</tr>\n"
 				"</thead>\n"
 				"<tbody>\n"
-					"<tr>"
-						"<td>" << htmlSpecialChars(problem_name) << "</td>"
+					"<tr>";
+
+		if (admin_view)
+			templ << "<td><a href=\"/u/" << submission_user_id << "\">"
+				<< user_name << "</a></td>";
+
+		templ << "<td>" << htmlSpecialChars(
+			concat(problem_name, " (", problem_tag, ')')) << "</td>"
 						"<td>" << htmlSpecialChars(submit_time) << "</td>"
 						"<td";
 
