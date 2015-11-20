@@ -39,6 +39,8 @@ private:
 
 	void getStaticFile();
 
+	void logs();
+
 	/**
 	 * @brief Sets headers to make a redirection
 	 * @details Does not clear response headers and contents
