@@ -11,6 +11,7 @@
 #include <cppconn/prepared_statement.h>
 
 using std::string;
+using std::vector;
 
 Sim::Sim() : db_conn(DB::createConnectionUsingPassFile(".db.config")),
 		client_ip_(), req_(nullptr), resp_(server::HttpResponse::TEXT),
@@ -47,6 +48,9 @@ server::HttpResponse Sim::handle(string client_ip,
 	try {
 		if (0 == compareTo(req.target, 1, '/', "kit"))
 			getStaticFile();
+
+		else if (0 == compareTo(req.target, 1, '/', "logs"))
+			logs();
 
 		else if (0 == compareTo(req.target, 1, '/', "login"))
 			user->login();
@@ -124,6 +128,98 @@ void Sim::getStaticFile() {
 
 	resp_.content_type = server::HttpResponse::FILE;
 	resp_.content = file;
+}
+
+// Cuts string to a newline character both from beginning and ending
+inline static void cutToNewline(string& str) noexcept {
+	// Suffix
+	str.erase(std::min(str.size(), str.rfind('\n')));
+	// Prefix
+	str.erase(0, str.find('\n'));
+}
+
+static string colour(const string& str) noexcept {
+	string res;
+	enum { SPAN, B, NONE } opened = NONE;
+	auto closeLastTag = [&res, &opened] () {
+		switch (opened) {
+			case SPAN: res += "</span>"; break;
+			case B: res += "</b>"; break;
+			case NONE: break;
+		}
+	};
+
+	for (size_t i = 0; i < str.size(); ++i) {
+		if (str.compare(i, 5, "\033[31m") == 0) {
+			closeLastTag();
+			res += "<span class=\"red\">";
+			opened = SPAN;
+			i += 4;
+		} else if (str.compare(i, 5, "\033[32m") == 0) {
+			closeLastTag();
+			res += "<span class=\"green\">";
+			opened = SPAN;
+			i += 4;
+		} else if (str.compare(i, 5, "\033[33m") == 0) {
+			closeLastTag();
+			res += "<span class=\"yellow\">";
+			opened = SPAN;
+			i += 4;
+		} else if (str.compare(i, 5, "\033[34m") == 0) {
+			closeLastTag();
+			res += "<span class=\"blue\">";
+			opened = SPAN;
+			i += 4;
+		} else if (str.compare(i, 7, "\033[1;31m") == 0) {
+			closeLastTag();
+			res += "<b class=\"red\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 7, "\033[1;32m") == 0) {
+			closeLastTag();
+			res += "<b class=\"green\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 7, "\033[1;33m") == 0) {
+			closeLastTag();
+			res += "<b class=\"yellow\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 7, "\033[1;34m") == 0) {
+			closeLastTag();
+			res += "<b class=\"blue\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 3, "\033[m") == 0) {
+			closeLastTag();
+			opened = NONE;
+			i += 2;
+		} else
+			res += str[i];
+	}
+	closeLastTag();
+	return res;
+}
+
+void Sim::logs() {
+	Template templ(*this, "Logs");
+	templ << "<pre class=\"logs\">";
+
+	Fd fd;
+	constexpr int BYTES_TO_READ = 65536;
+
+	// server_error.log
+	if (fd.open("server_error.log", O_RDONLY | O_LARGEFILE) == -1) {
+		error_log(__PRETTY_FUNCTION__, ": open()", error(errno));
+	} else {
+		string contents = getFileContents(fd, -BYTES_TO_READ, -1);
+		cutToNewline(contents);
+		contents = colour(contents);
+		templ << contents;
+	}
+	// TODO: more logs and show less, but make show more button
+
+	templ << "</pre>";
 }
 
 void Sim::redirect(const string& location) {
