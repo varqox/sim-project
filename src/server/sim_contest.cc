@@ -590,7 +590,7 @@ void Sim::Contest::addProblem() {
 				"</div>\n"
 				// Memory limit
 				"<div class=\"field-group\">\n"
-					"<label>Memory limit (in kB)</label>\n"
+					"<label>Memory limit [kB]</label>\n"
 					"<input type=\"text\" name=\"memory-limit\" value=\""
 						<< htmlSpecialChars(memory_limit) << "\" size=\"24\""
 					"placeholder=\"Detect from config.conf\">"
@@ -598,7 +598,7 @@ void Sim::Contest::addProblem() {
 				"</div>\n"
 				// Global time limit
 				"<div class=\"field-group\">\n"
-					"<label>Global time limit in sec (for each test)</label>\n"
+					"<label>Global time limit [s] (for each test)</label>\n"
 					"<input type=\"text\" name=\"time-limit\" value=\""
 						<< htmlSpecialChars(time_limit) << "\" size=\"24\""
 					"placeholder=\"No global time limit\">"
@@ -1072,7 +1072,7 @@ void Sim::Contest::editProblem() {
 				// TODO: Checker
 				// Memory limit
 				"<div class=\"field-group\">\n"
-					"<label>Memory limit (in kB)</label>\n"
+					"<label>Memory limit [kB]</label>\n"
 					"<input type=\"text\" name=\"memory-limit\" value=\""
 						<< htmlSpecialChars(memory_limit) << "\" size=\"24\" "
 						"required>\n"
