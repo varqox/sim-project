@@ -417,14 +417,13 @@ string abspath(const string& path, size_t beg, size_t end, string curr_dir) {
 	return curr_dir;
 }
 
-string getFileContents(int fd) {
+string getFileContents(int fd, size_t bytes) {
 	const size_t buff_len = 1 << 16;
 	char buff[buff_len];
 
 	string res;
-	ssize_t len;
-	for (;;) {
-		len = read(fd, buff, buff_len);
+	while (bytes > 0) {
+		ssize_t len = read(fd, buff, std::min(buff_len, bytes));
 		// Interrupted by signal
 		if (len < 0 && errno == EINTR)
 			continue;
@@ -432,6 +431,7 @@ string getFileContents(int fd) {
 		if (len <= 0)
 			break;
 
+		bytes -= len;
 		res.append(buff, len);
 	}
 
@@ -443,7 +443,9 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 	char buff[buff_len];
 
 	off64_t size = lseek64(fd, 0, SEEK_END);
-	if (size == (off64_t)-1 || beg < 0 || beg > size)
+	if (beg < 0)
+		beg = std::max<off64_t>(size + beg, 0);
+	if (size == (off64_t)-1 || beg > size)
 		return "";
 
 	// Change end to the valid value
@@ -458,9 +460,8 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 
 	off64_t bytes_left = end - beg;
 	string res;
-	ssize_t len;
 	while (bytes_left > 0) {
-		len = read(fd, buff, std::min<off64_t>(buff_len, bytes_left));
+		ssize_t len = read(fd, buff, std::min<off64_t>(buff_len, bytes_left));
 		// Interrupted by signal
 		if (len < 0 && errno == EINTR)
 			continue;

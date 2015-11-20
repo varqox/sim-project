@@ -479,7 +479,7 @@ struct StrNumCompare {
 };
 
 template<class T>
-inline size_t string_length(const T& x) { return x.size(); }
+inline size_t string_length(const T& x) { return x.length(); }
 
 template<class T>
 inline size_t string_length(T* x) { return strlen(x); }

@@ -357,25 +357,26 @@ inline std::string getExtension(const std::string file) {
  * @brief Reads until end of file
  *
  * @param fd file descriptor to read from
+ * @param bytes number of bytes to read
  *
  * @return read contents
  *
  * @errors The same that occur for read(2)
  */
-std::string getFileContents(int fd);
+std::string getFileContents(int fd, size_t bytes = -1);
 
 /**
  * @brief Reads form @p fd from beg to end
  *
  * @param fd file descriptor to read from
- * @param beg begin offset
+ * @param beg begin offset (if negative, then is set to file_size + @p beg)
  * @param end end offset (@p end < 0 means size of file)
  *
  * @return read contents
  *
  * @errors The same that occur for lseek64(3), read(2)
  */
-std::string getFileContents(int fd, off64_t beg, off64_t end = -1);
+std::string getFileContents(int fd, off64_t beg, off64_t end);
 
 /**
  * @brief Reads until end of file
@@ -497,6 +498,77 @@ public:
 	}
 
 	~Closer() { close(); }
+};
+
+// Encapsulates file descriptor
+class Fd {
+	int fd_;
+
+public:
+	explicit Fd(int fd = -1) : fd_(fd) {}
+
+	Fd(Fd&&) = default;
+
+	Fd& operator=(const Fd&) = default;
+
+	Fd& operator=(Fd&&) = default;
+
+	Fd& operator=(int fd) {
+		fd_ = fd;
+		return *this;
+	}
+
+	operator int() const { return fd_; }
+
+	void reset(int fd) {
+		close();
+		fd_ = fd;
+	}
+
+	int open(const char* filename, int flags) {
+		return fd_ = ::open(filename, flags);
+	}
+
+	int open(const char* filename, int flags, int mode) {
+		return fd_ = ::open(filename, flags, mode);
+	}
+
+	int open(const std::string& filename, int flags) {
+		return fd_ = ::open(filename.c_str(), flags);
+	}
+
+	int open(const std::string& filename, int flags, int mode) {
+		return fd_ = ::open(filename.c_str(), flags, mode);
+	}
+
+	int reopen(const char* filename, int flags) {
+		close();
+		return fd_ = ::open(filename, flags);
+	}
+
+	int reopen(const char* filename, int flags, int mode) {
+		close();
+		return fd_ = ::open(filename, flags, mode);
+	}
+
+	int reopen(const std::string& filename, int flags) {
+		close();
+		return fd_ = ::open(filename.c_str(), flags);
+	}
+
+	int reopen(const std::string& filename, int flags, int mode) {
+		close();
+		return fd_ = ::open(filename.c_str(), flags, mode);
+	}
+
+	int close() {
+		if (fd_ > 0)
+			return sclose(fd_);
+
+		return 0;
+	}
+
+	~Fd() { close(); }
 };
 
 template<int (*func)(const char*)>

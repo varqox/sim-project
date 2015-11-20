@@ -40,6 +40,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"-b", "/lib32",
 		"-b", "/libx32",
 		"-b", "/lib64",
+		"-b", "/etc/alternatives/",
 		"g++", // Invoke compiler
 		"a.cpp",
 		"-o", "exec",
