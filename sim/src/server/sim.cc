@@ -202,6 +202,9 @@ static string colour(const string& str) noexcept {
 }
 
 void Sim::logs() {
+	if (session->open() != Session::OK || session->user_type > 0)
+		return error403();
+
 	Template templ(*this, "Logs");
 	templ << "<pre class=\"logs\">";
 

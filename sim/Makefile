@@ -41,7 +41,7 @@ endif
 		fi'
 
 	# Set up install
-	src/setup-installation $(abspath $(DESTDIR))
+	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
 
 	# Set owner, group and permission bits
 	# src/chmod-default $(abspath $(DESTDIR))
@@ -51,15 +51,33 @@ endif
 	@printf "\033[;32mInstallation finished\033[0m\n"
 
 .PHONY: reinstall
+reinstall: SETUP_INSTALL_FLAGS += --drop-tables
 reinstall:
-	$(RM) $(abspath $(DESTDIR)/.db.config)
+	# Kill sim-server and judge-machine
+	src/killinstc $(abspath $(DESTDIR)/sim-server)
+	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+
+	# Delete files
+	$(RM) -r $(abspath $(DESTDIR)/)
 	$(MAKE) install
+
+.PHONY: uninstall
+uninstall: SETUP_INSTALL_FLAGS += --only-drop-tables
+uninstall:
+	# Kill sim-server and judge-machine
+	src/killinstc $(abspath $(DESTDIR)/sim-server)
+	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+
+	# Delete files and database tables
+	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
+	$(RM) -r $(abspath $(DESTDIR)/)
 
 .PHONY: run
 run:
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+
 	# Run
 	$(abspath $(DESTDIR)/judge-machine)&
 	$(abspath $(DESTDIR)/sim-server)&

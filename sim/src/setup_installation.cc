@@ -8,10 +8,62 @@
 
 using std::string;
 
+static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
+
+/**
+ * @brief Displays help
+ */
+static void help(const char* program_name) {
+	if (program_name == nullptr)
+		program_name = "setup-installation";
+
+	printf("Usage: %s [options] INSTALL_DIR\n", program_name);
+	puts("Setup database after SIM installation\n");
+	puts("\n");
+	puts("Options:\n");
+	puts("  --drop-tables          Drop database tables before recreating them\n");
+	puts("  -h, --help             Display this information\n");
+	puts("  --only-drop-tables     Drop database tables and exit\n");
+}
+
+static void parseOptions(int &argc, char **argv) {
+	int new_argc = 1;
+	for (int i = 1; i < argc; ++i) {
+
+		if (argv[i][0] == '-') {
+			// Drop tables
+			if (0 == strcmp(argv[i], "--drop-tables"))
+				DROP_TABLES = true;
+
+			// Help
+			else if (0 == strcmp(argv[i], "-h") ||
+					0 == strcmp(argv[i], "--help")) {
+				help(argv[0]); // argv[0] is valid (argc > 1)
+				exit(0);
+			}
+
+			// Drop tables
+			else if (0 == strcmp(argv[i], "--only-drop-tables")) {
+				DROP_TABLES = true;
+				ONLY_DROP_TABLES = true;
+			}
+
+			// Unknown
+			else
+				eprintf("Unknown option: '%s'\n", argv[i]);
+
+		} else
+			argv[new_argc++] = argv[i];
+	}
+
+	argc = new_argc;
+}
+
 int main(int argc, char **argv) {
-	if (argc < 2) {
-		eprintf("Usage: %s INSTALL_DIR\n",
-			(argc > 0 ? argv[0] : "setup-installationation"));
+	parseOptions(argc, argv);
+
+	if(argc != 2) {
+		help(argc > 0 ? argv[0] : nullptr);
 		return 1;
 	}
 
@@ -28,6 +80,24 @@ int main(int argc, char **argv) {
 
 	bool error = false;
 	UniquePtr<sql::Statement> stmt(conn->createStatement());
+
+	if (DROP_TABLES) {
+		try {
+			stmt->executeUpdate("DROP TABLE iF EXISTS users");
+			stmt->executeUpdate("DROP TABLE iF EXISTS session");
+			stmt->executeUpdate("DROP TABLE iF EXISTS problems");
+			stmt->executeUpdate("DROP TABLE iF EXISTS rounds");
+			stmt->executeUpdate("DROP TABLE iF EXISTS users_to_contests");
+			stmt->executeUpdate("DROP TABLE iF EXISTS submissions");
+
+			if (ONLY_DROP_TABLES)
+				return 0;
+
+		} catch (const std::exception& e) {
+			eprintf("\e[31mFailed to drop tables\e[m - %s\n", e.what());
+			return 5;
+		}
+	}
 
 	// users
 	try {
@@ -184,7 +254,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (error)
-		return 5;
+		return 6;
 
 	return 0;
 }
