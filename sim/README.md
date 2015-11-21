@@ -67,7 +67,7 @@ SIM is open source platform for carrying out algorithmic contests
   make run DESTDIR=where-you-installed-SIM
   ```
 
-  You can combine installation and running commands into:
+  You can combine building, installation and running commands into:
   ```sh
   make install run
   ```
@@ -85,7 +85,7 @@ Just type (be aware of incompatible database (and other inner) changes)
 ```sh
 git pull
 git submodule update
-make -j 4 && make install run
+make -j4 install run
 ```
 
 ### Task packages

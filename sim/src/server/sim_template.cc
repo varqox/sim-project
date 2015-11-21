@@ -29,12 +29,16 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 			"<body>\n"
 				"<div class=\"navbar\">\n"
 					"<a href=\"/\" class=\"brand\">SIM</a>\n"
-					"<a href=\"/c/\">Contests</a>\n"
-					"<div class=\"rightbar\">\n"
+					"<a href=\"/c/\">Contests</a>\n";
+
+	if (sim_.session->open() == Session::OK && sim_.session->user_type == 0)
+		*this << "<a href=\"/logs\">Logs</a>\n";
+
+	*this << "<div class=\"rightbar\">\n"
 						"<time id=\"clock\">" << date("%H:%M:%S")
 							<< " UTC</time>";
 
-	if (sim_.session->open() == Session::OK)
+	if (sim_.session->state() == Session::OK)
 		*this << "<div class=\"dropdown\">\n"
 				"<a class=\"user dropdown-toggle\"><strong>"
 			<< htmlSpecialChars(sim_.session->username) << "</strong>"
