@@ -83,7 +83,8 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		// Check rounds hierarchy
 		if (r_path->contest.isNull() || (rows > 1 && r_path->round.isNull())
 				|| (rows > 2 && r_path->problem.isNull()))
-			throw std::runtime_error("Database error (rounds hierarchy)");
+			throw std::runtime_error(concat("Database error: corrupt hierarchy "
+				"of rounds (id: ", round_id, ")"));
 
 		// Check access
 		r_path->admin_access = isAdmin(sim_, *r_path);
@@ -121,6 +122,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 	} catch (const std::exception& e) {
 		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
 			" - ", e.what());
+		sim_.error500();
 		return nullptr;
 	}
 

@@ -80,10 +80,8 @@ void Sim::Contest::handle() {
 
 		// Get parent rounds
 		r_path_.reset(getRoundPath(round_id));
-		if (r_path_.isNull()) {
-			error_log("Corrupt hierarchy of rounds (id: ", round_id, ")");
-			return sim_.error500();
-		}
+		if (r_path_.isNull())
+			return; // getRoundPath has already set error
 
 		// Check if user forces observer view
 		bool admin_view = r_path_->admin_access;
@@ -674,11 +672,8 @@ void Sim::Contest::editContest() {
 					fv.addError("Update successful");
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
-					if (r_path_.isNull()) {
-						error_log("Corrupt hierarchy of rounds (id: ",
-							r_path_->round_id, ")");
-						return sim_.error500();
-					}
+					if (r_path_.isNull())
+						return; // getRoundPath has already set error
 				}
 			}
 
@@ -798,11 +793,8 @@ void Sim::Contest::editRound() {
 					fv.addError("Update successful");
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
-					if (r_path_.isNull()) {
-						error_log("Corrupt hierarchy of rounds (id: ",
-							r_path_->round_id, ")");
-						return sim_.error500();
-					}
+					if (r_path_.isNull())
+						return; // getRoundPath has already set error
 				}
 
 			} catch (const std::exception& e) {
@@ -1013,11 +1005,8 @@ void Sim::Contest::editProblem() {
 				if (pstmt->executeUpdate() > 0) {
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
-					if (r_path_.isNull()) {
-						error_log("Corrupt hierarchy of rounds (id: ",
-							r_path_->round_id, ")");
-						return sim_.error500();
-					}
+					if (r_path_.isNull())
+						return; // getRoundPath has already set error
 				}
 
 			} catch (const std::exception& e) {
@@ -1277,11 +1266,8 @@ void Sim::Contest::submit(bool admin_view) {
 			if (r_path_->type != PROBLEM) {
 				// Get parent rounds of problem round
 				path.reset(getRoundPath(problem_round_id));
-				if (path.isNull()) {
-					error_log("Corrupt hierarchy of rounds (id: ",
-						problem_round_id, ")");
-					return sim_.error500();
-				}
+				if (path.isNull())
+					return; // getRoundPath has already set error
 
 				if (path->type != PROBLEM) {
 					fv.addError("Wrong problem round id");
@@ -1538,10 +1524,8 @@ void Sim::Contest::submission() {
 
 		// Get parent rounds
 		r_path_.reset(getRoundPath(round_id));
-		if (r_path_.isNull()) {
-			error_log("Corrupt hierarchy of rounds (id: ", round_id, ")");
-			return sim_.error500();
-		}
+		if (r_path_.isNull())
+			return; // getRoundPath has already set error
 
 		if (!r_path_->admin_access &&
 				sim_.session->user_id != submission_user_id)
@@ -2105,7 +2089,7 @@ void Sim::Contest::ranking(bool admin_view) {
 		sort(index_of.begin(), index_of.end());
 
 		// Table head
-		templ << "<table class=\"table ranking\">\n"
+		templ << "<table class=\"table ranking stripped\">\n"
 				"<thead>\n"
 					"<tr>\n"
 						"<th rowspan=\"2\">#</th>\n"
