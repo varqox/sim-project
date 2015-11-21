@@ -1788,8 +1788,10 @@ void Sim::Contest::submission() {
 						<< final_report;
 			}
 
-			templ << "<h2>Initial testing report</h2>"
-				<< res->getString(10);
+			string initial_report = res->getString(10);
+			if (initial_report.size())
+				templ << "<h2>Initial testing report</h2>"
+					<< initial_report;
 		}
 		templ << "</div>";
 
