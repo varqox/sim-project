@@ -35,47 +35,46 @@ static void help(const char* program_name) {
 		program_name = "conver";
 
 	printf("Usage: %s [options] problem_package\n", program_name);
-	printf("\
-Convert problem_package to sim_problem_package\n\
-  problem_package have to be archive (.zip, .tar.gz, .tgz, .7z) or directory\n\
-\n\
-Options:\n\
-  -fal, --force-auto-limit\n\
-                         Force automatic time limit setting\n\
-  -g, --gen-out, --generate-out\n\
-                         Generate .out files (tests), if exist override, disables -vo\n\
-  -h, --help             Display this information\n\
-  -ic, --ignore-config   Ignore config.conf (enables automatic time limit setting)\n\
-  -m MEM_LIMIT, --memory-limit=MEM_LIMIT\n\
-                         Set problem memory limit MEM_LIMIT in kB\n\
-  -mt <VAL>, --max-time-limit=<VAL>\n\
-                         Set hard max time limit VAL in usec\n\
-  -n NAME, --name=NAME   Set problem name to NAME (cannot be empty)\n\
-  -o DESTNAME            Set DESTNAME to which final package will be placed (default problem_tag), compression is deduced from extension\n\
-  -q, --quiet            Quiet mode\n\
-  -t TAG, --tag=TAG      Set problem tag to TAG (cannot be empty)\n\
-  -tl VAL, --time-limit=VAL\n\
-                         Set time limit VAL in usec on every test, disables automatic time limit setting (only if VAL > 0)\n\
-  -v, --verbose          Verbose mode\n\
-  -vo, --validate-out    Validate solution output on .out (by checker)\n\
-\n\
-problem_package tree:\n\
-   main/                 Root package folder\n\
-   |-- doc/              Documents folder - holds problem statement, elaboration, ... (optional)\n\
-   |-- check/            Checker folder - holds checker (optional)\n\
-   |-- in/               Tests folder - holds tests (optional)\n\
-   |-- prog/             Solutions folder - holds solutions (optional but without solutions automatic time limit setting will be disabled)\n\
-   |-- out/              Tests folder - holds tests (optional)\n\
-   |-- tests/            Tests folder - holds tests (optional)\n\
-   `-- config.conf       sim_problem_package config file - holds package config (optional)\n\
-\n\
-sim_problem_package tree:\n\
-   main/                 Root package folder\n\
-   |-- doc/              Documents folder - holds problem statement, elaboration, ...\n\
-   |-- check/            Checker folder - holds checker\n\
-   |-- prog/             Solutions folder - holds solutions\n\
-   |-- tests/            Tests folder - holds tests\n\
-   `-- config.conf       sim_problem_package config file - holds package config\n");
+	puts("Convert problem_package to sim_problem_package\n");
+	puts("  problem_package have to be archive (.zip, .tar.gz, .tgz, .7z) or directory\n");
+	puts("\n");
+	puts("Options:\n");
+	puts("  -fal, --force-auto-limit\n");
+	puts("                         Force automatic time limit setting\n");
+	puts("  -g, --gen-out, --generate-out\n");
+	puts("                         Generate .out files (tests), if exist override, disables -vo\n");
+	puts("  -h, --help             Display this information\n");
+	puts("  -ic, --ignore-config   Ignore config.conf (enables automatic time limit setting)\n");
+	puts("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT\n");
+	puts("                         Set problem memory limit MEM_LIMIT in kB\n");
+	puts("  -mt <VAL>, --max-time-limit=<VAL>\n");
+	puts("                         Set hard max time limit VAL in usec\n");
+	puts("  -n NAME, --name=NAME   Set problem name to NAME (cannot be empty)\n");
+	puts("  -o DESTNAME            Set DESTNAME to which final package will be placed (default problem_tag), compression is deduced from extension\n");
+	puts("  -q, --quiet            Quiet mode\n");
+	puts("  -t TAG, --tag=TAG      Set problem tag to TAG (cannot be empty)\n");
+	puts("  -tl VAL, --time-limit=VAL\n");
+	puts("                         Set time limit VAL in usec on every test, disables automatic time limit setting (only if VAL > 0)\n");
+	puts("  -v, --verbose          Verbose mode\n");
+	puts("  -vo, --validate-out    Validate solution output on .out (by checker)\n");
+	puts("\n");
+	puts("problem_package tree:\n");
+	puts("   main/                 Root package folder\n");
+	puts("   |-- doc/              Documents folder - holds problem statement, elaboration, ... (optional)\n");
+	puts("   |-- check/            Checker folder - holds checker (optional)\n");
+	puts("   |-- in/               Tests folder - holds tests (optional)\n");
+	puts("   |-- prog/             Solutions folder - holds solutions (optional but without solutions automatic time limit setting will be disabled)\n");
+	puts("   |-- out/              Tests folder - holds tests (optional)\n");
+	puts("   |-- tests/            Tests folder - holds tests (optional)\n");
+	puts("   `-- config.conf       sim_problem_package config file - holds package config (optional)\n");
+	puts("\n");
+	puts("sim_problem_package tree:\n");
+	puts("   main/                 Root package folder\n");
+	puts("   |-- doc/              Documents folder - holds problem statement, elaboration, ...\n");
+	puts("   |-- check/            Checker folder - holds checker\n");
+	puts("   |-- prog/             Solutions folder - holds solutions\n");
+	puts("   |-- tests/            Tests folder - holds tests\n");
+	puts("   `-- config.conf       sim_problem_package config file - holds package config\n");
 }
 
 // TODO: change sscanf to something else
