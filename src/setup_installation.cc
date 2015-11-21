@@ -226,6 +226,8 @@ int main(int argc, char **argv) {
 				"`status` enum('ok','error','c_error','judge_error','waiting') NULL DEFAULT NULL COLLATE utf8_bin,\n"
 				"`score` int NULL DEFAULT NULL,\n"
 				"`queued` datetime NOT NULL,\n"
+				"`initial_report` text COLLATE utf8_bin NOT NULL,\n"
+				"`final_report` text COLLATE utf8_bin NOT NULL,\n"
 				"PRIMARY KEY (id),\n"
 				// Judge server
 				"KEY (status, queued),\n"

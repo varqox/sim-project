@@ -96,8 +96,6 @@ private:
 
 	static std::string submissionStatus(const std::string& status);
 
-	static std::string convertStringBack(const std::string& str);
-
 	RoundPath* getRoundPath(const std::string& round_id);
 
 	// Returns whether user has admin access

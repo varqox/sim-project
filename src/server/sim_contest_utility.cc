@@ -28,19 +28,6 @@ string Sim::Contest::submissionStatus(const string& status) {
 	return "Unknown";
 }
 
-string Sim::Contest::convertStringBack(const string& str) {
-	string res;
-	for (auto i = str.begin(); i != str.end(); ++i) {
-		if (*i == '\\' && ++i != str.end() && *i == 'n') {
-			res += '\n';
-			continue;
-		}
-
-		res += *i;
-	}
-	return res;
-}
-
 Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 	UniquePtr<RoundPath> r_path(new RoundPath(round_id));
 
