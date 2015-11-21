@@ -25,6 +25,7 @@ CheckerCallback::CheckerCallback(vector<string> files)
 		(3) // SYS_read
 		(4) // SYS_write
 		(6) // SYS_close
+		(13) // SYS_time
 		(41) // SYS_dup
 		(45) // SYS_brk
 		(54) // SYS_ioctl
@@ -71,6 +72,7 @@ CheckerCallback::CheckerCallback(vector<string> files)
 		(33) // SYS_dup2
 		(60) // SYS_exit
 		(186) // SYS_gettid
+		(201) // SYS_time
 		(231) // SYS_exit_group
 		(234) // SYS_tgkill
 		(292); // SYS_dup3

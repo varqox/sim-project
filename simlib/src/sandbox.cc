@@ -30,6 +30,7 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 		(3) // SYS_read
 		(4) // SYS_write
 		(6) // SYS_close
+		(13) // SYS_time
 		(45) // SYS_brk
 		(54) // SYS_ioctl
 		(90) // SYS_mmap
@@ -71,6 +72,7 @@ DefaultCallback::DefaultCallback() : functor_call(0), arch(-1) {
 		(20) // SYS_writev
 		(60) // SYS_exit
 		(186) // SYS_gettid
+		(201) // SYS_time
 		(231) // SYS_exit_group
 		(234); // SYS_tgkill
 };
