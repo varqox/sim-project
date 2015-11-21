@@ -17,13 +17,13 @@ static void help(const char* program_name) {
 	if (program_name == nullptr)
 		program_name = "setup-installation";
 
-	printf("Usage: %s [options] INSTALL_DIR\n", program_name);
-	puts("Setup database after SIM installation\n");
-	puts("\n");
-	puts("Options:\n");
-	puts("  --drop-tables          Drop database tables before recreating them\n");
-	puts("  -h, --help             Display this information\n");
-	puts("  --only-drop-tables     Drop database tables and exit\n");
+	printf("Usage: %s [options] INSTALL_DIR", program_name);
+	puts("Setup database after SIM installation");
+	puts("");
+	puts("Options:");
+	puts("  --drop-tables          Drop database tables before recreating them");
+	puts("  -h, --help             Display this information");
+	puts("  --only-drop-tables     Drop database tables and exit");
 }
 
 static void parseOptions(int &argc, char **argv) {
