@@ -225,12 +225,13 @@ std::string toString(T x) {
 		x /= 10;
 	}
 
-	if (minus)
-		res += "-";
-	else if (res.empty())
-		res = "0";
-	else
+	if (res.empty()) {
+		res = '0';
+	} else {
+		if (minus)
+			res += '-';
 		std::reverse(res.begin(), res.end());
+	}
 
 	return res;
 }

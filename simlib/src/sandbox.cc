@@ -328,13 +328,12 @@ ExitStat run(const string& exec, vector<string> args,
 			return ExitStat(status, runtime, message);
 		}
 
-		// TODO: what if tracer is different architecture than tracee?
 #ifdef __x86_64__
-		int syscall = ptrace(PTRACE_PEEKUSER, cpid,
-			offsetof ( x86_64_user_regs_struct, orig_rax ) );
+		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
+			offsetof(x86_64_user_regs_struct, orig_rax));
 #else
-		int syscall = ptrace(PTRACE_PEEKUSER, cpid,
-			offsetof(i386_user_regs_struct, eax));
+		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
+			offsetof(i386_user_regs_struct, orig_eax));
 #endif
 
 		// If syscall is not allowed
@@ -352,9 +351,12 @@ ExitStat run(const string& exec, vector<string> args,
 			if (runtime >= opts->time_limit)
 				return ExitStat(status, runtime);
 
-			return ExitStat(status, runtime, (syscall == -1
-				? "failed to get syscall" : concat("forbidden syscall: ",
-					toString<uint>(syscall))));
+			if (syscall < 0)
+				return ExitStat(status, runtime, concat("failed to get "
+					"syscall: ", toString(syscall), error(errno)));
+
+			return ExitStat(status, runtime, concat("forbidden syscall: ",
+					toString(syscall)));
 		}
 
 		// syscall returns

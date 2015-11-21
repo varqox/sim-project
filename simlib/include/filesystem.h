@@ -497,7 +497,7 @@ public:
 		return rc;
 	}
 
-	~Closer() { close(); }
+	~Closer() { sclose(fd_); }
 };
 
 // Encapsulates file descriptor
@@ -521,7 +521,7 @@ public:
 	operator int() const { return fd_; }
 
 	void reset(int fd) {
-		close();
+		sclose(fd_);
 		fd_ = fd;
 	}
 
@@ -542,33 +542,36 @@ public:
 	}
 
 	int reopen(const char* filename, int flags) {
-		close();
+		sclose(fd_);
 		return fd_ = ::open(filename, flags);
 	}
 
 	int reopen(const char* filename, int flags, int mode) {
-		close();
+		sclose(fd_);
 		return fd_ = ::open(filename, flags, mode);
 	}
 
 	int reopen(const std::string& filename, int flags) {
-		close();
+		sclose(fd_);
 		return fd_ = ::open(filename.c_str(), flags);
 	}
 
 	int reopen(const std::string& filename, int flags, int mode) {
-		close();
+		sclose(fd_);
 		return fd_ = ::open(filename.c_str(), flags, mode);
 	}
 
 	int close() {
-		if (fd_ > 0)
-			return sclose(fd_);
+		if (fd_ > 0) {
+			int rc = sclose(fd_);
+			fd_ = -1;
+			return rc;
+		}
 
 		return 0;
 	}
 
-	~Fd() { close(); }
+	~Fd() { sclose(fd_); }
 };
 
 template<int (*func)(const char*)>
