@@ -1558,27 +1558,13 @@ void Sim::Contest::submission() {
 					}
 
 					// Restore `final` status
-					// TODO: try to simplify following UPDATE (see judge
-					// machine submission update)
 					pstmt.reset(sim_.db_conn->prepareStatement(
-						"UPDATE submissions SET final=IF(id IN (SELECT id FROM "
-							"(SELECT id FROM submissions "
-								"WHERE user_id=? AND round_id=? AND "
-									"status IN ('ok', 'error') "
-								"ORDER BY id DESC LIMIT 1) x), 1, 0) "
-						"WHERE id IN "
-							"(SELECT id FROM "
-								"(SELECT id FROM submissions "
-									"WHERE user_id=? AND round_id=? AND "
-										"status IN ('ok', 'error') "
-									"ORDER BY id DESC LIMIT 1) x) "
-							"OR user_id=? AND round_id=? AND final=1"));
+						"UPDATE submissions SET final=1 "
+						"WHERE user_id=? AND round_id=? "
+							"AND (status='ok' OR status='error') "
+						"ORDER BY id DESC LIMIT 1"));
 					pstmt->setString(1, submission_user_id);
 					pstmt->setString(2, round_id);
-					pstmt->setString(3, submission_user_id);
-					pstmt->setString(4, round_id);
-					pstmt->setString(5, submission_user_id);
-					pstmt->setString(6, round_id);
 					pstmt->executeUpdate();
 
 					return sim_.redirect("/c/" + round_id + "/submissions");
@@ -2090,10 +2076,10 @@ void Sim::Contest::ranking(bool admin_view) {
 
 		// Table head
 		templ << "<table class=\"table ranking stripped\">\n"
-				"<thead>\n"
-					"<tr>\n"
-						"<th rowspan=\"2\">#</th>\n"
-						"<th rowspan=\"2\">User</th>\n";
+			"<thead>\n"
+				"<tr>\n"
+					"<th rowspan=\"2\">#</th>\n"
+					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>\n";
 		// Rounds
 		for (auto& i : rounds) {
 			if (i.problems.empty())

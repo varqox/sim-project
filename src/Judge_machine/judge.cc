@@ -188,6 +188,11 @@ JudgeResult judge(string submission_id, string problem_id) {
 			sandbox::ExitStat es = sandbox::run(concat(tmp_dir.name(), "exec"),
 				exec_args, &sb_opts);
 
+			if (isPrefix(es.message, "failed to get syscall") ||
+					isPrefix(es.message, "forbidden syscall"))
+				error_log("Submission ", submission_id, " (problem ", problem_id,
+					"): ", test.name, ": ", es.message);
+
 			// Update ratio
 			ratio = std::min(ratio, 2.0 - 2.0 * (es.runtime / 10000) /
 				(test.time_limit / 10000));
@@ -270,6 +275,12 @@ JudgeResult judge(string submission_id, string problem_id) {
 						vector<string>(checker_args.begin() + 1,
 							checker_args.end())));
 
+				if (isPrefix(es.message, "failed to get syscall") ||
+						isPrefix(es.message, "forbidden syscall"))
+					error_log("Submission ", submission_id, " (problem ",
+						problem_id, "): ", test.name, " - checker: ",
+						es.message);
+
 				if (es.code == 0) {
 					if (VERBOSITY > 1)
 						tmplog("\e[1;32mPASSED\e[m");
@@ -311,10 +322,21 @@ JudgeResult judge(string submission_id, string problem_id) {
 						tmplog(" \"", buff, "\"");
 
 				} else if (es.runtime < test.time_limit) {
-					// TODO: add more detailed info (e.g. checker return codes)
 					group_result.back().status = TestResult::CHECKER_ERROR;
 					judge_test_report.status = JudgeResult::JUDGE_ERROR;
 					ratio = 0.0;
+
+					// Add test comment
+					append(judge_test_report.comments)
+						<< "<li><span class=\"test-id\">"
+						<< htmlSpecialChars(test.name)<< "</span>"
+						"Checker runtime error";
+
+					if (es.message.size())
+						append(judge_test_report.comments) << " (" << es.message
+							<< ")";
+
+					judge_test_report.comments += "</li>\n";
 
 					if (VERBOSITY > 1)
 						tmplog("\e[1;33mRTE\e[m (", es.message, ")");
@@ -323,6 +345,12 @@ JudgeResult judge(string submission_id, string problem_id) {
 					group_result.back().status = TestResult::CHECKER_ERROR;
 					judge_test_report.status = JudgeResult::JUDGE_ERROR;
 					ratio = 0.0;
+
+					// Add test comment
+					append(judge_test_report.comments)
+						<< "<li><span class=\"test-id\">"
+						<< htmlSpecialChars(test.name) << "</span>"
+						"Checker time limit exceeded</li>\n";
 
 					if (VERBOSITY > 1)
 						tmplog("\e[1;33mTLE\e[m");

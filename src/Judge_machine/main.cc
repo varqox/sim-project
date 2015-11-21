@@ -43,13 +43,35 @@ static void processSubmissionQueue() {
 				UniquePtr<sql::PreparedStatement> pstmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
 						jres.status == JudgeResult::JUDGE_ERROR) {
-					pstmt.reset(db_conn->prepareStatement("UPDATE submissions "
-						"SET final=false, status=?, score=? WHERE id=?"));
-					pstmt->setString(1,
+					pstmt.reset(db_conn->prepareStatement(
+						"UPDATE submissions s, "
+							"((SELECT id FROM submissions "
+									"WHERE user_id=? AND round_id=? "
+										"AND (status='ok' OR status='error') "
+									"ORDER BY id DESC LIMIT 1)"
+								"UNION "
+									"(SELECT ? AS id) "
+								"LIMIT 1) x "
+						"SET s.final=IF(s.id=?, 0, 1),"
+							"s.status=IF(s.id=?, ?, s.status),"
+							"s.score=IF(s.id=?, NULL, s.score),"
+							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
+							"s.final_report=IF(s.id=?, ?, s.final_report)"
+						"WHERE s.id=x.id OR s.id=?"));
+					pstmt->setString(1, user_id);
+					pstmt->setString(2, round_id);
+					pstmt->setString(3, submission_id);
+					pstmt->setString(4, submission_id);
+					pstmt->setString(5, submission_id);
+					pstmt->setString(6,
 						(jres.status == JudgeResult::COMPILE_ERROR
 							? "c_error" : "judge_error"));
-					pstmt->setNull(2, 0);
-					pstmt->setString(3, submission_id);
+					pstmt->setString(7, submission_id);
+					pstmt->setString(8, submission_id);
+					pstmt->setString(9, jres.initial_report);
+					pstmt->setString(10, submission_id);
+					pstmt->setString(11, jres.final_report);
+					pstmt->setString(12, submission_id);
 
 				} else {
 					pstmt.reset(db_conn->prepareStatement(
