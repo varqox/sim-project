@@ -80,8 +80,10 @@ void Sim::Contest::handle() {
 
 		// Get parent rounds
 		r_path_.reset(getRoundPath(round_id));
-		if (r_path_.isNull())
-			return;
+		if (r_path_.isNull()) {
+			error_log("Corrupt hierarchy of rounds (id: ", round_id, ")");
+			return sim_.error500();
+		}
 
 		// Check if user forces observer view
 		bool admin_view = r_path_->admin_access;
@@ -672,8 +674,11 @@ void Sim::Contest::editContest() {
 					fv.addError("Update successful");
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
-					if (r_path_.isNull())
-						return;
+					if (r_path_.isNull()) {
+						error_log("Corrupt hierarchy of rounds (id: ",
+							r_path_->round_id, ")");
+						return sim_.error500();
+					}
 				}
 			}
 
@@ -793,8 +798,11 @@ void Sim::Contest::editRound() {
 					fv.addError("Update successful");
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
-					if (r_path_.isNull())
-						return;
+					if (r_path_.isNull()) {
+						error_log("Corrupt hierarchy of rounds (id: ",
+							r_path_->round_id, ")");
+						return sim_.error500();
+					}
 				}
 
 			} catch (const std::exception& e) {
@@ -1005,8 +1013,11 @@ void Sim::Contest::editProblem() {
 				if (pstmt->executeUpdate() > 0) {
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
-					if (r_path_.isNull())
-						return;
+					if (r_path_.isNull()) {
+						error_log("Corrupt hierarchy of rounds (id: ",
+							r_path_->round_id, ")");
+						return sim_.error500();
+					}
 				}
 
 			} catch (const std::exception& e) {
@@ -1266,8 +1277,11 @@ void Sim::Contest::submit(bool admin_view) {
 			if (r_path_->type != PROBLEM) {
 				// Get parent rounds of problem round
 				path.reset(getRoundPath(problem_round_id));
-				if (path.isNull())
-					return;
+				if (path.isNull()) {
+					error_log("Corrupt hierarchy of rounds (id: ",
+						problem_round_id, ")");
+					return sim_.error500();
+				}
 
 				if (path->type != PROBLEM) {
 					fv.addError("Wrong problem round id");
@@ -1492,12 +1506,27 @@ void Sim::Contest::submission() {
 	arg_beg += res_code + 1;
 
 	try {
+		enum class Query {
+			DELETE, REJUDGE, DOWNLOAD, VIEW_SOURCE, NONE
+		} query = Query::NONE;
+
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete"))
+			query = Query::DELETE;
+		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "rejudge"))
+			query = Query::REJUDGE;
+		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "download"))
+			query = Query::DOWNLOAD;
+		else if (0 == compareTo(sim_.req_->target, arg_beg, '/', "source"))
+			query = Query::VIEW_SOURCE;
+
 		// Get submission
+		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
+			"status, score, name, tag, first_name, last_name, initial_report, "
+			"final_report");
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement("SELECT user_id, round_id, submit_time, status, "
-					"score, name, tag, first_name, last_name "
+			prepareStatement(concat("SELECT user_id, round_id", columns, " "
 				"FROM submissions s, problems p, users u "
-				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id"));
+				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id")));
 		pstmt->setString(1, submission_id);
 
 		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
@@ -1506,17 +1535,13 @@ void Sim::Contest::submission() {
 
 		string submission_user_id = res->getString(1);
 		string round_id = res->getString(2);
-		string submit_time = res->getString(3);
-		string submission_status = res->getString(4);
-		string score = res->getString(5);
-		string problem_name = res->getString(6);
-		string problem_tag = res->getString(7);
-		string user_name = concat(res->getString(8), ' ', res->getString(9));
 
 		// Get parent rounds
 		r_path_.reset(getRoundPath(round_id));
-		if (r_path_.isNull())
-			return;
+		if (r_path_.isNull()) {
+			error_log("Corrupt hierarchy of rounds (id: ", round_id, ")");
+			return sim_.error500();
+		}
 
 		if (!r_path_->admin_access &&
 				sim_.session->user_id != submission_user_id)
@@ -1530,12 +1555,12 @@ void Sim::Contest::submission() {
 		}
 
 		// Delete
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete")) {
+		if (query == Query::DELETE) {
 			if (!admin_view)
 				return sim_.error403();
 
 			FormValidator fv(sim_.req_->form_data);
-			if (sim_.req_->method == server::HttpRequest::POST
+			while (sim_.req_->method == server::HttpRequest::POST
 					&& fv.exist("delete"))
 				try {
 					// Delete submission
@@ -1545,7 +1570,7 @@ void Sim::Contest::submission() {
 
 					if (pstmt->executeUpdate() == 0) {
 						fv.addError("Deletion failed");
-						goto delete_form;
+						break;
 					}
 
 					// Restore `final` status
@@ -1579,7 +1604,6 @@ void Sim::Contest::submission() {
 						toString(__LINE__), " - ", e.what());
 				}
 
-		delete_form:
 			TemplateWithMenu templ(*this, "Delete submission");
 			templ.printRoundPath(*r_path_, "");
 			templ << fv.errors() << "<div class=\"form-container\">\n"
@@ -1602,7 +1626,7 @@ void Sim::Contest::submission() {
 		}
 
 		// Rejudge
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "rejudge")) {
+		if (query == Query::REJUDGE) {
 			if (!admin_view)
 				return sim_.error403();
 
@@ -1618,7 +1642,7 @@ void Sim::Contest::submission() {
 		}
 
 		// Download solution
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "download")) {
+		if (query == Query::DOWNLOAD) {
 			sim_.resp_.headers["Content-type"] = "application/text";
 			sim_.resp_.headers["Content-Disposition"] =
 				concat("attachment; filename=", submission_id, ".cpp");
@@ -1633,7 +1657,7 @@ void Sim::Contest::submission() {
 		templ.printRoundPath(*r_path_, "");
 
 		// View source
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "source")) {
+		if (query == Query::VIEW_SOURCE) {
 			vector<string> args;
 			append(args)("./CTH")("solutions/" + submission_id + ".cpp");
 
@@ -1674,6 +1698,13 @@ void Sim::Contest::submission() {
 
 			return;
 		}
+
+		string submit_time = res->getString(3);
+		string submission_status = res->getString(4);
+		string score = res->getString(5);
+		string problem_name = res->getString(6);
+		string problem_tag = res->getString(7);
+		string user_name = concat(res->getString(8), ' ', res->getString(9));
 
 		templ << "<div class=\"submission-info\">\n"
 			"<div>\n"
@@ -1740,26 +1771,25 @@ void Sim::Contest::submission() {
 			"</table>\n"
 			<< "</div>\n";
 
-		// Show testing report
-		vector<string> submission_file =
-			getFileByLines("submissions/" + submission_id,
-				GFBL_IGNORE_NEW_LINES);
-
+		// Print judge report
 		templ << "<div class=\"results\">";
-		if (submission_status == "c_error" && submission_file.size() > 0) {
+		if (submission_status == "c_error") {
 			templ << "<h2>Compilation failed</h2>"
 				"<pre class=\"compile-errors\">"
-				<< convertStringBack(submission_file[0])
+				<< res->getString(10)
 				<< "</pre>";
 
-		} else if (submission_file.size() > 1) {
+		} else {
 			if (admin_view || r_path_->round->full_results.empty() ||
-					r_path_->round->full_results <= date("%Y-%m-%d %H:%M:%S"))
-				templ << "<h2>Final testing report</h2>"
-					<< convertStringBack(submission_file[0]);
+					r_path_->round->full_results <= date("%Y-%m-%d %H:%M:%S")) {
+				string final_report = res->getString(11);
+				if (final_report.size())
+					templ << "<h2>Final testing report</h2>"
+						<< final_report;
+			}
 
 			templ << "<h2>Initial testing report</h2>"
-				<< convertStringBack(submission_file[1]);
+				<< res->getString(10);
 		}
 		templ << "</div>";
 

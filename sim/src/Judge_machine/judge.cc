@@ -11,21 +11,7 @@
 using std::string;
 using std::vector;
 
-const size_t COMPILE_ERRORS_MAX_LENGTH = 100 << 10; // 100kB
-
-static string convertString(const string& str) {
-	string res;
-	for (auto& c : str) {
-		if (c == '\\')
-			res += "\\\\";
-		else if (c == '\n')
-			res += "\\n";
-		else
-			res += c;
-	}
-
-	return res;
-}
+constexpr size_t COMPILE_ERRORS_MAX_LENGTH = 100 << 10; // 100kB
 
 namespace {
 
@@ -71,7 +57,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 	} catch (std::exception& e) {
 		if (VERBOSITY > 0)
 			error_log("Error: ", e.what());
-		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+		return JudgeResult(JudgeResult::JUDGE_ERROR, 0);
 	}
 
 	// Compile solution
@@ -80,21 +66,21 @@ JudgeResult judge(string submission_id, string problem_id) {
 		if (0 != compile(concat("solutions/", submission_id, ".cpp"),
 				concat(tmp_dir.sname(), "exec"), (VERBOSITY >> 1) + 1,
 				&compile_errors,COMPILE_ERRORS_MAX_LENGTH, "./proot"))
-			return (JudgeResult){ JudgeResult::COMPILE_ERROR, 0,
-				convertString(htmlSpecialChars(compile_errors)) };
+			return JudgeResult(JudgeResult::COMPILE_ERROR, 0,
+				htmlSpecialChars(compile_errors));
 
 		// Compile checker
 		if (0 != compile(concat(package_path, "check/", pconf.checker),
 				concat(tmp_dir.sname(), "checker"), (VERBOSITY >> 1) + 1,
 				nullptr, 0, "./proot"))
-			return (JudgeResult){ JudgeResult::COMPILE_ERROR, 0,
-				"Checker compilation error" };
+			return JudgeResult(JudgeResult::COMPILE_ERROR, 0,
+				"Checker compilation error");
 
 	} catch (const std::exception& e) {
 		stdlog("Compilation error", e.what());
 		error_log("Compilation error", e.what());
-		return (JudgeResult){ JudgeResult::COMPILE_ERROR, 0,
-			"Judge machine error" };
+		return JudgeResult(JudgeResult::COMPILE_ERROR, 0,
+			"Judge machine error");
 	}
 
 	// Prepare runtime environment
@@ -112,7 +98,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 	if (sb_opts.new_stdout_fd < 0) {
 		error_log("Failed to open '", tmp_dir.name(), "answer'",
 			error(errno));
-		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+		return JudgeResult(JudgeResult::JUDGE_ERROR, 0);
 	}
 
 	sandbox::options checker_sb_opts = {
@@ -132,7 +118,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 		// Close file descriptors
 		sclose(sb_opts.new_stdout_fd);
-		return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+		return JudgeResult(JudgeResult::JUDGE_ERROR, 0);
 	}
 
 	vector<string> exec_args, checker_args(4);
@@ -187,7 +173,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				// Close file descriptors
 				sclose(sb_opts.new_stdout_fd);
 				sclose(checker_sb_opts.new_stdout_fd);
-				return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+				return JudgeResult(JudgeResult::JUDGE_ERROR, 0);
 			}
 
 			// Truncate sb_opts.new_stdout
@@ -350,12 +336,13 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 		// assert that group_result is not empty
 		if (group_result.empty()) {
+			error_log("Error: group_result is empty");
 			// Close file descriptors
 			if (sb_opts.new_stdin_fd)
 				sclose(sb_opts.new_stdin_fd);
 			sclose(sb_opts.new_stdout_fd);
 			sclose(checker_sb_opts.new_stdout_fd);
-			return (JudgeResult){ JudgeResult::JUDGE_ERROR, 0, "" };
+			return JudgeResult(JudgeResult::JUDGE_ERROR, 0);
 		}
 
 		// Update score
@@ -401,13 +388,9 @@ JudgeResult judge(string submission_id, string problem_id) {
 	sclose(sb_opts.new_stdout_fd);
 	sclose(checker_sb_opts.new_stdout_fd);
 
-	return (JudgeResult){
-		initial.status,
-		total_score,
-		convertString(final.tests + (final.comments.empty() ? ""
-				: "<ul class=\"test-comments\">" + final.comments + "</ul>\n"))
-			+ "\n" + convertString(initial.tests + (initial.comments.empty() ?
-				"" : "<ul class=\"test-comments\">" + initial.comments +
-					"</ul>\n"))
-	};
+	return JudgeResult(initial.status, total_score,
+		initial.tests + (initial.comments.empty() ?	""
+			: "<ul class=\"test-comments\">" + initial.comments +"</ul>\n"),
+		final.tests + (final.comments.empty() ? ""
+			: "<ul class=\"test-comments\">" + final.comments + "</ul>\n"));
 }

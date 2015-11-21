@@ -777,7 +777,7 @@ a.btn-danger{
 .table tbody tr td:first-child, .table thead tr th:first-child{
 	border-left: none;
 }
-.ranking > tbody > tr:nth-child(3n) {
+.ranking > tbody > tr:nth-child(3n+1) {
 	background: #eaeaea;
 }
 .ranking > tbody > tr > td:first-child {

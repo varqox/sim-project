@@ -40,11 +40,6 @@ static void processSubmissionQueue() {
 				JudgeResult jres = judge(submission_id, problem_id);
 
 				// Update submission
-				if (putFileContents(concat("submissions/", submission_id),
-						jres.content) == -1)
-					throw std::runtime_error("putFileContents(): -1");
-
-				// Update final
 				UniquePtr<sql::PreparedStatement> pstmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
 						jres.status == JudgeResult::JUDGE_ERROR) {
@@ -69,7 +64,9 @@ static void processSubmissionQueue() {
 								"IF(x.id<=s.id, 1, 0), "
 								"IF(s.id>?, 1, 0)), "
 							"s.status=IF(s.id=?, ?, s.status),"
-							"s.score=IF(s.id=?, ?, s.score)"
+							"s.score=IF(s.id=?, ?, s.score),"
+							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
+							"s.final_report=IF(s.id=?, ?, s.final_report)"
 						"WHERE s.id=x.id OR s.id=?"));
 					pstmt->setString(1, user_id);
 					pstmt->setString(2, round_id);
@@ -82,6 +79,10 @@ static void processSubmissionQueue() {
 					pstmt->setString(8, submission_id);
 					pstmt->setInt64(9, jres.score);
 					pstmt->setString(10, submission_id);
+					pstmt->setString(11, jres.initial_report);
+					pstmt->setString(12, submission_id);
+					pstmt->setString(13, jres.final_report);
+					pstmt->setString(14, submission_id);
 				}
 
 				pstmt->executeUpdate();
