@@ -13,7 +13,7 @@ class ProblemConfig {
 public:
 	std::string name, tag, statement, checker, main_solution;
 	std::vector<std::string> solutions;
-	unsigned long long memory_limit; // in kB
+	unsigned long long memory_limit = 0; // in kB
 
 	/**
 	 * @brief Holds test
@@ -34,22 +34,29 @@ public:
 
 	std::vector<Group> test_groups;
 
-	ProblemConfig() : name(), tag(), statement(), checker(), main_solution(),
-		solutions(), memory_limit(0), test_groups() {}
+	ProblemConfig() = default;
 
-	~ProblemConfig() {}
+	ProblemConfig(const ProblemConfig&) = default;
+
+	ProblemConfig(ProblemConfig&&) = default;
+
+	ProblemConfig& operator=(const ProblemConfig&) = default;
+
+	ProblemConfig& operator=(ProblemConfig&&) = default;
+
+	~ProblemConfig() = default;
 
 	/**
 	 * @brief Dumps object to string
-	 * @return dumped config (can be placed in file)
+	 * @return dumped config (which can be placed in file)
 	 */
 	std::string dump() const;
 
 	/**
-	 * @brief loads and validates config file from problem package
+	 * @brief Loads and validates config file from problem package
 	 * @p package_path
-	 * @details Validates problem config (memory limits, tests existence etc.)
-	 * loaded via ConfigFile
+	 * @details Validates problem config (memory limits, tests specification
+	 * etc.) loaded via ConfigFile
 	 *
 	 * Fields:
 	 *   - name
@@ -63,9 +70,26 @@ public:
 	 *
 	 * @param package_path path to problem package main directory
 	 *
-	 * @errors Throw an exception if an error occurs
+	 * @return Warnings - every inconsistency with package config format
+	 * @errors May throw an exception if loading error occurs (see
+	 * ConfigFile::loadConfigFromFile())
 	 */
-	void loadConfig(std::string package_path);
+	std::vector<std::string> looselyLoadConfig(std::string package_path)
+		noexcept(false);
+
+	/**
+	 * @brief Loads and validates config file from problem package
+	 * @p package_path
+	 * @details Uses looselyLoadConfig() but also validates tests, checker and
+	 * solutions existence
+	 *
+	 * @param package_path path to problem package main directory
+	 *
+	 * @errors Throw an exception if any error occurs or any inconsistency with
+	 * package config format is found
+	 */
+	void loadConfig(std::string package_path) noexcept(false);
+
 
 	/**
 	 * @brief Converts string @p str that it can be safely placed in problem

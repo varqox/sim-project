@@ -10,7 +10,7 @@ private:
 	Logger& operator=(const Logger&) = delete;
 
 	FILE* f_;
-	bool opened_ = false;
+	bool opened_ = false, label_ = true;
 
 	void close() noexcept {
 		if (opened_) {
@@ -51,6 +51,14 @@ public:
 	void use(FILE *stream) noexcept {
 		close();
 		f_ = stream;
+	}
+
+	bool label() const noexcept { return label_; }
+
+	bool label(bool add_label) noexcept {
+		bool old = label_;
+		label_ = add_label;
+		return old;
 	}
 
 	class Appender {

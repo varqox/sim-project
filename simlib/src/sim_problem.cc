@@ -46,7 +46,128 @@ string ProblemConfig::dump() const {
 	return res;
 }
 
-void ProblemConfig::loadConfig(string package_path) {
+vector<string> ProblemConfig::looselyLoadConfig(string package_path)
+		noexcept(false) {
+	// Append slash to package_path
+	if (package_path.size() && package_path.back() != '/')
+		package_path += '/';
+
+	ConfigFile config;
+	config.addVar("name");
+	config.addVar("tag");
+	config.addVar("statement");
+	config.addVar("checker");
+	config.addVar("memory_limit");
+	config.addVar("solutions");
+	config.addVar("main_solution");
+	config.addVar("tests");
+
+	config.loadConfigFromFile(package_path + "config.conf");
+
+	vector<string> warnings;
+	// Problem name
+	name = config.getString("name");
+	if (name.empty())
+		warnings.emplace_back("config.conf: missing problem name");
+
+	// Problem tag
+	tag = config.getString("tag");
+	if (tag.size() > 4) // Invalid tag
+		warnings.emplace_back("conf.cfg: problem tag too long "
+			"(max 4 characters)");
+
+	// Statement
+	statement = config.getString("statement");
+	if (statement.size()) {
+		if (statement.find('/') < statement.size())
+			warnings.emplace_back("config.conf: statement cannot contain "
+				"'/' character");
+
+		if (access(concat(package_path, "doc/", statement), F_OK) == -1)
+			throw std::runtime_error(concat("config.conf: invalid statement '",
+				statement, "': 'doc/", statement, '\'', error(errno)));
+	}
+
+	// Checker
+	checker = config.getString("checker");
+	if (checker.size() && checker.find('/') < checker.size())
+		warnings.emplace_back("config.conf: checker cannot contain "
+			"'/' character");
+
+	// Solutions
+	solutions = config.getArray("solutions");
+	for (auto& i : solutions)
+		if (i.find('/') < i.size())
+			warnings.emplace_back("config.conf: solution cannot contain "
+				"'/' character");
+
+	// Main solution
+	main_solution = config.getString("main_solution");
+	if (main_solution.empty())
+		warnings.emplace_back("config.conf: missing main_solution");
+
+	else if (std::find(solutions.begin(), solutions.end(), main_solution) ==
+			solutions.end())
+		warnings.emplace_back("config.conf: main_solution has to be set in "
+			"solutions");
+
+	// Memory limit (in kB)
+	if (!config.isSet("memory_limit")) {
+		memory_limit = 0;
+		warnings.emplace_back("config.conf: missing memory limit\n");
+
+	} else if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
+		warnings.emplace_back("config.conf: invalid memory limit\n");
+
+	// Tests
+	test_groups.clear();
+	vector<string> tests = config.getArray("tests");
+	for (auto& i : tests) {
+		Test test;
+
+		// Test name
+		size_t pos = 0;
+		while (pos < i.size() && !isspace(i[pos]))
+			++pos;
+		test.name.assign(i, 0, pos);
+
+		if (test.name.find('/') != string::npos)
+			warnings.emplace_back("config.conf: test name cannot contain "
+				"'/' character");
+
+		// Time limit
+		errno = 0;
+		char *ptr;
+		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
+		if (errno)
+			warnings.emplace_back("config.conf: " + test.name +
+				": invalid time limit");
+		pos = ptr - i.data();
+
+		while (pos < i.size() && isspace(i[pos]))
+			++pos;
+
+		// Points
+		if (pos < i.size()) {
+			test_groups.emplace_back();
+
+			// Remove trailing white spaces
+			size_t end = i.size();
+			while (end > pos && isspace(i[end - 1]))
+				--end;
+
+			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
+				warnings.emplace_back("config.conf: " + test.name +
+					": invalid points");
+		}
+
+		test_groups.back().tests.push_back(test);
+	}
+
+	return warnings;
+}
+
+void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
@@ -112,6 +233,9 @@ void ProblemConfig::loadConfig(string package_path) {
 
 	// Main solution
 	main_solution = config.getString("main_solution");
+	if (main_solution.empty())
+		throw std::runtime_error("config.conf: missing main_solution");
+
 	if (std::find(solutions.begin(), solutions.end(), main_solution) ==
 			solutions.end())
 		throw std::runtime_error("config.conf: main_solution has to be set in "

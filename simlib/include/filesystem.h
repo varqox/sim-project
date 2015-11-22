@@ -61,22 +61,22 @@ public:
 	std::string path() const { return path_; }
 };
 
-// creates directory (not recursively) (mode: 0755/rwxr-xr-x)
+// Create directory (not recursively) (mode: 0755/rwxr-xr-x)
 inline int mkdir(const char* pathname) {
 	return mkdir(pathname, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 }
 
-// creates directory (not recursively) (mode: 0755/rwxr-xr-x)
+// Create directory (not recursively) (mode: 0755/rwxr-xr-x)
 inline int mkdir(const std::string& pathname) {
 	return mkdir(pathname.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH |
 		S_IXOTH);
 }
 
-// creates directories recursively (default mode: 0755/rwxr-xr-x)
+// Create directories recursively (default mode: 0755/rwxr-xr-x)
 int mkdir_r(const char* pathname, mode_t mode = S_IRWXU | S_IRGRP | S_IXGRP |
 		S_IROTH | S_IXOTH);
 
-// creates directories recursively (default mode: 0755/rwxr-xr-x)
+// Create directories recursively (default mode: 0755/rwxr-xr-x)
 inline int mkdir_r(const std::string& pathname, mode_t mode = S_IRWXU |
 		S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) {
 	return mkdir_r(pathname.c_str(), mode);

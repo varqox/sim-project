@@ -119,6 +119,23 @@ bool slowEqual(const char* str1, const char* str2, size_t len) noexcept {
 	return rc == 0;
 }
 
+string withoutTrailing(const string& str, char c) {
+	auto len = str.size();
+	while (len > 0 && str[len - 1] == c)
+		--len;
+	return string(str, 0, len);
+}
+
+void removeTrailing(string& str, char c) noexcept {
+	auto it = str.end();
+	while (it != str.begin())
+		if (*--it != c) {
+			++it;
+			break;
+		}
+	str.erase(it, str.end());
+}
+
 string encodeURI(const StringView& str, size_t beg, size_t end) {
 	// a-z A-Z 0-9 - _ . ~
 	static bool is_safe[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

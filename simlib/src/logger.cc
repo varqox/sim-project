@@ -25,8 +25,12 @@ void Logger::Appender::flush() noexcept {
 		return;
 
 	if (logger_.lock()) {
-		fprintf(logger_.f_, "[ %s ] %s\n", date("%Y-%m-%d %H:%M:%S").c_str(),
-			buff_.c_str());
+		if (logger_.label_)
+			fprintf(logger_.f_, "[ %s ] %s\n",
+				date("%Y-%m-%d %H:%M:%S").c_str(), buff_.c_str());
+		else
+			fprintf(logger_.f_, "%s\n", buff_.c_str());
+
 		fflush(logger_.f_);
 		logger_.unlock();
 	}

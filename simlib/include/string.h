@@ -14,7 +14,7 @@ public:
 	typedef const_pointer const_iterator;
 	typedef const_iterator iterator;
 	typedef size_t size_type;
-	static const size_type npos = -1;
+	static constexpr size_type npos = -1;
 
 private:
 	pointer str;
@@ -284,6 +284,29 @@ inline bool slowEqual(const std::string& str1, const std::string& str2)
 		noexcept {
 	return slowEqual(str1.data(), str2.data(),
 		std::min(str1.size(), str2.size())) && str1.size() == str2.size();
+}
+
+std::string withoutTrailing(const std::string& str, char c);
+
+void removeTrailing(std::string& str, char c) noexcept;
+
+template<class Func>
+std::string withoutTrailing(const std::string& str, Func f) {
+	auto len = str.size();
+	while (len > 0 && f(str[len - 1]))
+		--len;
+	return std::string(str, 0, len);
+}
+
+template<class Func>
+void removeTrailing(std::string& str, Func f) {
+	auto it = str.end();
+	while (it != str.begin())
+		if (!f(*--it)) {
+			++it;
+			break;
+		}
+	str.erase(it, str.end());
 }
 
 std::string encodeURI(const StringView& str, size_t beg = 0,

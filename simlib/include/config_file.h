@@ -59,16 +59,12 @@ public:
 
 		using runtime_error::what;
 
-#if __cplusplus >= 201103L
-		virtual ~ParseError() {}
-#else
-		virtual ~ParseError() throw() {}
-#endif
+		virtual ~ParseError() noexcept {}
 	};
 
 	struct Variable {
-		static const int SET = 1; // set if variable appear in config
-		static const int ARRAY = 2; // set if variable is array
+		static constexpr int SET = 1; // set if variable appear in config
+		static constexpr int ARRAY = 2; // set if variable is array
 		int flag;
 		std::string s;
 		std::vector<std::string> a;
