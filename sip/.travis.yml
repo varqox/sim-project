@@ -1,0 +1,41 @@
+language: cpp
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  -
+  - DEBUG=1
+  - DEBUG=2
+  - DEBUG=3
+
+cache: apt
+
+sudo: false
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++-4.8-multilib
+    - clang-3.4
+
+install:
+  # Compiler
+  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.8"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+
+before_script:
+  - export CC="$CC -Werror"
+  - export CXX="$CXX -Werror"
+
+script:
+  - make -kj DEBUG=$DEBUG
+
+notifications:
+  email: false
+
+matrix:
+  fast_finish: true
