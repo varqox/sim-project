@@ -1,8 +1,8 @@
 #pragma once
 
+#include <chrono>
 #include <ctime>
 #include <string>
-#include <sys/time.h>
 
 long long microtime();
 
@@ -12,19 +12,20 @@ std::string date(const std::string& str, time_t cur_time = -1);
 bool isDatetime(const std::string& str);
 
 class Stopwatch {
-	struct timeval begin;
+	std::chrono::steady_clock::time_point begin;
 
 public:
 	Stopwatch() noexcept { restart(); }
 
-	void restart() noexcept { gettimeofday(&begin, nullptr); }
+	void restart() noexcept { begin = std::chrono::steady_clock::now(); }
 
 	long long microtime() const noexcept {
-		struct timeval end;
-		gettimeofday(&end, NULL);
-		return (end.tv_sec - begin.tv_sec) * 1000000LL + end.tv_usec -
-			begin.tv_usec;
+		using namespace std::chrono;
+		return duration_cast<microseconds>(steady_clock::now() - begin).count();
 	}
 
-	double time() const noexcept { return microtime() * 0.000001; }
+	double time() const noexcept {
+		using namespace std::chrono;
+		return duration<double>(steady_clock::now() - begin).count();
+	}
 };

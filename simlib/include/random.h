@@ -1,13 +1,7 @@
 #pragma once
 
-#include "ncg.h"
-
-#include <algorithm>
-
-// Get random from [a, b]
-inline int getRandom(int a, int b) {
-	return a + pull() % (b - a + 1);
-}
+#include <chrono>
+#include <random>
 
 template<class Iter>
 void randomShuffle (Iter begin, Iter end) {
@@ -25,3 +19,18 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept;
 // Returns bytes read (from /dev/urandom) or -1 on error throws a
 // std::runtime_error with appropriate message if error occurs
 void readRandomBytes(void* dest, size_t bytes) noexcept(false);
+
+inline uint_fast32_t getRandomSeed() noexcept {
+	uint_fast32_t seed;
+	return (-1 == readRandomBytes_nothrow(&seed, sizeof(seed)) ? std::chrono::system_clock::now().time_since_epoch().count() : seed);
+}
+
+
+struct getRandom {
+	static std::mt19937 generator;
+};
+
+// Get random from [a, b]
+inline uint_fast32_t getRandom(uint_fast32_t a, uint_fast32_t b) {
+	return std::uniform_int_distribution<uint_fast32_t>(a, b)(getRandom::generator);
+}

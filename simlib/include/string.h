@@ -212,10 +212,13 @@ std::basic_ostream<CharT, Traits>& operator<<(
 // Converts T to std::string
 template<class T>
 std::string toString(T x) {
+	static_assert(std::is_integral<T>::value, "template argument not an "
+		"integral type");
+
 	std::string res;
 	bool minus = false;
 
-	if (x < T()) {
+	if (std::is_signed<T>::value && x < T()) {
 		minus = true;
 		x = -x;
 	}
@@ -410,6 +413,9 @@ inline bool isReal(const StringView& s) { return isReal(s, 0); }
 template<class T>
 int strtoi(const StringView& s, T *x, size_t beg = 0,
 		size_t end = StringView::npos) {
+	static_assert(std::is_integral<T>::value, "template argument not an "
+		"integral type");
+
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end) {
@@ -441,6 +447,9 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 template<class T>
 int strtou(const StringView& s, T *x, size_t beg = 0,
 		size_t end = StringView::npos) {
+	static_assert(std::is_integral<T>::value, "template argument not an "
+		"integral type");
+
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end) {

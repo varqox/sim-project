@@ -1,25 +1,27 @@
 #include "../include/filesystem.h"
 #include "../include/logger.h"
-#include "../include/ncg.h"
+#include "../include/random.h"
 
 #include <unistd.h>
+
+std::mt19937 getRandom::generator(getRandomSeed());
 
 void fillRandomly(void* dest, size_t bytes) noexcept {
 	if (bytes == 0)
 		return;
 
-	constexpr size_t len = sizeof(uint32_t);
-	uint32_t* ptr = static_cast<uint32_t*>(dest);
+	constexpr size_t len = sizeof(uint_fast32_t);
+	uint_fast32_t* ptr = static_cast<uint_fast32_t*>(dest);
 	for (; bytes >= len; bytes -= len, ++ptr)
-		*ptr = pull();
+		*ptr = getRandom::generator();
 
 	// Fill last bytes
 	if (bytes > 0) {
 		union {
-			uint32_t x = pull();
-			uint8_t t[len];
+			uint_fast32_t x = getRandom::generator();
+			uint_fast8_t t[len];
 		};
-		uint8_t* ptr1 = reinterpret_cast<uint8_t*>(ptr);
+		uint_fast8_t* ptr1 = reinterpret_cast<uint_fast8_t*>(ptr);
 		for (unsigned i = 0; i < bytes; ++i)
 			ptr1[i] = t[i];
 	}

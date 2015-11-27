@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <sys/ptrace.h>
 #include <sys/resource.h>
+#include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/wait.h>
 
@@ -215,7 +216,7 @@ ExitStat run(const string& exec, vector<string> args,
 	sigset_t sset, old_sset;
 	sigemptyset(&sset);
 	sigaddset(&sset, SIGALRM);
-	sigprocmask(SIG_BLOCK , &sset, &old_sset);
+	sigprocmask(SIG_BLOCK, &sset, &old_sset);
 
 	cpid = fork();
 	if (cpid == -1)
@@ -298,12 +299,11 @@ ExitStat run(const string& exec, vector<string> args,
 	timer.it_value.tv_usec = opts->time_limit - timer.it_value.tv_sec *
 		1000000LL;
 
-	int tmp;
-	sigwait(&sset, &tmp); // Wait for child process to be ready
-	sigprocmask(SIG_SETMASK , &old_sset, nullptr);
+	// Wait for child process to be ready
+	sigwait(&sset, &status);
+	sigprocmask(SIG_SETMASK, &old_sset, nullptr);
 
 	// Run timer (time limit)
-	Stopwatch stopwatch;
 	unsigned long long runtime;
 	setitimer(ITIMER_REAL, &timer, &old_timer);
 
@@ -313,8 +313,10 @@ ExitStat run(const string& exec, vector<string> args,
 		 exit_normally:
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
-			runtime = stopwatch.microtime();
 			sigaction(SIGALRM, &sa_old, nullptr);
+
+			runtime = opts->time_limit - timer.it_value.tv_sec * 1000000LL -
+				timer.it_value.tv_usec;
 
 			// Kill process if it still exists
 			kill(cpid, SIGKILL);
@@ -353,8 +355,10 @@ ExitStat run(const string& exec, vector<string> args,
 		if (syscall == -1 || func(cpid, syscall, data) != 0) {
 			// Disable timer
 			setitimer(ITIMER_REAL, &old_timer, &timer);
-			runtime = stopwatch.microtime();
 			sigaction(SIGALRM, &sa_old, nullptr);
+
+			runtime = opts->time_limit - timer.it_value.tv_sec * 1000000LL -
+				timer.it_value.tv_usec;
 
 			// Kill process if it still exists
 			kill(cpid, SIGKILL);
@@ -387,6 +391,7 @@ ExitStat thread_safe_run(const string& exec, vector<string> args,
 		char message[1000];
 	};
 
+	// TODO: maybe a pipe?
 	SharedMemorySegment shm_sgmt(sizeof(RuntimeInfo));
 	if (shm_sgmt.addr() == nullptr)
 		return ExitStat(-1, 0, string("Failed to create shared memory segment")
