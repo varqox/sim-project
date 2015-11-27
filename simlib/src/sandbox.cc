@@ -212,6 +212,11 @@ static void handle_timeout(int) {
 ExitStat run(const string& exec, vector<string> args,
 		const struct options *opts, int (*func)(int, int, void*), void *data) {
 
+	sigset_t sset, old_sset;
+	sigemptyset(&sset);
+	sigaddset(&sset, SIGALRM);
+	sigprocmask(SIG_BLOCK , &sset, &old_sset);
+
 	cpid = fork();
 	if (cpid == -1)
 		return ExitStat(-1, 0, string("Failed to fork() - ") + strerror(errno));
@@ -260,6 +265,8 @@ ExitStat run(const string& exec, vector<string> args,
 					_exit(-1);
 
 		ptrace(PTRACE_TRACEME);
+
+		kill(getppid(), SIGALRM);
 		kill(getpid(), SIGSTOP);
 
 		execv(exec.c_str(), arg);
@@ -290,6 +297,10 @@ ExitStat run(const string& exec, vector<string> args,
 	timer.it_value.tv_sec = opts->time_limit / 1000000;
 	timer.it_value.tv_usec = opts->time_limit - timer.it_value.tv_sec *
 		1000000LL;
+
+	int tmp;
+	sigwait(&sset, &tmp); // Wait for child process to be ready
+	sigprocmask(SIG_SETMASK , &old_sset, nullptr);
 
 	// Run timer (time limit)
 	Stopwatch stopwatch;
