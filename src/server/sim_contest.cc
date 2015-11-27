@@ -978,8 +978,9 @@ void Sim::Contest::editProblem() {
 		if (fv.noErrors())
 			try {
 				// Update problem config
-				ProblemConfig pconfig; // TODO: ProblemConfig is too heavy here
-				pconfig.loadConfig("problems/" + r_path_->problem->problem_id);
+				ProblemConfig pconfig;
+				pconfig.looselyLoadConfig("problems/" +
+					r_path_->problem->problem_id);
 
 				pconfig.name = name;
 				pconfig.tag = tag;

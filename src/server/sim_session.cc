@@ -52,13 +52,13 @@ Sim::Session::State Sim::Session::open() {
 	return FAIL;
 }
 
-static string generate_id() {
+string Sim::Session::generateId() {
 	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"0123456789";
 	constexpr size_t len = sizeof(t) - 1;
 
-	// Generate random id of length 10
-	string res(10, '0');
+	// Generate random id of length SESSION_ID_LENGTH
+	string res(SESSION_ID_LENGTH, '0');
 	for (auto& c : res)
 		c = t[getRandom(0, len - 1)];
 
@@ -84,7 +84,7 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 		pstmt->setString(5, date("%Y-%m-%d %H:%M:%S"));
 
 		for (;;) {
-			id_ = generate_id();
+			id_ = generateId();
 			pstmt->setString(1, id_);
 
 			try {

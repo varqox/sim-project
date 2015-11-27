@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
 	// session
 	try {
 		stmt->executeUpdate("CREATE TABLE IF NOT EXISTS `session` (\n"
-				"`id` char(10) COLLATE utf8_bin NOT NULL,\n"
+				"`id` char(30) COLLATE utf8_bin NOT NULL,\n"
 				"`user_id` int unsigned NOT NULL,\n"
 				"`data` text COLLATE utf8_bin NOT NULL,\n"
 				"`ip` char(15) COLLATE utf8_bin NOT NULL,\n"
