@@ -29,7 +29,8 @@ inline uint_fast32_t getRandomSeed() noexcept {
 extern std::mt19937 getRandom_generator;
 
 // Get random from [a, b]
-inline uint_fast32_t getRandom(uint_fast32_t a, uint_fast32_t b) {
-	return std::uniform_int_distribution<uint_fast32_t>(a, b)
+template<class T>
+inline T getRandom(T a, T b) {
+	return std::uniform_int_distribution<T>(a, b)
 		(getRandom_generator);
 }
