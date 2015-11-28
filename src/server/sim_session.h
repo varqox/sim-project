@@ -9,8 +9,9 @@ public:
 	unsigned user_type; // 0 - admin, 1 - teacher, 2 - normal
 
 private:
-	static const int SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days (in
-	                                                          // seconds)
+	static constexpr int SESSION_ID_LENGTH = 30;
+	static constexpr int SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days (in
+	                                                              // seconds)
 
 	Session(const Session&);
 	Session& operator=(const Session&);
@@ -21,6 +22,8 @@ private:
 
 	explicit Session(Sim& sim) : user_id(), data(), username(), user_type(),
 		sim_(sim), state_(CLOSED), id_() {}
+
+	static std::string generateId();
 
 	~Session() { close(); }
 
