@@ -249,6 +249,32 @@ int move(const std::string& oldpath, const std::string& newpath,
  */
 int createFile(const char* pathname, mode_t mode);
 
+/**
+ * @brief Read @p count bytes to @p buf from @p fd
+ * @details Uses read(2), but reads until it is able to read
+ *
+ * @param fd file descriptor
+ * @param buf where place read bytes
+ * @param count number of bytes to read
+ * @return number of bytes read on success, if error occurs then errno is > 0
+ *
+ * @errors The same as for read(2) except EINTR
+ */
+size_t readAll(int fd, void *buf, size_t count);
+
+/**
+ * @brief Write @p count bytes to @p fd from @p buf
+ * @details Uses write(2), but writes until it is able to write
+ *
+ * @param fd file descriptor
+ * @param buf where write bytes from
+ * @param count number of bytes to write
+ * @return number of bytes written on success, if error occurs then errno is > 0
+ *
+ * @errors The same as for write(2) except EINTR
+ */
+size_t writeAll(int fd, void *buf, size_t count);
+
 namespace directory_tree {
 
 // Node represents a directory
@@ -417,7 +443,7 @@ inline std::string getFileContents(const std::string& file, off64_t beg,
 	return getFileContents(file.c_str(), beg, end);
 }
 
-const int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
+constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
 /**
  * @brief Get file contents by lines in range [first, last)
  *

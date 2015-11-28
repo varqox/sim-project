@@ -284,6 +284,48 @@ int createFile(const char* pathname, mode_t mode) {
 	return sclose(fd);
 }
 
+size_t readAll(int fd, void *buf, size_t count) {
+	ssize_t k;
+	size_t pos = 0;
+	uint8_t *buff = static_cast<uint8_t*>(buf);
+	do {
+		k = read(fd, buff + pos, count - pos);
+		if (k > 0)
+			pos += k;
+		else if (k == 0) {
+			errno = 0; // No error
+			return pos;
+
+		} else if (errno != EINTR)
+			return pos; // Error
+
+	} while (count > 0);
+
+	errno = 0; // No error
+	return count;
+}
+
+size_t writeAll(int fd, void *buf, size_t count) {
+	ssize_t k;
+	size_t pos = 0;
+	uint8_t *buff = static_cast<uint8_t*>(buf);
+	do {
+		k = write(fd, buff + pos, count - pos);
+		if (k > 0)
+			pos += k;
+		else if (k == 0) {
+			errno = 0; // No error
+			return pos;
+
+		} else if (errno != EINTR)
+			return pos; // Error
+
+	} while (count > 0);
+
+	errno = 0; // No error
+	return count;
+}
+
 namespace directory_tree {
 
 void node::__print(FILE *stream, string buff) {

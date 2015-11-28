@@ -4,7 +4,7 @@
 
 #include <unistd.h>
 
-std::mt19937 getRandom::generator(getRandomSeed());
+std::mt19937 getRandom_generator(getRandomSeed());
 
 void fillRandomly(void* dest, size_t bytes) noexcept {
 	if (bytes == 0)
@@ -13,12 +13,12 @@ void fillRandomly(void* dest, size_t bytes) noexcept {
 	constexpr size_t len = sizeof(uint_fast32_t);
 	uint_fast32_t* ptr = static_cast<uint_fast32_t*>(dest);
 	for (; bytes >= len; bytes -= len, ++ptr)
-		*ptr = getRandom::generator();
+		*ptr = getRandom_generator();
 
 	// Fill last bytes
 	if (bytes > 0) {
 		union {
-			uint_fast32_t x = getRandom::generator();
+			uint_fast32_t x = getRandom_generator();
 			uint_fast8_t t[len];
 		};
 		uint_fast8_t* ptr1 = reinterpret_cast<uint_fast8_t*>(ptr);
@@ -32,10 +32,15 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
 	if (fd == -1)
 		return -1;
 
-	size_t len = read(fd, dest, bytes);
+	size_t len = readAll(fd, dest, bytes);
+	int errnum = errno;
 	sclose(fd);
 
-	return (bytes == len ? bytes : -1);
+	if (bytes == len)
+		return bytes;
+
+	errno = errnum;
+	return -1;
 }
 
 void readRandomBytes(void* dest, size_t bytes) noexcept(false) {
@@ -44,10 +49,11 @@ void readRandomBytes(void* dest, size_t bytes) noexcept(false) {
 		throw std::runtime_error(concat("Failed to open /dev/urandom",
 			error(errno)));
 
-	size_t len = read(fd, dest, bytes);
+	size_t len = readAll(fd, dest, bytes);
+	int errnum = errno;
 	sclose(fd);
 
 	if (len != bytes)
 		throw std::runtime_error(concat("Failed to read from /dev/urandom",
-			error(errno)));
+			error(errnum)));
 }
