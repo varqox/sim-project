@@ -60,7 +60,7 @@ string Sim::Session::generateId() {
 	// Generate random id of length SESSION_ID_LENGTH
 	string res(SESSION_ID_LENGTH, '0');
 	for (auto& c : res)
-		c = t[getRandom(0, len - 1)];
+		c = t[getRandom<int>(0, len - 1)];
 
 	return res;
 }
