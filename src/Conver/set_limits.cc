@@ -166,10 +166,10 @@ int setLimits(const string& package_path) {
 			// Run
 			sandbox::ExitStat es = sandbox::run("./exec", exec_args, &sb_opts);
 
-			// Set time_limit (minimum time_limit is 0.1s unless TIME_LIMIT > 0)
+			// Set time_limit (adjust time_limit by 0.4s unless TIME_LIMIT > 0)
 			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONFIG))
 				test.time_limit = TIME_LIMIT > 0 ? TIME_LIMIT :
-					std::max(es.runtime * 4, 100000ull);
+					es.runtime * 4 + 400000ull;
 
 			if (VERBOSITY > 0) {
 				printf("%4s / %-4s    Status: ",
