@@ -31,7 +31,7 @@ size_t ConfigFile::parseDoubleQuotedString(const StringView& in, string& out,
 
 		if (in[i] == '\\') {
 			if (++i == end)
-				throw ParseError(line, "multiline strings are not supported");
+				throw ParseError(line, "multi-line strings are not supported");
 
 			switch (in[i]) {
 			case '\'':
@@ -108,8 +108,8 @@ void ConfigFile::loadConfigFromFile(const string& pathname, bool load_all) {
 		errno == EINTR) {}
 
 	if (fd == -1)
-		throw std::runtime_error("Failed to open '" + pathname + "' - " +
-			strerror(errno));
+		throw std::runtime_error(concat("Failed to open '", pathname, "' - ",
+			strerror(errno)));
 
 	Closer closer(fd);
 	string contents = getFileContents(fd);
@@ -151,8 +151,8 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 			vars.insert(make_pair(name, Variable())).first : vars.find(name));
 		Variable& var = (it == vars.end() ? tmp : it->second);
 		if (var.flag & Variable::SET)
-			throw ParseError(line, "variable '" + name +
-				"' defined more than once");
+			throw ParseError(line, concat("variable '", name,
+				"' defined more than once"));
 
 		var.flag |= Variable::SET;
 		var.s.clear();
@@ -165,8 +165,8 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 			throw ParseError(line, "missing assignment operator");
 
 		if (config[beg] != ':' && config[beg] != '=')
-			throw ParseError(line, string("wrong assignment operator '") +
-				config[beg] + "'");
+			throw ParseError(line, concat("wrong assignment operator '",
+				config[beg], '\''));
 
 		++beg; // Ignore assignment operator
 		IgnoreWhitespace();

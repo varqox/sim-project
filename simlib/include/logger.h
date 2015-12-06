@@ -127,7 +127,7 @@ public:
 };
 
 inline std::string error(int errnum) {
-	return concat(" - " + toString(errnum) + ": " + strerror(errnum));
+	return concat(" - ", toString(errnum), ": ", strerror(errnum));
 }
 
 extern Logger stdlog, error_log; // By default both write to stderr

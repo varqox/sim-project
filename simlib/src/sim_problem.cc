@@ -70,6 +70,14 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 	if (name.empty())
 		warnings.emplace_back("config.conf: missing problem name");
 
+	// Memory limit (in kB)
+	if (!config.isSet("memory_limit")) {
+		memory_limit = 0;
+		warnings.emplace_back("config.conf: missing memory limit\n");
+
+	} else if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
+		warnings.emplace_back("config.conf: invalid memory limit\n");
+
 	// Problem tag
 	tag = config.getString("tag");
 	if (tag.size() > 4) // Invalid tag
@@ -111,14 +119,6 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 		warnings.emplace_back("config.conf: main_solution has to be set in "
 			"solutions");
 
-	// Memory limit (in kB)
-	if (!config.isSet("memory_limit")) {
-		memory_limit = 0;
-		warnings.emplace_back("config.conf: missing memory limit\n");
-
-	} else if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
-		warnings.emplace_back("config.conf: invalid memory limit\n");
-
 	// Tests
 	test_groups.clear();
 	vector<string> tests = config.getArray("tests");
@@ -140,8 +140,8 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 		char *ptr;
 		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
 		if (errno)
-			warnings.emplace_back("config.conf: " + test.name +
-				": invalid time limit");
+			warnings.emplace_back(concat("config.conf: ", test.name,
+				": invalid time limit"));
 		pos = ptr - i.data();
 
 		while (pos < i.size() && isspace(i[pos]))
@@ -157,8 +157,8 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 				--end;
 
 			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
-				warnings.emplace_back("config.conf: " + test.name +
-					": invalid points");
+				warnings.emplace_back(concat("config.conf: ", test.name,
+					": invalid points"));
 		}
 
 		test_groups.back().tests.push_back(test);
@@ -188,6 +188,13 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 	name = config.getString("name");
 	if (name.empty())
 		throw std::runtime_error("config.conf: Missing problem name");
+
+	// Memory limit (in kB)
+	if (!config.isSet("memory_limit"))
+		throw std::runtime_error("config.conf: missing memory limit\n");
+
+	if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
+		throw std::runtime_error("config.conf: invalid memory limit\n");
 
 	// Problem tag
 	tag = config.getString("tag");
@@ -241,13 +248,6 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 		throw std::runtime_error("config.conf: main_solution has to be set in "
 			"solutions");
 
-	// Memory limit (in kB)
-	if (!config.isSet("memory_limit"))
-		throw std::runtime_error("config.conf: missing memory limit\n");
-
-	if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
-		throw std::runtime_error("config.conf: invalid memory limit\n");
-
 	// Tests
 	test_groups.clear();
 	vector<string> tests = config.getArray("tests");
@@ -264,18 +264,18 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 			throw std::runtime_error("config.conf: test name cannot contain "
 				"'/' character");
 
-		if (access(package_path + "tests/" + test.name + ".in", F_OK) == -1)
-			throw std::runtime_error("config.conf: invalid test name '" +
-				test.name + "': 'tests/" + test.name + ".in' - " +
-				strerror(errno));
+		string test_in = concat(package_path, "tests/", test.name, ".in");
+		if (access(test_in, F_OK) == -1)
+			throw std::runtime_error(concat("config.conf: invalid test name '",
+				test_in, '\'', error(errno)));
 
 		// Time limit
 		errno = 0;
 		char *ptr;
 		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
 		if (errno)
-			throw std::runtime_error("config.conf: " + test.name +
-				": invalid time limit");
+			throw std::runtime_error(concat("config.conf: ", test.name,
+				": invalid time limit"));
 		pos = ptr - i.data();
 
 		while (pos < i.size() && isspace(i[pos]))
@@ -291,8 +291,8 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 				--end;
 
 			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
-				throw std::runtime_error("config.conf: " + test.name +
-					": invalid points");
+				throw std::runtime_error(concat("config.conf: ", test.name,
+					": invalid points"));
 		}
 
 		test_groups.back().tests.push_back(test);
@@ -307,13 +307,13 @@ string ProblemConfig::makeSafeString(const StringView& str,
 	if (escape_unprintable) {
 		for (size_t i = 0; i < str.size(); ++i)
 			if (!isprint(str[i]))
-				return '"' + ConfigFile::safeDoubleQuotedString(str, true)
-					+ '"';
+				return concat('"', ConfigFile::safeDoubleQuotedString(str,
+					true), '"');
 
 	} else if (str.find('\n') != StringView::npos)
-		return '"' + ConfigFile::safeDoubleQuotedString(str, false) + '"';
+		return concat('"', ConfigFile::safeDoubleQuotedString(str, false), '"');
 
-	return '\'' + ConfigFile::safeSingleQuotedString(str) + '\'';
+	return concat('\'', ConfigFile::safeSingleQuotedString(str), '\'');
 }
 
 string getTag(const string& str) {

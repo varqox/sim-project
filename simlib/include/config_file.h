@@ -51,7 +51,7 @@ public:
 		explicit ParseError(const std::string& msg) : runtime_error(msg) {}
 
 		explicit ParseError(size_t line, const std::string& msg)
-			: runtime_error("line " + toString(line) + ": " + msg) {}
+			: runtime_error(concat("line ", toString(line), ": ", msg)) {}
 
 		ParseError(const ParseError& pe) : runtime_error(pe) {}
 
@@ -115,7 +115,7 @@ public:
 	// with the same name already exists
 	void addVar(const std::string& name) {
 		if (!vars.insert(std::make_pair(name, Variable())).second)
-			throw std::logic_error("Variable '" + name + "' already set");
+			throw std::logic_error(concat("Variable '", name, "' already set"));
 	}
 
 	const std::map<std::string, Variable>& getVars() const { return vars; }
