@@ -70,8 +70,8 @@ int convertPackage(string tmp_package, string out_package) {
 
 	// check/
 	if (USE_CONFIG && config_conf.checker.size())
-		copy(tmp_package + "check/" + config_conf.checker, out_package + "check/" +
-			config_conf.checker);
+		copy(concat(tmp_package, "check/", config_conf.checker),
+			concat(out_package, "check/", config_conf.checker));
 
 	directory_tree::node *folder = package_tree_root->dir("check");
 	if (folder != nullptr)
@@ -90,8 +90,8 @@ int convertPackage(string tmp_package, string out_package) {
 
 	// doc/
 	if (USE_CONFIG && config_conf.statement.size())
-		copy(tmp_package + "doc/" + config_conf.statement, out_package + "doc/" +
-			config_conf.statement);
+		copy(concat(tmp_package, "doc/", config_conf.statement),
+			concat(out_package, "doc/", config_conf.statement));
 
 	folder = package_tree_root->dir("doc");
 	if (folder != nullptr)

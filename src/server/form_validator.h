@@ -40,7 +40,8 @@ public:
 	}
 
 	void addError(const std::string& error) {
-		append(errors_) << "<p>" << htmlSpecialChars(error) << "</p>\n";
+		append(errors_) << "<pre class=\"error\">" << htmlSpecialChars(error)
+			<< "</pre>\n";
 	}
 
 	std::string getFilePath(const std::string& name) {
@@ -50,7 +51,10 @@ public:
 		return it == form.end() ? "" : it->second;
 	}
 
-	std::string errors() const { return errors_; }
+	std::string errors() const {
+		return (errors_.empty() ? ""
+			: concat("<div class=\"notifications\">", errors_, "</div>"));
+	}
 
 	bool noErrors() const { return errors_.empty(); }
 };
@@ -65,8 +69,9 @@ inline bool FormValidator::validate(std::string& var, const std::string& name,
 		if (var.empty() || check(var))
 			return true;
 
-		append(errors_) << "<p>" << htmlSpecialChars(error.empty() ?
-				(name_to_print + " validation error") : error) << "</p>\n";
+		append(errors_) << "<pre class=\"error\">"
+			<< htmlSpecialChars(error.empty()
+				? (name_to_print + " validation error") : error) << "</pre>\n";
 	}
 
 	return false;
@@ -78,7 +83,8 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 		size_t max_size) {
 
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
-		append(errors_) << "<p>" << name_to_print << " cannot be blank</p>\n";
+		append(errors_) << "<pre class=\"error\">" << name_to_print
+			<< " cannot be blank</pre>\n";
 		return false;
 	}
 
@@ -95,8 +101,9 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 		if (check(var))
 			return true;
 
-		append(errors_) << "<p>" << htmlSpecialChars(error.empty() ?
-				(name_to_print + " validation error") : error) << "</p>\n";
+		append(errors_) << "<pre class=\"error\">"
+			<< htmlSpecialChars(error.empty()
+				? (name_to_print + " validation error") : error) << "</pre>\n";
 	}
 
 	return false;

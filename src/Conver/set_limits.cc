@@ -33,8 +33,8 @@ static void assignPoints() {
 int setLimits(const string& package_path) {
 	try {
 		// Compile checker
-		if (compile(package_path + "check/" + config_conf.checker, "checker",
-				(VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
+		if (compile(concat(package_path, "check/", config_conf.checker),
+				"checker", (VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
 			if (VERBOSITY == 1)
 				eprintf("Checker compilation failed.\n");
 			return 1;
@@ -59,8 +59,8 @@ int setLimits(const string& package_path) {
 			return 2;
 		}
 
-		if (compile(package_path + "prog/" + config_conf.main_solution, "exec",
-				(VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
+		if (compile(concat(package_path, "prog/", config_conf.main_solution),
+				"exec", (VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
 			if (VERBOSITY == 1)
 				eprintf("Solution compilation failed.\n");
 			return 2;
@@ -130,7 +130,7 @@ int setLimits(const string& package_path) {
 					concat(package_path, "tests/", test.name, ".in").c_str(),
 					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
-					(package_path + "tests/" + test.name + ".in").c_str(),
+					concat(package_path, "tests/", test.name, ".in").c_str(),
 					strerror(errno));
 
 				// Close file descriptors
