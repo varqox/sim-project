@@ -147,7 +147,7 @@ int main() {
 		return 1;
 	}
 
-	bool true_ = true;
+	int true_ = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &true_, sizeof(int))) {
 		error_log("Failed to setopt", error(errno));
 		return 2;
