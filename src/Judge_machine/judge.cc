@@ -43,7 +43,7 @@ struct TestResult {
 } // anonymous namespace
 
 JudgeResult judge(string submission_id, string problem_id) {
-	string package_path = "problems/" + problem_id + "/";
+	string package_path = concat("problems/", problem_id, '/');
 
 	// Load config
 	ProblemConfig pconf;
@@ -199,8 +199,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 			// Construct Report
 			group_result.push_back((TestResult){ &test.name, TestResult::ERROR,
-				usecToSecStr(es.runtime, 2, false) + "/" +
-					usecToSecStr(test.time_limit, 2, false) });
+				concat(usecToSecStr(es.runtime, 2, false), '/',
+					usecToSecStr(test.time_limit, 2, false)) });
 
 			// OK
 			if (es.code == 0)
@@ -418,7 +418,9 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	return JudgeResult(initial.status, total_score,
 		initial.tests + (initial.comments.empty() ?	""
-			: "<ul class=\"test-comments\">" + initial.comments +"</ul>\n"),
+			: concat("<ul class=\"test-comments\">", initial.comments,
+				"</ul>\n")),
 		final.tests + (final.comments.empty() ? ""
-			: "<ul class=\"test-comments\">" + final.comments + "</ul>\n"));
+			: concat("<ul class=\"test-comments\">", final.comments,
+				"</ul>\n")));
 }

@@ -387,13 +387,6 @@ int main(int argc, char **argv) {
 	// Validate
 	tmp_package = validatePackage(tmp_package);
 
-	// Problem name and memory limit are essential
-	if (!USE_CONFIG && (PROBLEM_NAME.empty() || !SET_MEMORY_LIMIT)) {
-		eprintf("Error: Package with invalid (or without) config.conf requires "
-			"problem name and memory limit (See options -n and -m)\n");
-		return -1;
-	}
-
 	// Problem name
 	if (PROBLEM_NAME.size())
 		config_conf.name = PROBLEM_NAME;
@@ -405,8 +398,19 @@ int main(int argc, char **argv) {
 		config_conf.tag = getTag(config_conf.name);
 
 	// Memory limit
-	if (SET_MEMORY_LIMIT || !USE_CONFIG)
+	if (SET_MEMORY_LIMIT)
 		config_conf.memory_limit = MEMORY_LIMIT;
+
+	// Problem name and memory limit are essential
+	if (config_conf.name.empty() || config_conf.memory_limit == 0) {
+		bool both = config_conf.name.empty() && config_conf.memory_limit == 0;
+		eprintf("Error: Package requires problem name and memory limit "
+			"specified, but there %s no %s neither in config.conf nor in "
+			"options (See options -n and -m)\n", (both ? "are" : "is"), (both
+				? "problem name and memory limit" : (config_conf.name.empty()
+					? "problem name" : "memory limit")));
+		return -1;
+	}
 
 	// Convert package (out_package - path to package after conversion)
 	string out_package = config_conf.tag + "/";

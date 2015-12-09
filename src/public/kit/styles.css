@@ -1088,7 +1088,6 @@ table.submissions td{
 	line-height: 20px;
 	border-top: 1px solid #bbb;
 }
-
 /* Logs */
 pre.logs {
 	margin: 10px;
@@ -1176,4 +1175,17 @@ div.right-flow{
 	display: flex;
 	flex-flow: row nowrap;
 	justify-content: flex-end;
+}
+
+/* Notifications */
+.notifications > .error {
+	margin: 10px 3px 0;
+	padding: 5px 10px;
+	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
+	background: #f6d7d7;
+	color: #ba4b49;
+	border: 1px solid #ecc1c7;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
 }

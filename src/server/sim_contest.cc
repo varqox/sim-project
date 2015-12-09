@@ -97,8 +97,8 @@ void Sim::Contest::handle() {
 			// Get statement path
 			ConfigFile problem_config;
 			problem_config.addVar("statement");
-			problem_config.loadConfigFromFile("problems/" +
-				r_path_->problem->problem_id + "/config.conf");
+			problem_config.loadConfigFromFile(concat("problems/",
+				r_path_->problem->problem_id, "/config.conf"));
 
 			string statement = problem_config.getString("statement");
 			// No statement
@@ -432,9 +432,9 @@ void Sim::Contest::addProblem() {
 				string package_file = fv.getFilePath("package");
 
 				// Rename package file that it will end with original extension
-				string new_package_file = package_file + '.' +
+				string new_package_file = concat(package_file, '.',
 					(isSuffix(user_package_file, ".tar.gz") ? "tar.gz"
-						: getExtension(user_package_file));
+						: getExtension(user_package_file)));
 				if (link(package_file.c_str(), new_package_file.c_str()))
 					throw std::runtime_error(string("Error: link() - ") +
 						strerror(errno));
@@ -482,7 +482,7 @@ void Sim::Contest::addProblem() {
 					// Move offset to begging
 					lseek(sopt.new_stderr_fd, 0, SEEK_SET);
 
-					fv.addError("Conver failed - " +
+					fv.addError("Conver failed:\n" +
 						getFileContents(sopt.new_stderr_fd));
 					goto form;
 				}
@@ -990,8 +990,8 @@ void Sim::Contest::editProblem() {
 						concat("problems/", r_path_->problem->problem_id,
 							"/config.conf"),
 						pconfig.dump()) == -1)
-					throw std::runtime_error("Failed to update problem " +
-						r_path_->problem->problem_id + " config");
+					throw std::runtime_error(concat("Failed to update problem ",
+						r_path_->problem->problem_id, " config"));
 
 				// Update database
 				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
@@ -1023,8 +1023,8 @@ void Sim::Contest::editProblem() {
 	pconfig.addVar("tag");
 	pconfig.addVar("memory_limit");
 
-	pconfig.loadConfigFromFile("problems/" + r_path_->problem->problem_id +
-		"/config.conf");
+	pconfig.loadConfigFromFile(concat("problems/", r_path_->problem->problem_id,
+		"/config.conf"));
 	name = pconfig.getString("name");
 	tag = pconfig.getString("tag");
 	memory_limit = pconfig.getString("memory_limit");
@@ -1324,7 +1324,8 @@ void Sim::Contest::submit(bool admin_view) {
 				string submission_id = res->getString(1);
 
 				// Copy solution
-				copy(solution_tmp_path, "solutions/" + submission_id + ".cpp");
+				copy(solution_tmp_path,
+					concat("solutions/", submission_id, ".cpp"));
 
 				// Change submission status to 'waiting'
 				stmt->executeUpdate("UPDATE submissions SET status='waiting' "
@@ -1568,7 +1569,8 @@ void Sim::Contest::submission() {
 					pstmt->setString(2, round_id);
 					pstmt->executeUpdate();
 
-					return sim_.redirect("/c/" + round_id + "/submissions");
+					return sim_.redirect(concat("/c/", round_id,
+						"/submissions"));
 
 				} catch (const std::exception& e) {
 					error_log("Caught exception: ", __FILE__, ':',
@@ -1630,7 +1632,7 @@ void Sim::Contest::submission() {
 		// View source
 		if (query == Query::VIEW_SOURCE) {
 			vector<string> args;
-			append(args)("./CTH")("solutions/" + submission_id + ".cpp");
+			append(args)("./CTH")(concat("solutions/", submission_id, ".cpp"));
 
 			spawn_opts sopt = {
 				-1,
@@ -1800,17 +1802,17 @@ void Sim::Contest::submissions(bool admin_view) {
 			: (r_path_->type == ROUND ? "parent_round_id" : "round_id"));
 
 		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement(admin_view ? "SELECT s.id, s.submit_time, r2.id, "
-					"r2.name, r.id, r.name, s.status, s.score, s.final, "
-					"s.user_id, u.username "
+			prepareStatement(admin_view ?
+				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
+					"r.name, s.status, s.score, s.final, s.user_id, u.username "
 				"FROM submissions s, rounds r, rounds r2, users u "
-				"WHERE s." + param_column + "=? AND s.round_id=r.id "
-					"AND r.parent=r2.id AND s.user_id=u.id ORDER BY s.id DESC"
-			: "SELECT s.id, s.submit_time, r2.id, r2.name, r.id, r.name, "
-					"s.status, s.score, s.final, r2.full_results "
+				"WHERE s.", param_column, "=? AND s.round_id=r.id "
+					"AND r.parent=r2.id AND s.user_id=u.id ORDER BY s.id DESC")
+			: concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
+					"r.name, s.status, s.score, s.final, r2.full_results "
 				"FROM submissions s, rounds r, rounds r2 "
-				"WHERE s." + param_column + "=? AND s.round_id=r.id "
-					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC"));
+				"WHERE s.", param_column, "=? AND s.round_id=r.id "
+					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC")));
 		pstmt->setString(1, r_path_->round_id);
 		if (!admin_view)
 			pstmt->setString(2, sim_.session->user_id);
@@ -2040,7 +2042,7 @@ void Sim::Contest::ranking(bool admin_view) {
 			if (last_user_id != res->getString(2)) {
 				rows.push_back((RankingRow){
 					res->getString(2),
-					res->getString(3) + " " + res->getString(4),
+					concat(res->getString(3), ' ', res->getString(4)),
 					0,
 					vector<RankingField>()
 				});
