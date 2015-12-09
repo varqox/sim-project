@@ -97,8 +97,8 @@ int mkdir_r(const char* path, mode_t mode) {
  * fdopendir(3)
  */
 int __remove_rat(int dirfd, const char* path) {
-	int fd = openat(dirfd, path, O_RDONLY | O_NOCTTY | O_NONBLOCK |
-			O_LARGEFILE | O_DIRECTORY | O_NOFOLLOW);
+	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY
+		| O_NOFOLLOW);
 	if (fd == -1)
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 
@@ -149,7 +149,7 @@ int blast(int infd, int outfd) {
 }
 
 int copy(const char* src, const char* dest) {
-	int in = open(src, O_RDONLY | O_LARGEFILE | O_NOFOLLOW);
+	int in = open(src, O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
 
@@ -198,17 +198,16 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  * mkdirat(2), copyat()
  */
-static int __copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) {
-	int src_fd = openat(dirfd1, src, O_RDONLY | O_NOCTTY | O_NONBLOCK |
-			O_LARGEFILE | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+static int __copy_rat(int dirfd1, const char* src, int dirfd2,
+		const char* dest) {
+	int src_fd = openat(dirfd1, src, O_RDONLY |	O_LARGEFILE | O_DIRECTORY);
 	if (src_fd == -1)
 		return -1;
 
 	// Do not use src permissions
 	mkdirat(dirfd2, dest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 
-	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_NOCTTY | O_NONBLOCK |
-			O_LARGEFILE | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
 	if (dest_fd == -1) {
 		sclose(src_fd);
 		return -1;
@@ -375,8 +374,7 @@ static node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 
 	node *root = new node(path, path + len);
 
-	int fd = openat(dirfd, path, O_RDONLY | O_NOCTTY | O_NONBLOCK |
-			O_LARGEFILE | O_DIRECTORY);
+	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
 	if (fd == -1)
 		return root;
 

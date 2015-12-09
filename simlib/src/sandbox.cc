@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <limits.h>
+#include <linux/version.h>
 #include <sys/ptrace.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -142,26 +143,54 @@ bool allowedCall(pid_t pid, int arch, int syscall,
 			&user_regs,
 			sizeof(user_regs)
 		};
-		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
-			return false; // Error occurred
+		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1) {
+			error_log("Error: ptrace(PTRACE_GETREGS)", error(errno));
+			return false;
+		}
 
 		if (ARG1 == 0) // NULL is first argument
 			return true;
 
 		char path[PATH_MAX] = {};
+		ssize_t len;
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
+		Fd fd;
+		if (fd.open(concat("/proc/", toString(pid), "/mem"),
+				O_RDONLY | O_LARGEFILE | O_NOFOLLOW) == -1) {
+			error_log("Error: open()", error(errno));
+			goto null_path;
+		}
+
+		if (lseek64(fd, ARG1, SEEK_SET) == -1) {
+			error_log("Error: lseek64()", error(errno));
+			goto null_path;
+		}
+
+		len = read(fd, path, PATH_MAX - 1);
+		if (len == -1) {
+			error_log("Error: read()", error(errno));
+			goto null_path;
+		}
+
+#else
 		struct iovec local, remote;
 		local.iov_base = path;
 		remote.iov_base = (void*)ARG1;
 		local.iov_len = remote.iov_len = PATH_MAX - 1;
 
-		ssize_t len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
-		if (len == -1)
-			return false; // Error occurred
+		len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
+		if (len == -1) {
+			error_log("Error: process_vm_readv()", error(errno));
+			goto null_path;
+		}
+#endif
 
 		path[len] = '\0';
 		if (binary_search(allowed_files.begin(), allowed_files.end(), path))
 			return true; // File is allowed to open
 
+null_path:
 		// Set NULL as first argument to open
 		if (arch)
 			user_regs.x86_64_regs.rdi = 0;
@@ -170,8 +199,10 @@ bool allowedCall(pid_t pid, int arch, int syscall,
 
 		// Update traced process registers
 		ivo.iov_base = &user_regs;
-		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
+		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1) {
+			error_log("Error: ptrace(PTRACE_SETREGS)", error(errno));
 			return false; // Failed to alter traced process registers
+		}
 
 		return true; // Allow to open NULL
 	}
