@@ -426,7 +426,8 @@ void Sim::User::editProfile(Data& data) {
 						sim_.session->username = new_username;
 
 				} else if (data.username != new_username)
-					fv.addError("Username '" + new_username + "' is taken");
+					fv.addError(concat("Username '", new_username,
+						"' is taken"));
 
 			} catch (const std::exception& e) {
 				error_log("Caught exception: ", __FILE__, ':',
