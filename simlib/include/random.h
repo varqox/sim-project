@@ -26,11 +26,11 @@ inline uint_fast32_t getRandomSeed() noexcept {
 }
 
 
-extern std::mt19937 getRandom_generator;
+extern std::mt19937 random_generator;
 
 // Get random from [a, b]
 template<class T>
 inline T getRandom(T a, T b) {
 	return std::uniform_int_distribution<T>(a, b)
-		(getRandom_generator);
+		(random_generator);
 }
