@@ -1,16 +1,21 @@
 #pragma once
 
-#include "memory.h"
-
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
+#include <memory>
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
+
+// File modes
+constexpr int S_0600 = S_IRUSR | S_IWUSR;
+constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+constexpr int S_0700 = S_IRWXU;
+constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
 /**
  * @brief Creates unlinked temporary file
@@ -25,11 +30,10 @@
  */
 int getUnlinkedTmpFile(int flags = 0) noexcept;
 
-class TemporaryDirectory
-{
+class TemporaryDirectory {
 private:
 	std::string path_; // absolute path
-	UniquePtr<char> name_;
+	std::unique_ptr<char> name_;
 
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
 	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
@@ -52,33 +56,30 @@ public:
 	~TemporaryDirectory();
 
 	// Directory name with trailing '/'
-	const char* name() const { return name_.get(); }
+	const char* name() const noexcept { return name_.get(); }
 
 	// Directory name with trailing '/'
 	std::string sname() const { return name_.get(); }
 
 	// Directory absolute path with trailing '/'
-	std::string path() const { return path_; }
+	const std::string& path() const noexcept { return path_; }
 };
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
 inline int mkdir(const char* pathname) {
-	return mkdir(pathname, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	return mkdir(pathname, S_0755);
 }
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
 inline int mkdir(const std::string& pathname) {
-	return mkdir(pathname.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH |
-		S_IXOTH);
+	return mkdir(pathname.c_str(), S_0755);
 }
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
-int mkdir_r(const char* pathname, mode_t mode = S_IRWXU | S_IRGRP | S_IXGRP |
-		S_IROTH | S_IXOTH);
+int mkdir_r(const char* pathname, mode_t mode = S_0755);
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
-inline int mkdir_r(const std::string& pathname, mode_t mode = S_IRWXU |
-		S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) {
+inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) {
 	return mkdir_r(pathname.c_str(), mode);
 }
 
@@ -278,11 +279,8 @@ size_t writeAll(int fd, void *buf, size_t count);
 namespace directory_tree {
 
 // Node represents a directory
-class node {
+class Node {
 private:
-	node(const node&);
-	node& operator=(const node&);
-
 	/**
 	 * @brief Prints tree rooted in *this
 	 *
@@ -293,14 +291,32 @@ private:
 
 public:
 	std::string name;
-	std::vector<node*> dirs;
+	std::vector<Node*> dirs;
 	std::vector<std::string> files;
 
-	explicit node(const std::string& new_name)
+	explicit Node(const std::string& new_name)
 			: name(new_name), dirs(), files() {}
 
+	Node(const Node&) = delete;
+
+	Node(Node&& n) : name(std::move(n.name)), dirs(std::move(n.dirs)),
+			files(std::move(n.files)) {
+		dirs.clear();
+	}
+
+	Node& operator=(const Node&) = delete;
+
+	Node& operator=(Node&& n) {
+		name = std::move(n.name);
+		dirs = std::move(n.dirs);
+		files = std::move(n.files);
+
+		dirs.clear();
+		return *this;
+	}
+
 	template<class Iter>
-	node(Iter beg, Iter end) : name(beg, end), dirs(), files() {}
+	Node(Iter beg, Iter end) : name(beg, end), dirs(), files() {}
 
 	/**
 	 * @brief Get subdirectory
@@ -308,7 +324,7 @@ public:
 	 * @param pathname name to search (cannot contain '/')
 	 * @return pointer to subdirectory or NULL if it does not exist
 	 */
-	node* dir(const std::string& pathname);
+	Node* dir(const std::string& pathname);
 
 	/**
 	 * @brief Checks if file exists in this node
@@ -320,7 +336,7 @@ public:
 		return std::binary_search(files.begin(), files.end(), pathname);
 	}
 
-	~node() {
+	~Node() {
 		for (size_t i = 0; i < dirs.size(); ++i)
 			delete dirs[i];
 	}
@@ -334,16 +350,6 @@ public:
 		if (stream != nullptr)
 			return __print(stream);
 	}
-
-	/**
-	 * @brief Compares two nodes (given via pointer) by name
-	 *
-	 * @param a
-	 * @param b
-	 *
-	 * @return a->name < b->name
-	 */
-	static bool cmp(node* a, node* b) { return a->name < b->name; }
 };
 
 /**
@@ -352,7 +358,7 @@ public:
  * @param path path to main directory
  * @return pointer to root node
  */
-node* dumpDirectoryTree(const char* path);
+Node* dumpDirectoryTree(const char* path);
 
 /**
  * @brief Dumps directory tree (rooted in @p path)
@@ -360,7 +366,7 @@ node* dumpDirectoryTree(const char* path);
  * @param path path to main directory
  * @return pointer to root node
  */
-inline node* dumpDirectoryTree(const std::string& path) {
+inline Node* dumpDirectoryTree(const std::string& path) {
 	return dumpDirectoryTree(path.c_str());
 }
 
@@ -547,43 +553,25 @@ public:
 	operator int() const { return fd_; }
 
 	void reset(int fd) {
-		sclose(fd_);
+		(void)sclose(fd_);
 		fd_ = fd;
 	}
 
-	int open(const char* filename, int flags) {
-		return fd_ = ::open(filename, flags);
-	}
-
-	int open(const char* filename, int flags, int mode) {
+	int open(const char* filename, int flags, int mode = S_0644) {
 		return fd_ = ::open(filename, flags, mode);
 	}
 
-	int open(const std::string& filename, int flags) {
-		return fd_ = ::open(filename.c_str(), flags);
-	}
-
-	int open(const std::string& filename, int flags, int mode) {
+	int open(const std::string& filename, int flags, int mode = S_0644) {
 		return fd_ = ::open(filename.c_str(), flags, mode);
 	}
 
-	int reopen(const char* filename, int flags) {
-		sclose(fd_);
-		return fd_ = ::open(filename, flags);
-	}
-
-	int reopen(const char* filename, int flags, int mode) {
-		sclose(fd_);
+	int reopen(const char* filename, int flags, int mode = S_0644) {
+		(void)sclose(fd_);
 		return fd_ = ::open(filename, flags, mode);
 	}
 
-	int reopen(const std::string& filename, int flags) {
-		sclose(fd_);
-		return fd_ = ::open(filename.c_str(), flags);
-	}
-
-	int reopen(const std::string& filename, int flags, int mode) {
-		sclose(fd_);
+	int reopen(const std::string& filename, int flags, int mode = S_0644) {
+		(void)sclose(fd_);
 		return fd_ = ::open(filename.c_str(), flags, mode);
 	}
 
@@ -597,12 +585,12 @@ public:
 		return 0;
 	}
 
-	~Fd() { sclose(fd_); }
+	~Fd() { (void)sclose(fd_); }
 };
 
 template<int (*func)(const char*)>
 class RemoverBase {
-	UniquePtr<char> name;
+	std::unique_ptr<char> name;
 
 	RemoverBase(const RemoverBase&) = delete;
 	RemoverBase& operator=(const RemoverBase&) = delete;
@@ -624,7 +612,7 @@ public:
 	}
 
 	~RemoverBase() {
-		if (!name.isNull())
+		if (name)
 			func(name.get());
 	}
 

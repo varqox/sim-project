@@ -10,7 +10,7 @@ using std::vector;
 int getUnlinkedTmpFile(int flags) noexcept {
 	int fd;
 #ifdef O_TMPFILE
-	fd = open("/tmp", O_TMPFILE | O_RDWR | flags, S_IRUSR | S_IWUSR);
+	fd = open("/tmp", O_TMPFILE | O_RDWR | flags, S_0600);
 	if (fd != -1)
 		return fd;
 
@@ -38,14 +38,14 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 		name_.reset(new char[size + 2]);
 
 		memcpy(name_.get(), templ, size);
-		name_[size] = name_[size + 1] = '\0';
+		name_.get()[size] = name_.get()[size + 1] = '\0';
 
 		// Create directory with permissions (mode: 0700/rwx------)
 		if (mkdtemp(name_.get()) == nullptr)
 			throw std::runtime_error("Cannot create temporary directory\n");
 
 		// name_ is absolute
-		if (name_[0] == '/')
+		if (name_.get()[0] == '/')
 			path_ = name();
 		// name_ is not absolute
 		else
@@ -55,7 +55,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 		abspath(path_).swap(path_);
 		path_ += '/';
 
-		name_[size] = '/';
+		name_.get()[size] = '/';
 	}
 }
 
@@ -153,8 +153,7 @@ int copy(const char* src, const char* dest) {
 	if (in == -1)
 		return -1;
 
-	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC,
-		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // (mode: 0644/rw-r--r--)
+	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC, S_0644);
 	if (out == -1) {
 		sclose(in);
 		return -1;
@@ -171,8 +170,7 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
 	if (in == -1)
 		return -1;
 
-	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC,
-		S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // (mode: 0644/rw-r--r--)
+	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC, S_0644);
 	if (out == -1) {
 		sclose(in);
 		return -1;
@@ -205,7 +203,7 @@ static int __copy_rat(int dirfd1, const char* src, int dirfd2,
 		return -1;
 
 	// Do not use src permissions
-	mkdirat(dirfd2, dest, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	mkdirat(dirfd2, dest, S_0755);
 
 	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
 	if (dest_fd == -1) {
@@ -327,7 +325,7 @@ size_t writeAll(int fd, void *buf, size_t count) {
 
 namespace directory_tree {
 
-void node::__print(FILE *stream, string buff) {
+void Node::__print(FILE *stream, string buff) {
 	fprintf(stream, "%s%s/\n", buff.c_str(), name.c_str());
 
 	// Update buffer
@@ -349,11 +347,11 @@ void node::__print(FILE *stream, string buff) {
 				(i + 1 == files_len ? '`' : '|'), files[i].c_str());
 }
 
-node* node::dir(const string& pathname) {
+Node* Node::dir(const string& pathname) {
 	if (dirs.empty())
 		return nullptr;
 
-	vector<node*>::iterator down = dirs.begin(), up = --dirs.end(), mid;
+	vector<Node*>::iterator down = dirs.begin(), up = --dirs.end(), mid;
 
 	while (down < up) {
 		mid = down + ((up - down) >> 1);
@@ -367,12 +365,12 @@ node* node::dir(const string& pathname) {
 	return (*down)->name == pathname ? *down : nullptr;
 }
 
-static node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
+static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 	size_t len = strlen(path);
 	if (len > 1 && path[len - 1] == '/')
 		--len;
 
-	node *root = new node(path, path + len);
+	Node *root = new Node(path, path + len);
 
 	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
 	if (fd == -1)
@@ -395,12 +393,13 @@ static node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 
 	closedir(dir);
 
-	std::sort(root->dirs.begin(), root->dirs.end(), node::cmp);
+	std::sort(root->dirs.begin(), root->dirs.end(),
+		[](Node* a, Node* b) { return a->name < b->name; });
 	std::sort(root->files.begin(), root->files.end());
 	return root;
 }
 
-node* dumpDirectoryTree(const char* path) {
+Node* dumpDirectoryTree(const char* path) {
 	struct stat64 sb;
 	if (stat64(path, &sb) == -1 ||
 			!S_ISDIR(sb.st_mode))

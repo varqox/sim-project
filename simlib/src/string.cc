@@ -2,86 +2,6 @@
 
 using std::string;
 
-StringView::size_type StringView::find(const StringView& s) const {
-	if (s.len == 0)
-		return 0;
-
-	// KMP algorithm
-	size_type p[s.len], k = p[0] = 0;
-	// Fill p
-	for (size_type i = 1; i < s.len; ++i) {
-		while (k > 0 && s[i] != s[k])
-			k = p[k - 1];
-		if (s[i] == s[k])
-			++k;
-		p[i] = k;
-	}
-
-	k = 0;
-	for (size_type i = 0; i < len; ++i) {
-		while (k > 0 && str[i] != s[k])
-			k = p[k - 1];
-		if (str[i] == s[k]) {
-			++k;
-			if (k == s.len)
-				return i - s.len + 1;
-		}
-	}
-
-	return npos;
-}
-
-StringView::size_type StringView::find(char c, size_t beg, size_t endi) const {
-	if (endi > len)
-		endi = len;
-
-	for (; beg < endi; ++beg)
-		if (str[beg] == c)
-			return beg;
-
-	return npos;
-}
-
-StringView::size_type StringView::rfind(const StringView& s) const {
-	if (s.len == 0)
-		return 0;
-
-	// KMP algorithm
-	size_type p[s.len], slen1 = s.len - 1, k = p[slen1] = slen1;
-	// Fill p
-	for (size_type i = slen1 - 1; i != npos; --i) {
-		while (k < slen1 && s[i] != s[k])
-			k = p[k + 1];
-		if (s[i] == s[k])
-			--k;
-		p[i] = k;
-	}
-
-	k = slen1;
-	for (size_type i = len - 1; i != npos; --i) {
-		while (k < slen1 && str[i] != s[k])
-			k = p[k + 1];
-		if (str[i] == s[k]) {
-			--k;
-			if (k == npos)
-				return i;
-		}
-	}
-
-	return npos;
-}
-
-StringView::size_type StringView::rfind(char c, size_t beg, size_t endi) const {
-	if (endi > len)
-		endi = len;
-
-	for (--endi; endi >= beg; --endi)
-		if (str[endi] == c)
-			return endi;
-
-	return npos;
-}
-
 int strtonum(string& x, const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
@@ -308,7 +228,7 @@ string usecToSecStr(unsigned long long x, unsigned prec, bool trim_nulls) {
 		res.append(".").append(t);
 
 	return res;
-};
+}
 
 string widedString(const StringView& s, size_t len, Adjustment adj, char fill) {
 	string res;

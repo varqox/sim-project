@@ -21,6 +21,9 @@ public:
 	struct Test {
 		std::string name;
 		unsigned long long time_limit; // in usec
+
+		explicit Test(const std::string& n = "", unsigned long long tl = 0)
+			: name(n), time_limit(tl) {}
 	};
 
 	/**

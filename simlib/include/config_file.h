@@ -6,9 +6,6 @@
 #include <vector>
 
 class ConfigFile {
-	ConfigFile(const ConfigFile&);
-	ConfigFile& operator=(const ConfigFile&);
-
 	/**
 	 * @brief Extracts single quoted string from @p in
 	 *
@@ -65,7 +62,7 @@ public:
 	struct Variable {
 		static constexpr int SET = 1; // set if variable appear in config
 		static constexpr int ARRAY = 2; // set if variable is array
-		int flag;
+		uint8_t flag;
 		std::string s;
 		std::vector<std::string> a;
 
@@ -80,7 +77,21 @@ private:
 	std::map<std::string, Variable> vars; // (name => value)
 
 public:
-	ConfigFile() {}
+	ConfigFile() = default;
+
+	ConfigFile(const ConfigFile& cf) : vars(cf.vars) {}
+
+	ConfigFile(ConfigFile&& cf) : vars(std::move(cf.vars)) {}
+
+	ConfigFile& operator=(const ConfigFile& cf) {
+		vars = cf.vars;
+		return *this;
+	}
+
+	ConfigFile& operator=(ConfigFile&& cf) {
+		vars = std::move(cf.vars);
+		return *this;
+	}
 
 	~ConfigFile() {}
 

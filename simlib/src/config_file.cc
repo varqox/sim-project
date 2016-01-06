@@ -118,22 +118,22 @@ void ConfigFile::loadConfigFromFile(const string& pathname, bool load_all) {
 }
 
 void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
-#define IgnoreWhitespace() \
-		while (beg < end && isspace(config[beg])) \
-			++beg;
-
 	// Set all variables as unused
 	for (auto& i : vars)
 		i.second.flag = 0;
 
 	Variable tmp; // Used for ignored variables
 	size_t beg, end = -1, x, line = 0;
+	auto ignoreWhitespace = [&beg, &end, &config]() {
+		while (beg < end && isspace(config[beg]))
+			++beg;
+	};
+
 	while ((beg = ++end) < config.size()) {
 		end = std::min(config.find('\n', beg), config.size());
 		++line;
 		tmp.flag = 0;
-
-		IgnoreWhitespace();
+		ignoreWhitespace();
 		// Assert beg < end
 		if (beg == end || config[beg] == '#') // Blank line or comment
 			continue;
@@ -159,7 +159,7 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 		var.a.clear();
 
 		// Assignment operator
-		IgnoreWhitespace();
+		ignoreWhitespace();
 		// Assert beg < end
 		if (beg == end)
 			throw ParseError(line, "missing assignment operator");
@@ -169,7 +169,7 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 				config[beg], '\''));
 
 		++beg; // Ignore assignment operator
-		IgnoreWhitespace();
+		ignoreWhitespace();
 		// Assert beg < end
 		if (beg == end || config[beg] == '#') // No value or comment
 			continue;
@@ -182,7 +182,7 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 			var.flag |= Variable::ARRAY;
 			bool expect_value = true;
 			for (;;) {
-				IgnoreWhitespace();
+				ignoreWhitespace();
 				// Config end
 				if (beg >= config.size())
 					throw ParseError(line, "incomplete array");
@@ -222,12 +222,11 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 			}
 		}
 
-		IgnoreWhitespace();
+		ignoreWhitespace();
 		if (beg < end && config[beg] != '#') // not comment
 			throw ParseError(line, string("Unknown character at the end of "
 				"line: ") + config[beg]);
 	}
-#undef IgnoreWhitespace
 }
 
 int ConfigFile::getInt(const StringView &name) const {

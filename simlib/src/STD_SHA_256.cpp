@@ -61,7 +61,7 @@ const uint32_t STD_SHA_256::K [64] =
     my_Hash_Value [5] = 0x9B05688C;
     my_Hash_Value [6] = 0x1F83D9AB;
     my_Hash_Value [7] = 0x5BE0CD19;
-};
+}
 
 //-----------------------------------------------------------------------------
     void STD_SHA_256::Add (uint8_t Byte)

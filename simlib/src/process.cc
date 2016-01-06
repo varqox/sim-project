@@ -1,11 +1,13 @@
 #include "../include/filesystem.h"
 #include "../include/logger.h"
+#include "../include/memory.h"
 #include "../include/process.h"
 
 #include <dirent.h>
 #include <sys/wait.h>
 
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 const spawn_opts default_spawn_opts = {
@@ -65,7 +67,7 @@ int spawn(const char* exec, const char* args[], const struct spawn_opts *opts,
 	int status;
 	waitpid(cpid, &status, 0);
 	return status;
-};
+}
 
 int spawn(const string& exec, const vector<string>& args,
 		const struct spawn_opts *opts, const string& working_dir) {
@@ -94,9 +96,9 @@ int spawn(const string& exec, size_t argc, string *args,
 }
 
 std::string getCWD() {
-	AutoFree<char> buff(get_current_dir_name());
-	if (buff.isNull() || *buff != '/') {
-		if (!buff.isNull())
+	unique_ptr<char, delete_using_free<char>> buff(get_current_dir_name());
+	if (!buff || *buff != '/') {
+		if (buff)
 			errno = ENOENT; // Improper path, but get_current_dir_name() succeed
 
 		throw std::runtime_error(concat("Failed to get CWD", error(errno)));

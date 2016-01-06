@@ -61,8 +61,9 @@ struct ExitStat {
 	unsigned long long runtime; // in usec
 	std::string message;
 
-	ExitStat(int _1 = 0, unsigned long long _2 = 0, const std::string& _3 = "")
-			: code(_1), runtime(_2), message(_3) {}
+	explicit ExitStat(int _1 = 0, unsigned long long _2 = 0,
+			const std::string& _3 = "")
+		: code(_1), runtime(_2), message(_3) {}
 };
 
 /**
@@ -84,11 +85,27 @@ struct DefaultCallback {
 		int limit;
 	};
 
-	int functor_call, arch; // arch - architecture: 0 - i386, 1 - x86_64
-	std::vector<Pair> limited_syscalls[2]; // 0 - i386, 1 - x86_64
-	std::vector<int> allowed_syscalls[2]; // 0 - i386, 1 - x86_64
+	int functor_call;
+	int8_t arch; // arch - architecture: 0 - i386, 1 - x86_64
+	std::vector<Pair> limited_syscalls[2] = {
+		{ /* i386 */
+			{  11, 1 }, // SYS_execve
+			{  33, 1 }, // SYS_access
+			{  85, 1 }, // SYS_readlink
+			{ 122, 1 }, // SYS_uname
+			{ 243, 1 }, // SYS_set_thread_area
+		},
+		{ /* x86_64 */
+			{  21, 1 }, // SYS_access
+			{  59, 1 }, // SYS_execve
+			{  63, 1 }, // SYS_uname
+			{  89, 1 }, // SYS_readlink
+			{ 158, 1 }, // SYS_arch_prctl
+			{ 205, 1 }, // SYS_set_thread_area
+		}
+	};
 
-	DefaultCallback();
+	DefaultCallback() : functor_call(0), arch(-1) {}
 
 	// Returns 0 on success, non-zero value on error
 	int operator()(pid_t pid, int syscall);
@@ -135,7 +152,7 @@ struct options {
  * @param data pointer which will be passed to @p func as last argument
  * @return Returns ExitStat structure with fields: code is -1 on error, or
  * return status (in the format specified in wait(2)).
- */
+ */ // TODO: make template
 ExitStat run(const std::string& exec, std::vector<std::string> args,
 		const struct options *opts, int (*func)(int, int, void*), void *data);
 
