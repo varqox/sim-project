@@ -3,7 +3,7 @@
 #include <string>
 
 struct JudgeResult {
-	enum Status { OK, ERROR, COMPILE_ERROR, JUDGE_ERROR } status;
+	enum Status : uint8_t { OK, ERROR, COMPILE_ERROR, JUDGE_ERROR } status;
 	long long score;
 	std::string initial_report;
 	std::string final_report;

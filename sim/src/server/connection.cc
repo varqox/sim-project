@@ -1,11 +1,10 @@
 #include "connection.h"
 
-#include "../simlib/include/debug.h"
-#include "../simlib/include/filesystem.h"
-#include "../simlib/include/logger.h"
-
 #include <iostream>
 #include <poll.h>
+#include <simlib/debug.h>
+#include <simlib/filesystem.h>
+#include <simlib/logger.h>
 
 using std::string;
 using std::pair;

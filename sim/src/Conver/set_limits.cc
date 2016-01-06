@@ -1,11 +1,10 @@
 #include "convert_package.h"
 
-#include "../simlib/include/compile.h"
-#include "../simlib/include/debug.h"
-#include "../simlib/include/sandbox.h"
-#include "../simlib/include/sandbox_checker_callback.h"
-
 #include <cassert>
+#include <simlib/compile.h>
+#include <simlib/debug.h>
+#include <simlib/sandbox.h>
+#include <simlib/sandbox_checker_callback.h>
 
 using std::pair;
 using std::string;
@@ -77,8 +76,7 @@ int setLimits(const string& package_path) {
 		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
 		config_conf.memory_limit << 10,
 		-1,
-		open("answer", O_WRONLY | O_CREAT | O_TRUNC,
-			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
+		open("answer", O_WRONLY | O_CREAT | O_TRUNC, S_0644),
 		-1
 	};
 
@@ -93,8 +91,7 @@ int setLimits(const string& package_path) {
 		10 * 1000000, // 10s
 		256 << 20, // 256 MB
 		-1,
-		open("checker_out", O_WRONLY | O_CREAT | O_TRUNC,
-			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
+		open("checker_out", O_WRONLY | O_CREAT | O_TRUNC, S_0644),
 		-1
 	};
 
@@ -141,8 +138,7 @@ int setLimits(const string& package_path) {
 			// Open sb_opts.new_stdout_fd
 			if (GEN_OUT && (sb_opts.new_stdout_fd = open(
 					concat(package_path, "tests/", test.name, ".out").c_str(),
-					O_WRONLY | O_CREAT | O_TRUNC, // (mode: 0644/rw-r--r--)
-					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
+					O_WRONLY | O_CREAT | O_TRUNC, S_0644)) == -1) {
 				eprintf("Failed to open: '%s' - %s\n",
 					concat(package_path, "tests/", test.name, ".out").c_str(),
 					strerror(errno));
@@ -177,11 +173,11 @@ int setLimits(const string& package_path) {
 					usecToSecStr(test.time_limit, 2, false).c_str());
 
 				if (es.code == 0)
-					printf("\e[1;32mOK\e[m");
+					printf("\033[1;32mOK\033[m");
 				else if (es.runtime < test.time_limit)
-					printf("\e[1;33mRTE\e[m (%s)", es.message.c_str());
+					printf("\033[1;33mRTE\033[m (%s)", es.message.c_str());
 				else
-					printf("\e[1;33mTLE\e[m");
+					printf("\033[1;33mTLE\033[m");
 
 				if (VERBOSITY > 1)
 					printf("   Exited with %i [ %s ]", es.code,
@@ -210,10 +206,10 @@ int setLimits(const string& package_path) {
 
 				if (VERBOSITY > 0) {
 					if (es.code == 0)
-						printf("\e[1;32mPASSED\e[m");
+						printf("\033[1;32mPASSED\033[m");
 
 					else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
-						printf("\e[1;31mFAILED\e[m");
+						printf("\033[1;31mFAILED\033[m");
 
 						FILE *f = fopen("checker_out", "r");
 						if (f != nullptr) {
@@ -232,10 +228,10 @@ int setLimits(const string& package_path) {
 						}
 
 					} else if (es.runtime < test.time_limit)
-						printf("\e[1;33mRTE\e[m (%s)", es.message.c_str());
+						printf("\033[1;33mRTE\033[m (%s)", es.message.c_str());
 
 					else
-						printf("\e[1;33mTLE\e[m");
+						printf("\033[1;33mTLE\033[m");
 
 					if (VERBOSITY > 1)
 						printf("   Exited with %i [ %s ]", es.code,

@@ -3,25 +3,26 @@
 #include "set_limits.h"
 #include "validate_package.h"
 
-#include "../simlib/include/debug.h"
-#include "../simlib/include/process.h"
-#include "../simlib/include/utility.h"
-
-#include <csignal>
+#include <simlib/debug.h>
+#include <simlib/process.h>
+#include <simlib/utility.h>
 
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 // Global variables
-UniquePtr<TemporaryDirectory> tmp_dir;
-bool GEN_OUT = false, VALIDATE_OUT = false, USE_CONFIG = true;
+unique_ptr<TemporaryDirectory> tmp_dir;
+bool GEN_OUT = false;
+bool VALIDATE_OUT = false;
+bool USE_CONFIG = true;
 bool FORCE_AUTO_LIMIT = false;
 unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
 unsigned long long MEMORY_LIMIT = 0; // in kB
 unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10s
 unsigned long long TIME_LIMIT = 0; // Not set (in usec)
 string PROOT_PATH = "proot"; // Search for PRoot in system
-UniquePtr<directory_tree::node> package_tree_root;
+unique_ptr<directory_tree::Node> package_tree_root;
 ProblemConfig config_conf;
 
 static bool SET_MEMORY_LIMIT = false; // true if set in options
@@ -86,7 +87,7 @@ static void help(const char* program_name) {
  */
 static void parseOptions(int &argc, char **argv) {
 	int new_argc = 1;
-	long long tmp;
+	unsigned long long tmp;
 
 	for (int i = 1; i < argc; ++i) {
 

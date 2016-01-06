@@ -1,12 +1,12 @@
 #include "sim_session.h"
 
-#include "../simlib/include/logger.h"
-#include "../simlib/include/random.h"
-#include "../simlib/include/time.h"
-
 #include <cppconn/prepared_statement.h>
+#include <simlib/logger.h>
+#include <simlib/random.h>
+#include <simlib/time.h>
 
 using std::string;
+using std::unique_ptr;
 
 Sim::Session::State Sim::Session::open() {
 	if (state_ != CLOSED)
@@ -20,7 +20,7 @@ Sim::Session::State Sim::Session::open() {
 		return FAIL;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement(
 				"SELECT user_id, data, type, username, ip, user_agent "
 				"FROM session s, users u "
@@ -29,7 +29,7 @@ Sim::Session::State Sim::Session::open() {
 		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
 			time(nullptr) - SESSION_MAX_LIFETIME));
 
-		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 		if (res->next()) {
 			user_id = res->getString(1);
 			data = res->getString(2);
@@ -69,12 +69,12 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 	close();
 	state_ = FAIL;
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("INSERT INTO session "
 				"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions
-		UniquePtr<sql::Statement>(sim_.db_conn->createStatement())->
+		unique_ptr<sql::Statement>(sim_.db_conn->createStatement())->
 			executeUpdate(string("DELETE FROM `session` WHERE time<'").
 				append(date("%Y-%m-%d %H:%M:%S'",
 					time(nullptr) - SESSION_MAX_LIFETIME)));
@@ -113,7 +113,7 @@ void Sim::Session::destroy() {
 		return;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("DELETE FROM session WHERE id=?"));
 		pstmt->setString(1, id_);
 		pstmt->executeUpdate();
@@ -134,7 +134,7 @@ void Sim::Session::close() {
 		return;
 
 	try {
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("UPDATE session SET data=? WHERE id=?"));
 		pstmt->setString(1, data);
 		pstmt->setString(2, id_);

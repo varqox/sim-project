@@ -1,13 +1,12 @@
 #include "connection.h"
 #include "sim.h"
 
-#include "../simlib/include/config_file.h"
-#include "../simlib/include/filesystem.h"
-#include "../simlib/include/logger.h"
-#include "../simlib/include/process.h"
-
 #include <arpa/inet.h>
 #include <csignal>
+#include <simlib/config_file.h>
+#include <simlib/filesystem.h>
+#include <simlib/logger.h>
+#include <simlib/process.h>
 
 using std::string;
 

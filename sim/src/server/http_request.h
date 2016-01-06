@@ -6,7 +6,7 @@ namespace server {
 
 class HttpRequest {
 public:
-	enum Method { GET, POST, HEAD } method;
+	enum Method : uint8_t { GET, POST, HEAD } method;
 	HttpHeaders headers;
 	std::string target, http_version, content;
 

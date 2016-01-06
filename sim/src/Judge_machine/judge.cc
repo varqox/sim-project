@@ -1,12 +1,12 @@
 #include "judge.h"
 #include "main.h"
 
-#include "../simlib/include/compile.h"
-#include "../simlib/include/logger.h"
-#include "../simlib/include/sandbox.h"
-#include "../simlib/include/sandbox_checker_callback.h"
-#include "../simlib/include/sim_problem.h"
-#include "../simlib/include/utility.h"
+#include <simlib/compile.h>
+#include <simlib/logger.h>
+#include <simlib/sandbox.h>
+#include <simlib/sandbox_checker_callback.h>
+#include <simlib/sim_problem.h>
+#include <simlib/utility.h>
 
 using std::string;
 using std::vector;
@@ -17,8 +17,11 @@ namespace {
 
 struct TestResult {
 	const string* name;
-	enum Status { ERROR, CHECKER_ERROR, OK, WA, TLE, RTE } status;
+	enum Status : uint8_t { ERROR, CHECKER_ERROR, OK, WA, TLE, RTE } status;
 	string time;
+
+	TestResult(const string* n, Status s, const string& t)
+		: name(n), status(s), time(t) {}
 
 	static string statusToTdString(Status s) {
 		switch (s) {
@@ -89,8 +92,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 		pconf.memory_limit << 10,
 		-1,
 		open(concat(tmp_dir.sname(), "answer").c_str(),
-			O_WRONLY | O_CREAT | O_TRUNC,
-			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
+			O_WRONLY | O_CREAT | O_TRUNC, S_0644),
 		-1
 	};
 
@@ -106,8 +108,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 		256 << 20, // 256 MB
 		-1,
 		open(concat(tmp_dir.sname(), "checker_out").c_str(),
-			O_WRONLY | O_CREAT | O_TRUNC,
-			S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH), // (mode: 0644/rw-r--r--)
+			O_WRONLY | O_CREAT | O_TRUNC, S_0644),
 		-1
 	};
 
@@ -123,12 +124,12 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	vector<string> exec_args, checker_args(4);
 
-	// Initialise judge reports
 	struct JudgeTestsReport {
 		string tests, comments;
 		JudgeResult::Status status;
 	};
 
+	// Initialise judge reports
 	JudgeTestsReport initial = {
 		"<table class=\"table\">\n"
 			"<thead>\n"
@@ -198,9 +199,9 @@ JudgeResult judge(string submission_id, string problem_id) {
 				(test.time_limit / 10000));
 
 			// Construct Report
-			group_result.push_back((TestResult){ &test.name, TestResult::ERROR,
+			group_result.emplace_back(&test.name, TestResult::ERROR,
 				concat(usecToSecStr(es.runtime, 2, false), '/',
-					usecToSecStr(test.time_limit, 2, false)) });
+					usecToSecStr(test.time_limit, 2, false)));
 
 			// OK
 			if (es.code == 0)
@@ -246,11 +247,11 @@ JudgeResult judge(string submission_id, string problem_id) {
 					"    Status: ");
 
 				if (es.code == 0)
-					tmplog("\e[1;32mOK\e[m");
+					tmplog("\033[1;32mOK\033[m");
 				else if (es.runtime < test.time_limit)
-					tmplog("\e[1;33mRTE\e[m (", es.message, ")");
+					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
 				else
-					tmplog("\e[1;33mTLE\e[m");
+					tmplog("\033[1;33mTLE\033[m");
 
 				tmplog("   Exited with ", toString(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]");
@@ -283,7 +284,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 				if (es.code == 0) {
 					if (VERBOSITY > 1)
-						tmplog("\e[1;32mPASSED\e[m");
+						tmplog("\033[1;32mPASSED\033[m");
 
 				// Wrong answer
 				} else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
@@ -293,7 +294,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					ratio = 0.0;
 
 					if (VERBOSITY > 1)
-						tmplog("\e[1;31mFAILED\e[m");
+						tmplog("\033[1;31mFAILED\033[m");
 
 					// Get checker output
 					char buff[204] = {};
@@ -339,7 +340,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					judge_test_report.comments += "</li>\n";
 
 					if (VERBOSITY > 1)
-						tmplog("\e[1;33mRTE\e[m (", es.message, ")");
+						tmplog("\033[1;33mRTE\033[m (", es.message, ")");
 
 				} else {
 					group_result.back().status = TestResult::CHECKER_ERROR;
@@ -353,7 +354,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						"Checker time limit exceeded</li>\n";
 
 					if (VERBOSITY > 1)
-						tmplog("\e[1;33mTLE\e[m");
+						tmplog("\033[1;33mTLE\033[m");
 				}
 
 				if (VERBOSITY > 1)

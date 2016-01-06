@@ -4,9 +4,6 @@
 
 class Sim::Contest {
 private:
-	Contest(const Contest&);
-	Contest& operator=(const Contest&);
-
 	struct Round {
 		std::string id, parent, problem_id, access, name, owner;
 		std::string begins, ends, full_results;
@@ -21,26 +18,42 @@ private:
 		std::string id, parent, name;
 	};
 
-	enum RoundType {
+	enum RoundType : uint8_t {
 		CONTEST = 0,
 		ROUND = 1,
 		PROBLEM = 2
 	};
 
 	class RoundPath {
-	private:
-		RoundPath(const RoundPath&);
-		RoundPath& operator=(const RoundPath&);
-
 	public:
 		bool admin_access;
 		RoundType type;
 		std::string round_id;
-		UniquePtr<Round> contest, round, problem;
+		std::unique_ptr<Round> contest, round, problem;
 
-		RoundPath(const std::string& rid) : admin_access(false), type(CONTEST),
-				round_id(rid), contest(nullptr), round(nullptr),
-				problem(nullptr) {}
+		explicit RoundPath(const std::string& rid) : admin_access(false),
+			type(CONTEST), round_id(rid), contest(nullptr), round(nullptr),
+			problem(nullptr) {}
+
+		RoundPath(const RoundPath&) = delete;
+
+		RoundPath(RoundPath&& rp) : admin_access(rp.admin_access),
+			type(rp.type), round_id(std::move(rp.round_id)),
+			contest(std::move(rp.contest)), round(std::move(rp.round)),
+			problem(std::move(rp.problem)) {}
+
+		RoundPath& operator=(const RoundPath&) = delete;
+
+		RoundPath& operator=(RoundPath&& rp) {
+			admin_access = rp.admin_access;
+			type = rp.type;
+			round_id = std::move(rp.round_id);
+			contest = std::move(rp.contest);
+			round = std::move(rp.round);
+			problem = std::move(rp.problem);
+
+			return *this;
+		}
 
 		void swap(RoundPath& rp) {
 			std::swap(admin_access, rp.admin_access);
@@ -55,10 +68,19 @@ private:
 	};
 
 	Sim& sim_;
-	UniquePtr<RoundPath> r_path_;
+	std::unique_ptr<RoundPath> r_path_;
 	size_t arg_beg;
 
 	explicit Contest(Sim& sim) : sim_(sim), arg_beg(0) {}
+
+	Contest(const Contest&) = delete;
+
+	Contest(Contest&& c) : sim_(c.sim_), r_path_(std::move(r_path_)),
+		arg_beg(c.arg_beg) {}
+
+	Contest& operator=(const Contest&) = delete;
+
+	Contest& operator=(Contest&&) = delete;
 
 	~Contest() {}
 

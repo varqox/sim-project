@@ -3,16 +3,12 @@
 #include "http_request.h"
 #include "http_response.h"
 
-#include "../include/db.h"
-
+#include <sim/db.h>
 #include <utime.h>
 
 // Every object is independent, thread-safe
 class Sim {
 private:
-	Sim(const Sim&);
-	Sim& operator=(const Sim&);
-
 	class Contest;
 	class Session;
 	class Template;
@@ -49,19 +45,39 @@ private:
 	 */
 	void redirect(const std::string& location);
 
-	/**
-	 * @brief Returns user type
-	 *
-	 * @param user_id user id
-	 * @return user type
-	 */
-	int getUserType(const std::string& user_id);
-
 	// Notifies judge server that there are submissions to judge
 	static void notifyJudgeServer() { utime("judge-machine.notify", nullptr); }
 
 public:
 	Sim();
+
+	Sim(const Sim&) = delete;
+
+	Sim(Sim&& sim) : db_conn(std::move(sim.db_conn)),
+			client_ip_(std::move(sim.client_ip_)), req_(sim.req_),
+			resp_(std::move(sim.resp_)), contest(sim.contest),
+			session(sim.session), user(sim.user) {
+		sim.contest = nullptr;
+		sim.session = nullptr;
+		sim.user = nullptr;
+	}
+
+	Sim& operator=(const Sim&) = delete;
+
+	Sim& operator=(Sim&& sim) {
+		db_conn = std::move(sim.db_conn);
+		client_ip_ = std::move(sim.client_ip_);
+		req_ = sim.req_;
+		resp_ = std::move(sim.resp_);
+		contest = sim.contest;
+		session = sim.session;
+		user = sim.user;
+
+		sim.contest = nullptr;
+		sim.session = nullptr;
+		sim.user = nullptr;
+		return *this;
+	}
 
 	~Sim();
 

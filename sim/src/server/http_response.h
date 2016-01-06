@@ -6,7 +6,7 @@ namespace server {
 
 class HttpResponse {
 public:
-	enum ContentType { TEXT, FILE, FILE_TO_REMOVE } content_type;
+	enum ContentType : uint8_t { TEXT, FILE, FILE_TO_REMOVE } content_type;
 	std::string status_code;
 	HttpHeaders headers, cookies;
 	std::string content;

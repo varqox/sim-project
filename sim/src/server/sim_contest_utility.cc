@@ -1,12 +1,12 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
-#include "../simlib/include/logger.h"
-#include "../simlib/include/time.h"
-
 #include <cppconn/prepared_statement.h>
+#include <simlib/logger.h>
+#include <simlib/time.h>
 
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 string Sim::Contest::submissionStatus(const string& status) {
@@ -29,28 +29,10 @@ string Sim::Contest::submissionStatus(const string& status) {
 }
 
 Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
-	UniquePtr<RoundPath> r_path(new RoundPath(round_id));
+	unique_ptr<RoundPath> r_path(new RoundPath(round_id));
 
 	try {
-		struct Local {
-			static void copyData(UniquePtr<Round>& r,
-					UniquePtr<sql::ResultSet>& res) {
-				r.reset(new Round);
-				r->id = res->getString(1);
-				r->parent = res->getString(2);
-				r->problem_id = res->getString(3);
-				r->access = res->getString(4);
-				r->name = res->getString(5);
-				r->owner = res->getString(6);
-				r->visible = res->getBoolean(7);
-				r->show_ranking = res->getBoolean(8);
-				r->begins = res->getString(9);
-				r->ends = res->getString(10);
-				r->full_results = res->getString(11);
-			}
-		};
-
-		UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 			prepareStatement("SELECT id, parent, problem_id, access, name, "
 					"owner, visible, show_ranking, begins, ends, full_results "
 				"FROM rounds "
@@ -60,7 +42,22 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		pstmt->setString(2, round_id);
 		pstmt->setString(3, round_id);
 
-		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+
+		auto copyDataTo = [&res](unique_ptr<Round>& r) {
+			r.reset(new Round);
+			r->id = res->getString(1);
+			r->parent = res->getString(2);
+			r->problem_id = res->getString(3);
+			r->access = res->getString(4);
+			r->name = res->getString(5);
+			r->owner = res->getString(6);
+			r->visible = res->getBoolean(7);
+			r->show_ranking = res->getBoolean(8);
+			r->begins = res->getString(9);
+			r->ends = res->getString(10);
+			r->full_results = res->getString(11);
+		};
 
 		int rows = res->rowsCount();
 		// If round does not exist
@@ -73,21 +70,21 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 
 		while (res->next()) {
 			if (res->isNull(2))
-				Local::copyData(r_path->contest, res);
+				copyDataTo(r_path->contest);
 			else if (res->isNull(3)) // problem_id IS NULL
-				Local::copyData(r_path->round, res);
+				copyDataTo(r_path->round);
 			else
-				Local::copyData(r_path->problem, res);
+				copyDataTo(r_path->problem);
 		}
 
 		// Check rounds hierarchy
-		if (r_path->contest.isNull() || (rows > 1 && r_path->round.isNull())
-				|| (rows > 2 && r_path->problem.isNull()))
+		if (!r_path->contest || (rows > 1 && !r_path->round)
+				|| (rows > 2 && !r_path->problem))
 			throw std::runtime_error(concat("Database error: corrupt hierarchy "
 				"of rounds (id: ", round_id, ")"));
 
 		// Check access
-		r_path->admin_access = isAdmin(sim_, *r_path);
+		r_path->admin_access = isAdmin(sim_, *r_path); // TODO: get data in above query!
 		if (!r_path->admin_access) {
 			if (r_path->contest->access == "private") {
 				// Check access to contest
@@ -140,12 +137,12 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 
 	try {
 		// Check if user has more privileges than the owner
-		UniquePtr<sql::PreparedStatement> pstmt(sim.db_conn->prepareStatement(
+		unique_ptr<sql::PreparedStatement> pstmt(sim.db_conn->prepareStatement(
 			"SELECT id, type FROM users WHERE id=? OR id=?"));
 		pstmt->setString(1, r_path.contest->owner);
 		pstmt->setString(2, sim.session->user_id);
 
-		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 		int owner_type = 0, user_type = 4;
 		for (int i = 0; i < 2 && res->next(); ++i) {
 			if (res->getString(1) == r_path.contest->owner)
@@ -181,17 +178,15 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 			"<span>CONTEST ADMINISTRATION</span>\n";
 
 		// Adding
-		if (sim_contest.r_path_->type >= CONTEST)
-			*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
-					<< "/add\">Add round</a>\n";
+		*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+			<< "/add\">Add round</a>\n";
 		if (sim_contest.r_path_->type >= ROUND)
 			*this << "<a href=\"/c/" << sim_contest.r_path_->round->id
-					<< "/add\">Add problem</a>\n";
+				<< "/add\">Add problem</a>\n";
 
 		// Editing
-		if (sim_contest.r_path_->type >= CONTEST)
-			*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
-				<< "/edit\">Edit contest</a>\n";
+		*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
+			<< "/edit\">Edit contest</a>\n";
 		if (sim_contest.r_path_->type >= ROUND)
 			*this << "<a href=\"/c/" << sim_contest.r_path_->round->id
 				<< "/edit\">Edit round</a>\n";
@@ -265,7 +260,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 	try {
 		if (r_path.type == CONTEST) {
 			// Select subrounds
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 				prepareStatement(admin_view ?
 					"SELECT id, name, item, visible, begins, ends, "
 						"full_results FROM rounds WHERE parent=? ORDER BY item"
@@ -282,7 +277,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 				bool visible;
 			};
 
-			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+			unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 			vector<SubroundExtended> subrounds;
 			// For performance
 			subrounds.reserve(res->rowsCount());
@@ -368,13 +363,13 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 					<< htmlSpecialChars(r_path.round->name) << "</a>\n";
 
 			// Select problems
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 				prepareStatement("SELECT id, name FROM rounds WHERE parent=? "
 					"ORDER BY item"));
 			pstmt->setString(1, r_path.round->id);
 
 			// List problems
-			UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+			unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 			while (res->next()) {
 				*this << "<a href=\"/c/" << res->getString(1);
 

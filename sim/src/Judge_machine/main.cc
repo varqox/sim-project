@@ -1,16 +1,14 @@
 #include "judge.h"
-#include "main.h"
-
-#include "../include/db.h"
-#include "../simlib/include/logger.h"
-#include "../simlib/include/process.h"
 
 #include <cppconn/prepared_statement.h>
-#include <csignal>
 #include <limits.h>
+#include <sim/db.h>
+#include <simlib/logger.h>
+#include <simlib/process.h>
 #include <sys/inotify.h>
 
 using std::string;
+using std::unique_ptr;
 
 static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1s
 static DB::Connection db_conn;
@@ -19,12 +17,12 @@ unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static void processSubmissionQueue() {
 	try {
-		UniquePtr<sql::Statement> stmt(db_conn->createStatement());
+		unique_ptr<sql::Statement> stmt(db_conn->createStatement());
 
 		// While submission queue is not empty
 		for (;;) {
 			// TODO: fix bug (rejudged submissions)
-			UniquePtr<sql::ResultSet> res(stmt->executeQuery(
+			unique_ptr<sql::ResultSet> res(stmt->executeQuery(
 				"SELECT id, user_id, round_id, problem_id FROM submissions "
 				"WHERE status='waiting' ORDER BY queued LIMIT 10"));
 			if (!res->next())
@@ -40,7 +38,7 @@ static void processSubmissionQueue() {
 				JudgeResult jres = judge(submission_id, problem_id);
 
 				// Update submission
-				UniquePtr<sql::PreparedStatement> pstmt;
+				unique_ptr<sql::PreparedStatement> pstmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
 						jres.status == JudgeResult::JUDGE_ERROR) {
 					pstmt.reset(db_conn->prepareStatement(

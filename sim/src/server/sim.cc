@@ -3,20 +3,20 @@
 #include "sim_template.h"
 #include "sim_user.h"
 
-#include "../simlib/include/debug.h"
-#include "../simlib/include/filesystem.h"
-#include "../simlib/include/logger.h"
-#include "../simlib/include/time.h"
-
 #include <cppconn/prepared_statement.h>
+#include <simlib/debug.h>
+#include <simlib/filesystem.h>
+#include <simlib/logger.h>
+#include <simlib/time.h>
 
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 Sim::Sim() : db_conn(DB::createConnectionUsingPassFile(".db.config")),
 		client_ip_(), req_(nullptr), resp_(server::HttpResponse::TEXT),
 		contest(nullptr), session(nullptr), user(nullptr) {
-	// Because of exception safety (we do not want to make memory leak)
+	// Because of exception safety (we do not want to make a memory leak)
 	try {
 		contest = new Contest(*this);
 		session = new Session(*this);
@@ -140,7 +140,7 @@ inline static void cutToNewline(string& str) noexcept {
 
 static string colour(const string& str) noexcept {
 	string res;
-	enum { SPAN, B, NONE } opened = NONE;
+	enum : uint8_t { SPAN, B, NONE } opened = NONE;
 	auto closeLastTag = [&res, &opened] () {
 		switch (opened) {
 			case SPAN: res += "</span>"; break;
@@ -228,22 +228,4 @@ void Sim::logs() {
 void Sim::redirect(const string& location) {
 	resp_.status_code = "302 Moved Temporarily";
 	resp_.headers["Location"] = location;
-}
-
-int Sim::getUserType(const string& user_id) {
-	try {
-		UniquePtr<sql::PreparedStatement> pstmt(db_conn->
-			prepareStatement("SELECT type FROM users WHERE id=?"));
-		pstmt->setString(1, user_id);
-
-		UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
-		if (res->next())
-			return res->getUInt(1);
-
-	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
-	}
-
-	return 3;
 }

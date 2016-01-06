@@ -2,12 +2,17 @@
 
 class Sim::User {
 private:
-	User(const User&);
-	User& operator=(const User&);
-
 	Sim& sim_;
 
 	explicit User(Sim& sim) : sim_(sim) {}
+
+	User(const User&) = delete;
+
+	User(User&& u) : sim_(u.sim_) {}
+
+	User& operator=(const User&) = delete;
+
+	User& operator=(User&&) = delete;
 
 	~User() {}
 
