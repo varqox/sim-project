@@ -13,7 +13,7 @@ private:
 	static const size_t MAX_HEADER_LENGTH = 8192;
 
 public:
-	enum State { OK, CLOSED };
+	enum State : uint8_t { OK, CLOSED };
 
 private:
 	State state_;

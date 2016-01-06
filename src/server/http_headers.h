@@ -1,8 +1,7 @@
 #pragma once
 
-#include "../simlib/include/string.h"
-
 #include <map>
+#include <simlib/string.h>
 
 namespace server {
 

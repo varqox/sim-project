@@ -1,9 +1,8 @@
 #pragma once
 
-#include "../simlib/include/memory.h"
-
-#include <mysql_connection.h>
 #include <mutex>
+#include <mysql_connection.h>
+#include <simlib/memory.h>
 
 namespace DB {
 
@@ -11,7 +10,7 @@ class Connection {
 private:
 	static std::mutex create_connection_lock;
 
-	UniquePtr<sql::Connection> conn_;
+	std::unique_ptr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
 
 	Connection(const Connection&) = delete;
@@ -25,13 +24,13 @@ public:
 	Connection(const std::string& host, const std::string& user,
 			const std::string& password, const std::string& database);
 
-	Connection(Connection&& conn) : conn_(conn.conn_.release()),
+	Connection(Connection&& conn) : conn_(std::move(conn.conn_)),
 		host_(std::move(conn.host_)), user_(std::move(conn.user_)),
 		password_(std::move(conn.password_)),
 		database_(std::move(conn.database_)) {}
 
 	Connection& operator=(Connection&& conn) {
-		conn_.reset(conn.conn_.release());
+		conn_ = std::move(conn.conn_);
 		host_ = std::move(conn.host_);
 		user_ = std::move(conn.user_);
 		password_ = std::move(conn.password_);

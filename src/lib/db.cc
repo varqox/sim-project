@@ -1,9 +1,9 @@
-#include "../include/db.h"
-#include "../simlib/include/logger.h"
-
 #include <cppconn/driver.h>
+#include <sim/db.h>
+#include <simlib/logger.h>
 
 using std::string;
+using std::unique_ptr;
 
 namespace DB {
 
@@ -56,7 +56,8 @@ Connection createConnectionUsingPassFile(const string& filename) {
 	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
 	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
 
-	AutoFree<char> f1(user), f2(password), f3(database), f(host);
+	unique_ptr<char, delete_using_free<char>> f1(user), f2(password),
+		f3(database), f4(host);
 
 	// Connect
 	try {

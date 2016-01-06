@@ -3,16 +3,22 @@
 #include "sim.h"
 
 class Sim::Template {
-private:
-	Template(const Template&);
-	Template& operator=(const Template&);
-
 protected:
 	Sim& sim_;
 
 public:
 	Template(Sim& sim, const std::string& title,
 			const std::string& styles = "", const std::string& scripts = "");
+
+	Template(const Template&) = delete;
+
+	Template(Template&&) = delete;
+
+	Template& operator=(const Template&) = delete;
+
+	Template& operator=(Template&&) = delete;
+
+	virtual ~Template();
 
 	Template& operator<<(char c) { sim_.resp_.content += c; return *this; }
 
@@ -25,6 +31,4 @@ public:
 		sim_.resp_.content += str;
 		return *this;
 	}
-
-	virtual ~Template();
 };

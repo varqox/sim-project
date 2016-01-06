@@ -1,8 +1,6 @@
-#include "simlib/include/debug.h"
-#include "simlib/include/logger.h"
-#include "simlib/include/process.h"
-
-#include <csignal>
+#include <simlib/debug.h>
+#include <simlib/logger.h>
+#include <simlib/process.h>
 
 using std::vector;
 

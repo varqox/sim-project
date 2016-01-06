@@ -40,6 +40,8 @@ script:
   - printf "sim\nsim\nsim\nlocalhost\n" | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
   - cat index.html
+  - cat build/server_error.log
+  - cat build/server.log
 
 notifications:
   email: false

@@ -1,7 +1,7 @@
 #include "convert_package.h"
 
-#include "../simlib/include/debug.h"
-#include "../simlib/include/logger.h"
+#include <simlib/debug.h>
+#include <simlib/logger.h>
 
 using std::pair;
 using std::string;
@@ -73,7 +73,7 @@ int convertPackage(string tmp_package, string out_package) {
 		copy(concat(tmp_package, "check/", config_conf.checker),
 			concat(out_package, "check/", config_conf.checker));
 
-	directory_tree::node *folder = package_tree_root->dir("check");
+	auto folder = package_tree_root->dir("check");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, solution_extensions, solution_extensions +
@@ -157,7 +157,7 @@ int convertPackage(string tmp_package, string out_package) {
 	}
 
 	vector<string> tests; // holds test names
-	directory_tree::node *folders[] = {
+	directory_tree::Node *folders[] = {
 		package_tree_root->dir("in"),
 		package_tree_root->dir("out"),
 		package_tree_root->dir("tests"),
@@ -210,7 +210,7 @@ int convertPackage(string tmp_package, string out_package) {
 			last_group = curr_group;
 		}
 
-		group->tests.push_back((ProblemConfig::Test){ i, 0 });
+		group->tests.emplace_back(i, 0);
 	}
 	return 0;
 }

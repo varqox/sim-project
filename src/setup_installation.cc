@@ -1,12 +1,12 @@
-#include "include/db.h"
-#include "simlib/include/debug.h"
-#include "simlib/include/random.h"
-#include "simlib/include/sha.h"
-#include "simlib/include/string.h"
-
 #include <cppconn/prepared_statement.h>
+#include <sim/db.h>
+#include <simlib/debug.h>
+#include <simlib/random.h>
+#include <simlib/sha.h>
+#include <simlib/string.h>
 
 using std::string;
+using std::unique_ptr;
 
 static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
 
@@ -74,12 +74,12 @@ int main(int argc, char **argv) {
 			concat(argv[1], "/.db.config"));
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to connect to database\e[m - %s\n", e.what());
+		eprintf("\033[31mFailed to connect to database\033[m - %s\n", e.what());
 		return 4;
 	}
 
 	bool error = false;
-	UniquePtr<sql::Statement> stmt(conn->createStatement());
+	unique_ptr<sql::Statement> stmt(conn->createStatement());
 
 	if (DROP_TABLES) {
 		try {
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 				return 0;
 
 		} catch (const std::exception& e) {
-			eprintf("\e[31mFailed to drop tables\e[m - %s\n", e.what());
+			eprintf("\033[31mFailed to drop tables\033[m - %s\n", e.what());
 			return 5;
 		}
 	}
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 			fillRandomly(salt_bin, 32);
 			string salt = toHex(salt_bin, 32);
 
-			UniquePtr<sql::PreparedStatement> pstmt(conn->
+			unique_ptr<sql::PreparedStatement> pstmt(conn->
 				prepareStatement("INSERT IGNORE INTO users "
 					"(username, salt, password, type) VALUES ('sim', ?, ?, 0)"));
 			pstmt->setString(1, salt);
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
 			pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to create table `users`\e[m - %s\n", e.what());
+		eprintf("\033[31mFailed to create table `users`\033[m - %s\n", e.what());
 		error = true;
 	}
 
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
 			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n");
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to create table `session`\e[m - %s\n", e.what());
+		eprintf("\033[31mFailed to create table `session`\033[m - %s\n", e.what());
 		error = true;
 	}
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
 			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to create table `problems`\e[m - %s\n", e.what());
+		eprintf("\033[31mFailed to create table `problems`\033[m - %s\n", e.what());
 		error = true;
 	}
 
@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
 			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to create table `rounds`\e[m - %s\n", e.what());
+		eprintf("\033[31mFailed to create table `rounds`\033[m - %s\n", e.what());
 		error = true;
 	}
 
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
 			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to create table `users_to_rounds`\e[m - %s\n",
+		eprintf("\033[31mFailed to create table `users_to_rounds`\033[m - %s\n",
 			e.what());
 		error = true;
 	}
@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
 			") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	} catch (const std::exception& e) {
-		eprintf("\e[31mFailed to create table `submissions`\e[m - %s\n",
+		eprintf("\033[31mFailed to create table `submissions`\033[m - %s\n",
 			e.what());
 		error = true;
 	}

@@ -1,8 +1,7 @@
 #include "validate_package.h"
 
-#include "../simlib/include/debug.h"
-
 #include <dirent.h>
+#include <simlib/debug.h>
 
 using std::string;
 
@@ -46,7 +45,7 @@ string validatePackage(string pathname) {
 
 	// Get package file structure
 	package_tree_root.reset(directory_tree::dumpDirectoryTree(pathname));
-	if (package_tree_root.isNull()) {
+	if (!package_tree_root) {
 		eprintf("Failed to get package file structure: %s\n", strerror(errno));
 		abort(); // This is probably a bug
 	}

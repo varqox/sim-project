@@ -3,19 +3,19 @@
 #include "sim_template.h"
 #include "sim_user.h"
 
-#include "../simlib/include/logger.h"
-#include "../simlib/include/random.h"
-#include "../simlib/include/sha.h"
-
 #include <cppconn/prepared_statement.h>
+#include <simlib/logger.h>
+#include <simlib/random.h>
+#include <simlib/sha.h>
 
-using std::string;
 using std::map;
+using std::string;
+using std::unique_ptr;
 
 struct Sim::User::Data {
 	string user_id, username, first_name, last_name, email;
 	unsigned user_type;
-	enum ViewType { FULL, READ_ONLY } view_type;
+	enum ViewType : uint8_t { FULL, READ_ONLY } view_type;
 };
 
 class Sim::User::TemplateWithMenu : public Template {
@@ -69,12 +69,12 @@ void Sim::User::handle() {
 	arg_beg += res_code + 1;
 
 	// Get user information
-	UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+	unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
 		"SELECT username, first_name, last_name, email, type "
 		"FROM users WHERE id=?"));
 	pstmt->setString(1, data.user_id);
 
-	UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+	unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 	if (res->next()) {
 		data.username = res->getString(1);
 		data.first_name = res->getString(2);
@@ -129,12 +129,12 @@ void Sim::User::login() {
 
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("SELECT id, salt, password FROM `users` "
 						"WHERE username=?"));
 				pstmt->setString(1, username);
 
-				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+				unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 				if (res->next()) {
 					if (!slowEqual(sha3_512(res->getString(2) + password),
 							res->getString(3)))
@@ -216,7 +216,7 @@ void Sim::User::signUp() {
 				fillRandomly(salt_bin, 32);
 				string salt = toHex(salt_bin, 32);
 
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("INSERT IGNORE INTO `users` "
 						"(username, first_name, last_name, email, salt, "
 							"password) "
@@ -233,7 +233,7 @@ void Sim::User::signUp() {
 						"SELECT id FROM `users` WHERE username=?"));
 					pstmt->setString(1, username);
 
-					UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+					unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 					if (res->next())
 						sim_.session->create(res->getString(1));
 
@@ -313,12 +313,12 @@ void Sim::User::changePassword(Data& data) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("SELECT salt, password FROM users "
 						"WHERE id=?"));
 				pstmt->setString(1, data.user_id);
 
-				UniquePtr<sql::ResultSet> res(pstmt->executeQuery());
+				unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 				if (!res->next())
 					fv.addError("Cannot get user password");
 
@@ -401,7 +401,7 @@ void Sim::User::editProfile(Data& data) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("UPDATE IGNORE users "
 					"SET username=?, first_name=?, last_name=?, email=?, "
 					"type=? WHERE id=?"));
@@ -517,7 +517,7 @@ void Sim::User::deleteAccount(Data& data) {
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
 			// Change contests and problems owner id to 1
-			UniquePtr<sql::PreparedStatement> pstmt(sim_.db_conn->
+			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 				prepareStatement("UPDATE rounds r, problems p "
 				"SET r.owner=1, p.owner=1 "
 				"WHERE r.owner=? OR p.owner=?"));
