@@ -1281,7 +1281,7 @@ void Sim::Contest::submit(bool admin_view) {
 			string solution_tmp_path = fv.getFilePath("solution");
 			struct stat sb;
 			if (stat(solution_tmp_path.c_str(), &sb) == -1) {
-				errlog("Error: stat()", error(errno));
+				error_log("Error: stat()", error(errno));
 				return sim_.error500();
 			}
 
