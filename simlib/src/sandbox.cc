@@ -252,11 +252,12 @@ ExitStat run(const string& exec, vector<string> args,
 		for (size_t i = 0; i < len; ++i)
 			arg[i] = const_cast<char*>(args[i].c_str());
 
-		// Set virtual memory limit
+		// Set virtual memory and stack size limit (to the same value)
 		if (opts->memory_limit > 0) {
 			struct rlimit limit;
 			limit.rlim_max = limit.rlim_cur = opts->memory_limit;
-			prlimit(getpid(), RLIMIT_AS, &limit, nullptr);
+			setrlimit(RLIMIT_AS, &limit);
+			setrlimit(RLIMIT_STACK, &limit);
 		}
 
 		// Change stdin
