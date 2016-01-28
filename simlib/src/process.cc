@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <sys/wait.h>
 
+using std::array;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -21,7 +22,7 @@ int spawn(const char* exec, const char* args[], const struct spawn_opts *opts,
 	pid_t cpid = fork();
 	if (cpid == -1) {
 		// TODO: Maybe throw an exception
-		error_log(__FILE__, ':', toString(__LINE__), ": ", __PRETTY_FUNCTION__,
+		errlog(__FILE__, ':', toString(__LINE__), ": ", __PRETTY_FUNCTION__,
 			": Failed to fork()", error(errno));
 		return -1;
 
@@ -96,8 +97,8 @@ int spawn(const string& exec, size_t argc, string *args,
 }
 
 std::string getCWD() {
-	unique_ptr<char, delete_using_free<char>> buff(get_current_dir_name());
-	if (!buff || *buff != '/') {
+	unique_ptr<char[], delete_using_free<char>> buff(get_current_dir_name());
+	if (!buff || buff[0] != '/') {
 		if (buff)
 			errno = ENOENT; // Improper path, but get_current_dir_name() succeed
 
@@ -112,25 +113,25 @@ std::string getCWD() {
 }
 
 string getExec(pid_t pid) {
-	constexpr int buff_size = 4096;
-	constexpr int buff2_size = 65536;
-	char buff[buff_size];
+	array<char, 4096> buff;
 	string path = concat("/proc/", toString(pid), "/exe");
 
-	ssize_t rc = readlink(path.c_str(), buff, buff_size);
-	if ((rc == -1 && errno == ENAMETOOLONG) || rc >= buff_size) {
-		char buff2[buff2_size];
-		rc = readlink(path.c_str(), buff2, buff2_size);
-		if (rc == -1 || rc >= buff2_size)
+	ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
+	if ((rc == -1 && errno == ENAMETOOLONG)
+		|| rc >= static_cast<int>(buff.size()))
+	{
+		array<char, 65536> buff2;
+		rc = readlink(path.c_str(), buff2.data(), buff2.size());
+		if (rc == -1 || rc >= static_cast<int>(buff2.size()))
 			throw std::runtime_error(concat("Failed: readlink()",
 				error(errno)));
 
-		return string(buff2, rc);
+		return string(buff2.data(), rc);
 
 	} else if (rc == -1)
 		throw std::runtime_error(concat("Failed: readlink()", error(errno)));
 
-	return string(buff, rc);
+	return string(buff.data(), rc);
 }
 
 vector<pid_t> findProcessesByExec(string exec, bool include_me) {
@@ -140,7 +141,7 @@ vector<pid_t> findProcessesByExec(string exec, bool include_me) {
 	if (exec.front() != '/')
 		exec = concat(getCWD(), exec);
 	// Make exec absolute
-	abspath(exec).swap(exec);
+	exec = abspath(exec);
 
 	pid_t pid, my_pid = (include_me ? -1 : getpid());
 	DIR *dir = opendir("/proc");

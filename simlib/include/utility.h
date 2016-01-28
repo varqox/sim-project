@@ -106,3 +106,33 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 	}
 	return (beg != x.end() && (*beg).*field == val ? beg : x.end());
 }
+
+template<class A, class B>
+inline bool binary_search(const A& a, const B& val) {
+	return std::binary_search(a.begin(), a.end(), val);
+}
+
+template<class A, class B>
+inline auto lower_bound(const A& a, const B& val) -> decltype(a.begin()) {
+	return std::lower_bound(a.begin(), a.end(), val);
+}
+
+template<class A, class B>
+inline auto upper_bound(const A& a, const B& val) -> decltype(a.begin()) {
+	return std::upper_bound(a.begin(), a.end(), val);
+}
+
+template<class Func>
+class CallInDtor {
+	Func func;
+
+public:
+	explicit CallInDtor(Func f) : func(f) {}
+
+	CallInDtor(const CallInDtor&) = delete;
+	CallInDtor(CallInDtor&&) = delete;
+	CallInDtor& operator=(const CallInDtor&) = delete;
+	CallInDtor& operator=(CallInDtor&&) = delete;
+
+	~CallInDtor() { func(); }
+};

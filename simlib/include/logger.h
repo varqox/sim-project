@@ -2,6 +2,7 @@
 
 #include "string.h"
 
+#include <atomic>
 #include <cstdio>
 
 class Logger {
@@ -10,16 +11,16 @@ private:
 	Logger& operator=(const Logger&) = delete;
 
 	FILE* f_;
-	bool opened_ = false, label_ = true;
+	std::atomic<bool> opened_{false}, label_{true};
 
 	void close() noexcept {
-		if (opened_) {
-			opened_ = false;
+		if (opened_.load()) {
+			opened_.store(false);
 			fclose(f_);
 		}
 	}
 
-	// Returns whether file was locked or not
+	// Lock the file
 	bool lock() noexcept {
 		if (f_ == nullptr)
 			return false;
@@ -28,6 +29,7 @@ private:
 		return true;
 	}
 
+	// Unlock the file
 	void unlock() noexcept { funlockfile(f_); }
 
 public:
@@ -39,7 +41,7 @@ public:
 
 	/**
 	 * @brief Opens file @p filename in append mode as log file, if fopen()
-	 * error occurs exception is thrown and f_ (inner stream) is unchanged
+	 *   error occurs exception is thrown and f_ (inner stream) is unchanged
 	 *
 	 * @param filename file to open
 	 *
@@ -53,13 +55,11 @@ public:
 		f_ = stream;
 	}
 
-	bool label() const noexcept { return label_; }
-
-	bool label(bool add_label) noexcept {
-		bool old = label_;
-		label_ = add_label;
-		return old;
+	bool label() const noexcept {
+		return label_.load(std::memory_order_relaxed);
 	}
+
+	bool label(bool add_label) noexcept { return label_.exchange(add_label); }
 
 	class Appender {
 	private:
@@ -127,7 +127,9 @@ public:
 };
 
 inline std::string error(int errnum) {
-	return concat(" - ", toString(errnum), ": ", strerror(errnum));
+	return concat(" - (", toString(errnum), ") ", strerror(errnum));
 }
 
-extern Logger stdlog, error_log; // By default both write to stderr
+// By default both write to stderr
+extern Logger stdlog; // Standard (default) log
+extern Logger errlog; // Error log

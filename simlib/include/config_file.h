@@ -101,10 +101,10 @@ public:
 	 *
 	 * @param pathname config file
 	 * @param load_all whether load all variables from @p pathname or load only
-	 * these from variable set
+	 *   these from variable set
 	 *
 	 * @errors Throws an exception std::runtime_error if an open() error occurs
-	 * and all exceptions from loadConfigFromString()
+	 *   and all exceptions from loadConfigFromString()
 	 */
 	void loadConfigFromFile(const std::string& pathname, bool load_all = false);
 
@@ -113,7 +113,7 @@ public:
 	 *
 	 * @param config input string
 	 * @param load_all whether load all variables from @p config or load only
-	 * these from variable set
+	 *   these from variable set
 	 *
 	 * @errors Throws an exception (ParseError) if an error occurs
 	 */
@@ -181,6 +181,7 @@ public:
 	 * @details '\'' replaces with "''"
 	 *
 	 * @param str input string
+	 *
 	 * @return escaped string
 	 */
 	static std::string safeSingleQuotedString(const StringView& str);
@@ -191,6 +192,7 @@ public:
 	 *
 	 * @param str input string
 	 * @param escape_unprintable whether escape unprintable characters via \xnn
+	 *
 	 * @return escaped string
 	 */
 	static std::string safeDoubleQuotedString(const StringView& str,

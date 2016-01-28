@@ -22,18 +22,19 @@ constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
  * @details Uses open(3) if O_TMPFILE is defined, or mkstemp(3)
  *
  * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or passed
- * to mkostemp(3)
+ *   to mkostemp(3)
+ *
  * @return file descriptor on success, -1 on error
  *
  * @errors The same that occur for open(2) (if O_TMPFILE is defined) or
- * mkstemp(3)
+ *   mkstemp(3)
  */
 int getUnlinkedTmpFile(int flags = 0) noexcept;
 
 class TemporaryDirectory {
 private:
 	std::string path_; // absolute path
-	std::unique_ptr<char> name_;
+	std::unique_ptr<char[]> name_;
 
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
 	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
@@ -85,7 +86,7 @@ inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) {
 
 /**
  * @brief Removes recursively file/directory @p pathname relative to the
- * directory file descriptor @p dirfd
+ *   directory file descriptor @p dirfd
  *
  * @param dirfd directory file descriptor
  * @param pathname file/directory pathname (relative to @p dirfd)
@@ -93,7 +94,7 @@ inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) {
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
- * fdopendir(3)
+ *   fdopendir(3)
  */
 int remove_rat(int dirfd, const char* pathname);
 
@@ -102,6 +103,7 @@ int remove_rat(int dirfd, const char* pathname);
  * @details Uses remove_rat()
  *
  * @param pathname file/directory to remove
+ *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for remove_rat()
@@ -118,7 +120,7 @@ inline int remove_r(const std::string& pathname) {
 /**
  * @brief Fast copies file from @p infd to @p outfd
  * @details Reads from @p infd form it's offset and writes to @p outfd from its
- * offset
+ *   offset
  *
  * @param infd file descriptor from which data will be copied
  * @param outfd file descriptor to which data will be copied
@@ -159,7 +161,7 @@ inline int copy(const std::string& src, const std::string& dest) {
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory file
- * descriptor
+ *   descriptor
  *
  * @param dirfd1 directory file descriptor
  * @param src source file (relative to @p dirfd1)
@@ -174,7 +176,7 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest);
 
 /**
  * @brief Copies (overrides) file/directory @p src to @p dest relative to a
- * directory file descriptor
+ *   directory file descriptor
  *
  * @param dirfd1 directory file descriptor
  * @param src source file/directory (relative to @p dirfd1)
@@ -184,7 +186,7 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest);
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
- * mkdirat(2), copyat()
+ *   mkdirat(2), copyat()
  */
 int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest);
 
@@ -226,8 +228,8 @@ inline int access(const std::string& pathname, int mode) {
 /**
  * @brief Moves file from @p oldpath to @p newpath
  * @details First creates directory containing @p newpath
- * (if @p create_subdirs is true) and then uses rename(2) to move file/directory
- * or copy_r() and remove_r() if rename(2) fails with errno == EXDEV
+ *   (if @p create_subdirs is true) and then uses rename(2) to move file/directory
+ *   or copy_r() and remove_r() if rename(2) fails with errno == EXDEV
  *
  * @param oldpath path to file/directory
  * @param newpath location
@@ -257,6 +259,7 @@ int createFile(const char* pathname, mode_t mode);
  * @param fd file descriptor
  * @param buf where place read bytes
  * @param count number of bytes to read
+ *
  * @return number of bytes read on success, if error occurs then errno is > 0
  *
  * @errors The same as for read(2) except EINTR
@@ -270,11 +273,12 @@ size_t readAll(int fd, void *buf, size_t count);
  * @param fd file descriptor
  * @param buf where write bytes from
  * @param count number of bytes to write
+ *
  * @return number of bytes written on success, if error occurs then errno is > 0
  *
  * @errors The same as for write(2) except EINTR
  */
-size_t writeAll(int fd, void *buf, size_t count);
+size_t writeAll(int fd, const void *buf, size_t count);
 
 namespace directory_tree {
 
@@ -322,6 +326,7 @@ public:
 	 * @brief Get subdirectory
 	 *
 	 * @param pathname name to search (cannot contain '/')
+	 *
 	 * @return pointer to subdirectory or NULL if it does not exist
 	 */
 	Node* dir(const std::string& pathname);
@@ -330,6 +335,7 @@ public:
 	 * @brief Checks if file exists in this node
 	 *
 	 * @param pathname file to check (cannot contain '/')
+	 *
 	 * @return true if exists, false otherwise
 	 */
 	bool fileExists(const std::string& pathname) {
@@ -356,6 +362,7 @@ public:
  * @brief Dumps directory tree (rooted in @p path)
  *
  * @param path path to main directory
+ *
  * @return pointer to root node
  */
 Node* dumpDirectoryTree(const char* path);
@@ -364,6 +371,7 @@ Node* dumpDirectoryTree(const char* path);
  * @brief Dumps directory tree (rooted in @p path)
  *
  * @param path path to main directory
+ *
  * @return pointer to root node
  */
 inline Node* dumpDirectoryTree(const std::string& path) {
@@ -455,7 +463,7 @@ constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
  *
  * @param file filename
  * @param flags if set GFBL_IGNORE_NEW_LINES then '\n' is not appended to each
- * line
+ *   line
  * @param first number of first line to fetch
  * @param last number of first line not to fetch
  *
@@ -498,6 +506,7 @@ inline ssize_t putFileContents(const std::string& file,
  * @brief Behaves like close(2) but cannot be interrupted by signal
  *
  * @param fd file descriptor to close
+ *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for close(2) expect EINTR
@@ -520,7 +529,9 @@ public:
 
 	/**
 	 * @brief Closes file descriptor
+	 *
 	 * @return 0 on success, -1 on error
+	 *
 	 * @errors The same that occur to sclose()
 	 */
 	int close() noexcept {
@@ -533,19 +544,19 @@ public:
 };
 
 // Encapsulates file descriptor
-class Fd {
+class FileDescriptor {
 	int fd_;
 
 public:
-	explicit Fd(int fd = -1) : fd_(fd) {}
+	explicit FileDescriptor(int fd = -1) : fd_(fd) {}
 
-	Fd(Fd&&) = default;
+	FileDescriptor(FileDescriptor&&) = default;
 
-	Fd& operator=(const Fd&) = default;
+	FileDescriptor& operator=(const FileDescriptor&) = default;
 
-	Fd& operator=(Fd&&) = default;
+	FileDescriptor& operator=(FileDescriptor&&) = default;
 
-	Fd& operator=(int fd) {
+	FileDescriptor& operator=(int fd) {
 		fd_ = fd;
 		return *this;
 	}
@@ -585,12 +596,12 @@ public:
 		return 0;
 	}
 
-	~Fd() { (void)sclose(fd_); }
+	~FileDescriptor() { (void)sclose(fd_); }
 };
 
 template<int (*func)(const char*)>
 class RemoverBase {
-	std::unique_ptr<char> name;
+	std::unique_ptr<char[]> name;
 
 	RemoverBase(const RemoverBase&) = delete;
 	RemoverBase& operator=(const RemoverBase&) = delete;

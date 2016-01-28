@@ -130,6 +130,7 @@ public:
 	 * @brief Compares two StringBase
 	 *
 	 * @param s StringBase to compare with
+	 *
 	 * @return -1 - this < @p s, 0 - equal, 1 - this > @p s
 	 */
 	int compare(const StringBase& s) const {
@@ -479,11 +480,10 @@ std::string toString(T x) {
 
 // TODO
 inline std::string toString(double x, int precision = 6) {
-	constexpr int buff_size = 300;
-	char buff[buff_size];
-	int rc = snprintf(buff, buff_size, "%.*lf", precision, x);
-	if (0 < rc && rc < buff_size)
-		return buff;
+	std::array<char, 300> buff;
+	int rc = snprintf(buff.data(), buff.size(), "%.*lf", precision, x);
+	if (0 < rc && rc < static_cast<int>(buff.size()))
+		return std::string(buff.data(), rc);
 
 	return std::to_string(x);
 }
@@ -594,6 +594,17 @@ bool isPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 	return false;
 }
 
+template<class T>
+inline bool isPrefixIn(const StringView& str, const T& x) noexcept {
+	return isPrefixIn(str, x.begin(), x.end());
+}
+
+inline bool isPrefixIn(const StringView& str,
+	const std::initializer_list<StringView>& x) noexcept
+{
+	return isPrefixIn(str, x.begin(), x.end());
+}
+
 inline bool isSuffix(const StringView& str, const StringView& suffix) noexcept {
 	try {
 		return str.size() >= suffix.size() &&
@@ -619,13 +630,14 @@ std::string htmlSpecialChars(const StringView& s);
 /**
  * @brief Check whether string @p s[beg, end) is an integer
  * @details Equivalent to check id string matches regex [+\-]?[0-9]+
- * Notes:
- * - empty string is not an integer
- * - sign is not an integer
+ *   Notes:
+ *   - empty string is not an integer
+ *   - sign is not an integer
  *
  * @param s string
  * @param beg beginning
  * @param end position of first character not to check
+ *
  * @return result - whether string @p s[beg, end) is an integer
  */
 bool isInteger(const StringView& s, size_t beg = 0,
@@ -745,6 +757,7 @@ T digitsToU(const StringView& str) {
  * @param x usec value
  * @param prec precision (maximum number of digits after '.')
  * @param trim_nulls set whether to trim trailing nulls
+ *
  * @return floating-point x in sec as string
  */
 std::string usecToSecStr(unsigned long long x, unsigned prec,
@@ -777,6 +790,7 @@ inline std::string& operator+=(std::string& str, const StringView& s) {
  * @brief Concentrates @p args into std::string
  *
  * @param args string-like objects
+ *
  * @return concentration of @p args
  */
 template<class... T>
@@ -797,16 +811,17 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
 /**
  * @brief Returns wided string
  * @details Examples:
- * widedString("abc", 5) -> "  abc"
- * widedString("abc", 5, false) -> "abc  "
- * widedString("1234", 7, true, '0') -> "0001234"
- * widedString("1234", 4, true, '0') -> "1234"
- * widedString("1234", 2, true, '0') -> "1234"
+ *   widedString("abc", 5) -> "  abc"
+ *   widedString("abc", 5, false) -> "abc  "
+ *   widedString("1234", 7, true, '0') -> "0001234"
+ *   widedString("1234", 4, true, '0') -> "1234"
+ *   widedString("1234", 2, true, '0') -> "1234"
  *
  * @param s string
  * @param len length of result string
  * @param left whether adjust to left or right
  * @param fill character used to fill blank fields
+ *
  * @return formatted string
  */
 std::string widedString(const StringView& s, size_t len, Adjustment adj = RIGHT,

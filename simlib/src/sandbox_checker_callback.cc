@@ -1,15 +1,11 @@
-#include "../include/filesystem.h"
-#include "../include/logger.h"
-#include "../include/sandbox.h"
 #include "../include/sandbox_checker_callback.h"
 #include "../include/utility.h"
 
+using std::array;
 using std::string;
 using std::vector;
 
-namespace sandbox {
-
-int CheckerCallback::operator()(pid_t pid, int syscall) {
+bool CheckerCallback::operator()(pid_t pid, int syscall) {
 	// Detect arch (first call - before exec, second - after exec)
 	if (++functor_call < 3) {
 		string filename = concat("/proc/", toString<int64_t>(pid), "/exe");
@@ -17,15 +13,15 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 		int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
 		if (fd == -1) {
 			arch = 0;
-			error_log("Error: open('", filename, "')", error(errno));
-			return 1;
+			errlog("Error: open('", filename, "')", error(errno));
+			return false;
 		}
 
 		Closer closer(fd);
 		// Read fourth byte and detect if 32 or 64 bit
 		unsigned char c;
 		if (lseek(fd, 4, SEEK_SET) == (off_t)-1)
-			return 1;
+			return false;
 
 		int ret = read(fd, &c, 1);
 		if (ret == 1 && c == 2)
@@ -34,7 +30,7 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 			arch = 0; // i386
 	}
 
-	constexpr int allowed_syscalls_i386[] = {
+	constexpr array<int, 23> allowed_syscalls_i386 {{
 		1, // SYS_exit
 		3, // SYS_read
 		4, // SYS_write
@@ -58,8 +54,8 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 		252, // SYS_exit_group
 		270, // SYS_tgkill
 		330, // SYS_dup3
-	};
-	constexpr int allowed_syscalls_x86_64[] = {
+	}};
+	constexpr array<int, 21> allowed_syscalls_x86_64 {{
 		0, // SYS_read
 		1, // SYS_write
 		3, // SYS_close
@@ -81,25 +77,21 @@ int CheckerCallback::operator()(pid_t pid, int syscall) {
 		231, // SYS_exit_group
 		234, // SYS_tgkill
 		292, // SYS_dup3
-	};
+	}};
 
 	// Check if syscall is allowed
 	if (arch == 0) {
-		for (int i : allowed_syscalls_i386)
-			if (syscall == i)
-				return 0;
+		if (binary_search(allowed_syscalls_i386, syscall))
+			return true;
 	} else {
-		for (int i : allowed_syscalls_x86_64)
-			if (syscall == i)
-				return 0;
+		if (binary_search(allowed_syscalls_x86_64, syscall))
+			return true;
 	}
 
 	// Check if syscall is limited
 	for (Pair& i : limited_syscalls[arch])
 		if (syscall == i.syscall)
-			return --i.limit < 0;
+			return --i.limit >= 0;
 
-	return !allowedCall(pid, arch, syscall, allowed_files);
+	return allowedCall(pid, arch, syscall, allowed_files);
 }
-
-} // namespace sandbox

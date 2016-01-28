@@ -1,11 +1,8 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include "sandbox.h"
 
-namespace sandbox {
-
-struct CheckerCallback {
+struct CheckerCallback : Sandbox::CallbackBase {
 	struct Pair {
 		int syscall;
 		int limit;
@@ -38,8 +35,5 @@ struct CheckerCallback {
 		std::sort(allowed_files.begin(), allowed_files.end());
 	}
 
-	// Returns 0 on success, non-zero value on error
-	int operator()(pid_t pid, int syscall);
+	bool operator()(pid_t pid, int syscall);
 };
-
-} // namespace sandbox

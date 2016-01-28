@@ -3,7 +3,7 @@
 
 using std::string;
 
-Logger stdlog(stderr), error_log(stderr);
+Logger stdlog(stderr), errlog(stderr);
 
 Logger::Logger(const string& filename) : f_(fopen(filename.c_str(), "a")),
 		opened_(true) {

@@ -22,9 +22,9 @@ extern const spawn_opts default_spawn_opts; /* = {
  * @param exec file to execute
  * @param args arguments (last has to be NULL)
  * @param sopt spawn options - defines what to change stdin, stdout and
- * stderr to (negative field closes the stream)
+ *   stderr to (negative field closes the stream)
  * @param working_dir directory at which exec will be run, nullptr - do not
- * change
+ *   change
  *
  * @return exit code on success, -1 on error
  */
@@ -38,7 +38,7 @@ int spawn(const char* exec, const char* args[],
  * @param exec file to execute
  * @param args arguments (last has to be NULL)
  * @param sopt spawn options - defines what to change stdin, stdout and
- * stderr to (negative field closes the stream)
+ *   stderr to (negative field closes the stream)
  * @param working_dir directory at which exec will be run
  *
  * @return exit code on success, -1 on error
@@ -55,7 +55,7 @@ inline int spawn(const std::string& exec, const char* args[],
  * @param exec file to execute
  * @param args arguments
  * @param sopt spawn options - defines what to change stdin, stdout and
- * stderr to (negative field closes the stream)
+ *   stderr to (negative field closes the stream)
  * @param working_dir directory at which exec will be run
  *
  * @return exit code on success, -1 on error
@@ -71,7 +71,7 @@ int spawn(const std::string& exec, const std::vector<std::string>& args,
  * @param argc number of arguments
  * @param args arguments
  * @param sopt spawn options - defines what to change stdin, stdout and
- * stderr to (negative field closes the stream)
+ *   stderr to (negative field closes the stream)
  * @param working_dir directory at which exec will be run
  *
  * @return exit code on success, -1 on error
@@ -87,16 +87,17 @@ int spawn(const std::string& exec, size_t argc, std::string *args,
  * @return current working directory (absolute path, with trailing '/')
  *
  * @errors If get_current_dir_name() fails then std::runtime_error will be
- * thrown
+ *   thrown
  */
 std::string getCWD() noexcept(false);
 
 /**
  * @brief Get a process with pid @p pid executable path
  * @details executable path is always absolute, notice that if executable is
- * removed then path will have additional " (deleted)" suffix
+ *   removed then path will have additional " (deleted)" suffix
  *
  * @param pid process pid
+ *
  * @return absolute path of @p pid executable
  *
  * @errors If readlink(2) fails then std::runtime_error will be thrown
@@ -109,11 +110,12 @@ std::string getExec(pid_t pid) noexcept(false);
  *
  * @param exec path to executable (if absolute, then getting CWD is omitted)
  * @param include_me whether include calling process in result (if matches) or
- * not
+ *   not
+ *
  * @return vector of pids of matched processes
  *
  * @errors Exceptions from getCWD() or if opendir(2) fails then
- * std::runtime_error will be thrown
+ *   std::runtime_error will be thrown
  */
 std::vector<pid_t> findProcessesByExec(std::string exec,
 	bool include_me = false) noexcept(false);
@@ -121,10 +123,11 @@ std::vector<pid_t> findProcessesByExec(std::string exec,
 /**
  * @brief Change current working directory to process executable directory
  * @details Uses getExec() and chdir(2)
+ *
  * @return New CWD (with trailing '/')
  *
  * @errors Exceptions from getExec() or if chdir(2) fails then
- * std::runtime_error will be thrown
+ *   std::runtime_error will be thrown
  */
 std::string chdirToExecDir() noexcept(false);
 

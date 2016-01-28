@@ -6,6 +6,7 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 
+// Deleter which use free to deallocate, useful for std::unique_ptr
 template<class T>
 struct delete_using_free {
 	void operator()(T* p) const noexcept { free(p); }
