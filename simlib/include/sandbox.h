@@ -189,7 +189,7 @@ public:
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - code: return status (in the format specified in wait(2)).
-	 *   - runtime: in micro seconds [usec]
+	 *   - runtime: in microseconds [usec]
 	 *   - message: detailed info about error, disallowed syscall, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
@@ -279,7 +279,7 @@ private:
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - code: return status (in the format specified in wait(2)).
-	 *   - runtime: in micro seconds [usec]
+	 *   - runtime: in microseconds [usec]
 	 *   - message: detailed info about error, disallowed syscall, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
