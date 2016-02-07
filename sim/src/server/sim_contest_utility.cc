@@ -44,7 +44,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 
 		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 
-		auto copyDataTo = [&res](unique_ptr<Round>& r) {
+		auto copyDataTo = [&](unique_ptr<Round>& r) {
 			r.reset(new Round);
 			r->id = res->getString(1);
 			r->parent = res->getString(2);
@@ -117,8 +117,8 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 		sim_.error500();
 		return nullptr;
 	}
@@ -154,8 +154,8 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 		return owner_type > user_type;
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 
 	return false;
@@ -405,7 +405,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 }

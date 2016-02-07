@@ -190,7 +190,7 @@ int convertPackage(string tmp_package, string out_package) {
 						concat(out_package, "tests/", file));
 				}
 
-	// Add tests to config_conf
+	/* Add tests to config_conf */
 	sort(tests.begin(), tests.end(), TestNameCompatator());
 
 	config_conf.test_groups.assign(1, ProblemConfig::Group());

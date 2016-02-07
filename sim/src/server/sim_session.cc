@@ -44,8 +44,8 @@ Sim::Session::State Sim::Session::open() {
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -75,8 +75,8 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 
 		// Remove obsolete sessions
 		unique_ptr<sql::Statement>(sim_.db_conn->createStatement())->
-			executeUpdate(string("DELETE FROM `session` WHERE time<'").
-				append(date("%Y-%m-%d %H:%M:%S'",
+			executeUpdate(concat("DELETE FROM `session` WHERE time<'",
+				date("%Y-%m-%d %H:%M:%S'",
 					time(nullptr) - SESSION_MAX_LIFETIME)));
 		pstmt->setString(2, _user_id);
 		pstmt->setString(3, sim_.client_ip_);
@@ -101,8 +101,8 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 		state_ = OK;
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 
 	return state_;
@@ -119,8 +119,8 @@ void Sim::Session::destroy() {
 		pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -141,7 +141,7 @@ void Sim::Session::close() {
 		pstmt->executeUpdate();
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 }

@@ -20,7 +20,7 @@ public:
 
 	std::string get(const std::string& key) const {
 		const_iterator it = find(tolower(key));
-		return it == end() ? std::string() : it->second;
+		return it == end() ? "" : it->second;
 	}
 
 	virtual ~HttpHeaders() {}

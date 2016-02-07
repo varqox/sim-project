@@ -4,6 +4,7 @@
 #include "validate_package.h"
 
 #include <simlib/debug.h>
+#include <simlib/logger.h>
 #include <simlib/process.h>
 #include <simlib/utility.h>
 
@@ -82,7 +83,7 @@ static void help(const char* program_name) {
 /**
  * Parses options passed to Conver via arguments
  * @param argc like in main (will be modified to hold the number of non-option
- * parameters)
+ *   parameters)
  * @param argv like in main (holds arguments)
  */
 static void parseOptions(int &argc, char **argv) {
@@ -328,9 +329,9 @@ int main(int argc, char **argv) {
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, nullptr);
-	sigaction(SIGQUIT, &sa, nullptr);
-	sigaction(SIGTERM, &sa, nullptr);
+	(void)sigaction(SIGINT, &sa, nullptr);
+	(void)sigaction(SIGQUIT, &sa, nullptr);
+	(void)sigaction(SIGTERM, &sa, nullptr);
 
 	string in_package = argv[1];
 	if (VERBOSITY > 1)
@@ -370,7 +371,7 @@ int main(int argc, char **argv) {
 
 	// Change current working directory to tmp_dir
 	if (chdir(tmp_dir->name()) == -1) {
-		eprintf("Error: chdir() - %s\n", strerror(errno));
+		eprintf("Error: chdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 
@@ -396,7 +397,7 @@ int main(int argc, char **argv) {
 	if (PROBLEM_TAG.size())
 		config_conf.tag = PROBLEM_TAG;
 	else if (!USE_CONFIG)
-		config_conf.tag = getTag(config_conf.name);
+		config_conf.tag = makeTag(config_conf.name);
 
 	// Memory limit
 	if (SET_MEMORY_LIMIT)
@@ -471,9 +472,8 @@ int main(int argc, char **argv) {
 	// Directory
 	else {
 		if (move(out_package, DEST_NAME) != 0) {
-			eprintf("Error moving: '%s' -> '%s' - %s\n",
-				out_package.c_str(), DEST_NAME.c_str(),
-				strerror(errno));
+			eprintf("Error moving: '%s' -> '%s'%s\n", out_package.c_str(),
+				DEST_NAME.c_str(), error(errno).c_str());
 			return 8;
 		}
 

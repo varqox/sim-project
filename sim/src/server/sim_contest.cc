@@ -60,8 +60,8 @@ void Sim::Contest::handle() {
 			templ << "</div>\n";
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" - ", e.what());
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 
 	// Add contest
@@ -247,8 +247,8 @@ void Sim::Contest::addContest() {
 				return sim_.redirect("/c");
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -348,8 +348,8 @@ void Sim::Contest::addRound() {
 				return sim_.redirect("/c/" + r_path_->round_id);
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -436,16 +436,16 @@ void Sim::Contest::addProblem() {
 					(isSuffix(user_package_file, ".tar.gz") ? "tar.gz"
 						: getExtension(user_package_file)));
 				if (link(package_file.c_str(), new_package_file.c_str()))
-					throw std::runtime_error(string("Error: link() - ") +
-						strerror(errno));
+					throw std::runtime_error(concat("Error: link()",
+						error(errno)));
 
 				FileRemover file_rm(new_package_file);
 
 				// Create temporary directory for holding package
 				char package_tmp_dir[] = "/tmp/sim-problem.XXXXXX";
 				if (mkdtemp(package_tmp_dir) == nullptr)
-					throw std::runtime_error(string("Error: mkdtemp() - ") +
-						strerror(errno));
+					throw std::runtime_error(concat("Error: mkdtemp()",
+						error(errno)));
 
 				DirectoryRemover rm_tmp_dir(package_tmp_dir);
 
@@ -474,8 +474,7 @@ void Sim::Contest::addProblem() {
 
 				if (sopt.new_stderr_fd == -1)
 					throw std::runtime_error(
-						string("Error: getUnlinkedTmpFile(): ") +
-						strerror(errno));
+						concat("Error: getUnlinkedTmpFile()", error(errno)));
 
 				// Convert package
 				if (0 != spawn("./conver", args, &sopt)) {
@@ -533,8 +532,8 @@ void Sim::Contest::addProblem() {
 
 				// Move package folder to problems/
 				if (move(package_tmp_dir, ("problems/" + problem_id).c_str()))
-					throw std::runtime_error(string("Error: move() - ") +
-						strerror(errno));
+					throw std::runtime_error(concat("Error: move()",
+						error(errno)));
 
 				rm_tmp_dir.reset("problems/" + problem_id);
 
@@ -569,8 +568,9 @@ void Sim::Contest::addProblem() {
 				return sim_.redirect("/c/" + round_id);
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -678,8 +678,9 @@ void Sim::Contest::editContest() {
 			}
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':',
-				toString(__LINE__), " - ", e.what());
+			fv.addError("Internal server error");
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 	}
 
@@ -798,8 +799,9 @@ void Sim::Contest::editRound() {
 				}
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -878,8 +880,8 @@ void Sim::Contest::editProblem() {
 			notifyJudgeServer();
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" - ", e.what());
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 
 		return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
@@ -933,18 +935,18 @@ void Sim::Contest::editProblem() {
 		spawn_opts opts = { -1, STDERR_FILENO, STDERR_FILENO };
 		int exit_code = spawn(args[0], args, &opts, "problems");
 		if (exit_code != 0) {
-			auto message = error_log("Error: ", args[0], " ");
+			auto tmperrlog = errlog("Error: ", args[0], " ");
 
 			if (exit_code == -1)
-				message("Failed to execute");
+				tmperrlog("Failed to execute");
 			else if (WIFSIGNALED(exit_code))
-				message("killed by signal ", toString(WTERMSIG(exit_code)),
+				tmperrlog("killed by signal ", toString(WTERMSIG(exit_code)),
 					" - ", strsignal(WTERMSIG(exit_code)));
 			else if (WIFSTOPPED(exit_code))
-				message("killed by signal ", toString(WSTOPSIG(exit_code)),
+				tmperrlog("killed by signal ", toString(WSTOPSIG(exit_code)),
 					" - ", strsignal(WSTOPSIG(exit_code)));
 			else
-				message("returned ", toString(WIFEXITED(exit_code) ?
+				tmperrlog("returned ", toString(WIFEXITED(exit_code) ?
 					WEXITSTATUS(exit_code) : exit_code));
 
 			return sim_.error500();
@@ -1011,8 +1013,9 @@ void Sim::Contest::editProblem() {
 				}
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -1119,8 +1122,9 @@ void Sim::Contest::deleteContest() {
 				return sim_.redirect("/c");
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" - ", e.what());
+			fv.addError("Internal server error");
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 
 	TemplateWithMenu templ(*this, "Delete contest");
@@ -1166,8 +1170,9 @@ void Sim::Contest::deleteRound() {
 				return sim_.redirect("/c/" + r_path_->contest->id);
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" - ", e.what());
+			fv.addError("Internal server error");
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 
 	TemplateWithMenu templ(*this, "Delete round");
@@ -1211,8 +1216,9 @@ void Sim::Contest::deleteProblem() {
 				return sim_.redirect("/c/" + r_path_->round->id);
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" - ", e.what());
+			fv.addError("Internal server error");
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 
 	TemplateWithMenu templ(*this, "Delete problem");
@@ -1337,8 +1343,8 @@ void Sim::Contest::submit(bool admin_view) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 		}
 	}
@@ -1458,8 +1464,9 @@ void Sim::Contest::submit(bool admin_view) {
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		fv.addError("Internal server error");
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 	}
 
 	if (isSuffix(buffer, "</option>\n"))
@@ -1573,8 +1580,9 @@ void Sim::Contest::submission() {
 						"/submissions"));
 
 				} catch (const std::exception& e) {
-					error_log("Caught exception: ", __FILE__, ':',
-						toString(__LINE__), " - ", e.what());
+					fv.addError("Internal server error");
+					errlog("Caught exception: ", __FILE__, ':',
+						toString(__LINE__), " -> ", e.what());
 				}
 
 			TemplateWithMenu templ(*this, "Delete submission");
@@ -1648,18 +1656,20 @@ void Sim::Contest::submission() {
 			// Run CTH
 			int exit_code = spawn(args[0], args, &sopt);
 			if (exit_code != 0) {
-				auto message = error_log("Error: ", args[0], " ");
+				auto tmperrlog = errlog("Error: ", args[0], " ");
 
 				if (exit_code == -1)
-					message("Failed to execute");
+					tmperrlog("Failed to execute");
 				else if (WIFSIGNALED(exit_code))
-					message("killed by signal ", toString(WTERMSIG(exit_code)),
-						" - ", strsignal(WTERMSIG(exit_code)));
+					tmperrlog("killed by signal ",
+						toString(WTERMSIG(exit_code)), " - ",
+						strsignal(WTERMSIG(exit_code)));
 				else if (WIFSTOPPED(exit_code))
-					message("killed by signal ", toString(WSTOPSIG(exit_code)),
-						" - ", strsignal(WSTOPSIG(exit_code)));
+					tmperrlog("killed by signal ",
+						toString(WSTOPSIG(exit_code)), " - ",
+						strsignal(WSTOPSIG(exit_code)));
 				else
-					message("returned ", toString(WIFEXITED(exit_code) ?
+					tmperrlog("returned ", toString(WIFEXITED(exit_code) ?
 						WEXITSTATUS(exit_code) : exit_code));
 
 				return sim_.error500();
@@ -1769,8 +1779,9 @@ void Sim::Contest::submission() {
 		templ << "</div>";
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+		return sim_.error500();
 	}
 }
 
@@ -1791,8 +1802,9 @@ void Sim::Contest::submissions(bool admin_view) {
 			templ << res->getString(1);
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+		return sim_.error500();
 	}
 
 	templ <<  "</h3>";
@@ -1881,8 +1893,9 @@ void Sim::Contest::submissions(bool admin_view) {
 			"</table>\n";
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+		return sim_.error500();
 	}
 }
 
@@ -2165,7 +2178,8 @@ void Sim::Contest::ranking(bool admin_view) {
 			"</table>\n";
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+		return sim_.error500();
 	}
 }
