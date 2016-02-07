@@ -18,7 +18,7 @@ using std::array;
 using std::string;
 using std::vector;
 
-int Sandbox::cpid;
+int Sandbox::NormalTimer::cpid;
 
 bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 	// Detect arch (first call - before exec, second - after exec)
@@ -104,7 +104,7 @@ bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 		if (syscall == i.syscall)
 			return --i.limit >= 0;
 
-	return allowedCall(pid, arch, syscall, vector<string>());
+	return allowedCall(pid, arch, syscall, {});
 }
 
 bool Sandbox::CallbackBase::allowedCall(pid_t pid, int arch, int syscall,

@@ -9,18 +9,18 @@ using std::vector;
 
 string ProblemConfig::dump() const {
 	string res;
-	append(res) << "name: " << makeSafeString(name) << '\n'
-		<< "tag: " << makeSafeString(tag) << '\n'
-		<< "statement: " << makeSafeString(statement) << '\n'
-		<< "checker: " << makeSafeString(checker) << '\n'
+	append(res) << "name: " << ConfigFile::safeString(name) << '\n'
+		<< "tag: " << ConfigFile::safeString(tag) << '\n'
+		<< "statement: " << ConfigFile::safeString(statement) << '\n'
+		<< "checker: " << ConfigFile::safeString(checker) << '\n'
 		<< "memory_limit: " << toString(memory_limit) << '\n'
-		<< "main_solution: " << makeSafeString(main_solution) << '\n';
+		<< "main_solution: " << ConfigFile::safeString(main_solution) << '\n';
 
 	// Solutions
 	res += "solutions: [";
 	for (auto i = solutions.begin(); i != solutions.end(); ++i)
 		append(res) << (i == solutions.begin() ? "" : ", ")
-			<< makeSafeString(*i);
+			<< ConfigFile::safeString(*i);
 	res += "]\n";
 
 	// Tests
@@ -299,28 +299,40 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 	}
 }
 
-string ProblemConfig::makeSafeString(const StringView& str,
-		bool escape_unprintable) {
-	if (ConfigFile::isStringLiteral(str))
-		return str.to_string();
-
-	if (escape_unprintable) {
-		for (size_t i = 0; i < str.size(); ++i)
-			if (!isprint(str[i]))
-				return concat('"', ConfigFile::safeDoubleQuotedString(str,
-					true), '"');
-
-	} else if (str.find('\n') != StringView::npos)
-		return concat('"', ConfigFile::safeDoubleQuotedString(str, false), '"');
-
-	return concat('\'', ConfigFile::safeSingleQuotedString(str), '\'');
-}
-
-string getTag(const string& str) {
+string makeTag(const string& str) {
 	string tag;
 	for (size_t i = 0, len = str.size(); tag.size() < 3 && i < len; ++i)
 		if (!isblank(str[i]))
 			tag += tolower(str[i]);
 
 	return tag;
+}
+
+string obtainCheckerOutput(int fd, size_t max_length) noexcept(false) {
+	string res(max_length, '\0');
+
+	(void)lseek(fd, 0, SEEK_SET);
+	size_t pos = 0;
+	ssize_t k;
+	do {
+		k = read(fd, const_cast<char*>(res.data()) + pos, max_length - pos);
+		if (k > 0) {
+			pos += k;
+		} else if (k == 0) {
+			// We have read whole checker output
+			res.resize(pos);
+			return res;
+
+		} else if (errno != EINTR)
+			throw std::runtime_error(concat("read()", error(errno)));
+
+	} while (pos < max_length);
+
+	// Checker output is longer than max_length
+
+	// Replace last 3 characters with "..."
+	if (max_length >= 3)
+		res[max_length - 3] = res[max_length - 2] = res[max_length - 1] = '.';
+
+	return res;
 }

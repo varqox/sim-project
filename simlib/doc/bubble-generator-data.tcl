@@ -8,7 +8,7 @@
 #
 set all_graphs {
   config-file {
-    line {loop {or directive-formal {line {opt ws} {or comment /newline}}}}
+    line {toploop {or directive-formal {line {opt ws} {or comment /newline}}}}
   }
   directive {
     line /name {or = :} {or {} value {line [ {toploop {line {opt comment} value {opt comment}} ,} ]}} {opt comment}
@@ -16,7 +16,7 @@ set all_graphs {
   directive-formal {
     stack
       {line {opt ws} /name {opt ws} {or = :} {opt ws}}
-      {line {or {or value {}}
+      {line {or {optx value}
         {line [ {or {line {toploop {line {opt comment-or-wsn} value {opt comment-or-wsn}} ,}}
           {opt comment-or-wsn}} ]}}}
       {line {opt ws} {or /newline comment}}
@@ -36,13 +36,23 @@ set all_graphs {
       {boolean}
   }
   string-literal {
-    line {toploop {or /letter /digit . : _ + - *}}
+    line {
+      opt {
+        stack
+          /anything-except-wsn-and-[-and-,-and-]-and-#-and-single-and-double-quote {
+            toploop {
+              or /anything-except-newline-and-#-and-]-and-, {line /anything-except-wsn-and-] #}
+            }
+          }
+          {or /anything-except-wsn-and-#-and-]-and-, {line /anything-except-wsn-and-] #}}
+      }
+    }
   }
   single-quoted-string-literal {
     line ' {opt {toploop {or /anything-except-newline-and-single-quote {line ' '}}}} '
   }
   double-quoted-string-literal {
-    line '' {opt {toploop {or /anything-except-\\-and-newline-and-double-quote
+    line '' {opt {toploop {or /anything-except-\\ -and-newline-and-double-quote
       \\' \\'' \\? \\\\ \\a \\b \\f \\n \\r \\t \\v \\xnn}}} ''
   }
   number {

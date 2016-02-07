@@ -768,8 +768,10 @@ std::string usecToSecStr(unsigned long long x, unsigned prec,
  * @details Compares strings like numbers
  */
 struct StrNumCompare {
-	bool operator()(const StringView& a, const StringView& b) const {
-		return a.size() == b.size() ? a < b : a.size() < b.size();
+	bool operator()(StringView a, StringView b) const {
+		a.removeLeading([](char c) { return c == '0'; });
+		b.removeLeading([](char c) { return c == '0'; });
+		return a.size() == b.size() ? std::string(a.data(), a.size()) < std::string(b.data(), b.size()) : a.size() < b.size();
 	}
 };
 

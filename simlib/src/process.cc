@@ -136,7 +136,7 @@ string getExec(pid_t pid) {
 
 vector<pid_t> findProcessesByExec(string exec, bool include_me) {
 	if (exec.empty())
-		return vector<pid_t>();
+		return {};
 
 	if (exec.front() != '/')
 		exec = concat(getCWD(), exec);

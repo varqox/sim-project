@@ -6,42 +6,6 @@
 #include <vector>
 
 class ConfigFile {
-	/**
-	 * @brief Extracts single quoted string from @p in
-	 *
-	 * @param in input string
-	 * @param out output string, should be empty (function will append to it)
-	 * @param line config file line number
-	 *
-	 * @return Number of @p in characters parsed
-	 */
-	static size_t parseSingleQuotedString(const StringView& in,
-		std::string& out, size_t line);
-
-	/**
-	 * @brief Extracts double quoted string from @p in
-	 *
-	 * @param in input string
-	 * @param out output string, should be empty (function will append to it)
-	 * @param line config file line number
-	 *
-	 * @return Number of @p in characters parsed
-	 */
-	static size_t parseDoubleQuotedString(const StringView& in,
-		std::string& out, size_t line);
-
-	/**
-	 * @brief Extracts value from @p in
-	 *
-	 * @param in not empty input string
-	 * @param out output string, should be empty (function will append to it)
-	 * @param line config file line number
-	 *
-	 * @return Number of @p in characters parsed
-	 */
-	static size_t extractValue(const StringView& in, std::string& out,
-		size_t line);
-
 public:
 	class ParseError : public std::runtime_error {
 	public:
@@ -163,16 +127,6 @@ public:
 	// Returns variable @p name as array (empty on error)
 	std::vector<std::string> getArray(const StringView& name) const;
 
-	// Check whether character is one of these [a-zA-Z0-9\-_.]
-	static bool isName(int c) {
-		return isalnum(c) || c == '-' || c == '_' || c == '.';
-	}
-
-	// Check whether character is one of these [a-zA-Z0-9\-_.+:\*]
-	static bool isStringLiteral(int c) {
-		return isName(c) || c == '+' || c == ':' || c == '*';
-	}
-
 	// Check whether string is a valid string literal
 	static bool isStringLiteral(const StringView& str);
 
@@ -196,5 +150,24 @@ public:
 	 * @return escaped string
 	 */
 	static std::string safeDoubleQuotedString(const StringView& str,
+		bool escape_unprintable = false);
+
+	/**
+	 * @brief Converts string @p str that it can be safely placed in config file
+	 * @details If @p str is string literal then it will be returned, if @p str
+	 *   contain '\n' or '\'' then it will be escaped as double quoted string,
+	 *   otherwise as single quoted string. For example:
+	 *   "foo-bar" -> "foo-bar" (string literal)
+	 *   "line: 1\nab d E\n" -> "\"line: 1\\nab d E\\n\"" (double quoted string)
+	 *   " My awesome text" -> "' My awesome text'" (single quoted string)
+	 *   "\\\\\\\\" -> '\\\\' (single quoted string)
+	 *
+	 * @param str input string
+	 * @param escape_unprintable whether escape unprintable via
+	 *   ConfigFile::safeDoubleQoutedString()
+	 *
+	 * @return escaped (and possibly quoted) string
+	 */
+	static std::string safeString(const StringView& str,
 		bool escape_unprintable = false);
 };

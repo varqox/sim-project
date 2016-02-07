@@ -94,27 +94,6 @@ public:
 	 *   package config format is found
 	 */
 	void loadConfig(std::string package_path) noexcept(false);
-
-
-	/**
-	 * @brief Converts string @p str that it can be safely placed in problem
-	 *   config
-	 * @details If @p str is string literal then it will be returned, if @p str
-	 *   contain '\n' then it will be escaped as double quoted string, otherwise
-	 *   as single quoted string. For example:
-	 *   "foo-bar" -> "foo-bar" (string literal)
-	 *   "line: 1\nab d E\n" -> "\"line: 1\\nab d E\\n\"" (double quoted string)
-	 *   "My awesome text" -> "'My awesome text'" (single quoted string)
-	 *   "\\\\\\\\" -> '\\\\' (single quoted string)
-	 *
-	 * @param str input string
-	 * @param escape_unprintable whether escape unprintable via
-	 *   ConfigFile::safeDoubleQoutedString()
-	 *
-	 * @return escaped (and quoted) string
-	 */
-	static std::string makeSafeString(const StringView& str,
-		bool escape_unprintable = false);
 };
 
 /**
@@ -125,4 +104,17 @@ public:
  *
  * @return tag
  */
-std::string getTag(const std::string& str);
+std::string makeTag(const std::string& str);
+
+/**
+ * @brief Obtains checker output (truncated if too long)
+ *
+ * @param fd file descriptor of file to which checker wrote via stdout
+ * @param max_length maximum length of the returned string
+ *
+ * @return checker output, truncated if too long
+ *
+ * @errors Throws an exception of type std::runtime_error with appropriate
+ *   message
+ */
+std::string obtainCheckerOutput(int fd, size_t max_length) noexcept(false);

@@ -12,7 +12,7 @@ int strtonum(string& x, const StringView& s, size_t beg, size_t end) {
 		if (!isdigit(s[i]))
 			return -1;
 
-	s.substr(beg, end - beg).to_string().swap(x);
+	x = s.substr(beg, end - beg).to_string();
 	return end - beg;
 }
 
@@ -27,7 +27,7 @@ int strToNum(string& x, const StringView& s, size_t beg, char c) {
 		if (!isdigit(s[i]))
 			return -1;
 
-	s.substr(beg, end - beg).to_string().swap(x);
+	x = s.substr(beg, end - beg).to_string();
 	return end - beg;
 }
 

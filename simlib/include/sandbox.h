@@ -3,6 +3,7 @@
 #include "filesystem.h"
 #include "logger.h"
 
+#include <chrono>
 #include <cstddef>
 #include <mutex>
 #include <sys/ptrace.h>
@@ -168,6 +169,72 @@ public:
 
 	};
 
+private:
+	class ZeroTimer {
+		std::chrono::steady_clock::time_point begin;
+
+	public:
+		explicit ZeroTimer(int, uint64_t)
+			: begin(std::chrono::steady_clock::now()) {}
+
+		uint64_t stopAndGetRuntime() {
+			using namespace std::chrono;
+			return duration_cast<microseconds>(steady_clock::now() - begin).count();
+		}
+	};
+
+	class NormalTimer {
+		uint64_t tl;
+		struct itimerval timer, old_timer;
+		struct sigaction sa_old;
+
+		void stop() {
+			if (tl > 0) {
+				// Disable timer
+				(void)setitimer(ITIMER_REAL, &old_timer, &timer);
+				// Unset timeout handler
+				(void)sigaction(SIGALRM, &sa_old, nullptr);
+			}
+		}
+
+		static int cpid;
+
+		static void handle_timeout(int) {
+			kill(cpid, SIGKILL);
+		}
+
+	public:
+		explicit NormalTimer(int pid, uint64_t time_limit)
+			: tl(time_limit), timer({{0, 0}, {0, 0}})
+		{
+			cpid = pid;
+			// Initialise new timer
+			timer.it_value.tv_sec = tl / 1000000;
+			timer.it_value.tv_usec = tl - timer.it_value.tv_sec * 1000000LL;
+
+			// Set timer timeout handler
+			struct sigaction sa;
+			memset (&sa, 0, sizeof(sa));
+			sa.sa_handler = &handle_timeout;
+			sa.sa_flags = SA_RESTART;
+			(void)sigaction(SIGALRM, &sa, &sa_old);
+
+			// Run timer
+			(void)setitimer(ITIMER_REAL, &timer, &old_timer);
+		}
+
+		uint64_t stopAndGetRuntime() {
+			stop();
+			uint64_t res = tl - timer.it_value.tv_sec * 1000000LL -
+				timer.it_value.tv_usec;
+			tl = 0; // Mark that timer was stopped
+			return res;
+		}
+
+		~NormalTimer() { stop(); }
+	};
+
+public:
 	/**
 	 * @brief Runs @p exec with arguments @p args with limits @p opts.time_limit
 	 *   and @p opts.memory_limit under ptrace(2)
@@ -198,17 +265,21 @@ public:
 	template<class Callback = DefaultCallback>
 	static ExitStat run(const std::string& exec,
 		const std::vector<std::string>& args, const Options& opts,
-		Callback func = Callback())
+		Callback func = Callback()) noexcept(false)
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
 			"Callback has to derive from Sandbox::CallbackBase");
+
+		// Without time_limit we can run as many sandboxes as we want
+		if (opts.time_limit == 0)
+			return execute<Callback, ZeroTimer>(exec, args, opts, func);
 
 		static std::mutex lock;
 		// Only one running sandbox per process is allowed. That is why when one
 		// is running, the next ones is executed in new child process.
 		std::unique_lock<std::mutex> ulck(lock, std::defer_lock);
 		if (ulck.try_lock())
-			return execute<Callback>(exec, args, opts, func);
+			return execute<Callback, NormalTimer>(exec, args, opts, func);
 
 		int pfd[2];
 		if (pipe(pfd) == -1)
@@ -221,7 +292,7 @@ public:
 		} else if (child == 0) {
 			ExitStat es(-1);
 			try {
-				es = execute<Callback>(exec, args, opts, func);
+				es = execute<Callback, NormalTimer>(exec, args, opts, func);
 			} catch (const std::exception& e) {
 				// We cannot allow exception to fly out of this thread
 				es.message = e.what();
@@ -252,12 +323,6 @@ public:
 	}
 
 private:
-	static int cpid;
-
-	static void handle_timeout(int) {
-		kill(cpid, SIGKILL);
-	}
-
 	/**
 	 * @brief Executes @p exec with arguments @p args with limits @p opts.time_limit
 	 *   and @p opts.memory_limit under ptrace(2)
@@ -285,10 +350,10 @@ private:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	template<class Callback>
+	template<class Callback, class Timer>
 	static ExitStat execute(const std::string& exec,
 		const std::vector<std::string>& args, const Options& opts,
-		Callback func)
+		Callback func) noexcept(false)
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
 			"Callback has to derive from Sandbox::CallbackBase");
@@ -298,7 +363,7 @@ private:
 		if (pipe2(pfd, O_CLOEXEC) == -1)
 			throw std::runtime_error(concat("pipe()", error(errno)));
 
-		cpid = fork();
+		int cpid = fork();
 		if (cpid == -1)
 			throw std::runtime_error(concat("fork()", error(errno)));
 
@@ -388,34 +453,9 @@ private:
 		}
 
 		// Set up timer
-		struct itimerval timer, old_timer;
-		memset(&timer, 0, sizeof(timer));
+		Timer timer(cpid, opts.time_limit);
 
-		timer.it_value.tv_sec = opts.time_limit / 1000000;
-		timer.it_value.tv_usec = opts.time_limit - timer.it_value.tv_sec *
-			1000000LL;
-
-		// Set timer timeout handler
-		struct sigaction sa, sa_old;
-		memset (&sa, 0, sizeof(sa));
-		sa.sa_handler = &handle_timeout;
-		sa.sa_flags = SA_RESTART;
-		(void)sigaction(SIGALRM, &sa, &sa_old);
-
-		// Run timer (time limit)
-		unsigned long long runtime;
-		(void)setitimer(ITIMER_REAL, &timer, &old_timer);
-
-		auto cleanup = [&]() {
-			// Disable timer
-			(void)setitimer(ITIMER_REAL, &old_timer, &timer);
-			(void)sigaction(SIGALRM, &sa_old, nullptr);
-
-			runtime = opts.time_limit - timer.it_value.tv_sec * 1000000LL -
-				timer.it_value.tv_usec;
-		};
-
-		auto wait_for_syscall = [&status, pfd, &cleanup]() -> int {
+		auto wait_for_syscall = [&]() -> int {
 			for (;;) {
 				(void)ptrace(PTRACE_SYSCALL, cpid, 0, 0); // Fail indicates that
 				                                          // the tracee has just
@@ -447,7 +487,7 @@ private:
 			// Into syscall
 			if (wait_for_syscall()) {
 			 exit_normally:
-				cleanup();
+				uint64_t runtime = timer.stopAndGetRuntime();
 
 				std::string message;
 				if (status) {
@@ -488,7 +528,7 @@ private:
 
 			// If syscall is not allowed
 			if (syscall < 0 || !func(cpid, syscall)) {
-				cleanup();
+				uint64_t runtime = timer.stopAndGetRuntime();
 
 				// Kill tracee
 				kill(cpid, SIGKILL);

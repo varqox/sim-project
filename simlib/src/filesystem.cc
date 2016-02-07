@@ -296,7 +296,7 @@ size_t readAll(int fd, void *buf, size_t count) {
 		} else if (errno != EINTR)
 			return pos; // Error
 
-	} while (count > 0);
+	} while (pos < count);
 
 	errno = 0; // No error
 	return count;
@@ -317,7 +317,7 @@ size_t writeAll(int fd, const void *buf, size_t count) {
 		} else if (errno != EINTR)
 			return pos; // Error
 
-	} while (count > 0);
+	} while (pos < count);
 
 	errno = 0; // No error
 	return count;
