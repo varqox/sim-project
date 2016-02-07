@@ -9,10 +9,10 @@
 #include <simlib/filesystem.h>
 #include <simlib/logger.h>
 #include <simlib/process.h>
-#include <simlib/sim_problem.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
 
+using std::array;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -62,9 +62,10 @@ struct Request {
 };
 
 class Connection {
-	static const size_t MAX_HEADER_LENGTH = 8192;
-	static const uint8_t MAX_HEADERS_NO = 100; // be careful with type (see
-	                                           // field: header_no)
+	static constexpr size_t MAX_HEADER_LENGTH = 8192;
+	static constexpr uint8_t MAX_HEADERS_NO = 100; // be careful with type (see
+	                                               // field: header_no)
+	static constexpr size_t MAX_NON_FORM_CONTENT_LENGTH = 1 << 20; // 1 MB
 
 	int fd_;
 	in_addr sin_addr_; // Client address
@@ -89,12 +90,14 @@ public:
 			reading(rd), writing(wr) {}
 
 	Connection(const Connection&) = delete;
-	Connection& operator=(const Connection&) = delete;
 
 	Connection(Connection&&) = default; // TODO
+
+	Connection& operator=(const Connection&) = delete;
+
 	Connection& operator=(Connection&&) = default; // TODO
 
-	~Connection() {}
+	~Connection() {};
 
 	int fd() const noexcept { return fd_; }
 
@@ -123,11 +126,15 @@ private:
 	bool constructHeaders(StringView& data);
 };
 
+namespace {
+
 struct ConnectionCompare {
 	bool operator()(const Connection& a, const Connection& b) const {
 		return a.fd() < b.fd();
 	}
 };
+
+} // anonymous namespace
 
 class ConnectionSet : private std::set<Connection, ConnectionCompare> {
 	typedef std::set<Connection, ConnectionCompare> BaseType;
@@ -147,10 +154,12 @@ public:
 	using BaseType::iterator;
 	using BaseType::const_iterator;
 
-	iterator find(int fd) { return BaseType::find(Connection(fd, {})); }
+	iterator find(int fd) {
+		return BaseType::find(Connection(fd, {0, 0, {0}, {}}));
+	}
 
 	const_iterator find(int fd) const {
-		return BaseType::find(Connection(fd, {}));
+		return BaseType::find(Connection(fd, {0, 0, {0}, {}}));
 	}
 
 	void erase(int fd) { BaseType::erase(find(fd)); }
@@ -162,8 +171,27 @@ public:
 
 static ConnectionSet connset; // set of connections
 
+namespace {
+
+class Job {
+public:
+	Job() = default;
+
+	Job(const Job&) = delete;
+
+	Job(Job&&) = delete;
+
+	Job& operator=(const Job&) = delete;
+
+	Job& operator=(Job&&) = delete;
+
+	~Job() {};
+};
+
+} // anonymous namespace
+
 #if 1
-#define DEBUG_HEADERS(...) __VA_ARGS__
+#define DEBUG_HEADERS(...) stdlog(__VA_ARGS__)
 #else
 #define DEBUG_HEADERS(...)
 #endif
@@ -184,14 +212,14 @@ bool Connection::parseHeader(StringView str, StringView& name,
 }
 
 bool Connection::constructHeaders(StringView& data) {
-	DEBUG_HEADERS(stdlog("Connection ", toString(fd_), " -> \033[1;33m"
-		"Parsing:\033[m ", ProblemConfig::makeSafeString(data, true));)
+	DEBUG_HEADERS("Connection ", toString(fd_), " -> \033[1;33m"
+		"Parsing:\033[m ", ConfigFile::safeString(data, true));
 
 	if (data.empty())
 		return false;
 
 	StringView header;
-	const auto pick_next_header = [&header, &data]() -> bool {
+	const auto pick_next_header = [&]() -> bool {
 		size_t x = data.find("\r\n");
 		if (x == StringView::npos)
 			return false; // Failure
@@ -226,8 +254,8 @@ bool Connection::constructHeaders(StringView& data) {
 	}
 
 	do {
-		DEBUG_HEADERS(stdlog("Connection ", toString(fd_), " -> Header: \033[36m",
-			header, "\033[m");)
+		DEBUG_HEADERS("Connection ", toString(fd_),
+			" -> Header: \033[36m", header, "\033[m");
 		++header_no;
 
 		/* Request line */
@@ -280,8 +308,8 @@ bool Connection::constructHeaders(StringView& data) {
 
 		/* Headers are complete */
 		if (header.empty()) {
-			DEBUG_HEADERS(stdlog("Connection ", toString(fd_),
-				" -> \033[1;32mHeaders parsed.\033[m");)
+			DEBUG_HEADERS("Connection ", toString(fd_),
+				" -> \033[1;32mHeaders parsed.\033[m");
 
 			std::sort(req_.headers.other.begin(), req_.headers.other.end());
 			if (req_.headers.find("Expect") == "100-continue")
@@ -318,6 +346,11 @@ bool Connection::constructHeaders(StringView& data) {
 				return true;
 			}
 			req_.headers.content_length = digitsToU<size_t>(value);
+			if (req_.headers.content_length > MAX_NON_FORM_CONTENT_LENGTH) {
+				// TODO: error 413
+				return true;
+			}
+
 		} else if (lower_equal(name, "host"))
 			req_.headers.host = value;
 		else if (lower_equal(name, "connection"))
@@ -359,8 +392,8 @@ void Connection::parse(const char *str, size_t len) {
 			data.clear();
 
 		} else { // Bug
-			error_log(__FILE__, ':', toString(__LINE__),
-				": Nothing to parse - this is probably a bug");
+			errlog(__FILE__, ':', toString(__LINE__), ": Nothing to parse - "
+				"this is probably a bug");
 			// TODO: connection state = CLOSE
 			return;
 		}
@@ -400,11 +433,11 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 
 	} catch (...) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
 	}
 
 	return nullptr;
@@ -416,16 +449,15 @@ static void* reader_thread(void*) {
 	pthread_sigmask(SIG_SETMASK, &SignalBlocker::full_mask, nullptr);
 
 	constexpr uint MAX_EVENTS = 64;
-	constexpr uint BUFFER_SIZE = 180;
 	constexpr uint MAX_ITERATIONS_PER_ONE = 32;
 
 	epoll_event events[MAX_EVENTS];
-	char buff[BUFFER_SIZE];
+	array<char, 65536> buff;
 
 	for (;;) {
 		int n = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
 		if (n < 0) {
-			error_log(__FILE__, ':', toString(__LINE__), ": epoll_wait()",
+			errlog(__FILE__, ':', toString(__LINE__), ": epoll_wait()",
 				error(errno));
 			continue;
 		}
@@ -439,11 +471,10 @@ static void* reader_thread(void*) {
 				(events[i].events & EPOLLERR ? "EPOLLERR | " : ""),
 				(events[i].events & EPOLLHUP ? "EPOLLHUP | " : ""),
 				(events[i].events & EPOLLET ? "EPOLLET | " : ""),
-				(events[i].events & EPOLLONESHOT ? "EPOLLONESHOT | " : ""),
-				(events[i].events & EPOLLWAKEUP ? "EPOLLWAKEUP | " : ""));)
+				(events[i].events & EPOLLONESHOT ? "EPOLLONESHOT | " : ""));)
 
 			for (uint j = 0; j < MAX_ITERATIONS_PER_ONE; ++j) {
-				ssize_t rc = read(events[i].data.fd, buff, BUFFER_SIZE);
+				ssize_t rc = read(events[i].data.fd, buff.data(), buff.size());
 				D(stdlog("read: ", toString(rc));)
 
 				if (rc < 0)
@@ -456,7 +487,8 @@ static void* reader_thread(void*) {
 					break;
 				}
 
-				const_cast<Connection&>(*connset.find(events[i].data.fd)).parse(buff, rc);
+				const_cast<Connection&>(*connset.find(events[i].data.fd))
+					.parse(buff.data(), rc);
 			}
 		}
 		// TODO: exceptions
@@ -487,7 +519,7 @@ static void master_process_cycle() {
 	// epoll(7)
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll_fd == -1) {
-		error_log("Error: epoll_create1()", error(errno));
+		errlog("Error: epoll_create1()", error(errno));
 		exit(9);
 	}
 
@@ -496,7 +528,7 @@ static void master_process_cycle() {
 	if (pthread_create(&reader_pid, nullptr, reader_thread, nullptr) == -1 ||
 			pthread_create(&writer_pid, nullptr, writer_thread, nullptr) ==
 			-1) {
-		error_log("Failed to spawn reader and writer threads", error(errno));
+		errlog("Failed to spawn reader and writer threads", error(errno));
 		exit(10);
 	}
 
@@ -507,11 +539,9 @@ static void master_process_cycle() {
 	                                 // is reached
 	(void)setrlimit(RLIMIT_NOFILE, &limit);
 
-	stdlog("Server launch:\n"
-		"PID: ", toString(getpid()), "\n"
-		"workers: ", toString(workers), "\n",
-		"connections: ", toString(connections), "\n",
-		"NOFILE limit: ", toString(limit.rlim_max));
+	stdlog("NOFILE limit: ", toString(limit.rlim_max),
+		"\n=================== Server launched ===================");
+	stdlog.label(true);
 
 	for (;;) {
 		sockaddr_in name;
@@ -536,7 +566,7 @@ static void master_process_cycle() {
 		event.events = EPOLLIN | EPOLLPRI;
 		event.data.fd = fd;
 		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
-			error_log("Error: epoll_ctl()", error(errno));
+			errlog("Error: epoll_ctl()", error(errno));
 			// TODO: write error 500
 			connset.erase(x.first);
 			close(fd);
@@ -554,28 +584,27 @@ static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
 
 		config.loadConfigFromFile(config_path);
 	} catch (const std::exception& e) {
-		error_log("Failed to load ", config_path, ": ", e.what());
+		errlog("Failed to load ", config_path, ": ", e.what());
 		exit(5);
 	}
 
 	const char* vars[] = {"address", "workers", "connections"};
 	for (auto var : vars)
 		if (!config.isSet(var)) {
-			error_log(config_path, ": variable '", var, "' is not defined");
+			errlog(config_path, ": variable '", var, "' is not defined");
 			exit(6);
 		}
 
 	string address = config.getString("address");
 	workers = config.getInt("workers");
 	if (workers < 1) {
-		error_log(config_path, ": Number of workers cannot be lower than 1");
+		errlog(config_path, ": Number of workers cannot be lower than 1");
 		exit(6);
 	}
 
 	connections = config.getInt("connections");
 	if (connections < 1) {
-		error_log(config_path, ": Number of connections cannot be lower than "
-			"1");
+		errlog(config_path, ": Number of connections cannot be lower than 1");
 		exit(6);
 	}
 
@@ -588,7 +617,7 @@ static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
 	// Colon found
 	if (colon_pos < address.size()) {
 		if (strtou(address, &port, colon_pos + 1) <= 0) {
-			error_log(config_path, ": incorrect port number");
+			errlog(config_path, ": incorrect port number");
 			exit(7);
 		}
 		address[colon_pos] = '\0'; // need to extract IPv4 address
@@ -603,10 +632,13 @@ static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
 		sock_name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
 	else if (address.empty() ||
 			inet_aton(address.data(), &sock_name.sin_addr) == 0) {
-		error_log(config_path, ": incorrect IPv4 address");
+		errlog(config_path, ": incorrect IPv4 address");
 		exit(8);
 	}
-	stdlog("ADDRESS: ", address, ':', toString(port)); // TODO: move it to server launch message
+
+	stdlog("ADDRESS: ", address, ':', toString(port));
+	stdlog("workers: ", toString(workers));
+	stdlog("connections: ", toString(connections));
 }
 
 int main() {
@@ -615,18 +647,18 @@ int main() {
 	try {
 		chdirToExecDir();
 	} catch (const std::exception& e) {
-		error_log("Failed to change working directory: ", e.what());
+		errlog("Failed to change working directory: ", e.what());
 	}
 
 	// Loggers
 	// Set stderr to write to server.log (stdlog writes to stderr)
 	if (freopen("server2.log", "a", stderr) == NULL) // TODO: remove '2'
-		error_log("Failed to open 'server.log'", error(errno));
+		errlog("Failed to open 'server.log'", error(errno));
 
 	try {
-		error_log.open("server2_error.log"); // TODO: remove '2'
+		errlog.open("server2_error.log"); // TODO: remove '2'
 	} catch (const std::exception& e) {
-		error_log("Failed to open 'server_error.log': ", e.what());
+		errlog("Failed to open 'server_error.log': ", e.what());
 	}
 
 	// Signal control
@@ -635,35 +667,37 @@ int main() {
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, nullptr);
-	sigaction(SIGTERM, &sa, nullptr);
-	sigaction(SIGQUIT, &sa, nullptr);
+	(void)sigaction(SIGINT, &sa, nullptr);
+	(void)sigaction(SIGTERM, &sa, nullptr);
+	(void)sigaction(SIGQUIT, &sa, nullptr);
+
+	stdlog("Initialising server...");
+	stdlog.label(false); // Turn label off (temporarily)
+	stdlog("PID: ", toString(getpid()));
 
 	// Load config
 	sockaddr_in name;
 	loadServerConfig("server.conf", name);
 
-	stdlog("Initializing server...");
-
 	socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
 	if (socket_fd < 0) {
-		error_log("Failed to create socket", error(errno));
+		errlog("Failed to create socket", error(errno));
 		return 1;
 	}
 
 	int _true = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &_true, sizeof(int))) {
-		error_log("Error: setopt()", error(errno));
+		errlog("Error: setopt()", error(errno));
 		return 2;
 	}
 
 	if (bind(socket_fd, (sockaddr*)&name, sizeof(name))) {
-		error_log("Error: bind()", error(errno));
+		errlog("Error: bind()", error(errno));
 		return 3;
 	}
 
 	if (listen(socket_fd, 10)) {
-		error_log("Error: listen()", error(errno));
+		errlog("Error: listen()", error(errno));
 		return 4;
 	}
 

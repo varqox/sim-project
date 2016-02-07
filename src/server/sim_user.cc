@@ -158,8 +158,9 @@ void Sim::User::login() {
 				}
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -243,8 +244,9 @@ void Sim::User::signUp() {
 				fv.addError("Username taken");
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -342,8 +344,9 @@ void Sim::User::changePassword(Data& data) {
 				}
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -430,8 +433,9 @@ void Sim::User::editProfile(Data& data) {
 						"' is taken"));
 
 			} catch (const std::exception& e) {
-				error_log("Caught exception: ", __FILE__, ':',
-					toString(__LINE__), " - ", e.what());
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
 			}
 	}
 
@@ -549,8 +553,9 @@ void Sim::User::deleteAccount(Data& data) {
 			}
 
 		} catch (const std::exception& e) {
-			error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+			fv.addError("Internal server error");
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
 		}
 
 	TemplateWithMenu templ(sim_, data.user_id, "Delete account");

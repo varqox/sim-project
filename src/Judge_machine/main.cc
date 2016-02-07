@@ -110,18 +110,18 @@ static void processSubmissionQueue() {
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" -> ", e.what());
 
 	} catch (...) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
 	}
 }
 
 void startWatching(int inotify_fd, int& wd) {
 	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
 			IN_ATTRIB)) == -1) {
-		error_log("Error: inotify_add_watch()", error(errno));
+		errlog("Error: inotify_add_watch()", error(errno));
 		// Run tests
 		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
@@ -137,20 +137,20 @@ int main() {
 	try {
 		cwd = chdirToExecDir();
 	} catch (const std::exception& e) {
-		error_log("Failed to change working directory: ", e.what());
+		errlog("Failed to change working directory: ", e.what());
 	}
 
 	// Loggers
 	try {
 		stdlog.open("judge-machine.log");
 	} catch (const std::exception& e) {
-		error_log("Failed to open 'judge-machine.log': ", e.what());
+		errlog("Failed to open 'judge-machine.log': ", e.what());
 	}
 
 	try {
-		error_log.open("judge-machine_error.log");
+		errlog.open("judge-machine_error.log");
 	} catch (const std::exception& e) {
-		error_log("Failed to open 'judge-machine_error.log': ", e.what());
+		errlog("Failed to open 'judge-machine_error.log': ", e.what());
 	}
 
 	// Install signal handlers
@@ -158,9 +158,9 @@ int main() {
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, nullptr);
-	sigaction(SIGQUIT, &sa, nullptr);
-	sigaction(SIGTERM, &sa, nullptr);
+	(void)sigaction(SIGINT, &sa, nullptr);
+	(void)sigaction(SIGQUIT, &sa, nullptr);
+	(void)sigaction(SIGTERM, &sa, nullptr);
 
 	try {
 		// Connect to database
@@ -169,15 +169,15 @@ int main() {
 		tmp_dir = TemporaryDirectory("/tmp/sim-judge-machine.XXXXXX");
 
 	} catch (const std::exception& e) {
-		error_log("Caugqht exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caugqht exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 		return 1;
 	}
 
 	// Initialise inotify
 	int inotify_fd, wd;
 	while ((inotify_fd = inotify_init()) == -1) {
-		error_log("Error: inotify_init()", error(errno));
+		errlog("Error: inotify_init()", error(errno));
 		// Run tests
 		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
@@ -200,7 +200,7 @@ int main() {
 	for (;;) {
 		len = read(inotify_fd, inotify_buff, sizeof(inotify_buff));
 		if (len < 1) {
-			error_log("Error: read()", error(errno));
+			errlog("Error: read()", error(errno));
 			continue;
 		}
 

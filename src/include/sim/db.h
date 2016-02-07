@@ -57,6 +57,7 @@ public:
  * @details File format: "USER\nPASSWORD\nDATABASE\nHOST"
  *
  * @param filename file to load credentials from
+ *
  * @return valid pointer (on error throws std::runtime_error)
  */
 Connection createConnectionUsingPassFile(const std::string& filename);

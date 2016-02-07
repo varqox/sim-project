@@ -64,7 +64,7 @@ string validatePackage(string pathname) {
 	} catch (std::exception& e) {
 		USE_CONFIG = false;
 		if (VERBOSITY > 0)
-			eprintf("Error: %s\n", e.what());
+			eprintf("Error in config.conf: %s\n", e.what());
 	}
 
 	return pathname;

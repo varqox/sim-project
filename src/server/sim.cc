@@ -77,12 +77,12 @@ server::HttpResponse Sim::handle(string client_ip,
 			error404();
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+			" -> ", e.what());
 		error500();
 
 	} catch (...) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
 		error500();
 	}
 
@@ -141,7 +141,7 @@ inline static void cutToNewline(string& str) noexcept {
 static string colour(const string& str) noexcept {
 	string res;
 	enum : uint8_t { SPAN, B, NONE } opened = NONE;
-	auto closeLastTag = [&res, &opened] () {
+	auto closeLastTag = [&] {
 		switch (opened) {
 			case SPAN: res += "</span>"; break;
 			case B: res += "</b>"; break;
@@ -208,12 +208,12 @@ void Sim::logs() {
 	Template templ(*this, "Logs");
 	templ << "<pre class=\"logs\">";
 
-	Fd fd;
+	FileDescriptor fd;
 	constexpr int BYTES_TO_READ = 65536;
 
 	// server_error.log
 	if (fd.open("server_error.log", O_RDONLY | O_LARGEFILE) == -1) {
-		error_log(__PRETTY_FUNCTION__, ": open()", error(errno));
+		errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
 	} else {
 		string contents = getFileContents(fd, -BYTES_TO_READ, -1);
 		cutToNewline(contents);

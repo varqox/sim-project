@@ -3,7 +3,6 @@
 #include <cassert>
 #include <simlib/compile.h>
 #include <simlib/debug.h>
-#include <simlib/sandbox.h>
 #include <simlib/sandbox_checker_callback.h>
 
 using std::pair;
@@ -72,7 +71,7 @@ int setLimits(const string& package_path) {
 
 	// Set limits
 	// Prepare runtime environment
-	sandbox::options sb_opts = {
+	Sandbox::Options sb_opts = {
 		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
 		config_conf.memory_limit << 10,
 		-1,
@@ -87,7 +86,7 @@ int setLimits(const string& package_path) {
 		return 3;
 	}
 
-	sandbox::options checker_sb_opts = {
+	Sandbox::Options checker_sb_opts = {
 		10 * 1000000, // 10s
 		256 << 20, // 256 MB
 		-1,
@@ -105,7 +104,7 @@ int setLimits(const string& package_path) {
 		return 3;
 	}
 
-	vector<string> exec_args, checker_args(4);
+	vector<string> checker_args(4);
 
 	// Set time limits on tests
 	for (auto& group : config_conf.test_groups)
@@ -160,7 +159,13 @@ int setLimits(const string& package_path) {
 			}
 
 			// Run
-			sandbox::ExitStat es = sandbox::run("./exec", exec_args, &sb_opts);
+			Sandbox::ExitStat es;
+			try {
+				es = Sandbox::run("./exec", {}, sb_opts);
+			} catch (const std::exception& e) {
+				eprintf("Sandbox error: %s\n", e.what());
+				return 5;
+			}
 
 			// Set time_limit (adjust time_limit by 0.4s unless TIME_LIMIT > 0)
 			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONFIG))
@@ -184,63 +189,73 @@ int setLimits(const string& package_path) {
 						usecToSecStr(es.runtime, 6, false).c_str());
 			}
 
+			if (!VALIDATE_OUT) {
+				if (VERBOSITY > 0)
+					putchar('\n');
+				continue;
+			}
+
 			// Validate output
-			if (VALIDATE_OUT) {
-				checker_args[1] = concat(package_path, "tests/", test.name, ".in");
-				checker_args[2] = concat(package_path, "tests/", test.name, ".out");
-				checker_args[3] = (GEN_OUT ? checker_args[2] : "answer");
+			checker_args[1] = concat(package_path, "tests/", test.name, ".in");
+			checker_args[2] = concat(package_path, "tests/", test.name, ".out");
+			checker_args[3] = (GEN_OUT ? checker_args[2] : "answer");
 
-				if (VERBOSITY > 0) {
-					printf("  Output validation... ");
-					fflush(stdout);
-				}
+			if (VERBOSITY > 0) {
+				printf("  Output validation... ");
+				fflush(stdout);
+			}
 
-				// Truncate checker_sb_opts.new_stdout_fd
-				ftruncate(checker_sb_opts.new_stdout_fd, 0);
-				lseek(checker_sb_opts.new_stdout_fd, 0, SEEK_SET);
+			// Truncate checker_sb_opts.new_stdout_fd
+			ftruncate(checker_sb_opts.new_stdout_fd, 0);
+			lseek(checker_sb_opts.new_stdout_fd, 0, SEEK_SET);
 
-				es = sandbox::run("./checker", checker_args, &checker_sb_opts,
-					sandbox::CheckerCallback(
-						vector<string>(checker_args.begin() + 1,
-							checker_args.end())));
+			try {
+				es = Sandbox::run("./checker", checker_args, checker_sb_opts,
+					CheckerCallback({checker_args.begin() + 1,
+						checker_args.end()}));
+			} catch (const std::exception& e) {
+				eprintf("Sandbox error: %s\n", e.what());
+				return 5;
+			}
 
-				if (VERBOSITY > 0) {
-					if (es.code == 0)
-						printf("\033[1;32mPASSED\033[m");
+			if (VERBOSITY > 0) {
+				if (es.code == 0)
+					printf("\033[1;32mPASSED\033[m");
 
-					else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
-						printf("\033[1;31mFAILED\033[m");
+				else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
+					printf("\033[1;31mFAILED\033[m");
 
-						FILE *f = fopen("checker_out", "r");
-						if (f != nullptr) {
-							char buff[204] = {};
-							ssize_t ret = fread(buff, 1, 204, f);
+					// TODO: do something with it (file descriptor only,
+					// something similar is in judge.cc)
+					FILE *f = fopen("checker_out", "r");
+					if (f != nullptr) {
+						char buff[204] = {};
+						ssize_t ret = fread(buff, 1, 204, f);
 
-							// Remove trailing white characters
-							while (ret > 0 && isspace(buff[ret - 1]))
-								buff[--ret] = '\0';
+						// Remove trailing white characters
+						while (ret > 0 && isspace(buff[ret - 1]))
+							buff[--ret] = '\0';
 
-							if (ret > 200)
-								strncpy(buff + 200, "...", 4);
+						if (ret > 200)
+							strncpy(buff + 200, "...", 4);
 
-							printf(" \"%s\"", buff);
-							fclose(f);
-						}
+						printf(" \"%s\"", buff);
+						fclose(f);
+					}
 
-					} else if (es.runtime < test.time_limit)
-						printf("\033[1;33mRTE\033[m (%s)", es.message.c_str());
+				} else if (es.runtime < test.time_limit)
+					printf("\033[1;33mRTE\033[m (%s)", es.message.c_str());
 
-					else
-						printf("\033[1;33mTLE\033[m");
+				else
+					printf("\033[1;33mTLE\033[m");
 
-					if (VERBOSITY > 1)
-						printf("   Exited with %i [ %s ]", es.code,
-							usecToSecStr(es.runtime, 6, false).c_str());
-				}
+				if (VERBOSITY > 1)
+					printf("   Exited with %i [ %s ]", es.code,
+						usecToSecStr(es.runtime, 6, false).c_str());
 			}
 
 			if (VERBOSITY > 0)
-				printf("\n");
+				putchar('\n');
 		}
 
 	// Close file descriptors
