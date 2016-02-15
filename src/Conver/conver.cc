@@ -19,8 +19,8 @@ bool VALIDATE_OUT = false;
 bool USE_CONFIG = true;
 bool FORCE_AUTO_LIMIT = false;
 unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
-unsigned long long MEMORY_LIMIT = 0; // in kB
-unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10s
+unsigned long long MEMORY_LIMIT = 0; // in KiB
+unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10 s
 unsigned long long TIME_LIMIT = 0; // Not set (in usec)
 string PROOT_PATH = "proot"; // Search for PRoot in system
 unique_ptr<directory_tree::Node> package_tree_root;
@@ -48,7 +48,7 @@ static void help(const char* program_name) {
 	puts("  -h, --help             Display this information");
 	puts("  -ic, --ignore-config   Ignore config.conf (enables automatic time limit setting)");
 	puts("  -m MEM_LIMIT, --memory-limit=MEM_LIMIT");
-	puts("                         Set problem memory limit MEM_LIMIT in kB");
+	puts("                         Set problem memory limit MEM_LIMIT in KiB");
 	puts("  -mt <VAL>, --max-time-limit=<VAL>");
 	puts("                         Set hard max time limit VAL in usec");
 	puts("  -n NAME, --name=NAME   Set problem name to NAME (cannot be empty)");
@@ -281,27 +281,22 @@ static void extractPackage(const string& source, const string& dest,
 			printf("Unpacking package...\n");
 
 		// Unpack package
-		int exit_code = spawn(args[0], args);
-		if (exit_code != 0) {
+		Spawner::ExitStat es;
+		try {
+			es = Spawner::run(args[0], args, {-1});
+		} catch (const std::exception& e) {
+			eprintf("Spawner error: %s\n", e.what());
+			exit(4);
+		}
+
+		if (es.code != 0) {
 			eprintf("Unpacking error: %s ", args[0].c_str());
-
-			if (exit_code == -1)
-				eprintf("Failed to execute\n");
-			else if (WIFSIGNALED(exit_code))
-				eprintf("killed by signal %i - %s\n", WTERMSIG(exit_code),
-					strsignal(WTERMSIG(exit_code)));
-			else if (WIFSTOPPED(exit_code))
-				eprintf("killed by signal %i - %s\n", WSTOPSIG(exit_code),
-					strsignal(WSTOPSIG(exit_code)));
-			else
-				eprintf("returned %i\n", WIFEXITED(exit_code) ?
-					WEXITSTATUS(exit_code) : exit_code);
-
+			eprintf("%s\n", es.message.c_str());
 			exit(4);
 		}
 
 		if (VERBOSITY > 1)
-			printf("Completed successfully.\n");
+			printf("Completed successfully in %.5lfs.\n", es.runtime / 1e6);
 
 	} else { // Unknown
 		eprintf("Error: '%s' - unknown type of file\n", source.c_str());
@@ -481,22 +476,15 @@ int main(int argc, char **argv) {
 	}
 
 	// Compress package
-	int exit_code = spawn(args[0], args);
-	if (exit_code != 0) {
-		eprintf("Error: %s ", args[0].c_str());
-
-		if (exit_code == -1)
-			eprintf("Failed to execute\n");
-		else if (WIFSIGNALED(exit_code))
-			eprintf("killed by signal %i - %s\n", WTERMSIG(exit_code),
-				strsignal(WTERMSIG(exit_code)));
-		else if (WIFSTOPPED(exit_code))
-			eprintf("killed by signal %i - %s\n", WSTOPSIG(exit_code),
-				strsignal(WSTOPSIG(exit_code)));
-		else
-			eprintf("returned %i\n", WIFEXITED(exit_code) ?
-				WEXITSTATUS(exit_code) : exit_code);
-
+	Spawner::ExitStat es;
+	try {
+		es = Spawner::run(args[0], args, {-1});
+	} catch (const std::exception& e) {
+		eprintf("Spawner error: %s\n", e.what());
+		return 9;
+	}
+	if (es.code != 0) {
+		eprintf("Error: %s %s\n", args[0].c_str(), es.message.c_str());
 		return 9;
 	}
 

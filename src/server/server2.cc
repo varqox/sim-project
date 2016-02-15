@@ -65,7 +65,7 @@ class Connection {
 	static constexpr size_t MAX_HEADER_LENGTH = 8192;
 	static constexpr uint8_t MAX_HEADERS_NO = 100; // be careful with type (see
 	                                               // field: header_no)
-	static constexpr size_t MAX_NON_FORM_CONTENT_LENGTH = 1 << 20; // 1 MB
+	static constexpr size_t MAX_NON_FORM_CONTENT_LENGTH = 1 << 20; // 1 MiB
 
 	int fd_;
 	in_addr sin_addr_; // Client address

@@ -465,24 +465,30 @@ void Sim::Contest::addProblem() {
 				if (time_limit.size())
 					append(args)("-tl")(toString(tl));
 
-				// Conver stdin, stdout, stderr
-				spawn_opts sopt = {
-					-1,
-					-1,
-					getUnlinkedTmpFile()
-				};
 
-				if (sopt.new_stderr_fd == -1)
+				int fd = getUnlinkedTmpFile();
+				if (fd == -1)
 					throw std::runtime_error(
 						concat("Error: getUnlinkedTmpFile()", error(errno)));
 
 				// Convert package
-				if (0 != spawn("./conver", args, &sopt)) {
-					// Move offset to begging
-					lseek(sopt.new_stderr_fd, 0, SEEK_SET);
+				Spawner::ExitStat es;
+				try {
+					es = Spawner::run(args[0], args,
+						{-1, -1, fd});
+				} catch (const std::exception& e) {
+					fv.addError("Internal server error");
+					errlog("Caught exception: ", __FILE__, ':',
+						toString(__LINE__), " -> ", e.what());
+					goto form;
+				}
 
-					fv.addError("Conver failed:\n" +
-						getFileContents(sopt.new_stderr_fd));
+				if (es.code) {
+					// Move offset to begging
+					lseek(fd, 0, SEEK_SET);
+
+					fv.addError(concat("Conver failed (", es.message, "):",
+						getFileContents(fd)));
 					goto form;
 				}
 
@@ -590,7 +596,7 @@ void Sim::Contest::addProblem() {
 				"</div>\n"
 				// Memory limit
 				"<div class=\"field-group\">\n"
-					"<label>Memory limit [kB]</label>\n"
+					"<label>Memory limit [KiB]</label>\n"
 					"<input type=\"text\" name=\"memory-limit\" value=\""
 						<< htmlSpecialChars(memory_limit) << "\" size=\"24\""
 					"placeholder=\"Detect from config.conf\">"
@@ -930,25 +936,20 @@ void Sim::Contest::editProblem() {
 			append(args)("tar")("czf")(tmp_file)(r_path_->problem->problem_id);
 
 		// Compress package
-		// TODO: add time limit
+		Spawner::ExitStat es;
+		try {
+			es = Spawner::run(args[0], args,
+				{-1, STDERR_FILENO, STDERR_FILENO, 20 * 1000000 /* 20 s */},
+				"problems");
+		} catch (const std::exception& e) {
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
+			return sim_.error500();
+		}
+
 		// TODO: better error handling
-		spawn_opts opts = { -1, STDERR_FILENO, STDERR_FILENO };
-		int exit_code = spawn(args[0], args, &opts, "problems");
-		if (exit_code != 0) {
-			auto tmperrlog = errlog("Error: ", args[0], " ");
-
-			if (exit_code == -1)
-				tmperrlog("Failed to execute");
-			else if (WIFSIGNALED(exit_code))
-				tmperrlog("killed by signal ", toString(WTERMSIG(exit_code)),
-					" - ", strsignal(WTERMSIG(exit_code)));
-			else if (WIFSTOPPED(exit_code))
-				tmperrlog("killed by signal ", toString(WSTOPSIG(exit_code)),
-					" - ", strsignal(WSTOPSIG(exit_code)));
-			else
-				tmperrlog("returned ", toString(WIFEXITED(exit_code) ?
-					WEXITSTATUS(exit_code) : exit_code));
-
+		if (es.code) {
+			errlog("Error: ", args[0], ' ', es.message);
 			return sim_.error500();
 		}
 
@@ -1289,8 +1290,8 @@ void Sim::Contest::submit(bool admin_view) {
 			stat(solution_tmp_path.c_str(), &sb);
 
 			// Check if solution is too big
-			if (sb.st_size > 100 << 10) { // 100kB
-				fv.addError("Solution file to big (max 100kB)");
+			if (sb.st_size > (100 << 10)) { // 100 KiB
+				fv.addError("Solution file to big (max 100 KiB)");
 				goto form;
 			}
 
@@ -1642,42 +1643,30 @@ void Sim::Contest::submission() {
 			vector<string> args;
 			append(args)("./CTH")(concat("solutions/", submission_id, ".cpp"));
 
-			spawn_opts sopt = {
-				-1,
-				getUnlinkedTmpFile(),
-				-1
-			};
-
-			if (sopt.new_stdout_fd < 0)
+			int fd = getUnlinkedTmpFile();
+			if (fd < 0)
 				return sim_.error500();
 
-			Closer closer(sopt.new_stdout_fd);
+			Closer closer(fd);
 
 			// Run CTH
-			int exit_code = spawn(args[0], args, &sopt);
-			if (exit_code != 0) {
-				auto tmperrlog = errlog("Error: ", args[0], " ");
+			Spawner::ExitStat es;
+			try {
+				es = Spawner::run(args[0], args, {-1, fd, -1});
+			} catch (const std::exception& e) {
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
+				return sim_.error500();
+			}
 
-				if (exit_code == -1)
-					tmperrlog("Failed to execute");
-				else if (WIFSIGNALED(exit_code))
-					tmperrlog("killed by signal ",
-						toString(WTERMSIG(exit_code)), " - ",
-						strsignal(WTERMSIG(exit_code)));
-				else if (WIFSTOPPED(exit_code))
-					tmperrlog("killed by signal ",
-						toString(WSTOPSIG(exit_code)), " - ",
-						strsignal(WSTOPSIG(exit_code)));
-				else
-					tmperrlog("returned ", toString(WIFEXITED(exit_code) ?
-						WEXITSTATUS(exit_code) : exit_code));
-
+			if (es.code) {
+				errlog("Error: ", args[0], ' ', es.message);
 				return sim_.error500();
 			}
 
 			// Print source code
-			lseek(sopt.new_stdout_fd, 0, SEEK_SET);
-			templ << getFileContents(sopt.new_stdout_fd);
+			lseek(fd, 0, SEEK_SET);
+			templ << getFileContents(fd);
 
 			return;
 		}
@@ -1756,26 +1745,17 @@ void Sim::Contest::submission() {
 
 		// Print judge report
 		templ << "<div class=\"results\">";
-		if (submission_status == "c_error") {
-			templ << "<h2>Compilation failed</h2>"
-				"<pre class=\"compile-errors\">"
-				<< res->getString(10)
-				<< "</pre>";
-
-		} else {
-			if (admin_view || r_path_->round->full_results.empty() ||
-					r_path_->round->full_results <= date("%Y-%m-%d %H:%M:%S")) {
-				string final_report = res->getString(11);
-				if (final_report.size())
-					templ << "<h2>Final testing report</h2>"
-						<< final_report;
-			}
-
-			string initial_report = res->getString(10);
-			if (initial_report.size())
-				templ << "<h2>Initial testing report</h2>"
-					<< initial_report;
+		if (admin_view || r_path_->round->full_results.empty() ||
+				r_path_->round->full_results <= date("%Y-%m-%d %H:%M:%S")) {
+			string final_report = res->getString(11);
+			if (final_report.size())
+				templ << final_report;
 		}
+
+		string initial_report = res->getString(10);
+		if (initial_report.size())
+			templ << initial_report;
+
 		templ << "</div>";
 
 	} catch (const std::exception& e) {

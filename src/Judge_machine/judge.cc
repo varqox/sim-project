@@ -9,7 +9,7 @@
 using std::string;
 using std::vector;
 
-constexpr size_t COMPILE_ERRORS_MAX_LENGTH = 100 << 10; // 100kB
+constexpr size_t COMPILE_ERRORS_MAX_LENGTH = 100 << 10; // 100 KiB
 
 namespace {
 
@@ -75,33 +75,47 @@ JudgeResult judge(string submission_id, string problem_id) {
 	try {
 		string compile_errors;
 		if (0 != compile(concat("solutions/", submission_id, ".cpp"),
-				concat(tmp_dir.sname(), "exec"), (VERBOSITY >> 1) + 1,
-				&compile_errors,COMPILE_ERRORS_MAX_LENGTH, "./proot"))
-			return JudgeResult(JudgeResult::COMPILE_ERROR, 0,
-				htmlSpecialChars(compile_errors));
+			concat(tmp_dir.sname(), "exec"), (VERBOSITY >> 1) + 1,
+			30 * 1000000, // 30 s
+			&compile_errors, COMPILE_ERRORS_MAX_LENGTH, "./proot"))
+		{
+			return JudgeResult(JudgeResult::COMPILE_ERROR, 0, concat(
+				"<h2>Compilation failed</h2>"
+				"<pre class=\"compile-errors\">",
+				htmlSpecialChars(compile_errors), "</pre>"));
+		}
 
 		// Compile checker
 		if (0 != compile(concat(package_path, "check/", pconf.checker),
-				concat(tmp_dir.sname(), "checker"), (VERBOSITY >> 1) + 1,
-				nullptr, 0, "./proot"))
+			concat(tmp_dir.sname(), "checker"), (VERBOSITY >> 1) + 1,
+			30 * 1000000, // 30 s
+			nullptr, 0, "./proot"))
+		{
 			return JudgeResult(JudgeResult::COMPILE_ERROR, 0,
-				"Checker compilation error");
+				"<h2>Compilation failed</h2>"
+				"<pre class=\"compile-errors\">"
+					"Checker compilation error"
+				"</pre>");
+		}
 
 	} catch (const std::exception& e) {
 		stdlog("Compilation error", e.what());
 		errlog("Compilation error", e.what());
-		return JudgeResult(JudgeResult::COMPILE_ERROR, 0,
-			"Judge machine error");
+		return JudgeResult(JudgeResult::JUDGE_ERROR, 0,
+			"<h2>Compilation failed</h2>"
+			"<pre class=\"compile-errors\">"
+				"Judge machine error"
+			"</pre>");
 	}
 
 	// Prepare runtime environment
 	Sandbox::Options sb_opts = {
-		0, // Will be set separately for each test later
-		pconf.memory_limit << 10,
 		-1,
 		open(concat(tmp_dir.sname(), "answer").c_str(),
 			O_WRONLY | O_CREAT | O_TRUNC, S_0644),
-		-1
+		-1,
+		0, // Will be set separately for each test later
+		pconf.memory_limit << 10
 	};
 
 	// Check for errors
@@ -111,11 +125,11 @@ JudgeResult judge(string submission_id, string problem_id) {
 	}
 
 	Sandbox::Options checker_sb_opts = {
-		10 * 1000000, // 10s
-		256 << 20, // 256 MB
 		-1,
 		getUnlinkedTmpFile(),
-		-1
+		-1,
+		10 * 1000000, // 10 s
+		256 << 20 // 256 MiB
 	};
 
 	// Check for errors
@@ -131,26 +145,24 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 	struct JudgeTestsReport {
 		string tests, comments;
-		JudgeResult::Status status;
+		JudgeResult::Status status = JudgeResult::OK;
+
+		JudgeTestsReport(const char* header) : tests(
+			concat(header, "<table class=\"table\">\n"
+				"<thead>\n"
+					"<tr>"
+						"<th class=\"test\">Test</th>"
+						"<th class=\"result\">Result</th>"
+						"<th class=\"time\">Time [s]</th>"
+						"<th class=\"points\">Points</th>"
+					"</tr>\n"
+				"</thead>\n"
+				"<tbody>\n")) {}
 	};
 
 	// Initialise judge reports
-	JudgeTestsReport initial = {
-		"<table class=\"table\">\n"
-			"<thead>\n"
-				"<tr>"
-					"<th class=\"test\">Test</th>"
-					"<th class=\"result\">Result</th>"
-					"<th class=\"time\">Time [s]</th>"
-					"<th class=\"points\">Points</th>"
-				"</tr>\n"
-			"</thead>\n"
-			"<tbody>\n",
-		"",
-		JudgeResult::OK
-	};
-
-	JudgeTestsReport final = initial;
+	JudgeTestsReport initial("<h2>Initial testing report</h2>");
+	JudgeTestsReport final("<h2>Final testing report</h2>");
 	long long total_score = 0;
 
 	// Run judge on tests
@@ -303,7 +315,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 			try {
 				es = Sandbox::run(concat(tmp_dir.sname(), "checker"),
-					checker_args, checker_sb_opts, CheckerCallback(
+					checker_args, checker_sb_opts, ".", CheckerCallback(
 						{checker_args.begin() + 1, checker_args.end()}));
 			} catch (const std::exception& e) {
 				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
