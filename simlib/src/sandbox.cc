@@ -1,24 +1,12 @@
-#include "../include/filesystem.h"
-#include "../include/logger.h"
-#include "../include/memory.h"
 #include "../include/sandbox.h"
-#include "../include/time.h"
 #include "../include/utility.h"
 
-#include <cstddef>
 #include <limits.h>
 #include <linux/version.h>
-#include <sys/ptrace.h>
-#include <sys/resource.h>
-#include <sys/time.h>
-#include <sys/uio.h>
-#include <sys/wait.h>
 
 using std::array;
 using std::string;
 using std::vector;
-
-int Sandbox::NormalTimer::cpid;
 
 bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 	// Detect arch (first call - before exec, second - after exec)
@@ -44,7 +32,6 @@ bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 		else
 			arch = 0; // i386
 	}
-
 
 	constexpr array<int, 20> allowed_syscalls_i386 {{
 		1, // SYS_exit
@@ -104,10 +91,10 @@ bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 		if (syscall == i.syscall)
 			return --i.limit >= 0;
 
-	return allowedCall(pid, arch, syscall, {});
+	return isSyscallAllowed(pid, arch, syscall, {});
 }
 
-bool Sandbox::CallbackBase::allowedCall(pid_t pid, int arch, int syscall,
+bool Sandbox::CallbackBase::isSyscallAllowed(pid_t pid, int arch, int syscall,
 		const vector<string>& allowed_files) {
 	const int sys_open[2] = {
 		5, // SYS_open - i386

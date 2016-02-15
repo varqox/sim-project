@@ -1,102 +1,39 @@
-#include "../include/filesystem.h"
-#include "../include/logger.h"
 #include "../include/memory.h"
 #include "../include/process.h"
 
 #include <dirent.h>
-#include <sys/wait.h>
 
 using std::array;
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
-const spawn_opts default_spawn_opts = {
-	STDIN_FILENO,
-	STDOUT_FILENO,
-	STDERR_FILENO
+int Spawner::NormalTimer::cpid;
+std::mutex Spawner::NormalTimer::lock;
+
+string Spawner::receiveErrorMessage(int status, int fd) {
+	string message;
+	array<char, 4096> buff;
+	// Read errors from fd
+	ssize_t rc;
+	while ((rc = read(fd, buff.data(), buff.size())) > 0)
+		message.append(buff.data(), rc);
+
+	if (message.size()) // Error in tracee
+		throw std::runtime_error(message);
+
+	if (WIFEXITED(status))
+		message = concat("returned ",
+			toString(WEXITSTATUS(status)));
+
+	else if (WIFSIGNALED(status))
+		message = concat("killed by signal ", toString(WTERMSIG(status)), " - ",
+			strsignal(WTERMSIG(status)));
+
+	return message;
 };
 
-int spawn(const char* exec, const char* args[], const struct spawn_opts *opts,
-		const char* working_dir) {
-	pid_t cpid = fork();
-	if (cpid == -1) {
-		// TODO: Maybe throw an exception
-		errlog(__FILE__, ':', toString(__LINE__), ": ", __PRETTY_FUNCTION__,
-			": Failed to fork()", error(errno));
-		return -1;
-
-	} else if (cpid == 0) {
-		// Change working directory
-		if (working_dir != nullptr && working_dir[0] != '\0' &&
-			strcmp(working_dir, ".") != 0 && strcmp(working_dir, "./") != 0) {
-			if (chdir(working_dir) == -1)
-				_exit(-1);
-		}
-
-		// Change stdin
-		if (opts->new_stdin_fd < 0)
-			sclose(STDIN_FILENO);
-
-		else if (opts->new_stdin_fd != STDIN_FILENO)
-			while (dup2(opts->new_stdin_fd, STDIN_FILENO) == -1)
-				if (errno != EINTR)
-					_exit(-1);
-
-		// Change stdout
-		if (opts->new_stdout_fd < 0)
-			sclose(STDOUT_FILENO);
-
-		else if (opts->new_stdout_fd != STDOUT_FILENO)
-			while (dup2(opts->new_stdout_fd, STDOUT_FILENO) == -1)
-				if (errno != EINTR)
-					_exit(-1);
-
-		// Change stderr
-		if (opts->new_stderr_fd < 0)
-			sclose(STDERR_FILENO);
-
-		else if (opts->new_stderr_fd != STDERR_FILENO)
-			while (dup2(opts->new_stderr_fd, STDERR_FILENO) == -1)
-				if (errno != EINTR)
-					_exit(-1);
-
-		execvp(exec, (char *const *)args);
-		_exit(-1);
-	}
-
-	int status;
-	waitpid(cpid, &status, 0);
-	return status;
-}
-
-int spawn(const string& exec, const vector<string>& args,
-		const struct spawn_opts *opts, const string& working_dir) {
-	// Convert args
-	const size_t len = args.size();
-	const char *argv[len + 1];
-	argv[len] = nullptr;
-
-	for (size_t i = 0; i < len; ++i)
-		argv[i] = args[i].c_str();
-
-	return spawn(exec.c_str(), argv, opts, working_dir.c_str());
-}
-
-int spawn(const string& exec, size_t argc, string *args,
-		const struct spawn_opts *opts, const string& working_dir) {
-	// Convert args
-	const size_t len = argc;
-	const char *argv[len + 1];
-	argv[len] = nullptr;
-
-	for (size_t i = 0; i < len; ++i)
-		argv[i] = args[i].c_str();
-
-	return spawn(exec.c_str(), argv, opts, working_dir.c_str());
-}
-
-std::string getCWD() {
+string getCWD() {
 	unique_ptr<char[], delete_using_free<char>> buff(get_current_dir_name());
 	if (!buff || buff[0] != '/') {
 		if (buff)

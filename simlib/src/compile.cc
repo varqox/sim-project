@@ -6,7 +6,9 @@ using std::string;
 using std::vector;
 
 int compile(const string& source, const string& exec, unsigned verbosity,
-		string* c_errors, size_t c_errors_max_len, const string& proot_path) {
+	uint64_t time_limit, string* c_errors, size_t c_errors_max_len,
+	const string& proot_path)
+{
 	int cef = -1;
 	if (c_errors) {
 		cef = getUnlinkedTmpFile();
@@ -30,10 +32,10 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	*  proot compiler to make compilation safer (e.g. prevent from including
 	*  unwanted files)
 	*/
-	const char* args[] = {
-		proot_path.c_str(),
+	vector<string> args = std::initializer_list<string> {
+		proot_path,
 		"-v", "-1",
-		"-r", tmp_dir.name(),
+		"-r", tmp_dir.sname(),
 		"-b", "/usr",
 		"-b", "/bin",
 		"-b", "/lib",
@@ -48,22 +50,22 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"-std=c++11",
 		"-static",
 		"-lm",
-		"-m32",
-		nullptr
+		"-m32"
 	};
 
-	// TODO: add compilation time limit
 	// Run compiler
-	spawn_opts sopts = { -1, cef, cef };
-	int compile_status = spawn(args[0], args, &sopts);
+	Spawner::ExitStat es = Spawner::run(args[0], args,
+		{-1, cef, cef, time_limit, 1 << 30 /* 1 GiB */});
 
 	// Check for errors
-	if (compile_status != 0) {
+	if (es.code != 0) {
 		if (verbosity > 1)
-			stdlog("Failed with code: ", toString(compile_status), '.');
+			stdlog(es.message);
 
 		if (c_errors)
-			*c_errors = getFileContents(cef, 0, c_errors_max_len);
+			*c_errors = (es.runtime >= time_limit
+				? "Compilation time limit exceeded"
+				: getFileContents(cef, 0, c_errors_max_len));
 
 		return 2;
 	}

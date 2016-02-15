@@ -70,7 +70,7 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 	if (name.empty())
 		warnings.emplace_back("config.conf: missing problem name");
 
-	// Memory limit (in kB)
+	// Memory limit (in KiB)
 	if (!config.isSet("memory_limit")) {
 		memory_limit = 0;
 		warnings.emplace_back("config.conf: missing memory limit\n");
@@ -189,7 +189,7 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 	if (name.empty())
 		throw std::runtime_error("config.conf: Missing problem name");
 
-	// Memory limit (in kB)
+	// Memory limit (in KiB)
 	if (!config.isSet("memory_limit"))
 		throw std::runtime_error("config.conf: missing memory limit\n");
 

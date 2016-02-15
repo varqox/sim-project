@@ -13,7 +13,7 @@ class ProblemConfig {
 public:
 	std::string name, tag, statement, checker, main_solution;
 	std::vector<std::string> solutions;
-	unsigned long long memory_limit = 0; // in kB
+	unsigned long long memory_limit = 0; // in KiB
 
 	/**
 	 * @brief Holds test

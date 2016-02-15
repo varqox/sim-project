@@ -93,5 +93,5 @@ bool CheckerCallback::operator()(pid_t pid, int syscall) {
 		if (syscall == i.syscall)
 			return --i.limit >= 0;
 
-	return allowedCall(pid, arch, syscall, allowed_files);
+	return isSyscallAllowed(pid, arch, syscall, allowed_files);
 }

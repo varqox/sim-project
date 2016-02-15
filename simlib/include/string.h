@@ -811,7 +811,7 @@ inline std::string concat(const T&... args) {
 enum Adjustment : uint8_t { LEFT, RIGHT };
 
 /**
- * @brief Returns wided string
+ * @brief Returns widened string
  * @details Examples:
  *   widedString("abc", 5) -> "  abc"
  *   widedString("abc", 5, false) -> "abc  "
