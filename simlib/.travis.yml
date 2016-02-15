@@ -24,8 +24,8 @@ addons:
 
 install:
   # Compiler
-  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.8"; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.9"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
 
 before_script:
   - export CC="$CC -Werror"

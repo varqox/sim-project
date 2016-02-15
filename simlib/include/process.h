@@ -165,7 +165,7 @@ protected:
 	static void runChild(const std::string& exec,
 		const std::vector<std::string>& args, const Options& opts,
 		const std::string& working_dir, int fd,
-		Func doBeforeExec = []{}) noexcept;
+		Func doBeforeExec) noexcept;
 
 	/**
 	 * @brief This function helps with making thread-unsafe function thread-safe
