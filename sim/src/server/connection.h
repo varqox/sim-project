@@ -9,7 +9,7 @@ class Connection {
 private:
 	static const size_t BUFFER_SIZE = 1 << 16;
 	static const int POLL_TIMEOUT = 20 * 1000; // in milliseconds
-	static const size_t MAX_CONTENT_LENGTH = 10 << 20; // 10 MB
+	static const size_t MAX_CONTENT_LENGTH = 10 << 20; // 10 MiB
 	static const size_t MAX_HEADER_LENGTH = 8192;
 
 public:

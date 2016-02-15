@@ -32,7 +32,9 @@ int setLimits(const string& package_path) {
 	try {
 		// Compile checker
 		if (compile(concat(package_path, "check/", config_conf.checker),
-				"checker", (VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
+			"checker", (VERBOSITY >> 1) + 1, 30 * 1000000, // 30 s
+			nullptr, 0, PROOT_PATH) != 0)
+		{
 			if (VERBOSITY == 1)
 				eprintf("Checker compilation failed.\n");
 			return 1;
@@ -58,7 +60,9 @@ int setLimits(const string& package_path) {
 		}
 
 		if (compile(concat(package_path, "prog/", config_conf.main_solution),
-				"exec", (VERBOSITY >> 1) + 1, nullptr, 0, PROOT_PATH) != 0) {
+			"exec", (VERBOSITY >> 1) + 1, 30 * 1000000, // 30 s
+			nullptr, 0, PROOT_PATH) != 0)
+		{
 			if (VERBOSITY == 1)
 				eprintf("Solution compilation failed.\n");
 			return 2;
@@ -72,11 +76,11 @@ int setLimits(const string& package_path) {
 	// Set limits
 	// Prepare runtime environment
 	Sandbox::Options sb_opts = {
-		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
-		config_conf.memory_limit << 10,
 		-1,
 		open("answer", O_WRONLY | O_CREAT | O_TRUNC, S_0644),
-		-1
+		-1,
+		TIME_LIMIT > 0 ? TIME_LIMIT : HARD_TIME_LIMIT,
+		config_conf.memory_limit << 10
 	};
 
 	// Check for errors
@@ -87,11 +91,11 @@ int setLimits(const string& package_path) {
 	}
 
 	Sandbox::Options checker_sb_opts = {
-		10 * 1000000, // 10s
-		256 << 20, // 256 MB
 		-1,
 		open("checker_out", O_WRONLY | O_CREAT | O_TRUNC, S_0644),
-		-1
+		-1,
+		10 * 1000000, // 10 s
+		256 << 20 // 256 MiB
 	};
 
 	// Check for errors
@@ -211,7 +215,7 @@ int setLimits(const string& package_path) {
 
 			try {
 				es = Sandbox::run("./checker", checker_args, checker_sb_opts,
-					CheckerCallback({checker_args.begin() + 1,
+					".", CheckerCallback({checker_args.begin() + 1,
 						checker_args.end()}));
 			} catch (const std::exception& e) {
 				eprintf("Sandbox error: %s\n", e.what());

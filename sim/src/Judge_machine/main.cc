@@ -10,7 +10,7 @@
 using std::string;
 using std::unique_ptr;
 
-static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1s
+static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1 s
 static DB::Connection db_conn;
 TemporaryDirectory tmp_dir;
 unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
