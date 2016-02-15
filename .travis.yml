@@ -19,16 +19,18 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-4.8-multilib
-    - clang-3.4
+    - g++-4.9-multilib
+    - clang-3.5
     - mysql-server
     - mysql-client
     - libmysqlcppconn-dev
 
 install:
   # Compiler
-  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.8"; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.9"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
+  - if [ "$CC" = "clang" ]; then export CC="clang-3.5"; fi
+  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.5"; fi
 
 before_script:
   - export CC="$CC -Werror"
