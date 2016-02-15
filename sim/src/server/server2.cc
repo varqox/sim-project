@@ -400,6 +400,7 @@ void Connection::parse(const char *str, size_t len) {
 	}
 }
 
+#if 0
 static void* worker(void*) {
 	try {
 		sockaddr_in name;
@@ -442,6 +443,7 @@ static void* worker(void*) {
 
 	return nullptr;
 }
+#endif
 
 // Reads data from connections
 static void* reader_thread(void*) {
@@ -504,7 +506,7 @@ static void* writer_thread(void*) {
 
 	return nullptr;
 }
-
+/*
 // Manages workers
 static void* workers_manager_thread(void*) {
 	// Leave all signals to the master thread
@@ -512,7 +514,7 @@ static void* workers_manager_thread(void*) {
 
 	// TODO: exceptions
 	return nullptr;
-}
+}*/
 
 // Manages workers, accepts connections
 static void master_process_cycle() {
