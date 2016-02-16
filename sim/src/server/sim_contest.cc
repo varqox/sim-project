@@ -1287,7 +1287,8 @@ void Sim::Contest::submit(bool admin_view) {
 
 			string solution_tmp_path = fv.getFilePath("solution");
 			struct stat sb;
-			stat(solution_tmp_path.c_str(), &sb);
+			if (stat(solution_tmp_path.c_str(), &sb))
+				throw std::runtime_error(concat("stat()", error(errno)));
 
 			// Check if solution is too big
 			if (sb.st_size > (100 << 10)) { // 100 KiB

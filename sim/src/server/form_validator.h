@@ -15,7 +15,8 @@ public:
 
 	~FormValidator() {}
 
-	// if valid returns true
+	// Returns true if and only if field @p var exists and its value is
+	// no longer than max_size
 	bool validate(std::string& var, const std::string& name,
 			const std::string& name_to_print, size_t max_size = -1);
 

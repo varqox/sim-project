@@ -85,10 +85,12 @@ void Sim::User::handle() {
 		return sim_.error404();
 
 	data.view_type = Data::FULL;
+	// TODO: write test suite!
 	/* Check permissions
 	* +---------------+---------+-------+---------+--------+
 	* | user \ viewer | id == 1 | admin | teacher | normal |
 	* +---------------+---------+-------+---------+--------+
+	* |   theirself   |  FULL   | FULL  |  FULL   |  FULL  |
 	* |    normal     |  FULL   | FULL  |   RDO   |  ---   |
 	* |    teacher    |  FULL   | FULL  |   ---   |  ---   |
 	* |     admin     |  FULL   |  RDO  |   ---   |  ---   |
@@ -101,8 +103,11 @@ void Sim::User::handle() {
 		return sim_.error403();
 
 	else if (sim_.session->user_type == 1 ||
-				(sim_.session->user_type == 0 && sim_.session->user_id != "1"))
+		(sim_.session->user_type == 0 && data.user_type == 0 &&
+			sim_.session->user_id != "1"))
+	{
 		data.view_type = Data::READ_ONLY;
+	}
 
 	// Change password
 	if (compareTo(sim_.req_->target, arg_beg, '/', "change-password") == 0)
@@ -301,12 +306,27 @@ void Sim::User::changePassword(Data& data) {
 	if (data.view_type == Data::READ_ONLY)
 		return sim_.error403();
 
-	// TODO: allow admins to change other's passwords
+	/* The ability to change user password without old one
+	* +---------------+---------+-------+-------+
+	* | user \ viewer | id == 1 | admin | other |
+	* +---------------+---------+-------+-------+
+	* |    id == 1    |   NO    |  NO   |  NO   |
+	* |    admin      |   YES   |  NO   |  NO   |
+	* |    other      |   YES   |  YES  |  NO   |
+	* |   theirself   |   NO    |  NO   |  NO   |
+	* +---------------+---------+-------+-------+
+	*/
+	bool has_admin_change_password_ability = (sim_.session->user_type == 0 &&
+		(data.user_type > 0 ||
+			(sim_.session->user_id == "1" && data.user_id != "1")));
+
 	FormValidator fv(sim_.req_->form_data);
 	if (sim_.req_->method == server::HttpRequest::POST) {
 		// Validate all fields
 		string old_password, password1, password2;
-		fv.validate(old_password, "old_password", "Old password");
+		if (!has_admin_change_password_ability)
+			fv.validate(old_password, "old_password", "Old password");
+
 		if (fv.validate(password1, "password1", "New password") &&
 				fv.validate(password2, "password2", "New password (repeat)") &&
 				password1 != password2)
@@ -321,14 +341,16 @@ void Sim::User::changePassword(Data& data) {
 				pstmt->setString(1, data.user_id);
 
 				unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-				if (!res->next())
+				if (!res->next()) {
 					fv.addError("Cannot get user password");
 
-				else if (!slowEqual(sha3_512(res->getString(1) + old_password),
+				} else if (!has_admin_change_password_ability &&
+					!slowEqual(sha3_512(res->getString(1) + old_password),
 						res->getString(2)))
-					fv.addError("Wrong password");
+				{
+					fv.addError("Wrong old password");
 
-				else {
+				} else {
 					char salt_bin[32];
 					fillRandomly(salt_bin, 32);
 					string salt = toHex(salt_bin, 32);
@@ -354,15 +376,18 @@ void Sim::User::changePassword(Data& data) {
 	templ.printUser(data);
 	templ << fv.errors() << "<div class=\"form-container\">\n"
 			"<h1>Change password</h1>\n"
-			"<form method=\"post\">\n"
-				// Old password
-				"<div class=\"field-group\">\n"
+			"<form method=\"post\">\n";
+
+	// Old password
+	if (!has_admin_change_password_ability)
+		templ << "<div class=\"field-group\">\n"
 					"<label>Old password</label>\n"
 					"<input type=\"password\" name=\"old_password\" "
 						"size=\"24\">\n"
-				"</div>\n"
-				// New password
-				"<div class=\"field-group\">\n"
+				"</div>\n";
+
+	// New password
+	templ << "<div class=\"field-group\">\n"
 					"<label>New password</label>\n"
 					"<input type=\"password\" name=\"password1\" size=\"24\">\n"
 				"</div>\n"
@@ -377,18 +402,24 @@ void Sim::User::changePassword(Data& data) {
 }
 
 void Sim::User::editProfile(Data& data) {
-	/* The ability to change user type
-	* +---------------+---------+-------+-------+
-	* | user \ viewer | id == 1 | admin | other |
-	* +---------------+---------+-------+-------+
-	* |    id == 1    |   NO    |  NO   |  NO   |
-	* |    admin      |   YES   |  NO   |  NO   |
-	* |    other      |   YES   |  YES  |  NO   |
-	* +---------------+---------+-------+-------+
+	/* The ability to change user type (only Sim root can change user type to
+	*   Admin)
+	* +---------------+---------+-------+---------+--------+
+	* | user \ viewer | id == 1 | admin | teacher | normal |
+	* +---------------+---------+-------+---------+--------+
+	* |    id == 1    |   NO    |  NO   |   NO    |   NO   |
+	* |    admin      |   YES   |  NO   |   NO    |   NO   |
+	* |    teacher    |   YES   |  YES  |   NO    |   NO   |
+	* |    normal     |   YES   |  YES  |   NO    |   NO   |
+	* |   theirself   |   NO    |  YES  |   YES   |   NO   |
+	* +---------------+---------+-------+---------+--------+
 	*/
-	bool can_change_user_type = data.user_id != "1" &&
-		sim_.session->user_type == 0 && (data.user_type > 0 ||
-			sim_.session->user_id == "1");
+	bool can_change_user_type =
+		((sim_.session->user_type == 1 && sim_.session->user_id == data.user_id)
+			|| (sim_.session->user_type == 0 &&
+				data.user_id != "1" && (data.user_type > 0 ||
+				sim_.session->user_id == "1" ||
+				sim_.session->user_id == data.user_id)));
 
 	FormValidator fv(sim_.req_->form_data);
 	if (sim_.req_->method == server::HttpRequest::POST &&
@@ -401,8 +432,13 @@ void Sim::User::editProfile(Data& data) {
 		fv.validateNotBlank(data.last_name, "last_name", "Last Name", 60);
 		fv.validateNotBlank(data.email, "email", "Email", 60);
 
+		if (data.user_type > 0 && user_type == "0" &&
+			sim_.session->user_id != "1")
+		{
+			fv.addError("Only Sim root can change user type to Admin!");
+
 		// If all fields are ok
-		if (fv.noErrors())
+		} else if (fv.noErrors())
 			try {
 				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
 					prepareStatement("UPDATE IGNORE users "
@@ -423,10 +459,13 @@ void Sim::User::editProfile(Data& data) {
 					data.user_type = (user_type == "0" ? 0
 						: user_type == "1" ? 1 : 2);
 
-					if (data.user_id == sim_.session->user_id)
-						// We do not have to actualise user_type because nobody
-						// can change their account type
+					if (data.user_id == sim_.session->user_id) {
+						sim_.session->user_type = data.user_type;
+						if (data.user_type == 2)
+							can_change_user_type = false;
+
 						sim_.session->username = new_username;
+					}
 
 				} else if (data.username != new_username)
 					fv.addError(concat("Username '", new_username,
@@ -456,10 +495,14 @@ void Sim::User::editProfile(Data& data) {
 			"<div class=\"field-group\">\n"
 				"<label>Account type</label>\n"
 				"<select name=\"type\"" << (can_change_user_type ? ""
-					: " disabled") << ">"
-					"<option value=\"0\"" << (data.user_type == 0 ? " selected"
-						: "") << ">Admin</option>"
-					"<option value=\"1\"" << (data.user_type == 1 ? " selected"
+					: " disabled") << ">";
+			// Option -> type: Admin
+			if (data.user_type == 0)
+				templ << "<option value=\"0\" selected>Admin</option>";
+			else if (sim_.session->user_id == "1")
+				templ << "<option value=\"0\">Admin</option>";
+
+			templ << "<option value=\"1\"" << (data.user_type == 1 ? " selected"
 						: "") << ">Teacher</option>"
 					"<option value=\"2\"" << (data.user_type > 1 ? " selected"
 						: "") << ">Normal</option>"
