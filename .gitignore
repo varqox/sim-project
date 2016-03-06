@@ -20,7 +20,6 @@ src/Conver/default_checker_dump.c
 
 # Others
 build/
-src/chmod-default
 src/killinstc
 src/conver
 src/CTH

@@ -24,7 +24,7 @@ unsigned long long HARD_TIME_LIMIT = 10 * 1000000; // 10 s
 unsigned long long TIME_LIMIT = 0; // Not set (in usec)
 string PROOT_PATH = "proot"; // Search for PRoot in system
 unique_ptr<directory_tree::Node> package_tree_root;
-ProblemConfig config_conf;
+ProblemConfig config_conf; // TODO: Rename file to Simfile
 
 static bool SET_MEMORY_LIMIT = false; // true if set in options
 static string PROBLEM_NAME, DEST_NAME, PROBLEM_TAG;

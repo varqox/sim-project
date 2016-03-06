@@ -73,7 +73,7 @@ void Sim::Contest::handle() {
 		// Extract round id
 		string round_id;
 		int res_code = strToNum(round_id, sim_.req_->target, arg_beg, '/');
-		if (res_code == -1)
+		if (res_code <= 0)
 			return sim_.error404();
 
 		arg_beg += res_code + 1;
@@ -741,7 +741,7 @@ void Sim::Contest::editContest() {
 				"</div>\n"
 				"<div>\n"
 					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+					"<a class=\"btn red\" style=\"float:right\" href=\"/c/"
 						<< r_path_->round_id << "/delete\">Delete contest</a>\n"
 				"</div>\n"
 			"</form>\n"
@@ -862,7 +862,7 @@ void Sim::Contest::editRound() {
 				"</div>\n"
 				"<div>\n"
 					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+					"<a class=\"btn red\" style=\"float:right\" href=\"/c/"
 						<< r_path_->round_id << "/delete\">Delete round</a>\n"
 				"</div>\n"
 			"</form>\n"
@@ -1085,7 +1085,7 @@ void Sim::Contest::editProblem() {
 				// TODO: Main solution
 				"<div>\n"
 					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn-danger\" style=\"float:right\" href=\"/c/"
+					"<a class=\"btn red\" style=\"float:right\" href=\"/c/"
 						<< r_path_->round_id << "/delete\">Delete problem</a>\n"
 				"</div>\n"
 			"</form>\n"
@@ -1138,7 +1138,7 @@ void Sim::Contest::deleteContest() {
 				<< htmlSpecialChars(r_path_->contest->name) << "</a>, all "
 				"subrounds and submissions?</label>\n"
 			"<div class=\"submit-yes-no\">\n"
-				"<button class=\"btn-danger\" type=\"submit\" name=\"delete\">"
+				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
 				"<a class=\"btn\" href=\"/c/" << r_path_->round_id << "/edit\">"
 					"No, go back</a>\n"
@@ -1186,7 +1186,7 @@ void Sim::Contest::deleteRound() {
 				<< htmlSpecialChars(r_path_->round->name) << "</a>, all "
 				"subrounds and submissions?</label>\n"
 			"<div class=\"submit-yes-no\">\n"
-				"<button class=\"btn-danger\" type=\"submit\" name=\"delete\">"
+				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
 				"<a class=\"btn\" href=\"/c/" << r_path_->round_id << "/edit\">"
 					"No, go back</a>\n"
@@ -1232,7 +1232,7 @@ void Sim::Contest::deleteProblem() {
 				<< htmlSpecialChars(r_path_->problem->name) << "</a> and all "
 				"its submissions?</label>\n"
 			"<div class=\"submit-yes-no\">\n"
-				"<button class=\"btn-danger\" type=\"submit\" name=\"delete\">"
+				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
 				"<a class=\"btn\" href=\"/c/" << r_path_->round_id << "/edit\">"
 					"No, go back</a>\n"
@@ -1497,7 +1497,7 @@ void Sim::Contest::submission() {
 	// Extract round id
 	string submission_id;
 	int res_code = strToNum(submission_id, sim_.req_->target, arg_beg, '/');
-	if (res_code == -1)
+	if (res_code <= 0)
 		return sim_.error404();
 
 	arg_beg += res_code + 1;
@@ -1596,7 +1596,7 @@ void Sim::Contest::submission() {
 					"<a href=\"/c/" << submission_id << "\">" << submission_id
 						<< "</a>?</label>\n"
 					"<div class=\"submit-yes-no\">\n"
-						"<button class=\"btn-danger\" type=\"submit\" "
+						"<button class=\"btn red\" type=\"submit\" "
 							"name=\"delete\">Yes, I'm sure</button>\n"
 						"<a class=\"btn\" href=\""
 							<< sim_.req_->target.substr(0, arg_beg - 1) << "\">"
@@ -1693,7 +1693,7 @@ void Sim::Contest::submission() {
 			templ << "<a class=\"btn-small\" href=\""
 					<< sim_.req_->target.substr(0, arg_beg - 1)
 					<< "/rejudge\">Rejudge</a>\n"
-				"<a class=\"btn-small-danger\" href=\""
+				"<a class=\"btn-small red\" href=\""
 					<< sim_.req_->target.substr(0, arg_beg - 1)
 					<< "/delete\">Delete</a>\n";
 		templ << "</div>\n"
