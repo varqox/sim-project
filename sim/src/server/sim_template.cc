@@ -31,8 +31,11 @@ Sim::Template::Template(Sim& sim, const std::string& title,
 					"<a href=\"/\" class=\"brand\">SIM</a>\n"
 					"<a href=\"/c/\">Contests</a>\n";
 
-	if (sim_.session->open() == Session::OK && sim_.session->user_type == 0)
-		*this << "<a href=\"/logs\">Logs</a>\n";
+	if (sim_.session->open() == Session::OK && sim_.session->user_type < 2) {
+		*this << "<a href=\"/u\">Users</a>\n";
+		if (sim_.session->user_type == 0)
+			*this << "<a href=\"/logs\">Logs</a>\n";
+	}
 
 	*this << "<div class=\"rightbar\">\n"
 						"<time id=\"clock\">" << date("%H:%M:%S")

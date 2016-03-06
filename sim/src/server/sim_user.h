@@ -27,6 +27,8 @@ private:
 
 	void signUp();
 
+	void listUsers();
+
 	void changePassword(Data& data);
 
 	void editProfile(Data& data);
