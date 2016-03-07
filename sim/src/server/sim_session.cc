@@ -53,13 +53,13 @@ Sim::Session::State Sim::Session::open() {
 }
 
 string Sim::Session::generateId() {
-	const char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"0123456789";
 	constexpr size_t len = sizeof(t) - 1;
 
 	// Generate random id of length SESSION_ID_LENGTH
 	string res(SESSION_ID_LENGTH, '0');
-	for (auto& c : res)
+	for (char& c : res)
 		c = t[getRandom<int>(0, len - 1)];
 
 	return res;
@@ -70,7 +70,7 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 	state_ = FAIL;
 	try {
 		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement("INSERT INTO session "
+			prepareStatement("INSERT session "
 				"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
 
 		// Remove obsolete sessions

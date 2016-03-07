@@ -199,6 +199,8 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 					<< "\">Contest dashboard</a>\n"
 				"<a href=\"/c/" << sim_contest.r_path_->contest->id
 					<< "/problems\">Problems</a>\n"
+				"<a href=\"/c/" << sim_contest.r_path_->contest->id
+					<< "/files\">Files</a>\n"
 				"<a href=\"/c/" << round_id << "/submit\">Submit a solution</a>"
 					"\n"
 				"<a href=\"/c/" << sim_contest.r_path_->contest->id
@@ -213,7 +215,9 @@ Sim::Contest::TemplateWithMenu::TemplateWithMenu(Contest& sim_contest,
 	*this << "<a href=\"/c/" << sim_contest.r_path_->contest->id
 			<< (admin_access ? "/n" : "") << "\">Contest dashboard</a>\n"
 		"<a href=\"/c/" << sim_contest.r_path_->contest->id
-			<< (admin_access ? "/n" : "") << "/problems\">Problems</a>\n";
+			<< (admin_access ? "/n" : "") << "/problems\">Problems</a>\n"
+		"<a href=\"/c/" << sim_contest.r_path_->contest->id
+			<< (admin_access ? "/n" : "") << "/files\">Files</a>\n";
 
 	string current_date = date("%Y-%m-%d %H:%M:%S");
 	if (sim_contest.r_path_->type == CONTEST || (

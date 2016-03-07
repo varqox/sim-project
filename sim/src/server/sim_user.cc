@@ -266,9 +266,8 @@ void Sim::User::signUp() {
 				string salt = toHex(salt_bin, 32);
 
 				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT IGNORE INTO `users` "
-						"(username, first_name, last_name, email, salt, "
-							"password) "
+					prepareStatement("INSERT IGNORE `users` (username, "
+							"first_name, last_name, email, salt, password) "
 						"VALUES(?, ?, ?, ?, ?, ?)"));
 				pstmt->setString(1, username);
 				pstmt->setString(2, first_name);
@@ -366,7 +365,7 @@ void Sim::User::listUsers() {
 					"<th class=\"last-name\">Last name</th>"
 					"<th class=\"email\">Email</th>"
 					"<th class=\"type\">Type</th>"
-					"<th class=\"type\">Actions</th>"
+					"<th class=\"actions\">Actions</th>"
 				"</tr>\n"
 			"</thead>\n"
 			"<tbody>\n";
@@ -427,9 +426,10 @@ void Sim::User::editProfile(Data& data) {
 			(user_type == "1" ? 1 : 2));
 
 		// Check if change of user type is allowed
-		constexpr uint needed_promote_privilege[2] = {
+		constexpr uint needed_promote_privilege[3] = {
 			PERM_MAKE_ADMIN,
 			PERM_MAKE_TEACHER,
+			0 // Just in case
 		};
 		// Demote
 		if (new_user_type > data.user_type && ~data.permissions & PERM_DEMOTE) {

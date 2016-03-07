@@ -21,6 +21,7 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
+	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
 
 	# Install PRoot
