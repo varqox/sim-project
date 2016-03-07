@@ -113,6 +113,10 @@ private:
 
 	void ranking(bool admin_view);
 
+	void file();
+
+	void files(bool admin_view);
+
 	// Contest utilities (sim_contest_utility.cc)
 	class TemplateWithMenu;
 

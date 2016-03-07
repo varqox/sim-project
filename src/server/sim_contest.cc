@@ -7,6 +7,7 @@
 #include <simlib/filesystem.h>
 #include <simlib/logger.h>
 #include <simlib/process.h>
+#include <simlib/random.h>
 #include <simlib/sim_problem.h>
 #include <simlib/time.h>
 
@@ -187,6 +188,12 @@ void Sim::Contest::handle() {
 			return ranking(admin_view);
 		}
 
+		// Files
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "files")) {
+			arg_beg += 6;
+			return files(admin_view);
+		}
+
 		// Contest dashboard
 		TemplateWithMenu templ(*this, "Contest dashboard");
 
@@ -224,7 +231,7 @@ void Sim::Contest::addContest() {
 		if (fv.noErrors())
 			try {
 				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT INTO rounds"
+					prepareStatement("INSERT rounds"
 							"(access, name, owner, item, show_ranking) "
 						"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
 							"WHERE parent IS NULL"));
@@ -305,9 +312,8 @@ void Sim::Contest::addRound() {
 		if (fv.noErrors())
 			try {
 				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT INTO rounds"
-							"(parent, name, item, visible, begins, ends, "
-								"full_results) "
+					prepareStatement("INSERT rounds (parent, name, item, "
+							"visible, begins, ends, full_results) "
 						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
 							"WHERE parent=?"));
 				pstmt->setString(1, r_path_->round_id);
@@ -499,8 +505,7 @@ void Sim::Contest::addProblem() {
 				// 'Transaction' begin
 				// Insert problem
 				if (1 != stmt->executeUpdate(
-						"INSERT INTO problems(name, owner, added) "
-						"VALUES('', 0, '')"))
+						"INSERT problems (name, owner, added) VALUES('',0,'')"))
 					throw std::runtime_error("Failed to problem");
 
 				// Get problem_id
@@ -512,8 +517,7 @@ void Sim::Contest::addProblem() {
 
 				// Insert round
 				if (1 != stmt->executeUpdate(
-						"INSERT INTO rounds(name, owner, item) "
-						"VALUES('', 0, 0)"))
+						"INSERT rounds (name, owner, item) VALUES('', 0, 0)"))
 					throw std::runtime_error("Failed to round");
 
 				// Get round_id
@@ -598,7 +602,7 @@ void Sim::Contest::addProblem() {
 				"<div class=\"field-group\">\n"
 					"<label>Memory limit [KiB]</label>\n"
 					"<input type=\"text\" name=\"memory-limit\" value=\""
-						<< htmlSpecialChars(memory_limit) << "\" size=\"24\""
+						<< htmlSpecialChars(memory_limit) << "\" size=\"24\" "
 					"placeholder=\"Detect from config.conf\">"
 					"\n"
 				"</div>\n"
@@ -606,7 +610,7 @@ void Sim::Contest::addProblem() {
 				"<div class=\"field-group\">\n"
 					"<label>Global time limit [s] (for each test)</label>\n"
 					"<input type=\"text\" name=\"time-limit\" value=\""
-						<< htmlSpecialChars(time_limit) << "\" size=\"24\""
+						<< htmlSpecialChars(time_limit) << "\" size=\"24\" "
 					"placeholder=\"No global time limit\">"
 					"\n"
 				"</div>\n"
@@ -1300,7 +1304,7 @@ void Sim::Contest::submit(bool admin_view) {
 				string current_date = date("%Y-%m-%d %H:%M:%S");
 				// Insert submission to `submissions`
 				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT INTO submissions "
+					prepareStatement("INSERT submissions "
 						"(user_id, problem_id, round_id, parent_round_id, "
 							"contest_round_id, submit_time, queued) "
 						"VALUES(?, ?, ?, ?, ?, ?, ?)"));
@@ -1632,7 +1636,6 @@ void Sim::Contest::submission() {
 
 			sim_.resp_.content = concat("solutions/", submission_id, ".cpp");
 			sim_.resp_.content_type = server::HttpResponse::FILE;
-
 			return;
 		}
 
@@ -1690,7 +1693,7 @@ void Sim::Contest::submission() {
 						<< sim_.req_->target.substr(0, arg_beg - 1)
 						<< "/download\">Download</a>\n";
 		if (admin_view)
-			templ << "<a class=\"btn-small\" href=\""
+			templ << "<a class=\"btn-small blue\" href=\""
 					<< sim_.req_->target.substr(0, arg_beg - 1)
 					<< "/rejudge\">Rejudge</a>\n"
 				"<a class=\"btn-small red\" href=\""
@@ -2156,6 +2159,237 @@ void Sim::Contest::ranking(bool admin_view) {
 		}
 		templ << "</tbody>\n"
 				"</thead>\n"
+			"</table>\n";
+
+	} catch (const std::exception& e) {
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+		return sim_.error500();
+	}
+}
+
+void Sim::Contest::file() {
+	if (sim_.req_->target.size() < 36)
+		return sim_.error404();
+
+	arg_beg = 6;
+	string id = sim_.req_->target.substr(arg_beg,
+		sim_.req_->target.find('/', arg_beg) - arg_beg);
+	arg_beg += id.size() + 1;
+	// Early id validation
+	if (id.size() != 30)
+		return sim_.error404();
+
+	try {
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+			"SELECT name, round_id FROM files WHERE id=?"));
+		pstmt->setString(1, id);
+
+		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+		if (!res->next())
+			return sim_.error404();
+
+		string file_name = res->getString(1);
+
+		r_path_.reset(getRoundPath(res->getString(2)));
+		if (!r_path_)
+			return; // getRoundPath has already set error
+
+		// TODO: add editing
+		// TODO: add confirming stage before deleting file (can be in JS)
+
+		// Delete
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete")) {
+			if (!r_path_->admin_access)
+				return sim_.error403();
+
+			pstmt.reset(sim_.db_conn->prepareStatement(
+				"DELETE FROM files WHERE id=?"));
+			pstmt->setString(1, id);
+
+			if (pstmt->executeUpdate() != 1)
+				return sim_.error500();
+
+			SignalBlocker signal_guard;
+			if (remove(concat("files/", id).c_str()))
+				throw std::runtime_error(concat("remove()", error(errno)));
+			signal_guard.unblock();
+
+			return sim_.redirect(concat("/c/", r_path_->round_id, "/files"));
+		}
+
+		// Download file
+		sim_.resp_.headers["Content-Disposition"] =
+			concat("attachment; filename=", file_name);
+
+		sim_.resp_.content = concat("files/", id);
+		sim_.resp_.content_type = server::HttpResponse::FILE;
+		return;
+
+	} catch (const std::exception& e) {
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+		return sim_.error500();
+	}
+}
+
+void Sim::Contest::files(bool admin_view) {
+	if (r_path_->type != RoundType::CONTEST)
+		return sim_.error404();
+
+	// Add
+	if (0 == compareTo(sim_.req_->target, arg_beg, '/', "add")) {
+		if (!admin_view)
+			return sim_.error403();
+
+		FormValidator fv(sim_.req_->form_data);
+		string file_name, description;
+		if (sim_.req_->method == server::HttpRequest::POST) {
+			string user_file_name;
+			// Validate all fields
+			fv.validate(file_name, "file-name", "File name", 128);
+
+			fv.validateNotBlank(user_file_name, "file", "File");
+
+			fv.validate(description, "description", "Description", 512);
+
+			if (file_name.size())
+				user_file_name = file_name;
+
+			// If all fields are OK
+			if (fv.noErrors())
+				try {
+					constexpr size_t FILE_ID_LENGTH = 30;
+					string id(FILE_ID_LENGTH, '0');
+					string current_time = date("%Y-%m-%d %H:%M:%S");
+					// Insert file to `files`
+					unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
+						prepareStatement("INSERT IGNORE files "
+							"(id, round_id, name, description, time_added) "
+							"VALUES(?,NULL,?,?,?)"));
+					do {
+						// TODO: looks the same as Sim::Session::generateId()
+						constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFG"
+							"HIJKLMNOPQRSTUVWXYZ0123456789";
+						constexpr size_t len = sizeof(t) - 1;
+
+						// Generate random id of length FILE_ID_LENGTH
+						for (char& c : id)
+							c = t[getRandom<int>(0, len - 1)];
+
+						pstmt->setString(1, id);
+						pstmt->setString(2, user_file_name);
+						pstmt->setString(3, description);
+						pstmt->setString(4, current_time);
+					} while (pstmt->executeUpdate() == 0);
+
+					// Move file
+					SignalBlocker signal_guard;
+					if (move(fv.getFilePath("file"), concat("files/", id)))
+						throw std::runtime_error("move()" + error(errno));
+
+					pstmt.reset(sim_.db_conn->prepareStatement(
+						"UPDATE files SET round_id=? WHERE id=?"));
+					pstmt->setString(1, r_path_->round_id);
+					pstmt->setString(2, id);
+
+					if (pstmt->executeUpdate() != 1) {
+						(void)remove(concat("files/", id).c_str());
+						throw std::runtime_error("Failed to update inserted "
+							"file");
+					}
+					signal_guard.unblock();
+
+					return sim_.redirect(sim_.req_->target.substr(0,
+						arg_beg - 1));
+
+				} catch (const std::exception& e) {
+					fv.addError("Internal server error");
+					errlog("Caught exception: ", __FILE__, ':',
+						toString(__LINE__), " -> ", e.what());
+				}
+		}
+
+		TemplateWithMenu templ(*this, "Add file");
+		templ.printRoundPath(*r_path_, "");
+		templ << fv.errors() << "<div class=\"form-container\">\n"
+				"<h1>Add file</h1>"
+				"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+					// File name
+					"<div class=\"field-group\">\n"
+						"<label>File name</label>\n"
+						"<input type=\"text\" name=\"file-name\" value=\""
+							<< htmlSpecialChars(file_name) << "\" size=\"24\" "
+							"maxlength=\"128\" "
+							"placeholder=\"The same as uploaded file\">\n"
+					"</div>\n"
+					// File
+					"<div class=\"field-group\">\n"
+						"<label>File</label>\n"
+						"<input type=\"file\" name=\"file\" required>\n"
+					"</div>\n"
+					// Description
+					"<div class=\"field-group\">\n"
+						"<label>Description</label>\n"
+						"<textarea name=\"description\" value=\""
+							<< htmlSpecialChars(description) << "\" "
+							"maxlength=\"512\">\n"
+						"</textarea>"
+					"</div>\n"
+					"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
+				"</form>\n"
+			"</div>\n";
+		return;
+	}
+
+	TemplateWithMenu templ(*this, "Files");
+	if (admin_view)
+		templ << "<a class=\"btn\" href=\""
+			<< sim_.req_->target.substr(0, arg_beg - 1)
+			<< "/add\">Add file</a>\n";
+
+	try {
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+			"SELECT id, time_added, name, description FROM files "
+			"WHERE round_id=? ORDER BY time_added DESC"));
+		pstmt->setString(1, r_path_->round_id);
+		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+
+		if (res->rowsCount() == 0) {
+			templ << "<p>There are no file here yet</p>";
+			return;
+		}
+
+		templ << "<table class=\"files\">\n"
+			"<thead>"
+				"<tr>"
+					"<th class=\"time\">Time added</th>"
+					"<th class=\"name\">File name</th>"
+					"<th class=\"description\">Description</th>"
+					"<th class=\"actions\">Actions</th>"
+				"</tr>"
+			"</thead>\n"
+			"<tbody>\n";
+
+		while (res->next()) {
+			string id = res->getString(1);
+			templ << "<tr>"
+				"<td>" << res->getString(2) << "</td>"
+				"<td><a href=\"/file/" << id << "\">" << res->getString(3)
+					<< "</a></td>"
+				"<td>" << res->getString(4) << "</td>"
+				"<td><a class=\"btn-small\" href=\"/file/" << id
+					<< "\">Download</a>";
+
+			if (admin_view)
+				templ << "<a class=\"btn-small red\" href=\"/file/" << id
+					<< "/delete\">Delete</a>";
+
+			templ << "</td>"
+				"</tr>\n";
+		}
+
+		templ << "</tbody>\n"
 			"</table>\n";
 
 	} catch (const std::exception& e) {

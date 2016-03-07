@@ -70,6 +70,9 @@ server::HttpResponse Sim::handle(string client_ip,
 		else if (0 == compareTo(req.target, 1, '/', "s"))
 			contest->submission();
 
+		else if (0 == compareTo(req.target, 1, '/', "file"))
+			contest->file();
+
 		else if (0 == compareTo(req.target, 1, '/', ""))
 			mainPage();
 
