@@ -378,11 +378,11 @@ void Spawner::runChild(const std::string& exec,
 
 	// Convert args
 	const size_t len = args.size();
-	char *arg[len + 1];
+	const char* arg[len + 1];
 	arg[len] = nullptr;
 
 	for (size_t i = 0; i < len; ++i)
-		arg[i] = const_cast<char*>(args[i].c_str());
+		arg[i] = args[i].c_str();
 
 	// Change working directory
 	if (working_dir != "." && working_dir != "" && working_dir != "./") {
@@ -436,7 +436,7 @@ void Spawner::runChild(const std::string& exec,
 	// Signal parent process that child is ready to execute @p exec
 	kill(getpid(), SIGSTOP);
 
-	execv(exec.c_str(), arg);
+	execvp(exec.c_str(), (char** const)arg);
 
 	send_error("execv()"); // execv() failed
 }

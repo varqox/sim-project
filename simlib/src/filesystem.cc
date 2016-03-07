@@ -24,7 +24,6 @@ int getUnlinkedTmpFile(int flags) noexcept {
 	fd = mkostemp(name, flags);
 	if (fd == -1)
 		return -1;
-
 	(void)unlink(name);
 	return fd;
 }
