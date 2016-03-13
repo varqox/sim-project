@@ -2195,28 +2195,13 @@ void Sim::Contest::file() {
 		if (!r_path_)
 			return; // getRoundPath has already set error
 
-		// TODO: add editing
-		// TODO: add confirming stage before deleting file (can be in JS)
+		// Edit file
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "edit"))
+			return editFile(id, file_name);
 
-		// Delete
-		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete")) {
-			if (!r_path_->admin_access)
-				return sim_.error403();
-
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM files WHERE id=?"));
-			pstmt->setString(1, id);
-
-			if (pstmt->executeUpdate() != 1)
-				return sim_.error500();
-
-			SignalBlocker signal_guard;
-			if (remove(concat("files/", id).c_str()))
-				throw std::runtime_error(concat("remove()", error(errno)));
-			signal_guard.unblock();
-
-			return sim_.redirect(concat("/c/", r_path_->round_id, "/files"));
-		}
+		// Delete file
+		if (0 == compareTo(sim_.req_->target, arg_beg, '/', "delete"))
+			return deleteFile(id, file_name);
 
 		// Download file
 		sim_.resp_.headers["Content-Disposition"] =
@@ -2233,114 +2218,253 @@ void Sim::Contest::file() {
 	}
 }
 
+void Sim::Contest::editFile(const string& id, string name) {
+	if (!r_path_->admin_access)
+		return sim_.error403();
+
+	FormValidator fv(sim_.req_->form_data);
+	string modified, description;
+	if (sim_.req_->method == server::HttpRequest::POST) {
+		// Validate all fields
+		fv.validate(name, "file-name", "File name", 128);
+
+		fv.validate(description, "description", "Description", 512);
+
+		// If all fields are OK
+		if (fv.noErrors())
+			try {
+				string current_time = date("%Y-%m-%d %H:%M:%S");
+				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
+					prepareStatement("UPDATE files "
+						"SET name=?, description=?, modified=? WHERE id=?"));
+				pstmt->setString(1, name);
+				pstmt->setString(2, description);
+				pstmt->setString(3, current_time);
+				pstmt->setString(4, id);
+				pstmt->executeUpdate();
+
+				// Move file
+				if (fv.exist("file")) {
+					SignalBlocker signal_guard;
+					if (move(fv.getFilePath("file"), concat("files/", id)))
+						throw std::runtime_error("move()" + error(errno));
+				}
+
+				fv.addError("Update successful");
+
+			} catch (const std::exception& e) {
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
+			}
+	}
+
+	try {
+		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+			"SELECT name, description, modified FROM files WHERE id=?"));
+		pstmt->setString(1, id);
+
+		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+		if (!res->next())
+			return sim_.error404();
+
+		name = res->getString(1);
+		description = res->getString(2);
+		modified = res->getString(3);
+
+	} catch (const std::exception& e) {
+		fv.addError("Internal server error");
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
+	}
+
+	TemplateWithMenu templ(*this, "Edit file");
+	templ.printRoundPath(*r_path_, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+			"<h1>Edit file</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+				// File name
+				"<div class=\"field-group\">\n"
+					"<label>File name</label>\n"
+					"<input type=\"text\" name=\"file-name\" value=\""
+						<< htmlSpecialChars(name) << "\" size=\"24\" "
+						"maxlength=\"128\" required>\n"
+				"</div>\n"
+				// Reupload file
+				"<div class=\"field-group\">\n"
+					"<label>Reupload file</label>\n"
+					"<input type=\"file\" name=\"file\">\n"
+				"</div>\n"
+				// Description
+				"<div class=\"field-group\">\n"
+					"<label>Description</label>\n"
+					"<textarea name=\"description\" maxlength=\"512\">"
+						<< htmlSpecialChars(description) << "</textarea>"
+				"</div>\n"
+				// Modified
+				"<div class=\"field-group\">\n"
+					"<label>Modified</label>\n"
+					"<input type=\"text\" value=\"" << modified
+						<< "\" disabled>\n"
+				"</div>\n"
+				"<div>\n"
+					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn red\" style=\"float:right\" href=\"/file/"
+						<< id << "/delete\">Delete file</a>\n"
+				"</div>\n"
+			"</form>\n"
+		"</div>\n";
+}
+
+void Sim::Contest::deleteFile(const string& id, const string& name) {
+	if (!r_path_->admin_access)
+		return sim_.error403();
+
+	FormValidator fv(sim_.req_->form_data);
+	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
+		try {
+			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
+				prepareStatement("DELETE FROM files WHERE id=?"));
+			pstmt->setString(1, id);
+
+			if (pstmt->executeUpdate() != 1)
+				return sim_.error500();
+
+			if (blockSignals(remove, concat("files/", id).c_str()))
+				throw std::runtime_error(concat("remove()", error(errno)));
+
+			return sim_.redirect(concat("/c/", r_path_->round_id, "/files"));
+
+		} catch (const std::exception& e) {
+			fv.addError("Internal server error");
+			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+				" -> ", e.what());
+		}
+
+	TemplateWithMenu templ(*this, "Delete file");
+	templ.printRoundPath(*r_path_, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+		"<h1>Delete file</h1>\n"
+		"<form method=\"post\">\n"
+			"<label class=\"field\">Are you sure to delete file "
+				"<a href=\"/file/" << id << "/edit\">"
+				<< htmlSpecialChars(name) << "</a>?</label>\n"
+			"<div class=\"submit-yes-no\">\n"
+				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
+					"Yes, I'm sure</button>\n"
+				"<a class=\"btn\" href=\"" << sim_.req_->headers.get("Referer")
+					<< "/\">No, go back</a>\n"
+			"</div>\n"
+		"</form>\n"
+	"</div>\n";
+}
+
+void Sim::Contest::addFile() {
+	if (!r_path_->admin_access)
+		return sim_.error403();
+
+	FormValidator fv(sim_.req_->form_data);
+	string file_name, description;
+	if (sim_.req_->method == server::HttpRequest::POST) {
+		string user_file_name;
+		// Validate all fields
+		fv.validate(file_name, "file-name", "File name", 128);
+
+		fv.validateNotBlank(user_file_name, "file", "File");
+
+		fv.validate(description, "description", "Description", 512);
+
+		if (file_name.empty())
+			file_name = user_file_name;
+
+		// If all fields are OK
+		if (fv.noErrors())
+			try {
+				constexpr size_t FILE_ID_LENGTH = 30;
+				string id(FILE_ID_LENGTH, '0');
+				string current_time = date("%Y-%m-%d %H:%M:%S");
+				// Insert file to `files`
+				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
+					prepareStatement("INSERT IGNORE files "
+						"(id, round_id, name, description, modified) "
+						"VALUES(?,NULL,?,?,?)"));
+				do {
+					// TODO: looks the same as Sim::Session::generateId()
+					constexpr char t[] = "abcdefghijklmnopqrstuvwxyz"
+						"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+					constexpr size_t len = sizeof(t) - 1;
+
+					// Generate random id of length FILE_ID_LENGTH
+					for (char& c : id)
+						c = t[getRandom<int>(0, len - 1)];
+
+					pstmt->setString(1, id);
+					pstmt->setString(2, file_name);
+					pstmt->setString(3, description);
+					pstmt->setString(4, current_time);
+				} while (pstmt->executeUpdate() == 0);
+
+				// Move file
+				SignalBlocker signal_guard;
+				if (move(fv.getFilePath("file"), concat("files/", id)))
+					throw std::runtime_error("move()" + error(errno));
+
+				pstmt.reset(sim_.db_conn->prepareStatement(
+					"UPDATE files SET round_id=? WHERE id=?"));
+				pstmt->setString(1, r_path_->round_id);
+				pstmt->setString(2, id);
+
+				if (pstmt->executeUpdate() != 1) {
+					(void)remove(concat("files/", id).c_str());
+					throw std::runtime_error("Failed to update inserted file");
+				}
+				signal_guard.unblock();
+
+				return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
+
+			} catch (const std::exception& e) {
+				fv.addError("Internal server error");
+				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
+					" -> ", e.what());
+			}
+	}
+
+	TemplateWithMenu templ(*this, "Add file");
+	templ.printRoundPath(*r_path_, "");
+	templ << fv.errors() << "<div class=\"form-container\">\n"
+			"<h1>Add file</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+				// File name
+				"<div class=\"field-group\">\n"
+					"<label>File name</label>\n"
+					"<input type=\"text\" name=\"file-name\" value=\""
+						<< htmlSpecialChars(file_name) << "\" size=\"24\" "
+						"maxlength=\"128\" "
+						"placeholder=\"The same as uploaded file\">\n"
+				"</div>\n"
+				// File
+				"<div class=\"field-group\">\n"
+					"<label>File</label>\n"
+					"<input type=\"file\" name=\"file\" required>\n"
+				"</div>\n"
+				// Description
+				"<div class=\"field-group\">\n"
+					"<label>Description</label>\n"
+					"<textarea name=\"description\" maxlength=\"512\">"
+						<< htmlSpecialChars(description) << "</textarea>"
+				"</div>\n"
+				"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
+			"</form>\n"
+		"</div>\n";
+}
+
 void Sim::Contest::files(bool admin_view) {
 	if (r_path_->type != RoundType::CONTEST)
 		return sim_.error404();
 
-	// Add
-	if (0 == compareTo(sim_.req_->target, arg_beg, '/', "add")) {
-		if (!admin_view)
-			return sim_.error403();
-
-		FormValidator fv(sim_.req_->form_data);
-		string file_name, description;
-		if (sim_.req_->method == server::HttpRequest::POST) {
-			string user_file_name;
-			// Validate all fields
-			fv.validate(file_name, "file-name", "File name", 128);
-
-			fv.validateNotBlank(user_file_name, "file", "File");
-
-			fv.validate(description, "description", "Description", 512);
-
-			if (file_name.size())
-				user_file_name = file_name;
-
-			// If all fields are OK
-			if (fv.noErrors())
-				try {
-					constexpr size_t FILE_ID_LENGTH = 30;
-					string id(FILE_ID_LENGTH, '0');
-					string current_time = date("%Y-%m-%d %H:%M:%S");
-					// Insert file to `files`
-					unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-						prepareStatement("INSERT IGNORE files "
-							"(id, round_id, name, description, time_added) "
-							"VALUES(?,NULL,?,?,?)"));
-					do {
-						// TODO: looks the same as Sim::Session::generateId()
-						constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFG"
-							"HIJKLMNOPQRSTUVWXYZ0123456789";
-						constexpr size_t len = sizeof(t) - 1;
-
-						// Generate random id of length FILE_ID_LENGTH
-						for (char& c : id)
-							c = t[getRandom<int>(0, len - 1)];
-
-						pstmt->setString(1, id);
-						pstmt->setString(2, user_file_name);
-						pstmt->setString(3, description);
-						pstmt->setString(4, current_time);
-					} while (pstmt->executeUpdate() == 0);
-
-					// Move file
-					SignalBlocker signal_guard;
-					if (move(fv.getFilePath("file"), concat("files/", id)))
-						throw std::runtime_error("move()" + error(errno));
-
-					pstmt.reset(sim_.db_conn->prepareStatement(
-						"UPDATE files SET round_id=? WHERE id=?"));
-					pstmt->setString(1, r_path_->round_id);
-					pstmt->setString(2, id);
-
-					if (pstmt->executeUpdate() != 1) {
-						(void)remove(concat("files/", id).c_str());
-						throw std::runtime_error("Failed to update inserted "
-							"file");
-					}
-					signal_guard.unblock();
-
-					return sim_.redirect(sim_.req_->target.substr(0,
-						arg_beg - 1));
-
-				} catch (const std::exception& e) {
-					fv.addError("Internal server error");
-					errlog("Caught exception: ", __FILE__, ':',
-						toString(__LINE__), " -> ", e.what());
-				}
-		}
-
-		TemplateWithMenu templ(*this, "Add file");
-		templ.printRoundPath(*r_path_, "");
-		templ << fv.errors() << "<div class=\"form-container\">\n"
-				"<h1>Add file</h1>"
-				"<form method=\"post\" enctype=\"multipart/form-data\">\n"
-					// File name
-					"<div class=\"field-group\">\n"
-						"<label>File name</label>\n"
-						"<input type=\"text\" name=\"file-name\" value=\""
-							<< htmlSpecialChars(file_name) << "\" size=\"24\" "
-							"maxlength=\"128\" "
-							"placeholder=\"The same as uploaded file\">\n"
-					"</div>\n"
-					// File
-					"<div class=\"field-group\">\n"
-						"<label>File</label>\n"
-						"<input type=\"file\" name=\"file\" required>\n"
-					"</div>\n"
-					// Description
-					"<div class=\"field-group\">\n"
-						"<label>Description</label>\n"
-						"<textarea name=\"description\" value=\""
-							<< htmlSpecialChars(description) << "\" "
-							"maxlength=\"512\">\n"
-						"</textarea>"
-					"</div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
-				"</form>\n"
-			"</div>\n";
-		return;
-	}
+	// Add file
+	if (0 == compareTo(sim_.req_->target, arg_beg, '/', "add"))
+		return addFile();
 
 	TemplateWithMenu templ(*this, "Files");
 	if (admin_view)
@@ -2350,8 +2474,8 @@ void Sim::Contest::files(bool admin_view) {
 
 	try {
 		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
-			"SELECT id, time_added, name, description FROM files "
-			"WHERE round_id=? ORDER BY time_added DESC"));
+			"SELECT id, modified, name, description FROM files "
+			"WHERE round_id=? ORDER BY modified DESC"));
 		pstmt->setString(1, r_path_->round_id);
 		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
 
@@ -2363,7 +2487,7 @@ void Sim::Contest::files(bool admin_view) {
 		templ << "<table class=\"files\">\n"
 			"<thead>"
 				"<tr>"
-					"<th class=\"time\">Time added</th>"
+					"<th class=\"time\">Modified</th>"
 					"<th class=\"name\">File name</th>"
 					"<th class=\"description\">Description</th>"
 					"<th class=\"actions\">Actions</th>"
@@ -2375,14 +2499,17 @@ void Sim::Contest::files(bool admin_view) {
 			string id = res->getString(1);
 			templ << "<tr>"
 				"<td>" << res->getString(2) << "</td>"
-				"<td><a href=\"/file/" << id << "\">" << res->getString(3)
-					<< "</a></td>"
-				"<td>" << res->getString(4) << "</td>"
+				"<td><a href=\"/file/" << id << "\">" << htmlSpecialChars(
+					StringView(res->getString(3))) << "</a></td>"
+				"<td>" << htmlSpecialChars(StringView(res->getString(4)))
+					<< "</td>"
 				"<td><a class=\"btn-small\" href=\"/file/" << id
 					<< "\">Download</a>";
 
 			if (admin_view)
-				templ << "<a class=\"btn-small red\" href=\"/file/" << id
+				templ << "<a class=\"btn-small blue\" href=\"/file/" << id
+					<< "/edit\">Edit</a>"
+					"<a class=\"btn-small red\" href=\"/file/" << id
 					<< "/delete\">Delete</a>";
 
 			templ << "</td>"

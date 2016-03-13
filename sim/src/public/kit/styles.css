@@ -538,7 +538,7 @@ th {
 }
 .btn.red:active,
 .btn-small.red:active {
-	background-color: #ce4741;
+	background-color: #ca4741;
 	background-image: none;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
@@ -1194,6 +1194,9 @@ pre .yellow {
 	margin: 0 10px 0 0;
 	font-size: 14px;
 	text-align: right;
+}
+.form-container form > .field-group > textarea {
+	min-width: 65%;
 }
 .form-container form input[type="submit"] {
 	margin-left: 140px;
