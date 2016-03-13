@@ -241,9 +241,9 @@ int main(int argc, char **argv) {
 			"`round_id` int unsigned NULL,\n"
 			"`name` VARCHAR(128) NOT NULL,\n"
 			"`description` VARCHAR(512) NOT NULL,\n"
-			"`time_added` datetime NOT NULL,\n"
+			"`modified` datetime NOT NULL,\n"
 			"PRIMARY KEY (id),\n"
-			"KEY (round_id, time_added)\n"
+			"KEY (round_id, modified)\n"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	if (error)

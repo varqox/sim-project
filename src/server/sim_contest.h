@@ -115,6 +115,12 @@ private:
 
 	void file();
 
+	void editFile(const std::string& id, std::string name);
+
+	void deleteFile(const std::string& id, const std::string& name);
+
+	void addFile();
+
 	void files(bool admin_view);
 
 	// Contest utilities (sim_contest_utility.cc)
