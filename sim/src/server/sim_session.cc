@@ -6,7 +6,6 @@
 #include <simlib/time.h>
 
 using std::string;
-using std::unique_ptr;
 
 Sim::Session::State Sim::Session::open() {
 	if (state_ != CLOSED)
@@ -20,27 +19,27 @@ Sim::Session::State Sim::Session::open() {
 		return FAIL;
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement(
+		DB::Statement stmt = sim_.db_conn.prepare(
 				"SELECT user_id, data, type, username, ip, user_agent "
 				"FROM session s, users u "
-				"WHERE s.id=? AND time>=? AND u.id=s.user_id"));
-		pstmt->setString(1, id_);
-		pstmt->setString(2, date("%Y-%m-%d %H:%M:%S",
+				"WHERE s.id=? AND time>=? AND u.id=s.user_id");
+		stmt.bind(1, id_);
+		stmt.bind(2, date("%Y-%m-%d %H:%M:%S",
 			time(nullptr) - SESSION_MAX_LIFETIME));
 
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-		if (res->next()) {
-			user_id = res->getString(1);
-			data = res->getString(2);
-			user_type = res->getUInt(3);
-			username = res->getString(4);
+		DB::Result res = stmt.executeQuery();
+		if (res.next()) {
+			user_id = res[1];
+			data = res[2];
+			user_type = res.getUInt(3);
+			username = res[4];
 
 			// If no session injection
-			if (sim_.client_ip_ == res->getString(5) &&
-					sim_.req_->headers.isEqualTo("User-Agent",
-						res->getString(6)))
+			if (sim_.client_ip_ == res[5] &&
+				sim_.req_->headers.isEqualTo("User-Agent", res[6]))
+			{
 				return (state_ = OK);
+			}
 		}
 
 	} catch (const std::exception& e) {
@@ -69,26 +68,23 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 	close();
 	state_ = FAIL;
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement("INSERT session "
-				"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)"));
+		DB::Statement stmt = sim_.db_conn.prepare("INSERT session "
+				"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)");
 
 		// Remove obsolete sessions
-		unique_ptr<sql::Statement>(sim_.db_conn->createStatement())->
-			executeUpdate(concat("DELETE FROM `session` WHERE time<'",
-				date("%Y-%m-%d %H:%M:%S'",
-					time(nullptr) - SESSION_MAX_LIFETIME)));
-		pstmt->setString(2, _user_id);
-		pstmt->setString(3, sim_.client_ip_);
-		pstmt->setString(4, sim_.req_->headers.get("User-Agent"));
-		pstmt->setString(5, date("%Y-%m-%d %H:%M:%S"));
+		sim_.db_conn.executeUpdate(concat("DELETE FROM `session` WHERE time<'",
+			date("%Y-%m-%d %H:%M:%S'", time(nullptr) - SESSION_MAX_LIFETIME)));
+		stmt.bind(2, _user_id);
+		stmt.bind(3, sim_.client_ip_);
+		stmt.bind(4, sim_.req_->headers.get("User-Agent"));
+		stmt.bind(5, date("%Y-%m-%d %H:%M:%S"));
 
 		for (;;) {
 			id_ = generateId();
-			pstmt->setString(1, id_);
+			stmt.bind(1, id_); // TODO: parameters preserve!
 
 			try {
-				pstmt->executeUpdate(); // TODO: INSERT IGNORE
+				stmt.executeUpdate(); // TODO: INSERT IGNORE
 				break;
 
 			} catch (...) {
@@ -113,10 +109,10 @@ void Sim::Session::destroy() {
 		return;
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement("DELETE FROM session WHERE id=?"));
-		pstmt->setString(1, id_);
-		pstmt->executeUpdate();
+		DB::Statement stmt = sim_.db_conn.prepare(
+			"DELETE FROM session WHERE id=?");
+		stmt.bind(1, id_);
+		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
 		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
@@ -134,11 +130,11 @@ void Sim::Session::close() {
 		return;
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement("UPDATE session SET data=? WHERE id=?"));
-		pstmt->setString(1, data);
-		pstmt->setString(2, id_);
-		pstmt->executeUpdate();
+		DB::Statement stmt = sim_.db_conn.prepare(
+			"UPDATE session SET data=? WHERE id=?");
+		stmt.bind(1, data);
+		stmt.bind(2, id_);
+		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
 		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",

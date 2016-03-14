@@ -1,4 +1,5 @@
 #include <cppconn/driver.h>
+#include <mutex>
 #include <sim/db.h>
 #include <simlib/logger.h>
 
@@ -7,7 +8,6 @@ using std::unique_ptr;
 
 namespace DB {
 
-std::mutex Connection::create_connection_lock;
 
 Connection::Connection(const string& host, const string& user,
 		const string& password, const string& database)
@@ -19,9 +19,11 @@ Connection::Connection(const string& host, const string& user,
 void Connection::connect() {
 	// We have to serialize creating connections, because MySQL Connector C++
 	// can crush if we won't guard it
-	create_connection_lock.lock();
-	conn_.reset(get_driver_instance()->connect(host_, user_, password_));
-	create_connection_lock.unlock();
+	static std::mutex lock;
+	{
+		std::lock_guard<std::mutex> guard(lock);
+		conn_.reset(get_driver_instance()->connect(host_, user_, password_));
+	}
 
 	conn_->setSchema(database_);
 }

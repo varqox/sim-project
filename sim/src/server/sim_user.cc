@@ -10,7 +10,6 @@
 
 using std::map;
 using std::string;
-using std::unique_ptr;
 
 struct Sim::User::Data {
 	string user_id, username, first_name, last_name, email;
@@ -129,20 +128,20 @@ void Sim::User::handle() {
 	arg_beg += res_code + 1;
 
 	// Get user information
-	unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+	DB::Statement stmt = sim_.db_conn.prepare(
 		"SELECT username, first_name, last_name, email, type "
-		"FROM users WHERE id=?"));
-	pstmt->setString(1, data.user_id);
+		"FROM users WHERE id=?");
+	stmt.bind(1, data.user_id);
 
-	unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-	if (res->next()) {
-		data.username = res->getString(1);
-		data.first_name = res->getString(2);
-		data.last_name = res->getString(3);
-		data.email = res->getString(4);
-		data.user_type = res->getUInt(5);
-	} else
+	DB::Result res = stmt.executeQuery();
+	if (!res.next())
 		return sim_.error404();
+
+	data.username = res[1];
+	data.first_name = res[2];
+	data.last_name = res[3];
+	data.email = res[4];
+	data.user_type = res.getUInt(5);
 
 	// TODO: write test suite!
 	// Check permissions
@@ -177,22 +176,20 @@ void Sim::User::login() {
 
 		if (fv.noErrors())
 			try {
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("SELECT id, salt, password FROM `users` "
-						"WHERE username=?"));
-				pstmt->setString(1, username);
+				DB::Statement stmt = sim_.db_conn.prepare(
+					"SELECT id, salt, password FROM `users` WHERE username=?");
+				stmt.bind(1, username);
 
-				unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-				if (res->next()) {
-					if (!slowEqual(sha3_512(res->getString(2) + password),
-							res->getString(3)))
+				DB::Result res = stmt.executeQuery();
+				if (res.next()) {
+					if (!slowEqual(sha3_512(res[2] + password), res[3]))
 						goto label_invalid;
 
 					// Delete old session
 					if (sim_.session->open() == Session::OK)
 						sim_.session->destroy();
 					// Create new
-					sim_.session->create(res->getString(1));
+					sim_.session->create(res[1]);
 
 					// If there is redirection string, redirect
 					if (sim_.req_->target.size() > 6)
@@ -265,25 +262,25 @@ void Sim::User::signUp() {
 				fillRandomly(salt_bin, 32);
 				string salt = toHex(salt_bin, 32);
 
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT IGNORE `users` (username, "
+				DB::Statement stmt = sim_.db_conn.prepare(
+					"INSERT IGNORE `users` (username, "
 							"first_name, last_name, email, salt, password) "
-						"VALUES(?, ?, ?, ?, ?, ?)"));
-				pstmt->setString(1, username);
-				pstmt->setString(2, first_name);
-				pstmt->setString(3, last_name);
-				pstmt->setString(4, email);
-				pstmt->setString(5, salt);
-				pstmt->setString(6, sha3_512(salt + password1));
+					"VALUES(?, ?, ?, ?, ?, ?)");
+				stmt.bind(1, username);
+				stmt.bind(2, first_name);
+				stmt.bind(3, last_name);
+				stmt.bind(4, email);
+				stmt.bind(5, salt);
+				stmt.bind(6, sha3_512(salt + password1));
 
-				if (pstmt->executeUpdate() == 1) {
-					pstmt.reset(sim_.db_conn->prepareStatement(
-						"SELECT id FROM `users` WHERE username=?"));
-					pstmt->setString(1, username);
+				if (stmt.executeUpdate() == 1) {
+					stmt = sim_.db_conn.prepare(
+						"SELECT id FROM `users` WHERE username=?");
+					stmt.bind(1, username);
 
-					unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-					if (res->next())
-						sim_.session->create(res->getString(1));
+					DB::Result res = stmt.executeQuery();
+					if (res.next())
+						sim_.session->create(res[1]);
 
 					return sim_.redirect("/");
 				}
@@ -351,10 +348,10 @@ void Sim::User::listUsers() {
 	Template templ(sim_, "Users list", ".body{margin-left:30px}");
 	templ << "<h1>Users</h1>";
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+		DB::Statement stmt = sim_.db_conn.prepare(
 			"SELECT id, username, first_name, last_name, email, type "
-			"FROM users ORDER BY id"));
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+			"FROM users ORDER BY id");
+		DB::Result res = stmt.executeQuery();
 
 		templ << "<table class=\"users\">\n"
 			"<thead>\n"
@@ -369,20 +366,20 @@ void Sim::User::listUsers() {
 				"</tr>\n"
 			"</thead>\n"
 			"<tbody>\n";
-		while (res->next()) {
-			string uid = res->getString(1);
-			uint utype = res->getUInt(6);
+		while (res.next()) {
+			string uid = res[1];
+			uint utype = res.getUInt(6);
 			uint perm = permissions(sim_.session->user_id,
-				sim_.session->user_type, res->getString(1), utype);
+				sim_.session->user_type, res[1], utype);
 			if (~perm & PERM_VIEW)
 				continue;
 
 			templ << "<tr>"
 				"<td>" << uid << "</td>"
-				"<td>" << res->getString(2) << "</td>"
-				"<td>" << res->getString(3) << "</td>"
-				"<td>" << res->getString(4) << "</td>"
-				"<td>" << res->getString(5) << "</td>"
+				"<td>" << htmlSpecialChars(res[2]) << "</td>"
+				"<td>" << htmlSpecialChars(res[3]) << "</td>"
+				"<td>" << htmlSpecialChars(res[4]) << "</td>"
+				"<td>" << htmlSpecialChars(res[5]) << "</td>"
 				"<td>" << (utype >= 2 ? "Normal"
 					: (utype == 1 ? "Teacher" : "Admin")) << "</td>"
 				"<td>"
@@ -447,18 +444,17 @@ void Sim::User::editProfile(Data& data) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("UPDATE IGNORE users "
+				DB::Statement stmt = sim_.db_conn.prepare("UPDATE IGNORE users "
 					"SET username=?, first_name=?, last_name=?, email=?, "
-					"type=? WHERE id=?"));
-				pstmt->setString(1, new_username);
-				pstmt->setString(2, data.first_name);
-				pstmt->setString(3, data.last_name);
-				pstmt->setString(4, data.email);
-				pstmt->setUInt(5, new_user_type);
-				pstmt->setString(6, data.user_id);
+					"type=? WHERE id=?");
+				stmt.bind(1, new_username);
+				stmt.bind(2, data.first_name);
+				stmt.bind(3, data.last_name);
+				stmt.bind(4, data.email);
+				stmt.bind(5, new_user_type);
+				stmt.bind(6, data.user_id);
 
-				if (pstmt->executeUpdate() == 1) {
+				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
 					// Update user info
 					data.username = new_username;
@@ -595,18 +591,16 @@ void Sim::User::changePassword(Data& data) {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("SELECT salt, password FROM users "
-						"WHERE id=?"));
-				pstmt->setString(1, data.user_id);
+				DB::Statement stmt = sim_.db_conn.prepare(
+					"SELECT salt, password FROM users WHERE id=?");
+				stmt.bind(1, data.user_id);
 
-				unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-				if (!res->next()) {
+				DB::Result res = stmt.executeQuery();
+				if (!res.next()) {
 					fv.addError("Cannot get user password");
 
 				} else if (~data.permissions & PERM_ADMIN_CHANGE_PASS &&
-					!slowEqual(sha3_512(res->getString(1) + old_password),
-						res->getString(2)))
+					!slowEqual(sha3_512(res[1] + old_password), res[2]))
 				{
 					fv.addError("Wrong old password");
 
@@ -615,13 +609,13 @@ void Sim::User::changePassword(Data& data) {
 					fillRandomly(salt_bin, 32);
 					string salt = toHex(salt_bin, 32);
 
-					pstmt.reset(sim_.db_conn->prepareStatement(
-						"UPDATE users SET salt=?, password=? WHERE id=?"));
-					pstmt->setString(1, salt);
-					pstmt->setString(2, sha3_512(salt + password1));
-					pstmt->setString(3, data.user_id);
+					stmt = sim_.db_conn.prepare(
+						"UPDATE users SET salt=?, password=? WHERE id=?");
+					stmt.bind(1, salt);
+					stmt.bind(2, sha3_512(salt + password1));
+					stmt.bind(3, data.user_id);
 
-					if (pstmt->executeUpdate() == 1)
+					if (stmt.executeUpdate() == 1)
 						fv.addError("Password changed");
 				}
 
@@ -669,32 +663,30 @@ void Sim::User::deleteAccount(Data& data) {
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
 			// Change contests and problems owner id to 1
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("UPDATE rounds r, problems p "
+			DB::Statement stmt = sim_.db_conn.prepare("UPDATE rounds r, problems p "
 				"SET r.owner=1, p.owner=1 "
-				"WHERE r.owner=? OR p.owner=?"));
-			pstmt->setString(1, data.user_id);
-			pstmt->setString(2, data.user_id);
-			pstmt->executeUpdate();
+				"WHERE r.owner=? OR p.owner=?");
+			stmt.bind(1, data.user_id);
+			stmt.bind(2, data.user_id);
+			stmt.executeUpdate();
 
 			// Delete submissions
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM submissions WHERE user_id=?"));
-			pstmt->setString(1, data.user_id);
-			pstmt->executeUpdate();
+			stmt = sim_.db_conn.prepare(
+				"DELETE FROM submissions WHERE user_id=?");
+			stmt.bind(1, data.user_id);
+			stmt.executeUpdate();
 
 			// Delete from users_to_contests
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM users_to_contests WHERE user_id=?"));
-			pstmt->setString(1, data.user_id);
-			pstmt->executeUpdate();
+			stmt = sim_.db_conn.prepare(
+				"DELETE FROM users_to_contests WHERE user_id=?");
+			stmt.bind(1, data.user_id);
+			stmt.executeUpdate();
 
 			// Delete user
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM users WHERE id=?"));
-			pstmt->setString(1, data.user_id);
+			stmt = sim_.db_conn.prepare("DELETE FROM users WHERE id=?");
+			stmt.bind(1, data.user_id);
 
-			if (pstmt->executeUpdate() > 0) {
+			if (stmt.executeUpdate()) {
 				if (data.user_id == sim_.session->user_id)
 					sim_.session->destroy();
 				return sim_.redirect("/");
