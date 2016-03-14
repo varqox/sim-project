@@ -1,4 +1,3 @@
-#include <cppconn/prepared_statement.h>
 #include <sim/db.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
@@ -60,6 +59,30 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
+struct TryCreateTable {
+	bool error = false;
+	DB::Connection& conn_;
+
+	TryCreateTable(DB::Connection& conn) : conn_(conn) {}
+
+	template<class Func>
+	void operator()(const char* table_name, const char* query, Func f) noexcept
+	{
+		try {
+			conn_.executeUpdate(query);
+			f();
+		} catch (const std::exception& e) {
+			errlog("\033[31mFailed to create table `", table_name, "`\033[m - ",
+				e.what());
+			error = true;
+		}
+	}
+
+	void operator()(const char* table_name, const char* query) noexcept {
+		return operator()(table_name, query, []{});
+	}
+};
+
 int main(int argc, char **argv) {
 	errlog.label(false);
 
@@ -99,19 +122,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	bool error = false;
-	auto tryCreateTable = [&](const char* table_name, const char* query,
-		std::function<void()> func = []{}) noexcept
-	{
-		try {
-			conn.executeUpdate(query);
-			func();
-		} catch (const std::exception& e) {
-			errlog("\033[31mFailed to create table `", table_name, "`\033[m - ",
-				e.what());
-			error = true;
-		}
-	};
+	TryCreateTable tryCreateTable(conn);
 
 	tryCreateTable("users",
 		"CREATE TABLE IF NOT EXISTS `users` (\n"
@@ -156,8 +167,7 @@ int main(int argc, char **argv) {
 	tryCreateTable("problems",
 		"CREATE TABLE IF NOT EXISTS `problems` (\n"
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
-			"`access` enum('public', 'private') COLLATE utf8_bin NOT NULL "
-				"DEFAULT 'private',\n"
+			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,\n"
 			"`name` VARCHAR(128) NOT NULL,\n"
 			"`tag` CHAR(4) NOT NULL,\n"
 			"`owner` int unsigned NOT NULL,\n"
@@ -172,10 +182,10 @@ int main(int argc, char **argv) {
 			"`parent` int unsigned NULL DEFAULT NULL,\n"
 			"`grandparent` int unsigned NULL DEFAULT NULL,\n"
 			"`problem_id` int unsigned DEFAULT NULL,\n"
-			"`access` enum('public', 'private') COLLATE utf8_bin NOT NULL DEFAULT 'private',\n"
 			"`name` VARCHAR(128) NOT NULL,\n"
 			"`owner` int unsigned NOT NULL,\n"
 			"`item` int unsigned NOT NULL,\n"
+			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,\n"
 			"`visible` BOOLEAN NOT NULL DEFAULT FALSE,\n"
 			"`show_ranking` BOOLEAN NOT NULL DEFAULT FALSE,\n"
 			"`begins` datetime NULL DEFAULT NULL,\n"
@@ -184,7 +194,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (`id`),\n"
 			"KEY (`parent`, `visible`),\n"
 			"KEY (`parent`, `begins`),\n"
-			"KEY (`parent`, `access`),\n"
+			"KEY (`parent`, `is_public`),\n"
 			"KEY (`grandparent`, `item`),\n"
 			"KEY (`owner`)\n"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
@@ -244,7 +254,7 @@ int main(int argc, char **argv) {
 			"KEY (round_id, modified)\n"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-	if (error)
+	if (tryCreateTable.error)
 		return 6;
 
 	return 0;

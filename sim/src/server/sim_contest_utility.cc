@@ -1,7 +1,6 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
-#include <cppconn/prepared_statement.h>
 #include <simlib/logger.h>
 #include <simlib/time.h>
 
@@ -32,8 +31,8 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 
 	try {
 		DB::Statement stmt = sim_.db_conn.prepare(
-			"SELECT id, parent, problem_id, access, name, "
-				"owner, visible, show_ranking, begins, ends, full_results "
+			"SELECT id, parent, problem_id, name, owner, is_public, visible, "
+				"show_ranking, begins, ends, full_results "
 			"FROM rounds "
 			"WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR "
 				"id=(SELECT grandparent FROM rounds WHERE id=?)");
@@ -48,9 +47,9 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 			r->id = res[1];
 			r->parent = res[2];
 			r->problem_id = res[3];
-			r->access = res[4];
-			r->name = res[5];
-			r->owner = res[6];
+			r->name = res[4];
+			r->owner = res[5];
+			r->is_public = res.getBool(6);
 			r->visible = res.getBool(7);
 			r->show_ranking = res.getBool(8);
 			r->begins = res[9];
@@ -85,7 +84,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		// Check access
 		r_path->admin_access = isAdmin(sim_, *r_path); // TODO: get data in above query!
 		if (!r_path->admin_access) {
-			if (r_path->contest->access == "private") {
+			if (!r_path->contest->is_public) {
 				// Check access to contest
 				if (sim_.session->open() != Sim::Session::OK) {
 					sim_.redirect("/login" + sim_.req_->target);
@@ -267,7 +266,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 						"full_results FROM rounds WHERE parent=? ORDER BY item"
 				: "SELECT id, name, item, visible, begins, ends, full_results "
 					"FROM rounds WHERE parent=? AND "
-						"(visible=1 OR begins IS NULL OR begins<=?) "
+						"(visible IS TRUE OR begins IS NULL OR begins<=?) "
 					"ORDER BY item");
 			stmt.bind(1, r_path.contest->id);
 			if (!admin_view)

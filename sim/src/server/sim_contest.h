@@ -5,9 +5,9 @@
 class Sim::Contest {
 private:
 	struct Round {
-		std::string id, parent, problem_id, access, name, owner;
+		std::string id, parent, problem_id, name, owner;
 		std::string begins, ends, full_results;
-		bool visible, show_ranking;
+		bool is_public, visible, show_ranking;
 	};
 
 	struct Subround {
