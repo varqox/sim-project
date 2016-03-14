@@ -1,6 +1,5 @@
 #include "sim_session.h"
 
-#include <cppconn/prepared_statement.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/time.h>

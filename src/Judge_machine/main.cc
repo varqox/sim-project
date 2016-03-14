@@ -1,6 +1,5 @@
 #include "judge.h"
 
-#include <cppconn/prepared_statement.h>
 #include <limits.h>
 #include <sim/db.h>
 #include <simlib/logger.h>

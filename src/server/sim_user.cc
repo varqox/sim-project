@@ -3,7 +3,6 @@
 #include "sim_template.h"
 #include "sim_user.h"
 
-#include <cppconn/prepared_statement.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>

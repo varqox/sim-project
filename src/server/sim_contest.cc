@@ -2,7 +2,6 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
-#include <cppconn/prepared_statement.h>
 #include <simlib/config_file.h>
 #include <simlib/filesystem.h>
 #include <simlib/logger.h>
@@ -29,8 +28,8 @@ void Sim::Contest::handle() {
 
 				stmt = sim_.db_conn.prepare(
 					"(SELECT r.id, r.name FROM rounds r, users u "
-						"WHERE parent IS NULL AND r.owner=u.id AND "
-							"(r.access='public' OR r.owner=? OR u.type>?))"
+						"WHERE parent IS NULL AND owner=u.id AND "
+							"(is_public IS TRUE OR owner=? OR u.type>?))"
 					" UNION "
 					"(SELECT id, name FROM rounds, users_to_contests "
 						"WHERE user_id=? AND contest_id=id) ORDER BY id");
@@ -39,9 +38,8 @@ void Sim::Contest::handle() {
 				stmt.bind(3, sim_.session->user_id);
 
 			} else
-				stmt = sim_.db_conn.prepare(
-					"SELECT id, name FROM rounds "
-					"WHERE parent IS NULL AND access='public' ORDER BY id");
+				stmt = sim_.db_conn.prepare("SELECT id, name FROM rounds "
+					"WHERE parent IS NULL AND is_public IS TRUE ORDER BY id");
 
 			// List them
 			DB::Result res = stmt.executeQuery();
@@ -229,10 +227,10 @@ void Sim::Contest::addContest() {
 		if (fv.noErrors())
 			try {
 				DB::Statement stmt = sim_.db_conn.prepare("INSERT rounds"
-						"(access, name, owner, item, show_ranking) "
+						"(is_public, name, owner, item, show_ranking) "
 					"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
 						"WHERE parent IS NULL");
-				stmt.bind(1, is_public ? "public" : "private");
+				stmt.bind(1, is_public);
 				stmt.bind(2, name);
 				stmt.bind(3, sim_.session->user_id);
 				stmt.bind(4, show_ranking);
@@ -638,32 +636,22 @@ void Sim::Contest::editContest() {
 		try {
 			DB::Statement stmt;
 			// Check if user has the ability to make contest public
-			if (is_public && sim_.session->user_type > 0) {
-				stmt = sim_.db_conn.prepare(
-					"SELECT access FROM rounds WHERE id=?");
-				stmt.bind(1, r_path_->round_id);
-
-				DB::Result res = stmt.executeQuery();
-				if (!res.next())
-					throw std::runtime_error("Failed to get contest access "
-						"field");
-
-				// Only admins can make contest public
-				if (res[1] == "private") {
-					is_public = false;
-					fv.addError("Only admins can make contest public");
-				}
+			if (is_public && sim_.session->user_type > 0
+				&& !r_path_->contest->is_public)
+			{
+				is_public = false;
+				fv.addError("Only admins can make contest public");
 			}
 
 			// If all fields are ok
 			if (fv.noErrors()) {
 				stmt = sim_.db_conn.prepare("UPDATE rounds r, "
 						"(SELECT id FROM users WHERE username=?) u "
-					"SET name=?, owner=u.id, access=?, show_ranking=? "
+					"SET name=?, owner=u.id, is_public=?, show_ranking=? "
 					"WHERE r.id=?");
 				stmt.bind(1, owner);
 				stmt.bind(2, name);
-				stmt.bind(3, is_public ? "public" : "private");
+				stmt.bind(3, is_public);
 				stmt.bind(4, show_ranking);
 				stmt.bind(5, r_path_->round_id);
 
@@ -675,7 +663,7 @@ void Sim::Contest::editContest() {
 						return; // getRoundPath has already set error
 
 				} /*else // TODO: make it working
-					*/fv.addError("User not found");
+					fv.addError("User not found");*/
 			}
 
 		} catch (const std::exception& e) {
@@ -687,8 +675,7 @@ void Sim::Contest::editContest() {
 
 	// Get contest information
 	DB::Statement stmt = sim_.db_conn.prepare(
-		"SELECT u.username, r.access FROM rounds r, users u "
-			"WHERE r.id=? AND r.owner=u.id");
+		"SELECT u.username FROM rounds r, users u WHERE r.id=? AND owner=u.id");
 	stmt.bind(1, r_path_->round_id);
 
 	DB::Result res = stmt.executeQuery();
@@ -698,7 +685,7 @@ void Sim::Contest::editContest() {
 
 	name = r_path_->contest->name;
 	owner = res[1];
-	is_public = (res[2] == "public");
+	is_public = r_path_->contest->is_public;
 	show_ranking = r_path_->contest->show_ranking;
 
 	TemplateWithMenu templ(*this, "Edit contest");

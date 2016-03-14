@@ -26,3 +26,7 @@ src/CTH
 src/judge-machine
 src/setup-installation
 src/sim-server
+
+# Coverity
+cov-int/
+sim-cov-build.tar.gz
