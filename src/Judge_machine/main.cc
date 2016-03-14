@@ -8,7 +8,6 @@
 #include <sys/inotify.h>
 
 using std::string;
-using std::unique_ptr;
 
 static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1 s
 static DB::Connection db_conn;
@@ -17,32 +16,29 @@ unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static void processSubmissionQueue() {
 	try {
-		unique_ptr<sql::Statement> stmt(db_conn->createStatement());
-
 		// While submission queue is not empty
 		for (;;) {
 			// TODO: fix bug (rejudged submissions)
-			unique_ptr<sql::ResultSet> res(stmt->executeQuery(
+			DB::Result res = db_conn.executeQuery(
 				"SELECT id, user_id, round_id, problem_id FROM submissions "
-				"WHERE status='waiting' ORDER BY queued LIMIT 10"));
-			if (!res->next())
+				"WHERE status='waiting' ORDER BY queued LIMIT 10");
+			if (!res.next())
 				return; // Queue is empty
 
 			do {
-				string submission_id = res->getString(1);
-				string user_id = res->getString(2);
-				string round_id = res->getString(3);
-				string problem_id = res->getString(4);
+				string submission_id = res[1];
+				string user_id = res[2];
+				string round_id = res[3];
+				string problem_id = res[4];
 
 				// Judge
 				JudgeResult jres = judge(submission_id, problem_id);
 
 				// Update submission
-				unique_ptr<sql::PreparedStatement> pstmt;
+				DB::Statement stmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
 						jres.status == JudgeResult::JUDGE_ERROR) {
-					pstmt.reset(db_conn->prepareStatement(
-						"UPDATE submissions s, "
+					stmt = db_conn.prepare("UPDATE submissions s, "
 							"((SELECT id FROM submissions "
 									"WHERE user_id=? AND round_id=? "
 										"AND (status='ok' OR status='error') "
@@ -55,25 +51,23 @@ static void processSubmissionQueue() {
 							"s.score=IF(s.id=?, NULL, s.score),"
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
 							"s.final_report=IF(s.id=?, ?, s.final_report)"
-						"WHERE s.id=x.id OR s.id=?"));
-					pstmt->setString(1, user_id);
-					pstmt->setString(2, round_id);
-					pstmt->setString(3, submission_id);
-					pstmt->setString(4, submission_id);
-					pstmt->setString(5, submission_id);
-					pstmt->setString(6,
-						(jres.status == JudgeResult::COMPILE_ERROR
-							? "c_error" : "judge_error"));
-					pstmt->setString(7, submission_id);
-					pstmt->setString(8, submission_id);
-					pstmt->setString(9, jres.initial_report);
-					pstmt->setString(10, submission_id);
-					pstmt->setString(11, jres.final_report);
-					pstmt->setString(12, submission_id);
+						"WHERE s.id=x.id OR s.id=?");
+					stmt.bind(1, user_id);
+					stmt.bind(2, round_id);
+					stmt.bind(3, submission_id);
+					stmt.bind(4, submission_id);
+					stmt.bind(5, submission_id);
+					stmt.bind(6, (jres.status == JudgeResult::COMPILE_ERROR
+						? "c_error" : "judge_error"));
+					stmt.bind(7, submission_id);
+					stmt.bind(8, submission_id);
+					stmt.bind(9, jres.initial_report);
+					stmt.bind(10, submission_id);
+					stmt.bind(11, jres.final_report);
+					stmt.bind(12, submission_id);
 
 				} else {
-					pstmt.reset(db_conn->prepareStatement(
-						"UPDATE submissions s, "
+					stmt = db_conn.prepare("UPDATE submissions s, "
 							"((SELECT id FROM submissions "
 									"WHERE user_id=? AND round_id=? "
 										"AND final=1) "
@@ -87,26 +81,26 @@ static void processSubmissionQueue() {
 							"s.score=IF(s.id=?, ?, s.score),"
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
 							"s.final_report=IF(s.id=?, ?, s.final_report)"
-						"WHERE s.id=x.id OR s.id=?"));
-					pstmt->setString(1, user_id);
-					pstmt->setString(2, round_id);
-					pstmt->setString(3, submission_id);
-					pstmt->setString(4, submission_id);
-					pstmt->setString(5, submission_id);
-					pstmt->setString(6, submission_id);
-					pstmt->setString(7, (jres.status == JudgeResult::OK
+						"WHERE s.id=x.id OR s.id=?");
+					stmt.bind(1, user_id);
+					stmt.bind(2, round_id);
+					stmt.bind(3, submission_id);
+					stmt.bind(4, submission_id);
+					stmt.bind(5, submission_id);
+					stmt.bind(6, submission_id);
+					stmt.bind(7, (jres.status == JudgeResult::OK
 						? "ok" : "error"));
-					pstmt->setString(8, submission_id);
-					pstmt->setInt64(9, jres.score);
-					pstmt->setString(10, submission_id);
-					pstmt->setString(11, jres.initial_report);
-					pstmt->setString(12, submission_id);
-					pstmt->setString(13, jres.final_report);
-					pstmt->setString(14, submission_id);
+					stmt.bind(8, submission_id);
+					stmt.bind(9, jres.score);
+					stmt.bind(10, submission_id);
+					stmt.bind(11, jres.initial_report);
+					stmt.bind(12, submission_id);
+					stmt.bind(13, jres.final_report);
+					stmt.bind(14, submission_id);
 				}
 
-				pstmt->executeUpdate();
-			} while (res->next());
+				stmt.executeUpdate();
+			} while (res.next());
 		}
 
 	} catch (const std::exception& e) {

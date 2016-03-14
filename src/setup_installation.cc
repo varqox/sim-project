@@ -81,16 +81,14 @@ int main(int argc, char **argv) {
 		return 4;
 	}
 
-	unique_ptr<sql::Statement> stmt(conn->createStatement());
-
 	if (DROP_TABLES) {
 		try {
-			stmt->executeUpdate("DROP TABLE iF EXISTS users");
-			stmt->executeUpdate("DROP TABLE iF EXISTS session");
-			stmt->executeUpdate("DROP TABLE iF EXISTS problems");
-			stmt->executeUpdate("DROP TABLE iF EXISTS rounds");
-			stmt->executeUpdate("DROP TABLE iF EXISTS users_to_contests");
-			stmt->executeUpdate("DROP TABLE iF EXISTS submissions");
+			conn.executeUpdate("DROP TABLE iF EXISTS users");
+			conn.executeUpdate("DROP TABLE iF EXISTS session");
+			conn.executeUpdate("DROP TABLE iF EXISTS problems");
+			conn.executeUpdate("DROP TABLE iF EXISTS rounds");
+			conn.executeUpdate("DROP TABLE iF EXISTS users_to_contests");
+			conn.executeUpdate("DROP TABLE iF EXISTS submissions");
 
 			if (ONLY_DROP_TABLES)
 				return 0;
@@ -106,7 +104,7 @@ int main(int argc, char **argv) {
 		std::function<void()> func = []{}) noexcept
 	{
 		try {
-			stmt->executeUpdate(query);
+			conn.executeUpdate(query);
 			func();
 		} catch (const std::exception& e) {
 			errlog("\033[31mFailed to create table `", table_name, "`\033[m - ",
@@ -134,12 +132,12 @@ int main(int argc, char **argv) {
 			fillRandomly(salt_bin, 32);
 			string salt = toHex(salt_bin, 32);
 
-			unique_ptr<sql::PreparedStatement> pstmt(conn->prepareStatement(
+			DB::Statement stmt(conn.prepare(
 				"INSERT IGNORE users (username, salt, password, type) "
 				"VALUES ('sim', ?, ?, 0)"));
-			pstmt->setString(1, salt);
-			pstmt->setString(2, sha3_512(salt + "sim"));
-			pstmt->executeUpdate();
+			stmt.bind(1, salt);
+			stmt.bind(2, sha3_512(salt + "sim"));
+			stmt.executeUpdate();
 		});
 
 	tryCreateTable("session",

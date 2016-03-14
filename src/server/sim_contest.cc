@@ -13,7 +13,6 @@
 
 using std::pair;
 using std::string;
-using std::unique_ptr;
 using std::vector;
 
 void Sim::Contest::handle() {
@@ -24,28 +23,28 @@ void Sim::Contest::handle() {
 		Template templ(sim_, "Select contest");
 		try {
 			// Get available contests
-			unique_ptr<sql::PreparedStatement> pstmt;
+			DB::Statement stmt;
 			if (sim_.session->open() == Session::OK) {
 				string lower_owners;
 
-				pstmt.reset(sim_.db_conn->prepareStatement(
+				stmt = sim_.db_conn.prepare(
 					"(SELECT r.id, r.name FROM rounds r, users u "
 						"WHERE parent IS NULL AND r.owner=u.id AND "
 							"(r.access='public' OR r.owner=? OR u.type>?))"
 					" UNION "
 					"(SELECT id, name FROM rounds, users_to_contests "
-						"WHERE user_id=? AND contest_id=id) ORDER BY id"));
-				pstmt->setString(1, sim_.session->user_id);
-				pstmt->setUInt(2, sim_.session->user_type);
-				pstmt->setString(3, sim_.session->user_id);
+						"WHERE user_id=? AND contest_id=id) ORDER BY id");
+				stmt.bind(1, sim_.session->user_id);
+				stmt.bind(2, sim_.session->user_type);
+				stmt.bind(3, sim_.session->user_id);
 
 			} else
-				pstmt.reset(sim_.db_conn->prepareStatement(
+				stmt = sim_.db_conn.prepare(
 					"SELECT id, name FROM rounds "
-					"WHERE parent IS NULL AND access='public' ORDER BY id"));
+					"WHERE parent IS NULL AND access='public' ORDER BY id");
 
 			// List them
-			unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+			DB::Result res = stmt.executeQuery();
 			templ << "<div class=\"contests-list\">\n";
 
 			// Add contest button (admins and teachers only)
@@ -53,11 +52,10 @@ void Sim::Contest::handle() {
 					sim_.session->user_type < 2)
 				templ << "<a class=\"btn\" href=\"/c/add\">Add contest</a>\n";
 
-			while (res->next())
-				templ << "<a href=\"/c/"
-					<< htmlSpecialChars(StringView(res->getString(1))) << "\">"
-					<< htmlSpecialChars(StringView(res->getString(2)))
-					<< "</a>\n";
+			while (res.next())
+				templ << "<a href=\"/c/" << htmlSpecialChars(res[1]) << "\">"
+					<< htmlSpecialChars(res[2]) << "</a>\n";
+
 			templ << "</div>\n";
 
 		} catch (const std::exception& e) {
@@ -230,26 +228,23 @@ void Sim::Contest::addContest() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT rounds"
-							"(access, name, owner, item, show_ranking) "
-						"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
-							"WHERE parent IS NULL"));
-				pstmt->setString(1, is_public ? "public" : "private");
-				pstmt->setString(2, name);
-				pstmt->setString(3, sim_.session->user_id);
-				pstmt->setBoolean(4, show_ranking);
+				DB::Statement stmt = sim_.db_conn.prepare("INSERT rounds"
+						"(access, name, owner, item, show_ranking) "
+					"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
+						"WHERE parent IS NULL");
+				stmt.bind(1, is_public ? "public" : "private");
+				stmt.bind(2, name);
+				stmt.bind(3, sim_.session->user_id);
+				stmt.bind(4, show_ranking);
 
-				if (pstmt->executeUpdate() != 1)
+				if (stmt.executeUpdate() != 1)
 					throw std::runtime_error("Failed to insert round");
 
-				unique_ptr<sql::Statement> stmt(sim_.db_conn->
-					createStatement());
-				unique_ptr<sql::ResultSet> res(stmt->
-					executeQuery("SELECT LAST_INSERT_ID()"));
+				DB::Result res = sim_.db_conn.executeQuery(
+					"SELECT LAST_INSERT_ID()");
 
-				if (res->next())
-					return sim_.redirect("/c/" + res->getString(1));
+				if (res.next())
+					return sim_.redirect("/c/" + res[1]);
 
 				return sim_.redirect("/c");
 
@@ -311,45 +306,43 @@ void Sim::Contest::addRound() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT rounds (parent, name, item, "
+				DB::Statement stmt = sim_.db_conn.prepare(
+					"INSERT rounds (parent, name, item, "
 							"visible, begins, ends, full_results) "
 						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
-							"WHERE parent=?"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->setString(2, name);
-				pstmt->setBoolean(3, is_visible);
+							"WHERE parent=?");
+				stmt.bind(1, r_path_->round_id);
+				stmt.bind(2, name);
+				stmt.bind(3, is_visible);
 
 				// Begins
 				if (begins.empty())
-					pstmt->setNull(4, 0);
+					stmt.bindNull(4);
 				else
-					pstmt->setString(4, begins);
+					stmt.bind(4, begins);
 
 				// ends
 				if (ends.empty())
-					pstmt->setNull(5, 0);
+					stmt.bindNull(5);
 				else
-					pstmt->setString(5, ends);
+					stmt.bind(5, ends);
 
 				// Full_results
 				if (full_results.empty())
-					pstmt->setNull(6, 0);
+					stmt.bindNull(6);
 				else
-					pstmt->setString(6, full_results);
+					stmt.bind(6, full_results);
 
-				pstmt->setString(7, r_path_->round_id);
+				stmt.bind(7, r_path_->round_id);
 
-				if (pstmt->executeUpdate() != 1)
+				if (stmt.executeUpdate() != 1)
 					throw std::runtime_error("Failed to insert round");
 
-				unique_ptr<sql::Statement> stmt(sim_.db_conn->
-					createStatement());
-				unique_ptr<sql::ResultSet> res(stmt->
-					executeQuery("SELECT LAST_INSERT_ID()"));
+				DB::Result res = sim_.db_conn.executeQuery(
+					"SELECT LAST_INSERT_ID()");
 
-				if (res->next())
-					return sim_.redirect("/c/" + res->getString(1));
+				if (res.next())
+					return sim_.redirect("/c/" + res[1]);
 
 				return sim_.redirect("/c/" + r_path_->round_id);
 
@@ -498,34 +491,31 @@ void Sim::Contest::addProblem() {
 					goto form;
 				}
 
-				unique_ptr<sql::Statement> stmt(sim_.db_conn->
-					createStatement());
-				unique_ptr<sql::ResultSet> res;
-
 				// 'Transaction' begin
 				// Insert problem
-				if (1 != stmt->executeUpdate(
+				if (1 != sim_.db_conn.executeUpdate(
 						"INSERT problems (name, owner, added) VALUES('',0,'')"))
 					throw std::runtime_error("Failed to problem");
 
 				// Get problem_id
-				res.reset(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
-				if (!res->next())
+				DB::Result res = sim_.db_conn.executeQuery(
+					"SELECT LAST_INSERT_ID()");
+				if (!res.next())
 					throw std::runtime_error("Failed to get LAST_INSERT_ID()");
 
-				string problem_id = res->getString(1);
+				string problem_id = res[1];
 
 				// Insert round
-				if (1 != stmt->executeUpdate(
+				if (1 != sim_.db_conn.executeUpdate(
 						"INSERT rounds (name, owner, item) VALUES('', 0, 0)"))
 					throw std::runtime_error("Failed to round");
 
 				// Get round_id
-				res.reset(stmt->executeQuery("SELECT LAST_INSERT_ID()"));
-				if (!res->next())
+				res = sim_.db_conn.executeQuery("SELECT LAST_INSERT_ID()");
+				if (!res.next())
 					throw std::runtime_error("Failed to get LAST_INSERT_ID()");
 
-				string round_id = res->getString(1);
+				string round_id = res[1];
 
 				// Get problem name
 				ConfigFile problem_config;
@@ -548,28 +538,28 @@ void Sim::Contest::addProblem() {
 				rm_tmp_dir.reset("problems/" + problem_id);
 
 				// Commit - update problem and round
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("UPDATE problems p, rounds r,"
+				DB::Statement stmt = sim_.db_conn.prepare(
+					"UPDATE problems p, rounds r,"
 							"(SELECT MAX(item)+1 x FROM rounds "
 								"WHERE parent=?) t "
 						"SET p.name=?, p.tag=?, p.owner=?, p.added=?, "
 							"parent=?, grandparent=?, r.name=?, item=t.x, "
 							"problem_id=? "
-						"WHERE p.id=? AND r.id=?"));
+						"WHERE p.id=? AND r.id=?");
 
-				pstmt->setString(1, r_path_->round->id);
-				pstmt->setString(2, name);
-				pstmt->setString(3, tag);
-				pstmt->setString(4, sim_.session->user_id);
-				pstmt->setString(5, date("%Y-%m-%d %H:%M:%S"));
-				pstmt->setString(6, r_path_->round->id);
-				pstmt->setString(7, r_path_->contest->id);
-				pstmt->setString(8, name);
-				pstmt->setString(9, problem_id);
-				pstmt->setString(10, problem_id);
-				pstmt->setString(11, round_id);
+				stmt.bind(1, r_path_->round->id);
+				stmt.bind(2, name);
+				stmt.bind(3, tag);
+				stmt.bind(4, sim_.session->user_id);
+				stmt.bind(5, date("%Y-%m-%d %H:%M:%S"));
+				stmt.bind(6, r_path_->round->id);
+				stmt.bind(7, r_path_->contest->id);
+				stmt.bind(8, name);
+				stmt.bind(9, problem_id);
+				stmt.bind(10, problem_id);
+				stmt.bind(11, round_id);
 
-				if (2 != pstmt->executeUpdate())
+				if (2 != stmt.executeUpdate())
 					throw std::runtime_error("Failed to update");
 
 				// Cancel folder deletion
@@ -646,20 +636,20 @@ void Sim::Contest::editContest() {
 		show_ranking = fv.exist("show-ranking");
 
 		try {
-			unique_ptr<sql::PreparedStatement> pstmt;
+			DB::Statement stmt;
 			// Check if user has the ability to make contest public
 			if (is_public && sim_.session->user_type > 0) {
-				pstmt.reset(sim_.db_conn->prepareStatement(
-					"SELECT access FROM rounds WHERE id=?"));
-				pstmt->setString(1, r_path_->round_id);
+				stmt = sim_.db_conn.prepare(
+					"SELECT access FROM rounds WHERE id=?");
+				stmt.bind(1, r_path_->round_id);
 
-				unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-				if (!res->next())
+				DB::Result res = stmt.executeQuery();
+				if (!res.next())
 					throw std::runtime_error("Failed to get contest access "
 						"field");
 
 				// Only admins can make contest public
-				if (res->getString(1) == "private") {
+				if (res[1] == "private") {
 					is_public = false;
 					fv.addError("Only admins can make contest public");
 				}
@@ -667,24 +657,25 @@ void Sim::Contest::editContest() {
 
 			// If all fields are ok
 			if (fv.noErrors()) {
-				pstmt.reset(sim_.db_conn->prepareStatement(
-					"UPDATE rounds r, "
+				stmt = sim_.db_conn.prepare("UPDATE rounds r, "
 						"(SELECT id FROM users WHERE username=?) u "
 					"SET name=?, owner=u.id, access=?, show_ranking=? "
-					"WHERE r.id=?"));
-				pstmt->setString(1, owner);
-				pstmt->setString(2, name);
-				pstmt->setString(3, is_public ? "public" : "private");
-				pstmt->setBoolean(4, show_ranking);
-				pstmt->setString(5, r_path_->round_id);
+					"WHERE r.id=?");
+				stmt.bind(1, owner);
+				stmt.bind(2, name);
+				stmt.bind(3, is_public ? "public" : "private");
+				stmt.bind(4, show_ranking);
+				stmt.bind(5, r_path_->round_id);
 
-				if (pstmt->executeUpdate() == 1) {
+				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
 					if (!r_path_)
 						return; // getRoundPath has already set error
-				}
+
+				} /*else // TODO: make it working
+					*/fv.addError("User not found");
 			}
 
 		} catch (const std::exception& e) {
@@ -695,19 +686,19 @@ void Sim::Contest::editContest() {
 	}
 
 	// Get contest information
-	unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-		prepareStatement("SELECT u.username, r.access FROM rounds r, users u "
-			"WHERE r.id=? AND r.owner=u.id"));
-	pstmt->setString(1, r_path_->round_id);
+	DB::Statement stmt = sim_.db_conn.prepare(
+		"SELECT u.username, r.access FROM rounds r, users u "
+			"WHERE r.id=? AND r.owner=u.id");
+	stmt.bind(1, r_path_->round_id);
 
-	unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-	if (!res->next())
+	DB::Result res = stmt.executeQuery();
+	if (!res.next())
 		throw std::runtime_error(concat(__PRETTY_FUNCTION__, ": Failed to get "
 			"contest and owner info"));
 
 	name = r_path_->contest->name;
-	owner = res->getString(1);
-	is_public = res->getString(2) == "public";
+	owner = res[1];
+	is_public = (res[2] == "public");
 	show_ranking = r_path_->contest->show_ranking;
 
 	TemplateWithMenu templ(*this, "Edit contest");
@@ -774,33 +765,33 @@ void Sim::Contest::editRound() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("UPDATE rounds SET name=?, visible=?, "
-							"begins=?, ends=?, full_results=? WHERE id=?"));
-				pstmt->setString(1, name);
-				pstmt->setBoolean(2, is_visible);
+				DB::Statement stmt = sim_.db_conn.prepare("UPDATE rounds "
+					"SET name=?, visible=?, begins=?, ends=?, full_results=? "
+					"WHERE id=?");
+				stmt.bind(1, name);
+				stmt.bind(2, is_visible);
 
 				// Begins
 				if (begins.empty())
-					pstmt->setNull(3, 0);
+					stmt.bindNull(3);
 				else
-					pstmt->setString(3, begins);
+					stmt.bind(3, begins);
 
 				// ends
 				if (ends.empty())
-					pstmt->setNull(4, 0);
+					stmt.bindNull(4);
 				else
-					pstmt->setString(4, ends);
+					stmt.bind(4, ends);
 
 				// Full_results
 				if (full_results.empty())
-					pstmt->setNull(5, 0);
+					stmt.bindNull(5);
 				else
-					pstmt->setString(5, full_results);
+					stmt.bind(5, full_results);
 
-				pstmt->setString(6, r_path_->round_id);
+				stmt.bind(6, r_path_->round_id);
 
-				if (pstmt->executeUpdate() == 1) {
+				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
@@ -880,13 +871,12 @@ void Sim::Contest::editProblem() {
 	// Rejudge
 	if (0 == compareTo(sim_.req_->target, arg_beg, '/', "rejudge")) {
 		try {
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("UPDATE submissions "
-				"SET status='waiting', queued=? WHERE problem_id=?"));
-			pstmt->setString(1, date("%Y-%m-%d %H:%M:%S"));
-			pstmt->setString(2, r_path_->problem->problem_id);
+			DB::Statement stmt = sim_.db_conn.prepare("UPDATE submissions "
+				"SET status='waiting', queued=? WHERE problem_id=?");
+			stmt.bind(1, date("%Y-%m-%d %H:%M:%S"));
+			stmt.bind(2, r_path_->problem->problem_id);
 
-			pstmt->executeUpdate();
+			stmt.executeUpdate();
 			notifyJudgeServer();
 
 		} catch (const std::exception& e) {
@@ -1001,16 +991,16 @@ void Sim::Contest::editProblem() {
 						r_path_->problem->problem_id, " config"));
 
 				// Update database
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("UPDATE rounds r, problems p "
-						"SET r.name=?, p.name=?, p.tag=? WHERE r.id=? AND p.id=?"));
-				pstmt->setString(1, round_name);
-				pstmt->setString(2, name);
-				pstmt->setString(3, tag);
-				pstmt->setString(4, r_path_->round_id);
-				pstmt->setString(5, r_path_->problem->problem_id);
+				DB::Statement stmt = sim_.db_conn.prepare(
+					"UPDATE rounds r, problems p "
+					"SET r.name=?, p.name=?, p.tag=? WHERE r.id=? AND p.id=?");
+				stmt.bind(1, round_name);
+				stmt.bind(2, name);
+				stmt.bind(3, tag);
+				stmt.bind(4, r_path_->round_id);
+				stmt.bind(5, r_path_->problem->problem_id);
 
-				if (pstmt->executeUpdate() > 0) {
+				if (stmt.executeUpdate()) {
 					// Update r_path_
 					r_path_.reset(getRoundPath(r_path_->round_id));
 					if (!r_path_)
@@ -1104,26 +1094,25 @@ void Sim::Contest::deleteContest() {
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
 			// Delete submissions
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("DELETE FROM submissions "
-					"WHERE contest_round_id=?"));
-			pstmt->setString(1, r_path_->round_id);
-			pstmt->executeUpdate();
+			DB::Statement stmt = sim_.db_conn.prepare("DELETE FROM submissions "
+					"WHERE contest_round_id=?");
+			stmt.bind(1, r_path_->round_id);
+			stmt.executeUpdate();
 
 			// Delete from users_to_contests
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM users_to_contests WHERE contest_id=?"));
-			pstmt->setString(1, r_path_->round_id);
-			pstmt->executeUpdate();
+			stmt = sim_.db_conn.prepare("DELETE FROM users_to_contests "
+				"WHERE contest_id=?");
+			stmt.bind(1, r_path_->round_id);
+			stmt.executeUpdate();
 
 			// Delete rounds
-			pstmt.reset(sim_.db_conn->prepareStatement("DELETE FROM rounds "
-				"WHERE id=? OR parent=? OR grandparent=?"));
-			pstmt->setString(1, r_path_->round_id);
-			pstmt->setString(2, r_path_->round_id);
-			pstmt->setString(3, r_path_->round_id);
+			stmt = sim_.db_conn.prepare("DELETE FROM rounds "
+				"WHERE id=? OR parent=? OR grandparent=?");
+			stmt.bind(1, r_path_->round_id);
+			stmt.bind(2, r_path_->round_id);
+			stmt.bind(3, r_path_->round_id);
 
-			if (pstmt->executeUpdate() > 0)
+			if (stmt.executeUpdate())
 				return sim_.redirect("/c");
 
 		} catch (const std::exception& e) {
@@ -1159,19 +1148,18 @@ void Sim::Contest::deleteRound() {
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
 			// Delete submissions
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("DELETE FROM submissions "
-					"WHERE parent_round_id=?"));
-			pstmt->setString(1, r_path_->round_id);
-			pstmt->executeUpdate();
+			DB::Statement stmt = sim_.db_conn.prepare("DELETE FROM submissions "
+					"WHERE parent_round_id=?");
+			stmt.bind(1, r_path_->round_id);
+			stmt.executeUpdate();
 
 			// Delete rounds
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM rounds WHERE id=? OR parent=?"));
-			pstmt->setString(1, r_path_->round_id);
-			pstmt->setString(2, r_path_->round_id);
+			stmt = sim_.db_conn.prepare(
+				"DELETE FROM rounds WHERE id=? OR parent=?");
+			stmt.bind(1, r_path_->round_id);
+			stmt.bind(2, r_path_->round_id);
 
-			if (pstmt->executeUpdate() > 0)
+			if (stmt.executeUpdate() > 0)
 				return sim_.redirect("/c/" + r_path_->contest->id);
 
 		} catch (const std::exception& e) {
@@ -1207,17 +1195,16 @@ void Sim::Contest::deleteProblem() {
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
 			// Delete submissions
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("DELETE FROM submissions WHERE round_id=?"));
-			pstmt->setString(1, r_path_->round_id);
-			pstmt->executeUpdate();
+			DB::Statement stmt = sim_.db_conn.prepare(
+				"DELETE FROM submissions WHERE round_id=?");
+			stmt.bind(1, r_path_->round_id);
+			stmt.executeUpdate();
 
 			// Delete problem round
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"DELETE FROM rounds WHERE id=?"));
-			pstmt->setString(1, r_path_->round_id);
+			stmt = sim_.db_conn.prepare("DELETE FROM rounds WHERE id=?");
+			stmt.bind(1, r_path_->round_id);
 
-			if (pstmt->executeUpdate() > 0)
+			if (stmt.executeUpdate())
 				return sim_.redirect("/c/" + r_path_->round->id);
 
 		} catch (const std::exception& e) {
@@ -1272,7 +1259,7 @@ void Sim::Contest::submit(bool admin_view) {
 		// If all fields are ok
 		// TODO: "transaction"
 		if (fv.noErrors()) {
-			unique_ptr<RoundPath> path;
+			std::unique_ptr<RoundPath> path;
 			const RoundPath* problem_r_path = r_path_.get();
 
 			if (r_path_->type != PROBLEM) {
@@ -1303,45 +1290,43 @@ void Sim::Contest::submit(bool admin_view) {
 			try {
 				string current_date = date("%Y-%m-%d %H:%M:%S");
 				// Insert submission to `submissions`
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT submissions "
+				DB::Statement stmt = sim_.db_conn.prepare("INSERT submissions "
 						"(user_id, problem_id, round_id, parent_round_id, "
 							"contest_round_id, submit_time, queued) "
-						"VALUES(?, ?, ?, ?, ?, ?, ?)"));
-				pstmt->setString(1, sim_.session->user_id);
-				pstmt->setString(2, problem_r_path->problem->problem_id);
-				pstmt->setString(3, problem_r_path->problem->id);
-				pstmt->setString(4, problem_r_path->round->id);
-				pstmt->setString(5, problem_r_path->contest->id);
-				pstmt->setString(6, current_date);
-				pstmt->setString(7, current_date);
+						"VALUES(?, ?, ?, ?, ?, ?, ?)");
+				stmt.bind(1, sim_.session->user_id);
+				stmt.bind(2, problem_r_path->problem->problem_id);
+				stmt.bind(3, problem_r_path->problem->id);
+				stmt.bind(4, problem_r_path->round->id);
+				stmt.bind(5, problem_r_path->contest->id);
+				stmt.bind(6, current_date);
+				stmt.bind(7, current_date);
 
-				if (1 != pstmt->executeUpdate()) {
+				if (stmt.executeUpdate() != 1) {
 					fv.addError("Database error - failed to insert submission");
 					goto form;
 				}
 
 				// Get inserted submission id
-				unique_ptr<sql::Statement> stmt(sim_.db_conn->
-					createStatement());
-				unique_ptr<sql::ResultSet> res(stmt->
-					executeQuery("SELECT LAST_INSERT_ID()"));
+				DB::Result res = sim_.db_conn.
+					executeQuery("SELECT LAST_INSERT_ID()");
 
-				if (!res->next()) {
+				if (!res.next()) {
 					fv.addError("Database error - failed to get inserted "
 						"submission id");
 					goto form;
 				}
 
-				string submission_id = res->getString(1);
+				string submission_id = res[1];
 
 				// Copy solution
 				copy(solution_tmp_path,
 					concat("solutions/", submission_id, ".cpp"));
 
 				// Change submission status to 'waiting'
-				stmt->executeUpdate("UPDATE submissions SET status='waiting' "
-					"WHERE id=" + submission_id);
+				sim_.db_conn.executeUpdate(
+					"UPDATE submissions SET status='waiting' WHERE id="
+					+ submission_id);
 
 				notifyJudgeServer();
 
@@ -1375,36 +1360,34 @@ void Sim::Contest::submit(bool admin_view) {
 			// Admin -> All problems from all subrounds
 			// Normal -> All problems from subrounds which have begun and
 			// have not ended
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement(admin_view ?
+			DB::Statement stmt = sim_.db_conn.prepare(admin_view ?
 					"SELECT id, name FROM rounds WHERE parent=? ORDER BY item"
-					: "SELECT id, name FROM rounds WHERE parent=? "
-						"AND (begins IS NULL OR begins<=?) "
-						"AND (ends IS NULL OR ?<ends) ORDER BY item"));
-			pstmt->setString(1, r_path_->contest->id);
+				: "SELECT id, name FROM rounds WHERE parent=? "
+					"AND (begins IS NULL OR begins<=?) "
+					"AND (ends IS NULL OR ?<ends) ORDER BY item");
+			stmt.bind(1, r_path_->contest->id);
 			if (!admin_view) {
-				pstmt->setString(2, current_date);
-				pstmt->setString(3, current_date);
+				stmt.bind(2, current_date);
+				stmt.bind(3, current_date);
 			}
 
-			unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+			DB::Result res = stmt.executeQuery();
 			vector<Subround> subrounds;
 			// For performance
-			subrounds.reserve(res->rowsCount());
+			subrounds.reserve(res.rowCount());
 
 			// Collect results
-			while (res->next()) {
+			while (res.next()) {
 				subrounds.push_back(Subround());
-				subrounds.back().id = res->getString(1);
-				subrounds.back().name = res->getString(2);
+				subrounds.back().id = res[1];
+				subrounds.back().name = res[2];
 			}
 
 			// Select problems
-			pstmt.reset(sim_.db_conn->prepareStatement(
-				"SELECT id, parent, name FROM rounds WHERE grandparent=? "
-				"ORDER BY item"));
-			pstmt->setString(1, r_path_->contest->id);
-			res.reset(pstmt->executeQuery());
+			stmt = sim_.db_conn.prepare("SELECT id, parent, name FROM rounds "
+				"WHERE grandparent=? ORDER BY item");
+			stmt.bind(1, r_path_->contest->id);
+			res = stmt.executeQuery();
 
 			// (round_id, problems)
 			std::map<string, vector<Problem> > problems_table;
@@ -1414,18 +1397,18 @@ void Sim::Contest::submit(bool admin_view) {
 				problems_table[subrounds[i].id];
 
 			// Collect results
-			while (res->next()) {
+			while (res.next()) {
 				// Get reference to proper vector<Problem>
-				auto it = problems_table.find(res->getString(2));
+				auto it = problems_table.find(res[2]);
 				// If problem parent is not visible or database error
 				if (it == problems_table.end())
 					continue; // Ignore
 
 				vector<Problem>& prob = it->second;
 				prob.push_back(Problem());
-				prob.back().id = res->getString(1);
-				prob.back().parent = res->getString(2);
-				prob.back().name = res->getString(3);
+				prob.back().id = res[1];
+				prob.back().parent = res[2];
+				prob.back().name = res[3];
 			}
 
 			// For each subround list all problems
@@ -1441,20 +1424,20 @@ void Sim::Contest::submit(bool admin_view) {
 		// Admin -> All problems
 		// Normal -> if round has begun and has not ended
 		} else if (r_path_->type == ROUND && (admin_view || (
-				r_path_->round->begins <= current_date && // "" <= everything
-				(r_path_->round->ends.empty() ||
-					current_date < r_path_->round->ends)))) {
+			r_path_->round->begins <= current_date && // "" <= everything
+			(r_path_->round->ends.empty() ||
+				current_date < r_path_->round->ends))))
+		{
 			// Select problems
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("SELECT id, name FROM rounds "
-					"WHERE parent=? ORDER BY item"));
-			pstmt->setString(1, r_path_->round->id);
+			DB::Statement stmt = sim_.db_conn.prepare(
+				"SELECT id, name FROM rounds WHERE parent=? ORDER BY item");
+			stmt.bind(1, r_path_->round->id);
 
 			// List problems
-			unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-			while (res->next())
-				append(buffer) << "<option value=\"" << res->getString(1)
-					<< "\">" << htmlSpecialChars(StringView(res->getString(2)))
+			DB::Result res = stmt.executeQuery();
+			while (res.next())
+				append(buffer) << "<option value=\"" << res[1]
+					<< "\">" << htmlSpecialChars(res[2])
 					<< " (" << htmlSpecialChars(r_path_->round->name)
 					<< ")</option>\n";
 
@@ -1524,18 +1507,18 @@ void Sim::Contest::submission() {
 		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
 			"status, score, name, tag, first_name, last_name, initial_report, "
 			"final_report");
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement(concat("SELECT user_id, round_id", columns, " "
+		DB::Statement stmt = sim_.db_conn.prepare(
+			concat("SELECT user_id, round_id", columns, " "
 				"FROM submissions s, problems p, users u "
-				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id")));
-		pstmt->setString(1, submission_id);
+				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id"));
+		stmt.bind(1, submission_id);
 
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-		if (!res->next())
+		DB::Result res = stmt.executeQuery();
+		if (!res.next())
 			return sim_.error404();
 
-		string submission_user_id = res->getString(1);
-		string round_id = res->getString(2);
+		string submission_user_id = res[1];
+		string round_id = res[2];
 
 		// Get parent rounds
 		r_path_.reset(getRoundPath(round_id));
@@ -1563,24 +1546,24 @@ void Sim::Contest::submission() {
 					&& fv.exist("delete"))
 				try {
 					// Delete submission
-					pstmt.reset(sim_.db_conn->prepareStatement(
-						"DELETE FROM submissions WHERE id=?"));
-					pstmt->setString(1, submission_id);
+					stmt = sim_.db_conn.prepare(
+						"DELETE FROM submissions WHERE id=?");
+					stmt.bind(1, submission_id);
 
-					if (pstmt->executeUpdate() == 0) {
+					if (stmt.executeUpdate() == 0) {
 						fv.addError("Deletion failed");
 						break;
 					}
 
 					// Restore `final` status
-					pstmt.reset(sim_.db_conn->prepareStatement(
+					stmt = sim_.db_conn.prepare(
 						"UPDATE submissions SET final=1 "
 						"WHERE user_id=? AND round_id=? "
 							"AND (status='ok' OR status='error') "
-						"ORDER BY id DESC LIMIT 1"));
-					pstmt->setString(1, submission_user_id);
-					pstmt->setString(2, round_id);
-					pstmt->executeUpdate();
+						"ORDER BY id DESC LIMIT 1");
+					stmt.bind(1, submission_user_id);
+					stmt.bind(2, round_id);
+					stmt.executeUpdate();
 
 					return sim_.redirect(concat("/c/", round_id,
 						"/submissions"));
@@ -1617,12 +1600,12 @@ void Sim::Contest::submission() {
 			if (!admin_view)
 				return sim_.error403();
 
-			pstmt.reset(sim_.db_conn->prepareStatement("UPDATE submissions "
-				"SET status='waiting', queued=? WHERE id=?"));
-			pstmt->setString(1, date("%Y-%m-%d %H:%M:%S"));
-			pstmt->setString(2, submission_id);
+			stmt = sim_.db_conn.prepare("UPDATE submissions "
+				"SET status='waiting', queued=? WHERE id=?");
+			stmt.bind(1, date("%Y-%m-%d %H:%M:%S"));
+			stmt.bind(2, submission_id);
 
-			pstmt->executeUpdate();
+			stmt.executeUpdate();
 			notifyJudgeServer();
 
 			return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
@@ -1675,12 +1658,12 @@ void Sim::Contest::submission() {
 			return;
 		}
 
-		string submit_time = res->getString(3);
-		string submission_status = res->getString(4);
-		string score = res->getString(5);
-		string problem_name = res->getString(6);
-		string problem_tag = res->getString(7);
-		string user_name = concat(res->getString(8), ' ', res->getString(9));
+		string submit_time = res[3];
+		string submission_status = res[4];
+		string score = res[5];
+		string problem_name = res[6];
+		string problem_tag = res[7];
+		string user_name = concat(res[8], ' ', res[9]);
 
 		templ << "<div class=\"submission-info\">\n"
 			"<div>\n"
@@ -1751,12 +1734,12 @@ void Sim::Contest::submission() {
 		templ << "<div class=\"results\">";
 		if (admin_view || r_path_->round->full_results.empty() ||
 				r_path_->round->full_results <= date("%Y-%m-%d %H:%M:%S")) {
-			string final_report = res->getString(11);
+			string final_report = res[11];
 			if (final_report.size())
 				templ << final_report;
 		}
 
-		string initial_report = res->getString(10);
+		string initial_report = res[10];
 		if (initial_report.size())
 			templ << initial_report;
 
@@ -1779,11 +1762,10 @@ void Sim::Contest::submissions(bool admin_view) {
 
 	templ << "<h3>Submission queue size: ";
 	try {
-		unique_ptr<sql::Statement> stmt(sim_.db_conn->createStatement());
-		unique_ptr<sql::ResultSet> res(stmt->executeQuery(
-			"SELECT COUNT(*) FROM submissions WHERE status='waiting';"));
-		if (res->next())
-			templ << res->getString(1);
+		DB::Result res = sim_.db_conn.executeQuery(
+			"SELECT COUNT(id) FROM submissions WHERE status='waiting';");
+		if (res.next())
+			templ << res[1];
 
 	} catch (const std::exception& e) {
 		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
@@ -1797,8 +1779,7 @@ void Sim::Contest::submissions(bool admin_view) {
 		string param_column = (r_path_->type == CONTEST ? "contest_round_id"
 			: (r_path_->type == ROUND ? "parent_round_id" : "round_id"));
 
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-			prepareStatement(admin_view ?
+		DB::Statement stmt = sim_.db_conn.prepare(admin_view ?
 				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
 					"r.name, s.status, s.score, s.final, s.user_id, u.username "
 				"FROM submissions s, rounds r, rounds r2, users u "
@@ -1808,13 +1789,13 @@ void Sim::Contest::submissions(bool admin_view) {
 					"r.name, s.status, s.score, s.final, r2.full_results "
 				"FROM submissions s, rounds r, rounds r2 "
 				"WHERE s.", param_column, "=? AND s.round_id=r.id "
-					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC")));
-		pstmt->setString(1, r_path_->round_id);
+					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC"));
+		stmt.bind(1, r_path_->round_id);
 		if (!admin_view)
-			pstmt->setString(2, sim_.session->user_id);
+			stmt.bind(2, sim_.session->user_id);
 
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-		if (res->rowsCount() == 0) {
+		DB::Result res = stmt.executeQuery();
+		if (res.rowCount() == 0) {
 			templ << "<p>There are no submissions to show</p>";
 			return;
 		}
@@ -1850,26 +1831,23 @@ void Sim::Contest::submissions(bool admin_view) {
 		};
 
 		string current_date = date("%Y-%m-%d %H:%M:%S");
-		while (res->next()) {
+		while (res.next()) {
 			templ << "<tr>";
 			// User
 			if (admin_view)
-				templ << "<td><a href=\"/u/" << res->getString(10) << "\">"
-					<< htmlSpecialChars(StringView(res->getString(11)))
-					<< "</a></td>";
+				templ << "<td><a href=\"/u/" << res[10] << "\">"
+					<< htmlSpecialChars(res[11]) << "</a></td>";
 			// Rest
-			templ << "<td><a href=\"/s/" << res->getString(1) << "\">"
-					<< res->getString(2) << "</a></td>"
-					"<td><a href=\"/c/" << res->getString(3) << "\">"
-						<< htmlSpecialChars(StringView(res->getString(4)))
-						<< "</a> -> <a href=\"/c/" << res->getString(5) << "\">"
-						<< htmlSpecialChars(StringView(res->getString(6)))
+			templ << "<td><a href=\"/s/" << res[1] << "\">"
+					<< res[2] << "</a></td>"
+					"<td><a href=\"/c/" << res[3] << "\">"
+						<< htmlSpecialChars(res[4]) << "</a> -> <a href=\"/c/"
+						<< res[5] << "\">" << htmlSpecialChars(res[6])
 						<< "</a></td>"
-					<< statusRow(res->getString(7))
-					<< "<td>" << (admin_view ||
-						string(res->getString(10)) <= current_date ?
-						res->getString(8) : "") << "</td>"
-					"<td>" << (res->getBoolean(9) ? "Yes" : "") << "</td>"
+					<< statusRow(res[7])
+					<< "<td>" << (admin_view || string(res[10]) <= current_date
+						? res[8] : "") << "</td>"
+					"<td>" << (res.getBool(9) ? "Yes" : "") << "</td>"
 				"<tr>\n";
 		}
 
@@ -1936,41 +1914,41 @@ void Sim::Contest::ranking(bool admin_view) {
 
 	struct RankingRow {
 		string user_id, name;
-		long long score;
+		int64_t score;
 		vector<RankingField> fields;
 
 		explicit RankingRow(const string& ui = "", const string& n = "",
-				long long s = 0, const vector<RankingField>& f = {})
+				int64_t s = 0, const vector<RankingField>& f = {})
 			: user_id(ui), name(n), score(s), fields(f) {}
 	};
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt;
-		unique_ptr<sql::ResultSet> res;
+		DB::Statement stmt;
+		DB::Result res;
 		string current_time = date("%Y-%m-%d %H:%M:%S");
 
 		// Select rounds
 		const char* column = (r_path_->type == CONTEST ? "parent" : "id");
-		pstmt.reset(sim_.db_conn->prepareStatement(admin_view ?
+		stmt = sim_.db_conn.prepare(admin_view ?
 			concat("SELECT id, name, item FROM rounds WHERE ", column, "=?")
 			: concat("SELECT id, name, item FROM rounds WHERE ", column, "=? "
-				"AND (full_results IS NULL OR full_results<=?)")));
+				"AND (full_results IS NULL OR full_results<=?)"));
 
-		pstmt->setString(1, r_path_->type == CONTEST
+		stmt.bind(1, r_path_->type == CONTEST
 			? r_path_->round_id
 			: r_path_->round->id);
 		if (!admin_view)
-			pstmt->setString(2, current_time);
-		res.reset(pstmt->executeQuery());
+			stmt.bind(2, current_time);
+		res = stmt.executeQuery();
 
 		vector<RankingRound> rounds;
-		rounds.reserve(res->rowsCount()); // Need for pointers validity
+		rounds.reserve(res.rowCount()); // Needed for pointers validity
 		vector<std::reference_wrapper<RankingRound>> rounds_by_id;
-		while (res->next()) {
+		while (res.next()) {
 			rounds.emplace_back(
-				res->getString(1),
-				res->getString(2),
-				res->getString(3)
+				res[1],
+				res[2],
+				res[3]
 			);
 			rounds_by_id.emplace_back(rounds.back());
 		}
@@ -1987,28 +1965,28 @@ void Sim::Contest::ranking(bool admin_view) {
 		// Select problems
 		column = (r_path_->type == CONTEST ? "grandparent" :
 			(r_path_->type == ROUND ? "parent" : "id"));
-		pstmt.reset(sim_.db_conn->prepareStatement(admin_view ?
+		stmt = sim_.db_conn.prepare(admin_view ?
 			concat("SELECT r.id, tag, parent FROM rounds r, problems p "
 				"WHERE r.", column, "=? AND problem_id=p.id ORDER BY item")
 			: concat("SELECT r.id, tag, r.parent "
 				"FROM rounds r, rounds r1, problems p "
 				"WHERE r.", column, "=? AND r.problem_id=p.id "
 					"AND r.parent=r1.id "
-					"AND (r1.full_results IS NULL OR r1.full_results<=?)")));
-		pstmt->setString(1, r_path_->round_id);
+					"AND (r1.full_results IS NULL OR r1.full_results<=?)"));
+		stmt.bind(1, r_path_->round_id);
 		if (!admin_view)
-			pstmt->setString(2, current_time);
-		res.reset(pstmt->executeQuery());
+			stmt.bind(2, current_time);
+		res = stmt.executeQuery();
 
 		// Add problems to rounds
-		while (res->next()) {
-			auto it = findWithId(rounds_by_id, res->getString(3));
+		while (res.next()) {
+			auto it = findWithId(rounds_by_id, res[3]);
 			if (it == rounds_by_id.end())
 				continue; // Ignore invalid rounds hierarchy
 
 			it->get().problems.emplace_back(
-				res->getUInt64(1),
-				res->getString(2)
+				res.getUInt64(1),
+				res[2]
 			);
 		}
 
@@ -2018,7 +1996,7 @@ void Sim::Contest::ranking(bool admin_view) {
 		// Select submissions
 		column = (r_path_->type == CONTEST ? "contest_round_id" :
 			(r_path_->type == ROUND ? "parent_round_id" : "round_id"));
-		pstmt.reset(sim_.db_conn->prepareStatement(admin_view ?
+		stmt = sim_.db_conn.prepare(admin_view ?
 			concat("SELECT s.id, user_id, u.first_name, u.last_name, round_id, "
 					"score "
 				"FROM submissions s, users u "
@@ -2030,31 +2008,31 @@ void Sim::Contest::ranking(bool admin_view) {
 				"WHERE s.", column, "=? AND final=1 AND user_id=u.id "
 					"AND r.id=parent_round_id "
 					"AND (full_results IS NULL OR full_results<=?) "
-				"ORDER BY user_id")));
-		pstmt->setString(1, r_path_->round_id);
+				"ORDER BY user_id"));
+		stmt.bind(1, r_path_->round_id);
 		if (!admin_view)
-			pstmt->setString(2, current_time);
-		res.reset(pstmt->executeQuery());
+			stmt.bind(2, current_time);
+		res = stmt.executeQuery();
 
 		// Construct rows
 		vector<RankingRow> rows;
 		string last_user_id;
-		while (res->next()) {
+		while (res.next()) {
 			// Next user
-			if (last_user_id != res->getString(2)) {
+			if (last_user_id != res[2]) {
 				rows.emplace_back(
-					res->getString(2),
-					concat(res->getString(3), ' ', res->getString(4)),
+					res[2],
+					concat(res[3], ' ', res[4]),
 					0
 				);
 			}
 			last_user_id = rows.back().user_id;
 
-			rows.back().score += res->getInt(6);
+			rows.back().score += res.getInt64(6);
 			rows.back().fields.emplace_back(
-				res->getString(1),
-				res->getString(5),
-				res->getString(6)
+				res[1],
+				res[5],
+				res[6]
 			);
 		}
 
@@ -2115,7 +2093,7 @@ void Sim::Contest::ranking(bool admin_view) {
 		// Rows
 		assert(sorted_rows.size());
 		size_t place = 1; // User place
-		long long last_user_score = sorted_rows.front().get().score;
+		int64_t last_user_score = sorted_rows.front().get().score;
 		vector<RankingField*> row_points(idx); // idx is now number of problems
 		for (size_t i = 0, end = sorted_rows.size(); i < end; ++i) {
 			RankingRow& row = sorted_rows[i];
@@ -2181,17 +2159,17 @@ void Sim::Contest::file() {
 		return sim_.error404();
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
-			"SELECT name, round_id FROM files WHERE id=?"));
-		pstmt->setString(1, id);
+		DB::Statement stmt = sim_.db_conn.prepare(
+			"SELECT name, round_id FROM files WHERE id=?");
+		stmt.bind(1, id);
 
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-		if (!res->next())
+		DB::Result res = stmt.executeQuery();
+		if (!res.next())
 			return sim_.error404();
 
-		string file_name = res->getString(1);
+		string file_name = res[1];
 
-		r_path_.reset(getRoundPath(res->getString(2)));
+		r_path_.reset(getRoundPath(res[2]));
 		if (!r_path_)
 			return; // getRoundPath has already set error
 
@@ -2234,14 +2212,13 @@ void Sim::Contest::editFile(const string& id, string name) {
 		if (fv.noErrors())
 			try {
 				string current_time = date("%Y-%m-%d %H:%M:%S");
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("UPDATE files "
-						"SET name=?, description=?, modified=? WHERE id=?"));
-				pstmt->setString(1, name);
-				pstmt->setString(2, description);
-				pstmt->setString(3, current_time);
-				pstmt->setString(4, id);
-				pstmt->executeUpdate();
+				DB::Statement stmt = sim_.db_conn.prepare("UPDATE files "
+						"SET name=?, description=?, modified=? WHERE id=?");
+				stmt.bind(1, name);
+				stmt.bind(2, description);
+				stmt.bind(3, current_time);
+				stmt.bind(4, id);
+				stmt.executeUpdate();
 
 				// Move file
 				if (fv.exist("file")) {
@@ -2260,17 +2237,17 @@ void Sim::Contest::editFile(const string& id, string name) {
 	}
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
-			"SELECT name, description, modified FROM files WHERE id=?"));
-		pstmt->setString(1, id);
+		DB::Statement stmt = sim_.db_conn.prepare(
+			"SELECT name, description, modified FROM files WHERE id=?");
+		stmt.bind(1, id);
 
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-		if (!res->next())
+		DB::Result res = stmt.executeQuery();
+		if (!res.next())
 			return sim_.error404();
 
-		name = res->getString(1);
-		description = res->getString(2);
-		modified = res->getString(3);
+		name = res[1];
+		description = res[2];
+		modified = res[3];
 
 	} catch (const std::exception& e) {
 		fv.addError("Internal server error");
@@ -2323,11 +2300,11 @@ void Sim::Contest::deleteFile(const string& id, const string& name) {
 	FormValidator fv(sim_.req_->form_data);
 	if (sim_.req_->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
-			unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-				prepareStatement("DELETE FROM files WHERE id=?"));
-			pstmt->setString(1, id);
+			DB::Statement stmt = sim_.db_conn.prepare(
+				"DELETE FROM files WHERE id=?");
+			stmt.bind(1, id);
 
-			if (pstmt->executeUpdate() != 1)
+			if (stmt.executeUpdate() != 1)
 				return sim_.error500();
 
 			if (blockSignals(remove, concat("files/", id).c_str()))
@@ -2384,10 +2361,9 @@ void Sim::Contest::addFile() {
 				string id(FILE_ID_LENGTH, '0');
 				string current_time = date("%Y-%m-%d %H:%M:%S");
 				// Insert file to `files`
-				unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->
-					prepareStatement("INSERT IGNORE files "
+				DB::Statement stmt = sim_.db_conn.prepare("INSERT IGNORE files "
 						"(id, round_id, name, description, modified) "
-						"VALUES(?,NULL,?,?,?)"));
+						"VALUES(?,NULL,?,?,?)");
 				do {
 					// TODO: looks the same as Sim::Session::generateId()
 					constexpr char t[] = "abcdefghijklmnopqrstuvwxyz"
@@ -2398,23 +2374,23 @@ void Sim::Contest::addFile() {
 					for (char& c : id)
 						c = t[getRandom<int>(0, len - 1)];
 
-					pstmt->setString(1, id);
-					pstmt->setString(2, file_name);
-					pstmt->setString(3, description);
-					pstmt->setString(4, current_time);
-				} while (pstmt->executeUpdate() == 0);
+					stmt.bind(1, id);
+					stmt.bind(2, file_name);
+					stmt.bind(3, description);
+					stmt.bind(4, current_time);
+				} while (stmt.executeUpdate() == 0);
 
 				// Move file
 				SignalBlocker signal_guard;
 				if (move(fv.getFilePath("file"), concat("files/", id)))
 					throw std::runtime_error("move()" + error(errno));
 
-				pstmt.reset(sim_.db_conn->prepareStatement(
-					"UPDATE files SET round_id=? WHERE id=?"));
-				pstmt->setString(1, r_path_->round_id);
-				pstmt->setString(2, id);
+				stmt = sim_.db_conn.prepare(
+					"UPDATE files SET round_id=? WHERE id=?");
+				stmt.bind(1, r_path_->round_id);
+				stmt.bind(2, id);
 
-				if (pstmt->executeUpdate() != 1) {
+				if (stmt.executeUpdate() != 1) {
 					(void)remove(concat("files/", id).c_str());
 					throw std::runtime_error("Failed to update inserted file");
 				}
@@ -2473,13 +2449,13 @@ void Sim::Contest::files(bool admin_view) {
 			<< "/add\">Add file</a>\n";
 
 	try {
-		unique_ptr<sql::PreparedStatement> pstmt(sim_.db_conn->prepareStatement(
+		DB::Statement stmt = sim_.db_conn.prepare(
 			"SELECT id, modified, name, description FROM files "
-			"WHERE round_id=? ORDER BY modified DESC"));
-		pstmt->setString(1, r_path_->round_id);
-		unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+			"WHERE round_id=? ORDER BY modified DESC");
+		stmt.bind(1, r_path_->round_id);
+		DB::Result res = stmt.executeQuery();
 
-		if (res->rowsCount() == 0) {
+		if (res.rowCount() == 0) {
 			templ << "<p>There are no file here yet</p>";
 			return;
 		}
@@ -2495,14 +2471,13 @@ void Sim::Contest::files(bool admin_view) {
 			"</thead>\n"
 			"<tbody>\n";
 
-		while (res->next()) {
-			string id = res->getString(1);
+		while (res.next()) {
+			string id = res[1];
 			templ << "<tr>"
-				"<td>" << res->getString(2) << "</td>"
-				"<td><a href=\"/file/" << id << "\">" << htmlSpecialChars(
-					StringView(res->getString(3))) << "</a></td>"
-				"<td>" << htmlSpecialChars(StringView(res->getString(4)))
-					<< "</td>"
+				"<td>" << res[2] << "</td>"
+				"<td><a href=\"/file/" << id << "\">"
+					<< htmlSpecialChars(res[3]) << "</a></td>"
+				"<td>" << htmlSpecialChars(res[4]) << "</td>"
 				"<td><a class=\"btn-small\" href=\"/file/" << id
 					<< "\">Download</a>";
 
