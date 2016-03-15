@@ -438,7 +438,7 @@ void Spawner::runChild(const std::string& exec,
 
 	execvp(exec.c_str(), (char** const)arg);
 
-	send_error("execv()"); // execv() failed
+	send_error(concat("execvp('", exec, "')").c_str()); // execvp() failed
 }
 
 template<template<class...> class Func, class... TArgs, class... Args>
