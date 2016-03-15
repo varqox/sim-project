@@ -22,8 +22,8 @@ Sim::Session::State Sim::Session::open() {
 				"SELECT user_id, data, type, username, ip, user_agent "
 				"FROM session s, users u "
 				"WHERE s.id=? AND time>=? AND u.id=s.user_id");
-		stmt.bind(1, id_);
-		stmt.bind(2, date("%Y-%m-%d %H:%M:%S",
+		stmt.setString(1, id_);
+		stmt.setString(2, date("%Y-%m-%d %H:%M:%S",
 			time(nullptr) - SESSION_MAX_LIFETIME));
 
 		DB::Result res = stmt.executeQuery();
@@ -73,14 +73,14 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 		// Remove obsolete sessions
 		sim_.db_conn.executeUpdate(concat("DELETE FROM `session` WHERE time<'",
 			date("%Y-%m-%d %H:%M:%S'", time(nullptr) - SESSION_MAX_LIFETIME)));
-		stmt.bind(2, _user_id);
-		stmt.bind(3, sim_.client_ip_);
-		stmt.bind(4, sim_.req_->headers.get("User-Agent"));
-		stmt.bind(5, date("%Y-%m-%d %H:%M:%S"));
+		stmt.setString(2, _user_id);
+		stmt.setString(3, sim_.client_ip_);
+		stmt.setString(4, sim_.req_->headers.get("User-Agent"));
+		stmt.setString(5, date("%Y-%m-%d %H:%M:%S"));
 
 		for (;;) {
 			id_ = generateId();
-			stmt.bind(1, id_); // TODO: parameters preserve!
+			stmt.setString(1, id_); // TODO: parameters preserve!
 
 			try {
 				stmt.executeUpdate(); // TODO: INSERT IGNORE
@@ -110,7 +110,7 @@ void Sim::Session::destroy() {
 	try {
 		DB::Statement stmt = sim_.db_conn.prepare(
 			"DELETE FROM session WHERE id=?");
-		stmt.bind(1, id_);
+		stmt.setString(1, id_);
 		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
@@ -131,8 +131,8 @@ void Sim::Session::close() {
 	try {
 		DB::Statement stmt = sim_.db_conn.prepare(
 			"UPDATE session SET data=? WHERE id=?");
-		stmt.bind(1, data);
-		stmt.bind(2, id_);
+		stmt.setString(1, data);
+		stmt.setString(2, id_);
 		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {

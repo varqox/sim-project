@@ -51,19 +51,19 @@ static void processSubmissionQueue() {
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
 							"s.final_report=IF(s.id=?, ?, s.final_report)"
 						"WHERE s.id=x.id OR s.id=?");
-					stmt.bind(1, user_id);
-					stmt.bind(2, round_id);
-					stmt.bind(3, submission_id);
-					stmt.bind(4, submission_id);
-					stmt.bind(5, submission_id);
-					stmt.bind(6, (jres.status == JudgeResult::COMPILE_ERROR
+					stmt.setString(1, user_id);
+					stmt.setString(2, round_id);
+					stmt.setString(3, submission_id);
+					stmt.setString(4, submission_id);
+					stmt.setString(5, submission_id);
+					stmt.setString(6, (jres.status == JudgeResult::COMPILE_ERROR
 						? "c_error" : "judge_error"));
-					stmt.bind(7, submission_id);
-					stmt.bind(8, submission_id);
-					stmt.bind(9, jres.initial_report);
-					stmt.bind(10, submission_id);
-					stmt.bind(11, jres.final_report);
-					stmt.bind(12, submission_id);
+					stmt.setString(7, submission_id);
+					stmt.setString(8, submission_id);
+					stmt.setString(9, jres.initial_report);
+					stmt.setString(10, submission_id);
+					stmt.setString(11, jres.final_report);
+					stmt.setString(12, submission_id);
 
 				} else {
 					stmt = db_conn.prepare("UPDATE submissions s, "
@@ -81,21 +81,21 @@ static void processSubmissionQueue() {
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
 							"s.final_report=IF(s.id=?, ?, s.final_report)"
 						"WHERE s.id=x.id OR s.id=?");
-					stmt.bind(1, user_id);
-					stmt.bind(2, round_id);
-					stmt.bind(3, submission_id);
-					stmt.bind(4, submission_id);
-					stmt.bind(5, submission_id);
-					stmt.bind(6, submission_id);
-					stmt.bind(7, (jres.status == JudgeResult::OK
+					stmt.setString(1, user_id);
+					stmt.setString(2, round_id);
+					stmt.setString(3, submission_id);
+					stmt.setString(4, submission_id);
+					stmt.setString(5, submission_id);
+					stmt.setString(6, submission_id);
+					stmt.setString(7, (jres.status == JudgeResult::OK
 						? "ok" : "error"));
-					stmt.bind(8, submission_id);
-					stmt.bind(9, jres.score);
-					stmt.bind(10, submission_id);
-					stmt.bind(11, jres.initial_report);
-					stmt.bind(12, submission_id);
-					stmt.bind(13, jres.final_report);
-					stmt.bind(14, submission_id);
+					stmt.setString(8, submission_id);
+					stmt.setInt64(9, jres.score);
+					stmt.setString(10, submission_id);
+					stmt.setString(11, jres.initial_report);
+					stmt.setString(12, submission_id);
+					stmt.setString(13, jres.final_report);
+					stmt.setString(14, submission_id);
 				}
 
 				stmt.executeUpdate();

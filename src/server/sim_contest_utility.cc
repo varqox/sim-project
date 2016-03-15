@@ -36,9 +36,9 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 			"FROM rounds "
 			"WHERE id=? OR id=(SELECT parent FROM rounds WHERE id=?) OR "
 				"id=(SELECT grandparent FROM rounds WHERE id=?)");
-		stmt.bind(1, round_id);
-		stmt.bind(2, round_id);
-		stmt.bind(3, round_id);
+		stmt.setString(1, round_id);
+		stmt.setString(2, round_id);
+		stmt.setString(3, round_id);
 
 		DB::Result res = stmt.executeQuery();
 
@@ -93,8 +93,8 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 
 				stmt = sim_.db_conn.prepare("SELECT user_id "
 					"FROM users_to_contests WHERE user_id=? AND contest_id=?");
-				stmt.bind(1, sim_.session->user_id);
-				stmt.bind(2, r_path->contest->id);
+				stmt.setString(1, sim_.session->user_id);
+				stmt.setString(2, r_path->contest->id);
 
 				res = stmt.executeQuery();
 				if (!res.next()) {
@@ -136,8 +136,8 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 		// Check if user has more privileges than the owner
 		DB::Statement stmt = sim.db_conn.prepare(
 			"SELECT id, type FROM users WHERE id=? OR id=?");
-		stmt.bind(1, r_path.contest->owner);
-		stmt.bind(2, sim.session->user_id);
+		stmt.setString(1, r_path.contest->owner);
+		stmt.setString(2, sim.session->user_id);
 
 		DB::Result res = stmt.executeQuery();
 		int owner_type = 0, user_type = 4;
@@ -268,9 +268,9 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 					"FROM rounds WHERE parent=? AND "
 						"(visible IS TRUE OR begins IS NULL OR begins<=?) "
 					"ORDER BY item");
-			stmt.bind(1, r_path.contest->id);
+			stmt.setString(1, r_path.contest->id);
 			if (!admin_view)
-				stmt.bind(2, date("%Y-%m-%d %H:%M:%S")); // current date
+				stmt.setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
 
 			struct SubroundExtended {
 				string id, name, item, begins, ends, full_results;
@@ -297,7 +297,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 			// Select problems
 			stmt = sim_.db_conn.prepare("SELECT id, parent, name FROM rounds "
 					"WHERE grandparent=? ORDER BY item");
-			stmt.bind(1, r_path.contest->id);
+			stmt.setString(1, r_path.contest->id);
 
 			res = stmt.executeQuery();
 			std::map<string, vector<Problem> > problems; // (round_id, problems)
@@ -364,7 +364,7 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 			// Select problems
 			DB::Statement stmt = sim_.db_conn.prepare("SELECT id, name "
 				"FROM rounds WHERE parent=? ORDER BY item");
-			stmt.bind(1, r_path.round->id);
+			stmt.setString(1, r_path.round->id);
 
 			// List problems
 			DB::Result res = stmt.executeQuery();
