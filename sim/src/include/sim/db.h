@@ -86,21 +86,21 @@ public:
 
 	void clearParams() { pstmt_->clearParameters(); }
 
-	void bind(uint index, bool val) { pstmt_->setBoolean(index, val); }
+	void setBool(uint index, bool val) { pstmt_->setBoolean(index, val); }
 
-	void bind(uint index, int32_t val) { pstmt_->setInt(index, val); }
+	void setInt(uint index, int32_t val) { pstmt_->setInt(index, val); }
 
-	void bind(uint index, uint32_t val) { pstmt_->setUInt(index, val); }
+	void setUInt(uint index, uint32_t val) { pstmt_->setUInt(index, val); }
 
-	void bind(uint index, int64_t val) { pstmt_->setInt64(index, val); }
+	void setInt64(uint index, int64_t val) { pstmt_->setInt64(index, val); }
 
-	void bind(uint index, uint64_t val) { pstmt_->setUInt64(index, val); }
+	void setUInt64(uint index, uint64_t val) { pstmt_->setUInt64(index, val); }
 
-	void bind(uint index, const std::string& val) {
+	void setString(uint index, const std::string& val) {
 		pstmt_->setString(index, val);
 	}
 
-	void bindNull(uint index) { pstmt_->setNull(index, 0); }
+	void setNull(uint index) { pstmt_->setNull(index, 0); }
 
 	int executeUpdate() { return pstmt_->executeUpdate(); }
 

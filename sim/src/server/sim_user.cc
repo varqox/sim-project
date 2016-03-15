@@ -130,7 +130,7 @@ void Sim::User::handle() {
 	DB::Statement stmt = sim_.db_conn.prepare(
 		"SELECT username, first_name, last_name, email, type "
 		"FROM users WHERE id=?");
-	stmt.bind(1, data.user_id);
+	stmt.setString(1, data.user_id);
 
 	DB::Result res = stmt.executeQuery();
 	if (!res.next())
@@ -177,7 +177,7 @@ void Sim::User::login() {
 			try {
 				DB::Statement stmt = sim_.db_conn.prepare(
 					"SELECT id, salt, password FROM `users` WHERE username=?");
-				stmt.bind(1, username);
+				stmt.setString(1, username);
 
 				DB::Result res = stmt.executeQuery();
 				if (res.next()) {
@@ -265,17 +265,17 @@ void Sim::User::signUp() {
 					"INSERT IGNORE `users` (username, "
 							"first_name, last_name, email, salt, password) "
 					"VALUES(?, ?, ?, ?, ?, ?)");
-				stmt.bind(1, username);
-				stmt.bind(2, first_name);
-				stmt.bind(3, last_name);
-				stmt.bind(4, email);
-				stmt.bind(5, salt);
-				stmt.bind(6, sha3_512(salt + password1));
+				stmt.setString(1, username);
+				stmt.setString(2, first_name);
+				stmt.setString(3, last_name);
+				stmt.setString(4, email);
+				stmt.setString(5, salt);
+				stmt.setString(6, sha3_512(salt + password1));
 
 				if (stmt.executeUpdate() == 1) {
 					stmt = sim_.db_conn.prepare(
 						"SELECT id FROM `users` WHERE username=?");
-					stmt.bind(1, username);
+					stmt.setString(1, username);
 
 					DB::Result res = stmt.executeQuery();
 					if (res.next())
@@ -446,12 +446,12 @@ void Sim::User::editProfile(Data& data) {
 				DB::Statement stmt = sim_.db_conn.prepare("UPDATE IGNORE users "
 					"SET username=?, first_name=?, last_name=?, email=?, "
 					"type=? WHERE id=?");
-				stmt.bind(1, new_username);
-				stmt.bind(2, data.first_name);
-				stmt.bind(3, data.last_name);
-				stmt.bind(4, data.email);
-				stmt.bind(5, new_user_type);
-				stmt.bind(6, data.user_id);
+				stmt.setString(1, new_username);
+				stmt.setString(2, data.first_name);
+				stmt.setString(3, data.last_name);
+				stmt.setString(4, data.email);
+				stmt.setUInt(5, new_user_type);
+				stmt.setString(6, data.user_id);
 
 				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
@@ -592,7 +592,7 @@ void Sim::User::changePassword(Data& data) {
 			try {
 				DB::Statement stmt = sim_.db_conn.prepare(
 					"SELECT salt, password FROM users WHERE id=?");
-				stmt.bind(1, data.user_id);
+				stmt.setString(1, data.user_id);
 
 				DB::Result res = stmt.executeQuery();
 				if (!res.next()) {
@@ -610,9 +610,9 @@ void Sim::User::changePassword(Data& data) {
 
 					stmt = sim_.db_conn.prepare(
 						"UPDATE users SET salt=?, password=? WHERE id=?");
-					stmt.bind(1, salt);
-					stmt.bind(2, sha3_512(salt + password1));
-					stmt.bind(3, data.user_id);
+					stmt.setString(1, salt);
+					stmt.setString(2, sha3_512(salt + password1));
+					stmt.setString(3, data.user_id);
 
 					if (stmt.executeUpdate() == 1)
 						fv.addError("Password changed");
@@ -665,25 +665,25 @@ void Sim::User::deleteAccount(Data& data) {
 			DB::Statement stmt = sim_.db_conn.prepare("UPDATE rounds r, problems p "
 				"SET r.owner=1, p.owner=1 "
 				"WHERE r.owner=? OR p.owner=?");
-			stmt.bind(1, data.user_id);
-			stmt.bind(2, data.user_id);
+			stmt.setString(1, data.user_id);
+			stmt.setString(2, data.user_id);
 			stmt.executeUpdate();
 
 			// Delete submissions
 			stmt = sim_.db_conn.prepare(
 				"DELETE FROM submissions WHERE user_id=?");
-			stmt.bind(1, data.user_id);
+			stmt.setString(1, data.user_id);
 			stmt.executeUpdate();
 
 			// Delete from users_to_contests
 			stmt = sim_.db_conn.prepare(
 				"DELETE FROM users_to_contests WHERE user_id=?");
-			stmt.bind(1, data.user_id);
+			stmt.setString(1, data.user_id);
 			stmt.executeUpdate();
 
 			// Delete user
 			stmt = sim_.db_conn.prepare("DELETE FROM users WHERE id=?");
-			stmt.bind(1, data.user_id);
+			stmt.setString(1, data.user_id);
 
 			if (stmt.executeUpdate()) {
 				if (data.user_id == sim_.session->user_id)

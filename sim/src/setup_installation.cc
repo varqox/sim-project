@@ -146,8 +146,8 @@ int main(int argc, char **argv) {
 			DB::Statement stmt(conn.prepare(
 				"INSERT IGNORE users (username, salt, password, type) "
 				"VALUES ('sim', ?, ?, 0)"));
-			stmt.bind(1, salt);
-			stmt.bind(2, sha3_512(salt + "sim"));
+			stmt.setString(1, salt);
+			stmt.setString(2, sha3_512(salt + "sim"));
 			stmt.executeUpdate();
 		});
 

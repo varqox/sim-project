@@ -33,9 +33,9 @@ void Sim::Contest::handle() {
 					" UNION "
 					"(SELECT id, name FROM rounds, users_to_contests "
 						"WHERE user_id=? AND contest_id=id) ORDER BY id");
-				stmt.bind(1, sim_.session->user_id);
-				stmt.bind(2, sim_.session->user_type);
-				stmt.bind(3, sim_.session->user_id);
+				stmt.setString(1, sim_.session->user_id);
+				stmt.setUInt(2, sim_.session->user_type);
+				stmt.setString(3, sim_.session->user_id);
 
 			} else
 				stmt = sim_.db_conn.prepare("SELECT id, name FROM rounds "
@@ -230,10 +230,10 @@ void Sim::Contest::addContest() {
 						"(is_public, name, owner, item, show_ranking) "
 					"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
 						"WHERE parent IS NULL");
-				stmt.bind(1, is_public);
-				stmt.bind(2, name);
-				stmt.bind(3, sim_.session->user_id);
-				stmt.bind(4, show_ranking);
+				stmt.setBool(1, is_public);
+				stmt.setString(2, name);
+				stmt.setString(3, sim_.session->user_id);
+				stmt.setBool(4, show_ranking);
 
 				if (stmt.executeUpdate() != 1)
 					throw std::runtime_error("Failed to insert round");
@@ -309,29 +309,29 @@ void Sim::Contest::addRound() {
 							"visible, begins, ends, full_results) "
 						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
 							"WHERE parent=?");
-				stmt.bind(1, r_path_->round_id);
-				stmt.bind(2, name);
-				stmt.bind(3, is_visible);
+				stmt.setString(1, r_path_->round_id);
+				stmt.setString(2, name);
+				stmt.setBool(3, is_visible);
 
 				// Begins
 				if (begins.empty())
-					stmt.bindNull(4);
+					stmt.setNull(4);
 				else
-					stmt.bind(4, begins);
+					stmt.setString(4, begins);
 
 				// ends
 				if (ends.empty())
-					stmt.bindNull(5);
+					stmt.setNull(5);
 				else
-					stmt.bind(5, ends);
+					stmt.setString(5, ends);
 
 				// Full_results
 				if (full_results.empty())
-					stmt.bindNull(6);
+					stmt.setNull(6);
 				else
-					stmt.bind(6, full_results);
+					stmt.setString(6, full_results);
 
-				stmt.bind(7, r_path_->round_id);
+				stmt.setString(7, r_path_->round_id);
 
 				if (stmt.executeUpdate() != 1)
 					throw std::runtime_error("Failed to insert round");
@@ -545,17 +545,17 @@ void Sim::Contest::addProblem() {
 							"problem_id=? "
 						"WHERE p.id=? AND r.id=?");
 
-				stmt.bind(1, r_path_->round->id);
-				stmt.bind(2, name);
-				stmt.bind(3, tag);
-				stmt.bind(4, sim_.session->user_id);
-				stmt.bind(5, date("%Y-%m-%d %H:%M:%S"));
-				stmt.bind(6, r_path_->round->id);
-				stmt.bind(7, r_path_->contest->id);
-				stmt.bind(8, name);
-				stmt.bind(9, problem_id);
-				stmt.bind(10, problem_id);
-				stmt.bind(11, round_id);
+				stmt.setString(1, r_path_->round->id);
+				stmt.setString(2, name);
+				stmt.setString(3, tag);
+				stmt.setString(4, sim_.session->user_id);
+				stmt.setString(5, date("%Y-%m-%d %H:%M:%S"));
+				stmt.setString(6, r_path_->round->id);
+				stmt.setString(7, r_path_->contest->id);
+				stmt.setString(8, name);
+				stmt.setString(9, problem_id);
+				stmt.setString(10, problem_id);
+				stmt.setString(11, round_id);
 
 				if (2 != stmt.executeUpdate())
 					throw std::runtime_error("Failed to update");
@@ -649,11 +649,11 @@ void Sim::Contest::editContest() {
 						"(SELECT id FROM users WHERE username=?) u "
 					"SET name=?, owner=u.id, is_public=?, show_ranking=? "
 					"WHERE r.id=?");
-				stmt.bind(1, owner);
-				stmt.bind(2, name);
-				stmt.bind(3, is_public);
-				stmt.bind(4, show_ranking);
-				stmt.bind(5, r_path_->round_id);
+				stmt.setString(1, owner);
+				stmt.setString(2, name);
+				stmt.setBool(3, is_public);
+				stmt.setBool(4, show_ranking);
+				stmt.setString(5, r_path_->round_id);
 
 				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
@@ -676,7 +676,7 @@ void Sim::Contest::editContest() {
 	// Get contest information
 	DB::Statement stmt = sim_.db_conn.prepare(
 		"SELECT u.username FROM rounds r, users u WHERE r.id=? AND owner=u.id");
-	stmt.bind(1, r_path_->round_id);
+	stmt.setString(1, r_path_->round_id);
 
 	DB::Result res = stmt.executeQuery();
 	if (!res.next())
@@ -755,28 +755,28 @@ void Sim::Contest::editRound() {
 				DB::Statement stmt = sim_.db_conn.prepare("UPDATE rounds "
 					"SET name=?, visible=?, begins=?, ends=?, full_results=? "
 					"WHERE id=?");
-				stmt.bind(1, name);
-				stmt.bind(2, is_visible);
+				stmt.setString(1, name);
+				stmt.setBool(2, is_visible);
 
 				// Begins
 				if (begins.empty())
-					stmt.bindNull(3);
+					stmt.setNull(3);
 				else
-					stmt.bind(3, begins);
+					stmt.setString(3, begins);
 
 				// ends
 				if (ends.empty())
-					stmt.bindNull(4);
+					stmt.setNull(4);
 				else
-					stmt.bind(4, ends);
+					stmt.setString(4, ends);
 
 				// Full_results
 				if (full_results.empty())
-					stmt.bindNull(5);
+					stmt.setNull(5);
 				else
-					stmt.bind(5, full_results);
+					stmt.setString(5, full_results);
 
-				stmt.bind(6, r_path_->round_id);
+				stmt.setString(6, r_path_->round_id);
 
 				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
@@ -860,8 +860,8 @@ void Sim::Contest::editProblem() {
 		try {
 			DB::Statement stmt = sim_.db_conn.prepare("UPDATE submissions "
 				"SET status='waiting', queued=? WHERE problem_id=?");
-			stmt.bind(1, date("%Y-%m-%d %H:%M:%S"));
-			stmt.bind(2, r_path_->problem->problem_id);
+			stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
+			stmt.setString(2, r_path_->problem->problem_id);
 
 			stmt.executeUpdate();
 			notifyJudgeServer();
@@ -981,11 +981,11 @@ void Sim::Contest::editProblem() {
 				DB::Statement stmt = sim_.db_conn.prepare(
 					"UPDATE rounds r, problems p "
 					"SET r.name=?, p.name=?, p.tag=? WHERE r.id=? AND p.id=?");
-				stmt.bind(1, round_name);
-				stmt.bind(2, name);
-				stmt.bind(3, tag);
-				stmt.bind(4, r_path_->round_id);
-				stmt.bind(5, r_path_->problem->problem_id);
+				stmt.setString(1, round_name);
+				stmt.setString(2, name);
+				stmt.setString(3, tag);
+				stmt.setString(4, r_path_->round_id);
+				stmt.setString(5, r_path_->problem->problem_id);
 
 				if (stmt.executeUpdate()) {
 					// Update r_path_
@@ -1083,21 +1083,21 @@ void Sim::Contest::deleteContest() {
 			// Delete submissions
 			DB::Statement stmt = sim_.db_conn.prepare("DELETE FROM submissions "
 					"WHERE contest_round_id=?");
-			stmt.bind(1, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
 			stmt.executeUpdate();
 
 			// Delete from users_to_contests
 			stmt = sim_.db_conn.prepare("DELETE FROM users_to_contests "
 				"WHERE contest_id=?");
-			stmt.bind(1, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
 			stmt.executeUpdate();
 
 			// Delete rounds
 			stmt = sim_.db_conn.prepare("DELETE FROM rounds "
 				"WHERE id=? OR parent=? OR grandparent=?");
-			stmt.bind(1, r_path_->round_id);
-			stmt.bind(2, r_path_->round_id);
-			stmt.bind(3, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
+			stmt.setString(2, r_path_->round_id);
+			stmt.setString(3, r_path_->round_id);
 
 			if (stmt.executeUpdate())
 				return sim_.redirect("/c");
@@ -1137,14 +1137,14 @@ void Sim::Contest::deleteRound() {
 			// Delete submissions
 			DB::Statement stmt = sim_.db_conn.prepare("DELETE FROM submissions "
 					"WHERE parent_round_id=?");
-			stmt.bind(1, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
 			stmt.executeUpdate();
 
 			// Delete rounds
 			stmt = sim_.db_conn.prepare(
 				"DELETE FROM rounds WHERE id=? OR parent=?");
-			stmt.bind(1, r_path_->round_id);
-			stmt.bind(2, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
+			stmt.setString(2, r_path_->round_id);
 
 			if (stmt.executeUpdate() > 0)
 				return sim_.redirect("/c/" + r_path_->contest->id);
@@ -1184,12 +1184,12 @@ void Sim::Contest::deleteProblem() {
 			// Delete submissions
 			DB::Statement stmt = sim_.db_conn.prepare(
 				"DELETE FROM submissions WHERE round_id=?");
-			stmt.bind(1, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
 			stmt.executeUpdate();
 
 			// Delete problem round
 			stmt = sim_.db_conn.prepare("DELETE FROM rounds WHERE id=?");
-			stmt.bind(1, r_path_->round_id);
+			stmt.setString(1, r_path_->round_id);
 
 			if (stmt.executeUpdate())
 				return sim_.redirect("/c/" + r_path_->round->id);
@@ -1281,13 +1281,13 @@ void Sim::Contest::submit(bool admin_view) {
 						"(user_id, problem_id, round_id, parent_round_id, "
 							"contest_round_id, submit_time, queued) "
 						"VALUES(?, ?, ?, ?, ?, ?, ?)");
-				stmt.bind(1, sim_.session->user_id);
-				stmt.bind(2, problem_r_path->problem->problem_id);
-				stmt.bind(3, problem_r_path->problem->id);
-				stmt.bind(4, problem_r_path->round->id);
-				stmt.bind(5, problem_r_path->contest->id);
-				stmt.bind(6, current_date);
-				stmt.bind(7, current_date);
+				stmt.setString(1, sim_.session->user_id);
+				stmt.setString(2, problem_r_path->problem->problem_id);
+				stmt.setString(3, problem_r_path->problem->id);
+				stmt.setString(4, problem_r_path->round->id);
+				stmt.setString(5, problem_r_path->contest->id);
+				stmt.setString(6, current_date);
+				stmt.setString(7, current_date);
 
 				if (stmt.executeUpdate() != 1) {
 					fv.addError("Database error - failed to insert submission");
@@ -1352,10 +1352,10 @@ void Sim::Contest::submit(bool admin_view) {
 				: "SELECT id, name FROM rounds WHERE parent=? "
 					"AND (begins IS NULL OR begins<=?) "
 					"AND (ends IS NULL OR ?<ends) ORDER BY item");
-			stmt.bind(1, r_path_->contest->id);
+			stmt.setString(1, r_path_->contest->id);
 			if (!admin_view) {
-				stmt.bind(2, current_date);
-				stmt.bind(3, current_date);
+				stmt.setString(2, current_date);
+				stmt.setString(3, current_date);
 			}
 
 			DB::Result res = stmt.executeQuery();
@@ -1373,7 +1373,7 @@ void Sim::Contest::submit(bool admin_view) {
 			// Select problems
 			stmt = sim_.db_conn.prepare("SELECT id, parent, name FROM rounds "
 				"WHERE grandparent=? ORDER BY item");
-			stmt.bind(1, r_path_->contest->id);
+			stmt.setString(1, r_path_->contest->id);
 			res = stmt.executeQuery();
 
 			// (round_id, problems)
@@ -1418,7 +1418,7 @@ void Sim::Contest::submit(bool admin_view) {
 			// Select problems
 			DB::Statement stmt = sim_.db_conn.prepare(
 				"SELECT id, name FROM rounds WHERE parent=? ORDER BY item");
-			stmt.bind(1, r_path_->round->id);
+			stmt.setString(1, r_path_->round->id);
 
 			// List problems
 			DB::Result res = stmt.executeQuery();
@@ -1498,7 +1498,7 @@ void Sim::Contest::submission() {
 			concat("SELECT user_id, round_id", columns, " "
 				"FROM submissions s, problems p, users u "
 				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id"));
-		stmt.bind(1, submission_id);
+		stmt.setString(1, submission_id);
 
 		DB::Result res = stmt.executeQuery();
 		if (!res.next())
@@ -1535,7 +1535,7 @@ void Sim::Contest::submission() {
 					// Delete submission
 					stmt = sim_.db_conn.prepare(
 						"DELETE FROM submissions WHERE id=?");
-					stmt.bind(1, submission_id);
+					stmt.setString(1, submission_id);
 
 					if (stmt.executeUpdate() == 0) {
 						fv.addError("Deletion failed");
@@ -1548,8 +1548,8 @@ void Sim::Contest::submission() {
 						"WHERE user_id=? AND round_id=? "
 							"AND (status='ok' OR status='error') "
 						"ORDER BY id DESC LIMIT 1");
-					stmt.bind(1, submission_user_id);
-					stmt.bind(2, round_id);
+					stmt.setString(1, submission_user_id);
+					stmt.setString(2, round_id);
 					stmt.executeUpdate();
 
 					return sim_.redirect(concat("/c/", round_id,
@@ -1589,8 +1589,8 @@ void Sim::Contest::submission() {
 
 			stmt = sim_.db_conn.prepare("UPDATE submissions "
 				"SET status='waiting', queued=? WHERE id=?");
-			stmt.bind(1, date("%Y-%m-%d %H:%M:%S"));
-			stmt.bind(2, submission_id);
+			stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
+			stmt.setString(2, submission_id);
 
 			stmt.executeUpdate();
 			notifyJudgeServer();
@@ -1777,9 +1777,9 @@ void Sim::Contest::submissions(bool admin_view) {
 				"FROM submissions s, rounds r, rounds r2 "
 				"WHERE s.", param_column, "=? AND s.round_id=r.id "
 					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC"));
-		stmt.bind(1, r_path_->round_id);
+		stmt.setString(1, r_path_->round_id);
 		if (!admin_view)
-			stmt.bind(2, sim_.session->user_id);
+			stmt.setString(2, sim_.session->user_id);
 
 		DB::Result res = stmt.executeQuery();
 		if (res.rowCount() == 0) {
@@ -1921,11 +1921,11 @@ void Sim::Contest::ranking(bool admin_view) {
 			: concat("SELECT id, name, item FROM rounds WHERE ", column, "=? "
 				"AND (full_results IS NULL OR full_results<=?)"));
 
-		stmt.bind(1, r_path_->type == CONTEST
+		stmt.setString(1, r_path_->type == CONTEST
 			? r_path_->round_id
 			: r_path_->round->id);
 		if (!admin_view)
-			stmt.bind(2, current_time);
+			stmt.setString(2, current_time);
 		res = stmt.executeQuery();
 
 		vector<RankingRound> rounds;
@@ -1960,9 +1960,9 @@ void Sim::Contest::ranking(bool admin_view) {
 				"WHERE r.", column, "=? AND r.problem_id=p.id "
 					"AND r.parent=r1.id "
 					"AND (r1.full_results IS NULL OR r1.full_results<=?)"));
-		stmt.bind(1, r_path_->round_id);
+		stmt.setString(1, r_path_->round_id);
 		if (!admin_view)
-			stmt.bind(2, current_time);
+			stmt.setString(2, current_time);
 		res = stmt.executeQuery();
 
 		// Add problems to rounds
@@ -1996,9 +1996,9 @@ void Sim::Contest::ranking(bool admin_view) {
 					"AND r.id=parent_round_id "
 					"AND (full_results IS NULL OR full_results<=?) "
 				"ORDER BY user_id"));
-		stmt.bind(1, r_path_->round_id);
+		stmt.setString(1, r_path_->round_id);
 		if (!admin_view)
-			stmt.bind(2, current_time);
+			stmt.setString(2, current_time);
 		res = stmt.executeQuery();
 
 		// Construct rows
@@ -2148,7 +2148,7 @@ void Sim::Contest::file() {
 	try {
 		DB::Statement stmt = sim_.db_conn.prepare(
 			"SELECT name, round_id FROM files WHERE id=?");
-		stmt.bind(1, id);
+		stmt.setString(1, id);
 
 		DB::Result res = stmt.executeQuery();
 		if (!res.next())
@@ -2201,10 +2201,10 @@ void Sim::Contest::editFile(const string& id, string name) {
 				string current_time = date("%Y-%m-%d %H:%M:%S");
 				DB::Statement stmt = sim_.db_conn.prepare("UPDATE files "
 						"SET name=?, description=?, modified=? WHERE id=?");
-				stmt.bind(1, name);
-				stmt.bind(2, description);
-				stmt.bind(3, current_time);
-				stmt.bind(4, id);
+				stmt.setString(1, name);
+				stmt.setString(2, description);
+				stmt.setString(3, current_time);
+				stmt.setString(4, id);
 				stmt.executeUpdate();
 
 				// Move file
@@ -2226,7 +2226,7 @@ void Sim::Contest::editFile(const string& id, string name) {
 	try {
 		DB::Statement stmt = sim_.db_conn.prepare(
 			"SELECT name, description, modified FROM files WHERE id=?");
-		stmt.bind(1, id);
+		stmt.setString(1, id);
 
 		DB::Result res = stmt.executeQuery();
 		if (!res.next())
@@ -2289,7 +2289,7 @@ void Sim::Contest::deleteFile(const string& id, const string& name) {
 		try {
 			DB::Statement stmt = sim_.db_conn.prepare(
 				"DELETE FROM files WHERE id=?");
-			stmt.bind(1, id);
+			stmt.setString(1, id);
 
 			if (stmt.executeUpdate() != 1)
 				return sim_.error500();
@@ -2361,10 +2361,10 @@ void Sim::Contest::addFile() {
 					for (char& c : id)
 						c = t[getRandom<int>(0, len - 1)];
 
-					stmt.bind(1, id);
-					stmt.bind(2, file_name);
-					stmt.bind(3, description);
-					stmt.bind(4, current_time);
+					stmt.setString(1, id);
+					stmt.setString(2, file_name);
+					stmt.setString(3, description);
+					stmt.setString(4, current_time);
 				} while (stmt.executeUpdate() == 0);
 
 				// Move file
@@ -2374,8 +2374,8 @@ void Sim::Contest::addFile() {
 
 				stmt = sim_.db_conn.prepare(
 					"UPDATE files SET round_id=? WHERE id=?");
-				stmt.bind(1, r_path_->round_id);
-				stmt.bind(2, id);
+				stmt.setString(1, r_path_->round_id);
+				stmt.setString(2, id);
 
 				if (stmt.executeUpdate() != 1) {
 					(void)remove(concat("files/", id).c_str());
@@ -2439,7 +2439,7 @@ void Sim::Contest::files(bool admin_view) {
 		DB::Statement stmt = sim_.db_conn.prepare(
 			"SELECT id, modified, name, description FROM files "
 			"WHERE round_id=? ORDER BY modified DESC");
-		stmt.bind(1, r_path_->round_id);
+		stmt.setString(1, r_path_->round_id);
 		DB::Result res = stmt.executeQuery();
 
 		if (res.rowCount() == 0) {
