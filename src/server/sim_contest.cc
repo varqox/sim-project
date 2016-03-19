@@ -526,9 +526,12 @@ void Sim::Contest::addProblem() {
 				string tag = problem_config.getString("tag");
 
 				// Move package folder to problems/
-				if (move(package_tmp_dir, ("problems/" + problem_id).c_str()))
+				if (BLOCK_SIGNALS(move(package_tmp_dir,
+					concat("problems/", problem_id).c_str(), false)))
+				{
 					throw std::runtime_error(concat("Error: move()",
 						error(errno)));
+				}
 
 				rm_tmp_dir.reset("problems/" + problem_id);
 
@@ -1295,8 +1298,8 @@ void Sim::Contest::submit(bool admin_view) {
 				string submission_id = res[1];
 
 				// Copy solution
-				copy(solution_tmp_path,
-					concat("solutions/", submission_id, ".cpp"));
+				BLOCK_SIGNALS(copy(solution_tmp_path,
+					concat("solutions/", submission_id, ".cpp")));
 
 				// Change submission status to 'waiting'
 				sim_.db_conn.executeUpdate(
@@ -2271,7 +2274,7 @@ void Sim::Contest::deleteFile(const string& id, const string& name) {
 			if (stmt.executeUpdate() != 1)
 				return sim_.error500();
 
-			if (blockSignals(remove, concat("files/", id).c_str()))
+			if (BLOCK_SIGNALS(remove(concat("files/", id))))
 				throw std::runtime_error(concat("remove()", error(errno)));
 
 			return sim_.redirect(concat("/c/", r_path_->round_id, "/files"));
@@ -2354,7 +2357,7 @@ void Sim::Contest::addFile() {
 				stmt.setString(2, id);
 
 				if (stmt.executeUpdate() != 1) {
-					(void)remove(concat("files/", id).c_str());
+					(void)remove(concat("files/", id));
 					throw std::runtime_error("Failed to update inserted file");
 				}
 				signal_guard.unblock();
