@@ -84,6 +84,11 @@ inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) {
 	return mkdir_r(pathname.c_str(), mode);
 }
 
+// The same as remove(const char*)
+inline int remove(const std::string& pathname) {
+	return remove(pathname.c_str());
+}
+
 /**
  * @brief Removes recursively file/directory @p pathname relative to the
  *   directory file descriptor @p dirfd

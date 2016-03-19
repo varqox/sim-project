@@ -294,13 +294,16 @@ auto blockSignals(F f, T... args) -> decltype(f(args...)) {
 	return f(args...);
 }
 
+#define BLOCK_SIGNALS(...) blockSignals([&]{ return __VA_ARGS__; })
+
 // Block all signals when function @p f is called
 template<class F, class... T>
-auto ThreadBlockSignals(F f, T... args) -> decltype(f(args...)) {
+auto threadBlockSignals(F f, T... args) -> decltype(f(args...)) {
 	ThreadSignalBlocker sb;
 	return f(args...);
 }
 
+#define THREAD_BLOCK_SIGNALS(...) threadBlockSignals([&]{ return __VA_ARGS__; })
 
 /******************************* IMPLEMENTATION *******************************/
 

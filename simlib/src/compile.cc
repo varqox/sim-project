@@ -19,7 +19,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	Closer closer(cef);
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
-	if (copy(source, concat(tmp_dir.name(), "a.cpp")) == -1)
+	if (BLOCK_SIGNALS(copy(source, concat(tmp_dir.name(), "a.cpp"))) == -1)
 		throw std::runtime_error(concat("Failed to copy source file",
 			error(errno)));
 
@@ -77,7 +77,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		*c_errors = "";
 
 	// Move exec
-	if (move(concat(tmp_dir.name(), "exec"), exec) == -1)
+	if (BLOCK_SIGNALS(move(concat(tmp_dir.name(), "exec"), exec, false)) == -1)
 		throw std::runtime_error(concat("Failed to move exec", error(errno)));
 
 	return 0;
