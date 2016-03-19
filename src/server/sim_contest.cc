@@ -3,6 +3,7 @@
 #include "sim_session.h"
 
 #include <simlib/config_file.h>
+#include <simlib/debug.h>
 #include <simlib/filesystem.h>
 #include <simlib/logger.h>
 #include <simlib/process.h>
@@ -57,8 +58,7 @@ void Sim::Contest::handle() {
 			templ << "</div>\n";
 
 		} catch (const std::exception& e) {
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 	// Add contest
@@ -247,8 +247,7 @@ void Sim::Contest::addContest() {
 				return sim_.redirect("/c");
 
 			} catch (const std::exception& e) {
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -345,8 +344,7 @@ void Sim::Contest::addRound() {
 				return sim_.redirect("/c/" + r_path_->round_id);
 
 			} catch (const std::exception& e) {
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -475,8 +473,7 @@ void Sim::Contest::addProblem() {
 						{-1, -1, fd});
 				} catch (const std::exception& e) {
 					fv.addError("Internal server error");
-					errlog("Caught exception: ", __FILE__, ':',
-						toString(__LINE__), " -> ", e.what());
+					ERRLOG_CAUGHT(e);
 					goto form;
 				}
 
@@ -567,8 +564,7 @@ void Sim::Contest::addProblem() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -668,8 +664,7 @@ void Sim::Contest::editContest() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 	}
 
@@ -788,8 +783,7 @@ void Sim::Contest::editRound() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -867,8 +861,7 @@ void Sim::Contest::editProblem() {
 			notifyJudgeServer();
 
 		} catch (const std::exception& e) {
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 		return sim_.redirect(sim_.req_->target.substr(0, arg_beg - 1));
@@ -923,8 +916,7 @@ void Sim::Contest::editProblem() {
 				{-1, STDERR_FILENO, STDERR_FILENO, 20 * 1000000 /* 20 s */},
 				"problems");
 		} catch (const std::exception& e) {
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 			return sim_.error500();
 		}
 
@@ -996,8 +988,7 @@ void Sim::Contest::editProblem() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -1104,8 +1095,7 @@ void Sim::Contest::deleteContest() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 	TemplateWithMenu templ(*this, "Delete contest");
@@ -1151,8 +1141,7 @@ void Sim::Contest::deleteRound() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 	TemplateWithMenu templ(*this, "Delete round");
@@ -1196,8 +1185,7 @@ void Sim::Contest::deleteProblem() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 	TemplateWithMenu templ(*this, "Delete problem");
@@ -1321,8 +1309,7 @@ void Sim::Contest::submit(bool admin_view) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 		}
 	}
@@ -1441,8 +1428,7 @@ void Sim::Contest::submit(bool admin_view) {
 
 	} catch (const std::exception& e) {
 		fv.addError("Internal server error");
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 
 	if (isSuffix(buffer, "</option>\n"))
@@ -1557,8 +1543,7 @@ void Sim::Contest::submission() {
 
 				} catch (const std::exception& e) {
 					fv.addError("Internal server error");
-					errlog("Caught exception: ", __FILE__, ':',
-						toString(__LINE__), " -> ", e.what());
+					ERRLOG_CAUGHT(e);
 				}
 
 			TemplateWithMenu templ(*this, "Delete submission");
@@ -1628,8 +1613,7 @@ void Sim::Contest::submission() {
 			try {
 				es = Spawner::run(args[0], args, {-1, fd, -1});
 			} catch (const std::exception& e) {
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 				return sim_.error500();
 			}
 
@@ -1733,8 +1717,7 @@ void Sim::Contest::submission() {
 		templ << "</div>";
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 }
@@ -1755,8 +1738,7 @@ void Sim::Contest::submissions(bool admin_view) {
 			templ << res[1];
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 
@@ -1842,8 +1824,7 @@ void Sim::Contest::submissions(bool admin_view) {
 			"</table>\n";
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 }
@@ -2127,8 +2108,7 @@ void Sim::Contest::ranking(bool admin_view) {
 			"</table>\n";
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 }
@@ -2177,8 +2157,7 @@ void Sim::Contest::file() {
 		return;
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 }
@@ -2218,8 +2197,7 @@ void Sim::Contest::editFile(const string& id, string name) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -2238,8 +2216,7 @@ void Sim::Contest::editFile(const string& id, string name) {
 
 	} catch (const std::exception& e) {
 		fv.addError("Internal server error");
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 
 	TemplateWithMenu templ(*this, "Edit file");
@@ -2301,8 +2278,7 @@ void Sim::Contest::deleteFile(const string& id, const string& name) {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 	TemplateWithMenu templ(*this, "Delete file");
@@ -2387,8 +2363,7 @@ void Sim::Contest::addFile() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -2482,8 +2457,7 @@ void Sim::Contest::files(bool admin_view) {
 			"</table>\n";
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 }

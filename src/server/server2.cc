@@ -434,11 +434,10 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		ERRLOG_CATCH();;
 	}
 
 	return nullptr;

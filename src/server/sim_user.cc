@@ -3,6 +3,7 @@
 #include "sim_template.h"
 #include "sim_user.h"
 
+#include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
@@ -203,8 +204,7 @@ void Sim::User::login() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -288,8 +288,7 @@ void Sim::User::signUp() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -400,8 +399,7 @@ void Sim::User::listUsers() {
 			"</table>\n";
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		return sim_.error500();
 	}
 }
@@ -472,8 +470,7 @@ void Sim::User::editProfile(Data& data) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -620,8 +617,7 @@ void Sim::User::changePassword(Data& data) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 			}
 	}
 
@@ -693,8 +689,7 @@ void Sim::User::deleteAccount(Data& data) {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-				" -> ", e.what());
+			ERRLOG_CAUGHT(e);
 		}
 
 	TemplateWithMenu templ(sim_, data.user_id, "Delete account");

@@ -1,6 +1,7 @@
 #include "sim_contest_utility.h"
 #include "sim_session.h"
 
+#include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/time.h>
 
@@ -114,8 +115,7 @@ Sim::Contest::RoundPath* Sim::Contest::getRoundPath(const string& round_id) {
 		}
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 		sim_.error500();
 		return nullptr;
 	}
@@ -151,8 +151,7 @@ bool Sim::Contest::isAdmin(Sim& sim, const RoundPath& r_path) {
 		return owner_type > user_type;
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 
 	return false;
@@ -403,7 +402,6 @@ void Sim::Contest::TemplateWithMenu::printRoundView(const RoundPath& r_path,
 		}
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 }

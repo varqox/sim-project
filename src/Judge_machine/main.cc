@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <sim/db.h>
+#include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/process.h>
 #include <sys/inotify.h>
@@ -103,11 +104,10 @@ static void processSubmissionQueue() {
 		}
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" -> ", e.what());
+		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		ERRLOG_CATCH();;
 	}
 }
 
@@ -162,7 +162,7 @@ int main() {
 		tmp_dir = TemporaryDirectory("/tmp/sim-judge-machine.XXXXXX");
 
 	} catch (const std::exception& e) {
-		errlog("Caugqht exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
 			e.what());
 		return 1;
 	}

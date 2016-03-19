@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <csignal>
 #include <simlib/config_file.h>
+#include <simlib/debug.h>
 #include <simlib/filesystem.h>
 #include <simlib/logger.h>
 #include <simlib/process.h>
@@ -47,11 +48,10 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" -> ", e.what());
+		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		ERRLOG_CATCH();;
 	}
 
 	return nullptr;

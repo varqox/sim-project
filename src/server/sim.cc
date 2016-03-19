@@ -79,12 +79,11 @@ server::HttpResponse Sim::handle(string client_ip,
 			error404();
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" -> ", e.what());
+		ERRLOG_CAUGHT(e);
 		error500();
 
 	} catch (...) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		ERRLOG_CATCH();;
 		error500();
 	}
 
