@@ -1,5 +1,6 @@
 #include "sim_session.h"
 
+#include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/time.h>
@@ -42,8 +43,7 @@ Sim::Session::State Sim::Session::open() {
 		}
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -96,8 +96,7 @@ Sim::Session::State Sim::Session::create(const string& _user_id) {
 		state_ = OK;
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 
 	return state_;
@@ -114,8 +113,7 @@ void Sim::Session::destroy() {
 		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 
 	sim_.resp_.setCookie("session", "", 0); // Delete cookie
@@ -136,7 +134,6 @@ void Sim::Session::close() {
 		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
-		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
-			e.what());
+		ERRLOG_CAUGHT(e);
 	}
 }

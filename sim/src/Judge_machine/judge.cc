@@ -2,6 +2,7 @@
 #include "main.h"
 
 #include <simlib/compile.h>
+#include <simlib/debug.h>
 #include <simlib/sandbox_checker_callback.h>
 #include <simlib/sim_problem.h>
 #include <simlib/utility.h>
@@ -207,8 +208,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 			try {
 				es = Sandbox::run(concat(tmp_dir.name(), "exec"), {}, sb_opts);
 			} catch (const std::exception& e) {
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 
 				// System error
 				ratio = 0.0;
@@ -318,8 +318,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					checker_args, checker_sb_opts, ".", CheckerCallback(
 						{checker_args.begin() + 1, checker_args.end()}));
 			} catch (const std::exception& e) {
-				errlog("Caught exception: ", __FILE__, ':', toString(__LINE__),
-					" -> ", e.what());
+				ERRLOG_CAUGHT(e);
 
 				// System error
 				ratio = 0.0;
