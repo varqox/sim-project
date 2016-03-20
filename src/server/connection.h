@@ -38,7 +38,7 @@ private:
 		size_t limit() const { return read_limit_; }
 
 		int getChar() {
-			if (read_limit_ == 0)
+			if (UNLIKELY(read_limit_ == 0))
 				return -1;
 
 			--read_limit_;
@@ -51,8 +51,9 @@ private:
 	void readPOST(HttpRequest& req);
 
 public:
-	Connection(int client_socket_fd) : state_(OK), sock_fd_(client_socket_fd),
-			buff_size_(0), pos_(0) {}
+	explicit Connection(int client_socket_fd) : state_(OK),
+		sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
+
 	~Connection() {}
 
 	State state() const { return state_; }

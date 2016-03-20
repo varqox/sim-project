@@ -51,7 +51,7 @@ static void* worker(void*) {
 		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		ERRLOG_CATCH();;
+		ERRLOG_CATCH();
 	}
 
 	return nullptr;
