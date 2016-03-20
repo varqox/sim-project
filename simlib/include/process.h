@@ -88,8 +88,9 @@ public:
 		uint64_t time_limit; // in usec (0 - disable time limit)
 		uint64_t memory_limit; // in bytes (0 - disable memory limit)
 
-		Options(int ifd = STDIN_FILENO, int ofd = STDOUT_FILENO,
-				int efd = STDERR_FILENO, uint64_t tl = 0, uint64_t ml = 0)
+		Options() : Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, 0, 0) {}
+
+		Options(int ifd, int ofd, int efd, uint64_t tl = 0, uint64_t ml = 0)
 			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
 				time_limit(tl), memory_limit(ml) {}
 	};
@@ -188,7 +189,7 @@ private:
 		std::chrono::steady_clock::time_point begin;
 
 	public:
-		explicit ZeroTimer(int, uint64_t);
+		ZeroTimer(int, uint64_t);
 
 		uint64_t stopAndGetRuntime();
 	};
@@ -207,7 +208,7 @@ private:
 	public:
 		static std::mutex lock;
 
-		explicit NormalTimer(int pid, uint64_t time_limit);
+		NormalTimer(int pid, uint64_t time_limit);
 
 		uint64_t stopAndGetRuntime();
 

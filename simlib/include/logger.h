@@ -69,10 +69,10 @@ public:
 		bool flushed_ = true;
 		std::string buff_;
 
-		Appender(Logger& logger) : logger_(logger) {}
+		explicit Appender(Logger& logger) : logger_(logger) {}
 
 		template<class... T>
-		Appender(Logger& logger, const T&... x) : logger_(logger) {
+		explicit Appender(Logger& logger, const T&... x) : logger_(logger) {
 			operator()(x...);
 		}
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <string>
 #include <vector>
 
 template<class T>
@@ -7,7 +9,7 @@ class Appender {
 public:
 	T& ref;
 
-	Appender(T& reference) : ref(reference) {}
+	explicit Appender(T& reference) : ref(reference) {}
 	~Appender() {}
 
 	template<class A>
@@ -28,7 +30,7 @@ class Appender<std::string> {
 public:
 	std::string& ref;
 
-	Appender(std::string& reference) : ref(reference) {}
+	explicit Appender(std::string& reference) : ref(reference) {}
 	~Appender() {}
 
 	template<class A>
@@ -47,6 +49,9 @@ public:
 template<class T>
 Appender<T> append(T& reference) { return Appender<T>(reference); }
 
+#if __cplusplus > 201103L
+# warning "Delete the class below (there is that feature in c++14)"
+#endif
 class less {
 	template<class A, class B>
 	bool operator()(const A& a, const B& b) { return a < b; }

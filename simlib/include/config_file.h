@@ -11,7 +11,7 @@ public:
 	public:
 		explicit ParseError(const std::string& msg) : runtime_error(msg) {}
 
-		explicit ParseError(size_t line, const std::string& msg)
+		ParseError(size_t line, const std::string& msg)
 			: runtime_error(concat("line ", toString(line), ": ", msg)) {}
 
 		ParseError(const ParseError& pe) : runtime_error(pe) {}

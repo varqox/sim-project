@@ -528,7 +528,7 @@ inline int sclose(int fd) noexcept {
 class Closer {
 	int fd_;
 public:
-	Closer(int fd) : fd_(fd) {}
+	explicit Closer(int fd) : fd_(fd) {}
 
 	void cancel() { fd_ = -1; }
 

@@ -770,9 +770,9 @@ std::string usecToSecStr(unsigned long long x, unsigned prec,
  */
 struct StrNumCompare {
 	bool operator()(StringView a, StringView b) const {
-		a.removeLeading([](char c) { return c == '0'; });
-		b.removeLeading([](char c) { return c == '0'; });
-		return a.size() == b.size() ? std::string(a.data(), a.size()) < std::string(b.data(), b.size()) : a.size() < b.size();
+		a.removeLeading([](char c) { return (c == '0'); });
+		b.removeLeading([](char c) { return (c == '0'); });
+		return a.size() == b.size() ? a < b : a.size() < b.size();
 	}
 };
 
