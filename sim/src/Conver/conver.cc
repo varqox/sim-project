@@ -283,7 +283,8 @@ static void extractPackage(const string& source, const string& dest,
 		// Unpack package
 		Spawner::ExitStat es;
 		try {
-			es = Spawner::run(args[0], args, {-1});
+			es = Spawner::run(args[0], args,
+				{-1, STDOUT_FILENO, STDERR_FILENO});
 		} catch (const std::exception& e) {
 			eprintf("Spawner error: %s\n", e.what());
 			exit(4);
@@ -478,7 +479,7 @@ int main(int argc, char **argv) {
 	// Compress package
 	Spawner::ExitStat es;
 	try {
-		es = Spawner::run(args[0], args, {-1});
+		es = Spawner::run(args[0], args, {-1, STDOUT_FILENO, STDERR_FILENO});
 	} catch (const std::exception& e) {
 		eprintf("Spawner error: %s\n", e.what());
 		return 9;

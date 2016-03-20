@@ -63,7 +63,7 @@ struct TryCreateTable {
 	bool error = false;
 	DB::Connection& conn_;
 
-	TryCreateTable(DB::Connection& conn) : conn_(conn) {}
+	explicit TryCreateTable(DB::Connection& conn) : conn_(conn) {}
 
 	template<class Func>
 	void operator()(const char* table_name, const char* query, Func f) noexcept

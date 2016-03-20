@@ -10,7 +10,7 @@ class Result {
 private:
 	std::unique_ptr<sql::ResultSet> res_;
 
-	Result(sql::ResultSet* res) : res_(res) {}
+	explicit Result(sql::ResultSet* res) : res_(res) {}
 
 public:
 	Result() = default;
@@ -63,7 +63,7 @@ class Statement {
 private:
 	std::unique_ptr<sql::PreparedStatement> pstmt_;
 
-	Statement(sql::PreparedStatement* pstmt) : pstmt_(pstmt) {}
+	explicit Statement(sql::PreparedStatement* pstmt) : pstmt_(pstmt) {}
 
 public:
 	Statement() = default;
@@ -104,7 +104,7 @@ public:
 
 	int executeUpdate() { return pstmt_->executeUpdate(); }
 
-	Result executeQuery() { return pstmt_->executeQuery(); }
+	Result executeQuery() { return Result(pstmt_->executeQuery()); }
 
 	friend class Connection;
 };
@@ -150,7 +150,7 @@ public:
 	}
 
 	Statement prepare(const std::string& query) noexcept(false) {
-		return impl()->prepareStatement(query);
+		return Statement(impl()->prepareStatement(query));
 	}
 
 	int executeUpdate(const std::string& update_query) noexcept(false) {
@@ -160,7 +160,7 @@ public:
 
 	Result executeQuery(const std::string& query) noexcept(false) {
 		std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
-		return stmt->executeQuery(query);
+		return Result(stmt->executeQuery(query));
 	}
 };
 

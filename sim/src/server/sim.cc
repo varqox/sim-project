@@ -83,7 +83,7 @@ server::HttpResponse Sim::handle(string client_ip,
 		error500();
 
 	} catch (...) {
-		ERRLOG_CATCH();;
+		ERRLOG_CATCH();
 		error500();
 	}
 

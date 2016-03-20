@@ -148,7 +148,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 		string tests, comments;
 		JudgeResult::Status status = JudgeResult::OK;
 
-		JudgeTestsReport(const char* header) : tests(
+		explicit JudgeTestsReport(const char* header) : tests(
 			concat(header, "<table class=\"table\">\n"
 				"<thead>\n"
 					"<tr>"

@@ -107,7 +107,7 @@ static void processSubmissionQueue() {
 		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		ERRLOG_CATCH();;
+		ERRLOG_CATCH();
 	}
 }
 

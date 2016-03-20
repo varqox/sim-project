@@ -83,7 +83,7 @@ public:
 
 	vector<Request> requests;
 
-	explicit Connection(int fde, const sockaddr_in& sock_addr, bool idl = true,
+	Connection(int fde, const sockaddr_in& sock_addr, bool idl = true,
 			bool rd = false, bool wr = false)
 		: fd_(fde), sin_addr_(sock_addr.sin_addr),
 			port_(ntohs(sock_addr.sin_port)), making_headers(true), idle(idl),
@@ -437,7 +437,7 @@ static void* worker(void*) {
 		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		ERRLOG_CATCH();;
+		ERRLOG_CATCH();
 	}
 
 	return nullptr;
