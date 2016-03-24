@@ -9,6 +9,7 @@ using std::string;
 using std::vector;
 
 #if 0
+# warning "Before committing disable this debug"
 # define DEBUG_CONFIG_FILE(...) stdlog(__VA_ARGS__)
 #else
 # define DEBUG_CONFIG_FILE(...)
@@ -212,8 +213,9 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 		DEBUG_CONFIG_FILE("Variable: '" , name, '\'');
 
 		// Get corresponding variable
-		map<string, Variable>::iterator it = (load_all ?
-			vars.insert(make_pair(name, Variable())).first : vars.find(name));
+		auto it = (load_all ? vars.insert(make_pair(name, Variable())).first
+			: vars.find(name));
+
 		Variable& var = (it == vars.end() ? tmp : it->second);
 		if (var.flag & Variable::SET)
 			throw ParseError(line, concat("variable '", name,
@@ -304,7 +306,7 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 }
 
 int ConfigFile::getInt(const StringView &name) const {
-	map<string, Variable>::const_iterator it = vars.find(name.to_string());
+	auto it = vars.find(name.to_string());
 	if (it == vars.end())
 		return 0;
 
@@ -313,7 +315,7 @@ int ConfigFile::getInt(const StringView &name) const {
 }
 
 bool ConfigFile::getBool(const StringView &name) const {
-	map<string, Variable>::const_iterator it = vars.find(name.to_string());
+	auto it = vars.find(name.to_string());
 	if (it == vars.end())
 		return false;
 
@@ -322,17 +324,17 @@ bool ConfigFile::getBool(const StringView &name) const {
 }
 
 double ConfigFile::getReal(const StringView &name) const {
-	map<string, Variable>::const_iterator it = vars.find(name.to_string());
+	auto it = vars.find(name.to_string());
 	return (it == vars.end() ? 0 : strtod(it->second.s.c_str(), nullptr));
 }
 
 string ConfigFile::getString(const StringView &name) const {
-	map<string, Variable>::const_iterator it = vars.find(name.to_string());
+	auto it = vars.find(name.to_string());
 	return (it == vars.end() ? "" : it->second.s);
 }
 
 vector<string> ConfigFile::getArray(const StringView& name) const {
-	map<string, Variable>::const_iterator it = vars.find(name.to_string());
+	auto it = vars.find(name.to_string());
 	return (it == vars.end() ? vector<string>{} : it->second.a);
 }
 
@@ -369,7 +371,7 @@ string ConfigFile::safeSingleQuotedString(const StringView& str) {
 }
 
 string ConfigFile::safeDoubleQuotedString(const StringView& str,
-		bool escape_unprintable)
+	bool escape_unprintable)
 {
 	string res;
 	res.reserve(str.size());

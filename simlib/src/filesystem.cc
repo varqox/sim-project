@@ -136,7 +136,8 @@ int blast(int infd, int outfd) {
 	array<char, 65536> buff;
 	ssize_t len, written;
 	while (len = read(infd, buff.data(), buff.size()), len > 0 ||
-			(len == -1 && errno == EINTR)) {
+		(len == -1 && errno == EINTR))
+	{
 		ssize_t pos = 0;
 		while (pos < len) {
 			if ((written = write(outfd, buff.data() + pos, len - pos)) == -1)
@@ -196,7 +197,8 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
  *   mkdirat(2), copyat()
  */
 static int __copy_rat(int dirfd1, const char* src, int dirfd2,
-		const char* dest) {
+	const char* dest)
+{
 	int src_fd = openat(dirfd1, src, O_RDONLY |	O_LARGEFILE | O_DIRECTORY);
 	if (src_fd == -1)
 		return -1;
@@ -350,11 +352,10 @@ Node* Node::dir(const string& pathname) {
 	if (dirs.empty())
 		return nullptr;
 
-	vector<Node*>::iterator down = dirs.begin(), up = --dirs.end(), mid;
+	auto down = dirs.begin(), up = --dirs.end();
 
 	while (down < up) {
-		mid = down + ((up - down) >> 1);
-
+		auto mid = down + ((up - down) >> 1);
 		if ((*mid)->name < pathname)
 			down = ++mid;
 		else
@@ -400,8 +401,7 @@ static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 
 Node* dumpDirectoryTree(const char* path) {
 	struct stat64 sb;
-	if (stat64(path, &sb) == -1 ||
-			!S_ISDIR(sb.st_mode))
+	if (stat64(path, &sb) == -1 || !S_ISDIR(sb.st_mode))
 		return nullptr;
 
 	return __dumpDirectoryTreeAt(AT_FDCWD, path);
@@ -430,7 +430,8 @@ string abspath(const string& path, size_t beg, size_t end, string curr_dir) {
 
 		// If [beg, next_slash) == ".."
 		} else if (next_slash - beg == 2 && path[beg] == '.' &&
-				path[beg + 1] == '.') {
+			path[beg + 1] == '.')
+		{
 			// Erase last path component
 			size_t new_size = curr_dir.size();
 
@@ -519,9 +520,7 @@ string getFileContents(const char* file) {
 		return "";
 
 	Closer closer(fd); // Exceptions can be thrown
-	string res = getFileContents(fd);
-
-	return res;
+	return getFileContents(fd);
 }
 
 string getFileContents(const char* file, off64_t beg, off64_t end) {
@@ -532,13 +531,12 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 		return "";
 
 	Closer closer(fd); // Exceptions can be thrown
-	string res = getFileContents(fd, beg, end);
-
-	return res;
+	return getFileContents(fd, beg, end);
 }
 
 vector<string> getFileByLines(const char* file, int flags, size_t first,
-		size_t last) {
+	size_t last)
+{
 	vector<string> res;
 
 	FILE *f = fopen(file, "r");

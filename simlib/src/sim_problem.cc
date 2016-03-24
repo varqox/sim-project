@@ -2,25 +2,25 @@
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/sim_problem.h"
-#include "../include/utility.h"
+#include "../include/utilities.h"
 
 using std::string;
 using std::vector;
 
 string ProblemConfig::dump() const {
 	string res;
-	append(res) << "name: " << ConfigFile::safeString(name) << '\n'
-		<< "tag: " << ConfigFile::safeString(tag) << '\n'
-		<< "statement: " << ConfigFile::safeString(statement) << '\n'
-		<< "checker: " << ConfigFile::safeString(checker) << '\n'
-		<< "memory_limit: " << toString(memory_limit) << '\n'
-		<< "main_solution: " << ConfigFile::safeString(main_solution) << '\n';
+	back_insert(res, "name: ", ConfigFile::safeString(name), '\n',
+		"tag: ", ConfigFile::safeString(tag), '\n',
+		"statement: ", ConfigFile::safeString(statement), '\n',
+		"checker: ", ConfigFile::safeString(checker), '\n',
+		"memory_limit: ", toString(memory_limit), '\n',
+		"main_solution: ", ConfigFile::safeString(main_solution), '\n');
 
 	// Solutions
 	res += "solutions: [";
 	for (auto i = solutions.begin(); i != solutions.end(); ++i)
-		append(res) << (i == solutions.begin() ? "" : ", ")
-			<< ConfigFile::safeString(*i);
+		back_insert(res, (i == solutions.begin() ? "" : ", "),
+			ConfigFile::safeString(*i));
 	res += "]\n";
 
 	// Tests
@@ -34,20 +34,22 @@ string ProblemConfig::dump() const {
 			first_test = false;
 		else
 			res += ",\n";
-		append(res) << "\n\t'" << i.tests[0].name << ' '
-			<< usecToSecStr(i.tests[0].time_limit, 2) << ' '
-			<< toString(i.points) << '\'';
+
+		back_insert(res, "\n\t'", i.tests[0].name, ' ',
+			usecToSecStr(i.tests[0].time_limit, 2), ' ', toString(i.points),
+			'\'');
 
 		for (auto j = ++i.tests.begin(); j != i.tests.end(); ++j)
-			append(res) << ",\n\t'" << j->name << ' '
-				<< usecToSecStr(j->time_limit, 2) << '\'';
+			back_insert(res, ",\n\t'", j->name, ' ', usecToSecStr(j->time_limit,
+				2), '\'');
 	}
 	res += "\n]\n";
 	return res;
 }
 
 vector<string> ProblemConfig::looselyLoadConfig(string package_path)
-		noexcept(false) {
+	noexcept(false)
+{
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
@@ -115,9 +117,11 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 		warnings.emplace_back("config.conf: missing main_solution");
 
 	else if (std::find(solutions.begin(), solutions.end(), main_solution) ==
-			solutions.end())
+		solutions.end())
+	{
 		warnings.emplace_back("config.conf: main_solution has to be set in "
 			"solutions");
+	}
 
 	// Tests
 	test_groups.clear();
@@ -244,9 +248,11 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 		throw std::runtime_error("config.conf: missing main_solution");
 
 	if (std::find(solutions.begin(), solutions.end(), main_solution) ==
-			solutions.end())
+		solutions.end())
+	{
 		throw std::runtime_error("config.conf: main_solution has to be set in "
 			"solutions");
+	}
 
 	// Tests
 	test_groups.clear();

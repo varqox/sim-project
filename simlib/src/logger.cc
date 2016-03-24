@@ -5,8 +5,9 @@ using std::string;
 
 Logger stdlog(stderr), errlog(stderr);
 
-Logger::Logger(const string& filename) : f_(fopen(filename.c_str(), "a")),
-		opened_(true) {
+Logger::Logger(const string& filename)
+	: f_(fopen(filename.c_str(), "a")), opened_(true)
+{
 	if (f_ == nullptr)
 		throw std::runtime_error(concat("fopen() failed", error(errno)));
 }

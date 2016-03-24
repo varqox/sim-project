@@ -108,12 +108,12 @@ public:
 	static ExitStat run(const std::string& exec,
 		const std::vector<std::string>& args, const Options& opts,
 		const std::string& working_dir = ".",
-		Callback func = Callback()) noexcept(false)
+		Callback&& func = Callback()) noexcept(false)
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
 			"Callback has to derive from Sandbox::CallbackBase");
 		return Spawner::runWithTimer<Impl, Callback>(opts.time_limit, exec,
-			args, opts, working_dir, func);
+			args, opts, working_dir, std::forward<Callback>(func));
 	}
 
 private:

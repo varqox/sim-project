@@ -29,10 +29,10 @@ public:
 
 	StringBase(pointer s, size_type n) : str(s), len(n) {}
 
-
-	StringBase(const std::string& s, size_type beg = 0, size_type endi = npos)
+	// Constructs StringView from substring [beg, beg + n) of string s
+	StringBase(const std::string& s, size_type beg = 0, size_type n = npos)
 		: str(s.data() + std::min(beg, s.size())),
-		len(std::min(s.size(), endi)) {}
+		len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	template<class CharT>
 	StringBase(const StringBase<CharT>& s) : str(s.data()), len(s.size()) {}
@@ -51,6 +51,8 @@ public:
 		str = s.data();
 		len = s.size();
 	}
+
+	operator std::string() const { return {str, len}; }
 
 	virtual ~StringBase() {}
 
@@ -176,17 +178,20 @@ public:
 	}
 
 	size_type find(const StringBase& s, size_type beg1,
-			size_type endi1 = npos) const {
+		size_type endi1 = npos) const
+	{
 		return find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type find(size_type beg, const StringBase& s, size_type beg1 = 0,
-			size_type endi1 = npos) const {
+		size_type endi1 = npos) const
+	{
 		return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type find(size_type beg, size_type endi, const StringBase& s,
-			size_type beg1 = 0, size_type endi1 = npos) const {
+		size_type beg1 = 0, size_type endi1 = npos) const
+	{
 		return substr(beg, endi).find(
 			s.substr(beg1, std::min(endi1, len) - beg1));
 	}
@@ -234,17 +239,20 @@ public:
 	}
 
 	size_type rfind(const StringBase& s, size_type beg1,
-			size_type endi1 = npos) const {
+		size_type endi1 = npos) const
+	{
 		return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type rfind(size_type beg, const StringBase& s, size_type beg1 = 0,
-			size_type endi1 = npos) const {
+		size_type endi1 = npos) const
+	{
 		return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type rfind(size_type beg, size_type endi, const StringBase& s,
-			size_type beg1 = 0, size_type endi1 = npos) const {
+		size_type beg1 = 0, size_type endi1 = npos) const
+	{
 		return substr(beg, endi).rfind(
 			s.substr(beg1, std::min(endi1, len) - beg1));
 	}
@@ -324,9 +332,9 @@ public:
 	// s cannot be nullptr
 	FixedString(const_pointer s) : FixedString(s, strlen(s)) {}
 
-	FixedString(const std::string& s, size_type beg = 0, size_type endi = npos)
-		: FixedString(s.data() + std::min(s.size(), beg),
-			std::min(s.size(), endi)) {}
+	FixedString(const std::string& s, size_type beg = 0, size_type n = npos)
+		: FixedString(s.data() + std::min(beg, s.size()),
+			std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	FixedString(const FixedString& fs) : FixedString(fs.str, fs.len) {}
 
@@ -378,7 +386,7 @@ public:
 	void clear() { len = 0; }
 
 	// Removes prefix of length n
-	void removePrefix(size_type n) {
+	void removePrefix(size_type n) noexcept {
 		if (n > len)
 			n = len;
 		str += n;
@@ -386,7 +394,7 @@ public:
 	}
 
 	// Removes suffix of length n
-	void removeSuffix(size_type n) {
+	void removeSuffix(size_type n) noexcept {
 		if (n > len)
 			len = 0;
 		else
@@ -394,8 +402,8 @@ public:
 	}
 
 	// Removes trailing characters for which f() returns true
-	template<class F>
-	void removeLeading(F f) {
+	template<class Func>
+	void removeLeading(Func f) {
 		size_type i = 0;
 		for (; i < len && f(str[i]); ++i) {}
 		str += i;
@@ -403,8 +411,8 @@ public:
 	}
 
 	// Removes trailing characters for which f() returns true
-	template<class F>
-	void removeTrailing(F f) {
+	template<class Func>
+	void removeTrailing(Func f) {
 		while (len > 0 && f(back()))
 			--len;
 	}
@@ -414,14 +422,15 @@ public:
 
 template<class CharT, class Traits, class Char>
 std::basic_ostream<CharT, Traits>& operator<<(
-		std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s) {
+	std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s)
+{
 	return os.write(s.data(), s.size());
 }
 
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
-template<class F>
-bool special_less(const StringView& a, const StringView& b, F f) {
+template<class Func>
+bool special_less(const StringView& a, const StringView& b, Func f) {
 	size_t len = std::min(a.size(), b.size());
 	for (size_t i = 0; i < len; ++i)
 		if (f(a[i]) != f(b[i]))
@@ -432,8 +441,8 @@ bool special_less(const StringView& a, const StringView& b, F f) {
 
 // Checks whether two StringView are equal, but before comparing two characters
 // modifies them with f()
-template<class F>
-bool special_equal(const StringView& a, const StringView& b, F f) {
+template<class Func>
+bool special_equal(const StringView& a, const StringView& b, Func f) {
 	if (a.size() != b.size())
 		return false;
 
@@ -502,7 +511,8 @@ inline size_t find(const StringView& str, char c, size_t beg = 0,
 
 // Compares two strings: @p str[beg, end) and @p s
 inline int compare(const StringView& str, size_t beg, size_t end,
-		const StringView& s) {
+	const StringView& s)
+{
 	if (end > str.size())
 		end = str.size();
 	if (beg > end)
@@ -513,7 +523,8 @@ inline int compare(const StringView& str, size_t beg, size_t end,
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
 inline int compareTo(const StringView& str, size_t pos, char c,
-		const StringView& s) {
+	const StringView& s)
+{
 	return compare(str, pos, str.find(c, pos), s);
 }
 
@@ -523,7 +534,8 @@ inline int compareTo(const StringView& str, size_t pos, char c,
 bool slowEqual(const char* str1, const char* str2, size_t len) noexcept;
 
 inline bool slowEqual(const std::string& str1, const std::string& str2)
-		noexcept {
+	noexcept
+{
 	return slowEqual(str1.data(), str2.data(),
 		std::min(str1.size(), str2.size())) && str1.size() == str2.size();
 }
@@ -596,7 +608,7 @@ bool isPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 }
 
 template<class T>
-inline bool isPrefixIn(const StringView& str, const T& x) noexcept {
+inline bool isPrefixIn(const StringView& str, T&& x) noexcept {
 	return isPrefixIn(str, x.begin(), x.end());
 }
 
@@ -624,6 +636,17 @@ bool isSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
 		++beg;
 	}
 	return false;
+}
+
+template<class T>
+inline bool isSuffixIn(const StringView& str, T&& x) noexcept {
+	return isSuffixIn(str, x.begin(), x.end());
+}
+
+inline bool isSuffixIn(const StringView& str,
+	const std::initializer_list<StringView>& x) noexcept
+{
+	return isSuffixIn(str, x.begin(), x.end());
 }
 
 std::string htmlSpecialChars(const StringView& s);
@@ -663,7 +686,8 @@ inline bool isReal(const StringView& s) { return isReal(s, 0); }
 */
 template<class T>
 int strtoi(const StringView& s, T *x, size_t beg = 0,
-		size_t end = StringView::npos) {
+	size_t end = StringView::npos)
+{
 	static_assert(std::is_integral<T>::value, "template argument not an "
 		"integral type");
 
@@ -697,7 +721,8 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 // Like strtoi() but assumes that @p s is unsigned integer
 template<class T>
 int strtou(const StringView& s, T *x, size_t beg = 0,
-		size_t end = StringView::npos) {
+	size_t end = StringView::npos)
+{
 	static_assert(std::is_integral<T>::value, "template argument not an "
 		"integral type");
 
@@ -727,7 +752,8 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 
 // Converts string to long long
 inline long long strtoll(const StringView& s, size_t beg = 0,
-		size_t end = StringView::npos) {
+	size_t end = StringView::npos)
+{
 	long long x;
 	strtoi(s, &x, beg, end);
 	return x;
@@ -735,7 +761,8 @@ inline long long strtoll(const StringView& s, size_t beg = 0,
 
 // Converts string to unsigned long long
 inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
-		size_t end = StringView::npos) {
+	size_t end = StringView::npos)
+{
 	unsigned long long x;
 	strtou(s, &x, beg, end);
 	return x;
@@ -784,7 +811,8 @@ inline size_t string_length(T* x) { return strlen(x); }
 
 inline size_t string_length(char) { return 1; }
 
-inline std::string& operator+=(std::string& str, const StringView& s) {
+template<class Char>
+inline std::string& operator+=(std::string& str, const StringBase<Char>& s) {
 	str.append(s.data(), s.size());
 	return str;
 }
@@ -796,15 +824,15 @@ inline std::string& operator+=(std::string& str, const StringView& s) {
  *
  * @return concentration of @p args
  */
-template<class... T>
-inline std::string concat(const T&... args) {
+template<class... Args>
+inline std::string concat(Args&&... args) {
 	size_t total_length = 0;
 	int foo[] = {(total_length += string_length(args), 0)...};
 	(void)foo;
 
 	std::string res;
 	res.reserve(total_length);
-	int bar[] = {(res += args, 0)...};
+	int bar[] = {(res += std::forward<Args>(args), 0)...};
 	(void)bar;
 	return res;
 }

@@ -222,7 +222,8 @@ int copy_r(const char* src, const char* dest, bool create_subdirs = true);
  * @errors The same that occur for copy_rat()
  */
 inline int copy_r(const std::string& src, const std::string& dest,
-		bool create_subdirs = true) {
+	bool create_subdirs = true)
+{
 	return copy_r(src.c_str(), dest.c_str(), create_subdirs);
 }
 
@@ -309,7 +310,8 @@ public:
 	Node(const Node&) = delete;
 
 	Node(Node&& n) : name(std::move(n.name)), dirs(std::move(n.dirs)),
-			files(std::move(n.files)) {
+		files(std::move(n.files))
+	{
 		dirs.clear();
 	}
 
@@ -438,7 +440,7 @@ std::string getFileContents(const char* file);
  * @brief Reads form @p file from beg to end
  *
  * @param file file to read from
- * @param beg begin offset
+ * @param beg begin offset (if negative, then is set to file_size + @p beg)
  * @param end end offset (@p end < 0 means size of file)
  *
  * @return read contents
@@ -458,7 +460,8 @@ inline std::string getFileContents(const std::string& file) {
  * Alias to getFileContents(const char*, off64_t, off64_t)
  */
 inline std::string getFileContents(const std::string& file, off64_t beg,
-		off64_t end = -1) {
+	off64_t end = -1)
+{
 	return getFileContents(file.c_str(), beg, end);
 }
 
@@ -478,7 +481,8 @@ std::vector<std::string> getFileByLines(const char* file, int flags = 0,
 	size_t first = 0, size_t last = -1);
 
 inline std::vector<std::string> getFileByLines(const std::string& file,
-		int flags = 0, size_t first = 0, size_t last = -1) {
+	int flags = 0, size_t first = 0, size_t last = -1)
+{
 	return getFileByLines(file.c_str(), flags, first, last);
 }
 
@@ -503,7 +507,8 @@ ssize_t putFileContents(const char* file, const char* data, size_t len = -1);
  * @return bytes written on success, -1 on error
  */
 inline ssize_t putFileContents(const std::string& file,
-		const std::string& data) {
+	const std::string& data)
+{
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
 

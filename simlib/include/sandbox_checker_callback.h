@@ -31,7 +31,8 @@ struct CheckerCallback : Sandbox::CallbackBase {
 	};
 
 	explicit CheckerCallback(std::vector<std::string> files = {})
-			: functor_call(0), arch(-1), allowed_files(files) {
+		: functor_call(0), arch(-1), allowed_files(files)
+	{
 		std::sort(allowed_files.begin(), allowed_files.end());
 	}
 

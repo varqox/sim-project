@@ -4,64 +4,39 @@
 #include <string>
 #include <vector>
 
-template<class T>
-class Appender {
-public:
-	T& ref;
+template<class T, class... Args>
+T& back_insert(T& reference, Args&&... args) {
+	reference.reserve(reference.size() + sizeof...(args));
+	int t[] = {(reference.emplace_back(std::forward<Args>(args)), 0)...};
+	(void)t;
+	return reference;
+}
 
-	explicit Appender(T& reference) : ref(reference) {}
-	~Appender() {}
+template<class... Args>
+std::string& back_insert(std::string& str, Args&&... args) {
+	size_t total_length = str.size();
+	int foo[] = {(total_length += string_length(args), 0)...};
+	(void)foo;
 
-	template<class A>
-	Appender& operator()(const A& x) {
-		ref.insert(ref.end(), x);
-		return *this;
-	}
-
-	template<class A>
-	Appender& operator<<(const A& x) {
-		ref.insert(ref.end(), x);
-		return *this;
-	}
-};
-
-template<>
-class Appender<std::string> {
-public:
-	std::string& ref;
-
-	explicit Appender(std::string& reference) : ref(reference) {}
-	~Appender() {}
-
-	template<class A>
-	Appender& operator()(const A& x) {
-		ref += x;
-		return *this;
-	}
-
-	template<class A>
-	Appender& operator<<(const A& x) {
-		ref += x;
-		return *this;
-	}
-};
-
-template<class T>
-Appender<T> append(T& reference) { return Appender<T>(reference); }
+	str.reserve(total_length);
+	int bar[] = {(str += std::forward<Args>(args), 0)...};
+	(void)bar;
+	return str;
+}
 
 #if __cplusplus > 201103L
 # warning "Delete the class below (there is that feature in c++14)"
 #endif
 class less {
 	template<class A, class B>
-	bool operator()(const A& a, const B& b) { return a < b; }
+	bool operator()(A&& a, B&& b) const { return a < b; }
 };
 
 template<class T, class C>
 typename T::const_iterator binaryFind(const T& x, const C& val) noexcept {
-	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
+	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
-		mid = beg + ((end - beg) >> 1);
+		auto mid = beg + ((end - beg) >> 1);
 		if (*mid < val)
 			beg = ++mid;
 		else
@@ -72,10 +47,11 @@ typename T::const_iterator binaryFind(const T& x, const C& val) noexcept {
 
 template<class T, class C, class Comp>
 typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp)
-		noexcept {
-	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
+	noexcept
+{
+	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
-		mid = beg + ((end - beg) >> 1);
+		auto mid = beg + ((end - beg) >> 1);
 		if (comp(*mid, val))
 			beg = ++mid;
 		else
@@ -86,10 +62,11 @@ typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp)
 
 template<class T, typename B, class C>
 typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-		const C& val) noexcept {
-	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
+	const C& val) noexcept
+{
+	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
-		mid = beg + ((end - beg) >> 1);
+		auto mid = beg + ((end - beg) >> 1);
 		if ((*mid).*field < val)
 			beg = ++mid;
 		else
@@ -100,10 +77,11 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 
 template<class T, typename B, class C, class Comp>
 typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-		const C& val, Comp comp) noexcept {
-	typename T::const_iterator beg = x.begin(), end = x.end(), mid;
+	const C& val, Comp comp) noexcept
+{
+	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
-		mid = beg + ((end - beg) >> 1);
+		auto mid = beg + ((end - beg) >> 1);
 		if (comp((*mid).*field, val))
 			beg = ++mid;
 		else
@@ -113,18 +91,18 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 }
 
 template<class A, class B>
-inline bool binary_search(const A& a, const B& val) {
-	return std::binary_search(a.begin(), a.end(), val);
+inline bool binary_search(const A& a, B&& val) {
+	return std::binary_search(a.begin(), a.end(), std::forward<B>(val));
 }
 
 template<class A, class B>
-inline auto lower_bound(const A& a, const B& val) -> decltype(a.begin()) {
-	return std::lower_bound(a.begin(), a.end(), val);
+inline auto lower_bound(const A& a, B&& val) -> decltype(a.begin()) {
+	return std::lower_bound(a.begin(), a.end(), std::forward<B>(val));
 }
 
 template<class A, class B>
-inline auto upper_bound(const A& a, const B& val) -> decltype(a.begin()) {
-	return std::upper_bound(a.begin(), a.end(), val);
+inline auto upper_bound(const A& a, B&& val) -> decltype(a.begin()) {
+	return std::upper_bound(a.begin(), a.end(), std::forward<B>(val));
 }
 
 template<class Func>

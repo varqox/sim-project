@@ -1,5 +1,5 @@
 #include "../include/sandbox.h"
-#include "../include/utility.h"
+#include "../include/utilities.h"
 
 #include <limits.h>
 #include <linux/version.h>
@@ -96,7 +96,8 @@ bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 }
 
 bool Sandbox::CallbackBase::isSyscallAllowed(pid_t pid, int arch, int syscall,
-		const vector<string>& allowed_files) {
+	const vector<string>& allowed_files)
+{
 	const int sys_open[2] = {
 		5, // SYS_open - i386
 		2 // SYS_open - x86_64
@@ -135,7 +136,8 @@ bool Sandbox::CallbackBase::isSyscallAllowed(pid_t pid, int arch, int syscall,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
 		FileDescriptor fd;
 		if (fd.open(concat("/proc/", toString(pid), "/mem"),
-				O_RDONLY | O_LARGEFILE | O_NOFOLLOW) == -1) {
+			O_RDONLY | O_LARGEFILE | O_NOFOLLOW) == -1)
+		{
 			errlog("Error: open()", error(errno));
 			goto null_path;
 		}

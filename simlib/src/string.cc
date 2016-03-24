@@ -2,7 +2,7 @@
 
 using std::string;
 
-int strtonum(string& x, const StringView& s, size_t beg, size_t end) {
+int strToNum(string& x, const StringView& s, size_t beg, size_t end) {
 	if (end > s.size())
 		end = s.size();
 	if (beg > end)

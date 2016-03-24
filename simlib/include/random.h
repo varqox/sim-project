@@ -30,7 +30,7 @@ extern std::mt19937 random_generator;
 
 // Get random from [a, b]
 template<class T>
-inline T getRandom(T a, T b) {
-	return std::uniform_int_distribution<T>(a, b)
-		(random_generator);
+inline T getRandom(T&& a, T&& b) {
+	return std::uniform_int_distribution<T>(std::forward<T>(a),
+		std::forward<T>(b)) (random_generator);
 }

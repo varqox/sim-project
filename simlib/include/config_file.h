@@ -102,14 +102,14 @@ public:
 
 	// Checks whether variable @p name is set
 	bool isSet(const std::string& name) const {
-		std::map<std::string, Variable>::const_iterator it = vars.find(name);
-		return it != vars.end() && it->second.isSet();
+		auto it = vars.find(name);
+		return (it != vars.end() && it->second.isSet());
 	}
 
 	// Checks whether variable @p name is an array
 	bool isArray(const std::string& name) const {
-		std::map<std::string, Variable>::const_iterator it = vars.find(name);
-		return it != vars.end() && it->second.isArray();
+		auto it = vars.find(name);
+		return (it != vars.end() && it->second.isArray());
 	}
 
 	// Returns variable @p name as int or 0 on error

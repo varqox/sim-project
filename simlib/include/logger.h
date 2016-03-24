@@ -71,9 +71,9 @@ public:
 
 		explicit Appender(Logger& logger) : logger_(logger) {}
 
-		template<class... T>
-		explicit Appender(Logger& logger, const T&... x) : logger_(logger) {
-			operator()(x...);
+		template<class... Args>
+		explicit Appender(Logger& logger, Args&&... args) : logger_(logger) {
+			operator()(std::forward<Args>(args)...);
 		}
 
 		Appender(const Appender&) = delete;
@@ -82,23 +82,24 @@ public:
 
 	public:
 		Appender(Appender&& app) : logger_(app.logger_), flushed_(app.flushed_),
-				buff_(std::move(app.buff_)) {
+			buff_(std::move(app.buff_))
+		{
 			app.flushed_ = true;
 		}
 
 		template<class T>
-		Appender& operator<<(const T& x) {
-			return operator()(x);
+		Appender& operator<<(T&& x) {
+			return operator()(std::forward<T>(x));
 		}
 
-		template<class... T>
-		Appender& operator()(const T&... args) {
-			size_t total_length = 0;
+		template<class... Args>
+		Appender& operator()(Args&&... args) {
+			size_t total_length = buff_.size();
 			int foo[] = {(total_length += string_length(args), 0)...};
 			(void)foo;
 
-			buff_.reserve(buff_.size() + total_length);
-			int bar[] = {(buff_ += args, 0)...};
+			buff_.reserve(total_length);
+			int bar[] = {(buff_ += std::forward<Args>(args), 0)...};
 			(void)bar;
 
 			flushed_ = false;
@@ -111,11 +112,13 @@ public:
 	};
 
 	template<class T>
-	Appender operator<<(const T& x) noexcept { return Appender(*this, x); }
+	Appender operator<<(T&& x) noexcept {
+		return Appender(*this, std::forward<T>(x));
+	}
 
-	template<class... T>
-	Appender operator()(const T&... args) noexcept {
-		return Appender(*this, args...);
+	template<class... Args>
+	Appender operator()(Args&&... args) noexcept {
+		return Appender(*this, std::forward<Args>(args)...);
 	}
 
 	Appender getAppender() noexcept { return Appender(*this); }

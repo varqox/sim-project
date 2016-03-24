@@ -181,7 +181,7 @@ protected:
 	 * @return return value of Func<>::execute()
 	 */
 	template<template<class...> class Func, class... TArgs, class... Args>
-	static ExitStat runWithTimer(uint64_t time_limit, Args... args)
+	static ExitStat runWithTimer(uint64_t time_limit, Args&&... args)
 		noexcept(false);
 
 private:
@@ -289,19 +289,23 @@ typedef SignalBlockerBase<sigprocmask> SignalBlocker;
 typedef SignalBlockerBase<pthread_sigmask> ThreadSignalBlocker;
 
 // Block all signals when function @p f is called
-template<class F, class... T>
-auto blockSignals(F f, T... args) -> decltype(f(args...)) {
+template<class F, class... Args>
+auto blockSignals(F f, Args&&... args)
+	-> decltype(f(std::forward<Args>(args)...))
+{
 	SignalBlocker sb;
-	return f(args...);
+	return f(std::forward<Args>(args)...);
 }
 
 #define BLOCK_SIGNALS(...) blockSignals([&]{ return __VA_ARGS__; })
 
 // Block all signals when function @p f is called
-template<class F, class... T>
-auto threadBlockSignals(F f, T... args) -> decltype(f(args...)) {
+template<class F, class... Args>
+auto threadBlockSignals(F f, Args&&... args)
+	-> decltype(f(std::forward<Args>(args)...))
+{
 	ThreadSignalBlocker sb;
-	return f(args...);
+	return f(std::forward<Args>(args)...);
 }
 
 #define THREAD_BLOCK_SIGNALS(...) threadBlockSignals([&]{ return __VA_ARGS__; })
@@ -446,18 +450,18 @@ void Spawner::runChild(const std::string& exec,
 }
 
 template<template<class...> class Func, class... TArgs, class... Args>
-Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args... args)
+Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args)
 	noexcept(false)
 {
 	// Without time_limit (NormalTimer) we can run as many processes as we want
 	if (time_limit == 0)
-		return Func<TArgs..., ZeroTimer>::execute(args...);
+		return Func<TArgs..., ZeroTimer>::execute(std::forward<Args>(args)...);
 
 	// Only one running Timer per process is allowed. That is why when one
 	// is running, the next ones are executed in new child process.
 	std::unique_lock<std::mutex> ulck(NormalTimer::lock, std::defer_lock);
 	if (ulck.try_lock())
-		return Func<TArgs..., NormalTimer>::execute(args...);
+		return Func<TArgs..., NormalTimer>::execute(std::forward<Args>(args)...);
 
 	int pfd[2];
 	if (pipe(pfd) == -1)
@@ -470,7 +474,7 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args... args)
 	} else if (child == 0) {
 		ExitStat es(-1);
 		try {
-			es = Func<TArgs..., NormalTimer>::execute(args...);
+			es = Func<TArgs..., NormalTimer>::execute(std::forward<Args>(args)...);
 		} catch (const std::exception& e) {
 			// We cannot allow exception to fly out of this thread
 			es.message = e.what();
