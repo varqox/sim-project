@@ -9,9 +9,10 @@ using std::unique_ptr;
 namespace DB {
 
 Connection::Connection(const string& host, const string& user,
-		const string& password, const string& database)
-		: conn_(), host_(host), user_(user), password_(password),
-			database_(database) {
+	const string& password, const string& database)
+	: conn_(), host_(host), user_(user), password_(password),
+		database_(database)
+{
 	connect();
 }
 

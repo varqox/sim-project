@@ -1,8 +1,19 @@
 #pragma once
 
-#include "sim.h"
+#include "errors.h"
+#include "template.h"
 
-class Sim::Contest {
+class Contest : virtual protected Template, virtual protected Errors {
+protected:
+	Contest() = default;
+
+	Contest(const Contest&) = delete;
+	Contest(Contest&&) = delete;
+	Contest& operator=(const Contest&) = delete;
+	Contest& operator=(Contest&&) = delete;
+
+	virtual ~Contest() = default;
+
 private:
 	struct Round {
 		std::string id, parent, problem_id, name, owner;
@@ -26,14 +37,12 @@ private:
 
 	class RoundPath {
 	public:
-		bool admin_access;
-		RoundType type;
+		bool admin_access = false;
+		RoundType type = CONTEST;
 		std::string round_id;
 		std::unique_ptr<Round> contest, round, problem;
 
-		explicit RoundPath(const std::string& rid) : admin_access(false),
-			type(CONTEST), round_id(rid), contest(nullptr), round(nullptr),
-			problem(nullptr) {}
+		explicit RoundPath(const std::string& rid) : round_id(rid) {}
 
 		RoundPath(const RoundPath&) = delete;
 
@@ -67,24 +76,32 @@ private:
 		~RoundPath() {}
 	};
 
-	Sim& sim_;
-	std::unique_ptr<RoundPath> r_path_;
-	size_t arg_beg;
+	std::unique_ptr<RoundPath> rpath;
 
-	explicit Contest(Sim& sim) : sim_(sim), arg_beg(0) {}
+	// Utilities
+	// contest_utilities.cc
+	static std::string submissionStatus(const std::string& status);
 
-	Contest(const Contest&) = delete;
+	RoundPath* getRoundPath(const std::string& round_id);
 
-	Contest(Contest&& c) : sim_(c.sim_), r_path_(std::move(r_path_)),
-		arg_beg(c.arg_beg) {}
+	/// Returns whether user has admin access
+	bool isAdmin(const RoundPath& r_path);
 
-	Contest& operator=(const Contest&) = delete;
+	TemplateEnder contestTemplate(const StringView& title,
+		const StringView& styles = {}, const StringView& scripts = {});
 
-	Contest& operator=(Contest&&) = delete;
+	void printRoundPath(const StringView& page, bool force_normal = false);
 
-	~Contest() {}
+	void printRoundView(bool link_to_problem_statement,
+		bool admin_view = false);
 
-	// Pages (sim_contest.cc)
+	// Pages
+	// contest.cc
+protected:
+	/// @brief Main contest handler
+	void handle();
+
+private:
 	void addContest();
 
 	void addRound();
@@ -103,18 +120,24 @@ private:
 
 	void deleteProblem();
 
-	void problems(bool admin_view);
-
-	void submit(bool admin_view);
-
-	void submission();
-
-	void submissions(bool admin_view);
+	void listProblems(bool admin_view);
 
 	void ranking(bool admin_view);
 
+	// submissions.cc
+	void submit(bool admin_view);
+
+protected:
+	void submission();
+
+private:
+	void submissions(bool admin_view);
+
+protected:
+	// files.cc
 	void file();
 
+private:
 	void editFile(const std::string& id, std::string name);
 
 	void deleteFile(const std::string& id, const std::string& name);
@@ -122,28 +145,4 @@ private:
 	void addFile();
 
 	void files(bool admin_view);
-
-	// Contest utilities (sim_contest_utility.cc)
-	class TemplateWithMenu;
-
-	static std::string submissionStatus(const std::string& status);
-
-	RoundPath* getRoundPath(const std::string& round_id);
-
-	// Returns whether user has admin access
-	static bool isAdmin(Sim& sim, const RoundPath& r_path);
-
-	// Returns whether user has admin access
-	bool isAdmin() { return isAdmin(sim_, *r_path_); }
-
-public:
-	/**
- 	 * @brief Main Contest handler
-	 */
-	void handle();
-
-	friend Sim::Sim();
-	friend Sim::~Sim();
-	friend server::HttpResponse Sim::handle(std::string client_ip,
-			const server::HttpRequest& req);
 };

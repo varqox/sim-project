@@ -14,12 +14,12 @@ public:
 	}
 
 	bool isEqualTo(const std::string& key, const std::string& val) const {
-		const_iterator it = find(tolower(key));
+		auto it = find(tolower(key));
 		return (it != end() && it->second == val);
 	}
 
 	std::string get(const std::string& key) const {
-		const_iterator it = find(tolower(key));
+		auto it = find(tolower(key));
 		return it == end() ? "" : it->second;
 	}
 

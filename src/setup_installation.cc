@@ -1,9 +1,7 @@
 #include <sim/db.h>
-#include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
-#include <simlib/string.h>
 
 using std::string;
 using std::unique_ptr;
@@ -37,7 +35,8 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Help
 			else if (0 == strcmp(argv[i], "-h") ||
-					0 == strcmp(argv[i], "--help")) {
+				0 == strcmp(argv[i], "--help"))
+			{
 				help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 			}

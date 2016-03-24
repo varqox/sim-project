@@ -84,8 +84,10 @@ int convertPackage(string tmp_package, string out_package) {
 					concat(out_package, "check/", i));
 
 				if (!USE_CONFIG && config_conf.checker.find_last_of('.') >
-						i.find_last_of('.'))
+					i.find_last_of('.'))
+				{
 					config_conf.checker = i;
+				}
 			}
 
 	// doc/
@@ -104,8 +106,10 @@ int convertPackage(string tmp_package, string out_package) {
 					concat(out_package, "doc/", i));
 
 				if (!USE_CONFIG && config_conf.statement.find_last_of('.') >
-						i.find_last_of('.'))
+					i.find_last_of('.'))
+				{
 					config_conf.statement = i;
+				}
 			}
 
 	// prog/
@@ -127,8 +131,10 @@ int convertPackage(string tmp_package, string out_package) {
 					config_conf.solutions.push_back(i);
 
 				if (!USE_CONFIG && config_conf.main_solution.find_last_of('.') >
-						i.find_last_of('.'))
+					i.find_last_of('.'))
+				{
 					config_conf.main_solution = i;
+				}
 			}
 
 	if (VERBOSITY > 1) {
@@ -137,9 +143,11 @@ int convertPackage(string tmp_package, string out_package) {
 			config_conf.statement.c_str(), config_conf.main_solution.c_str());
 
 		for (auto i = config_conf.solutions.begin();
-				i != config_conf.solutions.end(); ++i)
+			i != config_conf.solutions.end(); ++i)
+		{
 			printf((i == config_conf.solutions.begin() ? "'%s'" : ", '%s'"),
 				i->c_str());
+		}
 
 		printf("]\n");
 	}
@@ -185,7 +193,8 @@ int convertPackage(string tmp_package, string out_package) {
 		if (dir != nullptr)
 			for (auto& file : dir->files)
 				if (isSuffix(file, ".out") && binary_search(tests.begin(),
-						tests.end(), file.substr(0, file.size() - 4))) {
+					tests.end(), file.substr(0, file.size() - 4)))
+				{
 					copy(concat(tmp_package, dir->name, '/', file),
 						concat(out_package, "tests/", file));
 				}
@@ -203,8 +212,9 @@ int convertPackage(string tmp_package, string out_package) {
 		// Next group (it is strongly based on test order - see
 		// TestNameComparator)
 		if (curr_group.first != last_group.first &&
-				!(curr_group.second == "ocen" &&
-					(last_group.first == "0" || last_group.second == "ocen"))) {
+			!(curr_group.second == "ocen" &&
+				(last_group.first == "0" || last_group.second == "ocen")))
+		{
 			config_conf.test_groups.push_back(ProblemConfig::Group());
 			group = &config_conf.test_groups.back();
 			last_group = curr_group;

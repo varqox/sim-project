@@ -5,7 +5,7 @@
 #include <simlib/debug.h>
 #include <simlib/sandbox_checker_callback.h>
 #include <simlib/sim_problem.h>
-#include <simlib/utility.h>
+#include <simlib/utilities.h>
 
 using std::string;
 using std::vector;
@@ -184,8 +184,9 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 			// Open sb_opts.new_stdin_fd
 			if ((sb_opts.new_stdin_fd = open(
-					concat(package_path, "tests/", test.name, ".in").c_str(),
-					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
+				concat(package_path, "tests/", test.name, ".in").c_str(),
+				O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1)
+			{
 				errlog("Failed to open: '", package_path, "tests/", test.name,
 					".in'", error(errno));
 
@@ -255,14 +256,14 @@ JudgeResult judge(string submission_id, string problem_id) {
 					judge_test_report.status = JudgeResult::ERROR;
 
 				// Add test comment
-				append(judge_test_report.comments)
-					<< "<li><span class=\"test-id\">"
-					<< htmlSpecialChars(test.name)<< "</span>"
-					"Runtime error";
+				back_insert(judge_test_report.comments,
+					"<li><span class=\"test-id\">",
+					htmlSpecialChars(test.name), "</span>"
+					"Runtime error");
 
 				if (es.message.size())
-					append(judge_test_report.comments) << " (" << es.message
-						<< ")";
+					back_insert(judge_test_report.comments, " (", es.message,
+						')');
 
 				judge_test_report.comments += "</li>\n";
 
@@ -274,10 +275,10 @@ JudgeResult judge(string submission_id, string problem_id) {
 					judge_test_report.status = JudgeResult::ERROR;
 
 				// Add test comment
-				append(judge_test_report.comments)
-					<< "<li><span class=\"test-id\">"
-					<< htmlSpecialChars(test.name) << "</span>"
-					"Time limit exceeded</li>\n";
+				back_insert(judge_test_report.comments,
+					"<li><span class=\"test-id\">",
+					htmlSpecialChars(test.name), "</span>"
+					"Time limit exceeded</li>\n");
 			}
 
 			if (VERBOSITY > 1) {
@@ -363,10 +364,10 @@ JudgeResult judge(string submission_id, string problem_id) {
 				}
 
 				// Add test comment
-				append(judge_test_report.comments)
-					<< "<li><span class=\"test-id\">"
-					<< htmlSpecialChars(test.name) << "</span>"
-					<< htmlSpecialChars(checker_output) << "</li>\n";
+				back_insert(judge_test_report.comments,
+					"<li><span class=\"test-id\">",
+					htmlSpecialChars(test.name), "</span>",
+					htmlSpecialChars(checker_output), "</li>\n");
 
 				if (VERBOSITY > 1)
 					tmplog(" \"", checker_output, "\"");
@@ -377,14 +378,14 @@ JudgeResult judge(string submission_id, string problem_id) {
 				judge_test_report.status = JudgeResult::JUDGE_ERROR;
 
 				// Add test comment
-				append(judge_test_report.comments)
-					<< "<li><span class=\"test-id\">"
-					<< htmlSpecialChars(test.name)<< "</span>"
-					"Checker runtime error";
+				back_insert(judge_test_report.comments,
+					"<li><span class=\"test-id\">",
+					htmlSpecialChars(test.name), "</span>"
+					"Checker runtime error");
 
 				if (es.message.size())
-					append(judge_test_report.comments) << " (" << es.message
-						<< ")";
+					back_insert(judge_test_report.comments, " (", es.message,
+						')');
 
 				judge_test_report.comments += "</li>\n";
 
@@ -397,10 +398,10 @@ JudgeResult judge(string submission_id, string problem_id) {
 				judge_test_report.status = JudgeResult::JUDGE_ERROR;
 
 				// Add test comment
-				append(judge_test_report.comments)
-					<< "<li><span class=\"test-id\">"
-					<< htmlSpecialChars(test.name) << "</span>"
-						"Checker time limit exceeded</li>\n";
+				back_insert(judge_test_report.comments,
+					"<li><span class=\"test-id\">",
+					htmlSpecialChars(test.name), "</span>"
+						"Checker time limit exceeded</li>\n");
 
 				if (VERBOSITY > 1)
 					tmplog("\033[1;33mTLE\033[m");
@@ -431,23 +432,25 @@ JudgeResult judge(string submission_id, string problem_id) {
 				toString(group.points), " (ratio: ", toString(ratio, 3), ")");
 
 		// Append first row
-		append(judge_test_report.tests) << "<tr>"
-				"<td>" << htmlSpecialChars(*group_result[0].name) << "</td>"
-				<< TestResult::statusToTdString(group_result[0].status)
-				<< "<td>" << group_result[0].time << "</td>"
-				"<td class=\"groupscore\" rowspan=\""
-					<< toString(group.tests.size()) << "\">"
-					<< toString<long long>(round(group.points * ratio)) << " / "
-					<< toString(group.points) << "</td>"
-			"</tr>\n";
+		back_insert(judge_test_report.tests, "<tr>"
+				"<td>", htmlSpecialChars(*group_result[0].name), "</td>",
+				TestResult::statusToTdString(group_result[0].status),
+				"<td>", group_result[0].time, "</td>"
+				"<td class=\"groupscore\" rowspan=\"",
+					toString(group.tests.size()), "\">",
+					toString<long long>(round(group.points * ratio)), " / ",
+					toString(group.points), "</td>"
+			"</tr>\n");
 
-		for (vector<TestResult>::iterator i = ++group_result.begin(),
-				end = group_result.end(); i != end; ++i)
-			append(judge_test_report.tests) << "<tr>"
-					"<td>" << htmlSpecialChars(*i->name) << "</td>"
-					<< TestResult::statusToTdString(i->status)
-					<< "<td>" << i->time << "</td>"
-				"</tr>\n";
+		for (auto it = ++group_result.begin(), end = group_result.end();
+			it != end; ++it)
+		{
+			back_insert(judge_test_report.tests, "<tr>"
+					"<td>", htmlSpecialChars(*it->name), "</td>",
+					TestResult::statusToTdString(it->status),
+					"<td>", it->time, "</td>"
+				"</tr>\n");
+		}
 	}
 
 	if (VERBOSITY > 1)

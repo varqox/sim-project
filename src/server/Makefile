@@ -8,15 +8,15 @@ ifneq ($(MAKECMDGOALS), clean)
 endif
 
 ../sim-server: server.o connection.o http_request.o http_response.o form_validator.o
-../sim-server: sim.o sim_template.o sim_errors.o
-../sim-server: sim_session.o sim_user.o sim_contest.o sim_contest_utility.o
+../sim-server: session.o template.o errors.o user.o
+../sim-server: contest.o contest_utilities.o submissions.o files.o sim.o
 ../sim-server: ../lib/sim.a ../simlib/simlib.a
 ../sim-server:
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lpthread -lmysqlcppconn
 
 ../sim-server2: server2.o connection.o http_request.o http_response.o form_validator.o
-../sim-server2: sim.o sim_template.o sim_errors.o
-../sim-server2: sim_session.o sim_user.o sim_contest.o sim_contest_utility.o
+../sim-server2: session.o template.o errors.o user.o
+../sim-server2: contest.o contest_utilities.o submissions.o files.o sim.o
 ../sim-server2: ../lib/sim.a ../simlib/simlib.a
 ../sim-server2:
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lpthread -lmysqlcppconn

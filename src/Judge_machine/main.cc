@@ -3,7 +3,6 @@
 #include <limits.h>
 #include <sim/db.h>
 #include <simlib/debug.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
 #include <sys/inotify.h>
 
@@ -37,7 +36,8 @@ static void processSubmissionQueue() {
 				// Update submission
 				DB::Statement stmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
-						jres.status == JudgeResult::JUDGE_ERROR) {
+					jres.status == JudgeResult::JUDGE_ERROR)
+				{
 					stmt = db_conn.prepare("UPDATE submissions s, "
 							"((SELECT id FROM submissions "
 									"WHERE user_id=? AND round_id=? "
@@ -113,7 +113,8 @@ static void processSubmissionQueue() {
 
 void startWatching(int inotify_fd, int& wd) {
 	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
-			IN_ATTRIB)) == -1) {
+		IN_ATTRIB)) == -1)
+	{
 		errlog("Error: inotify_add_watch()", error(errno));
 		// Run tests
 		processSubmissionQueue();

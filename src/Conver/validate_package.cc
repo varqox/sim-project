@@ -52,9 +52,11 @@ string validatePackage(string pathname) {
 
 	// Validate config.conf
 	if (!USE_CONFIG || !std::binary_search(package_tree_root->files.begin(),
-			package_tree_root->files.end(), "config.conf"))
+		package_tree_root->files.end(), "config.conf"))
+	{
 		USE_CONFIG = false;
-	else try {
+
+	} else try {
 		if (VERBOSITY > 1)
 			printf("Validating config.conf...\n");
 		config_conf.loadConfig(pathname);
