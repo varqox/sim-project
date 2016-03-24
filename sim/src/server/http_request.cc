@@ -8,13 +8,12 @@ using std::string;
 namespace server {
 
 HttpRequest::Form::~Form() {
-	for (map<string, string>::iterator i = files.begin(), end = files.end();
-			i != end; ++i)
-		unlink(i->second.c_str());
+	for (auto&& p : files)
+		unlink(p.second.c_str());
 }
 
 string HttpRequest::getCookie(const string& name) const {
-	HttpHeaders::const_iterator it = headers.find("cookie");
+	auto it = headers.find("cookie");
 
 	if (it == headers.end())
 		return "";
@@ -26,8 +25,9 @@ string HttpRequest::getCookie(const string& name) const {
 			++beg;
 
 		if (0 == cookie.compare(beg, name.size(), name) &&
-				beg + name.size() < cookie.size() &&
-				cookie[beg + name.size()] == '=') {
+			beg + name.size() < cookie.size() &&
+			cookie[beg + name.size()] == '=')
+		{
 			beg += name.size() + 1;
 			size_t next = std::min(cookie.size(), find(cookie, ';', beg));
 			return cookie.substr(beg, next - beg);

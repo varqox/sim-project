@@ -6,11 +6,8 @@
 #include <set>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
-#include <simlib/filesystem.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
 #include <sys/epoll.h>
-#include <sys/resource.h>
 
 using std::array;
 using std::string;
@@ -84,7 +81,7 @@ public:
 	vector<Request> requests;
 
 	Connection(int fde, const sockaddr_in& sock_addr, bool idl = true,
-			bool rd = false, bool wr = false)
+		bool rd = false, bool wr = false)
 		: fd_(fde), sin_addr_(sock_addr.sin_addr),
 			port_(ntohs(sock_addr.sin_port)), making_headers(true), idle(idl),
 			reading(rd), writing(wr) {}
@@ -191,7 +188,8 @@ public:
 } // anonymous namespace
 
 #if 1
-#define DEBUG_HEADERS(...) stdlog(__VA_ARGS__)
+// # warning "Before committing disable this debug"
+# define DEBUG_HEADERS(...) stdlog(__VA_ARGS__)
 #else
 #define DEBUG_HEADERS(...)
 #endif
@@ -201,8 +199,10 @@ bool Connection::parseHeader(StringView str, StringView& name,
 {
 	name = str.substr(0, str.find(':'));
 	if (name.find(' ') != StringView::npos || name.size() == 0
-			|| name.size() == str.size())
+		|| name.size() == str.size())
+	{
 		return true; // Invalid header
+	}
 
 	str.removePrefix(name.size() + 1);
 	str.removeLeading(isspace);
@@ -527,8 +527,8 @@ static void master_process_cycle() {
 	// Run reader and writer threads
 	pthread_t reader_pid, writer_pid;
 	if (pthread_create(&reader_pid, nullptr, reader_thread, nullptr) == -1 ||
-			pthread_create(&writer_pid, nullptr, writer_thread, nullptr) ==
-			-1) {
+		pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1)
+	{
 		errlog("Failed to spawn reader and writer threads", error(errno));
 		exit(10);
 	}
@@ -632,7 +632,8 @@ static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
 	if (0 == strcmp(address.data(), "*")) // strcmp because of '\0' in address
 		sock_name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
 	else if (address.empty() ||
-			inet_aton(address.data(), &sock_name.sin_addr) == 0) {
+		inet_aton(address.data(), &sock_name.sin_addr) == 0)
+	{
 		errlog(config_path, ": incorrect IPv4 address");
 		exit(8);
 	}

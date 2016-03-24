@@ -127,8 +127,9 @@ int setLimits(const string& package_path) {
 
 			// Open sb_opts.new_stdin_fd
 			if ((sb_opts.new_stdin_fd = open(
-					concat(package_path, "tests/", test.name, ".in").c_str(),
-					O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1) {
+				concat(package_path, "tests/", test.name, ".in").c_str(),
+				O_RDONLY | O_LARGEFILE | O_NOFOLLOW)) == -1)
+			{
 				eprintf("Failed to open: '%s' - %s\n",
 					concat(package_path, "tests/", test.name, ".in").c_str(),
 					strerror(errno));
@@ -140,8 +141,9 @@ int setLimits(const string& package_path) {
 
 			// Open sb_opts.new_stdout_fd
 			if (GEN_OUT && (sb_opts.new_stdout_fd = open(
-					concat(package_path, "tests/", test.name, ".out").c_str(),
-					O_WRONLY | O_CREAT | O_TRUNC, S_0644)) == -1) {
+				concat(package_path, "tests/", test.name, ".out").c_str(),
+				O_WRONLY | O_CREAT | O_TRUNC, S_0644)) == -1)
+			{
 				eprintf("Failed to open: '%s' - %s\n",
 					concat(package_path, "tests/", test.name, ".out").c_str(),
 					strerror(errno));

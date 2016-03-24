@@ -4,9 +4,8 @@
 #include "validate_package.h"
 
 #include <simlib/debug.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
-#include <simlib/utility.h>
+#include <simlib/utilities.h>
 
 using std::string;
 using std::unique_ptr;
@@ -95,32 +94,39 @@ static void parseOptions(int &argc, char **argv) {
 		if (argv[i][0] == '-') {
 			// Force auto limit
 			if (0 == strcmp(argv[i], "-fal") ||
-					0 == strcmp(argv[i], "--force-auto-limit")) {
+				0 == strcmp(argv[i], "--force-auto-limit"))
+			{
 				FORCE_AUTO_LIMIT = true;
 				TIME_LIMIT = 0;
 			}
 
 			// Generate out
 			else if (0 == strcmp(argv[i], "-g") ||
-					0 == strcmp(argv[i], "--gen-out") ||
-					0 == strcmp(argv[i], "--generate-out"))
+				0 == strcmp(argv[i], "--gen-out") ||
+				0 == strcmp(argv[i], "--generate-out"))
+			{
 				GEN_OUT = true;
+			}
 
 			// Help
 			else if (0 == strcmp(argv[i], "-h") ||
-					0 == strcmp(argv[i], "--help")) {
+				0 == strcmp(argv[i], "--help"))
+			{
 				help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 			}
 
 			// Ignore config.conf
 			else if (0 == strcmp(argv[i], "-ic") ||
-					0 == strcmp(argv[i], "--ignore-config"))
+				0 == strcmp(argv[i], "--ignore-config"))
+			{
 				USE_CONFIG = false;
+			}
 
 			// Memory limit
 			else if ((0 == strcmp(argv[i], "-m") ||
-					0 == strcmp(argv[i], "--memory-limit")) && i + 1 < argc) {
+				0 == strcmp(argv[i], "--memory-limit")) && i + 1 < argc)
+			{
 				if (1 > sscanf(argv[++i], "%llu", &tmp)) {
 					eprintf("Wrong memory limit\n");
 					exit(-1);
@@ -141,7 +147,8 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Max time limit
 			else if ((0 == strcmp(argv[i], "-mt") ||
-					0 == strcmp(argv[i], "--max-time-limit")) && i + 1 < argc) {
+				0 == strcmp(argv[i], "--max-time-limit")) && i + 1 < argc)
+			{
 				if (1 > sscanf(argv[++i], "%llu", &tmp)) {
 					eprintf("Wrong max time limit\n");
 					exit(-1);
@@ -158,8 +165,10 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Problem name
 			else if ((0 == strcmp(argv[i], "-n") ||
-					0 == strcmp(argv[i], "--name")) && i + 1 < argc)
+				0 == strcmp(argv[i], "--name")) && i + 1 < argc)
+			{
 				PROBLEM_NAME = argv[++i];
+			}
 
 			else if (isPrefix(argv[i], "--name="))
 				PROBLEM_NAME = string(argv[i]).substr(7);
@@ -170,12 +179,15 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Quiet mode
 			else if (0 == strcmp(argv[i], "-q") ||
-					0 == strcmp(argv[i], "--quiet"))
+				0 == strcmp(argv[i], "--quiet"))
+			{
 				VERBOSITY = 0;
+			}
 
 			// Tag
 			else if ((0 == strcmp(argv[i], "-t") ||
-					0 == strcmp(argv[i], "--tag")) && i + 1 < argc) {
+				0 == strcmp(argv[i], "--tag")) && i + 1 < argc)
+			{
 				PROBLEM_TAG = argv[++i];
 				if (PROBLEM_TAG.size() > 4) {
 					eprintf("Problem tag too long (max 4 characters)\n");
@@ -188,7 +200,8 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Time limit
 			else if ((0 == strcmp(argv[i], "-tl") ||
-					0 == strcmp(argv[i], "--time-limit")) && i + 1 < argc) {
+				0 == strcmp(argv[i], "--time-limit")) && i + 1 < argc)
+			{
 				if (1 > sscanf(argv[++i], "%llu", &tmp)) {
 					eprintf("Wrong time limit\n");
 					exit(-1);
@@ -205,13 +218,17 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Verbose mode
 			else if (0 == strcmp(argv[i], "-v") ||
-					0 == strcmp(argv[i], "--verbose"))
+				0 == strcmp(argv[i], "--verbose"))
+			{
 				VERBOSITY = 2;
+			}
 
 			// Validate out
 			else if (0 == strcmp(argv[i], "-vo") ||
-					0 == strcmp(argv[i], "--validate-out"))
+				0 == strcmp(argv[i], "--validate-out"))
+			{
 				VALIDATE_OUT = true;
+			}
 
 			// Unknown
 			else
@@ -262,15 +279,15 @@ static void extractPackage(const string& source, const string& dest,
 		// Detect compression type (based on extension)
 		// zip
 		if (extension == "zip")
-			append(args)("unzip")(VERBOSITY > 1 ? "-o" : "-oq")(source)("-d")
-				(dest);
+			back_insert(args, "unzip", (VERBOSITY > 1 ? "-o" : "-oq"), source,
+				"-d", dest);
 		// 7zip
 		else if (extension == "7z")
-			append(args)("7z")("x")("-y")(source)("-o" + dest);
+			back_insert(args, "7z", "x", "-y", source, concat("-o", dest));
 		// tar.gz
 		else if (extension == "tgz" || isSuffix(source, ".tar.gz"))
-			append(args)("tar")(VERBOSITY > 1 ? "xvzf" : "xzf")(source)("-C")
-				(dest);
+			back_insert(args, "tar", (VERBOSITY > 1 ? "xvzf" : "xzf"), source,
+				"-C", dest);
 		// Unknown
 		else {
 			eprintf("Error: Unsupported file format\n");
@@ -420,21 +437,24 @@ int main(int argc, char **argv) {
 	if (config_conf.checker.empty()) {
 		config_conf.checker = "checker.c";
 		if (putFileContents((out_package + "check/checker.c").c_str(),
-				(const char*)default_checker_c,default_checker_c_len) == -1) {
+			(const char*)default_checker_c,default_checker_c_len) == -1)
+		{
 			eprintf("Error: putFileContents()\n");
 			return -1;
 		}
 	}
 
 	// Set limits
-	if ((!USE_CONFIG || GEN_OUT || TIME_LIMIT > 0 || VALIDATE_OUT ||
-				FORCE_AUTO_LIMIT) &&
-			setLimits(out_package) != 0)
+	if ((!USE_CONFIG || GEN_OUT || TIME_LIMIT > 0 || VALIDATE_OUT
+		|| FORCE_AUTO_LIMIT) && setLimits(out_package) != 0)
+	{
 		return 8;
+	}
 
 	// Write config
 	if (putFileContents(concat(out_package, "config.conf"), config_conf.dump())
-			== -1) {
+		== -1)
+	{
 		eprintf("Error: putFileContents()\n");
 		return -1;
 	}
@@ -452,18 +472,17 @@ int main(int argc, char **argv) {
 
 	// zip
 	if (extension == "zip")
-		append(args)("zip")(VERBOSITY > 1 ? "-r" : "-rq")(DEST_NAME)
-			(out_package);
+		back_insert(args, "zip", (VERBOSITY > 1 ? "-r" : "-rq"), DEST_NAME,
+			out_package);
 
 	// 7zip
 	else if (extension == "7z")
-		append(args)("7z")("a")("-y")("-m0=lzma2")(DEST_NAME)
-			(out_package);
+		back_insert(args, "7z", "a", "-y", "-m0=lzma2", DEST_NAME, out_package);
 
 	// tar.gz
 	else if (extension == "tgz" || isSuffix(DEST_NAME, ".tar.gz"))
-		append(args)("tar")(VERBOSITY > 1 ? "cvzf" : "czf")(DEST_NAME)
-			(out_package);
+		back_insert(args, "tar", (VERBOSITY > 1 ? "cvzf" : "czf"), DEST_NAME,
+			out_package);
 
 	// Directory
 	else {

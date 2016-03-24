@@ -130,8 +130,8 @@ int main() {
 	// Extract IPv4 address
 	if (0 == strcmp(address.data(), "*")) // strcmp because of '\0' in address
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
-	else if (address.empty() ||
-			inet_aton(address.data(), &name.sin_addr) == 0) {
+	else if (address.empty() || inet_aton(address.data(), &name.sin_addr) == 0)
+	{
 		errlog("sim.config: incorrect IPv4 address");
 		return 8;
 	}
