@@ -1,4 +1,5 @@
 #include "../include/config_file.h"
+#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/sim_problem.h"
@@ -94,8 +95,8 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 				"'/' character");
 
 		if (access(concat(package_path, "doc/", statement), F_OK) == -1)
-			throw std::runtime_error(concat("config.conf: invalid statement '",
-				statement, "': 'doc/", statement, '\'', error(errno)));
+			THROW("config.conf: invalid statement '", statement, "': 'doc/",
+				statement, '\'', error(errno));
 	}
 
 	// Checker
@@ -191,67 +192,62 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 	// Problem name
 	name = config.getString("name");
 	if (name.empty())
-		throw std::runtime_error("config.conf: Missing problem name");
+		THROW("config.conf: Missing problem name");
 
 	// Memory limit (in KiB)
 	if (!config.isSet("memory_limit"))
-		throw std::runtime_error("config.conf: missing memory limit\n");
+		THROW("config.conf: missing memory limit\n");
 
 	if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
-		throw std::runtime_error("config.conf: invalid memory limit\n");
+		THROW("config.conf: invalid memory limit\n");
 
 	// Problem tag
 	tag = config.getString("tag");
 	if (tag.size() > 4) // Invalid tag
-		throw std::runtime_error("conf.cfg: Problem tag too long "
-			"(max 4 characters)");
+		THROW("conf.cfg: Problem tag too long (max 4 characters)");
 
 	// Statement
 	statement = config.getString("statement");
 	if (statement.size()) {
 		if (statement.find('/') < statement.size())
-			throw std::runtime_error("config.conf: statement cannot contain "
-				"'/' character");
+			THROW("config.conf: statement cannot contain '/' character");
 
 		if (access(concat(package_path, "doc/", statement), F_OK) == -1)
-			throw std::runtime_error(concat("config.conf: invalid statement '",
-				statement, "': 'doc/", statement, '\'', error(errno)));
+			THROW("config.conf: invalid statement '", statement, "': 'doc/",
+				statement, '\'', error(errno));
 	}
 
 	// Checker
 	checker = config.getString("checker");
 	if (checker.size()) {
 		if (checker.find('/') < checker.size())
-			throw std::runtime_error("config.conf: checker cannot contain "
-				"'/' character");
+			THROW("config.conf: checker cannot contain '/' character");
 
 		if (access(concat(package_path, "check/", checker), F_OK) == -1)
-			throw std::runtime_error(concat("config.conf: invalid checker '",
-				checker, "': 'check/", checker, '\'', error(errno)));
+			THROW("config.conf: invalid checker '", checker, "': 'check/",
+				checker, '\'', error(errno));
 	}
 
 	// Solutions
 	solutions = config.getArray("solutions");
 	for (auto& i : solutions) {
 		if (i.find('/') < i.size())
-			throw std::runtime_error("config.conf: solution cannot contain "
-				"'/' character");
+			THROW("config.conf: solution cannot contain '/' character");
 
 		if (access(concat(package_path, "prog/", i), F_OK) == -1)
-			throw std::runtime_error(concat("config.conf: invalid solution '",
-				i, "': 'prog/", i, '\'', error(errno)));
+			THROW("config.conf: invalid solution '", i, "': 'prog/", i, '\'',
+				error(errno));
 	}
 
 	// Main solution
 	main_solution = config.getString("main_solution");
 	if (main_solution.empty())
-		throw std::runtime_error("config.conf: missing main_solution");
+		THROW("config.conf: missing main_solution");
 
 	if (std::find(solutions.begin(), solutions.end(), main_solution) ==
 		solutions.end())
 	{
-		throw std::runtime_error("config.conf: main_solution has to be set in "
-			"solutions");
+		THROW("config.conf: main_solution has to be set in solutions");
 	}
 
 	// Tests
@@ -267,21 +263,19 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 		test.name.assign(i, 0, pos);
 
 		if (test.name.find('/') != string::npos)
-			throw std::runtime_error("config.conf: test name cannot contain "
-				"'/' character");
+			THROW("config.conf: test name cannot contain '/' character");
 
 		string test_in = concat(package_path, "tests/", test.name, ".in");
 		if (access(test_in, F_OK) == -1)
-			throw std::runtime_error(concat("config.conf: invalid test name '",
-				test_in, '\'', error(errno)));
+			THROW("config.conf: invalid test name '", test_in, '\'',
+				error(errno));
 
 		// Time limit
 		errno = 0;
 		char *ptr;
 		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
 		if (errno)
-			throw std::runtime_error(concat("config.conf: ", test.name,
-				": invalid time limit"));
+			THROW("config.conf: ", test.name, ": invalid time limit");
 		pos = ptr - i.data();
 
 		while (pos < i.size() && isspace(i[pos]))
@@ -297,8 +291,7 @@ void ProblemConfig::loadConfig(string package_path) noexcept(false) {
 				--end;
 
 			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
-				throw std::runtime_error(concat("config.conf: ", test.name,
-					": invalid points"));
+				THROW("config.conf: ", test.name, ": invalid points");
 		}
 
 		test_groups.back().tests.push_back(test);
@@ -330,7 +323,7 @@ string obtainCheckerOutput(int fd, size_t max_length) noexcept(false) {
 			return res;
 
 		} else if (errno != EINTR)
-			throw std::runtime_error(concat("read()", error(errno)));
+			THROW("read()", error(errno));
 
 	} while (pos < max_length);
 

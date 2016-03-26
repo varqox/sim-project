@@ -36,20 +36,21 @@ private:
 	std::string path_; // absolute path
 	std::unique_ptr<char[]> name_;
 
-	TemporaryDirectory(const TemporaryDirectory&) = delete;
-	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
-
 public:
 	TemporaryDirectory() = default;
 
 	explicit TemporaryDirectory(const char* templ);
 
-	TemporaryDirectory(TemporaryDirectory&& td) : path_(std::move(td.path_)),
-		name_(td.name_.release()) {}
+	TemporaryDirectory(const TemporaryDirectory&) = delete;
 
-	TemporaryDirectory& operator=(TemporaryDirectory&& td) {
+	TemporaryDirectory(TemporaryDirectory&& td) noexcept
+		: path_(std::move(td.path_)), name_(std::move(td.name_)) {}
+
+	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
+
+	TemporaryDirectory& operator=(TemporaryDirectory&& td) noexcept {
 		path_ = std::move(td.path_);
-		name_.reset(td.name_.release());
+		name_ = std::move(td.name_);
 
 		return *this;
 	}
@@ -67,25 +68,25 @@ public:
 };
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(const char* pathname) {
+inline int mkdir(const char* pathname) noexcept {
 	return mkdir(pathname, S_0755);
 }
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(const std::string& pathname) {
+inline int mkdir(const std::string& pathname) noexcept {
 	return mkdir(pathname.c_str(), S_0755);
 }
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
-int mkdir_r(const char* pathname, mode_t mode = S_0755);
+int mkdir_r(const char* pathname, mode_t mode = S_0755) noexcept;
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
-inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) {
+inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) noexcept {
 	return mkdir_r(pathname.c_str(), mode);
 }
 
 // The same as remove(const char*)
-inline int remove(const std::string& pathname) {
+inline int remove(const std::string& pathname) noexcept {
 	return remove(pathname.c_str());
 }
 
@@ -101,7 +102,7 @@ inline int remove(const std::string& pathname) {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-int remove_rat(int dirfd, const char* pathname);
+int remove_rat(int dirfd, const char* pathname) noexcept;
 
 /**
  * @brief Removes recursively file/directory @p pathname
@@ -113,12 +114,12 @@ int remove_rat(int dirfd, const char* pathname);
  *
  * @errors The same that occur for remove_rat()
  */
-inline int remove_r(const char* pathname) {
+inline int remove_r(const char* pathname) noexcept {
 	return remove_rat(AT_FDCWD, pathname);
 }
 
 // The same as remove_r(const char*)
-inline int remove_r(const std::string& pathname) {
+inline int remove_r(const std::string& pathname) noexcept {
 	return remove_rat(AT_FDCWD, pathname.c_str());
 }
 
@@ -134,7 +135,7 @@ inline int remove_r(const std::string& pathname) {
  *
  * @errors The same that occur for read(2), write(2)
  */
-int blast(int infd, int outfd);
+int blast(int infd, int outfd) noexcept;
 
 /**
  * @brief Copies (overwrites) file from @p src to @p dest
@@ -147,7 +148,7 @@ int blast(int infd, int outfd);
  *
  * @errors The same that occur for open(2), blast()
  */
-int copy(const char* src, const char* dest);
+int copy(const char* src, const char* dest) noexcept;
 
 /**
  * @brief Copies (overrides) file from @p src to @p dest
@@ -160,7 +161,7 @@ int copy(const char* src, const char* dest);
  *
  * @errors The same that occur for open(2), blast()
  */
-inline int copy(const std::string& src, const std::string& dest) {
+inline int copy(const std::string& src, const std::string& dest) noexcept {
 	return copy(src.c_str(), dest.c_str());
 }
 
@@ -177,7 +178,7 @@ inline int copy(const std::string& src, const std::string& dest) {
  *
  * @errors The same that occur for openat(2), blast()
  */
-int copyat(int dirfd1, const char* src, int dirfd2, const char* dest);
+int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept;
 
 /**
  * @brief Copies (overrides) file/directory @p src to @p dest relative to a
@@ -193,7 +194,8 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest);
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest);
+int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest)
+	noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -207,7 +209,8 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest);
  *
  * @errors The same that occur for copy_rat()
  */
-int copy_r(const char* src, const char* dest, bool create_subdirs = true);
+int copy_r(const char* src, const char* dest, bool create_subdirs = true)
+	noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -222,12 +225,12 @@ int copy_r(const char* src, const char* dest, bool create_subdirs = true);
  * @errors The same that occur for copy_rat()
  */
 inline int copy_r(const std::string& src, const std::string& dest,
-	bool create_subdirs = true)
+	bool create_subdirs = true) noexcept
 {
 	return copy_r(src.c_str(), dest.c_str(), create_subdirs);
 }
 
-inline int access(const std::string& pathname, int mode) {
+inline int access(const std::string& pathname, int mode) noexcept {
 	return access(pathname.c_str(), mode);
 }
 
@@ -244,7 +247,7 @@ inline int access(const std::string& pathname, int mode) {
  * @return Return value of rename(2) or copy_r() or remove_r()
  */
 int move(const std::string& oldpath, const std::string& newpath,
-		bool create_subdirs = true);
+	bool create_subdirs = true) noexcept;
 
 /**
  * @brief Creates file pathname with access mode @p mode
@@ -256,35 +259,35 @@ int move(const std::string& oldpath, const std::string& newpath,
  *
  * @errors The same that occur for creat(2), close(2)
  */
-int createFile(const char* pathname, mode_t mode);
+int createFile(const char* pathname, mode_t mode) noexcept;
 
 /**
  * @brief Read @p count bytes to @p buf from @p fd
- * @details Uses read(2), but reads until it is able to read
+ * @details Uses read(2), but reads until it is unable to read
  *
  * @param fd file descriptor
  * @param buf where place read bytes
  * @param count number of bytes to read
  *
- * @return number of bytes read on success, if error occurs then errno is > 0
+ * @return number of bytes read, if error occurs then errno is > 0
  *
  * @errors The same as for read(2) except EINTR
  */
-size_t readAll(int fd, void *buf, size_t count);
+size_t readAll(int fd, void *buf, size_t count) noexcept;
 
 /**
  * @brief Write @p count bytes to @p fd from @p buf
- * @details Uses write(2), but writes until it is able to write
+ * @details Uses write(2), but writes until it is unable to write
  *
  * @param fd file descriptor
  * @param buf where write bytes from
  * @param count number of bytes to write
  *
- * @return number of bytes written on success, if error occurs then errno is > 0
+ * @return number of bytes written, if error occurs then errno is > 0
  *
  * @errors The same as for write(2) except EINTR
  */
-size_t writeAll(int fd, const void *buf, size_t count);
+size_t writeAll(int fd, const void *buf, size_t count) noexcept;
 
 namespace directory_tree {
 
@@ -304,25 +307,24 @@ public:
 	std::vector<Node*> dirs;
 	std::vector<std::string> files;
 
-	explicit Node(const std::string& new_name)
+	explicit Node(std::string new_name)
 			: name(new_name), dirs(), files() {}
 
 	Node(const Node&) = delete;
 
-	Node(Node&& n) : name(std::move(n.name)), dirs(std::move(n.dirs)),
-		files(std::move(n.files))
-	{
-		dirs.clear();
-	}
+	Node(Node&& n) noexcept : name(std::move(n.name)), dirs(std::move(n.dirs)),
+		files(std::move(n.files)) {}
 
 	Node& operator=(const Node&) = delete;
 
-	Node& operator=(Node&& n) {
+	Node& operator=(Node&& n) noexcept {
+		for (size_t i = 0; i < dirs.size(); ++i)
+			delete dirs[i];
+
 		name = std::move(n.name);
 		dirs = std::move(n.dirs);
 		files = std::move(n.files);
 
-		dirs.clear();
 		return *this;
 	}
 
@@ -345,7 +347,7 @@ public:
 	 *
 	 * @return true if exists, false otherwise
 	 */
-	bool fileExists(const std::string& pathname) {
+	bool fileExists(const std::string& pathname) noexcept {
 		return std::binary_search(files.begin(), files.end(), pathname);
 	}
 
@@ -493,9 +495,13 @@ inline std::vector<std::string> getFileByLines(const std::string& file,
  * @param file file to write to
  * @param data data to write
  *
- * @return bytes written on success, -1 on error
+ * @return bytes written, if error occurs then errno is > 0
+ *
+ * @errors The same that occur for open(2) and write(2) except EINTR from
+ *   write(2)
  */
-ssize_t putFileContents(const char* file, const char* data, size_t len = -1);
+ssize_t putFileContents(const char* file, const char* data, size_t len = -1)
+	noexcept;
 
 /**
  * @brief Writes @p data to file @p file
@@ -504,10 +510,13 @@ ssize_t putFileContents(const char* file, const char* data, size_t len = -1);
  * @param file file to write to
  * @param data data to write
  *
- * @return bytes written on success, -1 on error
+ * @return bytes written, if error occurs then errno is > 0
+ *
+ * @errors The same that occur for open(2) and write(2) except EINTR from
+ *   write(2)
  */
 inline ssize_t putFileContents(const std::string& file,
-	const std::string& data)
+	const std::string& data) noexcept
 {
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
@@ -533,9 +542,9 @@ inline int sclose(int fd) noexcept {
 class Closer {
 	int fd_;
 public:
-	explicit Closer(int fd) : fd_(fd) {}
+	explicit Closer(int fd) noexcept : fd_(fd) {}
 
-	void cancel() { fd_ = -1; }
+	void cancel() noexcept { fd_ = -1; }
 
 	/**
 	 * @brief Closes file descriptor
@@ -545,12 +554,18 @@ public:
 	 * @errors The same that occur to sclose()
 	 */
 	int close() noexcept {
+		if (fd_ < 0)
+			return 0;
+
 		int rc = sclose(fd_);
 		fd_ = -1;
 		return rc;
 	}
 
-	~Closer() { sclose(fd_); }
+	~Closer() {
+		if (fd_ >= 0)
+			sclose(fd_);
+	}
 };
 
 // Encapsulates file descriptor
@@ -558,55 +573,61 @@ class FileDescriptor {
 	int fd_;
 
 public:
-	explicit FileDescriptor(int fd = -1) : fd_(fd) {}
+	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
-	FileDescriptor(FileDescriptor&&) = default;
+	FileDescriptor(FileDescriptor&&) noexcept = default;
 
-	FileDescriptor& operator=(const FileDescriptor&) = default;
+	FileDescriptor& operator=(const FileDescriptor&) noexcept = default;
 
-	FileDescriptor& operator=(FileDescriptor&&) = default;
+	FileDescriptor& operator=(FileDescriptor&&) noexcept = default;
 
-	FileDescriptor& operator=(int fd) {
+	FileDescriptor& operator=(int fd) noexcept {
 		fd_ = fd;
 		return *this;
 	}
 
-	operator int() const { return fd_; }
+	operator int() const noexcept { return fd_; }
 
-	void reset(int fd) {
-		(void)sclose(fd_);
+	void reset(int fd) noexcept {
+		if (fd_ >= 0)
+			(void)sclose(fd_);
 		fd_ = fd;
 	}
 
-	int open(const char* filename, int flags, int mode = S_0644) {
+	int open(const char* filename, int flags, int mode = S_0644) noexcept {
 		return fd_ = ::open(filename, flags, mode);
 	}
 
-	int open(const std::string& filename, int flags, int mode = S_0644) {
+	int open(const std::string& filename, int flags, int mode = S_0644) noexcept
+	{
 		return fd_ = ::open(filename.c_str(), flags, mode);
 	}
 
-	int reopen(const char* filename, int flags, int mode = S_0644) {
-		(void)sclose(fd_);
-		return fd_ = ::open(filename, flags, mode);
+	int reopen(const char* filename, int flags, int mode = S_0644) noexcept {
+		reset(::open(filename, flags, mode));
+		return fd_;
 	}
 
-	int reopen(const std::string& filename, int flags, int mode = S_0644) {
-		(void)sclose(fd_);
-		return fd_ = ::open(filename.c_str(), flags, mode);
+	int reopen(const std::string& filename, int flags, int mode = S_0644)
+		noexcept
+	{
+		reset(::open(filename.c_str(), flags, mode));
+		return fd_;
 	}
 
-	int close() {
-		if (fd_ > 0) {
-			int rc = sclose(fd_);
-			fd_ = -1;
-			return rc;
-		}
+	int close() noexcept {
+		if (fd_ < 0)
+			return 0;
 
-		return 0;
+		int rc = sclose(fd_);
+		fd_ = -1;
+		return rc;
 	}
 
-	~FileDescriptor() { (void)sclose(fd_); }
+	~FileDescriptor() {
+		if (fd_ >= 0)
+			(void)sclose(fd_);
+	}
 };
 
 template<int (*func)(const char*)>
@@ -619,8 +640,8 @@ class RemoverBase {
 	RemoverBase& operator=(const RemoverBase&&) = delete;
 
 public:
-	explicit RemoverBase(const char* str) : RemoverBase(str, str == nullptr
-		? 0 : strlen(str)) {}
+	explicit RemoverBase(const char* str)
+		: RemoverBase(str, (str ? strlen(str) : 0)) {}
 
 	explicit RemoverBase(const std::string& str)
 		: RemoverBase(str.data(), str.size()) {}
@@ -637,7 +658,7 @@ public:
 			func(name.get());
 	}
 
-	void cancel() { name.reset(); }
+	void cancel() noexcept { name.reset(); }
 
 	void reset(const char* str) { reset(str, strlen(str)); }
 
@@ -649,7 +670,7 @@ public:
 		strncpy(name.get(), str, len + 1);
 	}
 
-	int removeTarget() {
+	int removeTarget() noexcept {
 		int rc = func(name.get());
 		cancel();
 		return rc;

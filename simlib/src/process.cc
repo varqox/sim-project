@@ -20,7 +20,7 @@ string Spawner::receiveErrorMessage(int status, int fd) {
 		message.append(buff.data(), rc);
 
 	if (message.size()) // Error in tracee
-		throw std::runtime_error(message);
+		THROW(message);
 
 	if (WIFEXITED(status))
 		message = concat("returned ",
@@ -39,7 +39,7 @@ string getCWD() {
 		if (buff)
 			errno = ENOENT; // Improper path, but get_current_dir_name() succeed
 
-		throw std::runtime_error(concat("Failed to get CWD", error(errno)));
+		THROW("Failed to get CWD", error(errno));
 	}
 
 	string res(buff.get());
@@ -60,13 +60,12 @@ string getExec(pid_t pid) {
 		array<char, 65536> buff2;
 		rc = readlink(path.c_str(), buff2.data(), buff2.size());
 		if (rc == -1 || rc >= static_cast<int>(buff2.size()))
-			throw std::runtime_error(concat("Failed: readlink()",
-				error(errno)));
+			THROW("Failed: readlink()", error(errno));
 
 		return string(buff2.data(), rc);
 
 	} else if (rc == -1)
-		throw std::runtime_error(concat("Failed: readlink()", error(errno)));
+		THROW("Failed: readlink()", error(errno));
 
 	return string(buff.data(), rc);
 }
@@ -83,8 +82,7 @@ vector<pid_t> findProcessesByExec(string exec, bool include_me) {
 	pid_t pid, my_pid = (include_me ? -1 : getpid());
 	DIR *dir = opendir("/proc");
 	if (dir == nullptr)
-		throw std::runtime_error(concat("Cannot open /proc directory",
-			error(errno)));
+		THROW("Cannot open /proc directory", error(errno));
 
 	// Process with deleted exec will have " (deleted)" suffix in result of
 	// readlink(2)
@@ -127,7 +125,7 @@ string chdirToExecDir() {
 		exec.erase(exec.begin() + slash + 1, exec.end()); // Erase filename
 
 	if (chdir(exec.c_str()) == -1)
-		throw std::runtime_error(concat("chdir()", error(errno)));
+		THROW("chdir()", error(errno));
 
 	return exec;
 }

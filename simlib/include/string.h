@@ -25,29 +25,31 @@ protected:
 	size_type len;
 
 public:
-	StringBase(pointer s = "") : str(s), len(strlen(s)) {}
+	StringBase(pointer s = "") noexcept : str(s), len(strlen(s)) {}
 
-	StringBase(pointer s, size_type n) : str(s), len(n) {}
+	StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
 
 	// Constructs StringView from substring [beg, beg + n) of string s
 	StringBase(const std::string& s, size_type beg = 0, size_type n = npos)
+		noexcept
 		: str(s.data() + std::min(beg, s.size())),
-		len(std::min(n, s.size() - std::min(beg, s.size()))) {}
+			len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	template<class CharT>
-	StringBase(const StringBase<CharT>& s) : str(s.data()), len(s.size()) {}
+	StringBase(const StringBase<CharT>& s) noexcept
+		: str(s.data()), len(s.size()) {}
 
 	template<class CharT>
-	StringBase(StringBase<CharT>&& s) : str(s.data()), len(s.size()) {}
+	StringBase(StringBase<CharT>&& s) noexcept : str(s.data()), len(s.size()) {}
 
 	template<class CharT>
-	StringBase& operator=(StringBase<CharT>&& s) {
+	StringBase& operator=(StringBase<CharT>&& s) noexcept {
 		str = s.data();
 		len = s.size();
 	}
 
 	template<class CharT>
-	StringBase& operator=(const StringBase<CharT>& s) {
+	StringBase& operator=(const StringBase<CharT>& s) noexcept {
 		str = s.data();
 		len = s.size();
 	}
@@ -84,25 +86,25 @@ public:
 	const_iterator cend() const noexcept { return str + len; }
 
 	// Returns reference to first element
-	reference front() { return str[0]; }
+	reference front() noexcept { return str[0]; }
 
 	// Returns const_reference to first element
-	const_reference front() const { return str[0]; }
+	const_reference front() const noexcept { return str[0]; }
 
 	// Returns reference to last element
-	reference back() { return str[len - 1]; }
+	reference back() noexcept { return str[len - 1]; }
 
 	// Returns const_reference to last element
-	const_reference back() const { return str[len - 1]; }
+	const_reference back() const noexcept { return str[len - 1]; }
 
 	// Returns reference to n-th element
-	reference operator[](size_type n) { return str[n]; }
+	reference operator[](size_type n) noexcept { return str[n]; }
 
 	// Returns const_reference to n-th element
-	const_reference operator[](size_type n) const { return str[n]; }
+	const_reference operator[](size_type n) const noexcept { return str[n]; }
 
 	// Like operator[] but throws exception if n >= size()
-	reference at(size_type n) {
+	reference at(size_type n) noexcept(false) {
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
@@ -110,7 +112,7 @@ public:
 	}
 
 	// Like operator[] but throws exception if n >= size()
-	const_reference at(size_type n) const {
+	const_reference at(size_type n) const noexcept(false) {
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
@@ -118,7 +120,7 @@ public:
 	}
 
 	// Swaps two StringBase
-	virtual void swap(StringBase& s) {
+	virtual void swap(StringBase& s) noexcept {
 		// Swap str
 		pointer p = str;
 		str = s.str;
@@ -136,19 +138,21 @@ public:
 	 *
 	 * @return -1 - this < @p s, 0 - equal, 1 - this > @p s
 	 */
-	int compare(const StringBase& s) const {
+	int compare(const StringBase& s) const noexcept {
 		size_type clen = std::min(len, s.len);
 		int rc = strncmp(str, s.str, clen);
 		return rc != 0 ? rc : (len == s.len ? 0 : ((len < s.len) ? -1 : 1));
 	}
 
-	int compare(size_type pos, size_type count, const StringBase& s) const {
+	int compare(size_type pos, size_type count, const StringBase& s) const
+		noexcept(false)
+	{
 		return substr(pos, count).compare(s);
 	}
 
 	// Returns position of the first character of the first substring equal to
 	// the given character sequence, or npos if no such substring is found
-	size_type find(const StringBase& s) const {
+	size_type find(const StringBase& s) const noexcept {
 		if (s.len == 0)
 			return 0;
 
@@ -178,25 +182,27 @@ public:
 	}
 
 	size_type find(const StringBase& s, size_type beg1,
-		size_type endi1 = npos) const
+		size_type endi1 = npos) const noexcept(false)
 	{
 		return find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type find(size_type beg, const StringBase& s, size_type beg1 = 0,
-		size_type endi1 = npos) const
+		size_type endi1 = npos) const noexcept(false)
 	{
 		return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type find(size_type beg, size_type endi, const StringBase& s,
-		size_type beg1 = 0, size_type endi1 = npos) const
+		size_type beg1 = 0, size_type endi1 = npos) const noexcept(false)
 	{
 		return substr(beg, endi).find(
 			s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type find(char c, size_type beg = 0, size_type endi = npos) const {
+	size_type find(char c, size_type beg = 0, size_type endi = npos) const
+		noexcept
+	{
 		if (endi > len)
 			endi = len;
 
@@ -209,7 +215,7 @@ public:
 
 	// Returns position of the first character of the last substring equal to
 	// the given character sequence, or npos if no such substring is found
-	size_type rfind(const StringBase& s) const {
+	size_type rfind(const StringBase& s) const noexcept {
 		if (s.len == 0)
 			return 0;
 
@@ -239,25 +245,27 @@ public:
 	}
 
 	size_type rfind(const StringBase& s, size_type beg1,
-		size_type endi1 = npos) const
+		size_type endi1 = npos) const noexcept(false)
 	{
 		return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type rfind(size_type beg, const StringBase& s, size_type beg1 = 0,
-		size_type endi1 = npos) const
+		size_type endi1 = npos) const noexcept(false)
 	{
 		return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type rfind(size_type beg, size_type endi, const StringBase& s,
-		size_type beg1 = 0, size_type endi1 = npos) const
+		size_type beg1 = 0, size_type endi1 = npos) const noexcept(false)
 	{
 		return substr(beg, endi).rfind(
 			s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type rfind(char c, size_type beg = 0, size_type endi = npos) const {
+	size_type rfind(char c, size_type beg = 0, size_type endi = npos) const
+		noexcept
+	{
 		if (endi > len)
 			endi = len;
 
@@ -270,7 +278,9 @@ public:
 
 protected:
 	// Returns a StringBase of the substring [pos, pos + count)
-	StringBase substr(size_type pos = 0, size_type count = npos) const {
+	StringBase substr(size_type pos = 0, size_type count = npos) const
+		noexcept(false)
+	{
 		if (pos > len)
 			throw std::out_of_range("StringBase::substr");
 
@@ -282,27 +292,27 @@ public:
 	std::string to_string() const { return std::string(str, str + len); }
 
 	// comparison operators
-	friend bool operator==(const StringBase& a, const StringBase& b) {
+	friend bool operator==(const StringBase& a, const StringBase& b) noexcept {
 		return a.len == b.len && strncmp(a.str, b.str, a.len) == 0;
 	}
 
-	friend bool operator!=(const StringBase& a, const StringBase& b) {
+	friend bool operator!=(const StringBase& a, const StringBase& b) noexcept {
 		return a.len != b.len || strncmp(a.str, b.str, a.len) != 0;
 	}
 
-	friend bool operator<(const StringBase& a, const StringBase& b) {
+	friend bool operator<(const StringBase& a, const StringBase& b) noexcept {
 		return a.compare(b) < 0;
 	}
 
-	friend bool operator>(const StringBase& a, const StringBase& b) {
+	friend bool operator>(const StringBase& a, const StringBase& b) noexcept {
 		return a.compare(b) > 0;
 	}
 
-	friend bool operator<=(const StringBase& a, const StringBase& b) {
+	friend bool operator<=(const StringBase& a, const StringBase& b) noexcept {
 		return a.compare(b) <= 0;
 	}
 
-	friend bool operator>=(const StringBase& a, const StringBase& b) {
+	friend bool operator>=(const StringBase& a, const StringBase& b) noexcept {
 		return a.compare(b) >= 0;
 	}
 };
@@ -338,7 +348,7 @@ public:
 
 	FixedString(const FixedString& fs) : FixedString(fs.str, fs.len) {}
 
-	FixedString(FixedString&& fs) : StringBase(fs.str, fs.len) {
+	FixedString(FixedString&& fs) noexcept(false) : StringBase(fs.str, fs.len) {
 		fs.str = new char[1]();
 		fs.len = 0;
 	}
@@ -364,7 +374,9 @@ public:
 	}
 
 	// Returns a FixedString of the substring [pos, pos + count)
-	FixedString substr(size_type pos = 0, size_type count = npos) const {
+	FixedString substr(size_type pos = 0, size_type count = npos) const
+		noexcept(false)
+	{
 		if (pos > len)
 			throw std::out_of_range("FixedString::substr");
 
@@ -376,14 +388,14 @@ class StringView : public StringBase<const char> {
 public:
 	using StringBase::StringBase;
 
-	StringView() : StringBase("", 0) {}
+	StringView() noexcept : StringBase("", 0) {}
 
 	template<class Char>
-	StringView(const StringBase<Char>& s) : StringBase(s) {}
+	StringView(const StringBase<Char>& s) noexcept : StringBase(s) {}
 
 	~StringView() = default;
 
-	void clear() { len = 0; }
+	void clear() noexcept { len = 0; }
 
 	// Removes prefix of length n
 	void removePrefix(size_type n) noexcept {
@@ -401,7 +413,7 @@ public:
 			len -= n;
 	}
 
-	// Removes trailing characters for which f() returns true
+	// Removes leading characters for which f() returns true
 	template<class Func>
 	void removeLeading(Func f) {
 		size_type i = 0;
@@ -410,11 +422,19 @@ public:
 		len -= i;
 	}
 
+	void removeLeading(char c) noexcept {
+		removeLeading([c](char x) { return (x == c); });
+	}
+
 	// Removes trailing characters for which f() returns true
 	template<class Func>
 	void removeTrailing(Func f) {
 		while (len > 0 && f(back()))
 			--len;
+	}
+
+	void removeTrailing(char c) noexcept {
+		removeTrailing([c](char x) { return (x == c); });
 	}
 
 	using StringBase::substr;
@@ -454,7 +474,7 @@ bool special_equal(const StringView& a, const StringView& b, Func f) {
 }
 
 // Checks whether lowered @p a is equal to lowered @p b
-inline bool lower_equal(const StringView& a, const StringView& b) {
+inline bool lower_equal(const StringView& a, const StringView& b) noexcept {
 	return special_equal<int(int)>(a, b, tolower);
 }
 
@@ -511,7 +531,7 @@ inline size_t find(const StringView& str, char c, size_t beg = 0,
 
 // Compares two strings: @p str[beg, end) and @p s
 inline int compare(const StringView& str, size_t beg, size_t end,
-	const StringView& s)
+	const StringView& s) noexcept
 {
 	if (end > str.size())
 		end = str.size();
@@ -523,7 +543,7 @@ inline int compare(const StringView& str, size_t beg, size_t end,
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
 inline int compareTo(const StringView& str, size_t pos, char c,
-	const StringView& s)
+	const StringView& s) noexcept
 {
 	return compare(str, pos, str.find(c, pos), s);
 }
@@ -540,10 +560,7 @@ inline bool slowEqual(const std::string& str1, const std::string& str2)
 		std::min(str1.size(), str2.size())) && str1.size() == str2.size();
 }
 
-std::string withoutTrailing(const std::string& str, char c);
-
-void removeTrailing(std::string& str, char c) noexcept;
-
+// Returns @p str without trailing characters for which f() returns true
 template<class Func>
 std::string withoutTrailing(const std::string& str, Func f) {
 	auto len = str.size();
@@ -552,6 +569,7 @@ std::string withoutTrailing(const std::string& str, Func f) {
 	return std::string(str, 0, len);
 }
 
+// Removes trailing characters for which f() returns true
 template<class Func>
 void removeTrailing(std::string& str, Func f) {
 	auto it = str.end();
@@ -563,6 +581,16 @@ void removeTrailing(std::string& str, Func f) {
 	str.erase(it, str.end());
 }
 
+// Returns @p str without trailing @p c
+inline std::string withoutTrailing(const std::string& str, char c) {
+	return withoutTrailing(str, [c](char x) { return (x == c); });
+}
+
+// Removes trailing @p c
+inline void removeTrailing(std::string& str, char c) noexcept {
+	removeTrailing(str, [c](char x) { return (x == c); });
+}
+
 std::string encodeURI(const StringView& str, size_t beg = 0,
 	size_t end = StringView::npos);
 
@@ -571,14 +599,14 @@ std::string decodeURI(const StringView& str, size_t beg = 0,
 
 std::string tolower(std::string str);
 
-inline int hextodec(int c) {
+inline int hextodec(int c) noexcept {
 	c = tolower(c);
 	return (c >= 'a' ? 10 + c - 'a' : c - '0');
 }
 
-inline char dectohex(int x) { return x > 9 ? 'A' - 10 + x : x + '0'; }
+inline char dectohex(int x) noexcept { return x > 9 ? 'A' - 10 + x : x + '0'; }
 
-inline char dectohex2(int x) { return x > 9 ? 'a' - 10 + x : x + '0'; }
+inline char dectohex2(int x) noexcept { return x > 9 ? 'a' - 10 + x : x + '0'; }
 
 // Converts each byte of @p str to two hex digits using dectohex2()
 std::string toHex(const char* str, size_t len) noexcept(false);
@@ -665,17 +693,19 @@ std::string htmlSpecialChars(const StringView& s);
  * @return result - whether string @p s[beg, end) is an integer
  */
 bool isInteger(const StringView& s, size_t beg = 0,
-	size_t end = StringView::npos);
+	size_t end = StringView::npos) noexcept;
 
 // Checks whether string @p s[beg, end) consist only of digits
-bool isDigit(const StringView& s, size_t beg, size_t end = StringView::npos);
+bool isDigit(const StringView& s, size_t beg, size_t end = StringView::npos)
+	noexcept;
 
 // Checks whether string @p s consist only of digits
-inline bool isDigit(const StringView& s) { return isDigit(s, 0); }
+inline bool isDigit(const StringView& s) noexcept { return isDigit(s, 0); }
 
-bool isReal(const StringView& s, size_t beg, size_t end = StringView::npos);
+bool isReal(const StringView& s, size_t beg, size_t end = StringView::npos)
+	noexcept;
 
-inline bool isReal(const StringView& s) { return isReal(s, 0); }
+inline bool isReal(const StringView& s) noexcept { return isReal(s, 0); }
 
 /* Converts s: [beg, end) to size_t
 *  if end > s.size() or enStringViewnpos then end = s.size()
@@ -686,7 +716,7 @@ inline bool isReal(const StringView& s) { return isReal(s, 0); }
 */
 template<class T>
 int strtoi(const StringView& s, T *x, size_t beg = 0,
-	size_t end = StringView::npos)
+	size_t end = StringView::npos) noexcept
 {
 	static_assert(std::is_integral<T>::value, "template argument not an "
 		"integral type");
@@ -721,7 +751,7 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 // Like strtoi() but assumes that @p s is unsigned integer
 template<class T>
 int strtou(const StringView& s, T *x, size_t beg = 0,
-	size_t end = StringView::npos)
+	size_t end = StringView::npos) noexcept
 {
 	static_assert(std::is_integral<T>::value, "template argument not an "
 		"integral type");
@@ -734,7 +764,7 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 	}
 
 	if (x == nullptr)
-		return s[beg] != '-' && isInteger(s, beg, end) ? end - beg : -1;
+		return isDigit(s, beg, end) ? end - beg : -1;
 
 	*x = 0;
 	if (s[beg] == '+' && ++beg == end)
@@ -752,7 +782,7 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 
 // Converts string to long long
 inline long long strtoll(const StringView& s, size_t beg = 0,
-	size_t end = StringView::npos)
+	size_t end = StringView::npos) noexcept
 {
 	long long x;
 	strtoi(s, &x, beg, end);
@@ -761,7 +791,7 @@ inline long long strtoll(const StringView& s, size_t beg = 0,
 
 // Converts string to unsigned long long
 inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
-	size_t end = StringView::npos)
+	size_t end = StringView::npos) noexcept
 {
 	unsigned long long x;
 	strtou(s, &x, beg, end);
@@ -770,7 +800,7 @@ inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
 
 // Converts digits @p str to @p T, WARNING: assumes that isDigit(str) == true
 template<class T>
-T digitsToU(const StringView& str) {
+T digitsToU(const StringView& str) noexcept {
 	static_assert(std::is_integral<T>::value, "template argument not an "
 		"integral type");
 	T x = 0;
@@ -804,12 +834,12 @@ struct StrNumCompare {
 };
 
 template<class T>
-inline size_t string_length(const T& x) { return x.length(); }
+inline size_t string_length(const T& x) noexcept { return x.length(); }
 
 template<class T>
-inline size_t string_length(T* x) { return strlen(x); }
+inline size_t string_length(T* x) noexcept { return strlen(x); }
 
-inline size_t string_length(char) { return 1; }
+inline size_t string_length(char) noexcept { return 1; }
 
 template<class Char>
 inline std::string& operator+=(std::string& str, const StringBase<Char>& s) {

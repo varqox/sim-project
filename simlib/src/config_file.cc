@@ -1,4 +1,5 @@
 #include "../include/config_file.h"
+#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 
@@ -165,8 +166,7 @@ void ConfigFile::loadConfigFromFile(const string& pathname, bool load_all) {
 		errno == EINTR) {}
 
 	if (fd == -1)
-		throw std::runtime_error(concat("Failed to open '", pathname, "'",
-			error(errno)));
+		THROW("Failed to open '", pathname, '\'', error(errno));
 
 	Closer closer(fd);
 	string contents = getFileContents(fd);

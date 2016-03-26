@@ -13,15 +13,13 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	if (c_errors) {
 		cef = getUnlinkedTmpFile();
 		if (cef == -1)
-			throw std::runtime_error(concat("Failed to open 'compile_errors'",
-				error(errno)));
+			THROW("Failed to open 'compile_errors'", error(errno));
 	}
 	Closer closer(cef);
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
-	if (BLOCK_SIGNALS(copy(source, concat(tmp_dir.name(), "a.cpp"))) == -1)
-		throw std::runtime_error(concat("Failed to copy source file",
-			error(errno)));
+	if (copy(source, concat(tmp_dir.name(), "a.cpp")))
+		THROW("Failed to copy source file", error(errno));
 
 	if (verbosity > 1)
 		stdlog("Compiling: '", source, "' ");
@@ -77,8 +75,8 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		*c_errors = "";
 
 	// Move exec
-	if (BLOCK_SIGNALS(move(concat(tmp_dir.name(), "exec"), exec, false)) == -1)
-		throw std::runtime_error(concat("Failed to move exec", error(errno)));
+	if (move(concat(tmp_dir.name(), "exec"), exec, false))
+		THROW("Failed to move exec", error(errno));
 
 	return 0;
 }

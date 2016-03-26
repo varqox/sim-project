@@ -218,11 +218,11 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	// Error stream from tracee (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
-		throw std::runtime_error(concat("pipe()", error(errno)));
+		THROW("pipe()", error(errno));
 
 	int cpid = fork();
 	if (cpid == -1)
-		throw std::runtime_error(concat("fork()", error(errno)));
+		THROW("fork()", error(errno));
 
 	else if (cpid == 0) {
 		sclose(pfd[0]);
@@ -251,8 +251,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		int ec = errno;
 		kill(cpid, SIGKILL);
 		waitpid(cpid, nullptr, 0);
-		throw std::runtime_error(concat("ptrace(PTRACE_SETOPTIONS)",
-			error(ec)));
+		THROW("ptrace(PTRACE_SETOPTIONS)", error(ec));
 	}
 
 	// Set up timer
@@ -321,8 +320,8 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 				return ExitStat(status, runtime);
 
 			if (syscall < 0)
-				throw std::runtime_error(concat("failed to get syscall - "
-					"ptrace(): ", toString(syscall), error(errno)));
+				THROW("failed to get syscall - ptrace(): ", toString(syscall),
+					error(errno));
 
 			return ExitStat(status, runtime,
 				concat("forbidden syscall: ", toString(syscall)));

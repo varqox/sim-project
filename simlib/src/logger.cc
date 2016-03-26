@@ -1,3 +1,4 @@
+#include "../include/debug.h"
 #include "../include/logger.h"
 #include "../include/time.h"
 
@@ -9,13 +10,13 @@ Logger::Logger(const string& filename)
 	: f_(fopen(filename.c_str(), "a")), opened_(true)
 {
 	if (f_ == nullptr)
-		throw std::runtime_error(concat("fopen() failed", error(errno)));
+		THROW("fopen() failed", error(errno));
 }
 
 void Logger::open(const string& filename) {
 	FILE *f = fopen(filename.c_str(), "a");
 	if (f == nullptr)
-		throw std::runtime_error(concat("fopen() failed", error(errno)));
+		THROW("fopen() failed", error(errno));
 
 	close();
 	f_ = f;

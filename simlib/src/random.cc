@@ -1,3 +1,4 @@
+#include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/random.h"
@@ -46,14 +47,12 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
 void readRandomBytes(void* dest, size_t bytes) noexcept(false) {
 	int fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1)
-		throw std::runtime_error(concat("Failed to open /dev/urandom",
-			error(errno)));
+		THROW("Failed to open /dev/urandom", error(errno));
 
 	size_t len = readAll(fd, dest, bytes);
 	int errnum = errno;
 	sclose(fd);
 
 	if (len != bytes)
-		throw std::runtime_error(concat("Failed to read from /dev/urandom",
-			error(errnum)));
+		THROW("Failed to read from /dev/urandom", error(errnum));
 }

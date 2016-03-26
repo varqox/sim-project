@@ -32,7 +32,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 	size_t size = strlen(templ);
 	if (size > 0) {
 		// Fill name_
-		if (templ[size - 1] == '/')
+		while (size && templ[size - 1] == '/')
 			--size;
 
 		name_.reset(new char[size + 2]);
@@ -42,7 +42,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 
 		// Create directory with permissions (mode: 0700/rwx------)
 		if (mkdtemp(name_.get()) == nullptr)
-			throw std::runtime_error("Cannot create temporary directory\n");
+			THROW("Cannot create temporary directory\n");
 
 		// name_ is absolute
 		if (name_.get()[0] == '/')
@@ -64,22 +64,33 @@ TemporaryDirectory::~TemporaryDirectory() {
 		errlog("Error: remove_r()", error(errno)); // TODO: it is not so good
 }
 
-int mkdir_r(const char* path, mode_t mode) {
-	string dir(path);
-	// Remove ending slash (if it exists)
-	if (dir.size() && dir.back() == '/')
-		dir.pop_back();
+int mkdir_r(const char* path, mode_t mode) noexcept {
+	size_t len = strlen(path);
+	if (len >= PATH_MAX) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
 
-	size_t end = 0;
+	std::array<char, PATH_MAX> dir;
+	strncpy(dir.data(), path, len);
+	// Add ending slash (if not exists)
+	if (len == 0 || dir[len - 1] != '/')
+		dir[len++] = '/';
+
+	size_t end = 1;
 	int res;
-	do {
-		end = find(dir, '/', end + 1);
-		res = mkdir(dir.substr(0, end).c_str(), mode);
+	while (end < len) {
+		while (dir[end] != '/')
+			++end;
 
+		dir[end] = '\0'; // Separate subpath
+		res = mkdir(dir.data(), mode);
 		if (res == -1 && errno != EEXIST)
 			return -1;
 
-	} while (end < dir.size());
+		dir[end++] = '/';
+
+	}
 
 	return res;
 }
@@ -121,7 +132,7 @@ int __remove_rat(int dirfd, const char* path) {
 	return unlinkat(dirfd, path, AT_REMOVEDIR);
 }
 
-int remove_rat(int dirfd, const char* path) {
+int remove_rat(int dirfd, const char* path) noexcept {
 	struct stat64 sb;
 	if (fstatat64(dirfd, path, &sb, AT_SYMLINK_NOFOLLOW) == -1)
 		return -1;
@@ -132,7 +143,7 @@ int remove_rat(int dirfd, const char* path) {
 	return unlinkat(dirfd, path, 0);
 }
 
-int blast(int infd, int outfd) {
+int blast(int infd, int outfd) noexcept {
 	array<char, 65536> buff;
 	ssize_t len, written;
 	while (len = read(infd, buff.data(), buff.size()), len > 0 ||
@@ -140,15 +151,17 @@ int blast(int infd, int outfd) {
 	{
 		ssize_t pos = 0;
 		while (pos < len) {
-			if ((written = write(outfd, buff.data() + pos, len - pos)) == -1)
+			written = write(outfd, buff.data() + pos, len - pos);
+			if (written > 0)
+				pos += written;
+			else if (errno != EINTR)
 				return -1;
-			pos += written;
 		}
 	}
 	return 0;
 }
 
-int copy(const char* src, const char* dest) {
+int copy(const char* src, const char* dest) noexcept {
 	int in = open(src, O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
@@ -165,7 +178,7 @@ int copy(const char* src, const char* dest) {
 	return res;
 }
 
-int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
+int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept {
 	int in = openat(dirfd1, src, O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
@@ -197,7 +210,7 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) {
  *   mkdirat(2), copyat()
  */
 static int __copy_rat(int dirfd1, const char* src, int dirfd2,
-	const char* dest)
+	const char* dest) noexcept
 {
 	int src_fd = openat(dirfd1, src, O_RDONLY |	O_LARGEFILE | O_DIRECTORY);
 	if (src_fd == -1)
@@ -233,7 +246,8 @@ static int __copy_rat(int dirfd1, const char* src, int dirfd2,
 	return 0;
 }
 
-int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) {
+int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept
+{
 	struct stat64 sb;
 	if (fstatat64(dirfd1, src, &sb, AT_SYMLINK_NOFOLLOW) == -1)
 		return -1;
@@ -244,20 +258,33 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) {
 	return copyat(dirfd1, src, dirfd2, dest);
 }
 
-int copy_r(const char* src, const char* dest, bool create_subdirs) {
-	string tmp(dest);
-	// Extract containing directory
-	size_t pos = tmp.find_last_of('/');
-	if (pos < tmp.size())
-		tmp.resize(pos);
+int copy_r(const char* src, const char* dest, bool create_subdirs) noexcept {
+	if (!create_subdirs)
+		return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 
-	if (create_subdirs)
-		mkdir_r(tmp.c_str()); // Ensure that exists
+	size_t len = strlen(dest);
+	if (len >= PATH_MAX) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	// Extract containing directory
+	while (len && dest[len - 1] != '/')
+		--len;
+
+	std::array<char, PATH_MAX> dir;
+	strncpy(dir.data(), dest, len);
+	dir[len] = '\0';
+
+	// Ensure that parent directory exists
+	mkdir_r(dir.data());
 
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
-int move(const string& oldpath, const string& newpath, bool create_subdirs) {
+int move(const string& oldpath, const string& newpath, bool create_subdirs)
+	noexcept
+{
 	if (create_subdirs) {
 		size_t x = newpath.find_last_of('/');
 		if (x != string::npos)
@@ -274,7 +301,7 @@ int move(const string& oldpath, const string& newpath, bool create_subdirs) {
 	return 0;
 }
 
-int createFile(const char* pathname, mode_t mode) {
+int createFile(const char* pathname, mode_t mode) noexcept {
 	int fd = creat(pathname, mode);
 	if (fd == -1)
 		return -1;
@@ -282,7 +309,7 @@ int createFile(const char* pathname, mode_t mode) {
 	return sclose(fd);
 }
 
-size_t readAll(int fd, void *buf, size_t count) {
+size_t readAll(int fd, void *buf, size_t count) noexcept {
 	ssize_t k;
 	size_t pos = 0;
 	uint8_t *buff = static_cast<uint8_t*>(buf);
@@ -303,7 +330,8 @@ size_t readAll(int fd, void *buf, size_t count) {
 	return count;
 }
 
-size_t writeAll(int fd, const void *buf, size_t count) {
+size_t writeAll(int fd, const void *buf, size_t count) noexcept
+{
 	ssize_t k;
 	size_t pos = 0;
 	const uint8_t *buff = static_cast<const uint8_t*>(buf);
@@ -367,7 +395,7 @@ Node* Node::dir(const string& pathname) {
 
 static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 	size_t len = strlen(path);
-	if (len > 1 && path[len - 1] == '/')
+	while (len > 1 && path[len - 1] == '/')
 		--len;
 
 	Node *root = new Node(path, path + len);
@@ -569,21 +597,14 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 	return res;
 }
 
-ssize_t putFileContents(const char* file, const char* data, size_t len) {
-	FILE *f = fopen(file, "w");
-	if (f == nullptr)
+ssize_t putFileContents(const char* file, const char* data, size_t len) noexcept
+{
+	FileDescriptor fd {open(file, O_WRONLY | O_CREAT | O_TRUNC, S_0644)};
+	if (fd == -1)
 		return -1;
 
 	if (len == size_t(-1))
 		len = strlen(data);
 
-	size_t pos = 0, written = 1;
-
-	while (pos < len && written != 0) {
-		written = fwrite(data + pos, sizeof(char), len - pos, f);
-		pos += written;
-	}
-
-	fclose(f);
-	return pos;
+	return writeAll(fd, data, len);
 }

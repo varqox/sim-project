@@ -1,5 +1,6 @@
 #pragma once
 
+#include "debug.h"
 #include "filesystem.h"
 #include "logger.h"
 
@@ -465,11 +466,11 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args)
 
 	int pfd[2];
 	if (pipe(pfd) == -1)
-		throw std::runtime_error(concat("pipe()", error(errno)));
+		THROW("pipe()", error(errno));
 
 	pid_t child = fork();
 	if (child == -1) {
-		throw std::runtime_error(concat("Failed to fork()", error(errno)));
+		THROW("Failed to fork()", error(errno));
 
 	} else if (child == 0) {
 		ExitStat es(-1);
@@ -500,7 +501,7 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args)
 
 	// Throw exception caught in child
 	if (es.code == -1)
-		throw std::runtime_error(es.message);
+		THROW(es.message);
 	return es;
 }
 
@@ -512,11 +513,11 @@ Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 	// Error stream from child (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
-		throw std::runtime_error(concat("pipe()", error(errno)));
+		THROW("pipe()", error(errno));
 
 	int cpid = fork();
 	if (cpid == -1)
-		throw std::runtime_error(concat("fork()", error(errno)));
+		THROW("fork()", error(errno));
 
 	else if (cpid == 0) {
 		sclose(pfd[0]);

@@ -4,6 +4,8 @@
 
 #include <vector>
 
+// TODO: sim namespace
+
 /**
  * @brief ProblemConfig holds SIM package config
  * @details Holds problem name, problem tag, problem statement, checker,
