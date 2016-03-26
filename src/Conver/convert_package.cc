@@ -37,22 +37,22 @@ int convertPackage(string tmp_package, string out_package) {
 	// Create package structure
 	// TODO: these lines look to similarly
 	if (mkdir_r(out_package + "check") == -1) {
-		eprintf("Failed to create check/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create check/: mkdir_r()%s\n", error(errno).c_str());
 		return -1;
 	}
 
 	if (mkdir(out_package + "doc") == -1) {
-		eprintf("Failed to create doc/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create doc/: mkdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 
 	if (mkdir(out_package + "prog") == -1) {
-		eprintf("Failed to create prog/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create prog/: mkdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 
 	if (mkdir(out_package + "tests") == -1) {
-		eprintf("Failed to create tests/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create tests/: mkdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 

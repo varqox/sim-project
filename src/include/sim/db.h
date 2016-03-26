@@ -17,12 +17,11 @@ public:
 
 	Result(const Result&) = delete;
 
-	Result(Result&& ps)
-		: res_(std::move(ps.res_)) {}
+	Result(Result&& ps) noexcept : res_(std::move(ps.res_)) {}
 
 	Result& operator=(const Result&) = delete;
 
-	Result& operator=(Result&& ps) {
+	Result& operator=(Result&& ps) noexcept {
 		res_ = std::move(ps.res_);
 		return *this;
 	}
@@ -70,12 +69,11 @@ public:
 
 	Statement(const Statement&) = delete;
 
-	Statement(Statement&& ps)
-		: pstmt_(std::move(ps.pstmt_)) {}
+	Statement(Statement&& ps) noexcept : pstmt_(std::move(ps.pstmt_)) {}
 
 	Statement& operator=(const Statement&) = delete;
 
-	Statement& operator=(Statement&& ps) {
+	Statement& operator=(Statement&& ps) noexcept {
 		pstmt_ = std::move(ps.pstmt_);
 		return *this;
 	}
@@ -124,14 +122,14 @@ public:
 
 	Connection(const Connection&) = delete;
 
-	Connection(Connection&& conn) : conn_(std::move(conn.conn_)),
+	Connection(Connection&& conn) noexcept : conn_(std::move(conn.conn_)),
 		host_(std::move(conn.host_)), user_(std::move(conn.user_)),
 		password_(std::move(conn.password_)),
 		database_(std::move(conn.database_)) {}
 
 	Connection& operator=(const Connection&) = delete;
 
-	Connection& operator=(Connection&& conn) {
+	Connection& operator=(Connection&& conn) noexcept {
 		conn_ = std::move(conn.conn_);
 		host_ = std::move(conn.host_);
 		user_ = std::move(conn.user_);

@@ -8,10 +8,7 @@
 using std::string;
 
 void Contest::file() {
-	if (req->target.size() < 36)
-		return error404();
-
-	string id = url_args.extractNext();
+	StringView id = url_args.extractNext();
 	// Early id validation
 	if (id.size() != 30)
 		return error404();
@@ -32,16 +29,13 @@ void Contest::file() {
 			return; // getRoundPath has already set error
 
 		// Edit file
-		if (url_args.isNext("edit")) {
-			url_args.extractNext();
+		StringView next_arg = url_args.extractNext();
+		if (next_arg == "edit")
 			return editFile(id, file_name);
-		}
 
 		// Delete file
-		if (url_args.isNext("delete")) {
-			url_args.extractNext();
+		if (next_arg == "delete")
 			return deleteFile(id, file_name);
-		}
 
 		// Download file
 		resp.headers["Content-Disposition"] =
@@ -57,7 +51,7 @@ void Contest::file() {
 	}
 }
 
-void Contest::editFile(const string& id, string name) {
+void Contest::editFile(const StringView& id, string name) {
 	if (!rpath->admin_access)
 		return error403();
 
@@ -85,7 +79,7 @@ void Contest::editFile(const string& id, string name) {
 				if (fv.exist("file")) {
 					SignalBlocker signal_guard;
 					if (move(fv.getFilePath("file"), concat("files/", id)))
-						throw std::runtime_error("move()" + error(errno));
+						THROW("move()", error(errno));
 				}
 
 				fv.addError("Update successful");
@@ -115,7 +109,7 @@ void Contest::editFile(const string& id, string name) {
 	}
 
 	auto ender = contestTemplate("Edit file");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Edit file</h1>"
 			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
@@ -140,8 +134,7 @@ void Contest::editFile(const string& id, string name) {
 				// Modified
 				"<div class=\"field-group\">\n"
 					"<label>Modified</label>\n"
-					"<input type=\"text\" value=\"", modified,
-						"\" disabled>\n"
+					"<input type=\"text\" value=\"", modified, "\" disabled>\n"
 				"</div>\n"
 				"<div>\n"
 					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
@@ -152,7 +145,7 @@ void Contest::editFile(const string& id, string name) {
 		"</div>\n");
 }
 
-void Contest::deleteFile(const string& id, const string& name) {
+void Contest::deleteFile(const StringView& id, const StringView& name) {
 	if (!rpath->admin_access)
 		return error403();
 
@@ -167,7 +160,7 @@ void Contest::deleteFile(const string& id, const string& name) {
 				return error500();
 
 			if (BLOCK_SIGNALS(remove(concat("files/", id))))
-				throw std::runtime_error(concat("remove()", error(errno)));
+				THROW("remove()", error(errno));
 
 			return redirect(concat("/c/", rpath->round_id, "/files"));
 
@@ -177,13 +170,14 @@ void Contest::deleteFile(const string& id, const string& name) {
 		}
 
 	auto ender = contestTemplate("Delete file");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete file</h1>\n"
 		"<form method=\"post\">\n"
 			"<label class=\"field\">Are you sure to delete file "
 				"<a href=\"/file/", id, "/edit\">",
-				htmlSpecialChars(name), "</a>?</label>\n"
+					htmlSpecialChars(name), "</a>?"
+			"</label>\n"
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
@@ -233,7 +227,7 @@ void Contest::addFile() {
 				// Move file
 				SignalBlocker signal_guard;
 				if (move(fv.getFilePath("file"), concat("files/", id)))
-					throw std::runtime_error("move()" + error(errno));
+					THROW("move()", error(errno));
 
 				stmt = db_conn.prepare(
 					"UPDATE files SET round_id=? WHERE id=?");
@@ -242,7 +236,7 @@ void Contest::addFile() {
 
 				if (stmt.executeUpdate() != 1) {
 					(void)remove(concat("files/", id));
-					throw std::runtime_error("Failed to update inserted file");
+					THROW("Failed to update inserted file");
 				}
 				signal_guard.unblock();
 
@@ -255,7 +249,7 @@ void Contest::addFile() {
 	}
 
 	auto ender = contestTemplate("Add file");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Add file</h1>"
 			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
@@ -325,11 +319,11 @@ void Contest::files(bool admin_view) {
 			string id = res[1];
 			append("<tr>"
 				"<td>", res[2], "</td>"
-				"<td><a href=\"/file/", id, "\">",
-					htmlSpecialChars(res[3]), "</a></td>"
+				"<td><a href=\"/file/", id, "\">", htmlSpecialChars(res[3]),
+					"</a></td>"
 				"<td>", htmlSpecialChars(res[4]), "</td>"
-				"<td><a class=\"btn-small\" href=\"/file/", id, "\">"
-					"Download</a>");
+				"<td><a class=\"btn-small\" href=\"/file/", id, "\">Download"
+					"</a>");
 
 			if (admin_view)
 				append("<a class=\"btn-small blue\" href=\"/file/", id,

@@ -106,7 +106,7 @@ void User::handle() {
 
 	// TODO: write test suite!
 	// Check permissions
-	permissions = getPermissions(user_id,user_type);
+	permissions = getPermissions(user_id, user_type);
 
 	if (~permissions & PERM_VIEW)
 		return error403();
@@ -144,9 +144,9 @@ void User::login() {
 				stmt.setString(1, username);
 
 				DB::Result res = stmt.executeQuery();
-				if (res.next()) {
+				while (res.next()) {
 					if (!slowEqual(sha3_512(res[2] + password), res[3]))
-						goto label_invalid;
+						break;
 
 					// Delete old session
 					if (Session::open())
@@ -157,12 +157,10 @@ void User::login() {
 
 					// If there is redirection string, redirect to it
 					auto remnant = url_args.remnant();
-					return redirect(remnant.empty() ? "/" : remnant);
-
-				} else {
-				label_invalid:
-					fv.addError("Invalid username or password");
+					return redirect(concat('/', remnant));
 				}
+
+				fv.addError("Invalid username or password");
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
@@ -418,15 +416,16 @@ void User::editProfile() {
 
 				if (stmt.executeUpdate() == 1) {
 					fv.addError("Update successful");
-					// Update user info
-					username = new_username;
-					user_type = new_utype;
-					permissions = getPermissions(user_id, user_type);
-
+					// Update session
 					if (user_id == Session::user_id) {
-						Session::user_type = user_type;
+						Session::user_type = new_utype;
 						Session::username = new_username;
 					}
+
+					// Update user info
+					user_type = new_utype;
+					username = new_username;
+					permissions = getPermissions(user_id, user_type);
 
 				} else if (username != new_username)
 					fv.addError(concat("Username '", new_username,

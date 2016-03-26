@@ -1,5 +1,7 @@
 #include "http_response.h"
 
+#include <simlib/utilities.h>
+
 using std::string;
 
 namespace server {
@@ -17,11 +19,11 @@ void HttpResponse::setCookie(const string& name, const string& val,
 			value.append("; Expires=").append(buff);
 	}
 
-	if (!path.empty())
-		value.append("; Path=").append(path);
+	if (path.size())
+		back_insert(value, "; Path=", path);
 
-	if (!domain.empty())
-		value.append("; Domain=").append(domain);
+	if (domain.size())
+		back_insert(value, "; Domain=", domain);
 
 	if (http_only)
 		value.append("; HttpOnly");

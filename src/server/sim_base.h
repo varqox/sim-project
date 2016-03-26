@@ -33,6 +33,8 @@ protected:
 	virtual void redirect(std::string location) = 0;
 
 	// Notifies judge server that there are submissions to judge
-	static void notifyJudgeServer() { utime("judge-machine.notify", nullptr); }
+	static void notifyJudgeServer() noexcept {
+		utime("judge-machine.notify", nullptr);
+	}
 
 };

@@ -22,7 +22,7 @@ void Contest::submit(bool admin_view) {
 
 		fv.validateNotBlank(problem_round_id, "round-id", "Problem");
 
-		if (!isInteger(problem_round_id))
+		if (!isDigit(problem_round_id))
 			fv.addError("Wrong problem round id");
 
 		// If all fields are ok
@@ -48,7 +48,7 @@ void Contest::submit(bool admin_view) {
 			string solution_tmp_path = fv.getFilePath("solution");
 			struct stat sb;
 			if (stat(solution_tmp_path.c_str(), &sb))
-				throw std::runtime_error(concat("stat()", error(errno)));
+				THROW("stat()", error(errno));
 
 			// Check if solution is too big
 			if (sb.st_size > (100 << 10)) { // 100 KiB
@@ -77,8 +77,8 @@ void Contest::submit(bool admin_view) {
 				}
 
 				// Get inserted submission id
-				DB::Result res = db_conn.
-					executeQuery("SELECT LAST_INSERT_ID()");
+				DB::Result res = db_conn.executeQuery(
+					"SELECT LAST_INSERT_ID()");
 
 				if (!res.next()) {
 					fv.addError("Database error - failed to get inserted "
@@ -89,13 +89,15 @@ void Contest::submit(bool admin_view) {
 				string submission_id = res[1];
 
 				// Copy solution
-				BLOCK_SIGNALS(copy(solution_tmp_path,
-					concat("solutions/", submission_id, ".cpp")));
+				if (copy(solution_tmp_path,
+					concat("solutions/", submission_id, ".cpp")))
+				{
+					THROW("copy()", error(errno));
+				}
 
 				// Change submission status to 'waiting'
-				db_conn.executeUpdate(
-					"UPDATE submissions SET status='waiting' WHERE id="
-					+ submission_id);
+				db_conn.executeUpdate("UPDATE submissions SET status='waiting' "
+					"WHERE id=" + submission_id);
 
 				notifyJudgeServer();
 
@@ -110,7 +112,7 @@ void Contest::submit(bool admin_view) {
 
  form:
 	auto ender = contestTemplate("Submit a solution");
-	printRoundPath("");
+	printRoundPath();
 	string buffer;
 	back_insert(buffer, fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Submit a solution</h1>\n"
@@ -161,8 +163,8 @@ void Contest::submit(bool admin_view) {
 			std::map<string, vector<Problem> > problems_table;
 
 			// Fill problems with all subrounds
-			for (size_t i = 0; i < subrounds.size(); ++i)
-				problems_table[subrounds[i].id];
+			for (auto&& sr : subrounds)
+				problems_table[sr.id];
 
 			// Collect results
 			while (res.next()) {
@@ -180,13 +182,13 @@ void Contest::submit(bool admin_view) {
 			}
 
 			// For each subround list all problems
-			for (auto& subround : subrounds) {
-				vector<Problem>& prob = problems_table[subround.id];
+			for (auto&& sr : subrounds) {
+				vector<Problem>& prob = problems_table[sr.id];
 
 				for (auto& problem : prob)
 					back_insert(buffer, "<option value=\"", problem.id, "\">",
 						htmlSpecialChars(problem.name), " (",
-						htmlSpecialChars(subround.name), ")</option>\n");
+						htmlSpecialChars(sr.name), ")</option>\n");
 			}
 
 		// Admin -> All problems
@@ -326,8 +328,7 @@ void Contest::submission() {
 					stmt.setString(2, round_id);
 					stmt.executeUpdate();
 
-					return redirect(concat("/c/", round_id,
-						"/submissions"));
+					return redirect(concat("/c/", round_id, "/submissions"));
 
 				} catch (const std::exception& e) {
 					fv.addError("Internal server error");
@@ -336,7 +337,7 @@ void Contest::submission() {
 			}
 
 			auto ender = contestTemplate("Delete submission");
-			printRoundPath("");
+			printRoundPath();
 			append(fv.errors(), "<div class=\"form-container\">\n"
 				"<h1>Delete submission</h1>\n"
 				"<form method=\"post\">\n"
@@ -383,7 +384,7 @@ void Contest::submission() {
 		}
 
 		auto ender = contestTemplate("Submission " + submission_id);
-		printRoundPath("");
+		printRoundPath();
 
 		// View source
 		if (query == Query::VIEW_SOURCE) {
@@ -474,7 +475,7 @@ void Contest::submission() {
 		else if (submission_status == "judge_error")
 			append(" class=\"judge-error\"");
 
-		append('>', submissionStatus(submission_status),
+		append('>', submissionStatusDescription(submission_status),
 							"</td>"
 						"<td>", (admin_view ||
 							rpath->round->full_results.empty() ||
@@ -531,7 +532,7 @@ void Contest::submissions(bool admin_view) {
 	append( "</h3>");
 
 	try {
-		string param_column = (rpath->type == CONTEST ? "contest_round_id"
+		const char* param_column = (rpath->type == CONTEST ? "contest_round_id"
 			: (rpath->type == ROUND ? "parent_round_id" : "round_id"));
 
 		DB::Statement stmt = db_conn.prepare(admin_view ?
@@ -582,7 +583,8 @@ void Contest::submissions(bool admin_view) {
 			else
 				ret += ">";
 
-			return ret.append(submissionStatus(status)).append("</td>");
+			return back_insert(ret, submissionStatusDescription(status),
+				"</td>");
 		};
 
 		string current_date = date("%Y-%m-%d %H:%M:%S");

@@ -16,7 +16,8 @@ using std::vector;
 
 void Contest::handle() {
 	// Select contest
-	if (url_args.isNext("")) {
+	StringView next_arg = url_args.extractNext();
+	if (next_arg.empty()) {
 		auto ender = baseTemplate("Select contest");
 		try {
 			// Get available contests
@@ -52,139 +53,136 @@ void Contest::handle() {
 					htmlSpecialChars(res[2]), "</a>\n");
 
 			append("</div>\n");
+			return;
 
 		} catch (const std::exception& e) {
 			ERRLOG_CAUGHT(e);
+			return;
 		}
-
-	// Add contest
-	} else if (url_args.isNext("add")) {
-		url_args.extractNext();
-		addContest();
 	}
 
-	// Other pages which need round id
-	else {
-		// Extract round id
-		string round_id;
-		if (strToNum(round_id, url_args.extractNext()) <= 0)
-			return error404();
 
-		// Get parent rounds
-		rpath.reset(getRoundPath(round_id));
-		if (!rpath)
-			return; // getRoundPath has already set error
+	// Add contest
+	if (next_arg == "add")
+		return addContest();
 
-		// Check if user forces observer view
-		bool admin_view = rpath->admin_access;
-		if (url_args.isNext("n")) {
-			url_args.extractNext();
-			admin_view = false;
-		}
+	/* Other pages which need round id */
+	// Extract round id
+	string round_id;
+	if (strToNum(round_id, next_arg) <= 0)
+		return error404();
 
-		// Problem statement
-		if (rpath->type == PROBLEM && url_args.isNext("statement")) {
-			url_args.extractNext();
-			// Get statement path
-			ConfigFile problem_config;
-			problem_config.addVar("statement");
-			problem_config.loadConfigFromFile(concat("problems/",
-				rpath->problem->problem_id, "/config.conf"));
+	next_arg = url_args.extractNext();
 
-			string statement = problem_config.getString("statement");
-			// No statement
-			if (statement.empty()) {
-				auto ender = contestTemplate("Problems");
-				append("<h1>Problems</h1>");
-				printRoundPath("problems");
+	// Get parent rounds
+	rpath.reset(getRoundPath(round_id));
+	if (!rpath)
+		return; // getRoundPath has already set an error
 
-				append("<p>This problem has no statement...</p>");
-				return;
-			}
+	// Check if user forces observer view
+	bool admin_view = rpath->admin_access;
+	if (next_arg == "n") {
+		admin_view = false;
+		next_arg = url_args.extractNext();
+	}
 
-			if (isSuffix(statement, ".pdf"))
-				resp.headers["Content-type"] = "application/pdf";
-			else if (isSuffixIn(statement, {".html", ".htm"}))
-				resp.headers["Content-type"] = "text/html";
-			else if (isSuffixIn(statement, {".txt", ".md"}))
-				resp.headers["Content-type"] = "text/plain; charset=utf-8";
+	// Problem statement
+	if (rpath->type == PROBLEM && next_arg == "statement") {
+		// Get statement path
+		ConfigFile problem_config;
+		problem_config.addVar("statement");
+		problem_config.loadConfigFromFile(concat("problems/",
+			rpath->problem->problem_id, "/config.conf"));
 
-			resp.content_type = server::HttpResponse::FILE;
-			resp.content.clear();
-			back_insert(resp.content, "problems/", rpath->problem->problem_id,
-				"/doc/", statement);
+		string statement = problem_config.getString("statement");
+		// No statement
+		if (statement.empty()) {
+			auto ender = contestTemplate("Problems");
+			append("<h1>Problems</h1>");
+			printRoundPath("problems", !admin_view);
 
+			append("<p>This problem has no statement...</p>");
 			return;
 		}
 
-		// Add
-		if (url_args.isNext("add")) {
-			url_args.extractNext();
-			if (rpath->type == CONTEST)
-				return addRound();
+		if (isSuffix(statement, ".pdf"))
+			resp.headers["Content-type"] = "application/pdf";
+		else if (isSuffixIn(statement, {".html", ".htm"}))
+			resp.headers["Content-type"] = "text/html";
+		else if (isSuffixIn(statement, {".txt", ".md"}))
+			resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
-			if (rpath->type == ROUND)
-				return addProblem();
+		resp.content_type = server::HttpResponse::FILE;
+		resp.content = concat(resp.content, "problems/",
+			rpath->problem->problem_id, "/doc/", statement);
 
-			return error404();
-		}
-
-		// Edit
-		if (url_args.isNext("edit")) {
-			url_args.extractNext();
-			if (rpath->type == CONTEST)
-				return editContest();
-
-			if (rpath->type == ROUND)
-				return editRound();
-
-			return editProblem();
-		}
-
-		// Delete
-		StringView next_arg = url_args.extractNext();
-		if (next_arg == "delete") {
-			if (rpath->type == CONTEST)
-				return deleteContest();
-
-			if (rpath->type == ROUND)
-				return deleteRound();
-
-			return deleteProblem();
-		}
-
-		// Problems
-		if (next_arg == "problems")
-			return listProblems(admin_view);
-
-		// Submit
-		if (next_arg == "submit")
-			return submit(admin_view);
-
-		// Submissions
-		if (next_arg == "submissions")
-			return submissions(admin_view);
-
-		// Ranking
-		if (next_arg == "ranking")
-			return ranking(admin_view);
-
-		// Files
-		if (next_arg == "files")
-			return files(admin_view);
-
-		// Contest dashboard
-		auto ender = contestTemplate("Contest dashboard");
-
-		append("<h1>Dashboard</h1>");
-		printRoundPath("");
-		printRoundView(false, admin_view);
-
-		if (rpath->type == PROBLEM)
-			append("<a class=\"btn\" href=\"/c/", rpath->round_id,
-				"/statement\" style=\"margin:5px auto 5px auto\">"
-					"View statement</a>\n");
+		return;
 	}
+
+	// Add
+	if (next_arg == "add") {
+		if (rpath->type == CONTEST)
+			return addRound();
+
+		if (rpath->type == ROUND)
+			return addProblem();
+
+		return error404();
+	}
+
+	// Edit
+	if (next_arg == "edit") {
+		if (rpath->type == CONTEST)
+			return editContest();
+
+		if (rpath->type == ROUND)
+			return editRound();
+
+		return editProblem();
+	}
+
+	// Delete
+	if (next_arg == "delete") {
+		if (rpath->type == CONTEST)
+			return deleteContest();
+
+		if (rpath->type == ROUND)
+			return deleteRound();
+
+		return deleteProblem();
+	}
+
+	// Problems
+	if (next_arg == "problems")
+		return listProblems(admin_view);
+
+	// Submit
+	if (next_arg == "submit")
+		return submit(admin_view);
+
+	// Submissions
+	if (next_arg == "submissions")
+		return submissions(admin_view);
+
+	// Ranking
+	if (next_arg == "ranking")
+		return ranking(admin_view);
+
+	// Files
+	if (next_arg == "files")
+		return files(admin_view);
+
+	// Contest dashboard
+	auto ender = contestTemplate("Contest dashboard");
+
+	append("<h1>Dashboard</h1>");
+	printRoundPath();
+	printRoundView(false, admin_view);
+
+	if (rpath->type == PROBLEM)
+		append("<a class=\"btn\" href=\"/c/", rpath->round_id,
+			"/statement\" style=\"margin:5px auto 5px auto\">"
+				"View statement</a>\n");
 }
 
 void Contest::addContest() {
@@ -219,7 +217,7 @@ void Contest::addContest() {
 				stmt.setBool(4, show_ranking);
 
 				if (stmt.executeUpdate() != 1)
-					throw std::runtime_error("Failed to insert round");
+					THROW("Failed to insert round");
 
 				DB::Result res = db_conn.executeQuery(
 					"SELECT LAST_INSERT_ID()");
@@ -288,9 +286,9 @@ void Contest::addRound() {
 			try {
 				DB::Statement stmt = db_conn.prepare(
 					"INSERT rounds (parent, name, item, "
-							"visible, begins, ends, full_results) "
-						"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
-							"WHERE parent=?");
+						"visible, begins, ends, full_results) "
+					"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
+						"WHERE parent=?");
 				stmt.setString(1, rpath->round_id);
 				stmt.setString(2, name);
 				stmt.setBool(3, is_visible);
@@ -316,7 +314,7 @@ void Contest::addRound() {
 				stmt.setString(7, rpath->round_id);
 
 				if (stmt.executeUpdate() != 1)
-					throw std::runtime_error("Failed to insert round");
+					THROW("Failed to insert round");
 
 				DB::Result res = db_conn.executeQuery(
 					"SELECT LAST_INSERT_ID()");
@@ -332,7 +330,7 @@ void Contest::addRound() {
 	}
 
 	auto ender = contestTemplate("Add round");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Add round</h1>\n"
 		"<form method=\"post\">\n"
@@ -414,16 +412,14 @@ void Contest::addProblem() {
 					(isSuffix(user_package_file, ".tar.gz") ? "tar.gz"
 						: getExtension(user_package_file)));
 				if (link(package_file.c_str(), new_package_file.c_str()))
-					throw std::runtime_error(concat("Error: link()",
-						error(errno)));
+					THROW("Error: link()", error(errno));
 
 				FileRemover file_rm(new_package_file);
 
 				// Create temporary directory for holding package
 				char package_tmp_dir[] = "/tmp/sim-problem.XXXXXX";
 				if (mkdtemp(package_tmp_dir) == nullptr)
-					throw std::runtime_error(concat("Error: mkdtemp()",
-						error(errno)));
+					THROW("Error: mkdtemp()", error(errno));
 
 				DirectoryRemover rm_tmp_dir(package_tmp_dir);
 
@@ -446,14 +442,13 @@ void Contest::addProblem() {
 
 				int fd = getUnlinkedTmpFile();
 				if (fd == -1)
-					throw std::runtime_error(
-						concat("Error: getUnlinkedTmpFile()", error(errno)));
+					THROW("Error: getUnlinkedTmpFile()", error(errno));
 
 				// Convert package
 				Spawner::ExitStat es;
 				try {
-					es = Spawner::run(args[0], args,
-						{-1, -1, fd});
+					es = Spawner::run(args[0], args, {-1, -1, fd});
+
 				} catch (const std::exception& e) {
 					fv.addError("Internal server error");
 					ERRLOG_CAUGHT(e);
@@ -461,7 +456,7 @@ void Contest::addProblem() {
 				}
 
 				if (es.code) {
-					// Move offset to begging
+					// Move offset to the beginning
 					lseek(fd, 0, SEEK_SET);
 
 					fv.addError(concat("Conver failed (", es.message, "):",
@@ -474,14 +469,14 @@ void Contest::addProblem() {
 				if (1 != db_conn.executeUpdate(
 					"INSERT problems (name, owner, added) VALUES('',0,'')"))
 				{
-					throw std::runtime_error("Failed to problem");
+					THROW("Failed to problem");
 				}
 
 				// Get problem_id
 				DB::Result res = db_conn.executeQuery(
 					"SELECT LAST_INSERT_ID()");
 				if (!res.next())
-					throw std::runtime_error("Failed to get LAST_INSERT_ID()");
+					THROW("Failed to get LAST_INSERT_ID()");
 
 				string problem_id = res[1];
 
@@ -489,13 +484,13 @@ void Contest::addProblem() {
 				if (1 != db_conn.executeUpdate(
 					"INSERT rounds (name, owner, item) VALUES('', 0, 0)"))
 				{
-					throw std::runtime_error("Failed to round");
+					THROW("Failed to round");
 				}
 
 				// Get round_id
 				res = db_conn.executeQuery("SELECT LAST_INSERT_ID()");
 				if (!res.next())
-					throw std::runtime_error("Failed to get LAST_INSERT_ID()");
+					THROW("Failed to get LAST_INSERT_ID()");
 
 				string round_id = res[1];
 
@@ -503,21 +498,20 @@ void Contest::addProblem() {
 				ConfigFile problem_config;
 				problem_config.addVar("name");
 				problem_config.addVar("tag");
-				problem_config.loadConfigFromFile(string(package_tmp_dir) +
-					"/config.conf");
+				problem_config.loadConfigFromFile(concat(package_tmp_dir,
+					"/config.conf"));
 
 				name = problem_config.getString("name");
 				if (name.empty())
-					throw std::runtime_error("Failed to get problem name");
+					THROW("Failed to get problem name");
 
 				string tag = problem_config.getString("tag");
 
 				// Move package folder to problems/
-				if (BLOCK_SIGNALS(move(package_tmp_dir,
-					concat("problems/", problem_id).c_str(), false)))
+				if (move(package_tmp_dir,
+					concat("problems/", problem_id).c_str(), false))
 				{
-					throw std::runtime_error(concat("Error: move()",
-						error(errno)));
+					THROW("Error: move()", error(errno));
 				}
 
 				rm_tmp_dir.reset("problems/" + problem_id);
@@ -545,7 +539,7 @@ void Contest::addProblem() {
 				stmt.setString(11, round_id);
 
 				if (2 != stmt.executeUpdate())
-					throw std::runtime_error("Failed to update");
+					THROW("Failed to update");
 
 				// Cancel folder deletion
 				rm_tmp_dir.cancel();
@@ -560,7 +554,7 @@ void Contest::addProblem() {
 
  form:
 	auto ender = contestTemplate("Add problem");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Add problem</h1>\n"
 			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
@@ -646,7 +640,7 @@ void Contest::editContest() {
 					// Update rpath
 					rpath.reset(getRoundPath(rpath->round_id));
 					if (!rpath)
-						return; // getRoundPath has already set error
+						return; // getRoundPath has already set an error
 
 				} /*else // TODO: make it working
 					fv.addError("User not found");*/
@@ -665,8 +659,7 @@ void Contest::editContest() {
 
 	DB::Result res = stmt.executeQuery();
 	if (!res.next())
-		throw std::runtime_error(concat(__PRETTY_FUNCTION__, ": Failed to get "
-			"contest and owner info"));
+		THROW(__PRETTY_FUNCTION__, ": Failed to get contest and owner info");
 
 	name = rpath->contest->name;
 	owner = res[1];
@@ -674,7 +667,7 @@ void Contest::editContest() {
 	show_ranking = rpath->contest->show_ranking;
 
 	auto ender = contestTemplate("Edit contest");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Edit contest</h1>\n"
 			"<form method=\"post\">\n"
@@ -727,10 +720,14 @@ void Contest::editRound() {
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", 128);
+
 		is_visible = fv.exist("visible");
+
 		fv.validate(begins, "begins", "Begins", isDatetime,
 			"Begins: invalid value");
+
 		fv.validate(ends, "ends", "Ends", isDatetime, "Ends: invalid value");
+
 		fv.validate(full_results, "full_results", "Ends", isDatetime,
 			"Full_results: invalid value");
 
@@ -768,7 +765,7 @@ void Contest::editRound() {
 					// Update rpath
 					rpath.reset(getRoundPath(rpath->round_id));
 					if (!rpath)
-						return; // getRoundPath has already set error
+						return; // getRoundPath has already set an error
 				}
 
 			} catch (const std::exception& e) {
@@ -785,7 +782,7 @@ void Contest::editRound() {
 	full_results = rpath->round->full_results;
 
 	auto ender = contestTemplate("Edit round");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Edit round</h1>\n"
 			"<form method=\"post\">\n"
@@ -883,7 +880,7 @@ void Contest::editProblem() {
 		umask(077); // Only owner can access this temporary file
 		int fd = mkstemp(tmp_file);
 		if (fd == -1)
-			throw std::runtime_error(concat("Error: mkstemp()", error(errno)));
+			THROW("Error: mkstemp()", error(errno));
 
 		sclose(fd);
 		FileRemover remover(tmp_file);
@@ -896,12 +893,12 @@ void Contest::editProblem() {
 			if (putFileContents(tmp_file, (const char*)empty_zip_file.data(),
 				empty_zip_file.size()) == -1)
 			{
-				throw std::runtime_error(concat("Error: putFileContents()",
-					error(errno)));
+				THROW("Error: putFileContents()", error(errno));
 			}
 		// tar.gz
 		} else // extension == tgz
-			back_insert(args, "tar", "czf", tmp_file, rpath->problem->problem_id);
+			back_insert(args, "tar", "czf", tmp_file,
+				rpath->problem->problem_id);
 
 		// Compress package
 		Spawner::ExitStat es;
@@ -909,6 +906,7 @@ void Contest::editProblem() {
 			es = Spawner::run(args[0], args,
 				{-1, STDERR_FILENO, STDERR_FILENO, 20 * 1000000 /* 20 s */},
 				"problems");
+
 		} catch (const std::exception& e) {
 			ERRLOG_CAUGHT(e);
 			return error500();
@@ -921,10 +919,10 @@ void Contest::editProblem() {
 		}
 
 		resp.content_type = server::HttpResponse::FILE_TO_REMOVE;
-		resp.headers["Content-Disposition"] =
-			concat("attachment; filename=", rpath->problem->problem_id,
-				extension);
+		resp.headers["Content-Disposition"] = concat("attachment; filename=",
+			rpath->problem->problem_id, extension);
 		resp.content = tmp_file;
+
 		remover.cancel();
 		return;
 	}
@@ -956,12 +954,12 @@ void Contest::editProblem() {
 				pconfig.tag = tag;
 				pconfig.memory_limit = strtoull(memory_limit);
 
-				if (putFileContents(concat("problems/",
+				if (BLOCK_SIGNALS(putFileContents(concat("problems/",
 						rpath->problem->problem_id, "/config.conf"),
-					pconfig.dump()) == -1)
+					pconfig.dump())) == -1)
 				{
-					throw std::runtime_error(concat("Failed to update problem ",
-						rpath->problem->problem_id, " config"));
+					THROW("Failed to update problem ",
+						rpath->problem->problem_id, " config");
 				}
 
 				// Update database
@@ -978,7 +976,7 @@ void Contest::editProblem() {
 					// Update rpath
 					rpath.reset(getRoundPath(rpath->round_id));
 					if (!rpath)
-						return; // getRoundPath has already set error
+						return; // getRoundPath has already set an error
 				}
 
 			} catch (const std::exception& e) {
@@ -1001,7 +999,7 @@ void Contest::editProblem() {
 	memory_limit = pconfig.getString("memory_limit");
 
 	auto ender = contestTemplate("Edit problem");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
 			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
 				"/edit/rejudge\">Rejudge all submissions</a>\n"
@@ -1093,7 +1091,7 @@ void Contest::deleteContest() {
 		}
 
 	auto ender = contestTemplate("Delete contest");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete contest</h1>\n"
 		"<form method=\"post\">\n"
@@ -1125,8 +1123,7 @@ void Contest::deleteRound() {
 			stmt.executeUpdate();
 
 			// Delete rounds
-			stmt = db_conn.prepare(
-				"DELETE FROM rounds WHERE id=? OR parent=?");
+			stmt = db_conn.prepare("DELETE FROM rounds WHERE id=? OR parent=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.setString(2, rpath->round_id);
 
@@ -1139,7 +1136,7 @@ void Contest::deleteRound() {
 		}
 
 	auto ender = contestTemplate("Delete round");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete round</h1>\n"
 		"<form method=\"post\">\n"
@@ -1183,14 +1180,14 @@ void Contest::deleteProblem() {
 		}
 
 	auto ender = contestTemplate("Delete problem");
-	printRoundPath("");
+	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete problem</h1>\n"
 		"<form method=\"post\">\n"
-			"<label class=\"field\">Are you sure to delete problem <a href=\"/c/",
-				rpath->round_id, "\">",
-				htmlSpecialChars(rpath->problem->name), "</a> and all "
-				"its submissions?</label>\n"
+			"<label class=\"field\">Are you sure to delete problem "
+				"<a href=\"/c/", rpath->round_id, "\">",
+				htmlSpecialChars(rpath->problem->name), "</a> and all its "
+				"submissions?</label>\n"
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
@@ -1204,7 +1201,7 @@ void Contest::deleteProblem() {
 void Contest::listProblems(bool admin_view) {
 	auto ender = contestTemplate("Problems");
 	append("<h1>Problems</h1>");
-	printRoundPath("problems");
+	printRoundPath("problems", !admin_view);
 	printRoundView(true, admin_view);
 }
 
@@ -1463,7 +1460,7 @@ void Contest::ranking(bool admin_view) {
 				auto it = binaryFindBy(index_of, &pair<size_t, size_t>::first,
 					strtoull(j.round_id));
 				if (it == index_of.end())
-					throw std::runtime_error("Failed to get index of problem");
+					THROW("Failed to get index of problem");
 
 				row_points[it->second] = &j;
 			}
