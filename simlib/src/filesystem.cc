@@ -78,7 +78,7 @@ int mkdir_r(const char* path, mode_t mode) noexcept {
 		dir[len++] = '/';
 
 	size_t end = 1;
-	int res;
+	int res = 0;
 	while (end < len) {
 		while (dir[end] != '/')
 			++end;
