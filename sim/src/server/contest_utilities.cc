@@ -7,7 +7,7 @@
 using std::string;
 using std::vector;
 
-string Contest::submissionStatus(const string& status) {
+string Contest::submissionStatusDescription(const string& status) {
 	if (status == "ok")
 		return "Initial tests: OK";
 
@@ -79,8 +79,8 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 		if (!r_path->contest || (rows > 1 && !r_path->round)
 			|| (rows > 2 && !r_path->problem))
 		{
-			throw std::runtime_error(concat("Database error: corrupt hierarchy "
-				"of rounds (id: ", round_id, ")"));
+			THROW("Database error: corrupted hierarchy of rounds (id: ",
+				round_id, ")");
 		}
 
 		// Check access
@@ -107,7 +107,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 			}
 
 			// Check access to round - check if round has begun
-			// If begin time is not null and round has not begun, error403
+			// If begin time is not null and round has not begun, then error 403
 			if (r_path->type != CONTEST && r_path->round->begins.size() &&
 				date("%Y-%m-%d %H:%M:%S") < r_path->round->begins)
 			{
@@ -137,7 +137,6 @@ Template::TemplateEnder Contest::contestTemplate(const StringView& title,
 	// Aliases
 	string &round_id = rpath->round_id;
 	bool &admin_access = rpath->admin_access;
-	Round *round = rpath->round.get();
 
 	if (admin_access) {
 		append( "<a href=\"/c/add\">Add contest</a>\n"
@@ -179,6 +178,7 @@ Template::TemplateEnder Contest::contestTemplate(const StringView& title,
 			"/files\">Files</a>\n");
 
 	string current_date = date("%Y-%m-%d %H:%M:%S");
+	Round *round = rpath->round.get();
 	if (rpath->type == CONTEST || (
 		(round->begins.empty() || round->begins <= current_date) &&
 		(round->ends.empty() || current_date < round->ends)))
@@ -223,6 +223,8 @@ bool Contest::isAdmin(const RoundPath& r_path) {
 			owner_type = res.getUInt(1);
 
 		return owner_type > Session::user_type;
+		// TODO: give SIM root privileges to admins' contests (in contest list
+		// in handle() also)
 
 	} catch (const std::exception& e) {
 		ERRLOG_CAUGHT(e);
@@ -296,8 +298,8 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			std::map<string, vector<Problem> > problems; // (round_id, problems)
 
 			// Fill with all subrounds
-			for (size_t i = 0; i < subrounds.size(); ++i)
-				problems[subrounds[i].id];
+			for (auto&& sr : subrounds)
+				problems[sr.id];
 
 			// Collect results
 			while (res.next()) {
@@ -321,21 +323,21 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				"<div>\n");
 
 			// For each subround list all problems
-			for (size_t i = 0; i < subrounds.size(); ++i) {
+			for (auto&& sr : subrounds) {
 				// Round
 				append("<div>\n"
-					"<a href=\"/c/", subrounds[i].id, "\">",
-					htmlSpecialChars(subrounds[i].name), "</a>\n");
+					"<a href=\"/c/", sr.id, "\">",
+					htmlSpecialChars(sr.name), "</a>\n");
 
 				// List problems
-				vector<Problem>& prob = problems[subrounds[i].id];
-				for (size_t j = 0; j < prob.size(); ++j) {
-					append("<a href=\"/c/", prob[j].id);
+				vector<Problem>& prob = problems[sr.id];
+				for (auto&& pro : prob) {
+					append("<a href=\"/c/", pro.id);
 
 					if (link_to_problem_statement)
 						append("/statement");
 
-					append("\">", htmlSpecialChars(prob[j].name), "</a>\n");
+					append("\">", htmlSpecialChars(pro.name), "</a>\n");
 				}
 				append("</div>\n");
 			}

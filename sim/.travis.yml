@@ -9,6 +9,7 @@ env:
   - DEBUG=1
   - DEBUG=2
   - DEBUG=3
+  - DEBUG=4
 
 cache: apt
 

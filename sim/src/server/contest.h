@@ -80,7 +80,7 @@ private:
 
 	// Utilities
 	// contest_utilities.cc
-	static std::string submissionStatus(const std::string& status);
+	static std::string submissionStatusDescription(const std::string& status);
 
 	RoundPath* getRoundPath(const std::string& round_id);
 
@@ -90,7 +90,7 @@ private:
 	TemplateEnder contestTemplate(const StringView& title,
 		const StringView& styles = {}, const StringView& scripts = {});
 
-	void printRoundPath(const StringView& page, bool force_normal = false);
+	void printRoundPath(const StringView& page = "", bool force_normal = false);
 
 	void printRoundView(bool link_to_problem_statement,
 		bool admin_view = false);
@@ -138,9 +138,9 @@ protected:
 	void file();
 
 private:
-	void editFile(const std::string& id, std::string name);
+	void editFile(const StringView& id, std::string name);
 
-	void deleteFile(const std::string& id, const std::string& name);
+	void deleteFile(const StringView& id, const StringView& name);
 
 	void addFile();
 

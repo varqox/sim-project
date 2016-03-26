@@ -1,6 +1,7 @@
 #include <cppconn/driver.h>
 #include <mutex>
 #include <sim/db.h>
+#include <simlib/debug.h>
 #include <simlib/logger.h>
 
 using std::string;
@@ -34,8 +35,7 @@ Connection createConnectionUsingPassFile(const string& filename) {
 
 	FILE *conf = fopen(filename.c_str(), "r");
 	if (conf == nullptr)
-		throw std::runtime_error(concat("Cannot open file: '", filename, '\'',
-			error(errno)));
+		THROW("Cannot open file: '", filename, '\'', error(errno));
 
 	// Get credentials
 	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
@@ -51,7 +51,7 @@ Connection createConnectionUsingPassFile(const string& filename) {
 		free(password);
 		free(database);
 
-		throw std::runtime_error("Failed to get database config");
+		THROW("Failed to get database config");
 	}
 
 	fclose(conf);
@@ -66,11 +66,10 @@ Connection createConnectionUsingPassFile(const string& filename) {
 		return Connection(host, user, password, database);
 
 	} catch (const std::exception& e) {
-		throw std::runtime_error(concat("Failed to connect to database - ",
-			e.what()));
+		THROW("Failed to connect to database - ", e.what());
 
 	} catch (...) {
-		throw std::runtime_error("Failed to connect to database");
+		THROW("Failed to connect to database");
 	}
 }
 

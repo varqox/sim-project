@@ -88,8 +88,8 @@ void Session::createAndOpen(const string& _user_id) noexcept(false) {
 		}
 	}
 
-	resp.setCookie("session", sid, time(nullptr) +
-		SESSION_MAX_LIFETIME, "/", "", true);
+	resp.setCookie("session", sid, time(nullptr) + SESSION_MAX_LIFETIME, "/",
+		"", true);
 	is_open = true;
 }
 
