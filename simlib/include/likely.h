@@ -1,3 +1,4 @@
+#pragma once
 /**
  * Compiler hints to indicate the fast path of an "if" branch: whether
  * the if condition is likely to be true or false.
