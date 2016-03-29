@@ -1,17 +1,17 @@
 #pragma once
 
-#include "string.h"
+#include "../string.h"
 
 #include <vector>
 
-// TODO: sim namespace
+namespace sim {
 
 /**
- * @brief ProblemConfig holds SIM package config
+ * @brief Simfile holds SIM package configuration file
  * @details Holds problem name, problem tag, problem statement, checker,
  *   solution, memory limit and grouped tests, with time limit for each one
  */
-class ProblemConfig {
+class Simfile {
 public:
 	std::string name, tag, statement, checker, main_solution;
 	std::vector<std::string> solutions;
@@ -39,17 +39,17 @@ public:
 
 	std::vector<Group> test_groups;
 
-	ProblemConfig() = default;
+	Simfile() = default;
 
-	ProblemConfig(const ProblemConfig&) = default;
+	Simfile(const Simfile&) = default;
 
-	ProblemConfig(ProblemConfig&&) = default;
+	Simfile(Simfile&&) = default;
 
-	ProblemConfig& operator=(const ProblemConfig&) = default;
+	Simfile& operator=(const Simfile&) = default;
 
-	ProblemConfig& operator=(ProblemConfig&&) = default;
+	Simfile& operator=(Simfile&&) = default;
 
-	~ProblemConfig() = default;
+	~Simfile() = default;
 
 	/**
 	 * @brief Dumps object to string
@@ -81,7 +81,7 @@ public:
 	 * @errors May throw an exception if loading error occurs (see
 	 *   ConfigFile::loadConfigFromFile())
 	 */
-	std::vector<std::string> looselyLoadConfig(std::string package_path)
+	std::vector<std::string> loadFrom(std::string package_path)
 		noexcept(false);
 
 	/**
@@ -95,7 +95,7 @@ public:
 	 * @errors Throw an exception if any error occurs or any inconsistency with
 	 *   package config format is found
 	 */
-	void loadConfig(std::string package_path) noexcept(false);
+	void loadFromAndValidate(std::string package_path) noexcept(false);
 };
 
 /**
@@ -120,3 +120,5 @@ std::string makeTag(const std::string& str);
  *   message
  */
 std::string obtainCheckerOutput(int fd, size_t max_length) noexcept(false);
+
+} // namespace sim

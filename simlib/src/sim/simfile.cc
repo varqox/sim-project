@@ -1,14 +1,16 @@
-#include "../include/config_file.h"
-#include "../include/debug.h"
-#include "../include/filesystem.h"
-#include "../include/logger.h"
-#include "../include/sim_problem.h"
-#include "../include/utilities.h"
+#include "../../include/config_file.h"
+#include "../../include/debug.h"
+#include "../../include/filesystem.h"
+#include "../../include/logger.h"
+#include "../../include/sim/simfile.h"
+#include "../../include/utilities.h"
 
 using std::string;
 using std::vector;
 
-string ProblemConfig::dump() const {
+namespace sim {
+
+string Simfile::dump() const {
 	string res;
 	back_insert(res, "name: ", ConfigFile::safeString(name), '\n',
 		"tag: ", ConfigFile::safeString(tag), '\n',
@@ -48,9 +50,7 @@ string ProblemConfig::dump() const {
 	return res;
 }
 
-vector<string> ProblemConfig::looselyLoadConfig(string package_path)
-	noexcept(false)
-{
+vector<string> Simfile::loadFrom(string package_path) noexcept(false) {
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
@@ -172,7 +172,8 @@ vector<string> ProblemConfig::looselyLoadConfig(string package_path)
 	return warnings;
 }
 
-void ProblemConfig::loadConfig(string package_path) noexcept(false) {
+void Simfile::loadFromAndValidate(string package_path) noexcept(false)
+{
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
@@ -335,3 +336,5 @@ string obtainCheckerOutput(int fd, size_t max_length) noexcept(false) {
 
 	return res;
 }
+
+} // namespace sim
