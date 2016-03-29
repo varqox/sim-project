@@ -7,7 +7,7 @@
 #include <simlib/logger.h>
 #include <simlib/process.h>
 #include <simlib/random.h>
-#include <simlib/sim_problem.h>
+#include <simlib/sim/simfile.h>
 #include <simlib/time.h>
 
 using std::pair;
@@ -946,9 +946,8 @@ void Contest::editProblem() {
 		if (fv.noErrors())
 			try {
 				// Update problem config
-				ProblemConfig pconfig;
-				pconfig.looselyLoadConfig("problems/" +
-					rpath->problem->problem_id);
+				sim::Simfile pconfig;
+				pconfig.loadFrom("problems/" + rpath->problem->problem_id);
 
 				pconfig.name = name;
 				pconfig.tag = tag;

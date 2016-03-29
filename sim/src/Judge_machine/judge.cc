@@ -4,7 +4,7 @@
 #include <simlib/compile.h>
 #include <simlib/debug.h>
 #include <simlib/sandbox_checker_callback.h>
-#include <simlib/sim_problem.h>
+#include <simlib/sim/simfile.h>
 #include <simlib/utilities.h>
 
 using std::string;
@@ -58,11 +58,11 @@ JudgeResult judge(string submission_id, string problem_id) {
 	string package_path = concat("problems/", problem_id, '/');
 
 	// Load config
-	ProblemConfig pconf;
+	sim::Simfile pconf;
 	try {
 		if (VERBOSITY > 1)
 			stdlog("Validating config.conf...");
-		pconf.loadConfig(package_path);
+		pconf.loadFromAndValidate(package_path);
 		if (VERBOSITY > 1)
 			stdlog("Validation passed.");
 
@@ -357,8 +357,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 				// Get checker output
 				string checker_output;
 				try {
-					checker_output =
-						obtainCheckerOutput(checker_sb_opts.new_stdout_fd, 256);
+					checker_output = sim::obtainCheckerOutput(
+						checker_sb_opts.new_stdout_fd, 256);
 				} catch (const std::exception& e) {
 					errlog("Failed to obtain checker output -> ", e.what());
 				}

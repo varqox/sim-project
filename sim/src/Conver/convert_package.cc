@@ -202,8 +202,8 @@ int convertPackage(string tmp_package, string out_package) {
 	/* Add tests to config_conf */
 	sort(tests.begin(), tests.end(), TestNameCompatator());
 
-	config_conf.test_groups.assign(1, ProblemConfig::Group());
-	ProblemConfig::Group *group = &config_conf.test_groups.back();
+	config_conf.test_groups.assign(1, sim::Simfile::Group());
+	sim::Simfile::Group *group = &config_conf.test_groups.back();
 	pair<string, string> curr_group,
 		last_group = TestNameCompatator::extractTag(tests[0]);
 
@@ -215,7 +215,7 @@ int convertPackage(string tmp_package, string out_package) {
 			!(curr_group.second == "ocen" &&
 				(last_group.first == "0" || last_group.second == "ocen")))
 		{
-			config_conf.test_groups.push_back(ProblemConfig::Group());
+			config_conf.test_groups.push_back(sim::Simfile::Group());
 			group = &config_conf.test_groups.back();
 			last_group = curr_group;
 		}
