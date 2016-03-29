@@ -59,7 +59,7 @@ string validatePackage(string pathname) {
 	} else try {
 		if (VERBOSITY > 1)
 			printf("Validating config.conf...\n");
-		config_conf.loadConfig(pathname);
+		config_conf.loadFromAndValidate(pathname);
 		if (VERBOSITY > 1)
 			printf("Validation passed.\n");
 
