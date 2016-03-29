@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cstring>
 #include <stdexcept>
 
@@ -478,33 +479,62 @@ inline bool lower_equal(const StringView& a, const StringView& b) noexcept {
 	return special_equal<int(int)>(a, b, tolower);
 }
 
+// Only to use with standard integral types
+template<class T>
+typename std::enable_if<std::is_integral<T>::value, std::string>::type
+	toString(T x)
+{
+	if (x == 0)
+		return std::string(1, '0');
+
+	static_assert(ULLONG_MAX <= 18446744073709551615ull, "Enlarge the array!");
+	std::array<char, 21> buff;
+	unsigned i = buff.size();
+
+	if (std::is_signed<T>::value && x < 0) {
+		while (x) {
+			T x2 = x / 10;
+			buff[--i] = x2 * 10 - x + '0';
+			x = x2;
+		}
+		buff[--i] = '-';
+		return std::string(buff.data() + i, buff.size() - i);
+	}
+
+	while (x) {
+		T x2 = x / 10;
+		buff[--i] = x - x2 * 10 + '0';
+		x = x2;
+	}
+	return std::string(buff.data() + i, buff.size() - i);
+}
+
 // Converts T to std::string
 template<class T>
-std::string toString(T x) {
-	static_assert(std::is_integral<T>::value, "template argument not an "
-		"integral type");
+typename std::enable_if<!std::is_integral<T>::value, std::string>::type
+	toString(T x)
+{
+	if (x == T())
+		return std::string(1, '0');
 
 	std::string res;
-	bool minus = false;
+	if (x < T()) {
+		while (x) {
+			T x2 = x / 10;
+			res += static_cast<char>(x2 * 10 - x + '0');
+			x = x2;
+		}
+		res += '-';
 
-	if (std::is_signed<T>::value && x < T()) {
-		minus = true;
-		x = -x;
-	}
-
-	while (x > 0) {
-		res += static_cast<char>(x % 10 + '0');
-		x /= 10;
-	}
-
-	if (res.empty()) {
-		res = '0';
 	} else {
-		if (minus)
-			res += '-';
-		std::reverse(res.begin(), res.end());
+		while (x) {
+			T x2 = x / 10;
+			res += static_cast<char>(x - x2 * 10 + '0');
+			x = x2;
+		}
 	}
 
+	std::reverse(res.begin(), res.end());
 	return res;
 }
 
@@ -718,34 +748,31 @@ template<class T>
 int strtoi(const StringView& s, T *x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
-	static_assert(std::is_integral<T>::value, "template argument not an "
-		"integral type");
-
 	if (end > s.size())
 		end = s.size();
-	if (beg >= end) {
-		*x = 0;
-		return 0;
-	}
+	if (beg >= end)
+		return (*x = 0);
 
-	if (x == nullptr)
-		return isInteger(s, beg, end) ? end - beg : -1;
-
-	*x = 0;
 	bool minus = (s[beg] == '-');
-	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
+	int res = 0;
+	if ((s[beg] == '-' || s[beg] == '+') && (++res, ++beg) == end)
 			return -1; // sign is not a number
 
+	if (x == nullptr)
+		return isInteger(s, beg, end) ? res + end - beg : -1;
+
+	*x = 0;
 	for (size_t i = beg; i < end; ++i) {
 		if (isdigit(s[i]))
 			*x = *x * 10 + s[i] - '0';
 		else
 			return -1;
 	}
+
 	if (minus)
 		*x = -*x;
 
-	return end - beg;
+	return res + end - beg;
 }
 
 // Like strtoi() but assumes that @p s is unsigned integer
@@ -753,9 +780,6 @@ template<class T>
 int strtou(const StringView& s, T *x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
-	static_assert(std::is_integral<T>::value, "template argument not an "
-		"integral type");
-
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end) {
@@ -763,13 +787,14 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 		return 0;
 	}
 
-	if (x == nullptr)
-		return isDigit(s, beg, end) ? end - beg : -1;
-
-	*x = 0;
-	if (s[beg] == '+' && ++beg == end)
+	int res = 0;
+	if (s[beg] == '+' && (++res, ++beg) == end)
 		return -1; // sign is not a number
 
+	if (x == nullptr)
+		return isDigit(s, beg, end) ? res + end - beg : -1;
+
+	*x = 0;
 	for (size_t i = beg; i < end; ++i) {
 		if (isdigit(s[i]))
 			*x = *x * 10 + s[i] - '0';
@@ -777,7 +802,7 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 			return -1;
 	}
 
-	return end - beg;
+	return res + end - beg;
 }
 
 // Converts string to long long
@@ -801,8 +826,6 @@ inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
 // Converts digits @p str to @p T, WARNING: assumes that isDigit(str) == true
 template<class T>
 T digitsToU(const StringView& str) noexcept {
-	static_assert(std::is_integral<T>::value, "template argument not an "
-		"integral type");
 	T x = 0;
 	for (char c : str)
 		x = 10 * x + c - '0';
