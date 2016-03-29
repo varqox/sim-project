@@ -90,7 +90,7 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 }
 
 void Connection::readPOST(HttpRequest& req) {
-	size_t content_length;
+	size_t content_length = 0;
 	if (strtou(req.headers["Content-Length"], &content_length) < 0)
 		return error400();
 
