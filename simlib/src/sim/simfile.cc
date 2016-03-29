@@ -172,8 +172,7 @@ vector<string> Simfile::loadFrom(string package_path) noexcept(false) {
 	return warnings;
 }
 
-void Simfile::loadFromAndValidate(string package_path) noexcept(false)
-{
+void Simfile::loadFromAndValidate(string package_path) noexcept(false) {
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';

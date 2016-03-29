@@ -782,10 +782,8 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 {
 	if (end > s.size())
 		end = s.size();
-	if (beg >= end) {
-		*x = 0;
-		return 0;
-	}
+	if (beg >= end)
+		return (*x = 0);
 
 	int res = 0;
 	if (s[beg] == '+' && (++res, ++beg) == end)
@@ -818,7 +816,7 @@ inline long long strtoll(const StringView& s, size_t beg = 0,
 inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
-	unsigned long long x;
+	unsigned long long x = 0;
 	strtou(s, &x, beg, end);
 	return x;
 }
