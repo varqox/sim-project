@@ -391,8 +391,29 @@ public:
 
 	StringView() noexcept : StringBase("", 0) {}
 
+	StringView(const StringView& s) noexcept : StringBase(s) {}
+
+	StringView(StringView&& s) noexcept : StringBase(s) {}
+
 	template<class Char>
 	StringView(const StringBase<Char>& s) noexcept : StringBase(s) {}
+
+
+	template<class Char>
+	StringView& operator=(const StringBase<Char>& s) noexcept {
+		StringBase::operator=(s);
+		return *this;
+	}
+
+	StringView& operator=(const StringView& s) noexcept {
+		StringBase::operator=(s);
+		return *this;
+	}
+
+	StringView& operator=(StringView&& s) noexcept {
+		StringBase::operator=(s);
+		return *this;
+	}
 
 	~StringView() = default;
 

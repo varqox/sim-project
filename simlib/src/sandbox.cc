@@ -1,7 +1,7 @@
 #include "../include/sandbox.h"
 #include "../include/utilities.h"
 
-#include <limits.h>
+#include <climits>
 #include <linux/version.h>
 #include <sys/uio.h>
 

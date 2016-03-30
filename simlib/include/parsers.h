@@ -32,25 +32,25 @@ public:
 
 	~SimpleParser() = default;
 
-	bool isNext(const StringView& str, char delimeter = '/') const noexcept {
+	bool isNext(const StringView& str, char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", str, "' -> ",
-			toString(compareTo(buff, 0, delimeter, str)));)
-		return (compareTo(buff, 0, delimeter, str) == 0);
+			toString(compareTo(buff, 0, delimiter, str)));)
+		return (compareTo(buff, 0, delimiter, str) == 0);
 	}
 
 	/**
-	 * @brief Extracts next argument
-	 * @details [long description]
+	 * @brief Extracts next data
 	 *
-	 * @param isDelimeter functor which should take one argument - char and
-	 *   return true for the first character which should not appear in result
+	 * @param isDelimiter functor which should take one argument - char and
+	 *   return true for the first character which should not appear in the
+	 *   result
 	 *
-	 * @return [description]
+	 * @return Extracted data
 	 */
 	template<class Func>
-	StringView extractNext(Func&& isDelimeter) {
+	StringView extractNext(Func&& isDelimiter) {
 		size_t pos = 0;
-		while (pos < buff.size() && !isDelimeter(buff[pos]))
+		while (pos < buff.size() && !isDelimiter(buff[pos]))
 			++pos;
 
 		StringView res{buff.substr(0, pos)};
@@ -59,8 +59,29 @@ public:
 		return res;
 	}
 
-	StringView extractNext(char delimeter = '/') noexcept {
-		return extractNext([delimeter](char c) { return (c == delimeter); });
+	StringView extractNext(char delimiter = '/') noexcept {
+		return extractNext([delimiter](char c) { return (c == delimiter); });
+	}
+
+	/**
+	 * @brief Extracts next data (ignores empty arguments)
+	 *
+	 * @param isDelimiter functor which should take one argument - char and
+	 *   return true for the first character which should not appear in the
+	 *   result
+	 *
+	 * @return Extracted data (empty if there is no more data)
+	 */
+	template<class Func>
+	StringView extractNextNonEmpty(Func&& isDelimiter) {
+		buff.removeLeading(isDelimiter); // Ignore delimiters
+		return extractNext(std::forward<Func>(isDelimiter));
+	}
+
+	StringView extractNextNonEmpty(char delimiter = '/') noexcept {
+		return extractNextNonEmpty([delimiter](char c) {
+				return (c == delimiter);
+			});
 	}
 
 	StringView remnant() const noexcept { return buff; }
