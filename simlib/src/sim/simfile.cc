@@ -56,14 +56,8 @@ vector<string> Simfile::loadFrom(string package_path) noexcept(false) {
 		package_path += '/';
 
 	ConfigFile config;
-	config.addVar("name");
-	config.addVar("tag");
-	config.addVar("statement");
-	config.addVar("checker");
-	config.addVar("memory_limit");
-	config.addVar("solutions");
-	config.addVar("main_solution");
-	config.addVar("tests");
+	config.addVars("name", "tag", "statement", "checker", "memory_limit",
+		"solutions", "main_solution", "tests");
 
 	config.loadConfigFromFile(package_path + "config.conf");
 
@@ -178,14 +172,8 @@ void Simfile::loadFromAndValidate(string package_path) noexcept(false) {
 		package_path += '/';
 
 	ConfigFile config;
-	config.addVar("name");
-	config.addVar("tag");
-	config.addVar("statement");
-	config.addVar("checker");
-	config.addVar("memory_limit");
-	config.addVar("solutions");
-	config.addVar("main_solution");
-	config.addVar("tests");
+	config.addVars("name", "tag", "statement", "checker", "memory_limit",
+		"solutions", "main_solution", "tests");
 
 	config.loadConfigFromFile(package_path + "config.conf");
 

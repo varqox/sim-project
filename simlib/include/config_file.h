@@ -86,11 +86,11 @@ public:
 	// Clears variable set
 	void clear() { vars.clear(); }
 
-	// Adds variable @p name to variable set or throw an exception if variable
-	// with the same name already exists
-	void addVar(const std::string& name) {
-		if (!vars.insert(std::make_pair(name, Variable())).second)
-			throw std::logic_error(concat("Variable '", name, "' already set"));
+	// Adds variables @p names to variable set, ignores duplications
+	template<class... Args>
+	void addVars(Args&&... names) {
+		int t[] = {(vars.emplace(std::forward<Args>(names), Variable{}), 0)...};
+		(void)t;
 	}
 
 	const std::map<std::string, Variable>& getVars() const { return vars; }
