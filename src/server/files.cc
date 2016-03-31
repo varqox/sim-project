@@ -16,7 +16,7 @@ void Contest::file() {
 	try {
 		DB::Statement stmt = db_conn.prepare(
 			"SELECT name, round_id FROM files WHERE id=?");
-		stmt.setString(1, id);
+		stmt.setString(1, id.to_string());
 
 		DB::Result res = stmt.executeQuery();
 		if (!res.next())
@@ -72,7 +72,7 @@ void Contest::editFile(const StringView& id, string name) {
 				stmt.setString(1, name);
 				stmt.setString(2, description);
 				stmt.setString(3, current_time);
-				stmt.setString(4, id);
+				stmt.setString(4, id.to_string());
 				stmt.executeUpdate();
 
 				// Move file
@@ -93,7 +93,7 @@ void Contest::editFile(const StringView& id, string name) {
 	try {
 		DB::Statement stmt = db_conn.prepare(
 			"SELECT name, description, modified FROM files WHERE id=?");
-		stmt.setString(1, id);
+		stmt.setString(1, id.to_string());
 
 		DB::Result res = stmt.executeQuery();
 		if (!res.next())
@@ -154,7 +154,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 		try {
 			DB::Statement stmt = db_conn.prepare(
 				"DELETE FROM files WHERE id=?");
-			stmt.setString(1, id);
+			stmt.setString(1, id.to_string());
 
 			if (stmt.executeUpdate() != 1)
 				return error500();

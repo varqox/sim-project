@@ -3,7 +3,7 @@
 void Errors::errorTemplate(const StringView& status, const char* code,
 	const char* message)
 {
-	resp.status_code = status;
+	resp.status_code = status.to_string();
 	resp.headers.clear();
 
 	std::string prev = req->headers.get("Referer");

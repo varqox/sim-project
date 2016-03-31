@@ -90,7 +90,7 @@ void Contest::handle() {
 	if (rpath->type == PROBLEM && next_arg == "statement") {
 		// Get statement path
 		ConfigFile problem_config;
-		problem_config.addVar("statement");
+		problem_config.addVars("statement");
 		problem_config.loadConfigFromFile(concat("problems/",
 			rpath->problem->problem_id, "/config.conf"));
 
@@ -496,8 +496,7 @@ void Contest::addProblem() {
 
 				// Get problem name
 				ConfigFile problem_config;
-				problem_config.addVar("name");
-				problem_config.addVar("tag");
+				problem_config.addVars("name", "tag");
 				problem_config.loadConfigFromFile(concat(package_tmp_dir,
 					"/config.conf"));
 
@@ -987,9 +986,7 @@ void Contest::editProblem() {
 	// Get problem information
 	round_name = rpath->problem->name;
 	ConfigFile pconfig;
-	pconfig.addVar("name");
-	pconfig.addVar("tag");
-	pconfig.addVar("memory_limit");
+	pconfig.addVars("name", "tag", "memory_limit");
 
 	pconfig.loadConfigFromFile(concat("problems/", rpath->problem->problem_id,
 		"/config.conf"));

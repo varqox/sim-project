@@ -1,6 +1,6 @@
 #include "judge.h"
 
-#include <limits.h>
+#include <climits>
 #include <sim/db.h>
 #include <simlib/debug.h>
 #include <simlib/process.h>

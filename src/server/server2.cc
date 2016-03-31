@@ -579,9 +579,7 @@ static void master_process_cycle() {
 static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
 	ConfigFile config;
 	try {
-		config.addVar("address");
-		config.addVar("workers");
-		config.addVar("connections");
+		config.addVars("address", "workers", "connections");
 
 		config.loadConfigFromFile(config_path);
 	} catch (const std::exception& e) {

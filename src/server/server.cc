@@ -91,8 +91,7 @@ int main() {
 
 	ConfigFile config;
 	try {
-		config.addVar("address");
-		config.addVar("workers");
+		config.addVars("address", "workers");
 
 		config.loadConfigFromFile("server.conf");
 	} catch (const std::exception& e) {
