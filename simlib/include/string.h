@@ -55,8 +55,6 @@ public:
 		len = s.size();
 	}
 
-	operator std::string() const { return {str, len}; }
-
 	virtual ~StringBase() {}
 
 	// Returns whether the StringBase is empty (size() == 0)
@@ -288,9 +286,8 @@ protected:
 		return StringBase(str + pos, std::min(count, len - pos));
 	}
 
-
 public:
-	std::string to_string() const { return std::string(str, str + len); }
+	std::string to_string() const { return std::string(str, len); }
 
 	// comparison operators
 	friend bool operator==(const StringBase& a, const StringBase& b) noexcept {
