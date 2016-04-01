@@ -45,11 +45,21 @@ public:
 			"</pre>\n");
 	}
 
-	std::string getFilePath(const std::string& name) {
-		const std::map<std::string, std::string>& form = form_.files;
-
+	/// @brief Returns path of file of form name @p name or empty string if such
+	/// does not exist
+	std::string getFilePath(const std::string& name) const {
+		auto const& form = form_.files;
 		auto it = form.find(name);
-		return it == form.end() ? "" : it->second;
+		return (it == form.end() ? "" : it->second);
+	}
+
+
+	/// @brief Returns value of variable @p name or empty string if such does
+	/// not exist
+	std::string get(const std::string& name) const {
+		auto const& form = form_.other;
+		auto it = form.find(name);
+		return (it == form.end() ? "" : it->second);
 	}
 
 	std::string errors() const {
@@ -63,9 +73,9 @@ public:
 // validate field + (if not blank) check it by comp
 template<class Checker>
 inline bool FormValidator::validate(std::string& var, const std::string& name,
-		const std::string& name_to_print, Checker&& check,
-		const std::string& error, size_t max_size) {
-
+	const std::string& name_to_print, Checker&& check, const std::string& error,
+	size_t max_size)
+{
 	if (validate(var, name, name_to_print, max_size)) {
 		if (var.empty() || check(var))
 			return true;
@@ -80,9 +90,8 @@ inline bool FormValidator::validate(std::string& var, const std::string& name,
 
 // Like validate but also validate not blank
 inline bool FormValidator::validateNotBlank(std::string& var,
-		const std::string& name, const std::string& name_to_print,
-		size_t max_size) {
-
+	const std::string& name, const std::string& name_to_print, size_t max_size)
+{
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
 		back_insert(errors_, "<pre class=\"error\">", name_to_print,
 			" cannot be blank</pre>\n");
@@ -95,9 +104,9 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 // validate field + check it by comp
 template<class Checker>
 inline bool FormValidator::validateNotBlank(std::string& var,
-		const std::string& name, const std::string& name_to_print,
-		Checker&& check, const std::string& error, size_t max_size) {
-
+	const std::string& name, const std::string& name_to_print, Checker&& check,
+	const std::string& error, size_t max_size)
+{
 	if (validateNotBlank(var, name, name_to_print, max_size)) {
 		if (check(var))
 			return true;

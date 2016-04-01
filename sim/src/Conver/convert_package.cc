@@ -77,9 +77,8 @@ int convertPackage(string tmp_package, string out_package) {
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, solution_extensions, solution_extensions +
-					sizeof(solution_extensions) /
-					sizeof(*solution_extensions))) {
-
+				sizeof(solution_extensions) / sizeof(*solution_extensions)))
+			{
 				copy(concat(tmp_package, "check/", i),
 					concat(out_package, "check/", i));
 
@@ -99,9 +98,8 @@ int convertPackage(string tmp_package, string out_package) {
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, statement_extensions, statement_extensions +
-					sizeof(statement_extensions) /
-					sizeof(*statement_extensions))) {
-
+				sizeof(statement_extensions) / sizeof(*statement_extensions)))
+			{
 				copy(concat(tmp_package, "doc/", i),
 					concat(out_package, "doc/", i));
 
@@ -122,9 +120,8 @@ int convertPackage(string tmp_package, string out_package) {
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, solution_extensions, solution_extensions +
-					sizeof(solution_extensions) /
-					sizeof(*solution_extensions))) {
-
+				sizeof(solution_extensions) / sizeof(*solution_extensions)))
+			{
 				copy(concat(tmp_package, "prog/", i),
 					concat(out_package, "prog/", i));
 				if (!USE_CONFIG)

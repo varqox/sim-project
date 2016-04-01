@@ -250,8 +250,8 @@ static void parseOptions(int &argc, char **argv) {
  * @param stat stat on source
  */
 static void extractPackage(const string& source, const string& dest,
-		const struct stat* sb) {
-
+	const struct stat* sb)
+{
 	if (mkdir_r(dest) == -1) {
 		eprintf("Error: cannot create directory: mkdir() - %s\n",
 			strerror(errno));

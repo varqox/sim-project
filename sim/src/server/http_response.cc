@@ -7,9 +7,9 @@ using std::string;
 namespace server {
 
 void HttpResponse::setCookie(const string& name, const string& val,
-		time_t expire, const string& path, const string& domain, bool http_only,
-		bool secure) {
-
+	time_t expire, const string& path, const string& domain, bool http_only,
+	bool secure)
+{
 	string value = val;
 
 	if (expire != -1) {
