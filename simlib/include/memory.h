@@ -18,10 +18,10 @@ private:
 	void* addr_;
 
 public:
-	explicit SharedMemorySegment(size_t size) : id_(shmget(IPC_PRIVATE, size,
-				IPC_CREAT | IPC_EXCL | S_0600)),
-			addr_(nullptr) {
-
+	explicit SharedMemorySegment(size_t size)
+		: id_(shmget(IPC_PRIVATE, size, IPC_CREAT | IPC_EXCL | S_0600)),
+			addr_(nullptr)
+	{
 		if (id_ != -1) {
 			if ((addr_ = shmat(id_, nullptr, 0)) == (void*)-1)
 				addr_ = nullptr;
