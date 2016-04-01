@@ -78,7 +78,7 @@ void Contest::addFile() {
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(file_name), "\" size=\"24\" "
 						"maxlength=\"128\" "
-						"placeholder=\"The same as uploaded file\">\n"
+						"placeholder=\"The same as name of uploaded file\">\n"
 				"</div>\n"
 				// File
 				"<div class=\"field-group\">\n"
@@ -91,7 +91,12 @@ void Contest::addFile() {
 					"<textarea name=\"description\" maxlength=\"512\">",
 						htmlSpecialChars(description), "</textarea>"
 				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
+
+				"<div class=\"button-row\">\n"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">\n"
+					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
+						"Go back</a>"
+				"</div>\n"
 			"</form>\n"
 		"</div>\n");
 }
@@ -107,6 +112,13 @@ void Contest::editFile(const StringView& id, string name) {
 		fv.validate(name, "file-name", "File name", 128);
 
 		fv.validate(description, "description", "Description", 512);
+
+		if (name.empty()) {
+			name = fv.get("file");
+			if (name.empty())
+				fv.addError(
+					"File name cannot be blank unless you upload a new file");
+		}
 
 		// If all fields are OK
 		if (fv.noErrors())
@@ -163,7 +175,8 @@ void Contest::editFile(const StringView& id, string name) {
 					"<label>File name</label>\n"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
-						"maxlength=\"128\" required>\n"
+						"maxlength=\"128\" "
+						"placeholder=\"The same as name of reuploaded file\">\n"
 				"</div>\n"
 				// Reupload file
 				"<div class=\"field-group\">\n"
@@ -181,10 +194,13 @@ void Contest::editFile(const StringView& id, string name) {
 					"<label>Modified</label>\n"
 					"<input type=\"text\" value=\"", modified, "\" disabled>\n"
 				"</div>\n"
-				"<div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn red\" style=\"float:right\" href=\"/file/",
-						id, "/delete\">Delete file</a>\n"
+
+				"<div class=\"button-row\">\n"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
+						"Go back</a>"
+					"<a class=\"btn red\" href=\"/file/", id, "/delete\">"
+						"Delete file</a>\n"
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");

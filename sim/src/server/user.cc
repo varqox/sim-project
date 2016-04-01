@@ -185,7 +185,7 @@ void User::login() {
 					"<input type=\"password\" name=\"password\" "
 						"size=\"24\">\n"
 				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Log in\">\n"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">\n"
 			"</form>\n"
 		"</div>\n");
 }
@@ -300,7 +300,7 @@ void User::signUp() {
 					"<label>Password (repeat)</label>\n"
 					"<input type=\"password\" name=\"password2\" size=\"24\">\n"
 				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Sign up\">\n"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Sign up\">\n"
 			"</form>\n"
 		"</div>\n");
 }
@@ -519,7 +519,7 @@ void User::editProfile() {
 	if (permissions & (PERM_EDIT | PERM_DELETE)) {
 		append("<div>\n");
 		if (permissions & PERM_EDIT)
-			append("<input class=\"btn\" type=\"submit\" value=\"Update\">\n");
+			append("<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n");
 		if (permissions & PERM_DELETE)
 			append("<a class=\"btn red\" style=\"float:right\" href=\"/u/",
 				user_id, "/delete\">Delete account</a>\n");
@@ -610,7 +610,7 @@ void User::changePassword() {
 					"<label>New password (repeat)</label>\n"
 					"<input type=\"password\" name=\"password2\" size=\"24\">\n"
 				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
 			"</form>\n"
 		"</div>\n");
 }
