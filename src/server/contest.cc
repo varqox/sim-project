@@ -257,7 +257,7 @@ void Contest::addContest() {
 					"<input type=\"checkbox\" name=\"show-ranking\"",
 						(show_ranking ? " checked" : ""), ">\n"
 				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Add\">\n"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
 			"</form>\n"
 		"</div>\n");
 }
@@ -371,7 +371,7 @@ void Contest::addRound() {
 					htmlSpecialChars(full_results), "\" size=\"19\" "
 					"maxlength=\"19\">\n"
 			"</div>\n"
-			"<input class=\"btn\" type=\"submit\" value=\"Add\">\n"
+			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
 		"</form>\n"
 	"</div>\n");
 }
@@ -592,7 +592,7 @@ void Contest::addProblem() {
 					"<label>Package</label>\n"
 					"<input type=\"file\" name=\"package\" required>\n"
 				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Add\">\n"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
 			"</form>\n"
 		"</div>\n");
 }
@@ -698,10 +698,10 @@ void Contest::editContest() {
 					"<input type=\"checkbox\" name=\"show-ranking\"",
 						(show_ranking ? " checked" : ""), ">\n"
 				"</div>\n"
-				"<div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn red\" style=\"float:right\" href=\"/c/",
-						rpath->round_id, "/delete\">Delete contest</a>\n"
+				"<div class=\"button-row\">\n"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
+						"/delete\">Delete contest</a>\n"
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");
@@ -822,10 +822,10 @@ void Contest::editRound() {
 						htmlSpecialChars(full_results), "\" size=\"19\" "
 						"maxlength=\"19\">\n"
 				"</div>\n"
-				"<div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn red\" style=\"float:right\" href=\"/c/",
-						rpath->round_id, "/delete\">Delete round</a>\n"
+				"<div class=\"button-row\">\n"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
+						"/delete\">Delete round</a>\n"
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");
@@ -1043,10 +1043,10 @@ void Contest::editProblem() {
 						"required>\n"
 				"</div>\n"
 				// TODO: Main solution
-				"<div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Update\">\n"
-					"<a class=\"btn red\" style=\"float:right\" href=\"/c/",
-						rpath->round_id, "/delete\">Delete problem</a>\n"
+				"<div class=\"button-row\">\n"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
+						"/delete\">Delete problem</a>\n"
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");

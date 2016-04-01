@@ -234,7 +234,7 @@ void Contest::submit(bool admin_view) {
 						"<label>Solution</label>\n"
 						"<input type=\"file\" name=\"solution\" required>\n"
 					"</div>\n"
-					"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">\n"
 				"</form>\n"
 			"</div>\n");
 

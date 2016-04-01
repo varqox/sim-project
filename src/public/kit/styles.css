@@ -918,6 +918,11 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	padding: 10px;
 	text-align: center;
 }
+div.right-flow {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: flex-end;
+}
 .compile-errors {
 	display: inline-block;
 	padding: 8px;
@@ -1204,10 +1209,12 @@ pre .yellow {
 	margin-right: auto;
 	margin-left: auto;
 }
-div.right-flow {
+.form-container form div.button-row {
 	display: flex;
-	flex-flow: row nowrap;
-	justify-content: flex-end;
+    flex-flow: row nowrap;
+}
+.form-container form div.button-row > .btn {
+	margin-right: 10px;
 }
 
 /* Notifications */
