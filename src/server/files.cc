@@ -316,7 +316,7 @@ void Contest::files(bool admin_view) {
 		DB::Result res = stmt.executeQuery();
 
 		if (res.rowCount() == 0) {
-			append("<p>There are no file here yet</p>");
+			append("<p>There are no files here yet</p>");
 			return;
 		}
 
