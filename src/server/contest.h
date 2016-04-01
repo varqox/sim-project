@@ -133,16 +133,16 @@ protected:
 private:
 	void submissions(bool admin_view);
 
-protected:
 	// files.cc
-	void file();
+	void addFile();
 
-private:
 	void editFile(const StringView& id, std::string name);
 
 	void deleteFile(const StringView& id, const StringView& name);
 
-	void addFile();
+protected:
+	void file();
 
+private:
 	void files(bool admin_view);
 };

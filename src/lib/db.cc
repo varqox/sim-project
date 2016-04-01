@@ -40,10 +40,10 @@ Connection createConnectionUsingPassFile(const string& filename) {
 	// Get credentials
 	size_t x1 = 0, x2 = 0, x3 = 0, x4 = 0;
 	if (getline(&user, &x1, conf) == -1 ||
-			getline(&password, &x2, conf) == -1 ||
-			getline(&database, &x3, conf) == -1 ||
-			getline(&host, &x4, conf) == -1) {
-
+		getline(&password, &x2, conf) == -1 ||
+		getline(&database, &x3, conf) == -1 ||
+		getline(&host, &x4, conf) == -1)
+	{
 		// Free resources
 		fclose(conf);
 		free(host);

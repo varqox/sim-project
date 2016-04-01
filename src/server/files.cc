@@ -7,48 +7,93 @@
 
 using std::string;
 
-void Contest::file() {
-	StringView id = url_args.extractNext();
-	// Early id validation
-	if (id.size() != 30)
-		return error404();
+void Contest::addFile() {
+	if (!rpath->admin_access)
+		return error403();
 
-	try {
-		DB::Statement stmt = db_conn.prepare(
-			"SELECT name, round_id FROM files WHERE id=?");
-		stmt.setString(1, id.to_string());
+	FormValidator fv(req->form_data);
+	string file_name, description;
+	if (req->method == server::HttpRequest::POST) {
+		string user_file_name;
+		// Validate all fields
+		fv.validate(file_name, "file-name", "File name", 128);
 
-		DB::Result res = stmt.executeQuery();
-		if (!res.next())
-			return error404();
+		fv.validateNotBlank(user_file_name, "file", "File");
 
-		string file_name = res[1];
+		fv.validate(description, "description", "Description", 512);
 
-		rpath.reset(getRoundPath(res[2]));
-		if (!rpath)
-			return; // getRoundPath has already set error
+		if (file_name.empty())
+			file_name = user_file_name;
 
-		// Edit file
-		StringView next_arg = url_args.extractNext();
-		if (next_arg == "edit")
-			return editFile(id, file_name);
+		// If all fields are OK
+		if (fv.noErrors())
+			try {
+				constexpr size_t FILE_ID_LENGTH = 30; // TODO: move it up in this file
+				string id;
+				string current_time = date("%Y-%m-%d %H:%M:%S");
+				// Insert file to `files`
+				DB::Statement stmt = db_conn.prepare("INSERT IGNORE files "
+						"(id, round_id, name, description, modified) "
+						"VALUES(?,NULL,?,?,?)");
+				stmt.setString(2, file_name);
+				stmt.setString(3, description);
+				stmt.setString(4, current_time);
+				do {
+					id = generateId(FILE_ID_LENGTH);
+					stmt.setString(1, id);
+				} while (stmt.executeUpdate() == 0);
 
-		// Delete file
-		if (next_arg == "delete")
-			return deleteFile(id, file_name);
+				// Move file
+				SignalBlocker signal_guard;
+				if (move(fv.getFilePath("file"), concat("files/", id)))
+					THROW("move()", error(errno));
 
-		// Download file
-		resp.headers["Content-Disposition"] =
-			concat("attachment; filename=", file_name);
+				stmt = db_conn.prepare(
+					"UPDATE files SET round_id=? WHERE id=?");
+				stmt.setString(1, rpath->round_id);
+				stmt.setString(2, id);
 
-		resp.content = concat("files/", id);
-		resp.content_type = server::HttpResponse::FILE;
-		return;
+				if (stmt.executeUpdate() != 1) {
+					(void)remove(concat("files/", id));
+					THROW("Failed to update inserted file");
+				}
+				signal_guard.unblock();
 
-	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
-		return error500();
+				return redirect(concat("/c/", rpath->round_id, "/files"));
+
+			} catch (const std::exception& e) {
+				fv.addError("Internal server error");
+				ERRLOG_CAUGHT(e);
+			}
 	}
+
+	auto ender = contestTemplate("Add file");
+	printRoundPath();
+	append(fv.errors(), "<div class=\"form-container\">\n"
+			"<h1>Add file</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+				// File name
+				"<div class=\"field-group\">\n"
+					"<label>File name</label>\n"
+					"<input type=\"text\" name=\"file-name\" value=\"",
+						htmlSpecialChars(file_name), "\" size=\"24\" "
+						"maxlength=\"128\" "
+						"placeholder=\"The same as uploaded file\">\n"
+				"</div>\n"
+				// File
+				"<div class=\"field-group\">\n"
+					"<label>File</label>\n"
+					"<input type=\"file\" name=\"file\" required>\n"
+				"</div>\n"
+				// Description
+				"<div class=\"field-group\">\n"
+					"<label>Description</label>\n"
+					"<textarea name=\"description\" maxlength=\"512\">",
+						htmlSpecialChars(description), "</textarea>"
+				"</div>\n"
+				"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
+			"</form>\n"
+		"</div>\n");
 }
 
 void Contest::editFile(const StringView& id, string name) {
@@ -76,7 +121,7 @@ void Contest::editFile(const StringView& id, string name) {
 				stmt.executeUpdate();
 
 				// Move file
-				if (fv.exist("file")) {
+				if (fv.get("file").size()) {
 					SignalBlocker signal_guard;
 					if (move(fv.getFilePath("file"), concat("files/", id)))
 						THROW("move()", error(errno));
@@ -188,93 +233,48 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	"</div>\n");
 }
 
-void Contest::addFile() {
-	if (!rpath->admin_access)
-		return error403();
+void Contest::file() {
+	StringView id = url_args.extractNext();
+	// Early id validation
+	if (id.size() != 30)
+		return error404();
 
-	FormValidator fv(req->form_data);
-	string file_name, description;
-	if (req->method == server::HttpRequest::POST) {
-		string user_file_name;
-		// Validate all fields
-		fv.validate(file_name, "file-name", "File name", 128);
+	try {
+		DB::Statement stmt = db_conn.prepare(
+			"SELECT name, round_id FROM files WHERE id=?");
+		stmt.setString(1, id.to_string());
 
-		fv.validateNotBlank(user_file_name, "file", "File");
+		DB::Result res = stmt.executeQuery();
+		if (!res.next())
+			return error404();
 
-		fv.validate(description, "description", "Description", 512);
+		string file_name = res[1];
 
-		if (file_name.empty())
-			file_name = user_file_name;
+		rpath.reset(getRoundPath(res[2]));
+		if (!rpath)
+			return; // getRoundPath has already set error
 
-		// If all fields are OK
-		if (fv.noErrors())
-			try {
-				constexpr size_t FILE_ID_LENGTH = 30; // TODO: move it up in this file
-				string id;
-				string current_time = date("%Y-%m-%d %H:%M:%S");
-				// Insert file to `files`
-				DB::Statement stmt = db_conn.prepare("INSERT IGNORE files "
-						"(id, round_id, name, description, modified) "
-						"VALUES(?,NULL,?,?,?)");
-				stmt.setString(2, file_name);
-				stmt.setString(3, description);
-				stmt.setString(4, current_time);
-				do {
-					id = generateId(FILE_ID_LENGTH);
-					stmt.setString(1, id);
-				} while (stmt.executeUpdate() == 0);
+		// Edit file
+		StringView next_arg = url_args.extractNext();
+		if (next_arg == "edit")
+			return editFile(id, file_name);
 
-				// Move file
-				SignalBlocker signal_guard;
-				if (move(fv.getFilePath("file"), concat("files/", id)))
-					THROW("move()", error(errno));
+		// Delete file
+		if (next_arg == "delete")
+			return deleteFile(id, file_name);
 
-				stmt = db_conn.prepare(
-					"UPDATE files SET round_id=? WHERE id=?");
-				stmt.setString(1, rpath->round_id);
-				stmt.setString(2, id);
+		// Download file
+		resp.headers["Content-Disposition"] =
+			concat("attachment; filename=", file_name);
 
-				if (stmt.executeUpdate() != 1) {
-					(void)remove(concat("files/", id));
-					THROW("Failed to update inserted file");
-				}
-				signal_guard.unblock();
+		resp.content = concat("files/", id);
+		resp.content_type = server::HttpResponse::FILE;
+		return;
 
-				return redirect(concat("/c/", rpath->round_id, "/files"));
-
-			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
-			}
+	} catch (const std::exception& e) {
+		ERRLOG_CAUGHT(e);
+		return error500();
 	}
-
-	auto ender = contestTemplate("Add file");
-	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Add file</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
-				// File name
-				"<div class=\"field-group\">\n"
-					"<label>File name</label>\n"
-					"<input type=\"text\" name=\"file-name\" value=\"",
-						htmlSpecialChars(file_name), "\" size=\"24\" "
-						"maxlength=\"128\" "
-						"placeholder=\"The same as uploaded file\">\n"
-				"</div>\n"
-				// File
-				"<div class=\"field-group\">\n"
-					"<label>File</label>\n"
-					"<input type=\"file\" name=\"file\" required>\n"
-				"</div>\n"
-				// Description
-				"<div class=\"field-group\">\n"
-					"<label>Description</label>\n"
-					"<textarea name=\"description\" maxlength=\"512\">",
-						htmlSpecialChars(description), "</textarea>"
-				"</div>\n"
-				"<input class=\"btn\" type=\"submit\" value=\"Submit\">\n"
-			"</form>\n"
-		"</div>\n");
 }
 
 void Contest::files(bool admin_view) {

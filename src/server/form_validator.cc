@@ -3,9 +3,9 @@
 using std::string;
 
 bool FormValidator::validate(string& var, const string& name,
-		const string& name_to_print, size_t max_size) {
-
-	const std::map<string, string>& form = form_.other;
+	const string& name_to_print, size_t max_size)
+{
+	auto const& form = form_.other;
 	auto it = form.find(name);
 	if (it == form.end()) {
 		back_insert(errors_, "<pre class=\"error\">Invalid ",
