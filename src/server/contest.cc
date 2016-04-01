@@ -198,7 +198,7 @@ void Contest::addContest() {
 		fv.validateNotBlank(name, "name", "Contest name", 128);
 		is_public = fv.exist("public");
 		// Only admins can create public contests
-		if (Session::user_type > 0) {
+		if (is_public && Session::user_type > 0) {
 			is_public = false;
 			fv.addError("Only admins can create public contests");
 		}
@@ -389,10 +389,10 @@ void Contest::addProblem() {
 		fv.validate(name, "name", "Problem name", 128);
 
 		fv.validate<bool(*)(const StringView&)>(memory_limit, "memory-limit",
-			"Memory limit", isDigit, "Memory limit: invalid value");
+			"Memory limit", isDigit, "Memory limit: invalid value"); // TODO: add length limit
 
 		fv.validate<bool(*)(const StringView&)>(time_limit, "time-limit",
-			"Time limit", isReal, "Time limit: invalid value");
+			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
 		unsigned long long tl = round(strtod(time_limit.c_str(), nullptr) *
 			1000000LL); // Time limit in usec
 		if (time_limit.size() && tl == 0)
@@ -723,7 +723,7 @@ void Contest::editRound() {
 		is_visible = fv.exist("visible");
 
 		fv.validate(begins, "begins", "Begins", isDatetime,
-			"Begins: invalid value");
+			"Begins: invalid value");// TODO: add length limit???????
 
 		fv.validate(ends, "ends", "Ends", isDatetime, "Ends: invalid value");
 

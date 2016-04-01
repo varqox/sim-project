@@ -207,7 +207,7 @@ void User::signUp() {
 		// Validate all fields
 		fv.validateNotBlank(username, "username", "Username", 30);
 
-		fv.validateNotBlank(first_name, "first_name", "First Name");
+		fv.validateNotBlank(first_name, "first_name", "First Name", 60);
 
 		fv.validateNotBlank(last_name, "last_name", "Last Name", 60);
 
@@ -377,7 +377,7 @@ void User::editProfile() {
 		// Validate all fields
 		fv.validateNotBlank(new_username, "username", "Username", 30);
 		fv.validateNotBlank(new_utype_s, "type", "Account type");
-		fv.validateNotBlank(first_name, "first_name", "First Name");
+		fv.validateNotBlank(first_name, "first_name", "First Name", 60);
 		fv.validateNotBlank(last_name, "last_name", "Last Name", 60);
 		fv.validateNotBlank(email, "email", "Email", 60);
 
