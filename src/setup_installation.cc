@@ -1,3 +1,4 @@
+#include <sim/constants.h>
 #include <sim/db.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
@@ -65,7 +66,8 @@ struct TryCreateTable {
 	explicit TryCreateTable(DB::Connection& conn) : conn_(conn) {}
 
 	template<class Func>
-	void operator()(const char* table_name, const char* query, Func f) noexcept
+	void operator()(const char* table_name, const std::string& query, Func&& f)
+		noexcept
 	{
 		try {
 			conn_.executeUpdate(query);
@@ -77,8 +79,8 @@ struct TryCreateTable {
 		}
 	}
 
-	void operator()(const char* table_name, const char* query) noexcept {
-		return operator()(table_name, query, []{});
+	void operator()(const char* table_name, const string& query) noexcept {
+		operator()(table_name, query, []{});
 	}
 };
 
@@ -124,23 +126,23 @@ int main(int argc, char **argv) {
 	TryCreateTable tryCreateTable(conn);
 
 	tryCreateTable("users",
-		"CREATE TABLE IF NOT EXISTS `users` (\n"
+		concat("CREATE TABLE IF NOT EXISTS `users` (\n"
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
-			"`username` varchar(30) COLLATE utf8_bin NOT NULL,\n"
-			"`first_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-			"`last_name` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-			"`email` varchar(60) COLLATE utf8_bin NOT NULL,\n"
-			"`salt` char(64) COLLATE utf8_bin NOT NULL,\n"
-			"`password` char(128) COLLATE utf8_bin NOT NULL,\n"
+			"`username` varchar(", toStr(USERNAME_MAX_LEN), ") NOT NULL,\n"
+			"`first_name` varchar(", toStr(USER_FIRST_NAME_MAX_LEN), ") NOT NULL,\n"
+			"`last_name` varchar(", toStr(USER_LAST_NAME_MAX_LEN), ") NOT NULL,\n"
+			"`email` varchar(", toStr(USER_EMAIL_MAX_LEN), ") NOT NULL,\n"
+			"`salt` char(", toStr(SALT_LEN), ") NOT NULL,\n"
+			"`password` char(", toStr(PASSWORD_HASH_LEN), ") NOT NULL,\n"
 			"`type` tinyint(1) unsigned NOT NULL DEFAULT 2,\n"
 			"PRIMARY KEY (`id`),\n"
 			"UNIQUE KEY `username` (`username`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n",
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n"),
 		[&] {
 			// Add default user sim with password sim
-			char salt_bin[32];
-			fillRandomly(salt_bin, 32);
-			string salt = toHex(salt_bin, 32);
+			char salt_bin[SALT_LEN >> 1];
+			fillRandomly(salt_bin, sizeof(salt_bin));
+			string salt = toHex(salt_bin, sizeof(salt_bin));
 
 			DB::Statement stmt(conn.prepare(
 				"INSERT IGNORE users (username, salt, password, type) "
@@ -151,37 +153,37 @@ int main(int argc, char **argv) {
 		});
 
 	tryCreateTable("session",
-		"CREATE TABLE IF NOT EXISTS `session` (\n"
-			"`id` char(30) COLLATE utf8_bin NOT NULL,\n"
+		concat("CREATE TABLE IF NOT EXISTS `session` (\n"
+			"`id` char(", toStr(SESSION_ID_LEN), ") NOT NULL,\n"
 			"`user_id` int unsigned NOT NULL,\n"
-			"`data` text COLLATE utf8_bin NOT NULL,\n"
-			"`ip` char(15) COLLATE utf8_bin NOT NULL,\n"
-			"`user_agent` text COLLATE utf8_bin NOT NULL,\n"
+			"`data` text NOT NULL,\n"
+			"`ip` char(", toStr(SESSION_IP_LEN), ") NOT NULL,\n"
+			"`user_agent` text NOT NULL,\n"
 			"`time` datetime NOT NULL,\n"
 			"PRIMARY KEY (`id`),\n"
 			"KEY (`user_id`),\n"
 			"KEY (`time`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n");
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;\n"));
 
 	tryCreateTable("problems",
-		"CREATE TABLE IF NOT EXISTS `problems` (\n"
+		concat("CREATE TABLE IF NOT EXISTS `problems` (\n"
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,\n"
-			"`name` VARCHAR(128) NOT NULL,\n"
-			"`tag` CHAR(4) NOT NULL,\n"
+			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,\n"
+			"`tag` CHAR(", toStr(PROBLEM_TAG_LEN), ") NOT NULL,\n"
 			"`owner` int unsigned NOT NULL,\n"
 			"`added` datetime NOT NULL,\n"
 			"PRIMARY KEY (`id`),\n"
 			"KEY (`owner`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	tryCreateTable("rounds",
-		"CREATE TABLE IF NOT EXISTS `rounds` (\n"
+		concat("CREATE TABLE IF NOT EXISTS `rounds` (\n"
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,\n"
 			"`parent` int unsigned NULL DEFAULT NULL,\n"
 			"`grandparent` int unsigned NULL DEFAULT NULL,\n"
 			"`problem_id` int unsigned DEFAULT NULL,\n"
-			"`name` VARCHAR(128) NOT NULL,\n"
+			"`name` VARCHAR(", toStr(ROUND_NAME_MAX_LEN), ") NOT NULL,\n"
 			"`owner` int unsigned NOT NULL,\n"
 			"`item` int unsigned NOT NULL,\n"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,\n"
@@ -196,7 +198,7 @@ int main(int argc, char **argv) {
 			"KEY (`parent`, `is_public`),\n"
 			"KEY (`grandparent`, `item`),\n"
 			"KEY (`owner`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	tryCreateTable("users_to_contests",
 		"CREATE TABLE IF NOT EXISTS `users_to_contests` (\n"
@@ -216,11 +218,11 @@ int main(int argc, char **argv) {
 			"`contest_round_id` int unsigned NOT NULL,\n"
 			"`final` BOOLEAN NOT NULL DEFAULT FALSE,\n"
 			"`submit_time` datetime NOT NULL,\n"
-			"`status` enum('ok','error','c_error','judge_error','waiting') NULL DEFAULT NULL COLLATE utf8_bin,\n"
+			"`status` enum('ok','error','c_error','judge_error','waiting') NULL DEFAULT NULL,\n"
 			"`score` int NULL DEFAULT NULL,\n"
 			"`queued` datetime NOT NULL,\n"
-			"`initial_report` text COLLATE utf8_bin NOT NULL,\n"
-			"`final_report` text COLLATE utf8_bin NOT NULL,\n"
+			"`initial_report` text NOT NULL,\n"
+			"`final_report` text NOT NULL,\n"
 			"PRIMARY KEY (id),\n"
 			// Judge server
 			"KEY (status, queued),\n"
@@ -243,15 +245,16 @@ int main(int argc, char **argv) {
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	tryCreateTable("files",
-		"CREATE TABLE IF NOT EXISTS `files` (\n"
-			"`id` char(30) COLLATE utf8_bin NOT NULL,\n"
+		concat("CREATE TABLE IF NOT EXISTS `files` (\n"
+			"`id` char(", toStr(FILE_ID_LEN), ") NOT NULL,\n"
 			"`round_id` int unsigned NULL,\n"
-			"`name` VARCHAR(128) NOT NULL,\n"
-			"`description` VARCHAR(512) NOT NULL,\n"
+			"`name` VARCHAR(", toStr(FILE_NAME_MAX_LEN), ") NOT NULL,\n"
+			"`description` VARCHAR(", toStr(FILE_DESCRIPTION_MAX_LEN), ") "
+				"NOT NULL,\n"
 			"`modified` datetime NOT NULL,\n"
 			"PRIMARY KEY (id),\n"
 			"KEY (round_id, modified)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	if (tryCreateTable.error)
 		return 6;

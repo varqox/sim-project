@@ -18,7 +18,7 @@ server::HttpResponse Sim::handle(string _client_ip,
 	stdlog(req->target);
 
 	try {
-		url_args = SimpleParser(StringView{req->target, 1});
+		url_args = SimpleParser(StringView {req->target, 1});
 		StringView next_arg = url_args.extractNext();
 
 		if (next_arg == "kit")
@@ -182,7 +182,7 @@ static string colour(const string& str) noexcept {
 }
 
 void Sim::logs() {
-	if (!Session::open() || Session::user_type > 0)
+	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
 		return error403();
 
 	auto ender = baseTemplate("Logs");

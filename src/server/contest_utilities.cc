@@ -218,7 +218,7 @@ bool Contest::isAdmin(const RoundPath& r_path) {
 		stmt.setString(1, r_path.contest->owner);
 
 		DB::Result res = stmt.executeQuery();
-		int owner_type = 0;
+		int owner_type = UTYPE_ADMIN;
 		if (res.next())
 			owner_type = res.getUInt(1);
 

@@ -2,15 +2,14 @@
 
 #include "sim_base.h"
 
+#include <sim/constants.h>
+
 class Session : virtual protected SimBase {
 private:
 	bool is_open = false;
 
-	static constexpr uint SESSION_ID_LENGTH = 30;
-	static constexpr uint SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days [s]
-
 protected:
-	uint8_t user_type = 2; // 0 - admin, 1 - teacher, 2 - normal
+	uint8_t user_type = UTYPE_NORMAL;
 	std::string sid; // session id
 	std::string user_id, username, data;
 

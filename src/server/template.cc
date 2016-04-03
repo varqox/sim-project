@@ -30,9 +30,9 @@ Template::TemplateEnder Template::baseTemplate(const StringView& title,
 					"<a href=\"/\" class=\"brand\">SIM</a>\n"
 					"<a href=\"/c/\">Contests</a>\n");
 
-	if (Session::open() && Session::user_type < 2) {
+	if (Session::open() && Session::user_type < UTYPE_NORMAL) {
 		append("<a href=\"/u\">Users</a>\n");
-		if (Session::user_type == 0)
+		if (Session::user_type == UTYPE_ADMIN)
 			append("<a href=\"/logs\">Logs</a>\n");
 	}
 

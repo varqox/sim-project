@@ -1,5 +1,6 @@
 #include "session.h"
 
+#include <sim/constants.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
@@ -76,7 +77,7 @@ void Session::createAndOpen(const string& _user_id) noexcept(false) {
 	stmt.setString(5, date("%Y-%m-%d %H:%M:%S"));
 
 	for (;;) {
-		sid = generateId(SESSION_ID_LENGTH);
+		sid = generateId(SESSION_ID_LEN);
 		stmt.setString(1, sid); // TODO: parameters preserve!
 
 		try {

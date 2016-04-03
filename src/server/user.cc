@@ -134,7 +134,8 @@ void User::login() {
 		// Try to login
 		string password;
 		// Validate all fields
-		fv.validate(username, "username", "Username", 30);
+		fv.validate(username, "username", "Username", USERNAME_MAX_LEN);
+
 		fv.validate(password, "password", "Password");
 
 		if (fv.noErrors())
@@ -177,13 +178,13 @@ void User::login() {
 					"<label>Username</label>\n"
 					"<input type=\"text\" name=\"username\" value=\"",
 						htmlSpecialChars(username), "\" size=\"24\" "
-						"maxlength=\"30\" required>\n"
+						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Password
 				"<div class=\"field-group\">\n"
 					"<label>Password</label>\n"
-					"<input type=\"password\" name=\"password\" "
-						"size=\"24\">\n"
+					"<input type=\"password\" name=\"password\" size=\"24\">\n"
 				"</div>\n"
 				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">\n"
 			"</form>\n"
@@ -205,13 +206,15 @@ void User::signUp() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(username, "username", "Username", 30);
+		fv.validateNotBlank(username, "username", "Username", USERNAME_MAX_LEN);
 
-		fv.validateNotBlank(first_name, "first_name", "First Name", 60);
+		fv.validateNotBlank(first_name, "first_name", "First Name",
+			USER_FIRST_NAME_MAX_LEN);
 
-		fv.validateNotBlank(last_name, "last_name", "Last Name", 60);
+		fv.validateNotBlank(last_name, "last_name", "Last Name",
+			USER_LAST_NAME_MAX_LEN);
 
-		fv.validateNotBlank(email, "email", "Email", 60);
+		fv.validateNotBlank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
 		if (fv.validate(password1, "password1", "Password") &&
 			fv.validate(password2, "password2", "Password (repeat)") &&
@@ -223,9 +226,9 @@ void User::signUp() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				char salt_bin[32];
-				fillRandomly(salt_bin, 32);
-				string salt = toHex(salt_bin, 32);
+				char salt_bin[SALT_LEN >> 1];
+				fillRandomly(salt_bin, sizeof(salt_bin));
+				string salt = toHex(salt_bin, sizeof(salt_bin));
 
 				DB::Statement stmt = db_conn.prepare(
 					"INSERT IGNORE `users` (username, "
@@ -267,28 +270,32 @@ void User::signUp() {
 					"<label>Username</label>\n"
 					"<input type=\"text\" name=\"username\" value=\"",
 						htmlSpecialChars(username), "\" size=\"24\" "
-						"maxlength=\"30\" required>\n"
+						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// First Name
 				"<div class=\"field-group\">\n"
 					"<label>First name</label>\n"
 					"<input type=\"text\" name=\"first_name\" value=\"",
 						htmlSpecialChars(first_name), "\" size=\"24\" "
-						"maxlength=\"60\" required>\n"
+						"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Last name
 				"<div class=\"field-group\">\n"
 					"<label>Last name</label>\n"
 					"<input type=\"text\" name=\"last_name\" value=\"",
 						htmlSpecialChars(last_name), "\" size=\"24\" "
-						"maxlength=\"60\" required>\n"
+						"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Email
 				"<div class=\"field-group\">\n"
 					"<label>Email</label>\n"
 					"<input type=\"email\" name=\"email\" value=\"",
 						htmlSpecialChars(email), "\" size=\"24\" "
-						"maxlength=\"60\" required>\n"
+						"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Password
 				"<div class=\"field-group\">\n"
@@ -306,7 +313,7 @@ void User::signUp() {
 }
 
 void User::listUsers() {
-	if (Session::user_type > 1)
+	if (Session::user_type > UTYPE_TEACHER)
 		return error403();
 
 	auto ender = baseTemplate("Users list", ".body{margin-left:30px}");
@@ -344,8 +351,8 @@ void User::listUsers() {
 				"<td>", htmlSpecialChars(res[3]), "</td>"
 				"<td>", htmlSpecialChars(res[4]), "</td>"
 				"<td>", htmlSpecialChars(res[5]), "</td>"
-				"<td>", (utype >= 2 ? "Normal"
-					: (utype == 1 ? "Teacher" : "Admin")), "</td>"
+				"<td>", (utype >= UTYPE_NORMAL ? "Normal"
+					: (utype == UTYPE_TEACHER ? "Teacher" : "Admin")), "</td>"
 				"<td>"
 					"<a class=\"btn-small\" href=\"/u/", uid, "\">"
 						"View profile</a>");
@@ -375,14 +382,21 @@ void User::editProfile() {
 	if (req->method == server::HttpRequest::POST && (permissions & PERM_EDIT)) {
 		string new_username, new_utype_s;
 		// Validate all fields
-		fv.validateNotBlank(new_username, "username", "Username", 30);
-		fv.validateNotBlank(new_utype_s, "type", "Account type");
-		fv.validateNotBlank(first_name, "first_name", "First Name", 60);
-		fv.validateNotBlank(last_name, "last_name", "Last Name", 60);
-		fv.validateNotBlank(email, "email", "Email", 60);
+		fv.validateNotBlank(new_username, "username", "Username",
+			USERNAME_MAX_LEN);
 
-		uint8_t new_utype = (new_utype_s == "0" ? 0 :
-			(new_utype_s == "1" ? 1 : 2));
+		fv.validateNotBlank(new_utype_s, "type", "Account type");
+
+		fv.validateNotBlank(first_name, "first_name", "First Name",
+			USER_FIRST_NAME_MAX_LEN);
+
+		fv.validateNotBlank(last_name, "last_name", "Last Name",
+			USER_LAST_NAME_MAX_LEN);
+
+		fv.validateNotBlank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+
+		uint8_t new_utype = (new_utype_s == "0" ? UTYPE_ADMIN :
+			(new_utype_s == "1" ? UTYPE_TEACHER : UTYPE_NORMAL));
 
 		// Check if change of user type is allowed
 		constexpr uint needed_promote_privilege[3] = {
@@ -447,8 +461,8 @@ void User::editProfile() {
 				"<label>Username</label>\n"
 				"<input type=\"text\" name=\"username\" value=\"",
 					htmlSpecialChars(username), "\" size=\"24\" "
-					"maxlength=\"30\" ", (permissions & PERM_EDIT ? "required"
-						: "readonly"), ">\n"
+					"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" ",
+					(permissions & PERM_EDIT ? "required" : "readonly"), ">\n"
 			"</div>\n"
 			// Account type
 			"<div class=\"field-group\">\n"
@@ -458,27 +472,36 @@ void User::editProfile() {
 					PERM_DEMOTE) ? "" : " disabled"), '>');
 
 	switch (user_type) {
-		case 0: // Admin
-			append("<option value=\"0\" selected>Admin</option>");
+		case UTYPE_ADMIN:
+			append("<option value=\"", toStr(UTYPE_ADMIN), "\" selected>"
+				"Admin</option>");
 			if (permissions & PERM_DEMOTE)
-				append("<option value=\"1\">Teacher</option>"
-					     "<option value=\"2\">Normal</option>");
+				append("<option value=\"", toStr(UTYPE_TEACHER), "\">"
+						"Teacher</option>"
+					"<option value=\"", toStr(UTYPE_NORMAL), "\">"
+						"Normal</option>");
 			break;
 
-		case 1: // Teacher
+		case UTYPE_TEACHER:
 			if (permissions & PERM_MAKE_ADMIN)
-				append("<option value=\"0\">Admin</option>");
-			append("<option value=\"1\" selected>Teacher</option>");
+				append("<option value=\"", toStr(UTYPE_ADMIN), "\">"
+					"Admin</option>");
+			append("<option value=\"", toStr(UTYPE_TEACHER), "\" selected>"
+				"Teacher</option>");
 			if (permissions & PERM_DEMOTE)
-				append("<option value=\"2\">Normal</option>");
+				append("<option value=\"", toStr(UTYPE_NORMAL), "\">"
+					"Normal</option>");
 			break;
 
 		default: // Normal
 			if (permissions & PERM_MAKE_ADMIN)
-				append("<option value=\"0\">Admin</option>");
+				append("<option value=\"", toStr(UTYPE_ADMIN), "\">"
+					"Admin</option>");
 			if (permissions & PERM_MAKE_TEACHER)
-				append("<option value=\"1\">Teacher</option>");
-			append("<option value=\"2\" selected>Normal</option>");
+				append("<option value=\"", toStr(UTYPE_TEACHER), "\">"
+					"Teacher</option>");
+			append("<option value=\"", toStr(UTYPE_NORMAL), "\" selected>"
+				"Normal</option>");
 	}
 	append("</select>\n");
 
@@ -495,24 +518,24 @@ void User::editProfile() {
 				"<label>First name</label>\n"
 				"<input type=\"text\" name=\"first_name\" value=\"",
 					htmlSpecialChars(first_name), "\" size=\"24\""
-					"maxlength=\"60\" ", (permissions & PERM_EDIT ? "required"
-						: "readonly"),  ">\n"
+					"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" ",
+					(permissions & PERM_EDIT ? "required" : "readonly"),  ">\n"
 			"</div>\n"
 			// Last name
 			"<div class=\"field-group\">\n"
 				"<label>Last name</label>\n"
 				"<input type=\"text\" name=\"last_name\" value=\"",
 					htmlSpecialChars(last_name), "\" size=\"24\""
-					"maxlength=\"60\" ", (permissions & PERM_EDIT ? "required"
-						: "readonly"),  ">\n"
+					"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" ",
+					(permissions & PERM_EDIT ? "required" : "readonly"),  ">\n"
 			"</div>\n"
 			// Email
 			"<div class=\"field-group\">\n"
 				"<label>Email</label>\n"
 				"<input type=\"email\" name=\"email\" value=\"",
 					htmlSpecialChars(email), "\" size=\"24\""
-					"maxlength=\"60\" ", (permissions & PERM_EDIT ? "required"
-						: "readonly"),  ">\n"
+					"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" ",
+					(permissions & PERM_EDIT ? "required" : "readonly"),  ">\n"
 			"</div>\n");
 
 	// Buttons
@@ -566,9 +589,9 @@ void User::changePassword() {
 					fv.addError("Wrong old password");
 
 				} else {
-					char salt_bin[32];
-					fillRandomly(salt_bin, 32);
-					string salt = toHex(salt_bin, 32);
+					char salt_bin[SALT_LEN >> 1];
+					fillRandomly(salt_bin, sizeof(salt_bin));
+					string salt = toHex(salt_bin, sizeof(salt_bin));
 
 					stmt = db_conn.prepare(
 						"UPDATE users SET salt=?, password=? WHERE id=?");

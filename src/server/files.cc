@@ -1,6 +1,7 @@
 #include "contest.h"
 #include "form_validator.h"
 
+#include <sim/constants.h>
 #include <simlib/debug.h>
 #include <simlib/process.h>
 #include <simlib/time.h>
@@ -16,11 +17,12 @@ void Contest::addFile() {
 	if (req->method == server::HttpRequest::POST) {
 		string user_file_name;
 		// Validate all fields
-		fv.validate(file_name, "file-name", "File name", 128);
+		fv.validate(file_name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
 		fv.validateNotBlank(user_file_name, "file", "File");
 
-		fv.validate(description, "description", "Description", 512);
+		fv.validate(description, "description", "Description",
+			FILE_DESCRIPTION_MAX_LEN);
 
 		if (file_name.empty())
 			file_name = user_file_name;
@@ -28,7 +30,6 @@ void Contest::addFile() {
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				constexpr size_t FILE_ID_LENGTH = 30; // TODO: move it up in this file
 				string id;
 				string current_time = date("%Y-%m-%d %H:%M:%S");
 				// Insert file to `files`
@@ -39,7 +40,7 @@ void Contest::addFile() {
 				stmt.setString(3, description);
 				stmt.setString(4, current_time);
 				do {
-					id = generateId(FILE_ID_LENGTH);
+					id = generateId(FILE_ID_LEN);
 					stmt.setString(1, id);
 				} while (stmt.executeUpdate() == 0);
 
@@ -77,7 +78,7 @@ void Contest::addFile() {
 					"<label>File name</label>\n"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(file_name), "\" size=\"24\" "
-						"maxlength=\"128\" "
+						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
 						"placeholder=\"The same as name of uploaded file\">\n"
 				"</div>\n"
 				// File
@@ -88,7 +89,8 @@ void Contest::addFile() {
 				// Description
 				"<div class=\"field-group\">\n"
 					"<label>Description</label>\n"
-					"<textarea name=\"description\" maxlength=\"512\">",
+					"<textarea name=\"description\" maxlength=\"",
+						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
 				"</div>\n"
 
@@ -109,9 +111,10 @@ void Contest::editFile(const StringView& id, string name) {
 	string modified, description;
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validate(name, "file-name", "File name", 128);
+		fv.validate(name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
-		fv.validate(description, "description", "Description", 512);
+		fv.validate(description, "description", "Description",
+			FILE_DESCRIPTION_MAX_LEN);
 
 		if (name.empty()) {
 			name = fv.get("file");
@@ -175,7 +178,7 @@ void Contest::editFile(const StringView& id, string name) {
 					"<label>File name</label>\n"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
-						"maxlength=\"128\" "
+						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
 						"placeholder=\"The same as name of reuploaded file\">\n"
 				"</div>\n"
 				// Reupload file
@@ -186,7 +189,8 @@ void Contest::editFile(const StringView& id, string name) {
 				// Description
 				"<div class=\"field-group\">\n"
 					"<label>Description</label>\n"
-					"<textarea name=\"description\" maxlength=\"512\">",
+					"<textarea name=\"description\" maxlength=\"",
+						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
 				"</div>\n"
 				// Modified
@@ -252,7 +256,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 void Contest::file() {
 	StringView id = url_args.extractNext();
 	// Early id validation
-	if (id.size() != 30)
+	if (id.size() != FILE_ID_LEN)
 		return error404();
 
 	try {
