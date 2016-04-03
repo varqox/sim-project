@@ -45,7 +45,7 @@ void Contest::handle() {
 			append("<div class=\"contests-list\">\n");
 
 			// Add contest button (admins and teachers only)
-			if (Session::isOpen() && Session::user_type < 2)
+			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
 				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>\n");
 
 			while (res.next())
@@ -186,7 +186,7 @@ void Contest::handle() {
 }
 
 void Contest::addContest() {
-	if (!Session::open() || Session::user_type > 1)
+	if (!Session::open() || Session::user_type > UTYPE_TEACHER)
 		return error403();
 
 	FormValidator fv(req->form_data);
@@ -195,10 +195,10 @@ void Contest::addContest() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(name, "name", "Contest name", 128);
+		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
 		is_public = fv.exist("public");
 		// Only admins can create public contests
-		if (is_public && Session::user_type > 0) {
+		if (is_public && Session::user_type > UTYPE_ADMIN) {
 			is_public = false;
 			fv.addError("Only admins can create public contests");
 		}
@@ -241,14 +241,15 @@ void Contest::addContest() {
 					"<label>Contest name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
-						"maxlength=\"128\" required>\n"
+						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
 					"<label>Public</label>\n"
 					"<input type=\"checkbox\" name=\"public\"",
 						(is_public ? " checked" : ""),
-						(Session::user_type > 0 ? " disabled" : ""),
+						(Session::user_type > UTYPE_ADMIN ? " disabled" : ""),
 						">\n"
 				"</div>\n"
 				// Show ranking
@@ -273,7 +274,7 @@ void Contest::addRound() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(name, "name", "Round name", 128);
+		fv.validateNotBlank(name, "name", "Round name", ROUND_NAME_MAX_LEN);
 		is_visible = fv.exist("visible");
 		fv.validate(begins, "begins", "Begins", isDatetime,
 			"Begins: invalid value");
@@ -339,7 +340,7 @@ void Contest::addRound() {
 				"<label>Round name</label>\n"
 				"<input type=\"text\" name=\"name\" value=\"",
 					htmlSpecialChars(name), "\" size=\"24\" "
-					"maxlength=\"128\" required>\n"
+					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>\n"
 			"</div>\n"
 			// Visible
 			"<div class=\"field-group\">\n"
@@ -386,14 +387,14 @@ void Contest::addProblem() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validate(name, "name", "Problem name", 128);
+		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
 		fv.validate<bool(*)(const StringView&)>(memory_limit, "memory-limit",
 			"Memory limit", isDigit, "Memory limit: invalid value"); // TODO: add length limit
 
 		fv.validate<bool(*)(const StringView&)>(time_limit, "time-limit",
 			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
-		unsigned long long tl = round(strtod(time_limit.c_str(), nullptr) *
+		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) *
 			1000000LL); // Time limit in usec
 		if (time_limit.size() && tl == 0)
 			fv.addError("Global time limit cannot be lower than 0.000001");
@@ -562,7 +563,8 @@ void Contest::addProblem() {
 					"<label>Problem name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\""
-					"maxlength=\"128\" placeholder=\"Detect from config.conf\">"
+					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+					"placeholder=\"Detect from config.conf\">"
 					"\n"
 				"</div>\n"
 				// Memory limit
@@ -607,15 +609,15 @@ void Contest::editContest() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(name, "name", "Contest name", 128);
-		fv.validateNotBlank(owner, "owner", "Owner username", 30);
+		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
+		fv.validateNotBlank(owner, "owner", "Owner username", USERNAME_MAX_LEN);
 		is_public = fv.exist("public");
 		show_ranking = fv.exist("show-ranking");
 
 		try {
 			DB::Statement stmt;
 			// Check if user has the ability to make contest public
-			if (is_public && Session::user_type > 0
+			if (is_public && Session::user_type > UTYPE_ADMIN
 				&& !rpath->contest->is_public)
 			{
 				is_public = false;
@@ -675,21 +677,24 @@ void Contest::editContest() {
 					"<label>Contest name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
-						"maxlength=\"128\" required>\n"
+						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Owner
 				"<div class=\"field-group\">\n"
 					"<label>Owner username</label>\n"
 					"<input type=\"text\" name=\"owner\" value=\"",
 						htmlSpecialChars(owner), "\" size=\"24\" "
-						"maxlength=\"30\" required>\n"
+						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Public
 				"<div class=\"field-group\">\n"
 					"<label>Public</label>\n"
 					"<input type=\"checkbox\" name=\"public\"",
 						(is_public ? " checked"
-							: (Session::user_type > 0 ? " disabled" : "")),
+							: (Session::user_type > UTYPE_ADMIN ? " disabled"
+								: "")),
 						">\n"
 				"</div>\n"
 				// Show ranking
@@ -718,7 +723,7 @@ void Contest::editRound() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(name, "name", "Round name", 128);
+		fv.validateNotBlank(name, "name", "Round name", ROUND_NAME_MAX_LEN);
 
 		is_visible = fv.exist("visible");
 
@@ -790,7 +795,8 @@ void Contest::editRound() {
 					"<label>Round name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
-						"maxlength=\"128\" required>\n"
+						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Visible
 				"<div class=\"field-group\">\n"
@@ -931,11 +937,12 @@ void Contest::editProblem() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validate(round_name, "round-name", "Problem round name", 128);
+		fv.validate(round_name, "round-name", "Problem round name",
+			ROUND_NAME_MAX_LEN);
 
-		fv.validate(name, "name", "Problem name", 128);
+		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
-		fv.validate(tag, "tag", "Problem tag", 4);
+		fv.validate(tag, "tag", "Problem tag", PROBLEM_TAG_LEN);
 
 		fv.validateNotBlank<bool(*)(const StringView&)>(memory_limit,
 			"memory-limit", "Memory limit", isDigit,
@@ -1018,21 +1025,23 @@ void Contest::editProblem() {
 					"<label>Problem round name</label>\n"
 					"<input type=\"text\" name=\"round-name\" value=\"",
 						htmlSpecialChars(round_name), "\" size=\"24\" "
-						"maxlength=\"128\" required>\n"
+						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Problem name
 				"<div class=\"field-group\">\n"
 					"<label>Problem name</label>\n"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
-						"maxlength=\"128\" required>\n"
+						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+						"required>\n"
 				"</div>\n"
 				// Tag
 				"<div class=\"field-group\">\n"
 					"<label>Problem tag</label>\n"
 					"<input type=\"text\" name=\"tag\" value=\"",
 						htmlSpecialChars(tag), "\" size=\"24\" "
-						"maxlength=\"4\" required>\n"
+						"maxlength=\"", toStr(PROBLEM_TAG_LEN), "\" required>\n"
 				"</div>\n"
 				// TODO: Checker
 				// Memory limit
@@ -1123,7 +1132,7 @@ void Contest::deleteRound() {
 			stmt.setString(1, rpath->round_id);
 			stmt.setString(2, rpath->round_id);
 
-			if (stmt.executeUpdate() > 0)
+			if (stmt.executeUpdate())
 				return redirect("/c/" + rpath->contest->id);
 
 		} catch (const std::exception& e) {
@@ -1225,10 +1234,10 @@ void Contest::ranking(bool admin_view) {
 	printRoundPath("ranking", !admin_view);
 
 	struct RankingProblem {
-		unsigned long long id;
+		uint64_t id;
 		string tag;
 
-		explicit RankingProblem(unsigned long long i = 0, const string& t = "")
+		explicit RankingProblem(uint64_t i = 0, const string& t = "")
 			: id(i), tag(t) {}
 	};
 

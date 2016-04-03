@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
 	try {
 		vector<pid_t> vec = findProcessesByExec(argv[1]);
-		for (auto& pid : vec) {
+		for (auto pid : vec) {
 			printf("%i <- SIGTERM\n", pid);
 			if (kill(pid, SIGTERM) == -1)
 				eprintf("kill(%i)%s\n", pid, error(errno).c_str());
