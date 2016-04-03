@@ -566,6 +566,10 @@ inline std::string toString(double x, int precision = 6) {
 	return std::to_string(x);
 }
 
+// Alias to toString()
+template<class T>
+inline std::string toStr(T&& x) { return toString(std::forward<T>(x)); }
+
 // Like strtou() but places number into x
 int strToNum(std::string& x, const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos);

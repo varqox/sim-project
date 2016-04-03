@@ -98,7 +98,7 @@ bool Sandbox::DefaultCallback::operator()(pid_t pid, int syscall) {
 bool Sandbox::CallbackBase::isSyscallAllowed(pid_t pid, int arch, int syscall,
 	const vector<string>& allowed_files)
 {
-	const int sys_open[2] = {
+	constexpr int sys_open[2] = {
 		5, // SYS_open - i386
 		2 // SYS_open - x86_64
 	};
