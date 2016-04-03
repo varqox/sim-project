@@ -1,6 +1,7 @@
 #include "form_validator.h"
 #include "contest.h"
 
+#include <sim/utilities.h>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
@@ -610,7 +611,11 @@ void Contest::editContest() {
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
-		fv.validateNotBlank(owner, "owner", "Owner username", USERNAME_MAX_LEN);
+
+		fv.validateNotBlank(owner, "owner", "Owner username", isUsername,
+			"Username can only consist of characters [a-zA-Z0-9_-]",
+			USERNAME_MAX_LEN);
+
 		is_public = fv.exist("public");
 		show_ranking = fv.exist("show-ranking");
 

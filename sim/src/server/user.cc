@@ -1,6 +1,7 @@
 #include "form_validator.h"
 #include "user.h"
 
+#include <sim/utilities.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>
@@ -134,7 +135,9 @@ void User::login() {
 		// Try to login
 		string password;
 		// Validate all fields
-		fv.validate(username, "username", "Username", USERNAME_MAX_LEN);
+		fv.validate(username, "username", "Username", isUsername,
+			"Username can only consist of characters [a-zA-Z0-9_-]",
+			USERNAME_MAX_LEN);
 
 		fv.validate(password, "password", "Password");
 
@@ -206,7 +209,9 @@ void User::signUp() {
 
 	if (req->method == server::HttpRequest::POST) {
 		// Validate all fields
-		fv.validateNotBlank(username, "username", "Username", USERNAME_MAX_LEN);
+		fv.validateNotBlank(username, "username", "Username", isUsername,
+			"Username can only consist of characters [a-zA-Z0-9_-]",
+			USERNAME_MAX_LEN);
 
 		fv.validateNotBlank(first_name, "first_name", "First Name",
 			USER_FIRST_NAME_MAX_LEN);
@@ -382,7 +387,8 @@ void User::editProfile() {
 	if (req->method == server::HttpRequest::POST && (permissions & PERM_EDIT)) {
 		string new_username, new_utype_s;
 		// Validate all fields
-		fv.validateNotBlank(new_username, "username", "Username",
+		fv.validateNotBlank(new_username, "username", "Username", isUsername,
+			"Username can only consist of characters [a-zA-Z0-9_-]",
 			USERNAME_MAX_LEN);
 
 		fv.validateNotBlank(new_utype_s, "type", "Account type");

@@ -2,7 +2,6 @@
 #include "main.h"
 
 #include <simlib/compile.h>
-#include <simlib/debug.h>
 #include <simlib/sandbox_checker_callback.h>
 #include <simlib/sim/simfile.h>
 #include <simlib/utilities.h>
