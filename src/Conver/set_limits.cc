@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <simlib/compile.h>
-#include <simlib/debug.h>
 #include <simlib/sandbox_checker_callback.h>
 
 using std::pair;
