@@ -207,8 +207,8 @@ bool Contest::isAdmin(const RoundPath& r_path) {
 	if (!Session::open())
 		return false;
 
-	// User is the owner of the contest
-	if (r_path.contest->owner == Session::user_id)
+	// User is the owner of the contest or is the Sim root
+	if (r_path.contest->owner == Session::user_id || Session::user_id == "1")
 		return true;
 
 	try {
