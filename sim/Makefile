@@ -75,7 +75,7 @@ uninstall:
 
 .PHONY: run
 run: $(filter-out run, $(MAKECMDGOALS))
-	@# ^^^ run always have to be executed at the end
+	@ # ^ run always have to be executed at the end
 
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
@@ -85,7 +85,7 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	# Run
 	$(abspath $(DESTDIR)/judge-machine)&
 	$(abspath $(DESTDIR)/sim-server)&
-	$(abspath $(DESTDIR)/sim-server2)&
+	# $(abspath $(DESTDIR)/sim-server2)&
 
 .PHONY: clean
 clean:
