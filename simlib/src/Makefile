@@ -17,7 +17,8 @@ sim/sim.o: sim
 http/http.o: http
 	@
 
-../simlib.a: string.o time.o filesystem.o STD_SHA_256.o process.o sandbox.o
+../simlib.a: string.o aho_corasick.o
+../simlib.a: time.o filesystem.o STD_SHA_256.o process.o sandbox.o
 ../simlib.a: sandbox_checker_callback.o compile.o config_file.o
 ../simlib.a: logger.o
 ../simlib.a: sim/sim.o http/http.o
