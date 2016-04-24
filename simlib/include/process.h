@@ -61,6 +61,22 @@ std::vector<pid_t> findProcessesByExec(std::string exec,
  */
 std::string chdirToExecDir() noexcept(false);
 
+constexpr int8_t ARCH_i386 = 0;
+constexpr int8_t ARCH_x86_64 = 1;
+/**
+ * @brief Detects architecture of running process @p pid
+ * @details Currently it only detects i386 and x86_64 (see defined ARCH_ values
+ *   above)
+ *
+ * @param pid pid of process to detect architecture
+ *
+ * @return detected architecture
+ *
+ * @errors If architecture is different from allowed or any error occurs
+ *   an exception of type std::runtime_error is thrown
+ */
+int8_t detectArchitecture(pid_t pid) noexcept(false);
+
 class Spawner {
 public:
 	Spawner() = delete;

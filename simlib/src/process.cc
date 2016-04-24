@@ -129,3 +129,27 @@ string chdirToExecDir() {
 
 	return exec;
 }
+
+int8_t detectArchitecture(pid_t pid) {
+	string filename = concat("/proc/", toString(pid), "/exe");
+
+	int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
+	if (fd == -1)
+		THROW("open('", filename, "')", error(errno));
+
+	Closer closer(fd);
+	// Read fourth byte and detect if 32 or 64 bit
+	unsigned char c;
+	if (lseek(fd, 4, SEEK_SET) == (off_t)-1)
+		THROW("lseek()", error(errno));
+
+	if (read(fd, &c, 1) != 1)
+		THROW("read()", error(errno));
+
+	if (c == 1)
+		return ARCH_i386;
+	if (c == 2)
+		return ARCH_x86_64;
+
+	THROW("Unsupported architecture");
+}

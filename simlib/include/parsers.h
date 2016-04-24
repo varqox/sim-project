@@ -5,9 +5,9 @@
 
 #if 0
 # warning "Before committing disable this debug"
-#define DEBUG_PARSER(...) __VA_ARGS__
+# define DEBUG_PARSER(...) __VA_ARGS__
 #else
-#define DEBUG_PARSER(...)
+# define DEBUG_PARSER(...)
 #endif
 
 class SimpleParser {

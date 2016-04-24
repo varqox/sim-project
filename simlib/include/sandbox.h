@@ -1,6 +1,7 @@
 #pragma once
 
 #include "process.h"
+#include "utilities.h"
 
 #include <cstddef>
 #include <sys/ptrace.h>
@@ -9,47 +10,69 @@ class Sandbox : protected Spawner {
 public:
 	Sandbox() = delete;
 
-	struct i386_user_regs_struct;
+	struct i386_user_regset;
 
-	struct x86_64_user_regs_struct;
+	struct x86_64_user_regset;
 
 	class CallbackBase {
 	protected:
 		/**
-		 * @brief Invokes ptr as function with parameters @p a, @p b
+		 * @brief Checks whether syscall open(2) is allowed, if not, tries to
+		 *   modify it (by replacing filename with nullptr) so that syscall will
+		 *   fail
 		 *
-		 * @param pid traced process (via ptrace) pid
+		 * @param pid pid of traced process (via ptrace)
 		 * @param arch architecture: 0 - i386, 1 - x86_64
-		 * @param syscall currently invoked syscall
-		 * @param allowed_filed files which can be opened
+		 * @param allowed_filed files which are allowed to be opened
 		 *
-		 * @return true if call is allowed, false otherwise
+		 * @return true if call is allowed (modified if needed), false otherwise
 		 */
-		bool isSyscallAllowed(pid_t pid, int arch, int syscall,
+		bool isSysOpenAllowed(pid_t pid, int arch,
 			const std::vector<std::string>& allowed_files = {});
 
 	public:
 		/**
-		 * @brief Checks whether syscall is allowed or not
+		 * @brief Checks whether or not entering syscall @p syscall is allowed
 		 *
 		 * @param pid sandboxed process id
 		 * @param syscall executed syscall number to check
 		 *
-		 * @return true - executed syscall is allowed, false - not allowed
+		 * @return true if syscall is allowed to be executed, false otherwise
 		 */
-		virtual bool operator()(pid_t pid, int syscall) = 0;
+		virtual bool isSyscallEntryAllowed(pid_t pid, int syscall) = 0;
+
+		/**
+		 * @brief Checks whether or not exit from finished syscall @p syscall
+		 *   is allowed
+		 *
+		 * @param pid sandboxed process id
+		 * @param syscall executed syscall number to check
+		 *
+		 * @return true if finished syscall is allowed to exit, false otherwise
+		 */
+		virtual bool isSyscallExitAllowed(pid_t pid, int syscall) = 0;
+
+		/**
+		 * @brief Returns error message which was set after unsuccessful call to
+		 *   either isSyscallEntryAllowed() or isSyscallExitAllowed()
+		 * @return an error message
+		 */
+		virtual std::string errorMessage() const = 0;
 
 		virtual ~CallbackBase() noexcept {}
 	};
 
-	struct DefaultCallback : public CallbackBase {
+	class DefaultCallback : public CallbackBase {
+	protected:
 		struct Pair {
 			int syscall;
 			int limit;
 		};
 
-		int functor_call; // number of operator() calls
-		int8_t arch; // arch - architecture: 0 - i386, 1 - x86_64
+		int8_t counter = 0; // number of early isSyscallEntryAllowed() calls
+		int8_t arch = -1; // arch - architecture: 0 - i386, 1 - x86_64
+		static_assert(ARCH_i386 == 0 && ARCH_x86_64 == 1,
+			"Invalid values of ARCH_ constants");
 		std::vector<Pair> limited_syscalls[2] = {
 			{ /* i386 */
 				{  11, 1 }, // SYS_execve
@@ -68,9 +91,73 @@ public:
 			}
 		};
 
-		DefaultCallback() : functor_call(0), arch(-1) {}
+		int unsuccessful_SYS_brk_counter = 0; // used in isSyscallExitAllowed()
+		static constexpr int UNSUCCESSFUL_SYS_BRK_LIMIT = 128;
 
-		bool operator()(pid_t pid, int syscall);
+		std::string error_message;
+
+		template<size_t N1, size_t N2>
+		bool isSyscallEntryAllowed(pid_t pid, int syscall,
+			const std::array<int, N1>& allowed_syscalls_i386,
+			const std::array<int, N2>& allowed_syscalls_x86_64,
+			const std::vector<std::string>& allowed_files);
+
+	public:
+		DefaultCallback() = default;
+
+		virtual ~DefaultCallback() = default;
+
+		bool isSyscallEntryAllowed(pid_t pid, int syscall) {
+			constexpr std::array<int, 20> allowed_syscalls_i386 {{
+				1, // SYS_exit
+				3, // SYS_read
+				4, // SYS_write
+				6, // SYS_close
+				13, // SYS_time
+				45, // SYS_brk
+				54, // SYS_ioctl
+				90, // SYS_mmap
+				91, // SYS_munmap
+				108, // SYS_fstat
+				125, // SYS_mprotect
+				145, // SYS_readv
+				146, // SYS_writev
+				174, // SYS_rt_sigaction
+				175, // SYS_rt_sigprocmask
+				192, // SYS_mmap2
+				197, // SYS_fstat64
+				224, // SYS_gettid
+				252, // SYS_exit_group
+				270, // SYS_tgkill
+			}};
+			constexpr std::array<int, 18> allowed_syscalls_x86_64 {{
+				0, // SYS_read
+				1, // SYS_write
+				3, // SYS_close
+				5, // SYS_fstat
+				9, // SYS_mmap
+				10, // SYS_mprotect
+				11, // SYS_munmap
+				12, // SYS_brk
+				13, // SYS_rt_sigaction
+				14, // SYS_rt_sigprocmask
+				16, // SYS_ioctl
+				19, // SYS_readv
+				20, // SYS_writev
+				60, // SYS_exit
+				186, // SYS_gettid
+				201, // SYS_time
+				231, // SYS_exit_group
+				234, // SYS_tgkill
+			}};
+
+			return isSyscallEntryAllowed(pid, syscall, allowed_syscalls_i386,
+				allowed_syscalls_x86_64, {});
+		}
+
+		bool isSyscallExitAllowed(pid_t pid, int syscall);
+
+		std::string errorMessage() const { return error_message; }
 	};
 
 	using Spawner::ExitStat;
@@ -156,7 +243,14 @@ private:
 
 /******************************* IMPLEMENTATION *******************************/
 
-struct Sandbox::i386_user_regs_struct {
+#if 0
+# warning "Before committing disable this debug"
+# define DEBUG_SANDBOX(...) __VA_ARGS__
+#else
+# define DEBUG_SANDBOX(...)
+#endif
+
+struct Sandbox::i386_user_regset {
 	uint32_t ebx;
 	uint32_t ecx;
 	uint32_t edx;
@@ -176,7 +270,7 @@ struct Sandbox::i386_user_regs_struct {
 	uint32_t xss;
 };
 
-struct Sandbox::x86_64_user_regs_struct {
+struct Sandbox::x86_64_user_regset {
 	uint64_t r15;
 	uint64_t r14;
 	uint64_t r13;
@@ -205,6 +299,42 @@ struct Sandbox::x86_64_user_regs_struct {
 	uint64_t fs;
 	uint64_t gs;
 };
+
+template<size_t N1, size_t N2>
+bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
+	const std::array<int, N1>& allowed_syscalls_i386,
+	const std::array<int, N2>& allowed_syscalls_x86_64,
+	const std::vector<std::string>& allowed_files)
+{
+	// Detect arch (first call - before exec, second - after exec)
+	if (counter < 2) {
+		arch = detectArchitecture(pid);
+		++counter;
+	}
+
+	// Check if syscall is allowed
+	if (arch == ARCH_i386) {
+		if (binary_search(allowed_syscalls_i386, syscall))
+			return true;
+	} else {
+		if (binary_search(allowed_syscalls_x86_64, syscall))
+			return true;
+	}
+
+	// Check if syscall is limited
+	for (Pair& i : limited_syscalls[arch])
+		if (syscall == i.syscall)
+			return (--i.limit >= 0);
+
+	constexpr int sys_open[2] = {
+		5, // SYS_open - i386
+		2 // SYS_open - x86_64
+	};
+	if (syscall == sys_open[arch])
+		return isSysOpenAllowed(pid, arch, allowed_files);
+
+	return false;
+}
 
 template<class Callback, class Timer>
 Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
@@ -285,6 +415,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		}
 	};
 
+
 	for (;;) {
 		auto exit_normally = [&]() -> ExitStat {
 			uint64_t runtime = timer.stopAndGetRuntime();
@@ -301,34 +432,61 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 #ifdef __x86_64__
 		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
-			offsetof(x86_64_user_regs_struct, orig_rax), 0);
+			offsetof(x86_64_user_regset, orig_rax), 0);
 #else
 		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
-			offsetof(i386_user_regs_struct, orig_eax), 0);
+			offsetof(i386_user_regset, orig_eax), 0);
 #endif
 
-		// If syscall is not allowed
-		if (syscall < 0 || !func(cpid, syscall)) {
-			uint64_t runtime = timer.stopAndGetRuntime();
+		// If syscall entry is allowed
+		if (syscall >= 0 && func.isSyscallEntryAllowed(cpid, syscall)) {
+			// Syscall returns
+			if (wait_for_syscall())
+				return exit_normally();
 
-			// Kill tracee
-			kill(cpid, SIGKILL);
-			waitpid(cpid, &status, 0);
+			DEBUG_SANDBOX(
+#ifdef __x86_64__
+				long ret_val = ptrace(PTRACE_PEEKUSER, cpid,
+					offsetof(x86_64_user_regset, rax), 0);
+				long arg1 = ptrace(PTRACE_PEEKUSER, cpid,
+					offsetof(x86_64_user_regset, rdi), 0);
+				long arg2 = ptrace(PTRACE_PEEKUSER, cpid,
+					offsetof(x86_64_user_regset, rsi), 0);
+#else
+				long ret_val = ptrace(PTRACE_PEEKUSER, cpid,
+					offsetof(i386_user_regset, eax), 0);
+				long arg1 = ptrace(PTRACE_PEEKUSER, cpid,
+					offsetof(i386_user_regset, ebx), 0);
+				long arg2 = ptrace(PTRACE_PEEKUSER, cpid,
+					offsetof(i386_user_regset, ecx), 0);
+#endif
+				stdlog("syscall: ", toString(syscall), '(',
+					toString(arg1), ", ", toString(arg2), ", ...) -> ",
+					toString(ret_val));
+			)
 
-			// If time limit exceeded
-			if (runtime >= opts.time_limit)
-				return ExitStat(status, runtime);
-
-			if (syscall < 0)
-				THROW("failed to get syscall - ptrace(): ", toString(syscall),
-					error(errno));
-
-			return ExitStat(status, runtime,
-				concat("forbidden syscall: ", toString(syscall)));
+			if (func.isSyscallExitAllowed(cpid, syscall))
+				continue;
 		}
 
-		// syscall returns
-		if (wait_for_syscall())
-			return exit_normally();
+		/* Syscall entry or exit is not allowed or syscall < 0 */
+		uint64_t runtime = timer.stopAndGetRuntime();
+
+		// Kill tracee
+		kill(cpid, SIGKILL);
+		waitpid(cpid, &status, 0);
+
+		// If time limit was exceeded
+		if (runtime >= opts.time_limit)
+			return ExitStat(status, runtime, "Time limit exceeded");
+
+		if (syscall < 0)
+			THROW("failed to get syscall - ptrace(): ", toString(syscall),
+				error(errno));
+
+		std::string message = func.errorMessage();
+		if (message.empty())
+			message =  concat("forbidden syscall: ", toString(syscall));
+		return ExitStat(status, runtime, message);
 	}
 }

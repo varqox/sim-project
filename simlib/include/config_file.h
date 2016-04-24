@@ -95,18 +95,18 @@ public:
 
 	const std::map<std::string, Variable>& getVars() const { return vars; }
 
-	// Checks whether variable @p name exist
+	// Checks if variable @p name exist
 	bool exist(const std::string& name) const {
 		return vars.find(name) != vars.end();
 	}
 
-	// Checks whether variable @p name is set
+	// Checks if variable @p name is set
 	bool isSet(const std::string& name) const {
 		auto it = vars.find(name);
 		return (it != vars.end() && it->second.isSet());
 	}
 
-	// Checks whether variable @p name is an array
+	// Checks if variable @p name is an array
 	bool isArray(const std::string& name) const {
 		auto it = vars.find(name);
 		return (it != vars.end() && it->second.isArray());
@@ -127,7 +127,7 @@ public:
 	// Returns variable @p name as array (empty on error)
 	std::vector<std::string> getArray(const StringView& name) const;
 
-	// Check whether string is a valid string literal
+	// Check if string @p str is a valid string literal
 	static bool isStringLiteral(const StringView& str);
 
 	/**
@@ -146,6 +146,7 @@ public:
 	 *
 	 * @param str input string
 	 * @param escape_unprintable whether escape unprintable characters via \xnn
+	 *   or not
 	 *
 	 * @return escaped string
 	 */
@@ -164,7 +165,7 @@ public:
 	 *
 	 * @param str input string
 	 * @param escape_unprintable whether escape unprintable via
-	 *   ConfigFile::safeDoubleQoutedString()
+	 *   ConfigFile::safeDoubleQoutedString() or not
 	 *
 	 * @return escaped (and possibly quoted) string
 	 */
