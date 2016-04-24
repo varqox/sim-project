@@ -191,7 +191,7 @@ public:
 // # warning "Before committing disable this debug"
 # define DEBUG_HEADERS(...) stdlog(__VA_ARGS__)
 #else
-#define DEBUG_HEADERS(...)
+# define DEBUG_HEADERS(...)
 #endif
 
 bool Connection::parseHeader(StringView str, StringView& name,
