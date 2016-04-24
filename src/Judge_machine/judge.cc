@@ -19,6 +19,7 @@ struct TestResult {
 		OK,
 		WA, // Wrong answer
 		TLE, // Time limit exceeded
+		MLE, // Memory limit exceeded
 		RTE, // Runtime error
 		ERROR,
 		CHECKER_ERROR,
@@ -37,6 +38,8 @@ struct TestResult {
 			return "<td class=\"wa\">Wrong answer</td>";
 		case TLE:
 			return "<td class=\"tl-rte\">Time limit exceeded</td>";
+		case MLE:
+			return "<td class=\"tl-rte\">Memory limit exceeded</td>";
 		case RTE:
 			return "<td class=\"tl-rte\">Runtime error</td>";
 		case ERROR:
@@ -61,7 +64,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 	try {
 		if (VERBOSITY > 1)
 			stdlog("Validating config.conf...");
-		pconf.loadFromAndValidate(package_path);
+		pconf.loadFrom(package_path);
 		if (VERBOSITY > 1)
 			stdlog("Validation passed.");
 
@@ -99,8 +102,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 		}
 
 	} catch (const std::exception& e) {
-		stdlog("Compilation error", e.what());
-		errlog("Compilation error", e.what());
+		stdlog("Compilation error: ", e.what());
+		errlog("Compilation error: ", e.what());
 		return JudgeResult(JudgeResult::JUDGE_ERROR, 0,
 			"<h2>Compilation failed</h2>"
 			"<pre class=\"compile-errors\">"
@@ -247,27 +250,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 			if (es.code == 0) {
 				group_result.back().status = TestResult::OK;
 
-			// Runtime error
-			} else if (es.runtime < test.time_limit) {
-				ratio = 0.0;
-				group_result.back().status = TestResult::RTE;
-				if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
-					judge_test_report.status = JudgeResult::ERROR;
-
-				// Add test comment
-				back_insert(judge_test_report.comments,
-					"<li><span class=\"test-id\">",
-					htmlSpecialChars(test.name), "</span>"
-					"Runtime error");
-
-				if (es.message.size())
-					back_insert(judge_test_report.comments, " (", es.message,
-						')');
-
-				judge_test_report.comments += "</li>\n";
-
 			// Time limit exceeded
-			} else {
+			} else if (es.runtime >= test.time_limit) {
 				ratio = 0.0;
 				group_result.back().status = TestResult::TLE;
 				if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
@@ -275,10 +259,48 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 				// Add test comment
 				back_insert(judge_test_report.comments,
-					"<li><span class=\"test-id\">",
-					htmlSpecialChars(test.name), "</span>"
-					"Time limit exceeded</li>\n");
+					"<li>"
+						"<span class=\"test-id\">", htmlSpecialChars(test.name),
+						"</span>"
+						"Time limit exceeded"
+					"</li>\n");
+
+			// Memory limit exceeded
+			} else if (es.message == "Memory limit exceeded") {
+				ratio = 0.0;
+				group_result.back().status = TestResult::MLE;
+				if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
+					judge_test_report.status = JudgeResult::ERROR;
+
+				// Add test comment
+				back_insert(judge_test_report.comments,
+					"<li>"
+						"<span class=\"test-id\">", htmlSpecialChars(test.name),
+						"</span>"
+						"Memory limit exceeded"
+					"</li>\n");
+
+			// Runtime error
+			} else {
+				ratio = 0.0;
+				group_result.back().status = TestResult::RTE;
+				if (judge_test_report.status != JudgeResult::JUDGE_ERROR)
+					judge_test_report.status = JudgeResult::ERROR;
+
+				// Add test comment
+				back_insert(judge_test_report.comments,
+					"<li>"
+						"<span class=\"test-id\">", htmlSpecialChars(test.name),
+						"</span>"
+						"Runtime error");
+
+				if (es.message.size())
+					back_insert(judge_test_report.comments, " (", es.message,
+						')');
+
+				judge_test_report.comments += "</li>\n";
 			}
+
 
 			if (VERBOSITY > 1) {
 				tmplog(widedString(usecToSecStr(es.runtime, 2, false), 4),
@@ -286,12 +308,14 @@ JudgeResult judge(string submission_id, string problem_id) {
 					widedString(usecToSecStr(test.time_limit, 2, false), 4),
 					"    Status: ");
 
-				if (es.code == 0)
+				if (group_result.back().status == TestResult::OK)
 					tmplog("\033[1;32mOK\033[m");
-				else if (es.runtime < test.time_limit)
-					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
-				else
+				else if (group_result.back().status == TestResult::TLE)
 					tmplog("\033[1;33mTLE\033[m");
+				else if (group_result.back().status == TestResult::MLE)
+					tmplog("\033[1;33mMLE\033[m");
+				else if (group_result.back().status == TestResult::RTE)
+					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
 
 				tmplog("   Exited with ", toString(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]");
@@ -371,16 +395,51 @@ JudgeResult judge(string submission_id, string problem_id) {
 				if (VERBOSITY > 1)
 					tmplog(" \"", checker_output, "\"");
 
-			} else if (es.runtime < test.time_limit) {
+			// Time limit exceeded
+			} else if (es.runtime >= test.time_limit) {
 				ratio = 0.0;
 				group_result.back().status = TestResult::CHECKER_ERROR;
 				judge_test_report.status = JudgeResult::JUDGE_ERROR;
 
 				// Add test comment
 				back_insert(judge_test_report.comments,
-					"<li><span class=\"test-id\">",
-					htmlSpecialChars(test.name), "</span>"
-					"Checker runtime error");
+					"<li>"
+						"<span class=\"test-id\">", htmlSpecialChars(test.name),
+						"</span>"
+						"Checker time limit exceeded"
+					"</li>\n");
+
+				if (VERBOSITY > 1)
+					tmplog("\033[1;33mTLE\033[m");
+
+			// Memory limit exceeded
+			} else if (es.message == "Memory limit exceeded") {
+				ratio = 0.0;
+				group_result.back().status = TestResult::CHECKER_ERROR;
+				judge_test_report.status = JudgeResult::JUDGE_ERROR;
+
+				// Add test comment
+				back_insert(judge_test_report.comments,
+					"<li>"
+						"<span class=\"test-id\">", htmlSpecialChars(test.name),
+						"</span>"
+						"Checker memory limit exceeded"
+					"</li>\n");
+
+				if (VERBOSITY > 1)
+					tmplog("\033[1;33mMLE\033[m");
+
+			} else {
+				ratio = 0.0;
+				group_result.back().status = TestResult::CHECKER_ERROR;
+				judge_test_report.status = JudgeResult::JUDGE_ERROR;
+
+				// Add test comment
+				back_insert(judge_test_report.comments,
+					"<li>"
+						"<span class=\"test-id\">", htmlSpecialChars(test.name),
+						"</span>"
+						"Checker runtime error");
 
 				if (es.message.size())
 					back_insert(judge_test_report.comments, " (", es.message,
@@ -390,20 +449,6 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 				if (VERBOSITY > 1)
 					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
-
-			} else {
-				ratio = 0.0;
-				group_result.back().status = TestResult::CHECKER_ERROR;
-				judge_test_report.status = JudgeResult::JUDGE_ERROR;
-
-				// Add test comment
-				back_insert(judge_test_report.comments,
-					"<li><span class=\"test-id\">",
-					htmlSpecialChars(test.name), "</span>"
-						"Checker time limit exceeded</li>\n");
-
-				if (VERBOSITY > 1)
-					tmplog("\033[1;33mTLE\033[m");
 			}
 
 			if (VERBOSITY > 1)

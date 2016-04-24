@@ -18,7 +18,7 @@ string validatePackage(string pathname) {
 	if (pathname.back() != '/')
 		pathname += '/';
 
-	// Check whether package has exactly one main folder
+	// Check if package has exactly one main folder
 	string main_folder;
 	while ((file = readdir(dir))) {
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")

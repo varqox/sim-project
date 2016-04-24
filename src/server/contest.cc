@@ -390,10 +390,10 @@ void Contest::addProblem() {
 		// Validate all fields
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
-		fv.validate<bool(*)(const StringView&)>(memory_limit, "memory-limit",
+		fv.validate<bool(const StringView&)>(memory_limit, "memory-limit",
 			"Memory limit", isDigit, "Memory limit: invalid value"); // TODO: add length limit
 
-		fv.validate<bool(*)(const StringView&)>(time_limit, "time-limit",
+		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
 			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
 		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) *
 			1000000LL); // Time limit in usec
