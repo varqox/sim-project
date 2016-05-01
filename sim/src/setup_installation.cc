@@ -145,8 +145,9 @@ int main(int argc, char **argv) {
 			string salt = toHex(salt_bin, sizeof(salt_bin));
 
 			DB::Statement stmt(conn.prepare(
-				"INSERT IGNORE users (username, salt, password, type) "
-				"VALUES ('sim', ?, ?, 0)"));
+				"INSERT IGNORE users (username, first_name, last_name, email, "
+					"salt, password, type) "
+				"VALUES ('sim', 'sim', 'sim', 'sim@sim', ?, ?, 0)"));
 			stmt.setString(1, salt);
 			stmt.setString(2, sha3_512(salt + "sim"));
 			stmt.executeUpdate();

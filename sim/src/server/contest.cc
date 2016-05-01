@@ -210,7 +210,7 @@ void Contest::addContest() {
 			try {
 				DB::Statement stmt = db_conn.prepare("INSERT rounds"
 						"(is_public, name, owner, item, show_ranking) "
-					"SELECT ?, ?, ?, MAX(item)+1, ? FROM rounds "
+					"SELECT ?, ?, ?, COALESCE(MAX(item)+1, 1), ? FROM rounds "
 						"WHERE parent IS NULL");
 				stmt.setBool(1, is_public);
 				stmt.setString(2, name);
@@ -229,6 +229,7 @@ void Contest::addContest() {
 				return redirect("/c");
 
 			} catch (const std::exception& e) {
+				fv.addError("Internal server error");
 				ERRLOG_CAUGHT(e);
 			}
 	}
@@ -287,9 +288,10 @@ void Contest::addRound() {
 		if (fv.noErrors())
 			try {
 				DB::Statement stmt = db_conn.prepare(
-					"INSERT rounds (parent, name, item, "
+					"INSERT rounds (parent, name, owner, item, "
 						"visible, begins, ends, full_results) "
-					"SELECT ?, ?, MAX(item)+1, ?, ?, ?, ? FROM rounds "
+					"SELECT ?, ?, 0, COALESCE(MAX(item)+1, 1), ?, ?, ?, ? "
+						"FROM rounds "
 						"WHERE parent=?");
 				stmt.setString(1, rpath->round_id);
 				stmt.setString(2, name);
@@ -327,6 +329,7 @@ void Contest::addRound() {
 				return redirect("/c/" + rpath->round_id);
 
 			} catch (const std::exception& e) {
+				fv.addError("Internal server error");
 				ERRLOG_CAUGHT(e);
 			}
 	}
@@ -468,11 +471,12 @@ void Contest::addProblem() {
 
 				// 'Transaction' begin
 				// Insert problem
-				if (1 != db_conn.executeUpdate(
-					"INSERT problems (name, owner, added) VALUES('',0,'')"))
-				{
-					THROW("Failed to problem");
-				}
+				DB::Statement stmt = db_conn.prepare(
+					"INSERT problems (name, tag, owner, added) "
+						"VALUES('', '', 0, ?)");
+				stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
+				if (1 != stmt.executeUpdate())
+					THROW("Failed to insert problem");
 
 				// Get problem_id
 				DB::Result res = db_conn.executeQuery(
@@ -486,7 +490,7 @@ void Contest::addProblem() {
 				if (1 != db_conn.executeUpdate(
 					"INSERT rounds (name, owner, item) VALUES('', 0, 0)"))
 				{
-					THROW("Failed to round");
+					THROW("Failed to insert round");
 				}
 
 				// Get round_id
@@ -518,11 +522,11 @@ void Contest::addProblem() {
 				rm_tmp_dir.reset("problems/" + problem_id);
 
 				// Commit - update problem and round
-				DB::Statement stmt = db_conn.prepare(
+				stmt = db_conn.prepare(
 					"UPDATE problems p, rounds r,"
 							"(SELECT MAX(item)+1 x FROM rounds "
 								"WHERE parent=?) t "
-						"SET p.name=?, p.tag=?, p.owner=?, p.added=?, "
+						"SET p.name=?, p.tag=?, p.owner=?, "
 							"parent=?, grandparent=?, r.name=?, item=t.x, "
 							"problem_id=? "
 						"WHERE p.id=? AND r.id=?");
@@ -531,13 +535,12 @@ void Contest::addProblem() {
 				stmt.setString(2, name);
 				stmt.setString(3, tag);
 				stmt.setString(4, Session::user_id);
-				stmt.setString(5, date("%Y-%m-%d %H:%M:%S"));
-				stmt.setString(6, rpath->round->id);
-				stmt.setString(7, rpath->contest->id);
-				stmt.setString(8, name);
+				stmt.setString(5, rpath->round->id);
+				stmt.setString(6, rpath->contest->id);
+				stmt.setString(7, name);
+				stmt.setString(8, problem_id);
 				stmt.setString(9, problem_id);
-				stmt.setString(10, problem_id);
-				stmt.setString(11, round_id);
+				stmt.setString(10, round_id);
 
 				if (2 != stmt.executeUpdate())
 					THROW("Failed to update");

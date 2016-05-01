@@ -65,29 +65,21 @@ string Session::generateId(uint length) {
 void Session::createAndOpen(const string& _user_id) noexcept(false) {
 	close();
 
-	DB::Statement stmt = db_conn.prepare("INSERT session "
-			"(id, user_id, ip, user_agent,time) VALUES(?,?,?,?,?)");
-
 	// Remove obsolete sessions
 	db_conn.executeUpdate(concat("DELETE FROM `session` WHERE time<'",
 		date("%Y-%m-%d %H:%M:%S'", time(nullptr) - SESSION_MAX_LIFETIME)));
+
+	DB::Statement stmt = db_conn.prepare("INSERT IGNORE session "
+			"(id, user_id, data, ip, user_agent, time) VALUES(?,?,'',?,?,?)");
 	stmt.setString(2, _user_id);
 	stmt.setString(3, client_ip);
 	stmt.setString(4, req->headers.get("User-Agent"));
 	stmt.setString(5, date("%Y-%m-%d %H:%M:%S"));
 
-	for (;;) {
+	do {
 		sid = generateId(SESSION_ID_LEN);
 		stmt.setString(1, sid); // TODO: parameters preserve!
-
-		try {
-			stmt.executeUpdate(); // TODO: INSERT IGNORE
-			break;
-
-		} catch (...) {
-			continue;
-		}
-	}
+	} while (stmt.executeUpdate() == 0);
 
 	resp.setCookie("session", sid, time(nullptr) + SESSION_MAX_LIFETIME, "/",
 		"", true);
