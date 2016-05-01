@@ -34,15 +34,16 @@ string Spawner::receiveErrorMessage(int status, int fd) {
 };
 
 string getCWD() {
-	unique_ptr<char[], delete_using_free<char>> buff(get_current_dir_name());
-	if (!buff || buff[0] != '/') {
-		if (buff)
-			errno = ENOENT; // Improper path, but get_current_dir_name() succeed
+	array<char, PATH_MAX> buff;
+	if (getcwd(buff.data(), buff.size()))
+		THROW("Failed to get CWD", error(errno));
 
+	if (buff[0] != '/') {
+		errno = ENOENT; // Improper path, but getcwd() succeed
 		THROW("Failed to get CWD", error(errno));
 	}
 
-	string res(buff.get());
+	string res(buff.data());
 	if (res.back() != '/')
 		res += '/';
 

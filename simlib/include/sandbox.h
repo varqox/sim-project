@@ -69,6 +69,7 @@ public:
 			int limit;
 		};
 
+		// TODO: try to remove counter and do arch checks in isSyscallExitAllowed()
 		int8_t counter = 0; // number of early isSyscallEntryAllowed() calls
 		int8_t arch = -1; // arch - architecture: 0 - i386, 1 - x86_64
 		static_assert(ARCH_i386 == 0 && ARCH_x86_64 == 1,
@@ -96,11 +97,183 @@ public:
 
 		std::string error_message;
 
+		/// Check whether syscall @p syscall lies in proper syscall_list,
+		/// it is important to call isSyscallEntryAllowed(@p syscall) before
+		/// calling isSyscallIn() (due to architecture detection issues)
+		template<size_t N1, size_t N2>
+		bool isSyscallIn(int syscall,
+			const std::array<int, N1>& syscall_list_i386,
+			const std::array<int, N2>& syscall_list_x86_64);
+
+		/// Check whether syscall @p syscall is allowed
 		template<size_t N1, size_t N2>
 		bool isSyscallEntryAllowed(pid_t pid, int syscall,
 			const std::array<int, N1>& allowed_syscalls_i386,
 			const std::array<int, N2>& allowed_syscalls_x86_64,
 			const std::vector<std::string>& allowed_files);
+
+		bool isSyscallEntryAllowed(pid_t pid, int syscall,
+			const std::vector<std::string>& allowed_files)
+		{
+			constexpr std::array<int, 83> allowed_syscalls_i386 {{
+				1, // SYS_exit
+				3, // SYS_read
+				4, // SYS_write
+				6, // SYS_close
+				13, // SYS_time
+				19, // SYS_lseek TODO
+				20, // SYS_getpid
+				24, // SYS_getuid
+				27, // SYS_alarm
+				29, // SYS_pause
+				41, // SYS_dup
+				45, // SYS_brk
+				47, // SYS_getgid
+				49, // SYS_geteuid
+				50, // SYS_getegid
+				63, // SYS_dup2
+				67, // SYS_sigaction
+				72, // SYS_sigsuspend
+				73, // SYS_sigpending
+				76, // SYS_getrlimit
+				78, // SYS_gettimeofday
+				82, // SYS_select
+				90, // SYS_mmap
+				91, // SYS_munmap
+				100, // SYS_fstatfs
+				108, // SYS_fstat
+				118, // SYS_fsync
+				125, // SYS_mprotect
+				140, // SYS__llseek TODO
+				142, // SYS__newselect
+				143, // SYS_flock
+				144, // SYS_msync
+				145, // SYS_readv
+				146, // SYS_writev
+				148, // SYS_fdatasync
+				150, // SYS_mlock
+				151, // SYS_munlock
+				152, // SYS_mlockall
+				153, // SYS_munlockall
+				162, // SYS_nanosleep
+				163, // SYS_mremap
+				168, // SYS_poll
+				174, // SYS_rt_sigaction
+				175, // SYS_rt_sigprocmask
+				176, // SYS_rt_sigpending
+				177, // SYS_rt_sigtimedwait
+				179, // SYS_rt_sigsuspend
+				180, // SYS_pread64
+				181, // SYS_pwrite64
+				184, // SYS_capget
+				187, // SYS_sendfile
+				191, // SYS_ugetrlimit
+				192, // SYS_mmap2
+				197, // SYS_fstat64
+				199, // SYS_getuid32
+				200, // SYS_getgid32
+				201, // SYS_geteuid32
+				202, // SYS_getegid32
+				219, // SYS_madvise
+				224, // SYS_gettid
+				231, // SYS_fgetxattr
+				232, // SYS_listxattr
+				237, // SYS_fremovexattr
+				239, // SYS_sendfile64
+				240, // SYS_futex
+				244, // SYS_get_thread_area
+				250, // SYS_fadvise64
+				252, // SYS_exit_group
+				265, // SYS_clock_gettime
+				266, // SYS_clock_getres
+				267, // SYS_clock_nanosleep
+				269, // SYS_fstatfs64
+				272, // SYS_fadvise64_64
+				308, // SYS_pselect6
+				309, // SYS_ppoll
+				312, // SYS_get_robust_list
+				323, // SYS_eventfd
+				328, // SYS_eventfd2
+				330, // SYS_dup3
+				333, // SYS_preadv
+				334, // SYS_pwritev
+				355, // SYS_getrandom
+				376, // SYS_mlock2
+			}};
+			constexpr std::array<int, 68> allowed_syscalls_x86_64 {{
+				0, // SYS_read
+				1, // SYS_write
+				3, // SYS_close
+				5, // SYS_fstat
+				7, // SYS_poll
+				8, // SYS_lseek TODO
+				9, // SYS_mmap
+				10, // SYS_mprotect
+				11, // SYS_munmap
+				12, // SYS_brk
+				13, // SYS_rt_sigaction
+				14, // SYS_rt_sigprocmask
+				17, // SYS_pread64
+				18, // SYS_pwrite64
+				19, // SYS_readv
+				20, // SYS_writev
+				23, // SYS_select
+				25, // SYS_mremap
+				26, // SYS_msync
+				28, // SYS_madvise
+				32, // SYS_dup
+				33, // SYS_dup2
+				34, // SYS_pause
+				35, // SYS_nanosleep
+				37, // SYS_alarm
+				39, // SYS_getpid
+				40, // SYS_sendfile
+				60, // SYS_exit
+				73, // SYS_flock
+				74, // SYS_fsync
+				75, // SYS_fdatasync
+				96, // SYS_gettimeofday
+				97, // SYS_getrlimi
+				102, // SYS_getuid
+				104, // SYS_getgid
+				107, // SYS_geteuid
+				108, // SYS_getegid
+				125, // SYS_capget
+				127, // SYS_rt_sigpending
+				128, // SYS_rt_sigtimedwait
+				130, // SYS_rt_sigsuspend
+				138, // SYS_fstatfs
+				149, // SYS_mlock
+				150, // SYS_munlock
+				151, // SYS_mlockall
+				152, // SYS_munlockall
+				186, // SYS_gettid
+				193, // SYS_fgetxattr
+				196, // SYS_flistxattr
+				199, // SYS_fremovexattr
+				201, // SYS_time
+				202, // SYS_futex
+				211, // SYS_get_thread_area
+				221, // SYS_fadvise64
+				228, // SYS_clock_gettime
+				229, // SYS_clock_getres
+				230, // SYS_clock_nanosleep
+				231, // SYS_exit_group
+				270, // SYS_pselect6
+				271, // SYS_ppoll
+				274, // SYS_get_robust_list
+				284, // SYS_eventfd
+				290, // SYS_eventfd2
+				292, // SYS_dup3
+				295, // SYS_preadv
+				296, // SYS_pwritev
+				318, // SYS_getrandom
+				325, // SYS_mlock2t
+			}};
+
+			return isSyscallEntryAllowed(pid, syscall, allowed_syscalls_i386,
+				allowed_syscalls_x86_64, allowed_files);
+		}
 
 	public:
 		DefaultCallback() = default;
@@ -108,51 +281,7 @@ public:
 		virtual ~DefaultCallback() = default;
 
 		bool isSyscallEntryAllowed(pid_t pid, int syscall) {
-			constexpr std::array<int, 20> allowed_syscalls_i386 {{
-				1, // SYS_exit
-				3, // SYS_read
-				4, // SYS_write
-				6, // SYS_close
-				13, // SYS_time
-				45, // SYS_brk
-				54, // SYS_ioctl
-				90, // SYS_mmap
-				91, // SYS_munmap
-				108, // SYS_fstat
-				125, // SYS_mprotect
-				145, // SYS_readv
-				146, // SYS_writev
-				174, // SYS_rt_sigaction
-				175, // SYS_rt_sigprocmask
-				192, // SYS_mmap2
-				197, // SYS_fstat64
-				224, // SYS_gettid
-				252, // SYS_exit_group
-				270, // SYS_tgkill
-			}};
-			constexpr std::array<int, 18> allowed_syscalls_x86_64 {{
-				0, // SYS_read
-				1, // SYS_write
-				3, // SYS_close
-				5, // SYS_fstat
-				9, // SYS_mmap
-				10, // SYS_mprotect
-				11, // SYS_munmap
-				12, // SYS_brk
-				13, // SYS_rt_sigaction
-				14, // SYS_rt_sigprocmask
-				16, // SYS_ioctl
-				19, // SYS_readv
-				20, // SYS_writev
-				60, // SYS_exit
-				186, // SYS_gettid
-				201, // SYS_time
-				231, // SYS_exit_group
-				234, // SYS_tgkill
-			}};
-
-			return isSyscallEntryAllowed(pid, syscall, allowed_syscalls_i386,
-				allowed_syscalls_x86_64, {});
+			return isSyscallEntryAllowed(pid, syscall, {});
 		}
 
 		bool isSyscallExitAllowed(pid_t pid, int syscall);
@@ -301,6 +430,17 @@ struct Sandbox::x86_64_user_regset {
 };
 
 template<size_t N1, size_t N2>
+bool Sandbox::DefaultCallback::isSyscallIn(int syscall,
+	const std::array<int, N1>& syscall_list_i386,
+	const std::array<int, N2>& syscall_list_x86_64)
+{
+	if (arch == ARCH_i386)
+		return binary_search(syscall_list_i386, syscall);
+
+	return binary_search(syscall_list_x86_64, syscall);
+}
+
+template<size_t N1, size_t N2>
 bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 	const std::array<int, N1>& allowed_syscalls_i386,
 	const std::array<int, N2>& allowed_syscalls_x86_64,
@@ -313,13 +453,8 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 	}
 
 	// Check if syscall is allowed
-	if (arch == ARCH_i386) {
-		if (binary_search(allowed_syscalls_i386, syscall))
-			return true;
-	} else {
-		if (binary_search(allowed_syscalls_x86_64, syscall))
-			return true;
-	}
+	if (isSyscallIn(syscall, allowed_syscalls_i386, allowed_syscalls_x86_64))
+		return true;
 
 	// Check if syscall is limited
 	for (Pair& i : limited_syscalls[arch])
@@ -460,8 +595,8 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 				long arg2 = ptrace(PTRACE_PEEKUSER, cpid,
 					offsetof(i386_user_regset, ecx), 0);
 #endif
-				stdlog("syscall: ", toString(syscall), '(',
-					toString(arg1), ", ", toString(arg2), ", ...) -> ",
+				stdlog("[", toString(cpid), "] syscall: ", toString(syscall),
+					'(', toString(arg1), ", ", toString(arg2), ", ...) -> ",
 					toString(ret_val));
 			)
 
