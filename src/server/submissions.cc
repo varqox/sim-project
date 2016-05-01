@@ -63,8 +63,9 @@ void Contest::submit(bool admin_view) {
 				// Insert submission to `submissions`
 				DB::Statement stmt = db_conn.prepare("INSERT submissions "
 						"(user_id, problem_id, round_id, parent_round_id, "
-							"contest_round_id, submit_time, queued) "
-						"VALUES(?, ?, ?, ?, ?, ?, ?)");
+							"contest_round_id, submit_time, queued,"
+							"initial_report, final_report) "
+						"VALUES(?, ?, ?, ?, ?, ?, ?, '', '')");
 				stmt.setString(1, Session::user_id);
 				stmt.setString(2, problem_r_path->problem->problem_id);
 				stmt.setString(3, problem_r_path->problem->id);
@@ -500,7 +501,7 @@ void Contest::submission() {
 		}
 
 		string initial_report = res[10];
-		if (initial_report.size())
+		if (initial_report.size()) // TODO: fix bug - empty initial report table
 			append(initial_report);
 
 		append("</div>");
