@@ -427,7 +427,7 @@ void Contest::submission() {
 		string score = res[5];
 		string problem_name = res[6];
 		string problem_tag = res[7];
-		string user = concat(res[8], ' ', res[9], " (", res[10], ')');
+		string full_name = concat(res[8], ' ', res[9]);
 
 		append("<div class=\"submission-info\">\n"
 			"<div>\n"
@@ -462,12 +462,12 @@ void Contest::submission() {
 
 		if (admin_view)
 			append("<td><a href=\"/u/", submission_user_id, "\">",
-				user, "</a></td>");
+					res[10], "</a> (", htmlSpecialChars(full_name), ")</td>");
 
 		append("<td>", htmlSpecialChars(
 			concat(problem_name, " (", problem_tag, ')')), "</td>"
-						"<td>", htmlSpecialChars(submit_time), "</td>"
-						"<td");
+				"<td>", htmlSpecialChars(submit_time), "</td>"
+				"<td");
 
 		if (submission_status == "ok")
 			append(" class=\"ok\"");
@@ -479,12 +479,12 @@ void Contest::submission() {
 			append(" class=\"judge-error\"");
 
 		append('>', submissionStatusDescription(submission_status),
-							"</td>"
+						"</td>"
 						"<td>", (admin_view ||
 							rpath->round->full_results.empty() ||
 							rpath->round->full_results <=
 								date("%Y-%m-%d %H:%M:%S") ? score : ""),
-							"</td>"
+						"</td>"
 					"</tr>\n"
 				"</tbody>\n"
 			"</table>\n",
@@ -563,7 +563,9 @@ void Contest::submissions(bool admin_view) {
 		append("<table class=\"submissions\">\n"
 			"<thead>\n"
 				"<tr>",
-					(admin_view ? "<th class=\"user\">User</th>" : ""),
+					(admin_view ? "<th class=\"username\">Username</th>"
+							"<th class=\"full-name\">Full name</th>"
+						: ""),
 					"<th class=\"time\">Submission time</th>"
 					"<th class=\"problem\">Problem</th>"
 					"<th class=\"status\">Status</th>"
@@ -596,9 +598,9 @@ void Contest::submissions(bool admin_view) {
 			append("<tr>");
 			// User
 			if (admin_view)
-				append("<td><a href=\"/u/", res[10], "\">",
-					htmlSpecialChars(concat(res[11], ' ', res[12], " (",
-						res[13], ')')), "</a></td>");
+				append("<td><a href=\"/u/", res[10], "\">", res[13],"</a></td>"
+					"<td>", htmlSpecialChars(concat(res[11], ' ', res[12])),
+					"</td>");
 			// Rest
 			append("<td><a href=\"/s/", res[1], "\">",
 					res[2], "</a></td>"
