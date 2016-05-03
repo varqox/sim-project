@@ -271,8 +271,8 @@ void Contest::submission() {
 
 		// Get submission
 		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
-			"status, score, name, tag, first_name, last_name, initial_report, "
-			"final_report");
+			"status, score, name, tag, first_name, last_name, username, "
+			"initial_report, final_report");
 		DB::Statement stmt = db_conn.prepare(
 			concat("SELECT user_id, round_id", columns, " "
 				"FROM submissions s, problems p, users u "
@@ -427,7 +427,7 @@ void Contest::submission() {
 		string score = res[5];
 		string problem_name = res[6];
 		string problem_tag = res[7];
-		string user_name = concat(res[8], ' ', res[9]);
+		string user = concat(res[8], ' ', res[9], " (", res[10], ')');
 
 		append("<div class=\"submission-info\">\n"
 			"<div>\n"
@@ -462,7 +462,7 @@ void Contest::submission() {
 
 		if (admin_view)
 			append("<td><a href=\"/u/", submission_user_id, "\">",
-				user_name, "</a></td>");
+				user, "</a></td>");
 
 		append("<td>", htmlSpecialChars(
 			concat(problem_name, " (", problem_tag, ')')), "</td>"
@@ -495,12 +495,12 @@ void Contest::submission() {
 		if (admin_view || rpath->round->full_results.empty() ||
 			rpath->round->full_results <= date("%Y-%m-%d %H:%M:%S"))
 		{
-			string final_report = res[11];
+			string final_report = res[12];
 			if (final_report.size())
 				append(final_report);
 		}
 
-		string initial_report = res[10];
+		string initial_report = res[11];
 		if (initial_report.size()) // TODO: fix bug - empty initial report table
 			append(initial_report);
 
@@ -540,7 +540,8 @@ void Contest::submissions(bool admin_view) {
 
 		DB::Statement stmt = db_conn.prepare(admin_view ?
 				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
-					"r.name, s.status, s.score, s.final, s.user_id, u.username "
+					"r.name, s.status, s.score, s.final, s.user_id, "
+					"u.first_name, u.last_name, u.username "
 				"FROM submissions s, rounds r, rounds r2, users u "
 				"WHERE s.", param_column, "=? AND s.round_id=r.id "
 					"AND r.parent=r2.id AND s.user_id=u.id ORDER BY s.id DESC")
@@ -596,7 +597,8 @@ void Contest::submissions(bool admin_view) {
 			// User
 			if (admin_view)
 				append("<td><a href=\"/u/", res[10], "\">",
-					htmlSpecialChars(res[11]), "</a></td>");
+					htmlSpecialChars(concat(res[11], ' ', res[12], " (",
+						res[13], ')')), "</a></td>");
 			// Rest
 			append("<td><a href=\"/s/", res[1], "\">",
 					res[2], "</a></td>"
