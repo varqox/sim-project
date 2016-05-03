@@ -308,6 +308,9 @@ string obtainCheckerOutput(int fd, size_t max_length) noexcept(false) {
 		} else if (k == 0) {
 			// We have read whole checker output
 			res.resize(pos);
+			// Remove trailing white characters
+			while (isspace(res.back()))
+				res.pop_back();
 			return res;
 
 		} else if (errno != EINTR)

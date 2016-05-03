@@ -7,29 +7,20 @@ using std::array;
 using std::string;
 using std::vector;
 
-#define USER_REGS (arch ? user_regs.x86_64_regs : user_regs.i386_regs)
-#define RES (arch ? user_regs.x86_64_regs.rax : user_regs.i386_regs.eax)
-#define ARG1 (arch ? user_regs.x86_64_regs.rdi : user_regs.i386_regs.ebx)
-#define ARG2 (arch ? user_regs.x86_64_regs.rsi : user_regs.i386_regs.ecx)
-#define ARG3 (arch ? user_regs.x86_64_regs.rdx : user_regs.i386_regs.edx)
-#define ARG4 (arch ? user_regs.x86_64_regs.r10 : user_regs.i386_regs.esi)
-#define ARG5 (arch ? user_regs.x86_64_regs.r8 : user_regs.i386_regs.edi)
-#define ARG6 (arch ? user_regs.x86_64_regs.r9 : user_regs.i386_regs.ebp)
+#define USER_REGS (arch ? regs.uregs.x86_64_regs : regs.uregs.i386_regs)
+#define RES (arch ? regs.uregs.x86_64_regs.rax : regs.uregs.i386_regs.eax)
+#define ARG1 (arch ? regs.uregs.x86_64_regs.rdi : regs.uregs.i386_regs.ebx)
+#define ARG2 (arch ? regs.uregs.x86_64_regs.rsi : regs.uregs.i386_regs.ecx)
+#define ARG3 (arch ? regs.uregs.x86_64_regs.rdx : regs.uregs.i386_regs.edx)
+#define ARG4 (arch ? regs.uregs.x86_64_regs.r10 : regs.uregs.i386_regs.esi)
+#define ARG5 (arch ? regs.uregs.x86_64_regs.r8 : regs.uregs.i386_regs.edi)
+#define ARG6 (arch ? regs.uregs.x86_64_regs.r9 : regs.uregs.i386_regs.ebp)
 
-bool Sandbox::CallbackBase::isSysOpenAllowed(pid_t pid, int arch,
+bool Sandbox::CallbackBase::isSysOpenAllowed(pid_t pid,
 	const vector<string>& allowed_files)
 {
-	union user_regs_union {
-		i386_user_regset i386_regs;
-		x86_64_user_regset x86_64_regs;
-	} user_regs;
-
-	struct iovec ivo = {
-		&user_regs,
-		sizeof(user_regs)
-	};
-	if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
-		THROW("Error: ptrace(PTRACE_GETREGS)", error(errno));
+	Registers regs;
+	regs.getRegs(pid);
 
 	if (ARG1 == 0) // NULL is first argument
 		return true;
@@ -77,39 +68,59 @@ bool Sandbox::CallbackBase::isSysOpenAllowed(pid_t pid, int arch,
 null_path:
 	// Set NULL as first argument to open
 	if (arch)
-		user_regs.x86_64_regs.rdi = 0;
+		regs.uregs.x86_64_regs.rdi = 0;
 	else
-		user_regs.i386_regs.ebx = 0;
+		regs.uregs.i386_regs.ebx = 0;
 
-	// Update traced process registers
-	ivo.iov_base = &user_regs;
-	if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
-		THROW("Error: ptrace(PTRACE_SETREGS)", error(errno));
+	regs.setRegs(pid); // Update traced process registers
 
 	return true; // Allow to open NULL
 }
 
+bool Sandbox::CallbackBase::isSysLseekAllowed(pid_t pid) {
+	Registers regs;
+	regs.getRegs(pid);
+
+	// Disallow lseek on stdin, stdout and stderr
+	array<int, 3> stdfiles {{STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO}};
+	if (std::find(stdfiles.begin(), stdfiles.end(), ARG1) == stdfiles.end())
+		return true;
+
+	// Set -1 as first argument to lseek
+	if (arch)
+		regs.uregs.x86_64_regs.rdi = -1;
+	else
+		regs.uregs.i386_regs.ebx = -1;
+
+	regs.setRegs(pid); // Update traced process registers
+
+	return true; // Allow to lseek -1
+}
+
 bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
+	constexpr int sys_execve[2] = {
+		11, // SYS_execve - i386
+		59, // SYS_execve - x86_64
+	};
+	constexpr int sys_execveat[2] = {
+		358, // SYS_execve - i386
+		322, // SYS_execve - x86_64
+	};
 	constexpr int sys_brk[2] = {
 		45, // SYS_brk - i386
 		12, // SYS_brk - x86_64
 	};
+
+	if (syscall == sys_execve[arch] || syscall == sys_execveat[arch])
+		detectArchitecture(pid);
+
 	if (syscall != sys_brk[arch])
 		return true;
 
 	/* syscall == SYS_brk */
 
-	union user_regs_union {
-		i386_user_regset i386_regs;
-		x86_64_user_regset x86_64_regs;
-	} user_regs;
-
-	struct iovec ivo = {
-		&user_regs,
-		sizeof(user_regs)
-	};
-	if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
-		THROW("Error: ptrace(PTRACE_GETREGS)", error(errno));
+	Registers regs;
+	regs.getRegs(pid);
 
 	// Count unsuccessful series of SYS_brk calls
 	if (ARG1 <= RES) {

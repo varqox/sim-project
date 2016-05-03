@@ -14,23 +14,40 @@ public:
 
 	struct x86_64_user_regset;
 
+private:
+	struct Registers;
+
+public:
 	class CallbackBase {
 	protected:
+		int8_t arch = -1; // arch - architecture: 0 - i386, 1 - x86_64
+
 		/**
 		 * @brief Checks whether syscall open(2) is allowed, if not, tries to
 		 *   modify it (by replacing filename with nullptr) so that syscall will
 		 *   fail
 		 *
 		 * @param pid pid of traced process (via ptrace)
-		 * @param arch architecture: 0 - i386, 1 - x86_64
 		 * @param allowed_filed files which are allowed to be opened
 		 *
 		 * @return true if call is allowed (modified if needed), false otherwise
 		 */
-		bool isSysOpenAllowed(pid_t pid, int arch,
+		bool isSysOpenAllowed(pid_t pid,
 			const std::vector<std::string>& allowed_files = {});
 
+		/**
+		 * @brief Checks whether syscall lseek(2) is allowed, if not, tries to
+		 *   modify it (by replacing fd with -1) so that syscall will fail
+		 *
+		 * @param pid pid of traced process (via ptrace)
+		 *
+		 * @return true if call is allowed (modified if needed), false otherwise
+		 */
+		bool isSysLseekAllowed(pid_t pid);
+
 	public:
+		void detectArchitecture(pid_t pid) { arch = ::detectArchitecture(pid); }
+
 		/**
 		 * @brief Checks whether or not entering syscall @p syscall is allowed
 		 *
@@ -69,9 +86,6 @@ public:
 			int limit;
 		};
 
-		// TODO: try to remove counter and do arch checks in isSyscallExitAllowed()
-		int8_t counter = 0; // number of early isSyscallEntryAllowed() calls
-		int8_t arch = -1; // arch - architecture: 0 - i386, 1 - x86_64
 		static_assert(ARCH_i386 == 0 && ARCH_x86_64 == 1,
 			"Invalid values of ARCH_ constants");
 		std::vector<Pair> limited_syscalls[2] = {
@@ -97,9 +111,7 @@ public:
 
 		std::string error_message;
 
-		/// Check whether syscall @p syscall lies in proper syscall_list,
-		/// it is important to call isSyscallEntryAllowed(@p syscall) before
-		/// calling isSyscallIn() (due to architecture detection issues)
+		/// Check whether syscall @p syscall lies in proper syscall_list
 		template<size_t N1, size_t N2>
 		bool isSyscallIn(int syscall,
 			const std::array<int, N1>& syscall_list_i386,
@@ -115,23 +127,20 @@ public:
 		bool isSyscallEntryAllowed(pid_t pid, int syscall,
 			const std::vector<std::string>& allowed_files)
 		{
-			constexpr std::array<int, 83> allowed_syscalls_i386 {{
+			constexpr std::array<int, 77> allowed_syscalls_i386 {{
 				1, // SYS_exit
 				3, // SYS_read
 				4, // SYS_write
 				6, // SYS_close
 				13, // SYS_time
-				19, // SYS_lseek TODO
 				20, // SYS_getpid
 				24, // SYS_getuid
 				27, // SYS_alarm
 				29, // SYS_pause
-				41, // SYS_dup
 				45, // SYS_brk
 				47, // SYS_getgid
 				49, // SYS_geteuid
 				50, // SYS_getegid
-				63, // SYS_dup2
 				67, // SYS_sigaction
 				72, // SYS_sigsuspend
 				73, // SYS_sigpending
@@ -144,7 +153,6 @@ public:
 				108, // SYS_fstat
 				118, // SYS_fsync
 				125, // SYS_mprotect
-				140, // SYS__llseek TODO
 				142, // SYS__newselect
 				143, // SYS_flock
 				144, // SYS_msync
@@ -178,7 +186,6 @@ public:
 				224, // SYS_gettid
 				231, // SYS_fgetxattr
 				232, // SYS_listxattr
-				237, // SYS_fremovexattr
 				239, // SYS_sendfile64
 				240, // SYS_futex
 				244, // SYS_get_thread_area
@@ -194,19 +201,17 @@ public:
 				312, // SYS_get_robust_list
 				323, // SYS_eventfd
 				328, // SYS_eventfd2
-				330, // SYS_dup3
 				333, // SYS_preadv
 				334, // SYS_pwritev
 				355, // SYS_getrandom
 				376, // SYS_mlock2
 			}};
-			constexpr std::array<int, 68> allowed_syscalls_x86_64 {{
+			constexpr std::array<int, 63> allowed_syscalls_x86_64 {{
 				0, // SYS_read
 				1, // SYS_write
 				3, // SYS_close
 				5, // SYS_fstat
 				7, // SYS_poll
-				8, // SYS_lseek TODO
 				9, // SYS_mmap
 				10, // SYS_mprotect
 				11, // SYS_munmap
@@ -221,8 +226,6 @@ public:
 				25, // SYS_mremap
 				26, // SYS_msync
 				28, // SYS_madvise
-				32, // SYS_dup
-				33, // SYS_dup2
 				34, // SYS_pause
 				35, // SYS_nanosleep
 				37, // SYS_alarm
@@ -250,7 +253,6 @@ public:
 				186, // SYS_gettid
 				193, // SYS_fgetxattr
 				196, // SYS_flistxattr
-				199, // SYS_fremovexattr
 				201, // SYS_time
 				202, // SYS_futex
 				211, // SYS_get_thread_area
@@ -264,7 +266,6 @@ public:
 				274, // SYS_get_robust_list
 				284, // SYS_eventfd
 				290, // SYS_eventfd2
-				292, // SYS_dup3
 				295, // SYS_preadv
 				296, // SYS_pwritev
 				318, // SYS_getrandom
@@ -429,6 +430,34 @@ struct Sandbox::x86_64_user_regset {
 	uint64_t gs;
 };
 
+struct Sandbox::Registers {
+	union user_regs_union {
+		i386_user_regset i386_regs;
+		x86_64_user_regset x86_64_regs;
+	} uregs;
+
+	Registers() = default;
+
+	void getRegs(pid_t pid) noexcept(false) {
+		struct iovec ivo = {
+			&uregs,
+			sizeof(uregs)
+		};
+		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
+			THROW("Error: ptrace(PTRACE_GETREGS)", error(errno));
+	}
+
+	void setRegs(pid_t pid) noexcept(false) {
+		struct iovec ivo = {
+			&uregs,
+			sizeof(uregs)
+		};
+		// Update traced process registers
+		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
+			THROW("Error: ptrace(PTRACE_SETREGS)", error(errno));
+	}
+};
+
 template<size_t N1, size_t N2>
 bool Sandbox::DefaultCallback::isSyscallIn(int syscall,
 	const std::array<int, N1>& syscall_list_i386,
@@ -446,12 +475,6 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 	const std::array<int, N2>& allowed_syscalls_x86_64,
 	const std::vector<std::string>& allowed_files)
 {
-	// Detect arch (first call - before exec, second - after exec)
-	if (counter < 2) {
-		arch = detectArchitecture(pid);
-		++counter;
-	}
-
 	// Check if syscall is allowed
 	if (isSyscallIn(syscall, allowed_syscalls_i386, allowed_syscalls_x86_64))
 		return true;
@@ -466,7 +489,17 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 		2 // SYS_open - x86_64
 	};
 	if (syscall == sys_open[arch])
-		return isSysOpenAllowed(pid, arch, allowed_files);
+		return isSysOpenAllowed(pid, allowed_files);
+
+	constexpr int sys_lseek[2] = {
+		19, // SYS_lseek - i386
+		8 // SYS_lseek - x86_64
+	};
+	if (syscall == sys_lseek[arch] ||
+		(arch == ARCH_i386 && syscall == 140)) // SYS__llseek
+	{
+		return isSysLseekAllowed(pid);
+	}
 
 	return false;
 }
@@ -550,6 +583,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		}
 	};
 
+	func.detectArchitecture(cpid);
 
 	for (;;) {
 		auto exit_normally = [&]() -> ExitStat {
@@ -580,21 +614,16 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 				return exit_normally();
 
 			DEBUG_SANDBOX(
-#ifdef __x86_64__
-				long ret_val = ptrace(PTRACE_PEEKUSER, cpid,
-					offsetof(x86_64_user_regset, rax), 0);
-				long arg1 = ptrace(PTRACE_PEEKUSER, cpid,
-					offsetof(x86_64_user_regset, rdi), 0);
-				long arg2 = ptrace(PTRACE_PEEKUSER, cpid,
-					offsetof(x86_64_user_regset, rsi), 0);
-#else
-				long ret_val = ptrace(PTRACE_PEEKUSER, cpid,
-					offsetof(i386_user_regset, eax), 0);
-				long arg1 = ptrace(PTRACE_PEEKUSER, cpid,
-					offsetof(i386_user_regset, ebx), 0);
-				long arg2 = ptrace(PTRACE_PEEKUSER, cpid,
-					offsetof(i386_user_regset, ecx), 0);
-#endif
+				Registers regs;
+				regs.getRegs(cpid);
+
+				int64_t ret_val = (detectArchitecture(cpid) == ARCH_i386 ?
+					int(regs.uregs.i386_regs.eax) : regs.uregs.x86_64_regs.rax);
+				int64_t arg1 = (detectArchitecture(cpid) == ARCH_i386 ?
+					int(regs.uregs.i386_regs.ebx) : regs.uregs.x86_64_regs.rdi);
+				int64_t arg2 = (detectArchitecture(cpid) == ARCH_i386 ?
+					int(regs.uregs.i386_regs.ecx) : regs.uregs.x86_64_regs.rsi);
+
 				stdlog("[", toString(cpid), "] syscall: ", toString(syscall),
 					'(', toString(arg1), ", ", toString(arg2), ", ...) -> ",
 					toString(ret_val));
