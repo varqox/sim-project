@@ -650,7 +650,7 @@ int main() {
 		errlog("Failed to change working directory: ", e.what());
 	}
 
-	// Loggers
+	// Loggers TODO: use global log filenames
 	// Set stderr to write to server.log (stdlog writes to stderr)
 	if (freopen("server2.log", "a", stderr) == NULL) // TODO: remove '2'
 		errlog("Failed to open 'server.log'", error(errno));

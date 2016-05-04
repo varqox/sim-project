@@ -191,8 +191,8 @@ void Sim::logs() {
 	FileDescriptor fd;
 	constexpr int BYTES_TO_READ = 65536;
 
-	// server_error.log
-	if (fd.open("server_error.log", O_RDONLY | O_LARGEFILE) == -1) {
+	// Server error log
+	if (fd.open(SERVER_ERROR_LOG, O_RDONLY | O_LARGEFILE) == -1) {
 		errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
 	} else {
 		string contents = getFileContents(fd, -BYTES_TO_READ, -1);

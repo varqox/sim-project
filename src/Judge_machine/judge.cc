@@ -331,7 +331,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 			checker_args[3] = concat(tmp_dir.sname(), "answer");
 
 			if (VERBOSITY > 1)
-				tmplog("  Output validation... ");
+				tmplog("  Checker: ");
 
 			// Truncate checker_sb_opts.new_stdout
 			ftruncate(checker_sb_opts.new_stdout_fd, 0);
@@ -365,7 +365,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 			if (es.code == 0) {
 				// Test status is already set to TestResult::OK
 				if (VERBOSITY > 1)
-					tmplog("\033[1;32mPASSED\033[m");
+					tmplog("\033[1;32mOK\033[m");
 
 			// Wrong answer
 			} else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
@@ -375,7 +375,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					judge_test_report.status = JudgeResult::ERROR;
 
 				if (VERBOSITY > 1)
-					tmplog("\033[1;31mFAILED\033[m");
+					tmplog("\033[1;31mWRONG\033[m");
 
 				// Get checker output
 				string checker_output;

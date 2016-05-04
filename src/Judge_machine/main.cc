@@ -1,6 +1,7 @@
 #include "judge.h"
 
 #include <climits>
+#include <sim/constants.h>
 #include <sim/db.h>
 #include <simlib/debug.h>
 #include <simlib/process.h>
@@ -8,7 +9,7 @@
 
 using std::string;
 
-static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1 s
+static constexpr int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1 s
 static DB::Connection db_conn;
 TemporaryDirectory tmp_dir;
 unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
@@ -136,15 +137,15 @@ int main() {
 
 	// Loggers
 	try {
-		stdlog.open("judge-machine.log");
+		stdlog.open(JUDGE_LOG);
 	} catch (const std::exception& e) {
-		errlog("Failed to open 'judge-machine.log': ", e.what());
+		errlog("Failed to open '", JUDGE_LOG, "': ", e.what());
 	}
 
 	try {
-		errlog.open("judge-machine_error.log");
+		errlog.open(JUDGE_ERROR_LOG);
 	} catch (const std::exception& e) {
-		errlog("Failed to open 'judge-machine_error.log': ", e.what());
+		errlog("Failed to open '", JUDGE_ERROR_LOG, "': ", e.what());
 	}
 
 	// Install signal handlers
