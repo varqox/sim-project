@@ -139,35 +139,43 @@ Template::TemplateEnder Contest::contestTemplate(const StringView& title,
 	bool &admin_access = rpath->admin_access;
 
 	if (admin_access) {
-		append( "<a href=\"/c/add\">Add contest</a>\n"
-			"<span>CONTEST ADMINISTRATION</span>\n");
+		append("<span>CONTEST ADMINISTRATION</span>\n"
+			// Adding
+			"<div class=\"dropright-hover\">"
+				"<a class=\"dropright-hover-toggle\">Add</a>\n"
+				"<ul>\n"
+					"<a href=\"/c/add\">Contest</a>\n"
+					"<a href=\"/c/", rpath->contest->id, "/add\">Round</a>\n");
 
-		// Adding
-		append("<a href=\"/c/", rpath->contest->id, "/add\">Add round</a>\n");
 		if (rpath->type >= ROUND)
-			append("<a href=\"/c/", rpath->round->id, "/add\">"
-				"Add problem</a>\n");
+			append("<a href=\"/c/", rpath->round->id, "/add\">Problem</a>\n");
+
+		append("</ul>\n"
+			"</div>\n"
 
 		// Editing
-		append("<a href=\"/c/", rpath->contest->id, "/edit\">"
-			"Edit contest</a>\n");
-		if (rpath->type >= ROUND)
-			append("<a href=\"/c/", rpath->round->id, "/edit\">"
-				"Edit round</a>\n");
-		if (rpath->type == PROBLEM)
-			append("<a href=\"/c/", round_id, "/edit\">Edit problem</a>\n");
+			"<div class=\"dropright-hover\">"
+				"<a class=\"dropright-hover-toggle\">Edit</a>\n"
+			"<ul>\n"
+				"<a href=\"/c/", rpath->contest->id, "/edit\">Contest</a>\n");
 
-		append("<hr/>"
-				"<a href=\"/c/", rpath->contest->id, "\">Contest dashboard</a>\n"
-				"<a href=\"/c/", rpath->contest->id, "/problems\">Problems</a>\n"
-				"<a href=\"/c/", rpath->contest->id, "/files\">Files</a>\n"
-				"<a href=\"/c/", round_id, "/submit\">Submit a solution</a>\n"
-				"<a href=\"/c/", rpath->contest->id, "/submissions\">"
-					"Submissions</a>\n"
-				"<a href=\"/c/", round_id, "/submissions\">"
-					"Local submissions</a>\n"
-				"<a href=\"/c/", rpath->contest->id, "/ranking\">Ranking</a>\n"
-				"<span>OBSERVER MENU</span>\n");
+		if (rpath->type >= ROUND)
+			append("<a href=\"/c/", rpath->round->id, "/edit\">Round</a>\n");
+		if (rpath->type == PROBLEM)
+			append("<a href=\"/c/", round_id, "/edit\">Problem</a>\n");
+
+		append("</ul>\n"
+			"</div>\n"
+			"<hr/>\n"
+			"<a href=\"/c/", rpath->contest->id, "\">Contest dashboard</a>\n"
+			"<a href=\"/c/", rpath->contest->id, "/problems\">Problems</a>\n"
+			"<a href=\"/c/", rpath->contest->id, "/files\">Files</a>\n"
+			"<a href=\"/c/", round_id, "/submit\">Submit a solution</a>\n"
+			"<a href=\"/c/", rpath->contest->id, "/submissions\">"
+				"Submissions</a>\n"
+			"<a href=\"/c/", round_id, "/submissions\">Local submissions</a>\n"
+			"<a href=\"/c/", rpath->contest->id, "/ranking\">Ranking</a>\n"
+			"<span>OBSERVER MENU</span>\n");
 	}
 
 	append("<a href=\"/c/", rpath->contest->id, (admin_access ? "/n" : ""),
