@@ -5,6 +5,12 @@
 Template::TemplateEnder Template::baseTemplate(const StringView& title,
 	const StringView& styles, const StringView& scripts)
 {
+	// Protect from clickjacking
+	resp.headers["X-Frame-Options"] = "DENY";
+	resp.headers["Content-Security-Policy"] = "frame-ancestors 'none'";
+	// Protect from XSS attack
+	resp.headers["X-XSS-Protection"] = "1; mode=block";
+
 	resp.headers["Content-Type"] = "text/html; charset=utf-8";
 	resp.content = "";
 
