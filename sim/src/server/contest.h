@@ -128,6 +128,9 @@ private:
 	void submit(bool admin_view);
 
 protected:
+	void deleteSubmission(const std::string& submission_id,
+		const std::string& submission_user_id);
+
 	void submission();
 
 private:

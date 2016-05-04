@@ -44,7 +44,7 @@ Template::TemplateEnder Template::baseTemplate(const StringView& title,
 		append("<div class=\"dropdown\">\n"
 				"<a class=\"user dropdown-toggle\">"
 					"<strong>", htmlSpecialChars(Session::username), "</strong>"
-					"<b class=\"caret\"></b></a>\n"
+				"</a>\n"
 				"<ul>\n"
 					"<a href=\"/u/", Session::user_id, "\">Edit profile</a>\n"
 					"<a href=\"/u/", Session::user_id,

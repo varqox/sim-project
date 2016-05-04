@@ -246,6 +246,60 @@ void Contest::submit(bool admin_view) {
 			"</p>");
 }
 
+void Contest::deleteSubmission(const string& submission_id,
+	const string& submission_user_id)
+{
+	FormValidator fv(req->form_data);
+	while (req->method == server::HttpRequest::POST
+		&& fv.exist("delete"))
+	{
+		try {
+			// Delete submission
+			DB::Statement stmt = db_conn.prepare(
+				"DELETE FROM submissions WHERE id=?");
+			stmt.setString(1, submission_id);
+
+			if (stmt.executeUpdate() == 0) {
+				fv.addError("Deletion failed");
+				break;
+			}
+
+			// Restore `final` status
+			stmt = db_conn.prepare(
+				"UPDATE submissions SET final=1 "
+				"WHERE user_id=? AND round_id=? "
+					"AND (status='ok' OR status='error') "
+				"ORDER BY id DESC LIMIT 1");
+			stmt.setString(1, submission_user_id);
+			stmt.setString(2, rpath->round_id);
+			stmt.executeUpdate();
+
+			return redirect(concat("/c/", rpath->round_id, "/submissions"));
+
+		} catch (const std::exception& e) {
+			fv.addError("Internal server error");
+			ERRLOG_CAUGHT(e);
+		}
+	}
+
+	auto ender = contestTemplate("Delete submission");
+	printRoundPath();
+	append(fv.errors(), "<div class=\"form-container\">\n"
+			"<h1>Delete submission</h1>\n"
+			"<form method=\"post\">\n"
+				"<label class=\"field\">Are you sure to delete submission "
+				"<a href=\"/s/", submission_id, "\">", submission_id,
+					"</a>?</label>\n"
+				"<div class=\"submit-yes-no\">\n"
+					"<button class=\"btn red\" type=\"submit\" "
+						"name=\"delete\">Yes, I'm sure</button>\n"
+					"<a class=\"btn\" href=\"/s/", submission_id, "\">"
+						"No, go back</a>\n"
+				"</div>\n"
+			"</form>\n"
+		"</div>\n");
+}
+
 void Contest::submission() {
 	if (!Session::open())
 		return redirect("/login" + req->target);
@@ -260,13 +314,14 @@ void Contest::submission() {
 			DELETE, REJUDGE, DOWNLOAD, VIEW_SOURCE, NONE
 		} query = Query::NONE;
 
-		if (url_args.isNext("delete"))
+		StringView next_arg = url_args.extractNext();
+		if (next_arg == "delete")
 			query = Query::DELETE;
-		else if (url_args.isNext("rejudge"))
+		else if (next_arg == "rejudge")
 			query = Query::REJUDGE;
-		else if (url_args.isNext("download"))
+		else if (next_arg == "download")
 			query = Query::DOWNLOAD;
-		else if (url_args.isNext("source"))
+		else if (next_arg == "source")
 			query = Query::VIEW_SOURCE;
 
 		// Get submission
@@ -296,68 +351,17 @@ void Contest::submission() {
 
 		// Check if user forces observer view
 		bool admin_view = rpath->admin_access;
-		if (url_args.isNext("n")) {
+		if (next_arg == "n")
+			admin_view = false;
+		else if (url_args.isNext("n")) {
 			url_args.extractNext();
 			admin_view = false;
 		}
 
 		// Delete
-		if (query == Query::DELETE) {
-			if (!admin_view)
-				return error403();
-
-			FormValidator fv(req->form_data);
-			while (req->method == server::HttpRequest::POST
-				&& fv.exist("delete"))
-			{
-				try {
-					// Delete submission
-					stmt = db_conn.prepare(
-						"DELETE FROM submissions WHERE id=?");
-					stmt.setString(1, submission_id);
-
-					if (stmt.executeUpdate() == 0) {
-						fv.addError("Deletion failed");
-						break;
-					}
-
-					// Restore `final` status
-					stmt = db_conn.prepare(
-						"UPDATE submissions SET final=1 "
-						"WHERE user_id=? AND round_id=? "
-							"AND (status='ok' OR status='error') "
-						"ORDER BY id DESC LIMIT 1");
-					stmt.setString(1, submission_user_id);
-					stmt.setString(2, round_id);
-					stmt.executeUpdate();
-
-					return redirect(concat("/c/", round_id, "/submissions"));
-
-				} catch (const std::exception& e) {
-					fv.addError("Internal server error");
-					ERRLOG_CAUGHT(e);
-				}
-			}
-
-			auto ender = contestTemplate("Delete submission");
-			printRoundPath();
-			append(fv.errors(), "<div class=\"form-container\">\n"
-				"<h1>Delete submission</h1>\n"
-				"<form method=\"post\">\n"
-					"<label class=\"field\">Are you sure to delete submission "
-					"<a href=\"/s/", submission_id, "\">", submission_id,
-						"</a>?</label>\n"
-					"<div class=\"submit-yes-no\">\n"
-						"<button class=\"btn red\" type=\"submit\" "
-							"name=\"delete\">Yes, I'm sure</button>\n"
-						"<a class=\"btn\" href=\"/s/", submission_id, "\">"
-							"No, go back</a>\n"
-					"</div>\n"
-				"</form>\n"
-			"</div>\n");
-
-			return;
-		}
+		if (query == Query::DELETE)
+			return (admin_view ? deleteSubmission(submission_id,
+				submission_user_id) : error403());
 
 		// Rejudge
 		if (query == Query::REJUDGE) {
