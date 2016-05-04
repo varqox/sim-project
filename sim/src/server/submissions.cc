@@ -283,6 +283,11 @@ void Contest::deleteSubmission(const string& submission_id,
 		}
 	}
 
+	// Referer or submission page
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/s/", submission_id);
+
 	auto ender = contestTemplate("Delete submission");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
@@ -294,8 +299,7 @@ void Contest::deleteSubmission(const string& submission_id,
 				"<div class=\"submit-yes-no\">\n"
 					"<button class=\"btn red\" type=\"submit\" "
 						"name=\"delete\">Yes, I'm sure</button>\n"
-					"<a class=\"btn\" href=\"/s/", submission_id, "\">"
-						"No, go back</a>\n"
+					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");

@@ -250,8 +250,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer,
-					"/\">No, go back</a>\n"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
 			"</div>\n"
 		"</form>\n"
 	"</div>\n");
