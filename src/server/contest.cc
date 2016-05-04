@@ -1103,6 +1103,10 @@ void Contest::deleteContest() {
 			ERRLOG_CAUGHT(e);
 		}
 
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/c/", rpath->round_id, "/edit");
+
 	auto ender = contestTemplate("Delete contest");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
@@ -1115,8 +1119,7 @@ void Contest::deleteContest() {
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"/c/", rpath->round_id, "/edit\">"
-					"No, go back</a>\n"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
 			"</div>\n"
 		"</form>\n"
 	"</div>\n");
@@ -1148,6 +1151,10 @@ void Contest::deleteRound() {
 			ERRLOG_CAUGHT(e);
 		}
 
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/c/", rpath->round_id, "/edit");
+
 	auto ender = contestTemplate("Delete round");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
@@ -1160,8 +1167,7 @@ void Contest::deleteRound() {
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"/c/", rpath->round_id, "/edit\">"
-					"No, go back</a>\n"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
 			"</div>\n"
 		"</form>\n"
 	"</div>\n");
@@ -1192,6 +1198,10 @@ void Contest::deleteProblem() {
 			ERRLOG_CAUGHT(e);
 		}
 
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/c/", rpath->round_id, "/edit");
+
 	auto ender = contestTemplate("Delete problem");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
@@ -1204,8 +1214,7 @@ void Contest::deleteProblem() {
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"/c/", rpath->round_id, "/edit\">"
-					"No, go back</a>\n"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
 			"</div>\n"
 		"</form>\n"
 	"</div>\n");
