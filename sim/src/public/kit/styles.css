@@ -486,9 +486,6 @@ table {
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
 
-.btn-small + .btn-small {
-}
-
 /* Blue button */
 .btn.blue,
 .btn-small.blue {
@@ -1125,9 +1122,15 @@ table.submissions th {
 	line-height: 20px;
 }
 table.submissions td {
-	padding: 5px 24px 5px 8px;
+	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
+}
+table.submissions td .btn-small {
+	margin: 0 2px;
+}
+table.submissions tr > td:last-child {
+	white-space: nowrap;
 }
 
 /* Users */
@@ -1156,6 +1159,9 @@ table.users td {
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
+}
+table.users tr > td:last-child {
+	white-space: nowrap;
 }
 
 /* Files */

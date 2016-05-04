@@ -247,12 +247,12 @@ void Contest::printRoundPath(const StringView& page, bool force_normal) {
 		htmlSpecialChars(rpath->contest->name), "</a>");
 
 	if (rpath->type != CONTEST) {
-		append(" -> <a href=\"/c/", rpath->round->id,
+		append(" ~~> <a href=\"/c/", rpath->round->id,
 			(force_normal ? "/n/" : "/"), page, "\">",
 			htmlSpecialChars(rpath->round->name), "</a>");
 
 		if (rpath->type == PROBLEM)
-			append(" -> <a href=\"/c/", rpath->problem->id,
+			append(" ~~> <a href=\"/c/", rpath->problem->id,
 				(force_normal ? "/n/" : "/"), page, "\">",
 				htmlSpecialChars(rpath->problem->name), "</a>");
 	}

@@ -678,6 +678,7 @@ void User::deleteAccount() {
 			if (stmt.executeUpdate()) {
 				if (user_id == Session::user_id)
 					Session::destroy();
+
 				return redirect("/");
 			}
 
@@ -685,6 +686,10 @@ void User::deleteAccount() {
 			fv.addError("Internal server error");
 			ERRLOG_CAUGHT(e);
 		}
+
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = '/';
 
 	auto ender = userTemplate("Delete account");
 	printUser();
@@ -699,8 +704,7 @@ void User::deleteAccount() {
 				"<div class=\"submit-yes-no\">\n"
 					"<button class=\"btn red\" type=\"submit\" "
 						"name=\"delete\">Yes, I'm sure</button>\n"
-					"<a class=\"btn\" href=\"",
-							req->headers.get("Referer"), "\">"
+					"<a class=\"btn\" href=\"", referer, "\">"
 						"No, go back</a>\n"
 				"</div>\n"
 			"</form>\n"

@@ -214,6 +214,10 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	if (!rpath->admin_access)
 		return error403();
 
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/c/", rpath->round_id, "/files");
+
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
@@ -227,7 +231,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			if (BLOCK_SIGNALS(remove(concat("files/", id))))
 				THROW("remove()", error(errno));
 
-			return redirect(concat("/c/", rpath->round_id, "/files"));
+			return redirect(referer);
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
@@ -246,7 +250,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			"<div class=\"submit-yes-no\">\n"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", req->headers.get("Referer"),
+				"<a class=\"btn\" href=\"", referer,
 					"/\">No, go back</a>\n"
 			"</div>\n"
 		"</form>\n"

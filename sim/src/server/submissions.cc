@@ -279,6 +279,7 @@ void Contest::deleteSubmission(const string& submission_id,
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
 			ERRLOG_CAUGHT(e);
+			break;
 		}
 	}
 
@@ -358,12 +359,12 @@ void Contest::submission() {
 			admin_view = false;
 		}
 
-		// Delete
+		/* Delete */
 		if (query == Query::DELETE)
 			return (admin_view ? deleteSubmission(submission_id,
 				submission_user_id) : error403());
 
-		// Rejudge
+		/* Rejudge */
 		if (query == Query::REJUDGE) {
 			if (!admin_view)
 				return error403();
@@ -376,10 +377,15 @@ void Contest::submission() {
 			stmt.executeUpdate();
 			notifyJudgeServer();
 
-			return redirect(concat("/s/", submission_id));
+			// Redirect to Referer or submission page
+			string referer = req->headers.get("Referer");
+			if (referer.empty())
+				return redirect(concat("/s/", submission_id));
+
+			return redirect(referer);
 		}
 
-		// Download solution
+		/* Download solution */
 		if (query == Query::DOWNLOAD) {
 			resp.headers["Content-type"] = "application/text";
 			resp.headers["Content-Disposition"] =
@@ -393,7 +399,7 @@ void Contest::submission() {
 		auto ender = contestTemplate("Submission " + submission_id);
 		printRoundPath();
 
-		// View source
+		/* View source */
 		if (query == Query::VIEW_SOURCE) {
 			vector<string> args;
 			back_insert(args, "./CTH",
@@ -575,6 +581,7 @@ void Contest::submissions(bool admin_view) {
 					"<th class=\"status\">Status</th>"
 					"<th class=\"score\">Score</th>"
 					"<th class=\"final\">Final</th>"
+					"<th class=\"actions\">Actions</th>"
 				"</tr>\n"
 			"</thead>\n"
 			"<tbody>\n");
@@ -609,13 +616,26 @@ void Contest::submissions(bool admin_view) {
 			append("<td><a href=\"/s/", res[1], "\">",
 					res[2], "</a></td>"
 					"<td><a href=\"/c/", res[3], "\">",
-						htmlSpecialChars(res[4]), "</a> -> <a href=\"/c/",
+						htmlSpecialChars(res[4]), "</a> ~> <a href=\"/c/",
 						res[5], "\">", htmlSpecialChars(res[6]),
 						"</a></td>",
 					statusRow(res[7]),
 					"<td>", (admin_view || string(res[10]) <= current_date
 						? res[8] : ""), "</td>"
 					"<td>", (res.getBool(9) ? "Yes" : ""), "</td>"
+					"<td>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/source\">View source</a>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/download\">Download</a>");
+
+			if (admin_view)
+				append("<a class=\"btn-small blue\" href=\"/s/", res[1],
+						"/rejudge\">Rejudge</a>"
+					"<a class=\"btn-small red\" href=\"/s/", res[1],
+						"/delete\">Delete</a>");
+
+			append("</td>"
 				"<tr>\n");
 		}
 

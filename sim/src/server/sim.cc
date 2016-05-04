@@ -200,7 +200,7 @@ void Sim::logs() {
 		contents = colour(contents);
 		append(contents);
 	}
-	// TODO: more logs and show less, but make show more button
+	// TODO: more logs and show less, but add "show more" button
 
 	append("</pre>");
 }
