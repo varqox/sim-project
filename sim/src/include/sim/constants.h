@@ -32,3 +32,9 @@ constexpr unsigned FILE_DESCRIPTION_MAX_LEN = 512;
 
 // Submissions
 constexpr unsigned SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
+
+// Logs
+constexpr const char* SERVER_LOG = "logs/server.log";
+constexpr const char* SERVER_ERROR_LOG = "logs/server-error.log";
+constexpr const char* JUDGE_LOG = "logs/judge.log";
+constexpr const char* JUDGE_ERROR_LOG = "logs/judge-error.log";
