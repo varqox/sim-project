@@ -32,6 +32,7 @@ constexpr unsigned FILE_DESCRIPTION_MAX_LEN = 512;
 
 // Submissions
 constexpr unsigned SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
+constexpr unsigned SUBMISSIONS_ON_USER_PROFILE_LIMIT = 16;
 
 // Logs
 constexpr const char* SERVER_LOG = "logs/server.log";

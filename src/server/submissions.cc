@@ -274,7 +274,8 @@ void Contest::deleteSubmission(const string& submission_id,
 			stmt.setString(2, rpath->round_id);
 			stmt.executeUpdate();
 
-			return redirect(concat("/c/", rpath->round_id, "/submissions"));
+			string location = url_args.remnant().to_string();
+			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
@@ -283,16 +284,20 @@ void Contest::deleteSubmission(const string& submission_id,
 		}
 	}
 
-	// Referer or submission page
-	string referer = req->headers.get("Referer");
-	if (referer.empty())
-		referer = concat("/s/", submission_id);
-
 	auto ender = contestTemplate("Delete submission");
 	printRoundPath();
+
+	// Referer or submission page
+	string referer = req->headers.get("Referer");
+	string prev_referer = referer;
+	if (referer.empty()) {
+		referer = concat("/s/", submission_id);
+		prev_referer = concat("/c/", rpath->round_id, "/submissions");
+	}
+
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Delete submission</h1>\n"
-			"<form method=\"post\">\n"
+			"<form method=\"post\" action=\"delete/", prev_referer ,"\">\n"
 				"<label class=\"field\">Are you sure to delete submission "
 				"<a href=\"/s/", submission_id, "\">", submission_id,
 					"</a>?</label>\n"
@@ -558,12 +563,14 @@ void Contest::submissions(bool admin_view) {
 					"u.first_name, u.last_name, u.username "
 				"FROM submissions s, rounds r, rounds r2, users u "
 				"WHERE s.", param_column, "=? AND s.round_id=r.id "
-					"AND r.parent=r2.id AND s.user_id=u.id ORDER BY s.id DESC")
+					"AND s.parent_round_id=r2.id AND s.user_id=u.id "
+				"ORDER BY s.id DESC")
 			: concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
 					"r.name, s.status, s.score, s.final, r2.full_results "
 				"FROM submissions s, rounds r, rounds r2 "
 				"WHERE s.", param_column, "=? AND s.round_id=r.id "
-					"AND r.parent=r2.id AND s.user_id=? ORDER BY s.id DESC"));
+					"AND s.parent_round_id=r2.id AND s.user_id=? "
+				"ORDER BY s.id DESC"));
 		stmt.setString(1, rpath->round_id);
 		if (!admin_view)
 			stmt.setString(2, Session::user_id);
@@ -617,12 +624,14 @@ void Contest::submissions(bool admin_view) {
 					"<td>", htmlSpecialChars(concat(res[11], ' ', res[12])),
 					"</td>");
 			// Rest
-			append("<td><a href=\"/s/", res[1], "\">",
-					res[2], "</a></td>"
-					"<td><a href=\"/c/", res[3], "\">",
-						htmlSpecialChars(res[4]), "</a> ~> <a href=\"/c/",
-						res[5], "\">", htmlSpecialChars(res[6]),
-						"</a></td>",
+			append("<td><a href=\"/s/", res[1], "\">", res[2], "</a></td>"
+					"<td>"
+						"<a href=\"/c/", res[3], "\">",
+							htmlSpecialChars(res[4]), "</a>"
+						" ~> "
+						"<a href=\"/c/", res[5], "\">",
+							htmlSpecialChars(res[6]), "</a>"
+					"</td>",
 					statusRow(res[7]),
 					"<td>", (admin_view || string(res[10]) <= current_date
 						? res[8] : ""), "</td>"

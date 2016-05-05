@@ -6,6 +6,7 @@
 #include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
+#include <simlib/time.h>
 
 using std::map;
 using std::string;
@@ -67,18 +68,14 @@ Template::TemplateEnder User::userTemplate(const StringView& title,
 		return ender;
 
 	append("<ul class=\"menu\">\n"
-			"<span>YOUR ACCOUNT</span>"
-			"<a href=\"/u/", Session::user_id, "\">Edit profile</a>\n"
-			"<a href=\"/u/", Session::user_id, "/change-password\">"
-				"Change password</a>\n");
+			"<span>USER</span>"
+			"<a href=\"/u/", user_id, "\">View profile</a>"
+			"<a href=\"/u/", user_id, "/submissions\">User submissions</a>"
+			"<hr/>"
+			"<a href=\"/u/", user_id, "/edit\">Edit profile</a>"
+			"<a href=\"/u/", user_id, "/change-password\">Change password</a>"
+		"</ul>");
 
-	if (Session::user_id != user_id)
-		append("<span>VIEWED ACCOUNT</span>"
-			"<a href=\"/u/", user_id, "\">Edit profile</a>\n"
-			"<a href=\"/u/", user_id, "/change-password\">Change password"
-				"</a>\n");
-
-	append("</ul>");
 	return ender;
 }
 
@@ -125,7 +122,18 @@ void User::handle() {
 	}
 
 	// Edit account
-	editProfile();
+	if (url_args.isNext("edit")) {
+		url_args.extractNext();
+		return editProfile();
+	}
+
+	// Edit account
+	if (url_args.isNext("submissions")) {
+		url_args.extractNext();
+		return userSubmissions();
+	}
+
+	userProfile();
 }
 
 void User::login() {
@@ -355,10 +363,20 @@ void User::listUsers() {
 				"<td>", htmlSpecialChars(res[2]), "</td>"
 				"<td>", htmlSpecialChars(res[3]), "</td>"
 				"<td>", htmlSpecialChars(res[4]), "</td>"
-				"<td>", htmlSpecialChars(res[5]), "</td>"
-				"<td>", (utype >= UTYPE_NORMAL ? "Normal"
-					: (utype == UTYPE_TEACHER ? "Teacher" : "Admin")), "</td>"
-				"<td>"
+				"<td>", htmlSpecialChars(res[5]), "</td>");
+
+			switch (utype) {
+			case UTYPE_ADMIN:
+				append("<td class=\"admin\">Admin</td>");
+				break;
+			case UTYPE_TEACHER:
+				append("<td class=\"teacher\">Teacher</td>");
+				break;
+			default:
+				append("<td class=\"normal\">Normal</td>");
+			}
+
+			append("<td>"
 					"<a class=\"btn-small\" href=\"/u/", uid, "\">"
 						"View profile</a>");
 
@@ -380,6 +398,49 @@ void User::listUsers() {
 		ERRLOG_CAUGHT(e);
 		return error500();
 	}
+}
+
+void User::userProfile() {
+	auto ender = userTemplate("User profile");
+	printUser();
+	append("<div class=\"user-info\">"
+			"<div class=\"first-name\">"
+				"<label>First name</label>",
+				htmlSpecialChars(first_name),
+			"</div>"
+			"<div class=\"last-name\">"
+				"<label>Last name</label>",
+				htmlSpecialChars(last_name),
+			"</div>"
+			"<div class=\"username\">"
+				"<label>Username</label>",
+				htmlSpecialChars(username),
+			"</div>"
+			"<div class=\"type\">"
+				"<label>Account type</label>");
+
+	switch (user_type) {
+	case UTYPE_ADMIN:
+		append("<span class=\"admin\">Admin</span>");
+		break;
+
+	case UTYPE_TEACHER:
+		append("<span class=\"teacher\">Teacher</span>");
+		break;
+
+	default:
+		append("<span class=\"normal\">Normal</span>");
+	}
+
+	append("</div>"
+			"<div class=\"email\">"
+				"<label>Email</label>",
+				htmlSpecialChars(email),
+			"</div>"
+		"</div>"
+		"<h2>User submissions</h2>");
+
+	printUserSubmissions(SUBMISSIONS_ON_USER_PROFILE_LIMIT);
 }
 
 void User::editProfile() {
@@ -679,7 +740,8 @@ void User::deleteAccount() {
 				if (user_id == Session::user_id)
 					Session::destroy();
 
-				return redirect("/");
+				string location = url_args.remnant().to_string();
+				return redirect(location.empty() ? "/" : location);
 			}
 
 		} catch (const std::exception& e) {
@@ -687,15 +749,22 @@ void User::deleteAccount() {
 			ERRLOG_CAUGHT(e);
 		}
 
-	string referer = req->headers.get("Referer");
-	if (referer.empty())
-		referer = '/';
-
 	auto ender = userTemplate("Delete account");
 	printUser();
+
+	string referer = req->headers.get("Referer");
+	string prev_referer = referer;
+	if (referer.empty()) {
+		referer = '/';
+		prev_referer = '/';
+
+	// If user deletes their own account, referer may be invalid
+	} else if (user_id == Session::user_id)
+		prev_referer = '/';
+
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Delete account</h1>\n"
-			"<form method=\"post\">\n"
+			"<form method=\"post\" action=\"delete/", prev_referer ,"\">\n"
 				"<label class=\"field\">Are you sure to delete account "
 					"<a href=\"/u/", user_id, "\">",
 					htmlSpecialChars(username), "</a>, all its "
@@ -708,4 +777,113 @@ void User::deleteAccount() {
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");
+}
+
+void User::printUserSubmissions(uint limit) {
+	try {
+		string query = "SELECT s.id, s.submit_time, r3.id, r3.name, r2.id, "
+				"r2.name, r.id, r.name, s.status, s.score, s.final, "
+				"r2.full_results, r3.owner, u.type "
+			"FROM submissions s, rounds r, rounds r2, rounds r3, users u "
+			"WHERE s.user_id=? AND s.round_id=r.id AND s.parent_round_id=r2.id "
+				"AND s.contest_round_id=r3.id AND r3.owner=u.id "
+			"ORDER BY s.id DESC";
+
+		if (limit > 0)
+			back_insert(query, " LIMIT ", toString(limit));
+
+		DB::Statement stmt = db_conn.prepare(query);
+		stmt.setString(1, user_id);
+
+		DB::Result res = stmt.executeQuery();
+		if (res.rowCount() == 0) {
+			append("<p>There are no submissions to show</p>");
+			return;
+		}
+
+		append("<table class=\"submissions\">\n"
+			"<thead>\n"
+				"<tr>",
+					"<th class=\"time\">Submission time</th>"
+					"<th class=\"problem\">Problem</th>"
+					"<th class=\"status\">Status</th>"
+					"<th class=\"score\">Score</th>"
+					"<th class=\"final\">Final</th>"
+					"<th class=\"actions\">Actions</th>"
+				"</tr>\n"
+			"</thead>\n"
+			"<tbody>\n");
+
+		auto statusRow = [](const string& status) {
+			string ret = "<td";
+
+			if (status == "ok")
+				ret += " class=\"ok\">";
+			else if (status == "error")
+				ret += " class=\"wa\">";
+			else if (status == "c_error")
+				ret += " class=\"tl-rte\">";
+			else if (status == "judge_error")
+				ret += " class=\"judge-error\">";
+			else
+				ret += ">";
+
+			return back_insert(ret, submissionStatusDescription(status),
+				"</td>");
+		};
+
+		string current_date = date("%Y-%m-%d %H:%M:%S");
+		while (res.next()) {
+			append("<tr>");
+
+			bool admin_view = (res[13] == Session::user_id
+				|| Session::user_type < digitsToU<uint>(res[14])
+				|| Session::user_id == "1");
+			// Rest
+			append("<td><a href=\"/s/", res[1], "\">", res[2], "</a></td>"
+					"<td>"
+						"<a href=\"/c/", res[3], "\">",
+							htmlSpecialChars(res[4]), "</a>"
+						" ~> "
+						"<a href=\"/c/", res[5], "\">",
+							htmlSpecialChars(res[6]), "</a>"
+						" ~> "
+						"<a href=\"/c/", res[7], "\">",
+							htmlSpecialChars(res[8]), "</a>"
+					"</td>",
+					statusRow(res[9]),
+					"<td>", (admin_view || string(res[12]) <= current_date
+						? res[10] : ""), "</td>"
+					"<td>", (res.getBool(11) ? "Yes" : ""), "</td>"
+					"<td>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/source\">View source</a>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/download\">Download</a>");
+
+			if (admin_view)
+				append("<a class=\"btn-small blue\" href=\"/s/", res[1],
+						"/rejudge\">Rejudge</a>"
+					"<a class=\"btn-small red\" href=\"/s/", res[1],
+						"/delete\">Delete</a>");
+
+			append("</td>"
+				"<tr>\n");
+		}
+
+		append("</tbody>\n"
+			"</table>\n");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CAUGHT(e);
+		return error500();
+	}
+}
+
+void User::userSubmissions() {
+	auto ender = userTemplate("User submissions");
+	append("<h1>User submissions</h1>");
+
+	printUser();
+	printUserSubmissions();
 }
