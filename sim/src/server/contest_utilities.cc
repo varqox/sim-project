@@ -7,25 +7,6 @@
 using std::string;
 using std::vector;
 
-string Contest::submissionStatusDescription(const string& status) {
-	if (status == "ok")
-		return "Initial tests: OK";
-
-	if (status == "error")
-		return "Initial tests: Error";
-
-	if (status == "c_error")
-		return "Compilation failed";
-
-	if (status == "judge_error")
-		return "Judge error";
-
-	if (status == "waiting")
-		return "Pending";
-
-	return "Unknown";
-}
-
 Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 	std::unique_ptr<RoundPath> r_path(new RoundPath(round_id));
 

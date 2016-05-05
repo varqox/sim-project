@@ -52,9 +52,13 @@ Template::TemplateEnder Template::baseTemplate(const StringView& title,
 					"<strong>", htmlSpecialChars(Session::username), "</strong>"
 				"</a>\n"
 				"<ul>\n"
-					"<a href=\"/u/", Session::user_id, "\">Edit profile</a>\n"
-					"<a href=\"/u/", Session::user_id,
-						"/change-password\">Change password</a>\n"
+					"<a href=\"/u/", Session::user_id, "\">My profile</a>\n"
+					"<a href=\"/u/", Session::user_id, "/submissions\">"
+						"My submissions</a>\n"
+					"<a href=\"/u/", Session::user_id, "/edit\">"
+						"Edit profile</a>\n"
+					"<a href=\"/u/", Session::user_id, "/change-password\">"
+						"Change password</a>\n"
 					"<a href=\"/logout\">Logout</a>\n"
 				"</ul>\n"
 				"</div>");

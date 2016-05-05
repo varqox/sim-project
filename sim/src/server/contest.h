@@ -80,8 +80,6 @@ private:
 
 	// Utilities
 	// contest_utilities.cc
-	static std::string submissionStatusDescription(const std::string& status);
-
 	RoundPath* getRoundPath(const std::string& round_id);
 
 	/// Returns whether user has admin access

@@ -71,7 +71,18 @@ private:
 
 	void changePassword();
 
+	void userProfile();
+
 	void editProfile();
 
 	void deleteAccount();
+
+	/**
+	 * @brief Prints submissions table
+	 *
+	 * @param limit maximum number of submissions in table, 0 means infinity
+	 */
+	void printUserSubmissions(uint limit = 0);
+
+	void userSubmissions();
 };

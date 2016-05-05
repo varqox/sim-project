@@ -37,4 +37,5 @@ protected:
 		utime("judge-machine.notify", nullptr);
 	}
 
+	static std::string submissionStatusDescription(const std::string& status);
 };
