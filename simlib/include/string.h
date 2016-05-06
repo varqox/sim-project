@@ -135,11 +135,11 @@ public:
 	 *
 	 * @param s StringBase to compare with
 	 *
-	 * @return -1 - this < @p s, 0 - equal, 1 - this > @p s
+	 * @return <0 - this < @p s, 0 - equal, >0 - this > @p s
 	 */
 	int compare(const StringBase& s) const noexcept {
 		size_type clen = std::min(len, s.len);
-		int rc = strncmp(str, s.str, clen);
+		int rc = memcmp(str, s.str, clen);
 		return rc != 0 ? rc : (len == s.len ? 0 : ((len < s.len) ? -1 : 1));
 	}
 
@@ -291,11 +291,11 @@ public:
 
 	// comparison operators
 	friend bool operator==(const StringBase& a, const StringBase& b) noexcept {
-		return a.len == b.len && strncmp(a.str, b.str, a.len) == 0;
+		return a.len == b.len && memcmp(a.str, b.str, a.len) == 0;
 	}
 
 	friend bool operator!=(const StringBase& a, const StringBase& b) noexcept {
-		return a.len != b.len || strncmp(a.str, b.str, a.len) != 0;
+		return a.len != b.len || memcmp(a.str, b.str, a.len) != 0;
 	}
 
 	friend bool operator<(const StringBase& a, const StringBase& b) noexcept {
