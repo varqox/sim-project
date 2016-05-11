@@ -72,12 +72,22 @@ string decodeURI(const StringView& str, size_t beg, size_t end) {
 		end = str.size();
 
 	string ret;
-	for (; beg < end; ++beg) {
+	if (end > 2)
+		for (size_t end2 = end - 2; beg < end2; ++beg) {
 
-		if (str[beg] == '%' && beg + 2 < end) {
-			ret += static_cast<char>((hextodec(str[beg+1]) << 4) + hextodec(str[beg+2]));
-			beg += 2;
-		} else if (str[beg] == '+')
+			if (str[beg] == '%') {
+				ret += static_cast<char>((hextodec(str[beg + 1]) << 4) +
+					hextodec(str[beg + 2]));
+				beg += 2;
+			} else if (str[beg] == '+')
+				ret += ' ';
+			else
+				ret += str[beg];
+		}
+
+	// last two characters (if left)
+	for (; beg < end; ++beg) {
+		if (str[beg] == '+')
 			ret += ' ';
 		else
 			ret += str[beg];
@@ -108,9 +118,7 @@ string htmlSpecialChars(const StringView& s) {
 
 	for (size_t i = 0; i < s.size(); ++i)
 		switch (s[i]) {
-		case ' ':
-			res += "&nbsp;";
-			break;
+		// To preserve spaces use CSS: white-space: pre | pre-wrap;
 		case '&':
 			res += "&amp;";
 			break;
