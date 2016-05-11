@@ -35,7 +35,7 @@ string Spawner::receiveErrorMessage(int status, int fd) {
 
 string getCWD() {
 	array<char, PATH_MAX> buff;
-	if (getcwd(buff.data(), buff.size()))
+	if (!getcwd(buff.data(), buff.size()))
 		THROW("Failed to get CWD", error(errno));
 
 	if (buff[0] != '/') {
