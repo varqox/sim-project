@@ -311,6 +311,7 @@ void Contest::files(bool admin_view) {
 	}
 
 	auto ender = contestTemplate("Files");
+	append("<h1>Files</h1>");
 	if (admin_view)
 		append("<a class=\"btn\" href=\"/c/", rpath->round_id, "/files/add\">"
 			"Add file</a>\n");

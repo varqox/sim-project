@@ -176,7 +176,10 @@ void Contest::handle() {
 	// Contest dashboard
 	auto ender = contestTemplate("Contest dashboard");
 
-	append("<h1>Dashboard</h1>");
+	string& round_name = (rpath->type == CONTEST ? rpath->contest->name
+		: (rpath->type == ROUND ? rpath->round->name : rpath->problem->name));
+
+	append("<h1>", htmlSpecialChars(round_name), "</h1>");
 	printRoundPath();
 	printRoundView(false, admin_view);
 
