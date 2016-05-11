@@ -934,8 +934,8 @@ table.stripped > tbody > tr:last-child > td:last-child {
 }
 .round-view > div > div > a:hover,
 .round-view > div > div > a:focus,
-.round-view > :first-child:hover,
-.round-view > :first-child:focus {
+.round-view > a:first-child:hover,
+.round-view > a:first-child:focus {
 	text-decoration: none;
 	background: #eeeeee;
 }
@@ -1354,4 +1354,9 @@ pre .yellow {
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
+}
+
+/* Generic classes */
+.grayed {
+	background: #e8e8e8;
 }

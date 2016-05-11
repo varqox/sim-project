@@ -307,7 +307,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 
 			// Construct "table"
 			append("<div class=\"round-view\">\n"
-				"<a href=\"/c/", rpath->contest->id, "\"", ">",
+				"<a class=\"grayed\" href=\"/c/", rpath->contest->id, "\"", ">",
 					htmlSpecialChars(rpath->contest->name), "</a>\n"
 				"<div>\n");
 
@@ -341,7 +341,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				"<div>\n");
 			// Round
 			append("<div>\n"
-				"<a href=\"/c/", rpath->round->id, "\">",
+				"<a class=\"grayed\" href=\"/c/", rpath->round->id, "\">",
 					htmlSpecialChars(rpath->round->name), "</a>\n");
 
 			// Select problems
@@ -373,7 +373,8 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			append("<div>\n"
 				"<a href=\"/c/", rpath->round->id, "\">",
 					htmlSpecialChars(rpath->round->name), "</a>\n"
-				"<a href=\"/c/", rpath->problem->id);
+			// Problem
+				"<a class=\"grayed\" href=\"/c/", rpath->problem->id);
 
 			if (link_to_problem_statement)
 				append("/statement");
