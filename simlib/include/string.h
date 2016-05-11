@@ -180,26 +180,50 @@ public:
 		return npos;
 	}
 
-	size_type find(const StringBase& s, size_type beg1,
-		size_type endi1 = npos) const noexcept(false)
+	size_type find(const StringBase& s, size_type beg1) const noexcept(false) {
+		return find(s.substr(beg1, len - beg1));
+	}
+
+	size_type find(const StringBase& s, size_type beg1, size_type endi1) const
+		noexcept(false)
 	{
 		return find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type find(size_type beg, const StringBase& s, size_type beg1 = 0,
-		size_type endi1 = npos) const noexcept(false)
+	size_type find(size_type beg, const StringBase& s, size_type beg1 = 0) const
+		noexcept(false)
+	{
+		return substr(beg).find(s.substr(beg1, len - beg1));
+	}
+
+	size_type find(size_type beg, const StringBase& s, size_type beg1,
+		size_type endi1) const noexcept(false)
 	{
 		return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type find(size_type beg, size_type endi, const StringBase& s,
-		size_type beg1 = 0, size_type endi1 = npos) const noexcept(false)
+		size_type beg1 = 0) const noexcept(false)
+	{
+		return substr(beg, endi).find(s.substr(beg1, len - beg1));
+	}
+
+	size_type find(size_type beg, size_type endi, const StringBase& s,
+		size_type beg1, size_type endi1) const noexcept(false)
 	{
 		return substr(beg, endi).find(
 			s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type find(char c, size_type beg = 0, size_type endi = npos) const
+	size_type find(char c, size_type beg = 0) const noexcept {
+		for (; beg < len; ++beg)
+			if (str[beg] == c)
+				return beg;
+
+		return npos;
+	}
+
+	size_type find(char c, size_type beg, size_type endi) const
 		noexcept
 	{
 		if (endi > len)
@@ -243,26 +267,52 @@ public:
 		return npos;
 	}
 
-	size_type rfind(const StringBase& s, size_type beg1,
-		size_type endi1 = npos) const noexcept(false)
+	size_type rfind(const StringBase& s, size_type beg1) const noexcept(false) {
+		return rfind(s.substr(beg1, len - beg1));
+	}
+
+	size_type rfind(const StringBase& s, size_type beg1, size_type endi1) const
+		noexcept(false)
 	{
 		return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type rfind(size_type beg, const StringBase& s, size_type beg1 = 0,
-		size_type endi1 = npos) const noexcept(false)
+	size_type rfind(size_type beg, const StringBase& s, size_type beg1 = 0)
+		const noexcept(false)
+	{
+		return substr(beg).rfind(s.substr(beg1, len - beg1));
+	}
+
+	size_type rfind(size_type beg, const StringBase& s, size_type beg1,
+		size_type endi1) const noexcept(false)
 	{
 		return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	size_type rfind(size_type beg, size_type endi, const StringBase& s,
-		size_type beg1 = 0, size_type endi1 = npos) const noexcept(false)
+		size_type beg1 = 0) const noexcept(false)
+	{
+		return substr(beg, endi).rfind(s.substr(beg1, len - beg1));
+	}
+
+	size_type rfind(size_type beg, size_type endi, const StringBase& s,
+		size_type beg1, size_type endi1) const noexcept(false)
 	{
 		return substr(beg, endi).rfind(
 			s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type rfind(char c, size_type beg = 0, size_type endi = npos) const
+	size_type rfind(char c, size_type beg = 0) const
+		noexcept
+	{
+		for (size_type endi = len - 1; endi >= beg; --endi)
+			if (str[endi] == c)
+				return endi;
+
+		return npos;
+	}
+
+	size_type rfind(char c, size_type beg, size_type endi) const
 		noexcept
 	{
 		if (endi > len)
@@ -276,10 +326,16 @@ public:
 	}
 
 protected:
+	// Returns a StringBase of the substring [pos, ...)
+	StringBase substr(size_type pos = 0) const noexcept(false) {
+		if (pos > len)
+			throw std::out_of_range("StringBase::substr");
+
+		return StringBase(str + pos, len - pos);
+	}
+
 	// Returns a StringBase of the substring [pos, pos + count)
-	StringBase substr(size_type pos = 0, size_type count = npos) const
-		noexcept(false)
-	{
+	StringBase substr(size_type pos, size_type count) const noexcept(false) {
 		if (pos > len)
 			throw std::out_of_range("StringBase::substr");
 
@@ -371,10 +427,16 @@ public:
 		return *this;
 	}
 
+	// Returns a FixedString of the substring [pos, ...)
+	FixedString substr(size_type pos = 0) const noexcept(false) {
+		if (pos > len)
+			throw std::out_of_range("FixedString::substr");
+
+		return FixedString(str + pos, len - pos);
+	}
+
 	// Returns a FixedString of the substring [pos, pos + count)
-	FixedString substr(size_type pos = 0, size_type count = npos) const
-		noexcept(false)
-	{
+	FixedString substr(size_type pos, size_type count) const noexcept(false) {
 		if (pos > len)
 			throw std::out_of_range("FixedString::substr");
 
@@ -578,8 +640,14 @@ int strToNum(std::string& x, const StringView& s, size_t beg = 0,
 int strToNum(std::string& x, const StringView& s, size_t beg, char c);
 
 // Like string::find() but searches in [beg, end)
-inline size_t find(const StringView& str, char c, size_t beg = 0,
-	size_t end = StringView::npos) { return str.find(c, beg, end); }
+inline size_t find(const StringView& str, char c, size_t beg = 0) {
+	return str.find(c, beg);
+}
+
+// Like string::find() but searches in [beg, end)
+inline size_t find(const StringView& str, char c, size_t beg, size_t end) {
+	return str.find(c, beg, end);
+}
 
 // Compares two strings: @p str[beg, end) and @p s
 inline int compare(const StringView& str, size_t beg, size_t end,

@@ -10,7 +10,7 @@ long long microtime() {
 }
 
 string date(const string& str, time_t cur_time) {
-	if (cur_time == -1)
+	if (cur_time < 0)
 		time(&cur_time);
 
 	size_t buff_size = str.size() + 1 +
@@ -24,6 +24,6 @@ string date(const string& str, time_t cur_time) {
 
 bool isDatetime(const string& str) {
 	struct tm t;
-	return str.size() == 19 &&
-		strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr;
+	return (str.size() == 19 &&
+			strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
