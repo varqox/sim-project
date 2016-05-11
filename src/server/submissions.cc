@@ -9,6 +9,8 @@ using std::string;
 using std::vector;
 
 void Contest::submit(bool admin_view) {
+	// TODO: admin views as normal - before round begins, admin does not get 403
+	// error
 	if (!Session::open())
 		return redirect("/login" + req->target);
 
@@ -32,7 +34,8 @@ void Contest::submit(bool admin_view) {
 			const RoundPath* problem_r_path = rpath.get();
 
 			if (rpath->type != PROBLEM) {
-				// Get parent rounds of problem round
+				// Get parent rounds of problem round (it also checks access
+				// permissions)
 				path.reset(getRoundPath(problem_round_id));
 				if (!path)
 					return; // getRoundPath has already set error
@@ -83,11 +86,8 @@ void Contest::submit(bool admin_view) {
 				DB::Result res = db_conn.executeQuery(
 					"SELECT LAST_INSERT_ID()");
 
-				if (!res.next()) {
-					fv.addError("Database error - failed to get inserted "
-						"submission id");
-					goto form;
-				}
+				if (!res.next())
+					THROW("Failed to get inserted submission id");
 
 				string submission_id = res[1];
 

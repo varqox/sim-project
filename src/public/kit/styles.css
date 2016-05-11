@@ -462,7 +462,7 @@ table {
 	height: 26px;
 	margin: 2px;
 	padding: 2px 10px;
-	white-space: nowrap;
+	white-space: pre;
 }
 .btn:hover,
 .btn:focus,
@@ -594,7 +594,7 @@ a.btn.red {
 }
 .dropdown > .dropdown-toggle {
 	cursor: pointer;
-	white-space: nowrap;
+	white-space: pre;
 }
 .dropdown > .dropdown-toggle::after {
 	display: inline-block;
@@ -629,7 +629,7 @@ a.btn.red {
 	-webkit-border-radius: 8px;
 	-moz-border-radius: 8px;
 	border-radius: 8px;
-	white-space: nowrap;
+	white-space: pre;
 }
 .dropdown.open > ul > a:hover,
 .dropdown.open > ul > a:focus {
@@ -648,7 +648,7 @@ a.btn.red {
 }
 .dropright-hover > .dropright-hover-toggle {
 	display: flex;
-	white-space: nowrap;
+	white-space: pre;
 }
 .dropright-hover > .dropright-hover-toggle::after {
 	display: inline-block;
@@ -1138,7 +1138,7 @@ table.submissions td .btn-small {
 	margin: 0 2px;
 }
 table.submissions tr > td:last-child {
-	white-space: nowrap;
+	white-space: pre;
 }
 
 /* Users */
@@ -1169,7 +1169,7 @@ table.users td {
 	border-top: 1px solid #bbb;
 }
 table.users tr > td:last-child {
-	white-space: nowrap;
+	white-space: pre;
 }
 
 /* User-info */
