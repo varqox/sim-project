@@ -178,7 +178,10 @@ void User::login() {
 				fv.addError("Internal server error");
 				ERRLOG_CAUGHT(e);
 			}
-	}
+	
+	// Clean old data
+	} else
+		username = "";
 
 	auto ender = baseTemplate("Login");
 	append(fv.errors(), "<div class=\"form-container\">\n"
@@ -272,6 +275,13 @@ void User::signUp() {
 				fv.addError("Internal server error");
 				ERRLOG_CAUGHT(e);
 			}
+
+	// Clean old data
+	} else {
+		username = "";
+		first_name = "";
+		last_name = "";
+		email = "";
 	}
 
 	auto ender = baseTemplate("Register");
