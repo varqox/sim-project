@@ -47,8 +47,8 @@ Template::TemplateEnder Template::baseTemplate(const StringView& title,
 							" UTC</time>");
 
 	if (Session::isOpen())
-		append("<div class=\"dropdown\">\n"
-				"<a class=\"user dropdown-toggle\">"
+		append("<div class=\"dropmenu down\">\n"
+				"<a class=\"user dropmenu-toggle\">"
 					"<strong>", htmlSpecialChars(Session::username), "</strong>"
 				"</a>\n"
 				"<ul>\n"
