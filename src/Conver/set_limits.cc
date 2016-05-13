@@ -172,7 +172,7 @@ int setLimits(const string& package_path) {
 				return 5;
 			}
 
-			// Set time_limit (adjust time_limit by 0.4s unless TIME_LIMIT > 0)
+			// Set time_limit (adjust time_limit by 0.4 s unless TIME_LIMIT > 0)
 			if (TIME_LIMIT > 0 || (FORCE_AUTO_LIMIT || !USE_CONFIG))
 				test.time_limit = TIME_LIMIT > 0 ? TIME_LIMIT :
 					es.runtime * 4 + 400000ull;
