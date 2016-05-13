@@ -11,6 +11,7 @@
 #include <simlib/sim/simfile.h>
 #include <simlib/time.h>
 
+using std::array;
 using std::pair;
 using std::string;
 using std::vector;
@@ -19,13 +20,39 @@ void Contest::handle() {
 	// Select contest
 	StringView next_arg = url_args.extractNext();
 	if (next_arg.empty()) {
-		auto ender = baseTemplate("Select contest");
 		try {
 			// Get available contests
 			DB::Statement stmt;
-			if (Session::open()) {
-				string lower_owners;
+			do {
+				// Not logged in
+				if (!Session::open()) {
+					stmt = db_conn.prepare("SELECT id, name FROM rounds "
+						"WHERE parent IS NULL AND is_public IS TRUE "
+						"ORDER BY id");
+					break;
+				}
 
+				// Sim root
+				if (UNLIKELY(Session::user_id == "1")) {
+					stmt = db_conn.prepare("SELECT id, name FROM rounds "
+						"WHERE parent is NULL ORDER BY id");
+					break;
+				}
+
+				// Normal user
+				if (Session::user_type == UTYPE_NORMAL) {
+					stmt = db_conn.prepare("(SELECT id, name FROM rounds "
+							"WHERE parent IS NULL AND "
+								"(is_public IS TRUE OR owner=?))"
+						" UNION "
+						"(SELECT id, name FROM rounds, users_to_contests "
+							"WHERE user_id=? AND contest_id=id) ORDER BY id");
+					stmt.setString(1, Session::user_id);
+					stmt.setString(2, Session::user_id);
+					break;
+				}
+
+				// Admin + Teacher
 				stmt = db_conn.prepare(
 					"(SELECT r.id, r.name FROM rounds r, users u "
 						"WHERE parent IS NULL AND owner=u.id AND "
@@ -36,19 +63,17 @@ void Contest::handle() {
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, Session::user_type);
 				stmt.setString(3, Session::user_id);
+			} while (0);
 
-			} else
-				stmt = db_conn.prepare("SELECT id, name FROM rounds "
-					"WHERE parent IS NULL AND is_public IS TRUE ORDER BY id");
-
-			// List them
-			DB::Result res = stmt.executeQuery();
+			/* List them */
+			auto ender = baseTemplate("Select contest");
 			append("<div class=\"contests-list\">\n");
 
 			// Add contest button (admins and teachers only)
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
 				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>\n");
 
+			DB::Result res = stmt.executeQuery();
 			while (res.next())
 				append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
 					htmlSpecialChars(res[2]), "</a>\n");
@@ -58,7 +83,7 @@ void Contest::handle() {
 
 		} catch (const std::exception& e) {
 			ERRLOG_CAUGHT(e);
-			return;
+			return error500();
 		}
 	}
 
@@ -403,8 +428,8 @@ void Contest::addProblem() {
 			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
 		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) *
 			1000000LL); // Time limit in usec
-		if (time_limit.size() && tl == 0)
-			fv.addError("Global time limit cannot be lower than 0.000001");
+		if (time_limit.size() && tl < 400000)
+			fv.addError("Global time limit cannot be lower than 0.4 s");
 
 		force_auto_limit = fv.exist("force-auto-limit");
 
@@ -527,7 +552,7 @@ void Contest::addProblem() {
 				// Commit - update problem and round
 				stmt = db_conn.prepare(
 					"UPDATE problems p, rounds r,"
-							"(SELECT MAX(item)+1 x FROM rounds "
+							"(SELECT COALESCE(MAX(item)+1, 1) x FROM rounds "
 								"WHERE parent=?) t "
 						"SET p.name=?, p.tag=?, p.owner=?, "
 							"parent=?, grandparent=?, r.name=?, item=t.x, "
@@ -989,6 +1014,8 @@ void Contest::editProblem() {
 				stmt.setString(5, rpath->problem->problem_id);
 
 				if (stmt.executeUpdate()) {
+					fv.addError("Update successful");
+
 					// Update rpath
 					rpath.reset(getRoundPath(rpath->round_id));
 					if (!rpath)

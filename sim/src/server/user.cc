@@ -178,7 +178,7 @@ void User::login() {
 				fv.addError("Internal server error");
 				ERRLOG_CAUGHT(e);
 			}
-	
+
 	// Clean old data
 	} else
 		username = "";
@@ -472,8 +472,8 @@ void User::editProfile() {
 
 		fv.validateNotBlank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
-		uint8_t new_utype = (new_utype_s == "0" ? UTYPE_ADMIN :
-			(new_utype_s == "1" ? UTYPE_TEACHER : UTYPE_NORMAL));
+		uint8_t new_utype = (new_utype_s == UTYPE_ADMIN_STR ? UTYPE_ADMIN :
+			(new_utype_s == UTYPE_TEACHER_STR ? UTYPE_TEACHER : UTYPE_NORMAL));
 
 		// Check if change of user type is allowed
 		constexpr uint needed_promote_privilege[3] = {
