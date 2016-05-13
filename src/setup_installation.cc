@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 			"`type` tinyint(1) unsigned NOT NULL DEFAULT " UTYPE_NORMAL_STR ",\n"
 			"PRIMARY KEY (`id`),\n"
 			"UNIQUE KEY `username` (`username`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n"),
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin\n"),
 		[&] {
 			// Add default user sim with password sim
 			char salt_bin[SALT_LEN >> 1];
@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
 			"`added` datetime NOT NULL,\n"
 			"PRIMARY KEY (`id`),\n"
 			"KEY (`owner`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	tryCreateTable("rounds",
 		concat("CREATE TABLE IF NOT EXISTS `rounds` (\n"
@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
 			"KEY (`parent`, `is_public`),\n"
 			"KEY (`grandparent`, `item`),\n"
 			"KEY (`owner`)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	tryCreateTable("users_to_contests",
 		"CREATE TABLE IF NOT EXISTS `users_to_contests` (\n"
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
 			"KEY (parent_round_id, user_id, final, id),\n"
 			"KEY (contest_round_id, final, id),\n"
 			"KEY (contest_round_id, user_id, final, id)\n"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	tryCreateTable("files",
 		concat("CREATE TABLE IF NOT EXISTS `files` (\n"

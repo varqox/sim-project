@@ -543,9 +543,11 @@ void Contest::addProblem() {
 
 				string problem_id = res[1];
 
-				// Insert round
+				// Insert round (parent 0 - round will not be visible in case of
+				// error)
 				if (1 != db_conn.executeUpdate(
-					"INSERT rounds (name, owner, item) VALUES('', 0, 0)"))
+					"INSERT rounds (parent, name, owner, item) "
+					"VALUES(0, '', 0, 0)"))
 				{
 					THROW("Failed to insert round");
 				}
