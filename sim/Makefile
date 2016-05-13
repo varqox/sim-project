@@ -53,7 +53,7 @@ endif
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
-reinstall:
+reinstall: all
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
