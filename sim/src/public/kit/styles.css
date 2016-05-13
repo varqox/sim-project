@@ -585,41 +585,19 @@ a.btn.red {
 	text-align: center;
 }
 
-/* dropdown */
-.dropdown {
+/* dropmenu */
+.dropmenu {
 	position: relative;
 }
-.dropdown > ul {
+.dropmenu > ul {
 	display: none;
 }
-.dropdown > .dropdown-toggle {
+.dropmenu .dropmenu-toggle {
+	display: inline-flex;
 	cursor: pointer;
 	white-space: pre;
 }
-.dropdown > .dropdown-toggle::after {
-	display: inline-block;
-	content: "";
-	border-top: 4px solid;
-	border-right: 4px solid transparent;
-	border-left: 4px solid transparent;
-	vertical-align: middle;
-	margin-left: 5px;
-}
-.dropdown.open > ul {
-	position: absolute;
-	display: block !important;
-	min-width: 100%;
-	padding: 0;
-	margin: 5px 0 0 0;
-	list-style: none;
-	background: #fcfcfc;
-	border: 1px solid #cccccc;
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
-	border-radius: 8px;
-	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
-}
-.dropdown.open > ul > a {
+.dropmenu.open > ul > a {
 	display: flex;
 	padding: 2px 30px 2px 25px;
 	margin: -1px;
@@ -631,27 +609,38 @@ a.btn.red {
 	border-radius: 8px;
 	white-space: pre;
 }
-.dropdown.open > ul > a:hover,
-.dropdown.open > ul > a:focus {
+.dropmenu.open > ul > a:hover,
+.dropmenu.open > ul > a:focus {
 	background: rgba(82, 168, 236, 0.35);
 	border: 1px solid #cccccc;
 	border-color: #51a7e8;
 	outline: none;
 }
-
-/* dropright-hover */
-.dropright-hover {
-	position: relative;
+/* dropmenu down */
+.dropmenu.down .dropmenu-toggle::after {
+	content: "";
+    align-self: center;
+	margin: 0.15em 0 0 5px;
+	border-top: 4px solid;
+	border-right: 4px solid transparent;
+	border-left: 4px solid transparent;
 }
-.dropright-hover > ul {
-	display: none;
+.dropmenu.down.open > ul {
+	position: absolute;
+	display: block;
+	min-width: 100%;
+	padding: 0;
+	margin: 5px 0 0 0;
+	list-style: none;
+	background: #fcfcfc;
+	border: 1px solid #cccccc;
+	-webkit-border-radius: 8px;
+	-moz-border-radius: 8px;
+	border-radius: 8px;
+	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
-.dropright-hover > .dropright-hover-toggle {
-	display: flex;
-	white-space: pre;
-}
-.dropright-hover > .dropright-hover-toggle::after {
-	display: inline-block;
+/* dropmenu right */
+.dropmenu.right .dropmenu-toggle::after {
 	content: "";
 	border-left: 4px solid #888;
 	border-top: 4px solid transparent;
@@ -659,10 +648,7 @@ a.btn.red {
 	height: 0;
 	margin: auto 0 auto auto;
 }
-.dropright-hover:hover > .dropright-hover-toggle {
-	background: #e7e7e7;
-}
-.dropright-hover:hover > ul {
+.dropmenu.right.open > ul {
 	position: absolute;
 	top: 0;
 	left: 100%;
@@ -673,22 +659,10 @@ a.btn.red {
 	margin: -1px 0 0;
 	background: #f5f5f5;
 	border: 1px solid #cccccc;
-	-webkit-border-top-right-radius: 4px;
-	-moz-border-top-right-radius: 4px;
-	border-top-right-radius: 4px;
-	-webkit-border-bottom-right-radius: 4px;
-	-moz-border-bottom-right-radius: 4px;
-	border-bottom-right-radius: 4px;
-}
-.dropright-hover:hover > ul > a:first-child {
-	-webkit-border-top-right-radius: 4px;
-	-moz-border-top-right-radius: 4px;
-	border-top-right-radius: 4px;
-}
-.dropright-hover:hover > ul > a:last-child {
-	-webkit-border-bottom-right-radius: 4px;
-	-moz-border-bottom-right-radius: 4px;
-	border-bottom-right-radius: 4px;
+	-webkit-border-radius: 8px;
+	-moz-border-radius: 8px;
+	border-radius: 8px;
+	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 /* Navigation bar */
@@ -742,14 +716,14 @@ a.btn.red {
 .navbar .user > .caret {
 	margin-left: 5px;
 }
-.navbar .dropdown.open > ul {
+.navbar .dropmenu.open > ul {
 	right: 0;
 	margin: 45px 5px 0 0;
 }
-.navbar .dropdown.open .user {
+.navbar .dropmenu.open .user {
 	color: #ffffff;
 }
-.navbar .dropdown.open .caret,
+.navbar .dropmenu.open .caret,
 .navbar .user:hover > .caret,
 .navbar .user:focus > .caret {
 	border-top-color: #ffffff;
@@ -827,7 +801,7 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	border-bottom-right-radius: 4px;
 }
 
-/* Contest */
+/* Menu */
 .menu {
 	position: fixed;
 	top: 0;
@@ -841,14 +815,6 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	border-right: 1px solid #ccc;
 	-webkit-flex-flow: column wrap;
 	flex-flow: column wrap;
-}
-.menu a {
-	min-width: 160px;
-	padding: 7px 10px 7px 15px;
-}
-.menu a:focus, .menu a:hover {
-	text-decoration: none;
-	background: #e7e7e7;
 }
 .menu > span {
 	padding: 0 7px 0 10px;
@@ -866,6 +832,52 @@ table.stripped > tbody > tr:last-child > td:last-child {
 .menu > span:first-child {
 	margin-top: 0;
 }
+.menu a, .menu .dropmenu.right.open > ul >  a {
+	min-width: 160px;
+	padding: 7px 10px 7px 15px;
+	margin: 0;
+	border: none;
+	color: #1088cc;
+}
+.menu a:focus,
+.menu a:hover,
+.menu .dropmenu.right.open  > ul > a:focus,
+.menu .dropmenu.right.open  > ul > a:hover {
+	color: #105580;
+	text-decoration: none;
+	background: #e7e7e7;
+}
+.menu .dropmenu.right.open .dropmenu-toggle {
+	background: #e7e7e7;
+}
+.menu .dropmenu.right > ul {
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+}
+.menu .dropmenu.right.open > ul > a {
+	-webkit-border-radius: 0;
+	-moz-border-radius: 0;
+	border-radius: 0;
+}
+.menu .dropmenu.right.open > ul > a:first-child {
+	-webkit-border-top-left-radius: 4px;
+	-moz-border-top-left-radius: 4px;
+	border-top-left-radius: 4px;
+	-webkit-border-top-right-radius: 4px;
+	-moz-border-top-right-radius: 4px;
+	border-top-right-radius: 4px;
+}
+.menu .dropmenu.right.open > ul > a:last-child {
+	-webkit-border-bottom-left-radius: 4px;
+	-moz-border-bottom-left-radius: 4px;
+	border-bottom-left-radius: 4px;
+	-webkit-border-bottom-right-radius: 4px;
+	-moz-border-bottom-right-radius: 4px;
+	border-bottom-right-radius: 4px;
+}
+
+/* Contest list */
 .contests-list {
 	min-width: 25em;
 	margin-right: auto;
@@ -885,13 +897,24 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	display: inline-block;
 	margin: 2px 2px 10px 10px;
 }
+
+/* Round info, path and view */
+.round-info {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: space-between;
+}
+.round-info > div {
+	align-self: flex-end;
+	margin-right: 10%;
+}
 .round-path {
 	font-size: 16px;
 	line-height: 22px;
 }
 .round-view {
 	display: flex;
-	margin: auto;
+	margin: 8px auto;
 	-webkit-flex-direction: column;
 	flex-direction: column;
 }

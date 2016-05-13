@@ -200,18 +200,47 @@ void Contest::handle() {
 
 	// Contest dashboard
 	auto ender = contestTemplate("Contest dashboard");
+	append("<div class=\"round-info\">");
 
-	string& round_name = (rpath->type == CONTEST ? rpath->contest->name
-		: (rpath->type == ROUND ? rpath->round->name : rpath->problem->name));
+	if (rpath->type == CONTEST) {
+		append("<h1>", htmlSpecialChars(rpath->contest->name), "</h1>");
+		if (admin_view)
+			append("<div>"
+					"<a class=\"btn-small\" href=\"/c/", round_id, "/add\">"
+						"Add round</a>"
+					"<a class=\"btn-small blue\" href=\"/c/", round_id,
+						"/edit\">Edit contest</a>"
+				"</div>");
 
-	append("<h1>", htmlSpecialChars(round_name), "</h1>");
+	} else if (rpath->type == ROUND) {
+		append("<h1>", htmlSpecialChars(rpath->round->name), "</h1>");
+		if (admin_view)
+			append("<div>"
+					"<a class=\"btn-small\" href=\"/c/", round_id, "/add\">"
+						"Add problem</a>"
+					"<a class=\"btn-small blue\" href=\"/c/", round_id,
+						"/edit\">Edit round</a>"
+				"</div>");
+
+	} else { // rpath->type == PROBLEM
+		append("<h1>", htmlSpecialChars(rpath->problem->name), "</h1>");
+		if (admin_view)
+			append("<div>"
+				"<a class=\"btn-small\" href=\"/c/", rpath->round->id,
+					"/add\">Add problem</a>"
+				"<a class=\"btn-small blue\" href=\"/c/", round_id,
+					"/edit\">Edit problem</a>"
+				"</div>");
+	}
+
+	append("</div>");
 	printRoundPath();
+
 	printRoundView(false, admin_view);
 
 	if (rpath->type == PROBLEM)
-		append("<a class=\"btn\" href=\"/c/", rpath->round_id,
-			"/statement\" style=\"margin:5px auto 5px auto\">"
-				"View statement</a>\n");
+		append("<a class=\"btn\" href=\"/c/", round_id, "/statement\" "
+			"style=\"margin:5px auto\">View statement</a>\n");
 }
 
 void Contest::addContest() {
@@ -1044,8 +1073,8 @@ void Contest::editProblem() {
 	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
 			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
 				"/edit/rejudge\">Rejudge all submissions</a>\n"
-			"<div class=\"dropdown\" style=\"margin-left:5px\">"
-				"<a class=\"btn-small dropdown-toggle\">"
+			"<div class=\"dropmenu down\" style=\"margin-left:5px\">"
+				"<a class=\"btn-small dropmenu-toggle\">"
 					"Download package as<span class=\"caret\"></span></a>"
 				"<ul>"
 					"<a href=\"/c/", rpath->round_id, "/edit/download/zip\">"

@@ -122,8 +122,8 @@ Template::TemplateEnder Contest::contestTemplate(const StringView& title,
 	if (admin_access) {
 		append("<span>CONTEST ADMINISTRATION</span>\n"
 			// Adding
-			"<div class=\"dropright-hover\">"
-				"<a class=\"dropright-hover-toggle\">Add</a>\n"
+			"<div class=\"dropmenu right\">"
+				"<a class=\"dropmenu-toggle\">Add</a>\n"
 				"<ul>\n"
 					"<a href=\"/c/add\">Contest</a>\n"
 					"<a href=\"/c/", rpath->contest->id, "/add\">Round</a>\n");
@@ -135,8 +135,8 @@ Template::TemplateEnder Contest::contestTemplate(const StringView& title,
 			"</div>\n"
 
 		// Editing
-			"<div class=\"dropright-hover\">"
-				"<a class=\"dropright-hover-toggle\">Edit</a>\n"
+			"<div class=\"dropmenu right\">"
+				"<a class=\"dropmenu-toggle\">Edit</a>\n"
 			"<ul>\n"
 				"<a href=\"/c/", rpath->contest->id, "/edit\">Contest</a>\n");
 

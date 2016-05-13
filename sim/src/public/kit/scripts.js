@@ -15,17 +15,17 @@ window.onload = function updateClock() {
 	setTimeout(updateClock, 1000 - time.getMilliseconds());
 }
 $(document).ready(function(){
-	$('.dropdown > .dropdown-toggle').click(function(event) {
+	$('.dropmenu > .dropmenu-toggle').click(function(event) {
 		event.preventDefault();
 		if($(this).parent().is('.open'))
 			$(this).parent().removeClass('open');
 		else {
-			$('.dropdown.open').removeClass('open');
+			$('.dropmenu.open').removeClass('open');
 			$(this).parent().addClass('open');
 		}
 	});
 	$(document).click(function(event) {
-		if(!$(event.target).is('.dropdown-toggle, .dropdown-toggle *'))
-			$('.dropdown.open').removeClass('open');
+		if(!$(event.target).is('.dropmenu-toggle, .dropmenu-toggle *'))
+			$('.dropmenu.open').removeClass('open');
 	});
 });
