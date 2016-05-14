@@ -679,3 +679,16 @@ public:
 
 typedef RemoverBase<unlink> FileRemover;
 typedef RemoverBase<remove_r> DirectoryRemover;
+
+/**
+ * @brief Converts @p size, so that it human readable
+ * @details It adds proper prefixes, for example:
+ *   1023 -> "1023"
+ *   1024 -> "1.0 KB"
+ *   129747 -> "127 KB"
+ *   97379112 -> "92.9 MB"
+ *
+ * @param size size to humanize
+ * @return humanized file size
+ */
+std::string humanizeFileSize(uint64_t size);

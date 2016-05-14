@@ -620,8 +620,16 @@ typename std::enable_if<!std::is_integral<T>::value, std::string>::type
 
 // TODO
 inline std::string toString(double x, int precision = 6) {
-	std::array<char, 300> buff;
+	std::array<char, 350> buff;
 	int rc = snprintf(buff.data(), buff.size(), "%.*lf", precision, x);
+	if (0 < rc && rc < static_cast<int>(buff.size()))
+		return std::string(buff.data(), rc);
+
+	return std::to_string(x);
+}
+inline std::string toString(long double x, int precision = 6) {
+	std::array<char, 5050> buff;
+	int rc = snprintf(buff.data(), buff.size(), "%.*Lf", precision, x);
 	if (0 < rc && rc < static_cast<int>(buff.size()))
 		return std::string(buff.data(), rc);
 

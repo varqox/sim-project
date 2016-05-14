@@ -608,3 +608,49 @@ ssize_t putFileContents(const char* file, const char* data, size_t len) noexcept
 
 	return writeAll(fd, data, len);
 }
+
+string humanizeFileSize(uint64_t size) {
+	constexpr uint64_t MIN_KB = 1ull << 10;
+	constexpr uint64_t MIN_MB = 1ull << 20;
+	constexpr uint64_t MIN_GB = 1ull << 30;
+	constexpr uint64_t MIN_TB = 1ull << 40;
+	constexpr uint64_t MIN_PB = 1ull << 50;
+	constexpr uint64_t MIN_EB = 1ull << 60;
+	constexpr uint64_t MIN_3DIGIT_KB = 102349ull;
+	constexpr uint64_t MIN_3DIGIT_MB = 104805172ull;
+	constexpr uint64_t MIN_3DIGIT_GB = 107320495309ull;
+	constexpr uint64_t MIN_3DIGIT_TB = 109896187196212ull;
+	constexpr uint64_t MIN_3DIGIT_PB = 112533595688920269ull;
+
+	double dsize = size;
+	// Bytes
+	if (size < MIN_KB)
+		return toString(size);
+	// KB
+	if (size < MIN_3DIGIT_KB)
+		return toString(dsize / MIN_KB, 1) + " KB";
+	if (size < MIN_MB)
+		return toString(dsize / MIN_KB, 0) + " KB";
+	// MB
+	if (size < MIN_3DIGIT_MB)
+		return toString(dsize / MIN_MB, 1) + " MB";
+	if (size < MIN_GB)
+		return toString(dsize / MIN_MB, 0) + " MB";
+	// GB
+	if (size < MIN_3DIGIT_GB)
+		return toString(dsize / MIN_GB, 1) + " GB";
+	if (size < MIN_TB)
+		return toString(dsize / MIN_GB, 0) + " GB";
+	// TB
+	if (size < MIN_3DIGIT_TB)
+		return toString(dsize / MIN_TB, 1) + " TB";
+	if (size < MIN_PB)
+		return toString(dsize / MIN_TB, 0) + " TB";
+	// PB
+	if (size < MIN_3DIGIT_PB)
+		return toString(dsize / MIN_PB, 1) + " PB";
+	if (size < MIN_EB)
+		return toString(dsize / MIN_PB, 0) + " PB";
+	// EB
+	return toString(dsize / MIN_EB, 1) + " EB";
+}

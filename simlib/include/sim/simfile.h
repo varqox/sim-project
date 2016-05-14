@@ -67,7 +67,7 @@ public:
 	 *   Fields:
 	 *     - name
 	 *     - tag (optional, max length = 4)
-	 *     - memory_limit (in kB)
+	 *     - memory_limit (in KB)
 	 *     - checker (optional)
 	 *     - statement (optional)
 	 *     - solutions (optional)
