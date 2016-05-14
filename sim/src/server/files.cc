@@ -34,8 +34,8 @@ void Contest::addFile() {
 				string current_time = date("%Y-%m-%d %H:%M:%S");
 				// Insert file to `files`
 				DB::Statement stmt = db_conn.prepare("INSERT IGNORE files "
-						"(id, round_id, name, description, modified) "
-						"VALUES(?,NULL,?,?,?)");
+					"(id, round_id, name, description, file_size, modified) "
+					"VALUES(?, NULL, ?, ?, 0, ?)");
 				stmt.setString(2, file_name);
 				stmt.setString(3, description);
 				stmt.setString(4, current_time);
@@ -44,15 +44,24 @@ void Contest::addFile() {
 					stmt.setString(1, id);
 				} while (stmt.executeUpdate() == 0);
 
+				// Get file size
+				string file_path = fv.getFilePath("file");
+				struct stat64 sb;
+				if (stat64(file_path.c_str(), &sb))
+					THROW("stat()", error(errno));
+
+				uint64_t file_size = sb.st_size;
+
 				// Move file
 				SignalBlocker signal_guard;
-				if (move(fv.getFilePath("file"), concat("files/", id)))
+				if (move(file_path, concat("files/", id)))
 					THROW("move()", error(errno));
 
 				stmt = db_conn.prepare(
-					"UPDATE files SET round_id=? WHERE id=?");
+					"UPDATE files SET round_id=?, file_size=? WHERE id=?");
 				stmt.setString(1, rpath->round_id);
-				stmt.setString(2, id);
+				stmt.setUInt64(2, file_size);
+				stmt.setString(3, id);
 
 				if (stmt.executeUpdate() != 1) {
 					(void)remove(concat("files/", id));
@@ -126,21 +135,39 @@ void Contest::editFile(const StringView& id, string name) {
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				string current_time = date("%Y-%m-%d %H:%M:%S");
-				DB::Statement stmt = db_conn.prepare("UPDATE files "
+				DB::Statement stmt;
+				// File is being reuploaded
+				if (fv.get("file").size()) {
+					// Get file size
+					string file_path = fv.getFilePath("file");
+					struct stat64 sb;
+					if (stat64(file_path.c_str(), &sb))
+						THROW("stat()", error(errno));
+
+					uint64_t file_size = sb.st_size;
+
+					// Move file
+					SignalBlocker signal_guard;
+					if (move(file_path, concat("files/", id)))
+						THROW("move()", error(errno));
+					signal_guard.unblock();
+
+					stmt = db_conn.prepare("UPDATE files SET name=?, "
+						"description=?, modified=?, file_size=? WHERE id=?");
+					stmt.setUInt64(4, file_size);
+					stmt.setString(5, id.to_string());
+
+				} else {
+					stmt = db_conn.prepare("UPDATE files "
 						"SET name=?, description=?, modified=? WHERE id=?");
+					stmt.setString(4, id.to_string());
+				}
+
+				string current_time = date("%Y-%m-%d %H:%M:%S");
 				stmt.setString(1, name);
 				stmt.setString(2, description);
 				stmt.setString(3, current_time);
-				stmt.setString(4, id.to_string());
 				stmt.executeUpdate();
-
-				// Move file
-				if (fv.get("file").size()) {
-					SignalBlocker signal_guard;
-					if (move(fv.getFilePath("file"), concat("files/", id)))
-						THROW("move()", error(errno));
-				}
 
 				fv.addError("Update successful");
 
@@ -150,9 +177,11 @@ void Contest::editFile(const StringView& id, string name) {
 			}
 	}
 
+	uint64_t file_size;
 	try {
 		DB::Statement stmt = db_conn.prepare(
-			"SELECT name, description, modified FROM files WHERE id=?");
+			"SELECT name, description, file_size, modified FROM files "
+			"WHERE id=?");
 		stmt.setString(1, id.to_string());
 
 		DB::Result res = stmt.executeQuery();
@@ -161,7 +190,8 @@ void Contest::editFile(const StringView& id, string name) {
 
 		name = res[1];
 		description = res[2];
-		modified = res[3];
+		file_size = res.getInt64(3);
+		modified = res[4];
 
 	} catch (const std::exception& e) {
 		fv.addError("Internal server error");
@@ -193,6 +223,13 @@ void Contest::editFile(const StringView& id, string name) {
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
 				"</div>\n"
+				// File size
+				"<div class=\"field-group\">\n"
+					"<label>File size</label>\n"
+					"<input type=\"text\" value=\"",
+						humanizeFileSize(file_size), " (", toString(file_size),
+						" bytes)\" disabled>\n"
+				"</div>\n"
 				// Modified
 				"<div class=\"field-group\">\n"
 					"<label>Modified</label>\n"
@@ -214,9 +251,6 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	if (!rpath->admin_access)
 		return error403();
 
-	string referer = req->headers.get("Referer");
-	if (referer.empty())
-		referer = concat("/c/", rpath->round_id, "/files");
 
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
@@ -231,7 +265,8 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			if (BLOCK_SIGNALS(remove(concat("files/", id))))
 				THROW("remove()", error(errno));
 
-			return redirect(referer);
+			string location = url_args.remnant().to_string();
+			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
@@ -240,9 +275,18 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 
 	auto ender = contestTemplate("Delete file");
 	printRoundPath();
+
+	// Referer or file page
+	string referer = req->headers.get("Referer");
+	string prev_referer = referer;
+	if (referer.empty()) {
+		referer = concat("/file/", id);
+		prev_referer = concat("/c/", rpath->round_id, "/files");
+	}
+
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete file</h1>\n"
-		"<form method=\"post\">\n"
+		"<form method=\"post\" action=\"delete/", prev_referer, "\">\n"
 			"<label class=\"field\">Are you sure to delete file "
 				"<a href=\"/file/", id, "/edit\">",
 					htmlSpecialChars(name), "</a>?"
@@ -318,7 +362,7 @@ void Contest::files(bool admin_view) {
 
 	try {
 		DB::Statement stmt = db_conn.prepare(
-			"SELECT id, modified, name, description FROM files "
+			"SELECT id, modified, name, file_size, description FROM files "
 			"WHERE round_id=? ORDER BY modified DESC");
 		stmt.setString(1, rpath->round_id);
 		DB::Result res = stmt.executeQuery();
@@ -333,6 +377,7 @@ void Contest::files(bool admin_view) {
 				"<tr>"
 					"<th class=\"time\">Modified</th>"
 					"<th class=\"name\">File name</th>"
+					"<th class=\"size\">File size</th>"
 					"<th class=\"description\">Description</th>"
 					"<th class=\"actions\">Actions</th>"
 				"</tr>"
@@ -345,7 +390,8 @@ void Contest::files(bool admin_view) {
 				"<td>", res[2], "</td>"
 				"<td><a href=\"/file/", id, "\">", htmlSpecialChars(res[3]),
 					"</a></td>"
-				"<td>", htmlSpecialChars(res[4]), "</td>"
+				"<td>", humanizeFileSize(res.getUInt64(4)), "</td>"
+				"<td>", htmlSpecialChars(res[5]), "</td>"
 				"<td><a class=\"btn-small\" href=\"/file/", id, "\">Download"
 					"</a>");
 

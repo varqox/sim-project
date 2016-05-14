@@ -1115,7 +1115,7 @@ void Contest::editProblem() {
 				// TODO: Checker
 				// Memory limit
 				"<div class=\"field-group\">\n"
-					"<label>Memory limit [kB]</label>\n"
+					"<label>Memory limit [KB]</label>\n"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
 						"required>\n"

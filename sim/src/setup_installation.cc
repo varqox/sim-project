@@ -253,6 +253,7 @@ int main(int argc, char **argv) {
 			"`name` VARCHAR(", toStr(FILE_NAME_MAX_LEN), ") NOT NULL,\n"
 			"`description` VARCHAR(", toStr(FILE_DESCRIPTION_MAX_LEN), ") "
 				"NOT NULL,\n"
+			"`file_size` bigint unsigned NOT NULL,\n"
 			"`modified` datetime NOT NULL,\n"
 			"PRIMARY KEY (id),\n"
 			"KEY (round_id, modified)\n"
