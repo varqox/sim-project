@@ -4,7 +4,7 @@
 
 struct JudgeResult {
 	enum Status : uint8_t { OK, ERROR, COMPILE_ERROR, JUDGE_ERROR } status;
-	long long score;
+	int64_t score;
 	std::string initial_report;
 	std::string final_report;
 

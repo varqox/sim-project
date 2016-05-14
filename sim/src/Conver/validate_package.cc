@@ -18,7 +18,7 @@ string validatePackage(string pathname) {
 	if (pathname.back() != '/')
 		pathname += '/';
 
-	// Check whether package has exactly one main folder
+	// Check if package has exactly one main folder
 	string main_folder;
 	while ((file = readdir(dir))) {
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")
@@ -52,19 +52,21 @@ string validatePackage(string pathname) {
 
 	// Validate config.conf
 	if (!USE_CONFIG || !std::binary_search(package_tree_root->files.begin(),
-			package_tree_root->files.end(), "config.conf"))
+		package_tree_root->files.end(), "config.conf"))
+	{
 		USE_CONFIG = false;
-	else try {
+
+	} else try {
 		if (VERBOSITY > 1)
 			printf("Validating config.conf...\n");
-		config_conf.loadConfig(pathname);
+		config_conf.loadFromAndValidate(pathname);
 		if (VERBOSITY > 1)
 			printf("Validation passed.\n");
 
 	} catch (std::exception& e) {
 		USE_CONFIG = false;
 		if (VERBOSITY > 0)
-			eprintf("Error: %s\n", e.what());
+			eprintf("Error in config.conf: %s\n", e.what());
 	}
 
 	return pathname;
