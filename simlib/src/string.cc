@@ -104,8 +104,8 @@ string tolower(string str) {
 
 string toHex(const char* str, size_t len) noexcept(false) {
 	string res(len << 1, '\0');
-	size_t i = -1;
-	for (unsigned char c = *str; len-- > 0; c = *++str) {
+	for (size_t i = -1; len-- > 0; ++str) {
+		unsigned char c = *str;
 		res[++i] = dectohex2(c >> 4);
 		res[++i] = dectohex2(c & 15);
 	}
