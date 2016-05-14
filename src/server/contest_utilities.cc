@@ -64,46 +64,56 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 				round_id, ")");
 		}
 
-		// Check access
+		/* Check access */
+
 		r_path->admin_access = isAdmin(*r_path); // TODO: get data in above query!
-		if (!r_path->admin_access) {
-			if (!r_path->contest->is_public) {
-				// Check access to contest
-				if (!Session::open()) {
-					redirect(concat("/login", req->target));
-					return nullptr;
-				}
+		if (r_path->admin_access)
+			return r_path.release();
 
-				stmt = db_conn.prepare("SELECT user_id "
-					"FROM users_to_contests WHERE user_id=? AND contest_id=?");
-				stmt.setString(1, Session::user_id);
-				stmt.setString(2, r_path->contest->id);
+		/* admin_access == false */
 
-				res = stmt.executeQuery();
-				if (!res.next()) {
-					// User is not assigned to this contest
-					error403();
-					return nullptr;
-				}
+		if (!r_path->contest->is_public) {
+			// Check access to contest
+			if (!Session::open()) {
+				redirect(concat("/login", req->target));
+				return nullptr;
 			}
 
-			// Check access to round - check if round has begun
-			// If begin time is not null and round has not begun, then error 403
-			if (r_path->type != CONTEST && r_path->round->begins.size() &&
-				date("%Y-%m-%d %H:%M:%S") < r_path->round->begins)
-			{
+			stmt = db_conn.prepare("SELECT user_id "
+				"FROM users_to_contests WHERE user_id=? AND contest_id=?");
+			stmt.setString(1, Session::user_id);
+			stmt.setString(2, r_path->contest->id);
+
+			res = stmt.executeQuery();
+			if (!res.next()) {
+				// User is not assigned to this contest
 				error403();
 				return nullptr;
 			}
 		}
+
+		// Check access to round - check if round has begun
+		// GRANT ACCESS if and only if:
+		// 1) type == CONTEST
+		// 2) type == ROUND and round has begun or is visible
+		// 3) type == PROBLEM and parent round has begun
+		if (r_path->type == CONTEST || // 1
+			r_path->round->begins.empty() || // 2 & 3
+			r_path->round->begins <= date("%Y-%m-%d %H:%M:%S") || // 2 & 3
+			(r_path->type == ROUND && r_path->round->visible)) // 2 \ 3
+		{
+			return r_path.release();
+		}
+
+		// Otherwise error 403
+		error403();
+		return nullptr;
 
 	} catch (const std::exception& e) {
 		ERRLOG_CAUGHT(e);
 		error500();
 		return nullptr;
 	}
-
-	return r_path.release();
 }
 
 Template::TemplateEnder Contest::contestTemplate(const StringView& title,
@@ -197,8 +207,11 @@ bool Contest::isAdmin(const RoundPath& r_path) {
 		return false;
 
 	// User is the owner of the contest or is the Sim root
-	if (r_path.contest->owner == Session::user_id || Session::user_id == "1")
+	if (r_path.contest->owner == Session::user_id
+		|| Session::user_id == SIM_ROOT_UID)
+	{
 		return true;
+	}
 
 	try {
 		// Check if user has more privileges than the owner
@@ -242,6 +255,7 @@ void Contest::printRoundPath(const StringView& page, bool force_normal) {
 }
 
 void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
+	const char* force_normal = (!admin_view && rpath->admin_access ? "/n" : "");
 	try {
 		if (rpath->type == CONTEST) {
 			// Select subrounds
@@ -253,8 +267,9 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 						"(visible IS TRUE OR begins IS NULL OR begins<=?) "
 					"ORDER BY item");
 			stmt.setString(1, rpath->contest->id);
+			string current_date;
 			if (!admin_view)
-				stmt.setString(2, date("%Y-%m-%d %H:%M:%S")); // current date
+				stmt.setString(2, (current_date = date("%Y-%m-%d %H:%M:%S")));
 
 			struct SubroundExtended {
 				string id, name, item, begins, ends, full_results;
@@ -286,15 +301,21 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			res = stmt.executeQuery();
 			std::map<string, vector<Problem> > problems; // (round_id, problems)
 
-			// Fill with all subrounds
-			for (auto&& sr : subrounds)
-				problems[sr.id];
+			// Fill with all subrounds, which has begun <- for these rounds
+			// problems will be listed
+			if (admin_view)
+				for (auto&& sr : subrounds)
+					problems[sr.id];
+			else
+				for (auto&& sr : subrounds)
+					if (sr.begins.empty() || sr.begins <= current_date)
+						problems[sr.id];
 
 			// Collect results
 			while (res.next()) {
 				// Get reference to proper vector<Problem>
 				auto it = problems.find(res[2]);
-				// If problem parent is not visible or database error
+				// Database error or problem parent round has not began yet
 				if (it == problems.end())
 					continue; // Ignore
 
@@ -307,21 +328,22 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 
 			// Construct "table"
 			append("<div class=\"round-view\">\n"
-				"<a class=\"grayed\" href=\"/c/", rpath->contest->id, "\"", ">",
-					htmlSpecialChars(rpath->contest->name), "</a>\n"
+				"<a class=\"grayed\" href=\"/c/", rpath->contest->id,
+					force_normal, "\">", htmlSpecialChars(rpath->contest->name),
+				"</a>\n"
 				"<div>\n");
 
 			// For each subround list all problems
 			for (auto&& sr : subrounds) {
 				// Round
 				append("<div>\n"
-					"<a href=\"/c/", sr.id, "\">",
+					"<a href=\"/c/", sr.id, force_normal, "\">",
 					htmlSpecialChars(sr.name), "</a>\n");
 
 				// List problems
 				vector<Problem>& prob = problems[sr.id];
 				for (auto&& pro : prob) {
-					append("<a href=\"/c/", pro.id);
+					append("<a href=\"/c/", pro.id, force_normal);
 
 					if (link_to_problem_statement)
 						append("/statement");
@@ -336,29 +358,36 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 		} else if (rpath->type == ROUND) {
 			// Construct "table"
 			append("<div class=\"round-view\">\n"
-				"<a href=\"/c/", rpath->contest->id, "\"", ">",
+				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
 					htmlSpecialChars(rpath->contest->name), "</a>\n"
 				"<div>\n");
 			// Round
 			append("<div>\n"
-				"<a class=\"grayed\" href=\"/c/", rpath->round->id, "\">",
-					htmlSpecialChars(rpath->round->name), "</a>\n");
+				"<a class=\"grayed\" href=\"/c/", rpath->round->id,
+					force_normal, "\">", htmlSpecialChars(rpath->round->name),
+				"</a>\n");
 
-			// Select problems
-			DB::Statement stmt = db_conn.prepare("SELECT id, name "
-				"FROM rounds WHERE parent=? ORDER BY item");
-			stmt.setString(1, rpath->round->id);
+			// List problems if and only if round has begun
+			if (rpath->round->begins.empty() ||
+				rpath->round->begins <= date("%Y-%m-%d %H:%M:%S"))
+			{
+				// Select problems
+				DB::Statement stmt = db_conn.prepare("SELECT id, name "
+					"FROM rounds WHERE parent=? ORDER BY item");
+				stmt.setString(1, rpath->round->id);
 
-			// List problems
-			DB::Result res = stmt.executeQuery();
-			while (res.next()) {
-				append("<a href=\"/c/", res[1]);
+				// List problems
+				DB::Result res = stmt.executeQuery();
+				while (res.next()) {
+					append("<a href=\"/c/", res[1], force_normal);
 
-				if (link_to_problem_statement)
-					append("/statement");
+					if (link_to_problem_statement)
+						append("/statement");
 
-				append("\">", htmlSpecialChars(res[2]), "</a>\n");
+					append("\">", htmlSpecialChars(res[2]), "</a>\n");
+				}
 			}
+
 			append("</div>\n"
 				"</div>\n"
 				"</div>\n");
@@ -366,15 +395,16 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 		} else { // rpath->type == PROBLEM
 			// Construct "table"
 			append("<div class=\"round-view\">\n"
-				"<a href=\"/c/", rpath->contest->id, "\"", ">",
+				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
 					htmlSpecialChars(rpath->contest->name), "</a>\n"
 				"<div>\n");
 			// Round
 			append("<div>\n"
-				"<a href=\"/c/", rpath->round->id, "\">",
+				"<a href=\"/c/", rpath->round->id, force_normal, "\">",
 					htmlSpecialChars(rpath->round->name), "</a>\n"
 			// Problem
-				"<a class=\"grayed\" href=\"/c/", rpath->problem->id);
+				"<a class=\"grayed\" href=\"/c/", rpath->problem->id,
+					force_normal);
 
 			if (link_to_problem_statement)
 				append("/statement");
