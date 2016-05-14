@@ -194,8 +194,8 @@ void Contest::editFile(const StringView& id, string name) {
 		modified = res[4];
 
 	} catch (const std::exception& e) {
-		fv.addError("Internal server error");
 		ERRLOG_CAUGHT(e);
+		return error500();
 	}
 
 	auto ender = contestTemplate("Edit file");
