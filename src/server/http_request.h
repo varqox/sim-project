@@ -6,7 +6,7 @@ namespace server {
 
 class HttpRequest {
 public:
-	enum Method { GET, POST, HEAD } method;
+	enum Method : uint8_t { GET, POST, HEAD } method;
 	HttpHeaders headers;
 	std::string target, http_version, content;
 
@@ -16,7 +16,7 @@ public:
 		// other: name => value; for file: name => client_filename
 		std::map<std::string, std::string> files, other;
 
-		operator std::map<std::string, std::string>&() {
+		explicit operator std::map<std::string, std::string>&() {
 			return other;
 		}
 

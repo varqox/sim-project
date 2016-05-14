@@ -21,7 +21,9 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
-	$(UPDATE) src/public src/sim-server src/server.conf src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
+	$(MKDIR) $(abspath $(DESTDIR)/files/)
+	$(MKDIR) $(abspath $(DESTDIR)/logs/)
+	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -51,7 +53,7 @@ endif
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
-reinstall:
+reinstall: all
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
@@ -65,6 +67,7 @@ uninstall: SETUP_INSTALL_FLAGS += --only-drop-tables
 uninstall:
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
+	src/killinstc $(abspath $(DESTDIR)/sim-server2)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
 
 	# Delete files and database tables
@@ -73,15 +76,17 @@ uninstall:
 
 .PHONY: run
 run: $(filter-out run, $(MAKECMDGOALS))
-	@# ^^^ run always have to be executed at the end
+	@ # ^ run always have to be executed at the end
 
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
+	src/killinstc $(abspath $(DESTDIR)/sim-server2)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
 
 	# Run
 	$(abspath $(DESTDIR)/judge-machine)&
 	$(abspath $(DESTDIR)/sim-server)&
+	# $(abspath $(DESTDIR)/sim-server2)&
 
 .PHONY: clean
 clean:

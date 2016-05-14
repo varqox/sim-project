@@ -9,11 +9,11 @@ class Connection {
 private:
 	static const size_t BUFFER_SIZE = 1 << 16;
 	static const int POLL_TIMEOUT = 20 * 1000; // in milliseconds
-	static const size_t MAX_CONTENT_LENGTH = 10 << 20; // 10 MB
+	static const size_t MAX_CONTENT_LENGTH = 10 << 20; // 10 MiB
 	static const size_t MAX_HEADER_LENGTH = 8192;
 
 public:
-	enum State { OK, CLOSED };
+	enum State : uint8_t { OK, CLOSED };
 
 private:
 	State state_;
@@ -38,7 +38,7 @@ private:
 		size_t limit() const { return read_limit_; }
 
 		int getChar() {
-			if (read_limit_ == 0)
+			if (UNLIKELY(read_limit_ == 0))
 				return -1;
 
 			--read_limit_;
@@ -51,8 +51,9 @@ private:
 	void readPOST(HttpRequest& req);
 
 public:
-	Connection(int client_socket_fd) : state_(OK), sock_fd_(client_socket_fd),
-			buff_size_(0), pos_(0) {}
+	explicit Connection(int client_socket_fd) : state_(OK),
+		sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
+
 	~Connection() {}
 
 	State state() const { return state_; }

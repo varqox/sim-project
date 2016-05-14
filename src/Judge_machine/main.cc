@@ -1,50 +1,45 @@
 #include "judge.h"
-#include "main.h"
 
-#include "../include/db.h"
-#include "../simlib/include/logger.h"
-#include "../simlib/include/process.h"
-
-#include <cppconn/prepared_statement.h>
-#include <csignal>
-#include <limits.h>
+#include <climits>
+#include <sim/constants.h>
+#include <sim/db.h>
+#include <simlib/debug.h>
+#include <simlib/process.h>
 #include <sys/inotify.h>
 
 using std::string;
 
-static const int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1s
+static constexpr int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1 s
 static DB::Connection db_conn;
 TemporaryDirectory tmp_dir;
 unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static void processSubmissionQueue() {
 	try {
-		UniquePtr<sql::Statement> stmt(db_conn->createStatement());
-
 		// While submission queue is not empty
 		for (;;) {
 			// TODO: fix bug (rejudged submissions)
-			UniquePtr<sql::ResultSet> res(stmt->executeQuery(
+			DB::Result res = db_conn.executeQuery(
 				"SELECT id, user_id, round_id, problem_id FROM submissions "
-				"WHERE status='waiting' ORDER BY queued LIMIT 10"));
-			if (!res->next())
+				"WHERE status='waiting' ORDER BY queued LIMIT 10");
+			if (!res.next())
 				return; // Queue is empty
 
 			do {
-				string submission_id = res->getString(1);
-				string user_id = res->getString(2);
-				string round_id = res->getString(3);
-				string problem_id = res->getString(4);
+				string submission_id = res[1];
+				string user_id = res[2];
+				string round_id = res[3];
+				string problem_id = res[4];
 
 				// Judge
 				JudgeResult jres = judge(submission_id, problem_id);
 
 				// Update submission
-				UniquePtr<sql::PreparedStatement> pstmt;
+				DB::Statement stmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
-						jres.status == JudgeResult::JUDGE_ERROR) {
-					pstmt.reset(db_conn->prepareStatement(
-						"UPDATE submissions s, "
+					jres.status == JudgeResult::JUDGE_ERROR)
+				{
+					stmt = db_conn.prepare("UPDATE submissions s, "
 							"((SELECT id FROM submissions "
 									"WHERE user_id=? AND round_id=? "
 										"AND (status='ok' OR status='error') "
@@ -57,25 +52,23 @@ static void processSubmissionQueue() {
 							"s.score=IF(s.id=?, NULL, s.score),"
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
 							"s.final_report=IF(s.id=?, ?, s.final_report)"
-						"WHERE s.id=x.id OR s.id=?"));
-					pstmt->setString(1, user_id);
-					pstmt->setString(2, round_id);
-					pstmt->setString(3, submission_id);
-					pstmt->setString(4, submission_id);
-					pstmt->setString(5, submission_id);
-					pstmt->setString(6,
-						(jres.status == JudgeResult::COMPILE_ERROR
-							? "c_error" : "judge_error"));
-					pstmt->setString(7, submission_id);
-					pstmt->setString(8, submission_id);
-					pstmt->setString(9, jres.initial_report);
-					pstmt->setString(10, submission_id);
-					pstmt->setString(11, jres.final_report);
-					pstmt->setString(12, submission_id);
+						"WHERE s.id=x.id OR s.id=?");
+					stmt.setString(1, user_id);
+					stmt.setString(2, round_id);
+					stmt.setString(3, submission_id);
+					stmt.setString(4, submission_id);
+					stmt.setString(5, submission_id);
+					stmt.setString(6, (jres.status == JudgeResult::COMPILE_ERROR
+						? "c_error" : "judge_error"));
+					stmt.setString(7, submission_id);
+					stmt.setString(8, submission_id);
+					stmt.setString(9, jres.initial_report);
+					stmt.setString(10, submission_id);
+					stmt.setString(11, jres.final_report);
+					stmt.setString(12, submission_id);
 
 				} else {
-					pstmt.reset(db_conn->prepareStatement(
-						"UPDATE submissions s, "
+					stmt = db_conn.prepare("UPDATE submissions s, "
 							"((SELECT id FROM submissions "
 									"WHERE user_id=? AND round_id=? "
 										"AND final=1) "
@@ -89,41 +82,41 @@ static void processSubmissionQueue() {
 							"s.score=IF(s.id=?, ?, s.score),"
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
 							"s.final_report=IF(s.id=?, ?, s.final_report)"
-						"WHERE s.id=x.id OR s.id=?"));
-					pstmt->setString(1, user_id);
-					pstmt->setString(2, round_id);
-					pstmt->setString(3, submission_id);
-					pstmt->setString(4, submission_id);
-					pstmt->setString(5, submission_id);
-					pstmt->setString(6, submission_id);
-					pstmt->setString(7, (jres.status == JudgeResult::OK
+						"WHERE s.id=x.id OR s.id=?");
+					stmt.setString(1, user_id);
+					stmt.setString(2, round_id);
+					stmt.setString(3, submission_id);
+					stmt.setString(4, submission_id);
+					stmt.setString(5, submission_id);
+					stmt.setString(6, submission_id);
+					stmt.setString(7, (jres.status == JudgeResult::OK
 						? "ok" : "error"));
-					pstmt->setString(8, submission_id);
-					pstmt->setInt64(9, jres.score);
-					pstmt->setString(10, submission_id);
-					pstmt->setString(11, jres.initial_report);
-					pstmt->setString(12, submission_id);
-					pstmt->setString(13, jres.final_report);
-					pstmt->setString(14, submission_id);
+					stmt.setString(8, submission_id);
+					stmt.setInt64(9, jres.score);
+					stmt.setString(10, submission_id);
+					stmt.setString(11, jres.initial_report);
+					stmt.setString(12, submission_id);
+					stmt.setString(13, jres.final_report);
+					stmt.setString(14, submission_id);
 				}
 
-				pstmt->executeUpdate();
-			} while (res->next());
+				stmt.executeUpdate();
+			} while (res.next());
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		ERRLOG_CATCH();
 	}
 }
 
 void startWatching(int inotify_fd, int& wd) {
 	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
-			IN_ATTRIB)) == -1) {
-		error_log("Error: inotify_add_watch()", error(errno));
+		IN_ATTRIB)) == -1)
+	{
+		errlog("Error: inotify_add_watch()", error(errno));
 		// Run tests
 		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
@@ -139,20 +132,20 @@ int main() {
 	try {
 		cwd = chdirToExecDir();
 	} catch (const std::exception& e) {
-		error_log("Failed to change working directory: ", e.what());
+		errlog("Failed to change working directory: ", e.what());
 	}
 
 	// Loggers
 	try {
-		stdlog.open("judge-machine.log");
+		stdlog.open(JUDGE_LOG);
 	} catch (const std::exception& e) {
-		error_log("Failed to open 'judge-machine.log': ", e.what());
+		errlog("Failed to open '", JUDGE_LOG, "': ", e.what());
 	}
 
 	try {
-		error_log.open("judge-machine_error.log");
+		errlog.open(JUDGE_ERROR_LOG);
 	} catch (const std::exception& e) {
-		error_log("Failed to open 'judge-machine_error.log': ", e.what());
+		errlog("Failed to open '", JUDGE_ERROR_LOG, "': ", e.what());
 	}
 
 	// Install signal handlers
@@ -160,9 +153,9 @@ int main() {
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, nullptr);
-	sigaction(SIGQUIT, &sa, nullptr);
-	sigaction(SIGTERM, &sa, nullptr);
+	(void)sigaction(SIGINT, &sa, nullptr);
+	(void)sigaction(SIGQUIT, &sa, nullptr);
+	(void)sigaction(SIGTERM, &sa, nullptr);
 
 	try {
 		// Connect to database
@@ -171,15 +164,15 @@ int main() {
 		tmp_dir = TemporaryDirectory("/tmp/sim-judge-machine.XXXXXX");
 
 	} catch (const std::exception& e) {
-		error_log("Caugqht exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		errlog("Caught exception: ", __FILE__, ':', toString(__LINE__), " -> ",
+			e.what());
 		return 1;
 	}
 
 	// Initialise inotify
 	int inotify_fd, wd;
 	while ((inotify_fd = inotify_init()) == -1) {
-		error_log("Error: inotify_init()", error(errno));
+		errlog("Error: inotify_init()", error(errno));
 		// Run tests
 		processSubmissionQueue();
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
@@ -202,7 +195,7 @@ int main() {
 	for (;;) {
 		len = read(inotify_fd, inotify_buff, sizeof(inotify_buff));
 		if (len < 1) {
-			error_log("Error: read()", error(errno));
+			errlog("Error: read()", error(errno));
 			continue;
 		}
 

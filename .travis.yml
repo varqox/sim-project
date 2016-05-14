@@ -8,7 +8,6 @@ env:
   -
   - DEBUG=1
   - DEBUG=2
-  - DEBUG=3
 
 cache: apt
 
@@ -18,17 +17,20 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
+    - llvm-toolchain-precise-3.5
     packages:
-    - g++-4.8-multilib
-    - clang-3.4
+    - g++-4.9-multilib
+    - clang-3.5
     - mysql-server
     - mysql-client
     - libmysqlcppconn-dev
 
 install:
   # Compiler
-  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.8"; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.9"; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
+  - if [ "$CC" = "clang" ]; then export CC="clang-3.5"; fi
+  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.5"; fi
 
 before_script:
   - export CC="$CC -Werror"
@@ -37,9 +39,10 @@ before_script:
 
 script:
   - make -kj DEBUG=$DEBUG
-  - printf "sim\nsim\nsim\nlocalhost\n" | make install run
+  - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
   - cat index.html
+  - cat build/logs/*.log
 
 notifications:
   email: false
