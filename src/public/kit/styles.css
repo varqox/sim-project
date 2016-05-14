@@ -1254,10 +1254,13 @@ table.files th.time {
 table.files th.name {
 	min-width: 100px;
 }
+table.files th.size {
+	min-width: 6em;
+}
 table.files th.description {
 	min-width: 100px;
 }
-table.files td:nth-child(3) {
+table.files td:nth-child(4) {
 	max-width: 600px;
 	word-wrap: break-word;
 }
