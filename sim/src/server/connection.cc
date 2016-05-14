@@ -1,11 +1,10 @@
 #include "connection.h"
 
-#include "../simlib/include/debug.h"
-#include "../simlib/include/filesystem.h"
-#include "../simlib/include/logger.h"
-
 #include <iostream>
 #include <poll.h>
+#include <simlib/debug.h>
+#include <simlib/filesystem.h>
+#include <simlib/logger.h>
 
 using std::string;
 using std::pair;
@@ -91,7 +90,7 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 }
 
 void Connection::readPOST(HttpRequest& req) {
-	size_t content_length;
+	size_t content_length = 0;
 	if (strtou(req.headers["Content-Length"], &content_length) < 0)
 		return error400();
 
@@ -239,7 +238,8 @@ void Connection::readPOST(HttpRequest& req) {
 					while ((c = reader.getChar()) != -1) {
 						// Found CRLF
 						if (c == '\n' && field_content.size() &&
-								field_content.back() == '\r') {
+							field_content.back() == '\r')
+						{
 							field_content.pop_back();
 							break;
 
@@ -273,15 +273,18 @@ void Connection::readPOST(HttpRequest& req) {
 
 						// extract all variables from header content
 						while ((last = header.second.find(';', st)) !=
-								string::npos) {
+							string::npos)
+						{
 							while (isblank(header.second[st]))
 								++st;
 
 							var_name = var_val = "";
 							// extract var_name
 							while (st < last && !isblank(header.second[st]) &&
-									header.second[st] != '=')
+								header.second[st] != '=')
+							{
 								var_name += header.second[st++];
+							}
 
 							// extract var_val
 							if (header.second[st] == '=') {
@@ -290,7 +293,8 @@ void Connection::readPOST(HttpRequest& req) {
 
 								if (header.second[st] == '"')
 									while (++st < last &&
-											header.second[st] != '"') {
+										header.second[st] != '"')
+									{
 										if (header.second[st] == '\\')
 											++st; // safe because last character
 												  // is ';'
@@ -299,8 +303,10 @@ void Connection::readPOST(HttpRequest& req) {
 
 								else
 									while (st < last &&
-											!isblank(header.second[st]))
+										!isblank(header.second[st]))
+									{
 										var_val += header.second[st++];
+									}
 							}
 							st = last + 1;
 
@@ -665,24 +671,24 @@ void Connection::sendResponse(const HttpResponse& res) {
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
 
-	for (HttpHeaders::const_iterator i = res.headers.begin(),
-			end = res.headers.end(); i != end; ++i) {
-		if (i->first == "server" || i->first == "connection" ||
-				i->first == "content-length")
+	for (auto const& i : res.headers) {
+		if (i.first == "server" || i.first == "connection" ||
+			i.first == "content-length")
+		{
 			continue;
+		}
 
-		str += i->first;
+		str += i.first;
 		str += ": ";
-		str += i->second;
+		str += i.second;
 		str += "\r\n";
 	}
 
-	for (HttpHeaders::const_iterator i = res.cookies.begin(),
-			end = res.cookies.end(); i != end; ++i) {
+	for (auto const& i : res.cookies) {
 		str += "Set-Cookie: ";
-		str += i->first;
+		str += i.first;
 		str += "=";
-		str += i->second;
+		str += i.second;
 		str += "\r\n";
 	}
 
@@ -742,7 +748,8 @@ void Connection::sendResponse(const HttpResponse& res) {
 		off64_t pos = 0;
 		ssize_t read_len;
 		while (pos < fsize && state_ == OK &&
-				(read_len = read(fd, buff, buff_length)) != -1) {
+			(read_len = read(fd, buff, buff_length)) != -1)
+		{
 			send(buff, read_len);
 			pos += read_len;
 		}

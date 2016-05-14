@@ -1,13 +1,13 @@
 #include "connection.h"
 #include "sim.h"
 
-#include "../simlib/include/config_file.h"
-#include "../simlib/include/filesystem.h"
-#include "../simlib/include/logger.h"
-#include "../simlib/include/process.h"
-
 #include <arpa/inet.h>
 #include <csignal>
+#include <simlib/config_file.h>
+#include <simlib/debug.h>
+#include <simlib/filesystem.h>
+#include <simlib/logger.h>
+#include <simlib/process.h>
 
 using std::string;
 
@@ -48,11 +48,10 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__),
-			" - ", e.what());
+		ERRLOG_CAUGHT(e);
 
 	} catch (...) {
-		error_log("Caught exception: ", __FILE__, ':', toString(__LINE__));
+		ERRLOG_CATCH();
 	}
 
 	return nullptr;
@@ -67,18 +66,18 @@ int main() {
 	try {
 		cwd = chdirToExecDir();
 	} catch (const std::exception& e) {
-		error_log("Failed to change working directory: ", e.what());
+		errlog("Failed to change working directory: ", e.what());
 	}
 
 	// Loggers
 	// stdlog like everything writes to stderr
-	if (freopen("server.log", "a", stderr) == NULL)
-		error_log("Failed to open 'server.log'", error(errno));
+	if (freopen(SERVER_LOG, "a", stderr) == NULL)
+		errlog("Failed to open '", SERVER_LOG, "'", error(errno));
 
 	try {
-		error_log.open("server_error.log");
+		errlog.open(SERVER_ERROR_LOG);
 	} catch (const std::exception& e) {
-		error_log("Failed to open 'server_error.log': ", e.what());
+		errlog("Failed to open '", SERVER_ERROR_LOG, "': ", e.what());
 	}
 
 	// Signal control
@@ -86,18 +85,17 @@ int main() {
 	memset (&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
-	sigaction(SIGINT, &sa, nullptr);
-	sigaction(SIGTERM, &sa, nullptr);
-	sigaction(SIGQUIT, &sa, nullptr);
+	(void)sigaction(SIGINT, &sa, nullptr);
+	(void)sigaction(SIGTERM, &sa, nullptr);
+	(void)sigaction(SIGQUIT, &sa, nullptr);
 
 	ConfigFile config;
 	try {
-		config.addVar("address");
-		config.addVar("workers");
+		config.addVars("address", "workers");
 
 		config.loadConfigFromFile("server.conf");
 	} catch (const std::exception& e) {
-		error_log("Failed to load server.config: ", e.what());
+		errlog("Failed to load server.config: ", e.what());
 		return 5;
 	}
 
@@ -105,7 +103,7 @@ int main() {
 	int workers = config.getInt("workers");
 
 	if (workers < 1) {
-		error_log("sim.config: Number of workers cannot be lower than 1");
+		errlog("sim.config: Number of workers cannot be lower than 1");
 		return 6;
 	}
 
@@ -119,7 +117,7 @@ int main() {
 	// Colon found
 	if (colon_pos < address.size()) {
 		if (strtou(address, &port, colon_pos + 1) <= 0) {
-			error_log("sim.config: incorrect port number");
+			errlog("sim.config: incorrect port number");
 			return 7;
 		}
 		address[colon_pos] = '\0'; // need to extract IPv4 address
@@ -131,9 +129,9 @@ int main() {
 	// Extract IPv4 address
 	if (0 == strcmp(address.data(), "*")) // strcmp because of '\0' in address
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
-	else if (address.empty() ||
-			inet_aton(address.data(), &name.sin_addr) == 0) {
-		error_log("sim.config: incorrect IPv4 address");
+	else if (address.empty() || inet_aton(address.data(), &name.sin_addr) == 0)
+	{
+		errlog("sim.config: incorrect IPv4 address");
 		return 8;
 	}
 
@@ -143,23 +141,23 @@ int main() {
 		"address: ", address.data(), ':', toString(port));
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		error_log("Failed to create socket", error(errno));
+		errlog("Failed to create socket", error(errno));
 		return 1;
 	}
 
 	int true_ = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &true_, sizeof(int))) {
-		error_log("Failed to setopt", error(errno));
+		errlog("Failed to setopt", error(errno));
 		return 2;
 	}
 
 	if (bind(socket_fd, (sockaddr*)&name, sizeof(name))) {
-		error_log("Failed to bind", error(errno));
+		errlog("Failed to bind", error(errno));
 		return 3;
 	}
 
 	if (listen(socket_fd, 10)) {
-		error_log("Failed to listen", error(errno));
+		errlog("Failed to listen", error(errno));
 		return 4;
 	}
 
