@@ -33,7 +33,7 @@ void Contest::handle() {
 				}
 
 				// Sim root
-				if (UNLIKELY(Session::user_id == "1")) {
+				if (UNLIKELY(Session::user_id == SIM_ROOT_UID)) {
 					stmt = db_conn.prepare("SELECT id, name FROM rounds "
 						"WHERE parent is NULL ORDER BY id");
 					break;
@@ -865,9 +865,9 @@ void Contest::editRound() {
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
 						"required>\n"
 				"</div>\n"
-				// Visible
+				// Visible before beginning
 				"<div class=\"field-group\">\n"
-					"<label>Visible</label>\n"
+					"<label>Visible before beginning</label>\n"
 					"<input type=\"checkbox\" name=\"visible\"",
 						(is_visible ? " checked" : ""), ">\n"
 				"</div>\n"
@@ -1360,13 +1360,16 @@ void Contest::ranking(bool admin_view) {
 		stmt = db_conn.prepare(admin_view ?
 			concat("SELECT id, name, item FROM rounds WHERE ", column, "=?")
 			: concat("SELECT id, name, item FROM rounds WHERE ", column, "=? "
+				"AND (begins IS NULL OR begins<=?) "
 				"AND (full_results IS NULL OR full_results<=?)"));
 
 		stmt.setString(1, rpath->type == CONTEST
 			? rpath->round_id
 			: rpath->round->id);
-		if (!admin_view)
+		if (!admin_view) {
 			stmt.setString(2, current_time);
+			stmt.setString(3, current_time);
+		}
 		res = stmt.executeQuery();
 
 		vector<RankingRound> rounds;
@@ -1400,10 +1403,13 @@ void Contest::ranking(bool admin_view) {
 				"FROM rounds r, rounds r1, problems p "
 				"WHERE r.", column, "=? AND r.problem_id=p.id "
 					"AND r.parent=r1.id "
+					"AND (r1.begins IS NULL OR r1.begins<=?)"
 					"AND (r1.full_results IS NULL OR r1.full_results<=?)"));
 		stmt.setString(1, rpath->round_id);
-		if (!admin_view)
+		if (!admin_view) {
 			stmt.setString(2, current_time);
+			stmt.setString(3, current_time);
+		}
 		res = stmt.executeQuery();
 
 		// Add problems to rounds
@@ -1435,11 +1441,14 @@ void Contest::ranking(bool admin_view) {
 				"FROM submissions s, users u, rounds r "
 				"WHERE s.", column, "=? AND final=1 AND user_id=u.id "
 					"AND r.id=parent_round_id "
+					"AND (begins IS NULL OR begins<=?) "
 					"AND (full_results IS NULL OR full_results<=?) "
 				"ORDER BY user_id"));
 		stmt.setString(1, rpath->round_id);
-		if (!admin_view)
+		if (!admin_view) {
 			stmt.setString(2, current_time);
+			stmt.setString(3, current_time);
+		}
 		res = stmt.executeQuery();
 
 		// Construct rows

@@ -15,6 +15,7 @@ constexpr unsigned UTYPE_NORMAL = 2;
 #define UTYPE_ADMIN_STR "0"
 #define UTYPE_TEACHER_STR "1"
 #define UTYPE_NORMAL_STR "2"
+#define SIM_ROOT_UID "1"
 
 // Session
 constexpr unsigned SESSION_ID_LEN = 30;

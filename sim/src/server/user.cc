@@ -14,7 +14,7 @@ using std::string;
 uint User::getPermissions(const string& viewer_id, uint viewer_type,
 	const string& uid, uint utype)
 {
-	uint viewer = viewer_type + (viewer_id != "1");
+	uint viewer = viewer_type + (viewer_id != SIM_ROOT_UID);
 	if (viewer_id == uid) {
 		constexpr uint perm[4] = {
 			// SIM root
@@ -31,7 +31,7 @@ uint User::getPermissions(const string& viewer_id, uint viewer_type,
 		return perm[viewer];
 	}
 
-	uint user = utype + (uid != "1");
+	uint user = utype + (uid != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr uint perm[4][4] = {
 		{ // SIM root
@@ -848,7 +848,7 @@ void User::printUserSubmissions(uint limit) {
 
 			bool admin_view = (res[13] == Session::user_id
 				|| Session::user_type < digitsToU<uint>(res[14])
-				|| Session::user_id == "1");
+				|| Session::user_id == SIM_ROOT_UID);
 			// Rest
 			append("<td><a href=\"/s/", res[1], "\">", res[2], "</a></td>"
 					"<td>"
