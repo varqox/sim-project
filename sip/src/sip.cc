@@ -9,7 +9,7 @@ using std::string;
 using std::vector;
 
 unsigned VERBOSITY = 1; // 0 - quiet, 1 - normal, 2 or more - verbose
-ProblemConfig pconf;
+sim::Simfile pconf;
 
 /**
  * @brief Displays help
@@ -27,7 +27,7 @@ static void help(const char* program_name) {
 	puts("  prepare               Prepare package to contest: gentests, genout");
 	puts("  package               Prepare package to archiving: remove unnecessary files (compiled programs, generated tests, etc.)");
 	puts("  init [directory] [name]");
-	puts("                        Initialise Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
+	puts("                        Initialize Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
 	puts("  gentests              Generate tests inputs: compile generators, generate tests");
 	puts("  genout [sol]          Generate tests outputs using solution [sol] (main solution by default)");
 	puts("  add-sol [sol...]      Add solutions [sol...] to package");
@@ -158,7 +158,7 @@ static void parseOptions(int &argc, char **argv) {
 int main(int argc, char **argv) {
 	stdlog.use(stdout);
 	stdlog.label(false);
-	error_log.label(false);
+	errlog.label(false);
 
 	parseOptions(argc, argv);
 
@@ -178,14 +178,14 @@ int main(int argc, char **argv) {
 
 		// Unknown command
 		else {
-			error_log("Unknown command: ", argv[1]);
+			errlog("Unknown command: ", argv[1]);
 			return 2;
 		}
 
 		return rc;
 
 	} catch (const std::exception& e) {
-		error_log("\e[1;31mError:\e[m ", e.what());
+		errlog("\e[1;31mError:\e[m ", e.what());
 		return 1;
 	}
 

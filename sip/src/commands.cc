@@ -11,7 +11,7 @@ namespace command {
 int init(int argc, char **argv) noexcept(false) {
 	if (argc > 3) {
 		puts("Usage: sip init [directory] [name]");
-		puts("Initialise Sip package in [directory] (by default current directory) and (if specified) set problem name to [name]");
+		puts("Initialize Sip package in [directory] (by default current directory) and (if specified) set problem name to [name]");
 		return 2;
 	}
 
@@ -24,7 +24,8 @@ int init(int argc, char **argv) noexcept(false) {
 	if ((mkdir_r(directory) == -1 && errno != EEXIST)
 			|| (mkdir(directory + "check") == -1 && errno != EEXIST)
 			|| (mkdir(directory + "doc") == -1 && errno != EEXIST)
-			|| (mkdir(directory + "tests") == -1 && errno != EEXIST)
+			|| (mkdir(directory + "in") == -1 && errno != EEXIST)
+			|| (mkdir(directory + "out") == -1 && errno != EEXIST)
 			|| (mkdir(directory + "prog") == -1 && errno != EEXIST)
 			|| (mkdir(directory + "utils") == -1 && errno != EEXIST))
 		throw std::runtime_error(concat("mkdir()", error(errno)));
@@ -35,7 +36,7 @@ int init(int argc, char **argv) noexcept(false) {
 		overwrite_config = false;
 		verbose_log(2, "Loading config (loosely)...");
 
-		vector<string> warnings = pconf.looselyLoadConfig(directory);
+		vector<string> warnings = pconf.loadFrom(directory);
 		for (string const& warning : warnings)
 			verbose_log(1, "\e[1;35mWarning:\e[m ", warning);
 	}
@@ -76,7 +77,7 @@ int set(int argc, char **argv) noexcept(false) {
 	}
 
 	verbose_log(2, "Loading config (loosely)...");
-	vector<string> warnings = pconf.looselyLoadConfig(".");
+	vector<string> warnings = pconf.loadFrom(".");
 	for (string const& warning : warnings)
 		verbose_log(1, "\e[1;35mWarning:\e[m ", warning);
 
@@ -91,7 +92,7 @@ int set(int argc, char **argv) noexcept(false) {
 
 	} else if (strcmp(argv[1], "statement") == 0) {
 		if (access(concat("doc/", argv[2]), F_OK) == -1) {
-			error_log("\e[1;31mError:\e[m Statement: '", argv[2], "' does not "
+			errlog("\e[1;31mError:\e[m Statement: '", argv[2], "' does not "
 				"exit");
 			return 2;
 		}
@@ -101,7 +102,7 @@ int set(int argc, char **argv) noexcept(false) {
 
 	} else if (strcmp(argv[1], "checker") == 0) {
 		if (access(concat("check/", argv[2]), F_OK) == -1) {
-			error_log("\e[1;31mError:\e[m Checker: '", argv[2], "' does not "
+			errlog("\e[1;31mError:\e[m Checker: '", argv[2], "' does not "
 				"exit");
 			return 2;
 		}
@@ -111,14 +112,14 @@ int set(int argc, char **argv) noexcept(false) {
 
 	} else if (strcmp(argv[1], "memory_limit") == 0) {
 		if (strtoi(argv[2], &pconf.memory_limit) < 1) {
-			error_log("\e[1;31mError:\e[m Wrong memory limit: '", argv[2], "'");
+			errlog("\e[1;31mError:\e[m Wrong memory limit: '", argv[2], "'");
 			return 2;
 		}
 		config_changed = true;
 
 	} else if (strcmp(argv[1], "main_solution") == 0) {
 		if (access(concat("prog/", argv[2]), F_OK) == -1) {
-			error_log("\e[1;31mError:\e[m Solution: '", argv[2], "' does not "
+			errlog("\e[1;31mError:\e[m Solution: '", argv[2], "' does not "
 				"exit");
 			return 2;
 		}
@@ -132,7 +133,7 @@ int set(int argc, char **argv) noexcept(false) {
 		}
 
 	} else {
-		error_log("Unknown name: '", argv[1], "'");
+		errlog("Unknown name: '", argv[1], "'");
 		return 2;
 	}
 

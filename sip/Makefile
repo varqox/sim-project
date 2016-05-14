@@ -13,6 +13,7 @@ endif
 .PHONY: install
 install: all
 	$(CP) src/sip /usr/local/bin
+	$(CP) src/gen-line /usr/local/bin
 
 .PHONY: uninstall
 uninstall:

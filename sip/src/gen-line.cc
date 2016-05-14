@@ -22,12 +22,8 @@ void generate(string test_name, const vector<string>& args) {
 		exit(-1);
 	}
 
-	spawn_opts sopt = {
-		-1,
-		fileno(test),
-		STDERR_FILENO
-	};
-	if (spawn(args[0], args, &sopt)) {
+	Spawner::ExitStat es = Spawner::run(args[0], args, {-1, fileno(test), STDERR_FILENO});
+	if (es.code) {
 		eprintf("Generator returned non-zero code\n");
 		exit(-1);
 	}
@@ -47,7 +43,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	string test_prefix = "tests/";
+	string test_prefix = "in/";
 	// remove_r(test_prefix.c_str());
 	if (mkdir(test_prefix) && errno != EEXIST) {
 		eprintf("Error: mkdir('%s') - %s\n", test_prefix.c_str(),
