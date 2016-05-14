@@ -16,7 +16,7 @@ public:
 		// other: name => value; for file: name => client_filename
 		std::map<std::string, std::string> files, other;
 
-		operator std::map<std::string, std::string>&() {
+		explicit operator std::map<std::string, std::string>&() {
 			return other;
 		}
 

@@ -2,7 +2,7 @@
 
 #include "http_request.h"
 
-#include <simlib/utility.h>
+#include <simlib/utilities.h>
 
 class FormValidator {
 private:
@@ -15,14 +15,15 @@ public:
 
 	~FormValidator() {}
 
-	// if valid returns true
+	// Returns true if and only if field @p var exists and its value is
+	// no longer than max_size
 	bool validate(std::string& var, const std::string& name,
 			const std::string& name_to_print, size_t max_size = -1);
 
 	// validate field + (if not blank) check it by comp
 	template<class Checker>
 	bool validate(std::string& var, const std::string& name,
-			const std::string& name_to_print, Checker check,
+			const std::string& name_to_print, Checker&& check,
 			const std::string& error, size_t max_size = -1);
 
 	// Like validate() but also validate not blank
@@ -32,7 +33,7 @@ public:
 	// validate field + check it by comp
 	template<class Checker>
 	bool validateNotBlank(std::string& var, const std::string& name,
-			const std::string& name_to_print, Checker check,
+			const std::string& name_to_print, Checker&& check,
 			const std::string& error, size_t max_size = -1);
 
 	bool exist(const std::string& name) {
@@ -40,15 +41,25 @@ public:
 	}
 
 	void addError(const std::string& error) {
-		append(errors_) << "<pre class=\"error\">" << htmlSpecialChars(error)
-			<< "</pre>\n";
+		back_insert(errors_, "<pre class=\"error\">", htmlSpecialChars(error),
+			"</pre>\n");
 	}
 
-	std::string getFilePath(const std::string& name) {
-		const std::map<std::string, std::string>& form = form_.files;
-
+	/// @brief Returns path of file of form name @p name or empty string if such
+	/// does not exist
+	std::string getFilePath(const std::string& name) const {
+		auto const& form = form_.files;
 		auto it = form.find(name);
-		return it == form.end() ? "" : it->second;
+		return (it == form.end() ? "" : it->second);
+	}
+
+
+	/// @brief Returns value of variable @p name or empty string if such does
+	/// not exist
+	std::string get(const std::string& name) const {
+		auto const& form = form_.other;
+		auto it = form.find(name);
+		return (it == form.end() ? "" : it->second);
 	}
 
 	std::string errors() const {
@@ -62,16 +73,16 @@ public:
 // validate field + (if not blank) check it by comp
 template<class Checker>
 inline bool FormValidator::validate(std::string& var, const std::string& name,
-		const std::string& name_to_print, Checker check,
-		const std::string& error, size_t max_size) {
-
+	const std::string& name_to_print, Checker&& check, const std::string& error,
+	size_t max_size)
+{
 	if (validate(var, name, name_to_print, max_size)) {
 		if (var.empty() || check(var))
 			return true;
 
-		append(errors_) << "<pre class=\"error\">"
-			<< htmlSpecialChars(error.empty()
-				? (name_to_print + " validation error") : error) << "</pre>\n";
+		back_insert(errors_, "<pre class=\"error\">",
+			htmlSpecialChars(error.empty()
+				? (name_to_print + " validation error") : error), "</pre>\n");
 	}
 
 	return false;
@@ -79,12 +90,11 @@ inline bool FormValidator::validate(std::string& var, const std::string& name,
 
 // Like validate but also validate not blank
 inline bool FormValidator::validateNotBlank(std::string& var,
-		const std::string& name, const std::string& name_to_print,
-		size_t max_size) {
-
+	const std::string& name, const std::string& name_to_print, size_t max_size)
+{
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
-		append(errors_) << "<pre class=\"error\">" << name_to_print
-			<< " cannot be blank</pre>\n";
+		back_insert(errors_, "<pre class=\"error\">", name_to_print,
+			" cannot be blank</pre>\n");
 		return false;
 	}
 
@@ -94,16 +104,16 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 // validate field + check it by comp
 template<class Checker>
 inline bool FormValidator::validateNotBlank(std::string& var,
-		const std::string& name, const std::string& name_to_print,
-		Checker check, const std::string& error, size_t max_size) {
-
+	const std::string& name, const std::string& name_to_print, Checker&& check,
+	const std::string& error, size_t max_size)
+{
 	if (validateNotBlank(var, name, name_to_print, max_size)) {
 		if (check(var))
 			return true;
 
-		append(errors_) << "<pre class=\"error\">"
-			<< htmlSpecialChars(error.empty()
-				? (name_to_print + " validation error") : error) << "</pre>\n";
+		back_insert(errors_, "<pre class=\"error\">",
+			htmlSpecialChars(error.empty()
+				? (name_to_print + " validation error") : error), "</pre>\n");
 	}
 
 	return false;

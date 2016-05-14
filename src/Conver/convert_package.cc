@@ -37,22 +37,22 @@ int convertPackage(string tmp_package, string out_package) {
 	// Create package structure
 	// TODO: these lines look to similarly
 	if (mkdir_r(out_package + "check") == -1) {
-		eprintf("Failed to create check/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create check/: mkdir_r()%s\n", error(errno).c_str());
 		return -1;
 	}
 
 	if (mkdir(out_package + "doc") == -1) {
-		eprintf("Failed to create doc/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create doc/: mkdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 
 	if (mkdir(out_package + "prog") == -1) {
-		eprintf("Failed to create prog/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create prog/: mkdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 
 	if (mkdir(out_package + "tests") == -1) {
-		eprintf("Failed to create tests/: chmod()%s\n", error(errno).c_str());
+		eprintf("Failed to create tests/: mkdir()%s\n", error(errno).c_str());
 		return -1;
 	}
 
@@ -77,15 +77,16 @@ int convertPackage(string tmp_package, string out_package) {
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, solution_extensions, solution_extensions +
-					sizeof(solution_extensions) /
-					sizeof(*solution_extensions))) {
-
+				sizeof(solution_extensions) / sizeof(*solution_extensions)))
+			{
 				copy(concat(tmp_package, "check/", i),
 					concat(out_package, "check/", i));
 
 				if (!USE_CONFIG && config_conf.checker.find_last_of('.') >
-						i.find_last_of('.'))
+					i.find_last_of('.'))
+				{
 					config_conf.checker = i;
+				}
 			}
 
 	// doc/
@@ -97,15 +98,16 @@ int convertPackage(string tmp_package, string out_package) {
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, statement_extensions, statement_extensions +
-					sizeof(statement_extensions) /
-					sizeof(*statement_extensions))) {
-
+				sizeof(statement_extensions) / sizeof(*statement_extensions)))
+			{
 				copy(concat(tmp_package, "doc/", i),
 					concat(out_package, "doc/", i));
 
 				if (!USE_CONFIG && config_conf.statement.find_last_of('.') >
-						i.find_last_of('.'))
+					i.find_last_of('.'))
+				{
 					config_conf.statement = i;
+				}
 			}
 
 	// prog/
@@ -118,17 +120,18 @@ int convertPackage(string tmp_package, string out_package) {
 	if (folder != nullptr)
 		for (auto& i : folder->files)
 			if (isSuffixIn(i, solution_extensions, solution_extensions +
-					sizeof(solution_extensions) /
-					sizeof(*solution_extensions))) {
-
+				sizeof(solution_extensions) / sizeof(*solution_extensions)))
+			{
 				copy(concat(tmp_package, "prog/", i),
 					concat(out_package, "prog/", i));
 				if (!USE_CONFIG)
 					config_conf.solutions.push_back(i);
 
 				if (!USE_CONFIG && config_conf.main_solution.find_last_of('.') >
-						i.find_last_of('.'))
+					i.find_last_of('.'))
+				{
 					config_conf.main_solution = i;
+				}
 			}
 
 	if (VERBOSITY > 1) {
@@ -137,9 +140,11 @@ int convertPackage(string tmp_package, string out_package) {
 			config_conf.statement.c_str(), config_conf.main_solution.c_str());
 
 		for (auto i = config_conf.solutions.begin();
-				i != config_conf.solutions.end(); ++i)
+			i != config_conf.solutions.end(); ++i)
+		{
 			printf((i == config_conf.solutions.begin() ? "'%s'" : ", '%s'"),
 				i->c_str());
+		}
 
 		printf("]\n");
 	}
@@ -185,16 +190,17 @@ int convertPackage(string tmp_package, string out_package) {
 		if (dir != nullptr)
 			for (auto& file : dir->files)
 				if (isSuffix(file, ".out") && binary_search(tests.begin(),
-						tests.end(), file.substr(0, file.size() - 4))) {
+					tests.end(), file.substr(0, file.size() - 4)))
+				{
 					copy(concat(tmp_package, dir->name, '/', file),
 						concat(out_package, "tests/", file));
 				}
 
-	// Add tests to config_conf
+	/* Add tests to config_conf */
 	sort(tests.begin(), tests.end(), TestNameCompatator());
 
-	config_conf.test_groups.assign(1, ProblemConfig::Group());
-	ProblemConfig::Group *group = &config_conf.test_groups.back();
+	config_conf.test_groups.assign(1, sim::Simfile::Group());
+	sim::Simfile::Group *group = &config_conf.test_groups.back();
 	pair<string, string> curr_group,
 		last_group = TestNameCompatator::extractTag(tests[0]);
 
@@ -203,9 +209,10 @@ int convertPackage(string tmp_package, string out_package) {
 		// Next group (it is strongly based on test order - see
 		// TestNameComparator)
 		if (curr_group.first != last_group.first &&
-				!(curr_group.second == "ocen" &&
-					(last_group.first == "0" || last_group.second == "ocen"))) {
-			config_conf.test_groups.push_back(ProblemConfig::Group());
+			!(curr_group.second == "ocen" &&
+				(last_group.first == "0" || last_group.second == "ocen")))
+		{
+			config_conf.test_groups.push_back(sim::Simfile::Group());
 			group = &config_conf.test_groups.back();
 			last_group = curr_group;
 		}
