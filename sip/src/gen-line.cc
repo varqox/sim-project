@@ -95,8 +95,8 @@ int main(int argc, char *argv[]) {
 		end = begin;
 
 	// Log
-	E("begin: (%u, %s)\n", begin.group_id, begin.test_id.c_str());
-	E("end: (%u, %s)\n", end.group_id, end.test_id.c_str());
+	D(E("begin: (%u, %s)\n", begin.group_id, begin.test_id.c_str());)
+	D(E("end: (%u, %s)\n", end.group_id, end.test_id.c_str());)
 
 	// More validation
 	if (begin.test_id.empty() != end.test_id.empty())
@@ -116,7 +116,8 @@ int main(int argc, char *argv[]) {
 
 	// Generating
 	for (unsigned group_id = begin.group_id; group_id <= end.group_id;
-			++group_id) {
+		++group_id)
+	{
 		if (begin.test_id.empty()) {
 			printf("%u: ", group_id);
 			fflush(stdout);
@@ -127,7 +128,8 @@ int main(int argc, char *argv[]) {
 
 		} else
 			for (char test_id = begin.test_id[0]; test_id <= end.test_id[0];
-					++test_id) {
+				++test_id)
+			{
 				printf("%u%c: ", group_id, test_id);
 				fflush(stdout);
 
@@ -136,7 +138,10 @@ int main(int argc, char *argv[]) {
 				printf("generated.\n");
 			}
 
-		printf("\n");
+		// If there is more than one test per group then separate groups by
+		// an empty line
+		if (begin.test_id != end.test_id)
+			printf("\n");
 	}
 	return 0;
 }

@@ -22,13 +22,15 @@ int init(int argc, char **argv) noexcept(false) {
 	// Create directory structure of the package
 	verbose_log(2, "Creating directories...");
 	if ((mkdir_r(directory) == -1 && errno != EEXIST)
-			|| (mkdir(directory + "check") == -1 && errno != EEXIST)
-			|| (mkdir(directory + "doc") == -1 && errno != EEXIST)
-			|| (mkdir(directory + "in") == -1 && errno != EEXIST)
-			|| (mkdir(directory + "out") == -1 && errno != EEXIST)
-			|| (mkdir(directory + "prog") == -1 && errno != EEXIST)
-			|| (mkdir(directory + "utils") == -1 && errno != EEXIST))
+		|| (mkdir(directory + "check") == -1 && errno != EEXIST)
+		|| (mkdir(directory + "doc") == -1 && errno != EEXIST)
+		|| (mkdir(directory + "in") == -1 && errno != EEXIST)
+		|| (mkdir(directory + "out") == -1 && errno != EEXIST)
+		|| (mkdir(directory + "prog") == -1 && errno != EEXIST)
+		|| (mkdir(directory + "utils") == -1 && errno != EEXIST))
+	{
 		throw std::runtime_error(concat("mkdir()", error(errno)));
+	}
 
 	bool overwrite_config = true;
 	// Load config
@@ -62,8 +64,10 @@ int init(int argc, char **argv) noexcept(false) {
 
 	verbose_log(2, "Writing config...");
 	if (overwrite_config && putFileContents(directory + "config.conf",
-			pconf.dump()) == -1)
+		pconf.dump()) == -1)
+	{
 		throw std::runtime_error(concat("putFileContents()", error(errno)));
+	}
 
 	verbose_log(1, "Done.");
 	return 0;
