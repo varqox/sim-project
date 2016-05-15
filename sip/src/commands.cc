@@ -9,13 +9,13 @@ using std::vector;
 namespace command {
 
 int init(int argc, char **argv) noexcept(false) {
-	if (argc > 3) {
-		puts("Usage: sip init [directory] [name]");
-		puts("Initialize Sip package in [directory] (by default current directory) and (if specified) set problem name to [name]");
+	if (argc > 3 || argc < 2) {
+		puts("Usage: sip init <directory> [name]");
+		puts("Initialize Sip package in <directory> (by default current directory) and (if specified) set problem name to [name]");
 		return 2;
 	}
 
-	string directory = (argc < 2 || argv[1][0] == '\0' ? "./" : argv[1]);
+	string directory = (argv[1][0] == '\0' ? "./" : argv[1]);
 	if (directory.back() != '/')
 		directory += '/';
 
@@ -144,7 +144,7 @@ int set(int argc, char **argv) noexcept(false) {
 	if (config_changed && putFileContents("config.conf", pconf.dump()) == -1)
 		throw std::runtime_error(concat("putFileContents()", error(errno)));
 
-	verbose_log(1, "Set ", argv[1], " to '", argv[2], "' -> \e[1;32mDone.\e[m");
+	verbose_log(1, argv[1], " = '", argv[2], "'  \e[1;32mDone.\e[m");
 	return 0;
 }
 
