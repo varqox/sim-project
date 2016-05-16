@@ -17,10 +17,10 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.5
+    - llvm-toolchain-precise-3.6
     packages:
     - g++-4.9-multilib
-    - clang-3.5
+    - clang-3.6
     - mysql-server
     - mysql-client
     - libmysqlcppconn-dev
@@ -29,8 +29,8 @@ install:
   # Compiler
   - if [ "$CC" = "gcc" ]; then export CC="gcc-4.9"; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
-  - if [ "$CC" = "clang" ]; then export CC="clang-3.5"; fi
-  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.5"; fi
+  - if [ "$CC" = "clang" ]; then export CC="clang-3.6"; fi
+  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.6"; fi
 
 before_script:
   - export CC="$CC -Werror"

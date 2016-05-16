@@ -367,8 +367,9 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					force_normal, "\">", htmlSpecialChars(rpath->round->name),
 				"</a>\n");
 
-			// List problems if and only if round has begun
-			if (rpath->round->begins.empty() ||
+			// List problems if and only if round has begun (for non-admins)
+			if (admin_view ||
+				rpath->round->begins.empty() ||
 				rpath->round->begins <= date("%Y-%m-%d %H:%M:%S"))
 			{
 				// Select problems
