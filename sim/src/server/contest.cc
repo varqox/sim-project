@@ -1137,15 +1137,29 @@ void Contest::deleteContest() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
-					"WHERE contest_round_id=?");
+				"WHERE contest_round_id=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
 
 			// Delete from users_to_contests
 			stmt = db_conn.prepare("DELETE FROM users_to_contests "
 				"WHERE contest_id=?");
+			stmt.setString(1, rpath->round_id);
+			stmt.executeUpdate();
+
+			// Delete files (from disk)
+			stmt = db_conn.prepare("SELECT * FROM files WHERE round_id=?");
+			stmt.setString(1, rpath->round_id);
+			DB::Result res {stmt.executeQuery()};
+			while (res.next())
+				// Ignore errors - there is no goo way to deal with them
+				(void)unlink(concat("files/", res[1]));
+
+			// Delete files (from database)
+			stmt = db_conn.prepare("DELETE FROM files WHERE round_id=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
 
@@ -1193,6 +1207,7 @@ void Contest::deleteRound() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
 					"WHERE parent_round_id=?");
@@ -1241,6 +1256,7 @@ void Contest::deleteProblem() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare(
 				"DELETE FROM submissions WHERE round_id=?");

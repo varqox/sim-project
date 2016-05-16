@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
 			conn.executeUpdate("DROP TABLE iF EXISTS rounds");
 			conn.executeUpdate("DROP TABLE iF EXISTS users_to_contests");
 			conn.executeUpdate("DROP TABLE iF EXISTS submissions");
+			conn.executeUpdate("DROP TABLE iF EXISTS files");
 
 			if (ONLY_DROP_TABLES)
 				return 0;

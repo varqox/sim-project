@@ -53,7 +53,6 @@ void Contest::addFile() {
 				uint64_t file_size = sb.st_size;
 
 				// Move file
-				SignalBlocker signal_guard;
 				if (move(file_path, concat("files/", id)))
 					THROW("move()", error(errno));
 
@@ -64,10 +63,9 @@ void Contest::addFile() {
 				stmt.setString(3, id);
 
 				if (stmt.executeUpdate() != 1) {
-					(void)remove(concat("files/", id));
+					(void)unlink(concat("files/", id));
 					THROW("Failed to update inserted file");
 				}
-				signal_guard.unblock();
 
 				return redirect(concat("/c/", rpath->round_id, "/files"));
 
@@ -147,10 +145,8 @@ void Contest::editFile(const StringView& id, string name) {
 					uint64_t file_size = sb.st_size;
 
 					// Move file
-					SignalBlocker signal_guard;
-					if (move(file_path, concat("files/", id)))
+					if (BLOCK_SIGNALS(move(file_path, concat("files/", id))))
 						THROW("move()", error(errno));
-					signal_guard.unblock();
 
 					stmt = db_conn.prepare("UPDATE files SET name=?, "
 						"description=?, modified=?, file_size=? WHERE id=?");
@@ -251,10 +247,10 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	if (!rpath->admin_access)
 		return error403();
 
-
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			SignalBlocker signal_guard;
 			DB::Statement stmt = db_conn.prepare(
 				"DELETE FROM files WHERE id=?");
 			stmt.setString(1, id.to_string());
@@ -262,8 +258,10 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			if (stmt.executeUpdate() != 1)
 				return error500();
 
-			if (BLOCK_SIGNALS(remove(concat("files/", id))))
-				THROW("remove()", error(errno));
+			if (unlink(concat("files/", id)))
+				THROW("unlink()", error(errno));
+
+			signal_guard.unblock();
 
 			string location = url_args.remnant().to_string();
 			return redirect(location.empty() ? "/" : location);
