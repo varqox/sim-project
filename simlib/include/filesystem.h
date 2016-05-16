@@ -85,6 +85,11 @@ inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) noexcept {
 	return mkdir_r(pathname.c_str(), mode);
 }
 
+// The same as unlink(const char*)
+inline int unlink(const std::string& pathname) noexcept {
+	return unlink(pathname.c_str());
+}
+
 // The same as remove(const char*)
 inline int remove(const std::string& pathname) noexcept {
 	return remove(pathname.c_str());
