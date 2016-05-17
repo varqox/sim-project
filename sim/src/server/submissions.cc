@@ -254,8 +254,20 @@ void Contest::deleteSubmission(const string& submission_id,
 		&& fv.exist("delete"))
 	{
 		try {
-			// Delete submission
+			SignalBlocker signal_guard;
+			// Update `final` status as there was no submission submission_id
 			DB::Statement stmt = db_conn.prepare(
+				"UPDATE submissions SET final=1 "
+				"WHERE user_id=? AND round_id=? AND id!=? "
+					"AND (status='ok' OR status='error') "
+				"ORDER BY id DESC LIMIT 1");
+			stmt.setString(1, submission_user_id);
+			stmt.setString(2, rpath->round_id);
+			stmt.setString(3, submission_id);
+			stmt.executeUpdate();
+
+			// Delete submission
+			stmt = db_conn.prepare(
 				"DELETE FROM submissions WHERE id=?");
 			stmt.setString(1, submission_id);
 
@@ -264,15 +276,7 @@ void Contest::deleteSubmission(const string& submission_id,
 				break;
 			}
 
-			// Restore `final` status
-			stmt = db_conn.prepare(
-				"UPDATE submissions SET final=1 "
-				"WHERE user_id=? AND round_id=? "
-					"AND (status='ok' OR status='error') "
-				"ORDER BY id DESC LIMIT 1");
-			stmt.setString(1, submission_user_id);
-			stmt.setString(2, rpath->round_id);
-			stmt.executeUpdate();
+			signal_guard.unblock();
 
 			string location = url_args.remnant().to_string();
 			return redirect(location.empty() ? "/" : location);

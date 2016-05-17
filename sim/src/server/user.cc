@@ -4,6 +4,7 @@
 #include <sim/utilities.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
+#include <simlib/process.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
 #include <simlib/time.h>
@@ -722,6 +723,7 @@ void User::deleteAccount() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			SignalBlocker signal_guard;
 			// Change contests and problems owner id to 1
 			DB::Statement stmt = db_conn.prepare("UPDATE rounds r, problems p "
 				"SET r.owner=1, p.owner=1 "
@@ -747,12 +749,17 @@ void User::deleteAccount() {
 			stmt.setString(1, user_id);
 
 			if (stmt.executeUpdate()) {
+				signal_guard.unblock();
+
 				if (user_id == Session::user_id)
 					Session::destroy();
 
 				string location = url_args.remnant().to_string();
 				return redirect(location.empty() ? "/" : location);
 			}
+
+			signal_guard.unblock();
+			fv.addError("Internal server error");
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
