@@ -617,13 +617,18 @@ a.btn.red {
 	outline: none;
 }
 /* dropmenu down */
+.dropmenu.down .dropmenu-toggle {
+	display: inline-block;
+}
 .dropmenu.down .dropmenu-toggle::after {
 	content: "";
-    align-self: center;
-	margin: 0.15em 0 0 5px;
+	display: inline-block;
+	vertical-align: middle;
+	margin-left: 5px;
 	border-top: 4px solid;
 	border-right: 4px solid transparent;
 	border-left: 4px solid transparent;
+	white-space: normal; /* Firefox has a problem without that */
 }
 .dropmenu.down.open > ul {
 	position: absolute;
