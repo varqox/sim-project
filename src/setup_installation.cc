@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
 			conn.executeUpdate("DROP TABLE iF EXISTS rounds");
 			conn.executeUpdate("DROP TABLE iF EXISTS users_to_contests");
 			conn.executeUpdate("DROP TABLE iF EXISTS submissions");
+			conn.executeUpdate("DROP TABLE iF EXISTS files");
 
 			if (ONLY_DROP_TABLES)
 				return 0;
@@ -253,6 +254,7 @@ int main(int argc, char **argv) {
 			"`name` VARCHAR(", toStr(FILE_NAME_MAX_LEN), ") NOT NULL,\n"
 			"`description` VARCHAR(", toStr(FILE_DESCRIPTION_MAX_LEN), ") "
 				"NOT NULL,\n"
+			"`file_size` bigint unsigned NOT NULL,\n"
 			"`modified` datetime NOT NULL,\n"
 			"PRIMARY KEY (id),\n"
 			"KEY (round_id, modified)\n"
