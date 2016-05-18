@@ -97,6 +97,14 @@ bool Sandbox::CallbackBase::isSysLseekAllowed(pid_t pid) {
 	return true; // Allow to lseek -1
 }
 
+bool Sandbox::CallbackBase::isSysTgkillAllowed(pid_t pid) {
+	Registers regs;
+	regs.getRegs(pid);
+
+	// The thread (one in the process) is allowed to kill itself ONLY
+	return (ARG1 == (uint64_t)pid && ARG2 == (uint64_t)pid);
+}
+
 bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
 	constexpr int sys_execve[2] = {
 		11, // SYS_execve - i386

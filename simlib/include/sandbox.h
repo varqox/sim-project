@@ -45,6 +45,18 @@ public:
 		 */
 		bool isSysLseekAllowed(pid_t pid);
 
+		/**
+		 * @brief Checks whether syscall tgkill(2) is allowed
+		 *
+		 * @details Syscall is allowed only if the first and the second argument
+		 *   are equal to @p pid
+		 *
+		 * @param pid pid of traced process (via ptrace)
+		 *
+		 * @return true if call is allowed, false otherwise
+		 */
+		bool isSysTgkillAllowed(pid_t pid);
+
 	public:
 		void detectArchitecture(pid_t pid) { arch = ::detectArchitecture(pid); }
 
@@ -501,6 +513,13 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 		return isSysLseekAllowed(pid);
 	}
 
+	constexpr int sys_tgkill[2] = {
+		270, // SYS_tgkill - i386
+		234 // SYS_tgkill - x86_64
+	};
+	if (syscall == sys_tgkill[arch])
+		return isSysTgkillAllowed(pid);
+
 	return false;
 }
 
@@ -606,6 +625,30 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
 			offsetof(i386_user_regset, orig_eax), 0);
 #endif
+		DEBUG_SANDBOX(
+			auto logSyscall = [&](bool with_result) {
+				Registers regs;
+				regs.getRegs(cpid);
+
+				int64_t arg1 = (detectArchitecture(cpid) == ARCH_i386 ?
+					int32_t(regs.uregs.i386_regs.ebx)
+					: regs.uregs.x86_64_regs.rdi);
+				int64_t arg2 = (detectArchitecture(cpid) == ARCH_i386 ?
+					int32_t(regs.uregs.i386_regs.ecx)
+					: regs.uregs.x86_64_regs.rsi);
+
+				auto tmplog = stdlog("[", toString(cpid), "] syscall: ",
+					toString(syscall), '(', toString(arg1), ", ",
+					toString(arg2), ", ...)");
+
+				if (with_result) {
+					int64_t ret_val = (detectArchitecture(cpid) == ARCH_i386 ?
+						int32_t(regs.uregs.i386_regs.eax)
+						: regs.uregs.x86_64_regs.rax);
+					tmplog(" -> ", toString(ret_val));
+				}
+			};
+		)
 
 		// If syscall entry is allowed
 		if (syscall >= 0 && func.isSyscallEntryAllowed(cpid, syscall)) {
@@ -613,25 +656,13 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 			if (wait_for_syscall())
 				return exit_normally();
 
-			DEBUG_SANDBOX(
-				Registers regs;
-				regs.getRegs(cpid);
-
-				int64_t ret_val = (detectArchitecture(cpid) == ARCH_i386 ?
-					int(regs.uregs.i386_regs.eax) : regs.uregs.x86_64_regs.rax);
-				int64_t arg1 = (detectArchitecture(cpid) == ARCH_i386 ?
-					int(regs.uregs.i386_regs.ebx) : regs.uregs.x86_64_regs.rdi);
-				int64_t arg2 = (detectArchitecture(cpid) == ARCH_i386 ?
-					int(regs.uregs.i386_regs.ecx) : regs.uregs.x86_64_regs.rsi);
-
-				stdlog("[", toString(cpid), "] syscall: ", toString(syscall),
-					'(', toString(arg1), ", ", toString(arg2), ", ...) -> ",
-					toString(ret_val));
-			)
+			DEBUG_SANDBOX(logSyscall(true);)
 
 			if (func.isSyscallExitAllowed(cpid, syscall))
 				continue;
 		}
+
+		DEBUG_SANDBOX(logSyscall(false);)
 
 		/* Syscall entry or exit is not allowed or syscall < 0 */
 		uint64_t runtime = timer.stopAndGetRuntime();
