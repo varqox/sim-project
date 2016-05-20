@@ -34,6 +34,9 @@ static void processSubmissionQueue() {
 				// Judge
 				JudgeResult jres = judge(submission_id, problem_id);
 
+				// TODO: fix bug - final become unset when submission is removed
+				// before setting judge result
+
 				// Update submission
 				DB::Statement stmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||

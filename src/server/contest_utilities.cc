@@ -75,7 +75,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 		if (!r_path->contest->is_public) {
 			// Check access to contest
 			if (!Session::open()) {
-				redirect(concat("/login", req->target));
+				redirect(concat("/login?", req->target));
 				return nullptr;
 			}
 

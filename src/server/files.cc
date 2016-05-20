@@ -194,6 +194,10 @@ void Contest::editFile(const StringView& id, string name) {
 		return error500();
 	}
 
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/c/", rpath->round_id, "/files");
+
 	auto ender = contestTemplate("Edit file");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
@@ -236,8 +240,8 @@ void Contest::editFile(const StringView& id, string name) {
 					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
-					"<a class=\"btn red\" href=\"/file/", id, "/delete\">"
-						"Delete file</a>\n"
+					"<a class=\"btn red\" href=\"/file/", id, "/delete?",
+						referer, "\">Delete file</a>\n"
 				"</div>\n"
 			"</form>\n"
 		"</div>\n");
@@ -263,7 +267,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 
 			signal_guard.unblock();
 
-			string location = url_args.remnant().to_string();
+			string location = url_args.extractQuery().to_string();
 			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
@@ -276,15 +280,21 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 
 	// Referer or file page
 	string referer = req->headers.get("Referer");
-	string prev_referer = referer;
-	if (referer.empty()) {
+	string prev_referer = url_args.extractQuery().to_string();
+	if (prev_referer.empty()) {
+		if (referer.size())
+			prev_referer = referer;
+		else {
+			referer = concat("/file/", id);
+			prev_referer = concat("/c/", rpath->round_id, "/files");
+		}
+
+	} else if (referer.empty())
 		referer = concat("/file/", id);
-		prev_referer = concat("/c/", rpath->round_id, "/files");
-	}
 
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete file</h1>\n"
-		"<form method=\"post\" action=\"delete/", prev_referer, "\">\n"
+		"<form method=\"post\" action=\"?", prev_referer, "\">\n"
 			"<label class=\"field\">Are you sure to delete file "
 				"<a href=\"/file/", id, "/edit\">",
 					htmlSpecialChars(name), "</a>?"
@@ -299,7 +309,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 }
 
 void Contest::file() {
-	StringView id = url_args.extractNext();
+	StringView id = url_args.extractNextArg();
 	// Early id validation
 	if (id.size() != FILE_ID_LEN)
 		return error404();
@@ -320,7 +330,7 @@ void Contest::file() {
 			return; // getRoundPath has already set error
 
 		// Edit file
-		StringView next_arg = url_args.extractNext();
+		StringView next_arg = url_args.extractNextArg();
 		if (next_arg == "edit")
 			return editFile(id, file_name);
 
@@ -346,11 +356,10 @@ void Contest::files(bool admin_view) {
 	if (rpath->type != RoundType::CONTEST)
 		return error404();
 
+	StringView next_arg = url_args.extractNextArg();
 	// Add file
-	if (url_args.isNext("add")) {
-		url_args.extractNext();
+	if (next_arg == "add")
 		return addFile();
-	}
 
 	auto ender = contestTemplate("Files");
 	append("<h1>Files</h1>");
