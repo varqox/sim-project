@@ -86,3 +86,62 @@ public:
 
 	StringView remnant() const noexcept { return buff; }
 };
+
+/**
+ * @brief Used to parse Request URI from HTTP requests
+ *
+ * @details Request has to begin with '/'.
+ *   Arguments are delimited by '/' and the last one may be delimited by '?'.
+ *   Only after extracting all arguments the query string (delimited by '?')
+ *   may be extracted.
+ */
+class RequestURIParser {
+	StringView buff;
+
+public:
+	explicit RequestURIParser(const StringView& str) : buff(str) {}
+
+	RequestURIParser(const RequestURIParser& up) : buff(up.buff) {}
+
+	RequestURIParser(RequestURIParser&& up) : buff(std::move(up.buff)) {}
+
+	RequestURIParser& operator=(const RequestURIParser& up)  {
+		buff = up.buff;
+		return *this;
+	}
+
+	RequestURIParser& operator=(RequestURIParser&& up) {
+		buff = std::move(up.buff);
+		return *this;
+	}
+
+	~RequestURIParser() = default;
+
+	/// @brief Extracts next URL argument
+	StringView extractNextArg() {
+		if (buff.empty() || buff.front() != '/')
+			return {};
+
+		size_t pos = 1;
+		while (pos < buff.size() && buff[pos] != '/' && buff[pos] != '?')
+			++pos;
+
+		StringView res {buff.substr(1, pos - 1)};
+		buff.removePrefix(pos);
+		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res,
+			" \tleft: ", buff);)
+		return res;
+	}
+
+	/// Extracts URL Query (if all arguments were extracted before)
+	StringView extractQuery() {
+		if (buff.empty() || buff.front() != '?')
+			return {};
+
+		StringView res {buff.substr(1)};
+		buff.clear();
+		return res;
+	}
+
+	StringView remnant() const noexcept { return buff; }
+};
