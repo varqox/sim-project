@@ -18,7 +18,7 @@ using std::vector;
 
 void Contest::handle() {
 	// Select contest
-	StringView next_arg = url_args.extractNext();
+	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
 		try {
 			// Get available contests
@@ -98,7 +98,7 @@ void Contest::handle() {
 	if (strToNum(round_id, next_arg) <= 0)
 		return error404();
 
-	next_arg = url_args.extractNext();
+	next_arg = url_args.extractNextArg();
 
 	// Get parent rounds
 	rpath.reset(getRoundPath(round_id));
@@ -109,7 +109,7 @@ void Contest::handle() {
 	bool admin_view = rpath->admin_access;
 	if (next_arg == "n") {
 		admin_view = false;
-		next_arg = url_args.extractNext();
+		next_arg = url_args.extractNextArg();
 	}
 
 	// Problem statement
@@ -908,8 +908,9 @@ void Contest::editProblem() {
 	if (!rpath->admin_access)
 		return error403();
 
+	StringView next_arg = url_args.extractNextArg();
 	// Rejudge
-	if (url_args.isNext("rejudge")) {
+	if (next_arg == "rejudge") {
 		try {
 			DB::Statement stmt = db_conn.prepare("UPDATE submissions "
 				"SET status='waiting', queued=? WHERE problem_id=?");
@@ -927,9 +928,7 @@ void Contest::editProblem() {
 	}
 
 	// Download
-	while (url_args.isNext("download")) {
-		url_args.extractNext();
-
+	while (next_arg == "download") {
 		constexpr std::array<unsigned char, 22> empty_zip_file{{
 			0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -940,9 +939,10 @@ void Contest::editProblem() {
 		const char* _tgz = ".tar.gz";
 		const char* extension;
 		// Get extension
-		if (url_args.isNext("zip"))
+		next_arg = url_args.extractNextArg();
+		if (next_arg == "zip")
 			extension = _zip;
-		else if (url_args.isNext("tgz"))
+		else if (next_arg == "tgz")
 			extension = _tgz;
 		else
 			break;

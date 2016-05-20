@@ -82,9 +82,9 @@ Template::TemplateEnder User::userTemplate(const StringView& title,
 
 void User::handle() {
 	if (!Session::open())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
-	if (strToNum(user_id, url_args.extractNext()) <= 0)
+	if (strToNum(user_id, url_args.extractNextArg()) <= 0)
 		return listUsers();
 
 	// Get user information
@@ -110,29 +110,23 @@ void User::handle() {
 	if (~permissions & PERM_VIEW)
 		return error403();
 
+	StringView next_arg = url_args.extractNextArg();
+
 	// Change password
-	if (url_args.isNext("change-password")) {
-		url_args.extractNext();
+	if (next_arg == "change-password")
 		return changePassword();
-	}
 
 	// Delete account
-	if (url_args.isNext("delete")) {
-		url_args.extractNext();
+	if (next_arg == "delete")
 		return deleteAccount();
-	}
 
 	// Edit account
-	if (url_args.isNext("edit")) {
-		url_args.extractNext();
+	if (next_arg == "edit")
 		return editProfile();
-	}
 
 	// Edit account
-	if (url_args.isNext("submissions")) {
-		url_args.extractNext();
+	if (next_arg == "submissions")
 		return userSubmissions();
-	}
 
 	userProfile();
 }
@@ -169,8 +163,8 @@ void User::login() {
 					Session::createAndOpen(res[1]);
 
 					// If there is redirection string, redirect to it
-					auto remnant = url_args.remnant();
-					return redirect(concat('/', remnant));
+					string location = url_args.extractQuery().to_string();
+					return redirect(location.empty() ? "/" : location);
 				}
 
 				fv.addError("Invalid username or password");
@@ -623,7 +617,7 @@ void User::editProfile() {
 			append("<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n");
 		if (permissions & PERM_DELETE)
 			append("<a class=\"btn red\" style=\"float:right\" href=\"/u/",
-				user_id, "/delete\">Delete account</a>\n");
+				user_id, "/delete?/\">Delete account</a>\n");
 
 		append("</div>\n");
 	}
@@ -754,7 +748,7 @@ void User::deleteAccount() {
 				if (user_id == Session::user_id)
 					Session::destroy();
 
-				string location = url_args.remnant().to_string();
+				string location = url_args.extractQuery().to_string();
 				return redirect(location.empty() ? "/" : location);
 			}
 
@@ -769,19 +763,23 @@ void User::deleteAccount() {
 	auto ender = userTemplate("Delete account");
 	printUser();
 
+	// Referer or user profile
 	string referer = req->headers.get("Referer");
-	string prev_referer = referer;
-	if (referer.empty()) {
-		referer = '/';
-		prev_referer = '/';
+	string prev_referer = url_args.extractQuery().to_string();
+	if (prev_referer.empty()) {
+		if (referer.size())
+			prev_referer = referer;
+		else {
+			referer = '/';
+			prev_referer = '/';
+		}
 
-	// If user deletes their own account, referer may be invalid
-	} else if (user_id == Session::user_id)
-		prev_referer = '/';
+	} else if (referer.empty())
+		referer = '/';
 
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Delete account</h1>\n"
-			"<form method=\"post\" action=\"delete/", prev_referer ,"\">\n"
+			"<form method=\"post\" action=\"?", prev_referer ,"\">\n"
 				"<label class=\"field\">Are you sure to delete account "
 					"<a href=\"/u/", user_id, "\">",
 					htmlSpecialChars(username), "</a>, all its "

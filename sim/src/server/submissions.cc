@@ -12,7 +12,7 @@ void Contest::submit(bool admin_view) {
 	// TODO: admin views as normal - before round begins, admin does not get 403
 	// error
 	if (!Session::open())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
 	FormValidator fv(req->form_data);
 
@@ -278,7 +278,7 @@ void Contest::deleteSubmission(const string& submission_id,
 
 			signal_guard.unblock();
 
-			string location = url_args.remnant().to_string();
+			string location = url_args.extractQuery().to_string();
 			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
@@ -293,15 +293,21 @@ void Contest::deleteSubmission(const string& submission_id,
 
 	// Referer or submission page
 	string referer = req->headers.get("Referer");
-	string prev_referer = referer;
-	if (referer.empty()) {
+	string prev_referer = url_args.extractQuery().to_string();
+	if (prev_referer.empty()) {
+		if (referer.size())
+			prev_referer = referer;
+		else {
+			referer = concat("/s/", submission_id);
+			prev_referer = concat("/c/", rpath->round_id, "/submissions");
+		}
+
+	} else if (referer.empty())
 		referer = concat("/s/", submission_id);
-		prev_referer = concat("/c/", rpath->round_id, "/submissions");
-	}
 
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Delete submission</h1>\n"
-			"<form method=\"post\" action=\"delete/", prev_referer ,"\">\n"
+			"<form method=\"post\" action=\"?", prev_referer ,"\">\n"
 				"<label class=\"field\">Are you sure to delete submission "
 				"<a href=\"/s/", submission_id, "\">", submission_id,
 					"</a>?</label>\n"
@@ -316,19 +322,27 @@ void Contest::deleteSubmission(const string& submission_id,
 
 void Contest::submission() {
 	if (!Session::open())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
 	// Extract round id
 	string submission_id;
-	if (strToNum(submission_id, url_args.extractNext()) <= 0)
+	if (strToNum(submission_id, url_args.extractNextArg()) <= 0)
 		return error404();
 
 	try {
+		StringView next_arg = url_args.extractNextArg();
+
+		// Check if user forces the observer view
+		bool admin_view = true;
+		if (next_arg == "n") {
+			admin_view = false;
+			next_arg = url_args.extractNextArg();
+		}
+
 		enum class Query : uint8_t {
 			DELETE, REJUDGE, DOWNLOAD, VIEW_SOURCE, NONE
 		} query = Query::NONE;
 
-		StringView next_arg = url_args.extractNext();
 		if (next_arg == "delete")
 			query = Query::DELETE;
 		else if (next_arg == "rejudge")
@@ -363,14 +377,8 @@ void Contest::submission() {
 		if (!rpath->admin_access && Session::user_id != submission_user_id)
 			return error403();
 
-		// Check if user forces observer view
-		bool admin_view = rpath->admin_access;
-		if (next_arg == "n")
-			admin_view = false;
-		else if (url_args.isNext("n")) {
-			url_args.extractNext();
-			admin_view = false;
-		}
+		if (admin_view)
+			admin_view = rpath->admin_access;
 
 		/* Delete */
 		if (query == Query::DELETE)
@@ -452,6 +460,10 @@ void Contest::submission() {
 		string problem_tag = res[7];
 		string full_name = concat(res[8], ' ', res[9]);
 
+		string referer = req->headers.get("Referer");
+		if (referer.empty())
+			referer = concat("/c/", round_id, "/submissions");
+
 		append("<div class=\"submission-info\">\n"
 			"<div>\n"
 				"<h1>Submission ", submission_id, "</h1>\n"
@@ -464,7 +476,7 @@ void Contest::submission() {
 			append("<a class=\"btn-small blue\" href=\"/s/", submission_id,
 					"/rejudge\">Rejudge</a>\n"
 				"<a class=\"btn-small red\" href=\"/s/", submission_id,
-					"/delete\">Delete</a>\n");
+					"/delete?", referer, "\">Delete</a>\n");
 		append("</div>\n"
 			"</div>\n"
 			"<table style=\"width: 100%\">\n"
@@ -537,7 +549,7 @@ void Contest::submission() {
 
 void Contest::submissions(bool admin_view) {
 	if (!Session::isOpen())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
 	auto ender = contestTemplate("Submissions");
 	append("<h1>Submissions</h1>");

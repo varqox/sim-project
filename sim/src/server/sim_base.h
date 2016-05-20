@@ -13,7 +13,7 @@ protected:
 	std::string client_ip; // TODO: put in request?
 	const server::HttpRequest* req = nullptr;
 	server::HttpResponse resp;
-	SimpleParser url_args {""};
+	RequestURIParser url_args {""};
 
 	SimBase() : db_conn(DB::createConnectionUsingPassFile(".db.config")) {}
 

@@ -18,8 +18,8 @@ server::HttpResponse Sim::handle(string _client_ip,
 	stdlog(req->target);
 
 	try {
-		url_args = SimpleParser(StringView {req->target, 1});
-		StringView next_arg = url_args.extractNext();
+		url_args = RequestURIParser {req->target};
+		StringView next_arg = url_args.extractNextArg();
 
 		if (next_arg == "kit")
 			getStaticFile();
