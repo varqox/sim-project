@@ -34,74 +34,71 @@ static void processSubmissionQueue() {
 				// Judge
 				JudgeResult jres = judge(submission_id, problem_id);
 
-				// TODO: fix bug - final become unset when submission is removed
-				// before setting judge result
-
 				// Update submission
 				DB::Statement stmt;
 				if (jres.status == JudgeResult::COMPILE_ERROR ||
 					jres.status == JudgeResult::JUDGE_ERROR)
 				{
-					stmt = db_conn.prepare("UPDATE submissions s, "
-							"((SELECT id FROM submissions "
-									"WHERE user_id=? AND round_id=? "
-										"AND (status='ok' OR status='error') "
-									"ORDER BY id DESC LIMIT 1)"
-								"UNION "
-									"(SELECT ? AS id) "
-								"LIMIT 1) x "
-						"SET s.final=IF(s.id=?, 0, 1),"
+					stmt = db_conn.prepare(
+						// x.id - id of submission which will have final=1
+						//   (latest with status = 'ok' or 'error')
+						// y.id - id of submissions which will have final=0
+						"UPDATE submissions s, "
+							"(SELECT id FROM submissions WHERE user_id=? AND "
+								"round_id=? AND (status='ok' OR status='error')"
+								"AND id!=? ORDER BY id DESC LIMIT 1) x, "
+							"(SELECT id FROM submissions WHERE user_id=? AND "
+								"round_id=? AND final=1) y "
+						// set final properly and other columns ONLY for just
+						// judged submission
+						"SET s.final=IF(s.id=x.id, 1, 0),"
 							"s.status=IF(s.id=?, ?, s.status),"
-							"s.score=IF(s.id=?, NULL, s.score),"
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
-							"s.final_report=IF(s.id=?, ?, s.final_report)"
-						"WHERE s.id=x.id OR s.id=?");
-					stmt.setString(1, user_id);
-					stmt.setString(2, round_id);
-					stmt.setString(3, submission_id);
-					stmt.setString(4, submission_id);
-					stmt.setString(5, submission_id);
-					stmt.setString(6, (jres.status == JudgeResult::COMPILE_ERROR
+							"s.final_report=IF(s.id=?, ?, s.final_report),"
+							"s.score=IF(s.id=?, NULL, s.score)"
+						"WHERE s.id=x.id OR s.id=y.id OR s.id=?");
+
+					stmt.setString(7, (jres.status == JudgeResult::COMPILE_ERROR
 						? "c_error" : "judge_error"));
-					stmt.setString(7, submission_id);
-					stmt.setString(8, submission_id);
-					stmt.setString(9, jres.initial_report);
-					stmt.setString(10, submission_id);
-					stmt.setString(11, jres.final_report);
-					stmt.setString(12, submission_id);
+					stmt.setString(13, submission_id);
 
 				} else {
-					stmt = db_conn.prepare("UPDATE submissions s, "
-							"((SELECT id FROM submissions "
-									"WHERE user_id=? AND round_id=? "
-										"AND final=1) "
-								"UNION "
-									"(SELECT ? AS id) "
-								"LIMIT 1) x "
-						"SET s.final=IF(s.id=?, "
-								"IF(x.id<=s.id, 1, 0), "
-								"IF(s.id>?, 1, 0)), "
+					stmt = db_conn.prepare(
+						// x.id - id of submission which will have final=1
+						//   (latest with status = 'ok' or 'error')
+						// y.id - id of submissions which will have final=0
+						"UPDATE submissions s, "
+							"(SELECT id FROM submissions WHERE user_id=? AND "
+								"round_id=? AND (status='ok' OR status='error' "
+								"OR id=?) ORDER BY id DESC LIMIT 1) x, "
+							"(SELECT id FROM submissions WHERE user_id=? AND "
+								"round_id=? AND final=1) y "
+						// set final properly and other columns ONLY for just
+						// judged submission
+						"SET s.final=IF(s.id=x.id, 1, 0),"
 							"s.status=IF(s.id=?, ?, s.status),"
-							"s.score=IF(s.id=?, ?, s.score),"
 							"s.initial_report=IF(s.id=?, ?, s.initial_report),"
-							"s.final_report=IF(s.id=?, ?, s.final_report)"
-						"WHERE s.id=x.id OR s.id=?");
-					stmt.setString(1, user_id);
-					stmt.setString(2, round_id);
-					stmt.setString(3, submission_id);
-					stmt.setString(4, submission_id);
-					stmt.setString(5, submission_id);
-					stmt.setString(6, submission_id);
+							"s.final_report=IF(s.id=?, ?, s.final_report),"
+							"s.score=IF(s.id=?, ?, s.score)"
+						"WHERE s.id=x.id OR s.id=y.id OR s.id=?");
+
 					stmt.setString(7, (jres.status == JudgeResult::OK
 						? "ok" : "error"));
-					stmt.setString(8, submission_id);
-					stmt.setInt64(9, jres.score);
-					stmt.setString(10, submission_id);
-					stmt.setString(11, jres.initial_report);
-					stmt.setString(12, submission_id);
-					stmt.setString(13, jres.final_report);
+					stmt.setInt64(13, jres.score);
 					stmt.setString(14, submission_id);
 				}
+
+				stmt.setString(1, user_id);
+				stmt.setString(2, round_id);
+				stmt.setString(3, submission_id);
+				stmt.setString(4, user_id);
+				stmt.setString(5, round_id);
+				stmt.setString(6, submission_id);
+				stmt.setString(8, submission_id);
+				stmt.setString(9, jres.initial_report);
+				stmt.setString(10, submission_id);
+				stmt.setString(11, jres.final_report);
+				stmt.setString(12, submission_id);
 
 				stmt.executeUpdate();
 			} while (res.next());
