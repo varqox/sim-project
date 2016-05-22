@@ -43,12 +43,18 @@ static void processSubmissionQueue() {
 						// x.id - id of submission which will have final=1
 						//   (latest with status = 'ok' or 'error')
 						// y.id - id of submissions which will have final=0
+						// UNION with 0 - because if x is empty then whole query
+						// won't be executed (and 0 is safe because submission 0
+						// does not exist)
 						"UPDATE submissions s, "
-							"(SELECT id FROM submissions WHERE user_id=? AND "
+							"((SELECT id FROM submissions WHERE user_id=? AND "
 								"round_id=? AND (status='ok' OR status='error')"
-								"AND id!=? ORDER BY id DESC LIMIT 1) x, "
-							"(SELECT id FROM submissions WHERE user_id=? AND "
-								"round_id=? AND final=1) y "
+								"AND id!=? ORDER BY id DESC LIMIT 1) "
+							"UNION (SELECT 0 AS id)) x, "
+
+							"((SELECT id FROM submissions WHERE user_id=? AND "
+								"round_id=? AND final=1) "
+							"UNION (SELECT 0 AS id)) y "
 						// set final properly and other columns ONLY for just
 						// judged submission
 						"SET s.final=IF(s.id=x.id, 1, 0),"
@@ -67,12 +73,18 @@ static void processSubmissionQueue() {
 						// x.id - id of submission which will have final=1
 						//   (latest with status = 'ok' or 'error')
 						// y.id - id of submissions which will have final=0
+						// UNION with 0 - because if x is empty then whole query
+						// won't be executed (and 0 is safe because submission 0
+						// does not exist)
 						"UPDATE submissions s, "
-							"(SELECT id FROM submissions WHERE user_id=? AND "
+							"((SELECT id FROM submissions WHERE user_id=? AND "
 								"round_id=? AND (status='ok' OR status='error' "
-								"OR id=?) ORDER BY id DESC LIMIT 1) x, "
-							"(SELECT id FROM submissions WHERE user_id=? AND "
-								"round_id=? AND final=1) y "
+								"OR id=?) ORDER BY id DESC LIMIT 1) "
+							"UNION (SELECT 0 AS id)) x, "
+
+							"((SELECT id FROM submissions WHERE user_id=? AND "
+								"round_id=? AND final=1) "
+							"UNION (SELECT 0 AS id)) y "
 						// set final properly and other columns ONLY for just
 						// judged submission
 						"SET s.final=IF(s.id=x.id, 1, 0),"

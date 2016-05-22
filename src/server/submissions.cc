@@ -460,10 +460,6 @@ void Contest::submission() {
 		string problem_tag = res[7];
 		string full_name = concat(res[8], ' ', res[9]);
 
-		string referer = req->headers.get("Referer");
-		if (referer.empty())
-			referer = concat("/c/", round_id, "/submissions");
-
 		append("<div class=\"submission-info\">\n"
 			"<div>\n"
 				"<h1>Submission ", submission_id, "</h1>\n"
@@ -476,7 +472,7 @@ void Contest::submission() {
 			append("<a class=\"btn-small blue\" href=\"/s/", submission_id,
 					"/rejudge\">Rejudge</a>\n"
 				"<a class=\"btn-small red\" href=\"/s/", submission_id,
-					"/delete?", referer, "\">Delete</a>\n");
+					"/delete?/c/", round_id, "/submissions\">Delete</a>\n");
 		append("</div>\n"
 			"</div>\n"
 			"<table style=\"width: 100%\">\n"
