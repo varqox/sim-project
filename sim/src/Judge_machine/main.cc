@@ -43,9 +43,9 @@ static void processSubmissionQueue() {
 						// x.id - id of submission which will have final=1
 						//   (latest with status = 'ok' or 'error')
 						// y.id - id of submissions which will have final=0
-						// UNION with 0 - because if x is empty then whole query
-						// won't be executed (and 0 is safe because submission 0
-						// does not exist)
+						//   UNION with 0 - because if x was empty then whole
+						//   query wouldn't be executed (and 0 is safe because
+						//   submission with id=0 does not exist)
 						"UPDATE submissions s, "
 							"((SELECT id FROM submissions WHERE user_id=? AND "
 								"round_id=? AND (status='ok' OR status='error')"
@@ -73,9 +73,9 @@ static void processSubmissionQueue() {
 						// x.id - id of submission which will have final=1
 						//   (latest with status = 'ok' or 'error')
 						// y.id - id of submissions which will have final=0
-						// UNION with 0 - because if x is empty then whole query
-						// won't be executed (and 0 is safe because submission 0
-						// does not exist)
+						//   UNION with 0 - because if x was empty then whole
+						//   query wouldn't be executed (and 0 is safe because
+						//   submission with id=0 does not exist)
 						"UPDATE submissions s, "
 							"((SELECT id FROM submissions WHERE user_id=? AND "
 								"round_id=? AND (status='ok' OR status='error' "
@@ -126,7 +126,7 @@ static void processSubmissionQueue() {
 
 void startWatching(int inotify_fd, int& wd) {
 	while ((wd = inotify_add_watch(inotify_fd, "judge-machine.notify",
-		IN_ATTRIB)) == -1)
+		IN_ATTRIB | IN_MOVE_SELF)) == -1)
 	{
 		errlog("Error: inotify_add_watch()", error(errno));
 		// Run tests
@@ -134,7 +134,7 @@ void startWatching(int inotify_fd, int& wd) {
 		usleep(OLD_WATCH_METHOD_SLEEP); // sleep
 
 		if (access("judge-machine.notify", F_OK) == -1)
-			createFile("judge-machine.notify", S_IRUSR);
+			(void)createFile("judge-machine.notify", S_IRUSR);
 	}
 }
 
@@ -192,7 +192,7 @@ int main() {
 
 	// If "judge-machine.notify" file does not exist create it
 	if (access("judge-machine.notify", F_OK) == -1)
-		createFile("judge-machine.notify", S_IRUSR);
+		(void)createFile("judge-machine.notify", S_IRUSR);
 
 	startWatching(inotify_fd, wd);
 
@@ -211,11 +211,16 @@ int main() {
 			continue;
 		}
 
-		// If notify file disappeared
-		if (access("judge-machine.notify", F_OK) == -1) {
-			createFile("judge-machine.notify", S_IRUSR);
-
+		struct inotify_event *event = (struct inotify_event *) inotify_buff;
+		// If notify file has been moved
+		if (event->mask & IN_MOVE_SELF) {
+			(void)createFile("judge-machine.notify", S_IRUSR);
 			inotify_rm_watch(inotify_fd, wd);
+			startWatching(inotify_fd, wd);
+
+		// If notify file has disappeared
+		} else if (event->mask & IN_IGNORED) {
+			(void)createFile("judge-machine.notify", S_IRUSR);
 			startWatching(inotify_fd, wd);
 		}
 
