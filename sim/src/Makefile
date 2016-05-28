@@ -1,12 +1,12 @@
 include ../Makefile.config
 
 .PHONY: all
-all: killinstc Conver CppToHTML Judge_machine server lib setup-installation
+all: killinstc Conver Judge_machine server lib setup-installation
 
-.PHONY: Conver CppToHTML Judge_machine server lib simlib
+.PHONY: Conver Judge_machine server lib simlib
 Conver Judge_machine server lib: simlib
 Judge_machine server: lib
-Conver CppToHTML Judge_machine server lib simlib:
+Conver Judge_machine server lib simlib:
 	$(Q)$(MAKE) -C $@/
 
 killinstc: killinstc.cc simlib/simlib.a
@@ -27,6 +27,5 @@ clean:
 	$(Q)$(MAKE) clean -C lib/
 	$(Q)$(MAKE) clean -C simlib/
 	$(Q)$(MAKE) clean -C Conver/
-	$(Q)$(MAKE) clean -C CppToHTML/
 	$(Q)$(MAKE) clean -C Judge_machine/
 	$(Q)$(MAKE) clean -C server/

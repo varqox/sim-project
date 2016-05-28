@@ -23,7 +23,7 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
+	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/conver src/judge-machine $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -45,9 +45,8 @@ endif
 	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
 
 	# Set owner, group and permission bits
-	# src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
-	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/CTH) $(abspath $(DESTDIR)/proot)
+	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/proot)
 
 	@printf "\033[;32mInstallation finished\033[0m\n"
 

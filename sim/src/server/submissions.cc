@@ -422,34 +422,8 @@ void Contest::submission() {
 
 		/* View source */
 		if (query == Query::VIEW_SOURCE) {
-			vector<string> args;
-			back_insert(args, "./CTH",
-				concat("solutions/", submission_id, ".cpp"));
-
-			int fd = getUnlinkedTmpFile();
-			if (fd < 0)
-				return error500();
-
-			Closer closer(fd);
-
-			// Run CTH
-			Spawner::ExitStat es;
-			try {
-				es = Spawner::run(args[0], args, {-1, fd, -1});
-			} catch (const std::exception& e) {
-				ERRLOG_CAUGHT(e);
-				return error500();
-			}
-
-			if (es.code) {
-				errlog("Error: ", args[0], ' ', es.message);
-				return error500();
-			}
-
-			// Print source code
-			lseek(fd, 0, SEEK_SET);
-			append(getFileContents(fd));
-
+			append(cpp_syntax_highlighter(getFileContents(
+				concat("solutions/", submission_id, ".cpp"))));
 			return;
 		}
 
