@@ -342,12 +342,12 @@ protected:
 		return StringBase(str + pos, std::min(count, len - pos));
 	}
 
-	// Returns a StringBase of the substring [beg, end)
-	StringBase substring(size_type beg, size_type end) const noexcept(false) {
-		if (beg > end || end > len)
+	// Returns a StringBase of the substring [beg, endi)
+	StringBase substring(size_type beg, size_type endi) const noexcept(false) {
+		if (beg > endi || endi > len)
 			throw std::out_of_range("StringBase::substring");
 
-		return StringBase(str + beg, end - beg);
+		return StringBase(str + beg, endi - beg);
 	}
 
 public:
