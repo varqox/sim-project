@@ -3,6 +3,7 @@
 #include "http_request.h"
 #include "http_response.h"
 
+#include <sim/cpp_syntax_highlighter.h>
 #include <sim/db.h>
 #include <simlib/parsers.h>
 #include <utime.h>
@@ -14,6 +15,7 @@ protected:
 	const server::HttpRequest* req = nullptr;
 	server::HttpResponse resp;
 	RequestURIParser url_args {""};
+	CppSyntaxHighlighter cpp_syntax_highlighter;
 
 	SimBase() : db_conn(DB::createConnectionUsingPassFile(".db.config")) {}
 
