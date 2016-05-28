@@ -242,8 +242,9 @@ inline int access(const std::string& pathname, int mode) noexcept {
 /**
  * @brief Moves file from @p oldpath to @p newpath
  * @details First creates directory containing @p newpath
- *   (if @p create_subdirs is true) and then uses rename(2) to move file/directory
- *   or copy_r() and remove_r() if rename(2) fails with errno == EXDEV
+ *   (if @p create_subdirs is true) and then uses rename(2) to move
+ *   file/directory or copy_r() and remove_r() if rename(2) fails with
+ *   errno == EXDEV
  *
  * @param oldpath path to file/directory
  * @param newpath location

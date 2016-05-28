@@ -113,37 +113,33 @@ string toHex(const char* str, size_t len) noexcept(false) {
 	return res;
 }
 
-string htmlSpecialChars(const StringView& s) {
-	string res;
-
+void htmlSpecialChars(string& str, const StringView& s) {
 	for (size_t i = 0; i < s.size(); ++i)
 		switch (s[i]) {
 		// To preserve spaces use CSS: white-space: pre | pre-wrap;
 		case '&':
-			res += "&amp;";
+			str += "&amp;";
 			break;
 
 		case '"':
-			res += "&quot;";
+			str += "&quot;";
 			break;
 
 		case '\'':
-			res += "&apos;";
+			str += "&apos;";
 			break;
 
 		case '<':
-			res += "&lt;";
+			str += "&lt;";
 			break;
 
 		case '>':
-			res += "&gt;";
+			str += "&gt;";
 			break;
 
 		default:
-			res += s[i];
+			str += s[i];
 		}
-
-	return res;
 }
 
 bool isInteger(const StringView& s, size_t beg, size_t end) noexcept {

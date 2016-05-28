@@ -57,7 +57,7 @@ public:
 	// exist
 	uint findNode(const StringView& str) const;
 
-	// Returns pattern id which ends in node @p node_id
+	// Returns id of the pattern which ends in node @p node_id
 	uint pattId(uint node_id) const { return nodes[node_id].patt_id; }
 
 	// Returns id of next pattern node for pattern which ends in node @p node_id

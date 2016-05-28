@@ -342,6 +342,14 @@ protected:
 		return StringBase(str + pos, std::min(count, len - pos));
 	}
 
+	// Returns a StringBase of the substring [beg, end)
+	StringBase substring(size_type beg, size_type end) const noexcept(false) {
+		if (beg > end || end > len)
+			throw std::out_of_range("StringBase::substring");
+
+		return StringBase(str + beg, end - beg);
+	}
+
 public:
 	std::string to_string() const { return std::string(str, len); }
 
@@ -519,6 +527,7 @@ public:
 	}
 
 	using StringBase::substr;
+	using StringBase::substring;
 };
 
 template<class CharT, class Traits, class Char>
@@ -805,7 +814,15 @@ inline bool isSuffixIn(const StringView& str,
 	return isSuffixIn(str, x.begin(), x.end());
 }
 
-std::string htmlSpecialChars(const StringView& s);
+// Escapes HTML unsafe character sequences and appends them to @p str
+void htmlSpecialChars(std::string& str, const StringView& s);
+
+// Escapes HTML unsafe character sequences
+inline std::string htmlSpecialChars(const StringView& s) {
+	std::string res;
+	htmlSpecialChars(res, s);
+	return res;
+}
 
 /**
  * @brief Check whether string @p s[beg, end) is an integer

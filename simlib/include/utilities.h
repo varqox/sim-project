@@ -25,7 +25,7 @@ std::string& back_insert(std::string& str, Args&&... args) {
 }
 
 #if __cplusplus > 201103L
-# warning "Delete the class below (there is that feature in c++14)"
+# warning "Delete the class below (there is that feature in C++14)"
 #endif
 class less {
 	template<class A, class B>
