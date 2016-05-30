@@ -581,6 +581,10 @@ class FileDescriptor {
 public:
 	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
+	explicit FileDescriptor(const char* filename, int flags, int mode = S_0644)
+		noexcept
+		: fd_(::open(filename, flags, mode)) {}
+
 	FileDescriptor(FileDescriptor&&) noexcept = default;
 
 	FileDescriptor& operator=(const FileDescriptor&) noexcept = default;
