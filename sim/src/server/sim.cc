@@ -110,14 +110,6 @@ void Sim::getStaticFile() {
 	resp.content = file_path;
 }
 
-// Cuts string to a newline character both from beginning and ending
-inline static void cutToNewline(string& str) noexcept {
-	// Suffix
-	str.erase(std::min(str.size(), str.rfind('\n')));
-	// Prefix
-	str.erase(0, str.find('\n'));
-}
-
 static string colour(const string& str) noexcept {
 	string res;
 	enum : uint8_t { SPAN, B, NONE } opened = NONE;
@@ -185,22 +177,69 @@ void Sim::logs() {
 	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
 		return error403();
 
-	auto ender = baseTemplate("Logs");
-	append("<pre class=\"logs\">");
+	auto ender = baseTemplate("Logs", ".body{margin-left:20px}");
 
-	FileDescriptor fd;
-	constexpr int BYTES_TO_READ = 65536;
+	// TODO: more logs and show less, but add "show more" button???
+	// TODO: active updating logs
+	constexpr int BYTES_TO_READ = 16384;
+	constexpr int MAX_LINES = 128;
+
+	auto dumpLogTail = [&](const char* filename) {
+		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
+		if (fd == -1) {
+			errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
+			return;
+		}
+
+		string fdata = getFileContents(fd, -BYTES_TO_READ, -1);
+
+		// The first line is probably not intact so erase it
+		if (int(fdata.size()) == BYTES_TO_READ)
+			fdata.erase(0, fdata.find('\n'));
+
+		// Cuts fdata to a newline character from the ending
+		fdata.erase(std::min(fdata.size(), fdata.rfind('\n')));
+
+		// Shorten to the last MAX_LINES
+		auto it = --fdata.end();
+		for (uint lines = MAX_LINES; it > fdata.begin(); --it)
+			if (*it == '\n' && --lines == 0) {
+				fdata.erase(fdata.begin(), ++it);
+				break;
+			}
+
+		fdata = colour(fdata);
+		append(fdata);
+	};
+
+	// Server log
+	append("<h2>Server log:</h2>\n"
+		"<pre class=\"logs\">");
+	dumpLogTail(SERVER_LOG);
+	append("</pre>\n");
 
 	// Server error log
-	if (fd.open(SERVER_ERROR_LOG, O_RDONLY | O_LARGEFILE) == -1) {
-		errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
-	} else {
-		string contents = getFileContents(fd, -BYTES_TO_READ, -1);
-		cutToNewline(contents);
-		contents = colour(contents);
-		append(contents);
-	}
-	// TODO: more logs and show less, but add "show more" button
+	append("<h2>Server error log:</h2>\n"
+		"<pre class=\"logs\">");
+	dumpLogTail(SERVER_ERROR_LOG);
+	append("</pre>\n");
 
-	append("</pre>");
+	// Judge log
+	append("<h2>Judge log:</h2>\n"
+		"<pre class=\"logs\">");
+	dumpLogTail(JUDGE_LOG);
+	append("</pre>\n");
+
+	// Judge error log
+	append("<h2>Judge error log:</h2>\n"
+		"<pre class=\"logs\">");
+	dumpLogTail(JUDGE_ERROR_LOG);
+	append("</pre>\n"
+
+	// Script used to scroll down the logs
+		"<script>"
+			"$(\".logs\").each(function(){"
+				"$(this).scrollTop($(this)[0].scrollHeight);"
+			"});"
+		"</script>");
 }
