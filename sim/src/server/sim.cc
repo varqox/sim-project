@@ -17,6 +17,18 @@ server::HttpResponse Sim::handle(string _client_ip,
 
 	stdlog(req->target);
 
+	// TODO: this is pretty bad-looking
+	auto hardError500 = [&] {
+		resp.status_code = "500 Internal Server Error";
+		resp.headers["Content-Type"] = "text/html; charset=utf-8";
+		resp.content = "<html>\n"
+				"<head><title>500 Internal Server Error</title></head>\n"
+				"<body>\n"
+					"<center><h1>500 Internal Server Error</h1></center>\n"
+				"</body>\n"
+			"</html>\n";
+	};
+
 	try {
 		url_args = RequestURIParser {req->target};
 		StringView next_arg = url_args.extractNextArg();
@@ -54,17 +66,18 @@ server::HttpResponse Sim::handle(string _client_ip,
 		else
 			error404();
 
+		// Make sure that the session is closed
+		Session::close();
+
 	} catch (const std::exception& e) {
 		ERRLOG_CAUGHT(e);
-		error500();
+		hardError500(); // We cannot use error500() because it may throw
 
 	} catch (...) {
 		ERRLOG_CATCH();
-		error500();
+		hardError500(); // We cannot use error500() because it may throw
 	}
 
-	// Make sure that session is closed
-	Session::close();
 	return resp;
 }
 

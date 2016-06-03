@@ -45,10 +45,10 @@ protected:
 	void destroy();
 
 	/// Opens session, returns true if opened successfully, false otherwise
-	bool open() noexcept;
+	bool open();
 
 	bool isOpen() const noexcept { return is_open; }
 
 	/// Closes session
-	void close() noexcept;
+	void close();
 };
