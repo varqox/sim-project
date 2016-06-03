@@ -8,7 +8,7 @@
 
 using std::string;
 
-bool Session::open() noexcept {
+bool Session::open() {
 	if (is_open)
 		return true;
 
@@ -42,7 +42,7 @@ bool Session::open() noexcept {
 		}
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_FORWARDING(e);
 	}
 
 	resp.setCookie("session", "", 0); // Delete cookie
@@ -103,7 +103,7 @@ void Session::destroy() {
 	is_open = false;
 }
 
-void Session::close() noexcept {
+void Session::close() {
 	if (!is_open)
 		return;
 
@@ -116,6 +116,6 @@ void Session::close() noexcept {
 		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_FORWARDING(e);
 	}
 }

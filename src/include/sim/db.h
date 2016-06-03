@@ -142,7 +142,7 @@ public:
 	~Connection() {}
 
 	sql::Connection* impl() {
-		if (conn_->isClosed())
+		if (!conn_->isValid())
 			connect();
 		return conn_.get();
 	}
