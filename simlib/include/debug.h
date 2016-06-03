@@ -21,3 +21,7 @@
 
 #define ERRLOG_CAUGHT(e) errlog(__FILE__ ":", toString(__LINE__), \
 	": Caught exception -> ", e.what())
+
+#define ERRLOG_FORWARDING(e) errlog(__FILE__ ":", toString(__LINE__), \
+		": Forwarding exception -> ", e.what()); \
+	throw;
