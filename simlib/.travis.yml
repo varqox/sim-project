@@ -9,7 +9,6 @@ notifications:
 
 _packages:
   - &default_packages
-    - mysql-server
   - &GCC
     addons:
       apt:
