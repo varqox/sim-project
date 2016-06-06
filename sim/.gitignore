@@ -18,6 +18,10 @@
 # Generated files
 src/Conver/default_checker_dump.c
 
+# External libraries
+src/include/others/
+src/lib/others/
+
 # Others
 build/
 src/killinstc

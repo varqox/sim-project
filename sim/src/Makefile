@@ -1,5 +1,8 @@
 include ../Makefile.config
 
+EXTRA_OPTIONS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
+EXTRA_LD_OPTIONS += -L '$(ROOT)/src/lib' -L '$(ROOT)/src/lib/others'
+
 .PHONY: all
 all: killinstc Conver Judge_machine server lib setup-installation
 
@@ -10,10 +13,10 @@ Conver Judge_machine server lib simlib:
 	$(Q)$(MAKE) -C $@/
 
 killinstc: killinstc.cc simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
 
 setup-installation: setup_installation.cc lib/sim.a simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@ -lmysqlcppconn
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@ -lmysqlcppconn-static -lmysqlclient -lpthread -ldl
 
 lib/sim.a: lib
 	@
