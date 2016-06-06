@@ -11,16 +11,18 @@ SIM is open source platform for carrying out algorithmic contests
 
 ### Dependencies:
 
-- gcc/g++ (32 bit version)
-- MySQL (Debian packages: _mysql-server mysql-client_)
-- [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
+- gcc/g++ (32 bit version) with C++11 support
+- MySQL (Debian packages: _mysql-server_)
+- [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_) at least version 1.1.5 (it's better to use script to install it - see instructions below)
+- MySQL client library (Debian packages: libmysqlclient-dev)
+- [Boost C++ Library](http://www.boost.org/) (Debian package: libboost-dev) - needed by MySQL Connector/C++
 - GNU/Make
 - zip + unzip
 
 #### Ubuntu / Debian
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server mysql-client libmysqlcppconn-dev make zip unzip
+  sudo apt-get install g++-multilib mysql-server libmysqlclient-dev libboost-dev make zip unzip
   ```
 
 ### Instructions
@@ -30,6 +32,12 @@ SIM is open source platform for carrying out algorithmic contests
   ```sh
   git clone --recursive https://github.com/krzyk240/sim
   cd sim
+  ```
+
+  If you want to (or have to) install MySQL Connector/C++ locally (in this repository only) then use the following command:
+
+  ```sh
+  make download-libmysqlcppconn
   ```
 
 2. Build
@@ -80,7 +88,11 @@ SIM is open source platform for carrying out algorithmic contests
   password: sim
   ```
 
-7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/server.conf` in which are server parameters like ADDRESS etc. There are also log files `*.log` which you would find useful if something did not work. Feel free to report bugs and irregularities.
+  Remember to change the password later (or now) if you want to make SIM site public. Do not make hacker's life easier!
+
+7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/server.conf` in which are server parameters like ADDRESS etc. There are also log files `log/*.log` which you would find useful if something did not work.
+
+8. Feel free to report bugs and irregularities.
 
 ### Upgrading
 Just type (be aware of incompatible database (and other inner) changes)

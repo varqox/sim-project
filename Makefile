@@ -87,6 +87,21 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	$(abspath $(DESTDIR)/sim-server)&
 	# $(abspath $(DESTDIR)/sim-server2)&
 
+.PHONY: download-libmysqlcppconn
+download-libmysqlcppconn:
+	$(MKDIR) src/include/others
+	$(MKDIR) src/lib/others
+	bash -c '\
+		TMPDIR=$$(mktemp -d /tmp/tmp.XXXXXXXXXX); \
+		trap "{ rm -rf $$TMPDIR; exit 0; }" EXIT; \
+		trap "{ rm -rf $$TMPDIR; exit 1; }" SIGINT SIGTERM SIGQUIT; \
+		[[ "$$(uname -m)" == "x86_64" ]] && ARCH=64 || ARCH=32; \
+		wget "https://github.com/krzyk240/sim/releases/download/static-files/mysql-connector-cpp-1.1.7-$${ARCH}bit.tar.xz" -O "$$TMPDIR/tmp.tar.xz"; \
+		mkdir "$$TMPDIR/tmp"; \
+		tar xf "$$TMPDIR/tmp.tar.xz" -C "$$TMPDIR/tmp" --strip-components 1; \
+		find "$$TMPDIR/tmp/include" -mindepth 1 -maxdepth 1 | xargs cp -rt src/include/others; \
+		find "$$TMPDIR/tmp/lib" -mindepth 1 -maxdepth 1 | xargs cp -rt src/lib/others'
+
 .PHONY: clean
 clean:
 	$(Q)$(MAKE) clean -C src/
