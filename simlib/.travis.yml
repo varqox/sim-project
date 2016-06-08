@@ -65,4 +65,4 @@ before_script:
   - export CXX="$CXX -Werror"
 
 script:
-  - make -kj DEBUG=$DEBUG
+  - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
