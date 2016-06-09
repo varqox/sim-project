@@ -9,7 +9,7 @@ notifications:
 
 _packages:
   - &default_packages
-    - [mysql-server, libmysqlclient-dev, libboost-dev, make, zip, unzip]
+    - [mysql-server, libmysqlcppconn-dev, make, zip, unzip]
   - &GCC
     addons:
       apt:
@@ -60,9 +60,6 @@ matrix:
   # Due to LLVM APT outage
   allow_failures:
     - compiler: clang
-
-install:
-  - make download-libmysqlcppconn
 
 before_script:
   - export CC="$CC -Werror"

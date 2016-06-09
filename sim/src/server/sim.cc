@@ -21,10 +21,15 @@ server::HttpResponse Sim::handle(string _client_ip,
 	auto hardError500 = [&] {
 		resp.status_code = "500 Internal Server Error";
 		resp.headers["Content-Type"] = "text/html; charset=utf-8";
-		resp.content = "<html>\n"
+		resp.content = "<!DOCTYPE html>"
+				"<html lang=\"en\">\n"
 				"<head><title>500 Internal Server Error</title></head>\n"
 				"<body>\n"
-					"<center><h1>500 Internal Server Error</h1></center>\n"
+					"<center>"
+						"<h1>500 Internal Server Error</h1>\n"
+						"<p>Try to reload the page in a few seconds.</p>\n"
+						"<button onclick=\"history.go(0)\">Reload</button>"
+						"</center>\n"
 				"</body>\n"
 			"</html>\n";
 	};
@@ -72,6 +77,13 @@ server::HttpResponse Sim::handle(string _client_ip,
 	} catch (const std::exception& e) {
 		ERRLOG_CAUGHT(e);
 		hardError500(); // We cannot use error500() because it may throw
+		// In case the lost the connection was lost (such an exception could get
+		// here)
+		try {
+			// Try to reconnect - needed by Connection to detect bad state
+			if (!db_conn.badState())
+				db_conn.reconnect();
+		} catch (...) {}
 
 	} catch (...) {
 		ERRLOG_CATCH();

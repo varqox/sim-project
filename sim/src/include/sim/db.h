@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cppconn_bug_fix.h"
+
 #include <cppconn/prepared_statement.h>
 #include <mysql_connection.h>
 #include <simlib/memory.h>
@@ -111,8 +113,13 @@ class Connection {
 private:
 	std::unique_ptr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
-
-	void connect();
+	bool bad_state = false; // Bad state is ONLY detected in reconnect, so if
+							// you got an exception about lost connection you
+							// have to call reconnect on your own first, that is
+							// because an exception about connection loss as
+							// well as other exception may be thrown by other
+							// instance (e.g. Statement), so we cannot simply
+							// catch it and set bad_state to true
 
 public:
 	Connection() = default;
@@ -142,10 +149,14 @@ public:
 	~Connection() {}
 
 	sql::Connection* impl() {
-		if (!conn_->isValid())
-			connect();
+		if (bad_state)
+			reconnect();
 		return conn_.get();
 	}
+
+	void reconnect() noexcept(false);
+
+	bool badState() noexcept { return bad_state; }
 
 	Statement prepare(const std::string& query) noexcept(false) {
 		return Statement(impl()->prepareStatement(query));
