@@ -16,7 +16,7 @@ killinstc: killinstc.cc simlib/simlib.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
 
 setup-installation: setup_installation.cc lib/sim.a simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@ -lmysqlcppconn-static -lmysqlclient -lpthread -ldl
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@ -lmysqlcppconn
 
 lib/sim.a: lib
 	@
