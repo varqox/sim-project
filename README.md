@@ -13,16 +13,15 @@ SIM is open source platform for carrying out algorithmic contests
 
 - gcc/g++ (32 bit version) with C++11 support
 - MySQL (Debian packages: _mysql-server_)
-- [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_) at least version 1.1.5 (it's better to use script to install it - see instructions below)
+- [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
 - MySQL client library (Debian packages: libmysqlclient-dev)
-- [Boost C++ Library](http://www.boost.org/) (Debian package: libboost-dev) - needed by MySQL Connector/C++
 - GNU/Make
 - zip + unzip
 
 #### Ubuntu / Debian
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmysqlclient-dev libboost-dev make zip unzip
+  sudo apt-get install g++-multilib mysql-server libmysqlcppconn-dev make zip unzip
   ```
 
 ### Instructions
@@ -32,12 +31,6 @@ SIM is open source platform for carrying out algorithmic contests
   ```sh
   git clone --recursive https://github.com/krzyk240/sim
   cd sim
-  ```
-
-  If you want to (or have to) install MySQL Connector/C++ locally (in this repository only) then use the following command:
-
-  ```sh
-  make download-libmysqlcppconn
   ```
 
 2. Build
