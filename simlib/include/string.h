@@ -737,7 +737,7 @@ std::string decodeURI(const StringView& str, size_t beg = 0,
 std::string tolower(std::string str);
 
 inline int hextodec(int c) noexcept {
-	c = tolower(c);
+	c = ::tolower(c);
 	return (c >= 'a' ? 10 + c - 'a' : c - '0');
 }
 
