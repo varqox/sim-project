@@ -75,15 +75,8 @@ server::HttpResponse Sim::handle(string _client_ip,
 		Session::close();
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		hardError500(); // We cannot use error500() because it may throw
-		// In case the lost the connection was lost (such an exception could get
-		// here)
-		try {
-			// Try to reconnect - needed by Connection to detect bad state
-			if (!db_conn.badState())
-				db_conn.reconnect();
-		} catch (...) {}
 
 	} catch (...) {
 		ERRLOG_CATCH();

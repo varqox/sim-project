@@ -41,8 +41,8 @@ bool Session::open() {
 			}
 		}
 
-	} catch (const std::exception& e) {
-		ERRLOG_FORWARDING(e);
+	} catch (...) {
+		ERRLOG_AND_FORWARD();
 	}
 
 	resp.setCookie("session", "", 0); // Delete cookie
@@ -96,7 +96,7 @@ void Session::destroy() {
 		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 	}
 
 	resp.setCookie("session", "", 0); // Delete cookie
@@ -115,7 +115,7 @@ void Session::close() {
 		stmt.setString(2, sid);
 		stmt.executeUpdate();
 
-	} catch (const std::exception& e) {
-		ERRLOG_FORWARDING(e);
+	} catch (...) {
+		ERRLOG_AND_FORWARD();
 	}
 }

@@ -48,7 +48,7 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 
 	} catch (...) {
 		ERRLOG_CATCH();

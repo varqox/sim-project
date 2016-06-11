@@ -82,7 +82,7 @@ void Contest::handle() {
 			return;
 
 		} catch (const std::exception& e) {
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 			return error500();
 		}
 	}
@@ -287,7 +287,7 @@ void Contest::addContest() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -387,7 +387,7 @@ void Contest::addRound() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -513,7 +513,7 @@ void Contest::addProblem() {
 
 				} catch (const std::exception& e) {
 					fv.addError("Internal server error");
-					ERRLOG_CAUGHT(e);
+					ERRLOG_CATCH(e);
 					goto form;
 				}
 
@@ -611,7 +611,7 @@ void Contest::addProblem() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -716,7 +716,7 @@ void Contest::editContest() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 	}
 
@@ -841,7 +841,7 @@ void Contest::editRound() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -921,7 +921,7 @@ void Contest::editProblem() {
 			notifyJudgeServer();
 
 		} catch (const std::exception& e) {
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 		return redirect(concat("/c/", rpath->round_id, "/edit"));
@@ -980,7 +980,7 @@ void Contest::editProblem() {
 				"problems");
 
 		} catch (const std::exception& e) {
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 			return error500();
 		}
 
@@ -1055,7 +1055,7 @@ void Contest::editProblem() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -1175,7 +1175,7 @@ void Contest::deleteContest() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	string referer = req->headers.get("Referer");
@@ -1224,7 +1224,7 @@ void Contest::deleteRound() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	string referer = req->headers.get("Referer");
@@ -1272,7 +1272,7 @@ void Contest::deleteProblem() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	string referer = req->headers.get("Referer");
@@ -1592,7 +1592,7 @@ void Contest::ranking(bool admin_view) {
 			"</table>\n");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

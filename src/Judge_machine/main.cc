@@ -9,15 +9,15 @@
 
 using std::string;
 
-static constexpr int OLD_WATCH_METHOD_SLEEP = 1 * 1000000; // 1 s
+static constexpr int OLD_WATCH_METHOD_SLEEP = 1e6; // 1 s
 static DB::Connection db_conn;
 TemporaryDirectory tmp_dir;
 unsigned VERBOSITY = 2; // 0 - quiet, 1 - normal, 2 or more - verbose
 
 static void processSubmissionQueue() {
-	try {
-		// While submission queue is not empty
-		for (;;) {
+	// While submission queue is not empty
+	for (;;) {
+		try {
 			// TODO: fix bug (rejudged submissions)
 			DB::Result res = db_conn.executeQuery(
 				"SELECT id, user_id, round_id, problem_id FROM submissions "
@@ -114,13 +114,15 @@ static void processSubmissionQueue() {
 
 				stmt.executeUpdate();
 			} while (res.next());
+
+		} catch (const std::exception& e) {
+			ERRLOG_CATCH(e);
+			usleep(1e6); // Give up for a second to not litter the error log
+
+		} catch (...) {
+			ERRLOG_CATCH();
+			usleep(1e6); // Give up for a second to not litter the error log
 		}
-
-	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
-
-	} catch (...) {
-		ERRLOG_CATCH();
 	}
 }
 

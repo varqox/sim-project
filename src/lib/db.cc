@@ -24,6 +24,8 @@ void Connection::reconnect() {
 	try {
 		std::lock_guard<std::mutex> guard(lock);
 		conn_.reset(get_driver_instance()->connect(host_, user_, password_));
+		bad_state = false;
+
 	} catch (...) {
 		bad_state = true;
 		throw;
