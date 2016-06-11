@@ -110,7 +110,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 		return nullptr;
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		error500();
 		return nullptr;
 	}
@@ -229,7 +229,7 @@ bool Contest::isAdmin(const RoundPath& r_path) {
 		// in handle() also)
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 	}
 
 	return false;
@@ -417,6 +417,6 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 		}
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 	}
 }

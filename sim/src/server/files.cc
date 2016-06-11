@@ -71,7 +71,7 @@ void Contest::addFile() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -169,7 +169,7 @@ void Contest::editFile(const StringView& id, string name) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -190,7 +190,7 @@ void Contest::editFile(const StringView& id, string name) {
 		modified = res[4];
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 
@@ -272,7 +272,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	auto ender = contestTemplate("Delete file");
@@ -347,7 +347,7 @@ void Contest::file() {
 		return;
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
@@ -416,7 +416,7 @@ void Contest::files(bool admin_view) {
 			"</table>\n");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

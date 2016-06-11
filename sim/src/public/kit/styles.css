@@ -1280,9 +1280,8 @@ table.files td {
 
 /* Logs */
 pre.logs {
-	margin: 10px;
+	margin: 10px 32px 10px 10px;
 	max-height: 400px;
-	width: 90%;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	white-space: pre-wrap;
 	background: #131926;

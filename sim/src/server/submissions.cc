@@ -108,7 +108,7 @@ void Contest::submit(bool admin_view) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 		}
 	}
@@ -226,7 +226,7 @@ void Contest::submit(bool admin_view) {
 
 	} catch (const std::exception& e) {
 		fv.addError("Internal server error");
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 	}
 
 	if (isSuffix(buffer, "</option>\n"))
@@ -283,7 +283,7 @@ void Contest::deleteSubmission(const string& submission_id,
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 			break;
 		}
 	}
@@ -512,7 +512,7 @@ void Contest::submission() {
 		append("</div>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
@@ -533,7 +533,7 @@ void Contest::submissions(bool admin_view) {
 			append(res[1]);
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 
@@ -642,7 +642,7 @@ void Contest::submissions(bool admin_view) {
 			"</table>\n");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

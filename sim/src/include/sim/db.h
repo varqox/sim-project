@@ -108,18 +108,17 @@ public:
 
 	friend class Connection;
 };
-
+// #include <simlib/string.h>
 class Connection {
 private:
 	std::unique_ptr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
-	bool bad_state = false; // Bad state is ONLY detected in reconnect, so if
-							// you got an exception about lost connection you
-							// have to call reconnect on your own first, that is
-							// because an exception about connection loss as
-							// well as other exception may be thrown by other
-							// instance (e.g. Statement), so we cannot simply
-							// catch it and set bad_state to true
+	bool bad_state = false; // Bad state is ONLY detected if exception is thrown
+	                        // in (or deeper) methods: prepare(),
+	                        // executeUpdate(), executeQuery(); that is why
+	                        // after connection resetting first call will
+	                        // fail - bad_state is then set and reconnection
+	                        // will happen during the next try
 
 public:
 	Connection() = default;
@@ -159,17 +158,35 @@ public:
 	bool badState() noexcept { return bad_state; }
 
 	Statement prepare(const std::string& query) noexcept(false) {
-		return Statement(impl()->prepareStatement(query));
+		try {
+			return Statement(impl()->prepareStatement(query));
+
+		} catch (...) {
+			bad_state = true;
+			throw;
+		}
 	}
 
 	int executeUpdate(const std::string& update_query) noexcept(false) {
-		std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
-		return stmt->executeUpdate(update_query);
+		try {
+			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
+			return stmt->executeUpdate(update_query);
+
+		} catch (...) {
+			bad_state = true;
+			throw;
+		}
 	}
 
 	Result executeQuery(const std::string& query) noexcept(false) {
-		std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
-		return Result(stmt->executeQuery(query));
+		try {
+			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
+			return Result(stmt->executeQuery(query));
+
+		} catch (...) {
+			bad_state = true;
+			throw;
+		}
 	}
 };
 

@@ -171,7 +171,7 @@ void User::login() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 
 	// Clean old data
@@ -268,7 +268,7 @@ void User::signUp() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 
 	// Clean old data
@@ -400,7 +400,7 @@ void User::listUsers() {
 			"</table>\n");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
@@ -519,7 +519,7 @@ void User::editProfile() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -677,7 +677,7 @@ void User::changePassword() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -757,7 +757,7 @@ void User::deleteAccount() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	auto ender = userTemplate("Delete account");
@@ -890,7 +890,7 @@ void User::printUserSubmissions(uint limit) {
 			"</table>\n");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

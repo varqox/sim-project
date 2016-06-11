@@ -211,7 +211,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 			try {
 				es = Sandbox::run(concat(tmp_dir.name(), "exec"), {}, sb_opts);
 			} catch (const std::exception& e) {
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 
 				// System error
 				ratio = 0.0;
@@ -342,7 +342,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					checker_args, checker_sb_opts, ".", CheckerCallback(
 						{checker_args.begin() + 1, checker_args.end()}));
 			} catch (const std::exception& e) {
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 
 				// System error
 				ratio = 0.0;
