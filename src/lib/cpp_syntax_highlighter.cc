@@ -594,7 +594,6 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 		int k = aho.pattId(aho_res[i]);
 		if (k && (end == size || !isName(str[end]))) {
 			int j = end - words[--k].size;
-			stdlog(toString(j));
 			if (j == 0) {
 				begs[0] = words[k].style;
 				++ends[end];
