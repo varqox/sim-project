@@ -1,0 +1,73 @@
+#include <iostream> // test test \
+					saasasaa
+
+int s_0012intchar = 111;
+
+int ok_suff = 1ll + 2LL + 1ull + 1llu + 1ul + 1u + 1UL + 1ul + 1lU + 1lu + 1LU + 1LLu + 1uLL + 1llU;
+int ill_formed_suff = 1lLu + 1Llu + 1lul + 1.u + 2.0ll + 1.2u + 2lf + 1fl + 1uu + 3lll;
+
+int ok = 0x1122.3p-5 + 0x.1p2 + 0x1.p-3 + 1.e3 + .3e1;
+int ill_formed = 0x + 0x1122p1.2 + 0.2e3e3 + 0x12e+2 + 0x.p1 + .e1 + 0x.2p-1.2 + 11.4e-2.01;
+
+int a = 0222.1.2, b = 0.1l + 0.2l + 1u + 1ll + .0ll + 0.u, c = 0.l + 0ull + .1F
+	+ 1ll + 2l,  = 00.\
+111\
+l;
+
+#define hhhhhhhh "foo-bar.h" // bar foo
+
+using namespace std;
+/\
+/ aaaa
+int main() {
+	int x = _\
+\
+_gcd \
+
+	 (3, 4);
+	 int a = s:::a(::aa::aa() + a:d() + :::dd());
+	char c = '\\
+\
+\
+\
+n';
+/\
+\
+\
+\
+*
+
+aa
+*\
+/
+	char c1 = '\
+\
+\
+\
+n';
+	// char c2 = 'a';
+	const char* cc = /*/ aaa */ "bbb"/**/"aaa";
+	cout << '\'' << c << "' '" << c1 << "'"  << endl << cc << endl;
+
+	const char ccc = "\na\x11p\033ooo\u1234oooo\U12345678q0000\u\
+1\
+\
+2\
+\
+3\
+\
+\
+4\
+qqqq\u12\
+34wwww/*     */  // # include ";
+}
+
+#pragma /*aa
+	aa*/ bb \
+	aaaaaa\
+	aaa // bbbb\
+		bbb
+
+/* // "    #aaa
+aaa " */
+

@@ -1,0 +1,78 @@
+<table class="code-view">
+<tbody>
+<tr><td id="L1" line="1"></td><td><span style="color:#00a000">#include &lt;iostream&gt; <span style="color:#a0a0a0">// test test \</span></span></td></tr>
+<tr><td id="L2" line="2"></td><td><span style="color:#00a000"><span style="color:#a0a0a0">					saasasaa</span></span></td></tr>
+<tr><td id="L3" line="3"></td><td></td></tr>
+<tr><td id="L4" line="4"></td><td><span style="color:#0000ff;font-weight:bold">int</span> s_0012intchar <span style="color:#515125">=</span> <span style="color:#d923e9">111</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L5" line="5"></td><td></td></tr>
+<tr><td id="L6" line="6"></td><td><span style="color:#0000ff;font-weight:bold">int</span> ok_suff <span style="color:#515125">=</span> <span style="color:#d923e9">1ll</span> <span style="color:#515125">+</span> <span style="color:#d923e9">2LL</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1ull</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1llu</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1ul</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1u</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1UL</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1ul</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1lU</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1lu</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1LU</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1LLu</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1uLL</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1llU</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L7" line="7"></td><td><span style="color:#0000ff;font-weight:bold">int</span> ill_formed_suff <span style="color:#515125">=</span> <span style="color:#d923e9">1l</span>Lu <span style="color:#515125">+</span> <span style="color:#d923e9">1L</span>lu <span style="color:#515125">+</span> <span style="color:#d923e9">1lu</span>l <span style="color:#515125">+</span> <span style="color:#d923e9">1.</span>u <span style="color:#515125">+</span> <span style="color:#d923e9">2.0l</span>l <span style="color:#515125">+</span> <span style="color:#d923e9">1.2</span>u <span style="color:#515125">+</span> <span style="color:#d923e9">2l</span>f <span style="color:#515125">+</span> <span style="color:#d923e9">1f</span>l <span style="color:#515125">+</span> <span style="color:#d923e9">1u</span>u <span style="color:#515125">+</span> <span style="color:#d923e9">3ll</span>l<span style="color:#515125">;</span></td></tr>
+<tr><td id="L8" line="8"></td><td></td></tr>
+<tr><td id="L9" line="9"></td><td><span style="color:#0000ff;font-weight:bold">int</span> ok <span style="color:#515125">=</span> <span style="color:#d923e9">0x1122.3p-5</span> <span style="color:#515125">+</span> <span style="color:#d923e9">0x.1p2</span> <span style="color:#515125">+</span> <span style="color:#d923e9">0x1.p-3</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1.e3</span> <span style="color:#515125">+</span> <span style="color:#d923e9">.3e1</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L10" line="10"></td><td><span style="color:#0000ff;font-weight:bold">int</span> ill_formed <span style="color:#515125">=</span> 0x <span style="color:#515125">+</span> 0x1122p1<span style="color:#515125">.</span>2 <span style="color:#515125">+</span> 0<span style="color:#515125">.</span>2e3e3 <span style="color:#515125">+</span> <span style="color:#d923e9">0x12e</span><span style="color:#515125">+</span><span style="color:#d923e9">2</span> <span style="color:#515125">+</span> 0x<span style="color:#515125">.</span>p1 <span style="color:#515125">+</span> <span style="color:#515125">.</span>e1 <span style="color:#515125">+</span> 0x<span style="color:#515125">.</span>2p<span style="color:#515125">-</span>1<span style="color:#515125">.</span>2 <span style="color:#515125">+</span> 11<span style="color:#515125">.</span>4e<span style="color:#515125">-</span>2<span style="color:#515125">.</span>01<span style="color:#515125">;</span></td></tr>
+<tr><td id="L11" line="11"></td><td></td></tr>
+<tr><td id="L12" line="12"></td><td><span style="color:#0000ff;font-weight:bold">int</span> a <span style="color:#515125">=</span> 0222<span style="color:#515125">.</span>1<span style="color:#515125">.</span>2<span style="color:#515125">,</span> b <span style="color:#515125">=</span> <span style="color:#d923e9">0.1l</span> <span style="color:#515125">+</span> <span style="color:#d923e9">0.2l</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1u</span> <span style="color:#515125">+</span> <span style="color:#d923e9">1ll</span> <span style="color:#515125">+</span> <span style="color:#d923e9">.0l</span>l <span style="color:#515125">+</span> <span style="color:#d923e9">0.</span>u<span style="color:#515125">,</span> c <span style="color:#515125">=</span> <span style="color:#d923e9">0.l</span> <span style="color:#515125">+</span> <span style="color:#d923e9">0ull</span> <span style="color:#515125">+</span> <span style="color:#d923e9">.1F</span></td></tr>
+<tr><td id="L13" line="13"></td><td>	<span style="color:#515125">+</span> <span style="color:#d923e9">1ll</span> <span style="color:#515125">+</span> <span style="color:#d923e9">2l</span><span style="color:#515125">,</span>  <span style="color:#515125">=</span> <span style="color:#d923e9">00.\</span></td></tr>
+<tr><td id="L14" line="14"></td><td><span style="color:#d923e9">111\</span></td></tr>
+<tr><td id="L15" line="15"></td><td><span style="color:#d923e9">l</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L16" line="16"></td><td></td></tr>
+<tr><td id="L17" line="17"></td><td><span style="color:#00a000">#define hhhhhhhh <span style="color:#ff0000">&quot;foo-bar.h&quot;</span> <span style="color:#a0a0a0">// bar foo</span></span></td></tr>
+<tr><td id="L18" line="18"></td><td></td></tr>
+<tr><td id="L19" line="19"></td><td><span style="color:#c90049;font-weight:bold;">using</span> <span style="color:#c90049;font-weight:bold;">namespace</span> std<span style="color:#515125">;</span></td></tr>
+<tr><td id="L20" line="20"></td><td><span style="color:#a0a0a0">/\</span></td></tr>
+<tr><td id="L21" line="21"></td><td><span style="color:#a0a0a0">/ aaaa</span></td></tr>
+<tr><td id="L22" line="22"></td><td><span style="color:#0000ff;font-weight:bold">int</span> <span style="color:#0086b3">main</span><span style="color:#515125">()</span> <span style="color:#515125">{</span></td></tr>
+<tr><td id="L23" line="23"></td><td>	<span style="color:#0000ff;font-weight:bold">int</span> x <span style="color:#515125">=</span> <span style="color:#0086b3">_<span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L24" line="24"></td><td><span style="color:#0086b3"><span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L25" line="25"></td><td><span style="color:#0086b3">_gcd</span> <span style="color:#515125">\</span></td></tr>
+<tr><td id="L26" line="26"></td><td></td></tr>
+<tr><td id="L27" line="27"></td><td>	 <span style="color:#515125">(</span><span style="color:#d923e9">3</span><span style="color:#515125">,</span> <span style="color:#d923e9">4</span><span style="color:#515125">);</span></td></tr>
+<tr><td id="L28" line="28"></td><td>	 <span style="color:#0000ff;font-weight:bold">int</span> a <span style="color:#515125">=</span> s<span style="color:#515125">:</span><span style="color:#0086b3">::a</span><span style="color:#515125">(</span><span style="color:#0086b3">::aa::aa</span><span style="color:#515125">()</span> <span style="color:#515125">+</span> a<span style="color:#515125">:</span><span style="color:#0086b3">d</span><span style="color:#515125">()</span> <span style="color:#515125">+</span> <span style="color:#515125">:</span><span style="color:#0086b3">::dd</span><span style="color:#515125">());</span></td></tr>
+<tr><td id="L29" line="29"></td><td>	<span style="color:#0000ff;font-weight:bold">char</span> c <span style="color:#515125">=</span> <span style="color:#e0a000">&apos;<span style="color:#d923e9">\<span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L30" line="30"></td><td><span style="color:#e0a000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L31" line="31"></td><td><span style="color:#e0a000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L32" line="32"></td><td><span style="color:#e0a000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L33" line="33"></td><td><span style="color:#e0a000"><span style="color:#d923e9">n</span>&apos;</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L34" line="34"></td><td><span style="color:#a0a0a0">/\</span></td></tr>
+<tr><td id="L35" line="35"></td><td><span style="color:#a0a0a0">\</span></td></tr>
+<tr><td id="L36" line="36"></td><td><span style="color:#a0a0a0">\</span></td></tr>
+<tr><td id="L37" line="37"></td><td><span style="color:#a0a0a0">\</span></td></tr>
+<tr><td id="L38" line="38"></td><td><span style="color:#a0a0a0">*</span></td></tr>
+<tr><td id="L39" line="39"></td><td><span style="color:#a0a0a0"></span></td></tr>
+<tr><td id="L40" line="40"></td><td><span style="color:#a0a0a0">aa</span></td></tr>
+<tr><td id="L41" line="41"></td><td><span style="color:#a0a0a0">*\</span></td></tr>
+<tr><td id="L42" line="42"></td><td><span style="color:#a0a0a0">/</span></td></tr>
+<tr><td id="L43" line="43"></td><td>	<span style="color:#0000ff;font-weight:bold">char</span> c1 <span style="color:#515125">=</span> <span style="color:#e0a000">&apos;<span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L44" line="44"></td><td><span style="color:#e0a000"><span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L45" line="45"></td><td><span style="color:#e0a000"><span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L46" line="46"></td><td><span style="color:#e0a000"><span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L47" line="47"></td><td><span style="color:#e0a000">n&apos;</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L48" line="48"></td><td>	<span style="color:#a0a0a0">// char c2 = &apos;a&apos;;</span></td></tr>
+<tr><td id="L49" line="49"></td><td>	<span style="color:#c90049;font-weight:bold;">const</span> <span style="color:#0000ff;font-weight:bold">char</span><span style="color:#515125">*</span> cc <span style="color:#515125">=</span> <span style="color:#a0a0a0">/*/ aaa */</span> <span style="color:#ff0000">&quot;bbb&quot;</span><span style="color:#a0a0a0">/**/</span><span style="color:#ff0000">&quot;aaa&quot;</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L50" line="50"></td><td>	cout <span style="color:#515125">&lt;&lt;</span> <span style="color:#e0a000">&apos;<span style="color:#d923e9">\&apos;</span>&apos;</span> <span style="color:#515125">&lt;&lt;</span> c <span style="color:#515125">&lt;&lt;</span> <span style="color:#ff0000">&quot;&apos; &apos;&quot;</span> <span style="color:#515125">&lt;&lt;</span> c1 <span style="color:#515125">&lt;&lt;</span> <span style="color:#ff0000">&quot;&apos;&quot;</span>  <span style="color:#515125">&lt;&lt;</span> endl <span style="color:#515125">&lt;&lt;</span> cc <span style="color:#515125">&lt;&lt;</span> endl<span style="color:#515125">;</span></td></tr>
+<tr><td id="L51" line="51"></td><td></td></tr>
+<tr><td id="L52" line="52"></td><td>	<span style="color:#c90049;font-weight:bold;">const</span> <span style="color:#0000ff;font-weight:bold">char</span> ccc <span style="color:#515125">=</span> <span style="color:#ff0000">&quot;<span style="color:#d923e9">\n</span>a<span style="color:#d923e9">\x11</span>p<span style="color:#d923e9">\033</span>ooo<span style="color:#d923e9">\u1234</span>oooo<span style="color:#d923e9">\U12345678</span>q0000<span style="color:#d923e9">\u<span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L53" line="53"></td><td><span style="color:#ff0000"><span style="color:#d923e9">1<span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L54" line="54"></td><td><span style="color:#ff0000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L55" line="55"></td><td><span style="color:#ff0000"><span style="color:#d923e9">2<span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L56" line="56"></td><td><span style="color:#ff0000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L57" line="57"></td><td><span style="color:#ff0000"><span style="color:#d923e9">3<span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L58" line="58"></td><td><span style="color:#ff0000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L59" line="59"></td><td><span style="color:#ff0000"><span style="color:#d923e9"><span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L60" line="60"></td><td><span style="color:#ff0000"><span style="color:#d923e9">4</span><span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L61" line="61"></td><td><span style="color:#ff0000">qqqq<span style="color:#d923e9">\u12<span style="color:#515125">\</span></span></span></td></tr>
+<tr><td id="L62" line="62"></td><td><span style="color:#ff0000"><span style="color:#d923e9">34</span>wwww/*     */  // # include &quot;</span><span style="color:#515125">;</span></td></tr>
+<tr><td id="L63" line="63"></td><td><span style="color:#515125">}</span></td></tr>
+<tr><td id="L64" line="64"></td><td></td></tr>
+<tr><td id="L65" line="65"></td><td><span style="color:#00a000">#pragma <span style="color:#a0a0a0">/*aa</span></span></td></tr>
+<tr><td id="L66" line="66"></td><td><span style="color:#00a000"><span style="color:#a0a0a0">	aa*/</span> bb <span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L67" line="67"></td><td><span style="color:#00a000">	aaaaaa<span style="color:#515125">\</span></span></td></tr>
+<tr><td id="L68" line="68"></td><td><span style="color:#00a000">	aaa <span style="color:#a0a0a0">// bbbb\</span></span></td></tr>
+<tr><td id="L69" line="69"></td><td><span style="color:#00a000"><span style="color:#a0a0a0">		bbb</span></span></td></tr>
+<tr><td id="L70" line="70"></td><td></td></tr>
+<tr><td id="L71" line="71"></td><td><span style="color:#a0a0a0">/* // &quot;    #aaa</span></td></tr>
+<tr><td id="L72" line="72"></td><td><span style="color:#a0a0a0">aaa &quot; */</span></td></tr>
+<tr><td id="L73" line="73"></td><td></td></tr>
+<tr><td id="L74" line="74"></td><td></td></tr>
+</tbody>
+</table>

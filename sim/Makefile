@@ -2,18 +2,28 @@ include Makefile.config
 
 DESTDIR = build
 
-.PHONY: all
-all:
+.PHONY: build
+build:
 ifeq ($(MAKELEVEL), 0)
 	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
 endif
 	$(Q)$(MAKE) -C src/
 ifeq ($(MAKELEVEL), 0)
-	@printf "\033[;32mBuild finished\033[0m\n"
+	@printf "\033[32mBuild finished\033[0m\n"
+endif
+
+.PHONY: test
+test: build
+ifeq ($(MAKELEVEL), 0)
+	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
+endif
+	$(Q)$(MAKE) -C test/
+ifeq ($(MAKELEVEL), 0)
+	@printf "\033[1;32mAll tests passed\033[0m\n"
 endif
 
 .PHONY: install
-install: all
+install: build
 	# Echo log
 	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
@@ -52,7 +62,7 @@ endif
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
-reinstall: all
+reinstall: build
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
@@ -90,6 +100,7 @@ run: $(filter-out run, $(MAKECMDGOALS))
 .PHONY: clean
 clean:
 	$(Q)$(MAKE) clean -C src/
+	$(Q)$(MAKE) clean -C test/
 
 .PHONY: help
 help:
