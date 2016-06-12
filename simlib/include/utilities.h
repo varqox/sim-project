@@ -90,6 +90,7 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 	return (beg != x.end() && (*beg).*field == val ? beg : x.end());
 }
 
+// Aliases - take container instead of range
 template<class A, class B>
 inline bool binary_search(const A& a, B&& val) {
 	return std::binary_search(a.begin(), a.end(), std::forward<B>(val));
@@ -103,6 +104,14 @@ inline auto lower_bound(const A& a, B&& val) -> decltype(a.begin()) {
 template<class A, class B>
 inline auto upper_bound(const A& a, B&& val) -> decltype(a.begin()) {
 	return std::upper_bound(a.begin(), a.end(), std::forward<B>(val));
+}
+
+template<class A>
+inline void sort(A& a) { std::sort(a.begin(), a.end()); }
+
+template<class A, class Func>
+inline void sort(A& a, Func&& func) {
+	std::sort(a.begin(), a.end(), std::forward<Func>(func));
 }
 
 template<class Func>
