@@ -43,19 +43,13 @@ private:
 public:
 	ConfigFile() = default;
 
-	ConfigFile(const ConfigFile& cf) : vars(cf.vars) {}
+	ConfigFile(const ConfigFile&) = default;
 
-	ConfigFile(ConfigFile&& cf) : vars(std::move(cf.vars)) {}
+	ConfigFile(ConfigFile&&) = default;
 
-	ConfigFile& operator=(const ConfigFile& cf) {
-		vars = cf.vars;
-		return *this;
-	}
+	ConfigFile& operator=(const ConfigFile&) = default;
 
-	ConfigFile& operator=(ConfigFile&& cf) {
-		vars = std::move(cf.vars);
-		return *this;
-	}
+	ConfigFile& operator=(ConfigFile&&) = default;
 
 	~ConfigFile() {}
 

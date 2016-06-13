@@ -2,14 +2,16 @@ include Makefile.config
 
 DESTDIR = build
 
-.PHONY: all
-all:
+.PHONY: build
+build:
 ifeq ($(MAKELEVEL), 0)
-	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
+	@echo "DEBUG: $(DEBUG)"
+	@echo "CC -> $(CC)"
+	@echo "CXX -> $(CXX)"
 endif
 	$(Q)$(MAKE) -C src/
 ifeq ($(MAKELEVEL), 0)
-	@printf "\033[;32mBuild finished\033[0m\n"
+	@echo "\033[32mBuild finished\033[0m"
 endif
 
 .PHONY: clean

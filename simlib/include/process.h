@@ -89,13 +89,13 @@ public:
 		explicit ExitStat(int c = 0, uint64_t r = 0, const std::string& m = "")
 			: code(c), runtime(r), message(m) {}
 
-		ExitStat(const ExitStat& es);
+		ExitStat(const ExitStat&) = default;
 
-		ExitStat(ExitStat&& es);
+		ExitStat(ExitStat&&) noexcept = default;
 
-		ExitStat& operator=(const ExitStat& es);
+		ExitStat& operator=(const ExitStat&) = default;
 
-		ExitStat& operator=(ExitStat&& es);
+		ExitStat& operator=(ExitStat&&) = default;
 	};
 
 	struct Options {
@@ -328,26 +328,6 @@ auto threadBlockSignals(F f, Args&&... args)
 #define THREAD_BLOCK_SIGNALS(...) threadBlockSignals([&]{ return __VA_ARGS__; })
 
 /******************************* IMPLEMENTATION *******************************/
-
-inline Spawner::ExitStat::ExitStat(const ExitStat& es)
-	: code(es.code), runtime(es.runtime), message(es.message) {}
-
-inline Spawner::ExitStat::ExitStat(ExitStat&& es)
-	: code(es.code), runtime(es.runtime), message(std::move(es.message)) {}
-
-inline Spawner::ExitStat& Spawner::ExitStat::operator=(const ExitStat& es) {
-	code = es.code;
-	runtime = es.runtime;
-	message = es.message;
-	return *this;
-}
-
-inline Spawner::ExitStat& Spawner::ExitStat::operator=(ExitStat&& es) {
-	code = es.code;
-	runtime = es.runtime;
-	message = std::move(es.message);
-	return *this;
-}
 
 inline Spawner::ZeroTimer::ZeroTimer(int, uint64_t)
 	: begin(std::chrono::steady_clock::now()) {}

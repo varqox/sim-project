@@ -47,12 +47,14 @@ public:
 	StringBase& operator=(StringBase<CharT>&& s) noexcept {
 		str = s.data();
 		len = s.size();
+		return *this;
 	}
 
 	template<class CharT>
 	StringBase& operator=(const StringBase<CharT>& s) noexcept {
 		str = s.data();
 		len = s.size();
+		return *this;
 	}
 
 	virtual ~StringBase() {}
@@ -458,13 +460,12 @@ public:
 
 	StringView() noexcept : StringBase("", 0) {}
 
-	StringView(const StringView& s) noexcept : StringBase(s) {}
+	StringView(const StringView&) noexcept = default;
 
-	StringView(StringView&& s) noexcept : StringBase(s) {}
+	StringView(StringView&&) noexcept = default;
 
 	template<class Char>
 	StringView(const StringBase<Char>& s) noexcept : StringBase(s) {}
-
 
 	template<class Char>
 	StringView& operator=(const StringBase<Char>& s) noexcept {
@@ -472,15 +473,9 @@ public:
 		return *this;
 	}
 
-	StringView& operator=(const StringView& s) noexcept {
-		StringBase::operator=(s);
-		return *this;
-	}
+	StringView& operator=(const StringView& s) noexcept = default;
 
-	StringView& operator=(StringView&& s) noexcept {
-		StringBase::operator=(s);
-		return *this;
-	}
+	StringView& operator=(StringView&& s) noexcept = default;
 
 	~StringView() = default;
 

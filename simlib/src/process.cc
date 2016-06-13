@@ -111,7 +111,7 @@ vector<pid_t> findProcessesByExec(string exec, bool include_me) {
 		buff[len] = '\0';
 
 		if (exec == buff || exec_deleted == buff)
-			res.push_back(pid); // We have a match
+			res.emplace_back(pid); // We have a match
 	}
 
 	closedir(dir);

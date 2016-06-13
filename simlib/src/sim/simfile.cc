@@ -160,7 +160,7 @@ vector<string> Simfile::loadFrom(string package_path) noexcept(false) {
 					": invalid points"));
 		}
 
-		test_groups.back().tests.push_back(test);
+		test_groups.back().tests.emplace_back(test);
 	}
 
 	return warnings;
@@ -282,7 +282,7 @@ void Simfile::loadFromAndValidate(string package_path) noexcept(false) {
 				THROW("config.conf: ", test.name, ": invalid points");
 		}
 
-		test_groups.back().tests.push_back(test);
+		test_groups.back().tests.emplace_back(test);
 	}
 }
 

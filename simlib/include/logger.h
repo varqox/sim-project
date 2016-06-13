@@ -76,16 +76,18 @@ public:
 			operator()(std::forward<Args>(args)...);
 		}
 
-		Appender(const Appender&) = delete;
-		Appender& operator=(const Appender&) = delete;
-		Appender& operator=(Appender&&) = delete;
-
 	public:
+		Appender(const Appender&) = delete;
+
 		Appender(Appender&& app) : logger_(app.logger_), flushed_(app.flushed_),
 			buff_(std::move(app.buff_))
 		{
 			app.flushed_ = true;
 		}
+
+		Appender& operator=(const Appender&) = delete;
+
+		Appender& operator=(Appender&&) = delete;
 
 		template<class T>
 		Appender& operator<<(T&& x) {

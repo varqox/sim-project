@@ -32,19 +32,13 @@ private:
 public:
 	AhoCorasick() = default;
 
-	AhoCorasick(const AhoCorasick& aho) : nodes(aho.nodes) {}
+	AhoCorasick(const AhoCorasick&) = default;
 
-	AhoCorasick(AhoCorasick&& aho) : nodes(std::move(aho.nodes)) {}
+	AhoCorasick(AhoCorasick&&) = default;
 
-	AhoCorasick& operator=(const AhoCorasick& aho) {
-		nodes = aho.nodes;
-		return *this;
-	}
+	AhoCorasick& operator=(const AhoCorasick&) = default;
 
-	AhoCorasick& operator=(AhoCorasick&& aho) {
-		nodes = std::move(aho.nodes);
-		return *this;
-	}
+	AhoCorasick& operator=(AhoCorasick&&) = default;
 
 	const Node& node(int i) const { return nodes[i]; }
 

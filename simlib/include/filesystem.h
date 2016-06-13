@@ -43,17 +43,11 @@ public:
 
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
 
-	TemporaryDirectory(TemporaryDirectory&& td) noexcept
-		: path_(std::move(td.path_)), name_(std::move(td.name_)) {}
+	TemporaryDirectory(TemporaryDirectory&&) noexcept = default;
 
 	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
 
-	TemporaryDirectory& operator=(TemporaryDirectory&& td) noexcept {
-		path_ = std::move(td.path_);
-		name_ = std::move(td.name_);
-
-		return *this;
-	}
+	TemporaryDirectory& operator=(TemporaryDirectory&&) = default;
 
 	~TemporaryDirectory();
 
@@ -310,7 +304,7 @@ private:
 
 public:
 	std::string name;
-	std::vector<Node*> dirs;
+	std::vector<std::unique_ptr<Node>> dirs;
 	std::vector<std::string> files;
 
 	explicit Node(std::string new_name)
@@ -318,21 +312,11 @@ public:
 
 	Node(const Node&) = delete;
 
-	Node(Node&& n) noexcept : name(std::move(n.name)), dirs(std::move(n.dirs)),
-		files(std::move(n.files)) {}
+	Node(Node&& n) noexcept = default;
 
 	Node& operator=(const Node&) = delete;
 
-	Node& operator=(Node&& n) noexcept {
-		for (size_t i = 0; i < dirs.size(); ++i)
-			delete dirs[i];
-
-		name = std::move(n.name);
-		dirs = std::move(n.dirs);
-		files = std::move(n.files);
-
-		return *this;
-	}
+	Node& operator=(Node&&) = default;
 
 	template<class Iter>
 	Node(Iter beg, Iter end) : name(beg, end), dirs(), files() {}
@@ -355,11 +339,6 @@ public:
 	 */
 	bool fileExists(const std::string& pathname) noexcept {
 		return std::binary_search(files.begin(), files.end(), pathname);
-	}
-
-	~Node() {
-		for (size_t i = 0; i < dirs.size(); ++i)
-			delete dirs[i];
 	}
 
 	/**
@@ -585,9 +564,11 @@ public:
 		noexcept
 		: fd_(::open(filename, flags, mode)) {}
 
+	FileDescriptor(const FileDescriptor&) = delete;
+
 	FileDescriptor(FileDescriptor&&) noexcept = default;
 
-	FileDescriptor& operator=(const FileDescriptor&) noexcept = default;
+	FileDescriptor& operator=(const FileDescriptor&) = delete;
 
 	FileDescriptor& operator=(FileDescriptor&&) noexcept = default;
 

@@ -16,21 +16,13 @@ class SimpleParser {
 public:
 	explicit SimpleParser(const StringView& str) : buff(str) {}
 
-	SimpleParser(const SimpleParser& up) : buff(up.buff) {}
+	SimpleParser(const SimpleParser&) noexcept = default;
 
-	SimpleParser(SimpleParser&& up) : buff(std::move(up.buff)) {}
+	SimpleParser(SimpleParser&&) noexcept = default;
 
-	SimpleParser& operator=(const SimpleParser& up)  {
-		buff = up.buff;
-		return *this;
-	}
+	SimpleParser& operator=(const SimpleParser&) noexcept = default;
 
-	SimpleParser& operator=(SimpleParser&& up) {
-		buff = std::move(up.buff);
-		return *this;
-	}
-
-	~SimpleParser() = default;
+	SimpleParser& operator=(SimpleParser&&) noexcept = default;
 
 	bool isNext(const StringView& str, char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", str, "' -> ",
@@ -101,19 +93,13 @@ class RequestURIParser {
 public:
 	explicit RequestURIParser(const StringView& str) : buff(str) {}
 
-	RequestURIParser(const RequestURIParser& up) : buff(up.buff) {}
+	RequestURIParser(const RequestURIParser&) noexcept = default;
 
-	RequestURIParser(RequestURIParser&& up) : buff(std::move(up.buff)) {}
+	RequestURIParser(RequestURIParser&&) noexcept = default;
 
-	RequestURIParser& operator=(const RequestURIParser& up)  {
-		buff = up.buff;
-		return *this;
-	}
+	RequestURIParser& operator=(const RequestURIParser&) noexcept = default;
 
-	RequestURIParser& operator=(RequestURIParser&& up) {
-		buff = std::move(up.buff);
-		return *this;
-	}
+	RequestURIParser& operator=(RequestURIParser&&) noexcept = default;
 
 	~RequestURIParser() = default;
 

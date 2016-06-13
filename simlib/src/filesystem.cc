@@ -6,6 +6,7 @@
 
 using std::array;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 int getUnlinkedTmpFile(int flags) noexcept {
@@ -390,7 +391,7 @@ Node* Node::dir(const string& pathname) {
 			up = mid;
 	}
 
-	return (*down)->name == pathname ? *down : nullptr;
+	return (*down)->name == pathname ? down->get() : nullptr;
 }
 
 static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
@@ -414,15 +415,18 @@ static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
 	while ((file = readdir(dir)))
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
 			if (file->d_type == DT_DIR)
-				root->dirs.push_back(__dumpDirectoryTreeAt(fd, file->d_name));
+				root->dirs.emplace_back(__dumpDirectoryTreeAt(fd,
+					file->d_name));
 			else
-				root->files.push_back(file->d_name);
+				root->files.emplace_back(file->d_name);
 		}
 
 	closedir(dir);
 
 	std::sort(root->dirs.begin(), root->dirs.end(),
-		[](Node* a, Node* b) { return a->name < b->name; });
+		[](const unique_ptr<Node>& a, const unique_ptr<Node>& b) {
+			return a->name < b->name;
+		});
 	std::sort(root->files.begin(), root->files.end());
 	return root;
 }
@@ -581,7 +585,7 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 
 		if (line >= first && line < last)
 			try {
-				res.push_back(buff);
+				res.emplace_back(buff);
 			} catch (...) {
 				fclose(f);
 				free(buff);

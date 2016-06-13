@@ -317,6 +317,7 @@ int ConfigFile::getInt(const StringView &name) const {
 bool ConfigFile::getBool(const StringView &name) const {
 	auto it = vars.find(name.to_string());
 	if (it == vars.end())
+
 		return false;
 
 	string val = tolower(it->second.s);
