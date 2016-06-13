@@ -18,7 +18,7 @@ protected:
 	Session(const Session&) = delete;
 	Session(Session&&) = delete;
 	Session& operator=(const Session&) = delete;
-	Session& operator=(Session&& s) = delete;
+	Session& operator=(Session&&) = delete;
 
 	virtual ~Session() { close(); }
 

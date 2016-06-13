@@ -125,7 +125,7 @@ int convertPackage(string tmp_package, string out_package) {
 				copy(concat(tmp_package, "prog/", i),
 					concat(out_package, "prog/", i));
 				if (!USE_CONFIG)
-					config_conf.solutions.push_back(i);
+					config_conf.solutions.emplace_back(i);
 
 				if (!USE_CONFIG && config_conf.main_solution.find_last_of('.') >
 					i.find_last_of('.'))
@@ -175,7 +175,7 @@ int convertPackage(string tmp_package, string out_package) {
 				if (isSuffix(file, ".in")) {
 					copy(concat(tmp_package, dir->name, '/', file),
 						concat(out_package, "tests/", file));
-					tests.push_back(file.substr(0, file.size() - 3));
+					tests.emplace_back(file.substr(0, file.size() - 3));
 				}
 
 	if (tests.empty()) { // No tests
@@ -212,7 +212,7 @@ int convertPackage(string tmp_package, string out_package) {
 			!(curr_group.second == "ocen" &&
 				(last_group.first == "0" || last_group.second == "ocen")))
 		{
-			config_conf.test_groups.push_back(sim::Simfile::Group());
+			config_conf.test_groups.emplace_back(); // Add new group
 			group = &config_conf.test_groups.back();
 			last_group = curr_group;
 		}

@@ -8,19 +8,13 @@ class CppSyntaxHighlighter {
 public:
 	CppSyntaxHighlighter();
 
-	CppSyntaxHighlighter(const CppSyntaxHighlighter& csh) : aho(csh.aho) {}
+	CppSyntaxHighlighter(const CppSyntaxHighlighter&) = default;
 
-	CppSyntaxHighlighter(CppSyntaxHighlighter&& ch) : aho(std::move(ch.aho)) {}
+	CppSyntaxHighlighter(CppSyntaxHighlighter&&) = default;
 
-	CppSyntaxHighlighter& operator=(const CppSyntaxHighlighter& csh) {
-		aho = csh.aho;
-		return *this;
-	}
+	CppSyntaxHighlighter& operator=(const CppSyntaxHighlighter&) = default;
 
-	CppSyntaxHighlighter& operator=(CppSyntaxHighlighter&& csh) {
-		aho = std::move(csh.aho);
-		return *this;
-	}
+	CppSyntaxHighlighter& operator=(CppSyntaxHighlighter&&) = default;
 
 	// Returns html table containing coloured code @p str
 	std::string operator()(const StringView& str) const;

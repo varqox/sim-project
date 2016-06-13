@@ -3,7 +3,8 @@
 #include <simlib/process.h>
 #include <simlib/utilities.h>
 
-using namespace std;
+using std::vector;
+using std::string;
 
 vector<string> findTests(string path = "tests") {
 	if (path.empty())
@@ -80,8 +81,6 @@ void regenerate(const vector<string>& tests) {
 // argv[1] == "diff" -> show diff if test failed
 // argv[1] == "regen" -> regenerate .out files
 int main(int argc, char **argv) {
-	chdirToExecDir();
-
 	stdlog.label(false);
 	errlog.label(false);
 
@@ -93,7 +92,15 @@ int main(int argc, char **argv) {
 			regen = true;
 	}
 
-	vector<string> tests = findTests();
+	vector<string> tests;
+	try {
+		chdirToExecDir();
+		tests = findTests();
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return 1;
+	}
 
 	if (regen) {
 		regenerate(tests);
@@ -101,7 +108,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (check(tests, diff) != tests.size())
-		return 1;
+		return 2;
 
 	return 0;
 }

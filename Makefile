@@ -5,27 +5,24 @@ DESTDIR = build
 .PHONY: build
 build:
 ifeq ($(MAKELEVEL), 0)
-	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
+	@echo "DEBUG: $(DEBUG)"
+	@echo "CC -> $(CC)"
+	@echo "CXX -> $(CXX)"
 endif
 	$(Q)$(MAKE) -C src/
 ifeq ($(MAKELEVEL), 0)
-	@printf "\033[32mBuild finished\033[0m\n"
+	@echo "\033[32mBuild finished\033[0m"
 endif
 
 .PHONY: test
 test: build
-ifeq ($(MAKELEVEL), 0)
-	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
-endif
 	$(Q)$(MAKE) -C test/
-ifeq ($(MAKELEVEL), 0)
-	@printf "\033[1;32mAll tests passed\033[0m\n"
-endif
+	@echo "\033[1;32mAll tests passed\033[0m"
 
 .PHONY: install
 install: build
 	# Echo log
-	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
+	@echo "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m"
 
 	# Installation
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
@@ -58,7 +55,7 @@ endif
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
 	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/proot)
 
-	@printf "\033[;32mInstallation finished\033[0m\n"
+	@echo "\033[;32mInstallation finished\033[0m"
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
