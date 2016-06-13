@@ -22,7 +22,7 @@ protected:
 	SimBase(const SimBase&) = delete;
 	SimBase(SimBase&&) = delete;
 	SimBase& operator=(const SimBase&) = delete;
-	SimBase& operator=(SimBase&& s) = delete;
+	SimBase& operator=(SimBase&&) = delete;
 
 	virtual ~SimBase() = default;
 

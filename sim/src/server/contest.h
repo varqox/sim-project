@@ -46,23 +46,11 @@ private:
 
 		RoundPath(const RoundPath&) = delete;
 
-		RoundPath(RoundPath&& rp) : admin_access(rp.admin_access),
-			type(rp.type), round_id(std::move(rp.round_id)),
-			contest(std::move(rp.contest)), round(std::move(rp.round)),
-			problem(std::move(rp.problem)) {}
+		RoundPath(RoundPath&&) = default;
 
 		RoundPath& operator=(const RoundPath&) = delete;
 
-		RoundPath& operator=(RoundPath&& rp) {
-			admin_access = rp.admin_access;
-			type = rp.type;
-			round_id = std::move(rp.round_id);
-			contest = std::move(rp.contest);
-			round = std::move(rp.round);
-			problem = std::move(rp.problem);
-
-			return *this;
-		}
+		RoundPath& operator=(RoundPath&&) = default;
 
 		void swap(RoundPath& rp) {
 			std::swap(admin_access, rp.admin_access);

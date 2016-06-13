@@ -151,7 +151,7 @@ void Contest::submit(bool admin_view) {
 
 			// Collect results
 			while (res.next()) {
-				subrounds.push_back(Subround());
+				subrounds.emplace_back();
 				subrounds.back().id = res[1];
 				subrounds.back().name = res[2];
 			}
@@ -178,7 +178,7 @@ void Contest::submit(bool admin_view) {
 					continue; // Ignore
 
 				vector<Problem>& prob = it->second;
-				prob.push_back(Problem());
+				prob.emplace_back();
 				prob.back().id = res[1];
 				prob.back().parent = res[2];
 				prob.back().name = res[3];
