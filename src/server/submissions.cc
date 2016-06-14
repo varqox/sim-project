@@ -114,7 +114,7 @@ void Contest::submit(bool admin_view) {
 	}
 
  form:
-	auto ender = contestTemplate("Submit a solution");
+	contestTemplate("Submit a solution");
 	printRoundPath();
 	string buffer;
 	back_insert(buffer, fv.errors(), "<div class=\"form-container\">\n"
@@ -288,7 +288,7 @@ void Contest::deleteSubmission(const string& submission_id,
 		}
 	}
 
-	auto ender = contestTemplate("Delete submission");
+	contestTemplate("Delete submission");
 	printRoundPath();
 
 	// Referer or submission page
@@ -417,7 +417,7 @@ void Contest::submission() {
 			return;
 		}
 
-		auto ender = contestTemplate("Submission " + submission_id);
+		contestTemplate("Submission " + submission_id);
 		printRoundPath();
 
 		/* View source */
@@ -521,7 +521,7 @@ void Contest::submissions(bool admin_view) {
 	if (!Session::isOpen())
 		return redirect("/login?" + req->target);
 
-	auto ender = contestTemplate("Submissions");
+	contestTemplate("Submissions");
 	append("<h1>Submissions</h1>");
 	printRoundPath("submissions", !admin_view);
 

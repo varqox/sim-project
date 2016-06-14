@@ -37,6 +37,7 @@ server::HttpResponse Sim::handle(string _client_ip,
 	try {
 		url_args = RequestURIParser {req->target};
 		StringView next_arg = url_args.extractNextArg();
+		Template::reset();
 
 		if (next_arg == "kit")
 			getStaticFile();
@@ -71,6 +72,8 @@ server::HttpResponse Sim::handle(string _client_ip,
 		else
 			error404();
 
+		Template::endTemplate();
+
 		// Make sure that the session is closed
 		Session::close();
 
@@ -87,7 +90,7 @@ server::HttpResponse Sim::handle(string _client_ip,
 }
 
 void Sim::mainPage() {
-	auto ender = baseTemplate("Main page");
+	baseTemplate("Main page");
 	append("<div style=\"text-align: center\">\n"
 			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
 				"alt=\"\">\n"
@@ -195,7 +198,7 @@ void Sim::logs() {
 	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
 		return error403();
 
-	auto ender = baseTemplate("Logs", ".body{margin-left:20px}");
+	baseTemplate("Logs", ".body{margin-left:20px}");
 
 	// TODO: more logs and show less, but add "show more" button???
 	// TODO: active updating logs

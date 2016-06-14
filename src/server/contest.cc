@@ -66,7 +66,7 @@ void Contest::handle() {
 			} while (0);
 
 			/* List them */
-			auto ender = baseTemplate("Select contest");
+			baseTemplate("Select contest");
 			append("<div class=\"contests-list\">\n");
 
 			// Add contest button (admins and teachers only)
@@ -123,7 +123,7 @@ void Contest::handle() {
 		string statement = problem_config.getString("statement");
 		// No statement
 		if (statement.empty()) {
-			auto ender = contestTemplate("Problems");
+			contestTemplate("Problems");
 			append("<h1>Problems</h1>");
 			printRoundPath("problems", !admin_view);
 
@@ -199,7 +199,7 @@ void Contest::handle() {
 		return files(admin_view);
 
 	// Contest dashboard
-	auto ender = contestTemplate("Contest dashboard");
+	contestTemplate("Contest dashboard");
 	append("<div class=\"round-info\">");
 
 	if (rpath->type == CONTEST) {
@@ -291,7 +291,7 @@ void Contest::addContest() {
 			}
 	}
 
-	auto ender = baseTemplate("Add contest", ".body{margin-left:30px}");
+	baseTemplate("Add contest", ".body{margin-left:30px}");
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Add contest</h1>\n"
 			"<form method=\"post\">\n"
@@ -391,7 +391,7 @@ void Contest::addRound() {
 			}
 	}
 
-	auto ender = contestTemplate("Add round");
+	contestTemplate("Add round");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Add round</h1>\n"
@@ -616,7 +616,7 @@ void Contest::addProblem() {
 	}
 
  form:
-	auto ender = contestTemplate("Add problem");
+	contestTemplate("Add problem");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Add problem</h1>\n"
@@ -734,7 +734,7 @@ void Contest::editContest() {
 	is_public = rpath->contest->is_public;
 	show_ranking = rpath->contest->show_ranking;
 
-	auto ender = contestTemplate("Edit contest");
+	contestTemplate("Edit contest");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Edit contest</h1>\n"
@@ -852,7 +852,7 @@ void Contest::editRound() {
 	ends = rpath->round->ends;
 	full_results = rpath->round->full_results;
 
-	auto ender = contestTemplate("Edit round");
+	contestTemplate("Edit round");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Edit round</h1>\n"
@@ -1070,7 +1070,7 @@ void Contest::editProblem() {
 	tag = pconfig.getString("tag");
 	memory_limit = pconfig.getString("memory_limit");
 
-	auto ender = contestTemplate("Edit problem");
+	contestTemplate("Edit problem");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
 			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
@@ -1182,7 +1182,7 @@ void Contest::deleteContest() {
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/edit");
 
-	auto ender = contestTemplate("Delete contest");
+	contestTemplate("Delete contest");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete contest</h1>\n"
@@ -1231,7 +1231,7 @@ void Contest::deleteRound() {
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/edit");
 
-	auto ender = contestTemplate("Delete round");
+	contestTemplate("Delete round");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete round</h1>\n"
@@ -1279,7 +1279,7 @@ void Contest::deleteProblem() {
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/edit");
 
-	auto ender = contestTemplate("Delete problem");
+	contestTemplate("Delete problem");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Delete problem</h1>\n"
@@ -1298,7 +1298,7 @@ void Contest::deleteProblem() {
 }
 
 void Contest::listProblems(bool admin_view) {
-	auto ender = contestTemplate("Problems");
+	contestTemplate("Problems");
 	append("<h1>Problems</h1>");
 	printRoundPath("problems", !admin_view);
 	printRoundView(true, admin_view);
@@ -1323,7 +1323,7 @@ void Contest::ranking(bool admin_view) {
 	if (!admin_view && !rpath->contest->show_ranking)
 		return error403();
 
-	auto ender = contestTemplate("Ranking");
+	contestTemplate("Ranking");
 	append("<h1>Ranking</h1>");
 	printRoundPath("ranking", !admin_view);
 

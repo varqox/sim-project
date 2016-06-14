@@ -75,7 +75,7 @@ void Contest::addFile() {
 			}
 	}
 
-	auto ender = contestTemplate("Add file");
+	contestTemplate("Add file");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Add file</h1>"
@@ -198,7 +198,7 @@ void Contest::editFile(const StringView& id, string name) {
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/files");
 
-	auto ender = contestTemplate("Edit file");
+	contestTemplate("Edit file");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Edit file</h1>"
@@ -275,7 +275,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			ERRLOG_CATCH(e);
 		}
 
-	auto ender = contestTemplate("Delete file");
+	contestTemplate("Delete file");
 	printRoundPath();
 
 	// Referer or file page
@@ -361,7 +361,7 @@ void Contest::files(bool admin_view) {
 	if (next_arg == "add")
 		return addFile();
 
-	auto ender = contestTemplate("Files");
+	contestTemplate("Files");
 	append("<h1>Files</h1>");
 	if (admin_view)
 		append("<a class=\"btn\" href=\"/c/", rpath->round_id, "/files/add\">"

@@ -6,7 +6,7 @@
 
 class Template : virtual protected Session {
 private:
-	void endTemplate();
+	bool template_began = false;
 
 protected:
 	Template() = default;
@@ -18,33 +18,12 @@ protected:
 
 	virtual ~Template() = default;
 
-	class TemplateEnder {
-		Template* templ;
-	public:
-		TemplateEnder(const TemplateEnder&) = delete;
+	void baseTemplate(const StringView& title, const StringView& styles = {},
+		const StringView& scripts = {});
 
-		TemplateEnder(TemplateEnder&& te) : templ(te.templ) {
-			te.templ = nullptr;
-		}
+	void endTemplate();
 
-		TemplateEnder& operator=(const TemplateEnder&) = delete;
-
-		TemplateEnder& operator=(TemplateEnder&& te) {
-			templ = te.templ;
-			te.templ = nullptr;
-			return *this;
-		}
-
-		TemplateEnder(Template& templ1) : templ(&templ1) {}
-
-		~TemplateEnder() {
-			if (templ)
-				templ->endTemplate();
-		}
-	};
-
-	TemplateEnder baseTemplate(const StringView& title,
-		const StringView& styles = {}, const StringView& scripts = {});
+	void reset() noexcept { template_began = false; }
 
 	template<class... Args>
 	Template& append(Args&&... args) {
