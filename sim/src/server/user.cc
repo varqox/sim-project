@@ -60,13 +60,13 @@ uint User::getPermissions(const string& viewer_id, uint viewer_type,
 	return perm[viewer][user];
 }
 
-Template::TemplateEnder User::userTemplate(const StringView& title,
-	const StringView& styles, const StringView& scripts)
+void User::userTemplate(const StringView& title, const StringView& styles,
+	const StringView& scripts)
 {
-	auto ender = baseTemplate(title, concat(".body{margin-left:190px}", styles),
+	baseTemplate(title, concat(".body{margin-left:190px}", styles),
 		scripts);
 	if (!Session::isOpen())
-		return ender;
+		return;
 
 	append("<ul class=\"menu\">\n"
 			"<span>USER</span>"
@@ -76,8 +76,6 @@ Template::TemplateEnder User::userTemplate(const StringView& title,
 			"<a href=\"/u/", user_id, "/edit\">Edit profile</a>"
 			"<a href=\"/u/", user_id, "/change-password\">Change password</a>"
 		"</ul>");
-
-	return ender;
 }
 
 void User::handle() {
@@ -178,7 +176,7 @@ void User::login() {
 	} else
 		username = "";
 
-	auto ender = baseTemplate("Login");
+	baseTemplate("Login");
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Log in</h1>\n"
 			"<form method=\"post\">\n"
@@ -279,7 +277,7 @@ void User::signUp() {
 		email = "";
 	}
 
-	auto ender = baseTemplate("Register");
+	baseTemplate("Register");
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Register</h1>\n"
 			"<form method=\"post\">\n"
@@ -334,7 +332,7 @@ void User::listUsers() {
 	if (Session::user_type > UTYPE_TEACHER)
 		return error403();
 
-	auto ender = baseTemplate("Users list", ".body{margin-left:30px}");
+	baseTemplate("Users list", ".body{margin-left:30px}");
 	append("<h1>Users</h1>");
 	try {
 		DB::Statement stmt = db_conn.prepare(
@@ -406,7 +404,7 @@ void User::listUsers() {
 }
 
 void User::userProfile() {
-	auto ender = userTemplate("User profile");
+	userTemplate("User profile");
 	printUser();
 	append("<div class=\"user-info\">"
 			"<div class=\"first-name\">"
@@ -523,7 +521,7 @@ void User::editProfile() {
 			}
 	}
 
-	auto ender = userTemplate("Edit profile");
+	userTemplate("Edit profile");
 	printUser();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 		"<h1>Edit account</h1>\n"
@@ -681,7 +679,7 @@ void User::changePassword() {
 			}
 	}
 
-	auto ender = userTemplate("Change password");
+	userTemplate("Change password");
 	printUser();
 	append(fv.errors(), "<div class=\"form-container\">\n"
 			"<h1>Change password</h1>\n"
@@ -760,7 +758,7 @@ void User::deleteAccount() {
 			ERRLOG_CATCH(e);
 		}
 
-	auto ender = userTemplate("Delete account");
+	userTemplate("Delete account");
 	printUser();
 
 	// Referer or user profile
@@ -896,7 +894,7 @@ void User::printUserSubmissions(uint limit) {
 }
 
 void User::userSubmissions() {
-	auto ender = userTemplate("User submissions");
+	userTemplate("User submissions");
 	append("<h1>User submissions</h1>");
 
 	printUser();

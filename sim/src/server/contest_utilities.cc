@@ -116,11 +116,11 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 	}
 }
 
-Template::TemplateEnder Contest::contestTemplate(const StringView& title,
-	const StringView& styles, const StringView& scripts)
+void Contest::contestTemplate(const StringView& title, const StringView& styles,
+	const StringView& scripts)
 {
 
-	auto ender = baseTemplate(title, concat(".body{margin-left:190px}", styles),
+	baseTemplate(title, concat(".body{margin-left:190px}", styles),
 		scripts);
 
 	append("<ul class=\"menu\">\n");
@@ -197,8 +197,6 @@ Template::TemplateEnder Contest::contestTemplate(const StringView& title,
 			(admin_access ? "/n" : ""), "/ranking\">Ranking</a>\n");
 
 	append("</ul>");
-
-	return ender;
 }
 
 bool Contest::isAdmin(const RoundPath& r_path) {

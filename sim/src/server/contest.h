@@ -73,8 +73,8 @@ private:
 	/// Returns whether user has admin access
 	bool isAdmin(const RoundPath& r_path);
 
-	TemplateEnder contestTemplate(const StringView& title,
-		const StringView& styles = {}, const StringView& scripts = {});
+	void contestTemplate(const StringView& title, const StringView& styles = {},
+		const StringView& scripts = {});
 
 	void printRoundPath(const StringView& page = "", bool force_normal = false);
 

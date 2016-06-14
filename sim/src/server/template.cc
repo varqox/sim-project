@@ -2,8 +2,8 @@
 
 #include <simlib/time.h>
 
-Template::TemplateEnder Template::baseTemplate(const StringView& title,
-	const StringView& styles, const StringView& scripts)
+void Template::baseTemplate(const StringView& title, const StringView& styles,
+	const StringView& scripts)
 {
 	// Protect from clickjacking
 	resp.headers["X-Frame-Options"] = "DENY";
@@ -71,13 +71,16 @@ Template::TemplateEnder Template::baseTemplate(const StringView& title,
 		"</div>\n"
 		"<div class=\"body\">\n");
 
-	return TemplateEnder(*this);
+	template_began = true;
 }
 
 void Template::endTemplate() {
-	append("</div>\n"
-			"<script>var start_time=", toString(microtime() / 1000),
-				";</script>\n"
-			"</body>\n"
-		"</html>\n");
+	if (template_began) {
+		template_began = false;
+		append("</div>\n"
+				"<script>var start_time=", toString(microtime() / 1000),
+					";</script>\n"
+				"</body>\n"
+			"</html>\n");
+	}
 }

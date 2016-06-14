@@ -10,7 +10,7 @@ void Errors::errorTemplate(const StringView& status, const char* code,
 	if (prev.empty())
 		prev = '/';
 
-	auto ender = baseTemplate(status);
+	baseTemplate(status);
 	append("<center>\n"
 		"<h1 style=\"font-size:25px;font-weight:normal;\">", code, " &mdash; ",
 			message, "</h1>\n"
