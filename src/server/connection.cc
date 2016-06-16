@@ -100,7 +100,7 @@ void Connection::readPOST(HttpRequest& req) {
 	string &con_type = req.headers["Content-Type"];
 	LimitedReader reader(*this, content_length);
 
-	if (isPrefix(con_type, "text/plain")) {
+	if (hasPrefix(con_type, "text/plain")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -126,7 +126,7 @@ void Connection::readPOST(HttpRequest& req) {
 			req.form_data[field_name] = field_content;
 		}
 
-	} else if (isPrefix(con_type, "application/x-www-form-urlencoded")) {
+	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -149,7 +149,7 @@ void Connection::readPOST(HttpRequest& req) {
 			req.form_data[decodeURI(field_name)] = decodeURI(field_content);
 		}
 
-	} else if (isPrefix(con_type, "multipart/form-data")) {
+	} else if (hasPrefix(con_type, "multipart/form-data")) {
 		size_t beg = con_type.find("boundary=");
 		if (beg == string::npos || beg + 9 >= con_type.size()) {
 			error400();

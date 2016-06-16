@@ -230,7 +230,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				continue;
 			}
 
-			if (isPrefixIn(es.message, {"Error: ", "failed to get syscall",
+			if (hasPrefixIn(es.message, {"Error: ", "failed to get syscall",
 				"forbidden syscall"}))
 			{
 				errlog("Submission ", submission_id, " (problem ", problem_id,
@@ -354,7 +354,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				continue;
 			}
 
-			if (isPrefixIn(es.message, {"Error: ", "failed to get syscall",
+			if (hasPrefixIn(es.message, {"Error: ", "failed to get syscall",
 				"forbidden syscall"}))
 			{
 				errlog("Submission ", submission_id, " (problem ", problem_id,

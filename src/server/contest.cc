@@ -131,11 +131,11 @@ void Contest::handle() {
 			return;
 		}
 
-		if (isSuffix(statement, ".pdf"))
+		if (hasSuffix(statement, ".pdf"))
 			resp.headers["Content-type"] = "application/pdf";
-		else if (isSuffixIn(statement, {".html", ".htm"}))
+		else if (hasSuffixIn(statement, {".html", ".htm"}))
 			resp.headers["Content-type"] = "text/html";
-		else if (isSuffixIn(statement, {".txt", ".md"}))
+		else if (hasSuffixIn(statement, {".txt", ".md"}))
 			resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
 		resp.content_type = server::HttpResponse::FILE;
@@ -471,7 +471,7 @@ void Contest::addProblem() {
 
 				// Rename package file that it will end with original extension
 				string new_package_file = concat(package_file, '.',
-					(isSuffix(user_package_file, ".tar.gz") ? "tar.gz"
+					(hasSuffix(user_package_file, ".tar.gz") ? "tar.gz"
 						: getExtension(user_package_file)));
 				if (link(package_file.c_str(), new_package_file.c_str()))
 					THROW("Error: link()", error(errno));

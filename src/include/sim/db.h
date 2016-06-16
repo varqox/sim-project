@@ -5,6 +5,7 @@
 #include <cppconn/prepared_statement.h>
 #include <mysql_connection.h>
 #include <simlib/memory.h>
+#include <simlib/string.h>
 
 namespace DB {
 
@@ -105,7 +106,7 @@ public:
 
 	friend class Connection;
 };
-// #include <simlib/string.h>
+
 class Connection {
 private:
 	std::unique_ptr<sql::Connection> conn_;
@@ -143,36 +144,45 @@ public:
 
 	bool badState() noexcept { return bad_state; }
 
-	Statement prepare(const std::string& query) noexcept(false) {
+private:
+	template<class Func>
+	auto try_call(Func&& f) -> decltype(f()) {
 		try {
-			return Statement(impl()->prepareStatement(query));
+			return f();
 
-		} catch (...) {
+		} catch (const std::exception& e) {
+			if (hasPrefixIn(e.what(), {"Lost connection to MySQL server",
+				"MySQL server has gone away"}))
+			{
+				// Try to deal with problem silently
+				reconnect();
+				return f();
+			}
+
 			bad_state = true;
 			throw;
 		}
+	}
+
+public:
+	Statement prepare(const std::string& query) noexcept(false) {
+		return try_call([&] {
+			return Statement(impl()->prepareStatement(query));
+		});
 	}
 
 	int executeUpdate(const std::string& update_query) noexcept(false) {
-		try {
+		return try_call([&] {
 			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
 			return stmt->executeUpdate(update_query);
-
-		} catch (...) {
-			bad_state = true;
-			throw;
-		}
+		});
 	}
 
 	Result executeQuery(const std::string& query) noexcept(false) {
-		try {
+		return try_call([&] {
 			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
 			return Result(stmt->executeQuery(query));
-
-		} catch (...) {
-			bad_state = true;
-			throw;
-		}
+		});
 	}
 };
 
