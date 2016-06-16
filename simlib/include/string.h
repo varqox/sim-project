@@ -748,7 +748,7 @@ inline std::string toHex(const std::string& str) noexcept(false) {
 	return toHex(str.data(), str.size());
 }
 
-inline bool isPrefix(const StringView& str, const StringView& prefix) noexcept {
+inline bool hasPrefix(const StringView& str, const StringView& prefix) noexcept {
 	try {
 		return str.compare(0, prefix.size(), prefix) == 0;
 	} catch (const std::out_of_range& e) {
@@ -758,9 +758,9 @@ inline bool isPrefix(const StringView& str, const StringView& prefix) noexcept {
 }
 
 template<class Iter>
-bool isPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
+bool hasPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
-		if (isPrefix(str, *beg))
+		if (hasPrefix(str, *beg))
 			return true;
 		++beg;
 	}
@@ -768,17 +768,17 @@ bool isPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 }
 
 template<class T>
-inline bool isPrefixIn(const StringView& str, T&& x) noexcept {
-	return isPrefixIn(str, x.begin(), x.end());
+inline bool hasPrefixIn(const StringView& str, T&& x) noexcept {
+	return hasPrefixIn(str, x.begin(), x.end());
 }
 
-inline bool isPrefixIn(const StringView& str,
+inline bool hasPrefixIn(const StringView& str,
 	const std::initializer_list<StringView>& x) noexcept
 {
-	return isPrefixIn(str, x.begin(), x.end());
+	return hasPrefixIn(str, x.begin(), x.end());
 }
 
-inline bool isSuffix(const StringView& str, const StringView& suffix) noexcept {
+inline bool hasSuffix(const StringView& str, const StringView& suffix) noexcept {
 	try {
 		return str.size() >= suffix.size() &&
 			str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
@@ -789,9 +789,9 @@ inline bool isSuffix(const StringView& str, const StringView& suffix) noexcept {
 }
 
 template<class Iter>
-bool isSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
+bool hasSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
-		if (isSuffix(str, *beg))
+		if (hasSuffix(str, *beg))
 			return true;
 		++beg;
 	}
@@ -799,14 +799,14 @@ bool isSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
 }
 
 template<class T>
-inline bool isSuffixIn(const StringView& str, T&& x) noexcept {
-	return isSuffixIn(str, x.begin(), x.end());
+inline bool hasSuffixIn(const StringView& str, T&& x) noexcept {
+	return hasSuffixIn(str, x.begin(), x.end());
 }
 
-inline bool isSuffixIn(const StringView& str,
+inline bool hasSuffixIn(const StringView& str,
 	const std::initializer_list<StringView>& x) noexcept
 {
-	return isSuffixIn(str, x.begin(), x.end());
+	return hasSuffixIn(str, x.begin(), x.end());
 }
 
 // Escapes HTML unsafe character sequences and appends them to @p str
