@@ -76,7 +76,7 @@ int convertPackage(string tmp_package, string out_package) {
 	auto folder = package_tree_root->dir("check");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
-			if (isSuffixIn(i, solution_extensions, solution_extensions +
+			if (hasSuffixIn(i, solution_extensions, solution_extensions +
 				sizeof(solution_extensions) / sizeof(*solution_extensions)))
 			{
 				copy(concat(tmp_package, "check/", i),
@@ -97,7 +97,7 @@ int convertPackage(string tmp_package, string out_package) {
 	folder = package_tree_root->dir("doc");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
-			if (isSuffixIn(i, statement_extensions, statement_extensions +
+			if (hasSuffixIn(i, statement_extensions, statement_extensions +
 				sizeof(statement_extensions) / sizeof(*statement_extensions)))
 			{
 				copy(concat(tmp_package, "doc/", i),
@@ -119,7 +119,7 @@ int convertPackage(string tmp_package, string out_package) {
 	folder = package_tree_root->dir("prog");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
-			if (isSuffixIn(i, solution_extensions, solution_extensions +
+			if (hasSuffixIn(i, solution_extensions, solution_extensions +
 				sizeof(solution_extensions) / sizeof(*solution_extensions)))
 			{
 				copy(concat(tmp_package, "prog/", i),
@@ -172,7 +172,7 @@ int convertPackage(string tmp_package, string out_package) {
 	for (auto& dir : folders)
 		if (dir != nullptr)
 			for (auto& file : dir->files)
-				if (isSuffix(file, ".in")) {
+				if (hasSuffix(file, ".in")) {
 					copy(concat(tmp_package, dir->name, '/', file),
 						concat(out_package, "tests/", file));
 					tests.emplace_back(file.substr(0, file.size() - 3));
@@ -189,7 +189,7 @@ int convertPackage(string tmp_package, string out_package) {
 	for (auto& dir : folders)
 		if (dir != nullptr)
 			for (auto& file : dir->files)
-				if (isSuffix(file, ".out") && binary_search(tests.begin(),
+				if (hasSuffix(file, ".out") && binary_search(tests.begin(),
 					tests.end(), file.substr(0, file.size() - 4)))
 				{
 					copy(concat(tmp_package, dir->name, '/', file),

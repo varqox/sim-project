@@ -229,7 +229,7 @@ void Contest::submit(bool admin_view) {
 		ERRLOG_CATCH(e);
 	}
 
-	if (isSuffix(buffer, "</option>\n"))
+	if (hasSuffix(buffer, "</option>\n"))
 		append(buffer, "</select>"
 					"</div>\n"
 					// Solution file

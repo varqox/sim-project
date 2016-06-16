@@ -22,9 +22,9 @@ vector<string> findTests(string path = "tests") {
 
 	dirent *file;
 	while ((file = readdir(dir)))
-		if (isSuffix(file->d_name, ".in")) {
+		if (hasSuffix(file->d_name, ".in")) {
 			in.emplace_back(file->d_name, strlen(file->d_name) - 3);
-		} else if (isSuffix(file->d_name, ".out")) {
+		} else if (hasSuffix(file->d_name, ".out")) {
 			out.emplace_back(file->d_name, strlen(file->d_name) - 4);
 		}
 
@@ -59,7 +59,7 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 			string ans_fname = concat("tests/", test, ".ans");
 			putFileContents(ans_fname, ans);
 			if (show_diff)
-				system(concat("git --no-pager diff --no-index '", out_fname,
+				system(concat("git --no-pager diff --no-index -a '", out_fname,
 					"' '", ans_fname, '\'').data());
 		}
 	}
