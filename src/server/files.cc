@@ -15,6 +15,9 @@ void Contest::addFile() {
 	FormValidator fv(req->form_data);
 	string file_name, description;
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		string user_file_name;
 		// Validate all fields
 		fv.validate(file_name, "file-name", "File name", FILE_NAME_MAX_LEN);
@@ -117,6 +120,9 @@ void Contest::editFile(const StringView& id, string name) {
 	FormValidator fv(req->form_data);
 	string modified, description;
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validate(name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
@@ -254,6 +260,9 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			DB::Statement stmt = db_conn.prepare(
 				"DELETE FROM files WHERE id=?");

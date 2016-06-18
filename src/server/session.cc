@@ -19,7 +19,8 @@ bool Session::open() {
 
 	try {
 		DB::Statement stmt = db_conn.prepare(
-				"SELECT user_id, data, type, username, ip, user_agent "
+				"SELECT csrf_token, user_id, data, type, username, ip, "
+					"user_agent "
 				"FROM session s, users u "
 				"WHERE s.id=? AND time>=? AND u.id=s.user_id");
 		stmt.setString(1, sid);
@@ -28,14 +29,15 @@ bool Session::open() {
 
 		DB::Result res = stmt.executeQuery();
 		if (res.next()) {
-			user_id = res[1];
-			data = res[2];
-			user_type = res.getUInt(3);
-			username = res[4];
+			csrf_token = res[1];
+			user_id = res[2];
+			data = res[3];
+			user_type = res.getUInt(4);
+			username = res[5];
 
 			// If no session injection
-			if (client_ip == res[5] &&
-				req->headers.isEqualTo("User-Agent", res[6]))
+			if (client_ip == res[6] &&
+				req->headers.isEqualTo("User-Agent", res[7]))
 			{
 				return (is_open = true);
 			}
@@ -69,18 +71,24 @@ void Session::createAndOpen(const string& _user_id) noexcept(false) {
 	db_conn.executeUpdate(concat("DELETE FROM `session` WHERE time<'",
 		date("%Y-%m-%d %H:%M:%S'", time(nullptr) - SESSION_MAX_LIFETIME)));
 
+	csrf_token = generateId(SESSION_CSRF_TOKEN_LEN);
+
 	DB::Statement stmt = db_conn.prepare("INSERT IGNORE session "
-			"(id, user_id, data, ip, user_agent, time) VALUES(?,?,'',?,?,?)");
-	stmt.setString(2, _user_id);
-	stmt.setString(3, client_ip);
-	stmt.setString(4, req->headers.get("User-Agent"));
-	stmt.setString(5, date("%Y-%m-%d %H:%M:%S"));
+			"(id, csrf_token, user_id, data, ip, user_agent, time) "
+			"VALUES(?,?,?,'',?,?,?)");
+	stmt.setString(2, csrf_token);
+	stmt.setString(3, _user_id);
+	stmt.setString(4, client_ip);
+	stmt.setString(5, req->headers.get("User-Agent"));
+	stmt.setString(6, date("%Y-%m-%d %H:%M:%S"));
 
 	do {
 		sid = generateId(SESSION_ID_LEN);
 		stmt.setString(1, sid); // TODO: parameters preserve!
 	} while (stmt.executeUpdate() == 0);
 
+	resp.setCookie("csrf_token", csrf_token,
+		time(nullptr) + SESSION_MAX_LIFETIME, "/");
 	resp.setCookie("session", sid, time(nullptr) + SESSION_MAX_LIFETIME, "/",
 		"", true);
 	is_open = true;
@@ -99,6 +107,7 @@ void Session::destroy() {
 		ERRLOG_CATCH(e);
 	}
 
+	resp.setCookie("csrf_token", "", 0); // Delete cookie
 	resp.setCookie("session", "", 0); // Delete cookie
 	is_open = false;
 }

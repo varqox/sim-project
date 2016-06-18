@@ -17,6 +17,9 @@ void Contest::submit(bool admin_view) {
 	FormValidator fv(req->form_data);
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		string solution, problem_round_id;
 
 		// Validate all fields
@@ -253,6 +256,9 @@ void Contest::deleteSubmission(const string& submission_id,
 	while (req->method == server::HttpRequest::POST
 		&& fv.exist("delete"))
 	{
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		try {
 			SignalBlocker signal_guard;
 			// Update `final` status as there was no submission submission_id
