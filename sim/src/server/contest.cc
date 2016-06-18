@@ -252,6 +252,9 @@ void Contest::addContest() {
 	bool is_public = false, show_ranking = false;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
 		is_public = fv.exist("public");
@@ -332,6 +335,9 @@ void Contest::addRound() {
 	string begins, full_results, ends;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", ROUND_NAME_MAX_LEN);
 		is_visible = fv.exist("visible");
@@ -447,6 +453,9 @@ void Contest::addProblem() {
 	bool force_auto_limit = true;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
@@ -671,6 +680,9 @@ void Contest::editContest() {
 	bool is_public, show_ranking;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
 
@@ -789,6 +801,9 @@ void Contest::editRound() {
 	string begins, full_results, ends;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", ROUND_NAME_MAX_LEN);
 
@@ -1003,6 +1018,9 @@ void Contest::editProblem() {
 	string round_name, name, tag, memory_limit;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validate(round_name, "round-name", "Problem round name",
 			ROUND_NAME_MAX_LEN);
@@ -1137,6 +1155,9 @@ void Contest::deleteContest() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
@@ -1207,6 +1228,9 @@ void Contest::deleteRound() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
@@ -1256,6 +1280,9 @@ void Contest::deleteProblem() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare(

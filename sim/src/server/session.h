@@ -11,6 +11,7 @@ private:
 protected:
 	uint8_t user_type = UTYPE_NORMAL;
 	std::string sid; // session id
+	std::string csrf_token;
 	std::string user_id, username, data;
 
 	Session() = default;

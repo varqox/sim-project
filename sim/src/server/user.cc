@@ -449,6 +449,9 @@ void User::userProfile() {
 void User::editProfile() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && (permissions & PERM_EDIT)) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		string new_username, new_utype_s;
 		// Validate all fields
 		fv.validateNotBlank(new_username, "username", "Username", isUsername,
@@ -630,6 +633,9 @@ void User::changePassword() {
 
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		string old_password, password1, password2;
 		if (~permissions & PERM_ADMIN_CHANGE_PASS)
@@ -715,6 +721,9 @@ void User::deleteAccount() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Change contests and problems owner id to 1
 			DB::Statement stmt = db_conn.prepare("UPDATE rounds r, problems p "

@@ -158,6 +158,7 @@ int main(int argc, char **argv) {
 	tryCreateTable("session",
 		concat("CREATE TABLE IF NOT EXISTS `session` (\n"
 			"`id` char(", toStr(SESSION_ID_LEN), ") NOT NULL,\n"
+			"`csrf_token` char(", toStr(SESSION_CSRF_TOKEN_LEN), ") NOT NULL,\n"
 			"`user_id` int unsigned NOT NULL,\n"
 			"`data` blob NOT NULL,\n"
 			"`ip` char(", toStr(SESSION_IP_LEN), ") NOT NULL,\n"

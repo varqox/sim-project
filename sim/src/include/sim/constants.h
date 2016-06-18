@@ -19,6 +19,7 @@ constexpr unsigned UTYPE_NORMAL = 2;
 
 // Session
 constexpr unsigned SESSION_ID_LEN = 30;
+constexpr unsigned SESSION_CSRF_TOKEN_LEN = 20;
 constexpr unsigned SESSION_IP_LEN = 15;
 constexpr unsigned SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days [s]
 
