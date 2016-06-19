@@ -12,7 +12,7 @@ vector<string> findTests(string path = "tests") {
 
 	DIR *dir = opendir(path.data());
 	if (dir == nullptr)
-		THROW("opendir()", error(errno));
+		THROW("opendir(", path, ')', error(errno));
 
 	auto close_dir = [&]{ closedir(dir); };
 	CallInDtor<decltype(close_dir)> dir_guard(close_dir);
@@ -58,9 +58,18 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 			puts("\033[1;31mWRONG\033[m");
 			string ans_fname = concat("tests/", test, ".ans");
 			putFileContents(ans_fname, ans);
-			if (show_diff)
-				system(concat("git --no-pager diff --no-index -a '", out_fname,
-					"' '", ans_fname, '\'').data());
+			if (show_diff) {
+				(void)Spawner::run("git", {
+					"git",
+					"--no-pager",
+					"diff",
+					"--no-index",
+					"-a",
+					"--color=always",
+					out_fname,
+					ans_fname
+				}, {-1, STDOUT_FILENO, STDERR_FILENO});
+			}
 		}
 	}
 
@@ -78,18 +87,21 @@ void regenerate(const vector<string>& tests) {
 	}
 }
 
-// argv[1] == "diff" -> show diff if test failed
-// argv[1] == "regen" -> regenerate .out files
+// argv[1] == "--diff" -> show diff if test failed
+// argv[1] == "--regen" -> regenerate .out files
 int main(int argc, char **argv) {
 	stdlog.label(false);
 	errlog.label(false);
 
 	bool diff = false, regen = false;
-	if (argc > 1) {
-		if (!strcmp(argv[1], "diff"))
+	vector<string> arg_tests;
+	for (int i = 1; i < argc; ++i) {
+		if (!strcmp(argv[i], "--diff"))
 			diff = true;
-		else if (!strcmp(argv[1], "regen"))
+		else if (!strcmp(argv[i], "--regen"))
 			regen = true;
+		else
+			arg_tests.emplace_back(argv[i]);
 	}
 
 	vector<string> tests;
@@ -105,6 +117,19 @@ int main(int argc, char **argv) {
 	if (regen) {
 		regenerate(tests);
 		return 0;
+	}
+
+	// Take these arg_tests, which were detected and run check on them
+	if (arg_tests.size()) {
+		sort(tests);
+		vector<string> res;
+		for (auto&& str : arg_tests) {
+			if (binary_search(tests, str))
+				res.emplace_back(str);
+			else
+				stdlog("Ignored: '", str, "' - not detected");
+		}
+		tests = std::move(res);
 	}
 
 	if (check(tests, diff) != tests.size())

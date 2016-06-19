@@ -61,7 +61,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 			|| (rows > 2 && !r_path->problem))
 		{
 			THROW("Database error: corrupted hierarchy of rounds (id: ",
-				round_id, ")");
+				round_id, ')');
 		}
 
 		/* Check access */

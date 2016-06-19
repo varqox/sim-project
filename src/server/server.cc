@@ -72,7 +72,7 @@ int main() {
 	// Loggers
 	// stdlog like everything writes to stderr
 	if (freopen(SERVER_LOG, "a", stderr) == NULL)
-		errlog("Failed to open '", SERVER_LOG, "'", error(errno));
+		errlog("Failed to open '", SERVER_LOG, '\'', error(errno));
 
 	try {
 		errlog.open(SERVER_ERROR_LOG);

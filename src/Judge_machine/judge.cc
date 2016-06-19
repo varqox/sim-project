@@ -204,7 +204,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 			auto tmplog = stdlog();
 			if (VERBOSITY > 1)
-				tmplog("  ", widedString(test.name, 11, LEFT), " ");
+				tmplog("  ", widedString(test.name, 11, LEFT), ' ');
 
 			// Run
 			Sandbox::ExitStat es;
@@ -225,7 +225,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					tmplog("-.-- / ",
 						widedString(usecToSecStr(test.time_limit, 2, false), 4),
 						"    Status: \033[1;34mSYSTEM ERROR\033[m (",
-						e.what(), ")");
+						e.what(), ')');
 
 				continue;
 			}
@@ -315,7 +315,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				else if (group_result.back().status == TestResult::MLE)
 					tmplog("\033[1;33mMLE\033[m");
 				else if (group_result.back().status == TestResult::RTE)
-					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
+					tmplog("\033[1;33mRTE\033[m (", es.message, ')');
 
 				tmplog("   Exited with ", toString(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]");
@@ -350,7 +350,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				judge_test_report.status = JudgeResult::JUDGE_ERROR;
 
 				if (VERBOSITY > 1)
-					tmplog("\033[1;34mSYSTEM ERROR\033[m (", e.what(), ")");
+					tmplog("\033[1;34mSYSTEM ERROR\033[m (", e.what(), ')');
 				continue;
 			}
 
@@ -448,7 +448,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				judge_test_report.comments += "</li>\n";
 
 				if (VERBOSITY > 1)
-					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
+					tmplog("\033[1;33mRTE\033[m (", es.message, ')');
 			}
 
 			if (VERBOSITY > 1)
@@ -473,7 +473,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 		if (VERBOSITY > 1)
 			stdlog("  Score: ",
 				toString<long long>(round(group.points * ratio)), " / ",
-				toString(group.points), " (ratio: ", toString(ratio, 3), ")");
+				toString(group.points), " (ratio: ", toString(ratio, 3), ')');
 
 		// Append first row
 		back_insert(judge_test_report.tests, "<tr>"

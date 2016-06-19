@@ -257,7 +257,7 @@ void Connection::readPOST(HttpRequest& req) {
 					if (field_content.empty()) // End of headers
 						break;
 
-					D(stdlog("header: '", field_content, "'");)
+					D(stdlog("header: '", field_content, '\'');)
 					pair<string, string> header =
 						parseHeaderline(field_content);
 					if (state_ != OK) // Something went wrong
@@ -591,7 +591,7 @@ HttpRequest Connection::getRequest() {
 	}
 
 	// Read headers
-	req.headers["Content-Length"] = "0";
+	req.headers["Content-Length"] = '0';
 	string header;
 
 	D(auto tmplog = stdlog("HEADERS:\n");)
@@ -687,10 +687,12 @@ void Connection::sendResponse(const HttpResponse& res) {
 	for (auto const& i : res.cookies) {
 		str += "Set-Cookie: ";
 		str += i.first;
-		str += "=";
+		str += '=';
 		str += i.second;
 		str += "\r\n";
 	}
+
+	D(stdlog("RESPONSE: ", str);)
 
 	switch (res.content_type) {
 	case HttpResponse::TEXT:

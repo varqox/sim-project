@@ -848,7 +848,7 @@ void User::printUserSubmissions(uint limit) {
 			else if (status == "judge_error")
 				ret += " class=\"judge-error\">";
 			else
-				ret += ">";
+				ret += '>';
 
 			return back_insert(ret, submissionStatusDescription(status),
 				"</td>");
