@@ -447,7 +447,7 @@ string abspath(const string& path, size_t beg, size_t end, string curr_dir) {
 
 	// path begin with '/'
 	if (beg < end && path[beg] == '/')
-		curr_dir = "/";
+		curr_dir = '/';
 
 	while (beg < end) {
 		while (beg < end && path[beg] == '/')

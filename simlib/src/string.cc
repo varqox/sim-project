@@ -212,7 +212,7 @@ string usecToSecStr(unsigned long long x, unsigned prec, bool trim_nulls) {
 		t[prec] = '\0';
 
 	if (t[0] != '\0')
-		res.append(".").append(t);
+		res.append(1, '.').append(t);
 
 	return res;
 }

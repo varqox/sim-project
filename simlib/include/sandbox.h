@@ -637,7 +637,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 					int32_t(regs.uregs.i386_regs.ecx)
 					: regs.uregs.x86_64_regs.rsi);
 
-				auto tmplog = stdlog("[", toString(cpid), "] syscall: ",
+				auto tmplog = stdlog('[', toString(cpid), "] syscall: ",
 					toString(syscall), '(', toString(arg1), ", ",
 					toString(arg2), ", ...)");
 

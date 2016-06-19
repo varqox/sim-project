@@ -10,13 +10,13 @@ Logger::Logger(const string& filename)
 	: f_(fopen(filename.c_str(), "a")), opened_(true)
 {
 	if (f_ == nullptr)
-		THROW("fopen(", filename, ") failed", error(errno));
+		THROW("fopen('", filename, "') failed", error(errno));
 }
 
 void Logger::open(const string& filename) {
 	FILE *f = fopen(filename.c_str(), "a");
 	if (f == nullptr)
-		THROW("fopen(", filename, ") failed", error(errno));
+		THROW("fopen('", filename, "') failed", error(errno));
 
 	close();
 	f_ = f;
