@@ -693,9 +693,19 @@ void Connection::sendResponse(const HttpResponse& res) {
 	}
 
 	D({
-		int pos = str.find('\n');
-		stdlog("\033[36mRESPONSE: ", substring(str, 0, pos), "\033[m",
-			substring(str, pos));
+		int pos = str.find('\r');
+		auto tmplog = stdlog("\033[36mRESPONSE: ", substring(str, 0, pos),
+			"\033[m");
+
+		StringView rest = substring(str, pos + 1); // omit '\r'
+		for (char c : rest) {
+			if (c == '\r')
+				continue;
+			if (c == '\n')
+				tmplog("\n\t");
+			else
+				tmplog(c);
+		}
 	})
 
 	switch (res.content_type) {
