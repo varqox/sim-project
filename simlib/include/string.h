@@ -525,6 +525,12 @@ public:
 	using StringBase::substring;
 };
 
+inline StringView substring(const std::string& str, std::string::size_type beg,
+	std::string::size_type end = std::string::npos)
+{
+	return StringView(str, beg, end - beg);
+}
+
 template<class CharT, class Traits, class Char>
 std::basic_ostream<CharT, Traits>& operator<<(
 	std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s)

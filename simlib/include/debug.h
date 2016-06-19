@@ -1,9 +1,16 @@
 #pragma once
 
+#include "string.h"
+
 #include <cstdio>
 #include <exception>
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+#define try_assert(expr) \
+	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
+	toString(__LINE__), ": ", __PRETTY_FUNCTION__, \
+	": Assertion `" #expr " failed.")))
 
 #ifdef DEBUG
 # define D(...) __VA_ARGS__

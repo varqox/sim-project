@@ -61,12 +61,12 @@ string getExec(pid_t pid) {
 		array<char, 65536> buff2;
 		rc = readlink(path.c_str(), buff2.data(), buff2.size());
 		if (rc == -1 || rc >= static_cast<int>(buff2.size()))
-			THROW("Failed: readlink()", error(errno));
+			THROW("Failed: readlink(", path, ')', error(errno));
 
 		return string(buff2.data(), rc);
 
 	} else if (rc == -1)
-		THROW("Failed: readlink()", error(errno));
+		THROW("Failed: readlink(", path, ')', error(errno));
 
 	return string(buff.data(), rc);
 }
@@ -126,7 +126,7 @@ string chdirToExecDir() {
 		exec.erase(exec.begin() + slash + 1, exec.end()); // Erase filename
 
 	if (chdir(exec.c_str()) == -1)
-		THROW("chdir()", error(errno));
+		THROW("chdir(", exec, ')', error(errno));
 
 	return exec;
 }
