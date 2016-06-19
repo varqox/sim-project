@@ -12,7 +12,7 @@ vector<string> findTests(string path = "tests") {
 
 	DIR *dir = opendir(path.data());
 	if (dir == nullptr)
-		THROW("opendir(", path, ')', error(errno));
+		THROW("opendir('", path, "')", error(errno));
 
 	auto close_dir = [&]{ closedir(dir); };
 	CallInDtor<decltype(close_dir)> dir_guard(close_dir);

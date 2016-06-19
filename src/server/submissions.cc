@@ -20,12 +20,15 @@ void Contest::submit(bool admin_view) {
 		if (fv.get("csrf_token") != Session::csrf_token)
 			return error403();
 
-		string solution, problem_round_id;
+		string solution, problem_round_id, solution_tmp_path;
 
 		// Validate all fields
 		fv.validateNotBlank(solution, "solution", "Solution file field");
 
 		fv.validateNotBlank(problem_round_id, "round-id", "Problem");
+
+		fv.validateFilePathNotEmpty(solution_tmp_path, "solution",
+			"Solution file field");
 
 		if (!isDigit(problem_round_id))
 			fv.addError("Wrong problem round id");
@@ -51,10 +54,9 @@ void Contest::submit(bool admin_view) {
 				problem_r_path = path.get();
 			}
 
-			string solution_tmp_path = fv.getFilePath("solution");
 			struct stat sb;
 			if (stat(solution_tmp_path.c_str(), &sb))
-				THROW("stat(", solution_tmp_path, ')', error(errno));
+				THROW("stat('", solution_tmp_path, "')", error(errno));
 
 			// Check if solution is too big
 			if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
@@ -97,7 +99,7 @@ void Contest::submit(bool admin_view) {
 				// Copy solution
 				string location = concat("solutions/", submission_id, ".cpp");
 				if (copy(solution_tmp_path, location))
-					THROW("copy(", solution_tmp_path, ", ", location, ')',
+					THROW("copy('", solution_tmp_path, "', '", location, "')",
 						error(errno));
 
 				// Change submission status to 'waiting'

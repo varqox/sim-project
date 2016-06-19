@@ -1320,6 +1320,12 @@ pre .red {
 pre .yellow {
 	color: #ffff54;
 }
+pre .pink {
+	color: #ff00ff;
+}
+pre .turquoise {
+	color: #40e0d0;
+}
 
 /* Forms */
 .form-container {

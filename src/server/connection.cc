@@ -543,7 +543,7 @@ HttpRequest Connection::getRequest() {
 	if (state_ == CLOSED)
 		return req;
 
-	D(stdlog("REQUEST: ", request_line);)
+	D(stdlog("\033[33mREQUEST: ", request_line, "\033[m");)
 	// Extract method
 	size_t beg = 0, end = 0;
 
@@ -692,7 +692,11 @@ void Connection::sendResponse(const HttpResponse& res) {
 		str += "\r\n";
 	}
 
-	D(stdlog("RESPONSE: ", str);)
+	D({
+		int pos = str.find('\n');
+		stdlog("\033[36mRESPONSE: ", substring(str, 0, pos), "\033[m",
+			substring(str, pos));
+	})
 
 	switch (res.content_type) {
 	case HttpResponse::TEXT:

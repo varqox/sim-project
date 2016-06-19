@@ -53,6 +53,24 @@ public:
 		return (it == form.end() ? "" : it->second);
 	}
 
+	/// @brief Sets path of file of form name @p name to @p var or sets an error
+	/// if such does not exist
+	bool validateFilePathNotEmpty(std::string& var, const std::string& name,
+		const std::string& name_to_print)
+	{
+		auto const& form = form_.files;
+		auto it = form.find(name);
+		if (it == form.end()) {
+			back_insert(errors_, "<pre class=\"error\">",
+				htmlSpecialChars(name_to_print),
+				" has to be submitted as a file</pre>\n");
+			return false;
+		}
+
+		var = it->second;
+		return true;
+	}
+
 
 	/// @brief Returns value of variable @p name or empty string if such does
 	/// not exist
@@ -93,8 +111,8 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 	const std::string& name, const std::string& name_to_print, size_t max_size)
 {
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
-		back_insert(errors_, "<pre class=\"error\">", name_to_print,
-			" cannot be blank</pre>\n");
+		back_insert(errors_, "<pre class=\"error\">",
+			htmlSpecialChars(name_to_print), " cannot be blank</pre>\n");
 		return false;
 	}
 
