@@ -54,7 +54,7 @@ void Contest::submit(bool admin_view) {
 			string solution_tmp_path = fv.getFilePath("solution");
 			struct stat sb;
 			if (stat(solution_tmp_path.c_str(), &sb))
-				THROW("stat()", error(errno));
+				THROW("stat(", solution_tmp_path, ')', error(errno));
 
 			// Check if solution is too big
 			if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
@@ -95,11 +95,10 @@ void Contest::submit(bool admin_view) {
 				string submission_id = res[1];
 
 				// Copy solution
-				if (copy(solution_tmp_path,
-					concat("solutions/", submission_id, ".cpp")))
-				{
-					THROW("copy()", error(errno));
-				}
+				string location = concat("solutions/", submission_id, ".cpp");
+				if (copy(solution_tmp_path, location))
+					THROW("copy(", solution_tmp_path, ", ", location, ')',
+						error(errno));
 
 				// Change submission status to 'waiting'
 				db_conn.executeUpdate("UPDATE submissions SET status='waiting' "
@@ -601,7 +600,7 @@ void Contest::submissions(bool admin_view) {
 			else if (status == "judge_error")
 				ret += " class=\"judge-error\">";
 			else
-				ret += ">";
+				ret += '>';
 
 			return back_insert(ret, submissionStatusDescription(status),
 				"</td>");
