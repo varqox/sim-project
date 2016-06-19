@@ -18,11 +18,14 @@ void Contest::addFile() {
 		if (fv.get("csrf_token") != Session::csrf_token)
 			return error403();
 
-		string user_file_name;
+		string user_file_name, file_path;
+
 		// Validate all fields
 		fv.validate(file_name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
 		fv.validateNotBlank(user_file_name, "file", "File");
+
+		fv.validateFilePathNotEmpty(file_path, "file", "File");
 
 		fv.validate(description, "description", "Description",
 			FILE_DESCRIPTION_MAX_LEN);
@@ -48,17 +51,16 @@ void Contest::addFile() {
 				} while (stmt.executeUpdate() == 0);
 
 				// Get file size
-				string file_path = fv.getFilePath("file");
 				struct stat64 sb;
 				if (stat64(file_path.c_str(), &sb))
-					THROW("stat(", file_path, ')', error(errno));
+					THROW("stat('", file_path, "')", error(errno));
 
 				uint64_t file_size = sb.st_size;
 
 				// Move file
 				string location = concat("files/", id);
 				if (move(file_path, location))
-					THROW("move(", file_path, ", ", location, ')',
+					THROW("move('", file_path, "', '", location, "')",
 						error(errno));
 
 				stmt = db_conn.prepare(
@@ -125,15 +127,18 @@ void Contest::editFile(const StringView& id, string name) {
 		if (fv.get("csrf_token") != Session::csrf_token)
 			return error403();
 
+
 		// Validate all fields
 		fv.validate(name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
 		fv.validate(description, "description", "Description",
 			FILE_DESCRIPTION_MAX_LEN);
 
+		string file_path = fv.getFilePath("file");
+		bool is_file_reuploaded = (fv.get("file").size() && file_path.size());
 		if (name.empty()) {
 			name = fv.get("file");
-			if (name.empty())
+			if (!is_file_reuploaded)
 				fv.addError(
 					"File name cannot be blank unless you upload a new file");
 		}
@@ -143,19 +148,18 @@ void Contest::editFile(const StringView& id, string name) {
 			try {
 				DB::Statement stmt;
 				// File is being reuploaded
-				if (fv.get("file").size()) {
+				if (is_file_reuploaded) {
 					// Get file size
-					string file_path = fv.getFilePath("file");
 					struct stat64 sb;
 					if (stat64(file_path.c_str(), &sb))
-						THROW("stat(", file_path, ')', error(errno));
+						THROW("stat('", file_path, "')", error(errno));
 
 					uint64_t file_size = sb.st_size;
 
 					// Move file
 					string location = concat("files/", id);
 					if (BLOCK_SIGNALS(move(file_path, location)))
-						THROW("move(", file_path, ", ", location, ')',
+						THROW("move('", file_path, "', '", location, "')",
 							error(errno));
 
 					stmt = db_conn.prepare("UPDATE files SET name=?, "
@@ -276,7 +280,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 				return error500();
 
 			if (unlink(concat("files/", id)))
-				THROW("unlink(files/", id, ')', error(errno));
+				THROW("unlink('files/", id, "')", error(errno));
 
 			signal_guard.unblock();
 

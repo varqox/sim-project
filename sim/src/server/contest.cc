@@ -456,6 +456,8 @@ void Contest::addProblem() {
 		if (fv.get("csrf_token") != Session::csrf_token)
 			return error403();
 
+		string package_file;
+
 		// Validate all fields
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
@@ -473,11 +475,11 @@ void Contest::addProblem() {
 
 		fv.validateNotBlank(user_package_file, "package", "Package");
 
+		fv.validateFilePathNotEmpty(package_file, "package", "Package");
+
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				string package_file = fv.getFilePath("package");
-
 				// Rename package file that it will end with original extension
 				string new_package_file = concat(package_file, '.',
 					(hasSuffix(user_package_file, ".tar.gz") ? "tar.gz"
@@ -491,7 +493,7 @@ void Contest::addProblem() {
 				// Create temporary directory for holding package
 				char package_tmp_dir[] = "/tmp/sim-problem.XXXXXX";
 				if (mkdtemp(package_tmp_dir) == nullptr)
-					THROW("Error: mkdtemp(", package_tmp_dir, ')',
+					THROW("Error: mkdtemp('", package_tmp_dir, "')",
 						error(errno));
 
 				DirectoryRemover rm_tmp_dir(package_tmp_dir);
@@ -585,8 +587,8 @@ void Contest::addProblem() {
 				// Move package folder to problems/
 				string package_dir = concat("problems/", problem_id);
 				if (move(package_tmp_dir, package_dir, false))
-					THROW("Error: move(", package_tmp_dir, ", ", package_dir,
-						')', error(errno));
+					THROW("Error: move('", package_tmp_dir, "', '", package_dir,
+						"')", error(errno));
 
 				rm_tmp_dir.reset("problems/" + problem_id);
 
@@ -968,7 +970,7 @@ void Contest::editProblem() {
 		umask(077); // Only owner can access this temporary file
 		int fd = mkstemp(tmp_file);
 		if (fd == -1)
-			THROW("Error: mkstemp(", tmp_file, ')', error(errno));
+			THROW("Error: mkstemp('", tmp_file, "')", error(errno));
 
 		sclose(fd);
 		FileRemover remover(tmp_file);
@@ -981,7 +983,7 @@ void Contest::editProblem() {
 			if (putFileContents(tmp_file, (const char*)empty_zip_file.data(),
 				empty_zip_file.size()) == -1)
 			{
-				THROW("Error: putFileContents(", tmp_file, ')', error(errno));
+				THROW("Error: putFileContents('", tmp_file, "')", error(errno));
 			}
 		// tar.gz
 		} else // extension == tgz

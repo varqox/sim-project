@@ -163,6 +163,16 @@ static string colour(const string& str) noexcept {
 			res += "<span class=\"blue\">";
 			opened = SPAN;
 			i += 4;
+		} else if (str.compare(i, 5, "\033[35m") == 0) {
+			closeLastTag();
+			res += "<span class=\"magentapink\">";
+			opened = SPAN;
+			i += 4;
+		} else if (str.compare(i, 5, "\033[36m") == 0) {
+			closeLastTag();
+			res += "<span class=\"turquoise\">";
+			opened = SPAN;
+			i += 4;
 		} else if (str.compare(i, 7, "\033[1;31m") == 0) {
 			closeLastTag();
 			res += "<b class=\"red\">";
@@ -181,6 +191,16 @@ static string colour(const string& str) noexcept {
 		} else if (str.compare(i, 7, "\033[1;34m") == 0) {
 			closeLastTag();
 			res += "<b class=\"blue\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 7, "\033[1;35m") == 0) {
+			closeLastTag();
+			res += "<b class=\"pink\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 7, "\033[1;36m") == 0) {
+			closeLastTag();
+			res += "<b class=\"turquoise\">";
 			opened = B;
 			i += 6;
 		} else if (str.compare(i, 3, "\033[m") == 0) {
