@@ -1,7 +1,6 @@
 #include "contest.h"
 
 #include <simlib/debug.h>
-#include <simlib/logger.h>
 #include <simlib/time.h>
 
 using std::string;

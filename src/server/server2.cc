@@ -2,12 +2,12 @@
 #include "sim.h"
 
 #include <arpa/inet.h>
-#include <csignal>
 #include <set>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/process.h>
 #include <sys/epoll.h>
+#include <sys/resource.h>
 
 using std::array;
 using std::string;
@@ -314,7 +314,6 @@ bool Connection::constructHeaders(StringView& data) {
 			std::sort(req_.headers.other.begin(), req_.headers.other.end());
 			if (req_.headers.find("Expect") == "100-continue")
 				{}// TODO: add response: 100
-
 
 			if (req_.headers.content_length == 0)
 				{}// TODO: add request to queue

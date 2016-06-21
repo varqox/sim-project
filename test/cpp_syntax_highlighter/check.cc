@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <sim/cpp_syntax_highlighter.h>
 #include <simlib/process.h>
+#include <simlib/spawner.h>
 #include <simlib/utilities.h>
 
 using std::vector;

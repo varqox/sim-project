@@ -6,7 +6,6 @@
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
 
 using std::string;

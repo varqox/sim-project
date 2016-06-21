@@ -10,7 +10,6 @@ all: check
 check: check.cc ../../src/lib/sim.a ../../src/simlib/simlib.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
 
-
 ../../src/lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)
 	$(Q)$(MAKE) -C ../../src/lib/

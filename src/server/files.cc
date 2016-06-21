@@ -127,7 +127,6 @@ void Contest::editFile(const StringView& id, string name) {
 		if (fv.get("csrf_token") != Session::csrf_token)
 			return error403();
 
-
 		// Validate all fields
 		fv.validate(name, "file-name", "File name", FILE_NAME_MAX_LEN);
 

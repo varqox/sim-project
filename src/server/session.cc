@@ -1,6 +1,5 @@
 #include "session.h"
 
-#include <sim/constants.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/random.h>

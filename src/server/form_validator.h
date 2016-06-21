@@ -71,7 +71,6 @@ public:
 		return true;
 	}
 
-
 	/// @brief Returns value of variable @p name or empty string if such does
 	/// not exist
 	std::string get(const std::string& name) const {
