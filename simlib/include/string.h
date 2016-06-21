@@ -6,7 +6,6 @@
 #include <array>
 #include <climits>
 #include <cstring>
-#include <stdexcept>
 
 template<class Char>
 class StringBase {

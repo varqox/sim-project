@@ -1,6 +1,7 @@
 #pragma once
 
 #include "process.h"
+#include "spawner.h"
 #include "utilities.h"
 
 #include <cstddef>

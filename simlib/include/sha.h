@@ -1,12 +1,6 @@
 #pragma once
 
-#include "STD_SHA_256.h"
-
-// SHA-2
-
-inline std::string sha256(const std::string& str) {
-	return STD_SHA_256::Digest(str);
-}
+#include <string>
 
 // SHA-3
 

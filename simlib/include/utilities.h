@@ -1,8 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <string>
-#include <vector>
 
 template<class T, class... Args>
 T& back_insert(T& reference, Args&&... args) {

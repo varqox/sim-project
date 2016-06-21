@@ -8,7 +8,6 @@ See <http://creativecommons.org/publicdomain/zero/1.0/>.  */
 
 #include <stdint.h>
 #include <string.h>
-#include <time.h>
 
 // S - seed, I - increment, t - mask, i - temporary
 static uint32_t S, I, t, i;

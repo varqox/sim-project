@@ -1,15 +1,11 @@
 #pragma once
 
 #include <algorithm>
-#include <cerrno>
-#include <cstdio>
 #include <cstring>
 #include <fcntl.h>
 #include <memory>
-#include <string>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <vector>
 
 // File modes
 constexpr int S_0600 = S_IRUSR | S_IWUSR;

@@ -1,6 +1,4 @@
-#include "../include/filesystem.h"
-#include "../include/logger.h"
-#include "../include/process.h"
+#include "../include/spawner.h"
 
 using std::string;
 using std::vector;

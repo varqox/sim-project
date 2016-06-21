@@ -2,8 +2,6 @@
 
 #include "../string.h"
 
-#include <vector>
-
 namespace sim {
 
 /**

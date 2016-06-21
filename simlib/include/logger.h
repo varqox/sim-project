@@ -3,7 +3,6 @@
 #include "string.h"
 
 #include <atomic>
-#include <cstdio>
 
 class Logger {
 private:

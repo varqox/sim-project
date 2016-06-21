@@ -3,8 +3,6 @@
 #include "../include/logger.h"
 #include "../include/random.h"
 
-#include <unistd.h>
-
 std::mt19937 random_generator(getRandomSeed());
 
 void fillRandomly(void* dest, size_t bytes) noexcept {
