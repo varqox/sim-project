@@ -5,10 +5,10 @@
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
 #include <simlib/random.h>
 #include <simlib/sim/simfile.h>
+#include <simlib/spawner.h>
 #include <simlib/time.h>
 
 using std::array;
@@ -86,7 +86,6 @@ void Contest::handle() {
 			return error500();
 		}
 	}
-
 
 	// Add contest
 	if (next_arg == "add")
@@ -513,7 +512,6 @@ void Contest::addProblem() {
 
 				if (time_limit.size())
 					back_insert(args, "-tl", toString(tl));
-
 
 				int fd = getUnlinkedTmpFile();
 				if (fd == -1)

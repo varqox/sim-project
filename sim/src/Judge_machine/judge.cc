@@ -4,7 +4,6 @@
 #include <simlib/compile.h>
 #include <simlib/sandbox_checker_callback.h>
 #include <simlib/sim/simfile.h>
-#include <simlib/utilities.h>
 
 using std::string;
 using std::vector;
@@ -300,7 +299,6 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 				judge_test_report.comments += "</li>\n";
 			}
-
 
 			if (VERBOSITY > 1) {
 				tmplog(widedString(usecToSecStr(es.runtime, 2, false), 4),

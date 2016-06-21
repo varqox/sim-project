@@ -4,6 +4,7 @@
 #include "validate_package.h"
 
 #include <simlib/process.h>
+#include <simlib/spawner.h>
 #include <simlib/utilities.h>
 
 using std::string;

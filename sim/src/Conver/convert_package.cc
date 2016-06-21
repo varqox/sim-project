@@ -1,7 +1,6 @@
 #include "convert_package.h"
 
 #include <simlib/debug.h>
-#include <simlib/logger.h>
 
 using std::pair;
 using std::string;

@@ -1,6 +1,4 @@
 #include "judge.h"
-
-#include <climits>
 #include <sim/constants.h>
 #include <sim/db.h>
 #include <simlib/debug.h>
