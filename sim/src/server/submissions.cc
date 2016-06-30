@@ -424,12 +424,21 @@ void Contest::submission() {
 			return;
 		}
 
-		contestTemplate("Submission " + submission_id);
-		printRoundPath();
-
 		/* View source */
 		if (query == Query::VIEW_SOURCE) {
-			append(cpp_syntax_highlighter(getFileContents(
+			contestTemplate(concat("Submission ", submission_id, " - source"));
+			printRoundPath();
+
+			append("<h2>Source code of submission ", submission_id, "</h2>"
+				"<div>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id, "\">"
+						"View submission</a>"
+					"<a class=\"btn-small\" "
+						"onclick=\"SelectText(document.getElementsByClassName("
+							"'code-view')[0])\">"
+						"Select the full code</a>"
+				"</div>",
+				cpp_syntax_highlighter(getFileContents(
 				concat("solutions/", submission_id, ".cpp"))));
 			return;
 		}
@@ -440,6 +449,9 @@ void Contest::submission() {
 		string problem_name = res[6];
 		string problem_tag = res[7];
 		string full_name = concat(res[8], ' ', res[9]);
+
+		contestTemplate("Submission " + submission_id);
+		printRoundPath();
 
 		append("<div class=\"submission-info\">\n"
 			"<div>\n"

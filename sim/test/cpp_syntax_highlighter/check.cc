@@ -89,7 +89,7 @@ void regenerate(const vector<string>& tests) {
 }
 
 // argv[1] == "--diff" -> show diff if test failed
-// argv[1] == "--regen" -> regenerate .out files
+// argv[1] == "--regen" -> regenerate ALL .out files
 int main(int argc, char **argv) {
 	stdlog.label(false);
 	errlog.label(false);
