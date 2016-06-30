@@ -57,9 +57,6 @@ matrix:
     - compiler: clang
       <<: *Clang
       env: DEBUG=2
-  # Due to LLVM APT outage
-  allow_failures:
-    - compiler: clang
 
 before_script:
   - export CC="$CC -Werror"
