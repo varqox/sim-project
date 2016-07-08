@@ -25,7 +25,6 @@ inline uint_fast32_t getRandomSeed() noexcept {
 	return (-1 == readRandomBytes_nothrow(&seed, sizeof(seed)) ? std::chrono::system_clock::now().time_since_epoch().count() : seed);
 }
 
-
 extern std::mt19937 random_generator;
 
 // Get random from [a, b]

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "meta.h"
 #include "process.h"
 #include "spawner.h"
 #include "utilities.h"
@@ -99,8 +100,9 @@ public:
 			int limit;
 		};
 
-		static_assert(ARCH_i386 == 0 && ARCH_x86_64 == 1,
-			"Invalid values of ARCH_ constants");
+		static_assert(ARCH_i386 == 0, "Invalid value of a constant");
+		static_assert(ARCH_x86_64 == 1, "Invalid value of a constant");
+
 		std::vector<Pair> limited_syscalls[2] = {
 			{ /* i386 */
 				{  11, 1 }, // SYS_execve
@@ -285,6 +287,9 @@ public:
 				325, // SYS_mlock2t
 			}};
 
+			static_assert(meta::is_sorted(allowed_syscalls_i386), "");
+			static_assert(meta::is_sorted(allowed_syscalls_x86_64), "");
+
 			return isSyscallEntryAllowed(pid, syscall, allowed_syscalls_i386,
 				allowed_syscalls_x86_64, allowed_files);
 		}
@@ -382,7 +387,6 @@ private:
 			const std::string& working_dir, Callback func) noexcept (false);
 	};
 };
-
 
 /******************************* IMPLEMENTATION *******************************/
 

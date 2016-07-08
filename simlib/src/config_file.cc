@@ -43,7 +43,6 @@ static size_t parseSingleQuotedString(const StringView& in, string& out,
 	}
 }
 
-
 /**
  * @brief Extracts double quoted string from @p in
  *
@@ -123,7 +122,6 @@ static size_t parseDoubleQuotedString(const StringView& in, string& out,
 	}
 }
 
-
 /**
  * @brief Extracts value from @p in
  *
@@ -201,8 +199,8 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 		if (beg == end || config[beg] == '#') // Blank line or comment
 			continue;
 
-
 		/* Extract name */
+
 		x = beg;
 		while (beg < end && isName(config[beg]))
 			++beg;
@@ -225,8 +223,8 @@ void ConfigFile::loadConfigFromString(const StringView& config, bool load_all) {
 		var.s.clear();
 		var.a.clear();
 
-
 		/* Assignment operator */
+
 		ignoreWhitespace();
 		// Assert beg < end
 		if (beg == end)

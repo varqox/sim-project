@@ -868,15 +868,14 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 	if (beg >= end)
 		return (*x = 0);
 
+	if (x == nullptr)
+		return (isInteger(s, beg, end) ? end - beg : -1);
+
 	bool minus = (s[beg] == '-');
 	int res = 0;
+	*x = 0;
 	if ((s[beg] == '-' || s[beg] == '+') && (++res, ++beg) == end)
 			return -1; // sign is not a number
-
-	if (x == nullptr)
-		return isInteger(s, beg, end) ? res + end - beg : -1;
-
-	*x = 0;
 	for (size_t i = beg; i < end; ++i) {
 		if (isdigit(s[i]))
 			*x = *x * 10 + s[i] - '0';
@@ -900,14 +899,14 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 	if (beg >= end)
 		return (*x = 0);
 
+	if (x == nullptr)
+		return (isDigit(s, beg + (s[beg] == '+'), end) ? end - beg : -1);
+
 	int res = 0;
+	*x = 0;
 	if (s[beg] == '+' && (++res, ++beg) == end)
 		return -1; // sign is not a number
 
-	if (x == nullptr)
-		return isDigit(s, beg, end) ? res + end - beg : -1;
-
-	*x = 0;
 	for (size_t i = beg; i < end; ++i) {
 		if (isdigit(s[i]))
 			*x = *x * 10 + s[i] - '0';
@@ -922,7 +921,7 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 inline long long strtoll(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
-	long long x;
+	long long x; // x will be initialized in function below
 	strtoi(s, &x, beg, end);
 	return x;
 }
@@ -931,7 +930,7 @@ inline long long strtoll(const StringView& s, size_t beg = 0,
 inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
-	unsigned long long x = 0;
+	unsigned long long x; // x will be initialized in function below
 	strtou(s, &x, beg, end);
 	return x;
 }
