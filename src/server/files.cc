@@ -84,37 +84,37 @@ void Contest::addFile() {
 
 	contestTemplate("Add file");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
 			"<h1>Add file</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// File name
-				"<div class=\"field-group\">\n"
-					"<label>File name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(file_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
-						"placeholder=\"The same as name of uploaded file\">\n"
-				"</div>\n"
+						"placeholder=\"The same as name of uploaded file\">"
+				"</div>"
 				// File
-				"<div class=\"field-group\">\n"
-					"<label>File</label>\n"
-					"<input type=\"file\" name=\"file\" required>\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>File</label>"
+					"<input type=\"file\" name=\"file\" required>"
+				"</div>"
 				// Description
-				"<div class=\"field-group\">\n"
-					"<label>Description</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
-				"</div>\n"
+				"</div>"
 
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">\n"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editFile(const StringView& id, string name) {
@@ -213,51 +213,51 @@ void Contest::editFile(const StringView& id, string name) {
 
 	contestTemplate("Edit file");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
 			"<h1>Edit file</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// File name
-				"<div class=\"field-group\">\n"
-					"<label>File name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
-						"placeholder=\"The same as name of reuploaded file\">\n"
-				"</div>\n"
+						"placeholder=\"The same as name of reuploaded file\">"
+				"</div>"
 				// Reupload file
-				"<div class=\"field-group\">\n"
-					"<label>Reupload file</label>\n"
-					"<input type=\"file\" name=\"file\">\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>Reupload file</label>"
+					"<input type=\"file\" name=\"file\">"
+				"</div>"
 				// Description
-				"<div class=\"field-group\">\n"
-					"<label>Description</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
-				"</div>\n"
+				"</div>"
 				// File size
-				"<div class=\"field-group\">\n"
-					"<label>File size</label>\n"
+				"<div class=\"field-group\">"
+					"<label>File size</label>"
 					"<input type=\"text\" value=\"",
 						humanizeFileSize(file_size), " (", toString(file_size),
-						" bytes)\" disabled>\n"
-				"</div>\n"
+						" bytes)\" disabled>"
+				"</div>"
 				// Modified
-				"<div class=\"field-group\">\n"
-					"<label>Modified</label>\n"
-					"<input type=\"text\" value=\"", modified, "\" disabled>\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>Modified</label>"
+					"<input type=\"text\" value=\"", modified, "\" disabled>"
+				"</div>"
 
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
 					"<a class=\"btn red\" href=\"/file/", id, "/delete?",
-						referer, "\">Delete file</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						referer, "\">Delete file</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::deleteFile(const StringView& id, const StringView& name) {
@@ -308,20 +308,20 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	} else if (referer.empty())
 		referer = concat("/file/", id);
 
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete file</h1>\n"
-		"<form method=\"post\" action=\"?", prev_referer, "\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete file</h1>"
+		"<form method=\"post\" action=\"?", prev_referer, "\">"
 			"<label class=\"field\">Are you sure to delete file "
 				"<a href=\"/file/", id, "/edit\">",
 					htmlSpecialChars(name), "</a>?"
-			"</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+			"</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::file() {
@@ -381,7 +381,7 @@ void Contest::files(bool admin_view) {
 	append("<h1>Files</h1>");
 	if (admin_view)
 		append("<a class=\"btn\" href=\"/c/", rpath->round_id, "/files/add\">"
-			"Add file</a>\n");
+			"Add file</a>");
 
 	try {
 		DB::Statement stmt = db_conn.prepare(
@@ -395,7 +395,7 @@ void Contest::files(bool admin_view) {
 			return;
 		}
 
-		append("<table class=\"files\">\n"
+		append("<table class=\"files\">"
 			"<thead>"
 				"<tr>"
 					"<th class=\"time\">Modified</th>"
@@ -404,8 +404,8 @@ void Contest::files(bool admin_view) {
 					"<th class=\"description\">Description</th>"
 					"<th class=\"actions\">Actions</th>"
 				"</tr>"
-			"</thead>\n"
-			"<tbody>\n");
+			"</thead>"
+			"<tbody>");
 
 		while (res.next()) {
 			string id = res[1];
@@ -425,11 +425,11 @@ void Contest::files(bool admin_view) {
 						"Delete</a>");
 
 			append("</td>"
-				"</tr>\n");
+				"</tr>");
 		}
 
-		append("</tbody>\n"
-			"</table>\n");
+		append("</tbody>"
+			"</table>");
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

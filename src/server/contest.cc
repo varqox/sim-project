@@ -67,18 +67,18 @@ void Contest::handle() {
 
 			/* List them */
 			baseTemplate("Select contest");
-			append("<div class=\"contests-list\">\n");
+			append("<div class=\"contests-list\">");
 
 			// Add contest button (admins and teachers only)
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
-				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>\n");
+				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>");
 
 			DB::Result res = stmt.executeQuery();
 			while (res.next())
 				append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
-					htmlSpecialChars(res[2]), "</a>\n");
+					htmlSpecialChars(res[2]), "</a>");
 
-			append("</div>\n");
+			append("</div>");
 			return;
 
 		} catch (const std::exception& e) {
@@ -239,7 +239,7 @@ void Contest::handle() {
 
 	if (rpath->type == PROBLEM)
 		append("<a class=\"btn\" href=\"/c/", round_id, "/statement\" "
-			"style=\"margin:5px auto\">View statement</a>\n");
+			"style=\"margin:5px auto\">View statement</a>");
 }
 
 void Contest::addContest() {
@@ -294,34 +294,34 @@ void Contest::addContest() {
 	}
 
 	baseTemplate("Add contest", ".body{margin-left:30px}");
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Add contest</h1>\n"
-			"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Add contest</h1>"
+			"<form method=\"post\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Contest name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Public
-				"<div class=\"field-group\">\n"
-					"<label>Public</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Public</label>"
 					"<input type=\"checkbox\" name=\"public\"",
 						(is_public ? " checked" : ""),
 						(Session::user_type > UTYPE_ADMIN ? " disabled" : ""),
-						">\n"
-				"</div>\n"
+						">"
+				"</div>"
 				// Show ranking
-				"<div class=\"field-group\">\n"
-					"<label>Show ranking</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Show ranking</label>"
 					"<input type=\"checkbox\" name=\"show-ranking\"",
-						(show_ranking ? " checked" : ""), ">\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
-			"</form>\n"
-		"</div>\n");
+						(show_ranking ? " checked" : ""), ">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+			"</form>"
+		"</div>");
 }
 
 void Contest::addRound() {
@@ -398,49 +398,49 @@ void Contest::addRound() {
 
 	contestTemplate("Add round");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Add round</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Add round</h1>"
+		"<form method=\"post\">"
 			// Name
-			"<div class=\"field-group\">\n"
-				"<label>Round name</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Round name</label>"
 				"<input type=\"text\" name=\"name\" value=\"",
 					htmlSpecialChars(name), "\" size=\"24\" "
-					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>\n"
-			"</div>\n"
+					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>"
+			"</div>"
 			// Visible
-			"<div class=\"field-group\">\n"
-				"<label>Visible</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Visible</label>"
 				"<input type=\"checkbox\" name=\"visible\"",
-					(is_visible ? " checked" : ""), ">\n"
-			"</div>\n"
+					(is_visible ? " checked" : ""), ">"
+			"</div>"
 			// Begins
-			"<div class=\"field-group\">\n"
-				"<label>Begins</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Begins</label>"
 				"<input type=\"text\" name=\"begins\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(begins), "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
+					"maxlength=\"19\">"
+			"</div>"
 			// Ends
-			"<div class=\"field-group\">\n"
-				"<label>Ends</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Ends</label>"
 				"<input type=\"text\" name=\"ends\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(ends), "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
+					"maxlength=\"19\">"
+			"</div>"
 			// Full_results
-			"<div class=\"field-group\">\n"
-				"<label>Full_results</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Full_results</label>"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(full_results), "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
-			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
-		"</form>\n"
-	"</div>\n");
+					"maxlength=\"19\">"
+			"</div>"
+			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+		"</form>"
+	"</div>");
 }
 
 void Contest::addProblem() {
@@ -628,48 +628,45 @@ void Contest::addProblem() {
  form:
 	contestTemplate("Add problem");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Add problem</h1>\n"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Add problem</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Problem name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\""
 					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
 					"placeholder=\"Detect from config.conf\">"
-					"\n"
-				"</div>\n"
+				"</div>"
 				// Memory limit
-				"<div class=\"field-group\">\n"
-					"<label>Memory limit [KiB]</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Memory limit [KiB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
 					"placeholder=\"Detect from config.conf\">"
-					"\n"
-				"</div>\n"
+				"</div>"
 				// Global time limit
-				"<div class=\"field-group\">\n"
-					"<label>Global time limit [s] (for each test)</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Global time limit [s] (for each test)</label>"
 					"<input type=\"text\" name=\"time-limit\" value=\"",
 						htmlSpecialChars(time_limit), "\" size=\"24\" "
 					"placeholder=\"No global time limit\">"
-					"\n"
-				"</div>\n"
+				"</div>"
 				// Force auto limit
-				"<div class=\"field-group\">\n"
-					"<label>Automatic time limit setting</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Automatic time limit setting</label>"
 					"<input type=\"checkbox\" name=\"force-auto-limit\"",
-						(force_auto_limit ? " checked" : ""), ">\n"
-				"</div>\n"
+						(force_auto_limit ? " checked" : ""), ">"
+				"</div>"
 				// Package
-				"<div class=\"field-group\">\n"
-					"<label>Package</label>\n"
-					"<input type=\"file\" name=\"package\" required>\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
-			"</form>\n"
-		"</div>\n");
+				"<div class=\"field-group\">"
+					"<label>Package</label>"
+					"<input type=\"file\" name=\"package\" required>"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editContest() {
@@ -749,47 +746,46 @@ void Contest::editContest() {
 
 	contestTemplate("Edit contest");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Edit contest</h1>\n"
-			"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Edit contest</h1>"
+			"<form method=\"post\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Contest name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Owner
-				"<div class=\"field-group\">\n"
-					"<label>Owner username</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Owner username</label>"
 					"<input type=\"text\" name=\"owner\" value=\"",
 						htmlSpecialChars(owner), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Public
-				"<div class=\"field-group\">\n"
-					"<label>Public</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Public</label>"
 					"<input type=\"checkbox\" name=\"public\"",
 						(is_public ? " checked"
 							: (Session::user_type > UTYPE_ADMIN ? " disabled"
-								: "")),
-						">\n"
-				"</div>\n"
+								: "")), ">"
+				"</div>"
 				// Show ranking
-				"<div class=\"field-group\">\n"
-					"<label>Show ranking</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Show ranking</label>"
 					"<input type=\"checkbox\" name=\"show-ranking\"",
-						(show_ranking ? " checked" : ""), ">\n"
-				"</div>\n"
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+						(show_ranking ? " checked" : ""), ">"
+				"</div>"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
-						"/delete\">Delete contest</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"/delete\">Delete contest</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editRound() {
@@ -870,54 +866,54 @@ void Contest::editRound() {
 
 	contestTemplate("Edit round");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Edit round</h1>\n"
-			"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Edit round</h1>"
+			"<form method=\"post\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Round name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Round name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Visible before beginning
-				"<div class=\"field-group\">\n"
-					"<label>Visible before beginning</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Visible before beginning</label>"
 					"<input type=\"checkbox\" name=\"visible\"",
-						(is_visible ? " checked" : ""), ">\n"
-				"</div>\n"
+						(is_visible ? " checked" : ""), ">"
+				"</div>"
 				// Begins
-				"<div class=\"field-group\">\n"
-					"<label>Begins</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Begins</label>"
 					"<input type=\"text\" name=\"begins\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(begins), "\" size=\"19\" "
-						"maxlength=\"19\">\n"
-				"</div>\n"
+						"maxlength=\"19\">"
+				"</div>"
 				// Ends
-				"<div class=\"field-group\">\n"
-					"<label>Ends</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Ends</label>"
 					"<input type=\"text\" name=\"ends\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(ends), "\" size=\"19\" "
-						"maxlength=\"19\">\n"
-				"</div>\n"
+						"maxlength=\"19\">"
+				"</div>"
 				// Full_results
-				"<div class=\"field-group\">\n"
-					"<label>Full_results</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Full_results</label>"
 					"<input type=\"text\" name=\"full_results\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(full_results), "\" size=\"19\" "
-						"maxlength=\"19\">\n"
-				"</div>\n"
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+						"maxlength=\"19\">"
+				"</div>"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
-						"/delete\">Delete round</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"/delete\">Delete round</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editProblem() {
@@ -1093,8 +1089,8 @@ void Contest::editProblem() {
 	printRoundPath();
 	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
 			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
-				"/edit/rejudge\">Rejudge all submissions</a>\n"
-			"<div class=\"dropmenu down\" style=\"margin-left:5px\">"
+				"/edit/rejudge\">Rejudge all submissions</a>"
+			"<div class=\"dropmenu down\">"
 				"<a class=\"btn-small dropmenu-toggle\">"
 					"Download package as<span class=\"caret\"></span></a>"
 				"<ul>"
@@ -1103,50 +1099,50 @@ void Contest::editProblem() {
 					"<a href=\"/c/", rpath->round_id, "/edit/download/tgz\">"
 						".tar.gz</a>"
 				"</ul>"
-			"</div>\n"
-		"</div>\n"
-		"<div class=\"form-container\">\n"
-			"<h1>Edit problem</h1>\n"
-			"<form method=\"post\">\n"
+			"</div>"
+		"</div>"
+		"<div class=\"form-container\">"
+			"<h1>Edit problem</h1>"
+			"<form method=\"post\">"
 				// Problem round name
-				"<div class=\"field-group\">\n"
-					"<label>Problem round name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem round name</label>"
 					"<input type=\"text\" name=\"round-name\" value=\"",
 						htmlSpecialChars(round_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Problem name
-				"<div class=\"field-group\">\n"
-					"<label>Problem name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Tag
-				"<div class=\"field-group\">\n"
-					"<label>Problem tag</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem tag</label>"
 					"<input type=\"text\" name=\"tag\" value=\"",
 						htmlSpecialChars(tag), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_TAG_LEN), "\" required>\n"
-				"</div>\n"
+						"maxlength=\"", toStr(PROBLEM_TAG_LEN), "\" required>"
+				"</div>"
 				// TODO: Checker
 				// Memory limit
-				"<div class=\"field-group\">\n"
-					"<label>Memory limit [KB]</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Memory limit [KB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// TODO: Main solution
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
-						"/delete\">Delete problem</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"/delete\">Delete problem</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::deleteContest() {
@@ -1206,20 +1202,20 @@ void Contest::deleteContest() {
 
 	contestTemplate("Delete contest");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete contest</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete contest</h1>"
+		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure to delete contest "
 				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->contest->name), "</a>, all "
-				"subrounds and submissions?</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+				"subrounds and submissions?</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::deleteRound() {
@@ -1258,20 +1254,20 @@ void Contest::deleteRound() {
 
 	contestTemplate("Delete round");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete round</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete round</h1>"
+		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure to delete round <a href=\"/c/",
 				rpath->round_id, "\">",
 				htmlSpecialChars(rpath->round->name), "</a>, all "
-				"subrounds and submissions?</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+				"subrounds and submissions?</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::deleteProblem() {
@@ -1309,20 +1305,20 @@ void Contest::deleteProblem() {
 
 	contestTemplate("Delete problem");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete problem</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete problem</h1>"
+		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure to delete problem "
 				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->problem->name), "</a> and all its "
-				"submissions?</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+				"submissions?</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::listProblems(bool admin_view) {
@@ -1541,11 +1537,11 @@ void Contest::ranking(bool admin_view) {
 		sort(index_of.begin(), index_of.end());
 
 		// Table head
-		append("<table class=\"table ranking stripped\">\n"
-			"<thead>\n"
-				"<tr>\n"
-					"<th rowspan=\"2\">#</th>\n"
-					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>\n");
+		append("<table class=\"table ranking stripped\">"
+			"<thead>"
+				"<tr>"
+					"<th rowspan=\"2\">#</th>"
+					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>");
 		// Rounds
 		for (auto& i : rounds) {
 			if (i.problems.empty())
@@ -1556,20 +1552,20 @@ void Contest::ranking(bool admin_view) {
 				append(" colspan=\"", toString(i.problems.size()), '"');
 			append("><a href=\"/c/", i.id,
 				(admin_view ? "/ranking\">" : "/n/ranking\">"),
-				htmlSpecialChars(i.name), "</a></th>\n");
+				htmlSpecialChars(i.name), "</a></th>");
 		}
 		// Problems
-		append("<th rowspan=\"2\">Sum</th>\n"
-			"</tr>\n"
-			"<tr>\n");
+		append("<th rowspan=\"2\">Sum</th>"
+			"</tr>"
+			"<tr>");
 		for (auto& i : rounds)
 			for (auto& j : i.problems)
 				append("<th><a href=\"/c/", toString(j.id),
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
 					htmlSpecialChars(j.tag), "</a></th>");
-		append("</tr>\n"
-			"</thead>\n"
-			"<tbody>\n");
+		append("</tr>"
+			"</thead>"
+			"<tbody>");
 		// Rows
 		assert(sorted_rows.size());
 		size_t place = 1; // User place
@@ -1581,14 +1577,14 @@ void Contest::ranking(bool admin_view) {
 			if (last_user_score != row.score)
 				place = i + 1;
 			last_user_score = row.score;
-			append("<tr>\n"
-					"<td>", toString(place), "</td>\n");
+			append("<tr>"
+					"<td>", toString(place), "</td>");
 			// Name
 			if (admin_view)
 				append("<td><a href=\"/u/", row.user_id, "\">",
-					htmlSpecialChars(row.name), "</a></td>\n");
+					htmlSpecialChars(row.name), "</a></td>");
 			else
-				append("<td>", htmlSpecialChars(row.name), "</td>\n");
+				append("<td>", htmlSpecialChars(row.name), "</td>");
 
 			// Fields
 			fill(row_points.begin(), row_points.end(), nullptr);
@@ -1602,22 +1598,22 @@ void Contest::ranking(bool admin_view) {
 			}
 			for (auto& j : row_points) {
 				if (j == nullptr)
-					append("<td></td>\n");
+					append("<td></td>");
 				else if (admin_view || (Session::isOpen() &&
 					row.user_id == Session::user_id))
 				{
 					append("<td><a href=\"/s/", j->submission_id, "\">",
-						j->score, "</a></td>\n");
+						j->score, "</a></td>");
 				} else
-					append("<td>", j->score, "</td>\n");
+					append("<td>", j->score, "</td>");
 			}
 
 			append("<td>", toString(row.score), "</td>"
-				"</tr>\n");
+				"</tr>");
 		}
-		append("</tbody>\n"
-				"</thead>\n"
-			"</table>\n");
+		append("</tbody>"
+				"</thead>"
+			"</table>");
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

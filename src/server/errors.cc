@@ -11,9 +11,9 @@ void Errors::errorTemplate(const StringView& status, const char* code,
 		prev = '/';
 
 	baseTemplate(status);
-	append("<center>\n"
+	append("<center>"
 		"<h1 style=\"font-size:25px;font-weight:normal;\">", code, " &mdash; ",
-			message, "</h1>\n"
-		"<a class=\"btn\" href=\"", prev, "\">Go back</a>\n"
+			message, "</h1>"
+		"<a class=\"btn\" href=\"", prev, "\">Go back</a>"
 		"</center>");
 }

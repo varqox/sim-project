@@ -22,16 +22,16 @@ server::HttpResponse Sim::handle(string _client_ip,
 		resp.status_code = "500 Internal Server Error";
 		resp.headers["Content-Type"] = "text/html; charset=utf-8";
 		resp.content = "<!DOCTYPE html>"
-				"<html lang=\"en\">\n"
-				"<head><title>500 Internal Server Error</title></head>\n"
-				"<body>\n"
+				"<html lang=\"en\">"
+				"<head><title>500 Internal Server Error</title></head>"
+				"<body>"
 					"<center>"
-						"<h1>500 Internal Server Error</h1>\n"
-						"<p>Try to reload the page in a few seconds.</p>\n"
+						"<h1>500 Internal Server Error</h1>"
+						"<p>Try to reload the page in a few seconds.</p>"
 						"<button onclick=\"history.go(0)\">Reload</button>"
-						"</center>\n"
-				"</body>\n"
-			"</html>\n";
+						"</center>"
+				"</body>"
+			"</html>";
 	};
 
 	try {
@@ -91,14 +91,14 @@ server::HttpResponse Sim::handle(string _client_ip,
 
 void Sim::mainPage() {
 	baseTemplate("Main page");
-	append("<div style=\"text-align: center\">\n"
+	append("<div style=\"text-align: center\">"
 			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
-				"alt=\"\">\n"
-			"<p style=\"font-size: 30px\">Welcome to SIM</p>\n"
-			"<hr>\n"
-			"<p>SIM is open source platform for carrying out algorithmic "
-				"contests</p>\n"
-		"</div>\n");
+				"alt=\"\">"
+			"<p style=\"font-size: 30px\">Welcome to SIM</p>"
+			"<hr>"
+			"<p>SIM is an open source platform for carrying out algorithmic "
+				"contests</p>"
+		"</div>");
 }
 
 void Sim::getStaticFile() {
@@ -254,28 +254,28 @@ void Sim::logs() {
 	};
 
 	// Server log
-	append("<h2>Server log:</h2>\n"
+	append("<h2>Server log:</h2>"
 		"<pre class=\"logs\">");
 	dumpLogTail(SERVER_LOG);
-	append("</pre>\n");
+	append("</pre>");
 
 	// Server error log
-	append("<h2>Server error log:</h2>\n"
+	append("<h2>Server error log:</h2>"
 		"<pre class=\"logs\">");
 	dumpLogTail(SERVER_ERROR_LOG);
-	append("</pre>\n");
+	append("</pre>");
 
 	// Judge log
-	append("<h2>Judge log:</h2>\n"
+	append("<h2>Judge log:</h2>"
 		"<pre class=\"logs\">");
 	dumpLogTail(JUDGE_LOG);
-	append("</pre>\n");
+	append("</pre>");
 
 	// Judge error log
-	append("<h2>Judge error log:</h2>\n"
+	append("<h2>Judge error log:</h2>"
 		"<pre class=\"logs\">");
 	dumpLogTail(JUDGE_ERROR_LOG);
-	append("</pre>\n"
+	append("</pre>"
 
 	// Script used to scroll down the logs
 		"<script>"
