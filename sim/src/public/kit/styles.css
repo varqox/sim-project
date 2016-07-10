@@ -460,7 +460,7 @@ table {
 .btn-small {
 	display: inline-block;
 	height: 26px;
-	margin: 2px;
+	margin: 2px 3px;
 	padding: 2px 10px;
 	white-space: pre;
 }

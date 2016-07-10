@@ -122,58 +122,58 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 	baseTemplate(title, concat(".body{margin-left:190px}", styles),
 		scripts);
 
-	append("<ul class=\"menu\">\n");
+	append("<ul class=\"menu\">");
 
 	// Aliases
 	string &round_id = rpath->round_id;
 	bool &admin_access = rpath->admin_access;
 
 	if (admin_access) {
-		append("<span>CONTEST ADMINISTRATION</span>\n"
+		append("<span>CONTEST ADMINISTRATION</span>"
 			// Adding
 			"<div class=\"dropmenu right\">"
-				"<a class=\"dropmenu-toggle\">Add</a>\n"
-				"<ul>\n"
-					"<a href=\"/c/add\">Contest</a>\n"
-					"<a href=\"/c/", rpath->contest->id, "/add\">Round</a>\n");
+				"<a class=\"dropmenu-toggle\">Add</a>"
+				"<ul>"
+					"<a href=\"/c/add\">Contest</a>"
+					"<a href=\"/c/", rpath->contest->id, "/add\">Round</a>");
 
 		if (rpath->type >= ROUND)
-			append("<a href=\"/c/", rpath->round->id, "/add\">Problem</a>\n");
+			append("<a href=\"/c/", rpath->round->id, "/add\">Problem</a>");
 
-		append("</ul>\n"
-			"</div>\n"
+		append("</ul>"
+			"</div>"
 
 		// Editing
 			"<div class=\"dropmenu right\">"
-				"<a class=\"dropmenu-toggle\">Edit</a>\n"
-			"<ul>\n"
-				"<a href=\"/c/", rpath->contest->id, "/edit\">Contest</a>\n");
+				"<a class=\"dropmenu-toggle\">Edit</a>"
+			"<ul>"
+				"<a href=\"/c/", rpath->contest->id, "/edit\">Contest</a>");
 
 		if (rpath->type >= ROUND)
-			append("<a href=\"/c/", rpath->round->id, "/edit\">Round</a>\n");
+			append("<a href=\"/c/", rpath->round->id, "/edit\">Round</a>");
 		if (rpath->type == PROBLEM)
-			append("<a href=\"/c/", round_id, "/edit\">Problem</a>\n");
+			append("<a href=\"/c/", round_id, "/edit\">Problem</a>");
 
-		append("</ul>\n"
-			"</div>\n"
-			"<hr/>\n"
-			"<a href=\"/c/", rpath->contest->id, "\">Contest dashboard</a>\n"
-			"<a href=\"/c/", rpath->contest->id, "/problems\">Problems</a>\n"
-			"<a href=\"/c/", rpath->contest->id, "/files\">Files</a>\n"
-			"<a href=\"/c/", round_id, "/submit\">Submit a solution</a>\n"
+		append("</ul>"
+			"</div>"
+			"<hr/>"
+			"<a href=\"/c/", rpath->contest->id, "\">Contest dashboard</a>"
+			"<a href=\"/c/", rpath->contest->id, "/problems\">Problems</a>"
+			"<a href=\"/c/", rpath->contest->id, "/files\">Files</a>"
+			"<a href=\"/c/", round_id, "/submit\">Submit a solution</a>"
 			"<a href=\"/c/", rpath->contest->id, "/submissions\">"
-				"Submissions</a>\n"
-			"<a href=\"/c/", round_id, "/submissions\">Local submissions</a>\n"
-			"<a href=\"/c/", rpath->contest->id, "/ranking\">Ranking</a>\n"
-			"<span>OBSERVER MENU</span>\n");
+				"Submissions</a>"
+			"<a href=\"/c/", round_id, "/submissions\">Local submissions</a>"
+			"<a href=\"/c/", rpath->contest->id, "/ranking\">Ranking</a>"
+			"<span>OBSERVER MENU</span>");
 	}
 
 	append("<a href=\"/c/", rpath->contest->id, (admin_access ? "/n" : ""),
-			"\">Contest dashboard</a>\n"
+			"\">Contest dashboard</a>"
 		"<a href=\"/c/", rpath->contest->id, (admin_access ? "/n" : ""),
-			"/problems\">Problems</a>\n"
+			"/problems\">Problems</a>"
 		"<a href=\"/c/", rpath->contest->id, (admin_access ? "/n" : ""),
-			"/files\">Files</a>\n");
+			"/files\">Files</a>");
 
 	string current_date = date("%Y-%m-%d %H:%M:%S");
 	Round *round = rpath->round.get();
@@ -182,18 +182,18 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 		(round->ends.empty() || current_date < round->ends)))
 	{
 		append("<a href=\"/c/", round_id, (admin_access ? "/n" : ""),
-			"/submit\">Submit a solution</a>\n");
+			"/submit\">Submit a solution</a>");
 	}
 
 	append("<a href=\"/c/", rpath->contest->id,
-		(admin_access ? "/n" : ""), "/submissions\">Submissions</a>\n");
+		(admin_access ? "/n" : ""), "/submissions\">Submissions</a>");
 
 	append("<a href=\"/c/", round_id, (admin_access ? "/n" : ""),
-		"/submissions\">Local submissions</a>\n");
+		"/submissions\">Local submissions</a>");
 
 	if (rpath->contest->show_ranking)
 		append("<a href=\"/c/", rpath->contest->id,
-			(admin_access ? "/n" : ""), "/ranking\">Ranking</a>\n");
+			(admin_access ? "/n" : ""), "/ranking\">Ranking</a>");
 
 	append("</ul>");
 }
@@ -248,7 +248,7 @@ void Contest::printRoundPath(const StringView& page, bool force_normal) {
 				htmlSpecialChars(rpath->problem->name), "</a>");
 	}
 
-	append("</div>\n");
+	append("</div>");
 }
 
 void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
@@ -324,18 +324,18 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			}
 
 			// Construct "table"
-			append("<div class=\"round-view\">\n"
+			append("<div class=\"round-view\">"
 				"<a class=\"grayed\" href=\"/c/", rpath->contest->id,
 					force_normal, "\">", htmlSpecialChars(rpath->contest->name),
-				"</a>\n"
-				"<div>\n");
+				"</a>"
+				"<div>");
 
 			// For each subround list all problems
 			for (auto&& sr : subrounds) {
 				// Round
-				append("<div>\n"
+				append("<div>"
 					"<a href=\"/c/", sr.id, force_normal, "\">",
-					htmlSpecialChars(sr.name), "</a>\n");
+					htmlSpecialChars(sr.name), "</a>");
 
 				// List problems
 				vector<Problem>& prob = problems[sr.id];
@@ -345,24 +345,24 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					if (link_to_problem_statement)
 						append("/statement");
 
-					append("\">", htmlSpecialChars(pro.name), "</a>\n");
+					append("\">", htmlSpecialChars(pro.name), "</a>");
 				}
-				append("</div>\n");
+				append("</div>");
 			}
-			append("</div>\n"
-				"</div>\n");
+			append("</div>"
+				"</div>");
 
 		} else if (rpath->type == ROUND) {
 			// Construct "table"
-			append("<div class=\"round-view\">\n"
+			append("<div class=\"round-view\">"
 				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
-					htmlSpecialChars(rpath->contest->name), "</a>\n"
-				"<div>\n");
+					htmlSpecialChars(rpath->contest->name), "</a>"
+				"<div>");
 			// Round
-			append("<div>\n"
+			append("<div>"
 				"<a class=\"grayed\" href=\"/c/", rpath->round->id,
 					force_normal, "\">", htmlSpecialChars(rpath->round->name),
-				"</a>\n");
+				"</a>");
 
 			// List problems if and only if round has begun (for non-admins)
 			if (admin_view ||
@@ -382,24 +382,24 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					if (link_to_problem_statement)
 						append("/statement");
 
-					append("\">", htmlSpecialChars(res[2]), "</a>\n");
+					append("\">", htmlSpecialChars(res[2]), "</a>");
 				}
 			}
 
-			append("</div>\n"
-				"</div>\n"
-				"</div>\n");
+			append("</div>"
+				"</div>"
+				"</div>");
 
 		} else { // rpath->type == PROBLEM
 			// Construct "table"
-			append("<div class=\"round-view\">\n"
+			append("<div class=\"round-view\">"
 				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
-					htmlSpecialChars(rpath->contest->name), "</a>\n"
-				"<div>\n");
+					htmlSpecialChars(rpath->contest->name), "</a>"
+				"<div>");
 			// Round
-			append("<div>\n"
+			append("<div>"
 				"<a href=\"/c/", rpath->round->id, force_normal, "\">",
-					htmlSpecialChars(rpath->round->name), "</a>\n"
+					htmlSpecialChars(rpath->round->name), "</a>"
 			// Problem
 				"<a class=\"grayed\" href=\"/c/", rpath->problem->id,
 					force_normal);
@@ -407,10 +407,10 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			if (link_to_problem_statement)
 				append("/statement");
 
-			append("\">", htmlSpecialChars(rpath->problem->name), "</a>\n"
-					"</div>\n"
-				"</div>\n"
-				"</div>\n");
+			append("\">", htmlSpecialChars(rpath->problem->name), "</a>"
+					"</div>"
+				"</div>"
+				"</div>");
 		}
 
 	} catch (const std::exception& e) {

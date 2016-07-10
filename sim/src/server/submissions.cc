@@ -121,12 +121,12 @@ void Contest::submit(bool admin_view) {
 	contestTemplate("Submit a solution");
 	printRoundPath();
 	string buffer;
-	back_insert(buffer, fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Submit a solution</h1>\n"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+	back_insert(buffer, fv.errors(), "<div class=\"form-container\">"
+			"<h1>Submit a solution</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// Round id
-				"<div class=\"field-group\">\n"
-					"<label>Problem</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem</label>"
 					"<select name=\"round-id\">");
 
 	// List problems
@@ -195,7 +195,7 @@ void Contest::submit(bool admin_view) {
 				for (auto& problem : prob)
 					back_insert(buffer, "<option value=\"", problem.id, "\">",
 						htmlSpecialChars(problem.name), " (",
-						htmlSpecialChars(sr.name), ")</option>\n");
+						htmlSpecialChars(sr.name), ")</option>");
 			}
 
 		// Admin -> All problems
@@ -215,7 +215,7 @@ void Contest::submit(bool admin_view) {
 				back_insert(buffer, "<option value=\"", res[1],
 					"\">", htmlSpecialChars(res[2]),
 					" (", htmlSpecialChars(rpath->round->name),
-					")</option>\n");
+					")</option>");
 
 		// Admin -> Current problem
 		// Normal -> if parent round has begun and has not ended
@@ -225,7 +225,7 @@ void Contest::submit(bool admin_view) {
 		{
 			back_insert(buffer, "<option value=\"", rpath->problem->id,
 				"\">", htmlSpecialChars(rpath->problem->name), " (",
-				htmlSpecialChars(rpath->round->name), ")</option>\n");
+				htmlSpecialChars(rpath->round->name), ")</option>");
 		}
 
 	} catch (const std::exception& e) {
@@ -233,17 +233,17 @@ void Contest::submit(bool admin_view) {
 		ERRLOG_CATCH(e);
 	}
 
-	if (hasSuffix(buffer, "</option>\n"))
+	if (hasSuffix(buffer, "</option>"))
 		append(buffer, "</select>"
-					"</div>\n"
+					"</div>"
 					// Solution file
-					"<div class=\"field-group\">\n"
-						"<label>Solution</label>\n"
-						"<input type=\"file\" name=\"solution\" required>\n"
-					"</div>\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">\n"
-				"</form>\n"
-			"</div>\n");
+					"<div class=\"field-group\">"
+						"<label>Solution</label>"
+						"<input type=\"file\" name=\"solution\" required>"
+					"</div>"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
+				"</form>"
+			"</div>");
 
 	else
 		append("<p>There are no problems for which you can submit a solution..."
@@ -312,19 +312,19 @@ void Contest::deleteSubmission(const string& submission_id,
 	} else if (referer.empty())
 		referer = concat("/s/", submission_id);
 
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Delete submission</h1>\n"
-			"<form method=\"post\" action=\"?", prev_referer ,"\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Delete submission</h1>"
+			"<form method=\"post\" action=\"?", prev_referer ,"\">"
 				"<label class=\"field\">Are you sure to delete submission "
 				"<a href=\"/s/", submission_id, "\">", submission_id,
-					"</a>?</label>\n"
-				"<div class=\"submit-yes-no\">\n"
+					"</a>?</label>"
+				"<div class=\"submit-yes-no\">"
 					"<button class=\"btn red\" type=\"submit\" "
-						"name=\"delete\">Yes, I'm sure</button>\n"
-					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"name=\"delete\">Yes, I'm sure</button>"
+					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::submission() {
@@ -347,13 +347,15 @@ void Contest::submission() {
 		}
 
 		enum class Query : uint8_t {
-			DELETE, REJUDGE, DOWNLOAD, VIEW_SOURCE, NONE
+			DELETE, REJUDGE, DOWNLOAD, RAW, VIEW_SOURCE, NONE
 		} query = Query::NONE;
 
 		if (next_arg == "delete")
 			query = Query::DELETE;
 		else if (next_arg == "rejudge")
 			query = Query::REJUDGE;
+		else if (next_arg == "raw")
+			query = Query::RAW;
 		else if (next_arg == "download")
 			query = Query::DOWNLOAD;
 		else if (next_arg == "source")
@@ -413,6 +415,15 @@ void Contest::submission() {
 			return redirect(referer);
 		}
 
+		/* Raw code */
+		if (query == Query::RAW) {
+			resp.headers["Content-type"] = "text/plain";
+
+			resp.content = concat("solutions/", submission_id, ".cpp");
+			resp.content_type = server::HttpResponse::FILE;
+			return;
+		}
+
 		/* Download solution */
 		if (query == Query::DOWNLOAD) {
 			resp.headers["Content-type"] = "application/text";
@@ -433,10 +444,8 @@ void Contest::submission() {
 				"<div>"
 					"<a class=\"btn-small\" href=\"/s/", submission_id, "\">"
 						"View submission</a>"
-					"<a class=\"btn-small\" "
-						"onclick=\"SelectText(document.getElementsByClassName("
-							"'code-view')[0])\">"
-						"Select the full code</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/raw/", submission_id, ".cpp\">Raw code</a>"
 				"</div>",
 				cpp_syntax_highlighter(getFileContents(
 				concat("solutions/", submission_id, ".cpp"))));
@@ -453,23 +462,25 @@ void Contest::submission() {
 		contestTemplate("Submission " + submission_id);
 		printRoundPath();
 
-		append("<div class=\"submission-info\">\n"
-			"<div>\n"
-				"<h1>Submission ", submission_id, "</h1>\n"
-				"<div>\n"
+		append("<div class=\"submission-info\">"
+			"<div>"
+				"<h1>Submission ", submission_id, "</h1>"
+				"<div>"
 					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/source\">View source</a>\n"
+						"/source\">View source</a>"
 					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/download\">Download</a>\n");
+						"/raw/", submission_id, ".cpp\">Raw code</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/download\">Download</a>");
 		if (admin_view)
 			append("<a class=\"btn-small blue\" href=\"/s/", submission_id,
-					"/rejudge\">Rejudge</a>\n"
+					"/rejudge\">Rejudge</a>"
 				"<a class=\"btn-small red\" href=\"/s/", submission_id,
-					"/delete?/c/", round_id, "/submissions\">Delete</a>\n");
-		append("</div>\n"
-			"</div>\n"
-			"<table style=\"width: 100%\">\n"
-				"<thead>\n"
+					"/delete?/c/", round_id, "/submissions\">Delete</a>");
+		append("</div>"
+			"</div>"
+			"<table style=\"width: 100%\">"
+				"<thead>"
 					"<tr>");
 
 		if (admin_view)
@@ -479,9 +490,9 @@ void Contest::submission() {
 						"<th style=\"min-width:150px\">Submission time</th>"
 						"<th style=\"min-width:150px\">Status</th>"
 						"<th style=\"min-width:90px\">Score</th>"
-					"</tr>\n"
-				"</thead>\n"
-				"<tbody>\n"
+					"</tr>"
+				"</thead>"
+				"<tbody>"
 					"<tr>");
 
 		if (admin_view)
@@ -509,10 +520,10 @@ void Contest::submission() {
 							rpath->round->full_results <=
 								date("%Y-%m-%d %H:%M:%S") ? score : ""),
 						"</td>"
-					"</tr>\n"
-				"</tbody>\n"
-			"</table>\n",
-			"</div>\n");
+					"</tr>"
+				"</tbody>"
+			"</table>",
+			"</div>");
 
 		// Print judge report
 		append("<div class=\"results\">");
@@ -586,8 +597,8 @@ void Contest::submissions(bool admin_view) {
 			return;
 		}
 
-		append("<table class=\"submissions\">\n"
-			"<thead>\n"
+		append("<table class=\"submissions\">"
+			"<thead>"
 				"<tr>",
 					(admin_view ? "<th class=\"username\">Username</th>"
 							"<th class=\"full-name\">Full name</th>"
@@ -598,9 +609,9 @@ void Contest::submissions(bool admin_view) {
 					"<th class=\"score\">Score</th>"
 					"<th class=\"final\">Final</th>"
 					"<th class=\"actions\">Actions</th>"
-				"</tr>\n"
-			"</thead>\n"
-			"<tbody>\n");
+				"</tr>"
+			"</thead>"
+			"<tbody>");
 
 		auto statusRow = [](const string& status) {
 			string ret = "<td";
@@ -654,11 +665,11 @@ void Contest::submissions(bool admin_view) {
 						"/delete\">Delete</a>");
 
 			append("</td>"
-				"<tr>\n");
+				"<tr>");
 		}
 
-		append("</tbody>\n"
-			"</table>\n");
+		append("</tbody>"
+			"</table>");
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

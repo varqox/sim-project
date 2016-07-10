@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 /**
  * @brief Runs automatic tests on @p package_path
  *

@@ -1,6 +1,6 @@
 # sim [![Build Status](https://travis-ci.org/krzyk240/sim.svg?branch=master)](https://travis-ci.org/krzyk240/sim) [![Coverity Scan Build Status](https://scan.coverity.com/projects/6466/badge.svg)](https://scan.coverity.com/projects/krzyk240-sim) [![Gitter chat](https://badges.gitter.im/krzyk240/sim.png)](https://gitter.im/krzyk240/sim)
 
-SIM is open source platform for carrying out algorithmic contests
+SIM is an open source platform for carrying out algorithmic contests
 
 <div align="center">
   <img src="http://krzyk240.github.io/img/sim.png"/>
