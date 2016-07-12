@@ -7,7 +7,7 @@ all: check
 	@echo $(notdir $(shell pwd)):
 	./check
 
-check: check.cc ../../src/lib/sim.a ../../src/simlib/simlib.a
+check: check.o ../../src/lib/sim.a ../../src/simlib/simlib.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
 
 ../../src/lib/%: FORCE

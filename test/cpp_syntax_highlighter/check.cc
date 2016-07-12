@@ -37,6 +37,7 @@ vector<string> findTests(string path = "tests") {
 		if (binary_search(in, str))
 			res.emplace_back(str);
 
+	sort(res, StrNumCompare());
 	return res;
 }
 

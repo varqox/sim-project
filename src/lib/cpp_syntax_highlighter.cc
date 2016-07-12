@@ -1,5 +1,7 @@
 #include <sim/cpp_syntax_highlighter.h>
+#include <simlib/debug.h>
 #include <simlib/logger.h>
+#include <simlib/meta.h>
 #include <simlib/utilities.h>
 
 using std::array;
@@ -9,6 +11,9 @@ using std::vector;
 #if 0
 # warning "Before committing disable this debug"
 # define DEBUG_CSH(...) __VA_ARGS__
+# include <cassert>
+# undef try_assert
+# define try_assert assert
 #else
 # define DEBUG_CSH(...)
 #endif
@@ -35,11 +40,15 @@ struct Word {
 	const char* str;
 	uint8_t size;
 	Style style;
+
+	template<uint8_t N>
+	constexpr Word(const char(&s)[N], Style stl) : str(s), size(N - 1),
+		style(stl) {}
 };
 
 } // anonymous namespace
 
-static constexpr std::array<const char*, 11> begin_style {{
+static constexpr array<const char*, 11> begin_style {{
 	"<span style=\"color:#00a000\">",
 	"<span style=\"color:#a0a0a0\">",
 	"<span style=\"color:#0000ff;font-weight:bold\">",
@@ -55,250 +64,288 @@ static constexpr std::array<const char*, 11> begin_style {{
 
 static constexpr const char* end_style = "</span>";
 
-static constexpr std::array<Word, 123> words {{
-	{"uint_least16_t", 14, BUILTIN_TYPE},
-	{"uint_least32_t", 14, BUILTIN_TYPE},
-	{"uint_least64_t", 14, BUILTIN_TYPE},
-	{"uint_fast16_t", 13, BUILTIN_TYPE},
-	{"uint_fast64_t", 13, BUILTIN_TYPE},
-	{"uint_least8_t", 13, BUILTIN_TYPE},
-	{"int_least16_t", 13, BUILTIN_TYPE},
-	{"int_least32_t", 13, BUILTIN_TYPE},
-	{"int_least64_t", 13, BUILTIN_TYPE},
-	{"uint_fast32_t", 13, BUILTIN_TYPE},
-	{"uint_fast8_t", 12, BUILTIN_TYPE},
-	{"int_fast16_t", 12, BUILTIN_TYPE},
-	{"int_least8_t", 12, BUILTIN_TYPE},
-	{"int_fast32_t", 12, BUILTIN_TYPE},
-	{"int_fast64_t", 12, BUILTIN_TYPE},
-	{"int_fast8_t", 11, BUILTIN_TYPE},
-	{"_Char16_t", 9, BUILTIN_TYPE},
-	{"_Char32_t", 9, BUILTIN_TYPE},
-	{"uintptr_t", 9, BUILTIN_TYPE},
-	{"uintmax_t", 9, BUILTIN_TYPE},
-	{"wint_t", 6, BUILTIN_TYPE},
-	{"wctrans_t", 9, BUILTIN_TYPE},
-	{"unsigned", 8, BUILTIN_TYPE},
-	{"uint16_t", 8, BUILTIN_TYPE},
-	{"uint32_t", 8, BUILTIN_TYPE},
-	{"uint64_t", 8, BUILTIN_TYPE},
-	{"intmax_t", 8, BUILTIN_TYPE},
-	{"wctype_t", 8, BUILTIN_TYPE},
-	{"intptr_t", 8, BUILTIN_TYPE},
-	{"wchar_t", 7, BUILTIN_TYPE},
-	{"uint8_t", 7, BUILTIN_TYPE},
-	{"int16_t", 7, BUILTIN_TYPE},
-	{"int32_t", 7, BUILTIN_TYPE},
-	{"int64_t", 7, BUILTIN_TYPE},
-	{"wchar_t", 7, BUILTIN_TYPE},
-	{"double", 6, BUILTIN_TYPE},
-	{"signed", 6, BUILTIN_TYPE},
-	{"size_t", 6, BUILTIN_TYPE},
-	{"time_t", 6, BUILTIN_TYPE},
-	{"int8_t", 6, BUILTIN_TYPE},
-	{"short", 5, BUILTIN_TYPE},
-	{"float", 5, BUILTIN_TYPE},
-	{"void", 4, BUILTIN_TYPE},
-	{"char", 4, BUILTIN_TYPE},
-	{"bool", 4, BUILTIN_TYPE},
-	{"long", 4, BUILTIN_TYPE},
-	{"int", 3, BUILTIN_TYPE},
-	{"nullptr_t", 9, BUILTIN_TYPE},
-	{"auto", 4, BUILTIN_TYPE},
-	{"enum", 4, KEYWORD},
-	{"class", 5, KEYWORD},
-	{"union", 5, KEYWORD},
-	{"struct", 6, KEYWORD},
-	{"namespace", 9, KEYWORD},
-	{"or", 2, KEYWORD},
-	{"if", 2, KEYWORD},
-	{"do", 2, KEYWORD},
-	{"for", 3, KEYWORD},
-	{"asm", 3, KEYWORD},
-	{"and", 3, KEYWORD},
-	{"try", 3, KEYWORD},
-	{"not", 3, KEYWORD},
-	{"xor", 3, KEYWORD},
-	{"new", 3, KEYWORD},
-	{"goto", 4, KEYWORD},
-	{"else", 4, KEYWORD},
-	{"this", 4, KEYWORD},
-	{"case", 4, KEYWORD},
-	{"or_eq", 5, KEYWORD},
-	{"final", 5, KEYWORD},
-	{"using", 5, KEYWORD},
-	{"while", 5, KEYWORD},
-	{"bitor", 5, KEYWORD},
-	{"compl", 5, KEYWORD},
-	{"const", 5, KEYWORD},
-	{"catch", 5, KEYWORD},
-	{"break", 5, KEYWORD},
-	{"sizeof", 6, KEYWORD},
-	{"static", 6, KEYWORD},
-	{"switch", 6, KEYWORD},
-	{"return", 6, KEYWORD},
-	{"and_eq", 6, KEYWORD},
-	{"bitand", 6, KEYWORD},
-	{"not_eq", 6, KEYWORD},
-	{"xor_eq", 6, KEYWORD},
-	{"typeid", 6, KEYWORD},
-	{"throw", 5, KEYWORD},
-	{"extern", 6, KEYWORD},
-	{"export", 6, KEYWORD},
-	{"friend", 6, KEYWORD},
-	{"import", 6, KEYWORD},
-	{"public", 6, KEYWORD},
-	{"inline", 6, KEYWORD},
-	{"delete", 6, KEYWORD},
-	{"typedef", 7, KEYWORD},
-	{"alignof", 7, KEYWORD},
-	{"mutable", 7, KEYWORD},
-	{"decltype", 8, KEYWORD},
-	{"continue", 8, KEYWORD},
-	{"explicit", 8, KEYWORD},
-	{"default", 7, KEYWORD},
-	{"nullptr", 7, KEYWORD},
-	{"private", 7, KEYWORD},
-	{"virtual", 7, KEYWORD},
-	{"volatile", 8, KEYWORD},
-	{"protected", 9, KEYWORD},
-	{"constexpr", 9, KEYWORD},
-	{"noexcept", 8, KEYWORD},
-	{"operator", 8, KEYWORD},
-	{"override", 8, KEYWORD},
-	{"template", 8, KEYWORD},
-	{"register", 8, KEYWORD},
-	{"typename", 8, KEYWORD},
-	{"static_cast", 11, KEYWORD},
-	{"const_cast", 10, KEYWORD},
-	{"align_union", 11, KEYWORD},
-	{"dynamic_cast", 12, KEYWORD},
-	{"reinterpret_cast", 16, KEYWORD},
-	{"static_assert", 13, KEYWORD},
-	{"true", 4, CONSTANT},
-	{"false", 5, CONSTANT},
-	{"NULL", 4, CONSTANT},
-	{"nullptr", 7, CONSTANT},
+static constexpr array<Word, 124> words {{
+	{"", COMMENT}, // Guard - ignored
+	{"uint_least16_t", BUILTIN_TYPE},
+	{"uint_least32_t", BUILTIN_TYPE},
+	{"uint_least64_t", BUILTIN_TYPE},
+	{"uint_fast16_t", BUILTIN_TYPE},
+	{"uint_fast64_t", BUILTIN_TYPE},
+	{"uint_least8_t", BUILTIN_TYPE},
+	{"int_least16_t", BUILTIN_TYPE},
+	{"int_least32_t", BUILTIN_TYPE},
+	{"int_least64_t", BUILTIN_TYPE},
+	{"uint_fast32_t", BUILTIN_TYPE},
+	{"uint_fast8_t", BUILTIN_TYPE},
+	{"int_fast16_t", BUILTIN_TYPE},
+	{"int_least8_t", BUILTIN_TYPE},
+	{"int_fast32_t", BUILTIN_TYPE},
+	{"int_fast64_t", BUILTIN_TYPE},
+	{"int_fast8_t", BUILTIN_TYPE},
+	{"_Char16_t", BUILTIN_TYPE},
+	{"_Char32_t", BUILTIN_TYPE},
+	{"uintptr_t", BUILTIN_TYPE},
+	{"uintmax_t", BUILTIN_TYPE},
+	{"wint_t", BUILTIN_TYPE},
+	{"wctrans_t", BUILTIN_TYPE},
+	{"unsigned", BUILTIN_TYPE},
+	{"uint16_t", BUILTIN_TYPE},
+	{"uint32_t", BUILTIN_TYPE},
+	{"uint64_t", BUILTIN_TYPE},
+	{"intmax_t", BUILTIN_TYPE},
+	{"wctype_t", BUILTIN_TYPE},
+	{"intptr_t", BUILTIN_TYPE},
+	{"wchar_t", BUILTIN_TYPE},
+	{"uint8_t", BUILTIN_TYPE},
+	{"int16_t", BUILTIN_TYPE},
+	{"int32_t", BUILTIN_TYPE},
+	{"int64_t", BUILTIN_TYPE},
+	{"wchar_t", BUILTIN_TYPE},
+	{"double", BUILTIN_TYPE},
+	{"signed", BUILTIN_TYPE},
+	{"size_t", BUILTIN_TYPE},
+	{"time_t", BUILTIN_TYPE},
+	{"int8_t", BUILTIN_TYPE},
+	{"short", BUILTIN_TYPE},
+	{"float", BUILTIN_TYPE},
+	{"void", BUILTIN_TYPE},
+	{"char", BUILTIN_TYPE},
+	{"bool", BUILTIN_TYPE},
+	{"long", BUILTIN_TYPE},
+	{"int", BUILTIN_TYPE},
+	{"nullptr_t", BUILTIN_TYPE},
+	{"auto", BUILTIN_TYPE},
+	{"align_union", KEYWORD},
+	{"alignof", KEYWORD},
+	{"and", KEYWORD},
+	{"and_eq", KEYWORD},
+	{"asm", KEYWORD},
+	{"bitand", KEYWORD},
+	{"bitor", KEYWORD},
+	{"break", KEYWORD},
+	{"case", KEYWORD},
+	{"catch", KEYWORD},
+	{"class", KEYWORD},
+	{"compl", KEYWORD},
+	{"const", KEYWORD},
+	{"const_cast", KEYWORD},
+	{"constexpr", KEYWORD},
+	{"continue", KEYWORD},
+	{"decltype", KEYWORD},
+	{"default", KEYWORD},
+	{"delete", KEYWORD},
+	{"do", KEYWORD},
+	{"dynamic_cast", KEYWORD},
+	{"else", KEYWORD},
+	{"enum", KEYWORD},
+	{"explicit", KEYWORD},
+	{"export", KEYWORD},
+	{"extern", KEYWORD},
+	{"final", KEYWORD},
+	{"for", KEYWORD},
+	{"friend", KEYWORD},
+	{"goto", KEYWORD},
+	{"if", KEYWORD},
+	{"import", KEYWORD},
+	{"inline", KEYWORD},
+	{"mutable", KEYWORD},
+	{"namespace", KEYWORD},
+	{"new", KEYWORD},
+	{"noexcept", KEYWORD},
+	{"not", KEYWORD},
+	{"not_eq", KEYWORD},
+	{"nullptr", KEYWORD},
+	{"operator", KEYWORD},
+	{"or", KEYWORD},
+	{"or_eq", KEYWORD},
+	{"override", KEYWORD},
+	{"private", KEYWORD},
+	{"protected", KEYWORD},
+	{"public", KEYWORD},
+	{"register", KEYWORD},
+	{"reinterpret_cast", KEYWORD},
+	{"return", KEYWORD},
+	{"sizeof", KEYWORD},
+	{"static", KEYWORD},
+	{"static_assert", KEYWORD},
+	{"static_cast", KEYWORD},
+	{"struct", KEYWORD},
+	{"switch", KEYWORD},
+	{"template", KEYWORD},
+	{"this", KEYWORD},
+	{"throw", KEYWORD},
+	{"try", KEYWORD},
+	{"typedef", KEYWORD},
+	{"typeid", KEYWORD},
+	{"typename", KEYWORD},
+	{"union", KEYWORD},
+	{"using", KEYWORD},
+	{"virtual", KEYWORD},
+	{"volatile", KEYWORD},
+	{"while", KEYWORD},
+	{"xor", KEYWORD},
+	{"xor_eq", KEYWORD},
+	{"true", CONSTANT},
+	{"false", CONSTANT},
+	{"NULL", CONSTANT},
+	{"nullptr", CONSTANT},
 }};
+
+/* Some ugly meta programming used to extract KEYWORDS from words */
+
+template<size_t N>
+constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
+	return (idx == N ? 0 :
+		(arr[idx].style == KEYWORD) + count_keywords(arr, idx + 1));
+}
+
+template<size_t N, size_t... Idx>
+constexpr array<meta::string, N> extract_keywords_from_append(
+	const array<meta::string, N>& base, meta::string x, meta::Seq<Idx...>)
+{
+	return {{base[Idx]..., x}};
+}
+
+template<size_t N, size_t RES_N, size_t RES_END>
+constexpr typename std::enable_if<
+	RES_END >= RES_N, array<meta::string, RES_N>>::type
+	extract_keywords_from(const array<Word, N>&,
+	array<meta::string, RES_N> res = {}, size_t = 0)
+{
+	return res;
+}
+
+template<size_t N, size_t RES_N, size_t RES_END = 0>
+constexpr typename std::enable_if<
+	RES_END < RES_N, array<meta::string, RES_N>>::type
+	extract_keywords_from(const array<Word, N>& arr,
+	array<meta::string, RES_N> res = {}, size_t idx = 0)
+{
+	return (idx == N ? res : (arr[idx].style == KEYWORD ?
+		extract_keywords_from<N, RES_N, RES_END + 1>(
+			arr, extract_keywords_from_append(
+				res, {arr[idx].str, arr[idx].size}, meta::GenSeq<RES_END>{}),
+			idx + 1)
+		: extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
+}
+
+static constexpr auto cpp_keywords =
+	extract_keywords_from<words.size(), count_keywords(words)>(words);
 
 // Important: elements have to be sorted!
-static constexpr array<const char*, 64> cpp_keywords {{
-	"align_union", "alignof", "and", "and_eq", "asm", "bitand", "bitor",
-	"break", "case", "catch", "compl", "const", "const_cast", "constexpr",
-	"continue", "decltype", "default", "delete", "do", "dynamic_cast", "else",
-	"explicit", "export", "extern", "final", "for", "friend", "goto", "if",
-	"import", "inline", "mutable", "new", "not", "not_eq", "nullptr",
-	"operator", "or", "or_eq", "override", "private", "protected", "public",
-	"register", "reinterpret_cast", "return", "sizeof", "static",
-	"static_assert", "static_cast", "switch", "template", "this", "throw",
-	"try", "typedef", "typeid", "typename", "using", "virtual", "volatile",
-	"while", "xor", "xor_eq"
-}};
-
+static_assert(meta::is_sorted(cpp_keywords),
+	"cpp_keywords has to be sorted, fields in words with style KEYWORD are "
+	"probably unsorted");
 
 CppSyntaxHighlighter::CppSyntaxHighlighter() {
-	for (uint i = 0; i < words.size(); ++i)
-		aho.addPattern(words[i].str, i + 1);
+	static_assert(words[0].size == 0, "First (zero) element of words is a guard"
+		" - because Aho-Corasick implementation takes only positive IDs");
+	for (uint i = 1; i < words.size(); ++i)
+		aho.addPattern(words[i].str, i);
 
 	aho.buildFails();
 }
 
-string CppSyntaxHighlighter::operator()(const StringView& str) const {
-	int size = str.size(); // We can use int - this function shuld not be called
-	                       // on insanely long strings
-	vector<StyleType> begs(size, -1); // here beginnings of styles are marked
-	vector<int8_t> ends(size + 2); // ends[i] = # of endings (of styles) just
-	                               // BEFORE str[i]
+string CppSyntaxHighlighter::operator()(const std::string& input) const {
+	constexpr int BEGIN_GUARDS = 2, BEGIN = BEGIN_GUARDS;
+	constexpr int END_GUARDS = 2;
+	constexpr char GUARD_CHARACTER = '\0';
 
-	DEBUG_CSH(stdlog("size: ", toString(size));)
+	// Make sure we can use int
+	if (input.size() + BEGIN_GUARDS + END_GUARDS > INT_MAX)
+		THROW("Input string too long");
+
+	/* Remove "\\\n" sequences */
+	int end = input.size();
+	// BEGIN_GUARDS x '\0' - guards
+	string str(BEGIN_GUARDS, GUARD_CHARACTER);
+	str.reserve(end + 64); // Pre-allocation
+
+	for (int i = 0; i < end; ++i) {
+		// i + 1 is safe - std::string adds extra '\0' at the end
+		if (input[i] == '\\' && input[i + 1] == '\n') {
+			++i;
+			continue;
+		}
+
+		str += input[i];
+	}
+
+	end = str.size();
+
+	// Append end guards (one is already in str - terminating null character)
+	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
+	DEBUG_CSH(stdlog("end: ", toString(end));)
+
+	vector<StyleType> begs(end, -1); // here beginnings of styles are marked
+	vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles)
+	                                     // JUST BEFORE str[i]
 
 	/* Mark comments string / character literals */
 
-	for (int i = 0; i < size; ++i) {
+	for (int i = BEGIN; i < end; ++i) {
 		// Comments
 		if (str[i] == '/') {
-			// Parse through stupid "\\\n" sequences
-			int k = i + 1;
-			while (str[k] == '\\' && k + 1 < size && str[k + 1] == '\n')
-				k += 2;
 			// (One-)line comment
-			if (str[k] == '/') {
+			if (str[i + 1] == '/') {
 				begs[i] = COMMENT;
-				i = k + 1;
-				while (i < size && (str[i] != '\n' || str[i - 1] == '\\'))
+				i += 2;
+				while (i < end && str[i] != '\n')
 					++i;
 				++ends[i];
 
 			// Multi-line comment
-			} else if (str[k] == '*') {
+			} else if (str[i + 1] == '*') {
 				begs[i] = COMMENT;
-				i = k + 2; // +2 is necessary to not end comment on this: /*/
-				while (i < size && !(str[i] == '/' && (str[i - 1] == '*' ||
-					(str[i - 1] == '\n' && str[i - 2] == '\\' &&
-						str[i - 3] == '*'))))
-				{
+				i += 3;
+				while (i < end && !(str[i - 1] == '*' && str[i] == '/'))
 					++i;
-				}
-
 				++ends[i + 1];
 			}
+			continue;
 		}
-
-		auto omit_backslash_newlines = [&] () {
-			while (i + 1 < size && str[i] == '\\' &&
-				str[i + 1] == '\n')
-			{
-				begs[i] = OPERATOR;
-				++ends[i + 1];
-				i += 2;
-			}
-		};
 
 		// String / character literals
 		if (str[i] == '"' || str[i] == '\'') {
 			char literal_delim = str[i];
 			begs[i++] = (literal_delim == '"' ? STRING_LITERAL : CHARACTER);
-			while (i < size && str[i] != literal_delim) {
-				if (str[i] == '\\') {
-					// "\\\n" sequence
-					if (i + 1 < size && str[i + 1] == '\n') {
-						begs[i] = OPERATOR;
-						++ends[++i];
-						continue;
-					}
-
-					/* Escape sequence */
-					begs[i++] = ESCAPED_CHARACTER;
-
-					omit_backslash_newlines();
-					if (i < size) {
-						// Octals and Hexadecimal
-						if (isdigit(str[i]) || str[i] == 'x') {
-							for (int j = 0; j < 2; ++j)
-								++i, omit_backslash_newlines();
-
-						// Unicode U+nnnn
-						} else if(str[i] == 'u') {
-							for (int j = 0; j < 4; ++j)
-								++i, omit_backslash_newlines();
-
-						// Unicode U+nnnnnnnn
-						} else if(str[i] == 'U') {
-							for (int j = 0; j < 8; ++j)
-								++i, omit_backslash_newlines();
-						}
-					}
-					i = std::min(i, size - 1);
-					++ends[i + 1];
+			// End on newline - to mitigate invalid literals
+			while (i < end && str[i] != literal_delim && str[i] != '\n') {
+				// Ordinary character
+				if (str[i] != '\\') {
+					++i;
+					continue;
 				}
-				++i;
+
+				/* Escape sequence */
+				begs[i++] = ESCAPED_CHARACTER;
+
+				// Octals and Hexadecimal
+				if (isdigit(str[i]) || str[i] == 'x')
+					i += 2;
+				// Unicode U+nnnn
+				else if (str[i] == 'u')
+					i += 4;
+				// Unicode U+nnnnnnnn
+				else if (str[i] == 'U')
+					i += 8;
+
+				// i has to point to the last character from escaped sequence
+				i = std::min(i + 1, end);
+				++ends[i];
 			}
 			++ends[i + 1];
 		}
 	}
 
 	DEBUG_CSH(auto dump_begs_ends = [&] {
-		for (int i = 0, line = 1; i < size; ++i) {
+		for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
+			while (str[i] != input[j]) {
+				try_assert(input[j] == '\\' && j + 1 < (int)input.size()
+					&& input[j + 1] == '\n');
+				j += 2;
+				++line;
+			}
 			auto tmplog = stdlog(toString(i), " (line ", toString(line), "): '",
 				str[i], "' -> ");
 
@@ -346,11 +393,9 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 
 	/* Mark preprocessor, functions and numbers */
 
-	for (int i = 0, styles_depth = 0; i < size; ++i) {
+	for (int i = BEGIN, styles_depth = 0; i < end; ++i) {
 		auto control_style_depth = [&] {
-			if (begs[i] != -1)
-				++styles_depth;
-			styles_depth -= ends[i];
+			styles_depth += (begs[i] != -1) - ends[i];
 		};
 
 		control_style_depth();
@@ -360,22 +405,12 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 		// Preprocessor
 		if (str[i] == '#') {
 			begs[i] = PREPROCESSOR;
-
-			for (++i; i < size; ++i) {
+			do {
+				++i;
 				control_style_depth();
-				if (styles_depth > 0)
-					continue;
-
-				if (str[i] == '\\' && i + 1 < size && str[i + 1] == '\n') {
-					begs[i] = OPERATOR;
-					++i;
-					control_style_depth();
-					++ends[i++];
-					control_style_depth();
-				}
-				if (str[i] == '\n')
-					break;
-			}
+			} while (i < end && (styles_depth || str[i] != '\n'));
+			//                   ^ this is here because preprocessor directives
+			// can break (on '\n') with e.g. multi-line comments
 
 			++ends[i];
 
@@ -383,115 +418,120 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 		} else if (str[i] == '(' && i) {
 			int k = i - 1;
 			// Omit white-spaces between function name and '('
-			while (k && (isspace(str[k]) ||
-				(str[k] == '\\' && str[k + 1] == '\n')))
-			{
+			static_assert(BEGIN_GUARDS > 0, "Need for unguarded search");
+			while (isspace(str[k]))
 				--k;
-			}
 
-			int kk = k + 1, last_k = kk;
-			string function_name;
+			int name_end = k + 1;
 
 			// Function name
-			do {
-				if (k > 1 && str[k] == '\n' && str[k - 1] == '\\') {
-					++ends[k];
-					begs[--k] = OPERATOR;
-					continue;
+			for (;;) {
+				// Namespaces
+				static_assert(BEGIN_GUARDS > 0, "");
+				if (str[k] == ':' && str[k - 1] == ':' && str[k + 1] != ':')
+					--k;
+				else if (!isName(str[k]))
+					break;
+
+				--k;
+			}
+			++k;
+
+			struct cmp {
+				bool operator()(const meta::string& a, const StringView& b)
+					const
+				{
+					return StringView(a.data(), a.size()) < b;
 				}
 
-				// Namespaces
-				if (str[k] == ':' && k && str[k - 1] == ':'
-					&& str[last_k] != ':')
+				bool operator()(const StringView& a, const meta::string& b)
+					const
 				{
-					--k;
+					return a < StringView(b.data(), b.size());
+				}
+			};
 
-				} else if (!isName(str[k]))
-					break;
-
-				function_name += str[k];
-				last_k = k;
-
-			} while (k--);
-
-			// Function name cannot be blank or begin with digit
-			if (last_k < kk && !isdigit(str[last_k])) {
-				std::reverse(function_name.begin(), function_name.end());
-				// It is important that function_name is taken as string below!
-				begs[last_k] = (binary_search(cpp_keywords,
-					StringView(function_name)) ? KEYWORD : FUNCTION);
-				++ends[kk];
+			// Function name can neither be blank nor begin with a digit
+			if (k < name_end && !isdigit(str[k])) {
+				StringView function_name = substring(str, k, name_end);
+				// It is important that function_name is taken as StringView
+				// below!
+				begs[k] = (std::binary_search(cpp_keywords.begin(),
+						cpp_keywords.end(), function_name, cmp())
+					? KEYWORD : FUNCTION);
+				++ends[name_end];
 			}
 
-		// Digits
-		} else if (isdigit(str[i])) do {
-			if (i > 0) {
-				if (isName(str[i - 1]))
-					break;
-				// Floating points may begin with '.', but inhibit highlighting
-				// of whole number 111.2.3
-				if (str[i - 1] == '.' && i > 1 && isdigit(str[i - 2]))
-					break;
-			}
+		// Digits - numeric literals
+		} else if (isdigit(str[i])) {
+			static_assert(BEGIN_GUARDS > 0, "");
+			// Ignore digits in names
+			if (isName(str[i - 1]))
+				continue;
+			// Floating points may begin with '.', but inhibit highlighting
+			// the whole number 111.2.3
+			static_assert(GUARD_CHARACTER != '.', "");
+			if (str[i - 1] == '.' && isdigit(str[i - 2]))
+				continue;
 
 			// Number begins with dot
 			bool dot_appeared = false, dot_as_beginning = false,
 				exponent_appeared = false;
-			if (i && str[i - 1] == '.') {
+			if (str[i - 1] == '.') {
 				dot_as_beginning = dot_appeared = true;
 				begs[i - 1] = DIGIT;
 			} else
 				begs[i] = DIGIT;
 
-			auto get_next = [&](int k) {
-				++k;
-				while (k + 1 < size && str[k] == '\\' && str[k + 1] == '\n')
-					k += 2;
-				return k;
-			};
-
-			int k = get_next(i);
-			char last_strk = str[i];
+			int k = i + 1;
 			auto is_digit = isdigit;
 			char exp_sign = 'e';
 
-			if (last_strk == '0' && tolower(str[k]) == 'x') {
+			// Hexadecimal
+			if (str[i] == '0' && tolower(str[k]) == 'x' && !dot_appeared) {
 				is_digit = isxdigit;
 				exp_sign = 'p';
-				last_strk = str[k], k = get_next(k);
+				++k;
 				if (str[k] == '.') {
 					dot_as_beginning = dot_appeared = true;
-					last_strk = str[k], k = get_next(k);
+					++k;
 
+				// Disallow numeric literal "0x"
 				} else if (!is_digit(str[k])) {
 					begs[i - dot_as_beginning] = -1;
 					i = k - 1;
-					break;
+					continue;
 				}
 			}
 
-			for (; k < size; last_strk = str[k], k = get_next(k)) {
-				// Exponent
+			// Now the main part of the numeric literal (digits + exponent)
+			for (; k < end; ++k) {
+				// Digits are always valid
 				if (is_digit(str[k]))
 					continue;
 
+				// Dot
 				if (str[k] == '.') {
+					// Disallow double dot and double exponent
 					if (dot_appeared || exponent_appeared)
 						goto kill_try;
 
 					dot_appeared = true;
+
+				// Exponent
 				} else if (tolower(str[k]) == exp_sign) {
 					// Do not allow cases like: 0.1e1e or .e2
 					if (exponent_appeared ||
-						(last_strk == '.' && dot_as_beginning))
+						(str[k - 1] == '.' && dot_as_beginning))
 					{
 						goto kill_try;
 					}
 
 					exponent_appeared = true;
 
-				} else if (last_strk == exp_sign &&
-					(str[k] == '-' || str[k] == '+'))
+				// Sign after exponent
+				} else if (str[k - 1] == exp_sign &&
+				(str[k] == '-' || str[k] == '+'))
 				{
 					continue;
 
@@ -499,65 +539,59 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 					break;
 			}
 
-			if ((last_strk == '.' && dot_as_beginning) ||
-				(exp_sign == 'p' && dot_appeared && !exponent_appeared))
+			// Ignore invalid numeric literals
+			if ((str[k - 1] == '.' && dot_as_beginning) ||
+				// In floating-point hexadecimals exponent has to appear
+				(exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
+				// Allow literals like: "111."
+				(str[k - 1] != '.' && !is_digit(str[k - 1])))
 			{
 			kill_try:
+				// dot_as_beginning does not imply beg[i - 1] in hexadecimals
 				begs[i - (dot_as_beginning && exp_sign == 'e')] = -1;
 				i = k - 1;
-				break;
+				continue;
 			}
 
-			// Suffixes
+			/* Suffixes */
+			i = k;
+			static_assert(END_GUARDS > 0, "");
 			// Float-point: (f|l)
 			if (dot_appeared || exponent_appeared) {
-				i = k;
-				char c = tolower(UNLIKELY(k == size) ? '\0' : str[k]);
-				if (c == 'f' || c == 'l')
+				if (str[i] == 'f' || str[i] == 'F' ||
+					str[i] == 'l' || str[i] == 'L')
+				{
 					++i;
-
-			// Integer (l|ll|lu|llu|u|ul|ull)
-			} else {
-				i = k;
-				char c = (UNLIKELY(k == size) ? '\0' : str[k]);
-				if (c == 'f' || c == 'F') {
-					++i;
-
-				} else if (c == 'l' || c == 'L') { // l
-					++i;
-					k = get_next(k);
-					if (UNLIKELY(k == size)) {
-
-					} else if (str[k] == 'u' || str[k] == 'U') // lu
-						i = k + 1;
-					// Because lL and Ll suffixes are wrong
-					else if (str[k] == c) { // ll | LL
-						i = k + 1;
-						k = get_next(k);
-						if (UNLIKELY(k == size)) {
-
-						} else if (str[k] == 'u' || str[k] == 'U') // llu
-							i = k + 1;
-					}
-
-				} else if (c == 'u' || c == 'U') { // u
-					++i;
-					k = get_next(k);
-					c = (UNLIKELY(k == size) ? '\0' : str[k]);
-					if (c == 'l' || c == 'L') { // ul
-						i = k + 1;
-						k = get_next(k);
-						// Because lL and Ll suffixes are wrong
-						if (LIKELY(k < size) && str[k] == c) // ull | uLL
-							i = k + 1;
-					}
 				}
-
+				++ends[i];
+				continue;
 			}
 
-			++ends[i];
+			// Integer (l|ll|lu|llu|u|ul|ull) or float-point (f)
+			if (str[i] == 'f' || str[i] == 'F') {
+				++i;
 
-		} while (false);
+			} else if (str[i] == 'l' || str[i] == 'L') { // l
+				++i;
+				if (str[i] == 'u' || str[i] == 'U') // lu
+					++i;
+				// Because lL and Ll suffixes are wrong
+				else if (str[i] == str[i - 1]) { // ll | LL
+					++i;
+					if (str[i] == 'u' || str[i] == 'U') // llu
+						++i;
+				}
+			} else if (str[i] == 'u' || str[i] == 'U') { // u
+				++i;
+				if (str[i] == 'l' || str[i] == 'L') { // ul
+					++i;
+					// Because lL and Ll suffixes are wrong
+					if (str[i] == str[i - 1]) // ull | uLL
+						++i;
+				}
+			}
+			++ends[i];
+		}
 	}
 
 	DEBUG_CSH(dump_begs_ends();)
@@ -581,88 +615,75 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 	/* Highlight non-styled code */
 
 	// Highlights fragments of code not containing: comments, preprocessor,
-	// number literals, string literals, character literals
-	auto highlight = [&](int beg, int end) {
-		DEBUG_CSH(stdlog("highlight(", toString(beg), ", ", toString(end),
+	// number literals, string literals and character literals
+	auto highlight = [&](int beg, int endi) {
+		DEBUG_CSH(stdlog("highlight(", toString(beg), ", ", toString(endi),
 			"):");)
-		if (beg >= end)
+		if (beg >= endi)
 			return;
 
-		auto aho_res = aho.searchIn(str.substring(beg, end));
+		auto aho_res = aho.searchIn(substring(str, beg, endi));
 		// Handle last one to eliminate right boundary checks
-		int i = end - beg - 1;
-		int k = aho.pattId(aho_res[i]);
-		if (k && (end == size || !isName(str[end]))) {
-			int j = end - words[--k].size;
-			if (j == 0) {
-				begs[0] = words[k].style;
-				++ends[end];
-				i = j - beg;
-			} else if (!isName(str[j - 1])) {
-				begs[j - 1] = words[k].style;
-				++ends[end];
-				i = j - beg;
-			}
+		for (int i = endi - 1; i >= beg;) {
+			int k = aho.pattId(aho_res[i - beg]), j;
 
-		} else if (isOperator(str[end - 1])) {
-				begs[end - 1] = OPERATOR;
-				++ends[end];
+			static_assert(BEGIN_GUARDS > 0, "");
+			static_assert(END_GUARDS > 0, "");
+			// Found a word
+			if (k && !isName(str[i + 1]) &&
+				!isName(str[j = i - words[k].size]))
+			{
+				DEBUG_CSH(stdlog("aho: ", toString(j + 1), ": ", words[k].str);)
+				begs[j + 1] = words[k].style;
+				++ends[i + 1];
+				i = j;
+				continue;
+
+			} else if (isOperator(str[i])) {
+				begs[i] = OPERATOR;
+				++ends[i + 1];
+			}
+			--i;
 		}
-
-		while (i--)
-			if ((k = aho.pattId(aho_res[i])) && !isName(str[beg + i + 1])) {
-				int j = i - words[--k].size;
-				if (UNLIKELY(j + beg < 0)) {
-					begs[0] = words[k].style;
-					++ends[beg + i + 1];
-					i = 0;
-				} else if (!isName(str[beg + j])) {
-					begs[beg + j + 1] = words[k].style;
-					++ends[beg + i + 1];
-					i = j + 1;
-				}
-				DEBUG_CSH(stdlog("aho: ", toString(i + beg), ": ",
-					words[k - 1].str);)
-
-			} else if (isOperator(str[beg + i])) {
-				begs[beg + i] = OPERATOR;
-				++ends[beg + i + 1];
-			}
 	};
 
-	// Find non-styled segments
-	int last_non_styled = 0;
-	for (int i = 0, styles_depth = 0; i < size; ++i) {
-		int k = styles_depth;
-		if (begs[i] != -1)
-			++styles_depth;
-		styles_depth -= ends[i];
+	/* Find non-styled segments and tun highlight() on them */
+	{
+		int last_non_styled = 0;
+		for (int i = BEGIN, styles_depth = 0; i < end; ++i) {
+			int k = styles_depth;
+			if (begs[i] != -1)
+				++styles_depth;
+			styles_depth -= ends[i];
 
-		if (k == 0 && styles_depth > 0) {
-			highlight(last_non_styled, i);
-			// Needed for proper non-styled interval after this loop
-			last_non_styled = size;
+			if (k == 0 && styles_depth > 0) {
+				highlight(last_non_styled, i);
+				// Needed for proper non-styled interval after this loop
+				last_non_styled = end;
 
-		} else if (k > 0 && styles_depth == 0)
-			last_non_styled = i;
+			} else if (k > 0 && styles_depth == 0)
+				last_non_styled = i;
+		}
+		highlight(last_non_styled, end); // Take care of last non-styled piece
 	}
-	highlight(last_non_styled, size); // Take care of last non-styled piece
 
 	DEBUG_CSH(dump_begs_ends();)
 
 	/* Parse styles and produce result */
-	string res = "<table class=\"code-view\">\n"
-		"<tbody>\n"
+
+	string res = "<table class=\"code-view\">"
+		"<tbody>"
 		"<tr><td id=\"L1\" line=\"1\"></td><td>";
 	// Stack of styles (needed to properly break on '\n')
 	vector<StyleType> style_stack;
-	int first_unescaped = 0, line = 1;
-	for (int i = 0; i < size; ++i) {
+	int first_unescaped = BEGIN;
+	for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 		// End styles
 		if (ends[i]) {
-			htmlSpecialChars(res, str.substring(first_unescaped, i));
+			htmlSpecialChars(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
+			// Leave last style and try to elide it
 			while (ends[i] > 1) {
 				style_stack.pop_back();
 				res += end_style;
@@ -680,41 +701,75 @@ string CppSyntaxHighlighter::operator()(const StringView& str) const {
 			}
 		}
 
-		// Begins style
+		// Handle erased "\\\n" sequences
+		if (str[i] != input[j]) {
+			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			first_unescaped = i;
+			// End styles
+			for (int k = style_stack.size(); k > 0; --k)
+				res += end_style;
+			// Handle "\\\n"
+			do {
+				try_assert(input[j] == '\\' && j + 1 < (int)input.size()
+					&& input[j + 1] == '\n');
+
+				string line_str = toString(++line);
+				// When we were ending styles (somewhere above), there can be
+				// an opportunity to elide style OPERATOR (only in the first
+				// iteration of this loop) but it's not worth that, as it's a
+				// very rare situation and gives little profit at the expense of
+				// a not pretty if statement
+				back_insert(res, begin_style[OPERATOR], '\\', end_style,
+					"</td></tr>"
+					"<tr><td id=\"L", line_str, "\" line=\"", line_str,
+						"\"></td><td>");
+			} while (str[i] != input[j += 2]);
+
+			// Restore styles
+			for (StyleType style : style_stack)
+				res += begin_style[style];
+		}
+
+		// Line ending
+		if (str[i] == '\n') {
+			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			first_unescaped = i + 1;
+			// End styles
+			for (int k = style_stack.size(); k > 0; --k)
+				res += end_style;
+			// Fill the empty line with '\n'
+			if (j == 0 || input[j - 1] == '\n')
+				res += '\n';
+			// Break the line
+			string line_str = toString(++line);
+			back_insert(res, "</td></tr>"
+				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
+					"\"></td><td>");
+			// Restore styles
+			for (StyleType style : style_stack)
+				res += begin_style[style];
+		}
+
+		// Begin style
 		if (begs[i] != -1) {
-			htmlSpecialChars(res, str.substring(first_unescaped, i));
+			htmlSpecialChars(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			style_stack.emplace_back(begs[i]);
 			res += begin_style[begs[i]];
 		}
-
-		// Line ending
-		if (str[i] == '\n') {
-			htmlSpecialChars(res, str.substring(first_unescaped, i));
-			first_unescaped = i + 1;
-			// End styles
-			for (int k = style_stack.size(); k > 0; --k)
-				res += end_style;
-			// Break the line
-			string line_str = toString(++line);
-			back_insert(res, "</td></tr>\n"
-				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
-				"\"></td><td>");
-			// Restore styles
-			for (StyleType style : style_stack)
-				res += begin_style[style];
-		}
 	}
+
 	// Ending
-	htmlSpecialChars(res, str.substring(first_unescaped, size));
-	while (ends[size]--)
-		res += end_style;
-	while (ends[size + 1]--)
-		res += end_style;
-	res += "</td></tr>\n"
-			"</tbody>\n"
-		"</table>\n";
+	htmlSpecialChars(res, substring(str, first_unescaped, end));
+	// End styles
+	for (uint i = end; i < ends.size(); ++i)
+		while (ends[i]--)
+			res += end_style;
+	// End table
+	res += "</td></tr>"
+			"</tbody>"
+		"</table>";
 
 	return res;
 }
