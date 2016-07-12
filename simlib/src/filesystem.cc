@@ -549,7 +549,7 @@ string getFileContents(const char* file) {
 	int fd;
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
-	if (fd == -1)
+	if (fd == -1) // TODO: maybe throw
 		return "";
 
 	Closer closer(fd); // Exceptions can be thrown
@@ -560,7 +560,7 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 	int fd;
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
-	if (fd == -1)
+	if (fd == -1) // TODO: maybe throw
 		return "";
 
 	Closer closer(fd); // Exceptions can be thrown
