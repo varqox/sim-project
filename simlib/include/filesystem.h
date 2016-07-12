@@ -453,8 +453,8 @@ constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
  * @brief Get file contents by lines in range [first, last)
  *
  * @param file filename
- * @param flags if set GFBL_IGNORE_NEW_LINES then '\n' is not appended to each
- *   line
+ * @param flags if GFBL_IGNORE_NEW_LINES is set then '\n' is not appended to
+ *   each line
  * @param first number of first line to fetch
  * @param last number of first line not to fetch
  *
