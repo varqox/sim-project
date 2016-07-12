@@ -6,8 +6,10 @@ int s_0012intchar = 111;
 int ok_suff = 1ll + 2LL + 1ull + 1llu + 1ul + 1u + 1UL + 1ul + 1lU + 1lu + 1LU + 1LLu + 1uLL + 1llU;
 int ill_formed_suff = 1lLu + 1Llu + 1lul + 1.u + 2.0ll + 1.2u + 2lf + 1fl + 1uu + 3lll;
 
-int ok = 0x1122.3p-5 + 0x.1p2 + 0x1.p-3 + 1.e3 + .3e1;
-int ill_formed = 0x + 0x1122p1.2 + 0.2e3e3 + 0x12e+2 + 0x.p1 + .e1 + 0x.2p-1.2 + 11.4e-2.01;
+int ok = 0x1122.3p-5 + 0x.1p2 + 0x1.p-3 + 1.e3 + .3e1 + 69. + .11 + .3e+3 + 1.e-4
+	+ 0.11f + 0.1F + 1.2l + 5.5L;
+int ill_formed = . + 0x + 0x1122p1.2 + 0.2e3e3 + 0x12e+2 + 0x.p1 + .e1 + 0x.2p-1.2 + 11.4e-2.01
+	+ 0.1e + 3p2 0.p3 0.1p+ + 0x11p- + 4e- + 4e1+ + 41p1-;
 
 int a = 0222.1.2, b = 0.1l + 0.2l + 1u + 1ll + .0ll + 0.u, c = 0.l + 0ull + .1F
 	+ 1ll + 2l,  = 00.\

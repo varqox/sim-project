@@ -1,0 +1,5 @@
+char trolololo_char = '\n';
+char char_trolololo = '\\';
+char trolololo_char_ = trolololo_char + char_trolololo;
+
+
