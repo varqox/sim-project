@@ -19,6 +19,7 @@ _packages:
     addons:
       apt:
         sources:
+          - ubuntu-toolchain-r-test
           - debian-sid
         packages:
           - *default_packages
@@ -30,6 +31,7 @@ _packages:
     addons:
       apt:
         sources:
+          - ubuntu-toolchain-r-test
           - debian-sid
           - llvm-toolchain-precise-3.6
         packages:
