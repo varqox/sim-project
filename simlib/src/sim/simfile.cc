@@ -5,6 +5,8 @@
 #include "../../include/sim/simfile.h"
 #include "../../include/utilities.h"
 
+#include <cmath>
+
 using std::string;
 using std::vector;
 
