@@ -37,7 +37,7 @@ enum Style : StyleType {
 };
 
 struct Word {
-	const char* str;
+	const char* const str;
 	uint8_t size;
 	Style style;
 

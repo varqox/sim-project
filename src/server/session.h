@@ -40,7 +40,7 @@ protected:
 	 *
 	 * @errors Throws an exception in any case of error
 	 */
-	void createAndOpen(const std::string& _user_id) noexcept(false);
+	void createAndOpen(const std::string& _user_id);
 
 	/// Destroys session (removes from database, etc.)
 	void destroy();
