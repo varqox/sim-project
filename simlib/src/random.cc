@@ -42,7 +42,7 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
 	return -1;
 }
 
-void readRandomBytes(void* dest, size_t bytes) noexcept(false) {
+void readRandomBytes(void* dest, size_t bytes) {
 	int fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1)
 		THROW("Failed to open /dev/urandom", error(errno));

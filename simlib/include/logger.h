@@ -33,7 +33,7 @@ private:
 
 public:
 	// Like open()
-	explicit Logger(const std::string& filename) noexcept(false);
+	explicit Logger(const std::string& filename);
 
 	// Like use()
 	explicit Logger(FILE *stream) noexcept : f_(stream) {}
@@ -46,7 +46,7 @@ public:
 	 *
 	 * @errors Throws an exception std::runtime_error if an fopen() error occurs
 	 */
-	void open(const std::string& filename) noexcept(false);
+	void open(const std::string& filename);
 
 	// Use @p stream as log stream
 	void use(FILE *stream) noexcept {

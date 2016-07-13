@@ -18,7 +18,7 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept;
 
 // Returns bytes read (from /dev/urandom) or -1 on error throws a
 // std::runtime_error with appropriate message if error occurs
-void readRandomBytes(void* dest, size_t bytes) noexcept(false);
+void readRandomBytes(void* dest, size_t bytes);
 
 inline uint_fast32_t getRandomSeed() noexcept {
 	uint_fast32_t seed;

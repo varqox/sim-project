@@ -79,8 +79,7 @@ public:
 	 * @errors May throw an exception if loading error occurs (see
 	 *   ConfigFile::loadConfigFromFile())
 	 */
-	std::vector<std::string> loadFrom(std::string package_path)
-		noexcept(false);
+	std::vector<std::string> loadFrom(std::string package_path);
 
 	/**
 	 * @brief Loads and validates config file from problem package
@@ -93,7 +92,7 @@ public:
 	 * @errors Throw an exception if any error occurs or any inconsistency with
 	 *   package config format is found
 	 */
-	void loadFromAndValidate(std::string package_path) noexcept(false);
+	void loadFromAndValidate(std::string package_path);
 };
 
 /**
@@ -117,6 +116,6 @@ std::string makeTag(const std::string& str);
  * @errors Throws an exception of type std::runtime_error with appropriate
  *   message
  */
-std::string obtainCheckerOutput(int fd, size_t max_length) noexcept(false);
+std::string obtainCheckerOutput(int fd, size_t max_length);
 
 } // namespace sim

@@ -102,7 +102,7 @@ string tolower(string str) {
 	return str;
 }
 
-string toHex(const char* str, size_t len) noexcept(false) {
+string toHex(const char* str, size_t len) {
 	string res(len << 1, '\0');
 	for (size_t i = -1; len-- > 0; ++str) {
 		unsigned char c = *str;

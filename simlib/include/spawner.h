@@ -68,7 +68,7 @@ public:
 	 */
 	static ExitStat run(const std::string& exec,
 		const std::vector<std::string>& args, const Options& opts = Options(),
-		const std::string& working_dir = ".") noexcept(false)
+		const std::string& working_dir = ".")
 	{
 		return runWithTimer<Impl>(opts.time_limit, exec, args, opts,
 			working_dir);
@@ -129,8 +129,7 @@ protected:
 	 * @return return value of Func<>::execute()
 	 */
 	template<template<class...> class Func, class... TArgs, class... Args>
-	static ExitStat runWithTimer(uint64_t time_limit, Args&&... args)
-		noexcept(false);
+	static ExitStat runWithTimer(uint64_t time_limit, Args&&... args);
 
 private:
 	class ZeroTimer {
@@ -190,7 +189,7 @@ private:
 		 */
 		static ExitStat execute(const std::string& exec,
 			const std::vector<std::string>& args, const Options& opts,
-			const std::string& working_dir) noexcept(false);
+			const std::string& working_dir);
 	};
 };
 
@@ -314,9 +313,7 @@ void Spawner::runChild(const std::string& exec,
 }
 
 template<template<class...> class Func, class... TArgs, class... Args>
-Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args)
-	noexcept(false)
-{
+Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 	// Without time_limit (NormalTimer) we can run as many processes as we want
 	if (time_limit == 0)
 		return Func<TArgs..., ZeroTimer>::execute(std::forward<Args>(args)...);
@@ -371,7 +368,7 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args)
 template<class Timer>
 Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 	const std::vector<std::string>& args, const Spawner::Options& opts,
-	const std::string& working_dir) noexcept(false)
+	const std::string& working_dir)
 {
 	// Error stream from child (and wait_for_syscall()) via pipe
 	int pfd[2];

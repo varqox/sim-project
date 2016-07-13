@@ -52,7 +52,7 @@ string Simfile::dump() const {
 	return res;
 }
 
-vector<string> Simfile::loadFrom(string package_path) noexcept(false) {
+vector<string> Simfile::loadFrom(string package_path) {
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
@@ -168,7 +168,7 @@ vector<string> Simfile::loadFrom(string package_path) noexcept(false) {
 	return warnings;
 }
 
-void Simfile::loadFromAndValidate(string package_path) noexcept(false) {
+void Simfile::loadFromAndValidate(string package_path) {
 	// Append slash to package_path
 	if (package_path.size() && package_path.back() != '/')
 		package_path += '/';
@@ -297,7 +297,7 @@ string makeTag(const string& str) {
 	return tag;
 }
 
-string obtainCheckerOutput(int fd, size_t max_length) noexcept(false) {
+string obtainCheckerOutput(int fd, size_t max_length) {
 	string res(max_length, '\0');
 
 	(void)lseek(fd, 0, SEEK_SET);

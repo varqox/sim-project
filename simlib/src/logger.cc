@@ -27,7 +27,7 @@ void Logger::Appender::flush() noexcept {
 		return;
 
 	if (logger_.lock()) {
-		if (logger_.label_)
+		if (logger_.label())
 			fprintf(logger_.f_, "[ %s ] %s\n",
 				localdate("%Y-%m-%d %H:%M:%S").c_str(), buff_.c_str());
 		else

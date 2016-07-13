@@ -13,7 +13,7 @@
  * @errors If get_current_dir_name() fails then std::runtime_error will be
  *   thrown
  */
-std::string getCWD() noexcept(false);
+std::string getCWD();
 
 /**
  * @brief Get a process with pid @p pid executable path
@@ -26,7 +26,7 @@ std::string getCWD() noexcept(false);
  *
  * @errors If readlink(2) fails then std::runtime_error will be thrown
  */
-std::string getExec(pid_t pid) noexcept(false);
+std::string getExec(pid_t pid);
 
 /**
  * @brief Get a vector of processes pids which are instances of @p exec
@@ -42,7 +42,7 @@ std::string getExec(pid_t pid) noexcept(false);
  *   std::runtime_error will be thrown
  */
 std::vector<pid_t> findProcessesByExec(std::string exec,
-	bool include_me = false) noexcept(false);
+	bool include_me = false);
 
 /**
  * @brief Change current working directory to process executable directory
@@ -53,7 +53,7 @@ std::vector<pid_t> findProcessesByExec(std::string exec,
  * @errors Exceptions from getExec() or if chdir(2) fails then
  *   std::runtime_error will be thrown
  */
-std::string chdirToExecDir() noexcept(false);
+std::string chdirToExecDir();
 
 constexpr int8_t ARCH_i386 = 0;
 constexpr int8_t ARCH_x86_64 = 1;
@@ -69,7 +69,7 @@ constexpr int8_t ARCH_x86_64 = 1;
  * @errors If architecture is different from allowed or any error occurs
  *   an exception of type std::runtime_error is thrown
  */
-int8_t detectArchitecture(pid_t pid) noexcept(false);
+int8_t detectArchitecture(pid_t pid);
 
 // Block all signals
 template<int (*func)(int, const sigset_t*, sigset_t*)>

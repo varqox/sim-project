@@ -343,7 +343,7 @@ public:
 	static ExitStat run(const std::string& exec,
 		const std::vector<std::string>& args, const Options& opts,
 		const std::string& working_dir = ".",
-		Callback&& func = Callback()) noexcept(false)
+		Callback&& func = Callback())
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
 			"Callback has to derive from Sandbox::CallbackBase");
@@ -384,7 +384,7 @@ private:
 		 */
 		static ExitStat execute(const std::string& exec,
 			const std::vector<std::string>& args, const Options& opts,
-			const std::string& working_dir, Callback func) noexcept (false);
+			const std::string& working_dir, Callback func);
 	};
 };
 
@@ -455,7 +455,7 @@ struct Sandbox::Registers {
 
 	Registers() = default;
 
-	void getRegs(pid_t pid) noexcept(false) {
+	void getRegs(pid_t pid) {
 		struct iovec ivo = {
 			&uregs,
 			sizeof(uregs)
@@ -464,7 +464,7 @@ struct Sandbox::Registers {
 			THROW("Error: ptrace(PTRACE_GETREGS)", error(errno));
 	}
 
-	void setRegs(pid_t pid) noexcept(false) {
+	void setRegs(pid_t pid) {
 		struct iovec ivo = {
 			&uregs,
 			sizeof(uregs)
@@ -532,7 +532,6 @@ template<class Callback, class Timer>
 Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	const std::string& exec, const std::vector<std::string>& args,
 	const Options& opts, const std::string& working_dir, Callback func)
-	noexcept(false)
 {
 	static_assert(std::is_base_of<CallbackBase, Callback>::value,
 		"Callback has to derive from Sandbox::CallbackBase");
