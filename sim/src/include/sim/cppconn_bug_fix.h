@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <string>
 
 // In <cppconn/sqlstring.h> in function sql::SQLString::caseCompare() there is
 // a problem with type deduction of ::tolower, the code below fixes it if is
