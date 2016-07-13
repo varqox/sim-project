@@ -10,10 +10,10 @@ void Errors::errorTemplate(const StringView& status, const char* code,
 	if (prev.empty())
 		prev = '/';
 
-	auto ender = baseTemplate(status);
-	append("<center>\n"
+	baseTemplate(status);
+	append("<center>"
 		"<h1 style=\"font-size:25px;font-weight:normal;\">", code, " &mdash; ",
-			message, "</h1>\n"
-		"<a class=\"btn\" href=\"", prev, "\">Go back</a>\n"
+			message, "</h1>"
+		"<a class=\"btn\" href=\"", prev, "\">Go back</a>"
 		"</center>");
 }

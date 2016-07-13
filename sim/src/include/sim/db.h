@@ -1,8 +1,11 @@
 #pragma once
 
+#include "cppconn_bug_fix.h"
+
 #include <cppconn/prepared_statement.h>
 #include <mysql_connection.h>
 #include <simlib/memory.h>
+#include <simlib/string.h>
 
 namespace DB {
 
@@ -17,14 +20,11 @@ public:
 
 	Result(const Result&) = delete;
 
-	Result(Result&& ps) noexcept : res_(std::move(ps.res_)) {}
+	Result(Result&&) noexcept = default;
 
 	Result& operator=(const Result&) = delete;
 
-	Result& operator=(Result&& ps) noexcept {
-		res_ = std::move(ps.res_);
-		return *this;
-	}
+	Result& operator=(Result&&) noexcept = default;
 
 	~Result() = default;
 
@@ -111,8 +111,12 @@ class Connection {
 private:
 	std::unique_ptr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
-
-	void connect();
+	bool bad_state = false; // Bad state is ONLY detected if exception is thrown
+	                        // in (or deeper) methods: prepare(),
+	                        // executeUpdate(), executeQuery(); that is why
+	                        // after connection resetting first call will
+	                        // fail - bad_state is then set and reconnection
+	                        // will happen during the next try
 
 public:
 	Connection() = default;
@@ -122,43 +126,63 @@ public:
 
 	Connection(const Connection&) = delete;
 
-	Connection(Connection&& conn) noexcept : conn_(std::move(conn.conn_)),
-		host_(std::move(conn.host_)), user_(std::move(conn.user_)),
-		password_(std::move(conn.password_)),
-		database_(std::move(conn.database_)) {}
+	Connection(Connection&&) noexcept = default;
 
 	Connection& operator=(const Connection&) = delete;
 
-	Connection& operator=(Connection&& conn) noexcept {
-		conn_ = std::move(conn.conn_);
-		host_ = std::move(conn.host_);
-		user_ = std::move(conn.user_);
-		password_ = std::move(conn.password_);
-		database_ = std::move(conn.database_);
-
-		return *this;
-	}
+	Connection& operator=(Connection&&) = default;
 
 	~Connection() {}
 
 	sql::Connection* impl() {
-		if (conn_->isClosed())
-			connect();
+		if (bad_state)
+			reconnect();
 		return conn_.get();
 	}
 
-	Statement prepare(const std::string& query) noexcept(false) {
-		return Statement(impl()->prepareStatement(query));
+	void reconnect();
+
+	bool badState() noexcept { return bad_state; }
+
+private:
+	template<class Func>
+	auto try_call(Func&& f) -> decltype(f()) {
+		try {
+			return f();
+
+		} catch (const std::exception& e) {
+			if (hasPrefixIn(e.what(), {"Lost connection to MySQL server",
+				"MySQL server has gone away"}))
+			{
+				// Try to deal with problem silently
+				reconnect();
+				return f();
+			}
+
+			bad_state = true;
+			throw;
+		}
 	}
 
-	int executeUpdate(const std::string& update_query) noexcept(false) {
-		std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
-		return stmt->executeUpdate(update_query);
+public:
+	Statement prepare(const std::string& query) {
+		return try_call([&] {
+			return Statement(impl()->prepareStatement(query));
+		});
 	}
 
-	Result executeQuery(const std::string& query) noexcept(false) {
-		std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
-		return Result(stmt->executeQuery(query));
+	int executeUpdate(const std::string& update_query) {
+		return try_call([&] {
+			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
+			return stmt->executeUpdate(update_query);
+		});
+	}
+
+	Result executeQuery(const std::string& query) {
+		return try_call([&] {
+			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
+			return Result(stmt->executeQuery(query));
+		});
 	}
 };
 
@@ -172,7 +196,6 @@ public:
  *
  * @errors On error throws std::runtime_error
  */
-Connection createConnectionUsingPassFile(const std::string& filename)
-	noexcept(false);
+Connection createConnectionUsingPassFile(const std::string& filename);
 
 } // namespace DB

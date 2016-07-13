@@ -5,10 +5,10 @@
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
 #include <simlib/random.h>
 #include <simlib/sim/simfile.h>
+#include <simlib/spawner.h>
 #include <simlib/time.h>
 
 using std::array;
@@ -18,7 +18,7 @@ using std::vector;
 
 void Contest::handle() {
 	// Select contest
-	StringView next_arg = url_args.extractNext();
+	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
 		try {
 			// Get available contests
@@ -66,27 +66,26 @@ void Contest::handle() {
 			} while (0);
 
 			/* List them */
-			auto ender = baseTemplate("Select contest");
-			append("<div class=\"contests-list\">\n");
+			baseTemplate("Select contest");
+			append("<div class=\"contests-list\">");
 
 			// Add contest button (admins and teachers only)
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
-				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>\n");
+				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>");
 
 			DB::Result res = stmt.executeQuery();
 			while (res.next())
 				append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
-					htmlSpecialChars(res[2]), "</a>\n");
+					htmlSpecialChars(res[2]), "</a>");
 
-			append("</div>\n");
+			append("</div>");
 			return;
 
 		} catch (const std::exception& e) {
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 			return error500();
 		}
 	}
-
 
 	// Add contest
 	if (next_arg == "add")
@@ -98,7 +97,7 @@ void Contest::handle() {
 	if (strToNum(round_id, next_arg) <= 0)
 		return error404();
 
-	next_arg = url_args.extractNext();
+	next_arg = url_args.extractNextArg();
 
 	// Get parent rounds
 	rpath.reset(getRoundPath(round_id));
@@ -109,7 +108,7 @@ void Contest::handle() {
 	bool admin_view = rpath->admin_access;
 	if (next_arg == "n") {
 		admin_view = false;
-		next_arg = url_args.extractNext();
+		next_arg = url_args.extractNextArg();
 	}
 
 	// Problem statement
@@ -123,7 +122,7 @@ void Contest::handle() {
 		string statement = problem_config.getString("statement");
 		// No statement
 		if (statement.empty()) {
-			auto ender = contestTemplate("Problems");
+			contestTemplate("Problems");
 			append("<h1>Problems</h1>");
 			printRoundPath("problems", !admin_view);
 
@@ -131,11 +130,11 @@ void Contest::handle() {
 			return;
 		}
 
-		if (isSuffix(statement, ".pdf"))
+		if (hasSuffix(statement, ".pdf"))
 			resp.headers["Content-type"] = "application/pdf";
-		else if (isSuffixIn(statement, {".html", ".htm"}))
+		else if (hasSuffixIn(statement, {".html", ".htm"}))
 			resp.headers["Content-type"] = "text/html";
-		else if (isSuffixIn(statement, {".txt", ".md"}))
+		else if (hasSuffixIn(statement, {".txt", ".md"}))
 			resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
 		resp.content_type = server::HttpResponse::FILE;
@@ -199,7 +198,7 @@ void Contest::handle() {
 		return files(admin_view);
 
 	// Contest dashboard
-	auto ender = contestTemplate("Contest dashboard");
+	contestTemplate("Contest dashboard");
 	append("<div class=\"round-info\">");
 
 	if (rpath->type == CONTEST) {
@@ -240,7 +239,7 @@ void Contest::handle() {
 
 	if (rpath->type == PROBLEM)
 		append("<a class=\"btn\" href=\"/c/", round_id, "/statement\" "
-			"style=\"margin:5px auto\">View statement</a>\n");
+			"style=\"margin:5px auto\">View statement</a>");
 }
 
 void Contest::addContest() {
@@ -252,6 +251,9 @@ void Contest::addContest() {
 	bool is_public = false, show_ranking = false;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
 		is_public = fv.exist("public");
@@ -287,39 +289,39 @@ void Contest::addContest() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
-	auto ender = baseTemplate("Add contest", ".body{margin-left:30px}");
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Add contest</h1>\n"
-			"<form method=\"post\">\n"
+	baseTemplate("Add contest", ".body{margin-left:30px}");
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Add contest</h1>"
+			"<form method=\"post\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Contest name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Public
-				"<div class=\"field-group\">\n"
-					"<label>Public</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Public</label>"
 					"<input type=\"checkbox\" name=\"public\"",
 						(is_public ? " checked" : ""),
 						(Session::user_type > UTYPE_ADMIN ? " disabled" : ""),
-						">\n"
-				"</div>\n"
+						">"
+				"</div>"
 				// Show ranking
-				"<div class=\"field-group\">\n"
-					"<label>Show ranking</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Show ranking</label>"
 					"<input type=\"checkbox\" name=\"show-ranking\"",
-						(show_ranking ? " checked" : ""), ">\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
-			"</form>\n"
-		"</div>\n");
+						(show_ranking ? " checked" : ""), ">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+			"</form>"
+		"</div>");
 }
 
 void Contest::addRound() {
@@ -332,6 +334,9 @@ void Contest::addRound() {
 	string begins, full_results, ends;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", ROUND_NAME_MAX_LEN);
 		is_visible = fv.exist("visible");
@@ -387,55 +392,55 @@ void Contest::addRound() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
-	auto ender = contestTemplate("Add round");
+	contestTemplate("Add round");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Add round</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Add round</h1>"
+		"<form method=\"post\">"
 			// Name
-			"<div class=\"field-group\">\n"
-				"<label>Round name</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Round name</label>"
 				"<input type=\"text\" name=\"name\" value=\"",
 					htmlSpecialChars(name), "\" size=\"24\" "
-					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>\n"
-			"</div>\n"
+					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>"
+			"</div>"
 			// Visible
-			"<div class=\"field-group\">\n"
-				"<label>Visible</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Visible</label>"
 				"<input type=\"checkbox\" name=\"visible\"",
-					(is_visible ? " checked" : ""), ">\n"
-			"</div>\n"
+					(is_visible ? " checked" : ""), ">"
+			"</div>"
 			// Begins
-			"<div class=\"field-group\">\n"
-				"<label>Begins</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Begins</label>"
 				"<input type=\"text\" name=\"begins\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(begins), "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
+					"maxlength=\"19\">"
+			"</div>"
 			// Ends
-			"<div class=\"field-group\">\n"
-				"<label>Ends</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Ends</label>"
 				"<input type=\"text\" name=\"ends\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(ends), "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
+					"maxlength=\"19\">"
+			"</div>"
 			// Full_results
-			"<div class=\"field-group\">\n"
-				"<label>Full_results</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Full_results</label>"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(full_results), "\" size=\"19\" "
-					"maxlength=\"19\">\n"
-			"</div>\n"
-			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
-		"</form>\n"
-	"</div>\n");
+					"maxlength=\"19\">"
+			"</div>"
+			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+		"</form>"
+	"</div>");
 }
 
 void Contest::addProblem() {
@@ -447,6 +452,11 @@ void Contest::addProblem() {
 	bool force_auto_limit = true;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		string package_file;
+
 		// Validate all fields
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
@@ -464,24 +474,26 @@ void Contest::addProblem() {
 
 		fv.validateNotBlank(user_package_file, "package", "Package");
 
+		fv.validateFilePathNotEmpty(package_file, "package", "Package");
+
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				string package_file = fv.getFilePath("package");
-
 				// Rename package file that it will end with original extension
 				string new_package_file = concat(package_file, '.',
-					(isSuffix(user_package_file, ".tar.gz") ? "tar.gz"
+					(hasSuffix(user_package_file, ".tar.gz") ? "tar.gz"
 						: getExtension(user_package_file)));
 				if (link(package_file.c_str(), new_package_file.c_str()))
-					THROW("Error: link()", error(errno));
+					THROW("Error: link('", package_file, "', '",
+						new_package_file, "')", error(errno));
 
 				FileRemover file_rm(new_package_file);
 
 				// Create temporary directory for holding package
 				char package_tmp_dir[] = "/tmp/sim-problem.XXXXXX";
 				if (mkdtemp(package_tmp_dir) == nullptr)
-					THROW("Error: mkdtemp()", error(errno));
+					THROW("Error: mkdtemp('", package_tmp_dir, "')",
+						error(errno));
 
 				DirectoryRemover rm_tmp_dir(package_tmp_dir);
 
@@ -501,7 +513,6 @@ void Contest::addProblem() {
 				if (time_limit.size())
 					back_insert(args, "-tl", toString(tl));
 
-
 				int fd = getUnlinkedTmpFile();
 				if (fd == -1)
 					THROW("Error: getUnlinkedTmpFile()", error(errno));
@@ -513,7 +524,7 @@ void Contest::addProblem() {
 
 				} catch (const std::exception& e) {
 					fv.addError("Internal server error");
-					ERRLOG_CAUGHT(e);
+					ERRLOG_CATCH(e);
 					goto form;
 				}
 
@@ -572,11 +583,10 @@ void Contest::addProblem() {
 				string tag = problem_config.getString("tag");
 
 				// Move package folder to problems/
-				if (move(package_tmp_dir,
-					concat("problems/", problem_id).c_str(), false))
-				{
-					THROW("Error: move()", error(errno));
-				}
+				string package_dir = concat("problems/", problem_id);
+				if (move(package_tmp_dir, package_dir, false))
+					THROW("Error: move('", package_tmp_dir, "', '", package_dir,
+						"')", error(errno));
 
 				rm_tmp_dir.reset("problems/" + problem_id);
 
@@ -611,55 +621,52 @@ void Contest::addProblem() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
  form:
-	auto ender = contestTemplate("Add problem");
+	contestTemplate("Add problem");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Add problem</h1>\n"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Add problem</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Problem name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\""
 					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
 					"placeholder=\"Detect from config.conf\">"
-					"\n"
-				"</div>\n"
+				"</div>"
 				// Memory limit
-				"<div class=\"field-group\">\n"
-					"<label>Memory limit [KiB]</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Memory limit [KiB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
 					"placeholder=\"Detect from config.conf\">"
-					"\n"
-				"</div>\n"
+				"</div>"
 				// Global time limit
-				"<div class=\"field-group\">\n"
-					"<label>Global time limit [s] (for each test)</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Global time limit [s] (for each test)</label>"
 					"<input type=\"text\" name=\"time-limit\" value=\"",
 						htmlSpecialChars(time_limit), "\" size=\"24\" "
 					"placeholder=\"No global time limit\">"
-					"\n"
-				"</div>\n"
+				"</div>"
 				// Force auto limit
-				"<div class=\"field-group\">\n"
-					"<label>Automatic time limit setting</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Automatic time limit setting</label>"
 					"<input type=\"checkbox\" name=\"force-auto-limit\"",
-						(force_auto_limit ? " checked" : ""), ">\n"
-				"</div>\n"
+						(force_auto_limit ? " checked" : ""), ">"
+				"</div>"
 				// Package
-				"<div class=\"field-group\">\n"
-					"<label>Package</label>\n"
-					"<input type=\"file\" name=\"package\" required>\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">\n"
-			"</form>\n"
-		"</div>\n");
+				"<div class=\"field-group\">"
+					"<label>Package</label>"
+					"<input type=\"file\" name=\"package\" required>"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editContest() {
@@ -671,6 +678,9 @@ void Contest::editContest() {
 	bool is_public, show_ranking;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Contest name", ROUND_NAME_MAX_LEN);
 
@@ -716,7 +726,7 @@ void Contest::editContest() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 	}
 
@@ -727,56 +737,55 @@ void Contest::editContest() {
 
 	DB::Result res = stmt.executeQuery();
 	if (!res.next())
-		THROW(__PRETTY_FUNCTION__, ": Failed to get contest and owner info");
+		THROW("Failed to get contest and owner info");
 
 	name = rpath->contest->name;
 	owner = res[1];
 	is_public = rpath->contest->is_public;
 	show_ranking = rpath->contest->show_ranking;
 
-	auto ender = contestTemplate("Edit contest");
+	contestTemplate("Edit contest");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Edit contest</h1>\n"
-			"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Edit contest</h1>"
+			"<form method=\"post\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Contest name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Owner
-				"<div class=\"field-group\">\n"
-					"<label>Owner username</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Owner username</label>"
 					"<input type=\"text\" name=\"owner\" value=\"",
 						htmlSpecialChars(owner), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Public
-				"<div class=\"field-group\">\n"
-					"<label>Public</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Public</label>"
 					"<input type=\"checkbox\" name=\"public\"",
 						(is_public ? " checked"
 							: (Session::user_type > UTYPE_ADMIN ? " disabled"
-								: "")),
-						">\n"
-				"</div>\n"
+								: "")), ">"
+				"</div>"
 				// Show ranking
-				"<div class=\"field-group\">\n"
-					"<label>Show ranking</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Show ranking</label>"
 					"<input type=\"checkbox\" name=\"show-ranking\"",
-						(show_ranking ? " checked" : ""), ">\n"
-				"</div>\n"
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+						(show_ranking ? " checked" : ""), ">"
+				"</div>"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
-						"/delete\">Delete contest</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"/delete\">Delete contest</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editRound() {
@@ -789,6 +798,9 @@ void Contest::editRound() {
 	string begins, full_results, ends;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validateNotBlank(name, "name", "Round name", ROUND_NAME_MAX_LEN);
 
@@ -841,7 +853,7 @@ void Contest::editRound() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -852,64 +864,65 @@ void Contest::editRound() {
 	ends = rpath->round->ends;
 	full_results = rpath->round->full_results;
 
-	auto ender = contestTemplate("Edit round");
+	contestTemplate("Edit round");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Edit round</h1>\n"
-			"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Edit round</h1>"
+			"<form method=\"post\">"
 				// Name
-				"<div class=\"field-group\">\n"
-					"<label>Round name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Round name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Visible before beginning
-				"<div class=\"field-group\">\n"
-					"<label>Visible before beginning</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Visible before beginning</label>"
 					"<input type=\"checkbox\" name=\"visible\"",
-						(is_visible ? " checked" : ""), ">\n"
-				"</div>\n"
+						(is_visible ? " checked" : ""), ">"
+				"</div>"
 				// Begins
-				"<div class=\"field-group\">\n"
-					"<label>Begins</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Begins</label>"
 					"<input type=\"text\" name=\"begins\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(begins), "\" size=\"19\" "
-						"maxlength=\"19\">\n"
-				"</div>\n"
+						"maxlength=\"19\">"
+				"</div>"
 				// Ends
-				"<div class=\"field-group\">\n"
-					"<label>Ends</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Ends</label>"
 					"<input type=\"text\" name=\"ends\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(ends), "\" size=\"19\" "
-						"maxlength=\"19\">\n"
-				"</div>\n"
+						"maxlength=\"19\">"
+				"</div>"
 				// Full_results
-				"<div class=\"field-group\">\n"
-					"<label>Full_results</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Full_results</label>"
 					"<input type=\"text\" name=\"full_results\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(full_results), "\" size=\"19\" "
-						"maxlength=\"19\">\n"
-				"</div>\n"
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+						"maxlength=\"19\">"
+				"</div>"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
-						"/delete\">Delete round</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"/delete\">Delete round</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editProblem() {
 	if (!rpath->admin_access)
 		return error403();
 
+	StringView next_arg = url_args.extractNextArg();
 	// Rejudge
-	if (url_args.isNext("rejudge")) {
+	if (next_arg == "rejudge") {
 		try {
 			DB::Statement stmt = db_conn.prepare("UPDATE submissions "
 				"SET status='waiting', queued=? WHERE problem_id=?");
@@ -920,16 +933,14 @@ void Contest::editProblem() {
 			notifyJudgeServer();
 
 		} catch (const std::exception& e) {
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 		return redirect(concat("/c/", rpath->round_id, "/edit"));
 	}
 
 	// Download
-	while (url_args.isNext("download")) {
-		url_args.extractNext();
-
+	while (next_arg == "download") {
 		constexpr std::array<unsigned char, 22> empty_zip_file{{
 			0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -940,9 +951,10 @@ void Contest::editProblem() {
 		const char* _tgz = ".tar.gz";
 		const char* extension;
 		// Get extension
-		if (url_args.isNext("zip"))
+		next_arg = url_args.extractNextArg();
+		if (next_arg == "zip")
 			extension = _zip;
-		else if (url_args.isNext("tgz"))
+		else if (next_arg == "tgz")
 			extension = _tgz;
 		else
 			break;
@@ -952,7 +964,7 @@ void Contest::editProblem() {
 		umask(077); // Only owner can access this temporary file
 		int fd = mkstemp(tmp_file);
 		if (fd == -1)
-			THROW("Error: mkstemp()", error(errno));
+			THROW("Error: mkstemp('", tmp_file, "')", error(errno));
 
 		sclose(fd);
 		FileRemover remover(tmp_file);
@@ -965,7 +977,7 @@ void Contest::editProblem() {
 			if (putFileContents(tmp_file, (const char*)empty_zip_file.data(),
 				empty_zip_file.size()) == -1)
 			{
-				THROW("Error: putFileContents()", error(errno));
+				THROW("Error: putFileContents('", tmp_file, "')", error(errno));
 			}
 		// tar.gz
 		} else // extension == tgz
@@ -976,11 +988,11 @@ void Contest::editProblem() {
 		Spawner::ExitStat es;
 		try {
 			es = Spawner::run(args[0], args,
-				{-1, STDERR_FILENO, STDERR_FILENO, 20 * 1000000 /* 20 s */},
+				{-1, STDERR_FILENO, STDERR_FILENO, 30 * 1000000 /* 30 s */},
 				"problems");
 
 		} catch (const std::exception& e) {
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 			return error500();
 		}
 
@@ -1003,6 +1015,9 @@ void Contest::editProblem() {
 	string round_name, name, tag, memory_limit;
 
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validate(round_name, "round-name", "Problem round name",
 			ROUND_NAME_MAX_LEN);
@@ -1055,7 +1070,7 @@ void Contest::editProblem() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -1070,12 +1085,12 @@ void Contest::editProblem() {
 	tag = pconfig.getString("tag");
 	memory_limit = pconfig.getString("memory_limit");
 
-	auto ender = contestTemplate("Edit problem");
+	contestTemplate("Edit problem");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
 			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
-				"/edit/rejudge\">Rejudge all submissions</a>\n"
-			"<div class=\"dropmenu down\" style=\"margin-left:5px\">"
+				"/edit/rejudge\">Rejudge all submissions</a>"
+			"<div class=\"dropmenu down\">"
 				"<a class=\"btn-small dropmenu-toggle\">"
 					"Download package as<span class=\"caret\"></span></a>"
 				"<ul>"
@@ -1084,50 +1099,50 @@ void Contest::editProblem() {
 					"<a href=\"/c/", rpath->round_id, "/edit/download/tgz\">"
 						".tar.gz</a>"
 				"</ul>"
-			"</div>\n"
-		"</div>\n"
-		"<div class=\"form-container\">\n"
-			"<h1>Edit problem</h1>\n"
-			"<form method=\"post\">\n"
+			"</div>"
+		"</div>"
+		"<div class=\"form-container\">"
+			"<h1>Edit problem</h1>"
+			"<form method=\"post\">"
 				// Problem round name
-				"<div class=\"field-group\">\n"
-					"<label>Problem round name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem round name</label>"
 					"<input type=\"text\" name=\"round-name\" value=\"",
 						htmlSpecialChars(round_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Problem name
-				"<div class=\"field-group\">\n"
-					"<label>Problem name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Tag
-				"<div class=\"field-group\">\n"
-					"<label>Problem tag</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem tag</label>"
 					"<input type=\"text\" name=\"tag\" value=\"",
 						htmlSpecialChars(tag), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_TAG_LEN), "\" required>\n"
-				"</div>\n"
+						"maxlength=\"", toStr(PROBLEM_TAG_LEN), "\" required>"
+				"</div>"
 				// TODO: Checker
 				// Memory limit
-				"<div class=\"field-group\">\n"
-					"<label>Memory limit [KB]</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Memory limit [KB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// TODO: Main solution
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
-						"/delete\">Delete problem</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"/delete\">Delete problem</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::deleteContest() {
@@ -1137,6 +1152,9 @@ void Contest::deleteContest() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
@@ -1175,29 +1193,29 @@ void Contest::deleteContest() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	string referer = req->headers.get("Referer");
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/edit");
 
-	auto ender = contestTemplate("Delete contest");
+	contestTemplate("Delete contest");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete contest</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete contest</h1>"
+		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure to delete contest "
 				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->contest->name), "</a>, all "
-				"subrounds and submissions?</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+				"subrounds and submissions?</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::deleteRound() {
@@ -1207,6 +1225,9 @@ void Contest::deleteRound() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
@@ -1224,29 +1245,29 @@ void Contest::deleteRound() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	string referer = req->headers.get("Referer");
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/edit");
 
-	auto ender = contestTemplate("Delete round");
+	contestTemplate("Delete round");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete round</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete round</h1>"
+		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure to delete round <a href=\"/c/",
 				rpath->round_id, "\">",
 				htmlSpecialChars(rpath->round->name), "</a>, all "
-				"subrounds and submissions?</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+				"subrounds and submissions?</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::deleteProblem() {
@@ -1256,6 +1277,9 @@ void Contest::deleteProblem() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Delete submissions
 			DB::Statement stmt = db_conn.prepare(
@@ -1272,33 +1296,33 @@ void Contest::deleteProblem() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
 	string referer = req->headers.get("Referer");
 	if (referer.empty())
 		referer = concat("/c/", rpath->round_id, "/edit");
 
-	auto ender = contestTemplate("Delete problem");
+	contestTemplate("Delete problem");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete problem</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete problem</h1>"
+		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure to delete problem "
 				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->problem->name), "</a> and all its "
-				"submissions?</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+				"submissions?</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::listProblems(bool admin_view) {
-	auto ender = contestTemplate("Problems");
+	contestTemplate("Problems");
 	append("<h1>Problems</h1>");
 	printRoundPath("problems", !admin_view);
 	printRoundView(true, admin_view);
@@ -1323,7 +1347,7 @@ void Contest::ranking(bool admin_view) {
 	if (!admin_view && !rpath->contest->show_ranking)
 		return error403();
 
-	auto ender = contestTemplate("Ranking");
+	contestTemplate("Ranking");
 	append("<h1>Ranking</h1>");
 	printRoundPath("ranking", !admin_view);
 
@@ -1513,11 +1537,11 @@ void Contest::ranking(bool admin_view) {
 		sort(index_of.begin(), index_of.end());
 
 		// Table head
-		append("<table class=\"table ranking stripped\">\n"
-			"<thead>\n"
-				"<tr>\n"
-					"<th rowspan=\"2\">#</th>\n"
-					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>\n");
+		append("<table class=\"table ranking stripped\">"
+			"<thead>"
+				"<tr>"
+					"<th rowspan=\"2\">#</th>"
+					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>");
 		// Rounds
 		for (auto& i : rounds) {
 			if (i.problems.empty())
@@ -1528,20 +1552,20 @@ void Contest::ranking(bool admin_view) {
 				append(" colspan=\"", toString(i.problems.size()), '"');
 			append("><a href=\"/c/", i.id,
 				(admin_view ? "/ranking\">" : "/n/ranking\">"),
-				htmlSpecialChars(i.name), "</a></th>\n");
+				htmlSpecialChars(i.name), "</a></th>");
 		}
 		// Problems
-		append("<th rowspan=\"2\">Sum</th>\n"
-			"</tr>\n"
-			"<tr>\n");
+		append("<th rowspan=\"2\">Sum</th>"
+			"</tr>"
+			"<tr>");
 		for (auto& i : rounds)
 			for (auto& j : i.problems)
 				append("<th><a href=\"/c/", toString(j.id),
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
 					htmlSpecialChars(j.tag), "</a></th>");
-		append("</tr>\n"
-			"</thead>\n"
-			"<tbody>\n");
+		append("</tr>"
+			"</thead>"
+			"<tbody>");
 		// Rows
 		assert(sorted_rows.size());
 		size_t place = 1; // User place
@@ -1553,14 +1577,14 @@ void Contest::ranking(bool admin_view) {
 			if (last_user_score != row.score)
 				place = i + 1;
 			last_user_score = row.score;
-			append("<tr>\n"
-					"<td>", toString(place), "</td>\n");
+			append("<tr>"
+					"<td>", toString(place), "</td>");
 			// Name
 			if (admin_view)
 				append("<td><a href=\"/u/", row.user_id, "\">",
-					htmlSpecialChars(row.name), "</a></td>\n");
+					htmlSpecialChars(row.name), "</a></td>");
 			else
-				append("<td>", htmlSpecialChars(row.name), "</td>\n");
+				append("<td>", htmlSpecialChars(row.name), "</td>");
 
 			// Fields
 			fill(row_points.begin(), row_points.end(), nullptr);
@@ -1574,25 +1598,25 @@ void Contest::ranking(bool admin_view) {
 			}
 			for (auto& j : row_points) {
 				if (j == nullptr)
-					append("<td></td>\n");
+					append("<td></td>");
 				else if (admin_view || (Session::isOpen() &&
 					row.user_id == Session::user_id))
 				{
 					append("<td><a href=\"/s/", j->submission_id, "\">",
-						j->score, "</a></td>\n");
+						j->score, "</a></td>");
 				} else
-					append("<td>", j->score, "</td>\n");
+					append("<td>", j->score, "</td>");
 			}
 
 			append("<td>", toString(row.score), "</td>"
-				"</tr>\n");
+				"</tr>");
 		}
-		append("</tbody>\n"
-				"</thead>\n"
-			"</table>\n");
+		append("</tbody>"
+				"</thead>"
+			"</table>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

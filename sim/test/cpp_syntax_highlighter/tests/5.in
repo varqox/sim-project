@@ -1,0 +1,3 @@
+#include <vector>
+/* vector<int> is (?) an awesome structure */ std::vector<int> xxxx;
+main(){}

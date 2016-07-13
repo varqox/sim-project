@@ -4,6 +4,7 @@
 #include "validate_package.h"
 
 #include <simlib/process.h>
+#include <simlib/spawner.h>
 #include <simlib/utilities.h>
 
 using std::string;
@@ -134,7 +135,7 @@ static void parseOptions(int &argc, char **argv) {
 					SET_MEMORY_LIMIT = true;
 				}
 
-			} else if (isPrefix(argv[i], "--memory-limit=")) {
+			} else if (hasPrefix(argv[i], "--memory-limit=")) {
 				if (1 > sscanf(argv[i] + 15, "%llu", &tmp)) {
 					eprintf("Wrong memory limit\n");
 					exit(-1);
@@ -154,7 +155,7 @@ static void parseOptions(int &argc, char **argv) {
 				} else
 					HARD_TIME_LIMIT = tmp;
 
-			} else if (isPrefix(argv[i], "--max-time-limit=")) {
+			} else if (hasPrefix(argv[i], "--max-time-limit=")) {
 				if (1 > sscanf(argv[i] + 17, "%llu", &tmp)) {
 					eprintf("Wrong max time limit\n");
 					exit(-1);
@@ -169,7 +170,7 @@ static void parseOptions(int &argc, char **argv) {
 				PROBLEM_NAME = argv[++i];
 			}
 
-			else if (isPrefix(argv[i], "--name="))
+			else if (hasPrefix(argv[i], "--name="))
 				PROBLEM_NAME = string(argv[i]).substr(7);
 
 			// Destname
@@ -194,7 +195,7 @@ static void parseOptions(int &argc, char **argv) {
 				}
 			}
 
-			else if (isPrefix(argv[i], "--tag="))
+			else if (hasPrefix(argv[i], "--tag="))
 				PROBLEM_TAG = string(argv[i]).substr(6);
 
 			// Time limit
@@ -207,7 +208,7 @@ static void parseOptions(int &argc, char **argv) {
 				} else
 					TIME_LIMIT = tmp;
 
-			} else if (isPrefix(argv[i], "--time-limit=")) {
+			} else if (hasPrefix(argv[i], "--time-limit=")) {
 				if (1 > sscanf(argv[i] + 17, "%llu", &tmp)) {
 					eprintf("Wrong time limit\n");
 					exit(-1);
@@ -284,7 +285,7 @@ static void extractPackage(const string& source, const string& dest,
 		else if (extension == "7z")
 			back_insert(args, "7z", "x", "-y", source, concat("-o", dest));
 		// tar.gz
-		else if (extension == "tgz" || isSuffix(source, ".tar.gz"))
+		else if (extension == "tgz" || hasSuffix(source, ".tar.gz"))
 			back_insert(args, "tar", (VERBOSITY > 1 ? "xvzf" : "xzf"), source,
 				"-C", dest);
 		// Unknown
@@ -479,7 +480,7 @@ int main(int argc, char **argv) {
 		back_insert(args, "7z", "a", "-y", "-m0=lzma2", DEST_NAME, out_package);
 
 	// tar.gz
-	else if (extension == "tgz" || isSuffix(DEST_NAME, ".tar.gz"))
+	else if (extension == "tgz" || hasSuffix(DEST_NAME, ".tar.gz"))
 		back_insert(args, "tar", (VERBOSITY > 1 ? "cvzf" : "czf"), DEST_NAME,
 			out_package);
 

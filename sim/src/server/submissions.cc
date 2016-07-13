@@ -12,17 +12,23 @@ void Contest::submit(bool admin_view) {
 	// TODO: admin views as normal - before round begins, admin does not get 403
 	// error
 	if (!Session::open())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
 	FormValidator fv(req->form_data);
 
 	if (req->method == server::HttpRequest::POST) {
-		string solution, problem_round_id;
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		string solution, problem_round_id, solution_tmp_path;
 
 		// Validate all fields
 		fv.validateNotBlank(solution, "solution", "Solution file field");
 
 		fv.validateNotBlank(problem_round_id, "round-id", "Problem");
+
+		fv.validateFilePathNotEmpty(solution_tmp_path, "solution",
+			"Solution file field");
 
 		if (!isDigit(problem_round_id))
 			fv.addError("Wrong problem round id");
@@ -48,13 +54,12 @@ void Contest::submit(bool admin_view) {
 				problem_r_path = path.get();
 			}
 
-			string solution_tmp_path = fv.getFilePath("solution");
 			struct stat sb;
 			if (stat(solution_tmp_path.c_str(), &sb))
-				THROW("stat()", error(errno));
+				THROW("stat('", solution_tmp_path, "')", error(errno));
 
 			// Check if solution is too big
-			if (sb.st_size > SOLUTION_MAX_SIZE) {
+			if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
 				fv.addError(concat("Solution file to big (max ",
 					toStr(SOLUTION_MAX_SIZE), " bytes = ",
 					toString(SOLUTION_MAX_SIZE >> 10), " KiB)"));
@@ -92,11 +97,10 @@ void Contest::submit(bool admin_view) {
 				string submission_id = res[1];
 
 				// Copy solution
-				if (copy(solution_tmp_path,
-					concat("solutions/", submission_id, ".cpp")))
-				{
-					THROW("copy()", error(errno));
-				}
+				string location = concat("solutions/", submission_id, ".cpp");
+				if (copy(solution_tmp_path, location))
+					THROW("copy('", solution_tmp_path, "', '", location, "')",
+						error(errno));
 
 				// Change submission status to 'waiting'
 				db_conn.executeUpdate("UPDATE submissions SET status='waiting' "
@@ -108,21 +112,21 @@ void Contest::submit(bool admin_view) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 		}
 	}
 
  form:
-	auto ender = contestTemplate("Submit a solution");
+	contestTemplate("Submit a solution");
 	printRoundPath();
 	string buffer;
-	back_insert(buffer, fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Submit a solution</h1>\n"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+	back_insert(buffer, fv.errors(), "<div class=\"form-container\">"
+			"<h1>Submit a solution</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// Round id
-				"<div class=\"field-group\">\n"
-					"<label>Problem</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Problem</label>"
 					"<select name=\"round-id\">");
 
 	// List problems
@@ -151,7 +155,7 @@ void Contest::submit(bool admin_view) {
 
 			// Collect results
 			while (res.next()) {
-				subrounds.push_back(Subround());
+				subrounds.emplace_back();
 				subrounds.back().id = res[1];
 				subrounds.back().name = res[2];
 			}
@@ -178,7 +182,7 @@ void Contest::submit(bool admin_view) {
 					continue; // Ignore
 
 				vector<Problem>& prob = it->second;
-				prob.push_back(Problem());
+				prob.emplace_back();
 				prob.back().id = res[1];
 				prob.back().parent = res[2];
 				prob.back().name = res[3];
@@ -191,7 +195,7 @@ void Contest::submit(bool admin_view) {
 				for (auto& problem : prob)
 					back_insert(buffer, "<option value=\"", problem.id, "\">",
 						htmlSpecialChars(problem.name), " (",
-						htmlSpecialChars(sr.name), ")</option>\n");
+						htmlSpecialChars(sr.name), ")</option>");
 			}
 
 		// Admin -> All problems
@@ -211,7 +215,7 @@ void Contest::submit(bool admin_view) {
 				back_insert(buffer, "<option value=\"", res[1],
 					"\">", htmlSpecialChars(res[2]),
 					" (", htmlSpecialChars(rpath->round->name),
-					")</option>\n");
+					")</option>");
 
 		// Admin -> Current problem
 		// Normal -> if parent round has begun and has not ended
@@ -221,25 +225,25 @@ void Contest::submit(bool admin_view) {
 		{
 			back_insert(buffer, "<option value=\"", rpath->problem->id,
 				"\">", htmlSpecialChars(rpath->problem->name), " (",
-				htmlSpecialChars(rpath->round->name), ")</option>\n");
+				htmlSpecialChars(rpath->round->name), ")</option>");
 		}
 
 	} catch (const std::exception& e) {
 		fv.addError("Internal server error");
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 	}
 
-	if (isSuffix(buffer, "</option>\n"))
+	if (hasSuffix(buffer, "</option>"))
 		append(buffer, "</select>"
-					"</div>\n"
+					"</div>"
 					// Solution file
-					"<div class=\"field-group\">\n"
-						"<label>Solution</label>\n"
-						"<input type=\"file\" name=\"solution\" required>\n"
-					"</div>\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">\n"
-				"</form>\n"
-			"</div>\n");
+					"<div class=\"field-group\">"
+						"<label>Solution</label>"
+						"<input type=\"file\" name=\"solution\" required>"
+					"</div>"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
+				"</form>"
+			"</div>");
 
 	else
 		append("<p>There are no problems for which you can submit a solution..."
@@ -253,6 +257,9 @@ void Contest::deleteSubmission(const string& submission_id,
 	while (req->method == server::HttpRequest::POST
 		&& fv.exist("delete"))
 	{
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		try {
 			SignalBlocker signal_guard;
 			// Update `final` status as there was no submission submission_id
@@ -278,61 +285,77 @@ void Contest::deleteSubmission(const string& submission_id,
 
 			signal_guard.unblock();
 
-			string location = url_args.remnant().to_string();
+			string location = url_args.extractQuery().to_string();
 			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 			break;
 		}
 	}
 
-	auto ender = contestTemplate("Delete submission");
+	contestTemplate("Delete submission");
 	printRoundPath();
 
 	// Referer or submission page
 	string referer = req->headers.get("Referer");
-	string prev_referer = referer;
-	if (referer.empty()) {
-		referer = concat("/s/", submission_id);
-		prev_referer = concat("/c/", rpath->round_id, "/submissions");
-	}
+	string prev_referer = url_args.extractQuery().to_string();
+	if (prev_referer.empty()) {
+		if (referer.size())
+			prev_referer = referer;
+		else {
+			referer = concat("/s/", submission_id);
+			prev_referer = concat("/c/", rpath->round_id, "/submissions");
+		}
 
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Delete submission</h1>\n"
-			"<form method=\"post\" action=\"delete/", prev_referer ,"\">\n"
+	} else if (referer.empty())
+		referer = concat("/s/", submission_id);
+
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Delete submission</h1>"
+			"<form method=\"post\" action=\"?", prev_referer ,"\">"
 				"<label class=\"field\">Are you sure to delete submission "
 				"<a href=\"/s/", submission_id, "\">", submission_id,
-					"</a>?</label>\n"
-				"<div class=\"submit-yes-no\">\n"
+					"</a>?</label>"
+				"<div class=\"submit-yes-no\">"
 					"<button class=\"btn red\" type=\"submit\" "
-						"name=\"delete\">Yes, I'm sure</button>\n"
-					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"name=\"delete\">Yes, I'm sure</button>"
+					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::submission() {
 	if (!Session::open())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
 	// Extract round id
 	string submission_id;
-	if (strToNum(submission_id, url_args.extractNext()) <= 0)
+	if (strToNum(submission_id, url_args.extractNextArg()) <= 0)
 		return error404();
 
 	try {
+		StringView next_arg = url_args.extractNextArg();
+
+		// Check if user forces the observer view
+		bool admin_view = true;
+		if (next_arg == "n") {
+			admin_view = false;
+			next_arg = url_args.extractNextArg();
+		}
+
 		enum class Query : uint8_t {
-			DELETE, REJUDGE, DOWNLOAD, VIEW_SOURCE, NONE
+			DELETE, REJUDGE, DOWNLOAD, RAW, VIEW_SOURCE, NONE
 		} query = Query::NONE;
 
-		StringView next_arg = url_args.extractNext();
 		if (next_arg == "delete")
 			query = Query::DELETE;
 		else if (next_arg == "rejudge")
 			query = Query::REJUDGE;
+		else if (next_arg == "raw")
+			query = Query::RAW;
 		else if (next_arg == "download")
 			query = Query::DOWNLOAD;
 		else if (next_arg == "source")
@@ -363,14 +386,8 @@ void Contest::submission() {
 		if (!rpath->admin_access && Session::user_id != submission_user_id)
 			return error403();
 
-		// Check if user forces observer view
-		bool admin_view = rpath->admin_access;
-		if (next_arg == "n")
-			admin_view = false;
-		else if (url_args.isNext("n")) {
-			url_args.extractNext();
-			admin_view = false;
-		}
+		if (admin_view)
+			admin_view = rpath->admin_access;
 
 		/* Delete */
 		if (query == Query::DELETE)
@@ -398,6 +415,15 @@ void Contest::submission() {
 			return redirect(referer);
 		}
 
+		/* Raw code */
+		if (query == Query::RAW) {
+			resp.headers["Content-type"] = "text/plain";
+
+			resp.content = concat("solutions/", submission_id, ".cpp");
+			resp.content_type = server::HttpResponse::FILE;
+			return;
+		}
+
 		/* Download solution */
 		if (query == Query::DOWNLOAD) {
 			resp.headers["Content-type"] = "application/text";
@@ -409,39 +435,20 @@ void Contest::submission() {
 			return;
 		}
 
-		auto ender = contestTemplate("Submission " + submission_id);
-		printRoundPath();
-
 		/* View source */
 		if (query == Query::VIEW_SOURCE) {
-			vector<string> args;
-			back_insert(args, "./CTH",
-				concat("solutions/", submission_id, ".cpp"));
+			contestTemplate(concat("Submission ", submission_id, " - source"));
+			printRoundPath();
 
-			int fd = getUnlinkedTmpFile();
-			if (fd < 0)
-				return error500();
-
-			Closer closer(fd);
-
-			// Run CTH
-			Spawner::ExitStat es;
-			try {
-				es = Spawner::run(args[0], args, {-1, fd, -1});
-			} catch (const std::exception& e) {
-				ERRLOG_CAUGHT(e);
-				return error500();
-			}
-
-			if (es.code) {
-				errlog("Error: ", args[0], ' ', es.message);
-				return error500();
-			}
-
-			// Print source code
-			lseek(fd, 0, SEEK_SET);
-			append(getFileContents(fd));
-
+			append("<h2>Source code of submission ", submission_id, "</h2>"
+				"<div>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id, "\">"
+						"View submission</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/raw/", submission_id, ".cpp\">Raw code</a>"
+				"</div>",
+				cpp_syntax_highlighter(getFileContents(
+				concat("solutions/", submission_id, ".cpp"))));
 			return;
 		}
 
@@ -452,23 +459,28 @@ void Contest::submission() {
 		string problem_tag = res[7];
 		string full_name = concat(res[8], ' ', res[9]);
 
-		append("<div class=\"submission-info\">\n"
-			"<div>\n"
-				"<h1>Submission ", submission_id, "</h1>\n"
-				"<div>\n"
+		contestTemplate("Submission " + submission_id);
+		printRoundPath();
+
+		append("<div class=\"submission-info\">"
+			"<div>"
+				"<h1>Submission ", submission_id, "</h1>"
+				"<div>"
 					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/source\">View source</a>\n"
+						"/source\">View source</a>"
 					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/download\">Download</a>\n");
+						"/raw/", submission_id, ".cpp\">Raw code</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/download\">Download</a>");
 		if (admin_view)
 			append("<a class=\"btn-small blue\" href=\"/s/", submission_id,
-					"/rejudge\">Rejudge</a>\n"
+					"/rejudge\">Rejudge</a>"
 				"<a class=\"btn-small red\" href=\"/s/", submission_id,
-					"/delete\">Delete</a>\n");
-		append("</div>\n"
-			"</div>\n"
-			"<table style=\"width: 100%\">\n"
-				"<thead>\n"
+					"/delete?/c/", round_id, "/submissions\">Delete</a>");
+		append("</div>"
+			"</div>"
+			"<table style=\"width: 100%\">"
+				"<thead>"
 					"<tr>");
 
 		if (admin_view)
@@ -478,9 +490,9 @@ void Contest::submission() {
 						"<th style=\"min-width:150px\">Submission time</th>"
 						"<th style=\"min-width:150px\">Status</th>"
 						"<th style=\"min-width:90px\">Score</th>"
-					"</tr>\n"
-				"</thead>\n"
-				"<tbody>\n"
+					"</tr>"
+				"</thead>"
+				"<tbody>"
 					"<tr>");
 
 		if (admin_view)
@@ -508,10 +520,10 @@ void Contest::submission() {
 							rpath->round->full_results <=
 								date("%Y-%m-%d %H:%M:%S") ? score : ""),
 						"</td>"
-					"</tr>\n"
-				"</tbody>\n"
-			"</table>\n",
-			"</div>\n");
+					"</tr>"
+				"</tbody>"
+			"</table>",
+			"</div>");
 
 		// Print judge report
 		append("<div class=\"results\">");
@@ -530,16 +542,16 @@ void Contest::submission() {
 		append("</div>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
 
 void Contest::submissions(bool admin_view) {
 	if (!Session::isOpen())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
-	auto ender = contestTemplate("Submissions");
+	contestTemplate("Submissions");
 	append("<h1>Submissions</h1>");
 	printRoundPath("submissions", !admin_view);
 
@@ -551,7 +563,7 @@ void Contest::submissions(bool admin_view) {
 			append(res[1]);
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 
@@ -585,8 +597,8 @@ void Contest::submissions(bool admin_view) {
 			return;
 		}
 
-		append("<table class=\"submissions\">\n"
-			"<thead>\n"
+		append("<table class=\"submissions\">"
+			"<thead>"
 				"<tr>",
 					(admin_view ? "<th class=\"username\">Username</th>"
 							"<th class=\"full-name\">Full name</th>"
@@ -597,9 +609,9 @@ void Contest::submissions(bool admin_view) {
 					"<th class=\"score\">Score</th>"
 					"<th class=\"final\">Final</th>"
 					"<th class=\"actions\">Actions</th>"
-				"</tr>\n"
-			"</thead>\n"
-			"<tbody>\n");
+				"</tr>"
+			"</thead>"
+			"<tbody>");
 
 		auto statusRow = [](const string& status) {
 			string ret = "<td";
@@ -613,7 +625,7 @@ void Contest::submissions(bool admin_view) {
 			else if (status == "judge_error")
 				ret += " class=\"judge-error\">";
 			else
-				ret += ">";
+				ret += '>';
 
 			return back_insert(ret, submissionStatusDescription(status),
 				"</td>");
@@ -653,14 +665,14 @@ void Contest::submissions(bool admin_view) {
 						"/delete\">Delete</a>");
 
 			append("</td>"
-				"<tr>\n");
+				"<tr>");
 		}
 
-		append("</tbody>\n"
-			"</table>\n");
+		append("</tbody>"
+			"</table>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

@@ -12,7 +12,7 @@ endif
 ../conver: default_checker_dump.o
 ../conver: ../simlib/simlib.a
 ../conver:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) -o $@
+	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
 
 default_checker_dump.c: default_checker.c
 	$(Q)$(call P,GEN,$@)xxd -i $< > $@

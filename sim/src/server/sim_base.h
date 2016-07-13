@@ -3,6 +3,7 @@
 #include "http_request.h"
 #include "http_response.h"
 
+#include <sim/cpp_syntax_highlighter.h>
 #include <sim/db.h>
 #include <simlib/parsers.h>
 #include <utime.h>
@@ -13,14 +14,15 @@ protected:
 	std::string client_ip; // TODO: put in request?
 	const server::HttpRequest* req = nullptr;
 	server::HttpResponse resp;
-	SimpleParser url_args {""};
+	RequestURIParser url_args {""};
+	CppSyntaxHighlighter cpp_syntax_highlighter;
 
 	SimBase() : db_conn(DB::createConnectionUsingPassFile(".db.config")) {}
 
 	SimBase(const SimBase&) = delete;
 	SimBase(SimBase&&) = delete;
 	SimBase& operator=(const SimBase&) = delete;
-	SimBase& operator=(SimBase&& s) = delete;
+	SimBase& operator=(SimBase&&) = delete;
 
 	virtual ~SimBase() = default;
 

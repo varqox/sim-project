@@ -7,7 +7,7 @@ ifneq ($(MAKECMDGOALS), clean)
 -include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
 endif
 
-sim.a: db.o
+sim.a: db.o cpp_syntax_highlighter.o
 	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
 
 .PHONY: clean

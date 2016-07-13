@@ -29,3 +29,24 @@ $(document).ready(function(){
 			$('.dropmenu.open').removeClass('open');
 	});
 });
+// Returns value of cookie @p name or ... TODO!!!
+function getCookie(name) {
+	name = name + '=';
+	console.log(name);
+	var arr = document.cookie.split(';');
+	for (i = 0; i < arr.length; ++i) {
+		var j = 0;
+		while (arr[i].charAt(j) == ' ')
+			++j;
+		if (arr[i].indexOf(name, j) == j)
+			return arr[i].substring(j + name.length, arr[i].length);
+	}
+
+	return '';
+};
+$(function() {
+	$('form').submit(function() {
+		$(this).append('<input type="hidden" name="csrf_token" value="' +
+			getCookie('csrf_token') + '">');
+	});
+});

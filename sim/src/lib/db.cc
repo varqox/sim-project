@@ -14,16 +14,21 @@ Connection::Connection(const string& host, const string& user,
 	: conn_(), host_(host), user_(user), password_(password),
 		database_(database)
 {
-	connect();
+	reconnect();
 }
 
-void Connection::connect() {
+void Connection::reconnect() {
 	// We have to serialize creating connections, because MySQL Connector C++
 	// can crush if we won't guard it
 	static std::mutex lock;
-	{
+	try {
 		std::lock_guard<std::mutex> guard(lock);
 		conn_.reset(get_driver_instance()->connect(host_, user_, password_));
+		bad_state = false;
+
+	} catch (...) {
+		bad_state = true;
+		throw;
 	}
 
 	conn_->setSchema(database_);

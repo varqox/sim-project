@@ -2,6 +2,10 @@
 extern "C" {
 #endif
 
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE 1
+#endif
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

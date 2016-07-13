@@ -1,4 +1,5 @@
 #include <simlib/debug.h>
+#include <simlib/logger.h>
 #include <simlib/process.h>
 
 using std::vector;

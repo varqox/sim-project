@@ -2,20 +2,27 @@ include Makefile.config
 
 DESTDIR = build
 
-.PHONY: all
-all:
+.PHONY: build
+build:
 ifeq ($(MAKELEVEL), 0)
-	@printf "CC -> $(CC)\nCXX -> $(CXX)\n"
+	@echo "DEBUG: $(DEBUG)"
+	@echo "CC -> $(CC)"
+	@echo "CXX -> $(CXX)"
 endif
 	$(Q)$(MAKE) -C src/
 ifeq ($(MAKELEVEL), 0)
-	@printf "\033[;32mBuild finished\033[0m\n"
+	@echo "\033[32mBuild finished\033[0m"
 endif
 
+.PHONY: test
+test: build
+	$(Q)$(MAKE) -C test/
+	@echo "\033[1;32mAll tests passed\033[0m"
+
 .PHONY: install
-install: all
+install: build
 	# Echo log
-	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
+	@echo "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m"
 
 	# Installation
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
@@ -23,7 +30,7 @@ install: all
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/conver src/judge-machine src/CTH $(abspath $(DESTDIR))
+	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/conver src/judge-machine $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -45,15 +52,14 @@ endif
 	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
 
 	# Set owner, group and permission bits
-	# src/chmod-default $(abspath $(DESTDIR))
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
-	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/CTH) $(abspath $(DESTDIR)/proot)
+	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/conver) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/proot)
 
-	@printf "\033[;32mInstallation finished\033[0m\n"
+	@echo "\033[;32mInstallation finished\033[0m"
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
-reinstall: all
+reinstall: build
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
@@ -91,6 +97,7 @@ run: $(filter-out run, $(MAKECMDGOALS))
 .PHONY: clean
 clean:
 	$(Q)$(MAKE) clean -C src/
+	$(Q)$(MAKE) clean -C test/
 
 .PHONY: help
 help:
