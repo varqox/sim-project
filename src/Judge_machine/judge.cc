@@ -1,6 +1,7 @@
 #include "judge.h"
 #include "main.h"
 
+#include <cmath>
 #include <simlib/compile.h>
 #include <simlib/sandbox_checker_callback.h>
 #include <simlib/sim/simfile.h>
