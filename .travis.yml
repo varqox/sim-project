@@ -17,10 +17,10 @@ _packages:
           - ubuntu-toolchain-r-test
         packages:
           - *default_packages
-          - g++-4.9-multilib
+          - g++-5-multilib
     before_install:
-      - export CC="gcc-4.9"
-      - export CXX="g++-4.9"
+      - export CC="gcc-5"
+      - export CXX="g++-5"
   - &Clang
     addons:
       apt:
