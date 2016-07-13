@@ -6,6 +6,7 @@
 #include <memory>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <vector>
 
 // File modes
 constexpr int S_0600 = S_IRUSR | S_IWUSR;

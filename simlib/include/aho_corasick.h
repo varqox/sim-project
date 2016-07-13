@@ -3,6 +3,7 @@
 #include "string.h"
 
 #include <deque>
+#include <vector>
 
 class AhoCorasick {
 public:
