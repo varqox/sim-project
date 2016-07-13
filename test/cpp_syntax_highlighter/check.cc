@@ -1,3 +1,4 @@
+#include <cmath>
 #include <dirent.h>
 #include <sim/cpp_syntax_highlighter.h>
 #include <simlib/process.h>
