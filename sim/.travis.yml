@@ -9,7 +9,12 @@ notifications:
 
 _packages:
   - &default_packages
-    - [mysql-server, libmysqlcppconn-dev, make, zip, unzip]
+    - mysql-server
+    - libmysqlcppconn-dev
+    - make
+    - zip
+    - unzip
+    - binutils # Needed for /usr/bin/ld
   - &GCC
     addons:
       apt:
