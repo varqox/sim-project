@@ -140,7 +140,7 @@ public:
 		return conn_.get();
 	}
 
-	void reconnect() noexcept(false);
+	void reconnect();
 
 	bool badState() noexcept { return bad_state; }
 
@@ -165,20 +165,20 @@ private:
 	}
 
 public:
-	Statement prepare(const std::string& query) noexcept(false) {
+	Statement prepare(const std::string& query) {
 		return try_call([&] {
 			return Statement(impl()->prepareStatement(query));
 		});
 	}
 
-	int executeUpdate(const std::string& update_query) noexcept(false) {
+	int executeUpdate(const std::string& update_query) {
 		return try_call([&] {
 			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
 			return stmt->executeUpdate(update_query);
 		});
 	}
 
-	Result executeQuery(const std::string& query) noexcept(false) {
+	Result executeQuery(const std::string& query) {
 		return try_call([&] {
 			std::unique_ptr<sql::Statement> stmt(impl()->createStatement());
 			return Result(stmt->executeQuery(query));
@@ -196,7 +196,6 @@ public:
  *
  * @errors On error throws std::runtime_error
  */
-Connection createConnectionUsingPassFile(const std::string& filename)
-	noexcept(false);
+Connection createConnectionUsingPassFile(const std::string& filename);
 
 } // namespace DB

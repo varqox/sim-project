@@ -63,7 +63,7 @@ string Session::generateId(uint length) {
 	return res;
 }
 
-void Session::createAndOpen(const string& _user_id) noexcept(false) {
+void Session::createAndOpen(const string& _user_id) {
 	close();
 
 	// Remove obsolete sessions

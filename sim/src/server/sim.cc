@@ -86,7 +86,7 @@ server::HttpResponse Sim::handle(string _client_ip,
 		hardError500(); // We cannot use error500() because it may throw
 	}
 
-	return resp;
+	return std::move(resp);
 }
 
 void Sim::mainPage() {

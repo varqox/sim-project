@@ -5,9 +5,14 @@
 
 namespace server {
 
-class HttpHeaders : public std::map<std::string, std::string> {
+class HttpHeaders final : public std::map<std::string, std::string> {
 public:
 	HttpHeaders() = default;
+
+	HttpHeaders(const HttpHeaders&) = default;
+	HttpHeaders(HttpHeaders&&) noexcept = default;
+	HttpHeaders& operator=(const HttpHeaders&) = default;
+	HttpHeaders& operator=(HttpHeaders&&) noexcept = default;
 
 	std::string& operator[](const std::string& key) {
 		return std::map<std::string, std::string>::operator[](tolower(key));
@@ -23,7 +28,7 @@ public:
 		return it == end() ? "" : it->second;
 	}
 
-	virtual ~HttpHeaders() {}
+	~HttpHeaders() {}
 };
 
 } // namespace server

@@ -93,50 +93,50 @@ void regenerate(const vector<string>& tests) {
 // argv[1] == "--diff" -> show diff if test failed
 // argv[1] == "--regen" -> regenerate ALL .out files
 int main(int argc, char **argv) {
-	stdlog.label(false);
-	errlog.label(false);
-
-	bool diff = false, regen = false;
-	vector<string> arg_tests;
-	for (int i = 1; i < argc; ++i) {
-		if (!strcmp(argv[i], "--diff"))
-			diff = true;
-		else if (!strcmp(argv[i], "--regen"))
-			regen = true;
-		else
-			arg_tests.emplace_back(argv[i]);
-	}
-
-	vector<string> tests;
 	try {
+		stdlog.label(false);
+		errlog.label(false);
+
+		bool diff = false, regen = false;
+		vector<string> arg_tests;
+		for (int i = 1; i < argc; ++i) {
+			if (!strcmp(argv[i], "--diff"))
+				diff = true;
+			else if (!strcmp(argv[i], "--regen"))
+				regen = true;
+			else
+				arg_tests.emplace_back(argv[i]);
+		}
+
 		chdirToExecDir();
-		tests = findTests();
+		vector<string> tests = findTests();
+
+		if (regen) {
+			regenerate(tests);
+			return 0;
+		}
+
+		// Take these arg_tests, which were detected and run check on them
+		if (arg_tests.size()) {
+			sort(tests);
+			vector<string> res;
+			for (auto&& str : arg_tests) {
+				if (binary_search(tests, str))
+					res.emplace_back(str);
+				else
+					stdlog("Ignored: '", str, "' - not detected");
+			}
+			tests = std::move(res);
+		}
+
+		if (check(tests, diff) != tests.size())
+			return 2;
+
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
 		return 1;
 	}
-
-	if (regen) {
-		regenerate(tests);
-		return 0;
-	}
-
-	// Take these arg_tests, which were detected and run check on them
-	if (arg_tests.size()) {
-		sort(tests);
-		vector<string> res;
-		for (auto&& str : arg_tests) {
-			if (binary_search(tests, str))
-				res.emplace_back(str);
-			else
-				stdlog("Ignored: '", str, "' - not detected");
-		}
-		tests = std::move(res);
-	}
-
-	if (check(tests, diff) != tests.size())
-		return 2;
 
 	return 0;
 }
