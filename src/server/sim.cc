@@ -17,9 +17,27 @@ server::HttpResponse Sim::handle(string _client_ip,
 
 	stdlog(req->target);
 
+	// TODO: this is pretty bad-looking
+	auto hardError500 = [&] {
+		resp.status_code = "500 Internal Server Error";
+		resp.headers["Content-Type"] = "text/html; charset=utf-8";
+		resp.content = "<!DOCTYPE html>"
+				"<html lang=\"en\">"
+				"<head><title>500 Internal Server Error</title></head>"
+				"<body>"
+					"<center>"
+						"<h1>500 Internal Server Error</h1>"
+						"<p>Try to reload the page in a few seconds.</p>"
+						"<button onclick=\"history.go(0)\">Reload</button>"
+						"</center>"
+				"</body>"
+			"</html>";
+	};
+
 	try {
-		url_args = SimpleParser(StringView {req->target, 1});
-		StringView next_arg = url_args.extractNext();
+		url_args = RequestURIParser {req->target};
+		StringView next_arg = url_args.extractNextArg();
+		Template::reset();
 
 		if (next_arg == "kit")
 			getStaticFile();
@@ -54,30 +72,33 @@ server::HttpResponse Sim::handle(string _client_ip,
 		else
 			error404();
 
+		Template::endTemplate();
+
+		// Make sure that the session is closed
+		Session::close();
+
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
-		error500();
+		ERRLOG_CATCH(e);
+		hardError500(); // We cannot use error500() because it may throw
 
 	} catch (...) {
 		ERRLOG_CATCH();
-		error500();
+		hardError500(); // We cannot use error500() because it may throw
 	}
 
-	// Make sure that session is closed
-	Session::close();
-	return resp;
+	return std::move(resp);
 }
 
 void Sim::mainPage() {
-	auto ender = baseTemplate("Main page");
-	append("<div style=\"text-align: center\">\n"
+	baseTemplate("Main page");
+	append("<div style=\"text-align: center\">"
 			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
-				"alt=\"\">\n"
-			"<p style=\"font-size: 30px\">Welcome to SIM</p>\n"
-			"<hr>\n"
-			"<p>SIM is open source platform for carrying out algorithmic "
-				"contests</p>\n"
-		"</div>\n");
+				"alt=\"\">"
+			"<p style=\"font-size: 30px\">Welcome to SIM</p>"
+			"<hr>"
+			"<p>SIM is an open source platform for carrying out algorithmic "
+				"contests</p>"
+		"</div>");
 }
 
 void Sim::getStaticFile() {
@@ -108,14 +129,6 @@ void Sim::getStaticFile() {
 
 	resp.content_type = server::HttpResponse::FILE;
 	resp.content = file_path;
-}
-
-// Cuts string to a newline character both from beginning and ending
-inline static void cutToNewline(string& str) noexcept {
-	// Suffix
-	str.erase(std::min(str.size(), str.rfind('\n')));
-	// Prefix
-	str.erase(0, str.find('\n'));
 }
 
 static string colour(const string& str) noexcept {
@@ -150,6 +163,16 @@ static string colour(const string& str) noexcept {
 			res += "<span class=\"blue\">";
 			opened = SPAN;
 			i += 4;
+		} else if (str.compare(i, 5, "\033[35m") == 0) {
+			closeLastTag();
+			res += "<span class=\"magentapink\">";
+			opened = SPAN;
+			i += 4;
+		} else if (str.compare(i, 5, "\033[36m") == 0) {
+			closeLastTag();
+			res += "<span class=\"turquoise\">";
+			opened = SPAN;
+			i += 4;
 		} else if (str.compare(i, 7, "\033[1;31m") == 0) {
 			closeLastTag();
 			res += "<b class=\"red\">";
@@ -170,6 +193,16 @@ static string colour(const string& str) noexcept {
 			res += "<b class=\"blue\">";
 			opened = B;
 			i += 6;
+		} else if (str.compare(i, 7, "\033[1;35m") == 0) {
+			closeLastTag();
+			res += "<b class=\"pink\">";
+			opened = B;
+			i += 6;
+		} else if (str.compare(i, 7, "\033[1;36m") == 0) {
+			closeLastTag();
+			res += "<b class=\"turquoise\">";
+			opened = B;
+			i += 6;
 		} else if (str.compare(i, 3, "\033[m") == 0) {
 			closeLastTag();
 			opened = NONE;
@@ -185,22 +218,69 @@ void Sim::logs() {
 	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
 		return error403();
 
-	auto ender = baseTemplate("Logs");
-	append("<pre class=\"logs\">");
+	baseTemplate("Logs", ".body{margin-left:20px}");
 
-	FileDescriptor fd;
-	constexpr int BYTES_TO_READ = 65536;
+	// TODO: more logs and show less, but add "show more" button???
+	// TODO: active updating logs
+	constexpr int BYTES_TO_READ = 16384;
+	constexpr int MAX_LINES = 128;
+
+	auto dumpLogTail = [&](const char* filename) {
+		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
+		if (fd == -1) {
+			errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
+			return;
+		}
+
+		string fdata = getFileContents(fd, -BYTES_TO_READ, -1);
+
+		// The first line is probably not intact so erase it
+		if (int(fdata.size()) == BYTES_TO_READ)
+			fdata.erase(0, fdata.find('\n'));
+
+		// Cuts fdata to a newline character from the ending
+		fdata.erase(std::min(fdata.size(), fdata.rfind('\n')));
+
+		// Shorten to the last MAX_LINES
+		auto it = --fdata.end();
+		for (uint lines = MAX_LINES; it > fdata.begin(); --it)
+			if (*it == '\n' && --lines == 0) {
+				fdata.erase(fdata.begin(), ++it);
+				break;
+			}
+
+		fdata = colour(fdata);
+		append(fdata);
+	};
+
+	// Server log
+	append("<h2>Server log:</h2>"
+		"<pre class=\"logs\">");
+	dumpLogTail(SERVER_LOG);
+	append("</pre>");
 
 	// Server error log
-	if (fd.open(SERVER_ERROR_LOG, O_RDONLY | O_LARGEFILE) == -1) {
-		errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
-	} else {
-		string contents = getFileContents(fd, -BYTES_TO_READ, -1);
-		cutToNewline(contents);
-		contents = colour(contents);
-		append(contents);
-	}
-	// TODO: more logs and show less, but add "show more" button
-
+	append("<h2>Server error log:</h2>"
+		"<pre class=\"logs\">");
+	dumpLogTail(SERVER_ERROR_LOG);
 	append("</pre>");
+
+	// Judge log
+	append("<h2>Judge log:</h2>"
+		"<pre class=\"logs\">");
+	dumpLogTail(JUDGE_LOG);
+	append("</pre>");
+
+	// Judge error log
+	append("<h2>Judge error log:</h2>"
+		"<pre class=\"logs\">");
+	dumpLogTail(JUDGE_ERROR_LOG);
+	append("</pre>"
+
+	// Script used to scroll down the logs
+		"<script>"
+			"$(\".logs\").each(function(){"
+				"$(this).scrollTop($(this)[0].scrollHeight);"
+			"});"
+		"</script>");
 }

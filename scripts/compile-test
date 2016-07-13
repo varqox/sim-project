@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+CORES=$(grep -c ^processor /proc/cpuinfo)
+
+export CC='gcc -Werror'
+export CXX='g++ -Werror'
+make clean && make build test -j $CORES
+make clean && make build test -j $CORES DEBUG=1
+make clean && make build test -j $CORES DEBUG=2
+
+export CC='clang -Werror'
+export CXX='clang++ -Werror'
+make clean && make build test -j $CORES
+make clean && make build test -j $CORES DEBUG=1
+make clean && make build test -j $CORES DEBUG=2

@@ -2,12 +2,12 @@
 #include "sim.h"
 
 #include <arpa/inet.h>
-#include <csignal>
 #include <set>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/process.h>
 #include <sys/epoll.h>
+#include <sys/resource.h>
 
 using std::array;
 using std::string;
@@ -315,7 +315,6 @@ bool Connection::constructHeaders(StringView& data) {
 			if (req_.headers.find("Expect") == "100-continue")
 				{}// TODO: add response: 100
 
-
 			if (req_.headers.content_length == 0)
 				{}// TODO: add request to queue
 			else
@@ -434,7 +433,7 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 
 	} catch (...) {
 		ERRLOG_CATCH();
@@ -691,9 +690,14 @@ int main() {
 		return 2;
 	}
 
-	if (bind(socket_fd, (sockaddr*)&name, sizeof(name))) {
-		errlog("Error: bind()", error(errno));
-		return 3;
+	// Bind
+	constexpr int TRIES = 8;
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
+		errlog("Failed to bind (try ", toString(try_no), ')', error(errno));
+		if (++try_no > TRIES)
+			return 3;
+
+		usleep(800000);
 	}
 
 	if (listen(socket_fd, 10)) {

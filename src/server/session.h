@@ -11,6 +11,7 @@ private:
 protected:
 	uint8_t user_type = UTYPE_NORMAL;
 	std::string sid; // session id
+	std::string csrf_token;
 	std::string user_id, username, data;
 
 	Session() = default;
@@ -18,7 +19,7 @@ protected:
 	Session(const Session&) = delete;
 	Session(Session&&) = delete;
 	Session& operator=(const Session&) = delete;
-	Session& operator=(Session&& s) = delete;
+	Session& operator=(Session&&) = delete;
 
 	virtual ~Session() { close(); }
 
@@ -39,16 +40,16 @@ protected:
 	 *
 	 * @errors Throws an exception in any case of error
 	 */
-	void createAndOpen(const std::string& _user_id) noexcept(false);
+	void createAndOpen(const std::string& _user_id);
 
 	/// Destroys session (removes from database, etc.)
 	void destroy();
 
 	/// Opens session, returns true if opened successfully, false otherwise
-	bool open() noexcept;
+	bool open();
 
 	bool isOpen() const noexcept { return is_open; }
 
 	/// Closes session
-	void close() noexcept;
+	void close();
 };

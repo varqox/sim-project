@@ -16,6 +16,13 @@ public:
 			: content_type(con_type), status_code(stat_code), headers(),
 			cookies(), content() {}
 
+	HttpResponse(const HttpResponse&) = default;
+	HttpResponse(HttpResponse&&) noexcept = default;
+	HttpResponse& operator=(const HttpResponse&) = default;
+	HttpResponse& operator=(HttpResponse&&) = default;
+
+	~HttpResponse() {}
+
 	void setCookie(const std::string& name, const std::string& val,
 			time_t expire = -1, const std::string& path = "",
 			const std::string& domain ="", bool http_only = false,
@@ -25,8 +32,6 @@ public:
 		std::string &cookie = cookies[name];
 		return cookie.substr(0, cookie.find(';'));
 	}
-
-	~HttpResponse() {}
 };
 
 } // namespace server

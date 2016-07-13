@@ -100,7 +100,7 @@ void Connection::readPOST(HttpRequest& req) {
 	string &con_type = req.headers["Content-Type"];
 	LimitedReader reader(*this, content_length);
 
-	if (isPrefix(con_type, "text/plain")) {
+	if (hasPrefix(con_type, "text/plain")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -126,7 +126,7 @@ void Connection::readPOST(HttpRequest& req) {
 			req.form_data[field_name] = field_content;
 		}
 
-	} else if (isPrefix(con_type, "application/x-www-form-urlencoded")) {
+	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -149,7 +149,7 @@ void Connection::readPOST(HttpRequest& req) {
 			req.form_data[decodeURI(field_name)] = decodeURI(field_content);
 		}
 
-	} else if (isPrefix(con_type, "multipart/form-data")) {
+	} else if (hasPrefix(con_type, "multipart/form-data")) {
 		size_t beg = con_type.find("boundary=");
 		if (beg == string::npos || beg + 9 >= con_type.size()) {
 			error400();
@@ -257,7 +257,7 @@ void Connection::readPOST(HttpRequest& req) {
 					if (field_content.empty()) // End of headers
 						break;
 
-					D(stdlog("header: '", field_content, "'");)
+					D(stdlog("header: '", field_content, '\'');)
 					pair<string, string> header =
 						parseHeaderline(field_content);
 					if (state_ != OK) // Something went wrong
@@ -543,7 +543,7 @@ HttpRequest Connection::getRequest() {
 	if (state_ == CLOSED)
 		return req;
 
-	D(stdlog("REQUEST: ", request_line);)
+	D(stdlog("\033[33mREQUEST: ", request_line, "\033[m");)
 	// Extract method
 	size_t beg = 0, end = 0;
 
@@ -591,7 +591,7 @@ HttpRequest Connection::getRequest() {
 	}
 
 	// Read headers
-	req.headers["Content-Length"] = "0";
+	req.headers["Content-Length"] = '0';
 	string header;
 
 	D(auto tmplog = stdlog("HEADERS:\n");)
@@ -687,10 +687,26 @@ void Connection::sendResponse(const HttpResponse& res) {
 	for (auto const& i : res.cookies) {
 		str += "Set-Cookie: ";
 		str += i.first;
-		str += "=";
+		str += '=';
 		str += i.second;
 		str += "\r\n";
 	}
+
+	D({
+		int pos = str.find('\r');
+		auto tmplog = stdlog("\033[36mRESPONSE: ", substring(str, 0, pos),
+			"\033[m");
+
+		StringView rest = substring(str, pos + 1); // omit '\r'
+		for (char c : rest) {
+			if (c == '\r')
+				continue;
+			if (c == '\n')
+				tmplog("\n\t");
+			else
+				tmplog(c);
+		}
+	})
 
 	switch (res.content_type) {
 	case HttpResponse::TEXT:

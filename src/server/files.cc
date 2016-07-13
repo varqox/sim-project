@@ -15,11 +15,17 @@ void Contest::addFile() {
 	FormValidator fv(req->form_data);
 	string file_name, description;
 	if (req->method == server::HttpRequest::POST) {
-		string user_file_name;
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		string user_file_name, file_path;
+
 		// Validate all fields
 		fv.validate(file_name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
 		fv.validateNotBlank(user_file_name, "file", "File");
+
+		fv.validateFilePathNotEmpty(file_path, "file", "File");
 
 		fv.validate(description, "description", "Description",
 			FILE_DESCRIPTION_MAX_LEN);
@@ -45,16 +51,17 @@ void Contest::addFile() {
 				} while (stmt.executeUpdate() == 0);
 
 				// Get file size
-				string file_path = fv.getFilePath("file");
 				struct stat64 sb;
 				if (stat64(file_path.c_str(), &sb))
-					THROW("stat()", error(errno));
+					THROW("stat('", file_path, "')", error(errno));
 
 				uint64_t file_size = sb.st_size;
 
 				// Move file
-				if (move(file_path, concat("files/", id)))
-					THROW("move()", error(errno));
+				string location = concat("files/", id);
+				if (move(file_path, location))
+					THROW("move('", file_path, "', '", location, "')",
+						error(errno));
 
 				stmt = db_conn.prepare(
 					"UPDATE files SET round_id=?, file_size=? WHERE id=?");
@@ -71,43 +78,43 @@ void Contest::addFile() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
-	auto ender = contestTemplate("Add file");
+	contestTemplate("Add file");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
 			"<h1>Add file</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// File name
-				"<div class=\"field-group\">\n"
-					"<label>File name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(file_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
-						"placeholder=\"The same as name of uploaded file\">\n"
-				"</div>\n"
+						"placeholder=\"The same as name of uploaded file\">"
+				"</div>"
 				// File
-				"<div class=\"field-group\">\n"
-					"<label>File</label>\n"
-					"<input type=\"file\" name=\"file\" required>\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>File</label>"
+					"<input type=\"file\" name=\"file\" required>"
+				"</div>"
 				// Description
-				"<div class=\"field-group\">\n"
-					"<label>Description</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
-				"</div>\n"
+				"</div>"
 
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">\n"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::editFile(const StringView& id, string name) {
@@ -117,15 +124,20 @@ void Contest::editFile(const StringView& id, string name) {
 	FormValidator fv(req->form_data);
 	string modified, description;
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		fv.validate(name, "file-name", "File name", FILE_NAME_MAX_LEN);
 
 		fv.validate(description, "description", "Description",
 			FILE_DESCRIPTION_MAX_LEN);
 
+		string file_path = fv.getFilePath("file");
+		bool is_file_reuploaded = (fv.get("file").size() && file_path.size());
 		if (name.empty()) {
 			name = fv.get("file");
-			if (name.empty())
+			if (!is_file_reuploaded)
 				fv.addError(
 					"File name cannot be blank unless you upload a new file");
 		}
@@ -135,18 +147,19 @@ void Contest::editFile(const StringView& id, string name) {
 			try {
 				DB::Statement stmt;
 				// File is being reuploaded
-				if (fv.get("file").size()) {
+				if (is_file_reuploaded) {
 					// Get file size
-					string file_path = fv.getFilePath("file");
 					struct stat64 sb;
 					if (stat64(file_path.c_str(), &sb))
-						THROW("stat()", error(errno));
+						THROW("stat('", file_path, "')", error(errno));
 
 					uint64_t file_size = sb.st_size;
 
 					// Move file
-					if (BLOCK_SIGNALS(move(file_path, concat("files/", id))))
-						THROW("move()", error(errno));
+					string location = concat("files/", id);
+					if (BLOCK_SIGNALS(move(file_path, location)))
+						THROW("move('", file_path, "', '", location, "')",
+							error(errno));
 
 					stmt = db_conn.prepare("UPDATE files SET name=?, "
 						"description=?, modified=?, file_size=? WHERE id=?");
@@ -169,7 +182,7 @@ void Contest::editFile(const StringView& id, string name) {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
@@ -190,57 +203,61 @@ void Contest::editFile(const StringView& id, string name) {
 		modified = res[4];
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 
-	auto ender = contestTemplate("Edit file");
+	string referer = req->headers.get("Referer");
+	if (referer.empty())
+		referer = concat("/c/", rpath->round_id, "/files");
+
+	contestTemplate("Edit file");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
 			"<h1>Edit file</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">\n"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// File name
-				"<div class=\"field-group\">\n"
-					"<label>File name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
-						"placeholder=\"The same as name of reuploaded file\">\n"
-				"</div>\n"
+						"placeholder=\"The same as name of reuploaded file\">"
+				"</div>"
 				// Reupload file
-				"<div class=\"field-group\">\n"
-					"<label>Reupload file</label>\n"
-					"<input type=\"file\" name=\"file\">\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>Reupload file</label>"
+					"<input type=\"file\" name=\"file\">"
+				"</div>"
 				// Description
-				"<div class=\"field-group\">\n"
-					"<label>Description</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
 						htmlSpecialChars(description), "</textarea>"
-				"</div>\n"
+				"</div>"
 				// File size
-				"<div class=\"field-group\">\n"
-					"<label>File size</label>\n"
+				"<div class=\"field-group\">"
+					"<label>File size</label>"
 					"<input type=\"text\" value=\"",
 						humanizeFileSize(file_size), " (", toString(file_size),
-						" bytes)\" disabled>\n"
-				"</div>\n"
+						" bytes)\" disabled>"
+				"</div>"
 				// Modified
-				"<div class=\"field-group\">\n"
-					"<label>Modified</label>\n"
-					"<input type=\"text\" value=\"", modified, "\" disabled>\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>Modified</label>"
+					"<input type=\"text\" value=\"", modified, "\" disabled>"
+				"</div>"
 
-				"<div class=\"button-row\">\n"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
+				"<div class=\"button-row\">"
+					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
-					"<a class=\"btn red\" href=\"/file/", id, "/delete\">"
-						"Delete file</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+					"<a class=\"btn red\" href=\"/file/", id, "/delete?",
+						referer, "\">Delete file</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void Contest::deleteFile(const StringView& id, const StringView& name) {
@@ -250,6 +267,9 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			DB::Statement stmt = db_conn.prepare(
 				"DELETE FROM files WHERE id=?");
@@ -259,47 +279,53 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 				return error500();
 
 			if (unlink(concat("files/", id)))
-				THROW("unlink()", error(errno));
+				THROW("unlink('files/", id, "')", error(errno));
 
 			signal_guard.unblock();
 
-			string location = url_args.remnant().to_string();
+			string location = url_args.extractQuery().to_string();
 			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
-	auto ender = contestTemplate("Delete file");
+	contestTemplate("Delete file");
 	printRoundPath();
 
 	// Referer or file page
 	string referer = req->headers.get("Referer");
-	string prev_referer = referer;
-	if (referer.empty()) {
-		referer = concat("/file/", id);
-		prev_referer = concat("/c/", rpath->round_id, "/files");
-	}
+	string prev_referer = url_args.extractQuery().to_string();
+	if (prev_referer.empty()) {
+		if (referer.size())
+			prev_referer = referer;
+		else {
+			referer = concat("/file/", id);
+			prev_referer = concat("/c/", rpath->round_id, "/files");
+		}
 
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Delete file</h1>\n"
-		"<form method=\"post\" action=\"delete/", prev_referer, "\">\n"
+	} else if (referer.empty())
+		referer = concat("/file/", id);
+
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Delete file</h1>"
+		"<form method=\"post\" action=\"?", prev_referer, "\">"
 			"<label class=\"field\">Are you sure to delete file "
 				"<a href=\"/file/", id, "/edit\">",
 					htmlSpecialChars(name), "</a>?"
-			"</label>\n"
-			"<div class=\"submit-yes-no\">\n"
+			"</label>"
+			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
-					"Yes, I'm sure</button>\n"
-				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-			"</div>\n"
-		"</form>\n"
-	"</div>\n");
+					"Yes, I'm sure</button>"
+				"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+			"</div>"
+		"</form>"
+	"</div>");
 }
 
 void Contest::file() {
-	StringView id = url_args.extractNext();
+	StringView id = url_args.extractNextArg();
 	// Early id validation
 	if (id.size() != FILE_ID_LEN)
 		return error404();
@@ -320,7 +346,7 @@ void Contest::file() {
 			return; // getRoundPath has already set error
 
 		// Edit file
-		StringView next_arg = url_args.extractNext();
+		StringView next_arg = url_args.extractNextArg();
 		if (next_arg == "edit")
 			return editFile(id, file_name);
 
@@ -337,7 +363,7 @@ void Contest::file() {
 		return;
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
@@ -346,17 +372,16 @@ void Contest::files(bool admin_view) {
 	if (rpath->type != RoundType::CONTEST)
 		return error404();
 
+	StringView next_arg = url_args.extractNextArg();
 	// Add file
-	if (url_args.isNext("add")) {
-		url_args.extractNext();
+	if (next_arg == "add")
 		return addFile();
-	}
 
-	auto ender = contestTemplate("Files");
+	contestTemplate("Files");
 	append("<h1>Files</h1>");
 	if (admin_view)
 		append("<a class=\"btn\" href=\"/c/", rpath->round_id, "/files/add\">"
-			"Add file</a>\n");
+			"Add file</a>");
 
 	try {
 		DB::Statement stmt = db_conn.prepare(
@@ -370,7 +395,7 @@ void Contest::files(bool admin_view) {
 			return;
 		}
 
-		append("<table class=\"files\">\n"
+		append("<table class=\"files\">"
 			"<thead>"
 				"<tr>"
 					"<th class=\"time\">Modified</th>"
@@ -379,8 +404,8 @@ void Contest::files(bool admin_view) {
 					"<th class=\"description\">Description</th>"
 					"<th class=\"actions\">Actions</th>"
 				"</tr>"
-			"</thead>\n"
-			"<tbody>\n");
+			"</thead>"
+			"<tbody>");
 
 		while (res.next()) {
 			string id = res[1];
@@ -400,14 +425,14 @@ void Contest::files(bool admin_view) {
 						"Delete</a>");
 
 			append("</td>"
-				"</tr>\n");
+				"</tr>");
 		}
 
-		append("</tbody>\n"
-			"</table>\n");
+		append("</tbody>"
+			"</table>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }

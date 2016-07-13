@@ -1,7 +1,6 @@
 #include "convert_package.h"
 
 #include <simlib/debug.h>
-#include <simlib/logger.h>
 
 using std::pair;
 using std::string;
@@ -76,7 +75,7 @@ int convertPackage(string tmp_package, string out_package) {
 	auto folder = package_tree_root->dir("check");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
-			if (isSuffixIn(i, solution_extensions, solution_extensions +
+			if (hasSuffixIn(i, solution_extensions, solution_extensions +
 				sizeof(solution_extensions) / sizeof(*solution_extensions)))
 			{
 				copy(concat(tmp_package, "check/", i),
@@ -97,7 +96,7 @@ int convertPackage(string tmp_package, string out_package) {
 	folder = package_tree_root->dir("doc");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
-			if (isSuffixIn(i, statement_extensions, statement_extensions +
+			if (hasSuffixIn(i, statement_extensions, statement_extensions +
 				sizeof(statement_extensions) / sizeof(*statement_extensions)))
 			{
 				copy(concat(tmp_package, "doc/", i),
@@ -119,13 +118,13 @@ int convertPackage(string tmp_package, string out_package) {
 	folder = package_tree_root->dir("prog");
 	if (folder != nullptr)
 		for (auto& i : folder->files)
-			if (isSuffixIn(i, solution_extensions, solution_extensions +
+			if (hasSuffixIn(i, solution_extensions, solution_extensions +
 				sizeof(solution_extensions) / sizeof(*solution_extensions)))
 			{
 				copy(concat(tmp_package, "prog/", i),
 					concat(out_package, "prog/", i));
 				if (!USE_CONFIG)
-					config_conf.solutions.push_back(i);
+					config_conf.solutions.emplace_back(i);
 
 				if (!USE_CONFIG && config_conf.main_solution.find_last_of('.') >
 					i.find_last_of('.'))
@@ -172,10 +171,10 @@ int convertPackage(string tmp_package, string out_package) {
 	for (auto& dir : folders)
 		if (dir != nullptr)
 			for (auto& file : dir->files)
-				if (isSuffix(file, ".in")) {
+				if (hasSuffix(file, ".in")) {
 					copy(concat(tmp_package, dir->name, '/', file),
 						concat(out_package, "tests/", file));
-					tests.push_back(file.substr(0, file.size() - 3));
+					tests.emplace_back(file.substr(0, file.size() - 3));
 				}
 
 	if (tests.empty()) { // No tests
@@ -189,7 +188,7 @@ int convertPackage(string tmp_package, string out_package) {
 	for (auto& dir : folders)
 		if (dir != nullptr)
 			for (auto& file : dir->files)
-				if (isSuffix(file, ".out") && binary_search(tests.begin(),
+				if (hasSuffix(file, ".out") && binary_search(tests.begin(),
 					tests.end(), file.substr(0, file.size() - 4)))
 				{
 					copy(concat(tmp_package, dir->name, '/', file),
@@ -212,7 +211,7 @@ int convertPackage(string tmp_package, string out_package) {
 			!(curr_group.second == "ocen" &&
 				(last_group.first == "0" || last_group.second == "ocen")))
 		{
-			config_conf.test_groups.push_back(sim::Simfile::Group());
+			config_conf.test_groups.emplace_back(); // Add new group
 			group = &config_conf.test_groups.back();
 			last_group = curr_group;
 		}

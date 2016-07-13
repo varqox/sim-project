@@ -1,36 +1,62 @@
 language: cpp
 
-compiler:
-  - gcc
-  - clang
-
-env:
-  -
-  - DEBUG=1
-  - DEBUG=2
+sudo: false
 
 cache: apt
 
-sudo: false
+notifications:
+  email: false
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-precise-3.6
-    packages:
-    - g++-4.9-multilib
-    - clang-3.6
-    - mysql-server
-    - mysql-client
-    - libmysqlcppconn-dev
+_packages:
+  - &default_packages
+    - [mysql-server, libmysqlcppconn-dev, make, zip, unzip]
+  - &GCC
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - *default_packages
+          - g++-5-multilib
+    before_install:
+      - export CC="gcc-5"
+      - export CXX="g++-5"
+  - &Clang
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+          - llvm-toolchain-precise-3.6
+        packages:
+          - *default_packages
+          - clang-3.6
+    before_install:
+      - export CC="clang-3.6"
+      - export CXX="clang++-3.6"
 
-install:
-  # Compiler
-  - if [ "$CC" = "gcc" ]; then export CC="gcc-4.9"; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
-  - if [ "$CC" = "clang" ]; then export CC="clang-3.6"; fi
-  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.6"; fi
+matrix:
+  fast_finish: true
+  include:
+    # GCC
+    - compiler: gcc
+      <<: *GCC
+      env:
+    - compiler: gcc
+      <<: *GCC
+      env: DEBUG=1
+    - compiler: gcc
+      <<: *GCC
+      env: DEBUG=2
+    # Clang
+    - compiler: clang
+      <<: *Clang
+      env:
+    - compiler: clang
+      <<: *Clang
+      env: DEBUG=1
+    - compiler: clang
+      <<: *Clang
+      env: DEBUG=2
 
 before_script:
   - export CC="$CC -Werror"
@@ -38,14 +64,8 @@ before_script:
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
-  - make -kj DEBUG=$DEBUG
+  - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
   - cat index.html
   - cat build/logs/*.log
-
-notifications:
-  email: false
-
-matrix:
-  fast_finish: true

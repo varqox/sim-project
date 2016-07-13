@@ -1,10 +1,10 @@
 #include "judge.h"
 #include "main.h"
 
+#include <cmath>
 #include <simlib/compile.h>
 #include <simlib/sandbox_checker_callback.h>
 #include <simlib/sim/simfile.h>
-#include <simlib/utilities.h>
 
 using std::string;
 using std::vector;
@@ -151,16 +151,16 @@ JudgeResult judge(string submission_id, string problem_id) {
 		JudgeResult::Status status = JudgeResult::OK;
 
 		explicit JudgeTestsReport(const char* header) : tests(
-			concat(header, "<table class=\"table\">\n"
-				"<thead>\n"
+			concat(header, "<table class=\"table\">"
+				"<thead>"
 					"<tr>"
 						"<th class=\"test\">Test</th>"
 						"<th class=\"result\">Result</th>"
 						"<th class=\"time\">Time [s]</th>"
 						"<th class=\"points\">Points</th>"
-					"</tr>\n"
-				"</thead>\n"
-				"<tbody>\n")) {}
+					"</tr>"
+				"</thead>"
+				"<tbody>")) {}
 	};
 
 	// Initialise judge reports
@@ -204,14 +204,14 @@ JudgeResult judge(string submission_id, string problem_id) {
 
 			auto tmplog = stdlog();
 			if (VERBOSITY > 1)
-				tmplog("  ", widedString(test.name, 11, LEFT), " ");
+				tmplog("  ", widedString(test.name, 11, LEFT), ' ');
 
 			// Run
 			Sandbox::ExitStat es;
 			try {
 				es = Sandbox::run(concat(tmp_dir.name(), "exec"), {}, sb_opts);
 			} catch (const std::exception& e) {
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 
 				// System error
 				ratio = 0.0;
@@ -225,12 +225,12 @@ JudgeResult judge(string submission_id, string problem_id) {
 					tmplog("-.-- / ",
 						widedString(usecToSecStr(test.time_limit, 2, false), 4),
 						"    Status: \033[1;34mSYSTEM ERROR\033[m (",
-						e.what(), ")");
+						e.what(), ')');
 
 				continue;
 			}
 
-			if (isPrefixIn(es.message, {"Error: ", "failed to get syscall",
+			if (hasPrefixIn(es.message, {"Error: ", "failed to get syscall",
 				"forbidden syscall"}))
 			{
 				errlog("Submission ", submission_id, " (problem ", problem_id,
@@ -263,7 +263,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						"<span class=\"test-id\">", htmlSpecialChars(test.name),
 						"</span>"
 						"Time limit exceeded"
-					"</li>\n");
+					"</li>");
 
 			// Memory limit exceeded
 			} else if (es.message == "Memory limit exceeded") {
@@ -278,7 +278,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						"<span class=\"test-id\">", htmlSpecialChars(test.name),
 						"</span>"
 						"Memory limit exceeded"
-					"</li>\n");
+					"</li>");
 
 			// Runtime error
 			} else {
@@ -298,9 +298,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 					back_insert(judge_test_report.comments, " (", es.message,
 						')');
 
-				judge_test_report.comments += "</li>\n";
+				judge_test_report.comments += "</li>";
 			}
-
 
 			if (VERBOSITY > 1) {
 				tmplog(widedString(usecToSecStr(es.runtime, 2, false), 4),
@@ -315,7 +314,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				else if (group_result.back().status == TestResult::MLE)
 					tmplog("\033[1;33mMLE\033[m");
 				else if (group_result.back().status == TestResult::RTE)
-					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
+					tmplog("\033[1;33mRTE\033[m (", es.message, ')');
 
 				tmplog("   Exited with ", toString(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]");
@@ -342,7 +341,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					checker_args, checker_sb_opts, ".", CheckerCallback(
 						{checker_args.begin() + 1, checker_args.end()}));
 			} catch (const std::exception& e) {
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 
 				// System error
 				ratio = 0.0;
@@ -350,11 +349,11 @@ JudgeResult judge(string submission_id, string problem_id) {
 				judge_test_report.status = JudgeResult::JUDGE_ERROR;
 
 				if (VERBOSITY > 1)
-					tmplog("\033[1;34mSYSTEM ERROR\033[m (", e.what(), ")");
+					tmplog("\033[1;34mSYSTEM ERROR\033[m (", e.what(), ')');
 				continue;
 			}
 
-			if (isPrefixIn(es.message, {"Error: ", "failed to get syscall",
+			if (hasPrefixIn(es.message, {"Error: ", "failed to get syscall",
 				"forbidden syscall"}))
 			{
 				errlog("Submission ", submission_id, " (problem ", problem_id,
@@ -390,7 +389,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 				back_insert(judge_test_report.comments,
 					"<li><span class=\"test-id\">",
 					htmlSpecialChars(test.name), "</span>",
-					htmlSpecialChars(checker_output), "</li>\n");
+					htmlSpecialChars(checker_output), "</li>");
 
 				if (VERBOSITY > 1)
 					tmplog(" \"", checker_output, "\"");
@@ -407,7 +406,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						"<span class=\"test-id\">", htmlSpecialChars(test.name),
 						"</span>"
 						"Checker time limit exceeded"
-					"</li>\n");
+					"</li>");
 
 				if (VERBOSITY > 1)
 					tmplog("\033[1;33mTLE\033[m");
@@ -424,7 +423,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 						"<span class=\"test-id\">", htmlSpecialChars(test.name),
 						"</span>"
 						"Checker memory limit exceeded"
-					"</li>\n");
+					"</li>");
 
 				if (VERBOSITY > 1)
 					tmplog("\033[1;33mMLE\033[m");
@@ -445,10 +444,10 @@ JudgeResult judge(string submission_id, string problem_id) {
 					back_insert(judge_test_report.comments, " (", es.message,
 						')');
 
-				judge_test_report.comments += "</li>\n";
+				judge_test_report.comments += "</li>";
 
 				if (VERBOSITY > 1)
-					tmplog("\033[1;33mRTE\033[m (", es.message, ")");
+					tmplog("\033[1;33mRTE\033[m (", es.message, ')');
 			}
 
 			if (VERBOSITY > 1)
@@ -473,7 +472,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 		if (VERBOSITY > 1)
 			stdlog("  Score: ",
 				toString<long long>(round(group.points * ratio)), " / ",
-				toString(group.points), " (ratio: ", toString(ratio, 3), ")");
+				toString(group.points), " (ratio: ", toString(ratio, 3), ')');
 
 		// Append first row
 		back_insert(judge_test_report.tests, "<tr>"
@@ -484,7 +483,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					toString(group.tests.size()), "\">",
 					toString<long long>(round(group.points * ratio)), " / ",
 					toString(group.points), "</td>"
-			"</tr>\n");
+			"</tr>");
 
 		for (auto it = ++group_result.begin(), end = group_result.end();
 			it != end; ++it)
@@ -493,7 +492,7 @@ JudgeResult judge(string submission_id, string problem_id) {
 					"<td>", htmlSpecialChars(*it->name), "</td>",
 					TestResult::statusToTdString(it->status),
 					"<td>", it->time, "</td>"
-				"</tr>\n");
+				"</tr>");
 		}
 	}
 
@@ -501,10 +500,10 @@ JudgeResult judge(string submission_id, string problem_id) {
 		stdlog("Total score: ", toString(total_score));
 
 	// Complete reports
-	initial.tests.append("</tbody>\n"
-		"</table>\n");
-	final.tests.append("</tbody>\n"
-		"</table>\n");
+	initial.tests.append("</tbody>"
+		"</table>");
+	final.tests.append("</tbody>"
+		"</table>");
 
 	// Close file descriptors
 	if (sb_opts.new_stdin_fd)
@@ -515,8 +514,8 @@ JudgeResult judge(string submission_id, string problem_id) {
 	return JudgeResult(initial.status, total_score,
 		initial.tests + (initial.comments.empty() ?	""
 			: concat("<ul class=\"test-comments\">", initial.comments,
-				"</ul>\n")),
+				"</ul>")),
 		final.tests + (final.comments.empty() ? ""
 			: concat("<ul class=\"test-comments\">", final.comments,
-				"</ul>\n")));
+				"</ul>")));
 }

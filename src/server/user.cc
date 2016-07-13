@@ -60,15 +60,15 @@ uint User::getPermissions(const string& viewer_id, uint viewer_type,
 	return perm[viewer][user];
 }
 
-Template::TemplateEnder User::userTemplate(const StringView& title,
-	const StringView& styles, const StringView& scripts)
+void User::userTemplate(const StringView& title, const StringView& styles,
+	const StringView& scripts)
 {
-	auto ender = baseTemplate(title, concat(".body{margin-left:190px}", styles),
+	baseTemplate(title, concat(".body{margin-left:190px}", styles),
 		scripts);
 	if (!Session::isOpen())
-		return ender;
+		return;
 
-	append("<ul class=\"menu\">\n"
+	append("<ul class=\"menu\">"
 			"<span>USER</span>"
 			"<a href=\"/u/", user_id, "\">View profile</a>"
 			"<a href=\"/u/", user_id, "/submissions\">User submissions</a>"
@@ -76,15 +76,13 @@ Template::TemplateEnder User::userTemplate(const StringView& title,
 			"<a href=\"/u/", user_id, "/edit\">Edit profile</a>"
 			"<a href=\"/u/", user_id, "/change-password\">Change password</a>"
 		"</ul>");
-
-	return ender;
 }
 
 void User::handle() {
 	if (!Session::open())
-		return redirect("/login" + req->target);
+		return redirect("/login?" + req->target);
 
-	if (strToNum(user_id, url_args.extractNext()) <= 0)
+	if (strToNum(user_id, url_args.extractNextArg()) <= 0)
 		return listUsers();
 
 	// Get user information
@@ -110,29 +108,23 @@ void User::handle() {
 	if (~permissions & PERM_VIEW)
 		return error403();
 
+	StringView next_arg = url_args.extractNextArg();
+
 	// Change password
-	if (url_args.isNext("change-password")) {
-		url_args.extractNext();
+	if (next_arg == "change-password")
 		return changePassword();
-	}
 
 	// Delete account
-	if (url_args.isNext("delete")) {
-		url_args.extractNext();
+	if (next_arg == "delete")
 		return deleteAccount();
-	}
 
 	// Edit account
-	if (url_args.isNext("edit")) {
-		url_args.extractNext();
+	if (next_arg == "edit")
 		return editProfile();
-	}
 
 	// Edit account
-	if (url_args.isNext("submissions")) {
-		url_args.extractNext();
+	if (next_arg == "submissions")
 		return userSubmissions();
-	}
 
 	userProfile();
 }
@@ -169,41 +161,41 @@ void User::login() {
 					Session::createAndOpen(res[1]);
 
 					// If there is redirection string, redirect to it
-					auto remnant = url_args.remnant();
-					return redirect(concat('/', remnant));
+					string location = url_args.extractQuery().to_string();
+					return redirect(location.empty() ? "/" : location);
 				}
 
 				fv.addError("Invalid username or password");
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 
 	// Clean old data
 	} else
 		username = "";
 
-	auto ender = baseTemplate("Login");
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Log in</h1>\n"
-			"<form method=\"post\">\n"
+	baseTemplate("Login");
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Log in</h1>"
+			"<form method=\"post\">"
 				// Username
-				"<div class=\"field-group\">\n"
-					"<label>Username</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Username</label>"
 					"<input type=\"text\" name=\"username\" value=\"",
 						htmlSpecialChars(username), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Password
-				"<div class=\"field-group\">\n"
-					"<label>Password</label>\n"
-					"<input type=\"password\" name=\"password\" size=\"24\">\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">\n"
-			"</form>\n"
-		"</div>\n");
+				"<div class=\"field-group\">"
+					"<label>Password</label>"
+					"<input type=\"password\" name=\"password\" size=\"24\">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
+			"</form>"
+		"</div>");
 }
 
 void User::logout() {
@@ -274,7 +266,7 @@ void User::signUp() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 
 	// Clean old data
@@ -285,62 +277,62 @@ void User::signUp() {
 		email = "";
 	}
 
-	auto ender = baseTemplate("Register");
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Register</h1>\n"
-			"<form method=\"post\">\n"
+	baseTemplate("Register");
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Register</h1>"
+			"<form method=\"post\">"
 				// Username
-				"<div class=\"field-group\">\n"
-					"<label>Username</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Username</label>"
 					"<input type=\"text\" name=\"username\" value=\"",
 						htmlSpecialChars(username), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// First Name
-				"<div class=\"field-group\">\n"
-					"<label>First name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>First name</label>"
 					"<input type=\"text\" name=\"first_name\" value=\"",
 						htmlSpecialChars(first_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Last name
-				"<div class=\"field-group\">\n"
-					"<label>Last name</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Last name</label>"
 					"<input type=\"text\" name=\"last_name\" value=\"",
 						htmlSpecialChars(last_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Email
-				"<div class=\"field-group\">\n"
-					"<label>Email</label>\n"
+				"<div class=\"field-group\">"
+					"<label>Email</label>"
 					"<input type=\"email\" name=\"email\" value=\"",
 						htmlSpecialChars(email), "\" size=\"24\" "
 						"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" "
-						"required>\n"
-				"</div>\n"
+						"required>"
+				"</div>"
 				// Password
-				"<div class=\"field-group\">\n"
-					"<label>Password</label>\n"
-					"<input type=\"password\" name=\"password1\" size=\"24\">\n"
-				"</div>\n"
+				"<div class=\"field-group\">"
+					"<label>Password</label>"
+					"<input type=\"password\" name=\"password1\" size=\"24\">"
+				"</div>"
 				// Password (repeat)
-				"<div class=\"field-group\">\n"
-					"<label>Password (repeat)</label>\n"
-					"<input type=\"password\" name=\"password2\" size=\"24\">\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Sign up\">\n"
-			"</form>\n"
-		"</div>\n");
+				"<div class=\"field-group\">"
+					"<label>Password (repeat)</label>"
+					"<input type=\"password\" name=\"password2\" size=\"24\">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Sign up\">"
+			"</form>"
+		"</div>");
 }
 
 void User::listUsers() {
 	if (Session::user_type > UTYPE_TEACHER)
 		return error403();
 
-	auto ender = baseTemplate("Users list", ".body{margin-left:30px}");
+	baseTemplate("Users list", ".body{margin-left:30px}");
 	append("<h1>Users</h1>");
 	try {
 		DB::Statement stmt = db_conn.prepare(
@@ -348,8 +340,8 @@ void User::listUsers() {
 			"FROM users ORDER BY id");
 		DB::Result res = stmt.executeQuery();
 
-		append("<table class=\"users\">\n"
-			"<thead>\n"
+		append("<table class=\"users\">"
+			"<thead>"
 				"<tr>"
 					"<th class=\"uid\">Uid</th>"
 					"<th class=\"username\">Username</th>"
@@ -358,9 +350,9 @@ void User::listUsers() {
 					"<th class=\"email\">Email</th>"
 					"<th class=\"type\">Type</th>"
 					"<th class=\"actions\">Actions</th>"
-				"</tr>\n"
-			"</thead>\n"
-			"<tbody>\n");
+				"</tr>"
+			"</thead>"
+			"<tbody>");
 
 		while (res.next()) {
 			string uid = res[1];
@@ -399,20 +391,20 @@ void User::listUsers() {
 					"/delete\">Delete account</a>");
 
 			append("</td>"
-				"</tr>\n");
+				"</tr>");
 		}
 
-		append("</tbody>\n"
-			"</table>\n");
+		append("</tbody>"
+			"</table>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
 
 void User::userProfile() {
-	auto ender = userTemplate("User profile");
+	userTemplate("User profile");
 	printUser();
 	append("<div class=\"user-info\">"
 			"<div class=\"first-name\">"
@@ -457,6 +449,9 @@ void User::userProfile() {
 void User::editProfile() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && (permissions & PERM_EDIT)) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		string new_username, new_utype_s;
 		// Validate all fields
 		fv.validateNotBlank(new_username, "username", "Username", isUsername,
@@ -525,26 +520,26 @@ void User::editProfile() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
-	auto ender = userTemplate("Edit profile");
+	userTemplate("Edit profile");
 	printUser();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-		"<h1>Edit account</h1>\n"
-		"<form method=\"post\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Edit account</h1>"
+		"<form method=\"post\">"
 			// Username
-			"<div class=\"field-group\">\n"
-				"<label>Username</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Username</label>"
 				"<input type=\"text\" name=\"username\" value=\"",
 					htmlSpecialChars(username), "\" size=\"24\" "
 					"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" ",
-					(permissions & PERM_EDIT ? "required" : "readonly"), ">\n"
-			"</div>\n"
+					(permissions & PERM_EDIT ? "required" : "readonly"), ">"
+			"</div>"
 			// Account type
-			"<div class=\"field-group\">\n"
-				"<label>Account type</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Account type</label>"
 				"<select name=\"type\"",
 				(permissions & (PERM_MAKE_ADMIN | PERM_MAKE_TEACHER |
 					PERM_DEMOTE) ? "" : " disabled"), '>');
@@ -581,55 +576,55 @@ void User::editProfile() {
 			append("<option value=\"", toStr(UTYPE_NORMAL), "\" selected>"
 				"Normal</option>");
 	}
-	append("</select>\n");
+	append("</select>");
 
 	if ((permissions & (PERM_MAKE_ADMIN | PERM_MAKE_TEACHER | PERM_DEMOTE))
 		== 0)
 	{
 		append("<input type=\"hidden\" name=\"type\" value=\"",
-			toString(user_type), "\">\n");
+			toString(user_type), "\">");
 	}
 
-	append("</div>\n"
+	append("</div>"
 			// First Name
-			"<div class=\"field-group\">\n"
-				"<label>First name</label>\n"
+			"<div class=\"field-group\">"
+				"<label>First name</label>"
 				"<input type=\"text\" name=\"first_name\" value=\"",
 					htmlSpecialChars(first_name), "\" size=\"24\""
 					"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" ",
-					(permissions & PERM_EDIT ? "required" : "readonly"),  ">\n"
-			"</div>\n"
+					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
+			"</div>"
 			// Last name
-			"<div class=\"field-group\">\n"
-				"<label>Last name</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Last name</label>"
 				"<input type=\"text\" name=\"last_name\" value=\"",
 					htmlSpecialChars(last_name), "\" size=\"24\""
 					"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" ",
-					(permissions & PERM_EDIT ? "required" : "readonly"),  ">\n"
-			"</div>\n"
+					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
+			"</div>"
 			// Email
-			"<div class=\"field-group\">\n"
-				"<label>Email</label>\n"
+			"<div class=\"field-group\">"
+				"<label>Email</label>"
 				"<input type=\"email\" name=\"email\" value=\"",
 					htmlSpecialChars(email), "\" size=\"24\""
 					"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" ",
-					(permissions & PERM_EDIT ? "required" : "readonly"),  ">\n"
-			"</div>\n");
+					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
+			"</div>");
 
 	// Buttons
 	if (permissions & (PERM_EDIT | PERM_DELETE)) {
-		append("<div>\n");
+		append("<div>");
 		if (permissions & PERM_EDIT)
-			append("<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n");
+			append("<input class=\"btn blue\" type=\"submit\" value=\"Update\">");
 		if (permissions & PERM_DELETE)
 			append("<a class=\"btn red\" style=\"float:right\" href=\"/u/",
-				user_id, "/delete\">Delete account</a>\n");
+				user_id, "/delete?/\">Delete account</a>");
 
-		append("</div>\n");
+		append("</div>");
 	}
 
-	append("</form>\n"
-		"</div>\n");
+	append("</form>"
+		"</div>");
 }
 
 void User::changePassword() {
@@ -638,6 +633,9 @@ void User::changePassword() {
 
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
 		// Validate all fields
 		string old_password, password1, password2;
 		if (~permissions & PERM_ADMIN_CHANGE_PASS)
@@ -683,37 +681,37 @@ void User::changePassword() {
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
-				ERRLOG_CAUGHT(e);
+				ERRLOG_CATCH(e);
 			}
 	}
 
-	auto ender = userTemplate("Change password");
+	userTemplate("Change password");
 	printUser();
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Change password</h1>\n"
-			"<form method=\"post\">\n");
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Change password</h1>"
+			"<form method=\"post\">");
 
 	// Old password
 	if (~permissions & PERM_ADMIN_CHANGE_PASS)
-		append("<div class=\"field-group\">\n"
-					"<label>Old password</label>\n"
+		append("<div class=\"field-group\">"
+					"<label>Old password</label>"
 					"<input type=\"password\" name=\"old_password\" "
-						"size=\"24\">\n"
-				"</div>\n");
+						"size=\"24\">"
+				"</div>");
 
 	// New password
-	append("<div class=\"field-group\">\n"
-					"<label>New password</label>\n"
-					"<input type=\"password\" name=\"password1\" size=\"24\">\n"
-				"</div>\n"
+	append("<div class=\"field-group\">"
+					"<label>New password</label>"
+					"<input type=\"password\" name=\"password1\" size=\"24\">"
+				"</div>"
 				// New password (repeat)
-				"<div class=\"field-group\">\n"
-					"<label>New password (repeat)</label>\n"
-					"<input type=\"password\" name=\"password2\" size=\"24\">\n"
-				"</div>\n"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Update\">\n"
-			"</form>\n"
-		"</div>\n");
+				"<div class=\"field-group\">"
+					"<label>New password (repeat)</label>"
+					"<input type=\"password\" name=\"password2\" size=\"24\">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
+			"</form>"
+		"</div>");
 }
 
 void User::deleteAccount() {
@@ -723,6 +721,9 @@ void User::deleteAccount() {
 	FormValidator fv(req->form_data);
 	if (req->method == server::HttpRequest::POST && fv.exist("delete"))
 		try {
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return error403();
+
 			SignalBlocker signal_guard;
 			// Change contests and problems owner id to 1
 			DB::Statement stmt = db_conn.prepare("UPDATE rounds r, problems p "
@@ -754,7 +755,7 @@ void User::deleteAccount() {
 				if (user_id == Session::user_id)
 					Session::destroy();
 
-				string location = url_args.remnant().to_string();
+				string location = url_args.extractQuery().to_string();
 				return redirect(location.empty() ? "/" : location);
 			}
 
@@ -763,37 +764,41 @@ void User::deleteAccount() {
 
 		} catch (const std::exception& e) {
 			fv.addError("Internal server error");
-			ERRLOG_CAUGHT(e);
+			ERRLOG_CATCH(e);
 		}
 
-	auto ender = userTemplate("Delete account");
+	userTemplate("Delete account");
 	printUser();
 
+	// Referer or user profile
 	string referer = req->headers.get("Referer");
-	string prev_referer = referer;
-	if (referer.empty()) {
+	string prev_referer = url_args.extractQuery().to_string();
+	if (prev_referer.empty()) {
+		if (referer.size())
+			prev_referer = referer;
+		else {
+			referer = '/';
+			prev_referer = '/';
+		}
+
+	} else if (referer.empty())
 		referer = '/';
-		prev_referer = '/';
 
-	// If user deletes their own account, referer may be invalid
-	} else if (user_id == Session::user_id)
-		prev_referer = '/';
-
-	append(fv.errors(), "<div class=\"form-container\">\n"
-			"<h1>Delete account</h1>\n"
-			"<form method=\"post\" action=\"delete/", prev_referer ,"\">\n"
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Delete account</h1>"
+			"<form method=\"post\" action=\"?", prev_referer ,"\">"
 				"<label class=\"field\">Are you sure to delete account "
 					"<a href=\"/u/", user_id, "\">",
 					htmlSpecialChars(username), "</a>, all its "
 					"submissions and change owner of its contests and "
-					"problems to SIM root?</label>\n"
-				"<div class=\"submit-yes-no\">\n"
+					"problems to SIM root?</label>"
+				"<div class=\"submit-yes-no\">"
 					"<button class=\"btn red\" type=\"submit\" "
-						"name=\"delete\">Yes, I'm sure</button>\n"
-					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>\n"
-				"</div>\n"
-			"</form>\n"
-		"</div>\n");
+						"name=\"delete\">Yes, I'm sure</button>"
+					"<a class=\"btn\" href=\"", referer, "\">No, go back</a>"
+				"</div>"
+			"</form>"
+		"</div>");
 }
 
 void User::printUserSubmissions(uint limit) {
@@ -818,8 +823,8 @@ void User::printUserSubmissions(uint limit) {
 			return;
 		}
 
-		append("<table class=\"submissions\">\n"
-			"<thead>\n"
+		append("<table class=\"submissions\">"
+			"<thead>"
 				"<tr>",
 					"<th class=\"time\">Submission time</th>"
 					"<th class=\"problem\">Problem</th>"
@@ -827,9 +832,9 @@ void User::printUserSubmissions(uint limit) {
 					"<th class=\"score\">Score</th>"
 					"<th class=\"final\">Final</th>"
 					"<th class=\"actions\">Actions</th>"
-				"</tr>\n"
-			"</thead>\n"
-			"<tbody>\n");
+				"</tr>"
+			"</thead>"
+			"<tbody>");
 
 		auto statusRow = [](const string& status) {
 			string ret = "<td";
@@ -843,7 +848,7 @@ void User::printUserSubmissions(uint limit) {
 			else if (status == "judge_error")
 				ret += " class=\"judge-error\">";
 			else
-				ret += ">";
+				ret += '>';
 
 			return back_insert(ret, submissionStatusDescription(status),
 				"</td>");
@@ -885,20 +890,20 @@ void User::printUserSubmissions(uint limit) {
 						"/delete\">Delete</a>");
 
 			append("</td>"
-				"<tr>\n");
+				"<tr>");
 		}
 
-		append("</tbody>\n"
-			"</table>\n");
+		append("</tbody>"
+			"</table>");
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 		return error500();
 	}
 }
 
 void User::userSubmissions() {
-	auto ender = userTemplate("User submissions");
+	userTemplate("User submissions");
 	append("<h1>User submissions</h1>");
 
 	printUser();

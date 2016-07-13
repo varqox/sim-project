@@ -46,13 +46,13 @@ private:
 		return getPermissions(Session::user_id, Session::user_type, uid, utype);
 	}
 
-	TemplateEnder userTemplate(const StringView& title,
-		const StringView& styles = {}, const StringView& scripts = {});
+	void userTemplate(const StringView& title, const StringView& styles = {},
+		const StringView& scripts = {});
 
 	void printUser() {
 		append("<h4><a href=\"/u/", user_id, "\">", htmlSpecialChars(username),
 			"</a> (", htmlSpecialChars(first_name), ' ',
-			htmlSpecialChars(last_name), ")</h4>\n");
+			htmlSpecialChars(last_name), ")</h4>");
 	}
 
 	// Pages

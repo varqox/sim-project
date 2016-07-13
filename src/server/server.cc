@@ -6,7 +6,6 @@
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
-#include <simlib/logger.h>
 #include <simlib/process.h>
 
 using std::string;
@@ -48,7 +47,7 @@ static void* worker(void*) {
 		}
 
 	} catch (const std::exception& e) {
-		ERRLOG_CAUGHT(e);
+		ERRLOG_CATCH(e);
 
 	} catch (...) {
 		ERRLOG_CATCH();
@@ -72,7 +71,7 @@ int main() {
 	// Loggers
 	// stdlog like everything writes to stderr
 	if (freopen(SERVER_LOG, "a", stderr) == NULL)
-		errlog("Failed to open '", SERVER_LOG, "'", error(errno));
+		errlog("Failed to open '", SERVER_LOG, '\'', error(errno));
 
 	try {
 		errlog.open(SERVER_ERROR_LOG);
@@ -151,9 +150,14 @@ int main() {
 		return 2;
 	}
 
-	if (bind(socket_fd, (sockaddr*)&name, sizeof(name))) {
-		errlog("Failed to bind", error(errno));
-		return 3;
+	// Bind
+	constexpr int TRIES = 8;
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
+		errlog("Failed to bind (try ", toString(try_no), ')', error(errno));
+		if (++try_no > TRIES)
+			return 3;
+
+		usleep(800000);
 	}
 
 	if (listen(socket_fd, 10)) {
