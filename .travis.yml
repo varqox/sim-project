@@ -69,6 +69,7 @@ before_script:
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
+  - /usr/bin/ld --version
   - make DEBUG=$DEBUG CXX="$CXX -v" build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
