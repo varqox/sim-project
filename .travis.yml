@@ -70,6 +70,9 @@ before_script:
 
 script:
   - /usr/bin/ld --version
+  - /usr/bin/ld --help
+  - /usr/lib/gcc/x86_64-linux-gnu/5/collect2 --version
+  - /usr/lib/gcc/x86_64-linux-gnu/5/collect2 --help
   - make DEBUG=$DEBUG CXX="$CXX -v" build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
