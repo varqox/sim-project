@@ -35,9 +35,10 @@ _packages:
           - *default_packages
           - libstdc++-4.9-dev # Proper version of std library
           - clang-3.4
+          - clang
     before_install:
-      - export CC="clang-3.4"
-      - export CXX="clang++-3.4"
+      - export CC="clang"
+      - export CXX="clang++"
 
 matrix:
   fast_finish: true
@@ -64,6 +65,8 @@ matrix:
       env: DEBUG=2
 
 before_script:
+  - $CC -v
+  - $CXX -v
   - export CC="$CC -Werror"
   - export CXX="$CXX -Werror"
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
