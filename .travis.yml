@@ -30,14 +30,14 @@ _packages:
       apt:
         sources:
           - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise
+          - llvm-toolchain-precise-3.5
         packages:
           - *default_packages
           - libstdc++-4.9-dev # Proper version of std library
-          - clang-3.4
+          - clang-3.5
     before_install:
-      - export CC="clang"
-      - export CXX="clang++"
+      - export CC="clang-3.5"
+      - export CXX="clang++-3.5"
 
 matrix:
   fast_finish: true
@@ -71,8 +71,6 @@ before_script:
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
-  - ls /usr/bin | grep clang
-  - ls /usr/local/bin | grep clang
   # Compile this file with suppressed warning
   - if [ "$CXX" = "g++-4.9 -Werror" ]; then make src/lib/cpp_syntax_highlighter.o DEBUG=$DEBUG CXX='g++-4.9 -Wno-missing-field-initializers -Isrc/include'; fi
   # Proper compilation
