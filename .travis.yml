@@ -30,14 +30,14 @@ _packages:
       apt:
         sources:
           - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise-3.5
+          - llvm-toolchain-precise
         packages:
           - *default_packages
           - libstdc++-4.9-dev # Proper version of std library
-          - clang-3.5
+          - clang-3.4
     before_install:
-      - export CC="clang-3.5"
-      - export CXX="clang++-3.5"
+      - export CC="clang-3.4"
+      - export CXX="clang++-3.4"
 
 matrix:
   fast_finish: true
