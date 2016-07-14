@@ -9,7 +9,11 @@ notifications:
 
 _packages:
   - &default_packages
-    - [mysql-server, libmysqlcppconn-dev, make, zip, unzip]
+    - mysql-server
+    - libmysqlcppconn-dev
+    - make
+    - zip
+    - unzip
   - &GCC
     addons:
       apt:
@@ -17,22 +21,23 @@ _packages:
           - ubuntu-toolchain-r-test
         packages:
           - *default_packages
-          - g++-5-multilib
+          - g++-4.9-multilib
     before_install:
-      - export CC="gcc-5"
-      - export CXX="g++-5"
+      - export CC="gcc-4.9"
+      - export CXX="g++-4.9"
   - &Clang
     addons:
       apt:
         sources:
           - ubuntu-toolchain-r-test
-          - llvm-toolchain-precise-3.6
+          - llvm-toolchain-precise-3.5
         packages:
           - *default_packages
-          - clang-3.6
+          - libstdc++-4.9-dev # Proper version of std library
+          - clang-3.5
     before_install:
-      - export CC="clang-3.6"
-      - export CXX="clang++-3.6"
+      - export CC="clang-3.5"
+      - export CXX="clang++-3.5"
 
 matrix:
   fast_finish: true
@@ -59,11 +64,16 @@ matrix:
       env: DEBUG=2
 
 before_script:
+  - $CC -v
+  - $CXX -v
   - export CC="$CC -Werror"
   - export CXX="$CXX -Werror"
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
+  # Compile this file with suppressed warning
+  - if [ "$CXX" = "g++-4.9 -Werror" ]; then make src/lib/cpp_syntax_highlighter.o DEBUG=$DEBUG CXX="$CXX -Wno-missing-field-initializers -Isrc/include"; fi
+  # Proper compilation
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
