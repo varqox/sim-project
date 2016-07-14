@@ -99,7 +99,7 @@ string chdirToExecDir() {
 	// Erase file component
 	size_t slash = exec.rfind('/');
 	if (slash < exec.size())
-		exec.erase(exec.begin() + slash + 1, exec.end()); // Erase filename
+		exec.resize(slash); // Erase filename
 
 	if (chdir(exec.c_str()) == -1)
 		THROW("chdir('", exec, "')", error(errno));
