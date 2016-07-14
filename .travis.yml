@@ -69,6 +69,8 @@ before_script:
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
+  - ls /usr/bin | grep clang
+  - ls /usr/local/bin | grep clang
   # Compile this file with suppressed warning
   - if [ "$CXX" = "g++-4.9 -Werror" ]; then make src/lib/cpp_syntax_highlighter.o DEBUG=$DEBUG CXX='g++-4.9 -Wno-missing-field-initializers -Isrc/include'; fi
   # Proper compilation
