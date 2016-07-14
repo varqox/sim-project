@@ -69,7 +69,7 @@ before_script:
 
 script:
   # Compile this file with suppressed warning
-  - if [ "$CXX" = "g++-4.9 -Werror" ]; then make src/lib/cpp_syntax_highlighter.o DEBUG=3 CXX='g++-4.9 -Wno-missing-field-initializers -Isrc/include'; fi
+  - if [ "$CXX" = "g++-4.9 -Werror" ]; then make src/lib/cpp_syntax_highlighter.o DEBUG=$DEBUG CXX='g++-4.9 -Wno-missing-field-initializers -Isrc/include'; fi
   # Proper compilation
   - make DEBUG=$DEBUG build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
