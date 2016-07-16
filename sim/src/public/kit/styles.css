@@ -972,8 +972,11 @@ table.stripped > tbody > tr:last-child > td:last-child {
 .ranking {
 	margin: 8px 0;
 }
-.ranking > tbody > tr > td:first-child {
+.ranking > tbody td {
 	text-align: right;
+}
+.ranking > tbody > tr > td:nth-child(2) {
+	text-align: left;
 }
 .ranking > thead > tr:nth-child(2) > th:first-child {
 	border-left: 1px solid #a2a2a2;

@@ -1541,7 +1541,8 @@ void Contest::ranking(bool admin_view) {
 			"<thead>"
 				"<tr>"
 					"<th rowspan=\"2\">#</th>"
-					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>");
+					"<th rowspan=\"2\" style=\"min-width:120px\">User</th>"
+					"<th rowspan=\"2\">Sum</th>");
 		// Rounds
 		for (auto& i : rounds) {
 			if (i.problems.empty())
@@ -1555,7 +1556,7 @@ void Contest::ranking(bool admin_view) {
 				htmlSpecialChars(i.name), "</a></th>");
 		}
 		// Problems
-		append("<th rowspan=\"2\">Sum</th>"
+		append(
 			"</tr>"
 			"<tr>");
 		for (auto& i : rounds)
@@ -1586,6 +1587,9 @@ void Contest::ranking(bool admin_view) {
 			else
 				append("<td>", htmlSpecialChars(row.name), "</td>");
 
+			// Score
+			append("<td>", toString(row.score), "</td>");
+
 			// Fields
 			fill(row_points.begin(), row_points.end(), nullptr);
 			for (auto& j : row.fields) {
@@ -1608,8 +1612,7 @@ void Contest::ranking(bool admin_view) {
 					append("<td>", j->score, "</td>");
 			}
 
-			append("<td>", toString(row.score), "</td>"
-				"</tr>");
+			append("</tr>");
 		}
 		append("</tbody>"
 				"</thead>"
