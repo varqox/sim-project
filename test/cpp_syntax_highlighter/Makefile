@@ -7,6 +7,10 @@ all: check
 	@echo $(notdir $(shell pwd)):
 	./check
 
+ifneq ($(MAKECMDGOALS), clean)
+-include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
+endif
+
 check: check.o ../../src/lib/sim.a ../../src/simlib/simlib.a
 	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
 
