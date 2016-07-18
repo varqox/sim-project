@@ -93,6 +93,7 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	$(abspath $(DESTDIR)/judge-machine)&
 	$(abspath $(DESTDIR)/sim-server)&
 	# $(abspath $(DESTDIR)/sim-server2)&
+	@echo "\033[;32mRunning finished\033[0m"
 
 .PHONY: clean
 clean:
