@@ -3,9 +3,7 @@ include ../Makefile.config
 .PHONY: all
 all: ../simlib.a
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
-endif
+ $(eval $(call dependencies))
 
 .PHONY: sim http
 sim http:
