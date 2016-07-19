@@ -3,14 +3,12 @@ include ../../Makefile.config
 .PHONY: all
 all: ../judge-machine
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
-endif
+ $(eval $(call dependencies))
 
 ../judge-machine: main.o judge.o
-../judge-machine: ../lib/sim.a ../simlib/simlib.a
+../judge-machine: ../lib/sim.a
 ../judge-machine:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn
+	$(LINK) -lmysqlcppconn
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)
