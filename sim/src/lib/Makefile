@@ -3,12 +3,11 @@ include ../../Makefile.config
 .PHONY: all
 all: sim.a
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
-endif
+$(eval $(call dependencies))
 
-sim.a: db.o cpp_syntax_highlighter.o
+sim.a: db.o cpp_syntax_highlighter.o ../simlib/simlib.a
 	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+	echo "OPEN sim.a\nADDLIB ../simlib/simlib.a\nSAVE\nEND" | ar -M
 
 .PHONY: clean
 clean:

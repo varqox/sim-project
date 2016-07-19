@@ -3,16 +3,17 @@ include ../../Makefile.config
 .PHONY: all
 all: ../conver
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
--include default_checker_dump.c.deps
-endif
+ $(eval $(call dependencies))
 
 ../conver: conver.o validate_package.o convert_package.o set_limits.o
 ../conver: default_checker_dump.o
 ../conver: ../simlib/simlib.a
 ../conver:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@
+	$(LINK)
+
+# Because source file is generated - that is why we can generate dependencies
+# now and why we have to do it manually
+default_checker_dump.o: default_checker_dump.c.deps
 
 default_checker_dump.c: default_checker.c
 	$(Q)$(call P,GEN,$@)xxd -i $< > $@

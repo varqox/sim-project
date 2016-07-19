@@ -3,23 +3,21 @@ include ../../Makefile.config
 .PHONY: all
 all: ../sim-server ../sim-server2
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
-endif
+ $(eval $(call dependencies))
 
 ../sim-server: server.o connection.o http_request.o http_response.o form_validator.o
 ../sim-server: session.o template.o errors.o user.o
 ../sim-server: contest.o contest_utilities.o submissions.o files.o sim_base.o sim.o
-../sim-server: ../lib/sim.a ../simlib/simlib.a
+../sim-server: ../lib/sim.a
 ../sim-server:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn -pthread
+	$(LINK) -lmysqlcppconn -pthread
 
 ../sim-server2: server2.o connection.o http_request.o http_response.o form_validator.o
 ../sim-server2: session.o template.o errors.o user.o
 ../sim-server2: contest.o contest_utilities.o submissions.o files.o sim_base.o sim.o
-../sim-server2: ../lib/sim.a ../simlib/simlib.a
+../sim-server2: ../lib/sim.a
 ../sim-server2:
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(LFLAGS) -o $@ -lmysqlcppconn -pthread
+	$(LINK) -lmysqlcppconn -pthread
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)

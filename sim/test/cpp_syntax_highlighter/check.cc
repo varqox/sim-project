@@ -76,6 +76,11 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 		}
 	}
 
+	if (tests.empty()) {
+		puts("No tests found");
+		return 0;
+	}
+
 	printf("Passed %u / %u (%u%%)\n", passed, (uint)tests.size(),
 		(uint)round(double(passed * 100)/tests.size()));
 	return passed;

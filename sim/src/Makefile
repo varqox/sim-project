@@ -1,28 +1,33 @@
 include ../Makefile.config
 
-EXTRA_OPTIONS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
-EXTRA_LD_OPTIONS += -L '$(ROOT)/src/lib' -L '$(ROOT)/src/lib/others'
-
 .PHONY: all
-all: killinstc Conver Judge_machine server lib setup-installation
+all: killinstc Conver Judge_machine server lib setup-installation simlib
+
+OLD_EXTRA_CXX_FLAGS := $(EXTRA_CXX_FLAGS)
+OLD_EXTRA_LD_FLAGS := $(EXTRA_LD_FLAGS)
+EXTRA_CXX_FLAGS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
+EXTRA_LD_FLAGS += -L '$(ROOT)/src/lib' -L '$(ROOT)/src/lib/others'
+
+# Disable flags to be run on simlib
+simlib: override EXTRA_CXX_FLAGS = $(OLD_EXTRA_LD_FLAGS)
+simlib: override EXTRA_LD_FLAGS = $(OLD_EXTRA_CXX_FLAGS)
+simlib:
+	$(Q)$(MAKE) -C $@/
 
 .PHONY: Conver Judge_machine server lib simlib
 Conver Judge_machine server lib: simlib
 Judge_machine server: lib
-Conver Judge_machine server lib simlib:
+Conver Judge_machine server lib:
 	$(Q)$(MAKE) -C $@/
 
-killinstc: killinstc.cc simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
+killinstc: killinstc.o simlib/simlib.a
+	$(LINK)
 
-setup-installation: setup_installation.cc lib/sim.a simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@ -lmysqlcppconn
+setup-installation: setup_installation.o lib/sim.a
+	$(LINK) -lmysqlcppconn
 
-lib/sim.a: lib
-	@
-
-simlib/simlib.a: simlib
-	@
+simlib/simlib.a: lib;
+lib/sim.a: lib;
 
 .PHONY: clean
 clean:

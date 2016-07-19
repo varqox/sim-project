@@ -1,18 +1,16 @@
 include ../../Makefile.config
 
-EXTRA_OPTIONS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
+EXTRA_CXX_FLAGS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
 
 .PHONY: all
 all: check
 	@echo $(notdir $(shell pwd)):
 	./check
 
-ifneq ($(MAKECMDGOALS), clean)
--include $(shell ls | egrep "\.c$$|\.cc$$|\.cpp$$" | sed "s/$$/\.deps/")
-endif
+ $(eval $(call dependencies))
 
-check: check.o ../../src/lib/sim.a ../../src/simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
+check: check.o ../../src/lib/sim.a
+	$(LINK)
 
 ../../src/lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)
