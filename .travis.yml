@@ -71,9 +71,9 @@ before_script:
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
 
 script:
-  # Compile this file with suppressed warning
-  - if [ "$CXX" = "g++-4.9 -Werror" ]; then make src/lib/cpp_syntax_highlighter.o DEBUG=$DEBUG CXX="$CXX -Wno-missing-field-initializers -Isrc/include"; fi
-  # Proper compilation
+  # Suppressed warning on src/lib/cpp_syntax_highlighter.c file - this is a GCC bug
+  - if [ "$CXX" = "g++-4.9 -Werror" ]; then echo 'cpp_syntax_highlighter.o: EXTRA_CXX_FLAGS += -Wno-missing-field-initializers' >> src/lib/Makefile; fi
+  # Build project
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
   - wget -t 5 -T 1 --retry-connrefused http://127.7.7.7:8080/
