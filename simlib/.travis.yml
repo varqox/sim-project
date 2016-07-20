@@ -9,6 +9,7 @@ notifications:
 
 _packages:
   - &default_packages
+    - time # For build
   - &GCC
     addons:
       apt:
