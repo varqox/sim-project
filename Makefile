@@ -20,7 +20,8 @@ test: build
 	@echo "\033[1;32mAll tests passed\033[0m"
 
 .PHONY: install
-install:
+install: $(filter-out install run, $(MAKECMDGOALS))
+	@ #   ^ install always have to be executed at the end (but before run)
 	# Echo log
 	@echo "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m"
 
@@ -59,7 +60,8 @@ endif
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
-reinstall:
+reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
+	@ #     ^ reinstall always have to be executed at the end (but before run)
 	# Kill sim-server and judge-machine
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/judge-machine)
