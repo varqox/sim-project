@@ -72,7 +72,7 @@ before_script:
 
 script:
   # Suppressed warning on src/lib/cpp_syntax_highlighter.c file - this is a GCC bug
-  - if [ "$CXX" = "g++-4.9 -Werror" ]; then echo 'cpp_syntax_highlighter.o: EXTRA_CXX_FLAGS += -Wno-missing-field-initializers' >> src/lib/Makefile; fi
+  - "if [ \"$CXX\" = \"g++-4.9 -Werror\" ]; then echo 'cpp_syntax_highlighter.o: EXTRA_CXX_FLAGS += -Wno-missing-field-initializers' >> src/lib/Makefile; fi"
   # Build project
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG build test
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
