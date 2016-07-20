@@ -26,7 +26,7 @@ killinstc: killinstc.o simlib/simlib.a
 setup-installation: setup_installation.o lib/sim.a
 	$(LINK) -lmysqlcppconn
 
-simlib/simlib.a: lib;
+simlib/simlib.a: simlib;
 lib/sim.a: lib;
 
 .PHONY: clean
