@@ -21,7 +21,7 @@ http/http.o: http
 ../simlib.a: spawner.o sandbox.o compile.o
 ../simlib.a: sim/sim.o http/http.o
 ../simlib.a: random.o ncg.o sha.o sha3.o
-	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+	$(Q)$(call P,AR,$@)$(AR) cr $@ $?
 
 .PHONY: clean
 clean:
