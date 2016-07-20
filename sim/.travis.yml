@@ -14,6 +14,7 @@ _packages:
     - make
     - zip
     - unzip
+    - time # For build
   - &GCC
     addons:
       apt:
