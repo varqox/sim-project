@@ -51,14 +51,14 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	#endif
 
 	#define throw_parse_error(...) { \
-			string::size_type pos = buff.data() - buff_beg; \
-			string::size_type x = config.rfind('\n', pos); \
-			int line = 1; \
-			if (x < pos) { \
-				pos = x; \
-				line += std::count(buff_beg, buff_beg + pos, '\n'); \
-			} \
-			ParseError pe(line, pos + 1, __VA_ARGS__); \
+			string::size_type pos = buff.data() - buff_beg - buff.empty(); \
+			string::size_type x = pos; /* Position of the last newline before
+				pos */ \
+			while (x && config[--x] != '\n') {} \
+			\
+			int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n'); \
+			\
+			ParseError pe(line, pos - x + (line == 1), __VA_ARGS__); \
 			DEBUG_CF(stdlog("Throwing exception: ", pe.what());) \
 			throw pe; \
 		}
@@ -114,20 +114,21 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 					// i will not go out of the buffer - (guard = newline)
 					if (!isxdigit(buff[++i])) {
 						buff.removePrefix(i);
-						throw_parse_error("Invalid hexadecimal digit: ",
-							buff[0]);
+						throw_parse_error("Invalid hexadecimal digit: `",
+							buff[0], '`');
 					}
 					if (!isxdigit(buff[++i])) {
 						buff.removePrefix(i);
-						throw_parse_error("Invalid hexadecimal digit: ",
-							buff[0]);
+						throw_parse_error("Invalid hexadecimal digit: `",
+							buff[0], '`');
 					}
 					res += static_cast<char>((hextodec(buff[i - 1]) << 4) +
 						hextodec(buff[i]));
 					continue;
 				default:
 					buff.removePrefix(i);
-					throw_parse_error("Unknown escape sequence: \\", buff[0]);
+					throw_parse_error("Unknown escape sequence: `\\", buff[0],
+						'`');
 				}
 
 			}
@@ -140,8 +141,8 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 
 		// Check if the string literal begins
 		if (buff[0] == '[' || buff[0] == ',' || buff[0] == ']')
-			throw_parse_error("Invalid beginning of the string literal: ",
-				buff[0]);
+			throw_parse_error("Invalid beginning of the string literal: `",
+				buff[0], '`');
 
 		// Beginning is ok
 		// Interior
@@ -187,9 +188,9 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		/* Assignment operator */
 		buff.removeLeading(isWs);
 		if (buff[0] == '\n' || buff[0] == '#') // Newline or comment
-			throw_parse_error("Incomplete directive: ", name);
+			throw_parse_error("Incomplete directive: `", name, '`');
 		if (buff[0] != '=' && buff[0] != ':')
-			throw_parse_error("Wrong assignment operator: ", buff.front());
+			throw_parse_error("Wrong assignment operator: `", buff[0], '`');
 
 		buff.removePrefix(1); // Assignment operator
 		buff.removeLeading(isWs);
@@ -257,11 +258,11 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 
 				// Error - unknown sequence after the value
 				throw_parse_error("Unknown sequence after the value: `", buff[0],
-					"...`");
+					'`');
 			}
 
 			if (buff.empty())
-				throw_parse_error("Missing terminating character ] at the end "
+				throw_parse_error("Missing terminating ] character at the end "
 					"of an array");
 		}
 
@@ -275,7 +276,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		// Error - unknown sequence after the value
 		if (buff[0] != '\n')
 			throw_parse_error("Unknown sequence after the value: `", buff[0],
-				"...`");
+				'`');
 
 		buff.removePrefix(1); // Newline
 	}

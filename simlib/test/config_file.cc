@@ -414,8 +414,8 @@ TEST (ConfigFile, loadConfigFromString) {
 		/* 10 */ {"a: aa\" # aaa\n ", "a: \"aa\\\"\"\n"},
 		/* 11 */ {"a: '\"It''s awesome\"'\n ", "a: \"\\\"It's awesome\\\"\"\n"},
 		/* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\"\n"},
-		/* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\"\n"},
-		/* 12 */ {R"===(# Server address
+		/* 13 */ {"a = \"ab\\xa61\"\n ", "a: \"ab\\xa61\"\n"},
+		/* 14 */ {R"===(# Server address
 address: 127.7.7.7:8080
 
 # Number of server workers (cannot be lower than 1)
@@ -522,6 +522,8 @@ workers: "2"
 
 	ConfigFile cf; // It do not have to be cleaned - we watch only for
 	               // exceptions
+	// TODO: if (when) EXPECT_THROW_WHAT will be available in Google Test,
+	// use it here
 	EXPECT_THROW(cf.loadConfigFromString("a & eee "), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = [a"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = ,a"), ConfigFile::ParseError);
@@ -538,5 +540,12 @@ workers: "2"
 	EXPECT_THROW(cf.loadConfigFromString("a = 'b'b'"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"b\"b\""), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"\\q\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"\\q\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = a\nb = ,]" ), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = a\n\n&" ), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = a\n\na = '" ), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = \"\\xg21\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = \"\\x2g1\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = \"\\x\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString("a = \"\\xa\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.loadConfigFromString(";"), ConfigFile::ParseError);
 }
