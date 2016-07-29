@@ -12,7 +12,7 @@
 
 class SimpleParser : public StringView {
 public:
-	explicit SimpleParser(const StringView& str) : StringView(str) {}
+	explicit SimpleParser(const StringView& s) : StringView(s) {}
 
 	SimpleParser(const SimpleParser&) noexcept = default;
 
@@ -22,10 +22,10 @@ public:
 
 	SimpleParser& operator=(SimpleParser&&) noexcept = default;
 
-	bool isNext(const StringView& str, char delimiter = '/') const noexcept {
-		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", str, "' -> ",
-			toString(compareTo(buff, 0, delimiter, str)));)
-		return (compareTo(*this, 0, delimiter, str) == 0);
+	bool isNext(const StringView& s, char delimiter = '/') const noexcept {
+		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", s, "' -> ",
+			toString(compareTo(buff, 0, delimiter, s)));)
+		return (compareTo(*this, 0, delimiter, s) == 0);
 	}
 
 	/**
