@@ -3,7 +3,7 @@ include ../../Makefile.config
 .PHONY: all
 all: sim.o
 
- $(eval $(call dependencies))
+$(eval $(call dependencies))
 
 sim.o: simfile.o
 	$(Q)$(call P,LD,$@)$(LD) -r $^ -o $@

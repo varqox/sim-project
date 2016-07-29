@@ -3,7 +3,7 @@ include ../../Makefile.config
 .PHONY: all
 all: http.o
 
- $(eval $(call dependencies))
+$(eval $(call dependencies))
 
 http.o: server.o
 	$(Q)$(call P,LD,$@)$(LD) -r $^ -o $@

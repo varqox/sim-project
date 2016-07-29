@@ -552,7 +552,7 @@ string getFileContents(const char* file) {
 	if (fd == -1) // TODO: maybe throw
 		return "";
 
-	Closer closer(fd); // Exceptions can be thrown
+	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd);
 }
 
@@ -563,7 +563,7 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 	if (fd == -1) // TODO: maybe throw
 		return "";
 
-	Closer closer(fd); // Exceptions can be thrown
+	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd, beg, end);
 }
 

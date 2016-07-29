@@ -1,7 +1,5 @@
 #!/usr/bin/wish
 #
-# File taken from SQLite 3 Project
-#
 # Run this wish script to generate syntax bubble diagrams from
 # text descriptions.
 #
@@ -260,7 +258,7 @@ proc draw_stack {indent lx} {
 
   foreach term $lx {
     set bypass_y $next_bypass_y
-    if {$i>0 && $i<$n && [llength $term]>1 &&
+    if {$i>0 && $i<$n && [llength $term]>1 && $indent>=0 &&
         ([lindex $term 0]=="opt" || [lindex $term 0]=="optx")} {
       set bypass 1
       set term "line [lrange $term 1 end]"
@@ -278,7 +276,14 @@ proc draw_stack {indent lx} {
     } else {
       set enter_y [expr {$btm - $ty0 + $sep*2 + 2}]
       if {$bypass} {set next_bypass_y [expr {$enter_y - $RADIUS}]}
-      set enter_x [expr {$sep*2 + $indent}]
+      if {$indent<0} {
+        set w [expr {$tx1 - $tx0}]
+        set enter_x [expr {$exit_x - $w + $sep*$indent}]
+        set ex2 [expr {$sep*2 - $indent}]
+        if {$ex2>$enter_x} {set enter_x $ex2}
+      } else {
+        set enter_x [expr {$sep*2 + $indent}]
+      }
       set back_y [expr {$btm + $sep + 1}]
       if {$bypass_y>0} {
          set mid_y [expr {($bypass_y+$RADIUS+$back_y)/2}]
@@ -597,7 +602,11 @@ proc draw_diagram {spec} {
     return [draw_stack 0 [lrange $spec 1 end]]
   }
   if {$cmd=="indentstack"} {
-    return [draw_stack $::HSEP [lrange $spec 1 end]]
+    set hsep [expr {$::HSEP*[lindex $spec 1]}]
+    return [draw_stack $hsep [lrange $spec 2 end]]
+  }
+  if {$cmd=="rightstack"} {
+    return [draw_stack -1 [lrange $spec 1 end]]
   }
   if {$cmd=="loop"} {
     return [draw_loop [lindex $spec 1] [lindex $spec 2]]

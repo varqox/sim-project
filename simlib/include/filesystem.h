@@ -544,7 +544,7 @@ public:
 		return rc;
 	}
 
-	~Closer() {
+	~Closer() noexcept {
 		if (fd_ >= 0)
 			sclose(fd_);
 	}
@@ -575,6 +575,12 @@ public:
 	}
 
 	operator int() const noexcept { return fd_; }
+
+	int release() noexcept {
+		int fd = fd_;
+		fd = -1;
+		return fd;
+	}
 
 	void reset(int fd) noexcept {
 		if (fd_ >= 0)

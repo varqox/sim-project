@@ -10,11 +10,9 @@
 # define DEBUG_PARSER(...)
 #endif
 
-class SimpleParser {
-	StringView buff;
-
+class SimpleParser : public StringView {
 public:
-	explicit SimpleParser(const StringView& str) : buff(str) {}
+	explicit SimpleParser(const StringView& str) : StringView(str) {}
 
 	SimpleParser(const SimpleParser&) noexcept = default;
 
@@ -27,7 +25,7 @@ public:
 	bool isNext(const StringView& str, char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", str, "' -> ",
 			toString(compareTo(buff, 0, delimiter, str)));)
-		return (compareTo(buff, 0, delimiter, str) == 0);
+		return (compareTo(*this, 0, delimiter, str) == 0);
 	}
 
 	/**
@@ -42,11 +40,11 @@ public:
 	template<class Func>
 	StringView extractNext(Func&& isDelimiter) {
 		size_t pos = 0;
-		while (pos < buff.size() && !isDelimiter(buff[pos]))
+		while (pos < size() && !isDelimiter((*this)[pos]))
 			++pos;
 
-		StringView res{buff.substr(0, pos)};
-		buff.removePrefix(pos + 1);
+		StringView res {substr(0, pos)};
+		removePrefix(pos + 1);
 		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res);)
 		return res;
 	}
@@ -66,7 +64,7 @@ public:
 	 */
 	template<class Func>
 	StringView extractNextNonEmpty(Func&& isDelimiter) {
-		buff.removeLeading(isDelimiter); // Ignore delimiters
+		removeLeading(isDelimiter); // Ignore delimiters
 		return extractNext(std::forward<Func>(isDelimiter));
 	}
 
@@ -75,8 +73,6 @@ public:
 				return (c == delimiter);
 			});
 	}
-
-	StringView remnant() const noexcept { return buff; }
 };
 
 /**
@@ -128,6 +124,10 @@ public:
 		buff.clear();
 		return res;
 	}
+
+	StringView& data() noexcept { return buff; }
+
+	const StringView& data() const noexcept { return buff; }
 
 	StringView remnant() const noexcept { return buff; }
 };

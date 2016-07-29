@@ -59,8 +59,8 @@ string encodeURI(const StringView& str, size_t beg, size_t end) {
 			ret += c;
 		else {
 			ret += '%';
-			ret += dectohex(c >> 4);
-			ret += dectohex(c & 15);
+			ret += dectoHex(c >> 4);
+			ret += dectoHex(c & 15);
 		}
 	}
 
@@ -106,8 +106,8 @@ string toHex(const char* str, size_t len) {
 	string res(len << 1, '\0');
 	for (size_t i = -1; len-- > 0; ++str) {
 		unsigned char c = *str;
-		res[++i] = dectohex2(c >> 4);
-		res[++i] = dectohex2(c & 15);
+		res[++i] = dectohex(c >> 4);
+		res[++i] = dectohex(c & 15);
 	}
 
 	return res;

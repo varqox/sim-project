@@ -8,24 +8,37 @@
 #
 set all_graphs {
   config-file {
-    line {toploop {or directive-formal {line {opt ws} {or comment /newline}}}}
+    line {toploop
+      {or
+        directive-formal
+        {line wsn /newline}
+        {line {opt wsn} comment}
+      }
+    }
   }
   directive {
-    line /name {or = :} {or {} value {line [ {toploop {line {opt comment} value {opt comment}} ,} ]}} {opt comment}
+    line name {or = :} {or {} value {line [ {or {toploop {line {opt comment} value {opt comment}} delimeter} {}} ]}} {opt comment}
   }
   directive-formal {
     stack
-      {line {opt ws} /name {opt ws} {or = :} {opt ws}}
+      {line {opt ws} name {opt ws} {or = :} {opt ws}}
       {line {or {optx value}
-        {line [ {or {line {toploop {line {opt comment-or-wsn} value {opt comment-or-wsn}} ,}}
-          {opt comment-or-wsn}} ]}}}
+        {line [ {or {line {toploop {line {opt comment-or-wsn} value {opt comment-or-wsn}} delimeter}}
+          {or comment-or-wsn {}}} ]}}}
       {line {opt ws} {or /newline comment}}
+  }
+  delimiter {
+    toploop
+      {line
+        {or , /newline}
+        {opt comment-or-wsn}
+      }
   }
   comment {
     line # {loop {} /anything-except-newline} /newline
   }
   comment-or-wsn {
-    or wsn comment
+    or wsn comment {line wsn comment}
   }
   value {
     or
@@ -37,23 +50,39 @@ set all_graphs {
   }
   string-literal {
     line {
-      opt {
+      line {
         stack
           /anything-except-wsn-and-[-and-,-and-]-and-#-and-single-and-double-quote {
-            toploop {
-              or /anything-except-newline-and-#-and-]-and-, {line /anything-except-wsn-and-] #}
+            opt {
+              stack {opt {loop /anything-except-newline-and-#-and-]-and-,}}
+              /anything-except-wsn-and-#-and-]-and-,
             }
           }
-          {or /anything-except-wsn-and-#-and-]-and-, {line /anything-except-wsn-and-] #}}
-      }
+        }
     }
   }
   single-quoted-string-literal {
     line ' {opt {toploop {or /anything-except-newline-and-single-quote {line ' '}}}} '
   }
   double-quoted-string-literal {
-    line '' {opt {toploop {or /anything-except-\\ -and-newline-and-double-quote
-      \\' \\'' \\? \\\\ \\a \\b \\f \\n \\r \\t \\v \\xnn}}} ''
+    line '' {opt {toploop {or /anything-except-\\-and-newline-and-double-quote
+      {line \\ '}
+      {line \\ ''}
+      {line \\ ?}
+      {line \\ \\}
+      {line \\ /a}
+      {line \\ /b}
+      {line \\ /f}
+      {line \\ /n}
+      {line \\ /r}
+      {line \\ /t}
+      {line \\ /v}
+      {line \\ /x hex-digit hex-digit}
+    }}}
+    ''
+  }
+  hex-digit {
+    toploop {or /digit /a /b /c /d /e /f A B C D E F}
   }
   number {
     line {or {} + -} {loop /digit} {opt /decimal-point {loop /digit}}

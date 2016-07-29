@@ -3,7 +3,7 @@ include ../Makefile.config
 .PHONY: all
 all: ../simlib.a
 
- $(eval $(call dependencies))
+$(eval $(call dependencies))
 
 .PHONY: sim http
 sim http:

@@ -1,11 +1,16 @@
 #pragma once
 
 #include "likely.h"
+#include "meta.h"
 
 #include <algorithm>
 #include <array>
 #include <climits>
 #include <cstring>
+
+#ifdef _GLIBCXX_DEBUG
+#  include <cassert>
+#endif
 
 template<class Char>
 class StringBase {
@@ -34,6 +39,13 @@ public:
 		noexcept
 		: str(s.data() + std::min(beg, s.size())),
 			len(std::min(n, s.size() - std::min(beg, s.size()))) {}
+
+	template<class CharT, size_t N>
+	constexpr StringBase(const CharT(&s)[N]) noexcept : str(s), len(N) {}
+
+	constexpr StringBase(const meta::string& s) noexcept
+		: str(s.data()), len(s.size())
+	{}
 
 	template<class CharT>
 	StringBase(const StringBase<CharT>& s) noexcept
@@ -98,16 +110,32 @@ public:
 	const_reference back() const noexcept { return str[len - 1]; }
 
 	// Returns reference to n-th element
-	reference operator[](size_type n) noexcept { return str[n]; }
+	reference operator[](size_type n) noexcept {
+	#ifdef _GLIBCXX_DEBUG
+		assert(n >= 0);
+		assert(n < len);
+	#endif
+		return str[n];
+	}
 
 	// Returns const_reference to n-th element
-	const_reference operator[](size_type n) const noexcept { return str[n]; }
+	const_reference operator[](size_type n) const noexcept {
+	#ifdef _GLIBCXX_DEBUG
+		assert(n >= 0);
+		assert(n < len);
+	#endif
+		return str[n];
+	}
 
 	// Like operator[] but throws exception if n >= size()
 	reference at(size_type n) {
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
+	#ifdef _GLIBCXX_DEBUG
+		assert(n >= 0);
+		assert(n < len);
+	#endif
 		return str[n];
 	}
 
@@ -490,7 +518,7 @@ public:
 
 	// Removes leading characters for which f() returns true
 	template<class Func>
-	void removeLeading(Func f) {
+	void removeLeading(Func&& f) {
 		size_type i = 0;
 		for (; i < len && f(str[i]); ++i) {}
 		str += i;
@@ -503,13 +531,38 @@ public:
 
 	// Removes trailing characters for which f() returns true
 	template<class Func>
-	void removeTrailing(Func f) {
+	void removeTrailing(Func&& f) {
 		while (len > 0 && f(back()))
 			--len;
 	}
 
 	void removeTrailing(char c) noexcept {
 		removeTrailing([c](char x) { return (x == c); });
+	}
+
+	// Extracts leading characters for which f() returns true
+	template<class Func>
+	StringView extractLeading(Func&& f) {
+		size_type i = 0;
+		for (; i < len && f(str[i]); ++i) {}
+
+		StringView res = substring(0, i);
+		str += i;
+		len -= i;
+
+		return res;
+	}
+
+	// Extracts trailing characters for which f() returns true
+	template<class Func>
+	StringView extractTrailing(Func&& f) {
+		size_type i = len;
+		for (; i > 0 && f(str[i]); --i) {}
+
+		StringView res = substring(i, len);
+		len = i;
+
+		return res;
 	}
 
 	using StringBase::substr;
@@ -532,7 +585,7 @@ std::basic_ostream<CharT, Traits>& operator<<(
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
 template<class Func>
-bool special_less(const StringView& a, const StringView& b, Func f) {
+bool special_less(const StringView& a, const StringView& b, Func&& f) {
 	size_t len = std::min(a.size(), b.size());
 	for (size_t i = 0; i < len; ++i)
 		if (f(a[i]) != f(b[i]))
@@ -544,7 +597,7 @@ bool special_less(const StringView& a, const StringView& b, Func f) {
 // Checks whether two StringView are equal, but before comparing two characters
 // modifies them with f()
 template<class Func>
-bool special_equal(const StringView& a, const StringView& b, Func f) {
+bool special_equal(const StringView& a, const StringView& b, Func&& f) {
 	if (a.size() != b.size())
 		return false;
 
@@ -691,7 +744,7 @@ inline bool slowEqual(const std::string& str1, const std::string& str2)
 
 // Returns @p str without trailing characters for which f() returns true
 template<class Func>
-std::string withoutTrailing(const std::string& str, Func f) {
+std::string withoutTrailing(const std::string& str, Func&& f) {
 	auto len = str.size();
 	while (len > 0 && f(str[len - 1]))
 		--len;
@@ -700,7 +753,7 @@ std::string withoutTrailing(const std::string& str, Func f) {
 
 // Removes trailing characters for which f() returns true
 template<class Func>
-void removeTrailing(std::string& str, Func f) {
+void removeTrailing(std::string& str, Func&& f) {
 	auto it = str.end();
 	while (it != str.begin())
 		if (!f(*--it)) {
@@ -733,14 +786,14 @@ inline int hextodec(int c) noexcept {
 	return (c >= 'a' ? 10 + c - 'a' : c - '0');
 }
 
-inline char dectohex(int x) noexcept { return x > 9 ? 'A' - 10 + x : x + '0'; }
+inline char dectoHex(int x) noexcept { return x > 9 ? 'A' - 10 + x : x + '0'; }
 
-inline char dectohex2(int x) noexcept { return x > 9 ? 'a' - 10 + x : x + '0'; }
+inline char dectohex(int x) noexcept { return x > 9 ? 'a' - 10 + x : x + '0'; }
 
-// Converts each byte of @p str to two hex digits using dectohex2()
+// Converts each byte of @p str to two hex digits using dectohex()
 std::string toHex(const char* str, size_t len);
 
-// Converts each byte of @p str to two hex digits using dectohex2()
+// Converts each byte of @p str to two hex digits using dectohex()
 inline std::string toHex(const std::string& str) {
 	return toHex(str.data(), str.size());
 }

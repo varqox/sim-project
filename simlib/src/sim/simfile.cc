@@ -14,18 +14,18 @@ namespace sim {
 
 string Simfile::dump() const {
 	string res;
-	back_insert(res, "name: ", ConfigFile::safeString(name), '\n',
-		"tag: ", ConfigFile::safeString(tag), '\n',
-		"statement: ", ConfigFile::safeString(statement), '\n',
-		"checker: ", ConfigFile::safeString(checker), '\n',
+	back_insert(res, "name: ", ConfigFile::escapeString(name), '\n',
+		"tag: ", ConfigFile::escapeString(tag), '\n',
+		"statement: ", ConfigFile::escapeString(statement), '\n',
+		"checker: ", ConfigFile::escapeString(checker), '\n',
 		"memory_limit: ", toString(memory_limit), '\n',
-		"main_solution: ", ConfigFile::safeString(main_solution), '\n');
+		"main_solution: ", ConfigFile::escapeString(main_solution), '\n');
 
 	// Solutions
 	res += "solutions: [";
 	for (auto i = solutions.begin(); i != solutions.end(); ++i)
 		back_insert(res, (i == solutions.begin() ? "" : ", "),
-			ConfigFile::safeString(*i));
+			ConfigFile::escapeString(*i));
 	res += "]\n";
 
 	// Tests
@@ -65,26 +65,26 @@ vector<string> Simfile::loadFrom(string package_path) {
 
 	vector<string> warnings;
 	// Problem name
-	name = config.getString("name");
+	name = config["name"].asString();
 	if (name.empty())
 		warnings.emplace_back("config.conf: missing problem name");
 
 	// Memory limit (in KiB)
-	if (!config.isSet("memory_limit")) {
+	if (!config["memory_limit"].isSet()) {
 		memory_limit = 0;
 		warnings.emplace_back("config.conf: missing memory limit\n");
 
-	} else if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
+	} else if (strtou(config["memory_limit"].asString(), &memory_limit) <= 0)
 		warnings.emplace_back("config.conf: invalid memory limit\n");
 
 	// Problem tag
-	tag = config.getString("tag");
+	tag = config["tag"].asString();
 	if (tag.size() > 4) // Invalid tag
 		warnings.emplace_back("conf.cfg: problem tag too long "
 			"(max 4 characters)");
 
 	// Statement
-	statement = config.getString("statement");
+	statement = config["statement"].asString();
 	if (statement.size()) {
 		if (statement.find('/') < statement.size())
 			warnings.emplace_back("config.conf: statement cannot contain "
@@ -96,20 +96,20 @@ vector<string> Simfile::loadFrom(string package_path) {
 	}
 
 	// Checker
-	checker = config.getString("checker");
+	checker = config["checker"].asString();
 	if (checker.size() && checker.find('/') < checker.size())
 		warnings.emplace_back("config.conf: checker cannot contain "
 			"'/' character");
 
 	// Solutions
-	solutions = config.getArray("solutions");
+	solutions = config["solutions"].asArray();
 	for (auto& i : solutions)
 		if (i.find('/') < i.size())
 			warnings.emplace_back("config.conf: solution cannot contain "
 				"'/' character");
 
 	// Main solution
-	main_solution = config.getString("main_solution");
+	main_solution = config["main_solution"].asString();
 	if (main_solution.empty())
 		warnings.emplace_back("config.conf: missing main_solution");
 
@@ -122,7 +122,7 @@ vector<string> Simfile::loadFrom(string package_path) {
 
 	// Tests
 	test_groups.clear();
-	vector<string> tests = config.getArray("tests");
+	vector<string> tests = config["tests"].asArray();
 	for (auto& i : tests) {
 		Test test;
 
@@ -180,24 +180,24 @@ void Simfile::loadFromAndValidate(string package_path) {
 	config.loadConfigFromFile(package_path + "config.conf");
 
 	// Problem name
-	name = config.getString("name");
+	name = config["name"].asString();
 	if (name.empty())
 		THROW("config.conf: Missing problem name");
 
 	// Memory limit (in KiB)
-	if (!config.isSet("memory_limit"))
+	if (!config["memory_limit"].isSet())
 		THROW("config.conf: missing memory limit\n");
 
-	if (strtou(config.getString("memory_limit"), &memory_limit) <= 0)
+	if (strtou(config["memory_limit"].asString(), &memory_limit) <= 0)
 		THROW("config.conf: invalid memory limit\n");
 
 	// Problem tag
-	tag = config.getString("tag");
+	tag = config["tag"].asString();
 	if (tag.size() > 4) // Invalid tag
 		THROW("conf.cfg: Problem tag too long (max 4 characters)");
 
 	// Statement
-	statement = config.getString("statement");
+	statement = config["statement"].asString();
 	if (statement.size()) {
 		if (statement.find('/') < statement.size())
 			THROW("config.conf: statement cannot contain '/' character");
@@ -208,7 +208,7 @@ void Simfile::loadFromAndValidate(string package_path) {
 	}
 
 	// Checker
-	checker = config.getString("checker");
+	checker = config["checker"].asString();
 	if (checker.size()) {
 		if (checker.find('/') < checker.size())
 			THROW("config.conf: checker cannot contain '/' character");
@@ -219,7 +219,7 @@ void Simfile::loadFromAndValidate(string package_path) {
 	}
 
 	// Solutions
-	solutions = config.getArray("solutions");
+	solutions = config["solutions"].asArray();
 	for (auto& i : solutions) {
 		if (i.find('/') < i.size())
 			THROW("config.conf: solution cannot contain '/' character");
@@ -230,7 +230,7 @@ void Simfile::loadFromAndValidate(string package_path) {
 	}
 
 	// Main solution
-	main_solution = config.getString("main_solution");
+	main_solution = config["main_solution"].asString();
 	if (main_solution.empty())
 		THROW("config.conf: missing main_solution");
 
@@ -242,7 +242,7 @@ void Simfile::loadFromAndValidate(string package_path) {
 
 	// Tests
 	test_groups.clear();
-	vector<string> tests = config.getArray("tests");
+	vector<string> tests = config["tests"].asArray();
 	for (auto& i : tests) {
 		Test test;
 

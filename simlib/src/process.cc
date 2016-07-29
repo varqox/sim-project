@@ -101,7 +101,7 @@ string chdirToExecDir() {
 	if (slash < exec.size())
 		exec.resize(slash); // Erase filename
 
-	if (chdir(exec.c_str()) == -1)
+	if (chdir(exec.c_str()))
 		THROW("chdir('", exec, "')", error(errno));
 
 	return exec;
