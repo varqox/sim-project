@@ -3,7 +3,7 @@ include ../../Makefile.config
 .PHONY: all
 all: ../judge-machine
 
- $(eval $(call dependencies))
+$(eval $(call dependencies))
 
 ../judge-machine: main.o judge.o
 ../judge-machine: ../lib/sim.a

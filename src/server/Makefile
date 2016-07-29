@@ -3,7 +3,7 @@ include ../../Makefile.config
 .PHONY: all
 all: ../sim-server ../sim-server2
 
- $(eval $(call dependencies))
+$(eval $(call dependencies))
 
 ../sim-server: server.o connection.o http_request.o http_response.o form_validator.o
 ../sim-server: session.o template.o errors.o user.o

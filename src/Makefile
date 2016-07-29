@@ -5,8 +5,8 @@ all: killinstc Conver Judge_machine server lib setup-installation simlib
 
 OLD_EXTRA_CXX_FLAGS := $(EXTRA_CXX_FLAGS)
 OLD_EXTRA_LD_FLAGS := $(EXTRA_LD_FLAGS)
-EXTRA_CXX_FLAGS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
-EXTRA_LD_FLAGS += -L '$(ROOT)/src/lib' -L '$(ROOT)/src/lib/others'
+EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/others'
+EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others'
 
 # Disable flags to be run on simlib
 simlib: override EXTRA_CXX_FLAGS = $(OLD_EXTRA_LD_FLAGS)

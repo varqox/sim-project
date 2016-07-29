@@ -2,22 +2,36 @@ include Makefile.config
 
 DESTDIR = build
 
-.PHONY: build
-build:
+.PHONY: all
+all: build-info
+	@$(MAKE) src
+ifeq ($(MAKELEVEL), 0)
+	@echo "\033[32mBuild finished\033[0m"
+endif
+
+.PHONY: build-info
+build-info:
 ifeq ($(MAKELEVEL), 0)
 	@echo "DEBUG: $(DEBUG)"
 	@echo "CC -> $(CC)"
 	@echo "CXX -> $(CXX)"
 endif
-	$(Q)$(MAKE) -C src/
-ifeq ($(MAKELEVEL), 0)
-	@echo "\033[32mBuild finished\033[0m"
-endif
+
+.PHONY: src
+src: build-info
+	$(Q)$(MAKE) -C $@
 
 .PHONY: test
-test: build
-	$(Q)$(MAKE) -C test/
+test: test-sim test-simlib
 	@echo "\033[1;32mAll tests passed\033[0m"
+
+.PHONY: test-sim
+test-sim: src
+	$(Q)$(MAKE) -C test/
+
+.PHONY: test-simlib
+test-simlib: src
+	$(Q)$(MAKE) -C src/simlib/ test
 
 .PHONY: install
 install: $(filter-out install run, $(MAKECMDGOALS))

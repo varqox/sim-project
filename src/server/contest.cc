@@ -119,7 +119,7 @@ void Contest::handle() {
 		problem_config.loadConfigFromFile(concat("problems/",
 			rpath->problem->problem_id, "/config.conf"));
 
-		string statement = problem_config.getString("statement");
+		string statement = problem_config["statement"].asString();
 		// No statement
 		if (statement.empty()) {
 			contestTemplate("Problems");
@@ -576,11 +576,11 @@ void Contest::addProblem() {
 				problem_config.loadConfigFromFile(concat(package_tmp_dir,
 					"/config.conf"));
 
-				name = problem_config.getString("name");
+				name = problem_config["name"].asString();
 				if (name.empty())
 					THROW("Failed to get problem name");
 
-				string tag = problem_config.getString("tag");
+				string tag = problem_config["tag"].asString();
 
 				// Move package folder to problems/
 				string package_dir = concat("problems/", problem_id);
@@ -1081,9 +1081,9 @@ void Contest::editProblem() {
 
 	pconfig.loadConfigFromFile(concat("problems/", rpath->problem->problem_id,
 		"/config.conf"));
-	name = pconfig.getString("name");
-	tag = pconfig.getString("tag");
-	memory_limit = pconfig.getString("memory_limit");
+	name = pconfig["name"].asString();
+	tag = pconfig["tag"].asString();
+	memory_limit = pconfig["memory_limit"].asString();
 
 	contestTemplate("Edit problem");
 	printRoundPath();
