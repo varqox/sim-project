@@ -437,27 +437,13 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			}
 			++k;
 
-			struct cmp {
-				bool operator()(const meta::string& a, const StringView& b)
-					const
-				{
-					return StringView(a.data(), a.size()) < b;
-				}
-
-				bool operator()(const StringView& a, const meta::string& b)
-					const
-				{
-					return a < StringView(b.data(), b.size());
-				}
-			};
-
 			// Function name can neither be blank nor begin with a digit
 			if (k < name_end && !isdigit(str[k])) {
 				StringView function_name = substring(str, k, name_end);
 				// It is important that function_name is taken as StringView
 				// below!
 				begs[k] = (std::binary_search(cpp_keywords.begin(),
-						cpp_keywords.end(), function_name, cmp())
+						cpp_keywords.end(), function_name)
 					? KEYWORD : FUNCTION);
 				++ends[name_end];
 			}

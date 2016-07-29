@@ -98,8 +98,8 @@ int main() {
 		return 5;
 	}
 
-	string address = config.getString("address");
-	int workers = config.getInt("workers");
+	string address = config["address"].asString();
+	int workers = config["workers"].asInt();
 
 	if (workers < 1) {
 		errlog("sim.config: Number of workers cannot be lower than 1");

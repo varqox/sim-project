@@ -213,7 +213,7 @@ bool Connection::parseHeader(StringView str, StringView& name,
 
 bool Connection::constructHeaders(StringView& data) {
 	DEBUG_HEADERS("Connection ", toString(fd_), " -> \033[1;33m"
-		"Parsing:\033[m ", ConfigFile::safeString(data, true));
+		"Parsing:\033[m ", ConfigFile::escapeString(data, true));
 
 	if (data.empty())
 		return false;
@@ -588,19 +588,19 @@ static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
 
 	const char* vars[] = {"address", "workers", "connections"};
 	for (auto var : vars)
-		if (!config.isSet(var)) {
+		if (!config[var].isSet()) {
 			errlog(config_path, ": variable '", var, "' is not defined");
 			exit(6);
 		}
 
-	string address = config.getString("address");
-	workers = config.getInt("workers");
+	string address = config["address"].asString();
+	workers = config["workers"].asInt();
 	if (workers < 1) {
 		errlog(config_path, ": Number of workers cannot be lower than 1");
 		exit(6);
 	}
 
-	connections = config.getInt("connections");
+	connections = config["connections"].asInt();
 	if (connections < 1) {
 		errlog(config_path, ": Number of connections cannot be lower than 1");
 		exit(6);

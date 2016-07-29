@@ -3,7 +3,7 @@ include ../../Makefile.config
 .PHONY: all
 all: ../conver
 
- $(eval $(call dependencies))
+$(eval $(call dependencies))
 
 ../conver: conver.o validate_package.o convert_package.o set_limits.o
 ../conver: default_checker_dump.o
