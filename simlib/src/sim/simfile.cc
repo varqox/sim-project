@@ -1,12 +1,12 @@
-#include "../../include/config_file.h"
-#include "../../include/debug.h"
 #include "../../include/filesystem.h"
-#include "../../include/logger.h"
+#include "../../include/parsers.h"
 #include "../../include/sim/simfile.h"
 #include "../../include/utilities.h"
 
 #include <cmath>
 
+using std::map;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -14,319 +14,348 @@ namespace sim {
 
 string Simfile::dump() const {
 	string res;
-	back_insert(res, "name: ", ConfigFile::escapeString(name), '\n',
-		"tag: ", ConfigFile::escapeString(tag), '\n',
-		"statement: ", ConfigFile::escapeString(statement), '\n',
-		"checker: ", ConfigFile::escapeString(checker), '\n',
-		"memory_limit: ", toString(memory_limit), '\n',
-		"main_solution: ", ConfigFile::escapeString(main_solution), '\n');
+	back_insert(res, "name: ", ConfigFile::escapeString(name), "\n"
+		"tag: ", ConfigFile::escapeString(tag), "\n"
+		"statement: ", ConfigFile::escapeString(statement), "\n"
+		"checker: ", ConfigFile::escapeString(checker), "\n"
+		"solutions: [");
 
-	// Solutions
-	res += "solutions: [";
-	for (auto i = solutions.begin(); i != solutions.end(); ++i)
-		back_insert(res, (i == solutions.begin() ? "" : ", "),
-			ConfigFile::escapeString(*i));
+	if (solutions.size()) {
+		back_insert(res, solutions[0]);
+		for (uint i = 1; i < solutions.size(); ++i)
+			back_insert(res, ", ", solutions[i]);
+	}
+	back_insert(res, "]\n");
+
+	// Memory limit
+	if (global_mem_limit >= (1 << 10))
+		back_insert(res, "memory_limit: ", toString(global_mem_limit >> 10),
+			'\n');
+
+	// Limits
+	back_insert(res, "limits: [");
+	for (const TestGroup& group : tgroups) {
+		if (group.tests.size())
+			res += '\n';
+		for (const Test& test : group.tests) {
+			string line {concat(test.name, ' ',
+				usecToSecStr(test.time_limit, 2))};
+
+			if (test.memory_limit != global_mem_limit)
+				back_insert(line, ' ', toString(test.memory_limit >> 10));
+
+			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
+		}
+	}
 	res += "]\n";
 
-	// Tests
-	res += "tests: [";
-	bool first_test = true;
-	for (auto& i : test_groups) {
-		if (i.tests.empty())
-			continue;
-
-		if (first_test)
-			first_test = false;
-		else
-			res += ",\n";
-
-		back_insert(res, "\n\t'", i.tests[0].name, ' ',
-			usecToSecStr(i.tests[0].time_limit, 2), ' ', toString(i.points),
-			'\'');
-
-		for (auto j = ++i.tests.begin(); j != i.tests.end(); ++j)
-			back_insert(res, ",\n\t'", j->name, ' ', usecToSecStr(j->time_limit,
-				2), '\'');
+	// Scoring
+	if (tgroups.size()) {
+		res += "scoring: [\n";
+		for (const TestGroup& group : tgroups)
+			if (group.tests.size()) {
+				auto p = TestNameComparator::split(group.tests[0].name);
+				if (p.second == "ocen")
+					p.first = "0";
+				back_insert(res, '\t', ConfigFile::escapeString(concat(p.first,
+					' ', toString(group.score))), '\n');
+			}
+		res += "]\n";
 	}
-	res += "\n]\n";
+
+	// Tests files
+	res += "tests_files: [\n";
+	for (const TestGroup& group : tgroups)
+		for (const Test& test : group.tests)
+			if (test.in.size() && test.out.size())
+				back_insert(res, '\t', ConfigFile::escapeString(
+					concat(test.name, ' ', test.in, ' ', test.out)), '\n');
+
+	res += "]\n";
+
 	return res;
 }
 
-vector<string> Simfile::loadFrom(string package_path) {
-	// Append slash to package_path
-	if (package_path.size() && package_path.back() != '/')
-		package_path += '/';
+// Macros because of string concentration in compile-time (in C++11 it is hard
+// to achieve in the other way)
+#define CHECK_IF_ARR(var, name) if (!var.isArray() && var.isSet()) \
+	throw std::runtime_error("Simfile: variable `" name "` has to be an array")
+#define CHECK_IF_NOT_ARR(var, name) if (var.isArray()) \
+	throw std::runtime_error("Simfile: variable `" name "` cannot be an array")
 
-	ConfigFile config;
-	config.addVars("name", "tag", "statement", "checker", "memory_limit",
-		"solutions", "main_solution", "tests");
+void Simfile::loadName() {
+	auto&& var = config["name"];
+	CHECK_IF_NOT_ARR(var, "name");
+	if (!var.isSet() || (name = var.asString()).empty())
+		throw std::runtime_error("Simfile: missing problem name");
+}
 
-	config.loadConfigFromFile(package_path + "config.conf");
+void Simfile::loadTag() {
+	auto&& var = config["tag"];
+	CHECK_IF_NOT_ARR(var, "tag");
+	if (!var.isSet() || (tag = var.asString()).empty())
+		throw std::runtime_error("Simfile: missing problem tag");
+}
 
-	vector<string> warnings;
-	// Problem name
-	name = config["name"].asString();
-	if (name.empty())
-		warnings.emplace_back("config.conf: missing problem name");
+void Simfile::loadChecker() {
+	auto&& var = config["checker"];
+	CHECK_IF_NOT_ARR(var, "checker");
+	if (!var.isSet() || var.asString().empty())
+		throw std::runtime_error("Simfile: missing checker");
 
-	// Memory limit (in KiB)
-	if (!config["memory_limit"].isSet()) {
-		memory_limit = 0;
-		warnings.emplace_back("config.conf: missing memory limit\n");
+	// Secure path, so that it is not going outside the package
+	checker = abspath(var.asString()).erase(0, 1); // Erase '/' from the
+	                                               // beginning
+}
 
-	} else if (strtou(config["memory_limit"].asString(), &memory_limit) <= 0)
-		warnings.emplace_back("config.conf: invalid memory limit\n");
+void Simfile::loadStatement() {
+	auto&& var = config["statement"];
+	CHECK_IF_NOT_ARR(var, "statement");
+	if (!var.isSet() || var.asString().empty())
+		throw std::runtime_error("Simfile: missing statement");
 
-	// Problem tag
-	tag = config["tag"].asString();
-	if (tag.size() > 4) // Invalid tag
-		warnings.emplace_back("conf.cfg: problem tag too long "
-			"(max 4 characters)");
+	// Secure path, so that it is not going outside the package
+	statement = abspath(var.asString()).erase(0, 1); // Erase '/' from the
+	                                                 // beginning
+}
 
-	// Statement
-	statement = config["statement"].asString();
-	if (statement.size()) {
-		if (statement.find('/') < statement.size())
-			warnings.emplace_back("config.conf: statement cannot contain "
-				"'/' character");
+void Simfile::loadSolutions() {
+	auto&& var = config["solutions"];
+	CHECK_IF_ARR(var, "solutions");
+	if (!var.isSet() || var.asArray().empty())
+		throw std::runtime_error("Simfile: missing solution");
 
-		if (access(concat(package_path, "doc/", statement), F_OK) == -1)
-			THROW("config.conf: invalid statement '", statement, "': 'doc/",
-				statement, '\'', error(errno));
-	}
+	solutions.clear();
+	solutions.reserve(var.asArray().size());
+	for (const string& str : var.asArray())
+		// Secure path, so that it is not going outside the package
+		solutions.emplace_back(abspath(str).erase(0, 1)); // Erase '/' from the
+		                                                  // beginning
+}
 
-	// Checker
-	checker = config["checker"].asString();
-	if (checker.size() && checker.find('/') < checker.size())
-		warnings.emplace_back("config.conf: checker cannot contain "
-			"'/' character");
+void Simfile::loadTests() {
+	// Global memory limit
+	auto&& ml = config["memory_limit"];
+	CHECK_IF_NOT_ARR(ml, "memory_limit");
+	if ((global_mem_limit = ml.asInt<uint64_t>()) == 0 && ml.isSet())
+		throw std::runtime_error("Simfile: invalid memory_limit - it has to be "
+			"a positive integer");
+	global_mem_limit <<= 10; // Convert from KB to bytes
+	// Now if global_mem_limit == 0 then it is unset
 
-	// Solutions
-	solutions = config["solutions"].asArray();
-	for (auto& i : solutions)
-		if (i.find('/') < i.size())
-			warnings.emplace_back("config.conf: solution cannot contain "
-				"'/' character");
+	/* Limits */
 
-	// Main solution
-	main_solution = config["main_solution"].asString();
-	if (main_solution.empty())
-		warnings.emplace_back("config.conf: missing main_solution");
+	auto&& limits = config["limits"];
+	CHECK_IF_ARR(limits, "limits");
 
-	else if (std::find(solutions.begin(), solutions.end(), main_solution) ==
-		solutions.end())
-	{
-		warnings.emplace_back("config.conf: main_solution has to be set in "
-			"solutions");
-	}
+	if (!limits.isSet())
+		throw std::runtime_error("Simfile: missing limits array");
 
-	// Tests
-	test_groups.clear();
-	vector<string> tests = config["tests"].asArray();
-	for (auto& i : tests) {
-		Test test;
-
+	map<StringView, TestGroup, StrNumCompare> tests_groups;
+	// StringView may be sued as Key because it will point to string in
+	// limits.asArray() which is a const reference to vector inside the `limits`
+	// variable which will be valid as long as config is not cleared
+	for (const string& str : limits.asArray()) {
+		SimpleParser sp {str};
 		// Test name
-		size_t pos = 0;
-		while (pos < i.size() && !isspace(i[pos]))
-			++pos;
-		test.name.assign(i, 0, pos);
-
-		if (test.name.find('/') != string::npos)
-			warnings.emplace_back("config.conf: test name cannot contain "
-				"'/' character");
+		StringView test_name {sp.extractNextNonEmpty(isspace)};
+		Test test(test_name.to_string());
 
 		// Time limit
-		errno = 0;
-		char *ptr;
-		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
-		if (errno)
-			warnings.emplace_back(concat("config.conf: ", test.name,
-				": invalid time limit"));
-		pos = ptr - i.data();
+		StringView x {sp.extractNextNonEmpty(isspace)};
+		if (!isReal(x))
+			throw std::runtime_error(concat("Simfile: invalid time limit for "
+				"the test `", test_name, '`'));
 
-		while (pos < i.size() && isspace(i[pos]))
-			++pos;
+		double tl = stod(x.to_string());
+		if (tl <= 0)
+			throw std::runtime_error(concat("Simfile: invalid time limit of "
+				"the test `", test_name, "` - it has to be grater than 0"));
 
-		// Points
-		if (pos < i.size()) {
-			test_groups.emplace_back();
+		test.time_limit = round(tl * 1000000LL);
+		if (test.time_limit == 0)
+			throw std::runtime_error(concat("Simfile: time limit of the test `",
+				test_name, "` is to small - after rounding it is equal to 0 "
+				"microseconds, but it has to be at least 1 microsecond"));
 
-			// Remove trailing white spaces
-			size_t end = i.size();
-			while (end > pos && isspace(i[end - 1]))
-				--end;
+		// Memory limit
+		// TODO: add boundaries to the values - make sure that they will fit
+		//       into uint64_t before converting them
+		sp.removeLeading(isspace);
+		if (sp.empty()) { // No memory limit is specified for current test
+			if (!global_mem_limit)
+				throw std::runtime_error(concat("Simfile: missing memory limit "
+					"for the test `", test_name, '`'));
 
-			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
-				warnings.emplace_back(concat("config.conf: ", test.name,
-					": invalid points"));
+			test.memory_limit = global_mem_limit;
+
+		// There is an invalid memory limit specified for the current test
+		} else if (strtou(sp, &test.memory_limit) != (int)sp.size() ||
+			test.memory_limit == 0)
+		{
+			throw std::runtime_error(concat("Simfile: invalid memory limit "
+				"for the test `", test_name, "` - it has to be a positive "
+				"integer"));
+
+		// Memory limit of the current test is valid
+		} else
+			test.memory_limit <<= 10; // Convert from KB to bytes
+
+		// Add test to its group
+		auto p = TestNameComparator::split(test_name);
+		if (p.first.empty())
+			throw std::runtime_error(concat("Simfile: missing group id in the "
+				"name of the test `", test_name, '`'));
+
+		// tid == "ocen" belongs to the same group as tests with gid == "0"
+		if (p.second == "ocen")
+			p.first = "0";
+
+		tests_groups[p.first].tests.emplace_back(std::move(test));
+	}
+
+	/* Scoring */
+
+	auto&& scoring = config["scoring"];
+	CHECK_IF_ARR(scoring, "scoring");
+	if (!scoring.isSet()) { // Calculate scoring automatically
+		int groups_no = tests_groups.size() -
+			(tests_groups.find("0") != tests_groups.end());
+		int points = 100;
+		for (auto&& git : tests_groups)
+			if (git.first != "0") {
+				git.second.score = points / groups_no--;
+				points -= git.second.score;
+			}
+
+	} else { // Check and implement defined scoring
+		map<StringView, int64_t> sm; // (gid, score)
+		for (const string& str : scoring.asArray()) {
+			SimpleParser sp {str};
+			StringView gid {sp.extractNextNonEmpty(isspace)};
+
+			if (tests_groups.find(gid) == tests_groups.end()) {
+				// It is safe to do check here because gids in tests_groups are
+				// positive integers
+				if (!isDigit(gid))
+					throw std::runtime_error(concat("Simfile: scoring of the "
+						"invalid group `", gid, "` - it has to be a positive "
+						"integer"));
+				throw std::runtime_error(concat("Simfile: scoring of the "
+					"invalid group `", gid, "` - there is no test belonging to "
+					"this group"));
+			}
+
+			sp.removeLeading(isspace);
+			auto&& it = sm.emplace(gid, 0);
+			if (!it.second)
+				throw std::runtime_error(concat("Simfile: redefined scoring of "
+					"the group `", gid, '`'));
+
+			if (strtoi(sp, &it.first->second) != (int)sp.size())
+				throw std::runtime_error(concat("Simfile: invalid scoring of "
+					"the group `", gid, '`'));
 		}
 
-		test_groups.back().tests.emplace_back(test);
+		// Assign scoring to each group
+		for (auto&& git : tests_groups) {
+			auto&& it = sm.find(git.first);
+			if (it == sm.end())
+				throw std::runtime_error(concat("Simfile: missing scoring of "
+					"the group `", git.first, '`'));
+
+			git.second.score = it->second;
+		}
 	}
 
-	return warnings;
+	// Move limits from tests_groups to tgroups
+	tgroups.clear();
+	tgroups.reserve(tests_groups.size());
+	for (auto&& git : tests_groups)
+		tgroups.emplace_back(std::move(git.second));
+
+	// Sort tests in groups
+	for (auto& group : tgroups)
+		sort(group.tests, [](const Test& a, const Test& b) {
+			return TestNameComparator()(a.name, b.name);
+		});
 }
 
-void Simfile::loadFromAndValidate(string package_path) {
-	// Append slash to package_path
-	if (package_path.size() && package_path.back() != '/')
-		package_path += '/';
+void Simfile::loadTestsWithFiles() {
+	loadTests();
 
-	ConfigFile config;
-	config.addVars("name", "tag", "statement", "checker", "memory_limit",
-		"solutions", "main_solution", "tests");
+	auto&& tests_files = config["tests_files"];
+	CHECK_IF_ARR(tests_files, "tests_files");
 
-	config.loadConfigFromFile(package_path + "config.conf");
+	if (!tests_files.isSet())
+		throw std::runtime_error("Simfile: missing tests_files array");
 
-	// Problem name
-	name = config["name"].asString();
-	if (name.empty())
-		THROW("config.conf: Missing problem name");
+	map<StringView, pair<StringView, StringView>> files; // test => (in, out)
+	// StringView can be used because it will point to the config variable
+	// "tests_files" member, which becomes unchanged
+	for (const string& str : tests_files.asArray()) {
+		SimpleParser sp {str};
+		StringView test_name {sp.extractNextNonEmpty(isspace)};
 
-	// Memory limit (in KiB)
-	if (!config["memory_limit"].isSet())
-		THROW("config.conf: missing memory limit\n");
+		auto it = files.emplace(test_name, pair<StringView, StringView>{});
+		if (!it.second)
+			throw std::runtime_error(concat("Simfile: `test_files`: "
+				"redefinition of the test `", test_name, '`'));
 
-	if (strtou(config["memory_limit"].asString(), &memory_limit) <= 0)
-		THROW("config.conf: invalid memory limit\n");
-
-	// Problem tag
-	tag = config["tag"].asString();
-	if (tag.size() > 4) // Invalid tag
-		THROW("conf.cfg: Problem tag too long (max 4 characters)");
-
-	// Statement
-	statement = config["statement"].asString();
-	if (statement.size()) {
-		if (statement.find('/') < statement.size())
-			THROW("config.conf: statement cannot contain '/' character");
-
-		if (access(concat(package_path, "doc/", statement), F_OK) == -1)
-			THROW("config.conf: invalid statement '", statement, "': 'doc/",
-				statement, '\'', error(errno));
+		auto& p = it.first->second;
+		p.first = sp.extractNextNonEmpty(isspace);
+		sp.removeLeading(isspace);
+		p.second = sp;
 	}
 
-	// Checker
-	checker = config["checker"].asString();
-	if (checker.size()) {
-		if (checker.find('/') < checker.size())
-			THROW("config.conf: checker cannot contain '/' character");
+	// Assign to each test its files
+	for (TestGroup& group : tgroups)
+		for (Test& test : group.tests) {
+			auto it = files.find(test.name);
+			if (it == files.end())
+				throw std::runtime_error(concat("Simfile: no files specified "
+					"for the test `", test.name, '`'));
 
-		if (access(concat(package_path, "check/", checker), F_OK) == -1)
-			THROW("config.conf: invalid checker '", checker, "': 'check/",
-				checker, '\'', error(errno));
+			// Secure paths, so that it is not going outside the package
+			test.in = abspath(it->second.first).erase(0, 1); // Erase '/' from
+			                                                 // the beginning
+			test.out = abspath(it->second.second).erase(0, 1); // The same here
+		}
+
+	// Superfluous files declarations are ignored - those for tests not from
+	// limits array
+}
+
+void Simfile::validateFiles(const StringView& package_path) const {
+	// Checker
+	if (checker.size() && !isRegularFile(concat(package_path, '/', checker)))
+		throw std::runtime_error(concat("Simfile: invalid checker file `",
+			checker, '`'));
+
+	// Statement
+	if (statement.size() &&
+		!isRegularFile(concat(package_path, '/', statement)))
+	{
+		throw std::runtime_error(concat("Simfile: invalid statement file `",
+			statement, '`'));
 	}
 
 	// Solutions
-	solutions = config["solutions"].asArray();
-	for (auto& i : solutions) {
-		if (i.find('/') < i.size())
-			THROW("config.conf: solution cannot contain '/' character");
-
-		if (access(concat(package_path, "prog/", i), F_OK) == -1)
-			THROW("config.conf: invalid solution '", i, "': 'prog/", i, '\'',
-				error(errno));
-	}
-
-	// Main solution
-	main_solution = config["main_solution"].asString();
-	if (main_solution.empty())
-		THROW("config.conf: missing main_solution");
-
-	if (std::find(solutions.begin(), solutions.end(), main_solution) ==
-		solutions.end())
-	{
-		THROW("config.conf: main_solution has to be set in solutions");
-	}
+	for (auto&& str : solutions)
+		if (!isRegularFile(concat(package_path, '/', str)))
+			throw std::runtime_error(concat("Simfile: invalid solution file `",
+				str, '`'));
 
 	// Tests
-	test_groups.clear();
-	vector<string> tests = config["tests"].asArray();
-	for (auto& i : tests) {
-		Test test;
-
-		// Test name
-		size_t pos = 0;
-		while (pos < i.size() && !isspace(i[pos]))
-			++pos;
-		test.name.assign(i, 0, pos);
-
-		if (test.name.find('/') != string::npos)
-			THROW("config.conf: test name cannot contain '/' character");
-
-		string test_in = concat(package_path, "tests/", test.name, ".in");
-		if (access(test_in, F_OK) == -1)
-			THROW("config.conf: invalid test name '", test_in, '\'',
-				error(errno));
-
-		// Time limit
-		errno = 0;
-		char *ptr;
-		test.time_limit = round(strtod(i.data() + pos, &ptr) * 1000000LL);
-		if (errno)
-			THROW("config.conf: ", test.name, ": invalid time limit");
-		pos = ptr - i.data();
-
-		while (pos < i.size() && isspace(i[pos]))
-			++pos;
-
-		// Points
-		if (pos < i.size()) {
-			test_groups.emplace_back();
-
-			// Remove trailing white spaces
-			size_t end = i.size();
-			while (end > pos && isspace(i[end - 1]))
-				--end;
-
-			if (strtoi(i, &test_groups.back().points, pos, end) <= 0)
-				THROW("config.conf: ", test.name, ": invalid points");
+	for (const TestGroup& group : tgroups)
+		for (const Test& test : group.tests) {
+			if (!isRegularFile(concat(package_path, '/', test.in)))
+				throw std::runtime_error(concat("Simfile: invalid test input "
+					"file `", test.in, '`'));
+			if (!isRegularFile(concat(package_path, '/', test.out)))
+				throw std::runtime_error(concat("Simfile: invalid test output "
+					"file `", test.out, '`'));
 		}
-
-		test_groups.back().tests.emplace_back(test);
-	}
-}
-
-string makeTag(const string& str) {
-	string tag;
-	for (size_t i = 0, len = str.size(); tag.size() < 3 && i < len; ++i)
-		if (!isblank(str[i]))
-			tag += tolower(str[i]);
-
-	return tag;
-}
-
-string obtainCheckerOutput(int fd, size_t max_length) {
-	string res(max_length, '\0');
-
-	(void)lseek(fd, 0, SEEK_SET);
-	size_t pos = 0;
-	ssize_t k;
-	do {
-		k = read(fd, const_cast<char*>(res.data()) + pos, max_length - pos);
-		if (k > 0) {
-			pos += k;
-		} else if (k == 0) {
-			// We have read whole checker output
-			res.resize(pos);
-			// Remove trailing white characters
-			while (isspace(res.back()))
-				res.pop_back();
-			return res;
-
-		} else if (errno != EINTR)
-			THROW("read()", error(errno));
-
-	} while (pos < max_length);
-
-	// Checker output is longer than max_length
-
-	// Replace last 3 characters with "..."
-	if (max_length >= 3)
-		res[max_length - 3] = res[max_length - 2] = res[max_length - 1] = '.';
-
-	return res;
 }
 
 } // namespace sim

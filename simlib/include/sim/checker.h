@@ -1,9 +1,12 @@
 #pragma once
 
-#include "sandbox.h"
+#include "../sandbox.h"
+
+namespace sim {
 
 class CheckerCallback : protected Sandbox::DefaultCallback {
-	std::vector<std::string> allowed_files; // sorted list of files allowed to
+	std::vector<std::string> allowed_files; // Sorted list of files allowed to
+	                                        // open by the sandboxed program
 
 public:
 	explicit CheckerCallback(std::vector<std::string> files = {})
@@ -38,3 +41,18 @@ public:
 
 	using DefaultCallback::errorMessage;
 };
+
+/**
+ * @brief Obtains checker output (truncated if too long)
+ *
+ * @param fd file descriptor of file to which checker wrote via stdout
+ * @param max_length maximum length of the returned string
+ *
+ * @return checker output, truncated if too long
+ *
+ * @errors Throws an exception of type std::runtime_error with appropriate
+ *   message
+ */
+std::string obtainCheckerOutput(int fd, size_t max_length);
+
+} // namespace sim

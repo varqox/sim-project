@@ -1,5 +1,7 @@
 #pragma once
 
+#include "string.h"
+
 #include <algorithm>
 #include <cstring>
 #include <fcntl.h>
@@ -34,7 +36,7 @@ private:
 	std::unique_ptr<char[]> name_;
 
 public:
-	TemporaryDirectory() = default;
+	// TemporaryDirectory() = default; // TODO: it does not seem to be necessary
 
 	explicit TemporaryDirectory(const char* templ);
 
@@ -48,10 +50,10 @@ public:
 
 	~TemporaryDirectory();
 
-	// Directory name with trailing '/'
+	// Directory name (from constructor parameter) with trailing '/'
 	const char* name() const noexcept { return name_.get(); }
 
-	// Directory name with trailing '/'
+	// Directory name (from constructor parameter) with trailing '/'
 	std::string sname() const { return name_.get(); }
 
 	// Directory absolute path with trailing '/'
@@ -69,12 +71,7 @@ inline int mkdir(const std::string& pathname) noexcept {
 }
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
-int mkdir_r(const char* pathname, mode_t mode = S_0755) noexcept;
-
-// Create directories recursively (default mode: 0755/rwxr-xr-x)
-inline int mkdir_r(const std::string& pathname, mode_t mode = S_0755) noexcept {
-	return mkdir_r(pathname.c_str(), mode);
-}
+int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
 
 // The same as unlink(const char*)
 inline int unlink(const std::string& pathname) noexcept {
@@ -256,7 +253,14 @@ int move(const std::string& oldpath, const std::string& newpath,
  *
  * @errors The same that occur for creat(2), close(2)
  */
-int createFile(const char* pathname, mode_t mode) noexcept;
+int createFile(const char* pathname, mode_t mode = S_0644) noexcept;
+
+// Alias to createFile(const char*, mode_t)
+inline int createFile(const std::string& pathname, mode_t mode = S_0644)
+	noexcept
+{
+	return createFile(pathname.c_str(), mode);
+}
 
 /**
  * @brief Read @p count bytes to @p buf from @p fd
@@ -376,7 +380,7 @@ inline Node* dumpDirectoryTree(const std::string& path) {
 *  nor any repeated path separators (/), and does not end with /
 *  curr_dir can be empty. If path begin with / then curr_dir is ignored.
 */
-std::string abspath(const std::string& path, size_t beg = 0,
+std::string abspath(const StringView& path, size_t beg = 0,
 		size_t end = std::string::npos, std::string curr_dir = "/");
 
 // returns extension (with dot) e.g. ".cc"
@@ -392,7 +396,7 @@ inline std::string getExtension(const std::string file) {
  *
  * @return read contents
  *
- * @errors The same that occur for read(2)
+ * @errors The same that occur for read(2) - check errno
  */
 std::string getFileContents(int fd, size_t bytes = -1);
 
@@ -405,7 +409,7 @@ std::string getFileContents(int fd, size_t bytes = -1);
  *
  * @return read contents
  *
- * @errors The same that occur for lseek64(3), read(2)
+ * @errors The same that occur for lseek64(3), read(2) - check errno
  */
 std::string getFileContents(int fd, off64_t beg, off64_t end);
 
@@ -416,7 +420,8 @@ std::string getFileContents(int fd, off64_t beg, off64_t end);
  *
  * @return read contents
  *
- * @errors The same that occur for open(2), read(2), close(2)
+ * @errors The same that occur for read(2), close(2) - check errno; May throw an
+ *   exception of type std::runtime_error if open(2) fails
  */
 std::string getFileContents(const char* file);
 
@@ -429,20 +434,17 @@ std::string getFileContents(const char* file);
  *
  * @return read contents
  *
- * @errors The same that occur for open(2), lseek64(3), read(2), close(2)
+ * @errors The same that occur for lseek64(3), read(2), close(2) - check errno;
+ *   May throw an exception of type std::runtime_error if open(2) fails
  */
 std::string getFileContents(const char* file, off64_t beg, off64_t end = -1);
 
-/**
- * Alias to getFileContents(const char*)
- */
+/// Alias to getFileContents(const char*)
 inline std::string getFileContents(const std::string& file) {
 	return getFileContents(file.c_str());
 }
 
-/**
- * Alias to getFileContents(const char*, off64_t, off64_t)
- */
+/// Alias to getFileContents(const char*, off64_t, off64_t)
 inline std::string getFileContents(const std::string& file, off64_t beg,
 	off64_t end = -1)
 {
@@ -578,7 +580,7 @@ public:
 
 	int release() noexcept {
 		int fd = fd_;
-		fd = -1;
+		fd_ = -1;
 		return fd;
 	}
 
@@ -635,7 +637,7 @@ class RemoverBase {
 
 public:
 	explicit RemoverBase(const char* str)
-		: RemoverBase(str, (str ? strlen(str) : 0)) {}
+		: RemoverBase(str, (str ? __builtin_strlen(str) : 0)) {}
 
 	explicit RemoverBase(const std::string& str)
 		: RemoverBase(str.data(), str.size()) {}
@@ -654,7 +656,7 @@ public:
 
 	void cancel() noexcept { name.reset(); }
 
-	void reset(const char* str) { reset(str, strlen(str)); }
+	void reset(const char* str) { reset(str, __builtin_strlen(str)); }
 
 	void reset(const std::string& str) { reset(str.data(), str.size()); }
 
@@ -683,6 +685,43 @@ typedef RemoverBase<remove_r> DirectoryRemover;
  *   97379112 -> "92.9 MB"
  *
  * @param size size to humanize
+ *
  * @return humanized file size
  */
 std::string humanizeFileSize(uint64_t size);
+
+/**
+ * @brief Check whether @p file exists and is a regular file
+ *
+ * @param file path of the file to check (has to be null-terminated)
+ *
+ * @return true if @p file is a regular file, false otherwise. To distinguish
+ *   other file type error from stat(2) error set errno to 0 before calling this
+ *   function, if stat(2) fails, errno will have nonzero value
+ */
+inline bool isRegularFile(const char* file) noexcept {
+	struct stat st;
+	return (stat(file, &st) == 0 && S_ISREG(st.st_mode));
+}
+
+inline bool isRegularFile(const std::string& file) noexcept {
+	return isRegularFile(file.c_str());
+}
+
+/**
+ * @brief Check whether @p file exists and is a directory
+ *
+ * @param file path of the file to check (has to be null-terminated)
+ *
+ * @return true if @p file is a directory, false otherwise. To distinguish
+ *   other file type error from stat(2) error set errno to 0 before calling this
+ *   function, if stat(2) fails, errno will have nonzero value
+ */
+inline bool isDirectory(const char* file) noexcept {
+	struct stat st;
+	return (stat(file, &st) == 0 && S_ISDIR(st.st_mode));
+}
+
+inline bool isDirectory(const std::string& file) noexcept {
+	return isDirectory(file.c_str());
+}

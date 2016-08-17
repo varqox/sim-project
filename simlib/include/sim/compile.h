@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace sim {
+
 /**
  * @brief Compiles C++ @p source to @p exec using g++ via PRoot
  * @details If compilation is not successful then errors are placed if c_errors
@@ -23,3 +25,5 @@ int compile(const std::string& source, const std::string& exec,
 	unsigned verbosity, uint64_t time_limit = 0,
 	std::string* c_errors = nullptr, size_t c_errors_max_len = -1,
 	const std::string& proot_path = "proot");
+
+} // namespace sim

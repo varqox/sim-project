@@ -27,11 +27,18 @@ public:
 	struct Variable {
 		static constexpr uint8_t SET = 1; // set if variable appear in the config
 		static constexpr uint8_t ARRAY = 2; // set if variable is an array
+
 		uint8_t flag;
 		std::string s;
 		std::vector<std::string> a;
 
 		Variable() : flag(0) {}
+
+		void unset() noexcept {
+			flag = 0;
+			s.clear();
+			a.clear();
+		}
 
 		bool isSet() const noexcept { return flag & SET; }
 
@@ -42,23 +49,35 @@ public:
 			return (s == "1" || lower_equal(s, "on") || lower_equal(s, "true"));
 		}
 
-		// Returns value as Integer (unsigned only) or 0 on error
+		// Returns value as Integer (unsigned only) or 0 on error. To
+		// distinguish error from success when return value is 0, set errno to 0
+		// before calling this function. If the errno != 0 after the call, then
+		// an error was encountered.
 		template<class Type>
 		typename std::enable_if<std::is_unsigned<Type>::value, Type>::type
 			asInt() const noexcept
 		{
 			Type x{};
-			strtou<Type>(s, &x);
+			if (strtou<Type>(s, &x) != (int)s.size()) {
+				errno = EINVAL;
+				return 0; // TODO: maybe throw
+			}
 			return x;
 		};
 
-		// Returns value as Integer or 0 on error
+		// Returns value as Integer or 0 on error. To distinguish error from
+		// success when return value is 0, set errno to 0 before calling this
+		// function. If the errno != 0 after the call, then an error was
+		// encountered.
 		template<class Type = int32_t>
 		typename std::enable_if<!std::is_unsigned<Type>::value, Type>::type
 			asInt() const noexcept
 		{
 			Type x{};
-			strtoi<Type>(s, &x);
+			if (strtoi<Type>(s, &x) != (int)s.size()) {
+				errno = EINVAL;
+				return 0; // TODO: maybe throw
+			}
 			return x;
 		};
 
@@ -119,7 +138,7 @@ public:
 	 * @param load_all whether load all variables from @p pathname or load only
 	 *   these from variable set
 	 *
-	 * @errors Throws an exception std::runtime_error if an open() error occurs
+	 * @errors Throws an exception std::runtime_error if an open(2) error occurs
 	 *   and all exceptions from loadConfigFromString()
 	 */
 	void loadConfigFromFile(const std::string& pathname, bool load_all = false);

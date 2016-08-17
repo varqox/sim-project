@@ -192,8 +192,8 @@ bool isReal(const StringView& s, size_t beg, size_t end) noexcept {
 	return true;
 }
 
-string usecToSecStr(unsigned long long x, unsigned prec, bool trim_nulls) {
-	unsigned long long y = x / 1000000;
+string usecToSecStr(uint64_t x, uint prec, bool trim_zeros) {
+	uint64_t y = x / 1000000;
 	string res = toString(y);
 
 	y = x - y * 1000000;
@@ -204,7 +204,7 @@ string usecToSecStr(unsigned long long x, unsigned prec, bool trim_nulls) {
 	}
 
 	// Truncate trailing zeros
-	if (trim_nulls)
+	if (trim_zeros)
 		for (int i = std::min(5u, prec - 1); i >= 0 && t[i] == '0'; --i)
 			t[i] = '\0';
 

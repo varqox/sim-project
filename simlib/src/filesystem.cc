@@ -31,7 +31,7 @@ int getUnlinkedTmpFile(int flags) noexcept {
 }
 
 TemporaryDirectory::TemporaryDirectory(const char* templ) {
-	size_t size = strlen(templ);
+	size_t size = __builtin_strlen(templ);
 	if (size > 0) {
 		// Fill name_
 		while (size && templ[size - 1] == '/')
@@ -44,7 +44,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 
 		// Create directory with permissions (mode: 0700/rwx------)
 		if (mkdtemp(name_.get()) == nullptr)
-			THROW("Cannot create temporary directory\n");
+			THROW("Cannot create temporary directory");
 
 		// name_ is absolute
 		if (name_.get()[0] == '/')
@@ -54,8 +54,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 			path_ = concat(getCWD(), name());
 
 		// Make path_ absolute
-		abspath(path_).swap(path_);
-		path_ += '/';
+		path_ = (abspath(path_) += '/');
 
 		name_.get()[size] = '/';
 	}
@@ -63,35 +62,33 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 
 TemporaryDirectory::~TemporaryDirectory() {
 	if (path_.size() && remove_r(path_) == -1)
-		errlog("Error: remove_r()", error(errno)); // TODO: it is not so good
+		errlog("Error: remove_r()", error(errno)); // TODO: it is not so good,
+		                                           // but throwing from the
+		                                           // destructor is UB
 }
 
-int mkdir_r(const char* path, mode_t mode) noexcept {
-	size_t len = strlen(path);
-	if (len >= PATH_MAX) {
+int mkdir_r(string path, mode_t mode) noexcept {
+	if (path.size() >= PATH_MAX) {
 		errno = ENAMETOOLONG;
 		return -1;
 	}
 
-	std::array<char, PATH_MAX> dir;
-	strncpy(dir.data(), path, len);
 	// Add ending slash (if not exists)
-	if (len == 0 || dir[len - 1] != '/')
-		dir[len++] = '/';
+	if (path.empty() || path.back() != '/')
+		path += '/';
 
-	size_t end = 1;
+	size_t end = 1; // If there is a leading slash, it will be omitted
 	int res = 0;
-	while (end < len) {
-		while (dir[end] != '/')
+	while (end < path.size()) {
+		while (path[end] != '/')
 			++end;
 
-		dir[end] = '\0'; // Separate subpath
-		res = mkdir(dir.data(), mode);
+		path[end] = '\0'; // Separate subpath
+		res = mkdir(path.data(), mode);
 		if (res == -1 && errno != EEXIST)
 			return -1;
 
-		dir[end++] = '/';
-
+		path[end++] = '/';
 	}
 
 	return res;
@@ -264,7 +261,7 @@ int copy_r(const char* src, const char* dest, bool create_subdirs) noexcept {
 	if (!create_subdirs)
 		return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 
-	size_t len = strlen(dest);
+	size_t len = __builtin_strlen(dest);
 	if (len >= PATH_MAX) {
 		errno = ENAMETOOLONG;
 		return -1;
@@ -396,7 +393,7 @@ Node* Node::dir(const string& pathname) {
 }
 
 static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
-	size_t len = strlen(path);
+	size_t len = __builtin_strlen(path);
 	while (len > 1 && path[len - 1] == '/')
 		--len;
 
@@ -442,11 +439,12 @@ Node* dumpDirectoryTree(const char* path) {
 
 } // namespace directory_tree
 
-string abspath(const string& path, size_t beg, size_t end, string curr_dir) {
+string abspath(const StringView& path, size_t beg, size_t end, string curr_dir)
+{
 	if (end > path.size())
 		end = path.size();
 
-	// path begin with '/'
+	// path begins with '/'
 	if (beg < end && path[beg] == '/')
 		curr_dir = '/';
 
@@ -482,7 +480,7 @@ string abspath(const string& path, size_t beg, size_t end, string curr_dir) {
 		if (curr_dir.size() && curr_dir.back() != '/')
 			curr_dir += '/';
 
-		curr_dir.append(path, beg, next_slash - beg);
+		curr_dir.append(path.begin() + beg, path.begin() + next_slash);
 		beg = next_slash;
 	}
 
@@ -549,8 +547,8 @@ string getFileContents(const char* file) {
 	int fd;
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
-	if (fd == -1) // TODO: maybe throw
-		return "";
+	if (fd == -1)
+		THROW("Failed to open file `", file, '`', strerror(errno));
 
 	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd);
@@ -560,8 +558,8 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 	int fd;
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
-	if (fd == -1) // TODO: maybe throw
-		return "";
+	if (fd == -1)
+		THROW("Failed to open file `", file, '`', strerror(errno));
 
 	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd, beg, end);
@@ -609,7 +607,7 @@ ssize_t putFileContents(const char* file, const char* data, size_t len) noexcept
 		return -1;
 
 	if (len == size_t(-1))
-		len = strlen(data);
+		len = __builtin_strlen(data);
 
 	return writeAll(fd, data, len);
 }

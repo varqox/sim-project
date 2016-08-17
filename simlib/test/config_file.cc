@@ -1,8 +1,7 @@
 #include "../include/config_file.h"
 #include "../include/utilities.h"
-#include <gtest/gtest.h>
 
-#include <array>
+#include <gtest/gtest.h>
 
 using std::endl;
 using std::pair;
@@ -445,18 +444,19 @@ test2 = [
   2,
   3 # Instead of a comma newline may also be used as a delimiter
     # But be careful, because many newlines and commas (delimiters) between two
-    # values are treated as one
+    # values are treated as one. At the beginning and the ending of an array
+    # delimiters are also ignored.
   4, 5
 
   "6", '7', 8
 ]
 
-test3 = [1,2,,3,
-	4
-	,5
-	,
+test3 = [,,1,2,,3,
+  4
+  ,5
+  ,
 ]
-# test3 and test4 are equal
+# test3 and test4 are equivalent
 test4 = [1, 2, 3, 4, 5]
 
 test5 = [1, 2

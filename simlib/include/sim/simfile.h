@@ -1,50 +1,55 @@
 #pragma once
 
-#include "../string.h"
+#include "../config_file.h"
 
 namespace sim {
 
 /**
  * @brief Simfile holds SIM package configuration file
- * @details Holds problem name, problem tag, problem statement, checker,
- *   solution, memory limit and grouped tests, with time limit for each one
  */
 class Simfile {
 public:
-	std::string name, tag, statement, checker, main_solution;
+	std::string name, tag, statement, checker;
 	std::vector<std::string> solutions;
-	unsigned long long memory_limit = 0; // in KiB
+	uint64_t global_mem_limit = 0; // in bytes
 
 	/**
-	 * @brief Holds test
+	 * @brief Holds a test
 	 */
 	struct Test {
-		std::string name;
-		unsigned long long time_limit; // in usec
+		std::string name, in, out; // in, out - paths to test input and output
+		uint64_t time_limit; // in usec
+		uint64_t memory_limit; // in bytes
 
-		explicit Test(const std::string& n = "", unsigned long long tl = 0)
-			: name(n), time_limit(tl) {}
+		explicit Test(const std::string& n = "", uint64_t tl = 0,
+				uint64_t ml = 0)
+			: name(n), time_limit(tl), memory_limit(ml) {}
 	};
 
 	/**
-	 * @brief Holds group of tests
-	 * @details Holds group of tests and their point information
+	 * @brief Holds a group of tests
+	 * @details Holds a group of tests and their score information
 	 */
-	struct Group {
+	struct TestGroup {
 		std::vector<Test> tests;
-		long long points;
+		int64_t score;
 	};
 
-	std::vector<Group> test_groups;
+	std::vector<TestGroup> tgroups;
+	ConfigFile config;
 
 	Simfile() = default;
 
+	// TODO: comment
+	Simfile(std::string simfile) {
+		config.addVars("name", "tag", "checker", "statement", "solutions",
+			"memory_limit", "limits", "scoring", "tests_files");
+		config.loadConfigFromString(std::move(simfile));
+	}
+
 	Simfile(const Simfile&) = default;
-
 	Simfile(Simfile&&) = default;
-
 	Simfile& operator=(const Simfile&) = default;
-
 	Simfile& operator=(Simfile&&) = default;
 
 	~Simfile() = default;
@@ -52,70 +57,123 @@ public:
 	/**
 	 * @brief Dumps object to string
 	 *
-	 * @return dumped config (which can be placed in file)
+	 * @return dumped config (which can be placed in a file)
 	 */
 	std::string dump() const;
 
 	/**
 	 * @brief Loads and validates config file from problem package
 	 *   @p package_path
+	 *
+	 * @param package_path path to problem package main directory
+	 *
+	 * @return Warnings - every inconsistency with package config format
+	 *
+	 * @errors May throw an exception if a loading error occurs (see
+	 *   ConfigFile::loadConfigFromString())
+	 */
+
+	/**
+	 * @brief Loads and validates Simfile from string
 	 * @details Validates problem config (memory limits, tests specification
 	 *   etc.) loaded via ConfigFile
 	 *
 	 *   Fields:
 	 *     - name
 	 *     - tag (optional, max length = 4)
-	 *     - memory_limit (in KB)
+	 *     - memory_limit (in KB, has to be > 0)
 	 *     - checker (optional)
 	 *     - statement (optional)
-	 *     - solutions (optional)
+	 *     - solutions (optional, the first one is the main solution)
 	 *     - main_solution (optional)
-	 *     - tests (optional)
+	 *     - limits (optional)
+	 *     - scoring (optional)
+	 *     - tests_files (optional)
 	 *
-	 * @param package_path path to problem package main directory
+	 * @param simfile Contents of the Simfile file
 	 *
-	 * @return Warnings - every inconsistency with package config format
+	 * @return Warnings // TODO: for sure ???
 	 *
-	 * @errors May throw an exception if loading error occurs (see
-	 *   ConfigFile::loadConfigFromFile())
+	 * @errors May throw an exception from ConfigFile::loadConfigFromString(),
+	 *   or an instance of std::runtime_error if any inconsistency with Simfile
+	 *   format is detected
 	 */
-	std::vector<std::string> loadFrom(std::string package_path);
+	// std::vector<std::string> loadFromString(std::string simfile);
 
-	/**
-	 * @brief Loads and validates config file from problem package
-	 *   @p package_path
-	 * @details Uses looselyLoadConfig() but also validates tests, checker and
-	 *   solutions existence
-	 *
-	 * @param package_path path to problem package main directory
-	 *
-	 * @errors Throw an exception if any error occurs or any inconsistency with
-	 *   package config format is found
-	 */
-	void loadFromAndValidate(std::string package_path);
+	// TODO: comment
+	void loadName();
+
+	// TODO: comment
+	void loadTag();
+
+	// TODO: comment
+	void loadChecker();
+
+	// TODO: comment
+	void loadStatement();
+
+	// TODO: comment
+	void loadSolutions();
+
+	// TODO: comment
+	void loadTests();
+
+	// TODO: comment
+	void loadTestsWithFiles();
+
+	// TODO: comment
+	void validateFiles(const StringView& package_path) const;
+
+	struct TestNameComparator {
+		/**
+		 * @brief Splits @p test_name into gid (group id) and tid (test id)
+		 * @details e.g. "test1abc" -> ("1", "abc")
+		 *
+		 * @param test_name string from which gid and tid will be extracted
+		 *
+		 * @return (gid, tid)
+		 */
+		static inline std::pair<StringView, StringView>
+			split(StringView test_name) noexcept
+		{
+			StringView tid = test_name.extractTrailing(isalpha);
+			StringView gid = test_name.extractTrailing(isdigit);
+			return {gid, tid};
+		}
+
+		bool operator()(StringView a, StringView b) const {
+			auto x = split(std::move(a)), y = split(std::move(b));
+			// tid == "ocen" behaves the same as gid == "0"
+			if (x.second == "ocen") {
+				if (y.second == "ocen")
+					return StrNumCompare()(x.first, y.first);
+
+				return (y.first != "0");
+			}
+			if (y.second == "ocen")
+				return (x.first == "0");
+
+			return (x.first == y.first ?
+				x.second < y.second : StrNumCompare()(x.first, y.first));
+		}
+	};
 };
 
 /**
- * @brief Makes tag from @p str
- * @details Tag is lower of 3 first not blank characters from @p str
+ * @brief Makes a tag from @p str
+ * @details Tag is made of lowered 3 (at most) first characters of @p str for
+ *   which isgraph(3) != 0
  *
- * @param str string to make tag from it
+ * @param str string to make the tag from
  *
  * @return tag
  */
-std::string makeTag(const std::string& str);
-
-/**
- * @brief Obtains checker output (truncated if too long)
- *
- * @param fd file descriptor of file to which checker wrote via stdout
- * @param max_length maximum length of the returned string
- *
- * @return checker output, truncated if too long
- *
- * @errors Throws an exception of type std::runtime_error with appropriate
- *   message
- */
-std::string obtainCheckerOutput(int fd, size_t max_length);
+inline std::string makeTag(const StringView& str) {
+	std::string tag;
+	for (char c : str)
+		if (isgraph(c) && (tag += ::tolower(c)).size() == 3)
+			break;
+	return tag;
+}
 
 } // namespace sim

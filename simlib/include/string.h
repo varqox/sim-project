@@ -30,9 +30,18 @@ protected:
 	size_type len;
 
 public:
-	StringBase(pointer s = "") noexcept : str(s), len(strlen(s)) {}
+	constexpr StringBase() noexcept : str(""), len(0) {}
 
-	StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
+	template<class CharT, size_t N>
+	constexpr StringBase(const CharT(&s)[N]) noexcept : str(s), len(N - 1) {}
+
+	constexpr StringBase(const meta::string& s) noexcept
+		: str(s.data()), len(s.size()) {}
+
+	constexpr StringBase(pointer s) noexcept
+		: str(s), len(__builtin_strlen(s)) {}
+
+	constexpr StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
 
 	// Constructs StringView from substring [beg, beg + n) of string s
 	StringBase(const std::string& s, size_type beg = 0, size_type n = npos)
@@ -40,19 +49,13 @@ public:
 		: str(s.data() + std::min(beg, s.size())),
 			len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
-	template<class CharT, size_t N>
-	constexpr StringBase(const CharT(&s)[N]) noexcept : str(s), len(N) {}
-
-	constexpr StringBase(const meta::string& s) noexcept
-		: str(s.data()), len(s.size())
-	{}
-
 	template<class CharT>
-	StringBase(const StringBase<CharT>& s) noexcept
+	constexpr StringBase(const StringBase<CharT>& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
 	template<class CharT>
-	StringBase(StringBase<CharT>&& s) noexcept : str(s.data()), len(s.size()) {}
+	constexpr StringBase(StringBase<CharT>&& s) noexcept
+		: str(s.data()), len(s.size()) {}
 
 	template<class CharT>
 	StringBase& operator=(StringBase<CharT>&& s) noexcept {
@@ -68,46 +71,46 @@ public:
 		return *this;
 	}
 
-	virtual ~StringBase() {}
+	~StringBase() = default;
 
 	// Returns whether the StringBase is empty (size() == 0)
-	bool empty() const noexcept { return len == 0; }
+	constexpr bool empty() const noexcept { return (len == 0); }
 
 	// Returns the number of characters in the StringBase
-	size_type size() const noexcept { return len; }
+	constexpr size_type size() const noexcept { return len; }
 
 	// Returns the number of characters in the StringBase
-	size_type length() const noexcept { return len; }
+	constexpr size_type length() const noexcept { return len; }
 
 	// Returns a pointer to the underlying character array
 	pointer data() noexcept { return str; }
 
 	// Returns a const pointer to the underlying character array
-	const_pointer data() const noexcept { return str; }
+	constexpr const_pointer data() const noexcept { return str; }
 
 	iterator begin() noexcept { return str; }
 
 	iterator end() noexcept { return str + len; }
 
-	const_iterator begin() const noexcept { return str; }
+	constexpr const_iterator begin() const noexcept { return str; }
 
-	const_iterator end() const noexcept { return str + len; }
+	constexpr const_iterator end() const noexcept { return str + len; }
 
-	const_iterator cbegin() const noexcept { return str; }
+	constexpr const_iterator cbegin() const noexcept { return str; }
 
-	const_iterator cend() const noexcept { return str + len; }
+	constexpr const_iterator cend() const noexcept { return str + len; }
 
 	// Returns reference to first element
 	reference front() noexcept { return str[0]; }
 
 	// Returns const_reference to first element
-	const_reference front() const noexcept { return str[0]; }
+	constexpr const_reference front() const noexcept { return str[0]; }
 
 	// Returns reference to last element
 	reference back() noexcept { return str[len - 1]; }
 
 	// Returns const_reference to last element
-	const_reference back() const noexcept { return str[len - 1]; }
+	constexpr const_reference back() const noexcept { return str[len - 1]; }
 
 	// Returns reference to n-th element
 	reference operator[](size_type n) noexcept {
@@ -376,27 +379,27 @@ public:
 
 	// comparison operators
 	friend bool operator==(const StringBase& a, const StringBase& b) noexcept {
-		return a.len == b.len && memcmp(a.str, b.str, a.len) == 0;
+		return (a.len == b.len && memcmp(a.str, b.str, a.len) == 0);
 	}
 
 	friend bool operator!=(const StringBase& a, const StringBase& b) noexcept {
-		return a.len != b.len || memcmp(a.str, b.str, a.len) != 0;
+		return (a.len != b.len || memcmp(a.str, b.str, a.len) != 0);
 	}
 
 	friend bool operator<(const StringBase& a, const StringBase& b) noexcept {
-		return a.compare(b) < 0;
+		return (a.compare(b) < 0);
 	}
 
 	friend bool operator>(const StringBase& a, const StringBase& b) noexcept {
-		return a.compare(b) > 0;
+		return (a.compare(b) > 0);
 	}
 
 	friend bool operator<=(const StringBase& a, const StringBase& b) noexcept {
-		return a.compare(b) <= 0;
+		return (a.compare(b) <= 0);
 	}
 
 	friend bool operator>=(const StringBase& a, const StringBase& b) noexcept {
-		return a.compare(b) >= 0;
+		return (a.compare(b) >= 0);
 	}
 };
 
@@ -423,7 +426,7 @@ public:
 		: FixedString(s.data(), s.size()) {}
 
 	// s cannot be nullptr
-	FixedString(const_pointer s) : FixedString(s, strlen(s)) {}
+	FixedString(const_pointer s) : FixedString(s, __builtin_strlen(s)) {}
 
 	FixedString(const std::string& s, size_type beg = 0, size_type n = npos)
 		: FixedString(s.data() + std::min(beg, s.size()),
@@ -557,7 +560,7 @@ public:
 	template<class Func>
 	StringView extractTrailing(Func&& f) {
 		size_type i = len;
-		for (; i > 0 && f(str[i]); --i) {}
+		for (; i > 0 && f(str[i - 1]); --i) {}
 
 		StringView res = substring(i, len);
 		len = i;
@@ -897,12 +900,12 @@ bool isReal(const StringView& s, size_t beg, size_t end = StringView::npos)
 
 inline bool isReal(const StringView& s) noexcept { return isReal(s, 0); }
 
-/* Converts s: [beg, end) to size_t
-*  if end > s.size() or enStringViewnpos then end = s.size()
+/* Converts s: [beg, end) to @p T
+*  if end > s.size() or end == StringView::npos then end = s.size()
 *  if beg > end then beg = end
 *  if x == nullptr then only validate
-*  Return value: -1 if s: [beg, end) is not a number
-*    otherwise return the number of characters parsed
+*  Return value: -1 if s: [beg, end) is not a number (empty string is not a
+*    number), otherwise return the number of characters parsed
 */
 template<class T>
 int strtoi(const StringView& s, T *x, size_t beg = 0,
@@ -911,7 +914,7 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end)
-		return (*x = 0);
+		return -1;
 
 	if (x == nullptr)
 		return (isInteger(s, beg, end) ? end - beg : -1);
@@ -934,7 +937,7 @@ int strtoi(const StringView& s, T *x, size_t beg = 0,
 	return res + end - beg;
 }
 
-// Like strtoi() but assumes that @p s is unsigned integer
+// Like strtoi() but assumes that @p s is a unsigned integer
 template<class T>
 int strtou(const StringView& s, T *x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
@@ -942,7 +945,7 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end)
-		return (*x = 0);
+		return -1;
 
 	if (x == nullptr)
 		return (isDigit(s, beg + (s[beg] == '+'), end) ? end - beg : -1);
@@ -962,19 +965,23 @@ int strtou(const StringView& s, T *x, size_t beg = 0,
 	return res + end - beg;
 }
 
-// Converts string to long long
+// Converts string to long long using strtoi
 inline long long strtoll(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
+	// TODO: when argument is not a valid number, strtoi() won't parse all the
+	// string, and may (but don't have to) return parsed value
 	long long x; // x will be initialized in function below
 	strtoi(s, &x, beg, end);
 	return x;
 }
 
-// Converts string to unsigned long long
+// Converts string to unsigned long long using strtou
 inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
+	// TODO: when argument is not a valid number, strtou() won't parse all the
+	// string, and may (but don't have to) return parsed value
 	unsigned long long x; // x will be initialized in function below
 	strtou(s, &x, beg, end);
 	return x;
@@ -994,12 +1001,11 @@ T digitsToU(const StringView& str) noexcept {
  *
  * @param x usec value
  * @param prec precision (maximum number of digits after '.')
- * @param trim_nulls set whether to trim trailing nulls
+ * @param trim_zeros set whether to trim trailing zeros
  *
  * @return floating-point x in sec as string
  */
-std::string usecToSecStr(unsigned long long x, unsigned prec,
-	bool trim_nulls = true);
+std::string usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true);
 
 /**
  * @brief String comparator
@@ -1017,7 +1023,7 @@ template<class T>
 inline size_t string_length(const T& x) noexcept { return x.length(); }
 
 template<class T>
-inline size_t string_length(T* x) noexcept { return strlen(x); }
+inline size_t string_length(T* x) noexcept { return __builtin_strlen(x); }
 
 inline size_t string_length(char) noexcept { return 1; }
 

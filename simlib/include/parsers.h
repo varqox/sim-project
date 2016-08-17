@@ -1,7 +1,7 @@
 #pragma once
 
-#include "string.h"
 #include "logger.h"
+#include "string.h"
 
 #if 0
 # warning "Before committing disable this debug"

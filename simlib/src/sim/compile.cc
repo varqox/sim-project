@@ -1,7 +1,9 @@
-#include "../include/spawner.h"
+#include "../../include/spawner.h"
 
 using std::string;
 using std::vector;
+
+namespace sim {
 
 int compile(const string& source, const string& exec, unsigned verbosity,
 	uint64_t time_limit, string* c_errors, size_t c_errors_max_len,
@@ -39,10 +41,10 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"-b", "/libx32",
 		"-b", "/lib64",
 		"-b", "/etc/alternatives/",
-		"g++", // Invoke compiler
+		"g++", // Invoke the compiler
 		"a.cpp",
 		"-o", "exec",
-		"-O2",
+		"-O3", // These days -O3 option is safe to use
 		"-std=c++11",
 		"-static",
 		"-lm",
@@ -78,3 +80,5 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 
 	return 0;
 }
+
+} // namespace sim

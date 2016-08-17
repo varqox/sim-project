@@ -8,7 +8,9 @@ run: exec
 
 $(eval $(call dependencies))
 
-exec: config_file.o ../gtest_main.a ../simlib.a
+exec: config_file.o simfile.o
+exec: ../gtest_main.a ../simlib.a
+exec:
 	$(LINK)
 
 .PHONY: clean

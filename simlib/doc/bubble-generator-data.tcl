@@ -17,13 +17,13 @@ set all_graphs {
     }
   }
   directive {
-    line name {or = :} {or {} value {line [ {or {toploop {line {opt comment} value {opt comment}} delimeter} {}} ]}} {opt comment}
+    line name {or = :} {or {} value {line [ {or {toploop {line {opt comment} value {opt comment}} delimiter} {}} ]}} {opt comment}
   }
   directive-formal {
     stack
       {line {opt ws} name {opt ws} {or = :} {opt ws}}
       {line {or {optx value}
-        {line [ {or {line {toploop {line {opt comment-or-wsn} value {opt comment-or-wsn}} delimeter}}
+        {line [ {opt delimiter} {or {line {toploop {line {opt comment-or-wsn} value {opt comment-or-wsn}} delimiter}}
           {or comment-or-wsn {}}} ]}}}
       {line {opt ws} {or /newline comment}}
   }

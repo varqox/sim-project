@@ -3,8 +3,6 @@
 #include "../include/filesystem.h"
 #include "../include/parsers.h"
 
-#include <cassert>
-
 using std::map;
 using std::string;
 using std::vector;
@@ -19,18 +17,14 @@ using std::vector;
 const ConfigFile::Variable ConfigFile::null_var;
 
 void ConfigFile::loadConfigFromFile(const string& pathname, bool load_all) {
-	FileDescriptor fd(pathname.c_str(), O_RDONLY | O_LARGEFILE);
-	if (fd == -1)
-		THROW("Failed to open '", pathname, '\'', error(errno));
-
-	string contents = getFileContents(fd);
+	string contents = getFileContents(pathname);
 	loadConfigFromString(contents, load_all);
 }
 
 void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	// Set all variables as unused
 	for (auto& i : vars)
-		i.second.flag = 0;
+		i.second.unset();
 
 	// Checks whether c is a white-space but not a newline
 	auto isWs = [](int c) { return (c != '\n' && isspace(c)); };
@@ -204,6 +198,8 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			varp = (it == vars.end() ? &tmp : &it->second);
 		}
 		Variable& var = *varp;
+		if (var.isSet())
+			var.unset();
 		var.flag = Variable::SET;
 		// Normal
 		if (buff[0] != '[') {
