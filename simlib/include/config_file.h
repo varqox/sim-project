@@ -101,9 +101,9 @@ public:
 	ConfigFile() = default;
 
 	ConfigFile(const ConfigFile&) = default;
-	ConfigFile(ConfigFile&&) = default;
+	ConfigFile(ConfigFile&&) noexcept = default;
 	ConfigFile& operator=(const ConfigFile&) = default;
-	ConfigFile& operator=(ConfigFile&&) = default;
+	ConfigFile& operator=(ConfigFile&&) noexcept = default;
 
 	~ConfigFile() {}
 

@@ -696,12 +696,12 @@ std::string humanizeFileSize(uint64_t size);
  * @param file path of the file to check (has to be null-terminated)
  *
  * @return true if @p file is a regular file, false otherwise. To distinguish
- *   other file type error from stat(2) error set errno to 0 before calling this
- *   function, if stat(2) fails, errno will have nonzero value
+ *   other file type error from stat64(2) error set errno to 0 before calling
+ *   this function, if stat64(2) fails, errno will have nonzero value
  */
 inline bool isRegularFile(const char* file) noexcept {
-	struct stat st;
-	return (stat(file, &st) == 0 && S_ISREG(st.st_mode));
+	struct stat64 st;
+	return (stat64(file, &st) == 0 && S_ISREG(st.st_mode));
 }
 
 inline bool isRegularFile(const std::string& file) noexcept {
@@ -714,12 +714,12 @@ inline bool isRegularFile(const std::string& file) noexcept {
  * @param file path of the file to check (has to be null-terminated)
  *
  * @return true if @p file is a directory, false otherwise. To distinguish
- *   other file type error from stat(2) error set errno to 0 before calling this
- *   function, if stat(2) fails, errno will have nonzero value
+ *   other file type error from stat64(2) error set errno to 0 before calling
+ *   this function, if stat64(2) fails, errno will have nonzero value
  */
 inline bool isDirectory(const char* file) noexcept {
-	struct stat st;
-	return (stat(file, &st) == 0 && S_ISDIR(st.st_mode));
+	struct stat64 st;
+	return (stat64(file, &st) == 0 && S_ISDIR(st.st_mode));
 }
 
 inline bool isDirectory(const std::string& file) noexcept {

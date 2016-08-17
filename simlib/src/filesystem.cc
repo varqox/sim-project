@@ -61,10 +61,17 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 }
 
 TemporaryDirectory::~TemporaryDirectory() {
+#ifdef DEBUG
 	if (path_.size() && remove_r(path_) == -1)
-		errlog("Error: remove_r()", error(errno)); // TODO: it is not so good,
-		                                           // but throwing from the
+		errlog("Error: remove_r()", error(errno)); // We cannot throw because
+		                                           // throwing from the
 		                                           // destructor is UB
+#else
+	if (path_.size())
+		(void)remove_r(path_); // Return value is ignored, we cannot throw
+		                       // (because throwing from destructor is UB),
+		                       // logging it is also not so good
+#endif
 }
 
 int mkdir_r(string path, mode_t mode) noexcept {
@@ -106,7 +113,7 @@ int mkdir_r(string path, mode_t mode) noexcept {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-int __remove_rat(int dirfd, const char* path) {
+static int __remove_rat(int dirfd, const char* path) {
 	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY
 		| O_NOFOLLOW);
 	if (fd == -1)

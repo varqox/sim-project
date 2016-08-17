@@ -638,7 +638,7 @@ TEST (Simfile, validateFiles) {
 
 	// Tests
 	{
-		constexpr array<StringView, 5> tests {{"1", "2", "3a", "3b", "3c"}};
+		const array<StringView, 5> tests {{"1", "2", "3a", "3b", "3c"}};
 		array<string, tests.size() * 2> files {{
 			"in/1.in", "out/1.out",
 			"in/2.in", "out/2.out",
@@ -653,8 +653,8 @@ TEST (Simfile, validateFiles) {
 					"limits: [1 1 1, 2 1 1, 3a 1 1, 3b 1 1, 3c 1 1]\n"
 					"tests_files: [\n"
 				};
-				static_assert(
-					tests.size() * 2 == std::tuple_size<decltype(files)>::value,
+				static_assert(std::tuple_size<decltype(tests)>::value * 2 ==
+					std::tuple_size<decltype(files)>::value,
 					"Each test has one in and one out file");
 				for (uint j = 0; j < files.size(); j += 2)
 					back_insert(contents, tests[j >> 1], ' ', files[j], ' ',
