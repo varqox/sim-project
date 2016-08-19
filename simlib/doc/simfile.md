@@ -1,5 +1,5 @@
 # Simfile - Sim package configuration file
-Simfile is a ConfigFile file, so the syntax is as in ConfigFile
+Simfile is a ConfigFile file, so the syntax is as in ConfigFile.
 
 ## Example:
 ```sh

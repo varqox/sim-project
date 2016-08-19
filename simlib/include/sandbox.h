@@ -142,7 +142,7 @@ public:
 		bool isSyscallEntryAllowed(pid_t pid, int syscall,
 			const std::vector<std::string>& allowed_files)
 		{
-			constexpr std::array<int, 77> allowed_syscalls_i386 {{
+			constexpr std::array<int, 78> allowed_syscalls_i386 {{
 				1, // SYS_exit
 				3, // SYS_read
 				4, // SYS_write
@@ -160,6 +160,7 @@ public:
 				72, // SYS_sigsuspend
 				73, // SYS_sigpending
 				76, // SYS_getrlimit
+				77, // SYS_getrusage
 				78, // SYS_gettimeofday
 				82, // SYS_select
 				90, // SYS_mmap
@@ -221,7 +222,7 @@ public:
 				355, // SYS_getrandom
 				376, // SYS_mlock2
 			}};
-			constexpr std::array<int, 63> allowed_syscalls_x86_64 {{
+			constexpr std::array<int, 64> allowed_syscalls_x86_64 {{
 				0, // SYS_read
 				1, // SYS_write
 				3, // SYS_close
@@ -251,7 +252,8 @@ public:
 				74, // SYS_fsync
 				75, // SYS_fdatasync
 				96, // SYS_gettimeofday
-				97, // SYS_getrlimi
+				97, // SYS_getrlimit
+				98, // SYS_getrusage
 				102, // SYS_getuid
 				104, // SYS_getgid
 				107, // SYS_geteuid
@@ -334,6 +336,7 @@ public:
 	 * @return Returns ExitStat structure with fields:
 	 *   - code: return status (in the format specified in wait(2)).
 	 *   - runtime: in microseconds [usec]
+	 *   - rusage: resource usage measures
 	 *   - message: detailed info about error, disallowed syscall, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
@@ -341,7 +344,7 @@ public:
 	 */
 	template<class Callback = DefaultCallback>
 	static ExitStat run(const std::string& exec,
-		const std::vector<std::string>& args, const Options& opts,
+		const std::vector<std::string>& args, const Options& opts = Options(),
 		const std::string& working_dir = ".",
 		Callback&& func = Callback())
 	{
@@ -377,6 +380,7 @@ private:
 		 * @return Returns ExitStat structure with fields:
 		 *   - code: return status (in the format specified in wait(2)).
 		 *   - runtime: in microseconds [usec]
+		 *   - rusage: resource usage measures
 		 *   - message: detailed info about error, disallowed syscall, etc.
 		 *
 		 * @errors Throws an exception std::runtime_error with appropriate
@@ -536,7 +540,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	static_assert(std::is_base_of<CallbackBase, Callback>::value,
 		"Callback has to derive from Sandbox::CallbackBase");
 
-	// Error stream from tracee (and wait_for_syscall()) via pipe
+	// Set up error stream from tracee (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
 		THROW("pipe()", error(errno));
@@ -545,7 +549,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	if (cpid == -1)
 		THROW("fork()", error(errno));
 
-	else if (cpid == 0) {
+	else if (cpid == 0) { // Child = tracee
 		sclose(pfd[0]);
 		runChild(exec, args, opts, working_dir, pfd[1], [&]{
 			if (ptrace(PTRACE_TRACEME, 0, 0, 0))
@@ -554,18 +558,20 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	}
 
 	sclose(pfd[1]);
-	Closer close_pipe0(pfd[0]);
+	Closer close_pipe0(pfd[0]); // Guard closing of the second pipe end
 
 	// Wait for tracee to be ready
 	int status;
-	waitpid(cpid, &status, 0);
+	struct rusage rusage;
+	wait4(cpid, &status, 0, &rusage);
 	// If something went wrong
 	if (WIFEXITED(status) || WIFSIGNALED(status))
-		return ExitStat(status, 0, receiveErrorMessage(status, pfd[0]));
+		return ExitStat(status, 0, rusage, receiveErrorMessage(status, pfd[0]));
 
 #ifndef PTRACE_O_EXITKILL
 # define PTRACE_O_EXITKILL 0
 #endif
+	// Set up ptrace options
 	if (ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD
 		| PTRACE_O_EXITKILL))
 	{
@@ -583,7 +589,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 			(void)ptrace(PTRACE_SYSCALL, cpid, 0, 0); // Fail indicates that
 			                                          // the tracee has just
 			                                          // died
-			waitpid(cpid, &status, 0);
+			wait4(cpid, &status, 0, &rusage);
 
 			if (WIFSTOPPED(status)) {
 				switch (WSTOPSIG(status)) {
@@ -596,12 +602,11 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 					break;
 
 				default:
-					// Deliver killing signal to tracee
+					// Deliver intercepted signal to tracee
 					ptrace(PTRACE_CONT, cpid, 0, WSTOPSIG(status));
 				}
-			}
 
-			if (WIFEXITED(status) || WIFSIGNALED(status))
+			} else if (WIFEXITED(status) || WIFSIGNALED(status))
 				return -1; // Tracee is dead now
 		}
 	};
@@ -612,23 +617,26 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		auto exit_normally = [&]() -> ExitStat {
 			uint64_t runtime = timer.stopAndGetRuntime();
 			if (status)
-				return ExitStat(status, runtime,
+				return ExitStat(status, runtime, rusage,
 					receiveErrorMessage(status, pfd[0]));
 
-			return ExitStat(status, runtime, "");
+			return ExitStat(status, runtime, rusage);
 		};
 
 		// Into syscall
 		if (wait_for_syscall())
 			return exit_normally();
 
-#ifdef __x86_64__
+		// Get syscall no.
+	#ifdef __x86_64__
 		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
 			offsetof(x86_64_user_regset, orig_rax), 0);
-#else
+	#else
 		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
 			offsetof(i386_user_regset, orig_eax), 0);
-#endif
+	#endif
+
+		// Some useful debug
 		DEBUG_SANDBOX(
 			auto logSyscall = [&](bool with_result) {
 				Registers regs;
@@ -669,23 +677,22 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		DEBUG_SANDBOX(logSyscall(false);)
 
 		/* Syscall entry or exit is not allowed or syscall < 0 */
+
 		uint64_t runtime = timer.stopAndGetRuntime();
 
 		// Kill tracee
 		kill(cpid, SIGKILL);
-		waitpid(cpid, &status, 0);
-
-		// If time limit was exceeded
-		if (runtime >= opts.time_limit)
-			return ExitStat(status, runtime, "Time limit exceeded");
+		wait4(cpid, &status, 0, &rusage);
 
 		if (syscall < 0)
 			THROW("failed to get syscall - ptrace(): ", toString(syscall),
 				error(errno));
 
+		// Not allowed syscall
 		std::string message = func.errorMessage();
-		if (message.empty())
-			message =  concat("forbidden syscall: ", toString(syscall));
-		return ExitStat(status, runtime, message);
+		if (message.empty()) // func has not left any message
+			message = concat("forbidden syscall: ", toString(syscall));
+
+		return ExitStat(status, runtime, rusage, message);
 	}
 }

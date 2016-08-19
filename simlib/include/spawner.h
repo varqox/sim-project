@@ -15,17 +15,18 @@ public:
 	struct ExitStat {
 		int code;
 		uint64_t runtime; // in usec
+		struct rusage rusage; // resource usage measures
 		std::string message;
 
-		explicit ExitStat(int c = 0, uint64_t r = 0, const std::string& m = "")
-			: code(c), runtime(r), message(m) {}
+		ExitStat() = default;
+
+		ExitStat(int c, uint64_t rt, const struct rusage& rus,
+				const std::string& m = "")
+			: code(c), runtime(rt), rusage(rus), message(m) {}
 
 		ExitStat(const ExitStat&) = default;
-
 		ExitStat(ExitStat&&) noexcept = default;
-
 		ExitStat& operator=(const ExitStat&) = default;
-
 		ExitStat& operator=(ExitStat&&) = default;
 	};
 
@@ -36,9 +37,11 @@ public:
 		uint64_t time_limit; // in usec (0 - disable time limit)
 		uint64_t memory_limit; // in bytes (0 - disable memory limit)
 
-		Options() : Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, 0, 0) {}
+		constexpr Options()
+			: Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, 0, 0) {}
 
-		Options(int ifd, int ofd, int efd, uint64_t tl = 0, uint64_t ml = 0)
+		constexpr Options(int ifd, int ofd, int efd, uint64_t tl = 0,
+				uint64_t ml = 0)
 			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
 				time_limit(tl), memory_limit(ml) {}
 	};
@@ -61,6 +64,7 @@ public:
 	 * @return Returns ExitStat structure with fields:
 	 *   - code: return status (in the format specified in wait(2)).
 	 *   - runtime: in microseconds [usec]
+	 *   - rusage: resource usage measures
 	 *   - message: detailed info about error, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
@@ -182,6 +186,7 @@ private:
 		 * @return Returns ExitStat structure with fields:
 		 *   - code: return status (in the format specified in wait(2)).
 		 *   - runtime: in microseconds [usec]
+		 *   - rusage: resource usage measures
 		 *   - message: detailed info about error, etc.
 		 *
 		 * @errors Throws an exception std::runtime_error with appropriate
@@ -319,11 +324,12 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 		return Func<TArgs..., ZeroTimer>::execute(std::forward<Args>(args)...);
 
 	// Only one running Timer per process is allowed. That is why when one
-	// is running, the next ones are executed in new child process.
+	// is running, the next ones are executed in the new child process.
 	std::unique_lock<std::mutex> ulck(NormalTimer::lock, std::defer_lock);
 	if (ulck.try_lock())
 		return Func<TArgs..., NormalTimer>::execute(std::forward<Args>(args)...);
 
+	// There is already one Timer running in this process, so move to child
 	int pfd[2];
 	if (pipe(pfd) == -1)
 		THROW("pipe()", error(errno));
@@ -333,7 +339,9 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 		THROW("Failed to fork()", error(errno));
 
 	} else if (child == 0) {
-		ExitStat es(-1);
+		ExitStat es;
+		es.code = -1; // If not overwritten, it will indicate an error
+		              // (caught exception)
 		try {
 			es = Func<TArgs..., NormalTimer>::execute(std::forward<Args>(args)...);
 		} catch (const std::exception& e) {
@@ -341,7 +349,8 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 			es.message = e.what();
 		}
 
-		writeAll(pfd[1], &es, sizeof(es.code) + sizeof(es.runtime));
+		writeAll(pfd[1], &es, sizeof(es.code) + sizeof(es.runtime) +
+			sizeof(es.rusage));
 		writeAll(pfd[1], es.message.data(), es.message.size());
 		_exit(0);
 	}
@@ -349,15 +358,17 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 	sclose(pfd[1]);
 	Closer pipe_close(pfd[0]);
 
-	ExitStat es;
-	readAll(pfd[0], &es, sizeof(es.code) + sizeof(es.runtime));
+	ExitStat es; // Loaded from message from child
+	readAll(pfd[0], &es, sizeof(es.code) + sizeof(es.runtime) +
+		sizeof(es.rusage));
 
 	std::array<char, 4096> buff;
 	int rc;
 	while ((rc = read(pfd[0], buff.data(), buff.size())) > 0)
 		es.message.append(buff.data(), rc);
 
-	waitpid(child, nullptr, 0);
+	waitpid(child, nullptr, 0); // No status, because child is not a spawned
+	                            // process
 
 	// Throw exception caught in child
 	if (es.code == -1)
@@ -389,10 +400,11 @@ Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 
 	// Wait for child to be ready
 	int status;
-	waitpid(cpid, &status, WUNTRACED);
+	struct rusage rusage;
+	wait4(cpid, &status, WUNTRACED, &rusage);
 	// If something went wrong
 	if (WIFEXITED(status) || WIFSIGNALED(status))
-		return ExitStat(status, 0, receiveErrorMessage(status, pfd[0]));
+		return ExitStat(status, 0, rusage, receiveErrorMessage(status, pfd[0]));
 
 	// Set up timer
 	Timer timer(cpid, opts.time_limit);
@@ -400,12 +412,13 @@ Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 
 	// Wait for death of the child
 	do {
-		waitpid(cpid, &status, 0);
+		wait4(cpid, &status, 0, &rusage);
 	} while (!WIFEXITED(status) && !WIFSIGNALED(status));
 
 	uint64_t runtime = timer.stopAndGetRuntime();
 	if (status)
-		return ExitStat(status, runtime, receiveErrorMessage(status, pfd[0]));
+		return ExitStat(status, runtime, rusage,
+			receiveErrorMessage(status, pfd[0]));
 
-	return ExitStat(status, runtime, "");
+	return ExitStat(status, runtime, rusage, "");
 }

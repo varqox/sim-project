@@ -127,6 +127,13 @@ bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
 
 	/* syscall == SYS_brk */
 
+	/* This is needed to prevent tracee going over the time limit when it is
+	 * flooding kernel with unsuccessful syscalls asking for more memory. No
+	 * normal program would constantly unsuccessfully ask for memory. Because of
+	 * that, instead of time out you will get "Memory limit exceeded". All this
+	 * is done to improve readability of ExitStatus.
+	 */
+
 	Registers regs;
 	regs.getRegs(pid);
 
