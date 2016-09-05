@@ -22,7 +22,7 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		THROW("Failed to copy source file", error(errno));
 
 	if (verbosity > 1)
-		stdlog("Compiling: '", source, "' ");
+		stdlog("Compiling: `", source, '`');
 
 	/* Compile as a 32-bit executable (not essential, but if the checker is
 	*  x86_64 and Conver/Judge_machine is i386, then the checker will not work -
@@ -41,7 +41,8 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 		"-b", "/libx32",
 		"-b", "/lib64",
 		"-b", "/etc/alternatives/",
-		"g++", // Invoke the compiler
+		// Invoke the compiler
+		"g++",
 		"a.cpp",
 		"-o", "exec",
 		"-O3", // These days -O3 option is safe to use

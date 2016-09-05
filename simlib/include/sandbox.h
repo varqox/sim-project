@@ -60,7 +60,11 @@ public:
 		bool isSysTgkillAllowed(pid_t pid);
 
 	public:
-		void detectArchitecture(pid_t pid) { arch = ::detectArchitecture(pid); }
+		void detectTraceeArchitecture(pid_t pid) {
+			arch = ::detectArchitecture(pid);
+		}
+
+		int8_t getArch() const noexcept { return arch; }
 
 		/**
 		 * @brief Checks whether or not entering syscall @p syscall is allowed
@@ -336,7 +340,7 @@ public:
 	 * @return Returns ExitStat structure with fields:
 	 *   - code: return status (in the format specified in wait(2)).
 	 *   - runtime: in microseconds [usec]
-	 *   - rusage: resource usage measures
+	 *   - vm_peak: peak virtual memory size [bytes]
 	 *   - message: detailed info about error, disallowed syscall, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
@@ -380,7 +384,7 @@ private:
 		 * @return Returns ExitStat structure with fields:
 		 *   - code: return status (in the format specified in wait(2)).
 		 *   - runtime: in microseconds [usec]
-		 *   - rusage: resource usage measures
+		 *   - vm_peak: peak virtual memory size [bytes]
 		 *   - message: detailed info about error, disallowed syscall, etc.
 		 *
 		 * @errors Throws an exception std::runtime_error with appropriate
@@ -558,15 +562,25 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	}
 
 	sclose(pfd[1]);
-	Closer close_pipe0(pfd[0]); // Guard closing of the second pipe end
+	Closer close_pipe0(pfd[0]); // Guard closing of the pipe second end
 
 	// Wait for tracee to be ready
 	int status;
-	struct rusage rusage;
-	wait4(cpid, &status, 0, &rusage);
+	waitpid(cpid, &status, 0);
 	// If something went wrong
 	if (WIFEXITED(status) || WIFSIGNALED(status))
-		return ExitStat(status, 0, rusage, receiveErrorMessage(status, pfd[0]));
+		return ExitStat(status, 0, 0, receiveErrorMessage(status, pfd[0]));
+
+	// Useful when exception is thrown
+	bool tracee_is_dead_and_waited = false;
+	auto kill_and_wait_tracee = [&] {
+		if (!tracee_is_dead_and_waited) {
+			kill(cpid, SIGKILL);
+			waitpid(cpid, nullptr, 0);
+		}
+	};
+	CallInDtor<decltype(kill_and_wait_tracee)> kill_and_wait_tracee_guard
+		{kill_and_wait_tracee};
 
 #ifndef PTRACE_O_EXITKILL
 # define PTRACE_O_EXITKILL 0
@@ -575,11 +589,34 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	if (ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD
 		| PTRACE_O_EXITKILL))
 	{
-		int ec = errno;
-		kill(cpid, SIGKILL);
-		waitpid(cpid, nullptr, 0);
-		THROW("ptrace(PTRACE_SETOPTIONS)", error(ec));
+		THROW("ptrace(PTRACE_SETOPTIONS)", error(errno));
 	}
+
+	func.detectTraceeArchitecture(cpid);
+
+	// Open /proc/{cpid}/statm
+	FileDescriptor statm_fd {concat("/proc/", toString(cpid), "/statm"),
+		O_RDONLY};
+	if (statm_fd == -1)
+		THROW("open(/proc/{cpid}/statm)", error(errno));
+
+	auto get_vm_size = [&] {
+		(void)lseek(statm_fd, 0, SEEK_SET);
+		std::array<char, 32> buff {{'\0'}};
+		buff[buff.size() - 1] = '\0';
+		if (read(statm_fd, buff.data(), buff.size() - 1) <= 0)
+			THROW("read()", error(errno));
+		// Obtain value
+		uint64_t vm_size = 0;
+		for (int i = 0; i < 32 && isdigit(buff[i]); ++i)
+			vm_size = vm_size * 10 + buff[i] - '0';
+
+		DEBUG_SANDBOX(stdlog("get_vm_size: -> ", toString(vm_size));)
+		return vm_size;
+
+	};
+
+	uint64_t vm_size = 0; // In pages
 
 	// Set up timer
 	Timer timer(cpid, opts.time_limit);
@@ -589,7 +626,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 			(void)ptrace(PTRACE_SYSCALL, cpid, 0, 0); // Fail indicates that
 			                                          // the tracee has just
 			                                          // died
-			wait4(cpid, &status, 0, &rusage);
+			waitpid(cpid, &status, 0);
 
 			if (WIFSTOPPED(status)) {
 				switch (WSTOPSIG(status)) {
@@ -603,24 +640,25 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 				default:
 					// Deliver intercepted signal to tracee
-					ptrace(PTRACE_CONT, cpid, 0, WSTOPSIG(status));
+					(void)ptrace(PTRACE_CONT, cpid, 0, WSTOPSIG(status));
 				}
 
-			} else if (WIFEXITED(status) || WIFSIGNALED(status))
+			} else if (WIFEXITED(status) || WIFSIGNALED(status)) {
+				tracee_is_dead_and_waited = true;
 				return -1; // Tracee is dead now
+			}
 		}
 	};
-
-	func.detectArchitecture(cpid);
 
 	for (;;) {
 		auto exit_normally = [&]() -> ExitStat {
 			uint64_t runtime = timer.stopAndGetRuntime();
 			if (status)
-				return ExitStat(status, runtime, rusage,
+				return ExitStat(status, runtime,
+					vm_size * sysconf(_SC_PAGESIZE),
 					receiveErrorMessage(status, pfd[0]));
 
-			return ExitStat(status, runtime, rusage);
+			return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE));
 		};
 
 		// Into syscall
@@ -629,70 +667,124 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 		// Get syscall no.
 	#ifdef __x86_64__
-		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
+		long syscall_no = ptrace(PTRACE_PEEKUSER, cpid,
 			offsetof(x86_64_user_regset, orig_rax), 0);
 	#else
-		long syscall = ptrace(PTRACE_PEEKUSER, cpid,
+		long syscall_no = ptrace(PTRACE_PEEKUSER, cpid,
 			offsetof(i386_user_regset, orig_eax), 0);
 	#endif
 
-		// Some useful debug
-		DEBUG_SANDBOX(
-			auto logSyscall = [&](bool with_result) {
-				Registers regs;
-				regs.getRegs(cpid);
+		try {
+			if (syscall_no < 0)
+				THROW("failed to get syscall_no - ptrace(): ", toString(syscall_no),
+					error(errno));
 
-				int64_t arg1 = (detectArchitecture(cpid) == ARCH_i386 ?
-					int32_t(regs.uregs.i386_regs.ebx)
-					: regs.uregs.x86_64_regs.rdi);
-				int64_t arg2 = (detectArchitecture(cpid) == ARCH_i386 ?
-					int32_t(regs.uregs.i386_regs.ecx)
-					: regs.uregs.x86_64_regs.rsi);
+			// Some useful debug
+			DEBUG_SANDBOX(
+				auto logSyscall = [&](bool with_result) {
+					Registers regs;
+					regs.getRegs(cpid);
 
-				auto tmplog = stdlog('[', toString(cpid), "] syscall: ",
-					toString(syscall), '(', toString(arg1), ", ",
-					toString(arg2), ", ...)");
+					int64_t arg1 = (func.getArch() == ARCH_i386 ?
+						int32_t(regs.uregs.i386_regs.ebx)
+						: regs.uregs.x86_64_regs.rdi);
+					int64_t arg2 = (func.getArch() == ARCH_i386 ?
+						int32_t(regs.uregs.i386_regs.ecx)
+						: regs.uregs.x86_64_regs.rsi);
 
-				if (with_result) {
-					int64_t ret_val = (detectArchitecture(cpid) == ARCH_i386 ?
-						int32_t(regs.uregs.i386_regs.eax)
-						: regs.uregs.x86_64_regs.rax);
-					tmplog(" -> ", toString(ret_val));
+					auto tmplog = stdlog('[', toString(cpid), "] syscall: ",
+						toString(syscall_no), '(', toString(arg1), ", ",
+						toString(arg2), ", ...)");
+
+					if (with_result) {
+						int64_t ret_val = (func.getArch() == ARCH_i386 ?
+							int32_t(regs.uregs.i386_regs.eax)
+							: regs.uregs.x86_64_regs.rax);
+						tmplog(" -> ", toString(ret_val));
+					}
+				};
+			)
+
+			// If syscall entry is allowed
+			if (func.isSyscallEntryAllowed(cpid, syscall_no)) {
+				// Syscall returns
+				if (wait_for_syscall())
+					return exit_normally();
+
+				DEBUG_SANDBOX(logSyscall(true);)
+
+				// Monitor for vm_size change
+				if (func.getArch() == ARCH_i386
+					? isIn(syscall_no, { // i386
+						45, // SYS_brk
+						90, // SYS_mmap
+						192, // SYS_mmap2
+					})
+					: isIn(syscall_no, { // x86_64
+						9, // SYS_mmap
+						12, // SYS_brk
+					}))
+				{
+					vm_size = std::max(vm_size, get_vm_size());
 				}
-			};
-		)
 
-		// If syscall entry is allowed
-		if (syscall >= 0 && func.isSyscallEntryAllowed(cpid, syscall)) {
-			// Syscall returns
-			if (wait_for_syscall())
+				// Check syscall after returning
+				if (func.isSyscallExitAllowed(cpid, syscall_no))
+					continue;
+			}
+
+			DEBUG_SANDBOX(logSyscall(false);)
+
+		} catch (...) {
+			DEBUG_SANDBOX(stdlog(__FILE__ ":", toString(__LINE__),
+				": Caught exception");)
+
+			// Exception after tracee is dead and waited
+			if (tracee_is_dead_and_waited)
+				throw;
+
+			// Check whether the tracee is still controllable - may not become
+			// a zombie in a moment (yes kernel has a minimal delay between
+			// these two, that's waitpid(cpid, ..., WNOHANG) may raturn 0, even
+			// though the tracee is not controllable anymore. The process state
+			// in /proc/.../stat also may not be `Z`. That is why ptrace92) is
+			// used here)
+			errno = 0;
+			(void)ptrace(PTRACE_PEEKUSER, cpid, 0, 0);
+			// The tracee is no longer controllable
+			if (errno == ESRCH) {
+				kill(cpid, SIGKILL); // Make sure tracee is (will be) dead
+				// Wait for tracee
+				do {
+					waitpid(cpid, &status, 0);
+				} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+				// Return sandboxing results
+				tracee_is_dead_and_waited = true;
 				return exit_normally();
+			}
 
-			DEBUG_SANDBOX(logSyscall(true);)
-
-			if (func.isSyscallExitAllowed(cpid, syscall))
-				continue;
+			// Tracee is controllable or other error occured
+			throw;
 		}
 
-		DEBUG_SANDBOX(logSyscall(false);)
-
-		/* Syscall entry or exit is not allowed or syscall < 0 */
+		/* Syscall entry or exit is not allowed */
 
 		uint64_t runtime = timer.stopAndGetRuntime();
 
 		// Kill tracee
 		kill(cpid, SIGKILL);
-		wait4(cpid, &status, 0, &rusage);
-
-		if (syscall < 0)
-			THROW("failed to get syscall - ptrace(): ", toString(syscall),
-				error(errno));
+		// Wait for tracee
+		do {
+			waitpid(cpid, &status, 0);
+		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+		tracee_is_dead_and_waited = true;
 
 		// Not allowed syscall
 		std::string message = func.errorMessage();
 		if (message.empty()) // func has not left any message
-			message = concat("forbidden syscall: ", toString(syscall));
+			message = concat("forbidden syscall: ", toString(syscall_no));
 
-		return ExitStat(status, runtime, rusage, message);
+		return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE),
+			message);
 	}
 }

@@ -15,14 +15,13 @@ public:
 	struct ExitStat {
 		int code;
 		uint64_t runtime; // in usec
-		struct rusage rusage; // resource usage measures
+		uint64_t vm_peak; // peak virtual memory size (in bytes)
 		std::string message;
 
 		ExitStat() = default;
 
-		ExitStat(int c, uint64_t rt, const struct rusage& rus,
-				const std::string& m = "")
-			: code(c), runtime(rt), rusage(rus), message(m) {}
+		ExitStat(int c, uint64_t rt, uint64_t vp, const std::string& m = "")
+			: code(c), runtime(rt), vm_peak(vp), message(m) {}
 
 		ExitStat(const ExitStat&) = default;
 		ExitStat(ExitStat&&) noexcept = default;
@@ -64,7 +63,7 @@ public:
 	 * @return Returns ExitStat structure with fields:
 	 *   - code: return status (in the format specified in wait(2)).
 	 *   - runtime: in microseconds [usec]
-	 *   - rusage: resource usage measures
+	 *   - vm_peak: peak virtual memory size [bytes] (ignored - always 0)
 	 *   - message: detailed info about error, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
@@ -186,7 +185,7 @@ private:
 		 * @return Returns ExitStat structure with fields:
 		 *   - code: return status (in the format specified in wait(2)).
 		 *   - runtime: in microseconds [usec]
-		 *   - rusage: resource usage measures
+		 *   - vm_peak: peak virtual memory size [bytes] (ignored - always 0)
 		 *   - message: detailed info about error, etc.
 		 *
 		 * @errors Throws an exception std::runtime_error with appropriate
@@ -280,6 +279,15 @@ void Spawner::runChild(const std::string& exec,
 			send_error("setrlimit(RLIMIT_STACK)");
 	}
 
+	// Set CPU time limit [s] (useful when spawned process becomes orphaned)
+	if (opts.time_limit > 0) {
+		struct rlimit limit;
+		limit.rlim_max = limit.rlim_cur = opts.time_limit / 1000000 + 1; /* +1
+			to avoid premature death */
+		if (setrlimit(RLIMIT_CPU, &limit))
+			send_error("setrlimit(RLIMIT_CPU)");
+	}
+
 	// Change stdin
 	if (opts.new_stdin_fd < 0)
 		sclose(STDIN_FILENO);
@@ -340,17 +348,18 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 
 	} else if (child == 0) {
 		ExitStat es;
-		es.code = -1; // If not overwritten, it will indicate an error
-		              // (caught exception)
+		es.code = -1; // If not overwritten, it will indicate an error -
+		              // caught exception
 		try {
-			es = Func<TArgs..., NormalTimer>::execute(std::forward<Args>(args)...);
+			es = Func<TArgs..., NormalTimer>::execute(
+				std::forward<Args>(args)...);
 		} catch (const std::exception& e) {
 			// We cannot allow exception to fly out of this thread
 			es.message = e.what();
 		}
 
 		writeAll(pfd[1], &es, sizeof(es.code) + sizeof(es.runtime) +
-			sizeof(es.rusage));
+			sizeof(es.vm_peak));
 		writeAll(pfd[1], es.message.data(), es.message.size());
 		_exit(0);
 	}
@@ -360,7 +369,7 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 
 	ExitStat es; // Loaded from message from child
 	readAll(pfd[0], &es, sizeof(es.code) + sizeof(es.runtime) +
-		sizeof(es.rusage));
+		sizeof(es.vm_peak));
 
 	std::array<char, 4096> buff;
 	int rc;
@@ -400,11 +409,10 @@ Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 
 	// Wait for child to be ready
 	int status;
-	struct rusage rusage;
-	wait4(cpid, &status, WUNTRACED, &rusage);
+	waitpid(cpid, &status, WUNTRACED);
 	// If something went wrong
 	if (WIFEXITED(status) || WIFSIGNALED(status))
-		return ExitStat(status, 0, rusage, receiveErrorMessage(status, pfd[0]));
+		return ExitStat(status, 0, 0, receiveErrorMessage(status, pfd[0]));
 
 	// Set up timer
 	Timer timer(cpid, opts.time_limit);
@@ -412,13 +420,13 @@ Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 
 	// Wait for death of the child
 	do {
-		wait4(cpid, &status, 0, &rusage);
+		waitpid(cpid, &status, 0);
 	} while (!WIFEXITED(status) && !WIFSIGNALED(status));
 
 	uint64_t runtime = timer.stopAndGetRuntime();
 	if (status)
-		return ExitStat(status, runtime, rusage,
+		return ExitStat(status, runtime, 0,
 			receiveErrorMessage(status, pfd[0]));
 
-	return ExitStat(status, runtime, rusage, "");
+	return ExitStat(status, runtime, 0, "");
 }

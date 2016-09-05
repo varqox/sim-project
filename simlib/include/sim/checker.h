@@ -35,7 +35,9 @@ public:
 				allowed_files));
 	}
 
-	using DefaultCallback::detectArchitecture;
+	using DefaultCallback::detectTraceeArchitecture;
+
+	using DefaultCallback::getArch;
 
 	using DefaultCallback::isSyscallExitAllowed;
 

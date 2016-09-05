@@ -86,21 +86,21 @@ string Simfile::dump() const {
 void Simfile::loadName() {
 	auto&& var = config["name"];
 	CHECK_IF_NOT_ARR(var, "name");
-	if (!var.isSet() || (name = var.asString()).empty())
+	if ((name = var.asString()).empty())
 		throw std::runtime_error("Simfile: missing problem name");
 }
 
 void Simfile::loadTag() {
 	auto&& var = config["tag"];
 	CHECK_IF_NOT_ARR(var, "tag");
-	if (!var.isSet() || (tag = var.asString()).empty())
+	if ((tag = var.asString()).empty())
 		throw std::runtime_error("Simfile: missing problem tag");
 }
 
 void Simfile::loadChecker() {
 	auto&& var = config["checker"];
 	CHECK_IF_NOT_ARR(var, "checker");
-	if (!var.isSet() || var.asString().empty())
+	if (var.asString().empty())
 		throw std::runtime_error("Simfile: missing checker");
 
 	// Secure path, so that it is not going outside the package
@@ -111,7 +111,7 @@ void Simfile::loadChecker() {
 void Simfile::loadStatement() {
 	auto&& var = config["statement"];
 	CHECK_IF_NOT_ARR(var, "statement");
-	if (!var.isSet() || var.asString().empty())
+	if (var.asString().empty())
 		throw std::runtime_error("Simfile: missing statement");
 
 	// Secure path, so that it is not going outside the package
@@ -122,7 +122,7 @@ void Simfile::loadStatement() {
 void Simfile::loadSolutions() {
 	auto&& var = config["solutions"];
 	CHECK_IF_ARR(var, "solutions");
-	if (!var.isSet() || var.asArray().empty())
+	if (var.asArray().empty())
 		throw std::runtime_error("Simfile: missing solution");
 
 	solutions.clear();

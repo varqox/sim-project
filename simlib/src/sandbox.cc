@@ -120,7 +120,7 @@ bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
 	};
 
 	if (syscall == sys_execve[arch] || syscall == sys_execveat[arch])
-		detectArchitecture(pid);
+		detectTraceeArchitecture(pid);
 
 	if (syscall != sys_brk[arch])
 		return true;

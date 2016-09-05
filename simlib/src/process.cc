@@ -115,7 +115,7 @@ int8_t detectArchitecture(pid_t pid) {
 		THROW("open('", filename, "')", error(errno));
 
 	Closer closer(fd);
-	// Read fourth byte and detect if 32 or 64 bit
+	// Read fourth byte and detect whether 32 or 64 bit
 	unsigned char c;
 	if (lseek(fd, 4, SEEK_SET) == (off_t)-1)
 		THROW("lseek()", error(errno));

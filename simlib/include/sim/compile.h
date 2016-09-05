@@ -6,8 +6,8 @@ namespace sim {
 
 /**
  * @brief Compiles C++ @p source to @p exec using g++ via PRoot
- * @details If compilation is not successful then errors are placed if c_errors
- *   (if  c_errors is not NULL)
+ * @details If compilation is not successful then errors are placed in
+ *   @p c_errors (if c_errors is not NULL)
  *
  * @param source C++ source filename
  * @param exec output executable filename

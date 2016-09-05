@@ -93,7 +93,7 @@ public:
 		int64_t score;
 	};
 
-	std::vector<TestGroup> tgroups;
+	std::vector<TestGroup> tgroups; // Sorted by gid
 	ConfigFile config;
 
 	Simfile() = default;
@@ -198,6 +198,18 @@ public:
 	 *     validation error occurs
 	 */
 	void loadTestsWithFiles();
+
+	/**
+	 * @brief Loads everything = the whole Simfile
+	 */
+	void loadAll() {
+		loadName();
+		loadTag();
+		loadChecker();
+		loadStatement();
+		loadSolutions();
+		loadTestsWithFiles();
+	}
 
 	/**
 	 * @brief Validates all previously loaded files

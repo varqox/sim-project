@@ -115,7 +115,7 @@ class CallInDtor {
 	Func func;
 
 public:
-	explicit CallInDtor(Func f) : func(f) {}
+	explicit CallInDtor(Func f) : func(std::move(f)) {}
 
 	CallInDtor(const CallInDtor&) = delete;
 	CallInDtor(CallInDtor&&) = delete;
@@ -124,3 +124,19 @@ public:
 
 	~CallInDtor() { func(); }
 };
+
+template<class A, class B>
+bool isIn(const A& val, const B& sequence) {
+	for (auto&& x : sequence)
+		if (x == val)
+			return true;
+	return false;
+}
+
+template<class A, class B>
+bool isIn(const A& val, const std::initializer_list<B>& sequence) {
+	for (auto&& x : sequence)
+		if (x == val)
+			return true;
+	return false;
+}

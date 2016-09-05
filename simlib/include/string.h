@@ -900,13 +900,21 @@ bool isReal(const StringView& s, size_t beg, size_t end = StringView::npos)
 
 inline bool isReal(const StringView& s) noexcept { return isReal(s, 0); }
 
-/* Converts s: [beg, end) to @p T
-*  if end > s.size() or end == StringView::npos then end = s.size()
-*  if beg > end then beg = end
-*  if x == nullptr then only validate
-*  Return value: -1 if s: [beg, end) is not a number (empty string is not a
-*    number), otherwise return the number of characters parsed
-*/
+/**
+ * @brief Converts s: [beg, end) to @p T
+ * @details if end > s.size() or end == StringView::npos then end = s.size()
+ *   if beg > end then beg = end
+ *   if x == nullptr then only validate
+ *
+ * @param s string to convert to int
+ * @param x pointer to int where result (converted value) will be placed
+ * @param beg position from which @p s is considered
+ * @param end position to which (exclusively) @p s is considered
+ * @return -1 if s: [beg, end) is not a number (empty string is not a number),
+ *   otherwise return the number of characters parsed.
+ *   Warning! If return value is -1 then *x may not be assigned, so using *x
+ *   after unsuccessful call is not safe.
+ */
 template<class T>
 int strtoi(const StringView& s, T *x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
@@ -971,7 +979,7 @@ inline long long strtoll(const StringView& s, size_t beg = 0,
 {
 	// TODO: when argument is not a valid number, strtoi() won't parse all the
 	// string, and may (but don't have to) return parsed value
-	long long x; // x will be initialized in function below
+	long long x = 0;
 	strtoi(s, &x, beg, end);
 	return x;
 }
@@ -982,7 +990,7 @@ inline unsigned long long strtoull(const StringView& s, size_t beg = 0,
 {
 	// TODO: when argument is not a valid number, strtou() won't parse all the
 	// string, and may (but don't have to) return parsed value
-	unsigned long long x; // x will be initialized in function below
+	unsigned long long x = 0;
 	strtou(s, &x, beg, end);
 	return x;
 }
@@ -1020,7 +1028,7 @@ struct StrNumCompare {
 };
 
 template<class T>
-inline size_t string_length(const T& x) noexcept { return x.length(); }
+inline size_t string_length(const T& x) noexcept { return x.size(); }
 
 template<class T>
 inline size_t string_length(T* x) noexcept { return __builtin_strlen(x); }
@@ -1029,6 +1037,11 @@ inline size_t string_length(char) noexcept { return 1; }
 
 template<class Char>
 inline std::string& operator+=(std::string& str, const StringBase<Char>& s) {
+	str.append(s.data(), s.size());
+	return str;
+}
+
+inline std::string& operator+=(std::string& str, const meta::string& s) {
 	str.append(s.data(), s.size());
 	return str;
 }

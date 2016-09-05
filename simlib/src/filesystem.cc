@@ -17,6 +17,7 @@ int getUnlinkedTmpFile(int flags) noexcept {
 	if (fd != -1)
 		return fd;
 
+	// If errno == EINVAL, then fall back to mkostemp(3)
 	if (errno != EINVAL)
 		return -1;
 #endif
@@ -555,7 +556,7 @@ string getFileContents(const char* file) {
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
-		THROW("Failed to open file `", file, '`', strerror(errno));
+		THROW("Failed to open file `", file, '`', error(errno));
 
 	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd);
@@ -566,7 +567,7 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
-		THROW("Failed to open file `", file, '`', strerror(errno));
+		THROW("Failed to open file `", file, '`', error(errno));
 
 	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd, beg, end);

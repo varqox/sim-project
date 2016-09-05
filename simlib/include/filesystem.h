@@ -36,7 +36,7 @@ private:
 	std::unique_ptr<char[]> name_;
 
 public:
-	// TemporaryDirectory() = default; // TODO: it does not seem to be necessary
+	TemporaryDirectory() = default; // Does NOT create a temporary directory
 
 	explicit TemporaryDirectory(const char* templ);
 
@@ -560,8 +560,14 @@ public:
 	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
 	explicit FileDescriptor(const char* filename, int flags, int mode = S_0644)
-		noexcept
-		: fd_(::open(filename, flags, mode)) {}
+			noexcept
+		: fd_(::open(filename, flags, mode))
+	{}
+
+	explicit FileDescriptor(const std::string& filename, int flags,
+			int mode = S_0644) noexcept
+		: FileDescriptor(filename.c_str(), flags, mode)
+	{}
 
 	FileDescriptor(const FileDescriptor&) = delete;
 

@@ -86,10 +86,10 @@ public:
 			return (isSet() ? strtod(s.c_str(), nullptr) : 0);
 		}
 
-		// Returns value as string
+		// Returns value as string (empty if not a string or variable isn't set)
 		const std::string& asString() const noexcept { return s; }
 
-		// Returns value as array (empty if not an array)
+		// Returns value as array (empty if not an array or variable isn't set)
 		const std::vector<std::string>& asArray() const noexcept { return a; }
 	};
 

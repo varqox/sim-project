@@ -1,8 +1,9 @@
 #pragma once
 
 #include <array>
+#include <type_traits>
 
-/// Some stuff useful in meta programming
+/// Some stuff useful in the meta programming
 
 namespace meta {
 
@@ -42,7 +43,20 @@ public:
 	constexpr const char* data() const { return p; }
 
 	constexpr size_t size() const { return len; }
+
+	constexpr size_t length() const { return len; }
 };
+
+template<class T, class U, uint N1, uint N2>
+constexpr bool equal_helper(const T (&x)[N1], const U (&y)[N2], uint idx) {
+	return (N1 == N2 &&
+		(idx == N1 || (x[idx] == y[idx] && equal_helper(x, y, idx + 1))));
+}
+
+template<class T, class U, uint N1, uint N2>
+constexpr bool equal(const T (&x)[N1], const U (&y)[N2]) {
+	return equal_helper(x, y, 0);
+}
 
 template<class T>
 constexpr bool is_sorted_compare(T&& a, T&& b) { return (a < b); }
@@ -70,7 +84,6 @@ constexpr bool is_sorted(const std::array<T, N>& arr) {
 	return is_sorted_helper(arr, 0);
 }
 
-
 #if __cplusplus > 201103L
 # warning "Delete the classes Seq and GenSeq below (there are these features in"
 	"C++14 - see std::integer_sequence)"
@@ -84,5 +97,50 @@ struct GenSeq : GenSeq<N - 1, N - 1, Idx...> {};
 
 template<size_t... Idx>
 struct GenSeq<0, Idx...> : Seq<Idx...> {};
+
+template<uint... Digits>
+struct ToStringHelper {
+	constexpr static char value[] = {('0' + Digits)..., '\0'};
+};
+
+template<uintmax_t N, uint... Digits>
+struct ToStringDecompose : ToStringDecompose<N / 10, N % 10, Digits...> {};
+
+template<uint... Digits>
+struct ToStringDecompose<0, Digits...> : ToStringHelper<Digits...> {};
+// Spacial case: N == 0
+template<>
+struct ToStringDecompose<0> : ToStringHelper<0> {};
+
+template<uintmax_t N>
+struct ToString : ToStringDecompose<N> {};
+
+template<class T>
+constexpr T max(T&& x) { return x; }
+
+template<class T, class U>
+constexpr typename std::common_type<T, U>::type max(T&& x, U&& y) {
+	return (x > y ? x : y);
+}
+
+template<class T, class... Args>
+constexpr typename std::common_type<T, Args...>::type max(T&& x, Args&&... args)
+{
+	return max(x, max(std::forward<Args>(args)...));
+}
+
+template<class T>
+constexpr T min(T&& x) { return x; }
+
+template<class T, class U>
+constexpr typename std::common_type<T, U>::type min(T&& x, U&& y) {
+	return (x < y ? x : y);
+}
+
+template<class T, class... Args>
+constexpr typename std::common_type<T, Args...>::type min(T&& x, Args&&... args)
+{
+	return min(x, min(std::forward<Args>(args)...));
+}
 
 } // namespace meta
