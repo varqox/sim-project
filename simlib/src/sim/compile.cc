@@ -9,13 +9,12 @@ int compile(const string& source, const string& exec, unsigned verbosity,
 	uint64_t time_limit, string* c_errors, size_t c_errors_max_len,
 	const string& proot_path)
 {
-	int cef = -1;
+	FileDescriptor cef;
 	if (c_errors) {
-		cef = getUnlinkedTmpFile();
+		cef = openUnlinkedTmpFile();
 		if (cef == -1)
 			THROW("Failed to open 'compile_errors'", error(errno));
 	}
-	Closer closer(cef);
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
 	if (copy(source, concat(tmp_dir.name(), "a.cpp")))

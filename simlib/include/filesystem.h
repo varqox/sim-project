@@ -17,7 +17,7 @@ constexpr int S_0700 = S_IRWXU;
 constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
 /**
- * @brief Creates unlinked temporary file
+ * @brief Creates (and opens) unlinked temporary file
  * @details Uses open(3) if O_TMPFILE is defined, or mkstemp(3)
  *
  * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or passed
@@ -28,7 +28,7 @@ constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
  * @errors The same that occur for open(2) (if O_TMPFILE is defined) or
  *   mkstemp(3)
  */
-int getUnlinkedTmpFile(int flags = 0) noexcept;
+int openUnlinkedTmpFile(int flags = 0) noexcept;
 
 class TemporaryDirectory {
 private:

@@ -5,7 +5,7 @@ all: sim.o
 
 $(eval $(call dependencies))
 
-sim.o: simfile.o compile.o checker.o
+sim.o: simfile.o compile.o checker.o judge_worker.o
 	$(Q)$(call P,LD,$@)$(LD) -r $^ -o $@
 
 .PHONY: clean

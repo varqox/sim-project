@@ -27,13 +27,12 @@ void fillRandomly(void* dest, size_t bytes) noexcept {
 }
 
 ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
-	int fd = open("/dev/urandom", O_RDONLY);
+	FileDescriptor fd("/dev/urandom", O_RDONLY);
 	if (fd == -1)
 		return -1;
 
 	size_t len = readAll(fd, dest, bytes);
 	int errnum = errno;
-	sclose(fd);
 
 	if (bytes == len)
 		return bytes;
@@ -43,13 +42,12 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
 }
 
 void readRandomBytes(void* dest, size_t bytes) {
-	int fd = open("/dev/urandom", O_RDONLY);
+	FileDescriptor fd("/dev/urandom", O_RDONLY);
 	if (fd == -1)
 		THROW("Failed to open /dev/urandom", error(errno));
 
 	size_t len = readAll(fd, dest, bytes);
 	int errnum = errno;
-	sclose(fd);
 
 	if (len != bytes)
 		THROW("Failed to read from /dev/urandom", error(errnum));

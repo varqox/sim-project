@@ -365,7 +365,7 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 	}
 
 	sclose(pfd[1]);
-	Closer pipe_close(pfd[0]);
+	Closer pipe0_closer(pfd[0]);
 
 	ExitStat es; // Loaded from message from child
 	readAll(pfd[0], &es, sizeof(es.code) + sizeof(es.runtime) +
@@ -405,7 +405,7 @@ Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
 	}
 
 	sclose(pfd[1]);
-	Closer close_pipe0(pfd[0]);
+	Closer pipe0_closer(pfd[0]);
 
 	// Wait for child to be ready
 	int status;

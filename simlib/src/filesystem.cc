@@ -10,7 +10,7 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-int getUnlinkedTmpFile(int flags) noexcept {
+int openUnlinkedTmpFile(int flags) noexcept {
 	int fd;
 #ifdef O_TMPFILE
 	fd = open("/tmp", O_TMPFILE | O_RDWR | flags, S_0600);
@@ -114,7 +114,7 @@ int mkdir_r(string path, mode_t mode) noexcept {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-static int __remove_rat(int dirfd, const char* path) {
+static int __remove_rat(int dirfd, const char* path) noexcept {
 	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY
 		| O_NOFOLLOW);
 	if (fd == -1)
@@ -552,24 +552,22 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 }
 
 string getFileContents(const char* file) {
-	int fd;
+	FileDescriptor fd;
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', error(errno));
 
-	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd);
 }
 
 string getFileContents(const char* file, off64_t beg, off64_t end) {
-	int fd;
+	FileDescriptor fd;
 	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', error(errno));
 
-	Closer closer(fd); // To guarantee exception safety
 	return getFileContents(fd, beg, end);
 }
 

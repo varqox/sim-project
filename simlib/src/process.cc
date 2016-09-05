@@ -110,11 +110,10 @@ string chdirToExecDir() {
 int8_t detectArchitecture(pid_t pid) {
 	string filename = concat("/proc/", toString(pid), "/exe");
 
-	int fd = open(filename.c_str(), O_RDONLY | O_LARGEFILE);
+	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 	if (fd == -1)
 		THROW("open('", filename, "')", error(errno));
 
-	Closer closer(fd);
 	// Read fourth byte and detect whether 32 or 64 bit
 	unsigned char c;
 	if (lseek(fd, 4, SEEK_SET) == (off_t)-1)
