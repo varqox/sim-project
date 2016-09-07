@@ -108,8 +108,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				auto tmplog = stdlog("  ", widedString(test.name, 11, LEFT),
 					widedString(usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
-					" s  ", toString(test_report.memory_consumed >> 10),
-					" / ", toString(test_report.memory_limit >> 10), " KiB"
+					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
+					toStr(test_report.memory_limit >> 10), " KiB"
 					"    Status: \033[1;33m");
 				// Status
 				switch (test_report.status) {
@@ -121,7 +121,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					THROW("Should not reach here");
 				}
 				// Rest
-				tmplog("   Exited with ", toString(es.code), " [ ",
+				tmplog("   Exited with ", toStr(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]");
 			};
 
@@ -215,8 +215,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				auto tmplog = stdlog("  ", widedString(test.name, 11, LEFT),
 					widedString(usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
-					" s  ", toString(test_report.memory_consumed >> 10),
-					" / ", toString(test_report.memory_limit >> 10), " KiB"
+					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
+					toStr(test_report.memory_limit >> 10), " KiB"
 					"    Status: \033[1;32mOK\033[m   Exited with 0 [ ",
 					usecToSecStr(test_report.runtime, 6, false), " ]  "
 					"Checker: ");
@@ -228,10 +228,10 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				else
 					tmplog("\033[1;33mERROR\033[m ", test_report.comment);
 				// Rest
-				tmplog("   Exited with ", toString(es.code), " [ ",
+				tmplog("   Exited with ", toStr(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]  ",
-					toString(es.vm_peak >> 10), " / ",
-					toString(CHECKER_MEMORY_LIMIT >> 10), " KiB");
+					toStr(es.vm_peak >> 10), " / ",
+					toStr(CHECKER_MEMORY_LIMIT >> 10), " KiB");
 			}
 		}
 
@@ -239,9 +239,9 @@ JudgeReport JudgeWorker::judge(bool final) const {
 		report_group.score = round(group.score * score_ratio);
 		report_group.max_score = group.score;
 
-		LOG("  Score: ", toString(report_group.score), " / ",
-			toString(report_group.max_score), " (ratio: ",
-			toString(score_ratio, 3), ')');
+		LOG("  Score: ", toStr(report_group.score), " / ",
+			toStr(report_group.max_score), " (ratio: ", toStr(score_ratio, 3),
+			')');
 	}
 
 	LOG('}');

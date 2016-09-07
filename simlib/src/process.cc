@@ -28,7 +28,7 @@ string getCWD() {
 
 string getExec(pid_t pid) {
 	array<char, 4096> buff;
-	string path = concat("/proc/", toString(pid), "/exe");
+	string path = concat("/proc/", toStr(pid), "/exe");
 
 	ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
 	if ((rc == -1 && errno == ENAMETOOLONG)
@@ -108,7 +108,7 @@ string chdirToExecDir() {
 }
 
 int8_t detectArchitecture(pid_t pid) {
-	string filename = concat("/proc/", toString(pid), "/exe");
+	string filename = concat("/proc/", toStr(pid), "/exe");
 
 	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 	if (fd == -1)

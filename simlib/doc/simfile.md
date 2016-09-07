@@ -33,7 +33,7 @@ limits: [                     # Limits array
         # Group 4
         sim4 5 32768
 ]
-scoring: [                    # Scoring of the tests group (optional)
+scoring: [                    # Scoring of the tests groups (optional)
         0 0      # Format: <group id> <score>
         1 20     # Score is a signed integer value
         2 30     # Groups may appear in arbitrary order

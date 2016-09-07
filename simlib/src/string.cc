@@ -194,7 +194,7 @@ bool isReal(const StringView& s, size_t beg, size_t end) noexcept {
 
 string usecToSecStr(uint64_t x, uint prec, bool trim_zeros) {
 	uint64_t y = x / 1000000;
-	string res = toString(y);
+	string res = toStr(y);
 
 	y = x - y * 1000000;
 	char t[7] = "000000";

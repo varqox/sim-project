@@ -634,32 +634,32 @@ string humanizeFileSize(uint64_t size) {
 	double dsize = size;
 	// Bytes
 	if (size < MIN_KB)
-		return toString(size);
+		return toStr(size);
 	// KB
 	if (size < MIN_3DIGIT_KB)
-		return toString(dsize / MIN_KB, 1) + " KB";
+		return toStr(dsize / MIN_KB, 1) + " KB";
 	if (size < MIN_MB)
-		return toString(dsize / MIN_KB, 0) + " KB";
+		return toStr(dsize / MIN_KB, 0) + " KB";
 	// MB
 	if (size < MIN_3DIGIT_MB)
-		return toString(dsize / MIN_MB, 1) + " MB";
+		return toStr(dsize / MIN_MB, 1) + " MB";
 	if (size < MIN_GB)
-		return toString(dsize / MIN_MB, 0) + " MB";
+		return toStr(dsize / MIN_MB, 0) + " MB";
 	// GB
 	if (size < MIN_3DIGIT_GB)
-		return toString(dsize / MIN_GB, 1) + " GB";
+		return toStr(dsize / MIN_GB, 1) + " GB";
 	if (size < MIN_TB)
-		return toString(dsize / MIN_GB, 0) + " GB";
+		return toStr(dsize / MIN_GB, 0) + " GB";
 	// TB
 	if (size < MIN_3DIGIT_TB)
-		return toString(dsize / MIN_TB, 1) + " TB";
+		return toStr(dsize / MIN_TB, 1) + " TB";
 	if (size < MIN_PB)
-		return toString(dsize / MIN_TB, 0) + " TB";
+		return toStr(dsize / MIN_TB, 0) + " TB";
 	// PB
 	if (size < MIN_3DIGIT_PB)
-		return toString(dsize / MIN_PB, 1) + " PB";
+		return toStr(dsize / MIN_PB, 1) + " PB";
 	if (size < MIN_EB)
-		return toString(dsize / MIN_PB, 0) + " PB";
+		return toStr(dsize / MIN_PB, 0) + " PB";
 	// EB
-	return toString(dsize / MIN_EB, 1) + " EB";
+	return toStr(dsize / MIN_EB, 1) + " EB";
 }

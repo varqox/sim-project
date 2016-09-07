@@ -10,7 +10,7 @@
 
 #define throw_assert(expr) \
 	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
-	toString(__LINE__), ": ", __PRETTY_FUNCTION__, \
+	toStr(__LINE__), ": ", __PRETTY_FUNCTION__, \
 	": Assertion `" #expr " failed.")))
 
 #ifdef DEBUG
@@ -23,7 +23,7 @@
 
 // Very useful - includes exception origin
 #define THROW(...) throw std::runtime_error(concat(__VA_ARGS__, " (thrown at " \
-	__FILE__ ":", toString(__LINE__), ')'))
+	__FILE__ ":", toStr(__LINE__), ')'))
 
 namespace __debug {
 
@@ -40,12 +40,12 @@ inline const char* __what(const std::exception& e) {
 
 } // __debug
 
-#define ERRLOG_CATCH(...) errlog(__FILE__ ":", toString(__LINE__), \
+#define ERRLOG_CATCH(...) errlog(__FILE__ ":", toStr(__LINE__), \
 	": Caught exception", __debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
 	__debug::__what(__VA_ARGS__))
 
 #define ERRLOG_AND_FORWARD(...) { errlog(__FILE__ ":", \
-		toString(__LINE__), ": Forwarding exception...", \
+		toStr(__LINE__), ": Forwarding exception...", \
 		__debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
 		__debug::__what(__VA_ARGS__)); \
 	throw; }

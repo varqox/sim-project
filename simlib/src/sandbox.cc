@@ -30,7 +30,7 @@ bool Sandbox::CallbackBase::isSysOpenAllowed(pid_t pid,
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
 	FileDescriptor fd;
-	if (fd.open(concat("/proc/", toString(pid), "/mem"),
+	if (fd.open(concat("/proc/", toStr(pid), "/mem"),
 		O_RDONLY | O_LARGEFILE | O_NOFOLLOW) == -1)
 	{
 		errlog("Error: open()", error(errno));

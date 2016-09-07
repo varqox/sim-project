@@ -24,7 +24,7 @@ public:
 
 	bool isNext(const StringView& s, char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", s, "' -> ",
-			toString(compareTo(buff, 0, delimiter, s)));)
+			toStr(compareTo(buff, 0, delimiter, s)));)
 		return (compareTo(*this, 0, delimiter, s) == 0);
 	}
 

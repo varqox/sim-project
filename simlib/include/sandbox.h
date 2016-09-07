@@ -595,7 +595,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 	func.detectTraceeArchitecture(cpid);
 
 	// Open /proc/{cpid}/statm
-	FileDescriptor statm_fd {concat("/proc/", toString(cpid), "/statm"),
+	FileDescriptor statm_fd {concat("/proc/", toStr(cpid), "/statm"),
 		O_RDONLY};
 	if (statm_fd == -1)
 		THROW("open(/proc/{cpid}/statm)", error(errno));
@@ -611,7 +611,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		for (int i = 0; i < 32 && isdigit(buff[i]); ++i)
 			vm_size = vm_size * 10 + buff[i] - '0';
 
-		DEBUG_SANDBOX(stdlog("get_vm_size: -> ", toString(vm_size));)
+		DEBUG_SANDBOX(stdlog("get_vm_size: -> ", toStr(vm_size));)
 		return vm_size;
 
 	};
@@ -676,8 +676,8 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 		try {
 			if (syscall_no < 0)
-				THROW("failed to get syscall_no - ptrace(): ", toString(syscall_no),
-					error(errno));
+				THROW("failed to get syscall_no - ptrace(): ",
+					toStr(syscall_no), error(errno));
 
 			// Some useful debug
 			DEBUG_SANDBOX(
@@ -692,15 +692,15 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 						int32_t(regs.uregs.i386_regs.ecx)
 						: regs.uregs.x86_64_regs.rsi);
 
-					auto tmplog = stdlog('[', toString(cpid), "] syscall: ",
-						toString(syscall_no), '(', toString(arg1), ", ",
-						toString(arg2), ", ...)");
+					auto tmplog = stdlog('[', toStr(cpid), "] syscall: ",
+						toStr(syscall_no), '(', toStr(arg1), ", ",
+						toStr(arg2), ", ...)");
 
 					if (with_result) {
 						int64_t ret_val = (func.getArch() == ARCH_i386 ?
 							int32_t(regs.uregs.i386_regs.eax)
 							: regs.uregs.x86_64_regs.rax);
-						tmplog(" -> ", toString(ret_val));
+						tmplog(" -> ", toStr(ret_val));
 					}
 				};
 			)
@@ -736,7 +736,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 			DEBUG_SANDBOX(logSyscall(false);)
 
 		} catch (...) {
-			DEBUG_SANDBOX(stdlog(__FILE__ ":", toString(__LINE__),
+			DEBUG_SANDBOX(stdlog(__FILE__ ":", toStr(__LINE__),
 				": Caught exception");)
 
 			// Exception after tracee is dead and waited
@@ -782,7 +782,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		// Not allowed syscall
 		std::string message = func.errorMessage();
 		if (message.empty()) // func has not left any message
-			message = concat("forbidden syscall: ", toString(syscall_no));
+			message = concat("forbidden syscall: ", toStr(syscall_no));
 
 		return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE),
 			message);

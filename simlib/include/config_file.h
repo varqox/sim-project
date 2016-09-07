@@ -13,8 +13,8 @@ public:
 
 		template<class... Args>
 		ParseError(size_t line, size_t pos, Args&&... msg)
-			: runtime_error(concat("line ", toString(line), ':', toString(pos),
-				": ", msg...)) {}
+			: runtime_error(concat("line ", toStr(line), ':', toStr(pos), ": ",
+				msg...)) {}
 
 		ParseError(const ParseError& pe) : runtime_error(pe) {}
 

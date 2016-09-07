@@ -131,7 +131,7 @@ public:
 };
 
 inline std::string error(int errnum) {
-	return concat(" - ", toString(errnum), ": ", strerror(errnum));
+	return concat(" - ", toStr(errnum), ": ", strerror(errnum));
 }
 
 // By default both write to stderr

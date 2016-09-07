@@ -89,8 +89,8 @@ TEST (ConfigFile, isStringLiteral) {
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};
-		return concat("(a, b, c): ", toString(a), ' ', toString(b), ' ',
-			toString(c), "\n  -> \"", StringView(t, 3));
+		return concat("(a, b, c): ", toStr(a), ' ', toStr(b), ' ', toStr(c),
+			"\n  -> \"", StringView(t, 3));
 	};
 
 	// Generated tests (all words of length not greater than 3)
