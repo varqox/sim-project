@@ -602,10 +602,13 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 	auto get_vm_size = [&] {
 		(void)lseek(statm_fd, 0, SEEK_SET);
-		std::array<char, 32> buff {{'\0'}};
-		buff[buff.size() - 1] = '\0';
-		if (read(statm_fd, buff.data(), buff.size() - 1) <= 0)
+		std::array<char, 32> buff;
+		ssize_t rc = read(statm_fd, buff.data(), buff.size() - 1);
+		if (rc <= 0)
 			THROW("read()", error(errno));
+
+		buff[rc] = '\0';
+
 		// Obtain value
 		uint64_t vm_size = 0;
 		for (int i = 0; i < 32 && isdigit(buff[i]); ++i)

@@ -13,9 +13,9 @@ public:
 	Spawner() = delete;
 
 	struct ExitStat {
-		int code;
-		uint64_t runtime; // in usec
-		uint64_t vm_peak; // peak virtual memory size (in bytes)
+		int code = 0;
+		uint64_t runtime = 0; // in usec
+		uint64_t vm_peak = 0; // peak virtual memory size (in bytes)
 		std::string message;
 
 		ExitStat() = default;
@@ -98,7 +98,7 @@ protected:
 	static std::string receiveErrorMessage(int status, int fd);
 
 	/**
-	 * @brief Initialises child process which will execute @p exec
+	 * @brief Initializes child process which will execute @p exec
 	 * @details Sets limits and file descriptors specified in opts
 	 *
 	 * @param exec filename that is to be executed
@@ -220,7 +220,7 @@ inline Spawner::NormalTimer::NormalTimer(int pid, uint64_t time_limit)
 	: tl(time_limit), timer({{0, 0}, {0, 0}})
 {
 	cpid = pid;
-	// Initialise new timer
+	// Initialize new timer
 	timer.it_value.tv_sec = tl / 1000000;
 	timer.it_value.tv_usec = tl - timer.it_value.tv_sec * 1000000LL;
 
