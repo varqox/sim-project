@@ -672,7 +672,7 @@ int main() {
 	(void)sigaction(SIGTERM, &sa, nullptr);
 	(void)sigaction(SIGQUIT, &sa, nullptr);
 
-	stdlog("Initialising server...");
+	stdlog("Initializing server...");
 	stdlog.label(false); // Turn label off (temporarily)
 	stdlog("PID: ", toStr(getpid()));
 
@@ -707,7 +707,17 @@ int main() {
 		return 4;
 	}
 
-	master_process_cycle();
+	try {
+		master_process_cycle();
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return 5;
+
+	} catch (...) {
+		ERRLOG_CATCH();
+		return 5;
+	}
 
 	return 0;
 }
