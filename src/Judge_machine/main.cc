@@ -209,6 +209,8 @@ static void processSubmissionQueue() {
 					case JudgeReport::Test::CHECKER_ERROR:
 						return "<td class=\"status blue\">Checker error</td>";
 					}
+
+					throw_assert(false); // We shouldn't get here
 				};
 				back_insert(report,
 					"<td>", htmlSpecialChars(test.name), "</td>",
