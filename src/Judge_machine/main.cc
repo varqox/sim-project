@@ -440,7 +440,7 @@ int main() {
 		return 1;
 	}
 
-	// Initialise inotify
+	// Initialize inotify
 	int inotify_fd, wd;
 	while ((inotify_fd = inotify_init()) == -1) {
 		errlog("Error: inotify_init()", error(errno));
