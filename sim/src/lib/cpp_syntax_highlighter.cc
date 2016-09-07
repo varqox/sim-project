@@ -12,8 +12,8 @@ using std::vector;
 # warning "Before committing disable this debug"
 # define DEBUG_CSH(...) __VA_ARGS__
 # include <cassert>
-# undef try_assert
-# define try_assert assert
+# undef throw_assert
+# define throw_assert assert
 #else
 # define DEBUG_CSH(...)
 #endif
@@ -241,7 +241,7 @@ CppSyntaxHighlighter::CppSyntaxHighlighter() {
 	static_assert(words[0].size == 0, "First (zero) element of words is a guard"
 		" - because Aho-Corasick implementation takes only positive IDs");
 	for (uint i = 1; i < words.size(); ++i)
-		aho.addPattern(words[i].str, i);
+		aho.addPattern({words[i].str, words[i].size}, i);
 
 	aho.buildFails();
 }
@@ -275,7 +275,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 	// Append end guards (one is already in str - terminating null character)
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
-	DEBUG_CSH(stdlog("end: ", toString(end));)
+	DEBUG_CSH(stdlog("end: ", toStr(end));)
 
 	vector<StyleType> begs(end, -1); // here beginnings of styles are marked
 	vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles)
@@ -341,18 +341,18 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	DEBUG_CSH(auto dump_begs_ends = [&] {
 		for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 			while (str[i] != input[j]) {
-				try_assert(input[j] == '\\' && j + 1 < (int)input.size()
+				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
 					&& input[j + 1] == '\n');
 				j += 2;
 				++line;
 			}
-			auto tmplog = stdlog(toString(i), " (line ", toString(line), "): '",
+			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '",
 				str[i], "' -> ");
 
 			if (ends[i] == 0)
 				tmplog("0, ");
 			else
-				tmplog("\033[1;32m", toString(ends[i]), "\033[m, ");
+				tmplog("\033[1;32m", toStr(ends[i]), "\033[m, ");
 
 			switch (begs[i]) {
 			case -1:
@@ -603,8 +603,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	// Highlights fragments of code not containing: comments, preprocessor,
 	// number literals, string literals and character literals
 	auto highlight = [&](int beg, int endi) {
-		DEBUG_CSH(stdlog("highlight(", toString(beg), ", ", toString(endi),
-			"):");)
+		DEBUG_CSH(stdlog("highlight(", toStr(beg), ", ", toStr(endi), "):");)
 		if (beg >= endi)
 			return;
 
@@ -619,7 +618,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (k && !isName(str[i + 1]) &&
 				!isName(str[j = i - words[k].size]))
 			{
-				DEBUG_CSH(stdlog("aho: ", toString(j + 1), ": ", words[k].str);)
+				DEBUG_CSH(stdlog("aho: ", toStr(j + 1), ": ", words[k].str);)
 				begs[j + 1] = words[k].style;
 				++ends[i + 1];
 				i = j;
@@ -696,10 +695,10 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				res += end_style;
 			// Handle "\\\n"
 			do {
-				try_assert(input[j] == '\\' && j + 1 < (int)input.size()
+				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
 					&& input[j + 1] == '\n');
 
-				string line_str = toString(++line);
+				string line_str = toStr(++line);
 				// When we were ending styles (somewhere above), there can be
 				// an opportunity to elide style OPERATOR (only in the first
 				// iteration of this loop) but it's not worth that, as it's a
@@ -727,7 +726,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (j == 0 || input[j - 1] == '\n')
 				res += '\n';
 			// Break the line
-			string line_str = toString(++line);
+			string line_str = toStr(++line);
 			back_insert(res, "</td></tr>"
 				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 					"\"></td><td>");

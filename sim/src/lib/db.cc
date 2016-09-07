@@ -60,8 +60,10 @@ Connection createConnectionUsingPassFile(const string& filename) {
 	}
 
 	fclose(conf);
-	user[strlen(user) - 1] = password[strlen(password) - 1] = '\0';
-	database[strlen(database) - 1] = host[strlen(host) - 1] = '\0';
+	user[__builtin_strlen(user) - 1] = '\0';
+	password[__builtin_strlen(password) - 1] = '\0';
+	database[__builtin_strlen(database) - 1] = '\0';
+	host[__builtin_strlen(host) - 1] = '\0';
 
 	unique_ptr<char, delete_using_free<char>> f1(user), f2(password),
 		f3(database), f4(host);

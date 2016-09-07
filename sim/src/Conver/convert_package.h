@@ -2,7 +2,7 @@
 
 #include "conver.h"
 
-struct TestNameCompatator {
+struct TestNameComparator {
 	/**
 	 * @brief Extracts tag from @p str
 	 * @details Test name: str tag = str group_id test_id = .*[0-9]+[a-z]*

@@ -3,6 +3,7 @@
 #include "http_request.h"
 #include "http_response.h"
 
+#include <sim/constants.h>
 #include <sim/cpp_syntax_highlighter.h>
 #include <sim/db.h>
 #include <simlib/parsers.h>
@@ -39,5 +40,6 @@ protected:
 		utime("judge-machine.notify", nullptr);
 	}
 
-	static std::string submissionStatusDescription(const std::string& status);
+	static std::string submissionStatusAsTd(SubmissionStatus status,
+		bool show_final);
 };

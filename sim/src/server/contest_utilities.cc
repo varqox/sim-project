@@ -97,7 +97,6 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 		// 2) type == ROUND and round has begun or is visible
 		// 3) type == PROBLEM and parent round has begun
 		if (r_path->type == CONTEST || // 1
-			r_path->round->begins.empty() || // 2 & 3
 			r_path->round->begins <= date("%Y-%m-%d %H:%M:%S") || // 2 & 3
 			(r_path->type == ROUND && r_path->round->visible)) // 2 \ 3
 		{
@@ -177,8 +176,7 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 
 	string current_date = date("%Y-%m-%d %H:%M:%S");
 	Round *round = rpath->round.get();
-	if (rpath->type == CONTEST || (
-		(round->begins.empty() || round->begins <= current_date) &&
+	if (rpath->type == CONTEST || (round->begins <= current_date &&
 		(round->ends.empty() || current_date < round->ends)))
 	{
 		append("<a href=\"/c/", round_id, (admin_access ? "/n" : ""),
@@ -305,7 +303,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					problems[sr.id];
 			else
 				for (auto&& sr : subrounds)
-					if (sr.begins.empty() || sr.begins <= current_date)
+					if (sr.begins <= current_date)
 						problems[sr.id];
 
 			// Collect results
@@ -365,9 +363,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				"</a>");
 
 			// List problems if and only if round has begun (for non-admins)
-			if (admin_view ||
-				rpath->round->begins.empty() ||
-				rpath->round->begins <= date("%Y-%m-%d %H:%M:%S"))
+			if (admin_view || rpath->round->begins <= date("%Y-%m-%d %H:%M:%S"))
 			{
 				// Select problems
 				DB::Statement stmt = db_conn.prepare("SELECT id, name "

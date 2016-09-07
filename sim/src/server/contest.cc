@@ -114,14 +114,21 @@ void Contest::handle() {
 	// Problem statement
 	if (rpath->type == PROBLEM && next_arg == "statement") {
 		// Get statement path
-		ConfigFile problem_config;
-		problem_config.addVars("statement");
-		problem_config.loadConfigFromFile(concat("problems/",
-			rpath->problem->problem_id, "/config.conf"));
+		ConfigFile cf;
+		try {
+			cf.addVars("statement");
+			cf.loadConfigFromFile(concat("problems/",
+				rpath->problem->problem_id, "/Simfile"));
 
-		string statement = problem_config["statement"].asString();
+		} catch (const std::exception& e) {
+			ERRLOG_CATCH(e);
+			return error500();
+		}
+
+		auto statement = cf["statement"];
+
 		// No statement
-		if (statement.empty()) {
+		if (statement.asString().empty()) {
 			contestTemplate("Problems");
 			append("<h1>Problems</h1>");
 			printRoundPath("problems", !admin_view);
@@ -130,16 +137,16 @@ void Contest::handle() {
 			return;
 		}
 
-		if (hasSuffix(statement, ".pdf"))
+		if (hasSuffix(statement.asString(), ".pdf"))
 			resp.headers["Content-type"] = "application/pdf";
-		else if (hasSuffixIn(statement, {".html", ".htm"}))
+		else if (hasSuffixIn(statement.asString(), {".html", ".htm"}))
 			resp.headers["Content-type"] = "text/html";
-		else if (hasSuffixIn(statement, {".txt", ".md"}))
+		else if (hasSuffixIn(statement.asString(), {".txt", ".md"}))
 			resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
 		resp.content_type = server::HttpResponse::FILE;
 		resp.content = concat(resp.content, "problems/",
-			rpath->problem->problem_id, "/doc/", statement);
+			rpath->problem->problem_id, '/', statement.asString());
 
 		return;
 	}
@@ -511,11 +518,11 @@ void Contest::addProblem() {
 					back_insert(args, "-m", memory_limit);
 
 				if (time_limit.size())
-					back_insert(args, "-tl", toString(tl));
+					back_insert(args, "-tl", toStr(tl));
 
-				int fd = getUnlinkedTmpFile();
+				FileDescriptor fd {openUnlinkedTmpFile()};
 				if (fd == -1)
-					THROW("Error: getUnlinkedTmpFile()", error(errno));
+					THROW("Error: openUnlinkedTmpFile()", error(errno));
 
 				// Convert package
 				Spawner::ExitStat es;
@@ -925,7 +932,8 @@ void Contest::editProblem() {
 	if (next_arg == "rejudge") {
 		try {
 			DB::Statement stmt = db_conn.prepare("UPDATE submissions "
-				"SET status='waiting', queued=? WHERE problem_id=?");
+				"SET status=" SSTATUS_WAITING_STR ", queued=? "
+				"WHERE problem_id=?");
 			stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
 			stmt.setString(2, rpath->problem->problem_id);
 
@@ -1024,7 +1032,7 @@ void Contest::editProblem() {
 
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
-		fv.validate(tag, "tag", "Problem tag", PROBLEM_TAG_LEN);
+		fv.validate(tag, "tag", "Problem tag", PROBLEM_TAG_MAX_LEN);
 
 		fv.validateNotBlank<bool(*)(const StringView&)>(memory_limit,
 			"memory-limit", "Memory limit", isDigit,
@@ -1034,19 +1042,24 @@ void Contest::editProblem() {
 		if (fv.noErrors())
 			try {
 				// Update problem config
-				sim::Simfile pconfig;
-				pconfig.loadFrom("problems/" + rpath->problem->problem_id);
+				sim::Simfile sf {
+					getFileContents("problems/" + rpath->problem->problem_id)
+				};
 
-				pconfig.name = name;
-				pconfig.tag = tag;
-				pconfig.memory_limit = strtoull(memory_limit);
+				sf.loadAll();
 
-				if (BLOCK_SIGNALS(putFileContents(concat("problems/",
-						rpath->problem->problem_id, "/config.conf"),
-					pconfig.dump())) == -1)
+				sf.name = name;
+				sf.tag = tag;
+				sf.global_mem_limit = strtoull(memory_limit);
+
+				if (BLOCK_SIGNALS(
+					putFileContents(
+						concat("problems/", rpath->problem->problem_id,
+							"/Simfile"),
+						sf.dump())) == -1)
 				{
 					THROW("Failed to update problem ",
-						rpath->problem->problem_id, " config");
+						rpath->problem->problem_id, " Simfile");
 				}
 
 				// Update database
@@ -1076,14 +1089,15 @@ void Contest::editProblem() {
 
 	// Get problem information
 	round_name = rpath->problem->name;
-	ConfigFile pconfig;
-	pconfig.addVars("name", "tag", "memory_limit");
-
-	pconfig.loadConfigFromFile(concat("problems/", rpath->problem->problem_id,
-		"/config.conf"));
-	name = pconfig["name"].asString();
-	tag = pconfig["tag"].asString();
-	memory_limit = pconfig["memory_limit"].asString();
+	sim::Simfile sf {getFileContents(
+		concat("problems/", rpath->problem->problem_id, "/Simfile"))
+	};
+	sf.loadName();
+	sf.loadTag();
+	sf.loadTests();
+	name = sf.name;
+	tag = sf.tag;
+	memory_limit = sf.global_mem_limit;
 
 	contestTemplate("Edit problem");
 	printRoundPath();
@@ -1125,9 +1139,9 @@ void Contest::editProblem() {
 					"<label>Problem tag</label>"
 					"<input type=\"text\" name=\"tag\" value=\"",
 						htmlSpecialChars(tag), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_TAG_LEN), "\" required>"
+						"maxlength=\"", toStr(PROBLEM_TAG_MAX_LEN), "\" "
+						"required>"
 				"</div>"
-				// TODO: Checker
 				// Memory limit
 				"<div class=\"field-group\">"
 					"<label>Memory limit [KB]</label>"
@@ -1373,11 +1387,12 @@ void Contest::ranking(bool admin_view) {
 	};
 
 	struct RankingField {
-		string submission_id, round_id, score;
+		uint64_t round_id;
+		string submission_id, score;
 
-		explicit RankingField(const string& si = "", const string& ri = "",
-			const string& s = "")
-			: submission_id(si), round_id(ri), score(s) {}
+		explicit RankingField(uint64_t ri, const string& si = "",
+				const string& s = "")
+			: round_id(ri), submission_id(si), score(s) {}
 	};
 
 	struct RankingRow {
@@ -1474,12 +1489,14 @@ void Contest::ranking(bool admin_view) {
 			concat("SELECT s.id, user_id, u.first_name, u.last_name, round_id, "
 					"score "
 				"FROM submissions s, users u "
-				"WHERE s.", column, "=? AND final=1 AND user_id=u.id "
+				"WHERE s.", column, "=? AND s.type=" STYPE_FINAL_STR " "
+					"AND user_id=u.id "
 				"ORDER BY user_id")
 			: concat("SELECT s.id, user_id, u.first_name, u.last_name, "
 					"round_id, score "
 				"FROM submissions s, users u, rounds r "
-				"WHERE s.", column, "=? AND final=1 AND user_id=u.id "
+				"WHERE s.", column, "=? AND s.type=" STYPE_FINAL_STR " "
+					"AND user_id=u.id "
 					"AND r.id=parent_round_id "
 					"AND (begins IS NULL OR begins<=?) "
 					"AND (full_results IS NULL OR full_results<=?) "
@@ -1507,8 +1524,8 @@ void Contest::ranking(bool admin_view) {
 
 			rows.back().score += res.getInt64(6);
 			rows.back().fields.emplace_back(
+				res.getUInt64(5),
 				res[1],
-				res[5],
 				res[6]
 			);
 		}
@@ -1550,7 +1567,7 @@ void Contest::ranking(bool admin_view) {
 
 			append("<th");
 			if (i.problems.size() > 1)
-				append(" colspan=\"", toString(i.problems.size()), '"');
+				append(" colspan=\"", toStr(i.problems.size()), '"');
 			append("><a href=\"/c/", i.id,
 				(admin_view ? "/ranking\">" : "/n/ranking\">"),
 				htmlSpecialChars(i.name), "</a></th>");
@@ -1561,14 +1578,14 @@ void Contest::ranking(bool admin_view) {
 			"<tr>");
 		for (auto& i : rounds)
 			for (auto& j : i.problems)
-				append("<th><a href=\"/c/", toString(j.id),
+				append("<th><a href=\"/c/", toStr(j.id),
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
 					htmlSpecialChars(j.tag), "</a></th>");
 		append("</tr>"
 			"</thead>"
 			"<tbody>");
 		// Rows
-		assert(sorted_rows.size());
+		throw_assert(sorted_rows.size());
 		size_t place = 1; // User place
 		int64_t last_user_score = sorted_rows.front().get().score;
 		vector<RankingField*> row_points(idx); // idx is now number of problems
@@ -1579,7 +1596,7 @@ void Contest::ranking(bool admin_view) {
 				place = i + 1;
 			last_user_score = row.score;
 			append("<tr>"
-					"<td>", toString(place), "</td>");
+					"<td>", toStr(place), "</td>");
 			// Name
 			if (admin_view)
 				append("<td><a href=\"/u/", row.user_id, "\">",
@@ -1588,15 +1605,15 @@ void Contest::ranking(bool admin_view) {
 				append("<td>", htmlSpecialChars(row.name), "</td>");
 
 			// Score
-			append("<td>", toString(row.score), "</td>");
+			append("<td>", toStr(row.score), "</td>");
 
 			// Fields
 			fill(row_points.begin(), row_points.end(), nullptr);
 			for (auto& j : row.fields) {
 				auto it = binaryFindBy(index_of, &pair<size_t, size_t>::first,
-					strtoull(j.round_id));
+					j.round_id);
 				if (it == index_of.end())
-					THROW("Failed to get index of problem");
+					THROW("Failed to get index of a problem");
 
 				row_points[it->second] = &j;
 			}

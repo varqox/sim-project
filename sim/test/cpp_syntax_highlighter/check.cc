@@ -19,20 +19,20 @@ vector<string> findTests(string path = "tests") {
 	auto close_dir = [&]{ closedir(dir); };
 	CallInDtor<decltype(close_dir)> dir_guard(close_dir);
 
-	// Collect .in and .out files
+	// Collect *.in and *.out files
 	vector<string> in, out;
 
 	dirent *file;
 	while ((file = readdir(dir)))
 		if (hasSuffix(file->d_name, ".in")) {
-			in.emplace_back(file->d_name, strlen(file->d_name) - 3);
+			in.emplace_back(file->d_name, __builtin_strlen(file->d_name) - 3);
 		} else if (hasSuffix(file->d_name, ".out")) {
-			out.emplace_back(file->d_name, strlen(file->d_name) - 4);
+			out.emplace_back(file->d_name, __builtin_strlen(file->d_name) - 4);
 		}
 
 	sort(in);
 
-	// For each .out check if is paired with any .in and if it is, collect it
+	// For each *.out check if is paired with any *.in and if it is, collect it
 	vector<string> res;
 	for (auto&& str : out)
 		if (binary_search(in, str))
@@ -96,7 +96,7 @@ void regenerate(const vector<string>& tests) {
 }
 
 // argv[1] == "--diff" -> show diff if test failed
-// argv[1] == "--regen" -> regenerate ALL .out files
+// argv[1] == "--regen" -> regenerate ALL *.out files
 int main(int argc, char **argv) {
 	try {
 		stdlog.label(false);

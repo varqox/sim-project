@@ -1,8 +1,8 @@
 #include "convert_package.h"
 
 #include <cassert>
-#include <simlib/compile.h>
-#include <simlib/sandbox_checker_callback.h>
+#include <simlib/sim/checker.h>
+#include <simlib/sim/compile.h>
 
 using std::pair;
 using std::string;

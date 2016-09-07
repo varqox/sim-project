@@ -32,7 +32,7 @@ static void* worker(void*) {
 
 			// extract IP
 			inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN);
-			stdlog("Connection accepted: ", toString(pthread_self()), " form ",
+			stdlog("Connection accepted: ", toStr(pthread_self()), " form ",
 				ip);
 
 			conn.assign(client_socket_fd);
@@ -113,9 +113,11 @@ int main() {
 	// Extract port from address
 	unsigned port = 80; // server port
 	size_t colon_pos = address.find(':');
-	// Colon found
+	// Colon has been found
 	if (colon_pos < address.size()) {
-		if (strtou(address, &port, colon_pos + 1) <= 0) {
+		if (strtou(address, &port, colon_pos + 1) !=
+			static_cast<int>(address.size() - colon_pos - 1))
+		{
 			errlog("sim.config: incorrect port number");
 			return 7;
 		}
@@ -135,9 +137,9 @@ int main() {
 	}
 
 	stdlog("Server launch:\n"
-		"PID: ", toString(getpid()), "\n"
-		"workers: ", toString(workers), "\n"
-		"address: ", address.data(), ':', toString(port));
+		"PID: ", toStr(getpid()), "\n"
+		"workers: ", toStr(workers), "\n"
+		"address: ", address.data(), ':', toStr(port));
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		errlog("Failed to create socket", error(errno));
@@ -153,7 +155,7 @@ int main() {
 	// Bind
 	constexpr int TRIES = 8;
 	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
-		errlog("Failed to bind (try ", toString(try_no), ')', error(errno));
+		errlog("Failed to bind (try ", toStr(try_no), ')', error(errno));
 		if (++try_no > TRIES)
 			return 3;
 

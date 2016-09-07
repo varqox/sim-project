@@ -31,8 +31,7 @@ int Connection::peek() {
 
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
-		D(stdlog("peek(): Reading completed; buff_size: ",
-			toString(buff_size_));)
+		D(stdlog("peek(): Reading completed; buff_size: ", toStr(buff_size_));)
 
 		if (buff_size_ <= 0) {
 			state_ = CLOSED;
@@ -91,8 +90,11 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 
 void Connection::readPOST(HttpRequest& req) {
 	size_t content_length = 0;
-	if (strtou(req.headers["Content-Length"], &content_length) < 0)
-		return error400();
+	{
+		auto&& cl = req.headers["Content-Length"];
+		if (strtou(cl, &content_length) != (int)cl.size())
+			return error400();
+	}
 
 	int c = '\0';
 	string field_name, field_content;
@@ -615,9 +617,12 @@ HttpRequest Connection::getRequest() {
 		return req;
 	}
 
-	if (strtou(req.headers["Content-Length"], &end) < 0) {
-		error400();
-		return req;
+	{
+		auto&& cl = req.headers["Content-Length"];
+		if (strtou(cl, &end) != (int)cl.size()) {
+			error400();
+			return req;
+		}
 	}
 
 	if (end > 0) {
@@ -654,7 +659,7 @@ void Connection::send(const char* str, size_t len) {
 
 	while (pos < len) {
 		written = write(sock_fd_, str + pos, len - pos);
-		D(stdlog("written: ", toString(written));)
+		D(stdlog("written: ", toStr(written));)
 
 		if (written == -1) {
 			state_ = CLOSED;
@@ -711,7 +716,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 	switch (res.content_type) {
 	case HttpResponse::TEXT:
 		str += "Content-Length: ";
-		str += toString(res.content.size());
+		str += toStr(res.content.size());
 		str += "\r\n\r\n";
 		str += res.content;
 		send(str);
@@ -750,7 +755,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
-		str += toString<uint64_t>(fsize);
+		str += toStr<uint64_t>(fsize);
 		str += "\r\n\r\n";
 
 		constexpr size_t buff_length = 1 << 20;

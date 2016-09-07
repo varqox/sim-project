@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,"
-			"`tag` CHAR(", toStr(PROBLEM_TAG_LEN), ") NOT NULL,"
+			"`tag` VARCHAR(", toStr(PROBLEM_TAG_MAX_LEN), ") NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
 			"PRIMARY KEY (`id`),"
@@ -220,9 +220,9 @@ int main(int argc, char **argv) {
 			"`round_id` int unsigned NOT NULL,"
 			"`parent_round_id` int unsigned NOT NULL,"
 			"`contest_round_id` int unsigned NOT NULL,"
-			"`final` BOOLEAN NOT NULL DEFAULT FALSE,"
+			"`type` TINYINT NULL DEFAULT NULL,"
+			"`status` TINYINT NOT NULL DEFAULT 0,"
 			"`submit_time` datetime NOT NULL,"
-			"`status` enum('ok','error','c_error','judge_error','waiting') NULL DEFAULT NULL,"
 			"`score` int NULL DEFAULT NULL,"
 			"`queued` datetime NOT NULL,"
 			"`initial_report` blob NOT NULL,"
@@ -230,8 +230,8 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			// Judge server
 			"KEY (status, queued),"
-			// Update final, delete account
-			"KEY (user_id, round_id, status, id),"
+			// Update type, delete account
+			"KEY (user_id, round_id, type, status, id),"
 			// Contest::submissions() - view all
 			"KEY (round_id, id),"
 			"KEY (round_id, user_id, id),"
@@ -239,13 +239,13 @@ int main(int argc, char **argv) {
 			"KEY (parent_round_id, user_id, id),"
 			"KEY (contest_round_id, id),"
 			"KEY (contest_round_id, user_id, id),"
-			// Contest::submissions() - view only finals
-			"KEY (round_id, final, id),"
-			"KEY (round_id, user_id, final, id),"
-			"KEY (parent_round_id, final, id),"
-			"KEY (parent_round_id, user_id, final, id),"
-			"KEY (contest_round_id, final, id),"
-			"KEY (contest_round_id, user_id, final, id)"
+			// Contest::submissions() - view by type
+			"KEY (round_id, type, id),"
+			"KEY (round_id, user_id, type, id),"
+			"KEY (parent_round_id, type, id),"
+			"KEY (parent_round_id, user_id, type, id),"
+			"KEY (contest_round_id, type, id),"
+			"KEY (contest_round_id, user_id, type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	tryCreateTable("files",
