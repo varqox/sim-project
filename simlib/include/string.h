@@ -694,9 +694,9 @@ inline std::string toString(long double x, int precision = 6) {
 }
 
 // Alias to toString()
-template<class T, class... Args>
-inline std::string toStr(T&& x, Args&&... args) {
-	return toString(std::forward<T>(x), std::forward<Args>(args)...);
+template<class... Args>
+inline std::string toStr(Args&&... args) {
+	return toString(std::forward<Args>(args)...);
 }
 
 // Like strtou() but places number into x
