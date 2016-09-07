@@ -219,7 +219,7 @@ template<size_t N, size_t RES_N, size_t RES_END = 0>
 constexpr typename std::enable_if<
 	RES_END < RES_N, array<meta::string, RES_N>>::type
 	extract_keywords_from(const array<Word, N>& arr,
-	array<meta::string, RES_N> res = {}, size_t idx = 0)
+	array<meta::string, RES_N> res, size_t idx = 0)
 {
 	return (idx == N ? res : (arr[idx].style == KEYWORD ?
 		extract_keywords_from<N, RES_N, RES_END + 1>(
@@ -230,7 +230,7 @@ constexpr typename std::enable_if<
 }
 
 static constexpr auto cpp_keywords =
-	extract_keywords_from<words.size(), count_keywords(words)>(words);
+	extract_keywords_from<words.size(), count_keywords(words)>(words, {{}});
 
 // Important: elements have to be sorted!
 static_assert(meta::is_sorted(cpp_keywords),

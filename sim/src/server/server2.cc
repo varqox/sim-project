@@ -451,11 +451,11 @@ static void* reader_thread(void*) {
 	constexpr uint MAX_EVENTS = 64;
 	constexpr uint MAX_ITERATIONS_PER_ONE = 32;
 
-	epoll_event events[MAX_EVENTS];
+	array<epoll_event, MAX_EVENTS> events;
 	array<char, 65536> buff;
 
 	for (;;) {
-		int n = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+		int n = epoll_wait(epoll_fd, events.data(), events.size(), -1);
 		if (n < 0) {
 			errlog(__FILE__, ':', toStr(__LINE__), ": epoll_wait()",
 				error(errno));
@@ -463,7 +463,7 @@ static void* reader_thread(void*) {
 		}
 
 		for (int i = 0; i < n; ++i) {
-			D(stdlog("Event: ", toStr(events[i].data.fd), " -> ",
+			D(stdlog("Event: ", toStr((int)events[i].data.fd), " -> ",
 				(events[i].events & EPOLLIN ? "EPOLLIN | " : ""),
 				(events[i].events & EPOLLOUT ? "EPOLLOUT | " : ""),
 				(events[i].events & EPOLLRDHUP ? "EPOLLRDHUP | " : ""),
