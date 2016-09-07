@@ -131,7 +131,7 @@ void Sim::getStaticFile() {
 	resp.content = file_path;
 }
 
-static string colour(const string& str) noexcept {
+static string colorize(const string& str) noexcept {
 	string res;
 	enum : uint8_t { SPAN, B, NONE } opened = NONE;
 	auto closeLastTag = [&] {
@@ -249,7 +249,7 @@ void Sim::logs() {
 				break;
 			}
 
-		fdata = colour(fdata);
+		fdata = colorize(fdata);
 		append(fdata);
 	};
 

@@ -6,7 +6,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
-pair<string, string> TestNameCompatator::extractTag(const string& str) {
+pair<string, string> TestNameComparator::extractTag(const string& str) {
 	size_t end, i = str.size();
 	pair<string, string> res;
 
@@ -196,16 +196,16 @@ int convertPackage(string tmp_package, string out_package) {
 				}
 
 	/* Add tests to config_conf */
-	sort(tests.begin(), tests.end(), TestNameCompatator());
+	sort(tests.begin(), tests.end(), TestNameComparator());
 
 	config_conf.test_groups.assign(1, sim::Simfile::Group());
 	sim::Simfile::Group *group = &config_conf.test_groups.back();
 	pair<string, string> curr_group,
-		last_group = TestNameCompatator::extractTag(tests[0]);
+		last_group = TestNameComparator::extractTag(tests[0]);
 
 	for (auto& i : tests) {
-		curr_group = TestNameCompatator::extractTag(i);
-		// Next group (it is strongly based on test order - see
+		curr_group = TestNameComparator::extractTag(i);
+		// Next group (it is strongly based on the test order - see
 		// TestNameComparator)
 		if (curr_group.first != last_group.first &&
 			!(curr_group.second == "ocen" &&

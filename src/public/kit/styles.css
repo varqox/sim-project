@@ -438,6 +438,58 @@ table {
 	border-spacing: 0;
 }
 
+/* Modal (background) */
+.modal {
+	display: flex;
+	flex-flow: column nowrap;
+	position: fixed;
+	z-index: 1;
+	padding-top: 200px;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+	background-color: #999; /* Fallback color */
+	background-color: rgba(0,0,0,0.4);
+}
+/* Modal content */
+.modal > div {
+	display: flex;
+	flex-flow: column nowrap;
+	background-color: #fefefe;
+	margin: 0 auto;
+	padding: 20px;
+	border: 1px solid #888;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+}
+.modal > div h2 {
+	margin: 5px 0;
+	font-size: 24px;
+	font-weight: normal;
+	line-height: 28px;
+	/*white-space: nowrap;*/
+}
+/* The Close Button */
+.modal .close {
+	color: #aaaaaa;
+	margin: -12px -8px -4px 0;
+	font-size: 28px;
+	font-weight: bold;
+    align-self: flex-end;
+}
+.modal .close::after {
+	content: "×";
+}
+.modal .close:hover,
+.modal .close:focus {
+	color: #000;
+	text-decoration: none;
+	cursor: pointer;
+}
+
 .btn,
 .btn-small {
 	cursor: pointer;
@@ -534,6 +586,36 @@ table {
 .btn.red:active,
 .btn-small.red:active {
 	background-color: #ca4741;
+	background-image: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Orange button */
+.btn.orange,
+.btn-small.orange {
+	color: #ffffff;
+	background-color: #f6a839;
+    background-image: linear-gradient(#fbba5d, #f19615);
+    border: 1px solid #e29b35;
+	/*background-color: #f0ad4e;*/
+	/*background-image: linear-gradient(#ee5f5b, #c73e38);*/
+	/*border: 1px solid #eea236;*/
+}
+.btn.orange:hover,
+.btn.orange:focus,
+.btn-small.orange:hover,
+.btn-small.orange:focus {
+    background-color: #ef9d2a;
+	/*background-color: #d94d48;*/
+	background-image: none;
+}
+.btn.orange:focus,
+.btn-small.orange:focus {
+	box-shadow: 0 0 8px 1px #f59b1a;
+}
+.btn.orange:active,
+.btn-small.orange:active {
+	background-color: #e8941c;
 	background-image: none;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
@@ -988,7 +1070,6 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	width: 85%;
 	margin: 15px 0 0 20px;
 	flex-flow: column nowrap;
-	/*text-align: center;*/
 }
 .submission-info > div:first-child {
 	display: flex;
@@ -1016,10 +1097,10 @@ div.right-flow {
 	flex-flow: row nowrap;
 	justify-content: flex-end;
 }
-.compile-errors {
+.compilation-errors {
 	display: inline-block;
 	padding: 8px;
-	margin: 0;
+	margin: 8px 0 0;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	background: #f5f5f5;
 	border: 1px solid #afafaf;
@@ -1057,36 +1138,45 @@ div.right-flow {
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 }
+.results > table td:nth-child(4) {
+	text-align: right;
+}
 .results > table td.groupscore {
 	padding-right: 8px;
 	text-align: right;
 	vertical-align: middle;
 }
-.ok {
+.status.green {
 	background: #8bee8b;
 }
-.wa {
+.status.red {
 	background: #ffbaba;
 }
-.tl-rte {
+.status.intense-red {
+	background: #ff937b;
+}
+.status.yellow {
 	background: #ffd27b;
 }
-.judge-error {
+.status.blue {
 	background: #7abfff;
 }
-.test-comments ul, .test-comments li {
+.status.purple {
+	background: #d3a4ff;
+}
+.tests-comments ul, .tests-comments li {
 	padding: 0;
 	margin: 0;
 	color: #999999;
 	list-style: none;
 }
-.test-comments {
+.tests-comments {
 	padding: 0;
 	margin: 20px 0;
 	line-height: 20px;
 	text-align: left;
 }
-.test-comments .test-id {
+.tests-comments .test-id {
 	padding-right: 5px;
 	font-size: 85%;
 	vertical-align: super;
@@ -1151,12 +1241,17 @@ table.submissions th.status {
 table.submissions th.score {
 	min-width: 60px;
 }
-table.submissions th.final {
+table.submissions th.type {
 	min-width: 60px;
 }
 table.submissions th {
 	padding: 6px;
 	line-height: 20px;
+}
+table.submissions tr.ignored,
+.submission-info table tr.ignored {
+	background: #eee;
+	color: #444;
 }
 table.submissions td {
 	padding: 4px 24px 4px 8px;
@@ -1168,6 +1263,9 @@ table.submissions td .btn-small {
 }
 table.submissions tr > td:last-child {
 	white-space: pre;
+}
+table.submissions td.status {
+	text-align: center;
 }
 
 /* Users */

@@ -4,12 +4,12 @@ CORES=$(grep -c ^processor /proc/cpuinfo)
 
 export CC='gcc -Werror'
 export CXX='g++ -Werror'
-make build test -j $CORES test
-make build test -j $CORES test DEBUG=1
-make build test -j $CORES test DEBUG=2
+make -j $CORES test
+make -j $CORES test DEBUG=1
+make -j $CORES test DEBUG=2
 
 export CC='clang -Werror'
 export CXX='clang++ -Werror'
-make build test -j $CORES test
-make build test -j $CORES test DEBUG=1
-make build test -j $CORES test DEBUG=2
+make -j $CORES test
+make -j $CORES test DEBUG=1
+make -j $CORES test DEBUG=2

@@ -240,7 +240,7 @@ void Contest::editFile(const StringView& id, string name) {
 				"<div class=\"field-group\">"
 					"<label>File size</label>"
 					"<input type=\"text\" value=\"",
-						humanizeFileSize(file_size), " (", toString(file_size),
+						humanizeFileSize(file_size), " (", toStr(file_size),
 						" bytes)\" disabled>"
 				"</div>"
 				// Modified

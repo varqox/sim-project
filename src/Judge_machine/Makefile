@@ -5,7 +5,7 @@ all: ../judge-machine
 
 $(eval $(call dependencies))
 
-../judge-machine: main.o judge.o
+../judge-machine: main.o
 ../judge-machine: ../lib/sim.a
 ../judge-machine:
 	$(LINK) -lmysqlcppconn

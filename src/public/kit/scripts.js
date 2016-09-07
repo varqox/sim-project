@@ -44,9 +44,77 @@ function getCookie(name) {
 
 	return '';
 };
+// Adding csrf token to a form
+function addCsrfTokenTo(form) {
+	$(form).find('input[name="csrf_token"]').remove(); // Avoid duplication
+	form.append('<input type="hidden" name="csrf_token" value="' +
+		getCookie('csrf_token') + '">');
+}
+// Adding csrf token before submitting a form
 $(function() {
-	$('form').submit(function() {
-		$(this).append('<input type="hidden" name="csrf_token" value="' +
-			getCookie('csrf_token') + '">');
-	});
+	$('form').submit(function() { addCsrfTokenTo($(this)); });
+});
+// Modal
+function changeSubmissionType(submission_id, stype) {
+	$('<div>', {
+		class: 'modal',
+		html: $('<div>', {
+			html: $('<span>', { class: 'close' })
+			.add('<h2>', {
+				text: 'Change submission type'
+			}).add('<form>', {
+				style: 'display: flex; flex-flow: column nowrap',
+				html: $('<div>', {
+					html: $('<span>', {
+						text: 'New submission type: '
+					}).add('<select>', {
+						name: 'stype',
+						html: $('<option>', {
+							value: 'n/f',
+							text: 'Normal / final',
+							selected: (stype === 'n/f')
+						}).add('<option>', {
+							value: 'i',
+							text: 'Ignored',
+							selected: (stype === 'i')
+						})
+					})
+				}).add('<input>', {
+					type: 'submit',
+					class: 'btn-small blue',
+					style: 'margin: 8px auto 0',
+					value: 'Change',
+					click: function() {
+						addCsrfTokenTo($(this).parent());
+						$('#req_status').remove();
+						$('<p>', {
+							id: 'req_status',
+							text: 'Sending request...'
+						}).appendTo($(this).parent());
+						$.ajax({
+							type: 'POST',
+							url: '/s/' + submission_id + '/change-type',
+							data: $(this).parent().serialize(),
+							success: function() {
+								$('#req_status').text("Submission type changed. Reload the page to see changes.")
+									.css('background', '#9ff55f');
+							},
+							error: function(req) {
+								$('#req_status').text("Error: " + req.status
+									+ ' ' + req.statusText)
+									.css('background', '#f55f5f');
+							}
+						});
+						return false;
+					}
+				})
+			})
+		})
+	}).appendTo('body');
+}
+$(document).click(function(event) {
+	if ($(event.target).is('.modal'))
+		$(event.target).remove();
+	else if ($(event.target).is('.modal .close'))
+		$(event.target).parent().parent().remove();
 });

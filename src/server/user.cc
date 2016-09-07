@@ -250,14 +250,15 @@ void User::signUp() {
 				stmt.setString(5, salt);
 				stmt.setString(6, sha3_512(salt + password1));
 
+				// User account successfully created
 				if (stmt.executeUpdate() == 1) {
-					stmt = db_conn.prepare(
-						"SELECT id FROM `users` WHERE username=?");
-					stmt.setString(1, username);
+					DB::Result res =
+						db_conn.executeQuery("SELECT LAST_INSERT_ID()");
+					if (!res.next())
+						THROW("Failed to get LAST_INSERT_ID()");
 
-					DB::Result res = stmt.executeQuery();
-					if (res.next())
-						Session::createAndOpen(res[1]);
+					Session::createAndOpen(res[1]);
+					stdlog("New user: ", res[1], " -> `", username, '`');
 
 					return redirect("/");
 				}
@@ -270,6 +271,7 @@ void User::signUp() {
 			}
 
 	// Clean old data
+	// TODO: ugly (?) way - do something with it
 	} else {
 		username = "";
 		first_name = "";
@@ -582,7 +584,7 @@ void User::editProfile() {
 		== 0)
 	{
 		append("<input type=\"hidden\" name=\"type\" value=\"",
-			toString(user_type), "\">");
+			toStr(user_type), "\">");
 	}
 
 	append("</div>"
@@ -615,7 +617,8 @@ void User::editProfile() {
 	if (permissions & (PERM_EDIT | PERM_DELETE)) {
 		append("<div>");
 		if (permissions & PERM_EDIT)
-			append("<input class=\"btn blue\" type=\"submit\" value=\"Update\">");
+			append("<input class=\"btn blue\" type=\"submit\" "
+				"value=\"Update\">");
 		if (permissions & PERM_DELETE)
 			append("<a class=\"btn red\" style=\"float:right\" href=\"/u/",
 				user_id, "/delete?/\">Delete account</a>");
@@ -804,7 +807,7 @@ void User::deleteAccount() {
 void User::printUserSubmissions(uint limit) {
 	try {
 		string query = "SELECT s.id, s.submit_time, r3.id, r3.name, r2.id, "
-				"r2.name, r.id, r.name, s.status, s.score, s.final, "
+				"r2.name, r.id, r.name, s.status, s.score, s.type, "
 				"r2.full_results, r3.owner, u.type "
 			"FROM submissions s, rounds r, rounds r2, rounds r3, users u "
 			"WHERE s.user_id=? AND s.round_id=r.id AND s.parent_round_id=r2.id "
@@ -812,7 +815,7 @@ void User::printUserSubmissions(uint limit) {
 			"ORDER BY s.id DESC";
 
 		if (limit > 0)
-			back_insert(query, " LIMIT ", toString(limit));
+			back_insert(query, " LIMIT ", toStr(limit));
 
 		DB::Statement stmt = db_conn.prepare(query);
 		stmt.setString(1, user_id);
@@ -830,37 +833,26 @@ void User::printUserSubmissions(uint limit) {
 					"<th class=\"problem\">Problem</th>"
 					"<th class=\"status\">Status</th>"
 					"<th class=\"score\">Score</th>"
-					"<th class=\"final\">Final</th>"
+					"<th class=\"type\">Type</th>"
 					"<th class=\"actions\">Actions</th>"
 				"</tr>"
 			"</thead>"
 			"<tbody>");
 
-		auto statusRow = [](const string& status) {
-			string ret = "<td";
-
-			if (status == "ok")
-				ret += " class=\"ok\">";
-			else if (status == "error")
-				ret += " class=\"wa\">";
-			else if (status == "c_error")
-				ret += " class=\"tl-rte\">";
-			else if (status == "judge_error")
-				ret += " class=\"judge-error\">";
-			else
-				ret += '>';
-
-			return back_insert(ret, submissionStatusDescription(status),
-				"</td>");
-		};
-
 		string current_date = date("%Y-%m-%d %H:%M:%S");
 		while (res.next()) {
-			append("<tr>");
+			SubmissionType stype = SubmissionType(res.getUInt(11));
+			if (stype == SubmissionType::IGNORED)
+				append("<tr class=\"ignored\">");
+			else
+				append("<tr>");
 
 			bool admin_view = (res[13] == Session::user_id
 				|| Session::user_type < digitsToU<uint>(res[14])
 				|| Session::user_id == SIM_ROOT_UID);
+
+			bool show_final_results = (admin_view || res[12] <= current_date);
+
 			// Rest
 			append("<td><a href=\"/s/", res[1], "\">", res[2], "</a></td>"
 					"<td>"
@@ -873,10 +865,10 @@ void User::printUserSubmissions(uint limit) {
 						"<a href=\"/c/", res[7], "\">",
 							htmlSpecialChars(res[8]), "</a>"
 					"</td>",
-					statusRow(res[9]),
-					"<td>", (admin_view || string(res[12]) <= current_date
-						? res[10] : ""), "</td>"
-					"<td>", (res.getBool(11) ? "Yes" : ""), "</td>"
+					submissionStatusAsTd(SubmissionStatus(res.getUInt(9)),
+						show_final_results),
+					"<td>", (show_final_results ? res[10] : ""), "</td>"
+					"<td>", toStr(stype), "</td>"
 					"<td>"
 						"<a class=\"btn-small\" href=\"/s/", res[1],
 							"/source\">View source</a>"
@@ -884,7 +876,11 @@ void User::printUserSubmissions(uint limit) {
 							"/download\">Download</a>");
 
 			if (admin_view)
-				append("<a class=\"btn-small blue\" href=\"/s/", res[1],
+				append("<a class=\"btn-small orange\" href=\"javascript:;\""
+						"onclick=\"changeSubmissionType(", res[1], ",'",
+						(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
+						"Change type</a>"
+					"<a class=\"btn-small blue\" href=\"/s/", res[1],
 						"/rejudge\">Rejudge</a>"
 					"<a class=\"btn-small red\" href=\"/s/", res[1],
 						"/delete\">Delete</a>");
