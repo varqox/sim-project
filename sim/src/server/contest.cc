@@ -1042,15 +1042,15 @@ void Contest::editProblem() {
 		if (fv.noErrors())
 			try {
 				// Update problem config
-				sim::Simfile sf {
-					getFileContents("problems/" + rpath->problem->problem_id)
+				sim::Simfile sf {getFileContents(concat("problems/",
+					rpath->problem->problem_id, "/Simfile"))
 				};
 
 				sf.loadAll();
 
 				sf.name = name;
 				sf.tag = tag;
-				sf.global_mem_limit = strtoull(memory_limit);
+				sf.global_mem_limit = strtoull(memory_limit) << 10;
 
 				if (BLOCK_SIGNALS(
 					putFileContents(
@@ -1097,7 +1097,7 @@ void Contest::editProblem() {
 	sf.loadTests();
 	name = sf.name;
 	tag = sf.tag;
-	memory_limit = sf.global_mem_limit;
+	memory_limit = toStr(sf.global_mem_limit >> 10);
 
 	contestTemplate("Edit problem");
 	printRoundPath();
