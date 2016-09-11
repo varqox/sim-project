@@ -21,6 +21,8 @@ void Conver::extractPackage(const string& package_path) {
 
 	// Set package_path_
 	package_path_ = tmp_dir_.path() + "p/";
+	if (mkdir(package_path_))
+		THROW("mkdir(`", package_path_, "`)", error(errno));
 
 	/* Copy the package to the temporary directory */
 
