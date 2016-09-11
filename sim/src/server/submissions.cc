@@ -62,7 +62,7 @@ void Contest::submit(bool admin_view) {
 			if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
 				fv.addError(concat("Solution file to big (max ",
 					toStr(SOLUTION_MAX_SIZE), " bytes = ",
-					toStr(SOLUTION_MAX_SIZE >> 10), " KiB)"));
+					toStr(SOLUTION_MAX_SIZE >> 10), " KB)"));
 				goto form;
 			}
 

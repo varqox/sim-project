@@ -133,6 +133,7 @@ constexpr const char* SERVER_ERROR_LOG = "logs/server-error.log";
 constexpr const char* JUDGE_LOG = "logs/judge.log";
 constexpr const char* JUDGE_ERROR_LOG = "logs/judge-error.log";
 
-constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 100 << 10; // 100 KiB
+constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
 constexpr uint64_t CHECKER_COMPILATION_TIME_LIMIT = 30e6; // 30 s
 constexpr uint64_t SOLUTION_COMPILATION_TIME_LIMIT = 30e6; // 30 s
+constexpr const char* PROOT_PATH = "./proot";

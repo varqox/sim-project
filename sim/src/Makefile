@@ -1,12 +1,14 @@
 include ../Makefile.config
 
-.PHONY: all
-all: killinstc Judge_machine server lib setup-installation simlib
-
 OLD_EXTRA_CXX_FLAGS := $(EXTRA_CXX_FLAGS)
 OLD_EXTRA_LD_FLAGS := $(EXTRA_LD_FLAGS)
 EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/others'
 EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others'
+
+.PHONY: all
+all: killinstc Judge_machine server lib setup-installation simlib
+
+$(eval $(call dependencies))
 
 # Disable flags to be run on simlib
 simlib: override EXTRA_CXX_FLAGS = $(OLD_EXTRA_LD_FLAGS)

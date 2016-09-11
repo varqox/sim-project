@@ -13,8 +13,8 @@ static constexpr int OLD_WATCH_METHOD_SLEEP = 1e6; // 1 s
 static DB::Connection db_conn;
 
 static void processSubmissionQueue() {
-	JudgeWorker worker;
-	worker.setVerbosity(true);
+	JudgeWorker jworker;
+	jworker.setVerbosity(true);
 
 	// While submission queue is not empty
 	for (;;) try {
@@ -34,7 +34,7 @@ static void processSubmissionQueue() {
 		stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
 			')');
 
-		worker.loadPackage("problems/" + problem_id,
+		jworker.loadPackage("problems/" + problem_id,
 			getFileContents(concat("problems/", problem_id, "/Simfile"))
 		);
 
@@ -140,8 +140,8 @@ static void processSubmissionQueue() {
 
 		// Compile checker
 		stdlog("Compiling checker...");
-		if (worker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
-			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, "./proot"))
+		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			stdlog("Checker compilation failed.");
 
@@ -155,9 +155,9 @@ static void processSubmissionQueue() {
 
 		// Compile solution
 		stdlog("Compiling solution...");
-		if (worker.compileSolution(concat("solutions/", submission_id, ".cpp"),
+		if (jworker.compileSolution(concat("solutions/", submission_id, ".cpp"),
 			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-			COMPILATION_ERRORS_MAX_LENGTH, "./proot"))
+			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			stdlog("Solution compilation failed.");
 
@@ -183,7 +183,7 @@ static void processSubmissionQueue() {
 						"<th class=\"test\">Test</th>"
 						"<th class=\"result\">Result</th>"
 						"<th class=\"time\">Time [s]</th>"
-						"<th class=\"memory\">Memory [KiB]</th>"
+						"<th class=\"memory\">Memory [KB]</th>"
 						"<th class=\"points\">Score</th>"
 					"</tr>"
 				"</thead>"
@@ -263,8 +263,8 @@ static void processSubmissionQueue() {
 
 		try {
 			// Judge
-			JudgeReport rep1 = worker.judge(false);
-			JudgeReport rep2 = worker.judge(true);
+			JudgeReport rep1 = jworker.judge(false);
+			JudgeReport rep2 = jworker.judge(true);
 			// Make reports
 			initial_report = construct_report(rep1, false);
 			final_report = construct_report(rep2, true);
