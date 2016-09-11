@@ -210,7 +210,7 @@ template<size_t N, size_t RES_N, size_t RES_END>
 constexpr typename std::enable_if<
 	RES_END >= RES_N, array<meta::string, RES_N>>::type
 	extract_keywords_from(const array<Word, N>&,
-	array<meta::string, RES_N> res = {}, size_t = 0)
+	const array<meta::string, RES_N>& res = {}, size_t = 0)
 {
 	return res;
 }
@@ -219,7 +219,7 @@ template<size_t N, size_t RES_N, size_t RES_END = 0>
 constexpr typename std::enable_if<
 	RES_END < RES_N, array<meta::string, RES_N>>::type
 	extract_keywords_from(const array<Word, N>& arr,
-	array<meta::string, RES_N> res, size_t idx = 0)
+	const array<meta::string, RES_N>& res, size_t idx = 0)
 {
 	return (idx == N ? res : (arr[idx].style == KEYWORD ?
 		extract_keywords_from<N, RES_N, RES_END + 1>(

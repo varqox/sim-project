@@ -7,7 +7,7 @@
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 #include <simlib/random.h>
-#include <simlib/sim/simfile.h>
+#include <simlib/sim/conver.h>
 #include <simlib/spawner.h>
 #include <simlib/time.h>
 
@@ -456,7 +456,7 @@ void Contest::addProblem() {
 
 	FormValidator fv(req->form_data);
 	string name, memory_limit, user_package_file, time_limit;
-	bool force_auto_limit = true;
+	bool force_auto_limit = true, ignore_simfile = false;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
@@ -479,6 +479,8 @@ void Contest::addProblem() {
 
 		force_auto_limit = fv.exist("force-auto-limit");
 
+		ignore_simfile = fv.exist("ignore-simfile");
+
 		fv.validateNotBlank(user_package_file, "package", "Package");
 
 		fv.validateFilePathNotEmpty(package_file, "package", "Package");
@@ -496,53 +498,38 @@ void Contest::addProblem() {
 
 				FileRemover file_rm(new_package_file);
 
-				// Create temporary directory for holding package
-				char package_tmp_dir[] = "/tmp/sim-problem.XXXXXX";
-				if (mkdtemp(package_tmp_dir) == nullptr)
-					THROW("Error: mkdtemp('", package_tmp_dir, "')",
-						error(errno));
-
-				DirectoryRemover rm_tmp_dir(package_tmp_dir);
-
-				// Construct Conver arguments
-				vector<string> args(1, "./conver");
-				back_insert(args, new_package_file, "-o", package_tmp_dir);
-
-				if (force_auto_limit)
-					args.emplace_back("-fal");
-
-				if (name.size())
-					back_insert(args, "-n", name);
-
-				if (memory_limit.size())
-					back_insert(args, "-m", memory_limit);
-
-				if (time_limit.size())
-					back_insert(args, "-tl", toStr(tl));
-
-				FileDescriptor fd {openUnlinkedTmpFile()};
-				if (fd == -1)
-					THROW("Error: openUnlinkedTmpFile()", error(errno));
-
-				// Convert package
-				Spawner::ExitStat es;
+				// Construct Simfile
+				sim::Conver conver;
+				sim::Simfile sf;
 				try {
-					es = Spawner::run(args[0], args, {-1, -1, fd});
+					conver.setVerbosity(true);
+					conver.extractPackage(new_package_file);
 
+					// Set Conver options
+					sim::Conver::Options opts;
+					opts.name = name;
+					opts.force_auto_time_limits_setting = force_auto_limit;
+					opts.ignore_simfile = ignore_simfile;
+					opts.compilation_time_limit = SOLUTION_COMPILATION_TIME_LIMIT;
+					opts.compilation_errors_max_length =
+						COMPILATION_ERRORS_MAX_LENGTH;
+					opts.proot_path = PROOT_PATH;
+
+					if (memory_limit.size())
+						opts.memory_limit = strtoull(memory_limit);
+
+					if (time_limit.size())
+						opts.global_time_limit = strtoull(time_limit);
+
+					sf = conver.constructFullSimfile(opts);
 				} catch (const std::exception& e) {
-					fv.addError("Internal server error");
-					ERRLOG_CATCH(e);
+					fv.addError(concat("Conver failed: ", e.what()));
 					goto form;
 				}
 
-				if (es.code) {
-					// Move offset to the beginning
-					lseek(fd, 0, SEEK_SET);
-
-					fv.addError(concat("Conver failed (", es.message, "):",
-						getFileContents(fd)));
-					goto form;
-				}
+				// Put the Simfile in the package
+				putFileContents(conver.unpackedPackagePath() + "Simfile",
+					sf.dump());
 
 				// 'Transaction' begin
 				// Insert problem
@@ -577,25 +564,11 @@ void Contest::addProblem() {
 
 				string round_id = res[1];
 
-				// Get problem name
-				ConfigFile problem_config;
-				problem_config.addVars("name", "tag");
-				problem_config.loadConfigFromFile(concat(package_tmp_dir,
-					"/config.conf"));
-
-				name = problem_config["name"].asString();
-				if (name.empty())
-					THROW("Failed to get problem name");
-
-				string tag = problem_config["tag"].asString();
-
 				// Move package folder to problems/
 				string package_dir = concat("problems/", problem_id);
-				if (move(package_tmp_dir, package_dir, false))
-					THROW("Error: move('", package_tmp_dir, "', '", package_dir,
-						"')", error(errno));
-
-				rm_tmp_dir.reset("problems/" + problem_id);
+				if (move(conver.unpackedPackagePath(), package_dir, false))
+					THROW("Error: move('", conver.unpackedPackagePath(), "', '",
+						package_dir, "')", error(errno));
 
 				// Commit - update problem and round
 				stmt = db_conn.prepare(
@@ -608,12 +581,12 @@ void Contest::addProblem() {
 						"WHERE p.id=? AND r.id=?");
 
 				stmt.setString(1, rpath->round->id);
-				stmt.setString(2, name);
-				stmt.setString(3, tag);
+				stmt.setString(2, sf.name);
+				stmt.setString(3, sf.tag);
 				stmt.setString(4, Session::user_id);
 				stmt.setString(5, rpath->round->id);
 				stmt.setString(6, rpath->contest->id);
-				stmt.setString(7, name);
+				stmt.setString(7, sf.name);
 				stmt.setString(8, problem_id);
 				stmt.setString(9, problem_id);
 				stmt.setString(10, round_id);
@@ -621,10 +594,7 @@ void Contest::addProblem() {
 				if (2 != stmt.executeUpdate())
 					THROW("Failed to update");
 
-				// Cancel folder deletion
-				rm_tmp_dir.cancel();
-
-				return redirect("/c/" + round_id);
+				return redirect(concat("/c/", round_id, "/edit"));
 
 			} catch (const std::exception& e) {
 				fv.addError("Internal server error");
@@ -644,14 +614,14 @@ void Contest::addProblem() {
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\""
 					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
-					"placeholder=\"Detect from config.conf\">"
+					"placeholder=\"Detect from Simfile\">"
 				"</div>"
 				// Memory limit
 				"<div class=\"field-group\">"
-					"<label>Memory limit [KiB]</label>"
+					"<label>Memory limit [KB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
-					"placeholder=\"Detect from config.conf\">"
+					"placeholder=\"Detect from Simfile\">"
 				"</div>"
 				// Global time limit
 				"<div class=\"field-group\">"
@@ -662,9 +632,15 @@ void Contest::addProblem() {
 				"</div>"
 				// Force auto limit
 				"<div class=\"field-group\">"
-					"<label>Automatic time limit setting</label>"
+					"<label>Force automatic time limit setting</label>"
 					"<input type=\"checkbox\" name=\"force-auto-limit\"",
 						(force_auto_limit ? " checked" : ""), ">"
+				"</div>"
+				// Ignore Simfile
+				"<div class=\"field-group\">"
+					"<label>Ignore Simfile</label>"
+					"<input type=\"checkbox\" name=\"ignore-simfile\"",
+						(ignore_simfile ? " checked" : ""), ">"
 				"</div>"
 				// Package
 				"<div class=\"field-group\">"
@@ -1050,7 +1026,17 @@ void Contest::editProblem() {
 
 				sf.name = name;
 				sf.tag = tag;
-				sf.global_mem_limit = strtoull(memory_limit) << 10;
+
+				// Update memory limit
+				uint64_t new_mem_limit = strtoull(memory_limit) << 10;
+				if (sf.global_mem_limit != new_mem_limit) {
+					for (auto&& tg : sf.tgroups)
+						for (auto&& t : tg.tests)
+							if (t.memory_limit == sf.global_mem_limit)
+								t.memory_limit = new_mem_limit;
+
+					sf.global_mem_limit = new_mem_limit;
+				}
 
 				if (BLOCK_SIGNALS(
 					putFileContents(
@@ -1089,9 +1075,9 @@ void Contest::editProblem() {
 
 	// Get problem information
 	round_name = rpath->problem->name;
-	sim::Simfile sf {getFileContents(
-		concat("problems/", rpath->problem->problem_id, "/Simfile"))
-	};
+	string simfile_contents = getFileContents(
+		concat("problems/", rpath->problem->problem_id, "/Simfile"));
+	sim::Simfile sf {simfile_contents};
 	sf.loadName();
 	sf.loadTag();
 	sf.loadTests();
@@ -1102,8 +1088,6 @@ void Contest::editProblem() {
 	contestTemplate("Edit problem");
 	printRoundPath();
 	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
-			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
-				"/edit/rejudge\">Rejudge all submissions</a>"
 			"<div class=\"dropmenu down\">"
 				"<a class=\"btn-small dropmenu-toggle\">"
 					"Download package as<span class=\"caret\"></span></a>"
@@ -1114,6 +1098,8 @@ void Contest::editProblem() {
 						".tar.gz</a>"
 				"</ul>"
 			"</div>"
+			"<a class=\"btn-small blue\" href=\"/c/", rpath->round_id,
+				"/edit/rejudge\">Rejudge all submissions</a>"
 		"</div>"
 		"<div class=\"form-container\">"
 			"<h1>Edit problem</h1>"
@@ -1156,7 +1142,9 @@ void Contest::editProblem() {
 						"/delete\">Delete problem</a>"
 				"</div>"
 			"</form>"
-		"</div>");
+		"</div>"
+		"<h2>Package Simfile:</h2>"
+		"<pre class=\"simfile\">", simfile_contents, "</pre>");
 }
 
 void Contest::deleteContest() {

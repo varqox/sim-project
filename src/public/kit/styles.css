@@ -1097,8 +1097,9 @@ div.right-flow {
 	flex-flow: row nowrap;
 	justify-content: flex-end;
 }
-.compilation-errors {
+.compilation-errors, .simfile {
 	display: inline-block;
+	align-self: flex-start;
 	padding: 8px;
 	margin: 8px 0 0;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
@@ -1500,6 +1501,7 @@ pre .turquoise {
 
 /* Notifications */
 .notifications > .error {
+	display: inline-flex;
 	margin: 10px 3px 0;
 	padding: 5px 10px;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
