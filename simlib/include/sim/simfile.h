@@ -94,8 +94,11 @@ public:
 	};
 
 	std::vector<TestGroup> tgroups; // Sorted by gid
+
+private:
 	ConfigFile config;
 
+public:
 	Simfile() = default;
 
 	/**
@@ -118,6 +121,8 @@ public:
 	Simfile& operator=(Simfile&&) = default;
 
 	~Simfile() = default;
+
+	const ConfigFile& configFile() const { return config; }
 
 	/**
 	 * @brief Dumps object to string
@@ -190,6 +195,16 @@ public:
 	void loadTests();
 
 	/**
+	 * @brief Loads tests files (input and output files)
+	 * @details Fields:
+	 *   - tests_files (array of the tests' input and output files)
+	 *
+	 *   @errors Throws an exception of type std::runtime_error if any
+	 *     validation error occurs
+	 */
+	void loadTestsFiles();
+
+	/**
 	 * @brief Loads tests, their limits, scoring and files
 	 * @details Fields are identical to these of loadTests(), with addition of:
 	 *   - tests_files (array of the tests' input and output files)
@@ -197,7 +212,10 @@ public:
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
 	 */
-	void loadTestsWithFiles();
+	void loadTestsWithFiles() {
+		loadTests();
+		loadTestsFiles();
+	}
 
 	/**
 	 * @brief Loads everything = the whole Simfile

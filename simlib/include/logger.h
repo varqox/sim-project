@@ -48,11 +48,15 @@ public:
 	 */
 	void open(const std::string& filename);
 
-	// Use @p stream as log stream
+	/// Use @p stream as log stream
 	void use(FILE *stream) noexcept {
 		close();
 		f_ = stream;
 	}
+
+	/// Returns file descriptor which is used internally by Logger (to log to
+	/// it)
+	int fileno() const noexcept { return ::fileno(f_); }
 
 	bool label() const noexcept {
 		return label_.load(std::memory_order_relaxed);
@@ -129,10 +133,6 @@ public:
 			fclose(f_);
 	}
 };
-
-inline std::string error(int errnum) {
-	return concat(" - ", toStr(errnum), ": ", strerror(errnum));
-}
 
 // By default both write to stderr
 extern Logger stdlog; // Standard (default) log

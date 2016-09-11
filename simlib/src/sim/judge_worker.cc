@@ -109,7 +109,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					widedString(usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
 					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
-					toStr(test_report.memory_limit >> 10), " KiB"
+					toStr(test_report.memory_limit >> 10), " KB"
 					"    Status: \033[1;33m");
 				// Status
 				switch (test_report.status) {
@@ -216,7 +216,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					widedString(usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
 					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
-					toStr(test_report.memory_limit >> 10), " KiB"
+					toStr(test_report.memory_limit >> 10), " KB"
 					"    Status: \033[1;32mOK\033[m   Exited with 0 [ ",
 					usecToSecStr(test_report.runtime, 6, false), " ]  "
 					"Checker: ");
@@ -231,7 +231,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				tmplog("   Exited with ", toStr(es.code), " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]  ",
 					toStr(es.vm_peak >> 10), " / ",
-					toStr(CHECKER_MEMORY_LIMIT >> 10), " KiB");
+					toStr(CHECKER_MEMORY_LIMIT >> 10), " KB");
 			}
 		}
 

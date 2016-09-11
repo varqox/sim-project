@@ -151,9 +151,9 @@ void Simfile::loadTests() {
 		throw std::runtime_error("Simfile: missing limits array");
 
 	map<StringView, TestGroup, StrNumCompare> tests_groups;
-	// StringView may be sued as Key because it will point to string in
+	// StringView may be used as Key because it will point to a string in
 	// limits.asArray() which is a const reference to vector inside the `limits`
-	// variable which will be valid as long as config is not cleared
+	// variable which will be valid as long as config is not changed
 	for (const string& str : limits.asArray()) {
 		SimpleParser sp {str};
 		// Test name
@@ -220,12 +220,10 @@ void Simfile::loadTests() {
 	if (!scoring.isSet()) { // Calculate scoring automatically
 		int groups_no = tests_groups.size() -
 			(tests_groups.find("0") != tests_groups.end());
-		int points = 100;
+		int total_score = 100;
 		for (auto&& git : tests_groups)
-			if (git.first != "0") {
-				git.second.score = points / groups_no--;
-				points -= git.second.score;
-			}
+			if (git.first != "0")
+				total_score -= (git.second.score = total_score / groups_no--);
 
 	} else { // Check and implement defined scoring
 		map<StringView, int64_t> sm; // (gid, score)
@@ -280,9 +278,7 @@ void Simfile::loadTests() {
 		});
 }
 
-void Simfile::loadTestsWithFiles() {
-	loadTests();
-
+void Simfile::loadTestsFiles() {
 	auto&& tests_files = config["tests_files"];
 	CHECK_IF_ARR(tests_files, "tests_files");
 

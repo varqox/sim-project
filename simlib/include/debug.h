@@ -49,3 +49,7 @@ inline const char* __what(const std::exception& e) {
 		__debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
 		__debug::__what(__VA_ARGS__)); \
 	throw; }
+
+inline std::string error(int errnum) {
+	return concat(" - ", toStr(errnum), ": ", strerror(errnum));
+}

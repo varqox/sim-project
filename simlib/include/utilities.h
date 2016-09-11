@@ -44,7 +44,7 @@ typename T::const_iterator binaryFind(const T& x, const C& val) {
 }
 
 template<class T, class C, class Comp>
-typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp) {
+typename T::const_iterator binaryFind(const T& x, const C& val, Comp&& comp) {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
 		auto mid = beg + ((end - beg) >> 1);
@@ -53,7 +53,8 @@ typename T::const_iterator binaryFind(const T& x, const C& val, Comp comp) {
 		else
 			end = mid;
 	}
-	return (beg != x.end() && *beg == val ? beg : x.end());
+	return (beg != x.end() && !comp(*beg, val) && !comp(val, *beg) ?
+		beg : x.end());
 }
 
 template<class T, typename B, class C>
@@ -73,7 +74,7 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 
 template<class T, typename B, class C, class Comp>
 typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-	const C& val, Comp comp)
+	const C& val, Comp&& comp)
 {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {

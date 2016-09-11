@@ -2,6 +2,7 @@
 #include "../include/filesystem.h"
 #include "../include/logger.h"
 #include "../include/process.h"
+#include "../include/utilities.h"
 
 #include <dirent.h>
 
@@ -63,12 +64,12 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 
 TemporaryDirectory::~TemporaryDirectory() {
 #ifdef DEBUG
-	if (path_.size() && remove_r(path_) == -1)
+	if (exist() && remove_r(path_) == -1)
 		errlog("Error: remove_r()", error(errno)); // We cannot throw because
 		                                           // throwing from the
 		                                           // destructor is UB
 #else
-	if (path_.size())
+	if (exist())
 		(void)remove_r(path_); // Return value is ignored, we cannot throw
 		                       // (because throwing from destructor is UB),
 		                       // logging it is also not so good
@@ -129,10 +130,19 @@ static int __remove_rat(int dirfd, const char* path) noexcept {
 	dirent *file;
 	while ((file = readdir(dir)))
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
-			if (file->d_type == DT_DIR)
-				__remove_rat(fd, file->d_name);
-			else
-				unlinkat(fd, file->d_name, 0);
+			if (file->d_type == DT_DIR) {
+				if (__remove_rat(fd, file->d_name)) {
+					int ec = errno;
+					closedir(dir);
+					errno = ec;
+					return -1;
+				}
+			} else if (unlinkat(fd, file->d_name, 0)) {
+				int ec = errno;
+				closedir(dir);
+				errno = ec;
+				return -1;
+			}
 		}
 
 	closedir(dir);
@@ -148,6 +158,42 @@ int remove_rat(int dirfd, const char* path) noexcept {
 		return __remove_rat(dirfd, path);
 
 	return unlinkat(dirfd, path, 0);
+}
+
+int removeDirContents_at(int dirfd, const char* pathname) noexcept {
+	int fd = openat(dirfd, pathname, O_RDONLY | O_LARGEFILE | O_DIRECTORY
+		| O_NOFOLLOW);
+	if (fd == -1)
+		return -1;
+
+	DIR *dir = fdopendir(fd);
+	if (dir == nullptr) {
+		int ec = errno;
+		sclose(fd);
+		errno = ec;
+		return -1;
+	}
+
+	dirent *file;
+	while ((file = readdir(dir)))
+		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
+			if (file->d_type == DT_DIR) {
+				if (__remove_rat(fd, file->d_name)) {
+					int ec = errno;
+					closedir(dir);
+					errno = ec;
+					return -1;
+				}
+			} else if (unlinkat(fd, file->d_name, 0)) {
+				int ec = errno;
+				closedir(dir);
+				errno = ec;
+				return -1;
+			}
+		}
+
+	closedir(dir);
+	return 0;
 }
 
 int blast(int infd, int outfd) noexcept {
@@ -203,8 +249,8 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept {
 }
 
 /**
- * @brief Copies directory @p src to @p dest relative to a directory file
- *   descriptor
+ * @brief Copies directory @p src to @p dest relative to the directory file
+ *   descriptors
  *
  * @param dirfd1 directory file descriptor
  * @param src source directory (relative to dirfd1)
@@ -358,94 +404,6 @@ size_t writeAll(int fd, const void *buf, size_t count) noexcept
 	errno = 0; // No error
 	return count;
 }
-
-namespace directory_tree {
-
-void Node::__print(FILE *stream, string buff) {
-	fprintf(stream, "%s%s/\n", buff.c_str(), name.c_str());
-
-	// Update buffer
-	if (buff.size() >= 4) {
-		if (buff[buff.size() - 4] == '`')
-			buff[buff.size() - 4] = ' ';
-		buff.replace(buff.size() - 3, 2, "  ");
-	}
-
-	size_t dirs_len = dirs.size(), files_len = files.size();
-	// Directories
-	for (size_t i = 0; i < dirs_len; ++i)
-		dirs[i]->__print(stream, buff +
-				(i + 1 == dirs_len && files_len == 0 ? "`-- " : "|-- "));
-
-	// Files
-	for (size_t i = 0; i < files_len; ++i)
-		fprintf(stream, "%s%c-- %s\n", buff.c_str(),
-				(i + 1 == files_len ? '`' : '|'), files[i].c_str());
-}
-
-Node* Node::dir(const string& pathname) {
-	if (dirs.empty())
-		return nullptr;
-
-	auto down = dirs.begin(), up = --dirs.end();
-
-	while (down < up) {
-		auto mid = down + ((up - down) >> 1);
-		if ((*mid)->name < pathname)
-			down = ++mid;
-		else
-			up = mid;
-	}
-
-	return (*down)->name == pathname ? down->get() : nullptr;
-}
-
-static Node* __dumpDirectoryTreeAt(int dirfd, const char* path) {
-	size_t len = __builtin_strlen(path);
-	while (len > 1 && path[len - 1] == '/')
-		--len;
-
-	Node *root = new Node(path, path + len);
-
-	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
-	if (fd == -1)
-		return root;
-
-	DIR *dir = fdopendir(fd);
-	if (dir == nullptr) {
-		sclose(fd);
-		return root;
-	}
-
-	dirent *file;
-	while ((file = readdir(dir)))
-		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
-			if (file->d_type == DT_DIR)
-				root->dirs.emplace_back(__dumpDirectoryTreeAt(fd,
-					file->d_name));
-			else
-				root->files.emplace_back(file->d_name);
-		}
-
-	closedir(dir);
-
-	std::sort(root->dirs.begin(), root->dirs.end(),
-		[](const unique_ptr<Node>& a, const unique_ptr<Node>& b) {
-			return a->name < b->name;
-		});
-	std::sort(root->files.begin(), root->files.end());
-	return root;
-}
-
-Node* dumpDirectoryTree(const char* path) {
-	struct stat64 sb;
-	if (stat64(path, &sb) == -1 || !S_ISDIR(sb.st_mode))
-		return nullptr;
-
-	return __dumpDirectoryTreeAt(AT_FDCWD, path);
-}
-
-} // namespace directory_tree
 
 string abspath(const StringView& path, size_t beg, size_t end, string curr_dir)
 {
@@ -663,3 +621,131 @@ string humanizeFileSize(uint64_t size) {
 	// EB
 	return toStr(dsize / MIN_EB, 1) + " EB";
 }
+
+namespace directory_tree {
+
+void Node::__print(FILE *stream, string buff) const {
+	fprintf(stream, "%s%s/\n", buff.c_str(), name_.c_str());
+
+	// Update buffer
+	if (buff.size() >= 4) {
+		if (buff[buff.size() - 4] == '`')
+			buff[buff.size() - 4] = ' ';
+		buff.replace(buff.size() - 3, 2, "  ");
+	}
+
+	size_t dirs_len = dirs_.size(), files_len = files_.size();
+	// Directories
+	for (size_t i = 0; i < dirs_len; ++i)
+		dirs_[i]->__print(stream, buff +
+				(i + 1 == dirs_len && files_len == 0 ? "`-- " : "|-- "));
+
+	// Files
+	for (size_t i = 0; i < files_len; ++i)
+		fprintf(stream, "%s%c-- %s\n", buff.c_str(),
+				(i + 1 == files_len ? '`' : '|'), files_[i].c_str());
+}
+
+bool Node::__pathExists(StringView s) const noexcept {
+	s.removeLeading('/');
+	if (s.empty())
+		return true;
+
+	StringView x = s.extractLeading([](char c) { return (c != '/'); });
+	if (s.empty())
+		return fileExists(x);
+
+	Node* d = dir(x);
+	return (d ? d->__pathExists(s) : false);
+}
+
+Node* Node::dir(const StringView& pathname) const {
+	if (dirs_.empty())
+		return nullptr;
+
+	auto down = dirs_.begin(), up = --dirs_.end();
+
+	while (down < up) {
+		auto mid = down + ((up - down) >> 1);
+		if ((*mid)->name_ < pathname)
+			down = ++mid;
+		else
+			up = mid;
+	}
+
+	return ((*down)->name_ == pathname ? down->get() : nullptr);
+}
+
+bool Node::removeDir(const StringView& pathname) {
+	if (dirs_.empty())
+		return false;
+
+	auto down = dirs_.begin(), up = --dirs_.end();
+
+	while (down < up) {
+		auto mid = down + ((up - down) >> 1);
+		if ((*mid)->name_ < pathname)
+			down = ++mid;
+		else
+			up = mid;
+	}
+
+	if ((*down)->name_ != pathname)
+		return false;
+
+	dirs_.erase(down);
+	return true;
+}
+
+bool Node::removeFile(const StringView& pathname) {
+	auto it = binaryFind(files_, pathname);
+	if (it == files_.end())
+		return false;
+
+	files_.erase(it);
+	return true;
+}
+
+static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd, const char* path) {
+	size_t len = __builtin_strlen(path);
+	while (len > 1 && path[len - 1] == '/')
+		--len;
+
+	unique_ptr<Node> root {new Node({path, path + len})}; // Exception approved
+
+	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
+	if (fd == -1)
+		return root;
+
+	Directory dir {fdopendir(fd)};
+	if (dir == nullptr) {
+		sclose(fd);
+		return root;
+	}
+
+	// Collect entities (recursively)
+	forEachDirComponent(dir, [&](dirent* file) {
+		if (file->d_type == DT_DIR)
+			root->dirs_.emplace_back(__dumpDirectoryTreeAt(fd, file->d_name));
+		else
+			root->files_.emplace_back(file->d_name);
+	});
+
+	// Sort directories and files
+	sort(root->dirs_, [](const unique_ptr<Node>& a, const unique_ptr<Node>& b) {
+		return (a->name_ < b->name_);
+	});
+	sort(root->files_);
+
+	return root;
+}
+
+unique_ptr<Node> dumpDirectoryTree(const char* path) {
+	struct stat64 sb;
+	if (stat64(path, &sb) == -1 || !S_ISDIR(sb.st_mode))
+		return nullptr;
+
+	return __dumpDirectoryTreeAt(AT_FDCWD, path);
+}
+
+} // namespace directory_tree

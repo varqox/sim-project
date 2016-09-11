@@ -721,11 +721,13 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 					? isIn(syscall_no, { // i386
 						45, // SYS_brk
 						90, // SYS_mmap
+						163, // SYS_mremap
 						192, // SYS_mmap2
 					})
 					: isIn(syscall_no, { // x86_64
 						9, // SYS_mmap
 						12, // SYS_brk
+						25, // SYS_mremap
 					}))
 				{
 					vm_size = std::max(vm_size, get_vm_size());

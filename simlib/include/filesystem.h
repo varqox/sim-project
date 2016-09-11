@@ -1,9 +1,10 @@
 #pragma once
 
-#include "string.h"
+#include "debug.h"
 
 #include <algorithm>
 #include <cstring>
+#include <dirent.h>
 #include <fcntl.h>
 #include <memory>
 #include <sys/stat.h>
@@ -15,6 +16,172 @@ constexpr int S_0600 = S_IRUSR | S_IWUSR;
 constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 constexpr int S_0700 = S_IRWXU;
 constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+
+/**
+ * @brief Behaves like close(2) but cannot be interrupted by signal
+ *
+ * @param fd file descriptor to close
+ *
+ * @return 0 on success, -1 on error
+ *
+ * @errors The same that occur for close(2) expect EINTR
+ */
+inline int sclose(int fd) noexcept {
+	while (close(fd) == -1)
+		if (errno != EINTR)
+			return -1;
+
+	return 0;
+}
+
+// Encapsulates file descriptor
+class FileDescriptor {
+	int fd_;
+
+public:
+	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
+
+	explicit FileDescriptor(const char* filename, int flags, int mode = S_0644)
+			noexcept
+		: fd_(::open(filename, flags, mode))
+	{}
+
+	explicit FileDescriptor(const std::string& filename, int flags,
+			int mode = S_0644) noexcept
+		: FileDescriptor(filename.c_str(), flags, mode)
+	{}
+
+	FileDescriptor(const FileDescriptor&) = delete;
+
+	FileDescriptor(FileDescriptor&& fd) noexcept : fd_(fd.release()) {}
+
+	FileDescriptor& operator=(const FileDescriptor&) = delete;
+
+	FileDescriptor& operator=(FileDescriptor&& fd) noexcept {
+		reset(fd.release());
+		return *this;
+	}
+
+	FileDescriptor& operator=(int fd) noexcept {
+		reset(fd);
+		return *this;
+	}
+
+	operator int() const noexcept { return fd_; }
+
+	int release() noexcept {
+		int fd = fd_;
+		fd_ = -1;
+		return fd;
+	}
+
+	void reset(int fd) noexcept {
+		if (fd_ >= 0)
+			(void)sclose(fd_);
+		fd_ = fd;
+	}
+
+	int open(const char* filename, int flags, int mode = S_0644) noexcept {
+		return fd_ = ::open(filename, flags, mode);
+	}
+
+	int open(const std::string& filename, int flags, int mode = S_0644) noexcept
+	{
+		return fd_ = ::open(filename.c_str(), flags, mode);
+	}
+
+	int reopen(const char* filename, int flags, int mode = S_0644) noexcept {
+		reset(::open(filename, flags, mode));
+		return fd_;
+	}
+
+	int reopen(const std::string& filename, int flags, int mode = S_0644)
+		noexcept
+	{
+		reset(::open(filename.c_str(), flags, mode));
+		return fd_;
+	}
+
+	int close() noexcept {
+		if (fd_ < 0)
+			return 0;
+
+		int rc = sclose(fd_);
+		fd_ = -1;
+		return rc;
+	}
+
+	~FileDescriptor() {
+		if (fd_ >= 0)
+			(void)sclose(fd_);
+	}
+};
+
+// Encapsulates directory object DIR
+class Directory {
+	DIR* dir_;
+
+public:
+	explicit Directory(DIR* dir = nullptr) noexcept : dir_(dir) {}
+
+	explicit Directory(const char* pathname) noexcept
+		: dir_(opendir(pathname)) {}
+
+	explicit Directory(const std::string& pathname) noexcept
+		: dir_(opendir(pathname.c_str())) {}
+
+	Directory(const Directory&) = delete;
+
+	Directory(Directory&& d) noexcept : dir_(d.release()) {}
+
+	Directory& operator=(const Directory&) = delete;
+
+	Directory& operator=(Directory&& d) noexcept {
+		reset(d.release());
+		return *this;
+	}
+
+	Directory& operator=(DIR* d) noexcept {
+		reset(d);
+		return *this;
+	}
+
+	operator DIR*() const noexcept { return dir_; }
+
+	DIR* release() noexcept {
+		DIR *d = dir_;
+		dir_ = nullptr;
+		return d;
+	}
+
+	void reset(DIR* d) {
+		if (dir_)
+			closedir(dir_);
+		dir_ = d;
+	}
+
+	void close() {
+		if (dir_) {
+			closedir(dir_);
+			dir_ = nullptr;
+		}
+	}
+
+	Directory& reopen(const char* pathname) noexcept {
+		reset(opendir(pathname));
+		return *this;
+	}
+
+	Directory& reopen(const std::string& pathname) noexcept {
+		reset(opendir(pathname.c_str()));
+		return *this;
+	}
+
+	~Directory() {
+		if (dir_)
+			closedir(dir_);
+	}
+};
 
 /**
  * @brief Creates (and opens) unlinked temporary file
@@ -50,6 +217,9 @@ public:
 
 	~TemporaryDirectory();
 
+	// Returns true if object holds a real temporary directory
+	bool exist() const noexcept { return (name_.get() != nullptr); }
+
 	// Directory name (from constructor parameter) with trailing '/'
 	const char* name() const noexcept { return name_.get(); }
 
@@ -84,6 +254,37 @@ inline int remove(const std::string& pathname) noexcept {
 }
 
 /**
+ * @brief Calls @p func on every component of the @p dir other than "." and ".."
+ *
+ * @param dir directory object, readdir(3) is used on it so one may want to save
+ *   its pos via telldir(3) and use seekdir(3) after the call or just
+ *   rewinddir(3) after the call
+ * @param func function to call on every component (other than "." and ".."),
+ *   it should take one argument - dirent*
+ */
+template<class Func>
+void forEachDirComponent(Directory& dir, Func&& func) {
+	dirent* file;
+	while ((file = readdir(dir)))
+		if (strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
+			func(file);
+}
+
+template<class Func>
+void forEachDirComponent(const char* pathname, Func&& func) {
+	Directory dir {pathname};
+	if (!dir)
+		THROW("opendir()", error(errno));
+
+	return forEachDirComponent(dir, std::forward<Func>(func));
+}
+
+template<class Func>
+void forEachDirComponent(const std::string& pathname, Func&& func) {
+	return forEachDirComponent(pathname.c_str(), std::forward<Func>(func));
+}
+
+/**
  * @brief Removes recursively file/directory @p pathname relative to the
  *   directory file descriptor @p dirfd
  *
@@ -114,6 +315,39 @@ inline int remove_r(const char* pathname) noexcept {
 // The same as remove_r(const char*)
 inline int remove_r(const std::string& pathname) noexcept {
 	return remove_rat(AT_FDCWD, pathname.c_str());
+}
+
+/**
+ * @brief Removes recursively all the contents of the directory @p pathname
+ *   relative to the directory file descriptor @p dirfd
+ * @details Uses remove_rat()
+ *
+ * @param dirfd directory file descriptor
+ * @param pathname directory pathname (relative to @p dirfd)
+ *
+ * @return 0 on success, -1 on error
+ *
+ * @errors The same that occur for remove_rat()
+ */
+int removeDirContents_at(int dirfd, const char* pathname) noexcept;
+
+/**
+ * @brief Removes recursively all the contents of the directory @p pathname
+ * @details Uses remove_rat()
+ *
+ * @param pathname path to the directory
+ *
+ * @return 0 on success, -1 on error
+ *
+ * @errors The same that occur for remove_rat()
+ */
+inline int removeDirContents(const char* pathname) noexcept {
+	return removeDirContents_at(AT_FDCWD, pathname);
+}
+
+// The same as remove_r(const char*)
+inline int removeDirContents(const std::string& pathname) noexcept {
+	return removeDirContents_at(AT_FDCWD, pathname.c_str());
 }
 
 /**
@@ -290,91 +524,6 @@ size_t readAll(int fd, void *buf, size_t count) noexcept;
  */
 size_t writeAll(int fd, const void *buf, size_t count) noexcept;
 
-namespace directory_tree {
-
-// Node represents a directory
-class Node {
-private:
-	/**
-	 * @brief Prints tree rooted in *this
-	 *
-	 * @param stream file to which write (cannot be NULL - does not check that)
-	 * @param buff buffer used to printing tree structure
-	 */
-	void __print(FILE *stream, std::string buff = "");
-
-public:
-	std::string name;
-	std::vector<std::unique_ptr<Node>> dirs;
-	std::vector<std::string> files;
-
-	explicit Node(std::string new_name)
-			: name(new_name), dirs(), files() {}
-
-	Node(const Node&) = delete;
-
-	Node(Node&& n) noexcept = default;
-
-	Node& operator=(const Node&) = delete;
-
-	Node& operator=(Node&&) = default;
-
-	template<class Iter>
-	Node(Iter beg, Iter end) : name(beg, end), dirs(), files() {}
-
-	/**
-	 * @brief Get subdirectory
-	 *
-	 * @param pathname name to search (cannot contain '/')
-	 *
-	 * @return pointer to subdirectory or NULL if it does not exist
-	 */
-	Node* dir(const std::string& pathname);
-
-	/**
-	 * @brief Checks if file exists in this node
-	 *
-	 * @param pathname file to check (cannot contain '/')
-	 *
-	 * @return true if exists, false otherwise
-	 */
-	bool fileExists(const std::string& pathname) noexcept {
-		return std::binary_search(files.begin(), files.end(), pathname);
-	}
-
-	/**
-	 * @brief Prints tree rooted in *this
-	 *
-	 * @param stream file to write to (if NULL returns immediately)
-	 */
-	inline void print(FILE *stream) {
-		if (stream != nullptr)
-			return __print(stream);
-	}
-};
-
-/**
- * @brief Dumps directory tree (rooted in @p path)
- *
- * @param path path to main directory
- *
- * @return pointer to root node
- */
-Node* dumpDirectoryTree(const char* path);
-
-/**
- * @brief Dumps directory tree (rooted in @p path)
- *
- * @param path path to main directory
- *
- * @return pointer to root node
- */
-inline Node* dumpDirectoryTree(const std::string& path) {
-	return dumpDirectoryTree(path.c_str());
-}
-
-} // namespace directory_tree
-
 /*
 *  Returns an absolute path that does not contain any . or .. components,
 *  nor any repeated path separators (/), and does not end with /
@@ -383,9 +532,13 @@ inline Node* dumpDirectoryTree(const std::string& path) {
 std::string abspath(const StringView& path, size_t beg = 0,
 		size_t end = std::string::npos, std::string curr_dir = "/");
 
-// returns extension (with dot) e.g. ".cc"
-inline std::string getExtension(const std::string file) {
-	return file.substr(file.find_last_of('.') + 1);
+// Returns extension (without dot) e.g. "foo.cc" -> "cc", "bar" -> ""
+inline std::string getExtension(const std::string& file) {
+	size_t x = file.rfind('.');
+	if (x == std::string::npos)
+		return {}; // No extension
+
+	return file.substr(x + 1);
 }
 
 /**
@@ -505,23 +658,6 @@ inline ssize_t putFileContents(const std::string& file,
 	return putFileContents(file.c_str(), data.c_str(), data.size());
 }
 
-/**
- * @brief Behaves like close(2) but cannot be interrupted by signal
- *
- * @param fd file descriptor to close
- *
- * @return 0 on success, -1 on error
- *
- * @errors The same that occur for close(2) expect EINTR
- */
-inline int sclose(int fd) noexcept {
-	while (close(fd) == -1)
-		if (errno != EINTR)
-			return -1;
-
-	return 0;
-}
-
 // Closes file descriptor automatically
 class Closer {
 	int fd_;
@@ -549,86 +685,6 @@ public:
 	~Closer() noexcept {
 		if (fd_ >= 0)
 			sclose(fd_);
-	}
-};
-
-// Encapsulates file descriptor
-class FileDescriptor {
-	int fd_;
-
-public:
-	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
-
-	explicit FileDescriptor(const char* filename, int flags, int mode = S_0644)
-			noexcept
-		: fd_(::open(filename, flags, mode))
-	{}
-
-	explicit FileDescriptor(const std::string& filename, int flags,
-			int mode = S_0644) noexcept
-		: FileDescriptor(filename.c_str(), flags, mode)
-	{}
-
-	FileDescriptor(const FileDescriptor&) = delete;
-
-	FileDescriptor(FileDescriptor&&) noexcept = default;
-
-	FileDescriptor& operator=(const FileDescriptor&) = delete;
-
-	FileDescriptor& operator=(FileDescriptor&&) noexcept = default;
-
-	FileDescriptor& operator=(int fd) noexcept {
-		fd_ = fd;
-		return *this;
-	}
-
-	operator int() const noexcept { return fd_; }
-
-	int release() noexcept {
-		int fd = fd_;
-		fd_ = -1;
-		return fd;
-	}
-
-	void reset(int fd) noexcept {
-		if (fd_ >= 0)
-			(void)sclose(fd_);
-		fd_ = fd;
-	}
-
-	int open(const char* filename, int flags, int mode = S_0644) noexcept {
-		return fd_ = ::open(filename, flags, mode);
-	}
-
-	int open(const std::string& filename, int flags, int mode = S_0644) noexcept
-	{
-		return fd_ = ::open(filename.c_str(), flags, mode);
-	}
-
-	int reopen(const char* filename, int flags, int mode = S_0644) noexcept {
-		reset(::open(filename, flags, mode));
-		return fd_;
-	}
-
-	int reopen(const std::string& filename, int flags, int mode = S_0644)
-		noexcept
-	{
-		reset(::open(filename.c_str(), flags, mode));
-		return fd_;
-	}
-
-	int close() noexcept {
-		if (fd_ < 0)
-			return 0;
-
-		int rc = sclose(fd_);
-		fd_ = -1;
-		return rc;
-	}
-
-	~FileDescriptor() {
-		if (fd_ >= 0)
-			(void)sclose(fd_);
 	}
 };
 
@@ -731,3 +787,151 @@ inline bool isDirectory(const char* file) noexcept {
 inline bool isDirectory(const std::string& file) noexcept {
 	return isDirectory(file.c_str());
 }
+
+namespace directory_tree {
+
+// Node represents a directory
+class Node {
+private:
+	/**
+	 * @brief Prints tree rooted in *this
+	 *
+	 * @param stream file to which write (cannot be NULL - does not check that)
+	 * @param buff buffer used to printing tree structure
+	 */
+	void __print(FILE *stream, std::string buff = "") const;
+
+
+	/// @brief Checks if path is valid in this directory, but path cannot
+	/// contain "." and ".." parts
+	bool __pathExists(StringView s) const noexcept;
+
+public:
+	std::string name_;
+	std::vector<std::unique_ptr<Node>> dirs_;
+	std::vector<std::string> files_;
+
+	explicit Node(std::string new_name)
+			: name_(std::move(new_name)), dirs_(), files_() {}
+
+	Node(const Node&) = delete;
+	Node(Node&& n) noexcept = default;
+	Node& operator=(const Node&) = delete;
+	Node& operator=(Node&&) = default;
+
+	/**
+	 * @brief Get subdirectory
+	 *
+	 * @param pathname name to search (cannot contain '/')
+	 *
+	 * @return pointer to subdirectory or nullptr if it does not exist
+	 */
+	Node* dir(const StringView& pathname) const;
+
+	/// Removes directory in O(n) time (n = # of directories in this node),
+	/// returns true if the removal occurred
+	bool removeDir(const StringView& pathname);
+
+	/// Removes file in O(n) time (n = # of files in this node), returns true
+	/// if the removal occurred
+	bool removeFile(const StringView& pathname);
+
+	/**
+	 * @brief Checks if file exists in this node
+	 *
+	 * @param pathname file to check (cannot contain '/')
+	 *
+	 * @return true if exists, false otherwise
+	 */
+	bool fileExists(const StringView& pathname) const noexcept {
+		return std::binary_search(files_.begin(), files_.end(), pathname);
+	}
+
+	/**
+	 * @brief Checks if path is valid in this directory
+	 *
+	 * @param path path to check, for empty one result is false
+	 *
+	 * @return true if path is valid, false otherwise
+	 */
+	bool pathExists(const StringView& path) const {
+		return (path.size() && __pathExists(abspath(path)));
+	}
+
+	/**
+	 * @brief Prints tree rooted in *this
+	 *
+	 * @param stream file to write to (if nullptr returns immediately)
+	 */
+	inline void print(FILE *stream) const {
+		if (stream)
+			return __print(stream);
+	}
+};
+
+/**
+ * @brief Dumps directory tree (rooted in @p path)
+ *
+ * @param path path to main directory
+ *
+ * @return pointer to root node
+ */
+std::unique_ptr<Node> dumpDirectoryTree(const char* path);
+
+/**
+ * @brief Dumps directory tree (rooted in @p path)
+ *
+ * @param path path to main directory
+ *
+ * @return pointer to root node
+ */
+inline std::unique_ptr<Node> dumpDirectoryTree(const std::string& path) {
+	return dumpDirectoryTree(path.c_str());
+}
+
+/**
+ * @brief Searches for files in @p dir for which @p func returns true
+ *
+ * @param dir directory tree to search in
+ * @param func predicate function
+ * @param path_prefix a string with which every returned path will be prefixed
+ *
+ * @return vector of paths (relative to @p dir) of files matched by @p func
+ */
+template<class UnaryPredicate>
+std::vector<std::string> findFiles(directory_tree::Node* dir,
+	UnaryPredicate&& func, std::string path_prefix = "")
+{
+	if (!dir)
+		return {};
+
+	struct Helper {
+		const UnaryPredicate& func;
+		std::string path;
+		std::vector<std::string> res;
+
+		Helper(const UnaryPredicate& f, std::string&& pprefix) : func(f),
+			path(pprefix) {}
+
+		void find(directory_tree::Node* d) {
+			// Files
+			for (auto&& file : d->files_)
+				if (func(file))
+					res.emplace_back(concat(path, file));
+			// Directories (recursively)
+			for (auto&& x : d->dirs_) {
+				path += x->name_;
+				path += '/';
+				find(x.get()); // Recursion
+				path.erase(path.end() - x->name_.size() - 1, path.end());
+			}
+		}
+
+	} foo(std::forward<UnaryPredicate>(func), std::move(path_prefix));
+
+	foo.find(dir);
+	return foo.res;
+};
+
+} // namespace directory_tree
+

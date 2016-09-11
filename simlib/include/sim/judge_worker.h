@@ -28,6 +28,8 @@ public:
 			case RTE: return "Runtime error";
 			case CHECKER_ERROR: return "Checker error";
 			}
+
+			return "Unknown"; // Should not happen but GCC complains about it
 		}
 
 		std::string name;
@@ -82,12 +84,12 @@ public:
 	void setVerbosity(bool verbosity) { verbose = verbosity; }
 
 	/// Loads package from @p simfile in @p package_path
-	void loadPackage(std::string pacakge_path, std::string simfile) {
+	void loadPackage(std::string package_path, std::string simfile) {
 		sf = Simfile {std::move(simfile)};
 		sf.loadChecker();
 		sf.loadTestsWithFiles();
 
-		pkg_root = std::move(pacakge_path);
+		pkg_root = std::move(package_path);
 		if (!isDirectory(pkg_root))
 			THROW("Invalid path to package root directory");
 
