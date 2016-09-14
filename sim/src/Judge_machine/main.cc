@@ -318,8 +318,7 @@ static void processSubmissionQueue() {
 								" (problem id: ", problem_id, ") test `",
 								test.name, '`');
 
-							send_report();
-							continue;
+							goto send_report_and_continue;
 						}
 
 			static_assert((int)SubmissionStatus::OK < 8, "Needed below");
@@ -359,6 +358,9 @@ static void processSubmissionQueue() {
 				s = s | SubmissionStatus::INITIAL_OK;
 			});
 
+		send_report_and_continue:
+			send_report();
+
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
 			stdlog("Judge error.");
@@ -367,9 +369,9 @@ static void processSubmissionQueue() {
 			initial_report = concat("<pre>", htmlSpecialChars(e.what()),
 				"</pre>");
 			final_report.clear();
-		}
 
-		send_report();
+			send_report();
+		}
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
@@ -407,10 +409,12 @@ int main() {
 	}
 
 	// Loggers
-	try {
-		stdlog.open(JUDGE_LOG);
-	} catch (const std::exception& e) {
-		errlog("Failed to open `", JUDGE_LOG, "`: ", e.what());
+	// stdlog like everything writes to stderr, so redirect stdout and stderr to
+	// the log file
+	if (freopen(JUDGE_LOG, "a", stdout) == nullptr ||
+		freopen(JUDGE_LOG, "a", stderr) == nullptr)
+	{
+		errlog("Failed to open `", JUDGE_LOG, '`', error(errno));
 	}
 
 	try {
