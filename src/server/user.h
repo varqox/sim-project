@@ -80,7 +80,8 @@ private:
 	/**
 	 * @brief Prints submissions table
 	 *
-	 * @param limit maximum number of submissions in table, 0 means infinity
+	 * @param limit the maximum number of submissions in the table, 0 means
+	 *   infinity (no limit)
 	 */
 	void printUserSubmissions(uint limit = 0);
 

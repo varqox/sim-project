@@ -35,6 +35,12 @@ protected:
 	 */
 	virtual void redirect(std::string location) = 0;
 
+	/// Sets resp.status_code to @p status_code and resp.content to
+	///  @p response_body
+	virtual void response(std::string status_code,
+		std::string response_body = {}) = 0;
+
+
 	// Notifies judge server that there are submissions to judge
 	static void notifyJudgeServer() noexcept {
 		utime("judge-machine.notify", nullptr);

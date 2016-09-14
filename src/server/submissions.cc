@@ -426,19 +426,15 @@ void Contest::submission() {
 
 		/* Change submission type */
 		if (query == Query::CHANGE_TYPE) {
-			auto status_code = [&](const char* status) {
-				resp.status_code = status;
-			};
-
 			// Changes are only allowed if one has permissions and only in the
 			// pool: {NORMAL | FINAL, IGNORED}
 			if (!admin_view || stype > SubmissionType::IGNORED)
-				return status_code("403 Forbidden");
+				return response("403 Forbidden");
 
 			// Get new stype
 			FormValidator fv(req->form_data);
 			if (fv.get("csrf_token") != Session::csrf_token)
-				return status_code("403 Forbidden");
+				return response("403 Forbidden");
 
 			SubmissionType new_stype;
 			{
@@ -448,14 +444,14 @@ void Contest::submission() {
 				else if (new_stype_str == "i")
 					new_stype = SubmissionType::IGNORED;
 				else
-					return status_code("501 Not Implemented");
+					return response("501 Not Implemented");
 			}
 
 			// No change
 			if ((stype == SubmissionType::IGNORED) ==
 				(new_stype == SubmissionType::IGNORED))
 			{
-				return status_code("200 OK");
+				return response("200 OK");
 			}
 
 			try {
@@ -501,11 +497,11 @@ void Contest::submission() {
 				stmt.setString(6, submission_id);
 				stmt.executeUpdate();
 
-				return status_code("200 OK");
+				return response("200 OK");
 
 			} catch (const std::exception& e) {
 				ERRLOG_CATCH(e);
-				return status_code("500 Internal Server Error");
+				return response("500 Internal Server Error");
 			}
 		}
 
@@ -567,7 +563,7 @@ void Contest::submission() {
 					"<a class=\"btn-small\" href=\"/s/", submission_id,
 						"/download\">Download</a>");
 		if (admin_view)
-			append("<a class=\"btn-small orange\" href=\"javascript:;\""
+			append("<a class=\"btn-small orange\" "
 				"onclick=\"changeSubmissionType(", submission_id, ",'",
 					(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
 					"Change type</a>"
@@ -743,7 +739,7 @@ void Contest::submissions(bool admin_view) {
 							"/download\">Download</a>");
 
 			if (admin_view)
-				append("<a class=\"btn-small orange\" href=\"javascript:;\""
+				append("<a class=\"btn-small orange\" "
 						"onclick=\"changeSubmissionType(", res[1], ",'",
 						(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
 						"Change type</a>"

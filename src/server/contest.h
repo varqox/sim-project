@@ -70,9 +70,6 @@ private:
 	// contest_utilities.cc
 	RoundPath* getRoundPath(const std::string& round_id);
 
-	/// Returns whether user has admin access
-	bool isAdmin(const RoundPath& r_path);
-
 	void contestTemplate(const StringView& title, const StringView& styles = {},
 		const StringView& scripts = {});
 
@@ -105,6 +102,8 @@ private:
 	void deleteRound();
 
 	void deleteProblem();
+
+	void users();
 
 	void listProblems(bool admin_view);
 

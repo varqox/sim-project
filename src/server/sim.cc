@@ -208,7 +208,7 @@ static string colorize(const string& str) noexcept {
 			opened = NONE;
 			i += 2;
 		} else
-			res += str[i];
+			htmlSpecialChars(res, str[i]);
 	}
 	closeLastTag();
 	return res;

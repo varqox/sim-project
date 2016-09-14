@@ -136,7 +136,7 @@ void User::login() {
 		// Try to login
 		string password;
 		// Validate all fields
-		fv.validate(username, "username", "Username", isUsername,
+		fv.validateNotBlank(username, "username", "Username", isUsername,
 			"Username can only consist of characters [a-zA-Z0-9_-]",
 			USERNAME_MAX_LEN);
 
@@ -443,7 +443,8 @@ void User::userProfile() {
 				htmlSpecialChars(email),
 			"</div>"
 		"</div>"
-		"<h2>User submissions</h2>");
+		"<h2>User submissions (showing the recent ",
+			toString(SUBMISSIONS_ON_USER_PROFILE_LIMIT), ")</h2>");
 
 	printUserSubmissions(SUBMISSIONS_ON_USER_PROFILE_LIMIT);
 }
@@ -742,9 +743,9 @@ void User::deleteAccount() {
 			stmt.setString(1, user_id);
 			stmt.executeUpdate();
 
-			// Delete from users_to_contests
+			// Delete from contests_users
 			stmt = db_conn.prepare(
-				"DELETE FROM users_to_contests WHERE user_id=?");
+				"DELETE FROM contests_users WHERE user_id=?");
 			stmt.setString(1, user_id);
 			stmt.executeUpdate();
 
@@ -876,7 +877,7 @@ void User::printUserSubmissions(uint limit) {
 							"/download\">Download</a>");
 
 			if (admin_view)
-				append("<a class=\"btn-small orange\" href=\"javascript:;\""
+				append("<a class=\"btn-small orange\" "
 						"onclick=\"changeSubmissionType(", res[1], ",'",
 						(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
 						"Change type</a>"
