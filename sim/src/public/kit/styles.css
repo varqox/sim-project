@@ -470,6 +470,7 @@ table {
 	font-size: 24px;
 	font-weight: normal;
 	line-height: 28px;
+	text-align: center;
 	/*white-space: nowrap;*/
 }
 /* The Close Button */
@@ -488,6 +489,10 @@ table {
 	color: #000;
 	text-decoration: none;
 	cursor: pointer;
+}
+/* Modal forms */
+.modal form .field-group {
+	margin-bottom: 8px;
 }
 
 .btn,
@@ -646,6 +651,7 @@ input[disabled], select[disabled], textarea[disabled], input[readonly], select[r
 a {
 	color: #1088cc;
 	text-decoration: none;
+	cursor: pointer;
 }
 a:focus,
 a:hover
@@ -1269,34 +1275,45 @@ table.submissions td.status {
 	text-align: center;
 }
 
-/* Users */
-table.users {
+/* Users & Contest users*/
+table.users,
+table.contest-users {
 	display: inline-table;
 	margin: 0;
 }
-table.users th.username {
-	min-width: 60px;
+table.users th.username,
+table.contest-users th.username {
+	min-width: 90px;
 }
-table.users th.first_name,
-table.users th.last_name {
-	min-width: 60px;
+table.users th.first-name,
+table.users th.last-name,
+table.contest-users th.first-name,
+table.contest-users th.last-name {
+	min-width: 100px;
 }
-table.users th.email {
+table.users th.email,
+table.contest-users th.email {
 	min-width: 120px;
 }
 table.users th.type {
-	min-width: 60px;
+	min-width: 90px;
 }
-table.users th {
+table.contest-users th.mode {
+	min-width: 110px;
+}
+table.users th,
+table.contest-users th {
 	padding: 6px;
 	line-height: 20px;
 }
-table.users td {
+table.users td,
+table.contest-users td {
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
 }
-table.users tr > td:last-child {
+table.users tr > td:last-child,
+table.contest-users tr > td:last-child {
 	white-space: pre;
 }
 
@@ -1337,7 +1354,8 @@ table.users tr > td:last-child {
 }
 
 .users .admin,
-.user-info .admin {
+.user-info .admin,
+.contest-users .moderator {
 	color: #ff0000;
 	font-weight: bold;
 }
@@ -1347,7 +1365,8 @@ table.users tr > td:last-child {
 	font-weight: bold;
 }
 .users .normal,
-.user-info .normal {
+.user-info .normal,
+.contest-users .contestant {
 	color: #0000ff;
 	font-weight: bold;
 }
@@ -1463,7 +1482,7 @@ pre .turquoise {
 .form-container form > .field {
 	margin-bottom: 15px;
 }
-.form-container form > .field-group {
+form .field-group {
 	display: flex;
 	min-height: 30px;
 	margin-bottom: 15px;
@@ -1472,16 +1491,16 @@ pre .turquoise {
 	-webkit-align-items: center;
 	align-items: center;
 }
-.form-container form > .field-group > * {
+form .field-group > * {
 	margin-left: 10px;
 }
-.form-container form > .field-group > :first-child {
+form .field-group > :first-child {
 	width: 120px;
 	margin: 0 10px 0 0;
 	font-size: 14px;
 	text-align: right;
 }
-.form-container form > .field-group > textarea {
+form .field-group > textarea {
 	min-width: 65%;
 }
 .form-container form input[type="submit"] {
@@ -1500,10 +1519,16 @@ pre .turquoise {
 }
 
 /* Notifications */
+.notifications {
+	display: flex;
+	flex-flow: column nowrap;
+	margin-right: 10px;
+	min-width: 300px;
+}
 .notifications > .error {
-	display: inline-flex;
-	margin: 10px 3px 0;
+	margin: 10px 0 0;
 	padding: 5px 10px;
+	overflow-x: auto;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	background: #f6d7d7;
 	color: #ba4b49;

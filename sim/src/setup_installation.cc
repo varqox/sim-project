@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 			conn.executeUpdate("DROP TABLE iF EXISTS session");
 			conn.executeUpdate("DROP TABLE iF EXISTS problems");
 			conn.executeUpdate("DROP TABLE iF EXISTS rounds");
-			conn.executeUpdate("DROP TABLE iF EXISTS users_to_contests");
+			conn.executeUpdate("DROP TABLE iF EXISTS contests_users");
 			conn.executeUpdate("DROP TABLE iF EXISTS submissions");
 			conn.executeUpdate("DROP TABLE iF EXISTS files");
 
@@ -204,10 +204,11 @@ int main(int argc, char **argv) {
 			"KEY (`owner`)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	tryCreateTable("users_to_contests",
-		"CREATE TABLE IF NOT EXISTS `users_to_contests` ("
+	tryCreateTable("contests_users",
+		"CREATE TABLE IF NOT EXISTS `contests_users` ("
 			"`user_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
+			"`mode` tinyint(1) unsigned NOT NULL DEFAULT " CU_MODE_CONTESTANT_STR ","
 			"PRIMARY KEY (`user_id`, `contest_id`),"
 			"KEY (`contest_id`)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");

@@ -32,6 +32,7 @@ int Connection::peek() {
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
 		D(stdlog("peek(): Reading completed; buff_size: ", toStr(buff_size_));)
+		// D(stdlog("buff: `", StringView((const char*)buffer_, buff_size_), "`");)
 
 		if (buff_size_ <= 0) {
 			state_ = CLOSED;

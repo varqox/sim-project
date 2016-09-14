@@ -43,4 +43,10 @@ private:
 		resp.status_code = "302 Moved Temporarily";
 		resp.headers["Location"] = std::move(location);
 	}
+
+	// See documentation in sim_base.h
+	void response(std::string status_code, std::string response_body = {}) {
+		resp.status_code = std::move(status_code);
+		resp.content = response_body;
+	}
 };

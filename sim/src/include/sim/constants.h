@@ -10,15 +10,36 @@ constexpr uint USER_LAST_NAME_MAX_LEN = 60;
 constexpr uint USER_EMAIL_MAX_LEN = 60;
 constexpr uint SALT_LEN = 64;
 constexpr uint PASSWORD_HASH_LEN = 128;
+constexpr uintmax_t MAX_UID = 4294967295;
+
+#define SIM_ROOT_UID "1"
 
 // user_type - strongly used -> do not change!
 constexpr uint UTYPE_ADMIN = 0;
 constexpr uint UTYPE_TEACHER = 1;
 constexpr uint UTYPE_NORMAL = 2;
+
 #define UTYPE_ADMIN_STR "0"
 #define UTYPE_TEACHER_STR "1"
 #define UTYPE_NORMAL_STR "2"
-#define SIM_ROOT_UID "1"
+
+static_assert(meta::equal(UTYPE_ADMIN_STR,
+	meta::ToString<UTYPE_ADMIN>::value), "Update the above #define");
+static_assert(meta::equal(UTYPE_TEACHER_STR,
+	meta::ToString<UTYPE_TEACHER>::value), "Update the above #define");
+static_assert(meta::equal(UTYPE_NORMAL_STR,
+	meta::ToString<UTYPE_NORMAL>::value), "Update the above #define");
+
+constexpr uint CU_MODE_CONTESTANT = 0;
+constexpr uint CU_MODE_MODERATOR = 1;
+
+#define CU_MODE_CONTESTANT_STR "0"
+#define CU_MODE_MODERATOR_STR "1"
+
+static_assert(meta::equal(CU_MODE_CONTESTANT_STR,
+	meta::ToString<CU_MODE_CONTESTANT>::value), "Update the above #define");
+static_assert(meta::equal(CU_MODE_MODERATOR_STR,
+	meta::ToString<CU_MODE_MODERATOR>::value), "Update the above #define");
 
 // Session
 constexpr uint SESSION_ID_LEN = 30;

@@ -39,26 +39,26 @@ void Contest::handle() {
 					break;
 				}
 
-				// Normal user
+				// Normal user + Moderator
 				if (Session::user_type == UTYPE_NORMAL) {
 					stmt = db_conn.prepare("(SELECT id, name FROM rounds "
 							"WHERE parent IS NULL AND "
 								"(is_public IS TRUE OR owner=?))"
 						" UNION "
-						"(SELECT id, name FROM rounds, users_to_contests "
+						"(SELECT id, name FROM rounds, contests_users "
 							"WHERE user_id=? AND contest_id=id) ORDER BY id");
 					stmt.setString(1, Session::user_id);
 					stmt.setString(2, Session::user_id);
 					break;
 				}
 
-				// Admin + Teacher
+				// Admin + Teacher + Moderator
 				stmt = db_conn.prepare(
 					"(SELECT r.id, r.name FROM rounds r, users u "
 						"WHERE parent IS NULL AND owner=u.id AND "
 							"(is_public IS TRUE OR owner=? OR u.type>?))"
 					" UNION "
-					"(SELECT id, name FROM rounds, users_to_contests "
+					"(SELECT id, name FROM rounds, contests_users "
 						"WHERE user_id=? AND contest_id=id) ORDER BY id");
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, Session::user_type);
@@ -183,6 +183,10 @@ void Contest::handle() {
 
 		return deleteProblem();
 	}
+
+	// Users
+	if (next_arg == "users")
+		return users();
 
 	// Problems
 	if (next_arg == "problems")
@@ -467,8 +471,9 @@ void Contest::addProblem() {
 		// Validate all fields
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
-		fv.validate<bool(const StringView&)>(memory_limit, "memory-limit",
-			"Memory limit", isDigit, "Memory limit: invalid value"); // TODO: add length limit
+		fv.validate(memory_limit, "memory-limit", "Memory limit",
+			isDigitNotGreaterThan<std::numeric_limits<uint64_t>::max()>,
+			"Memory limit: invalid value");
 
 		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
 			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
@@ -1010,8 +1015,8 @@ void Contest::editProblem() {
 
 		fv.validate(tag, "tag", "Problem tag", PROBLEM_TAG_MAX_LEN);
 
-		fv.validateNotBlank<bool(*)(const StringView&)>(memory_limit,
-			"memory-limit", "Memory limit", isDigit,
+		fv.validateNotBlank(memory_limit, "memory-limit", "Memory limit",
+			isDigitNotGreaterThan<std::numeric_limits<uint64_t>::max()>,
 			"Memory limit: invalid value");
 
 		// If all fields are ok
@@ -1164,8 +1169,8 @@ void Contest::deleteContest() {
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
 
-			// Delete from users_to_contests
-			stmt = db_conn.prepare("DELETE FROM users_to_contests "
+			// Delete from contests_users
+			stmt = db_conn.prepare("DELETE FROM contests_users "
 				"WHERE contest_id=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
@@ -1321,6 +1326,219 @@ void Contest::deleteProblem() {
 			"</div>"
 		"</form>"
 	"</div>");
+}
+
+void Contest::users() {
+	if (!rpath->admin_access)
+		return error403();
+	if (rpath->type != RoundType::CONTEST)
+		return error404();
+
+	if (req->method == server::HttpRequest::POST) {
+		StringView next_arg {url_args.extractNextArg()};
+
+		enum { ADD, CHANGE_MODE, EXPEL } query;
+		if (next_arg == "add")
+			query = ADD;
+		else if (next_arg == "change-mode")
+			query = CHANGE_MODE;
+		else if (next_arg == "expel")
+			query = EXPEL;
+		else
+			return error404();
+
+		FormValidator fv(req->form_data);
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return response("403 Forbidden");
+
+		try {
+			// Add user to the contest
+			if (query == ADD) {
+				string user, tmp;
+				enum { USERNAME, UID } user_value_type;
+
+				// user_value_type
+				fv.validateNotBlank(tmp, "user_value_type", "user_value_type",
+					meta::string("username").size());
+
+				if (tmp == "uid")
+					user_value_type = UID;
+				else if (tmp == "username")
+					user_value_type = USERNAME;
+				else
+					return response("501 Not Implemented");
+
+				// User
+				if (user_value_type == UID) {
+					fv.validateNotBlank<bool(const StringView&)>(user, "user",
+						"User id", isDigit,
+						"User id has to be a positive integer");
+				} else { // Username
+					fv.validateNotBlank(user, "user", "Username", isUsername,
+						"Username can only consist of characters [a-zA-Z0-9_-]",
+						USERNAME_MAX_LEN);
+				}
+
+				// Mode
+				uint mode;
+				fv.validateNotBlank(tmp, "mode", "mode", 1);
+				if (tmp == "c")
+					mode = CU_MODE_CONTESTANT;
+				else if (tmp == "m")
+					mode = CU_MODE_MODERATOR;
+				else
+					return response("501 Not Implemented");
+
+				// If any error was encountered
+				if (!fv.noErrors())
+					return response("400 Bad Request", fv.errors());
+
+				// Add new user
+				DB::Statement stmt = db_conn.prepare(concat("INSERT IGNORE "
+						"contests_users (user_id, contest_id, mode) "
+					"SELECT id, ?, ? FROM users WHERE ",
+						(user_value_type == UID ? "id=?" : "username=?")));
+				stmt.setString(1, rpath->round_id);
+				stmt.setUInt(2, mode);
+				stmt.setString(3, user);
+
+				if (!stmt.executeUpdate())
+					return response("400 Bad Request", "No such user found or "
+						"the user has already been added");
+
+				return response("200 OK");
+			}
+
+			// Change user mode
+			if (query == CHANGE_MODE) {
+				string uid, tmp;
+				// Uid
+				fv.validateNotBlank<bool(const StringView&)>(uid, "uid",
+					"User id", isDigit, "User id has to be a positive integer");
+
+				// Mode
+				uint mode;
+				fv.validateNotBlank(tmp, "mode", "mode", 1);
+				if (tmp == "c")
+					mode = CU_MODE_CONTESTANT;
+				else if (tmp == "m")
+					mode = CU_MODE_MODERATOR;
+				else
+					return response("501 Not Implemented");
+
+				// If any error was encountered
+				if (!fv.noErrors())
+					return response("400 Bad Request", fv.errors());
+
+				DB::Statement stmt = db_conn.prepare("UPDATE contests_users "
+					"SET mode=? WHERE user_id=? AND contest_id=?");
+				stmt.setUInt(1, mode);
+				stmt.setString(2, uid);
+				stmt.setString(3, rpath->round_id);
+				stmt.executeUpdate();
+
+				return response("200 OK");
+			}
+
+			// Expel user from the contest
+			if (query == EXPEL) {
+				string uid;
+				// Uid
+				fv.validateNotBlank<bool(const StringView&)>(uid, "uid",
+					"User id", isDigit, "User id has to be a positive integer");
+
+				// If any error was encountered
+				if (!fv.noErrors())
+					return response("400 Bad Request", fv.errors());
+
+				DB::Statement stmt = db_conn.prepare(
+					"DELETE FROM contests_users "
+					"WHERE user_id=? AND contest_id=?");
+				stmt.setString(1, uid);
+				stmt.setString(2, rpath->round_id);
+
+				if (!stmt.executeUpdate())
+					return response("400 Bad Request", "No such user found");
+
+				return response("200 OK");
+			}
+
+		} catch (const std::exception& e) {
+			ERRLOG_CATCH(e);
+			return response("500 Internal Server Error");
+		}
+	}
+
+	contestTemplate("Contest users");
+	append("<h1>Users assigned to the contest: ",
+			htmlSpecialChars(rpath->contest->name), "</h1>"
+		"<button class=\"btn\" style=\"align-self:flex-start\" "
+			"onclick=\"addContestUser(", rpath->round_id, ")\">Add user"
+		"</button>");
+	try {
+		DB::Statement stmt = db_conn.prepare(
+			"SELECT id, username, first_name, last_name, mode "
+			"FROM users, contests_users "
+			"WHERE contest_id=? AND id=user_id "
+			"ORDER BY mode DESC, id ASC");
+		stmt.setString(1, rpath->round_id);
+		DB::Result res = stmt.executeQuery();
+
+		append("<table class=\"contest-users\">"
+			"<thead>"
+				"<tr>"
+					"<th class=\"uid\">Uid</th>"
+					"<th class=\"username\">Username</th>"
+					"<th class=\"first-name\">First name</th>"
+					"<th class=\"last-name\">Last name</th>"
+					"<th class=\"mode\">Mode</th>"
+					"<th class=\"actions\">Actions</th>"
+				"</tr>"
+			"</thead>"
+			"<tbody>");
+
+		while (res.next()) {
+			string uid = res[1];
+			string uname = res[2];
+			uint mode = res.getUInt(5);
+
+			append("<tr>"
+				"<td>", uid, "</td>"
+				"<td>", htmlSpecialChars(uname), "</td>"
+				"<td>", htmlSpecialChars(res[3]), "</td>"
+				"<td>", htmlSpecialChars(res[4]), "</td>");
+
+			switch (mode) {
+			case CU_MODE_MODERATOR:
+				append("<td class=\"moderator\">Moderator</td>");
+				break;
+			default:
+				append("<td class=\"contestant\">Contestant</td>");
+			}
+
+			append("<td>"
+					"<a class=\"btn-small\" href=\"/u/", uid, "\">"
+						"View profile</a>"
+					"<a class=\"btn-small orange\" "
+						"onclick=\"changeContestUserMode(", rpath->round_id,
+							",", uid, ",'",
+							(mode == CU_MODE_MODERATOR ? "m" : "c"), "')\">"
+						"Change mode</a>"
+					"<a class=\"btn-small red\" onclick=\"expelContestUser(",
+							rpath->round_id, ",", uid, ",'", uname, "')\">"
+						"Expel</a>");
+
+			append("</td>"
+				"</tr>");
+		}
+
+		append("</tbody>"
+			"</table>");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return error500();
+	}
 }
 
 void Contest::listProblems(bool admin_view) {

@@ -65,31 +65,58 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 
 		/* Check access */
 
-		r_path->admin_access = isAdmin(*r_path); // TODO: get data in above query!
-		if (r_path->admin_access)
-			return r_path.release();
+		r_path->admin_access = false;
+		if (Session::open()) {
+			// User is the owner of the contest or is the Sim root
+			if (r_path->contest->owner == Session::user_id
+				|| Session::user_id == SIM_ROOT_UID)
+			{
+				r_path->admin_access = true;
+				return r_path.release();
+			}
 
-		/* admin_access == false */
+			stmt = db_conn.prepare("SELECT type, mode "
+				"FROM users,"
+					"((SELECT mode FROM contests_users WHERE user_id=? "
+							"AND contest_id=?) "
+						"UNION (SELECT NULL AS mode) LIMIT 1) x "
+					"WHERE id=?");
+			stmt.setString(1, Session::user_id);
+			stmt.setString(2, r_path->contest->id);
+			stmt.setString(3, r_path->contest->owner);
 
-		if (!r_path->contest->is_public) {
-			// Check access to contest
-			if (!Session::open()) {
+			res = stmt.executeQuery();
+			if (!res.next()) {
+				error500();
+				return nullptr;
+			}
+
+			// The user is more privileged than the contest owner
+			if (res.getUInt(1) > Session::user_type) {
+				r_path->admin_access = true;
+				return r_path.release();
+			}
+
+			if (!res.isNull(2)) { // Row exist in contests_users
+				uint cu_type = res.getUInt(2);
+				if (cu_type == CU_MODE_MODERATOR) {
+					r_path->admin_access = true;
+					return r_path.release();
+				}
+
+			// The user is not on the 'white list'
+			} else if (!r_path->contest->is_public) {
 				redirect(concat("/login?", req->target));
 				return nullptr;
 			}
 
-			stmt = db_conn.prepare("SELECT user_id "
-				"FROM users_to_contests WHERE user_id=? AND contest_id=?");
-			stmt.setString(1, Session::user_id);
-			stmt.setString(2, r_path->contest->id);
-
-			res = stmt.executeQuery();
-			if (!res.next()) {
-				// User is not assigned to this contest
-				error403();
-				return nullptr;
-			}
+		// Session is not open
+		} else if (!r_path->contest->is_public) {
+			redirect(concat("/login?", req->target));
+			return nullptr;
 		}
+
+		/* admin_access == false */
 
 		// Check access to round - check if round has begun
 		// GRANT ACCESS if and only if:
@@ -157,6 +184,7 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 			"</div>"
 			"<hr/>"
 			"<a href=\"/c/", rpath->contest->id, "\">Contest dashboard</a>"
+			"<a href=\"/c/", rpath->contest->id, "/users\">Users</a>"
 			"<a href=\"/c/", rpath->contest->id, "/problems\">Problems</a>"
 			"<a href=\"/c/", rpath->contest->id, "/files\">Files</a>"
 			"<a href=\"/c/", round_id, "/submit\">Submit a solution</a>"
@@ -194,40 +222,6 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 			(admin_access ? "/n" : ""), "/ranking\">Ranking</a>");
 
 	append("</ul>");
-}
-
-bool Contest::isAdmin(const RoundPath& r_path) {
-	// If is not logged in, he cannot be admin
-	if (!Session::open())
-		return false;
-
-	// User is the owner of the contest or is the Sim root
-	if (r_path.contest->owner == Session::user_id
-		|| Session::user_id == SIM_ROOT_UID)
-	{
-		return true;
-	}
-
-	try {
-		// Check if user has more privileges than the owner
-		DB::Statement stmt = db_conn.prepare(
-			"SELECT type FROM users WHERE id=?");
-		stmt.setString(1, r_path.contest->owner);
-
-		DB::Result res = stmt.executeQuery();
-		int owner_type = UTYPE_ADMIN;
-		if (res.next())
-			owner_type = res.getUInt(1);
-
-		return owner_type > Session::user_type;
-		// TODO: give SIM root privileges to admins' contests (in contest list
-		// in handle() also)
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-	}
-
-	return false;
 }
 
 void Contest::printRoundPath(const StringView& page, bool force_normal) {
