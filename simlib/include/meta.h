@@ -98,22 +98,23 @@ struct GenSeq : GenSeq<N - 1, N - 1, Idx...> {};
 template<size_t... Idx>
 struct GenSeq<0, Idx...> : Seq<Idx...> {};
 
-template<uint... Digits>
+template<uint LEN, uint... Digits>
 struct ToStringHelper {
-	constexpr static char value[] = {('0' + Digits)..., '\0'};
+	constexpr static const char value[] = {('0' + Digits)..., '\0'};
+	constexpr static std::array<char, LEN> arr_value = {{('0' + Digits)...}};
 };
 
-template<uintmax_t N, uint... Digits>
-struct ToStringDecompose : ToStringDecompose<N / 10, N % 10, Digits...> {};
+template<uintmax_t N, uint LEN, uint... Digits>
+struct ToStringDecompose : ToStringDecompose<N / 10, LEN + 1, N % 10, Digits...> {};
 
-template<uint... Digits>
-struct ToStringDecompose<0, Digits...> : ToStringHelper<Digits...> {};
+template<uint LEN, uint... Digits>
+struct ToStringDecompose<0, LEN, Digits...> : ToStringHelper<LEN, Digits...> {};
 // Spacial case: N == 0
 template<>
-struct ToStringDecompose<0> : ToStringHelper<0> {};
+struct ToStringDecompose<0, 0> : ToStringHelper<1, 0> {};
 
 template<uintmax_t N>
-struct ToString : ToStringDecompose<N> {};
+struct ToString : ToStringDecompose<N, 0> {};
 
 template<class T>
 constexpr T max(T&& x) { return x; }

@@ -269,6 +269,9 @@ TEST (Simfile, loadTests) {
 	sf = sim::Simfile {"memory_limit: 0\nlimits: []"};
 	EXPECT_THROW(sf.loadTests(), std::runtime_error);
 
+	sf = sim::Simfile {"memory_limit: 18446744073709551616\nlimits: []"};
+	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+
 	sf = sim::Simfile {"memory_limit: -178\nlimits: []"};
 	EXPECT_THROW(sf.loadTests(), std::runtime_error);
 
@@ -405,6 +408,9 @@ TEST (Simfile, loadTests) {
 	EXPECT_THROW(sf.loadTests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 0]"};
+	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+
+	sf = sim::Simfile {"limits: [1 1 18446744073709551616]"};
 	EXPECT_THROW(sf.loadTests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 3.14]"};

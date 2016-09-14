@@ -616,6 +616,18 @@ inline bool lower_equal(const StringView& a, const StringView& b) noexcept {
 	return special_equal<int(int)>(a, b, tolower);
 }
 
+/**
+ * @brief String comparator
+ * @details Compares strings like numbers
+ */
+struct StrNumCompare {
+	bool operator()(StringView a, StringView b) const {
+		a.removeLeading([](char c) { return (c == '0'); });
+		b.removeLeading([](char c) { return (c == '0'); });
+		return (a.size() == b.size() ? a < b : a.size() < b.size());
+	}
+};
+
 // Only to use with standard integral types
 template<class T>
 typename std::enable_if<std::is_integral<T>::value, std::string>::type
@@ -864,13 +876,17 @@ inline bool hasSuffixIn(const StringView& str,
 	return hasSuffixIn(str, x.begin(), x.end());
 }
 
+// Escapes HTML unsafe character and appends it to @p str
+void htmlSpecialChars(std::string& str, char c);
+
 // Escapes HTML unsafe character sequences and appends them to @p str
 void htmlSpecialChars(std::string& str, const StringView& s);
 
 // Escapes HTML unsafe character sequences
-inline std::string htmlSpecialChars(const StringView& s) {
+template<class T>
+inline std::string htmlSpecialChars(T&& s) {
 	std::string res;
-	htmlSpecialChars(res, s);
+	htmlSpecialChars(res, std::forward<T>(s));
 	return res;
 }
 
@@ -894,8 +910,16 @@ bool isInteger(const StringView& s, size_t beg = 0,
 bool isDigit(const StringView& s, size_t beg, size_t end = StringView::npos)
 	noexcept;
 
-// Checks whether string @p s consist only of digits
+/// Checks whether string @p s consist only of digits
 inline bool isDigit(const StringView& s) noexcept { return isDigit(s, 0); }
+
+/// Checks whether string @p s consist only of digits and is not greater than
+/// @p MAX_VAL
+template<uintmax_t MAX_VAL>
+inline bool isDigitNotGreaterThan(const StringView& s) noexcept {
+	constexpr auto x = meta::ToString<MAX_VAL>::arr_value;
+	return isDigit(s, 0) && !StrNumCompare()({x.data(), x.size()}, s);
+}
 
 bool isReal(const StringView& s, size_t beg, size_t end = StringView::npos)
 	noexcept;
@@ -1016,18 +1040,6 @@ T digitsToU(const StringView& str) noexcept {
  * @return floating-point x in sec as string
  */
 std::string usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true);
-
-/**
- * @brief String comparator
- * @details Compares strings like numbers
- */
-struct StrNumCompare {
-	bool operator()(StringView a, StringView b) const {
-		a.removeLeading([](char c) { return (c == '0'); });
-		b.removeLeading([](char c) { return (c == '0'); });
-		return a.size() == b.size() ? a < b : a.size() < b.size();
-	}
-};
 
 template<class T>
 inline size_t string_length(const T& x) noexcept { return x.size(); }

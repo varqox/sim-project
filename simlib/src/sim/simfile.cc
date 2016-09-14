@@ -136,10 +136,30 @@ void Simfile::loadTests() {
 	// Global memory limit
 	auto&& ml = config["memory_limit"];
 	CHECK_IF_NOT_ARR(ml, "memory_limit");
-	if ((global_mem_limit = ml.asInt<uint64_t>()) == 0 && ml.isSet())
-		throw std::runtime_error("Simfile: invalid memory_limit - it has to be "
-			"a positive integer");
-	global_mem_limit <<= 10; // Convert from KB to bytes
+	if (ml.isSet()) {
+		auto invalid_mem_limit = [] {
+			return std::runtime_error("Simfile: invalid memory_limit - it has "
+				"to be a positive integer");
+		};
+
+		if (!isDigitNotGreaterThan<std::numeric_limits<
+			decltype(global_mem_limit)>::max()>(ml.asString()))
+		{
+			if (!isDigit(ml.asString()))
+				throw invalid_mem_limit();
+
+			throw std::runtime_error("Simfile: too big value of the "
+				"`memory_limit`");
+		}
+
+		global_mem_limit =
+			ml.asInt<decltype(global_mem_limit)>() << 10; // Convert from KB to
+			                                              // bytes
+		if (global_mem_limit == 0)
+			throw invalid_mem_limit();
+	} else
+		global_mem_limit = 0;
+
 	// Now if global_mem_limit == 0 then it is unset
 
 	/* Limits */
@@ -178,8 +198,6 @@ void Simfile::loadTests() {
 				"microseconds, but it has to be at least 1 microsecond"));
 
 		// Memory limit
-		// TODO: add boundaries to the values - make sure that they will fit
-		//       into uint64_t before converting them
 		sp.removeLeading(isspace);
 		if (sp.empty()) { // No memory limit is specified for current test
 			if (!global_mem_limit)
@@ -189,16 +207,29 @@ void Simfile::loadTests() {
 			test.memory_limit = global_mem_limit;
 
 		// There is an invalid memory limit specified for the current test
-		} else if (strtou(sp, &test.memory_limit) != (int)sp.size() ||
-			test.memory_limit == 0)
-		{
-			throw std::runtime_error(concat("Simfile: invalid memory limit "
-				"for the test `", test_name, "` - it has to be a positive "
-				"integer"));
+		} else {
+			auto invalid_mem_limit = [&] {
+				return std::runtime_error(concat("Simfile: invalid memory "
+					"limit for the test `", test_name, "` - it has to be a "
+					"positive integer"));
+			};
+			if (!isDigitNotGreaterThan<std::numeric_limits<
+				decltype(test.memory_limit)>::max()>(sp))
+			{
+				if (!isDigit(sp))
+					throw invalid_mem_limit();
 
-		// Memory limit of the current test is valid
-		} else
+				throw std::runtime_error(concat("Simfile: too big memory "
+					"limit value for the test `", test_name, "`"));
+			}
+
+			// Memory limit of the current test is valid
+			strtou(sp, &test.memory_limit);
+			if (test.memory_limit == 0)
+				throw invalid_mem_limit();
+
 			test.memory_limit <<= 10; // Convert from KB to bytes
+		}
 
 		// Add test to its group
 		auto p = TestNameComparator::split(test_name);
