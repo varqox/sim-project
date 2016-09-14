@@ -205,7 +205,10 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 			StringView name {s};
 			name.removeSuffix(3);
 			name = name.extractTrailing([](char c) { return (c != '/'); });
-			in.emplace(name.to_string(), std::move(s));
+
+			string x {name.to_string()}; // Needed because since s is moved,
+			                             // name may not be valid
+			in.emplace(std::move(x), std::move(s));
 		}
 
 		// Construct a vector of the valid tests
@@ -249,14 +252,14 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 		}
 
 		// There are no tests limits specified
-		map<StringView, Simfile::TestGroup, StrNumCompare> tg; // gid => test
+		map<string, Simfile::TestGroup, StrNumCompare> tg; // gid => test
 		for (auto&& t : tests) {
 			auto p = Simfile::TestNameComparator::split(t.name);
 			// tid == "ocen" belongs to the same group as tests with gid == "0"
-			if (p.second == "ocen")
-				p.first = "0";
-
-			tg[p.first].tests.emplace_back(std::move(t));
+			string gid = (p.second == "ocen" ? "0" : p.first.to_string()); //
+			    // Needed (.to_string()) because since t is moved, p.first may
+			    // not be valid
+			tg[std::move(gid)].tests.emplace_back(std::move(t));
 		}
 
 		// Move tests groups from tg to sf.tgroups
@@ -321,7 +324,12 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 
 	JudgeWorker jworker;
 	jworker.setVerbosity(verbose_);
-	jworker.loadPackage(package_path_, sf.dump());
+
+	try { jworker.loadPackage(package_path_, sf.dump()); } catch(...) {
+		if (verbose_)
+			stdlog("Generated Simfile: ", sf.dump());
+		throw;
+	}
 
 	string compilation_errors;
 
