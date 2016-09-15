@@ -44,7 +44,7 @@ public:
 			++pos;
 
 		StringView res {substr(0, pos)};
-		removePrefix(pos + 1);
+		removePrefix(pos + 1); // Safe - pos + 1 is cut down to size() if needed
 		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res);)
 		return res;
 	}

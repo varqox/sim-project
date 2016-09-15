@@ -1,5 +1,6 @@
-#include "../../include/sim/judge_worker.h"
+#include "../../include/parsers.h"
 #include "../../include/sim/checker.h"
+#include "../../include/sim/judge_worker.h"
 
 using std::string;
 
@@ -176,17 +177,41 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				CheckerCallback({test_in_path, test_out_path, sol_stdout_path})
 			); // Allow exceptions to fly upper
 
-			// Checker: OK
+			// Checker exited with 0
 			if (es.code == 0) {
-				// Test status is already set to OK
+				string chout = sim::obtainCheckerOutput(checker_stdout, 512);
+				SimpleParser s {chout};
 
-			// Checker: WA
-			} else if (WIFEXITED(es.code) && WEXITSTATUS(es.code) == 1) {
-				// TODO: Detect from checker output whether WA or OK
-				score_ratio = 0;
-				test_report.status = JudgeReport::Test::WA;
-				test_report.comment =
-					sim::obtainCheckerOutput(checker_stdout, 256);
+				StringView line1 {s.extractNext('\n')}; // "OK" or "WRONG"
+				StringView line2 {s.extractNext('\n')}; // percentage (real)
+				// Second line has to be either empty or be a real number
+				if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
+					score_ratio = 0; // Do not give score for a checker error
+					test_report.status = JudgeReport::Test::CHECKER_ERROR;
+					test_report.comment = concat("Checker error: second line "
+						"of the checker stdout is invalid: `", line2, '`');
+
+				// OK -> Checker: OK
+				} else if (line1 == "OK") {
+					// Test status is already set to OK
+					if (line2.size()) // Empty line means 100%
+						score_ratio = std::min(score_ratio,
+							atof(line2.to_string().data()) * 0.01); /*
+								.to_string() is safer than tricky indexing over
+								chout */
+
+					// Leave the checker comment only
+					chout.erase(chout.begin(), chout.end() - s.size());
+					test_report.comment = std::move(chout);
+
+				// WRONG -> Checker WA
+				} else {
+					test_report.status = JudgeReport::Test::WA;
+					score_ratio = 0;
+					// Leave the checker comment only
+					chout.erase(chout.begin(), chout.end() - s.size());
+					test_report.comment = std::move(chout);
+				}
 
 			// Checker TLE
 			} else if (es.runtime >= CHECKER_TIME_LIMIT) {
@@ -222,7 +247,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					"Checker: ");
 				// Checker status
 				if (test_report.status == JudgeReport::Test::OK)
-					tmplog("\033[1;32mOK\033[m  ");
+					tmplog("\033[1;32mOK\033[m  ", test_report.comment);
 				else if (test_report.status == JudgeReport::Test::WA)
 					tmplog("\033[1;31mWRONG\033[m ", test_report.comment);
 				else

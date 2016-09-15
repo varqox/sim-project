@@ -35,6 +35,14 @@ int main(int argc, char **argv) {
   // argv[1] test_in
   // argv[2] test_out (right answer)
   // argv[3] answer to check
+  //
+  // Output:
+  // Line 1: "OK" or "WRONG"
+  // Line 2 (optional): leave empty or provide a real number x from interval
+  //   [0, 100], which means that the test will get no more than x percent of
+  //   its maximal score
+  // Line 3 and next (optional): A checker comment
+
   my_assert(argc == 4);
   FILE *fout = fopen(argv[2], "r"), *fans = fopen(argv[3], "r");
   my_assert(fout && fans);  // Open was successful
@@ -48,10 +56,10 @@ int main(int argc, char **argv) {
     ++line;
 
     if (0 != areEqual(lout, read1, lans, read2)) {
-      printf("Line %zu: read: '%.77s%s', expected: '%.77s%s'\n", line, lans,
-        (strlen(lans) > 77 ? "..." : ""), lout, (strlen(lout) > 77 ? "..." :
-          ""));
-      return 1;
+      printf("WRONG\n0\nLine %zu: read: '%.77s%s', expected: '%.77s%s'\n", line,
+        lans, (strlen(lans) > 77 ? "..." : ""), lout,
+        (strlen(lout) > 77 ? "..." : ""));
+      return 0;
     }
   }
 
@@ -59,9 +67,9 @@ int main(int argc, char **argv) {
     ++line;
 
     if (0 != areEqual(lout, read1, lans, 0)) {
-      printf("Line %zu: read: EOF, expected: '%.157s%s'\n", line, lout,
-        (strlen(lout) > 157 ? "..." : ""));
-      return 1;
+      printf("WRONG\n0\nLine %zu: read: EOF, expected: '%.157s%s'\n", line,
+        lout, (strlen(lout) > 157 ? "..." : ""));
+      return 0;
     }
 
     read1 = getline(&lout, &len1, fout);
@@ -71,14 +79,15 @@ int main(int argc, char **argv) {
     ++line;
 
     if (0 != areEqual(lans, read2, lout, 0)) {
-      printf("Line %zu: read: '%.157s%s', expected: EOF\n", line, lans,
-        (strlen(lans) > 157 ? "..." : ""));
-      return 1;
+      printf("WRONG\n0\nLine %zu: read: '%.157s%s', expected: EOF\n", line,
+        lans, (strlen(lans) > 157 ? "..." : ""));
+      return 0;
     }
 
     read2 = getline(&lans, &len2, fans);
   }
 
+  puts("OK");
   return 0;
 }
 
