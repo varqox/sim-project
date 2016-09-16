@@ -65,15 +65,22 @@ void Contest::handle() {
 				stmt.setString(3, Session::user_id);
 			} while (0);
 
-			/* List them */
 			baseTemplate("Select contest");
+
+			DB::Result res = stmt.executeQuery();
+			if (res.rowCount() == 0) {
+				append("<p class=\"pos-center\">There are no contests to "
+					"show...</p>");
+				return;
+			}
+
+			/* List them */
 			append("<div class=\"contests-list\">");
 
 			// Add contest button (admins and teachers only)
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
 				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>");
 
-			DB::Result res = stmt.executeQuery();
 			while (res.next())
 				append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
 					htmlSpecialChars(res[2]), "</a>");
