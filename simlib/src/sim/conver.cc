@@ -5,8 +5,11 @@
 #include "../../include/utilities.h"
 #include "default_checker_dump.h"
 
+#include <set>
+
 using std::map;
 using std::runtime_error;
+using std::set;
 using std::string;
 using std::vector;
 
@@ -155,14 +158,20 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 
 	// Solutions
 	try { sf.loadSolutions(); } catch (...) {}
-	vector<std::string> solutions;
-	for (auto&& s : sf.solutions) {
-		if (dt->pathExists(s))
-			solutions.emplace_back(s);
-		else if (verbose_)
-			stdlog("Ignoring invalid solution: `", s, '`');
-	}
 	{
+		vector<std::string> solutions;
+		set<std::string> solutions_set; // Used to detect and eliminate
+		for (auto&& s : sf.solutions) {
+			if (dt->pathExists(s) &&
+				solutions_set.find(s) == solutions_set.end())
+			{
+				solutions.emplace_back(s);
+				solutions_set.emplace(s);
+			}
+			else if (verbose_)
+				stdlog("Ignoring invalid solution: `", s, '`');
+		}
+		                                // solutions duplication
 		auto x = findFiles(dt.get(), is_source);
 		if (solutions.empty()) { // The main solution has to be set
 			if (x.empty())
@@ -175,8 +184,14 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 				}));
 		}
 
-		// Merge solutions and put them in the Simfile
-		solutions.insert(solutions.end(), x.begin(), x.end());
+		// Merge solutions
+		for (auto&& s : x)
+			if (solutions_set.find(s) == solutions_set.end()) {
+				solutions.emplace_back(s);
+				solutions_set.emplace(s);
+			}
+
+		// Put the solutions in the Simfile
 		sf.solutions = std::move(solutions);
 	}
 
