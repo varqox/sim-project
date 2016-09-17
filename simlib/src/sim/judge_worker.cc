@@ -83,7 +83,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			if (verbose && hasPrefixIn(es.message,
 				{"Error: ", "failed to get syscall", "forbidden syscall"}))
 			{
-				errlog("Package: `", pkg_root, '`', test.name, " -> ",
+				errlog("Package: `", pkg_root, "` ", test.name, " -> ",
 					es.message);
 			}
 
