@@ -15,7 +15,7 @@ bool FormValidator::validate(string& var, const string& name,
 	} else if (it->second.size() > max_size) {
 		back_insert(errors_, "<pre class=\"error\">",
 			htmlSpecialChars(name_to_print), " cannot be longer than ",
-			toString(max_size), "</pre>");
+			toString(max_size), " bytes</pre>");
 		return false;
 	}
 

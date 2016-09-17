@@ -321,6 +321,19 @@ static void processSubmissionQueue() {
 							goto send_report_and_continue;
 						}
 
+			// Log syscall problems (to errlog)
+			for (auto&& rep : {rep1, rep2})
+				for (auto&& group : rep.groups)
+					for (auto&& test : group.tests)
+						if (hasPrefixIn(test.comment, {"Runtime error (Error: ",
+							"Runtime error (failed to get syscall",
+							"Runtime error (forbidden syscall"}))
+						{
+							errlog("Submission ", submission_id, " (problem ",
+								problem_id, "): ", test.name, " -> ",
+								test.comment);
+						}
+
 			static_assert((int)SubmissionStatus::OK < 8, "Needed below");
 			static_assert((int)SubmissionStatus::WA < 8, "Needed below");
 			static_assert((int)SubmissionStatus::TLE < 8, "Needed below");
