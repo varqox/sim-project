@@ -332,9 +332,9 @@ void Contest::deleteSubmission(const string& submission_id,
 	append(fv.errors(), "<div class=\"form-container\">"
 			"<h1>Delete submission</h1>"
 			"<form method=\"post\" action=\"?", prev_referer ,"\">"
-				"<label class=\"field\">Are you sure to delete submission "
-				"<a href=\"/s/", submission_id, "\">", submission_id,
-					"</a>?</label>"
+				"<label class=\"field\">Are you sure you want to delete "
+					"submission <a href=\"/s/", submission_id, "\">",
+					submission_id, "</a>?</label>"
 				"<div class=\"submit-yes-no\">"
 					"<button class=\"btn red\" type=\"submit\" "
 						"name=\"delete\">Yes, I'm sure</button>"

@@ -1219,7 +1219,7 @@ void Contest::deleteContest() {
 	append(fv.errors(), "<div class=\"form-container\">"
 		"<h1>Delete contest</h1>"
 		"<form method=\"post\">"
-			"<label class=\"field\">Are you sure to delete contest "
+			"<label class=\"field\">Are you sure you want to delete contest "
 				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->contest->name), "</a>, all "
 				"subrounds and submissions?</label>"
@@ -1271,8 +1271,8 @@ void Contest::deleteRound() {
 	append(fv.errors(), "<div class=\"form-container\">"
 		"<h1>Delete round</h1>"
 		"<form method=\"post\">"
-			"<label class=\"field\">Are you sure to delete round <a href=\"/c/",
-				rpath->round_id, "\">",
+			"<label class=\"field\">Are you sure you want to delete round "
+				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->round->name), "</a>, all "
 				"subrounds and submissions?</label>"
 			"<div class=\"submit-yes-no\">"
@@ -1322,7 +1322,7 @@ void Contest::deleteProblem() {
 	append(fv.errors(), "<div class=\"form-container\">"
 		"<h1>Delete problem</h1>"
 		"<form method=\"post\">"
-			"<label class=\"field\">Are you sure to delete problem "
+			"<label class=\"field\">Are you sure you want to delete problem "
 				"<a href=\"/c/", rpath->round_id, "\">",
 				htmlSpecialChars(rpath->problem->name), "</a> and all its "
 				"submissions?</label>"

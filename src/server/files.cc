@@ -311,7 +311,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 	append(fv.errors(), "<div class=\"form-container\">"
 		"<h1>Delete file</h1>"
 		"<form method=\"post\" action=\"?", prev_referer, "\">"
-			"<label class=\"field\">Are you sure to delete file "
+			"<label class=\"field\">Are you sure you want to delete file "
 				"<a href=\"/file/", id, "/edit\">",
 					htmlSpecialChars(name), "</a>?"
 			"</label>"
