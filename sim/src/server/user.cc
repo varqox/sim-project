@@ -791,8 +791,8 @@ void User::deleteAccount() {
 	append(fv.errors(), "<div class=\"form-container\">"
 			"<h1>Delete account</h1>"
 			"<form method=\"post\" action=\"?", prev_referer ,"\">"
-				"<label class=\"field\">Are you sure to delete account "
-					"<a href=\"/u/", user_id, "\">",
+				"<label class=\"field\">Are you sure you want to delete "
+					"account <a href=\"/u/", user_id, "\">",
 					htmlSpecialChars(username), "</a>, all its "
 					"submissions and change owner of its contests and "
 					"problems to SIM root?</label>"
