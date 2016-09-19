@@ -15,6 +15,7 @@ void Contest::submit(bool admin_view) {
 		return redirect("/login?" + req->target);
 
 	FormValidator fv(req->form_data);
+	bool ignored_submission = false;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
@@ -29,6 +30,8 @@ void Contest::submit(bool admin_view) {
 
 		fv.validateFilePathNotEmpty(solution_tmp_path, "solution",
 			"Solution file field");
+
+		ignored_submission = (admin_view && fv.exist("ignored-submission"));
 
 		if (!isDigit(problem_round_id))
 			fv.addError("Wrong problem round id");
@@ -103,10 +106,11 @@ void Contest::submit(bool admin_view) {
 						error(errno));
 
 				// Change submission type to NORMAL (activate submission)
-				stmt = db_conn.prepare("UPDATE submissions SET type="
-					STYPE_NORMAL_STR ", status=" SSTATUS_WAITING_STR " "
-					"WHERE id=?");
-				stmt.setString(1, submission_id);
+				stmt = db_conn.prepare("UPDATE submissions SET type=?, status="
+					SSTATUS_WAITING_STR " WHERE id=?");
+				stmt.setUInt(1, static_cast<uint>(ignored_submission
+					? SubmissionType::IGNORED : SubmissionType::NORMAL));
+				stmt.setString(2, submission_id);
 				stmt.executeUpdate();
 
 				notifyJudgeServer();
@@ -236,17 +240,26 @@ void Contest::submit(bool admin_view) {
 		ERRLOG_CATCH(e);
 	}
 
-	if (hasSuffix(buffer, "</option>"))
+	if (hasSuffix(buffer, "</option>")) {
 		append(buffer, "</select>"
 					"</div>"
 					// Solution file
 					"<div class=\"field-group\">"
 						"<label>Solution</label>"
 						"<input type=\"file\" name=\"solution\" required>"
-					"</div>"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
+					"</div>");
+
+		if (admin_view) // Ignored submission
+			append("<div class=\"field-group\">"
+						"<label>Ignored submission</label>"
+						"<input type=\"checkbox\" name=\"ignored-submission\"",
+							(ignored_submission ? " checked" : ""), ">"
+				"</div>");
+
+		append("<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
 				"</form>"
 			"</div>");
+	}
 
 	else
 		append("<p>There are no problems for which you can submit a solution..."
