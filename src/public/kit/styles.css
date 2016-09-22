@@ -471,7 +471,6 @@ table {
 	font-weight: normal;
 	line-height: 28px;
 	text-align: center;
-	/*white-space: nowrap;*/
 }
 /* The Close Button */
 .modal .close {
@@ -602,16 +601,12 @@ table {
 	background-color: #f6a839;
     background-image: linear-gradient(#fbba5d, #f19615);
     border: 1px solid #e29b35;
-	/*background-color: #f0ad4e;*/
-	/*background-image: linear-gradient(#ee5f5b, #c73e38);*/
-	/*border: 1px solid #eea236;*/
 }
 .btn.orange:hover,
 .btn.orange:focus,
 .btn-small.orange:hover,
 .btn-small.orange:focus {
     background-color: #ef9d2a;
-	/*background-color: #d94d48;*/
 	background-image: none;
 }
 .btn.orange:focus,
@@ -627,7 +622,6 @@ table {
 
 textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"] {
 	padding: 4px;
-	/*margin: 5px;*/
 	line-height: 20px;
 	color: #555555;
 	border: 1px solid #cccccc;
@@ -686,7 +680,7 @@ a.btn.red {
 	white-space: pre;
 }
 .dropmenu.open > ul > a {
-	display: flex;
+	display: block;
 	padding: 2px 30px 2px 25px;
 	margin: -1px;
 	color: #222;
@@ -822,10 +816,8 @@ a.btn.red {
 	border-top-color: #ffffff;
 }
 .body {
-	display: flex;
-	margin: 50px 1px 15px;
-	-webkit-flex-direction: column;
-	flex-direction: column;
+	display: block;
+	margin: 50px 10px 15px;
 }
 .body h1 {
 	margin: 0;
@@ -972,12 +964,12 @@ table.stripped > tbody > tr:last-child > td:last-child {
 
 /* Contest list */
 .contests-list {
+	display: table;
+	margin: 0 auto;
 	min-width: 25em;
-	margin-right: auto;
-	margin-left: auto;
 }
 .contests-list > a:not(.btn) {
-	display: flex;
+	display: block;
 	padding: 5px;
 	border-top: 1px solid #ccc;
 }
@@ -1006,10 +998,8 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	line-height: 22px;
 }
 .round-view {
-	display: flex;
+	display: table;
 	margin: 8px auto;
-	-webkit-flex-direction: column;
-	flex-direction: column;
 }
 .round-view > :first-child {
 	margin-bottom: -1px;
@@ -1024,7 +1014,6 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	display: flex;
 	padding: 0;
 	margin: 0;
-	flex-grow: 1;
 	-webkit-flex-direction: column;
 	flex-direction: column;
 }
@@ -1058,10 +1047,13 @@ table.stripped > tbody > tr:last-child > td:last-child {
 
 /* Ranking */
 .ranking {
-	margin: 8px 0;
+	margin: 8px 10px 8px 0;
 }
 .ranking > tbody td {
 	text-align: right;
+}
+.ranking > thead th {
+	text-align: center;
 }
 .ranking > tbody > tr > td:nth-child(2) {
 	text-align: left;
@@ -1072,10 +1064,9 @@ table.stripped > tbody > tr:last-child > td:last-child {
 
 /* Submission */
 .submission-info {
-	display: flex;
+	display: block;
 	width: 85%;
 	margin: 15px 0 0 20px;
-	flex-flow: column nowrap;
 }
 .submission-info > div:first-child {
 	display: flex;
@@ -1319,7 +1310,7 @@ table.contest-users tr > td:last-child {
 
 /* User-info */
 .user-info {
-	display: flex;
+	display: table;
 	min-width: 400px;
 	margin: 0 auto;
 	padding: 4px 10px;
@@ -1328,8 +1319,6 @@ table.contest-users tr > td:last-child {
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
-	-webkit-flex-flow: column nowrap;
-	flex-flow: column nowrap;
 }
 .user-info > div {
 	margin-bottom: 5px;
@@ -1450,7 +1439,7 @@ pre .turquoise {
 
 /* Forms */
 .form-container {
-	display: flex;
+	display: table;
 	min-width: 430px;
 	margin: 70px auto 0;
 	background: #fdfdfd;
@@ -1458,8 +1447,6 @@ pre .turquoise {
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
-	-webkit-flex-flow: column nowrap;
-	flex-flow: column nowrap;
 }
 .form-container h1 {
 	margin: 0.67em 0.7em;
@@ -1473,11 +1460,9 @@ pre .turquoise {
 	text-align: center;
 }
 .form-container form {
-	display: flex;
+	display: block;
 	padding: 20px;
 	margin-top: -20px;
-	-webkit-flex-flow: column nowrap;
-	flex-flow: column nowrap;
 }
 .form-container form > .field {
 	margin-bottom: 15px;
@@ -1507,8 +1492,8 @@ form .field-group > textarea {
 	margin-left: 140px;
 }
 .form-container form div.submit-yes-no {
-	margin-right: auto;
-	margin-left: auto;
+	display: table;
+	margin: 15px auto 0;
 }
 .form-container form div.button-row {
 	display: flex;
@@ -1520,8 +1505,6 @@ form .field-group > textarea {
 
 /* Notifications */
 .notifications {
-	display: flex;
-	flex-flow: column nowrap;
 	margin-right: 10px;
 	min-width: 300px;
 }

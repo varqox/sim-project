@@ -257,7 +257,7 @@ void Contest::handle() {
 
 	if (rpath->type == PROBLEM)
 		append("<a class=\"btn\" href=\"/c/", round_id, "/statement\" "
-			"style=\"margin:5px auto\">View statement</a>");
+			"style=\"margin:5px auto;display:table\">View statement</a>");
 }
 
 void Contest::addContest() {
@@ -312,7 +312,7 @@ void Contest::addContest() {
 	}
 
 	baseTemplate("Add contest", ".body{margin-left:30px}");
-	append(fv.errors(), "<div class=\"form-container\">"
+	append(fv.errors(), "<div class=\"form-container\">" // TODO: center
 			"<h1>Add contest</h1>"
 			"<form method=\"post\">"
 				// Name
@@ -1479,7 +1479,7 @@ void Contest::users() {
 	contestTemplate("Contest users");
 	append("<h1>Users assigned to the contest: ",
 			htmlSpecialChars(rpath->contest->name), "</h1>"
-		"<button class=\"btn\" style=\"align-self:flex-start\" "
+		"<button class=\"btn\" style=\"display:block\" "
 			"onclick=\"addContestUser(", rpath->round_id, ")\">Add user"
 		"</button>");
 	try {

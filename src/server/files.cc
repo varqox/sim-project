@@ -9,6 +9,7 @@
 using std::string;
 
 void Contest::addFile() {
+	// TODO: rewrite with modals + ajax
 	if (!rpath->admin_access)
 		return error403();
 
