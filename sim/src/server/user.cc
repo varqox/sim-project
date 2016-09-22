@@ -438,11 +438,11 @@ void User::userProfile() {
 	}
 
 	append("</div>"
-			"<div class=\"email\">"
-				"<label>Email</label>",
-				htmlSpecialChars(email),
+				"<div class=\"email\">"
+					"<label>Email</label>",
+					htmlSpecialChars(email),
+				"</div>"
 			"</div>"
-		"</div>"
 		"<h2>User submissions (showing the recent ",
 			toString(SUBMISSIONS_ON_USER_PROFILE_LIMIT), ")</h2>");
 
