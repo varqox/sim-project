@@ -1014,6 +1014,7 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	display: flex;
 	padding: 0;
 	margin: 0;
+	flex-grow: 1;
 	-webkit-flex-direction: column;
 	flex-direction: column;
 }
