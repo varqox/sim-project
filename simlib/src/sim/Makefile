@@ -10,7 +10,7 @@ $(eval $(call dependencies))
 # do it manually
 default_checker_dump.o: default_checker_dump.c.deps
 
-default_checker_dump.c: default_checker.c
+default_checker_dump.c: default_checker.c Makefile
 	$(Q)$(call P,GEN,$@)xxd -i $< > $@
 
 sim.o: simfile.o compile.o checker.o judge_worker.o

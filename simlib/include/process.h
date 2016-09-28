@@ -1,8 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <string>
-#include <vector>
 #include <sys/wait.h>
+#include <vector>
 
 /**
  * @brief Get current working directory

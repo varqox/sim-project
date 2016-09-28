@@ -815,13 +815,9 @@ inline std::string toHex(const std::string& str) {
 	return toHex(str.data(), str.size());
 }
 
-inline bool hasPrefix(const StringView& str, const StringView& prefix) noexcept {
-	try {
-		return str.compare(0, prefix.size(), prefix) == 0;
-	} catch (const std::out_of_range& e) {
-		// This is a bug (ignore it; Coverity has a problem with that...)
-		return false;
-	}
+inline bool hasPrefix(const StringView& str, const StringView& prefix) noexcept
+{
+	return (str.compare(0, prefix.size(), prefix) == 0);
 }
 
 template<class Iter>
@@ -836,23 +832,27 @@ bool hasPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 
 template<class T>
 inline bool hasPrefixIn(const StringView& str, T&& x) noexcept {
-	return hasPrefixIn(str, x.begin(), x.end());
+	for (auto&& a : x)
+		if (hasPrefix(str, a))
+			return true;
+
+	return false;
 }
 
 inline bool hasPrefixIn(const StringView& str,
 	const std::initializer_list<StringView>& x) noexcept
 {
-	return hasPrefixIn(str, x.begin(), x.end());
+	for (auto&& a : x)
+		if (hasPrefix(str, a))
+			return true;
+
+	return false;
 }
 
-inline bool hasSuffix(const StringView& str, const StringView& suffix) noexcept {
-	try {
-		return str.size() >= suffix.size() &&
-			str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-	} catch (const std::out_of_range& e) {
-		// This is a bug (ignore it; Coverity has a problem with that...)
-		return false;
-	}
+inline bool hasSuffix(const StringView& str, const StringView& suffix) noexcept
+{
+	return (str.size() >= suffix.size() &&
+		str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
 }
 
 template<class Iter>
@@ -867,13 +867,21 @@ bool hasSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
 
 template<class T>
 inline bool hasSuffixIn(const StringView& str, T&& x) noexcept {
-	return hasSuffixIn(str, x.begin(), x.end());
+	for (auto&& a : x)
+		if (hasSuffix(str, a))
+			return true;
+
+	return false;
 }
 
 inline bool hasSuffixIn(const StringView& str,
 	const std::initializer_list<StringView>& x) noexcept
 {
-	return hasSuffixIn(str, x.begin(), x.end());
+	for (auto&& a : x)
+		if (hasSuffix(str, a))
+			return true;
+
+	return false;
 }
 
 // Escapes HTML unsafe character and appends it to @p str

@@ -3,6 +3,7 @@
 #include "meta.h"
 #include "process.h"
 #include "spawner.h"
+#include "syscall_name.h"
 #include "utilities.h"
 
 #include <cstddef>
@@ -146,6 +147,7 @@ public:
 		bool isSyscallEntryAllowed(pid_t pid, int syscall,
 			const std::vector<std::string>& allowed_files)
 		{
+			// TODO: make the below syscall numbers more portable
 			constexpr std::array<int, 78> allowed_syscalls_i386 {{
 				1, // SYS_exit
 				3, // SYS_read
@@ -786,8 +788,16 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 		// Not allowed syscall
 		std::string message = func.errorMessage();
-		if (message.empty()) // func has not left any message
-			message = concat("forbidden syscall: ", toStr(syscall_no));
+		if (message.empty()) { // func has not left any message
+			// Try to get syscall name
+			const char* syscall_name = (func.getArch() == ARCH_i386 ?
+				x86_syscall_name : x86_64_syscall_name)[syscall_no];
+
+			if (syscall_name[0] == '\0') // Syscall not found
+				message = concat("forbidden syscall ", toStr(syscall_no));
+			else
+				message = concat("forbidden syscall ", toStr(syscall_no), ": ", syscall_name, "()");
+		}
 
 		return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE),
 			message);
