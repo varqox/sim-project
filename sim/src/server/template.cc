@@ -68,8 +68,7 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 			"<a href=\"/signup\">Sign up</a>");
 
 	append("</div>"
-		"</div>"
-		"<div class=\"body\">");
+		"</div>");
 
 	template_began = true;
 }
@@ -77,8 +76,7 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 void Template::endTemplate() {
 	if (template_began) {
 		template_began = false;
-		append("</div>"
-				"<script>var start_time=", toString(microtime() / 1000),
+		append("<script>var start_time=", toString(microtime() / 1000),
 					";</script>"
 				"</body>"
 			"</html>");

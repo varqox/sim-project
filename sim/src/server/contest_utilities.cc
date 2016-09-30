@@ -145,7 +145,7 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 	const StringView& scripts)
 {
 
-	baseTemplate(title, concat(".body{margin-left:190px}", styles),
+	baseTemplate(title, concat("body{margin-left:190px}", styles),
 		scripts);
 
 	append("<ul class=\"menu\">");

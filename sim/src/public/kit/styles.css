@@ -431,6 +431,34 @@ html {
 	font-size: 14px;
 	line-height: 20px;
 }
+body {
+	display: block;
+	margin: 50px 10px 15px;
+}
+body h1 {
+	margin: 0;
+	font-size: 35px;
+	font-weight: normal;
+	line-height: 45px;
+}
+body h2 {
+	margin: 5px 0;
+	font-size: 26px;
+	font-weight: normal;
+	line-height: 37px;
+}
+body h3 {
+	margin: 5px 0;
+	font-size: 16px;
+	font-weight: normal;
+	line-height: 22px;
+}
+body h4 {
+	margin: 5px 0;
+	font-size: 14px;
+	font-weight: normal;
+	line-height: 20px;
+}
 pre {
 	font-family: monospace;
 }
@@ -815,34 +843,6 @@ a.btn.red {
 .navbar .user:focus > .caret {
 	border-top-color: #ffffff;
 }
-.body {
-	display: block;
-	margin: 50px 10px 15px;
-}
-.body h1 {
-	margin: 0;
-	font-size: 35px;
-	font-weight: normal;
-	line-height: 45px;
-}
-.body h2 {
-	margin: 5px 0;
-	font-size: 26px;
-	font-weight: normal;
-	line-height: 37px;
-}
-.body h3 {
-	margin: 5px 0;
-	font-size: 16px;
-	font-weight: normal;
-	line-height: 22px;
-}
-.body h4 {
-	margin: 5px 0;
-	font-size: 14px;
-	font-weight: normal;
-	line-height: 20px;
-}
 .table {
 	display: inline-table;
 	margin: 0 auto;
@@ -1028,6 +1028,7 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	text-align: center;
 	border: 1px solid #a2a2a2;
 	border-top: 0px;
+	white-space: nowrap;
 }
 .round-view > div > div > a:first-child, .round-view > :first-child {
 	border: 1px solid #a2a2a2;
