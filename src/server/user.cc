@@ -63,7 +63,7 @@ uint User::getPermissions(const string& viewer_id, uint viewer_type,
 void User::userTemplate(const StringView& title, const StringView& styles,
 	const StringView& scripts)
 {
-	baseTemplate(title, concat(".body{margin-left:190px}", styles),
+	baseTemplate(title, concat("body{margin-left:190px}", styles),
 		scripts);
 	if (!Session::isOpen())
 		return;
@@ -334,7 +334,7 @@ void User::listUsers() {
 	if (Session::user_type > UTYPE_TEACHER)
 		return error403();
 
-	baseTemplate("Users list", ".body{margin-left:30px}");
+	baseTemplate("Users list", "body{margin-left:30px}");
 	append("<h1>Users</h1>");
 	try {
 		DB::Statement stmt = db_conn.prepare(

@@ -218,7 +218,7 @@ void Sim::logs() {
 	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
 		return error403();
 
-	baseTemplate("Logs", ".body{margin-left:20px}");
+	baseTemplate("Logs", "body{margin-left:20px}");
 
 	// TODO: more logs and show less, but add "show more" button???
 	// TODO: active updating logs
