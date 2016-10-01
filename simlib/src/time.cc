@@ -43,3 +43,11 @@ bool isDatetime(const string& str) noexcept {
 	return (str.size() == 19 &&
 			strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
+
+time_t strToTime(const string& str, const char* format) noexcept {
+	struct tm t;
+	if (!strptime(str.c_str(), format, &t))
+		return -1;
+
+	return timegm(&t);
+}

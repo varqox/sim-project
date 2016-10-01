@@ -14,3 +14,16 @@ std::string localdate(const std::string& str, time_t curr_time = -1);
 
 // Checks if format is "%Y-%m-%d %H:%M:%S"
 bool isDatetime(const std::string& str) noexcept;
+
+/**
+ * @brief Converts a string containing time to time_t
+ *
+ * @param str a string containing time
+ * @param format the format of the contained time
+ *
+ * @return time as time_t, or -1 if an error occurred
+ *
+ * @errors The same that occur for strptime(3) and timegm(3)
+ */
+time_t strToTime(const std::string& str,
+	const char* format = "%Y-%m-%d %H:%M:%S") noexcept;
