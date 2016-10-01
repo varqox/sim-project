@@ -79,3 +79,78 @@ string SimBase::submissionStatusAsTd(SubmissionStatus status,
 
 	return "<td class=\"status\">Unknown</td>";
 }
+
+string SimBase::submissionStatusCSSClass(SubmissionStatus status,
+	bool show_final)
+{
+	// Fatal
+	if (status >= SubmissionStatus::WAITING) {
+		if (status == SubmissionStatus::WAITING)
+			return "status";
+
+		if (status == SubmissionStatus::COMPILATION_ERROR)
+			return "status purple";
+
+		if (status == SubmissionStatus::CHECKER_COMPILATION_ERROR)
+			return "status blue";
+
+		if (status == SubmissionStatus::JUDGE_ERROR)
+			return "status blue";
+
+		return "status";
+	}
+
+	/* Non-fatal */
+
+	// Final
+	if (show_final) {
+		if ((status & SubmissionStatus::FINAL_MASK) == SubmissionStatus::OK)
+			return "status green";
+
+		if ((status & SubmissionStatus::FINAL_MASK) == SubmissionStatus::WA)
+			return "status red";
+
+		if ((status & SubmissionStatus::FINAL_MASK) == SubmissionStatus::TLE)
+			return "status yellow";
+
+		if ((status & SubmissionStatus::FINAL_MASK) == SubmissionStatus::MLE)
+			return "status yellow";
+
+		if ((status & SubmissionStatus::FINAL_MASK) == SubmissionStatus::RTE)
+			return "status intense-red";
+
+	// Initial
+	} else {
+		if ((status & SubmissionStatus::INITIAL_MASK) ==
+			SubmissionStatus::INITIAL_OK)
+		{
+			return "status green";
+		}
+
+		if ((status & SubmissionStatus::INITIAL_MASK) ==
+			SubmissionStatus::INITIAL_WA)
+		{
+			return "status red";
+		}
+
+		if ((status & SubmissionStatus::INITIAL_MASK) ==
+			SubmissionStatus::INITIAL_TLE)
+		{
+			return "status yellow";
+		}
+
+		if ((status & SubmissionStatus::INITIAL_MASK) ==
+			SubmissionStatus::INITIAL_MLE)
+		{
+			return "status yellow";
+		}
+
+		if ((status & SubmissionStatus::INITIAL_MASK) ==
+			SubmissionStatus::INITIAL_RTE)
+		{
+			return "status intense-red";
+		}
+	}
+
+	return "status";
+}

@@ -1061,6 +1061,22 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	text-decoration: none;
 	background: #eee;
 }
+.round-view > div > div > a.status.green:hover,
+.round-view > div > div > a.status.green:focus {
+	background: #c9f3c9;
+}
+.round-view > div > div > a.status.red:hover,
+.round-view > div > div > a.status.red:focus {
+	background: #f6d0d0;
+}
+.round-view > div > div > a.status.intense-red:hover,
+.round-view > div > div > a.status.intense-red:focus {
+	background: #f6ad9c;
+}
+.round-view > div > div > a.status.yellow:hover,
+.round-view > div > div > a.status.yellow:focus {
+	background: #fbdda2;
+}
 
 /* Ranking */
 .ranking {

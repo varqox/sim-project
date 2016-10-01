@@ -3,6 +3,7 @@
 #include <simlib/debug.h>
 #include <simlib/time.h>
 
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -245,6 +246,8 @@ void Contest::printRoundPath(const StringView& page, bool force_normal) {
 
 void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 	const char* force_normal = (!admin_view && rpath->admin_access ? "/n" : "");
+	string current_date = date("%Y-%m-%d %H:%M:%S");
+
 	try {
 		if (rpath->type == CONTEST) {
 			// Select subrounds
@@ -256,9 +259,8 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 						"(visible IS TRUE OR begins IS NULL OR begins<=?) "
 					"ORDER BY item");
 			stmt.setString(1, rpath->contest->id);
-			string current_date;
 			if (!admin_view)
-				stmt.setString(2, (current_date = date("%Y-%m-%d %H:%M:%S")));
+				stmt.setString(2, current_date);
 
 			struct SubroundExtended {
 				string id, name, item, begins, ends, full_results;
@@ -315,6 +317,25 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				prob.back().name = res[3];
 			}
 
+			// Collect user's final submissions to listed problems
+			vector<pair<string, SubmissionStatus>> rid2stat; /*
+			 	(round_id, status of the final submission) */
+			if (Session::isOpen()) {
+				stmt = db_conn.prepare(
+					"SELECT round_id, status FROM submissions "
+					"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
+						"AND contest_round_id=?");
+				stmt.setString(1, Session::user_id);
+				stmt.setString(2, rpath->round_id);
+				res = stmt.executeQuery();
+
+				while (res.next())
+					rid2stat.emplace_back(res[1],
+						static_cast<SubmissionStatus>(res.getUInt(2)));
+
+				sort(rid2stat);
+			}
+
 			// Construct "table"
 			append("<div class=\"round-view\">"
 				"<a class=\"grayed\" href=\"/c/", rpath->contest->id,
@@ -338,10 +359,22 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 						"</div>"
 					"</a>");
 
+				bool show_full_results = (admin_view ||
+					sr.full_results <= current_date);
+
 				// List problems
 				vector<Problem>& prob = problems[sr.id];
 				for (auto&& pro : prob) {
-					append("<a href=\"/c/", pro.id, force_normal);
+					append("<a");
+
+					// Try to find the final submission to this problem
+					auto it = binaryFindBy(rid2stat,
+						&decltype(rid2stat)::value_type::first, pro.id);
+					if (it != rid2stat.end())
+						append(" class=\"", submissionStatusCSSClass(it->second,
+							show_full_results), '"');
+
+					append(" href=\"/c/", pro.id, force_normal);
 
 					if (link_to_problem_statement)
 						append("/statement");
@@ -378,6 +411,28 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			// List problems if and only if round has begun (for non-admins)
 			if (admin_view || rpath->round->begins <= date("%Y-%m-%d %H:%M:%S"))
 			{
+				// Collect user's final submissions to listed problems
+				vector<pair<string, SubmissionStatus>> rid2stat; /*
+				 	(round_id, status of the final submission) */
+				if (Session::isOpen()) {
+					DB::Statement stmt = db_conn.prepare(
+						"SELECT round_id, status FROM submissions "
+						"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
+							"AND parent_round_id=?");
+					stmt.setString(1, Session::user_id);
+					stmt.setString(2, rpath->round_id);
+					DB::Result res = stmt.executeQuery();
+
+					while (res.next())
+						rid2stat.emplace_back(res[1],
+							static_cast<SubmissionStatus>(res.getUInt(2)));
+
+					sort(rid2stat);
+				}
+
+				bool show_full_results = (admin_view ||
+					rpath->round->full_results <= current_date);
+
 				// Select problems
 				DB::Statement stmt = db_conn.prepare("SELECT id, name "
 					"FROM rounds WHERE parent=? ORDER BY item");
@@ -386,7 +441,16 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				// List problems
 				DB::Result res = stmt.executeQuery();
 				while (res.next()) {
-					append("<a href=\"/c/", res[1], force_normal);
+					append("<a");
+
+					// Try to find the final submission to this problem
+					auto it = binaryFindBy(rid2stat,
+						&decltype(rid2stat)::value_type::first, res[1]);
+					if (it != rid2stat.end())
+						append(" class=\"", submissionStatusCSSClass(it->second,
+							show_full_results), '"');
+
+					append(" href=\"/c/", res[1], force_normal);
 
 					if (link_to_problem_statement)
 						append("/statement");
@@ -400,6 +464,26 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				"</div>");
 
 		} else { // rpath->type == PROBLEM
+			string status_classes;
+			bool show_full_results = (admin_view ||
+				rpath->round->full_results <= current_date);
+
+			// Get status of the final submission to the problem
+			if (Session::isOpen()) {
+				DB::Statement stmt = db_conn.prepare(
+					"SELECT status FROM submissions "
+					"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
+						"AND round_id=?");
+				stmt.setString(1, Session::user_id);
+				stmt.setString(2, rpath->round_id);
+				DB::Result res = stmt.executeQuery();
+
+				if (res.next())
+					status_classes = concat(' ', submissionStatusCSSClass(
+						static_cast<SubmissionStatus>(res.getUInt(1)),
+						show_full_results));
+			}
+
 			// Construct "table"
 			append("<div class=\"round-view\">"
 				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
@@ -421,8 +505,8 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					"</div>"
 				"</a>"
 			// Problem
-				"<a class=\"grayed\" href=\"/c/", rpath->problem->id,
-					force_normal);
+				"<a class=\"grayed", status_classes, "\" href=\"/c/",
+					rpath->problem->id, force_normal);
 
 			if (link_to_problem_statement)
 				append("/statement");

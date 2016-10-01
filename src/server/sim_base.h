@@ -48,4 +48,7 @@ protected:
 
 	static std::string submissionStatusAsTd(SubmissionStatus status,
 		bool show_final);
+
+	static std::string submissionStatusCSSClass(SubmissionStatus status,
+		bool show_final);
 };
