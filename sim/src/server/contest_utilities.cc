@@ -288,7 +288,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			stmt.setString(1, rpath->contest->id);
 
 			res = stmt.executeQuery();
-			std::map<string, vector<Problem> > problems; // (round_id, problems)
+			std::map<string, vector<Problem>> problems; // (round_id, problems)
 
 			// Fill with all subrounds, which has begun <- for these rounds
 			// problems will be listed
@@ -327,7 +327,16 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				// Round
 				append("<div>"
 					"<a href=\"/c/", sr.id, force_normal, "\">",
-					htmlSpecialChars(sr.name), "</a>");
+						htmlSpecialChars(sr.name),
+						"<div>"
+							"<label>From: </label><span>", (sr.begins.empty() ?
+								"The Big Bang" : sr.begins + " UTC"), "</span>"
+						"</div>"
+						"<div>"
+							"<label>To: </label><span>", (sr.ends.empty() ?
+								"Forever" : sr.ends + " UTC"), "</span>"
+						"</div>"
+					"</a>");
 
 				// List problems
 				vector<Problem>& prob = problems[sr.id];
@@ -354,6 +363,16 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			append("<div>"
 				"<a class=\"grayed\" href=\"/c/", rpath->round->id,
 					force_normal, "\">", htmlSpecialChars(rpath->round->name),
+					"<div>"
+						"<label>From: </label><span>",
+							(rpath->round->begins.empty() ? "The Big Bang"
+								: rpath->round->begins + " UTC"), "</span>"
+					"</div>"
+					"<div>"
+						"<label>To: </label><span>",
+							(rpath->round->ends.empty() ? "Forever"
+								: rpath->round->ends + " UTC"), "</span>"
+					"</div>"
 				"</a>");
 
 			// List problems if and only if round has begun (for non-admins)
@@ -389,7 +408,18 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			// Round
 			append("<div>"
 				"<a href=\"/c/", rpath->round->id, force_normal, "\">",
-					htmlSpecialChars(rpath->round->name), "</a>"
+					htmlSpecialChars(rpath->round->name),
+					"<div>"
+						"<label>From: </label><span>",
+							(rpath->round->begins.empty() ? "The Big Bang"
+								: rpath->round->begins + " UTC"), "</span>"
+					"</div>"
+					"<div>"
+						"<label>To: </label><span>",
+							(rpath->round->ends.empty() ? "Forever"
+								: rpath->round->ends + " UTC"), "</span>"
+					"</div>"
+				"</a>"
 			// Problem
 				"<a class=\"grayed\" href=\"/c/", rpath->problem->id,
 					force_normal);

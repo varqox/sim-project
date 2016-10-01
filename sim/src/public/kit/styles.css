@@ -1033,18 +1033,33 @@ table.stripped > tbody > tr:last-child > td:last-child {
 .round-view > div > div > a:first-child, .round-view > :first-child {
 	border: 1px solid #a2a2a2;
 	border-bottom: 2px solid #a2a2a2;
-}
-.round-view > div > div > a:first-child, .round-view > :first-child {
 	padding: 7px;
 	font-weight: bold;
 	line-height: 12px;
+}
+.round-view > div > div > a:first-child > div {
+	margin: 5px;
+	display: block;
+	text-align: left;
+	color: #000;
+	font-size: 12px;
+	font-weight: normal;
+}
+.round-view > div > div > a:first-child > div:first-child {
+	margin-top: 10px;
+}
+.round-view > div > div > a:first-child > div > label {
+	display: inline-block;
+	padding-right: 8px;
+	min-width: 40px;
+	color: #444;
 }
 .round-view > div > div > a:hover,
 .round-view > div > div > a:focus,
 .round-view > a:first-child:hover,
 .round-view > a:first-child:focus {
 	text-decoration: none;
-	background: #eeeeee;
+	background: #eee;
 }
 
 /* Ranking */
