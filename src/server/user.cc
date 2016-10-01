@@ -855,7 +855,8 @@ void User::printUserSubmissions(uint limit) {
 			bool show_final_results = (admin_view || res[12] <= current_date);
 
 			// Rest
-			append("<td><a href=\"/s/", res[1], "\">", res[2], "</a></td>"
+			append("<td><a href=\"/s/", res[1], "\" datetime=\"",
+						toStr(strToTime(res[2])),"\">", res[2], " UTC</a></td>"
 					"<td>"
 						"<a href=\"/c/", res[3], "\">",
 							htmlSpecialChars(res[4]), "</a>"

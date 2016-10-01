@@ -248,6 +248,21 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 	const char* force_normal = (!admin_view && rpath->admin_access ? "/n" : "");
 	string current_date = date("%Y-%m-%d %H:%M:%S");
 
+	auto round_duration = [](const string& begin, const string& end) {
+		return concat("<div>"
+				"<label>From: </label><span",
+					(begin.empty() ? ">The Big Bang" : concat(" datetime=\"",
+						toStr(strToTime(begin)), "\">", begin, " UTC")),
+					"</span>"
+			"</div>"
+			"<div>"
+				"<label>To: </label><span",
+					(end.empty() ? ">Forever" : concat(" datetime=\"",
+						toStr(strToTime(end)), "\">", end, " UTC")),
+					"</span>"
+			"</div>");
+	};
+
 	try {
 		if (rpath->type == CONTEST) {
 			// Select subrounds
@@ -349,14 +364,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				append("<div>"
 					"<a href=\"/c/", sr.id, force_normal, "\">",
 						htmlSpecialChars(sr.name),
-						"<div>"
-							"<label>From: </label><span>", (sr.begins.empty() ?
-								"The Big Bang" : sr.begins + " UTC"), "</span>"
-						"</div>"
-						"<div>"
-							"<label>To: </label><span>", (sr.ends.empty() ?
-								"Forever" : sr.ends + " UTC"), "</span>"
-						"</div>"
+						round_duration(sr.begins, sr.ends),
 					"</a>");
 
 				bool show_full_results = (admin_view ||
@@ -396,16 +404,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			append("<div>"
 				"<a class=\"grayed\" href=\"/c/", rpath->round->id,
 					force_normal, "\">", htmlSpecialChars(rpath->round->name),
-					"<div>"
-						"<label>From: </label><span>",
-							(rpath->round->begins.empty() ? "The Big Bang"
-								: rpath->round->begins + " UTC"), "</span>"
-					"</div>"
-					"<div>"
-						"<label>To: </label><span>",
-							(rpath->round->ends.empty() ? "Forever"
-								: rpath->round->ends + " UTC"), "</span>"
-					"</div>"
+					round_duration(rpath->round->begins, rpath->round->ends),
 				"</a>");
 
 			// List problems if and only if round has begun (for non-admins)
@@ -493,16 +492,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			append("<div>"
 				"<a href=\"/c/", rpath->round->id, force_normal, "\">",
 					htmlSpecialChars(rpath->round->name),
-					"<div>"
-						"<label>From: </label><span>",
-							(rpath->round->begins.empty() ? "The Big Bang"
-								: rpath->round->begins + " UTC"), "</span>"
-					"</div>"
-					"<div>"
-						"<label>To: </label><span>",
-							(rpath->round->ends.empty() ? "Forever"
-								: rpath->round->ends + " UTC"), "</span>"
-					"</div>"
+					round_duration(rpath->round->begins, rpath->round->ends),
 				"</a>"
 			// Problem
 				"<a class=\"grayed", status_classes, "\" href=\"/c/",

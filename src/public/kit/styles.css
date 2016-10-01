@@ -670,6 +670,9 @@ input[disabled], select[disabled], textarea[disabled], input[readonly], select[r
 	cursor: not-allowed;
 	background-color: #eeeeee;
 }
+span[disabled] {
+	color: #555;
+}
 a {
 	color: #1088cc;
 	text-decoration: none;

@@ -439,6 +439,7 @@ void Contest::addRound() {
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(begins), "\" size=\"19\" "
 					"maxlength=\"19\">"
+					"<span>UTC</span>"
 			"</div>"
 			// Ends
 			"<div class=\"field-group\">"
@@ -447,6 +448,7 @@ void Contest::addRound() {
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(ends), "\" size=\"19\" "
 					"maxlength=\"19\">"
+					"<span>UTC</span>"
 			"</div>"
 			// Full_results
 			"<div class=\"field-group\">"
@@ -455,6 +457,7 @@ void Contest::addRound() {
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlSpecialChars(full_results), "\" size=\"19\" "
 					"maxlength=\"19\">"
+					"<span>UTC</span>"
 			"</div>"
 			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
 		"</form>"
@@ -885,6 +888,7 @@ void Contest::editRound() {
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(begins), "\" size=\"19\" "
 						"maxlength=\"19\">"
+					"<span>UTC</span>"
 				"</div>"
 				// Ends
 				"<div class=\"field-group\">"
@@ -893,6 +897,7 @@ void Contest::editRound() {
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(ends), "\" size=\"19\" "
 						"maxlength=\"19\">"
+					"<span>UTC</span>"
 				"</div>"
 				// Full_results
 				"<div class=\"field-group\">"
@@ -901,6 +906,7 @@ void Contest::editRound() {
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlSpecialChars(full_results), "\" size=\"19\" "
 						"maxlength=\"19\">"
+					"<span>UTC</span>"
 				"</div>"
 				"<div class=\"button-row\">"
 					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
