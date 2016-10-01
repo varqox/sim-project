@@ -7,7 +7,7 @@ SIM is an open source platform for carrying out algorithmic contests
 </div>
 
 
-## Instalation
+## Installation
 
 ### Dependencies:
 
@@ -75,7 +75,7 @@ SIM is an open source platform for carrying out algorithmic contests
   make install run
   ```
 
-6. Enter http://127.7.7.7:8080 via your internet browser, by default there was created SIM root account
+6. Enter http://127.7.7.7:8080 via your web browser, by default there was created SIM root account
   ```
   username: sim
   password: sim

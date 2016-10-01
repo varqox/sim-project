@@ -5,14 +5,15 @@ window.onload = function updateClock() {
 
 	var time = new Date();
 	time.setTime(time.getTime() - updateClock.time_difference);
-	var hours = time.getUTCHours();
-	var minutes = time.getUTCMinutes();
-	var seconds = time.getUTCSeconds();
+	var hours = time.getHours();
+	var minutes = time.getMinutes();
+	var seconds = time.getSeconds();
 	hours = (hours < 10 ? '0' : '') + hours;
 	minutes = (minutes < 10 ? '0' : '') + minutes;
 	seconds = (seconds < 10 ? '0' : '') + seconds;
 	// Update the displayed time
-	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, ' UTC');
+	var tzo = -time.getTimezoneOffset();
+	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');
 	setTimeout(updateClock, 1000 - time.getMilliseconds());
 }
 
@@ -30,6 +31,29 @@ $(document).ready(function(){
 	$(document).click(function(event) {
 		if(!$(event.target).is('.dropmenu-toggle, .dropmenu-toggle *'))
 			$('.dropmenu.open').removeClass('open');
+	});
+});
+
+// Converts datetimes to local
+$(document).ready(function() {
+	$('*[datetime]').each(function() {
+		var x = $(this), time = new Date(x.attr('datetime') * 1000);
+		var tzo = -time.getTimezoneOffset();
+
+		var month = time.getMonth() + 1;
+		var day = time.getDate();
+		var hours = time.getHours();
+		var minutes = time.getMinutes();
+		var seconds = time.getSeconds();
+		month = (month < 10 ? '0' : '') + month;
+		day = (day < 10 ? '0' : '') + day;
+		hours = (hours < 10 ? '0' : '') + hours;
+		minutes = (minutes < 10 ? '0' : '') + minutes;
+		seconds = (seconds < 10 ? '0' : '') + seconds;
+
+		x.html(String().concat(time.getFullYear(), '-', month, '-', day,
+			' ', hours, ':', minutes, ':', seconds,
+			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
 	});
 });
 
