@@ -912,7 +912,8 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	color: #555555;
 }
 .menu > hr {
-	height: 1px;
+	min-height: 1px; /* It has bo be done this way - height: 1px doesn't always work */
+	max-height: 1px;
 	margin: 2px 0;
 	background-color: #bbb;
 	border: none;
@@ -1102,15 +1103,18 @@ table.stripped > tbody > tr:last-child > td:last-child {
 .submission-info {
 	display: block;
 	width: 85%;
-	margin: 15px 0 0 20px;
+	margin: 5px 8px;
 }
 .submission-info > div:first-child {
 	display: flex;
-	flex-flow: row nowrap;
+	flex-flow: row wrap;
 	justify-content: space-between;
 }
-.submission-info h1 {
-	line-height: 26px;
+.submission-info > div:first-child h1 {
+	white-space: nowrap;
+}
+.submission-info > div:first-child h1 + div {
+	margin: 8px 0;
 }
 /*.submission-info h2 {
 	margin: 0;
@@ -1122,7 +1126,7 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	margin-top: 30px;
 }
 .submission-info table td {
-	padding: 10px;
+	padding: 10px 16px;
 	text-align: center;
 }
 div.right-flow {
@@ -1159,7 +1163,10 @@ div.right-flow {
 	min-width: 190px;
 }
 .results > table th.time {
-	min-width: 100px;
+	min-width: 95px;
+}
+.results > table th.memory {
+	min-width: 110px;
 }
 .results > table th.points {
 	min-width: 70px;
@@ -1167,11 +1174,14 @@ div.right-flow {
 .results > table th {
 	padding: 6px;
 	line-height: 20px;
+	white-space: nowrap;
 }
 .results > table td {
-	padding: 4px 24px 4px 8px;
+	padding: 4px 20px 4px 8px;
 	line-height: 20px;
+	white-space: nowrap;
 }
+.results > table td:nth-child(3),
 .results > table td:nth-child(4) {
 	text-align: right;
 }
@@ -1291,6 +1301,11 @@ table.submissions td {
 	padding: 4px 24px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
+}
+table.submissions td.status {
+	padding-left: 16px;
+	padding-right: 16px;
+	text-align: center;
 }
 table.submissions td .btn-small {
 	margin: 0 2px;
