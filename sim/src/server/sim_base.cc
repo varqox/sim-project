@@ -46,34 +46,34 @@ string SimBase::submissionStatusAsTd(SubmissionStatus status,
 		if ((status & SubmissionStatus::INITIAL_MASK) ==
 			SubmissionStatus::INITIAL_OK)
 		{
-			return "<td class=\"status green\">Initial tests: OK</td>";
+			return "<td class=\"status green\">Initial: OK</td>";
 		}
 
 		if ((status & SubmissionStatus::INITIAL_MASK) ==
 			SubmissionStatus::INITIAL_WA)
 		{
-			return "<td class=\"status red\">Initial tests: Wrong answer</td>";
+			return "<td class=\"status red\">Initial: Wrong answer</td>";
 		}
 
 		if ((status & SubmissionStatus::INITIAL_MASK) ==
 			SubmissionStatus::INITIAL_TLE)
 		{
 			return "<td class=\"status yellow\">"
-				"Initial tests: Time limit exceeded</td>";
+				"Initial: Time limit exceeded</td>";
 		}
 
 		if ((status & SubmissionStatus::INITIAL_MASK) ==
 			SubmissionStatus::INITIAL_MLE)
 		{
 			return "<td class=\"status yellow\">"
-				"Initial tests: Memory limit exceeded</td>";
+				"Initial: Memory limit exceeded</td>";
 		}
 
 		if ((status & SubmissionStatus::INITIAL_MASK) ==
 			SubmissionStatus::INITIAL_RTE)
 		{
 			return "<td class=\"status intense-red\">"
-				"Initial tests: Runtime error</td>";
+				"Initial: Runtime error</td>";
 		}
 	}
 
