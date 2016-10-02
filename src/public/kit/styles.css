@@ -1267,6 +1267,10 @@ table.submissions {
 	display: inline-table;
 	margin: 0;
 }
+table.submissions th {
+	padding: 6px;
+	line-height: 20px;
+}
 table.submissions th.username {
 	min-width: 60px;
 }
@@ -1274,13 +1278,13 @@ table.submissions th.full-name {
 	min-width: 60px;
 }
 table.submissions th.time {
-	min-width: 162px;
+	min-width: 118px;
 }
 table.submissions th.problem {
-	min-width: 120px;
+	min-width: 135px;
 }
 table.submissions th.status {
-	min-width: 200px;
+	min-width: 190px;
 }
 table.submissions th.score {
 	min-width: 60px;
@@ -1288,17 +1292,17 @@ table.submissions th.score {
 table.submissions th.type {
 	min-width: 60px;
 }
-table.submissions th {
-	padding: 6px;
-	line-height: 20px;
+table.submissions td:nth-child(2) > a, /* Normal (and) user submission */
+table.submissions td:nth-child(4) > a { /* Round submissions (admin view) */
+	white-space: nowrap;
 }
 table.submissions tr.ignored,
 .submission-info table tr.ignored {
-	background: #eee;
+	background: #e5e5e5;
 	color: #444;
 }
 table.submissions td {
-	padding: 4px 24px 4px 8px;
+	padding: 4px 16px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
 }
@@ -1312,9 +1316,6 @@ table.submissions td .btn-small {
 }
 table.submissions tr > td:last-child {
 	white-space: pre;
-}
-table.submissions td.status {
-	text-align: center;
 }
 
 /* Users & Contest users*/
