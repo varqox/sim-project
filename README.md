@@ -72,7 +72,7 @@ SIM is an open source platform for carrying out algorithmic contests
 
   You can combine building, installation and running commands into:
   ```sh
-  make install run
+  make src install run
   ```
 
 6. Enter http://127.7.7.7:8080 via your web browser, by default there was created SIM root account
@@ -92,7 +92,7 @@ Just type (be aware of incompatible database (and other inner) changes)
 ```sh
 git pull
 git submodule update
-make -j4 install run
+make -j4 src install run
 ```
 
 ### Task packages
