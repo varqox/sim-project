@@ -990,7 +990,7 @@ void Contest::editProblem() {
 		Spawner::ExitStat es;
 		try {
 			es = Spawner::run(args[0], args,
-				{-1, STDERR_FILENO, STDERR_FILENO, 30 * 1000000 /* 30 s */},
+				{-1, STDERR_FILENO, STDERR_FILENO, 200 * 1000000 /* 200 s */},
 				"problems");
 
 		} catch (const std::exception& e) {

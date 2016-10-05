@@ -36,9 +36,10 @@ $(document).ready(function(){
 
 // Converts datetimes to local
 $(document).ready(function() {
+	// Converts datetimes
+	var tzo = -(new Date()).getTimezoneOffset();
 	$('*[datetime]').each(function() {
 		var x = $(this), time = new Date(x.attr('datetime') * 1000);
-		var tzo = -time.getTimezoneOffset();
 
 		var month = time.getMonth() + 1;
 		var day = time.getDate();
@@ -51,8 +52,20 @@ $(document).ready(function() {
 		minutes = (minutes < 10 ? '0' : '') + minutes;
 		seconds = (seconds < 10 ? '0' : '') + seconds;
 
-		x.html(String().concat(time.getFullYear(), '-', month, '-', day,
-			' ', hours, ':', minutes, ':', seconds,
+		// If this is a submission time in a submission table, then skip tz part
+		if (x.parents('.submissions').length)
+			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
+				' ', hours, ':', minutes, ':', seconds));
+		else
+			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
+				' ', hours, ':', minutes, ':', seconds,
+				'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
+	});
+
+	// Give timezanoe info in the submissions table
+	$('.submissions th.time').each(function() {
+		$(this).children().remove();
+		$(this).append(String().concat(
 			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
 	});
 });
