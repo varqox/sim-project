@@ -1278,7 +1278,7 @@ table.submissions th.full-name {
 	min-width: 60px;
 }
 table.submissions th.time {
-	min-width: 118px;
+	min-width: 100px;
 }
 table.submissions th.problem {
 	min-width: 135px;

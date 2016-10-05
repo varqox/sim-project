@@ -249,7 +249,7 @@ void Contest::editFile(const StringView& id, string name) {
 					"<label>Modified</label>"
 					"<span datetime=\"",
 						toStr(strToTime(modified)),"\" disabled>", modified,
-						" UTC</span>"
+						"<sup>UTC+0</sup></span>"
 				"</div>"
 
 				"<div class=\"button-row\">"
@@ -414,7 +414,7 @@ void Contest::files(bool admin_view) {
 			string id = res[1];
 			append("<tr>"
 				"<td datetime=\"", toStr(strToTime(res[2])),"\">", res[2],
-					" UTC</td>"
+					"<sup>UTC+0</sup></td>"
 				"<td><a href=\"/file/", id, "\">", htmlSpecialChars(res[3]),
 					"</a></td>"
 				"<td>", humanizeFileSize(res.getUInt64(4)), "</td>"
