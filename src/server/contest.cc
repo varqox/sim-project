@@ -1450,7 +1450,7 @@ void Contest::users() {
 				stmt.setString(3, rpath->round_id);
 				stmt.executeUpdate();
 
-				return response("200 OK");
+				return response("200 OK"); // Ignore errors
 			}
 
 			// Expel user from the contest
