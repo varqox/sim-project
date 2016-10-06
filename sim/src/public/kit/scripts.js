@@ -1,6 +1,6 @@
 // Clock
 window.onload = function updateClock() {
-	if (typeof updateClock.time_difference === 'undefined')
+	if (updateClock.time_difference === undefined)
 		updateClock.time_difference = window.performance.timing.responseStart - start_time;
 
 	var time = new Date();
@@ -121,7 +121,14 @@ function modalForm(form_title, form_body) {
 		html: form_body
 	}));
 }
-function modalFormSubmitButton(value, url, success_msg, css_classes = 'blue', cancel_button_message = null) {
+function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_button_message)
+{
+	// Default arguments
+	if (css_classes === undefined)
+		css_classes = 'blue';
+	if (cancel_button_message === undefined)
+		cancel_button_message = null;
+
 	return $('<div>', {
 		style: 'margin: 8px auto 0',
 		html: $('<input>', {
