@@ -282,8 +282,9 @@ void Spawner::runChild(const std::string& exec,
 	// Set CPU time limit [s] (useful when spawned process becomes orphaned)
 	if (opts.time_limit > 0) {
 		struct rlimit limit;
-		limit.rlim_max = limit.rlim_cur = opts.time_limit / 1000000 + 1; /* +1
-			to avoid premature death */
+		limit.rlim_max = limit.rlim_cur =
+			(opts.time_limit + 500000) / 1000000 + 1; // +1 to avoid premature
+			                                          // death
 		if (setrlimit(RLIMIT_CPU, &limit))
 			send_error("setrlimit(RLIMIT_CPU)");
 	}

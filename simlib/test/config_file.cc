@@ -78,14 +78,13 @@ TEST (ConfigFile, isStringLiteral) {
 			<< "p.first: " << p.first << endl;
 
 	auto is_beginning = [](char c) {
-		return !(isspace(c) || c == '[' || c == ',' || c == ']' || c == '#' ||
-			c == '\'' || c == '"');
+		return !(isspace(c) || isIn(c, {'[', ',', ']', '#', '\'', '"'}));
 	};
 	auto is_interior = [](char c) {
-		return !(c == '\n' || c == '#' || c == ']' || c == ',');
+		return !isIn(c, {'\n', '#', ']', ','});
 	};
 	auto is_ending = [](char c) {
-		return !(isspace(c) || c == '#' || c == ']' || c == ',');
+		return !(isspace(c) || isIn(c, {'#', ']', ','}));
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};
@@ -97,19 +96,19 @@ TEST (ConfigFile, isStringLiteral) {
 	array<char, 4> t;
 	for (int a = t[0] = 0; a < 256; t[0] = ++a) {
 		// One character
-		EXPECT_EQ(ConfigFile::isStringLiteral(StringView(t.data(), 1)),
+		EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 1}),
 				is_beginning(t[0]) && is_ending(t[0]))
 			<< dump(a) << endl;
 
 		for (int b = t[1] = 0; b < 256; t[1] = ++b) {
 			// Two characters
-			EXPECT_EQ(ConfigFile::isStringLiteral(StringView(t.data(), 2)),
+			EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 2}),
 					is_beginning(t[0]) && is_ending(t[1]))
 				<< dump(a, b) << endl;
 
 			for (int c = t[2] = 0; c < 256; t[2] = ++c) {
 				// Three characters
-				EXPECT_EQ(ConfigFile::isStringLiteral(StringView(t.data(), 3)),
+				EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 3}),
 						is_beginning(t[0]) && is_interior(t[1]) &&
 						is_ending(t[2]))
 					<< dump(a, b, c) << endl;
@@ -117,7 +116,7 @@ TEST (ConfigFile, isStringLiteral) {
 		}
 	}
 
-	// Special test cases: ". #." <-- such a sequence cannot appear in string
+	// Special test cases: ". #." <-- such a sequence cannot appear in a string
 	for (int a = 0; a < 256; ++a)
 		for (int b = 0; b < 256; ++b) {
 			t = {{(char)a, ' ', '#', (char)b}};

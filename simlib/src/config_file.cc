@@ -2,6 +2,7 @@
 #include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/parsers.h"
+#include "../include/utilities.h"
 
 using std::map;
 using std::string;
@@ -285,14 +286,14 @@ bool ConfigFile::isStringLiteral(const StringView& str) {
 		return false;
 
 	// Special check on the first and last character
-	if (str[0] == '[' || str[0] == '\'' || str[0] == '"' || str[0] == '#' ||
-		isspace(str[0]) || isspace(str.back()))
+	if (isIn(str[0], {'[', '\'', '"', '#'}) || isspace(str[0]) ||
+		isspace(str.back()))
 	{
 		return false;
 	}
 
-	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\n' || str[i] == ']' || str[i] == ',' || str[i] == '#')
+	for (char c : str)
+		if (isIn(c, {'\n', ']', ',', '#'}))
 			return false;
 
 	return true;
