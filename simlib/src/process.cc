@@ -3,6 +3,7 @@
 #include "../include/memory.h"
 #include "../include/parsers.h"
 #include "../include/process.h"
+#include "../include/utilities.h"
 
 #include <dirent.h>
 
@@ -48,24 +49,38 @@ string getExec(pid_t pid) {
 	return string(buff.data(), rc);
 }
 
-vector<pid_t> findProcessesByExec(string exec, bool include_me) {
-	if (exec.empty())
+vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
+	if (exec_set.empty())
 		return {};
-
-	if (exec.front() != '/')
-		exec = concat(getCWD(), exec);
-	// Make exec absolute
-	exec = abspath(exec);
 
 	pid_t pid, my_pid = (include_me ? -1 : getpid());
 	DIR *dir = opendir("/proc");
 	if (dir == nullptr)
 		THROW("Cannot open /proc directory", error(errno));
 
+	string cwd;
+	for (auto& exec : exec_set) {
+		if (exec.front() != '/') {
+			if (cwd.empty()) // cwd not set
+				cwd = getCWD();
+			exec = concat(cwd, exec);
+		}
+
+		// Make exec absolute
+		exec = abspath(exec);
+	}
+
 	// Process with deleted exec will have " (deleted)" suffix in result of
 	// readlink(2)
-	string exec_deleted = concat(exec, " (deleted)");
-	ssize_t buff_size = exec_deleted.size() + 1; // +1 - for terminating null
+	ssize_t buff_size = 0;
+	for (int i = 0, n = exec_set.size(); i < n; ++i) {
+		string deleted = concat(exec_set[i], " (deleted)");
+		buff_size = meta::max(buff_size, (ssize_t)deleted.size());
+		exec_set.emplace_back(std::move(deleted));
+	}
+
+	sort(exec_set); // To make binary search possible
+	++buff_size; // For a terminating null character
 
 	dirent *file;
 	vector<pid_t> res;
@@ -87,7 +102,7 @@ vector<pid_t> findProcessesByExec(string exec, bool include_me) {
 
 		buff[len] = '\0';
 
-		if (exec == buff || exec_deleted == buff)
+		if (binary_search(exec_set, StringView{buff}))
 			res.emplace_back(pid); // We have a match
 	}
 

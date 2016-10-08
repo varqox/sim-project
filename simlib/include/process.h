@@ -30,19 +30,21 @@ std::string getCWD();
 std::string getExec(pid_t pid);
 
 /**
- * @brief Get a vector of processes pids which are instances of @p exec
+ * @brief Get a vector of processes pids which are instances of one of
+ *   @p exec_set
  * @details Function check every accessible process if matches
  *
- * @param exec path to executable (if absolute, then getting CWD is omitted)
- * @param include_me whether include calling process in result (if matches) or
- *   not
+ * @param exec_set paths to executables (if absolute, then getting CWD is
+ *   omitted)
+ * @param include_me whether include the calling process in the result
+ *   (if matches) or not
  *
  * @return vector of pids of matched processes
  *
  * @errors Exceptions from getCWD() or if opendir(2) fails then
  *   std::runtime_error will be thrown
  */
-std::vector<pid_t> findProcessesByExec(std::string exec,
+std::vector<pid_t> findProcessesByExec(std::vector<std::string> exec_set,
 	bool include_me = false);
 
 /**
