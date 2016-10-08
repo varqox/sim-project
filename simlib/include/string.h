@@ -521,8 +521,12 @@ public:
 
 	// Extracts prefix of length n
 	StringView extractPrefix(size_type n) noexcept {
+		if (n > len)
+			n = len;
+
 		StringView res = substring(0, n);
-		removePrefix(n);
+		str += n;
+		len -= n;
 		return res;
 	}
 
