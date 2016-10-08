@@ -1,6 +1,7 @@
 #include "../include/debug.h"
 #include "../include/logger.h"
 #include "../include/memory.h"
+#include "../include/parsers.h"
 #include "../include/process.h"
 
 #include <dirent.h>
@@ -128,4 +129,29 @@ int8_t detectArchitecture(pid_t pid) {
 		return ARCH_x86_64;
 
 	THROW("Unsupported architecture");
+}
+
+string getProcStat(pid_t pid, uint field_no) {
+	string contents = getFileContents(concat("/proc/", toStr(pid), "/stat"));
+	SimpleParser sp {contents};
+
+	// [0] - Process pid
+	StringView val = sp.extractNextNonEmpty(isspace);
+	if (field_no == 0)
+		return val.to_string();
+
+	// [1] Executable filename
+	sp.removeLeading(isspace);
+	sp.removeLeading('(');
+	val = sp.extractPrefix(sp.rfind(')'));
+	if (field_no == 1)
+		return val.to_string();
+
+	sp.removeLeading(')');
+
+	// [2...]
+	for (field_no -= 1; field_no > 0; --field_no)
+		val = sp.extractNextNonEmpty(isspace);
+
+	return val.to_string();
 }

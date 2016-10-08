@@ -72,6 +72,20 @@ constexpr int8_t ARCH_x86_64 = 1;
  */
 int8_t detectArchitecture(pid_t pid);
 
+/**
+ * @brief Returns field @p field_no value from /proc/@p pid/stat
+ *
+ * @param pid process id
+ * @param field_no number of the field to return, field numeration goes from 0
+ *
+ * @return field value
+ *
+ * @errors If any error occurs then an exception of type std::runtime_error is
+ *   thrown with a proper message. Example errors: process not found,
+ *   invalid field_no...
+ */
+std::string getProcStat(pid_t pid, uint field_no);
+
 // Block all signals
 template<int (*func)(int, const sigset_t*, sigset_t*)>
 class SignalBlockerBase {

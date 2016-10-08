@@ -519,6 +519,21 @@ public:
 			len -= n;
 	}
 
+	// Extracts prefix of length n
+	StringView extractPrefix(size_type n) noexcept {
+		StringView res = substring(0, n);
+		removePrefix(n);
+		return res;
+	}
+
+	// Extracts suffix of length n
+	StringView extractSuffix(size_type n) noexcept {
+		if (n > len)
+			len = n;
+		len -= n;
+		return {data() + len, n};
+	}
+
 	// Removes leading characters for which f() returns true
 	template<class Func>
 	void removeLeading(Func&& f) {
