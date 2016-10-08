@@ -100,10 +100,8 @@ uninstall:
 run: $(filter-out run, $(MAKECMDGOALS))
 	@ # ^ run always have to be executed at the end
 
-	# Kill sim-server and judge-machine
-	src/killinstc $(abspath $(DESTDIR)/sim-server)
-	src/killinstc $(abspath $(DESTDIR)/sim-server2)
-	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
+		$(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/judge-machine)
 
 	# Run
 	$(abspath $(DESTDIR)/judge-machine)&

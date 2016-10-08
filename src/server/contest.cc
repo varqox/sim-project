@@ -543,8 +543,8 @@ void Contest::addProblem() {
 				}
 
 				// Put the Simfile in the package
-				putFileContents(conver.unpackedPackagePath() + "Simfile",
-					sf.dump());
+				BLOCK_SIGNALS(putFileContents(
+					conver.unpackedPackagePath() + "Simfile", sf.dump()));
 
 				// 'Transaction' begin
 				// Insert problem
