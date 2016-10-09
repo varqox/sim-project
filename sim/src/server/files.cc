@@ -78,8 +78,8 @@ void Contest::addFile() {
 				return redirect(concat("/c/", rpath->round_id, "/files"));
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -182,8 +182,8 @@ void Contest::editFile(const StringView& id, string name) {
 				fv.addError("Update successful");
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -290,8 +290,8 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 			return redirect(location.empty() ? "/" : location);
 
 		} catch (const std::exception& e) {
-			fv.addError("Internal server error");
 			ERRLOG_CATCH(e);
+			fv.addError("Internal server error");
 		}
 
 	contestTemplate("Delete file");

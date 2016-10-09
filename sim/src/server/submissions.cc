@@ -118,8 +118,8 @@ void Contest::submit(bool admin_view) {
 				return redirect("/s/" + submission_id);
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 		}
 	}
@@ -236,8 +236,8 @@ void Contest::submit(bool admin_view) {
 		}
 
 	} catch (const std::exception& e) {
-		fv.addError("Internal server error");
 		ERRLOG_CATCH(e);
+		fv.addError("Internal server error");
 	}
 
 	if (hasSuffix(buffer, "</option>")) {
@@ -382,7 +382,7 @@ void Contest::submission() {
 
 		// Get submission
 		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
-			"status, score, name, tag, first_name, last_name, username, "
+			"status, score, name, shortname, first_name, last_name, username, "
 			"initial_report, final_report");
 		DB::Statement stmt = db_conn.prepare(
 			concat("SELECT user_id, round_id, s.type", columns, " "
@@ -559,7 +559,7 @@ void Contest::submission() {
 		SubmissionStatus submission_status = SubmissionStatus(res.getUInt(5));
 		string score = res[6];
 		string problem_name = res[7];
-		string problem_tag = res[8];
+		string problem_shortname = res[8];
 		string full_name = concat(res[9], ' ', res[10]);
 
 		contestTemplate("Submission " + submission_id);
@@ -615,7 +615,7 @@ void Contest::submission() {
 			rpath->round->full_results <= date("%Y-%m-%d %H:%M:%S"));
 
 		append("<td>", htmlSpecialChars(
-				concat(problem_name, " (", problem_tag, ')')), "</td>"
+				concat(problem_name, " (", problem_shortname, ')')), "</td>"
 				"<td datetime=\"", toStr(strToTime(submit_time)),"\">",
 					submit_time, "<sup>UTC+0</sup></td>",
 				submissionStatusAsTd(submission_status, show_final_results),

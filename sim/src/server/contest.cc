@@ -306,8 +306,8 @@ void Contest::addContest() {
 				return redirect("/c");
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -409,8 +409,8 @@ void Contest::addRound() {
 				return redirect("/c/" + rpath->round_id);
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -549,7 +549,7 @@ void Contest::addProblem() {
 				// 'Transaction' begin
 				// Insert problem
 				DB::Statement stmt = db_conn.prepare(
-					"INSERT problems (name, tag, owner, added) "
+					"INSERT problems (name, shortname, owner, added) "
 						"VALUES('', '', 0, ?)");
 				stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
 				if (1 != stmt.executeUpdate())
@@ -590,14 +590,14 @@ void Contest::addProblem() {
 					"UPDATE problems p, rounds r,"
 							"(SELECT COALESCE(MAX(item)+1, 1) x FROM rounds "
 								"WHERE parent=?) t "
-						"SET p.name=?, p.tag=?, p.owner=?, "
+						"SET p.name=?, p.shortname=?, p.owner=?, "
 							"parent=?, grandparent=?, r.name=?, item=t.x, "
 							"problem_id=? "
 						"WHERE p.id=? AND r.id=?");
 
 				stmt.setString(1, rpath->round->id);
 				stmt.setString(2, sf.name);
-				stmt.setString(3, sf.tag);
+				stmt.setString(3, sf.shortname);
 				stmt.setString(4, Session::user_id);
 				stmt.setString(5, rpath->round->id);
 				stmt.setString(6, rpath->contest->id);
@@ -612,8 +612,8 @@ void Contest::addProblem() {
 				return redirect(concat("/c/", round_id, "/edit"));
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -723,8 +723,8 @@ void Contest::editContest() {
 			}
 
 		} catch (const std::exception& e) {
-			fv.addError("Internal server error");
 			ERRLOG_CATCH(e);
+			fv.addError("Internal server error");
 		}
 	}
 
@@ -850,8 +850,8 @@ void Contest::editRound() {
 				}
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -1014,7 +1014,7 @@ void Contest::editProblem() {
 	}
 
 	FormValidator fv(req->form_data);
-	string round_name, name, tag, memory_limit;
+	string round_name, name, shortname, memory_limit;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
@@ -1026,7 +1026,8 @@ void Contest::editProblem() {
 
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
-		fv.validate(tag, "tag", "Problem tag", PROBLEM_TAG_MAX_LEN);
+		fv.validate(shortname, "shortname", "Problem shortname",
+			PROBLEM_SHORTNAME_MAX_LEN);
 
 		fv.validateNotBlank(memory_limit, "memory-limit", "Memory limit",
 			isDigitNotGreaterThan<std::numeric_limits<uint64_t>::max()>,
@@ -1043,7 +1044,7 @@ void Contest::editProblem() {
 				sf.loadAll();
 
 				sf.name = name;
-				sf.tag = tag;
+				sf.shortname = shortname;
 
 				// Update memory limit
 				uint64_t new_mem_limit = strtoull(memory_limit) << 10;
@@ -1069,10 +1070,11 @@ void Contest::editProblem() {
 				// Update database
 				DB::Statement stmt = db_conn.prepare(
 					"UPDATE rounds r, problems p "
-					"SET r.name=?, p.name=?, p.tag=? WHERE r.id=? AND p.id=?");
+					"SET r.name=?, p.name=?, p.shortname=? "
+					"WHERE r.id=? AND p.id=?");
 				stmt.setString(1, round_name);
 				stmt.setString(2, name);
-				stmt.setString(3, tag);
+				stmt.setString(3, shortname);
 				stmt.setString(4, rpath->round_id);
 				stmt.setString(5, rpath->problem->problem_id);
 
@@ -1086,8 +1088,8 @@ void Contest::editProblem() {
 				}
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -1095,13 +1097,20 @@ void Contest::editProblem() {
 	round_name = rpath->problem->name;
 	string simfile_contents = getFileContents(
 		concat("problems/", rpath->problem->problem_id, "/Simfile"));
-	sim::Simfile sf {simfile_contents};
-	sf.loadName();
-	sf.loadTag();
-	sf.loadTests();
-	name = sf.name;
-	tag = sf.tag;
-	memory_limit = toStr(sf.global_mem_limit >> 10);
+	// Read Simfile
+	try {
+		sim::Simfile sf {simfile_contents};
+		sf.loadName();
+		sf.loadShortname();
+		sf.loadTests();
+		name = sf.name;
+		shortname = sf.shortname;
+		memory_limit = toStr(sf.global_mem_limit >> 10);
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return error500();
+	}
 
 	contestTemplate("Edit problem");
 	printRoundPath();
@@ -1138,12 +1147,12 @@ void Contest::editProblem() {
 						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
-				// Tag
+				// Shortname
 				"<div class=\"field-group\">"
-					"<label>Problem tag</label>"
-					"<input type=\"text\" name=\"tag\" value=\"",
-						htmlSpecialChars(tag), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_TAG_MAX_LEN), "\" "
+					"<label>Problem shortname</label>"
+					"<input type=\"text\" name=\"shortname\" value=\"",
+						htmlSpecialChars(shortname), "\" size=\"24\" "
+						"maxlength=\"", toStr(PROBLEM_SHORTNAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
 				// Memory limit
@@ -1212,8 +1221,8 @@ void Contest::deleteContest() {
 				return redirect("/c");
 
 		} catch (const std::exception& e) {
-			fv.addError("Internal server error");
 			ERRLOG_CATCH(e);
+			fv.addError("Internal server error");
 		}
 
 	string referer = req->headers.get("Referer");
@@ -1264,8 +1273,8 @@ void Contest::deleteRound() {
 				return redirect("/c/" + rpath->contest->id);
 
 		} catch (const std::exception& e) {
-			fv.addError("Internal server error");
 			ERRLOG_CATCH(e);
+			fv.addError("Internal server error");
 		}
 
 	string referer = req->headers.get("Referer");
@@ -1315,8 +1324,8 @@ void Contest::deleteProblem() {
 				return redirect("/c/" + rpath->round->id);
 
 		} catch (const std::exception& e) {
-			fv.addError("Internal server error");
 			ERRLOG_CATCH(e);
+			fv.addError("Internal server error");
 		}
 
 	string referer = req->headers.get("Referer");
@@ -1586,10 +1595,10 @@ void Contest::ranking(bool admin_view) {
 
 	struct RankingProblem {
 		uint64_t id;
-		string tag;
+		string shortname;
 
 		explicit RankingProblem(uint64_t i = 0, const string& t = "")
-			: id(i), tag(t) {}
+			: id(i), shortname(t) {}
 	};
 
 	struct RankingRound {
@@ -1671,9 +1680,9 @@ void Contest::ranking(bool admin_view) {
 		column = (rpath->type == CONTEST ? "grandparent" :
 			(rpath->type == ROUND ? "parent" : "id"));
 		stmt = db_conn.prepare(admin_view ?
-			concat("SELECT r.id, tag, parent FROM rounds r, problems p "
+			concat("SELECT r.id, shortname, parent FROM rounds r, problems p "
 				"WHERE r.", column, "=? AND problem_id=p.id ORDER BY item")
-			: concat("SELECT r.id, tag, r.parent "
+			: concat("SELECT r.id, shortname, r.parent "
 				"FROM rounds r, rounds r1, problems p "
 				"WHERE r.", column, "=? AND r.problem_id=p.id "
 					"AND r.parent=r1.id "
@@ -1799,7 +1808,7 @@ void Contest::ranking(bool admin_view) {
 			for (auto& j : i.problems)
 				append("<th><a href=\"/c/", toStr(j.id),
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
-					htmlSpecialChars(j.tag), "</a></th>");
+					htmlSpecialChars(j.shortname), "</a></th>");
 		append("</tr>"
 			"</thead>"
 			"<tbody>");
