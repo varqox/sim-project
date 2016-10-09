@@ -99,11 +99,11 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	else if ((sf.name = sf.configFile()["name"].asString()).empty())
 		throw runtime_error("Problem name is not specified");
 
-	// Tag
-	if (opts.tag.size())
-		sf.tag = opts.tag;
-	else if ((sf.tag = sf.configFile()["tag"].asString()).empty())
-		sf.tag = makeTag(sf.name);
+	// Shortname
+	if (opts.shortname.size())
+		sf.shortname = opts.shortname;
+	else if ((sf.shortname = sf.configFile()["shortname"].asString()).empty())
+		sf.shortname = shortenName(sf.name);
 
 	auto is_source = [](const string& file) {
 		return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx"});

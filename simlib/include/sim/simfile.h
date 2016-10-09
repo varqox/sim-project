@@ -8,7 +8,7 @@
 /// ## Example:
 /// ```sh
 /// name: Simple Package                       # Problem name
-/// tag: sim                                   # Problem tag
+/// shortname: sim                             # Problem short name
 /// statement: doc/sim.pdf                     # Path to statement file
 /// checker: check/checker.cpp                 # Path to checker source file
 /// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions source files
@@ -67,7 +67,7 @@ namespace sim {
  */
 class Simfile {
 public:
-	std::string name, tag, statement, checker;
+	std::string name, shortname, statement, checker;
 	std::vector<std::string> solutions;
 	uint64_t global_mem_limit = 0; // in bytes
 
@@ -110,7 +110,7 @@ public:
 	 * @errors May throw from ConfigFile::loadConfigFromString
 	 */
 	Simfile(std::string simfile) {
-		config.addVars("name", "tag", "checker", "statement", "solutions",
+		config.addVars("name", "shortname", "checker", "statement", "solutions",
 			"memory_limit", "limits", "scoring", "tests_files");
 		config.loadConfigFromString(std::move(simfile));
 	}
@@ -142,14 +142,14 @@ public:
 	void loadName();
 
 	/**
-	 * @brief Loads problem tag
+	 * @brief Loads problem shortname
 	 * @details Fields:
-	 *   - tag (problem tag)
+	 *   - shortname (problem shortname)
 	 *
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
 	 */
-	void loadTag();
+	void loadShortname();
 
 	/**
 	 * @brief Loads path to checker source file
@@ -222,7 +222,7 @@ public:
 	 */
 	void loadAll() {
 		loadName();
-		loadTag();
+		loadShortname();
 		loadChecker();
 		loadStatement();
 		loadSolutions();
@@ -280,20 +280,20 @@ public:
 };
 
 /**
- * @brief Makes a tag from @p str
- * @details Tag is made of lowered 3 (at most) first characters of @p str for
- *   which isgraph(3) != 0
+ * @brief Makes a shortname from @p str
+ * @details Shortname is made of lowered 3 (at most) first characters of @p str
+ *   for which isgraph(3) != 0
  *
- * @param str string to make the tag from
+ * @param str string to make the shortname from
  *
- * @return tag
+ * @return shortname
  */
-inline std::string makeTag(const StringView& str) {
-	std::string tag;
+inline std::string shortenName(const StringView& str) {
+	std::string shortname;
 	for (char c : str)
-		if (isgraph(c) && (tag += ::tolower(c)).size() == 3)
+		if (isgraph(c) && (shortname += ::tolower(c)).size() == 3)
 			break;
-	return tag;
+	return shortname;
 }
 
 } // namespace sim

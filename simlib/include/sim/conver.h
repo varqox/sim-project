@@ -37,8 +37,8 @@ public:
 	struct Options {
 		std::string name; // Leave empty to detect it from the Simfile in the
 		                  // package
-		std::string tag; // Leave empty to detect it from the Simfile in the
-		                 // package
+		std::string shortname; // Leave empty to detect it from the Simfile in
+		                  // the package
 		uint64_t memory_limit = 0; // [KB] Set to a non-zero value to overwrite
 		                           // memory limit of every test with this value
 		uint64_t global_time_limit = 0; // [microseconds] If non-zero then every
