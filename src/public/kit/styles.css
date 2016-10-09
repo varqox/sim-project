@@ -547,6 +547,8 @@ table {
 	margin: 2px 3px;
 	padding: 2px 10px;
 	white-space: pre;
+	font-size: 14px;
+	line-height: 20px;
 }
 .btn:hover,
 .btn:focus,
@@ -998,8 +1000,15 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	margin-right: 10%;
 }
 .round-path {
+	display: flex;
+	flex-flow: row wrap;
+	align-items: center;
+	height: 26px;
 	font-size: 16px;
 	line-height: 22px;
+}
+.round-path > a {
+	margin: 0 4px;
 }
 .round-view {
 	display: table;
