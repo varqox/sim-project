@@ -95,5 +95,5 @@ git submodule update
 make -j4 src install run
 ```
 
-### Task packages
-You can find some example task packages in problems/ folder.
+### Problem packages
+You can find some example problem packages in problems/ folder.
