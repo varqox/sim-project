@@ -61,13 +61,13 @@ static void parseOptions(int &argc, char **argv) {
 }
 
 constexpr array<meta::string, 7> tables {{
-	"contests_users",
-	"files",
-	"problems",
-	"rounds",
-	"session",
-	"submissions",
-	"users",
+	{"contests_users"},
+	{"files"},
+	{"problems"},
+	{"rounds"},
+	{"session"},
+	{"submissions"},
+	{"users"},
 }};
 
 static_assert(meta::is_sorted(tables), "Needed for binary search");
