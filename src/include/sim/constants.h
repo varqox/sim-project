@@ -49,7 +49,7 @@ constexpr uint SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days [s]
 
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
-constexpr uint PROBLEM_TAG_MAX_LEN = 64;
+constexpr uint PROBLEM_SHORTNAME_MAX_LEN = 64;
 
 // Rounds
 constexpr uint ROUND_NAME_MAX_LEN = 128;

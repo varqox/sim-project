@@ -168,8 +168,8 @@ void User::login() {
 				fv.addError("Invalid username or password");
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 
 	// Clean old data
@@ -266,8 +266,8 @@ void User::signUp() {
 				fv.addError("Username taken");
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 
 	// Clean old data
@@ -522,8 +522,8 @@ void User::editProfile() {
 						"' is taken"));
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -684,8 +684,8 @@ void User::changePassword() {
 				}
 
 			} catch (const std::exception& e) {
-				fv.addError("Internal server error");
 				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
 			}
 	}
 
@@ -767,8 +767,8 @@ void User::deleteAccount() {
 			fv.addError("Internal server error");
 
 		} catch (const std::exception& e) {
-			fv.addError("Internal server error");
 			ERRLOG_CATCH(e);
+			fv.addError("Internal server error");
 		}
 
 	userTemplate("Delete account");
