@@ -1,9 +1,10 @@
 #include <sim/constants.h>
 #include <sim/db.h>
-#include <simlib/logger.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
+#include <simlib/utilities.h>
 
+using std::array;
 using std::string;
 using std::unique_ptr;
 
@@ -59,19 +60,35 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-struct TryCreateTable {
+constexpr array<meta::string, 7> tables {{
+	"contests_users",
+	"files",
+	"problems",
+	"rounds",
+	"session",
+	"submissions",
+	"users",
+}};
+
+static_assert(meta::is_sorted(tables), "Needed for binary search");
+
+struct TryToCreateTable {
 	bool error = false;
 	DB::Connection& conn_;
 
-	explicit TryCreateTable(DB::Connection& conn) : conn_(conn) {}
+	explicit TryToCreateTable(DB::Connection& conn) : conn_(conn) {}
 
 	template<class Func>
 	void operator()(const char* table_name, const std::string& query, Func&& f)
 		noexcept
 	{
 		try {
+			if (!binary_search(tables, StringView{table_name}))
+				THROW("Table `", table_name, "` not found in the table list");
+
 			conn_.executeUpdate(query);
 			f();
+
 		} catch (const std::exception& e) {
 			errlog("\033[31mFailed to create table `", table_name, "`\033[m - ",
 				e.what());
@@ -124,9 +141,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	TryCreateTable tryCreateTable(conn);
+	TryToCreateTable try_to_create_table(conn);
 
-	tryCreateTable("users",
+	try_to_create_table("users",
 		concat("CREATE TABLE IF NOT EXISTS `users` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`username` varchar(", toStr(USERNAME_MAX_LEN), ") NOT NULL,"
@@ -155,7 +172,7 @@ int main(int argc, char **argv) {
 			stmt.executeUpdate();
 		});
 
-	tryCreateTable("session",
+	try_to_create_table("session",
 		concat("CREATE TABLE IF NOT EXISTS `session` ("
 			"`id` char(", toStr(SESSION_ID_LEN), ") NOT NULL,"
 			"`csrf_token` char(", toStr(SESSION_CSRF_TOKEN_LEN), ") NOT NULL,"
@@ -169,7 +186,7 @@ int main(int argc, char **argv) {
 			"KEY (`time`)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"));
 
-	tryCreateTable("problems",
+	try_to_create_table("problems",
 		concat("CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
@@ -181,7 +198,7 @@ int main(int argc, char **argv) {
 			"KEY (`owner`)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	tryCreateTable("rounds",
+	try_to_create_table("rounds",
 		concat("CREATE TABLE IF NOT EXISTS `rounds` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`parent` int unsigned NULL DEFAULT NULL,"
@@ -204,7 +221,7 @@ int main(int argc, char **argv) {
 			"KEY (`owner`)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	tryCreateTable("contests_users",
+	try_to_create_table("contests_users",
 		"CREATE TABLE IF NOT EXISTS `contests_users` ("
 			"`user_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
@@ -213,7 +230,7 @@ int main(int argc, char **argv) {
 			"KEY (`contest_id`)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-	tryCreateTable("submissions",
+	try_to_create_table("submissions",
 		"CREATE TABLE IF NOT EXISTS `submissions` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`user_id` int unsigned NOT NULL,"
@@ -249,7 +266,7 @@ int main(int argc, char **argv) {
 			"KEY (contest_round_id, user_id, type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-	tryCreateTable("files",
+	try_to_create_table("files",
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` char(", toStr(FILE_ID_LEN), ") NOT NULL,"
 			"`round_id` int unsigned NULL,"
@@ -262,7 +279,7 @@ int main(int argc, char **argv) {
 			"KEY (round_id, modified)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	if (tryCreateTable.error)
+	if (try_to_create_table.error)
 		return 6;
 
 	return 0;
