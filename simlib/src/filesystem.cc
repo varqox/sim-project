@@ -592,7 +592,7 @@ string humanizeFileSize(uint64_t size) {
 	double dsize = size;
 	// Bytes
 	if (size < MIN_KB)
-		return toStr(size);
+		return (size == 1 ? "1 byte" : toStr(size) + " bytes");
 	// KB
 	if (size < MIN_3DIGIT_KB)
 		return toStr(dsize / MIN_KB, 1) + " KB";

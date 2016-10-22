@@ -741,7 +741,8 @@ typedef RemoverBase<remove_r> DirectoryRemover;
 /**
  * @brief Converts @p size, so that it human readable
  * @details It adds proper prefixes, for example:
- *   1023 -> "1023"
+ *   1 -> "1 byte"
+ *   1023 -> "1023 bytes"
  *   1024 -> "1.0 KB"
  *   129747 -> "127 KB"
  *   97379112 -> "92.9 MB"
