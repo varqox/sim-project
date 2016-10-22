@@ -1429,7 +1429,7 @@ table.files th.name {
 	min-width: 100px;
 }
 table.files th.size {
-	min-width: 6em;
+	min-width: 7em;
 }
 table.files th.description {
 	min-width: 100px;
