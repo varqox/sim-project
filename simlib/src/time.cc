@@ -1,9 +1,9 @@
 #include "../include/debug.h"
 
 #include <algorithm>
+#include <ctime>
 #include <string>
 #include <sys/time.h>
-#include <ctime>
 
 using std::string;
 

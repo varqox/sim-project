@@ -10,19 +10,28 @@ $(eval $(call dependencies))
 # do it manually
 syscall_name.o: syscall_name.cc.deps
 
+syscall_name.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
+syscall_name.cc: UNISTD_64 = /usr/include/x86_64-linux-gnu/asm/unistd_64.h
 syscall_name.cc: Makefile
+	$(GEN)
 	$(Q)echo "// File generated automatically, so changes will not be permanent" > $@
 	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
 	$(Q)echo "" >> $@
 	# 32 bit
+	$(Q) [ -f $(UNISTD_32) ] || \
+		{ echo "Error: $(UNISTD_32): No such file or directory"; $(RM) $@; exit 1; }
 	$(Q)echo "SyscallNameSet x86_syscall_name {" >> $@
-	$(Q)grep __NR_ /usr/include/asm/unistd_32.h | sed 's/#define\s*__NR_//' | \
+	$(Q)grep __NR_ $(UNISTD_32) | \
+		sed 's/#define\s*__NR_//' | \
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
 	$(Q)echo "};" >> $@
 	$(Q)echo "" >> $@
 	# 64 bit
 	$(Q)echo "SyscallNameSet x86_64_syscall_name {" >> $@
-	$(Q)grep __NR_ /usr/include/asm/unistd_64.h | sed 's/#define\s*__NR_//' | \
+	$(Q) [ -f $(UNISTD_64) ] || \
+		{ echo "Error: $(UNISTD_64): No such file or directory"; $(RM) $@; exit 1; }
+	$(Q)grep __NR_ $(UNISTD_64) | \
+		sed 's/#define\s*__NR_//' | \
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
 	$(Q)echo "};" >> $@
 

@@ -10,17 +10,6 @@ notifications:
 _packages:
   - &default_packages
     - time # For build
-  - &GCC-4_9
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - *default_packages
-          - g++-4.9-multilib
-    before_install:
-      - export CC="gcc-4.9"
-      - export CXX="g++-4.9"
   - &GCC-5
     addons:
       apt:
@@ -51,11 +40,12 @@ _packages:
           - llvm-toolchain-precise-3.5
         packages:
           - *default_packages
-          - libstdc++-4.9-dev # The proper version of std library
           - clang-3.5
+          - libc++-dev
+          - libc++abi-dev
     before_install:
       - export CC="clang-3.5"
-      - export CXX="clang++-3.5"
+      - export CXX="clang++-3.5 -stdlib=libc++ -isystem /usr/include/libcxxabi"
   - &Clang-3_6
     addons:
       apt:
@@ -64,11 +54,12 @@ _packages:
           - llvm-toolchain-precise-3.6
         packages:
           - *default_packages
-          - libstdc++-4.9-dev # The proper version of std library
           - clang-3.6
+          - libc++-dev
+          - libc++abi-dev
     before_install:
       - export CC="clang-3.6"
-      - export CXX="clang++-3.6"
+      - export CXX="clang++-3.6 -stdlib=libc++ -isystem /usr/include/libcxxabi"
   - &Clang-3_7
     addons:
       apt:
@@ -77,11 +68,12 @@ _packages:
           - llvm-toolchain-precise-3.7
         packages:
           - *default_packages
-          - libstdc++-4.9-dev # The proper version of std library
           - clang-3.7
+          - libc++-dev
+          - libc++abi-dev
     before_install:
       - export CC="clang-3.7"
-      - export CXX="clang++-3.7"
+      - export CXX="clang++-3.7 -stdlib=libc++ -isystem /usr/include/libcxxabi"
   - &Clang-3_8
     addons:
       apt:
@@ -90,25 +82,16 @@ _packages:
           - llvm-toolchain-precise-3.8
         packages:
           - *default_packages
-          - libstdc++-4.9-dev # The proper version of std library
           - clang-3.8
+          - libc++-dev
+          - libc++abi-dev
     before_install:
       - export CC="clang-3.8"
-      - export CXX="clang++-3.8"
+      - export CXX="clang++-3.8 -stdlib=libc++ -isystem /usr/include/libcxxabi"
 
 matrix:
   fast_finish: true
   include:
-    # GCC-4_9
-    - compiler: gcc
-      <<: *GCC-4_9
-      env:
-    - compiler: gcc
-      <<: *GCC-4_9
-      env: DEBUG=1
-    - compiler: gcc
-      <<: *GCC-4_9
-      env: DEBUG=2
     # GCC-5
     - compiler: gcc
       <<: *GCC-5
@@ -156,9 +139,6 @@ matrix:
     - compiler: clang
       <<: *Clang-3_7
       env: DEBUG=1
-    - compiler: clang
-      <<: *Clang-3_7
-      env: DEBUG=2
     # Clang-3_8
     - compiler: clang
       <<: *Clang-3_8
@@ -168,6 +148,11 @@ matrix:
       env: DEBUG=1
     - compiler: clang
       <<: *Clang-3_8
+      env: DEBUG=2
+  allow_failures:
+    # Clang-3_7 DEBUG=2
+    - compiler: clang
+      <<: *Clang-3_7
       env: DEBUG=2
 
 before_script:
