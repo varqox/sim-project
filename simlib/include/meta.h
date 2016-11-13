@@ -1,9 +1,13 @@
 #pragma once
 
 #include <array>
+#include <cerrno>
+#include <cstdlib>
 #include <type_traits>
 
 /// Some stuff useful in the meta programming
+
+using uint = unsigned;
 
 namespace meta {
 
@@ -83,20 +87,6 @@ template<class T, size_t N>
 constexpr bool is_sorted(const std::array<T, N>& arr) {
 	return is_sorted_helper(arr, 0);
 }
-
-#if __cplusplus > 201103L
-# warning "Delete the classes Seq and GenSeq below (there are these features in"
-	"C++14 - see std::integer_sequence)"
-#endif
-
-template<size_t... Idx>
-struct Seq {};
-
-template<size_t N, size_t... Idx>
-struct GenSeq : GenSeq<N - 1, N - 1, Idx...> {};
-
-template<size_t... Idx>
-struct GenSeq<0, Idx...> : Seq<Idx...> {};
 
 template<uint LEN, uint... Digits>
 struct ToStringHelper {

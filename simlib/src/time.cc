@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string>
 #include <sys/time.h>
+#include <ctime>
 
 using std::string;
 

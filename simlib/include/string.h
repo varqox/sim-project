@@ -7,6 +7,7 @@
 #include <array>
 #include <climits>
 #include <cstring>
+#include <string>
 
 #ifdef _GLIBCXX_DEBUG
 #  include <cassert>

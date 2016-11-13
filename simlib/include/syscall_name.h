@@ -35,7 +35,7 @@ public:
 		if (t.empty())
 			return "";
 
-		uint beg = 0, end = t.size() - 1;
+		unsigned beg = 0, end = t.size() - 1;
 		while (beg < end) {
 			int mid = (beg + end) >> 1;
 			if (t[mid].first < syscall_no)

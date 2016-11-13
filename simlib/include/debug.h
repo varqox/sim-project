@@ -1,9 +1,11 @@
 #pragma once
-
 #include "logger.h"
 #include "string.h"
 
 #include <cstdio>
+#include <cerrno>
+#include <cstdlib>
+#include <cmath>
 #include <exception>
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)

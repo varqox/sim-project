@@ -10,13 +10,12 @@ constexpr meta::string JudgeWorker::CHECKER_FILENAME;
 constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
 
 JudgeReport JudgeWorker::judge(bool final) const {
-	#if __cplusplus > 201103L
-	# warning "Use variadic generic lambda instead"
-	#endif
+	auto vlog = [&](auto&&... args) {
+		if (verbose)
+			stdlog(std::forward<decltype(args)>(args)...);
+	};
 
-	#define LOG(...) do { if (verbose) stdlog(__VA_ARGS__); } while (false)
-
-	LOG("Judging on `", pkg_root,"` (", (final ? "final" : "initial"), "): {");
+	vlog("Judging on `", pkg_root,"` (", (final ? "final" : "initial"), "): {");
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
 	// Checker STDOUT
@@ -264,12 +263,12 @@ JudgeReport JudgeWorker::judge(bool final) const {
 		report_group.score = round(group.score * score_ratio);
 		report_group.max_score = group.score;
 
-		LOG("  Score: ", toStr(report_group.score), " / ",
+		vlog("  Score: ", toStr(report_group.score), " / ",
 			toStr(report_group.max_score), " (ratio: ", toStr(score_ratio, 3),
 			')');
 	}
 
-	LOG('}');
+	vlog('}');
 	return report;
 }
 

@@ -41,22 +41,21 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 
 	Variable tmp; // Used for ignored variables
 	auto buff_beg = buff.data();
-	#if __cplusplus > 201103L
-	# warning "Use variadic generic lambda instead"
-	#endif
 
-	#define throw_parse_error(...) { \
-			string::size_type pos = buff.data() - buff_beg - buff.empty(); \
-			string::size_type x = pos; /* Position of the last newline before
-				pos */ \
-			while (x && config[--x] != '\n') {} \
-			\
-			int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n'); \
-			\
-			ParseError pe(line, pos - x + (line == 1), __VA_ARGS__); \
-			DEBUG_CF(stdlog("Throwing exception: ", pe.what());) \
-			throw pe; \
-		}
+	auto throw_parse_error = [&](auto&&... args) {
+		string::size_type pos = buff.data() - buff_beg - buff.empty();
+		string::size_type x = pos; // Position of the last newline before pos
+
+		while (x && config[--x] != '\n') {}
+		int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n');
+
+		ParseError pe(line, pos - x + (line == 1),
+			std::forward<decltype(args)>(args)...);
+
+		DEBUG_CF(stdlog("Throwing exception: ", pe.what());)
+		throw pe;
+
+	};
 
 	auto extract_value = [&] {
 		string res;

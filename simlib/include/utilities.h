@@ -22,14 +22,6 @@ std::string& back_insert(std::string& str, Args&&... args) {
 	return str;
 }
 
-#if __cplusplus > 201103L
-# warning "Delete the class below (there is that feature in C++14)"
-#endif
-class less {
-	template<class A, class B>
-	bool operator()(A&& a, B&& b) const { return a < b; }
-};
-
 template<class T, class C>
 typename T::const_iterator binaryFind(const T& x, const C& val) {
 	auto beg = x.begin(), end = x.end();
