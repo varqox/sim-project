@@ -22,7 +22,7 @@ syscall_name_32.cc: Makefile $(UNISTD_32)
 	$(Q) [ -f $(UNISTD_32) ] || \
 		{ echo "Error: $(UNISTD_32): No such file or directory"; $(RM) $@; exit 1; }
 	$(Q)echo "SyscallNameSet x86_syscall_name {" >> $@
-	$(Q)grep __NR_ $(UNISTD_32) | \
+	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_32) | \
 		sed 's/#define\s*__NR_//' | \
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
 	$(Q)echo "};" >> $@
@@ -38,7 +38,7 @@ syscall_name_64.cc: Makefile $(UNISTD_64)
 	$(Q)echo "SyscallNameSet x86_64_syscall_name {" >> $@
 	$(Q) [ -f $(UNISTD_64) ] || \
 		{ echo "Error: $(UNISTD_64): No such file or directory"; $(RM) $@; exit 1; }
-	$(Q)grep __NR_ $(UNISTD_64) | \
+	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_64) | \
 		sed 's/#define\s*__NR_//' | \
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
 	$(Q)echo "};" >> $@
