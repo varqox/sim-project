@@ -51,6 +51,9 @@ constexpr uint SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days [s]
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
 constexpr uint PROBLEM_SHORTNAME_MAX_LEN = 64;
 
+// Problems tags
+constexpr uint PROBLEM_TAG_MAX_LEN = 128;
+
 // Rounds
 constexpr uint ROUND_NAME_MAX_LEN = 128;
 
@@ -136,10 +139,7 @@ static_assert(meta::equal(STYPE_IGNORED_STR,
 	meta::ToString<(int)SubmissionType::IGNORED>::value),
 	"Update the above #define");
 
-#if __cplusplus > 201103L
-# warning "Make the below function constexpr"
-#endif
-inline const char* toString(SubmissionType x) {
+constexpr inline const char* toString(SubmissionType x) {
 	switch (x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::FINAL: return "Final";
