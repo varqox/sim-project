@@ -41,10 +41,10 @@ _packages:
         packages:
           - *default_packages
           - clang-3.5
-          - libc++-dev
+          - libstdc++-4.9-dev # The proper version of std library
     before_install:
       - export CC="clang-3.5"
-      - export CXX="clang++-3.5 -stdlib=libc++ -isystem /usr/include/libcxxabi"
+      - export CXX="clang++-3.5"
   - &Clang-3_6
     addons:
       apt:
@@ -54,10 +54,10 @@ _packages:
         packages:
           - *default_packages
           - clang-3.6
-          - libc++-dev
+          - libstdc++-4.9-dev # The proper version of std library
     before_install:
       - export CC="clang-3.6"
-      - export CXX="clang++-3.6 -stdlib=libc++ -isystem /usr/include/libcxxabi"
+      - export CXX="clang++-3.6"
   - &Clang-3_7
     addons:
       apt:
@@ -67,10 +67,10 @@ _packages:
         packages:
           - *default_packages
           - clang-3.7
-          - libc++-dev
+          - libstdc++-4.9-dev # The proper version of std library
     before_install:
       - export CC="clang-3.7"
-      - export CXX="clang++-3.7 -stdlib=libc++ -isystem /usr/include/libcxxabi"
+      - export CXX="clang++-3.7"
   - &Clang-3_8
     addons:
       apt:
@@ -80,10 +80,10 @@ _packages:
         packages:
           - *default_packages
           - clang-3.8
-          - libc++-dev
+          - libstdc++-4.9-dev # The proper version of std library
     before_install:
       - export CC="clang-3.8"
-      - export CXX="clang++-3.8 -stdlib=libc++ -isystem /usr/include/libcxxabi"
+      - export CXX="clang++-3.8"
 
 matrix:
   fast_finish: true

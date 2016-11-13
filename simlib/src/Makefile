@@ -8,8 +8,8 @@ $(eval $(call dependencies))
 # Because source file is generated we may not generate dependencies
 # automatically (the file may not be already created), that is why we have to
 # do it manually
-syscall_name_32.o: syscall_name.cc.deps
-syscall_name_64.o: syscall_name.cc.deps
+syscall_name_32.o: syscall_name_32.cc.deps
+syscall_name_64.o: syscall_name_64.cc.deps
 
 syscall_name_32.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
 syscall_name_32.cc: Makefile $(UNISTD_32)
