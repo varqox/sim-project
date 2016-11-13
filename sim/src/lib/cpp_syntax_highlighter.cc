@@ -229,7 +229,8 @@ constexpr typename std::enable_if<
 		: extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
 
-static constexpr auto cpp_keywords = array<meta::string, 0>{};
+static constexpr auto cpp_keywords =
+	extract_keywords_from<words.size(), count_keywords(words)>(words, {});
 
 // Important: elements have to be sorted!
 static_assert(meta::is_sorted(cpp_keywords),
