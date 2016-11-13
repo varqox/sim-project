@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <vector>
 
+// TODO: Try to make constexpr constructor (that sorts in constexpr)
 class SyscallNameSet {
 	typedef std::pair<int, const char*> SyscallInfo;
 	std::vector<SyscallInfo> t;
