@@ -275,13 +275,9 @@ static void processSubmissionQueue() {
 
 			/* Determine the submission status */
 
-			#if __cplusplus > 201103L
-			# warning "Use variadic generic lambda instead"
-			#endif
 			// Sets status to OK or first encountered error and modifies it
 			// with func
-			auto set_status = [&status] (const JudgeReport& jr,
-				void(*func)(SubmissionStatus&))
+			auto set_status = [&status] (const JudgeReport& jr, auto&& func)
 			{
 				for (auto&& group : jr.groups)
 					for (auto&& test : group.tests)

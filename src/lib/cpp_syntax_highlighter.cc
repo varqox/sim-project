@@ -201,7 +201,7 @@ constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
 
 template<size_t N, size_t... Idx>
 constexpr array<meta::string, N> extract_keywords_from_append(
-	const array<meta::string, N>& base, meta::string x, meta::Seq<Idx...>)
+	const array<meta::string, N>& base, meta::string x, std::integer_sequence<size_t, Idx...>)
 {
 	return {{base[Idx]..., x}};
 }
@@ -224,13 +224,12 @@ constexpr typename std::enable_if<
 	return (idx == N ? res : (arr[idx].style == KEYWORD ?
 		extract_keywords_from<N, RES_N, RES_END + 1>(
 			arr, extract_keywords_from_append(
-				res, {arr[idx].str, arr[idx].size}, meta::GenSeq<RES_END>{}),
+				res, {arr[idx].str, arr[idx].size}, std::make_integer_sequence<size_t, RES_END>{}),
 			idx + 1)
 		: extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
 
-static constexpr auto cpp_keywords =
-	extract_keywords_from<words.size(), count_keywords(words)>(words, {{}});
+static constexpr auto cpp_keywords = array<meta::string, 0>{};
 
 // Important: elements have to be sorted!
 static_assert(meta::is_sorted(cpp_keywords),

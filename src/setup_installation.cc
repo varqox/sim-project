@@ -60,10 +60,11 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 7> tables {{
+constexpr array<meta::string, 8> tables {{
 	{"contests_users"},
 	{"files"},
 	{"problems"},
+	{"problems_tags"},
 	{"rounds"},
 	{"session"},
 	{"submissions"},
@@ -192,11 +193,20 @@ int main(int argc, char **argv) {
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,"
 			"`shortname` VARCHAR(", toStr(PROBLEM_SHORTNAME_MAX_LEN), ") NOT NULL,"
+			"`simfile` blob NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
 			"PRIMARY KEY (`id`),"
 			"KEY (`owner`)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+
+	try_to_create_table("problems_tags",
+		concat("CREATE TABLE IF NOT EXISTS `problems_tags` ("
+			"`problem_id` int unsigned NOT NULL,"
+			"`tag` VARCHAR(", toStr(PROBLEM_TAG_MAX_LEN), ") NOT NULL,"
+			"PRIMARY KEY (`problem_id`, `tag`),"
+			"KEY (`tag`)"
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("rounds",
 		concat("CREATE TABLE IF NOT EXISTS `rounds` ("
