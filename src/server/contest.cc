@@ -549,7 +549,7 @@ void Contest::addProblem() {
 				// 'Transaction' begin
 				// Insert problem
 				DB::Statement stmt = db_conn.prepare(
-					"INSERT problems (name, shortname, owner, added) "
+					"INSERT problems (name, abbreviation, owner, added) "
 						"VALUES('', '', 0, ?)");
 				stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
 				if (1 != stmt.executeUpdate())
@@ -590,14 +590,14 @@ void Contest::addProblem() {
 					"UPDATE problems p, rounds r,"
 							"(SELECT COALESCE(MAX(item)+1, 1) x FROM rounds "
 								"WHERE parent=?) t "
-						"SET p.name=?, p.shortname=?, p.owner=?, "
+						"SET p.name=?, p.abbreviation=?, p.owner=?, "
 							"parent=?, grandparent=?, r.name=?, item=t.x, "
 							"problem_id=? "
 						"WHERE p.id=? AND r.id=?");
 
 				stmt.setString(1, rpath->round->id);
 				stmt.setString(2, sf.name);
-				stmt.setString(3, sf.shortname);
+				stmt.setString(3, sf.abbreviation);
 				stmt.setString(4, Session::user_id);
 				stmt.setString(5, rpath->round->id);
 				stmt.setString(6, rpath->contest->id);
@@ -1014,20 +1014,20 @@ void Contest::editProblem() {
 	}
 
 	FormValidator fv(req->form_data);
-	string round_name, name, shortname, memory_limit;
+	string round_name, name, abbreviation, memory_limit;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
 			return error403();
 
 		// Validate all fields
-		fv.validate(round_name, "round-name", "Problem round name",
+		fv.validate(round_name, "round-name", "Problem's round's name",
 			ROUND_NAME_MAX_LEN);
 
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
-		fv.validate(shortname, "shortname", "Problem shortname",
-			PROBLEM_SHORTNAME_MAX_LEN);
+		fv.validate(abbreviation, "abbreviation", "Abbreviation",
+			PROBLEM_ABBREVIATION_MAX_LEN);
 
 		fv.validateNotBlank(memory_limit, "memory-limit", "Memory limit",
 			isDigitNotGreaterThan<std::numeric_limits<uint64_t>::max()>,
@@ -1044,7 +1044,7 @@ void Contest::editProblem() {
 				sf.loadAll();
 
 				sf.name = name;
-				sf.shortname = shortname;
+				sf.abbreviation = abbreviation;
 
 				// Update memory limit
 				uint64_t new_mem_limit = strtoull(memory_limit) << 10;
@@ -1070,11 +1070,11 @@ void Contest::editProblem() {
 				// Update database
 				DB::Statement stmt = db_conn.prepare(
 					"UPDATE rounds r, problems p "
-					"SET r.name=?, p.name=?, p.shortname=? "
+					"SET r.name=?, p.name=?, p.abbreviation=? "
 					"WHERE r.id=? AND p.id=?");
 				stmt.setString(1, round_name);
 				stmt.setString(2, name);
-				stmt.setString(3, shortname);
+				stmt.setString(3, abbreviation);
 				stmt.setString(4, rpath->round_id);
 				stmt.setString(5, rpath->problem->problem_id);
 
@@ -1101,10 +1101,10 @@ void Contest::editProblem() {
 	try {
 		sim::Simfile sf {simfile_contents};
 		sf.loadName();
-		sf.loadShortname();
+		sf.loadAbbreviation();
 		sf.loadTests();
 		name = sf.name;
-		shortname = sf.shortname;
+		abbreviation = sf.abbreviation;
 		memory_limit = toStr(sf.global_mem_limit >> 10);
 
 	} catch (const std::exception& e) {
@@ -1131,29 +1131,29 @@ void Contest::editProblem() {
 		"<div class=\"form-container\">"
 			"<h1>Edit problem</h1>"
 			"<form method=\"post\">"
-				// Problem round name
+				// Round's name
 				"<div class=\"field-group\">"
-					"<label>Problem round name</label>"
+					"<label>Round's name</label>"
 					"<input type=\"text\" name=\"round-name\" value=\"",
 						htmlSpecialChars(round_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
-				// Problem name
+				// Problem's name
 				"<div class=\"field-group\">"
-					"<label>Problem name</label>"
+					"<label>Problem's name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlSpecialChars(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
-				// Shortname
+				// Abbreviation
 				"<div class=\"field-group\">"
-					"<label>Problem shortname</label>"
-					"<input type=\"text\" name=\"shortname\" value=\"",
-						htmlSpecialChars(shortname), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_SHORTNAME_MAX_LEN), "\" "
-						"required>"
+					"<label>Problem's abbreviation</label>"
+					"<input type=\"text\" name=\"abbreviation\" value=\"",
+						htmlSpecialChars(abbreviation), "\" size=\"24\" "
+						"maxlength=\"", toStr(PROBLEM_ABBREVIATION_MAX_LEN),
+						"\" required>"
 				"</div>"
 				// Memory limit
 				"<div class=\"field-group\">"
@@ -1595,10 +1595,10 @@ void Contest::ranking(bool admin_view) {
 
 	struct RankingProblem {
 		uint64_t id;
-		string shortname;
+		string abbreviation;
 
-		explicit RankingProblem(uint64_t i = 0, const string& t = "")
-			: id(i), shortname(t) {}
+		explicit RankingProblem(uint64_t i = 0, const string& abbr = "")
+			: id(i), abbreviation(abbr) {}
 	};
 
 	struct RankingRound {
@@ -1680,9 +1680,9 @@ void Contest::ranking(bool admin_view) {
 		column = (rpath->type == CONTEST ? "grandparent" :
 			(rpath->type == ROUND ? "parent" : "id"));
 		stmt = db_conn.prepare(admin_view ?
-			concat("SELECT r.id, shortname, parent FROM rounds r, problems p "
+			concat("SELECT r.id, abbreviation, parent FROM rounds r, problems p "
 				"WHERE r.", column, "=? AND problem_id=p.id ORDER BY item")
-			: concat("SELECT r.id, shortname, r.parent "
+			: concat("SELECT r.id, abbreviation, r.parent "
 				"FROM rounds r, rounds r1, problems p "
 				"WHERE r.", column, "=? AND r.problem_id=p.id "
 					"AND r.parent=r1.id "
@@ -1808,7 +1808,7 @@ void Contest::ranking(bool admin_view) {
 			for (auto& j : i.problems)
 				append("<th><a href=\"/c/", toStr(j.id),
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
-					htmlSpecialChars(j.shortname), "</a></th>");
+					htmlSpecialChars(j.abbreviation), "</a></th>");
 		append("</tr>"
 			"</thead>"
 			"<tbody>");

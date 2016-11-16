@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,"
-			"`shortname` VARCHAR(", toStr(PROBLEM_SHORTNAME_MAX_LEN), ") NOT NULL,"
+			"`abbreviation` VARCHAR(", toStr(PROBLEM_ABBREVIATION_MAX_LEN), ") NOT NULL,"
 			"`simfile` blob NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
