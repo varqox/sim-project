@@ -99,11 +99,11 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	else if ((sf.name = sf.configFile()["name"].asString()).empty())
 		throw runtime_error("Problem name is not specified");
 
-	// Shortname
-	if (opts.shortname.size())
-		sf.shortname = opts.shortname;
-	else if ((sf.shortname = sf.configFile()["shortname"].asString()).empty())
-		sf.shortname = shortenName(sf.name);
+	// Abbreviation
+	if (opts.abbreviation.size())
+		sf.abbreviation = opts.abbreviation;
+	else if ((sf.abbreviation = sf.configFile()["abbreviation"].asString()).empty())
+		sf.abbreviation = shortenName(sf.name);
 
 	auto is_source = [](const string& file) {
 		return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx"});
@@ -113,8 +113,8 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	try { sf.loadChecker(); } catch (...) {}
 	if (!dt->pathExists(sf.checker)) {
 		if (verbose_ && simfile_is_loaded)
-			stdlog("Missing / invalid checker specified in the package Simfile"
-				" - ignoring");
+			stdlog("Missing / invalid checker specified in the package's "
+				"Simfile - ignoring");
 
 		// Scan check/ directory
 		auto x = findFiles(dt->dir("check"), is_source, "check/");
@@ -134,7 +134,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	try { sf.loadStatement(); } catch (...) {}
 	if (!dt->pathExists(sf.statement)) {
 		if (verbose_ && simfile_is_loaded)
-			stdlog("Missing / invalid statement specified in the package "
+			stdlog("Missing / invalid statement specified in the package's "
 				"Simfile - ignoring");
 
 		auto is_statement = [](const string& file) {

@@ -8,7 +8,7 @@
 /// ## Example:
 /// ```sh
 /// name: Simple Package                       # Problem name
-/// shortname: sim                             # Problem short name
+/// abbreviation: sim                          # Problem name abbreviation
 /// statement: doc/sim.pdf                     # Path to statement file
 /// checker: check/checker.cpp                 # Path to checker source file
 /// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions source files
@@ -67,7 +67,7 @@ namespace sim {
  */
 class Simfile {
 public:
-	std::string name, shortname, statement, checker;
+	std::string name, abbreviation, statement, checker;
 	std::vector<std::string> solutions;
 	uint64_t global_mem_limit = 0; // in bytes
 
@@ -110,7 +110,7 @@ public:
 	 * @errors May throw from ConfigFile::loadConfigFromString
 	 */
 	Simfile(std::string simfile) {
-		config.addVars("name", "shortname", "checker", "statement", "solutions",
+		config.addVars("name", "abbreviation", "checker", "statement", "solutions",
 			"memory_limit", "limits", "scoring", "tests_files");
 		config.loadConfigFromString(std::move(simfile));
 	}
@@ -132,9 +132,9 @@ public:
 	std::string dump() const;
 
 	/**
-	 * @brief Loads problem name
+	 * @brief Loads problem's name
 	 * @details Fields:
-	 *   - name (problem name)
+	 *   - name (problem's name)
 	 *
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
@@ -142,14 +142,14 @@ public:
 	void loadName();
 
 	/**
-	 * @brief Loads problem shortname
+	 * @brief Loads problem's abbreviation
 	 * @details Fields:
-	 *   - shortname (problem shortname)
+	 *   - abbreviation (problem's name abbreviation)
 	 *
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
 	 */
-	void loadShortname();
+	void loadAbbreviation();
 
 	/**
 	 * @brief Loads path to checker source file
@@ -222,7 +222,7 @@ public:
 	 */
 	void loadAll() {
 		loadName();
-		loadShortname();
+		loadAbbreviation();
 		loadChecker();
 		loadStatement();
 		loadSolutions();
@@ -280,20 +280,20 @@ public:
 };
 
 /**
- * @brief Makes a shortname from @p str
- * @details Shortname is made of lowered 3 (at most) first characters of @p str
- *   for which isgraph(3) != 0
+ * @brief Makes an abbreviation from @p str
+ * @details Sbbreviation is made of lowered 3 (at most) first characters of
+ *   @p str for which isgraph(3) != 0
  *
- * @param str string to make the shortname from
+ * @param str string to make the abbreviation
  *
- * @return shortname
+ * @return abbreviation
  */
 inline std::string shortenName(const StringView& str) {
-	std::string shortname;
+	std::string abbreviation;
 	for (char c : str)
-		if (isgraph(c) && (shortname += ::tolower(c)).size() == 3)
+		if (isgraph(c) && (abbreviation += ::tolower(c)).size() == 3)
 			break;
-	return shortname;
+	return abbreviation;
 }
 
 } // namespace sim

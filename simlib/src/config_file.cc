@@ -175,7 +175,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		/* Variable name */
 		StringView name = buff.extractLeading(isName);
 		if (name.empty())
-			throw_parse_error("Invalid or missing variable name");
+			throw_parse_error("Invalid or missing variable's name");
 
 		DEBUG_CF(stdlog("Variable: ", name);)
 
