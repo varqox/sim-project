@@ -482,7 +482,7 @@ void Contest::addProblem() {
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
 
 		fv.validate(memory_limit, "memory-limit", "Memory limit",
-			isDigitNotGreaterThan<std::numeric_limits<uint64_t>::max()>,
+			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
 			"Memory limit: invalid value");
 
 		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
@@ -633,7 +633,7 @@ void Contest::addProblem() {
 				"</div>"
 				// Memory limit
 				"<div class=\"field-group\">"
-					"<label>Memory limit [KB]</label>"
+					"<label>Memory limit [MB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
 					"placeholder=\"Detect from Simfile\">"
@@ -1021,7 +1021,7 @@ void Contest::editProblem() {
 			return error403();
 
 		// Validate all fields
-		fv.validate(round_name, "round-name", "Problem's round's name",
+		fv.validate(round_name, "round-name", "Round's name",
 			ROUND_NAME_MAX_LEN);
 
 		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
@@ -1029,7 +1029,7 @@ void Contest::editProblem() {
 		fv.validate(label, "label", "Label", PROBLEM_LABEL_MAX_LEN);
 
 		fv.validateNotBlank(memory_limit, "memory-limit", "Memory limit",
-			isDigitNotGreaterThan<std::numeric_limits<uint64_t>::max()>,
+			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
 			"Memory limit: invalid value");
 
 		// If all fields are ok
@@ -1046,7 +1046,7 @@ void Contest::editProblem() {
 				sf.label = label;
 
 				// Update memory limit
-				uint64_t new_mem_limit = strtoull(memory_limit) << 10;
+				uint64_t new_mem_limit = strtoull(memory_limit) << 20;
 				if (sf.global_mem_limit != new_mem_limit) {
 					for (auto&& tg : sf.tgroups)
 						for (auto&& t : tg.tests)
@@ -1104,7 +1104,7 @@ void Contest::editProblem() {
 		sf.loadTests();
 		name = sf.name;
 		label = sf.label;
-		memory_limit = toStr(sf.global_mem_limit >> 10);
+		memory_limit = toStr(sf.global_mem_limit >> 20);
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
@@ -1156,7 +1156,7 @@ void Contest::editProblem() {
 				"</div>"
 				// Memory limit
 				"<div class=\"field-group\">"
-					"<label>Memory limit [KB]</label>"
+					"<label>Memory limit [MB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
 						htmlSpecialChars(memory_limit), "\" size=\"24\" "
 						"required>"
