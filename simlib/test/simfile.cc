@@ -12,7 +12,7 @@ using std::vector;
 TEST (Simfile, dump) {
 	sim::Simfile sf {
 		"name: Simple Package\n"
-		"abbreviation: sim\n"
+		"label: sim\n"
 		"statement: doc/sim.pdf\n"
 		"checker: check/checker.cpp\n"
 		"solutions: [prog/sim.cpp, prog/sim1.cpp]\n"
@@ -54,14 +54,14 @@ TEST (Simfile, dump) {
 
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadName();
-		sf.loadAbbreviation();
+		sf.loadLabel();
 		sf.loadChecker();
 		sf.loadStatement();
 		sf.loadSolutions();
 		sf.loadTestsWithFiles();
 
 		EXPECT_EQ(sf.dump(), "name: Simple Package\n"
-			"abbreviation: sim\n"
+			"label: sim\n"
 			"statement: doc/sim.pdf\n"
 			"checker: check/checker.cpp\n"
 			"solutions: [prog/sim.cpp, prog/sim1.cpp]\n"
@@ -116,7 +116,7 @@ TEST (Simfile, dump) {
 
 	sf.loadTests();
 
-	EXPECT_EQ(sf.dump(), "name: ''\nabbreviation: ''\nstatement: ''\n"
+	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 		"checker: ''\n"
 		"solutions: []\n"
 		"limits: [\n"
@@ -150,21 +150,21 @@ TEST (Simfile, loadName) {
 	EXPECT_THROW(sf.loadName(), std::runtime_error);
 }
 
-TEST (Simfile, loadAbbreviation) {
-	sim::Simfile sf {"abbreviation: Abbreviation 1 2 3"};
+TEST (Simfile, loadLabel) {
+	sim::Simfile sf {"label: Label 1 2 3"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadAbbreviation();
-		EXPECT_EQ(sf.abbreviation, "Abbreviation 1 2 3") << "iteration: " << i;
+		sf.loadLabel();
+		EXPECT_EQ(sf.label, "Label 1 2 3") << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadAbbreviation(), std::runtime_error);
-	sf = sim::Simfile {"abbreviation: []"};
-	EXPECT_THROW(sf.loadAbbreviation(), std::runtime_error);
-	sf = sim::Simfile {"abbreviation:"};
-	EXPECT_THROW(sf.loadAbbreviation(), std::runtime_error);
+	EXPECT_THROW(sf.loadLabel(), std::runtime_error);
+	sf = sim::Simfile {"label: []"};
+	EXPECT_THROW(sf.loadLabel(), std::runtime_error);
+	sf = sim::Simfile {"label:"};
+	EXPECT_THROW(sf.loadLabel(), std::runtime_error);
 }
 
 TEST (Simfile, loadChecker) {
@@ -293,7 +293,7 @@ TEST (Simfile, loadTests) {
 		"]\n"
 	};
 	sf.loadTests();
-	EXPECT_EQ(sf.dump(), "name: ''\nabbreviation: ''\nstatement: ''\n"
+	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 		"checker: ''\n"
 		"solutions: []\n"
 		"memory_limit: 33\n"
@@ -323,7 +323,7 @@ TEST (Simfile, loadTests) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadTests();
-		EXPECT_EQ(sf.dump(), "name: ''\nabbreviation: ''\nstatement: ''\n"
+		EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 			"checker: ''\n"
 			"solutions: []\n"
 			"memory_limit: 65536\n"
@@ -354,7 +354,7 @@ TEST (Simfile, loadTests) {
 		"]\n"
 	};
 	sf.loadTests();
-	EXPECT_EQ(sf.dump(), "name: ''\nabbreviation: ''\nstatement: ''\n"
+	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 		"checker: ''\n"
 		"solutions: []\n"
 		"memory_limit: 65536\n"
@@ -475,7 +475,7 @@ TEST (Simfile, loadTestsWithFiles) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadTestsWithFiles();
-		EXPECT_EQ(sf.dump(), "name: ''\nabbreviation: ''\nstatement: ''\n"
+		EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 			"checker: ''\n"
 			"solutions: []\n"
 			"limits: [\n"

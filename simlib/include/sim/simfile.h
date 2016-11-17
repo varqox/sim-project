@@ -8,7 +8,7 @@
 /// ## Example:
 /// ```sh
 /// name: Simple Package                       # Problem name
-/// abbreviation: sim                          # Problem name abbreviation
+/// label: sim                                 # Problem label (usually a shorten name)
 /// statement: doc/sim.pdf                     # Path to statement file
 /// checker: check/checker.cpp                 # Path to checker source file
 /// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions source files
@@ -67,7 +67,7 @@ namespace sim {
  */
 class Simfile {
 public:
-	std::string name, abbreviation, statement, checker;
+	std::string name, label, statement, checker;
 	std::vector<std::string> solutions;
 	uint64_t global_mem_limit = 0; // in bytes
 
@@ -110,7 +110,7 @@ public:
 	 * @errors May throw from ConfigFile::loadConfigFromString
 	 */
 	Simfile(std::string simfile) {
-		config.addVars("name", "abbreviation", "checker", "statement", "solutions",
+		config.addVars("name", "label", "checker", "statement", "solutions",
 			"memory_limit", "limits", "scoring", "tests_files");
 		config.loadConfigFromString(std::move(simfile));
 	}
@@ -142,14 +142,14 @@ public:
 	void loadName();
 
 	/**
-	 * @brief Loads problem's abbreviation
+	 * @brief Loads problem's label
 	 * @details Fields:
-	 *   - abbreviation (problem's name abbreviation)
+	 *   - label (problem's label)
 	 *
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
 	 */
-	void loadAbbreviation();
+	void loadLabel();
 
 	/**
 	 * @brief Loads path to checker source file
@@ -222,7 +222,7 @@ public:
 	 */
 	void loadAll() {
 		loadName();
-		loadAbbreviation();
+		loadLabel();
 		loadChecker();
 		loadStatement();
 		loadSolutions();
@@ -280,20 +280,20 @@ public:
 };
 
 /**
- * @brief Makes an abbreviation from @p str
+ * @brief Makes an label from @p str
  * @details Sbbreviation is made of lowered 3 (at most) first characters of
  *   @p str for which isgraph(3) != 0
  *
- * @param str string to make the abbreviation
+ * @param str string to make the label
  *
- * @return abbreviation
+ * @return label
  */
 inline std::string shortenName(const StringView& str) {
-	std::string abbreviation;
+	std::string label;
 	for (char c : str)
-		if (isgraph(c) && (abbreviation += ::tolower(c)).size() == 3)
+		if (isgraph(c) && (label += ::tolower(c)).size() == 3)
 			break;
-	return abbreviation;
+	return label;
 }
 
 } // namespace sim

@@ -4,7 +4,7 @@ Simfile is a ConfigFile file, so the syntax is as in ConfigFile.
 ## Example:
 ```sh
 name: Simple Package                       # Problem name
-abbreviation: sim                          # Problem short name
+label: sim                                 # Problem label (usually a shorten name)
 statement: doc/sim.pdf                     # Path to statement file
 checker: check/checker.cpp                 # Path to checker source file
 solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions source files

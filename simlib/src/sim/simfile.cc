@@ -15,7 +15,7 @@ namespace sim {
 string Simfile::dump() const {
 	string res;
 	back_insert(res, "name: ", ConfigFile::escapeString(name), "\n"
-		"abbreviation: ", ConfigFile::escapeString(abbreviation), "\n"
+		"label: ", ConfigFile::escapeString(label), "\n"
 		"statement: ", ConfigFile::escapeString(statement), "\n"
 		"checker: ", ConfigFile::escapeString(checker), "\n"
 		"solutions: [");
@@ -89,11 +89,11 @@ void Simfile::loadName() {
 		throw std::runtime_error("Simfile: missing problem's name");
 }
 
-void Simfile::loadAbbreviation() {
-	auto&& var = config["abbreviation"];
-	CHECK_IF_NOT_ARR(var, "abbreviation");
-	if ((abbreviation = var.asString()).empty())
-		throw std::runtime_error("Simfile: missing problem's abbreviation");
+void Simfile::loadLabel() {
+	auto&& var = config["label"];
+	CHECK_IF_NOT_ARR(var, "label");
+	if ((label = var.asString()).empty())
+		throw std::runtime_error("Simfile: missing problem's label");
 }
 
 void Simfile::loadChecker() {
