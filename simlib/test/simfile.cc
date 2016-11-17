@@ -16,7 +16,7 @@ TEST (Simfile, dump) {
 		"statement: doc/sim.pdf\n"
 		"checker: check/checker.cpp\n"
 		"solutions: [prog/sim.cpp, prog/sim1.cpp]\n"
-		"memory_limit: 65536\n"
+		"memory_limit: 64\n"
 		"limits: [\n"
 		"  sim0a 1\n"
 		"  sim0b 1\n"
@@ -28,7 +28,7 @@ TEST (Simfile, dump) {
 		"  sim2b 2\n"
 		"  sim3a 3\n"
 		"  sim3b 3\n"
-		"  sim4 5 32768\n"
+		"  sim4 5 32\n"
 		"]\n"
 		"scoring: [\n"
 		"  0 0\n"
@@ -65,7 +65,7 @@ TEST (Simfile, dump) {
 			"statement: doc/sim.pdf\n"
 			"checker: check/checker.cpp\n"
 			"solutions: [prog/sim.cpp, prog/sim1.cpp]\n"
-			"memory_limit: 65536\n"
+			"memory_limit: 64\n"
 			"limits: [\n"
 			"\tsim0a 1\n"
 			"\tsim0b 1\n"
@@ -81,7 +81,7 @@ TEST (Simfile, dump) {
 			"\tsim3a 3\n"
 			"\tsim3b 3\n"
 			"\n"
-			"\tsim4 5 32768\n"
+			"\tsim4 5 32\n"
 			"]\n"
 			"scoring: [\n"
 			"\t0 0\n"
@@ -109,8 +109,8 @@ TEST (Simfile, dump) {
 	// Omit memory limit when not necessary
 	sf = sim::Simfile {
 		"limits: [\n"
-		"  sim0 1 32768\n"
-		"  sim1 1 65536\n"
+		"  sim0 1 32\n"
+		"  sim1 1 64\n"
 		"]\n"
 	};
 
@@ -120,9 +120,9 @@ TEST (Simfile, dump) {
 		"checker: ''\n"
 		"solutions: []\n"
 		"limits: [\n"
-		"\tsim0 1 32768\n"
+		"\tsim0 1 32\n"
 		"\n"
-		"\tsim1 1 65536\n"
+		"\tsim1 1 64\n"
 		"]\n"
 		"scoring: [\n"
 		"\t0 0\n"
@@ -261,7 +261,7 @@ TEST (Simfile, loadTests) {
 	// Memory limit
 	sim::Simfile sf {"memory_limit: 123\nlimits: []"};
 	sf.loadTests();
-	EXPECT_EQ(sf.global_mem_limit, 123 << 10);
+	EXPECT_EQ(sf.global_mem_limit, 123 << 20);
 
 	// Exceptions - memory_limit
 	sf = sim::Simfile {"memory_limit: []\nlimits: []"};
@@ -313,7 +313,7 @@ TEST (Simfile, loadTests) {
 
 	// Automatic scoring
 	sf = sim::Simfile {
-		"memory_limit: 65536\n"
+		"memory_limit: 64\n"
 		"limits: [\n"
 		"  1 1\n"
 		"  2 1\n"
@@ -326,7 +326,7 @@ TEST (Simfile, loadTests) {
 		EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 			"checker: ''\n"
 			"solutions: []\n"
-			"memory_limit: 65536\n"
+			"memory_limit: 64\n"
 			"limits: [\n"
 			"\t1 1\n"
 			"\n"
@@ -345,7 +345,7 @@ TEST (Simfile, loadTests) {
 	}
 	// Grouping ocen with 0 tests and giving them score = 0
 	sf = sim::Simfile {
-		"memory_limit: 65536\n"
+		"memory_limit: 64\n"
 		"limits: [\n"
 		"  foo0 1\n"
 		"  foo1 1\n"
@@ -357,7 +357,7 @@ TEST (Simfile, loadTests) {
 	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
 		"checker: ''\n"
 		"solutions: []\n"
-		"memory_limit: 65536\n"
+		"memory_limit: 64\n"
 		"limits: [\n"
 		"\tfoo0 1\n"
 		"\tfoo1ocen 1\n"

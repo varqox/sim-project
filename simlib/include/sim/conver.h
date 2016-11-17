@@ -39,7 +39,7 @@ public:
 		                  // package
 		std::string label; // Leave empty to detect it from the Simfile in the
 		                   // package
-		uint64_t memory_limit = 0; // [KB] Set to a non-zero value to overwrite
+		uint64_t memory_limit = 0; // [MB] Set to a non-zero value to overwrite
 		                           // memory limit of every test with this value
 		uint64_t global_time_limit = 0; // [microseconds] If non-zero then every
 		                                // test will get this as time limit

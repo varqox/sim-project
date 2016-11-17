@@ -14,12 +14,12 @@
 /// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions source files
 ///                                            # The first solution is the main
 ///                                            # solution
-/// memory_limit: 65536           # Global memory limit in KB (optional)
+/// memory_limit: 64              # Global memory limit in MB (optional)
 /// limits: [                     # Limits array
 ///         # Group 0
 ///         sim0a 1            # Format: <test name> <time limit> [memory limit]
-///         sim0b 1.01         # Time limit in seconds, memory limit in KB
-///         sim1ocen 2 32768   # Memory limit is optional if global memory limit
+///         sim0b 1.01         # Time limit in seconds, memory limit in MB
+///         sim1ocen 2 32      # Memory limit is optional if global memory limit
 ///         sim2ocen 3         # is set.
 ///                            # Tests may appear in arbitrary order
 ///         # Group 1
@@ -35,7 +35,7 @@
 ///         sim3b 3
 ///
 ///         # Group 4
-///         sim4 5 32768
+///         sim4 5 32
 /// ]
 /// scoring: [                    # Scoring of the tests group (optional)
 ///         0 0      # Format: <group id> <score>
@@ -45,7 +45,7 @@
 ///         4 25
 /// ]
 /// tests_files: [                # Input and output files of the tests
-///                            # Format: <test name> <in file> <out file>
+///                               # Format: <test name> <in file> <out file>
 ///         sim0a in/sim0a.in out/sim0a.out
 ///         sim0b in/sim0b.in out/sim0b.out
 ///         sim1ocen in/sim1ocen.in out/sim1ocen.out
@@ -184,9 +184,9 @@ public:
 	/**
 	 * @brief Loads tests, their limits and scoring
 	 * @details Fields:
-	 *   - memory_limit (optional global memory limit [KB], if specified then
+	 *   - memory_limit (optional global memory limit [MB], if specified then
 	 *     memory limit in `limits` variable is optional)
-	 *   - limits (array of tests limits: time [seconds] and memory [KB])
+	 *   - limits (array of tests limits: time [seconds] and memory [MB])
 	 *   - scoring (optional array of scoring of the tests groups)
 	 *
 	 *   @errors Throws an exception of type std::runtime_error if any

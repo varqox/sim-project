@@ -298,7 +298,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 		if (opts.memory_limit == 0) {
 			if (sf.global_mem_limit == 0)
 				throw runtime_error("No memory limit is specified in neither "
-					"Simfile nor options");
+					"Simfile nor in options");
 
 			for (auto&& g : sf.tgroups)
 				for (auto&& t : g.tests)
@@ -314,7 +314,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 
 	// Overwrite memory limit
 	if (opts.memory_limit > 0) {
-		sf.global_mem_limit = opts.memory_limit << 10; // Convert from KB to
+		sf.global_mem_limit = opts.memory_limit << 20; // Convert from MB to
 		                                               // bytes
 			for (auto&& g : sf.tgroups)
 				for (auto&& t : g.tests)

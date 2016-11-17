@@ -29,7 +29,7 @@ string Simfile::dump() const {
 
 	// Memory limit
 	if (global_mem_limit >= (1 << 10))
-		back_insert(res, "memory_limit: ", toStr(global_mem_limit >> 10), '\n');
+		back_insert(res, "memory_limit: ", toStr(global_mem_limit >> 20), '\n');
 
 	// Limits
 	back_insert(res, "limits: [");
@@ -41,7 +41,7 @@ string Simfile::dump() const {
 				usecToSecStr(test.time_limit, 2))};
 
 			if (test.memory_limit != global_mem_limit)
-				back_insert(line, ' ', toStr(test.memory_limit >> 10));
+				back_insert(line, ' ', toStr(test.memory_limit >> 20));
 
 			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
 		}
@@ -142,8 +142,8 @@ void Simfile::loadTests() {
 				"to be a positive integer");
 		};
 
-		if (!isDigitNotGreaterThan<std::numeric_limits<
-			decltype(global_mem_limit)>::max()>(ml.asString()))
+		if (!isDigitNotGreaterThan<(std::numeric_limits<
+			decltype(global_mem_limit)>::max() >> 20)>(ml.asString()))
 		{
 			if (!isDigit(ml.asString()))
 				throw invalid_mem_limit();
@@ -153,7 +153,7 @@ void Simfile::loadTests() {
 		}
 
 		global_mem_limit =
-			ml.asInt<decltype(global_mem_limit)>() << 10; // Convert from KB to
+			ml.asInt<decltype(global_mem_limit)>() << 20; // Convert from MB to
 			                                              // bytes
 		if (global_mem_limit == 0)
 			throw invalid_mem_limit();
@@ -213,8 +213,8 @@ void Simfile::loadTests() {
 					"limit for the test `", test_name, "` - it has to be a "
 					"positive integer"));
 			};
-			if (!isDigitNotGreaterThan<std::numeric_limits<
-				decltype(test.memory_limit)>::max()>(sp))
+			if (!isDigitNotGreaterThan<(std::numeric_limits<
+				decltype(test.memory_limit)>::max() >> 20)>(sp))
 			{
 				if (!isDigit(sp))
 					throw invalid_mem_limit();
@@ -228,7 +228,7 @@ void Simfile::loadTests() {
 			if (test.memory_limit == 0)
 				throw invalid_mem_limit();
 
-			test.memory_limit <<= 10; // Convert from KB to bytes
+			test.memory_limit <<= 20; // Convert from MB to bytes
 		}
 
 		// Add test to its group
