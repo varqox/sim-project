@@ -67,13 +67,6 @@ void Contest::handle() {
 
 			baseTemplate("Select contest");
 
-			DB::Result res = stmt.executeQuery();
-			if (res.rowCount() == 0) {
-				append("<p class=\"pos-center\">There are no contests to "
-					"show...</p>");
-				return;
-			}
-
 			/* List them */
 			append("<div class=\"contests-list\">");
 
@@ -81,9 +74,17 @@ void Contest::handle() {
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
 				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>");
 
-			while (res.next())
-				append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
-					htmlSpecialChars(res[2]), "</a>");
+			DB::Result res = stmt.executeQuery();
+			if (res.next()) {
+				do {
+					append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
+						htmlSpecialChars(res[2]), "</a>");
+				} while (res.next());
+			} else {
+				append("<p class=\"pos-center\""
+					" style=\"margin:0;padding:5px;border-top:1px solid #ccc\">"
+					"There are no contests to show...</p>");
+			}
 
 			append("</div>");
 			return;
