@@ -4,14 +4,13 @@ EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/othe
 EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others'
 
 .PHONY: all
-all: killinstc Judge_machine server lib setup-installation
+all: lib killinstc setup-installation web-interface Judge_machine
 
 $(eval $(call dependencies))
 
-
-.PHONY: Judge_machine server lib
-Judge_machine server: lib
-Judge_machine server lib:
+.PHONY: Judge_machine web-interface lib
+Judge_machine web-interface: lib
+Judge_machine web-interface lib:
 	$(Q)$(MAKE) -C $@/
 
 killinstc: killinstc.o lib/simlib.a
@@ -27,4 +26,4 @@ clean:
 	$(Q)$(RM) *.o *.deps killinstc sim-server setup-installation
 	$(Q)$(MAKE) clean -C lib/
 	$(Q)$(MAKE) clean -C Judge_machine/
-	$(Q)$(MAKE) clean -C server/
+	$(Q)$(MAKE) clean -C web-interface/
