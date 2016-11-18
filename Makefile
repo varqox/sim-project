@@ -31,7 +31,7 @@ test-sim: src
 
 .PHONY: test-simlib
 test-simlib: src
-	$(Q)$(MAKE) -C src/simlib/ test
+	$(Q)$(MAKE) -C src/lib/simlib/ test
 
 .PHONY: install
 install: $(filter-out install run, $(MAKECMDGOALS))

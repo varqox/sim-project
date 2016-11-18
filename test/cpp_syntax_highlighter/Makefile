@@ -17,11 +17,6 @@ ifeq ($(MAKELEVEL), 0)
 	$(Q)$(MAKE) -C ../../src/lib/
 endif
 
-../../src/simlib/%: FORCE
-ifeq ($(MAKELEVEL), 0)
-	$(Q)$(MAKE) -C ../../src/simlib/
-endif
-
 .PHONY: clean
 clean:
 	$(Q)$(RM) *.o *.deps tests/*.ans check
