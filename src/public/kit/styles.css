@@ -1076,15 +1076,15 @@ table.stripped > tbody > tr:last-child > td:last-child {
 }
 .round-view > div > div > a.status.green:hover,
 .round-view > div > div > a.status.green:focus {
-	background: #c9f3c9;
+	background: #d7f9d7;
 }
 .round-view > div > div > a.status.red:hover,
 .round-view > div > div > a.status.red:focus {
-	background: #f6d0d0;
+	background: #fad6d6;
 }
 .round-view > div > div > a.status.intense-red:hover,
 .round-view > div > div > a.status.intense-red:focus {
-	background: #f6ad9c;
+	background: #f3c9b4;
 }
 .round-view > div > div > a.status.yellow:hover,
 .round-view > div > div > a.status.yellow:focus {
@@ -1200,13 +1200,13 @@ div.right-flow {
 	vertical-align: middle;
 }
 .status.green {
-	background: #8bee8b;
+	background: #aef4ae;
 }
 .status.red {
 	background: #ffbaba;
 }
 .status.intense-red {
-	background: #ff937b;
+	background: #f4ae8b;
 }
 .status.yellow {
 	background: #ffd27b;
