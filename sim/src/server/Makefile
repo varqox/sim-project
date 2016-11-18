@@ -24,11 +24,6 @@ ifeq ($(MAKELEVEL), 0)
 	$(Q)$(MAKE) -C ../lib/
 endif
 
-../simlib/%: FORCE
-ifeq ($(MAKELEVEL), 0)
-	$(Q)$(MAKE) -C ../simlib/
-endif
-
 .PHONY: clean
 clean:
 	$(Q)$(RM) *.o *.deps ../sim-server
