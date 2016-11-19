@@ -17,13 +17,15 @@ template<class Char>
 class StringBase {
 public:
 	// Types
-	typedef const Char& const_reference;
-	typedef Char& reference;
-	typedef Char* pointer;
-	typedef const Char* const_pointer;
-	typedef const_pointer const_iterator;
-	typedef const_iterator iterator;
-	typedef size_t size_type;
+	using value_type = Char;
+	using const_reference = const Char&;
+	using reference = Char&;
+	using pointer = Char*;
+	using const_pointer = const Char*;
+	using const_iterator = const_pointer;
+	using iterator = const_iterator;
+	using size_type = size_t;
+
 	static constexpr size_type npos = -1;
 
 protected:
@@ -33,8 +35,8 @@ protected:
 public:
 	constexpr StringBase() noexcept : str(""), len(0) {}
 
-	template<class CharT, size_t N>
-	constexpr StringBase(const CharT(&s)[N]) noexcept : str(s), len(N - 1) {}
+	template<size_t N>
+	constexpr StringBase(const Char(&s)[N]) noexcept : str(s), len(N - 1) {}
 
 	constexpr StringBase(const meta::string& s) noexcept
 		: str(s.data()), len(s.size()) {}
@@ -50,23 +52,22 @@ public:
 		: str(s.data() + std::min(beg, s.size())),
 			len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
-	template<class CharT>
-	constexpr StringBase(const StringBase<CharT>& s) noexcept
+	StringBase(const std::string&& s, size_type beg = 0, size_type n = npos)
+		= delete; // Disallow temporaries to pass through
+
+	constexpr StringBase(const StringBase<Char>& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
-	template<class CharT>
-	constexpr StringBase(StringBase<CharT>&& s) noexcept
+	constexpr StringBase(StringBase<Char>&& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
-	template<class CharT>
-	StringBase& operator=(StringBase<CharT>&& s) noexcept {
+	StringBase& operator=(StringBase<Char>&& s) noexcept {
 		str = s.data();
 		len = s.size();
 		return *this;
 	}
 
-	template<class CharT>
-	StringBase& operator=(const StringBase<CharT>& s) noexcept {
+	StringBase& operator=(const StringBase<Char>& s) noexcept {
 		str = s.data();
 		len = s.size();
 		return *this;
@@ -422,8 +423,10 @@ public:
 		str[len] = '\0';
 	}
 
-	template<class Char>
-	FixedString(const StringBase<Char>& s)
+	FixedString(const StringBase& s)
+		: FixedString(s.data(), s.size()) {}
+
+	FixedString(const StringBase<const value_type>& s)
 		: FixedString(s.data(), s.size()) {}
 
 	// s cannot be nullptr
@@ -432,6 +435,9 @@ public:
 	FixedString(const std::string& s, size_type beg = 0, size_type n = npos)
 		: FixedString(s.data() + std::min(beg, s.size()),
 			std::min(n, s.size() - std::min(beg, s.size()))) {}
+
+	FixedString(const std::string&& s, size_type beg = 0, size_type n = npos)
+		= delete; // Disallow temporaries to pass through
 
 	FixedString(const FixedString& fs) : FixedString(fs.str, fs.len) {}
 
@@ -477,28 +483,44 @@ public:
 	}
 };
 
+class CStringView : public StringBase<const char> {
+public:
+template<size_t N>
+constexpr CStringView(const value_type (&literal)[N])
+	: StringBase(literal, N - 1) {}
+
+constexpr CStringView(const FixedString& s)
+	: StringBase(s.data(), s.size()) {}
+
+constexpr CStringView(const std::string& s)
+	: StringBase(s.data(), s.size()) {}
+
+	CStringView(const FixedString&& s) = delete; // Disallow temporaries to pass
+	                                             // through
+	CStringView(const std::string&& s) = delete; // Disallow temporaries to pass
+	                                             // through
+
+CStringView(const CStringView&) noexcept = default;
+CStringView(CStringView&&) noexcept = default;
+CStringView& operator=(const CStringView&) noexcept = default;
+CStringView& operator=(CStringView&&) noexcept = default;
+
+constexpr const_pointer c_str() const noexcept { return data(); }
+};
+
 class StringView : public StringBase<const char> {
 public:
 	using StringBase::StringBase;
 
-	StringView() noexcept : StringBase("", 0) {}
+	constexpr StringView(const FixedString& s) noexcept
+		: StringBase(s.data(), s.size()) {}
 
-	StringView(const StringView&) noexcept = default;
+	StringView(const FixedString&& s) = delete; // Disallow temporaries to pass
+	                                            // through
 
-	StringView(StringView&&) noexcept = default;
+	constexpr StringView() noexcept : StringBase("", 0) {}
 
-	template<class Char>
-	StringView(const StringBase<Char>& s) noexcept : StringBase(s) {}
-
-	template<class Char>
-	StringView& operator=(const StringBase<Char>& s) noexcept {
-		StringBase::operator=(s);
-		return *this;
-	}
-
-	StringView& operator=(const StringView& s) noexcept = default;
-
-	StringView& operator=(StringView&& s) noexcept = default;
+	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
 
 	~StringView() = default;
 
