@@ -549,6 +549,8 @@ void Contest::submission() {
 						"View submission</a>"
 					"<a class=\"btn-small\" href=\"/s/", submission_id,
 						"/raw/", submission_id, ".cpp\">Raw code</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/download\">Download</a>"
 				"</div>",
 				cpp_syntax_highlighter(getFileContents(
 				concat("solutions/", submission_id, ".cpp"))));
