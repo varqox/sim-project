@@ -5,9 +5,9 @@ using std::vector;
 
 namespace sim {
 
-int compile(const string& source, const string& exec, unsigned verbosity,
+int compile(const CStringView& source, const CStringView& exec, unsigned verbosity,
 	uint64_t time_limit, string* c_errors, size_t c_errors_max_len,
-	const string& proot_path)
+	const std::string& proot_path)
 {
 	FileDescriptor cef;
 	if (c_errors) {

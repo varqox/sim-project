@@ -20,8 +20,8 @@ public:
 
 		ExitStat() = default;
 
-		ExitStat(int c, uint64_t rt, uint64_t vp, const std::string& m = "")
-			: code(c), runtime(rt), vm_peak(vp), message(m) {}
+		ExitStat(int c, uint64_t rt, uint64_t vp, const std::string& msg = "")
+			: code(c), runtime(rt), vm_peak(vp), message(msg) {}
 
 		ExitStat(const ExitStat&) = default;
 		ExitStat(ExitStat&&) noexcept = default;
@@ -69,9 +69,9 @@ public:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	static ExitStat run(const std::string& exec,
+	static ExitStat run(const CStringView& exec,
 		const std::vector<std::string>& args, const Options& opts = Options(),
-		const std::string& working_dir = ".")
+		const CStringView& working_dir = ".")
 	{
 		return runWithTimer<Impl>(opts.time_limit, exec, args, opts,
 			working_dir);
@@ -114,9 +114,9 @@ protected:
 	 *   @p exec
 	 */
 	template<class Func>
-	static void runChild(const std::string& exec,
+	static void runChild(const CStringView& exec,
 		const std::vector<std::string>& args, const Options& opts,
-		const std::string& working_dir, int fd,
+		const CStringView& working_dir, int fd,
 		Func doBeforeExec) noexcept;
 
 	/**
@@ -191,9 +191,9 @@ private:
 		 * @errors Throws an exception std::runtime_error with appropriate
 		 *   information if any syscall fails
 		 */
-		static ExitStat execute(const std::string& exec,
+		static ExitStat execute(const CStringView& exec,
 			const std::vector<std::string>& args, const Options& opts,
-			const std::string& working_dir);
+			const CStringView& working_dir);
 	};
 };
 
@@ -244,9 +244,9 @@ inline uint64_t Spawner::NormalTimer::stopAndGetRuntime() {
 }
 
 template<class Func>
-void Spawner::runChild(const std::string& exec,
+void Spawner::runChild(const CStringView& exec,
 	const std::vector<std::string>& args, const Options& opts,
-	const std::string& working_dir, int fd, Func doBeforeExec) noexcept
+	const CStringView& working_dir, int fd, Func doBeforeExec) noexcept
 {
 	// Sends error to parent
 	auto send_error = [fd](const char* str) { sendErrorMessage(fd, str); };
@@ -387,9 +387,9 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 }
 
 template<class Timer>
-Spawner::ExitStat Spawner::Impl<Timer>::execute(const std::string& exec,
+Spawner::ExitStat Spawner::Impl<Timer>::execute(const CStringView& exec,
 	const std::vector<std::string>& args, const Spawner::Options& opts,
-	const std::string& working_dir)
+	const CStringView& working_dir)
 {
 	// Error stream from child (and wait_for_syscall()) via pipe
 	int pfd[2];

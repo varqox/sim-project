@@ -349,10 +349,9 @@ public:
 	 *   information if any syscall fails
 	 */
 	template<class Callback = DefaultCallback>
-	static ExitStat run(const std::string& exec,
+	static ExitStat run(const CStringView& exec,
 		const std::vector<std::string>& args, const Options& opts = Options(),
-		const std::string& working_dir = ".",
-		Callback&& func = Callback())
+		const CStringView& working_dir = ".", Callback&& func = Callback())
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
 			"Callback has to derive from Sandbox::CallbackBase");
@@ -392,9 +391,9 @@ private:
 		 * @errors Throws an exception std::runtime_error with appropriate
 		 *   information if any syscall fails
 		 */
-		static ExitStat execute(const std::string& exec,
+		static ExitStat execute(const CStringView& exec,
 			const std::vector<std::string>& args, const Options& opts,
-			const std::string& working_dir, Callback func);
+			const CStringView& working_dir, Callback func);
 	};
 };
 
@@ -540,8 +539,8 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 
 template<class Callback, class Timer>
 Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
-	const std::string& exec, const std::vector<std::string>& args,
-	const Options& opts, const std::string& working_dir, Callback func)
+	const CStringView& exec, const std::vector<std::string>& args,
+	const Options& opts, const CStringView& working_dir, Callback func)
 {
 	static_assert(std::is_base_of<CallbackBase, Callback>::value,
 		"Callback has to derive from Sandbox::CallbackBase");
@@ -790,10 +789,10 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 		std::string message = func.errorMessage();
 		if (message.empty()) { // func has not left any message
 			// Try to get syscall name
-			const char* syscall_name = (func.getArch() == ARCH_i386 ?
+			CStringView syscall_name = (func.getArch() == ARCH_i386 ?
 				x86_syscall_name : x86_64_syscall_name)[syscall_no];
 
-			if (syscall_name[0] == '\0') // Syscall not found
+			if (syscall_name.empty()) // Syscall not found
 				message = concat("forbidden syscall ", toStr(syscall_no));
 			else
 				message = concat("forbidden syscall ", toStr(syscall_no), ": ", syscall_name, "()");

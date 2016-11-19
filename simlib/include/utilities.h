@@ -23,7 +23,7 @@ std::string& back_insert(std::string& str, Args&&... args) {
 }
 
 template<class T, class C>
-typename T::const_iterator binaryFind(const T& x, const C& val) {
+constexpr typename T::const_iterator binaryFind(const T& x, const C& val) {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
 		auto mid = beg + ((end - beg) >> 1);
@@ -36,7 +36,9 @@ typename T::const_iterator binaryFind(const T& x, const C& val) {
 }
 
 template<class T, class C, class Comp>
-typename T::const_iterator binaryFind(const T& x, const C& val, Comp&& comp) {
+constexpr typename T::const_iterator binaryFind(const T& x, const C& val,
+	Comp&& comp)
+{
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
 		auto mid = beg + ((end - beg) >> 1);
@@ -50,8 +52,8 @@ typename T::const_iterator binaryFind(const T& x, const C& val, Comp&& comp) {
 }
 
 template<class T, typename B, class C>
-typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-	const C& val)
+constexpr typename T::const_iterator binaryFindBy(const T& x,
+	B T::value_type::*field, const C& val)
 {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
@@ -65,8 +67,8 @@ typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
 }
 
 template<class T, typename B, class C, class Comp>
-typename T::const_iterator binaryFindBy(const T& x, B T::value_type::*field,
-	const C& val, Comp&& comp)
+constexpr typename T::const_iterator binaryFindBy(const T& x,
+	B T::value_type::*field, const C& val, Comp&& comp)
 {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
@@ -108,7 +110,7 @@ class CallInDtor {
 	Func func;
 
 public:
-	explicit CallInDtor(Func f) : func(std::move(f)) {}
+	constexpr explicit CallInDtor(Func f) : func(std::move(f)) {}
 
 	CallInDtor(const CallInDtor&) = delete;
 	CallInDtor(CallInDtor&&) = delete;
@@ -119,7 +121,7 @@ public:
 };
 
 template<class A, class B>
-bool isIn(const A& val, const B& sequence) {
+constexpr bool isIn(const A& val, const B& sequence) {
 	for (auto&& x : sequence)
 		if (x == val)
 			return true;
@@ -127,7 +129,7 @@ bool isIn(const A& val, const B& sequence) {
 }
 
 template<class A, class B>
-bool isIn(const A& val, const std::initializer_list<B>& sequence) {
+constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
 	for (auto&& x : sequence)
 		if (x == val)
 			return true;

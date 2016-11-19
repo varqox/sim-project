@@ -36,8 +36,12 @@ public:
 
 	constexpr string(const char* const str, size_t len1) : p(str), len(len1) {}
 
-	template<size_t N>
-	constexpr string(const char(&a)[N]) : p(a), len(N - 1) {}
+	constexpr string(const char* const str)
+		: p(str), len(__builtin_strlen(str)) {}
+
+	// A prototype: template<N> ...(const char(&a)[N]){} is not used because it
+	// takes const char[] wrongly (sets len to array size instead of stored
+	// string's length)
 
 	constexpr char operator[](size_t n) const {
 		return n < len ? p[n] :

@@ -105,8 +105,9 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				if (!verbose)
 					return;
 
-				auto tmplog = stdlog("  ", widedString(test.name, 11, LEFT),
-					widedString(usecToSecStr(test_report.runtime, 2, false), 4),
+				auto tmplog = stdlog("  ", widenedString(test.name, 11, LEFT),
+					widenedString(
+						usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
 					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
 					toStr(test_report.memory_limit >> 10), " KB"
@@ -236,8 +237,9 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			}
 
 			if (verbose) {
-				auto tmplog = stdlog("  ", widedString(test.name, 11, LEFT),
-					widedString(usecToSecStr(test_report.runtime, 2, false), 4),
+				auto tmplog = stdlog("  ", widenedString(test.name, 11, LEFT),
+					widenedString(
+						usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
 					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
 					toStr(test_report.memory_limit >> 10), " KB"

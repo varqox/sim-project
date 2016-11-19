@@ -12,14 +12,11 @@
 
 class SimpleParser : public StringView {
 public:
-	explicit SimpleParser(const StringView& s) : StringView(s) {}
+	constexpr explicit SimpleParser(const StringView& s) : StringView(s) {}
 
-	SimpleParser(const SimpleParser&) noexcept = default;
-
-	SimpleParser(SimpleParser&&) noexcept = default;
-
+	constexpr SimpleParser(const SimpleParser&) noexcept = default;
+	constexpr SimpleParser(SimpleParser&&) noexcept = default;
 	SimpleParser& operator=(const SimpleParser&) noexcept = default;
-
 	SimpleParser& operator=(SimpleParser&&) noexcept = default;
 
 	bool isNext(const StringView& s, char delimiter = '/') const noexcept {
@@ -87,14 +84,11 @@ class RequestURIParser {
 	StringView buff;
 
 public:
-	explicit RequestURIParser(const StringView& str) : buff(str) {}
+	constexpr explicit RequestURIParser(const StringView& str) : buff(str) {}
 
-	RequestURIParser(const RequestURIParser&) noexcept = default;
-
-	RequestURIParser(RequestURIParser&&) noexcept = default;
-
+	constexpr RequestURIParser(const RequestURIParser&) noexcept = default;
+	constexpr RequestURIParser(RequestURIParser&&) noexcept = default;
 	RequestURIParser& operator=(const RequestURIParser&) noexcept = default;
-
 	RequestURIParser& operator=(RequestURIParser&&) noexcept = default;
 
 	~RequestURIParser() = default;
@@ -127,7 +121,7 @@ public:
 
 	StringView& data() noexcept { return buff; }
 
-	const StringView& data() const noexcept { return buff; }
+	constexpr const StringView& data() const noexcept { return buff; }
 
-	StringView remnant() const noexcept { return buff; }
+	constexpr StringView remnant() const noexcept { return buff; }
 };

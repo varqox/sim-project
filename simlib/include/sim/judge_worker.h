@@ -19,7 +19,7 @@ public:
 			CHECKER_ERROR,
 		};
 
-		static const char* description(Status st) {
+		constexpr static CStringView description(Status st) {
 			switch (st) {
 			case OK: return "OK";
 			case WA: return "Wrong answer";
@@ -29,7 +29,8 @@ public:
 			case CHECKER_ERROR: return "Checker error";
 			}
 
-			return "Unknown"; // Should not happen but GCC complains about it
+			// Should not happen but GCC complains about it
+			return "Unknown";
 		}
 
 		std::string name;

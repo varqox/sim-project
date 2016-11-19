@@ -1,20 +1,20 @@
 #pragma once
 
-#include <string>
+#include "string.h"
 
 // SHA-3
 
 // Returns 48 bytes long hash ([a-f0-9]+)
-std::string sha3_224(const std::string& str);
+std::string sha3_224(const StringView& str);
 
 // Returns 64 bytes long hash ([a-f0-9]+)
-std::string sha3_256(const std::string& str);
+std::string sha3_256(const StringView& str);
 
 // Returns 96 bytes long hash ([a-f0-9]+)
-std::string sha3_384(const std::string& str);
+std::string sha3_384(const StringView& str);
 
 // Returns 128 bytes long hash ([a-f0-9]+)
-std::string sha3_512(const std::string& str);
+std::string sha3_512(const StringView& str);
 
 extern "C" {
 

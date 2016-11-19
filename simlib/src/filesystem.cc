@@ -32,8 +32,8 @@ int openUnlinkedTmpFile(int flags) noexcept {
 	return fd;
 }
 
-TemporaryDirectory::TemporaryDirectory(const char* templ) {
-	size_t size = __builtin_strlen(templ);
+TemporaryDirectory::TemporaryDirectory(const CStringView& templ) {
+	size_t size = templ.size();
 	if (size > 0) {
 		// Fill name_
 		while (size && templ[size - 1] == '/')
@@ -41,7 +41,7 @@ TemporaryDirectory::TemporaryDirectory(const char* templ) {
 
 		name_.reset(new char[size + 2]);
 
-		memcpy(name_.get(), templ, size);
+		memcpy(name_.get(), templ.c_str(), size);
 		name_.get()[size] = name_.get()[size + 1] = '\0';
 
 		// Create directory with permissions (mode: 0700/rwx------)
@@ -115,16 +115,16 @@ int mkdir_r(string path, mode_t mode) noexcept {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-static int __remove_rat(int dirfd, const char* path) noexcept {
-	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY
+static int __remove_rat(int dirfd, const CStringView& path) noexcept {
+	int fd = openat(dirfd, path.c_str(), O_RDONLY | O_LARGEFILE | O_DIRECTORY
 		| O_NOFOLLOW);
 	if (fd == -1)
-		return unlinkat(dirfd, path, AT_REMOVEDIR);
+		return unlinkat(dirfd, path.c_str(), AT_REMOVEDIR);
 
 	DIR *dir = fdopendir(fd);
 	if (dir == nullptr) {
 		sclose(fd);
-		return unlinkat(dirfd, path, AT_REMOVEDIR);
+		return unlinkat(dirfd, path.c_str(), AT_REMOVEDIR);
 	}
 
 	dirent *file;
@@ -146,23 +146,23 @@ static int __remove_rat(int dirfd, const char* path) noexcept {
 		}
 
 	closedir(dir);
-	return unlinkat(dirfd, path, AT_REMOVEDIR);
+	return unlinkat(dirfd, path.c_str(), AT_REMOVEDIR);
 }
 
-int remove_rat(int dirfd, const char* path) noexcept {
+int remove_rat(int dirfd, const CStringView& path) noexcept {
 	struct stat64 sb;
-	if (fstatat64(dirfd, path, &sb, AT_SYMLINK_NOFOLLOW) == -1)
+	if (fstatat64(dirfd, path.c_str(), &sb, AT_SYMLINK_NOFOLLOW) == -1)
 		return -1;
 
 	if (S_ISDIR(sb.st_mode))
 		return __remove_rat(dirfd, path);
 
-	return unlinkat(dirfd, path, 0);
+	return unlinkat(dirfd, path.c_str(), 0);
 }
 
-int removeDirContents_at(int dirfd, const char* pathname) noexcept {
-	int fd = openat(dirfd, pathname, O_RDONLY | O_LARGEFILE | O_DIRECTORY
-		| O_NOFOLLOW);
+int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept {
+	int fd = openat(dirfd, pathname.c_str(), O_RDONLY | O_LARGEFILE
+		| O_DIRECTORY | O_NOFOLLOW);
 	if (fd == -1)
 		return -1;
 
@@ -214,12 +214,12 @@ int blast(int infd, int outfd) noexcept {
 	return 0;
 }
 
-int copy(const char* src, const char* dest) noexcept {
-	int in = open(src, O_RDONLY | O_LARGEFILE);
+int copy(const CStringView& src, const CStringView& dest) noexcept {
+	int in = open(src.c_str(), O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
 
-	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC, S_0644);
+	int out = open(dest.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_0644);
 	if (out == -1) {
 		sclose(in);
 		return -1;
@@ -231,12 +231,15 @@ int copy(const char* src, const char* dest) noexcept {
 	return res;
 }
 
-int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept {
-	int in = openat(dirfd1, src, O_RDONLY | O_LARGEFILE);
+int copyat(int dirfd1, const CStringView& src, int dirfd2,
+	const CStringView& dest) noexcept
+{
+	int in = openat(dirfd1, src.c_str(), O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
 
-	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC, S_0644);
+	int out = openat(dirfd2, dest.c_str(), O_WRONLY | O_CREAT
+		| O_TRUNC, S_0644);
 	if (out == -1) {
 		sclose(in);
 		return -1;
@@ -262,17 +265,19 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept {
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-static int __copy_rat(int dirfd1, const char* src, int dirfd2,
-	const char* dest) noexcept
+static int __copy_rat(int dirfd1, const CStringView& src, int dirfd2,
+	const CStringView& dest) noexcept
 {
-	int src_fd = openat(dirfd1, src, O_RDONLY |	O_LARGEFILE | O_DIRECTORY);
+	int src_fd = openat(dirfd1, src.c_str(), O_RDONLY |	O_LARGEFILE
+		| O_DIRECTORY);
 	if (src_fd == -1)
 		return -1;
 
 	// Do not use src permissions
-	mkdirat(dirfd2, dest, S_0755);
+	mkdirat(dirfd2, dest.c_str(), S_0755);
 
-	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
+	int dest_fd = openat(dirfd2, dest.c_str(), O_RDONLY | O_LARGEFILE
+		| O_DIRECTORY);
 	if (dest_fd == -1) {
 		sclose(src_fd);
 		return -1;
@@ -299,10 +304,11 @@ static int __copy_rat(int dirfd1, const char* src, int dirfd2,
 	return 0;
 }
 
-int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept
+int copy_rat(int dirfd1, const CStringView& src, int dirfd2,
+	const CStringView& dest) noexcept
 {
 	struct stat64 sb;
-	if (fstatat64(dirfd1, src, &sb, AT_SYMLINK_NOFOLLOW) == -1)
+	if (fstatat64(dirfd1, src.c_str(), &sb, AT_SYMLINK_NOFOLLOW) == -1)
 		return -1;
 
 	if (S_ISDIR(sb.st_mode))
@@ -311,11 +317,13 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept
 	return copyat(dirfd1, src, dirfd2, dest);
 }
 
-int copy_r(const char* src, const char* dest, bool create_subdirs) noexcept {
+int copy_r(const CStringView& src, const CStringView& dest, bool create_subdirs)
+	noexcept
+{
 	if (!create_subdirs)
 		return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 
-	size_t len = __builtin_strlen(dest);
+	size_t len = dest.size();
 	if (len >= PATH_MAX) {
 		errno = ENAMETOOLONG;
 		return -1;
@@ -325,28 +333,24 @@ int copy_r(const char* src, const char* dest, bool create_subdirs) noexcept {
 	while (len && dest[len - 1] != '/')
 		--len;
 
-	std::array<char, PATH_MAX> dir;
-	strncpy(dir.data(), dest, len);
-	dir[len] = '\0';
-
 	// Ensure that parent directory exists
-	mkdir_r(dir.data());
+	mkdir_r(string {dest.data(), len});
 
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
-int move(const string& oldpath, const string& newpath, bool create_subdirs)
-	noexcept
+int move(const CStringView& oldpath, const CStringView& newpath,
+	bool create_subdirs) noexcept
 {
 	if (create_subdirs) {
-		size_t x = newpath.find_last_of('/');
-		if (x != string::npos)
-			mkdir_r(newpath.substr(0, x).c_str());
+		size_t x = newpath.rfind('/');
+		if (x != CStringView::npos)
+			mkdir_r(string {newpath.data(), x});
 	}
 
 	if (rename(oldpath.c_str(), newpath.c_str()) == -1) {
 		if (errno == EXDEV && copy_r(oldpath, newpath, false) == 0)
-			return remove_r(oldpath.c_str());
+			return remove_r(oldpath);
 
 		return -1;
 	}
@@ -354,8 +358,8 @@ int move(const string& oldpath, const string& newpath, bool create_subdirs)
 	return 0;
 }
 
-int createFile(const char* pathname, mode_t mode) noexcept {
-	int fd = creat(pathname, mode);
+int createFile(const CStringView& pathname, mode_t mode) noexcept {
+	int fd = creat(pathname.c_str(), mode);
 	if (fd == -1)
 		return -1;
 
@@ -509,9 +513,9 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 	return res;
 }
 
-string getFileContents(const char* file) {
+string getFileContents(const CStringView& file) {
 	FileDescriptor fd;
-	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', error(errno));
@@ -519,9 +523,9 @@ string getFileContents(const char* file) {
 	return getFileContents(fd);
 }
 
-string getFileContents(const char* file, off64_t beg, off64_t end) {
+string getFileContents(const CStringView& file, off64_t beg, off64_t end) {
 	FileDescriptor fd;
-	while ((fd = open(file, O_RDONLY | O_LARGEFILE)) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', error(errno));
@@ -529,12 +533,12 @@ string getFileContents(const char* file, off64_t beg, off64_t end) {
 	return getFileContents(fd, beg, end);
 }
 
-vector<string> getFileByLines(const char* file, int flags, size_t first,
+vector<string> getFileByLines(const CStringView& file, int flags, size_t first,
 	size_t last)
 {
 	vector<string> res;
 
-	FILE *f = fopen(file, "r");
+	FILE *f = fopen(file.c_str(), "r");
 	if (f == nullptr)
 		return res;
 
@@ -564,9 +568,10 @@ vector<string> getFileByLines(const char* file, int flags, size_t first,
 	return res;
 }
 
-ssize_t putFileContents(const char* file, const char* data, size_t len) noexcept
+ssize_t putFileContents(const CStringView& file, const char* data,
+	size_t len) noexcept
 {
-	FileDescriptor fd {open(file, O_WRONLY | O_CREAT | O_TRUNC, S_0644)};
+	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, S_0644};
 	if (fd == -1)
 		return -1;
 
@@ -706,14 +711,16 @@ bool Node::removeFile(const StringView& pathname) {
 	return true;
 }
 
-static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd, const char* path) {
-	size_t len = __builtin_strlen(path);
+static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd,
+	const CStringView& path)
+{
+	size_t len = path.size();
 	while (len > 1 && path[len - 1] == '/')
 		--len;
 
-	unique_ptr<Node> root {new Node({path, path + len})}; // Exception approved
+	unique_ptr<Node> root {new Node({path.data(), len})}; // Exception approved
 
-	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
+	int fd = openat(dirfd, path.c_str(), O_RDONLY | O_LARGEFILE | O_DIRECTORY);
 	if (fd == -1)
 		return root;
 
@@ -740,9 +747,8 @@ static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd, const char* path) {
 	return root;
 }
 
-unique_ptr<Node> dumpDirectoryTree(const char* path) {
-	struct stat64 sb;
-	if (stat64(path, &sb) == -1 || !S_ISDIR(sb.st_mode))
+unique_ptr<Node> dumpDirectoryTree(const CStringView& path) {
+	if (!isDirectory(path))
 		return nullptr;
 
 	return __dumpDirectoryTreeAt(AT_FDCWD, path);

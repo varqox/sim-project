@@ -6,14 +6,14 @@ using std::string;
 
 Logger stdlog(stderr), errlog(stderr);
 
-Logger::Logger(const string& filename)
+Logger::Logger(const CStringView& filename)
 	: f_(fopen(filename.c_str(), "a")), opened_(true)
 {
 	if (f_ == nullptr)
 		THROW("fopen('", filename, "') failed", error(errno));
 }
 
-void Logger::open(const string& filename) {
+void Logger::open(const CStringView& filename) {
 	FILE *f = fopen(filename.c_str(), "a");
 	if (f == nullptr)
 		THROW("fopen('", filename, "') failed", error(errno));

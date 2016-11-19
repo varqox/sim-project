@@ -123,7 +123,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 		} else {
 			(void)mkdir(concat(package_path_, "check"));
 			sf.checker = "check/checker.c";
-			putFileContents((package_path_ + sf.checker).data(),
+			putFileContents(package_path_ + sf.checker,
 				(const char*)default_checker_c, default_checker_c_len);
 		}
 	}
@@ -179,7 +179,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 
 			// Choose the one with the shortest path
 			swap(x.front(), *std::min_element(x.begin(), x.end(),
-				[](const string& a, const string& b) {
+				[](auto&& a, auto&& b) {
 					return a.size() < b.size();
 				}));
 		}

@@ -40,7 +40,7 @@ inline const char* __what(const std::exception& e) {
 	return e.what();
 }
 
-} // __debug
+} // namespace __debug
 
 #define ERRLOG_CATCH(...) errlog(__FILE__ ":", toStr(__LINE__), \
 	": Caught exception", __debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \

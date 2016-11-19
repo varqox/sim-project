@@ -1,11 +1,13 @@
 #pragma once
 
+#include "string.h"
+
 #include <algorithm>
 #include <vector>
 
 // TODO: Try to make constexpr constructor (that sorts in constexpr)
 class SyscallNameSet {
-	typedef std::pair<int, const char*> SyscallInfo;
+	typedef std::pair<int, CStringView> SyscallInfo;
 	std::vector<SyscallInfo> t;
 
 public:
@@ -32,9 +34,9 @@ public:
 	 * @return If there is no syscall in t returns empty string, otherwise
 	 *   corresponding syscall name is returned
 	 */
-	const char* operator[](int syscall_no) const noexcept {
+	CStringView operator[](int syscall_no) const noexcept {
 		if (t.empty())
-			return "";
+			return {};
 
 		unsigned beg = 0, end = t.size() - 1;
 		while (beg < end) {
@@ -45,7 +47,7 @@ public:
 				end = mid;
 		}
 
-		return (t[beg].first == syscall_no ? t[beg].second : "");
+		return (t[beg].first == syscall_no ? t[beg].second : CStringView{});
 	};
 };
 

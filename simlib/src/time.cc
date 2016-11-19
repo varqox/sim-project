@@ -14,40 +14,41 @@ long long microtime() noexcept {
 }
 
 template<class F>
-static string __date(const string& str, time_t curr_time, F func) {
+static string __date(const CStringView& format, time_t curr_time, F func) {
 	if (curr_time < 0)
 		time(&curr_time);
 
-	size_t buff_size = str.size() + 1 +
-		std::count(str.begin(), str.end(), '%') * 25;
-	char buff[buff_size];
+	string buff(format.size() + 1 +
+		std::count(format.begin(), format.end(), '%') * 25, '0');
+
 	tm *ptm = func(&curr_time);
 	if (!ptm)
 		THROW("Failed to convert time");
 
-	if (strftime(buff, buff_size, str.c_str(), ptm))
-		return buff;
+	size_t rc = strftime(const_cast<char*>(buff.data()), buff.size(),
+		format.c_str(), ptm);
 
-	return {};
+	buff.resize(rc);
+	return buff;
 }
 
-string date(const string& str, time_t curr_time) {
-	return __date(str, curr_time, gmtime);
+string date(const CStringView& format, time_t curr_time) {
+	return __date(format, curr_time, gmtime);
 }
 
-string localdate(const string& str, time_t curr_time) {
-	return __date(str, curr_time, localtime);
+string localdate(const CStringView& format, time_t curr_time) {
+	return __date(format, curr_time, localtime);
 }
 
-bool isDatetime(const string& str) noexcept {
+bool isDatetime(const CStringView& str) noexcept {
 	struct tm t;
 	return (str.size() == 19 &&
 			strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
 
-time_t strToTime(const string& str, const char* format) noexcept {
+time_t strToTime(const CStringView& str, const CStringView& format) noexcept {
 	struct tm t;
-	if (!strptime(str.c_str(), format, &t))
+	if (!strptime(str.c_str(), format.c_str(), &t))
 		return -1;
 
 	return timegm(&t);

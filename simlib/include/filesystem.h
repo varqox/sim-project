@@ -41,14 +41,9 @@ class FileDescriptor {
 public:
 	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
-	explicit FileDescriptor(const char* filename, int flags, int mode = S_0644)
-			noexcept
-		: fd_(::open(filename, flags, mode))
-	{}
-
-	explicit FileDescriptor(const std::string& filename, int flags,
+	explicit FileDescriptor(const CStringView& filename, int flags,
 			int mode = S_0644) noexcept
-		: FileDescriptor(filename.c_str(), flags, mode)
+		: fd_(::open(filename.c_str(), flags, mode))
 	{}
 
 	FileDescriptor(const FileDescriptor&) = delete;
@@ -81,21 +76,12 @@ public:
 		fd_ = fd;
 	}
 
-	int open(const char* filename, int flags, int mode = S_0644) noexcept {
-		return fd_ = ::open(filename, flags, mode);
-	}
-
-	int open(const std::string& filename, int flags, int mode = S_0644) noexcept
+	int open(const CStringView& filename, int flags, int mode = S_0644) noexcept
 	{
 		return fd_ = ::open(filename.c_str(), flags, mode);
 	}
 
-	int reopen(const char* filename, int flags, int mode = S_0644) noexcept {
-		reset(::open(filename, flags, mode));
-		return fd_;
-	}
-
-	int reopen(const std::string& filename, int flags, int mode = S_0644)
+	int reopen(const CStringView& filename, int flags, int mode = S_0644)
 		noexcept
 	{
 		reset(::open(filename.c_str(), flags, mode));
@@ -124,10 +110,7 @@ class Directory {
 public:
 	explicit Directory(DIR* dir = nullptr) noexcept : dir_(dir) {}
 
-	explicit Directory(const char* pathname) noexcept
-		: dir_(opendir(pathname)) {}
-
-	explicit Directory(const std::string& pathname) noexcept
+	explicit Directory(const CStringView& pathname) noexcept
 		: dir_(opendir(pathname.c_str())) {}
 
 	Directory(const Directory&) = delete;
@@ -167,12 +150,7 @@ public:
 		}
 	}
 
-	Directory& reopen(const char* pathname) noexcept {
-		reset(opendir(pathname));
-		return *this;
-	}
-
-	Directory& reopen(const std::string& pathname) noexcept {
+	Directory& reopen(const CStringView& pathname) noexcept {
 		reset(opendir(pathname.c_str()));
 		return *this;
 	}
@@ -205,7 +183,7 @@ private:
 public:
 	TemporaryDirectory() = default; // Does NOT create a temporary directory
 
-	explicit TemporaryDirectory(const char* templ);
+	explicit TemporaryDirectory(const CStringView& templ);
 
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
 
@@ -231,12 +209,7 @@ public:
 };
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(const char* pathname) noexcept {
-	return mkdir(pathname, S_0755);
-}
-
-// Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(const std::string& pathname) noexcept {
+inline int mkdir(const CStringView& pathname) noexcept {
 	return mkdir(pathname.c_str(), S_0755);
 }
 
@@ -244,12 +217,12 @@ inline int mkdir(const std::string& pathname) noexcept {
 int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
 
 // The same as unlink(const char*)
-inline int unlink(const std::string& pathname) noexcept {
+inline int unlink(const CStringView& pathname) noexcept {
 	return unlink(pathname.c_str());
 }
 
 // The same as remove(const char*)
-inline int remove(const std::string& pathname) noexcept {
+inline int remove(const CStringView& pathname) noexcept {
 	return remove(pathname.c_str());
 }
 
@@ -271,17 +244,12 @@ void forEachDirComponent(Directory& dir, Func&& func) {
 }
 
 template<class Func>
-void forEachDirComponent(const char* pathname, Func&& func) {
+void forEachDirComponent(const CStringView& pathname, Func&& func) {
 	Directory dir {pathname};
 	if (!dir)
 		THROW("opendir()", error(errno));
 
 	return forEachDirComponent(dir, std::forward<Func>(func));
-}
-
-template<class Func>
-void forEachDirComponent(const std::string& pathname, Func&& func) {
-	return forEachDirComponent(pathname.c_str(), std::forward<Func>(func));
 }
 
 /**
@@ -296,7 +264,7 @@ void forEachDirComponent(const std::string& pathname, Func&& func) {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-int remove_rat(int dirfd, const char* pathname) noexcept;
+int remove_rat(int dirfd, const CStringView& pathname) noexcept;
 
 /**
  * @brief Removes recursively file/directory @p pathname
@@ -308,13 +276,8 @@ int remove_rat(int dirfd, const char* pathname) noexcept;
  *
  * @errors The same that occur for remove_rat()
  */
-inline int remove_r(const char* pathname) noexcept {
+inline int remove_r(const CStringView& pathname) noexcept {
 	return remove_rat(AT_FDCWD, pathname);
-}
-
-// The same as remove_r(const char*)
-inline int remove_r(const std::string& pathname) noexcept {
-	return remove_rat(AT_FDCWD, pathname.c_str());
 }
 
 /**
@@ -329,7 +292,7 @@ inline int remove_r(const std::string& pathname) noexcept {
  *
  * @errors The same that occur for remove_rat()
  */
-int removeDirContents_at(int dirfd, const char* pathname) noexcept;
+int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept;
 
 /**
  * @brief Removes recursively all the contents of the directory @p pathname
@@ -341,13 +304,8 @@ int removeDirContents_at(int dirfd, const char* pathname) noexcept;
  *
  * @errors The same that occur for remove_rat()
  */
-inline int removeDirContents(const char* pathname) noexcept {
+inline int removeDirContents(const CStringView& pathname) noexcept {
 	return removeDirContents_at(AT_FDCWD, pathname);
-}
-
-// The same as remove_r(const char*)
-inline int removeDirContents(const std::string& pathname) noexcept {
-	return removeDirContents_at(AT_FDCWD, pathname.c_str());
 }
 
 /**
@@ -375,22 +333,7 @@ int blast(int infd, int outfd) noexcept;
  *
  * @errors The same that occur for open(2), blast()
  */
-int copy(const char* src, const char* dest) noexcept;
-
-/**
- * @brief Copies (overrides) file from @p src to @p dest
- * @details Requires for a directory containing @p dest to exist
- *
- * @param src source file
- * @param dest destination file
- *
- * @return 0 on success, -1 on error
- *
- * @errors The same that occur for open(2), blast()
- */
-inline int copy(const std::string& src, const std::string& dest) noexcept {
-	return copy(src.c_str(), dest.c_str());
-}
+int copy(const CStringView& src, const CStringView& dest) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory file
@@ -405,7 +348,8 @@ inline int copy(const std::string& src, const std::string& dest) noexcept {
  *
  * @errors The same that occur for openat(2), blast()
  */
-int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept;
+int copyat(int dirfd1, const CStringView& src, int dirfd2,
+	const CStringView& dest) noexcept;
 
 /**
  * @brief Copies (overrides) file/directory @p src to @p dest relative to a
@@ -421,8 +365,8 @@ int copyat(int dirfd1, const char* src, int dirfd2, const char* dest) noexcept;
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest)
-	noexcept;
+int copy_rat(int dirfd1, const CStringView& src, int dirfd2,
+	const CStringView& dest) noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -436,28 +380,10 @@ int copy_rat(int dirfd1, const char* src, int dirfd2, const char* dest)
  *
  * @errors The same that occur for copy_rat()
  */
-int copy_r(const char* src, const char* dest, bool create_subdirs = true)
-	noexcept;
+int copy_r(const CStringView& src, const CStringView& dest,
+	bool create_subdirs = true) noexcept;
 
-/**
- * @brief Copies (overrides) recursively files and folders
- * @details Uses copy_rat()
- *
- * @param src source file/directory
- * @param dest destination file/directory
- * @param create_subdirs whether create subdirectories or not
- *
- * @return 0 on success, -1 on error
- *
- * @errors The same that occur for copy_rat()
- */
-inline int copy_r(const std::string& src, const std::string& dest,
-	bool create_subdirs = true) noexcept
-{
-	return copy_r(src.c_str(), dest.c_str(), create_subdirs);
-}
-
-inline int access(const std::string& pathname, int mode) noexcept {
+inline int access(const CStringView& pathname, int mode) noexcept {
 	return access(pathname.c_str(), mode);
 }
 
@@ -474,7 +400,7 @@ inline int access(const std::string& pathname, int mode) noexcept {
  *
  * @return Return value of rename(2) or copy_r() or remove_r()
  */
-int move(const std::string& oldpath, const std::string& newpath,
+int move(const CStringView& oldpath, const CStringView& newpath,
 	bool create_subdirs = true) noexcept;
 
 /**
@@ -487,14 +413,7 @@ int move(const std::string& oldpath, const std::string& newpath,
  *
  * @errors The same that occur for creat(2), close(2)
  */
-int createFile(const char* pathname, mode_t mode = S_0644) noexcept;
-
-// Alias to createFile(const char*, mode_t)
-inline int createFile(const std::string& pathname, mode_t mode = S_0644)
-	noexcept
-{
-	return createFile(pathname.c_str(), mode);
-}
+int createFile(const CStringView& pathname, mode_t mode = S_0644) noexcept;
 
 /**
  * @brief Read @p count bytes to @p buf from @p fd
@@ -533,12 +452,30 @@ std::string abspath(const StringView& path, size_t beg = 0,
 		size_t end = std::string::npos, std::string curr_dir = "/");
 
 // Returns extension (without dot) e.g. "foo.cc" -> "cc", "bar" -> ""
-inline std::string getExtension(const std::string& file) {
+inline StringView getExtension(const CStringView& file) {
 	size_t x = file.rfind('.');
 	if (x == std::string::npos)
 		return {}; // No extension
 
 	return file.substr(x + 1);
+}
+
+/**
+ * @brief Returns the filename of the path @p path
+ * @details Examples:
+ *   "/my/path/foo.bar" -> "foo.bar"
+ *   "/my/path/" -> ""
+ *   "/" -> ""
+ *   "/my/path/." -> "."
+ *   "/my/path/.." -> ".."
+ *
+ * @param path given path
+ *
+ * @return Extracted filename
+ */
+inline CStringView filename(const CStringView &path) {
+	auto pos = path.rfind('/');
+	return path.substr(pos == CStringView::npos ? pos : pos + 1);
 }
 
 /**
@@ -576,7 +513,7 @@ std::string getFileContents(int fd, off64_t beg, off64_t end);
  * @errors The same that occur for read(2), close(2) - check errno; May throw an
  *   exception of type std::runtime_error if open(2) fails
  */
-std::string getFileContents(const char* file);
+std::string getFileContents(const CStringView& file);
 
 /**
  * @brief Reads form @p file from beg to end
@@ -590,19 +527,8 @@ std::string getFileContents(const char* file);
  * @errors The same that occur for lseek64(3), read(2), close(2) - check errno;
  *   May throw an exception of type std::runtime_error if open(2) fails
  */
-std::string getFileContents(const char* file, off64_t beg, off64_t end = -1);
-
-/// Alias to getFileContents(const char*)
-inline std::string getFileContents(const std::string& file) {
-	return getFileContents(file.c_str());
-}
-
-/// Alias to getFileContents(const char*, off64_t, off64_t)
-inline std::string getFileContents(const std::string& file, off64_t beg,
-	off64_t end = -1)
-{
-	return getFileContents(file.c_str(), beg, end);
-}
+std::string getFileContents(const CStringView& file, off64_t beg,
+	off64_t end = -1);
 
 constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
 /**
@@ -616,15 +542,9 @@ constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
  *
  * @return vector<string> containing fetched lines
  */
-std::vector<std::string> getFileByLines(const char* file, int flags = 0,
+std::vector<std::string> getFileByLines(const CStringView& file, int flags = 0,
 	size_t first = 0, size_t last = -1);
 
-inline std::vector<std::string> getFileByLines(const std::string& file,
-	int flags = 0, size_t first = 0, size_t last = -1)
-{
-	return getFileByLines(file.c_str(), flags, first, last);
-}
-
 /**
  * @brief Writes @p data to file @p file
  * @details Writes all data or nothing
@@ -637,25 +557,12 @@ inline std::vector<std::string> getFileByLines(const std::string& file,
  * @errors The same that occur for open(2) and write(2) except EINTR from
  *   write(2)
  */
-ssize_t putFileContents(const char* file, const char* data, size_t len = -1)
-	noexcept;
+ssize_t putFileContents(const CStringView& file, const char* data,
+	size_t len) noexcept;
 
-/**
- * @brief Writes @p data to file @p file
- * @details Writes all data or nothing
- *
- * @param file file to write to
- * @param data data to write
- *
- * @return bytes written, if error occurs then errno is > 0
- *
- * @errors The same that occur for open(2) and write(2) except EINTR from
- *   write(2)
- */
-inline ssize_t putFileContents(const std::string& file,
-	const std::string& data) noexcept
+inline ssize_t putFileContents(const CStringView& file, const StringView& data)
 {
-	return putFileContents(file.c_str(), data.c_str(), data.size());
+	return putFileContents(file, data.data(), data.size());
 }
 
 // Closes file descriptor automatically
@@ -688,9 +595,10 @@ public:
 	}
 };
 
-template<int (*func)(const char*)>
+template<int (*func)(const CStringView&) >
 class RemoverBase {
 	std::unique_ptr<char[]> name;
+	unsigned name_len = 0;
 
 	RemoverBase(const RemoverBase&) = delete;
 	RemoverBase& operator=(const RemoverBase&) = delete;
@@ -698,38 +606,36 @@ class RemoverBase {
 	RemoverBase& operator=(const RemoverBase&&) = delete;
 
 public:
-	explicit RemoverBase(const char* str)
-		: RemoverBase(str, (str ? __builtin_strlen(str) : 0)) {}
-
-	explicit RemoverBase(const std::string& str)
+	explicit RemoverBase(const CStringView& str)
 		: RemoverBase(str.data(), str.size()) {}
 
+	/// If @p str is null then @p len is ignored
 	RemoverBase(const char* str, size_t len) : name(nullptr) {
 		if (str != nullptr) {
 			name.reset(new char[len + 1]);
 			strncpy(name.get(), str, len + 1);
+			name_len = len;
 		}
 	}
 
 	~RemoverBase() {
 		if (name)
-			func(name.get());
+			func(CStringView{name.get(), name_len});
 	}
 
 	void cancel() noexcept { name.reset(); }
 
-	void reset(const char* str) { reset(str, __builtin_strlen(str)); }
-
-	void reset(const std::string& str) { reset(str.data(), str.size()); }
+	void reset(const CStringView& str) { reset(str.data(), str.size()); }
 
 	void reset(const char* str, size_t len) {
 		cancel();
 		name.reset(new char[len + 1]);
 		strncpy(name.get(), str, len + 1);
+		name_len = len;
 	}
 
 	int removeTarget() noexcept {
-		int rc = func(name.get());
+		int rc = func(CStringView{name.get(), name_len});
 		cancel();
 		return rc;
 	}
@@ -762,13 +668,9 @@ std::string humanizeFileSize(uint64_t size);
  *   other file type error from stat64(2) error set errno to 0 before calling
  *   this function, if stat64(2) fails, errno will have nonzero value
  */
-inline bool isRegularFile(const char* file) noexcept {
+inline bool isRegularFile(const CStringView& file) noexcept {
 	struct stat64 st;
-	return (stat64(file, &st) == 0 && S_ISREG(st.st_mode));
-}
-
-inline bool isRegularFile(const std::string& file) noexcept {
-	return isRegularFile(file.c_str());
+	return (stat64(file.c_str(), &st) == 0 && S_ISREG(st.st_mode));
 }
 
 /**
@@ -780,13 +682,9 @@ inline bool isRegularFile(const std::string& file) noexcept {
  *   other file type error from stat64(2) error set errno to 0 before calling
  *   this function, if stat64(2) fails, errno will have nonzero value
  */
-inline bool isDirectory(const char* file) noexcept {
+inline bool isDirectory(const CStringView& file) noexcept {
 	struct stat64 st;
-	return (stat64(file, &st) == 0 && S_ISDIR(st.st_mode));
-}
-
-inline bool isDirectory(const std::string& file) noexcept {
-	return isDirectory(file.c_str());
+	return (stat64(file.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
 }
 
 namespace directory_tree {
@@ -877,18 +775,7 @@ public:
  *
  * @return pointer to root node
  */
-std::unique_ptr<Node> dumpDirectoryTree(const char* path);
-
-/**
- * @brief Dumps directory tree (rooted in @p path)
- *
- * @param path path to main directory
- *
- * @return pointer to root node
- */
-inline std::unique_ptr<Node> dumpDirectoryTree(const std::string& path) {
-	return dumpDirectoryTree(path.c_str());
-}
+std::unique_ptr<Node> dumpDirectoryTree(const CStringView& path);
 
 /**
  * @brief Searches for files in @p dir for which @p func returns true
@@ -935,4 +822,3 @@ std::vector<std::string> findFiles(directory_tree::Node* dir,
 };
 
 } // namespace directory_tree
-

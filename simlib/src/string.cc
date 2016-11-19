@@ -2,35 +2,6 @@
 
 using std::string;
 
-int strToNum(string& x, const StringView& s, size_t beg, size_t end) {
-	if (end > s.size())
-		end = s.size();
-	if (beg > end)
-		beg = end;
-
-	for (size_t i = beg; i < end; ++i)
-		if (!isdigit(s[i]))
-			return -1;
-
-	x = s.substr(beg, end - beg).to_string();
-	return end - beg;
-}
-
-int strToNum(string& x, const StringView& s, size_t beg, char c) {
-	if (beg > s.size()) {
-		x.clear();
-		return 0;
-	}
-
-	size_t end = beg;
-	for (size_t i = beg, len = s.size(); i < len && s[i] != c; ++i, ++end)
-		if (!isdigit(s[i]))
-			return -1;
-
-	x = s.substr(beg, end - beg).to_string();
-	return end - beg;
-}
-
 bool slowEqual(const char* str1, const char* str2, size_t len) noexcept {
 	char rc = 0;
 	for (size_t i = 0; i < len; ++i)
@@ -96,12 +67,6 @@ string decodeURI(const StringView& str, size_t beg, size_t end) {
 	return ret;
 }
 
-string tolower(string str) {
-	for (auto& c : str)
-		c = tolower(c);
-	return str;
-}
-
 string toHex(const char* str, size_t len) {
 	string res(len << 1, '\0');
 	for (size_t i = -1; len-- > 0; ++str) {
@@ -113,87 +78,9 @@ string toHex(const char* str, size_t len) {
 	return res;
 }
 
-void htmlSpecialChars(string& str, char c) {
-	switch (c) {
-	// To preserve spaces use CSS: white-space: pre | pre-wrap;
-	case '&':
-		str += "&amp;";
-		break;
-
-	case '"':
-		str += "&quot;";
-		break;
-
-	case '\'':
-		str += "&apos;";
-		break;
-
-	case '<':
-		str += "&lt;";
-		break;
-
-	case '>':
-		str += "&gt;";
-		break;
-
-	default:
-		str += c;
-	}
-}
-
-void htmlSpecialChars(string& str, const StringView& s) {
+void appendHtmlEscaped(string& str, const StringView& s) {
 	for (size_t i = 0; i < s.size(); ++i)
-		htmlSpecialChars(str, s[i]);
-}
-
-bool isInteger(const StringView& s, size_t beg, size_t end) noexcept {
-	if (end > s.size())
-		end = s.size();
-	if (beg >= end)
-		return false; // empty string is not a number
-
-	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
-			return false; // sign is not a number
-
-	for (; beg < end; ++beg)
-		if (!isdigit(s[beg]))
-			return false;
-
-	return true;
-}
-
-bool isDigit(const StringView& s, size_t beg, size_t end) noexcept {
-	if (end > s.size())
-		end = s.size();
-	if (beg >= end)
-		return false;
-
-	for (; beg < end; ++beg)
-		if (!isdigit(s[beg]))
-			return false;
-
-	return true;
-}
-
-bool isReal(const StringView& s, size_t beg, size_t end) noexcept {
-	if (end > s.size())
-		end = s.size();
-	if (beg >= end || s[beg] == '.')
-		return false;
-
-	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
-			return false; // sign is not a number
-
-	bool dot = false;
-	for (; beg < end; ++beg)
-		if (!isdigit(s[beg])) {
-			if (s[beg] == '.' && !dot && beg + 1 < end)
-				dot = true;
-			else
-				return false;
-		}
-
-	return true;
+		appendHtmlEscaped(str, s[i]);
 }
 
 string usecToSecStr(uint64_t x, uint prec, bool trim_zeros) {
@@ -221,7 +108,9 @@ string usecToSecStr(uint64_t x, uint prec, bool trim_zeros) {
 	return res;
 }
 
-string widedString(const StringView& s, size_t len, Adjustment adj, char fill) {
+string widenedString(const StringView& s, size_t len, Adjustment adj,
+	char fill)
+{
 	string res;
 	if (adj == LEFT && len > s.size()) {
 		res.assign(s.data(), s.size());
