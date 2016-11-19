@@ -3,7 +3,7 @@
 #include "../include/logger.h"
 #include "../include/random.h"
 
-std::mt19937 random_generator(getRandomSeed());
+std::mt19937 random_generator {randomlySeededMersene()};
 
 void fillRandomly(void* dest, size_t bytes) noexcept {
 	if (bytes == 0)
@@ -26,7 +26,7 @@ void fillRandomly(void* dest, size_t bytes) noexcept {
 	}
 }
 
-ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
+ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept {
 	FileDescriptor fd("/dev/urandom", O_RDONLY);
 	if (fd == -1)
 		return -1;
@@ -41,7 +41,7 @@ ssize_t readRandomBytes_nothrow(void* dest, size_t bytes) noexcept {
 	return -1;
 }
 
-void readRandomBytes(void* dest, size_t bytes) {
+void readFromDevUrandom(void* dest, size_t bytes) {
 	FileDescriptor fd("/dev/urandom", O_RDONLY);
 	if (fd == -1)
 		THROW("Failed to open /dev/urandom", error(errno));
