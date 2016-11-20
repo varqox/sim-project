@@ -196,6 +196,6 @@ public:
  *
  * @errors On error throws std::runtime_error
  */
-Connection createConnectionUsingPassFile(const std::string& filename);
+Connection createConnectionUsingPassFile(const CStringView& filename);
 
 } // namespace DB

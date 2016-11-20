@@ -149,12 +149,17 @@ constexpr inline const char* toString(SubmissionType x) {
 }
 
 // Logs
-constexpr const char* SERVER_LOG = "logs/server.log";
-constexpr const char* SERVER_ERROR_LOG = "logs/server-error.log";
-constexpr const char* JUDGE_LOG = "logs/judge.log";
-constexpr const char* JUDGE_ERROR_LOG = "logs/judge-error.log";
+constexpr const char SERVER_LOG[] = "logs/server.log";
+constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
+constexpr const char JUDGE_LOG[] = "judge.log"; // TODO: remove
+constexpr const char JUDGE_ERROR_LOG[] = "judge-error.log"; // TODO: remove
+constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
+constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
+
+// Job-server notifying file
+constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
 constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
 constexpr uint64_t CHECKER_COMPILATION_TIME_LIMIT = 30e6; // 30 s
 constexpr uint64_t SOLUTION_COMPILATION_TIME_LIMIT = 30e6; // 30 s
-constexpr const char* PROOT_PATH = "./proot";
+constexpr const char PROOT_PATH[] = "./proot";

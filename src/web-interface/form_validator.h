@@ -41,7 +41,7 @@ public:
 	}
 
 	void addError(const std::string& error) {
-		back_insert(errors_, "<pre class=\"error\">", htmlSpecialChars(error),
+		back_insert(errors_, "<pre class=\"error\">", htmlEscape(error),
 			"</pre>");
 	}
 
@@ -62,7 +62,7 @@ public:
 		auto it = form.find(name);
 		if (it == form.end()) {
 			back_insert(errors_, "<pre class=\"error\">",
-				htmlSpecialChars(name_to_print),
+				htmlEscape(name_to_print),
 				" has to be submitted as a file</pre>");
 			return false;
 		}
@@ -98,7 +98,7 @@ inline bool FormValidator::validate(std::string& var, const std::string& name,
 			return true;
 
 		back_insert(errors_, "<pre class=\"error\">",
-			htmlSpecialChars(error.empty()
+			htmlEscape(error.empty()
 				? (name_to_print + " validation error") : error), "</pre>");
 	}
 
@@ -111,7 +111,7 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 {
 	if (validate(var, name, name_to_print, max_size) && var.empty()) {
 		back_insert(errors_, "<pre class=\"error\">",
-			htmlSpecialChars(name_to_print), " cannot be blank</pre>");
+			htmlEscape(name_to_print), " cannot be blank</pre>");
 		return false;
 	}
 
@@ -129,7 +129,7 @@ inline bool FormValidator::validateNotBlank(std::string& var,
 			return true;
 
 		back_insert(errors_, "<pre class=\"error\">",
-			htmlSpecialChars(error.empty()
+			htmlEscape(error.empty()
 				? (name_to_print + " validation error") : error), "</pre>");
 	}
 

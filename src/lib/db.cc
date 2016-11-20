@@ -34,7 +34,7 @@ void Connection::reconnect() {
 	conn_->setSchema(database_);
 }
 
-Connection createConnectionUsingPassFile(const string& filename) {
+Connection createConnectionUsingPassFile(const CStringView& filename) {
 	char *host = nullptr, *user = nullptr, *password = nullptr,
 		*database = nullptr;
 

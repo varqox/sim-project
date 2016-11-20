@@ -575,7 +575,9 @@ static void master_process_cycle() {
 }
 
 // Loads server configuration
-static void loadServerConfig(const char* config_path, sockaddr_in& sock_name) {
+static void loadServerConfig(const CStringView config_path,
+	sockaddr_in& sock_name)
+{
 	ConfigFile config;
 	try {
 		config.addVars("address", "workers", "connections");

@@ -9,12 +9,12 @@ bool FormValidator::validate(string& var, const string& name,
 	auto it = form.find(name);
 	if (it == form.end()) {
 		back_insert(errors_, "<pre class=\"error\">Invalid ",
-			htmlSpecialChars(name_to_print), "</pre>");
+			htmlEscape(name_to_print), "</pre>");
 		return false;
 
 	} else if (it->second.size() > max_size) {
 		back_insert(errors_, "<pre class=\"error\">",
-			htmlSpecialChars(name_to_print), " cannot be longer than ",
+			htmlEscape(name_to_print), " cannot be longer than ",
 			toString(max_size), " bytes</pre>");
 		return false;
 	}

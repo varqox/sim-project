@@ -147,7 +147,7 @@ static void processSubmissionQueue() {
 
 			status = SubmissionStatus::CHECKER_COMPILATION_ERROR;
 			initial_report = concat("<pre class=\"compilation-errors\">",
-				htmlSpecialChars(compilation_errors), "</pre>");
+				htmlEscape(compilation_errors), "</pre>");
 
 			send_report();
 			continue;
@@ -163,7 +163,7 @@ static void processSubmissionQueue() {
 
 			status = SubmissionStatus::COMPILATION_ERROR;
 			initial_report = concat("<pre class=\"compilation-errors\">",
-				htmlSpecialChars(compilation_errors), "</pre>");
+				htmlEscape(compilation_errors), "</pre>");
 
 			send_report();
 			continue;
@@ -213,7 +213,7 @@ static void processSubmissionQueue() {
 					throw_assert(false); // We shouldn't get here
 				};
 				back_insert(report,
-					"<td>", htmlSpecialChars(test.name), "</td>",
+					"<td>", htmlEscape(test.name), "</td>",
 					asTdString(test.status),
 					"<td>", usecToSecStr(test.runtime, 2, false), " / ",
 						usecToSecStr(test.time_limit, 2, false), "</td>"
@@ -252,8 +252,8 @@ static void processSubmissionQueue() {
 						if (test.comment.size())
 							back_insert(report, "<li>"
 								"<span class=\"test-id\">",
-									htmlSpecialChars(test.name), "</span>",
-								htmlSpecialChars(test.comment), "</li>");
+									htmlEscape(test.name), "</span>",
+								htmlEscape(test.comment), "</li>");
 
 				report += "</ul>";
 			}
@@ -375,7 +375,7 @@ static void processSubmissionQueue() {
 			stdlog("Judge error.");
 
 			status = SubmissionStatus::JUDGE_ERROR;
-			initial_report = concat("<pre>", htmlSpecialChars(e.what()),
+			initial_report = concat("<pre>", htmlEscape(e.what()),
 				"</pre>");
 			final_report.clear();
 

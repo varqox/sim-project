@@ -726,13 +726,12 @@ void Connection::sendResponse(const HttpResponse& res) {
 	case HttpResponse::FILE:
 	case HttpResponse::FILE_TO_REMOVE:
 		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
-			? res.content.c_str() : nullptr);
-		int fd = open(res.content.c_str(), O_RDONLY | O_LARGEFILE);
+			? res.content.c_str() : nullptr, res.content.size());
+		FileDescriptor fd {res.content, O_RDONLY | O_LARGEFILE};
 		if (fd == -1) {
 			error404();
 			return;
 		}
-		Closer make_close(fd);
 
 #ifdef __x86_64__
 		struct stat sb;

@@ -208,7 +208,7 @@ static string colorize(const string& str) noexcept {
 			opened = NONE;
 			i += 2;
 		} else
-			htmlSpecialChars(res, str[i]);
+			appendHtmlEscaped(res, str[i]);
 	}
 	closeLastTag();
 	return res;
@@ -225,7 +225,7 @@ void Sim::logs() {
 	constexpr int BYTES_TO_READ = 16384;
 	constexpr int MAX_LINES = 128;
 
-	auto dumpLogTail = [&](const char* filename) {
+	auto dumpLogTail = [&](const CStringView& filename) {
 		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 		if (fd == -1) {
 			errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
@@ -276,8 +276,7 @@ void Sim::logs() {
 		"<pre class=\"logs\">");
 	dumpLogTail(JUDGE_ERROR_LOG);
 	append("</pre>"
-
-	// Script used to scroll down the logs
+		// Script used to scroll down the logs
 		"<script>"
 			"$(\".logs\").each(function(){"
 				"$(this).scrollTop($(this)[0].scrollHeight);"

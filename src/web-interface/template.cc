@@ -18,7 +18,7 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 		"<html lang=\"en\">"
 			"<head>"
 				"<meta charset=\"utf-8\">"
-				"<title>", htmlSpecialChars(title), "</title>"
+				"<title>", htmlEscape(title), "</title>"
 				"<link rel=\"stylesheet\" href=\"/kit/styles.css\">"
 				"<script src=\"/kit/jquery.js\"></script>"
 				"<script src=\"/kit/scripts.js\"></script>"
@@ -49,7 +49,7 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 	if (Session::isOpen())
 		append("<div class=\"dropmenu down\">"
 				"<a class=\"user dropmenu-toggle\">"
-					"<strong>", htmlSpecialChars(Session::username), "</strong>"
+					"<strong>", htmlEscape(Session::username), "</strong>"
 				"</a>"
 				"<ul>"
 					"<a href=\"/u/", Session::user_id, "\">My profile</a>"

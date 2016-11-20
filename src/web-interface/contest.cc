@@ -77,8 +77,8 @@ void Contest::handle() {
 			DB::Result res = stmt.executeQuery();
 			if (res.next()) {
 				do {
-					append("<a href=\"/c/", htmlSpecialChars(res[1]), "\">",
-						htmlSpecialChars(res[2]), "</a>");
+					append("<a href=\"/c/", htmlEscape(res[1]), "\">",
+						htmlEscape(res[2]), "</a>");
 				} while (res.next());
 			} else {
 				append("<p class=\"pos-center\""
@@ -152,6 +152,9 @@ void Contest::handle() {
 		else if (hasSuffixIn(statement.asString(), {".txt", ".md"}))
 			resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
+		resp.headers["Content-Disposition"] =
+			concat("inline; filename=", filename(statement.asString()));
+
 		resp.content_type = server::HttpResponse::FILE;
 		resp.content = concat(resp.content, "problems/",
 			rpath->problem->problem_id, '/', statement.asString());
@@ -221,7 +224,7 @@ void Contest::handle() {
 	append("<div class=\"round-info\">");
 
 	if (rpath->type == CONTEST) {
-		append("<h1>", htmlSpecialChars(rpath->contest->name), "</h1>");
+		append("<h1>", htmlEscape(rpath->contest->name), "</h1>");
 		if (admin_view)
 			append("<div>"
 					"<a class=\"btn-small\" href=\"/c/", round_id, "/add\">"
@@ -231,7 +234,7 @@ void Contest::handle() {
 				"</div>");
 
 	} else if (rpath->type == ROUND) {
-		append("<h1>", htmlSpecialChars(rpath->round->name), "</h1>");
+		append("<h1>", htmlEscape(rpath->round->name), "</h1>");
 		if (admin_view)
 			append("<div>"
 					"<a class=\"btn-small\" href=\"/c/", round_id, "/add\">"
@@ -241,7 +244,7 @@ void Contest::handle() {
 				"</div>");
 
 	} else { // rpath->type == PROBLEM
-		append("<h1>", htmlSpecialChars(rpath->problem->name), "</h1>");
+		append("<h1>", htmlEscape(rpath->problem->name), "</h1>");
 		if (admin_view)
 			append("<div>"
 				"<a class=\"btn-small\" href=\"/c/", rpath->round->id,
@@ -320,7 +323,7 @@ void Contest::addContest() {
 				"<div class=\"field-group\">"
 					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
-						htmlSpecialChars(name), "\" size=\"24\" "
+						htmlEscape(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -424,7 +427,7 @@ void Contest::addRound() {
 			"<div class=\"field-group\">"
 				"<label>Round name</label>"
 				"<input type=\"text\" name=\"name\" value=\"",
-					htmlSpecialChars(name), "\" size=\"24\" "
+					htmlEscape(name), "\" size=\"24\" "
 					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>"
 			"</div>"
 			// Visible
@@ -438,7 +441,7 @@ void Contest::addRound() {
 				"<label>Begins</label>"
 				"<input type=\"text\" name=\"begins\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
-					htmlSpecialChars(begins), "\" size=\"19\" "
+					htmlEscape(begins), "\" size=\"19\" "
 					"maxlength=\"19\">"
 					"<span>UTC</span>"
 			"</div>"
@@ -447,7 +450,7 @@ void Contest::addRound() {
 				"<label>Ends</label>"
 				"<input type=\"text\" name=\"ends\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
-					htmlSpecialChars(ends), "\" size=\"19\" "
+					htmlEscape(ends), "\" size=\"19\" "
 					"maxlength=\"19\">"
 					"<span>UTC</span>"
 			"</div>"
@@ -456,7 +459,7 @@ void Contest::addRound() {
 				"<label>Full_results</label>"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
-					htmlSpecialChars(full_results), "\" size=\"19\" "
+					htmlEscape(full_results), "\" size=\"19\" "
 					"maxlength=\"19\">"
 					"<span>UTC</span>"
 			"</div>"
@@ -582,7 +585,7 @@ void Contest::addProblem() {
 
 				// Move package folder to problems/
 				string package_dir = concat("problems/", problem_id);
-				if (move(conver.unpackedPackagePath(), package_dir, false))
+				if (::move(conver.unpackedPackagePath(), package_dir, false))
 					THROW("Error: move('", conver.unpackedPackagePath(), "', '",
 						package_dir, "')", error(errno));
 
@@ -628,7 +631,7 @@ void Contest::addProblem() {
 				"<div class=\"field-group\">"
 					"<label>Problem name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
-						htmlSpecialChars(name), "\" size=\"24\""
+						htmlEscape(name), "\" size=\"24\""
 					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
 					"placeholder=\"Detect from Simfile\">"
 				"</div>"
@@ -636,14 +639,14 @@ void Contest::addProblem() {
 				"<div class=\"field-group\">"
 					"<label>Memory limit [MB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
-						htmlSpecialChars(memory_limit), "\" size=\"24\" "
+						htmlEscape(memory_limit), "\" size=\"24\" "
 					"placeholder=\"Detect from Simfile\">"
 				"</div>"
 				// Global time limit
 				"<div class=\"field-group\">"
 					"<label>Global time limit [s] (for each test)</label>"
 					"<input type=\"text\" name=\"time-limit\" value=\"",
-						htmlSpecialChars(time_limit), "\" size=\"24\" "
+						htmlEscape(time_limit), "\" size=\"24\" "
 					"placeholder=\"No global time limit\">"
 				"</div>"
 				// Force auto limit
@@ -752,7 +755,7 @@ void Contest::editContest() {
 				"<div class=\"field-group\">"
 					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
-						htmlSpecialChars(name), "\" size=\"24\" "
+						htmlEscape(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -760,7 +763,7 @@ void Contest::editContest() {
 				"<div class=\"field-group\">"
 					"<label>Owner username</label>"
 					"<input type=\"text\" name=\"owner\" value=\"",
-						htmlSpecialChars(owner), "\" size=\"24\" "
+						htmlEscape(owner), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -872,7 +875,7 @@ void Contest::editRound() {
 				"<div class=\"field-group\">"
 					"<label>Round name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
-						htmlSpecialChars(name), "\" size=\"24\" "
+						htmlEscape(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -887,7 +890,7 @@ void Contest::editRound() {
 					"<label>Begins</label>"
 					"<input type=\"text\" name=\"begins\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
-						htmlSpecialChars(begins), "\" size=\"19\" "
+						htmlEscape(begins), "\" size=\"19\" "
 						"maxlength=\"19\">"
 					"<span>UTC</span>"
 				"</div>"
@@ -896,7 +899,7 @@ void Contest::editRound() {
 					"<label>Ends</label>"
 					"<input type=\"text\" name=\"ends\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
-						htmlSpecialChars(ends), "\" size=\"19\" "
+						htmlEscape(ends), "\" size=\"19\" "
 						"maxlength=\"19\">"
 					"<span>UTC</span>"
 				"</div>"
@@ -905,7 +908,7 @@ void Contest::editRound() {
 					"<label>Full_results</label>"
 					"<input type=\"text\" name=\"full_results\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
-						htmlSpecialChars(full_results), "\" size=\"19\" "
+						htmlEscape(full_results), "\" size=\"19\" "
 						"maxlength=\"19\">"
 					"<span>UTC</span>"
 				"</div>"
@@ -1079,7 +1082,7 @@ void Contest::editProblem() {
 				stmt.setString(5, rpath->problem->problem_id);
 
 				if (stmt.executeUpdate()) {
-					fv.addError("Update successful");
+					fv.addError("Update successful"); // TODO: does not show in every case
 
 					// Update rpath
 					rpath.reset(getRoundPath(rpath->round_id));
@@ -1135,7 +1138,7 @@ void Contest::editProblem() {
 				"<div class=\"field-group\">"
 					"<label>Round's name</label>"
 					"<input type=\"text\" name=\"round-name\" value=\"",
-						htmlSpecialChars(round_name), "\" size=\"24\" "
+						htmlEscape(round_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -1143,7 +1146,7 @@ void Contest::editProblem() {
 				"<div class=\"field-group\">"
 					"<label>Problem's name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
-						htmlSpecialChars(name), "\" size=\"24\" "
+						htmlEscape(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -1151,7 +1154,7 @@ void Contest::editProblem() {
 				"<div class=\"field-group\">"
 					"<label>Problem's label</label>"
 					"<input type=\"text\" name=\"label\" value=\"",
-						htmlSpecialChars(label), "\" size=\"24\" "
+						htmlEscape(label), "\" size=\"24\" "
 						"maxlength=\"", toStr(PROBLEM_LABEL_MAX_LEN),
 						"\" required>"
 				"</div>"
@@ -1159,7 +1162,7 @@ void Contest::editProblem() {
 				"<div class=\"field-group\">"
 					"<label>Memory limit [MB]</label>"
 					"<input type=\"text\" name=\"memory-limit\" value=\"",
-						htmlSpecialChars(memory_limit), "\" size=\"24\" "
+						htmlEscape(memory_limit), "\" size=\"24\" "
 						"required>"
 				"</div>"
 				// TODO: Main solution
@@ -1236,8 +1239,8 @@ void Contest::deleteContest() {
 		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure you want to delete contest "
 				"<a href=\"/c/", rpath->round_id, "\">",
-				htmlSpecialChars(rpath->contest->name), "</a>, all "
-				"subrounds and submissions?</label>"
+				htmlEscape(rpath->contest->name), "</a>, all subrounds and"
+				" submissions?</label>"
 			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>"
@@ -1288,8 +1291,8 @@ void Contest::deleteRound() {
 		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure you want to delete round "
 				"<a href=\"/c/", rpath->round_id, "\">",
-				htmlSpecialChars(rpath->round->name), "</a>, all "
-				"subrounds and submissions?</label>"
+				htmlEscape(rpath->round->name), "</a>, all subrounds and"
+				" submissions?</label>"
 			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>"
@@ -1339,8 +1342,8 @@ void Contest::deleteProblem() {
 		"<form method=\"post\">"
 			"<label class=\"field\">Are you sure you want to delete problem "
 				"<a href=\"/c/", rpath->round_id, "\">",
-				htmlSpecialChars(rpath->problem->name), "</a> and all its "
-				"submissions?</label>"
+				htmlEscape(rpath->problem->name), "</a> and all its"
+				" submissions?</label>"
 			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
 					"Yes, I'm sure</button>"
@@ -1493,7 +1496,7 @@ void Contest::users() {
 
 	contestTemplate("Contest users");
 	append("<h1>Users assigned to the contest: ",
-			htmlSpecialChars(rpath->contest->name), "</h1>"
+			htmlEscape(rpath->contest->name), "</h1>"
 		"<button class=\"btn\" style=\"display:block\" "
 			"onclick=\"addContestUser(", rpath->round_id, ")\">Add user"
 		"</button>");
@@ -1526,9 +1529,9 @@ void Contest::users() {
 
 			append("<tr>"
 				"<td>", uid, "</td>"
-				"<td>", htmlSpecialChars(uname), "</td>"
-				"<td>", htmlSpecialChars(res[3]), "</td>"
-				"<td>", htmlSpecialChars(res[4]), "</td>");
+				"<td>", htmlEscape(uname), "</td>"
+				"<td>", htmlEscape(res[3]), "</td>"
+				"<td>", htmlEscape(res[4]), "</td>");
 
 			switch (mode) {
 			case CU_MODE_MODERATOR:
@@ -1798,7 +1801,7 @@ void Contest::ranking(bool admin_view) {
 				append(" colspan=\"", toStr(i.problems.size()), '"');
 			append("><a href=\"/c/", i.id,
 				(admin_view ? "/ranking\">" : "/n/ranking\">"),
-				htmlSpecialChars(i.name), "</a></th>");
+				htmlEscape(i.name), "</a></th>");
 		}
 		// Problems
 		append(
@@ -1808,7 +1811,7 @@ void Contest::ranking(bool admin_view) {
 			for (auto& j : i.problems)
 				append("<th><a href=\"/c/", toStr(j.id),
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
-					htmlSpecialChars(j.label), "</a></th>");
+					htmlEscape(j.label), "</a></th>");
 		append("</tr>"
 			"</thead>"
 			"<tbody>");
@@ -1828,9 +1831,9 @@ void Contest::ranking(bool admin_view) {
 			// Name
 			if (admin_view)
 				append("<td><a href=\"/u/", row.user_id, "\">",
-					htmlSpecialChars(row.name), "</a></td>");
+					htmlEscape(row.name), "</a></td>");
 			else
-				append("<td>", htmlSpecialChars(row.name), "</td>");
+				append("<td>", htmlEscape(row.name), "</td>");
 
 			// Score
 			append("<td>", toStr(row.score), "</td>");
