@@ -492,7 +492,7 @@ void Contest::addProblem() {
 		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
 			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
 		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) *
-			1000000LL); // Time limit in usec
+			100) * 10000LL; // Time limit in usec (converted with precision = 2)
 		if (time_limit.size() && tl < 400000)
 			fv.addError("Global time limit cannot be lower than 0.4 s");
 
@@ -538,7 +538,7 @@ void Contest::addProblem() {
 						opts.memory_limit = strtoull(memory_limit);
 
 					if (time_limit.size())
-						opts.global_time_limit = strtoull(time_limit);
+						opts.global_time_limit = tl;
 
 					sf = conver.constructFullSimfile(opts);
 				} catch (const std::exception& e) {
