@@ -46,25 +46,23 @@ struct Word {
 		style(stl) {}
 };
 
-} // anonymous namespace
-
-static constexpr array<CStringView, 11> begin_style {{
-	"<span style=\"color:#00a000\">",
-	"<span style=\"color:#a0a0a0\">",
-	"<span style=\"color:#0000ff;font-weight:bold\">",
-	"<span style=\"color:#c90049;font-weight:bold;\">",
-	"<span style=\"color:#ff0000\">",
-	"<span style=\"color:#e0a000\">",
-	"<span style=\"color:#d923e9\">",
-	"<span style=\"color:#d923e9\">",
-	"<span style=\"color:#a800ff\">",
-	"<span style=\"color:#0086b3\">",
-	"<span style=\"color:#515125\">",
+constexpr array<meta::string, 11> begin_style {{
+	{"<span style=\"color:#00a000\">"},
+	{"<span style=\"color:#a0a0a0\">"},
+	{"<span style=\"color:#0000ff;font-weight:bold\">"},
+	{"<span style=\"color:#c90049;font-weight:bold;\">"},
+	{"<span style=\"color:#ff0000\">"},
+	{"<span style=\"color:#e0a000\">"},
+	{"<span style=\"color:#d923e9\">"},
+	{"<span style=\"color:#d923e9\">"},
+	{"<span style=\"color:#a800ff\">"},
+	{"<span style=\"color:#0086b3\">"},
+	{"<span style=\"color:#515125\">"},
 }};
 
-static constexpr CStringView end_style = "</span>";
+constexpr CStringView end_style = "</span>";
 
-static constexpr array<Word, 124> words {{
+constexpr array<Word, 124> words {{
 	{"", COMMENT}, // Guard - ignored
 	{"uint_least16_t", BUILTIN_TYPE},
 	{"uint_least32_t", BUILTIN_TYPE},
@@ -190,6 +188,8 @@ static constexpr array<Word, 124> words {{
 	{"NULL", CONSTANT},
 	{"nullptr", CONSTANT},
 }};
+
+} // anonymous namespace
 
 /* Some ugly meta programming used to extract KEYWORDS from words */
 
