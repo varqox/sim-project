@@ -184,7 +184,7 @@ void User::login() {
 				"<div class=\"field-group\">"
 					"<label>Username</label>"
 					"<input type=\"text\" name=\"username\" value=\"",
-						htmlSpecialChars(username), "\" size=\"24\" "
+						htmlEscape(username), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -287,7 +287,7 @@ void User::signUp() {
 				"<div class=\"field-group\">"
 					"<label>Username</label>"
 					"<input type=\"text\" name=\"username\" value=\"",
-						htmlSpecialChars(username), "\" size=\"24\" "
+						htmlEscape(username), "\" size=\"24\" "
 						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -295,7 +295,7 @@ void User::signUp() {
 				"<div class=\"field-group\">"
 					"<label>First name</label>"
 					"<input type=\"text\" name=\"first_name\" value=\"",
-						htmlSpecialChars(first_name), "\" size=\"24\" "
+						htmlEscape(first_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -303,7 +303,7 @@ void User::signUp() {
 				"<div class=\"field-group\">"
 					"<label>Last name</label>"
 					"<input type=\"text\" name=\"last_name\" value=\"",
-						htmlSpecialChars(last_name), "\" size=\"24\" "
+						htmlEscape(last_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -311,7 +311,7 @@ void User::signUp() {
 				"<div class=\"field-group\">"
 					"<label>Email</label>"
 					"<input type=\"email\" name=\"email\" value=\"",
-						htmlSpecialChars(email), "\" size=\"24\" "
+						htmlEscape(email), "\" size=\"24\" "
 						"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" "
 						"required>"
 				"</div>"
@@ -365,10 +365,10 @@ void User::listUsers() {
 
 			append("<tr>"
 				"<td>", uid, "</td>"
-				"<td>", htmlSpecialChars(res[2]), "</td>"
-				"<td>", htmlSpecialChars(res[3]), "</td>"
-				"<td>", htmlSpecialChars(res[4]), "</td>"
-				"<td>", htmlSpecialChars(res[5]), "</td>");
+				"<td>", htmlEscape(res[2]), "</td>"
+				"<td>", htmlEscape(res[3]), "</td>"
+				"<td>", htmlEscape(res[4]), "</td>"
+				"<td>", htmlEscape(res[5]), "</td>");
 
 			switch (utype) {
 			case UTYPE_ADMIN:
@@ -411,15 +411,15 @@ void User::userProfile() {
 	append("<div class=\"user-info\">"
 			"<div class=\"first-name\">"
 				"<label>First name</label>",
-				htmlSpecialChars(first_name),
+				htmlEscape(first_name),
 			"</div>"
 			"<div class=\"last-name\">"
 				"<label>Last name</label>",
-				htmlSpecialChars(last_name),
+				htmlEscape(last_name),
 			"</div>"
 			"<div class=\"username\">"
 				"<label>Username</label>",
-				htmlSpecialChars(username),
+				htmlEscape(username),
 			"</div>"
 			"<div class=\"type\">"
 				"<label>Account type</label>");
@@ -440,7 +440,7 @@ void User::userProfile() {
 	append("</div>"
 				"<div class=\"email\">"
 					"<label>Email</label>",
-					htmlSpecialChars(email),
+					htmlEscape(email),
 				"</div>"
 			"</div>"
 		"<h2>User submissions (showing the recent ",
@@ -536,7 +536,7 @@ void User::editProfile() {
 			"<div class=\"field-group\">"
 				"<label>Username</label>"
 				"<input type=\"text\" name=\"username\" value=\"",
-					htmlSpecialChars(username), "\" size=\"24\" "
+					htmlEscape(username), "\" size=\"24\" "
 					"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"), ">"
 			"</div>"
@@ -593,7 +593,7 @@ void User::editProfile() {
 			"<div class=\"field-group\">"
 				"<label>First name</label>"
 				"<input type=\"text\" name=\"first_name\" value=\"",
-					htmlSpecialChars(first_name), "\" size=\"24\""
+					htmlEscape(first_name), "\" size=\"24\""
 					"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
 			"</div>"
@@ -601,7 +601,7 @@ void User::editProfile() {
 			"<div class=\"field-group\">"
 				"<label>Last name</label>"
 				"<input type=\"text\" name=\"last_name\" value=\"",
-					htmlSpecialChars(last_name), "\" size=\"24\""
+					htmlEscape(last_name), "\" size=\"24\""
 					"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
 			"</div>"
@@ -609,7 +609,7 @@ void User::editProfile() {
 			"<div class=\"field-group\">"
 				"<label>Email</label>"
 				"<input type=\"email\" name=\"email\" value=\"",
-					htmlSpecialChars(email), "\" size=\"24\""
+					htmlEscape(email), "\" size=\"24\""
 					"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
 			"</div>");
@@ -793,7 +793,7 @@ void User::deleteAccount() {
 			"<form method=\"post\" action=\"?", prev_referer ,"\">"
 				"<label class=\"field\">Are you sure you want to delete "
 					"account <a href=\"/u/", user_id, "\">",
-					htmlSpecialChars(username), "</a>, all its "
+					htmlEscape(username), "</a>, all its "
 					"submissions and change owner of its contests and "
 					"problems to SIM root?</label>"
 				"<div class=\"submit-yes-no\">"
@@ -859,13 +859,13 @@ void User::printUserSubmissions(uint limit) {
 						toStr(strToTime(res[2])),"\">", res[2], "</a></td>"
 					"<td>"
 						"<a href=\"/c/", res[3], "\">",
-							htmlSpecialChars(res[4]), "</a>"
+							htmlEscape(res[4]), "</a>"
 						" ~> "
 						"<a href=\"/c/", res[5], "\">",
-							htmlSpecialChars(res[6]), "</a>"
+							htmlEscape(res[6]), "</a>"
 						" ~> "
 						"<a href=\"/c/", res[7], "\">",
-							htmlSpecialChars(res[8]), "</a>"
+							htmlEscape(res[8]), "</a>"
 					"</td>",
 					submissionStatusAsTd(SubmissionStatus(res.getUInt(9)),
 						show_final_results),

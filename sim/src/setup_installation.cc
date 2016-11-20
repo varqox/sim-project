@@ -60,9 +60,10 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 8> tables {{
+constexpr array<meta::string, 9> tables {{
 	{"contests_users"},
 	{"files"},
+	{"job_queue"},
 	{"problems"},
 	{"problems_tags"},
 	{"rounds"},
@@ -125,13 +126,8 @@ int main(int argc, char **argv) {
 
 	if (DROP_TABLES) {
 		try {
-			conn.executeUpdate("DROP TABLE iF EXISTS users");
-			conn.executeUpdate("DROP TABLE iF EXISTS session");
-			conn.executeUpdate("DROP TABLE iF EXISTS problems");
-			conn.executeUpdate("DROP TABLE iF EXISTS rounds");
-			conn.executeUpdate("DROP TABLE iF EXISTS contests_users");
-			conn.executeUpdate("DROP TABLE iF EXISTS submissions");
-			conn.executeUpdate("DROP TABLE iF EXISTS files");
+			for (auto&& table : tables)
+				conn.executeUpdate(concat("DROP TABLE IF EXISTS `", table, '`'));
 
 			if (ONLY_DROP_TABLES)
 				return 0;
@@ -154,8 +150,8 @@ int main(int argc, char **argv) {
 			"`salt` char(", toStr(SALT_LEN), ") NOT NULL,"
 			"`password` char(", toStr(PASSWORD_HASH_LEN), ") NOT NULL,"
 			"`type` tinyint(1) unsigned NOT NULL DEFAULT " UTYPE_NORMAL_STR ","
-			"PRIMARY KEY (`id`),"
-			"UNIQUE KEY `username` (`username`)"
+			"PRIMARY KEY (id),"
+			"UNIQUE KEY (username)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
 		[&] {
 			// Add default user sim with password sim
@@ -182,9 +178,9 @@ int main(int argc, char **argv) {
 			"`ip` char(", toStr(SESSION_IP_LEN), ") NOT NULL,"
 			"`user_agent` blob NOT NULL,"
 			"`time` datetime NOT NULL,"
-			"PRIMARY KEY (`id`),"
-			"KEY (`user_id`),"
-			"KEY (`time`)"
+			"PRIMARY KEY (id),"
+			"KEY (user_id),"
+			"KEY (time)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"));
 
 	try_to_create_table("problems",
@@ -196,16 +192,16 @@ int main(int argc, char **argv) {
 			"`simfile` blob NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
-			"PRIMARY KEY (`id`),"
-			"KEY (`owner`)"
+			"PRIMARY KEY (id),"
+			"KEY (owner)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("problems_tags",
 		concat("CREATE TABLE IF NOT EXISTS `problems_tags` ("
 			"`problem_id` int unsigned NOT NULL,"
 			"`tag` VARCHAR(", toStr(PROBLEM_TAG_MAX_LEN), ") NOT NULL,"
-			"PRIMARY KEY (`problem_id`, `tag`),"
-			"KEY (`tag`)"
+			"PRIMARY KEY (problem_id, tag),"
+			"KEY (tag)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("rounds",
@@ -223,12 +219,12 @@ int main(int argc, char **argv) {
 			"`begins` datetime NULL DEFAULT NULL,"
 			"`full_results` datetime NULL DEFAULT NULL,"
 			"`ends` datetime NULL DEFAULT NULL,"
-			"PRIMARY KEY (`id`),"
-			"KEY (`parent`, `visible`),"
-			"KEY (`parent`, `begins`),"
-			"KEY (`parent`, `is_public`),"
-			"KEY (`grandparent`, `item`),"
-			"KEY (`owner`)"
+			"PRIMARY KEY (id),"
+			"KEY (parent, visible),"
+			"KEY (parent, begins),"
+			"KEY (parent, is_public),"
+			"KEY (grandparent, item),"
+			"KEY (owner)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("contests_users",
@@ -236,8 +232,8 @@ int main(int argc, char **argv) {
 			"`user_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
 			"`mode` tinyint(1) unsigned NOT NULL DEFAULT " CU_MODE_CONTESTANT_STR ","
-			"PRIMARY KEY (`user_id`, `contest_id`),"
-			"KEY (`contest_id`)"
+			"PRIMARY KEY (user_id, contest_id),"
+			"KEY (contest_id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("submissions",
@@ -275,6 +271,18 @@ int main(int argc, char **argv) {
 			"KEY (contest_round_id, type, id),"
 			"KEY (contest_round_id, user_id, type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+
+	try_to_create_table("job_queue",
+		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
+			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`priority` TINYINT NOT NULL,"
+			"`type` TINYINT NOT NULL,"
+			// "`problem_id` int unsigned NOT NULL,"
+			// "`submission_id` int unsigned NOT NULL,"
+			// "`data` blob NOT NULL,"
+			"PRIMARY KEY (id),"
+			"KEY (type)"
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("files",
 		concat("CREATE TABLE IF NOT EXISTS `files` ("

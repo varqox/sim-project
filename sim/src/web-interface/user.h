@@ -50,9 +50,8 @@ private:
 		const StringView& scripts = {});
 
 	void printUser() {
-		append("<h4><a href=\"/u/", user_id, "\">", htmlSpecialChars(username),
-			"</a> (", htmlSpecialChars(first_name), ' ',
-			htmlSpecialChars(last_name), ")</h4>");
+		append("<h4><a href=\"/u/", user_id, "\">", htmlEscape(username), "</a>"
+			" (", htmlEscape(first_name), ' ', htmlEscape(last_name), ")</h4>");
 	}
 
 	// Pages

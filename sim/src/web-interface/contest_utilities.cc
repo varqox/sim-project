@@ -228,17 +228,17 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 void Contest::printRoundPath(const StringView& page, bool force_normal) {
 	append("<div class=\"round-path\"><a href=\"/c/", rpath->contest->id,
 		(force_normal ? "/n/" : "/"), page, "\">",
-		htmlSpecialChars(rpath->contest->name), "</a>");
+		htmlEscape(rpath->contest->name), "</a>");
 
 	if (rpath->type != CONTEST) {
 		append(" ~~> <a href=\"/c/", rpath->round->id,
 			(force_normal ? "/n/" : "/"), page, "\">",
-			htmlSpecialChars(rpath->round->name), "</a>");
+			htmlEscape(rpath->round->name), "</a>");
 
 		if (rpath->type == PROBLEM)
 			append(" ~~> <a href=\"/c/", rpath->round_id,
 				(force_normal ? "/n/" : "/"), page, "\">",
-				htmlSpecialChars(rpath->problem->name), "</a>"
+				htmlEscape(rpath->problem->name), "</a>"
 			"<a class=\"btn-small\" href=\"/c/", rpath->round_id,
 				"/statement\">View statement</a>");
 	}
@@ -358,7 +358,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			// Construct "table"
 			append("<div class=\"round-view\">"
 				"<a class=\"grayed\" href=\"/c/", rpath->contest->id,
-					force_normal, "\">", htmlSpecialChars(rpath->contest->name),
+					force_normal, "\">", htmlEscape(rpath->contest->name),
 				"</a>"
 				"<div>");
 
@@ -367,7 +367,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				// Round
 				append("<div>"
 					"<a href=\"/c/", sr.id, force_normal, "\">",
-						htmlSpecialChars(sr.name),
+						htmlEscape(sr.name),
 						round_duration(sr.begins, sr.ends),
 					"</a>");
 
@@ -391,7 +391,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					if (link_to_problem_statement)
 						append("/statement");
 
-					append("\">", htmlSpecialChars(pro.name), "</a>");
+					append("\">", htmlEscape(pro.name), "</a>");
 				}
 				append("</div>");
 			}
@@ -402,12 +402,12 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			// Construct "table"
 			append("<div class=\"round-view\">"
 				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
-					htmlSpecialChars(rpath->contest->name), "</a>"
+					htmlEscape(rpath->contest->name), "</a>"
 				"<div>");
 			// Round
 			append("<div>"
 				"<a class=\"grayed\" href=\"/c/", rpath->round->id,
-					force_normal, "\">", htmlSpecialChars(rpath->round->name),
+					force_normal, "\">", htmlEscape(rpath->round->name),
 					round_duration(rpath->round->begins, rpath->round->ends),
 				"</a>");
 
@@ -458,7 +458,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					if (link_to_problem_statement)
 						append("/statement");
 
-					append("\">", htmlSpecialChars(res[2]), "</a>");
+					append("\">", htmlEscape(res[2]), "</a>");
 				}
 			}
 
@@ -490,12 +490,12 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			// Construct "table"
 			append("<div class=\"round-view\">"
 				"<a href=\"/c/", rpath->contest->id, force_normal, "\">",
-					htmlSpecialChars(rpath->contest->name), "</a>"
+					htmlEscape(rpath->contest->name), "</a>"
 				"<div>");
 			// Round
 			append("<div>"
 				"<a href=\"/c/", rpath->round->id, force_normal, "\">",
-					htmlSpecialChars(rpath->round->name),
+					htmlEscape(rpath->round->name),
 					round_duration(rpath->round->begins, rpath->round->ends),
 				"</a>"
 			// Problem
@@ -505,7 +505,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			if (link_to_problem_statement)
 				append("/statement");
 
-			append("\">", htmlSpecialChars(rpath->problem->name), "</a>"
+			append("\">", htmlEscape(rpath->problem->name), "</a>"
 					"</div>"
 				"</div>"
 				"</div>");

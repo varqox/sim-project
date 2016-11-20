@@ -92,7 +92,7 @@ void Contest::addFile() {
 				"<div class=\"field-group\">"
 					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
-						htmlSpecialChars(file_name), "\" size=\"24\" "
+						htmlEscape(file_name), "\" size=\"24\" "
 						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
 						"placeholder=\"The same as name of uploaded file\">"
 				"</div>"
@@ -106,7 +106,7 @@ void Contest::addFile() {
 					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
-						htmlSpecialChars(description), "</textarea>"
+						htmlEscape(description), "</textarea>"
 				"</div>"
 
 				"<div class=\"button-row\">"
@@ -221,7 +221,7 @@ void Contest::editFile(const StringView& id, string name) {
 				"<div class=\"field-group\">"
 					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
-						htmlSpecialChars(name), "\" size=\"24\" "
+						htmlEscape(name), "\" size=\"24\" "
 						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
 						"placeholder=\"The same as name of reuploaded file\">"
 				"</div>"
@@ -235,7 +235,7 @@ void Contest::editFile(const StringView& id, string name) {
 					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
 						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
-						htmlSpecialChars(description), "</textarea>"
+						htmlEscape(description), "</textarea>"
 				"</div>"
 				// File size
 				"<div class=\"field-group\">"
@@ -315,8 +315,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 		"<h1>Delete file</h1>"
 		"<form method=\"post\" action=\"?", prev_referer, "\">"
 			"<label class=\"field\">Are you sure you want to delete file "
-				"<a href=\"/file/", id, "/edit\">",
-					htmlSpecialChars(name), "</a>?"
+				"<a href=\"/file/", id, "/edit\">", htmlEscape(name), "</a>?"
 			"</label>"
 			"<div class=\"submit-yes-no\">"
 				"<button class=\"btn red\" type=\"submit\" name=\"delete\">"
@@ -415,10 +414,10 @@ void Contest::files(bool admin_view) {
 			append("<tr>"
 				"<td datetime=\"", toStr(strToTime(res[2])),"\">", res[2],
 					"<sup>UTC+0</sup></td>"
-				"<td><a href=\"/file/", id, "\">", htmlSpecialChars(res[3]),
+				"<td><a href=\"/file/", id, "\">", htmlEscape(res[3]),
 					"</a></td>"
 				"<td>", humanizeFileSize(res.getUInt64(4)), "</td>"
-				"<td>", htmlSpecialChars(res[5]), "</td>"
+				"<td>", htmlEscape(res[5]), "</td>"
 				"<td><a class=\"btn-small\" href=\"/file/", id, "\">Download"
 					"</a>");
 

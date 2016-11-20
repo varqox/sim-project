@@ -201,8 +201,8 @@ void Contest::submit(bool admin_view) {
 
 				for (auto& problem : prob)
 					back_insert(buffer, "<option value=\"", problem.id, "\">",
-						htmlSpecialChars(problem.name), " (",
-						htmlSpecialChars(sr.name), ")</option>");
+						htmlEscape(problem.name), " (", htmlEscape(sr.name),
+						")</option>");
 			}
 
 		// Admin -> All problems
@@ -220,9 +220,8 @@ void Contest::submit(bool admin_view) {
 			DB::Result res = stmt.executeQuery();
 			while (res.next())
 				back_insert(buffer, "<option value=\"", res[1],
-					"\">", htmlSpecialChars(res[2]),
-					" (", htmlSpecialChars(rpath->round->name),
-					")</option>");
+					"\">", htmlEscape(res[2]), " (",
+					htmlEscape(rpath->round->name), ")</option>");
 
 		// Admin -> Current problem
 		// Normal -> if parent round has begun and has not ended
@@ -231,8 +230,8 @@ void Contest::submit(bool admin_view) {
 			(rpath->round->ends.empty() || current_date < rpath->round->ends))))
 		{
 			back_insert(buffer, "<option value=\"", rpath->problem->id,
-				"\">", htmlSpecialChars(rpath->problem->name), " (",
-				htmlSpecialChars(rpath->round->name), ")</option>");
+				"\">", htmlEscape(rpath->problem->name), " (",
+				htmlEscape(rpath->round->name), ")</option>");
 		}
 
 	} catch (const std::exception& e) {
@@ -520,7 +519,9 @@ void Contest::submission() {
 
 		/* Raw code */
 		if (query == Query::RAW) {
-			resp.headers["Content-type"] = "text/plain";
+			resp.headers["Content-type"] = "text/plain; charset=utf-8";
+			resp.headers["Content-Disposition"] =
+				concat("inline; filename=", submission_id, ".cpp");
 
 			resp.content = concat("solutions/", submission_id, ".cpp");
 			resp.content_type = server::HttpResponse::FILE;
@@ -611,12 +612,12 @@ void Contest::submission() {
 
 		if (admin_view)
 			append("<td><a href=\"/u/", submission_user_id, "\">",
-					res[11], "</a> (", htmlSpecialChars(full_name), ")</td>");
+					res[11], "</a> (", htmlEscape(full_name), ")</td>");
 
 		bool show_final_results = (admin_view ||
 			rpath->round->full_results <= date("%Y-%m-%d %H:%M:%S"));
 
-		append("<td>", htmlSpecialChars(
+		append("<td>", htmlEscape(
 				concat(problem_name, " (", problem_label, ')')), "</td>"
 				"<td datetime=\"", toStr(strToTime(submit_time)),"\">",
 					submit_time, "<sup>UTC+0</sup></td>",
@@ -730,8 +731,7 @@ void Contest::submissions(bool admin_view) {
 			// User
 			if (admin_view)
 				append("<td><a href=\"/u/", res[10], "\">", res[13],"</a></td>"
-					"<td>", htmlSpecialChars(concat(res[11], ' ', res[12])),
-					"</td>");
+					"<td>", htmlEscape(concat(res[11], ' ', res[12])), "</td>");
 
 			bool show_final_results = (admin_view || res[10] <= current_date);
 
@@ -740,10 +740,10 @@ void Contest::submissions(bool admin_view) {
 						toStr(strToTime(res[2])),"\">", res[2], "</a></td>"
 					"<td>"
 						"<a href=\"/c/", res[3], "\">",
-							htmlSpecialChars(res[4]), "</a>"
+							htmlEscape(res[4]), "</a>"
 						" ~> "
 						"<a href=\"/c/", res[5], "\">",
-							htmlSpecialChars(res[6]), "</a>"
+							htmlEscape(res[6]), "</a>"
 					"</td>",
 					submissionStatusAsTd(SubmissionStatus(res.getUInt(7)),
 						show_final_results),
