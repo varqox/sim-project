@@ -26,6 +26,13 @@ public:
 	enum {value = (sizeof(helper<T>(0)) == sizeof(true_type))};
 };
 
+constexpr inline size_t strlen(const char* const p) {
+	size_t x = 0;
+	while (p[x] != '\0')
+		++x;
+	return x;
+}
+
 class string {
 private:
 	const char* const p;
@@ -36,12 +43,15 @@ public:
 
 	constexpr string(const char* const str, size_t len1) : p(str), len(len1) {}
 
-	constexpr string(const char* const str)
-		: p(str), len(__builtin_strlen(str)) {}
+	#if __cplusplus > 201402L
+	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
+	#endif
+	template<size_t N>
+	constexpr string(const char (&str)[N]) : p(str), len(strlen(str)) {}
 
-	// A prototype: template<N> ...(const char(&a)[N]){} is not used because it
-	// takes const char[] wrongly (sets len to array size instead of stored
-	// string's length)
+	// Do not treat as possible string literal
+	template<size_t N>
+	constexpr string(char (&str)[N]) = delete;
 
 	constexpr char operator[](size_t n) const {
 		return n < len ? p[n] :

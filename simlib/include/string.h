@@ -36,6 +36,16 @@ protected:
 public:
 	constexpr StringBase() noexcept : str(""), len(0) {}
 
+	#if __cplusplus > 201402L
+	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
+	#endif
+	template<size_t N>
+	constexpr StringBase(const char(&s)[N]) : str(s), len(meta::strlen(s)) {}
+
+	// Do not treat as possible string literal
+	template<size_t N>
+	constexpr StringBase(char(&s)[N]) : str(s), len(__builtin_strlen(s)) {}
+
 	constexpr StringBase(const meta::string& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
@@ -505,9 +515,17 @@ class CStringView : public StringBase<const char> {
 public:
 	constexpr CStringView() : StringBase("", 0) {}
 
-	// A prototype: template<N> ...(const char(&a)[N]){} is not used because it
-	// takes const char[] wrongly (sets len to array size instead of stored
-	// string's length)
+	#if __cplusplus > 201402L
+	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
+	#endif
+	template<size_t N>
+	constexpr CStringView(const char(&s)[N]) : StringBase(s, meta::strlen(s)) {}
+
+	// Do not treat as possible string literal
+	template<size_t N>
+	constexpr CStringView(char(&s)[N]) : StringBase(s) {}
+
+	constexpr CStringView(const meta::string& s) : StringBase(s) {}
 
 	constexpr CStringView(const FixedString& s) noexcept
 		: StringBase(s.data(), s.size()) {}
@@ -516,14 +534,14 @@ public:
 		: StringBase(s.data(), s.size()) {}
 
 	// Be careful with the constructor below! @p s cannot be null
-	constexpr CStringView(pointer s) noexcept : StringBase(s) {
+	constexpr explicit CStringView(pointer s) noexcept : StringBase(s) {
 	#ifdef _GLIBCXX_DEBUG
 		assert(s);
 	#endif
 	}
 
 	// Be careful with the constructor below! @p s cannot be null
-	constexpr CStringView(pointer s, size_type n) noexcept
+	constexpr explicit CStringView(pointer s, size_type n) noexcept
 		: StringBase(s, n)
 	{
 	#ifdef _GLIBCXX_DEBUG
@@ -555,6 +573,11 @@ public:
 		: StringBase(s.data(), s.size()) {}
 
 	constexpr StringView() noexcept : StringBase("", 0) {}
+
+	constexpr StringView(const StringView& s) noexcept = default;
+	constexpr StringView(StringView&& s) noexcept = default;
+	StringView& operator=(const StringView& s) noexcept = default;
+	StringView& operator=(StringView&& s) noexcept = default;
 
 	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
 
@@ -1203,7 +1226,8 @@ constexpr T digitsToU(const StringView& str) noexcept {
  * @brief Converts usec (ULL) to sec (double as string)
  *
  * @param x usec value
- * @param prec precision (maximum number of digits after '.')
+ * @param prec precision (maximum number of digits after '.', if greater than 6,
+ *   then it is downgraded to 6)
  * @param trim_zeros set whether to trim trailing zeros
  *
  * @return floating-point x in sec as string

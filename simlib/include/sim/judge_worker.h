@@ -21,16 +21,16 @@ public:
 
 		constexpr static CStringView description(Status st) {
 			switch (st) {
-			case OK: return "OK";
-			case WA: return "Wrong answer";
-			case TLE: return "Time limit exceeded";
-			case MLE: return "Memory limit exceeded";
-			case RTE: return "Runtime error";
-			case CHECKER_ERROR: return "Checker error";
+			case OK: return CStringView{"OK"};
+			case WA: return CStringView{"Wrong answer"};
+			case TLE: return CStringView{"Time limit exceeded"};
+			case MLE: return CStringView{"Memory limit exceeded"};
+			case RTE: return CStringView{"Runtime error"};
+			case CHECKER_ERROR: return CStringView{"Checker error"};
 			}
 
 			// Should not happen but GCC complains about it
-			return "Unknown";
+			return CStringView{"Unknown"};
 		}
 
 		std::string name;

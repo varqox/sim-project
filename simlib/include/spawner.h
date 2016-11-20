@@ -71,7 +71,7 @@ public:
 	 */
 	static ExitStat run(const CStringView& exec,
 		const std::vector<std::string>& args, const Options& opts = Options(),
-		const CStringView& working_dir = ".")
+		const CStringView& working_dir = CStringView{"."})
 	{
 		return runWithTimer<Impl>(opts.time_limit, exec, args, opts,
 			working_dir);

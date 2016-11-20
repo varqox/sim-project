@@ -351,7 +351,8 @@ public:
 	template<class Callback = DefaultCallback>
 	static ExitStat run(const CStringView& exec,
 		const std::vector<std::string>& args, const Options& opts = Options(),
-		const CStringView& working_dir = ".", Callback&& func = Callback())
+		const CStringView& working_dir = CStringView {"."},
+		Callback&& func = Callback())
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
 			"Callback has to derive from Sandbox::CallbackBase");

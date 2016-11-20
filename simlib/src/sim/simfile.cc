@@ -38,7 +38,7 @@ string Simfile::dump() const {
 			res += '\n';
 		for (const Test& test : group.tests) {
 			string line {concat(test.name, ' ',
-				usecToSecStr(test.time_limit, 2))};
+				usecToSecStr(test.time_limit, 6))};
 
 			if (test.memory_limit != global_mem_limit)
 				back_insert(line, ' ', toStr(test.memory_limit >> 20));

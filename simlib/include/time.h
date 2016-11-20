@@ -26,4 +26,4 @@ bool isDatetime(const CStringView& str) noexcept;
  * @errors The same that occur for strptime(3) and timegm(3)
  */
 time_t strToTime(const CStringView& str,
-	const CStringView& format = "%Y-%m-%d %H:%M:%S") noexcept;
+	const CStringView& format = CStringView {"%Y-%m-%d %H:%M:%S"}) noexcept;
