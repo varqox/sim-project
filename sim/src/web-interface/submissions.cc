@@ -16,6 +16,7 @@ void Contest::submit(bool admin_view) {
 
 	FormValidator fv(req->form_data);
 	bool ignored_submission = false;
+	string code;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
@@ -24,17 +25,20 @@ void Contest::submit(bool admin_view) {
 		string solution, problem_round_id, solution_tmp_path;
 
 		// Validate all fields
-		fv.validateNotBlank(solution, "solution", "Solution file field");
-
 		fv.validateNotBlank(problem_round_id, "round-id", "Problem");
 
-		fv.validateFilePathNotEmpty(solution_tmp_path, "solution",
-			"Solution file field");
+		code = fv.get("code");
+
+		solution_tmp_path = fv.getFilePath("solution");
 
 		ignored_submission = (admin_view && fv.exist("ignored-submission"));
 
 		if (!isDigit(problem_round_id))
 			fv.addError("Wrong problem round id");
+
+		// Only one option: code or file may be chosen
+		if ((code.empty() ^ fv.get("solution").empty()) == 0)
+			fv.addError("You have to either choose a file or paste the code");
 
 		// If all fields are ok
 		// TODO: "transaction"
@@ -57,13 +61,22 @@ void Contest::submit(bool admin_view) {
 				problem_r_path = path.get();
 			}
 
-			struct stat sb;
-			if (stat(solution_tmp_path.c_str(), &sb))
-				THROW("stat('", solution_tmp_path, "')", error(errno));
+			// Check solution size
+			if (code.empty()) { // File
+				struct stat sb;
+				if (stat(solution_tmp_path.c_str(), &sb))
+					THROW("stat('", solution_tmp_path, "')", error(errno));
 
-			// Check if solution is too big
-			if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
-				fv.addError(concat("Solution file is too big (maximum allowed "
+				// Check if solution is too big
+				if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
+					fv.addError(concat("Solution is too big (maximum allowed "
+						"size: ", toStr(SOLUTION_MAX_SIZE), " bytes = ",
+						toStr(SOLUTION_MAX_SIZE >> 10), " KB)"));
+					goto form;
+				}
+
+			} else if (code.size() > SOLUTION_MAX_SIZE) { // Code
+				fv.addError(concat("Solution is too big (maximum allowed "
 					"size: ", toStr(SOLUTION_MAX_SIZE), " bytes = ",
 					toStr(SOLUTION_MAX_SIZE >> 10), " KB)"));
 				goto form;
@@ -101,8 +114,13 @@ void Contest::submit(bool admin_view) {
 
 				// Copy solution
 				string location = concat("solutions/", submission_id, ".cpp");
-				if (copy(solution_tmp_path, location))
-					THROW("copy('", solution_tmp_path, "', '", location, "')",
+				if (code.empty()) { // File
+					if (copy(solution_tmp_path, location))
+						THROW("copy(`", solution_tmp_path, "`, `", location,
+							"`)", error(errno));
+
+				} else if (putFileContents(location, code) == -1) // Code
+					THROW("putFileContents(`", location, "`, ...)",
 						error(errno));
 
 				// Change submission type to NORMAL (activate submission)
@@ -245,8 +263,15 @@ void Contest::submit(bool admin_view) {
 					// Solution file
 					"<div class=\"field-group\">"
 						"<label>Solution</label>"
-						"<input type=\"file\" name=\"solution\" required>"
+						"<input type=\"file\" name=\"solution\">"
+					"</div>"
+					"<div class=\"field-group\">"
+						"<label>Code</label>"
+						"<textarea class=\"monospace\" rows=\"8\" cols=\"50\" "
+							"name=\"code\">", htmlEscape(code), "</textarea>"
 					"</div>");
+
+		// TODO: bound labels to fields (using "for" attribute)
 
 		if (admin_view) // Ignored submission
 			append("<div class=\"field-group\">"

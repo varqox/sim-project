@@ -465,6 +465,9 @@ pre {
 table {
 	border-spacing: 0;
 }
+.monospace {
+	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
+}
 
 /* Modal (background) */
 .modal {
