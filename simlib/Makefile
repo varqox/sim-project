@@ -23,6 +23,10 @@ googletest src: build-info
 test: src googletest
 	$(Q)$(MAKE) -C test/
 
+.PHONY: build-test
+build-test: src googletest
+	$(Q)$(MAKE) -C test/ build
+
 .PHONY: clean
 clean:
 	$(Q)$(RM) simlib.a

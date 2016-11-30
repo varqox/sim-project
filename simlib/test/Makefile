@@ -3,12 +3,15 @@ include ../Makefile.config
 EXTRA_CXX_FLAGS += -isystem '$(shell pwd)/../googletest/include' -pthread
 
 .PHONY: run
-run: exec
+run: build
 	./exec
+
+.PHONY: build
+build: exec
 
 $(eval $(call dependencies))
 
-exec: config_file.o simfile.o
+exec: string.o config_file.o simfile.o
 exec: ../gtest_main.a ../simlib.a
 exec:
 	$(LINK)

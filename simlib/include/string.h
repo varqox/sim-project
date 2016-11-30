@@ -14,6 +14,31 @@
 #  include <cassert>
 #endif
 
+template<size_t N>
+class StringBuff {
+public:
+	static constexpr size_t max_size = N;
+	char data[N];
+	unsigned size = 0; // Not size_t; who would make so incredibly large buffer?
+
+	constexpr StringBuff() = default;
+
+	constexpr StringBuff(unsigned count, char ch);
+
+	// Variadic constructor, it does not accept an integer as the first argument
+	template<class Arg1, class... Args, typename =
+		typename std::enable_if<!std::is_integral<Arg1>::value, void>::type>
+	constexpr StringBuff(Arg1&& arg1, Args&&... args) {
+		append(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
+	}
+
+	template<class... Args>
+	StringBuff& append(Args&&... args);
+};
+
+template<size_t N>
+constexpr size_t StringBuff<N>::max_size;
+
 template<class Char>
 class StringBase {
 public:
@@ -48,6 +73,10 @@ public:
 
 	constexpr StringBase(const meta::string& s) noexcept
 		: str(s.data()), len(s.size()) {}
+
+	template<size_t N>
+	constexpr StringBase(const StringBuff<N>& s) noexcept
+		: str(s.data), len(s.size) {}
 
 	constexpr StringBase(pointer s) noexcept
 		: str(s), len(__builtin_strlen(s)) {}
@@ -527,6 +556,9 @@ public:
 
 	constexpr CStringView(const meta::string& s) : StringBase(s) {}
 
+	template<size_t N>
+	constexpr CStringView(const StringBuff<N>& s) : StringBase(s) {}
+
 	constexpr CStringView(const FixedString& s) noexcept
 		: StringBase(s.data(), s.size()) {}
 
@@ -672,6 +704,38 @@ public:
 	using StringBase::substr;
 	using StringBase::substring;
 };
+
+// comparison operators
+#define COMPARE_BUFF_STRVIEW(oper) template<size_t N> \
+	constexpr bool operator oper (const StringBuff<N>& a, const StringView& b) \
+		noexcept \
+	{ \
+		return (StringView(a) oper b); \
+	}
+
+#define COMPARE_STRVIEW_BUFF(oper) template<size_t N> \
+	constexpr bool operator oper (const StringView& a, const StringBuff<N>& b) \
+		noexcept \
+	{ \
+		return (a oper StringView(b)); \
+	}
+
+COMPARE_BUFF_STRVIEW(==)
+COMPARE_BUFF_STRVIEW(!=)
+COMPARE_BUFF_STRVIEW(<)
+COMPARE_BUFF_STRVIEW(>)
+COMPARE_BUFF_STRVIEW(<=)
+COMPARE_BUFF_STRVIEW(>=)
+
+COMPARE_STRVIEW_BUFF(==)
+COMPARE_STRVIEW_BUFF(!=)
+COMPARE_STRVIEW_BUFF(<)
+COMPARE_STRVIEW_BUFF(>)
+COMPARE_STRVIEW_BUFF(<=)
+COMPARE_STRVIEW_BUFF(>=)
+
+#undef COMPARE_BUFF_STRVIEW
+#undef COMPARE_STRVIEW_BUFF
 
 constexpr inline StringView substring(const StringView& str,
 	StringView::size_type beg, StringView::size_type end = StringView::npos)
@@ -1235,7 +1299,9 @@ constexpr T digitsToU(const StringView& str) noexcept {
 std::string usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true);
 
 template<class T>
-constexpr inline size_t string_length(const T& x) noexcept { return x.size(); }
+constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
+	return x.size();
+}
 
 template<class T>
 constexpr inline size_t string_length(T* x) noexcept {
@@ -1243,6 +1309,18 @@ constexpr inline size_t string_length(T* x) noexcept {
 }
 
 constexpr inline size_t string_length(char) noexcept { return 1; }
+
+template<class T>
+constexpr inline auto data(const T& x) noexcept -> decltype(x.data()) {
+	return x.data();
+}
+
+template<class T, size_t N>
+constexpr inline const T* data(const T (&x)[N]) noexcept {
+	return x;
+}
+
+constexpr inline const char* data(const char& c) noexcept { return &c; }
 
 template<class Char>
 constexpr inline std::string& operator+=(std::string& str,
@@ -1297,3 +1375,37 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  */
 std::string widenedString(const StringView& s, size_t len,
 	Adjustment adj = RIGHT, char fill = ' ');
+
+#define throw_assert(expr) \
+	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
+	toStr(__LINE__), ": ", __PRETTY_FUNCTION__, \
+	": Assertion `" #expr " failed.")))
+
+/* ============================ IMPLEMENTATION ============================== */
+template<size_t N>
+inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : size(count) {
+	throw_assert(size < max_size);
+	std::fill(data, data + size, ch);
+	data[size] = '\0';
+}
+
+template<size_t N>
+template<class... Args>
+inline StringBuff<N>& StringBuff<N>::append(Args&&... args) {
+	// Sum size of all args
+	size_t final_size = size;
+	(void)std::initializer_list<size_t>{(final_size += string_length(args))...};
+	throw_assert(final_size < max_size);
+
+	// Concentrate them into data[]
+	auto raw_append = [&](auto&& str) {
+		auto sl = string_length(str);
+		std::copy(::data(str), ::data(str) + sl, data + size);
+		size += sl;
+	};
+	(void)raw_append; // Ignore warning 'unused' when no arguments are provided
+	(void)std::initializer_list<int>{(raw_append(std::forward<Args>(args)), 0)...};
+
+	data[size] = '\0'; // Terminating null character
+	return *this;
+}

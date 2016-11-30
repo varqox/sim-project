@@ -76,7 +76,9 @@ string Simfile::dump() const {
 }
 
 // Macros because of string concentration in compile-time (in C++11 it is hard
-// to achieve in the other way)
+// to achieve in the other way and this macros are pretty more readable than
+// some template meta-programming code that concentrates string literals. Also,
+// the macros are used only locally, so after all, they are not so evil...)
 #define CHECK_IF_ARR(var, name) if (!var.isArray() && var.isSet()) \
 	throw std::runtime_error("Simfile: variable `" name "` has to be an array")
 #define CHECK_IF_NOT_ARR(var, name) if (var.isArray()) \
