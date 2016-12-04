@@ -805,8 +805,9 @@ typename std::enable_if<std::is_integral<T>::value, std::string>::type
 	if (x == 0)
 		return std::string(1, '0');
 
-	static_assert(ULLONG_MAX <= 18446744073709551615ull, "Enlarge the array!");
-	std::array<char, 21> buff;
+	std::array<char, meta::ToString<std::numeric_limits<T>::max()>
+		::arr_value.size() + 2> buff; // +1 for a terminating null char and +1
+		                              // for minus sign
 	unsigned i = buff.size();
 
 	if (std::is_signed<T>::value && x < 0) {
