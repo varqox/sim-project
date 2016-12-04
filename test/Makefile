@@ -1,11 +1,12 @@
 include ../Makefile.config
 
-.PHONY: all
-all: cpp_syntax_highlighter
+.PHONY: run-all
+run-all:
+	$(Q)$(MAKE) -C cpp_syntax_highlighter/
 
-.PHONY: cpp_syntax_highlighter
-cpp_syntax_highlighter:
-	$(Q)$(MAKE) -C $@/
+.PHONY: build-all
+build-all:
+	$(Q)$(MAKE) -C cpp_syntax_highlighter/ build
 
 .PHONY: clean
 clean:

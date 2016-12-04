@@ -873,7 +873,9 @@ void User::printUserSubmissions(uint limit) {
 					"<td>", toStr(stype), "</td>"
 					"<td>"
 						"<a class=\"btn-small\" href=\"/s/", res[1],
-							"/source\">View source</a>"
+							"\">View</a>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/source\">Source</a>"
 						"<a class=\"btn-small\" href=\"/s/", res[1],
 							"/download\">Download</a>");
 
