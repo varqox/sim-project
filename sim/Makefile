@@ -25,13 +25,24 @@ src: build-info
 test: test-sim test-simlib
 	@echo "\033[1;32mAll tests passed\033[0m"
 
+.PHONY: build-test
+build-test: build-test-sim build-test-simlib
+
 .PHONY: test-sim
 test-sim: src
 	$(Q)$(MAKE) -C test/
 
+.PHONY: build-test-sim
+build-test-sim: src
+	$(Q)$(MAKE) -C test/ build
+
 .PHONY: test-simlib
-test-simlib: src
+test-simlib:
 	$(Q)$(MAKE) -C src/lib/simlib/ test
+
+.PHONY: build-test-simlib
+build-test-simlib:
+	$(Q)$(MAKE) -C src/lib/simlib/ build-test
 
 .PHONY: install
 install: $(filter-out install run, $(MAKECMDGOALS))
