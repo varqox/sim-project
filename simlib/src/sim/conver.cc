@@ -228,20 +228,24 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 
 		// Construct a vector of the valid tests
 		vector<Simfile::Test> tests;
-		for (auto&& s : outs) {
-			StringView name {s};
-			name.removeSuffix(4);
-			name = name.extractTrailing([](char c) { return (c != '/'); });
+		{
+			string name_s; // Placed here to save useless allocations
+			for (auto&& s : outs) {
+				StringView name {s};
+				name.removeSuffix(4);
+				name = name.extractTrailing([](char c) { return (c != '/'); });
+				name_s.assign(name.begin(), name.end()); // Place in a string
 
-			auto it = in.find(name.to_string()); // TODO: if C++14, remove part:
-			                                     // `.to_string()`
-			if (it == in.end()) // No matching .in file
-				continue;
+				auto it = in.find(name_s);
+				if (it == in.end()) // No matching .in file
+					continue;
 
-			tests.emplace_back(std::move(it->first), 0, 0);
-			tests.back().in = std::move(it->second);
-			tests.back().out = std::move(s);
-			in.erase(it); // Now *it is not valid, so it's better to remove it
+				tests.emplace_back(std::move(it->first), 0, 0);
+				tests.back().in = std::move(it->second);
+				tests.back().out = std::move(s);
+				// Now *it is not valid, so it's better to remove it
+				in.erase(it);
+			}
 		}
 
 		// Sort to speed up searching
@@ -321,8 +325,19 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 					t.memory_limit = sf.global_mem_limit;
 	}
 
-	if (!run_time_limits_setting)
+	// Rounds time limits to 0.01 s
+	auto normalize_time_limits = [&] {
+		constexpr unsigned GRANULARITY = 0.01e6; // 0.01s
+		for (auto&& g : sf.tgroups)
+			for (auto&& t : g.tests)
+				t.time_limit = (t.time_limit + GRANULARITY / 2) / GRANULARITY *
+					GRANULARITY;
+	};
+
+	if (!run_time_limits_setting) {
+		normalize_time_limits();
 		return sf; // Nothing more to do
+	}
 
 	/* Set time limits automatically */
 
@@ -399,6 +414,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 		for (auto&& t : tg.tests)
 			t.time_limit = tls[t.name];
 
+	normalize_time_limits();
 	return sf;
 }
 
