@@ -491,8 +491,8 @@ void Contest::addProblem() {
 
 		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
 			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
-		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) *
-			100) * 10000LL; // Time limit in usec (converted with precision = 2)
+		// Time limit in usec
+		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) * 1'000'000);
 		if (time_limit.size() && tl < 400000)
 			fv.addError("Global time limit cannot be lower than 0.4 s");
 
