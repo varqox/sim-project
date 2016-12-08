@@ -399,8 +399,8 @@ public:
 	}
 
 	constexpr size_type rfind(char c, size_type beg = 0) const noexcept {
-		for (size_type endi = len - 1; endi >= beg; --endi)
-			if (str[endi] == c)
+		for (size_type endi = len; endi > beg;)
+			if (str[--endi] == c)
 				return endi;
 
 		return npos;
@@ -412,8 +412,8 @@ public:
 		if (endi > len)
 			endi = len;
 
-		for (--endi; endi >= beg; --endi)
-			if (str[endi] == c)
+		for (; endi > beg;)
+			if (str[--endi] == c)
 				return endi;
 
 		return npos;
@@ -1442,13 +1442,13 @@ inline StringBuff<N>& StringBuff<N>::raw_append(Args&&... args) {
 	throw_assert(final_len <= max_size);
 
 	// Concentrate them into data[]
-	auto raw_append = [&](auto&& str) {
+	auto impl_append = [&](auto&& str) {
 		auto sl = string_length(str);
 		std::copy(::data(str), ::data(str) + sl, data + len);
 		len += sl;
 	};
-	(void)raw_append; // Ignore warning 'unused' when no arguments are provided
-	(void)std::initializer_list<int>{(raw_append(std::forward<Args>(args)), 0)...};
+	(void)impl_append; // Ignore warning 'unused' when no arguments are provided
+	(void)std::initializer_list<int>{(impl_append(std::forward<Args>(args)), 0)...};
 
 	return *this;
 }
