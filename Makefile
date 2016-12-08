@@ -37,11 +37,11 @@ build-test-sim: src
 	$(Q)$(MAKE) -C test/ build
 
 .PHONY: test-simlib
-test-simlib:
+test-simlib: src
 	$(Q)$(MAKE) -C src/lib/simlib/ test
 
 .PHONY: build-test-simlib
-build-test-simlib:
+build-test-simlib: src
 	$(Q)$(MAKE) -C src/lib/simlib/ build-test
 
 .PHONY: install
