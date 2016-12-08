@@ -594,10 +594,11 @@ string humanizeFileSize(uint64_t size) {
 	constexpr uint64_t MIN_3DIGIT_TB = 109896187196212ull;
 	constexpr uint64_t MIN_3DIGIT_PB = 112533595688920269ull;
 
-	double dsize = size;
 	// Bytes
 	if (size < MIN_KB)
-		return (size == 1 ? "1 byte" : toStr(size) + " bytes");
+		return (size == 1 ? "1 byte" : concat(toString(size), " bytes"));
+
+	double dsize = size;
 	// KB
 	if (size < MIN_3DIGIT_KB)
 		return toStr(dsize / MIN_KB, 1) + " KB";

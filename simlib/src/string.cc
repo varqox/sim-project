@@ -83,31 +83,6 @@ void appendHtmlEscaped(string& str, const StringView& s) {
 		appendHtmlEscaped(str, s[i]);
 }
 
-string usecToSecStr(uint64_t x, uint prec, bool trim_zeros) {
-	uint64_t y = x / 1000000;
-	string res = toStr(y);
-
-	y = x - y * 1000000;
-	char t[7] = "000000";
-	for (int i = 5; i >= 0; --i) {
-		t[i] = '0' + y % 10;
-		y /= 10;
-	}
-
-	// Truncate trailing zeros
-	if (trim_zeros)
-		for (int i = std::min(5u, prec - 1); i >= 0 && t[i] == '0'; --i)
-			t[i] = '\0';
-
-	if (prec < 6)
-		t[prec] = '\0';
-
-	if (t[0] != '\0')
-		res.append(1, '.').append(t);
-
-	return res;
-}
-
 string widenedString(const StringView& s, size_t len, Adjustment adj,
 	char fill)
 {

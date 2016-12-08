@@ -3,12 +3,12 @@
 #include <gtest/gtest.h>
 
 TEST (StringBuff, StringBuff) {
-	EXPECT_EQ(StringBuff<102>::max_size, 102);
+	EXPECT_EQ(StringBuff<102>::max_size, 101);
 
 	EXPECT_THROW(StringBuff<10>(10, 'a'), std::runtime_error);
-	EXPECT_EQ(StringBuff<10>().size, 0);
-	EXPECT_EQ(StringBuff<10>("foo-bar").size, 7);
-	EXPECT_EQ(StringBuff<10>(9, 'v').size, 9);
+	EXPECT_EQ(StringBuff<10>().len, 0);
+	EXPECT_EQ(StringBuff<10>("foo-bar").len, 7);
+	EXPECT_EQ(StringBuff<10>(9, 'v').len, 9);
 	EXPECT_EQ(StringBuff<10>(9, 'v'), "vvvvvvvvv");
 
 	StringBuff<10> sb("aaa", 'c', StringView{"kk"});

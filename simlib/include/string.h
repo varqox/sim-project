@@ -17,9 +17,11 @@
 template<size_t N>
 class StringBuff {
 public:
-	static constexpr size_t max_size = N;
+	static constexpr size_t max_size = N - 1;
+	static_assert(N > 0, "max_size would underflow");
+
 	char data[N];
-	unsigned size = 0; // Not size_t; who would make so incredibly large buffer?
+	unsigned len = 0; // Not size_t; who would make so incredibly large buffer?
 
 	constexpr StringBuff() = default;
 
@@ -32,9 +34,29 @@ public:
 		append(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
 	}
 
+	unsigned size() const noexcept { return len; }
+
+	/// Appends without adding the null terminating character
 	template<class... Args>
-	StringBuff& append(Args&&... args);
+	StringBuff& raw_append(Args&&... args);
+
+	/// Appends and adds the null terminating character
+	template<class... Args>
+	StringBuff& append(Args&&... args) {
+		raw_append(std::forward<Args>(args)...);
+		data[len] = '\0'; // Terminating null character
+		return *this;
+	}
+
+	char& operator[](unsigned n) noexcept { return data[n]; }
+
+	const char& operator[](unsigned n) const noexcept { return data[n]; }
 };
+
+template<size_t N>
+inline std::string& operator+=(std::string& s, const StringBuff<N>& sb) {
+	return s.append(sb.data, sb.len);
+}
 
 template<size_t N>
 constexpr size_t StringBuff<N>::max_size;
@@ -76,7 +98,7 @@ public:
 
 	template<size_t N>
 	constexpr StringBase(const StringBuff<N>& s) noexcept
-		: str(s.data), len(s.size) {}
+		: str(s.data), len(s.len) {}
 
 	constexpr StringBase(pointer s) noexcept
 		: str(s), len(__builtin_strlen(s)) {}
@@ -798,34 +820,34 @@ struct StrNumCompare {
 };
 
 // Only to use with standard integral types
-template<class T>
-typename std::enable_if<std::is_integral<T>::value, std::string>::type
-	toString(T x)
-{
+template<class T, size_t N = meta::ToString<std::numeric_limits<T>::max()>
+	::arr_value.size() + 2> // +1 for a terminating null char and +1 for the
+	                        // minus sign
+StringBuff<N> toString(T x) {
 	if (x == 0)
-		return std::string(1, '0');
+		return {1, '0'};
 
-	std::array<char, meta::ToString<std::numeric_limits<T>::max()>
-		::arr_value.size() + 2> buff; // +1 for a terminating null char and +1
-		                              // for minus sign
-	unsigned i = buff.size();
-
+	StringBuff<N> buff;
 	if (std::is_signed<T>::value && x < 0) {
 		while (x) {
 			T x2 = x / 10;
-			buff[--i] = x2 * 10 - x + '0';
+			buff[buff.len++] = x2 * 10 - x + '0';
 			x = x2;
 		}
-		buff[--i] = '-';
-		return std::string(buff.data() + i, buff.size() - i);
+		buff[buff.len++] = '-';
+
+		std::reverse(buff.data, buff.data + buff.len);
+		return buff;
 	}
 
 	while (x) {
 		T x2 = x / 10;
-		buff[--i] = x - x2 * 10 + '0';
+		buff[buff.len++] = x - x2 * 10 + '0';
 		x = x2;
 	}
-	return std::string(buff.data() + i, buff.size() - i);
+
+	std::reverse(buff.data, buff.data + buff.len);
+	return buff;
 }
 
 // Converts T to std::string
@@ -877,7 +899,7 @@ inline std::string toString(long double x, int precision = 6) {
 
 // Alias to toString()
 template<class... Args>
-inline std::string toStr(Args&&... args) {
+inline auto toStr(Args&&... args) {
 	return toString(std::forward<Args>(args)...);
 }
 
@@ -1297,7 +1319,34 @@ constexpr T digitsToU(const StringView& str) noexcept {
  *
  * @return floating-point x in sec as string
  */
-std::string usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true);
+template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 2> // +2 for
+	// terminating null and decimal point
+StringBuff<N> usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true) {
+	uint64_t y = x / 1'000'000;
+	auto res = toString<uint64_t, N>(y);
+
+	y = x - y * 1'000'000;
+	res.raw_append('.');
+	for (unsigned i = res.len + 5; i >= res.len; --i) {
+		res[i] = '0' + y % 10;
+		y /= 10;
+	}
+
+	// Truncate trailing zeros
+	unsigned i = res.len + std::min(5, int(prec) - 1);
+	// i will point to the last character of the result
+	if (trim_zeros)
+		while (i >= res.len && res[i] == '0')
+			--i;
+
+	if (i == res.len - 1)
+		res.len = i; // Trim trailing '.'
+	else
+		res.len = ++i;
+
+	res[i] = '\0';
+	return res;
+}
 
 template<class T>
 constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
@@ -1312,14 +1361,10 @@ constexpr inline size_t string_length(T* x) noexcept {
 constexpr inline size_t string_length(char) noexcept { return 1; }
 
 template<class T>
-constexpr inline auto data(const T& x) noexcept -> decltype(x.data()) {
-	return x.data();
-}
+constexpr inline auto data(const T& x) noexcept { return x.data(); }
 
 template<class T, size_t N>
-constexpr inline const T* data(const T (&x)[N]) noexcept {
-	return x;
-}
+constexpr inline const T* data(const T (&x)[N]) noexcept { return x; }
 
 constexpr inline const char* data(const char& c) noexcept { return &c; }
 
@@ -1327,13 +1372,11 @@ template<class Char>
 constexpr inline std::string& operator+=(std::string& str,
 	const StringBase<Char>& s)
 {
-	str.append(s.data(), s.size());
-	return str;
+	return str.append(s.data(), s.size());
 }
 
 inline std::string& operator+=(std::string& str, const meta::string& s) {
-	str.append(s.data(), s.size());
-	return str;
+	return str.append(s.data(), s.size());
 }
 
 /**
@@ -1384,29 +1427,28 @@ std::string widenedString(const StringView& s, size_t len,
 
 /* ============================ IMPLEMENTATION ============================== */
 template<size_t N>
-inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : size(count) {
-	throw_assert(size < max_size);
-	std::fill(data, data + size, ch);
-	data[size] = '\0';
+inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : len(count) {
+	throw_assert(len <= max_size);
+	std::fill(data, data + len, ch);
+	data[len] = '\0';
 }
 
 template<size_t N>
 template<class... Args>
-inline StringBuff<N>& StringBuff<N>::append(Args&&... args) {
-	// Sum size of all args
-	size_t final_size = size;
-	(void)std::initializer_list<size_t>{(final_size += string_length(args))...};
-	throw_assert(final_size < max_size);
+inline StringBuff<N>& StringBuff<N>::raw_append(Args&&... args) {
+	// Sum length of all args
+	size_t final_len = len;
+	(void)std::initializer_list<size_t>{(final_len += string_length(args))...};
+	throw_assert(final_len <= max_size);
 
 	// Concentrate them into data[]
 	auto raw_append = [&](auto&& str) {
 		auto sl = string_length(str);
-		std::copy(::data(str), ::data(str) + sl, data + size);
-		size += sl;
+		std::copy(::data(str), ::data(str) + sl, data + len);
+		len += sl;
 	};
 	(void)raw_append; // Ignore warning 'unused' when no arguments are provided
 	(void)std::initializer_list<int>{(raw_append(std::forward<Args>(args)), 0)...};
 
-	data[size] = '\0'; // Terminating null character
 	return *this;
 }
