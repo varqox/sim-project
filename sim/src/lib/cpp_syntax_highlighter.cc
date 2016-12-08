@@ -700,7 +700,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
 					&& input[j + 1] == '\n');
 
-				string line_str = toStr(++line);
+				auto line_str = toStr(++line);
 				// When we were ending styles (somewhere above), there can be
 				// an opportunity to elide style OPERATOR (only in the first
 				// iteration of this loop) but it's not worth that, as it's a
@@ -728,7 +728,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (j == 0 || input[j - 1] == '\n')
 				res += '\n';
 			// Break the line
-			string line_str = toStr(++line);
+			auto line_str = toStr(++line);
 			back_insert(res, "</td></tr>"
 				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 					"\"></td><td>");

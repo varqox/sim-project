@@ -1098,8 +1098,8 @@ void Contest::editProblem() {
 
 	// Get problem information
 	round_name = rpath->problem->name;
-	string simfile_contents = getFileContents(
-		concat("problems/", rpath->problem->problem_id, "/Simfile"));
+	string simfile_contents = getFileContents(StringBuff<PATH_MAX>("problems/",
+		rpath->problem->problem_id, "/Simfile"));
 	// Read Simfile
 	try {
 		sim::Simfile sf {simfile_contents};
@@ -1108,7 +1108,8 @@ void Contest::editProblem() {
 		sf.loadTests();
 		name = sf.name;
 		label = sf.label;
-		memory_limit = toStr(sf.global_mem_limit >> 20);
+		memory_limit.clear();
+		memory_limit += toStr(sf.global_mem_limit >> 20);
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
