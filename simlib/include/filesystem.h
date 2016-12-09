@@ -468,6 +468,7 @@ inline StringView getExtension(const CStringView& file) {
  *   "/" -> ""
  *   "/my/path/." -> "."
  *   "/my/path/.." -> ".."
+ *   "foo" -> "foo"
  *
  * @param path given path
  *
