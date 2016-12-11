@@ -120,47 +120,8 @@ void Contest::handle() {
 	}
 
 	// Problem statement
-	if (rpath->type == PROBLEM && next_arg == "statement") {
-		// Get statement path
-		ConfigFile cf;
-		try {
-			cf.addVars("statement");
-			cf.loadConfigFromFile(concat("problems/",
-				rpath->problem->problem_id, "/Simfile"));
-
-		} catch (const std::exception& e) {
-			ERRLOG_CATCH(e);
-			return error500();
-		}
-
-		auto statement = cf["statement"];
-
-		// No statement
-		if (statement.asString().empty()) {
-			contestTemplate("Problems");
-			append("<h1>Problems</h1>");
-			printRoundPath("problems", !admin_view);
-
-			append("<p>This problem has no statement...</p>");
-			return;
-		}
-
-		if (hasSuffix(statement.asString(), ".pdf"))
-			resp.headers["Content-type"] = "application/pdf";
-		else if (hasSuffixIn(statement.asString(), {".html", ".htm"}))
-			resp.headers["Content-type"] = "text/html";
-		else if (hasSuffixIn(statement.asString(), {".txt", ".md"}))
-			resp.headers["Content-type"] = "text/plain; charset=utf-8";
-
-		resp.headers["Content-Disposition"] =
-			concat("inline; filename=", filename(statement.asString()));
-
-		resp.content_type = server::HttpResponse::FILE;
-		resp.content = concat(resp.content, "problems/",
-			rpath->problem->problem_id, '/', statement.asString());
-
-		return;
-	}
+	if (rpath->type == PROBLEM && next_arg == "statement")
+		return Problemset::problemStatement(rpath->problem->problem_id);
 
 	// Add
 	if (next_arg == "add") {

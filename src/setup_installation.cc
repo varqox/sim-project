@@ -277,11 +277,11 @@ int main(int argc, char **argv) {
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`priority` TINYINT NOT NULL,"
 			"`type` TINYINT NOT NULL,"
-			// "`problem_id` int unsigned NOT NULL,"
-			// "`submission_id` int unsigned NOT NULL,"
-			// "`data` blob NOT NULL,"
+			"`aux_id` int unsigned NOT NULL,"
+			"`data` tinyblob NOT NULL,"
 			"PRIMARY KEY (id),"
-			"KEY (type)"
+			"KEY (priority DESC, id), "
+			"KEY (type, aux_id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("files",

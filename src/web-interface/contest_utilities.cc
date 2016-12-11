@@ -254,15 +254,13 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 		return concat("<div>"
 				"<label>From: </label><span",
 					(begin.empty() ? ">The Big Bang" : concat(" datetime=\"",
-						toStr(strToTime(begin)), "\">", begin,
-						"<sup>UTC+0</sup>")),
+						begin, "\">", begin, "<sup>UTC+0</sup>")),
 					"</span>"
 			"</div>"
 			"<div>"
 				"<label>To: </label><span",
 					(end.empty() ? ">Forever" : concat(" datetime=\"",
-						toStr(strToTime(end)), "\">", end,
-						"<sup>UTC+0</sup>")),
+						end, "\">", end, "<sup>UTC+0</sup>")),
 					"</span>"
 			"</div>");
 	};

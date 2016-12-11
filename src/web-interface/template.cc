@@ -37,7 +37,8 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 					"<a href=\"/c/\">Contests</a>");
 
 	if (Session::open() && Session::user_type < UTYPE_NORMAL) {
-		append("<a href=\"/u\">Users</a>");
+		append("<a href=\"/p\">Problemset</a>"
+			"<a href=\"/u\">Users</a>");
 		if (Session::user_type == UTYPE_ADMIN)
 			append("<a href=\"/logs\">Logs</a>");
 	}

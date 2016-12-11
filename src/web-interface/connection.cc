@@ -728,29 +728,21 @@ void Connection::sendResponse(const HttpResponse& res) {
 		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
 			? res.content.c_str() : nullptr, res.content.size());
 		FileDescriptor fd {res.content, O_RDONLY | O_LARGEFILE};
-		if (fd == -1) {
-			error404();
-			return;
-		}
+		if (fd == -1)
+			return error404();
 
 #ifdef __x86_64__
 		struct stat sb;
-		if (fstat(fd, &sb) == -1) {
-			error500();
-			return;
-		}
+		if (fstat(fd, &sb) == -1)
+			return error500();
 #else
 		struct stat64 sb;
-		if (fstat64(fd, &sb) == -1) {
-			error500();
-			return;
-		}
+		if (fstat64(fd, &sb) == -1)
+			return error500();
 #endif
 
-		if (!S_ISREG(sb.st_mode)) {
-			error403();
-			return;
-		}
+		if (!S_ISREG(sb.st_mode))
+			return error404();
 
 		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
