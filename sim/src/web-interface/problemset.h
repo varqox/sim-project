@@ -16,8 +16,9 @@ protected:
 
 private:
 	std::string problem_id_;
-	std::string name, label, owner, added, simfile;
-	bool is_public;
+	std::string problem_name, problem_label, problem_owner, problem_added;
+	std::string problem_simfile;
+	bool problem_is_public;
 	std::string owner_username;
 	uint owner_utype;
 
@@ -39,7 +40,6 @@ private:
 	void editProblem();
 
 	void deleteProblem();
-
 
 	void problemSolutions();
 };

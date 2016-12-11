@@ -586,8 +586,8 @@ void Contest::submission() {
 		string submit_time = res[4];
 		SubmissionStatus submission_status = SubmissionStatus(res.getUInt(5));
 		string score = res[6];
-		string problem_name = res[7];
-		string problem_label = res[8];
+		string problems_name = res[7];
+		string problems_label = res[8];
 		string full_name = concat(res[9], ' ', res[10]);
 
 		contestTemplate("Submission " + submission_id);
@@ -643,7 +643,7 @@ void Contest::submission() {
 			rpath->round->full_results <= date("%Y-%m-%d %H:%M:%S"));
 
 		append("<td>", htmlEscape(
-				concat(problem_name, " (", problem_label, ')')), "</td>"
+				concat(problems_name, " (", problems_label, ')')), "</td>"
 				"<td datetime=\"", submit_time ,"\">", submit_time,
 					"<sup>UTC+0</sup></td>",
 				submissionStatusAsTd(submission_status, show_final_results),
