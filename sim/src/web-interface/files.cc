@@ -247,8 +247,7 @@ void Contest::editFile(const StringView& id, string name) {
 				// Modified
 				"<div class=\"field-group\">"
 					"<label>Modified</label>"
-					"<span datetime=\"",
-						toStr(strToTime(modified)),"\" disabled>", modified,
+					"<span datetime=\"", modified, "\" disabled>", modified,
 						"<sup>UTC+0</sup></span>"
 				"</div>"
 
@@ -412,8 +411,7 @@ void Contest::files(bool admin_view) {
 		while (res.next()) {
 			string id = res[1];
 			append("<tr>"
-				"<td datetime=\"", toStr(strToTime(res[2])),"\">", res[2],
-					"<sup>UTC+0</sup></td>"
+				"<td datetime=\"", res[2],"\">", res[2], "<sup>UTC+0</sup></td>"
 				"<td><a href=\"/file/", id, "\">", htmlEscape(res[3]),
 					"</a></td>"
 				"<td>", humanizeFileSize(res.getUInt64(4)), "</td>"

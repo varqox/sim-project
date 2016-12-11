@@ -1,9 +1,10 @@
 #pragma once
 
 #include "errors.h"
+#include "problemset.h"
 #include "template.h"
 
-class Contest : virtual protected Template, virtual protected Errors {
+class Contest : virtual protected Problemset {
 protected:
 	Contest() = default;
 

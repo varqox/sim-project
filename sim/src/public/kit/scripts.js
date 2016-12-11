@@ -39,7 +39,11 @@ $(document).ready(function() {
 	// Converts datetimes
 	var tzo = -(new Date()).getTimezoneOffset();
 	$('*[datetime]').each(function() {
-		var x = $(this), time = new Date(x.attr('datetime') * 1000);
+		var x = $(this), time;
+		if (isNaN(x.attr('datetime')))
+			time = new Date(Date.parse(x.attr('datetime') + ' UTC'));
+		else
+			time = new Date(x.attr('datetime') * 1000);
 
 		var month = time.getMonth() + 1;
 		var day = time.getDate();
@@ -52,8 +56,9 @@ $(document).ready(function() {
 		minutes = (minutes < 10 ? '0' : '') + minutes;
 		seconds = (seconds < 10 ? '0' : '') + seconds;
 
-		// If this is a submission time in a submission table, then skip tz part
-		if (x.parents('.submissions').length)
+		// If this is a '.submissions .time' or '.problems .added', then skip
+		// the timezone part
+		if (x.parents('.submissions, .problems').length)
 			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
 				' ', hours, ':', minutes, ':', seconds));
 		else
@@ -62,8 +67,8 @@ $(document).ready(function() {
 				'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
 	});
 
-	// Give timezanoe info in the submissions table
-	$('.submissions th.time').each(function() {
+	// Give timezone info in the submissions and problems table
+	$('.submissions th.time, .problems th.added').each(function() {
 		$(this).children().remove();
 		$(this).append(String().concat(
 			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));

@@ -42,11 +42,26 @@ server::HttpResponse Sim::handle(string _client_ip,
 		if (next_arg == "kit")
 			getStaticFile();
 
-		else if (next_arg == "logs")
-			logs();
+		else if (next_arg == "c")
+			Contest::handle();
+
+		else if (next_arg == "s")
+			submission();
+
+		else if (next_arg == "u")
+			User::handle();
+
+		else if (next_arg == "")
+			mainPage();
+
+		else if (next_arg == "p")
+			Problemset::handle();
 
 		else if (next_arg == "login")
 			login();
+
+		else if (next_arg == "file")
+			file();
 
 		else if (next_arg == "logout")
 			logout();
@@ -54,20 +69,8 @@ server::HttpResponse Sim::handle(string _client_ip,
 		else if (next_arg == "signup")
 			signUp();
 
-		else if (next_arg == "u")
-			User::handle();
-
-		else if (next_arg == "c")
-			Contest::handle();
-
-		else if (next_arg == "s")
-			submission();
-
-		else if (next_arg == "file")
-			file();
-
-		else if (next_arg == "")
-			mainPage();
+		else if (next_arg == "logs")
+			logs();
 
 		else
 			error404();

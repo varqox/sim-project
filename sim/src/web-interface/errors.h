@@ -31,4 +31,10 @@ protected:
 		errorTemplate("500 Internal Server Error", "500",
 			"Internal Server Error");
 	}
+
+	// 501
+	void error501() {
+		errorTemplate("501 Not Implemented", "501",
+			"This feature has not been implemented yet.");
+	}
 };
