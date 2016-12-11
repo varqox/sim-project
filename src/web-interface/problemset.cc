@@ -51,14 +51,14 @@ void Problemset::handle() {
 
 	problemsetTemplate("Problemset");
 	append(next_arg.empty() ? "<h1>Problemset</h1>" : "<h1>My problems</h1>");
-	append("<a class=\"btn\" href=\"/p/add\">Add problem</a>");
+	append("<a class=\"btn\" href=\"/p/add\">Add a problem</a>");
 
 	// List available problems
 	try {
 		DB::Statement stmt;
 		if (next_arg == "my") {
 			stmt = db_conn.prepare("SELECT id, name, label, added, is_public"
-				" FROM problems p WHERE owner=?");
+				" FROM problems WHERE owner=?");
 			stmt.setString(1, Session::user_id);
 
 		} else if (Session::user_type == UTYPE_ADMIN) {
@@ -186,12 +186,12 @@ void Problemset::problem() {
 		if (!res.next())
 			return error404();
 
-		name = res[1];
-		label = res[2];
-		owner = res[3];
-		added = res[4];
-		simfile = res[5];
-		is_public = res.getBool(6);
+		problem_name = res[1];
+		problem_label = res[2];
+		problem_owner = res[3];
+		problem_added = res[4];
+		problem_simfile = res[5];
+		problem_is_public = res.getBool(6);
 		owner_username = res[7];
 		owner_utype = res.getUInt(8);
 
@@ -201,8 +201,8 @@ void Problemset::problem() {
 	}
 
 	// Check permissions
-	if (!is_public && Session::user_type != UTYPE_ADMIN &&
-		Session::user_id != owner && Session::user_type >= owner_utype)
+	if (!problem_is_public && Session::user_type != UTYPE_ADMIN &&
+		Session::user_id != problem_owner && Session::user_type >= owner_utype)
 	{
 		return error403();
 	}
@@ -225,24 +225,24 @@ void Problemset::problem() {
 	append("<div class=\"problem-info\">"
 			"<div class=\"name\">"
 				"<label>Name</label>",
-				htmlEscape(name),
+				htmlEscape(problem_name),
 			"</div>"
 			"<div class=\"label\">"
 				"<label>Label</label>",
-				htmlEscape(label),
+				htmlEscape(problem_label),
 			"</div>"
 			"<div class=\"owner\">"
 				"<label>Owner</label>"
-				"<a href=\"/u/", owner, "\">", owner_username, "</a>"
+				"<a href=\"/u/", problem_owner, "\">", owner_username, "</a>"
 			"</div>"
 			"<div class=\"added\">"
 				"<label>Added</label>"
-				"<span datetime=\"", added, "\">", added,
+				"<span datetime=\"", problem_added, "\">", problem_added,
 					"<sup>UTC+0</sup></span>"
 			"</div>"
 			"<div class=\"is_public\">"
 				"<label>Is public</label>",
-				(is_public ? "Yes" : "No"),
+				(problem_is_public ? "Yes" : "No"),
 			"</div>"
 		"</div>");
 	// TODO: buttons
