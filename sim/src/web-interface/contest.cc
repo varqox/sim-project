@@ -1136,7 +1136,7 @@ void Contest::editProblem() {
 			"</form>"
 		"</div>"
 		"<h2>Package Simfile:</h2>"
-		"<pre class=\"simfile\">", simfile_contents, "</pre>");
+		"<pre class=\"simfile\">", htmlEscape(simfile_contents), "</pre>");
 }
 
 void Contest::deleteContest() {

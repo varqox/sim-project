@@ -23,8 +23,8 @@ void Problemset::problemsetTemplate(const StringView& title,
 		append("<hr/>"
 			"<a href=\"/p/", problem_id_, "\">View problem</a>"
 			"<a href=\"/p/", problem_id_, "/edit\">Edit problem</a>"
-			"<a href=\"/p/", problem_id_, "/statement\">Problem's statement</a>"
-			"<a href=\"/p/", problem_id_, "/solutions\">Problem's solutions</a>");
+			"<a href=\"/p/", problem_id_, "/statement\">View statement</a>"
+			"<a href=\"/p/", problem_id_, "/solutions\">Solutions</a>");
 	}
 	append("</ul>");
 }
@@ -174,6 +174,10 @@ void Problemset::addProblem() {
 	error501();
 }
 
+void Problemset::reuploadProblem() {
+	error501();
+}
+
 void Problemset::problem() {
 	// Fetch problem info
 	try {
@@ -212,6 +216,8 @@ void Problemset::problem() {
 		return problemStatement(problem_id_);
 	if (next_arg == "edit")
 		return editProblem();
+	if (next_arg == "reupload")
+		return reuploadProblem();
 	if (next_arg == "solutions")
 		return problemSolutions();
 	if (next_arg == "delete")
@@ -222,7 +228,17 @@ void Problemset::problem() {
 	// View the problem
 	problemsetTemplate(StringBuff<40>("Problem ", problem_id_));
 
-	append("<div class=\"problem-info\">"
+	append("<div class=\"right-flow\" style=\"width:90%;margin:12px 0\">"
+			"<a class=\"btn-small\" href=\"/p/", problem_id_, "/statement\">"
+				"View statement</a>"
+			"<a class=\"btn-small blue\" href=\"/p/", problem_id_, "/edit\">"
+				"Edit problem</a>"
+			"<a class=\"btn-small orange\" href=\"/p/", problem_id_,
+				"/reupload\">Reupload the package</a>"
+			"<a class=\"btn-small red\" href=\"/p/", problem_id_, "/delete\">"
+				"Delete problem</a>"
+		"</div>"
+		"<div class=\"problem-info\">"
 			"<div class=\"name\">"
 				"<label>Name</label>",
 				htmlEscape(problem_name),
@@ -244,8 +260,9 @@ void Problemset::problem() {
 				"<label>Is public</label>",
 				(problem_is_public ? "Yes" : "No"),
 			"</div>"
-		"</div>");
-	// TODO: buttons
+		"</div>"
+		"<h2>Problem's Simfile:</h2>"
+		"<pre class=\"simfile\">", htmlEscape(problem_simfile), "</pre>");
 }
 
 void Problemset::editProblem() {
