@@ -33,8 +33,9 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 	append("</head>"
 			"<body>"
 				"<div class=\"navbar\">"
-					"<a href=\"/\" class=\"brand\">SIM</a>"
-					"<a href=\"/c/\">Contests</a>");
+					"<div>"
+						"<a href=\"/\" class=\"brand\">SIM</a>"
+						"<a href=\"/c/\">Contests</a>");
 
 	if (Session::open() && Session::user_type < UTYPE_NORMAL) {
 		append("<a href=\"/p\">Problemset</a>"
@@ -43,9 +44,10 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 			append("<a href=\"/logs\">Logs</a>");
 	}
 
-	append("<div class=\"rightbar\">"
-						"<time id=\"clock\">", date("%H:%M:%S"),
-							"<sup>UTC+0</sup></time>");
+	append("</div>"
+			"<div class=\"rightbar\">"
+				"<time id=\"clock\">", date("%H:%M:%S"),
+					"<sup>UTC+0</sup></time>");
 
 	if (Session::isOpen())
 		append("<div class=\"dropmenu down\">"

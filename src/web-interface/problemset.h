@@ -35,6 +35,8 @@ protected:
 private:
 	void addProblem();
 
+	void reuploadProblem();
+
 	void problem();
 
 	void editProblem();
