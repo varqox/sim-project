@@ -40,9 +40,10 @@ $(document).ready(function() {
 	var tzo = -(new Date()).getTimezoneOffset();
 	$('*[datetime]').each(function() {
 		var x = $(this), time;
-		if (isNaN(x.attr('datetime')))
-			time = new Date(Date.parse(x.attr('datetime') + ' UTC'));
-		else
+		if (isNaN(x.attr('datetime'))) {
+			var args = x.attr('datetime').split(/[- :]/);
+			time = new Date(Date.UTC.apply(this, args));
+		} else
 			time = new Date(x.attr('datetime') * 1000);
 
 		var month = time.getMonth() + 1;
