@@ -5,7 +5,7 @@ all: http.o
 
 $(eval $(call dependencies))
 
-http.o: server.o
+http.o: server.o response.o
 	$(Q)$(call P,LD,$@)$(LD) -r $^ -o $@
 
 .PHONY: clean
