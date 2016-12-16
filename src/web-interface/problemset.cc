@@ -1,6 +1,7 @@
 #include "problemset.h"
 
 #include <simlib/config_file.h>
+#include <simlib/http/response.h>
 #include <simlib/time.h>
 
 using std::string;
@@ -164,7 +165,7 @@ void Problemset::problemStatement(StringView problem_id) {
 		resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
 	resp.headers["Content-Disposition"] =
-		concat("inline; filename=", filename(statement));
+		concat("inline; filename=", http::quote(filename(statement)));
 
 	resp.content_type = server::HttpResponse::FILE;
 	resp.content = concat("problems/", problem_id, '/', statement);

@@ -3,6 +3,7 @@
 
 #include <sim/constants.h>
 #include <simlib/debug.h>
+#include <simlib/http/response.h>
 #include <simlib/process.h>
 #include <simlib/time.h>
 
@@ -357,7 +358,7 @@ void Contest::file() {
 
 		// Download file
 		resp.headers["Content-Disposition"] =
-			concat("attachment; filename=", file_name);
+			concat("attachment; filename=", http::quote(file_name));
 
 		resp.content = concat("files/", id);
 		resp.content_type = server::HttpResponse::FILE;
