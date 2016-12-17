@@ -6,72 +6,115 @@
 
 using std::string;
 
+Problemset::Permissions Problemset::getPermissions(const string& owner_id,
+	bool is_public)
+{
+	if (Session::open()) {
+		if (Session::user_type == UTYPE_ADMIN)
+			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_ALL |
+				PERM_VIEW_SOLUTIONS | PERM_SEE_OWNER | PERM_ADMIN);
+
+		if (Session::user_id == owner_id)
+			return Permissions(PERM_VIEW | PERM_VIEW_SOLUTIONS |
+				PERM_SEE_OWNER | PERM_ADMIN |
+				(Session::user_type == UTYPE_TEACHER ? PERM_ADD : 0));
+
+		if (Session::user_type == UTYPE_TEACHER && is_public)
+			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_SOLUTIONS |
+				PERM_SEE_OWNER);
+	}
+
+	return (is_public ? PERM_VIEW : PERM_NONE);
+}
+
 void Problemset::problemsetTemplate(const StringView& title,
 	const StringView& styles, const StringView& scripts)
 {
 	baseTemplate(title, concat("body{margin-left:190px}", styles),
 		scripts);
-	if (!Session::isOpen())
-		return;
 
 	append("<ul class=\"menu\">"
-			"<span>PROBLEMSET</span>"
-			"<a href=\"/p/add\">Add a problem</a>"
-			"<hr>"
-			"<a href=\"/p\">All problems</a>"
+			"<span>PROBLEMSET</span>");
+	if (perms & PERM_ADD)
+		append("<a href=\"/p/add\">Add a problem</a>"
+			"<hr>");
+
+	append("<a href=\"/p\">All problems</a>"
 			"<a href=\"/p/my\">My problems</a>");
 	if (!problem_id_.empty()) {
-		append("<hr/>"
+		append("<span>SELECTED PROBLEM</span>"
 			"<a href=\"/p/", problem_id_, "\">View problem</a>"
-			"<a href=\"/p/", problem_id_, "/edit\">Edit problem</a>"
-			"<a href=\"/p/", problem_id_, "/statement\">View statement</a>"
-			"<a href=\"/p/", problem_id_, "/solutions\">Solutions</a>");
+			"<a href=\"/p/", problem_id_, "/statement\">View statement</a>");
+
+		if (perms & PERM_VIEW_SOLUTIONS)
+			append("<a href=\"/p/", problem_id_, "/solutions\">Solutions</a>");
+		if (perms & PERM_ADMIN) {
+			append("<a href=\"/p/", problem_id_, "/edit\">Edit problem</a>");
+			append("<a href=\"/p/", problem_id_, "/submissions\">"
+				"Submissions</a>");
+		}
+
+		append("<a href=\"/p/", problem_id_, "/submissions/my\">"
+			"My submissions</a>");
 	}
 	append("</ul>");
 }
 
 void Problemset::handle() {
-	if (!Session::open())
-		return redirect("/login?" + req->target);
-
-	if (Session::user_type > UTYPE_TEACHER)
-		return error403();
-
 	StringView next_arg = url_args.extractNextArg();
 	if (isDigit(next_arg)) {
 		problem_id_ = next_arg.to_string();
 		return problem();
 	}
+
 	problem_id_.clear();
+	perms = getPermissions("", true); // Get permissions to overall problemset
 
 	if (next_arg == "add")
 		return addProblem();
 
-	if (!next_arg.empty() && next_arg != "my")
+	if (next_arg == "my") {
+		if (!Session::isOpen())
+			return redirect("/login?" + req->target);
+
+	} else if (!next_arg.empty())
 		return error404();
 
 	problemsetTemplate("Problemset");
 	append(next_arg.empty() ? "<h1>Problemset</h1>" : "<h1>My problems</h1>");
-	append("<a class=\"btn\" href=\"/p/add\">Add a problem</a>");
+	if (perms & PERM_ADD)
+		append("<a class=\"btn\" href=\"/p/add\">Add a problem</a>");
 
 	// List available problems
+	bool show_owner = (perms & PERM_SEE_OWNER);
 	try {
 		DB::Statement stmt;
 		if (next_arg == "my") {
+			show_owner = false;
 			stmt = db_conn.prepare("SELECT id, name, label, added, is_public"
-				" FROM problems WHERE owner=?");
+				" FROM problems WHERE owner=? ORDER BY id");
 			stmt.setString(1, Session::user_id);
 
-		} else if (Session::user_type == UTYPE_ADMIN) {
+		} else if (perms & PERM_VIEW_ALL) {
 			stmt = db_conn.prepare("SELECT p.id, name, label, added, is_public,"
-					" owner, u.username, u.type FROM problems p, users u"
-				" WHERE owner=u.id");
+					" owner, username FROM problems p, users u"
+				" WHERE owner=u.id ORDER BY id");
+
+		} else if (perms & PERM_SEE_OWNER) {
+			stmt = db_conn.prepare("SELECT p.id, name, label, added, is_public,"
+				" owner, username FROM problems p, users u"
+				" WHERE owner=u.id AND (is_public=1 OR owner=?) ORDER BY id");
+			stmt.setString(1, Session::user_id);
+
+		} else if (Session::isOpen()) {
+			stmt = db_conn.prepare("SELECT id, name, label, added, is_public,"
+				" owner FROM problems"
+				" WHERE is_public=1 OR owner=? ORDER BY id");
+			stmt.setString(1, Session::user_id);
 
 		} else {
-			stmt = db_conn.prepare("SELECT p.id, name, label, added, is_public,"
-					" owner, u.username, u.type FROM problems p, users u"
-				" WHERE owner=u.id AND (is_public=1 OR owner=?)");
-			stmt.setString(1, Session::user_id);
+			stmt = db_conn.prepare("SELECT id, name, label, added, is_public,"
+				" owner FROM problems WHERE is_public=1 ORDER BY id");
 		}
 
 		DB::Result res = stmt.executeQuery();
@@ -80,13 +123,14 @@ void Problemset::handle() {
 			return;
 		}
 
+		// TODO: add search option
 		append("<table class=\"problems\">"
 			"<thead>"
 				"<tr>"
 					"<th class=\"id\">Id</th>"
 					"<th class=\"name\">Name</th>"
 					"<th class=\"label\">Label</th>",
-					(next_arg.empty() ? "<th class=\"owner\">Owner</th>" : ""),
+					(show_owner ? "<th class=\"owner\">Owner</th>" : ""),
 					"<th class=\"added\">Added<sup>UTC+0</sup></th>"
 					"<th class=\"is_public\">Is public</th>"
 					"<th class=\"actions\">Actions</th>"
@@ -100,8 +144,12 @@ void Problemset::handle() {
 					"<td>", htmlEscape(res[2]), "</td>"
 					"<td>", htmlEscape(res[3]), "</td>");
 
-			if (next_arg.empty()) // Owner
+			if (show_owner) // Owner
 				append("<td><a href=\"/u/", res[6], "\">", res[7], "</a></td>");
+
+			Permissions problem_perms =
+				getPermissions(next_arg == "my" ? Session::user_id : res[6],
+					res.getBool(5));
 
 			append("<td datetime=\"", res[4], "\">", res[4], "</td>"
 					"<td>", (res.getBool(5) ? "YES" : "NO"), "</td>"
@@ -109,18 +157,16 @@ void Problemset::handle() {
 						"<a class=\"btn-small\" href=\"/p/", res[1], "\">"
 							"View</a>"
 						"<a class=\"btn-small\" href=\"/p/", res[1],
-							"/statement\">Statement</a>"
-						"<a class=\"btn-small\" href=\"/p/", res[1],
-							"/solutions\">Solutions</a>");
+							"/statement\">Statement</a>");
 
 			// More actions
-			if (Session::user_type == UTYPE_ADMIN ||
-				Session::user_id == res[6] ||
-				Session::user_type < res.getUInt(8))
-			{
+			if (problem_perms & PERM_VIEW_SOLUTIONS)
+				append("<a class=\"btn-small\" href=\"/p/", res[1],
+					"/solutions\">Solutions</a>");
+
+			if (problem_perms & PERM_ADMIN)
 				append("<a class=\"btn-small blue\" href=\"/p/", res[1],
 					"/edit\">Edit</a>");
-			}
 
 			append("</td>"
 				"</tr>");
@@ -172,10 +218,9 @@ void Problemset::problemStatement(StringView problem_id) {
 }
 
 void Problemset::addProblem() {
-	error501();
-}
+	if (~perms & PERM_ADD)
+		return error403();
 
-void Problemset::reuploadProblem() {
 	error501();
 }
 
@@ -205,22 +250,25 @@ void Problemset::problem() {
 		return error500();
 	}
 
+	perms = getPermissions(problem_owner, problem_is_public);
+
 	// Check permissions
-	if (!problem_is_public && Session::user_type != UTYPE_ADMIN &&
-		Session::user_id != problem_owner && Session::user_type >= owner_utype)
-	{
+	if (~perms & PERM_VIEW)
 		return error403();
-	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "statement")
 		return problemStatement(problem_id_);
+	if (next_arg == "submissions")
+		return problemSubmissions();
 	if (next_arg == "edit")
 		return editProblem();
-	if (next_arg == "reupload")
-		return reuploadProblem();
 	if (next_arg == "solutions")
 		return problemSolutions();
+	if (next_arg == "reupload")
+		return reuploadProblem();
+	if (next_arg == "rejudge")
+		return rejudgeProblemSubmissions();
 	if (next_arg == "delete")
 		return deleteProblem();
 	if (next_arg != "")
@@ -231,14 +279,19 @@ void Problemset::problem() {
 
 	append("<div class=\"right-flow\" style=\"width:90%;margin:12px 0\">"
 			"<a class=\"btn-small\" href=\"/p/", problem_id_, "/statement\">"
-				"View statement</a>"
-			"<a class=\"btn-small blue\" href=\"/p/", problem_id_, "/edit\">"
+				"View statement</a>");
+
+	if (perms & PERM_ADMIN)
+		append("<a class=\"btn-small blue\" href=\"/p/", problem_id_, "/edit\">"
 				"Edit problem</a>"
 			"<a class=\"btn-small orange\" href=\"/p/", problem_id_,
 				"/reupload\">Reupload the package</a>"
+			"<a class=\"btn-small blue\" href=\"/p/", problem_id_,
+				"/rejudge\">Rejudge all submissions</a>"
 			"<a class=\"btn-small red\" href=\"/p/", problem_id_, "/delete\">"
-				"Delete problem</a>"
-		"</div>"
+				"Delete problem</a>");
+
+	append("</div>"
 		"<div class=\"problem-info\">"
 			"<div class=\"name\">"
 				"<label>Name</label>",
@@ -247,12 +300,15 @@ void Problemset::problem() {
 			"<div class=\"label\">"
 				"<label>Label</label>",
 				htmlEscape(problem_label),
-			"</div>"
-			"<div class=\"owner\">"
+			"</div>");
+
+	if (perms & PERM_SEE_OWNER)
+			append("<div class=\"owner\">"
 				"<label>Owner</label>"
 				"<a href=\"/u/", problem_owner, "\">", owner_username, "</a>"
-			"</div>"
-			"<div class=\"added\">"
+			"</div>");
+
+	append("<div class=\"added\">"
 				"<label>Added</label>"
 				"<span datetime=\"", problem_added, "\">", problem_added,
 					"<sup>UTC+0</sup></span>"
@@ -262,18 +318,52 @@ void Problemset::problem() {
 				(problem_is_public ? "Yes" : "No"),
 			"</div>"
 		"</div>"
+		// TODO: list files and allow to download/reupload them
 		"<h2>Problem's Simfile:</h2>"
 		"<pre class=\"simfile\">", htmlEscape(problem_simfile), "</pre>");
 }
 
 void Problemset::editProblem() {
+	if (~perms & PERM_ADMIN)
+		return error403();
+
+	error501();
+}
+
+void Problemset::reuploadProblem() {
+	if (~perms & PERM_ADMIN)
+		return error403();
+
+	error501();
+}
+
+void Problemset::rejudgeProblemSubmissions() {
+	if (~perms & PERM_ADMIN)
+		return error403();
+
 	error501();
 }
 
 void Problemset::deleteProblem() {
+	if (~perms & PERM_ADMIN)
+		return error403();
+
 	error501();
 }
 
 void Problemset::problemSolutions() {
+	if (~perms & PERM_VIEW_SOLUTIONS)
+		return error403();
+
+	error501();
+}
+
+void Problemset::problemSubmissions() {
+	if (~perms & PERM_VIEW)
+		return error403();
+
+	if (!Session::isOpen())
+		return redirect("/login?" + req->target);
+
 	error501();
 }

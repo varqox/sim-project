@@ -193,8 +193,10 @@ int main(int argc, char **argv) {
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
-			"KEY (owner)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+			"KEY (owner),"
+			"KEY (is_public),"
+			"FULLTEXT (name, label)"
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("problems_tags",
 		concat("CREATE TABLE IF NOT EXISTS `problems_tags` ("

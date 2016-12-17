@@ -231,7 +231,7 @@ void Sim::logs() {
 	auto dumpLogTail = [&](const CStringView& filename) {
 		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 		if (fd == -1) {
-			errlog(__PRETTY_FUNCTION__, ": open()", error(errno));
+			errlog(__FILE__ ":", toStr(__LINE__), ": open()", error(errno));
 			return;
 		}
 

@@ -3,6 +3,8 @@
 #include "contest.h"
 #include "user.h"
 
+#include <simlib/http/response.h>
+
 // Every object is independent, objects can be used in multi-thread program
 // as long as one is not used by two threads simultaneously
 class Sim final : private Contest,  private User {
