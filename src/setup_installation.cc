@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (owner),"
 			"KEY (is_public),"
-			"FULLTEXT (name, label)"
+			"FULLTEXT KEY (name, label)"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("problems_tags",
