@@ -35,10 +35,11 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 				"<div class=\"navbar\">"
 					"<div>"
 						"<a href=\"/\" class=\"brand\">SIM</a>"
-						"<a href=\"/c/\">Contests</a>");
+						"<a href=\"/c/\">Contests</a>"
+						"<a href=\"/p\">Problemset</a>");
 
 	if (Session::open() && Session::user_type < UTYPE_NORMAL) {
-		append("<a href=\"/p\">Problemset</a>"
+		append(
 			"<a href=\"/u\">Users</a>");
 		if (Session::user_type == UTYPE_ADMIN)
 			append("<a href=\"/logs\">Logs</a>");
