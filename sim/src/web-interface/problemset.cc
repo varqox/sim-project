@@ -17,7 +17,7 @@ Problemset::Permissions Problemset::getPermissions(const string& owner_id,
 		if (Session::user_id == owner_id)
 			return Permissions(PERM_VIEW | PERM_VIEW_SOLUTIONS |
 				PERM_SEE_OWNER | PERM_ADMIN |
-				(Session::user_type == UTYPE_TEACHER ? PERM_ADD : 0));
+				(Session::user_type == UTYPE_TEACHER ? (int)PERM_ADD : 0));
 
 		if (Session::user_type == UTYPE_TEACHER && is_public)
 			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_SOLUTIONS |
