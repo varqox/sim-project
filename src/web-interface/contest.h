@@ -92,6 +92,8 @@ private:
 
 	void addProblem();
 
+	void reuploadProblem();
+
 	void editContest();
 
 	void editRound();

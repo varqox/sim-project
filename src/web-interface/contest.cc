@@ -180,6 +180,10 @@ void Contest::handle() {
 	if (next_arg == "files")
 		return files(admin_view);
 
+	// Reupload
+	if (next_arg == "reupload" && rpath->type == PROBLEM)
+		return reuploadProblem();
+
 	// Contest dashboard
 	contestTemplate("Contest dashboard");
 	append("<div class=\"round-info\">");
@@ -212,6 +216,8 @@ void Contest::handle() {
 					"/add\">Add problem</a>"
 				"<a class=\"btn-small blue\" href=\"/c/", round_id,
 					"/edit\">Edit problem</a>"
+				"<a class=\"btn-small orange\" href=\"/c/", round_id,
+					"/reupload\">Reupload problem</a>"
 				"</div>");
 	}
 
@@ -628,6 +634,183 @@ void Contest::addProblem() {
 					"<input type=\"file\" name=\"package\" required>"
 				"</div>"
 				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+			"</form>"
+		"</div>");
+}
+
+void Contest::reuploadProblem() {
+	if (!rpath->admin_access)
+		return error403();
+
+	FormValidator fv(req->form_data);
+	string name, memory_limit, user_package_file, time_limit;
+	bool force_auto_limit = true, ignore_simfile = false;
+
+	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		string package_file;
+
+		// Validate all fields
+		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
+
+		fv.validate(memory_limit, "memory-limit", "Memory limit",
+			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
+			"Memory limit: invalid value");
+
+		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
+			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
+		// Time limit in usec
+		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) * 1'000'000);
+		if (time_limit.size() && tl < 400000)
+			fv.addError("Global time limit cannot be lower than 0.4 s");
+
+		force_auto_limit = fv.exist("force-auto-limit");
+
+		ignore_simfile = fv.exist("ignore-simfile");
+
+		fv.validateNotBlank(user_package_file, "package", "Package");
+
+		fv.validateFilePathNotEmpty(package_file, "package", "Package");
+
+		// If all fields are OK
+		if (fv.noErrors())
+			try {
+				// Rename package file that it will end with original extension
+				string new_package_file = concat(package_file, '.',
+					(hasSuffix(user_package_file, ".tar.gz") ? "tar.gz"
+						: getExtension(user_package_file)));
+				if (link(package_file.c_str(), new_package_file.c_str()))
+					THROW("Error: link('", package_file, "', '",
+						new_package_file, "')", error(errno));
+
+				FileRemover file_rm(new_package_file);
+
+				// Construct Simfile
+				sim::Conver conver;
+				sim::Simfile sf;
+				try {
+					conver.setVerbosity(true);
+					conver.extractPackage(new_package_file);
+
+					// Set Conver options
+					sim::Conver::Options opts;
+					opts.name = name;
+					opts.force_auto_time_limits_setting = force_auto_limit;
+					opts.ignore_simfile = ignore_simfile;
+					opts.compilation_time_limit = SOLUTION_COMPILATION_TIME_LIMIT;
+					opts.compilation_errors_max_length =
+						COMPILATION_ERRORS_MAX_LENGTH;
+					opts.proot_path = PROOT_PATH;
+
+					if (memory_limit.size())
+						opts.memory_limit = strtoull(memory_limit);
+
+					if (time_limit.size())
+						opts.global_time_limit = tl;
+
+					sf = conver.constructFullSimfile(opts);
+				} catch (const std::exception& e) {
+					fv.addError(concat("Conver failed: ", e.what()));
+					goto form;
+				}
+
+				// Put the Simfile in the package
+				BLOCK_SIGNALS(putFileContents(
+					conver.unpackedPackagePath() + "Simfile", sf.dump()));
+
+				string problem_id = rpath->problem->problem_id;
+
+				// Back old package up
+				for (uint i = 0; ; ++i) {
+					StringBuff<PATH_MAX> new_name("problems/", problem_id, '.',
+						toStr(i));
+					if (!::move(StringBuff<PATH_MAX>("problems/", problem_id),
+						new_name))
+					{
+						break;
+					}
+
+					if (errno != EEXIST && errno != ENOTEMPTY)
+						THROW("Error: move('", StringBuff<PATH_MAX>("problems/", problem_id), "', '",
+							new_name, "')", error(errno));
+				}
+
+				// Move package folder to problems/
+				string package_dir = concat("problems/", problem_id);
+				if (::move(conver.unpackedPackagePath(), package_dir, false))
+					THROW("Error: move('", conver.unpackedPackagePath(), "', '",
+						package_dir, "')", error(errno));
+
+				// Commit - update problem and round
+				DB::Statement stmt = db_conn.prepare(
+					"UPDATE problems p, rounds r"
+						" SET p.name=?, p.label=?, p.owner=?, r.name=?"
+						" WHERE p.id=? AND r.id=?");
+
+				stmt.setString(1, sf.name);
+				stmt.setString(2, sf.label);
+				stmt.setString(3, Session::user_id);
+				stmt.setString(4, sf.name);
+				stmt.setString(5, problem_id);
+				stmt.setString(6, rpath->round_id);
+				stmt.executeUpdate();
+
+				return redirect(concat("/c/", rpath->round_id, "/edit"));
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
+			}
+	}
+
+ form:
+	contestTemplate("Reupload problem");
+	printRoundPath();
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Reupload problem</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
+				// Name
+				"<div class=\"field-group\">"
+					"<label>Problem name</label>"
+					"<input type=\"text\" name=\"name\" value=\"",
+						htmlEscape(name), "\" size=\"24\""
+					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+					"placeholder=\"Detect from Simfile\">"
+				"</div>"
+				// Memory limit
+				"<div class=\"field-group\">"
+					"<label>Memory limit [MB]</label>"
+					"<input type=\"text\" name=\"memory-limit\" value=\"",
+						htmlEscape(memory_limit), "\" size=\"24\" "
+					"placeholder=\"Detect from Simfile\">"
+				"</div>"
+				// Global time limit
+				"<div class=\"field-group\">"
+					"<label>Global time limit [s] (for each test)</label>"
+					"<input type=\"text\" name=\"time-limit\" value=\"",
+						htmlEscape(time_limit), "\" size=\"24\" "
+					"placeholder=\"No global time limit\">"
+				"</div>"
+				// Force auto limit
+				"<div class=\"field-group\">"
+					"<label>Force automatic time limit setting</label>"
+					"<input type=\"checkbox\" name=\"force-auto-limit\"",
+						(force_auto_limit ? " checked" : ""), ">"
+				"</div>"
+				// Ignore Simfile
+				"<div class=\"field-group\">"
+					"<label>Ignore Simfile</label>"
+					"<input type=\"checkbox\" name=\"ignore-simfile\"",
+						(ignore_simfile ? " checked" : ""), ">"
+				"</div>"
+				// Package
+				"<div class=\"field-group\">"
+					"<label>Package</label>"
+					"<input type=\"file\" name=\"package\" required>"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Reupload\">"
 			"</form>"
 		"</div>");
 }
@@ -1092,6 +1275,8 @@ void Contest::editProblem() {
 			"</div>"
 			"<a class=\"btn-small blue\" href=\"/c/", rpath->round_id,
 				"/edit/rejudge\">Rejudge all submissions</a>"
+			"<a class=\"btn-small orange\" href=\"/c/", rpath->round_id,
+				"/reupload\">Reupload problem</a>"
 		"</div>"
 		"<div class=\"form-container\">"
 			"<h1>Edit problem</h1>"
