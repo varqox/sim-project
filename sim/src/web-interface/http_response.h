@@ -2,6 +2,8 @@
 
 #include "http_headers.h"
 
+#include <simlib/time.h>
+
 namespace server {
 
 class HttpResponse {
@@ -27,6 +29,13 @@ public:
 			time_t expire = -1, const std::string& path = "",
 			const std::string& domain ="", bool http_only = false,
 			bool secure = false);
+
+	void setCache(bool to_public, uint max_age) {
+		headers["expires"] = date("%a, %d %b %Y %H:%M:%S GMT",
+			time(nullptr) + max_age);
+		headers["cache-control"] = concat((to_public ? "public" : "private"),
+			"; must-revalidate; max-age=", toStr(max_age));
+	}
 
 	std::string getCookie(const std::string& name) {
 		std::string &cookie = cookies[name];

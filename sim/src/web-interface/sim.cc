@@ -115,8 +115,9 @@ void Sim::getStaticFile() {
 	if (stat(file_path.c_str(), &attr) != -1) {
 		// Extract time of last modification
 		auto it = req->headers.find("if-modified-since");
-		resp.headers["Last-Modified"] = date("%a, %d %b %Y %H:%M:%S GMT",
+		resp.headers["last-modified"] = date("%a, %d %b %Y %H:%M:%S GMT",
 			attr.st_mtime);
+		resp.setCache(true, 6 * 60 * 60); // 6 hours
 
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
