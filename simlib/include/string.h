@@ -20,7 +20,7 @@ public:
 	static constexpr size_t max_size = N - 1;
 	static_assert(N > 0, "max_size would underflow");
 
-	char data[N];
+	char str[N];
 	unsigned len = 0; // Not size_t; who would make so incredibly large buffer?
 
 	constexpr StringBuff() = default;
@@ -44,18 +44,22 @@ public:
 	template<class... Args>
 	StringBuff& append(Args&&... args) {
 		raw_append(std::forward<Args>(args)...);
-		data[len] = '\0'; // Terminating null character
+		str[len] = '\0'; // Terminating null character
 		return *this;
 	}
 
-	char& operator[](unsigned n) noexcept { return data[n]; }
+	char* data() noexcept { return str; }
 
-	const char& operator[](unsigned n) const noexcept { return data[n]; }
+	constexpr const char* data() const noexcept { return str; }
+
+	char& operator[](unsigned n) noexcept { return str[n]; }
+
+	constexpr char& operator[](unsigned n) const noexcept { return str[n]; }
 };
 
 template<size_t N>
 inline std::string& operator+=(std::string& s, const StringBuff<N>& sb) {
-	return s.append(sb.data, sb.len);
+	return s.append(sb.str, sb.len);
 }
 
 template<size_t N>
@@ -98,7 +102,7 @@ public:
 
 	template<size_t N>
 	constexpr StringBase(const StringBuff<N>& s) noexcept
-		: str(s.data), len(s.len) {}
+		: str(s.data()), len(s.len) {}
 
 	constexpr StringBase(pointer s) noexcept
 		: str(s), len(__builtin_strlen(s)) {}
@@ -836,7 +840,7 @@ StringBuff<N> toString(T x) {
 		}
 		buff[buff.len++] = '-';
 
-		std::reverse(buff.data, buff.data + buff.len);
+		std::reverse(buff.str, buff.str + buff.len);
 		return buff;
 	}
 
@@ -846,7 +850,7 @@ StringBuff<N> toString(T x) {
 		x = x2;
 	}
 
-	std::reverse(buff.data, buff.data + buff.len);
+	std::reverse(buff.str, buff.str + buff.len);
 	return buff;
 }
 
@@ -1429,8 +1433,8 @@ std::string widenedString(const StringView& s, size_t len,
 template<size_t N>
 inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : len(count) {
 	throw_assert(len <= max_size);
-	std::fill(data, data + len, ch);
-	data[len] = '\0';
+	std::fill(str, str + len, ch);
+	str[len] = '\0';
 }
 
 template<size_t N>
@@ -1441,10 +1445,10 @@ inline StringBuff<N>& StringBuff<N>::raw_append(Args&&... args) {
 	(void)std::initializer_list<size_t>{(final_len += string_length(args))...};
 	throw_assert(final_len <= max_size);
 
-	// Concentrate them into data[]
-	auto impl_append = [&](auto&& str) {
-		auto sl = string_length(str);
-		std::copy(::data(str), ::data(str) + sl, data + len);
+	// Concentrate them into str[]
+	auto impl_append = [&](auto&& s) {
+		auto sl = string_length(s);
+		std::copy(::data(s), ::data(s) + sl, str + len);
 		len += sl;
 	};
 	(void)impl_append; // Ignore warning 'unused' when no arguments are provided
