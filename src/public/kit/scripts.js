@@ -42,6 +42,7 @@ $(document).ready(function() {
 		var x = $(this), time;
 		if (isNaN(x.attr('datetime'))) {
 			var args = x.attr('datetime').split(/[- :]/);
+			--args[1]; // fit month in [0, 11]
 			time = new Date(Date.UTC.apply(this, args));
 		} else
 			time = new Date(x.attr('datetime') * 1000);
