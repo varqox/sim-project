@@ -699,8 +699,12 @@ a.btn.red {
 	color: #ffffff;
 	text-decoration: none;
 }
-.pos-center {
+.align-center {
 	text-align: center;
+}
+.margin-center {
+	margin-left: auto;
+	margin-right: auto;
 }
 
 /* dropmenu */
@@ -791,12 +795,13 @@ a.btn.red {
 /* Navigation bar */
 .navbar {
 	display: flex;
-	flex-flow: row wrap;
-	/*flex-flow: row nowrap;*/
+	/*flex-flow: row wrap;*/
+	flex-flow: row nowrap;
 	justify-content: space-between;
 	position: fixed;
 	top: 0;
-	right: 0;
+	min-width: 100%;
+	/*right: 0;*/
 	left: 0;
 	z-index: 2;
 	min-height: 40px;
@@ -806,10 +811,16 @@ a.btn.red {
 	background-color: #1b1b1b;
 	background-image: linear-gradient(to bottom, #222222, #111111);
 }
+/* On too narrow screen menu would overflow */
+@media screen and (max-width: 600px) {
+	.navbar {
+		position: absolute;
+	}
+}
 .navbar > div {
 	display: flex;
-	flex-flow: row wrap;
-	/*flex-flow: row nowrap;*/
+	/*flex-flow: row wrap;*/
+	flex-flow: row nowrap;
 }
 .navbar > div > a,
 .navbar a.user {
