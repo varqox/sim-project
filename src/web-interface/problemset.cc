@@ -1,6 +1,7 @@
 #include "form_validator.h"
 #include "problemset.h"
 
+#include <sim/jobs.h>
 #include <simlib/config_file.h>
 #include <simlib/http/response.h>
 #include <simlib/time.h>
@@ -223,7 +224,147 @@ void Problemset::addProblem() {
 	if (~perms & PERM_ADD)
 		return error403();
 
-	error501();
+	FormValidator fv(req->form_data);
+	string name, label, memory_limit, user_package_file, global_time_limit;
+	bool force_auto_limit = true, ignore_simfile = false;
+
+	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		string package_file;
+
+		// Validate all fields
+		fv.validate(name, "name", "Problem's name", PROBLEM_NAME_MAX_LEN);
+
+		fv.validate(label, "label", "Problem's label", PROBLEM_LABEL_MAX_LEN);
+
+		fv.validate(memory_limit, "memory-limit", "Memory limit",
+			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
+			"Memory limit: invalid value");
+
+		fv.validate<bool(const StringView&)>(global_time_limit,
+			"global-time-limit", "Global time limit", isReal,
+			"Global time limit: invalid value"); // TODO: add length limit
+		// Global time limit in usec
+		uint64_t gtl =
+			round(strtod(global_time_limit.c_str(), nullptr) * 1'000'000);
+		if (global_time_limit.size() && gtl < 400000)
+			fv.addError("Global time limit cannot be lower than 0.4 s");
+
+		force_auto_limit = fv.exist("force-auto-limit");
+
+		ignore_simfile = fv.exist("ignore-simfile");
+
+		fv.validateNotBlank(user_package_file, "package", "Package");
+
+		fv.validateFilePathNotEmpty(package_file, "package", "Package");
+
+		// If all fields are OK
+		if (fv.noErrors())
+			try {
+				jobs::AddProblem ap {
+					name,
+					label,
+					strtoull(memory_limit.c_str()) << 20,
+					gtl,
+					force_auto_limit,
+					ignore_simfile
+				};
+
+				DB::Statement stmt {db_conn.prepare(
+					"INSERT job_queue (priority, type, added, data) "
+					"VALUES(?, ?, ?, ?)")};
+				stmt.setUInt(1, priority(JobQueueType::ADD_PROBLEM));
+				stmt.setUInt(2, static_cast<uint>(JobQueueType::ADD_PROBLEM));
+				stmt.setString(3, date("%Y-%m-%d %H:%M:%S"));
+				stmt.setString(4, ap.dump());
+				stmt.executeUpdate();
+
+				DB::Result res {db_conn.executeQuery("SELECT LAST_INSERT_ID()")};
+				if (!res.next())
+					THROW("Failed to get LAST_INSERT_ID()");
+
+				string jobid = res[1];
+
+				// Move package file that it will become a job's file
+				{
+					StringBuff<PATH_MAX> new_path {"jobs_files/", jobid};
+					if (::move(package_file, new_path))
+						THROW("Error: link(`", package_file, "`, `", new_path,
+							"`)", error(errno));
+
+					package_file = new_path.data();
+				}
+
+				// Activate the job
+				int rc = db_conn.executeUpdate("UPDATE job_queue SET status="
+					JQSTATUS_WAITING_STR " WHERE id=" + jobid);
+				if (1 != rc)
+					THROW("Failed to update");
+
+				return redirect(concat("/j/", jobid));
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
+			}
+	}
+
+	problemsetTemplate("Add a problem");
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Add a problem</h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
+				// Name
+				"<div class=\"field-group\">"
+					"<label>Problem's name</label>"
+					"<input type=\"text\" name=\"name\" value=\"",
+						htmlEscape(name), "\" size=\"24\""
+					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+					"placeholder=\"Detect from Simfile\">"
+				"</div>"
+				// Label
+				"<div class=\"field-group\">"
+					"<label>Problem's label</label>"
+					"<input type=\"text\" name=\"label\" value=\"",
+						htmlEscape(label), "\" size=\"24\""
+					"maxlength=\"", toStr(PROBLEM_LABEL_MAX_LEN), "\" "
+					"placeholder=\"Detect from Simfile or from name\">"
+				"</div>"
+				// Memory limit
+				"<div class=\"field-group\">"
+					"<label>Memory limit [MB]</label>"
+					"<input type=\"text\" name=\"memory-limit\" value=\"",
+						htmlEscape(memory_limit), "\" size=\"24\" "
+					"placeholder=\"Detect from Simfile\">"
+				"</div>"
+				// Global time limit
+				"<div class=\"field-group\">"
+					"<label>Global time limit [s] (for each test)</label>"
+					"<input type=\"text\" name=\"global-time-limit\" value=\"",
+						htmlEscape(global_time_limit), "\" size=\"24\" "
+					"placeholder=\"No global time limit\">"
+				"</div>"
+				// Force auto limit
+				"<div class=\"field-group\">"
+					"<label>Force automatic time limit setting</label>"
+					"<input type=\"checkbox\" name=\"force-auto-limit\"",
+						(force_auto_limit ? " checked" : ""), ">"
+				"</div>"
+				// Ignore Simfile
+				"<div class=\"field-group\">"
+					"<label>Ignore Simfile</label>"
+					"<input type=\"checkbox\" name=\"ignore-simfile\"",
+						(ignore_simfile ? " checked" : ""), ">"
+				"</div>"
+				// Package
+				"<div class=\"field-group\">"
+					"<label>Package [ZIP file]</label>"
+					"<input type=\"file\" name=\"package\" required>"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
+			"</form>"
+		"</div>");
 }
 
 void Problemset::problem() {

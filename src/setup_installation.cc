@@ -246,12 +246,12 @@ int main(int argc, char **argv) {
 			"`parent_round_id` int unsigned NOT NULL,"
 			"`contest_round_id` int unsigned NOT NULL,"
 			"`type` TINYINT NULL DEFAULT NULL,"
-			"`status` TINYINT NOT NULL DEFAULT 0,"
+			"`status` TINYINT NOT NULL DEFAULT " SSTATUS_VOID_STR ","
 			"`submit_time` datetime NOT NULL,"
 			"`score` int NULL DEFAULT NULL,"
 			"`queued` datetime NOT NULL,"
-			"`initial_report` blob NOT NULL,"
-			"`final_report` blob NOT NULL,"
+			"`initial_report` mediumblob NOT NULL,"
+			"`final_report` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
 			// Judge server
 			"KEY (status, queued),"
@@ -276,12 +276,14 @@ int main(int argc, char **argv) {
 	try_to_create_table("job_queue",
 		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`status` TINYINT NOT NULL DEFAULT " JQSTATUS_VOID_STR ","
 			"`priority` TINYINT NOT NULL,"
 			"`type` TINYINT NOT NULL,"
-			"`aux_id` int unsigned NOT NULL,"
-			"`data` tinyblob NOT NULL,"
+			"`added` datetime NOT NULL,"
+			"`aux_id` int unsigned DEFAULT NULL,"
+			"`data` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
-			"KEY (priority DESC, id), "
+			"KEY (status, priority DESC, id), "
 			"KEY (type, aux_id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
