@@ -162,8 +162,6 @@ before_script:
   - export CC="$CC -Werror"
   - export CXX="$CXX -Werror"
   - mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root
-  # Travis CI has too old mysql - version lower than 5.6, so it has to be worked around
-  - sed 's/InnoDB/MyISAM/' -i src/setup_installation.cc
 
 script:
   # Build project

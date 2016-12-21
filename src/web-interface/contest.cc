@@ -81,7 +81,7 @@ void Contest::handle() {
 						htmlEscape(res[2]), "</a>");
 				} while (res.next());
 			} else {
-				append("<p class=\"pos-center\""
+				append("<p class=\"align-center\""
 					" style=\"margin:0;padding:5px;border-top:1px solid #ccc\">"
 					"There are no contests to show...</p>");
 			}
