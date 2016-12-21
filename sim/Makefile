@@ -55,6 +55,7 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/public/)
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
+	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
 	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/judge-machine $(abspath $(DESTDIR))
 

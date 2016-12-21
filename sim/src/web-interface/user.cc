@@ -749,7 +749,7 @@ void User::deleteAccount() {
 			stmt.setString(1, user_id);
 			stmt.executeUpdate();
 
-			// Delete user
+			// Delete the user
 			stmt = db_conn.prepare("DELETE FROM users WHERE id=?");
 			stmt.setString(1, user_id);
 

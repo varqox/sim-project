@@ -90,6 +90,11 @@ enum class SubmissionStatus : uint8_t {
 	JUDGE_ERROR               = (8 << 3) + 3,
 };
 
+#define SSTATUS_VOID_STR "0"
+static_assert(meta::equal(SSTATUS_VOID_STR,
+	meta::ToString<(int)SubmissionStatus::VOID>::value),
+	"Update the above #define");
+
 #define SSTATUS_WAITING_STR "64"
 static_assert(meta::equal(SSTATUS_WAITING_STR,
 	meta::ToString<(int)SubmissionStatus::WAITING>::value),
@@ -122,9 +127,9 @@ inline SubmissionStatus operator &(SubmissionStatus a, SubmissionStatus b) {
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
 	FINAL = 1,
-	IGNORED = 2
+	IGNORED = 2,
+	SOLUTION = 3,
 };
-
 
 #define STYPE_NORMAL_STR "0"
 static_assert(meta::equal(STYPE_NORMAL_STR,
@@ -138,14 +143,74 @@ static_assert(meta::equal(STYPE_FINAL_STR,
 static_assert(meta::equal(STYPE_IGNORED_STR,
 	meta::ToString<(int)SubmissionType::IGNORED>::value),
 	"Update the above #define");
+#define STYPE_SOLUTION_STR "3"
+static_assert(meta::equal(STYPE_SOLUTION_STR,
+	meta::ToString<(int)SubmissionType::SOLUTION>::value),
+	"Update the above #define");
 
 constexpr inline const char* toString(SubmissionType x) {
 	switch (x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::FINAL: return "Final";
 	case SubmissionType::IGNORED: return "Ignored";
+	case SubmissionType::SOLUTION: return "Solution";
 	}
 	return "Unknown";
+}
+
+enum class JobQueueStatus : uint8_t {
+	VOID = 0,
+	WAITING = 1,
+	IN_PROGRESS = 2,
+	DONE = 3
+};
+
+#define JQSTATUS_VOID_STR "0"
+static_assert(meta::equal(JQSTATUS_VOID_STR,
+	meta::ToString<(int)JobQueueStatus::VOID>::value),
+	"Update the above #define");
+
+#define JQSTATUS_WAITING_STR "1"
+static_assert(meta::equal(JQSTATUS_WAITING_STR,
+	meta::ToString<(int)JobQueueStatus::WAITING>::value),
+	"Update the above #define");
+#define JQSTATUS_IN_PROGRESS_STR "2"
+static_assert(meta::equal(JQSTATUS_IN_PROGRESS_STR,
+	meta::ToString<(int)JobQueueStatus::IN_PROGRESS>::value),
+	"Update the above #define");
+#define JQSTATUS_DONE_STR "3"
+static_assert(meta::equal(JQSTATUS_DONE_STR,
+	meta::ToString<(int)JobQueueStatus::DONE>::value),
+	"Update the above #define");
+
+constexpr inline const char* toString(JobQueueStatus x) {
+	switch (x) {
+	case JobQueueStatus::VOID: return "Void";
+	case JobQueueStatus::WAITING: return "Waiting";
+	case JobQueueStatus::IN_PROGRESS: return "In progress";
+	case JobQueueStatus::DONE: return "Done";
+	}
+	return "Unknown";
+}
+
+enum class JobQueueType : uint8_t {
+	JUDGE_SUBMISSION = 0,
+	ADD_PROBLEM = 1,
+	REUPLOAD_PROBLEM = 2,
+	JUDGE_MODEL_SOLUTION = 3,
+	EDIT_PROBLEM = 4,
+};
+
+// The greater, the more important
+constexpr uint priority(JobQueueType x) {
+	switch (x) {
+	case JobQueueType::EDIT_PROBLEM: return 20;
+	case JobQueueType::JUDGE_MODEL_SOLUTION: return 15;
+	case JobQueueType::ADD_PROBLEM: return 10;
+	case JobQueueType::REUPLOAD_PROBLEM: return 10;
+	case JobQueueType::JUDGE_SUBMISSION: return  5;
+	}
+	return 0;
 }
 
 // Logs
