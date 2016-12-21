@@ -20,9 +20,10 @@ private:
 		PERM_VIEW = 1,
 		PERM_VIEW_ALL = 2,
 		PERM_VIEW_SOLUTIONS = 4,
-		PERM_SEE_OWNER = 8,
-		PERM_ADMIN = 16,
-		PERM_ADD = 32
+		PERM_DOWNLOAD = 8,
+		PERM_SEE_OWNER = 16,
+		PERM_ADMIN = 32,
+		PERM_ADD = 64
 	};
 
 	std::string problem_id_;
@@ -52,6 +53,8 @@ private:
 	void problem();
 
 	void editProblem();
+
+	void downloadProblem();
 
 	void reuploadProblem();
 

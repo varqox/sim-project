@@ -1,3 +1,4 @@
+#include "form_validator.h"
 #include "problemset.h"
 
 #include <simlib/config_file.h>
@@ -12,16 +13,17 @@ Problemset::Permissions Problemset::getPermissions(const string& owner_id,
 	if (Session::open()) {
 		if (Session::user_type == UTYPE_ADMIN)
 			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_ALL |
-				PERM_VIEW_SOLUTIONS | PERM_SEE_OWNER | PERM_ADMIN);
+				PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD | PERM_SEE_OWNER |
+				PERM_ADMIN);
 
 		if (Session::user_id == owner_id)
-			return Permissions(PERM_VIEW | PERM_VIEW_SOLUTIONS |
+			return Permissions(PERM_VIEW | PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD |
 				PERM_SEE_OWNER | PERM_ADMIN |
 				(Session::user_type == UTYPE_TEACHER ? (int)PERM_ADD : 0));
 
 		if (Session::user_type == UTYPE_TEACHER && is_public)
 			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_SOLUTIONS |
-				PERM_SEE_OWNER);
+				PERM_DOWNLOAD | PERM_SEE_OWNER);
 	}
 
 	return (is_public ? PERM_VIEW : PERM_NONE);
@@ -225,7 +227,7 @@ void Problemset::addProblem() {
 }
 
 void Problemset::problem() {
-	// Fetch problem info
+	// Fetch the problem info
 	try {
 		DB::Statement stmt = db_conn.prepare("SELECT name, label, owner, added,"
 				" simfile, is_public, username, type"
@@ -263,6 +265,8 @@ void Problemset::problem() {
 		return problemSubmissions();
 	if (next_arg == "edit")
 		return editProblem();
+	if (next_arg == "download")
+		return downloadProblem();
 	if (next_arg == "solutions")
 		return problemSolutions();
 	if (next_arg == "reupload")
@@ -277,9 +281,11 @@ void Problemset::problem() {
 	// View the problem
 	problemsetTemplate(StringBuff<40>("Problem ", problem_id_));
 
-	append("<div class=\"right-flow\" style=\"width:90%;margin:12px 0\">"
-			"<a class=\"btn-small\" href=\"/p/", problem_id_, "/statement\">"
-				"View statement</a>");
+	append("<div class=\"right-flow\" style=\"width:90%;margin:12px 0\">");
+
+	if (perms & PERM_DOWNLOAD)
+		append("<a class=\"btn-small\" href=\"/p/", problem_id_, "/download\">"
+				"Download problem</a>");
 
 	if (perms & PERM_ADMIN)
 		append("<a class=\"btn-small blue\" href=\"/p/", problem_id_, "/edit\">"
@@ -318,6 +324,10 @@ void Problemset::problem() {
 				(problem_is_public ? "Yes" : "No"),
 			"</div>"
 		"</div>"
+		"<center>"
+			"<a class=\"btn\" href=\"/p/", problem_id_, "/statement\">"
+				"View statement</a>"
+		"</center>"
 		// TODO: list files and allow to download/reupload them
 		"<h2>Problem's Simfile:</h2>"
 		"<pre class=\"simfile\">", htmlEscape(problem_simfile), "</pre>");
@@ -325,6 +335,13 @@ void Problemset::problem() {
 
 void Problemset::editProblem() {
 	if (~perms & PERM_ADMIN)
+		return error403();
+
+	error501();
+}
+
+void Problemset::downloadProblem() {
+	if (~perms & PERM_DOWNLOAD)
 		return error403();
 
 	error501();
