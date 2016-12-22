@@ -10,6 +10,7 @@ notifications:
 _packages:
   - &default_packages
     - time # For build
+    - strace
   - &GCC-5
     addons:
       apt:
