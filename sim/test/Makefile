@@ -2,11 +2,11 @@ include ../Makefile.config
 
 EXTRA_CXX_FLAGS += -I '$(shell pwd)/../src/include' -isystem '$(shell pwd)/../src/include/others' -pthread
 
-.PHONY: run-all
-run-all: cth-run run
+.PHONY: run
+run: cth-run exec-run
 
-.PHONY: build-all
-build-all: cth-build exec
+.PHONY: build
+build: cth-build exec
 
 $(eval $(call dependencies))
 
@@ -18,8 +18,8 @@ cth-run:
 cth-build:
 	$(Q)$(MAKE) -C cpp_syntax_highlighter/ build
 
-.PHONY: run
-run: exec
+.PHONY: exec-run
+exec-run: exec
 	./exec
 
 exec: jobs.o
