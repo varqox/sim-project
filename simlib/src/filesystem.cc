@@ -119,7 +119,7 @@ static int __remove_rat(int dirfd, const CStringView& path) noexcept {
 	int fd = openat(dirfd, path.c_str(), O_RDONLY | O_LARGEFILE | O_DIRECTORY
 		| O_NOFOLLOW);
 	if (fd == -1)
-		return unlinkat(dirfd, path.c_str(), AT_REMOVEDIR);
+		return unlinkat(dirfd, path.c_str(), 0);
 
 	DIR *dir = fdopendir(fd);
 	if (dir == nullptr) {
@@ -150,14 +150,7 @@ static int __remove_rat(int dirfd, const CStringView& path) noexcept {
 }
 
 int remove_rat(int dirfd, const CStringView& path) noexcept {
-	struct stat64 sb;
-	if (fstatat64(dirfd, path.c_str(), &sb, AT_SYMLINK_NOFOLLOW) == -1)
-		return -1;
-
-	if (S_ISDIR(sb.st_mode))
-		return __remove_rat(dirfd, path);
-
-	return unlinkat(dirfd, path.c_str(), 0);
+	return __remove_rat(dirfd, path);
 }
 
 int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept {
