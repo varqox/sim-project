@@ -109,7 +109,7 @@ public:
 		return res;
 	}
 
-	/// Extracts URL Query (if all arguments were extracted before)
+	/// Extracts URL Query (iff all arguments were extracted before)
 	StringView extractQuery() {
 		if (buff.empty() || buff.front() != '?')
 			return {};

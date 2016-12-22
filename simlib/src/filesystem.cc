@@ -131,21 +131,16 @@ static int __remove_rat(int dirfd, const CStringView& path) noexcept {
 	while ((file = readdir(dir)))
 		if (strcmp(file->d_name, ".") && strcmp(file->d_name, "..")) {
 		#ifdef _DIRENT_HAVE_D_TYPE
-			if (file->d_type == DT_DIR) {
+			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+		#endif
 				if (__remove_rat(fd, file->d_name)) {
 					int ec = errno;
 					closedir(dir);
 					errno = ec;
 					return -1;
 				}
+		#ifdef _DIRENT_HAVE_D_TYPE
 			} else if (unlinkat(fd, file->d_name, 0)) {
-				int ec = errno;
-				closedir(dir);
-				errno = ec;
-				return -1;
-			}
-		#else
-			if (__remove_rat(fd, file->d_name)) {
 				int ec = errno;
 				closedir(dir);
 				errno = ec;
@@ -180,21 +175,16 @@ int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept {
 	while ((file = readdir(dir)))
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
 		#ifdef _DIRENT_HAVE_D_TYPE
-			if (file->d_type == DT_DIR) {
+			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+		#endif
 				if (__remove_rat(fd, file->d_name)) {
 					int ec = errno;
 					closedir(dir);
 					errno = ec;
 					return -1;
 				}
+		#ifdef _DIRENT_HAVE_D_TYPE
 			} else if (unlinkat(fd, file->d_name, 0)) {
-				int ec = errno;
-				closedir(dir);
-				errno = ec;
-				return -1;
-			}
-		#else
-			if (__remove_rat(fd, file->d_name)) {
 				int ec = errno;
 				closedir(dir);
 				errno = ec;
@@ -309,12 +299,12 @@ static int __copy_rat(int dirfd1, const CStringView& src, int dirfd2,
 	while ((file = readdir(src_dir)))
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
 		#ifdef _DIRENT_HAVE_D_TYPE
-			if (file->d_type == DT_DIR)
+			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN)
+		#endif
 				__copy_rat(src_fd, file->d_name, dest_fd, file->d_name);
+		#ifdef _DIRENT_HAVE_D_TYPE
 			else
 				copyat(src_fd, file->d_name, dest_fd, file->d_name);
-		#else
-			__copy_rat(src_fd, file->d_name, dest_fd, file->d_name);
 		#endif
 		}
 
