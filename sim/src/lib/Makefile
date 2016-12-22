@@ -1,17 +1,22 @@
 include ../../Makefile.config
 
 .PHONY: all
-all: sim.a simlib.a
+all: sim.a simlib.a gtest_main.a
 
 $(eval $(call dependencies))
 
+.PHONY:
+simlib: override EXTRA_CXX_FLAGS = $(EXTERNAL_EXTRA_LD_FLAGS)
+simlib: override EXTRA_LD_FLAGS = $(EXTERNAL_EXTRA_CXX_FLAGS)
+simlib: FORCE
+	$(Q)$(MAKE) -C simlib/
 
 # Exclude additional compilation flags to be used on simlib
-simlib.a: override EXTRA_CXX_FLAGS = $(EXTERNAL_EXTRA_LD_FLAGS)
-simlib.a: override EXTRA_LD_FLAGS = $(EXTERNAL_EXTRA_CXX_FLAGS)
-simlib.a: FORCE
-	$(Q)$(MAKE) -C simlib/
-	$(Q)ln -s simlib/simlib.a $@ 2>&1 | true
+simlib.a: simlib
+	$(Q)ln -s simlib/$@ $@ 2>&1 | true
+
+gtest_main.a: simlib
+	$(Q)ln -s simlib/$@ $@ 2>&1 | true
 
 sim.a: db.o cpp_syntax_highlighter.o simlib.a
 	$(RM) $@ # Delete archive because if it has already existed then it will
