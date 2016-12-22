@@ -1,7 +1,3 @@
-# External libraries
-include/others/
-lib/others/
-
 # Others
 killinstc
 conver
