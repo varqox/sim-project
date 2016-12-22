@@ -129,7 +129,8 @@ static int __remove_rat(int dirfd, const CStringView& path) noexcept {
 
 	dirent *file;
 	while ((file = readdir(dir)))
-		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
+		if (strcmp(file->d_name, ".") && strcmp(file->d_name, "..")) {
+		#ifdef _DIRENT_HAVE_D_TYPE
 			if (file->d_type == DT_DIR) {
 				if (__remove_rat(fd, file->d_name)) {
 					int ec = errno;
@@ -143,6 +144,14 @@ static int __remove_rat(int dirfd, const CStringView& path) noexcept {
 				errno = ec;
 				return -1;
 			}
+		#else
+			if (__remove_rat(fd, file->d_name)) {
+				int ec = errno;
+				closedir(dir);
+				errno = ec;
+				return -1;
+			}
+		#endif
 		}
 
 	closedir(dir);
@@ -170,6 +179,7 @@ int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept {
 	dirent *file;
 	while ((file = readdir(dir)))
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
+		#ifdef _DIRENT_HAVE_D_TYPE
 			if (file->d_type == DT_DIR) {
 				if (__remove_rat(fd, file->d_name)) {
 					int ec = errno;
@@ -183,6 +193,14 @@ int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept {
 				errno = ec;
 				return -1;
 			}
+		#else
+			if (__remove_rat(fd, file->d_name)) {
+				int ec = errno;
+				closedir(dir);
+				errno = ec;
+				return -1;
+			}
+		#endif
 		}
 
 	closedir(dir);
@@ -263,8 +281,12 @@ static int __copy_rat(int dirfd1, const CStringView& src, int dirfd2,
 {
 	int src_fd = openat(dirfd1, src.c_str(), O_RDONLY |	O_LARGEFILE
 		| O_DIRECTORY);
-	if (src_fd == -1)
+	if (src_fd == -1){
+		if (errno == ENOTDIR)
+			return copyat(dirfd1, src, dirfd2, dest);
+
 		return -1;
+	}
 
 	// Do not use src permissions
 	mkdirat(dirfd2, dest.c_str(), S_0755);
@@ -286,10 +308,14 @@ static int __copy_rat(int dirfd1, const CStringView& src, int dirfd2,
 	dirent *file;
 	while ((file = readdir(src_dir)))
 		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
+		#ifdef _DIRENT_HAVE_D_TYPE
 			if (file->d_type == DT_DIR)
 				__copy_rat(src_fd, file->d_name, dest_fd, file->d_name);
 			else
 				copyat(src_fd, file->d_name, dest_fd, file->d_name);
+		#else
+			__copy_rat(src_fd, file->d_name, dest_fd, file->d_name);
+		#endif
 		}
 
 	closedir(src_dir);

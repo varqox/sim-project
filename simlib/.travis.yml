@@ -162,3 +162,5 @@ script:
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG test
   - strace test/exec
+  - cat /usr/include/dirent.h
+  - cat /usr/include/bits/dirent.h
