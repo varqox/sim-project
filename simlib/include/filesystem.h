@@ -261,8 +261,7 @@ void forEachDirComponent(const CStringView& pathname, Func&& func) {
  *
  * @return 0 on success, -1 on error
  *
- * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
- *   fdopendir(3)
+ * @errors The same that occur for openat(2), unlinkat(2), fdopendir(3)
  */
 int remove_rat(int dirfd, const CStringView& pathname) noexcept;
 
