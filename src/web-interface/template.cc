@@ -2,6 +2,16 @@
 
 #include <simlib/time.h>
 
+#ifndef STYLES_CSS_HASH
+# define STYLES_CSS_HASH ""
+#endif
+#ifndef JQUERY_JS_HASH
+# define JQUERY_JS_HASH ""
+#endif
+#ifndef SCRIPTS_JS_HASH
+# define SCRIPTS_JS_HASH ""
+#endif
+
 void Template::baseTemplate(const StringView& title, const StringView& styles,
 	const StringView& scripts)
 {
@@ -19,9 +29,10 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 			"<head>"
 				"<meta charset=\"utf-8\">"
 				"<title>", htmlEscape(title), "</title>"
-				"<link rel=\"stylesheet\" href=\"/kit/styles.css\">"
-				"<script src=\"/kit/jquery.js\"></script>"
-				"<script src=\"/kit/scripts.js\"></script>"
+				"<link rel=\"stylesheet\" href=\"/kit/styles.css?"
+					STYLES_CSS_HASH "\">"
+				"<script src=\"/kit/jquery.js?" JQUERY_JS_HASH "\"></script>"
+				"<script src=\"/kit/scripts.js?" SCRIPTS_JS_HASH "\"></script>"
 				"<link rel=\"shortcut icon\" href=\"/kit/img/favicon.png\">");
 
 	if (scripts.size())
