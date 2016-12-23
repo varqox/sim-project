@@ -279,7 +279,8 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
 	DEBUG_CSH(stdlog("end: ", toStr(end));)
 
-	vector<StyleType> begs(end, -1); // here beginnings of styles are marked
+	vector<StyleType> begs(str.size(), -1); // here beginnings of styles are
+	                                        // marked
 	vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles)
 	                                     // JUST BEFORE str[i]
 
@@ -348,8 +349,18 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				j += 2;
 				++line;
 			}
-			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '",
-				str[i], "' -> ");
+			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '");
+			if (isprint(str[i]))
+				tmplog(str[i], "'   ");
+			else if (str[i] == '\n')
+				tmplog("\\n'  ");
+			else if (str[i] == '\t')
+				tmplog("\\t'  ");
+			else if (str[i] == '\r')
+				tmplog("\\r'  ");
+			else
+				tmplog("\\x", toHex({&str[i], 1}), '\'');
+			tmplog(" -> ");
 
 			if (ends[i] == 0)
 				tmplog("0, ");
@@ -552,6 +563,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 					++i;
 				}
 				++ends[i];
+				// Go back by one to prevent omitting the next character
+				--i;
+				++styles_depth;
 				continue;
 			}
 
@@ -579,6 +593,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				}
 			}
 			++ends[i];
+			// Go back by one to prevent omitting the next character
+			--i;
+			++styles_depth;
 		}
 	}
 
