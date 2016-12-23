@@ -80,18 +80,34 @@ $(document).ready(function() {
 // Handle navbar correct size
 function normalizeNavbar() {
 	var navbar = $('.navbar');
-	$('.navbar').css('width', 'auto');
+	navbar.css('width', 'auto');
 
-	if ($('.navbar').width() <= $(window).width()) {
-		$('.navbar').css('width', '100%');
-		$('.navbar').css('position', 'fixed');
+	if (navbar.width() <= $(window).width()) {
+		navbar.css('width', '100%');
+		navbar.css('position', 'fixed');
 	} else {
-		$('.navbar').width($(document).width());
-		$('.navbar').css('position', 'absolute');
+		navbar.css('position', 'absolute');
+		navbar.width($(document).width());
 	}
 }
 $(document).ready(normalizeNavbar);
 $(window).resize(normalizeNavbar);
+
+// Handle menu correct size
+function normalizeMenu() {
+	var menu = $('.menu');
+	menu.css('height', 'auto');
+
+	if (menu.outerHeight() <= $(window).height()) {
+		menu.css('height', '100%');
+		menu.css('position', 'fixed');
+	} else {
+		menu.css('position', 'absolute');
+		menu.outerHeight($(document).height());
+	}
+}
+$(document).ready(normalizeMenu);
+$(window).resize(normalizeMenu);
 
 // Returns value of cookie @p name or ... TODO!!!
 function getCookie(name) {
