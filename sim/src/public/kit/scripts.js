@@ -77,6 +77,22 @@ $(document).ready(function() {
 	});
 });
 
+// Handle navbar correct size
+function normalizeNavbar() {
+	var navbar = $('.navbar');
+	$('.navbar').css('width', 'auto');
+
+	if ($('.navbar').width() <= $(window).width()) {
+		$('.navbar').css('width', '100%');
+		$('.navbar').css('position', 'fixed');
+	} else {
+		$('.navbar').width($(document).width());
+		$('.navbar').css('position', 'absolute');
+	}
+}
+$(document).ready(normalizeNavbar);
+$(window).resize(normalizeNavbar);
+
 // Returns value of cookie @p name or ... TODO!!!
 function getCookie(name) {
 	name = name + '=';
