@@ -1,3 +1,24 @@
+// DOM/Listener
+!function(a,b){function f(){if(!d){d=!0;for(var a=0;a<c.length;a++)c[a].fn.call(
+window,c[a].ctx);c=[]}}function g(){"complete"===document.readyState&&f()}a=a||
+"dd",b=b||window;var c=[],d=!1,e=!1;b[a]=function(a,b){return d?void
+setTimeout(function(){a(b)},1):(c.push({fn:a,ctx:b}),void("complete"===
+document.readyState?setTimeout(f,1):e||(document.addEventListener?
+(document.addEventListener("DOMContentLoaded",f,!1),window.addEventListener(
+"load",f,!1)):(document.attachEvent("onreadystatechange",g),window.attachEvent(
+"onload",f)),e=!0)))}}("dd",window);
+
+// Analytics
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-55884794-3', 'auto');
+
+dd(function(){""!=$(".user strong").text()&&
+ga("set","userId",$(".user strong").text()),ga("send","pageview")});
+
 // Clock
 window.onload = function updateClock() {
 	if (updateClock.time_difference === undefined)
