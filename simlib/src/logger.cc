@@ -29,8 +29,8 @@ void Logger::Appender::flush() noexcept {
 	if (logger_.lock()) {
 		if (logger_.label()) {
 			try {
-				fprintf(logger_.f_, "[ %s ] %s\n",
-					localdate("%Y-%m-%d %H:%M:%S").c_str(), buff_.c_str());
+				fprintf(logger_.f_, "[ %s ] %s\n", localdate().c_str(),
+					buff_.c_str());
 			} catch (const std::exception&) {
 				fprintf(logger_.f_, "[ unknown time ] %s\n", buff_.c_str());
 			}

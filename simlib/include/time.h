@@ -6,11 +6,14 @@ long long microtime() noexcept;
 
 // Returns UTC date in format of @p format (format like in strftime(3)), if
 // @p curr_time > 0 uses @p curr_time, otherwise uses the current time
-std::string date(const CStringView& format, time_t curr_time = -1);
+std::string date(const CStringView& format = CStringView {"%Y-%m-%d %H:%M:%S"},
+	time_t curr_time = -1);
 
 // Returns local date in format of @p format (format like in strftime(3)), if
 // @p curr_time > 0 uses @p curr_time, otherwise uses the current time
-std::string localdate(const CStringView& format, time_t curr_time = -1);
+std::string localdate(
+	const CStringView& format = CStringView {"%Y-%m-%d %H:%M:%S"},
+	time_t curr_time = -1);
 
 // Checks if format is "%Y-%m-%d %H:%M:%S"
 bool isDatetime(const CStringView& str) noexcept;
