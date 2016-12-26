@@ -29,8 +29,8 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 			"<head>"
 				"<meta charset=\"utf-8\">"
 				"<title>", htmlEscape(title), "</title>"
-				"<link rel=\"stylesheet\" href=\"/kit/styles.css?"
-					STYLES_CSS_HASH "\">"
+				"<link rel=\"stylesheet\" type=\"text/css\""
+					" href=\"/kit/styles.css?" STYLES_CSS_HASH "\">"
 				"<script src=\"/kit/jquery.js?" JQUERY_JS_HASH "\"></script>"
 				"<script src=\"/kit/scripts.js?" SCRIPTS_JS_HASH "\"></script>"
 				"<link rel=\"shortcut icon\" href=\"/kit/img/favicon.png\">");
@@ -51,7 +51,8 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 
 	if (Session::open() && Session::user_type < UTYPE_NORMAL) {
 		append(
-			"<a href=\"/u\">Users</a>");
+			"<a href=\"/u\">Users</a>"
+			"<a href=\"/jobs/\">Job queue</a>");
 		if (Session::user_type == UTYPE_ADMIN)
 			append("<a href=\"/logs\">Logs</a>");
 	}
@@ -70,6 +71,7 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 					"<a href=\"/u/", Session::user_id, "\">My profile</a>"
 					"<a href=\"/u/", Session::user_id, "/submissions\">"
 						"My submissions</a>"
+					"<a href=\"/jobs/my\">My jobs</a>"
 					"<a href=\"/u/", Session::user_id, "/edit\">"
 						"Edit profile</a>"
 					"<a href=\"/u/", Session::user_id, "/change-password\">"

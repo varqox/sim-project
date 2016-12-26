@@ -729,12 +729,16 @@ void User::deleteAccount() {
 				return error403();
 
 			SignalBlocker signal_guard;
-			// Change contests and problems owner id to 1
-			DB::Statement stmt = db_conn.prepare("UPDATE rounds r, problems p "
-				"SET r.owner=1, p.owner=1 "
-				"WHERE r.owner=? OR p.owner=?");
+			// Change contests' and problems' owner and jobs' creator id to
+			// SIM_ROOT_UID
+			DB::Statement stmt = db_conn.prepare(
+				"UPDATE rounds r, problems p, job_queue j"
+				" SET r.owner=" SIM_ROOT_UID ", p.owner=" SIM_ROOT_UID ","
+					" j.creator=" SIM_ROOT_UID
+				" WHERE r.owner=? OR p.owner=? OR j.creator=?");
 			stmt.setString(1, user_id);
 			stmt.setString(2, user_id);
+			stmt.setString(3, user_id);
 			stmt.executeUpdate();
 
 			// Delete submissions
@@ -840,7 +844,7 @@ void User::printUserSubmissions(uint limit) {
 			"</thead>"
 			"<tbody>");
 
-		string current_date = date("%Y-%m-%d %H:%M:%S");
+		string current_date = date();
 		while (res.next()) {
 			SubmissionType stype = SubmissionType(res.getUInt(11));
 			if (stype == SubmissionType::IGNORED)

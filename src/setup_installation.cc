@@ -276,15 +276,18 @@ int main(int argc, char **argv) {
 	try_to_create_table("job_queue",
 		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`creator` int unsigned NOT NULL,"
 			"`status` TINYINT NOT NULL DEFAULT " JQSTATUS_VOID_STR ","
 			"`priority` TINYINT NOT NULL,"
 			"`type` TINYINT NOT NULL,"
 			"`added` datetime NOT NULL,"
 			"`aux_id` int unsigned DEFAULT NULL,"
+			"`info` blob NOT NULL,"
 			"`data` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (status, priority DESC, id), "
-			"KEY (type, aux_id)"
+			"KEY (type, aux_id),"
+			"KEY (creator, id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("files",

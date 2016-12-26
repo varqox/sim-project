@@ -1,6 +1,7 @@
 #include "form_validator.h"
 #include "contest.h"
 
+#include <sim/jobs.h>
 #include <sim/utilities.h>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
@@ -522,7 +523,7 @@ void Contest::addProblem() {
 				DB::Statement stmt = db_conn.prepare(
 					"INSERT problems (name, label, owner, added) "
 						"VALUES('', '', 0, ?)");
-				stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
+				stmt.setString(1, date());
 				if (1 != stmt.executeUpdate())
 					THROW("Failed to insert problem");
 
@@ -866,7 +867,7 @@ void Contest::editContest() {
 					if (!rpath)
 						return; // getRoundPath has already set an error
 
-				} /*else // TODO: make it working
+				} /*else // TODO: fix it
 					fv.addError("User not found");*/
 			}
 
@@ -1076,10 +1077,23 @@ void Contest::editProblem() {
 			DB::Statement stmt = db_conn.prepare("UPDATE submissions "
 				"SET status=" SSTATUS_WAITING_STR ", queued=? "
 				"WHERE problem_id=?");
-			stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
+			stmt.setString(1, date());
 			stmt.setString(2, rpath->problem->problem_id);
-
 			stmt.executeUpdate();
+
+			// Add jobs to rejudge the submissions
+			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
+					" priority, type, added, aux_id, info, data)"
+				"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
+				" FROM submissions WHERE problem_id=?");
+			stmt.setString(1, Session::user_id);
+			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
+			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
+			stmt.setString(4, date());
+			stmt.setString(5, jobs::dumpString(rpath->problem->problem_id));
+			stmt.setString(6, rpath->problem->problem_id);
+			stmt.executeUpdate();
+
 			notifyJudgeServer();
 
 		} catch (const std::exception& e) {
@@ -1786,7 +1800,7 @@ void Contest::ranking(bool admin_view) {
 	try {
 		DB::Statement stmt;
 		DB::Result res;
-		string current_time = date("%Y-%m-%d %H:%M:%S");
+		string current_time = date();
 
 		// Select rounds
 		const char* column = (rpath->type == CONTEST ? "parent" : "id");

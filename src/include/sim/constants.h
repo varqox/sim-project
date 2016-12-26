@@ -160,9 +160,11 @@ constexpr inline const char* toString(SubmissionType x) {
 
 enum class JobQueueStatus : uint8_t {
 	VOID = 0,
-	WAITING = 1,
+	PENDING = 1,
 	IN_PROGRESS = 2,
-	DONE = 3
+	DONE = 3,
+	FAILED = 4,
+	CANCELLED = 5
 };
 
 #define JQSTATUS_VOID_STR "0"
@@ -170,25 +172,39 @@ static_assert(meta::equal(JQSTATUS_VOID_STR,
 	meta::ToString<(int)JobQueueStatus::VOID>::value),
 	"Update the above #define");
 
-#define JQSTATUS_WAITING_STR "1"
-static_assert(meta::equal(JQSTATUS_WAITING_STR,
-	meta::ToString<(int)JobQueueStatus::WAITING>::value),
+#define JQSTATUS_PENDING_STR "1"
+static_assert(meta::equal(JQSTATUS_PENDING_STR,
+	meta::ToString<(int)JobQueueStatus::PENDING>::value),
 	"Update the above #define");
+
 #define JQSTATUS_IN_PROGRESS_STR "2"
 static_assert(meta::equal(JQSTATUS_IN_PROGRESS_STR,
 	meta::ToString<(int)JobQueueStatus::IN_PROGRESS>::value),
 	"Update the above #define");
+
 #define JQSTATUS_DONE_STR "3"
 static_assert(meta::equal(JQSTATUS_DONE_STR,
 	meta::ToString<(int)JobQueueStatus::DONE>::value),
 	"Update the above #define");
 
+#define JQSTATUS_FAILED_STR "4"
+static_assert(meta::equal(JQSTATUS_FAILED_STR,
+	meta::ToString<(int)JobQueueStatus::FAILED>::value),
+	"Update the above #define");
+
+#define JQSTATUS_CANCELLED_STR "5"
+static_assert(meta::equal(JQSTATUS_CANCELLED_STR,
+	meta::ToString<(int)JobQueueStatus::CANCELLED>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobQueueStatus x) {
 	switch (x) {
 	case JobQueueStatus::VOID: return "Void";
-	case JobQueueStatus::WAITING: return "Waiting";
+	case JobQueueStatus::PENDING: return "Pending";
 	case JobQueueStatus::IN_PROGRESS: return "In progress";
 	case JobQueueStatus::DONE: return "Done";
+	case JobQueueStatus::FAILED: return "Failed";
+	case JobQueueStatus::CANCELLED: return "Cancelled";
 	}
 	return "Unknown";
 }
@@ -199,12 +215,14 @@ enum class JobQueueType : uint8_t {
 	REUPLOAD_PROBLEM = 2,
 	JUDGE_MODEL_SOLUTION = 3,
 	EDIT_PROBLEM = 4,
+	DELETE_PROBLEM = 5,
 };
 
 // The greater, the more important
 constexpr uint priority(JobQueueType x) {
 	switch (x) {
 	case JobQueueType::EDIT_PROBLEM: return 20;
+	case JobQueueType::DELETE_PROBLEM: return 20;
 	case JobQueueType::JUDGE_MODEL_SOLUTION: return 15;
 	case JobQueueType::ADD_PROBLEM: return 10;
 	case JobQueueType::REUPLOAD_PROBLEM: return 10;

@@ -263,7 +263,7 @@ void Problemset::addProblem() {
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				jobs::AddProblem ap {
+				jobs::AddProblemInfo ap_info {
 					name,
 					label,
 					strtoull(memory_limit.c_str()) << 20,
@@ -273,12 +273,14 @@ void Problemset::addProblem() {
 				};
 
 				DB::Statement stmt {db_conn.prepare(
-					"INSERT job_queue (priority, type, added, data) "
-					"VALUES(?, ?, ?, ?)")};
-				stmt.setUInt(1, priority(JobQueueType::ADD_PROBLEM));
-				stmt.setUInt(2, static_cast<uint>(JobQueueType::ADD_PROBLEM));
-				stmt.setString(3, date("%Y-%m-%d %H:%M:%S"));
-				stmt.setString(4, ap.dump());
+					"INSERT job_queue (creator, priority, type, added, info,"
+						" data) "
+					"VALUES(?, ?, ?, ?, ?, '')")};
+				stmt.setString(1, Session::user_id);
+				stmt.setUInt(2, priority(JobQueueType::ADD_PROBLEM));
+				stmt.setUInt(3, static_cast<uint>(JobQueueType::ADD_PROBLEM));
+				stmt.setString(4, date());
+				stmt.setString(5, ap_info.dump());
 				stmt.executeUpdate();
 
 				DB::Result res {db_conn.executeQuery("SELECT LAST_INSERT_ID()")};
@@ -289,7 +291,7 @@ void Problemset::addProblem() {
 
 				// Move package file that it will become a job's file
 				{
-					StringBuff<PATH_MAX> new_path {"jobs_files/", jobid};
+					StringBuff<PATH_MAX> new_path {"jobs_files/", jobid, ".zip"};
 					if (::move(package_file, new_path))
 						THROW("Error: link(`", package_file, "`, `", new_path,
 							"`)", error(errno));
@@ -299,11 +301,11 @@ void Problemset::addProblem() {
 
 				// Activate the job
 				int rc = db_conn.executeUpdate("UPDATE job_queue SET status="
-					JQSTATUS_WAITING_STR " WHERE id=" + jobid);
+					JQSTATUS_PENDING_STR " WHERE id=" + jobid);
 				if (1 != rc)
 					THROW("Failed to update");
 
-				return redirect(concat("/j/", jobid));
+				return redirect(concat("/jobs/", jobid));
 
 			} catch (const std::exception& e) {
 				ERRLOG_CATCH(e);

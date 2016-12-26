@@ -39,7 +39,7 @@ void Contest::addFile() {
 		if (fv.noErrors())
 			try {
 				string id;
-				string current_time = date("%Y-%m-%d %H:%M:%S");
+				string current_time = date();
 				// Insert file to `files`
 				DB::Statement stmt = db_conn.prepare("INSERT IGNORE files "
 					"(id, round_id, name, description, file_size, modified) "
@@ -174,7 +174,7 @@ void Contest::editFile(const StringView& id, string name) {
 					stmt.setString(4, id.to_string());
 				}
 
-				string current_time = date("%Y-%m-%d %H:%M:%S");
+				string current_time = date();
 				stmt.setString(1, name);
 				stmt.setString(2, description);
 				stmt.setString(3, current_time);

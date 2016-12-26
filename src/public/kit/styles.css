@@ -811,8 +811,8 @@ a.btn.red {
 	background-color: #1b1b1b;
 	background-image: linear-gradient(to bottom, #222222, #111111);
 }
-/* On too narrow screen menu would overflow */
-@media screen and (max-width: 600px) {
+/* On too narrow screen menu would overflow (this is just a fallback to the javascript solution) */
+@media screen and (max-width: 650px) {
 	.navbar {
 		position: absolute;
 	}
@@ -826,6 +826,7 @@ a.btn.red {
 .navbar a.user {
 	padding: 10px;
 	color: #999999;
+	white-space: nowrap;
 	text-decoration: none;
 }
 .navbar > div > a:hover,
@@ -1374,6 +1375,64 @@ table.problems td .btn-small {
 }
 table.problems tr > td:last-child {
 	white-space: pre;
+}
+
+/* Jobs */
+table.jobs {
+	/*display: inline-table;*/
+	margin: 0;
+}
+table.jobs th {
+	padding: 6px;
+	line-height: 20px;
+}
+table.jobs th.added {
+	min-width: 100px;
+}
+table.jobs th.type {
+	min-width: 60px;
+}
+table.jobs th.status {
+	min-width: 60px;
+}
+table.jobs th.owner {
+	min-width: 60px;
+}
+table.jobs th.info {
+	min-width: 200px;
+}
+table.jobs td.status {
+	padding-left: 16px;
+	padding-right: 16px;
+	text-align: center;
+}
+table.jobs td {
+	padding: 4px 16px 4px 8px;
+	line-height: 20px;
+	border-top: 1px solid #bbb;
+}
+table.jobs td .btn-small {
+	margin: 0 2px;
+}
+table.jobs tr > td:last-child {
+	white-space: pre;
+}
+table.jobs td label {
+	padding: 1.5px 4px 2.4px;
+	margin: 0 4px;
+	border-radius: 4px;
+	font-size: 12px;
+	line-height: 15px;
+	font-weight: bold;
+	color: #fefefe;
+	white-space: pre;
+	background: #54c32a;
+}
+table.jobs td label:first-of-type {
+	margin-left: 0;
+}
+table.jobs td label::after {
+	content: ":";
 }
 
 /* Users & Contest users*/
