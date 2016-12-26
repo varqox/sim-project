@@ -58,9 +58,9 @@ $(document).ready(function() {
 		minutes = (minutes < 10 ? '0' : '') + minutes;
 		seconds = (seconds < 10 ? '0' : '') + seconds;
 
-		// If this is a '.submissions .time' or '.problems .added', then skip
-		// the timezone part
-		if (x.parents('.submissions, .problems').length)
+		// If this is a '.submissions .time', '.problems .added' or
+		// '.jobs .added', then skip the timezone part
+		if (x.parents('.submissions, .problems, .jobs').length)
 			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
 				' ', hours, ':', minutes, ':', seconds));
 		else
@@ -70,7 +70,7 @@ $(document).ready(function() {
 	});
 
 	// Give timezone info in the submissions and problems table
-	$('.submissions th.time, .problems th.added').each(function() {
+	$('.submissions th.time, .problems th.added, .jobs th.added').each(function() {
 		$(this).children().remove();
 		$(this).append(String().concat(
 			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
@@ -82,12 +82,12 @@ function normalizeNavbar() {
 	var navbar = $('.navbar');
 	navbar.css('width', 'auto');
 
-	if (navbar.width() <= $(window).width()) {
+	if (navbar.outerWidth() <= $(window).width()) {
 		navbar.css('width', '100%');
 		navbar.css('position', 'fixed');
 	} else {
 		navbar.css('position', 'absolute');
-		navbar.width($(document).width());
+		navbar.outerWidth($(document).width());
 	}
 }
 $(document).ready(normalizeNavbar);

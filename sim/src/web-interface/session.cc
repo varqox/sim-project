@@ -79,7 +79,7 @@ void Session::createAndOpen(const string& _user_id) {
 	stmt.setString(3, _user_id);
 	stmt.setString(4, client_ip);
 	stmt.setString(5, req->headers.get("User-Agent"));
-	stmt.setString(6, date("%Y-%m-%d %H:%M:%S"));
+	stmt.setString(6, date());
 
 	do {
 		sid = generateId(SESSION_ID_LEN);

@@ -125,7 +125,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 		// 2) type == ROUND and round has begun or is visible
 		// 3) type == PROBLEM and parent round has begun
 		if (r_path->type == CONTEST || // 1
-			r_path->round->begins <= date("%Y-%m-%d %H:%M:%S") || // 2 & 3
+			r_path->round->begins <= date() || // 2 & 3
 			(r_path->type == ROUND && r_path->round->visible)) // 2 \ 3
 		{
 			return r_path.release();
@@ -203,7 +203,7 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 		"<a href=\"/c/", rpath->contest->id, (admin_access ? "/n" : ""),
 			"/files\">Files</a>");
 
-	string current_date = date("%Y-%m-%d %H:%M:%S");
+	string current_date = date();
 	Round *round = rpath->round.get();
 	if (rpath->type == CONTEST || (round->begins <= current_date &&
 		(round->ends.empty() || current_date < round->ends)))
@@ -248,7 +248,7 @@ void Contest::printRoundPath(const StringView& page, bool force_normal) {
 
 void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 	const char* force_normal = (!admin_view && rpath->admin_access ? "/n" : "");
-	string current_date = date("%Y-%m-%d %H:%M:%S");
+	string current_date = date();
 
 	auto round_duration = [](const string& begin, const string& end) {
 		return concat("<div>"
@@ -410,7 +410,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				"</a>");
 
 			// List problems if and only if round has begun (for non-admins)
-			if (admin_view || rpath->round->begins <= date("%Y-%m-%d %H:%M:%S"))
+			if (admin_view || rpath->round->begins <= date())
 			{
 				// Collect user's final submissions to listed problems
 				vector<pair<string, SubmissionStatus>> rid2stat; /*

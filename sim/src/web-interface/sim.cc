@@ -60,6 +60,9 @@ server::HttpResponse Sim::handle(string _client_ip,
 		else if (next_arg == "login")
 			login();
 
+		else if (next_arg == "jobs")
+			Jobs::handle();
+
 		else if (next_arg == "file")
 			file();
 

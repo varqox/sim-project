@@ -1,6 +1,7 @@
 #include "contest.h"
 #include "form_validator.h"
 
+#include <sim/jobs.h>
 #include <simlib/debug.h>
 #include <simlib/process.h>
 #include <simlib/time.h>
@@ -44,7 +45,7 @@ void Contest::submit(bool admin_view) {
 		// TODO: "transaction"
 		if (fv.noErrors()) {
 			std::unique_ptr<RoundPath> path;
-			const RoundPath* problem_r_path = rpath.get();
+			const RoundPath* problem_rpath = rpath.get();
 
 			if (rpath->type != PROBLEM) {
 				// Get parent rounds of problem round (it also checks access
@@ -58,7 +59,7 @@ void Contest::submit(bool admin_view) {
 					goto form;
 				}
 
-				problem_r_path = path.get();
+				problem_rpath = path.get();
 			}
 
 			// Check solution size
@@ -83,7 +84,7 @@ void Contest::submit(bool admin_view) {
 			}
 
 			try {
-				string current_date = date("%Y-%m-%d %H:%M:%S");
+				string current_date = date();
 				// Insert submission to `submissions`
 				DB::Statement stmt = db_conn.prepare("INSERT submissions "
 						"(user_id, problem_id, round_id, parent_round_id, "
@@ -91,10 +92,10 @@ void Contest::submit(bool admin_view) {
 							"initial_report, final_report) "
 						"VALUES(?, ?, ?, ?, ?, ?, ?, 0, '', '')");
 				stmt.setString(1, Session::user_id);
-				stmt.setString(2, problem_r_path->problem->problem_id);
-				stmt.setString(3, problem_r_path->problem->id);
-				stmt.setString(4, problem_r_path->round->id);
-				stmt.setString(5, problem_r_path->contest->id);
+				stmt.setString(2, problem_rpath->problem->problem_id);
+				stmt.setString(3, problem_rpath->problem->id);
+				stmt.setString(4, problem_rpath->round->id);
+				stmt.setString(5, problem_rpath->contest->id);
 				stmt.setString(6, current_date);
 				stmt.setString(7, current_date);
 
@@ -131,6 +132,19 @@ void Contest::submit(bool admin_view) {
 				stmt.setString(2, submission_id);
 				stmt.executeUpdate();
 
+				// Add a job to judge the submission
+				stmt = db_conn.prepare("INSERT job_queue (creator, status,"
+						" priority, type, added, aux_id, info, data)"
+					"VALUES(?, " JQSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+				stmt.setString(1, Session::user_id);
+				stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
+				stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
+				stmt.setString(4, date());
+				stmt.setString(5, submission_id);
+				stmt.setString(6,
+					jobs::dumpString(problem_rpath->problem->problem_id));
+				stmt.executeUpdate();
+
 				notifyJudgeServer();
 
 				return redirect("/s/" + submission_id);
@@ -156,7 +170,7 @@ void Contest::submit(bool admin_view) {
 
 	// List problems
 	try {
-		string current_date = date("%Y-%m-%d %H:%M:%S");
+		string current_date = date();
 		if (rpath->type == CONTEST) {
 			// Select subrounds
 			// Admin -> All problems from all subrounds
@@ -447,10 +461,22 @@ void Contest::submission() {
 
 			stmt = db_conn.prepare("UPDATE submissions "
 				"SET status=" SSTATUS_WAITING_STR ", queued=? WHERE id=?");
-			stmt.setString(1, date("%Y-%m-%d %H:%M:%S"));
+			stmt.setString(1, date());
 			stmt.setString(2, submission_id);
-
 			stmt.executeUpdate();
+
+			// Add a job to judge the submission
+			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
+					" priority, type, added, aux_id, info, data)"
+				"VALUES(?, " JQSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+			stmt.setString(1, Session::user_id);
+			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
+			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
+			stmt.setString(4, date());
+			stmt.setString(5, submission_id);
+			stmt.setString(6, jobs::dumpString(rpath->problem->problem_id));
+			stmt.executeUpdate();
+
 			notifyJudgeServer();
 
 			// Redirect to Referer or submission page
@@ -640,7 +666,7 @@ void Contest::submission() {
 					res[11], "</a> (", htmlEscape(full_name), ")</td>");
 
 		bool show_final_results = (admin_view ||
-			rpath->round->full_results <= date("%Y-%m-%d %H:%M:%S"));
+			rpath->round->full_results <= date());
 
 		append("<td>", htmlEscape(
 				concat(problems_name, " (", problems_label, ')')), "</td>"
@@ -662,7 +688,7 @@ void Contest::submission() {
 			append(initial_report);
 		// Final report
 		if (admin_view ||
-			rpath->round->full_results <= date("%Y-%m-%d %H:%M:%S"))
+			rpath->round->full_results <= date())
 		{
 			string final_report = res[13];
 			if (final_report.size())
@@ -745,7 +771,7 @@ void Contest::submissions(bool admin_view) {
 			"</thead>"
 			"<tbody>");
 
-		string current_date = date("%Y-%m-%d %H:%M:%S");
+		string current_date = date();
 		while (res.next()) {
 			SubmissionType stype = SubmissionType(res.getUInt(9));
 			if (stype == SubmissionType::IGNORED)
