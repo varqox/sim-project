@@ -1,7 +1,7 @@
 include ../../Makefile.config
 
 .PHONY: all
-all: sim.a simlib.a gtest_main.a
+all: sim.a simlib.a gtest_main.a sqlite3.o
 
 $(eval $(call dependencies))
 
@@ -26,6 +26,8 @@ sim.a: db.o cpp_syntax_highlighter.o simlib.a
 		$(filter-out $(lastword $^), $^) # Do not append simlib.a to archive -
 		                                 # it has to be done in the other way
 	echo "OPEN sim.a\nADDLIB simlib.a\nSAVE\nEND" | $(AR) -M
+
+sqlite3.o: override EXTRA_C_FLAGS += -DSQLITE_ENABLE_FTS5 -w
 
 .PHONY: clean
 clean:
