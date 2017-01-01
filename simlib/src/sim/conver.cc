@@ -8,6 +8,7 @@
 #include <set>
 
 using std::map;
+using std::pair;
 using std::runtime_error;
 using std::set;
 using std::string;
@@ -15,73 +16,7 @@ using std::vector;
 
 namespace sim {
 
-void Conver::extractPackage(const string& package_path) {
-	// Clear the temporary directory
-	if (tmp_dir_.exist())
-		removeDirContents(tmp_dir_.path());
-	else
-		tmp_dir_ = TemporaryDirectory("/tmp/sim-conver.XXXXXX");
-
-	// Set package_path_
-	package_path_ = tmp_dir_.path() + "p/";
-	if (mkdir(package_path_))
-		THROW("mkdir(`", package_path_, "`)", error(errno));
-
-	/* Copy the package to the temporary directory */
-
-	// Directory
-	if (isDirectory(package_path)) {
-		if (verbose_)
-			stdlog("Copying package...");
-
-		if (copy_r(package_path, package_path_))
-			THROW("Failed to copy package: copy_r()", error(errno));
-
-	// Archive
-	} else {
-		vector<string> args;
-
-		// zip
-		if (hasSuffix(package_path, ".zip"))
-			back_insert(args, "unzip", (verbose_ ? "-o" : "-oq"), package_path,
-				"-d", package_path_);
-		// tar.gz | tgz
-		else if (hasSuffixIn(package_path, {".tgz", ".tar.gz"}))
-			back_insert(args, "tar", (verbose_ ? "xvzf" : "xzf"), package_path,
-				"-C", package_path_);
-		else
-			THROW("Unsupported archive type");
-
-		/* Unpack the package */
-
-		if (verbose_)
-			stdlog("Unpacking package...");
-
-		Spawner::ExitStat es = Spawner::run(args[0], args,
-			{-1, stdlog.fileno(), stdlog.fileno(), 0, 512 << 20});
-
-		if (es.code)
-			THROW("Unpacking error: ", es.message);
-
-		if (verbose_)
-			stdlog("Unpacking took ", usecToSecStr(es.runtime, 3), "s.");
-	}
-
-	// Check if the package has the master directory
-	int entities = 0;
-	string master_dir;
-	forEachDirComponent(package_path_, [&](dirent* file) {
-		++entities;
-		if (master_dir.empty() && file->d_type == DT_DIR)
-			master_dir = file->d_name;
-	});
-
-	// If package has the master directory, update package_path_
-	if (master_dir.size() && entities == 1)
-		back_insert(package_path_, master_dir, '/');
-}
-
-Simfile Conver::constructFullSimfile(const Options& opts) {
+pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 	auto dt = directory_tree::dumpDirectoryTree(package_path_);
 	dt->removeDir("utils"); // This directory is ignored by Conver
 
@@ -113,8 +48,8 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	try { sf.loadChecker(); } catch (...) {}
 	if (!dt->pathExists(sf.checker)) {
 		if (verbose_ && simfile_is_loaded)
-			stdlog("Missing / invalid checker specified in the package's "
-				"Simfile - ignoring");
+			report_.append("Missing / invalid checker specified in the "
+				"package's Simfile - ignoring");
 
 		// Scan check/ directory
 		auto x = findFiles(dt->dir("check"), is_source, "check/");
@@ -134,8 +69,8 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	try { sf.loadStatement(); } catch (...) {}
 	if (!dt->pathExists(sf.statement)) {
 		if (verbose_ && simfile_is_loaded)
-			stdlog("Missing / invalid statement specified in the package's "
-				"Simfile - ignoring");
+			report_.append("Missing / invalid statement specified in the "
+				"package's Simfile - ignoring");
 
 		auto is_statement = [](const string& file) {
 			return hasSuffixIn(file, {".pdf", ".html", ".htm", ".md", ".txt"});
@@ -161,6 +96,7 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 	{
 		vector<std::string> solutions;
 		set<std::string> solutions_set; // Used to detect and eliminate
+		                                // solutions duplication
 		for (auto&& s : sf.solutions) {
 			if (dt->pathExists(s) &&
 				solutions_set.find(s) == solutions_set.end())
@@ -169,15 +105,15 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 				solutions_set.emplace(s);
 			}
 			else if (verbose_)
-				stdlog("Ignoring invalid solution: `", s, '`');
+				report_.append("Ignoring invalid solution: `", s, '`');
 		}
-		                                // solutions duplication
+
 		auto x = findFiles(dt.get(), is_source);
 		if (solutions.empty()) { // The main solution has to be set
 			if (x.empty())
 				throw runtime_error("No solution was found");
 
-			// Choose the one with the shortest path
+			// Choose the one with the shortest path to be the model solution
 			swap(x.front(), *std::min_element(x.begin(), x.end(),
 				[](auto&& a, auto&& b) {
 					return a.size() < b.size();
@@ -325,76 +261,32 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 					t.memory_limit = sf.global_mem_limit;
 	}
 
-	// Rounds time limits to 0.01 s
-	auto normalize_time_limits = [&] {
-		constexpr unsigned GRANULARITY = 0.01e6; // 0.01s
-		for (auto&& g : sf.tgroups)
-			for (auto&& t : g.tests)
-				t.time_limit = (t.time_limit + GRANULARITY / 2) / GRANULARITY *
-					GRANULARITY;
-	};
-
 	if (!run_time_limits_setting) {
-		normalize_time_limits();
-		return sf; // Nothing more to do
+		normalize_time_limits(sf);
+		return {Status::COMPLETE, sf}; // Nothing more to do
 	}
 
-	/* Set time limits automatically */
+	/* Judge report of the model solution is needed */
 
-	constexpr uint64_t TIME_LIMIT_ADJUSTMENT = 0.4e6; // 0.4 s
-	constexpr int MODEL_TIME_COEFFICENT = 4;
-
+	// Set the time limits for the model solution
 	uint64_t time_limit =
-		(std::max<uint64_t>(opts.max_time_limit, TIME_LIMIT_ADJUSTMENT) -
+		(meta::max(opts.max_time_limit, (uint64_t)TIME_LIMIT_ADJUSTMENT) -
 			TIME_LIMIT_ADJUSTMENT) / MODEL_TIME_COEFFICENT;
 
 	for (auto&& g : sf.tgroups)
 		for (auto&& t : g.tests)
 			t.time_limit = time_limit;
 
-	JudgeWorker jworker;
-	jworker.setVerbosity(verbose_);
+	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, sf};
+}
 
-	try { jworker.loadPackage(package_path_, sf.dump()); } catch(...) {
-		if (verbose_)
-			stdlog("Generated Simfile: ", sf.dump());
-		throw;
-	}
-
-	string compilation_errors;
-
-	// Compile checker
-	if (verbose_)
-		stdlog("Compiling checker...");
-	if (jworker.compileChecker(opts.compilation_time_limit, &compilation_errors,
-		opts.compilation_errors_max_length, opts.proot_path))
-	{
-		if (verbose_)
-			stdlog("Checker compilation failed.");
-		throw runtime_error(concat("Checker compilation failed:\n",
-			compilation_errors));
-	}
-
-	// Compile solution
-	if (verbose_)
-		stdlog("Compiling the main solution...");
-	if (jworker.compileSolution(package_path_ + sf.solutions.front(),
-		opts.compilation_time_limit, &compilation_errors,
-		opts.compilation_errors_max_length, opts.proot_path))
-	{
-		if (verbose_)
-			stdlog("The main solution compilation failed.");
-		throw runtime_error(concat("The main solution compilation failed:\n",
-			compilation_errors));
-	}
-
-	// Judge (obtain time limits)
-	JudgeReport rep1 = jworker.judge(false);
-	JudgeReport rep2 = jworker.judge(true);
-
+void Conver::finishConstructingSimfile(Simfile &sf, const JudgeReport &jrep1,
+	const JudgeReport &jrep2)
+{
 	// Map every test to its time limit
 	map<string, uint64_t> tls; // test name => time limit
-	for (auto&& rep : {rep1, rep2})
+	for (auto ptr : {&jrep1, &jrep2}) {
+		auto&& rep = *ptr;
 		for (auto&& g : rep.groups)
 			for (auto&& t : g.tests){
 				// Only allow OK and WA to pass through
@@ -408,14 +300,14 @@ Simfile Conver::constructFullSimfile(const Options& opts) {
 				tls[std::move(t.name)] = TIME_LIMIT_ADJUSTMENT + t.runtime *
 					MODEL_TIME_COEFFICENT;
 			}
+	}
 
-	// Assign time limits to tests
+	// Assign time limits to the tests
 	for (auto&& tg : sf.tgroups)
 		for (auto&& t : tg.tests)
 			t.time_limit = tls[t.name];
 
-	normalize_time_limits();
-	return sf;
+	normalize_time_limits(sf);
 }
 
 } // namespace sim

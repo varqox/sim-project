@@ -34,7 +34,9 @@ public:
 		append(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
 	}
 
-	unsigned size() const noexcept { return len; }
+	constexpr bool empty() const noexcept { return (len == 0); }
+
+	constexpr unsigned size() const noexcept { return len; }
 
 	/// Appends without adding the null terminating character
 	template<class... Args>
@@ -60,6 +62,11 @@ public:
 template<size_t N>
 inline std::string& operator+=(std::string& s, const StringBuff<N>& sb) {
 	return s.append(sb.str, sb.len);
+}
+
+template<size_t... N>
+constexpr auto merge(const StringBuff<N>&... args) {
+	return StringBuff<meta::sum<N...>>{args...};
 }
 
 template<size_t N>
@@ -1370,6 +1377,10 @@ constexpr inline auto data(const T& x) noexcept { return x.data(); }
 template<class T, size_t N>
 constexpr inline const T* data(const T (&x)[N]) noexcept { return x; }
 
+constexpr inline auto data(const char* const x) noexcept { return x; }
+
+constexpr inline auto data(char* const x) noexcept { return x; }
+
 constexpr inline const char* data(const char& c) noexcept { return &c; }
 
 template<class Char>
@@ -1406,13 +1417,13 @@ inline std::string concat(Args&&... args) {
 enum Adjustment : uint8_t { LEFT, RIGHT };
 
 /**
- * @brief Returns widened string
+ * @brief Returns a padded string
  * @details Examples:
- *   widenedString("abc", 5) -> "  abc"
- *   widenedString("abc", 5, false) -> "abc  "
- *   widenedString("1234", 7, true, '0') -> "0001234"
- *   widenedString("1234", 4, true, '0') -> "1234"
- *   widenedString("1234", 2, true, '0') -> "1234"
+ *   paddedString("abc", 5) -> "  abc"
+ *   paddedString("abc", 5, false) -> "abc  "
+ *   paddedString("1234", 7, true, '0') -> "0001234"
+ *   paddedString("1234", 4, true, '0') -> "1234"
+ *   paddedString("1234", 2, true, '0') -> "1234"
  *
  * @param s string
  * @param len length of result string
@@ -1421,7 +1432,7 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  *
  * @return formatted string
  */
-std::string widenedString(const StringView& s, size_t len,
+std::string paddedString(const StringView& s, size_t len,
 	Adjustment adj = RIGHT, char fill = ' ');
 
 #define throw_assert(expr) \

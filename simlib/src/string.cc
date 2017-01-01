@@ -83,7 +83,7 @@ void appendHtmlEscaped(string& str, const StringView& s) {
 		appendHtmlEscaped(str, s[i]);
 }
 
-string widenedString(const StringView& s, size_t len, Adjustment adj,
+string paddedString(const StringView& s, size_t len, Adjustment adj,
 	char fill)
 {
 	string res;

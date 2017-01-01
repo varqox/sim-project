@@ -148,4 +148,10 @@ constexpr typename std::common_type<T, Args...>::type min(T&& x, Args&&... args)
 	return min(x, min(std::forward<Args>(args)...));
 }
 
+template<intmax_t x, intmax_t... ints>
+constexpr intmax_t sum = x + sum<ints...>;
+
+template<intmax_t x>
+constexpr intmax_t sum<x> = x;
+
 } // namespace meta

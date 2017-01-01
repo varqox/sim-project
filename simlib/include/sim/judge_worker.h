@@ -2,6 +2,7 @@
 
 #include "../debug.h"
 #include "../filesystem.h"
+#include "../utilities.h"
 #include "compile.h"
 #include "simfile.h"
 
@@ -53,6 +54,56 @@ public:
 	};
 
 	std::vector<Group> groups;
+
+	/**
+	 * @brief Returns the pretty-printed judge report
+	 *
+	 * @param span_status Should take Test::Status as an argument and return
+	 *   something that will be appended to the dump as the test's status.
+	 *
+	 * @return A pretty-printed judge report
+	 */
+	template<class Func>
+	std::string pretty_dump(Func&& span_status) const {
+		std::string res = "{\n";
+		for (auto&& group : groups) {
+			for (auto&& test : group.tests) {
+				back_insert(res, "  ", paddedString(test.name, 11, LEFT),
+					paddedString(usecToSecStr(test.runtime, 2, false), 4),
+					" / ", usecToSecStr(test.time_limit, 2, false),
+					" s  ", toStr(test.memory_consumed >> 10), " / ",
+					toStr(test.memory_limit >> 10), " KB"
+					"    Status: ");
+				// Status
+				res += span_status(test.status);
+
+				// Comment
+				if (test.comment.size())
+					back_insert(res, ' ', test.comment, '\n');
+				else
+					res += '\n';
+			}
+
+			// Score
+			back_insert(res, "  Score: ", toString(group.score), " / ",
+				toString(group.max_score), '\n');
+		}
+		return res += '}';
+	}
+
+	/// Returns the pretty-printed judge report
+	std::string pretty_dump() const {
+		return pretty_dump([](Test::Status status) {
+			switch (status) {
+			case Test::OK: return "OK";
+			case Test::WA: return "WA";
+			case Test::TLE: return "TLE";
+			case Test::MLE: return "MLE";
+			case Test::RTE: return "RTE";
+			case Test::CHECKER_ERROR: return "CHECKER_ERROR";
+			}
+		});
+	}
 };
 
 /**
@@ -98,7 +149,10 @@ public:
 			pkg_root += '/';
 	}
 
-	/// Compiles checker, as sim::compile()
+ 	// Returns a const reference to the package's Simfile
+	const Simfile& simfile() const noexcept { return sf; }
+
+	/// Compiles checker (using sim::compile())
 	int compileChecker(uint64_t time_limit, std::string* c_errors = nullptr,
 		size_t c_errors_max_len = -1)
 	{
@@ -107,7 +161,7 @@ public:
 			c_errors, c_errors_max_len);
 	}
 
-	/// Compiles checker, as sim::compile()
+	/// Compiles checker (using sim::compile())
 	int compileChecker(uint64_t time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
@@ -116,16 +170,16 @@ public:
 			c_errors, c_errors_max_len, proot_path);
 	}
 
-	/// Compiles solution, as sim::compile()
-	int compileSolution(const std::string& source, uint64_t time_limit,
+	/// Compiles solution (using sim::compile())
+	int compileSolution(const CStringView& source, uint64_t time_limit,
 		std::string* c_errors = nullptr, size_t c_errors_max_len = -1)
 	{
 		return compile(source, concat(tmp_dir.path(), SOLUTION_FILENAME),
 			verbose, time_limit, c_errors, c_errors_max_len);
 	}
 
-	/// Compiles solution, as sim::compile()
-	int compileSolution(const std::string& source, uint64_t time_limit,
+	/// Compiles solution (using sim::compile())
+	int compileSolution(const CStringView& source, uint64_t time_limit,
 		std::string* c_errors, size_t c_errors_max_len,
 		const std::string& proot_path)
 	{

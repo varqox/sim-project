@@ -24,9 +24,9 @@ int compile(const CStringView& source, const CStringView& exec, unsigned verbosi
 		stdlog("Compiling: `", source, '`');
 
 	/* Compile as a 32-bit executable (not essential, but if the checker is
-	*  x86_64 and Conver/Judge_machine is i386, then the checker will not work -
-	*  this method is more secure (see making i386 syscall from x86_64))
-	*  proot compiler to make compilation safer (e.g. prevent from including
+	*  x86_64 and tracer is i386, then the checker will not work -
+	*  this method is more secure (see making i386 syscall from x86_64)).
+	*  Compiler is prooted to make compilation safer (e.g. prevents including
 	*  unwanted files)
 	*/
 	vector<string> args = std::initializer_list<string> {

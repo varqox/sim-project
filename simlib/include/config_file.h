@@ -25,7 +25,8 @@ public:
 	};
 
 	struct Variable {
-		static constexpr uint8_t SET = 1; // set if variable appear in the config
+		static constexpr uint8_t SET = 1; // set if variable appears in the
+		                                  // config
 		static constexpr uint8_t ARRAY = 2; // set if variable is an array
 
 		uint8_t flag;

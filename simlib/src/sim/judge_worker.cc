@@ -9,6 +9,7 @@ namespace sim {
 constexpr meta::string JudgeWorker::CHECKER_FILENAME;
 constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
 
+
 JudgeReport JudgeWorker::judge(bool final) const {
 	auto vlog = [&](auto&&... args) {
 		if (verbose)
@@ -105,19 +106,21 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				if (!verbose)
 					return;
 
-				auto tmplog = stdlog("  ", widenedString(test.name, 11, LEFT),
-					widenedString(
+				auto tmplog = stdlog("  ", paddedString(test.name, 11, LEFT),
+					paddedString(
 						usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
 					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
 					toStr(test_report.memory_limit >> 10), " KB"
-					"    Status: \033[1;33m");
+					"    Status: ");
 				// Status
 				switch (test_report.status) {
-				case JudgeReport::Test::TLE: tmplog("TLE\033[m"); break;
-				case JudgeReport::Test::MLE: tmplog("MLE\033[m"); break;
-				case JudgeReport::Test::RTE: tmplog("RTE\033[m (", es.message,
-					')'); break;
+				case JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m");
+					break;
+				case JudgeReport::Test::MLE: tmplog("\033[1;33mMLE\033[m");
+					break;
+				case JudgeReport::Test::RTE: tmplog("\033[1;31mRTE\033[m (",
+					es.message, ')'); break;
 				default:
 					THROW("Should not reach here");
 				}
@@ -237,8 +240,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			}
 
 			if (verbose) {
-				auto tmplog = stdlog("  ", widenedString(test.name, 11, LEFT),
-					widenedString(
+				auto tmplog = stdlog("  ", paddedString(test.name, 11, LEFT),
+					paddedString(
 						usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
 					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
