@@ -592,7 +592,7 @@ table {
 }
 .btn.blue:focus,
 .btn-small.blue:focus {
-    box-shadow: 0 0 8px 1px #0055cc;
+	box-shadow: 0 0 8px 1px #0055cc;
 }
 .btn.blue:active,
 .btn-small.blue:active {
@@ -632,14 +632,14 @@ table {
 .btn-small.orange {
 	color: #ffffff;
 	background-color: #f6a839;
-    background-image: linear-gradient(#fbba5d, #f19615);
-    border: 1px solid #e29b35;
+	background-image: linear-gradient(#fbba5d, #f19615);
+	border: 1px solid #e29b35;
 }
 .btn.orange:hover,
 .btn.orange:focus,
 .btn-small.orange:hover,
 .btn-small.orange:focus {
-    background-color: #ef9d2a;
+	background-color: #ef9d2a;
 	background-image: none;
 }
 .btn.orange:focus,
@@ -1151,21 +1151,25 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	border-left: 1px solid #a2a2a2;
 }
 
-/* Submission */
-.submission-info {
+/* Submission and job info */
+.submission-info,
+.job-info {
 	display: block;
 	width: 85%;
 	margin: 5px 8px;
 }
-.submission-info > div:first-child {
+.submission-info > div:first-child,
+.job-info > div:first-child {
 	display: flex;
 	flex-flow: row wrap;
 	justify-content: space-between;
 }
-.submission-info > div:first-child h1 {
+.submission-info > div:first-child h1,
+.job-info > div:first-child h1 {
 	white-space: nowrap;
 }
-.submission-info > div:first-child h1 + div {
+.submission-info > div:first-child h1 + div,
+.job-info > div:first-child h1 + div {
 	margin: 8px 0;
 }
 /*.submission-info h2 {
@@ -1174,19 +1178,24 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	font-weight: normal;
 	line-height: 23px;
 }*/
-.submission-info table {
+.submission-info table,
+.job-info table {
 	margin-top: 30px;
+	width: 100%;
 }
-.submission-info table td {
+.submission-info table td,
+.job-info table td {
 	padding: 10px 16px;
 	text-align: center;
 }
+
+/* Submission */
 div.right-flow {
 	display: flex;
 	flex-flow: row wrap;
 	justify-content: flex-end;
 }
-.compilation-errors, .simfile {
+.compilation-errors, .simfile, .report-preview {
 	display: inline-block;
 	align-self: flex-start;
 	padding: 8px;
@@ -1444,7 +1453,8 @@ table.jobs td .btn-small {
 table.jobs tr > td:last-child {
 	white-space: pre;
 }
-table.jobs td label {
+table.jobs td label,
+.job-info table td label {
 	padding: 1.5px 4px 2.4px;
 	margin: 0 4px;
 	border-radius: 4px;
@@ -1455,10 +1465,12 @@ table.jobs td label {
 	white-space: pre;
 	background: #54c32a;
 }
-table.jobs td label:first-of-type {
+table.jobs td label:first-of-type,
+.job-info table td label {
 	margin-left: 0;
 }
-table.jobs td label::after {
+table.jobs td label::after,
+.job-info table td label::after {
 	content: ":";
 }
 
@@ -1537,7 +1549,9 @@ table.contest-users tr > td:last-child {
 	content: ": ";
 }
 .user-info > div.first-name,
-.user-info > div.last-name {
+.user-info > div.last-name,
+.problem-info > div.name,
+.problem-info > div.label {
 	font-size: 16px;
 	line-height: 22px;
 }

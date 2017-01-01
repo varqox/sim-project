@@ -11,7 +11,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 	std::unique_ptr<RoundPath> r_path(new RoundPath(round_id));
 
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT id, parent, problem_id, name, owner, is_public, visible, "
 				"show_ranking, begins, ends, full_results "
 			"FROM rounds "
@@ -21,7 +21,7 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 		stmt.setString(2, round_id);
 		stmt.setString(3, round_id);
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 
 		auto copyDataTo = [&](std::unique_ptr<Round>& r) {
 			r.reset(new Round);
@@ -268,7 +268,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 	try {
 		if (rpath->type == CONTEST) {
 			// Select subrounds
-			DB::Statement stmt = db_conn.prepare(admin_view ?
+			MySQL::Statement stmt = db_conn.prepare(admin_view ?
 					"SELECT id, name, item, visible, begins, ends, "
 						"full_results FROM rounds WHERE parent=? ORDER BY item"
 				: "SELECT id, name, item, visible, begins, ends, full_results "
@@ -284,7 +284,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				bool visible;
 			};
 
-			DB::Result res = stmt.executeQuery();
+			MySQL::Result res = stmt.executeQuery();
 			vector<SubroundExtended> subrounds;
 			// For performance
 			subrounds.reserve(res.rowCount());
@@ -416,13 +416,13 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				vector<pair<string, SubmissionStatus>> rid2stat; /*
 				 	(round_id, status of the final submission) */
 				if (Session::isOpen()) {
-					DB::Statement stmt = db_conn.prepare(
+					MySQL::Statement stmt = db_conn.prepare(
 						"SELECT round_id, status FROM submissions "
 						"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
 							"AND parent_round_id=?");
 					stmt.setString(1, Session::user_id);
 					stmt.setString(2, rpath->round_id);
-					DB::Result res = stmt.executeQuery();
+					MySQL::Result res = stmt.executeQuery();
 
 					while (res.next())
 						rid2stat.emplace_back(res[1],
@@ -435,12 +435,12 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					rpath->round->full_results <= current_date);
 
 				// Select problems
-				DB::Statement stmt = db_conn.prepare("SELECT id, name "
+				MySQL::Statement stmt = db_conn.prepare("SELECT id, name "
 					"FROM rounds WHERE parent=? ORDER BY item");
 				stmt.setString(1, rpath->round->id);
 
 				// List problems
-				DB::Result res = stmt.executeQuery();
+				MySQL::Result res = stmt.executeQuery();
 				while (res.next()) {
 					append("<a");
 
@@ -471,13 +471,13 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 
 			// Get status of the final submission to the problem
 			if (Session::isOpen()) {
-				DB::Statement stmt = db_conn.prepare(
+				MySQL::Statement stmt = db_conn.prepare(
 					"SELECT status FROM submissions "
 					"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
 						"AND round_id=?");
 				stmt.setString(1, Session::user_id);
 				stmt.setString(2, rpath->round_id);
-				DB::Result res = stmt.executeQuery();
+				MySQL::Result res = stmt.executeQuery();
 
 				if (res.next())
 					status_classes = concat(' ', submissionStatusCSSClass(

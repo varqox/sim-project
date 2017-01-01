@@ -57,7 +57,7 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/judge-machine $(abspath $(DESTDIR))
+	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/job-server $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -80,7 +80,7 @@ endif
 
 	# Set owner, group and permission bits
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
-	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/judge-machine) $(abspath $(DESTDIR)/proot)
+	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/job-server) $(abspath $(DESTDIR)/proot)
 
 	@echo "\033[;32mInstallation finished\033[0m"
 
@@ -88,9 +88,9 @@ endif
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
 reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
 	@ #     ^ reinstall always have to be executed at the end (but before run)
-	# Kill sim-server and judge-machine
+	# Kill sim-server and job-server
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
-	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+	src/killinstc $(abspath $(DESTDIR)/job-server)
 
 	# Delete files
 	$(RM) -r $(abspath $(DESTDIR)/)
@@ -99,10 +99,10 @@ reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
 .PHONY: uninstall
 uninstall: SETUP_INSTALL_FLAGS += --only-drop-tables
 uninstall:
-	# Kill sim-server and judge-machine
+	# Kill sim-server and job-server
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
 	src/killinstc $(abspath $(DESTDIR)/sim-server2)
-	src/killinstc $(abspath $(DESTDIR)/judge-machine)
+	src/killinstc $(abspath $(DESTDIR)/job-server)
 
 	# Delete files and database tables
 	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
@@ -113,10 +113,10 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	@ # ^ run always have to be executed at the end
 
 	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
-		$(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/judge-machine)
+		$(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
 
 	# Run
-	$(abspath $(DESTDIR)/judge-machine)&
+	$(abspath $(DESTDIR)/job-server)&
 	$(abspath $(DESTDIR)/sim-server)&
 	# $(abspath $(DESTDIR)/sim-server2)&
 	@echo "\033[;32mRunning finished\033[0m"

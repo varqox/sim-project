@@ -1,13 +1,13 @@
 #include <cppconn/driver.h>
 #include <mutex>
-#include <sim/db.h>
+#include <sim/mysql.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
 
 using std::string;
 using std::unique_ptr;
 
-namespace DB {
+namespace MySQL {
 
 Connection::Connection(const string& host, const string& user,
 	const string& password, const string& database)
@@ -18,8 +18,8 @@ Connection::Connection(const string& host, const string& user,
 }
 
 void Connection::reconnect() {
-	// We have to serialize creating connections, because MySQL Connector C++
-	// can crush if we won't guard it
+	// We have to serialize the creation of connections, because MySQL Connector
+	// C++ would probably crush if we didn't guard it
 	static std::mutex lock;
 	try {
 		std::lock_guard<std::mutex> guard(lock);
@@ -80,4 +80,4 @@ Connection createConnectionUsingPassFile(const CStringView& filename) {
 	}
 }
 
-} // namespace DB
+} // namespace MySQL

@@ -86,18 +86,19 @@ void Contest::submit(bool admin_view) {
 			try {
 				string current_date = date();
 				// Insert submission to `submissions`
-				DB::Statement stmt = db_conn.prepare("INSERT submissions "
-						"(user_id, problem_id, round_id, parent_round_id, "
-							"contest_round_id, submit_time, queued, status,"
-							"initial_report, final_report) "
-						"VALUES(?, ?, ?, ?, ?, ?, ?, 0, '', '')");
+				MySQL::Statement stmt = db_conn.prepare("INSERT submissions "
+						"(user_id, problem_id, round_id, parent_round_id,"
+							" contest_round_id, submit_time, last_judgment,"
+							" status, initial_report, final_report) "
+						"VALUES(?, ?, ?, ?, ?, ?, ?, " SSTATUS_VOID_STR ", '',"
+							" '')");
 				stmt.setString(1, Session::user_id);
 				stmt.setString(2, problem_rpath->problem->problem_id);
 				stmt.setString(3, problem_rpath->problem->id);
 				stmt.setString(4, problem_rpath->round->id);
 				stmt.setString(5, problem_rpath->contest->id);
 				stmt.setString(6, current_date);
-				stmt.setString(7, current_date);
+				stmt.setString(7, date("%Y-%m-%d %H:%M:%S", 0));
 
 				if (stmt.executeUpdate() != 1) {
 					fv.addError("Database error - failed to insert submission");
@@ -105,13 +106,7 @@ void Contest::submit(bool admin_view) {
 				}
 
 				// Get inserted submission id
-				DB::Result res = db_conn.executeQuery(
-					"SELECT LAST_INSERT_ID()");
-
-				if (!res.next())
-					THROW("Failed to get inserted submission id");
-
-				string submission_id = res[1];
+				string submission_id = db_conn.lastInsertId();
 
 				// Copy solution
 				string location = concat("solutions/", submission_id, ".cpp");
@@ -126,7 +121,7 @@ void Contest::submit(bool admin_view) {
 
 				// Change submission type to NORMAL (activate submission)
 				stmt = db_conn.prepare("UPDATE submissions SET type=?, status="
-					SSTATUS_WAITING_STR " WHERE id=?");
+					SSTATUS_PENDING_STR " WHERE id=?");
 				stmt.setUInt(1, static_cast<uint>(ignored_submission
 					? SubmissionType::IGNORED : SubmissionType::NORMAL));
 				stmt.setString(2, submission_id);
@@ -135,17 +130,17 @@ void Contest::submit(bool admin_view) {
 				// Add a job to judge the submission
 				stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 						" priority, type, added, aux_id, info, data)"
-					"VALUES(?, " JQSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+					"VALUES(?, " JQSTATUS_PENDING_STR ", ?, "
+						JQTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
-				stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
-				stmt.setString(4, date());
-				stmt.setString(5, submission_id);
-				stmt.setString(6,
+				stmt.setString(3, date());
+				stmt.setString(4, submission_id);
+				stmt.setString(5,
 					jobs::dumpString(problem_rpath->problem->problem_id));
 				stmt.executeUpdate();
 
-				notifyJudgeServer();
+				notifyJobServer();
 
 				return redirect("/s/" + submission_id);
 
@@ -176,7 +171,7 @@ void Contest::submit(bool admin_view) {
 			// Admin -> All problems from all subrounds
 			// Normal -> All problems from subrounds which have begun and
 			// have not ended
-			DB::Statement stmt = db_conn.prepare(admin_view ?
+			MySQL::Statement stmt = db_conn.prepare(admin_view ?
 					"SELECT id, name FROM rounds WHERE parent=? ORDER BY item"
 				: "SELECT id, name FROM rounds WHERE parent=? "
 					"AND (begins IS NULL OR begins<=?) "
@@ -187,7 +182,7 @@ void Contest::submit(bool admin_view) {
 				stmt.setString(3, current_date);
 			}
 
-			DB::Result res = stmt.executeQuery();
+			MySQL::Result res = stmt.executeQuery();
 			vector<Subround> subrounds;
 			// For performance
 			subrounds.reserve(res.rowCount());
@@ -244,12 +239,12 @@ void Contest::submit(bool admin_view) {
 			(rpath->round->ends.empty() || current_date < rpath->round->ends))))
 		{
 			// Select problems
-			DB::Statement stmt = db_conn.prepare(
+			MySQL::Statement stmt = db_conn.prepare(
 				"SELECT id, name FROM rounds WHERE parent=? ORDER BY item");
 			stmt.setString(1, rpath->round->id);
 
 			// List problems
-			DB::Result res = stmt.executeQuery();
+			MySQL::Result res = stmt.executeQuery();
 			while (res.next())
 				back_insert(buffer, "<option value=\"", res[1],
 					"\">", htmlEscape(res[2]), " (",
@@ -317,11 +312,11 @@ void Contest::deleteSubmission(const string& submission_id,
 		try {
 			SignalBlocker signal_guard;
 			// Update FINAL status, as there was no submission submission_id
-			DB::Statement stmt = db_conn.prepare(
+			MySQL::Statement stmt = db_conn.prepare(
 				"UPDATE submissions SET type=" STYPE_FINAL_STR " "
 				"WHERE user_id=? AND round_id=? AND id!=? "
 					"AND type<=" STYPE_FINAL_STR " "
-					"AND status<" SSTATUS_WAITING_STR " "
+					"AND status<" SSTATUS_PENDING_STR " "
 				"ORDER BY id DESC LIMIT 1");
 			stmt.setString(1, submission_user_id);
 			stmt.setString(2, rpath->round_id);
@@ -422,13 +417,13 @@ void Contest::submission() {
 		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
 			"status, score, name, label, first_name, last_name, username, "
 			"initial_report, final_report");
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			concat("SELECT user_id, round_id, s.type", columns, " "
 				"FROM submissions s, problems p, users u "
 				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id"));
 		stmt.setString(1, submission_id);
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (!res.next())
 			return error404();
 
@@ -457,13 +452,11 @@ void Contest::submission() {
 			if (!admin_view)
 				return error403();
 
-			// TODO: make it as 'Change type', and use CSRF protection!
+			// TODO: make it like 'Change type', and use CSRF protection!
 
-			stmt = db_conn.prepare("UPDATE submissions "
-				"SET status=" SSTATUS_WAITING_STR ", queued=? WHERE id=?");
-			stmt.setString(1, date());
-			stmt.setString(2, submission_id);
-			stmt.executeUpdate();
+			db_conn.executeUpdate("UPDATE submissions"
+				" SET status=" SSTATUS_PENDING_STR
+				" WHERE id=" + submission_id);
 
 			// Add a job to judge the submission
 			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
@@ -477,7 +470,7 @@ void Contest::submission() {
 			stmt.setString(6, jobs::dumpString(rpath->problem->problem_id));
 			stmt.executeUpdate();
 
-			notifyJudgeServer();
+			notifyJobServer();
 
 			// Redirect to Referer or submission page
 			string referer = req->headers.get("Referer");
@@ -524,7 +517,7 @@ void Contest::submission() {
 						"((SELECT id FROM submissions WHERE user_id=? "
 								"AND round_id=? AND id!=? "
 								"AND type<=" STYPE_FINAL_STR " "
-								"AND status<" SSTATUS_WAITING_STR " "
+								"AND status<" SSTATUS_PENDING_STR " "
 								"ORDER BY id DESC LIMIT 1) "
 							"UNION (SELECT 0 AS id)) x,"
 						"((SELECT id FROM submissions WHERE user_id=? "
@@ -542,7 +535,7 @@ void Contest::submission() {
 						"((SELECT id FROM submissions WHERE user_id=? "
 								"AND round_id=? "
 								"AND (id=? OR type<=" STYPE_FINAL_STR ") "
-								"AND status<" SSTATUS_WAITING_STR " "
+								"AND status<" SSTATUS_PENDING_STR " "
 								"ORDER BY id DESC LIMIT 1) "
 							"UNION (SELECT 0 AS id)) x,"
 						"((SELECT id FROM submissions WHERE user_id=? "
@@ -640,7 +633,7 @@ void Contest::submission() {
 					"/delete?/c/", round_id, "/submissions\">Delete</a>");
 		append("</div>"
 			"</div>"
-			"<table style=\"width: 100%\">"
+			"<table>"
 				"<thead>"
 					"<tr>");
 
@@ -713,9 +706,9 @@ void Contest::submissions(bool admin_view) {
 
 	append("<h3>Submission queue size: ");
 	try {
-		DB::Result res = db_conn.executeQuery(
+		MySQL::Result res = db_conn.executeQuery(
 			"SELECT COUNT(id) FROM submissions WHERE status="
-			SSTATUS_WAITING_STR);
+			SSTATUS_PENDING_STR); // TODO: job-queue is now used
 		if (res.next())
 			append(res[1]);
 
@@ -731,7 +724,7 @@ void Contest::submissions(bool admin_view) {
 		const char* param_column = (rpath->type == CONTEST ? "contest_round_id"
 			: (rpath->type == ROUND ? "parent_round_id" : "round_id"));
 
-		DB::Statement stmt = db_conn.prepare(admin_view ?
+		MySQL::Statement stmt = db_conn.prepare(admin_view ?
 				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
 					"r.name, s.status, s.score, s.type, s.user_id, "
 					"u.first_name, u.last_name, u.username "
@@ -749,7 +742,7 @@ void Contest::submissions(bool admin_view) {
 		if (!admin_view)
 			stmt.setString(2, Session::user_id);
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (res.rowCount() == 0) {
 			append("<p>There are no submissions to show</p>");
 			return;

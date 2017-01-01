@@ -338,3 +338,29 @@ function expelContestUser(contest_id, user_id, username) {
 			'No, the user may stay'))
 	);
 }
+function cancelJob(job_id) {
+	modalForm('Cancel job',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to cancel the <a href="/jobs/' + job_id +
+					'">job ' + job_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Cancel job',
+			'/jobs/' + job_id + '/cancel',
+			'The job has been canceled.', 'red',
+			'No, go back'))
+	);
+}
+function restartJob(job_id) {
+	modalForm('Restart job',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to restart the <a href="/jobs/' + job_id +
+					'">job ' + job_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Restart job',
+			'/jobs/' + job_id + '/restart',
+			'The job has been restarted.', 'orange',
+			'No, go back'))
+	);
+}

@@ -23,7 +23,7 @@ void Contest::handle() {
 	if (next_arg.empty()) {
 		try {
 			// Get available contests
-			DB::Statement stmt;
+			MySQL::Statement stmt;
 			do {
 				// Not logged in
 				if (!Session::open()) {
@@ -75,7 +75,7 @@ void Contest::handle() {
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
 				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>");
 
-			DB::Result res = stmt.executeQuery();
+			MySQL::Result res = stmt.executeQuery();
 			if (res.next()) {
 				do {
 					append("<a href=\"/c/", htmlEscape(res[1]), "\">",
@@ -257,7 +257,7 @@ void Contest::addContest() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt = db_conn.prepare("INSERT rounds"
+				MySQL::Statement stmt = db_conn.prepare("INSERT rounds"
 						"(is_public, name, owner, item, show_ranking) "
 					"SELECT ?, ?, ?, COALESCE(MAX(item)+1, 1), ? FROM rounds "
 						"WHERE parent IS NULL");
@@ -269,13 +269,7 @@ void Contest::addContest() {
 				if (stmt.executeUpdate() != 1)
 					THROW("Failed to insert round");
 
-				DB::Result res = db_conn.executeQuery(
-					"SELECT LAST_INSERT_ID()");
-
-				if (res.next())
-					return redirect("/c/" + res[1]);
-
-				return redirect("/c");
+				return redirect("/c/" + db_conn.lastInsertId());
 
 			} catch (const std::exception& e) {
 				ERRLOG_CATCH(e);
@@ -339,7 +333,7 @@ void Contest::addRound() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt = db_conn.prepare(
+				MySQL::Statement stmt = db_conn.prepare(
 					"INSERT rounds (parent, name, owner, item, "
 						"visible, begins, ends, full_results) "
 					"SELECT ?, ?, 0, COALESCE(MAX(item)+1, 1), ?, ?, ?, ? "
@@ -372,13 +366,7 @@ void Contest::addRound() {
 				if (stmt.executeUpdate() != 1)
 					THROW("Failed to insert round");
 
-				DB::Result res = db_conn.executeQuery(
-					"SELECT LAST_INSERT_ID()");
-
-				if (res.next())
-					return redirect("/c/" + res[1]);
-
-				return redirect("/c/" + rpath->round_id);
+				return redirect("/c/" + db_conn.lastInsertId());
 
 			} catch (const std::exception& e) {
 				ERRLOG_CATCH(e);
@@ -437,383 +425,11 @@ void Contest::addRound() {
 }
 
 void Contest::addProblem() {
-	if (!rpath->admin_access)
-		return error403();
-
-	FormValidator fv(req->form_data);
-	string name, memory_limit, user_package_file, time_limit;
-	bool force_auto_limit = true, ignore_simfile = false;
-
-	if (req->method == server::HttpRequest::POST) {
-		if (fv.get("csrf_token") != Session::csrf_token)
-			return error403();
-
-		string package_file;
-
-		// Validate all fields
-		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
-
-		fv.validate(memory_limit, "memory-limit", "Memory limit",
-			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
-			"Memory limit: invalid value");
-
-		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
-			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
-		// Time limit in usec
-		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) * 1'000'000);
-		if (time_limit.size() && tl < 400000)
-			fv.addError("Global time limit cannot be lower than 0.4 s");
-
-		force_auto_limit = fv.exist("force-auto-limit");
-
-		ignore_simfile = fv.exist("ignore-simfile");
-
-		fv.validateNotBlank(user_package_file, "package", "Package");
-
-		fv.validateFilePathNotEmpty(package_file, "package", "Package");
-
-		// If all fields are OK
-		if (fv.noErrors())
-			try {
-				// Rename package file that it will end with original extension
-				string new_package_file = concat(package_file, '.',
-					(hasSuffix(user_package_file, ".tar.gz") ? "tar.gz"
-						: getExtension(user_package_file)));
-				if (link(package_file.c_str(), new_package_file.c_str()))
-					THROW("Error: link('", package_file, "', '",
-						new_package_file, "')", error(errno));
-
-				FileRemover file_rm(new_package_file);
-
-				// Construct Simfile
-				sim::Conver conver;
-				sim::Simfile sf;
-				try {
-					conver.setVerbosity(true);
-					conver.extractPackage(new_package_file);
-
-					// Set Conver options
-					sim::Conver::Options opts;
-					opts.name = name;
-					opts.force_auto_time_limits_setting = force_auto_limit;
-					opts.ignore_simfile = ignore_simfile;
-					opts.compilation_time_limit = SOLUTION_COMPILATION_TIME_LIMIT;
-					opts.compilation_errors_max_length =
-						COMPILATION_ERRORS_MAX_LENGTH;
-					opts.proot_path = PROOT_PATH;
-
-					if (memory_limit.size())
-						opts.memory_limit = strtoull(memory_limit);
-
-					if (time_limit.size())
-						opts.global_time_limit = tl;
-
-					sf = conver.constructFullSimfile(opts);
-				} catch (const std::exception& e) {
-					fv.addError(concat("Conver failed: ", e.what()));
-					goto form;
-				}
-
-				// Put the Simfile in the package
-				BLOCK_SIGNALS(putFileContents(
-					conver.unpackedPackagePath() + "Simfile", sf.dump()));
-
-				// 'Transaction' begin
-				// Insert problem
-				DB::Statement stmt = db_conn.prepare(
-					"INSERT problems (name, label, owner, added) "
-						"VALUES('', '', 0, ?)");
-				stmt.setString(1, date());
-				if (1 != stmt.executeUpdate())
-					THROW("Failed to insert problem");
-
-				// Get problem_id
-				DB::Result res = db_conn.executeQuery(
-					"SELECT LAST_INSERT_ID()");
-				if (!res.next())
-					THROW("Failed to get LAST_INSERT_ID()");
-
-				string problem_id = res[1];
-
-				// Insert round (parent 0 - round will not be visible in case of
-				// error)
-				if (1 != db_conn.executeUpdate(
-					"INSERT rounds (parent, name, owner, item) "
-					"VALUES(0, '', 0, 0)"))
-				{
-					THROW("Failed to insert round");
-				}
-
-				// Get round_id
-				res = db_conn.executeQuery("SELECT LAST_INSERT_ID()");
-				if (!res.next())
-					THROW("Failed to get LAST_INSERT_ID()");
-
-				string round_id = res[1];
-
-				// Move package folder to problems/
-				string package_dir = concat("problems/", problem_id);
-				if (::move(conver.unpackedPackagePath(), package_dir, false))
-					THROW("Error: move('", conver.unpackedPackagePath(), "', '",
-						package_dir, "')", error(errno));
-
-				// Commit - update problem and round
-				stmt = db_conn.prepare(
-					"UPDATE problems p, rounds r,"
-							"(SELECT COALESCE(MAX(item)+1, 1) x FROM rounds "
-								"WHERE parent=?) t "
-						"SET p.name=?, p.label=?, p.owner=?, "
-							"parent=?, grandparent=?, r.name=?, item=t.x, "
-							"problem_id=? "
-						"WHERE p.id=? AND r.id=?");
-
-				stmt.setString(1, rpath->round->id);
-				stmt.setString(2, sf.name);
-				stmt.setString(3, sf.label);
-				stmt.setString(4, Session::user_id);
-				stmt.setString(5, rpath->round->id);
-				stmt.setString(6, rpath->contest->id);
-				stmt.setString(7, sf.name);
-				stmt.setString(8, problem_id);
-				stmt.setString(9, problem_id);
-				stmt.setString(10, round_id);
-
-				if (2 != stmt.executeUpdate())
-					THROW("Failed to update");
-
-				return redirect(concat("/c/", round_id, "/edit"));
-
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				fv.addError("Internal server error");
-			}
-	}
-
- form:
-	contestTemplate("Add problem");
-	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">"
-			"<h1>Add problem</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">"
-				// Name
-				"<div class=\"field-group\">"
-					"<label>Problem name</label>"
-					"<input type=\"text\" name=\"name\" value=\"",
-						htmlEscape(name), "\" size=\"24\""
-					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
-					"placeholder=\"Detect from Simfile\">"
-				"</div>"
-				// Memory limit
-				"<div class=\"field-group\">"
-					"<label>Memory limit [MB]</label>"
-					"<input type=\"text\" name=\"memory-limit\" value=\"",
-						htmlEscape(memory_limit), "\" size=\"24\" "
-					"placeholder=\"Detect from Simfile\">"
-				"</div>"
-				// Global time limit
-				"<div class=\"field-group\">"
-					"<label>Global time limit [s] (for each test)</label>"
-					"<input type=\"text\" name=\"time-limit\" value=\"",
-						htmlEscape(time_limit), "\" size=\"24\" "
-					"placeholder=\"No global time limit\">"
-				"</div>"
-				// Force auto limit
-				"<div class=\"field-group\">"
-					"<label>Force automatic time limit setting</label>"
-					"<input type=\"checkbox\" name=\"force-auto-limit\"",
-						(force_auto_limit ? " checked" : ""), ">"
-				"</div>"
-				// Ignore Simfile
-				"<div class=\"field-group\">"
-					"<label>Ignore Simfile</label>"
-					"<input type=\"checkbox\" name=\"ignore-simfile\"",
-						(ignore_simfile ? " checked" : ""), ">"
-				"</div>"
-				// Package
-				"<div class=\"field-group\">"
-					"<label>Package</label>"
-					"<input type=\"file\" name=\"package\" required>"
-				"</div>"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
-			"</form>"
-		"</div>");
+	return error501();
 }
 
 void Contest::reuploadProblem() {
-	if (!rpath->admin_access)
-		return error403();
-
-	FormValidator fv(req->form_data);
-	string name, memory_limit, user_package_file, time_limit;
-	bool force_auto_limit = true, ignore_simfile = false;
-
-	if (req->method == server::HttpRequest::POST) {
-		if (fv.get("csrf_token") != Session::csrf_token)
-			return error403();
-
-		string package_file;
-
-		// Validate all fields
-		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
-
-		fv.validate(memory_limit, "memory-limit", "Memory limit",
-			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
-			"Memory limit: invalid value");
-
-		fv.validate<bool(const StringView&)>(time_limit, "time-limit",
-			"Time limit", isReal, "Time limit: invalid value");// TODO: add length limit
-		// Time limit in usec
-		uint64_t tl = round(strtod(time_limit.c_str(), nullptr) * 1'000'000);
-		if (time_limit.size() && tl < 400000)
-			fv.addError("Global time limit cannot be lower than 0.4 s");
-
-		force_auto_limit = fv.exist("force-auto-limit");
-
-		ignore_simfile = fv.exist("ignore-simfile");
-
-		fv.validateNotBlank(user_package_file, "package", "Package");
-
-		fv.validateFilePathNotEmpty(package_file, "package", "Package");
-
-		// If all fields are OK
-		if (fv.noErrors())
-			try {
-				// Rename package file that it will end with original extension
-				string new_package_file = concat(package_file, '.',
-					(hasSuffix(user_package_file, ".tar.gz") ? "tar.gz"
-						: getExtension(user_package_file)));
-				if (link(package_file.c_str(), new_package_file.c_str()))
-					THROW("Error: link('", package_file, "', '",
-						new_package_file, "')", error(errno));
-
-				FileRemover file_rm(new_package_file);
-
-				// Construct Simfile
-				sim::Conver conver;
-				sim::Simfile sf;
-				try {
-					conver.setVerbosity(true);
-					conver.extractPackage(new_package_file);
-
-					// Set Conver options
-					sim::Conver::Options opts;
-					opts.name = name;
-					opts.force_auto_time_limits_setting = force_auto_limit;
-					opts.ignore_simfile = ignore_simfile;
-					opts.compilation_time_limit = SOLUTION_COMPILATION_TIME_LIMIT;
-					opts.compilation_errors_max_length =
-						COMPILATION_ERRORS_MAX_LENGTH;
-					opts.proot_path = PROOT_PATH;
-
-					if (memory_limit.size())
-						opts.memory_limit = strtoull(memory_limit);
-
-					if (time_limit.size())
-						opts.global_time_limit = tl;
-
-					sf = conver.constructFullSimfile(opts);
-				} catch (const std::exception& e) {
-					fv.addError(concat("Conver failed: ", e.what()));
-					goto form;
-				}
-
-				// Put the Simfile in the package
-				BLOCK_SIGNALS(putFileContents(
-					conver.unpackedPackagePath() + "Simfile", sf.dump()));
-
-				string problem_id = rpath->problem->problem_id;
-
-				// Back old package up
-				for (uint i = 0; ; ++i) {
-					StringBuff<PATH_MAX> new_name("problems/", problem_id, '.',
-						toStr(i));
-					if (!::move(StringBuff<PATH_MAX>("problems/", problem_id),
-						new_name))
-					{
-						break;
-					}
-
-					if (errno != EEXIST && errno != ENOTEMPTY)
-						THROW("Error: move('", StringBuff<PATH_MAX>("problems/", problem_id), "', '",
-							new_name, "')", error(errno));
-				}
-
-				// Move package folder to problems/
-				string package_dir = concat("problems/", problem_id);
-				if (::move(conver.unpackedPackagePath(), package_dir, false))
-					THROW("Error: move('", conver.unpackedPackagePath(), "', '",
-						package_dir, "')", error(errno));
-
-				// Commit - update problem and round
-				DB::Statement stmt = db_conn.prepare(
-					"UPDATE problems p, rounds r"
-						" SET p.name=?, p.label=?, p.owner=?, r.name=?"
-						" WHERE p.id=? AND r.id=?");
-
-				stmt.setString(1, sf.name);
-				stmt.setString(2, sf.label);
-				stmt.setString(3, Session::user_id);
-				stmt.setString(4, sf.name);
-				stmt.setString(5, problem_id);
-				stmt.setString(6, rpath->round_id);
-				stmt.executeUpdate();
-
-				return redirect(concat("/c/", rpath->round_id, "/edit"));
-
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				fv.addError("Internal server error");
-			}
-	}
-
- form:
-	contestTemplate("Reupload problem");
-	printRoundPath();
-	append(fv.errors(), "<div class=\"form-container\">"
-			"<h1>Reupload problem</h1>"
-			"<form method=\"post\" enctype=\"multipart/form-data\">"
-				// Name
-				"<div class=\"field-group\">"
-					"<label>Problem name</label>"
-					"<input type=\"text\" name=\"name\" value=\"",
-						htmlEscape(name), "\" size=\"24\""
-					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
-					"placeholder=\"Detect from Simfile\">"
-				"</div>"
-				// Memory limit
-				"<div class=\"field-group\">"
-					"<label>Memory limit [MB]</label>"
-					"<input type=\"text\" name=\"memory-limit\" value=\"",
-						htmlEscape(memory_limit), "\" size=\"24\" "
-					"placeholder=\"Detect from Simfile\">"
-				"</div>"
-				// Global time limit
-				"<div class=\"field-group\">"
-					"<label>Global time limit [s] (for each test)</label>"
-					"<input type=\"text\" name=\"time-limit\" value=\"",
-						htmlEscape(time_limit), "\" size=\"24\" "
-					"placeholder=\"No global time limit\">"
-				"</div>"
-				// Force auto limit
-				"<div class=\"field-group\">"
-					"<label>Force automatic time limit setting</label>"
-					"<input type=\"checkbox\" name=\"force-auto-limit\"",
-						(force_auto_limit ? " checked" : ""), ">"
-				"</div>"
-				// Ignore Simfile
-				"<div class=\"field-group\">"
-					"<label>Ignore Simfile</label>"
-					"<input type=\"checkbox\" name=\"ignore-simfile\"",
-						(ignore_simfile ? " checked" : ""), ">"
-				"</div>"
-				// Package
-				"<div class=\"field-group\">"
-					"<label>Package</label>"
-					"<input type=\"file\" name=\"package\" required>"
-				"</div>"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Reupload\">"
-			"</form>"
-		"</div>");
+	return error501();
 }
 
 void Contest::editContest() {
@@ -839,7 +455,7 @@ void Contest::editContest() {
 		show_ranking = fv.exist("show-ranking");
 
 		try {
-			DB::Statement stmt;
+			MySQL::Statement stmt;
 			// Check if user has the ability to make contest public
 			if (is_public && Session::user_type > UTYPE_ADMIN
 				&& !rpath->contest->is_public)
@@ -878,11 +494,11 @@ void Contest::editContest() {
 	}
 
 	// Get contest information
-	DB::Statement stmt = db_conn.prepare(
+	MySQL::Statement stmt = db_conn.prepare(
 		"SELECT u.username FROM rounds r, users u WHERE r.id=? AND owner=u.id");
 	stmt.setString(1, rpath->round_id);
 
-	DB::Result res = stmt.executeQuery();
+	MySQL::Result res = stmt.executeQuery();
 	if (!res.next())
 		THROW("Failed to get contest and owner info");
 
@@ -964,7 +580,7 @@ void Contest::editRound() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt = db_conn.prepare("UPDATE rounds "
+				MySQL::Statement stmt = db_conn.prepare("UPDATE rounds "
 					"SET name=?, visible=?, begins=?, ends=?, full_results=? "
 					"WHERE id=?");
 				stmt.setString(1, name);
@@ -1074,11 +690,9 @@ void Contest::editProblem() {
 	// Rejudge
 	if (next_arg == "rejudge") {
 		try {
-			DB::Statement stmt = db_conn.prepare("UPDATE submissions "
-				"SET status=" SSTATUS_WAITING_STR ", queued=? "
-				"WHERE problem_id=?");
-			stmt.setString(1, date());
-			stmt.setString(2, rpath->problem->problem_id);
+			MySQL::Statement stmt = db_conn.prepare("UPDATE submissions "
+				"SET status=" SSTATUS_PENDING_STR " WHERE problem_id=?");
+			stmt.setString(1, rpath->problem->problem_id);
 			stmt.executeUpdate();
 
 			// Add jobs to rejudge the submissions
@@ -1094,7 +708,7 @@ void Contest::editProblem() {
 			stmt.setString(6, rpath->problem->problem_id);
 			stmt.executeUpdate();
 
-			notifyJudgeServer();
+			notifyJobServer();
 
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
@@ -1229,10 +843,10 @@ void Contest::editProblem() {
 				}
 
 				// Update database
-				DB::Statement stmt = db_conn.prepare(
-					"UPDATE rounds r, problems p "
-					"SET r.name=?, p.name=?, p.label=? "
-					"WHERE r.id=? AND p.id=?");
+				MySQL::Statement stmt = db_conn.prepare(
+					"UPDATE rounds r, problems p"
+					" SET r.name=?, p.name=?, p.label=?"
+					" WHERE r.id=? AND p.id=?");
 				stmt.setString(1, round_name);
 				stmt.setString(2, name);
 				stmt.setString(3, label);
@@ -1350,7 +964,7 @@ void Contest::deleteContest() {
 
 			SignalBlocker signal_guard;
 			// Delete submissions
-			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
+			MySQL::Statement stmt = db_conn.prepare("DELETE FROM submissions "
 				"WHERE contest_round_id=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
@@ -1364,7 +978,7 @@ void Contest::deleteContest() {
 			// Delete files (from disk)
 			stmt = db_conn.prepare("SELECT * FROM files WHERE round_id=?");
 			stmt.setString(1, rpath->round_id);
-			DB::Result res {stmt.executeQuery()};
+			MySQL::Result res {stmt.executeQuery()};
 			while (res.next())
 				// Ignore errors - there is no goo way to deal with them
 				(void)unlink(concat("files/", res[1]));
@@ -1423,7 +1037,7 @@ void Contest::deleteRound() {
 
 			SignalBlocker signal_guard;
 			// Delete submissions
-			DB::Statement stmt = db_conn.prepare("DELETE FROM submissions "
+			MySQL::Statement stmt = db_conn.prepare("DELETE FROM submissions "
 					"WHERE parent_round_id=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
@@ -1475,7 +1089,7 @@ void Contest::deleteProblem() {
 
 			SignalBlocker signal_guard;
 			// Delete submissions
-			DB::Statement stmt = db_conn.prepare(
+			MySQL::Statement stmt = db_conn.prepare(
 				"DELETE FROM submissions WHERE round_id=?");
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
@@ -1580,7 +1194,7 @@ void Contest::users() {
 					return response("400 Bad Request", fv.errors());
 
 				// Add new user
-				DB::Statement stmt = db_conn.prepare(concat("INSERT IGNORE "
+				MySQL::Statement stmt = db_conn.prepare(concat("INSERT IGNORE "
 						"contests_users (user_id, contest_id, mode) "
 					"SELECT id, ?, ? FROM users WHERE ",
 						(user_value_type == UID ? "id=?" : "username=?")));
@@ -1616,7 +1230,7 @@ void Contest::users() {
 				if (!fv.noErrors())
 					return response("400 Bad Request", fv.errors());
 
-				DB::Statement stmt = db_conn.prepare("UPDATE contests_users "
+				MySQL::Statement stmt = db_conn.prepare("UPDATE contests_users "
 					"SET mode=? WHERE user_id=? AND contest_id=?");
 				stmt.setUInt(1, mode);
 				stmt.setString(2, uid);
@@ -1637,7 +1251,7 @@ void Contest::users() {
 				if (!fv.noErrors())
 					return response("400 Bad Request", fv.errors());
 
-				DB::Statement stmt = db_conn.prepare(
+				MySQL::Statement stmt = db_conn.prepare(
 					"DELETE FROM contests_users "
 					"WHERE user_id=? AND contest_id=?");
 				stmt.setString(1, uid);
@@ -1662,13 +1276,13 @@ void Contest::users() {
 			"onclick=\"addContestUser(", rpath->round_id, ")\">Add user"
 		"</button>");
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT id, username, first_name, last_name, mode "
 			"FROM users, contests_users "
 			"WHERE contest_id=? AND id=user_id "
 			"ORDER BY mode DESC, id ASC");
 		stmt.setString(1, rpath->round_id);
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 
 		append("<table class=\"contest-users\">"
 			"<thead>"
@@ -1798,8 +1412,8 @@ void Contest::ranking(bool admin_view) {
 	};
 
 	try {
-		DB::Statement stmt;
-		DB::Result res;
+		MySQL::Statement stmt;
+		MySQL::Result res;
 		string current_time = date();
 
 		// Select rounds

@@ -17,15 +17,17 @@ protected:
 private:
 	enum Permissions : uint {
 		PERM_NONE = 0,
-		PERM_VIEW = 1,
-		PERM_VIEW_ALL = 2,
-		PERM_CANCEL = 4
+		PERM_VIEW = 1, // allowed to view the job
+		PERM_VIEW_ALL = 2, // allowed to view all the jobs
+		PERM_CANCEL = 4,
+		PERM_RESTART = 8
 	};
 
 	std::string job_id;
 	Permissions perms;
 
-	Permissions getPermissions(const std::string& owner_id);
+	Permissions getPermissions(const std::string& owner_id,
+		JobQueueStatus job_status);
 
 	void jobsTemplate(const StringView& title,
 		const StringView& styles = {}, const StringView& scripts = {})
@@ -40,5 +42,9 @@ protected:
 private:
 	void job();
 
+	void downloadReport(std::string data_preview);
+
 	void cancelJob();
+
+	void restartJob(JobQueueType job_type, StringView job_info);
 };

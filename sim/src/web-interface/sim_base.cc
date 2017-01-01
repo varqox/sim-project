@@ -6,8 +6,8 @@ string SimBase::submissionStatusAsTd(SubmissionStatus status,
 	bool show_final)
 {
 	// Fatal
-	if (status >= SubmissionStatus::WAITING) {
-		if (status == SubmissionStatus::WAITING)
+	if (status >= SubmissionStatus::PENDING) {
+		if (status == SubmissionStatus::PENDING)
 			return "<td class=\"status\">Pending</td>";
 
 		if (status == SubmissionStatus::COMPILATION_ERROR)
@@ -84,8 +84,8 @@ string SimBase::submissionStatusCSSClass(SubmissionStatus status,
 	bool show_final)
 {
 	// Fatal
-	if (status >= SubmissionStatus::WAITING) {
-		if (status == SubmissionStatus::WAITING)
+	if (status >= SubmissionStatus::PENDING) {
+		if (status == SubmissionStatus::PENDING)
 			return "status";
 
 		if (status == SubmissionStatus::COMPILATION_ERROR)

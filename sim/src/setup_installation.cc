@@ -1,5 +1,6 @@
 #include <sim/constants.h>
-#include <sim/db.h>
+#include <sim/mysql.h>
+#include <sim/sqlite.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
 #include <simlib/utilities.h>
@@ -76,9 +77,9 @@ static_assert(meta::is_sorted(tables), "Needed for binary search");
 
 struct TryToCreateTable {
 	bool error = false;
-	DB::Connection& conn_;
+	MySQL::Connection& conn_;
 
-	explicit TryToCreateTable(DB::Connection& conn) : conn_(conn) {}
+	explicit TryToCreateTable(MySQL::Connection& conn) : conn_(conn) {}
 
 	template<class Func>
 	void operator()(const char* table_name, const std::string& query, Func&& f)
@@ -113,10 +114,14 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	DB::Connection conn;
+	SQLite::Connection sqlite_db;
+	MySQL::Connection conn;
 	try {
 		// Get connection
-		conn = DB::createConnectionUsingPassFile(
+		sqlite_db = SQLite::Connection(
+			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
+			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+		conn = MySQL::createConnectionUsingPassFile(
 			concat(argv[1], "/.db.config"));
 
 	} catch (const std::exception& e) {
@@ -159,7 +164,7 @@ int main(int argc, char **argv) {
 			fillRandomly(salt_bin, sizeof(salt_bin));
 			string salt = toHex(salt_bin, sizeof(salt_bin));
 
-			DB::Statement stmt(conn.prepare(
+			MySQL::Statement stmt(conn.prepare(
 				"INSERT IGNORE users (id, username, first_name, last_name, email, "
 					"salt, password, type) "
 				"VALUES (" SIM_ROOT_UID ", 'sim', 'sim', 'sim', 'sim@sim', ?, "
@@ -242,19 +247,17 @@ int main(int argc, char **argv) {
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`user_id` int unsigned NOT NULL,"
 			"`problem_id` int unsigned NOT NULL,"
-			"`round_id` int unsigned NOT NULL,"
-			"`parent_round_id` int unsigned NOT NULL,"
-			"`contest_round_id` int unsigned NOT NULL,"
+			"`round_id` int unsigned NULL,"
+			"`parent_round_id` int unsigned NULL,"
+			"`contest_round_id` int unsigned NULL,"
 			"`type` TINYINT NULL DEFAULT NULL,"
 			"`status` TINYINT NOT NULL DEFAULT " SSTATUS_VOID_STR ","
 			"`submit_time` datetime NOT NULL,"
 			"`score` int NULL DEFAULT NULL,"
-			"`queued` datetime NOT NULL,"
+			"`last_judgment` datetime NOT NULL,"
 			"`initial_report` mediumblob NOT NULL,"
 			"`final_report` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
-			// Judge server
-			"KEY (status, queued),"
 			// Update type, delete account
 			"KEY (user_id, round_id, type, status, id),"
 			// Contest::submissions() - view all
@@ -303,8 +306,19 @@ int main(int argc, char **argv) {
 			"KEY (round_id, modified)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	if (try_to_create_table.error)
+	// Create SQLite tables
+	try {
+		sqlite_db.execute("PRAGMA journal_mode=WAL");
+		sqlite_db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS problems"
+			" USING fts5(is_public, name, label)");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
 		return 6;
+	}
+
+	if (try_to_create_table.error)
+		return 7;
 
 	return 0;
 }

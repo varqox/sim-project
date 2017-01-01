@@ -86,12 +86,12 @@ void User::handle() {
 		return listUsers();
 
 	// Get user information
-	DB::Statement stmt = db_conn.prepare(
+	MySQL::Statement stmt = db_conn.prepare(
 		"SELECT username, first_name, last_name, email, type "
 		"FROM users WHERE id=?");
 	stmt.setString(1, user_id);
 
-	DB::Result res = stmt.executeQuery();
+	MySQL::Result res = stmt.executeQuery();
 	if (!res.next())
 		return error404();
 
@@ -144,11 +144,11 @@ void User::login() {
 
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt = db_conn.prepare(
+				MySQL::Statement stmt = db_conn.prepare(
 					"SELECT id, salt, password FROM `users` WHERE username=?");
 				stmt.setString(1, username);
 
-				DB::Result res = stmt.executeQuery();
+				MySQL::Result res = stmt.executeQuery();
 				while (res.next()) {
 					if (!slowEqual(sha3_512(res[2] + password), res[3]))
 						break;
@@ -239,7 +239,7 @@ void User::signUp() {
 				fillRandomly(salt_bin, sizeof(salt_bin));
 				string salt = toHex(salt_bin, sizeof(salt_bin));
 
-				DB::Statement stmt = db_conn.prepare(
+				MySQL::Statement stmt = db_conn.prepare(
 					"INSERT IGNORE `users` (username, "
 							"first_name, last_name, email, salt, password) "
 					"VALUES(?, ?, ?, ?, ?, ?)");
@@ -252,13 +252,10 @@ void User::signUp() {
 
 				// User account successfully created
 				if (stmt.executeUpdate() == 1) {
-					DB::Result res =
-						db_conn.executeQuery("SELECT LAST_INSERT_ID()");
-					if (!res.next())
-						THROW("Failed to get LAST_INSERT_ID()");
+					string new_uid = db_conn.lastInsertId();
 
-					Session::createAndOpen(res[1]);
-					stdlog("New user: ", res[1], " -> `", username, '`');
+					Session::createAndOpen(new_uid);
+					stdlog("New user: ", new_uid, " -> `", username, '`');
 
 					return redirect("/");
 				}
@@ -337,10 +334,10 @@ void User::listUsers() {
 	baseTemplate("Users list", "body{margin-left:30px}");
 	append("<h1>Users</h1>");
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT id, username, first_name, last_name, email, type "
 			"FROM users ORDER BY id");
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 
 		append("<table class=\"users\">"
 			"<thead>"
@@ -494,7 +491,7 @@ void User::editProfile() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt = db_conn.prepare("UPDATE IGNORE users "
+				MySQL::Statement stmt = db_conn.prepare("UPDATE IGNORE users "
 					"SET username=?, first_name=?, last_name=?, email=?, "
 					"type=? WHERE id=?");
 				stmt.setString(1, new_username);
@@ -655,11 +652,11 @@ void User::changePassword() {
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt = db_conn.prepare(
+				MySQL::Statement stmt = db_conn.prepare(
 					"SELECT salt, password FROM users WHERE id=?");
 				stmt.setString(1, user_id);
 
-				DB::Result res = stmt.executeQuery();
+				MySQL::Result res = stmt.executeQuery();
 				if (!res.next()) {
 					fv.addError("Cannot get user password");
 
@@ -731,7 +728,7 @@ void User::deleteAccount() {
 			SignalBlocker signal_guard;
 			// Change contests' and problems' owner and jobs' creator id to
 			// SIM_ROOT_UID
-			DB::Statement stmt = db_conn.prepare(
+			MySQL::Statement stmt = db_conn.prepare(
 				"UPDATE rounds r, problems p, job_queue j"
 				" SET r.owner=" SIM_ROOT_UID ", p.owner=" SIM_ROOT_UID ","
 					" j.creator=" SIM_ROOT_UID
@@ -822,10 +819,10 @@ void User::printUserSubmissions(uint limit) {
 		if (limit > 0)
 			back_insert(query, " LIMIT ", toStr(limit));
 
-		DB::Statement stmt = db_conn.prepare(query);
+		MySQL::Statement stmt = db_conn.prepare(query);
 		stmt.setString(1, user_id);
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (res.rowCount() == 0) {
 			append("<p>There are no submissions to show</p>");
 			return;

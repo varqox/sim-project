@@ -91,7 +91,7 @@ void Problemset::handle() {
 	// List available problems
 	bool show_owner = (perms & PERM_SEE_OWNER);
 	try {
-		DB::Statement stmt;
+		MySQL::Statement stmt;
 		if (next_arg == "my") {
 			show_owner = false;
 			stmt = db_conn.prepare("SELECT id, name, label, added, is_public"
@@ -120,7 +120,7 @@ void Problemset::handle() {
 				" owner FROM problems WHERE is_public=1 ORDER BY id");
 		}
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (!res.next()) {
 			append("There are no problems to show...");
 			return;
@@ -189,11 +189,11 @@ void Problemset::problemStatement(StringView problem_id) {
 	ConfigFile cf;
 	cf.addVars("statement");
 	try {
-		DB::Statement stmt =
+		MySQL::Statement stmt =
 			db_conn.prepare("SELECT simfile FROM problems WHERE id=?");
 		stmt.setString(1, problem_id.to_string());
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (res.next())
 			cf.loadConfigFromString(res[1]);
 		else
@@ -226,7 +226,8 @@ void Problemset::addProblem() {
 
 	FormValidator fv(req->form_data);
 	string name, label, memory_limit, user_package_file, global_time_limit;
-	bool force_auto_limit = true, ignore_simfile = false;
+	bool force_auto_limit = true, ignore_simfile = false,
+		public_problem = false;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
@@ -256,6 +257,8 @@ void Problemset::addProblem() {
 
 		ignore_simfile = fv.exist("ignore-simfile");
 
+		public_problem = fv.exist("public-problem");
+
 		fv.validateNotBlank(user_package_file, "package", "Package");
 
 		fv.validateFilePathNotEmpty(package_file, "package", "Package");
@@ -266,32 +269,29 @@ void Problemset::addProblem() {
 				jobs::AddProblemInfo ap_info {
 					name,
 					label,
-					strtoull(memory_limit.c_str()) << 20,
+					strtoull(memory_limit.c_str()),
 					gtl,
 					force_auto_limit,
-					ignore_simfile
+					ignore_simfile,
+					public_problem
 				};
 
-				DB::Statement stmt {db_conn.prepare(
+				MySQL::Statement stmt {db_conn.prepare(
 					"INSERT job_queue (creator, priority, type, added, info,"
 						" data) "
-					"VALUES(?, ?, ?, ?, ?, '')")};
+					"VALUES(?, ?, " JQTYPE_ADD_PROBLEM_STR ", ?, ?, '')")};
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, priority(JobQueueType::ADD_PROBLEM));
-				stmt.setUInt(3, static_cast<uint>(JobQueueType::ADD_PROBLEM));
-				stmt.setString(4, date());
-				stmt.setString(5, ap_info.dump());
+				stmt.setString(3, date());
+				stmt.setString(4, ap_info.dump());
 				stmt.executeUpdate();
 
-				DB::Result res {db_conn.executeQuery("SELECT LAST_INSERT_ID()")};
-				if (!res.next())
-					THROW("Failed to get LAST_INSERT_ID()");
-
-				string jobid = res[1];
+				string jobid = db_conn.lastInsertId();
 
 				// Move package file that it will become a job's file
 				{
-					StringBuff<PATH_MAX> new_path {"jobs_files/", jobid, ".zip"};
+					StringBuff<PATH_MAX> new_path
+						{"jobs_files/", jobid, ".zip"};
 					if (::move(package_file, new_path))
 						THROW("Error: link(`", package_file, "`, `", new_path,
 							"`)", error(errno));
@@ -305,6 +305,7 @@ void Problemset::addProblem() {
 				if (1 != rc)
 					THROW("Failed to update");
 
+				notifyJobServer();
 				return redirect(concat("/jobs/", jobid));
 
 			} catch (const std::exception& e) {
@@ -364,6 +365,12 @@ void Problemset::addProblem() {
 					"<label>Package [ZIP file]</label>"
 					"<input type=\"file\" name=\"package\" required>"
 				"</div>"
+				// Public problem?
+				"<div class=\"field-group\">"
+					"<label>Public problem</label>"
+					"<input type=\"checkbox\" name=\"public-problem\"",
+						(public_problem ? " checked" : ""), ">"
+				"</div>"
 				"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
 			"</form>"
 		"</div>");
@@ -372,12 +379,12 @@ void Problemset::addProblem() {
 void Problemset::problem() {
 	// Fetch the problem info
 	try {
-		DB::Statement stmt = db_conn.prepare("SELECT name, label, owner, added,"
-				" simfile, is_public, username, type"
+		MySQL::Statement stmt = db_conn.prepare("SELECT name, label, owner,"
+				" added, simfile, is_public, username, type"
 			" FROM problems p, users u WHERE p.owner=u.id AND p.id=?");
 		stmt.setString(1, problem_id_);
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (!res.next())
 			return error404();
 

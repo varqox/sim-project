@@ -17,7 +17,7 @@ bool Session::open() {
 		return false;
 
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 				"SELECT csrf_token, user_id, data, type, username, ip, "
 					"user_agent "
 				"FROM session s, users u "
@@ -26,7 +26,7 @@ bool Session::open() {
 		stmt.setString(2, date("%Y-%m-%d %H:%M:%S",
 			time(nullptr) - SESSION_MAX_LIFETIME));
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (res.next()) {
 			csrf_token = res[1];
 			user_id = res[2];
@@ -72,7 +72,7 @@ void Session::createAndOpen(const string& _user_id) {
 
 	csrf_token = generateId(SESSION_CSRF_TOKEN_LEN);
 
-	DB::Statement stmt = db_conn.prepare("INSERT IGNORE session "
+	MySQL::Statement stmt = db_conn.prepare("INSERT IGNORE session "
 			"(id, csrf_token, user_id, data, ip, user_agent, time) "
 			"VALUES(?,?,?,'',?,?,?)");
 	stmt.setString(2, csrf_token);
@@ -98,7 +98,8 @@ void Session::destroy() {
 		return;
 
 	try {
-		DB::Statement stmt = db_conn.prepare("DELETE FROM session WHERE id=?");
+		MySQL::Statement stmt
+			{db_conn.prepare("DELETE FROM session WHERE id=?")};
 		stmt.setString(1, sid);
 		stmt.executeUpdate();
 
@@ -117,7 +118,7 @@ void Session::close() {
 
 	is_open = false;
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"UPDATE session SET data=? WHERE id=?");
 		stmt.setString(1, data);
 		stmt.setString(2, sid);

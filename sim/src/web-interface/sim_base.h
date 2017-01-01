@@ -5,20 +5,20 @@
 
 #include <sim/constants.h>
 #include <sim/cpp_syntax_highlighter.h>
-#include <sim/db.h>
+#include <sim/mysql.h>
 #include <simlib/parsers.h>
 #include <utime.h>
 
 class SimBase {
 protected:
-	DB::Connection db_conn;
+	MySQL::Connection db_conn;
 	std::string client_ip; // TODO: put in request?
 	const server::HttpRequest* req = nullptr;
 	server::HttpResponse resp;
 	RequestURIParser url_args {""};
 	CppSyntaxHighlighter cpp_syntax_highlighter;
 
-	SimBase() : db_conn(DB::createConnectionUsingPassFile(".db.config")) {}
+	SimBase() : db_conn(MySQL::createConnectionUsingPassFile(".db.config")) {}
 
 	SimBase(const SimBase&) = delete;
 	SimBase(SimBase&&) = delete;
@@ -41,9 +41,9 @@ protected:
 		std::string response_body = {}) = 0;
 
 
-	// Notifies judge server that there are submissions to judge
-	static void notifyJudgeServer() noexcept {
-		utime("judge-machine.notify", nullptr);
+	// Notifies the Job server that there are jobs to do
+	static void notifyJobServer() noexcept {
+		utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
 	}
 
 	static std::string submissionStatusAsTd(SubmissionStatus status,

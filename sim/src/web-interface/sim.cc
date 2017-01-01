@@ -260,28 +260,28 @@ void Sim::logs() {
 		append(fdata);
 	};
 
-	// Server log
-	append("<h2>Server log:</h2>"
+	// Server's log
+	append("<h2>Server's log:</h2>"
 		"<pre class=\"logs\">");
 	dumpLogTail(SERVER_LOG);
 	append("</pre>");
 
-	// Server error log
-	append("<h2>Server error log:</h2>"
+	// Server's error log
+	append("<h2>Server's error log:</h2>"
 		"<pre class=\"logs\">");
 	dumpLogTail(SERVER_ERROR_LOG);
 	append("</pre>");
 
-	// Judge log
-	append("<h2>Judge log:</h2>"
+	// Job server's log
+	append("<h2>Job server's log:</h2>"
 		"<pre class=\"logs\">");
-	dumpLogTail(JUDGE_LOG);
+	dumpLogTail(JOB_SERVER_LOG);
 	append("</pre>");
 
-	// Judge error log
-	append("<h2>Judge error log:</h2>"
+	// Job server's error log
+	append("<h2>Job server's error log:</h2>"
 		"<pre class=\"logs\">");
-	dumpLogTail(JUDGE_ERROR_LOG);
+	dumpLogTail(JOB_SERVER_ERROR_LOG);
 	append("</pre>"
 		// Script used to scroll down the logs
 		"<script>"
