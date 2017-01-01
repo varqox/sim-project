@@ -51,7 +51,17 @@ private:
 
 	void printUser() {
 		append("<h4><a href=\"/u/", user_id, "\">", htmlEscape(username), "</a>"
-			" (", htmlEscape(first_name), ' ', htmlEscape(last_name), ")</h4>");
+			" (", htmlEscape(first_name), ' ', htmlEscape(last_name), ")</h4>"
+			"<div class=\"right-flow\" style=\"width:87%\">"
+				"<a class=\"btn-small\" href=\"/u/", user_id, "\">"
+					"View profile</a>");
+		if (permissions & PERM_EDIT)
+			append("<a class=\"btn-small blue\" href=\"/u/", user_id,
+				"/edit\">Edit profile</a>");
+		if (permissions & PERM_CHANGE_PASS)
+			append("<a class=\"btn-small orange\" href=\"/u/", user_id,
+				"/change-password\">Change password</a>");
+		append("</div>");
 	}
 
 	// Pages

@@ -386,7 +386,7 @@ void User::listUsers() {
 						"View profile</a>");
 
 			if (perm & PERM_CHANGE_PASS)
-				append("<a class=\"btn-small blue\" href=\"/u/", uid,
+				append("<a class=\"btn-small orange\" href=\"/u/", uid,
 					"/change-password\">Change password</a>");
 			if (perm & PERM_DELETE)
 				append("<a class=\"btn-small red\" href=\"/u/", uid,
