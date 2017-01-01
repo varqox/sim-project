@@ -102,6 +102,8 @@ public:
 			case Test::RTE: return "RTE";
 			case Test::CHECKER_ERROR: return "CHECKER_ERROR";
 			}
+
+			return "UNKNOWN";
 		});
 	}
 };
