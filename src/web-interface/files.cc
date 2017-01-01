@@ -41,7 +41,7 @@ void Contest::addFile() {
 				string id;
 				string current_time = date();
 				// Insert file to `files`
-				DB::Statement stmt = db_conn.prepare("INSERT IGNORE files "
+				MySQL::Statement stmt = db_conn.prepare("INSERT IGNORE files "
 					"(id, round_id, name, description, file_size, modified) "
 					"VALUES(?, NULL, ?, ?, 0, ?)");
 				stmt.setString(2, file_name);
@@ -111,7 +111,8 @@ void Contest::addFile() {
 				"</div>"
 
 				"<div class=\"button-row\">"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
+					"<input class=\"btn blue\" type=\"submit\""
+						" value=\"Submit\">"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
 				"</div>"
@@ -147,7 +148,7 @@ void Contest::editFile(const StringView& id, string name) {
 		// If all fields are OK
 		if (fv.noErrors())
 			try {
-				DB::Statement stmt;
+				MySQL::Statement stmt;
 				// File is being reuploaded
 				if (is_file_reuploaded) {
 					// Get file size
@@ -190,12 +191,12 @@ void Contest::editFile(const StringView& id, string name) {
 
 	uint64_t file_size;
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT name, description, file_size, modified FROM files "
 			"WHERE id=?");
 		stmt.setString(1, id.to_string());
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (!res.next())
 			return error404();
 
@@ -253,7 +254,8 @@ void Contest::editFile(const StringView& id, string name) {
 				"</div>"
 
 				"<div class=\"button-row\">"
-					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
+					"<input class=\"btn blue\" type=\"submit\""
+						" value=\"Update\">"
 					"<a class=\"btn\" href=\"/c/", rpath->round_id ,"/files\">"
 						"Go back</a>"
 					"<a class=\"btn red\" href=\"/file/", id, "/delete?",
@@ -274,7 +276,7 @@ void Contest::deleteFile(const StringView& id, const StringView& name) {
 				return error403();
 
 			SignalBlocker signal_guard;
-			DB::Statement stmt = db_conn.prepare(
+			MySQL::Statement stmt = db_conn.prepare(
 				"DELETE FROM files WHERE id=?");
 			stmt.setString(1, id.to_string());
 
@@ -333,11 +335,11 @@ void Contest::file() {
 		return error404();
 
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT name, round_id FROM files WHERE id=?");
 		stmt.setString(1, id.to_string());
 
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 		if (!res.next())
 			return error404();
 
@@ -386,11 +388,11 @@ void Contest::files(bool admin_view) {
 			"Add file</a>");
 
 	try {
-		DB::Statement stmt = db_conn.prepare(
+		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT id, modified, name, file_size, description FROM files "
 			"WHERE round_id=? ORDER BY modified DESC");
 		stmt.setString(1, rpath->round_id);
-		DB::Result res = stmt.executeQuery();
+		MySQL::Result res = stmt.executeQuery();
 
 		if (res.rowCount() == 0) {
 			append("<p>There are no files here yet</p>");

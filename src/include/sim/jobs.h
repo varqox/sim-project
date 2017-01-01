@@ -61,21 +61,28 @@ struct AddProblemInfo {
 	uint64_t global_time_limit = 0; // in usec
 	bool force_auto_limit = false;
 	bool ignore_simfile = false;
+	bool public_problem = false;
+	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
 
 	AddProblemInfo() = default;
 
 	AddProblemInfo(const std::string& n, const std::string& l, uint64_t ml,
-			uint64_t gtl, bool fal, bool is)
+			uint64_t gtl, bool fal, bool is, bool pp)
 		: name {n}, label {l}, memory_limit {ml}, global_time_limit {gtl},
-			force_auto_limit {fal}, ignore_simfile {is} {}
+			force_auto_limit {fal}, ignore_simfile {is}, public_problem {pp} {}
 
 	AddProblemInfo(StringView str) {
 		name = extractDumpedString(str);
 		label = extractDumpedString(str);
 		extractDumpedInt(memory_limit, str);
 		extractDumpedInt(global_time_limit, str);
-		force_auto_limit = extractDumpedInt<uint8_t>(str);
-		ignore_simfile = extractDumpedInt<uint8_t>(str);
+
+		uint8_t mask = extractDumpedInt<uint8_t>(str);
+		force_auto_limit = (mask & 1);
+		ignore_simfile = (mask & 2);
+		public_problem = (mask & 4);
+
+		stage = static_cast<Stage>(extractDumpedInt<uint8_t>(str));
 	}
 
 	std::string dump() {
@@ -84,8 +91,13 @@ struct AddProblemInfo {
 		appendDumpedString(res, label);
 		appendDumpedInt(res, memory_limit);
 		appendDumpedInt(res, global_time_limit);
-		appendDumpedInt<uint8_t>(res, force_auto_limit);
-		appendDumpedInt<uint8_t>(res, ignore_simfile);
+
+		uint8_t mask = force_auto_limit |
+			(int(ignore_simfile) << 1) |
+			(int(public_problem) << 2);
+		appendDumpedInt<uint8_t>(res, mask);
+
+		appendDumpedInt<uint8_t>(res, stage);
 		return res;
 	}
 };

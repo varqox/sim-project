@@ -7,7 +7,7 @@
 #include <simlib/memory.h>
 #include <simlib/string.h>
 
-namespace DB {
+namespace MySQL {
 
 class Result {
 private:
@@ -111,10 +111,10 @@ class Connection {
 private:
 	std::unique_ptr<sql::Connection> conn_;
 	std::string host_, user_, password_, database_;
-	bool bad_state = false; // Bad state is ONLY detected if exception is thrown
-	                        // in (or deeper) methods: prepare(),
+	bool bad_state = false; // Bad state is detected ONLY if an exception is
+	                        // thrown in the (or deeper) methods: prepare(),
 	                        // executeUpdate(), executeQuery(); that is why
-	                        // after connection resetting first call will
+	                        // after connection resetting, the first call will
 	                        // fail - bad_state is then set and reconnection
 	                        // will happen during the next try
 
@@ -184,6 +184,13 @@ public:
 			return Result(stmt->executeQuery(query));
 		});
 	}
+
+	std::string lastInsertId() {
+		Result res = executeQuery("SELECT LAST_INSERT_ID()");
+		if (!res.next())
+			THROW("Failed to select LAST_INSET_ID");
+		return res[1];
+	}
 };
 
 /**
@@ -198,4 +205,4 @@ public:
  */
 Connection createConnectionUsingPassFile(const CStringView& filename);
 
-} // namespace DB
+} // namespace MySQL

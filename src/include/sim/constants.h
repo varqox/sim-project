@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <simlib/meta.h>
 
+#define SQLITE_DB_FILE "sqlite-sim.db"
+
 // User
 constexpr uint USERNAME_MAX_LEN = 30;
 constexpr uint USER_FIRST_NAME_MAX_LEN = 60;
@@ -84,7 +86,7 @@ enum class SubmissionStatus : uint8_t {
 	INITIAL_RTE = RTE << 3,
 	INITIAL_MASK = FINAL_MASK << 3,
 	// Special
-	WAITING                   = (8 << 3) + 0,
+	PENDING                   = (8 << 3) + 0,
 	COMPILATION_ERROR         = (8 << 3) + 1,
 	CHECKER_COMPILATION_ERROR = (8 << 3) + 2,
 	JUDGE_ERROR               = (8 << 3) + 3,
@@ -95,9 +97,9 @@ static_assert(meta::equal(SSTATUS_VOID_STR,
 	meta::ToString<(int)SubmissionStatus::VOID>::value),
 	"Update the above #define");
 
-#define SSTATUS_WAITING_STR "64"
-static_assert(meta::equal(SSTATUS_WAITING_STR,
-	meta::ToString<(int)SubmissionStatus::WAITING>::value),
+#define SSTATUS_PENDING_STR "64"
+static_assert(meta::equal(SSTATUS_PENDING_STR,
+	meta::ToString<(int)SubmissionStatus::PENDING>::value),
 	"Update the above #define");
 
 // Non-fatal statuses
@@ -105,14 +107,16 @@ static_assert(meta::max(SubmissionStatus::OK, SubmissionStatus::WA,
 	SubmissionStatus::TLE, SubmissionStatus::MLE, SubmissionStatus::RTE,
 	SubmissionStatus::INITIAL_OK, SubmissionStatus::INITIAL_WA,
 	SubmissionStatus::INITIAL_TLE, SubmissionStatus::INITIAL_MLE,
-	SubmissionStatus::INITIAL_RTE) < SubmissionStatus::WAITING,
-	"Needed as a boundary between non-fatal and fatal statuses");
+	SubmissionStatus::INITIAL_RTE) < SubmissionStatus::PENDING,
+	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+	" used during selection of the final submission");
 
 // Fatal statuses
 static_assert(meta::min(SubmissionStatus::COMPILATION_ERROR,
 	SubmissionStatus::CHECKER_COMPILATION_ERROR, SubmissionStatus::JUDGE_ERROR)
-	> SubmissionStatus::WAITING,
-	"Needed as a boundary between non-fatal and fatal statuses");
+	> SubmissionStatus::PENDING,
+	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+	" used during selection of the final submission");
 
 inline SubmissionStatus operator |(SubmissionStatus a, SubmissionStatus b) {
 	return static_cast<SubmissionStatus>(
@@ -128,7 +132,7 @@ enum class SubmissionType : uint8_t {
 	NORMAL = 0,
 	FINAL = 1,
 	IGNORED = 2,
-	SOLUTION = 3,
+	PROBLEM_SOLUTION = 3,
 };
 
 #define STYPE_NORMAL_STR "0"
@@ -143,9 +147,9 @@ static_assert(meta::equal(STYPE_FINAL_STR,
 static_assert(meta::equal(STYPE_IGNORED_STR,
 	meta::ToString<(int)SubmissionType::IGNORED>::value),
 	"Update the above #define");
-#define STYPE_SOLUTION_STR "3"
-static_assert(meta::equal(STYPE_SOLUTION_STR,
-	meta::ToString<(int)SubmissionType::SOLUTION>::value),
+#define STYPE_PROBLEM_SOLUTION_STR "3"
+static_assert(meta::equal(STYPE_PROBLEM_SOLUTION_STR,
+	meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
 	"Update the above #define");
 
 constexpr inline const char* toString(SubmissionType x) {
@@ -153,7 +157,7 @@ constexpr inline const char* toString(SubmissionType x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::FINAL: return "Final";
 	case SubmissionType::IGNORED: return "Ignored";
-	case SubmissionType::SOLUTION: return "Solution";
+	case SubmissionType::PROBLEM_SOLUTION: return "Problem solution";
 	}
 	return "Unknown";
 }
@@ -164,7 +168,7 @@ enum class JobQueueStatus : uint8_t {
 	IN_PROGRESS = 2,
 	DONE = 3,
 	FAILED = 4,
-	CANCELLED = 5
+	CANCELED = 5
 };
 
 #define JQSTATUS_VOID_STR "0"
@@ -192,9 +196,9 @@ static_assert(meta::equal(JQSTATUS_FAILED_STR,
 	meta::ToString<(int)JobQueueStatus::FAILED>::value),
 	"Update the above #define");
 
-#define JQSTATUS_CANCELLED_STR "5"
-static_assert(meta::equal(JQSTATUS_CANCELLED_STR,
-	meta::ToString<(int)JobQueueStatus::CANCELLED>::value),
+#define JQSTATUS_CANCELED_STR "5"
+static_assert(meta::equal(JQSTATUS_CANCELED_STR,
+	meta::ToString<(int)JobQueueStatus::CANCELED>::value),
 	"Update the above #define");
 
 constexpr inline const char* toString(JobQueueStatus x) {
@@ -204,7 +208,7 @@ constexpr inline const char* toString(JobQueueStatus x) {
 	case JobQueueStatus::IN_PROGRESS: return "In progress";
 	case JobQueueStatus::DONE: return "Done";
 	case JobQueueStatus::FAILED: return "Failed";
-	case JobQueueStatus::CANCELLED: return "Cancelled";
+	case JobQueueStatus::CANCELED: return "Cancelled";
 	}
 	return "Unknown";
 }
@@ -217,6 +221,36 @@ enum class JobQueueType : uint8_t {
 	EDIT_PROBLEM = 4,
 	DELETE_PROBLEM = 5,
 };
+
+#define JQTYPE_JUDGE_SUBMISSION_STR "0"
+static_assert(meta::equal(JQTYPE_JUDGE_SUBMISSION_STR,
+	meta::ToString<(int)JobQueueType::JUDGE_SUBMISSION>::value),
+	"Update the above #define");
+
+#define JQTYPE_ADD_PROBLEM_STR "1"
+static_assert(meta::equal(JQTYPE_ADD_PROBLEM_STR,
+	meta::ToString<(int)JobQueueType::ADD_PROBLEM>::value),
+	"Update the above #define");
+
+#define JQTYPE_REUPLOAD_PROBLEM_STR "2"
+static_assert(meta::equal(JQTYPE_REUPLOAD_PROBLEM_STR,
+	meta::ToString<(int)JobQueueType::REUPLOAD_PROBLEM>::value),
+	"Update the above #define");
+
+#define JQTYPE_JUDGE_MODEL_SOLUTION_STR "3"
+static_assert(meta::equal(JQTYPE_JUDGE_MODEL_SOLUTION_STR,
+	meta::ToString<(int)JobQueueType::JUDGE_MODEL_SOLUTION>::value),
+	"Update the above #define");
+
+#define JQTYPE_EDIT_PROBLEM_STR "4"
+static_assert(meta::equal(JQTYPE_EDIT_PROBLEM_STR,
+	meta::ToString<(int)JobQueueType::EDIT_PROBLEM>::value),
+	"Update the above #define");
+
+#define JQTYPE_DELETE_PROBLEM_STR "5"
+static_assert(meta::equal(JQTYPE_DELETE_PROBLEM_STR,
+	meta::ToString<(int)JobQueueType::DELETE_PROBLEM>::value),
+	"Update the above #define");
 
 // The greater, the more important
 constexpr uint priority(JobQueueType x) {
@@ -231,11 +265,12 @@ constexpr uint priority(JobQueueType x) {
 	return 0;
 }
 
+// Jobs
+constexpr uint REPORT_PREVIEW_MAX_LENGTH = 16 << 10; // 16 KB
+
 // Logs
 constexpr const char SERVER_LOG[] = "logs/server.log";
 constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
-constexpr const char JUDGE_LOG[] = "judge.log"; // TODO: remove
-constexpr const char JUDGE_ERROR_LOG[] = "judge-error.log"; // TODO: remove
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
 

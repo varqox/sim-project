@@ -29,7 +29,7 @@ SIM is an open source platform for carrying out algorithmic contests
 1. First of all clone the SIM repository and all its submodules
 
   ```sh
-  git clone --recursive https://github.com/krzyk240/sim
+  git clone --recursive https://github.com/varqox/sim
   cd sim
   ```
 
@@ -58,7 +58,7 @@ SIM is an open source platform for carrying out algorithmic contests
   make install DESTDIR=where-you-want-SIM-to-install
   ```
 
-5. Run sim-server and judge-machine
+5. Run sim-server and job-machine
 
   ```sh
   make run
