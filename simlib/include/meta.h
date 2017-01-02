@@ -125,7 +125,9 @@ constexpr T max(T&& x) { return x; }
 
 template<class T, class U>
 constexpr typename std::common_type<T, U>::type max(T&& x, U&& y) {
-	return (x > y ? x : y);
+	using CT = typename std::common_type<T, U>::type;
+	return (static_cast<CT>(x) > static_cast<CT>(y) ? static_cast<CT>(x)
+		: static_cast<CT>(y));
 }
 
 template<class T, class... Args>
