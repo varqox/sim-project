@@ -52,7 +52,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	{
 		FileDescriptor zip_output {openUnlinkedTmpFile()};
 		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
-			{-1, zip_output, zip_output, 0, 512 << 20});
+			{-1, zip_output, zip_output, 500'000'000 /* 500 s */, 512 << 20});
 
 		// Append unzip's output to the report
 		(void)lseek(zip_output, 0, SEEK_SET);
@@ -127,6 +127,20 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	} catch (const std::exception& e) {
 		report.str += conver.getReport();
 		report.append("Conver failed: ", e.what());
+		return set_failure();
+	}
+
+	// Check problem's name's length
+	if (p.second.name.size() > PROBLEM_NAME_MAX_LEN) {
+		report.append("Problem's name is too long (max allowed length: ",
+			toStr(PROBLEM_NAME_MAX_LEN), ')');
+		return set_failure();
+	}
+
+	// Check problem's label's length
+	if (p.second.label.size() > PROBLEM_LABEL_MAX_LEN) {
+		report.append("Problem's label is too long (max allowed length: ",
+			toStr(PROBLEM_LABEL_MAX_LEN), ')');
 		return set_failure();
 	}
 
@@ -234,12 +248,12 @@ static void secondStage(const string& job_id, const string& job_owner,
 		// Zip the package
 		report.append("Zipping the package...");
 		{
-			vector<string> zip_args;
-			back_insert(zip_args, "zip", "-rq", concat(package_dest, ".zip"),
-				package_dest.str);
 			FileDescriptor zip_output {openUnlinkedTmpFile()};
+			vector<string> zip_args;
+			back_insert(zip_args, "zip", "-rq", concat(problem_id, ".zip"),
+				problem_id);
 			Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
-				{-1, zip_output, zip_output, 0, 512 << 20});
+				{-1, zip_output, zip_output, 0, 512 << 20}, "problems");
 
 			// Append zip's output to the the report
 			(void)lseek(zip_output, 0, SEEK_SET);
