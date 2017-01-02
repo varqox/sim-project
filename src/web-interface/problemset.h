@@ -14,7 +14,6 @@ protected:
 
 	virtual ~Problemset() = default;
 
-private:
 	enum Permissions : uint {
 		PERM_NONE = 0,
 		PERM_VIEW = 1,
@@ -26,6 +25,9 @@ private:
 		PERM_ADD = 64
 	};
 
+	Permissions getPermissions(const std::string& owner_id, bool is_public);
+
+private:
 	std::string problem_id_;
 	std::string problem_name, problem_label, problem_owner, problem_added;
 	std::string problem_simfile;
@@ -33,8 +35,6 @@ private:
 	std::string owner_username;
 	uint owner_utype;
 	Permissions perms;
-
-	Permissions getPermissions(const std::string& owner_id, bool is_public);
 
 	void problemsetTemplate(const StringView& title,
 		const StringView& styles = {}, const StringView& scripts = {});

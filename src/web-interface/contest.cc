@@ -425,11 +425,96 @@ void Contest::addRound() {
 }
 
 void Contest::addProblem() {
-	return error501();
-}
+	if (!rpath->admin_access)
+		return error403();
 
-void Contest::reuploadProblem() {
-	return error501();
+	FormValidator fv(req->form_data);
+	string name;
+	string problem_id;
+
+	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		// Validate all fields
+		fv.validate(name, "name", "Round name", ROUND_NAME_MAX_LEN);
+
+		fv.validate(problem_id, "problem-id", "Problem's ID", isDigit,
+			"Problem's ID: invalid value");
+
+		// If all fields are ok
+		while (fv.noErrors())
+			try {
+				MySQL::Statement stmt {db_conn.prepare(
+					"SELECT name, owner, is_public FROM problems WHERE id=?")};
+				stmt.setString(1, problem_id);
+
+				MySQL::Result res {stmt.executeQuery()};
+				if (!res.next()) {
+					fv.addError(concat("There is no problem with the ID = ",
+						problem_id));
+					break;
+				}
+
+				// Check if the user has the permissions to use this problem
+				if (~Problemset::getPermissions(res[2], res.getBool(3)) &
+					Problemset::PERM_VIEW)
+				{
+					fv.addError(concat("You are not allowed to use the problem"
+						" with the ID = ",problem_id));
+					break;
+				}
+
+				if (name.empty()) // Was left to be set to the problem's name
+					name = res[1];
+
+				stmt = db_conn.prepare("INSERT rounds (parent, grandparent,"
+						" problem_id, name, owner, item)"
+					" SELECT ?, ?, ?, ?, ?, COALESCE(MAX(item)+1, 1)"
+						" FROM rounds"
+					" WHERE parent=?");
+				stmt.setString(1, rpath->round_id);
+				stmt.setString(2, rpath->contest->id);
+				stmt.setString(3, problem_id);
+				stmt.setString(4, name);
+				stmt.setString(5, Session::user_id);
+				stmt.setString(6, rpath->round_id);
+
+				throw_assert(stmt.executeUpdate() == 1);
+
+				return redirect("/c/" + db_conn.lastInsertId());
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
+				break;
+			}
+	}
+
+	contestTemplate("Add a problem");
+	printRoundPath();
+	append(fv.errors(), "<div class=\"form-container\">"
+		"<h1>Add a problem</h1>"
+		"<form method=\"post\">"
+			// Round's name
+			"<div class=\"field-group\">"
+				"<label>Round's name</label>"
+				"<input type=\"text\" name=\"name\""
+					" placeholder=\"The same as the problem's name\" value=\"",
+					htmlEscape(name), "\" size=\"24\" "
+					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\">"
+			"</div>"
+			// Problem's ID
+			"<div class=\"field-group\">"
+				"<label>Problem's ID</label>"
+				"<input type=\"text\" name=\"problem-id\" value=\"",
+					htmlEscape(problem_id), "\" size=\"6\" "
+					"maxlength=\"19\" required>"
+					"<a href=\"/p\">Search problemset</a>"
+			"</div>"
+			"<input class=\"btn blue\" type=\"submit\" value=\"Add\">"
+		"</form>"
+	"</div>");
 }
 
 void Contest::editContest() {
