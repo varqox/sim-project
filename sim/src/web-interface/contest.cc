@@ -73,7 +73,7 @@ void Contest::handle() {
 
 			// Add contest button (admins and teachers only)
 			if (Session::isOpen() && Session::user_type < UTYPE_NORMAL)
-				append("<a class=\"btn\" href=\"/c/add\">Add contest</a>");
+				append("<a class=\"btn\" href=\"/c/add\">Add a contest</a>");
 
 			MySQL::Result res = stmt.executeQuery();
 			if (res.next()) {
@@ -181,10 +181,6 @@ void Contest::handle() {
 	if (next_arg == "files")
 		return files(admin_view);
 
-	// Reupload
-	if (next_arg == "reupload" && rpath->type == PROBLEM)
-		return reuploadProblem();
-
 	// Contest dashboard
 	contestTemplate("Contest dashboard");
 	append("<div class=\"round-info\">");
@@ -217,8 +213,8 @@ void Contest::handle() {
 					"/add\">Add problem</a>"
 				"<a class=\"btn-small blue\" href=\"/c/", round_id,
 					"/edit\">Edit problem</a>"
-				"<a class=\"btn-small orange\" href=\"/c/", round_id,
-					"/reupload\">Reupload problem</a>"
+				"<a class=\"btn-small green\" href=\"/p/",
+					rpath->problem->problem_id, "\">Problem's page</a>"
 				"</div>");
 	}
 
@@ -775,6 +771,7 @@ void Contest::editProblem() {
 	// Rejudge
 	if (next_arg == "rejudge") {
 		try {
+			// TODO: CSRF protection - make a query with XML request
 			MySQL::Statement stmt = db_conn.prepare("UPDATE submissions "
 				"SET status=" SSTATUS_PENDING_STR " WHERE problem_id=?");
 			stmt.setString(1, rpath->problem->problem_id);
@@ -802,80 +799,8 @@ void Contest::editProblem() {
 		return redirect(concat("/c/", rpath->round_id, "/edit"));
 	}
 
-	// Download
-	while (next_arg == "download") {
-		constexpr std::array<unsigned char, 22> empty_zip_file{{
-			0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-		}};
-
-		// TODO: Simplify extension
-		const char* _zip = ".zip";
-		const char* _tgz = ".tar.gz";
-		const char* extension;
-		// Get extension
-		next_arg = url_args.extractNextArg();
-		if (next_arg == "zip")
-			extension = _zip;
-		else if (next_arg == "tgz")
-			extension = _tgz;
-		else
-			break;
-
-		// Create temporary file
-		char tmp_file[] = "/tmp/sim-problem.XXXXXX";
-		umask(077); // Only owner can access this temporary file
-		int fd = mkstemp(tmp_file);
-		if (fd == -1)
-			THROW("Error: mkstemp('", tmp_file, "')", error(errno));
-
-		sclose(fd);
-		FileRemover remover(tmp_file);
-		vector<string> args;
-		// zip
-		if (extension == _zip) {
-			back_insert(args, "zip", "-rq", tmp_file,
-				rpath->problem->problem_id);
-
-			if (putFileContents(tmp_file, (const char*)empty_zip_file.data(),
-				empty_zip_file.size()) == -1)
-			{
-				THROW("Error: putFileContents('", tmp_file, "')", error(errno));
-			}
-		// tar.gz
-		} else // extension == tgz
-			back_insert(args, "tar", "czf", tmp_file,
-				rpath->problem->problem_id);
-
-		// Compress package
-		Spawner::ExitStat es;
-		try {
-			es = Spawner::run(args[0], args,
-				{-1, STDERR_FILENO, STDERR_FILENO, 200 * 1000000 /* 200 s */},
-				"problems");
-
-		} catch (const std::exception& e) {
-			ERRLOG_CATCH(e);
-			return error500();
-		}
-
-		// TODO: better error handling
-		if (es.code) {
-			errlog("Error: ", args[0], ' ', es.message);
-			return error500();
-		}
-
-		resp.content_type = server::HttpResponse::FILE_TO_REMOVE;
-		resp.headers["Content-Disposition"] = concat("attachment; filename=",
-			rpath->problem->problem_id, extension);
-		resp.content = tmp_file;
-
-		remover.cancel();
-		return;
-	}
-
 	FormValidator fv(req->form_data);
-	string round_name, name, label, memory_limit;
+	string round_name, original_name;
 
 	if (req->method == server::HttpRequest::POST) {
 		if (fv.get("csrf_token") != Session::csrf_token)
@@ -885,67 +810,20 @@ void Contest::editProblem() {
 		fv.validate(round_name, "round-name", "Round's name",
 			ROUND_NAME_MAX_LEN);
 
-		fv.validate(name, "name", "Problem name", PROBLEM_NAME_MAX_LEN);
-
-		fv.validate(label, "label", "Label", PROBLEM_LABEL_MAX_LEN);
-
-		fv.validateNotBlank(memory_limit, "memory-limit", "Memory limit",
-			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
-			"Memory limit: invalid value");
-
 		// If all fields are ok
 		if (fv.noErrors())
 			try {
-				// Update problem config
-				sim::Simfile sf {getFileContents(concat("problems/",
-					rpath->problem->problem_id, "/Simfile"))
-				};
-
-				sf.loadAll();
-
-				sf.name = name;
-				sf.label = label;
-
-				// Update memory limit
-				uint64_t new_mem_limit = strtoull(memory_limit) << 20;
-				if (sf.global_mem_limit != new_mem_limit) {
-					for (auto&& tg : sf.tgroups)
-						for (auto&& t : tg.tests)
-							if (t.memory_limit == sf.global_mem_limit)
-								t.memory_limit = new_mem_limit;
-
-					sf.global_mem_limit = new_mem_limit;
-				}
-
-				if (BLOCK_SIGNALS(
-					putFileContents(
-						concat("problems/", rpath->problem->problem_id,
-							"/Simfile"),
-						sf.dump())) == -1)
-				{
-					THROW("Failed to update problem ",
-						rpath->problem->problem_id, " Simfile");
-				}
-
 				// Update database
-				MySQL::Statement stmt = db_conn.prepare(
-					"UPDATE rounds r, problems p"
-					" SET r.name=?, p.name=?, p.label=?"
-					" WHERE r.id=? AND p.id=?");
+				MySQL::Statement stmt = db_conn.prepare("UPDATE rounds"
+					" SET name=? WHERE id=?");
 				stmt.setString(1, round_name);
-				stmt.setString(2, name);
-				stmt.setString(3, label);
-				stmt.setString(4, rpath->round_id);
-				stmt.setString(5, rpath->problem->problem_id);
+				stmt.setString(2, rpath->round_id);
+				stmt.executeUpdate();
 
-				if (stmt.executeUpdate()) {
-					fv.addError("Update successful"); // TODO: does not show in every case
+				fv.addError("Update successful");
 
-					// Update rpath
-					rpath.reset(getRoundPath(rpath->round_id));
-					if (!rpath)
-						return; // getRoundPath has already set an error
-				}
+				// Update rpath
+				rpath->problem->name = round_name;
 
 			} catch (const std::exception& e) {
 				ERRLOG_CATCH(e);
@@ -961,12 +839,7 @@ void Contest::editProblem() {
 	try {
 		sim::Simfile sf {simfile_contents};
 		sf.loadName();
-		sf.loadLabel();
-		sf.loadTests();
-		name = sf.name;
-		label = sf.label;
-		memory_limit.clear();
-		memory_limit += toStr(sf.global_mem_limit >> 20);
+		original_name = sf.name;
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
@@ -975,22 +848,15 @@ void Contest::editProblem() {
 
 	contestTemplate("Edit problem");
 	printRoundPath();
-	append(fv.errors(), "<div class=\"right-flow\" style=\"width:85%\">"
-			"<div class=\"dropmenu down\">"
-				"<a class=\"btn-small dropmenu-toggle\">"
-					"Download package as<span class=\"caret\"></span></a>"
-				"<ul>"
-					"<a href=\"/c/", rpath->round_id, "/edit/download/zip\">"
-						".zip</a>"
-					"<a href=\"/c/", rpath->round_id, "/edit/download/tgz\">"
-						".tar.gz</a>"
-				"</ul>"
-			"</div>"
+	append("<div class=\"right-flow\" style=\"width:85%\">"
+			"<a class=\"btn-small\" href=\"/p/", rpath->problem->problem_id,
+				"/download\">Download the package</a>"
 			"<a class=\"btn-small blue\" href=\"/c/", rpath->round_id,
 				"/edit/rejudge\">Rejudge all submissions</a>"
-			"<a class=\"btn-small orange\" href=\"/c/", rpath->round_id,
-				"/reupload\">Reupload problem</a>"
-		"</div>"
+			"<a class=\"btn-small green\" href=\"/p/",
+				rpath->problem->problem_id, "\">Problem's page</a>"
+		"</div>",
+		fv.errors(),
 		"<div class=\"form-container\">"
 			"<h1>Edit problem</h1>"
 			"<form method=\"post\">"
@@ -1004,28 +870,10 @@ void Contest::editProblem() {
 				"</div>"
 				// Problem's name
 				"<div class=\"field-group\">"
-					"<label>Problem's name</label>"
-					"<input type=\"text\" name=\"name\" value=\"",
-						htmlEscape(name), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
-						"required>"
+					"<label>Original name</label>"
+					"<input type=\"text\" name=\"original-name\" value=\"",
+						htmlEscape(original_name), "\" size=\"24\" disabled>"
 				"</div>"
-				// Problem's label
-				"<div class=\"field-group\">"
-					"<label>Problem's label</label>"
-					"<input type=\"text\" name=\"label\" value=\"",
-						htmlEscape(label), "\" size=\"24\" "
-						"maxlength=\"", toStr(PROBLEM_LABEL_MAX_LEN),
-						"\" required>"
-				"</div>"
-				// Memory limit
-				"<div class=\"field-group\">"
-					"<label>Memory limit [MB]</label>"
-					"<input type=\"text\" name=\"memory-limit\" value=\"",
-						htmlEscape(memory_limit), "\" size=\"24\" "
-						"required>"
-				"</div>"
-				// TODO: Main solution
 				"<div class=\"button-row\">"
 					"<input class=\"btn blue\" type=\"submit\" value=\"Update\">"
 					"<a class=\"btn red\" href=\"/c/", rpath->round_id,
@@ -1179,7 +1027,7 @@ void Contest::deleteProblem() {
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
 
-			// Delete problem round
+			// Delete problem's round
 			stmt = db_conn.prepare("DELETE FROM rounds WHERE id=?");
 			stmt.setString(1, rpath->round_id);
 
