@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,"
 			"`label` VARCHAR(", toStr(PROBLEM_LABEL_MAX_LEN), ") NOT NULL,"
-			"`simfile` blob NOT NULL,"
+			"`simfile` mediumblob NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
