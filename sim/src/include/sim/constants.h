@@ -57,7 +57,7 @@ constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
 
 // Rounds
-constexpr uint ROUND_NAME_MAX_LEN = 128;
+constexpr uint ROUND_NAME_MAX_LEN = meta::max(128, PROBLEM_NAME_MAX_LEN);
 
 // Files
 constexpr uint FILE_ID_LEN = 30;
