@@ -47,6 +47,11 @@ inline const char* __what(const std::exception& e) {
 		__debug::__what(__VA_ARGS__)); \
 	throw; }
 
-inline std::string error(int errnum) {
-	return concat(" - ", toStr(errnum), ": ", strerror(errnum));
+inline StringBuff<4096> error(int errnum) noexcept {
+	std::array<char, 4000> buff;
+	auto errcode = toStr(errnum);
+	static_assert(decltype(errcode)::max_size < 90,
+		"Needed to fit in the returned buffer");
+	return {" - ", errcode, ": ", strerror_r(errnum, buff.data(),
+		buff.size())};
 }

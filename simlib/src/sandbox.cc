@@ -66,13 +66,13 @@ bool Sandbox::CallbackBase::isSysOpenAllowed(pid_t pid,
 		return true; // File is allowed to open
 
 null_path:
-	// Set NULL as first argument to open
+	// Set NULL as the first argument to open
 	if (arch)
 		regs.uregs.x86_64_regs.rdi = 0;
 	else
 		regs.uregs.i386_regs.ebx = 0;
 
-	regs.setRegs(pid); // Update traced process registers
+	regs.setRegs(pid); // Update traced process's registers
 
 	return true; // Allow to open NULL
 }
@@ -86,13 +86,13 @@ bool Sandbox::CallbackBase::isSysLseekAllowed(pid_t pid) {
 	if (std::find(stdfiles.begin(), stdfiles.end(), ARG1) == stdfiles.end())
 		return true;
 
-	// Set -1 as first argument to lseek
+	// Set -1 as the first argument to lseek
 	if (arch)
 		regs.uregs.x86_64_regs.rdi = -1;
 	else
 		regs.uregs.i386_regs.ebx = -1;
 
-	regs.setRegs(pid); // Update traced process registers
+	regs.setRegs(pid); // Update traced process's registers
 
 	return true; // Allow to lseek -1
 }

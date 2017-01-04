@@ -78,10 +78,15 @@ public:
 	}
 
 protected:
-	// Sends @p str followed by error message through @p fd and _exits
-	static void sendErrorMessage(int fd, const char* str) {
-		std::string msg = concat(str, error(errno));
-		writeAll(fd, msg.data(), msg.size());
+	// Sends @p str followed by error message of @p errnum through @p fd and
+	// _exits with -1
+	static void sendErrorMessage(int fd, int errnum, CStringView str) noexcept
+	{
+		writeAll(fd, str.data(), str.size());
+
+		auto err = error(errnum);
+		writeAll(fd, err.data(), err.size());
+
 		_exit(-1);
 	};
 
@@ -98,7 +103,8 @@ protected:
 	static std::string receiveErrorMessage(int status, int fd);
 
 	/**
-	 * @brief Initializes child process which will execute @p exec
+	 * @brief Initializes child process which will execute @p exec, this
+	 *   function does not return (it kill the process instead)!
 	 * @details Sets limits and file descriptors specified in opts
 	 *
 	 * @param exec filename that is to be executed
@@ -249,7 +255,9 @@ void Spawner::runChild(const CStringView& exec,
 	const CStringView& working_dir, int fd, Func doBeforeExec) noexcept
 {
 	// Sends error to parent
-	auto send_error = [fd](const char* str) { sendErrorMessage(fd, str); };
+	auto send_error = [fd](int errnum, CStringView str) {
+		sendErrorMessage(fd, errnum, str);
+	};
 
 	// Convert args
 	const size_t len = args.size();
@@ -262,21 +270,21 @@ void Spawner::runChild(const CStringView& exec,
 	// Change working directory
 	if (working_dir != "." && working_dir != "" && working_dir != "./") {
 		if (chdir(working_dir.c_str()) == -1)
-			send_error("chdir()");
+			send_error(errno, "chdir()");
 	}
 
 	// Create new process group (useful for killing the whole process group)
 	if (setpgid(0, 0))
-		send_error("setpgid()");
+		send_error(errno, "setpgid()");
 
 	// Set virtual memory and stack size limit (to the same value)
 	if (opts.memory_limit > 0) {
 		struct rlimit limit;
 		limit.rlim_max = limit.rlim_cur = opts.memory_limit;
 		if (setrlimit(RLIMIT_AS, &limit))
-			send_error("setrlimit(RLIMIT_AS)");
+			send_error(errno, "setrlimit(RLIMIT_AS)");
 		if (setrlimit(RLIMIT_STACK, &limit))
-			send_error("setrlimit(RLIMIT_STACK)");
+			send_error(errno, "setrlimit(RLIMIT_STACK)");
 	}
 
 	// Set CPU time limit [s] (useful when spawned process becomes orphaned)
@@ -286,7 +294,7 @@ void Spawner::runChild(const CStringView& exec,
 			(opts.time_limit + 500000) / 1000000 + 1; // +1 to avoid premature
 			                                          // death
 		if (setrlimit(RLIMIT_CPU, &limit))
-			send_error("setrlimit(RLIMIT_CPU)");
+			send_error(errno, "setrlimit(RLIMIT_CPU)");
 	}
 
 	// Change stdin
@@ -296,7 +304,7 @@ void Spawner::runChild(const CStringView& exec,
 	else if (opts.new_stdin_fd != STDIN_FILENO)
 		while (dup2(opts.new_stdin_fd, STDIN_FILENO) == -1)
 			if (errno != EINTR)
-				send_error("dup2()");
+				send_error(errno, "dup2()");
 
 	// Change stdout
 	if (opts.new_stdout_fd < 0)
@@ -305,7 +313,7 @@ void Spawner::runChild(const CStringView& exec,
 	else if (opts.new_stdout_fd != STDOUT_FILENO)
 		while (dup2(opts.new_stdout_fd, STDOUT_FILENO) == -1)
 			if (errno != EINTR)
-				send_error("dup2()");
+				send_error(errno, "dup2()");
 
 	// Change stderr
 	if (opts.new_stderr_fd < 0)
@@ -314,7 +322,7 @@ void Spawner::runChild(const CStringView& exec,
 	else if (opts.new_stderr_fd != STDERR_FILENO)
 		while (dup2(opts.new_stderr_fd, STDERR_FILENO) == -1)
 			if (errno != EINTR)
-				send_error("dup2()");
+				send_error(errno, "dup2()");
 
 	doBeforeExec();
 
@@ -322,8 +330,14 @@ void Spawner::runChild(const CStringView& exec,
 	kill(getpid(), SIGSTOP);
 
 	execvp(exec.c_str(), (char** const)arg);
+	int errnum = errno;
 
-	send_error(concat("execvp('", exec, "')").c_str()); // execvp() failed
+	// execvp() failed
+	if (exec.size() <= PATH_MAX)
+		send_error(errnum, StringBuff<PATH_MAX + 20>{"execvp('", exec, "')"});
+	else
+		send_error(errnum, StringBuff<PATH_MAX + 20>{"execvp('",
+			exec.substring(0, PATH_MAX), "...')"});
 }
 
 template<template<class...> class Func, class... TArgs, class... Args>

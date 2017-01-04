@@ -557,9 +557,9 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 
 	else if (cpid == 0) { // Child = tracee
 		sclose(pfd[0]);
-		runChild(exec, args, opts, working_dir, pfd[1], [&]{
+		runChild(exec, args, opts, working_dir, pfd[1], [=]{
 			if (ptrace(PTRACE_TRACEME, 0, 0, 0))
-				sendErrorMessage(pfd[1], "ptrace(PTRACE_TRACEME");
+				sendErrorMessage(pfd[1], errno, "ptrace(PTRACE_TRACEME)");
 		});
 	}
 
@@ -698,8 +698,11 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
 						: regs.uregs.x86_64_regs.rsi);
 
 					auto tmplog = stdlog('[', toStr(cpid), "] syscall: ",
-						toStr(syscall_no), '(', toStr(arg1), ", ",
-						toStr(arg2), ", ...)");
+						paddedString(toStr(syscall_no), 3), ": ",
+						// syscall name
+						(func.getArch() == ARCH_i386 ? x86_syscall_name
+							: x86_64_syscall_name)[syscall_no], '(',
+						toStr(arg1), ", ", toStr(arg2), ", ...)");
 
 					if (with_result) {
 						int64_t ret_val = (func.getArch() == ARCH_i386 ?

@@ -28,7 +28,7 @@ ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept;
  */
 void readFromDevUrandom(void* dest, size_t bytes);
 
-inline std::mt19937 randomlySeededMersene() noexcept {
+inline std::mt19937 randomlySeededMersene() {
 	std::array<std::mt19937::result_type, std::mt19937::state_size> seeds;
 	readFromDevUrandom(&seeds[0], seeds.size() * sizeof(seeds[0]));
 	std::seed_seq sseq(seeds.begin(), seeds.end());

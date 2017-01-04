@@ -109,7 +109,7 @@ public:
 
 	template<size_t N>
 	constexpr StringBase(const StringBuff<N>& s) noexcept
-		: str(s.data()), len(s.len) {}
+		: str(s.data()), len(s.size()) {}
 
 	constexpr StringBase(pointer s) noexcept
 		: str(s), len(__builtin_strlen(s)) {}
@@ -573,63 +573,6 @@ public:
 	}
 };
 
-class CStringView : public StringBase<const char> {
-public:
-	constexpr CStringView() : StringBase("", 0) {}
-
-	#if __cplusplus > 201402L
-	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
-	#endif
-	template<size_t N>
-	constexpr CStringView(const char(&s)[N]) : StringBase(s, meta::strlen(s)) {}
-
-	// Do not treat as possible string literal
-	template<size_t N>
-	constexpr CStringView(char(&s)[N]) : StringBase(s) {}
-
-	constexpr CStringView(const meta::string& s) : StringBase(s) {}
-
-	template<size_t N>
-	constexpr CStringView(const StringBuff<N>& s) : StringBase(s) {}
-
-	constexpr CStringView(const FixedString& s) noexcept
-		: StringBase(s.data(), s.size()) {}
-
-	CStringView(const std::string& s) noexcept
-		: StringBase(s.data(), s.size()) {}
-
-	// Be careful with the constructor below! @p s cannot be null
-	constexpr explicit CStringView(pointer s) noexcept : StringBase(s) {
-	#ifdef _GLIBCXX_DEBUG
-		assert(s);
-	#endif
-	}
-
-	// Be careful with the constructor below! @p s cannot be null
-	constexpr explicit CStringView(pointer s, size_type n) noexcept
-		: StringBase(s, n)
-	{
-	#ifdef _GLIBCXX_DEBUG
-		assert(s);
-		assert(s[n] == '\0');
-	#endif
-	}
-
-	constexpr CStringView(const CStringView&) noexcept = default;
-	constexpr CStringView(CStringView&&) noexcept = default;
-	constexpr CStringView& operator=(const CStringView&) noexcept = default;
-	constexpr CStringView& operator=(CStringView&&) noexcept = default;
-
-	constexpr CStringView substr(size_type pos) const {
-		const auto x = StringBase::substr(pos);
-		return CStringView{x.data(), x.size()};
-	}
-
-	constexpr CStringView substring(size_type pos) const { return substr(pos); }
-
-	constexpr const_pointer c_str() const noexcept { return data(); }
-};
-
 class StringView : public StringBase<const char> {
 public:
 	using StringBase::StringBase;
@@ -738,6 +681,71 @@ public:
 	using StringBase::substring;
 };
 
+class CStringView : public StringBase<const char> {
+public:
+	constexpr CStringView() : StringBase("", 0) {}
+
+	#if __cplusplus > 201402L
+	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
+	#endif
+	template<size_t N>
+	constexpr CStringView(const char(&s)[N]) : StringBase(s, meta::strlen(s)) {}
+
+	// Do not treat as possible string literal
+	template<size_t N>
+	constexpr CStringView(char(&s)[N]) : StringBase(s) {}
+
+	constexpr CStringView(const meta::string& s) : StringBase(s) {}
+
+	template<size_t N>
+	constexpr CStringView(const StringBuff<N>& s) : StringBase(s) {}
+
+	constexpr CStringView(const FixedString& s) noexcept
+		: StringBase(s.data(), s.size()) {}
+
+	CStringView(const std::string& s) noexcept
+		: StringBase(s.data(), s.size()) {}
+
+	// Be careful with the constructor below! @p s cannot be null
+	constexpr explicit CStringView(pointer s) noexcept : StringBase(s) {
+	#ifdef _GLIBCXX_DEBUG
+		assert(s);
+	#endif
+	}
+
+	// Be careful with the constructor below! @p s cannot be null
+	constexpr explicit CStringView(pointer s, size_type n) noexcept
+		: StringBase(s, n)
+	{
+	#ifdef _GLIBCXX_DEBUG
+		assert(s);
+		assert(s[n] == '\0');
+	#endif
+	}
+
+	constexpr CStringView(const CStringView&) noexcept = default;
+	constexpr CStringView(CStringView&&) noexcept = default;
+	constexpr CStringView& operator=(const CStringView&) noexcept = default;
+	constexpr CStringView& operator=(CStringView&&) noexcept = default;
+
+	constexpr CStringView substr(size_type pos) const {
+		const auto x = StringBase::substr(pos);
+		return CStringView{x.data(), x.size()};
+	}
+
+	constexpr StringView substr(size_type pos, size_type count) const {
+		return StringBase::substr(pos, count);
+	}
+
+	constexpr CStringView substring(size_type beg) const { return substr(beg); }
+
+	constexpr StringView substring(size_type beg, size_type end) const {
+		return StringBase::substring(beg, end);
+	}
+
+	constexpr const_pointer c_str() const noexcept { return data(); }
+};
+
 // comparison operators
 #define COMPARE_BUFF_STRVIEW(oper) template<size_t N> \
 	constexpr bool operator oper (const StringBuff<N>& a, const StringView& b) \
@@ -835,6 +843,7 @@ template<class T, size_t N = meta::ToString<std::numeric_limits<T>::max()>
 	::arr_value.size() + 2> // +1 for a terminating null char and +1 for the
 	                        // minus sign
 StringBuff<N> toString(T x) {
+	static_assert(N >= 2, "Needed to at least return \"0\"");
 	if (x == 0)
 		return {1, '0'};
 
@@ -1442,10 +1451,11 @@ std::string paddedString(const StringView& s, size_t len,
 
 /* ============================ IMPLEMENTATION ============================== */
 template<size_t N>
-inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : len(count) {
-	throw_assert(len <= max_size);
-	std::fill(str, str + len, ch);
-	str[len] = '\0';
+inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : len(count)
+{
+	throw_assert(count <= max_size);
+	std::fill(str, str + count, ch);
+	str[count] = '\0';
 }
 
 template<size_t N>
