@@ -12,12 +12,9 @@ vector<string> findTests(string path = "tests") {
 	if (path.empty())
 		return {};
 
-	DIR *dir = opendir(path.data());
-	if (dir == nullptr)
+	Directory dir {path};
+	if (!dir)
 		THROW("opendir('", path, "')", error(errno));
-
-	auto close_dir = [&]{ closedir(dir); };
-	CallInDtor<decltype(close_dir)> dir_guard(close_dir);
 
 	// Collect *.in and *.out files
 	vector<string> in, out;
