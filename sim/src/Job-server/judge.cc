@@ -3,6 +3,7 @@
 #include <sim/mysql.h>
 #include <simlib/sim/conver.h>
 #include <simlib/sim/judge_worker.h>
+#include <simlib/time.h>
 #include <simlib/utilities.h>
 
 using sim::JudgeReport;
@@ -44,6 +45,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	int64_t total_score = 0;
 
 	auto send_report = [&] {
+		// TODO: support for the submission in the problemset
 		/* Update submission */
 		MySQL::Statement stmt;
 		// Special status
@@ -79,6 +81,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 					"IF(s.type<=" STYPE_FINAL_STR "," STYPE_NORMAL_STR
 						",s.type)),"
 					"s.status=IF(s.id=z.id,?,s.status),"
+					"s.last_judgment=IF(s.id=z.id,?,s.last_judgment),"
 					"s.initial_report=IF(s.id=z.id,?,s.initial_report),"
 					"s.final_report=IF(s.id=z.id,?,s.final_report),"
 					"s.score=IF(s.id=z.id,NULL,s.score)"
@@ -114,12 +117,13 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 					"IF(s.type<=" STYPE_FINAL_STR "," STYPE_NORMAL_STR
 						",s.type)),"
 					"s.status=IF(s.id=z.id,?,s.status),"
+					"s.last_judgment=IF(s.id=z.id,?,s.last_judgment),"
 					"s.initial_report=IF(s.id=z.id,?,s.initial_report),"
 					"s.final_report=IF(s.id=z.id,?,s.final_report),"
 					"s.score=IF(s.id=z.id,?,s.score)"
 				"WHERE s.id=x.id OR s.id=y.id OR s.id=z.id");
 
-			stmt.setInt64(10, total_score);
+			stmt.setInt64(11, total_score);
 		}
 
 		stmt.setString(1, user_id);
@@ -129,8 +133,9 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 		stmt.setString(5, round_id);
 		stmt.setString(6, submission_id);
 		stmt.setUInt(7, static_cast<uint>(status));
-		stmt.setString(8, initial_report);
-		stmt.setString(9, final_report);
+		stmt.setString(8, date());
+		stmt.setString(9, initial_report);
+		stmt.setString(10, final_report);
 
 		stmt.executeUpdate();
 		db_conn.executeUpdate("UPDATE job_queue"

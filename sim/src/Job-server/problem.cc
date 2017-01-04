@@ -3,6 +3,7 @@
 #include <sim/mysql.h>
 #include <sim/sqlite.h>
 #include <simlib/filesystem.h>
+#include <simlib/process.h>
 #include <simlib/sim/conver.h>
 #include <simlib/spawner.h>
 #include <simlib/time.h>
@@ -217,6 +218,7 @@ static void secondStage(const string& job_id, const string& job_owner,
 		bool rollback_transaction = true;
 		auto rollbacker = [&] {
 			if (rollback_transaction) {
+				SignalBlocker sb; // Prevent the transaction from interrupting
 				sqlite_db.execute("ROLLBACK"); // SQLite
 				// Remove the problem and its submissions
 				db_conn.executeUpdate("DELETE FROM problems WHERE id=" +
