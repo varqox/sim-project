@@ -21,7 +21,9 @@ protected:
 	Session& operator=(const Session&) = delete;
 	Session& operator=(Session&&) = delete;
 
-	virtual ~Session() { close(); }
+	virtual ~Session() {
+		try { close(); } catch (...) {} // We cannot throw
+	}
 
 	/**
 	 * @brief Generates id of length @p length which consist of [a-zA-Z0-9]

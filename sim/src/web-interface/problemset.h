@@ -31,10 +31,10 @@ private:
 	std::string problem_id_;
 	std::string problem_name, problem_label, problem_owner, problem_added;
 	std::string problem_simfile;
-	bool problem_is_public;
+	bool problem_is_public = false;
 	std::string owner_username;
-	uint owner_utype;
-	Permissions perms;
+	uint owner_utype = UTYPE_NORMAL;
+	Permissions perms = PERM_NONE;
 
 	void problemsetTemplate(const StringView& title,
 		const StringView& styles = {}, const StringView& scripts = {});

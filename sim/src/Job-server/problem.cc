@@ -215,22 +215,19 @@ static void secondStage(const string& job_id, const string& job_owner,
 
 		// Begin transaction
 		sqlite_db.execute("BEGIN");
-		bool rollback_transaction = true;
 		auto rollbacker = [&] {
-			if (rollback_transaction) {
-				SignalBlocker sb; // Prevent the transaction from interrupting
-				sqlite_db.execute("ROLLBACK"); // SQLite
-				// Remove the problem and its submissions
-				db_conn.executeUpdate("DELETE FROM problems WHERE id=" +
-					problem_id);
-				db_conn.executeUpdate("DELETE FROM submissions"
-					" WHERE problem_id=" + problem_id);
-				// Files
-				remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
-				remove_r(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
-			}
+			SignalBlocker sb; // Prevent the transaction from interrupting
+			sqlite_db.execute("ROLLBACK"); // SQLite
+			// Remove the problem and its submissions
+			db_conn.executeUpdate("DELETE FROM problems WHERE id=" +
+				problem_id);
+			db_conn.executeUpdate("DELETE FROM submissions WHERE problem_id=" +
+				problem_id);
+			// Files
+			remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
+			remove_r(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
 		};
-		CallInDtor<decltype(rollbacker)> transaction_guard {rollbacker};
+		CallInDtor<decltype(rollbacker)> rollback_maker {rollbacker};
 
 		// Insert the problem into the SQLite FTS5
 		SQLite::Statement sqlite_stmt {sqlite_db.prepare(
@@ -331,7 +328,7 @@ static void secondStage(const string& job_id, const string& job_owner,
 		// End transaction
 		if (stmt.executeUpdate() == 1) {
 			sqlite_db.execute("COMMIT");
-			rollback_transaction = false;
+			rollback_maker.cancel();
 		}
 
 	} catch (const std::exception& e) {

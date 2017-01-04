@@ -24,7 +24,7 @@ private:
 	};
 
 	std::string job_id;
-	Permissions perms;
+	Permissions perms = PERM_NONE;
 
 	Permissions getPermissions(const std::string& owner_id,
 		JobQueueStatus job_status);
