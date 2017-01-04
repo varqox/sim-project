@@ -108,6 +108,7 @@ inline void sort(A& a, Func&& func) {
 template<class Func>
 class CallInDtor {
 	Func func;
+	bool make_call = true;
 
 public:
 	constexpr explicit CallInDtor(Func f) : func(std::move(f)) {}
@@ -117,7 +118,19 @@ public:
 	CallInDtor& operator=(const CallInDtor&) = delete;
 	CallInDtor& operator=(CallInDtor&&) = delete;
 
-	~CallInDtor() { func(); }
+	void cancel() { make_call = false; }
+
+	void restore() { make_call = true; }
+
+	auto call_and_cancel() {
+		make_call = false;
+		return func();
+	}
+
+	~CallInDtor() {
+		if (make_call)
+			try { func(); } catch (...) {} // We cannot throw
+	}
 };
 
 template<class A, class B>

@@ -842,7 +842,9 @@ struct StrNumCompare {
 template<class T, size_t N = meta::ToString<std::numeric_limits<T>::max()>
 	::arr_value.size() + 2> // +1 for a terminating null char and +1 for the
 	                        // minus sign
-StringBuff<N> toString(T x) {
+StringBuff<N> toString(T x) noexcept(N >=
+	meta::ToString<std::numeric_limits<T>::max()>::arr_value.size() + 2)
+{
 	static_assert(N >= 2, "Needed to at least return \"0\"");
 	if (x == 0)
 		return {1, '0'};
@@ -1286,7 +1288,7 @@ constexpr int strtou(const StringView& s, T *x, size_t beg = 0,
 	int res = 0;
 	*x = 0;
 	if (s[beg] == '+' && (++res, ++beg) == end)
-		return -1; // sign is not a number
+		return -1; // Sign is not a number
 
 	for (size_t i = beg; i < end; ++i) {
 		if (s[i] >= '0' && s[i] <= '9')
