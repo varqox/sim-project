@@ -57,7 +57,7 @@ http/http.o: http
 ../simlib.a: config_file.o logger.o
 ../simlib.a: time.o filesystem.o process.o
 ../simlib.a: spawner.o sandbox.o syscall_name_32.o syscall_name_64.o
-../simlib.a: random.o ncg.o sha.o sha3.o
+../simlib.a: random.o sha.o sha3.o
 ../simlib.a: sim/sim.o http/http.o
 ../simlib.a:
 	$(Q)$(call P,AR,$@)$(AR) cr $@ $?
