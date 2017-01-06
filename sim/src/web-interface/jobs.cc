@@ -110,7 +110,7 @@ void Jobs::handle() {
 			"<thead>"
 				"<tr>"
 					"<th class=\"type\">Type</th>"
-					"<th class=\"added\">Added<sup>UTC+0</sup></th>"
+					"<th class=\"added\">Added<sup>UTC</sup></th>"
 					"<th class=\"status\">Status</th>",
 					(show_all ? "<th class=\"owner\">Owner</th>" : ""),
 					"<th class=\"priority\">Priority</th>"
@@ -308,7 +308,7 @@ void Jobs::job() {
 					"<tr>"
 						"<td>", job_type_str(job_type), "</td>"
 						"<td datetime=\"", added, "\">", added,
-							"<sup>UTC+0</sup></td>",
+							"<sup>UTC</sup></td>",
 						job_status_as_td(job_status));
 
 		if (show_owner)

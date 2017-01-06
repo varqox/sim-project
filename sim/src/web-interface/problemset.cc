@@ -134,7 +134,7 @@ void Problemset::handle() {
 					"<th class=\"name\">Name</th>"
 					"<th class=\"label\">Label</th>",
 					(show_owner ? "<th class=\"owner\">Owner</th>" : ""),
-					"<th class=\"added\">Added<sup>UTC+0</sup></th>"
+					"<th class=\"added\">Added<sup>UTC</sup></th>"
 					"<th class=\"is_public\">Is public</th>"
 					"<th class=\"actions\">Actions</th>"
 				"</tr>"
@@ -467,7 +467,7 @@ void Problemset::problem() {
 	append("<div class=\"added\">"
 				"<label>Added</label>"
 				"<span datetime=\"", problem_added, "\">", problem_added,
-					"<sup>UTC+0</sup></span>"
+					"<sup>UTC</sup></span>"
 			"</div>"
 			"<div class=\"is_public\">"
 				"<label>Is public</label>",

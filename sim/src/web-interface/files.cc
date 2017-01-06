@@ -250,7 +250,7 @@ void Contest::editFile(const StringView& id, string name) {
 				"<div class=\"field-group\">"
 					"<label>Modified</label>"
 					"<span datetime=\"", modified, "\" disabled>", modified,
-						"<sup>UTC+0</sup></span>"
+						"<sup>UTC</sup></span>"
 				"</div>"
 
 				"<div class=\"button-row\">"
@@ -402,7 +402,7 @@ void Contest::files(bool admin_view) {
 		append("<table class=\"files\">"
 			"<thead>"
 				"<tr>"
-					"<th class=\"time\">Modified</th>"
+					"<th class=\"time\">Modified<sup>UTC</sup></th>"
 					"<th class=\"name\">File name</th>"
 					"<th class=\"size\">File size</th>"
 					"<th class=\"description\">Description</th>"
@@ -414,7 +414,7 @@ void Contest::files(bool admin_view) {
 		while (res.next()) {
 			string id = res[1];
 			append("<tr>"
-				"<td datetime=\"", res[2],"\">", res[2], "<sup>UTC+0</sup></td>"
+				"<td datetime=\"", res[2],"\">", res[2], "</td>"
 				"<td><a href=\"/file/", id, "\">", htmlEscape(res[3]),
 					"</a></td>"
 				"<td>", humanizeFileSize(res.getUInt64(4)), "</td>"

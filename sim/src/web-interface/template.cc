@@ -59,7 +59,7 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 	append("</div>"
 			"<div class=\"rightbar\">"
 				"<time id=\"clock\">", date("%H:%M:%S"),
-					"<sup>UTC+0</sup></time>");
+					"<sup>UTC</sup></time>");
 
 	if (Session::isOpen())
 		append("<div class=\"dropmenu down\">"

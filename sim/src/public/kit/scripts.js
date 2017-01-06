@@ -1,5 +1,5 @@
 // Clock
-window.onload = function updateClock() {
+$(document).ready(function updateClock() {
 	if (updateClock.time_difference === undefined)
 		updateClock.time_difference = window.performance.timing.responseStart - start_time;
 
@@ -15,7 +15,7 @@ window.onload = function updateClock() {
 	var tzo = -time.getTimezoneOffset();
 	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');
 	setTimeout(updateClock, 1000 - time.getMilliseconds());
-}
+});
 
 // Dropdowns
 $(document).ready(function(){
@@ -58,9 +58,9 @@ $(document).ready(function() {
 		minutes = (minutes < 10 ? '0' : '') + minutes;
 		seconds = (seconds < 10 ? '0' : '') + seconds;
 
-		// If this is a '.submissions .time', '.problems .added' or
-		// '.jobs .added', then skip the timezone part
-		if (x.parents('.submissions, .problems, .jobs').length)
+		// If this is a '.submissions .time', '.problems .added',
+		// '.jobs .added' or '.files .time', then skip the timezone part
+		if (x.parents('.submissions, .problems, .jobs, .files').length)
 			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
 				' ', hours, ':', minutes, ':', seconds));
 		else
@@ -70,13 +70,12 @@ $(document).ready(function() {
 	});
 
 	// Give timezone info in the submissions and problems table
-	$('.submissions th.time, .problems th.added, .jobs th.added').each(function() {
+	$('.submissions th.time, .problems th.added, .jobs th.added, .files th.time') .each(function() {
 		$(this).children().remove();
 		$(this).append(String().concat(
 			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
 	});
 });
-
 // Handle navbar correct size
 function normalizeNavbar() {
 	var navbar = $('.navbar');
