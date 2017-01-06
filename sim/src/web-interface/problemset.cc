@@ -122,7 +122,7 @@ void Problemset::handle() {
 
 		MySQL::Result res = stmt.executeQuery();
 		if (!res.next()) {
-			append("There are no problems to show...");
+			append("<p>There are no problems to show...</p>");
 			return;
 		}
 
@@ -494,7 +494,10 @@ void Problemset::downloadProblem() {
 	if (~perms & PERM_DOWNLOAD)
 		return error403();
 
-	error501();
+	resp.content_type = server::HttpResponse::FILE;
+	resp.headers["Content-Disposition"] = concat("attachment; filename=",
+		problem_id_, ".zip");
+	resp.content = concat("problems/", problem_id_, ".zip");
 }
 
 void Problemset::reuploadProblem() {
