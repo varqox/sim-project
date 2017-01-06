@@ -831,7 +831,7 @@ void User::printUserSubmissions(uint limit) {
 		append("<table class=\"submissions\">"
 			"<thead>"
 				"<tr>",
-					"<th class=\"time\">Submission time<sup>UTC+0</sup></th>"
+					"<th class=\"time\">Submission time<sup>UTC</sup></th>"
 					"<th class=\"problem\">Problem</th>"
 					"<th class=\"status\">Status</th>"
 					"<th class=\"score\">Score</th>"

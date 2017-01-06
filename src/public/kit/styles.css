@@ -421,6 +421,16 @@ textarea {
 }
 
 /* ================================ SIM CSS ================================ */
+#clock > sup,
+*[datetime] > sup,
+.submissions th.time > sup,
+.problems th.added > sup,
+.jobs th.added > sup,
+.files th.time > sup {
+	width: 3.5em;
+	display: inline-block;
+	text-align: left;
+}
 * {
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;

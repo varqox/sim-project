@@ -664,7 +664,7 @@ void Contest::submission() {
 		append("<td>", htmlEscape(
 				concat(problems_name, " (", problems_label, ')')), "</td>"
 				"<td datetime=\"", submit_time ,"\">", submit_time,
-					"<sup>UTC+0</sup></td>",
+					"<sup>UTC</sup></td>",
 				submissionStatusAsTd(submission_status, show_final_results),
 				"<td>", (show_final_results ? score : ""), "</td>"
 				"<td>", toStr(stype), "</td>"
@@ -754,7 +754,7 @@ void Contest::submissions(bool admin_view) {
 					(admin_view ? "<th class=\"username\">Username</th>"
 							"<th class=\"full-name\">Full name</th>"
 						: ""),
-					"<th class=\"time\">Submission time<sup>UTC+0</sup></th>"
+					"<th class=\"time\">Submission time<sup>UTC</sup></th>"
 					"<th class=\"problem\">Problem</th>"
 					"<th class=\"status\">Status</th>"
 					"<th class=\"score\">Score</th>"
