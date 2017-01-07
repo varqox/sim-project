@@ -8,27 +8,26 @@ using std::string;
 Jobs::Permissions Jobs::getPermissions(const string& owner_id,
 	JobQueueStatus job_status)
 {
-	if (Session::open()) {
-		if (Session::user_type == UTYPE_ADMIN)
-			switch (job_status) {
-			case JobQueueStatus::PENDING:
-			case JobQueueStatus::IN_PROGRESS:
-				return Permissions(PERM_VIEW | PERM_VIEW_ALL | PERM_CANCEL);
+	// Session must be open to access jobs
+	if (Session::user_type == UTYPE_ADMIN)
+		switch (job_status) {
+		case JobQueueStatus::PENDING:
+		case JobQueueStatus::IN_PROGRESS:
+			return Permissions(PERM_VIEW | PERM_VIEW_ALL | PERM_CANCEL);
 
-			case JobQueueStatus::FAILED:
-			case JobQueueStatus::CANCELED:
-				return Permissions(PERM_VIEW | PERM_VIEW_ALL | PERM_RESTART);
+		case JobQueueStatus::FAILED:
+		case JobQueueStatus::CANCELED:
+			return Permissions(PERM_VIEW | PERM_VIEW_ALL | PERM_RESTART);
 
-			default:
-				return Permissions(PERM_VIEW | PERM_VIEW_ALL);
-			}
+		default:
+			return Permissions(PERM_VIEW | PERM_VIEW_ALL);
+		}
 
-		if (Session::user_id == owner_id)
-			return Permissions(PERM_VIEW | (isIn(job_status,
-				{JobQueueStatus::PENDING, JobQueueStatus::IN_PROGRESS}) ?
-					(uint)PERM_CANCEL : 0) |
-				(Session::user_type == UTYPE_TEACHER ? (int)PERM_VIEW_ALL : 0));
-	}
+	if (Session::user_id == owner_id)
+		return Permissions(PERM_VIEW | (isIn(job_status,
+			{JobQueueStatus::PENDING, JobQueueStatus::IN_PROGRESS}) ?
+				(uint)PERM_CANCEL : 0) |
+			(Session::user_type == UTYPE_TEACHER ? (int)PERM_VIEW_ALL : 0));
 
 	return PERM_NONE;
 }
@@ -61,6 +60,9 @@ static constexpr const char* job_status_as_td(JobQueueStatus status) {
 }
 
 void Jobs::handle() {
+	if (!Session::open())
+		return redirect("/login?" + req->target);
+
 	StringView next_arg = url_args.extractNextArg();
 	if (isDigit(next_arg)) {
 		job_id = next_arg.to_string();
