@@ -199,15 +199,18 @@ static void secondStage(const string& job_id, const string& job_owner,
 		sf.loadSolutions();
 
 		// Add the problem to the database
+		string current_date = date();
 		MySQL::Statement stmt {db_conn.prepare(
-			"INSERT problems (is_public, name, label, simfile, owner, added)"
-			" VALUES(?, ?, ?, ?, ?, ?)")};
+			"INSERT problems (is_public, name, label, simfile, owner, added,"
+				" last_edit)"
+			" VALUES(?, ?, ?, ?, ?, ?, ?)")};
 		stmt.setBool(1, info.public_problem);
 		stmt.setString(2, sf.name);
 		stmt.setString(3, sf.label);
 		stmt.setString(4, std::move(simfile_str));
 		stmt.setString(5, job_owner);
-		stmt.setString(6, date());
+		stmt.setString(6, current_date);
+		stmt.setString(7, current_date);
 		stmt.executeUpdate();
 
 		// Obtain new problem's id
@@ -270,7 +273,7 @@ static void secondStage(const string& job_id, const string& job_owner,
 		for (auto&& solution : sf.solutions) {
 			report.append("Submit: ", solution);
 
-			string current_date = date();
+			current_date = date();
 			// Begin transaction
 			stmt = db_conn.prepare("INSERT submissions (user_id, problem_id,"
 					" round_id, parent_round_id, contest_round_id, status,"
