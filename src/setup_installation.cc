@@ -197,6 +197,7 @@ int main(int argc, char **argv) {
 			"`simfile` mediumblob NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
+			"`last_edit` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (owner),"
 			"KEY (is_public)"

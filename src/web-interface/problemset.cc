@@ -511,6 +511,8 @@ void Problemset::rejudgeProblemSubmissions() {
 	if (~perms & PERM_ADMIN)
 		return error403();
 
+	// TODO: CSRF protection here
+
 	error501();
 }
 
