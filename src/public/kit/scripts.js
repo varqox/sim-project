@@ -159,6 +159,55 @@ function modalForm(form_title, form_body) {
 		html: form_body
 	}));
 }
+function sendModalFrom(url, success_msg) {
+	var form = $('.modal form');
+	addCsrfTokenTo(form);
+	$('#modal_req_status').remove();
+	$('<p>', {
+		id: 'modal_req_status',
+		text: 'Sending request...'
+	}).appendTo(form);
+	console.log(form.serialize());
+	$.ajax({
+		type: 'POST',
+		url: url,
+		data: form.serialize(),
+		success: function() {
+			$('#modal_req_status').html(success_msg + ' <a onclick="location.reload(true)">Reload the page</a> to see changes.')
+				.css('background', '#9ff55f');
+		},
+		error: function(resp) {
+			$('#modal_req_status').replaceWith($('<pre>', {
+				id: 'modal_req_status',
+				text: "Error: " + resp.status + ' ' + resp.statusText,
+				style: 'background: #f55f5f'
+			}));
+			// Additional message
+			try {
+				var xml = $.parseXML(resp.responseText);
+				var msg = $(xml).text();
+
+				if (msg != '') {
+					var x = $('#modal_req_status');
+					x.text(x.text().concat("\nInfo: ", msg));
+				}
+			} catch (err) {
+				if (resp.responseText != '' // There is a message
+					&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
+						!== 0 // Message is not a whole HTML page
+					&& resp.responseText.lastIndexOf('<!doctype html>', 0)
+						!== 0) // Message is not a whole HTML page
+				{
+					var x = $('#modal_req_status');
+					x.text(x.text().concat("\nInfo: ",
+						resp.responseText));
+				}
+			}
+
+		}
+	});
+	return false;
+}
 function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_button_message)
 {
 	// Default arguments
@@ -174,51 +223,7 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 			class: 'btn-small ' + css_classes,
 			value: value,
 			click: function() {
-				addCsrfTokenTo($(this).parent());
-				$('#modal_req_status').remove();
-				$('<p>', {
-					id: 'modal_req_status',
-					text: 'Sending request...'
-				}).appendTo($(this).parent().parent());
-				$.ajax({
-					type: 'POST',
-					url: url,
-					data: $(this).parent().parent().serialize(),
-					success: function() {
-						$('#modal_req_status').html(success_msg + ' <a onclick="location.reload(true)">Reload the page</a> to see changes.')
-							.css('background', '#9ff55f');
-					},
-					error: function(resp) {
-						$('#modal_req_status').replaceWith($('<pre>', {
-							id: 'modal_req_status',
-							text: "Error: " + resp.status + ' ' + resp.statusText,
-							style: 'background: #f55f5f'
-						}));
-						// Additional message
-						try {
-							var xml = $.parseXML(resp.responseText);
-							var msg = $(xml).text();
-
-							if (msg != '') {
-								var x = $('#modal_req_status');
-								x.text(x.text().concat("\nInfo: ", msg));
-							}
-						} catch (err) {
-							if (resp.responseText != '' // There is a message
-								&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-									!== 0 // Message is not a whole HTML page
-								&& resp.responseText.lastIndexOf('<!doctype html>', 0)
-									!== 0) // Message is not a whole HTML page
-							{
-								var x = $('#modal_req_status');
-								x.text(x.text().concat("\nInfo: ",
-									resp.responseText));
-							}
-						}
-
-					}
-				});
-				return false;
+				return sendModalFrom(url, success_msg);
 			}
 		}).add((cancel_button_message === null ? '' : $('<input>', {
 			type: 'button',
@@ -250,6 +255,37 @@ function changeSubmissionType(submission_id, stype) {
 		}).add(modalFormSubmitButton('Change type',
 			'/s/' + submission_id + '/change-type',
 			'Submission type has been changed.'))
+	);
+}
+function rejudgeSubmission(submission_id) {
+	modalForm('Rejudge submission ' + submission_id);
+	sendModalFrom('/s/' + submission_id + '/rejudge',
+		'Rejudge of the submission was added to the job queue.')
+}
+function rejudgeProblemSubmissions(problem_id) {
+	modalForm('Rejudge submissions to the problem ' + problem_id,
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to rejudge all the submissions to the problem <a href="/p/' + problem_id +
+					'">' + problem_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Rejudge submissions',
+			'/p/' + problem_id + '/rejudge',
+			'Rejudge of the submissions was added to the job queue', 'blue',
+			'No, go back'))
+	);
+}
+function rejudgeRoundSubmissions(round_id) {
+	modalForm('Rejudge submissions in the round',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to rejudge all the submissions in the round <a href="/c/' + round_id +
+					'">' + round_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Rejudge submissions',
+			'/c/' + round_id + '/edit/rejudge',
+			'Rejudge of the submissions was added to the job queue', 'blue',
+			'No, go back'))
 	);
 }
 

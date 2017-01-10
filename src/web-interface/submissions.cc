@@ -449,10 +449,12 @@ void Contest::submission() {
 
 		/* Rejudge */
 		if (query == Query::REJUDGE) {
-			if (!admin_view)
+			FormValidator fv(req->form_data);
+			if (!admin_view || req->method != server::HttpRequest::POST ||
+				fv.get("csrf_token") != Session::csrf_token)
+			{
 				return error403();
-
-			// TODO: make it like 'Change type', and use CSRF protection!
+			}
 
 			db_conn.executeUpdate("UPDATE submissions"
 				" SET status=" SSTATUS_PENDING_STR
@@ -472,12 +474,7 @@ void Contest::submission() {
 
 			notifyJobServer();
 
-			// Redirect to Referer or submission page
-			string referer = req->headers.get("Referer");
-			if (referer.empty())
-				return redirect(concat("/s/", submission_id));
-
-			return redirect(referer);
+			return response("200 OK");
 		}
 
 		/* Change submission type */
@@ -485,7 +482,7 @@ void Contest::submission() {
 			// Changes are only allowed if one has permissions and only in the
 			// pool: {NORMAL | FINAL, IGNORED}
 			if (!admin_view || stype > SubmissionType::IGNORED)
-				return response("403 Forbidden");
+				return error403();
 
 			// Get new stype
 			FormValidator fv(req->form_data);
@@ -627,8 +624,8 @@ void Contest::submission() {
 				"onclick=\"changeSubmissionType(", submission_id, ",'",
 					(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
 					"Change type</a>"
-				"<a class=\"btn-small blue\" href=\"/s/", submission_id,
-					"/rejudge\">Rejudge</a>"
+				"<a class=\"btn-small blue\" onclick=\"rejudgeSubmission(",
+					submission_id, ")\">Rejudge</a>"
 				"<a class=\"btn-small red\" href=\"/s/", submission_id,
 					"/delete?/c/", round_id, "/submissions\">Delete</a>");
 		append("</div>"
@@ -806,8 +803,8 @@ void Contest::submissions(bool admin_view) {
 						"onclick=\"changeSubmissionType(", res[1], ",'",
 						(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
 						"Change type</a>"
-					"<a class=\"btn-small blue\" href=\"/s/", res[1],
-						"/rejudge\">Rejudge</a>"
+					"<a class=\"btn-small blue\" onclick=\"rejudgeSubmission(",
+						res[1], ")\">Rejudge</a>"
 					"<a class=\"btn-small red\" href=\"/s/", res[1],
 						"/delete\">Delete</a>");
 

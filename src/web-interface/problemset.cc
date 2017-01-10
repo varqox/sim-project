@@ -442,8 +442,8 @@ void Problemset::problem() {
 				"Edit problem</a>"
 			"<a class=\"btn-small orange\" href=\"/p/", problem_id_,
 				"/reupload\">Reupload the package</a>"
-			"<a class=\"btn-small blue\" href=\"/p/", problem_id_,
-				"/rejudge\">Rejudge all submissions</a>"
+			"<a class=\"btn-small blue\" onclick=\"rejudgeProblemSubmissions(",
+				problem_id_, ")\">Rejudge all submissions</a>"
 			"<a class=\"btn-small red\" href=\"/p/", problem_id_, "/delete\">"
 				"Delete problem</a>");
 
@@ -511,9 +511,39 @@ void Problemset::rejudgeProblemSubmissions() {
 	if (~perms & PERM_ADMIN)
 		return error403();
 
-	// TODO: CSRF protection here
+	FormValidator fv(req->form_data);
+	if (req->method != server::HttpRequest::POST ||
+		fv.get("csrf_token") != Session::csrf_token)
+	{
+		return error403();
+	}
 
-	error501();
+	try {
+		MySQL::Statement stmt = db_conn.prepare("UPDATE submissions "
+			"SET status=" SSTATUS_PENDING_STR " WHERE problem_id=?");
+		stmt.setString(1, problem_id_);
+		stmt.executeUpdate();
+
+		// Add jobs to rejudge the submissions
+		stmt = db_conn.prepare("INSERT job_queue (creator, status,"
+				" priority, type, added, aux_id, info, data)"
+			"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
+			" FROM submissions WHERE problem_id=?");
+		stmt.setString(1, Session::user_id);
+		stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
+		stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
+		stmt.setString(4, date());
+		stmt.setString(5, jobs::dumpString(problem_id_));
+		stmt.setString(6, problem_id_);
+		stmt.executeUpdate();
+
+		notifyJobServer();
+
+		return response("200 OK");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+	}
 }
 
 void Problemset::deleteProblem() {

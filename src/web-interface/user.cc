@@ -71,7 +71,7 @@ void User::userTemplate(const StringView& title, const StringView& styles,
 	append("<ul class=\"menu\">"
 			"<span>USER</span>"
 			"<a href=\"/u/", user_id, "\">View profile</a>"
-			"<a href=\"/u/", user_id, "/submissions\">User submissions</a>"
+			"<a href=\"/u/", user_id, "/submissions\">User's submissions</a>"
 			"<hr/>"
 			"<a href=\"/u/", user_id, "/edit\">Edit profile</a>"
 			"<a href=\"/u/", user_id, "/change-password\">Change password</a>"
@@ -440,7 +440,7 @@ void User::userProfile() {
 					htmlEscape(email),
 				"</div>"
 			"</div>"
-		"<h2>User submissions (showing the recent ",
+		"<h2>User's submissions (showing the recent ",
 			toString(SUBMISSIONS_ON_USER_PROFILE_LIMIT), ")</h2>");
 
 	printUserSubmissions(SUBMISSIONS_ON_USER_PROFILE_LIMIT);
@@ -885,8 +885,8 @@ void User::printUserSubmissions(uint limit) {
 						"onclick=\"changeSubmissionType(", res[1], ",'",
 						(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
 						"Change type</a>"
-					"<a class=\"btn-small blue\" href=\"/s/", res[1],
-						"/rejudge\">Rejudge</a>"
+					"<a class=\"btn-small blue\" onclick=\"rejudgeSubmission(",
+						res[1], ")\">Rejudge</a>"
 					"<a class=\"btn-small red\" href=\"/s/", res[1],
 						"/delete\">Delete</a>");
 
@@ -904,9 +904,9 @@ void User::printUserSubmissions(uint limit) {
 }
 
 void User::userSubmissions() {
-	userTemplate("User submissions");
-	append("<h1>User submissions</h1>");
-
+	userTemplate("User's submissions");
 	printUser();
+
+	append("<h1>User's submissions</h1>");
 	printUserSubmissions();
 }

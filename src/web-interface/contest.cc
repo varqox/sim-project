@@ -768,38 +768,44 @@ void Contest::editProblem() {
 		return error403();
 
 	StringView next_arg = url_args.extractNextArg();
+	FormValidator fv(req->form_data);
+
 	// Rejudge
 	if (next_arg == "rejudge") {
+		if (req->method != server::HttpRequest::POST ||
+			fv.get("csrf_token") != Session::csrf_token)
+		{
+			return error403();
+		}
+
 		try {
-			// TODO: CSRF protection - make a query with XML request
 			MySQL::Statement stmt = db_conn.prepare("UPDATE submissions "
-				"SET status=" SSTATUS_PENDING_STR " WHERE problem_id=?");
-			stmt.setString(1, rpath->problem->problem_id);
+				"SET status=" SSTATUS_PENDING_STR " WHERE round_id=?");
+			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
 
 			// Add jobs to rejudge the submissions
 			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 					" priority, type, added, aux_id, info, data)"
 				"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
-				" FROM submissions WHERE problem_id=?");
+				" FROM submissions WHERE round_id=?");
 			stmt.setString(1, Session::user_id);
 			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
 			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
 			stmt.setString(4, date());
 			stmt.setString(5, jobs::dumpString(rpath->problem->problem_id));
-			stmt.setString(6, rpath->problem->problem_id);
+			stmt.setString(6, rpath->round_id);
 			stmt.executeUpdate();
 
 			notifyJobServer();
 
+			return response("200 OK");
+
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
 		}
-
-		return redirect(concat("/c/", rpath->round_id, "/edit"));
 	}
 
-	FormValidator fv(req->form_data);
 	string round_name, original_name;
 
 	if (req->method == server::HttpRequest::POST) {
@@ -851,8 +857,9 @@ void Contest::editProblem() {
 	append("<div class=\"right-flow\" style=\"width:85%\">"
 			"<a class=\"btn-small\" href=\"/p/", rpath->problem->problem_id,
 				"/download\">Download the package</a>"
-			"<a class=\"btn-small blue\" href=\"/c/", rpath->round_id,
-				"/edit/rejudge\">Rejudge all submissions</a>"
+			"<a class=\"btn-small blue\""
+				" onclick=\"rejudgeRoundSubmissions(", rpath->round_id,
+				")\">Rejudge all submissions</a>"
 			"<a class=\"btn-small green\" href=\"/p/",
 				rpath->problem->problem_id, "\">Problem's page</a>"
 		"</div>",
