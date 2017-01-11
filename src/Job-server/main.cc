@@ -17,7 +17,7 @@ static void processJobQueue() {
 	// While job queue is not empty
 	for (;;) try {
 		MySQL::Result res = db_conn.executeQuery(
-			"SELECT id, type, aux_id, info, creator FROM job_queue"
+			"SELECT id, type, aux_id, info, creator, added FROM job_queue"
 			" WHERE status=" JQSTATUS_PENDING_STR
 			" ORDER BY priority DESC, id LIMIT 1");
 
@@ -36,7 +36,7 @@ static void processJobQueue() {
 		// Take action depending on the job type
 		switch (type) {
 		case JobQueueType::JUDGE_SUBMISSION:
-			judgeSubmission(job_id, aux_id, info);
+			judgeSubmission(job_id, aux_id, res[6]);
 			break;
 
 		case JobQueueType::ADD_PROBLEM:
