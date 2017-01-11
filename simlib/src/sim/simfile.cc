@@ -134,8 +134,7 @@ void Simfile::loadSolutions() {
 		                                                  // beginning
 }
 
-void Simfile::loadTests() {
-	// Global memory limit
+void Simfile::loadGlobalMemoryLimitOnly() {
 	auto&& ml = config["memory_limit"];
 	CHECK_IF_NOT_ARR(ml, "memory_limit");
 	if (ml.isSet()) {
@@ -161,6 +160,11 @@ void Simfile::loadTests() {
 			throw invalid_mem_limit();
 	} else
 		global_mem_limit = 0;
+}
+
+void Simfile::loadTests() {
+	// Global memory limit
+	loadGlobalMemoryLimitOnly();
 
 	// Now if global_mem_limit == 0 then it is unset
 

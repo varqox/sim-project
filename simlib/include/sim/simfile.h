@@ -136,8 +136,8 @@ public:
 	 * @details Fields:
 	 *   - name (problem's name)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadName();
 
@@ -146,8 +146,8 @@ public:
 	 * @details Fields:
 	 *   - label (problem's label)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadLabel();
 
@@ -156,8 +156,8 @@ public:
 	 * @details Fields:
 	 *   - checker (path to checker source file)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadChecker();
 
@@ -166,8 +166,8 @@ public:
 	 * @details Fields:
 	 *   - statement (path to statement)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadStatement();
 
@@ -176,8 +176,8 @@ public:
 	 * @details Fields:
 	 *   - solutions (array of paths to source files of the)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadSolutions();
 
@@ -185,22 +185,34 @@ public:
 	 * @brief Loads tests, their limits and scoring
 	 * @details Fields:
 	 *   - memory_limit (optional global memory limit [MB], if specified then
-	 *     memory limit in `limits` variable is optional)
+	 *     glogal_mem_limit > 0 and memory limit in `limits` variable is
+	 *     optional)
 	 *   - limits (array of tests limits: time [seconds] and memory [MB])
 	 *   - scoring (optional array of scoring of the tests groups)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadTests();
+
+	/**
+	 * @brief Loads only the global memory limit
+	 * @details Fields:
+	 *   - memory_limit (optional global memory limit [MB], if specified then
+	 *     glogal_mem_limit > 0 )
+	 *
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
+	 */
+	void loadGlobalMemoryLimitOnly();
 
 	/**
 	 * @brief Loads tests files (input and output files)
 	 * @details Fields:
 	 *   - tests_files (array of the tests' input and output files)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadTestsFiles();
 
@@ -209,8 +221,8 @@ public:
 	 * @details Fields are identical to these of loadTests(), with addition of:
 	 *   - tests_files (array of the tests' input and output files)
 	 *
-	 *   @errors Throws an exception of type std::runtime_error if any
-	 *     validation error occurs
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
 	 */
 	void loadTestsWithFiles() {
 		loadTests();

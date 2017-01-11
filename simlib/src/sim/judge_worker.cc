@@ -79,7 +79,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				test.memory_limit + page_size, // To be able to detect exceeding
 			}); // Allow exceptions to fly upper
 
-			// Log syscalls problems
+			// Log problems with syscalls
 			if (verbose && hasPrefixIn(es.message,
 				{"Error: ", "failed to get syscall", "forbidden syscall"}))
 			{
