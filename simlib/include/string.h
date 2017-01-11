@@ -858,6 +858,7 @@ StringBuff<N> toString(T x) noexcept(N >=
 		}
 		buff[buff.len++] = '-';
 
+		buff[buff.len] = '\0';
 		std::reverse(buff.str, buff.str + buff.len);
 		return buff;
 	}
@@ -868,6 +869,7 @@ StringBuff<N> toString(T x) noexcept(N >=
 		x = x2;
 	}
 
+	buff[buff.len] = '\0';
 	std::reverse(buff.str, buff.str + buff.len);
 	return buff;
 }
