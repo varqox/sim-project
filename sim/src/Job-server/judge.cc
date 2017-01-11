@@ -13,22 +13,39 @@ using std::string;
 extern MySQL::Connection db_conn;
 
 void judgeSubmission(const string& job_id, const string& submission_id,
-	StringView info)
+	const string& job_creation_time)
 {
-	MySQL::Result res = db_conn.executeQuery("SELECT user_id, round_id"
-		" FROM submissions WHERE id=" + submission_id);
-	string user_id, round_id;
+	MySQL::Result res = db_conn.executeQuery("SELECT user_id, round_id,"
+			" problem_id, last_judgment, p.last_edit"
+		" FROM submissions s, problems p"
+		" WHERE p.id=problem_id AND s.id=" + submission_id);
+	string user_id, round_id, problem_id, last_judgment, p_last_edit;
 	if (res.next()) {
 		user_id = res[1];
 		round_id = res[2];
+		problem_id = res[3];
+		last_judgment = res[4];
+		p_last_edit = res[5];
+
 	} else { // The submission doesn't exist (probably was removed)
 		// Cancel the job
 		db_conn.executeUpdate("UPDATE job_queue"
 			" SET status=" JQSTATUS_CANCELED_STR " WHERE id=" + job_id);
+		stdlog("Judging of the submission ", submission_id, " canceled, since"
+			" there is no such submission.");
 		return;
 	}
 
-	string problem_id = jobs::extractDumpedString(info);
+	// If the problem wasn't modified since last judgment and submission has
+	// already been rejudged after the job was created
+	if (last_judgment > p_last_edit && last_judgment > job_creation_time) {
+		// Skit the job - the submission has already been rejudged
+		db_conn.executeUpdate("UPDATE job_queue"
+			" SET status=" JQSTATUS_DONE_STR " WHERE id=" + job_id);
+		stdlog("Judging of the submission ", submission_id, " skipped.");
+		return;
+	}
+
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
 
