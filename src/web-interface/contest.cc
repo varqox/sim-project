@@ -324,7 +324,7 @@ void Contest::addRound() {
 			"Begins: invalid value");
 		fv.validate(ends, "ends", "Ends", isDatetime, "Ends: invalid value");
 		fv.validate(full_results, "full_results", "Ends", isDatetime,
-			"Full_results: invalid value");
+			"Full results: invalid value");
 
 		// If all fields are ok
 		if (fv.noErrors())
@@ -345,13 +345,13 @@ void Contest::addRound() {
 				else
 					stmt.setString(4, begins);
 
-				// ends
+				// Ends
 				if (ends.empty())
 					stmt.setNull(5);
 				else
 					stmt.setString(5, ends);
 
-				// Full_results
+				// Full results
 				if (full_results.empty())
 					stmt.setNull(6);
 				else
@@ -406,9 +406,9 @@ void Contest::addRound() {
 					"maxlength=\"19\">"
 					"<span>UTC</span>"
 			"</div>"
-			// Full_results
+			// Full results
 			"<div class=\"field-group\">"
-				"<label>Full_results</label>"
+				"<label>Full results</label>"
 				"<input type=\"text\" name=\"full_results\""
 					"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 					htmlEscape(full_results), "\" size=\"19\" "
@@ -656,7 +656,7 @@ void Contest::editRound() {
 		fv.validate(ends, "ends", "Ends", isDatetime, "Ends: invalid value");
 
 		fv.validate(full_results, "full_results", "Ends", isDatetime,
-			"Full_results: invalid value");
+			"Full results: invalid value");
 
 		// If all fields are ok
 		if (fv.noErrors())
@@ -673,13 +673,13 @@ void Contest::editRound() {
 				else
 					stmt.setString(3, begins);
 
-				// ends
+				// Ends
 				if (ends.empty())
 					stmt.setNull(4);
 				else
 					stmt.setString(4, ends);
 
-				// Full_results
+				// Full results
 				if (full_results.empty())
 					stmt.setNull(5);
 				else
@@ -745,9 +745,9 @@ void Contest::editRound() {
 						"maxlength=\"19\">"
 					"<span>UTC</span>"
 				"</div>"
-				// Full_results
+				// Full results
 				"<div class=\"field-group\">"
-					"<label>Full_results</label>"
+					"<label>Full results</label>"
 					"<input type=\"text\" name=\"full_results\""
 						"placeholder=\"yyyy-mm-dd HH:MM:SS\" value=\"",
 						htmlEscape(full_results), "\" size=\"19\" "
