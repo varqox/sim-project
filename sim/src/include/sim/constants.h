@@ -32,6 +32,7 @@ static_assert(meta::equal(UTYPE_TEACHER_STR,
 static_assert(meta::equal(UTYPE_NORMAL_STR,
 	meta::ToString<UTYPE_NORMAL>::value), "Update the above #define");
 
+// Contest's users
 constexpr uint CU_MODE_CONTESTANT = 0;
 constexpr uint CU_MODE_MODERATOR = 1;
 
@@ -68,9 +69,30 @@ constexpr uint FILE_DESCRIPTION_MAX_LEN = 512;
 constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
 constexpr uint SUBMISSIONS_ON_USER_PROFILE_LIMIT = 16;
 
-// Initial and final values may be combined, but not special
-enum class SubmissionStatus : uint8_t {
+
+enum class ProblemType : uint8_t {
 	VOID = 0,
+	PUBLIC = 1,
+	PRIVATE = 2,
+};
+
+#define PTYPE_VOID_STR "0"
+static_assert(meta::equal(PTYPE_VOID_STR,
+	meta::ToString<(int)ProblemType::VOID>::value),
+	"Update the above #define");
+
+#define PTYPE_PUBLIC_STR "1"
+static_assert(meta::equal(PTYPE_PUBLIC_STR,
+	meta::ToString<(int)ProblemType::PUBLIC>::value),
+	"Update the above #define");
+
+#define PTYPE_PRIVATE_STR "2"
+static_assert(meta::equal(PTYPE_PRIVATE_STR,
+	meta::ToString<(int)ProblemType::PRIVATE>::value),
+	"Update the above #define");
+
+// Initial and final values may be combined, but special not
+enum class SubmissionStatus : uint8_t {
 	// Final
 	OK = 1,
 	WA = 2,
@@ -89,13 +111,8 @@ enum class SubmissionStatus : uint8_t {
 	PENDING                   = (8 << 3) + 0,
 	COMPILATION_ERROR         = (8 << 3) + 1,
 	CHECKER_COMPILATION_ERROR = (8 << 3) + 2,
-	JUDGE_ERROR               = (8 << 3) + 3,
+	JUDGE_ERROR               = (8 << 3) + 3
 };
-
-#define SSTATUS_VOID_STR "0"
-static_assert(meta::equal(SSTATUS_VOID_STR,
-	meta::ToString<(int)SubmissionStatus::VOID>::value),
-	"Update the above #define");
 
 #define SSTATUS_PENDING_STR "64"
 static_assert(meta::equal(SSTATUS_PENDING_STR,
@@ -131,23 +148,32 @@ inline SubmissionStatus operator &(SubmissionStatus a, SubmissionStatus b) {
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
 	FINAL = 1,
-	IGNORED = 2,
-	PROBLEM_SOLUTION = 3,
+	VOID = 2,
+	IGNORED = 3,
+	PROBLEM_SOLUTION = 4,
 };
 
 #define STYPE_NORMAL_STR "0"
 static_assert(meta::equal(STYPE_NORMAL_STR,
 	meta::ToString<(int)SubmissionType::NORMAL>::value),
 	"Update the above #define");
+
 #define STYPE_FINAL_STR "1"
 static_assert(meta::equal(STYPE_FINAL_STR,
 	meta::ToString<(int)SubmissionType::FINAL>::value),
 	"Update the above #define");
-#define STYPE_IGNORED_STR "2"
+
+#define STYPE_VOID_STR "2"
+static_assert(meta::equal(STYPE_VOID_STR,
+	meta::ToString<(int)SubmissionType::VOID>::value),
+	"Update the above #define");
+
+#define STYPE_IGNORED_STR "3"
 static_assert(meta::equal(STYPE_IGNORED_STR,
 	meta::ToString<(int)SubmissionType::IGNORED>::value),
 	"Update the above #define");
-#define STYPE_PROBLEM_SOLUTION_STR "3"
+
+#define STYPE_PROBLEM_SOLUTION_STR "4"
 static_assert(meta::equal(STYPE_PROBLEM_SOLUTION_STR,
 	meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
 	"Update the above #define");
@@ -158,23 +184,18 @@ constexpr inline const char* toString(SubmissionType x) {
 	case SubmissionType::FINAL: return "Final";
 	case SubmissionType::IGNORED: return "Ignored";
 	case SubmissionType::PROBLEM_SOLUTION: return "Problem solution";
+	case SubmissionType::VOID: return "Void";
 	}
 	return "Unknown";
 }
 
 enum class JobQueueStatus : uint8_t {
-	VOID = 0,
 	PENDING = 1,
 	IN_PROGRESS = 2,
 	DONE = 3,
 	FAILED = 4,
 	CANCELED = 5
 };
-
-#define JQSTATUS_VOID_STR "0"
-static_assert(meta::equal(JQSTATUS_VOID_STR,
-	meta::ToString<(int)JobQueueStatus::VOID>::value),
-	"Update the above #define");
 
 #define JQSTATUS_PENDING_STR "1"
 static_assert(meta::equal(JQSTATUS_PENDING_STR,
@@ -203,7 +224,6 @@ static_assert(meta::equal(JQSTATUS_CANCELED_STR,
 
 constexpr inline const char* toString(JobQueueStatus x) {
 	switch (x) {
-	case JobQueueStatus::VOID: return "Void";
 	case JobQueueStatus::PENDING: return "Pending";
 	case JobQueueStatus::IN_PROGRESS: return "In progress";
 	case JobQueueStatus::DONE: return "Done";
@@ -214,40 +234,52 @@ constexpr inline const char* toString(JobQueueStatus x) {
 }
 
 enum class JobQueueType : uint8_t {
-	JUDGE_SUBMISSION = 0,
-	ADD_PROBLEM = 1,
-	REUPLOAD_PROBLEM = 2,
-	JUDGE_MODEL_SOLUTION = 3,
-	EDIT_PROBLEM = 4,
-	DELETE_PROBLEM = 5,
+	VOID = 0,
+	JUDGE_SUBMISSION = 1,
+	ADD_PROBLEM = 2,
+	REUPLOAD_PROBLEM = 3,
+	ADD_JUDGE_MODEL_SOLUTION = 4,
+	REUPLOAD_JUDGE_MODEL_SOLUTION = 5,
+	EDIT_PROBLEM = 6,
+	DELETE_PROBLEM = 7,
 };
 
-#define JQTYPE_JUDGE_SUBMISSION_STR "0"
+#define JQTYPE_VOID_STR "0"
+static_assert(meta::equal(JQTYPE_VOID_STR,
+	meta::ToString<(int)JobQueueType::VOID>::value),
+	"Update the above #define");
+
+#define JQTYPE_JUDGE_SUBMISSION_STR "1"
 static_assert(meta::equal(JQTYPE_JUDGE_SUBMISSION_STR,
 	meta::ToString<(int)JobQueueType::JUDGE_SUBMISSION>::value),
 	"Update the above #define");
 
-#define JQTYPE_ADD_PROBLEM_STR "1"
+#define JQTYPE_ADD_PROBLEM_STR "2"
 static_assert(meta::equal(JQTYPE_ADD_PROBLEM_STR,
 	meta::ToString<(int)JobQueueType::ADD_PROBLEM>::value),
 	"Update the above #define");
 
-#define JQTYPE_REUPLOAD_PROBLEM_STR "2"
+#define JQTYPE_REUPLOAD_PROBLEM_STR "3"
 static_assert(meta::equal(JQTYPE_REUPLOAD_PROBLEM_STR,
 	meta::ToString<(int)JobQueueType::REUPLOAD_PROBLEM>::value),
 	"Update the above #define");
 
-#define JQTYPE_JUDGE_MODEL_SOLUTION_STR "3"
-static_assert(meta::equal(JQTYPE_JUDGE_MODEL_SOLUTION_STR,
-	meta::ToString<(int)JobQueueType::JUDGE_MODEL_SOLUTION>::value),
+#define JQTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "4"
+static_assert(meta::equal(JQTYPE_ADD_JUDGE_MODEL_SOLUTION_STR,
+	meta::ToString<(int)JobQueueType::ADD_JUDGE_MODEL_SOLUTION>::value),
 	"Update the above #define");
 
-#define JQTYPE_EDIT_PROBLEM_STR "4"
+#define JQTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR "5"
+static_assert(meta::equal(JQTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR,
+	meta::ToString<(int)JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION>::value),
+	"Update the above #define");
+
+#define JQTYPE_EDIT_PROBLEM_STR "6"
 static_assert(meta::equal(JQTYPE_EDIT_PROBLEM_STR,
 	meta::ToString<(int)JobQueueType::EDIT_PROBLEM>::value),
 	"Update the above #define");
 
-#define JQTYPE_DELETE_PROBLEM_STR "5"
+#define JQTYPE_DELETE_PROBLEM_STR "7"
 static_assert(meta::equal(JQTYPE_DELETE_PROBLEM_STR,
 	meta::ToString<(int)JobQueueType::DELETE_PROBLEM>::value),
 	"Update the above #define");
@@ -257,10 +289,12 @@ constexpr uint priority(JobQueueType x) {
 	switch (x) {
 	case JobQueueType::EDIT_PROBLEM: return 20;
 	case JobQueueType::DELETE_PROBLEM: return 20;
-	case JobQueueType::JUDGE_MODEL_SOLUTION: return 15;
+	case JobQueueType::ADD_JUDGE_MODEL_SOLUTION: return 15;
+	case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
 	case JobQueueType::ADD_PROBLEM: return 10;
 	case JobQueueType::REUPLOAD_PROBLEM: return 10;
 	case JobQueueType::JUDGE_SUBMISSION: return  5;
+	case JobQueueType::VOID: return  0;
 	}
 	return 0;
 }

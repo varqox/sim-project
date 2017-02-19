@@ -808,13 +808,14 @@ void User::deleteAccount() {
 
 void User::printUserSubmissions(uint limit) {
 	try {
-		string query = "SELECT s.id, s.submit_time, r3.id, r3.name, r2.id, "
-				"r2.name, r.id, r.name, s.status, s.score, s.type, "
-				"r2.full_results, r3.owner, u.type "
-			"FROM submissions s, rounds r, rounds r2, rounds r3, users u "
-			"WHERE s.user_id=? AND s.round_id=r.id AND s.parent_round_id=r2.id "
-				"AND s.contest_round_id=r3.id AND r3.owner=u.id "
-			"ORDER BY s.id DESC";
+		string query = "SELECT s.id, s.submit_time, r3.id, r3.name, r2.id,"
+				" r2.name, r.id, r.name, s.status, s.score, s.type,"
+				" r2.full_results, r3.owner, u.type"
+			" FROM submissions s, rounds r, rounds r2, rounds r3, users u"
+			" WHERE s.user_id=? AND s.type!=" STYPE_VOID_STR
+				" AND s.round_id=r.id AND s.parent_round_id=r2.id"
+				" AND s.contest_round_id=r3.id AND r3.owner=u.id"
+			" ORDER BY s.id DESC";
 
 		if (limit > 0)
 			back_insert(query, " LIMIT ", toStr(limit));

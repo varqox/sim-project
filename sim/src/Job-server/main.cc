@@ -5,6 +5,7 @@
 #include <sim/mysql.h>
 #include <sim/sqlite.h>
 #include <simlib/process.h>
+#include <simlib/time.h>
 #include <sys/inotify.h>
 
 using std::string;
@@ -18,7 +19,7 @@ static void processJobQueue() {
 	for (;;) try {
 		MySQL::Result res = db_conn.executeQuery(
 			"SELECT id, type, aux_id, info, creator, added FROM job_queue"
-			" WHERE status=" JQSTATUS_PENDING_STR
+			" WHERE status=" JQSTATUS_PENDING_STR " AND type!=" JQTYPE_VOID_STR
 			" ORDER BY priority DESC, id LIMIT 1");
 
 		if (!res.next())
@@ -29,29 +30,40 @@ static void processJobQueue() {
 		string aux_id = (res.isNull(3) ? "" : res[3]);
 		string info = res[4];
 
-		// Change job status to IN_PROGRESS
+		// Change the job status to IN_PROGRESS
 		db_conn.executeUpdate("UPDATE job_queue"
 			" SET status=" JQSTATUS_IN_PROGRESS_STR " WHERE id=" + job_id);
 
-		// Take action depending on the job type
+		// Choose action depending on the job type
 		switch (type) {
 		case JobQueueType::JUDGE_SUBMISSION:
 			judgeSubmission(job_id, aux_id, res[6]);
 			break;
 
 		case JobQueueType::ADD_PROBLEM:
-			addProblem(job_id, res[5], info);
-			break;
-
-		case JobQueueType::JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id);
+			addOrReuploadProblem(job_id, res[5], info, aux_id, false);
 			break;
 
 		case JobQueueType::REUPLOAD_PROBLEM:
+			addOrReuploadProblem(job_id, res[5], info, aux_id, true);
+			break;
+
+		case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
+			judgeModelSolution(job_id, false);
+			break;
+
+		case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION:
+			judgeModelSolution(job_id, true);
+			break;
+
 		case JobQueueType::EDIT_PROBLEM:
 		case JobQueueType::DELETE_PROBLEM:
 			db_conn.executeUpdate("UPDATE job_queue"
 				" SET status=" JQSTATUS_CANCELED_STR " WHERE id=" + job_id);
+			break;
+
+		case JobQueueType::VOID:
+			break;
 
 		}
 
@@ -64,6 +76,30 @@ static void processJobQueue() {
 		ERRLOG_CATCH();
 		// Give up for a couple of seconds to not litter the error log
 		usleep(3e6);
+	}
+}
+
+// Clean up database
+static void cleanUpDB() {
+	try {
+		// Fix jobs that are in progress after the job-server died
+		db_conn.executeUpdate("UPDATE job_queue"
+			" SET status=" JQSTATUS_PENDING_STR
+			" WHERE status=" JQSTATUS_IN_PROGRESS_STR);
+
+		// Remove void (invalid) jobs and submissions that are older than 24 h
+		auto yesterday_date = date("%Y-%m-%d %H:%M:%S",
+			time(nullptr) - 24 * 60 * 60);
+		db_conn.executeUpdate("DELETE FROM job_queue WHERE type=" JQTYPE_VOID_STR
+			" AND added<'" + yesterday_date + "'");
+		db_conn.executeUpdate("DELETE FROM submissions WHERE type=" STYPE_VOID_STR
+			" AND submit_time<'" + yesterday_date + "'");
+
+		// Remove void (invalid) problems
+		db_conn.executeUpdate("DELETE FROM problems WHERE type=" PTYPE_VOID_STR);
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
 	}
 }
 
@@ -107,10 +143,8 @@ int main() {
 	try {
 		sqlite_db = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_READWRITE);
 		db_conn = MySQL::createConnectionUsingPassFile(".db.config");
-		// Fix jobs that are in progress after the job-server died
-		db_conn.executeUpdate("UPDATE job_queue"
-			" SET status=" JQSTATUS_PENDING_STR
-			" WHERE status=" JQSTATUS_IN_PROGRESS_STR);
+
+		cleanUpDB();
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

@@ -25,13 +25,13 @@ protected:
 		PERM_ADD = 64
 	};
 
-	Permissions getPermissions(const std::string& owner_id, bool is_public);
+	Permissions getPermissions(const std::string& owner_id, ProblemType ptype);
 
 private:
 	std::string problem_id_;
 	std::string problem_name, problem_label, problem_owner, problem_added;
 	std::string problem_simfile;
-	bool problem_is_public = false;
+	ProblemType problem_type = ProblemType::VOID;
 	std::string owner_username;
 	uint owner_utype = UTYPE_NORMAL;
 	Permissions perms = PERM_NONE;

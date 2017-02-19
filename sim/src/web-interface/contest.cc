@@ -442,7 +442,8 @@ void Contest::addProblem() {
 		while (fv.noErrors())
 			try {
 				MySQL::Statement stmt {db_conn.prepare(
-					"SELECT name, owner, is_public FROM problems WHERE id=?")};
+					"SELECT name, owner, type FROM problems"
+					" WHERE id=? AND type!=" PTYPE_VOID_STR)};
 				stmt.setString(1, problem_id);
 
 				MySQL::Result res {stmt.executeQuery()};
@@ -453,8 +454,8 @@ void Contest::addProblem() {
 				}
 
 				// Check if the user has the permissions to use this problem
-				if (~Problemset::getPermissions(res[2], res.getBool(3)) &
-					Problemset::PERM_VIEW)
+				if (~Problemset::getPermissions(res[2],
+					ProblemType(res.getUInt(3))) & Problemset::PERM_VIEW)
 				{
 					fv.addError(concat("You are not allowed to use the problem"
 						" with the ID = ",problem_id));

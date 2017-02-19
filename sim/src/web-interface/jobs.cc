@@ -37,17 +37,19 @@ static constexpr const char* job_type_str(JobQueueType type) {
 	case JobQueueType::JUDGE_SUBMISSION: return "Judge submission";
 	case JobQueueType::ADD_PROBLEM: return "Add problem";
 	case JobQueueType::REUPLOAD_PROBLEM: return "Reupload problem";
-	case JobQueueType::JUDGE_MODEL_SOLUTION: return "Add problem - judge model "
-		"solution";
+	case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
+		return  "Add problem - set limits";
+	case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION:
+		return"Reupload problem - set limits";
 	case JobQueueType::EDIT_PROBLEM: return "Edit problem";
 	case JobQueueType::DELETE_PROBLEM: return "Delete problem";
+	case JobQueueType::VOID: return "Void";
 	}
 	return "Unknown";
 }
 
 static constexpr const char* job_status_as_td(JobQueueStatus status) {
 	switch (status) {
-	case JobQueueStatus::VOID: return "<td class=\"status\">Unknown</td>";
 	case JobQueueStatus::PENDING: return "<td class=\"status\">Pending</td>";
 	case JobQueueStatus::IN_PROGRESS:
 		return "<td class=\"status yellow\">In progress</td>";
@@ -71,7 +73,7 @@ void Jobs::handle() {
 
 	job_id.clear();
 	// Get permissions to overall job queue
-	perms = getPermissions("", JobQueueStatus::VOID);
+	perms = getPermissions("", JobQueueStatus::DONE);
 
 	if (next_arg == "cancel")
 		return cancelJob();
@@ -93,12 +95,14 @@ void Jobs::handle() {
 			stmt = db_conn.prepare("SELECT j.id, added, j.type, status,"
 				" priority, aux_id, info, creator, username"
 				" FROM job_queue j, users u"
-				" WHERE creator=u.id ORDER BY id DESC");
+				" WHERE creator=u.id AND j.type!=" JQTYPE_VOID_STR
+				" ORDER BY id DESC");
 
 		} else {
 			stmt = db_conn.prepare("SELECT id, added, type, status, priority,"
 				" aux_id, info"
-				" FROM job_queue WHERE creator=? ORDER BY id DESC");
+				" FROM job_queue WHERE creator=? AND type!=" JQTYPE_VOID_STR
+				" ORDER BY id DESC");
 			stmt.setString(1, Session::user_id);
 		}
 
@@ -177,7 +181,9 @@ void Jobs::handle() {
 			}
 
 			case JobQueueType::ADD_PROBLEM:
-			case JobQueueType::JUDGE_MODEL_SOLUTION: {
+			case JobQueueType::REUPLOAD_PROBLEM:
+			case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
+			case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
 				foo([&]{
 					jobs::AddProblemInfo info {res[7]};
 					if (info.name.size())
@@ -191,14 +197,17 @@ void Jobs::handle() {
 				}, [&]{
 					append("<a class=\"btn-small\" href=\"/jobs/", res[1],
 						"/report\">Download report</a>");
-					if (job_status == JobQueueStatus::DONE)
+					if (job_status == JobQueueStatus::DONE || isIn(job_type, {
+						JobQueueType::REUPLOAD_PROBLEM,
+						JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
+					{
 						append("<a class=\"btn-small green\" href=\"/p/",
 							res[6], "\">View problem</a>");
+					}
 				});
 				break;
 			}
 
-			case JobQueueType::REUPLOAD_PROBLEM:
 			case JobQueueType::EDIT_PROBLEM:
 			case JobQueueType::DELETE_PROBLEM: {
 				foo([&]{
@@ -206,6 +215,9 @@ void Jobs::handle() {
 				}, [&]{});
 				break;
 			}
+
+			case JobQueueType::VOID:
+				break;
 			}
 
 		} while (res.next());
@@ -229,7 +241,7 @@ void Jobs::job() {
 			"SELECT creator, j.type, status, username, added,"
 				" aux_id, info, SUBSTR(data, 1, ?)"
 				" FROM job_queue j, users u"
-				" WHERE creator=u.id AND j.id=?");
+				" WHERE creator=u.id AND j.id=? AND j.type!=" JQTYPE_VOID_STR);
 		stmt.setUInt(1, REPORT_PREVIEW_MAX_LENGTH + 1);
 		stmt.setString(2, job_id);
 
@@ -247,9 +259,11 @@ void Jobs::job() {
 
 		// Job's actions
 		StringView next_arg = url_args.extractNextArg();
-		if (next_arg == "report" && isIn(job_type, {JobQueueType::ADD_PROBLEM,
-			JobQueueType::JUDGE_MODEL_SOLUTION,
-			JobQueueType::REUPLOAD_PROBLEM}))
+		if (next_arg == "report" && isIn(job_type, {
+			JobQueueType::ADD_PROBLEM,
+			JobQueueType::REUPLOAD_PROBLEM,
+			JobQueueType::ADD_JUDGE_MODEL_SOLUTION,
+			JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
 		{
 			return downloadReport(res[8]);
 
@@ -341,13 +355,19 @@ void Jobs::job() {
 	}
 
 	case JobQueueType::ADD_PROBLEM:
-	case JobQueueType::JUDGE_MODEL_SOLUTION: {
+	case JobQueueType::REUPLOAD_PROBLEM:
+	case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
+	case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
 		foo([&]{
 			append("<a class=\"btn-small\" href=\"/jobs/", job_id,
 				"/report\">Download report</a>");
-			if (job_status == JobQueueStatus::DONE)
+			if (job_status == JobQueueStatus::DONE || isIn(job_type, {
+				JobQueueType::REUPLOAD_PROBLEM,
+				JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
+			{
 				append("<a class=\"btn-small green\" href=\"/p/", aux_id,
 					"\">View problem</a>");
+			}
 		}, [&]{
 			jobs::AddProblemInfo info {info_str};
 			if (info.name.size())
@@ -384,7 +404,6 @@ void Jobs::job() {
 		break;
 	}
 
-	case JobQueueType::REUPLOAD_PROBLEM:
 	case JobQueueType::EDIT_PROBLEM:
 	case JobQueueType::DELETE_PROBLEM: {
 		foo([&]{}, [&]{
@@ -392,6 +411,9 @@ void Jobs::job() {
 		});
 		break;
 	}
+
+	case JobQueueType::VOID:
+		break;
 	}
 }
 
@@ -468,16 +490,20 @@ void Jobs::restartJob(JobQueueType job_type, StringView job_info) {
 	// Restart job
 	try {
 		// Restart adding problem
-		if (isIn(job_type,
-			{JobQueueType::ADD_PROBLEM, JobQueueType::JUDGE_MODEL_SOLUTION}))
-		{
+		bool add = isIn(job_type, {JobQueueType::ADD_PROBLEM,
+			JobQueueType::ADD_JUDGE_MODEL_SOLUTION});
+		bool reupload = isIn(job_type, {JobQueueType::REUPLOAD_PROBLEM,
+			JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION});
+		if (add || reupload) {
 			jobs::AddProblemInfo info {job_info};
 			info.stage = jobs::AddProblemInfo::FIRST;
 			MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
-				" SET type=" JQTYPE_ADD_PROBLEM_STR ","
-					" status=" JQSTATUS_PENDING_STR ", info=? WHERE id=?");
-			stmt.setString(1, info.dump());
-			stmt.setString(2, job_id);
+				" SET type=?, status=" JQSTATUS_PENDING_STR ", info=?"
+				" WHERE id=?");
+			stmt.setUInt(1, uint(add ? JobQueueType::ADD_PROBLEM
+				: JobQueueType::REUPLOAD_PROBLEM));
+			stmt.setString(2, info.dump());
+			stmt.setString(3, job_id);
 			stmt.executeUpdate();
 
 		} else

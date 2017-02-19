@@ -20,9 +20,9 @@ $(eval $(call dependencies))
 	$(LINK) -lmysqlcppconn -pthread
 
 # Technique used to force browsers to always keep updated version of the files below
-template.o: EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../public/kit/styles.css))"'
-template.o: EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../public/kit/jquery.js))"'
-template.o: EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../public/kit/scripts.js))"'
+template.o: EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/styles.css))"'
+template.o: EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/jquery.js))"'
+template.o: EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/scripts.js))"'
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)

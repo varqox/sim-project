@@ -15,6 +15,7 @@ extern MySQL::Connection db_conn;
 void judgeSubmission(const string& job_id, const string& submission_id,
 	const string& job_creation_time)
 {
+	// Gather the needed information about the submission
 	MySQL::Result res = db_conn.executeQuery("SELECT user_id, round_id,"
 			" problem_id, last_judgment, p.last_edit"
 		" FROM submissions s, problems p"
@@ -62,7 +63,10 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	int64_t total_score = 0;
 
 	auto send_report = [&] {
-		// TODO: support for the submission in the problemset
+		// TODO: support for the submissions in the problemset
+		static_assert(int(SubmissionType::NORMAL) == 0 &&
+			int(SubmissionType::FINAL) == 1, "Needed below where "
+				"\"... type<= ...\"");
 		/* Update submission */
 		MySQL::Statement stmt;
 		// Special status
@@ -82,19 +86,19 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 				// UNION with 0 - because if x or y was empty then the
 				//   whole query wouldn't be executed (and 0 is safe
 				//   because no submission with id=0 exists)
-				"UPDATE submissions s, "
-					"((SELECT id FROM submissions WHERE user_id=? "
-							"AND round_id=? AND type<=" STYPE_FINAL_STR " "
-							"AND status<" SSTATUS_PENDING_STR " AND id!=? "
-							"ORDER BY id DESC LIMIT 1) "
-						"UNION (SELECT 0 AS id)) x, "
-					"((SELECT id FROM submissions WHERE user_id=? "
-							"AND round_id=? AND type=" STYPE_FINAL_STR ") "
-						"UNION (SELECT 0 AS id)) y, "
-					"(SELECT (SELECT ?) AS id) z "
+				"UPDATE submissions s,"
+					" ((SELECT id FROM submissions WHERE user_id=?"
+								" AND round_id=? AND type<=" STYPE_FINAL_STR
+								" AND status<" SSTATUS_PENDING_STR " AND id!=?"
+							" ORDER BY id DESC LIMIT 1)"
+						" UNION (SELECT 0 AS id)) x,"
+					" ((SELECT id FROM submissions WHERE user_id=?"
+							" AND round_id=? AND type=" STYPE_FINAL_STR ")"
+						" UNION (SELECT 0 AS id)) y,"
+					" (SELECT (SELECT ?) AS id) z"
 				// Set type properly and other columns ONLY for just
 				//   judged submission
-				"SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
+				" SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
 					"IF(s.type<=" STYPE_FINAL_STR "," STYPE_NORMAL_STR
 						",s.type)),"
 					"s.status=IF(s.id=z.id,?,s.status),"
@@ -118,19 +122,19 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 				// UNION with 0 - because if x or y was empty then the
 				//   whole query wouldn't be executed (and 0 is safe
 				//   because no submission with id=0 exists)
-				"UPDATE submissions s, "
-					"((SELECT id FROM submissions WHERE user_id=? "
-							"AND round_id=? AND type<=" STYPE_FINAL_STR " "
-							"AND (status<" SSTATUS_PENDING_STR " OR id=?) "
-							"ORDER BY id DESC LIMIT 1) "
-						"UNION (SELECT 0 AS id)) x, "
-					"((SELECT id FROM submissions WHERE user_id=? AND "
-							"round_id=? AND type=" STYPE_FINAL_STR ") "
-						"UNION (SELECT 0 AS id)) y, "
-					"(SELECT (SELECT ?) AS id) z "
+				"UPDATE submissions s,"
+					" ((SELECT id FROM submissions WHERE user_id=?"
+							" AND round_id=? AND type<=" STYPE_FINAL_STR
+							" AND (status<" SSTATUS_PENDING_STR " OR id=?)"
+							" ORDER BY id DESC LIMIT 1)"
+						" UNION (SELECT 0 AS id)) x,"
+					" ((SELECT id FROM submissions WHERE user_id=?"
+							" AND round_id=? AND type=" STYPE_FINAL_STR ")"
+						" UNION (SELECT 0 AS id)) y,"
+					" (SELECT (SELECT ?) AS id) z"
 				// Set type properly and other columns ONLY for just
 				//   judged submission
-				"SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
+				" SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
 					"IF(s.type<=" STYPE_FINAL_STR "," STYPE_NORMAL_STR
 						",s.type)),"
 					"s.status=IF(s.id=z.id,?,s.status),"
@@ -175,6 +179,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 
 		return send_report();
 	}
+	stdlog("Done.");
 
 	// Compile solution
 	stdlog("Compiling solution...");
@@ -190,6 +195,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 
 		return send_report();
 	}
+	stdlog("Done.");
 
 	// Creates xml report from JudgeReport
 	auto construct_report = [](const JudgeReport& jr, bool final) -> string {
@@ -416,7 +422,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	send_report();
 }
 
-void judgeModelSolution(const string& job_id) {
+void judgeModelSolution(const string& job_id, bool reupload_problem) {
 	sim::Conver::ReportBuff report;
 	report.append("Stage: Judging the model solution");
 
@@ -493,11 +499,13 @@ void judgeModelSolution(const string& job_id) {
 	putFileContents(package_path.append("Simfile"), simfile.dump());
 
 	MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
-		" SET type=" JQTYPE_ADD_PROBLEM_STR ", status=" JQSTATUS_PENDING_STR ","
+		" SET type=?, status=" JQSTATUS_PENDING_STR ","
 			" data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-	stmt.setString(1, report.str);
-	stmt.setString(2, job_id);
+	stmt.setUInt(1, uint(reupload_problem ? JobQueueType::REUPLOAD_PROBLEM
+		: JobQueueType::ADD_PROBLEM));
+	stmt.setString(2, report.str);
+	stmt.setString(3, job_id);
 	stmt.executeUpdate();
 
 	stdlog("Job: ", job_id, '\n', report.str);

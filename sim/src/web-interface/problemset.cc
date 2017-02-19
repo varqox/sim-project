@@ -4,12 +4,13 @@
 #include <sim/jobs.h>
 #include <simlib/config_file.h>
 #include <simlib/http/response.h>
+#include <simlib/sim/simfile.h>
 #include <simlib/time.h>
 
 using std::string;
 
 Problemset::Permissions Problemset::getPermissions(const string& owner_id,
-	bool is_public)
+	ProblemType ptype)
 {
 	if (Session::open()) {
 		if (Session::user_type == UTYPE_ADMIN)
@@ -22,12 +23,12 @@ Problemset::Permissions Problemset::getPermissions(const string& owner_id,
 				PERM_SEE_OWNER | PERM_ADMIN |
 				(Session::user_type == UTYPE_TEACHER ? (int)PERM_ADD : 0));
 
-		if (Session::user_type == UTYPE_TEACHER && is_public)
+		if (Session::user_type == UTYPE_TEACHER && ptype == ProblemType::PUBLIC)
 			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_SOLUTIONS |
 				PERM_DOWNLOAD | PERM_SEE_OWNER);
 	}
 
-	return (is_public ? PERM_VIEW : PERM_NONE);
+	return (ptype == ProblemType::PUBLIC ? PERM_VIEW : PERM_NONE);
 }
 
 void Problemset::problemsetTemplate(const StringView& title,
@@ -71,7 +72,8 @@ void Problemset::handle() {
 	}
 
 	problem_id_.clear();
-	perms = getPermissions("", true); // Get permissions to overall problemset
+	perms = getPermissions("", ProblemType::VOID); // Get permissions to overall
+	                                               // problemset
 
 	if (next_arg == "add")
 		return addProblem();
@@ -94,30 +96,35 @@ void Problemset::handle() {
 		MySQL::Statement stmt;
 		if (next_arg == "my") {
 			show_owner = false;
-			stmt = db_conn.prepare("SELECT id, name, label, added, is_public"
-				" FROM problems WHERE owner=? ORDER BY id");
+			stmt = db_conn.prepare("SELECT id, name, label, added, type"
+				" FROM problems WHERE owner=? AND type!=" PTYPE_VOID_STR
+				" ORDER BY id");
 			stmt.setString(1, Session::user_id);
 
 		} else if (perms & PERM_VIEW_ALL) {
-			stmt = db_conn.prepare("SELECT p.id, name, label, added, is_public,"
+			stmt = db_conn.prepare("SELECT p.id, name, label, added, p.type,"
 					" owner, username FROM problems p, users u"
-				" WHERE owner=u.id ORDER BY id");
+				" WHERE owner=u.id AND p.type!=" PTYPE_VOID_STR " ORDER BY id");
 
 		} else if (perms & PERM_SEE_OWNER) {
-			stmt = db_conn.prepare("SELECT p.id, name, label, added, is_public,"
+			stmt = db_conn.prepare("SELECT p.id, name, label, added, p.type,"
 				" owner, username FROM problems p, users u"
-				" WHERE owner=u.id AND (is_public=1 OR owner=?) ORDER BY id");
+				" WHERE owner=u.id AND (p.type=" PTYPE_PUBLIC_STR " OR owner=?)"
+					" AND p.type!=" PTYPE_VOID_STR " ORDER BY id");
 			stmt.setString(1, Session::user_id);
 
 		} else if (Session::isOpen()) {
-			stmt = db_conn.prepare("SELECT id, name, label, added, is_public,"
+			stmt = db_conn.prepare("SELECT id, name, label, added, type,"
 				" owner FROM problems"
-				" WHERE is_public=1 OR owner=? ORDER BY id");
+				" WHERE type=" PTYPE_PUBLIC_STR
+					" OR (owner=? AND type!=" PTYPE_VOID_STR ")"
+				" ORDER BY id");
 			stmt.setString(1, Session::user_id);
 
 		} else {
-			stmt = db_conn.prepare("SELECT id, name, label, added, is_public,"
-				" owner FROM problems WHERE is_public=1 ORDER BY id");
+			stmt = db_conn.prepare("SELECT id, name, label, added, type,"
+				" owner FROM problems WHERE type=" PTYPE_PUBLIC_STR
+				" ORDER BY id");
 		}
 
 		MySQL::Result res = stmt.executeQuery();
@@ -152,10 +159,11 @@ void Problemset::handle() {
 
 			Permissions problem_perms =
 				getPermissions(next_arg == "my" ? Session::user_id : res[6],
-					res.getBool(5));
+					ProblemType(res.getUInt(5)));
 
 			append("<td datetime=\"", res[4], "\">", res[4], "</td>"
-					"<td>", (res.getBool(5) ? "YES" : "NO"), "</td>"
+					"<td>", (res.getUInt(5) == int(ProblemType::PUBLIC) ?
+						"YES" : "NO"), "</td>"
 					"<td>"
 						"<a class=\"btn-small\" href=\"/p/", res[1], "\">"
 							"View</a>"
@@ -277,9 +285,10 @@ void Problemset::addProblem() {
 				};
 
 				MySQL::Statement stmt {db_conn.prepare(
-					"INSERT job_queue (creator, priority, type, added, info,"
-						" data) "
-					"VALUES(?, ?, " JQTYPE_ADD_PROBLEM_STR ", ?, ?, '')")};
+					"INSERT job_queue (creator, priority, type, status, added,"
+						" info, data) "
+					"VALUES(?, ?, " JQTYPE_VOID_STR ", " JQSTATUS_PENDING_STR
+						", ?, ?, '')")};
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, priority(JobQueueType::ADD_PROBLEM));
 				stmt.setString(3, date());
@@ -300,8 +309,8 @@ void Problemset::addProblem() {
 				}
 
 				// Activate the job
-				int rc = db_conn.executeUpdate("UPDATE job_queue SET status="
-					JQSTATUS_PENDING_STR " WHERE id=" + jobid);
+				int rc = db_conn.executeUpdate("UPDATE job_queue SET type="
+					JQTYPE_ADD_PROBLEM_STR " WHERE id=" + jobid);
 				if (1 != rc)
 					THROW("Failed to update");
 
@@ -380,8 +389,9 @@ void Problemset::problem() {
 	// Fetch the problem info
 	try {
 		MySQL::Statement stmt = db_conn.prepare("SELECT name, label, owner,"
-				" added, simfile, is_public, username, type"
-			" FROM problems p, users u WHERE p.owner=u.id AND p.id=?");
+				" added, simfile, p.type, username, u.type"
+			" FROM problems p, users u"
+			" WHERE p.owner=u.id AND p.id=? AND p.type!=" PTYPE_VOID_STR);
 		stmt.setString(1, problem_id_);
 
 		MySQL::Result res = stmt.executeQuery();
@@ -393,7 +403,7 @@ void Problemset::problem() {
 		problem_owner = res[3];
 		problem_added = res[4];
 		problem_simfile = res[5];
-		problem_is_public = res.getBool(6);
+		problem_type = ProblemType(res.getUInt(6));
 		owner_username = res[7];
 		owner_utype = res.getUInt(8);
 
@@ -402,7 +412,7 @@ void Problemset::problem() {
 		return error500();
 	}
 
-	perms = getPermissions(problem_owner, problem_is_public);
+	perms = getPermissions(problem_owner, problem_type);
 
 	// Check permissions
 	if (~perms & PERM_VIEW)
@@ -471,7 +481,7 @@ void Problemset::problem() {
 			"</div>"
 			"<div class=\"is_public\">"
 				"<label>Is public</label>",
-				(problem_is_public ? "Yes" : "No"),
+				(problem_type == ProblemType::PUBLIC ? "Yes" : "No"),
 			"</div>"
 		"</div>"
 		"<center>"
@@ -504,7 +514,160 @@ void Problemset::reuploadProblem() {
 	if (~perms & PERM_ADMIN)
 		return error403();
 
-	error501();
+	FormValidator fv(req->form_data);
+	string name, label, memory_limit, user_package_file, global_time_limit;
+	bool force_auto_limit = true, ignore_simfile = false;
+
+	if (req->method == server::HttpRequest::POST) {
+		if (fv.get("csrf_token") != Session::csrf_token)
+			return error403();
+
+		string package_file;
+
+		// Validate all fields
+		fv.validate(name, "name", "Problem's name", PROBLEM_NAME_MAX_LEN);
+
+		fv.validate(label, "label", "Problem's label", PROBLEM_LABEL_MAX_LEN);
+
+		fv.validate(memory_limit, "memory-limit", "Memory limit",
+			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
+			"Memory limit: invalid value");
+
+		fv.validate<bool(const StringView&)>(global_time_limit,
+			"global-time-limit", "Global time limit", isReal,
+			"Global time limit: invalid value"); // TODO: add length limit
+		// Global time limit in usec
+		uint64_t gtl =
+			round(strtod(global_time_limit.c_str(), nullptr) * 1'000'000);
+		if (global_time_limit.size() && gtl < 400000)
+			fv.addError("Global time limit cannot be lower than 0.4 s");
+
+		force_auto_limit = fv.exist("force-auto-limit");
+
+		ignore_simfile = fv.exist("ignore-simfile");
+
+		fv.validateNotBlank(user_package_file, "package", "Package");
+
+		fv.validateFilePathNotEmpty(package_file, "package", "Package");
+
+		// If all fields are OK
+		if (fv.noErrors())
+			try {
+				jobs::AddProblemInfo ap_info {
+					name,
+					label,
+					strtoull(memory_limit.c_str()),
+					gtl,
+					force_auto_limit,
+					ignore_simfile,
+					problem_type == ProblemType::PUBLIC
+				};
+
+				MySQL::Statement stmt {db_conn.prepare(
+					"INSERT job_queue (creator, priority, type, status, added,"
+						" info, data, aux_id) "
+					"VALUES(?, ?, " JQTYPE_VOID_STR ", " JQSTATUS_PENDING_STR
+						", ?, ?, '')")};
+				stmt.setString(1, Session::user_id);
+				stmt.setUInt(2, priority(JobQueueType::REUPLOAD_PROBLEM));
+				stmt.setString(3, date());
+				stmt.setString(4, ap_info.dump());
+				stmt.setString(5, problem_id_);
+				stmt.executeUpdate();
+
+				string jobid = db_conn.lastInsertId();
+
+				// Move package file that it will become a job's file
+				{
+					StringBuff<PATH_MAX> new_path
+						{"jobs_files/", jobid, ".zip"};
+					if (::move(package_file, new_path))
+						THROW("Error: link(`", package_file, "`, `", new_path,
+							"`)", error(errno));
+
+					package_file = new_path.data();
+				}
+
+				// Activate the job
+				int rc = db_conn.executeUpdate("UPDATE job_queue SET type="
+					JQTYPE_REUPLOAD_PROBLEM_STR " WHERE id=" + jobid);
+				if (1 != rc)
+					THROW("Failed to update");
+
+				notifyJobServer();
+				return redirect(concat("/jobs/", jobid));
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				fv.addError("Internal server error");
+			}
+
+	} else {
+		name = problem_name;
+		label = problem_label;
+
+		// Load the global memory limit form the Simfile
+		sim::Simfile sf {std::move(problem_simfile)};
+		sf.loadGlobalMemoryLimitOnly();
+		if (sf.global_mem_limit)
+			memory_limit = toStr(sf.global_mem_limit >> 20).str;
+	}
+
+	problemsetTemplate("Reupload the problem " + problem_id_);
+	append(fv.errors(), "<div class=\"form-container\">"
+			"<h1>Reupload the problem<br/><a href=\"/p/", problem_id_, "\">",
+				htmlEscape(name), "</a></h1>"
+			"<form method=\"post\" enctype=\"multipart/form-data\">"
+				// Name
+				"<div class=\"field-group\">"
+					"<label>Problem's name</label>"
+					"<input type=\"text\" name=\"name\" value=\"",
+						htmlEscape(name), "\" size=\"24\""
+					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+					"placeholder=\"Detect from Simfile\">"
+				"</div>"
+				// Label
+				"<div class=\"field-group\">"
+					"<label>Problem's label</label>"
+					"<input type=\"text\" name=\"label\" value=\"",
+						htmlEscape(label), "\" size=\"24\""
+					"maxlength=\"", toStr(PROBLEM_LABEL_MAX_LEN), "\" "
+					"placeholder=\"Detect from Simfile or from name\">"
+				"</div>"
+				// Memory limit
+				"<div class=\"field-group\">"
+					"<label>Memory limit [MB]</label>"
+					"<input type=\"text\" name=\"memory-limit\" value=\"",
+						htmlEscape(memory_limit), "\" size=\"24\" "
+					"placeholder=\"Detect from Simfile\">"
+				"</div>"
+				// Global time limit
+				"<div class=\"field-group\">"
+					"<label>Global time limit [s] (for each test)</label>"
+					"<input type=\"text\" name=\"global-time-limit\" value=\"",
+						htmlEscape(global_time_limit), "\" size=\"24\" "
+					"placeholder=\"No global time limit\">"
+				"</div>"
+				// Force auto limit
+				"<div class=\"field-group\">"
+					"<label>Force automatic time limit setting</label>"
+					"<input type=\"checkbox\" name=\"force-auto-limit\"",
+						(force_auto_limit ? " checked" : ""), ">"
+				"</div>"
+				// Ignore Simfile
+				"<div class=\"field-group\">"
+					"<label>Ignore Simfile</label>"
+					"<input type=\"checkbox\" name=\"ignore-simfile\"",
+						(ignore_simfile ? " checked" : ""), ">"
+				"</div>"
+				// Package
+				"<div class=\"field-group\">"
+					"<label>Package [ZIP file]</label>"
+					"<input type=\"file\" name=\"package\" required>"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Submit\">"
+			"</form>"
+		"</div>");
 }
 
 void Problemset::rejudgeProblemSubmissions() {

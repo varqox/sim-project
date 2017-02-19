@@ -85,13 +85,14 @@ void Contest::submit(bool admin_view) {
 
 			try {
 				string current_date = date();
-				// Insert submission to `submissions`
-				MySQL::Statement stmt = db_conn.prepare("INSERT submissions "
-						"(user_id, problem_id, round_id, parent_round_id,"
-							" contest_round_id, submit_time, last_judgment,"
-							" status, initial_report, final_report) "
-						"VALUES(?, ?, ?, ?, ?, ?, ?, " SSTATUS_VOID_STR ", '',"
-							" '')");
+				// Insert submission to the `submissions` table
+				MySQL::Statement stmt = db_conn.prepare(
+					"INSERT submissions (user_id, problem_id, round_id,"
+						" parent_round_id, contest_round_id, type, status,"
+						" submit_time, last_judgment, initial_report,"
+						" final_report)"
+					" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", "
+						SSTATUS_PENDING_STR ", ?, ?, '', '')");
 				stmt.setString(1, Session::user_id);
 				stmt.setString(2, problem_rpath->problem->problem_id);
 				stmt.setString(3, problem_rpath->problem->id);
@@ -119,14 +120,6 @@ void Contest::submit(bool admin_view) {
 					THROW("putFileContents(`", location, "`, ...)",
 						error(errno));
 
-				// Change submission type to NORMAL (activate submission)
-				stmt = db_conn.prepare("UPDATE submissions SET type=?, status="
-					SSTATUS_PENDING_STR " WHERE id=?");
-				stmt.setUInt(1, static_cast<uint>(ignored_submission
-					? SubmissionType::IGNORED : SubmissionType::NORMAL));
-				stmt.setString(2, submission_id);
-				stmt.executeUpdate();
-
 				// Add a job to judge the submission
 				stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 						" priority, type, added, aux_id, info, data)"
@@ -141,6 +134,15 @@ void Contest::submit(bool admin_view) {
 				stmt.executeUpdate();
 
 				notifyJobServer();
+
+				// Activate submission (change submission type to NORMAL /
+				// IGNORED)
+				stmt = db_conn.prepare("UPDATE submissions SET type=?"
+					" WHERE id=?");
+				stmt.setUInt(1, static_cast<uint>(ignored_submission
+					? SubmissionType::IGNORED : SubmissionType::NORMAL));
+				stmt.setString(2, submission_id);
+				stmt.executeUpdate();
 
 				return redirect("/s/" + submission_id);
 
@@ -311,7 +313,7 @@ void Contest::deleteSubmission(const string& submission_id,
 
 		try {
 			SignalBlocker signal_guard;
-			// Update FINAL status, as there was no submission submission_id
+			// Update FINAL status, as if there was no submission submission_id
 			MySQL::Statement stmt = db_conn.prepare(
 				"UPDATE submissions SET type=" STYPE_FINAL_STR " "
 				"WHERE user_id=? AND round_id=? AND id!=? "
@@ -418,9 +420,10 @@ void Contest::submission() {
 			"status, score, name, label, first_name, last_name, username, "
 			"initial_report, final_report");
 		MySQL::Statement stmt = db_conn.prepare(
-			concat("SELECT user_id, round_id, s.type", columns, " "
-				"FROM submissions s, problems p, users u "
-				"WHERE s.id=? AND s.problem_id=p.id AND u.id=user_id"));
+			concat("SELECT user_id, round_id, s.type", columns,
+				" FROM submissions s, problems p, users u"
+				" WHERE s.id=? AND s.type!=" STYPE_VOID_STR
+					" AND s.problem_id=p.id AND u.id=user_id"));
 		stmt.setString(1, submission_id);
 
 		MySQL::Result res = stmt.executeQuery();
@@ -456,10 +459,6 @@ void Contest::submission() {
 				return error403();
 			}
 
-			db_conn.executeUpdate("UPDATE submissions"
-				" SET status=" SSTATUS_PENDING_STR
-				" WHERE id=" + submission_id);
-
 			// Add a job to judge the submission
 			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 					" priority, type, added, aux_id, info, data)"
@@ -473,6 +472,10 @@ void Contest::submission() {
 			stmt.executeUpdate();
 
 			notifyJobServer();
+
+			db_conn.executeUpdate("UPDATE submissions"
+				" SET status=" SSTATUS_PENDING_STR
+				" WHERE id=" + submission_id);
 
 			return response("200 OK");
 		}
@@ -508,6 +511,9 @@ void Contest::submission() {
 			}
 
 			try {
+				static_assert(int(SubmissionType::NORMAL) == 0 &&
+					int(SubmissionType::FINAL) == 1, "Needed below where "
+						"\"... type<= ...\"");
 				// Set to IGNORED
 				if (new_stype == SubmissionType::IGNORED) {
 					stmt = db_conn.prepare("UPDATE submissions s, "
@@ -722,19 +728,21 @@ void Contest::submissions(bool admin_view) {
 			: (rpath->type == ROUND ? "parent_round_id" : "round_id"));
 
 		MySQL::Statement stmt = db_conn.prepare(admin_view ?
-				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
-					"r.name, s.status, s.score, s.type, s.user_id, "
-					"u.first_name, u.last_name, u.username "
-				"FROM submissions s, rounds r, rounds r2, users u "
-				"WHERE s.", param_column, "=? AND s.round_id=r.id "
-					"AND s.parent_round_id=r2.id AND s.user_id=u.id "
-				"ORDER BY s.id DESC")
-			: concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id, "
-					"r.name, s.status, s.score, s.type, r2.full_results "
-				"FROM submissions s, rounds r, rounds r2 "
-				"WHERE s.", param_column, "=? AND s.round_id=r.id "
-					"AND s.parent_round_id=r2.id AND s.user_id=? "
-				"ORDER BY s.id DESC"));
+				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id,"
+					" r.name, s.status, s.score, s.type, s.user_id,"
+					" u.first_name, u.last_name, u.username"
+				" FROM submissions s, rounds r, rounds r2, users u"
+				" WHERE s.", param_column, "=? AND s.type!=" STYPE_VOID_STR
+					" AND s.round_id=r.id AND s.parent_round_id=r2.id"
+					" AND s.user_id=u.id"
+				" ORDER BY s.id DESC")
+			: concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id,"
+					" r.name, s.status, s.score, s.type, r2.full_results"
+				" FROM submissions s, rounds r, rounds r2"
+				" WHERE s.", param_column, "=? AND s.type!=" STYPE_VOID_STR
+					" AND s.round_id=r.id AND s.parent_round_id=r2.id"
+					" AND s.user_id=?"
+				" ORDER BY s.id DESC"));
 		stmt.setString(1, rpath->round_id);
 		if (!admin_view)
 			stmt.setString(2, Session::user_id);

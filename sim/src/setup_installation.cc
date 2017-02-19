@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
 	try_to_create_table("problems",
 		concat("CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
+			"`type` TINYINT NOT NULL,"
 			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,"
 			"`label` VARCHAR(", toStr(PROBLEM_LABEL_MAX_LEN), ") NOT NULL,"
 			"`simfile` mediumblob NOT NULL,"
@@ -199,8 +199,8 @@ int main(int argc, char **argv) {
 			"`added` datetime NOT NULL,"
 			"`last_edit` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
-			"KEY (owner),"
-			"KEY (is_public)"
+			"KEY (owner, id),"
+			"KEY (type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("problems_tags",
@@ -251,8 +251,8 @@ int main(int argc, char **argv) {
 			"`round_id` int unsigned NULL,"
 			"`parent_round_id` int unsigned NULL,"
 			"`contest_round_id` int unsigned NULL,"
-			"`type` TINYINT NULL DEFAULT NULL,"
-			"`status` TINYINT NOT NULL DEFAULT " SSTATUS_VOID_STR ","
+			"`type` TINYINT NOT NULL,"
+			"`status` TINYINT NOT NULL,"
 			"`submit_time` datetime NOT NULL,"
 			"`score` int NULL DEFAULT NULL,"
 			"`last_judgment` datetime NOT NULL,"
@@ -281,9 +281,9 @@ int main(int argc, char **argv) {
 		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`creator` int unsigned NOT NULL,"
-			"`status` TINYINT NOT NULL DEFAULT " JQSTATUS_VOID_STR ","
-			"`priority` TINYINT NOT NULL,"
 			"`type` TINYINT NOT NULL,"
+			"`priority` TINYINT NOT NULL,"
+			"`status` TINYINT NOT NULL,"
 			"`added` datetime NOT NULL,"
 			"`aux_id` int unsigned DEFAULT NULL,"
 			"`info` blob NOT NULL,"
@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
 	try {
 		sqlite_db.execute("PRAGMA journal_mode=WAL");
 		sqlite_db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS problems"
-			" USING fts5(is_public, name, label)");
+			" USING fts5(type, name, label)");
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
