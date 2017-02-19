@@ -121,10 +121,10 @@ void Contest::submit(bool admin_view) {
 						error(errno));
 
 				// Add a job to judge the submission
-				stmt = db_conn.prepare("INSERT job_queue (creator, status,"
-						" priority, type, added, aux_id, info, data)"
-					"VALUES(?, " JQSTATUS_PENDING_STR ", ?, "
-						JQTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
+				stmt = db_conn.prepare("INSERT job_queue (creator, type,"
+						" priority, status, added, aux_id, info, data)"
+					" VALUES(?, " JQTYPE_VOID_STR ", ?, " JQSTATUS_PENDING_STR
+						", ?, ?, ?, '')");
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
 				stmt.setString(3, date());
@@ -133,16 +133,17 @@ void Contest::submit(bool admin_view) {
 					jobs::dumpString(problem_rpath->problem->problem_id));
 				stmt.executeUpdate();
 
-				notifyJobServer();
-
-				// Activate submission (change submission type to NORMAL /
-				// IGNORED)
-				stmt = db_conn.prepare("UPDATE submissions SET type=?"
-					" WHERE id=?");
+				// Activate the submission and the job (change type to a valid
+				// one)
+				stmt = db_conn.prepare("UPDATE submissions s, job_queue j"
+					" SET s.type=?, j.type=" JQTYPE_JUDGE_SUBMISSION_STR
+					" WHERE s.id=? AND j.id=LAST_INSERT_ID()");
 				stmt.setUInt(1, static_cast<uint>(ignored_submission
 					? SubmissionType::IGNORED : SubmissionType::NORMAL));
 				stmt.setString(2, submission_id);
 				stmt.executeUpdate();
+
+				notifyJobServer();
 
 				return redirect("/s/" + submission_id);
 
