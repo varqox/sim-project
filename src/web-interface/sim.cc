@@ -108,7 +108,7 @@ void Sim::mainPage() {
 }
 
 void Sim::getStaticFile() {
-	string file_path = "public";
+	string file_path = "static";
 	// Extract path (ignore query)
 	file_path += abspath(decodeURI(req->target, 1, req->target.find('?')));
 	D(stdlog(file_path);)

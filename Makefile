@@ -53,11 +53,11 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	# Installation
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
 	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
-	$(MKDIR) $(abspath $(DESTDIR)/public/)
+	$(MKDIR) $(abspath $(DESTDIR)/static/)
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/public src/sim-server src/sim-server2 src/server.conf src/job-server $(abspath $(DESTDIR))
+	$(UPDATE) src/static src/sim-server src/sim-server2 src/server.conf src/job-server $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)

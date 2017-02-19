@@ -19,7 +19,9 @@ extern MySQL::Connection db_conn;
 extern SQLite::Connection sqlite_db;
 
 // Before judging the model solution
-static void firstStage(const string& job_id, AddProblemInfo info) {
+static void firstStage(const string& job_id, AddProblemInfo info,
+	bool reupload_problem)
+{
 	sim::Conver::ReportBuff report;
 	report.append("Stage: FIRST");
 
@@ -167,12 +169,14 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 		// Transform the job into a JUDGE_MODEL_SOLUTION job
 		MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
-			" SET type=" JQTYPE_JUDGE_MODEL_SOLUTION_STR ", "
-				"status=" JQSTATUS_PENDING_STR ", info=?, data=?"
-				" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-		stmt.setString(1, info.dump());
-		stmt.setString(2, report.str);
-		stmt.setString(3, job_id);
+			" SET type=?, status=" JQSTATUS_PENDING_STR ", info=?, data=?"
+			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
+		stmt.setUInt(1, uint(reupload_problem ?
+			JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION
+			: JobQueueType::ADD_JUDGE_MODEL_SOLUTION));
+		stmt.setString(2, info.dump());
+		stmt.setString(3, report.str);
+		stmt.setString(4, job_id);
 		stmt.executeUpdate();
 		break;
 	}
@@ -201,10 +205,11 @@ static void secondStage(const string& job_id, const string& job_owner,
 		// Add the problem to the database
 		string current_date = date();
 		MySQL::Statement stmt {db_conn.prepare(
-			"INSERT problems (is_public, name, label, simfile, owner, added,"
+			"INSERT problems (type, name, label, simfile, owner, added,"
 				" last_edit)"
 			" VALUES(?, ?, ?, ?, ?, ?, ?)")};
-		stmt.setBool(1, info.public_problem);
+		stmt.setUInt(1, int(info.public_problem ?
+			ProblemType::PUBLIC : ProblemType::PRIVATE));
 		stmt.setString(2, sf.name);
 		stmt.setString(3, sf.label);
 		stmt.setString(4, std::move(simfile_str));
@@ -234,10 +239,11 @@ static void secondStage(const string& job_id, const string& job_owner,
 
 		// Insert the problem into the SQLite FTS5
 		SQLite::Statement sqlite_stmt {sqlite_db.prepare(
-			"INSERT INTO problems (rowid, is_public, name, label)"
+			"INSERT INTO problems (rowid, type, name, label)"
 			" VALUES(?, ?, ?, ?)")};
 		sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
-		sqlite_stmt.bindInt(2, info.public_problem);
+		sqlite_stmt.bindInt(2, int(info.public_problem ?
+			ProblemType::PUBLIC : ProblemType::PRIVATE));
 		sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
 		sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
 		throw_assert(sqlite_stmt.step() == SQLITE_DONE);
@@ -276,10 +282,11 @@ static void secondStage(const string& job_id, const string& job_owner,
 			current_date = date();
 			// Begin transaction
 			stmt = db_conn.prepare("INSERT submissions (user_id, problem_id,"
-					" round_id, parent_round_id, contest_round_id, status,"
-					" submit_time, last_judgment, initial_report, final_report)"
+					" round_id, parent_round_id, contest_round_id, type,"
+					" status, submit_time, last_judgment, initial_report,"
+					" final_report)"
 				" VALUES(" SIM_ROOT_UID ", ?, NULL, NULL, NULL, "
-					SSTATUS_VOID_STR ", ?, ?, '', '')");
+					STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
 			stmt.setString(1, problem_id);
 			stmt.setString(2, current_date);
 			stmt.setString(3, date("%Y-%m-%d %H:%M:%S", 0));
@@ -297,8 +304,7 @@ static void secondStage(const string& job_id, const string& job_owner,
 
 			// Enable the submission
 			db_conn.executeUpdate("UPDATE submissions"
-				" SET type=" STYPE_PROBLEM_SOLUTION_STR ","
-					" status=" SSTATUS_PENDING_STR
+				" SET type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE id=" + submission_id);
 
 			// Create a job to judge the submission
@@ -350,10 +356,12 @@ static void secondStage(const string& job_id, const string& job_owner,
 	stdlog("Job: ", job_id, '\n', report.str);
 }
 
-void addProblem(const string& job_id, const string& job_owner, StringView info) {
+void addOrReuploadProblem(const string& job_id, const string& job_owner,
+	StringView info, const string& aux_id, bool reupload_problem)
+{
 	AddProblemInfo p_info {info};
 	if (p_info.stage == AddProblemInfo::FIRST)
-		firstStage(job_id, std::move(p_info));
+		firstStage(job_id, std::move(p_info), reupload_problem);
 	else
 		secondStage(job_id, job_owner, std::move(p_info));
 }

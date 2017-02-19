@@ -409,10 +409,10 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 					round_duration(rpath->round->begins, rpath->round->ends),
 				"</a>");
 
-			// List problems if and only if round has begun (for non-admins)
+			// List problems if and only if the round has begun (for non-admins)
 			if (admin_view || rpath->round->begins <= date())
 			{
-				// Collect user's final submissions to listed problems
+				// Collect user's final submissions to the listed problems
 				vector<pair<string, SubmissionStatus>> rid2stat; /*
 				 	(round_id, status of the final submission) */
 				if (Session::isOpen()) {
