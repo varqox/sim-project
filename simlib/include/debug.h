@@ -41,11 +41,12 @@ inline const char* __what(const std::exception& e) {
 	": Caught exception", __debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
 	__debug::__what(__VA_ARGS__))
 
-#define ERRLOG_AND_FORWARD(...) { errlog(__FILE__ ":", \
+#define ERRLOG_FORWARDING(...) errlog(__FILE__ ":", \
 		toStr(__LINE__), ": Forwarding exception...", \
 		__debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
-		__debug::__what(__VA_ARGS__)); \
-	throw; }
+		__debug::__what(__VA_ARGS__))
+
+#define ERRLOG_AND_FORWARD(...) { ERRLOG_FORWARDING(__VA_ARGS__); throw; }
 
 inline StringBuff<4096> error(int errnum) noexcept {
 	std::array<char, 4000> buff;
