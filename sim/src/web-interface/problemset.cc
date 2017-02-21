@@ -567,7 +567,7 @@ void Problemset::reuploadProblem() {
 					"INSERT job_queue (creator, priority, type, status, added,"
 						" info, data, aux_id) "
 					"VALUES(?, ?, " JQTYPE_VOID_STR ", " JQSTATUS_PENDING_STR
-						", ?, ?, '')")};
+						", ?, ?, '', ?)")};
 				stmt.setString(1, Session::user_id);
 				stmt.setUInt(2, priority(JobQueueType::REUPLOAD_PROBLEM));
 				stmt.setString(3, date());

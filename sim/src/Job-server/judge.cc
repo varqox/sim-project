@@ -422,7 +422,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	send_report();
 }
 
-void judgeModelSolution(const string& job_id, bool reupload_problem) {
+void judgeModelSolution(const string& job_id, JobQueueType original_job_type) {
 	sim::Conver::ReportBuff report;
 	report.append("Stage: Judging the model solution");
 
@@ -454,7 +454,7 @@ void judgeModelSolution(const string& job_id, bool reupload_problem) {
 	if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
 		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		report.append("Checker compilation failed:");
+		report.append("Checker's compilation failed:");
 		report.append(compilation_errors);
 		return set_failure();
 	}
@@ -468,7 +468,7 @@ void judgeModelSolution(const string& job_id, bool reupload_problem) {
 		SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 		COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		report.append("Solution compilation failed.");
+		report.append("Solution's compilation failed.");
 		report.append(compilation_errors);
 		return set_failure();
 	}
@@ -502,8 +502,7 @@ void judgeModelSolution(const string& job_id, bool reupload_problem) {
 		" SET type=?, status=" JQSTATUS_PENDING_STR ","
 			" data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-	stmt.setUInt(1, uint(reupload_problem ? JobQueueType::REUPLOAD_PROBLEM
-		: JobQueueType::ADD_PROBLEM));
+	stmt.setUInt(1, uint(original_job_type));
 	stmt.setString(2, report.str);
 	stmt.setString(3, job_id);
 	stmt.executeUpdate();
