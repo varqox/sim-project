@@ -41,19 +41,19 @@ static void processJobQueue() {
 			break;
 
 		case JobQueueType::ADD_PROBLEM:
-			addOrReuploadProblem(job_id, res[5], info, aux_id, false);
+			addProblem(job_id, res[5], info);
 			break;
 
 		case JobQueueType::REUPLOAD_PROBLEM:
-			addOrReuploadProblem(job_id, res[5], info, aux_id, true);
+			reuploadProblem(job_id, res[5], info, aux_id);
 			break;
 
 		case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id, false);
+			judgeModelSolution(job_id, JobQueueType::ADD_PROBLEM);
 			break;
 
 		case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id, true);
+			judgeModelSolution(job_id, JobQueueType::REUPLOAD_PROBLEM);
 			break;
 
 		case JobQueueType::EDIT_PROBLEM:
@@ -95,8 +95,30 @@ static void cleanUpDB() {
 		db_conn.executeUpdate("DELETE FROM submissions WHERE type=" STYPE_VOID_STR
 			" AND submit_time<'" + yesterday_date + "'");
 
-		// Remove void (invalid) problems
-		db_conn.executeUpdate("DELETE FROM problems WHERE type=" PTYPE_VOID_STR);
+		// Remove void (invalid) problems and associated with them submissions
+		// and jobs
+		for (;;) { // TODO test it
+			MySQL::Result res {db_conn.executeQuery("SELECT id FROM problems"
+				" WHERE type=" PTYPE_VOID_STR " LIMIT 32")};
+			if (res.rowCount() == 0)
+				break;
+
+			while (res.next()) {
+				string pid = res[1];
+				// Delete submissions
+				db_conn.executeUpdate(
+					"DELETE FROM submissions WHERE problem_id=" + pid);
+
+				// Delete problem's files
+				remove_r(StringBuff<PATH_MAX>{"problems/", pid});
+				remove_r(StringBuff<PATH_MAX>{"problems/", pid, ".zip"});
+
+				// Delete the problem (we have to do it here to prevent this
+				// loop from going infinite)
+				db_conn.executeUpdate("DELETE FROM problems WHERE id=" + pid);
+			}
+		}
+
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
