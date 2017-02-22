@@ -110,8 +110,8 @@ static void cleanUpDB() {
 					"DELETE FROM submissions WHERE problem_id=" + pid);
 
 				// Delete problem's files
-				remove_r(StringBuff<PATH_MAX>{"problems/", pid});
-				remove_r(StringBuff<PATH_MAX>{"problems/", pid, ".zip"});
+				(void)remove_r(StringBuff<PATH_MAX>{"problems/", pid});
+				(void)remove(StringBuff<PATH_MAX>{"problems/", pid, ".zip"});
 
 				// Delete the problem (we have to do it here to prevent this
 				// loop from going infinite)
