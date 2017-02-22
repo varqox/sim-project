@@ -46,25 +46,23 @@ struct Word {
 		style(stl) {}
 };
 
-} // anonymous namespace
-
-static constexpr array<const char*, 11> begin_style {{
-	"<span style=\"color:#00a000\">",
-	"<span style=\"color:#a0a0a0\">",
-	"<span style=\"color:#0000ff;font-weight:bold\">",
-	"<span style=\"color:#c90049;font-weight:bold;\">",
-	"<span style=\"color:#ff0000\">",
-	"<span style=\"color:#e0a000\">",
-	"<span style=\"color:#d923e9\">",
-	"<span style=\"color:#d923e9\">",
-	"<span style=\"color:#a800ff\">",
-	"<span style=\"color:#0086b3\">",
-	"<span style=\"color:#515125\">",
+constexpr array<meta::string, 11> begin_style {{
+	{"<span style=\"color:#00a000\">"},
+	{"<span style=\"color:#a0a0a0\">"},
+	{"<span style=\"color:#0000ff;font-weight:bold\">"},
+	{"<span style=\"color:#c90049;font-weight:bold;\">"},
+	{"<span style=\"color:#ff0000\">"},
+	{"<span style=\"color:#e0a000\">"},
+	{"<span style=\"color:#d923e9\">"},
+	{"<span style=\"color:#d923e9\">"},
+	{"<span style=\"color:#a800ff\">"},
+	{"<span style=\"color:#0086b3\">"},
+	{"<span style=\"color:#515125\">"},
 }};
 
-static constexpr const char* end_style = "</span>";
+constexpr CStringView end_style = "</span>";
 
-static constexpr array<Word, 124> words {{
+constexpr array<Word, 124> words {{
 	{"", COMMENT}, // Guard - ignored
 	{"uint_least16_t", BUILTIN_TYPE},
 	{"uint_least32_t", BUILTIN_TYPE},
@@ -191,6 +189,8 @@ static constexpr array<Word, 124> words {{
 	{"nullptr", CONSTANT},
 }};
 
+} // anonymous namespace
+
 /* Some ugly meta programming used to extract KEYWORDS from words */
 
 template<size_t N>
@@ -201,7 +201,8 @@ constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
 
 template<size_t N, size_t... Idx>
 constexpr array<meta::string, N> extract_keywords_from_append(
-	const array<meta::string, N>& base, meta::string x, meta::Seq<Idx...>)
+	const array<meta::string, N>& base, meta::string x,
+	std::integer_sequence<size_t, Idx...>)
 {
 	return {{base[Idx]..., x}};
 }
@@ -223,14 +224,15 @@ constexpr typename std::enable_if<
 {
 	return (idx == N ? res : (arr[idx].style == KEYWORD ?
 		extract_keywords_from<N, RES_N, RES_END + 1>(
-			arr, extract_keywords_from_append(
-				res, {arr[idx].str, arr[idx].size}, meta::GenSeq<RES_END>{}),
+			arr, extract_keywords_from_append(res,
+				{arr[idx].str, arr[idx].size},
+				std::make_integer_sequence<size_t, RES_END>{}),
 			idx + 1)
 		: extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
 
 static constexpr auto cpp_keywords =
-	extract_keywords_from<words.size(), count_keywords(words)>(words, {{}});
+	extract_keywords_from<words.size(), count_keywords(words)>(words, {});
 
 // Important: elements have to be sorted!
 static_assert(meta::is_sorted(cpp_keywords),
@@ -277,7 +279,8 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
 	DEBUG_CSH(stdlog("end: ", toStr(end));)
 
-	vector<StyleType> begs(end, -1); // here beginnings of styles are marked
+	vector<StyleType> begs(str.size(), -1); // here beginnings of styles are
+	                                        // marked
 	vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles)
 	                                     // JUST BEFORE str[i]
 
@@ -346,8 +349,18 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				j += 2;
 				++line;
 			}
-			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '",
-				str[i], "' -> ");
+			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '");
+			if (isprint(str[i]))
+				tmplog(str[i], "'   ");
+			else if (str[i] == '\n')
+				tmplog("\\n'  ");
+			else if (str[i] == '\t')
+				tmplog("\\t'  ");
+			else if (str[i] == '\r')
+				tmplog("\\r'  ");
+			else
+				tmplog("\\x", toHex({&str[i], 1}), '\'');
+			tmplog(" -> ");
 
 			if (ends[i] == 0)
 				tmplog("0, ");
@@ -550,6 +563,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 					++i;
 				}
 				++ends[i];
+				// Go back by one to prevent omitting the next character
+				--i;
+				++styles_depth;
 				continue;
 			}
 
@@ -577,6 +593,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				}
 			}
 			++ends[i];
+			// Go back by one to prevent omitting the next character
+			--i;
+			++styles_depth;
 		}
 	}
 
@@ -665,7 +684,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 		// End styles
 		if (ends[i]) {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			// Leave last style and try to elide it
@@ -688,7 +707,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		// Handle erased "\\\n" sequences
 		if (str[i] != input[j]) {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
@@ -698,7 +717,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
 					&& input[j + 1] == '\n');
 
-				string line_str = toStr(++line);
+				auto line_str = toStr(++line);
 				// When we were ending styles (somewhere above), there can be
 				// an opportunity to elide style OPERATOR (only in the first
 				// iteration of this loop) but it's not worth that, as it's a
@@ -717,7 +736,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		// Line ending
 		if (str[i] == '\n') {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i + 1;
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
@@ -726,7 +745,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (j == 0 || input[j - 1] == '\n')
 				res += '\n';
 			// Break the line
-			string line_str = toStr(++line);
+			auto line_str = toStr(++line);
 			back_insert(res, "</td></tr>"
 				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 					"\"></td><td>");
@@ -737,7 +756,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		// Begin style
 		if (begs[i] != -1) {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			style_stack.emplace_back(begs[i]);
@@ -746,7 +765,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	}
 
 	// Ending
-	htmlSpecialChars(res, substring(str, first_unescaped, end));
+	appendHtmlEscaped(res, substring(str, first_unescaped, end));
 	// End styles
 	for (uint i = end; i < ends.size(); ++i)
 		while (ends[i]--)

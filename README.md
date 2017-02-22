@@ -1,9 +1,9 @@
-# sim [![Build Status](https://travis-ci.org/krzyk240/sim.svg?branch=master)](https://travis-ci.org/krzyk240/sim) [![Coverity Scan Build Status](https://scan.coverity.com/projects/6466/badge.svg)](https://scan.coverity.com/projects/krzyk240-sim) [![Gitter chat](https://badges.gitter.im/krzyk240/sim.png)](https://gitter.im/krzyk240/sim)
+# sim [![Build Status](https://travis-ci.org/varqox/sim.svg?branch=master)](https://travis-ci.org/varqox/sim) [![Coverity Scan Build Status](https://scan.coverity.com/projects/6466/badge.svg)](https://scan.coverity.com/projects/varqox-sim) [![Gitter chat](https://badges.gitter.im/varqox/sim.png)](https://gitter.im/varqox/sim)
 
 SIM is an open source platform for carrying out algorithmic contests
 
 <div align="center">
-  <img src="http://krzyk240.github.io/img/sim.png"/>
+  <img src="http://varqox.github.io/img/sim.png"/>
 </div>
 
 
@@ -11,8 +11,8 @@ SIM is an open source platform for carrying out algorithmic contests
 
 ### Dependencies:
 
-- gcc/g++ (32 bit version) with C++11 support
-- MySQL (Debian packages: _mysql-server_)
+- gcc/g++ (32 bit version) with C++14 support
+- MySQL >= 5.6 (Debian packages: _mysql-server_)
 - [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
 - MySQL client library (Debian packages: libmysqlclient-dev)
 - GNU/Make
@@ -29,7 +29,7 @@ SIM is an open source platform for carrying out algorithmic contests
 1. First of all clone the SIM repository and all its submodules
 
   ```sh
-  git clone --recursive https://github.com/krzyk240/sim
+  git clone --recursive https://github.com/varqox/sim
   cd sim
   ```
 
@@ -58,7 +58,7 @@ SIM is an open source platform for carrying out algorithmic contests
   make install DESTDIR=where-you-want-SIM-to-install
   ```
 
-5. Run sim-server and judge-machine
+5. Run sim-server and job-machine
 
   ```sh
   make run

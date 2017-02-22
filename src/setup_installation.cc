@@ -1,5 +1,6 @@
 #include <sim/constants.h>
-#include <sim/db.h>
+#include <sim/mysql.h>
+#include <sim/sqlite.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
 #include <simlib/utilities.h>
@@ -60,10 +61,12 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 7> tables {{
+constexpr array<meta::string, 9> tables {{
 	{"contests_users"},
 	{"files"},
+	{"job_queue"},
 	{"problems"},
+	{"problems_tags"},
 	{"rounds"},
 	{"session"},
 	{"submissions"},
@@ -74,9 +77,9 @@ static_assert(meta::is_sorted(tables), "Needed for binary search");
 
 struct TryToCreateTable {
 	bool error = false;
-	DB::Connection& conn_;
+	MySQL::Connection& conn_;
 
-	explicit TryToCreateTable(DB::Connection& conn) : conn_(conn) {}
+	explicit TryToCreateTable(MySQL::Connection& conn) : conn_(conn) {}
 
 	template<class Func>
 	void operator()(const char* table_name, const std::string& query, Func&& f)
@@ -111,10 +114,14 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	DB::Connection conn;
+	SQLite::Connection sqlite_db;
+	MySQL::Connection conn;
 	try {
 		// Get connection
-		conn = DB::createConnectionUsingPassFile(
+		sqlite_db = SQLite::Connection(
+			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
+			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+		conn = MySQL::createConnectionUsingPassFile(
 			concat(argv[1], "/.db.config"));
 
 	} catch (const std::exception& e) {
@@ -124,13 +131,8 @@ int main(int argc, char **argv) {
 
 	if (DROP_TABLES) {
 		try {
-			conn.executeUpdate("DROP TABLE iF EXISTS users");
-			conn.executeUpdate("DROP TABLE iF EXISTS session");
-			conn.executeUpdate("DROP TABLE iF EXISTS problems");
-			conn.executeUpdate("DROP TABLE iF EXISTS rounds");
-			conn.executeUpdate("DROP TABLE iF EXISTS contests_users");
-			conn.executeUpdate("DROP TABLE iF EXISTS submissions");
-			conn.executeUpdate("DROP TABLE iF EXISTS files");
+			for (auto&& table : tables)
+				conn.executeUpdate(concat("DROP TABLE IF EXISTS `", table, '`'));
 
 			if (ONLY_DROP_TABLES)
 				return 0;
@@ -153,8 +155,8 @@ int main(int argc, char **argv) {
 			"`salt` char(", toStr(SALT_LEN), ") NOT NULL,"
 			"`password` char(", toStr(PASSWORD_HASH_LEN), ") NOT NULL,"
 			"`type` tinyint(1) unsigned NOT NULL DEFAULT " UTYPE_NORMAL_STR ","
-			"PRIMARY KEY (`id`),"
-			"UNIQUE KEY `username` (`username`)"
+			"PRIMARY KEY (id),"
+			"UNIQUE KEY (username)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
 		[&] {
 			// Add default user sim with password sim
@@ -162,7 +164,7 @@ int main(int argc, char **argv) {
 			fillRandomly(salt_bin, sizeof(salt_bin));
 			string salt = toHex(salt_bin, sizeof(salt_bin));
 
-			DB::Statement stmt(conn.prepare(
+			MySQL::Statement stmt(conn.prepare(
 				"INSERT IGNORE users (id, username, first_name, last_name, email, "
 					"salt, password, type) "
 				"VALUES (" SIM_ROOT_UID ", 'sim', 'sim', 'sim', 'sim@sim', ?, "
@@ -181,22 +183,33 @@ int main(int argc, char **argv) {
 			"`ip` char(", toStr(SESSION_IP_LEN), ") NOT NULL,"
 			"`user_agent` blob NOT NULL,"
 			"`time` datetime NOT NULL,"
-			"PRIMARY KEY (`id`),"
-			"KEY (`user_id`),"
-			"KEY (`time`)"
+			"PRIMARY KEY (id),"
+			"KEY (user_id),"
+			"KEY (time)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"));
 
 	try_to_create_table("problems",
 		concat("CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
+			"`type` TINYINT NOT NULL,"
 			"`name` VARCHAR(", toStr(PROBLEM_NAME_MAX_LEN), ") NOT NULL,"
-			"`tag` VARCHAR(", toStr(PROBLEM_TAG_MAX_LEN), ") NOT NULL,"
+			"`label` VARCHAR(", toStr(PROBLEM_LABEL_MAX_LEN), ") NOT NULL,"
+			"`simfile` mediumblob NOT NULL,"
 			"`owner` int unsigned NOT NULL,"
 			"`added` datetime NOT NULL,"
-			"PRIMARY KEY (`id`),"
-			"KEY (`owner`)"
+			"`last_edit` datetime NOT NULL,"
+			"PRIMARY KEY (id),"
+			"KEY (owner, id),"
+			"KEY (type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+
+	try_to_create_table("problems_tags",
+		concat("CREATE TABLE IF NOT EXISTS `problems_tags` ("
+			"`problem_id` int unsigned NOT NULL,"
+			"`tag` VARCHAR(", toStr(PROBLEM_TAG_MAX_LEN), ") NOT NULL,"
+			"PRIMARY KEY (problem_id, tag),"
+			"KEY (tag)"
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("rounds",
 		concat("CREATE TABLE IF NOT EXISTS `rounds` ("
@@ -213,12 +226,12 @@ int main(int argc, char **argv) {
 			"`begins` datetime NULL DEFAULT NULL,"
 			"`full_results` datetime NULL DEFAULT NULL,"
 			"`ends` datetime NULL DEFAULT NULL,"
-			"PRIMARY KEY (`id`),"
-			"KEY (`parent`, `visible`),"
-			"KEY (`parent`, `begins`),"
-			"KEY (`parent`, `is_public`),"
-			"KEY (`grandparent`, `item`),"
-			"KEY (`owner`)"
+			"PRIMARY KEY (id),"
+			"KEY (parent, visible),"
+			"KEY (parent, begins),"
+			"KEY (parent, is_public),"
+			"KEY (grandparent, item),"
+			"KEY (owner)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("contests_users",
@@ -226,8 +239,8 @@ int main(int argc, char **argv) {
 			"`user_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
 			"`mode` tinyint(1) unsigned NOT NULL DEFAULT " CU_MODE_CONTESTANT_STR ","
-			"PRIMARY KEY (`user_id`, `contest_id`),"
-			"KEY (`contest_id`)"
+			"PRIMARY KEY (user_id, contest_id),"
+			"KEY (contest_id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("submissions",
@@ -235,19 +248,17 @@ int main(int argc, char **argv) {
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`user_id` int unsigned NOT NULL,"
 			"`problem_id` int unsigned NOT NULL,"
-			"`round_id` int unsigned NOT NULL,"
-			"`parent_round_id` int unsigned NOT NULL,"
-			"`contest_round_id` int unsigned NOT NULL,"
-			"`type` TINYINT NULL DEFAULT NULL,"
-			"`status` TINYINT NOT NULL DEFAULT 0,"
+			"`round_id` int unsigned NULL,"
+			"`parent_round_id` int unsigned NULL,"
+			"`contest_round_id` int unsigned NULL,"
+			"`type` TINYINT NOT NULL,"
+			"`status` TINYINT NOT NULL,"
 			"`submit_time` datetime NOT NULL,"
 			"`score` int NULL DEFAULT NULL,"
-			"`queued` datetime NOT NULL,"
-			"`initial_report` blob NOT NULL,"
-			"`final_report` blob NOT NULL,"
+			"`last_judgment` datetime NOT NULL,"
+			"`initial_report` mediumblob NOT NULL,"
+			"`final_report` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
-			// Judge server
-			"KEY (status, queued),"
 			// Update type, delete account
 			"KEY (user_id, round_id, type, status, id),"
 			// Contest::submissions() - view all
@@ -266,6 +277,23 @@ int main(int argc, char **argv) {
 			"KEY (contest_round_id, user_id, type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
+	try_to_create_table("job_queue",
+		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
+			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`creator` int unsigned NOT NULL,"
+			"`type` TINYINT NOT NULL,"
+			"`priority` TINYINT NOT NULL,"
+			"`status` TINYINT NOT NULL,"
+			"`added` datetime NOT NULL,"
+			"`aux_id` int unsigned DEFAULT NULL,"
+			"`info` blob NOT NULL,"
+			"`data` mediumblob NOT NULL,"
+			"PRIMARY KEY (id),"
+			"KEY (status, priority DESC, id), "
+			"KEY (type, aux_id),"
+			"KEY (creator, id)"
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+
 	try_to_create_table("files",
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` char(", toStr(FILE_ID_LEN), ") NOT NULL,"
@@ -279,8 +307,19 @@ int main(int argc, char **argv) {
 			"KEY (round_id, modified)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	if (try_to_create_table.error)
+	// Create SQLite tables
+	try {
+		sqlite_db.execute("PRAGMA journal_mode=WAL");
+		sqlite_db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS problems"
+			" USING fts5(type, name, label)");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
 		return 6;
+	}
+
+	if (try_to_create_table.error)
+		return 7;
 
 	return 0;
 }
