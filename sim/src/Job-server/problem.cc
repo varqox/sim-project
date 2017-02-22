@@ -56,8 +56,8 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	StringBuff<PATH_MAX> package_dest {"jobs_files/", job_id};
 	StringBuff<PATH_MAX> tmp_package_path {package_dest, ".tmp/"};
 
-	remove_r(package_dest);
-	remove_r(tmp_package_path);
+	(void)remove_r(package_dest);
+	(void)remove_r(tmp_package_path);
 
 	vector<string> zip_args;
 	back_insert(zip_args, "unzip", "-o", concat(package_dest, ".zip"), "-d",
@@ -68,6 +68,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	// Run unzip
 	{
 		FileDescriptor zip_output {openUnlinkedTmpFile()};
+		// It isn't a fatal error if zip_output is invalid, so it can be ignored
 		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
 			{-1, zip_output, zip_output, 500'000'000 /* 500 s */, 512 << 20});
 
@@ -116,7 +117,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	if (master_dir.len) {
 		// Truncate master_dir from the path
 		tmp_package_path[tmp_package_path.len -= master_dir.len] = '\0';
-		remove_r(tmp_package_path);
+		(void)remove_r(tmp_package_path);
 	}
 
 	/* Construct Simfile */
@@ -251,8 +252,8 @@ static string secondStage(const string& job_id, const string& job_owner,
 		SignalBlocker sb; // Prevent the transaction rollback from interruption
 
 		// Delete problem's files
-		remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
-		remove_r(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
+		(void)remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
+		(void)remove(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
 
 		// Delete the problem and its submissions
 		db_conn.executeUpdate("DELETE FROM problems WHERE id=" +
@@ -282,6 +283,7 @@ static string secondStage(const string& job_id, const string& job_owner,
 	report.append("Zipping the package...");
 	{
 		FileDescriptor zip_output {openUnlinkedTmpFile()};
+		// It isn't a fatal error if zip_output is invalid, so it can be ignored
 		vector<string> zip_args;
 		back_insert(zip_args, "zip", "-rq", concat(problem_id, ".zip"),
 			problem_id);

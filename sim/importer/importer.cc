@@ -283,8 +283,8 @@ void handle_jobs() {
 	}
 }
 
-int main(int argc, char **argv) {
-	errlog.label(false);
+int main2(int argc, char **argv) {
+	stdlog.use(stdout);
 
 	if (argc != 3) {
 		errlog("You have to specify the path to the old sim installation as the first argument and the path to new installation as the second argument");
@@ -320,13 +320,13 @@ int main(int argc, char **argv) {
 	int jobs = stmt.getInt(0);
 
 	if (jobs == 0) {
-		char c;
+		int c;
 		do {
 			cout << "No jobs to do. Do you want to scan the old database and import old sim? [y/n] ";
 			c = cin.get();
-		} while (!isIn(c, {'y', 'n'}));
+		} while (!isIn(c, std::initializer_list<int>{'y', 'n', EOF}));
 
-		if (c == 'n')
+		if (c == 'n' || c == EOF)
 			return 0;
 		else
 			scan_old_db();
@@ -335,4 +335,14 @@ int main(int argc, char **argv) {
 	handle_jobs();
 
 	return 0;
+}
+
+int main(int argc, char **argv) {
+	try {
+		return main2(argc, argv);
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return 1;
+	}
 }
