@@ -44,6 +44,10 @@ test-simlib: src
 build-test-simlib: src
 	$(Q)$(MAKE) -C src/lib/simlib/ build-test
 
+.PHONY: importer
+importer: src
+	$(Q)$(MAKE) -C importer/
+
 .PHONY: install
 install: $(filter-out install run, $(MAKECMDGOALS))
 	@ #   ^ install always have to be executed at the end (but before run)
@@ -125,6 +129,7 @@ run: $(filter-out run, $(MAKECMDGOALS))
 clean:
 	$(Q)$(MAKE) clean -C src/
 	$(Q)$(MAKE) clean -C test/
+	$(Q)$(MAKE) clean -C importer/
 
 .PHONY: help
 help:
