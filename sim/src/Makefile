@@ -1,34 +1,29 @@
 include ../Makefile.config
 
-EXTRA_OPTIONS += -I '$(ROOT)/src/include' -isystem '$(ROOT)/src/include/others'
-EXTRA_LD_OPTIONS += -L '$(ROOT)/src/lib' -L '$(ROOT)/src/lib/others'
+EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/others'
+EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others'
 
 .PHONY: all
-all: killinstc Conver Judge_machine server lib setup-installation
+all: lib killinstc setup-installation web-interface Job-server
 
-.PHONY: Conver Judge_machine server lib simlib
-Conver Judge_machine server lib: simlib
-Judge_machine server: lib
-Conver Judge_machine server lib simlib:
+$(eval $(call dependencies))
+
+.PHONY: Job-server web-interface lib
+Job-server web-interface: lib
+Job-server web-interface lib:
 	$(Q)$(MAKE) -C $@/
 
-killinstc: killinstc.cc simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@
+killinstc: killinstc.o lib/simlib.a
+	$(LINK)
 
-setup-installation: setup_installation.cc lib/sim.a simlib/simlib.a
-	$(Q)$(call P,LINK,$@)$(CXX) $^ $(CXXFLAGS) $(LFLAGS) -o $@ -lmysqlcppconn
+setup-installation: setup_installation.o lib/sim.a lib/sqlite3.a
+	$(LINK) -lmysqlcppconn -ldl -pthread
 
-lib/sim.a: lib
-	@
-
-simlib/simlib.a: simlib
-	@
+lib/simlib.a lib/sim.a lib/sqlite3.a: lib;
 
 .PHONY: clean
 clean:
 	$(Q)$(RM) *.o *.deps killinstc sim-server setup-installation
 	$(Q)$(MAKE) clean -C lib/
-	$(Q)$(MAKE) clean -C simlib/
-	$(Q)$(MAKE) clean -C Conver/
-	$(Q)$(MAKE) clean -C Judge_machine/
-	$(Q)$(MAKE) clean -C server/
+	$(Q)$(MAKE) clean -C Job-server/
+	$(Q)$(MAKE) clean -C web-interface/

@@ -7,12 +7,12 @@ SIM is an open source platform for carrying out algorithmic contests
 </div>
 
 
-## Instalation
+## Installation
 
 ### Dependencies:
 
-- gcc/g++ (32 bit version) with C++11 support
-- MySQL (Debian packages: _mysql-server_)
+- gcc/g++ (32 bit version) with C++14 support
+- MySQL >= 5.6 (Debian packages: _mysql-server_)
 - [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
 - MySQL client library (Debian packages: libmysqlclient-dev)
 - GNU/Make
@@ -29,7 +29,7 @@ SIM is an open source platform for carrying out algorithmic contests
 1. First of all clone the SIM repository and all its submodules
 
   ```sh
-  git clone --recursive https://github.com/krzyk240/sim
+  git clone --recursive https://github.com/varqox/sim
   cd sim
   ```
 
@@ -58,7 +58,7 @@ SIM is an open source platform for carrying out algorithmic contests
   make install DESTDIR=where-you-want-SIM-to-install
   ```
 
-5. Run sim-server and judge-machine
+5. Run sim-server and job-machine
 
   ```sh
   make run
@@ -72,10 +72,10 @@ SIM is an open source platform for carrying out algorithmic contests
 
   You can combine building, installation and running commands into:
   ```sh
-  make install run
+  make src install run
   ```
 
-6. Enter http://127.7.7.7:8080 via your internet browser, by default there was created SIM root account
+6. Enter http://127.7.7.7:8080 via your web browser, by default there was created SIM root account
   ```
   username: sim
   password: sim
@@ -92,8 +92,8 @@ Just type (be aware of incompatible database (and other inner) changes)
 ```sh
 git pull
 git submodule update
-make -j4 install run
+make -j4 src install run
 ```
 
-### Task packages
-You can find some example task packages in problems/ folder.
+### Problem packages
+You can find some example problem packages in problems/ folder.

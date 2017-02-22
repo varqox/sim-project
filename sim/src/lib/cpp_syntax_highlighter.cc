@@ -12,8 +12,8 @@ using std::vector;
 # warning "Before committing disable this debug"
 # define DEBUG_CSH(...) __VA_ARGS__
 # include <cassert>
-# undef try_assert
-# define try_assert assert
+# undef throw_assert
+# define throw_assert assert
 #else
 # define DEBUG_CSH(...)
 #endif
@@ -46,25 +46,23 @@ struct Word {
 		style(stl) {}
 };
 
-} // anonymous namespace
-
-static constexpr array<const char*, 11> begin_style {{
-	"<span style=\"color:#00a000\">",
-	"<span style=\"color:#a0a0a0\">",
-	"<span style=\"color:#0000ff;font-weight:bold\">",
-	"<span style=\"color:#c90049;font-weight:bold;\">",
-	"<span style=\"color:#ff0000\">",
-	"<span style=\"color:#e0a000\">",
-	"<span style=\"color:#d923e9\">",
-	"<span style=\"color:#d923e9\">",
-	"<span style=\"color:#a800ff\">",
-	"<span style=\"color:#0086b3\">",
-	"<span style=\"color:#515125\">",
+constexpr array<meta::string, 11> begin_style {{
+	{"<span style=\"color:#00a000\">"},
+	{"<span style=\"color:#a0a0a0\">"},
+	{"<span style=\"color:#0000ff;font-weight:bold\">"},
+	{"<span style=\"color:#c90049;font-weight:bold;\">"},
+	{"<span style=\"color:#ff0000\">"},
+	{"<span style=\"color:#e0a000\">"},
+	{"<span style=\"color:#d923e9\">"},
+	{"<span style=\"color:#d923e9\">"},
+	{"<span style=\"color:#a800ff\">"},
+	{"<span style=\"color:#0086b3\">"},
+	{"<span style=\"color:#515125\">"},
 }};
 
-static constexpr const char* end_style = "</span>";
+constexpr CStringView end_style = "</span>";
 
-static constexpr array<Word, 124> words {{
+constexpr array<Word, 124> words {{
 	{"", COMMENT}, // Guard - ignored
 	{"uint_least16_t", BUILTIN_TYPE},
 	{"uint_least32_t", BUILTIN_TYPE},
@@ -191,6 +189,8 @@ static constexpr array<Word, 124> words {{
 	{"nullptr", CONSTANT},
 }};
 
+} // anonymous namespace
+
 /* Some ugly meta programming used to extract KEYWORDS from words */
 
 template<size_t N>
@@ -201,7 +201,8 @@ constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
 
 template<size_t N, size_t... Idx>
 constexpr array<meta::string, N> extract_keywords_from_append(
-	const array<meta::string, N>& base, meta::string x, meta::Seq<Idx...>)
+	const array<meta::string, N>& base, meta::string x,
+	std::integer_sequence<size_t, Idx...>)
 {
 	return {{base[Idx]..., x}};
 }
@@ -210,7 +211,7 @@ template<size_t N, size_t RES_N, size_t RES_END>
 constexpr typename std::enable_if<
 	RES_END >= RES_N, array<meta::string, RES_N>>::type
 	extract_keywords_from(const array<Word, N>&,
-	array<meta::string, RES_N> res = {}, size_t = 0)
+	const array<meta::string, RES_N>& res = {}, size_t = 0)
 {
 	return res;
 }
@@ -219,18 +220,19 @@ template<size_t N, size_t RES_N, size_t RES_END = 0>
 constexpr typename std::enable_if<
 	RES_END < RES_N, array<meta::string, RES_N>>::type
 	extract_keywords_from(const array<Word, N>& arr,
-	array<meta::string, RES_N> res = {}, size_t idx = 0)
+	const array<meta::string, RES_N>& res, size_t idx = 0)
 {
 	return (idx == N ? res : (arr[idx].style == KEYWORD ?
 		extract_keywords_from<N, RES_N, RES_END + 1>(
-			arr, extract_keywords_from_append(
-				res, {arr[idx].str, arr[idx].size}, meta::GenSeq<RES_END>{}),
+			arr, extract_keywords_from_append(res,
+				{arr[idx].str, arr[idx].size},
+				std::make_integer_sequence<size_t, RES_END>{}),
 			idx + 1)
 		: extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
 
 static constexpr auto cpp_keywords =
-	extract_keywords_from<words.size(), count_keywords(words)>(words);
+	extract_keywords_from<words.size(), count_keywords(words)>(words, {});
 
 // Important: elements have to be sorted!
 static_assert(meta::is_sorted(cpp_keywords),
@@ -241,7 +243,7 @@ CppSyntaxHighlighter::CppSyntaxHighlighter() {
 	static_assert(words[0].size == 0, "First (zero) element of words is a guard"
 		" - because Aho-Corasick implementation takes only positive IDs");
 	for (uint i = 1; i < words.size(); ++i)
-		aho.addPattern(words[i].str, i);
+		aho.addPattern({words[i].str, words[i].size}, i);
 
 	aho.buildFails();
 }
@@ -275,9 +277,10 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 	// Append end guards (one is already in str - terminating null character)
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
-	DEBUG_CSH(stdlog("end: ", toString(end));)
+	DEBUG_CSH(stdlog("end: ", toStr(end));)
 
-	vector<StyleType> begs(end, -1); // here beginnings of styles are marked
+	vector<StyleType> begs(str.size(), -1); // here beginnings of styles are
+	                                        // marked
 	vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles)
 	                                     // JUST BEFORE str[i]
 
@@ -341,18 +344,28 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	DEBUG_CSH(auto dump_begs_ends = [&] {
 		for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 			while (str[i] != input[j]) {
-				try_assert(input[j] == '\\' && j + 1 < (int)input.size()
+				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
 					&& input[j + 1] == '\n');
 				j += 2;
 				++line;
 			}
-			auto tmplog = stdlog(toString(i), " (line ", toString(line), "): '",
-				str[i], "' -> ");
+			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '");
+			if (isprint(str[i]))
+				tmplog(str[i], "'   ");
+			else if (str[i] == '\n')
+				tmplog("\\n'  ");
+			else if (str[i] == '\t')
+				tmplog("\\t'  ");
+			else if (str[i] == '\r')
+				tmplog("\\r'  ");
+			else
+				tmplog("\\x", toHex({&str[i], 1}), '\'');
+			tmplog(" -> ");
 
 			if (ends[i] == 0)
 				tmplog("0, ");
 			else
-				tmplog("\033[1;32m", toString(ends[i]), "\033[m, ");
+				tmplog("\033[1;32m", toStr(ends[i]), "\033[m, ");
 
 			switch (begs[i]) {
 			case -1:
@@ -437,27 +450,13 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			}
 			++k;
 
-			struct cmp {
-				bool operator()(const meta::string& a, const StringView& b)
-					const
-				{
-					return StringView(a.data(), a.size()) < b;
-				}
-
-				bool operator()(const StringView& a, const meta::string& b)
-					const
-				{
-					return a < StringView(b.data(), b.size());
-				}
-			};
-
 			// Function name can neither be blank nor begin with a digit
 			if (k < name_end && !isdigit(str[k])) {
 				StringView function_name = substring(str, k, name_end);
 				// It is important that function_name is taken as StringView
 				// below!
 				begs[k] = (std::binary_search(cpp_keywords.begin(),
-						cpp_keywords.end(), function_name, cmp())
+						cpp_keywords.end(), function_name)
 					? KEYWORD : FUNCTION);
 				++ends[name_end];
 			}
@@ -564,6 +563,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 					++i;
 				}
 				++ends[i];
+				// Go back by one to prevent omitting the next character
+				--i;
+				++styles_depth;
 				continue;
 			}
 
@@ -591,6 +593,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				}
 			}
 			++ends[i];
+			// Go back by one to prevent omitting the next character
+			--i;
+			++styles_depth;
 		}
 	}
 
@@ -617,8 +622,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	// Highlights fragments of code not containing: comments, preprocessor,
 	// number literals, string literals and character literals
 	auto highlight = [&](int beg, int endi) {
-		DEBUG_CSH(stdlog("highlight(", toString(beg), ", ", toString(endi),
-			"):");)
+		DEBUG_CSH(stdlog("highlight(", toStr(beg), ", ", toStr(endi), "):");)
 		if (beg >= endi)
 			return;
 
@@ -633,7 +637,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (k && !isName(str[i + 1]) &&
 				!isName(str[j = i - words[k].size]))
 			{
-				DEBUG_CSH(stdlog("aho: ", toString(j + 1), ": ", words[k].str);)
+				DEBUG_CSH(stdlog("aho: ", toStr(j + 1), ": ", words[k].str);)
 				begs[j + 1] = words[k].style;
 				++ends[i + 1];
 				i = j;
@@ -680,7 +684,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 		// End styles
 		if (ends[i]) {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			// Leave last style and try to elide it
@@ -703,17 +707,17 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		// Handle erased "\\\n" sequences
 		if (str[i] != input[j]) {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
 				res += end_style;
 			// Handle "\\\n"
 			do {
-				try_assert(input[j] == '\\' && j + 1 < (int)input.size()
+				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
 					&& input[j + 1] == '\n');
 
-				string line_str = toString(++line);
+				auto line_str = toStr(++line);
 				// When we were ending styles (somewhere above), there can be
 				// an opportunity to elide style OPERATOR (only in the first
 				// iteration of this loop) but it's not worth that, as it's a
@@ -732,7 +736,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		// Line ending
 		if (str[i] == '\n') {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i + 1;
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
@@ -741,7 +745,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (j == 0 || input[j - 1] == '\n')
 				res += '\n';
 			// Break the line
-			string line_str = toString(++line);
+			auto line_str = toStr(++line);
 			back_insert(res, "</td></tr>"
 				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 					"\"></td><td>");
@@ -752,7 +756,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		// Begin style
 		if (begs[i] != -1) {
-			htmlSpecialChars(res, substring(str, first_unescaped, i));
+			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			style_stack.emplace_back(begs[i]);
@@ -761,7 +765,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	}
 
 	// Ending
-	htmlSpecialChars(res, substring(str, first_unescaped, end));
+	appendHtmlEscaped(res, substring(str, first_unescaped, end));
 	// End styles
 	for (uint i = end; i < ends.size(); ++i)
 		while (ends[i]--)
