@@ -2,14 +2,15 @@
 
 CORES=$(grep -c ^processor /proc/cpuinfo)
 
-export CC='gcc -Werror'
-export CXX='g++ -Werror'
-make clean && make build test -j $CORES
-make clean && make build test -j $CORES DEBUG=1
-make clean && make build test -j $CORES DEBUG=2
+function test {
+	export CC="${1} -Werror"
+	export CXX="${2} -Werror"
+	make -j $CORES test
+	make -j $CORES test DEBUG=1
+	make -j $CORES test DEBUG=2
 
-export CC='clang -Werror'
-export CXX='clang++ -Werror'
-make clean && make build test -j $CORES
-make clean && make build test -j $CORES DEBUG=1
-make clean && make build test -j $CORES DEBUG=2
+}
+
+(which gcc-4.9 g++-4.9 > /dev/null) && test gcc-4.9 g++-4.9
+(which gcc g++ > /dev/null) && test gcc g++
+(which clang clang++ > /dev/null) && test clang clang++
