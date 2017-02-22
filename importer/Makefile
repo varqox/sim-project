@@ -8,4 +8,3 @@ importer: importer.o ../src/lib/sim.a ../src/lib/sqlite3.a
 .PHONY: clean
 clean:
 	$(Q)$(RM) *.o *.deps
-	$(Q)$(MAKE) clean -C cpp_syntax_highlighter/
