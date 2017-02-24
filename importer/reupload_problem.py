@@ -7,9 +7,10 @@ from bs4 import BeautifulSoup
 from enum import Enum
 import time
 import sys
+import getpass
 
 def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+	print(*args, file=sys.stderr, **kwargs)
 
 global ses
 ses = Session()
@@ -17,6 +18,10 @@ ses = Session()
 host = 'http://127.7.7.7:8080'
 username = 'sim'
 password = 'sim'
+
+if "-p" in sys.argv:
+	print("Give password to the account:", username)
+	password = getpass.getpass()
 
 def log_html(content):
 	f = open('/tmp/lol.html', 'w')
@@ -77,12 +82,13 @@ def getproblemId(job_id : str):
 
 
 ##############################################
-if len(sys.argv) < 3:
+args = [x for x in sys.argv if x[0] != '-']
+if len(args) < 2:
 	eprint("You have to specify the problem's path as the first argument and problem id to reupload")
 	sys.exit(1)
 
-problem_path = sys.argv[1]
-old_pid = sys.argv[2]
+problem_path = args[1]
+old_pid = args[2]
 eprint("problem_path:", problem_path)
 
 login() # Begin session
