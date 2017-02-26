@@ -20,9 +20,10 @@ protected:
 		PERM_VIEW_ALL = 2,
 		PERM_VIEW_SOLUTIONS = 4,
 		PERM_DOWNLOAD = 8,
-		PERM_SEE_OWNER = 16,
-		PERM_ADMIN = 32,
-		PERM_ADD = 64
+		PERM_SEE_SIMFILE = 16,
+		PERM_SEE_OWNER = 32,
+		PERM_ADMIN = 64,
+		PERM_ADD = 128
 	};
 
 	Permissions getPermissions(const std::string& owner_id, ProblemType ptype);
