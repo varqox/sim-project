@@ -206,16 +206,17 @@ void Contest::handle() {
 				"</div>");
 
 	} else { // rpath->type == PROBLEM
-		append("<h1>", htmlEscape(rpath->problem->name), "</h1>");
+		append("<h1>", htmlEscape(rpath->problem->name), "</h1>"
+			"<div>");
 		if (admin_view)
-			append("<div>"
-				"<a class=\"btn-small\" href=\"/c/", rpath->round->id,
+			append("<a class=\"btn-small\" href=\"/c/", rpath->round->id,
 					"/add\">Add problem</a>"
 				"<a class=\"btn-small blue\" href=\"/c/", round_id,
-					"/edit\">Edit problem</a>"
-				"<a class=\"btn-small green\" href=\"/p/",
-					rpath->problem->problem_id, "\">Problem's page</a>"
-				"</div>");
+					"/edit\">Edit problem</a>");
+
+		append("<a class=\"btn-small green\" href=\"/p/",
+				rpath->problem->problem_id, "\">Problem's page</a>"
+			"</div>");
 	}
 
 	append("</div>");
