@@ -15,17 +15,17 @@ Problemset::Permissions Problemset::getPermissions(const string& owner_id,
 	if (Session::open()) {
 		if (Session::user_type == UTYPE_ADMIN)
 			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_ALL |
-				PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD | PERM_SEE_OWNER |
+				PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD | PERM_SEE_SIMFILE | PERM_SEE_OWNER |
 				PERM_ADMIN);
 
 		if (Session::user_id == owner_id)
 			return Permissions(PERM_VIEW | PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD |
-				PERM_SEE_OWNER | PERM_ADMIN |
+				PERM_SEE_SIMFILE | PERM_SEE_OWNER | PERM_ADMIN |
 				(Session::user_type == UTYPE_TEACHER ? (int)PERM_ADD : 0));
 
 		if (Session::user_type == UTYPE_TEACHER && ptype == ProblemType::PUBLIC)
 			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_SOLUTIONS |
-				PERM_DOWNLOAD | PERM_SEE_OWNER);
+				PERM_DOWNLOAD | PERM_SEE_SIMFILE | PERM_SEE_OWNER);
 	}
 
 	return (ptype == ProblemType::PUBLIC ? PERM_VIEW : PERM_NONE);
@@ -487,9 +487,11 @@ void Problemset::problem() {
 		"<center>"
 			"<a class=\"btn\" href=\"/p/", problem_id_, "/statement\">"
 				"View statement</a>"
-		"</center>"
-		// TODO: list files and allow to download/reupload them
-		"<h2>Problem's Simfile:</h2>"
+		"</center>");
+
+	// TODO: list files and allow to download/reupload them
+	if (perms & PERM_SEE_SIMFILE)
+		append("<h2>Problem's Simfile:</h2>"
 		"<pre class=\"simfile\">", htmlEscape(problem_simfile), "</pre>");
 }
 

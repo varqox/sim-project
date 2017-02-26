@@ -785,7 +785,7 @@ void Contest::editProblem() {
 			stmt.setString(1, rpath->round_id);
 			stmt.executeUpdate();
 
-			// Add jobs to rejudge the submissions
+			// Add jobs to rejudge the submissions from that round
 			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 					" priority, type, added, aux_id, info, data)"
 				"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
