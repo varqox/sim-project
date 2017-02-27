@@ -261,6 +261,12 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			// Update type, delete account
 			"KEY (user_id, round_id, type, status, id),"
+			// Problemset::submissions - view - all
+			"KEY (problem_id, id),"
+			"KEY (problem_id, user_id, id),"
+			// Problemset::submissions() - view by type
+			"KEY (problem_id, type, id),"
+			"KEY (problem_id, user_id, type, id),"
 			// Contest::submissions() - view all
 			"KEY (round_id, id),"
 			"KEY (round_id, user_id, id),"
