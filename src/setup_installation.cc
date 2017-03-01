@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
 	try_to_create_table("job_queue",
 		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`creator` int unsigned NOT NULL,"
+			"`creator` int unsigned NULL,"
 			"`type` TINYINT NOT NULL,"
 			"`priority` TINYINT NOT NULL,"
 			"`status` TINYINT NOT NULL,"

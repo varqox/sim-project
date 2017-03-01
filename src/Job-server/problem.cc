@@ -331,7 +331,7 @@ static string secondStage(const string& job_id, const string& job_owner,
 		// Create a job to judge the submission
 		stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 				" priority, type, added, aux_id, info, data)"
-			" VALUES(" SIM_ROOT_UID ", " JQSTATUS_PENDING_STR ", ?, "
+			" VALUES(NULL, " JQSTATUS_PENDING_STR ", ?, "
 				JQTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
 		// Problem's solutions are more important than ordinary submissions
 		stmt.setUInt(1, priority(JobQueueType::JUDGE_SUBMISSION) + 1);
