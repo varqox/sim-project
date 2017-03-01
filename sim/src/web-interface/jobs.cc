@@ -38,7 +38,7 @@ static constexpr const char* job_type_str(JobQueueType type) {
 	case JobQueueType::ADD_PROBLEM: return "Add problem";
 	case JobQueueType::REUPLOAD_PROBLEM: return "Reupload problem";
 	case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
-		return  "Add problem - set limits";
+		return "Add problem - set limits";
 	case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION:
 		return"Reupload problem - set limits";
 	case JobQueueType::EDIT_PROBLEM: return "Edit problem";
@@ -88,15 +88,14 @@ void Jobs::handle() {
 	jobsTemplate("Job queue");
 	append(next_arg.empty() ? "<h1>Job queue</h1>" : "<h1>My jobs</h1>");
 
-	// List available problems
+	// List jobs
 	try {
 		MySQL::Statement stmt;
 		if (show_all) {
 			stmt = db_conn.prepare("SELECT j.id, added, j.type, status,"
-				" priority, aux_id, info, creator, username"
-				" FROM job_queue j, users u"
-				" WHERE creator=u.id AND j.type!=" JQTYPE_VOID_STR
-				" ORDER BY id DESC");
+					" priority, aux_id, info, creator, username"
+				" FROM job_queue j LEFT JOIN users u ON creator=u.id"
+				" WHERE j.type!=" JQTYPE_VOID_STR " ORDER BY id DESC");
 
 		} else {
 			stmt = db_conn.prepare("SELECT id, added, type, status, priority,"
@@ -135,8 +134,14 @@ void Jobs::handle() {
 						"\">", res[2], "</a></td>",
 					job_status_as_td(job_status));
 
-			if (show_all) // Owner
-				append("<td><a href=\"/u/", res[8], "\">", res[9], "</a></td>");
+			// Owner
+			if (show_all) {
+				if (res.isNull(8))
+					append("<td>System</td>");
+				else
+					append("<td><a href=\"/u/", res[8], "\">", res[9],
+						"</a></td>");
+			}
 
 			Permissions job_perms = getPermissions(
 				show_all ? res[8] : Session::user_id, job_status);
@@ -240,8 +245,8 @@ void Jobs::job() {
 		MySQL::Statement stmt = db_conn.prepare(
 			"SELECT creator, j.type, status, username, added,"
 				" aux_id, info, SUBSTR(data, 1, ?)"
-				" FROM job_queue j, users u"
-				" WHERE creator=u.id AND j.id=? AND j.type!=" JQTYPE_VOID_STR);
+				" FROM job_queue j LEFT JOIN users u ON j.creator=u.id"
+				" WHERE j.id=? AND j.type!=" JQTYPE_VOID_STR);
 		stmt.setUInt(1, REPORT_PREVIEW_MAX_LENGTH + 1);
 		stmt.setString(2, job_id);
 
@@ -250,7 +255,7 @@ void Jobs::job() {
 			return error404();
 
 		// Get permissions
-		creator = res[1];
+		creator = (res.isNull(1) ? "" : res[1]);
 		job_type = JobQueueType(res.getUInt(2));
 		job_status = JobQueueStatus(res.getUInt(3));
 		perms = getPermissions(creator, job_status);
@@ -327,9 +332,13 @@ void Jobs::job() {
 							"<sup>UTC</sup></td>",
 						job_status_as_td(job_status));
 
-		if (show_owner)
-			append("<td><a href=\"/u/", creator, "\">", creator_username,
-				"</a></td>");
+		if (show_owner) {
+			if (creator.empty())
+				append("<td>System</td>");
+			else
+				append("<td><a href=\"/u/", creator, "\">", creator_username,
+					"</a></td>");
+		}
 
 		append("<td style=\"text-align: left\">");
 		append_info();
