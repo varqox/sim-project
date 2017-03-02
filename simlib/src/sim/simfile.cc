@@ -80,9 +80,11 @@ string Simfile::dump() const {
 // some template meta-programming code that concentrates string literals. Also,
 // the macros are used only locally, so after all, they are not so evil...)
 #define CHECK_IF_ARR(var, name) if (!var.isArray() && var.isSet()) \
-	throw std::runtime_error("Simfile: variable `" name "` has to be an array")
+	throw std::runtime_error("Simfile: variable `" name "` has to be" \
+		" specified as an array")
 #define CHECK_IF_NOT_ARR(var, name) if (var.isArray()) \
-	throw std::runtime_error("Simfile: variable `" name "` cannot be an array")
+	throw std::runtime_error("Simfile: variable `" name "` cannot be" \
+		" specified as an array")
 
 void Simfile::loadName() {
 	auto&& var = config["name"];

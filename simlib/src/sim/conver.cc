@@ -25,20 +25,34 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 	bool simfile_is_loaded = false;
 	if (!opts.ignore_simfile && dt->fileExists("Simfile")) {
 		simfile_is_loaded = true;
-		sf = Simfile {getFileContents(package_path_ + "Simfile")};
+		try {
+			sf = Simfile {getFileContents(package_path_ + "Simfile")};
+		} catch (const ConfigFile::ParseError& e) {
+			throw ConfigFile::ParseError{concat("(Simfile) ", e.what())};
+		}
 	}
 
 	// Name
 	if (opts.name.size())
 		sf.name = opts.name;
-	else if ((sf.name = sf.configFile()["name"].asString()).empty())
-		throw runtime_error("Problem name is not specified");
+	else {
+		report_.append("Problem's name is not specified in options - loading it"
+			" from Simfile");
+		sf.loadName();
+	}
 
 	// Label
 	if (opts.label.size())
 		sf.label = opts.label;
-	else if ((sf.label = sf.configFile()["label"].asString()).empty())
-		sf.label = shortenName(sf.name);
+	else {
+		report_.append("Problem's label is not specified in options - loading"
+			" it from Simfile");
+		try { sf.loadLabel(); } catch (const std::exception& e) {
+			report_.append(e.what(),
+				" -> generating label from the problem's name");
+			sf.label = shortenName(sf.name);
+		}
+	}
 
 	auto is_source = [](const string& file) {
 		return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx"});
