@@ -36,6 +36,12 @@ struct ReuploadTrait {
 // Before judging the model solution
 template<class Trait>
 static void firstStage(const string& job_id, AddProblemInfo info) {
+	StringBuff<PATH_MAX> package_dest {"jobs_files/", job_id};
+	StringBuff<PATH_MAX> tmp_package_path {package_dest, ".tmp/"};
+
+	DirectoryRemover package_remover {package_dest};
+	DirectoryRemover tmp_package_remover {tmp_package_path};
+
 	sim::Conver::ReportBuff report;
 	report.append("Stage: FIRST");
 
@@ -50,12 +56,9 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 		stdlog("Job: ", job_id, '\n', report.str);
 	};
 
-	/* Extract package */
+	/* Extract the package */
 
 	// Remove old files/directories if exist
-	StringBuff<PATH_MAX> package_dest {"jobs_files/", job_id};
-	StringBuff<PATH_MAX> tmp_package_path {package_dest, ".tmp/"};
-
 	(void)remove_r(package_dest);
 	(void)remove_r(tmp_package_path);
 
@@ -113,11 +116,12 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 		return set_failure();
 	}
 
+
 	// Remove the .tmp directory
 	if (master_dir.len) {
 		// Truncate master_dir from the path
 		tmp_package_path[tmp_package_path.len -= master_dir.len] = '\0';
-		(void)remove_r(tmp_package_path);
+		(void)tmp_package_remover.removeTarget();
 	}
 
 	/* Construct Simfile */
@@ -143,8 +147,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	try {
 		p = conver.constructSimfile(opts);
 	} catch (const std::exception& e) {
-		report.str += conver.getReport();
-		report.append("Conver failed: ", e.what());
+		report.append(conver.getReport(), "Conver failed: ", e.what());
 		return set_failure();
 	}
 
@@ -162,7 +165,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 		return set_failure();
 	}
 
-	report.str += conver.getReport();
+	report.append(conver.getReport());
 
 	// Put the Simfile into the package
 	putFileContents(package_dest.append("/Simfile"), p.second.dump());
@@ -196,6 +199,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
 	}
 
 	stdlog("Job: ", job_id, '\n', report.str);
+	package_remover.cancel();
 }
 
 /**
@@ -216,7 +220,10 @@ template<class Trait>
 static string secondStage(const string& job_id, const string& job_owner,
 	AddProblemInfo info, sim::Conver::ReportBuff& report)
 {
-	report.append("Stage: SECOND");
+	DirectoryRemover job_package_remover
+		{StringBuff<PATH_MAX>{"jobs_files/", job_id}};
+
+	report.append("\nStage: SECOND");
 
 	// Load the Simfile
 	string simfile_str {getFileContents(
@@ -278,6 +285,8 @@ static string secondStage(const string& job_id, const string& job_owner,
 	StringBuff<PATH_MAX> package_dest {"problems/", problem_id};
 	if (move(StringBuff<PATH_MAX>{"jobs_files/", job_id}, package_dest))
 		THROW("move()", error(errno));
+
+	job_package_remover.cancel();
 
 	// Zip the package
 	report.append("Zipping the package...");
