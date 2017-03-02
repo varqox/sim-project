@@ -413,7 +413,14 @@ TEST (ConfigFile, loadConfigFromString) {
 		/* 11 */ {"a: '\"It''s awesome\"'\n ", "a: \"\\\"It's awesome\\\"\"\n"},
 		/* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\"\n"},
 		/* 13 */ {"a = \"ab\\xa61\"\n ", "a: \"ab\\xa61\"\n"},
-		/* 14 */ {R"===(# Server address
+		/* 14 */ {"a = b]b", "a: \"b]b\"\n"},
+		/* 15 */ {"a = b,b", "a: \"b,b\"\n"},
+		/* 16 */ {"a = bb]", "a: \"bb]\"\n"},
+		/* 17 */ {"a = bb,", "a: \"bb,\"\n"},
+		/* 18 */ {"a = ,a", "a: \",a\"\n"},
+		/* 19 */ {"a = ]a", "a: \"]a\"\n"},
+		/* 20 */ {"a = a\nb = ,]", "a: \"a\"\nb: \",]\"\n"},
+		/* 21 */ {R"===(# Server address
 address: 127.7.7.7:8080
 
 # Number of server workers (cannot be lower than 1)
@@ -426,7 +433,7 @@ empty-var.try_it: # dash, dot and underscore are allowed in variable name
 
 
 #Comments without trailing white-space also works
-foo=bar#Comments may appear on the end of the variable (also in array)
+foo=bar#Comments may appear on the end of the variable (also in arrays)
 
 # Values may be also single-quoted strings
 a1 = ' test test '
@@ -525,21 +532,14 @@ workers: "2"
 	// use it here
 	EXPECT_THROW(cf.loadConfigFromString("a & eee "), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = [a"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = ,a"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = ]a"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = 'a"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"a"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = b\nb"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = b]b"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = b,b"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = bb]"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = bb,"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"b\nb\""), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = 'b\nb'"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = 'b'b'"), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"b\"b\""), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"\\q\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = a\nb = ,]" ), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = a\n\n&" ), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = a\n\na = '" ), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = \"\\xg21\""), ConfigFile::ParseError);

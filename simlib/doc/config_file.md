@@ -17,7 +17,7 @@ empty-var.try_it: # dash, dot and underscore are allowed in variable name
 
 
 #Comments without trailing white-space also works
-foo=bar#Comments may appear on the end of the variable (also in array)
+foo=bar#Comments may appear on the end of the variable (also in arrays)
 
 # Values may be also single-quoted strings
 a1 = ' test test '
@@ -119,8 +119,12 @@ workers: "2"
 ![comment](comment-or-wsn.gif)
 ##### value:
 ![value](value.gif)
+##### in-array-value:
+![in-array-value](in-array-value.gif)
 ##### string-literal:
 ![string-literal](string-literal.gif)
+##### array-string-literal:
+![array-string-literal](array-string-literal.gif)
 ##### single-quoted-string-literal:
 ![single-quoted-string-literal](single-quoted-string-literal.gif)
 ##### double-quoted-string-literal:

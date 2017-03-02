@@ -58,7 +58,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 
 	};
 
-	auto extract_value = [&] {
+	auto extract_value = [&](bool is_in_array) {
 		string res;
 		size_t i = 0;
 		// Single-quoted string
@@ -135,17 +135,26 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		// String literal
 
 		// Check if the string literal begins
-		if (buff[0] == '[' || buff[0] == ',' || buff[0] == ']')
+		if (buff[0] == '[' ||
+			(is_in_array && (buff[0] == ',' || buff[0] == ']')))
+		{
 			throw_parse_error("Invalid beginning of the string literal: `",
 				buff[0], '`');
+		}
 
 		// Beginning is ok
 		// Interior
-		while (buff[i + 1] != '\n' && buff[i + 1] != '#' &&
-			buff[i + 1] != ']' && buff[i + 1] != ',')
-		{
-			++i;
-		}
+		if (is_in_array) // Value in an array
+			while (buff[i + 1] != '\n' && buff[i + 1] != '#' &&
+				buff[i + 1] != ']' && buff[i + 1] != ',')
+			{
+				++i;
+			}
+
+		else // Value of an ordinary variable
+			while (buff[i + 1] != '\n' && buff[i + 1] != '#')
+				++i;
+
 		// Remove white-spaces from ending
 		while (isspace(buff[i]))
 			--i;
@@ -207,7 +216,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			if (buff[0] == '\n' || buff[0] == '#') // No value
 				var.s.clear();
 			else
-				var.s = extract_value();
+				var.s = extract_value(false);
 			DEBUG_CF(stdlog("  value: ", escapeToDoubleQuotedString(var.s));)
 		// Array
 		} else {
@@ -232,7 +241,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 				}
 
 				// Value
-				var.a.emplace_back(extract_value());
+				var.a.emplace_back(extract_value(true));
 				DEBUG_CF(stdlog("->\t",
 					escapeToDoubleQuotedString(var.a.back()));)
 

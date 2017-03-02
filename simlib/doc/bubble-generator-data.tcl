@@ -17,13 +17,13 @@ set all_graphs {
     }
   }
   directive {
-    line name {or = :} {or {} value {line [ {or {toploop {line {opt comment} value {opt comment}} delimiter} {}} ]}} {opt comment}
+    line name {or = :} {or {} value {line [ {or {toploop {line {opt comment} in-array-value {opt comment}} delimiter} {}} ]}} {opt comment}
   }
   directive-formal {
     stack
       {line {opt ws} name {opt ws} {or = :} {opt ws}}
       {line {or {optx value}
-        {line [ {opt delimiter} {or {line {toploop {line {opt comment-or-wsn} value {opt comment-or-wsn}} delimiter}}
+        {line [ {opt delimiter} {or {line {toploop {line {opt comment-or-wsn} in-array-value {opt comment-or-wsn}} delimiter}}
           {or comment-or-wsn {}}} ]}}}
       {line {opt ws} {or /newline comment}}
   }
@@ -48,7 +48,28 @@ set all_graphs {
       {line number}
       {boolean}
   }
+  in-array-value {
+    or
+      {line single-quoted-string-literal}
+      {line double-quoted-string-literal}
+      {line array-string-literal}
+      {line number}
+      {boolean}
+  }
   string-literal {
+    line {
+      line {
+        stack
+          /anything-except-wsn-and-[-and-#-and-single-and-double-quote {
+            opt {
+              stack {opt {loop /anything-except-newline-and-#}}
+              /anything-except-wsn-and-#
+            }
+          }
+        }
+    }
+  }
+  array-string-literal {
     line {
       line {
         stack
