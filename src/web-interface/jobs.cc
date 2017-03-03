@@ -200,8 +200,17 @@ void Jobs::handle() {
 						(info.public_problem ? "yes" : "no"));
 
 				}, [&]{
-					append("<a class=\"btn-small\" href=\"/jobs/", res[1],
-						"/report\">Download report</a>");
+					append("<div class=\"dropmenu down\">"
+							"<a class=\"btn-small dropmenu-toggle\">"
+								"Download</a>"
+							"<ul>"
+								"<a href=\"/jobs/", res[1], "/report\">"
+									"Report</a>"
+								"<a href=\"/jobs/", res[1],
+									"/download-uploaded-package\">"
+									"Uploaded package</a>"
+							"</ul>"
+						"</div>");
 					if (job_status == JobQueueStatus::DONE || isIn(job_type, {
 						JobQueueType::REUPLOAD_PROBLEM,
 						JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
@@ -264,13 +273,16 @@ void Jobs::job() {
 
 		// Job's actions
 		StringView next_arg = url_args.extractNextArg();
-		if (next_arg == "report" && isIn(job_type, {
-			JobQueueType::ADD_PROBLEM,
+		if (isIn(job_type, {JobQueueType::ADD_PROBLEM,
 			JobQueueType::REUPLOAD_PROBLEM,
 			JobQueueType::ADD_JUDGE_MODEL_SOLUTION,
 			JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
 		{
-			return downloadReport(res[8]);
+			if (next_arg == "report")
+				return downloadReport(res[8]);
+
+			if (next_arg == "download-uploaded-package")
+				return downloadUploadedPackage();
 
 		} if (next_arg == "cancel")
 			return cancelJob();
@@ -368,8 +380,14 @@ void Jobs::job() {
 	case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
 	case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
 		foo([&]{
-			append("<a class=\"btn-small\" href=\"/jobs/", job_id,
-				"/report\">Download report</a>");
+			append("<div class=\"dropmenu down\">"
+					"<a class=\"btn-small dropmenu-toggle\">Download</a>"
+					"<ul>"
+						"<a href=\"/jobs/", job_id, "/report\">Report</a>"
+						"<a href=\"/jobs/", job_id,
+							"/download-uploaded-package\">Uploaded package</a>"
+					"</ul>"
+				"</div>");
 			if (job_status == JobQueueStatus::DONE || isIn(job_type, {
 				JobQueueType::REUPLOAD_PROBLEM,
 				JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
@@ -426,7 +444,7 @@ void Jobs::job() {
 	}
 }
 
-void Jobs::downloadReport(std::string data_preview) {
+void Jobs::downloadReport(string data_preview) {
 	// Assumption: permissions are already checked
 	try {
 		resp.headers["Content-type"] = "application/text";
@@ -451,6 +469,13 @@ void Jobs::downloadReport(std::string data_preview) {
 		ERRLOG_CATCH(e);
 		return error500();
 	}
+}
+
+void Jobs::downloadUploadedPackage() {
+	resp.headers["Content-Disposition"] =
+		concat("attachment; filename=", job_id, ".zip");
+	resp.content_type = server::HttpResponse::FILE;
+	resp.content = concat("jobs_files/", job_id, ".zip");
 }
 
 void Jobs::cancelJob() {
