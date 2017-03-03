@@ -44,6 +44,8 @@ private:
 
 	void downloadReport(std::string data_preview);
 
+	void downloadUploadedPackage();
+
 	void cancelJob();
 
 	void restartJob(JobQueueType job_type, StringView job_info);

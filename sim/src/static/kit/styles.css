@@ -746,6 +746,7 @@ a.btn.red {
 /* dropmenu */
 .dropmenu {
 	position: relative;
+	display: inline-block;
 }
 .dropmenu > ul {
 	display: none;
