@@ -35,7 +35,7 @@ struct ReuploadTrait {
 
 // Before judging the model solution
 template<class Trait>
-static void firstStage(const string& job_id, AddProblemInfo info) {
+static void firstStage(const string& job_id, AddProblemInfo& info) {
 	StringBuff<PATH_MAX> package_dest {"jobs_files/", job_id};
 	StringBuff<PATH_MAX> tmp_package_path {package_dest, ".tmp/"};
 
@@ -218,7 +218,7 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
  */
 template<class Trait>
 static string secondStage(const string& job_id, const string& job_owner,
-	AddProblemInfo info, sim::Conver::ReportBuff& report)
+	const AddProblemInfo& info, sim::Conver::ReportBuff& report)
 {
 	DirectoryRemover job_package_remover
 		{StringBuff<PATH_MAX>{"jobs_files/", job_id}};
@@ -376,11 +376,11 @@ static string secondStage(const string& job_id, const string& job_owner,
 */
 template<class Trait, class Func>
 static void addProblem(const string& job_id, const string& job_owner,
-	const string& aux_id, AddProblemInfo info, Func&& func)
+	const string& aux_id, AddProblemInfo& info, Func&& func)
 {
 	switch (info.stage) {
 	case AddProblemInfo::FIRST:
-		firstStage<Trait>(job_id, std::move(info));
+		firstStage<Trait>(job_id, info);
 		break;
 
 	case AddProblemInfo::SECOND: {
@@ -391,7 +391,7 @@ static void addProblem(const string& job_id, const string& job_owner,
 			sqlite_db.execute("BEGIN");
 			// Added problem's id
 			string apid =
-				secondStage<Trait>(job_id, job_owner, std::move(info), report);
+				secondStage<Trait>(job_id, job_owner, info, report);
 			func(apid, report);
 			sqlite_db.execute("COMMIT");
 
@@ -460,7 +460,6 @@ void reuploadProblem(const string& job_id, const string& job_owner,
 			string prestore_sql;
 			if (res.next()) {
 				prestore_sql = "REPLACE problems VALUES(";
-
 				uint n = res.impl()->getMetaData()->getColumnCount();
 				pbackup.resize(n);
 				for (uint i = 0; i < n; ++i) {
@@ -469,6 +468,18 @@ void reuploadProblem(const string& job_id, const string& job_owner,
 				}
 
 				prestore_sql.back() = ')';
+
+				// Save the previous owner
+				constexpr uint OWNER_IDX = 5;
+				throw_assert("owner" ==
+					res.impl()->getMetaData()->getColumnName(OWNER_IDX + 1));
+				p_info.previous_owner = strtoull(pbackup[OWNER_IDX].second);
+				// Commit the change to the database
+				MySQL::Statement stmt {db_conn.prepare(
+					"UPDATE job_queue SET info=? WHERE id=?")};
+				stmt.setString(1, p_info.dump());
+				stmt.setString(2, job_id);
+				stmt.executeUpdate();
 			}
 
 			// Make a backup of the problem's solutions' submissions
@@ -523,11 +534,17 @@ void reuploadProblem(const string& job_id, const string& job_owner,
 
 				// Replace the old problem with the new one
 				MySQL::Statement stmt {db_conn.prepare(
-					"UPDATE problems SET id=?, type=? WHERE id=?")};
+					"UPDATE problems SET id=?, type=?, owner=? WHERE id=?")};
 				stmt.setString(1, aux_id);
 				stmt.setUInt(2, uint(p_info.public_problem ?
 					ProblemType::PUBLIC : ProblemType::PRIVATE));
-				stmt.setString(3, problem_id);
+				// Owner
+				if (p_info.previous_owner < 0)
+					stmt.setString(3, job_owner);
+				else
+					stmt.setUInt(3, p_info.previous_owner);
+
+				stmt.setString(4, problem_id);
 				stmt.executeUpdate();
 
 				// The same with files

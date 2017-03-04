@@ -347,7 +347,7 @@ void Contest::file() {
 
 		rpath.reset(getRoundPath(res[2]));
 		if (!rpath)
-			return; // getRoundPath has already set error
+			return; // getRoundPath has already set an error
 
 		// Edit file
 		StringView next_arg = url_args.extractNextArg();

@@ -281,7 +281,8 @@ void Problemset::addProblem() {
 					gtl,
 					force_auto_limit,
 					ignore_simfile,
-					public_problem
+					public_problem,
+					-1
 				};
 
 				MySQL::Statement stmt {db_conn.prepare(
@@ -562,7 +563,10 @@ void Problemset::reuploadProblem() {
 					gtl,
 					force_auto_limit,
 					ignore_simfile,
-					problem_type == ProblemType::PUBLIC
+					problem_type == ProblemType::PUBLIC,
+					-1 // It will be set by the job server; it is done this way
+					   // to avoid collisions with the problem editing jobs (not
+					   // to dismiss one changing the problem's owner)
 				};
 
 				MySQL::Statement stmt {db_conn.prepare(
