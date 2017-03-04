@@ -63,13 +63,15 @@ struct AddProblemInfo {
 	bool ignore_simfile = false;
 	bool public_problem = false;
 	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
+	int32_t previous_owner = -1;
 
 	AddProblemInfo() = default;
 
 	AddProblemInfo(const std::string& n, const std::string& l, uint64_t ml,
-			uint64_t gtl, bool fal, bool is, bool pp)
+			uint64_t gtl, bool fal, bool is, bool pp, int32_t po)
 		: name {n}, label {l}, memory_limit {ml}, global_time_limit {gtl},
-			force_auto_limit {fal}, ignore_simfile {is}, public_problem {pp} {}
+			force_auto_limit {fal}, ignore_simfile {is}, public_problem {pp},
+			previous_owner{po} {}
 
 	AddProblemInfo(StringView str) {
 		name = extractDumpedString(str);
@@ -83,6 +85,7 @@ struct AddProblemInfo {
 		public_problem = (mask & 4);
 
 		stage = static_cast<Stage>(extractDumpedInt<uint8_t>(str));
+		previous_owner = static_cast<Stage>(extractDumpedInt<int32_t>(str));
 	}
 
 	std::string dump() {
@@ -98,6 +101,7 @@ struct AddProblemInfo {
 		appendDumpedInt<uint8_t>(res, mask);
 
 		appendDumpedInt<uint8_t>(res, stage);
+		appendDumpedInt<int32_t>(res, previous_owner);
 		return res;
 	}
 };
