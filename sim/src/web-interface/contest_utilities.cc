@@ -340,7 +340,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			if (Session::isOpen()) {
 				stmt = db_conn.prepare(
 					"SELECT round_id, status FROM submissions "
-					"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
+					"WHERE type=" STYPE_FINAL_STR " AND owner=? "
 						"AND contest_round_id=?");
 				stmt.setString(1, Session::user_id);
 				stmt.setString(2, rpath->round_id);
@@ -418,7 +418,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 				if (Session::isOpen()) {
 					MySQL::Statement stmt = db_conn.prepare(
 						"SELECT round_id, status FROM submissions "
-						"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
+						"WHERE type=" STYPE_FINAL_STR " AND owner=? "
 							"AND parent_round_id=?");
 					stmt.setString(1, Session::user_id);
 					stmt.setString(2, rpath->round_id);
@@ -473,7 +473,7 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			if (Session::isOpen()) {
 				MySQL::Statement stmt = db_conn.prepare(
 					"SELECT status FROM submissions "
-					"WHERE type=" STYPE_FINAL_STR " AND user_id=? "
+					"WHERE type=" STYPE_FINAL_STR " AND owner=? "
 						"AND round_id=?");
 				stmt.setString(1, Session::user_id);
 				stmt.setString(2, rpath->round_id);

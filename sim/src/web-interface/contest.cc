@@ -1434,21 +1434,21 @@ void Contest::ranking(bool admin_view) {
 		column = (rpath->type == CONTEST ? "contest_round_id" :
 			(rpath->type == ROUND ? "parent_round_id" : "round_id"));
 		stmt = db_conn.prepare(admin_view ?
-			concat("SELECT s.id, user_id, u.first_name, u.last_name, round_id, "
+			concat("SELECT s.id, owner, u.first_name, u.last_name, round_id, "
 					"score "
 				"FROM submissions s, users u "
 				"WHERE s.", column, "=? AND s.type=" STYPE_FINAL_STR " "
-					"AND user_id=u.id "
-				"ORDER BY user_id")
-			: concat("SELECT s.id, user_id, u.first_name, u.last_name, "
+					"AND owner=u.id "
+				"ORDER BY owner")
+			: concat("SELECT s.id, s.owner, u.first_name, u.last_name, "
 					"round_id, score "
 				"FROM submissions s, users u, rounds r "
 				"WHERE s.", column, "=? AND s.type=" STYPE_FINAL_STR " "
-					"AND user_id=u.id "
+					"AND s.owner=u.id "
 					"AND r.id=parent_round_id "
 					"AND (begins IS NULL OR begins<=?) "
 					"AND (full_results IS NULL OR full_results<=?) "
-				"ORDER BY user_id"));
+				"ORDER BY s.owner"));
 		stmt.setString(1, rpath->round_id);
 		if (!admin_view) {
 			stmt.setString(2, current_time);

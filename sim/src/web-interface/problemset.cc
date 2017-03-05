@@ -729,6 +729,18 @@ void Problemset::problemSolutions() {
 	error501();
 }
 
+void Problemset::deleteSubmission(const string& submission_id,
+	const string& submission_owner)
+{
+	return error501();
+}
+
+void Problemset::changeSubmissionTypeTo(const string& submission_id,
+	const string& submission_owner, SubmissionType stype)
+{
+	return error501();
+}
+
 void Problemset::problemSubmissions() {
 	if (~perms & PERM_VIEW)
 		return error403();

@@ -87,7 +87,7 @@ void Contest::submit(bool admin_view) {
 				string current_date = date();
 				// Insert submission to the `submissions` table
 				MySQL::Statement stmt = db_conn.prepare(
-					"INSERT submissions (user_id, problem_id, round_id,"
+					"INSERT submissions (owner, problem_id, round_id,"
 						" parent_round_id, contest_round_id, type, status,"
 						" submit_time, last_judgment, initial_report,"
 						" final_report)"
@@ -303,7 +303,7 @@ void Contest::submit(bool admin_view) {
 }
 
 void Contest::deleteSubmission(const string& submission_id,
-	const string& submission_user_id)
+	const string& submission_owner)
 {
 	FormValidator fv(req->form_data);
 	while (req->method == server::HttpRequest::POST
@@ -317,11 +317,11 @@ void Contest::deleteSubmission(const string& submission_id,
 			// Update FINAL status, as if there was no submission submission_id
 			MySQL::Statement stmt = db_conn.prepare(
 				"UPDATE submissions SET type=" STYPE_FINAL_STR " "
-				"WHERE user_id=? AND round_id=? AND id!=? "
+				"WHERE owner=? AND round_id=? AND id!=? "
 					"AND type<=" STYPE_FINAL_STR " "
 					"AND status<" SSTATUS_PENDING_STR " "
 				"ORDER BY id DESC LIMIT 1");
-			stmt.setString(1, submission_user_id);
+			stmt.setString(1, submission_owner);
 			stmt.setString(2, rpath->round_id);
 			stmt.setString(3, submission_id);
 			stmt.executeUpdate();
@@ -380,323 +380,59 @@ void Contest::deleteSubmission(const string& submission_id,
 		"</div>");
 }
 
-void Contest::submission() {
-	if (!Session::open())
-		return redirect("/login?" + req->target);
-
-	// Extract round id
-	string submission_id;
-	if (strToNum(submission_id, url_args.extractNextArg()) <= 0)
-		return error404();
-
+void Contest::changeSubmissionTypeTo(const string& submission_id,
+	const string& submission_owner, SubmissionType stype)
+{
 	try {
-		StringView next_arg = url_args.extractNextArg();
+		static_assert(int(SubmissionType::NORMAL) == 0 &&
+			int(SubmissionType::FINAL) == 1, "Needed below where "
+				"\"... type<= ...\"");
+		MySQL::Statement stmt;
+		// Set to IGNORED
+		if (stype == SubmissionType::IGNORED) {
+			stmt = db_conn.prepare("UPDATE submissions s, "
+				"((SELECT id FROM submissions WHERE owner=? "
+						"AND round_id=? AND id!=? "
+						"AND type<=" STYPE_FINAL_STR " "
+						"AND status<" SSTATUS_PENDING_STR " "
+						"ORDER BY id DESC LIMIT 1) "
+					"UNION (SELECT 0 AS id)) x,"
+				"((SELECT id FROM submissions WHERE owner=? "
+						"AND round_id=? AND type=" STYPE_FINAL_STR ") "
+					"UNION (SELECT 0 AS id)) y "
+				"SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ",IF(s.id=?,"
+					STYPE_IGNORED_STR "," STYPE_NORMAL_STR "))"
+				"WHERE s.id=x.id OR s.id=y.id OR s.id=?");
 
-		// Check if user forces the observer view
-		bool admin_view = true;
-		if (next_arg == "n") {
-			admin_view = false;
-			next_arg = url_args.extractNextArg();
+			stmt.setString(7, submission_id);
+
+		// Set to NORMAL / FINAL
+		} else {
+			stmt = db_conn.prepare("UPDATE submissions s, "
+				"((SELECT id FROM submissions WHERE owner=? "
+						"AND round_id=? "
+						"AND (id=? OR type<=" STYPE_FINAL_STR ") "
+						"AND status<" SSTATUS_PENDING_STR " "
+						"ORDER BY id DESC LIMIT 1) "
+					"UNION (SELECT 0 AS id)) x,"
+				"((SELECT id FROM submissions WHERE owner=? "
+						"AND round_id=? AND type=" STYPE_FINAL_STR ") "
+					"UNION (SELECT 0 AS id)) y "
+				"SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
+					STYPE_NORMAL_STR ")"
+				"WHERE s.id=x.id OR s.id=y.id OR s.id=?");
 		}
-
-		enum class Query : uint8_t {
-			DELETE, REJUDGE, CHANGE_TYPE, DOWNLOAD, RAW, VIEW_SOURCE, NONE
-		} query = Query::NONE;
-
-		if (next_arg == "delete")
-			query = Query::DELETE;
-		else if (next_arg == "rejudge")
-			query = Query::REJUDGE;
-		else if (next_arg == "change-type")
-			query = Query::CHANGE_TYPE;
-		else if (next_arg == "raw")
-			query = Query::RAW;
-		else if (next_arg == "download")
-			query = Query::DOWNLOAD;
-		else if (next_arg == "source")
-			query = Query::VIEW_SOURCE;
-
-		// Get submission
-		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
-			"status, score, name, label, first_name, last_name, username, "
-			"initial_report, final_report");
-		MySQL::Statement stmt = db_conn.prepare(
-			concat("SELECT user_id, round_id, s.type", columns,
-				" FROM submissions s, problems p, users u"
-				" WHERE s.id=? AND s.type!=" STYPE_VOID_STR
-					" AND s.problem_id=p.id AND u.id=user_id"));
-		stmt.setString(1, submission_id);
-
-		MySQL::Result res = stmt.executeQuery();
-		if (!res.next())
-			return error404();
-
-		string submission_user_id = res[1];
-		string round_id = res[2];
-		SubmissionType stype = SubmissionType(res.getUInt(3));
-
-		// Get parent rounds
-		rpath.reset(getRoundPath(round_id));
-		if (!rpath)
-			return; // getRoundPath has already set error
-
-		if (!rpath->admin_access && Session::user_id != submission_user_id)
-			return error403();
-
-		if (admin_view)
-			admin_view = rpath->admin_access;
-
-		/* Delete */
-		if (query == Query::DELETE)
-			return (admin_view ? deleteSubmission(submission_id,
-				submission_user_id) : error403());
-
-		/* Rejudge */
-		if (query == Query::REJUDGE) {
-			FormValidator fv(req->form_data);
-			if (!admin_view || req->method != server::HttpRequest::POST ||
-				fv.get("csrf_token") != Session::csrf_token)
-			{
-				return error403();
-			}
-
-			// Add a job to judge the submission
-			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
-					" priority, type, added, aux_id, info, data)"
-				"VALUES(?, " JQSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
-			stmt.setString(1, Session::user_id);
-			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
-			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
-			stmt.setString(4, date());
-			stmt.setString(5, submission_id);
-			stmt.setString(6, jobs::dumpString(rpath->problem->problem_id));
-			stmt.executeUpdate();
-
-			notifyJobServer();
-
-			db_conn.executeUpdate("UPDATE submissions"
-				" SET status=" SSTATUS_PENDING_STR
-				" WHERE id=" + submission_id);
-
-			return response("200 OK");
-		}
-
-		/* Change submission type */
-		if (query == Query::CHANGE_TYPE) {
-			// Changes are only allowed if one has permissions and only in the
-			// pool: {NORMAL | FINAL, IGNORED}
-			if (!admin_view || stype > SubmissionType::IGNORED)
-				return error403();
-
-			// Get new stype
-			FormValidator fv(req->form_data);
-			if (fv.get("csrf_token") != Session::csrf_token)
-				return response("403 Forbidden");
-
-			SubmissionType new_stype;
-			{
-				std::string new_stype_str = fv.get("stype");
-				if (new_stype_str == "n/f")
-					new_stype = SubmissionType::NORMAL;
-				else if (new_stype_str == "i")
-					new_stype = SubmissionType::IGNORED;
-				else
-					return response("501 Not Implemented");
-			}
-
-			// No change
-			if ((stype == SubmissionType::IGNORED) ==
-				(new_stype == SubmissionType::IGNORED))
-			{
-				return response("200 OK");
-			}
-
-			try {
-				static_assert(int(SubmissionType::NORMAL) == 0 &&
-					int(SubmissionType::FINAL) == 1, "Needed below where "
-						"\"... type<= ...\"");
-				// Set to IGNORED
-				if (new_stype == SubmissionType::IGNORED) {
-					stmt = db_conn.prepare("UPDATE submissions s, "
-						"((SELECT id FROM submissions WHERE user_id=? "
-								"AND round_id=? AND id!=? "
-								"AND type<=" STYPE_FINAL_STR " "
-								"AND status<" SSTATUS_PENDING_STR " "
-								"ORDER BY id DESC LIMIT 1) "
-							"UNION (SELECT 0 AS id)) x,"
-						"((SELECT id FROM submissions WHERE user_id=? "
-								"AND round_id=? AND type=" STYPE_FINAL_STR ") "
-							"UNION (SELECT 0 AS id)) y "
-						"SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ",IF(s.id=?,"
-							STYPE_IGNORED_STR "," STYPE_NORMAL_STR "))"
-						"WHERE s.id=x.id OR s.id=y.id OR s.id=?");
-
-					stmt.setString(7, submission_id);
-
-				// Set to NORMAL / FINAL
-				} else {
-					stmt = db_conn.prepare("UPDATE submissions s, "
-						"((SELECT id FROM submissions WHERE user_id=? "
-								"AND round_id=? "
-								"AND (id=? OR type<=" STYPE_FINAL_STR ") "
-								"AND status<" SSTATUS_PENDING_STR " "
-								"ORDER BY id DESC LIMIT 1) "
-							"UNION (SELECT 0 AS id)) x,"
-						"((SELECT id FROM submissions WHERE user_id=? "
-								"AND round_id=? AND type=" STYPE_FINAL_STR ") "
-							"UNION (SELECT 0 AS id)) y "
-						"SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
-							STYPE_NORMAL_STR ")"
-						"WHERE s.id=x.id OR s.id=y.id OR s.id=?");
-				}
-				stmt.setString(1, submission_user_id);
-				stmt.setString(2, round_id);
-				stmt.setString(3, submission_id);
-				stmt.setString(4, submission_user_id);
-				stmt.setString(5, round_id);
-				stmt.setString(6, submission_id);
-				stmt.executeUpdate();
-
-				return response("200 OK");
-
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				return response("500 Internal Server Error");
-			}
-		}
-
-		/* Raw code */
-		if (query == Query::RAW) {
-			resp.headers["Content-type"] = "text/plain; charset=utf-8";
-			resp.headers["Content-Disposition"] =
-				concat("inline; filename=", submission_id, ".cpp");
-
-			resp.content = concat("solutions/", submission_id, ".cpp");
-			resp.content_type = server::HttpResponse::FILE;
-			return;
-		}
-
-		/* Download solution */
-		if (query == Query::DOWNLOAD) {
-			resp.headers["Content-type"] = "application/text";
-			resp.headers["Content-Disposition"] =
-				concat("attachment; filename=", submission_id, ".cpp");
-
-			resp.content = concat("solutions/", submission_id, ".cpp");
-			resp.content_type = server::HttpResponse::FILE;
-			return;
-		}
-
-		/* View source */
-		if (query == Query::VIEW_SOURCE) {
-			contestTemplate(concat("Submission ", submission_id, " - source"));
-			printRoundPath();
-
-			append("<h2>Source code of submission ", submission_id, "</h2>"
-				"<div>"
-					"<a class=\"btn-small\" href=\"/s/", submission_id, "\">"
-						"View submission</a>"
-					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/raw/", submission_id, ".cpp\">Raw code</a>"
-					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/download\">Download</a>"
-				"</div>",
-				cpp_syntax_highlighter(getFileContents(
-				concat("solutions/", submission_id, ".cpp"))));
-			return;
-		}
-
-		string submit_time = res[4];
-		SubmissionStatus submission_status = SubmissionStatus(res.getUInt(5));
-		string score = res[6];
-		string problems_name = res[7];
-		string problems_label = res[8];
-		string full_name = concat(res[9], ' ', res[10]);
-
-		contestTemplate("Submission " + submission_id);
-		printRoundPath();
-
-		append("<div class=\"submission-info\">"
-			"<div>"
-				"<h1>Submission ", submission_id, "</h1>"
-				"<div>"
-					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/source\">View source</a>"
-					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/raw/", submission_id, ".cpp\">Raw code</a>"
-					"<a class=\"btn-small\" href=\"/s/", submission_id,
-						"/download\">Download</a>");
-		if (admin_view)
-			append("<a class=\"btn-small orange\" "
-				"onclick=\"changeSubmissionType(", submission_id, ",'",
-					(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
-					"Change type</a>"
-				"<a class=\"btn-small blue\" onclick=\"rejudgeSubmission(",
-					submission_id, ")\">Rejudge</a>"
-				"<a class=\"btn-small red\" href=\"/s/", submission_id,
-					"/delete?/c/", round_id, "/submissions\">Delete</a>");
-		append("</div>"
-			"</div>"
-			"<table>"
-				"<thead>"
-					"<tr>");
-
-		if (admin_view)
-			append("<th style=\"min-width:120px\">User</th>");
-
-		append("<th style=\"min-width:120px\">Problem</th>"
-						"<th style=\"min-width:150px\">Submission time</th>"
-						"<th style=\"min-width:150px\">Status</th>"
-						"<th style=\"min-width:90px\">Score</th>"
-						"<th style=\"min-width:90px\">Type</th>"
-					"</tr>"
-				"</thead>"
-				"<tbody>");
-
-		if (stype == SubmissionType::IGNORED)
-			append("<tr class=\"ignored\">");
-		else
-			append("<tr>");
-
-		if (admin_view)
-			append("<td><a href=\"/u/", submission_user_id, "\">",
-					res[11], "</a> (", htmlEscape(full_name), ")</td>");
-
-		bool show_final_results = (admin_view ||
-			rpath->round->full_results <= date());
-
-		append("<td>", htmlEscape(
-				concat(problems_name, " (", problems_label, ')')), "</td>"
-				"<td datetime=\"", submit_time ,"\">", submit_time,
-					"<sup>UTC</sup></td>",
-				submissionStatusAsTd(submission_status, show_final_results),
-				"<td>", (show_final_results ? score : ""), "</td>"
-				"<td>", toStr(stype), "</td>"
-			"</tr>"
-			"</tbody>"
-			"</table>",
-			"</div>");
-
-		// Print judge report
-		append("<div class=\"results\">");
-		// Initial report
-		string initial_report = res[12];
-		if (initial_report.size())
-			append(initial_report);
-		// Final report
-		if (admin_view ||
-			rpath->round->full_results <= date())
-		{
-			string final_report = res[13];
-			if (final_report.size())
-				append(final_report);
-		}
-
-		append("</div>");
+		stmt.setString(1, submission_owner);
+		stmt.setString(2, rpath->round_id);
+		stmt.setString(3, submission_id);
+		stmt.setString(4, submission_owner);
+		stmt.setString(5, rpath->round_id);
+		stmt.setString(6, submission_id);
+		stmt.executeUpdate();
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
-		return error500();
+		return response("500 Internal Server Error");
 	}
 }
 
@@ -730,19 +466,19 @@ void Contest::submissions(bool admin_view) {
 
 		MySQL::Statement stmt = db_conn.prepare(admin_view ?
 				concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id,"
-					" r.name, s.status, s.score, s.type, s.user_id,"
+					" r.name, s.status, s.score, s.type, s.owner,"
 					" u.first_name, u.last_name, u.username"
 				" FROM submissions s, rounds r, rounds r2, users u"
 				" WHERE s.", param_column, "=? AND s.type!=" STYPE_VOID_STR
 					" AND s.round_id=r.id AND s.parent_round_id=r2.id"
-					" AND s.user_id=u.id"
+					" AND s.owner=u.id"
 				" ORDER BY s.id DESC")
 			: concat("SELECT s.id, s.submit_time, r2.id, r2.name, r.id,"
 					" r.name, s.status, s.score, s.type, r2.full_results"
 				" FROM submissions s, rounds r, rounds r2"
 				" WHERE s.", param_column, "=? AND s.type!=" STYPE_VOID_STR
 					" AND s.round_id=r.id AND s.parent_round_id=r2.id"
-					" AND s.user_id=?"
+					" AND s.owner=?"
 				" ORDER BY s.id DESC"));
 		stmt.setString(1, rpath->round_id);
 		if (!admin_view)

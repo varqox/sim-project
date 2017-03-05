@@ -15,7 +15,6 @@ protected:
 
 	virtual ~Contest() = default;
 
-private:
 	struct Round {
 		std::string id, parent, problem_id, name, owner;
 		std::string begins, ends, full_results;
@@ -81,11 +80,9 @@ private:
 
 	// Pages
 	// contest.cc
-protected:
 	/// @brief Main contest handler
 	void handle();
 
-private:
 	void addContest();
 
 	void addRound();
@@ -113,13 +110,12 @@ private:
 	// submissions.cc
 	void submit(bool admin_view);
 
-protected:
 	void deleteSubmission(const std::string& submission_id,
-		const std::string& submission_user_id);
+		const std::string& submission_owner);
 
-	void submission();
+	void changeSubmissionTypeTo(const std::string& submission_id,
+		const std::string& submission_owner, SubmissionType stype);
 
-private:
 	void submissions(bool admin_view);
 
 	// files.cc
@@ -129,9 +125,7 @@ private:
 
 	void deleteFile(const StringView& id, const StringView& name);
 
-protected:
 	void file();
 
-private:
 	void files(bool admin_view);
 };

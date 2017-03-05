@@ -16,13 +16,13 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	const string& job_creation_time)
 {
 	// Gather the needed information about the submission
-	MySQL::Result res = db_conn.executeQuery("SELECT user_id, round_id,"
+	MySQL::Result res = db_conn.executeQuery("SELECT s.owner, round_id,"
 			" problem_id, last_judgment, p.last_edit"
 		" FROM submissions s, problems p"
 		" WHERE p.id=problem_id AND s.id=" + submission_id);
-	string user_id, round_id, problem_id, last_judgment, p_last_edit;
+	string sowner, round_id, problem_id, last_judgment, p_last_edit;
 	if (res.next()) {
-		user_id = res[1];
+		sowner = res[1];
 		round_id = res[2];
 		problem_id = res[3];
 		last_judgment = res[4];
@@ -87,12 +87,12 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 				//   whole query wouldn't be executed (and 0 is safe
 				//   because no submission with id=0 exists)
 				"UPDATE submissions s,"
-					" ((SELECT id FROM submissions WHERE user_id=?"
+					" ((SELECT id FROM submissions WHERE owner=?"
 								" AND round_id=? AND type<=" STYPE_FINAL_STR
 								" AND status<" SSTATUS_PENDING_STR " AND id!=?"
 							" ORDER BY id DESC LIMIT 1)"
 						" UNION (SELECT 0 AS id)) x,"
-					" ((SELECT id FROM submissions WHERE user_id=?"
+					" ((SELECT id FROM submissions WHERE owner=?"
 							" AND round_id=? AND type=" STYPE_FINAL_STR ")"
 						" UNION (SELECT 0 AS id)) y,"
 					" (SELECT (SELECT ?) AS id) z"
@@ -123,12 +123,12 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 				//   whole query wouldn't be executed (and 0 is safe
 				//   because no submission with id=0 exists)
 				"UPDATE submissions s,"
-					" ((SELECT id FROM submissions WHERE user_id=?"
+					" ((SELECT id FROM submissions WHERE owner=?"
 							" AND round_id=? AND type<=" STYPE_FINAL_STR
 							" AND (status<" SSTATUS_PENDING_STR " OR id=?)"
 							" ORDER BY id DESC LIMIT 1)"
 						" UNION (SELECT 0 AS id)) x,"
-					" ((SELECT id FROM submissions WHERE user_id=?"
+					" ((SELECT id FROM submissions WHERE owner=?"
 							" AND round_id=? AND type=" STYPE_FINAL_STR ")"
 						" UNION (SELECT 0 AS id)) y,"
 					" (SELECT (SELECT ?) AS id) z"
@@ -147,10 +147,10 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 			stmt.setInt64(11, total_score);
 		}
 
-		stmt.setString(1, user_id);
+		stmt.setString(1, sowner);
 		stmt.setString(2, round_id);
 		stmt.setString(3, submission_id);
-		stmt.setString(4, user_id);
+		stmt.setString(4, sowner);
 		stmt.setString(5, round_id);
 		stmt.setString(6, submission_id);
 		stmt.setUInt(7, static_cast<uint>(status));

@@ -740,7 +740,7 @@ void User::deleteAccount() {
 
 			// Delete submissions
 			stmt = db_conn.prepare(
-				"DELETE FROM submissions WHERE user_id=?");
+				"DELETE FROM submissions WHERE owner=?");
 			stmt.setString(1, user_id);
 			stmt.executeUpdate();
 
@@ -812,7 +812,7 @@ void User::printUserSubmissions(uint limit) {
 				" r2.name, r.id, r.name, s.status, s.score, s.type,"
 				" r2.full_results, r3.owner, u.type"
 			" FROM submissions s, rounds r, rounds r2, rounds r3, users u"
-			" WHERE s.user_id=? AND s.type!=" STYPE_VOID_STR
+			" WHERE s.owner=? AND s.type!=" STYPE_VOID_STR
 				" AND s.round_id=r.id AND s.parent_round_id=r2.id"
 				" AND s.contest_round_id=r3.id AND r3.owner=u.id"
 			" ORDER BY s.id DESC";
