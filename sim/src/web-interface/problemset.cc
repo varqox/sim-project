@@ -726,7 +726,54 @@ void Problemset::problemSolutions() {
 	if (~perms & PERM_VIEW_SOLUTIONS)
 		return error403();
 
-	error501();
+	problemsetTemplate("Solutions to the problem " + problem_id_);
+	append("<h1>Solutions to the problem <a href=\"/p/", problem_id_, "\">",
+		htmlEscape(problem_name), "</a></h1>");
+	try {
+		MySQL::Statement stmt {db_conn.prepare(
+			"SELECT id, submit_time, status, score FROM submissions"
+			" WHERE type=" STYPE_PROBLEM_SOLUTION_STR " AND problem_id=?"
+			" ORDER BY id DESC")};
+		stmt.setString(1, problem_id_);
+
+		MySQL::Result res {stmt.executeQuery()};
+		append("<table class=\"submissions\">"
+			"<thead>"
+				"<tr>",
+					"<th class=\"time\">Submission time<sup>UTC</sup></th>"
+					"<th class=\"status\">Status</th>"
+					"<th class=\"score\">Score</th>"
+					"<th class=\"actions\">Actions</th>"
+				"</tr>"
+			"</thead>"
+			"<tbody>");
+
+		while (res.next()) {
+			append("<td><a href=\"/s/", res[1], "\" datetime=\"", res[2], "\">",
+						res[2], "</a></td>",
+					submissionStatusAsTd(SubmissionStatus(res.getUInt(3)),
+						true),
+					"<td>", res[4], "</td>"
+					"<td>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"\">View</a>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/source\">Source</a>"
+						"<a class=\"btn-small\" href=\"/s/", res[1],
+							"/download\">Download</a>"
+					"<a class=\"btn-small blue\" onclick=\"rejudgeSubmission(",
+						res[1], ")\">Rejudge</a>"
+					"</td>"
+				"<tr>");
+		}
+
+		append("</tbody>"
+			"</table>");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return error500();
+	}
 }
 
 void Problemset::deleteSubmission(const string& submission_id,
