@@ -316,11 +316,11 @@ static string secondStage(const string& job_id, const string& job_owner,
 		report.append("Submit: ", solution);
 
 		current_date = date();
-		stmt = db_conn.prepare("INSERT submissions (user_id, problem_id,"
+		stmt = db_conn.prepare("INSERT submissions (owner, problem_id,"
 				" round_id, parent_round_id, contest_round_id, type,"
 				" status, submit_time, last_judgment, initial_report,"
 				" final_report)"
-			" VALUES(" SIM_ROOT_UID ", ?, NULL, NULL, NULL, "
+			" VALUES(NULL, ?, NULL, NULL, NULL, "
 				STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
 		stmt.setString(1, problem_id);
 		stmt.setString(2, current_date);

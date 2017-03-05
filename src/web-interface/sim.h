@@ -41,6 +41,8 @@ private:
 
 	void logs();
 
+	void submission();
+
 	// See documentation in sim_base.h
 	void redirect(std::string location) {
 		resp.status_code = "302 Moved Temporarily";

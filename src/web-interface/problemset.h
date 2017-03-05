@@ -28,7 +28,6 @@ protected:
 
 	Permissions getPermissions(const std::string& owner_id, ProblemType ptype);
 
-private:
 	std::string problem_id_;
 	std::string problem_name, problem_label, problem_owner, problem_added;
 	std::string problem_simfile;
@@ -40,7 +39,6 @@ private:
 	void problemsetTemplate(const StringView& title,
 		const StringView& styles = {}, const StringView& scripts = {});
 
-protected:
 	/// Main Problemset handler
 	void handle();
 
@@ -48,7 +46,6 @@ protected:
 	/// statement
 	void problemStatement(StringView problem_id);
 
-private:
 	void addProblem();
 
 	void problem();
@@ -64,6 +61,12 @@ private:
 	void deleteProblem();
 
 	void problemSolutions();
+
+	void deleteSubmission(const std::string& submission_id,
+		const std::string& submission_owner);
+
+	void changeSubmissionTypeTo(const std::string& submission_id,
+		const std::string& submission_owner, SubmissionType stype);
 
 	void problemSubmissions();
 };

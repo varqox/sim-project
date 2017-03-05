@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
 	try_to_create_table("submissions",
 		"CREATE TABLE IF NOT EXISTS `submissions` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`user_id` int unsigned NOT NULL,"
+			"`owner` int unsigned NULL,"
 			"`problem_id` int unsigned NOT NULL,"
 			"`round_id` int unsigned NULL,"
 			"`parent_round_id` int unsigned NULL,"
@@ -260,27 +260,27 @@ int main(int argc, char **argv) {
 			"`final_report` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
 			// Update type, delete account
-			"KEY (user_id, round_id, type, status, id),"
+			"KEY (owner, round_id, type, status, id),"
 			// Problemset::submissions - view - all
 			"KEY (problem_id, id),"
-			"KEY (problem_id, user_id, id),"
+			"KEY (problem_id, owner, id),"
 			// Problemset::submissions() - view by type
 			"KEY (problem_id, type, id),"
-			"KEY (problem_id, user_id, type, id),"
+			"KEY (problem_id, owner, type, id),"
 			// Contest::submissions() - view all
 			"KEY (round_id, id),"
-			"KEY (round_id, user_id, id),"
+			"KEY (round_id, owner, id),"
 			"KEY (parent_round_id, id),"
-			"KEY (parent_round_id, user_id, id),"
+			"KEY (parent_round_id, owner, id),"
 			"KEY (contest_round_id, id),"
-			"KEY (contest_round_id, user_id, id),"
+			"KEY (contest_round_id, owner, id),"
 			// Contest::submissions() - view by type
 			"KEY (round_id, type, id),"
-			"KEY (round_id, user_id, type, id),"
+			"KEY (round_id, owner, type, id),"
 			"KEY (parent_round_id, type, id),"
-			"KEY (parent_round_id, user_id, type, id),"
+			"KEY (parent_round_id, owner, type, id),"
 			"KEY (contest_round_id, type, id),"
-			"KEY (contest_round_id, user_id, type, id)"
+			"KEY (contest_round_id, owner, type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("job_queue",

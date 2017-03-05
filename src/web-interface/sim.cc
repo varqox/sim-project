@@ -1,5 +1,7 @@
+#include "form_validator.h"
 #include "sim.h"
 
+#include <sim/jobs.h>
 #include <simlib/debug.h>
 #include <simlib/logger.h>
 #include <simlib/time.h>
@@ -289,4 +291,312 @@ void Sim::logs() {
 				"$(this).scrollTop($(this)[0].scrollHeight);"
 			"});"
 		"</script>");
+}
+
+void Sim::submission() {
+	if (!Session::open())
+		return redirect("/login?" + req->target);
+
+	// Extract round id
+	string submission_id;
+	if (strToNum(submission_id, url_args.extractNextArg()) <= 0)
+		return error404();
+
+	try {
+		StringView next_arg = url_args.extractNextArg();
+
+		// Check if user forces the observer view
+		bool admin_view = true;
+		if (next_arg == "n") {
+			admin_view = false;
+			next_arg = url_args.extractNextArg();
+		}
+
+		enum class Query : uint8_t {
+			DELETE, REJUDGE, CHANGE_TYPE, DOWNLOAD, RAW, VIEW_SOURCE, NONE
+		} query = Query::NONE;
+
+		if (next_arg == "delete")
+			query = Query::DELETE;
+		else if (next_arg == "rejudge")
+			query = Query::REJUDGE;
+		else if (next_arg == "change-type")
+			query = Query::CHANGE_TYPE;
+		else if (next_arg == "raw")
+			query = Query::RAW;
+		else if (next_arg == "download")
+			query = Query::DOWNLOAD;
+		else if (next_arg == "source")
+			query = Query::VIEW_SOURCE;
+
+		// Get the submission
+		const char* columns = (query != Query::NONE ? "" : ", submit_time, "
+			"status, score, name, label, first_name, last_name, username, "
+			"initial_report, final_report");
+		MySQL::Statement stmt = db_conn.prepare(concat(
+			"SELECT s.owner, round_id, s.type, p.id, p.type", columns,
+			" FROM submissions s"
+			" LEFT JOIN users u ON s.owner=u.id"
+			" JOIN problems p ON problem_id=p.id"
+			" WHERE s.id=? AND s.type!=" STYPE_VOID_STR));
+		stmt.setString(1, submission_id);
+
+		MySQL::Result res = stmt.executeQuery();
+		if (!res.next())
+			return error404();
+
+		string submission_owner = (res.isNull(1) ? "" : res[1]);
+		string round_id = (res.isNull(2) ? "" : res[2]);
+		SubmissionType stype = SubmissionType(res.getUInt(3));
+		string problem_id = res[4];
+		ProblemType problem_type = ProblemType(res.getUInt(5));
+
+		auto pageTemplate = [&](auto&&... args) {
+			if (round_id.empty()) {
+				Problemset::problem_id_ = problem_id;
+				Problemset::perms = Problemset::getPermissions(submission_owner,
+					problem_type);
+				problemsetTemplate(std::forward<decltype(args)>(args)...);
+			} else {
+				contestTemplate(std::forward<decltype(args)>(args)...);
+				printRoundPath();
+			}
+		};
+
+		// Check permissions
+		bool has_admin_access;
+		if (round_id.empty())
+			has_admin_access = (Session::user_type == UTYPE_ADMIN);
+		else {
+			// Get parent rounds
+			rpath.reset(getRoundPath(round_id));
+			if (!rpath)
+				return; // getRoundPath has already set error
+			has_admin_access = rpath->admin_access;
+		}
+
+		if (!has_admin_access && Session::user_id != submission_owner)
+			return error403();
+
+		admin_view &= has_admin_access;
+
+		/* Delete */
+		if (query == Query::DELETE) {
+			if (!admin_view || stype == SubmissionType::PROBLEM_SOLUTION)
+				return error403();
+
+			return round_id.empty() ?
+				Problemset::deleteSubmission(submission_id, submission_owner)
+				: Contest::deleteSubmission(submission_id, submission_owner);
+		}
+
+		/* Rejudge */
+		if (query == Query::REJUDGE) {
+			FormValidator fv(req->form_data);
+			if (!admin_view || req->method != server::HttpRequest::POST ||
+				fv.get("csrf_token") != Session::csrf_token)
+			{
+				return error403();
+			}
+
+			// Add a job to judge the submission
+			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
+					" priority, type, added, aux_id, info, data)"
+				"VALUES(?, " JQSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+			stmt.setString(1, Session::user_id);
+			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
+			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
+			stmt.setString(4, date());
+			stmt.setString(5, submission_id);
+			stmt.setString(6, jobs::dumpString(problem_id));
+			stmt.executeUpdate();
+
+			notifyJobServer();
+
+			db_conn.executeUpdate("UPDATE submissions"
+				" SET status=" SSTATUS_PENDING_STR
+				" WHERE id=" + submission_id);
+
+			return response("200 OK");
+		}
+
+		/* Change submission type */
+		if (query == Query::CHANGE_TYPE) {
+			// Changes are only allowed if one has permissions and only in the
+			// pool: {NORMAL | FINAL, IGNORED}
+			if (!admin_view || stype > SubmissionType::IGNORED)
+				return error403();
+
+			// Get new stype
+			FormValidator fv(req->form_data);
+			if (fv.get("csrf_token") != Session::csrf_token)
+				return response("403 Forbidden");
+
+			SubmissionType new_stype;
+			{
+				std::string new_stype_str = fv.get("stype");
+				if (new_stype_str == "n/f")
+					new_stype = SubmissionType::NORMAL;
+				else if (new_stype_str == "i")
+					new_stype = SubmissionType::IGNORED;
+				else
+					return response("501 Not Implemented");
+			}
+
+			// No change
+			if ((stype == SubmissionType::IGNORED) ==
+				(new_stype == SubmissionType::IGNORED))
+			{
+				return response("200 OK");
+			}
+
+			if (round_id.empty())
+				Problemset::changeSubmissionTypeTo(submission_id,
+					submission_owner, new_stype);
+			else
+				Contest::changeSubmissionTypeTo(submission_id, submission_owner,
+					new_stype);
+
+			return response("200 OK");
+		}
+
+		/* Raw code */
+		if (query == Query::RAW) {
+			resp.headers["Content-type"] = "text/plain; charset=utf-8";
+			resp.headers["Content-Disposition"] =
+				concat("inline; filename=", submission_id, ".cpp");
+
+			resp.content = concat("solutions/", submission_id, ".cpp");
+			resp.content_type = server::HttpResponse::FILE;
+			return;
+		}
+
+		/* Download solution */
+		if (query == Query::DOWNLOAD) {
+			resp.headers["Content-type"] = "application/text";
+			resp.headers["Content-Disposition"] =
+				concat("attachment; filename=", submission_id, ".cpp");
+
+			resp.content = concat("solutions/", submission_id, ".cpp");
+			resp.content_type = server::HttpResponse::FILE;
+			return;
+		}
+
+		/* View source */
+		if (query == Query::VIEW_SOURCE) {
+			pageTemplate(concat("Submission ", submission_id, " - source"));
+
+			append("<h2>Source code of submission ", submission_id, "</h2>"
+				"<div>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id, "\">"
+						"View submission</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/raw/", submission_id, ".cpp\">Raw code</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/download\">Download</a>"
+				"</div>",
+				cpp_syntax_highlighter(getFileContents(
+				concat("solutions/", submission_id, ".cpp"))));
+			return;
+		}
+
+		string submit_time = res[6];
+		SubmissionStatus submission_status = SubmissionStatus(res.getUInt(7));
+		string score = res[8];
+		string problems_name = res[9];
+		string problems_label = res[10];
+		string full_name = concat(res[11], ' ', res[12]);
+
+		pageTemplate("Submission " + submission_id);
+
+		append("<div class=\"submission-info\">"
+			"<div>"
+				"<h1>Submission ", submission_id, "</h1>"
+				"<div>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/source\">View source</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/raw/", submission_id, ".cpp\">Raw code</a>"
+					"<a class=\"btn-small\" href=\"/s/", submission_id,
+						"/download\">Download</a>");
+		if (admin_view) {
+			if (stype != SubmissionType::PROBLEM_SOLUTION)
+				append("<a class=\"btn-small orange\" "
+					"onclick=\"changeSubmissionType(", submission_id, ",'",
+						(stype <= SubmissionType::FINAL ? "n/f" : "i"), "')\">"
+					"Change type</a>");
+
+			append("<a class=\"btn-small blue\" onclick=\"rejudgeSubmission(",
+					submission_id, ")\">Rejudge</a>");
+
+			if (stype != SubmissionType::PROBLEM_SOLUTION)
+				append("<a class=\"btn-small red\" href=\"/s/", submission_id,
+					"/delete?/", (round_id.empty() ?
+						StringBuff<100>{"p/", problem_id}
+						: StringBuff<100>{"c/", round_id}),
+					"/submissions\">Delete</a>");
+		}
+
+		append("</div>"
+			"</div>"
+			"<table>"
+				"<thead>"
+					"<tr>");
+
+		if (admin_view && stype != SubmissionType::PROBLEM_SOLUTION)
+			append("<th style=\"min-width:120px\">User</th>");
+
+		append("<th style=\"min-width:120px\">Problem</th>"
+						"<th style=\"min-width:150px\">Submission time</th>"
+						"<th style=\"min-width:150px\">Status</th>"
+						"<th style=\"min-width:90px\">Score</th>"
+						"<th style=\"min-width:90px\">Type</th>"
+					"</tr>"
+				"</thead>"
+				"<tbody>");
+
+		if (stype == SubmissionType::IGNORED)
+			append("<tr class=\"ignored\">");
+		else
+			append("<tr>");
+
+		if (admin_view && stype != SubmissionType::PROBLEM_SOLUTION)
+			append("<td><a href=\"/u/", submission_owner, "\">",
+					res[13], "</a> (", htmlEscape(full_name), ")</td>");
+
+		bool show_final_results = (admin_view || round_id.empty() ||
+			rpath->round->full_results <= date());
+
+		append("<td><a href=\"/p/", problem_id, "\">",
+					htmlEscape(problems_name), "</a>"
+					" (", htmlEscape(problems_label), ')', "</td>"
+				"<td datetime=\"", submit_time ,"\">", submit_time,
+					"<sup>UTC</sup></td>",
+				submissionStatusAsTd(submission_status, show_final_results),
+				"<td>", (show_final_results ? score : ""), "</td>"
+				"<td>", toStr(stype), "</td>"
+			"</tr>"
+			"</tbody>"
+			"</table>",
+			"</div>");
+
+		// Print judge report
+		append("<div class=\"results\">");
+		// Initial report
+		string initial_report = res[14];
+		if (initial_report.size())
+			append(initial_report);
+		// Final report
+		if (show_final_results) {
+			string final_report = res[15];
+			if (final_report.size())
+				append(final_report);
+		}
+
+		append("</div>");
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		return error500();
+	}
 }
