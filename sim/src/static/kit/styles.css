@@ -750,6 +750,7 @@ a.btn.red {
 }
 .dropmenu > ul {
 	display: none;
+	z-index: 1;
 }
 .dropmenu .dropmenu-toggle {
 	display: inline-flex;
