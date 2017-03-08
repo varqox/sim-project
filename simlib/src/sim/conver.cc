@@ -136,12 +136,10 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 
 		// Merge solutions
 		for (auto&& s : x)
-			if (solutions_set.find(s) == solutions_set.end()) {
+			if (solutions_set.emplace(s).second)
 				solutions.emplace_back(s);
-				solutions_set.emplace(s);
-			}
 
-		// Put the solutions in the Simfile
+		// Put the solutions into the Simfile
 		sf.solutions = std::move(solutions);
 	}
 
@@ -236,7 +234,9 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		int total_score = 100;
 		for (auto&& git : tg) {
 			// Take care of the scoring
-			if (git.first == "0")
+			StringView x = git.first;
+			x.removeLeading('0');
+			if (git.first.size() && x.empty()) // We have to compare as numbers
 				git.second.score = 0;
 			else
 				total_score -= (git.second.score = total_score / groups_no--);
