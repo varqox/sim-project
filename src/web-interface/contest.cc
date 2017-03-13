@@ -790,7 +790,7 @@ void Contest::editProblem() {
 			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 					" priority, type, added, aux_id, info, data)"
 				"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
-				" FROM submissions WHERE round_id=?");
+				" FROM submissions WHERE round_id=? ORDER BY id");
 			stmt.setString(1, Session::user_id);
 			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
 			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
