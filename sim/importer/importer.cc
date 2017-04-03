@@ -286,6 +286,8 @@ void handle_jobs() {
 int main2(int argc, char **argv) {
 	stdlog.use(stdout);
 
+	assert(false); // TODO: Importing jobs is not implemented!!!, handle submission_id and problem_id appropriately!
+
 	if (argc != 3) {
 		errlog("You have to specify the path to the old sim installation as the first argument and the path to new installation as the second argument");
 		return 1;
