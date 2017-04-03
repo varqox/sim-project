@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <type_traits>
+#include <stdexcept>
 
 /// Some stuff useful in the meta programming
 

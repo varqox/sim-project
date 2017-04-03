@@ -14,18 +14,18 @@
 #  include <cassert>
 #endif
 
-template<size_t N>
+template<size_t N, class size_type = size_t>
 class StringBuff {
 public:
 	static constexpr size_t max_size = N - 1;
 	static_assert(N > 0, "max_size would underflow");
 
 	char str[N];
-	unsigned len = 0; // Not size_t; who would make so incredibly large buffer?
+	size_type len = 0;
 
 	constexpr StringBuff() = default;
 
-	constexpr StringBuff(unsigned count, char ch);
+	constexpr StringBuff(size_type count, char ch);
 
 	// Variadic constructor, it does not accept an integer as the first argument
 	template<class Arg1, class... Args, typename =
@@ -36,7 +36,7 @@ public:
 
 	constexpr bool empty() const noexcept { return (len == 0); }
 
-	constexpr unsigned size() const noexcept { return len; }
+	constexpr size_type size() const noexcept { return len; }
 
 	/// Appends without adding the null terminating character
 	template<class... Args>
@@ -54,9 +54,9 @@ public:
 
 	constexpr const char* data() const noexcept { return str; }
 
-	char& operator[](unsigned n) noexcept { return str[n]; }
+	char& operator[](size_type n) noexcept { return str[n]; }
 
-	constexpr char& operator[](unsigned n) const noexcept { return str[n]; }
+	constexpr char& operator[](size_type n) const noexcept { return str[n]; }
 };
 
 template<size_t N>
@@ -69,8 +69,8 @@ constexpr auto merge(const StringBuff<N>&... args) {
 	return StringBuff<meta::sum<N...>>{args...};
 }
 
-template<size_t N>
-constexpr size_t StringBuff<N>::max_size;
+template<size_t N, class size_type>
+constexpr size_t StringBuff<N, size_type>::max_size;
 
 template<class Char>
 class StringBase {
@@ -1454,17 +1454,18 @@ std::string paddedString(const StringView& s, size_t len,
 	": Assertion `" #expr " failed.")))
 
 /* ============================ IMPLEMENTATION ============================== */
-template<size_t N>
-inline constexpr StringBuff<N>::StringBuff(unsigned count, char ch) : len(count)
+template<size_t N, class size_type>
+inline constexpr StringBuff<N, size_type>::StringBuff(size_type count, char ch)
+	: len(count)
 {
 	throw_assert(count <= max_size);
 	std::fill(str, str + count, ch);
 	str[count] = '\0';
 }
 
-template<size_t N>
+template<size_t N, class size_type>
 template<class... Args>
-inline StringBuff<N>& StringBuff<N>::raw_append(Args&&... args) {
+inline StringBuff<N, size_type>& StringBuff<N, size_type>::raw_append(Args&&... args) {
 	// Sum length of all args
 	size_t final_len = len;
 	(void)std::initializer_list<size_t>{(final_len += string_length(args))...};
