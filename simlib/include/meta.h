@@ -157,4 +157,10 @@ constexpr intmax_t sum = x + sum<ints...>;
 template<intmax_t x>
 constexpr intmax_t sum<x> = x;
 
+template <typename T1, typename T2>
+inline size_t constexpr offset_of(T1 T2::*member) {
+	constexpr T2 object {};
+	return size_t(&(object.*member)) - size_t(&object);
+}
+
 } // namespace meta

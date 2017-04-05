@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 
 template<class T, class... Args>
 T& back_insert(T& reference, Args&&... args) {
@@ -148,3 +149,105 @@ constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
 			return true;
 	return false;
 }
+
+template<class T, size_t N>
+class InplaceArray {
+	size_t size_;
+	std::array<T, N> a_;
+	T* p_;
+
+	void deallocate() noexcept {
+		if (p_ != &a_[0])
+			delete[] p_;
+	}
+
+public:
+	explicit InplaceArray(size_t n)
+		: size_(n), p_(n > N ? new T[n] : &a_[0]) {}
+
+	InplaceArray(size_t n, const T& val)
+		: size_(n), p_(n > N ? new T[n] : &a_[0])
+	{
+		fill(p_, p_ + n, val);
+	}
+
+	template<size_t N1>
+	InplaceArray(const InplaceArray<T, N1>& a) : InplaceArray(a.size_) {
+		copy(a.p_, a.p_ + size_, p_);
+	}
+
+	template<size_t N1>
+	InplaceArray(InplaceArray<T, N1>&& a) : size_(a.size_) {
+		if (size_ <= N) // copy to the array
+			std::copy(a.p_, a.p_ + size_, p_ = &a[0]);
+		else if (a.p_ != &a.a_[0]) { // move the pointer
+			p_ = a.p_;
+			a.p_ = &a.a_[0];
+		} else // allocate memory and then copy
+			std::copy(a.p_, a.p_ + size_, p_ = new T[size_]);
+
+		a.size_ = 0;
+	}
+
+	template<size_t N1>
+	InplaceArray& operator=(const InplaceArray<T, N1>& a) {
+		if (a.size_ <= N) {
+			deallocate();
+			p_ = &a_[0];
+			std::copy(a.p_, a.p_ + a.size_, p_);
+		} else if (size_ >= a.size_) {
+			std::copy(a.p_, a.p_ + a.size_, p_);
+		} else {
+			deallocate();
+			try {
+				p_ = new T[a.size_];
+			} catch (...) {
+				p_ = &a_[0];
+				throw;
+			}
+			std::copy(a.p_, a.p_ + a.size_, p_);
+		}
+
+		size_ = a.size_;
+		return *this;
+	}
+
+	template<size_t N1>
+	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
+		if (a.p_ != &a.a_[0]) {
+			deallocate();
+			p_ = a.p_;
+			a.p_ = &a.a_[0];
+		} else if (a.size_ <= N) {
+			deallocate();
+			p_ = &a_[0];
+			std::copy(a.p_, a.p_ + a.size_, p_);
+		} else if (size_ >= a.size_) {
+			std::copy(a.p_, a.p_ + a.size_, p_);
+		} else {
+			deallocate();
+			try {
+				p_ = new T[a.size_];
+			} catch (...) {
+				p_ = &a_[0];
+				throw;
+			}
+			std::copy(a.p_, a.p_ + a.size_, p_);
+		}
+
+		size_ = a.size_;
+		a.size_ = 0;
+		return *this;
+	}
+
+	size_t size() noexcept { return size_; }
+
+	T* data() noexcept { return p_; }
+	const T* data() const noexcept { return p_; }
+
+	T& operator[](size_t i) noexcept { return p_[i]; }
+
+	const T& operator[](size_t i) const noexcept { return p_[i]; }
+
+	~InplaceArray() { deallocate(); }
+};

@@ -791,6 +791,146 @@ constexpr std::basic_ostream<CharT, Traits>& operator<<(
 	return os.write(s.data(), s.size());
 }
 
+class InplaceBuffBase {
+public:
+	size_t size = 0;
+	size_t max_size_;
+	char *p_;
+
+	void resize(size_t n) {
+		if (n > max_size_) {
+			max_size_ = meta::max(max_size_ << 1, n);
+			deallocate();
+			try {
+				p_ = new char[max_size_];
+			} catch (...) {
+				p_ = (char*)&p_ + sizeof(p_);
+				throw;
+			}
+		}
+
+		size = n;
+	}
+
+	char* begin() noexcept { return data(); }
+
+	const char* begin() const noexcept { return data(); }
+
+	char* end() noexcept { return data() + size; }
+
+	const char* end() const noexcept { return data() + size; }
+
+	const char* cbegin() const noexcept { return data(); }
+
+	const char* cend() const noexcept { return data() + size; }
+
+	char* data() noexcept { return p_; }
+
+	const char* data() const noexcept { return p_; }
+
+	size_t max_size() const noexcept { return max_size_; }
+
+	char& operator[](size_t i) noexcept { return p_[i]; }
+
+	char operator[](size_t i) const noexcept { return p_[i]; }
+
+	operator StringView() const { return {data(), size}; }
+
+protected:
+	InplaceBuffBase(size_t s, size_t max_s, char* p)
+		: size(s), max_size_(max_s), p_(p) {}
+
+	InplaceBuffBase(const InplaceBuffBase&) = default;
+	InplaceBuffBase(InplaceBuffBase&&) = default;
+	InplaceBuffBase& operator=(const InplaceBuffBase&) = default;
+	InplaceBuffBase& operator=(InplaceBuffBase&&) = default;
+
+	bool is_allocated() const noexcept {
+		// This is not pretty but works...
+		return (p_ - (char*)&p_ != sizeof p_);
+	}
+
+	void deallocate() noexcept {
+		if (is_allocated())
+			delete[] p_;
+	}
+
+public:
+	~InplaceBuffBase() { deallocate(); }
+};
+
+template<size_t N>
+class InplaceBuff : protected InplaceBuffBase {
+private:
+	std::array<char, N> a_;
+
+public:
+	using InplaceBuffBase::size;
+
+	explicit InplaceBuff(size_t n)
+		: InplaceBuffBase(n, meta::max(N, n), nullptr)
+	{
+		p_ = (n < N ? &a_[0] : new char[n]);
+	}
+
+	explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size) {
+		std::copy(sv.begin(), sv.end(), p_);
+	}
+
+	InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
+		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+	}
+
+	InplaceBuff(InplaceBuff&& ibuff)
+		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.size()), ibuff.p_)
+	{
+		if (ibuff.is_allocated()) {
+			p_ = ibuff.p_;
+			ibuff.size = 0;
+			ibuff.max_size_ = N;
+			ibuff.p_ = &ibuff.a_[0];
+
+		} else {
+			p_ = &a_[0];
+			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
+			ibuff.size = 0;
+		}
+	}
+
+	InplaceBuff& operator=(const InplaceBuff& ibuff) {
+		resize(ibuff.size);
+		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+		return *this;
+	}
+
+	InplaceBuff& operator=(InplaceBuff&& ibuff) {
+		if (ibuff.is_allocated() and ibuff.max_size() > max_size()) {
+			size = ibuff.size;
+			max_size_ = ibuff.max_size_;
+			p_ = ibuff.p_;
+
+			ibuff.p_ = &ibuff.a_[0];
+			ibuff.size = 0;
+			ibuff.max_size_ = N;
+		} else {
+			size = ibuff.size;
+			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
+			ibuff.size = 0;
+		}
+
+		return *this;
+	}
+
+	using InplaceBuffBase::begin;
+	using InplaceBuffBase::end;
+	using InplaceBuffBase::cbegin;
+	using InplaceBuffBase::cend;
+	using InplaceBuffBase::data;
+	using InplaceBuffBase::max_size;
+	using InplaceBuffBase::operator[];
+	using InplaceBuffBase::operator StringView;
+};
+
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
 template<class Func>
