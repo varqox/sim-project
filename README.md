@@ -13,15 +13,14 @@ SIM is an open source platform for carrying out algorithmic contests
 
 - gcc/g++ (32 bit version) with C++14 support
 - MySQL >= 5.6 (Debian packages: _mysql-server_)
-- [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
-- MySQL client library (Debian packages: libmysqlclient-dev)
+- MySQL client library (Debian packages: _libmysqlclient-dev_)
 - GNU/Make
 - zip + unzip
 
 #### Ubuntu / Debian
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmysqlcppconn-dev make zip unzip
+  sudo apt-get install g++-multilib mysql-server libmysqlclient-dev make zip unzip
   ```
 
 ### Instructions

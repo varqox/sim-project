@@ -76,7 +76,7 @@ endif
 			echo Type your password for $$mysql_username:; read -s mysql_password;\
 			echo Type your database which SIM will use:; read db_name;\
 			echo Type your user_host:; read user_host;\
-			printf "$$mysql_username\n$$mysql_password\n$$db_name\n$$user_host\n" > $(abspath $(DESTDIR)/.db.config);\
+			printf "user: \"$$mysql_username\"\npassword: \"$$mysql_password\"\ndb: \"$$db_name\"\nhost: \"$$user_host\"\n" > $(abspath $(DESTDIR)/.db.config);\
 		fi'
 
 	# Set up install
