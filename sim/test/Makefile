@@ -29,5 +29,5 @@ exec:
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps
+	$(Q)$(RM) *.o *.deps exec
 	$(Q)$(MAKE) clean -C cpp_syntax_highlighter/

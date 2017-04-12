@@ -33,5 +33,5 @@ sqlite3.a: sqlite3.o
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps sim.a simlib.a
+	$(Q)$(RM) *.o *.deps *.a
 	$(Q)$(MAKE) clean -C simlib/
