@@ -1,6 +1,7 @@
 #include <sim/constants.h>
 #include <sim/mysql.h>
 #include <sim/sqlite.h>
+#include <simlib/filesystem.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
 #include <simlib/utilities.h>
@@ -89,7 +90,7 @@ struct TryToCreateTable {
 			if (!binary_search(tables, StringView{table_name}))
 				THROW("Table `", table_name, "` not found in the table list");
 
-			conn_.executeUpdate(query);
+			conn_.update(query);
 			f();
 
 		} catch (const std::exception& e) {
@@ -121,8 +122,15 @@ int main(int argc, char **argv) {
 		sqlite_db = SQLite::Connection(
 			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
-		conn = MySQL::createConnectionUsingPassFile(
-			concat(argv[1], "/.db.config"));
+		conn = MySQL::makeConnWithCredFile(concat(argv[1], "/.db.config"));
+
+		#warning "Put these in the rewritten backup.sh"
+		// Make a file with credentials for backup.sh
+		// putFileContents(concat(argv[1], "/.mysql.cnf"),
+			// concat("[client]\n"
+				// "user=", conn.impl()->user,
+				// "password=", conn.impl()->passwd,
+				// "user=", conn.impl()->user));
 
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
@@ -132,7 +140,7 @@ int main(int argc, char **argv) {
 	if (DROP_TABLES) {
 		try {
 			for (auto&& table : tables)
-				conn.executeUpdate(concat("DROP TABLE IF EXISTS `", table, '`'));
+				conn.update(concat("DROP TABLE IF EXISTS `", table, '`'));
 
 			if (ONLY_DROP_TABLES)
 				return 0;
@@ -164,14 +172,12 @@ int main(int argc, char **argv) {
 			fillRandomly(salt_bin, sizeof(salt_bin));
 			string salt = toHex(salt_bin, sizeof(salt_bin));
 
-			MySQL::Statement stmt(conn.prepare(
+			auto stmt = conn.prepare(
 				"INSERT IGNORE users (id, username, first_name, last_name, email, "
 					"salt, password, type) "
 				"VALUES (" SIM_ROOT_UID ", 'sim', 'sim', 'sim', 'sim@sim', ?, "
-					"?, 0)"));
-			stmt.setString(1, salt);
-			stmt.setString(2, sha3_512(salt + "sim"));
-			stmt.executeUpdate();
+					"?, 0)");
+			stmt.bindAndExecute(salt, sha3_512(salt + "sim"));
 		});
 
 	try_to_create_table("session",
