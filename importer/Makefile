@@ -12,4 +12,4 @@ repair_and_scale_submissions_ids: repair_and_scale_submissions_ids.o ../src/lib/
 
 .PHONY: clean
 clean:
-	$(Q)$(RM) *.o *.deps
+	$(Q)$(RM) *.o *.deps importer
