@@ -4,6 +4,7 @@
 #include <sim/constants.h>
 #include <sim/mysql.h>
 #include <sim/sqlite.h>
+#include <simlib/filesystem.h>
 #include <simlib/process.h>
 #include <simlib/time.h>
 #include <sys/inotify.h>
@@ -17,7 +18,7 @@ static void processJobQueue() {
 
 	// While job queue is not empty
 	for (;;) try {
-		MySQL::Result res = db_conn.executeQuery(
+		MySQL::Result res = db_conn.query(
 			"SELECT id, type, aux_id, info, creator, added FROM job_queue"
 			" WHERE status=" JQSTATUS_PENDING_STR " AND type!=" JQTYPE_VOID_STR
 			" ORDER BY priority DESC, id LIMIT 1");
@@ -25,14 +26,15 @@ static void processJobQueue() {
 		if (!res.next())
 			break;
 
-		string job_id = res[1];
-		JobQueueType type = JobQueueType(res.getUInt(2));
-		string aux_id = (res.isNull(3) ? "" : res[3]);
-		string info = res[4];
+		StringView job_id = res[1];
+		JobQueueType type = JobQueueType(strtoull(res[2]));
+		StringView aux_id = (res.isNull(3) ? "" : res[3]);
+		StringView info = res[4];
 
 		// Change the job status to IN_PROGRESS
-		db_conn.executeUpdate("UPDATE job_queue"
-			" SET status=" JQSTATUS_IN_PROGRESS_STR " WHERE id=" + job_id);
+		auto stmt = db_conn.prepare("UPDATE job_queue"
+			" SET status=" JQSTATUS_IN_PROGRESS_STR " WHERE id=?");
+		stmt.bindAndExecute(job_id);
 
 		// Choose action depending on the job type
 		switch (type) {
@@ -58,8 +60,9 @@ static void processJobQueue() {
 
 		case JobQueueType::EDIT_PROBLEM:
 		case JobQueueType::DELETE_PROBLEM:
-			db_conn.executeUpdate("UPDATE job_queue"
-				" SET status=" JQSTATUS_CANCELED_STR " WHERE id=" + job_id);
+			stmt = db_conn.prepare("UPDATE job_queue"
+				" SET status=" JQSTATUS_CANCELED_STR " WHERE id=?");
+			stmt.bindAndExecute(job_id);
 			break;
 
 		case JobQueueType::VOID:
@@ -83,31 +86,35 @@ static void processJobQueue() {
 static void cleanUpDB() {
 	try {
 		// Fix jobs that are in progress after the job-server died
-		db_conn.executeUpdate("UPDATE job_queue"
+		db_conn.update("UPDATE job_queue"
 			" SET status=" JQSTATUS_PENDING_STR
 			" WHERE status=" JQSTATUS_IN_PROGRESS_STR);
 
 		// Remove void (invalid) jobs and submissions that are older than 24 h
 		auto yesterday_date = date("%Y-%m-%d %H:%M:%S",
 			time(nullptr) - 24 * 60 * 60);
-		db_conn.executeUpdate("DELETE FROM job_queue WHERE type=" JQTYPE_VOID_STR
-			" AND added<'" + yesterday_date + "'");
-		db_conn.executeUpdate("DELETE FROM submissions WHERE type=" STYPE_VOID_STR
-			" AND submit_time<'" + yesterday_date + "'");
+		auto stmt = db_conn.prepare("DELETE FROM job_queue WHERE type="
+			JQTYPE_VOID_STR " AND added<?");
+		stmt.bindAndExecute(yesterday_date);
+
+		stmt = db_conn.prepare("DELETE FROM submissions WHERE type="
+			STYPE_VOID_STR " AND submit_time<?");
+		stmt.bindAndExecute(yesterday_date);
 
 		// Remove void (invalid) problems and associated with them submissions
 		// and jobs
 		for (;;) { // TODO test it
-			MySQL::Result res {db_conn.executeQuery("SELECT id FROM problems"
+			MySQL::Result res {db_conn.query("SELECT id FROM problems"
 				" WHERE type=" PTYPE_VOID_STR " LIMIT 32")};
-			if (res.rowCount() == 0)
+			if (res.rows_num() == 0)
 				break;
 
 			while (res.next()) {
-				string pid = res[1];
+				StringView pid = res[1];
 				// Delete submissions
-				db_conn.executeUpdate(
-					"DELETE FROM submissions WHERE problem_id=" + pid);
+				stmt = db_conn.prepare("DELETE FROM submissions"
+					" WHERE problem_id=?");
+				stmt.bindAndExecute(pid);
 
 				// Delete problem's files
 				(void)remove_r(StringBuff<PATH_MAX>{"problems/", pid});
@@ -115,7 +122,8 @@ static void cleanUpDB() {
 
 				// Delete the problem (we have to do it here to prevent this
 				// loop from going infinite)
-				db_conn.executeUpdate("DELETE FROM problems WHERE id=" + pid);
+				stmt = db_conn.prepare("DELETE FROM problems WHERE id=?");
+				stmt.bindAndExecute(pid);
 			}
 		}
 
@@ -164,7 +172,7 @@ int main() {
 	// Connect to the databases
 	try {
 		sqlite_db = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_READWRITE);
-		db_conn = MySQL::createConnectionUsingPassFile(".db.config");
+		db_conn = MySQL::makeConnWithCredFile(".db.config");
 
 		cleanUpDB();
 

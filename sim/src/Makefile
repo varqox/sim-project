@@ -17,7 +17,7 @@ killinstc: killinstc.o lib/simlib.a
 	$(LINK)
 
 setup-installation: setup_installation.o lib/sim.a lib/sqlite3.a
-	$(LINK) -lmysqlcppconn -ldl -pthread
+	$(LINK) $(shell mysql_config --libs)
 
 lib/simlib.a lib/sim.a lib/sqlite3.a: lib;
 

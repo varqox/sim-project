@@ -5,7 +5,7 @@ namespace MySQL {
 
 Connection makeConnWithCredFile(CStringView filename) {
 	ConfigFile cf;
-	cf.addVars("user", "host", "password", "host");
+	cf.addVars("host", "user", "password", "db");
 	cf.loadConfigFromFile(filename);
 
 	for (auto it : cf.getVars()) {
@@ -20,7 +20,7 @@ Connection makeConnWithCredFile(CStringView filename) {
 	try {
 		Connection conn;
 		conn.connect(cf["host"].asString(), cf["user"].asString(),
-			cf["password"].asString(), cf["database"].asString());
+			cf["password"].asString(), cf["db"].asString());
 		return conn;
 
 	} catch (const std::exception& e) {

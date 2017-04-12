@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# TODO: rewrite as C++ - to read credentials safely
 echo "[client]" > .mysql.cnf
 chmod 0600 .mysql.cnf
 echo "user=$(head -n 1 .db.config)" >> .mysql.cnf

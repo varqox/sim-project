@@ -12,26 +12,25 @@ using std::string;
 
 extern MySQL::Connection db_conn;
 
-void judgeSubmission(const string& job_id, const string& submission_id,
-	const string& job_creation_time)
+void judgeSubmission(StringView job_id, StringView submission_id,
+	StringView job_creation_time)
 {
 	// Gather the needed information about the submission
-	MySQL::Result res = db_conn.executeQuery("SELECT s.owner, round_id,"
-			" problem_id, last_judgment, p.last_edit"
-		" FROM submissions s, problems p"
-		" WHERE p.id=problem_id AND s.id=" + submission_id);
-	string sowner, round_id, problem_id, last_judgment, p_last_edit;
-	if (res.next()) {
-		sowner = res[1];
-		round_id = res[2];
-		problem_id = res[3];
-		last_judgment = res[4];
-		p_last_edit = res[5];
 
-	} else { // The submission doesn't exist (probably was removed)
+	auto stmt = db_conn.prepare("SELECT s.owner, round_id, problem_id,"
+			" last_judgment, p.last_edit"
+		" FROM submissions s, problems p"
+		" WHERE p.id=problem_id AND s.id=?");
+	stmt.bindAndExecute(submission_id);
+	uint64_t sowner, round_id, problem_id;
+	InplaceBuff<64> last_judgment, p_last_edit;
+	stmt.res_bind_all(sowner, round_id, problem_id, last_judgment, p_last_edit);
+	// If the submission doesn't exist (probably was removed)
+	if (not stmt.next()) {
 		// Cancel the job
-		db_conn.executeUpdate("UPDATE job_queue"
-			" SET status=" JQSTATUS_CANCELED_STR " WHERE id=" + job_id);
+		stmt = db_conn.prepare("UPDATE job_queue"
+			" SET status=" JQSTATUS_CANCELED_STR " WHERE id=?");
+		stmt.bindAndExecute(job_id);
 		stdlog("Judging of the submission ", submission_id, " canceled, since"
 			" there is no such submission.");
 		return;
@@ -39,10 +38,13 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 
 	// If the problem wasn't modified since last judgment and submission has
 	// already been rejudged after the job was created
-	if (last_judgment > p_last_edit && last_judgment > job_creation_time) {
+	if (StringView(last_judgment) > StringView(p_last_edit) and
+		last_judgment > job_creation_time)
+	{
 		// Skit the job - the submission has already been rejudged
-		db_conn.executeUpdate("UPDATE job_queue"
-			" SET status=" JQSTATUS_DONE_STR " WHERE id=" + job_id);
+		stmt = db_conn.prepare("UPDATE job_queue"
+			" SET status=" JQSTATUS_DONE_STR " WHERE id=?");
+		stmt.bindAndExecute(job_id);
 		stdlog("Judging of the submission ", submission_id, " skipped.");
 		return;
 	}
@@ -53,7 +55,7 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
 		')');
 
-	jworker.loadPackage("problems/" + problem_id,
+	jworker.loadPackage(concat("problems/", problem_id),
 		getFileContents(concat("problems/", problem_id, "/Simfile"))
 	);
 
@@ -67,8 +69,9 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 		static_assert(int(SubmissionType::NORMAL) == 0 &&
 			int(SubmissionType::FINAL) == 1, "Needed below where "
 				"\"... type<= ...\"");
+
 		/* Update submission */
-		MySQL::Statement stmt;
+
 		// Special status
 		if (isIn(status, {SubmissionStatus::COMPILATION_ERROR,
 		                  SubmissionStatus::CHECKER_COMPILATION_ERROR,
@@ -144,23 +147,28 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 					"s.score=IF(s.id=z.id,?,s.score)"
 				"WHERE s.id=x.id OR s.id=y.id OR s.id=z.id");
 
-			stmt.setInt64(11, total_score);
+			stmt.bind(10, total_score);
 		}
 
-		stmt.setString(1, sowner);
-		stmt.setString(2, round_id);
-		stmt.setString(3, submission_id);
-		stmt.setString(4, sowner);
-		stmt.setString(5, round_id);
-		stmt.setString(6, submission_id);
-		stmt.setUInt(7, static_cast<uint>(status));
-		stmt.setString(8, date());
-		stmt.setString(9, initial_report);
-		stmt.setString(10, final_report);
+		uint ustatus = static_cast<uint>(status);
+		string curr_date = date();
 
-		stmt.executeUpdate();
-		db_conn.executeUpdate("UPDATE job_queue"
-			" SET status=" JQSTATUS_DONE_STR " WHERE id=" + job_id);
+		stmt.bind(0, sowner);
+		stmt.bind(1, round_id);
+		stmt.bind(2, submission_id);
+		stmt.bind(3, sowner);
+		stmt.bind(4, round_id);
+		stmt.bind(5, submission_id);
+		stmt.bind(6, ustatus);
+		stmt.bind(7, curr_date);
+		stmt.bind(8, initial_report);
+		stmt.bind(9, final_report);
+		stmt.fixBinds();
+		stmt.execute();
+
+		stmt = db_conn.prepare("UPDATE job_queue"
+			" SET status=" JQSTATUS_DONE_STR " WHERE id=?");
+		stmt.bindAndExecute(job_id);
 
 	};
 
@@ -422,17 +430,15 @@ void judgeSubmission(const string& job_id, const string& submission_id,
 	send_report();
 }
 
-void judgeModelSolution(const string& job_id, JobQueueType original_job_type) {
+void judgeModelSolution(StringView job_id, JobQueueType original_job_type) {
 	sim::Conver::ReportBuff report;
 	report.append("Stage: Judging the model solution");
 
 	auto set_failure= [&] {
-		MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
+		auto stmt = db_conn.prepare("UPDATE job_queue"
 			" SET status=" JQSTATUS_FAILED_STR ", data=CONCAT(data,?)"
 			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-		stmt.setString(1, report.str);
-		stmt.setString(2, job_id);
-		stmt.executeUpdate();
+		stmt.bindAndExecute(report.str, job_id);
 
 		stdlog("Job: ", job_id, '\n', report.str);
 	};
@@ -498,14 +504,11 @@ void judgeModelSolution(const string& job_id, JobQueueType original_job_type) {
 	// Put the Simfile in the package
 	putFileContents(package_path.append("Simfile"), simfile.dump());
 
-	MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
+	auto stmt = db_conn.prepare("UPDATE job_queue"
 		" SET type=?, status=" JQSTATUS_PENDING_STR ","
 			" data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-	stmt.setUInt(1, uint(original_job_type));
-	stmt.setString(2, report.str);
-	stmt.setString(3, job_id);
-	stmt.executeUpdate();
+	stmt.bindAndExecute(uint(original_job_type), report.str, job_id);
 
 	stdlog("Job: ", job_id, '\n', report.str);
 }
