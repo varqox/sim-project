@@ -121,10 +121,12 @@ public:
 	// Returns a reference to a variable @p name from variable set or to a
 	// null_var
 	const Variable& getVar(const std::string& name) const noexcept {
+		// TODO: when map will be replaced with sth better use StringView as arg
 		return (*this)[name];
 	}
 
 	const Variable& operator[](const std::string& name) const noexcept {
+		// TODO: when map will be replaced with sth better use StringView as arg
 		auto it = vars.find(name);
 		return (it != vars.end() ? it->second : null_var);
 	}

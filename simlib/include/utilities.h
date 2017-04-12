@@ -1,5 +1,7 @@
 #pragma once
 
+#include "meta.h"
+
 #include <algorithm>
 #include <array>
 
@@ -152,7 +154,7 @@ constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
 
 template<class T, size_t N>
 class InplaceArray {
-	size_t size_;
+	size_t size_, max_size_;
 	std::array<T, N> a_;
 	T* p_;
 
@@ -240,9 +242,48 @@ public:
 		return *this;
 	}
 
-	size_t size() noexcept { return size_; }
+	/**
+	 * @brief Changes array's size and max_size if needed, but in the latter
+	 *   case all the data are lost
+	 *
+	 * @param n new array's size
+	 */
+	void lossy_resize(size_t n) {
+		if (n > max_size_) {
+			max_size_ = meta::max(max_size_ << 1, n);
+			deallocate();
+			try {
+				p_ = new T[max_size_];
+			} catch (...) {
+				p_ = &a_[0];
+				throw;
+			}
+		}
+
+		size_ = n;
+	}
+
+	/**
+	 * @brief Changes array's size and max_size if needed, preserves data
+	 *
+	 * @param n new array's size
+	 */
+	void resize(size_t n) {
+		if (n > max_size_) {
+			max_size_ = meta::max(max_size_ << 1, n);
+			T* new_p = new T[max_size_];
+			std::copy(p_, p_ + size_, new_p);
+			deallocate();
+			p_ = new_p;
+		}
+
+		size_ = n;
+	}
+
+	size_t size() const noexcept { return size_; }
 
 	T* data() noexcept { return p_; }
+
 	const T* data() const noexcept { return p_; }
 
 	T& operator[](size_t i) noexcept { return p_[i]; }

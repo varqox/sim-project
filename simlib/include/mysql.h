@@ -1,9 +1,10 @@
 #pragma once
 
+#include "debug.h"
+#include "string.h"
+#include "utilities.h"
+
 #include <cstddef>
-#include <simlib/debug.h>
-#include <simlib/string.h>
-#include <simlib/utilities.h>
 
 #if __has_include(<mysql/mysql.h>)
 #include <mysql/mysql.h>
@@ -34,7 +35,9 @@ public:
 
 	~Result() { mysql_free_result(res_); }
 
-	operator MYSQL_RES* () noexcept { return res_; }
+	MYSQL_RES* impl() noexcept { return res_; }
+
+	operator MYSQL_RES* () noexcept { return impl(); }
 
 	bool next() noexcept {
 		if ((row_ = mysql_fetch_row(res_)) and
@@ -49,6 +52,8 @@ public:
 	unsigned fields_num() noexcept { return mysql_num_fields(res_); }
 
 	my_ulonglong rows_num() noexcept { return mysql_num_rows(res_); }
+
+	bool isNull(unsigned i) noexcept { return (row_[i] == nullptr); }
 
 	StringView operator[](unsigned i) noexcept { return {row_[i], lengths_[i]}; }
 };
@@ -76,9 +81,10 @@ private:
 
 	Statement(const Statement&) = delete;
 	Statement& operator=(const Statement&) = delete;
-	Statement& operator=(Statement&&) = delete;
 
 public:
+	Statement() : stmt_ {nullptr}, params_ {0}, res_ {0} {}
+
 	Statement(Statement&& s) noexcept : stmt_ {s.stmt_},
 		params_ {std::move(s.params_)}, res_ {std::move(s.res_)}
 	{
@@ -88,9 +94,24 @@ public:
 			res_[i].error = &res_[i].error_value;
 	}
 
+	Statement& operator=(Statement&& s) {
+		mysql_stmt_close(stmt_);
+		params_ = std::move(s.params_);
+		res_ = std::move(s.res_);
+		s.stmt_ = nullptr;
+
+		// Bind errors
+		for (unsigned i = 0; i < res_.size(); ++i)
+			res_[i].error = &res_[i].error_value;
+
+		return *this;
+	}
+
 	~Statement() { mysql_stmt_close(stmt_); }
 
-	operator MYSQL_STMT* () noexcept { return stmt_; }
+	MYSQL_STMT* impl() noexcept { return stmt_; }
+
+	operator MYSQL_STMT* () noexcept { return impl(); }
 
 	// Need to be called before execute()
 	void bind(unsigned idx, char& x) noexcept {
@@ -141,6 +162,20 @@ public:
 		params_[idx].is_unsigned = true;
 	}
 
+	void bind(unsigned idx, long& x) noexcept {
+		params_[idx].buffer_type =
+			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		params_[idx].buffer = &x;
+		params_[idx].is_unsigned = false;
+	}
+
+	void bind(unsigned idx, unsigned long& x) noexcept {
+		params_[idx].buffer_type =
+			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		params_[idx].buffer = &x;
+		params_[idx].is_unsigned = true;
+	}
+
 	void bind(unsigned idx, char* str, size_t& length, size_t max_size) noexcept
 	{
 		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
@@ -156,6 +191,8 @@ public:
 		params_[idx].length = nullptr;
 		params_[idx].length_value = str.size();
 	}
+
+	void bind(unsigned idx, std::string&&) = delete;
 
 	template<size_t BUFF_SIZE>
 	void bind(unsigned idx, StringBuff<BUFF_SIZE>& buff) noexcept {
@@ -191,9 +228,15 @@ public:
 			THROW(mysql_stmt_error(stmt_));
 	}
 
+	void fixAndExecute() {
+		fixBinds();
+		execute();
+	}
+
 	template<class... Args>
 	void bindAndExecute(Args&&... args) {
-		bind_all(std::forward<Args>(args)...);
+		bind_all(args...); // std::forward is omitted intentionally to make
+		                   // bind_all() think that all arguments are references
 		execute();
 	}
 
@@ -242,6 +285,20 @@ public:
 
 	void res_bind(unsigned idx, unsigned long long& x) noexcept {
 		res_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
+		res_[idx].buffer = &x;
+		res_[idx].is_unsigned = true;
+	}
+
+	void res_bind(unsigned idx, long& x) noexcept {
+		res_[idx].buffer_type =
+			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		res_[idx].buffer = &x;
+		res_[idx].is_unsigned = false;
+	}
+
+	void res_bind(unsigned idx, unsigned long& x) noexcept {
+		res_[idx].buffer_type =
+			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
 		res_[idx].buffer = &x;
 		res_[idx].is_unsigned = true;
 	}
@@ -315,7 +372,7 @@ public:
 
 			InplaceBuffBase* buff = reinterpret_cast<InplaceBuffBase*>
 				((int8_t*)res_[i].length - offsetof(InplaceBuffBase, size));
-			buff->resize(buff->size);
+			buff->lossy_resize(buff->size);
 
 			res_[i].buffer = buff->data();
 			res_[i].buffer_length = buff->max_size();
@@ -333,6 +390,10 @@ public:
 	my_ulonglong rows_num() noexcept { return mysql_stmt_num_rows(stmt_); }
 
 	my_ulonglong insert_id() noexcept { return mysql_stmt_insert_id(stmt_); }
+
+	MYSQL_RES* resMetadata() noexcept {
+		return mysql_stmt_result_metadata(stmt_);
+	}
 };
 
 class Connection {
@@ -352,7 +413,6 @@ private:
 
 	Connection(const Connection&) = delete;
 	Connection& operator=(const Connection&) = delete;
-	Connection& operator=(Connection&&) = delete;
 
 public:
 	Connection() {
@@ -365,7 +425,18 @@ public:
 		c.conn_ = {};
 	}
 
-	operator MYSQL* () noexcept { return &conn_; }
+	Connection& operator=(Connection&& c) {
+		close();
+
+		memcpy(&conn_, &c.conn_, sizeof(conn_));
+		c.conn_ = {};
+
+		return *this;
+	}
+
+	MYSQL* impl() noexcept { return &conn_; }
+
+	operator MYSQL* () noexcept { return impl(); }
 
 	void connect(CStringView host, CStringView user, CStringView passwd,
 		CStringView db)
@@ -411,8 +482,6 @@ public:
 
 	~Connection() { close(); }
 };
-
-const Connection::Library Connection::init_ {};
 
 } // namespace MySQL
 

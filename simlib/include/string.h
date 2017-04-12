@@ -797,7 +797,13 @@ public:
 	size_t max_size_;
 	char *p_;
 
-	void resize(size_t n) {
+	/**
+	 * @brief Changes buffer's size and max_size if needed, but in the latter
+	 *   case all the data are lost
+	 *
+	 * @param n new buffer's size
+	 */
+	void lossy_resize(size_t n) {
 		if (n > max_size_) {
 			max_size_ = meta::max(max_size_ << 1, n);
 			deallocate();
@@ -807,6 +813,23 @@ public:
 				p_ = (char*)&p_ + sizeof(p_);
 				throw;
 			}
+		}
+
+		size = n;
+	}
+
+	/**
+	 * @brief Changes buffer's size and max_size if needed, preserves data
+	 *
+	 * @param n new buffer's size
+	 */
+	void resize(size_t n) {
+		if (n > max_size_) {
+			max_size_ = meta::max(max_size_ << 1, n);
+			char* new_p = new char[max_size_];
+			std::copy(p_, p_ + size, new_p);
+			deallocate();
+			p_ = new_p;
 		}
 
 		size = n;
@@ -835,6 +858,8 @@ public:
 	char operator[](size_t i) const noexcept { return p_[i]; }
 
 	operator StringView() const { return {data(), size}; }
+
+	std::string to_string() { return {data(), size}; }
 
 protected:
 	InplaceBuffBase(size_t s, size_t max_s, char* p)
@@ -866,6 +891,8 @@ private:
 
 public:
 	using InplaceBuffBase::size;
+
+	InplaceBuff() : InplaceBuffBase(0, N, nullptr) { p_ = &a_[0]; }
 
 	explicit InplaceBuff(size_t n)
 		: InplaceBuffBase(n, meta::max(N, n), nullptr)
@@ -929,6 +956,7 @@ public:
 	using InplaceBuffBase::max_size;
 	using InplaceBuffBase::operator[];
 	using InplaceBuffBase::operator StringView;
+	using InplaceBuffBase::to_string;
 };
 
 // Compares two StringView, but before comparing two characters modifies them
