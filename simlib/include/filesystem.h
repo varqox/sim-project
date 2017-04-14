@@ -452,7 +452,7 @@ size_t writeAll(int fd, const void *buff, size_t count) noexcept;
  *
  * @errors If any error occurs then an exception is thrown
  */
-inline void writeAll_throw(int fd, const void *buff, size_t count) noexcept {
+inline void writeAll_throw(int fd, const void *buff, size_t count) {
 	if (writeAll(fd, buff, count) != count)
 		THROW("write()", error(errno));
 }
@@ -483,7 +483,7 @@ inline size_t writeAll(int fd, StringView str) noexcept {
  *
  * @errors If any error occurs then an exception is thrown
  */
-inline void writeAll_throw(int fd, StringView str) noexcept {
+inline void writeAll_throw(int fd, StringView str) {
 	writeAll_throw(fd, str.data(), str.size());
 }
 
