@@ -11,7 +11,7 @@
 #include <string>
 
 #ifdef _GLIBCXX_DEBUG
-#  include <cassert>
+# include <cassert>
 #endif
 
 template<size_t N, class size_type = size_t>
@@ -948,6 +948,8 @@ public:
 		return *this;
 	}
 
+	using InplaceBuffBase::lossy_resize;
+	using InplaceBuffBase::resize;
 	using InplaceBuffBase::begin;
 	using InplaceBuffBase::end;
 	using InplaceBuffBase::cbegin;

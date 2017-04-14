@@ -137,13 +137,13 @@ public:
 		return d;
 	}
 
-	void reset(DIR* d) {
+	void reset(DIR* d) noexcept {
 		if (dir_)
 			closedir(dir_);
 		dir_ = d;
 	}
 
-	void close() {
+	void close() noexcept {
 		if (dir_) {
 			closedir(dir_);
 			dir_ = nullptr;
@@ -415,32 +415,77 @@ int move(const CStringView& oldpath, const CStringView& newpath,
 int createFile(const CStringView& pathname, mode_t mode = S_0644) noexcept;
 
 /**
- * @brief Read @p count bytes to @p buf from @p fd
+ * @brief Read @p count bytes to @p buff from @p fd
  * @details Uses read(2), but reads until it is unable to read
  *
  * @param fd file descriptor
- * @param buf where place read bytes
+ * @param buff where place read bytes
  * @param count number of bytes to read
  *
  * @return number of bytes read, if error occurs then errno is > 0
  *
  * @errors The same as for read(2) except EINTR
  */
-size_t readAll(int fd, void *buf, size_t count) noexcept;
+size_t readAll(int fd, void *buff, size_t count) noexcept;
 
 /**
- * @brief Write @p count bytes to @p fd from @p buf
+ * @brief Write @p count bytes to @p fd from @p buff
  * @details Uses write(2), but writes until it is unable to write
  *
  * @param fd file descriptor
- * @param buf where write bytes from
+ * @param buff where write bytes from
  * @param count number of bytes to write
  *
  * @return number of bytes written, if error occurs then errno is > 0
  *
  * @errors The same as for write(2) except EINTR
  */
-size_t writeAll(int fd, const void *buf, size_t count) noexcept;
+size_t writeAll(int fd, const void *buff, size_t count) noexcept;
+
+/**
+ * @brief Write @p count bytes to @p fd from @p str
+ * @details Uses write(2), but writes until it is unable to write
+ *
+ * @param fd file descriptor
+ * @param buff where write bytes from
+ * @param count number of bytes to write
+ *
+ * @errors If any error occurs then an exception is thrown
+ */
+inline void writeAll_throw(int fd, const void *buff, size_t count) noexcept {
+	if (writeAll(fd, buff, count) != count)
+		THROW("write()", error(errno));
+}
+
+/**
+ * @brief Write @p count bytes to @p fd from @p str
+ * @details Uses write(2), but writes until it is unable to write
+ *
+ * @param fd file descriptor
+ * @param str where write bytes from
+ *
+ * @return number of bytes written, if error occurs then errno is > 0
+ *
+ * @errors The same as for write(2) except EINTR
+ */
+inline size_t writeAll(int fd, StringView str) noexcept {
+	return writeAll(fd, str.data(), str.size());
+}
+
+/**
+ * @brief Write @p count bytes to @p fd from @p str
+ * @details Uses write(2), but writes until it is unable to write
+ *
+ * @param fd file descriptor
+ * @param str where write bytes from
+ *
+ * @return number of bytes written
+ *
+ * @errors If any error occurs then an exception is thrown
+ */
+inline void writeAll_throw(int fd, StringView str) noexcept {
+	writeAll_throw(fd, str.data(), str.size());
+}
 
 /*
 *  Returns an absolute path that does not contain any . or .. components,
@@ -597,8 +642,7 @@ public:
 
 template<int (*func)(const CStringView&) >
 class RemoverBase {
-	std::unique_ptr<char[]> name;
-	unsigned name_len = 0;
+	InplaceBuff<PATH_MAX> name;
 
 	RemoverBase(const RemoverBase&) = delete;
 	RemoverBase& operator=(const RemoverBase&) = delete;
@@ -606,36 +650,43 @@ class RemoverBase {
 	RemoverBase& operator=(const RemoverBase&&) = delete;
 
 public:
+	RemoverBase() : name() {}
+
 	explicit RemoverBase(const CStringView& str)
 		: RemoverBase(str.data(), str.size()) {}
 
 	/// If @p str is null then @p len is ignored
-	RemoverBase(const char* str, size_t len) : name(nullptr) {
-		if (str != nullptr) {
-			name.reset(new char[len + 1]);
-			strncpy(name.get(), str, len + 1);
-			name_len = len;
+	RemoverBase(const char* str, size_t len) : name(len + 1) {
+		if (len != 0) {
+			strncpy(name.data(), str, len + 1);
+			name.size = len;
 		}
 	}
 
 	~RemoverBase() {
-		if (name)
-			func(CStringView{name.get(), name_len});
+		if (name.size != 0)
+			func(CStringView {name.data(), name.size});
 	}
 
-	void cancel() noexcept { name.reset(); }
+	void cancel() noexcept { name.size = 0; }
 
 	void reset(const CStringView& str) { reset(str.data(), str.size()); }
 
 	void reset(const char* str, size_t len) {
 		cancel();
-		name.reset(new char[len + 1]);
-		strncpy(name.get(), str, len + 1);
-		name_len = len;
+		if (len != 0) {
+			name.lossy_resize(len + 1);
+			strncpy(name.data(), str, len + 1);
+			name.size = len;
+		}
 	}
 
 	int removeTarget() noexcept {
-		int rc = func(CStringView{name.get(), name_len});
+		if (name.size == 0)
+			return 0;
+
+		int rc = 0;
+		rc = func(CStringView{name.data(), name.size});
 		cancel();
 		return rc;
 	}

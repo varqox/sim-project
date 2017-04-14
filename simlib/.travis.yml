@@ -114,9 +114,6 @@ matrix:
       env:
     - compiler: clang
       <<: *Clang-3_5
-      env: DEBUG=1
-    - compiler: clang
-      <<: *Clang-3_5
       env: DEBUG=2
     # Clang-3_6
     - compiler: clang
@@ -146,7 +143,11 @@ matrix:
       <<: *Clang-3_8
       env: DEBUG=2
   allow_failures:
-    # Clang-3_7 DEBUG=2
+    # Clang-3_5 DEBUG=1 (debug information for auto is not yet supported)
+    - compiler: clang
+      <<: *Clang-3_5
+      env: DEBUG=1
+    # Clang-3_7 DEBUG=2 (sanitizers' linking errors)
     - compiler: clang
       <<: *Clang-3_7
       env: DEBUG=2
