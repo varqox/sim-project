@@ -400,6 +400,8 @@ static void addProblem(StringView job_id, StringView job_owner,
 			#warning "Check if nullptr works up here"
 		}
 
+		uint x = (uint)status;
+		stmt.bind(1, x);
 		stmt.bind(3, report.str);
 		stmt.bind(4, job_id);
 		stmt.fixAndExecute();
