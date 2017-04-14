@@ -124,14 +124,6 @@ int main(int argc, char **argv) {
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
 		conn = MySQL::makeConnWithCredFile(concat(argv[1], "/.db.config"));
 
-		#warning "Put these in the rewritten backup.sh"
-		// Make a file with credentials for backup.sh
-		// putFileContents(concat(argv[1], "/.mysql.cnf"),
-			// concat("[client]\n"
-				// "user=", conn.impl()->user,
-				// "password=", conn.impl()->passwd,
-				// "user=", conn.impl()->user));
-
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
 		return 4;
