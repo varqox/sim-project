@@ -153,14 +153,14 @@ public:
 	constexpr size_type length() const noexcept { return len; }
 
 	// Returns a pointer to the underlying character array
-	pointer data() noexcept { return str; }
+	constexpr pointer data() noexcept { return str; }
 
 	// Returns a const pointer to the underlying character array
 	constexpr const_pointer data() const noexcept { return str; }
 
-	iterator begin() noexcept { return str; }
+	constexpr iterator begin() noexcept { return str; }
 
-	iterator end() noexcept { return str + len; }
+	constexpr iterator end() noexcept { return str + len; }
 
 	constexpr const_iterator begin() const noexcept { return str; }
 
@@ -171,19 +171,19 @@ public:
 	constexpr const_iterator cend() const noexcept { return str + len; }
 
 	// Returns reference to first element
-	reference front() noexcept { return str[0]; }
+	constexpr reference front() noexcept { return str[0]; }
 
 	// Returns const_reference to first element
 	constexpr const_reference front() const noexcept { return str[0]; }
 
 	// Returns reference to last element
-	reference back() noexcept { return str[len - 1]; }
+	constexpr reference back() noexcept { return str[len - 1]; }
 
 	// Returns const_reference to last element
 	constexpr const_reference back() const noexcept { return str[len - 1]; }
 
 	// Returns reference to n-th element
-	reference operator[](size_type n) noexcept {
+	constexpr reference operator[](size_type n) noexcept {
 	#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
@@ -201,7 +201,7 @@ public:
 	}
 
 	// Like operator[] but throws exception if n >= size()
-	reference at(size_type n) {
+	constexpr reference at(size_type n) {
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
