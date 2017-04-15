@@ -15,7 +15,7 @@ static int socket_fd;
 namespace server {
 
 static void* worker(void*) {
-	try {
+	// try {
 		sockaddr_in name;
 		socklen_t client_name_len = sizeof(name);
 		char ip[INET_ADDRSTRLEN];
@@ -39,19 +39,19 @@ static void* worker(void*) {
 			HttpRequest req = conn.getRequest();
 
 			if (conn.state() == Connection::OK)
-				conn.sendResponse(sim_worker.handle(ip, req));
+				conn.sendResponse(sim_worker.handle(ip, std::move(req)));
 
 			stdlog("Closing...");
 			closer.close();
 			stdlog("Closed");
 		}
 
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
+	// } catch (const std::exception& e) {
+	// 	ERRLOG_CATCH(e);
 
-	} catch (...) {
-		ERRLOG_CATCH();
-	}
+	// } catch (...) {
+	// 	ERRLOG_CATCH();
+	// }
 
 	return nullptr;
 }

@@ -1,6 +1,4 @@
-#include "template.h"
-
-#include <simlib/time.h>
+#include "sim.h"
 
 #ifndef STYLES_CSS_HASH
 # define STYLES_CSS_HASH ""
@@ -12,8 +10,7 @@
 # define SCRIPTS_JS_HASH ""
 #endif
 
-void Template::baseTemplate(const StringView& title, const StringView& styles,
-	const StringView& scripts)
+void Sim::page_template(StringView title, StringView styles, StringView scripts)
 {
 	// Protect from clickjacking
 	resp.headers["X-Frame-Options"] = "DENY";
@@ -49,9 +46,9 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 						"<a href=\"/c/\">Contests</a>"
 						"<a href=\"/p\">Problemset</a>");
 
-	if (Session::open() && Session::user_type < UTYPE_NORMAL) {
+	if (session_open() && session_user_type < UTYPE_NORMAL) {
 		append("<a href=\"/u\">Users</a>");
-		if (Session::user_type == UTYPE_ADMIN)
+		if (session_user_type == UTYPE_ADMIN)
 			append("<a href=\"/jobs/\">Job queue</a>"
 				"<a href=\"/logs\">Logs</a>");
 	}
@@ -61,19 +58,19 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 				"<time id=\"clock\">", date("%H:%M:%S"),
 					"<sup>UTC</sup></time>");
 
-	if (Session::isOpen())
+	if (session_is_open)
 		append("<div class=\"dropmenu down\">"
 				"<a class=\"user dropmenu-toggle\">"
-					"<strong>", htmlEscape(Session::username), "</strong>"
+					"<strong>", htmlEscape(session_username), "</strong>"
 				"</a>"
 				"<ul>"
-					"<a href=\"/u/", Session::user_id, "\">My profile</a>"
-					"<a href=\"/u/", Session::user_id, "/submissions\">"
+					"<a href=\"/u/", session_user_id, "\">My profile</a>"
+					"<a href=\"/u/", session_user_id, "/submissions\">"
 						"My submissions</a>"
 					"<a href=\"/jobs/my\">My jobs</a>"
-					"<a href=\"/u/", Session::user_id, "/edit\">"
+					"<a href=\"/u/", session_user_id, "/edit\">"
 						"Edit profile</a>"
-					"<a href=\"/u/", Session::user_id, "/change-password\">"
+					"<a href=\"/u/", session_user_id, "/change-password\">"
 						"Change password</a>"
 					"<a href=\"/logout\">Logout</a>"
 				"</ul>"
@@ -84,17 +81,36 @@ void Template::baseTemplate(const StringView& title, const StringView& styles,
 			"<a href=\"/signup\">Sign up</a>");
 
 	append("</div>"
-		"</div>");
+		"</div>"
+		"<div class=\"notifications\">", notifications, "</div>");
 
-	template_began = true;
+	page_template_began = true;
 }
 
-void Template::endTemplate() {
-	if (template_began) {
-		template_began = false;
-		append("<script>var start_time=", toString(microtime() / 1000),
+void Sim::page_template_end() {
+	if (page_template_began) {
+		page_template_began = false;
+		append("<script>var start_time=", toStr(microtime() / 1000),
 					";</script>"
 				"</body>"
 			"</html>");
 	}
+}
+
+void Sim::error_page_template(StringView status, StringView code,
+	StringView message)
+{
+	resp.status_code = status.to_string();
+	resp.headers.clear();
+
+	auto prev = request.headers.get("Referer");
+	if (prev.empty())
+		prev = '/';
+
+	page_template(status);
+	append("<center>"
+		"<h1 style=\"font-size:25px;font-weight:normal;\">", code, " &mdash; ",
+			message, "</h1>"
+		"<a class=\"btn\" href=\"", prev, "\">Go back</a>"
+		"</center>");
 }

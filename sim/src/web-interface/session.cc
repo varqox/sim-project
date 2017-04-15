@@ -1,44 +1,37 @@
-#include "session.h"
+#include "sim.h"
 
-#include <simlib/debug.h>
-#include <simlib/logger.h>
 #include <simlib/random.h>
-#include <simlib/time.h>
 
 using std::string;
 
-bool Session::open() {
-	if (is_open)
+bool Sim::session_open() {
+	if (session_is_open)
 		return true;
 
-	sid = req->getCookie("session");
+	session_id = request.getCookie("session");
 	// Cookie does not exist (or have no value)
-	if (sid.empty())
+	if (session_id.size == 0)
 		return false;
 
 	try {
-		MySQL::Statement stmt = db_conn.prepare(
+		auto stmt = mysql.prepare(
 				"SELECT csrf_token, user_id, data, type, username, ip, "
 					"user_agent "
 				"FROM session s, users u "
 				"WHERE s.id=? AND time>=? AND u.id=s.user_id");
-		stmt.setString(1, sid);
-		stmt.setString(2, date("%Y-%m-%d %H:%M:%S",
-			time(nullptr) - SESSION_MAX_LIFETIME));
+		stmt.bindAndExecute(session_id,
+			date("%Y-%m-%d %H:%M:%S", time(nullptr) - SESSION_MAX_LIFETIME));
 
-		MySQL::Result res = stmt.executeQuery();
-		if (res.next()) {
-			csrf_token = res[1];
-			user_id = res[2];
-			data = res[3];
-			user_type = res.getUInt(4);
-			username = res[5];
+		InplaceBuff<SESSION_IP_LEN + 1> session_ip;
+		InplaceBuff<4096> user_agent;
+		stmt.res_bind_all(session_csrf_token, session_user_id, session_data, session_user_type, session_username, session_ip, user_agent);
 
+		if (stmt.next()) {
 			// If no session injection
-			if (client_ip == res[6] &&
-				req->headers.isEqualTo("User-Agent", res[7]))
+			if (client_ip == session_ip &&
+				request.headers.isEqualTo("User-Agent", user_agent))
 			{
-				return (is_open = true);
+				return (session_is_open = true);
 			}
 		}
 
@@ -50,7 +43,7 @@ bool Session::open() {
 	return false;
 }
 
-string Session::generateId(uint length) {
+string Sim::session_generate_id(uint length) {
 	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"0123456789";
 	constexpr size_t len = sizeof(t) - 1;
@@ -63,45 +56,49 @@ string Session::generateId(uint length) {
 	return res;
 }
 
-void Session::createAndOpen(const string& _user_id) {
-	close();
+void Sim::session_create_and_open(StringView user_id) {
+	session_close();
 
 	// Remove obsolete sessions
-	db_conn.executeUpdate(concat("DELETE FROM `session` WHERE time<'",
+	mysql.update(concat("DELETE FROM `session` WHERE time<'",
 		date("%Y-%m-%d %H:%M:%S'", time(nullptr) - SESSION_MAX_LIFETIME)));
 
-	csrf_token = generateId(SESSION_CSRF_TOKEN_LEN);
+	session_csrf_token = session_generate_id(SESSION_CSRF_TOKEN_LEN);
 
-	MySQL::Statement stmt = db_conn.prepare("INSERT IGNORE session "
+	auto stmt = mysql.prepare("INSERT IGNORE session "
 			"(id, csrf_token, user_id, data, ip, user_agent, time) "
 			"VALUES(?,?,?,'',?,?,?)");
-	stmt.setString(2, csrf_token);
-	stmt.setString(3, _user_id);
-	stmt.setString(4, client_ip);
-	stmt.setString(5, req->headers.get("User-Agent"));
-	stmt.setString(6, date());
+
+	auto user_agent = request.headers.get("User-Agent");
+	auto curr_date = date();
+	stmt.bind(1, session_csrf_token);
+	stmt.bind(2, user_id);
+	stmt.bind(3, client_ip);
+	stmt.bind(4, user_agent);
+	stmt.bind(5, curr_date);
 
 	do {
-		sid = generateId(SESSION_ID_LEN);
-		stmt.setString(1, sid); // TODO: parameters preserve!
-	} while (stmt.executeUpdate() == 0);
+		session_id = session_generate_id(SESSION_ID_LEN);
+		stmt.bind(0, session_id);
+		stmt.fixAndExecute();
 
-	resp.setCookie("csrf_token", csrf_token,
+	} while (stmt.affected_rows() == 0);
+
+	// TODO: force https if enabled
+	resp.setCookie("csrf_token", StringView(session_csrf_token).to_string(),
 		time(nullptr) + SESSION_MAX_LIFETIME, "/");
-	resp.setCookie("session", sid, time(nullptr) + SESSION_MAX_LIFETIME, "/",
-		"", true);
-	is_open = true;
+	resp.setCookie("session", StringView(session_id).to_string(),
+		time(nullptr) + SESSION_MAX_LIFETIME, "/", "", true);
+	session_is_open = true;
 }
 
-void Session::destroy() {
-	if (!is_open)
+void Sim::session_destroy() {
+	if (!session_is_open)
 		return;
 
 	try {
-		MySQL::Statement stmt
-			{db_conn.prepare("DELETE FROM session WHERE id=?")};
-		stmt.setString(1, sid);
-		stmt.executeUpdate();
+		auto stmt = mysql.prepare("DELETE FROM session WHERE id=?");
+		stmt.bindAndExecute(session_id);
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
@@ -109,20 +106,17 @@ void Session::destroy() {
 
 	resp.setCookie("csrf_token", "", 0); // Delete cookie
 	resp.setCookie("session", "", 0); // Delete cookie
-	is_open = false;
+	session_is_open = false;
 }
 
-void Session::close() {
-	if (!is_open)
+void Sim::session_close() {
+	if (!session_is_open)
 		return;
 
-	is_open = false;
+	session_is_open = false;
 	try {
-		MySQL::Statement stmt = db_conn.prepare(
-			"UPDATE session SET data=? WHERE id=?");
-		stmt.setString(1, data);
-		stmt.setString(2, sid);
-		stmt.executeUpdate();
+		auto stmt = mysql.prepare("UPDATE session SET data=? WHERE id=?");
+		stmt.bindAndExecute(session_data, session_id);
 
 	} catch (...) {
 		ERRLOG_AND_FORWARD();

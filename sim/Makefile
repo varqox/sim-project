@@ -61,7 +61,8 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/static src/sim-server src/sim-server2 src/server.conf src/job-server src/backup $(abspath $(DESTDIR))
+	$(UPDATE) src/static src/sim-server src/server.conf src/job-server src/backup $(abspath $(DESTDIR))
+	# $(UPDATE) src/static src/sim-server src/sim-server2 src/server.conf src/job-server src/backup $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -105,7 +106,7 @@ uninstall: SETUP_INSTALL_FLAGS += --only-drop-tables
 uninstall:
 	# Kill sim-server and job-server
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
-	src/killinstc $(abspath $(DESTDIR)/sim-server2)
+	# src/killinstc $(abspath $(DESTDIR)/sim-server2)
 	src/killinstc $(abspath $(DESTDIR)/job-server)
 
 	# Delete files and database tables
@@ -117,7 +118,8 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	@ # ^ run always have to be executed at the end
 
 	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
-		$(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
+		$(abspath $(DESTDIR)/job-server)
+		# $(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
 
 	# Run
 	$(abspath $(DESTDIR)/job-server)&
