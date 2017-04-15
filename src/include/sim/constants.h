@@ -135,15 +135,9 @@ static_assert(meta::min(SubmissionStatus::COMPILATION_ERROR,
 	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
 	" used during selection of the final submission");
 
-inline SubmissionStatus operator |(SubmissionStatus a, SubmissionStatus b) {
-	return static_cast<SubmissionStatus>(
-		static_cast<int>(a) | static_cast<int>(b));
-}
-
-inline SubmissionStatus operator &(SubmissionStatus a, SubmissionStatus b) {
-	return static_cast<SubmissionStatus>(
-		static_cast<int>(a) & static_cast<int>(b));
-}
+DECLARE_ENUM_UNARY_OPERATOR(SubmissionStatus, ~)
+DECLARE_ENUM_OPERATOR(SubmissionStatus, |)
+DECLARE_ENUM_OPERATOR(SubmissionStatus, &)
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,

@@ -22,6 +22,24 @@ public:
 
 		std::string& operator[](const std::string& key) { return other[key]; }
 
+		/// @brief Returns value of the variable @p name or empty string if such
+		/// does not exist
+		StringView get(const std::string& name) {
+			auto it = other.find(name);
+			return (it == other.end() ? StringView{} : it->second);
+		}
+
+		bool exist(const std::string& name) const {
+			return (other.find(name) != other.end());
+		}
+
+		/// @brief Returns path of the uploaded file with the form's name
+		/// @p name or empty string if such does not exist
+		StringView file_path(const std::string& name) {
+			auto it = files.find(name);
+			return (it == other.end() ? "" : it->second);
+		}
+
 		Form() = default;
 
 		Form(const Form&) = default;

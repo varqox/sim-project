@@ -1,26 +1,26 @@
-#include "form_validator.h"
 #include "sim.h"
 
-#include <sim/jobs.h>
-#include <simlib/debug.h>
-#include <simlib/logger.h>
-#include <simlib/time.h>
+#include <simlib/filesystem.h>
+// #include <sim/jobs.h>
+// #include <simlib/debug.h>
+// #include <simlib/logger.h>
+// #include <simlib/time.h>
 
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
-server::HttpResponse Sim::handle(string _client_ip,
-	const server::HttpRequest& request)
+server::HttpResponse Sim::handle(CStringView _client_ip,
+	server::HttpRequest req)
 {
 	client_ip = std::move(_client_ip);
-	req = &request;
+	request = std::move(req);
 	resp = server::HttpResponse(server::HttpResponse::TEXT);
 
-	stdlog(req->target);
+	stdlog(request.target);
 
 	// TODO: this is pretty bad-looking
-	auto hardError500 = [&] {
+	auto hard_error500 = [&] {
 		resp.status_code = "500 Internal Server Error";
 		resp.headers["Content-Type"] = "text/html; charset=utf-8";
 		resp.content = "<!DOCTYPE html>"
@@ -36,69 +36,86 @@ server::HttpResponse Sim::handle(string _client_ip,
 			"</html>";
 	};
 
-	try {
-		url_args = RequestURIParser {req->target};
+	// try {
+		url_args = RequestURIParser {request.target};
 		StringView next_arg = url_args.extractNextArg();
-		Template::reset();
+
+		// Reset state
+		page_template_began = false;
+		notifications.size = 0;
+		session_is_open = false;
+		form_validation_error = false;
+
+		// Check CSRF token
+		if (request.method == server::HttpRequest::POST) {
+			if (not session_open())
+				session_csrf_token = "";
+
+			if (request.form_data.get("csrf_token") != session_csrf_token) {
+				error403();
+				goto cleanup;
+			}
+		}
 
 		if (next_arg == "kit")
-			getStaticFile();
+			static_file();
 
-		else if (next_arg == "c")
-			Contest::handle();
+		// else if (next_arg == "c")
+			// contest_handle();
 
-		else if (next_arg == "s")
-			submission();
+		// else if (next_arg == "s")
+			// view_submission();
 
-		else if (next_arg == "u")
-			User::handle();
+		// else if (next_arg == "u")
+			// users_handle();
 
 		else if (next_arg == "")
-			mainPage();
+			main_page();
 
-		else if (next_arg == "p")
-			Problemset::handle();
+		// else if (next_arg == "p")
+			// problemset_handle();
 
 		else if (next_arg == "login")
 			login();
 
-		else if (next_arg == "jobs")
-			Jobs::handle();
+		// else if (next_arg == "jobs")
+			// jobs_handle();
 
-		else if (next_arg == "file")
-			file();
+		// else if (next_arg == "file")
+			// contest_file();
 
 		else if (next_arg == "logout")
 			logout();
 
-		else if (next_arg == "signup")
-			signUp();
+		// else if (next_arg == "signup")
+			// sign_up();
 
 		else if (next_arg == "logs")
-			logs();
+			view_logs();
 
 		else
 			error404();
 
-		Template::endTemplate();
+	cleanup:
+		page_template_end();
 
 		// Make sure that the session is closed
-		Session::close();
+		session_close();
 
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		hardError500(); // We cannot use error500() because it may throw
-
-	} catch (...) {
-		ERRLOG_CATCH();
-		hardError500(); // We cannot use error500() because it may throw
-	}
+	// } catch (const std::exception& e) {
+		// ERRLOG_CATCH(e);
+		// hard_error500(); // We cannot use error500() because it may throw
+//
+	// } catch (...) {
+		// ERRLOG_CATCH();
+		// hard_error500(); // We cannot use error500() because it may throw
+	// }
 
 	return std::move(resp);
 }
 
-void Sim::mainPage() {
-	baseTemplate("Main page");
+void Sim::main_page() {
+	page_template("Main page");
 	append("<div style=\"text-align: center\">"
 			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
 				"alt=\"\">"
@@ -109,17 +126,17 @@ void Sim::mainPage() {
 		"</div>");
 }
 
-void Sim::getStaticFile() {
-	string file_path = "static";
+void Sim::static_file() {
+	string file_path = concat("static",
+		abspath(decodeURI(request.target, 1, request.target.find('?'))));
 	// Extract path (ignore query)
-	file_path += abspath(decodeURI(req->target, 1, req->target.find('?')));
 	D(stdlog(file_path);)
 
 	// Get file stat
 	struct stat attr;
 	if (stat(file_path.c_str(), &attr) != -1) {
 		// Extract time of last modification
-		auto it = req->headers.find("if-modified-since");
+		auto it = request.headers.find("if-modified-since");
 		resp.headers["last-modified"] = date("%a, %d %b %Y %H:%M:%S GMT",
 			attr.st_mtime);
 		resp.setCache(true, 100 * 24 * 60 * 60); // 100 days
@@ -127,7 +144,7 @@ void Sim::getStaticFile() {
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
 		struct tm client_mtime;
-		if (it != req->headers.end() && strptime(it->second.c_str(),
+		if (it != request.headers.end() && strptime(it->second.c_str(),
 			"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
 			timegm(&client_mtime) >= attr.st_mtime)
 		{
@@ -223,18 +240,18 @@ static string colorize(const string& str) noexcept {
 	return res;
 }
 
-void Sim::logs() {
-	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
+void Sim::view_logs() {
+	if (!session_open() || session_user_type > UTYPE_ADMIN)
 		return error403();
 
-	baseTemplate("Logs", "body{margin-left:20px}");
+	page_template("Logs", "body{margin-left:20px}");
 
 	// TODO: more logs and show less, but add "show more" button???
 	// TODO: active updating logs
 	constexpr int BYTES_TO_READ = 16384;
 	constexpr int MAX_LINES = 128;
 
-	auto dumpLogTail = [&](const CStringView& filename) {
+	auto dumpLogTail = [&](CStringView filename) {
 		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 		if (fd == -1) {
 			errlog(__FILE__ ":", toStr(__LINE__), ": open()", error(errno));
@@ -292,10 +309,10 @@ void Sim::logs() {
 			"});"
 		"</script>");
 }
-
-void Sim::submission() {
-	if (!Session::open())
-		return redirect("/login?" + req->target);
+#if 0
+void Sim::view_submission() {
+	if (session_open())
+		return redirect("/login?" + request.target);
 
 	// Extract round id
 	string submission_id;
@@ -392,8 +409,8 @@ void Sim::submission() {
 
 		/* Rejudge */
 		if (query == Query::REJUDGE) {
-			FormValidator fv(req->form_data);
-			if (!admin_view || req->method != server::HttpRequest::POST ||
+			FormValidator fv(request.form_data);
+			if (!admin_view || request.method != server::HttpRequest::POST ||
 				fv.get("csrf_token") != Session::csrf_token)
 			{
 				return error403();
@@ -428,7 +445,7 @@ void Sim::submission() {
 				return error403();
 
 			// Get new stype
-			FormValidator fv(req->form_data);
+			FormValidator fv(request.form_data);
 			if (fv.get("csrf_token") != Session::csrf_token)
 				return response("403 Forbidden");
 
@@ -600,3 +617,4 @@ void Sim::submission() {
 		return error500();
 	}
 }
+#endif

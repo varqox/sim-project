@@ -18,8 +18,8 @@ public:
 		return std::map<std::string, std::string>::operator[](tolower(key));
 	}
 
-	bool isEqualTo(const std::string& key, const std::string& val) const {
-		auto it = find(tolower(key));
+	bool isEqualTo(StringView key, StringView val) const {
+		auto it = find(tolower(key.to_string()));
 		return (it != end() && it->second == val);
 	}
 

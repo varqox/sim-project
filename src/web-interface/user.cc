@@ -1,17 +1,90 @@
-#include "form_validator.h"
-#include "user.h"
+#include "sim.h"
 
 #include <sim/utilities.h>
-#include <simlib/debug.h>
-#include <simlib/logger.h>
-#include <simlib/process.h>
-#include <simlib/random.h>
 #include <simlib/sha.h>
-#include <simlib/time.h>
 
-using std::map;
 using std::string;
 
+void Sim::login() {
+	InplaceBuff<USERNAME_MAX_LEN + 1> username;
+	if (request.method == server::HttpRequest::POST) {
+		// Try to login
+		InplaceBuff<4096> password;
+		// Validate all fields
+		form_validate_not_blank(username, "username", "Username", isUsername,
+			"Username can only consist of characters [a-zA-Z0-9_-]",
+			USERNAME_MAX_LEN);
+
+		form_validate(password, "password", "Password");
+
+		if (not form_validation_error)
+			try {
+				auto stmt = mysql.prepare("SELECT id, salt, password FROM users"
+					" WHERE username=?");
+				stmt.bindAndExecute(username);
+
+				InplaceBuff<30> uid;
+				InplaceBuff<SALT_LEN> salt;
+				InplaceBuff<4096> passwd_hash;
+				stmt.res_bind_all(uid, salt, passwd_hash);
+
+				while (stmt.next()) {
+					if (!slowEqual(sha3_512(concat(salt, password)),
+						passwd_hash))
+					{
+						break;
+					}
+
+					// Delete old session
+					if (session_open())
+						session_destroy();
+
+					// Create new
+					session_create_and_open(uid);
+
+					// If there is a redirection string, redirect to it
+					InplaceBuff<4096> location {url_args.extractQuery()};
+					return redirect(location.size == 0 ? "/"
+						: location.to_string());
+				}
+
+				addNotification("error", "Invalid username or password");
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				addNotification("error", "Internal server error");
+			}
+	}
+
+	page_template("Login");
+	append("<div class=\"form-container\">"
+			"<h1>Log in</h1>"
+			"<form method=\"post\">"
+				// Username
+				"<div class=\"field-group\">"
+					"<label>Username</label>"
+					"<input type=\"text\" name=\"username\" value=\"",
+						htmlEscape(username), "\" size=\"24\" "
+						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
+						"required>"
+				"</div>"
+				// Password
+				"<div class=\"field-group\">"
+					"<label>Password</label>"
+					"<input type=\"password\" name=\"password\" size=\"24\">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
+			"</form>"
+		"</div>");
+}
+
+void Sim::logout() {
+	if (session_is_open)
+		session_destroy();
+	redirect("/login");
+}
+
+#if 1 - 1
 uint User::getPermissions(const string& viewer_id, uint viewer_type,
 	const string& uid, uint utype)
 {
@@ -60,8 +133,7 @@ uint User::getPermissions(const string& viewer_id, uint viewer_type,
 	return perm[viewer][user];
 }
 
-void User::userTemplate(const StringView& title, const StringView& styles,
-	const StringView& scripts)
+void User::userTemplate(StringView title, StringView styles, StringView scripts)
 {
 	baseTemplate(title, concat("body{margin-left:190px}", styles),
 		scripts);
@@ -127,81 +199,6 @@ void User::handle() {
 		return userSubmissions();
 
 	userProfile();
-}
-
-void User::login() {
-	FormValidator fv(req->form_data);
-
-	if (req->method == server::HttpRequest::POST) {
-		// Try to login
-		string password;
-		// Validate all fields
-		fv.validateNotBlank(username, "username", "Username", isUsername,
-			"Username can only consist of characters [a-zA-Z0-9_-]",
-			USERNAME_MAX_LEN);
-
-		fv.validate(password, "password", "Password");
-
-		if (fv.noErrors())
-			try {
-				MySQL::Statement stmt = db_conn.prepare(
-					"SELECT id, salt, password FROM `users` WHERE username=?");
-				stmt.setString(1, username);
-
-				MySQL::Result res = stmt.executeQuery();
-				while (res.next()) {
-					if (!slowEqual(sha3_512(res[2] + password), res[3]))
-						break;
-
-					// Delete old session
-					if (Session::open())
-						Session::destroy();
-
-					// Create new
-					Session::createAndOpen(res[1]);
-
-					// If there is redirection string, redirect to it
-					string location = url_args.extractQuery().to_string();
-					return redirect(location.empty() ? "/" : location);
-				}
-
-				fv.addError("Invalid username or password");
-
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				fv.addError("Internal server error");
-			}
-
-	// Clean old data
-	} else
-		username = "";
-
-	baseTemplate("Login");
-	append(fv.errors(), "<div class=\"form-container\">"
-			"<h1>Log in</h1>"
-			"<form method=\"post\">"
-				// Username
-				"<div class=\"field-group\">"
-					"<label>Username</label>"
-					"<input type=\"text\" name=\"username\" value=\"",
-						htmlEscape(username), "\" size=\"24\" "
-						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>"
-				"</div>"
-				// Password
-				"<div class=\"field-group\">"
-					"<label>Password</label>"
-					"<input type=\"password\" name=\"password\" size=\"24\">"
-				"</div>"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
-			"</form>"
-		"</div>");
-}
-
-void User::logout() {
-	if (Session::open())
-		Session::destroy();
-	redirect("/login");
 }
 
 void User::signUp() {
@@ -911,3 +908,4 @@ void User::userSubmissions() {
 	append("<h1>User's submissions</h1>");
 	printUserSubmissions();
 }
+#endif
