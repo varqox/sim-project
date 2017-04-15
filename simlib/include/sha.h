@@ -5,16 +5,16 @@
 // SHA-3
 
 // Returns 48 bytes long hash ([a-f0-9]+)
-std::string sha3_224(const StringView& str);
+std::string sha3_224(StringView str);
 
 // Returns 64 bytes long hash ([a-f0-9]+)
-std::string sha3_256(const StringView& str);
+std::string sha3_256(StringView str);
 
 // Returns 96 bytes long hash ([a-f0-9]+)
-std::string sha3_384(const StringView& str);
+std::string sha3_384(StringView str);
 
 // Returns 128 bytes long hash ([a-f0-9]+)
-std::string sha3_512(const StringView& str);
+std::string sha3_512(StringView str);
 
 extern "C" {
 

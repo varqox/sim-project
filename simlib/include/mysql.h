@@ -95,10 +95,13 @@ public:
 	}
 
 	Statement& operator=(Statement&& s) {
-		mysql_stmt_close(stmt_);
+		if (stmt_)
+			mysql_stmt_close(stmt_);
+
+		stmt_ = s.stmt_;
+		s.stmt_ = nullptr;
 		params_ = std::move(s.params_);
 		res_ = std::move(s.res_);
-		s.stmt_ = nullptr;
 
 		// Bind errors
 		for (unsigned i = 0; i < res_.size(); ++i)
@@ -107,7 +110,10 @@ public:
 		return *this;
 	}
 
-	~Statement() { mysql_stmt_close(stmt_); }
+	~Statement() {
+		if (stmt_)
+			mysql_stmt_close(stmt_);
+	}
 
 	MYSQL_STMT* impl() noexcept { return stmt_; }
 
@@ -326,8 +332,11 @@ public:
 	}
 
 	void resFixBinds() {
-		if (mysql_stmt_bind_result(stmt_, res_.data()))
+		if (mysql_stmt_bind_result(stmt_, res_.data()) or
+			mysql_stmt_store_result(stmt_))
+		{
 			THROW(mysql_stmt_error(stmt_));
+		}
 	}
 
 	template<class... Args>
@@ -390,6 +399,10 @@ public:
 	my_ulonglong rows_num() noexcept { return mysql_stmt_num_rows(stmt_); }
 
 	my_ulonglong insert_id() noexcept { return mysql_stmt_insert_id(stmt_); }
+
+	my_ulonglong affected_rows() noexcept {
+		return mysql_stmt_affected_rows(stmt_);
+	}
 
 	MYSQL_RES* resMetadata() noexcept {
 		return mysql_stmt_result_metadata(stmt_);

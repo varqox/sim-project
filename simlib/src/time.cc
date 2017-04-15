@@ -14,7 +14,7 @@ long long microtime() noexcept {
 }
 
 template<class F>
-static string __date(const CStringView& format, time_t curr_time, F func) {
+static string __date(CStringView format, time_t curr_time, F func) {
 	if (curr_time < 0)
 		time(&curr_time);
 
@@ -32,21 +32,21 @@ static string __date(const CStringView& format, time_t curr_time, F func) {
 	return buff;
 }
 
-string date(const CStringView& format, time_t curr_time) {
+string date(CStringView format, time_t curr_time) {
 	return __date(format, curr_time, gmtime);
 }
 
-string localdate(const CStringView& format, time_t curr_time) {
+string localdate(CStringView format, time_t curr_time) {
 	return __date(format, curr_time, localtime);
 }
 
-bool isDatetime(const CStringView& str) noexcept {
+bool isDatetime(CStringView str) noexcept {
 	struct tm t;
 	return (str.size() == 19 &&
 			strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
 
-time_t strToTime(const CStringView& str, const CStringView& format) noexcept {
+time_t strToTime(CStringView str, CStringView format) noexcept {
 	struct tm t;
 	if (!strptime(str.c_str(), format.c_str(), &t))
 		return -1;

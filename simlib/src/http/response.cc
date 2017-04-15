@@ -1,9 +1,11 @@
 #include "../../include/string.h"
 
+using std::string;
+
 namespace http {
 
-std::string quote(const StringView& str) {
-	std::string res;
+string quote(StringView str) {
+	string res;
 	res.reserve(str.size() + 10);
 	res += '"';
 	for (char c : str) {

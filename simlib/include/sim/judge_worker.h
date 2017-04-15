@@ -173,7 +173,7 @@ public:
 	}
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(const CStringView& source, uint64_t time_limit,
+	int compileSolution(CStringView source, uint64_t time_limit,
 		std::string* c_errors = nullptr, size_t c_errors_max_len = -1)
 	{
 		return compile(source, concat(tmp_dir.path(), SOLUTION_FILENAME),
@@ -181,7 +181,7 @@ public:
 	}
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(const CStringView& source, uint64_t time_limit,
+	int compileSolution(CStringView source, uint64_t time_limit,
 		std::string* c_errors, size_t c_errors_max_len,
 		const std::string& proot_path)
 	{

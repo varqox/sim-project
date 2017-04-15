@@ -5,7 +5,7 @@ using std::vector;
 
 namespace sim {
 
-int compile(const CStringView& source, const CStringView& exec, unsigned verbosity,
+int compile(CStringView source, CStringView exec, unsigned verbosity,
 	uint64_t time_limit, string* c_errors, size_t c_errors_max_len,
 	const std::string& proot_path)
 {

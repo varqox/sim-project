@@ -69,9 +69,9 @@ public:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	static ExitStat run(const CStringView& exec,
-		const std::vector<std::string>& args, const Options& opts = Options(),
-		const CStringView& working_dir = CStringView{"."})
+	static ExitStat run(CStringView exec, const std::vector<std::string>& args,
+		const Options& opts = Options(),
+		CStringView working_dir = CStringView{"."})
 	{
 		return runWithTimer<Impl>(opts.time_limit, exec, args, opts,
 			working_dir);
@@ -120,10 +120,9 @@ protected:
 	 *   @p exec
 	 */
 	template<class Func>
-	static void runChild(const CStringView& exec,
-		const std::vector<std::string>& args, const Options& opts,
-		const CStringView& working_dir, int fd,
-		Func doBeforeExec) noexcept;
+	static void runChild(CStringView exec, const std::vector<std::string>& args,
+		const Options& opts, CStringView working_dir, int fd, Func doBeforeExec)
+		noexcept;
 
 	/**
 	 * @brief This function helps with making thread-unsafe function thread-safe
@@ -197,9 +196,9 @@ private:
 		 * @errors Throws an exception std::runtime_error with appropriate
 		 *   information if any syscall fails
 		 */
-		static ExitStat execute(const CStringView& exec,
+		static ExitStat execute(CStringView exec,
 			const std::vector<std::string>& args, const Options& opts,
-			const CStringView& working_dir);
+			CStringView working_dir);
 	};
 };
 
@@ -250,9 +249,9 @@ inline uint64_t Spawner::NormalTimer::stopAndGetRuntime() {
 }
 
 template<class Func>
-void Spawner::runChild(const CStringView& exec,
-	const std::vector<std::string>& args, const Options& opts,
-	const CStringView& working_dir, int fd, Func doBeforeExec) noexcept
+void Spawner::runChild(CStringView exec, const std::vector<std::string>& args,
+	const Options& opts, CStringView working_dir, int fd, Func doBeforeExec)
+	noexcept
 {
 	// Sends error to parent
 	auto send_error = [fd](int errnum, CStringView str) {
@@ -401,9 +400,9 @@ Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
 }
 
 template<class Timer>
-Spawner::ExitStat Spawner::Impl<Timer>::execute(const CStringView& exec,
+Spawner::ExitStat Spawner::Impl<Timer>::execute(CStringView exec,
 	const std::vector<std::string>& args, const Spawner::Options& opts,
-	const CStringView& working_dir)
+	CStringView working_dir)
 {
 	// Error stream from child (and wait_for_syscall()) via pipe
 	int pfd[2];

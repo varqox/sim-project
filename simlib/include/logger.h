@@ -33,7 +33,7 @@ private:
 
 public:
 	// Like open()
-	explicit Logger(const CStringView& filename);
+	explicit Logger(CStringView filename);
 
 	// Like use()
 	explicit Logger(FILE *stream) noexcept : f_(stream) {}
@@ -46,7 +46,7 @@ public:
 	 *
 	 * @errors Throws an exception std::runtime_error if an fopen() error occurs
 	 */
-	void open(const CStringView& filename);
+	void open(CStringView filename);
 
 	/// Use @p stream as log stream
 	void use(FILE *stream) noexcept {

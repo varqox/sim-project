@@ -349,9 +349,9 @@ public:
 	 *   information if any syscall fails
 	 */
 	template<class Callback = DefaultCallback>
-	static ExitStat run(const CStringView& exec,
-		const std::vector<std::string>& args, const Options& opts = Options(),
-		const CStringView& working_dir = CStringView {"."},
+	static ExitStat run(CStringView exec, const std::vector<std::string>& args,
+		const Options& opts = Options(),
+		CStringView working_dir = CStringView {"."},
 		Callback&& func = Callback())
 	{
 		static_assert(std::is_base_of<CallbackBase, Callback>::value,
@@ -392,9 +392,9 @@ private:
 		 * @errors Throws an exception std::runtime_error with appropriate
 		 *   information if any syscall fails
 		 */
-		static ExitStat execute(const CStringView& exec,
+		static ExitStat execute(CStringView exec,
 			const std::vector<std::string>& args, const Options& opts,
-			const CStringView& working_dir, Callback func);
+			CStringView working_dir, Callback func);
 	};
 };
 
@@ -539,9 +539,9 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 }
 
 template<class Callback, class Timer>
-Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(
-	const CStringView& exec, const std::vector<std::string>& args,
-	const Options& opts, const CStringView& working_dir, Callback func)
+Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
+	const std::vector<std::string>& args, const Options& opts,
+	CStringView working_dir, Callback func)
 {
 	static_assert(std::is_base_of<CallbackBase, Callback>::value,
 		"Callback has to derive from Sandbox::CallbackBase");

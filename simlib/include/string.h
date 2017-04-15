@@ -59,11 +59,6 @@ public:
 	constexpr char& operator[](size_type n) const noexcept { return str[n]; }
 };
 
-template<size_t N>
-inline std::string& operator+=(std::string& s, const StringBuff<N>& sb) {
-	return s.append(sb.str, sb.len);
-}
-
 template<size_t... N>
 constexpr auto merge(const StringBuff<N>&... args) {
 	return StringBuff<meta::sum<N...>>{args...};
@@ -93,6 +88,8 @@ protected:
 
 public:
 	constexpr StringBase() noexcept : str(""), len(0) {}
+
+	constexpr StringBase(std::nullptr_t) noexcept : StringBase() {}
 
 	#if __cplusplus > 201402L
 	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
@@ -503,6 +500,8 @@ class FixedString : public StringBase<char> {
 public:
 	FixedString() : StringBase(new char[1](), 0) {}
 
+	FixedString(std::nullptr_t) : FixedString() {}
+
 	~FixedString() { delete[] str; }
 
 	FixedString(size_type n, char c = '\0') : StringBase(new char[n + 1], n) {
@@ -581,6 +580,8 @@ public:
 		: StringBase(s.data(), s.size()) {}
 
 	constexpr StringView() noexcept : StringBase("", 0) {}
+
+	constexpr StringView(std::nullptr_t) noexcept : StringView() {}
 
 	constexpr StringView(const StringView& s) noexcept = default;
 	constexpr StringView(StringView&& s) noexcept = default;
@@ -685,6 +686,8 @@ class CStringView : public StringBase<const char> {
 public:
 	constexpr CStringView() : StringBase("", 0) {}
 
+	constexpr CStringView(std::nullptr_t) : CStringView() {}
+
 	#if __cplusplus > 201402L
 	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
 	#endif
@@ -748,14 +751,14 @@ public:
 
 // comparison operators
 #define COMPARE_BUFF_STRVIEW(oper) template<size_t N> \
-	constexpr bool operator oper (const StringBuff<N>& a, const StringView& b) \
+	constexpr bool operator oper (const StringBuff<N>& a, StringView b) \
 		noexcept \
 	{ \
 		return (StringView(a) oper b); \
 	}
 
 #define COMPARE_STRVIEW_BUFF(oper) template<size_t N> \
-	constexpr bool operator oper (const StringView& a, const StringBuff<N>& b) \
+	constexpr bool operator oper (StringView a, const StringBuff<N>& b) \
 		noexcept \
 	{ \
 		return (a oper StringView(b)); \
@@ -778,8 +781,8 @@ COMPARE_STRVIEW_BUFF(>=)
 #undef COMPARE_BUFF_STRVIEW
 #undef COMPARE_STRVIEW_BUFF
 
-constexpr inline StringView substring(const StringView& str,
-	StringView::size_type beg, StringView::size_type end = StringView::npos)
+constexpr inline StringView substring(StringView str, StringView::size_type beg,
+	StringView::size_type end = StringView::npos)
 {
 	return str.substring(beg, end);
 }
@@ -882,6 +885,9 @@ protected:
 
 public:
 	~InplaceBuffBase() { deallocate(); }
+
+	template<class... Args>
+	inline InplaceBuffBase& append(Args&&... args);
 };
 
 template<size_t N>
@@ -900,7 +906,7 @@ public:
 		p_ = (n < N ? &a_[0] : new char[n]);
 	}
 
-	explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size) {
+	explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size()) {
 		std::copy(sv.begin(), sv.end(), p_);
 	}
 
@@ -924,8 +930,14 @@ public:
 		}
 	}
 
+	InplaceBuff& operator=(StringView sv) {
+		lossy_resize(sv.size());
+		std::copy(sv.begin(), sv.end(), data());
+		return *this;
+	}
+
 	InplaceBuff& operator=(const InplaceBuff& ibuff) {
-		resize(ibuff.size);
+		lossy_resize(ibuff.size);
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 		return *this;
 	}
@@ -959,13 +971,13 @@ public:
 	using InplaceBuffBase::operator[];
 	using InplaceBuffBase::operator StringView;
 	using InplaceBuffBase::to_string;
+	using InplaceBuffBase::append;
 };
 
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
 template<class Func>
-constexpr bool special_less(const StringView& a, const StringView& b, Func&& f)
-{
+constexpr bool special_less(StringView a, StringView b, Func&& f) {
 	size_t len = std::min(a.size(), b.size());
 	for (size_t i = 0; i < len; ++i)
 		if (f(a[i]) != f(b[i]))
@@ -977,8 +989,7 @@ constexpr bool special_less(const StringView& a, const StringView& b, Func&& f)
 // Checks whether two StringView are equal, but before comparing two characters
 // modifies them with f()
 template<class Func>
-constexpr bool special_equal(const StringView& a, const StringView& b, Func&& f)
-{
+constexpr bool special_equal(StringView a, StringView b, Func&& f) {
 	if (a.size() != b.size())
 		return false;
 
@@ -990,9 +1001,7 @@ constexpr bool special_equal(const StringView& a, const StringView& b, Func&& f)
 }
 
 // Checks whether lowered @p a is equal to lowered @p b
-constexpr inline bool lower_equal(const StringView& a, const StringView& b)
-	noexcept
-{
+constexpr inline bool lower_equal(StringView a, StringView b) noexcept {
 	return special_equal<int(int)>(a, b, tolower);
 }
 
@@ -1098,7 +1107,7 @@ inline auto toStr(Args&&... args) {
 }
 
 // Like strtou() but places the result number into x
-inline int strToNum(std::string& x, const StringView& s) {
+inline int strToNum(std::string& x, StringView s) {
 	for (char c : s)
 		if (!isdigit(c))
 			return -1;
@@ -1108,7 +1117,7 @@ inline int strToNum(std::string& x, const StringView& s) {
 }
 
 // Like strToNum() but ends on the first occurrence of @p c or @p s's end
-inline int strToNum(std::string& x, const StringView& s, char c) {
+inline int strToNum(std::string& x, StringView s, char c) {
 	if (s.empty()) {
 		x.clear();
 		return 0;
@@ -1124,20 +1133,20 @@ inline int strToNum(std::string& x, const StringView& s, char c) {
 }
 
 // Like string::find() but searches in [beg, end)
-constexpr inline size_t find(const StringView& str, char c, size_t beg = 0) {
+constexpr inline size_t find(StringView str, char c, size_t beg = 0) {
 	return str.find(c, beg);
 }
 
 // Like string::find() but searches in [beg, end)
-constexpr inline size_t find(const StringView& str, char c, size_t beg,
+constexpr inline size_t find(StringView str, char c, size_t beg,
 	size_t end)
 {
 	return str.find(c, beg, end);
 }
 
 // Compares two strings: @p str[beg, end) and @p s
-constexpr inline int compare(const StringView& str, size_t beg, size_t end,
-	const StringView& s) noexcept
+constexpr inline int compare(StringView str, size_t beg, size_t end,
+	StringView s) noexcept
 {
 	if (end > str.size())
 		end = str.size();
@@ -1148,8 +1157,8 @@ constexpr inline int compare(const StringView& str, size_t beg, size_t end,
 }
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
-constexpr inline int compareTo(const StringView& str, size_t pos, char c,
-	const StringView& s) noexcept
+constexpr inline int compareTo(StringView str, size_t pos, char c, StringView s)
+	noexcept
 {
 	return compare(str, pos, str.find(c, pos), s);
 }
@@ -1159,9 +1168,7 @@ constexpr inline int compareTo(const StringView& str, size_t pos, char c,
 // it applies to security
 bool slowEqual(const char* str1, const char* str2, size_t len) noexcept;
 
-inline bool slowEqual(const StringView& str1, const StringView& str2)
-	noexcept
-{
+inline bool slowEqual(StringView str1, StringView str2) noexcept {
 	return slowEqual(str1.data(), str2.data(),
 		std::min(str1.size(), str2.size())) && str1.size() == str2.size();
 }
@@ -1183,10 +1190,10 @@ inline void removeTrailing(std::string& str, char c) noexcept {
 	removeTrailing(str, [c](char x) { return (x == c); });
 }
 
-std::string encodeURI(const StringView& str, size_t beg = 0,
+std::string encodeURI(StringView str, size_t beg = 0,
 	size_t end = StringView::npos);
 
-std::string decodeURI(const StringView& str, size_t beg = 0,
+std::string decodeURI(StringView str, size_t beg = 0,
 	size_t end = StringView::npos);
 
 inline std::string tolower(std::string str) {
@@ -1212,18 +1219,16 @@ constexpr inline char dectohex(int x) noexcept {
 std::string toHex(const char* str, size_t len);
 
 /// Converts each byte of @p str to two hex digits using dectohex()
-inline std::string toHex(const StringView& str) {
+inline std::string toHex(StringView str) {
 	return toHex(str.data(), str.size());
 }
 
-constexpr inline bool hasPrefix(const StringView& str, const StringView& prefix)
-	noexcept
-{
+constexpr inline bool hasPrefix(StringView str, StringView prefix) noexcept {
 	return (str.compare(0, prefix.size(), prefix) == 0);
 }
 
 template<class Iter>
-constexpr bool hasPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
+constexpr bool hasPrefixIn(StringView str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
 		if (hasPrefix(str, *beg))
 			return true;
@@ -1233,7 +1238,7 @@ constexpr bool hasPrefixIn(const StringView& str, Iter beg, Iter end) noexcept {
 }
 
 template<class T>
-constexpr inline bool hasPrefixIn(const StringView& str, T&& x) noexcept {
+constexpr inline bool hasPrefixIn(StringView str, T&& x) noexcept {
 	for (auto&& a : x)
 		if (hasPrefix(str, a))
 			return true;
@@ -1241,7 +1246,7 @@ constexpr inline bool hasPrefixIn(const StringView& str, T&& x) noexcept {
 	return false;
 }
 
-constexpr inline bool hasPrefixIn(const StringView& str,
+constexpr inline bool hasPrefixIn(StringView str,
 	const std::initializer_list<StringView>& x) noexcept
 {
 	for (auto&& a : x)
@@ -1251,7 +1256,7 @@ constexpr inline bool hasPrefixIn(const StringView& str,
 	return false;
 }
 
-constexpr inline bool hasSuffix(const StringView& str, const StringView& suffix)
+constexpr inline bool hasSuffix(StringView str, StringView suffix)
 	noexcept
 {
 	return (str.size() >= suffix.size() &&
@@ -1259,7 +1264,7 @@ constexpr inline bool hasSuffix(const StringView& str, const StringView& suffix)
 }
 
 template<class Iter>
-constexpr bool hasSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
+constexpr bool hasSuffixIn(StringView str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
 		if (hasSuffix(str, *beg))
 			return true;
@@ -1269,7 +1274,7 @@ constexpr bool hasSuffixIn(const StringView& str, Iter beg, Iter end) noexcept {
 }
 
 template<class T>
-constexpr inline bool hasSuffixIn(const StringView& str, T&& x) noexcept {
+constexpr inline bool hasSuffixIn(StringView str, T&& x) noexcept {
 	for (auto&& a : x)
 		if (hasSuffix(str, a))
 			return true;
@@ -1277,7 +1282,7 @@ constexpr inline bool hasSuffixIn(const StringView& str, T&& x) noexcept {
 	return false;
 }
 
-constexpr inline bool hasSuffixIn(const StringView& str,
+constexpr inline bool hasSuffixIn(StringView str,
 	const std::initializer_list<StringView>& x) noexcept
 {
 	for (auto&& a : x)
@@ -1317,7 +1322,7 @@ inline void appendHtmlEscaped(std::string& str, char c) {
 }
 
 // Escapes HTML unsafe character sequences and appends them to @p str
-void appendHtmlEscaped(std::string& str, const StringView& s);
+void appendHtmlEscaped(std::string& str, StringView s);
 
 // Escapes HTML unsafe character sequences
 template<class T>
@@ -1341,7 +1346,7 @@ inline std::string htmlEscape(T&& s) {
  * @return result - whether string @p s[beg, end) is an integer
  */
 
-constexpr inline bool isInteger(const StringView& s, size_t beg = 0,
+constexpr inline bool isInteger(StringView s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	if (end > s.size())
@@ -1359,7 +1364,7 @@ constexpr inline bool isInteger(const StringView& s, size_t beg = 0,
 	return true;
 }
 
-constexpr inline bool isDigit(const StringView& s) noexcept {
+constexpr inline bool isDigit(StringView s) noexcept {
 	if (s.empty())
 		return false;
 
@@ -1370,7 +1375,7 @@ constexpr inline bool isDigit(const StringView& s) noexcept {
 	return true;
 }
 
-constexpr inline bool isReal(const StringView& s) noexcept {
+constexpr inline bool isReal(StringView s) noexcept {
 	if (s.empty() || s.front() == '.')
 		return false;
 
@@ -1393,7 +1398,7 @@ constexpr inline bool isReal(const StringView& s) noexcept {
 /// Checks whether string @p s consist only of digits and is not greater than
 /// @p MAX_VAL
 template<uintmax_t MAX_VAL>
-constexpr inline bool isDigitNotGreaterThan(const StringView& s) noexcept {
+constexpr inline bool isDigitNotGreaterThan(StringView s) noexcept {
 	constexpr auto x = meta::ToString<MAX_VAL>::arr_value;
 	return isDigit(s) && !StrNumCompare()({x.data(), x.size()}, s);
 }
@@ -1414,7 +1419,7 @@ constexpr inline bool isDigitNotGreaterThan(const StringView& s) noexcept {
  *   after unsuccessful call is not safe.
  */
 template<class T>
-constexpr int strtoi(const StringView& s, T *x, size_t beg = 0,
+constexpr int strtoi(StringView s, T *x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	if (end > s.size())
@@ -1445,7 +1450,7 @@ constexpr int strtoi(const StringView& s, T *x, size_t beg = 0,
 
 // Like strtoi() but assumes that @p s is a unsigned integer
 template<class T>
-constexpr int strtou(const StringView& s, T *x, size_t beg = 0,
+constexpr int strtou(StringView s, T *x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	if (end > s.size())
@@ -1473,7 +1478,7 @@ constexpr int strtou(const StringView& s, T *x, size_t beg = 0,
 }
 
 // Converts string to long long using strtoi
-constexpr inline long long strtoll(const StringView& s, size_t beg = 0,
+constexpr inline long long strtoll(StringView s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	// TODO: when argument is not a valid number, strtoi() won't parse all the
@@ -1484,8 +1489,8 @@ constexpr inline long long strtoll(const StringView& s, size_t beg = 0,
 }
 
 // Converts string to unsigned long long using strtou
-constexpr inline unsigned long long strtoull(const StringView& s,
-	size_t beg = 0, size_t end = StringView::npos) noexcept
+constexpr inline unsigned long long strtoull(StringView s, size_t beg = 0,
+	size_t end = StringView::npos) noexcept
 {
 	// TODO: when argument is not a valid number, strtou() won't parse all the
 	// string, and may (but don't have to) return parsed value
@@ -1496,7 +1501,7 @@ constexpr inline unsigned long long strtoull(const StringView& s,
 
 // Converts digits @p str to @p T, WARNING: assumes that isDigit(str) == true
 template<class T>
-constexpr T digitsToU(const StringView& str) noexcept {
+constexpr T digitsToU(StringView str) noexcept {
 	T x = 0;
 	for (char c : str)
 		x = 10 * x + c - '0';
@@ -1547,6 +1552,13 @@ constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
 	return x.size();
 }
 
+template<size_t T>
+constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
+	-> decltype(ibuff.size)
+{
+	return ibuff.size;
+}
+
 template<class T>
 constexpr inline size_t string_length(T* x) noexcept {
 	return __builtin_strlen(x);
@@ -1570,6 +1582,10 @@ template<class Char>
 constexpr inline std::string& operator+=(std::string& str,
 	const StringBase<Char>& s)
 {
+	return str.append(s.data(), s.size());
+}
+
+inline std::string& operator+=(std::string& str, StringView s) {
 	return str.append(s.data(), s.size());
 }
 
@@ -1611,12 +1627,12 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  * @param s string
  * @param len length of result string
  * @param left whether adjust to left or right
- * @param fill character used to fill blank fields
+ * @param filler character used to fill blank fields
  *
  * @return formatted string
  */
-std::string paddedString(const StringView& s, size_t len,
-	Adjustment adj = RIGHT, char fill = ' ');
+std::string paddedString(StringView s, size_t len, Adjustment adj = RIGHT,
+	char filler = ' ');
 
 #define throw_assert(expr) \
 	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
@@ -1646,6 +1662,25 @@ inline StringBuff<N, size_type>& StringBuff<N, size_type>::raw_append(Args&&... 
 		auto sl = string_length(s);
 		std::copy(::data(s), ::data(s) + sl, str + len);
 		len += sl;
+	};
+	(void)impl_append; // Ignore warning 'unused' when no arguments are provided
+	(void)std::initializer_list<int>{(impl_append(std::forward<Args>(args)), 0)...};
+
+	return *this;
+}
+
+template<class... Args>
+inline InplaceBuffBase& InplaceBuffBase::append(Args&&... args) {
+	// Sum length of all args
+	size_t k = size, final_len = size;
+	(void)std::initializer_list<size_t>{(final_len += string_length(args))...};
+	resize(final_len);
+
+	// Concentrate them into str[]
+	auto impl_append = [&](auto&& s) {
+		auto sl = string_length(s);
+		std::copy(::data(s), ::data(s) + sl, data() + k);
+		k += sl;
 	};
 	(void)impl_append; // Ignore warning 'unused' when no arguments are provided
 	(void)std::initializer_list<int>{(impl_append(std::forward<Args>(args)), 0)...};

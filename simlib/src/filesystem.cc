@@ -32,7 +32,7 @@ int openUnlinkedTmpFile(int flags) noexcept {
 	return fd;
 }
 
-TemporaryDirectory::TemporaryDirectory(const CStringView& templ) {
+TemporaryDirectory::TemporaryDirectory(CStringView templ) {
 	size_t size = templ.size();
 	if (size > 0) {
 		// Fill name_
@@ -115,7 +115,7 @@ int mkdir_r(string path, mode_t mode) noexcept {
  * @errors The same that occur for fstatat64(2), openat(2), unlinkat(2),
  *   fdopendir(3)
  */
-static int __remove_rat(int dirfd, const CStringView& path) noexcept {
+static int __remove_rat(int dirfd, CStringView path) noexcept {
 	int fd = openat(dirfd, path.c_str(), O_RDONLY | O_LARGEFILE | O_DIRECTORY
 		| O_NOFOLLOW);
 	if (fd == -1)
@@ -153,11 +153,11 @@ static int __remove_rat(int dirfd, const CStringView& path) noexcept {
 	return unlinkat(dirfd, path.c_str(), AT_REMOVEDIR);
 }
 
-int remove_rat(int dirfd, const CStringView& path) noexcept {
+int remove_rat(int dirfd, CStringView path) noexcept {
 	return __remove_rat(dirfd, path);
 }
 
-int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept {
+int removeDirContents_at(int dirfd, CStringView pathname) noexcept {
 	int fd = openat(dirfd, pathname.c_str(), O_RDONLY | O_LARGEFILE
 		| O_DIRECTORY | O_NOFOLLOW);
 	if (fd == -1)
@@ -215,7 +215,7 @@ int blast(int infd, int outfd) noexcept {
 	return 0;
 }
 
-int copy(const CStringView& src, const CStringView& dest) noexcept {
+int copy(CStringView src, CStringView dest) noexcept {
 	int in = open(src.c_str(), O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
@@ -232,9 +232,7 @@ int copy(const CStringView& src, const CStringView& dest) noexcept {
 	return res;
 }
 
-int copyat(int dirfd1, const CStringView& src, int dirfd2,
-	const CStringView& dest) noexcept
-{
+int copyat(int dirfd1, CStringView src, int dirfd2, CStringView dest) noexcept {
 	int in = openat(dirfd1, src.c_str(), O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
@@ -266,8 +264,8 @@ int copyat(int dirfd1, const CStringView& src, int dirfd2,
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-static int __copy_rat(int dirfd1, const CStringView& src, int dirfd2,
-	const CStringView& dest) noexcept
+static int __copy_rat(int dirfd1, CStringView src, int dirfd2, CStringView dest)
+	noexcept
 {
 	int src_fd = openat(dirfd1, src.c_str(), O_RDONLY |	O_LARGEFILE
 		| O_DIRECTORY);
@@ -313,8 +311,7 @@ static int __copy_rat(int dirfd1, const CStringView& src, int dirfd2,
 	return 0;
 }
 
-int copy_rat(int dirfd1, const CStringView& src, int dirfd2,
-	const CStringView& dest) noexcept
+int copy_rat(int dirfd1, CStringView src, int dirfd2, CStringView dest) noexcept
 {
 	struct stat64 sb;
 	if (fstatat64(dirfd1, src.c_str(), &sb, AT_SYMLINK_NOFOLLOW) == -1)
@@ -326,9 +323,7 @@ int copy_rat(int dirfd1, const CStringView& src, int dirfd2,
 	return copyat(dirfd1, src, dirfd2, dest);
 }
 
-int copy_r(const CStringView& src, const CStringView& dest, bool create_subdirs)
-	noexcept
-{
+int copy_r(CStringView src, CStringView dest, bool create_subdirs) noexcept {
 	if (!create_subdirs)
 		return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 
@@ -348,8 +343,7 @@ int copy_r(const CStringView& src, const CStringView& dest, bool create_subdirs)
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
-int move(const CStringView& oldpath, const CStringView& newpath,
-	bool create_subdirs) noexcept
+int move(CStringView oldpath, CStringView newpath, bool create_subdirs) noexcept
 {
 	if (create_subdirs) {
 		size_t x = newpath.rfind('/');
@@ -367,7 +361,7 @@ int move(const CStringView& oldpath, const CStringView& newpath,
 	return 0;
 }
 
-int createFile(const CStringView& pathname, mode_t mode) noexcept {
+int createFile(CStringView pathname, mode_t mode) noexcept {
 	int fd = creat(pathname.c_str(), mode);
 	if (fd == -1)
 		return -1;
@@ -418,8 +412,7 @@ size_t writeAll(int fd, const void *buf, size_t count) noexcept
 	return count;
 }
 
-string abspath(const StringView& path, size_t beg, size_t end, string curr_dir)
-{
+string abspath(StringView path, size_t beg, size_t end, string curr_dir) {
 	if (end > path.size())
 		end = path.size();
 
@@ -522,7 +515,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 	return res;
 }
 
-string getFileContents(const CStringView& file) {
+string getFileContents(CStringView file) {
 	FileDescriptor fd;
 	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
 
@@ -532,7 +525,7 @@ string getFileContents(const CStringView& file) {
 	return getFileContents(fd);
 }
 
-string getFileContents(const CStringView& file, off64_t beg, off64_t end) {
+string getFileContents(CStringView file, off64_t beg, off64_t end) {
 	FileDescriptor fd;
 	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
 
@@ -542,7 +535,7 @@ string getFileContents(const CStringView& file, off64_t beg, off64_t end) {
 	return getFileContents(fd, beg, end);
 }
 
-vector<string> getFileByLines(const CStringView& file, int flags, size_t first,
+vector<string> getFileByLines(CStringView file, int flags, size_t first,
 	size_t last)
 {
 	vector<string> res;
@@ -577,8 +570,7 @@ vector<string> getFileByLines(const CStringView& file, int flags, size_t first,
 	return res;
 }
 
-ssize_t putFileContents(const CStringView& file, const char* data,
-	size_t len) noexcept
+ssize_t putFileContents(CStringView file, const char* data, size_t len) noexcept
 {
 	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, S_0644};
 	if (fd == -1)
@@ -674,7 +666,7 @@ bool Node::__pathExists(StringView s) const noexcept {
 	return (d ? d->__pathExists(s) : false);
 }
 
-Node* Node::dir(const StringView& pathname) const {
+Node* Node::dir(StringView pathname) const {
 	if (dirs_.empty())
 		return nullptr;
 
@@ -691,7 +683,7 @@ Node* Node::dir(const StringView& pathname) const {
 	return ((*down)->name_ == pathname ? down->get() : nullptr);
 }
 
-bool Node::removeDir(const StringView& pathname) {
+bool Node::removeDir(StringView pathname) {
 	if (dirs_.empty())
 		return false;
 
@@ -712,7 +704,7 @@ bool Node::removeDir(const StringView& pathname) {
 	return true;
 }
 
-bool Node::removeFile(const StringView& pathname) {
+bool Node::removeFile(StringView pathname) {
 	auto it = binaryFind(files_, pathname);
 	if (it == files_.end())
 		return false;
@@ -721,9 +713,7 @@ bool Node::removeFile(const StringView& pathname) {
 	return true;
 }
 
-static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd,
-	const CStringView& path)
-{
+static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd, CStringView path) {
 	size_t len = path.size();
 	while (len > 1 && path[len - 1] == '/')
 		--len;
@@ -757,7 +747,7 @@ static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd,
 	return root;
 }
 
-unique_ptr<Node> dumpDirectoryTree(const CStringView& path) {
+unique_ptr<Node> dumpDirectoryTree(CStringView path) {
 	if (!isDirectory(path))
 		return nullptr;
 

@@ -144,7 +144,7 @@ public:
 	 * @errors Throws an exception std::runtime_error if an open(2) error occurs
 	 *   and all exceptions from loadConfigFromString()
 	 */
-	void loadConfigFromFile(const CStringView& pathname, bool load_all = false);
+	void loadConfigFromFile(CStringView pathname, bool load_all = false);
 
 	/**
 	 * @brief Loads config (variables) form string @p config
@@ -158,7 +158,7 @@ public:
 	void loadConfigFromString(std::string config, bool load_all = false);
 
 	// Check if string @p str is a valid string literal
-	static bool isStringLiteral(const StringView& str);
+	static bool isStringLiteral(StringView str);
 
 	/**
 	 * @brief Escapes unsafe sequences in str
@@ -168,7 +168,7 @@ public:
 	 *
 	 * @return escaped, single-quoted string
 	 */
-	static std::string escapeToSingleQuotedString(const StringView& str);
+	static std::string escapeToSingleQuotedString(StringView str);
 
 	/**
 	 * @brief Escapes unsafe sequences in str
@@ -179,7 +179,7 @@ public:
 	 *
 	 * @return escaped, double-quoted string
 	 */
-	static std::string escapeToDoubleQuotedString(const StringView& str);
+	static std::string escapeToDoubleQuotedString(StringView str);
 
 	/**
 	 * @brief Escapes unsafe sequences in str
@@ -195,7 +195,7 @@ public:
 	 *
 	 * @return escaped, double-quoted string
 	 */
-	static std::string escapeToDoubleQuotedString(const StringView& str, int);
+	static std::string escapeToDoubleQuotedString(StringView str, int);
 
 	/**
 	 * @brief Converts string @p str so that it can be safely placed in config
@@ -221,7 +221,7 @@ public:
 	 *
 	 * @return escaped (and possibly quoted) string
 	 */
-	static std::string escapeString(const StringView& str);
+	static std::string escapeString(StringView str);
 
 	/**
 	 * @brief Converts string @p str so that it can be safely placed in config
@@ -251,5 +251,5 @@ public:
 	 *
 	 * @return escaped (and possibly quoted) string
 	 */
-	static std::string escapeString(const StringView& str, int);
+	static std::string escapeString(StringView str, int);
 };

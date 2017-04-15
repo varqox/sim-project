@@ -21,9 +21,8 @@ namespace sim {
  *
  * @return 0 on success, non-zero value on error
  */
-int compile(const CStringView& source, const CStringView& exec,
-	unsigned verbosity, uint64_t time_limit = 0,
-	std::string* c_errors = nullptr, size_t c_errors_max_len = -1,
-	const std::string& proot_path = "proot");
+int compile(CStringView source, CStringView exec, unsigned verbosity,
+	uint64_t time_limit = 0, std::string* c_errors = nullptr,
+	size_t c_errors_max_len = -1, const std::string& proot_path = "proot");
 
 } // namespace sim

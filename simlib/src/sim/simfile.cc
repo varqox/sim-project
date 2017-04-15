@@ -360,7 +360,7 @@ void Simfile::loadTestsFiles() {
 	// limits array
 }
 
-void Simfile::validateFiles(const StringView& package_path) const {
+void Simfile::validateFiles(StringView package_path) const {
 	// Checker
 	if (checker.size() && !isRegularFile(concat(package_path, '/', checker)))
 		throw std::runtime_error(concat("Simfile: invalid checker file `",

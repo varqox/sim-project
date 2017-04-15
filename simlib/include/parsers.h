@@ -12,14 +12,14 @@
 
 class SimpleParser : public StringView {
 public:
-	constexpr explicit SimpleParser(const StringView& s) : StringView(s) {}
+	constexpr explicit SimpleParser(StringView s) : StringView(std::move(s)) {}
 
 	constexpr SimpleParser(const SimpleParser&) noexcept = default;
 	constexpr SimpleParser(SimpleParser&&) noexcept = default;
 	SimpleParser& operator=(const SimpleParser&) noexcept = default;
 	SimpleParser& operator=(SimpleParser&&) noexcept = default;
 
-	bool isNext(const StringView& s, char delimiter = '/') const noexcept {
+	bool isNext(StringView s, char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", s, "' -> ",
 			toStr(compareTo(buff, 0, delimiter, s)));)
 		return (compareTo(*this, 0, delimiter, s) == 0);
@@ -84,7 +84,8 @@ class RequestURIParser {
 	StringView buff;
 
 public:
-	constexpr explicit RequestURIParser(const StringView& str) : buff(str) {}
+	constexpr explicit RequestURIParser(StringView str)
+		: buff(std::move(str)) {}
 
 	constexpr RequestURIParser(const RequestURIParser&) noexcept = default;
 	constexpr RequestURIParser(RequestURIParser&&) noexcept = default;

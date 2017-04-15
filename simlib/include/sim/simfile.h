@@ -254,7 +254,7 @@ public:
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
 	 */
-	void validateFiles(const StringView& package_path) const;
+	void validateFiles(StringView package_path) const;
 
 	struct TestNameComparator {
 		/**
@@ -300,7 +300,7 @@ public:
  *
  * @return label
  */
-inline std::string shortenName(const StringView& str) {
+inline std::string shortenName(StringView str) {
 	std::string label;
 	for (char c : str)
 		if (isgraph(c) && (label += ::tolower(c)).size() == 3)

@@ -41,10 +41,8 @@ class FileDescriptor {
 public:
 	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
-	explicit FileDescriptor(const CStringView& filename, int flags,
-			int mode = S_0644) noexcept
-		: fd_(::open(filename.c_str(), flags, mode))
-	{}
+	explicit FileDescriptor(CStringView filename, int flags, int mode = S_0644)
+		noexcept : fd_(::open(filename.c_str(), flags, mode)) {}
 
 	FileDescriptor(const FileDescriptor&) = delete;
 
@@ -76,14 +74,11 @@ public:
 		fd_ = fd;
 	}
 
-	int open(const CStringView& filename, int flags, int mode = S_0644) noexcept
-	{
+	int open(CStringView filename, int flags, int mode = S_0644) noexcept {
 		return fd_ = ::open(filename.c_str(), flags, mode);
 	}
 
-	int reopen(const CStringView& filename, int flags, int mode = S_0644)
-		noexcept
-	{
+	int reopen(CStringView filename, int flags, int mode = S_0644) noexcept {
 		reset(::open(filename.c_str(), flags, mode));
 		return fd_;
 	}
@@ -110,7 +105,7 @@ class Directory {
 public:
 	explicit Directory(DIR* dir = nullptr) noexcept : dir_(dir) {}
 
-	explicit Directory(const CStringView& pathname) noexcept
+	explicit Directory(CStringView pathname) noexcept
 		: dir_(opendir(pathname.c_str())) {}
 
 	Directory(const Directory&) = delete;
@@ -150,7 +145,7 @@ public:
 		}
 	}
 
-	Directory& reopen(const CStringView& pathname) noexcept {
+	Directory& reopen(CStringView pathname) noexcept {
 		reset(opendir(pathname.c_str()));
 		return *this;
 	}
@@ -183,7 +178,7 @@ private:
 public:
 	TemporaryDirectory() = default; // Does NOT create a temporary directory
 
-	explicit TemporaryDirectory(const CStringView& templ);
+	explicit TemporaryDirectory(CStringView templ);
 
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
 
@@ -209,7 +204,7 @@ public:
 };
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(const CStringView& pathname) noexcept {
+inline int mkdir(CStringView pathname) noexcept {
 	return mkdir(pathname.c_str(), S_0755);
 }
 
@@ -217,12 +212,12 @@ inline int mkdir(const CStringView& pathname) noexcept {
 int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
 
 // The same as unlink(const char*)
-inline int unlink(const CStringView& pathname) noexcept {
+inline int unlink(CStringView pathname) noexcept {
 	return unlink(pathname.c_str());
 }
 
 // The same as remove(const char*)
-inline int remove(const CStringView& pathname) noexcept {
+inline int remove(CStringView pathname) noexcept {
 	return remove(pathname.c_str());
 }
 
@@ -244,7 +239,7 @@ void forEachDirComponent(Directory& dir, Func&& func) {
 }
 
 template<class Func>
-void forEachDirComponent(const CStringView& pathname, Func&& func) {
+void forEachDirComponent(CStringView pathname, Func&& func) {
 	Directory dir {pathname};
 	if (!dir)
 		THROW("opendir()", error(errno));
@@ -263,7 +258,7 @@ void forEachDirComponent(const CStringView& pathname, Func&& func) {
  *
  * @errors The same that occur for openat(2), unlinkat(2), fdopendir(3)
  */
-int remove_rat(int dirfd, const CStringView& pathname) noexcept;
+int remove_rat(int dirfd, CStringView pathname) noexcept;
 
 /**
  * @brief Removes recursively file/directory @p pathname
@@ -275,7 +270,7 @@ int remove_rat(int dirfd, const CStringView& pathname) noexcept;
  *
  * @errors The same that occur for remove_rat()
  */
-inline int remove_r(const CStringView& pathname) noexcept {
+inline int remove_r(CStringView pathname) noexcept {
 	return remove_rat(AT_FDCWD, pathname);
 }
 
@@ -291,7 +286,7 @@ inline int remove_r(const CStringView& pathname) noexcept {
  *
  * @errors The same that occur for remove_rat()
  */
-int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept;
+int removeDirContents_at(int dirfd, CStringView pathname) noexcept;
 
 /**
  * @brief Removes recursively all the contents of the directory @p pathname
@@ -303,7 +298,7 @@ int removeDirContents_at(int dirfd, const CStringView& pathname) noexcept;
  *
  * @errors The same that occur for remove_rat()
  */
-inline int removeDirContents(const CStringView& pathname) noexcept {
+inline int removeDirContents(CStringView pathname) noexcept {
 	return removeDirContents_at(AT_FDCWD, pathname);
 }
 
@@ -332,7 +327,7 @@ int blast(int infd, int outfd) noexcept;
  *
  * @errors The same that occur for open(2), blast()
  */
-int copy(const CStringView& src, const CStringView& dest) noexcept;
+int copy(CStringView src, CStringView dest) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory file
@@ -347,8 +342,7 @@ int copy(const CStringView& src, const CStringView& dest) noexcept;
  *
  * @errors The same that occur for openat(2), blast()
  */
-int copyat(int dirfd1, const CStringView& src, int dirfd2,
-	const CStringView& dest) noexcept;
+int copyat(int dirfd1, CStringView src, int dirfd2, CStringView dest) noexcept;
 
 /**
  * @brief Copies (overrides) file/directory @p src to @p dest relative to a
@@ -364,8 +358,8 @@ int copyat(int dirfd1, const CStringView& src, int dirfd2,
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-int copy_rat(int dirfd1, const CStringView& src, int dirfd2,
-	const CStringView& dest) noexcept;
+int copy_rat(int dirfd1, CStringView src, int dirfd2, CStringView dest)
+	noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -379,10 +373,10 @@ int copy_rat(int dirfd1, const CStringView& src, int dirfd2,
  *
  * @errors The same that occur for copy_rat()
  */
-int copy_r(const CStringView& src, const CStringView& dest,
-	bool create_subdirs = true) noexcept;
+int copy_r(CStringView src, CStringView dest, bool create_subdirs = true)
+	noexcept;
 
-inline int access(const CStringView& pathname, int mode) noexcept {
+inline int access(CStringView pathname, int mode) noexcept {
 	return access(pathname.c_str(), mode);
 }
 
@@ -399,8 +393,8 @@ inline int access(const CStringView& pathname, int mode) noexcept {
  *
  * @return Return value of rename(2) or copy_r() or remove_r()
  */
-int move(const CStringView& oldpath, const CStringView& newpath,
-	bool create_subdirs = true) noexcept;
+int move(CStringView oldpath, CStringView newpath, bool create_subdirs = true)
+	noexcept;
 
 /**
  * @brief Creates file pathname with access mode @p mode
@@ -412,7 +406,7 @@ int move(const CStringView& oldpath, const CStringView& newpath,
  *
  * @errors The same that occur for creat(2), close(2)
  */
-int createFile(const CStringView& pathname, mode_t mode = S_0644) noexcept;
+int createFile(CStringView pathname, mode_t mode = S_0644) noexcept;
 
 /**
  * @brief Read @p count bytes to @p buff from @p fd
@@ -492,11 +486,11 @@ inline void writeAll_throw(int fd, StringView str) {
 *  nor any repeated path separators (/), and does not end with /
 *  curr_dir can be empty. If path begin with / then curr_dir is ignored.
 */
-std::string abspath(const StringView& path, size_t beg = 0,
+std::string abspath(StringView path, size_t beg = 0,
 		size_t end = std::string::npos, std::string curr_dir = "/");
 
 // Returns extension (without dot) e.g. "foo.cc" -> "cc", "bar" -> ""
-inline StringView getExtension(const CStringView& file) {
+inline StringView getExtension(CStringView file) {
 	size_t x = file.rfind('.');
 	if (x == std::string::npos)
 		return {}; // No extension
@@ -558,7 +552,7 @@ std::string getFileContents(int fd, off64_t beg, off64_t end);
  * @errors The same that occur for read(2), close(2) - check errno; May throw an
  *   exception of type std::runtime_error if open(2) fails
  */
-std::string getFileContents(const CStringView& file);
+std::string getFileContents(CStringView file);
 
 /**
  * @brief Reads form @p file from beg to end
@@ -572,8 +566,7 @@ std::string getFileContents(const CStringView& file);
  * @errors The same that occur for lseek64(3), read(2), close(2) - check errno;
  *   May throw an exception of type std::runtime_error if open(2) fails
  */
-std::string getFileContents(const CStringView& file, off64_t beg,
-	off64_t end = -1);
+std::string getFileContents(CStringView file, off64_t beg, off64_t end = -1);
 
 constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
 /**
@@ -587,7 +580,7 @@ constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
  *
  * @return vector<string> containing fetched lines
  */
-std::vector<std::string> getFileByLines(const CStringView& file, int flags = 0,
+std::vector<std::string> getFileByLines(CStringView file, int flags = 0,
 	size_t first = 0, size_t last = -1);
 
 /**
@@ -602,11 +595,10 @@ std::vector<std::string> getFileByLines(const CStringView& file, int flags = 0,
  * @errors The same that occur for open(2) and write(2) except EINTR from
  *   write(2)
  */
-ssize_t putFileContents(const CStringView& file, const char* data,
-	size_t len) noexcept;
+ssize_t putFileContents(CStringView file, const char* data, size_t len)
+	noexcept;
 
-inline ssize_t putFileContents(const CStringView& file, const StringView& data)
-{
+inline ssize_t putFileContents(CStringView file, StringView data) {
 	return putFileContents(file, data.data(), data.size());
 }
 
@@ -640,7 +632,7 @@ public:
 	}
 };
 
-template<int (*func)(const CStringView&) >
+template<int (*func)(CStringView) >
 class RemoverBase {
 	InplaceBuff<PATH_MAX> name;
 
@@ -652,15 +644,14 @@ class RemoverBase {
 public:
 	RemoverBase() : name() {}
 
-	explicit RemoverBase(const CStringView& str)
+	explicit RemoverBase(CStringView str)
 		: RemoverBase(str.data(), str.size()) {}
 
 	/// If @p str is null then @p len is ignored
 	RemoverBase(const char* str, size_t len) : name(len + 1) {
-		if (len != 0) {
+		if (len != 0)
 			strncpy(name.data(), str, len + 1);
-			name.size = len;
-		}
+		name.size = len;
 	}
 
 	~RemoverBase() {
@@ -670,7 +661,7 @@ public:
 
 	void cancel() noexcept { name.size = 0; }
 
-	void reset(const CStringView& str) { reset(str.data(), str.size()); }
+	void reset(CStringView str) { reset(str.data(), str.size()); }
 
 	void reset(const char* str, size_t len) {
 		cancel();
@@ -719,7 +710,7 @@ std::string humanizeFileSize(uint64_t size);
  *   other file type error from stat64(2) error set errno to 0 before calling
  *   this function, if stat64(2) fails, errno will have nonzero value
  */
-inline bool isRegularFile(const CStringView& file) noexcept {
+inline bool isRegularFile(CStringView file) noexcept {
 	struct stat64 st;
 	return (stat64(file.c_str(), &st) == 0 && S_ISREG(st.st_mode));
 }
@@ -733,7 +724,7 @@ inline bool isRegularFile(const CStringView& file) noexcept {
  *   other file type error from stat64(2) error set errno to 0 before calling
  *   this function, if stat64(2) fails, errno will have nonzero value
  */
-inline bool isDirectory(const CStringView& file) noexcept {
+inline bool isDirectory(CStringView file) noexcept {
 	struct stat64 st;
 	return (stat64(file.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
 }
@@ -776,15 +767,15 @@ public:
 	 *
 	 * @return pointer to subdirectory or nullptr if it does not exist
 	 */
-	Node* dir(const StringView& pathname) const;
+	Node* dir(StringView pathname) const;
 
 	/// Removes directory in O(n) time (n = # of directories in this node),
 	/// returns true if the removal occurred
-	bool removeDir(const StringView& pathname);
+	bool removeDir(StringView pathname);
 
 	/// Removes file in O(n) time (n = # of files in this node), returns true
 	/// if the removal occurred
-	bool removeFile(const StringView& pathname);
+	bool removeFile(StringView pathname);
 
 	/**
 	 * @brief Checks if file exists in this node
@@ -793,7 +784,7 @@ public:
 	 *
 	 * @return true if exists, false otherwise
 	 */
-	bool fileExists(const StringView& pathname) const noexcept {
+	bool fileExists(StringView pathname) const noexcept {
 		return std::binary_search(files_.begin(), files_.end(), pathname);
 	}
 
@@ -804,7 +795,7 @@ public:
 	 *
 	 * @return true if path is valid, false otherwise
 	 */
-	bool pathExists(const StringView& path) const {
+	bool pathExists(StringView path) const {
 		return (path.size() && __pathExists(abspath(path)));
 	}
 
@@ -826,7 +817,7 @@ public:
  *
  * @return pointer to root node
  */
-std::unique_ptr<Node> dumpDirectoryTree(const CStringView& path);
+std::unique_ptr<Node> dumpDirectoryTree(CStringView path);
 
 /**
  * @brief Searches for files in @p dir for which @p func returns true

@@ -41,14 +41,14 @@ uint AhoCorasick::son(uint id, char c) {
 	return nodes[id].sons[beg].second;
 }
 
-void AhoCorasick::addPattern(const StringView& patt, uint id) {
+void AhoCorasick::addPattern(StringView patt, uint id) {
 	uint curr = 0;
 	for (char c : patt)
 		curr = son(curr, c);
 	nodes[curr].patt_id = id;
 }
 
-uint AhoCorasick::findNode(const StringView& str) const {
+uint AhoCorasick::findNode(StringView str) const {
 	uint x = 0;
 	for (char c : str)
 		if ((x = nodes[x][c]) == 0)
@@ -77,7 +77,7 @@ void AhoCorasick::buildFails() {
 	}
 }
 
-vector<uint> AhoCorasick::searchIn(const StringView& text) const {
+vector<uint> AhoCorasick::searchIn(StringView text) const {
 	vector<uint> res(text.size());
 	uint curr = 0, x;
 	for (size_t i = 0; i < text.size(); ++i) {

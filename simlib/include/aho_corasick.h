@@ -46,11 +46,11 @@ public:
 	// Adds pattern s to structure and sets (override if such pattern has
 	// already existed) its id to @p id, @p id equal to 0 disables the pattern,
 	// pattern cannot be empty
-	void addPattern(const StringView& patt, uint id);
+	void addPattern(StringView patt, uint id);
 
 	// Returns id of node in which pattern @p str ends or 0 if such does not
 	// exist
-	uint findNode(const StringView& str) const;
+	uint findNode(StringView str) const;
 
 	// Returns id of the pattern which ends in node @p node_id
 	uint pattId(uint node_id) const { return nodes[node_id].patt_id; }
@@ -62,5 +62,5 @@ public:
 	void buildFails();
 
 	// Returns set of ids of nodes in which longest matching patterns end
-	std::vector<uint> searchIn(const StringView& text) const;
+	std::vector<uint> searchIn(StringView text) const;
 };

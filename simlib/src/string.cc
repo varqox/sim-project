@@ -10,7 +10,7 @@ bool slowEqual(const char* str1, const char* str2, size_t len) noexcept {
 	return rc == 0;
 }
 
-string encodeURI(const StringView& str, size_t beg, size_t end) {
+string encodeURI(StringView str, size_t beg, size_t end) {
 	// a-z A-Z 0-9 - _ . ~
 	static bool is_safe[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -38,7 +38,7 @@ string encodeURI(const StringView& str, size_t beg, size_t end) {
 	return ret;
 }
 
-string decodeURI(const StringView& str, size_t beg, size_t end) {
+string decodeURI(StringView str, size_t beg, size_t end) {
 	if (end > str.size())
 		end = str.size();
 
@@ -78,22 +78,20 @@ string toHex(const char* str, size_t len) {
 	return res;
 }
 
-void appendHtmlEscaped(string& str, const StringView& s) {
+void appendHtmlEscaped(string& str, StringView s) {
 	for (size_t i = 0; i < s.size(); ++i)
 		appendHtmlEscaped(str, s[i]);
 }
 
-string paddedString(const StringView& s, size_t len, Adjustment adj,
-	char fill)
-{
+string paddedString(StringView s, size_t len, Adjustment adj, char filler) {
 	string res;
 	if (adj == LEFT && len > s.size()) {
 		res.assign(s.data(), s.size());
-		res.resize(res.size() + len - s.size(), fill);
+		res.resize(res.size() + len - s.size(), filler);
 
 	} else {
 		if (len > s.size())
-			res.resize(len - s.size(), fill);
+			res.resize(len - s.size(), filler);
 		res.append(s.data(), s.size());
 	}
 

@@ -17,8 +17,7 @@ using std::vector;
 
 const ConfigFile::Variable ConfigFile::null_var;
 
-void ConfigFile::loadConfigFromFile(const CStringView& pathname, bool load_all)
-{
+void ConfigFile::loadConfigFromFile(CStringView pathname, bool load_all) {
 	string contents = getFileContents(pathname);
 	loadConfigFromString(contents, load_all);
 }
@@ -290,7 +289,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	DEBUG_CF(stdlog("End of the config file.");)
 }
 
-bool ConfigFile::isStringLiteral(const StringView& str) {
+bool ConfigFile::isStringLiteral(StringView str) {
 	if (str.empty())
 		return false;
 
@@ -308,7 +307,7 @@ bool ConfigFile::isStringLiteral(const StringView& str) {
 	return true;
 }
 
-string ConfigFile::escapeToSingleQuotedString(const StringView& str) {
+string ConfigFile::escapeToSingleQuotedString(StringView str) {
 	string res {'\''};
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i) {
@@ -320,7 +319,7 @@ string ConfigFile::escapeToSingleQuotedString(const StringView& str) {
 }
 
 template<class Func>
-static string _escapeToDoubleQuotedString(const StringView& str, Func&& func) {
+static string _escapeToDoubleQuotedString(StringView str, Func&& func) {
 	string res {'"'};
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i)
@@ -370,15 +369,15 @@ static string _escapeToDoubleQuotedString(const StringView& str, Func&& func) {
 	return (res += '"');
 }
 
-string ConfigFile::escapeToDoubleQuotedString(const StringView& str) {
+string ConfigFile::escapeToDoubleQuotedString(StringView str) {
 	return _escapeToDoubleQuotedString(str, ::iscntrl);
 }
 
-string ConfigFile::escapeToDoubleQuotedString(const StringView& str, int) {
+string ConfigFile::escapeToDoubleQuotedString(StringView str, int) {
 	return _escapeToDoubleQuotedString(str, [](int x) { return !isprint(x); });
 }
 
-string ConfigFile::escapeString(const StringView& str) {
+string ConfigFile::escapeString(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i)
 		if (str[i] == '\'' || iscntrl(str[i]))
 			return escapeToDoubleQuotedString(str);
@@ -389,7 +388,7 @@ string ConfigFile::escapeString(const StringView& str) {
 	return escapeToSingleQuotedString(str);
 }
 
-string ConfigFile::escapeString(const StringView& str, int) {
+string ConfigFile::escapeString(StringView str, int) {
 	for (size_t i = 0; i < str.size(); ++i)
 		if (str[i] == '\'' || !isprint(str[i]))
 			return escapeToDoubleQuotedString(str, 0);
