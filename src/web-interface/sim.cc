@@ -48,8 +48,10 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 
 		// Check CSRF token
 		if (request.method == server::HttpRequest::POST) {
+			// If no session is open, load value from cookie to pass
+			// verification
 			if (not session_open())
-				session_csrf_token = "";
+				session_csrf_token = request.getCookie("csrf_token");
 
 			if (request.form_data.get("csrf_token") != session_csrf_token) {
 				error403();
@@ -71,6 +73,9 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 
 		else if (next_arg == "")
 			main_page();
+
+		else if (next_arg == "api")
+			api_handle();
 
 		// else if (next_arg == "p")
 			// problemset_handle();
@@ -157,156 +162,29 @@ void Sim::static_file() {
 	resp.content = file_path;
 }
 
-static string colorize(const string& str) noexcept {
-	string res;
-	enum : uint8_t { SPAN, B, NONE } opened = NONE;
-	auto closeLastTag = [&] {
-		switch (opened) {
-			case SPAN: res += "</span>"; break;
-			case B: res += "</b>"; break;
-			case NONE: break;
-		}
-	};
-
-	for (size_t i = 0; i < str.size(); ++i) {
-		if (str.compare(i, 5, "\033[31m") == 0) {
-			closeLastTag();
-			res += "<span class=\"red\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[32m") == 0) {
-			closeLastTag();
-			res += "<span class=\"green\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[33m") == 0) {
-			closeLastTag();
-			res += "<span class=\"yellow\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[34m") == 0) {
-			closeLastTag();
-			res += "<span class=\"blue\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[35m") == 0) {
-			closeLastTag();
-			res += "<span class=\"magentapink\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[36m") == 0) {
-			closeLastTag();
-			res += "<span class=\"turquoise\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 7, "\033[1;31m") == 0) {
-			closeLastTag();
-			res += "<b class=\"red\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;32m") == 0) {
-			closeLastTag();
-			res += "<b class=\"green\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;33m") == 0) {
-			closeLastTag();
-			res += "<b class=\"yellow\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;34m") == 0) {
-			closeLastTag();
-			res += "<b class=\"blue\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;35m") == 0) {
-			closeLastTag();
-			res += "<b class=\"pink\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;36m") == 0) {
-			closeLastTag();
-			res += "<b class=\"turquoise\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 3, "\033[m") == 0) {
-			closeLastTag();
-			opened = NONE;
-			i += 2;
-		} else
-			appendHtmlEscaped(res, str[i]);
-	}
-	closeLastTag();
-	return res;
-}
-
 void Sim::view_logs() {
 	if (!session_open() || session_user_type > UTYPE_ADMIN)
 		return error403();
 
 	page_template("Logs", "body{margin-left:20px}");
 
-	// TODO: more logs and show less, but add "show more" button???
-	// TODO: active updating logs
-	constexpr int BYTES_TO_READ = 16384;
-	constexpr int MAX_LINES = 128;
-
-	auto dumpLogTail = [&](CStringView filename) {
-		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
-		if (fd == -1) {
-			errlog(__FILE__ ":", toStr(__LINE__), ": open()", error(errno));
-			return;
-		}
-
-		string fdata = getFileContents(fd, -BYTES_TO_READ, -1);
-
-		// The first line is probably not intact so erase it
-		if (int(fdata.size()) == BYTES_TO_READ)
-			fdata.erase(0, fdata.find('\n'));
-
-		// Cuts fdata to a newline character from the ending
-		fdata.erase(std::min(fdata.size(), fdata.rfind('\n')));
-
-		// Shorten to the last MAX_LINES
-		auto it = --fdata.end();
-		for (uint lines = MAX_LINES; it > fdata.begin(); --it)
-			if (*it == '\n' && --lines == 0) {
-				fdata.erase(fdata.begin(), ++it);
-				break;
-			}
-
-		fdata = colorize(fdata);
-		append(fdata);
-	};
-
-	// Server's log
 	append("<h2>Server's log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(SERVER_LOG);
-	append("</pre>");
+		"<pre id=\"web\" class=\"logs\"></pre>"
 
-	// Server's error log
-	append("<h2>Server's error log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(SERVER_ERROR_LOG);
-	append("</pre>");
+		"<h2>Server's error log:</h2>"
+		"<pre id=\"web_err\" class=\"logs\"></pre>"
 
-	// Job server's log
-	append("<h2>Job server's log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(JOB_SERVER_LOG);
-	append("</pre>");
+		"<h2>Job server's log:</h2>"
+		"<pre id=\"jobs\" class=\"logs\"></pre>"
 
-	// Job server's error log
-	append("<h2>Job server's error log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(JOB_SERVER_ERROR_LOG);
-	append("</pre>"
-		// Script used to scroll down the logs
+		"<h2>Job server's error log:</h2>"
+		"<pre id=\"jobs_err\" class=\"logs\"></pre>"
+
 		"<script>"
-			"$(\".logs\").each(function(){"
-				"$(this).scrollTop($(this)[0].scrollHeight);"
-			"});"
+			"new Logs('web', $('#web')).monitor_scroll();"
+			"new Logs('web_err', $('#web_err')).monitor_scroll();"
+			"new Logs('jobs', $('#jobs')).monitor_scroll();"
+			"new Logs('jobs_err', $('#jobs_err')).monitor_scroll();"
 		"</script>");
 }
 #if 0

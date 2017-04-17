@@ -35,14 +35,14 @@ inline typename std::enable_if<std::is_integral<Integer>::value, void>::type
 
 /// Dumps @p str to binary format XXXXABC... where XXXX code string's size and
 /// ABC... is the @p str and appends it to the @p buff
-inline void appendDumpedString(std::string& buff, const StringView& str) {
+inline void appendDumpedString(std::string& buff, StringView str) {
 	appendDumpedInt<uint32_t>(buff, str.size());
 	buff += str;
 }
 
 /// Returns dumped @p str to binary format XXXXABC... where XXXX code string's
 /// size and ABC... is the @p str
-inline std::string dumpString(const StringView& str) {
+inline std::string dumpString(StringView str) {
 	std::string res;
 	appendDumpedString(res, str);
 	return res;

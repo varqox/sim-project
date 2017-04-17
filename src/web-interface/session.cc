@@ -93,7 +93,7 @@ void Sim::session_create_and_open(StringView user_id) {
 }
 
 void Sim::session_destroy() {
-	if (!session_is_open)
+	if (not session_open())
 		return;
 
 	try {

@@ -580,7 +580,11 @@ private:
 
 	void problemset_problem_submissions();
 
-	/* =============================== Other =============================== */
+	/* ================================ API ================================ */
+
+	void api_handle();
+
+	void api_logs();
 
 	void api_list_problems();
 
@@ -589,6 +593,8 @@ private:
 	void api_list_submissions();
 
 	void api_list_jobs();
+
+	/* =============================== Other =============================== */
 
 	// Pages
 	void main_page();

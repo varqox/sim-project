@@ -79,8 +79,7 @@ void Sim::login() {
 }
 
 void Sim::logout() {
-	if (session_is_open)
-		session_destroy();
+	session_destroy();
 	redirect("/login");
 }
 
