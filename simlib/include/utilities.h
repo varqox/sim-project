@@ -256,6 +256,7 @@ public:
 				p_ = new T[max_size_];
 			} catch (...) {
 				p_ = &a_[0];
+				max_size_ = N;
 				throw;
 			}
 		}
@@ -270,11 +271,13 @@ public:
 	 */
 	void resize(size_t n) {
 		if (n > max_size_) {
-			max_size_ = meta::max(max_size_ << 1, n);
-			T* new_p = new T[max_size_];
+			size_t new_ms = meta::max(max_size_ << 1, n);
+			T* new_p = new T[new_ms];
 			std::copy(p_, p_ + size_, new_p);
 			deallocate();
+
 			p_ = new_p;
+			max_size_ = new_ms;
 		}
 
 		size_ = n;

@@ -230,7 +230,7 @@ public:
 	}
 
 	void execute() {
-		if (mysql_stmt_execute(stmt_))
+		if (mysql_stmt_execute(stmt_) or mysql_stmt_store_result(stmt_))
 			THROW(mysql_stmt_error(stmt_));
 	}
 
@@ -332,32 +332,24 @@ public:
 	}
 
 	void resFixBinds() {
-		if (mysql_stmt_bind_result(stmt_, res_.data()) or
-			mysql_stmt_store_result(stmt_))
-		{
+		if (mysql_stmt_bind_result(stmt_, res_.data()))
 			THROW(mysql_stmt_error(stmt_));
-		}
 	}
 
 	template<class... Args>
-	void res_bind_all(Args&&... args) {
+	void res_bind_all(Args&... args) {
 		unsigned idx = 0;
-		int t[] = {(res_bind(idx++, std::forward<Args>(args)), 0)...};
+		int t[] = {(res_bind(idx++, args), 0)...}; // Forward is omitted because
+		                                           // args are references
 		(void)t;
 
 		resFixBinds();
 	}
 
-	// StringView getString(unsigned i) {
-	// 	return {(const char*)res_[i].buffer, *res_[i].length};
-	// }
-
 	bool isNull(unsigned i) noexcept {
 		// TODO: check if works when is_null == nullptr
 		return res_[i].is_null ? *res_[i].is_null : res_[i].is_null_value;
 	}
-
-	// StringView operator[](unsigned i) { return getString(i); }
 
 	bool next() {
 		int rc = mysql_stmt_fetch(stmt_);
@@ -456,6 +448,7 @@ public:
 	{
 		my_bool x = true;
 		mysql_options(&conn_, MYSQL_OPT_RECONNECT, &x);
+		mysql_options(&conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
 		if (not mysql_real_connect(&conn_, host.data(), user.data(),
 			passwd.data(), db.data(), 0, nullptr, 0))

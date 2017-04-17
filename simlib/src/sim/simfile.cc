@@ -232,7 +232,7 @@ void Simfile::loadTests() {
 			}
 
 			// Memory limit of the current test is valid
-			strtou(sp, &test.memory_limit);
+			strtou(sp, test.memory_limit); // TODO: handle overflows!
 			if (test.memory_limit == 0)
 				throw invalid_mem_limit();
 
@@ -288,7 +288,7 @@ void Simfile::loadTests() {
 				throw std::runtime_error(concat("Simfile: redefined scoring of "
 					"the group `", gid, '`'));
 
-			if (strtoi(sp, &it.first->second) != (int)sp.size())
+			if (strtoi(sp, it.first->second) != (int)sp.size()) // TODO: handle overflows!
 				throw std::runtime_error(concat("Simfile: invalid scoring of "
 					"the group `", gid, '`'));
 		}

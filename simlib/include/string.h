@@ -814,6 +814,7 @@ public:
 				p_ = new char[max_size_];
 			} catch (...) {
 				p_ = (char*)&p_ + sizeof(p_);
+				max_size_ = 0;
 				throw;
 			}
 		}
@@ -828,11 +829,13 @@ public:
 	 */
 	void resize(size_t n) {
 		if (n > max_size_) {
-			max_size_ = meta::max(max_size_ << 1, n);
-			char* new_p = new char[max_size_];
+			size_t new_ms = meta::max(max_size_ << 1, n);
+			char* new_p = new char[new_ms];
 			std::copy(p_, p_ + size, new_p);
 			deallocate();
+
 			p_ = new_p;
+			max_size_ = new_ms;
 		}
 
 		size = n;
@@ -903,7 +906,7 @@ public:
 	explicit InplaceBuff(size_t n)
 		: InplaceBuffBase(n, meta::max(N, n), nullptr)
 	{
-		p_ = (n < N ? &a_[0] : new char[n]);
+		p_ = (n <= N ? &a_[0] : new char[n]);
 	}
 
 	explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size()) {
@@ -1415,11 +1418,11 @@ constexpr inline bool isDigitNotGreaterThan(StringView s) noexcept {
  * @param end position to which (exclusively) @p s is considered
  * @return -1 if s: [beg, end) is not a number (empty string is not a number),
  *   otherwise return the number of characters parsed.
- *   Warning! If return value is -1 then *x may not be assigned, so using *x
- *   after unsuccessful call is not safe.
+ *   Warning! If return value is -1 then x may not be assigned, so using x after
+ *   unsuccessful call is not safe.
  */
 template<class T>
-constexpr int strtoi(StringView s, T *x, size_t beg = 0,
+constexpr int strtoi(StringView s, T& x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	if (end > s.size())
@@ -1427,30 +1430,27 @@ constexpr int strtoi(StringView s, T *x, size_t beg = 0,
 	if (beg >= end)
 		return -1;
 
-	if (x == nullptr)
-		return (isInteger(s, beg, end) ? end - beg : -1);
-
 	bool minus = (s[beg] == '-');
 	int res = 0;
-	*x = 0;
+	x = 0;
 	if ((s[beg] == '-' || s[beg] == '+') && (++res, ++beg) == end)
 			return -1; // sign is not a number
 	for (size_t i = beg; i < end; ++i) {
 		if (s[i] >= '0' && s[i] <= '9')
-			*x = *x * 10 + s[i] - '0';
+			x = x * 10 + s[i] - '0';
 		else
 			return -1;
 	}
 
 	if (minus)
-		*x = -*x;
+		x = -x;
 
 	return res + end - beg;
 }
 
 // Like strtoi() but assumes that @p s is a unsigned integer
 template<class T>
-constexpr int strtou(StringView s, T *x, size_t beg = 0,
+constexpr int strtou(StringView s, T& x, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	if (end > s.size())
@@ -1458,18 +1458,14 @@ constexpr int strtou(StringView s, T *x, size_t beg = 0,
 	if (beg >= end)
 		return -1;
 
-	if (x == nullptr)
-		return (isDigit(s.substring(beg + (s[beg] == '+'), end)) ? end - beg
-			: -1);
-
 	int res = 0;
-	*x = 0;
+	x = 0;
 	if (s[beg] == '+' && (++res, ++beg) == end)
 		return -1; // Sign is not a number
 
 	for (size_t i = beg; i < end; ++i) {
 		if (s[i] >= '0' && s[i] <= '9')
-			*x = *x * 10 + s[i] - '0';
+			x = x * 10 + s[i] - '0';
 		else
 			return -1;
 	}
@@ -1477,25 +1473,25 @@ constexpr int strtou(StringView s, T *x, size_t beg = 0,
 	return res + end - beg;
 }
 
-// Converts string to long long using strtoi
+// Converts string to long long using strtoi()
 constexpr inline long long strtoll(StringView s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	// TODO: when argument is not a valid number, strtoi() won't parse all the
 	// string, and may (but don't have to) return parsed value
 	long long x = 0;
-	strtoi(s, &x, beg, end);
+	strtoi(s, x, beg, end);
 	return x;
 }
 
-// Converts string to unsigned long long using strtou
+// Converts string to unsigned long long using strtou()
 constexpr inline unsigned long long strtoull(StringView s, size_t beg = 0,
 	size_t end = StringView::npos) noexcept
 {
 	// TODO: when argument is not a valid number, strtou() won't parse all the
 	// string, and may (but don't have to) return parsed value
 	unsigned long long x = 0;
-	strtou(s, &x, beg, end);
+	strtou(s, x, beg, end);
 	return x;
 }
 

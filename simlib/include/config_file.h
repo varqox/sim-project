@@ -59,7 +59,7 @@ public:
 			asInt() const noexcept
 		{
 			Type x{};
-			if (strtou<Type>(s, &x) != (int)s.size()) {
+			if (strtou<Type>(s, x) != (int)s.size()) {
 				errno = EINVAL;
 				return 0; // TODO: maybe throw
 			}
@@ -75,7 +75,7 @@ public:
 			asInt() const noexcept
 		{
 			Type x{};
-			if (strtoi<Type>(s, &x) != (int)s.size()) {
+			if (strtoi<Type>(s, x) != (int)s.size()) {
 				errno = EINVAL;
 				return 0; // TODO: maybe throw
 			}
