@@ -588,6 +588,12 @@ public:
 	StringView& operator=(const StringView& s) noexcept = default;
 	StringView& operator=(StringView&& s) noexcept = default;
 
+	StringView operator=(pointer p) { return operator=(StringView {p}); }
+
+	template<class T, class =
+		typename std::enable_if<std::is_rvalue_reference<T>::value>::type>
+	StringView& operator=(T&& s) = delete; // Protect from assigning unsafe data
+
 	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
 
 	~StringView() = default;
