@@ -6,7 +6,7 @@ all: ../sim-server ../sim-server2
 $(eval $(call dependencies))
 
 ../sim-server: server.o connection.o http_request.o http_response.o form_validator.o
-../sim-server: sim.o session.o template.o user.cc
+../sim-server: sim.o session.o template.o user.o api.o
 ../sim-server: ../lib/sim.a ../lib/sqlite3.a
 ../sim-server:
 	$(LINK) $(shell mysql_config --libs) -pthread

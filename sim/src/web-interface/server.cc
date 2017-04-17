@@ -119,7 +119,7 @@ int main() {
 	size_t colon_pos = address.find(':');
 	// Colon has been found
 	if (colon_pos < address.size()) {
-		if (strtou(address, &port, colon_pos + 1) !=
+		if (strtou(address, port, colon_pos + 1) !=
 			static_cast<int>(address.size() - colon_pos - 1))
 		{
 			errlog("sim.config: incorrect port number");

@@ -1,3 +1,11 @@
+function hex2str(hexx) {
+	var hex = hexx.toString(); //force conversion
+	var str = '';
+	for (var i = 0; i < hex.length; i += 2)
+		str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+	return str;
+}
+
 // Clock
 $(document).ready(function updateClock() {
 	if (updateClock.time_difference === undefined)
@@ -390,4 +398,180 @@ function restartJob(job_id) {
 			'The job has been restarted.', 'orange',
 			'No, go back'))
 	);
+}
+
+function colorize(log, end) {
+	if (end > log.length)
+		end = log.length;
+
+	var res = "";
+	var opened = null;
+
+	function close_last_tag() {
+		if (opened == 'span')
+			res += '</span>';
+		else if (open == 'b')
+			res += '</b>';
+		opened = null;
+	};
+
+	function contains(idx, str) {
+		return (log.substring(idx, idx + str.length) == str);
+	};
+	for (var i = 0; i < end; ++i) {
+		if (contains(i, '\033[31m')) {
+			close_last_tag();
+			res += '<span class="red">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[32m')) {
+			close_last_tag();
+			res += '<span class="green">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[33m')) {
+			close_last_tag();
+			res += '<span class="yellow">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[34m')) {
+			close_last_tag();
+			res += '<span class="blue">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[35m')) {
+			close_last_tag();
+			res += '<span class="magentapink">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[36m')) {
+			close_last_tag();
+			res += '<span class="turquoise">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[1;31m')) {
+			close_last_tag();
+			res += '<b class="red">';
+			opened = 'b';
+			i += 6;
+		} else if (contains(i, '\033[1;32m')) {
+			close_last_tag();
+			res += '<b class="green">';
+			opened = 'b';
+			i += 6;
+		} else if (contains(i, '\033[1;33m')) {
+			close_last_tag();
+			res += '<b class="yellow">';
+			opened = 'b';
+			i += 6;
+		} else if (contains(i, '\033[1;34m')) {
+			close_last_tag();
+			res += '<b class="blue">';
+			opened = 'b';
+			i += 6;
+		} else if (contains(i, '\033[1;35m')) {
+			close_last_tag();
+			res += '<b class="pink">';
+			opened = 'b';
+			i += 6;
+		} else if (contains(i, '\033[1;36m')) {
+			close_last_tag();
+			res += '<b class="turquoise">';
+			opened = 'b';
+			i += 6;
+		} else if (contains(i, '\033[m') && opened !== null) {
+			close_last_tag();
+			opened = null;
+			i += 2;
+		} else
+			res += log[i];
+	}
+	close_last_tag();
+
+	return res + log.substring(end);
+}
+
+function Logs(type, elem) {
+	this.type = type;
+	this.elem = $(elem);
+	this.offset = undefined;
+	this.lock = false;
+	this.fetch_more = function() {
+		if (this.lock)
+			return;
+		this.lock = true;
+
+		$(this.elem).children('.loader, .loader-info').remove();
+		this.elem.append('<img class="loader" src="/kit/img/loader.gif">');
+		var logs = this;
+		$.ajax({
+			type: 'GET',
+			url: 'api/logs/' + logs.type +
+				(logs.offset === undefined ? '' : '?' + logs.offset),
+			success: function(data) {
+				data = String(data).split('\n');
+				logs.offset = data[0];
+				data = hex2str(data[1]);
+
+				var prev_height = elem[0].scrollHeight;
+				var prev = prev_height - elem.scrollTop();
+
+				logs.elem.children('.loader').remove();
+				elem.html(colorize($('<div/>').text(data).html() + elem.html(),
+					data.length + 2000));
+				var curr_height = elem[0].scrollHeight;
+				elem.scrollTop(curr_height - prev);
+
+				// Load more logs if scrolling up did not become possible
+				logs.lock = false;
+				if (logs.offset > 0 && (elem.innerHeight() >= curr_height || prev_height == curr_height))
+					logs.fetch_more();
+			},
+			error: function(resp) {
+				logs.elem.children('.loader').remove();
+				logs.elem.append($('<span>', {
+					class: 'loader-info',
+					html: $('<span>', {
+						text: "Error: " + resp.status + ' ' + resp.statusText
+					}).add('<a>', {
+						text: 'Try again',
+						click: function () { new Logs(logs.type, logs.elem); }
+					})
+				}));
+
+				// Additional message
+				var x = logs.elem.children('.loader > span');
+				try {
+					var xml = $.parseXML(resp.responseText);
+					var msg = $(xml).text();
+
+					if (msg != '')
+						x.text(x.text().concat("\nInfo: ", msg));
+
+				} catch (err) {
+					if (resp.responseText != '' // There is a message
+						&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
+							!== 0 // Message is not a whole HTML page
+						&& resp.responseText.lastIndexOf('<!doctype html>', 0)
+							!== 0) // Message is not a whole HTML page
+					{
+						x.text(x.text().concat("\nInfo: ",
+							resp.responseText));
+					}
+				}
+
+				logs.lock = false;
+			}
+		});
+	};
+
+	this.monitor_scroll = function() {
+		var logs = this;
+		this.elem.on('scroll', function() {
+			if (logs.offset != 0 && $(this).scrollTop() <= 300)
+				logs.fetch_more();
+		});
+	};
+
+	this.fetch_more();
 }
