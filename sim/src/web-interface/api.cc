@@ -11,7 +11,7 @@ void Sim::api_handle() {
 }
 
 void Sim::api_logs() {
-	// if (!session_open() || session_user_type > UTYPE_ADMIN)
+	if (!session_open() || session_user_type > UTYPE_ADMIN)
 		return set_response("403 Forbidden");
 
 	StringView type = url_args.extractNextArg();
