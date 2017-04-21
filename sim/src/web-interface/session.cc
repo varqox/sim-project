@@ -84,10 +84,10 @@ void Sim::session_create_and_open(StringView user_id) {
 
 	} while (stmt.affected_rows() == 0);
 
-	// TODO: force https if enabled
-	resp.setCookie("csrf_token", StringView(session_csrf_token).to_string(),
+	// TODO: force https, if enabled
+	resp.setCookie("csrf_token", session_csrf_token.to_string(),
 		time(nullptr) + SESSION_MAX_LIFETIME, "/");
-	resp.setCookie("session", StringView(session_id).to_string(),
+	resp.setCookie("session", session_id.to_string(),
 		time(nullptr) + SESSION_MAX_LIFETIME, "/", "", true);
 	session_is_open = true;
 }

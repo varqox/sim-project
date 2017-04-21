@@ -282,11 +282,11 @@ private:
 
 	uint8_t users_user_type = 0;
 	UserPermissions users_permissions = UserPermissions::PERM_NONE;
-	std::string users_user_id;
-	std::string users_username;
-	std::string users_first_name;
-	std::string users_last_name;
-	std::string users_email;
+	InplaceBuff<30> users_user_id;
+	InplaceBuff<USERNAME_MAX_LEN> users_username;
+	InplaceBuff<USER_FIRST_NAME_MAX_LEN> users_first_name;
+	InplaceBuff<USER_LAST_NAME_MAX_LEN> users_last_name;
+	InplaceBuff<USER_EMAIL_MAX_LEN> users_email;
 
 	/**
 	 * @brief Returns a set of operation the viewer is allowed to do over the

@@ -38,9 +38,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 	// If the problem wasn't modified since last judgment and submission has
 	// already been rejudged after the job was created
-	if (StringView(last_judgment) > StringView(p_last_edit) and
-		last_judgment > job_creation_time)
-	{
+	if (last_judgment > p_last_edit and last_judgment > job_creation_time) {
 		// Skit the job - the submission has already been rejudged
 		stmt = db_conn.prepare("UPDATE job_queue"
 			" SET status=" JQSTATUS_DONE_STR " WHERE id=?");

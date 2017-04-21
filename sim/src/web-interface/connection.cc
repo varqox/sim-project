@@ -93,7 +93,8 @@ void Connection::readPOST(HttpRequest& req) {
 	size_t content_length = 0;
 	{
 		auto&& cl = req.headers["Content-Length"];
-		if (strtou(cl, &content_length) != (int)cl.size())
+		// TODO: handle overflows
+		if (strtou(cl, content_length) != (int)cl.size())
 			return error400();
 	}
 
@@ -620,7 +621,8 @@ HttpRequest Connection::getRequest() {
 
 	{
 		auto&& cl = req.headers["Content-Length"];
-		if (strtou(cl, &end) != (int)cl.size()) {
+		// TODO: handle overflows
+		if (strtou(cl, end) != (int)cl.size()) {
 			error400();
 			return req;
 		}

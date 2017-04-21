@@ -1619,6 +1619,7 @@ table.files td {
 pre.logs {
 	margin: 10px 32px 10px 10px;
 	max-height: 400px;
+	padding: 2px;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	white-space: pre-wrap;
 	background: #131926;
