@@ -14,6 +14,108 @@
 # include <cassert>
 #endif
 
+#define throw_assert(expr) \
+	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
+	meta::ToString<__LINE__>(), ": ", __PRETTY_FUNCTION__, \
+	": Assertion `" #expr " failed.")))
+
+
+template<class T>
+constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
+	return x.size();
+}
+
+template<uint LEN, uint... Digits>
+constexpr inline uint string_length(meta::ToStringHelper<LEN, Digits...>) {
+	return LEN;
+}
+
+template<class T>
+constexpr inline size_t string_length(T* x) noexcept {
+	return __builtin_strlen(x);
+}
+
+constexpr inline size_t string_length(char) noexcept { return 1; }
+
+template<class T>
+constexpr inline auto data(const T& x) noexcept { return x.data(); }
+
+// Some stuff to provide a mechanism to call std::copy on meta::ToString<>
+template<uintmax_t N>
+struct meta_to_string_helper_iter {
+	meta_to_string_helper_iter() = default;
+};
+
+template<uintmax_t N, class T>
+auto operator+(meta_to_string_helper_iter<N> x, T) { return x; }
+
+template<uint LEN, uint... Digits, class OIter>
+constexpr inline OIter copy_meta_to_string_helper(
+	meta::ToStringHelper<LEN, Digits...>, OIter result)
+{
+	for (auto c : {Digits...})
+		*result++ = '0' + c;
+
+	return result;
+}
+
+namespace std {
+
+template<uintmax_t N, class OIter>
+constexpr inline OIter copy(meta_to_string_helper_iter<N>,
+	meta_to_string_helper_iter<N>, OIter result)
+{
+	return copy_meta_to_string_helper(meta::ToString<N>{}, result);
+}
+
+} // namespace std
+
+template<uintmax_t N>
+constexpr inline auto data(meta::ToString<N>) {
+	return meta_to_string_helper_iter<N>{};
+}
+
+template<class T, size_t N>
+constexpr inline auto data(const T (&x)[N]) noexcept { return x; }
+
+constexpr inline auto data(const char* const x) noexcept { return x; }
+
+constexpr inline auto data(char* const x) noexcept { return x; }
+
+constexpr inline const char* data(const char& c) noexcept { return &c; }
+
+inline std::string& operator+=(std::string& str, const meta::string& s) {
+	return str.append(s.data(), s.size());
+}
+
+template<uint LEN, uint... Digits>
+inline std::string& operator+=(std::string& str,
+	meta::ToStringHelper<LEN, Digits...>)
+{
+	(void)std::initializer_list<int>{(str += Digits, 0)...};
+	return str;
+}
+
+/**
+ * @brief Concentrates @p args into std::string
+ *
+ * @param args string-like objects
+ *
+ * @return concentration of @p args
+ */
+template<class... Args>
+inline std::string concat(Args&&... args) {
+	size_t total_length = 0;
+	int foo[] = {(total_length += string_length(args), 0)...};
+	(void)foo;
+
+	std::string res;
+	res.reserve(total_length);
+	int bar[] = {(res += std::forward<Args>(args), 0)...};
+	(void)bar;
+	return res;
+}
+
 template<size_t N, class size_type = size_t>
 class StringBuff {
 public:
@@ -23,14 +125,18 @@ public:
 	char str[N];
 	size_type len = 0;
 
-	constexpr StringBuff() = default;
+	constexpr StringBuff() {}
 
-	constexpr StringBuff(size_type count, char ch);
+	constexpr StringBuff(size_type count, char ch) : len(count) {
+		throw_assert(count <= max_size);
+		std::fill(str, str + count, ch);
+		str[count] = '\0';
+	}
 
 	// Variadic constructor, it does not accept an integer as the first argument
 	template<class Arg1, class... Args, typename =
 		typename std::enable_if<!std::is_integral<Arg1>::value, void>::type>
-	constexpr StringBuff(Arg1&& arg1, Args&&... args) {
+	StringBuff(Arg1&& arg1, Args&&... args) {
 		append(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
 	}
 
@@ -40,21 +146,43 @@ public:
 
 	/// Appends without adding the null terminating character
 	template<class... Args>
-	StringBuff& raw_append(Args&&... args);
+	constexpr StringBuff& raw_append(Args&&... args) {
+		// Sum length of all args
+		size_t final_len = len;
+		(void)std::initializer_list<size_t>{
+			(final_len += string_length(args))...
+		};
+		throw_assert(final_len <= max_size);
+
+		// Concentrate them into str[]
+		auto impl_append = [&](auto&& s) {
+			auto sl = string_length(s);
+			std::copy(::data(s), ::data(s) + sl, str + len);
+			len += sl;
+		};
+
+		(void)impl_append; // Ignore warning 'unused' when no arguments are
+		                   // provided
+		(void)std::initializer_list<int>{
+			(impl_append(std::forward<Args>(args)), 0)...
+		};
+
+		return *this;
+	}
 
 	/// Appends and adds the null terminating character
 	template<class... Args>
-	StringBuff& append(Args&&... args) {
+	constexpr StringBuff& append(Args&&... args) {
 		raw_append(std::forward<Args>(args)...);
 		str[len] = '\0'; // Terminating null character
 		return *this;
 	}
 
-	char* data() noexcept { return str; }
+	constexpr char* data() noexcept { return str; }
 
 	constexpr const char* data() const noexcept { return str; }
 
-	char& operator[](size_type n) noexcept { return str[n]; }
+	constexpr char& operator[](size_type n) noexcept { return str[n]; }
 
 	constexpr char& operator[](size_type n) const noexcept { return str[n]; }
 };
@@ -123,19 +251,19 @@ public:
 		: str(s.data() + std::min(beg, s.size())),
 			len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
-	constexpr StringBase(const StringBase<Char>& s) noexcept
+	constexpr StringBase(const StringBase& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
 	constexpr StringBase(StringBase<Char>&& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
-	constexpr StringBase& operator=(StringBase<Char>&& s) noexcept {
+	constexpr StringBase& operator=(StringBase&& s) noexcept {
 		str = s.data();
 		len = s.size();
 		return *this;
 	}
 
-	constexpr StringBase& operator=(const StringBase<Char>& s) noexcept {
+	constexpr StringBase& operator=(const StringBase& s) noexcept {
 		str = s.data();
 		len = s.size();
 		return *this;
@@ -283,35 +411,35 @@ public:
 		return npos;
 	}
 
-	size_type find(const StringBase& s, size_type beg1) const {
+	constexpr size_type find(const StringBase& s, size_type beg1) const {
 		return find(s.substr(beg1, len - beg1));
 	}
 
-	size_type find(const StringBase& s, size_type beg1,
+	constexpr size_type find(const StringBase& s, size_type beg1,
 		size_type endi1) const
 	{
 		return find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type find(size_type beg, const StringBase& s,
+	constexpr size_type find(size_type beg, const StringBase& s,
 		size_type beg1 = 0) const
 	{
 		return substr(beg).find(s.substr(beg1, len - beg1));
 	}
 
-	size_type find(size_type beg, const StringBase& s, size_type beg1,
+	constexpr size_type find(size_type beg, const StringBase& s, size_type beg1,
 		size_type endi1) const
 	{
 		return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type find(size_type beg, size_type endi, const StringBase& s,
+	constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
 		size_type beg1 = 0) const
 	{
 		return substr(beg, endi).find(s.substr(beg1, len - beg1));
 	}
 
-	size_type find(size_type beg, size_type endi, const StringBase& s,
+	constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
 		size_type beg1, size_type endi1) const
 	{
 		return substr(beg, endi).find(
@@ -371,35 +499,35 @@ public:
 		return npos;
 	}
 
-	size_type rfind(const StringBase& s, size_type beg1) const {
+	constexpr size_type rfind(const StringBase& s, size_type beg1) const {
 		return rfind(s.substr(beg1, len - beg1));
 	}
 
-	size_type rfind(const StringBase& s, size_type beg1,
+	constexpr size_type rfind(const StringBase& s, size_type beg1,
 		size_type endi1) const
 	{
 		return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type rfind(size_type beg, const StringBase& s,
+	constexpr size_type rfind(size_type beg, const StringBase& s,
 		size_type beg1 = 0) const
 	{
 		return substr(beg).rfind(s.substr(beg1, len - beg1));
 	}
 
-	size_type rfind(size_type beg, const StringBase& s,
+	constexpr size_type rfind(size_type beg, const StringBase& s,
 		size_type beg1, size_type endi1) const
 	{
 		return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	size_type rfind(size_type beg, size_type endi,
+	constexpr size_type rfind(size_type beg, size_type endi,
 		const StringBase& s, size_type beg1 = 0) const
 	{
 		return substr(beg, endi).rfind(s.substr(beg1, len - beg1));
 	}
 
-	size_type rfind(size_type beg, size_type endi,
+	constexpr size_type rfind(size_type beg, size_type endi,
 		const StringBase& s, size_type beg1, size_type endi1) const
 	{
 		return substr(beg, endi).rfind(
@@ -456,44 +584,156 @@ protected:
 
 public:
 	std::string to_string() const { return std::string(str, len); }
-
-	// comparison operators
-	friend constexpr bool operator==(const StringBase& a, const StringBase& b)
-		noexcept
-	{
-		return (a.len == b.len && memcmp(a.str, b.str, a.len) == 0);
-	}
-
-	friend constexpr bool operator!=(const StringBase& a, const StringBase& b)
-		noexcept
-	{
-		return (a.len != b.len || memcmp(a.str, b.str, a.len) != 0);
-	}
-
-	friend constexpr bool operator<(const StringBase& a, const StringBase& b)
-		noexcept
-	{
-		return (a.compare(b) < 0);
-	}
-
-	friend constexpr bool operator>(const StringBase& a, const StringBase& b)
-		noexcept
-	{
-		return (a.compare(b) > 0);
-	}
-
-	friend constexpr bool operator<=(const StringBase& a, const StringBase& b)
-		noexcept
-	{
-		return (a.compare(b) <= 0);
-	}
-
-	friend constexpr bool operator>=(const StringBase& a, const StringBase& b)
-		noexcept
-	{
-		return (a.compare(b) >= 0);
-	}
 };
+
+template<class Char>
+constexpr inline std::string& operator+=(std::string& str,
+	const StringBase<Char>& s)
+{
+	return str.append(s.data(), s.size());
+}
+
+class StringView : public StringBase<const char> {
+public:
+	using StringBase::StringBase;
+
+	constexpr StringView() noexcept : StringBase("", 0) {}
+
+	constexpr StringView(std::nullptr_t) noexcept : StringView() {}
+
+	constexpr StringView(const StringView& s) noexcept = default;
+	constexpr StringView(StringView&& s) noexcept = default;
+	StringView& operator=(const StringView& s) noexcept = default;
+	StringView& operator=(StringView&& s) noexcept = default;
+
+	constexpr StringView operator=(pointer p) { return operator=(StringView {p}); }
+
+	template<class T, class =
+		typename std::enable_if<std::is_rvalue_reference<T>::value>::type>
+	StringView& operator=(T&& s) = delete; // Protect from assigning unsafe data
+
+	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
+
+	~StringView() = default;
+
+	constexpr void clear() noexcept { len = 0; }
+
+	// Removes prefix of length n
+	constexpr void removePrefix(size_type n) noexcept {
+		if (n > len)
+			n = len;
+		str += n;
+		len -= n;
+	}
+
+	// Removes suffix of length n
+	constexpr void removeSuffix(size_type n) noexcept {
+		if (n > len)
+			len = 0;
+		else
+			len -= n;
+	}
+
+	// Extracts prefix of length n
+	constexpr StringView extractPrefix(size_type n) noexcept {
+		if (n > len)
+			n = len;
+
+		StringView res = substring(0, n);
+		str += n;
+		len -= n;
+		return res;
+	}
+
+	// Extracts suffix of length n
+	constexpr StringView extractSuffix(size_type n) noexcept {
+		if (n > len)
+			len = n;
+		len -= n;
+		return {data() + len, n};
+	}
+
+	// Removes leading characters for which f() returns true
+	template<class Func>
+	constexpr void removeLeading(Func&& f) {
+		size_type i = 0;
+		for (; i < len && f(str[i]); ++i) {}
+		str += i;
+		len -= i;
+	}
+
+	constexpr void removeLeading(char c) noexcept {
+		removeLeading([c](char x) { return (x == c); });
+	}
+
+	// Removes trailing characters for which f() returns true
+	template<class Func>
+	constexpr void removeTrailing(Func&& f) {
+		while (len > 0 && f(back()))
+			--len;
+	}
+
+	constexpr void removeTrailing(char c) noexcept {
+		removeTrailing([c](char x) { return (x == c); });
+	}
+
+	// Extracts leading characters for which f() returns true
+	template<class Func>
+	constexpr StringView extractLeading(Func&& f) {
+		size_type i = 0;
+		for (; i < len && f(str[i]); ++i) {}
+
+		StringView res = substring(0, i);
+		str += i;
+		len -= i;
+
+		return res;
+	}
+
+	// Extracts trailing characters for which f() returns true
+	template<class Func>
+	constexpr StringView extractTrailing(Func&& f) {
+		size_type i = len;
+		for (; i > 0 && f(str[i - 1]); --i) {}
+
+		StringView res = substring(i, len);
+		len = i;
+
+		return res;
+	}
+
+	using StringBase::substr;
+	using StringBase::substring;
+};
+
+inline std::string& operator+=(std::string& str, StringView s) {
+	return str.append(s.data(), s.size());
+}
+
+// comparison operators
+inline constexpr bool operator==(StringView a, StringView b) noexcept {
+	return (a.size() == b.size() && memcmp(a.data(), b.data(), a.size()) == 0);
+}
+
+inline constexpr bool operator!=(StringView a, StringView b) noexcept {
+	return (a.size() != b.size() || memcmp(a.data(), b.data(), a.size()) != 0);
+}
+
+inline constexpr bool operator<(StringView a, StringView b) noexcept {
+	return (a.compare(b) < 0);
+}
+
+inline constexpr bool operator>(StringView a, StringView b) noexcept {
+	return (a.compare(b) > 0);
+}
+
+inline constexpr bool operator<=(StringView a, StringView b) noexcept {
+	return (a.compare(b) <= 0);
+}
+
+inline constexpr bool operator>=(StringView a, StringView b) noexcept {
+	return (a.compare(b) >= 0);
+}
 
 // Holds string with fixed size and null-terminating character at the end
 class FixedString : public StringBase<char> {
@@ -555,6 +795,8 @@ public:
 		return *this;
 	}
 
+	operator StringView() const { return {data(), size()}; }
+
 	// Returns a FixedString of the substring [pos, ...)
 	FixedString substr(size_type pos = 0) const {
 		if (pos > len)
@@ -570,122 +812,6 @@ public:
 
 		return FixedString(str + pos, std::min(count, len - pos));
 	}
-};
-
-class StringView : public StringBase<const char> {
-public:
-	using StringBase::StringBase;
-
-	constexpr StringView(const FixedString& s) noexcept
-		: StringBase(s.data(), s.size()) {}
-
-	constexpr StringView() noexcept : StringBase("", 0) {}
-
-	constexpr StringView(std::nullptr_t) noexcept : StringView() {}
-
-	constexpr StringView(const StringView& s) noexcept = default;
-	constexpr StringView(StringView&& s) noexcept = default;
-	StringView& operator=(const StringView& s) noexcept = default;
-	StringView& operator=(StringView&& s) noexcept = default;
-
-	StringView operator=(pointer p) { return operator=(StringView {p}); }
-
-	template<class T, class =
-		typename std::enable_if<std::is_rvalue_reference<T>::value>::type>
-	StringView& operator=(T&& s) = delete; // Protect from assigning unsafe data
-
-	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
-
-	~StringView() = default;
-
-	constexpr void clear() noexcept { len = 0; }
-
-	// Removes prefix of length n
-	constexpr void removePrefix(size_type n) noexcept {
-		if (n > len)
-			n = len;
-		str += n;
-		len -= n;
-	}
-
-	// Removes suffix of length n
-	constexpr void removeSuffix(size_type n) noexcept {
-		if (n > len)
-			len = 0;
-		else
-			len -= n;
-	}
-
-	// Extracts prefix of length n
-	StringView extractPrefix(size_type n) noexcept {
-		if (n > len)
-			n = len;
-
-		StringView res = substring(0, n);
-		str += n;
-		len -= n;
-		return res;
-	}
-
-	// Extracts suffix of length n
-	StringView extractSuffix(size_type n) noexcept {
-		if (n > len)
-			len = n;
-		len -= n;
-		return {data() + len, n};
-	}
-
-	// Removes leading characters for which f() returns true
-	template<class Func>
-	constexpr void removeLeading(Func&& f) {
-		size_type i = 0;
-		for (; i < len && f(str[i]); ++i) {}
-		str += i;
-		len -= i;
-	}
-
-	constexpr void removeLeading(char c) noexcept {
-		removeLeading([c](char x) { return (x == c); });
-	}
-
-	// Removes trailing characters for which f() returns true
-	template<class Func>
-	constexpr void removeTrailing(Func&& f) {
-		while (len > 0 && f(back()))
-			--len;
-	}
-
-	constexpr void removeTrailing(char c) noexcept {
-		removeTrailing([c](char x) { return (x == c); });
-	}
-
-	// Extracts leading characters for which f() returns true
-	template<class Func>
-	constexpr StringView extractLeading(Func&& f) {
-		size_type i = 0;
-		for (; i < len && f(str[i]); ++i) {}
-
-		StringView res = substring(0, i);
-		str += i;
-		len -= i;
-
-		return res;
-	}
-
-	// Extracts trailing characters for which f() returns true
-	template<class Func>
-	constexpr StringView extractTrailing(Func&& f) {
-		size_type i = len;
-		for (; i > 0 && f(str[i - 1]); --i) {}
-
-		StringView res = substring(i, len);
-		len = i;
-
-		return res;
-	}
-
-	using StringBase::substr;
-	using StringBase::substring;
 };
 
 class CStringView : public StringBase<const char> {
@@ -737,6 +863,8 @@ public:
 	constexpr CStringView& operator=(const CStringView&) noexcept = default;
 	constexpr CStringView& operator=(CStringView&&) noexcept = default;
 
+	constexpr operator StringView() const { return {data(), size()}; }
+
 	constexpr CStringView substr(size_type pos) const {
 		const auto x = StringBase::substr(pos);
 		return CStringView{x.data(), x.size()};
@@ -754,38 +882,6 @@ public:
 
 	constexpr const_pointer c_str() const noexcept { return data(); }
 };
-
-// comparison operators
-#define COMPARE_BUFF_STRVIEW(oper) template<size_t N> \
-	constexpr bool operator oper (const StringBuff<N>& a, StringView b) \
-		noexcept \
-	{ \
-		return (StringView(a) oper b); \
-	}
-
-#define COMPARE_STRVIEW_BUFF(oper) template<size_t N> \
-	constexpr bool operator oper (StringView a, const StringBuff<N>& b) \
-		noexcept \
-	{ \
-		return (a oper StringView(b)); \
-	}
-
-COMPARE_BUFF_STRVIEW(==)
-COMPARE_BUFF_STRVIEW(!=)
-COMPARE_BUFF_STRVIEW(<)
-COMPARE_BUFF_STRVIEW(>)
-COMPARE_BUFF_STRVIEW(<=)
-COMPARE_BUFF_STRVIEW(>=)
-
-COMPARE_STRVIEW_BUFF(==)
-COMPARE_STRVIEW_BUFF(!=)
-COMPARE_STRVIEW_BUFF(<)
-COMPARE_STRVIEW_BUFF(>)
-COMPARE_STRVIEW_BUFF(<=)
-COMPARE_STRVIEW_BUFF(>=)
-
-#undef COMPARE_BUFF_STRVIEW
-#undef COMPARE_STRVIEW_BUFF
 
 constexpr inline StringView substring(StringView str, StringView::size_type beg,
 	StringView::size_type end = StringView::npos)
@@ -874,11 +970,11 @@ public:
 	std::string to_string() { return {data(), size}; }
 
 protected:
-	InplaceBuffBase(size_t s, size_t max_s, char* p)
+	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p)
 		: size(s), max_size_(max_s), p_(p) {}
 
-	InplaceBuffBase(const InplaceBuffBase&) = default;
-	InplaceBuffBase(InplaceBuffBase&&) = default;
+	constexpr InplaceBuffBase(const InplaceBuffBase&) = default;
+	constexpr InplaceBuffBase(InplaceBuffBase&&) = default;
 	InplaceBuffBase& operator=(const InplaceBuffBase&) = default;
 	InplaceBuffBase& operator=(InplaceBuffBase&&) = default;
 
@@ -896,7 +992,29 @@ public:
 	~InplaceBuffBase() { deallocate(); }
 
 	template<class... Args>
-	inline InplaceBuffBase& append(Args&&... args);
+	constexpr InplaceBuffBase& append(Args&&... args) {
+		// Sum length of all args
+		size_t k = size, final_len = size;
+		(void)std::initializer_list<size_t>{
+			(final_len += string_length(args))...
+		};
+		resize(final_len);
+
+		// Concentrate them into str[]
+		auto impl_append = [&](auto&& s) {
+			auto sl = string_length(s);
+			std::copy(::data(s), ::data(s) + sl, data() + k);
+			k += sl;
+		};
+
+		(void)impl_append; // Ignore warning 'unused' when no arguments are
+		                   // provided
+		(void)std::initializer_list<int>{
+			(impl_append(std::forward<Args>(args)), 0)...
+		};
+
+		return *this;
+	}
 };
 
 template<size_t N>
@@ -907,23 +1025,23 @@ private:
 public:
 	using InplaceBuffBase::size;
 
-	InplaceBuff() : InplaceBuffBase(0, N, nullptr) { p_ = &a_[0]; }
+	constexpr InplaceBuff() : InplaceBuffBase(0, N, nullptr) { p_ = &a_[0]; }
 
-	explicit InplaceBuff(size_t n)
+	constexpr explicit InplaceBuff(size_t n)
 		: InplaceBuffBase(n, meta::max(N, n), nullptr)
 	{
 		p_ = (n <= N ? &a_[0] : new char[n]);
 	}
 
-	explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size()) {
+	constexpr explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size()) {
 		std::copy(sv.begin(), sv.end(), p_);
 	}
 
-	InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
+	constexpr InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
-	InplaceBuff(InplaceBuff&& ibuff)
+	constexpr InplaceBuff(InplaceBuff&& ibuff)
 		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.size()), ibuff.p_)
 	{
 		if (ibuff.is_allocated()) {
@@ -939,19 +1057,19 @@ public:
 		}
 	}
 
-	InplaceBuff& operator=(StringView sv) {
+	constexpr InplaceBuff& operator=(StringView sv) {
 		lossy_resize(sv.size());
 		std::copy(sv.begin(), sv.end(), data());
 		return *this;
 	}
 
-	InplaceBuff& operator=(const InplaceBuff& ibuff) {
+	constexpr InplaceBuff& operator=(const InplaceBuff& ibuff) {
 		lossy_resize(ibuff.size);
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 		return *this;
 	}
 
-	InplaceBuff& operator=(InplaceBuff&& ibuff) {
+	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) {
 		if (ibuff.is_allocated() and ibuff.max_size() > max_size()) {
 			size = ibuff.size;
 			max_size_ = ibuff.max_size_;
@@ -982,6 +1100,13 @@ public:
 	using InplaceBuffBase::to_string;
 	using InplaceBuffBase::append;
 };
+
+template<size_t T>
+constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
+	-> decltype(ibuff.size)
+{
+	return ibuff.size;
+}
 
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
@@ -1030,7 +1155,7 @@ struct StrNumCompare {
 template<class T, size_t N = meta::ToString<std::numeric_limits<T>::max()>
 	::arr_value.size() + 2> // +1 for a terminating null char and +1 for the
 	                        // minus sign
-StringBuff<N> toString(T x) noexcept(N >=
+constexpr StringBuff<N> toString(T x) noexcept(N >=
 	meta::ToString<std::numeric_limits<T>::max()>::arr_value.size() + 2)
 {
 	static_assert(N >= 2, "Needed to at least return \"0\"");
@@ -1111,7 +1236,7 @@ inline std::string toString(long double x, int precision = 6) {
 
 // Alias to toString()
 template<class... Args>
-inline auto toStr(Args&&... args) {
+constexpr inline auto toStr(Args&&... args) {
 	return toString(std::forward<Args>(args)...);
 }
 
@@ -1549,72 +1674,6 @@ StringBuff<N> usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true) {
 	return res;
 }
 
-template<class T>
-constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
-	return x.size();
-}
-
-template<size_t T>
-constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
-	-> decltype(ibuff.size)
-{
-	return ibuff.size;
-}
-
-template<class T>
-constexpr inline size_t string_length(T* x) noexcept {
-	return __builtin_strlen(x);
-}
-
-constexpr inline size_t string_length(char) noexcept { return 1; }
-
-template<class T>
-constexpr inline auto data(const T& x) noexcept { return x.data(); }
-
-template<class T, size_t N>
-constexpr inline const T* data(const T (&x)[N]) noexcept { return x; }
-
-constexpr inline auto data(const char* const x) noexcept { return x; }
-
-constexpr inline auto data(char* const x) noexcept { return x; }
-
-constexpr inline const char* data(const char& c) noexcept { return &c; }
-
-template<class Char>
-constexpr inline std::string& operator+=(std::string& str,
-	const StringBase<Char>& s)
-{
-	return str.append(s.data(), s.size());
-}
-
-inline std::string& operator+=(std::string& str, StringView s) {
-	return str.append(s.data(), s.size());
-}
-
-inline std::string& operator+=(std::string& str, const meta::string& s) {
-	return str.append(s.data(), s.size());
-}
-
-/**
- * @brief Concentrates @p args into std::string
- *
- * @param args string-like objects
- *
- * @return concentration of @p args
- */
-template<class... Args>
-inline std::string concat(Args&&... args) {
-	size_t total_length = 0;
-	int foo[] = {(total_length += string_length(args), 0)...};
-	(void)foo;
-
-	std::string res;
-	res.reserve(total_length);
-	int bar[] = {(res += std::forward<Args>(args), 0)...};
-	(void)bar;
-	return res;
-}
-
 enum Adjustment : uint8_t { LEFT, RIGHT };
 
 /**
@@ -1635,57 +1694,3 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  */
 std::string paddedString(StringView s, size_t len, Adjustment adj = RIGHT,
 	char filler = ' ');
-
-#define throw_assert(expr) \
-	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
-	toStr(__LINE__), ": ", __PRETTY_FUNCTION__, \
-	": Assertion `" #expr " failed.")))
-
-/* ============================ IMPLEMENTATION ============================== */
-template<size_t N, class size_type>
-inline constexpr StringBuff<N, size_type>::StringBuff(size_type count, char ch)
-	: len(count)
-{
-	throw_assert(count <= max_size);
-	std::fill(str, str + count, ch);
-	str[count] = '\0';
-}
-
-template<size_t N, class size_type>
-template<class... Args>
-inline StringBuff<N, size_type>& StringBuff<N, size_type>::raw_append(Args&&... args) {
-	// Sum length of all args
-	size_t final_len = len;
-	(void)std::initializer_list<size_t>{(final_len += string_length(args))...};
-	throw_assert(final_len <= max_size);
-
-	// Concentrate them into str[]
-	auto impl_append = [&](auto&& s) {
-		auto sl = string_length(s);
-		std::copy(::data(s), ::data(s) + sl, str + len);
-		len += sl;
-	};
-	(void)impl_append; // Ignore warning 'unused' when no arguments are provided
-	(void)std::initializer_list<int>{(impl_append(std::forward<Args>(args)), 0)...};
-
-	return *this;
-}
-
-template<class... Args>
-inline InplaceBuffBase& InplaceBuffBase::append(Args&&... args) {
-	// Sum length of all args
-	size_t k = size, final_len = size;
-	(void)std::initializer_list<size_t>{(final_len += string_length(args))...};
-	resize(final_len);
-
-	// Concentrate them into str[]
-	auto impl_append = [&](auto&& s) {
-		auto sl = string_length(s);
-		std::copy(::data(s), ::data(s) + sl, data() + k);
-		k += sl;
-	};
-	(void)impl_append; // Ignore warning 'unused' when no arguments are provided
-	(void)std::initializer_list<int>{(impl_append(std::forward<Args>(args)), 0)...};
-
-	return *this;
-}

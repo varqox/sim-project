@@ -2,6 +2,8 @@
 
 #include "string.h"
 
+#include <ctime>
+
 long long microtime() noexcept;
 
 // Returns UTC date in format of @p format (format like in strftime(3)), if

@@ -105,8 +105,8 @@ constexpr bool is_sorted(const std::array<T, N>& arr) {
 
 template<uint LEN, uint... Digits>
 struct ToStringHelper {
-	constexpr static const char value[] = {('0' + Digits)..., '\0'};
-	constexpr static std::array<char, LEN> arr_value = {{('0' + Digits)...}};
+	static constexpr const char value[] = {('0' + Digits)..., '\0'};
+	static constexpr std::array<char, LEN> arr_value = {{('0' + Digits)...}};
 };
 
 template<uintmax_t N, uint LEN, uint... Digits>
@@ -120,6 +120,9 @@ struct ToStringDecompose<0, 0> : ToStringHelper<1, 0> {};
 
 template<uintmax_t N>
 struct ToString : ToStringDecompose<N, 0> {};
+
+template<uintmax_t N>
+constexpr const char* toStr = ToString<N>::value;
 
 template<class T>
 constexpr T max(T&& x) { return x; }
