@@ -1,12 +1,14 @@
 #include "sim.h"
 
 #include <sim/utilities.h>
+#include <simlib/random.h>
 #include <simlib/sha.h>
 
+using std::array;
 using std::string;
 
 void Sim::login() {
-	InplaceBuff<USERNAME_MAX_LEN + 1> username;
+	auto& username = users_username = "";
 	if (request.method == server::HttpRequest::POST) {
 		// Try to login
 		InplaceBuff<4096> password;
@@ -83,7 +85,121 @@ void Sim::logout() {
 	redirect("/login");
 }
 
-#if 1 - 1
+void Sim::sign_up() {
+	if (session_open())
+		return redirect("/");
+
+	InplaceBuff<4096> pass1, pass2;
+	auto& username = users_username = "";
+	auto& first_name = users_first_name = "";
+	auto& last_name = users_last_name = "";
+	auto& email = users_email = "";
+
+	if (request.method == server::HttpRequest::POST) {
+		// Validate all fields
+		form_validate_not_blank(username, "username", "Username", isUsername,
+			"Username can only consist of characters [a-zA-Z0-9_-]",
+			USERNAME_MAX_LEN);
+
+		form_validate_not_blank(first_name, "first_name", "First Name",
+			USER_FIRST_NAME_MAX_LEN);
+
+		form_validate_not_blank(last_name, "last_name", "Last Name",
+			USER_LAST_NAME_MAX_LEN);
+
+		form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+
+		if (form_validate(pass1, "password1", "Password") &&
+			form_validate(pass2, "password2", "Password (repeat)") &&
+			pass1 != pass2)
+		{
+			addNotification("error", "Passwords do not match");
+		}
+
+		// If all fields are ok
+		if (not form_validation_error)
+			try {
+				array<char, (SALT_LEN >> 1)> salt_bin;
+				fillRandomly(salt_bin.data(), salt_bin.size());
+				string salt = toHex(salt_bin.data(), salt_bin.size());
+
+				auto stmt = mysql.prepare("INSERT IGNORE `users` (username, "
+						"first_name, last_name, email, salt, password) "
+					"VALUES(?, ?, ?, ?, ?, ?)");
+
+				stmt.bindAndExecute(username, first_name, last_name, email,
+					salt, sha3_512(concat(salt, pass1)));
+
+				// User account successfully created
+				if (stmt.affected_rows() == 1) {
+					auto new_uid = toStr(stmt.insert_id());
+
+					session_create_and_open(new_uid);
+					stdlog("New user: ", new_uid, " -> `", username, '`');
+
+					return redirect("/");
+				}
+
+				addNotification("error", "Username taken");
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				addNotification("error", "Internal server error");
+			}
+	}
+
+	page_template("Register");
+	append("<div class=\"form-container\">"
+			"<h1>Register</h1>"
+			"<form method=\"post\">"
+				// Username
+				"<div class=\"field-group\">"
+					"<label>Username</label>"
+					"<input type=\"text\" name=\"username\" value=\"",
+						htmlEscape(username), "\" size=\"24\" "
+						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
+						"required>"
+				"</div>"
+				// First Name
+				"<div class=\"field-group\">"
+					"<label>First name</label>"
+					"<input type=\"text\" name=\"first_name\" value=\"",
+						htmlEscape(first_name), "\" size=\"24\" "
+						"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" "
+						"required>"
+				"</div>"
+				// Last name
+				"<div class=\"field-group\">"
+					"<label>Last name</label>"
+					"<input type=\"text\" name=\"last_name\" value=\"",
+						htmlEscape(last_name), "\" size=\"24\" "
+						"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" "
+						"required>"
+				"</div>"
+				// Email
+				"<div class=\"field-group\">"
+					"<label>Email</label>"
+					"<input type=\"email\" name=\"email\" value=\"",
+						htmlEscape(email), "\" size=\"24\" "
+						"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" "
+						"required>"
+				"</div>"
+				// Password
+				"<div class=\"field-group\">"
+					"<label>Password</label>"
+					"<input type=\"password\" name=\"password1\" size=\"24\">"
+				"</div>"
+				// Password (repeat)
+				"<div class=\"field-group\">"
+					"<label>Password (repeat)</label>"
+					"<input type=\"password\" name=\"password2\" size=\"24\">"
+				"</div>"
+				"<input class=\"btn blue\" type=\"submit\" value=\"Sign up\">"
+			"</form>"
+		"</div>");
+}
+
+#if 0
 uint User::getPermissions(const string& viewer_id, uint viewer_type,
 	const string& uid, uint utype)
 {
@@ -198,129 +314,6 @@ void User::handle() {
 		return userSubmissions();
 
 	userProfile();
-}
-
-void User::signUp() {
-	if (Session::open())
-		return redirect("/");
-
-	FormValidator fv(req->form_data);
-	string password1, password2;
-
-	if (req->method == server::HttpRequest::POST) {
-		// Validate all fields
-		fv.validateNotBlank(username, "username", "Username", isUsername,
-			"Username can only consist of characters [a-zA-Z0-9_-]",
-			USERNAME_MAX_LEN);
-
-		fv.validateNotBlank(first_name, "first_name", "First Name",
-			USER_FIRST_NAME_MAX_LEN);
-
-		fv.validateNotBlank(last_name, "last_name", "Last Name",
-			USER_LAST_NAME_MAX_LEN);
-
-		fv.validateNotBlank(email, "email", "Email", USER_EMAIL_MAX_LEN);
-
-		if (fv.validate(password1, "password1", "Password") &&
-			fv.validate(password2, "password2", "Password (repeat)") &&
-			password1 != password2)
-		{
-			fv.addError("Passwords do not match");
-		}
-
-		// If all fields are ok
-		if (fv.noErrors())
-			try {
-				char salt_bin[SALT_LEN >> 1];
-				fillRandomly(salt_bin, sizeof(salt_bin));
-				string salt = toHex(salt_bin, sizeof(salt_bin));
-
-				MySQL::Statement stmt = db_conn.prepare(
-					"INSERT IGNORE `users` (username, "
-							"first_name, last_name, email, salt, password) "
-					"VALUES(?, ?, ?, ?, ?, ?)");
-				stmt.setString(1, username);
-				stmt.setString(2, first_name);
-				stmt.setString(3, last_name);
-				stmt.setString(4, email);
-				stmt.setString(5, salt);
-				stmt.setString(6, sha3_512(salt + password1));
-
-				// User account successfully created
-				if (stmt.executeUpdate() == 1) {
-					string new_uid = db_conn.lastInsertId();
-
-					Session::createAndOpen(new_uid);
-					stdlog("New user: ", new_uid, " -> `", username, '`');
-
-					return redirect("/");
-				}
-
-				fv.addError("Username taken");
-
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				fv.addError("Internal server error");
-			}
-
-	// Clean old data
-	// TODO: ugly (?) way - do something with it
-	} else {
-		username = "";
-		first_name = "";
-		last_name = "";
-		email = "";
-	}
-
-	baseTemplate("Register");
-	append(fv.errors(), "<div class=\"form-container\">"
-			"<h1>Register</h1>"
-			"<form method=\"post\">"
-				// Username
-				"<div class=\"field-group\">"
-					"<label>Username</label>"
-					"<input type=\"text\" name=\"username\" value=\"",
-						htmlEscape(username), "\" size=\"24\" "
-						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>"
-				"</div>"
-				// First Name
-				"<div class=\"field-group\">"
-					"<label>First name</label>"
-					"<input type=\"text\" name=\"first_name\" value=\"",
-						htmlEscape(first_name), "\" size=\"24\" "
-						"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" "
-						"required>"
-				"</div>"
-				// Last name
-				"<div class=\"field-group\">"
-					"<label>Last name</label>"
-					"<input type=\"text\" name=\"last_name\" value=\"",
-						htmlEscape(last_name), "\" size=\"24\" "
-						"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" "
-						"required>"
-				"</div>"
-				// Email
-				"<div class=\"field-group\">"
-					"<label>Email</label>"
-					"<input type=\"email\" name=\"email\" value=\"",
-						htmlEscape(email), "\" size=\"24\" "
-						"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" "
-						"required>"
-				"</div>"
-				// Password
-				"<div class=\"field-group\">"
-					"<label>Password</label>"
-					"<input type=\"password\" name=\"password1\" size=\"24\">"
-				"</div>"
-				// Password (repeat)
-				"<div class=\"field-group\">"
-					"<label>Password (repeat)</label>"
-					"<input type=\"password\" name=\"password2\" size=\"24\">"
-				"</div>"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Sign up\">"
-			"</form>"
-		"</div>");
 }
 
 void User::listUsers() {

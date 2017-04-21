@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>
 #include <csignal>
+#include <pthread.h>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>

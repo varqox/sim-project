@@ -92,8 +92,8 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 		else if (next_arg == "logout")
 			logout();
 
-		// else if (next_arg == "signup")
-			// sign_up();
+		else if (next_arg == "signup")
+			sign_up();
 
 		else if (next_arg == "logs")
 			view_logs();
