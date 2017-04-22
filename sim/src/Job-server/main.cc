@@ -14,8 +14,7 @@ using std::string;
 MySQL::Connection db_conn;
 SQLite::Connection sqlite_db;
 
-static void processJobQueue() {
-
+static void processJobQueue() noexcept {
 	// While job queue is not empty
 	for (;;) try {
 		MySQL::Result res = db_conn.query(
@@ -26,10 +25,10 @@ static void processJobQueue() {
 		if (!res.next())
 			break;
 
-		StringView job_id = res[1];
-		JobQueueType type = JobQueueType(strtoull(res[2]));
-		StringView aux_id = (res.isNull(3) ? "" : res[3]);
-		StringView info = res[4];
+		StringView job_id = res[0];
+		JobQueueType type = JobQueueType(strtoull(res[1]));
+		StringView aux_id = (res.isNull(2) ? "" : res[2]);
+		StringView info = res[3];
 
 		// Change the job status to IN_PROGRESS
 		auto stmt = db_conn.prepare("UPDATE job_queue"
@@ -39,15 +38,15 @@ static void processJobQueue() {
 		// Choose action depending on the job type
 		switch (type) {
 		case JobQueueType::JUDGE_SUBMISSION:
-			judgeSubmission(job_id, aux_id, res[6]);
+			judgeSubmission(job_id, aux_id, res[5]);
 			break;
 
 		case JobQueueType::ADD_PROBLEM:
-			addProblem(job_id, res[5], info);
+			addProblem(job_id, res[4], info);
 			break;
 
 		case JobQueueType::REUPLOAD_PROBLEM:
-			reuploadProblem(job_id, res[5], info, aux_id);
+			reuploadProblem(job_id, res[4], info, aux_id);
 			break;
 
 		case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
