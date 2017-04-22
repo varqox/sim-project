@@ -31,8 +31,8 @@ Problemset::Permissions Problemset::getPermissions(const string& owner_id,
 	return (ptype == ProblemType::PUBLIC ? PERM_VIEW : PERM_NONE);
 }
 
-void Problemset::problemsetTemplate(const StringView& title,
-	const StringView& styles, const StringView& scripts)
+void Problemset::problemsetTemplate(StringView title, StringView styles,
+	StringView scripts)
 {
 	baseTemplate(title, concat("body{margin-left:190px}", styles),
 		scripts);
@@ -252,7 +252,7 @@ void Problemset::addProblem() {
 			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
 			"Memory limit: invalid value");
 
-		fv.validate<bool(const StringView&)>(global_time_limit,
+		fv.validate<bool(StringView)>(global_time_limit,
 			"global-time-limit", "Global time limit", isReal,
 			"Global time limit: invalid value"); // TODO: add length limit
 		// Global time limit in usec
@@ -333,7 +333,7 @@ void Problemset::addProblem() {
 					"<label>Problem's name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlEscape(name), "\" size=\"24\""
-					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+					"maxlength=\"", PROBLEM_NAME_MAX_LEN, "\" "
 					"placeholder=\"Detect from Simfile\">"
 				"</div>"
 				// Label
@@ -341,7 +341,7 @@ void Problemset::addProblem() {
 					"<label>Problem's label</label>"
 					"<input type=\"text\" name=\"label\" value=\"",
 						htmlEscape(label), "\" size=\"24\""
-					"maxlength=\"", toStr(PROBLEM_LABEL_MAX_LEN), "\" "
+					"maxlength=\"", PROBLEM_LABEL_MAX_LEN, "\" "
 					"placeholder=\"Detect from Simfile or from name\">"
 				"</div>"
 				// Memory limit
@@ -536,7 +536,7 @@ void Problemset::reuploadProblem() {
 			isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
 			"Memory limit: invalid value");
 
-		fv.validate<bool(const StringView&)>(global_time_limit,
+		fv.validate<bool(StringView)>(global_time_limit,
 			"global-time-limit", "Global time limit", isReal,
 			"Global time limit: invalid value"); // TODO: add length limit
 		// Global time limit in usec
@@ -629,7 +629,7 @@ void Problemset::reuploadProblem() {
 					"<label>Problem's name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlEscape(name), "\" size=\"24\""
-					"maxlength=\"", toStr(PROBLEM_NAME_MAX_LEN), "\" "
+					"maxlength=\"", PROBLEM_NAME_MAX_LEN, "\" "
 					"placeholder=\"Detect from Simfile\">"
 				"</div>"
 				// Label
@@ -637,7 +637,7 @@ void Problemset::reuploadProblem() {
 					"<label>Problem's label</label>"
 					"<input type=\"text\" name=\"label\" value=\"",
 						htmlEscape(label), "\" size=\"24\""
-					"maxlength=\"", toStr(PROBLEM_LABEL_MAX_LEN), "\" "
+					"maxlength=\"", PROBLEM_LABEL_MAX_LEN, "\" "
 					"placeholder=\"Detect from Simfile or from name\">"
 				"</div>"
 				// Memory limit

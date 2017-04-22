@@ -67,8 +67,7 @@ void Sim::login() {
 					"<label>Username</label>"
 					"<input type=\"text\" name=\"username\" value=\"",
 						htmlEscape(username), "\" size=\"24\" "
-						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", USERNAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Password
 				"<div class=\"field-group\">"
@@ -157,32 +156,28 @@ void Sim::sign_up() {
 					"<label>Username</label>"
 					"<input type=\"text\" name=\"username\" value=\"",
 						htmlEscape(username), "\" size=\"24\" "
-						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", USERNAME_MAX_LEN, "\" required>"
 				"</div>"
 				// First Name
 				"<div class=\"field-group\">"
 					"<label>First name</label>"
 					"<input type=\"text\" name=\"first_name\" value=\"",
 						htmlEscape(first_name), "\" size=\"24\" "
-						"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", USER_FIRST_NAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Last name
 				"<div class=\"field-group\">"
 					"<label>Last name</label>"
 					"<input type=\"text\" name=\"last_name\" value=\"",
 						htmlEscape(last_name), "\" size=\"24\" "
-						"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", USER_LAST_NAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Email
 				"<div class=\"field-group\">"
 					"<label>Email</label>"
 					"<input type=\"email\" name=\"email\" value=\"",
 						htmlEscape(email), "\" size=\"24\" "
-						"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", USER_EMAIL_MAX_LEN, "\" required>"
 				"</div>"
 				// Password
 				"<div class=\"field-group\">"
@@ -430,7 +425,7 @@ void User::userProfile() {
 				"</div>"
 			"</div>"
 		"<h2>User's submissions (showing the recent ",
-			toString(SUBMISSIONS_ON_USER_PROFILE_LIMIT), ")</h2>");
+			SUBMISSIONS_ON_USER_PROFILE_LIMIT, ")</h2>");
 
 	printUserSubmissions(SUBMISSIONS_ON_USER_PROFILE_LIMIT);
 }
@@ -523,7 +518,7 @@ void User::editProfile() {
 				"<label>Username</label>"
 				"<input type=\"text\" name=\"username\" value=\"",
 					htmlEscape(username), "\" size=\"24\" "
-					"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" ",
+					"maxlength=\"", USERNAME_MAX_LEN, "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"), ">"
 			"</div>"
 			// Account type
@@ -535,34 +530,29 @@ void User::editProfile() {
 
 	switch (user_type) {
 		case UTYPE_ADMIN:
-			append("<option value=\"", toStr(UTYPE_ADMIN), "\" selected>"
-				"Admin</option>");
+			append("<option value=\"", UTYPE_ADMIN, "\" selected>Admin</option>"
+				);
 			if (permissions & PERM_DEMOTE)
-				append("<option value=\"", toStr(UTYPE_TEACHER), "\">"
-						"Teacher</option>"
-					"<option value=\"", toStr(UTYPE_NORMAL), "\">"
-						"Normal</option>");
+				append("<option value=\"", UTYPE_TEACHER, "\">Teacher</option>"
+					"<option value=\"", UTYPE_NORMAL, "\">Normal</option>");
 			break;
 
 		case UTYPE_TEACHER:
 			if (permissions & PERM_MAKE_ADMIN)
-				append("<option value=\"", toStr(UTYPE_ADMIN), "\">"
-					"Admin</option>");
-			append("<option value=\"", toStr(UTYPE_TEACHER), "\" selected>"
+				append("<option value=\"", UTYPE_ADMIN, "\">Admin</option>");
+			append("<option value=\"", UTYPE_TEACHER, "\" selected>"
 				"Teacher</option>");
 			if (permissions & PERM_DEMOTE)
-				append("<option value=\"", toStr(UTYPE_NORMAL), "\">"
-					"Normal</option>");
+				append("<option value=\"", UTYPE_NORMAL, "\">Normal</option>");
 			break;
 
 		default: // Normal
 			if (permissions & PERM_MAKE_ADMIN)
-				append("<option value=\"", toStr(UTYPE_ADMIN), "\">"
-					"Admin</option>");
+				append("<option value=\"", UTYPE_ADMIN, "\">Admin</option>");
 			if (permissions & PERM_MAKE_TEACHER)
-				append("<option value=\"", toStr(UTYPE_TEACHER), "\">"
-					"Teacher</option>");
-			append("<option value=\"", toStr(UTYPE_NORMAL), "\" selected>"
+				append("<option value=\"", UTYPE_TEACHER, "\">Teacher</option>"
+					);
+			append("<option value=\"", UTYPE_NORMAL, "\" selected>"
 				"Normal</option>");
 	}
 	append("</select>");
@@ -570,8 +560,8 @@ void User::editProfile() {
 	if ((permissions & (PERM_MAKE_ADMIN | PERM_MAKE_TEACHER | PERM_DEMOTE))
 		== 0)
 	{
-		append("<input type=\"hidden\" name=\"type\" value=\"",
-			toStr(user_type), "\">");
+		append("<input type=\"hidden\" name=\"type\" value=\"", user_type,
+			"\">");
 	}
 
 	append("</div>"
@@ -580,7 +570,7 @@ void User::editProfile() {
 				"<label>First name</label>"
 				"<input type=\"text\" name=\"first_name\" value=\"",
 					htmlEscape(first_name), "\" size=\"24\""
-					"maxlength=\"", toStr(USER_FIRST_NAME_MAX_LEN), "\" ",
+					"maxlength=\"", USER_FIRST_NAME_MAX_LEN, "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
 			"</div>"
 			// Last name
@@ -588,7 +578,7 @@ void User::editProfile() {
 				"<label>Last name</label>"
 				"<input type=\"text\" name=\"last_name\" value=\"",
 					htmlEscape(last_name), "\" size=\"24\""
-					"maxlength=\"", toStr(USER_LAST_NAME_MAX_LEN), "\" ",
+					"maxlength=\"", USER_LAST_NAME_MAX_LEN, "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
 			"</div>"
 			// Email
@@ -596,7 +586,7 @@ void User::editProfile() {
 				"<label>Email</label>"
 				"<input type=\"email\" name=\"email\" value=\"",
 					htmlEscape(email), "\" size=\"24\""
-					"maxlength=\"", toStr(USER_EMAIL_MAX_LEN), "\" ",
+					"maxlength=\"", USER_EMAIL_MAX_LEN, "\" ",
 					(permissions & PERM_EDIT ? "required" : "readonly"),  ">"
 			"</div>");
 
@@ -807,7 +797,7 @@ void User::printUserSubmissions(uint limit) {
 			" ORDER BY s.id DESC";
 
 		if (limit > 0)
-			back_insert(query, " LIMIT ", toStr(limit));
+			back_insert(query, " LIMIT ", limit);
 
 		MySQL::Statement stmt = db_conn.prepare(query);
 		stmt.setString(1, user_id);
@@ -861,7 +851,7 @@ void User::printUserSubmissions(uint limit) {
 					submissionStatusAsTd(SubmissionStatus(res.getUInt(9)),
 						show_final_results),
 					"<td>", (show_final_results ? res[10] : ""), "</td>"
-					"<td>", toStr(stype), "</td>"
+					"<td>", stype, "</td>"
 					"<td>"
 						"<a class=\"btn-small\" href=\"/s/", res[1],
 							"\">View</a>"

@@ -76,7 +76,7 @@ int main2(int argc, char**argv) {
 	auto run_command = [](vector<string> args) {
 		auto es = Spawner::run(args[0], args);
 		if (es.code) {
-			auto tmplog = errlog(args[0], " failed with code ", toStr(es.code));
+			auto tmplog = errlog(args[0], " failed with code ", es.code);
 			if (es.message.size())
 				tmplog(" because: ", es.message);
 

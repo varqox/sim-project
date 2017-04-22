@@ -157,7 +157,7 @@ int main() {
 	}
 
 	stdlog("Job server launch:\n"
-		"PID: ", toStr(getpid()));
+		"PID: ", getpid());
 
 	// Install signal handlers
 	struct sigaction sa;

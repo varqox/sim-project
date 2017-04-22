@@ -66,6 +66,6 @@ void Sim::api_logs() {
 	if (ret != len)
 		THROW("read()", error(errno));
 
-	append(toStr(end_offset - len), '\n'); // New offset
+	append(end_offset - len, '\n'); // New offset
 	append(toHex(buff)); // Data
 }

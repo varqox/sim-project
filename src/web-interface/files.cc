@@ -94,7 +94,7 @@ void Contest::addFile() {
 					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlEscape(file_name), "\" size=\"24\" "
-						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
+						"maxlength=\"", FILE_NAME_MAX_LEN, "\" "
 						"placeholder=\"The same as name of uploaded file\">"
 				"</div>"
 				// File
@@ -106,7 +106,7 @@ void Contest::addFile() {
 				"<div class=\"field-group\">"
 					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
-						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
+						FILE_DESCRIPTION_MAX_LEN, "\">",
 						htmlEscape(description), "</textarea>"
 				"</div>"
 
@@ -120,7 +120,7 @@ void Contest::addFile() {
 		"</div>");
 }
 
-void Contest::editFile(const StringView& id, string name) {
+void Contest::editFile(StringView id, string name) {
 	if (!rpath->admin_access)
 		return error403();
 
@@ -224,7 +224,7 @@ void Contest::editFile(const StringView& id, string name) {
 					"<label>File name</label>"
 					"<input type=\"text\" name=\"file-name\" value=\"",
 						htmlEscape(name), "\" size=\"24\" "
-						"maxlength=\"", toStr(FILE_NAME_MAX_LEN), "\" "
+						"maxlength=\"", FILE_NAME_MAX_LEN, "\" "
 						"placeholder=\"The same as name of reuploaded file\">"
 				"</div>"
 				// Reupload file
@@ -236,15 +236,15 @@ void Contest::editFile(const StringView& id, string name) {
 				"<div class=\"field-group\">"
 					"<label>Description</label>"
 					"<textarea name=\"description\" maxlength=\"",
-						toStr(FILE_DESCRIPTION_MAX_LEN), "\">",
+						FILE_DESCRIPTION_MAX_LEN, "\">",
 						htmlEscape(description), "</textarea>"
 				"</div>"
 				// File size
 				"<div class=\"field-group\">"
 					"<label>File size</label>"
 					"<input type=\"text\" value=\"",
-						humanizeFileSize(file_size), " (", toStr(file_size),
-						" bytes)\" disabled>"
+						humanizeFileSize(file_size), " (", file_size, " bytes)"
+						"\" disabled>"
 				"</div>"
 				// Modified
 				"<div class=\"field-group\">"
@@ -265,7 +265,7 @@ void Contest::editFile(const StringView& id, string name) {
 		"</div>");
 }
 
-void Contest::deleteFile(const StringView& id, const StringView& name) {
+void Contest::deleteFile(StringView id, StringView name) {
 	if (!rpath->admin_access)
 		return error403();
 

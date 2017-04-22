@@ -162,7 +162,7 @@ private:
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
 			addNotification("error", htmlEscape(name_to_print),
-				" cannot be longer than ", toStr(max_size), " bytes");
+				" cannot be longer than ", max_size, " bytes");
 			return false;
 		}
 
@@ -212,7 +212,7 @@ private:
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
 			addNotification("error", htmlEscape(name_to_print),
-				" cannot be longer than ", toStr(max_size), " bytes");
+				" cannot be longer than ", max_size, " bytes");
 			return false;
 		}
 

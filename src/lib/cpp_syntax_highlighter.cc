@@ -277,7 +277,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 	// Append end guards (one is already in str - terminating null character)
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
-	DEBUG_CSH(stdlog("end: ", toStr(end));)
+	DEBUG_CSH(stdlog("end: ", end);)
 
 	vector<StyleType> begs(str.size(), -1); // here beginnings of styles are
 	                                        // marked
@@ -349,7 +349,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				j += 2;
 				++line;
 			}
-			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '");
+			auto tmplog = stdlog(i, " (line ", line, "): '");
 			if (isprint(str[i]))
 				tmplog(str[i], "'   ");
 			else if (str[i] == '\n')
@@ -365,7 +365,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (ends[i] == 0)
 				tmplog("0, ");
 			else
-				tmplog("\033[1;32m", toStr(ends[i]), "\033[m, ");
+				tmplog("\033[1;32m", ends[i], "\033[m, ");
 
 			switch (begs[i]) {
 			case -1:
@@ -622,7 +622,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	// Highlights fragments of code not containing: comments, preprocessor,
 	// number literals, string literals and character literals
 	auto highlight = [&](int beg, int endi) {
-		DEBUG_CSH(stdlog("highlight(", toStr(beg), ", ", toStr(endi), "):");)
+		DEBUG_CSH(stdlog("highlight(", beg, ", ", endi, "):");)
 		if (beg >= endi)
 			return;
 
@@ -637,7 +637,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (k && !isName(str[i + 1]) &&
 				!isName(str[j = i - words[k].size]))
 			{
-				DEBUG_CSH(stdlog("aho: ", toStr(j + 1), ": ", words[k].str);)
+				DEBUG_CSH(stdlog("aho: ", j + 1, ": ", words[k].str);)
 				begs[j + 1] = words[k].style;
 				++ends[i + 1];
 				i = j;

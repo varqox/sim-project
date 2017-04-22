@@ -33,8 +33,7 @@ static void* worker(void*) {
 
 			// extract IP
 			inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN);
-			stdlog("Connection accepted: ", toStr(pthread_self()), " form ",
-				ip);
+			stdlog("Connection accepted: ", pthread_self(), " form ", ip);
 
 			conn.assign(client_socket_fd);
 			HttpRequest req = conn.getRequest();
@@ -142,9 +141,9 @@ int main() {
 	}
 
 	stdlog("Server launch:\n"
-		"PID: ", toStr(getpid()), "\n"
-		"workers: ", toStr(workers), "\n"
-		"address: ", address.data(), ':', toStr(port));
+		"PID: ", getpid(), "\n"
+		"workers: ", workers, "\n"
+		"address: ", address.data(), ':', port);
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		errlog("Failed to create socket", error(errno));
@@ -160,7 +159,7 @@ int main() {
 	// Bind
 	constexpr int TRIES = 8;
 	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
-		errlog("Failed to bind (try ", toStr(try_no), ')', error(errno));
+		errlog("Failed to bind (try ", try_no, ')', error(errno));
 		if (++try_no > TRIES)
 			return 3;
 

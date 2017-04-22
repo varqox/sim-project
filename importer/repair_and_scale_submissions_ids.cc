@@ -84,7 +84,7 @@ void work() {
 	}
 
 	conn.executeUpdate(concat("ALTER TABLE submissions AUTO_INCREMENT=",
-		toStr(data.size())));
+		data.size()));
 
 	// Update submissions' ids in job_queue
 	stdlog("Updating job_queue...");
