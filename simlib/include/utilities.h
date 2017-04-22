@@ -1,6 +1,6 @@
 #pragma once
 
-#include "meta.h"
+#include "string.h"
 
 #include <algorithm>
 #include <array>
@@ -20,19 +20,21 @@ T& back_insert(T& reference, Args&&... args) {
 
 template<class... Args>
 std::string& back_insert(std::string& str, Args&&... args) {
-	size_t total_length = str.size();
-	(void)std::initializer_list<int>{
-		(total_length += string_length(args), 0)...
-	};
+	[&str](auto&&... xx) {
+		size_t total_length = str.size();
+		(void)std::initializer_list<int>{
+			(total_length += string_length(xx), 0)...
+		};
 
-	// Allocate more space (reserve is inefficient)
-	size_t old_size = str.size();
-	str.resize(total_length);
-	str.resize(old_size);
+		// Allocate more space (reserve is inefficient)
+		size_t old_size = str.size();
+		str.resize(total_length);
+		str.resize(old_size);
 
-	(void)std::initializer_list<int>{
-		(str.append(data(args), string_length(args)), 0)...
-	};
+		(void)std::initializer_list<int>{
+			(str += std::forward<decltype(xx)>(xx), 0)...
+		};
+	}(stringify(std::forward<Args>(args))...);
 
 	return str;
 }

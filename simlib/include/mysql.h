@@ -404,7 +404,7 @@ public:
 				continue;
 
 			if (res_[i].buffer_type != MYSQL_TYPE_BLOB)
-				THROW("Truncated data at column ", toStr(i));
+				THROW("Truncated data at column ", i);
 
 			InplaceBuffBase* buff = reinterpret_cast<InplaceBuffBase*>
 				((int8_t*)res_[i].length - offsetof(InplaceBuffBase, size));

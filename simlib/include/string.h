@@ -14,12 +14,6 @@
 # include <cassert>
 #endif
 
-#define throw_assert(expr) \
-	((expr) ? (void)0 : throw std::runtime_error(concat_tostr(__FILE__, ':', \
-	meta::ToString<__LINE__>{}, ": ", __PRETTY_FUNCTION__, \
-	": Assertion `" #expr " failed.")))
-
-
 template<class T>
 constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
 	return x.size();
@@ -96,6 +90,41 @@ inline std::string& operator+=(std::string& str,
 	return str;
 }
 
+template<size_t N, class size_type = size_t>
+class StringBuff;
+
+// Only to use with standard integral types
+// +1 for a terminating null char and +1 for the minus sign
+template<class T, size_t N =
+	string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2>
+constexpr inline auto toString(T x) noexcept ->
+	typename std::enable_if<std::is_integral<T>::value, StringBuff<N>>::type;
+
+template<class T>
+constexpr inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x))
+{
+	return std::forward<T>(x);
+}
+
+// Allows stringifying integers
+constexpr inline char stringify(char x) noexcept { return x; }
+constexpr inline auto stringify(unsigned char x) noexcept ->
+	decltype(toString(x));
+
+constexpr inline auto stringify(short x) noexcept -> decltype(toString(x));
+constexpr inline auto stringify(unsigned short x) noexcept ->
+	decltype(toString(x));
+
+constexpr inline auto stringify(int x) noexcept -> decltype(toString(x));
+constexpr inline auto stringify(unsigned x) noexcept -> decltype(toString(x));
+constexpr inline auto stringify(long x) noexcept -> decltype(toString(x));
+constexpr inline auto stringify(unsigned long x) noexcept ->
+	decltype(toString(x));
+
+constexpr inline auto stringify(long long x) noexcept -> decltype(toString(x));
+constexpr inline auto stringify(unsigned long long x) noexcept ->
+	decltype(toString(x));
+
 /**
  * @brief Concentrates @p args into std::string
  *
@@ -105,18 +134,29 @@ inline std::string& operator+=(std::string& str,
  */
 template<class... Args>
 inline std::string concat_tostr(Args&&... args) {
-	size_t total_length = 0;
-	int foo[] = {(total_length += string_length(args), 0)...};
-	(void)foo;
+	return [](auto&&... xx) {
+		size_t total_length = 0;
+		(void)std::initializer_list<int>{
+			(total_length += string_length(xx), 0)...
+		};
 
-	std::string res;
-	res.reserve(total_length);
-	int bar[] = {(res += std::forward<Args>(args), 0)...};
-	(void)bar;
-	return res;
+		std::string res;
+		res.reserve(total_length);
+
+		(void)std::initializer_list<int>{
+			(res += std::forward<decltype(xx)>(xx), 0)...
+		};
+
+		return res;
+	}(stringify(std::forward<Args>(args))...);
 }
 
-template<size_t N, class size_type = size_t>
+#define throw_assert(expr) \
+	((expr) ? (void)0 : throw std::runtime_error(concat_tostr(__FILE__, ':', \
+	meta::ToString<__LINE__>{}, ": ", __PRETTY_FUNCTION__, \
+	": Assertion `" #expr " failed.")))
+
+template<size_t N, class size_type>
 class StringBuff {
 public:
 	static constexpr size_t max_size = N - 1;
@@ -147,25 +187,27 @@ public:
 	/// Appends without adding the null terminating character
 	template<class... Args>
 	constexpr StringBuff& raw_append(Args&&... args) {
-		// Sum length of all args
-		size_t final_len = len;
-		(void)std::initializer_list<size_t>{
-			(final_len += string_length(args))...
-		};
-		throw_assert(final_len <= max_size);
+		[this](auto&&... xx) {
+			// Sum length of all args
+			size_t final_len = len;
+			(void)std::initializer_list<size_t>{
+				(final_len += string_length(xx))...
+			};
+			throw_assert(final_len <= max_size);
 
-		// Concentrate them into str[]
-		auto impl_append = [&](auto&& s) {
-			auto sl = string_length(s);
-			std::copy(::data(s), ::data(s) + sl, str + len);
-			len += sl;
-		};
+			// Concentrate them into str[]
+			auto impl_append = [&](auto&& s) {
+				auto sl = string_length(s);
+				std::copy(::data(s), ::data(s) + sl, str + len);
+				len += sl;
+			};
 
-		(void)impl_append; // Ignore warning 'unused' when no arguments are
-		                   // provided
-		(void)std::initializer_list<int>{
-			(impl_append(std::forward<Args>(args)), 0)...
-		};
+			(void)impl_append; // Ignore warning 'unused' when no arguments are
+			                   // provided
+			(void)std::initializer_list<int>{
+				(impl_append(std::forward<decltype(xx)>(xx)), 0)...
+			};
+		}(stringify(std::forward<Args>(args))...);
 
 		return *this;
 	}
@@ -993,25 +1035,27 @@ public:
 
 	template<class... Args>
 	constexpr InplaceBuffBase& append(Args&&... args) {
-		// Sum length of all args
-		size_t k = size, final_len = size;
-		(void)std::initializer_list<size_t>{
-			(final_len += string_length(args))...
-		};
-		resize(final_len);
+		[this](auto&&... xx) {
+			// Sum length of all args
+			size_t k = size, final_len = size;
+			(void)std::initializer_list<size_t>{
+				(final_len += string_length(xx))...
+			};
+			resize(final_len);
 
-		// Concentrate them into str[]
-		auto impl_append = [&](auto&& s) {
-			auto sl = string_length(s);
-			std::copy(::data(s), ::data(s) + sl, data() + k);
-			k += sl;
-		};
+			// Concentrate them into str[]
+			auto impl_append = [&](auto&& s) {
+				auto sl = string_length(s);
+				std::copy(::data(s), ::data(s) + sl, data() + k);
+				k += sl;
+			};
 
-		(void)impl_append; // Ignore warning 'unused' when no arguments are
-		                   // provided
-		(void)std::initializer_list<int>{
-			(impl_append(std::forward<Args>(args)), 0)...
-		};
+			(void)impl_append; // Ignore warning 'unused' when no arguments are
+			                   // provided
+			(void)std::initializer_list<int>{
+				(impl_append(std::forward<decltype(xx)>(xx)), 0)...
+			};
+		}(stringify(std::forward<Args>(args))...);
 
 		return *this;
 	}
@@ -1165,18 +1209,19 @@ struct StrNumCompare {
 	}
 };
 
-// Only to use with standard integral types
-template<class T, size_t N = meta::ToString<std::numeric_limits<T>::max()>
-	::arr_value.size() + 2> // +1 for a terminating null char and +1 for the
-	                        // minus sign
-constexpr StringBuff<N> toString(T x) noexcept(N >=
-	meta::ToString<std::numeric_limits<T>::max()>::arr_value.size() + 2)
+template<class T, size_t N>
+constexpr inline auto toString(T x) noexcept ->
+	typename std::enable_if<std::is_integral<T>::value, StringBuff<N>>::type
 {
-	static_assert(N >= 2, "Needed to at least return \"0\"");
-	if (x == 0)
-		return {1, '0'};
+	using RType = StringBuff<N>;
+	static_assert(N >=
+		string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2,
+		"Needed to be noexcept");
 
-	StringBuff<N> buff;
+	if (x == 0)
+		return RType{1, '0'};
+
+	RType buff;
 	if (std::is_signed<T>::value && x < 0) {
 		while (x) {
 			T x2 = x / 10;
@@ -1199,6 +1244,51 @@ constexpr StringBuff<N> toString(T x) noexcept(N >=
 	buff[buff.len] = '\0';
 	std::reverse(buff.str, buff.str + buff.len);
 	return buff;
+}
+
+// Allows stringifying integers
+constexpr inline auto stringify(unsigned char x) noexcept ->
+	decltype(toString(x))
+{
+	return toString(x);
+}
+
+constexpr inline auto stringify(short x) noexcept -> decltype(toString(x)) {
+	return toString(x);
+}
+
+constexpr inline auto stringify(unsigned short x) noexcept ->
+	decltype(toString(x))
+{
+	return toString(x);
+}
+
+constexpr inline auto stringify(int x) noexcept -> decltype(toString(x)) {
+	return toString(x);
+}
+
+constexpr inline auto stringify(unsigned x) noexcept -> decltype(toString(x)) {
+	return toString(x);
+}
+
+constexpr inline auto stringify(long x) noexcept -> decltype(toString(x)) {
+	return toString(x);
+}
+
+constexpr inline auto stringify(unsigned long x) noexcept ->
+	decltype(toString(x))
+{
+	return toString(x);
+}
+
+constexpr inline auto stringify(long long x) noexcept -> decltype(toString(x)) {
+	return toString(x);
+}
+
+constexpr inline auto stringify(unsigned long long x) noexcept ->
+	decltype(toString(x))
+{
+	return toString(x);
 }
 
 // Converts T to std::string

@@ -29,7 +29,7 @@ string Simfile::dump() const {
 
 	// Memory limit
 	if (global_mem_limit >= (1 << 10))
-		back_insert(res, "memory_limit: ", toStr(global_mem_limit >> 20), '\n');
+		back_insert(res, "memory_limit: ", global_mem_limit >> 20, '\n');
 
 	// Limits
 	back_insert(res, "limits: [");
@@ -41,7 +41,7 @@ string Simfile::dump() const {
 				usecToSecStr(test.time_limit, 6))};
 
 			if (test.memory_limit != global_mem_limit)
-				back_insert(line, ' ', toStr(test.memory_limit >> 20));
+				back_insert(line, ' ', test.memory_limit >> 20);
 
 			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
 		}
@@ -57,7 +57,7 @@ string Simfile::dump() const {
 				if (p.second == "ocen")
 					p.first = "0";
 				back_insert(res, '\t', ConfigFile::escapeString(concat(p.first,
-					' ', toStr(group.score))), '\n');
+					' ', group.score)), '\n');
 			}
 		res += "]\n";
 	}

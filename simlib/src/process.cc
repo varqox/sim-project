@@ -30,7 +30,7 @@ string getCWD() {
 
 string getExec(pid_t pid) {
 	array<char, 4096> buff;
-	string path = concat_tostr("/proc/", toStr(pid), "/exe");
+	string path = concat_tostr("/proc/", pid, "/exe");
 
 	ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
 	if ((rc == -1 && errno == ENAMETOOLONG)
@@ -124,7 +124,7 @@ string chdirToExecDir() {
 }
 
 int8_t detectArchitecture(pid_t pid) {
-	string filename = concat_tostr("/proc/", toStr(pid), "/exe");
+	string filename = concat_tostr("/proc/", pid, "/exe");
 
 	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 	if (fd == -1)
@@ -147,8 +147,7 @@ int8_t detectArchitecture(pid_t pid) {
 }
 
 string getProcStat(pid_t pid, uint field_no) {
-	string contents = getFileContents(concat_tostr("/proc/", toStr(pid),
-		"/stat"));
+	string contents = getFileContents(concat_tostr("/proc/", pid, "/stat"));
 	SimpleParser sp {contents};
 
 	// [0] - Process pid

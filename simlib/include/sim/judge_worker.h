@@ -71,8 +71,8 @@ public:
 				back_insert(res, "  ", paddedString(test.name, 11, LEFT),
 					paddedString(usecToSecStr(test.runtime, 2, false), 4),
 					" / ", usecToSecStr(test.time_limit, 2, false),
-					" s  ", toStr(test.memory_consumed >> 10), " / ",
-					toStr(test.memory_limit >> 10), " KB"
+					" s  ", test.memory_consumed >> 10, " / ",
+					test.memory_limit >> 10, " KB"
 					"    Status: ");
 				// Status
 				res += span_status(test.status);
@@ -85,9 +85,10 @@ public:
 			}
 
 			// Score
-			back_insert(res, "  Score: ", toString(group.score), " / ",
-				toString(group.max_score), '\n');
+			back_insert(res, "  Score: ", group.score, " / ", group.max_score,
+				'\n');
 		}
+
 		return res += '}';
 	}
 

@@ -597,8 +597,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 	func.detectTraceeArchitecture(cpid);
 
 	// Open /proc/{cpid}/statm
-	FileDescriptor statm_fd {concat_tostr("/proc/", toStr(cpid), "/statm"),
-		O_RDONLY};
+	FileDescriptor statm_fd {concat_tostr("/proc/", cpid, "/statm"), O_RDONLY};
 	if (statm_fd == -1)
 		THROW("open(/proc/{cpid}/statm)", error(errno));
 
@@ -616,7 +615,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 		for (int i = 0; i < 32 && isdigit(buff[i]); ++i)
 			vm_size = vm_size * 10 + buff[i] - '0';
 
-		DEBUG_SANDBOX(stdlog("get_vm_size: -> ", toStr(vm_size));)
+		DEBUG_SANDBOX(stdlog("get_vm_size: -> ", vm_size);)
 		return vm_size;
 
 	};
@@ -681,8 +680,8 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 
 		try {
 			if (syscall_no < 0)
-				THROW("failed to get syscall_no - ptrace(): ",
-					toStr(syscall_no), error(errno));
+				THROW("failed to get syscall_no - ptrace(): ", syscall_no,
+					error(errno));
 
 			// Some useful debug
 			DEBUG_SANDBOX(
@@ -697,18 +696,18 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 						int32_t(regs.uregs.i386_regs.ecx)
 						: regs.uregs.x86_64_regs.rsi);
 
-					auto tmplog = stdlog('[', toStr(cpid), "] syscall: ",
-						paddedString(toStr(syscall_no), 3), ": ",
+					auto tmplog = stdlog('[', cpid, "] syscall: ",
+						paddedString(syscall_no, 3), ": ",
 						// syscall name
 						(func.getArch() == ARCH_i386 ? x86_syscall_name
-							: x86_64_syscall_name)[syscall_no], '(',
-						toStr(arg1), ", ", toStr(arg2), ", ...)");
+							: x86_64_syscall_name)[syscall_no], '(', arg1, ", ",
+						arg2, ", ...)");
 
 					if (with_result) {
 						int64_t ret_val = (func.getArch() == ARCH_i386 ?
 							int32_t(regs.uregs.i386_regs.eax)
 							: regs.uregs.x86_64_regs.rax);
-						tmplog(" -> ", toStr(ret_val));
+						tmplog(" -> ", ret_val);
 					}
 				};
 			)
@@ -746,7 +745,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 			DEBUG_SANDBOX(logSyscall(false);)
 
 		} catch (...) {
-			DEBUG_SANDBOX(stdlog(__FILE__ ":", toStr(__LINE__),
+			DEBUG_SANDBOX(stdlog(__FILE__ ":", meta::ToString<__LINE__>{},
 				": Caught exception");)
 
 			// Exception after tracee is dead and waited
@@ -797,9 +796,9 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 				x86_syscall_name : x86_64_syscall_name)[syscall_no];
 
 			if (syscall_name.empty()) // Syscall not found
-				message = concat_tostr("forbidden syscall ", toStr(syscall_no));
+				message = concat_tostr("forbidden syscall ", syscall_no);
 			else
-				message = concat_tostr("forbidden syscall ", toStr(syscall_no), ": ", syscall_name, "()");
+				message = concat_tostr("forbidden syscall ", syscall_no, ": ", syscall_name, "()");
 		}
 
 		return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE),

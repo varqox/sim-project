@@ -110,8 +110,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					paddedString(
 						usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
-					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
-					toStr(test_report.memory_limit >> 10), " KB"
+					" s  ", test_report.memory_consumed >> 10, " / ",
+					test_report.memory_limit >> 10, " KB"
 					"    Status: ");
 				// Status
 				switch (test_report.status) {
@@ -125,7 +125,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					THROW("Should not reach here");
 				}
 				// Rest
-				tmplog("   Exited with ", toStr(es.code), " [ ",
+				tmplog("   Exited with ", es.code, " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]");
 			};
 
@@ -244,8 +244,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					paddedString(
 						usecToSecStr(test_report.runtime, 2, false), 4),
 					" / ", usecToSecStr(test_report.time_limit, 2, false),
-					" s  ", toStr(test_report.memory_consumed >> 10), " / ",
-					toStr(test_report.memory_limit >> 10), " KB"
+					" s  ", test_report.memory_consumed >> 10, " / ",
+					test_report.memory_limit >> 10, " KB"
 					"    Status: \033[1;32mOK\033[m   Exited with 0 [ ",
 					usecToSecStr(test_report.runtime, 6, false), " ]  "
 					"Checker: ");
@@ -257,10 +257,9 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				else
 					tmplog("\033[1;33mERROR\033[m ", test_report.comment);
 				// Rest
-				tmplog("   Exited with ", toStr(es.code), " [ ",
+				tmplog("   Exited with ", es.code, " [ ",
 					usecToSecStr(es.runtime, 6, false), " ]  ",
-					toStr(es.vm_peak >> 10), " / ",
-					toStr(CHECKER_MEMORY_LIMIT >> 10), " KB");
+					es.vm_peak >> 10, " / ", CHECKER_MEMORY_LIMIT >> 10, " KB");
 			}
 		}
 
@@ -268,9 +267,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 		report_group.score = round(group.score * score_ratio);
 		report_group.max_score = group.score;
 
-		vlog("  Score: ", toStr(report_group.score), " / ",
-			toStr(report_group.max_score), " (ratio: ", toStr(score_ratio, 3),
-			')');
+		vlog("  Score: ", report_group.score, " / ", report_group.max_score,
+			" (ratio: ", toStr(score_ratio, 3), ')');
 	}
 
 	vlog('}');

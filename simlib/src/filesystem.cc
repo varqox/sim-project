@@ -597,7 +597,7 @@ string humanizeFileSize(uint64_t size) {
 
 	// Bytes
 	if (size < MIN_KB)
-		return (size == 1 ? "1 byte" : concat_tostr(toString(size), " bytes"));
+		return (size == 1 ? "1 byte" : concat_tostr(size," bytes"));
 
 	double dsize = size;
 	// KB
