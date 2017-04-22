@@ -12,15 +12,19 @@
 
 #ifdef DEBUG
 # define D(...) __VA_ARGS__
+# define ND(...)
 #else
 # define D(...)
+# define ND(...) __VA_ARGS__
 #endif
+
+#define LOG_LINE stdlog(__FILE__ ":", meta::ToString<__LINE__>{})
 
 #define E(...) eprintf(__VA_ARGS__)
 
 // Very useful - includes exception origin
 #define THROW(...) throw std::runtime_error(concat(__VA_ARGS__, " (thrown at " \
-	__FILE__ ":", toStr(__LINE__), ')'))
+	__FILE__ ":", meta::ToString<__LINE__>{}, ')'))
 
 namespace __debug {
 
@@ -37,12 +41,12 @@ inline const char* __what(const std::exception& e) {
 
 } // namespace __debug
 
-#define ERRLOG_CATCH(...) errlog(__FILE__ ":", toStr(__LINE__), \
+#define ERRLOG_CATCH(...) errlog(__FILE__ ":", meta::ToString<__LINE__>{}, \
 	": Caught exception", __debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
 	__debug::__what(__VA_ARGS__))
 
 #define ERRLOG_FORWARDING(...) errlog(__FILE__ ":", \
-		toStr(__LINE__), ": Forwarding exception...", \
+		meta::ToString<__LINE__>{}, ": Forwarding exception...", \
 		__debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ", \
 		__debug::__what(__VA_ARGS__))
 

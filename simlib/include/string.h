@@ -16,7 +16,7 @@
 
 #define throw_assert(expr) \
 	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
-	meta::ToString<__LINE__>(), ": ", __PRETTY_FUNCTION__, \
+	meta::ToString<__LINE__>{}, ": ", __PRETTY_FUNCTION__, \
 	": Assertion `" #expr " failed.")))
 
 
@@ -92,7 +92,7 @@ template<uint LEN, uint... Digits>
 inline std::string& operator+=(std::string& str,
 	meta::ToStringHelper<LEN, Digits...>)
 {
-	(void)std::initializer_list<int>{(str += Digits, 0)...};
+	(void)std::initializer_list<int>{(str += '0' + Digits, 0)...};
 	return str;
 }
 
