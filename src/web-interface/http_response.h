@@ -11,7 +11,7 @@ public:
 	enum ContentType : uint8_t { TEXT, FILE, FILE_TO_REMOVE } content_type;
 	std::string status_code;
 	HttpHeaders headers, cookies;
-	std::string content;
+	InplaceBuff<4096> content;
 
 	explicit HttpResponse(ContentType con_type = TEXT,
 			const std::string& stat_code = "200 OK")
@@ -33,8 +33,9 @@ public:
 	void setCache(bool to_public, uint max_age) {
 		headers["expires"] = date("%a, %d %b %Y %H:%M:%S GMT",
 			time(nullptr) + max_age);
-		headers["cache-control"] = concat((to_public ? "public" : "private"),
-			"; must-revalidate; max-age=", toStr(max_age));
+		headers["cache-control"] =
+			concat_tostr((to_public ? "public" : "private"),
+				"; must-revalidate; max-age=", toStr(max_age));
 	}
 
 	std::string getCookie(const std::string& name) {

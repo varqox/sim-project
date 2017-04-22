@@ -83,7 +83,7 @@ struct TryToCreateTable {
 	explicit TryToCreateTable(MySQL::Connection& conn) : conn_(conn) {}
 
 	template<class Func>
-	void operator()(const char* table_name, const std::string& query, Func&& f)
+	void operator()(const char* table_name, StringView query, Func&& f)
 		noexcept
 	{
 		try {
@@ -100,7 +100,7 @@ struct TryToCreateTable {
 		}
 	}
 
-	void operator()(const char* table_name, const string& query) noexcept {
+	void operator()(const char* table_name, StringView query) noexcept {
 		operator()(table_name, query, []{});
 	}
 };
@@ -122,7 +122,8 @@ int main(int argc, char **argv) {
 		sqlite_db = SQLite::Connection(
 			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
-		conn = MySQL::makeConnWithCredFile(concat(argv[1], "/.db.config"));
+		conn = MySQL::makeConnWithCredFile(
+			concat_tostr(argv[1], "/.db.config"));
 
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());

@@ -61,7 +61,7 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	(void)remove_r(tmp_package_path);
 
 	vector<string> zip_args;
-	back_insert(zip_args, "unzip", "-o", concat(package_dest, ".zip"), "-d",
+	back_insert(zip_args, "unzip", "-o", concat_tostr(package_dest, ".zip"), "-d",
 		tmp_package_path.str);
 
 	report.append("Unpacking package...");
@@ -283,7 +283,7 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 		FileDescriptor zip_output {openUnlinkedTmpFile()};
 		// It isn't a fatal error if zip_output is invalid, so it can be ignored
 		vector<string> zip_args;
-		back_insert(zip_args, "zip", "-rq", concat(pid_str, ".zip"),
+		back_insert(zip_args, "zip", "-rq", concat_tostr(pid_str, ".zip"),
 			pid_str.str);
 		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
 			{-1, zip_output, zip_output, 0, 512 << 20}, "problems");
