@@ -53,7 +53,7 @@ TemporaryDirectory::TemporaryDirectory(CStringView templ) {
 			path_ = name();
 		// name_ is not absolute
 		else
-			path_ = concat(getCWD(), name());
+			path_ = concat_tostr(getCWD(), name());
 
 		// Make path_ absolute
 		path_ = (abspath(path_) += '/');
@@ -597,7 +597,7 @@ string humanizeFileSize(uint64_t size) {
 
 	// Bytes
 	if (size < MIN_KB)
-		return (size == 1 ? "1 byte" : concat(toString(size), " bytes"));
+		return (size == 1 ? "1 byte" : concat_tostr(toString(size), " bytes"));
 
 	double dsize = size;
 	// KB

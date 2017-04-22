@@ -159,7 +159,7 @@ public:
 		size_t c_errors_max_len = -1)
 	{
 		return compile(pkg_root + sf.checker,
-			concat(tmp_dir.path(), CHECKER_FILENAME), verbose, time_limit,
+			concat_tostr(tmp_dir.path(), CHECKER_FILENAME), verbose, time_limit,
 			c_errors, c_errors_max_len);
 	}
 
@@ -168,7 +168,7 @@ public:
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
 		return compile(pkg_root + sf.checker,
-			concat(tmp_dir.path(), CHECKER_FILENAME), verbose, time_limit,
+			concat_tostr(tmp_dir.path(), CHECKER_FILENAME), verbose, time_limit,
 			c_errors, c_errors_max_len, proot_path);
 	}
 
@@ -176,7 +176,7 @@ public:
 	int compileSolution(CStringView source, uint64_t time_limit,
 		std::string* c_errors = nullptr, size_t c_errors_max_len = -1)
 	{
-		return compile(source, concat(tmp_dir.path(), SOLUTION_FILENAME),
+		return compile(source, concat_tostr(tmp_dir.path(), SOLUTION_FILENAME),
 			verbose, time_limit, c_errors, c_errors_max_len);
 	}
 
@@ -185,7 +185,7 @@ public:
 		std::string* c_errors, size_t c_errors_max_len,
 		const std::string& proot_path)
 	{
-		return compile(source, concat(tmp_dir.path(), SOLUTION_FILENAME),
+		return compile(source, concat_tostr(tmp_dir.path(), SOLUTION_FILENAME),
 			verbose, time_limit, c_errors, c_errors_max_len, proot_path);
 	}
 

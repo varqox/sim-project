@@ -7,21 +7,33 @@
 
 template<class T, class... Args>
 T& back_insert(T& reference, Args&&... args) {
-	reference.reserve(reference.size() + sizeof...(args));
-	int t[] = {(reference.emplace_back(std::forward<Args>(args)), 0)...};
-	(void)t;
+	// Allocate more space (reserve is inefficient)
+	size_t old_size = reference.size();
+	reference.resize(old_size + sizeof...(args));
+	reference.resize(old_size);
+
+	(void)std::initializer_list<int>{
+		(reference.emplace_back(std::forward<Args>(args)), 0)...
+	};
 	return reference;
 }
 
 template<class... Args>
 std::string& back_insert(std::string& str, Args&&... args) {
 	size_t total_length = str.size();
-	int foo[] = {(total_length += string_length(args), 0)...};
-	(void)foo;
+	(void)std::initializer_list<int>{
+		(total_length += string_length(args), 0)...
+	};
 
-	str.reserve(total_length);
-	int bar[] = {(str += std::forward<Args>(args), 0)...};
-	(void)bar;
+	// Allocate more space (reserve is inefficient)
+	size_t old_size = str.size();
+	str.resize(total_length);
+	str.resize(old_size);
+
+	(void)std::initializer_list<int>{
+		(str.append(data(args), string_length(args)), 0)...
+	};
+
 	return str;
 }
 

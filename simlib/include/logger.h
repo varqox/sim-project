@@ -70,7 +70,7 @@ public:
 
 		Logger& logger_;
 		bool flushed_ = true;
-		std::string buff_;
+		InplaceBuff<8192> buff_;
 
 		explicit Appender(Logger& logger) : logger_(logger) {}
 
@@ -99,14 +99,7 @@ public:
 
 		template<class... Args>
 		Appender& operator()(Args&&... args) {
-			size_t total_length = buff_.size();
-			int foo[] = {(total_length += string_length(args), 0)...};
-			(void)foo;
-
-			buff_.reserve(total_length);
-			int bar[] = {(buff_ += std::forward<Args>(args), 0)...};
-			(void)bar;
-
+			buff_.append(std::forward<Args>(args)...);
 			flushed_ = false;
 			return *this;
 		}

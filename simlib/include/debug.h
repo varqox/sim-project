@@ -23,8 +23,8 @@
 #define E(...) eprintf(__VA_ARGS__)
 
 // Very useful - includes exception origin
-#define THROW(...) throw std::runtime_error(concat(__VA_ARGS__, " (thrown at " \
-	__FILE__ ":", meta::ToString<__LINE__>{}, ')'))
+#define THROW(...) throw std::runtime_error(concat_tostr(__VA_ARGS__, \
+	" (thrown at " __FILE__ ":", meta::ToString<__LINE__>{}, ')'))
 
 namespace __debug {
 

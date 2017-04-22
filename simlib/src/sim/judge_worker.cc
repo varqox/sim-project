@@ -44,8 +44,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 	};
 
 	JudgeReport report;
-	string checker_path {concat(tmp_dir.path(), CHECKER_FILENAME)};
-	string solution_path {concat(tmp_dir.path(), SOLUTION_FILENAME)};
+	string checker_path {concat_tostr(tmp_dir.path(), CHECKER_FILENAME)};
+	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
 
 	for (auto&& group : sf.tgroups) {
 		// Group "0" goes to the initial report, others groups to final
@@ -191,8 +191,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
 					score_ratio = 0; // Do not give score for a checker error
 					test_report.status = JudgeReport::Test::CHECKER_ERROR;
-					test_report.comment = concat("Checker error: second line "
-						"of the checker stdout is invalid: `", line2, '`');
+					test_report.comment = concat_tostr("Checker error: second "
+						"line of the checker stdout is invalid: `", line2, '`');
 
 				// OK -> Checker: OK
 				} else if (line1 == "OK") {

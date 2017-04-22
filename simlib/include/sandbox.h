@@ -597,7 +597,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 	func.detectTraceeArchitecture(cpid);
 
 	// Open /proc/{cpid}/statm
-	FileDescriptor statm_fd {concat("/proc/", toStr(cpid), "/statm"),
+	FileDescriptor statm_fd {concat_tostr("/proc/", toStr(cpid), "/statm"),
 		O_RDONLY};
 	if (statm_fd == -1)
 		THROW("open(/proc/{cpid}/statm)", error(errno));
@@ -797,9 +797,9 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 				x86_syscall_name : x86_64_syscall_name)[syscall_no];
 
 			if (syscall_name.empty()) // Syscall not found
-				message = concat("forbidden syscall ", toStr(syscall_no));
+				message = concat_tostr("forbidden syscall ", toStr(syscall_no));
 			else
-				message = concat("forbidden syscall ", toStr(syscall_no), ": ", syscall_name, "()");
+				message = concat_tostr("forbidden syscall ", toStr(syscall_no), ": ", syscall_name, "()");
 		}
 
 		return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE),

@@ -15,7 +15,7 @@
 #endif
 
 #define throw_assert(expr) \
-	((expr) ? (void)0 : throw std::runtime_error(concat(__FILE__, ':', \
+	((expr) ? (void)0 : throw std::runtime_error(concat_tostr(__FILE__, ':', \
 	meta::ToString<__LINE__>{}, ": ", __PRETTY_FUNCTION__, \
 	": Assertion `" #expr " failed.")))
 
@@ -104,7 +104,7 @@ inline std::string& operator+=(std::string& str,
  * @return concentration of @p args
  */
 template<class... Args>
-inline std::string concat(Args&&... args) {
+inline std::string concat_tostr(Args&&... args) {
 	size_t total_length = 0;
 	int foo[] = {(total_length += string_length(args), 0)...};
 	(void)foo;
@@ -967,10 +967,10 @@ public:
 
 	operator StringView() const { return {data(), size}; }
 
-	std::string to_string() { return {data(), size}; }
+	std::string to_string() const { return {data(), size}; }
 
 protected:
-	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p)
+	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
 		: size(s), max_size_(max_s), p_(p) {}
 
 	constexpr InplaceBuffBase(const InplaceBuffBase&) = default;
@@ -1041,8 +1041,8 @@ public:
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
-	constexpr InplaceBuff(InplaceBuff&& ibuff)
-		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.size()), ibuff.p_)
+	constexpr InplaceBuff(InplaceBuff&& ibuff) noexcept
+		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.size), ibuff.p_)
 	{
 		if (ibuff.is_allocated()) {
 			p_ = ibuff.p_;
@@ -1069,7 +1069,7 @@ public:
 		return *this;
 	}
 
-	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) {
+	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) noexcept {
 		if (ibuff.is_allocated() and ibuff.max_size() > max_size()) {
 			size = ibuff.size;
 			max_size_ = ibuff.max_size_;
@@ -1106,6 +1106,20 @@ constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
 	-> decltype(ibuff.size)
 {
 	return ibuff.size;
+}
+
+/**
+ * @brief Concentrates @p args into std::string
+ *
+ * @param args string-like objects
+ *
+ * @return concentration of @p args
+ */
+template<size_t IBUFF_SIZE = 4096, class... Args>
+inline InplaceBuff<IBUFF_SIZE> concat(Args&&... args) {
+	InplaceBuff<IBUFF_SIZE> res;
+	res.append(std::forward<Args>(args)...);
+	return res;
 }
 
 // Compares two StringView, but before comparing two characters modifies them

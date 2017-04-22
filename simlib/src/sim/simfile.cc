@@ -37,7 +37,7 @@ string Simfile::dump() const {
 		if (group.tests.size())
 			res += '\n';
 		for (const Test& test : group.tests) {
-			string line {concat(test.name, ' ',
+			string line {concat_tostr(test.name, ' ',
 				usecToSecStr(test.time_limit, 6))};
 
 			if (test.memory_limit != global_mem_limit)
@@ -80,31 +80,31 @@ string Simfile::dump() const {
 // some template meta-programming code that concentrates string literals. Also,
 // the macros are used only locally, so after all, they are not so evil...)
 #define CHECK_IF_ARR(var, name) if (!var.isArray() && var.isSet()) \
-	throw std::runtime_error("Simfile: variable `" name "` has to be" \
-		" specified as an array")
+	throw std::runtime_error{"Simfile: variable `" name "` has to be" \
+		" specified as an array"}
 #define CHECK_IF_NOT_ARR(var, name) if (var.isArray()) \
-	throw std::runtime_error("Simfile: variable `" name "` cannot be" \
-		" specified as an array")
+	throw std::runtime_error{"Simfile: variable `" name "` cannot be" \
+		" specified as an array"}
 
 void Simfile::loadName() {
 	auto&& var = config["name"];
 	CHECK_IF_NOT_ARR(var, "name");
 	if ((name = var.asString()).empty())
-		throw std::runtime_error("Simfile: missing problem's name");
+		throw std::runtime_error{"Simfile: missing problem's name"};
 }
 
 void Simfile::loadLabel() {
 	auto&& var = config["label"];
 	CHECK_IF_NOT_ARR(var, "label");
 	if ((label = var.asString()).empty())
-		throw std::runtime_error("Simfile: missing problem's label");
+		throw std::runtime_error{"Simfile: missing problem's label"};
 }
 
 void Simfile::loadChecker() {
 	auto&& var = config["checker"];
 	CHECK_IF_NOT_ARR(var, "checker");
 	if (var.asString().empty())
-		throw std::runtime_error("Simfile: missing checker");
+		throw std::runtime_error{"Simfile: missing checker"};
 
 	// Secure path, so that it is not going outside the package
 	checker = abspath(var.asString()).erase(0, 1); // Erase '/' from the
@@ -115,7 +115,7 @@ void Simfile::loadStatement() {
 	auto&& var = config["statement"];
 	CHECK_IF_NOT_ARR(var, "statement");
 	if (var.asString().empty())
-		throw std::runtime_error("Simfile: missing statement");
+		throw std::runtime_error{"Simfile: missing statement"};
 
 	// Secure path, so that it is not going outside the package
 	statement = abspath(var.asString()).erase(0, 1); // Erase '/' from the
@@ -126,7 +126,7 @@ void Simfile::loadSolutions() {
 	auto&& var = config["solutions"];
 	CHECK_IF_ARR(var, "solutions");
 	if (var.asArray().empty())
-		throw std::runtime_error("Simfile: missing solution");
+		throw std::runtime_error{"Simfile: missing solution"};
 
 	solutions.clear();
 	solutions.reserve(var.asArray().size());
@@ -141,8 +141,8 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 	CHECK_IF_NOT_ARR(ml, "memory_limit");
 	if (ml.isSet()) {
 		auto invalid_mem_limit = [] {
-			return std::runtime_error("Simfile: invalid memory_limit - it has "
-				"to be a positive integer");
+			return std::runtime_error{"Simfile: invalid memory_limit - it has "
+				"to be a positive integer"};
 		};
 
 		if (!isDigitNotGreaterThan<(std::numeric_limits<
@@ -151,8 +151,8 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 			if (!isDigit(ml.asString()))
 				throw invalid_mem_limit();
 
-			throw std::runtime_error("Simfile: too big value of the "
-				"`memory_limit`");
+			throw std::runtime_error{"Simfile: too big value of the "
+				"`memory_limit`"};
 		}
 
 		global_mem_limit =
@@ -176,7 +176,7 @@ void Simfile::loadTests() {
 	CHECK_IF_ARR(limits, "limits");
 
 	if (!limits.isSet())
-		throw std::runtime_error("Simfile: missing limits array");
+		throw std::runtime_error{"Simfile: missing limits array"};
 
 	map<StringView, TestGroup, StrNumCompare> tests_groups;
 	// StringView may be used as Key because it will point to a string in
@@ -191,35 +191,36 @@ void Simfile::loadTests() {
 		// Time limit
 		StringView x {sp.extractNextNonEmpty(isspace)};
 		if (!isReal(x))
-			throw std::runtime_error(concat("Simfile: invalid time limit for "
-				"the test `", test_name, '`'));
+			throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
+				" for the test `", test_name, '`')};
 
 		double tl = stod(x.to_string());
 		if (tl <= 0)
-			throw std::runtime_error(concat("Simfile: invalid time limit of "
-				"the test `", test_name, "` - it has to be grater than 0"));
+			throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
+				" of the test `", test_name, "` - it has to be grater than 0")};
 
 		test.time_limit = round(tl * 1000000LL);
 		if (test.time_limit == 0)
-			throw std::runtime_error(concat("Simfile: time limit of the test `",
-				test_name, "` is to small - after rounding it is equal to 0 "
-				"microseconds, but it has to be at least 1 microsecond"));
+			throw std::runtime_error{concat_tostr("Simfile: time limit of the"
+				" test `", test_name, "` is to small - after rounding it is"
+				" equal to 0 microseconds, but it has to be at least"
+				" 1 microsecond")};
 
 		// Memory limit
 		sp.removeLeading(isspace);
 		if (sp.empty()) { // No memory limit is specified for current test
 			if (!global_mem_limit)
-				throw std::runtime_error(concat("Simfile: missing memory limit "
-					"for the test `", test_name, '`'));
+				throw std::runtime_error{concat_tostr("Simfile: missing memory"
+					" limit for the test `", test_name, '`')};
 
 			test.memory_limit = global_mem_limit;
 
 		// There is an invalid memory limit specified for the current test
 		} else {
 			auto invalid_mem_limit = [&] {
-				return std::runtime_error(concat("Simfile: invalid memory "
+				return std::runtime_error{concat_tostr("Simfile: invalid memory "
 					"limit for the test `", test_name, "` - it has to be a "
-					"positive integer"));
+					"positive integer")};
 			};
 			if (!isDigitNotGreaterThan<(std::numeric_limits<
 				decltype(test.memory_limit)>::max() >> 20)>(sp))
@@ -227,8 +228,8 @@ void Simfile::loadTests() {
 				if (!isDigit(sp))
 					throw invalid_mem_limit();
 
-				throw std::runtime_error(concat("Simfile: too big memory "
-					"limit value for the test `", test_name, "`"));
+				throw std::runtime_error{concat_tostr("Simfile: too big memory "
+					"limit value for the test `", test_name, "`")};
 			}
 
 			// Memory limit of the current test is valid
@@ -242,8 +243,8 @@ void Simfile::loadTests() {
 		// Add test to its group
 		auto p = TestNameComparator::split(test_name);
 		if (p.first.empty())
-			throw std::runtime_error(concat("Simfile: missing group id in the "
-				"name of the test `", test_name, '`'));
+			throw std::runtime_error{concat_tostr("Simfile: missing group id in"
+				" the name of the test `", test_name, '`')};
 
 		// tid == "ocen" belongs to the same group as tests with gid == "0"
 		if (p.second == "ocen")
@@ -274,31 +275,31 @@ void Simfile::loadTests() {
 				// It is safe to do check here because gids in tests_groups are
 				// positive integers
 				if (!isDigit(gid))
-					throw std::runtime_error(concat("Simfile: scoring of the "
-						"invalid group `", gid, "` - it has to be a positive "
-						"integer"));
-				throw std::runtime_error(concat("Simfile: scoring of the "
+					throw std::runtime_error{concat_tostr("Simfile: scoring of"
+						" the invalid group `", gid, "` - it has to be a"
+						" positive integer")};
+				throw std::runtime_error{concat_tostr("Simfile: scoring of the "
 					"invalid group `", gid, "` - there is no test belonging to "
-					"this group"));
+					"this group")};
 			}
 
 			sp.removeLeading(isspace);
 			auto&& it = sm.emplace(gid, 0);
 			if (!it.second)
-				throw std::runtime_error(concat("Simfile: redefined scoring of "
-					"the group `", gid, '`'));
+				throw std::runtime_error{concat_tostr("Simfile: redefined"
+					" scoring of the group `", gid, '`')};
 
 			if (strtoi(sp, it.first->second) != (int)sp.size()) // TODO: handle overflows!
-				throw std::runtime_error(concat("Simfile: invalid scoring of "
-					"the group `", gid, '`'));
+				throw std::runtime_error{concat_tostr("Simfile: invalid scoring"
+					" of the group `", gid, '`')};
 		}
 
 		// Assign scoring to each group
 		for (auto&& git : tests_groups) {
 			auto&& it = sm.find(git.first);
 			if (it == sm.end())
-				throw std::runtime_error(concat("Simfile: missing scoring of "
-					"the group `", git.first, '`'));
+				throw std::runtime_error{concat_tostr("Simfile: missing scoring"
+					" of the group `", git.first, '`')};
 
 			git.second.score = it->second;
 		}
@@ -322,7 +323,7 @@ void Simfile::loadTestsFiles() {
 	CHECK_IF_ARR(tests_files, "tests_files");
 
 	if (!tests_files.isSet())
-		throw std::runtime_error("Simfile: missing tests_files array");
+		throw std::runtime_error{"Simfile: missing tests_files array"};
 
 	map<StringView, pair<StringView, StringView>> files; // test => (in, out)
 	// StringView can be used because it will point to the config variable
@@ -333,8 +334,8 @@ void Simfile::loadTestsFiles() {
 
 		auto it = files.emplace(test_name, pair<StringView, StringView>{});
 		if (!it.second)
-			throw std::runtime_error(concat("Simfile: `test_files`: "
-				"redefinition of the test `", test_name, '`'));
+			throw std::runtime_error{concat_tostr("Simfile: `test_files`: "
+				"redefinition of the test `", test_name, '`')};
 
 		auto& p = it.first->second;
 		p.first = sp.extractNextNonEmpty(isspace);
@@ -347,8 +348,8 @@ void Simfile::loadTestsFiles() {
 		for (Test& test : group.tests) {
 			auto it = files.find(test.name);
 			if (it == files.end())
-				throw std::runtime_error(concat("Simfile: no files specified "
-					"for the test `", test.name, '`'));
+				throw std::runtime_error{concat_tostr("Simfile: no files"
+					" specified for the test `", test.name, '`')};
 
 			// Secure paths, so that it is not going outside the package
 			test.in = abspath(it->second.first).erase(0, 1); // Erase '/' from
@@ -362,33 +363,36 @@ void Simfile::loadTestsFiles() {
 
 void Simfile::validateFiles(StringView package_path) const {
 	// Checker
-	if (checker.size() && !isRegularFile(concat(package_path, '/', checker)))
-		throw std::runtime_error(concat("Simfile: invalid checker file `",
-			checker, '`'));
+	if (checker.size() &&
+		not isRegularFile(concat_tostr(package_path, '/', checker)))
+	{
+		throw std::runtime_error{concat_tostr("Simfile: invalid checker file `",
+			checker, '`')};
+	}
 
 	// Statement
 	if (statement.size() &&
-		!isRegularFile(concat(package_path, '/', statement)))
+		!isRegularFile(concat_tostr(package_path, '/', statement)))
 	{
-		throw std::runtime_error(concat("Simfile: invalid statement file `",
-			statement, '`'));
+		throw std::runtime_error{concat_tostr("Simfile: invalid statement file"
+			" `", statement, '`')};
 	}
 
 	// Solutions
 	for (auto&& str : solutions)
-		if (!isRegularFile(concat(package_path, '/', str)))
-			throw std::runtime_error(concat("Simfile: invalid solution file `",
-				str, '`'));
+		if (!isRegularFile(concat_tostr(package_path, '/', str)))
+			throw std::runtime_error{concat_tostr("Simfile: invalid solution"
+				" file `", str, '`')};
 
 	// Tests
 	for (const TestGroup& group : tgroups)
 		for (const Test& test : group.tests) {
-			if (!isRegularFile(concat(package_path, '/', test.in)))
-				throw std::runtime_error(concat("Simfile: invalid test input "
-					"file `", test.in, '`'));
-			if (!isRegularFile(concat(package_path, '/', test.out)))
-				throw std::runtime_error(concat("Simfile: invalid test output "
-					"file `", test.out, '`'));
+			if (!isRegularFile(concat_tostr(package_path, '/', test.in)))
+				throw std::runtime_error{concat_tostr("Simfile: invalid test"
+					" input file `", test.in, '`')};
+			if (!isRegularFile(concat_tostr(package_path, '/', test.out)))
+				throw std::runtime_error{concat_tostr("Simfile: invalid test"
+					" output file `", test.out, '`')};
 		}
 }
 

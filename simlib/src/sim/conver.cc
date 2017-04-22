@@ -28,8 +28,8 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		try {
 			sf = Simfile {getFileContents(package_path_ + "Simfile")};
 		} catch (const ConfigFile::ParseError& e) {
-			throw ConfigFile::ParseError{concat("(Simfile) ", e.what(), "\n",
-				e.diagnostics())};
+			throw std::runtime_error{concat_tostr("(Simfile) ", e.what(),
+				"\n", e.diagnostics())};
 		}
 	}
 
@@ -71,7 +71,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		if (x.size()) {
 			sf.checker = x.front();
 		} else {
-			(void)mkdir(concat(package_path_, "check"));
+			(void)mkdir(concat_tostr(package_path_, "check"));
 			sf.checker = "check/checker.c";
 			putFileContents(package_path_ + sf.checker,
 				(const char*)default_checker_c, default_checker_c_len);
@@ -209,8 +209,8 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 				for (auto&& test : group.tests) {
 					auto it = binaryFind(tests, test, test_cmp);
 					if (it == tests.end())
-						throw runtime_error(concat("Input and output files not "
-							"found for the test `", test.name, '`'));
+						throw runtime_error{concat_tostr("Input and output"
+							" files not found for the test `", test.name, '`')};
 
 					test.in = std::move(it->in);
 					test.out = std::move(it->out);
@@ -308,8 +308,8 @@ void Conver::finishConstructingSimfile(Simfile &sf, const JudgeReport &jrep1,
 				if (!isIn(t.status,
 					{JudgeReport::Test::OK, JudgeReport::Test::WA}))
 				{
-					throw runtime_error(concat("Error on test `", t.name, "`: ",
-						JudgeReport::Test::description(t.status)));
+					throw runtime_error{concat_tostr("Error on test `", t.name,
+						"`: ", JudgeReport::Test::description(t.status))};
 				}
 
 				tls[std::move(t.name)] = TIME_LIMIT_ADJUSTMENT + t.runtime *

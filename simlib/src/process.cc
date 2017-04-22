@@ -30,7 +30,7 @@ string getCWD() {
 
 string getExec(pid_t pid) {
 	array<char, 4096> buff;
-	string path = concat("/proc/", toStr(pid), "/exe");
+	string path = concat_tostr("/proc/", toStr(pid), "/exe");
 
 	ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
 	if ((rc == -1 && errno == ENAMETOOLONG)
@@ -63,7 +63,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 		if (exec.front() != '/') {
 			if (cwd.empty()) // cwd not set
 				cwd = getCWD();
-			exec = concat(cwd, exec);
+			exec = concat_tostr(cwd, exec);
 		}
 
 		// Make exec absolute
@@ -74,7 +74,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	// readlink(2)
 	ssize_t buff_size = 0;
 	for (int i = 0, n = exec_set.size(); i < n; ++i) {
-		string deleted = concat(exec_set[i], " (deleted)");
+		string deleted = concat_tostr(exec_set[i], " (deleted)");
 		buff_size = meta::max(buff_size, (ssize_t)deleted.size());
 		exec_set.emplace_back(std::move(deleted));
 	}
@@ -93,7 +93,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 			continue; // Do not need to check myself
 
 		// Process exe_path (/proc/pid/exe)
-		string exe_path = concat("/proc/", file->d_name, "/exe");
+		string exe_path = concat_tostr("/proc/", file->d_name, "/exe");
 
 		char buff[buff_size];
 		ssize_t len = readlink(exe_path.c_str(), buff, buff_size);
@@ -124,7 +124,7 @@ string chdirToExecDir() {
 }
 
 int8_t detectArchitecture(pid_t pid) {
-	string filename = concat("/proc/", toStr(pid), "/exe");
+	string filename = concat_tostr("/proc/", toStr(pid), "/exe");
 
 	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 	if (fd == -1)
@@ -147,7 +147,8 @@ int8_t detectArchitecture(pid_t pid) {
 }
 
 string getProcStat(pid_t pid, uint field_no) {
-	string contents = getFileContents(concat("/proc/", toStr(pid), "/stat"));
+	string contents = getFileContents(concat_tostr("/proc/", toStr(pid),
+		"/stat"));
 	SimpleParser sp {contents};
 
 	// [0] - Process pid

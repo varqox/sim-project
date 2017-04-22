@@ -847,7 +847,7 @@ std::vector<std::string> findFiles(directory_tree::Node* dir,
 			// Files
 			for (auto&& file : d->files_)
 				if (func(file))
-					res.emplace_back(concat(path, file));
+					res.emplace_back(concat_tostr(path, file));
 			// Directories (recursively)
 			for (auto&& x : d->dirs_) {
 				path += x->name_;

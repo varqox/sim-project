@@ -18,11 +18,11 @@ string Spawner::receiveErrorMessage(int status, int fd) {
 		THROW(message);
 
 	if (WIFEXITED(status))
-		message = concat("returned ", toStr(WEXITSTATUS(status)));
+		message = concat_tostr("returned ", toStr(WEXITSTATUS(status)));
 
 	else if (WIFSIGNALED(status))
-		message = concat("killed by signal ", toStr(WTERMSIG(status)), " - ",
-			strsignal(WTERMSIG(status)));
+		message = concat_tostr("killed by signal ", toStr(WTERMSIG(status)),
+			" - ", strsignal(WTERMSIG(status)));
 
 	return message;
 };

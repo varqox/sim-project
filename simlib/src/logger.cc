@@ -29,18 +29,19 @@ void Logger::Appender::flush() noexcept {
 	if (logger_.lock()) {
 		if (logger_.label()) {
 			try {
-				fprintf(logger_.f_, "[ %s ] %s\n", localdate().c_str(),
-					buff_.c_str());
+				fprintf(logger_.f_, "[ %s ] %.*s\n", localdate().c_str(),
+					(int)buff_.size, buff_.data());
 			} catch (const std::exception&) {
-				fprintf(logger_.f_, "[ unknown time ] %s\n", buff_.c_str());
+				fprintf(logger_.f_, "[ unknown time ] %.*s\n", (int)buff_.size,
+					buff_.data());
 			}
 		} else
-			fprintf(logger_.f_, "%s\n", buff_.c_str());
+			fprintf(logger_.f_, "%.*s\n", (int)buff_.size, buff_.data());
 
 		fflush(logger_.f_);
 		logger_.unlock();
 	}
 
 	flushed_ = true;
-	buff_.clear();
+	buff_ = "";
 }
