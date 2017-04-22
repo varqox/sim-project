@@ -50,8 +50,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
 
-	stdlog("Judging submission ", submission_id, " (problem: ",
-		toStr(problem_id), ')');
+	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
+		')');
 	jworker.loadPackage(concat_tostr("problems/", problem_id),
 		getFileContents(concat_tostr("problems/", problem_id, "/Simfile"))
 	);
@@ -249,8 +249,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 				asTdString(test.status),
 				"<td>", usecToSecStr(test.runtime, 2, false), " / ",
 					usecToSecStr(test.time_limit, 2, false), "</td>"
-				"<td>", toStr(test.memory_consumed >> 10), " / ",
-					toStr(test.memory_limit >> 10), "</td>");
+				"<td>", test.memory_consumed >> 10, " / ",
+					test.memory_limit >> 10, "</td>");
 		};
 
 		bool there_are_comments = false;
@@ -260,8 +260,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 			report.append("<tr>");
 			append_normal_columns(group.tests[0]);
 			report.append("<td class=\"groupscore\" rowspan=\"",
-				toStr(group.tests.size()), "\">", toString(group.score),
-				" / ", toStr(group.max_score), "</td></tr>");
+				group.tests.size(), "\">", group.score, " / ", group.max_score,
+				"</td></tr>");
 			// Other rows
 			std::for_each(group.tests.begin() + 1, group.tests.end(),
 				[&](const JudgeReport::Test& test) {
@@ -316,7 +316,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		};
 
 		stdlog("Job ", job_id, " -> submission ", submission_id, " (problem ",
-			toStr(problem_id), ")\n"
+			problem_id, ")\n"
 			"Initial judge report: ", rep1.pretty_dump(span_status), "\n"
 			"Final judge report: ", rep2.pretty_dump(span_status), "\n");
 
@@ -362,8 +362,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 					if (test.status == JudgeReport::Test::CHECKER_ERROR) {
 						status = SubmissionStatus::JUDGE_ERROR;
 						errlog("Checker error: submission ", submission_id,
-							" (problem id: ", toStr(problem_id), ") test `",
-							test.name, '`');
+							" (problem id: ", problem_id, ") test `", test.name,
+							'`');
 
 						return send_report();
 					}
@@ -377,8 +377,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 						"Runtime error (forbidden syscall"}))
 					{
 						errlog("Submission ", submission_id, " (problem ",
-							toStr(problem_id), "): ", test.name, " -> ",
-							test.comment);
+							problem_id, "): ", test.name, " -> ", test.comment);
 					}
 
 		static_assert((int)SubmissionStatus::OK < 8, "Needed below");

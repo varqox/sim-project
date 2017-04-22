@@ -224,8 +224,8 @@ void Sim::jobs_handle() {
 					if (info.name.size())
 						append("<label>name</label>", htmlEscape(info.name));
 					if (info.memory_limit)
-						append("<label>memory limit</label>",
-							toStr(info.memory_limit), " MB");
+						append("<label>memory limit</label>", info.memory_limit,
+							" MB");
 					append("<label>public</label>",
 						(info.public_problem ? "yes" : "no"));
 
@@ -433,8 +433,8 @@ void Jobs::job() {
 			if (info.label.size())
 				append("<label>label</label>", htmlEscape(info.label), "<br/>");
 			if (info.memory_limit)
-				append("<label>memory limit</label>", toStr(info.memory_limit),
-					" MB", "<br/>");
+				append("<label>memory limit</label>", info.memory_limit, " MB",
+					"<br/>");
 			if (info.global_time_limit)
 				append("<label>global time limit</label>",
 					usecToSecStr(info.global_time_limit, 6), " s", "<br/>");

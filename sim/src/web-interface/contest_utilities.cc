@@ -142,8 +142,8 @@ Contest::RoundPath* Contest::getRoundPath(const string& round_id) {
 	}
 }
 
-void Contest::contestTemplate(const StringView& title, const StringView& styles,
-	const StringView& scripts)
+void Contest::contestTemplate(StringView title, StringView styles,
+	StringView scripts)
 {
 
 	baseTemplate(title, concat("body{margin-left:190px}", styles),
@@ -225,7 +225,7 @@ void Contest::contestTemplate(const StringView& title, const StringView& styles,
 	append("</ul>");
 }
 
-void Contest::printRoundPath(const StringView& page, bool force_normal) {
+void Contest::printRoundPath(StringView page, bool force_normal) {
 	append("<div class=\"round-path\"><a href=\"/c/", rpath->contest->id,
 		(force_normal ? "/n/" : "/"), page, "\">",
 		htmlEscape(rpath->contest->name), "</a>");

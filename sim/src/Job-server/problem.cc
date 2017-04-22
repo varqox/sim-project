@@ -107,8 +107,8 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 
 	// Move package to the final destination
 	if (rename(tmp_package_path.str, package_dest.str) != 0) {
-		errlog(__FILE__ ":", toStr(__LINE__), ": rename(`", tmp_package_path,
-			"`, `", package_dest, '`');
+		errlog(__FILE__ ":", meta::ToString<__LINE__>{}, ": rename(`",
+			tmp_package_path, "`, `", package_dest, '`');
 		report.append("Error: rename(`", tmp_package_path, "`, `", package_dest,
 			'`');
 		return set_failure();
@@ -152,14 +152,14 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	// Check problem's name's length
 	if (p.second.name.size() > PROBLEM_NAME_MAX_LEN) {
 		report.append("Problem's name is too long (max allowed length: ",
-			toStr(PROBLEM_NAME_MAX_LEN), ')');
+			PROBLEM_NAME_MAX_LEN, ')');
 		return set_failure();
 	}
 
 	// Check problem's label's length
 	if (p.second.label.size() > PROBLEM_LABEL_MAX_LEN) {
 		report.append("Problem's label is too long (max allowed length: ",
-			toStr(PROBLEM_LABEL_MAX_LEN), ')');
+			PROBLEM_LABEL_MAX_LEN, ')');
 		return set_failure();
 	}
 
@@ -318,7 +318,7 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 
 		// Make solution's source code the submission's source code
 		if (copy(StringBuff<PATH_MAX * 2>{package_dest, solution},
-			StringBuff<PATH_MAX>{"solutions/", toStr(submission_id), ".cpp"}))
+			StringBuff<PATH_MAX>{"solutions/", submission_id, ".cpp"}))
 		{
 			THROW("Copying solution `", solution, "`: copy()",
 				error(errno));

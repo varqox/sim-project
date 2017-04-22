@@ -469,7 +469,7 @@ void Sim::view_submission() {
 					"<sup>UTC</sup></td>",
 				submissionStatusAsTd(submission_status, show_final_results),
 				"<td>", (show_final_results ? score : ""), "</td>"
-				"<td>", toStr(stype), "</td>"
+				"<td>", stype, "</td>"
 			"</tr>"
 			"</tbody>"
 			"</table>",

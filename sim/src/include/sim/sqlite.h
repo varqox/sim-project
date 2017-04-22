@@ -5,7 +5,7 @@
 #include <sqlite3.h>
 
 #define THROW_SQLITE_ERROR(db, ...) THROW(__VA_ARGS__, " - ", \
-	toStr(sqlite3_errcode(db)), ": ", sqlite3_errmsg(db))
+	sqlite3_errcode(db), ": ", sqlite3_errmsg(db))
 
 namespace SQLite {
 

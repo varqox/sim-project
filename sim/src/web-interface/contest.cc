@@ -283,8 +283,7 @@ void Contest::addContest() {
 					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlEscape(name), "\" size=\"24\" "
-						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", ROUND_NAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Public
 				"<div class=\"field-group\">"
@@ -381,7 +380,7 @@ void Contest::addRound() {
 				"<label>Round name</label>"
 				"<input type=\"text\" name=\"name\" value=\"",
 					htmlEscape(name), "\" size=\"24\" "
-					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" required>"
+					"maxlength=\"", ROUND_NAME_MAX_LEN, "\" required>"
 			"</div>"
 			// Visible
 			"<div class=\"field-group\">"
@@ -500,7 +499,7 @@ void Contest::addProblem() {
 				"<input type=\"text\" name=\"name\""
 					" placeholder=\"The same as the problem's name\" value=\"",
 					htmlEscape(name), "\" size=\"24\" "
-					"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\">"
+					"maxlength=\"", ROUND_NAME_MAX_LEN, "\">"
 			"</div>"
 			// Problem's ID
 			"<div class=\"field-group\">"
@@ -600,16 +599,14 @@ void Contest::editContest() {
 					"<label>Contest name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlEscape(name), "\" size=\"24\" "
-						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", ROUND_NAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Owner
 				"<div class=\"field-group\">"
 					"<label>Owner username</label>"
 					"<input type=\"text\" name=\"owner\" value=\"",
 						htmlEscape(owner), "\" size=\"24\" "
-						"maxlength=\"", toStr(USERNAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", USERNAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Public
 				"<div class=\"field-group\">"
@@ -720,8 +717,7 @@ void Contest::editRound() {
 					"<label>Round name</label>"
 					"<input type=\"text\" name=\"name\" value=\"",
 						htmlEscape(name), "\" size=\"24\" "
-						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", ROUND_NAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Visible before beginning
 				"<div class=\"field-group\">"
@@ -874,8 +870,7 @@ void Contest::editProblem() {
 					"<label>Round's name</label>"
 					"<input type=\"text\" name=\"round-name\" value=\"",
 						htmlEscape(round_name), "\" size=\"24\" "
-						"maxlength=\"", toStr(ROUND_NAME_MAX_LEN), "\" "
-						"required>"
+						"maxlength=\"", ROUND_NAME_MAX_LEN, "\" required>"
 				"</div>"
 				// Problem's name
 				"<div class=\"field-group\">"
@@ -1112,7 +1107,7 @@ void Contest::users() {
 
 				// User
 				if (user_value_type == UID) {
-					fv.validateNotBlank<bool(const StringView&)>(user, "user",
+					fv.validateNotBlank<bool(StringView)>(user, "user",
 						"User id", isDigit,
 						"User id has to be a positive integer");
 				} else { // Username
@@ -1155,7 +1150,7 @@ void Contest::users() {
 			if (query == CHANGE_MODE) {
 				string uid, tmp;
 				// Uid
-				fv.validateNotBlank<bool(const StringView&)>(uid, "uid",
+				fv.validateNotBlank<bool(StringView)>(uid, "uid",
 					"User id", isDigit, "User id has to be a positive integer");
 
 				// Mode
@@ -1186,7 +1181,7 @@ void Contest::users() {
 			if (query == EXPEL) {
 				string uid;
 				// Uid
-				fv.validateNotBlank<bool(const StringView&)>(uid, "uid",
+				fv.validateNotBlank<bool(StringView)>(uid, "uid",
 					"User id", isDigit, "User id has to be a positive integer");
 
 				// If any error was encountered
@@ -1515,7 +1510,7 @@ void Contest::ranking(bool admin_view) {
 
 			append("<th");
 			if (i.problems.size() > 1)
-				append(" colspan=\"", toStr(i.problems.size()), '"');
+				append(" colspan=\"", i.problems.size(), '"');
 			append("><a href=\"/c/", i.id,
 				(admin_view ? "/ranking\">" : "/n/ranking\">"),
 				htmlEscape(i.name), "</a></th>");
@@ -1526,7 +1521,7 @@ void Contest::ranking(bool admin_view) {
 			"<tr>");
 		for (auto& i : rounds)
 			for (auto& j : i.problems)
-				append("<th><a href=\"/c/", toStr(j.id),
+				append("<th><a href=\"/c/", j.id,
 					(admin_view ? "/ranking\">" : "/n/ranking\">"),
 					htmlEscape(j.label), "</a></th>");
 		append("</tr>"
@@ -1544,7 +1539,7 @@ void Contest::ranking(bool admin_view) {
 				place = i + 1;
 			last_user_score = row.score;
 			append("<tr>"
-					"<td>", toStr(place), "</td>");
+					"<td>", place, "</td>");
 			// Name
 			if (admin_view)
 				append("<td><a href=\"/u/", row.user_id, "\">",
@@ -1553,7 +1548,7 @@ void Contest::ranking(bool admin_view) {
 				append("<td>", htmlEscape(row.name), "</td>");
 
 			// Score
-			append("<td>", toStr(row.score), "</td>");
+			append("<td>", row.score, "</td>");
 
 			// Fields
 			fill(row_points.begin(), row_points.end(), nullptr);

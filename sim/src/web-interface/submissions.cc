@@ -71,15 +71,15 @@ void Contest::submit(bool admin_view) {
 				// Check if solution is too big
 				if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
 					fv.addError(concat("Solution is too big (maximum allowed "
-						"size: ", toStr(SOLUTION_MAX_SIZE), " bytes = ",
-						toStr(SOLUTION_MAX_SIZE >> 10), " KB)"));
+						"size: ", SOLUTION_MAX_SIZE, " bytes = ",
+						SOLUTION_MAX_SIZE >> 10, " KB)"));
 					goto form;
 				}
 
 			} else if (code.size() > SOLUTION_MAX_SIZE) { // Code
 				fv.addError(concat("Solution is too big (maximum allowed "
-					"size: ", toStr(SOLUTION_MAX_SIZE), " bytes = ",
-					toStr(SOLUTION_MAX_SIZE >> 10), " KB)"));
+					"size: ", SOLUTION_MAX_SIZE, " bytes = ",
+					SOLUTION_MAX_SIZE >> 10, " KB)"));
 				goto form;
 			}
 
@@ -534,7 +534,7 @@ void Contest::submissions(bool admin_view) {
 					submissionStatusAsTd(SubmissionStatus(res.getUInt(7)),
 						show_final_results),
 					"<td>", (show_final_results ? res[8] : ""), "</td>"
-					"<td>", toStr(stype), "</td>"
+					"<td>", stype, "</td>"
 					"<td>"
 						"<a class=\"btn-small\" href=\"/s/", res[1],
 							"\">View</a>"

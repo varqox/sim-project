@@ -90,7 +90,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 void Sim::page_template_end() {
 	if (page_template_began) {
 		page_template_began = false;
-		append("<script>var start_time=", toStr(microtime() / 1000),
+		append("<script>var start_time=", microtime() / 1000,
 					";</script>"
 				"</body>"
 			"</html>");

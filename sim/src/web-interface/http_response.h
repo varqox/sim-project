@@ -35,7 +35,7 @@ public:
 			time(nullptr) + max_age);
 		headers["cache-control"] =
 			concat_tostr((to_public ? "public" : "private"),
-				"; must-revalidate; max-age=", toStr(max_age));
+				"; must-revalidate; max-age=", max_age);
 	}
 
 	std::string getCookie(const std::string& name) {

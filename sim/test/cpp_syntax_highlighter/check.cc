@@ -44,8 +44,8 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 	uint passed = 0;
 	for (auto&& test : tests) {
 		printf("%6s: ", test.c_str());
-		string in_fname = concat("tests/", test, ".in");
-		string out_fname = concat("tests/", test, ".out");
+		string in_fname = concat_tostr("tests/", test, ".in");
+		string out_fname = concat_tostr("tests/", test, ".out");
 		string ans = csh(getFileContents(in_fname));
 
 		// OK
@@ -56,7 +56,7 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 		// WRONG
 		} else {
 			puts("\033[1;31mWRONG\033[m");
-			string ans_fname = concat("tests/", test, ".ans");
+			string ans_fname = concat_tostr("tests/", test, ".ans");
 			putFileContents(ans_fname, ans);
 			if (show_diff) {
 				(void)Spawner::run("git", {
@@ -86,8 +86,8 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 void regenerate(const vector<string>& tests) {
 	CppSyntaxHighlighter csh;
 	for (auto&& test : tests) {
-		string in_fname = concat("tests/", test, ".in");
-		string out_fname = concat("tests/", test, ".out");
+		string in_fname = concat_tostr("tests/", test, ".in");
+		string out_fname = concat_tostr("tests/", test, ".out");
 		putFileContents(out_fname, csh(getFileContents(in_fname)));
 	}
 }
