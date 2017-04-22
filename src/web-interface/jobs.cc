@@ -7,11 +7,11 @@ using std::string;
 Sim::JobPermissions Sim::jobs_get_permissions(StringView owner_id,
 	JobQueueStatus job_status)
 {
-	using Sim::JobPermissions::PERM_NONE;
-	using Sim::JobPermissions::PERM_VIEW;
-	using Sim::JobPermissions::PERM_VIEW_ALL;
-	using Sim::JobPermissions::PERM_CANCEL;
-	using Sim::JobPermissions::PERM_RESTART;
+	constexpr auto PERM_NONE = Sim::JobPermissions::PERM_NONE;
+	constexpr auto PERM_VIEW = Sim::JobPermissions::PERM_VIEW;
+	constexpr auto PERM_VIEW_ALL = Sim::JobPermissions::PERM_VIEW_ALL;
+	constexpr auto PERM_CANCEL = Sim::JobPermissions::PERM_CANCEL;
+	constexpr auto PERM_RESTART = Sim::JobPermissions::PERM_RESTART;
 
 	D(throw_assert(session_is_open);) // Session must be open to access jobs
 
@@ -69,9 +69,9 @@ static constexpr const char* job_status_as_td(JobQueueStatus status) noexcept  {
 }
 
 void Sim::jobs_handle() {
-	using Sim::JobPermissions::PERM_VIEW_ALL;
-	using Sim::JobPermissions::PERM_CANCEL;
-	using Sim::JobPermissions::PERM_RESTART;
+	constexpr auto PERM_VIEW_ALL = Sim::JobPermissions::PERM_VIEW_ALL;
+	constexpr auto PERM_CANCEL = Sim::JobPermissions::PERM_CANCEL;
+	constexpr auto PERM_RESTART = Sim::JobPermissions::PERM_RESTART;
 
 	if (not session_open())
 		return redirect("/login?" + request.target);
