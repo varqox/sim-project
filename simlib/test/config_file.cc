@@ -88,7 +88,7 @@ TEST (ConfigFile, isStringLiteral) {
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};
-		return concat("(a, b, c): ", a, ' ', b, ' ', c, "\n  -> \"",
+		return concat_tostr("(a, b, c): ", a, ' ', b, ' ', c, "\n  -> \"",
 			StringView(t, 3));
 	};
 
