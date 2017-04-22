@@ -50,16 +50,15 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
 
-	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
-		')');
-
-	jworker.loadPackage(concat("problems/", problem_id),
-		getFileContents(concat("problems/", problem_id, "/Simfile"))
+	stdlog("Judging submission ", submission_id, " (problem: ",
+		toStr(problem_id), ')');
+	jworker.loadPackage(concat_tostr("problems/", problem_id),
+		getFileContents(concat_tostr("problems/", problem_id, "/Simfile"))
 	);
 
 	// Variables
 	SubmissionStatus status = SubmissionStatus::OK;
-	string initial_report, final_report;
+	InplaceBuff<65536> initial_report, final_report;
 	int64_t total_score = 0;
 
 	auto send_report = [&] {
@@ -189,7 +188,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 	// Compile solution
 	stdlog("Compiling solution...");
-	if (jworker.compileSolution(concat("solutions/", submission_id, ".cpp"),
+	if (jworker.compileSolution(concat_tostr("solutions/", submission_id, ".cpp"),
 		SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 		COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
@@ -204,11 +203,12 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	stdlog("Done.");
 
 	// Creates xml report from JudgeReport
-	auto construct_report = [](const JudgeReport& jr, bool final) -> string {
+	auto construct_report = [](const JudgeReport& jr, bool final) {
+		InplaceBuff<65536> report;
 		if (jr.groups.empty())
-			return {};
+			return report;
 
-		string report = concat("<h2>", (final ? "Final" : "Initial"),
+		report.append("<h2>", (final ? "Final" : "Initial"),
 				" testing report</h2>"
 			"<table class=\"table\">"
 			"<thead>"
@@ -245,8 +245,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 				throw_assert(false); // We shouldn't get here
 			};
-			back_insert(report,
-				"<td>", htmlEscape(test.name), "</td>",
+			report.append("<td>", htmlEscape(test.name), "</td>",
 				asTdString(test.status),
 				"<td>", usecToSecStr(test.runtime, 2, false), " / ",
 					usecToSecStr(test.time_limit, 2, false), "</td>"
@@ -258,36 +257,36 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		for (auto&& group : jr.groups) {
 			throw_assert(group.tests.size() > 0);
 			// First row
-			report += "<tr>";
+			report.append("<tr>");
 			append_normal_columns(group.tests[0]);
-			back_insert(report, "<td class=\"groupscore\" rowspan=\"",
+			report.append("<td class=\"groupscore\" rowspan=\"",
 				toStr(group.tests.size()), "\">", toString(group.score),
 				" / ", toStr(group.max_score), "</td></tr>");
 			// Other rows
 			std::for_each(group.tests.begin() + 1, group.tests.end(),
 				[&](const JudgeReport::Test& test) {
-					report += "<tr>";
+					report.append("<tr>");
 					append_normal_columns(test);
-					report += "</tr>";
+					report.append("</tr>");
 				});
 
 			for (auto&& test : group.tests)
 				there_are_comments |= !test.comment.empty();
 		}
 
-		report += "</tbody></table>";
+		report.append("</tbody></table>");
 
 		// Tests comments
 		if (there_are_comments) {
-			report += "<ul class=\"tests-comments\">";
+			report.append("<ul class=\"tests-comments\">");
 			for (auto&& group : jr.groups)
 				for (auto&& test : group.tests)
 					if (test.comment.size())
-						back_insert(report, "<li>"
+						report.append("<li>"
 							"<span class=\"test-id\">", htmlEscape(test.name),
 							"</span>", htmlEscape(test.comment), "</li>");
 
-			report += "</ul>";
+			report.append("</ul>");
 		}
 
 		return report;
@@ -317,7 +316,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		};
 
 		stdlog("Job ", job_id, " -> submission ", submission_id, " (problem ",
-			problem_id, ")\n"
+			toStr(problem_id), ")\n"
 			"Initial judge report: ", rep1.pretty_dump(span_status), "\n"
 			"Final judge report: ", rep2.pretty_dump(span_status), "\n");
 
@@ -363,7 +362,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 					if (test.status == JudgeReport::Test::CHECKER_ERROR) {
 						status = SubmissionStatus::JUDGE_ERROR;
 						errlog("Checker error: submission ", submission_id,
-							" (problem id: ", problem_id, ") test `",
+							" (problem id: ", toStr(problem_id), ") test `",
 							test.name, '`');
 
 						return send_report();
@@ -378,7 +377,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 						"Runtime error (forbidden syscall"}))
 					{
 						errlog("Submission ", submission_id, " (problem ",
-							problem_id, "): ", test.name, " -> ",
+							toStr(problem_id), "): ", test.name, " -> ",
 							test.comment);
 					}
 
@@ -422,7 +421,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 		status = SubmissionStatus::JUDGE_ERROR;
 		initial_report = concat("<pre>", htmlEscape(e.what()), "</pre>");
-		final_report.clear();
+		final_report = "";
 	}
 
 	send_report();

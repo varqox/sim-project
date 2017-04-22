@@ -83,8 +83,8 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 		else if (next_arg == "login")
 			login();
 
-		// else if (next_arg == "jobs")
-			// jobs_handle();
+		else if (next_arg == "jobs")
+			jobs_handle();
 
 		// else if (next_arg == "file")
 			// contest_file();
@@ -132,7 +132,7 @@ void Sim::main_page() {
 }
 
 void Sim::static_file() {
-	string file_path = concat("static",
+	string file_path = concat_tostr("static",
 		abspath(decodeURI(request.target, 1, request.target.find('?'))));
 	// Extract path (ignore query)
 	D(stdlog(file_path);)

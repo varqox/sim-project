@@ -719,7 +719,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 	switch (res.content_type) {
 	case HttpResponse::TEXT:
 		str += "Content-Length: ";
-		str += toStr(res.content.size());
+		str += toStr(res.content.size);
 		str += "\r\n\r\n";
 		str += res.content;
 		send(str);
@@ -727,9 +727,13 @@ void Connection::sendResponse(const HttpResponse& res) {
 
 	case HttpResponse::FILE:
 	case HttpResponse::FILE_TO_REMOVE:
+		InplaceBuff<PATH_MAX> filename_s;
+		filename_s.append(res.content, '\0');
+		CStringView filename {filename_s.data(), filename_s.size - 1};
+
 		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
-			? res.content : "");
-		FileDescriptor fd {res.content, O_RDONLY | O_LARGEFILE};
+			? filename : "");
+		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 		if (fd == -1)
 			return error404();
 

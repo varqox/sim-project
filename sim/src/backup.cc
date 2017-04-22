@@ -99,7 +99,7 @@ int main2(int argc, char**argv) {
 	run_command({"git", "config", "--local", "user.name", "Sim backuper"});
 	run_command({"git", "add", "solutions", SQLITE_DB_FILE ".backup",
 		"dump.sql"});
-	run_command({"git", "commit", "-m", concat("Backup ", date())});
+	run_command({"git", "commit", "-m", concat_tostr("Backup ", date())});
 
 	return 0;
 }

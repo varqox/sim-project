@@ -112,7 +112,7 @@ private:
 
 	template<class... Args>
 	Sim& append(Args&&... args) {
-		back_insert(resp.content, std::forward<Args>(args)...);
+		resp.content.append(std::forward<Args>(args)...);
 		return *this;
 	}
 
@@ -489,9 +489,10 @@ private:
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
 
-	std::string jobs_job_id;
+	InplaceBuff<30> jobs_job_id;
 	JobPermissions jobs_perms = JobPermissions::PERM_NONE;
 
+	// Session must be open to access jobs
 	JobPermissions jobs_get_permissions(StringView owner_id,
 		JobQueueStatus job_status);
 

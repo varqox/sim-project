@@ -1,38 +1,45 @@
-#include "form_validator.h"
-#include "jobs.h"
+#include "sim.h"
 
 #include <sim/jobs.h>
 
 using std::string;
 
-Jobs::Permissions Jobs::getPermissions(const string& owner_id,
+Sim::JobPermissions Sim::jobs_get_permissions(StringView owner_id,
 	JobQueueStatus job_status)
 {
-	// Session must be open to access jobs
-	if (Session::user_type == UTYPE_ADMIN)
+	using Sim::JobPermissions::PERM_NONE;
+	using Sim::JobPermissions::PERM_VIEW;
+	using Sim::JobPermissions::PERM_VIEW_ALL;
+	using Sim::JobPermissions::PERM_CANCEL;
+	using Sim::JobPermissions::PERM_RESTART;
+
+	D(throw_assert(session_is_open);) // Session must be open to access jobs
+
+	if (session_user_type == UTYPE_ADMIN)
 		switch (job_status) {
 		case JobQueueStatus::PENDING:
 		case JobQueueStatus::IN_PROGRESS:
-			return Permissions(PERM_VIEW | PERM_VIEW_ALL | PERM_CANCEL);
+			return PERM_VIEW | PERM_VIEW_ALL | PERM_CANCEL;
 
 		case JobQueueStatus::FAILED:
 		case JobQueueStatus::CANCELED:
-			return Permissions(PERM_VIEW | PERM_VIEW_ALL | PERM_RESTART);
+			return PERM_VIEW | PERM_VIEW_ALL | PERM_RESTART;
 
 		default:
-			return Permissions(PERM_VIEW | PERM_VIEW_ALL);
+			return PERM_VIEW | PERM_VIEW_ALL;
 		}
 
-	if (Session::user_id == owner_id)
-		return Permissions(PERM_VIEW | (isIn(job_status,
+	static_assert((uint)PERM_NONE == 0, "Needed blow");
+	if (session_user_id == owner_id)
+		return PERM_VIEW | (isIn(job_status,
 			{JobQueueStatus::PENDING, JobQueueStatus::IN_PROGRESS}) ?
-				(uint)PERM_CANCEL : 0) |
-			(Session::user_type == UTYPE_TEACHER ? (int)PERM_VIEW_ALL : 0));
+				PERM_CANCEL : PERM_NONE) |
+			(session_user_type == UTYPE_TEACHER ? PERM_VIEW_ALL : PERM_NONE);
 
 	return PERM_NONE;
 }
 
-static constexpr const char* job_type_str(JobQueueType type) {
+static constexpr const char* job_type_str(JobQueueType type) noexcept {
 	switch (type) {
 	case JobQueueType::JUDGE_SUBMISSION: return "Judge submission";
 	case JobQueueType::ADD_PROBLEM: return "Add problem";
@@ -48,7 +55,7 @@ static constexpr const char* job_type_str(JobQueueType type) {
 	return "Unknown";
 }
 
-static constexpr const char* job_status_as_td(JobQueueStatus status) {
+static constexpr const char* job_status_as_td(JobQueueStatus status) noexcept  {
 	switch (status) {
 	case JobQueueStatus::PENDING: return "<td class=\"status\">Pending</td>";
 	case JobQueueStatus::IN_PROGRESS:
@@ -61,52 +68,76 @@ static constexpr const char* job_status_as_td(JobQueueStatus status) {
 	return "<td class=\"status\">Unknown</td>";
 }
 
-void Jobs::handle() {
-	if (!Session::open())
-		return redirect("/login?" + req->target);
+void Sim::jobs_handle() {
+	using Sim::JobPermissions::PERM_VIEW_ALL;
+	using Sim::JobPermissions::PERM_CANCEL;
+	using Sim::JobPermissions::PERM_RESTART;
+
+	if (not session_open())
+		return redirect("/login?" + request.target);
 
 	StringView next_arg = url_args.extractNextArg();
 	if (isDigit(next_arg)) {
-		job_id = next_arg.to_string();
-		return job();
+		jobs_job_id = next_arg;
+		return error501();
+		// return job();
 	}
 
-	job_id.clear();
 	// Get permissions to overall job queue
-	perms = getPermissions("", JobQueueStatus::DONE);
+	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
 
 	if (next_arg == "cancel")
-		return cancelJob();
+		return error501();
+		// return cancelJob();
 
 	else if (!next_arg.empty() && next_arg != "my")
 		return error404();
 
 	bool show_all = (next_arg != "my");
-	if (show_all && ~perms & PERM_VIEW_ALL)
+	if (show_all && uint(~jobs_perms & PERM_VIEW_ALL))
 		return error403();
 
-	jobsTemplate("Job queue");
+	jobs_page_template("Job queue");
 	append(next_arg.empty() ? "<h1>Job queue</h1>" : "<h1>My jobs</h1>");
 
 	// List jobs
 	try {
-		MySQL::Statement stmt;
+		MySQL::Statement<> stmt;
+		uint8_t jtype, jstatus;
+		my_bool is_aux_id_null, is_creator_null;
+		InplaceBuff<30> job_id, added, jpriority, aux_id, creator;
+		InplaceBuff<512> jinfo;
+		InplaceBuff<USERNAME_MAX_LEN> cusername;
+
 		if (show_all) {
-			stmt = db_conn.prepare("SELECT j.id, added, j.type, status,"
+			stmt = mysql.prepare("SELECT j.id, added, j.type, status,"
 					" priority, aux_id, info, creator, username"
 				" FROM job_queue j LEFT JOIN users u ON creator=u.id"
 				" WHERE j.type!=" JQTYPE_VOID_STR " ORDER BY id DESC");
+			stmt.execute();
+			stmt.res_bind(7, creator);
+			stmt.res_bind_isnull(7, is_creator_null);
+			stmt.res_bind(8, cusername);
 
 		} else {
-			stmt = db_conn.prepare("SELECT id, added, type, status, priority,"
+			stmt = mysql.prepare("SELECT id, added, type, status, priority,"
 				" aux_id, info"
 				" FROM job_queue WHERE creator=? AND type!=" JQTYPE_VOID_STR
 				" ORDER BY id DESC");
-			stmt.setString(1, Session::user_id);
+			stmt.bindAndExecute(session_user_id);
 		}
 
-		MySQL::Result res = stmt.executeQuery();
-		if (!res.next()) {
+		stmt.res_bind(0, job_id);
+		stmt.res_bind(1, added);
+		stmt.res_bind(2, jtype);
+		stmt.res_bind(3, jstatus);
+		stmt.res_bind(4, jpriority);
+		stmt.res_bind(5, aux_id);
+		stmt.res_bind_isnull(5, is_aux_id_null);
+		stmt.res_bind(6, jinfo);
+		stmt.resFixBinds();
+
+		if (!stmt.next()) {
 			append("There are no jobs to show...");
 			return;
 		}
@@ -126,27 +157,27 @@ void Jobs::handle() {
 			"<tbody>");
 
 		do {
-			JobQueueType job_type {JobQueueType(res.getUInt(3))};
-			JobQueueStatus job_status {JobQueueStatus(res.getUInt(4))};
+			JobQueueType job_type {JobQueueType(jtype)};
+			JobQueueStatus job_status {JobQueueStatus(jstatus)};
 			append("<tr>"
 					"<td>", job_type_str(job_type), "</td>"
-					"<td><a href=\"/jobs/", res[1], "\" datetime=\"", res[2],
-						"\">", res[2], "</a></td>",
+					"<td><a href=\"/jobs/", job_id, "\" datetime=\"", added,
+						"\">", added, "</a></td>",
 					job_status_as_td(job_status));
 
 			// Owner
 			if (show_all) {
-				if (res.isNull(8))
+				if (is_creator_null)
 					append("<td>System</td>");
 				else
-					append("<td><a href=\"/u/", res[8], "\">", res[9],
+					append("<td><a href=\"/u/", creator, "\">", cusername,
 						"</a></td>");
 			}
 
-			Permissions job_perms = getPermissions(
-				show_all ? res[8] : Session::user_id, job_status);
+			JobPermissions job_perms = jobs_get_permissions(show_all ?
+				creator : session_user_id, job_status);
 
-			append("<td>", res[5], "</td>"
+			append("<td>", jpriority, "</td>"
 					"<td>");
 
 			/* Info + actions */
@@ -154,17 +185,17 @@ void Jobs::handle() {
 				append_info();
 				append("</td>"
 						"<td>"
-							"<a class=\"btn-small\" href=\"/jobs/", res[1],
+							"<a class=\"btn-small\" href=\"/jobs/", job_id,
 								"\">View job</a>");
 				append_actions();
 
-				if (job_perms & PERM_CANCEL)
+				if (uint(job_perms & PERM_CANCEL))
 					append("<a class=\"btn-small red\" onclick=\"cancelJob(",
-						res[1], ")\">Cancel job</a>");
+						job_id, ")\">Cancel job</a>");
 
-				if (job_perms & PERM_RESTART)
+				if (uint(job_perms & PERM_RESTART))
 					append("<a class=\"btn-small orange\" onclick="
-						"\"restartJob(", res[1], ")\">Restart job</a>");
+						"\"restartJob(", job_id, ")\">Restart job</a>");
 
 				append("</td>"
 					"</tr>");
@@ -174,11 +205,10 @@ void Jobs::handle() {
 			switch (job_type) {
 			case JobQueueType::JUDGE_SUBMISSION: {
 				foo([&]{
-					string info_s = res[7];
-					StringView info {info_s};
+					StringView info {jinfo};
 					string pid = jobs::extractDumpedString(info);
 					append("<label>submission</label>",
-						"<a href=\"/s/", res[6], "\">", res[6], "</a>"
+						"<a href=\"/s/", aux_id, "\">", aux_id, "</a>"
 						"<label>problem</label>",
 						"<a href=\"/p/", pid, "\">", pid, "</a>");
 				}, [&]{});
@@ -190,7 +220,7 @@ void Jobs::handle() {
 			case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
 			case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
 				foo([&]{
-					jobs::AddProblemInfo info {res[7]};
+					jobs::AddProblemInfo info {jinfo};
 					if (info.name.size())
 						append("<label>name</label>", htmlEscape(info.name));
 					if (info.memory_limit)
@@ -204,9 +234,9 @@ void Jobs::handle() {
 							"<a class=\"btn-small dropmenu-toggle\">"
 								"Download</a>"
 							"<ul>"
-								"<a href=\"/jobs/", res[1], "/report\">"
+								"<a href=\"/jobs/", job_id, "/report\">"
 									"Report</a>"
-								"<a href=\"/jobs/", res[1],
+								"<a href=\"/jobs/", job_id,
 									"/download-uploaded-package\">"
 									"Uploaded package</a>"
 							"</ul>"
@@ -216,7 +246,7 @@ void Jobs::handle() {
 						JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
 					{
 						append("<a class=\"btn-small green\" href=\"/p/",
-							res[6], "\">View problem</a>");
+							aux_id, "\">View problem</a>");
 					}
 				});
 				break;
@@ -234,7 +264,7 @@ void Jobs::handle() {
 				break;
 			}
 
-		} while (res.next());
+		} while (stmt.next());
 
 		append("</tbody>"
 			"</table>");
@@ -245,6 +275,7 @@ void Jobs::handle() {
 	}
 }
 
+#if 0
 void Jobs::job() {
 	// Fetch the job info
 	JobQueueType job_type;
@@ -552,3 +583,4 @@ void Jobs::restartJob(JobQueueType job_type, StringView job_info) {
 		return response("500 Internal Server Error");
 	}
 }
+#endif
