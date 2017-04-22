@@ -268,8 +268,8 @@ public:
 		static inline std::pair<StringView, StringView>
 			split(StringView test_name) noexcept
 		{
-			StringView tid = test_name.extractTrailing(isalpha);
-			StringView gid = test_name.extractTrailing(isdigit);
+			StringView tid = test_name.extractTrailing(::isalpha);
+			StringView gid = test_name.extractTrailing(::isdigit);
 			return {gid, tid};
 		}
 

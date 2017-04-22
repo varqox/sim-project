@@ -8,6 +8,8 @@
 class ConfigFile {
 public:
 	class ParseError : public std::runtime_error {
+		std::string diagnostics_;
+
 	public:
 		explicit ParseError(const std::string& msg) : runtime_error(msg) {}
 
@@ -16,12 +18,18 @@ public:
 			: runtime_error(concat("line ", toStr(line), ':', toStr(pos), ": ",
 				msg...)) {}
 
-		ParseError(const ParseError& pe) : runtime_error(pe) {}
+		ParseError(const ParseError& pe) = default;
+		ParseError(ParseError&& pe) noexcept = default;
+		ParseError& operator=(const ParseError& pe) = default;
+		ParseError& operator=(ParseError&& pe) /*noexcept*/ = default;
 
-		using runtime_error::operator=;
 		using runtime_error::what;
 
+		const std::string& diagnostics() const noexcept { return diagnostics_; }
+
 		virtual ~ParseError() noexcept {}
+
+		friend class ConfigFile;
 	};
 
 	struct Variable {

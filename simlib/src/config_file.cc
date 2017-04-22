@@ -24,8 +24,8 @@ void ConfigFile::loadConfigFromFile(CStringView pathname, bool load_all) {
 
 void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	// Set all variables as unused
-	for (auto& i : vars)
-		i.second.unset();
+	for (auto it : vars)
+		it.second.unset();
 
 	// Checks whether c is a white-space but not a newline
 	auto isWs = [](int c) { return (c != '\n' && isspace(c)); };
@@ -45,14 +45,61 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	auto throw_parse_error = [&](auto&&... args) {
 		string::size_type pos = buff.data() - buff_beg - buff.empty();
 		string::size_type x = pos; // Position of the last newline before pos
-
 		while (x && config[--x] != '\n') {}
+
 		int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n');
+		size_t col = pos - x + (line == 1); // Indexed from 1
 
-		ParseError pe(line, pos - x + (line == 1),
-			std::forward<decltype(args)>(args)...);
+		ParseError pe(line, col, std::forward<decltype(args)>(args)...);
 
-		DEBUG_CF(stdlog("Throwing exception: ", pe.what());)
+		// Construct diagnostics
+		auto& diags = pe.diagnostics_;
+		auto append_char = [&](unsigned char c) {
+			if (isprint(c))
+				diags += c;
+			else {
+				diags += "\\x";
+				diags += dectohex(c >> 4);
+				diags += dectohex(c & 15);
+			}
+		};
+
+		// Left part
+		constexpr uint CONTEXT = 20;
+		if (col <= CONTEXT + 1) {
+			for (size_t i = x; i < pos; ++i)
+				append_char(config[i]);
+		} else {
+			diags += "...";
+			for (size_t i = pos - CONTEXT; i < pos; ++i)
+				append_char(config[i]);
+		}
+
+		// Faulty position
+		size_t padding = diags.size();
+		uint stress_len = 1;
+		if (config[pos] != '\n') {
+			append_char(config[pos]);
+			stress_len = diags.size() - padding;
+
+			// Right part
+			size_t i = pos + 1;
+			for (; config[i] != '\n' and i <= pos + CONTEXT; ++i)
+				append_char(config[i]);
+
+			if (config[i] != '\n')
+				diags += "...";
+		}
+
+		// Diagnostics's second line - stress
+		diags += "\n";
+		diags.append(padding, ' ');
+		diags += '^';
+		diags.append(stress_len - 1, '~');
+
+		DEBUG_CF(
+			stdlog("Throwing exception: ", pe.what(), "\n", pe.diagnostcs());
+		)
 		throw pe;
 
 	};

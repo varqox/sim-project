@@ -28,7 +28,8 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		try {
 			sf = Simfile {getFileContents(package_path_ + "Simfile")};
 		} catch (const ConfigFile::ParseError& e) {
-			throw ConfigFile::ParseError{concat("(Simfile) ", e.what())};
+			throw ConfigFile::ParseError{concat("(Simfile) ", e.what(), "\n",
+				e.diagnostics())};
 		}
 	}
 
