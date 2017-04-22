@@ -65,14 +65,14 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		};
 
 		// Left part
-		constexpr uint CONTEXT = 20;
+		constexpr uint CONTEXT = 32;
 		if (col <= CONTEXT + 1) {
-			for (size_t i = x; i < pos; ++i)
-				append_char(config[i]);
+			for (size_t k = x; k < pos; ++k)
+				append_char(config[k]);
 		} else {
 			diags += "...";
-			for (size_t i = pos - CONTEXT; i < pos; ++i)
-				append_char(config[i]);
+			for (size_t k = pos - CONTEXT; k < pos; ++k)
+				append_char(config[k]);
 		}
 
 		// Faulty position
@@ -83,11 +83,11 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			stress_len = diags.size() - padding;
 
 			// Right part
-			size_t i = pos + 1;
-			for (; config[i] != '\n' and i <= pos + CONTEXT; ++i)
-				append_char(config[i]);
+			size_t k = pos + 1;
+			for (; config[k] != '\n' and k <= pos + CONTEXT; ++k)
+				append_char(config[k]);
 
-			if (config[i] != '\n')
+			if (config[k] != '\n')
 				diags += "...";
 		}
 
