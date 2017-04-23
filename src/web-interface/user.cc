@@ -8,6 +8,8 @@ using std::array;
 using std::string;
 
 void Sim::login() {
+	STACK_UNWINDING_MARK;
+
 	auto& username = users_username = "";
 	if (request.method == server::HttpRequest::POST) {
 		// Try to login
@@ -80,11 +82,15 @@ void Sim::login() {
 }
 
 void Sim::logout() {
+	STACK_UNWINDING_MARK;
+
 	session_destroy();
 	redirect("/login");
 }
 
 void Sim::sign_up() {
+	STACK_UNWINDING_MARK;
+
 	if (session_open())
 		return redirect("/");
 

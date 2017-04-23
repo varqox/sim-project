@@ -12,6 +12,8 @@
 
 void Sim::page_template(StringView title, StringView styles, StringView scripts)
 {
+	STACK_UNWINDING_MARK;
+
 	// Protect from clickjacking
 	resp.headers["X-Frame-Options"] = "DENY";
 	resp.headers["Content-Security-Policy"] = "frame-ancestors 'none'";
@@ -88,6 +90,8 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 }
 
 void Sim::page_template_end() {
+	STACK_UNWINDING_MARK;
+
 	if (page_template_began) {
 		page_template_began = false;
 		append("<script>var start_time=", microtime() / 1000,
@@ -100,6 +104,8 @@ void Sim::page_template_end() {
 void Sim::error_page_template(StringView status, StringView code,
 	StringView message)
 {
+	STACK_UNWINDING_MARK;
+
 	resp.status_code = status.to_string();
 	resp.headers.clear();
 

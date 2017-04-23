@@ -1,5 +1,6 @@
 #include "http_request.h"
 
+#include <simlib/debug.h>
 #include <unistd.h>
 
 using std::map;
@@ -13,6 +14,8 @@ HttpRequest::Form::~Form() {
 }
 
 string HttpRequest::getCookie(const string& name) const {
+	STACK_UNWINDING_MARK;
+
 	auto it = headers.find("cookie");
 
 	if (it == headers.end())

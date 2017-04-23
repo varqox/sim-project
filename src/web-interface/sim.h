@@ -32,7 +32,9 @@ private:
 	 *
 	 * @param location URL address where to redirect
 	 */
-	virtual void redirect(std::string location) {
+	void redirect(std::string location) {
+		STACK_UNWINDING_MARK;
+
 		resp.status_code = "302 Moved Temporarily";
 		resp.headers["Location"] = std::move(location);
 	}
@@ -40,6 +42,8 @@ private:
 	/// Sets resp.status_code to @p status_code and resp.content to
 	///  @p response_body
 	void set_response(std::string status_code, std::string response_body = {}) {
+		STACK_UNWINDING_MARK;
+
 		resp.status_code = std::move(status_code);
 		resp.content = response_body;
 	}
@@ -152,6 +156,8 @@ private:
 	bool form_validate(T& var, const std::string& name,
 		StringView name_to_print, size_t max_size = -1)
 	{
+		STACK_UNWINDING_MARK;
+
 		auto const& form = request.form_data.other;
 		auto it = form.find(name);
 		if (it == form.end()) {
@@ -176,6 +182,8 @@ private:
 		StringView name_to_print, Checker&& check, StringView error_msg,
 		size_t max_size = -1)
 	{
+		STACK_UNWINDING_MARK;
+
 		if (form_validate(var, name, name_to_print, max_size)) {
 			if (string_length(var) == 0 || check(var))
 				return true;
@@ -196,6 +204,8 @@ private:
 	bool form_validate_not_blank(T& var, const std::string& name,
 		StringView name_to_print, size_t max_size = -1)
 	{
+		STACK_UNWINDING_MARK;
+
 		auto const& form = request.form_data.other;
 		auto it = form.find(name);
 		if (it == form.end()) {
@@ -226,6 +236,8 @@ private:
 		StringView name_to_print, Checker&& check, StringView error_msg,
 		size_t max_size = -1)
 	{
+		STACK_UNWINDING_MARK;
+
 		if (form_validate_not_blank(var, name, name_to_print, max_size)) {
 			if (check(var))
 				return true;
@@ -247,6 +259,8 @@ private:
 	bool form_validate_file_path_not_blank(T& var, const std::string& name,
 		StringView name_to_print)
 	{
+		STACK_UNWINDING_MARK;
+
 		auto const& form = request.form_data.files;
 		auto it = form.find(name);
 		if (it == form.end()) {
@@ -310,6 +324,8 @@ private:
 		StringView scripts = {});
 
 	void users_print_user() {
+		STACK_UNWINDING_MARK;
+
 		append("<h4><a href=\"/u/", users_user_id, "\">",
 				htmlEscape(users_username), "</a> (",
 				htmlEscape(users_first_name), ' ', htmlEscape(users_last_name),
@@ -499,6 +515,7 @@ private:
 	void jobs_page_template(StringView title, StringView styles = {},
 		StringView scripts = {})
 	{
+		STACK_UNWINDING_MARK;
 		page_template(title, concat("body{margin-left:32px}", styles), scripts);
 	}
 

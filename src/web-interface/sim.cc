@@ -36,90 +36,107 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 			"</html>";
 	};
 
-	// try {
-		url_args = RequestURIParser {request.target};
-		StringView next_arg = url_args.extractNextArg();
+	try {
+		STACK_UNWINDING_MARK;
+		try {
+			STACK_UNWINDING_MARK;
 
-		// Reset state
-		page_template_began = false;
-		notifications.size = 0;
-		session_is_open = false;
-		form_validation_error = false;
+			url_args = RequestURIParser {request.target};
+			StringView next_arg = url_args.extractNextArg();
 
-		// Check CSRF token
-		if (request.method == server::HttpRequest::POST) {
-			// If no session is open, load value from cookie to pass
-			// verification
-			if (not session_open())
-				session_csrf_token = request.getCookie("csrf_token");
+			// Reset state
+			page_template_began = false;
+			notifications.size = 0;
+			session_is_open = false;
+			form_validation_error = false;
 
-			if (request.form_data.get("csrf_token") != session_csrf_token) {
-				error403();
-				goto cleanup;
+			// Check CSRF token
+			if (request.method == server::HttpRequest::POST) {
+				// If no session is open, load value from cookie to pass
+				// verification
+				if (not session_open())
+					session_csrf_token = request.getCookie("csrf_token");
+
+				if (request.form_data.get("csrf_token") != session_csrf_token) {
+					error403();
+					goto cleanup;
+				}
 			}
+
+			if (next_arg == "kit")
+				static_file();
+
+			// else if (next_arg == "c")
+				// contest_handle();
+
+			// else if (next_arg == "s")
+				// view_submission();
+
+			// else if (next_arg == "u")
+				// users_handle();
+
+			else if (next_arg == "")
+				main_page();
+
+			else if (next_arg == "api")
+				api_handle();
+
+			// else if (next_arg == "p")
+				// problemset_handle();
+
+			else if (next_arg == "login")
+				login();
+
+			else if (next_arg == "jobs")
+				jobs_handle();
+
+			// else if (next_arg == "file")
+				// contest_file();
+
+			else if (next_arg == "logout")
+				logout();
+
+			else if (next_arg == "signup")
+				sign_up();
+
+			else if (next_arg == "logs")
+				view_logs();
+
+			else
+				error404();
+
+		cleanup:
+			page_template_end();
+
+			// Make sure that the session is closed
+			session_close();
+
+		} catch (const std::exception& e) {
+			ERRLOG_CATCH(e);
+			error500();
+
+		} catch (...) {
+			ERRLOG_CATCH();
+			error500();
 		}
 
-		if (next_arg == "kit")
-			static_file();
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		// We cannot use error500() because it will probably throw
+		hard_error500();
 
-		// else if (next_arg == "c")
-			// contest_handle();
-
-		// else if (next_arg == "s")
-			// view_submission();
-
-		// else if (next_arg == "u")
-			// users_handle();
-
-		else if (next_arg == "")
-			main_page();
-
-		else if (next_arg == "api")
-			api_handle();
-
-		// else if (next_arg == "p")
-			// problemset_handle();
-
-		else if (next_arg == "login")
-			login();
-
-		else if (next_arg == "jobs")
-			jobs_handle();
-
-		// else if (next_arg == "file")
-			// contest_file();
-
-		else if (next_arg == "logout")
-			logout();
-
-		else if (next_arg == "signup")
-			sign_up();
-
-		else if (next_arg == "logs")
-			view_logs();
-
-		else
-			error404();
-
-	cleanup:
-		page_template_end();
-
-		// Make sure that the session is closed
-		session_close();
-
-	// } catch (const std::exception& e) {
-		// ERRLOG_CATCH(e);
-		// hard_error500(); // We cannot use error500() because it may throw
-//
-	// } catch (...) {
-		// ERRLOG_CATCH();
-		// hard_error500(); // We cannot use error500() because it may throw
-	// }
+	} catch (...) {
+		ERRLOG_CATCH();
+		// We cannot use error500() because it will probably throw
+		hard_error500();
+	}
 
 	return std::move(resp);
 }
 
 void Sim::main_page() {
+	STACK_UNWINDING_MARK;
+
 	page_template("Main page");
 	append("<div style=\"text-align: center\">"
 			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
@@ -132,6 +149,8 @@ void Sim::main_page() {
 }
 
 void Sim::static_file() {
+	STACK_UNWINDING_MARK;
+
 	string file_path = concat_tostr("static",
 		abspath(decodeURI(request.target, 1, request.target.find('?'))));
 	// Extract path (ignore query)
@@ -163,6 +182,8 @@ void Sim::static_file() {
 }
 
 void Sim::view_logs() {
+	STACK_UNWINDING_MARK;
+
 	if (!session_open() || session_user_type > UTYPE_ADMIN)
 		return error403();
 

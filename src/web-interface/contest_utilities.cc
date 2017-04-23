@@ -1,5 +1,3 @@
-#include "contest.h"
-
 #include <simlib/debug.h>
 #include <simlib/time.h>
 

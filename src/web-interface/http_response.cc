@@ -1,7 +1,7 @@
 #include "http_response.h"
 
 #include <ctime>
-#include <simlib/utilities.h>
+#include <simlib/debug.h>
 
 using std::string;
 
@@ -11,6 +11,8 @@ void HttpResponse::setCookie(const string& name, const string& val,
 	time_t expire, const string& path, const string& domain, bool http_only,
 	bool secure)
 {
+	STACK_UNWINDING_MARK;
+
 	string value = val;
 
 	if (expire != -1) {
