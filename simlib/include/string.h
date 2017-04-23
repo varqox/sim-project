@@ -14,6 +14,17 @@
 # include <cassert>
 #endif
 
+#define STRINGIZE2(x) #x
+#define STRINGIZE(x) STRINGIZE2(x)
+
+#define CONCATENATE_DETAIL(x, y) x##y
+#define CONCAT(x, y) CONCATENATE_DETAIL(x, y)
+
+#define throw_assert(expr) \
+	((expr) ? (void)0 : throw std::runtime_error(std::string(__FILE__ ":" \
+	STRINGIZE(__LINE__) ": ").append(__PRETTY_FUNCTION__).append( \
+	": Assertion `" #expr "` failed.")))
+
 template<class T>
 constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
 	return x.size();
@@ -150,11 +161,6 @@ inline std::string concat_tostr(Args&&... args) {
 		return res;
 	}(stringify(std::forward<Args>(args))...);
 }
-
-#define throw_assert(expr) \
-	((expr) ? (void)0 : throw std::runtime_error(concat_tostr(__FILE__, ':', \
-	meta::ToString<__LINE__>{}, ": ", __PRETTY_FUNCTION__, \
-	": Assertion `" #expr " failed.")))
 
 template<size_t N, class size_type>
 class StringBuff {
@@ -985,6 +991,8 @@ public:
 		size = n;
 	}
 
+	void clear() noexcept { size = 0; }
+
 	char* begin() noexcept { return data(); }
 
 	const char* begin() const noexcept { return data(); }
@@ -1069,7 +1077,9 @@ private:
 public:
 	using InplaceBuffBase::size;
 
-	constexpr InplaceBuff() : InplaceBuffBase(0, N, nullptr) { p_ = &a_[0]; }
+	constexpr InplaceBuff() noexcept : InplaceBuffBase(0, N, nullptr) {
+		p_ = &a_[0];
+	}
 
 	constexpr explicit InplaceBuff(size_t n)
 		: InplaceBuffBase(n, meta::max(N, n), nullptr)
@@ -1133,6 +1143,7 @@ public:
 
 	using InplaceBuffBase::lossy_resize;
 	using InplaceBuffBase::resize;
+	using InplaceBuffBase::clear;
 	using InplaceBuffBase::begin;
 	using InplaceBuffBase::end;
 	using InplaceBuffBase::cbegin;

@@ -53,7 +53,7 @@ sim/sim.o: sim
 http/http.o: http
 	@
 
-../simlib.a: string.o aho_corasick.o
+../simlib.a: string.o debug.o aho_corasick.o
 ../simlib.a: config_file.o logger.o
 ../simlib.a: time.o filesystem.o process.o
 ../simlib.a: spawner.o sandbox.o syscall_name_32.o syscall_name_64.o

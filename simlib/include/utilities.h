@@ -178,13 +178,16 @@ class InplaceArray {
 	}
 
 public:
+	InplaceArray() : size_(0), a_{}, p_(&a_[0]) {}
+
 	explicit InplaceArray(size_t n)
-		: size_(n), p_(n > N ? new T[n] : &a_[0]) {}
+		: size_(n), a_{}, p_(n > N ? new T[n] : &a_[0])
+	{}
 
 	InplaceArray(size_t n, const T& val)
-		: size_(n), p_(n > N ? new T[n] : &a_[0])
+		: size_(n), a_{}, p_(n > N ? new T[n] : &a_[0])
 	{
-		fill(p_, p_ + n, val);
+		fill(begin(), end(), val);
 	}
 
 	template<size_t N1>
@@ -194,13 +197,18 @@ public:
 
 	template<size_t N1>
 	InplaceArray(InplaceArray<T, N1>&& a) : size_(a.size_) {
-		if (size_ <= N) // copy to the array
-			std::copy(a.p_, a.p_ + size_, p_ = &a[0]);
-		else if (a.p_ != &a.a_[0]) { // move the pointer
+		if (size_ <= N) {
+			for (size_t i = 0; i < size_; ++i)
+				(*this)[i] = std::move(a[i]);
+
+		} else if (a.p_ != &a.a_[0]) { // move the pointer
 			p_ = a.p_;
 			a.p_ = &a.a_[0];
-		} else // allocate memory and then copy
-			std::copy(a.p_, a.p_ + size_, p_ = new T[size_]);
+		} else { // allocate memory and then copy
+			p_ = new T[size_];
+			for (size_t i = 0; i < size_; ++i)
+				(*this)[i] = std::move(a[i]);
+		}
 
 		a.size_ = 0;
 	}
@@ -237,9 +245,11 @@ public:
 		} else if (a.size_ <= N) {
 			deallocate();
 			p_ = &a_[0];
-			std::copy(a.p_, a.p_ + a.size_, p_);
+			for (size_t i = 0; i < size_; ++i)
+				(*this)[i] = std::move(a[i]);
 		} else if (size_ >= a.size_) {
-			std::copy(a.p_, a.p_ + a.size_, p_);
+			for (size_t i = 0; i < size_; ++i)
+				(*this)[i] = std::move(a[i]);
 		} else {
 			deallocate();
 			try {
@@ -248,7 +258,8 @@ public:
 				p_ = &a_[0];
 				throw;
 			}
-			std::copy(a.p_, a.p_ + a.size_, p_);
+			for (size_t i = 0; i < size_; ++i)
+				(*this)[i] = std::move(a[i]);
 		}
 
 		size_ = a.size_;
@@ -297,11 +308,25 @@ public:
 		size_ = n;
 	}
 
+	void clear() noexcept { size_ = 0; }
+
 	size_t size() const noexcept { return size_; }
 
 	T* data() noexcept { return p_; }
 
 	const T* data() const noexcept { return p_; }
+
+	T* begin() noexcept { return data(); }
+
+	T* end() noexcept { return data() + size(); }
+
+	T& front() noexcept { return (*this)[0]; }
+
+	const T& front() const noexcept { return (*this)[0]; }
+
+	T& back() noexcept { return (*this)[size() - 1]; }
+
+	const T& back() const noexcept { return (*this)[size() - 1]; }
 
 	T& operator[](size_t i) noexcept { return p_[i]; }
 
