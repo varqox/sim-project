@@ -3,6 +3,8 @@
 #include <simlib/filesystem.h>
 
 void Sim::api_handle() {
+	STACK_UNWINDING_MARK;
+
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "logs")
 		return api_logs();
@@ -11,6 +13,8 @@ void Sim::api_handle() {
 }
 
 void Sim::api_logs() {
+	STACK_UNWINDING_MARK;
+
 	if (!session_open() || session_user_type > UTYPE_ADMIN)
 		return set_response("403 Forbidden");
 

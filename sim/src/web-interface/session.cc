@@ -5,6 +5,8 @@
 using std::string;
 
 bool Sim::session_open() {
+	STACK_UNWINDING_MARK;
+
 	if (session_is_open)
 		return true;
 
@@ -44,6 +46,8 @@ bool Sim::session_open() {
 }
 
 string Sim::session_generate_id(uint length) {
+	STACK_UNWINDING_MARK;
+
 	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"0123456789";
 	constexpr size_t len = sizeof(t) - 1;
@@ -57,6 +61,8 @@ string Sim::session_generate_id(uint length) {
 }
 
 void Sim::session_create_and_open(StringView user_id) {
+	STACK_UNWINDING_MARK;
+
 	session_close();
 
 	// Remove obsolete sessions
@@ -93,6 +99,8 @@ void Sim::session_create_and_open(StringView user_id) {
 }
 
 void Sim::session_destroy() {
+	STACK_UNWINDING_MARK;
+
 	if (not session_open())
 		return;
 
@@ -110,6 +118,8 @@ void Sim::session_destroy() {
 }
 
 void Sim::session_close() {
+	STACK_UNWINDING_MARK;
+
 	if (!session_is_open)
 		return;
 

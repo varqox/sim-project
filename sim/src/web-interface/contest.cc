@@ -1,6 +1,3 @@
-#include "form_validator.h"
-#include "contest.h"
-
 #include <sim/jobs.h>
 #include <sim/utilities.h>
 #include <simlib/config_file.h>
