@@ -49,10 +49,10 @@ inline const char* __what(const std::exception& e) {
 		"\nStack unwinding marks:\n"); \
 		\
 		size_t i = 0;\
-		for (auto&& mark : stack_unwinding::marks_collected()) \
+		for (auto&& mark : stack_unwinding::marks_collected) \
 			tmplog('[', i++, "] ", mark, "\n"); \
 		\
-		stack_unwinding::marks_collected().clear(); \
+		stack_unwinding::marks_collected.clear(); \
 	} while (false)
 
 #define ERRLOG_FORWARDING(...) errlog(__FILE__ ":" STRINGIZE(__LINE__) \
@@ -72,14 +72,19 @@ inline StringBuff<4096> error(int errnum) noexcept {
 }
 
 #if !defined(__cpp_lib_uncaught_exceptions) || __cpp_lib_uncaught_exceptions < 201411
-extern "C" {
+namespace __cxxabiv1 {
 struct __cxa_eh_globals;
-__cxa_eh_globals* __cxa_get_globals();
-}
+extern "C" {
+__cxa_eh_globals*
+__cxa_get_globals() noexcept __attribute__ ((__const__));
+} // extern "C"
+} // namespace __cxxabiv1
+
 namespace std {
 inline int uncaught_exceptions() noexcept {
 	return *reinterpret_cast<unsigned*>(
-		reinterpret_cast<char*>(__cxa_get_globals()) + sizeof(void*));
+		reinterpret_cast<char*>(__cxxabiv1::__cxa_get_globals()) +
+		sizeof(void*));
 }
 } // namespace std
 #endif
@@ -119,11 +124,11 @@ constexpr inline auto make_guard(Func&& func) {
 	return Guard<Func>(std::forward<Func>(func));
 }
 
-InplaceArray<InplaceBuff<256>, 32>& marks_collected() noexcept;
+extern thread_local InplaceArray<InplaceBuff<256>, 32> marks_collected;
 
 #define STACK_UNWINDING_MARK auto CONCAT(stack_unwind_mark, __COUNTER__) = \
 	stack_unwinding::make_guard([upper_func_name = __PRETTY_FUNCTION__]{ \
-		auto& marks = stack_unwinding::marks_collected(); \
+		auto& marks = stack_unwinding::marks_collected; \
 		marks.resize(marks.size() + 1); \
 		marks.back() = \
 			concat(upper_func_name, " at " __FILE__ ":" STRINGIZE(__LINE__)); \
