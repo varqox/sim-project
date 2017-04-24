@@ -72,10 +72,14 @@ inline StringBuff<4096> error(int errnum) noexcept {
 }
 
 #if !defined(__cpp_lib_uncaught_exceptions) || __cpp_lib_uncaught_exceptions < 201411
-namespace details { extern "C" char * __cxa_get_globals(); }
+extern "C" {
+struct __cxa_eh_globals;
+__cxa_eh_globals* __cxa_get_globals();
+}
 namespace std {
 inline int uncaught_exceptions() noexcept {
-	return *(static_cast<unsigned*>(static_cast<void*>(details::__cxa_get_globals() + sizeof(void*))));
+	return *reinterpret_cast<unsigned*>(
+		reinterpret_cast<char*>(__cxa_get_globals()) + sizeof(void*));
 }
 } // namespace std
 #endif
