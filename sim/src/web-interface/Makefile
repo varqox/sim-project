@@ -1,7 +1,7 @@
 include ../../Makefile.config
 
 .PHONY: all
-all: ../sim-server ../sim-server2
+all: ../sim-server # ../sim-server2
 
 $(eval $(call dependencies))
 
@@ -9,14 +9,14 @@ $(eval $(call dependencies))
 ../sim-server: sim.o session.o template.o api.o user.o jobs.o
 ../sim-server: ../lib/sim.a ../lib/sqlite3.a
 ../sim-server:
-	$(LINK) $(shell mysql_config --libs) -pthread
+	$(LINK) $(shell mysql_config --libs) -pthread -lsupc++
 
 # ../sim-server2: server2.o connection.o http_request.o http_response.o form_validator.o
 # ../sim-server2: session.o template.o errors.o user.o problemset.o jobs.o
 # ../sim-server2: contest.o contest_utilities.o submissions.o files.o sim_base.o sim.o
 # ../sim-server2: ../lib/sim.a
 # ../sim-server2:
-	# $(LINK) -lmysqlcppconn -pthread
+	# $(LINK) -lmysqlcppconn -pthread -lsupc++
 
 # Technique used to force browsers to always keep updated version of the files below
 template.o: EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/styles.css))"'

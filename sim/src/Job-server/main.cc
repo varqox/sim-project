@@ -170,7 +170,8 @@ int main() {
 
 	// Connect to the databases
 	try {
-		sqlite_db = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_READWRITE);
+		sqlite_db = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_READWRITE |
+			SQLITE_OPEN_NOMUTEX);
 		db_conn = MySQL::makeConnWithCredFile(".db.config");
 
 		cleanUpDB();

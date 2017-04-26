@@ -624,7 +624,7 @@ private:
 	void view_submission();
 
 public:
-	Sim() : sqlite(SQLITE_DB_FILE, SQLITE_OPEN_READONLY),
+	Sim() : sqlite(SQLITE_DB_FILE, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX),
 		mysql(MySQL::makeConnWithCredFile(".db.config")) {}
 
 	~Sim() {}
