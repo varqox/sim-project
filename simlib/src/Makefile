@@ -11,7 +11,14 @@ $(eval $(call dependencies))
 syscall_name_32.o: syscall_name_32.cc.deps
 syscall_name_64.o: syscall_name_64.cc.deps
 
+ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_32.h),)
+syscall_name_32.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
+else ifneq ($(wildcard /usr/include/x86-linux-gnu/asm/unistd_32.h),)
+syscall_name_32.cc: UNISTD_32 = /usr/include/x86-linux-gnu/asm/unistd_32.h
+else
 syscall_name_32.cc: UNISTD_32 = /usr/include/asm/unistd_32.h
+endif
+
 syscall_name_32.cc: Makefile $(UNISTD_32)
 	$(GEN)
 	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
@@ -27,7 +34,14 @@ syscall_name_32.cc: Makefile $(UNISTD_32)
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
 	$(Q)echo "};" >> $@
 
+ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_64.h),)
+syscall_name_64.cc: UNISTD_64 = /usr/include/x86_64-linux-gnu/asm/unistd_64.h
+else ifneq ($(wildcard /usr/include/x86-linux-gnu/asm/unistd_64.h),)
+syscall_name_64.cc: UNISTD_64 = /usr/include/x86-linux-gnu/asm/unistd_64.h
+else
 syscall_name_64.cc: UNISTD_64 = /usr/include/asm/unistd_64.h
+endif
+
 syscall_name_64.cc: Makefile $(UNISTD_64)
 	$(GEN)
 	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
