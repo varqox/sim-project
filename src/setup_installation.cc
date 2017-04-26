@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
 		// Get connection
 		sqlite_db = SQLite::Connection(
 			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
-			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
 		conn = MySQL::makeConnWithCredFile(
 			concat_tostr(argv[1], "/.db.config"));
 

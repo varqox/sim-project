@@ -171,9 +171,19 @@ int main() {
 		return 4;
 	}
 
+	// Alter default thread stack size
+	pthread_attr_t attr;
+	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MB
+	if (pthread_attr_init(&attr) ||
+		pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE))
+	{
+		errlog("Failed to set new thread stack size");
+		return 4;
+	}
+
 	pthread_t threads[workers];
 	for (int i = 1; i < workers; ++i)
-		pthread_create(threads + i, nullptr, server::worker, nullptr);
+		pthread_create(threads + i, &attr, server::worker, nullptr); // TODO: errors...
 	threads[0] = pthread_self();
 	server::worker(nullptr);
 

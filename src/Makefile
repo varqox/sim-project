@@ -14,14 +14,14 @@ Job-server web-interface lib:
 	$(Q)$(MAKE) -C $@/
 
 killinstc: killinstc.o lib/simlib.a
-	$(LINK)
+	$(LINK) -lsupc++
 
 setup-installation: setup_installation.o lib/sim.a lib/sqlite3.a
-	$(LINK) $(shell mysql_config --libs)
+	$(LINK) $(shell mysql_config --libs) -lsupc++
 
 
 backup: backup.o lib/sim.a lib/sqlite3.a
-	$(LINK) $(shell mysql_config --libs)
+	$(LINK) $(shell mysql_config --libs) -lsupc++
 
 lib/simlib.a lib/sim.a lib/sqlite3.a: lib;
 

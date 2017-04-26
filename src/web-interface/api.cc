@@ -31,7 +31,7 @@ void Sim::api_logs() {
 	else
 		return set_response("400 Bad Request");
 
-	off64_t end_offset;
+	off64_t end_offset = 0;
 	StringView que = url_args.extractQuery();
 	if (que.size()) {
 		if (strtou(que, end_offset) == -1)
