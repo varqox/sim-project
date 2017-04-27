@@ -186,13 +186,13 @@ void Sim::api_jobs() {
 
 		// Status: (CSS class, text)
 		switch (job_status) {
-		case JobQueueStatus::PENDING: append("[\"\", \"Pending\"],"); break;
+		case JobQueueStatus::PENDING: append("[\"\",\"Pending\"],"); break;
 		case JobQueueStatus::IN_PROGRESS:
-			append("[\"yellow\", \"In progress\"],"); break;
-		case JobQueueStatus::DONE: append("[\"green\", \"Done\"],"); break;
-		case JobQueueStatus::FAILED: append("[\"red\", \"Failed\"],"); break;
+			append("[\"yellow\",\"In progress\"],"); break;
+		case JobQueueStatus::DONE: append("[\"green\",\"Done\"],"); break;
+		case JobQueueStatus::FAILED: append("[\"red\",\"Failed\"],"); break;
 		case JobQueueStatus::CANCELED:
-			append("[\"blue\", \"Cancelled\"],"); break;
+			append("[\"blue\",\"Cancelled\"],"); break;
 		}
 
 		append(jpriority, ',');
