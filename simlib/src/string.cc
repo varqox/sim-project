@@ -38,35 +38,6 @@ string encodeURI(StringView str, size_t beg, size_t end) {
 	return ret;
 }
 
-string decodeURI(StringView str, size_t beg, size_t end) {
-	if (end > str.size())
-		end = str.size();
-
-	string ret;
-	if (end > 2)
-		for (size_t end2 = end - 2; beg < end2; ++beg) {
-
-			if (str[beg] == '%') {
-				ret += static_cast<char>((hextodec(str[beg + 1]) << 4) +
-					hextodec(str[beg + 2]));
-				beg += 2;
-			} else if (str[beg] == '+')
-				ret += ' ';
-			else
-				ret += str[beg];
-		}
-
-	// last two characters (if left)
-	for (; beg < end; ++beg) {
-		if (str[beg] == '+')
-			ret += ' ';
-		else
-			ret += str[beg];
-	}
-
-	return ret;
-}
-
 string toHex(const char* str, size_t len) {
 	string res(len << 1, '\0');
 	for (size_t i = -1; len-- > 0; ++str) {

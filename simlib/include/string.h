@@ -1011,6 +1011,14 @@ public:
 
 	size_t max_size() const noexcept { return max_size_; }
 
+	char& front() noexcept { return (*this)[0]; }
+
+	char front() const noexcept { return (*this)[0]; }
+
+	char& back() noexcept { return (*this)[size - 1]; }
+
+	char back() const noexcept { return (*this)[size - 1]; }
+
 	char& operator[](size_t i) noexcept { return p_[i]; }
 
 	char operator[](size_t i) const noexcept { return p_[i]; }
@@ -1150,6 +1158,8 @@ public:
 	using InplaceBuffBase::cend;
 	using InplaceBuffBase::data;
 	using InplaceBuffBase::max_size;
+	using InplaceBuffBase::front;
+	using InplaceBuffBase::back;
 	using InplaceBuffBase::operator[];
 	using InplaceBuffBase::operator StringView;
 	using InplaceBuffBase::to_string;
@@ -1171,7 +1181,7 @@ constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
  * @return concentration of @p args
  */
 template<size_t IBUFF_SIZE = 4096, class... Args>
-inline InplaceBuff<IBUFF_SIZE> concat(Args&&... args) {
+constexpr inline InplaceBuff<IBUFF_SIZE> concat(Args&&... args) {
 	InplaceBuff<IBUFF_SIZE> res;
 	res.append(std::forward<Args>(args)...);
 	return res;
@@ -1439,12 +1449,6 @@ inline void removeTrailing(std::string& str, char c) noexcept {
 	removeTrailing(str, [c](char x) { return (x == c); });
 }
 
-std::string encodeURI(StringView str, size_t beg = 0,
-	size_t end = StringView::npos);
-
-std::string decodeURI(StringView str, size_t beg = 0,
-	size_t end = StringView::npos);
-
 inline std::string tolower(std::string str) {
 	for (auto& c : str)
 		c = tolower(c);
@@ -1470,6 +1474,28 @@ std::string toHex(const char* str, size_t len);
 /// Converts each byte of @p str to two hex digits using dectohex()
 inline std::string toHex(StringView str) {
 	return toHex(str.data(), str.size());
+}
+
+// TODO: rewrite using InplaceBuff
+std::string encodeURI(StringView str, size_t beg = 0,
+	size_t end = StringView::npos);
+
+/// Decodes URI, WARNING: it does not validate hex digits
+template<size_t N = 4096>
+InplaceBuff<N> decodeURI(StringView str) {
+	InplaceBuff<N> res;
+	for (size_t i = 0; i < str.size(); ++i) {
+		if (str[i] == '%' and i + 2 < str.size()) {
+			res.template append<char>(
+				(hextodec(str[i + 1]) << 4) | hextodec(str[i + 2]));
+			i += 2;
+		} else if (str[i] == '+')
+			res.append(' ');
+		else
+			res.append(str[i]);
+	}
+
+	return res;
 }
 
 constexpr inline bool hasPrefix(StringView str, StringView prefix) noexcept {
@@ -1578,6 +1604,33 @@ template<class T>
 inline std::string htmlEscape(T&& s) {
 	std::string res;
 	appendHtmlEscaped(res, std::forward<T>(s));
+	return res;
+}
+
+template<size_t N = 512, class... Args>
+constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
+	InplaceBuff<N> res;
+	res.append('"');
+	auto safe_append = [&](auto&& arg) {
+		auto p = data(arg);
+		for (size_t i = 0, len = string_length(arg); i < len; ++i) {
+			unsigned char c = p[i];
+			if (c == '\"')
+				res.append("\\\"");
+			else if (c == '\n')
+				res.append("\\n");
+			else if (iscntrl(c))
+				res.append("\\u00", dectohex(c >> 4), dectohex(c & 15));
+			else
+				res.template append<char>(c);
+		}
+	};
+
+	(void)std::initializer_list<int>{
+		(safe_append(stringify(std::forward<Args>(args))), 0)...
+	};
+
+	res.append('"');
 	return res;
 }
 
