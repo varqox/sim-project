@@ -74,8 +74,6 @@ void Sim::jobs_handle() {
 	STACK_UNWINDING_MARK;
 
 	constexpr auto PERM_VIEW_ALL = Sim::JobPermissions::PERM_VIEW_ALL;
-	constexpr auto PERM_CANCEL = Sim::JobPermissions::PERM_CANCEL;
-	constexpr auto PERM_RESTART = Sim::JobPermissions::PERM_RESTART;
 
 	if (not session_open())
 		return redirect("/login?" + request.target);
@@ -89,188 +87,39 @@ void Sim::jobs_handle() {
 
 	// Get permissions to overall job queue
 	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
-
+	StringView my = next_arg;
 	if (next_arg == "cancel")
 		return error501();
 		// return cancelJob();
-
-	else if (!next_arg.empty() && next_arg != "my")
+	else if (next_arg == "my")
+		my = "/my";
+	else if (next_arg.size())
 		return error404();
-
-	bool show_all = (next_arg != "my");
-	if (show_all && uint(~jobs_perms & PERM_VIEW_ALL))
+	else if (uint(~jobs_perms & PERM_VIEW_ALL))
 		return error403();
 
 	/* List jobs */
+	page_template("Job queue", "body{margin-left:20px}");
 
-	STACK_UNWINDING_MARK;
-	jobs_page_template("Job queue");
-	append(next_arg.empty() ? "<h1>Job queue</h1>" : "<h1>My jobs</h1>");
-
-	MySQL::Statement<> stmt;
-	uint8_t jtype, jstatus;
-	my_bool is_aux_id_null, is_creator_null;
-	InplaceBuff<30> job_id, added, jpriority, aux_id, creator;
-	InplaceBuff<512> jinfo;
-	InplaceBuff<USERNAME_MAX_LEN> cusername;
-
-	if (show_all) {
-		stmt = mysql.prepare("SELECT j.id, added, j.type, status, priority,"
-				" aux_id, info, creator, username"
-			" FROM job_queue j LEFT JOIN users u ON creator=u.id"
-			" WHERE j.type!=" JQTYPE_VOID_STR " ORDER BY id DESC");
-		stmt.execute();
-		stmt.res_bind(7, creator);
-		stmt.res_bind_isnull(7, is_creator_null);
-		stmt.res_bind(8, cusername);
-
-	} else {
-		stmt = mysql.prepare("SELECT id, added, type, status, priority, aux_id,"
-				" info"
-			" FROM job_queue WHERE creator=? AND type!=" JQTYPE_VOID_STR
-			" ORDER BY id DESC");
-		stmt.bindAndExecute(session_user_id);
-	}
-
-	stmt.res_bind(0, job_id);
-	stmt.res_bind(1, added);
-	stmt.res_bind(2, jtype);
-	stmt.res_bind(3, jstatus);
-	stmt.res_bind(4, jpriority);
-	stmt.res_bind(5, aux_id);
-	stmt.res_bind_isnull(5, is_aux_id_null);
-	stmt.res_bind(6, jinfo);
-	stmt.resFixBinds();
-
-	if (!stmt.next()) {
-		append("There are no jobs to show...");
-		return;
-	}
-
-	append("<table class=\"jobs\">"
+	append("<h1>", (my.empty() ? "All jobs" : "My jobs"), "</h1>"
+		"<table class=\"jobs\">"
 		"<thead>"
 			"<tr>"
 				"<th class=\"type\">Type</th>"
 				"<th class=\"added\">Added<sup>UTC</sup></th>"
 				"<th class=\"status\">Status</th>",
-				(show_all ? "<th class=\"owner\">Owner</th>" : ""),
+				"<th class=\"owner\">Owner</th>",
 				"<th class=\"priority\">Priority</th>"
 				"<th class=\"info\">Info</th>"
 				"<th class=\"actions\">Actions</th>"
 			"</tr>"
 		"</thead>"
-		"<tbody>");
+		"<tbody></tbody>"
+		"</table>"
 
-	do {
-		JobQueueType job_type {JobQueueType(jtype)};
-		JobQueueStatus job_status {JobQueueStatus(jstatus)};
-		append("<tr>"
-				"<td>", job_type_str(job_type), "</td>"
-				"<td><a href=\"/jobs/", job_id, "\" datetime=\"", added, "\">",
-					added, "</a></td>",
-				job_status_as_td(job_status));
-
-		// Owner
-		if (show_all) {
-			if (is_creator_null)
-				append("<td>System</td>");
-			else
-				append("<td><a href=\"/u/", creator, "\">", cusername,
-					"</a></td>");
-		}
-
-		JobPermissions job_perms = jobs_get_permissions(show_all ?
-			creator : session_user_id, job_status);
-
-		append("<td>", jpriority, "</td>"
-				"<td>");
-
-		/* Info + actions */
-		auto foo = [&](auto&& append_info, auto&& append_actions) {
-			append_info();
-			append("</td>"
-					"<td>"
-						"<a class=\"btn-small\" href=\"/jobs/", job_id,
-							"\">View job</a>");
-			append_actions();
-
-			if (uint(job_perms & PERM_CANCEL))
-				append("<a class=\"btn-small red\" onclick=\"cancelJob(",
-					job_id, ")\">Cancel job</a>");
-
-			if (uint(job_perms & PERM_RESTART))
-				append("<a class=\"btn-small orange\" onclick=\"restartJob(",
-					job_id, ")\">Restart job</a>");
-
-			append("</td>"
-				"</tr>");
-		};
-
-		// Decide, by the job_type, what to show
-		switch (job_type) {
-		case JobQueueType::JUDGE_SUBMISSION: {
-			foo([&]{
-				StringView info {jinfo};
-				string pid = jobs::extractDumpedString(info);
-				append("<label>submission</label>",
-					"<a href=\"/s/", aux_id, "\">", aux_id, "</a>"
-					"<label>problem</label>",
-					"<a href=\"/p/", pid, "\">", pid, "</a>");
-			}, [&]{});
-			break;
-		}
-
-		case JobQueueType::ADD_PROBLEM:
-		case JobQueueType::REUPLOAD_PROBLEM:
-		case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
-		case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
-			foo([&]{
-				jobs::AddProblemInfo info {jinfo};
-				if (info.name.size())
-					append("<label>name</label>", htmlEscape(info.name));
-				if (info.memory_limit)
-					append("<label>memory limit</label>", info.memory_limit,
-						" MB");
-				append("<label>public</label>",
-					(info.public_problem ? "yes" : "no"));
-
-			}, [&]{
-				append("<div class=\"dropmenu down\">"
-						"<a class=\"btn-small dropmenu-toggle\">Download</a>"
-						"<ul>"
-							"<a href=\"/jobs/", job_id, "/report\">Report</a>"
-							"<a href=\"/jobs/", job_id,
-								"/download-uploaded-package\">"
-								"Uploaded package</a>"
-						"</ul>"
-					"</div>");
-				if (job_status == JobQueueStatus::DONE || isIn(job_type, {
-					JobQueueType::REUPLOAD_PROBLEM,
-					JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION}))
-				{
-					append("<a class=\"btn-small green\" href=\"/p/", aux_id,
-						"\">View problem</a>");
-				}
-			});
-			break;
-		}
-
-		case JobQueueType::EDIT_PROBLEM:
-		case JobQueueType::DELETE_PROBLEM: {
-			foo([&]{
-				append("TODO...");
-			}, [&]{});
-			break;
-		}
-
-		case JobQueueType::VOID:
-			break;
-		}
-
-	} while (stmt.next());
-
-	append("</tbody>"
-		"</table>");
+		"<script>"
+			"new Jobs('/api/jobs", my, "', $('.jobs')).monitor_scroll();"
+		"</script>");
 }
 
 #if 0

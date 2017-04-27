@@ -604,13 +604,13 @@ private:
 
 	void api_logs();
 
+	void api_jobs();
+
 	void api_list_problems();
 
 	void api_change_submission_type_to();
 
 	void api_list_submissions();
-
-	void api_list_jobs();
 
 	/* =============================== Other =============================== */
 

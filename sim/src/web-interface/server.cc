@@ -2,6 +2,7 @@
 #include "sim.h"
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <csignal>
 #include <pthread.h>
 #include <simlib/config_file.h>
@@ -38,8 +39,19 @@ static void* worker(void*) {
 			conn.assign(client_socket_fd);
 			HttpRequest req = conn.getRequest();
 
-			if (conn.state() == Connection::OK)
-				conn.sendResponse(sim_worker.handle(ip, std::move(req)));
+			if (conn.state() == Connection::OK) {
+				using namespace std::chrono;
+				auto beg = steady_clock::now();
+
+				HttpResponse resp = sim_worker.handle(ip, std::move(req));
+
+				auto microdur = duration_cast<microseconds>
+					(steady_clock::now() - beg).count();
+				stdlog("Response generated in ", toString(microdur / 1000.0, 3),
+					" ms.");
+
+				conn.sendResponse(std::move(resp));
+			}
 
 			stdlog("Closing...");
 			closer.close();

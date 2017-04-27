@@ -264,7 +264,7 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 		"INSERT INTO problems (rowid, type, name, label)"
 		" VALUES(?, ?, ?, ?)")};
 	sqlite_stmt.bindInt64(1, problem_id);
-	sqlite_stmt.bindInt(2, int(info.public_problem ?
+	sqlite_stmt.bindInt(2, int(info.make_public ?
 		ProblemType::PUBLIC : ProblemType::PRIVATE));
 	sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
 	sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
@@ -421,7 +421,7 @@ void addProblem(StringView job_id, StringView job_owner, StringView info) {
 			auto stmt = db_conn.prepare("UPDATE problems p, submissions s"
 				" SET p.type=?, s.type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE p.id=? AND s.problem_id=?");
-			stmt.bindAndExecute(uint(p_info.public_problem ?
+			stmt.bindAndExecute(uint(p_info.make_public ?
 				ProblemType::PUBLIC : ProblemType::PRIVATE), problem_id,
 				problem_id);
 		});
@@ -538,7 +538,7 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 				// Replace the old problem with the new one
 				stmt = db_conn.prepare("UPDATE problems"
 					" SET id=?, type=?, owner=? WHERE id=?");
-				uint ptype = uint(p_info.public_problem ?
+				uint ptype = uint(p_info.make_public ?
 					ProblemType::PUBLIC : ProblemType::PRIVATE);
 				stmt.bind(0, aux_id);
 				stmt.bind(1, ptype);
