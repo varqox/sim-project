@@ -27,17 +27,16 @@ $(document).ready(function updateClock() {
 
 // Dropdowns
 $(document).ready(function(){
-	$('.dropmenu > .dropmenu-toggle').click(function(event) {
-		event.preventDefault();
-		if($(this).parent().is('.open'))
-			$(this).parent().removeClass('open');
-		else {
-			$('.dropmenu.open').removeClass('open');
-			$(this).parent().addClass('open');
-		}
-	});
 	$(document).click(function(event) {
-		if(!$(event.target).is('.dropmenu-toggle, .dropmenu-toggle *'))
+		if ($(event.target).is('.dropmenu .dropmenu-toggle, .dropmenu .dropmenu-toggle *')) {
+			var dropmenu = $(event.target).closest('.dropmenu');
+			if (dropmenu.is('.open'))
+				dropmenu.removeClass('open');
+			else {
+				$('.dropmenu.open').removeClass('open');
+				dropmenu.addClass('open');
+			}
+		} else
 			$('.dropmenu.open').removeClass('open');
 	});
 });
@@ -570,6 +569,198 @@ function Logs(type, elem) {
 		this.elem.on('scroll', function() {
 			if (logs.offset != 0 && $(this).scrollTop() <= 300)
 				logs.fetch_more();
+		});
+	};
+
+	this.fetch_more();
+}
+
+function Jobs(base_url, elem) {
+	this.base_url = base_url;
+	this.elem = $(elem);
+	this.lock = false;
+	this.fetch_more = function() {
+		if (this.lock)
+			return;
+		this.lock = true;
+
+		this.elem.parent().children('.loader, .loader-info').remove();
+		this.elem.parent().append('<img class="loader" src="/kit/img/loader.gif">');
+
+		function getid(url) { return url.substr(url.lastIndexOf('/') + 1); }
+
+		var lower_job_id = this.elem.find("tr:last-child td:nth-child(2)");
+		var query = (lower_job_id.length === 0 ? ''
+			: '/<' + getid(lower_job_id.children().attr('href')));
+
+		var jobs = this;
+		$.ajax({
+			type: 'GET',
+			url: jobs.base_url + query,
+			dataType: 'json',
+			success: function(data) {
+				for (x in data) {
+					x = data[x];
+					var row = $('<tr>');
+					row.append($('<td>', {text: x[2]}));
+					row.append($('<td>', {html: $('<a>', {
+						href: '/jobs/' + x[0],
+						text: x[1]
+					})}));
+					row.append($('<td>', {
+						class: 'status ' + x[3][0],
+						text: x[3][1]
+					}));
+					row.append($('<td>', {
+						html: x[5] === null ? 'System' : $('<a>', {
+							href: '/u/' + x[5],
+							text: x[6]
+						})
+					}));
+					row.append($('<td>', {text: x[4]}));
+					// Info
+					var info = x[7];
+					row.append(function() {
+						var td = $('<td>');
+						function append_tag(name, val) {
+							td.append($('<label>', {text: name}));
+							td.append(val);
+						}
+
+						if (info.submission !== undefined)
+							append_tag('submission', $('<a>', {
+								href: '/s/' + info.submission,
+								text: info.submission
+							}))
+
+						if (info.problem !== undefined)
+							append_tag('problem', $('<a>', {
+								href: '/p/' + info.problem,
+								text: info.problem
+							}))
+
+						var names = ['name', 'memory limit', 'make public'];
+						for (var idx in names) {
+							var x = names[idx];
+							if (info[x] !== undefined)
+								append_tag(x, info[x]);
+						}
+
+						return td;
+					}());
+
+					// Actions
+					var td = $('<td>');
+					td.append($('<a>', {
+						class: 'btn-small',
+						href: '/jobs/' + x[0],
+						text: 'View job'
+					}));
+					for (var idx in x[8]) {
+						var c = x[8][idx];
+
+						if (c == 'P')
+							td.append($('<div>', {
+								class: 'dropmenu down',
+								html: $('<a>', {
+									class: 'btn-small dropmenu-toggle',
+									text: 'Download'
+								}).add($('<ul>', {
+									html: $('<a>', {
+										href: '/jobs/' + x[0] + '/report',
+										text: 'Report'
+									}).add($('<a>', {
+										href: '/jobs/' + x[0] +
+											'/download-uploaded-package',
+										text: 'Uploaded package'
+									}))
+								}))
+							}));
+
+						if (c == 'V')
+							td.append($('<a>', {
+								class: 'btn-small green',
+								href: '/p/' + info.problem,
+								text: 'View problem'
+							}));
+
+						if (c == 'c')
+							td.append($('<a>', {
+								class: 'btn-small red',
+								text: 'Cancel job',
+								click: function() {
+									var job_id = x[0];
+									return function() { cancelJob(job_id); }
+								}()
+							}));
+
+						if (c == 'r')
+							td.append($('<a>', {
+								class: 'btn-small orange',
+								text: 'Restart job',
+								click: function() {
+									var job_id = x[0];
+									return function() { restartJob(job_id); }
+								}()
+							}));
+					}
+
+					row.append(td);
+					jobs.elem.children('tbody').append(row);
+				}
+
+				jobs.elem.parent().children('.loader').remove();
+
+				// Load more jobs if scrolling up did not become possible
+				if (data.length > 0)
+					jobs.lock = false;
+
+				if ($(document).height() - $(window).height() <= 300)
+					jobs.fetch_more();
+			},
+			error: function(resp) {
+				jobs.elem.parent().children('.loader').remove();
+				jobs.elem.parent().append($('<span>', {
+					class: 'loader-info',
+					html: $('<span>', {
+						text: "Error: " + resp.status + ' ' + resp.statusText
+					}).add('<a>', {
+						text: 'Try again',
+						click: function () { new Jobs(jobs.base_url, jobs.elem); }
+					})
+				}));
+
+				// Additional message
+				var x = jobs.elem.parent().children('.loader > span');
+				try {
+					var xml = $.parseXML(resp.responseText);
+					var msg = $(xml).text();
+
+					if (msg != '')
+						x.text(x.text().concat("\nInfo: ", msg));
+
+				} catch (err) {
+					if (resp.responseText != '' // There is a message
+						&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
+							!== 0 // Message is not a whole HTML page
+						&& resp.responseText.lastIndexOf('<!doctype html>', 0)
+							!== 0) // Message is not a whole HTML page
+					{
+						x.text(x.text().concat("\nInfo: ",
+							resp.responseText));
+					}
+				}
+
+				jobs.lock = false;
+			}
+		});
+	};
+
+	this.monitor_scroll = function() {
+		var jobs = this;
+		$(window).on('scroll resize', function() {
+			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300)
+				jobs.fetch_more();
 		});
 	};
 

@@ -150,7 +150,8 @@ void Connection::readPOST(HttpRequest& req) {
 			if (state_ == CLOSED)
 				return;
 
-			req.form_data[decodeURI(field_name)] = decodeURI(field_content);
+			req.form_data[decodeURI(field_name).to_string()] =
+				decodeURI(field_content).to_string();
 		}
 
 	} else if (hasPrefix(con_type, "multipart/form-data")) {

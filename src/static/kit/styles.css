@@ -534,6 +534,9 @@ table {
 .modal form .field-group {
 	margin-bottom: 8px;
 }
+.modal #modal_req_status {
+	padding: 1px 4px;
+}
 
 .btn,
 .btn-small {
@@ -1486,6 +1489,31 @@ table.jobs td label::after,
 .job-info table td label::after {
 	content: ":";
 }
+table.jobs ~ .loader,
+table.jobs ~ .loader-info {
+	display: table;
+	margin: 4px auto;
+	padding: 2px;
+	border: 1px solid #bbb;
+	background: white;
+}
+table.jobs ~ .loader {
+	border-radius: 100%;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+table.jobs ~ .loader-info {
+	padding: 2px 5px;
+	color: #222;
+	white-space: pre;
+	background: #ffa5a5;
+	border-radius: 6px;
+}
+table.jobs ~ .loader-info a {
+	margin-left: 5px;
+}
 
 /* Users & Contest users*/
 table.users,
@@ -1654,21 +1682,22 @@ pre.logs .loader-info {
 	left: 50%;
 	margin-top: 4px;
 	margin-left: -13.5px;
-	padding: 1px;
+	padding: 2px;
+	border: 1px solid #bbb;
 	background: white;
 }
 pre.logs .loader {
 	border-radius: 100%;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
 }
 pre.logs .loader-info {
-	padding-left: 4px;
-	padding-right: 4px;
+	padding: 2px 5px;
 	color: #222;
 	white-space: pre;
+	background: #ffa5a5;
 	border-radius: 6px;
 }
 pre.logs .loader-info a {

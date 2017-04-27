@@ -152,7 +152,8 @@ void Sim::static_file() {
 	STACK_UNWINDING_MARK;
 
 	string file_path = concat_tostr("static",
-		abspath(decodeURI(request.target, 1, request.target.find('?'))));
+			abspath(decodeURI(StringView{request.target}
+				.substring(1, request.target.find('?')))));
 	// Extract path (ignore query)
 	D(stdlog(file_path);)
 
