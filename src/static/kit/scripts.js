@@ -42,38 +42,46 @@ $(document).ready(function(){
 });
 
 // Converts datetimes to local
+function normalize_datetime(elem, add_tz) {
+	elem = $(elem);
+	var time;
+	if (isNaN(elem.attr('datetime'))) {
+		var args = elem.attr('datetime').split(/[- :]/);
+		--args[1]; // fit month in [0, 11]
+		time = new Date(Date.UTC.apply(this, args));
+	} else
+		time = new Date(elem.attr('datetime') * 1000);
+
+	var month = time.getMonth() + 1;
+	var day = time.getDate();
+	var hours = time.getHours();
+	var minutes = time.getMinutes();
+	var seconds = time.getSeconds();
+	month = (month < 10 ? '0' : '') + month;
+	day = (day < 10 ? '0' : '') + day;
+	hours = (hours < 10 ? '0' : '') + hours;
+	minutes = (minutes < 10 ? '0' : '') + minutes;
+	seconds = (seconds < 10 ? '0' : '') + seconds;
+
+	// Add the timezone part
+	if (add_tz) {
+		var tzo = -(new Date()).getTimezoneOffset();
+		elem.html(String().concat(time.getFullYear(), '-', month, '-', day,
+			' ', hours, ':', minutes, ':', seconds,
+			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
+	} else
+		elem.html(String().concat(time.getFullYear(), '-', month, '-', day,
+			' ', hours, ':', minutes, ':', seconds));
+
+	return elem;
+};
+
 $(document).ready(function() {
 	// Converts datetimes
 	var tzo = -(new Date()).getTimezoneOffset();
 	$('*[datetime]').each(function() {
-		var x = $(this), time;
-		if (isNaN(x.attr('datetime'))) {
-			var args = x.attr('datetime').split(/[- :]/);
-			--args[1]; // fit month in [0, 11]
-			time = new Date(Date.UTC.apply(this, args));
-		} else
-			time = new Date(x.attr('datetime') * 1000);
-
-		var month = time.getMonth() + 1;
-		var day = time.getDate();
-		var hours = time.getHours();
-		var minutes = time.getMinutes();
-		var seconds = time.getSeconds();
-		month = (month < 10 ? '0' : '') + month;
-		day = (day < 10 ? '0' : '') + day;
-		hours = (hours < 10 ? '0' : '') + hours;
-		minutes = (minutes < 10 ? '0' : '') + minutes;
-		seconds = (seconds < 10 ? '0' : '') + seconds;
-
-		// If this is a '.submissions .time', '.problems .added',
-		// '.jobs .added' or '.files .time', then skip the timezone part
-		if (x.parents('.submissions, .problems, .jobs, .files').length)
-			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
-				' ', hours, ':', minutes, ':', seconds));
-		else
-			x.html(String().concat(time.getFullYear(), '-', month, '-', day,
-				' ', hours, ':', minutes, ':', seconds,
-				'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
+		normalize_datetime($(this),
+			$(this).parents('.submissions, .problems, .jobs, .files').length == 0);
 	});
 
 	// Give timezone info in the submissions and problems table
@@ -603,10 +611,13 @@ function Jobs(base_url, elem) {
 					x = data[x];
 					var row = $('<tr>');
 					row.append($('<td>', {text: x[2]}));
-					row.append($('<td>', {html: $('<a>', {
-						href: '/jobs/' + x[0],
-						text: x[1]
-					})}));
+					row.append($('<td>', {
+						html: normalize_datetime($('<a>', {
+							datetime: x[1],
+							href: '/jobs/' + x[0],
+							text: x[1]
+						}), false)
+					}));
 					row.append($('<td>', {
 						class: 'status ' + x[3][0],
 						text: x[3][1]
