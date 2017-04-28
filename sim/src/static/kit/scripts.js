@@ -417,7 +417,7 @@ function colorize(log, end) {
 	function close_last_tag() {
 		if (opened == 'span')
 			res += '</span>';
-		else if (open == 'b')
+		else if (opened == 'b')
 			res += '</b>';
 		opened = null;
 	};
@@ -513,7 +513,7 @@ function Logs(type, elem) {
 		var logs = this;
 		$.ajax({
 			type: 'GET',
-			url: 'api/logs/' + logs.type +
+			url: '/api/logs/' + logs.type +
 				(logs.offset === undefined ? '' : '?' + logs.offset),
 			success: function(data) {
 				data = String(data).split('\n');
