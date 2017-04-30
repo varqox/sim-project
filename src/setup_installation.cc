@@ -181,10 +181,10 @@ int main(int argc, char **argv) {
 			"`data` blob NOT NULL,"
 			"`ip` char(", SESSION_IP_LEN, ") NOT NULL,"
 			"`user_agent` blob NOT NULL,"
-			"`time` datetime NOT NULL,"
+			"`expires` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (user_id),"
-			"KEY (time)"
+			"KEY (expires)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"));
 
 	try_to_create_table("problems",

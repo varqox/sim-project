@@ -87,6 +87,7 @@ void Sim::jobs_handle() {
 
 	// Get permissions to overall job queue
 	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
+
 	StringView my = next_arg;
 	if (next_arg == "cancel")
 		return error501();

@@ -20,9 +20,8 @@ bool Sim::session_open() {
 				"SELECT csrf_token, user_id, data, type, username, ip, "
 					"user_agent "
 				"FROM session s, users u "
-				"WHERE s.id=? AND time>=? AND u.id=s.user_id");
-		stmt.bindAndExecute(session_id,
-			date("%Y-%m-%d %H:%M:%S", time(nullptr) - SESSION_MAX_LIFETIME));
+				"WHERE s.id=? AND expires>=? AND u.id=s.user_id");
+		stmt.bindAndExecute(session_id, date());
 
 		InplaceBuff<SESSION_IP_LEN + 1> session_ip;
 		InplaceBuff<4096> user_agent;
@@ -60,28 +59,31 @@ string Sim::session_generate_id(uint length) {
 	return res;
 }
 
-void Sim::session_create_and_open(StringView user_id) {
+void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	STACK_UNWINDING_MARK;
 
 	session_close();
 
 	// Remove obsolete sessions
-	mysql.update(concat("DELETE FROM `session` WHERE time<'",
-		date("%Y-%m-%d %H:%M:%S'", time(nullptr) - SESSION_MAX_LIFETIME)));
+	auto stmt = mysql.prepare("DELETE FROM session WHERE expires<?");
+	stmt.bindAndExecute(date());
+
+	// Create a record in database
+	stmt = mysql.prepare("INSERT IGNORE session"
+		" (id, csrf_token, user_id, data, ip, user_agent, expires)"
+		" VALUES(?,?,?,'',?,?,?)");
 
 	session_csrf_token = session_generate_id(SESSION_CSRF_TOKEN_LEN);
-
-	auto stmt = mysql.prepare("INSERT IGNORE session "
-			"(id, csrf_token, user_id, data, ip, user_agent, time) "
-			"VALUES(?,?,?,'',?,?,?)");
-
 	auto user_agent = request.headers.get("User-Agent");
-	auto curr_date = date();
+	time_t exp_time = time(nullptr) +
+		(temporary_session ? TMP_SESSION_MAX_LIFETIME : SESSION_MAX_LIFETIME);
+	auto exp_datetime = date("%Y-%m-%d %H:%M:%S", exp_time);
+
 	stmt.bind(1, session_csrf_token);
 	stmt.bind(2, user_id);
 	stmt.bind(3, client_ip);
 	stmt.bind(4, user_agent);
-	stmt.bind(5, curr_date);
+	stmt.bind(5, exp_datetime);
 
 	do {
 		session_id = session_generate_id(SESSION_ID_LEN);
@@ -90,12 +92,15 @@ void Sim::session_create_and_open(StringView user_id) {
 
 	} while (stmt.affected_rows() == 0);
 
-	// TODO: force https, if enabled
+	if (temporary_session)
+		exp_time = -1; // -1 causes setCookie() to not set Expire= field
+
+	// There is no better method than looking on the referer
 	bool is_https = hasPrefix(request.headers["referer"], "https://");
-	resp.setCookie("csrf_token", session_csrf_token.to_string(),
-		time(nullptr) + SESSION_MAX_LIFETIME, "/", "", false, is_https);
-	resp.setCookie("session", session_id.to_string(),
-		time(nullptr) + SESSION_MAX_LIFETIME, "/", "", true, is_https);
+	resp.setCookie("csrf_token", session_csrf_token.to_string(), exp_time, "/",
+		"", false, is_https);
+	resp.setCookie("session", session_id.to_string(), exp_time, "/", "", true,
+		is_https);
 	session_is_open = true;
 }
 
@@ -126,6 +131,7 @@ void Sim::session_close() {
 
 	session_is_open = false;
 	try {
+		// TODO: add a marker of a change used to omit unnecessary updates
 		auto stmt = mysql.prepare("UPDATE session SET data=? WHERE id=?");
 		stmt.bindAndExecute(session_data, session_id);
 

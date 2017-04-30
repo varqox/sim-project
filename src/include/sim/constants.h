@@ -48,7 +48,8 @@ static_assert(meta::equal(CU_MODE_MODERATOR_STR,
 constexpr uint SESSION_ID_LEN = 30;
 constexpr uint SESSION_CSRF_TOKEN_LEN = 20;
 constexpr uint SESSION_IP_LEN = 15;
-constexpr uint SESSION_MAX_LIFETIME = 7 * 24 * 60 * 60; // 7 days [s]
+constexpr uint TMP_SESSION_MAX_LIFETIME = 60 * 60; // 1 hour [s]
+constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
