@@ -17,6 +17,8 @@ SQLite::Connection sqlite_db;
 static void processJobQueue() noexcept {
 	// While job queue is not empty
 	for (;;) try {
+		STACK_UNWINDING_MARK;
+
 		MySQL::Result res = db_conn.query(
 			"SELECT id, type, aux_id, info, creator, added FROM job_queue"
 			" WHERE status=" JQSTATUS_PENDING_STR " AND type!=" JQTYPE_VOID_STR

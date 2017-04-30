@@ -36,6 +36,8 @@ struct ReuploadTrait {
 // Before judging the model solution
 template<class Trait>
 static void firstStage(StringView job_id, AddProblemInfo& info) {
+	STACK_UNWINDING_MARK;
+
 	StringBuff<PATH_MAX> package_dest {"jobs_files/", job_id};
 	StringBuff<PATH_MAX> tmp_package_path {package_dest, ".tmp/"};
 
@@ -212,6 +214,8 @@ template<class Trait>
 static uint64_t secondStage(StringView job_id, StringView job_owner,
 	const AddProblemInfo& info, sim::Conver::ReportBuff& report)
 {
+	STACK_UNWINDING_MARK;
+
 	DirectoryRemover job_package_remover
 		{StringBuff<PATH_MAX>{"jobs_files/", job_id}};
 
@@ -362,6 +366,8 @@ template<class Trait, class Func>
 static void addProblem(StringView job_id, StringView job_owner,
 	StringView aux_id, AddProblemInfo& info, Func&& func)
 {
+	STACK_UNWINDING_MARK;
+
 	switch (info.stage) {
 	case AddProblemInfo::FIRST:
 		firstStage<Trait>(job_id, info);
@@ -414,6 +420,8 @@ static void addProblem(StringView job_id, StringView job_owner,
 
 
 void addProblem(StringView job_id, StringView job_owner, StringView info) {
+	STACK_UNWINDING_MARK;
+
 	AddProblemInfo p_info {info};
 	addProblem<AddTrait>(job_id, job_owner, "", p_info,
 		[&](uint64_t problem_id, sim::Conver::ReportBuff&) {
@@ -431,6 +439,8 @@ void addProblem(StringView job_id, StringView job_owner, StringView info) {
 void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 	StringView aux_id)
 {
+	STACK_UNWINDING_MARK;
+
 	AddProblemInfo p_info {info};
 	addProblem<ReuploadTrait>(job_id, job_owner, aux_id, p_info,
 		[&](uint64_t problem_id, sim::Conver::ReportBuff& report) {
@@ -519,6 +529,8 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 
 			ThreadSignalBlocker sb; // This part cannot be interrupted
 			try {
+				STACK_UNWINDING_MARK;
+
 				// Backup old problem's files
 				if (rename(package_path.str, backuped_package.str)) {
 					package_path = package_zip = {}; // Prevent restoring of
