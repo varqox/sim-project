@@ -15,8 +15,9 @@ extern MySQL::Connection db_conn;
 void judgeSubmission(StringView job_id, StringView submission_id,
 	StringView job_creation_time)
 {
-	// Gather the needed information about the submission
+	STACK_UNWINDING_MARK;
 
+	// Gather the needed information about the submission
 	auto stmt = db_conn.prepare("SELECT s.owner, round_id, problem_id,"
 			" last_judgment, p.last_edit"
 		" FROM submissions s, problems p"
@@ -427,6 +428,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 }
 
 void judgeModelSolution(StringView job_id, JobQueueType original_job_type) {
+	STACK_UNWINDING_MARK;
+
 	sim::Conver::ReportBuff report;
 	report.append("Stage: Judging the model solution");
 
