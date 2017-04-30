@@ -83,10 +83,11 @@ private:
 	 * @details First closes old session and then creates and opens new one
 	 *
 	 * @param user_id Id of user to which session will belong
+	 * @param temporary_session Whether create temporary or persistent session
 	 *
 	 * @errors Throws an exception in any case of error
 	 */
-	void session_create_and_open(StringView user_id);
+	void session_create_and_open(StringView user_id, bool temporary_session);
 
 	/// Destroys session (removes from database, etc.)
 	void session_destroy();
@@ -508,7 +509,7 @@ private:
 	InplaceBuff<30> jobs_job_id;
 	JobPermissions jobs_perms = JobPermissions::PERM_NONE;
 
-	// Session must be open to access jobs
+	// Session must be open to access the jobs
 	JobPermissions jobs_get_permissions(StringView owner_id,
 		JobQueueStatus job_status);
 

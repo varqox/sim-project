@@ -11,6 +11,7 @@ void Sim::login() {
 	STACK_UNWINDING_MARK;
 
 	auto& username = users_username = "";
+	bool remember = false;
 	if (request.method == server::HttpRequest::POST) {
 		// Try to login
 		InplaceBuff<4096> password;
@@ -21,43 +22,39 @@ void Sim::login() {
 
 		form_validate(password, "password", "Password");
 
-		if (not form_validation_error)
-			try {
-				auto stmt = mysql.prepare("SELECT id, salt, password FROM users"
-					" WHERE username=?");
-				stmt.bindAndExecute(username);
+		remember = request.form_data.exist("persistent-login");
 
-				InplaceBuff<30> uid;
-				InplaceBuff<SALT_LEN> salt;
-				InplaceBuff<4096> passwd_hash;
-				stmt.res_bind_all(uid, salt, passwd_hash);
+		if (not form_validation_error) {
+			STACK_UNWINDING_MARK;
 
-				while (stmt.next()) {
-					if (!slowEqual(sha3_512(concat(salt, password)),
-						passwd_hash))
-					{
-						break;
-					}
+			auto stmt = mysql.prepare("SELECT id, salt, password FROM users"
+				" WHERE username=?");
+			stmt.bindAndExecute(username);
 
-					// Delete old session
-					if (session_open())
-						session_destroy();
+			InplaceBuff<30> uid;
+			InplaceBuff<SALT_LEN> salt;
+			InplaceBuff<4096> passwd_hash;
+			stmt.res_bind_all(uid, salt, passwd_hash);
 
-					// Create new
-					session_create_and_open(uid);
+			while (stmt.next()) {
+				if (!slowEqual(sha3_512(concat(salt, password)), passwd_hash))
+					break;
 
-					// If there is a redirection string, redirect to it
-					InplaceBuff<4096> location {url_args.extractQuery()};
-					return redirect(location.size == 0 ? "/"
-						: location.to_string());
-				}
+				// Delete old session
+				if (session_open())
+					session_destroy();
 
-				addNotification("error", "Invalid username or password");
+				// Create new
+				session_create_and_open(uid, not remember);
 
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				addNotification("error", "Internal server error");
+				// If there is a redirection string, redirect to it
+				InplaceBuff<4096> location {url_args.extractQuery()};
+				return redirect(location.size == 0 ? "/"
+					: location.to_string());
 			}
+
+			addNotification("error", "Invalid username or password");
+		}
 	}
 
 	page_template("Login");
@@ -75,6 +72,12 @@ void Sim::login() {
 				"<div class=\"field-group\">"
 					"<label>Password</label>"
 					"<input type=\"password\" name=\"password\" size=\"24\">"
+				"</div>"
+				// Remember
+				"<div class=\"field-group\">"
+					"<label>Remember me for a month</label>"
+					"<input type=\"checkbox\" name=\"persistent-login\"",
+						(remember ? " checked" : ""), ">"
 				"</div>"
 				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
 			"</form>"
@@ -122,35 +125,33 @@ void Sim::sign_up() {
 		}
 
 		// If all fields are ok
-		if (not form_validation_error)
-			try {
-				array<char, (SALT_LEN >> 1)> salt_bin;
-				fillRandomly(salt_bin.data(), salt_bin.size());
-				string salt = toHex(salt_bin.data(), salt_bin.size());
+		if (not form_validation_error) {
+			STACK_UNWINDING_MARK;
 
-				auto stmt = mysql.prepare("INSERT IGNORE `users` (username, "
-						"first_name, last_name, email, salt, password) "
-					"VALUES(?, ?, ?, ?, ?, ?)");
+			array<char, (SALT_LEN >> 1)> salt_bin;
+			fillRandomly(salt_bin.data(), salt_bin.size());
+			string salt = toHex(salt_bin.data(), salt_bin.size());
 
-				stmt.bindAndExecute(username, first_name, last_name, email,
-					salt, sha3_512(concat(salt, pass1)));
+			auto stmt = mysql.prepare("INSERT IGNORE `users` (username, "
+					"first_name, last_name, email, salt, password) "
+				"VALUES(?, ?, ?, ?, ?, ?)");
 
-				// User account successfully created
-				if (stmt.affected_rows() == 1) {
-					auto new_uid = toStr(stmt.insert_id());
+			stmt.bindAndExecute(username, first_name, last_name, email, salt,
+				sha3_512(concat(salt, pass1)));
 
-					session_create_and_open(new_uid);
-					stdlog("New user: ", new_uid, " -> `", username, '`');
+			// User account successfully created
+			if (stmt.affected_rows() == 1) {
+				auto new_uid = toStr(stmt.insert_id());
 
-					return redirect("/");
-				}
+				session_create_and_open(new_uid, true);
+				stdlog("New user: ", new_uid, " -> `", username, '`');
 
-				addNotification("error", "Username taken");
-
-			} catch (const std::exception& e) {
-				ERRLOG_CATCH(e);
-				addNotification("error", "Internal server error");
+				return redirect("/");
 			}
+
+			addNotification("error", "Username taken");
+		}
+
 	}
 
 	page_template("Register");
