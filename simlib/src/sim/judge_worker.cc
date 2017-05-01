@@ -180,6 +180,14 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				CheckerCallback({test_in_path, test_out_path, sol_stdout_path})
 			); // Allow exceptions to fly upper
 
+			auto append_checker_rt_info = [&] {
+				back_insert(test_report.comment, "; ",
+					usecToSecStr(es.runtime, 2), " / ",
+					usecToSecStr(checker_opts.time_limit, 2), " s  ",
+					es.vm_peak >> 10, " /  ", checker_opts.memory_limit >> 10,
+					" KB");
+			};
+
 			// Checker exited with 0
 			if (es.code == 0) {
 				string chout = sim::obtainCheckerOutput(checker_stdout, 512);
@@ -192,7 +200,9 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					score_ratio = 0; // Do not give score for a checker error
 					test_report.status = JudgeReport::Test::CHECKER_ERROR;
 					test_report.comment = concat_tostr("Checker error: second "
-						"line of the checker stdout is invalid: `", line2, '`');
+						"line of the checker's stdout is invalid: `", line2,
+						'`');
+					append_checker_rt_info();
 
 				// OK -> Checker: OK
 				} else if (line1 == "OK") {
@@ -221,6 +231,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				score_ratio = 0; // Do not give score for a checker error
 				test_report.status = JudgeReport::Test::CHECKER_ERROR;
 				test_report.comment = "Checker: time limit exceeded";
+				append_checker_rt_info();
 
 			// Checker MLE
 			} else if (es.message == "Memory limit exceeded" ||
@@ -229,6 +240,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				score_ratio = 0; // Do not give score for a checker error
 				test_report.status = JudgeReport::Test::CHECKER_ERROR;
 				test_report.comment = "Checker: memory limit exceeded";
+				append_checker_rt_info();
 
 			// Checker RTE
 			} else {
@@ -237,6 +249,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				test_report.comment = "Checker runtime error";
 				if (es.message.size())
 					back_insert(test_report.comment, " (", es.message, ')');
+				append_checker_rt_info();
 			}
 
 			if (verbose) {

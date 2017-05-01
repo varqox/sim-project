@@ -37,7 +37,7 @@ public:
 		std::string name;
 		Status status;
 		uint64_t runtime, time_limit;
-		uint64_t memory_consumed, memory_limit;
+		uint64_t memory_consumed, memory_limit; // in bytes
 		std::string comment;
 
 		Test(std::string n, Status s, uint64_t rt, uint64_t tl, uint64_t mc,
