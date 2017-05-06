@@ -481,11 +481,10 @@ table {
 
 /* Modal (background) */
 .modal {
-	display: flex;
-	flex-flow: column nowrap;
 	position: fixed;
-	z-index: 1;
-	padding-top: 200px;
+	z-index: 100;
+	text-align: center;
+	padding-top: 20%;
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -496,17 +495,18 @@ table {
 }
 /* Modal content */
 .modal > div {
-	display: flex;
+	display: inline-flex;
+	text-align: initial;
 	flex-flow: column nowrap;
 	background-color: #fefefe;
-	margin: 0 auto;
+	margin: 4px auto;
 	padding: 20px;
 	border: 1px solid #888;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
-.modal > div h2 {
+.modal > div > h2 {
 	margin: 5px 0;
 	font-size: 24px;
 	font-weight: normal;
@@ -853,6 +853,7 @@ a.btn.red {
 	padding: 2px 5px;
 	color: #222;
 	white-space: pre;
+	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	background: #ffa5a5;
 	border-radius: 6px;
 }
@@ -1200,6 +1201,10 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	display: block;
 	width: 85%;
 	margin: 5px 8px;
+}
+.modal .submission-info,
+.modal .job-info {
+	width: initial;
 }
 .submission-info > div:first-child,
 .job-info > div:first-child {
@@ -1682,7 +1687,15 @@ pre.logs .loader-info {
 	position: absolute;
 	top: 0;
 	left: 50%;
-	margin-left: -13.5px;
+}
+pre.logs .loader {
+	margin-left: -15.5px;
+}
+pre.logs .loader-info {
+	-webkit-transform: perspective(1px) translateX(-50%);
+	-moz-transform: perspective(1px) translateX(-50%);
+	-ms-transform: perspective(1px) translateX(-50%);
+	transform: perspective(1px) translateX(-50%);
 }
 
 pre .green {
