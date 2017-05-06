@@ -597,7 +597,7 @@ function Jobs(base_url, elem) {
 
 		function getid(url) { return url.substr(url.lastIndexOf('/') + 1); }
 
-		var lower_job_id = this.elem.find("tr:last-child td:nth-child(2)");
+		var lower_job_id = this.elem.find('tr:last-child td:nth-child(3)');
 		var query = (lower_job_id.length === 0 ? ''
 			: '/<' + getid(lower_job_id.children().attr('href')));
 
@@ -607,10 +607,21 @@ function Jobs(base_url, elem) {
 			url: jobs.base_url + query,
 			dataType: 'json',
 			success: function(data) {
+				if (elem.children('thead').length === 0)
+					elem.html('<thead><tr>' +
+							'<th class="type">Type</th>' +
+							'<th class="priority">Priority</th>' +
+							'<th class="added">Added<sup>UTC</sup></th>' +
+							'<th class="status">Status</th>' +
+							'<th class="owner">Owner</th>' +
+							'<th class="info">Info</th>' +
+							'<th class="actions">Actions</th>' +
+						'</tr></thead><tbody></tbody>');
 				for (x in data) {
 					x = data[x];
 					var row = $('<tr>');
 					row.append($('<td>', {text: x[2]}));
+					row.append($('<td>', {text: x[4]}));
 					row.append($('<td>', {
 						html: normalize_datetime($('<a>', {
 							datetime: x[1],
@@ -628,7 +639,6 @@ function Jobs(base_url, elem) {
 							text: x[6]
 						})
 					}));
-					row.append($('<td>', {text: x[4]}));
 					// Info
 					var info = x[7];
 					row.append(function() {
