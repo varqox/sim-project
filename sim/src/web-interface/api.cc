@@ -108,17 +108,21 @@ void Sim::api_jobs() {
 	// Get permissions to the overall job queue
 	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
 	StringView next_arg = url_args.extractNextArg();
-	bool my_jobs = false;
-	InplaceBuff<512> query;
-	query.append("SELECT j.id, added, j.type, status, priority, aux_id, info,"
-			" creator, username"
-		" FROM job_queue j LEFT JOIN users u ON creator=u.id"
+	bool my_jobs = false, select_data = false;
+
+	InplaceArray<InplaceBuff<30>, 5> to_bind;
+	InplaceBuff<512> qfields, qwhere;
+	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
+			" j.info, j.creator, u.username");
+	qwhere.append(" FROM job_queue j LEFT JOIN users u ON creator=u.id"
 		" WHERE j.type!=" JQTYPE_VOID_STR);
+
 
 	// Request for user's jobs
 	if (next_arg == "my") {
 		next_arg = url_args.extractNextArg();
-		query.append(" AND creator=?");
+		qwhere.append(" AND creator=?");
+		to_bind.emplace_back(session_user_id);
 		my_jobs = true;
 	// Request for all jobs
 	} else {
@@ -128,31 +132,69 @@ void Sim::api_jobs() {
 
 	MySQL::Statement<> stmt;
 
-	if (next_arg.empty()) {
-		query.append(" ORDER BY j.id DESC LIMIT 50");
-		stmt = mysql.prepare(query);
+	// Process restrictions
+	for (uint i = 0, mask = 0;
+		i < 2 and next_arg.size();
+		++i, next_arg = url_args.extractNextArg())
+	{
+		constexpr uint ID_COND = 1;
+		constexpr uint AUX_ID_COND = 2;
 
-		if (my_jobs)
-			stmt.bindAndExecute(session_user_id);
-		else
-			stmt.bindAndExecute();
-
-	// There is some restriction (conditional)
-	} else {
 		auto arg = decodeURI(next_arg);
 		char cond = arg[0];
 		StringView arg_id = StringView{arg}.substr(1);
-		if (not isDigit(arg_id) or not isIn(cond, "=<"))
+
+		if (not isDigit(arg_id))
 			return set_response("400 Bad Request");
 
-		query.append(" AND j.id", cond, "? ORDER BY j.id DESC LIMIT 50");
-		stmt = mysql.prepare(query);
+		// conditional
+		if (cond == '<' and ~mask & ID_COND) {
+			qwhere.append(" AND j.id<?");
+			to_bind.emplace_back(arg_id);
+			mask |= ID_COND;
 
-		if (my_jobs)
-			stmt.bindAndExecute(session_user_id, arg_id);
-		else
-			stmt.bindAndExecute(arg_id);
+		} else if (cond == '=' and ~mask & ID_COND) {
+			qfields.append(", SUBSTR(data, 1, ",
+				meta::ToString<REPORT_PREVIEW_MAX_LENGTH + 1>{}, ')');
+			select_data = true;
+			qwhere.append(" AND j.id=?");
+			to_bind.emplace_back(arg_id);
+			mask |= ID_COND;
+
+		// problem
+		} else if (cond == 'p' and ~mask & AUX_ID_COND) {
+			qwhere.append(" AND j.aux_id=? AND j.type IN("
+				JQTYPE_ADD_PROBLEM_STR ","
+				JQTYPE_ADD_JUDGE_MODEL_SOLUTION_STR ","
+				JQTYPE_REUPLOAD_PROBLEM_STR ","
+				JQTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR ","
+				JQTYPE_DELETE_PROBLEM_STR ","
+				JQTYPE_EDIT_PROBLEM_STR ")");
+
+			to_bind.emplace_back(arg_id);
+			mask |= AUX_ID_COND;
+
+		// submission
+		} else if (cond == 's' and ~mask & AUX_ID_COND) {
+			qwhere.append(" AND j.aux_id=? AND j.type="
+				JQTYPE_JUDGE_SUBMISSION_STR);
+
+			to_bind.emplace_back(arg_id);
+			mask |= AUX_ID_COND;
+
+		} else
+			return set_response("400 Bad Request");
+
 	}
+
+	// Execute query
+	stmt =
+		mysql.prepare(concat(qfields, qwhere, " ORDER BY j.id DESC LIMIT 50"));
+
+	for (uint i = 0; i < to_bind.size(); ++i)
+		stmt.bind(i, to_bind[i]);
+	stmt.fixBinds();
+	stmt.execute();
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
@@ -162,6 +204,7 @@ void Sim::api_jobs() {
 	InplaceBuff<30> job_id, added, jpriority, aux_id, creator;
 	InplaceBuff<512> jinfo;
 	InplaceBuff<USERNAME_MAX_LEN> cusername;
+	InplaceBuff<REPORT_PREVIEW_MAX_LENGTH> report_preview;
 
 	stmt.res_bind(0, job_id);
 	stmt.res_bind(1, added);
@@ -174,6 +217,8 @@ void Sim::api_jobs() {
 	stmt.res_bind(7, creator);
 	stmt.res_bind_isnull(7, is_creator_null);
 	stmt.res_bind(8, cusername);
+	if (select_data)
+		stmt.res_bind(9, report_preview);
 	stmt.resFixBinds();
 
 	while (stmt.next()) {
@@ -263,8 +308,14 @@ void Sim::api_jobs() {
 			append('c');
 		if (uint(job_perms & PERM_RESTART))
 			append('r');
+		append('\"');
 
-		append("\"],");
+		// Append report preview (whether there is more to load, data)
+		if (select_data)
+			append(",[", report_preview.size > REPORT_PREVIEW_MAX_LENGTH, ',',
+				jsonStringify(report_preview), ']');
+
+		append("],");
 	}
 
 	if (resp.content.back() == ',')
