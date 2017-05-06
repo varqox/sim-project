@@ -508,7 +508,7 @@ function append_loader(elem) {
 
 function show_error_via_loader(elem, response, try_again_handler) {
 	elem = $(elem);
-	elem.children('.loader').remove();
+	remove_loader(elem);
 	elem.append($('<span>', {
 		class: 'loader-info',
 		html: $('<span>', {
@@ -545,7 +545,8 @@ function Logs(type, elem) {
 	this.type = type;
 	this.elem = $(elem);
 	this.offset = undefined;
-	this.lock = false;
+	this.lock = false; // allow only manual unlocking
+
 	this.fetch_more = function() {
 		if (this.lock)
 			return;
@@ -572,14 +573,20 @@ function Logs(type, elem) {
 				elem.scrollTop(curr_height - prev);
 
 				// Load more logs if scrolling up did not become possible
-				logs.lock = false;
-				if (logs.offset > 0 && (elem.innerHeight() >= curr_height || prev_height == curr_height))
-					logs.fetch_more();
+				if (logs.offset > 0) {
+					logs.lock = false;
+					if (elem.innerHeight() >= curr_height || prev_height == curr_height) {
+						// avoid recursion
+						setTimeout(function(){ logs.fetch_more(); }, 0);
+					}
+				}
 			},
 			error: function(resp) {
 				show_error_via_loader(logs.elem, resp,
-					function () { new Logs(logs.type, logs.elem); });
-				logs.lock = false;
+					function () {
+						logs.lock = false; // allow only manual unlocking
+						logs.fetch_more();
+					});
 			}
 		});
 	};
@@ -587,7 +594,7 @@ function Logs(type, elem) {
 	this.monitor_scroll = function() {
 		var logs = this;
 		this.elem.on('scroll', function() {
-			if (logs.offset != 0 && $(this).scrollTop() <= 300)
+			if ($(this).scrollTop() <= 300)
 				logs.fetch_more();
 		});
 	};
@@ -656,22 +663,123 @@ function job_actions_html(job_id, actions_str, problem_id, show_view_job = true)
 	return res;
 };
 
+function preview_job(job_id, elem, success_handler) {
+	append_loader(elem);
+	$.ajax({
+		type: 'GET',
+		url: '/api/jobs/=' + job_id,
+		dataType: 'json',
+		success: function(data) {
+			if (data.length === 0)
+				return show_error_via_loader(elem, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+			data = data[0];
+
+			function info_html(info) {
+				var td = $('<td>', {
+					style: 'text-align:left'
+				});
+				for (var name in info) {
+					td.append($('<label>', {text: name}));
+
+					if (name == "submission" || name == "problem")
+						td.append($('<a>', {
+							href: '/' + name[0] + '/' + info[name],
+							text: info[name]
+						}));
+					else
+						td.append(info[name]);
+
+					td.append('<br/>');
+				}
+
+				return td;
+			};
+
+			elem.append($('<div>', {
+				class: 'job-info',
+				html: $('<div>', {
+					html: $('<h1>', {
+						text: 'Job ' + job_id
+					}).add('<div>', {
+						html: job_actions_html(job_id, data[8],
+							data[7].problem, false)
+					})
+				}).add('<table>', {
+					html: $('<thead>', {html: '<tr>' +
+						'<th style="min-width:120px">Type</th>' +
+						'<th style="min-width:150px">Added</th>' +
+						'<th style="min-width:150px">Status</th>' +
+						'<th style="min-width:120px">Owner</th>' +
+						'<th style="min-width:90px">Info</th>' +
+						'</tr>'
+					}).add('<tbody>', {
+						html: $('<tr>', {
+							html: $('<td>', {
+								text: data[2]
+							}).add(normalize_datetime($('<td>', {
+									datetime: data[1],
+									text: data[1]
+								}), true)
+							).add('<td>', {
+								class: 'status ' + data[3][0],
+								text: data[3][1]
+							}).add('<td>', {
+								html: data[5] === null ? 'System' : $('<a>', {
+									href: '/u/' + data[5],
+									text: data[6]
+								})
+							}).add('<td>', {
+								html: info_html(data[7])
+							})
+						})
+					})
+				})
+			})).append('<h2>Report preview</h2>')
+			.append($('<pre>', {
+				class: 'report-preview',
+				html: data[9][1]
+			}));
+
+			if (data[9][0])
+				elem.append($('<p>', {
+					text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
+				}).append($('<a>', {
+					class: 'btn-small',
+					href: '/api/job/' + job_id + '/report',
+					text: 'Download the full report'
+				})));
+
+			remove_loader(elem);
+
+			if (success_handler !== undefined)
+				success_handler();
+		},
+		error: function(resp) {
+			show_error_via_loader(elem, resp,
+				function () { preview_job(job_id, elem, success_handler); });
+		}
+	});
+}
+var global_lock = false;
 function Jobs(base_url, elem) {
 	this.base_url = base_url;
 	this.elem = $(elem);
 	this.lock = false;
+	this.lower_job_id = undefined;
+
 	this.fetch_more = function() {
-		if (this.lock)
+		if (this.lock || global_lock)
 			return;
 
 		this.lock = true;
 		append_loader(this.elem.parent());
 
-		function getid(url) { return url.substr(url.lastIndexOf('/') + 1); }
-
-		var lower_job_id = this.elem.find('tr:last-child td:nth-child(3)');
-		var query = (lower_job_id.length === 0 ? ''
-			: '/<' + getid(lower_job_id.children().attr('href')));
+		var query = (this.lower_job_id === undefined ? ''
+			: '/<' + this.lower_job_id);
 
 		var jobs = this;
 		$.ajax({
@@ -691,14 +799,27 @@ function Jobs(base_url, elem) {
 						'</tr></thead><tbody></tbody>');
 				for (x in data) {
 					x = data[x];
+					jobs.lower_job_id = x[0];
+
 					var row = $('<tr>');
 					row.append($('<td>', {text: x[2]}));
 					row.append($('<td>', {text: x[4]}));
 					row.append($('<td>', {
 						html: normalize_datetime($('<a>', {
 							datetime: x[1],
-							href: '/jobs/' + x[0],
-							text: x[1]
+							text: x[1],
+							click: function() {
+								var job_id = x[0];
+								return function() {
+									// Preview job
+									modal($('<div>', {style: 'display:block'}));
+									preview_job(job_id, $('.modal > div > div'), function () {
+										var m = $('.modal');
+										var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
+										m.css({'padding-top': Math.max(new_padding, 0)});
+									});
+								};
+							}()
 						}), false)
 					}));
 					row.append($('<td>', {
@@ -753,16 +874,20 @@ function Jobs(base_url, elem) {
 				remove_loader(jobs.elem.parent());
 
 				// Load more jobs if scrolling up did not become possible
-				if (data.length > 0)
+				if (data.length > 0) {
 					jobs.lock = false;
-
-				if ($(document).height() - $(window).height() <= 300)
-					jobs.fetch_more();
+					if ($(document).height() - $(window).height() <= 300) {
+						// avoid recursion
+						setTimeout(function(){ jobs.fetch_more(); }, 0);
+					}
+				}
 			},
 			error: function(resp) {
 				show_error_via_loader(jobs.elem.parent(), resp,
-					function () { new Jobs(jobs.base_url, jobs.elem); });
-				jobs.lock = false;
+					function () {
+						jobs.lock = false;
+						jobs.fetch_more();
+					});
 			}
 		});
 	};
@@ -770,110 +895,11 @@ function Jobs(base_url, elem) {
 	this.monitor_scroll = function() {
 		var jobs = this;
 		$(window).on('scroll resize', function() {
-			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300)
+			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300) {
 				jobs.fetch_more();
+			}
 		});
 	};
 
 	this.fetch_more();
-}
-
-function preview_job(job_id, elem) {
-	append_loader(elem);
-	$.ajax({
-			type: 'GET',
-			url: '/api/jobs/=' + job_id,
-			dataType: 'json',
-			success: function(data) {
-				if (data.length === 0)
-					return show_error_via_loader(elem, {
-						status: '404',
-						statusText: 'Not Found'
-					});
-
-				data = data[0];
-
-				function info_html(info) {
-					var td = $('<td>', {
-						style: 'text-align:left'
-					});
-					for (var name in info) {
-						td.append($('<label>', {text: name}));
-
-						if (name == "submission" || name == "problem")
-							td.append($('<a>', {
-								href: '/' + name[0] + '/' + info[name],
-								text: info[name]
-							}));
-						else
-							td.append(info[name]);
-
-						td.append('<br/>');
-					}
-
-					return td;
-				};
-
-				elem.append($('<div>', {
-					class: 'job-info',
-					html: $('<div>', {
-						html: $('<h1>', {
-							text: 'Job ' + job_id
-						}).add('<div>', {
-							html: job_actions_html(job_id, data[8],
-								data[7].problem, false)
-						})
-					}).add('<table>', {
-						html: $('<thead>', {html: '<tr>' +
-							'<th style="min-width:120px">Type</th>' +
-							'<th style="min-width:150px">Added</th>' +
-							'<th style="min-width:150px">Status</th>' +
-							'<th style="min-width:120px">Owner</th>' +
-							'<th style="min-width:90px">Info</th>' +
-							'</tr>'
-						}).add('<tbody>', {
-							html: $('<tr>', {
-								html: $('<td>', {
-									text: data[2]
-								}).add(normalize_datetime($('<td>', {
-										datetime: data[1],
-										text: data[1]
-									}), true)
-								).add('<td>', {
-									class: 'status ' + data[3][0],
-									text: data[3][1]
-								}).add('<td>', {
-									html: data[5] === null ? 'System' : $('<a>', {
-										href: '/u/' + data[5],
-										text: data[6]
-									})
-								}).add('<td>', {
-									html: info_html(data[7])
-								})
-							})
-						})
-					})
-				})).append('<h2>Report preview</h2>')
-				.append($('<pre>', {
-					class: 'report-preview',
-					html: data[9][1]
-				}));
-
-				if (data[9][0])
-					elem.append($('<p>', {
-						text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
-					}).append($('<a>', {
-						class: 'btn-small',
-						href: '/api/job/' + job_id + '/report',
-						text: 'Download the full report'
-					})));
-
-				remove_loader(elem);
-			},
-			error: function(resp) {
-				show_error_via_loader(jobs.elem.parent(), resp,
-					function () { new Jobs(jobs.base_url, jobs.elem); });
-				jobs.lock = false;
-			}
-		});
 }
