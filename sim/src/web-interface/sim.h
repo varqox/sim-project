@@ -278,17 +278,17 @@ private:
 	/* ============================== Users ============================== */
 
 	enum class UserPermissions : uint {
-		PERM_NONE = 0,
-		PERM_VIEW = 1,
-		PERM_EDIT = 2,
-		PERM_CHANGE_PASS = 4,
-		PERM_ADMIN_CHANGE_PASS = 8,
-		PERM_DELETE = 16,
-		PERM_ADMIN = 31,
+		NONE = 0,
+		VIEW = 1,
+		EDIT = 2,
+		CHANGE_PASS = 4,
+		ADMIN_CHANGE_PASS = 8,
+		DELETE = 16,
+		ADMIN = 31,
 
-		PERM_MAKE_ADMIN = 32,
-		PERM_MAKE_TEACHER = 64,
-		PERM_DEMOTE = 128
+		MAKE_ADMIN = 32,
+		MAKE_TEACHER = 64,
+		DEMOTE = 128
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~)
@@ -296,7 +296,7 @@ private:
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, &)
 
 	uint8_t users_user_type = 0;
-	UserPermissions users_permissions = UserPermissions::PERM_NONE;
+	UserPermissions users_permissions = UserPermissions::NONE;
 	InplaceBuff<30> users_user_id;
 	InplaceBuff<USERNAME_MAX_LEN> users_username;
 	InplaceBuff<USER_FIRST_NAME_MAX_LEN> users_first_name;
@@ -335,11 +335,11 @@ private:
 				"<a class=\"btn-small\" href=\"/u/", users_user_id, "\">"
 					"View profile</a>");
 
-		if (uint(users_permissions & UserPermissions::PERM_EDIT))
+		if (uint(users_permissions & UserPermissions::EDIT))
 			append("<a class=\"btn-small blue\" href=\"/u/", users_user_id,
 				"/edit\">Edit profile</a>");
 
-		if (uint(users_permissions & UserPermissions::PERM_CHANGE_PASS))
+		if (uint(users_permissions & UserPermissions::CHANGE_PASS))
 			append("<a class=\"btn-small orange\" href=\"/u/", users_user_id,
 				"/change-password\">Change password</a>");
 
@@ -495,11 +495,11 @@ private:
 	/* ============================= Job queue ============================= */
 
 	enum class JobPermissions : uint {
-		PERM_NONE = 0,
-		PERM_VIEW = 1, // allowed to view the job
-		PERM_VIEW_ALL = 2, // allowed to view all the jobs
-		PERM_CANCEL = 4,
-		PERM_RESTART = 8
+		NONE = 0,
+		VIEW = 1, // allowed to view the job
+		VIEW_ALL = 2, // allowed to view all the jobs
+		CANCEL = 4,
+		RESTART = 8
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
@@ -507,10 +507,10 @@ private:
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
 
 	InplaceBuff<30> jobs_job_id;
-	JobPermissions jobs_perms = JobPermissions::PERM_NONE;
+	JobPermissions jobs_perms = JobPermissions::NONE;
 
 	// Session must be open to access the jobs
-	JobPermissions jobs_get_permissions(StringView owner_id,
+	JobPermissions jobs_get_permissions(StringView creator_id,
 		JobQueueStatus job_status);
 
 	void jobs_page_template(StringView title, StringView styles = {},
@@ -523,28 +523,18 @@ private:
 	/// Main Jobs handler
 	void jobs_handle();
 
-	void jobs_job();
-
-	void jobs_download_report(std::string data_preview);
-
-	void jobs_download_uploaded_package();
-
-	void jobs_cancel_job();
-
-	void jobs_restart_job(JobQueueType job_type, StringView job_info);
-
 	/* ============================= Problemset ============================= */
 
 	enum class ProblemsetPermissions : uint {
-		PERM_NONE = 0,
-		PERM_VIEW = 1,
-		PERM_VIEW_ALL = 2,
-		PERM_VIEW_SOLUTIONS = 4,
-		PERM_DOWNLOAD = 8,
-		PERM_SEE_SIMFILE = 16,
-		PERM_SEE_OWNER = 32,
-		PERM_ADMIN = 64,
-		PERM_ADD = 128
+		NONE = 0,
+		VIEW = 1,
+		VIEW_ALL = 2,
+		VIEW_SOLUTIONS = 4,
+		DOWNLOAD = 8,
+		SEE_SIMFILE = 16,
+		SEE_OWNER = 32,
+		ADMIN = 64,
+		ADD = 128
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemsetPermissions, ~)
@@ -554,7 +544,7 @@ private:
 	ProblemsetPermissions problemset_get_permissions(StringView owner_id,
 		ProblemType ptype);
 
-	ProblemsetPermissions problemset_perms = ProblemsetPermissions::PERM_NONE;
+	ProblemsetPermissions problemset_perms = ProblemsetPermissions::NONE;
 	uint problemset_owner_utype = UTYPE_NORMAL;
 	std::string problemset_owner_username;
 	std::string problemset_problem_id;
@@ -604,6 +594,16 @@ private:
 	void api_handle();
 
 	void api_logs();
+
+	void api_job();
+
+	void api_job_restart(JobQueueType job_type, StringView job_info);
+
+	void api_job_cancel();
+
+	void api_job_download_report();
+
+	void api_job_download_uploaded_package();
 
 	void api_jobs();
 

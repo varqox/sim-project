@@ -64,14 +64,13 @@ function normalize_datetime(elem, add_tz) {
 	seconds = (seconds < 10 ? '0' : '') + seconds;
 
 	// Add the timezone part
+	elem.html(String().concat(time.getFullYear(), '-', month, '-', day,
+		' ', hours, ':', minutes, ':', seconds));
 	if (add_tz) {
 		var tzo = -(new Date()).getTimezoneOffset();
-		elem.html(String().concat(time.getFullYear(), '-', month, '-', day,
-			' ', hours, ':', minutes, ':', seconds,
-			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
-	} else
-		elem.html(String().concat(time.getFullYear(), '-', month, '-', day,
-			' ', hours, ':', minutes, ':', seconds));
+		elem.append(String().concat('<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60,
+			'</sup>'));
+	}
 
 	return elem;
 };
@@ -390,7 +389,7 @@ function expelContestUser(contest_id, user_id, username) {
 }
 function cancelJob(job_id) {
 	modalForm('Cancel job ' + job_id);
-	sendModalFrom('/jobs/' + job_id + '/cancel',
+	sendModalFrom('/api/job/' + job_id + '/cancel',
 		'The job has been canceled.');
 }
 function restartJob(job_id) {
@@ -401,7 +400,7 @@ function restartJob(job_id) {
 					'">job ' + job_id + '</a>?',
 			})
 		}).add(modalFormSubmitButton('Restart job',
-			'/jobs/' + job_id + '/restart',
+			'/api/job/' + job_id + '/restart',
 			'The job has been restarted.', 'orange',
 			'No, go back'))
 	);
@@ -498,6 +497,50 @@ function colorize(log, end) {
 	return res + log.substring(end);
 }
 
+function remove_loader(elem) {
+	$(elem).children('.loader, .loader-info').remove();
+}
+
+function append_loader(elem) {
+	remove_loader(elem);
+	$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
+}
+
+function show_error_via_loader(elem, response, try_again_handler) {
+	elem = $(elem);
+	elem.children('.loader').remove();
+	elem.append($('<span>', {
+		class: 'loader-info',
+		html: $('<span>', {
+			text: "Error: " + response.status + ' ' + response.statusText
+		}).add(try_again_handler === undefined ? '' : $('<a>', {
+			text: 'Try again',
+			click: try_again_handler
+		}))
+	}));
+
+	// Additional message
+	var x = elem.children('.loader > span');
+	try {
+		var xml = $.parseXML(response.responseText);
+		var msg = $(xml).text();
+
+		if (msg != '')
+			x.text(x.text().concat("\nInfo: ", msg));
+
+	} catch (err) {
+		if (response.responseText != '' // There is a message
+			&& response.responseText.lastIndexOf('<!DOCTYPE html>', 0)
+				!== 0 // Message is not a whole HTML page
+			&& response.responseText.lastIndexOf('<!doctype html>', 0)
+				!== 0) // Message is not a whole HTML page
+		{
+			x.text(x.text().concat("\nInfo: ",
+				response.responseText));
+		}
+	}
+}
+
 function Logs(type, elem) {
 	this.type = type;
 	this.elem = $(elem);
@@ -508,8 +551,7 @@ function Logs(type, elem) {
 			return;
 		this.lock = true;
 
-		$(this.elem).children('.loader, .loader-info').remove();
-		this.elem.append('<img class="loader" src="/kit/img/loader.gif">');
+		append_loader(this.elem);
 		var logs = this;
 		$.ajax({
 			type: 'GET',
@@ -523,7 +565,7 @@ function Logs(type, elem) {
 				var prev_height = elem[0].scrollHeight;
 				var prev = prev_height - elem.scrollTop();
 
-				logs.elem.children('.loader').remove();
+				remove_loader(logs.elem);
 				elem.html(colorize($('<div/>').text(data).html() + elem.html(),
 					data.length + 2000));
 				var curr_height = elem[0].scrollHeight;
@@ -535,38 +577,8 @@ function Logs(type, elem) {
 					logs.fetch_more();
 			},
 			error: function(resp) {
-				logs.elem.children('.loader').remove();
-				logs.elem.append($('<span>', {
-					class: 'loader-info',
-					html: $('<span>', {
-						text: "Error: " + resp.status + ' ' + resp.statusText
-					}).add('<a>', {
-						text: 'Try again',
-						click: function () { new Logs(logs.type, logs.elem); }
-					})
-				}));
-
-				// Additional message
-				var x = logs.elem.children('.loader > span');
-				try {
-					var xml = $.parseXML(resp.responseText);
-					var msg = $(xml).text();
-
-					if (msg != '')
-						x.text(x.text().concat("\nInfo: ", msg));
-
-				} catch (err) {
-					if (resp.responseText != '' // There is a message
-						&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-							!== 0 // Message is not a whole HTML page
-						&& resp.responseText.lastIndexOf('<!doctype html>', 0)
-							!== 0) // Message is not a whole HTML page
-					{
-						x.text(x.text().concat("\nInfo: ",
-							resp.responseText));
-					}
-				}
-
+				show_error_via_loader(logs.elem, resp,
+					function () { new Logs(logs.type, logs.elem); });
 				logs.lock = false;
 			}
 		});
@@ -583,6 +595,67 @@ function Logs(type, elem) {
 	this.fetch_more();
 }
 
+
+function job_actions_html(job_id, actions_str, problem_id, show_view_job = true) {
+	var res = [];
+	if (show_view_job)
+		res.push($('<a>', {
+			class: 'btn-small',
+			href: '/jobs/' + job_id,
+			text: 'View job'
+		}));
+
+	for (var idx in actions_str) {
+		var c = actions_str[idx];
+
+		if (c == 'P' || c == 'R')
+			res.push($('<div>', {
+				class: 'dropmenu down',
+				html: $('<a>', {
+					class: 'btn-small dropmenu-toggle',
+					text: 'Download'
+				}).add($('<ul>', {
+					html: $('<a>', {
+						href: '/api/job/' + job_id + '/report',
+						text: 'Report'
+					}).add(c != 'P' ? '' : $('<a>', {
+						href: '/api/job/' + job_id + '/uploaded-package',
+						text: 'Uploaded package'
+					}))
+				}))
+			}));
+
+		if (c == 'V')
+			res.push($('<a>', {
+				class: 'btn-small green',
+				href: '/p/' + problem_id,
+				text: 'View problem'
+			}));
+
+		if (c == 'c')
+			res.push($('<a>', {
+				class: 'btn-small red',
+				text: 'Cancel job',
+				click: function() {
+					var jid = job_id;
+					return function() { cancelJob(jid); }
+				}()
+			}));
+
+		if (c == 'r')
+			res.push($('<a>', {
+				class: 'btn-small orange',
+				text: 'Restart job',
+				click: function() {
+					var jid = job_id;
+					return function() { restartJob(jid); }
+				}()
+			}));
+	}
+
+	return res;
+};
+
 function Jobs(base_url, elem) {
 	this.base_url = base_url;
 	this.elem = $(elem);
@@ -590,10 +663,9 @@ function Jobs(base_url, elem) {
 	this.fetch_more = function() {
 		if (this.lock)
 			return;
-		this.lock = true;
 
-		this.elem.parent().children('.loader, .loader-info').remove();
-		this.elem.parent().append('<img class="loader" src="/kit/img/loader.gif">');
+		this.lock = true;
+		append_loader(this.elem.parent());
 
 		function getid(url) { return url.substr(url.lastIndexOf('/') + 1); }
 
@@ -671,66 +743,14 @@ function Jobs(base_url, elem) {
 					}());
 
 					// Actions
-					var td = $('<td>');
-					td.append($('<a>', {
-						class: 'btn-small',
-						href: '/jobs/' + x[0],
-						text: 'View job'
+					row.append($('<td>', {
+						html: job_actions_html(x[0], x[8], info.problem)
 					}));
-					for (var idx in x[8]) {
-						var c = x[8][idx];
 
-						if (c == 'P')
-							td.append($('<div>', {
-								class: 'dropmenu down',
-								html: $('<a>', {
-									class: 'btn-small dropmenu-toggle',
-									text: 'Download'
-								}).add($('<ul>', {
-									html: $('<a>', {
-										href: '/jobs/' + x[0] + '/report',
-										text: 'Report'
-									}).add($('<a>', {
-										href: '/jobs/' + x[0] +
-											'/download-uploaded-package',
-										text: 'Uploaded package'
-									}))
-								}))
-							}));
-
-						if (c == 'V')
-							td.append($('<a>', {
-								class: 'btn-small green',
-								href: '/p/' + info.problem,
-								text: 'View problem'
-							}));
-
-						if (c == 'c')
-							td.append($('<a>', {
-								class: 'btn-small red',
-								text: 'Cancel job',
-								click: function() {
-									var job_id = x[0];
-									return function() { cancelJob(job_id); }
-								}()
-							}));
-
-						if (c == 'r')
-							td.append($('<a>', {
-								class: 'btn-small orange',
-								text: 'Restart job',
-								click: function() {
-									var job_id = x[0];
-									return function() { restartJob(job_id); }
-								}()
-							}));
-					}
-
-					row.append(td);
 					jobs.elem.children('tbody').append(row);
 				}
 
-				jobs.elem.parent().children('.loader').remove();
+				remove_loader(jobs.elem.parent());
 
 				// Load more jobs if scrolling up did not become possible
 				if (data.length > 0)
@@ -740,38 +760,8 @@ function Jobs(base_url, elem) {
 					jobs.fetch_more();
 			},
 			error: function(resp) {
-				jobs.elem.parent().children('.loader').remove();
-				jobs.elem.parent().append($('<span>', {
-					class: 'loader-info',
-					html: $('<span>', {
-						text: "Error: " + resp.status + ' ' + resp.statusText
-					}).add('<a>', {
-						text: 'Try again',
-						click: function () { new Jobs(jobs.base_url, jobs.elem); }
-					})
-				}));
-
-				// Additional message
-				var x = jobs.elem.parent().children('.loader > span');
-				try {
-					var xml = $.parseXML(resp.responseText);
-					var msg = $(xml).text();
-
-					if (msg != '')
-						x.text(x.text().concat("\nInfo: ", msg));
-
-				} catch (err) {
-					if (resp.responseText != '' // There is a message
-						&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-							!== 0 // Message is not a whole HTML page
-						&& resp.responseText.lastIndexOf('<!doctype html>', 0)
-							!== 0) // Message is not a whole HTML page
-					{
-						x.text(x.text().concat("\nInfo: ",
-							resp.responseText));
-					}
-				}
-
+				show_error_via_loader(jobs.elem.parent(), resp,
+					function () { new Jobs(jobs.base_url, jobs.elem); });
 				jobs.lock = false;
 			}
 		});
@@ -786,4 +776,104 @@ function Jobs(base_url, elem) {
 	};
 
 	this.fetch_more();
+}
+
+function preview_job(job_id, elem) {
+	append_loader(elem);
+	$.ajax({
+			type: 'GET',
+			url: '/api/jobs/=' + job_id,
+			dataType: 'json',
+			success: function(data) {
+				if (data.length === 0)
+					return show_error_via_loader(elem, {
+						status: '404',
+						statusText: 'Not Found'
+					});
+
+				data = data[0];
+
+				function info_html(info) {
+					var td = $('<td>', {
+						style: 'text-align:left'
+					});
+					for (var name in info) {
+						td.append($('<label>', {text: name}));
+
+						if (name == "submission" || name == "problem")
+							td.append($('<a>', {
+								href: '/' + name[0] + '/' + info[name],
+								text: info[name]
+							}));
+						else
+							td.append(info[name]);
+
+						td.append('<br/>');
+					}
+
+					return td;
+				};
+
+				elem.append($('<div>', {
+					class: 'job-info',
+					html: $('<div>', {
+						html: $('<h1>', {
+							text: 'Job ' + job_id
+						}).add('<div>', {
+							html: job_actions_html(job_id, data[8],
+								data[7].problem, false)
+						})
+					}).add('<table>', {
+						html: $('<thead>', {html: '<tr>' +
+							'<th style="min-width:120px">Type</th>' +
+							'<th style="min-width:150px">Added</th>' +
+							'<th style="min-width:150px">Status</th>' +
+							'<th style="min-width:120px">Owner</th>' +
+							'<th style="min-width:90px">Info</th>' +
+							'</tr>'
+						}).add('<tbody>', {
+							html: $('<tr>', {
+								html: $('<td>', {
+									text: data[2]
+								}).add(normalize_datetime($('<td>', {
+										datetime: data[1],
+										text: data[1]
+									}), true)
+								).add('<td>', {
+									class: 'status ' + data[3][0],
+									text: data[3][1]
+								}).add('<td>', {
+									html: data[5] === null ? 'System' : $('<a>', {
+										href: '/u/' + data[5],
+										text: data[6]
+									})
+								}).add('<td>', {
+									html: info_html(data[7])
+								})
+							})
+						})
+					})
+				})).append('<h2>Report preview</h2>')
+				.append($('<pre>', {
+					class: 'report-preview',
+					html: data[9][1]
+				}));
+
+				if (data[9][0])
+					elem.append($('<p>', {
+						text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
+					}).append($('<a>', {
+						class: 'btn-small',
+						href: '/api/job/' + job_id + '/report',
+						text: 'Download the full report'
+					})));
+
+				remove_loader(elem);
+			},
+			error: function(resp) {
+				show_error_via_loader(jobs.elem.parent(), resp,
+					function () { new Jobs(jobs.base_url, jobs.elem); });
+				jobs.lock = false;
+			}
+		});
 }

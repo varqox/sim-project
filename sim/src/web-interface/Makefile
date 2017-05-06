@@ -6,7 +6,8 @@ all: ../sim-server # ../sim-server2
 $(eval $(call dependencies))
 
 ../sim-server: server.o connection.o http_request.o http_response.o
-../sim-server: sim.o session.o template.o api.o user.o jobs.o
+../sim-server: sim.o session.o template.o api.o api_jobs.o
+../sim-server: user.o jobs.o problemset.o
 ../sim-server: ../lib/sim.a ../lib/sqlite3.a
 ../sim-server:
 	$(LINK) $(shell mysql_config --libs) -pthread -lsupc++
