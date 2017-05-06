@@ -144,6 +144,9 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		sf.solutions = std::move(solutions);
 	}
 
+	// TODO: allow specifying scoring without limits
+	//
+
 	// Tests
 	try { sf.loadTests(); } catch (...) {
 		sf.tgroups.clear();
@@ -281,7 +284,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		return {Status::COMPLETE, sf}; // Nothing more to do
 	}
 
-	/* Judge report of the model solution is needed */
+	/* The model solution's judge report is needed */
 
 	// Set the time limits for the model solution
 	uint64_t time_limit =

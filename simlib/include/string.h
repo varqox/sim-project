@@ -118,6 +118,10 @@ constexpr inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x))
 }
 
 // Allows stringifying integers
+constexpr inline auto stringify(bool x) noexcept {
+	return (x ? "true" : "false");
+}
+
 constexpr inline char stringify(char x) noexcept { return x; }
 constexpr inline auto stringify(unsigned char x) noexcept ->
 	decltype(toString(x));

@@ -308,6 +308,12 @@ public:
 		size_ = n;
 	}
 
+	template<class... Args>
+	T& emplace_back(Args&&... args) {
+		resize(size() + 1);
+		return back() = T{std::forward<Args>(args)...};
+	}
+
 	void clear() noexcept { size_ = 0; }
 
 	size_t size() const noexcept { return size_; }
