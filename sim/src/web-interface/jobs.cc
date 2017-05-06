@@ -103,21 +103,7 @@ void Sim::jobs_handle() {
 	page_template("Job queue", "body{margin-left:20px}");
 
 	append("<h1>", (my.empty() ? "All jobs" : "My jobs"), "</h1>"
-		"<table class=\"jobs\">"
-		"<thead>"
-			"<tr>"
-				"<th class=\"type\">Type</th>"
-				"<th class=\"added\">Added<sup>UTC</sup></th>"
-				"<th class=\"status\">Status</th>",
-				"<th class=\"owner\">Owner</th>",
-				"<th class=\"priority\">Priority</th>"
-				"<th class=\"info\">Info</th>"
-				"<th class=\"actions\">Actions</th>"
-			"</tr>"
-		"</thead>"
-		"<tbody></tbody>"
-		"</table>"
-
+		"<table class=\"jobs\"></table>"
 		"<script>"
 			"new Jobs('/api/jobs", my, "', $('.jobs')).monitor_scroll();"
 		"</script>");
