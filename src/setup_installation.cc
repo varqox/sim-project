@@ -296,6 +296,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (status, priority DESC, id), "
 			"KEY (type, aux_id),"
+			"KEY (aux_id, id),"
 			"KEY (creator, id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 

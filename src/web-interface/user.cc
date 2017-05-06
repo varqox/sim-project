@@ -710,7 +710,7 @@ void User::deleteAccount() {
 		try {
 			if (fv.get("csrf_token") != Session::csrf_token)
 				return error403();
-
+// TODO: handle deleted owner of the job better than passing ownership to SIM_ROOT_UID
 			SignalBlocker signal_guard;
 			// Change contests' and problems' owner and jobs' creator id to
 			// SIM_ROOT_UID
