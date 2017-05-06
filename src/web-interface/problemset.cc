@@ -1,34 +1,43 @@
+#include "sim.h"
 
-#include <sim/jobs.h>
-#include <simlib/config_file.h>
-#include <simlib/http/response.h>
-#include <simlib/sim/simfile.h>
-#include <simlib/time.h>
 
-using std::string;
 
-Problemset::Permissions Problemset::getPermissions(const string& owner_id,
+// #include <sim/jobs.h>
+// #include <simlib/config_file.h>
+// #include <simlib/http/response.h>
+// #include <simlib/sim/simfile.h>
+// #include <simlib/time.h>
+
+// using std::string;
+
+
+Sim::ProblemsetPermissions Sim::problemset_get_permissions(StringView owner_id,
 	ProblemType ptype)
 {
-	if (Session::open()) {
-		if (Session::user_type == UTYPE_ADMIN)
-			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_ALL |
-				PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD | PERM_SEE_SIMFILE | PERM_SEE_OWNER |
-				PERM_ADMIN);
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemsetPermissions;
 
-		if (Session::user_id == owner_id)
-			return Permissions(PERM_VIEW | PERM_VIEW_SOLUTIONS | PERM_DOWNLOAD |
-				PERM_SEE_SIMFILE | PERM_SEE_OWNER | PERM_ADMIN |
-				(Session::user_type == UTYPE_TEACHER ? (int)PERM_ADD : 0));
+	if (session_open()) {
+		if (session_user_type == UTYPE_ADMIN)
+			return PERM::ADD | PERM::VIEW | PERM::VIEW_ALL |
+				PERM::VIEW_SOLUTIONS | PERM::DOWNLOAD | PERM::SEE_SIMFILE |
+				PERM::SEE_OWNER | PERM::ADMIN;
 
-		if (Session::user_type == UTYPE_TEACHER && ptype == ProblemType::PUBLIC)
-			return Permissions(PERM_ADD | PERM_VIEW | PERM_VIEW_SOLUTIONS |
-				PERM_DOWNLOAD | PERM_SEE_SIMFILE | PERM_SEE_OWNER);
+		static_assert(uint(PERM::NONE) == 0, "Needed below");
+		if (session_user_id == owner_id)
+			return PERM::VIEW | PERM::VIEW_SOLUTIONS | PERM::DOWNLOAD |
+				PERM::SEE_SIMFILE | PERM::SEE_OWNER | PERM::ADMIN |
+				(session_user_type == UTYPE_TEACHER ? PERM::ADD : PERM::NONE);
+
+		if (session_user_type == UTYPE_TEACHER && ptype == ProblemType::PUBLIC)
+			return PERM::ADD | PERM::VIEW | PERM::VIEW_SOLUTIONS |
+				PERM::DOWNLOAD | PERM::SEE_SIMFILE | PERM::SEE_OWNER;
 	}
 
-	return (ptype == ProblemType::PUBLIC ? PERM_VIEW : PERM_NONE);
+	return (ptype == ProblemType::PUBLIC ? PERM::VIEW : PERM::NONE);
 }
 
+#if 1-1
 void Problemset::problemsetTemplate(StringView title, StringView styles,
 	StringView scripts)
 {
@@ -795,3 +804,4 @@ void Problemset::problemSubmissions() {
 
 	error501();
 }
+#endif

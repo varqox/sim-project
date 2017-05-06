@@ -833,6 +833,33 @@ a.btn.red {
 	box-shadow: 1px 3px 10px rgba(0, 0, 0, 0.2);
 }
 
+/* Loader */
+.loader,
+.loader-info {
+	display: table;
+	margin: 4px auto;
+	border: 1px solid #bbb;
+}
+.loader {
+	padding: 2px;
+	background: white;
+	border-radius: 100%;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+.loader-info {
+	padding: 2px 5px;
+	color: #222;
+	white-space: pre;
+	background: #ffa5a5;
+	border-radius: 6px;
+}
+.loader-info a {
+	margin-left: 5px;
+}
+
 /* Navigation bar */
 .navbar {
 	display: flex;
@@ -1489,31 +1516,6 @@ table.jobs td label::after,
 .job-info table td label::after {
 	content: ":";
 }
-table.jobs ~ .loader,
-table.jobs ~ .loader-info {
-	display: table;
-	margin: 4px auto;
-	padding: 2px;
-	border: 1px solid #bbb;
-	background: white;
-}
-table.jobs ~ .loader {
-	border-radius: 100%;
-	user-select: none;
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-}
-table.jobs ~ .loader-info {
-	padding: 2px 5px;
-	color: #222;
-	white-space: pre;
-	background: #ffa5a5;
-	border-radius: 6px;
-}
-table.jobs ~ .loader-info a {
-	margin-left: 5px;
-}
 
 /* Users & Contest users*/
 table.users,
@@ -1646,7 +1648,7 @@ table.files td {
 /* Logs */
 pre.logs {
 	margin: 10px 32px 10px 10px;
-	max-height: 400px;
+	height: 400px;
 	padding: 2px;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	white-space: pre-wrap;
@@ -1680,28 +1682,7 @@ pre.logs .loader-info {
 	position: absolute;
 	top: 0;
 	left: 50%;
-	margin-top: 4px;
 	margin-left: -13.5px;
-	padding: 2px;
-	border: 1px solid #bbb;
-	background: white;
-}
-pre.logs .loader {
-	border-radius: 100%;
-	user-select: none;
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-}
-pre.logs .loader-info {
-	padding: 2px 5px;
-	color: #222;
-	white-space: pre;
-	background: #ffa5a5;
-	border-radius: 6px;
-}
-pre.logs .loader-info a {
-	margin-left: 5px;
 }
 
 pre .green {
