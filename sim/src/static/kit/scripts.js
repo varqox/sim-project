@@ -764,7 +764,7 @@ function preview_job(job_id, elem, success_handler) {
 		}
 	});
 }
-var global_lock = false;
+
 function Jobs(base_url, elem) {
 	this.base_url = base_url;
 	this.elem = $(elem);
@@ -772,7 +772,7 @@ function Jobs(base_url, elem) {
 	this.lower_job_id = undefined;
 
 	this.fetch_more = function() {
-		if (this.lock || global_lock)
+		if (this.lock)
 			return;
 
 		this.lock = true;
