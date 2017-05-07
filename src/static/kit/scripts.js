@@ -503,7 +503,16 @@ function remove_loader(elem) {
 
 function append_loader(elem) {
 	remove_loader(elem);
-	$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
+	elem = $(elem);
+	if (elem[0].style.animationName === undefined &&
+		elem[0].style.WebkitAnimationName === undefined)
+	{
+		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
+	} else
+		$(elem).append($('<span>', {
+			class: 'loader',
+			html: $('<div>', {class: 'spinner'})
+		}));
 }
 
 function show_error_via_loader(elem, response, try_again_handler) {
