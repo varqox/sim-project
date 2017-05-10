@@ -46,7 +46,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 					"<div>"
 						"<a href=\"/\" class=\"brand\">SIM</a>"
 						"<a href=\"/c/\">Contests</a>"
-						"<a href=\"/p\">Problemset</a>");
+						"<a href=\"/p\">Problems</a>");
 
 	if (session_open() && session_user_type < UTYPE_NORMAL) {
 		append("<a href=\"/u\">Users</a>");

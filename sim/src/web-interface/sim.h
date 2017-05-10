@@ -523,9 +523,9 @@ private:
 	/// Main Jobs handler
 	void jobs_handle();
 
-	/* ============================= Problemset ============================= */
+	/* ============================== Problems ============================== */
 
-	enum class ProblemsetPermissions : uint {
+	enum class ProblemPermissions : uint {
 		NONE = 0,
 		VIEW = 1,
 		VIEW_ALL = 2,
@@ -537,57 +537,57 @@ private:
 		ADD = 128
 	};
 
-	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemsetPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(ProblemsetPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(ProblemsetPermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |)
+	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &)
 
-	ProblemsetPermissions problemset_get_permissions(StringView owner_id,
+	ProblemPermissions problems_get_permissions(StringView owner_id,
 		ProblemType ptype);
 
-	ProblemsetPermissions problemset_perms = ProblemsetPermissions::NONE;
-	uint problemset_owner_utype = UTYPE_NORMAL;
-	std::string problemset_owner_username;
-	std::string problemset_problem_id;
-	std::string problemset_problem_name;
-	std::string problemset_problem_label;
-	std::string problemset_problem_owner;
-	std::string problemset_problem_added;
-	std::string problemset_problem_simfile;
-	ProblemType problemset_problem_type = ProblemType::VOID;
+	ProblemPermissions problems_perms = ProblemPermissions::NONE;
+	uint problems_owner_utype = UTYPE_NORMAL;
+	std::string problems_owner_username;
+	std::string problems_problem_id;
+	std::string problems_problem_name;
+	std::string problems_problem_label;
+	std::string problems_problem_owner;
+	std::string problems_problem_added;
+	std::string problems_problem_simfile;
+	ProblemType problems_problem_type = ProblemType::VOID;
 
-	void problemset_page_template(StringView title, StringView styles = {},
+	void problems_page_template(StringView title, StringView styles = {},
 		StringView scripts = {});
 
 	/// Main Problemset handler
-	void problemset_handle();
+	void problems_handle();
 
 	/// Warning: this function assumes that the user is allowed to view the
 	/// statement
-	void problemset_view_statement(StringView problem_id);
+	void problems_view_statement(StringView problem_id);
 
-	void problemset_add_problem();
+	void problems_add_problem();
 
-	void problemset_view_problem();
+	void problems_view_problem();
 
-	void problemset_edit_problem();
+	void problems_edit_problem();
 
-	void problemset_download_problem();
+	void problems_download_problem();
 
-	void problemset_reupload_problem();
+	void problems_reupload_problem();
 
-	void problemset_rejudge_problem_submissions();
+	void problems_rejudge_problem_submissions();
 
-	void problemset_delete_problem();
+	void problems_delete_problem();
 
-	void problemset_problem_solutions();
+	void problems_problem_solutions();
 
-	void problemset_delete_submission(StringView submission_id,
+	void problems_delete_submission(StringView submission_id,
 		StringView submission_owner);
 
-	void problemset_change_submission_type_to(StringView submission_id,
+	void problems_change_submission_type_to(StringView submission_id,
 		StringView submission_owner, SubmissionType stype);
 
-	void problemset_problem_submissions();
+	void problems_problem_submissions();
 
 	/* ================================ API ================================ */
 

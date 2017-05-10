@@ -10,12 +10,11 @@
 
 // using std::string;
 
-
-Sim::ProblemsetPermissions Sim::problemset_get_permissions(StringView owner_id,
+Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 	ProblemType ptype)
 {
 	STACK_UNWINDING_MARK;
-	using PERM = ProblemsetPermissions;
+	using PERM = ProblemPermissions;
 
 	if (session_open()) {
 		if (session_user_type == UTYPE_ADMIN)
