@@ -223,10 +223,10 @@ void Sim::api_jobs() {
 				uint ptype;
 				stmt.res_bind_all(powner, ptype);
 				if (stmt.next()) {
-					auto pperms = problemset_get_permissions(powner,
+					auto pperms = problems_get_permissions(powner,
 						ProblemType(ptype));
 					allow_access |=
-						bool(uint(pperms & ProblemsetPermissions::ADMIN));
+						bool(uint(pperms & ProblemPermissions::ADMIN));
 				}
 			}
 
