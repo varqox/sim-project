@@ -131,9 +131,17 @@ public:
 	constexpr explicit CallInDtor(Func f) : func(std::move(f)) {}
 
 	CallInDtor(const CallInDtor&) = delete;
-	CallInDtor(CallInDtor&&) = delete;
 	CallInDtor& operator=(const CallInDtor&) = delete;
-	CallInDtor& operator=(CallInDtor&&) = delete;
+
+	CallInDtor(CallInDtor&& cid) : func(std::move(cid.func)) {
+		cid.cancel();
+	}
+
+	CallInDtor& operator=(CallInDtor&& cid) {
+		func = std::move(cid.func);
+		cid.cancel();
+		return *this;
+	}
 
 	void cancel() { make_call = false; }
 
@@ -149,6 +157,11 @@ public:
 			try { func(); } catch (...) {} // We cannot throw
 	}
 };
+
+template<class Func>
+inline CallInDtor<Func> make_call_in_destructor(Func func) {
+	return CallInDtor<Func>{std::move(func)};
+}
 
 template<class A, class B>
 constexpr bool isIn(const A& val, const B& sequence) {

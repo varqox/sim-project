@@ -169,23 +169,23 @@ inline size_t constexpr offset_of(T1 T2::*member) {
 } // namespace meta
 
 #define DECLARE_ENUM_OPERATOR(enu, oper) \
-	inline enu operator oper(enu a, enu b) { \
+	constexpr inline enu operator oper(enu a, enu b) { \
 		using UT = std::underlying_type<enu>::type; \
 		return static_cast<enu>(static_cast<UT>(a) oper static_cast<UT>(b)); \
 	}
 
 #define DECLARE_ENUM_UNARY_OPERATOR(enu, oper) \
-	inline enu operator oper(enu a) { \
+	constexpr inline enu operator oper(enu a) { \
 		using UT = std::underlying_type<enu>::type; \
 		return static_cast<enu>(oper static_cast<UT>(a)); \
 	}
 
 #define DECLARE_ENUM_COMPARE1(enu, oper) \
-	inline bool operator oper(enu a, std::underlying_type<enu>::type b) { \
+	constexpr inline bool operator oper(enu a, std::underlying_type<enu>::type b) { \
 		return static_cast<decltype(b)>(a) oper b; \
 	}
 
 #define DECLARE_ENUM_COMPARE2(enu, oper) \
-	inline bool operator oper(std::underlying_type<enu>::type a, enu b) { \
+	constexpr inline bool operator oper(std::underlying_type<enu>::type a, enu b) { \
 		return a oper static_cast<decltype(a)>(b); \
 	}
