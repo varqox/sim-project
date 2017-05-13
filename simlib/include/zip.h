@@ -10,6 +10,15 @@
 #include <archive.h>
 #include <archive_entry.h>
 
+/**
+ * @brief Runs @p entry_callback on every archive @p filename's entry
+ *
+ * @param filename path of the archive
+ * @param setup_archive function to run before reading the archive, should take
+ *   archive* as the argument, most useful to set the accepted archive formats
+ * @param entry_callback function to call on every entry, should take one
+ *   argument - archive_entry*
+ */
 template<class Func, class UnaryFunc>
 void skim_archive(CStringView filename, Func&& setup_archive,
 	UnaryFunc&& entry_callback)
@@ -40,6 +49,18 @@ void skim_archive(CStringView filename, Func&& setup_archive,
 	}
 }
 
+/**
+ * @brief Extracts archive @p filename to the current working directory
+ *
+ * @param filename path of the archive
+ * @param flags flags to pass to archive_write_disk_set_options()
+ * @param setup_archives function to run before reading the archive, should take
+ *   arguments: archive* in, archive* out - input and output archive handlers,
+ *   most useful to set the accepted archive formats
+ * @param extract_entry function to call on every entry, should take one
+ *   argument - archive_entry* and return bool determining whether or not
+ *   extract the entry
+ */
 template<class Func, class UnaryFunc>
 void extract(CStringView filename, int flags,
 	Func&& setup_archives, UnaryFunc&& extract_entry)
@@ -100,6 +121,7 @@ void extract(CStringView filename, int flags,
 	}
 }
 
+// Extracts zip, for details see extract() documentation
 template<class UnaryFunc>
 inline void extract_zip(CStringView filename, int flags,
 	UnaryFunc&& extract_entry)
@@ -109,11 +131,20 @@ inline void extract_zip(CStringView filename, int flags,
 	}, std::forward<UnaryFunc>(extract_entry));
 }
 
+// Extracts zip, for details see extract() documentation
 inline void extract_zip(CStringView filename, int flags = ARCHIVE_EXTRACT_TIME)
 {
 	return extract_zip(filename, flags, [](archive_entry*) { return true; });
 }
 
+/**
+ * @brief Compresses @p filenames recursively into @p archive_filename
+ *
+ * @param filenames paths of files/directories to archive
+ * @param archive_filename output archive's path
+ * @param setup_archive function to run before reading the archive, should take
+ *   archive* as the argument, most useful to set the archive format
+ */
 template<class Container, class Func>
 void compress(Container&& filenames, CStringView archive_filename,
 	Func&& setup_archive)
@@ -233,6 +264,7 @@ void compress(Container&& filenames, CStringView archive_filename,
 	}
 }
 
+/// Specialization of compress()
 template<class T, class Func>
 inline void compress(std::initializer_list<T> filenames,
 	CStringView archive_filename, Func&& setup_archive)
