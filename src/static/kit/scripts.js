@@ -28,7 +28,7 @@ $(document).ready(function updateClock() {
 // Dropdowns
 $(document).ready(function(){
 	$(document).click(function(event) {
-		if ($(event.target).is('.dropmenu .dropmenu-toggle, .dropmenu .dropmenu-toggle *')) {
+		if ($(event.target).parent('.dropmenu .dropmenu-toggle') !== 0) {
 			var dropmenu = $(event.target).closest('.dropmenu');
 			if (dropmenu.is('.open'))
 				dropmenu.removeClass('open');
@@ -151,10 +151,18 @@ $(function() {
 
 // Modal
 $(document).click(function(event) {
+	var elem;
+
 	if ($(event.target).is('.modal'))
-		$(event.target).remove();
+		elem = $(event.target);
 	else if ($(event.target).is('.modal .close'))
-		$(event.target).parent().parent().remove();
+		elem = $(event.target).parent().parent();
+	else
+		return;
+
+	elem.remove();
+	if (elem.is('.preview'))
+		window.history.replaceState({}, '', elem.attr('prev-url'));
 });
 function modal(modal_body) {
 	$('<div>', {
@@ -617,8 +625,8 @@ function job_actions_html(job_id, actions_str, problem_id, show_view_job = true)
 	if (show_view_job)
 		res.push($('<a>', {
 			class: 'btn-small',
-			href: '/jobs/' + job_id,
-			text: 'View job'
+			text: 'View job',
+			click: function() { preview_job(true, job_id); }
 		}));
 
 	for (var idx in actions_str) {
@@ -672,106 +680,133 @@ function job_actions_html(job_id, actions_str, problem_id, show_view_job = true)
 	return res;
 };
 
-function preview_job(job_id, elem, success_handler) {
-	append_loader(elem);
-	$.ajax({
-		type: 'GET',
-		url: '/api/jobs/=' + job_id,
-		dataType: 'json',
-		success: function(data) {
-			if (data.length === 0)
-				return show_error_via_loader(elem, {
-					status: '404',
-					statusText: 'Not Found'
-				});
+function preview_base(as_modal, ajax_url, success_handler, new_window_location) {
+	function impl(elem) {
+		append_loader(elem);
+		$.ajax({
+			type: 'GET',
+			url: ajax_url,
+			dataType: 'json',
+			success: function() {
+				remove_loader(elem);
+				success_handler.apply(elem, arguments);
 
-			data = data[0];
-
-			function info_html(info) {
-				var td = $('<td>', {
-					style: 'text-align:left'
-				});
-				for (var name in info) {
-					td.append($('<label>', {text: name}));
-
-					if (name == "submission" || name == "problem")
-						td.append($('<a>', {
-							href: '/' + name[0] + '/' + info[name],
-							text: info[name]
-						}));
-					else
-						td.append(info[name]);
-
-					td.append('<br/>');
+				if (as_modal) {
+					// Update padding-top
+					var m = elem.parent().parent();
+					var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
+					m.css({'padding-top': Math.max(new_padding, 0)});
 				}
+			},
+			error: function(resp) {
+				show_error_via_loader(elem, resp, function () {
+					impl(elem);
+				});
+			}
+		});
+	}
 
-				return td;
-			};
+	if (as_modal) {
+		var elem = $('<div>', {
+			class: 'modal preview',
+			'prev-url': window.location.href,
+			html: $('<div>', {
+				html: $('<span>', { class: 'close'})
+				.add('<div>', {style: 'display:block'})
+			})
+		}).appendTo('body');
+		window.history.replaceState({}, '', new_window_location);
+		impl(elem.find('div > div'));
 
-			elem.append($('<div>', {
-				class: 'job-info',
-				html: $('<div>', {
-					html: $('<h1>', {
-						text: 'Job ' + job_id
-					}).add('<div>', {
-						html: job_actions_html(job_id, data[8],
-							data[7].problem, false)
-					})
-				}).add('<table>', {
-					html: $('<thead>', {html: '<tr>' +
-						'<th style="min-width:120px">Type</th>' +
-						'<th style="min-width:150px">Added</th>' +
-						'<th style="min-width:150px">Status</th>' +
-						'<th style="min-width:120px">Owner</th>' +
-						'<th style="min-width:90px">Info</th>' +
-						'</tr>'
-					}).add('<tbody>', {
-						html: $('<tr>', {
-							html: $('<td>', {
-								text: data[2]
-							}).add(normalize_datetime($('<td>', {
-									datetime: data[1],
-									text: data[1]
-								}), true)
-							).add('<td>', {
-								class: 'status ' + data[3][0],
-								text: data[3][1]
-							}).add('<td>', {
-								html: data[5] === null ? 'System' : $('<a>', {
-									href: '/u/' + data[5],
-									text: data[6]
-								})
-							}).add('<td>', {
-								html: info_html(data[7])
+	} else
+		impl($(document.body));
+}
+
+function preview_job(as_modal, job_id) {
+	preview_base(as_modal, '/api/jobs/=' + job_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		data = data[0];
+
+		function info_html(info) {
+			var td = $('<td>', {
+				style: 'text-align:left'
+			});
+			for (var name in info) {
+				td.append($('<label>', {text: name}));
+
+				if (name == "submission" || name == "problem")
+					td.append($('<a>', {
+						href: '/' + name[0] + '/' + info[name],
+						text: info[name]
+					}));
+				else
+					td.append(info[name]);
+
+				td.append('<br/>');
+			}
+
+			return td;
+		};
+
+		this.append($('<div>', {
+			class: 'job-info',
+			html: $('<div>', {
+				html: $('<h1>', {
+					text: 'Job ' + job_id
+				}).add('<div>', {
+					html: job_actions_html(job_id, data[8],
+						data[7].problem, false)
+				})
+			}).add('<table>', {
+				html: $('<thead>', {html: '<tr>' +
+					'<th style="min-width:120px">Type</th>' +
+					'<th style="min-width:150px">Added</th>' +
+					'<th style="min-width:150px">Status</th>' +
+					'<th style="min-width:120px">Owner</th>' +
+					'<th style="min-width:90px">Info</th>' +
+					'</tr>'
+				}).add('<tbody>', {
+					html: $('<tr>', {
+						html: $('<td>', {
+							text: data[2]
+						}).add(normalize_datetime($('<td>', {
+								datetime: data[1],
+								text: data[1]
+							}), true)
+						).add('<td>', {
+							class: 'status ' + data[3][0],
+							text: data[3][1]
+						}).add('<td>', {
+							html: data[5] === null ? 'System' : $('<a>', {
+								href: '/u/' + data[5],
+								text: data[6]
 							})
+						}).add('<td>', {
+							html: info_html(data[7])
 						})
 					})
 				})
-			})).append('<h2>Report preview</h2>')
-			.append($('<pre>', {
-				class: 'report-preview',
-				html: data[9][1]
-			}));
+			})
+		})).append('<h2>Report preview</h2>')
+		.append($('<pre>', {
+			class: 'report-preview',
+			html: data[9][1]
+		}));
 
-			if (data[9][0])
-				elem.append($('<p>', {
-					text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
-				}).append($('<a>', {
-					class: 'btn-small',
-					href: '/api/job/' + job_id + '/report',
-					text: 'Download the full report'
-				})));
-
-			remove_loader(elem);
-
-			if (success_handler !== undefined)
-				success_handler();
-		},
-		error: function(resp) {
-			show_error_via_loader(elem, resp,
-				function () { preview_job(job_id, elem, success_handler); });
-		}
-	});
+		if (data[9][0])
+			this.append($('<p>', {
+				text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
+			}).append($('<a>', {
+				class: 'btn-small',
+				href: '/api/job/' + job_id + '/report',
+				text: 'Download the full report'
+			})));
+	}, '/jobs/' + job_id);
 }
 
 function Jobs(base_url, elem) {
@@ -819,15 +854,7 @@ function Jobs(base_url, elem) {
 							text: x[1],
 							click: function() {
 								var job_id = x[0];
-								return function() {
-									// Preview job
-									modal($('<div>', {style: 'display:block'}));
-									preview_job(job_id, $('.modal > div > div'), function () {
-										var m = $('.modal');
-										var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
-										m.css({'padding-top': Math.max(new_padding, 0)});
-									});
-								};
+								return function() { preview_job(true, job_id); };
 							}()
 						}), false)
 					}));

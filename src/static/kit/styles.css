@@ -517,7 +517,7 @@ table {
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
-.modal > div > h2 {
+.modal:not(.preview) > div > h2 {
 	margin: 5px 0;
 	font-size: 24px;
 	font-weight: normal;
@@ -527,10 +527,12 @@ table {
 /* The Close Button */
 .modal .close {
 	color: #aaaaaa;
-	margin: -12px -8px -4px 0;
+	margin: -14px -10px -6px 0;
+	padding: 2px;
 	font-size: 28px;
 	font-weight: bold;
     align-self: flex-end;
+    z-index: 2;
 }
 .modal .close::after {
 	content: "×";

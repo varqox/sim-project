@@ -79,7 +79,7 @@ void Sim::jobs_handle() {
 		jobs_job_id = next_arg;
 
 		page_template(concat("Job ", jobs_job_id), "body{margin-left:32px}");
-		append("<script>preview_job(", jobs_job_id, ", $('body'));</script>");
+		append("<script>preview_job(false, ", jobs_job_id, ");</script>");
 		return;
 	}
 
