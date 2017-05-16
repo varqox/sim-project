@@ -7,6 +7,58 @@
 using std::array;
 using std::string;
 
+Sim::UserPermissions Sim::users_get_permissions(StringView viewer_id,
+	UserType viewer_type, StringView uid, UserType utype)
+{
+	using PERM = UserPermissions;
+	constexpr UserPermissions PERM_ADMIN = PERM::VIEW | PERM::EDIT |
+		PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS | PERM::DELETE;
+
+	uint viewer = (uint8_t)viewer_type + (viewer_id != SIM_ROOT_UID);
+	if (viewer_id == uid) {
+		constexpr UserPermissions perm[4] = {
+			// SIM root
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::VIEW_ALL,
+			// Admin
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::DEMOTE |
+				PERM::DELETE | PERM::VIEW_ALL,
+			// Teacher
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::DEMOTE |
+				PERM::DELETE | PERM::VIEW_ALL,
+			// Normal
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::DELETE,
+		};
+		return perm[viewer];
+	}
+
+	uint user = (uint8_t)utype + (uid != SIM_ROOT_UID);
+	// Permission table [ viewer ][ user ]
+	constexpr UserPermissions perm[4][4] = {
+		{ // SIM root
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS, // SIM root
+			PERM_ADMIN | PERM::DEMOTE, // Admin
+			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::DEMOTE, // Teacher
+			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER // Normal
+		}, { // Admin
+			PERM::VIEW, // SIM root
+			PERM::VIEW, // Admin
+			PERM_ADMIN | PERM::DEMOTE, // Teacher
+			PERM_ADMIN | PERM::MAKE_TEACHER // Normal
+		}, { // Teacher
+			PERM::NONE, // SIM root
+			PERM::VIEW, // Admin
+			PERM::VIEW, // Teacher
+			PERM::VIEW // Normal
+		}, { // Normal
+			PERM::NONE, // SIM root
+			PERM::NONE, // Admin
+			PERM::NONE, // Teacher
+			PERM::NONE // Normal
+		}
+	};
+	return perm[viewer][user];
+}
+
 void Sim::login() {
 	STACK_UNWINDING_MARK;
 
@@ -201,54 +253,28 @@ void Sim::sign_up() {
 		"</div>");
 }
 
-#if 0
-uint User::getPermissions(const string& viewer_id, uint viewer_type,
-	const string& uid, uint utype)
-{
-	uint viewer = viewer_type + (viewer_id != SIM_ROOT_UID);
-	if (viewer_id == uid) {
-		constexpr uint perm[4] = {
-			// SIM root
-			PERM_VIEW | PERM_EDIT | PERM_CHANGE_PASS,
-			// Admin
-			PERM_VIEW | PERM_EDIT | PERM_CHANGE_PASS | PERM_DEMOTE |
-				PERM_DELETE,
-			// Teacher
-			PERM_VIEW | PERM_EDIT | PERM_CHANGE_PASS | PERM_DEMOTE |
-				PERM_DELETE,
-			// Normal
-			PERM_VIEW | PERM_EDIT | PERM_CHANGE_PASS | PERM_DELETE,
-		};
-		return perm[viewer];
+void Sim::users_handle() {
+	STACK_UNWINDING_MARK;
+
+	if (not session_open() or
+		uint(~users_get_viewer_permissions(session_user_id, session_user_type) &
+			UserPermissions::VIEW_ALL))
+	{
+		if (not session_is_open)
+			return redirect(concat_tostr("/login?", request.target));
+
+		return error403();
 	}
 
-	uint user = utype + (uid != SIM_ROOT_UID);
-	// Permission table [ viewer ][ user ]
-	constexpr uint perm[4][4] = {
-		{ // SIM root
-			PERM_VIEW | PERM_EDIT | PERM_CHANGE_PASS, // SIM root
-			PERM_ADMIN | PERM_DEMOTE, // Admin
-			PERM_ADMIN | PERM_MAKE_ADMIN | PERM_DEMOTE, // Teacher
-			PERM_ADMIN | PERM_MAKE_ADMIN | PERM_MAKE_TEACHER // Normal
-		}, { // Admin
-			PERM_VIEW, // SIM root
-			PERM_VIEW, // Admin
-			PERM_ADMIN | PERM_DEMOTE, // Teacher
-			PERM_ADMIN | PERM_MAKE_TEACHER // Normal
-		}, { // Teacher
-			0, // SIM root
-			PERM_VIEW, // Admin
-			PERM_VIEW, // Teacher
-			PERM_VIEW // Normal
-		}, { // Normal
-			0, // SIM root
-			0, // Admin
-			0, // Teacher
-			0 // Normal
-		}
-	};
-	return perm[viewer][user];
+	page_template("Users", "body{margin-left:30px}");
+	append("<h1>Users</h1>"
+		"<table class=\"users\"></table>"
+		"<script>"
+			"new UsersLister($('.users')).monitor_scroll();"
+		"</script>");
 }
+
+#if 0
 
 void User::userTemplate(StringView title, StringView styles, StringView scripts)
 {

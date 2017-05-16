@@ -17,7 +17,7 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 	using PERM = ProblemPermissions;
 
 	if (session_open()) {
-		if (session_user_type == UTYPE_ADMIN)
+		if (session_user_type == UserType::ADMIN)
 			return PERM::ADD | PERM::VIEW | PERM::VIEW_ALL |
 				PERM::VIEW_SOLUTIONS | PERM::DOWNLOAD | PERM::SEE_SIMFILE |
 				PERM::SEE_OWNER | PERM::ADMIN;
@@ -26,11 +26,15 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 		if (session_user_id == owner_id)
 			return PERM::VIEW | PERM::VIEW_SOLUTIONS | PERM::DOWNLOAD |
 				PERM::SEE_SIMFILE | PERM::SEE_OWNER | PERM::ADMIN |
-				(session_user_type == UTYPE_TEACHER ? PERM::ADD : PERM::NONE);
+				(session_user_type == UserType::TEACHER ? PERM::ADD
+					: PERM::NONE);
 
-		if (session_user_type == UTYPE_TEACHER && ptype == ProblemType::PUBLIC)
+		if (session_user_type == UserType::TEACHER and
+			ptype == ProblemType::PUBLIC)
+		{
 			return PERM::ADD | PERM::VIEW | PERM::VIEW_SOLUTIONS |
 				PERM::DOWNLOAD | PERM::SEE_SIMFILE | PERM::SEE_OWNER;
+		}
 	}
 
 	return (ptype == ProblemType::PUBLIC ? PERM::VIEW : PERM::NONE);

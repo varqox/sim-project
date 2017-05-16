@@ -6,7 +6,7 @@ void Sim::api_job() {
 	STACK_UNWINDING_MARK;
 	using JQT = JobQueueType;
 
-	if (!session_open())
+	if (not session_open())
 		return error403(); // Intentionally the whole template
 
 	jobs_job_id = url_args.extractNextArg();
@@ -20,7 +20,7 @@ void Sim::api_job() {
 	stmt.bindAndExecute(jobs_job_id);
 	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
 	if (not stmt.next())
-		return set_response("404 Not Found");
+		return api_error404();
 
 	jobs_perms = jobs_get_permissions(jcreator, JobQueueStatus(jstatus));
 
@@ -40,7 +40,7 @@ void Sim::api_job() {
 		return api_job_download_uploaded_package();
 
 	} else
-		return set_response("400 Bad Request");
+		return api_error400();
 }
 
 void Sim::api_job_cancel() {
@@ -48,13 +48,12 @@ void Sim::api_job_cancel() {
 	using PERM = JobPermissions;
 
 	if (request.method != server::HttpRequest::POST)
-		return set_response("400 Bad Request");
+		return api_error400();
 
 	if (uint(~jobs_perms & PERM::CANCEL)) {
 		if (uint(jobs_perms & PERM::VIEW))
-			return set_response("400 Bad Request",
-				"Job has already been canceled or done");
-		return set_response("403 Forbidden");
+			return api_error400("Job has already been canceled or done");
+		return api_error403();
 	}
 
 	// Cancel job
@@ -69,13 +68,12 @@ void Sim::api_job_restart(JobQueueType job_type, StringView job_info) {
 	using JQT = JobQueueType;
 
 	if (request.method != server::HttpRequest::POST)
-		return set_response("400 Bad Request");
+		return api_error400();
 
 	if (uint(~jobs_perms & PERM::RESTART)) {
 		if (uint(jobs_perms & PERM::VIEW))
-			return set_response("400 Bad Request",
-				"Job has already been restarted");
-		return set_response("403 Forbidden");
+			return api_error400("Job has already been restarted");
+		return api_error403();
 	}
 
 	/* Restart job */
@@ -152,8 +150,8 @@ static constexpr const char* job_type_str(JobQueueType type) noexcept {
 void Sim::api_jobs() {
 	STACK_UNWINDING_MARK;
 
-	if (!session_open())
-		return set_response("403 Forbidden");
+	if (not session_open())
+		return api_error403();
 
 	using PERM = JobPermissions;
 
@@ -195,7 +193,7 @@ void Sim::api_jobs() {
 		StringView arg_id = StringView{arg}.substr(1);
 
 		if (not isDigit(arg_id))
-			return set_response("400 Bad Request");
+			return api_error400();
 
 		// conditional
 		if (cond == '<' and ~mask & ID_COND) {
@@ -250,12 +248,12 @@ void Sim::api_jobs() {
 			mask |= AUX_ID_COND;
 
 		} else
-			return set_response("400 Bad Request");
+			return api_error400();
 
 	}
 
 	if (not allow_access)
-		return set_response("403 Forbidden");
+		return api_error403();
 
 	// Execute query
 	stmt =
@@ -328,7 +326,7 @@ void Sim::api_jobs() {
 			append("\"problem\":", jobs::extractDumpedString(x));
 			append(",\"submission\":", aux_id);
 
-			actions.append('R'); // download report
+			actions.append('R'); // Download report
 			break;
 		}
 
@@ -359,7 +357,7 @@ void Sim::api_jobs() {
 				append(",\"problem\":", aux_id);
 
 			// Add actions
-			actions.append('P'); // dropdown with report and uploaded package
+			actions.append('P'); // Download uploaded package
 
 			if (not is_aux_id_null)
 				actions.append('V'); // View problem

@@ -17,20 +17,22 @@ constexpr uintmax_t MAX_UID = 4294967295;
 #define SIM_ROOT_UID "1"
 
 // user_type - strongly used -> do not change!
-constexpr uint UTYPE_ADMIN = 0;
-constexpr uint UTYPE_TEACHER = 1;
-constexpr uint UTYPE_NORMAL = 2;
+enum class UserType : uint8_t {
+	ADMIN = 0,
+	TEACHER = 1,
+	NORMAL = 2
+};
 
 #define UTYPE_ADMIN_STR "0"
 #define UTYPE_TEACHER_STR "1"
 #define UTYPE_NORMAL_STR "2"
 
 static_assert(meta::equal(UTYPE_ADMIN_STR,
-	meta::ToString<UTYPE_ADMIN>::value), "Update the above #define");
+	meta::ToString<(int)UserType::ADMIN>::value), "Update the above #define");
 static_assert(meta::equal(UTYPE_TEACHER_STR,
-	meta::ToString<UTYPE_TEACHER>::value), "Update the above #define");
+	meta::ToString<(int)UserType::TEACHER>::value), "Update the above #define");
 static_assert(meta::equal(UTYPE_NORMAL_STR,
-	meta::ToString<UTYPE_NORMAL>::value), "Update the above #define");
+	meta::ToString<(int)UserType::NORMAL>::value), "Update the above #define");
 
 // Contest's users
 constexpr uint CU_MODE_CONTESTANT = 0;
