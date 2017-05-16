@@ -46,7 +46,7 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 
 			// Reset state
 			page_template_began = false;
-			notifications.size = 0;
+			notifications.clear();
 			session_is_open = false;
 			form_validation_error = false;
 
@@ -72,8 +72,8 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 			// else if (next_arg == "s")
 				// view_submission();
 
-			// else if (next_arg == "u")
-				// users_handle();
+			else if (next_arg == "u")
+				users_handle();
 
 			else if (next_arg == "")
 				main_page();
@@ -185,7 +185,7 @@ void Sim::static_file() {
 void Sim::view_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (!session_open() || session_user_type > UTYPE_ADMIN)
+	if (!session_open() || session_user_type > UserType::ADMIN)
 		return error403();
 
 	page_template("Logs", "body{margin-left:20px}");

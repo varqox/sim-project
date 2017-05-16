@@ -12,15 +12,19 @@ void Sim::api_handle() {
 		return api_job();
 	else if (next_arg == "jobs")
 		return api_jobs();
+	else if (next_arg == "user")
+		return api_user();
+	else if (next_arg == "users")
+		return api_users();
 	else
-		return set_response("404 Not Found");
+		return api_error404();
 }
 
 void Sim::api_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (!session_open() || session_user_type > UTYPE_ADMIN)
-		return set_response("403 Forbidden");
+	if (not session_open() || session_user_type != UserType::ADMIN)
+		return api_error403();
 
 	StringView type = url_args.extractNextArg();
 	CStringView filename;
@@ -33,13 +37,13 @@ void Sim::api_logs() {
 	else if (type == "jobs_err")
 		filename = JOB_SERVER_ERROR_LOG;
 	else
-		return set_response("404 Not Found");
+		return api_error404();
 
 	off64_t end_offset = 0;
 	StringView que = url_args.extractQuery();
 	if (que.size()) {
 		if (strtou(que, end_offset) == -1)
-			return set_response("400 Bad Request");
+			return api_error400();
 
 		// If overflow occurred
 		if (end_offset < 0)

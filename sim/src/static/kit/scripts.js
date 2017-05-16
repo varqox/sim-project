@@ -619,20 +619,18 @@ function Logs(type, elem) {
 	this.fetch_more();
 }
 
+var ActionsToHTML = {};
+(function() {
+	this.job = function(job_id, actions_str, problem_id, show_view_job = true) {
+		var res = [];
+		if (show_view_job)
+			res.push($('<a>', {
+				class: 'btn-small',
+				text: 'View job',
+				click: function() { preview_job(true, job_id); }
+			}));
 
-function job_actions_html(job_id, actions_str, problem_id, show_view_job = true) {
-	var res = [];
-	if (show_view_job)
-		res.push($('<a>', {
-			class: 'btn-small',
-			text: 'View job',
-			click: function() { preview_job(true, job_id); }
-		}));
-
-	for (var idx in actions_str) {
-		var c = actions_str[idx];
-
-		if (c == 'P' || c == 'R')
+		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('R') !== -1)
 			res.push($('<div>', {
 				class: 'dropmenu down',
 				html: $('<a>', {
@@ -642,21 +640,21 @@ function job_actions_html(job_id, actions_str, problem_id, show_view_job = true)
 					html: $('<a>', {
 						href: '/api/job/' + job_id + '/report',
 						text: 'Report'
-					}).add(c != 'P' ? '' : $('<a>', {
+					}).add(actions_str.indexOf('P') === -1 ? '' : $('<a>', {
 						href: '/api/job/' + job_id + '/uploaded-package',
 						text: 'Uploaded package'
 					}))
 				}))
 			}));
 
-		if (c == 'V')
+		if (actions_str.indexOf('V') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small green',
 				href: '/p/' + problem_id,
 				text: 'View problem'
 			}));
 
-		if (c == 'c')
+		if (actions_str.indexOf('c') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small red',
 				text: 'Cancel job',
@@ -666,7 +664,7 @@ function job_actions_html(job_id, actions_str, problem_id, show_view_job = true)
 				}()
 			}));
 
-		if (c == 'r')
+		if (actions_str.indexOf('r') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small orange',
 				text: 'Restart job',
@@ -675,10 +673,43 @@ function job_actions_html(job_id, actions_str, problem_id, show_view_job = true)
 					return function() { restartJob(jid); }
 				}()
 			}));
+
+		return res;
 	}
 
-	return res;
-};
+	this.user = function(user_id, actions_str, show_view_user = true) {
+		var res = [];
+		if (show_view_user && actions_str.indexOf('v') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small',
+				text: 'View',
+				click: function() { preview_user(true, user_id); }
+			}));
+
+		if (actions_str.indexOf('E') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small blue',
+				href: '/u/' + user_id + '/edit',
+				text: 'Edit'
+			}));
+
+		if (actions_str.indexOf('D') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small red',
+				href: '/u/' + user_id + '/delete',
+				text: 'Delete'
+			}));
+
+		if (actions_str.indexOf('P') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small orange',
+				href: '/u/' + user_id + '/change-password',
+				text: 'Change password'
+			}));
+
+		return res;
+	}
+}).call(ActionsToHTML);
 
 function preview_base(as_modal, ajax_url, success_handler, new_window_location) {
 	function impl(elem) {
@@ -759,8 +790,8 @@ function preview_job(as_modal, job_id) {
 				html: $('<h1>', {
 					text: 'Job ' + job_id
 				}).add('<div>', {
-					html: job_actions_html(job_id, data[8],
-						data[7].problem, false)
+					html: ActionsToHTML.job(job_id, data[8], data[7].problem,
+						false)
 				})
 			}).add('<table>', {
 				html: $('<thead>', {html: '<tr>' +
@@ -809,11 +840,9 @@ function preview_job(as_modal, job_id) {
 	}, '/jobs/' + job_id);
 }
 
-function Jobs(base_url, elem) {
-	this.base_url = base_url;
+function Lister(elem) {
 	this.elem = $(elem);
 	this.lock = false;
-	this.lower_job_id = undefined;
 
 	this.fetch_more = function() {
 		if (this.lock)
@@ -822,13 +851,104 @@ function Jobs(base_url, elem) {
 		this.lock = true;
 		append_loader(this.elem.parent());
 
-		var query = (this.lower_job_id === undefined ? ''
-			: '/<' + this.lower_job_id);
+		this.fetch_more_impl();
+	}
 
-		var jobs = this;
+	this.monitor_scroll = function() {
+		var obj = this;
+		$(window).on('scroll resize', function() {
+			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300) {
+				obj.fetch_more();
+			}
+		});
+	};
+
+	this.get_error_handler = function() {
+		var obj = this;
+		return function(resp) {
+			show_error_via_loader(obj.elem.parent(), resp,
+				function () {
+					obj.lock = false;
+					obj.fetch_more();
+				});
+		};
+	}
+}
+
+function UsersLister(elem) {
+	Lister.call(this, elem);
+	this.query_suffix = '';
+
+	this.fetch_more_impl = function() {
+		var obj = this;
 		$.ajax({
 			type: 'GET',
-			url: jobs.base_url + query,
+			url: '/api/users' + obj.query_suffix,
+			dataType: 'json',
+			success: function(data) {
+				if (elem.children('thead').length === 0)
+					elem.html('<thead><tr>' +
+							'<th class="uid">Id</th>' +
+							'<th class="username">Username</th>' +
+							'<th class="first-name">First name</th>' +
+							'<th class="last-name">Last name</th>' +
+							'<th class="email">Email</th>' +
+							'<th class="type">Type</th>' +
+							'<th class="actions">Actions</th>' +
+						'</tr></thead><tbody></tbody>');
+
+				for (x in data) {
+					x = data[x];
+					obj.query_suffix = '/>' + x[0];
+
+					var row = $('<tr>');
+					row.append($('<td>', {text: x[0]}));
+					row.append($('<td>', {text: x[1]}));
+					row.append($('<td>', {text: x[2]}));
+					row.append($('<td>', {text: x[3]}));
+					row.append($('<td>', {text: x[4]}));
+					row.append($('<td>', {
+						class: x[5],
+						text: String(x[5]).slice(0, 1).toUpperCase() +
+							String(x[5]).slice(1)
+					}));
+
+					// Actions
+					row.append($('<td>', {
+						html: ActionsToHTML.user(x[0], x[6])
+					}));
+
+					obj.elem.children('tbody').append(row);
+				}
+
+				remove_loader(elem.parent());
+
+				if (data.length == 0)
+					return; // No more data to load
+
+				obj.lock = false;
+				if ($(document).height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
+				}
+			},
+			error: obj.get_error_handler()
+		});
+	}
+
+	this.fetch_more();
+}
+
+function JobsLister(show_all_jobs, elem) {
+	Lister.call(this, elem);
+	this.query_url = '/api/jobs' + (show_all_jobs ? '' : '/my');
+	this.query_suffix = '';
+
+	this.fetch_more_impl = function() {
+		var obj = this;
+		$.ajax({
+			type: 'GET',
+			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
 				if (elem.children('thead').length === 0)
@@ -841,9 +961,10 @@ function Jobs(base_url, elem) {
 							'<th class="info">Info</th>' +
 							'<th class="actions">Actions</th>' +
 						'</tr></thead><tbody></tbody>');
+
 				for (x in data) {
 					x = data[x];
-					jobs.lower_job_id = x[0];
+					obj.query_suffix = '/<' + x[0];
 
 					var row = $('<tr>');
 					row.append($('<td>', {text: x[2]}));
@@ -901,39 +1022,24 @@ function Jobs(base_url, elem) {
 
 					// Actions
 					row.append($('<td>', {
-						html: job_actions_html(x[0], x[8], info.problem)
+						html: ActionsToHTML.job(x[0], x[8], info.problem)
 					}));
 
-					jobs.elem.children('tbody').append(row);
+					obj.elem.children('tbody').append(row);
 				}
 
-				remove_loader(jobs.elem.parent());
+				remove_loader(obj.elem.parent());
 
-				// Load more jobs if scrolling up did not become possible
-				if (data.length > 0) {
-					jobs.lock = false;
-					if ($(document).height() - $(window).height() <= 300) {
-						// avoid recursion
-						setTimeout(function(){ jobs.fetch_more(); }, 0);
-					}
+				if (data.length == 0)
+					return; // No more data to load
+
+				obj.lock = false;
+				if ($(document).height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
 				}
 			},
-			error: function(resp) {
-				show_error_via_loader(jobs.elem.parent(), resp,
-					function () {
-						jobs.lock = false;
-						jobs.fetch_more();
-					});
-			}
-		});
-	};
-
-	this.monitor_scroll = function() {
-		var jobs = this;
-		$(window).on('scroll resize', function() {
-			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300) {
-				jobs.fetch_more();
-			}
+			error: obj.get_error_handler()
 		});
 	};
 

@@ -59,10 +59,51 @@ private:
 	static std::string submission_status_css_class(SubmissionStatus status,
 		bool show_final);
 
+
+	/* ================================ API ================================ */
+
+	void api_error400(std::string response_body = {}) {
+		set_response("400 Bad Request", response_body);
+	}
+
+	void api_error403(std::string response_body = {}) {
+		set_response("403 Forbidden", response_body);
+	}
+
+	void api_error404(std::string response_body = {}) {
+		set_response("404 Not Found", response_body);
+	}
+
+	void api_handle();
+
+	void api_logs();
+
+	void api_job();
+
+	void api_job_restart(JobQueueType job_type, StringView job_info);
+
+	void api_job_cancel();
+
+	void api_job_download_report();
+
+	void api_job_download_uploaded_package();
+
+	void api_jobs();
+
+	void api_user();
+
+	void api_users();
+
+	void api_list_problems();
+
+	void api_change_submission_type_to();
+
+	void api_list_submissions();
+
 	/* ============================== Session ============================== */
 
 	bool session_is_open = false;
-	uint8_t session_user_type = UTYPE_NORMAL;
+	UserType session_user_type = UserType::NORMAL;
 	InplaceBuff<SESSION_ID_LEN + 1> session_id;
 	InplaceBuff<SESSION_CSRF_TOKEN_LEN + 1> session_csrf_token;
 	InplaceBuff<30> session_user_id;
@@ -284,11 +325,11 @@ private:
 		CHANGE_PASS = 4,
 		ADMIN_CHANGE_PASS = 8,
 		DELETE = 16,
-		ADMIN = 31,
 
-		MAKE_ADMIN = 32,
-		MAKE_TEACHER = 64,
-		DEMOTE = 128
+		VIEW_ALL = 32,
+		MAKE_ADMIN = 64,
+		MAKE_TEACHER = 128,
+		DEMOTE = 256
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~)
@@ -307,16 +348,21 @@ private:
 	 * @brief Returns a set of operation the viewer is allowed to do over the
 	 *   user
 	 *
+	 * @details To check VIEW_ALL permission @p viewer_id must be equal to
+	 *   @p uid
+	 *
 	 * @param viewer_id uid of viewer
 	 * @param viewer_type user_type of viewer
 	 * @param uid uid of (viewed) user
 	 * @param utype type of (viewed) user
 	 * @return ORed permissions flags
 	 */
-	static uint users_get_permissions(StringView viewer_id, uint viewer_type,
-		StringView uid, uint utype);
+	static Sim::UserPermissions users_get_permissions(StringView viewer_id,
+		UserType viewer_type, StringView uid, UserType utype);
 
-	uint users_get_viewer_permissions(StringView uid, uint utype) {
+	Sim::UserPermissions users_get_viewer_permissions(StringView uid,
+		UserType utype)
+	{
 		return users_get_permissions(session_user_id, session_user_type, uid,
 			utype);
 	}
@@ -376,6 +422,103 @@ private:
 	void users_print_user_submissions(uint limit = 0);
 
 	void users_user_submissions();
+
+	/* ============================= Job queue ============================= */
+
+	enum class JobPermissions : uint {
+		NONE = 0,
+		VIEW = 1, // allowed to view the job
+		VIEW_ALL = 2, // allowed to view all the jobs
+		CANCEL = 4,
+		RESTART = 8
+	};
+
+	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(JobPermissions, |)
+	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
+
+	InplaceBuff<30> jobs_job_id;
+	JobPermissions jobs_perms = JobPermissions::NONE;
+
+	// Session must be open to access the jobs
+	JobPermissions jobs_get_permissions(StringView creator_id,
+		JobQueueStatus job_status);
+
+	void jobs_page_template(StringView title, StringView styles = {},
+		StringView scripts = {})
+	{
+		STACK_UNWINDING_MARK;
+		page_template(title, concat("body{margin-left:32px}", styles), scripts);
+	}
+
+	/// Main Jobs handler
+	void jobs_handle();
+
+	/* ============================== Problems ============================== */
+
+	enum class ProblemPermissions : uint {
+		NONE = 0,
+		VIEW = 1,
+		VIEW_ALL = 2,
+		VIEW_SOLUTIONS = 4,
+		DOWNLOAD = 8,
+		SEE_SIMFILE = 16,
+		SEE_OWNER = 32,
+		ADMIN = 64,
+		ADD = 128
+	};
+
+	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |)
+	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &)
+
+	ProblemPermissions problems_get_permissions(StringView owner_id,
+		ProblemType ptype);
+
+	ProblemPermissions problems_perms = ProblemPermissions::NONE;
+	UserType problems_owner_utype = UserType::NORMAL;
+	std::string problems_owner_username;
+	std::string problems_problem_id;
+	std::string problems_problem_name;
+	std::string problems_problem_label;
+	std::string problems_problem_owner;
+	std::string problems_problem_added;
+	std::string problems_problem_simfile;
+	ProblemType problems_problem_type = ProblemType::VOID;
+
+	void problems_page_template(StringView title, StringView styles = {},
+		StringView scripts = {});
+
+	/// Main Problemset handler
+	void problems_handle();
+
+	/// WARNING: this function assumes that the user is allowed to view the
+	/// statement
+	void problems_view_statement(StringView problem_id);
+
+	void problems_add_problem();
+
+	void problems_view_problem();
+
+	void problems_edit_problem();
+
+	void problems_download_problem();
+
+	void problems_reupload_problem();
+
+	void problems_rejudge_problem_submissions();
+
+	void problems_delete_problem();
+
+	void problems_problem_solutions();
+
+	void problems_delete_submission(StringView submission_id,
+		StringView submission_owner);
+
+	void problems_change_submission_type_to(StringView submission_id,
+		StringView submission_owner, SubmissionType stype);
+
+	void problems_problem_submissions();
 
 	/* ============================== Contest ============================== */
 
@@ -491,127 +634,6 @@ private:
 	void contest_file();
 
 	void contest_files(bool admin_view);
-
-	/* ============================= Job queue ============================= */
-
-	enum class JobPermissions : uint {
-		NONE = 0,
-		VIEW = 1, // allowed to view the job
-		VIEW_ALL = 2, // allowed to view all the jobs
-		CANCEL = 4,
-		RESTART = 8
-	};
-
-	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(JobPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
-
-	InplaceBuff<30> jobs_job_id;
-	JobPermissions jobs_perms = JobPermissions::NONE;
-
-	// Session must be open to access the jobs
-	JobPermissions jobs_get_permissions(StringView creator_id,
-		JobQueueStatus job_status);
-
-	void jobs_page_template(StringView title, StringView styles = {},
-		StringView scripts = {})
-	{
-		STACK_UNWINDING_MARK;
-		page_template(title, concat("body{margin-left:32px}", styles), scripts);
-	}
-
-	/// Main Jobs handler
-	void jobs_handle();
-
-	/* ============================== Problems ============================== */
-
-	enum class ProblemPermissions : uint {
-		NONE = 0,
-		VIEW = 1,
-		VIEW_ALL = 2,
-		VIEW_SOLUTIONS = 4,
-		DOWNLOAD = 8,
-		SEE_SIMFILE = 16,
-		SEE_OWNER = 32,
-		ADMIN = 64,
-		ADD = 128
-	};
-
-	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &)
-
-	ProblemPermissions problems_get_permissions(StringView owner_id,
-		ProblemType ptype);
-
-	ProblemPermissions problems_perms = ProblemPermissions::NONE;
-	uint problems_owner_utype = UTYPE_NORMAL;
-	std::string problems_owner_username;
-	std::string problems_problem_id;
-	std::string problems_problem_name;
-	std::string problems_problem_label;
-	std::string problems_problem_owner;
-	std::string problems_problem_added;
-	std::string problems_problem_simfile;
-	ProblemType problems_problem_type = ProblemType::VOID;
-
-	void problems_page_template(StringView title, StringView styles = {},
-		StringView scripts = {});
-
-	/// Main Problemset handler
-	void problems_handle();
-
-	/// Warning: this function assumes that the user is allowed to view the
-	/// statement
-	void problems_view_statement(StringView problem_id);
-
-	void problems_add_problem();
-
-	void problems_view_problem();
-
-	void problems_edit_problem();
-
-	void problems_download_problem();
-
-	void problems_reupload_problem();
-
-	void problems_rejudge_problem_submissions();
-
-	void problems_delete_problem();
-
-	void problems_problem_solutions();
-
-	void problems_delete_submission(StringView submission_id,
-		StringView submission_owner);
-
-	void problems_change_submission_type_to(StringView submission_id,
-		StringView submission_owner, SubmissionType stype);
-
-	void problems_problem_submissions();
-
-	/* ================================ API ================================ */
-
-	void api_handle();
-
-	void api_logs();
-
-	void api_job();
-
-	void api_job_restart(JobQueueType job_type, StringView job_info);
-
-	void api_job_cancel();
-
-	void api_job_download_report();
-
-	void api_job_download_uploaded_package();
-
-	void api_jobs();
-
-	void api_list_problems();
-
-	void api_change_submission_type_to();
-
-	void api_list_submissions();
 
 	/* =============================== Other =============================== */
 

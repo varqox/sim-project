@@ -1582,6 +1582,10 @@ table.contest-users td {
 	line-height: 20px;
 	border-top: 1px solid #bbb;
 }
+table.users tr > td:first-child,
+table.contest-users tr > td:first-child {
+	text-align: right;
+}
 table.users tr > td:last-child,
 table.contest-users tr > td:last-child {
 	white-space: pre;
