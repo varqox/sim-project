@@ -160,7 +160,6 @@ void Sim::api_jobs() {
 	StringView next_arg = url_args.extractNextArg();
 	bool select_data = false;
 
-	InplaceArray<InplaceBuff<30>, 5> to_bind;
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
 			" j.info, j.creator, u.username");
@@ -175,8 +174,6 @@ void Sim::api_jobs() {
 	// Request for all jobs
 	} else
 		allow_access &= bool(uint(jobs_perms & PERM::VIEW_ALL));
-
-	MySQL::Statement<> stmt;
 
 	// Process restrictions
 	for (uint i = 0, mask = 0;
@@ -215,7 +212,7 @@ void Sim::api_jobs() {
 		} else if (cond == 'p' and ~mask & AUX_ID_COND) {
 			// Check permissions - they may be granted
 			if (not allow_access) {
-				stmt = mysql.prepare("SELECT owner, type FROM problems"
+				auto stmt = mysql.prepare("SELECT owner, type FROM problems"
 					" WHERE id=?");
 				stmt.bindAndExecute(arg_id);
 
@@ -230,7 +227,7 @@ void Sim::api_jobs() {
 				}
 			}
 
-			qwhere.append(" AND j.aux_id=? AND j.type IN("
+			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type IN("
 				JQTYPE_ADD_PROBLEM_STR ","
 				JQTYPE_ADD_JUDGE_MODEL_SOLUTION_STR ","
 				JQTYPE_REUPLOAD_PROBLEM_STR ","
@@ -238,15 +235,13 @@ void Sim::api_jobs() {
 				JQTYPE_DELETE_PROBLEM_STR ","
 				JQTYPE_EDIT_PROBLEM_STR ")");
 
-			to_bind.emplace_back(arg_id);
 			mask |= AUX_ID_COND;
 
 		// submission
 		} else if (cond == 's' and ~mask & AUX_ID_COND) {
-			qwhere.append(" AND j.aux_id=? AND j.type="
+			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type="
 				JQTYPE_JUDGE_SUBMISSION_STR);
 
-			to_bind.emplace_back(arg_id);
 			mask |= AUX_ID_COND;
 
 		} else
@@ -258,45 +253,18 @@ void Sim::api_jobs() {
 		return api_error403();
 
 	// Execute query
-	stmt =
-		mysql.prepare(concat(qfields, qwhere, " ORDER BY j.id DESC LIMIT 50"));
-
-	for (uint i = 0; i < to_bind.size(); ++i)
-		stmt.bind(i, to_bind[i]);
-	stmt.fixBinds();
-	stmt.execute();
+	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT 50");
+	auto res = mysql.query(qfields);
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
-	uint8_t jtype, jstatus;
-	my_bool is_aux_id_null, is_creator_null;
-	InplaceBuff<30> job_id, added, jpriority, aux_id, creator;
-	InplaceBuff<512> jinfo;
-	InplaceBuff<USERNAME_MAX_LEN> cusername;
-	InplaceBuff<REPORT_PREVIEW_MAX_LENGTH> report_preview;
+	while (res.next()) {
+		JobQueueType job_type {JobQueueType(strtoull(res[2]))};
+		JobQueueStatus job_status {JobQueueStatus(strtoull(res[3]))};
 
-	stmt.res_bind(0, job_id);
-	stmt.res_bind(1, added);
-	stmt.res_bind(2, jtype);
-	stmt.res_bind(3, jstatus);
-	stmt.res_bind(4, jpriority);
-	stmt.res_bind(5, aux_id);
-	stmt.res_bind_isnull(5, is_aux_id_null);
-	stmt.res_bind(6, jinfo);
-	stmt.res_bind(7, creator);
-	stmt.res_bind_isnull(7, is_creator_null);
-	stmt.res_bind(8, cusername);
-	if (select_data)
-		stmt.res_bind(9, report_preview);
-	stmt.resFixBinds();
-
-	while (stmt.next()) {
-		JobQueueType job_type {JobQueueType(jtype)};
-		JobQueueStatus job_status {JobQueueStatus(jstatus)};
-
-		append("\n[", job_id, ',',
-			jsonStringify(added), ","
+		append("\n[", res[0], ',', // job_id
+			jsonStringify(res[1]), "," // added
 			"\"", job_type_str(job_type), "\",");
 
 		// Status: (CSS class, text)
@@ -310,13 +278,13 @@ void Sim::api_jobs() {
 			append("[\"blue\",\"Cancelled\"],"); break;
 		}
 
-		append(jpriority, ',');
+		append(res[4], ','); // priority
 
 		// Creator
-		if (is_creator_null)
+		if (res.isNull(7))
 			append("null,null,");
 		else
-			append(creator, ",\"", cusername, "\",");
+			append(res[7], ",\"", res[8], "\","); // creator, username
 
 		// Additional info
 		InplaceBuff<10> actions;
@@ -324,9 +292,9 @@ void Sim::api_jobs() {
 
 		switch (job_type) {
 		case JobQueueType::JUDGE_SUBMISSION: {
-			StringView x {jinfo};
-			append("\"problem\":", jobs::extractDumpedString(x));
-			append(",\"submission\":", aux_id);
+			StringView info {res[6]};
+			append("\"problem\":", jobs::extractDumpedString(info));
+			append(",\"submission\":", res[5]); // aux_id
 
 			actions.append('R'); // Download report
 			break;
@@ -336,7 +304,7 @@ void Sim::api_jobs() {
 		case JobQueueType::REUPLOAD_PROBLEM:
 		case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
 		case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
-			jobs::AddProblemInfo info {jinfo};
+			jobs::AddProblemInfo info {res[6]};
 			append("\"make public\":", info.make_public ?
 				"\"yes\"" : "\"no\"");
 
@@ -355,14 +323,13 @@ void Sim::api_jobs() {
 				",\"ignore simfile\":", info.ignore_simfile ?
 					"\"yes\"" : "\"no\"");
 
-			if (not is_aux_id_null)
-				append(",\"problem\":", aux_id);
-
-			// Add actions
-			actions.append('P'); // Download uploaded package
-
-			if (not is_aux_id_null)
+			if (not res.isNull(5)) {
+				// aux_id
+				append(",\"problem\":", res[5]);
 				actions.append('V'); // View problem
+			}
+
+			actions.append('P'); // Download uploaded package
 			break;
 		}
 
@@ -375,7 +342,8 @@ void Sim::api_jobs() {
 		// Append what buttons to show
 		append('"', actions);
 
-		auto job_perms = jobs_get_permissions(creator, job_status);
+		// res[7] = creator
+		auto job_perms = jobs_get_permissions(res[7], job_status);
 		if (uint(job_perms & PERM::CANCEL))
 			append('c');
 		if (uint(job_perms & PERM::RESTART))
@@ -384,8 +352,8 @@ void Sim::api_jobs() {
 
 		// Append report preview (whether there is more to load, data)
 		if (select_data)
-			append(",[", report_preview.size > REPORT_PREVIEW_MAX_LENGTH, ',',
-				jsonStringify(report_preview), ']');
+			append(",[", res[9].size() > REPORT_PREVIEW_MAX_LENGTH, ',',
+				jsonStringify(res[9]), ']'); // report preview
 
 		append("],");
 	}
