@@ -403,25 +403,11 @@ private:
 
 	void sign_up();
 
-	void users_list_users();
-
-	void users_change_password();
-
-	void users_user_profile();
-
-	void users_edit_profile();
-
-	void users_delete_account();
-
-	/**
-	 * @brief Prints submissions table
-	 *
-	 * @param limit the maximum number of submissions in the table, 0 means
-	 *   infinity (no limit)
-	 */
-	void users_print_user_submissions(uint limit = 0);
+	void users_user();
 
 	void users_user_submissions();
+
+	void users_user_problems();
 
 	/* ============================= Job queue ============================= */
 
