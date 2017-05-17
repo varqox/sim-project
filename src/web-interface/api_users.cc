@@ -28,8 +28,6 @@ void Sim::api_users() {
 		query.append(" WHERE id!=" SIM_ROOT_UID);
 	}
 
-	MySQL::Statement<> stmt;
-
 	auto arg = decodeURI(url_args.extractNextArg());
 	if (arg.size) {
 		char cond = arg[0];
@@ -55,37 +53,27 @@ void Sim::api_users() {
 		return api_error403();
 
 	query.append(" ORDER BY id LIMIT 50");
-	stmt = mysql.prepare(query);
-	stmt.execute();
+	auto res = mysql.query(query);
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
-	uint8_t utype;
-	InplaceBuff<30> uid;
-	InplaceBuff<USERNAME_MAX_LEN> username;
-	InplaceBuff<USER_FIRST_NAME_MAX_LEN> first_name;
-	InplaceBuff<USER_LAST_NAME_MAX_LEN> last_name;
-	InplaceBuff<USER_EMAIL_MAX_LEN> email;
+	while (res.next()) {
+		append("\n[", res[0], ',', // id
+			jsonStringify(res[1]), ',', // username
+			jsonStringify(res[2]), ',', // first_name
+			jsonStringify(res[3]), ',', // last_name
+			jsonStringify(res[4]), ','); // email
 
-	stmt.res_bind_all(uid, username, first_name, last_name, email, utype);
-
-	while (stmt.next()) {
-		append("\n[", uid, ',',
-			jsonStringify(username), ',',
-			jsonStringify(first_name), ',',
-			jsonStringify(last_name), ',',
-			jsonStringify(email), ',');
-
-		switch (UserType(utype)) {
+		UserType utype {UserType(strtoull(res[5]))};
+		switch (utype) {
 		case UserType::ADMIN: append("\"admin\","); break;
 		case UserType::TEACHER: append("\"teacher\","); break;
 		case UserType::NORMAL: append("\"normal\","); break;
 		}
 
 		// Allowed actions
-		UserPermissions perms = users_get_viewer_permissions(uid,
-			UserType(utype));
+		UserPermissions perms = users_get_viewer_permissions(res[0], utype);
 		append('"');
 
 		if (uint(perms & PERM::VIEW))
