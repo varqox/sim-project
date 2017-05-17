@@ -5,26 +5,6 @@ function hex2str(hexx) {
 		str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
 	return str;
 }
-
-// Clock
-$(document).ready(function updateClock() {
-	if (updateClock.time_difference === undefined)
-		updateClock.time_difference = window.performance.timing.responseStart - start_time;
-
-	var time = new Date();
-	time.setTime(time.getTime() - updateClock.time_difference);
-	var hours = time.getHours();
-	var minutes = time.getMinutes();
-	var seconds = time.getSeconds();
-	hours = (hours < 10 ? '0' : '') + hours;
-	minutes = (minutes < 10 ? '0' : '') + minutes;
-	seconds = (seconds < 10 ? '0' : '') + seconds;
-	// Update the displayed time
-	var tzo = -time.getTimezoneOffset();
-	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');
-	setTimeout(updateClock, 1000 - time.getMilliseconds());
-});
-
 // Dropdowns
 $(document).ready(function(){
 	$(document).click(function(event) {
@@ -41,6 +21,17 @@ $(document).ready(function(){
 	});
 });
 
+function tz_marker() {
+	var tzo = -(new Date()).getTimezoneOffset();
+	return String().concat('<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60,
+		'</sup>');
+}
+
+function add_tz_marker(elem) {
+	elem = $(elem);
+	elem.children('sup').remove();
+	elem.append(tz_marker);
+}
 // Converts datetimes to local
 function normalize_datetime(elem, add_tz) {
 	elem = $(elem);
@@ -66,29 +57,35 @@ function normalize_datetime(elem, add_tz) {
 	// Add the timezone part
 	elem.html(String().concat(time.getFullYear(), '-', month, '-', day,
 		' ', hours, ':', minutes, ':', seconds));
-	if (add_tz) {
-		var tzo = -(new Date()).getTimezoneOffset();
-		elem.append(String().concat('<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60,
-			'</sup>'));
-	}
+	if (add_tz)
+		elem.append(tz_marker());
 
 	return elem;
 };
 
 $(document).ready(function() {
 	// Converts datetimes
-	var tzo = -(new Date()).getTimezoneOffset();
 	$('*[datetime]').each(function() {
 		normalize_datetime($(this),
 			$(this).parents('.submissions, .problems, .jobs, .files').length == 0);
 	});
+});
+// Clock
+$(document).ready(function updateClock() {
+	if (updateClock.time_difference === undefined)
+		updateClock.time_difference = window.performance.timing.responseStart - start_time;
 
-	// Give timezone info in the submissions and problems table
-	$('.submissions th.time, .problems th.added, .jobs th.added, .files th.time') .each(function() {
-		$(this).children().remove();
-		$(this).append(String().concat(
-			'<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>'));
-	});
+	var time = new Date();
+	time.setTime(time.getTime() - updateClock.time_difference);
+	var hours = time.getHours();
+	var minutes = time.getMinutes();
+	var seconds = time.getSeconds();
+	hours = (hours < 10 ? '0' : '') + hours;
+	minutes = (minutes < 10 ? '0' : '') + minutes;
+	seconds = (seconds < 10 ? '0' : '') + seconds;
+	// Update the displayed time
+	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, tz_marker());
+	setTimeout(updateClock, 1000 - time.getMilliseconds());
 });
 // Handle navbar correct size
 function normalizeNavbar() {
@@ -939,9 +936,9 @@ function UsersLister(elem) {
 	this.fetch_more();
 }
 
-function JobsLister(show_all_jobs, elem) {
+function JobsLister(elem, query_suffix = '') {
 	Lister.call(this, elem);
-	this.query_url = '/api/jobs' + (show_all_jobs ? '' : '/my');
+	this.query_url = '/api/jobs' + query_suffix;
 	this.query_suffix = '';
 
 	this.fetch_more_impl = function() {
@@ -951,16 +948,18 @@ function JobsLister(show_all_jobs, elem) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0)
+				if (elem.children('thead').length === 0) {
 					elem.html('<thead><tr>' +
 							'<th class="type">Type</th>' +
 							'<th class="priority">Priority</th>' +
-							'<th class="added">Added<sup>UTC</sup></th>' +
+							'<th class="added">Added</th>' +
 							'<th class="status">Status</th>' +
 							'<th class="owner">Owner</th>' +
 							'<th class="info">Info</th>' +
 							'<th class="actions">Actions</th>' +
 						'</tr></thead><tbody></tbody>');
+					add_tz_marker(elem.find('thead th.added'));
+				}
 
 				for (x in data) {
 					x = data[x];
