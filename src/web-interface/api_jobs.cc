@@ -158,7 +158,7 @@ void Sim::api_jobs() {
 	// Get permissions to the overall job queue
 	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
 	StringView next_arg = url_args.extractNextArg();
-	bool my_jobs = false, select_data = false;
+	bool select_data = false;
 
 	InplaceArray<InplaceBuff<30>, 5> to_bind;
 	InplaceBuff<512> qfields, qwhere;
@@ -171,9 +171,7 @@ void Sim::api_jobs() {
 	// Request only for user's jobs
 	if (next_arg == "my") {
 		next_arg = url_args.extractNextArg();
-		qwhere.append(" AND creator=?");
-		to_bind.emplace_back(session_user_id);
-		my_jobs = true;
+		qwhere.append(" AND creator=", session_user_id);
 	// Request for all jobs
 	} else
 		allow_access &= bool(uint(jobs_perms & PERM::VIEW_ALL));
@@ -197,16 +195,20 @@ void Sim::api_jobs() {
 
 		// conditional
 		if (cond == '<' and ~mask & ID_COND) {
-			qwhere.append(" AND j.id<?");
-			to_bind.emplace_back(arg_id);
+			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
 		} else if (cond == '=' and ~mask & ID_COND) {
+			if (not allow_access) {
+				// If user cannot view all jobs, allow they to view his jobs
+				allow_access = true;
+				qwhere.append(" AND creator=", session_user_id);
+			}
+
 			qfields.append(", SUBSTR(data, 1, ",
 				meta::ToString<REPORT_PREVIEW_MAX_LENGTH + 1>{}, ')');
 			select_data = true;
-			qwhere.append(" AND j.id=?");
-			to_bind.emplace_back(arg_id);
+			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
 		// problem
@@ -373,8 +375,7 @@ void Sim::api_jobs() {
 		// Append what buttons to show
 		append('"', actions);
 
-		auto job_perms = jobs_get_permissions(my_jobs ? session_user_id
-			: creator, job_status);
+		auto job_perms = jobs_get_permissions(creator, job_status);
 		if (uint(job_perms & PERM::CANCEL))
 			append('c');
 		if (uint(job_perms & PERM::RESTART))

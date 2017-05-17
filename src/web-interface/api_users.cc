@@ -11,12 +11,12 @@ void Sim::api_users() {
 
 	using PERM = UserPermissions;
 
-	if (not session_open() or
-		uint(~users_get_viewer_permissions(session_user_id, session_user_type) &
-			PERM::VIEW_ALL))
-	{
+	if (not session_open())
 		return api_error403();
-	}
+
+	bool allow_access =
+		uint(users_get_viewer_permissions(session_user_id, session_user_type) &
+			PERM::VIEW_ALL);
 
 	InplaceBuff<256> query;
 	query.append("SELECT id, username, first_name, last_name, email, type"
@@ -33,23 +33,30 @@ void Sim::api_users() {
 	auto arg = decodeURI(url_args.extractNextArg());
 	if (arg.size) {
 		char cond = arg[0];
-		if (!isIn(cond, ">="))
+		StringView arg_id = StringView{arg}.substr(1);
+
+		if (not isDigit(arg_id))
+			return api_error400();
+
+		if (cond == '=') {
+			if (not allow_access)
+				// Allow selecting the user's data
+				allow_access = (arg_id == session_user_id);
+		} else if (cond != '>')
 			return api_error400();
 
 		if (where_added)
-			query.append(" AND id", cond, '?');
+			query.append(" AND id", arg);
 		else
-			query.append(" WHERE id", cond, '?');
-
-		query.append(" ORDER BY id LIMIT 50");
-		stmt = mysql.prepare(query);
-		stmt.bindAndExecute(StringView{arg}.substr(1));
-
-	} else {
-		query.append(" ORDER BY id LIMIT 50");
-		stmt = mysql.prepare(query);
-		stmt.execute();
+			query.append(" WHERE id", arg);
 	}
+
+	if (not allow_access)
+		return api_error403();
+
+	query.append(" ORDER BY id LIMIT 50");
+	stmt = mysql.prepare(query);
+	stmt.execute();
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
