@@ -146,7 +146,7 @@ $(function() {
 	$('form').submit(function() { addCsrfTokenTo($(this)); });
 });
 
-// Modal
+/* ================================= Modals ================================= */
 $(document).click(function(event) {
 	var elem;
 
@@ -254,163 +254,141 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 		})))
 	});
 }
-function changeSubmissionType(submission_id, stype) {
-	modalForm('Change submission type',
-		$('<div>', {
-			html: $('<label>', {
-				text: 'New submission type: '
-			}).add('<select>', {
-				name: 'stype',
-				html: $('<option>', {
-					value: 'n/f',
-					text: 'Normal / final',
-					selected: (stype === 'n/f')
-				}).add('<option>', {
-					value: 'i',
-					text: 'Ignored',
-					selected: (stype === 'i')
-				})
-			})
-		}).add(modalFormSubmitButton('Change type',
-			'/s/' + submission_id + '/change-type',
-			'Submission type has been changed.'))
-	);
+
+/* ================================= Loader ================================= */
+function remove_loader(elem) {
+	$(elem).children('.loader, .loader-info').remove();
 }
-function rejudgeSubmission(submission_id) {
-	modalForm('Rejudge submission ' + submission_id);
-	sendModalFrom('/s/' + submission_id + '/rejudge',
-		'Rejudge of the submission was added to the job queue.')
+function append_loader(elem) {
+	remove_loader(elem);
+	elem = $(elem);
+	if (elem[0].style.animationName === undefined &&
+		elem[0].style.WebkitAnimationName === undefined)
+	{
+		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
+	} else
+		$(elem).append($('<span>', {
+			class: 'loader',
+			html: $('<div>', {class: 'spinner'})
+		}));
 }
-function rejudgeProblemSubmissions(problem_id) {
-	modalForm('Rejudge submissions to the problem ' + problem_id,
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to rejudge all the submissions to the problem <a href="/p/' + problem_id +
-					'">' + problem_id + '</a>?',
-			})
-		}).add(modalFormSubmitButton('Rejudge submissions',
-			'/p/' + problem_id + '/rejudge',
-			'Rejudge of the submissions was added to the job queue', 'blue',
-			'No, go back'))
-	);
-}
-function rejudgeRoundSubmissions(round_id) {
-	modalForm('Rejudge submissions in the round',
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to rejudge all the submissions in the round <a href="/c/' + round_id +
-					'">' + round_id + '</a>?',
-			})
-		}).add(modalFormSubmitButton('Rejudge submissions',
-			'/c/' + round_id + '/edit/rejudge',
-			'Rejudge of the submissions was added to the job queue', 'blue',
-			'No, go back'))
-	);
+function show_error_via_loader(elem, response, try_again_handler) {
+	elem = $(elem);
+	remove_loader(elem);
+	elem.append($('<span>', {
+		class: 'loader-info',
+		html: $('<span>', {
+			text: "Error: " + response.status + ' ' + response.statusText
+		}).add(try_again_handler === undefined ? '' : $('<a>', {
+			text: 'Try again',
+			click: try_again_handler
+		}))
+	}));
+
+	// Additional message
+	var x = elem.children('.loader > span');
+	try {
+		var xml = $.parseXML(response.responseText);
+		var msg = $(xml).text();
+
+		if (msg != '')
+			x.text(x.text().concat("\nInfo: ", msg));
+
+	} catch (err) {
+		if (response.responseText != '' // There is a message
+			&& response.responseText.lastIndexOf('<!DOCTYPE html>', 0)
+				!== 0 // Message is not a whole HTML page
+			&& response.responseText.lastIndexOf('<!doctype html>', 0)
+				!== 0) // Message is not a whole HTML page
+		{
+			x.text(x.text().concat("\nInfo: ",
+				response.responseText));
+		}
+	}
 }
 
-function addContestUser(contest_id) {
-	modalForm('Add user to the contest',
-		$('<div>', {
-			class: 'field-group',
-			style: 'margin-top: 5px',
+/* ================================ Preview ================================ */
+function preview_base(as_modal, ajax_url, success_handler, new_window_location) {
+	function impl(elem) {
+		append_loader(elem);
+		$.ajax({
+			type: 'GET',
+			url: ajax_url,
+			dataType: 'json',
+			success: function() {
+				remove_loader(elem);
+				success_handler.apply(elem, arguments);
+
+				if (as_modal) {
+					// Update padding-top
+					var m = elem.parent().parent();
+					var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
+					m.css({'padding-top': Math.max(new_padding, 0)});
+				}
+			},
+			error: function(resp) {
+				show_error_via_loader(elem, resp, function () {
+					impl(elem);
+				});
+			}
+		});
+	}
+
+	if (as_modal) {
+		var elem = $('<div>', {
+			class: 'modal preview',
+			'prev-url': window.location.href,
 			html: $('<div>', {
-				html: $('<select>', {
-				name: 'user_value_type',
-					html: $('<option>', {
-						value: 'username',
-						text: 'Username',
-						selected: true
-					}).add('<option>', {
-						value: 'uid',
-						text: 'Uid'
-					})
-				})
-			}).add('<input>', {
-				type: 'text',
-				name: 'user'
+				html: $('<span>', { class: 'close'})
+				.add('<div>', {style: 'display:block'})
 			})
-		}).add('<div>', {
-			class: 'field-group',
-			html: $('<label>', {
-				text: 'User mode'
-			}).add('<select>', {
-				name: 'mode',
-				html: $('<option>', {
-					value: 'c',
-					text: 'Contestant',
-					selected: true
-				}).add('<option>', {
-					value: 'm',
-					text: 'Moderator'
-				})
-			})
-		}).add(modalFormSubmitButton('Add user',
-			'/c/' + contest_id + '/users/add',
-			'User has been added.'))
-	);
-}
-function changeContestUserMode(contest_id, user_id, mode) {
-	modalForm('Change user mode',
-		$('<div>', {
-			html: $('<label>', {
-				text: "New user's mode: "
-			}).add('<select>', {
-				name: 'mode',
-				html: $('<option>', {
-					value: 'c',
-					text: 'Contestant',
-					selected: (mode === 'c')
-				}).add('<option>', {
-					value: 'm',
-					text: 'Moderator',
-					selected: (mode === 'm')
-				})
-			}).add('<input>', {
-				type: 'hidden',
-				name: 'uid',
-				value: user_id
-			})
-		}).add(modalFormSubmitButton('Change mode',
-			'/c/' + contest_id + '/users/change-mode',
-			'User mode has been changed.'))
-	);
-}
-function expelContestUser(contest_id, user_id, username) {
-	modalForm('Expel user from the contest',
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to expel the user <a href="/u/' + user_id +
-					'">' + username + '</a> with the id = ' + user_id + '?',
-			}).add('<input>', {
-				type: 'hidden',
-				name: 'uid',
-				value: user_id
-			})
-		}).add(modalFormSubmitButton('Of course!',
-			'/c/' + contest_id + '/users/expel',
-			'User has been expelled.', 'red',
-			'No, the user may stay'))
-	);
-}
-function cancelJob(job_id) {
-	modalForm('Cancel job ' + job_id);
-	sendModalFrom('/api/job/' + job_id + '/cancel',
-		'The job has been canceled.');
-}
-function restartJob(job_id) {
-	modalForm('Restart job',
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to restart the <a href="/jobs/' + job_id +
-					'">job ' + job_id + '</a>?',
-			})
-		}).add(modalFormSubmitButton('Restart job',
-			'/api/job/' + job_id + '/restart',
-			'The job has been restarted.', 'orange',
-			'No, go back'))
-	);
+		}).appendTo('body');
+		window.history.replaceState({}, '', new_window_location);
+		impl(elem.find('div > div'));
+
+	} else
+		impl($(document.body));
 }
 
+/* ================================= Lister ================================= */
+function Lister(elem) {
+	this.elem = $(elem);
+	this.lock = false;
+
+	this.fetch_more = function() {
+		if (this.lock)
+			return;
+
+		this.lock = true;
+		append_loader(this.elem.parent());
+
+		this.fetch_more_impl();
+	}
+
+	this.monitor_scroll = function() {
+		var obj = this;
+		$(window).on('scroll resize', function() {
+			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300) {
+				obj.fetch_more();
+			}
+		});
+	};
+
+	this.get_error_handler = function() {
+		var obj = this;
+		return function(resp) {
+			show_error_via_loader(obj.elem.parent(), resp,
+				function () {
+					obj.lock = false;
+					obj.fetch_more();
+				});
+		};
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/* ================================== Logs ================================== */
 function colorize(log, end) {
 	if (end > log.length)
 		end = log.length;
@@ -501,60 +479,6 @@ function colorize(log, end) {
 
 	return res + log.substring(end);
 }
-
-function remove_loader(elem) {
-	$(elem).children('.loader, .loader-info').remove();
-}
-
-function append_loader(elem) {
-	remove_loader(elem);
-	elem = $(elem);
-	if (elem[0].style.animationName === undefined &&
-		elem[0].style.WebkitAnimationName === undefined)
-	{
-		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
-	} else
-		$(elem).append($('<span>', {
-			class: 'loader',
-			html: $('<div>', {class: 'spinner'})
-		}));
-}
-
-function show_error_via_loader(elem, response, try_again_handler) {
-	elem = $(elem);
-	remove_loader(elem);
-	elem.append($('<span>', {
-		class: 'loader-info',
-		html: $('<span>', {
-			text: "Error: " + response.status + ' ' + response.statusText
-		}).add(try_again_handler === undefined ? '' : $('<a>', {
-			text: 'Try again',
-			click: try_again_handler
-		}))
-	}));
-
-	// Additional message
-	var x = elem.children('.loader > span');
-	try {
-		var xml = $.parseXML(response.responseText);
-		var msg = $(xml).text();
-
-		if (msg != '')
-			x.text(x.text().concat("\nInfo: ", msg));
-
-	} catch (err) {
-		if (response.responseText != '' // There is a message
-			&& response.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-				!== 0 // Message is not a whole HTML page
-			&& response.responseText.lastIndexOf('<!doctype html>', 0)
-				!== 0) // Message is not a whole HTML page
-		{
-			x.text(x.text().concat("\nInfo: ",
-				response.responseText));
-		}
-	}
-}
-
 function Logs(type, elem) {
 	this.type = type;
 	this.elem = $(elem);
@@ -616,6 +540,7 @@ function Logs(type, elem) {
 	this.fetch_more();
 }
 
+/* ============================ Actions buttons ============================ */
 var ActionsToHTML = {};
 (function() {
 	this.job = function(job_id, actions_str, problem_id, show_view_job = true) {
@@ -708,48 +633,90 @@ var ActionsToHTML = {};
 	}
 }).call(ActionsToHTML);
 
-function preview_base(as_modal, ajax_url, success_handler, new_window_location) {
-	function impl(elem) {
-		append_loader(elem);
+/* ================================= Users ================================= */
+function UsersLister(elem) {
+	Lister.call(this, elem);
+	this.query_suffix = '';
+
+	this.fetch_more_impl = function() {
+		var obj = this;
 		$.ajax({
 			type: 'GET',
-			url: ajax_url,
+			url: '/api/users' + obj.query_suffix,
 			dataType: 'json',
-			success: function() {
-				remove_loader(elem);
-				success_handler.apply(elem, arguments);
+			success: function(data) {
+				if (elem.children('thead').length === 0)
+					elem.html('<thead><tr>' +
+							'<th class="uid">Id</th>' +
+							'<th class="username">Username</th>' +
+							'<th class="first-name">First name</th>' +
+							'<th class="last-name">Last name</th>' +
+							'<th class="email">Email</th>' +
+							'<th class="type">Type</th>' +
+							'<th class="actions">Actions</th>' +
+						'</tr></thead><tbody></tbody>');
 
-				if (as_modal) {
-					// Update padding-top
-					var m = elem.parent().parent();
-					var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
-					m.css({'padding-top': Math.max(new_padding, 0)});
+				for (x in data) {
+					x = data[x];
+					obj.query_suffix = '/>' + x[0];
+
+					var row = $('<tr>');
+					row.append($('<td>', {text: x[0]}));
+					row.append($('<td>', {text: x[1]}));
+					row.append($('<td>', {text: x[2]}));
+					row.append($('<td>', {text: x[3]}));
+					row.append($('<td>', {text: x[4]}));
+					row.append($('<td>', {
+						class: x[5],
+						text: String(x[5]).slice(0, 1).toUpperCase() +
+							String(x[5]).slice(1)
+					}));
+
+					// Actions
+					row.append($('<td>', {
+						html: ActionsToHTML.user(x[0], x[6])
+					}));
+
+					obj.elem.children('tbody').append(row);
+				}
+
+				remove_loader(elem.parent());
+
+				if (data.length == 0)
+					return; // No more data to load
+
+				obj.lock = false;
+				if ($(document).height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
 				}
 			},
-			error: function(resp) {
-				show_error_via_loader(elem, resp, function () {
-					impl(elem);
-				});
-			}
+			error: obj.get_error_handler()
 		});
 	}
 
-	if (as_modal) {
-		var elem = $('<div>', {
-			class: 'modal preview',
-			'prev-url': window.location.href,
-			html: $('<div>', {
-				html: $('<span>', { class: 'close'})
-				.add('<div>', {style: 'display:block'})
-			})
-		}).appendTo('body');
-		window.history.replaceState({}, '', new_window_location);
-		impl(elem.find('div > div'));
-
-	} else
-		impl($(document.body));
+	this.fetch_more();
 }
 
+/* ================================== Jobs ================================== */
+function cancelJob(job_id) {
+	modalForm('Cancel job ' + job_id);
+	sendModalFrom('/api/job/' + job_id + '/cancel',
+		'The job has been canceled.');
+}
+function restartJob(job_id) {
+	modalForm('Restart job',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to restart the <a href="/jobs/' + job_id +
+					'">job ' + job_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Restart job',
+			'/api/job/' + job_id + '/restart',
+			'The job has been restarted.', 'orange',
+			'No, go back'))
+	);
+}
 function preview_job(as_modal, job_id) {
 	preview_base(as_modal, '/api/jobs/=' + job_id, function(data) {
 		if (data.length === 0)
@@ -836,106 +803,6 @@ function preview_job(as_modal, job_id) {
 			})));
 	}, '/jobs/' + job_id);
 }
-
-function Lister(elem) {
-	this.elem = $(elem);
-	this.lock = false;
-
-	this.fetch_more = function() {
-		if (this.lock)
-			return;
-
-		this.lock = true;
-		append_loader(this.elem.parent());
-
-		this.fetch_more_impl();
-	}
-
-	this.monitor_scroll = function() {
-		var obj = this;
-		$(window).on('scroll resize', function() {
-			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300) {
-				obj.fetch_more();
-			}
-		});
-	};
-
-	this.get_error_handler = function() {
-		var obj = this;
-		return function(resp) {
-			show_error_via_loader(obj.elem.parent(), resp,
-				function () {
-					obj.lock = false;
-					obj.fetch_more();
-				});
-		};
-	}
-}
-
-function UsersLister(elem) {
-	Lister.call(this, elem);
-	this.query_suffix = '';
-
-	this.fetch_more_impl = function() {
-		var obj = this;
-		$.ajax({
-			type: 'GET',
-			url: '/api/users' + obj.query_suffix,
-			dataType: 'json',
-			success: function(data) {
-				if (elem.children('thead').length === 0)
-					elem.html('<thead><tr>' +
-							'<th class="uid">Id</th>' +
-							'<th class="username">Username</th>' +
-							'<th class="first-name">First name</th>' +
-							'<th class="last-name">Last name</th>' +
-							'<th class="email">Email</th>' +
-							'<th class="type">Type</th>' +
-							'<th class="actions">Actions</th>' +
-						'</tr></thead><tbody></tbody>');
-
-				for (x in data) {
-					x = data[x];
-					obj.query_suffix = '/>' + x[0];
-
-					var row = $('<tr>');
-					row.append($('<td>', {text: x[0]}));
-					row.append($('<td>', {text: x[1]}));
-					row.append($('<td>', {text: x[2]}));
-					row.append($('<td>', {text: x[3]}));
-					row.append($('<td>', {text: x[4]}));
-					row.append($('<td>', {
-						class: x[5],
-						text: String(x[5]).slice(0, 1).toUpperCase() +
-							String(x[5]).slice(1)
-					}));
-
-					// Actions
-					row.append($('<td>', {
-						html: ActionsToHTML.user(x[0], x[6])
-					}));
-
-					obj.elem.children('tbody').append(row);
-				}
-
-				remove_loader(elem.parent());
-
-				if (data.length == 0)
-					return; // No more data to load
-
-				obj.lock = false;
-				if ($(document).height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
-					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
-				}
-			},
-			error: obj.get_error_handler()
-		});
-	}
-
-	this.fetch_more();
-}
-
 function JobsLister(elem, query_suffix = '') {
 	Lister.call(this, elem);
 	this.query_url = '/api/jobs' + query_suffix;
@@ -1043,4 +910,145 @@ function JobsLister(elem, query_suffix = '') {
 	};
 
 	this.fetch_more();
+}
+
+/* ============================== Submissions ============================== */
+function changeSubmissionType(submission_id, stype) {
+	modalForm('Change submission type',
+		$('<div>', {
+			html: $('<label>', {
+				text: 'New submission type: '
+			}).add('<select>', {
+				name: 'stype',
+				html: $('<option>', {
+					value: 'n/f',
+					text: 'Normal / final',
+					selected: (stype === 'n/f')
+				}).add('<option>', {
+					value: 'i',
+					text: 'Ignored',
+					selected: (stype === 'i')
+				})
+			})
+		}).add(modalFormSubmitButton('Change type',
+			'/s/' + submission_id + '/change-type',
+			'Submission type has been changed.'))
+	);
+}
+function rejudgeSubmission(submission_id) {
+	modalForm('Rejudge submission ' + submission_id);
+	sendModalFrom('/s/' + submission_id + '/rejudge',
+		'Rejudge of the submission was added to the job queue.')
+}
+function rejudgeProblemSubmissions(problem_id) {
+	modalForm('Rejudge submissions to the problem ' + problem_id,
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to rejudge all the submissions to the problem <a href="/p/' + problem_id +
+					'">' + problem_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Rejudge submissions',
+			'/p/' + problem_id + '/rejudge',
+			'Rejudge of the submissions was added to the job queue', 'blue',
+			'No, go back'))
+	);
+}
+function rejudgeRoundSubmissions(round_id) {
+	modalForm('Rejudge submissions in the round',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to rejudge all the submissions in the round <a href="/c/' + round_id +
+					'">' + round_id + '</a>?',
+			})
+		}).add(modalFormSubmitButton('Rejudge submissions',
+			'/c/' + round_id + '/edit/rejudge',
+			'Rejudge of the submissions was added to the job queue', 'blue',
+			'No, go back'))
+	);
+}
+
+/* ============================ Contest's users ============================ */
+function addContestUser(contest_id) {
+	modalForm('Add user to the contest',
+		$('<div>', {
+			class: 'field-group',
+			style: 'margin-top: 5px',
+			html: $('<div>', {
+				html: $('<select>', {
+				name: 'user_value_type',
+					html: $('<option>', {
+						value: 'username',
+						text: 'Username',
+						selected: true
+					}).add('<option>', {
+						value: 'uid',
+						text: 'Uid'
+					})
+				})
+			}).add('<input>', {
+				type: 'text',
+				name: 'user'
+			})
+		}).add('<div>', {
+			class: 'field-group',
+			html: $('<label>', {
+				text: 'User mode'
+			}).add('<select>', {
+				name: 'mode',
+				html: $('<option>', {
+					value: 'c',
+					text: 'Contestant',
+					selected: true
+				}).add('<option>', {
+					value: 'm',
+					text: 'Moderator'
+				})
+			})
+		}).add(modalFormSubmitButton('Add user',
+			'/c/' + contest_id + '/users/add',
+			'User has been added.'))
+	);
+}
+function changeContestUserMode(contest_id, user_id, mode) {
+	modalForm('Change user mode',
+		$('<div>', {
+			html: $('<label>', {
+				text: "New user's mode: "
+			}).add('<select>', {
+				name: 'mode',
+				html: $('<option>', {
+					value: 'c',
+					text: 'Contestant',
+					selected: (mode === 'c')
+				}).add('<option>', {
+					value: 'm',
+					text: 'Moderator',
+					selected: (mode === 'm')
+				})
+			}).add('<input>', {
+				type: 'hidden',
+				name: 'uid',
+				value: user_id
+			})
+		}).add(modalFormSubmitButton('Change mode',
+			'/c/' + contest_id + '/users/change-mode',
+			'User mode has been changed.'))
+	);
+}
+function expelContestUser(contest_id, user_id, username) {
+	modalForm('Expel user from the contest',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to expel the user <a href="/u/' + user_id +
+					'">' + username + '</a> with the id = ' + user_id + '?',
+			}).add('<input>', {
+				type: 'hidden',
+				name: 'uid',
+				value: user_id
+			})
+		}).add(modalFormSubmitButton('Of course!',
+			'/c/' + contest_id + '/users/expel',
+			'User has been expelled.', 'red',
+			'No, the user may stay'))
+	);
 }
