@@ -1078,6 +1078,19 @@ table.stripped > tbody > tr:last-child > td:last-child {
 	border-bottom-right-radius: 4px;
 }
 
+/* Header */
+div.header {
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: space-between;
+}
+div.header > h1 {
+	white-space: nowrap;
+}
+div.header > div:last-child{
+	margin: 8px 0;
+}
+
 /* Contest list */
 .contests-list {
 	display: table;
@@ -1228,20 +1241,6 @@ table.stripped > tbody > tr:last-child > td:last-child {
 .modal .submission-info,
 .modal .job-info {
 	width: initial;
-}
-.submission-info > div:first-child,
-.job-info > div:first-child {
-	display: flex;
-	flex-flow: row wrap;
-	justify-content: space-between;
-}
-.submission-info > div:first-child h1,
-.job-info > div:first-child h1 {
-	white-space: nowrap;
-}
-.submission-info > div:first-child h1 + div,
-.job-info > div:first-child h1 + div {
-	margin: 8px 0;
 }
 /*.submission-info h2 {
 	margin: 0;
@@ -1594,7 +1593,7 @@ table.contest-users tr > td:last-child {
 /* User-info, problem-info */
 .user-info,
 .problem-info {
-	display: table;
+	display: inline-block;
 	min-width: 400px;
 	margin: 8px auto;
 	padding: 4px 10px;

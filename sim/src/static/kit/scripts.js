@@ -5,6 +5,9 @@ function hex2str(hexx) {
 		str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
 	return str;
 }
+function text_to_safe_html(str) {
+	return $('<div>', {text: str}).html();
+}
 // Dropdowns
 $(document).ready(function(){
 	$(document).click(function(event) {
@@ -315,8 +318,15 @@ function preview_base(as_modal, ajax_url, success_handler, new_window_location) 
 			type: 'GET',
 			url: ajax_url,
 			dataType: 'json',
-			success: function() {
+			success: function(data) {
 				remove_loader(elem);
+
+				if (data.length === 0)
+					return show_error_via_loader(elem, {
+						status: '404',
+						statusText: 'Not Found'
+					});
+
 				success_handler.apply(elem, arguments);
 
 				if (as_modal) {
@@ -505,7 +515,7 @@ function Logs(type, elem) {
 				var prev = prev_height - elem.scrollTop();
 
 				remove_loader(logs.elem);
-				elem.html(colorize($('<div/>').text(data).html() + elem.html(),
+				elem.html(colorize(text_to_safe_html(data) + elem.html(),
 					data.length + 2000));
 				var curr_height = elem[0].scrollHeight;
 				elem.scrollTop(curr_height - prev);
@@ -548,7 +558,7 @@ var ActionsToHTML = {};
 		if (show_view_job)
 			res.push($('<a>', {
 				class: 'btn-small',
-				text: 'View job',
+				text: 'Preview',
 				click: function() { preview_job(true, job_id); }
 			}));
 
@@ -604,7 +614,7 @@ var ActionsToHTML = {};
 		if (show_view_user && actions_str.indexOf('v') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
-				text: 'View',
+				text: 'Preview',
 				click: function() { preview_user(true, user_id); }
 			}));
 
@@ -634,6 +644,55 @@ var ActionsToHTML = {};
 }).call(ActionsToHTML);
 
 /* ================================= Users ================================= */
+function preview_user(as_modal, user_id) {
+	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+		data = data[0];
+
+		this.append($('<div>', {
+			class: 'header',
+			html: $('<span>', {
+				style: 'margin: auto 0',
+				html: $('<a>', {
+					href: '/u/' + user_id,
+					text: data[1]
+				})
+			}).append(text_to_safe_html(' (' + data[2] + ' ' + data[3] + ')'))
+			.add('<div>', {
+				html: ActionsToHTML.user(user_id, data[6], false)
+			})
+		})).append($('<center>', {
+			html: $('<div>', {
+				class: 'user-info',
+				html: $('<div>', {
+					class: 'first-name',
+					html: $('<label>', {text: 'First name'})
+				}).append(text_to_safe_html(data[2]))
+				.add($('<div>', {
+					class: 'last-name',
+					html: $('<label>', {text: 'Last name'})
+				}).append(text_to_safe_html(data[3])))
+				.add($('<div>', {
+					class: 'username',
+					html: $('<label>', {text: 'Username'})
+				}).append(text_to_safe_html(data[1])))
+				.add($('<div>', {
+					class: 'type',
+					html: $('<label>', {text: 'Account type'}).add('<span>', {
+						class: data[5],
+						text: String(data[5]).slice(0, 1).toUpperCase() +
+							String(data[5]).slice(1)
+					})
+				}))
+				.add($('<div>', {
+					class: 'email',
+					html: $('<label>', {text: 'Email'})
+				}).append(text_to_safe_html(data[4])))
+			})
+		}));
+		this.append($('<p>', {text: 'TODO: add inline submissions preview'}));
+
+	}, '/u/' + user_id);
+}
 function UsersLister(elem) {
 	Lister.call(this, elem);
 	this.query_suffix = '';
@@ -719,12 +778,6 @@ function restartJob(job_id) {
 }
 function preview_job(as_modal, job_id) {
 	preview_base(as_modal, '/api/jobs/=' + job_id, function(data) {
-		if (data.length === 0)
-			return show_error_via_loader(this, {
-				status: '404',
-				statusText: 'Not Found'
-			});
-
 		data = data[0];
 
 		function info_html(info) {
@@ -751,6 +804,7 @@ function preview_job(as_modal, job_id) {
 		this.append($('<div>', {
 			class: 'job-info',
 			html: $('<div>', {
+				class: 'header',
 				html: $('<h1>', {
 					text: 'Job ' + job_id
 				}).add('<div>', {
@@ -778,8 +832,11 @@ function preview_job(as_modal, job_id) {
 							text: data[3][1]
 						}).add('<td>', {
 							html: data[5] === null ? 'System' : $('<a>', {
-								href: '/u/' + data[5],
-								text: data[6]
+								text: data[6],
+								click: function() {
+									var user_id = data[5];
+									return function() { preview_user(true, user_id); };
+								}()
 							})
 						}).add('<td>', {
 							html: info_html(data[7])
@@ -851,8 +908,11 @@ function JobsLister(elem, query_suffix = '') {
 					}));
 					row.append($('<td>', {
 						html: x[5] === null ? 'System' : $('<a>', {
-							href: '/u/' + x[5],
-							text: x[6]
+							text: x[6],
+							click: function() {
+								var user_id = x[5];
+								return function() { preview_user(true, user_id); };
+							}()
 						})
 					}));
 					// Info

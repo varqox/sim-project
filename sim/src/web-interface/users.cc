@@ -256,13 +256,22 @@ void Sim::sign_up() {
 void Sim::users_handle() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_open() or
-		uint(~users_get_viewer_permissions(session_user_id, session_user_type) &
+	if (not session_open())
+		return redirect(concat_tostr("/login?", request.target));
+
+	StringView next_arg = url_args.extractNextArg();
+	if (isDigit(next_arg)) {
+		users_user_id = next_arg;
+		return users_user();
+	}
+
+	if (next_arg.size())
+		return error404();
+
+	// List users
+	if (uint(~users_get_viewer_permissions(session_user_id, session_user_type) &
 			UserPermissions::VIEW_ALL))
 	{
-		if (not session_is_open)
-			return redirect(concat_tostr("/login?", request.target));
-
 		return error403();
 	}
 
@@ -274,8 +283,35 @@ void Sim::users_handle() {
 		"</script>");
 }
 
-#if 0
+void Sim::users_user() {
+	STACK_UNWINDING_MARK;
 
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "submissions")
+		return users_user_submissions();
+	else if (next_arg == "problems")
+		return users_user_problems();
+	else if (not next_arg.empty())
+		return error404();
+
+	page_template(concat("User ", users_user_id), "body{margin-left:32px}");
+	append("<script>preview_user(false, ", users_user_id, ");</script>");
+}
+
+void Sim::users_user_submissions() {
+	STACK_UNWINDING_MARK;
+
+	return error501();
+}
+
+
+void Sim::users_user_problems() {
+	STACK_UNWINDING_MARK;
+
+	return error501();
+}
+
+#if 0
 void User::userTemplate(StringView title, StringView styles, StringView scripts)
 {
 	baseTemplate(title, concat("body{margin-left:190px}", styles),
