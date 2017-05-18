@@ -431,8 +431,10 @@ public:
 		return mysql_stmt_affected_rows(stmt_);
 	}
 
-	MYSQL_RES* resMetadata() noexcept {
-		return mysql_stmt_result_metadata(stmt_);
+	std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)> resMetadata()
+		noexcept
+	{
+		return {mysql_stmt_result_metadata(stmt_), &mysql_free_result};
 	}
 };
 
