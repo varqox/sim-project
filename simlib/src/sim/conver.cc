@@ -287,13 +287,9 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 	/* The model solution's judge report is needed */
 
 	// Set the time limits for the model solution
-	uint64_t time_limit =
-		(meta::max(opts.max_time_limit, (uint64_t)TIME_LIMIT_ADJUSTMENT) -
-			TIME_LIMIT_ADJUSTMENT) / MODEL_TIME_COEFFICENT;
-
 	for (auto&& g : sf.tgroups)
 		for (auto&& t : g.tests)
-			t.time_limit = time_limit;
+			t.time_limit = MODEL_SOL_TLIMIT;
 
 	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, sf};
 }
@@ -315,8 +311,7 @@ void Conver::finishConstructingSimfile(Simfile &sf, const JudgeReport &jrep1,
 						"`: ", JudgeReport::Test::description(t.status))};
 				}
 
-				tls[std::move(t.name)] = TIME_LIMIT_ADJUSTMENT + t.runtime *
-					MODEL_TIME_COEFFICENT;
+				tls[std::move(t.name)] = time_limit(t.runtime / 1e6) * 1e6;
 			}
 	}
 

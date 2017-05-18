@@ -101,8 +101,12 @@ public:
 		const JudgeReport& jrep2);
 
 private:
-	static constexpr uint64_t TIME_LIMIT_ADJUSTMENT = 0.4e6; // 0.4 s
-	static constexpr int MODEL_TIME_COEFFICENT = 4;
+	static constexpr double time_limit(double model_sol_runtime) {
+		double x = model_sol_runtime;
+		return 3*x + 2/(2*x*x + 5);
+	}
+
+	static constexpr uint64_t MODEL_SOL_TLIMIT = 20e6;
 
 	// Rounds time limits to 0.01 s
 	static void normalize_time_limits(Simfile& sf) {
