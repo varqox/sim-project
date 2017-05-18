@@ -387,9 +387,9 @@ static void addProblem(StringView job_id, StringView job_owner,
 
 			status = JobQueueStatus::DONE;
 			if (std::is_same<Trait, AddTrait>::value)
-				stmt.bind(2, apid);
+				stmt.bind(1, apid);
 			else
-				stmt.bind(2, aux_id);
+				stmt.bind(1, aux_id);
 
 		} catch (const std::exception& e) {
 			// To avoid exceptions C API is used
@@ -400,16 +400,16 @@ static void addProblem(StringView job_id, StringView job_owner,
 
 			status = JobQueueStatus::FAILED;
 			if (std::is_same<Trait, ReuploadTrait>::value)
-				stmt.bind(2, aux_id);
+				stmt.bind(1, aux_id);
 			else
-				stmt.bind(2, nullptr);
+				stmt.bind(1, nullptr);
 			#warning "Check if nullptr works up here"
 		}
 
 		uint x = (uint)status;
-		stmt.bind(1, x);
-		stmt.bind(3, report.str);
-		stmt.bind(4, job_id);
+		stmt.bind(0, x);
+		stmt.bind(2, report.str);
+		stmt.bind(3, job_id);
 		stmt.fixAndExecute();
 
 		stdlog("Job: ", job_id, '\n', report.str);
@@ -476,8 +476,8 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 
 				// Save the previous owner
 				constexpr uint OWNER_IDX = 5;
-				throw_assert("owner" ==
-					StringView{mysql_fetch_field_direct(stmt.resMetadata(),
+				throw_assert("owner" == StringView{
+					mysql_fetch_field_direct(stmt.resMetadata().get(),
 						OWNER_IDX)->name});
 				p_info.previous_owner = strtoull(pbackup[OWNER_IDX].second);
 				// Commit the change to the database
