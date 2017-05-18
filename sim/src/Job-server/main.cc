@@ -87,6 +87,7 @@ static void processJobQueue() noexcept {
 static void cleanUpDB() {
 	try {
 		// Fix jobs that are in progress after the job-server died
+		// TODO: does not work for interrupted problem adding/reuploading jobs
 		db_conn.update("UPDATE job_queue"
 			" SET status=" JQSTATUS_PENDING_STR
 			" WHERE status=" JQSTATUS_IN_PROGRESS_STR);
