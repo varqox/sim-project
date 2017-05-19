@@ -27,6 +27,8 @@ sim.a: mysql.o cpp_syntax_highlighter.o simlib.a
 		                                 # it has to be done in the other way
 	echo "OPEN sim.a\nADDLIB simlib.a\nSAVE\nEND" | $(AR) -M
 
+sqlite3.c: sqlite/sqlite3.c
+
 sqlite3.a: override EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2
 sqlite3.a: sqlite3.o
 	$(Q)$(call P,AR,$@)$(AR) cr $@ $?
