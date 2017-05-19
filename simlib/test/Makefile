@@ -1,6 +1,6 @@
 include ../Makefile.config
 
-EXTRA_CXX_FLAGS += -isystem '$(shell pwd)/../googletest/include' -pthread
+EXTRA_CXX_FLAGS += -isystem '$(shell pwd)/../googletest/googletest/include' -pthread
 
 .PHONY: run
 run: build

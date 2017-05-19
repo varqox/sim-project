@@ -15,8 +15,8 @@ ifeq ($(MAKELEVEL), 0)
 	@echo "CXX -> $(CXX)"
 endif
 
-.PHONY: googletest src
-googletest src: build-info
+.PHONY: src
+src: build-info
 	$(Q)$(MAKE) -C $@
 
 .PHONY: test
@@ -27,10 +27,20 @@ test: src googletest
 build-test: src googletest
 	$(Q)$(MAKE) -C test/ build
 
+.PHONY: googletest
+googletest: build-info gtest_main.a
+
+gtest_main.a googletest/%.deps: EXTRA_CXX_FLAGS += -isystem '$(shell pwd)/googletest/googletest/include' -I googletest/googletest/ -pthread
+
+gtest_main.a: googletest/googletest/src/gtest-all.o googletest/googletest/src/gtest_main.o
+	$(Q)$(call P,AR,$@)$(AR) cr $@ $?
+
+# Build dependencies manually because only that two are needed
+$(eval $(call dependencies_list, googletest/googletest/src/gtest-all.cc googletest/googletest/src/gtest_main.cc))
+
 .PHONY: clean
 clean:
-	$(Q)$(RM) simlib.a
-	$(Q)$(MAKE) clean -C googletest/
+	$(Q)$(RM) simlib.a gtest_main.a googletest/googletest/src/*.o src/*.deps
 	$(Q)$(MAKE) clean -C src/
 	$(Q)$(MAKE) clean -C test/
 
