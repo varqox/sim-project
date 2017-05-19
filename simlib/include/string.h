@@ -1623,6 +1623,8 @@ constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
 				res.append("\\\"");
 			else if (c == '\n')
 				res.append("\\n");
+			else if (c == '\\')
+				res.append("\\\\");
 			else if (iscntrl(c))
 				res.append("\\u00", dectohex(c >> 4), dectohex(c & 15));
 			else
