@@ -29,7 +29,6 @@ function tz_marker() {
 	return String().concat('<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60,
 		'</sup>');
 }
-
 function add_tz_marker(elem) {
 	elem = $(elem);
 	elem.children('sup').remove();
@@ -145,9 +144,7 @@ function addCsrfTokenTo(form) {
 }
 
 // Adding csrf token just before submitting a form
-$(function() {
-	$('form').submit(function() { addCsrfTokenTo($(this)); });
-});
+$('form').submit(function() { addCsrfTokenTo($(this)); });
 
 /* ================================= Modals ================================= */
 $(document).click(function(event) {
@@ -275,13 +272,18 @@ function append_loader(elem) {
 			html: $('<div>', {class: 'spinner'})
 		}));
 }
-function show_error_via_loader(elem, response, try_again_handler) {
+function show_error_via_loader(elem, response, err_status, try_again_handler) {
+	if (err_status == 'success' || err_status === undefined)
+		err_status = '';
+	else
+		err_status = '; ' + err_status;
+
 	elem = $(elem);
 	remove_loader(elem);
 	elem.append($('<span>', {
 		class: 'loader-info',
 		html: $('<span>', {
-			text: "Error: " + response.status + ' ' + response.statusText
+			text: "Error: " + response.status + ' ' + response.statusText + err_status
 		}).add(try_again_handler === undefined ? '' : $('<a>', {
 			text: 'Try again',
 			click: try_again_handler
@@ -336,12 +338,12 @@ function preview_base(as_modal, ajax_url, success_handler, new_window_location) 
 					m.css({'padding-top': Math.max(new_padding, 0)});
 				}
 			},
-			error: function(resp) {
-				show_error_via_loader(elem, resp, function () {
+			error: function(resp, status) {
+				show_error_via_loader(elem, resp, status, function () {
 					impl(elem);
 				});
 			}
-		});
+			});
 	}
 
 	if (as_modal) {
@@ -358,6 +360,20 @@ function preview_base(as_modal, ajax_url, success_handler, new_window_location) 
 
 	} else
 		impl($(document.body));
+}
+function a_preview_button(href, text, classes, func) {
+	return $('<a>', {
+			'href': href,
+			'text': text,
+			class: classes,
+			click: function(event) {
+				if (event.ctrlKey)
+					return true; // Allow opening the link in a new tab
+				func();
+				return false;
+			}
+
+		});
 }
 
 /* ================================= Lister ================================= */
@@ -386,8 +402,8 @@ function Lister(elem) {
 
 	this.get_error_handler = function() {
 		var obj = this;
-		return function(resp) {
-			show_error_via_loader(obj.elem.parent(), resp,
+		return function(resp, status) {
+			show_error_via_loader(obj.elem.parent(), resp, status,
 				function () {
 					obj.lock = false;
 					obj.fetch_more();
@@ -529,8 +545,8 @@ function Logs(type, elem) {
 					}
 				}
 			},
-			error: function(resp) {
-				show_error_via_loader(logs.elem, resp,
+			error: function(resp, status) {
+				show_error_via_loader(logs.elem, resp, status,
 					function () {
 						logs.lock = false; // allow only manual unlocking
 						logs.fetch_more();
@@ -553,14 +569,14 @@ function Logs(type, elem) {
 /* ============================ Actions buttons ============================ */
 var ActionsToHTML = {};
 (function() {
-	this.job = function(job_id, actions_str, problem_id, show_view_job = true) {
+	this.job = function(job_id, actions_str, problem_id, show_view_job /*= true*/) {
+		if (show_view_job == undefined)
+			show_view_job = true;
+
 		var res = [];
 		if (show_view_job)
-			res.push($('<a>', {
-				class: 'btn-small',
-				text: 'Preview',
-				click: function() { preview_job(true, job_id); }
-			}));
+			res.push(a_preview_button('/jobs/' + job_id, 'Preview', 'btn-small',
+				function() { preview_job(true, job_id); }));
 
 		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('R') !== -1)
 			res.push($('<div>', {
@@ -580,7 +596,7 @@ var ActionsToHTML = {};
 			}));
 
 		if (actions_str.indexOf('V') !== -1)
-			res.push($('<a>', {
+			res.push($('<a>', { // TODO: do a preview button when ready
 				class: 'btn-small green',
 				href: '/p/' + problem_id,
 				text: 'View problem'
@@ -609,35 +625,26 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.user = function(user_id, actions_str, show_view_user = true) {
+	this.user = function(user_id, actions_str, show_view_user /*= true*/) {
+		if (show_view_user === undefined)
+			show_view_user = true;
+
 		var res = [];
 		if (show_view_user && actions_str.indexOf('v') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small',
-				text: 'Preview',
-				click: function() { preview_user(true, user_id); }
-			}));
+			res.push(a_preview_button('/u/' + user_id, 'Preview', 'btn-small',
+				function() { preview_user(true, user_id); }));
 
 		if (actions_str.indexOf('E') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small blue',
-				href: '/u/' + user_id + '/edit',
-				text: 'Edit'
-			}));
+			res.push(a_preview_button('/u/' + user_id + '/edit', 'Edit',
+				'btn-small blue', function() { preview_user_edit('TODO...'); }));
 
 		if (actions_str.indexOf('D') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small red',
-				href: '/u/' + user_id + '/delete',
-				text: 'Delete'
-			}));
+			res.push(a_preview_button('/u/' + user_id + '/delete', 'Delete',
+				'btn-small red', function() { preview_user_delete('TODO...'); }));
 
 		if (actions_str.indexOf('P') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small orange',
-				href: '/u/' + user_id + '/change-password',
-				text: 'Change password'
-			}));
+			res.push(a_preview_button('/u/' + user_id + '/change-password', 'Change password',
+				'btn-small orange', function() { preview_user_change_password('TODO...'); }));
 
 		return res;
 	}
@@ -706,7 +713,7 @@ function UsersLister(elem) {
 			success: function(data) {
 				if (elem.children('thead').length === 0)
 					elem.html('<thead><tr>' +
-							'<th class="uid">Id</th>' +
+							'<th>Id</th>' +
 							'<th class="username">Username</th>' +
 							'<th class="first-name">First name</th>' +
 							'<th class="last-name">Last name</th>' +
@@ -758,24 +765,6 @@ function UsersLister(elem) {
 }
 
 /* ================================== Jobs ================================== */
-function cancelJob(job_id) {
-	modalForm('Cancel job ' + job_id);
-	sendModalFrom('/api/job/' + job_id + '/cancel',
-		'The job has been canceled.');
-}
-function restartJob(job_id) {
-	modalForm('Restart job',
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to restart the <a href="/jobs/' + job_id +
-					'">job ' + job_id + '</a>?',
-			})
-		}).add(modalFormSubmitButton('Restart job',
-			'/api/job/' + job_id + '/restart',
-			'The job has been restarted.', 'orange',
-			'No, go back'))
-	);
-}
 function preview_job(as_modal, job_id) {
 	preview_base(as_modal, '/api/jobs/=' + job_id, function(data) {
 		data = data[0];
@@ -788,7 +777,7 @@ function preview_job(as_modal, job_id) {
 				td.append($('<label>', {text: name}));
 
 				if (name == "submission" || name == "problem")
-					td.append($('<a>', {
+					td.append($('<a>', { // TODO: do a preview button when ready
 						href: '/' + name[0] + '/' + info[name],
 						text: info[name]
 					}));
@@ -831,13 +820,9 @@ function preview_job(as_modal, job_id) {
 							class: 'status ' + data[3][0],
 							text: data[3][1]
 						}).add('<td>', {
-							html: data[5] === null ? 'System' : $('<a>', {
-								text: data[6],
-								click: function() {
-									var user_id = data[5];
-									return function() { preview_user(true, user_id); };
-								}()
-							})
+							html: data[5] === null ? 'System' : a_preview_button(
+								'/u/' + data[5], data[6], undefined,
+								function() { preview_user(true, data[5]); })
 						}).add('<td>', {
 							html: info_html(data[7])
 						})
@@ -860,7 +845,29 @@ function preview_job(as_modal, job_id) {
 			})));
 	}, '/jobs/' + job_id);
 }
-function JobsLister(elem, query_suffix = '') {
+function cancelJob(job_id) {
+	modalForm('Cancel job ' + job_id);
+	sendModalFrom('/api/job/' + job_id + '/cancel',
+		'The job has been canceled.');
+}
+function restartJob(job_id) {
+	modalForm('Restart job',
+		$('<div>', {
+			html: $('<label>', {
+				html: 'Are you sure to restart the '
+			}).append(a_preview_button('/jobs/' + job_id, 'job ' + job_id, undefined,
+				function() { preview_job(true, job_id);}))
+			.append('?')
+		}).add(modalFormSubmitButton('Restart job',
+			'/api/job/' + job_id + '/restart',
+			'The job has been restarted.', 'orange',
+			'No, go back'))
+	);
+}
+function JobsLister(elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
 	Lister.call(this, elem);
 	this.query_url = '/api/jobs' + query_suffix;
 	this.query_suffix = '';
@@ -874,6 +881,7 @@ function JobsLister(elem, query_suffix = '') {
 			success: function(data) {
 				if (elem.children('thead').length === 0) {
 					elem.html('<thead><tr>' +
+							'<th>Id</th>' +
 							'<th class="type">Type</th>' +
 							'<th class="priority">Priority</th>' +
 							'<th class="added">Added</th>' +
@@ -890,30 +898,30 @@ function JobsLister(elem, query_suffix = '') {
 					obj.query_suffix = '/<' + x[0];
 
 					var row = $('<tr>');
+					row.append($('<td>', {text: x[0]}));
 					row.append($('<td>', {text: x[2]}));
 					row.append($('<td>', {text: x[4]}));
 					row.append($('<td>', {
-						html: normalize_datetime($('<a>', {
-							datetime: x[1],
-							text: x[1],
-							click: function() {
-								var job_id = x[0];
-								return function() { preview_job(true, job_id); };
-							}()
-						}), false)
+						html: normalize_datetime(
+							a_preview_button('/jobs/' + x[0], x[1], undefined,
+								function() {
+									var job_id = x[0];
+									return function() {
+										preview_job(true, job_id);
+									};
+								}()).attr('datetime', x[1]),
+							false)
 					}));
 					row.append($('<td>', {
 						class: 'status ' + x[3][0],
 						text: x[3][1]
 					}));
 					row.append($('<td>', {
-						html: x[5] === null ? 'System' : $('<a>', {
-							text: x[6],
-							click: function() {
-								var user_id = x[5];
-								return function() { preview_user(true, user_id); };
-							}()
-						})
+						html: x[5] === null ? 'System' : a_preview_button(
+							'/u/' + x[5], x[6], undefined, function() {
+								var uid = x[5];
+								return function() { preview_user(true, uid); };
+							}())
 					}));
 					// Info
 					var info = x[7];
@@ -925,13 +933,13 @@ function JobsLister(elem, query_suffix = '') {
 						}
 
 						if (info.submission !== undefined)
-							append_tag('submission', $('<a>', {
+							append_tag('submission', $('<a>', { // TODO: do a preview button when ready
 								href: '/s/' + info.submission,
 								text: info.submission
 							}))
 
 						if (info.problem !== undefined)
-							append_tag('problem', $('<a>', {
+							append_tag('problem', $('<a>', { // TODO: do a preview button when ready
 								href: '/p/' + info.problem,
 								text: info.problem
 							}))

@@ -433,11 +433,11 @@ textarea {
 }
 
 #clock > sup,
-*[datetime] > sup,
+*[datetime] > sup/*,
 .submissions th.time > sup,
 .problems th.added > sup,
 .jobs th.added > sup,
-.files th.time > sup {
+.files th.time > sup */{
 	width: 3.5em;
 	display: inline-block;
 	text-align: left;
@@ -1519,6 +1519,9 @@ table.jobs td {
 }
 table.jobs td .btn-small {
 	margin: 0 2px;
+}
+table.jobs tr > td:first-child {
+	text-align: right;
 }
 table.jobs tr > td:last-child {
 	white-space: pre;
