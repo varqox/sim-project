@@ -95,11 +95,11 @@ void Sim::login() {
 
 			InplaceBuff<30> uid;
 			InplaceBuff<SALT_LEN> salt;
-			InplaceBuff<4096> passwd_hash;
+			InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
 			stmt.res_bind_all(uid, salt, passwd_hash);
 
 			while (stmt.next()) {
-				if (!slowEqual(sha3_512(concat(salt, password)), passwd_hash))
+				if (not slowEqual(sha3_512(concat(salt, password)), passwd_hash))
 					break;
 
 				// Delete old session
