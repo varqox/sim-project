@@ -744,7 +744,11 @@ function edit_user(as_modal, user_id) {
 		data = data[0];
 
 		var actions = data[6];
-		// TODO: check permissions
+		if (actions.indexOf('E') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
 
 		this.append($('<div>', {
 			class: 'form-container',
