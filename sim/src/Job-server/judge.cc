@@ -17,6 +17,12 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 {
 	STACK_UNWINDING_MARK;
 
+	InplaceBuff<16384> job_report;
+	auto stdlog_and_append_jreport = [&](auto&&... args) {
+		stdlog(args...);
+		job_report.append(std::forward<decltype(args)>(args)...);
+	};
+
 	// Gather the needed information about the submission
 	auto stmt = db_conn.prepare("SELECT s.owner, round_id, problem_id,"
 			" last_judgment, p.last_edit"
@@ -29,22 +35,23 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	// If the submission doesn't exist (probably was removed)
 	if (not stmt.next()) {
 		// Cancel the job
+		stdlog_and_append_jreport("Canceled judging of the submission ",
+			submission_id, ", since there is no such submission.");
 		stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_CANCELED_STR " WHERE id=?");
-		stmt.bindAndExecute(job_id);
-		stdlog("Judging of the submission ", submission_id, " canceled, since"
-			" there is no such submission.");
+			" SET status=" JQSTATUS_CANCELED_STR ", data=? WHERE id=?");
+		stmt.bindAndExecute(job_report, job_id);
 		return;
 	}
 
 	// If the problem wasn't modified since last judgment and submission has
 	// already been rejudged after the job was created
 	if (last_judgment > p_last_edit and last_judgment > job_creation_time) {
-		// Skit the job - the submission has already been rejudged
+		// Skip the job - the submission has already been rejudged
+		stdlog_and_append_jreport("Skipped judging of the submission ",
+			submission_id);
 		stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_DONE_STR " WHERE id=?");
-		stmt.bindAndExecute(job_id);
-		stdlog("Judging of the submission ", submission_id, " skipped.");
+			" SET status=" JQSTATUS_DONE_STR ", data=? WHERE id=?");
+		stmt.bindAndExecute(job_report, job_id);
 		return;
 	}
 
@@ -165,19 +172,19 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		stmt.execute();
 
 		stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_DONE_STR " WHERE id=?");
-		stmt.bindAndExecute(job_id);
+			" SET status=" JQSTATUS_DONE_STR ", data=? WHERE id=?");
+		stmt.bindAndExecute(job_report, job_id);
 
 	};
 
 	string compilation_errors;
 
 	// Compile checker
-	stdlog("Compiling checker...");
+	stdlog_and_append_jreport("Compiling checker...");
 	if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
 		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		stdlog("Checker compilation failed.");
+		stdlog_and_append_jreport("Checker compilation failed.");
 
 		status = SubmissionStatus::CHECKER_COMPILATION_ERROR;
 		initial_report = concat("<pre class=\"compilation-errors\">",
@@ -185,15 +192,15 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 		return send_report();
 	}
-	stdlog("Done.");
+	stdlog_and_append_jreport("Done.");
 
 	// Compile solution
-	stdlog("Compiling solution...");
+	stdlog_and_append_jreport("Compiling solution...");
 	if (jworker.compileSolution(concat_tostr("solutions/", submission_id, ".cpp"),
 		SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 		COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		stdlog("Solution compilation failed.");
+		stdlog_and_append_jreport("Solution compilation failed.");
 
 		status = SubmissionStatus::COMPILATION_ERROR;
 		initial_report = concat("<pre class=\"compilation-errors\">",
@@ -201,7 +208,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 		return send_report();
 	}
-	stdlog("Done.");
+	stdlog_and_append_jreport("Done.");
 
 	// Creates xml report from JudgeReport
 	auto construct_report = [](const JudgeReport& jr, bool final) {
@@ -316,8 +323,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 			return "UNKNOWN";
 		};
 
-		stdlog("Job ", job_id, " -> submission ", submission_id, " (problem ",
-			problem_id, ")\n"
+		stdlog_and_append_jreport("Job ", job_id, " -> submission ",
+			submission_id, " (problem ", problem_id, ")\n"
 			"Initial judge report: ", rep1.pretty_dump(span_status), "\n"
 			"Final judge report: ", rep2.pretty_dump(span_status), "\n");
 
@@ -417,7 +424,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
-		stdlog("Judge error.");
+		stdlog_and_append_jreport("Judge error.");
 
 		status = SubmissionStatus::JUDGE_ERROR;
 		initial_report = concat("<pre>", htmlEscape(e.what()), "</pre>");
