@@ -138,14 +138,17 @@ function getCookie(name) {
 
 // Adding csrf token to a form
 function addCsrfTokenTo(form) {
-	form.find('input[name="csrf_token"]').remove(); // Avoid duplication
-	form.append('<input type="hidden" name="csrf_token" value="' +
+	var x = $(form);
+	x.find('input[name="csrf_token"]').remove(); // Avoid duplication
+	x.append('<input type="hidden" name="csrf_token" value="' +
 		getCookie('csrf_token') + '">');
 	return form;
 }
 
 // Adding csrf token just before submitting a form
-$('form').submit(function() { addCsrfTokenTo(this); });
+$(document).ready(function() {
+	$('form').submit(function() { addCsrfTokenTo(this); });
+});
 
 /* ================================= Loader ================================= */
 function remove_loader(elem) {
