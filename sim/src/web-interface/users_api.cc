@@ -1,6 +1,8 @@
 #include "sim.h"
 
 #include <sim/utilities.h>
+#include <simlib/random.h>
+#include <simlib/sha.h>
 
 using std::string;
 
@@ -78,6 +80,8 @@ void Sim::api_users() {
 		if (uint(perms & PERM::EDIT))
 			append('E');
 		if (uint(perms & PERM::CHANGE_PASS))
+			append('p');
+		if (uint(perms & PERM::ADMIN_CHANGE_PASS))
 			append('P');
 		if (uint(perms & PERM::DELETE))
 			append('D');
@@ -145,7 +149,7 @@ void Sim::api_user_edit() {
 		USERNAME_MAX_LEN);
 
 	// Validate user type
-	form_validate_not_blank(new_utype_str, "type", "User's type");
+	new_utype_str = request.form_data.get("type");
 	UserType new_utype /*= UserType::NORMAL*/;
 	if (new_utype_str == "A") {
 		new_utype = UserType::ADMIN;
@@ -203,6 +207,39 @@ void Sim::api_user_change_password() {
 	STACK_UNWINDING_MARK;
 	using PERM = UserPermissions;
 
-	if (uint(~users_perms & PERM::CHANGE_PASS))
+	if (uint(~users_perms & PERM::CHANGE_PASS) and
+		uint(~users_perms & PERM::ADMIN_CHANGE_PASS))
+	{
 		return api_error403();
+	}
+
+	StringView old_pass = request.form_data.get("old_pass");
+	StringView new_pass = request.form_data.get("new_pass");
+	StringView new_pass1 = request.form_data.get("new_pass1");
+
+	if (new_pass != new_pass1)
+		return api_error400("Passwords do not match");
+
+	// Get salt and the hash of the password
+	InplaceBuff<SALT_LEN> salt;
+	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
+	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
+	stmt.bindAndExecute(users_user_id);
+	stmt.res_bind_all(salt, passwd_hash);
+	if (!stmt.next())
+		THROW("Cannot get user's password");
+
+	if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
+		not slowEqual(sha3_512(concat(salt, old_pass)), passwd_hash))
+	{
+		return api_error403("Wrong old password");
+	}
+
+	// Commit password change
+	char salt_bin[SALT_LEN >> 1];
+	fillRandomly(salt_bin, sizeof(salt_bin));
+	salt = toHex(salt_bin, sizeof(salt_bin));
+
+	stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
+	stmt.bindAndExecute(salt, sha3_512(concat(salt, new_pass)), users_user_id);
 }

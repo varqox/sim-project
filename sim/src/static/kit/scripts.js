@@ -251,7 +251,7 @@ var Form = {};
 	}
 }).call(Form);
 
-function ajax_form(title, target, html) {
+function ajax_form(title, target, html, success_msg) {
 	return $('<div>', {
 		class: 'form-container',
 		html: $('<h1>', {text: title})
@@ -259,7 +259,7 @@ function ajax_form(title, target, html) {
 			method: 'post',
 			html: html
 		}).submit(function () {
-			return Form.send_via_ajax(this, target);
+			return Form.send_via_ajax(this, target, success_msg);
 		})
 	});
 }
@@ -731,9 +731,10 @@ var ActionsToHTML = {};
 			res.push(a_preview_button('/u/' + user_id + '/delete', 'Delete',
 				'btn-small red', function() { delete_user(true, user_id); }));
 
-		if (actions_str.indexOf('P') !== -1)
-			res.push(a_preview_button('/u/' + user_id + '/change-password', 'Change password',
-				'btn-small orange', function() { change_user_passowrd(true, user_id); }));
+		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
+			res.push(a_preview_button('/u/' + user_id + '/change-password',
+				'Change password', 'btn-small orange',
+				function() { change_user_password(true, user_id); }));
 
 		return res;
 	}
@@ -874,7 +875,46 @@ function edit_user(as_modal, user_id) {
 }
 function delete_user(as_modal, user_id) {
 }
-function change_user_passowrd(as_modal, user_id) {
+function change_user_password(as_modal, user_id) {
+	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+		data = data[0];
+
+		var actions = data[6];
+		if (actions.indexOf('P') === -1 && actions.indexOf('p') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		if (actions.indexOf('P') === -1 && $('.navbar .user > strong').text() != data[1])
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Change password',
+			'/api/user/' + user_id + '/change-password',
+			(actions.indexOf('P') !== -1 ? $() : Form.field_group('Old password', {
+					type: 'password',
+					name: 'old_pass',
+					size: 24,
+				})).add(Form.field_group('New password', {
+					type: 'password',
+					name: 'new_pass',
+					size: 24,
+				})).add(Form.field_group('New password (repeat)', {
+					type: 'password',
+					name: 'new_pass1',
+					size: 24,
+				})).add('<div>', {
+					html: $('<input>', {
+						class: 'btn blue',
+						type: 'submit',
+						value: 'Update'
+					})
+				}), 'Password changed'));
+
+	}, '/u/' + user_id + "/change-password");
 }
 function UsersLister(elem) {
 	Lister.call(this, elem);
