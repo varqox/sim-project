@@ -968,7 +968,7 @@ function preview_job(as_modal, job_id) {
 		})).append('<h2>Report preview</h2>')
 		.append($('<pre>', {
 			class: 'report-preview',
-			html: data[9][1]
+			html: colorize(text_to_safe_html(data[9][1]))
 		}));
 
 		if (data[9][0])

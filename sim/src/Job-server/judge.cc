@@ -20,7 +20,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	InplaceBuff<16384> job_report;
 	auto stdlog_and_append_jreport = [&](auto&&... args) {
 		stdlog(args...);
-		job_report.append(std::forward<decltype(args)>(args)...);
+		job_report.append(std::forward<decltype(args)>(args)..., '\n');
 	};
 
 	// Gather the needed information about the submission
