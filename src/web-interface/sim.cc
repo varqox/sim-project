@@ -188,7 +188,7 @@ void Sim::view_logs() {
 	if (!session_open() || session_user_type > UserType::ADMIN)
 		return error403();
 
-	page_template("Logs", "body{margin-left:20px}");
+	page_template("Logs", "body{padding-left:20px}");
 
 	append("<h2>Server's log:</h2>"
 		"<pre id=\"web\" class=\"logs\"></pre>"

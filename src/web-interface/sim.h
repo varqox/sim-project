@@ -41,7 +41,7 @@ private:
 
 	/// Sets resp.status_code to @p status_code and resp.content to
 	///  @p response_body
-	void set_response(std::string status_code, std::string response_body = {}) {
+	void set_response(StringView status_code, StringView response_body = {}) {
 		STACK_UNWINDING_MARK;
 
 		resp.status_code = std::move(status_code);
@@ -62,21 +62,25 @@ private:
 
 	/* ================================ API ================================ */
 
-	void api_error400(std::string response_body = {}) {
+	void api_error400(StringView response_body = {}) {
 		set_response("400 Bad Request", response_body);
 	}
 
-	void api_error403(std::string response_body = {}) {
+	void api_error403(StringView response_body = {}) {
 		set_response("403 Forbidden", response_body);
 	}
 
-	void api_error404(std::string response_body = {}) {
+	void api_error404(StringView response_body = {}) {
 		set_response("404 Not Found", response_body);
 	}
 
+	// api.cc
 	void api_handle();
 
 	void api_logs();
+
+	// jobs_api.cc
+	void api_jobs();
 
 	void api_job();
 
@@ -88,12 +92,18 @@ private:
 
 	void api_job_download_uploaded_package();
 
-	void api_jobs();
+	// users_api.cc
+	void api_users();
 
 	void api_user();
 
-	void api_users();
+	void api_user_edit();
 
+	void api_user_delete();
+
+	void api_user_change_password();
+
+	// ???_api.cc
 	void api_list_problems();
 
 	void api_change_submission_type_to();
@@ -329,15 +339,15 @@ private:
 		VIEW_ALL = 32,
 		MAKE_ADMIN = 64,
 		MAKE_TEACHER = 128,
-		DEMOTE = 256
+		MAKE_NORMAL = 256
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, &)
 
-	uint8_t users_user_type = 0;
-	UserPermissions users_permissions = UserPermissions::NONE;
+	UserType users_user_type = UserType::NORMAL;
+	UserPermissions users_perms = UserPermissions::NONE;
 	InplaceBuff<30> users_user_id;
 	InplaceBuff<USERNAME_MAX_LEN> users_username;
 	InplaceBuff<USER_FIRST_NAME_MAX_LEN> users_first_name;
@@ -381,11 +391,11 @@ private:
 				"<a class=\"btn-small\" href=\"/u/", users_user_id, "\">"
 					"View profile</a>");
 
-		if (uint(users_permissions & UserPermissions::EDIT))
+		if (uint(users_perms & UserPermissions::EDIT))
 			append("<a class=\"btn-small blue\" href=\"/u/", users_user_id,
 				"/edit\">Edit profile</a>");
 
-		if (uint(users_permissions & UserPermissions::CHANGE_PASS))
+		if (uint(users_perms & UserPermissions::CHANGE_PASS))
 			append("<a class=\"btn-small orange\" href=\"/u/", users_user_id,
 				"/change-password\">Change password</a>");
 
@@ -434,7 +444,7 @@ private:
 		StringView scripts = {})
 	{
 		STACK_UNWINDING_MARK;
-		page_template(title, concat("body{margin-left:32px}", styles), scripts);
+		page_template(title, concat("body{padding-left:32px}", styles), scripts);
 	}
 
 	/// Main Jobs handler

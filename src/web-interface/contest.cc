@@ -271,7 +271,7 @@ void Contest::addContest() {
 			}
 	}
 
-	baseTemplate("Add contest", "body{margin-left:30px}");
+	baseTemplate("Add contest", "body{padding-left:30px}");
 	append(fv.errors(), "<div class=\"form-container\">" // TODO: center
 			"<h1>Add contest</h1>"
 			"<form method=\"post\">"

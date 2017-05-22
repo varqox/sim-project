@@ -677,7 +677,7 @@ void Connection::send(const char* str, size_t len) {
 void Connection::sendResponse(const HttpResponse& res) {
 	string str = "HTTP/1.1 ";
 	str.reserve(res.content.size + 500);
-	str.append(res.status_code).append("\r\n");
+	str.append(res.status_code.data(), res.status_code.size).append("\r\n");
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
 
