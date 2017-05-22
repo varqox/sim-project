@@ -215,6 +215,55 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	}
 }
 
+/* ================================= Form ================================= */
+var Form = {};
+(function() {
+	this.field_group = function(label, input_context) {
+		return $('<div>', {
+			class: 'field-group',
+			html: $('<label>', {text: label}).add('<input>', input_context)
+		});
+	}
+
+	this.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_parent)
+	{
+		if (success_msg === undefined)
+			success_msg = 'Success';
+		if (loader_parent === undefined)
+			loader_parent = $(form);
+
+		form = $(form);
+		addCsrfTokenTo(form);
+		append_loader(loader_parent);
+
+		$.ajax({
+			type: 'POST',
+			url: url,
+			data: form.serialize(),
+			success: function() {
+				show_success_via_loader(loader_parent, success_msg);
+			},
+			error: function(resp, status) {
+				show_error_via_loader(loader_parent, resp, status);
+			}
+		});
+		return false;
+	}
+}).call(Form);
+
+function ajax_form(title, target, html) {
+	return $('<div>', {
+		class: 'form-container',
+		html: $('<h1>', {text: title})
+		.add('<form>', {
+			method: 'post',
+			html: html
+		}).submit(function () {
+			return Form.send_via_ajax(this, target);
+		})
+	});
+}
+
 /* ================================= Modals ================================= */
 $(document).click(function(event) {
 	var elem;
@@ -231,14 +280,42 @@ $(document).click(function(event) {
 		window.history.replaceState({}, '', elem.attr('prev-url'));
 });
 function modal(modal_body) {
-	$('<div>', {
+	return $('<div>', {
 		class: 'modal',
 		html: $('<div>', {
 			html: $('<span>', { class: 'close' }).add(modal_body)
 		})
 	}).appendTo('body');
 }
-function modalForm(form_title, form_body) {
+function modal_request(title, form, target_url, success_msg) {
+	var elem = modal($('<h2>', {text: title}));
+	Form.send_via_ajax(form, target_url, success_msg, elem.children());
+}
+function dialogue_modal_request(title, info_html, go_text, go_classes, target_url, success_msg, cancel_text) {
+	modal($('<h2>', {text: title})
+		.add(info_html).add('<div>', {
+			style: 'margin: 8px auto 0',
+			html: $('<a>', {
+				class: go_classes,
+				text: go_text,
+				click: function() {
+					var form = $(this).parent().parent().find('form');
+					if (form.length === 0)
+						form = $('<form>');
+					Form.send_via_ajax(form, target_url, success_msg,
+						$(this).parent().parent());
+				}
+			}).add((cancel_text === undefined ? '' : $('<a>', {
+				class: 'btn-small',
+				text: cancel_text,
+				click: function() {
+					$(this).parent().parent().parent().remove();
+				}
+			})))
+		})
+	);
+}
+/*function modalForm(form_title, form_body) {
 	modal($('<h2>', {
 		text: form_title
 	}).add('<form>', {
@@ -322,7 +399,7 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 			}
 		})))
 	});
-}
+}*/
 
 /* ================================ Preview ================================ */
 function preview_base(as_modal, ajax_url, success_handler, new_window_location) {
@@ -428,7 +505,7 @@ function Lister(elem) {
 
 /* ================================== Logs ================================== */
 function colorize(log, end) {
-	if (end > log.length)
+	if (end === undefined || end > log.length)
 		end = log.length;
 
 	var res = "";
@@ -620,7 +697,7 @@ var ActionsToHTML = {};
 				text: 'Cancel job',
 				click: function() {
 					var jid = job_id;
-					return function() { cancelJob(jid); }
+					return function() { cancel_job(jid); }
 				}()
 			}));
 
@@ -630,7 +707,7 @@ var ActionsToHTML = {};
 				text: 'Restart job',
 				click: function() {
 					var jid = job_id;
-					return function() { restartJob(jid); }
+					return function() { restart_job(jid); }
 				}()
 			}));
 
@@ -661,36 +738,6 @@ var ActionsToHTML = {};
 		return res;
 	}
 }).call(ActionsToHTML);
-
-/* ================================= Form ================================= */
-var form = {};
-(function() {
-	this.field_group = function(label, input_context) {
-		return $('<div>', {
-			class: 'field-group',
-			html: $('<label>', {text: label}).add('<input>', input_context)
-		});
-	}
-
-	this.send_via_ajax = function(form, url) {
-		form = $(form);
-		addCsrfTokenTo(form);
-		append_loader(form);
-
-		$.ajax({
-			type: 'POST',
-			url: url,
-			data: form.serialize(),
-			success: function() {
-				show_success_via_loader(form, 'Success');
-			},
-			error: function(resp, status) {
-				show_error_via_loader(form, resp, status);
-			}
-		});
-		return false;
-	}
-}).call(form);
 
 /* ================================= Users ================================= */
 function preview_user(as_modal, user_id) {
@@ -753,12 +800,8 @@ function edit_user(as_modal, user_id) {
 					statusText: 'Not Allowed'
 				});
 
-		this.append($('<div>', {
-			class: 'form-container',
-			html: $('<h1>', {text: 'Edit account'})
-			.add('<form>', {
-				method: 'post',
-				html: form.field_group('Username', {
+		this.append(ajax_form('Edit account', '/api/user/' + user_id + '/edit',
+			Form.field_group('Username', {
 					type: 'text',
 					name: 'username',
 					value: data[1],
@@ -797,21 +840,21 @@ function edit_user(as_modal, user_id) {
 							return res;
 						}()
 					})
-				})).add(form.field_group('First name', {
+				})).add(Form.field_group('First name', {
 					type: 'text',
 					name: 'first_name',
 					value: data[2],
 					size: 24,
 					// maxlength: 'TODO...',
 					required: true
-				})).add(form.field_group('Last name', {
+				})).add(Form.field_group('Last name', {
 					type: 'text',
 					name: 'last_name',
 					value: data[3],
 					size: 24,
 					// maxlength: 'TODO...',
 					required: true
-				})).add(form.field_group('Email', {
+				})).add(Form.field_group('Email', {
 					type: 'email',
 					name: 'email',
 					value: data[4],
@@ -825,10 +868,7 @@ function edit_user(as_modal, user_id) {
 						value: 'Update'
 					})
 				})
-			}).submit(function () {
-				return form.send_via_ajax(this, '/api/user/' + user_id + '/edit');
-			})
-		}));
+			));
 
 	}, '/u/' + user_id + "/edit");
 }
@@ -981,24 +1021,18 @@ function preview_job(as_modal, job_id) {
 			})));
 	}, '/jobs/' + job_id);
 }
-function cancelJob(job_id) {
-	modalForm('Cancel job ' + job_id);
-	sendModalFrom('/api/job/' + job_id + '/cancel',
-		'The job has been canceled.');
+function cancel_job(job_id) {
+	modal_request('Canceling job ' + job_id, $('<form>'),
+		'/api/job/' + job_id + '/cancel', 'The job has been canceled.');
 }
-function restartJob(job_id) {
-	modalForm('Restart job',
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to restart the '
-			}).append(a_preview_button('/jobs/' + job_id, 'job ' + job_id, undefined,
+function restart_job(job_id) {
+	dialogue_modal_request('Restart job', $('<label>', {
+			text: 'Are you sure to restart the '
+		}).append(a_preview_button('/jobs/' + job_id, 'job ' + job_id, undefined,
 				function() { preview_job(true, job_id);}))
-			.append('?')
-		}).add(modalFormSubmitButton('Restart job',
-			'/api/job/' + job_id + '/restart',
-			'The job has been restarted.', 'orange',
-			'No, go back'))
-	);
+		.append('?'),
+		'Restart job', 'btn-small orange', '/api/job/' + job_id + '/restart',
+		'The job has been restarted.', 'No, go back');
 }
 function JobsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
@@ -1117,7 +1151,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 }
 
 /* ============================== Submissions ============================== */
-function changeSubmissionType(submission_id, stype) {
+/*function changeSubmissionType(submission_id, stype) {
 	modalForm('Change submission type',
 		$('<div>', {
 			html: $('<label>', {
@@ -1169,10 +1203,10 @@ function rejudgeRoundSubmissions(round_id) {
 			'Rejudge of the submissions was added to the job queue', 'blue',
 			'No, go back'))
 	);
-}
+}*/
 
 /* ============================ Contest's users ============================ */
-function addContestUser(contest_id) {
+/*function addContestUser(contest_id) {
 	modalForm('Add user to the contest',
 		$('<div>', {
 			class: 'field-group',
@@ -1255,4 +1289,4 @@ function expelContestUser(contest_id, user_id, username) {
 			'User has been expelled.', 'red',
 			'No, the user may stay'))
 	);
-}
+}*/
