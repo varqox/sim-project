@@ -1270,7 +1270,9 @@ div.right-flow {
 	flex-flow: row wrap;
 	justify-content: flex-end;
 }
-.compilation-errors, .simfile, .report-preview {
+.compilation-errors,
+.simfile,
+.report-preview {
 	display: inline-block;
 	align-self: flex-start;
 	padding: 8px;
@@ -1282,6 +1284,31 @@ div.right-flow {
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
+pre.compilation-errors .green,
+pre.report-preview .green {
+	color: #49bb00;
+}
+pre.compilation-errors .blue,
+pre.report-preview .blue {
+	color: #5454ff;
+}
+pre.compilation-errors .red,
+pre.report-preview .red {
+	color: #ff5454;
+}
+pre.compilation-errors .yellow,
+pre.report-preview .yellow {
+	color: #cec100;
+}
+pre.compilation-errors .pink,
+pre.report-preview .pink {
+	color: #ff00ff;
+}
+pre.compilation-errors .turquoise,
+pre.report-preview .turquoise {
+	color: #1bc7b7;
+}
+
 .results {
 	margin-left: 10px;
 }
@@ -1733,22 +1760,22 @@ pre.logs span.loader {
 	transform: perspective(1px) translateX(-50%);
 }
 
-pre .green {
+pre.logs .green {
 	color: #54ff54;
 }
-pre .blue {
+pre.logs .blue {
 	color: #5454ff;
 }
-pre .red {
+pre.logs .red {
 	color: #ff5454;
 }
-pre .yellow {
+pre.logs .yellow {
 	color: #ffff54;
 }
-pre .pink {
+pre.logs .pink {
 	color: #ff00ff;
 }
-pre .turquoise {
+pre.logs .turquoise {
 	color: #40e0d0;
 }
 
