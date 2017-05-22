@@ -18,7 +18,8 @@ Sim::UserPermissions Sim::users_get_permissions(StringView viewer_id,
 	if (viewer_id == uid) {
 		constexpr UserPermissions perm[4] = {
 			// SIM root
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::VIEW_ALL,
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::VIEW_ALL |
+				PERM::MAKE_ADMIN,
 			// Admin
 			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN |
 				PERM::MAKE_TEACHER | PERM::MAKE_NORMAL | PERM::DELETE |
@@ -37,13 +38,17 @@ Sim::UserPermissions Sim::users_get_permissions(StringView viewer_id,
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
 		{ // SIM root
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS, // SIM root
+			// SIM root
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS,
+			// Admin
 			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL, // Admin
+				PERM::MAKE_NORMAL,
+			// Teacher
 			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL, // Teacher
+				PERM::MAKE_NORMAL,
+			// Normal
 			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL // Normal
+				PERM::MAKE_NORMAL
 		}, { // Admin
 			PERM::VIEW, // SIM root
 			PERM::VIEW, // Admin
