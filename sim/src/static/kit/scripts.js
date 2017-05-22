@@ -138,13 +138,79 @@ function getCookie(name) {
 
 // Adding csrf token to a form
 function addCsrfTokenTo(form) {
-	$(form).find('input[name="csrf_token"]').remove(); // Avoid duplication
+	form.find('input[name="csrf_token"]').remove(); // Avoid duplication
 	form.append('<input type="hidden" name="csrf_token" value="' +
 		getCookie('csrf_token') + '">');
+	return form;
 }
 
 // Adding csrf token just before submitting a form
-$('form').submit(function() { addCsrfTokenTo($(this)); });
+$('form').submit(function() { addCsrfTokenTo(this); });
+
+/* ================================= Loader ================================= */
+function remove_loader(elem) {
+	$(elem).children('.loader, .loader-info').remove();
+}
+function append_loader(elem) {
+	remove_loader(elem);
+	elem = $(elem);
+	if (elem[0].style.animationName === undefined &&
+		elem[0].style.WebkitAnimationName === undefined)
+	{
+		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
+	} else
+		$(elem).append($('<span>', {
+			class: 'loader',
+			html: $('<div>', {class: 'spinner'})
+		}));
+}
+function show_success_via_loader(elem, html) {
+	elem = $(elem);
+	remove_loader(elem);
+	elem.append($('<span>', {
+		class: 'loader-info success',
+		html: html
+	}));
+}
+function show_error_via_loader(elem, response, err_status, try_again_handler) {
+	if (err_status == 'success' || err_status == 'error' || err_status === undefined)
+		err_status = '';
+	else
+		err_status = '; ' + err_status;
+
+	elem = $(elem);
+	remove_loader(elem);
+	elem.append($('<span>', {
+		class: 'loader-info error',
+		html: $('<span>', {
+			text: "Error: " + response.status + ' ' + response.statusText + err_status
+		}).add(try_again_handler === undefined ? '' : $('<a>', {
+			text: 'Try again',
+			click: try_again_handler
+		}))
+	}));
+
+	// Additional message
+	var x = elem.find('.loader-info > span');
+	try {
+		var xml = $.parseXML(response.responseText);
+		var msg = $(xml).text();
+
+		if (msg != '')
+			x.text(x.text().concat("\nInfo: ", msg));
+
+	} catch (err) {
+		if (response.responseText != '' // There is a message
+			&& response.responseText.lastIndexOf('<!DOCTYPE html>', 0)
+				!== 0 // Message is not a whole HTML page
+			&& response.responseText.lastIndexOf('<!doctype html>', 0)
+				!== 0) // Message is not a whole HTML page
+		{
+			x.text(x.text().concat("\nInfo: ",
+				response.responseText));
+		}
+	}
+}
 
 /* ================================= Modals ================================= */
 $(document).click(function(event) {
@@ -253,63 +319,6 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 			}
 		})))
 	});
-}
-
-/* ================================= Loader ================================= */
-function remove_loader(elem) {
-	$(elem).children('.loader, .loader-info').remove();
-}
-function append_loader(elem) {
-	remove_loader(elem);
-	elem = $(elem);
-	if (elem[0].style.animationName === undefined &&
-		elem[0].style.WebkitAnimationName === undefined)
-	{
-		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
-	} else
-		$(elem).append($('<span>', {
-			class: 'loader',
-			html: $('<div>', {class: 'spinner'})
-		}));
-}
-function show_error_via_loader(elem, response, err_status, try_again_handler) {
-	if (err_status == 'success' || err_status === undefined)
-		err_status = '';
-	else
-		err_status = '; ' + err_status;
-
-	elem = $(elem);
-	remove_loader(elem);
-	elem.append($('<span>', {
-		class: 'loader-info',
-		html: $('<span>', {
-			text: "Error: " + response.status + ' ' + response.statusText + err_status
-		}).add(try_again_handler === undefined ? '' : $('<a>', {
-			text: 'Try again',
-			click: try_again_handler
-		}))
-	}));
-
-	// Additional message
-	var x = elem.children('.loader > span');
-	try {
-		var xml = $.parseXML(response.responseText);
-		var msg = $(xml).text();
-
-		if (msg != '')
-			x.text(x.text().concat("\nInfo: ", msg));
-
-	} catch (err) {
-		if (response.responseText != '' // There is a message
-			&& response.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-				!== 0 // Message is not a whole HTML page
-			&& response.responseText.lastIndexOf('<!doctype html>', 0)
-				!== 0) // Message is not a whole HTML page
-		{
-			x.text(x.text().concat("\nInfo: ",
-				response.responseText));
-		}
-	}
 }
 
 /* ================================ Preview ================================ */
@@ -584,7 +593,7 @@ var ActionsToHTML = {};
 				html: $('<a>', {
 					class: 'btn-small dropmenu-toggle',
 					text: 'Download'
-				}).add($('<ul>', {
+				}).add('<ul>', {
 					html: $('<a>', {
 						href: '/api/job/' + job_id + '/report',
 						text: 'Report'
@@ -592,7 +601,7 @@ var ActionsToHTML = {};
 						href: '/api/job/' + job_id + '/uploaded-package',
 						text: 'Uploaded package'
 					}))
-				}))
+				})
 			}));
 
 		if (actions_str.indexOf('V') !== -1)
@@ -636,19 +645,49 @@ var ActionsToHTML = {};
 
 		if (actions_str.indexOf('E') !== -1)
 			res.push(a_preview_button('/u/' + user_id + '/edit', 'Edit',
-				'btn-small blue', function() { preview_user_edit('TODO...'); }));
+				'btn-small blue', function() { edit_user(true, user_id); }));
 
 		if (actions_str.indexOf('D') !== -1)
 			res.push(a_preview_button('/u/' + user_id + '/delete', 'Delete',
-				'btn-small red', function() { preview_user_delete('TODO...'); }));
+				'btn-small red', function() { delete_user(true, user_id); }));
 
 		if (actions_str.indexOf('P') !== -1)
 			res.push(a_preview_button('/u/' + user_id + '/change-password', 'Change password',
-				'btn-small orange', function() { preview_user_change_password('TODO...'); }));
+				'btn-small orange', function() { change_user_passowrd(true, user_id); }));
 
 		return res;
 	}
 }).call(ActionsToHTML);
+
+/* ================================= Form ================================= */
+var form = {};
+(function() {
+	this.field_group = function(label, input_context) {
+		return $('<div>', {
+			class: 'field-group',
+			html: $('<label>', {text: label}).add('<input>', input_context)
+		});
+	}
+
+	this.send_via_ajax = function(form, url) {
+		form = $(form);
+		addCsrfTokenTo(form);
+		append_loader(form);
+
+		$.ajax({
+			type: 'POST',
+			url: url,
+			data: form.serialize(),
+			success: function() {
+				show_success_via_loader(form, 'Success');
+			},
+			error: function(resp, status) {
+				show_error_via_loader(form, resp, status);
+			}
+		});
+		return false;
+	}
+}).call(form);
 
 /* ================================= Users ================================= */
 function preview_user(as_modal, user_id) {
@@ -699,6 +738,96 @@ function preview_user(as_modal, user_id) {
 		this.append($('<p>', {text: 'TODO: add inline submissions preview'}));
 
 	}, '/u/' + user_id);
+}
+function edit_user(as_modal, user_id) {
+	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+		data = data[0];
+
+		var actions = data[6];
+		// TODO: check permissions
+
+		this.append($('<div>', {
+			class: 'form-container',
+			html: $('<h1>', {text: 'Edit account'})
+			.add('<form>', {
+				method: 'post',
+				html: form.field_group('Username', {
+					type: 'text',
+					name: 'username',
+					value: data[1],
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				}).add($('<div>', {
+					class: 'field-group',
+					html: $('<label>', {text: 'Type'})
+					.add('<select>', {
+						name: 'type',
+						required: true,
+						html: function() {
+							var res = [];
+							if (actions.indexOf('A') !== -1)
+								res.push($('<option>', {
+									value: 'A',
+									text: 'Admin',
+									selected: ('admin' === data[5] ? true : undefined)
+								}));
+
+							if (actions.indexOf('T') !== -1)
+								res.push($('<option>', {
+									value: 'T',
+									text: 'Teacher',
+									selected: ('teacher' === data[5] ? true : undefined)
+								}));
+
+							if (actions.indexOf('N') !== -1)
+								res.push($('<option>', {
+									value: 'N',
+									text: 'Normal',
+									selected: ('normal' === data[5] ? true : undefined)
+								}));
+
+							return res;
+						}()
+					})
+				})).add(form.field_group('First name', {
+					type: 'text',
+					name: 'first_name',
+					value: data[2],
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(form.field_group('Last name', {
+					type: 'text',
+					name: 'last_name',
+					value: data[3],
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(form.field_group('Email', {
+					type: 'email',
+					name: 'email',
+					value: data[4],
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add('<div>', {
+					html: $('<input>', {
+						class: 'btn blue',
+						type: 'submit',
+						value: 'Update'
+					})
+				})
+			}).submit(function () {
+				return form.send_via_ajax(this, '/api/user/' + user_id + '/edit');
+			})
+		}));
+
+	}, '/u/' + user_id + "/edit");
+}
+function delete_user(as_modal, user_id) {
+}
+function change_user_passowrd(as_modal, user_id) {
 }
 function UsersLister(elem) {
 	Lister.call(this, elem);

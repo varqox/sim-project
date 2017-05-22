@@ -20,13 +20,15 @@ Sim::UserPermissions Sim::users_get_permissions(StringView viewer_id,
 			// SIM root
 			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::VIEW_ALL,
 			// Admin
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::DEMOTE |
-				PERM::DELETE | PERM::VIEW_ALL,
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN |
+				PERM::MAKE_TEACHER | PERM::MAKE_NORMAL | PERM::DELETE |
+				PERM::VIEW_ALL,
 			// Teacher
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::DEMOTE |
-				PERM::DELETE | PERM::VIEW_ALL,
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_TEACHER |
+				PERM::MAKE_NORMAL | PERM::DELETE | PERM::VIEW_ALL,
 			// Normal
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::DELETE,
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_NORMAL |
+				PERM::DELETE,
 		};
 		return perm[viewer];
 	}
@@ -36,14 +38,17 @@ Sim::UserPermissions Sim::users_get_permissions(StringView viewer_id,
 	constexpr UserPermissions perm[4][4] = {
 		{ // SIM root
 			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS, // SIM root
-			PERM_ADMIN | PERM::DEMOTE, // Admin
-			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::DEMOTE, // Teacher
-			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER // Normal
+			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
+				PERM::MAKE_NORMAL, // Admin
+			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
+				PERM::MAKE_NORMAL, // Teacher
+			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
+				PERM::MAKE_NORMAL // Normal
 		}, { // Admin
 			PERM::VIEW, // SIM root
 			PERM::VIEW, // Admin
-			PERM_ADMIN | PERM::DEMOTE, // Teacher
-			PERM_ADMIN | PERM::MAKE_TEACHER // Normal
+			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL, // Teacher
+			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL // Normal
 		}, { // Teacher
 			PERM::NONE, // SIM root
 			PERM::VIEW, // Admin
@@ -275,7 +280,7 @@ void Sim::users_handle() {
 		return error403();
 	}
 
-	page_template("Users", "body{margin-left:30px}");
+	page_template("Users", "body{padding-left:30px}");
 	append("<h1>Users</h1>"
 		"<table class=\"users\"></table>"
 		"<script>"
@@ -291,11 +296,30 @@ void Sim::users_user() {
 		return users_user_submissions();
 	else if (next_arg == "problems")
 		return users_user_problems();
-	else if (not next_arg.empty())
-		return error404();
 
-	page_template(concat("User ", users_user_id), "body{margin-left:32px}");
-	append("<script>preview_user(false, ", users_user_id, ");</script>");
+	if (next_arg.empty()) {
+		page_template(concat("User ", users_user_id),
+			"body{padding-left:32px}");
+		append("<script>preview_user(false, ", users_user_id, ");</script>");
+
+	} else if (next_arg == "edit") {
+		page_template(concat("Edit user ", users_user_id),
+			"body{padding-left:32px}");
+		append("<script>edit_user(false, ", users_user_id, ");</script>");
+
+	} else if (next_arg == "delete") {
+		page_template(concat("Delete user ", users_user_id),
+			"body{padding-left:32px}");
+		append("<script>delete_user(false, ", users_user_id, ");</script>");
+
+	} else if (next_arg == "change-password") {
+		page_template(concat("Change password ", users_user_id),
+			"body{padding-left:32px}");
+		append("<script>change_user_password(false, ", users_user_id,
+			");</script>");
+
+	} else
+		return error404();
 }
 
 void Sim::users_user_submissions() {
@@ -314,7 +338,7 @@ void Sim::users_user_problems() {
 #if 0
 void User::userTemplate(StringView title, StringView styles, StringView scripts)
 {
-	baseTemplate(title, concat("body{margin-left:190px}", styles),
+	baseTemplate(title, concat("body{padding-left:190px}", styles),
 		scripts);
 	if (!Session::isOpen())
 		return;
@@ -384,7 +408,7 @@ void User::listUsers() {
 	if (Session::user_type > UTYPE_TEACHER)
 		return error403();
 
-	baseTemplate("Users list", "body{margin-left:30px}");
+	baseTemplate("Users list", "body{padding-left:30px}");
 	append("<h1>Users</h1>");
 	try {
 		MySQL::Statement stmt = db_conn.prepare(

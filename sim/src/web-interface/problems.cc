@@ -44,7 +44,7 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 void Problemset::problemsetTemplate(StringView title, StringView styles,
 	StringView scripts)
 {
-	baseTemplate(title, concat("body{margin-left:190px}", styles),
+	baseTemplate(title, concat("body{padding-left:190px}", styles),
 		scripts);
 
 	append("<ul class=\"menu\">"

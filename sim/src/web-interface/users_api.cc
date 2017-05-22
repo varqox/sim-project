@@ -1,14 +1,121 @@
 #include "sim.h"
 
+#include <sim/utilities.h>
+
+using std::string;
+
 void Sim::api_user() {
 	STACK_UNWINDING_MARK;
 
-	return api_error400();
+	if (not session_open())
+		return error403(); // Intentionally the whole template
+
+	users_user_id = url_args.extractNextArg();
+	if (not isDigit(users_user_id) or
+		request.method != server::HttpRequest::POST)
+	{
+		return api_error400();
+	}
+
+	uint utype;
+	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
+	stmt.bindAndExecute(users_user_id);
+	stmt.res_bind_all(utype);
+	if (not stmt.next())
+		return api_error404();
+
+	users_user_type = UserType(utype);
+	users_perms = users_get_viewer_permissions(users_user_id, users_user_type);
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "edit")
+		return api_user_edit();
+	else if (next_arg == "delete")
+		return api_user_delete();
+	else if (next_arg == "change-password")
+		return api_user_change_password();
+	else
+		return api_error404();
+}
+
+void Sim::api_user_edit() {
+	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
+
+	if (uint(~users_perms & PERM::EDIT))
+		return api_error403();
+
+	StringView username, new_utype_str, fname, lname, email;
+	// Validate fields
+	form_validate_not_blank(username, "username", "Username", isUsername,
+		"Username can only consist of characters [a-zA-Z0-9_-]",
+		USERNAME_MAX_LEN);
+
+	// Validate user type
+	form_validate_not_blank(new_utype_str, "type", "User's type");
+	UserType new_utype /*= UserType::NORMAL*/;
+	if (new_utype_str == "A") {
+		new_utype = UserType::ADMIN;
+		if (uint(~users_perms & PERM::MAKE_ADMIN))
+			return api_error403("You have no permissions to make this user an"
+				" admin");
+
+	} else if (new_utype_str == "T") {
+		new_utype = UserType::TEACHER;
+		if (uint(~users_perms & PERM::MAKE_TEACHER))
+			return api_error403("You have no permissions to make this user a"
+				" teacher");
+
+	} else if (new_utype_str == "N") {
+		new_utype = UserType::NORMAL;
+		if (uint(~users_perms & PERM::MAKE_NORMAL))
+			return api_error403("You have no permissions to make this user a"
+				" normal user");
+
+	} else
+		return api_error400("Invalid user's type");
+
+	form_validate_not_blank(fname, "first_name", "First Name",
+		USER_FIRST_NAME_MAX_LEN);
+
+	form_validate_not_blank(lname, "last_name", "Last Name",
+		USER_LAST_NAME_MAX_LEN);
+
+	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+
+	if (form_validation_error)
+		return api_error400(concat("<div>", notifications, "</div>"));
+
+	// Commit changes
+	auto stmt = mysql.prepare("UPDATE users"
+		" SET username=?, first_name=?, last_name=?, email=?, type=?"
+		" WHERE id=?");
+	try {
+		stmt.bindAndExecute(username, fname, lname, email, uint(new_utype),
+			users_user_id);
+	} catch (const std::exception&) {
+		return api_error400("Username is already taken");
+	}
+}
+
+void Sim::api_user_delete() {
+	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
+
+	if (uint(~users_perms & PERM::DELETE))
+		return api_error403();
+}
+
+void Sim::api_user_change_password() {
+	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
+
+	if (uint(~users_perms & PERM::CHANGE_PASS))
+		return api_error403();
 }
 
 void Sim::api_users() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = UserPermissions;
 
 	if (not session_open())
@@ -88,8 +195,8 @@ void Sim::api_users() {
 			append('A');
 		if (uint(perms & PERM::MAKE_TEACHER))
 			append('T');
-		if (uint(perms & PERM::DEMOTE))
-			append('d');
+		if (uint(perms & PERM::MAKE_NORMAL))
+			append('N');
 
 		append("\"],");
 	}

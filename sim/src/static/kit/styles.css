@@ -454,7 +454,7 @@ html {
 }
 body {
 	display: block;
-	margin: 50px 10px 15px;
+	padding: 50px 10px 15px;
 }
 body h1 {
 	margin: 0;
@@ -867,8 +867,13 @@ a.btn.red {
 	color: #222;
 	white-space: pre;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
-	background: #ffa5a5;
 	border-radius: 6px;
+}
+.loader-info.error {
+	background: #ffa5a5;
+}
+.loader-info.success {
+	background: #a3ffa3;
 }
 .loader-info a {
 	margin-left: 5px;
@@ -1751,7 +1756,7 @@ pre .turquoise {
 .form-container {
 	display: table;
 	min-width: 430px;
-	margin: 70px auto 0;
+	margin: 20px auto 0;
 	background: #fdfdfd;
 	border: 1px solid #dddddd;
 	-webkit-border-radius: 4px;
@@ -1811,6 +1816,10 @@ form .field-group > textarea {
 }
 .form-container form div.button-row > .btn {
 	margin-right: 10px;
+}
+.form-container form .loader,
+.form-container form .loader-info {
+	margin-top: 16px;
 }
 
 /* Notifications */

@@ -49,7 +49,7 @@ void Sim::jobs_handle() {
 	if (isDigit(next_arg)) {
 		jobs_job_id = next_arg;
 
-		page_template(concat("Job ", jobs_job_id), "body{margin-left:32px}");
+		page_template(concat("Job ", jobs_job_id), "body{padding-left:32px}");
 		append("<script>preview_job(false, ", jobs_job_id, ");</script>");
 		return;
 	}
@@ -66,7 +66,7 @@ void Sim::jobs_handle() {
 		return error403();
 
 	/* List jobs */
-	page_template("Job queue", "body{margin-left:20px}");
+	page_template("Job queue", "body{padding-left:20px}");
 
 	append("<h1>", (query_suffix.empty() ? "All jobs" : "My jobs"), "</h1>"
 		"<table class=\"jobs\"></table>"

@@ -2,134 +2,6 @@
 
 #include <sim/jobs.h>
 
-void Sim::api_job() {
-	STACK_UNWINDING_MARK;
-	using JQT = JobQueueType;
-
-	if (not session_open())
-		return error403(); // Intentionally the whole template
-
-	jobs_job_id = url_args.extractNextArg();
-
-	InplaceBuff<30> jcreator;
-	InplaceBuff<256> jinfo;
-	uint jtype, jstatus;
-
-	auto stmt = mysql.prepare("SELECT creator, type, status, info"
-		" FROM job_queue WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
-	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
-	if (not stmt.next())
-		return api_error404();
-
-	jobs_perms = jobs_get_permissions(jcreator, JobQueueStatus(jstatus));
-
-	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "cancel")
-		return api_job_cancel();
-	else if (next_arg == "restart")
-		return api_job_restart(JQT(jtype), jinfo);
-	else if (next_arg == "report")
-		return api_job_download_report();
-	else if (next_arg == "uploaded-package" and isIn(JQT(jtype), {
-		JQT::ADD_PROBLEM,
-		JQT::REUPLOAD_PROBLEM,
-		JQT::ADD_JUDGE_MODEL_SOLUTION,
-		JQT::REUPLOAD_JUDGE_MODEL_SOLUTION}))
-	{
-		return api_job_download_uploaded_package();
-
-	} else
-		return api_error400();
-}
-
-void Sim::api_job_cancel() {
-	STACK_UNWINDING_MARK;
-	using PERM = JobPermissions;
-
-	if (request.method != server::HttpRequest::POST)
-		return api_error400();
-
-	if (uint(~jobs_perms & PERM::CANCEL)) {
-		if (uint(jobs_perms & PERM::VIEW))
-			return api_error400("Job has already been canceled or done");
-		return api_error403();
-	}
-
-	// Cancel job
-	auto stmt = mysql.prepare("UPDATE job_queue"
-		" SET status=" JQSTATUS_CANCELED_STR " WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
-}
-
-void Sim::api_job_restart(JobQueueType job_type, StringView job_info) {
-	STACK_UNWINDING_MARK;
-	using PERM = JobPermissions;
-	using JQT = JobQueueType;
-
-	if (request.method != server::HttpRequest::POST)
-		return api_error400();
-
-	if (uint(~jobs_perms & PERM::RESTART)) {
-		if (uint(jobs_perms & PERM::VIEW))
-			return api_error400("Job has already been restarted");
-		return api_error403();
-	}
-
-	/* Restart job */
-
-	// Restart adding / reuploading problem
-	bool adding = isIn(job_type,
-		{JQT::ADD_PROBLEM, JQT::ADD_JUDGE_MODEL_SOLUTION});
-	bool reupload = isIn(job_type,
-		{JQT::REUPLOAD_PROBLEM, JQT::REUPLOAD_JUDGE_MODEL_SOLUTION});
-
-	if (adding or reupload) {
-		jobs::AddProblemInfo info {job_info};
-		info.stage = jobs::AddProblemInfo::FIRST;
-
-		auto stmt = mysql.prepare("UPDATE job_queue"
-			" SET type=?, status=" JQSTATUS_PENDING_STR ", info=?"
-			" WHERE id=?");
-
-		stmt.bindAndExecute(
-			uint(adding ? JQT::ADD_PROBLEM : JQT::REUPLOAD_PROBLEM),
-			info.dump(), jobs_job_id);
-
-	// Restart job of other type
-	} else {
-		auto stmt = mysql.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_PENDING_STR " WHERE id=?");
-		stmt.bindAndExecute(jobs_job_id);
-	}
-
-	notify_job_server();
-}
-
-void Sim::api_job_download_report() {
-	STACK_UNWINDING_MARK;
-
-	// Assumption: permissions are already checked
-	resp.headers["Content-type"] = "application/text";
-	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=job-", jobs_job_id, "-report");
-
-	// Fetch the report
-	auto stmt = mysql.prepare("SELECT data FROM job_queue WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
-	stmt.res_bind_all(resp.content);
-	throw_assert(stmt.next());
-}
-
-void Sim::api_job_download_uploaded_package() {
-	STACK_UNWINDING_MARK;
-
-	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=", jobs_job_id, ".zip");
-	resp.content_type = server::HttpResponse::FILE;
-	resp.content = concat("jobs_files/", jobs_job_id, ".zip");
-}
-
 static constexpr const char* job_type_str(JobQueueType type) noexcept {
 	using T = JobQueueType;
 
@@ -362,4 +234,134 @@ void Sim::api_jobs() {
 		--resp.content.size;
 
 	append("\n]");
+}
+
+void Sim::api_job() {
+	STACK_UNWINDING_MARK;
+	using JQT = JobQueueType;
+
+	if (not session_open())
+		return error403(); // Intentionally the whole template
+
+	jobs_job_id = url_args.extractNextArg();
+	if (not isDigit(jobs_job_id))
+		return api_error400();
+
+	InplaceBuff<30> jcreator;
+	InplaceBuff<256> jinfo;
+	uint jtype, jstatus;
+
+	auto stmt = mysql.prepare("SELECT creator, type, status, info"
+		" FROM job_queue WHERE id=?");
+	stmt.bindAndExecute(jobs_job_id);
+	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
+	if (not stmt.next())
+		return api_error404();
+
+	jobs_perms = jobs_get_permissions(jcreator, JobQueueStatus(jstatus));
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "cancel")
+		return api_job_cancel();
+	else if (next_arg == "restart")
+		return api_job_restart(JQT(jtype), jinfo);
+	else if (next_arg == "report")
+		return api_job_download_report();
+	else if (next_arg == "uploaded-package" and isIn(JQT(jtype), {
+		JQT::ADD_PROBLEM,
+		JQT::REUPLOAD_PROBLEM,
+		JQT::ADD_JUDGE_MODEL_SOLUTION,
+		JQT::REUPLOAD_JUDGE_MODEL_SOLUTION}))
+	{
+		return api_job_download_uploaded_package();
+
+	} else
+		return api_error400();
+}
+
+void Sim::api_job_cancel() {
+	STACK_UNWINDING_MARK;
+	using PERM = JobPermissions;
+
+	if (request.method != server::HttpRequest::POST)
+		return api_error400();
+
+	if (uint(~jobs_perms & PERM::CANCEL)) {
+		if (uint(jobs_perms & PERM::VIEW))
+			return api_error400("Job has already been canceled or done");
+		return api_error403();
+	}
+
+	// Cancel job
+	auto stmt = mysql.prepare("UPDATE job_queue"
+		" SET status=" JQSTATUS_CANCELED_STR " WHERE id=?");
+	stmt.bindAndExecute(jobs_job_id);
+}
+
+void Sim::api_job_restart(JobQueueType job_type, StringView job_info) {
+	STACK_UNWINDING_MARK;
+	using PERM = JobPermissions;
+	using JQT = JobQueueType;
+
+	if (request.method != server::HttpRequest::POST)
+		return api_error400();
+
+	if (uint(~jobs_perms & PERM::RESTART)) {
+		if (uint(jobs_perms & PERM::VIEW))
+			return api_error400("Job has already been restarted");
+		return api_error403();
+	}
+
+	/* Restart job */
+
+	// Restart adding / reuploading problem
+	bool adding = isIn(job_type,
+		{JQT::ADD_PROBLEM, JQT::ADD_JUDGE_MODEL_SOLUTION});
+	bool reupload = isIn(job_type,
+		{JQT::REUPLOAD_PROBLEM, JQT::REUPLOAD_JUDGE_MODEL_SOLUTION});
+
+	if (adding or reupload) {
+		jobs::AddProblemInfo info {job_info};
+		info.stage = jobs::AddProblemInfo::FIRST;
+
+		auto stmt = mysql.prepare("UPDATE job_queue"
+			" SET type=?, status=" JQSTATUS_PENDING_STR ", info=?"
+			" WHERE id=?");
+
+		stmt.bindAndExecute(
+			uint(adding ? JQT::ADD_PROBLEM : JQT::REUPLOAD_PROBLEM),
+			info.dump(), jobs_job_id);
+
+	// Restart job of other type
+	} else {
+		auto stmt = mysql.prepare("UPDATE job_queue"
+			" SET status=" JQSTATUS_PENDING_STR " WHERE id=?");
+		stmt.bindAndExecute(jobs_job_id);
+	}
+
+	notify_job_server();
+}
+
+void Sim::api_job_download_report() {
+	STACK_UNWINDING_MARK;
+
+	// Assumption: permissions are already checked
+	resp.headers["Content-type"] = "application/text";
+	resp.headers["Content-Disposition"] =
+		concat_tostr("attachment; filename=job-", jobs_job_id, "-report");
+
+	// Fetch the report
+	auto stmt = mysql.prepare("SELECT data FROM job_queue WHERE id=?");
+	stmt.bindAndExecute(jobs_job_id);
+	stmt.res_bind_all(resp.content);
+	throw_assert(stmt.next());
+}
+
+void Sim::api_job_download_uploaded_package() {
+	STACK_UNWINDING_MARK;
+
+	resp.headers["Content-Disposition"] =
+		concat_tostr("attachment; filename=", jobs_job_id, ".zip");
+	resp.content_type = server::HttpResponse::FILE;
+	resp.content = concat("jobs_files/", jobs_job_id, ".zip");
 }

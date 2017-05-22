@@ -9,7 +9,7 @@ namespace server {
 class HttpResponse {
 public:
 	enum ContentType : uint8_t { TEXT, FILE, FILE_TO_REMOVE } content_type;
-	std::string status_code;
+	InplaceBuff<100> status_code;
 	HttpHeaders headers, cookies;
 	InplaceBuff<4096> content;
 
