@@ -97,6 +97,8 @@ private:
 
 	void api_user();
 
+	void api_user_add();
+
 	void api_user_edit();
 
 	void api_user_delete();
@@ -339,7 +341,8 @@ private:
 		VIEW_ALL = 32,
 		MAKE_ADMIN = 64,
 		MAKE_TEACHER = 128,
-		MAKE_NORMAL = 256
+		MAKE_NORMAL = 256,
+		ADD_USER = 512
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~)
@@ -358,23 +361,16 @@ private:
 	 * @brief Returns a set of operation the viewer is allowed to do over the
 	 *   user
 	 *
-	 * @details To check VIEW_ALL permission @p viewer_id must be equal to
-	 *   @p uid
-	 *
-	 * @param viewer_id uid of viewer
-	 * @param viewer_type user_type of viewer
 	 * @param uid uid of (viewed) user
 	 * @param utype type of (viewed) user
+	 *
 	 * @return ORed permissions flags
 	 */
-	static Sim::UserPermissions users_get_permissions(StringView viewer_id,
-		UserType viewer_type, StringView uid, UserType utype);
+	Sim::UserPermissions users_get_permissions(StringView uid, UserType utype);
 
-	Sim::UserPermissions users_get_viewer_permissions(StringView uid,
-		UserType utype)
-	{
-		return users_get_permissions(session_user_id, session_user_type, uid,
-			utype);
+	Sim::UserPermissions users_get_permissions() {
+		// Return overall permissions
+		return users_get_permissions("", UserType::NORMAL);
 	}
 
 	void users_page_template(StringView title, StringView styles = {},
@@ -404,14 +400,16 @@ private:
 
 	/* Pages */
 
-	// @brief Main User handler
-	void users_handle();
-
 	void login();
 
 	void logout();
 
 	void sign_up();
+
+	// @brief Main User handler
+	void users_handle();
+
+	void users_add();
 
 	void users_user();
 
@@ -439,6 +437,11 @@ private:
 	// Session must be open to access the jobs
 	JobPermissions jobs_get_permissions(StringView creator_id,
 		JobQueueStatus job_status);
+
+	JobPermissions jobs_get_permissions() {
+		// Return overall permissions
+		return jobs_get_permissions("", JobQueueStatus::DONE);
+	}
 
 	void jobs_page_template(StringView title, StringView styles = {},
 		StringView scripts = {})
@@ -470,6 +473,11 @@ private:
 
 	ProblemPermissions problems_get_permissions(StringView owner_id,
 		ProblemType ptype);
+
+	ProblemPermissions problems_get_permissions() {
+		// Return overall permissions
+		return problems_get_permissions("", ProblemType::VOID);
+	}
 
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	UserType problems_owner_utype = UserType::NORMAL;

@@ -49,18 +49,12 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 						"<a href=\"/p\">Problems</a>");
 
 	if (session_open()) {
-		if (uint(users_get_viewer_permissions(session_user_id,
-			session_user_type) & UserPermissions::VIEW_ALL))
-		{
+		if (uint(users_get_permissions() & UserPermissions::VIEW_ALL))
 			append("<a href=\"/u\">Users</a>");
-		}
 
 
-		if (uint(jobs_get_permissions("", JobQueueStatus::DONE) &
-			JobPermissions::VIEW_ALL))
-		{
+		if (uint(jobs_get_permissions() & JobPermissions::VIEW_ALL))
 			append("<a href=\"/jobs/\">Job queue</a>");
-		}
 
 		if (session_user_type == UserType::ADMIN)
 			append("<a href=\"/logs\">Logs</a>");
