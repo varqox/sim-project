@@ -8,6 +8,11 @@ function hex2str(hexx) {
 function text_to_safe_html(str) {
 	return $('<div>', {text: str}).html();
 }
+function logged_user_id() {
+	var x = $('.navbar .rightbar .user + ul > a:first-child').attr('href');
+	return x.substr(x.lastIndexOf('/') + 1);
+}
+
 // Dropdowns
 $(document).ready(function(){
 	$(document).click(function(event) {
@@ -265,19 +270,17 @@ function ajax_form(title, target, html, success_msg) {
 }
 
 /* ================================= Modals ================================= */
+function close_modal(modal) {
+	modal = $(modal);
+	modal.remove();
+	if (modal.is('.preview'))
+		window.history.replaceState({}, '', modal.attr('prev-url'));
+}
 $(document).click(function(event) {
-	var elem;
-
 	if ($(event.target).is('.modal'))
-		elem = $(event.target);
+		close_modal($(event.target));
 	else if ($(event.target).is('.modal .close'))
-		elem = $(event.target).parent().parent();
-	else
-		return;
-
-	elem.remove();
-	if (elem.is('.preview'))
-		window.history.replaceState({}, '', elem.attr('prev-url'));
+		close_modal($(event.target).parent().parent());
 });
 function modal(modal_body) {
 	return $('<div>', {
@@ -874,6 +877,52 @@ function edit_user(as_modal, user_id) {
 	}, '/u/' + user_id + "/edit");
 }
 function delete_user(as_modal, user_id) {
+	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+		data = data[0];
+
+		var actions = data[6];
+		if (actions.indexOf('D') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		var title = 'Delete user ' + user_id;
+		var confirm_text = 'Delete user';
+		var p = $('<p>', {
+			style: 'margin: 0 0 20px; text-align: center',
+			html: 'You are going to delete the user '
+		}).append(a_preview_button('/u/' + user_id, data[1], undefined, function() {
+			preview_user(true, user_id);
+		})).append('. As it cannot be undone,<br>you have to confirm it with YOUR password.');
+
+		if (user_id == logged_user_id()) {
+			title = confirm_text = 'Delete account';
+			p.html('You are going to delete your account. As it cannot be undone,<br>you have to confirm it with your password.');
+		}
+
+		this.append(ajax_form(title,
+			'/api/user/' + user_id + '/delete',
+			p.add(Form.field_group('Your password', {
+				type: 'password',
+				name: 'password',
+				size: 24,
+			})).add('<div>', {
+				html: $('<input>', {
+					class: 'btn red',
+					type: 'submit',
+					value: confirm_text
+				}).add('<a>', {
+					class: 'btn',
+					href: (as_modal ? undefined : '/'),
+					text: 'Go back',
+					click: (as_modal ? function() {
+						close_modal($(this).closest('.modal'));
+					} : undefined)
+				})
+			}), 'Deletion succeeded'));
+
+	}, '/u/' + user_id + "/delete");
 }
 function change_user_password(as_modal, user_id) {
 	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
@@ -895,24 +944,24 @@ function change_user_password(as_modal, user_id) {
 		this.append(ajax_form('Change password',
 			'/api/user/' + user_id + '/change-password',
 			(actions.indexOf('P') !== -1 ? $() : Form.field_group('Old password', {
-					type: 'password',
-					name: 'old_pass',
-					size: 24,
-				})).add(Form.field_group('New password', {
-					type: 'password',
-					name: 'new_pass',
-					size: 24,
-				})).add(Form.field_group('New password (repeat)', {
-					type: 'password',
-					name: 'new_pass1',
-					size: 24,
-				})).add('<div>', {
-					html: $('<input>', {
-						class: 'btn blue',
-						type: 'submit',
-						value: 'Update'
-					})
-				}), 'Password changed'));
+				type: 'password',
+				name: 'old_pass',
+				size: 24,
+			})).add(Form.field_group('New password', {
+				type: 'password',
+				name: 'new_pass',
+				size: 24,
+			})).add(Form.field_group('New password (repeat)', {
+				type: 'password',
+				name: 'new_pass1',
+				size: 24,
+			})).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Update'
+				})
+			}), 'Password changed'));
 
 	}, '/u/' + user_id + "/change-password");
 }
@@ -1000,7 +1049,7 @@ function preview_job(as_modal, job_id) {
 				else
 					td.append(info[name]);
 
-				td.append('<br/>');
+				td.append('<br>');
 			}
 
 			return td;
@@ -1036,9 +1085,11 @@ function preview_job(as_modal, job_id) {
 							class: 'status ' + data[3][0],
 							text: data[3][1]
 						}).add('<td>', {
-							html: data[5] === null ? 'System' : a_preview_button(
+							html: data[5] === null ? 'System' :
+								(data[6] == null ? 'Deleted (id: ' + data[5] + ')'
+								: a_preview_button(
 								'/u/' + data[5], data[6], undefined,
-								function() { preview_user(true, data[5]); })
+								function() { preview_user(true, data[5]); }))
 						}).add('<td>', {
 							html: info_html(data[7])
 						})
@@ -1127,11 +1178,11 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 						text: x[3][1]
 					}));
 					row.append($('<td>', {
-						html: x[5] === null ? 'System' : a_preview_button(
-							'/u/' + x[5], x[6], undefined, function() {
+						html: x[5] === null ? 'System' : (x[6] == null ? x[5]
+							: a_preview_button('/u/' + x[5], x[6], undefined, function() {
 								var uid = x[5];
 								return function() { preview_user(true, uid); };
-							}())
+							}()))
 					}));
 					// Info
 					var info = x[7];
