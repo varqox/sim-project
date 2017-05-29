@@ -55,7 +55,7 @@ void Sim::jobs_handle() {
 	}
 
 	// Get permissions to overall job queue
-	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
+	jobs_perms = jobs_get_permissions();
 
 	StringView query_suffix {};
 	if (next_arg == "my")

@@ -290,6 +290,12 @@ function modal(modal_body) {
 		})
 	}).appendTo('body');
 }
+function centerize_modal(modal) {
+	// Update padding-top
+	var m = $(modal);
+	var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
+	m.css({'padding-top': Math.max(new_padding, 0)});
+}
 function modal_request(title, form, target_url, success_msg) {
 	var elem = modal($('<h2>', {text: title}));
 	Form.send_via_ajax(form, target_url, success_msg, elem.children());
@@ -405,8 +411,26 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 }*/
 
 /* ================================ Preview ================================ */
-function preview_base(as_modal, ajax_url, success_handler, new_window_location) {
-	function impl(elem) {
+function preview_base(as_modal, new_window_location, func) {
+	if (as_modal) {
+		var elem = $('<div>', {
+			class: 'modal preview',
+			'prev-url': window.location.href,
+			html: $('<div>', {
+				html: $('<span>', { class: 'close'})
+				.add('<div>', {style: 'display:block'})
+			})
+		}).appendTo('body');
+		window.history.replaceState({}, '', new_window_location);
+		func.call(elem.find('div > div'));
+		centerize_modal(elem);
+
+	} else
+		func.call($(document.body));
+}
+function preview_ajax(as_modal, ajax_url, success_handler, new_window_location) {
+	preview_base(as_modal, new_window_location, function() {
+		var elem = this;
 		append_loader(elem);
 		$.ajax({
 			type: 'GET',
@@ -423,12 +447,8 @@ function preview_base(as_modal, ajax_url, success_handler, new_window_location) 
 
 				success_handler.apply(elem, arguments);
 
-				if (as_modal) {
-					// Update padding-top
-					var m = elem.parent().parent();
-					var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
-					m.css({'padding-top': Math.max(new_padding, 0)});
-				}
+				if (as_modal)
+					centerize_modal(elem.parent().parent());
 			},
 			error: function(resp, status) {
 				show_error_via_loader(elem, resp, status, function () {
@@ -436,22 +456,7 @@ function preview_base(as_modal, ajax_url, success_handler, new_window_location) 
 				});
 			}
 			});
-	}
-
-	if (as_modal) {
-		var elem = $('<div>', {
-			class: 'modal preview',
-			'prev-url': window.location.href,
-			html: $('<div>', {
-				html: $('<span>', { class: 'close'})
-				.add('<div>', {style: 'display:block'})
-			})
-		}).appendTo('body');
-		window.history.replaceState({}, '', new_window_location);
-		impl(elem.find('div > div'));
-
-	} else
-		impl($(document.body));
+	});
 }
 function a_preview_button(href, text, classes, func) {
 	return $('<a>', {
@@ -744,8 +749,71 @@ var ActionsToHTML = {};
 }).call(ActionsToHTML);
 
 /* ================================= Users ================================= */
+function add_user(as_modal) {
+	preview_base(as_modal, '/u/add', function() {
+		this.append(ajax_form('Add user', '/api/user/add',
+			Form.field_group('Username', {
+					type: 'text',
+					name: 'username',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				}).add($('<div>', {
+					class: 'field-group',
+					html: $('<label>', {text: 'Type'})
+					.add('<select>', {
+						name: 'type',
+						required: true,
+						html: $('<option>', {
+							value: 'A',
+							text: 'Admin',
+						}).add('<option>', {
+							value: 'T',
+							text: 'Teacher',
+						}).add('<option>', {
+							value: 'N',
+							text: 'Normal',
+							selected: true
+						})
+					})
+				})).add(Form.field_group('First name', {
+					type: 'text',
+					name: 'first_name',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(Form.field_group('Last name', {
+					type: 'text',
+					name: 'last_name',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(Form.field_group('Email', {
+					type: 'email',
+					name: 'email',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(Form.field_group('Password', {
+					type: 'password',
+					name: 'pass',
+					size: 24,
+				})).add(Form.field_group('Password (repeat)', {
+					type: 'password',
+					name: 'pass1',
+					size: 24,
+				})).add('<div>', {
+					html: $('<input>', {
+						class: 'btn blue',
+						type: 'submit',
+						value: 'Submit'
+					})
+				}), 'User was added'
+			));
+	})
+}
 function preview_user(as_modal, user_id) {
-	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		data = data[0];
 
 		this.append($('<div>', {
@@ -794,7 +862,7 @@ function preview_user(as_modal, user_id) {
 	}, '/u/' + user_id);
 }
 function edit_user(as_modal, user_id) {
-	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		data = data[0];
 
 		var actions = data[6];
@@ -877,7 +945,7 @@ function edit_user(as_modal, user_id) {
 	}, '/u/' + user_id + "/edit");
 }
 function delete_user(as_modal, user_id) {
-	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		data = data[0];
 
 		var actions = data[6];
@@ -925,7 +993,7 @@ function delete_user(as_modal, user_id) {
 	}, '/u/' + user_id + "/delete");
 }
 function change_user_password(as_modal, user_id) {
-	preview_base(as_modal, '/api/users/=' + user_id, function(data) {
+	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		data = data[0];
 
 		var actions = data[6];
@@ -1031,7 +1099,7 @@ function UsersLister(elem) {
 
 /* ================================== Jobs ================================== */
 function preview_job(as_modal, job_id) {
-	preview_base(as_modal, '/api/jobs/=' + job_id, function(data) {
+	preview_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
 		data = data[0];
 
 		function info_html(info) {

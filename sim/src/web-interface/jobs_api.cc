@@ -28,7 +28,7 @@ void Sim::api_jobs() {
 	using PERM = JobPermissions;
 
 	// Get permissions to the overall job queue
-	jobs_perms = jobs_get_permissions("", JobQueueStatus::DONE);
+	jobs_perms = jobs_get_permissions();
 	StringView next_arg = url_args.extractNextArg();
 	bool select_data = false;
 

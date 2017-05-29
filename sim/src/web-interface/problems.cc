@@ -82,8 +82,7 @@ void Problemset::handle() {
 	}
 
 	problem_id_.clear();
-	perms = getPermissions("", ProblemType::VOID); // Get permissions to overall
-	                                               // problemset
+	perms = getPermissions();
 
 	if (next_arg == "add")
 		return addProblem();

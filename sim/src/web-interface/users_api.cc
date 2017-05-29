@@ -4,6 +4,7 @@
 #include <simlib/random.h>
 #include <simlib/sha.h>
 
+using std::array;
 using std::string;
 
 void Sim::api_users() {
@@ -13,9 +14,7 @@ void Sim::api_users() {
 	if (not session_open())
 		return api_error403();
 
-	bool allow_access =
-		uint(users_get_viewer_permissions(session_user_id, session_user_type) &
-			PERM::VIEW_ALL);
+	bool allow_access = uint(users_get_permissions() & PERM::VIEW_ALL);
 
 	InplaceBuff<256> query;
 	query.append("SELECT id, username, first_name, last_name, email, type"
@@ -72,7 +71,7 @@ void Sim::api_users() {
 		}
 
 		// Allowed actions
-		UserPermissions perms = users_get_viewer_permissions(res[0], utype);
+		UserPermissions perms = users_get_permissions(res[0], utype);
 		append('"');
 
 		if (uint(perms & PERM::VIEW))
@@ -107,12 +106,16 @@ void Sim::api_user() {
 	if (not session_open())
 		return error403(); // Intentionally the whole template
 
-	users_user_id = url_args.extractNextArg();
-	if (not isDigit(users_user_id) or
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "add")
+		return api_user_add();
+	else if (not isDigit(next_arg) or
 		request.method != server::HttpRequest::POST)
 	{
 		return api_error400();
 	}
+
+	users_user_id = next_arg;
 
 	uint utype;
 	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
@@ -122,9 +125,9 @@ void Sim::api_user() {
 		return api_error404();
 
 	users_user_type = UserType(utype);
-	users_perms = users_get_viewer_permissions(users_user_id, users_user_type);
+	users_perms = users_get_permissions(users_user_id, users_user_type);
 
-	StringView next_arg = url_args.extractNextArg();
+	next_arg = url_args.extractNextArg();
 	if (next_arg == "edit")
 		return api_user_edit();
 	else if (next_arg == "delete")
@@ -133,6 +136,82 @@ void Sim::api_user() {
 		return api_user_change_password();
 	else
 		return api_error404();
+}
+
+void Sim::api_user_add() {
+	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
+
+	users_perms = users_get_permissions();
+
+	if (uint(~users_perms & PERM::ADD_USER))
+		return api_error403();
+
+	// Validate fields
+	StringView pass = request.form_data.get("pass");
+	StringView pass1 = request.form_data.get("pass1");
+
+	if (pass != pass1)
+		return api_error403("Passwords do not match");
+
+	StringView username, utype_str, fname, lname, email;
+
+	form_validate_not_blank(username, "username", "Username", isUsername,
+		"Username can only consist of characters [a-zA-Z0-9_-]",
+		USERNAME_MAX_LEN);
+
+	// Validate user type
+	utype_str = request.form_data.get("type");
+	UserType utype /*= UserType::NORMAL*/;
+	if (utype_str == "A") {
+		utype = UserType::ADMIN;
+		if (uint(~users_perms & PERM::MAKE_ADMIN))
+			return api_error403("You have no permissions to make this user an"
+				" admin");
+
+	} else if (utype_str == "T") {
+		utype = UserType::TEACHER;
+		if (uint(~users_perms & PERM::MAKE_TEACHER))
+			return api_error403("You have no permissions to make this user a"
+				" teacher");
+
+	} else if (utype_str == "N") {
+		utype = UserType::NORMAL;
+		if (uint(~users_perms & PERM::MAKE_NORMAL))
+			return api_error403("You have no permissions to make this user a"
+				" normal user");
+
+	} else
+		return api_error400("Invalid user's type");
+
+	form_validate_not_blank(fname, "first_name", "First Name",
+		USER_FIRST_NAME_MAX_LEN);
+
+	form_validate_not_blank(lname, "last_name", "Last Name",
+		USER_LAST_NAME_MAX_LEN);
+
+	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+
+	if (form_validation_error)
+		return api_error400(concat("<div>", notifications, "</div>"));
+
+	// All fields are valid
+	array<char, (SALT_LEN >> 1)> salt_bin;
+	fillRandomly(salt_bin.data(), salt_bin.size());
+	auto salt = toHex(salt_bin.data(), salt_bin.size());
+
+	auto stmt = mysql.prepare("INSERT IGNORE `users` (username, type,"
+			"first_name, last_name, email, salt, password) "
+		"VALUES(?, ?, ?, ?, ?, ?, ?)");
+
+	stmt.bindAndExecute(username, uint(utype), fname, lname, email, salt,
+		sha3_512(concat(salt, pass)));
+
+	// User account successfully created
+	if (stmt.affected_rows() != 1)
+		return api_error400("Username taken");
+
+	stdlog("New user: ", stmt.insert_id(), " -> `", username, '`');
 }
 
 void Sim::api_user_edit() {
