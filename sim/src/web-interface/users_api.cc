@@ -201,6 +201,25 @@ void Sim::api_user_delete() {
 
 	if (uint(~users_perms & PERM::DELETE))
 		return api_error403();
+
+	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
+	stmt.bindAndExecute(session_user_id);
+
+	InplaceBuff<SALT_LEN> salt;
+	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
+	stmt.res_bind_all(salt, passwd_hash);
+	throw_assert(stmt.next());
+
+	if (not slowEqual(sha3_512(concat(salt, request.form_data.get("password"))),
+		passwd_hash))
+	{
+		return api_error403("Wrong password");
+	}
+
+	// TODO: add other things like problems, submissions, contests, messages, files etc.
+
+	stmt = mysql.prepare("DELETE FROM users WHERE id=?");
+	stmt.bindAndExecute(users_user_id);
 }
 
 void Sim::api_user_change_password() {

@@ -631,7 +631,7 @@ void Problemset::reuploadProblem() {
 
 	problemsetTemplate("Reupload the problem " + problem_id_);
 	append(fv.errors(), "<div class=\"form-container\">"
-			"<h1>Reupload the problem<br/><a href=\"/p/", problem_id_, "\">",
+			"<h1>Reupload the problem<br><a href=\"/p/", problem_id_, "\">",
 				htmlEscape(name), "</a></h1>"
 			"<form method=\"post\" enctype=\"multipart/form-data\">"
 				// Name

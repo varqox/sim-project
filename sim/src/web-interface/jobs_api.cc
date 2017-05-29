@@ -154,9 +154,15 @@ void Sim::api_jobs() {
 
 		// Creator
 		if (res.isNull(7))
-			append("null,null,");
+			append("null,");
 		else
-			append(res[7], ",\"", res[8], "\","); // creator, username
+			append(res[7], ','); // creator
+
+		// Username
+		if (res.isNull(8))
+			append("null,");
+		else
+			append("\"", res[8], "\","); // username
 
 		// Additional info
 		InplaceBuff<10> actions;
