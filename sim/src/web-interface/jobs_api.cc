@@ -3,18 +3,18 @@
 #include <sim/jobs.h>
 
 static constexpr const char* job_type_str(JobQueueType type) noexcept {
-	using T = JobQueueType;
+	using JQT = JobQueueType;
 
 	switch (type) {
-	case T::JUDGE_SUBMISSION: return "Judge submission";
-	case T::ADD_PROBLEM: return "Add problem";
-	case T::REUPLOAD_PROBLEM: return "Reupload problem";
-	case T::ADD_JUDGE_MODEL_SOLUTION: return "Add problem - set limits";
-	case T::REUPLOAD_JUDGE_MODEL_SOLUTION:
+	case JQT::JUDGE_SUBMISSION: return "Judge submission";
+	case JQT::ADD_PROBLEM: return "Add problem";
+	case JQT::REUPLOAD_PROBLEM: return "Reupload problem";
+	case JQT::ADD_JUDGE_MODEL_SOLUTION: return "Add problem - set limits";
+	case JQT::REUPLOAD_JUDGE_MODEL_SOLUTION:
 		return"Reupload problem - set limits";
-	case T::EDIT_PROBLEM: return "Edit problem";
-	case T::DELETE_PROBLEM: return "Delete problem";
-	case T::VOID: return "Void";
+	case JQT::EDIT_PROBLEM: return "Edit problem";
+	case JQT::DELETE_PROBLEM: return "Delete problem";
+	case JQT::VOID: return "Void";
 	}
 	return "Unknown";
 }
@@ -41,10 +41,7 @@ void Sim::api_jobs() {
 	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
 
 	// Process restrictions
-	for (uint i = 0, mask = 0;
-		i < 2 and next_arg.size();
-		++i, next_arg = url_args.extractNextArg())
-	{
+	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
 		constexpr uint AUX_ID_COND = 2;
 		constexpr uint USER_ID_COND = 4;
