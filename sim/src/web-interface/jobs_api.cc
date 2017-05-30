@@ -38,14 +38,7 @@ void Sim::api_jobs() {
 	qwhere.append(" FROM job_queue j LEFT JOIN users u ON creator=u.id"
 		" WHERE j.type!=" JQTYPE_VOID_STR);
 
-	bool allow_access = true;
-	// Request only for user's jobs
-	if (next_arg == "my") {
-		next_arg = url_args.extractNextArg();
-		qwhere.append(" AND creator=", session_user_id);
-	// Request for all jobs
-	} else
-		allow_access &= bool(uint(jobs_perms & PERM::VIEW_ALL));
+	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
 
 	// Process restrictions
 	for (uint i = 0, mask = 0;
@@ -54,6 +47,7 @@ void Sim::api_jobs() {
 	{
 		constexpr uint ID_COND = 1;
 		constexpr uint AUX_ID_COND = 2;
+		constexpr uint USER_ID_COND = 4;
 
 		auto arg = decodeURI(next_arg);
 		char cond = arg[0];
@@ -115,6 +109,14 @@ void Sim::api_jobs() {
 				JQTYPE_JUDGE_SUBMISSION_STR);
 
 			mask |= AUX_ID_COND;
+
+		// user (creator)
+		} else if (cond == 'u' and ~mask & USER_ID_COND) {
+			qwhere.append(" AND creator=", arg_id);
+			if (arg_id == session_user_id)
+				allow_access = true;
+
+			mask |= USER_ID_COND;
 
 		} else
 			return api_error400();
