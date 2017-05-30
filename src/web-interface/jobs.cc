@@ -57,9 +57,9 @@ void Sim::jobs_handle() {
 	// Get permissions to overall job queue
 	jobs_perms = jobs_get_permissions();
 
-	StringView query_suffix {};
+	InplaceBuff<32> query_suffix {};
 	if (next_arg == "my")
-		query_suffix = "/my";
+		query_suffix.append("/u", session_user_id);
 	else if (next_arg.size())
 		return error404();
 	else if (uint(~jobs_perms & PERM::VIEW_ALL))
@@ -68,7 +68,7 @@ void Sim::jobs_handle() {
 	/* List jobs */
 	page_template("Job queue", "body{padding-left:20px}");
 
-	append("<h1>", (query_suffix.empty() ? "All jobs" : "My jobs"), "</h1>"
+	append("<h1>", (query_suffix.size == 0 ? "All jobs" : "My jobs"), "</h1>"
 		"<table class=\"jobs\"></table>"
 		"<script>"
 			"new JobsLister($('.jobs'),'", query_suffix, "').monitor_scroll();"

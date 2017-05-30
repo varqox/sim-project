@@ -295,9 +295,11 @@ int main(int argc, char **argv) {
 			"`data` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (status, priority DESC, id), "
-			"KEY (type, aux_id),"
-			"KEY (aux_id, id),"
-			"KEY (creator, id)"
+			"KEY (type, aux_id, id DESC),"
+			"KEY (aux_id, id DESC),"
+			"KEY (creator, id DESC),"
+			"KEY (creator, type, aux_id, id DESC),"
+			"KEY (creator, aux_id, id DESC)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("files",
