@@ -12,6 +12,10 @@ void Sim::api_handle() {
 		return api_job();
 	else if (next_arg == "jobs")
 		return api_jobs();
+	else if (next_arg == "submission")
+		return api_submission();
+	else if (next_arg == "submissions")
+		return api_submissions();
 	else if (next_arg == "user")
 		return api_user();
 	else if (next_arg == "users")

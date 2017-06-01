@@ -57,8 +57,8 @@ void Sim::api_users() {
 	append("[");
 
 	while (res.next()) {
-		append("\n[", res[0], ',', // id
-			jsonStringify(res[1]), ',', // username
+		append("\n[", res[0], "," // id
+			"\"", res[1], "\",", // username
 			jsonStringify(res[2]), ',', // first_name
 			jsonStringify(res[3]), ',', // last_name
 			jsonStringify(res[4]), ','); // email

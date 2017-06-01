@@ -35,16 +35,20 @@ static_assert(meta::equal(UTYPE_NORMAL_STR,
 	meta::ToString<(int)UserType::NORMAL>::value), "Update the above #define");
 
 // Contest's users
-constexpr uint CU_MODE_CONTESTANT = 0;
-constexpr uint CU_MODE_MODERATOR = 1;
-
+enum class ContestUserMode : int8_t {
+	IS_NULL = -1,
+	CONTESTANT = 0,
+	MODERATOR = 1
+};
 #define CU_MODE_CONTESTANT_STR "0"
 #define CU_MODE_MODERATOR_STR "1"
 
 static_assert(meta::equal(CU_MODE_CONTESTANT_STR,
-	meta::ToString<CU_MODE_CONTESTANT>::value), "Update the above #define");
+	meta::ToString<(int)ContestUserMode::CONTESTANT>::value),
+	"Update the above #define");
 static_assert(meta::equal(CU_MODE_MODERATOR_STR,
-	meta::ToString<CU_MODE_MODERATOR>::value), "Update the above #define");
+	meta::ToString<(int)ContestUserMode::MODERATOR>::value),
+	"Update the above #define");
 
 // Session
 constexpr uint SESSION_ID_LEN = 30;
