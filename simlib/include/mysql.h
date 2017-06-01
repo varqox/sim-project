@@ -79,14 +79,20 @@ private:
 	{
 		memset(params_.data(), 0, sizeof(params_[0]) * params_.size());
 		memset(res_.data(), 0, sizeof(res_[0]) * res_.size());
-
-		// Bind errors
-		for (unsigned i = 0; i < res_.size(); ++i)
-			res_[i].error = &res_[i].error_value;
+		bind_res_errors_and_nulls();
 	}
 
 	Statement(const Statement&) = delete;
 	Statement& operator=(const Statement&) = delete;
+
+	void bind_res_errors_and_nulls() noexcept {
+		// Bind errors
+		for (unsigned i = 0; i < res_.size(); ++i)
+			res_[i].error = &res_[i].error_value;
+		// Bind nulls
+		for (unsigned i = 0; i < res_.size(); ++i)
+			res_[i].is_null = &res_[i].is_null_value;
+	}
 
 public:
 	Statement() : stmt_ {nullptr}, params_ {0}, res_ {0} {}
@@ -95,9 +101,7 @@ public:
 		params_ {std::move(s.params_)}, res_ {std::move(s.res_)}
 	{
 		s.stmt_ = nullptr;
-		// Bind errors
-		for (unsigned i = 0; i < res_.size(); ++i)
-			res_[i].error = &res_[i].error_value;
+		bind_res_errors_and_nulls();
 	}
 
 	Statement& operator=(Statement&& s) {
@@ -108,10 +112,7 @@ public:
 		s.stmt_ = nullptr;
 		params_ = std::move(s.params_);
 		res_ = std::move(s.res_);
-
-		// Bind errors
-		for (unsigned i = 0; i < res_.size(); ++i)
-			res_[i].error = &res_[i].error_value;
+		bind_res_errors_and_nulls();
 
 		return *this;
 	}
@@ -382,8 +383,7 @@ public:
 
 	bool isNull(unsigned idx) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
-		// TODO: check if works when is_null == nullptr
-		return res_[idx].is_null ? *res_[idx].is_null : res_[idx].is_null_value;
+		return *res_[idx].is_null;
 	}
 
 	bool next() {
