@@ -105,12 +105,20 @@ private:
 
 	void api_user_change_password();
 
-	// ???_api.cc
-	void api_list_problems();
+	// submissions_api.cc
+	void api_submissions();
 
-	void api_change_submission_type_to();
+	void api_submission();
 
-	void api_list_submissions();
+	void api_submission_rejudge();
+
+	void api_submission_change_type();
+
+	void api_submission_delete();
+
+	void api_submission_source();
+
+	void api_submission_download();
 
 	/* ============================== Session ============================== */
 
@@ -413,10 +421,6 @@ private:
 
 	void users_user();
 
-	void users_user_submissions();
-
-	void users_user_problems();
-
 	/* ============================= Job queue ============================= */
 
 	enum class JobPermissions : uint {
@@ -638,6 +642,47 @@ private:
 	void contest_file();
 
 	void contest_files(bool admin_view);
+
+	/* ============================= Submission ============================= */
+
+	enum class SubmissionPermissions : uint {
+		NONE = 0,
+		VIEW = 1,
+		VIEW_SOURCE = 2,
+		VIEW_FULL_REPORT = 4,
+		CHANGE_TYPE = 8,
+		REJUDGE = 16,
+		DELETE = 32
+	};
+
+	friend DECLARE_ENUM_UNARY_OPERATOR(SubmissionPermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, |)
+	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &)
+
+	SubmissionPermissions submission_get_permissions(
+		StringView submission_owner, StringView contest_owner,
+		ContestUserMode cu_mode)
+	{
+		using PERM = SubmissionPermissions;
+		using CUM = ContestUserMode;
+
+		D(throw_assert(session_is_open);) // Session must be open to gain access
+
+		if (session_user_type == UserType::ADMIN or
+			session_user_id == contest_owner or cu_mode == CUM::MODERATOR)
+		{
+			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FULL_REPORT |
+				PERM::CHANGE_TYPE | PERM::REJUDGE | PERM::DELETE;
+		}
+
+		if (session_user_id == submission_owner or cu_mode == CUM::CONTESTANT)
+			return PERM::VIEW | PERM::VIEW_SOURCE;
+
+		return PERM::NONE;
+	}
+
+	StringView submission_id;
+	SubmissionPermissions submission_perms = SubmissionPermissions::NONE;
 
 	/* =============================== Other =============================== */
 

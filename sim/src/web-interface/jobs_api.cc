@@ -60,7 +60,7 @@ void Sim::api_jobs() {
 
 		} else if (cond == '=' and ~mask & ID_COND) {
 			if (not allow_access) {
-				// If user cannot view all jobs, allow they to view his jobs
+				// If user cannot view all jobs, allow they to view their jobs
 				allow_access = true;
 				qwhere.append(" AND creator=", session_user_id);
 			}
@@ -134,8 +134,8 @@ void Sim::api_jobs() {
 		JobQueueType job_type {JobQueueType(strtoull(res[2]))};
 		JobQueueStatus job_status {JobQueueStatus(strtoull(res[3]))};
 
-		append("\n[", res[0], ',', // job_id
-			jsonStringify(res[1]), "," // added
+		append("\n[", res[0], "," // job_id
+			"\"", res[1], "\"," // added
 			"\"", job_type_str(job_type), "\",");
 
 		// Status: (CSS class, text)

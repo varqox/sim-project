@@ -254,7 +254,7 @@ void Sim::view_submission() {
 			"SELECT s.owner, round_id, s.type, p.id, p.type", columns,
 			" FROM submissions s"
 			" LEFT JOIN users u ON s.owner=u.id"
-			" JOIN problems p ON problem_id=p.id"
+			" STRAIGHT_JOIN problems p ON problem_id=p.id"
 			" WHERE s.id=? AND s.type!=" STYPE_VOID_STR));
 		stmt.setString(1, submission_id);
 

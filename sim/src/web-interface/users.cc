@@ -311,11 +311,6 @@ void Sim::users_user() {
 	STACK_UNWINDING_MARK;
 
 	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "submissions")
-		return users_user_submissions();
-	else if (next_arg == "problems")
-		return users_user_problems();
-
 	if (next_arg.empty()) {
 		page_template(concat("User ", users_user_id),
 			"body{padding-left:32px}");
@@ -339,17 +334,4 @@ void Sim::users_user() {
 
 	} else
 		return error404();
-}
-
-void Sim::users_user_submissions() {
-	STACK_UNWINDING_MARK;
-
-	return error501();
-}
-
-
-void Sim::users_user_problems() {
-	STACK_UNWINDING_MARK;
-
-	return error501();
 }

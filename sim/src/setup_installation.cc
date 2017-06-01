@@ -213,18 +213,19 @@ int main(int argc, char **argv) {
 	try_to_create_table("rounds",
 		concat("CREATE TABLE IF NOT EXISTS `rounds` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`parent` int unsigned NULL DEFAULT NULL,"
-			"`grandparent` int unsigned NULL DEFAULT NULL,"
-			"`problem_id` int unsigned DEFAULT NULL,"
-			"`name` VARBINARY(", ROUND_NAME_MAX_LEN, ") NOT NULL,"
-			"`owner` int unsigned NOT NULL,"
-			"`item` int unsigned NOT NULL,"
-			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
-			"`visible` BOOLEAN NOT NULL DEFAULT FALSE,"
-			"`show_ranking` BOOLEAN NOT NULL DEFAULT FALSE,"
-			"`begins` datetime NULL DEFAULT NULL,"
-			"`full_results` datetime NULL DEFAULT NULL,"
-			"`ends` datetime NULL DEFAULT NULL,"
+			"`parent` int unsigned NULL DEFAULT NULL," // round, problem
+			"`grandparent` int unsigned NULL DEFAULT NULL," // problem
+			"`problem_id` int unsigned DEFAULT NULL," // problem
+			"`name` VARBINARY(", ROUND_NAME_MAX_LEN, ") NOT NULL," // all
+			"`owner` int unsigned NOT NULL," // contest
+			"`item` int unsigned NOT NULL," // round, problem
+			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE," // contest
+			"`reveal_score` BOOLEAN NOT NULL DEFAULT FALSE," // problem
+			"`visible` BOOLEAN NOT NULL DEFAULT FALSE," // round
+			"`show_ranking` BOOLEAN NOT NULL DEFAULT FALSE," // round
+			"`begins` datetime NULL DEFAULT NULL," // round
+			"`full_results` datetime NULL DEFAULT NULL," // round
+			"`ends` datetime NULL DEFAULT NULL," // round
 			"PRIMARY KEY (id),"
 			"KEY (parent, visible),"
 			"KEY (parent, begins),"
@@ -258,28 +259,31 @@ int main(int argc, char **argv) {
 			"`initial_report` mediumblob NOT NULL,"
 			"`final_report` mediumblob NOT NULL,"
 			"PRIMARY KEY (id),"
-			// Update type, delete account
-			"KEY (owner, round_id, type, status, id),"
-			// Problemset::submissions - view - all
+			/* All needed by submissions API */
+			// With owner
+			"KEY (owner, id),"
+			"KEY (owner, problem_id, id),"
+			"KEY (owner, round_id, id),"
+			"KEY (owner, parent_round_id, id),"
+			"KEY (owner, contest_round_id, id),"
+			"KEY (owner, type, id),"
+			"KEY (owner, problem_id, type, id),"
+			"KEY (owner, round_id, type, id),"
+			"KEY (owner, parent_round_id, type, id),"
+			"KEY (owner, contest_round_id, type, id),"
+			// Without owner
 			"KEY (problem_id, id),"
-			"KEY (problem_id, owner, id),"
-			// Problemset::submissions() - view by type
-			"KEY (problem_id, type, id),"
-			"KEY (problem_id, owner, type, id),"
-			// Contest::submissions() - view all
 			"KEY (round_id, id),"
-			"KEY (round_id, owner, id),"
 			"KEY (parent_round_id, id),"
-			"KEY (parent_round_id, owner, id),"
 			"KEY (contest_round_id, id),"
-			"KEY (contest_round_id, owner, id),"
-			// Contest::submissions() - view by type
+			"KEY (type, id),"
+			"KEY (problem_id, type, id),"
 			"KEY (round_id, type, id),"
-			"KEY (round_id, owner, type, id),"
 			"KEY (parent_round_id, type, id),"
-			"KEY (parent_round_id, owner, type, id),"
-			"KEY (contest_round_id, type, id),"
-			"KEY (contest_round_id, owner, type, id)"
+			"KEY (contest_round_id, type, id)"
+			// Needed to effectively changing type to/from FINAL
+			// TODO: important!!!
+			// TODO: apply it to local DB
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("job_queue",
