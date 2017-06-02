@@ -7,7 +7,7 @@ name: Simple Package                       # Problem name
 label: sim                                 # Problem label (usually a shorten name)
 statement: doc/sim.pdf                     # Path to statement file
 checker: check/checker.cpp                 # Path to checker source file
-solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions source files
+solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files
                                            # The first solution is the main
                                            # solution
 memory_limit: 64              # Global memory limit in MB (optional)
@@ -15,9 +15,9 @@ limits: [                     # Limits array
         # Group 0
         sim0a 1            # Format: <test name> <time limit> [memory limit]
         sim0b 1.01         # Time limit in seconds, memory limit in MB
-        sim1ocen 2 32      # Memory limit is optional if global memory limit
+        sim1ocen 2 32      # Memory limit is optional if the global memory limit
         sim2ocen 3         # is set.
-                           # Tests may appear in arbitrary order
+                           # Tests may appear in an arbitrary order
         # Group 1
         sim1a 1
         sim1b 1
@@ -36,11 +36,11 @@ limits: [                     # Limits array
 scoring: [                    # Scoring of the tests groups (optional)
         0 0      # Format: <group id> <score>
         1 20     # Score is a signed integer value
-        2 30     # Groups may appear in arbitrary order
+        2 30     # Groups may appear in an arbitrary order
         3 25
         4 25
 ]
-tests_files: [                # Input and output files of the tests
+tests_files: [                # Tests' input and output files
                               # Format: <test name> <in file> <out file>
         sim0a in/sim0a.in out/sim0a.out
         sim0b in/sim0b.in out/sim0b.out
