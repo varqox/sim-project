@@ -964,7 +964,7 @@ a.btn.red {
 	border-top-color: #ffffff;
 }
 .table {
-	display: inline-table;
+	/*display: inline-table;*/
 	margin: 0 auto;
 	border: 1px solid #a2a2a2;
 	-webkit-border-radius: 4px;
@@ -1428,7 +1428,7 @@ table.code-view > tbody > tr:last-child td {
 
 /* Submissions */
 table.submissions {
-	display: inline-table;
+	/*display: inline-table;*/
 	margin: 0;
 }
 table.submissions th {
@@ -1456,8 +1456,10 @@ table.submissions th.score {
 table.submissions th.type {
 	min-width: 60px;
 }
-table.submissions td:nth-child(2) > a, /* Normal (and) user submission */
-table.submissions td:nth-child(4) > a { /* Round submissions (admin view) */
+table.submissions tr > td:first-child {
+	text-align: right;
+}
+table.submissions td > a {
 	white-space: nowrap;
 }
 table.submissions tr.ignored,
@@ -1582,7 +1584,7 @@ table.jobs td label::after,
 /* Users & Contest users*/
 table.users,
 table.contest-users {
-	display: inline-table;
+	/*display: inline-table;*/
 	margin: 0;
 }
 table.users th.username,
