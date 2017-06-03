@@ -11,7 +11,7 @@ void Sim::api_submissions() {
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
-	bool select_report = false;
+	bool select_one = false;
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT s.id, s.type, s.owner, c.owner, cu.mode,"
@@ -70,8 +70,9 @@ void Sim::api_submissions() {
 		} else if (cond == '=' and ~mask & ID_COND) {
 			allow_access = true; // Permissions will be checked on fetching data
 
-			qfields.append(", s.initial_report, s.final_report");
-			select_report = true;
+			qfields.append(", u.first_name, u.last_name,"
+				" s.initial_report, s.final_report");
+			select_one = true;
 
 			qwhere.append(" AND s.id", arg);
 			mask |= ID_COND;
@@ -209,6 +210,7 @@ void Sim::api_submissions() {
 		// Onwer's username
 		if (res.isNull(5))
 			append("null,");
+		else
 			append("\"", sowner_username, "\",");
 
 		// Problem
@@ -238,46 +240,46 @@ void Sim::api_submissions() {
 		// Fatal
 		if (status >= SS::PENDING) {
 			if (status == SS::PENDING)
-				append("[\"status\",\"Pending\"],");
+				append("[\"\",\"Pending\"],");
 			else if (status == SS::COMPILATION_ERROR)
-				append("[\"status purple\",\"Compilation failed\"],");
+				append("[\" purple\",\"Compilation failed\"],");
 			else if (status == SS::CHECKER_COMPILATION_ERROR)
-				append("[\"status blue\",\"Checker compilation failed\"],");
+				append("[\" blue\",\"Checker compilation failed\"],");
 			else if (status == SS::JUDGE_ERROR)
-				append("[\"status blue\",\"Judge error\"],");
+				append("[\" blue\",\"Judge error\"],");
 			else
-				append("[\"status\",\"Unknown\"],");
+				append("[\"\",\"Unknown\"],");
 
 		// Final
 		} else if (show_full_results) {
 			if ((status & SS::FINAL_MASK) == SS::OK)
-				append("[\"status green\",\"OK\"],");
+				append("[\"green\",\"OK\"],");
 			else if ((status & SS::FINAL_MASK) == SS::WA)
-				append("[\"status red\",\"Wrong answer\"],");
+				append("[\"red\",\"Wrong answer\"],");
 			else if ((status & SS::FINAL_MASK) == SS::TLE)
-				append("[\"status yellow\",\"Time limit exceeded\"],");
+				append("[\"yellow\",\"Time limit exceeded\"],");
 			else if ((status & SS::FINAL_MASK) == SS::MLE)
-				append("[\"status yellow\",\"Memory limit exceeded\"],");
+				append("[\"yellow\",\"Memory limit exceeded\"],");
 			else if ((status & SS::FINAL_MASK) == SS::RTE)
-				append("[\"status intense-red\",\"Runtime error\"],");
+				append("[\"intense-red\",\"Runtime error\"],");
 			else
-				append("[\"status\",\"Unknown\"],");
+				append("[\"\",\"Unknown\"],");
 
 		// Initial
 		} else {
 			if ((status & SS::INITIAL_MASK) == SS::INITIAL_OK)
-				append("[\"status initial green\",\"OK\"],");
+				append("[\"initial green\",\"OK\"],");
 			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_WA)
-				append("[\"status initial red\",\"Wrong answer\"],");
+				append("[\"initial red\",\"Wrong answer\"],");
 			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_TLE)
-				append("[\"status initial yellow\",\"Time limit exceeded\"],");
+				append("[\"initial yellow\",\"Time limit exceeded\"],");
 			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_MLE)
-				append("[\"status initial yellow\",\"Memory limit exceeded\"],")
+				append("[\"initial yellow\",\"Memory limit exceeded\"],")
 					;
 			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_RTE)
-				append("[\"status initial intense-red\",\"Runtime error\"],");
+				append("[\"initial intense-red\",\"Runtime error\"],");
 			else
-				append("[\"status\",\"Unknown\"],");
+				append("[\"\",\"Unknown\"],");
 		}
 
 		// Score
@@ -302,11 +304,19 @@ void Sim::api_submissions() {
 
 		append("\"");
 
-		// Append reports
-		if (select_report) {
-			append(',', jsonStringify(res[19]));
+		// Append
+		if (select_one) {
+			// User first and last name
+			if (res.isNull(19))
+				append(",null,null");
+			else
+				append(',', jsonStringify(res[19]), ',',
+					jsonStringify(res[20]));
+
+			// Reports
+			append(',', jsonStringify(res[21]));
 			if (show_full_results)
-				append(',', jsonStringify(res[20]));
+				append(',', jsonStringify(res[22]));
 			else
 				append(",null");
 		}

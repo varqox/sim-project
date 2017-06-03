@@ -490,11 +490,23 @@ function Lister(elem) {
 
 	this.monitor_scroll = function() {
 		var obj = this;
-		$(window).on('scroll resize', function() {
-			if ($(document).height() - $(window).height() - $(document).scrollTop() <= 300) {
-				obj.fetch_more();
-			}
-		});
+
+		var modal_parent = elem.closest('.modal');
+		if (modal_parent.length === 1)
+			modal_parent.on('scroll resize', function() {
+				var height = $(this).children('div').height();
+				var scroll_top = $(this).scrollTop();
+				if (height - $(window).height() - scroll_top <= 300)
+					obj.fetch_more();
+			});
+		else
+			$(document).on('scroll resize', function() {
+				var x = $(this);
+				if (x.height() - $(window).height() - x.scrollTop() <= 300)
+					obj.fetch_more();
+			});
+
+		modal_parent = null;
 	};
 
 	this.get_error_handler = function() {
@@ -672,7 +684,7 @@ var ActionsToHTML = {};
 
 		var res = [];
 		if (show_view_job)
-			res.push(a_preview_button('/jobs/' + job_id, 'Preview', 'btn-small',
+			res.push(a_preview_button('/jobs/' + job_id, 'View', 'btn-small',
 				function() { preview_job(true, job_id); }));
 
 		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('R') !== -1)
@@ -693,11 +705,8 @@ var ActionsToHTML = {};
 			}));
 
 		if (actions_str.indexOf('V') !== -1)
-			res.push($('<a>', { // TODO: do a preview button when ready
-				class: 'btn-small green',
-				href: '/p/' + problem_id,
-				text: 'View problem'
-			}));
+			res.push(a_preview_button('/p/' + problem_id, 'View problem',
+				'btn-small green', function() { preview_problem(true, problem_id); }));
 
 		if (actions_str.indexOf('c') !== -1)
 			res.push($('<a>', {
@@ -728,7 +737,7 @@ var ActionsToHTML = {};
 
 		var res = [];
 		if (show_view_user && actions_str.indexOf('v') !== -1)
-			res.push(a_preview_button('/u/' + user_id, 'Preview', 'btn-small',
+			res.push(a_preview_button('/u/' + user_id, 'View', 'btn-small',
 				function() { preview_user(true, user_id); }));
 
 		if (actions_str.indexOf('E') !== -1)
@@ -743,6 +752,54 @@ var ActionsToHTML = {};
 			res.push(a_preview_button('/u/' + user_id + '/change-password',
 				'Change password', 'btn-small orange',
 				function() { change_user_password(true, user_id); }));
+
+		return res;
+	}
+
+	this.submission = function(submission_id, actions_str, show_view_submission /*= true*/) {
+		if (show_view_submission === undefined)
+			show_view_submission = true;
+
+		var res = [];
+		if (show_view_submission && actions_str.indexOf('v') !== -1)
+			res.push(a_preview_button('/s/' + submission_id, 'Preview', 'btn-small',
+				function() { preview_submission(true, submission_id); }));
+
+		if (actions_str.indexOf('s') !== -1) {
+			res.push(a_preview_button('/s/' + submission_id + '/source', 'Source',
+				'btn-small', function() { submission_source(true, submission_id); }));
+
+			res.push($('<a>', {
+				class: 'btn-small',
+				href: '/api/submission/' + submission_id + '/download',
+				text: 'Download'
+			}));
+		}
+
+		if (actions_str.indexOf('C') !== -1)
+			res.push(a_preview_button('/s/' + submission_id + '/chtype', 'Change type',
+				'btn-small orange',
+				function() { submission_chtype(true, submission_id); }));
+
+		if (actions_str.indexOf('R') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small blue',
+				text: 'Rejudge',
+				click: function() {
+					var sid = submission_id;
+					return function() { rejudge_submission(sid); }
+				}()
+			}));
+
+		if (actions_str.indexOf('D') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small red',
+				text: 'Delete',
+				click: function() {
+					var sid = submission_id;
+					return function() { delete_submission(sid); }
+				}()
+			}));
 
 		return res;
 	}
@@ -857,7 +914,12 @@ function preview_user(as_modal, user_id) {
 				}).append(text_to_safe_html(data[4])))
 			})
 		}));
-		this.append($('<p>', {text: 'TODO: add inline submissions preview'}));
+
+		var s_table = $('<table>', {
+			class: 'submissions'
+		});
+		this.append("<h2>User's submissions</h2>").append(s_table);
+		new SubmissionsLister(s_table, '/u' + user_id).monitor_scroll();
 
 	}, '/u/' + user_id);
 }
@@ -1085,7 +1147,7 @@ function UsersLister(elem) {
 					return; // No more data to load
 
 				obj.lock = false;
-				if ($(document).height() - $(window).height() <= 300) {
+				if (obj.elem.height() - $(window).height() <= 300) {
 					// Load more if scrolling down did not become possible
 					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
 				}
@@ -1109,11 +1171,12 @@ function preview_job(as_modal, job_id) {
 			for (var name in info) {
 				td.append($('<label>', {text: name}));
 
-				if (name == "submission" || name == "problem")
-					td.append($('<a>', { // TODO: do a preview button when ready
-						href: '/' + name[0] + '/' + info[name],
-						text: info[name]
-					}));
+				if (name == "submission")
+					td.append(a_preview_button('/s/' + info[name], info[name],
+						undefined, function() { preview_submission(true, info[name]); }));
+				else if (name == "problem")
+					td.append(a_preview_button('/p/' + info[name], info[name],
+						undefined, function() { preview_problem(true, info[name]); }));
 				else
 					td.append(info[name]);
 
@@ -1262,16 +1325,18 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 						}
 
 						if (info.submission !== undefined)
-							append_tag('submission', $('<a>', { // TODO: do a preview button when ready
-								href: '/s/' + info.submission,
-								text: info.submission
-							}))
+							append_tag('submission',
+								a_preview_button('/s/' + info.submission,
+									info.submission, undefined, function() {
+										preview_submission(true, info.submission);
+									}));
 
 						if (info.problem !== undefined)
-							append_tag('problem', $('<a>', { // TODO: do a preview button when ready
-								href: '/p/' + info.problem,
-								text: info.problem
-							}))
+							append_tag('problem',
+								a_preview_button('/s/' + info.problem,
+									info.problem, undefined, function() {
+										preview_submission(true, info.problem);
+									}));
 
 						var names = ['name', 'memory limit', 'make public'];
 						for (var idx in names) {
@@ -1297,7 +1362,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					return; // No more data to load
 
 				obj.lock = false;
-				if ($(document).height() - $(window).height() <= 300) {
+				if (obj.elem.height() - $(window).height() <= 300) {
 					// Load more if scrolling down did not become possible
 					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
 				}
@@ -1363,6 +1428,153 @@ function rejudgeRoundSubmissions(round_id) {
 			'No, go back'))
 	);
 }*/
+
+function SubmissionsLister(elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	this.show_user = (query_suffix.indexOf('/u') === -1 &&
+		query_suffix.indexOf('/tS') === -1);
+
+	this.show_contest = (query_suffix.indexOf('/C') === -1 &&
+		query_suffix.indexOf('/R') === -1 &&
+		query_suffix.indexOf('/P') === -1);
+
+	Lister.call(this, elem);
+	this.query_url = '/api/submissions' + query_suffix;
+	this.query_suffix = '';
+
+	this.fetch_more_impl = function() {
+		var obj = this;
+		$.ajax({
+			type: 'GET',
+			url: obj.query_url + obj.query_suffix,
+			dataType: 'json',
+			success: function(data) {
+				if (elem.children('thead').length === 0) {
+					if (data.length == 0) {
+						obj.elem.parent().append($('<center>', {
+							html: '<p>There are no submissions to show...</p>'
+						}));
+						remove_loader(obj.elem.parent());
+						return;
+					}
+
+					elem.html('<thead><tr>' +
+							'<th>Id</th>' +
+							(obj.show_user ? '<th class="username">Username</th>' : '') +
+							'<th class="type">Type</th>' +
+							'<th class="time">Added</th>' +
+							'<th class="problem">Problem</th>' +
+							'<th class="status">Status</th>' +
+							'<th class="score">Score</th>' +
+							'<th class="actions">Actions</th>' +
+						'</tr></thead><tbody></tbody>');
+					add_tz_marker(elem.find('thead th.time'));
+
+				}
+
+				for (x in data) {
+					x = data[x];
+					obj.query_suffix = '/<' + x[0];
+
+					var row = $('<tr>', {
+						class: (x[1] === 'Ignored' ? 'ignored' : undefined)
+					});
+					// Id
+					row.append($('<td>', {text: x[0]}));
+
+					// Username
+					if (obj.show_user)
+						row.append($('<td>', {
+							html: x[2] === null ? 'System' : (x[3] == null ? x[2]
+								: a_preview_button('/u/' + x[2], x[3], undefined,
+									function() {
+										var uid = x[2];
+										return function() { preview_user(true, uid); };
+									}()))
+						}));
+
+					// Type
+					row.append($('<td>', {text: x[1]}));
+
+					// Submission time
+					row.append($('<td>', {
+						html: normalize_datetime(
+							a_preview_button('/s/' + x[0], x[12], undefined,
+								function() {
+									var submission_id = x[0];
+									return function() {
+										preview_submission(true, submission_id);
+									};
+								}()).attr('datetime', x[12]),
+							false)
+					}));
+
+					// Problem
+					if (x[6] == null) // Not in the contest
+						row.append($('<td>', {
+							html: a_preview_button('/p/' + x[4], x[5], undefined,
+								function() {
+									var pid = x[4];
+									return function() { preview_problem(true, pid); };
+							}())
+						}));
+					else
+						row.append($('<td>', {
+							html: [(obj.show_contest ? $('<a>', {
+									href: '/c/' + x[10],
+									text: x[11]
+								}) : ''),
+								(obj.show_contest ? ' ~> ' : ''),
+								$('<a>', {
+									href: '/c/' + x[8],
+									text: x[9]
+								}),
+								' ~> ',
+								$('<a>', {
+									href: '/c/' + x[6],
+									text: x[7]
+								})
+							]
+						}))
+
+					// Status
+					row.append($('<td>', {
+						class: 'status ' + x[13][0],
+						text: (x[13][0].lastIndexOf('initial') === -1 ? ''
+							: 'Initial: ') + x[13][1]
+					}));
+
+					// Score
+					row.append($('<td>', { text: x[14] }));
+
+					// Actions
+					row.append($('<td>', {
+						html: ActionsToHTML.submission(x[0], x[15])
+					}));
+
+					obj.elem.children('tbody').append(row);
+				}
+
+				remove_loader(obj.elem.parent());
+				centerize_modal(obj.elem.parents('.modal'));
+
+				if (data.length == 0)
+					return; // No more data to load
+
+				obj.lock = false;
+				if (obj.elem.height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
+				}
+			},
+			error: obj.get_error_handler()
+		});
+	};
+
+	this.fetch_more();
+}
 
 /* ============================ Contest's users ============================ */
 /*function addContestUser(contest_id) {
