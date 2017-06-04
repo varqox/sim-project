@@ -201,8 +201,7 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	// Additional message
 	var x = elem.find('.loader-info > span');
 	try {
-		var xml = $.parseXML(response.responseText);
-		var msg = $(xml).text();
+		var msg = $($.parseHTML(response.responseText)).text();
 
 		if (msg != '')
 			x.text(x.text().concat("\nInfo: ", msg));
