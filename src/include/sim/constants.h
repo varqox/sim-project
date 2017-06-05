@@ -190,7 +190,7 @@ constexpr inline const char* toString(SubmissionType x) {
 	return "Unknown";
 }
 
-enum class JobQueueStatus : uint8_t {
+enum class JobStatus : uint8_t {
 	PENDING = 1,
 	IN_PROGRESS = 2,
 	DONE = 3,
@@ -198,43 +198,41 @@ enum class JobQueueStatus : uint8_t {
 	CANCELED = 5
 };
 
-#define JQSTATUS_PENDING_STR "1"
-static_assert(meta::equal(JQSTATUS_PENDING_STR,
-	meta::ToString<(int)JobQueueStatus::PENDING>::value),
+#define JSTATUS_PENDING_STR "1"
+static_assert(meta::equal(JSTATUS_PENDING_STR,
+	meta::ToString<(int)JobStatus::PENDING>::value),
 	"Update the above #define");
 
-#define JQSTATUS_IN_PROGRESS_STR "2"
-static_assert(meta::equal(JQSTATUS_IN_PROGRESS_STR,
-	meta::ToString<(int)JobQueueStatus::IN_PROGRESS>::value),
+#define JSTATUS_IN_PROGRESS_STR "2"
+static_assert(meta::equal(JSTATUS_IN_PROGRESS_STR,
+	meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
 	"Update the above #define");
 
-#define JQSTATUS_DONE_STR "3"
-static_assert(meta::equal(JQSTATUS_DONE_STR,
-	meta::ToString<(int)JobQueueStatus::DONE>::value),
+#define JSTATUS_DONE_STR "3"
+static_assert(meta::equal(JSTATUS_DONE_STR,
+	meta::ToString<(int)JobStatus::DONE>::value), "Update the above #define");
+
+#define JSTATUS_FAILED_STR "4"
+static_assert(meta::equal(JSTATUS_FAILED_STR,
+	meta::ToString<(int)JobStatus::FAILED>::value), "Update the above #define");
+
+#define JSTATUS_CANCELED_STR "5"
+static_assert(meta::equal(JSTATUS_CANCELED_STR,
+	meta::ToString<(int)JobStatus::CANCELED>::value),
 	"Update the above #define");
 
-#define JQSTATUS_FAILED_STR "4"
-static_assert(meta::equal(JQSTATUS_FAILED_STR,
-	meta::ToString<(int)JobQueueStatus::FAILED>::value),
-	"Update the above #define");
-
-#define JQSTATUS_CANCELED_STR "5"
-static_assert(meta::equal(JQSTATUS_CANCELED_STR,
-	meta::ToString<(int)JobQueueStatus::CANCELED>::value),
-	"Update the above #define");
-
-constexpr inline const char* toString(JobQueueStatus x) {
+constexpr inline const char* toString(JobStatus x) {
 	switch (x) {
-	case JobQueueStatus::PENDING: return "Pending";
-	case JobQueueStatus::IN_PROGRESS: return "In progress";
-	case JobQueueStatus::DONE: return "Done";
-	case JobQueueStatus::FAILED: return "Failed";
-	case JobQueueStatus::CANCELED: return "Cancelled";
+	case JobStatus::PENDING: return "Pending";
+	case JobStatus::IN_PROGRESS: return "In progress";
+	case JobStatus::DONE: return "Done";
+	case JobStatus::FAILED: return "Failed";
+	case JobStatus::CANCELED: return "Cancelled";
 	}
 	return "Unknown";
 }
 
-enum class JobQueueType : uint8_t {
+enum class JobType : uint8_t {
 	VOID = 0,
 	JUDGE_SUBMISSION = 1,
 	ADD_PROBLEM = 2,
@@ -245,57 +243,57 @@ enum class JobQueueType : uint8_t {
 	DELETE_PROBLEM = 7,
 };
 
-#define JQTYPE_VOID_STR "0"
-static_assert(meta::equal(JQTYPE_VOID_STR,
-	meta::ToString<(int)JobQueueType::VOID>::value),
+#define JTYPE_VOID_STR "0"
+static_assert(meta::equal(JTYPE_VOID_STR,
+	meta::ToString<(int)JobType::VOID>::value),
 	"Update the above #define");
 
-#define JQTYPE_JUDGE_SUBMISSION_STR "1"
-static_assert(meta::equal(JQTYPE_JUDGE_SUBMISSION_STR,
-	meta::ToString<(int)JobQueueType::JUDGE_SUBMISSION>::value),
+#define JTYPE_JUDGE_SUBMISSION_STR "1"
+static_assert(meta::equal(JTYPE_JUDGE_SUBMISSION_STR,
+	meta::ToString<(int)JobType::JUDGE_SUBMISSION>::value),
 	"Update the above #define");
 
-#define JQTYPE_ADD_PROBLEM_STR "2"
-static_assert(meta::equal(JQTYPE_ADD_PROBLEM_STR,
-	meta::ToString<(int)JobQueueType::ADD_PROBLEM>::value),
+#define JTYPE_ADD_PROBLEM_STR "2"
+static_assert(meta::equal(JTYPE_ADD_PROBLEM_STR,
+	meta::ToString<(int)JobType::ADD_PROBLEM>::value),
 	"Update the above #define");
 
-#define JQTYPE_REUPLOAD_PROBLEM_STR "3"
-static_assert(meta::equal(JQTYPE_REUPLOAD_PROBLEM_STR,
-	meta::ToString<(int)JobQueueType::REUPLOAD_PROBLEM>::value),
+#define JTYPE_REUPLOAD_PROBLEM_STR "3"
+static_assert(meta::equal(JTYPE_REUPLOAD_PROBLEM_STR,
+	meta::ToString<(int)JobType::REUPLOAD_PROBLEM>::value),
 	"Update the above #define");
 
-#define JQTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "4"
-static_assert(meta::equal(JQTYPE_ADD_JUDGE_MODEL_SOLUTION_STR,
-	meta::ToString<(int)JobQueueType::ADD_JUDGE_MODEL_SOLUTION>::value),
+#define JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "4"
+static_assert(meta::equal(JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR,
+	meta::ToString<(int)JobType::ADD_JUDGE_MODEL_SOLUTION>::value),
 	"Update the above #define");
 
-#define JQTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR "5"
-static_assert(meta::equal(JQTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR,
-	meta::ToString<(int)JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION>::value),
+#define JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR "5"
+static_assert(meta::equal(JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR,
+	meta::ToString<(int)JobType::REUPLOAD_JUDGE_MODEL_SOLUTION>::value),
 	"Update the above #define");
 
-#define JQTYPE_EDIT_PROBLEM_STR "6"
-static_assert(meta::equal(JQTYPE_EDIT_PROBLEM_STR,
-	meta::ToString<(int)JobQueueType::EDIT_PROBLEM>::value),
+#define JTYPE_EDIT_PROBLEM_STR "6"
+static_assert(meta::equal(JTYPE_EDIT_PROBLEM_STR,
+	meta::ToString<(int)JobType::EDIT_PROBLEM>::value),
 	"Update the above #define");
 
-#define JQTYPE_DELETE_PROBLEM_STR "7"
-static_assert(meta::equal(JQTYPE_DELETE_PROBLEM_STR,
-	meta::ToString<(int)JobQueueType::DELETE_PROBLEM>::value),
+#define JTYPE_DELETE_PROBLEM_STR "7"
+static_assert(meta::equal(JTYPE_DELETE_PROBLEM_STR,
+	meta::ToString<(int)JobType::DELETE_PROBLEM>::value),
 	"Update the above #define");
 
 // The greater, the more important
-constexpr uint priority(JobQueueType x) {
+constexpr uint priority(JobType x) {
 	switch (x) {
-	case JobQueueType::EDIT_PROBLEM: return 20;
-	case JobQueueType::DELETE_PROBLEM: return 20;
-	case JobQueueType::ADD_JUDGE_MODEL_SOLUTION: return 15;
-	case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
-	case JobQueueType::ADD_PROBLEM: return 10;
-	case JobQueueType::REUPLOAD_PROBLEM: return 10;
-	case JobQueueType::JUDGE_SUBMISSION: return  5;
-	case JobQueueType::VOID: return  0;
+	case JobType::EDIT_PROBLEM: return 20;
+	case JobType::DELETE_PROBLEM: return 20;
+	case JobType::ADD_JUDGE_MODEL_SOLUTION: return 15;
+	case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
+	case JobType::ADD_PROBLEM: return 10;
+	case JobType::REUPLOAD_PROBLEM: return 10;
+	case JobType::JUDGE_SUBMISSION: return  5;
+	case JobType::VOID: return  0;
 	}
 	return 0;
 }
