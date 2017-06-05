@@ -84,7 +84,7 @@ private:
 
 	void api_job();
 
-	void api_job_restart(JobQueueType job_type, StringView job_info);
+	void api_job_restart(JobType job_type, StringView job_info);
 
 	void api_job_cancel();
 
@@ -426,9 +426,11 @@ private:
 	enum class JobPermissions : uint {
 		NONE = 0,
 		VIEW = 1, // allowed to view the job
-		VIEW_ALL = 2, // allowed to view all the jobs
-		CANCEL = 4,
-		RESTART = 8
+		DOWNLOAD_REPORT = 2,
+		DOWNLOAD_UPLOADED_PACKAGE = 4,
+		CANCEL = 8,
+		RESTART = 16,
+		VIEW_ALL = 32 // allowed to view all the jobs
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
@@ -439,12 +441,12 @@ private:
 	JobPermissions jobs_perms = JobPermissions::NONE;
 
 	// Session must be open to access the jobs
-	JobPermissions jobs_get_permissions(StringView creator_id,
-		JobQueueStatus job_status);
+	JobPermissions jobs_get_permissions(StringView creator_id, JobType job_type,
+		JobStatus job_status);
 
 	JobPermissions jobs_get_permissions() {
 		// Return overall permissions
-		return jobs_get_permissions("", JobQueueStatus::DONE);
+		return jobs_get_permissions("", JobType::VOID, JobStatus::DONE);
 	}
 
 	void jobs_page_template(StringView title, StringView styles = {},

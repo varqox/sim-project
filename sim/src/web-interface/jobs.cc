@@ -5,31 +5,40 @@
 using std::string;
 
 Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
-	JobQueueStatus job_status)
+	JobType job_type, JobStatus job_status)
 {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
+	using JT = JobType;
 
 	D(throw_assert(session_is_open);) // Session must be open to access jobs
 
-	if (session_user_type == UserType::ADMIN)
-		switch (job_status) {
-		case JobQueueStatus::PENDING:
-		case JobQueueStatus::IN_PROGRESS:
-			return PERM::VIEW | PERM::VIEW_ALL | PERM::CANCEL;
+	JobPermissions perm = (isIn(job_type, { JT::ADD_PROBLEM,
+		JT::REUPLOAD_PROBLEM, JT::ADD_JUDGE_MODEL_SOLUTION,
+		JT::REUPLOAD_JUDGE_MODEL_SOLUTION})
+		? PERM::DOWNLOAD_REPORT | PERM::DOWNLOAD_UPLOADED_PACKAGE : PERM::NONE);
 
-		case JobQueueStatus::FAILED:
-		case JobQueueStatus::CANCELED:
-			return PERM::VIEW | PERM::VIEW_ALL | PERM::RESTART;
+	if (session_user_type == UserType::ADMIN) {
+		switch (job_status) {
+		case JobStatus::PENDING:
+		case JobStatus::IN_PROGRESS:
+			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL |
+				PERM::CANCEL;
+
+		case JobStatus::FAILED:
+		case JobStatus::CANCELED:
+			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL |
+				PERM::RESTART;
 
 		default:
-			return PERM::VIEW | PERM::VIEW_ALL;
+			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL;
 		}
+	}
 
 	static_assert(uint(PERM::NONE) == 0, "Needed below");
 	if (session_user_id == creator_id)
-		return PERM::VIEW | (isIn(job_status,
-			{JobQueueStatus::PENDING, JobQueueStatus::IN_PROGRESS}) ?
+		return perm | PERM::VIEW | (isIn(job_status,
+			{JobStatus::PENDING, JobStatus::IN_PROGRESS}) ?
 				PERM::CANCEL : PERM::NONE) |
 			(session_user_type == UserType::TEACHER ? PERM::VIEW_ALL
 				: PERM::NONE);

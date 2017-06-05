@@ -38,7 +38,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		stdlog_and_append_jreport("Canceled judging of the submission ",
 			submission_id, ", since there is no such submission.");
 		stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_CANCELED_STR ", data=? WHERE id=?");
+			" SET status=" JSTATUS_CANCELED_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 		return;
 	}
@@ -50,7 +50,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		stdlog_and_append_jreport("Skipped judging of the submission ",
 			submission_id);
 		stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_DONE_STR ", data=? WHERE id=?");
+			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 		return;
 	}
@@ -172,7 +172,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		stmt.execute();
 
 		stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_DONE_STR ", data=? WHERE id=?");
+			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 
 	};
@@ -434,7 +434,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	send_report();
 }
 
-void judgeModelSolution(StringView job_id, JobQueueType original_job_type) {
+void judgeModelSolution(StringView job_id, JobType original_job_type) {
 	STACK_UNWINDING_MARK;
 
 	sim::Conver::ReportBuff report;
@@ -442,8 +442,8 @@ void judgeModelSolution(StringView job_id, JobQueueType original_job_type) {
 
 	auto set_failure= [&] {
 		auto stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_FAILED_STR ", data=CONCAT(data,?)"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
+			" SET status=" JSTATUS_FAILED_STR ", data=CONCAT(data,?)"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(report.str, job_id);
 
 		stdlog("Job: ", job_id, '\n', report.str);
@@ -511,9 +511,8 @@ void judgeModelSolution(StringView job_id, JobQueueType original_job_type) {
 	putFileContents(package_path.append("Simfile"), simfile.dump());
 
 	auto stmt = db_conn.prepare("UPDATE job_queue"
-		" SET type=?, status=" JQSTATUS_PENDING_STR ","
-			" data=CONCAT(data,?)"
-		" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
+		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
+		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 	stmt.bindAndExecute(uint(original_job_type), report.str, job_id);
 
 	stdlog("Job: ", job_id, '\n', report.str);

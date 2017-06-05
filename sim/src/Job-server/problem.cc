@@ -22,13 +22,13 @@ extern SQLite::Connection sqlite_db;
 namespace {
 
 struct AddTrait {
-	static constexpr JobQueueType JUDGE_MODEL_SOLUTION =
-		JobQueueType::ADD_JUDGE_MODEL_SOLUTION;
+	static constexpr JobType JUDGE_MODEL_SOLUTION =
+		JobType::ADD_JUDGE_MODEL_SOLUTION;
 };
 
 struct ReuploadTrait {
-	static constexpr JobQueueType JUDGE_MODEL_SOLUTION =
-		JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION;
+	static constexpr JobType JUDGE_MODEL_SOLUTION =
+		JobType::REUPLOAD_JUDGE_MODEL_SOLUTION;
 };
 
 } // anonymous namespace
@@ -49,8 +49,8 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 
 	auto set_failure = [&] {
 		auto stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_FAILED_STR ", data=?"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(report.str, job_id);
 
 		stdlog("Job: ", job_id, '\n', report.str);
@@ -176,16 +176,16 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	case sim::Conver::Status::COMPLETE: {
 		// Advance the job to the SECOND stage
 		auto stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_PENDING_STR ", info=?, data=?"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
+			" SET status=" JSTATUS_PENDING_STR ", info=?, data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(info.dump(), report.str, job_id);
 		break;
 	}
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 		// Transform the job into a JUDGE_MODEL_SOLUTION job
 		auto stmt = db_conn.prepare("UPDATE job_queue"
-			" SET type=?, status=" JQSTATUS_PENDING_STR ", info=?, data=?"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
+			" SET type=?, status=" JSTATUS_PENDING_STR ", info=?, data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(uint(Trait::JUDGE_MODEL_SOLUTION), info.dump(),
 			report.str, job_id);
 		break;
@@ -331,10 +331,10 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 		// Create a job to judge the submission
 		stmt = db_conn.prepare("INSERT job_queue (creator, status,"
 				" priority, type, added, aux_id, info, data)"
-			" VALUES(NULL, " JQSTATUS_PENDING_STR ", ?, "
-				JQTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
+			" VALUES(NULL, " JSTATUS_PENDING_STR ", ?, "
+				JTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
 		// Problem's solutions are more important than ordinary submissions
-		stmt.bindAndExecute(priority(JobQueueType::JUDGE_SUBMISSION) + 1,
+		stmt.bindAndExecute(priority(JobType::JUDGE_SUBMISSION) + 1,
 			current_date, submission_id, jobs::dumpString(toStr(problem_id)));
 	}
 	report.append("Done.");
@@ -377,7 +377,7 @@ static void addProblem(StringView job_id, StringView job_owner,
 		sim::Conver::ReportBuff report;
 		auto stmt = db_conn.prepare("UPDATE job_queue"
 			" SET status=?, aux_id=?, data=CONCAT(data,?) WHERE id=?");
-		JobQueueStatus status; // [[maybe_uninitilized]]
+		JobStatus status; // [[maybe_uninitilized]]
 		uint64_t apid; // Added problem's id
 		try {
 			sqlite_db.execute("BEGIN");
@@ -385,7 +385,7 @@ static void addProblem(StringView job_id, StringView job_owner,
 			func(apid, report);
 			sqlite_db.execute("COMMIT");
 
-			status = JobQueueStatus::DONE;
+			status = JobStatus::DONE;
 			if (std::is_same<Trait, AddTrait>::value)
 				stmt.bind(1, apid);
 			else
@@ -398,12 +398,11 @@ static void addProblem(StringView job_id, StringView job_owner,
 			ERRLOG_CATCH(e);
 			report.append("Caught exception: ", e.what());
 
-			status = JobQueueStatus::FAILED;
+			status = JobStatus::FAILED;
 			if (std::is_same<Trait, ReuploadTrait>::value)
 				stmt.bind(1, aux_id);
 			else
 				stmt.bind(1, nullptr);
-			#warning "Check if nullptr works up here"
 		}
 
 		uint x = (uint)status;
@@ -425,6 +424,8 @@ void addProblem(StringView job_id, StringView job_owner, StringView info) {
 	AddProblemInfo p_info {info};
 	addProblem<AddTrait>(job_id, job_owner, "", p_info,
 		[&](uint64_t problem_id, sim::Conver::ReportBuff&) {
+			STACK_UNWINDING_MARK;
+
 			// Make the problem and its solutions' submissions public
 			auto stmt = db_conn.prepare("UPDATE problems p, submissions s"
 				" SET p.type=?, s.type=" STYPE_PROBLEM_SOLUTION_STR
@@ -444,6 +445,8 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 	AddProblemInfo p_info {info};
 	addProblem<ReuploadTrait>(job_id, job_owner, aux_id, p_info,
 		[&](uint64_t problem_id, sim::Conver::ReportBuff& report) {
+			STACK_UNWINDING_MARK;
+
 			// TODO: the problem is invalid for a while - do something so that
 			//   judging worker won't use it during that time
 			report.append("Replacing the old problem with the new one...");

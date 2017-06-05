@@ -281,6 +281,10 @@ $(document).click(function(event) {
 	else if ($(event.target).is('.modal .close'))
 		close_modal($(event.target).parent().parent());
 });
+$(document).keydown(function(event) {
+	if (event.key == 'Escape')
+		close_modal($('body').children('.modal').last());
+});
 function modal(modal_body) {
 	return $('<div>', {
 		class: 'modal',
@@ -491,19 +495,41 @@ function Lister(elem) {
 		var obj = this;
 
 		var modal_parent = elem.closest('.modal');
-		if (modal_parent.length === 1)
-			modal_parent.on('scroll resize', function() {
+		if (modal_parent.length === 1) {
+			function scres_handler() {
+				if (elem.closest('body').length === 0) {
+					obj.elem = null;
+					$(this).off('scroll', scres_handler);
+					$(this).off('resize', scres_handler);
+					return;
+				}
+
 				var height = $(this).children('div').height();
 				var scroll_top = $(this).scrollTop();
 				if (height - $(window).height() - scroll_top <= 300)
 					obj.fetch_more();
-			});
-		else
-			$(document).on('scroll resize', function() {
-				var x = $(this);
+			};
+
+			modal_parent.on('scroll', scres_handler);
+			$(window).on('resize', scres_handler);
+
+		} else {
+			function scres_handler() {
+				if (elem.closest('body').length === 0) {
+					obj.elem = null;
+					$(this).off('scroll', scres_handler);
+					$(this).off('resize', scres_handler);
+					return;
+				}
+
+				var x = $(document);
 				if (x.height() - $(window).height() - x.scrollTop() <= 300)
 					obj.fetch_more();
-			});
+			};
+
+			$(document).on('scroll', scres_handler);
+			$(window).on('resize', scres_handler);
+		}
 
 		modal_parent = null;
 	};
@@ -682,32 +708,33 @@ var ActionsToHTML = {};
 			show_view_job = true;
 
 		var res = [];
-		if (show_view_job)
+		if (show_view_job && actions_str.indexOf('v') !== -1)
 			res.push(a_preview_button('/jobs/' + job_id, 'View', 'btn-small',
 				function() { preview_job(true, job_id); }));
 
-		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('R') !== -1)
+		if (actions_str.indexOf('u') !== -1 || actions_str.indexOf('r') !== -1)
 			res.push($('<div>', {
 				class: 'dropmenu down',
 				html: $('<a>', {
 					class: 'btn-small dropmenu-toggle',
 					text: 'Download'
 				}).add('<ul>', {
-					html: $('<a>', {
-						href: '/api/job/' + job_id + '/report',
-						text: 'Report'
-					}).add(actions_str.indexOf('P') === -1 ? '' : $('<a>', {
-						href: '/api/job/' + job_id + '/uploaded-package',
-						text: 'Uploaded package'
-					}))
+					html: [actions_str.indexOf('r') === -1 ? '' :  $('<a>', {
+							href: '/api/job/' + job_id + '/report',
+							text: 'Report'
+						}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
+							href: '/api/job/' + job_id + '/uploaded-package',
+							text: 'Uploaded package'
+						})
+					]
 				})
 			}));
 
-		if (actions_str.indexOf('V') !== -1)
+		if (actions_str.indexOf('p') !== -1)
 			res.push(a_preview_button('/p/' + problem_id, 'View problem',
 				'btn-small green', function() { preview_problem(true, problem_id); }));
 
-		if (actions_str.indexOf('c') !== -1)
+		if (actions_str.indexOf('C') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small red',
 				text: 'Cancel job',
@@ -717,7 +744,7 @@ var ActionsToHTML = {};
 				}()
 			}));
 
-		if (actions_str.indexOf('r') !== -1)
+		if (actions_str.indexOf('R') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small orange',
 				text: 'Restart job',
@@ -914,11 +941,59 @@ function preview_user(as_modal, user_id) {
 			})
 		}));
 
-		var s_table = $('<table>', {
-			class: 'submissions'
-		});
-		this.append("<h2>User's submissions</h2>").append(s_table);
-		new SubmissionsLister(s_table, '/u' + user_id).monitor_scroll();
+		var main = $(this);
+
+		function show_submissions() {
+			var s_table = $('<table>', {
+				class: 'submissions'
+			});
+			main.append($('<div>', {
+				html: ["<h2>User's submissions</h2>", s_table]
+			}));
+			new SubmissionsLister(s_table, '/u' + user_id).monitor_scroll();
+		}
+
+		function show_jobs() {
+			var s_table = $('<table>', {
+				class: 'jobs'
+			});
+			main.append($('<div>', {
+				html: ["<h2>User's jobs</h2>", s_table]
+			}));
+			new JobsLister(s_table, '/u' + user_id).monitor_scroll();
+		}
+
+		this.append($('<div>', {
+			class: 'tabmenu',
+			html: [$('<a>', {
+					class: 'active',
+					text: 'Submissions',
+					click: function() {
+						if (!$(this).hasClass('active')) {
+							$(this).parent().css('min-width', $(this).parent().width());
+							$(this).parent().next().remove();
+							$(this).parent().children('.active').removeClass('active');
+							$(this).addClass('active');
+							show_submissions();
+						}
+					}
+				}),
+				$('<a>', {
+					text: 'Jobs',
+					click: function() {
+						if (!$(this).hasClass('active')) {
+							$(this).parent().css('min-width', $(this).parent().width());
+							$(this).parent().next().remove();
+							$(this).parent().children('.active').removeClass('active');
+							$(this).addClass('active');
+							show_jobs();
+						}
+					}
+				})
+			]
+		}))
+
+		show_submissions();
 
 	}, '/u/' + user_id);
 }
@@ -1226,20 +1301,24 @@ function preview_job(as_modal, job_id) {
 					})
 				})
 			})
-		})).append('<h2>Report preview</h2>')
-		.append($('<pre>', {
-			class: 'report-preview',
-			html: colorize(text_to_safe_html(data[9][1]))
-		}));
+		}))
 
-		if (data[9][0])
-			this.append($('<p>', {
-				text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
-			}).append($('<a>', {
-				class: 'btn-small',
-				href: '/api/job/' + job_id + '/report',
-				text: 'Download the full report'
-			})));
+		if (data[8].indexOf('r') !== -1) {
+			this.append('<h2>Report preview</h2>')
+			.append($('<pre>', {
+				class: 'report-preview',
+				html: colorize(text_to_safe_html(data[9][1]))
+			}));
+
+			if (data[9][0])
+				this.append($('<p>', {
+					text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
+				}).append($('<a>', {
+					class: 'btn-small',
+					href: '/api/job/' + job_id + '/report',
+					text: 'Download the full report'
+				})));
+		}
 	}, '/jobs/' + job_id);
 }
 function cancel_job(job_id) {
@@ -1271,6 +1350,14 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			dataType: 'json',
 			success: function(data) {
 				if (elem.children('thead').length === 0) {
+					if (data.length == 0) {
+						obj.elem.parent().append($('<center>', {
+							html: '<p>There are no jobs to show...</p>'
+						}));
+						remove_loader(obj.elem.parent());
+						return;
+					}
+
 					elem.html('<thead><tr>' +
 							'<th>Id</th>' +
 							'<th class="type">Type</th>' +
@@ -1462,11 +1549,11 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 					elem.html('<thead><tr>' +
 							'<th>Id</th>' +
 							(obj.show_user ? '<th class="username">Username</th>' : '') +
-							'<th class="type">Type</th>' +
 							'<th class="time">Added</th>' +
 							'<th class="problem">Problem</th>' +
 							'<th class="status">Status</th>' +
 							'<th class="score">Score</th>' +
+							'<th class="type">Type</th>' +
 							'<th class="actions">Actions</th>' +
 						'</tr></thead><tbody></tbody>');
 					add_tz_marker(elem.find('thead th.time'));
@@ -1493,9 +1580,6 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 										return function() { preview_user(true, uid); };
 									}()))
 						}));
-
-					// Type
-					row.append($('<td>', {text: x[1]}));
 
 					// Submission time
 					row.append($('<td>', {
@@ -1547,6 +1631,9 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 					// Score
 					row.append($('<td>', { text: x[14] }));
+
+					// Type
+					row.append($('<td>', {text: x[1]}));
 
 					// Actions
 					row.append($('<td>', {

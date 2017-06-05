@@ -21,52 +21,52 @@ static void processJobQueue() noexcept {
 
 		MySQL::Result res = db_conn.query(
 			"SELECT id, type, aux_id, info, creator, added FROM job_queue"
-			" WHERE status=" JQSTATUS_PENDING_STR " AND type!=" JQTYPE_VOID_STR
+			" WHERE status=" JSTATUS_PENDING_STR " AND type!=" JTYPE_VOID_STR
 			" ORDER BY priority DESC, id LIMIT 1");
 
 		if (!res.next())
 			break;
 
 		StringView job_id = res[0];
-		JobQueueType type = JobQueueType(strtoull(res[1]));
+		JobType type = JobType(strtoull(res[1]));
 		StringView aux_id = (res.isNull(2) ? "" : res[2]);
 		StringView info = res[3];
 
 		// Change the job status to IN_PROGRESS
 		auto stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_IN_PROGRESS_STR " WHERE id=?");
+			" SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
 		stmt.bindAndExecute(job_id);
 
 		// Choose action depending on the job type
 		switch (type) {
-		case JobQueueType::JUDGE_SUBMISSION:
+		case JobType::JUDGE_SUBMISSION:
 			judgeSubmission(job_id, aux_id, res[5]);
 			break;
 
-		case JobQueueType::ADD_PROBLEM:
+		case JobType::ADD_PROBLEM:
 			addProblem(job_id, res[4], info);
 			break;
 
-		case JobQueueType::REUPLOAD_PROBLEM:
+		case JobType::REUPLOAD_PROBLEM:
 			reuploadProblem(job_id, res[4], info, aux_id);
 			break;
 
-		case JobQueueType::ADD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id, JobQueueType::ADD_PROBLEM);
+		case JobType::ADD_JUDGE_MODEL_SOLUTION:
+			judgeModelSolution(job_id, JobType::ADD_PROBLEM);
 			break;
 
-		case JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id, JobQueueType::REUPLOAD_PROBLEM);
+		case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION:
+			judgeModelSolution(job_id, JobType::REUPLOAD_PROBLEM);
 			break;
 
-		case JobQueueType::EDIT_PROBLEM:
-		case JobQueueType::DELETE_PROBLEM:
+		case JobType::EDIT_PROBLEM:
+		case JobType::DELETE_PROBLEM:
 			stmt = db_conn.prepare("UPDATE job_queue"
-				" SET status=" JQSTATUS_CANCELED_STR " WHERE id=?");
+				" SET status=" JSTATUS_CANCELED_STR " WHERE id=?");
 			stmt.bindAndExecute(job_id);
 			break;
 
-		case JobQueueType::VOID:
+		case JobType::VOID:
 			break;
 
 		}
@@ -88,15 +88,14 @@ static void cleanUpDB() {
 	try {
 		// Fix jobs that are in progress after the job-server died
 		// TODO: does not work for interrupted problem adding/reuploading jobs
-		db_conn.update("UPDATE job_queue"
-			" SET status=" JQSTATUS_PENDING_STR
-			" WHERE status=" JQSTATUS_IN_PROGRESS_STR);
+		db_conn.update("UPDATE job_queue SET status=" JSTATUS_PENDING_STR
+			" WHERE status=" JSTATUS_IN_PROGRESS_STR);
 
 		// Remove void (invalid) jobs and submissions that are older than 24 h
 		auto yesterday_date = date("%Y-%m-%d %H:%M:%S",
 			time(nullptr) - 24 * 60 * 60);
 		auto stmt = db_conn.prepare("DELETE FROM job_queue WHERE type="
-			JQTYPE_VOID_STR " AND added<?");
+			JTYPE_VOID_STR " AND added<?");
 		stmt.bindAndExecute(yesterday_date);
 
 		stmt = db_conn.prepare("DELETE FROM submissions WHERE type="
