@@ -510,7 +510,7 @@ table {
 	text-align: initial;
 	flex-flow: column nowrap;
 	background-color: #fefefe;
-	margin: 4px auto 64px;
+	margin: 4px 1px 64px;
 	padding: 20px;
 	border: 1px solid #888;
 	-webkit-border-radius: 4px;
@@ -1122,6 +1122,7 @@ div.header {
 	display: flex;
 	flex-flow: row wrap;
 	justify-content: space-between;
+	align-items: center;
 }
 div.header > h1 {
 	white-space: nowrap;

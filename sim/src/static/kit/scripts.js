@@ -293,10 +293,20 @@ function modal(modal_body) {
 		})
 	}).appendTo('body');
 }
-function centerize_modal(modal) {
+function centerize_modal(modal, allow_lowering /*= true*/) {
+	if (allow_lowering === undefined)
+		allow_lowering = true;
+
 	// Update padding-top
 	var m = $(modal);
 	var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
+
+	if (!allow_lowering) {
+		var old_padding = m.css('padding-top');
+		if (old_padding !== undefined && parseInt(old_padding.slice(0, -2)) < new_padding)
+			return;
+	}
+
 	m.css({'padding-top': Math.max(new_padding, 0)});
 }
 function modal_request(title, form, target_url, success_msg) {
@@ -412,6 +422,35 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 		})))
 	});
 }*/
+
+/* ================================ Tab menu ================================ */
+function tabmenu(attacher, tabs, click_first_tab /*= true*/) {
+	if (click_first_tab === undefined)
+		click_first_tab = true;
+
+	var res = $('<div>', {class: 'tabmenu'});
+
+	for (var i = 0; i < tabs.length; i += 2)
+		res.append($('<a>', {
+			text: tabs[i],
+			click: function() {
+				var handler = tabs[i + 1];
+				return function() {
+					if (!$(this).hasClass('active')) {
+						$(this).parent().css('min-width', $(this).parent().width());
+						$(this).parent().children('.active').removeClass('active');
+						$(this).addClass('active');
+						handler.call(this);
+					}
+				}
+			}()
+		}))
+
+	attacher(res);
+	res.children().first().addClass('active');
+	if (click_first_tab === true)
+		tabs[1].call(res.children().first()[0]);
+}
 
 /* ================================ Preview ================================ */
 function preview_base(as_modal, new_window_location, func) {
@@ -943,57 +982,28 @@ function preview_user(as_modal, user_id) {
 
 		var main = $(this);
 
-		function show_submissions() {
-			var s_table = $('<table>', {
-				class: 'submissions'
-			});
-			main.append($('<div>', {
-				html: ["<h2>User's submissions</h2>", s_table]
-			}));
-			new SubmissionsLister(s_table, '/u' + user_id).monitor_scroll();
-		}
-
-		function show_jobs() {
-			var s_table = $('<table>', {
-				class: 'jobs'
-			});
-			main.append($('<div>', {
-				html: ["<h2>User's jobs</h2>", s_table]
-			}));
-			new JobsLister(s_table, '/u' + user_id).monitor_scroll();
-		}
-
-		this.append($('<div>', {
-			class: 'tabmenu',
-			html: [$('<a>', {
-					class: 'active',
-					text: 'Submissions',
-					click: function() {
-						if (!$(this).hasClass('active')) {
-							$(this).parent().css('min-width', $(this).parent().width());
-							$(this).parent().next().remove();
-							$(this).parent().children('.active').removeClass('active');
-							$(this).addClass('active');
-							show_submissions();
-						}
-					}
-				}),
-				$('<a>', {
-					text: 'Jobs',
-					click: function() {
-						if (!$(this).hasClass('active')) {
-							$(this).parent().css('min-width', $(this).parent().width());
-							$(this).parent().next().remove();
-							$(this).parent().children('.active').removeClass('active');
-							$(this).addClass('active');
-							show_jobs();
-						}
-					}
-				})
-			]
-		}))
-
-		show_submissions();
+		tabmenu(function(x) { x.appendTo(main); }, [
+			'Submissions', function() {
+				$(this).parent().next().remove();
+				var s_table = $('<table>', {
+					class: 'submissions'
+				});
+				main.append($('<div>', {
+					html: ["<h2>User's submissions</h2>", s_table]
+				}));
+				new SubmissionsLister(s_table, '/u' + user_id).monitor_scroll();
+			},
+			'Jobs', function() {
+				$(this).parent().next().remove();
+				var s_table = $('<table>', {
+					class: 'jobs'
+				});
+				main.append($('<div>', {
+					html: ["<h2>User's jobs</h2>", s_table]
+				}));
+				new JobsLister(s_table, '/u' + user_id).monitor_scroll();
+			}
+		]);
 
 	}, '/u/' + user_id);
 }
@@ -1352,6 +1362,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 				if (elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
+							class: 'jobs',
 							html: '<p>There are no jobs to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
@@ -1443,6 +1454,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(obj.elem.parent());
+				centerize_modal(obj.elem.parents('.modal'), false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -1515,9 +1527,11 @@ function rejudgeRoundSubmissions(round_id) {
 	);
 }*/
 
-function SubmissionsLister(elem, query_suffix /*= ''*/) {
+function SubmissionsLister(elem, query_suffix /*= ''*/, tab_query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
+	if (tab_query_suffix === undefined)
+		tab_query_suffix = '';
 
 	this.show_user = (query_suffix.indexOf('/u') === -1 &&
 		query_suffix.indexOf('/tS') === -1);
@@ -1527,19 +1541,49 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 		query_suffix.indexOf('/P') === -1);
 
 	Lister.call(this, elem);
-	this.query_url = '/api/submissions' + query_suffix;
+	this.query_base = '/api/submissions';
+	this.arg_query_suffix = query_suffix;
+	this.tab_query_suffix = tab_query_suffix;
 	this.query_suffix = '';
+
+	if (elem.prev('.tabmenu').length === 0) {
+		var obj = this, par = elem.parent();
+		function retab(new_tab_query_suffix) {
+			obj.lock = true;
+			par.children('.submissions, .loader, .loader-info').remove();
+			var table = $('<table class="submissions"></table>').appendTo(par);
+			new SubmissionsLister(table, obj.arg_query_suffix, new_tab_query_suffix)
+				.monitor_scroll();
+		}
+
+		var tabs = [
+			'All', function() { retab(''); },
+			'Final', function() { retab('/tF'); },
+			'Ignored', function() { retab('/tI'); }
+		];
+		if (this.arg_query_suffix.indexOf('/u') === -1 &&
+			this.arg_query_suffix.indexOf('/C') === -1 &&
+			this.arg_query_suffix.indexOf('/R') === -1 &&
+			this.arg_query_suffix.indexOf('/P') === -1)
+		{
+			tabs.push('Solutions', function() { retab('/tS'); })
+		}
+
+		tabmenu(function(x) { x.insertBefore(obj.elem); }, tabs, false);
+	}
 
 	this.fetch_more_impl = function() {
 		var obj = this;
 		$.ajax({
 			type: 'GET',
-			url: obj.query_url + obj.query_suffix,
+			url: obj.query_base + obj.arg_query_suffix + obj.tab_query_suffix +
+				obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
 				if (elem.children('thead').length === 0) {
-					if (data.length == 0) {
+					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
+							class: 'submissions',
 							html: '<p>There are no submissions to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
@@ -1557,7 +1601,6 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 							'<th class="actions">Actions</th>' +
 						'</tr></thead><tbody></tbody>');
 					add_tz_marker(elem.find('thead th.time'));
-
 				}
 
 				for (x in data) {
@@ -1644,7 +1687,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(obj.elem.parent());
-				centerize_modal(obj.elem.parents('.modal'));
+				centerize_modal(obj.elem.parents('.modal'), false);
 
 				if (data.length == 0)
 					return; // No more data to load

@@ -104,7 +104,7 @@ void Sim::api_user() {
 	STACK_UNWINDING_MARK;
 
 	if (not session_open())
-		return error403(); // Intentionally the whole template
+		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "add")

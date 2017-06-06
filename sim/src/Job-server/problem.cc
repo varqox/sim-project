@@ -449,7 +449,7 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 
 			// TODO: the problem is invalid for a while - do something so that
 			//   judging worker won't use it during that time
-			report.append("Replacing the old problem with the new one...");
+			report.append("Replacing the old package with the new one...");
 
 			// Make a backup of the problem
 			vector<pair<bool, string>> pbackup;
