@@ -10,9 +10,6 @@ void Sim::api_submissions() {
 	if (not session_open())
 		return api_error403();
 
-	StringView next_arg = url_args.extractNextArg();
-	bool select_one = false;
-
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT s.id, s.type, s.owner, c.owner, cu.mode,"
 		" u.username, s.problem_id, p.name, s.round_id, r.name,"
@@ -29,8 +26,10 @@ void Sim::api_submissions() {
 		" WHERE s.type!=" STYPE_VOID_STR);
 
 	bool allow_access = (session_user_type == UserType::ADMIN);
+	bool select_one = false;
 
 	// Process restrictions
+	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
 		constexpr uint STYPE_COND = 2;

@@ -291,9 +291,8 @@ void Sim::users_handle() {
 	page_template("Users", "body{padding-left:30px}");
 	append("<h1>Users</h1>"
 		"<div><a class=\"btn\" onclick=\"add_user(true)\">Add user</a><div>"
-		"<table class=\"users\"></table>"
 		"<script>"
-			"new UsersLister($('.users')).monitor_scroll();"
+			"tab_users_lister($('body'));"
 		"</script>");
 }
 

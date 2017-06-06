@@ -14,8 +14,6 @@ void Sim::api_users() {
 	if (not session_open())
 		return api_error403();
 
-	bool allow_access = uint(users_get_permissions() & PERM::VIEW_ALL);
-
 	InplaceBuff<256> query;
 	query.append("SELECT id, username, first_name, last_name, email, type"
 		" FROM users");
@@ -26,25 +24,57 @@ void Sim::api_users() {
 		query.append(" WHERE id!=" SIM_ROOT_UID);
 	}
 
-	auto arg = decodeURI(url_args.extractNextArg());
-	if (arg.size) {
+	bool allow_access = uint(users_get_permissions() & PERM::VIEW_ALL);
+
+	// Process restrictions
+	StringView next_arg = url_args.extractNextArg();
+	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
+		constexpr uint ID_COND = 1;
+		constexpr uint UTYPE_COND = 2;
+
+		auto arg = decodeURI(next_arg);
 		char cond = arg[0];
 		StringView arg_id = StringView{arg}.substr(1);
+
+		// user type
+		if (cond == 't' and ~mask & UTYPE_COND) {
+			query.append((where_added ? " AND" : " WHERE"));
+			where_added = true;
+
+			if (arg_id == "A")
+				query.append(" type=" UTYPE_ADMIN_STR);
+			else if (arg_id == "T")
+				query.append(" type=" UTYPE_TEACHER_STR);
+			else if (arg_id == "N")
+				query.append(" type=" UTYPE_NORMAL_STR);
+			else
+				return api_error400(concat("Invalid user type: ", arg_id));
+
+			mask |= UTYPE_COND;
+			continue;
+		}
 
 		if (not isDigit(arg_id))
 			return api_error400();
 
-		if (cond == '=') {
+		// conditional
+		if (cond == '>' and ~mask & ID_COND) {
+			query.append((where_added ? " AND id" : " WHERE id"), arg);
+			where_added = true;
+			mask |= ID_COND;
+
+		} else if (cond == '=' and ~mask & ID_COND) {
 			if (not allow_access)
 				// Allow selecting the user's data
 				allow_access = (arg_id == session_user_id);
-		} else if (cond != '>')
+
+			query.append((where_added ? " AND id" : " WHERE id"), arg);
+			where_added = true;
+			mask |= ID_COND;
+
+		} else
 			return api_error400();
 
-		if (where_added)
-			query.append(" AND id", arg);
-		else
-			query.append(" WHERE id", arg);
 	}
 
 	if (not allow_access)
