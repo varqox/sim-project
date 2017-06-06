@@ -248,7 +248,7 @@ void Sim::api_job() {
 	using JT = JobType;
 
 	if (not session_open())
-		return error403(); // Intentionally the whole template
+		return api_error403();
 
 	jobs_job_id = url_args.extractNextArg();
 	if (not isDigit(jobs_job_id))

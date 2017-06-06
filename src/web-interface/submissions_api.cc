@@ -335,7 +335,7 @@ void Sim::api_submission() {
 	using CUM = ContestUserMode;
 
 	if (not session_open())
-		return error403(); // Intentionally the whole template
+		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
 	if (not isDigit(next_arg) or request.method != server::HttpRequest::POST)
