@@ -157,7 +157,8 @@ int main(int argc, char **argv) {
 			"`password` BINARY(", PASSWORD_HASH_LEN, ") NOT NULL,"
 			"`type` tinyint(1) unsigned NOT NULL DEFAULT " UTYPE_NORMAL_STR ","
 			"PRIMARY KEY (id),"
-			"UNIQUE KEY (username)"
+			"UNIQUE KEY (username),"
+			"KEY(type, id DESC)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
 		[&] {
 			// Add default user sim with password sim

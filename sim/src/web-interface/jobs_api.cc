@@ -29,8 +29,6 @@ void Sim::api_jobs() {
 
 	// Get permissions to the overall job queue
 	jobs_perms = jobs_get_permissions();
-	StringView next_arg = url_args.extractNextArg();
-	bool select_data = false;
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
@@ -39,8 +37,10 @@ void Sim::api_jobs() {
 		" WHERE j.type!=" JTYPE_VOID_STR);
 
 	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
+	bool select_data = false;
 
 	// Process restrictions
+	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
 		constexpr uint AUX_ID_COND = 2;

@@ -985,23 +985,18 @@ function preview_user(as_modal, user_id) {
 		tabmenu(function(x) { x.appendTo(main); }, [
 			'Submissions', function() {
 				$(this).parent().next().remove();
-				var s_table = $('<table>', {
-					class: 'submissions'
-				});
-				main.append($('<div>', {
-					html: ["<h2>User's submissions</h2>", s_table]
-				}));
-				new SubmissionsLister(s_table, '/u' + user_id).monitor_scroll();
+				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
+				tab_submissions_lister(main, '/u' + user_id);
 			},
 			'Jobs', function() {
 				$(this).parent().next().remove();
-				var s_table = $('<table>', {
+				var j_table = $('<table>', {
 					class: 'jobs'
 				});
 				main.append($('<div>', {
-					html: ["<h2>User's jobs</h2>", s_table]
+					html: ["<h2>User's jobs</h2>", j_table]
 				}));
-				new JobsLister(s_table, '/u' + user_id).monitor_scroll();
+				new JobsLister(j_table, '/u' + user_id).monitor_scroll();
 			}
 		]);
 
@@ -1179,18 +1174,31 @@ function change_user_password(as_modal, user_id) {
 
 	}, '/u/' + user_id + "/change-password");
 }
-function UsersLister(elem) {
+function UsersLister(elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
 	Lister.call(this, elem);
+	this.query_url = '/api/users' + query_suffix;
 	this.query_suffix = '';
 
 	this.fetch_more_impl = function() {
 		var obj = this;
 		$.ajax({
 			type: 'GET',
-			url: '/api/users' + obj.query_suffix,
+			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0)
+				if (elem.children('thead').length === 0) {
+					if (data.length == 0) {
+						obj.elem.parent().append($('<center>', {
+							class: 'users',
+							html: '<p>There are no users to show...</p>'
+						}));
+						remove_loader(obj.elem.parent());
+						return;
+					}
+
 					elem.html('<thead><tr>' +
 							'<th>Id</th>' +
 							'<th class="username">Username</th>' +
@@ -1200,6 +1208,7 @@ function UsersLister(elem) {
 							'<th class="type">Type</th>' +
 							'<th class="actions">Actions</th>' +
 						'</tr></thead><tbody></tbody>');
+				}
 
 				for (x in data) {
 					x = data[x];
@@ -1241,6 +1250,27 @@ function UsersLister(elem) {
 	}
 
 	this.fetch_more();
+}
+
+function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	parent_elem = $(parent_elem);
+	function retab(tab_qsuff) {
+		parent_elem.children('.users, .loader, .loader-info').remove();
+		var table = $('<table class="users"></table>').appendTo(parent_elem);
+		new UsersLister(table, query_suffix + tab_qsuff).monitor_scroll();
+	}
+
+	var tabs = [
+		'All', function() { retab(''); },
+		'Admins', function() { retab('/tA'); },
+		'Teachers', function() { retab('/tT'); },
+		'Normal', function() { retab('/tN'); }
+	];
+
+	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
 }
 
 /* ================================== Jobs ================================== */
@@ -1527,11 +1557,9 @@ function rejudgeRoundSubmissions(round_id) {
 	);
 }*/
 
-function SubmissionsLister(elem, query_suffix /*= ''*/, tab_query_suffix /*= ''*/) {
+function SubmissionsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
-	if (tab_query_suffix === undefined)
-		tab_query_suffix = '';
 
 	this.show_user = (query_suffix.indexOf('/u') === -1 &&
 		query_suffix.indexOf('/tS') === -1);
@@ -1541,43 +1569,14 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, tab_query_suffix /*= ''*
 		query_suffix.indexOf('/P') === -1);
 
 	Lister.call(this, elem);
-	this.query_base = '/api/submissions';
-	this.arg_query_suffix = query_suffix;
-	this.tab_query_suffix = tab_query_suffix;
+	this.query_url = '/api/submissions' + query_suffix;
 	this.query_suffix = '';
-
-	if (elem.prev('.tabmenu').length === 0) {
-		var obj = this, par = elem.parent();
-		function retab(new_tab_query_suffix) {
-			obj.lock = true;
-			par.children('.submissions, .loader, .loader-info').remove();
-			var table = $('<table class="submissions"></table>').appendTo(par);
-			new SubmissionsLister(table, obj.arg_query_suffix, new_tab_query_suffix)
-				.monitor_scroll();
-		}
-
-		var tabs = [
-			'All', function() { retab(''); },
-			'Final', function() { retab('/tF'); },
-			'Ignored', function() { retab('/tI'); }
-		];
-		if (this.arg_query_suffix.indexOf('/u') === -1 &&
-			this.arg_query_suffix.indexOf('/C') === -1 &&
-			this.arg_query_suffix.indexOf('/R') === -1 &&
-			this.arg_query_suffix.indexOf('/P') === -1)
-		{
-			tabs.push('Solutions', function() { retab('/tS'); })
-		}
-
-		tabmenu(function(x) { x.insertBefore(obj.elem); }, tabs, false);
-	}
 
 	this.fetch_more_impl = function() {
 		var obj = this;
 		$.ajax({
 			type: 'GET',
-			url: obj.query_base + obj.arg_query_suffix + obj.tab_query_suffix +
-				obj.query_suffix,
+			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
 				if (elem.children('thead').length === 0) {
@@ -1703,6 +1702,31 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, tab_query_suffix /*= ''*
 	};
 
 	this.fetch_more();
+}
+
+function tab_submissions_lister(parent_elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	parent_elem = $(parent_elem);
+	function retab(tab_qsuff) {
+		parent_elem.children('.submissions, .loader, .loader-info').remove();
+		var table = $('<table class="submissions"></table>').appendTo(parent_elem);
+		new SubmissionsLister(table, query_suffix + tab_qsuff).monitor_scroll();
+	}
+
+	var tabs = [
+		'All', function() { retab(''); },
+		'Final', function() { retab('/tF'); },
+		'Ignored', function() { retab('/tI'); }
+	];
+	if (query_suffix.indexOf('/u') === -1 && query_suffix.indexOf('/C') === -1 &&
+		query_suffix.indexOf('/R') === -1 && query_suffix.indexOf('/P') === -1)
+	{
+		tabs.push('Solutions', function() { retab('/tS'); })
+	}
+
+	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
 }
 
 /* ============================ Contest's users ============================ */

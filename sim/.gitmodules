@@ -1,8 +1,6 @@
 [submodule "src/simlib"]
 	path = src/lib/simlib
 	url = https://github.com/varqox/simlib
-	shallow = true
 [submodule "src/lib/sqlite"]
 	path = src/lib/sqlite
 	url = https://github.com/azadkuh/sqlite-amalgamation
-	shallow = true
