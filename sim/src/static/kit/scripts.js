@@ -986,7 +986,7 @@ function preview_user(as_modal, user_id) {
 			'Submissions', function() {
 				$(this).parent().next().remove();
 				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
-				tab_submissions_lister(main, '/u' + user_id);
+				tab_submissions_lister(main.children().last(), '/u' + user_id);
 			},
 			'Jobs', function() {
 				$(this).parent().next().remove();
@@ -1607,7 +1607,7 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 							(data[2] === null ? ''
 								: '<th style="min-width:120px">User</th>') +
 							'<th style="min-width:120px">Problem</th>' +
-							'<th style="min-width:150px">submission time</th>' +
+							'<th style="min-width:150px">Submission time</th>' +
 							'<th style="min-width:150px">Status</th>' +
 							'<th style="min-width:90px">Score</th>' +
 							'<th style="min-width:90px">Type</th>' +
