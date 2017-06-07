@@ -1,4 +1,5 @@
 #include "sim.h"
+#include <simlib/filesystem.h>
 
 using std::string;
 
@@ -337,7 +338,7 @@ void Sim::api_submission() {
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
-	if (not isDigit(next_arg) or request.method != server::HttpRequest::POST)
+	if (not isDigit(next_arg))
 		return api_error400();
 
 	submission_id = next_arg;
@@ -356,40 +357,72 @@ void Sim::api_submission() {
 		return api_error404();
 
 	submission_perms = submission_get_permissions(sowner,
-		(stmt.isNull(2) ? StringView{} : c_owner),
-		(stmt.isNull(3) ? CUM::IS_NULL : CUM(cu_mode)));
+		(stmt.isNull(1) ? StringView{} : c_owner),
+		(stmt.isNull(2) ? CUM::IS_NULL : CUM(cu_mode)));
 
+	// Subpages
 	next_arg = url_args.extractNextArg();
 	if (next_arg == "source")
 		return api_submission_source();
-	else if (next_arg == "download")
+	if (next_arg == "download")
 		return api_submission_download();
-	else if (next_arg == "rejudge")
+
+	if (request.method != server::HttpRequest::POST)
+		return api_error400();
+
+	// Subpages causing action
+	if (next_arg == "rejudge")
 		return api_submission_rejudge();
-	else if (next_arg == "chtype")
+	if (next_arg == "chtype")
 		return api_submission_change_type();
-	else if (next_arg == "delete")
+	if (next_arg == "delete")
 		return api_submission_delete();
-	else
-		return api_error404();
+
+	return api_error404();
 }
 
 void Sim::api_submission_source() {
 	STACK_UNWINDING_MARK;
+
+	if (uint(~submission_perms & SubmissionPermissions::VIEW_SOURCE))
+		return api_error403();
+
+	append(cpp_syntax_highlighter(getFileContents(
+		concat_tostr("solutions/", submission_id, ".cpp"))));
 }
 
 void Sim::api_submission_download() {
 	STACK_UNWINDING_MARK;
+
+	if (uint(~submission_perms & SubmissionPermissions::VIEW_SOURCE))
+		return api_error403();
+
+
+	resp.headers["Content-type"] = "application/text";
+	resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=",
+		submission_id, ".cpp");
+
+	resp.content = concat("solutions/", submission_id, ".cpp");
+	resp.content_type = server::HttpResponse::FILE;
 }
 
 void Sim::api_submission_rejudge() {
 	STACK_UNWINDING_MARK;
+
+	if (uint(~submission_perms & SubmissionPermissions::REJUDGE))
+		return api_error403();
 }
 
 void Sim::api_submission_change_type() {
 	STACK_UNWINDING_MARK;
+
+	if (uint(~submission_perms & SubmissionPermissions::CHANGE_TYPE))
+		return api_error403();
 }
 
 void Sim::api_submission_delete() {
 	STACK_UNWINDING_MARK;
+
+	if (uint(~submission_perms & SubmissionPermissions::DELETE))
+		return api_error403();
 }

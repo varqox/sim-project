@@ -686,6 +686,9 @@ private:
 	StringView submission_id;
 	SubmissionPermissions submission_perms = SubmissionPermissions::NONE;
 
+	// Pages
+	void submission_handle();
+
 	/* =============================== Other =============================== */
 
 	// Pages
@@ -694,8 +697,6 @@ private:
 	void static_file();
 
 	void view_logs();
-
-	void view_submission();
 
 public:
 	Sim() : sqlite(SQLITE_DB_FILE, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX),
