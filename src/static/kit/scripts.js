@@ -1656,14 +1656,14 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 		var elem = $(this);
 		tabmenu(function(x) { x.appendTo(elem); }, [
 			'Reports', function() {
-				elem.children('.results, .code-view').remove();
+				elem.children('.results, .code-view, .loader, .loader-info').remove();
 				elem.append($('<div>', {
 					class: 'results',
 					html: [data[18], data[19], null]
 				}))
 			},
 			'Source', function() {
-				elem.children('.results, .code-view').remove();
+				elem.children('.results, .code-view, .loader, .loader-info').remove();
 				append_loader(elem);
 				$.ajax({
 					url: '/api/submission/' + submission_id + '/source',
