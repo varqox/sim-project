@@ -12,6 +12,9 @@ function logged_user_id() {
 	var x = $('.navbar .rightbar .user + ul > a:first-child').attr('href');
 	return x.substr(x.lastIndexOf('/') + 1);
 }
+function logged_user_is_admin() {
+	return ($('.navbar > div > a[href="/logs"]').length === 1);
+}
 
 // Dropdowns
 $(document).ready(function(){
@@ -1654,16 +1657,16 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 
 
 		var elem = $(this);
-		tabmenu(function(x) { x.appendTo(elem); }, [
+		var tabs = [
 			'Reports', function() {
-				elem.children('.results, .code-view, .loader, .loader-info').remove();
+				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
 				elem.append($('<div>', {
 					class: 'results',
 					html: [data[18], data[19], null]
 				}))
 			},
 			'Source', function() {
-				elem.children('.results, .code-view, .loader, .loader-info').remove();
+				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
 				append_loader(elem);
 				$.ajax({
 					url: '/api/submission/' + submission_id + '/source',
@@ -1678,7 +1681,16 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 					}
 				});
 			}
-		], active_tab);
+		];
+
+		if (logged_user_is_admin())
+			tabs.push('Related jobs', function() {
+				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
+				elem.append($('<table>', {class: 'jobs'}));
+				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
+			});
+
+		tabmenu(function(x) { x.appendTo(elem); }, tabs, active_tab);
 
 	}, '/s/' + submission_id);
 }

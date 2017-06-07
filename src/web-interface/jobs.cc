@@ -39,9 +39,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 	if (session_user_id == creator_id)
 		return perm | PERM::VIEW | (isIn(job_status,
 			{JobStatus::PENDING, JobStatus::IN_PROGRESS}) ?
-				PERM::CANCEL : PERM::NONE) |
-			(session_user_type == UserType::TEACHER ? PERM::VIEW_ALL
-				: PERM::NONE);
+				PERM::CANCEL : PERM::NONE);
 
 	return PERM::NONE;
 }
