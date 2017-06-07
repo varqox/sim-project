@@ -48,7 +48,6 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 
 void Sim::jobs_handle() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = JobPermissions;
 
 	if (not session_open())

@@ -1,11 +1,20 @@
-#include <sim/jobs.h>
-#include <simlib/debug.h>
-#include <simlib/process.h>
-#include <simlib/time.h>
+#include "sim.h"
 
-using std::string;
-using std::vector;
+void Sim::submission_handle() {
+	STACK_UNWINDING_MARK;
 
+	if (not session_open())
+		return redirect("/login?" + request.target);
+
+	submission_id = url_args.extractNextArg();
+	if (not isDigit(submission_id))
+		return error404();
+
+	page_template(concat("Submission ", submission_id), "body{padding-left:32px}");
+	append("<script>preview_submission(false, ", submission_id, ");</script>");
+}
+
+#if 0
 void Contest::submit(bool admin_view) {
 	// TODO: admin views as normal - before round begins, admin does not get 403
 	// error
@@ -562,3 +571,4 @@ void Contest::submissions(bool admin_view) {
 		return error500();
 	}
 }
+#endif

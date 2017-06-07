@@ -424,9 +424,9 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 }*/
 
 /* ================================ Tab menu ================================ */
-function tabmenu(attacher, tabs, click_first_tab /*= true*/) {
-	if (click_first_tab === undefined)
-		click_first_tab = true;
+function tabmenu(attacher, tabs, active_tab /*= 0*/) {
+	if (active_tab === undefined)
+		active_tab = 0;
 
 	var res = $('<div>', {class: 'tabmenu'});
 
@@ -447,9 +447,8 @@ function tabmenu(attacher, tabs, click_first_tab /*= true*/) {
 		}))
 
 	attacher(res);
-	res.children().first().addClass('active');
-	if (click_first_tab === true)
-		tabs[1].call(res.children().first()[0]);
+	res.children().eq(active_tab).addClass('active');
+	tabs[active_tab * 2 + 1].call(res.children().eq(active_tab)[0]);
 }
 
 /* ================================ Preview ================================ */
@@ -742,12 +741,12 @@ function Logs(type, elem) {
 /* ============================ Actions buttons ============================ */
 var ActionsToHTML = {};
 (function() {
-	this.job = function(job_id, actions_str, problem_id, show_view_job /*= true*/) {
-		if (show_view_job == undefined)
-			show_view_job = true;
+	this.job = function(job_id, actions_str, problem_id, job_preview /*= false*/) {
+		if (job_preview == undefined)
+			job_preview = false;
 
 		var res = [];
-		if (show_view_job && actions_str.indexOf('v') !== -1)
+		if (!job_preview && actions_str.indexOf('v') !== -1)
 			res.push(a_preview_button('/jobs/' + job_id, 'View', 'btn-small',
 				function() { preview_job(true, job_id); }));
 
@@ -796,12 +795,12 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.user = function(user_id, actions_str, show_view_user /*= true*/) {
-		if (show_view_user === undefined)
-			show_view_user = true;
+	this.user = function(user_id, actions_str, user_preview /*= false*/) {
+		if (user_preview === undefined)
+			user_preview = false;
 
 		var res = [];
-		if (show_view_user && actions_str.indexOf('v') !== -1)
+		if (!user_preview && actions_str.indexOf('v') !== -1)
 			res.push(a_preview_button('/u/' + user_id, 'View', 'btn-small',
 				function() { preview_user(true, user_id); }));
 
@@ -821,18 +820,19 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.submission = function(submission_id, actions_str, show_view_submission /*= true*/) {
-		if (show_view_submission === undefined)
-			show_view_submission = true;
+	this.submission = function(submission_id, actions_str, submission_preview /*= false*/) {
+		if (submission_preview === undefined)
+			submission_preview = false;
 
 		var res = [];
-		if (show_view_submission && actions_str.indexOf('v') !== -1)
+		if (!submission_preview && actions_str.indexOf('v') !== -1)
 			res.push(a_preview_button('/s/' + submission_id, 'Preview', 'btn-small',
 				function() { preview_submission(true, submission_id); }));
 
 		if (actions_str.indexOf('s') !== -1) {
-			res.push(a_preview_button('/s/' + submission_id + '/source', 'Source',
-				'btn-small', function() { submission_source(true, submission_id); }));
+			if (!submission_preview)
+				res.push(a_preview_button('/s/' + submission_id + '/source', 'Source',
+					'btn-small', function() { preview_submission(true, submission_id, 1); }));
 
 			res.push($('<a>', {
 				class: 'btn-small',
@@ -948,7 +948,7 @@ function preview_user(as_modal, user_id) {
 				})
 			}).append(text_to_safe_html(' (' + data[2] + ' ' + data[3] + ')'))
 			.add('<div>', {
-				html: ActionsToHTML.user(user_id, data[6], false)
+				html: ActionsToHTML.user(user_id, data[6], true)
 			})
 		})).append($('<center>', {
 			html: $('<div>', {
@@ -1251,7 +1251,6 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
-
 function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
@@ -1307,8 +1306,7 @@ function preview_job(as_modal, job_id) {
 				html: $('<h1>', {
 					text: 'Job ' + job_id
 				}).add('<div>', {
-					html: ActionsToHTML.job(job_id, data[8], data[7].problem,
-						false)
+					html: ActionsToHTML.job(job_id, data[8], data[7].problem, true)
 				})
 			}).add('<table>', {
 				html: $('<thead>', {html: '<tr>' +
@@ -1455,15 +1453,17 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 							append_tag('submission',
 								a_preview_button('/s/' + info.submission,
 									info.submission, undefined, function() {
-										preview_submission(true, info.submission);
-									}));
+										var sid = info.submission;
+										return function() {preview_submission(true, sid); };
+									}()));
 
 						if (info.problem !== undefined)
 							append_tag('problem',
 								a_preview_button('/s/' + info.problem,
 									info.problem, undefined, function() {
-										preview_submission(true, info.problem);
-									}));
+										var pid = info.problem;
+										return function() {preview_problem(true, pid); };
+									}()));
 
 						var names = ['name', 'memory limit', 'make public'];
 						for (var idx in names) {
@@ -1557,6 +1557,131 @@ function rejudgeRoundSubmissions(round_id) {
 	);
 }*/
 
+function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
+	preview_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
+		data = data[0];
+
+		if (data[6] !== null)
+			this.append($('<div>', {
+				class: 'round-path',
+				html: [
+					$('<a>', {
+						href: '/c/' + data[10],
+						text: data[11]
+					}),
+					' ~> ',
+					$('<a>', {
+						href: '/c/' + data[8],
+						text: data[9]
+					}),
+					' ~> ',
+					$('<a>', {
+						href: '/c/' + data[6],
+						text: data[7]
+					}),
+					$('<a>', {
+						class: 'btn-small',
+						href: '/c/' + data[6] + '/statement',
+						text: 'View statement'
+					})
+				]
+			}));
+
+		this.append($('<div>', {
+			class: 'submission-info',
+			html: [
+				$('<div>', {
+					class: 'header',
+					html: [
+						$('<h1>', {
+							text: 'Submission ' + submission_id
+						}),
+						$('<div>', {
+							html: ActionsToHTML.submission(submission_id, data[15], true)
+						})
+					]
+				}),
+				$('<table>', {
+					html: [
+						$('<thead>', {html: '<tr>' +
+							(data[2] === null ? ''
+								: '<th style="min-width:120px">User</th>') +
+							'<th style="min-width:120px">Problem</th>' +
+							'<th style="min-width:150px">submission time</th>' +
+							'<th style="min-width:150px">Status</th>' +
+							'<th style="min-width:90px">Score</th>' +
+							'<th style="min-width:90px">Type</th>' +
+							'</tr>'
+						}),
+						$('<tbody>', {
+							html: $('<tr>', {
+								class: (data[1] === 'Ignored' ? 'ignored' : undefined),
+								html: [
+									(data[2] === null ? '' : $('<td>', {
+										html: [a_preview_button('/u/' + data[2], data[3],
+												undefined, function() {
+													preview_user(true, data[2]);
+												}),
+											' (' + text_to_safe_html(data[16]) + ' ' +
+												text_to_safe_html(data[17]) + ')'
+										]
+									})),
+									$('<td>', {
+										html: a_preview_button('/p/' + data[4], data[5],
+											undefined, function() {
+												preview_problem(true, data[4]);
+											})
+									}),
+									normalize_datetime($('<td>', {
+										datetime: data[12],
+										text: data[12]
+									}), true),
+									$('<td>', {
+										class: 'status ' + data[13][0],
+										text: (data[13][0].lastIndexOf('initial') === -1
+											? '' : 'Initial: ') + data[13][1]
+									}),
+									$('<td>', {text: data[14]}),
+									$('<td>', {text: data[1]})
+
+								]
+							})
+						})
+					]
+				})
+			]
+		}));
+
+
+		var elem = $(this);
+		tabmenu(function(x) { x.appendTo(elem); }, [
+			'Reports', function() {
+				elem.children('.results, .code-view').remove();
+				elem.append($('<div>', {
+					class: 'results',
+					html: [data[18], data[19], null]
+				}))
+			},
+			'Source', function() {
+				elem.children('.results, .code-view').remove();
+				append_loader(elem);
+				$.ajax({
+					url: '/api/submission/' + submission_id + '/source',
+					dataType: 'html',
+					success: function(data) {
+						elem.append(data);
+						remove_loader(elem);
+						centerize_modal(elem.closest('.modal'), false);
+					},
+					error: function(resp, status) {
+						show_error_via_loader(elem, resp, status);
+					}
+				});
+			}
+		], active_tab);
+
+	}, '/s/' + submission_id);
+}
 function SubmissionsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
@@ -1672,7 +1797,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 					}));
 
 					// Score
-					row.append($('<td>', { text: x[14] }));
+					row.append($('<td>', {text: x[14]}));
 
 					// Type
 					row.append($('<td>', {text: x[1]}));
@@ -1703,7 +1828,6 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
-
 function tab_submissions_lister(parent_elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
