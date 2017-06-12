@@ -74,7 +74,6 @@ constexpr uint FILE_DESCRIPTION_MAX_LEN = 512;
 
 // Submissions
 constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
-constexpr uint SUBMISSIONS_ON_USER_PROFILE_LIMIT = 16;
 
 
 enum class ProblemType : uint8_t {
@@ -97,54 +96,6 @@ static_assert(meta::equal(PTYPE_PUBLIC_STR,
 static_assert(meta::equal(PTYPE_PRIVATE_STR,
 	meta::ToString<(int)ProblemType::PRIVATE>::value),
 	"Update the above #define");
-
-// Initial and final values may be combined, but special not
-enum class SubmissionStatus : uint8_t {
-	// Final
-	OK = 1,
-	WA = 2,
-	TLE = 3,
-	MLE = 4,
-	RTE = 5,
-	FINAL_MASK = 7,
-	// Initial
-	INITIAL_OK  = OK << 3,
-	INITIAL_WA  = WA << 3,
-	INITIAL_TLE = TLE << 3,
-	INITIAL_MLE = MLE << 3,
-	INITIAL_RTE = RTE << 3,
-	INITIAL_MASK = FINAL_MASK << 3,
-	// Special
-	PENDING                   = (8 << 3) + 0,
-	COMPILATION_ERROR         = (8 << 3) + 1,
-	CHECKER_COMPILATION_ERROR = (8 << 3) + 2,
-	JUDGE_ERROR               = (8 << 3) + 3
-};
-
-#define SSTATUS_PENDING_STR "64"
-static_assert(meta::equal(SSTATUS_PENDING_STR,
-	meta::ToString<(int)SubmissionStatus::PENDING>::value),
-	"Update the above #define");
-
-// Non-fatal statuses
-static_assert(meta::max(SubmissionStatus::OK, SubmissionStatus::WA,
-	SubmissionStatus::TLE, SubmissionStatus::MLE, SubmissionStatus::RTE,
-	SubmissionStatus::INITIAL_OK, SubmissionStatus::INITIAL_WA,
-	SubmissionStatus::INITIAL_TLE, SubmissionStatus::INITIAL_MLE,
-	SubmissionStatus::INITIAL_RTE) < SubmissionStatus::PENDING,
-	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-	" used during selection of the final submission");
-
-// Fatal statuses
-static_assert(meta::min(SubmissionStatus::COMPILATION_ERROR,
-	SubmissionStatus::CHECKER_COMPILATION_ERROR, SubmissionStatus::JUDGE_ERROR)
-	> SubmissionStatus::PENDING,
-	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-	" used during selection of the final submission");
-
-DECLARE_ENUM_UNARY_OPERATOR(SubmissionStatus, ~)
-DECLARE_ENUM_OPERATOR(SubmissionStatus, |)
-DECLARE_ENUM_OPERATOR(SubmissionStatus, &)
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
@@ -188,6 +139,61 @@ constexpr inline const char* toString(SubmissionType x) {
 	case SubmissionType::VOID: return "Void";
 	}
 	return "Unknown";
+}
+
+// Initial and final values may be combined, but special not
+enum class SubmissionStatus : uint8_t {
+	// Final
+	OK = 1,
+	WA = 2,
+	TLE = 3,
+	MLE = 4,
+	RTE = 5,
+	FINAL_MASK = 7,
+	// Initial
+	INITIAL_OK  = OK << 3,
+	INITIAL_WA  = WA << 3,
+	INITIAL_TLE = TLE << 3,
+	INITIAL_MLE = MLE << 3,
+	INITIAL_RTE = RTE << 3,
+	INITIAL_MASK = FINAL_MASK << 3,
+	// Special
+	PENDING                   = (8 << 3) + 0,
+	COMPILATION_ERROR         = (8 << 3) + 1,
+	CHECKER_COMPILATION_ERROR = (8 << 3) + 2,
+	JUDGE_ERROR               = (8 << 3) + 3
+};
+
+DECLARE_ENUM_UNARY_OPERATOR(SubmissionStatus, ~)
+DECLARE_ENUM_OPERATOR(SubmissionStatus, |)
+DECLARE_ENUM_OPERATOR(SubmissionStatus, &)
+
+#define SSTATUS_PENDING_STR "64"
+static_assert(meta::equal(SSTATUS_PENDING_STR,
+	meta::ToString<(int)SubmissionStatus::PENDING>::value),
+	"Update the above #define");
+
+// Non-fatal statuses
+static_assert(meta::max(SubmissionStatus::OK, SubmissionStatus::WA,
+	SubmissionStatus::TLE, SubmissionStatus::MLE, SubmissionStatus::RTE,
+	SubmissionStatus::INITIAL_OK, SubmissionStatus::INITIAL_WA,
+	SubmissionStatus::INITIAL_TLE, SubmissionStatus::INITIAL_MLE,
+	SubmissionStatus::INITIAL_RTE) < SubmissionStatus::PENDING,
+	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+	" used during selection of the final submission");
+
+// Fatal statuses
+static_assert(meta::min(SubmissionStatus::COMPILATION_ERROR,
+	SubmissionStatus::CHECKER_COMPILATION_ERROR, SubmissionStatus::JUDGE_ERROR)
+	> SubmissionStatus::PENDING,
+	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+	" used during selection of the final submission");
+
+constexpr inline bool is_special(SubmissionStatus status) {
+	return (status == SubmissionStatus::PENDING or
+		status == SubmissionStatus::COMPILATION_ERROR or
+		status == SubmissionStatus::CHECKER_COMPILATION_ERROR or
+		status == SubmissionStatus::JUDGE_ERROR);
 }
 
 enum class JobStatus : uint8_t {

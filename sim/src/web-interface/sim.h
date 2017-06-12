@@ -662,10 +662,11 @@ private:
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &)
 
 	SubmissionPermissions submission_get_permissions(
-		StringView submission_owner, StringView contest_owner,
-		ContestUserMode cu_mode)
+		StringView submission_owner, SubmissionType stype,
+		StringView contest_owner, ContestUserMode cu_mode)
 	{
 		using PERM = SubmissionPermissions;
+		using STYPE = SubmissionType;
 		using CUM = ContestUserMode;
 
 		D(throw_assert(session_is_open);) // Session must be open to gain access
@@ -673,8 +674,10 @@ private:
 		if (session_user_type == UserType::ADMIN or
 			session_user_id == contest_owner or cu_mode == CUM::MODERATOR)
 		{
-			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FULL_REPORT |
-				PERM::CHANGE_TYPE | PERM::REJUDGE | PERM::DELETE;
+			static_assert((uint)PERM::NONE == 0, "Needed below");
+			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FULL_REPORT | PERM::REJUDGE | PERM::DELETE |
+				(isIn(stype, {STYPE::NORMAL, STYPE::FINAL, STYPE::IGNORED})
+					? PERM::CHANGE_TYPE : PERM::NONE);
 		}
 
 		if (session_user_id == submission_owner or cu_mode == CUM::CONTESTANT)

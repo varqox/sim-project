@@ -253,6 +253,7 @@ int main(int argc, char **argv) {
 			"`parent_round_id` int unsigned NULL,"
 			"`contest_round_id` int unsigned NULL,"
 			"`type` TINYINT NOT NULL,"
+			"`final_candidate` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`status` TINYINT NOT NULL,"
 			"`submit_time` datetime NOT NULL,"
 			"`score` int NULL DEFAULT NULL,"
@@ -281,10 +282,9 @@ int main(int argc, char **argv) {
 			"KEY (problem_id, type, id),"
 			"KEY (round_id, type, id),"
 			"KEY (parent_round_id, type, id),"
-			"KEY (contest_round_id, type, id)"
+			"KEY (contest_round_id, type, id),"
 			// Needed to effectively changing type to/from FINAL
-			// TODO: important!!!
-			// TODO: apply it to local DB
+			"KEY (final_candidate, owner, round_id, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("job_queue",

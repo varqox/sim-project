@@ -1,5 +1,9 @@
 #include "sim.h"
+
+#include <sim/jobs.h>
+#include <sim/submission.h>
 #include <simlib/filesystem.h>
+#include <simlib/process.h>
 
 using std::string;
 
@@ -166,7 +170,7 @@ void Sim::api_submissions() {
 		StringView c_owner = (res.isNull(3) ? "" : res[3]);
 		StringView cu_mode = res[4];
 
-		SubmissionPermissions perms = submission_get_permissions(sowner,
+		SubmissionPermissions perms = submission_get_permissions(sowner, stype,
 			c_owner, (res.isNull(4) ? CUM::IS_NULL : CUM(strtoull(cu_mode))));
 
 		if (perms == PERM::NONE)
@@ -344,19 +348,19 @@ void Sim::api_submission() {
 	submission_id = next_arg;
 
 	InplaceBuff<30> sowner, c_owner;
-	uint cu_mode;
-	auto stmt = mysql.prepare("SELECT s.owner, c.owner, cu.mode"
+	uint stype, cu_mode;
+	auto stmt = mysql.prepare("SELECT s.owner, s.type, c.owner, cu.mode"
 		" FROM submissions s"
 		" LEFT JOIN rounds c ON c.id=s.contest_round_id"
 		" LEFT JOIN contests_users cu ON cu.contest_id=s.contest_round_id"
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(users_user_id, submission_id);
-	stmt.res_bind_all(sowner, c_owner, cu_mode);
+	stmt.res_bind_all(sowner, stype, c_owner, cu_mode);
 	if (not stmt.next())
 		return api_error404();
 
-	submission_perms = submission_get_permissions(sowner,
+	submission_perms = submission_get_permissions(sowner, SubmissionType(stype),
 		(stmt.isNull(1) ? StringView{} : c_owner),
 		(stmt.isNull(2) ? CUM::IS_NULL : CUM(cu_mode)));
 
@@ -411,13 +415,73 @@ void Sim::api_submission_rejudge() {
 
 	if (uint(~submission_perms & SubmissionPermissions::REJUDGE))
 		return api_error403();
+
+	InplaceBuff<30> problem_id;
+	auto stmt = mysql.prepare("SELECT problem_id FROM submissions WHERE id=?");
+	stmt.bindAndExecute(submission_id);
+	stmt.res_bind_all(problem_id);
+	throw_assert(stmt.next());
+
+	stmt = mysql.prepare("INSERT job_queue (creator, status, priority,"
+			" type, added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+		(uint)JobType::JUDGE_SUBMISSION, date(), submission_id,
+		jobs::dumpString(problem_id));
+
+	notify_job_server();
 }
 
 void Sim::api_submission_change_type() {
 	STACK_UNWINDING_MARK;
+	using SS = SubmissionStatus;
+	using ST = SubmissionType;
 
 	if (uint(~submission_perms & SubmissionPermissions::CHANGE_TYPE))
 		return api_error403();
+
+	StringView type_s = request.form_data.get("type");
+
+	SubmissionType new_type;
+	if (type_s == "I")
+		new_type = ST::IGNORED;
+	else if (type_s == "N")
+		new_type = ST::NORMAL;
+	else
+		return api_error400("Invalid type, it must be one of those: I or N");
+
+	// Lock the table to be able to safely modify the submission
+	mysql.update("LOCK TABLES submissions WRITE");
+	auto lock_guard = make_call_in_destructor([&]{
+		mysql.update("UNLOCK TABLES");
+	});
+
+	auto res = mysql.query(concat("SELECT status, owner, round_id"
+		" FROM submissions WHERE id=", submission_id));
+	throw_assert(res.next());
+
+	SS status = SS(strtoull(res[0]));
+	StringView owner = res[1];
+	StringView round_id = (res.isNull(2) ? "" : res[2]);
+
+	// Cannot be FINAL
+	if (is_special(status)) {
+		auto stmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
+		stmt.bindAndExecute(uint(new_type), submission_id);
+		return;
+	}
+
+	// May be of type FINAL
+	SignalBlocker sb; // This part shouldn't be interrupted
+
+	// Update the submission first
+	auto stmt = mysql.prepare("UPDATE submissions SET type=?, final_candidate=?"
+		" WHERE id=?");
+	stmt.bindAndExecute(uint(new_type), (new_type == ST::NORMAL),
+		submission_id);
+
+	if (round_id.size())
+		submission::update_final(mysql, owner, round_id, false);
 }
 
 void Sim::api_submission_delete() {
@@ -425,4 +489,21 @@ void Sim::api_submission_delete() {
 
 	if (uint(~submission_perms & SubmissionPermissions::DELETE))
 		return api_error403();
+
+	// Lock the table to be able to safely delete the submission
+	mysql.update("LOCK TABLES submissions WRITE");
+	auto lock_guard = make_call_in_destructor([&]{
+		mysql.update("UNLOCK TABLES");
+	});
+
+	auto res = mysql.query(concat("SELECT owner, round_id FROM submissions"
+		" WHERE id=", submission_id));
+	throw_assert(res.next());
+
+	SignalBlocker sb; // This part shouldn't be interrupted
+
+	mysql.update(concat("DELETE FROM submissions WHERE id=", submission_id));
+
+	if (not res.isNull(1))
+		submission::update_final(mysql, res[0], res[1], false);
 }
