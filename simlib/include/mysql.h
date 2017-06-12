@@ -127,6 +127,14 @@ public:
 	operator MYSQL_STMT* () noexcept { return impl(); }
 
 	// Need to be called before execute()
+private:
+	void bind(unsigned idx, bool x) ND(noexcept) {
+		unsigned char c = x;
+		errlog(int(c));
+		bind(idx, c);
+	}
+
+public:
 	void bind(unsigned idx, char& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_TINY;
