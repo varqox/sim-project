@@ -325,7 +325,10 @@ void Sim::api_user_delete() {
 		return api_error403("Wrong password");
 	}
 
-	// TODO: add other things like problems, submissions, contests, messages, files etc.
+	// TODO: add other things like problems,, contests, messages, files etc.
+
+	stmt = mysql.prepare("DELETE FROM submissions WHERE owner=?");
+	stmt.bindAndExecute(users_user_id);
 
 	stmt = mysql.prepare("DELETE FROM users WHERE id=?");
 	stmt.bindAndExecute(users_user_id);
