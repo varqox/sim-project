@@ -39,7 +39,7 @@ string package_hash(string package_zip) {
 	FileDescriptor output {openUnlinkedTmpFile()};
 	throw_assert(output >= 0);
 	Spawner::ExitStat es = Spawner::run(args[0], args,
-		{-1, output, output, 0, 1024 << 20});
+		{-1, output, output, {}, 1024 << 20});
 
 	// Append zip's output to the the report
 	(void)lseek(output, 0, SEEK_SET);

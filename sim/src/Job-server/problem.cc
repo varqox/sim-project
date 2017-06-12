@@ -73,18 +73,19 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 		FileDescriptor zip_output {openUnlinkedTmpFile()};
 		// It isn't a fatal error if zip_output is invalid, so it can be ignored
 		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
-			{-1, zip_output, zip_output, 500'000'000 /* 500 s */, 512 << 20});
+			{-1, zip_output, zip_output, {500, 0} /* 500 s */, 512 << 20});
 
 		// Append unzip's output to the report
 		(void)lseek(zip_output, 0, SEEK_SET);
 		report.append(getFileContents(zip_output));
 
-		if (es.code) {
+
+		if (es.si.code != CLD_EXITED or es.si.status != 0) {
 			report.append("Unpacking error: ", es.message);
 			return set_failure();
 		}
 
-		report.append("Unpacking took ", usecToSecStr(es.runtime, 3), "s.");
+		report.append("Unpacking took ", timespec_to_str(es.runtime, 3), "s.");
 	}
 
 
@@ -138,10 +139,6 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	opts.global_time_limit = info.global_time_limit;
 	opts.ignore_simfile = info.ignore_simfile;
 	opts.force_auto_time_limits_setting = info.force_auto_limit;
-	opts.compilation_time_limit = SOLUTION_COMPILATION_TIME_LIMIT;
-	opts.compilation_errors_max_length =
-		COMPILATION_ERRORS_MAX_LENGTH;
-	opts.proot_path = PROOT_PATH;
 
 	std::pair<sim::Conver::Status, sim::Simfile> p;
 	try {
@@ -290,16 +287,16 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 		back_insert(zip_args, "zip", "-rq", concat_tostr(pid_str, ".zip"),
 			pid_str.str);
 		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
-			{-1, zip_output, zip_output, 0, 512 << 20}, "problems");
+			{-1, zip_output, zip_output, {}, 512 << 20}, "problems");
 
 		// Append zip's output to the the report
 		(void)lseek(zip_output, 0, SEEK_SET);
 		report.append(getFileContents(zip_output));
 
-		if (es.code)
+		if (es.si.code != CLD_EXITED or es.si.status != 0)
 			THROW("Zip error: ", es.message);
 
-		report.append("Zipping took ", usecToSecStr(es.runtime, 3), "s.");
+		report.append("Zipping took ", timespec_to_str(es.runtime, 3), "s.");
 	}
 
 	// Submit the solutions

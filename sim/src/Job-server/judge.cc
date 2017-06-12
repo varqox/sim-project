@@ -55,6 +55,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		return;
 	}
 
+	string judging_began = date();
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
 
@@ -156,7 +157,6 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		}
 
 		uint ustatus = static_cast<uint>(status);
-		string curr_date = date();
 
 		stmt.bind(0, sowner);
 		stmt.bind(1, round_id);
@@ -165,7 +165,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		stmt.bind(4, round_id);
 		stmt.bind(5, submission_id);
 		stmt.bind(6, ustatus);
-		stmt.bind(7, curr_date);
+		stmt.bind(7, judging_began);
 		stmt.bind(8, initial_report);
 		stmt.bind(9, final_report);
 		stmt.fixBinds();
@@ -255,8 +255,9 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 			};
 			report.append("<td>", htmlEscape(test.name), "</td>",
 				asTdString(test.status),
-				"<td>", usecToSecStr(test.runtime, 2, false), " / ",
-					usecToSecStr(test.time_limit, 2, false), "</td>"
+				"<td>", usecToSecStr(
+						meta::min(test.runtime, test.time_limit), 2, false),
+					" / ", usecToSecStr(test.time_limit, 2, false), "</td>"
 				"<td>", test.memory_consumed >> 10, " / ",
 					test.memory_limit >> 10, "</td>");
 		};
