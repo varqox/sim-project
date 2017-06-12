@@ -130,7 +130,6 @@ public:
 private:
 	void bind(unsigned idx, bool x) ND(noexcept) {
 		unsigned char c = x;
-		errlog(int(c));
 		bind(idx, c);
 	}
 
