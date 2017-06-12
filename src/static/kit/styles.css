@@ -518,7 +518,7 @@ table {
 	border-radius: 4px;
 }
 .modal:not(.preview) > div > h2 {
-	margin: 5px 0;
+	margin: 5px 0 12px;
 	font-size: 24px;
 	font-weight: normal;
 	line-height: 28px;

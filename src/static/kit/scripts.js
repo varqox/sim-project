@@ -319,7 +319,7 @@ function modal_request(title, form, target_url, success_msg) {
 function dialogue_modal_request(title, info_html, go_text, go_classes, target_url, success_msg, cancel_text) {
 	modal($('<h2>', {text: title})
 		.add(info_html).add('<div>', {
-			style: 'margin: 8px auto 0',
+			style: 'margin: 12px auto 0',
 			html: $('<a>', {
 				class: go_classes,
 				text: go_text,
@@ -823,7 +823,7 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.submission = function(submission_id, actions_str, submission_preview /*= false*/) {
+	this.submission = function(submission_id, actions_str, submission_type, submission_preview /*= false*/) {
 		if (submission_preview === undefined)
 			submission_preview = false;
 
@@ -847,7 +847,7 @@ var ActionsToHTML = {};
 		if (actions_str.indexOf('C') !== -1)
 			res.push(a_preview_button('/s/' + submission_id + '/chtype', 'Change type',
 				'btn-small orange',
-				function() { submission_chtype(true, submission_id); }));
+				function() { submission_chtype(submission_id, submission_type); }));
 
 		if (actions_str.indexOf('R') !== -1)
 			res.push($('<a>', {
@@ -1368,11 +1368,13 @@ function cancel_job(job_id) {
 }
 function restart_job(job_id) {
 	dialogue_modal_request('Restart job', $('<label>', {
-			text: 'Are you sure to restart the '
-		}).append(a_preview_button('/jobs/' + job_id, 'job ' + job_id, undefined,
-				function() { preview_job(true, job_id);}))
-		.append('?'),
-		'Restart job', 'btn-small orange', '/api/job/' + job_id + '/restart',
+			html: [
+				'Are you sure to restart the ',
+				a_preview_button('/jobs/' + job_id, 'job ' + job_id, undefined,
+					function() { preview_job(true, job_id); }),
+				'?'
+			]
+		}), 'Restart job', 'btn-small orange', '/api/job/' + job_id + '/restart',
 		'The job has been restarted.', 'No, go back');
 }
 function JobsLister(elem, query_suffix /*= ''*/) {
@@ -1506,34 +1508,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 }
 
 /* ============================== Submissions ============================== */
-/*function changeSubmissionType(submission_id, stype) {
-	modalForm('Change submission type',
-		$('<div>', {
-			html: $('<label>', {
-				text: 'New submission type: '
-			}).add('<select>', {
-				name: 'stype',
-				html: $('<option>', {
-					value: 'n/f',
-					text: 'Normal / final',
-					selected: (stype === 'n/f')
-				}).add('<option>', {
-					value: 'i',
-					text: 'Ignored',
-					selected: (stype === 'i')
-				})
-			})
-		}).add(modalFormSubmitButton('Change type',
-			'/s/' + submission_id + '/change-type',
-			'Submission type has been changed.'))
-	);
-}
-function rejudgeSubmission(submission_id) {
-	modalForm('Rejudge submission ' + submission_id);
-	sendModalFrom('/s/' + submission_id + '/rejudge',
-		'Rejudge of the submission was added to the job queue.')
-}
-function rejudgeProblemSubmissions(problem_id) {
+/*function rejudgeProblemSubmissions(problem_id) {
 	modalForm('Rejudge submissions to the problem ' + problem_id,
 		$('<div>', {
 			html: $('<label>', {
@@ -1560,6 +1535,54 @@ function rejudgeRoundSubmissions(round_id) {
 	);
 }*/
 
+function rejudge_submission(submission_id) {
+	modal_request('Scheduling submission rejudge ' + submission_id, $('<form>'),
+		'/api/submission/' + submission_id + '/rejudge',
+		'The rejudge has been scheduled.');
+}
+function submission_chtype(submission_id, submission_type) {
+	dialogue_modal_request('Change submission type', $('<form>', {
+		html: [
+			$('<label>', {
+				html: [
+					'New type of the ',
+					a_preview_button('/s/' + submission_id, 'submission ' + submission_id,
+						undefined,
+						function() { preview_submission(true, submission_id); }),
+					': '
+				]
+			}),
+			$('<select>', {
+				name: 'type',
+				html: [
+					$('<option>', {
+						value: 'N',
+						text: 'Normal / final',
+						selected: (submission_type !== 'Ignored' ? true : undefined)
+					}),
+					$('<option>', {
+						value: 'I',
+						text: 'Ignored',
+						selected: (submission_type === 'Ignored' ? true : undefined)
+					})
+				]
+			})
+		]
+	}), 'Change type', 'btn-small orange', '/api/submission/' + submission_id + '/chtype',
+		'Submission type has been updated.', 'No, go back');
+}
+function delete_submission(submission_id) {
+	dialogue_modal_request('Delete submission', $('<label>', {
+			html: [
+				'Are you sure to delete the ',
+				a_preview_button('/s/' + submission_id, 'submission ' + submission_id,
+					undefined,
+					function() { preview_submission(true, submission_id); }),
+				'?'
+			]
+		}), 'Yes, delete it', 'btn-small red', '/api/submission/' + submission_id + '/delete',
+		'The submission has been deleted.', 'No, go back');
+}
 function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 	preview_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
 		data = data[0];
@@ -1600,7 +1623,8 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 							text: 'Submission ' + submission_id
 						}),
 						$('<div>', {
-							html: ActionsToHTML.submission(submission_id, data[15], true)
+							html: ActionsToHTML.submission(submission_id, data[15],
+								data[1], true)
 						})
 					]
 				}),
@@ -1816,7 +1840,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 					// Actions
 					row.append($('<td>', {
-						html: ActionsToHTML.submission(x[0], x[15])
+						html: ActionsToHTML.submission(x[0], x[15], x[1])
 					}));
 
 					obj.elem.children('tbody').append(row);
