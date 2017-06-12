@@ -75,11 +75,8 @@ int main2(int argc, char**argv) {
 
 	auto run_command = [](vector<string> args) {
 		auto es = Spawner::run(args[0], args);
-		if (es.code) {
-			auto tmplog = errlog(args[0], " failed with code ", es.code);
-			if (es.message.size())
-				tmplog(" because: ", es.message);
-
+		if (es.si.code != CLD_EXITED or es.si.status != 0) {
+			errlog(args[0], " failed: ", es.message);
 			exit(1);
 		}
 	};

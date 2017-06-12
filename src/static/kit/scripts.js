@@ -1464,7 +1464,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 						if (info.problem !== undefined)
 							append_tag('problem',
-								a_preview_button('/s/' + info.problem,
+								a_preview_button('/p/' + info.problem,
 									info.problem, undefined, function() {
 										var pid = info.problem;
 										return function() {preview_problem(true, pid); };
