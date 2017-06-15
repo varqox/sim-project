@@ -11,7 +11,7 @@ build: check
 $(eval $(call dependencies))
 
 check: check.o ../../src/lib/sim.a
-	$(LINK)
+	$(LINK) -lrt
 
 ../../src/lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)
