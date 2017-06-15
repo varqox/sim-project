@@ -56,12 +56,6 @@ public:
 		                             // ignored
 		bool force_auto_time_limits_setting =
 			false; // If global_time_limit != 0 this option is ignored
-		uint64_t compilation_time_limit = 30e6; // [microseconds] for checker
-		                                        // and solution compilation
-		uint64_t compilation_errors_max_length = 32768; // [bytes]
-		std::string proot_path = "proot"; // Path to PRoot (passed to
-		                                  // Simfile::compile* methods)
-
 		Options() = default;
 	};
 

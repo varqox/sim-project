@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <sys/ptrace.h>
+#include <sys/syscall.h>
 
 class Sandbox : protected Spawner {
 public:
@@ -17,12 +18,12 @@ public:
 
 	struct x86_64_user_regset;
 
-private:
-	struct Registers;
-
 public:
 	class CallbackBase {
 	protected:
+		friend class Sandbox;
+		struct Registers;
+
 		int8_t arch = -1; // arch - architecture: 0 - i386, 1 - x86_64
 
 		/**
@@ -333,17 +334,21 @@ public:
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of sandboxed
 	 *   process will be changed or if negative, closed;
-	 *   time_limit set to 0 disables time limit;
+	 *   time_limit set to 0 disables the time limit;
 	 *   memory_limit set to 0 disables memory limit)
 	 * @param working_dir directory at which @p exec will be run
-	 * @param func callback functor (used to determine if syscall should be
+	 * @param func callback functor (used to determine if a syscall should be
 	 *   executed)
 	 *
 	 * @return Returns ExitStat structure with fields:
-	 *   - code: return status (in the format specified in wait(2)).
-	 *   - runtime: in microseconds [usec]
+	 *   - runtime: in timespec structure {sec, nsec}
+	 *   - si: {
+	 *       code: si_code form siginfo_t from waitid(2)
+	 *       status: si_status form siginfo_t from waitid(2)
+	 *     }
+	 *   - rusage: resource used (see getrusage(2)).
 	 *   - vm_peak: peak virtual memory size [bytes]
-	 *   - message: detailed info about error, disallowed syscall, etc.
+	 *   - message: detailed info about error, etc.
 	 *
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
@@ -352,50 +357,7 @@ public:
 	static ExitStat run(CStringView exec, const std::vector<std::string>& args,
 		const Options& opts = Options(),
 		CStringView working_dir = CStringView {"."},
-		Callback&& func = Callback())
-	{
-		static_assert(std::is_base_of<CallbackBase, Callback>::value,
-			"Callback has to derive from Sandbox::CallbackBase");
-		return Spawner::runWithTimer<Impl, Callback>(opts.time_limit, exec,
-			args, opts, working_dir, std::forward<Callback>(func));
-	}
-
-private:
-	template<class Callback, class Timer>
-	struct Impl {
-		/**
-		 * @brief Executes @p exec with arguments @p args with limits @p
-		 *   opts.time_limit and @p opts.memory_limit under ptrace(2)
-		 * @details Callback object is called on every syscall entry called by
-		 *   exec with parameters: child pid, syscall number.
-		 *   Callback::operator() must return whether syscall is allowed or not
-		 *   @p exec is called via execvp()
-		 *   This function is not thread-safe
-		 *
-		 * @param exec filename that is to be executed
-		 * @param args arguments passed to exec
-		 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd -
-		 *   - file descriptors to which respectively stdin, stdout, stderr of
-		 *   sandboxed process will be changed or if negative, closed;
-		 *   time_limit set to 0 disables time limit;
-		 *   memory_limit set to 0 disables memory limit)
-		 * @param working_dir directory at which @p exec will be run
-		 * @param func callback functor (used to determine if syscall should be
-		 *   executed)
-		 *
-		 * @return Returns ExitStat structure with fields:
-		 *   - code: return status (in the format specified in wait(2)).
-		 *   - runtime: in microseconds [usec]
-		 *   - vm_peak: peak virtual memory size [bytes]
-		 *   - message: detailed info about error, disallowed syscall, etc.
-		 *
-		 * @errors Throws an exception std::runtime_error with appropriate
-		 *   information if any syscall fails
-		 */
-		static ExitStat execute(CStringView exec,
-			const std::vector<std::string>& args, const Options& opts,
-			CStringView working_dir, Callback func);
-	};
+		Callback&& func = Callback());
 };
 
 /******************************* IMPLEMENTATION *******************************/
@@ -457,7 +419,7 @@ struct Sandbox::x86_64_user_regset {
 	uint64_t gs;
 };
 
-struct Sandbox::Registers {
+struct Sandbox::CallbackBase::Registers {
 	union user_regs_union {
 		i386_user_regset i386_regs;
 		x86_64_user_regset x86_64_regs;
@@ -538,10 +500,10 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 	return false;
 }
 
-template<class Callback, class Timer>
-Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
+template<class Callback>
+Sandbox::ExitStat Sandbox::run(CStringView exec,
 	const std::vector<std::string>& args, const Options& opts,
-	CStringView working_dir, Callback func)
+	CStringView working_dir, Callback&& func)
 {
 	static_assert(std::is_base_of<CallbackBase, Callback>::value,
 		"Callback has to derive from Sandbox::CallbackBase");
@@ -567,29 +529,26 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 	Closer close_pipe0(pfd[0]); // Guard closing of the pipe second end
 
 	// Wait for tracee to be ready
-	int status;
-	waitpid(cpid, &status, 0);
+	siginfo_t si;
+	rusage ru;
+	waitid(P_PID, cpid, &si, WSTOPPED);
 	// If something went wrong
-	if (WIFEXITED(status) || WIFSIGNALED(status))
-		return ExitStat(status, 0, 0, receiveErrorMessage(status, pfd[0]));
+	if (si.si_code != CLD_TRAPPED)
+		return ExitStat({0, 0}, si.si_code, si.si_status, ru, 0,
+			receiveErrorMessage(si, pfd[0]));
 
 	// Useful when exception is thrown
-	bool tracee_is_dead_and_waited = false;
-	auto kill_and_wait_tracee = [&] {
-		if (!tracee_is_dead_and_waited) {
-			kill(cpid, SIGKILL);
-			waitpid(cpid, nullptr, 0);
-		}
-	};
-	CallInDtor<decltype(kill_and_wait_tracee)> kill_and_wait_tracee_guard
-		{kill_and_wait_tracee};
+	auto kill_and_wait_tracee_guard = make_call_in_destructor([&] {
+		kill(-cpid, SIGKILL);
+		waitid(P_PID, cpid, &si, WEXITED);
+	});
 
 #ifndef PTRACE_O_EXITKILL
 # define PTRACE_O_EXITKILL 0
 #endif
 	// Set up ptrace options
-	if (ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD
-		| PTRACE_O_EXITKILL))
+	if (ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD |
+		PTRACE_O_TRACEEXEC | PTRACE_O_EXITKILL))
 	{
 		THROW("ptrace(PTRACE_SETOPTIONS)", error(errno));
 	}
@@ -617,59 +576,66 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 
 		DEBUG_SANDBOX(stdlog("get_vm_size: -> ", vm_size);)
 		return vm_size;
-
 	};
 
 	uint64_t vm_size = 0; // In pages
 
 	// Set up timer
-	Timer timer(cpid, opts.time_limit);
+	Timer timer(cpid, opts.real_time_limit);
 
 	auto wait_for_syscall = [&]() -> int {
 		for (;;) {
 			(void)ptrace(PTRACE_SYSCALL, cpid, 0, 0); // Fail indicates that
 			                                          // the tracee has just
 			                                          // died
-			waitpid(cpid, &status, 0);
+			syscall(SYS_waitid, P_PID, cpid, &si, WSTOPPED | WEXITED, &ru);
 
-			if (WIFSTOPPED(status)) {
-				switch (WSTOPSIG(status)) {
-				case SIGTRAP | 0x80:
-					return 0; // We are in a syscall
+			switch (si.si_code) {
+			case CLD_TRAPPED:
+				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_EXEC<<8)))
+					continue; // Ignore exec() events
 
-				case SIGSTOP:
-				case SIGTRAP:
-				case SIGCONT:
-					break;
-
-				default:
+				if (si.si_status != (SIGTRAP | 0x80)) {
 					// Deliver intercepted signal to tracee
-					(void)ptrace(PTRACE_CONT, cpid, 0, WSTOPSIG(status));
+					(void)ptrace(PTRACE_CONT, cpid, 0, si.si_status);
+					continue;
 				}
 
-			} else if (WIFEXITED(status) || WIFSIGNALED(status)) {
-				tracee_is_dead_and_waited = true;
-				return -1; // Tracee is dead now
+				return 0;
+
+			case CLD_STOPPED:
+					// Deliver intercepted signal to tracee
+					(void)ptrace(PTRACE_CONT, cpid, 0, si.si_status);
+					break;
+
+			case CLD_EXITED:
+			case CLD_DUMPED:
+			case CLD_KILLED:
+				return -1;
 			}
 		}
 	};
 
 	for (;;) {
 		auto exit_normally = [&]() -> ExitStat {
-			uint64_t runtime = timer.stopAndGetRuntime();
-			if (status)
-				return ExitStat(status, runtime,
-					vm_size * sysconf(_SC_PAGESIZE),
-					receiveErrorMessage(status, pfd[0]));
+			timespec runtime = timer.stop_and_get_runtime();
+			kill_and_wait_tracee_guard.cancel();
 
-			return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE));
+			if (si.si_code != CLD_EXITED or si.si_status != 0)
+				return ExitStat(runtime, si.si_code, si.si_status, ru,
+					vm_size * sysconf(_SC_PAGESIZE),
+					receiveErrorMessage(si, pfd[0]));
+
+			return ExitStat(runtime, si.si_code, si.si_status, ru,
+				vm_size * sysconf(_SC_PAGESIZE));
 		};
 
-		// Into syscall
+		// Syscall entry
 		if (wait_for_syscall())
 			return exit_normally();
 
 		// Get syscall no.
+		errno = 0;
 	#ifdef __x86_64__
 		long syscall_no = ptrace(PTRACE_PEEKUSER, cpid,
 			offsetof(x86_64_user_regset, orig_rax), 0);
@@ -679,14 +645,29 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 	#endif
 
 		try {
-			if (syscall_no < 0)
-				THROW("failed to get syscall_no - ptrace(): ", syscall_no,
-					error(errno));
+			if (syscall_no < 0) {
+				if (errno != ESRCH)
+					THROW("failed to get syscall_no - ptrace(): ", syscall_no,
+						error(errno));
+
+				// Tracee has just died
+				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead
+				waitid(P_PID, cpid, &si, WEXITED);
+
+				// Return sandboxing results
+				return exit_normally();
+			}
 
 			// Some useful debug
 			DEBUG_SANDBOX(
-				auto logSyscall = [&](bool with_result) {
-					Registers regs;
+				auto syscall_log = stdlog('[', cpid, "] syscall: ",
+					paddedString(toStr(syscall_no), 3), ": ",
+					// syscall name
+					(func.getArch() == ARCH_i386 ? x86_syscall_name
+						: x86_64_syscall_name)[syscall_no]);
+
+				auto log_syscall_args = [&] {
+					CallbackBase::Registers regs;
 					regs.getRegs(cpid);
 
 					int64_t arg1 = (func.getArch() == ARCH_i386 ?
@@ -696,29 +677,27 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 						int32_t(regs.uregs.i386_regs.ecx)
 						: regs.uregs.x86_64_regs.rsi);
 
-					auto tmplog = stdlog('[', cpid, "] syscall: ",
-						paddedString(syscall_no, 3), ": ",
-						// syscall name
-						(func.getArch() == ARCH_i386 ? x86_syscall_name
-							: x86_64_syscall_name)[syscall_no], '(', arg1, ", ",
-						arg2, ", ...)");
+					syscall_log('(', arg1, ", ", arg2, ", ...)");
+				};
 
-					if (with_result) {
-						int64_t ret_val = (func.getArch() == ARCH_i386 ?
-							int32_t(regs.uregs.i386_regs.eax)
-							: regs.uregs.x86_64_regs.rax);
-						tmplog(" -> ", ret_val);
-					}
+				auto log_syscall_retval = [&] {
+					CallbackBase::Registers regs;
+					regs.getRegs(cpid);
+					int64_t ret_val = (func.getArch() == ARCH_i386 ?
+						int32_t(regs.uregs.i386_regs.eax)
+						: regs.uregs.x86_64_regs.rax);
+					syscall_log(" -> ", ret_val);
 				};
 			)
 
 			// If syscall entry is allowed
-			if (func.isSyscallEntryAllowed(cpid, syscall_no)) {
+			bool allowed = func.isSyscallEntryAllowed(cpid, syscall_no);
+			DEBUG_SANDBOX(log_syscall_args();) // Must be placed after the check
+				// because the arguments may be altered by it
+			if (allowed) {
 				// Syscall returns
 				if (wait_for_syscall())
 					return exit_normally();
-
-				DEBUG_SANDBOX(logSyscall(true);)
 
 				// Monitor for vm_size change
 				if (func.getArch() == ARCH_i386
@@ -738,55 +717,53 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 				}
 
 				// Check syscall after returning
-				if (func.isSyscallExitAllowed(cpid, syscall_no))
+				allowed = func.isSyscallExitAllowed(cpid, syscall_no);
+				DEBUG_SANDBOX(log_syscall_retval();) // Must be placed after the
+					// above check because syscall return value is affected by
+					// the architecture change, which is detected in the check,
+					// and may be affected by the check itself
+				if (allowed)
 					continue;
 			}
 
-			DEBUG_SANDBOX(logSyscall(false);)
-
-		} catch (...) {
+		} catch (const std::exception& e) {
 			DEBUG_SANDBOX(stdlog(__FILE__ ":", meta::ToString<__LINE__>{},
-				": Caught exception");)
+				": Caught exception: ", e.what());)
 
 			// Exception after tracee is dead and waited
-			if (tracee_is_dead_and_waited)
+			if (not kill_and_wait_tracee_guard.active())
 				throw;
 
 			// Check whether the tracee is still controllable - may not become
 			// a zombie in a moment (yes kernel has a minimal delay between
 			// these two, that's waitpid(cpid, ..., WNOHANG) may raturn 0, even
 			// though the tracee is not controllable anymore. The process state
-			// in /proc/.../stat also may not be `Z`. That is why ptrace92) is
+			// in /proc/.../stat also may not be `Z`. That is why ptrace(2) is
 			// used here)
 			errno = 0;
 			(void)ptrace(PTRACE_PEEKUSER, cpid, 0, 0);
 			// The tracee is no longer controllable
 			if (errno == ESRCH) {
-				kill(cpid, SIGKILL); // Make sure tracee is (will be) dead
-				// Wait for tracee
-				do {
-					waitpid(cpid, &status, 0);
-				} while (!WIFEXITED(status) && !WIFSIGNALED(status));
+				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead
+				waitid(P_PID, cpid, &si, WEXITED);
+
 				// Return sandboxing results
-				tracee_is_dead_and_waited = true;
 				return exit_normally();
 			}
 
-			// Tracee is controllable or other error occured
+			// Tracee is controllable and other error occured
 			throw;
 		}
 
 		/* Syscall entry or exit is not allowed */
 
-		uint64_t runtime = timer.stopAndGetRuntime();
+		timespec runtime = timer.stop_and_get_runtime();
 
 		// Kill tracee
-		kill(cpid, SIGKILL);
+		kill(-cpid, SIGKILL);
 		// Wait for tracee
-		do {
-			waitpid(cpid, &status, 0);
-		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
-		tracee_is_dead_and_waited = true;
+		waitid(P_PID, cpid, &si, WEXITED);
+		kill_and_wait_tracee_guard.cancel();
 
 		// Not allowed syscall
 		std::string message = func.errorMessage();
@@ -801,7 +778,7 @@ Sandbox::ExitStat Sandbox::Impl<Callback, Timer>::execute(CStringView exec,
 				message = concat_tostr("forbidden syscall ", syscall_no, ": ", syscall_name, "()");
 		}
 
-		return ExitStat(status, runtime, vm_size * sysconf(_SC_PAGESIZE),
-			message);
+		return ExitStat(runtime, si.si_code, si.si_status, ru,
+			vm_size * sysconf(_SC_PAGESIZE), message);
 	}
 }

@@ -143,6 +143,8 @@ public:
 		return *this;
 	}
 
+	bool active() const { return make_call; }
+
 	void cancel() { make_call = false; }
 
 	void restore() { make_call = true; }

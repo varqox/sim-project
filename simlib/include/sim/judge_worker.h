@@ -121,7 +121,7 @@ class JudgeWorker {
 
 	constexpr static meta::string CHECKER_FILENAME {"checker"};
 	constexpr static meta::string SOLUTION_FILENAME {"solution"};
-	constexpr static uint64_t CHECKER_TIME_LIMIT = 10e6; // 10 s
+	constexpr static timespec CHECKER_TIME_LIMIT = {10, 0}; // 10 s
 	constexpr static uint64_t CHECKER_MEMORY_LIMIT = 256 << 20; // 256 MiB
 
 public:
@@ -156,7 +156,7 @@ public:
 	const Simfile& simfile() const noexcept { return sf; }
 
 	/// Compiles checker (using sim::compile())
-	int compileChecker(uint64_t time_limit, std::string* c_errors = nullptr,
+	int compileChecker(timespec time_limit, std::string* c_errors = nullptr,
 		size_t c_errors_max_len = -1)
 	{
 		return compile(pkg_root + sf.checker,
@@ -165,7 +165,7 @@ public:
 	}
 
 	/// Compiles checker (using sim::compile())
-	int compileChecker(uint64_t time_limit, std::string* c_errors,
+	int compileChecker(timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
 		return compile(pkg_root + sf.checker,
@@ -174,7 +174,7 @@ public:
 	}
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(CStringView source, uint64_t time_limit,
+	int compileSolution(CStringView source, timespec time_limit,
 		std::string* c_errors = nullptr, size_t c_errors_max_len = -1)
 	{
 		return compile(source, concat_tostr(tmp_dir.path(), SOLUTION_FILENAME),
@@ -182,7 +182,7 @@ public:
 	}
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(CStringView source, uint64_t time_limit,
+	int compileSolution(CStringView source, timespec time_limit,
 		std::string* c_errors, size_t c_errors_max_len,
 		const std::string& proot_path)
 	{

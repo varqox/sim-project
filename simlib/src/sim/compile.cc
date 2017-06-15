@@ -6,7 +6,7 @@ using std::vector;
 namespace sim {
 
 int compile(CStringView source, CStringView exec, unsigned verbosity,
-	uint64_t time_limit, string* c_errors, size_t c_errors_max_len,
+	timespec time_limit, string* c_errors, size_t c_errors_max_len,
 	const std::string& proot_path)
 {
 	FileDescriptor cef;
@@ -56,7 +56,7 @@ int compile(CStringView source, CStringView exec, unsigned verbosity,
 		{-1, cef, cef, time_limit, 1 << 30 /* 1 GiB */});
 
 	// Check for errors
-	if (es.code != 0) {
+	if (es.si.code != CLD_EXITED or es.si.status != 0) {
 		if (verbosity > 1)
 			stdlog(es.message);
 

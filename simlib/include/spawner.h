@@ -1,11 +1,9 @@
 #pragma once
 
-#include "debug.h"
 #include "filesystem.h"
+#include "time.h"
 
-#include <mutex>
 #include <sys/resource.h>
-#include <sys/time.h>
 #include <sys/wait.h>
 
 class Spawner {
@@ -13,15 +11,21 @@ public:
 	Spawner() = delete;
 
 	struct ExitStat {
-		int code = 0;
-		uint64_t runtime = 0; // in usec
+		timespec runtime = {0, 0};
+		struct {
+			int code; // si_code field from siginfo_t from waitid(2)
+			int status; // si_status field from siginfo_t from waitid(2)
+		} si {};
+		struct rusage rusage = {}; // resource information
 		uint64_t vm_peak = 0; // peak virtual memory size (in bytes)
 		std::string message;
 
 		ExitStat() = default;
 
-		ExitStat(int c, uint64_t rt, uint64_t vp, const std::string& msg = "")
-			: code(c), runtime(rt), vm_peak(vp), message(msg) {}
+		ExitStat(timespec rt, int sic, int sis, const struct rusage& rus,
+				uint64_t vp, const std::string& msg = "")
+			: runtime(rt), si {sic, sis}, rusage(rus), vm_peak(vp),
+				message(msg) {}
 
 		ExitStat(const ExitStat&) = default;
 		ExitStat(ExitStat&&) noexcept = default;
@@ -33,16 +37,20 @@ public:
 		int new_stdin_fd; // negative - close, STDIN_FILENO - do not change
 		int new_stdout_fd; // negative - close, STDOUT_FILENO - do not change
 		int new_stderr_fd; // negative - close, STDERR_FILENO - do not change
-		uint64_t time_limit; // in usec (0 - disable time limit)
+		timespec real_time_limit; // ({0, 0} - disable real time limit)
 		uint64_t memory_limit; // in bytes (0 - disable memory limit)
+		uint64_t cpu_time_limit; // in seconds (0 - if the real time limit is
+		                         // set then cpu time limit will be set to
+		                         // round(real time limit in seconds) + 1)
+		                         // seconds
 
 		constexpr Options()
-			: Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, 0, 0) {}
+			: Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO) {}
 
-		constexpr Options(int ifd, int ofd, int efd, uint64_t tl = 0,
-				uint64_t ml = 0)
+		constexpr Options(int ifd, int ofd, int efd, timespec rtl = {0, 0},
+				uint64_t ml = 0, uint64_t ctl = 0)
 			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
-				time_limit(tl), memory_limit(ml) {}
+				real_time_limit(rtl), memory_limit(ml), cpu_time_limit(ctl) {}
 	};
 
 	/**
@@ -56,13 +64,17 @@ public:
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
-	 *   time_limit set to 0 disables time limit;
+	 *   time_limit set to 0 disables the time limit;
 	 *   memory_limit set to 0 disables memory limit)
 	 * @param working_dir directory at which exec will be run
 	 *
 	 * @return Returns ExitStat structure with fields:
-	 *   - code: return status (in the format specified in wait(2)).
-	 *   - runtime: in microseconds [usec]
+	 *   - runtime: in timespec structure {sec, nsec}
+	 *   - si: {
+	 *       code: si_code form siginfo_t from waitid(2)
+	 *       status: si_status form siginfo_t from waitid(2)
+	 *     }
+	 *   - rusage: resource used (see getrusage(2)).
 	 *   - vm_peak: peak virtual memory size [bytes] (ignored - always 0)
 	 *   - message: detailed info about error, etc.
 	 *
@@ -71,17 +83,12 @@ public:
 	 */
 	static ExitStat run(CStringView exec, const std::vector<std::string>& args,
 		const Options& opts = Options(),
-		CStringView working_dir = CStringView{"."})
-	{
-		return runWithTimer<Impl>(opts.time_limit, exec, args, opts,
-			working_dir);
-	}
+		CStringView working_dir = CStringView{"."});
 
 protected:
 	// Sends @p str followed by error message of @p errnum through @p fd and
 	// _exits with -1
-	static void sendErrorMessage(int fd, int errnum, CStringView str) noexcept
-	{
+	static void sendErrorMessage(int fd, int errnum, CStringView str) noexcept {
 		writeAll(fd, str.data(), str.size());
 
 		auto err = error(errnum);
@@ -95,16 +102,16 @@ protected:
 	 * @details Useful in conjunction with sendErrorMessage() and pipe for
 	 *   instance in reporting errors from child process
 	 *
-	 * @param status status from waitpid(2)
+	 * @param si sig_info from waitid(2)
 	 * @param fd file descriptor to read from
 	 *
 	 * @return the message received
 	 */
-	static std::string receiveErrorMessage(int status, int fd);
+	static std::string receiveErrorMessage(const siginfo_t& si, int fd);
 
 	/**
 	 * @brief Initializes child process which will execute @p exec, this
-	 *   function does not return (it kill the process instead)!
+	 *   function does not return (it kills the process instead)!
 	 * @details Sets limits and file descriptors specified in opts
 	 *
 	 * @param exec filename that is to be executed
@@ -124,129 +131,74 @@ protected:
 		const Options& opts, CStringView working_dir, int fd, Func doBeforeExec)
 		noexcept;
 
-	/**
-	 * @brief This function helps with making thread-unsafe function thread-safe
-	 * @details Expects class Func to have static execute(...) method,
-	 *   which will be called with proper timer, see e.g. Spawner::Impl
-	 *
-	 * @param time_limit time_limit used to decide which timer to use
-	 * @param args arguments to Func<>::execute()
-	 * @tparam class Func structure with static method execute()
-	 * @tparam TArgs additional template arguments used during template
-	 *   specialization of struct Func
-	 * @return return value of Func<>::execute()
-	 */
-	template<template<class...> class Func, class... TArgs, class... Args>
-	static ExitStat runWithTimer(uint64_t time_limit, Args&&... args);
+	class Timer {
+	private:
+		pid_t pid_;
+		timespec tlimit;
+		// used only if time_limit == {0, 0}
+		timespec begin_point;
+		// used only if time_limit != {0, 0}
+		timer_t timerid;
 
-private:
-	class ZeroTimer {
-		std::chrono::steady_clock::time_point begin;
+		static void handle_timeout(int, siginfo_t* si, void*) {
+			kill(-*(pid_t*)si->si_value.sival_ptr, SIGKILL);
+		}
 
 	public:
-		ZeroTimer(int, uint64_t);
+		Timer(pid_t pid, timespec time_limit) : pid_ {pid}, tlimit(time_limit) {
+			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
+				if (clock_gettime(CLOCK_MONOTONIC, &begin_point))
+					THROW("clock_gettime()", error(errno));
 
-		uint64_t stopAndGetRuntime();
-	};
+			} else {
+				// Install (timeout) signal handler
+				struct sigaction sa;
+				sa.sa_flags = SA_SIGINFO | SA_RESTART;
+				sa.sa_sigaction = handle_timeout;
+				if (sigaction(SIGRTMIN, &sa, nullptr))
+					THROW("signaction()", error(errno));
 
-	class NormalTimer {
-		uint64_t tl;
-		struct itimerval timer, old_timer;
-		struct sigaction sa_old;
+				// Prepare timer
+				sigevent sev;
+				memset(&sev, 0, sizeof(sev));
+				sev.sigev_notify = SIGEV_SIGNAL;
+				sev.sigev_signo = SIGRTMIN;
+				sev.sigev_value.sival_ptr = &pid_;
+				if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
+					THROW("timer_create()", error(errno));
 
-		void stop();
+				// Arm timer
+				itimerspec its {{0, 0}, tlimit};
+				if (timer_settime(timerid, 0, &its, nullptr)) {
+				int errnum = errno;
+					timer_delete(timerid);
+					THROW("timer_settime()", error(errnum));
+				}
+			}
+		}
 
-		static int cpid;
+		timespec stop_and_get_runtime() {
+			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
+				timespec end_point;
+				if (clock_gettime(CLOCK_MONOTONIC, &end_point))
+					THROW("clock_gettime()", error(errno));
+				return end_point - begin_point;
+			}
 
-		static void handle_timeout(int) { kill(-cpid, SIGKILL); }
+			itimerspec its {{0, 0}, {0, 0}}, old;
+			if (timer_settime(timerid, 0, &its, &old)) {
+				int errnum = errno;
+				timer_delete(timerid);
+				THROW("timer_settime()", error(errnum));
+			}
 
-	public:
-		static std::mutex lock;
-
-		NormalTimer(int pid, uint64_t time_limit);
-
-		uint64_t stopAndGetRuntime();
-
-		~NormalTimer() { stop(); }
-	};
-
-	template<class Timer>
-	struct Impl {
-		/**
-		 * @brief Runs @p exec with arguments @p args with limits
-		 *   @p opts.time_limit and @p opts.memory_limit
-		 * @details @p exec is called via execvp()
-		 *   This function is thread-safe
-		 *
-		 * @param exec filename that is to be executed
-		 * @param args arguments passed to exec
-		 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd -
-		 *   - file descriptors to which respectively stdin, stdout, stderr of
-		 *   spawned process will be changed or if negative, closed;
-		 *   time_limit set to 0 disables time limit;
-		 *   memory_limit set to 0 disables memory limit)
-		 * @param working_dir directory at which exec will be run
-		 *
-		 * @return Returns ExitStat structure with fields:
-		 *   - code: return status (in the format specified in wait(2)).
-		 *   - runtime: in microseconds [usec]
-		 *   - vm_peak: peak virtual memory size [bytes] (ignored - always 0)
-		 *   - message: detailed info about error, etc.
-		 *
-		 * @errors Throws an exception std::runtime_error with appropriate
-		 *   information if any syscall fails
-		 */
-		static ExitStat execute(CStringView exec,
-			const std::vector<std::string>& args, const Options& opts,
-			CStringView working_dir);
+			timer_delete(timerid);
+			return tlimit - old.it_value;
+		}
 	};
 };
 
 /******************************* IMPLEMENTATION *******************************/
-
-inline Spawner::ZeroTimer::ZeroTimer(int, uint64_t)
-	: begin(std::chrono::steady_clock::now()) {}
-
-inline uint64_t Spawner::ZeroTimer::stopAndGetRuntime() {
-	using namespace std::chrono;
-	return duration_cast<microseconds>(steady_clock::now() - begin).count();
-}
-
-inline void Spawner::NormalTimer::stop() {
-	if (tl > 0) {
-		// Disable timer
-		(void)setitimer(ITIMER_REAL, &old_timer, &timer);
-		// Unset timeout handler
-		(void)sigaction(SIGALRM, &sa_old, nullptr);
-	}
-}
-
-inline Spawner::NormalTimer::NormalTimer(int pid, uint64_t time_limit)
-	: tl(time_limit), timer({{0, 0}, {0, 0}})
-{
-	cpid = pid;
-	// Initialize new timer
-	timer.it_value.tv_sec = tl / 1000000;
-	timer.it_value.tv_usec = tl - timer.it_value.tv_sec * 1000000LL;
-
-	// Set timer timeout handler
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = &handle_timeout;
-	sa.sa_flags = SA_RESTART;
-	(void)sigaction(SIGALRM, &sa, &sa_old);
-
-	// Run timer
-	(void)setitimer(ITIMER_REAL, &timer, &old_timer);
-}
-
-inline uint64_t Spawner::NormalTimer::stopAndGetRuntime() {
-	stop();
-	uint64_t res = tl - timer.it_value.tv_sec * 1000000LL -
-		timer.it_value.tv_usec;
-	tl = 0; // Mark that timer was stopped
-	return res;
-}
 
 template<class Func>
 void Spawner::runChild(CStringView exec, const std::vector<std::string>& args,
@@ -286,12 +238,20 @@ void Spawner::runChild(CStringView exec, const std::vector<std::string>& args,
 			send_error(errno, "setrlimit(RLIMIT_STACK)");
 	}
 
-	// Set CPU time limit [s] (useful when spawned process becomes orphaned)
-	if (opts.time_limit > 0) {
-		struct rlimit limit;
+	// Set CPU time limit [s]
+	if (opts.cpu_time_limit > 0) {
+		rlimit limit {opts.cpu_time_limit, opts.cpu_time_limit};
+
+		if (setrlimit(RLIMIT_CPU, &limit))
+			send_error(errno, "setrlimit(RLIMIT_CPU)");
+
+	// Limit below is useful when spawned process becomes orphaned
+	} else if (opts.real_time_limit.tv_sec or opts.real_time_limit.tv_nsec) {
+		rlimit limit;
 		limit.rlim_max = limit.rlim_cur =
-			(opts.time_limit + 500000) / 1000000 + 1; // +1 to avoid premature
-			                                          // death
+			opts.real_time_limit.tv_sec + 1 + // +1 to avoid premature death
+			(opts.real_time_limit.tv_nsec > 500000000);
+
 		if (setrlimit(RLIMIT_CPU, &limit))
 			send_error(errno, "setrlimit(RLIMIT_CPU)");
 	}
@@ -337,110 +297,4 @@ void Spawner::runChild(CStringView exec, const std::vector<std::string>& args,
 	else
 		send_error(errnum, StringBuff<PATH_MAX + 20>{"execvp('",
 			exec.substring(0, PATH_MAX), "...')"});
-}
-
-template<template<class...> class Func, class... TArgs, class... Args>
-Spawner::ExitStat Spawner::runWithTimer(uint64_t time_limit, Args&&... args) {
-	// Without time_limit (NormalTimer) we can run as many processes as we want
-	if (time_limit == 0)
-		return Func<TArgs..., ZeroTimer>::execute(std::forward<Args>(args)...);
-
-	// Only one running Timer per process is allowed. That is why when one
-	// is running, the next ones are executed in the new child process.
-	std::unique_lock<std::mutex> ulck(NormalTimer::lock, std::defer_lock);
-	if (ulck.try_lock())
-		return Func<TArgs..., NormalTimer>::execute(std::forward<Args>(args)...);
-
-	// There is already one Timer running in this process, so move to child
-	int pfd[2];
-	if (pipe(pfd) == -1)
-		THROW("pipe()", error(errno));
-
-	pid_t child = fork();
-	if (child == -1) {
-		THROW("Failed to fork()", error(errno));
-
-	} else if (child == 0) {
-		ExitStat es;
-		es.code = -1; // If not overwritten, it will indicate an error -
-		              // caught exception
-		try {
-			es = Func<TArgs..., NormalTimer>::execute(
-				std::forward<Args>(args)...);
-		} catch (const std::exception& e) {
-			// We cannot allow exception to fly out of this thread
-			es.message = e.what();
-		}
-
-		writeAll(pfd[1], &es, sizeof(es.code) + sizeof(es.runtime) +
-			sizeof(es.vm_peak));
-		writeAll(pfd[1], es.message.data(), es.message.size());
-		_exit(0);
-	}
-
-	sclose(pfd[1]);
-	Closer pipe0_closer(pfd[0]);
-
-	ExitStat es; // Loaded from message from child
-	readAll(pfd[0], &es, sizeof(es.code) + sizeof(es.runtime) +
-		sizeof(es.vm_peak));
-
-	std::array<char, 4096> buff;
-	int rc;
-	while ((rc = read(pfd[0], buff.data(), buff.size())) > 0)
-		es.message.append(buff.data(), rc);
-
-	waitpid(child, nullptr, 0); // No status, because child is not a spawned
-	                            // process
-
-	// Throw exception caught in child
-	if (es.code == -1)
-		THROW(es.message);
-	return es;
-}
-
-template<class Timer>
-Spawner::ExitStat Spawner::Impl<Timer>::execute(CStringView exec,
-	const std::vector<std::string>& args, const Spawner::Options& opts,
-	CStringView working_dir)
-{
-	// Error stream from child (and wait_for_syscall()) via pipe
-	int pfd[2];
-	if (pipe2(pfd, O_CLOEXEC) == -1)
-		THROW("pipe()", error(errno));
-
-	int cpid = fork();
-	if (cpid == -1)
-		THROW("fork()", error(errno));
-
-	else if (cpid == 0) {
-		sclose(pfd[0]);
-		runChild(exec, args, opts, working_dir, pfd[1], []{});
-	}
-
-	sclose(pfd[1]);
-	Closer pipe0_closer(pfd[0]);
-
-	// Wait for child to be ready
-	int status;
-	waitpid(cpid, &status, WUNTRACED);
-	// If something went wrong
-	if (WIFEXITED(status) || WIFSIGNALED(status))
-		return ExitStat(status, 0, 0, receiveErrorMessage(status, pfd[0]));
-
-	// Set up timer
-	Timer timer(cpid, opts.time_limit);
-	kill(cpid, SIGCONT);
-
-	// Wait for death of the child
-	do {
-		waitpid(cpid, &status, 0);
-	} while (!WIFEXITED(status) && !WIFSIGNALED(status));
-
-	uint64_t runtime = timer.stopAndGetRuntime();
-	if (status)
-		return ExitStat(status, runtime, 0,
-			receiveErrorMessage(status, pfd[0]));
-
-	return ExitStat(status, runtime, 0, "");
 }
