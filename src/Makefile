@@ -21,7 +21,7 @@ setup-installation: setup_installation.o lib/sim.a lib/sqlite3.a
 
 
 backup: backup.o lib/sim.a lib/sqlite3.a
-	$(LINK) $(shell mysql_config --libs) -lsupc++
+	$(LINK) $(shell mysql_config --libs) -lsupc++ -lrt
 
 lib/simlib.a lib/sim.a lib/sqlite3.a: lib;
 
