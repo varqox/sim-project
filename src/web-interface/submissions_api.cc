@@ -156,7 +156,6 @@ void Sim::api_submissions() {
 
 	// Execute query
 	qfields.append(qwhere, " ORDER BY s.id DESC LIMIT 50");
-	stdlog(qfields);
 	auto res = mysql.query(qfields);
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
