@@ -255,8 +255,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 			};
 			report.append("<td>", htmlEscape(test.name), "</td>",
 				asTdString(test.status),
-				"<td>", usecToSecStr(
-						meta::min(test.runtime, test.time_limit), 2, false),
+				"<td>", usecToSecStr(test.runtime, 2, false),
 					" / ", usecToSecStr(test.time_limit, 2, false), "</td>"
 				"<td>", test.memory_consumed >> 10, " / ",
 					test.memory_limit >> 10, "</td>");
