@@ -36,7 +36,7 @@ public:
 		 *
 		 * @return true if call is allowed (modified if needed), false otherwise
 		 */
-		bool isSysOpenAllowed(pid_t pid,
+		bool is_open_allowed(pid_t pid,
 			const std::vector<std::string>& allowed_files = {});
 
 		/**
@@ -47,7 +47,7 @@ public:
 		 *
 		 * @return true if call is allowed (modified if needed), false otherwise
 		 */
-		bool isSysLseekAllowed(pid_t pid);
+		bool is_lseek_allowed(pid_t pid);
 
 		/**
 		 * @brief Checks whether syscall tgkill(2) is allowed
@@ -59,14 +59,14 @@ public:
 		 *
 		 * @return true if call is allowed, false otherwise
 		 */
-		bool isSysTgkillAllowed(pid_t pid);
+		bool is_tgkill_allowed(pid_t pid);
 
 	public:
-		void detectTraceeArchitecture(pid_t pid) {
+		void detect_tracee_architecture(pid_t pid) {
 			arch = ::detectArchitecture(pid);
 		}
 
-		int8_t getArch() const noexcept { return arch; }
+		int8_t get_arch() const noexcept { return arch; }
 
 		/**
 		 * @brief Checks whether or not entering syscall @p syscall is allowed
@@ -76,7 +76,7 @@ public:
 		 *
 		 * @return true if syscall is allowed to be executed, false otherwise
 		 */
-		virtual bool isSyscallEntryAllowed(pid_t pid, int syscall) = 0;
+		virtual bool is_syscall_entry_allowed(pid_t pid, int syscall) = 0;
 
 		/**
 		 * @brief Checks whether or not exit from finished syscall @p syscall
@@ -87,14 +87,14 @@ public:
 		 *
 		 * @return true if finished syscall is allowed to exit, false otherwise
 		 */
-		virtual bool isSyscallExitAllowed(pid_t pid, int syscall) = 0;
+		virtual bool is_syscall_exit_allowed(pid_t pid, int syscall) = 0;
 
 		/**
 		 * @brief Returns error message which was set after unsuccessful call to
-		 *   either isSyscallEntryAllowed() or isSyscallExitAllowed()
+		 *   either is_syscall_entry_allowed() or is_syscall_exit_allowed()
 		 * @return an error message
 		 */
-		virtual std::string errorMessage() const = 0;
+		virtual std::string error_message() const = 0;
 
 		virtual ~CallbackBase() noexcept {}
 	};
@@ -127,25 +127,26 @@ public:
 			}
 		};
 
-		int unsuccessful_SYS_brk_counter = 0; // used in isSyscallExitAllowed()
+		int unsuccessful_SYS_brk_counter = 0; // used in
+		                                      // is_syscall_exit_allowed()
 		static constexpr int UNSUCCESSFUL_SYS_BRK_LIMIT = 128;
 
-		std::string error_message;
+		std::string error_message_;
 
 		/// Check whether syscall @p syscall lies in proper syscall_list
 		template<size_t N1, size_t N2>
-		bool isSyscallIn(int syscall,
+		bool is_syscall_in(int syscall,
 			const std::array<int, N1>& syscall_list_i386,
 			const std::array<int, N2>& syscall_list_x86_64);
 
 		/// Check whether syscall @p syscall is allowed
 		template<size_t N1, size_t N2>
-		bool isSyscallEntryAllowed(pid_t pid, int syscall,
+		bool is_syscall_entry_allowed(pid_t pid, int syscall,
 			const std::array<int, N1>& allowed_syscalls_i386,
 			const std::array<int, N2>& allowed_syscalls_x86_64,
 			const std::vector<std::string>& allowed_files);
 
-		bool isSyscallEntryAllowed(pid_t pid, int syscall,
+		bool is_syscall_entry_allowed(pid_t pid, int syscall,
 			const std::vector<std::string>& allowed_files)
 		{
 			// TODO: make the below syscall numbers more portable
@@ -299,7 +300,7 @@ public:
 			static_assert(meta::is_sorted(allowed_syscalls_i386), "");
 			static_assert(meta::is_sorted(allowed_syscalls_x86_64), "");
 
-			return isSyscallEntryAllowed(pid, syscall, allowed_syscalls_i386,
+			return is_syscall_entry_allowed(pid, syscall, allowed_syscalls_i386,
 				allowed_syscalls_x86_64, allowed_files);
 		}
 
@@ -308,13 +309,13 @@ public:
 
 		virtual ~DefaultCallback() = default;
 
-		bool isSyscallEntryAllowed(pid_t pid, int syscall) {
-			return isSyscallEntryAllowed(pid, syscall, {});
+		bool is_syscall_entry_allowed(pid_t pid, int syscall) {
+			return is_syscall_entry_allowed(pid, syscall, {});
 		}
 
-		bool isSyscallExitAllowed(pid_t pid, int syscall);
+		bool is_syscall_exit_allowed(pid_t pid, int syscall);
 
-		std::string errorMessage() const { return error_message; }
+		std::string error_message() const { return error_message_; }
 	};
 
 	using Spawner::ExitStat;
@@ -327,7 +328,12 @@ public:
 	 *   with parameters: child pid, syscall number.
 	 *   Callback::operator() must return whether syscall is allowed or not
 	 *   @p exec is called via execvp()
-	 *   This function is thread-safe
+	 *   This function is thread-safe.
+	 *   IMPORTANT: To function properly this function uses internally signals
+	 *     SIGRTMIN and SIGRTMIN + 1 and installs handlers for them. So be aware
+	 *     that using these signals while this function runs (in any thread) is
+	 *     not safe. Moreover if your program installed handler for the above
+	 *     signals, it must install them again after the function returns.
 	 *
 	 * @param exec filename that is to be executed
 	 * @param args arguments passed to exec
@@ -427,7 +433,7 @@ struct Sandbox::CallbackBase::Registers {
 
 	Registers() = default;
 
-	void getRegs(pid_t pid) {
+	void get_regs(pid_t pid) {
 		struct iovec ivo = {
 			&uregs,
 			sizeof(uregs)
@@ -436,7 +442,7 @@ struct Sandbox::CallbackBase::Registers {
 			THROW("Error: ptrace(PTRACE_GETREGS)", error(errno));
 	}
 
-	void setRegs(pid_t pid) {
+	void set_regs(pid_t pid) {
 		struct iovec ivo = {
 			&uregs,
 			sizeof(uregs)
@@ -448,7 +454,7 @@ struct Sandbox::CallbackBase::Registers {
 };
 
 template<size_t N1, size_t N2>
-bool Sandbox::DefaultCallback::isSyscallIn(int syscall,
+bool Sandbox::DefaultCallback::is_syscall_in(int syscall,
 	const std::array<int, N1>& syscall_list_i386,
 	const std::array<int, N2>& syscall_list_x86_64)
 {
@@ -459,13 +465,13 @@ bool Sandbox::DefaultCallback::isSyscallIn(int syscall,
 }
 
 template<size_t N1, size_t N2>
-bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
+bool Sandbox::DefaultCallback::is_syscall_entry_allowed(pid_t pid, int syscall,
 	const std::array<int, N1>& allowed_syscalls_i386,
 	const std::array<int, N2>& allowed_syscalls_x86_64,
 	const std::vector<std::string>& allowed_files)
 {
 	// Check if syscall is allowed
-	if (isSyscallIn(syscall, allowed_syscalls_i386, allowed_syscalls_x86_64))
+	if (is_syscall_in(syscall, allowed_syscalls_i386, allowed_syscalls_x86_64))
 		return true;
 
 	// Check if syscall is limited
@@ -478,7 +484,7 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 		2 // SYS_open - x86_64
 	};
 	if (syscall == sys_open[arch])
-		return isSysOpenAllowed(pid, allowed_files);
+		return is_open_allowed(pid, allowed_files);
 
 	constexpr int sys_lseek[2] = {
 		19, // SYS_lseek - i386
@@ -487,7 +493,7 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 	if (syscall == sys_lseek[arch] ||
 		(arch == ARCH_i386 && syscall == 140)) // SYS__llseek
 	{
-		return isSysLseekAllowed(pid);
+		return is_lseek_allowed(pid);
 	}
 
 	constexpr int sys_tgkill[2] = {
@@ -495,7 +501,7 @@ bool Sandbox::DefaultCallback::isSyscallEntryAllowed(pid_t pid, int syscall,
 		234 // SYS_tgkill - x86_64
 	};
 	if (syscall == sys_tgkill[arch])
-		return isSysTgkillAllowed(pid);
+		return is_tgkill_allowed(pid);
 
 	return false;
 }
@@ -519,9 +525,9 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 	else if (cpid == 0) { // Child = tracee
 		sclose(pfd[0]);
-		runChild(exec, args, opts, working_dir, pfd[1], [=]{
+		run_child(exec, args, opts, working_dir, pfd[1], [=]{
 			if (ptrace(PTRACE_TRACEME, 0, 0, 0))
-				sendErrorMessage(pfd[1], errno, "ptrace(PTRACE_TRACEME)");
+				send_error_message(pfd[1], errno, "ptrace(PTRACE_TRACEME)");
 		});
 	}
 
@@ -534,8 +540,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	waitid(P_PID, cpid, &si, WSTOPPED);
 	// If something went wrong
 	if (si.si_code != CLD_TRAPPED)
-		return ExitStat({0, 0}, si.si_code, si.si_status, ru, 0,
-			receiveErrorMessage(si, pfd[0]));
+		return ExitStat({0, 0}, {0, 0}, si.si_code, si.si_status, ru, 0,
+			receive_error_message(si, pfd[0]));
 
 	// Useful when exception is thrown
 	auto kill_and_wait_tracee_guard = make_call_in_destructor([&] {
@@ -553,7 +559,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 		THROW("ptrace(PTRACE_SETOPTIONS)", error(errno));
 	}
 
-	func.detectTraceeArchitecture(cpid);
+	func.detect_tracee_architecture(cpid);
 
 	// Open /proc/{cpid}/statm
 	FileDescriptor statm_fd {concat_tostr("/proc/", cpid, "/statm"), O_RDONLY};
@@ -579,16 +585,36 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	};
 
 	uint64_t vm_size = 0; // In pages
+	timespec runtime {};
+	timespec cpu_time {};
 
-	// Set up timer
+	// Set up timers
 	Timer timer(cpid, opts.real_time_limit);
+	CPUTimeMonitor cpu_timer(cpid, opts.cpu_time_limit);
+
+	auto get_cpu_time_and_wait_tracee = [&] {
+		// Get cpu_time
+		clockid_t cid;
+		if (clock_getcpuclockid(cpid, &cid) == 0)
+			clock_gettime(cid, &cpu_time);
+
+		cpu_timer.deactivate();
+		kill_and_wait_tracee_guard.cancel(); // Tracee has died
+		syscall(SYS_waitid, P_PID, cpid, nullptr, WEXITED, &ru);
+		runtime = timer.stop_and_get_runtime(); // This have to be last because
+		                                        // it may throw
+	};
 
 	auto wait_for_syscall = [&]() -> int {
 		for (;;) {
 			(void)ptrace(PTRACE_SYSCALL, cpid, 0, 0); // Fail indicates that
 			                                          // the tracee has just
 			                                          // died
-			syscall(SYS_waitid, P_PID, cpid, &si, WSTOPPED | WEXITED, &ru);
+			waitid(P_PID, cpid, &si, WSTOPPED | WEXITED | WNOWAIT);
+
+			// If process terminated
+			if (isIn(si.si_code, {CLD_EXITED, CLD_KILLED, CLD_DUMPED}))
+				get_cpu_time_and_wait_tracee();
 
 			switch (si.si_code) {
 			case CLD_TRAPPED:
@@ -618,15 +644,12 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 	for (;;) {
 		auto exit_normally = [&]() -> ExitStat {
-			timespec runtime = timer.stop_and_get_runtime();
-			kill_and_wait_tracee_guard.cancel();
-
 			if (si.si_code != CLD_EXITED or si.si_status != 0)
-				return ExitStat(runtime, si.si_code, si.si_status, ru,
+				return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
 					vm_size * sysconf(_SC_PAGESIZE),
-					receiveErrorMessage(si, pfd[0]));
+					receive_error_message(si, pfd[0]));
 
-			return ExitStat(runtime, si.si_code, si.si_status, ru,
+			return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
 				vm_size * sysconf(_SC_PAGESIZE));
 		};
 
@@ -652,7 +675,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 				// Tracee has just died
 				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead
-				waitid(P_PID, cpid, &si, WEXITED);
+				waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
+				get_cpu_time_and_wait_tracee();
 
 				// Return sandboxing results
 				return exit_normally();
@@ -663,17 +687,17 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				auto syscall_log = stdlog('[', cpid, "] syscall: ",
 					paddedString(toStr(syscall_no), 3), ": ",
 					// syscall name
-					(func.getArch() == ARCH_i386 ? x86_syscall_name
+					(func.get_arch() == ARCH_i386 ? x86_syscall_name
 						: x86_64_syscall_name)[syscall_no]);
 
 				auto log_syscall_args = [&] {
 					CallbackBase::Registers regs;
-					regs.getRegs(cpid);
+					regs.get_regs(cpid);
 
-					int64_t arg1 = (func.getArch() == ARCH_i386 ?
+					int64_t arg1 = (func.get_arch() == ARCH_i386 ?
 						int32_t(regs.uregs.i386_regs.ebx)
 						: regs.uregs.x86_64_regs.rdi);
-					int64_t arg2 = (func.getArch() == ARCH_i386 ?
+					int64_t arg2 = (func.get_arch() == ARCH_i386 ?
 						int32_t(regs.uregs.i386_regs.ecx)
 						: regs.uregs.x86_64_regs.rsi);
 
@@ -682,8 +706,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 				auto log_syscall_retval = [&] {
 					CallbackBase::Registers regs;
-					regs.getRegs(cpid);
-					int64_t ret_val = (func.getArch() == ARCH_i386 ?
+					regs.get_regs(cpid);
+					int64_t ret_val = (func.get_arch() == ARCH_i386 ?
 						int32_t(regs.uregs.i386_regs.eax)
 						: regs.uregs.x86_64_regs.rax);
 					syscall_log(" -> ", ret_val);
@@ -691,7 +715,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			)
 
 			// If syscall entry is allowed
-			bool allowed = func.isSyscallEntryAllowed(cpid, syscall_no);
+			bool allowed = func.is_syscall_entry_allowed(cpid, syscall_no);
 			DEBUG_SANDBOX(log_syscall_args();) // Must be placed after the check
 				// because the arguments may be altered by it
 			if (allowed) {
@@ -700,7 +724,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 					return exit_normally();
 
 				// Monitor for vm_size change
-				if (func.getArch() == ARCH_i386
+				if (func.get_arch() == ARCH_i386
 					? isIn(syscall_no, { // i386
 						45, // SYS_brk
 						90, // SYS_mmap
@@ -717,7 +741,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				}
 
 				// Check syscall after returning
-				allowed = func.isSyscallExitAllowed(cpid, syscall_no);
+				allowed = func.is_syscall_exit_allowed(cpid, syscall_no);
 				DEBUG_SANDBOX(log_syscall_retval();) // Must be placed after the
 					// above check because syscall return value is affected by
 					// the architecture change, which is detected in the check,
@@ -745,7 +769,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			// The tracee is no longer controllable
 			if (errno == ESRCH) {
 				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead
-				waitid(P_PID, cpid, &si, WEXITED);
+				waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
+				get_cpu_time_and_wait_tracee();
 
 				// Return sandboxing results
 				return exit_normally();
@@ -757,19 +782,16 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 		/* Syscall entry or exit is not allowed */
 
-		timespec runtime = timer.stop_and_get_runtime();
-
-		// Kill tracee
+		// Kill and wait tracee
 		kill(-cpid, SIGKILL);
-		// Wait for tracee
-		waitid(P_PID, cpid, &si, WEXITED);
-		kill_and_wait_tracee_guard.cancel();
+		waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
+		get_cpu_time_and_wait_tracee();
 
 		// Not allowed syscall
-		std::string message = func.errorMessage();
+		std::string message = func.error_message();
 		if (message.empty()) { // func has not left any message
 			// Try to get syscall name
-			CStringView syscall_name = (func.getArch() == ARCH_i386 ?
+			CStringView syscall_name = (func.get_arch() == ARCH_i386 ?
 				x86_syscall_name : x86_64_syscall_name)[syscall_no];
 
 			if (syscall_name.empty()) // Syscall not found
@@ -778,7 +800,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				message = concat_tostr("forbidden syscall ", syscall_no, ": ", syscall_name, "()");
 		}
 
-		return ExitStat(runtime, si.si_code, si.si_status, ru,
+		return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
 			vm_size * sysconf(_SC_PAGESIZE), message);
 	}
 }

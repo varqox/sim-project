@@ -15,7 +15,12 @@ public:
 		std::sort(allowed_files.begin(), allowed_files.end());
 	}
 
-	bool isSyscallEntryAllowed(pid_t pid, int syscall) {
+	using DefaultCallback::detect_tracee_architecture;
+	using DefaultCallback::get_arch;
+	using DefaultCallback::is_syscall_exit_allowed;
+	using DefaultCallback::error_message;
+
+	bool is_syscall_entry_allowed(pid_t pid, int syscall) {
 		constexpr std::array<int, 5> allowed_syscalls_i386 {{
 			19, // SYS_lseek
 			41, // SYS_dup
@@ -29,19 +34,11 @@ public:
 			33, // SYS_dup2
 			292, // SYS_dup3
 		}};
-		return (DefaultCallback::isSyscallIn(syscall, allowed_syscalls_i386,
+		return (DefaultCallback::is_syscall_in(syscall, allowed_syscalls_i386,
 				allowed_syscalls_x86_64)
-			|| DefaultCallback::isSyscallEntryAllowed(pid, syscall,
+			|| DefaultCallback::is_syscall_entry_allowed(pid, syscall,
 				allowed_files));
 	}
-
-	using DefaultCallback::detectTraceeArchitecture;
-
-	using DefaultCallback::getArch;
-
-	using DefaultCallback::isSyscallExitAllowed;
-
-	using DefaultCallback::errorMessage;
 };
 
 /**

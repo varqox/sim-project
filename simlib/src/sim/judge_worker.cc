@@ -10,12 +10,12 @@ class JudgeCallback : protected Sandbox::DefaultCallback {
 public:
 	JudgeCallback() = default;
 
-	using DefaultCallback::detectTraceeArchitecture;
-	using DefaultCallback::getArch;
-	using DefaultCallback::isSyscallExitAllowed;
-	using DefaultCallback::errorMessage;
+	using DefaultCallback::detect_tracee_architecture;
+	using DefaultCallback::get_arch;
+	using DefaultCallback::is_syscall_exit_allowed;
+	using DefaultCallback::error_message;
 
-	bool isSyscallEntryAllowed(pid_t pid, int syscall) {
+	bool is_syscall_entry_allowed(pid_t pid, int syscall) {
 		constexpr int sys_nanosleep[2] = {
 			162, // SYS_nanosleep - i386
 			35, // SYS_nanosleep - x86_64
@@ -28,11 +28,11 @@ public:
 		if (syscall != sys_nanosleep[arch] and
 			syscall != sys_clock_nanosleep[arch])
 		{
-			return DefaultCallback::isSyscallExitAllowed(pid, syscall);
+			return DefaultCallback::is_syscall_entry_allowed(pid, syscall);
 		}
 
 		Registers regs;
-		regs.getRegs(pid);
+		regs.get_regs(pid);
 
 		if (syscall == sys_nanosleep[arch]) {
 			// Set NULL as the first argument to nanosleep(2)
@@ -49,7 +49,7 @@ public:
 				regs.uregs.i386_regs.edx = 0;
 		}
 
-		regs.setRegs(pid); // Update traced process's registers
+		regs.set_regs(pid); // Update traced process's registers
 		return true;
 	}
 };
@@ -130,6 +130,10 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			tl.tv_sec = real_tl / 1000000;
 			tl.tv_nsec = (real_tl - tl.tv_sec * 1000000) * 1000;
 
+			timespec cpu_tl;
+			cpu_tl.tv_sec = test.time_limit / 1000000;
+			cpu_tl.tv_nsec = (test.time_limit - cpu_tl.tv_sec * 1000000) * 1000;
+
 			// Run solution on the test
 			Sandbox::ExitStat es = Sandbox::run(solution_path, {}, {
 				test_in,
@@ -137,9 +141,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				-1,
 				tl,
 				test.memory_limit + page_size, // To be able to detect exceeding
-				// CPU time limit - give at leas 0.3 s margin to mitigate the
-				// inaccuracy of measurements
-				(test.time_limit + 1300000) / 1000000,
+				cpu_tl
 			}, ".", JudgeCallback{}); // Allow exceptions to fly upper
 
 			// Log problems with syscalls
@@ -151,9 +153,9 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			}
 
 			// Update score_ratio
-			timeval cpu_runtime = es.rusage.ru_utime + es.rusage.ru_stime;
 			score_ratio = std::min(score_ratio, 2.0 -
-				2.0 * (cpu_runtime.tv_sec * 100 + cpu_runtime.tv_usec / 10000)
+				2.0 * (es.cpu_runtime.tv_sec * 100 +
+					es.cpu_runtime.tv_nsec / 10000000)
 				/ (test.time_limit / 10000));
 			// cpu_runtime may be grater than test.time_limit therefore
 			// score_ratio may be negative which is impermissible
@@ -163,7 +165,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			report_group.tests.emplace_back(
 				test.name,
 				JudgeReport::Test::OK,
-				cpu_runtime.tv_sec * 1000000 + cpu_runtime.tv_usec,
+				es.cpu_runtime.tv_sec * 1000000 + es.cpu_runtime.tv_nsec / 1000,
 				test.time_limit,
 				es.vm_peak,
 				test.memory_limit,
@@ -200,8 +202,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					tmplog("   Killed with ", es.si.status, " (",
 						strsignal(es.si.status), ')');
 
-				tmplog(" [ CPU: ", timeval_to_str(cpu_runtime, 6, false), " ]"
-					" [ ", timespec_to_str(es.runtime, 9, false), " ]");
+				tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 9, false),
+					" ] [ ", timespec_to_str(es.runtime, 9, false), " ]");
 			};
 
 			// OK
@@ -351,8 +353,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 					tmplog("   Killed with ", es.si.status, " (",
 						strsignal(es.si.status), ')');
 
-				tmplog(" [ CPU: ", timeval_to_str(cpu_runtime, 6, false), " ]"
-					" [ ", timespec_to_str(es.runtime, 9, false), " ]"
+				tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 6, false),
+					" ] [ ", timespec_to_str(es.runtime, 9, false), " ]"
 					"  Checker: ");
 
 				// Checker status

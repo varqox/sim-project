@@ -16,11 +16,11 @@ using std::vector;
 #define ARG5 (arch ? regs.uregs.x86_64_regs.r8 : regs.uregs.i386_regs.edi)
 #define ARG6 (arch ? regs.uregs.x86_64_regs.r9 : regs.uregs.i386_regs.ebp)
 
-bool Sandbox::CallbackBase::isSysOpenAllowed(pid_t pid,
+bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 	const vector<string>& allowed_files)
 {
 	Registers regs;
-	regs.getRegs(pid);
+	regs.get_regs(pid);
 
 	if (ARG1 == 0) // NULL is first argument
 		return true;
@@ -72,14 +72,14 @@ null_path:
 	else
 		regs.uregs.i386_regs.ebx = 0;
 
-	regs.setRegs(pid); // Update traced process's registers
+	regs.set_regs(pid); // Update traced process's registers
 
 	return true; // Allow to open NULL
 }
 
-bool Sandbox::CallbackBase::isSysLseekAllowed(pid_t pid) {
+bool Sandbox::CallbackBase::is_lseek_allowed(pid_t pid) {
 	Registers regs;
-	regs.getRegs(pid);
+	regs.get_regs(pid);
 
 	// Disallow lseek on stdin, stdout and stderr
 	array<int, 3> stdfiles {{STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO}};
@@ -92,20 +92,20 @@ bool Sandbox::CallbackBase::isSysLseekAllowed(pid_t pid) {
 	else
 		regs.uregs.i386_regs.ebx = -1;
 
-	regs.setRegs(pid); // Update traced process's registers
+	regs.set_regs(pid); // Update traced process's registers
 
 	return true; // Allow to lseek -1
 }
 
-bool Sandbox::CallbackBase::isSysTgkillAllowed(pid_t pid) {
+bool Sandbox::CallbackBase::is_tgkill_allowed(pid_t pid) {
 	Registers regs;
-	regs.getRegs(pid);
+	regs.get_regs(pid);
 
 	// The thread (one in the process) is allowed to kill itself ONLY
 	return (ARG1 == (uint64_t)pid && ARG2 == (uint64_t)pid);
 }
 
-bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
+bool Sandbox::DefaultCallback::is_syscall_exit_allowed(pid_t pid, int syscall) {
 	constexpr int sys_execve[2] = {
 		11, // SYS_execve - i386
 		59, // SYS_execve - x86_64
@@ -120,7 +120,7 @@ bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
 	};
 
 	if (syscall == sys_execve[arch] || syscall == sys_execveat[arch])
-		detectTraceeArchitecture(pid);
+		detect_tracee_architecture(pid);
 
 	if (syscall != sys_brk[arch])
 		return true;
@@ -135,7 +135,7 @@ bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
 	 */
 
 	Registers regs;
-	regs.getRegs(pid);
+	regs.get_regs(pid);
 
 	// Count unsuccessful series of SYS_brk calls
 	if (ARG1 <= RES) {
@@ -146,6 +146,6 @@ bool Sandbox::DefaultCallback::isSyscallExitAllowed(pid_t pid, int syscall) {
 	if (++unsuccessful_SYS_brk_counter < UNSUCCESSFUL_SYS_BRK_LIMIT)
 		return true;
 
-	error_message = "Memory limit exceeded";
+	error_message_ = "Memory limit exceeded";
 	return false;
 }

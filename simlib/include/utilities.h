@@ -143,11 +143,11 @@ public:
 		return *this;
 	}
 
-	bool active() const { return make_call; }
+	bool active() const noexcept { return make_call; }
 
-	void cancel() { make_call = false; }
+	void cancel() noexcept { make_call = false; }
 
-	void restore() { make_call = true; }
+	void restore() noexcept { make_call = true; }
 
 	auto call_and_cancel() {
 		make_call = false;
