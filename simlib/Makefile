@@ -4,15 +4,15 @@ include Makefile.config
 all: build-info
 	@$(MAKE) src googletest
 ifeq ($(MAKELEVEL), 0)
-	@echo "\033[32mBuild finished\033[0m"
+	@echo -e "\033[32mBuild finished\033[0m"
 endif
 
 .PHONY: build-info
 build-info:
 ifeq ($(MAKELEVEL), 0)
-	@echo "DEBUG: $(DEBUG)"
-	@echo "CC -> $(CC)"
-	@echo "CXX -> $(CXX)"
+	@echo -e "DEBUG: $(DEBUG)"
+	@echo -e "CC -> $(CC)"
+	@echo -e "CXX -> $(CXX)"
 endif
 
 .PHONY: src
@@ -46,4 +46,4 @@ clean:
 
 .PHONY: help
 help:
-	@echo "Nothing is here yet..."
+	@echo -e "Nothing is here yet..."

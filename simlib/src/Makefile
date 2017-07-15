@@ -21,18 +21,18 @@ endif
 
 syscall_name_32.cc: Makefile $(UNISTD_32)
 	$(GEN)
-	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
-	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
-	$(Q)echo "#include \"$(UNISTD_32)\"" >> $@
-	$(Q)echo "" >> $@
+	$(Q)echo -e "// WARNING: file generated automatically; changes will not be permanent." > $@
+	$(Q)echo -e "#include \"../include/syscall_name.h\"" >> $@
+	$(Q)echo -e "#include \"$(UNISTD_32)\"" >> $@
+	$(Q)echo -e "" >> $@
 	# 32 bit
 	$(Q) [ -f $(UNISTD_32) ] || \
-		{ echo "Error: $(UNISTD_32): No such file or directory"; $(RM) $@; exit 1; }
-	$(Q)echo "SyscallNameSet x86_syscall_name {" >> $@
+		{ echo -e "Error: $(UNISTD_32): No such file or directory"; $(RM) $@; exit 1; }
+	$(Q)echo -e "SyscallNameSet x86_syscall_name {" >> $@
 	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_32) | \
 		sed 's/#define\s*__NR_//' | \
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
-	$(Q)echo "};" >> $@
+	$(Q)echo -e "};" >> $@
 
 ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_64.h),)
 syscall_name_64.cc: UNISTD_64 = /usr/include/x86_64-linux-gnu/asm/unistd_64.h
@@ -44,18 +44,18 @@ endif
 
 syscall_name_64.cc: Makefile $(UNISTD_64)
 	$(GEN)
-	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
-	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
-	$(Q)echo "#include \"$(UNISTD_64)\"" >> $@
-	$(Q)echo "" >> $@
+	$(Q)echo -e "// WARNING: file generated automatically; changes will not be permanent." > $@
+	$(Q)echo -e "#include \"../include/syscall_name.h\"" >> $@
+	$(Q)echo -e "#include \"$(UNISTD_64)\"" >> $@
+	$(Q)echo -e "" >> $@
 	# 64 bit
-	$(Q)echo "SyscallNameSet x86_64_syscall_name {" >> $@
+	$(Q)echo -e "SyscallNameSet x86_64_syscall_name {" >> $@
 	$(Q) [ -f $(UNISTD_64) ] || \
-		{ echo "Error: $(UNISTD_64): No such file or directory"; $(RM) $@; exit 1; }
+		{ echo -e "Error: $(UNISTD_64): No such file or directory"; $(RM) $@; exit 1; }
 	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_64) | \
 		sed 's/#define\s*__NR_//' | \
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
-	$(Q)echo "};" >> $@
+	$(Q)echo -e "};" >> $@
 
 .PHONY: sim http
 sim http:

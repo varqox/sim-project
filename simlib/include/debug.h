@@ -74,10 +74,8 @@ inline StringBuff<4096> error(int errnum) noexcept {
 #if !defined(__cpp_lib_uncaught_exceptions) || __cpp_lib_uncaught_exceptions < 201411
 namespace __cxxabiv1 {
 struct __cxa_eh_globals;
-extern "C" {
-__cxa_eh_globals*
+extern "C" __cxa_eh_globals*
 __cxa_get_globals() noexcept __attribute__ ((__const__));
-} // extern "C"
 } // namespace __cxxabiv1
 
 namespace std {

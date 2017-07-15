@@ -6,8 +6,9 @@
 
 #include <cstddef>
 
-#if __has_include(<mysql/mysql.h>)
-#include <mysql/mysql.h>
+#if __has_include(<mysql.h>)
+#define SIMLIB_MYSQL_ENABLED 1
+#include <mysql.h>
 
 namespace MySQL {
 
@@ -542,4 +543,4 @@ public:
 
 } // namespace MySQL
 
-#endif // __has_include(<mysql/mysql.h>)
+#endif // __has_include(<mysql.h>)
