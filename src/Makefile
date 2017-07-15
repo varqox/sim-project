@@ -1,7 +1,8 @@
 include ../Makefile.config
 
-EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/others'
-EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others'
+MYSQL_CONFIG = $(shell which mariadb_config || which mysql_config)
+EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/others' $(shell $(MYSQL_CONFIG) --include)
+EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others' $(shell $(MYSQL_CONFIG) --libs)
 
 .PHONY: all
 all: lib killinstc setup-installation backup web-interface Job-server
@@ -17,11 +18,11 @@ killinstc: killinstc.o lib/simlib.a
 	$(LINK) -lsupc++
 
 setup-installation: setup_installation.o lib/sim.a lib/sqlite3.a
-	$(LINK) $(shell mysql_config --libs) -lsupc++
+	$(LINK) -lsupc++
 
 
 backup: backup.o lib/sim.a lib/sqlite3.a
-	$(LINK) $(shell mysql_config --libs) -lsupc++ -lrt
+	$(LINK) -lsupc++ -lrt
 
 lib/simlib.a lib/sim.a lib/sqlite3.a: lib;
 

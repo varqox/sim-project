@@ -2,7 +2,7 @@ include ../../Makefile.config
 
 .PHONY: run
 run: build
-	@echo $(notdir $(shell pwd)):
+	@echo -e $(notdir $(shell pwd)):
 	./check
 
 .PHONY: build
