@@ -11,7 +11,7 @@ $(eval $(call dependencies))
 ../sim-server: users.o jobs.o problems.o submission.o
 ../sim-server: ../lib/sim.a ../lib/sqlite3.a
 ../sim-server:
-	$(LINK) $(shell mysql_config --libs) -pthread -lsupc++
+	$(LINK) -pthread -lsupc++
 
 # ../sim-server2: server2.o connection.o http_request.o http_response.o form_validator.o
 # ../sim-server2: session.o template.o errors.o user.o problemset.o jobs.o
