@@ -97,6 +97,21 @@ bool Sandbox::CallbackBase::is_lseek_allowed(pid_t pid) {
 	return true; // Allow to lseek -1
 }
 
+bool Sandbox::CallbackBase::is_sysinfo_allowed(pid_t pid) {
+	Registers regs;
+	regs.get_regs(pid);
+
+	// Set NULL as the first argument to sysinfo
+	if (arch)
+		regs.uregs.x86_64_regs.rdi = 0;
+	else
+		regs.uregs.i386_regs.ebx = 0;
+
+	regs.set_regs(pid); // Update traced process's registers
+
+	return true; // Allow sysinfo on NULL
+}
+
 bool Sandbox::CallbackBase::is_tgkill_allowed(pid_t pid) {
 	Registers regs;
 	regs.get_regs(pid);

@@ -50,6 +50,16 @@ public:
 		bool is_lseek_allowed(pid_t pid);
 
 		/**
+		 * @brief Checks whether syscall sysinfo(2) is allowed, if not, tries to
+		 *   modify it (by replacing info with NULL) so that syscall will fail
+		 *
+		 * @param pid pid of traced process (via ptrace)
+		 *
+		 * @return true if call is allowed (modified if needed), false otherwise
+		 */
+		bool is_sysinfo_allowed(pid_t pid);
+
+		/**
 		 * @brief Checks whether syscall tgkill(2) is allowed
 		 *
 		 * @details Syscall is allowed only if the first and the second argument
@@ -495,6 +505,13 @@ bool Sandbox::DefaultCallback::is_syscall_entry_allowed(pid_t pid, int syscall,
 	{
 		return is_lseek_allowed(pid);
 	}
+
+	constexpr int sys_sysinfo[2] = {
+		116, // SYS_sysinfo - i386
+		99 // SYS_sysinfo - x86_64
+	};
+	if (syscall == sys_sysinfo[arch])
+		return is_sysinfo_allowed(pid);
 
 	constexpr int sys_tgkill[2] = {
 		270, // SYS_tgkill - i386
