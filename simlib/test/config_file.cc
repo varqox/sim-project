@@ -380,7 +380,7 @@ TEST (ConfigFile, escapeString) {
 string dumpConfig(const ConfigFile& cf) {
 	auto&& vars = cf.getVars();
 	string res;
-	for (auto&& p : vars) {
+	vars.for_each([&](auto&& p) {
 		// Array
 		if (p.second.isArray()) {
 			back_insert(res, p.first, ": [\n");
@@ -393,7 +393,7 @@ string dumpConfig(const ConfigFile& cf) {
 			back_insert(res, p.first, ": ",
 				ConfigFile::escapeToDoubleQuotedString(p.second.asString(), 0),
 				'\n');
-	}
+	});
 	return res;
 }
 
@@ -528,7 +528,7 @@ workers: "2"
 
 	ConfigFile cf; // It do not have to be cleaned - we watch only for
 	               // exceptions
-	// TODO: if (when) EXPECT_THROW_WHAT will be available in Google Test,
+	// TODO: if / when EXPECT_THROW_WHAT will be available in Google Test,
 	// use it here
 	EXPECT_THROW(cf.loadConfigFromString("a & eee "), ConfigFile::ParseError);
 	EXPECT_THROW(cf.loadConfigFromString("a = [a"), ConfigFile::ParseError);

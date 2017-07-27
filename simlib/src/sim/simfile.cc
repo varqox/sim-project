@@ -5,7 +5,6 @@
 
 #include <cmath>
 
-using std::map;
 using std::pair;
 using std::string;
 using std::vector;
@@ -178,7 +177,7 @@ void Simfile::loadTests() {
 	if (!limits.isSet())
 		throw std::runtime_error{"Simfile: missing limits array"};
 
-	map<StringView, TestGroup, StrNumCompare> tests_groups;
+	AVLDictMap<StringView, TestGroup, StrNumCompare> tests_groups;
 	// StringView may be used as Key because it will point to a string in
 	// limits.asArray() which is a const reference to vector inside the `limits`
 	// variable which will be valid as long as config is not changed
@@ -258,20 +257,21 @@ void Simfile::loadTests() {
 	auto&& scoring = config["scoring"];
 	CHECK_IF_ARR(scoring, "scoring");
 	if (!scoring.isSet()) { // Calculate scoring automatically
-		int groups_no = tests_groups.size() -
-			(tests_groups.find("0") != tests_groups.end());
+		int groups_no = tests_groups.size() - bool(tests_groups.find("0"));
 		int total_score = 100;
-		for (auto&& git : tests_groups)
+
+		tests_groups.for_each([&](auto&& git) {
 			if (git.first != "0")
 				total_score -= (git.second.score = total_score / groups_no--);
+		});
 
 	} else { // Check and implement defined scoring
-		map<StringView, int64_t> sm; // (gid, score)
+		AVLDictMap<StringView, int64_t> sm; // (gid, score)
 		for (const string& str : scoring.asArray()) {
 			SimpleParser sp {str};
 			StringView gid {sp.extractNextNonEmpty(isspace)};
 
-			if (tests_groups.find(gid) == tests_groups.end()) {
+			if (not tests_groups.find(gid)) {
 				// It is safe to do check here because gids in tests_groups are
 				// positive integers
 				if (!isDigit(gid))
@@ -295,21 +295,22 @@ void Simfile::loadTests() {
 		}
 
 		// Assign scoring to each group
-		for (auto&& git : tests_groups) {
-			auto&& it = sm.find(git.first);
-			if (it == sm.end())
+		tests_groups.for_each([&](auto&& git) {
+			auto it = sm.find(git.first);
+			if (not it)
 				throw std::runtime_error{concat_tostr("Simfile: missing scoring"
 					" of the group `", git.first, '`')};
 
 			git.second.score = it->second;
-		}
+		});
 	}
 
 	// Move limits from tests_groups to tgroups
 	tgroups.clear();
 	tgroups.reserve(tests_groups.size());
-	for (auto&& git : tests_groups)
+	tests_groups.for_each([&](auto&& git) {
 		tgroups.emplace_back(std::move(git.second));
+	});
 
 	// Sort tests in groups
 	for (auto& group : tgroups)
@@ -325,7 +326,8 @@ void Simfile::loadTestsFiles() {
 	if (!tests_files.isSet())
 		throw std::runtime_error{"Simfile: missing tests_files array"};
 
-	map<StringView, pair<StringView, StringView>> files; // test => (in, out)
+	AVLDictMap<StringView, pair<StringView, StringView>> files; // test =>
+	                                                            // (in, out)
 	// StringView can be used because it will point to the config variable
 	// "tests_files" member, which becomes unchanged
 	for (const string& str : tests_files.asArray()) {
@@ -347,7 +349,7 @@ void Simfile::loadTestsFiles() {
 	for (TestGroup& group : tgroups)
 		for (Test& test : group.tests) {
 			auto it = files.find(test.name);
-			if (it == files.end())
+			if (not it)
 				throw std::runtime_error{concat_tostr("Simfile: no files"
 					" specified for the test `", test.name, '`')};
 

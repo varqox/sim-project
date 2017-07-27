@@ -109,7 +109,7 @@ class StringBuff;
 template<class T, size_t N =
 	string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2>
 constexpr inline auto toString(T x) noexcept ->
-	typename std::enable_if<std::is_integral<T>::value, StringBuff<N>>::type;
+	std::enable_if_t<std::is_integral<T>::value, StringBuff<N>>;
 
 template<class T>
 constexpr inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x))
@@ -184,8 +184,8 @@ public:
 	}
 
 	// Variadic constructor, it does not accept an integer as the first argument
-	template<class Arg1, class... Args, typename =
-		typename std::enable_if<!std::is_integral<Arg1>::value, void>::type>
+	template<class Arg1, class... Args,
+		typename = std::enable_if_t<!std::is_integral<Arg1>::value, void>>
 	StringBuff(Arg1&& arg1, Args&&... args) {
 		append(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
 	}
@@ -587,7 +587,7 @@ public:
 	}
 
 	constexpr size_type rfind(char c, size_type beg = 0) const noexcept {
-		for (size_type endi = len; endi > beg;)
+		for (size_type endi = len; endi > beg; )
 			if (str[--endi] == c)
 				return endi;
 
@@ -600,7 +600,7 @@ public:
 		if (endi > len)
 			endi = len;
 
-		for (; endi > beg;)
+		for (; endi > beg; )
 			if (str[--endi] == c)
 				return endi;
 
@@ -658,10 +658,12 @@ public:
 	StringView& operator=(const StringView& s) noexcept = default;
 	StringView& operator=(StringView&& s) noexcept = default;
 
-	constexpr StringView operator=(pointer p) { return operator=(StringView {p}); }
+	constexpr StringView operator=(pointer p) noexcept {
+		return operator=(StringView{p});
+	}
 
-	template<class T, class =
-		typename std::enable_if<std::is_rvalue_reference<T>::value>::type>
+	template<class T,
+		typename = std::enable_if_t<std::is_rvalue_reference<T>::value>>
 	StringView& operator=(T&& s) = delete; // Protect from assigning unsafe data
 
 	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
@@ -1200,7 +1202,7 @@ constexpr bool special_less(StringView a, StringView b, Func&& f) {
 		if (f(a[i]) != f(b[i]))
 			return f(a[i]) < f(b[i]);
 
-	return b.size() > len;
+	return (b.size() > len);
 }
 
 // Checks whether two StringView are equal, but before comparing two characters
@@ -1234,9 +1236,26 @@ struct StrNumCompare {
 	}
 };
 
+template<class Func>
+class SpecialStrCompare {
+	Func func;
+
+public:
+	SpecialStrCompare(Func f = {}) : func(std::move(f)) {}
+
+	template<class A, class B>
+	bool operator()(A&& a, B&& b) const {
+		return special_less(a, b, func);
+	}
+};
+
+struct LowerStrCompare : public SpecialStrCompare<int(*)(int)> {
+	LowerStrCompare() : SpecialStrCompare(tolower) {}
+};
+
 template<class T, size_t N>
 constexpr inline auto toString(T x) noexcept ->
-	typename std::enable_if<std::is_integral<T>::value, StringBuff<N>>::type
+	std::enable_if_t<std::is_integral<T>::value, StringBuff<N>>
 {
 	using RType = StringBuff<N>;
 	static_assert(N >=
@@ -1318,9 +1337,7 @@ constexpr inline auto stringify(unsigned long long x) noexcept ->
 
 // Converts T to std::string
 template<class T>
-typename std::enable_if<!std::is_integral<T>::value, std::string>::type
-	toString(T x)
-{
+std::enable_if_t<!std::is_integral<T>::value, std::string> toString(T x) {
 	if (x == T())
 		return std::string(1, '0');
 

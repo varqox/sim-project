@@ -1,8 +1,8 @@
 #pragma once
 
+#include "avl_dict.h"
 #include "string.h"
 
-#include <map>
 #include <vector>
 
 class ConfigFile {
@@ -63,8 +63,8 @@ public:
 		// before calling this function. If the errno != 0 after the call, then
 		// an error was encountered.
 		template<class Type>
-		typename std::enable_if<std::is_unsigned<Type>::value, Type>::type
-			asInt() const noexcept
+		std::enable_if_t<std::is_unsigned<Type>::value, Type> asInt() const
+			noexcept
 		{
 			Type x{};
 			if (strtou<Type>(s, x) != (int)s.size()) {
@@ -79,8 +79,8 @@ public:
 		// function. If the errno != 0 after the call, then an error was
 		// encountered.
 		template<class Type = int32_t>
-		typename std::enable_if<!std::is_unsigned<Type>::value, Type>::type
-			asInt() const noexcept
+		std::enable_if_t<!std::is_unsigned<Type>::value, Type> asInt() const
+			noexcept
 		{
 			Type x{};
 			if (strtoi<Type>(s, x) != (int)s.size()) {
@@ -103,7 +103,7 @@ public:
 	};
 
 private:
-	std::map<std::string, Variable> vars; // (name => value)
+	AVLDictMap<std::string, Variable> vars; // (name => value)
 	static const Variable null_var;
 
 public:
@@ -128,18 +128,16 @@ public:
 
 	// Returns a reference to a variable @p name from variable set or to a
 	// null_var
-	const Variable& getVar(const std::string& name) const noexcept {
-		// TODO: when map will be replaced with sth better use StringView as arg
+	const Variable& getVar(StringView name) const noexcept {
 		return (*this)[name];
 	}
 
-	const Variable& operator[](const std::string& name) const noexcept {
-		// TODO: when map will be replaced with sth better use StringView as arg
+	const Variable& operator[](StringView name) const noexcept {
 		auto it = vars.find(name);
-		return (it != vars.end() ? it->second : null_var);
+		return (it ? it->second : null_var);
 	}
 
-	const std::map<std::string, Variable>& getVars() const { return vars; }
+	const AVLDictMap<std::string, Variable>& getVars() const { return vars; }
 
 	 /**
 	 * @brief Loads config (variables) form file @p pathname

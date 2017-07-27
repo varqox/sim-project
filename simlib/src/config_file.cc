@@ -4,7 +4,6 @@
 #include "../include/parsers.h"
 #include "../include/utilities.h"
 
-using std::map;
 using std::string;
 using std::vector;
 
@@ -24,8 +23,9 @@ void ConfigFile::loadConfigFromFile(CStringView pathname, bool load_all) {
 
 void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	// Set all variables as unused
-	for (auto it : vars)
+	vars.for_each([](auto&& it) {
 		it.second.unset();
+	});
 
 	// Checks whether c is a white-space but not a newline
 	auto isWs = [](int c) { return (c != '\n' && isspace(c)); };
@@ -246,12 +246,13 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		buff.removeLeading(isWs);
 
 		/* Value */
-		Variable *varp;
+		Variable *varp; // It is safe to take a pointer to a value in vars, as
+		                // vars is not modified after that
 		if (load_all)
 			varp = &vars[name.to_string()];
 		else {
 			auto it = vars.find(name.to_string());
-			varp = (it == vars.end() ? &tmp : &it->second);
+			varp = (it ? &it->second : &tmp);
 		}
 		Variable& var = *varp;
 		if (var.isSet())

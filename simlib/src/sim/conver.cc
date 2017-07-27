@@ -5,12 +5,8 @@
 #include "../../include/utilities.h"
 #include "default_checker_dump.h"
 
-#include <set>
-
-using std::map;
 using std::pair;
 using std::runtime_error;
-using std::set;
 using std::string;
 using std::vector;
 
@@ -110,16 +106,13 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 	try { sf.loadSolutions(); } catch (...) {}
 	{
 		vector<std::string> solutions;
-		set<std::string> solutions_set; // Used to detect and eliminate
+		AVLDictSet<std::string> solutions_set; // Used to detect and eliminate
 		                                // solutions duplication
 		for (auto&& s : sf.solutions) {
-			if (dt->pathExists(s) &&
-				solutions_set.find(s) == solutions_set.end())
-			{
+			if (dt->pathExists(s) && not solutions_set.find(s)) {
 				solutions.emplace_back(s);
 				solutions_set.emplace(s);
-			}
-			else if (verbose_)
+			} else if (verbose_)
 				report_.append("Ignoring invalid solution: `", s, '`');
 		}
 
@@ -137,7 +130,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 
 		// Merge solutions
 		for (auto&& s : x)
-			if (solutions_set.emplace(s).second)
+			if (solutions_set.emplace(s))
 				solutions.emplace_back(s);
 
 		// Put the solutions into the Simfile
@@ -167,7 +160,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		auto outs = findFiles(dt.get(),
 			[](const string& file) { return hasSuffix(file, ".out"); });
 
-		map<string, string> in; // test name => path
+		AVLDictMap<string, string> in; // test name => path
 		for (auto&& s : ins) {
 			StringView name {s};
 			name.removeSuffix(3);
@@ -189,14 +182,14 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 				name_s.assign(name.begin(), name.end()); // Place in a string
 
 				auto it = in.find(name_s);
-				if (it == in.end()) // No matching .in file
+				if (not it) // No matching .in file
 					continue;
 
 				tests.emplace_back(std::move(it->first), 0, 0);
 				tests.back().in = std::move(it->second);
 				tests.back().out = std::move(s);
 				// Now *it is not valid, so it's better to remove it
-				in.erase(it);
+				in.erase(it->first);
 			}
 		}
 
@@ -223,7 +216,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		}
 
 		// There are no tests limits specified
-		map<string, Simfile::TestGroup, StrNumCompare> tg; // gid => test
+		AVLDictMap<string, Simfile::TestGroup, StrNumCompare> tg; // gid => test
 		for (auto&& t : tests) {
 			auto p = Simfile::TestNameComparator::split(t.name);
 			// tid == "ocen" belongs to the same group as tests with gid == "0"
@@ -234,9 +227,9 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		}
 
 		// Move tests groups from tg to sf.tgroups
-		int groups_no = tg.size() - (tg.find("0") != tg.end());
+		int groups_no = tg.size() - bool(tg.find("0"));
 		int total_score = 100;
-		for (auto&& git : tg) {
+		tg.for_each([&](auto&& git) {
 			// Take care of the scoring
 			StringView x = git.first;
 			x.removeLeading('0');
@@ -246,7 +239,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 				total_score -= (git.second.score = total_score / groups_no--);
 
 			sf.tgroups.emplace_back(std::move(git.second));
-		}
+		});
 
 		// Take care of the time limit
 		if (opts.global_time_limit == 0)
@@ -281,7 +274,7 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 
 	if (!run_time_limits_setting) {
 		normalize_time_limits(sf);
-		return {Status::COMPLETE, sf}; // Nothing more to do
+		return {Status::COMPLETE, std::move(sf)}; // Nothing more to do
 	}
 
 	/* The model solution's judge report is needed */
@@ -291,14 +284,14 @@ pair<Conver::Status, Simfile> Conver::constructSimfile(const Options& opts) {
 		for (auto&& t : g.tests)
 			t.time_limit = MODEL_SOL_TLIMIT;
 
-	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, sf};
+	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf)};
 }
 
 void Conver::finishConstructingSimfile(Simfile &sf, const JudgeReport &jrep1,
 	const JudgeReport &jrep2)
 {
 	// Map every test to its time limit
-	map<string, uint64_t> tls; // test name => time limit
+	AVLDictMap<string, uint64_t> tls; // test name => time limit
 	for (auto ptr : {&jrep1, &jrep2}) {
 		auto&& rep = *ptr;
 		for (auto&& g : rep.groups)
