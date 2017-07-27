@@ -305,7 +305,8 @@ void Contest::printRoundView(bool link_to_problem_statement, bool admin_view) {
 			stmt.setString(1, rpath->contest->id);
 
 			res = stmt.executeQuery();
-			std::map<string, vector<Problem>> problems; // (round_id, problems)
+			AVLDictMap<string, vector<Problem>> problems; // (round_id =>
+			                                              //  problems)
 
 			// Fill with all subrounds, which has begun <- for these rounds
 			// problems will be listed

@@ -113,7 +113,7 @@ void Sim::error_page_template(StringView status, StringView code,
 
 	auto prev = request.headers.get("Referer");
 	if (prev.empty())
-		prev = '/';
+		prev = "/";
 
 	page_template(status);
 	append("<center>"

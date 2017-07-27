@@ -6,7 +6,7 @@ namespace jobs {
 
 /// Append an integer @p x in binary format to the @p buff
 template<class Integer>
-inline typename std::enable_if<std::is_integral<Integer>::value, void>::type
+inline std::enable_if_t<std::is_integral<Integer>::value, void>
 	appendDumpedInt(std::string& buff, Integer x)
 {
 	buff.append(sizeof(x), '\0');
@@ -15,7 +15,7 @@ inline typename std::enable_if<std::is_integral<Integer>::value, void>::type
 }
 
 template<class Integer>
-inline typename std::enable_if<std::is_integral<Integer>::value, Integer>::type
+inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
 	extractDumpedInt(StringView& dumped_str)
 {
 	throw_assert(dumped_str.size() >= sizeof(Integer));
@@ -27,7 +27,7 @@ inline typename std::enable_if<std::is_integral<Integer>::value, Integer>::type
 }
 
 template<class Integer>
-inline typename std::enable_if<std::is_integral<Integer>::value, void>::type
+inline std::enable_if_t<std::is_integral<Integer>::value, void>
 	extractDumpedInt(Integer& x, StringView& dumped_str)
 {
 	x = extractDumpedInt<Integer>(dumped_str);

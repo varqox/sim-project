@@ -14,30 +14,30 @@ public:
 	public:
 		// files: name (this from form) => tmp_filename
 		// other: name => value; for file: name => client_filename
-		std::map<std::string, std::string> files, other;
+		AVLDictMap<std::string, std::string> files, other;
 
-		explicit operator std::map<std::string, std::string>&() {
+		explicit operator AVLDictMap<std::string, std::string>&() {
 			return other;
 		}
 
-		std::string& operator[](const std::string& key) { return other[key]; }
+		std::string& operator[](std::string key) {
+			return other[std::move(key)];
+		}
 
 		/// @brief Returns value of the variable @p name or empty string if such
 		/// does not exist
-		StringView get(const std::string& name) {
+		StringView get(StringView name) const noexcept {
 			auto it = other.find(name);
-			return (it == other.end() ? StringView{} : it->second);
+			return (it ? it->second : StringView{});
 		}
 
-		bool exist(const std::string& name) const {
-			return (other.find(name) != other.end());
-		}
+		bool exist(StringView name) const noexcept { return other.find(name); }
 
 		/// @brief Returns path of the uploaded file with the form's name
 		/// @p name or empty string if such does not exist
-		StringView file_path(const std::string& name) {
+		StringView file_path(StringView name) const noexcept {
 			auto it = files.find(name);
-			return (it == other.end() ? "" : it->second);
+			return (it ? it->second : StringView{});
 		}
 
 		Form() = default;
@@ -59,7 +59,7 @@ public:
 
 	~HttpRequest() {}
 
-	std::string getCookie(const std::string& name) const;
+	StringView getCookie(StringView name) const noexcept;
 };
 
 } // namespace server

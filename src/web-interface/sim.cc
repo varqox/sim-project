@@ -169,8 +169,8 @@ void Sim::static_file() {
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
 		struct tm client_mtime;
-		if (it != request.headers.end() && strptime(it->second.c_str(),
-			"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
+		if (it && strptime(it->second.c_str(),
+				"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
 			timegm(&client_mtime) >= attr.st_mtime)
 		{
 			resp.status_code = "304 Not Modified";

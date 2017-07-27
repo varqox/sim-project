@@ -1,11 +1,12 @@
 #pragma once
 
-#include <map>
-#include <simlib/string.h>
+#include <simlib/avl_dict.h>
 
 namespace server {
 
-class HttpHeaders final : public std::map<std::string, std::string> {
+class HttpHeaders final
+	: public AVLDictMap<std::string, std::string, LowerStrCompare>
+{
 public:
 	HttpHeaders() = default;
 
@@ -14,18 +15,18 @@ public:
 	HttpHeaders& operator=(const HttpHeaders&) = default;
 	HttpHeaders& operator=(HttpHeaders&&) noexcept = default;
 
-	std::string& operator[](const std::string& key) {
-		return std::map<std::string, std::string>::operator[](tolower(key));
+	std::string& operator[](std::string key) {
+		return AVLDictMap::operator[](std::move(key));
 	}
 
-	bool isEqualTo(StringView key, StringView val) const {
+	bool isEqualTo(StringView key, StringView val) const noexcept {
 		auto it = find(tolower(key.to_string()));
-		return (it != end() && it->second == val);
+		return (it and it->second == val);
 	}
 
-	std::string get(const std::string& key) const {
-		auto it = find(tolower(key));
-		return it == end() ? "" : it->second;
+	StringView get(StringView key) const noexcept {
+		auto it = find(key);
+		return (it ? it->second : StringView{});
 	}
 
 	~HttpHeaders() {}

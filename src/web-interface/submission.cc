@@ -210,7 +210,7 @@ void Contest::submit(bool admin_view) {
 			res = stmt.executeQuery();
 
 			// (round_id, problems)
-			std::map<string, vector<Problem> > problems_table;
+			AVLDictMap<string, vector<Problem> > problems_table;
 
 			// Fill problems with all subrounds
 			for (auto&& sr : subrounds)
