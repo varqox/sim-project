@@ -696,7 +696,7 @@ int main() {
 
 	// Bind
 	constexpr int TRIES = 8;
-	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
 		errlog("Failed to bind (try ", try_no, ')', error(errno));
 		if (++try_no > TRIES)
 			return 3;

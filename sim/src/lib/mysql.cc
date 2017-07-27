@@ -8,13 +8,13 @@ Connection makeConnWithCredFile(CStringView filename) {
 	cf.addVars("host", "user", "password", "db");
 	cf.loadConfigFromFile(filename);
 
-	for (auto it : cf.getVars()) {
+	cf.getVars().for_each([](auto&& it) {
 		if (it.second.isArray())
 			THROW("Simfile: variable `", it.first, "` cannot be specified as an"
 				" array");
 		if (not it.second.isSet())
 			THROW("Simfile: variable `", it.first, "` is not set");
-	}
+	});
 
 	// Connect
 	try {

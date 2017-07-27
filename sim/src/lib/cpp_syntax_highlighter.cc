@@ -208,8 +208,8 @@ constexpr array<meta::string, N> extract_keywords_from_append(
 }
 
 template<size_t N, size_t RES_N, size_t RES_END>
-constexpr typename std::enable_if<
-	RES_END >= RES_N, array<meta::string, RES_N>>::type
+constexpr std::enable_if_t<
+	RES_END >= RES_N, array<meta::string, RES_N>>
 	extract_keywords_from(const array<Word, N>&,
 	const array<meta::string, RES_N>& res = {}, size_t = 0)
 {
@@ -217,8 +217,8 @@ constexpr typename std::enable_if<
 }
 
 template<size_t N, size_t RES_N, size_t RES_END = 0>
-constexpr typename std::enable_if<
-	RES_END < RES_N, array<meta::string, RES_N>>::type
+constexpr std::enable_if_t<
+	RES_END < RES_N, array<meta::string, RES_N>>
 	extract_keywords_from(const array<Word, N>& arr,
 	const array<meta::string, RES_N>& res, size_t idx = 0)
 {
@@ -628,7 +628,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 		auto aho_res = aho.searchIn(substring(str, beg, endi));
 		// Handle last one to eliminate right boundary checks
-		for (int i = endi - 1; i >= beg;) {
+		for (int i = endi - 1; i >= beg; ) {
 			int k = aho.pattId(aho_res[i - beg]), j;
 
 			static_assert(BEGIN_GUARDS > 0, "");

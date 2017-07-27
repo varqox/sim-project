@@ -222,7 +222,7 @@ private:
 
 		auto const& form = request.form_data.other;
 		auto it = form.find(name);
-		if (it == form.end()) {
+		if (not it) {
 			form_validation_error = true;
 			addNotification("error", "Invalid ", htmlEscape(name_to_print));
 			return false;
@@ -270,7 +270,7 @@ private:
 
 		auto const& form = request.form_data.other;
 		auto it = form.find(name);
-		if (it == form.end()) {
+		if (not it) {
 			form_validation_error = true;
 			addNotification("error", "Invalid ", htmlEscape(name_to_print));
 			return false;
@@ -325,7 +325,7 @@ private:
 
 		auto const& form = request.form_data.files;
 		auto it = form.find(name);
-		if (it == form.end()) {
+		if (not it) {
 			form_validation_error = true;
 			addNotification("error", htmlEscape(name_to_print),
 				" has to be submitted as a file</pre>");

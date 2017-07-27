@@ -38,8 +38,8 @@ public:
 				"; must-revalidate; max-age=", max_age);
 	}
 
-	std::string getCookie(const std::string& name) {
-		std::string &cookie = cookies[name];
+	StringView getCookie(StringView name) const noexcept {
+		StringView cookie = cookies.get(name);
 		return cookie.substr(0, cookie.find(';'));
 	}
 };

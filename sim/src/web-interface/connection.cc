@@ -105,7 +105,7 @@ void Connection::readPOST(HttpRequest& req) {
 	LimitedReader reader(*this, content_length);
 
 	if (hasPrefix(con_type, "text/plain")) {
-		for (; c != -1;) {
+		for (; c != -1; ) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
@@ -131,7 +131,7 @@ void Connection::readPOST(HttpRequest& req) {
 		}
 
 	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
-		for (; c != -1;) {
+		for (; c != -1; ) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
@@ -185,7 +185,7 @@ void Connection::readPOST(HttpRequest& req) {
 		bool first_boundary = true;
 		k = 2; // Because "\r\n" may not exist at the beginning
 
-		// TODO: consider changing structure of while below
+		// TODO: consider changing structure of the while below
 		// While we can read
 		// In each loop pass parse EXACTLY one field
 		while ((c = reader.getChar()) != -1) {
@@ -681,26 +681,26 @@ void Connection::sendResponse(const HttpResponse& res) {
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
 
-	for (auto const& i : res.headers) {
+	res.headers.for_each([&](auto&& i) {
 		if (i.first == "server" || i.first == "connection" ||
 			i.first == "content-length")
 		{
-			continue;
+			return;
 		}
 
 		str += i.first;
 		str += ": ";
 		str += i.second;
 		str += "\r\n";
-	}
+	});
 
-	for (auto const& i : res.cookies) {
+	res.cookies.for_each([&](auto&& i) {
 		str += "Set-Cookie: ";
 		str += i.first;
 		str += '=';
 		str += i.second;
 		str += "\r\n";
-	}
+	});
 
 	D({
 		int pos = str.find('\r');
