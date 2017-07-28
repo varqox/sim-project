@@ -47,7 +47,7 @@ class AVLPoolAllocator {
 public:
 	struct AssertAllIsDeallocated {};
 
-	AVLPoolAllocator() : data {new Elem[1]}, capacity_ {1} { ptr(0) = 1; }
+	AVLPoolAllocator() : data(new Elem[1]), capacity_(1) { ptr(0) = 1; }
 
 	AVLPoolAllocator(const AVLPoolAllocator&) = delete;
 	AVLPoolAllocator& operator=(const AVLPoolAllocator&) = delete;
@@ -230,7 +230,7 @@ protected:
 
 public:
 	AVLDictionary(size_type reserve_n = 1, Comp cmp = {})
-		: pool {reserve_n}, compare {std::move(cmp)}
+		: pool(reserve_n), compare(std::move(cmp))
 	{
 		throw_assert(nil == 0);
 		pool[nil].kid[L] = nil;
@@ -238,7 +238,7 @@ public:
 		pool[nil].h = 0;
 	}
 
-	AVLDictionary(Comp cmp) : AVLDictionary {1, std::move(cmp)} {}
+	AVLDictionary(Comp cmp) : AVLDictionary(1, std::move(cmp)) {}
 
 	AVLDictionary(const AVLDictionary&) = delete;
 	AVLDictionary& operator=(const AVLDictionary&) = delete;
@@ -246,8 +246,8 @@ public:
 	// After moving out @p avld should be reinitialized (e.g. avld = {}), before
 	// using it in any way other than destructing
 	AVLDictionary(AVLDictionary&& avld) noexcept
-		: pool {std::move(avld.pool)}, nil {avld.nil}, root {avld.root},
-			size_ {avld.size_}, compare {std::move(avld.compare)}
+		: pool(std::move(avld.pool)), nil(avld.nil), root(avld.root),
+			size_(avld.size_), compare(std::move(avld.compare))
 	{
 		// Set avld to a clear state
 		avld.root = nil;
