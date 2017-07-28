@@ -2,6 +2,8 @@
 
 #include "debug.h"
 
+#include <vector>
+
 template<class size_type>
 struct AVLNodeBase {
 	static constexpr int L = 0; // left
