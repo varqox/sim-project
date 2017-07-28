@@ -6,15 +6,15 @@ DESTDIR = build
 all: build-info
 	@$(MAKE) src
 ifeq ($(MAKELEVEL), 0)
-	@echo -e "\033[32mBuild finished\033[0m"
+	@printf "\033[32mBuild finished\033[0m\n"
 endif
 
 .PHONY: build-info
 build-info:
 ifeq ($(MAKELEVEL), 0)
-	@echo -e "DEBUG: $(DEBUG)"
-	@echo -e "CC -> $(CC)"
-	@echo -e "CXX -> $(CXX)"
+	@echo "DEBUG: $(DEBUG)"
+	@echo "CC -> $(CC)"
+	@echo "CXX -> $(CXX)"
 endif
 
 .PHONY: src
@@ -23,7 +23,7 @@ src: build-info
 
 .PHONY: test
 test: test-sim test-simlib
-	@echo -e "\033[1;32mAll tests passed\033[0m"
+	@printf "\033[1;32mAll tests passed\033[0m\n"
 
 .PHONY: build-test
 build-test: build-test-sim build-test-simlib
@@ -52,7 +52,7 @@ importer: src
 install: $(filter-out install run, $(MAKECMDGOALS))
 	@ #   ^ install always have to be executed at the end (but before run)
 	# Echo log
-	@echo -e "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m"
+	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
 	# Installation
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
@@ -73,11 +73,11 @@ endif
 
 	# Set database pass
 	@bash -c 'if [ ! -e $(abspath $(DESTDIR)/.db.config) ]; then\
-			echo -e Type your MySQL username \(for SIM\):; read mysql_username;\
-			echo -e Type your password for $$mysql_username:; read -s mysql_password;\
-			echo -e Type your database which SIM will use:; read db_name;\
-			echo -e Type your user_host:; read user_host;\
-			echo -e "user: \"$$mysql_username\"\npassword: \"$$mysql_password\"\ndb: \"$$db_name\"\nhost: \"$$user_host\"" > $(abspath $(DESTDIR)/.db.config);\
+			echo Type your MySQL username \(for SIM\):; read mysql_username;\
+			echo Type your password for $$mysql_username:; read -s mysql_password;\
+			echo Type your database which SIM will use:; read db_name;\
+			echo Type your user_host:; read user_host;\
+			printf "user: \"$$mysql_username\"\npassword: \"$$mysql_password\"\ndb: \"$$db_name\"\nhost: \"$$user_host\"\n" > $(abspath $(DESTDIR)/.db.config);\
 		fi'
 
 	# Set up install
@@ -87,7 +87,7 @@ endif
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
 	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/job-server) $(abspath $(DESTDIR)/proot)
 
-	@echo -e "\033[;32mInstallation finished\033[0m"
+	@printf "\033[;32mInstallation finished\033[0m\n"
 
 .PHONY: reinstall
 reinstall: SETUP_INSTALL_FLAGS += --drop-tables
@@ -125,7 +125,7 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	$(abspath $(DESTDIR)/job-server)&
 	$(abspath $(DESTDIR)/sim-server)&
 	# $(abspath $(DESTDIR)/sim-server2)&
-	@echo -e "\033[;32mRunning finished\033[0m"
+	@printf "\033[;32mRunning finished\033[0m\n"
 
 .PHONY: clean
 clean:
@@ -135,4 +135,4 @@ clean:
 
 .PHONY: help
 help:
-	@echo -e "Nothing is here yet..."
+	@echo "Nothing is here yet..."

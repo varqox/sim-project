@@ -25,7 +25,7 @@ sim.a: mysql.o cpp_syntax_highlighter.o simlib.a
 	$(Q)$(call P,AR,$@)$(AR) cr $@ \
 		$(filter-out $(lastword $^), $^) # Do not append simlib.a to archive -
 		                                 # it has to be done in the other way
-	echo -e "OPEN sim.a\nADDLIB simlib.a\nSAVE\nEND" | $(AR) -M
+	printf "OPEN sim.a\nADDLIB simlib.a\nSAVE\nEND" | $(AR) -M
 
 sqlite3.c: sqlite/sqlite3.c
 
