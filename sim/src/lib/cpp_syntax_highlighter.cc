@@ -323,8 +323,12 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				/* Escape sequence */
 				begs[i++] = ESCAPED_CHARACTER;
 
-				// Octals and Hexadecimal
-				if (isdigit(str[i]) || str[i] == 'x')
+				// Octals
+				if (isdigit(str[i]))
+					i += (isdigit(str[i + 1]) ?
+						1 + bool(isdigit(str[i + 2])) : 0);
+				// Hexadecimal
+				else if (str[i] == 'x')
 					i += 2;
 				// Unicode U+nnnn
 				else if (str[i] == 'u')
@@ -333,7 +337,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				else if (str[i] == 'U')
 					i += 8;
 
-				// i has to point to the last character from escaped sequence
+				// i has to point to the last character of the escaped sequence
 				i = std::min(i + 1, end);
 				++ends[i];
 			}
