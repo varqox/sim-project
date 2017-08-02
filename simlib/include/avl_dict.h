@@ -713,6 +713,8 @@ public:
 	using AVLBase::empty;
 	using AVLBase::erase;
 
+	// TODO: alter_key() - change key without reallocating node and moving value
+
 	typename Node::Data* front() {
 		auto x = AVLBase::front();
 		return (x ? &x->data() : nullptr);
@@ -864,7 +866,8 @@ public:
 
 	template<class... Args>
 	AVLMapNode(Data data, Args&&... args)
-		: AVLNodeBase<size_type>{std::forward<Args>(args)...}, data_{data} {}
+		: AVLNodeBase<size_type>{std::forward<Args>(args)...},
+			data_{std::move(data)} {}
 
 	Data& data() noexcept { return data_; }
 
@@ -911,10 +914,31 @@ public:
 		return emplace(std::move(kvp));
 	}
 
-	Value& operator[](Key key) {
+	/// Return value - a pair of a pointer to pair (key, value) and a bool
+	/// denoting whether the insertion took place
+	std::pair<KeyValPair*, bool> insert(typename Node::Key key,
+		typename Node::Value val)
+	{
+		return insert({std::move(key), std::move(val)});
+	}
+
+	Value& operator[](const Key& key) {
 		auto new_node =
-			AVLBase::allocate_node(KeyValPair{std::move(key), {}}, nil,
-				nil, uint8_t{0});
+			AVLBase::allocate_node(KeyValPair{std::piecewise_construct,
+					std::forward_as_tuple(key), std::tuple<>()},
+				nil, nil, uint8_t{0});
+		auto x = AVLBase::insert_if_not_exists(new_node);
+		if (x != new_node)
+			AVLBase::deallocate_node(new_node);
+
+		return pool[x].value();
+	}
+
+	Value& operator[](Key&& key) {
+		auto new_node =
+			AVLBase::allocate_node(KeyValPair{std::piecewise_construct,
+					std::forward_as_tuple(std::move(key)), std::tuple<>()},
+				nil, nil, uint8_t{0});
 		auto x = AVLBase::insert_if_not_exists(new_node);
 		if (x != new_node)
 			AVLBase::deallocate_node(new_node);
@@ -952,4 +976,10 @@ public:
 
 	/// Return value - a pointer to pair (key, value)
 	KeyValPair* insert(KeyValPair kvp) { return emplace(std::move(kvp)); }
+
+
+	/// Return value - a pointer to pair (key, value)
+	KeyValPair* insert(typename Node::Key key, typename Node::Value val) {
+		return insert({std::move(key), std::move(val)});
+	}
 };

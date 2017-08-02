@@ -132,11 +132,8 @@ int8_t detectArchitecture(pid_t pid) {
 
 	// Read fourth byte and detect whether 32 or 64 bit
 	unsigned char c;
-	if (lseek(fd, 4, SEEK_SET) == (off_t)-1)
-		THROW("lseek()", error(errno));
-
-	if (read(fd, &c, 1) != 1)
-		THROW("read()", error(errno));
+	if (pread(fd, &c, 1, 4) != 1)
+		THROW("pread()", error(errno));
 
 	if (c == 1)
 		return ARCH_i386;

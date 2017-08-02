@@ -44,7 +44,8 @@ public:
 /**
  * @brief Obtains checker output (truncated if too long)
  *
- * @param fd file descriptor of file to which checker wrote via stdout
+ * @param fd file descriptor of file to which checker wrote via stdout. (The
+ *   file offset is not changed.)
  * @param max_length maximum length of the returned string
  *
  * @return checker output, truncated if too long

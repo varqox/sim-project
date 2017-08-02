@@ -26,15 +26,35 @@ private:
 
 	Result(const Result&) = delete;
 	Result& operator=(const Result&) = delete;
-	Result& operator=(Result&&) = delete;
 
 public:
-	Result(Result&& r) noexcept : res_ {r.res_}, row_ {r.row_} {
+	Result(Result&& r) noexcept : res_(r.res_), row_(r.row_),
+		lengths_(r.lengths_)
+	{
 		r.res_ = nullptr;
 		r.row_ = {};
+		// r.lengths_ does not have to be changed
 	}
 
-	~Result() { mysql_free_result(res_); }
+	Result& operator=(Result&& r) {
+		if (res_)
+			mysql_free_result(res_);
+
+		res_ = r.res_;
+		row_ = r.row_;
+		lengths_ = r.lengths_;
+
+		r.res_ = nullptr;
+		r.row_ = {};
+		// r.lengths_ does not have to be changed
+		return *this;
+	}
+
+
+	~Result() {
+		if (res_)
+			mysql_free_result(res_);
+	}
 
 	MYSQL_RES* impl() noexcept { return res_; }
 
@@ -54,7 +74,7 @@ public:
 
 	my_ulonglong rows_num() noexcept { return mysql_num_rows(res_); }
 
-	bool isNull(unsigned idx) ND(noexcept) {
+	bool is_null(unsigned idx) ND(noexcept) {
 		D(throw_assert(idx < fields_num());)
 		return (row_[idx] == nullptr);
 	}
@@ -389,7 +409,7 @@ public:
 		resFixBinds();
 	}
 
-	bool isNull(unsigned idx) ND(noexcept) {
+	bool is_null(unsigned idx) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
 		return *res_[idx].is_null;
 	}

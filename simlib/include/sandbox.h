@@ -584,11 +584,10 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 		THROW("open(/proc/{cpid}/statm)", error(errno));
 
 	auto get_vm_size = [&] {
-		(void)lseek(statm_fd, 0, SEEK_SET);
 		std::array<char, 32> buff;
-		ssize_t rc = read(statm_fd, buff.data(), buff.size() - 1);
+		ssize_t rc = pread(statm_fd, buff.data(), buff.size() - 1, 0);
 		if (rc <= 0)
-			THROW("read()", error(errno));
+			THROW("pread()", error(errno));
 
 		buff[rc] = '\0';
 

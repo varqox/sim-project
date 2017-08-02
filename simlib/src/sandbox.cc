@@ -37,14 +37,9 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 		goto null_path;
 	}
 
-	if (lseek64(fd, ARG1, SEEK_SET) == -1) {
-		errlog("Error: lseek64()", error(errno));
-		goto null_path;
-	}
-
-	len = read(fd, path, PATH_MAX - 1);
+	len = pread64(fd, path, PATH_MAX - 1, ARG1);
 	if (len == -1) {
-		errlog("Error: read()", error(errno));
+		errlog("Error: pread64()", error(errno));
 		goto null_path;
 	}
 
