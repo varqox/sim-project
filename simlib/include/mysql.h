@@ -5,6 +5,7 @@
 #include "utilities.h"
 
 #include <cstddef>
+#include <mutex>
 
 #if __has_include(<mysql.h>)
 #define SIMLIB_MYSQL_ENABLED 1
@@ -479,32 +480,41 @@ private:
 	};
 	static const Library init_;
 
-	MYSQL conn_;
+	MYSQL* conn_;
 
 	Connection(const Connection&) = delete;
 	Connection& operator=(const Connection&) = delete;
 
 public:
 	Connection() {
-		if (not mysql_init(&conn_))
-			THROW(mysql_error(&conn_));
+		static std::mutex mysql_protector;
+		mysql_protector.lock();
+		conn_ = mysql_init(nullptr);
+		mysql_protector.unlock();
+		if (not conn_)
+			THROW("mysql_init() failed - not enough memory is available");
 	}
+
+	void close() noexcept {
+		if (conn_)
+			mysql_close(conn_);
+	}
+
+	~Connection() { close(); }
 
 	Connection(Connection&& c) noexcept {
-		memcpy(&conn_, &c.conn_, sizeof(conn_));
-		c.conn_ = {};
+		conn_ = c.conn_;
+		c.conn_ = nullptr;
 	}
 
-	Connection& operator=(Connection&& c) {
+	Connection& operator=(Connection&& c) noexcept {
 		close();
-
-		memcpy(&conn_, &c.conn_, sizeof(conn_));
-		c.conn_ = {};
-
+		conn_ = c.conn_;
+		c.conn_ = nullptr;
 		return *this;
 	}
 
-	MYSQL* impl() noexcept { return &conn_; }
+	MYSQL* impl() noexcept { return conn_; }
 
 	operator MYSQL* () noexcept { return impl(); }
 
@@ -512,53 +522,49 @@ public:
 		CStringView db)
 	{
 		my_bool x = true;
-		mysql_options(&conn_, MYSQL_OPT_RECONNECT, &x);
-		mysql_options(&conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
+		mysql_options(conn_, MYSQL_OPT_RECONNECT, &x);
+		mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
-		if (not mysql_real_connect(&conn_, host.data(), user.data(),
+		if (not mysql_real_connect(conn_, host.data(), user.data(),
 			passwd.data(), db.data(), 0, nullptr, 0))
 		{
-			THROW(mysql_error(&conn_));
+			THROW(mysql_error(conn_));
 		}
 	}
 
 	Result query(StringView sql) {
-		if (mysql_real_query(&conn_, sql.data(), sql.size()))
-			THROW(mysql_error(&conn_));
+		if (mysql_real_query(conn_, sql.data(), sql.size()))
+			THROW(mysql_error(conn_));
 
-		MYSQL_RES* res = mysql_store_result(&conn_);
+		MYSQL_RES* res = mysql_store_result(conn_);
 		if (not res)
-			THROW(mysql_error(&conn_));
+			THROW(mysql_error(conn_));
 
 		return {res};
 	}
 
 	void update(StringView sql) {
-		if (mysql_real_query(&conn_, sql.data(), sql.size()))
-			THROW(mysql_error(&conn_));
+		if (mysql_real_query(conn_, sql.data(), sql.size()))
+			THROW(mysql_error(conn_));
 	}
 
 	template<size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
 	Statement<STATIC_BINDS, STATIC_RESULTS> prepare(StringView sql) {
-		MYSQL_STMT* stmt = mysql_stmt_init(&conn_);
+		MYSQL_STMT* stmt = mysql_stmt_init(conn_);
 		if (not stmt)
-			THROW(mysql_error(&conn_));
+			THROW(mysql_error(conn_));
 
 		if (mysql_stmt_prepare(stmt, sql.data(), sql.size())) {
 			auto close_stmt = [&] { mysql_stmt_close(stmt); };
 			CallInDtor<decltype(close_stmt)> closer {close_stmt};
 
-			THROW(mysql_error(&conn_));
+			THROW(mysql_error(conn_));
 		}
 
 		return {stmt};
 	}
 
-	my_ulonglong insert_id() noexcept { return mysql_insert_id(&conn_); }
-
-	void close() noexcept { mysql_close(&conn_); }
-
-	~Connection() { close(); }
+	my_ulonglong insert_id() noexcept { return mysql_insert_id(conn_); }
 };
 
 } // namespace MySQL
