@@ -127,8 +127,8 @@ void Contest::submit(bool admin_view) {
 						error(errno));
 
 				// Add a job to judge the submission
-				stmt = db_conn.prepare("INSERT job_queue (creator, type,"
-						" priority, status, added, aux_id, info, data)"
+				stmt = db_conn.prepare("INSERT jobs (creator, type, priority,"
+						" status, added, aux_id, info, data)"
 					" VALUES(?, " JQTYPE_VOID_STR ", ?, " JQSTATUS_PENDING_STR
 						", ?, ?, ?, '')");
 				stmt.setString(1, Session::user_id);
@@ -141,7 +141,7 @@ void Contest::submit(bool admin_view) {
 
 				// Activate the submission and the job (change type to a valid
 				// one)
-				stmt = db_conn.prepare("UPDATE submissions s, job_queue j"
+				stmt = db_conn.prepare("UPDATE submissions s, jobs j"
 					" SET s.type=?, j.type=" JQTYPE_JUDGE_SUBMISSION_STR
 					" WHERE s.id=? AND j.id=LAST_INSERT_ID()");
 				stmt.setUInt(1, static_cast<uint>(ignored_submission

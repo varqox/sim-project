@@ -10,7 +10,7 @@ using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
-extern MySQL::Connection db_conn;
+extern thread_local MySQL::Connection mysql;
 
 void judgeSubmission(StringView job_id, StringView submission_id,
 	StringView job_creation_time)
@@ -24,7 +24,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	};
 
 	// Gather the needed information about the submission
-	auto stmt = db_conn.prepare("SELECT s.owner, round_id, problem_id,"
+	auto stmt = mysql.prepare("SELECT s.owner, round_id, problem_id,"
 			" last_judgment, p.last_edit"
 		" FROM submissions s, problems p"
 		" WHERE p.id=problem_id AND s.id=?");
@@ -37,7 +37,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		// Cancel the job
 		stdlog_and_append_jreport("Canceled judging of the submission ",
 			submission_id, ", since there is no such submission.");
-		stmt = db_conn.prepare("UPDATE job_queue"
+		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_CANCELED_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 		return;
@@ -49,7 +49,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		// Skip the job - the submission has already been rejudged
 		stdlog_and_append_jreport("Skipped judging of the submission ",
 			submission_id);
-		stmt = db_conn.prepare("UPDATE job_queue"
+		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 		return;
@@ -83,7 +83,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		                  SubmissionStatus::CHECKER_COMPILATION_ERROR,
 		                  SubmissionStatus::JUDGE_ERROR}))
 		{
-			stmt = db_conn.prepare(
+			stmt = mysql.prepare(
 				// x.id - id of a submission which will have set
 				//   type=FINAL (latest with non-fatal status)
 				//   UNION with 0
@@ -119,7 +119,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 		// Normal status
 		} else {
-			stmt = db_conn.prepare(
+			stmt = mysql.prepare(
 				// x.id - id of a submission which will have set
 				//   type=FINAL (latest with non-fatal status)
 				//   UNION with 0
@@ -171,7 +171,7 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		stmt.fixBinds();
 		stmt.execute();
 
-		stmt = db_conn.prepare("UPDATE job_queue"
+		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 
@@ -441,7 +441,7 @@ void judgeModelSolution(StringView job_id, JobType original_job_type) {
 	report.append("Stage: Judging the model solution");
 
 	auto set_failure= [&] {
-		auto stmt = db_conn.prepare("UPDATE job_queue"
+		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=CONCAT(data,?)"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(report.str, job_id);
@@ -510,7 +510,7 @@ void judgeModelSolution(StringView job_id, JobType original_job_type) {
 	// Put the Simfile in the package
 	putFileContents(package_path.append("Simfile"), simfile.dump());
 
-	auto stmt = db_conn.prepare("UPDATE job_queue"
+	auto stmt = mysql.prepare("UPDATE jobs"
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 	stmt.bindAndExecute(uint(original_job_type), report.str, job_id);

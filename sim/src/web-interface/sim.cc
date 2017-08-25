@@ -317,8 +317,8 @@ void Sim::view_submission() {
 			}
 
 			// Add a job to judge the submission
-			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
-					" priority, type, added, aux_id, info, data)"
+			stmt = db_conn.prepare("INSERT jobs (creator, status, priority,"
+					" type, added, aux_id, info, data)"
 				"VALUES(?, " JQSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
 			stmt.setString(1, Session::user_id);
 			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));

@@ -295,8 +295,8 @@ void Problemset::addProblem() {
 				};
 
 				MySQL::Statement stmt {db_conn.prepare(
-					"INSERT job_queue (creator, priority, type, status, added,"
-						" info, data) "
+					"INSERT jobs (creator, priority, type, status, added, info,"
+						" data) "
 					"VALUES(?, ?, " JQTYPE_VOID_STR ", " JQSTATUS_PENDING_STR
 						", ?, ?, '')")};
 				stmt.setString(1, Session::user_id);
@@ -319,7 +319,7 @@ void Problemset::addProblem() {
 				}
 
 				// Activate the job
-				int rc = db_conn.executeUpdate("UPDATE job_queue SET type="
+				int rc = db_conn.executeUpdate("UPDATE jobs SET type="
 					JQTYPE_ADD_PROBLEM_STR " WHERE id=" + jobid);
 				if (1 != rc)
 					THROW("Failed to update");
@@ -579,8 +579,8 @@ void Problemset::reuploadProblem() {
 				};
 
 				MySQL::Statement stmt {db_conn.prepare(
-					"INSERT job_queue (creator, priority, type, status, added,"
-						" info, data, aux_id) "
+					"INSERT jobs (creator, priority, type, status, added, info,"
+						" data, aux_id) "
 					"VALUES(?, ?, " JQTYPE_VOID_STR ", " JQSTATUS_PENDING_STR
 						", ?, ?, '', ?)")};
 				stmt.setString(1, Session::user_id);
@@ -604,7 +604,7 @@ void Problemset::reuploadProblem() {
 				}
 
 				// Activate the job
-				int rc = db_conn.executeUpdate("UPDATE job_queue SET type="
+				int rc = db_conn.executeUpdate("UPDATE jobs SET type="
 					JQTYPE_REUPLOAD_PROBLEM_STR " WHERE id=" + jobid);
 				if (1 != rc)
 					THROW("Failed to update");
@@ -703,8 +703,8 @@ void Problemset::rejudgeProblemSubmissions() {
 		stmt.executeUpdate();
 
 		// Add jobs to rejudge the submissions
-		stmt = db_conn.prepare("INSERT job_queue (creator, status,"
-				" priority, type, added, aux_id, info, data)"
+		stmt = db_conn.prepare("INSERT jobs (creator, status, priority, type,"
+				" added, aux_id, info, data)"
 			"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
 			" FROM submissions WHERE problem_id=? ORDER BY id");
 		stmt.setString(1, Session::user_id);

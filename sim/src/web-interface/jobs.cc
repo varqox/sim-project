@@ -10,23 +10,25 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using JT = JobType;
+	using JS = JobStatus;
 
 	D(throw_assert(session_is_open);) // Session must be open to access jobs
 
-	JobPermissions perm = (isIn(job_type, { JT::ADD_PROBLEM,
+	JobPermissions perm = (isIn(job_type, {JT::ADD_PROBLEM,
 		JT::REUPLOAD_PROBLEM, JT::ADD_JUDGE_MODEL_SOLUTION,
 		JT::REUPLOAD_JUDGE_MODEL_SOLUTION})
 		? PERM::DOWNLOAD_REPORT | PERM::DOWNLOAD_UPLOADED_PACKAGE : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN) {
 		switch (job_status) {
-		case JobStatus::PENDING:
-		case JobStatus::IN_PROGRESS:
+		case JS::PENDING:
+		case JS::NOTICED_PENDING:
+		case JS::IN_PROGRESS:
 			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL |
 				PERM::CANCEL;
 
-		case JobStatus::FAILED:
-		case JobStatus::CANCELED:
+		case JS::FAILED:
+		case JS::CANCELED:
 			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL |
 				PERM::RESTART;
 
@@ -38,7 +40,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 	static_assert(uint(PERM::NONE) == 0, "Needed below");
 	if (session_user_id == creator_id)
 		return perm | PERM::VIEW | (isIn(job_status,
-			{JobStatus::PENDING, JobStatus::IN_PROGRESS}) ?
+			{JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS}) ?
 				PERM::CANCEL : PERM::NONE);
 
 	return PERM::NONE;

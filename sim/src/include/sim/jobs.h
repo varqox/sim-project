@@ -1,6 +1,8 @@
 #pragma once
 
-#include <simlib/string.h>
+#include <sim/constants.h>
+#include <simlib/mysql.h>
+#include <utime.h>
 
 namespace jobs {
 
@@ -55,6 +57,10 @@ inline std::string extractDumpedString(StringView& dumped_str) {
 	return dumped_str.extractPrefix(size).to_string();
 }
 
+inline std::string extractDumpedString(StringView&& dumped_str) {
+	return extractDumpedString(dumped_str);
+}
+
 struct AddProblemInfo {
 	std::string name, label;
 	uint64_t memory_limit = 0; // in bytes
@@ -105,5 +111,16 @@ struct AddProblemInfo {
 		return res;
 	}
 };
+
+void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
+	StringView job_info, bool notify_job_server);
+
+void restart_job(MySQL::Connection& mysql, StringView job_id,
+	bool notify_job_server);
+
+// Notifies the Job server that there are jobs to do
+inline void notify_job_server() noexcept {
+	utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
+}
 
 } // namespace jobs

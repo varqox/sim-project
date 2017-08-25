@@ -86,11 +86,11 @@ void work() {
 	conn.executeUpdate(concat("ALTER TABLE submissions AUTO_INCREMENT=",
 		data.size()));
 
-	// Update submissions' ids in job_queue
-	stdlog("Updating job_queue...");
-	res = conn.executeQuery("SELECT id, aux_id FROM job_queue WHERE type="
+	// Update submissions' ids in jobs
+	stdlog("Updating jobs...");
+	res = conn.executeQuery("SELECT id, aux_id FROM jobs WHERE type="
 		JQTYPE_JUDGE_SUBMISSION_STR);
-	auto stmt = conn.prepare("UPDATE job_queue SET aux_id=? WHERE id=?");
+	auto stmt = conn.prepare("UPDATE jobs SET aux_id=? WHERE id=?");
 	while (res.next()) {
 		stmt.setString(1, toStr(M[res[2]]).str);
 		stmt.setString(2, res[1]);

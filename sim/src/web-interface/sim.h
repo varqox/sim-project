@@ -48,11 +48,6 @@ private:
 		resp.content = response_body;
 	}
 
-	// Notifies the Job server that there are jobs to do
-	static void notify_job_server() noexcept {
-		utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
-	}
-
 	static std::string submission_status_as_td(SubmissionStatus status,
 		bool show_final);
 

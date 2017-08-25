@@ -16,8 +16,8 @@ using std::pair;
 using std::string;
 using std::vector;
 
-extern MySQL::Connection db_conn;
-extern SQLite::Connection sqlite_db;
+extern thread_local MySQL::Connection mysql;
+extern thread_local SQLite::Connection sqlite;
 
 namespace {
 
@@ -48,7 +48,7 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	report.append("Stage: FIRST");
 
 	auto set_failure = [&] {
-		auto stmt = db_conn.prepare("UPDATE job_queue"
+		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(report.str, job_id);
@@ -172,7 +172,7 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	switch (p.first) {
 	case sim::Conver::Status::COMPLETE: {
 		// Advance the job to the SECOND stage
-		auto stmt = db_conn.prepare("UPDATE job_queue"
+		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_PENDING_STR ", info=?, data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(info.dump(), report.str, job_id);
@@ -180,7 +180,7 @@ static void firstStage(StringView job_id, AddProblemInfo& info) {
 	}
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 		// Transform the job into a JUDGE_MODEL_SOLUTION job
-		auto stmt = db_conn.prepare("UPDATE job_queue"
+		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET type=?, status=" JSTATUS_PENDING_STR ", info=?, data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(uint(Trait::JUDGE_MODEL_SOLUTION), info.dump(),
@@ -229,7 +229,7 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 
 	// Add the problem to the database
 	string current_date = date();
-	auto stmt = db_conn.prepare(
+	auto stmt = mysql.prepare(
 		"INSERT problems (type, name, label, simfile, owner, added,"
 			" last_edit)"
 		" VALUES(" PTYPE_VOID_STR ", ?, ?, ?, ?, ?, ?)");
@@ -252,16 +252,16 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 		(void)remove(StringBuff<PATH_MAX>{"problems/", pid_str, ".zip"});
 
 		// Delete the problem and its submissions
-		stmt = db_conn.prepare("DELETE FROM problems WHERE id=?");
+		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 		stmt.bindAndExecute(problem_id);
 
-		stmt = db_conn.prepare("DELETE FROM submissions WHERE problem_id=?");
+		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");
 		stmt.bindAndExecute(problem_id);
 	};
 	CallInDtor<decltype(rollbacker)> rollback_maker {rollbacker};
 
 	// Insert the problem into the SQLite FTS5 table `problems`
-	SQLite::Statement sqlite_stmt {sqlite_db.prepare(
+	SQLite::Statement sqlite_stmt {sqlite.prepare(
 		"INSERT INTO problems (rowid, type, name, label)"
 		" VALUES(?, ?, ?, ?)")};
 	sqlite_stmt.bindInt64(1, problem_id);
@@ -307,7 +307,7 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 
 		current_date = date();
 		string zero_date = date("%Y-%m-%d %H:%M:%S", 0);
-		stmt = db_conn.prepare("INSERT submissions (owner, problem_id,"
+		stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 				" round_id, parent_round_id, contest_round_id, type,"
 				" status, submit_time, last_judgment, initial_report,"
 				" final_report)"
@@ -315,7 +315,7 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 				STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
 
 		stmt.bindAndExecute(problem_id, current_date, zero_date);
-		uint64_t submission_id = db_conn.insert_id();
+		uint64_t submission_id = mysql.insert_id();
 
 		// Make solution's source code the submission's source code
 		if (copy(StringBuff<PATH_MAX * 2>{package_dest, solution},
@@ -326,11 +326,11 @@ static uint64_t secondStage(StringView job_id, StringView job_owner,
 		}
 
 		// Create a job to judge the submission
-		stmt = db_conn.prepare("INSERT job_queue (creator, status,"
+		stmt = mysql.prepare("INSERT jobs (creator, status,"
 				" priority, type, added, aux_id, info, data)"
 			" VALUES(NULL, " JSTATUS_PENDING_STR ", ?, "
 				JTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
-		// Problem's solutions are more important than ordinary submissions
+		// Problem's solutions are more important than the ordinary submissions
 		stmt.bindAndExecute(priority(JobType::JUDGE_SUBMISSION) + 1,
 			current_date, submission_id, jobs::dumpString(toStr(problem_id)));
 	}
@@ -372,15 +372,15 @@ static void addProblem(StringView job_id, StringView job_owner,
 
 	case AddProblemInfo::SECOND: {
 		sim::Conver::ReportBuff report;
-		auto stmt = db_conn.prepare("UPDATE job_queue"
+		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=?, aux_id=?, data=CONCAT(data,?) WHERE id=?");
 		JobStatus status; // [[maybe_uninitilized]]
 		uint64_t apid; // Added problem's id
 		try {
-			sqlite_db.execute("BEGIN");
+			sqlite.execute("BEGIN");
 			apid = secondStage<Trait>(job_id, job_owner, info, report);
 			func(apid, report);
-			sqlite_db.execute("COMMIT");
+			sqlite.execute("COMMIT");
 
 			status = JobStatus::DONE;
 			if (std::is_same<Trait, AddTrait>::value)
@@ -390,7 +390,7 @@ static void addProblem(StringView job_id, StringView job_owner,
 
 		} catch (const std::exception& e) {
 			// To avoid exceptions C API is used
-			sqlite3_exec(sqlite_db, "ROLLBACK", nullptr, nullptr, nullptr);
+			sqlite3_exec(sqlite, "ROLLBACK", nullptr, nullptr, nullptr);
 
 			ERRLOG_CATCH(e);
 			report.append("Caught exception: ", e.what());
@@ -424,7 +424,7 @@ void addProblem(StringView job_id, StringView job_owner, StringView info) {
 			STACK_UNWINDING_MARK;
 
 			// Make the problem and its solutions' submissions public
-			auto stmt = db_conn.prepare("UPDATE problems p, submissions s"
+			auto stmt = mysql.prepare("UPDATE problems p, submissions s"
 				" SET p.type=?, s.type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE p.id=? AND s.problem_id=?");
 			stmt.bindAndExecute(uint(p_info.make_public ?
@@ -450,7 +450,7 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 
 			// Make a backup of the problem
 			vector<pair<bool, string>> pbackup;
-			auto stmt = db_conn.prepare("SELECT * FROM problems"
+			auto stmt = mysql.prepare("SELECT * FROM problems"
 				" WHERE id=?");
 			stmt.bindAndExecute(aux_id);
 			uint n = stmt.fields_num();
@@ -481,15 +481,14 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 						OWNER_IDX)->name});
 				p_info.previous_owner = strtoull(pbackup[OWNER_IDX].second);
 				// Commit the change to the database
-				stmt = db_conn.prepare(
-					"UPDATE job_queue SET info=? WHERE id=?");
+				stmt = mysql.prepare("UPDATE jobs SET info=? WHERE id=?");
 				stmt.bindAndExecute(p_info.dump(), job_id);
 			}
 
 			// Make a backup of the problem's solutions' submissions
 			vector<vector<pair<bool, string>>> sbackup;
 			string srestore_sql;
-			stmt = db_conn.prepare("SELECT * FROM submissions"
+			stmt = mysql.prepare("SELECT * FROM submissions"
 				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR " AND problem_id=?");
 			stmt.bindAndExecute(aux_id);
 			if (stmt.next()) {
@@ -544,11 +543,11 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 				}
 
 				// Delete the old problem
-				stmt = db_conn.prepare("DELETE FROM problems WHERE id=?");
+				stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 				stmt.bindAndExecute(aux_id);
 
 				// Replace the old problem with the new one
-				stmt = db_conn.prepare("UPDATE problems"
+				stmt = mysql.prepare("UPDATE problems"
 					" SET id=?, type=?, owner=? WHERE id=?");
 				uint ptype = uint(p_info.make_public ?
 					ProblemType::PUBLIC : ProblemType::PRIVATE);
@@ -573,20 +572,20 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 				}
 
 				// Replace the problem in the SQLite FTS5 table `problems`
-				SQLite::Statement sqlite_stmt {sqlite_db.prepare(
+				SQLite::Statement sqlite_stmt {sqlite.prepare(
 					"UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
 				sqlite_stmt.bindText(1, aux_id, SQLITE_STATIC);
 				sqlite_stmt.bindInt64(2, problem_id);
 				throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
 				// Delete the old problem's solutions' submissions
-				stmt = db_conn.prepare("DELETE FROM submissions"
+				stmt = mysql.prepare("DELETE FROM submissions"
 					" WHERE type=" STYPE_PROBLEM_SOLUTION_STR
 						" AND problem_id=?");
 				stmt.bindAndExecute(aux_id);
 
 				// Activate the new problem's solutions' submissions
-				stmt = db_conn.prepare("UPDATE submissions"
+				stmt = mysql.prepare("UPDATE submissions"
 					" SET problem_id=?, type=" STYPE_PROBLEM_SOLUTION_STR
 					" WHERE problem_id=?");
 				stmt.bindAndExecute(aux_id, problem_id);
@@ -603,7 +602,7 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 
 				// Restore the problem in the database
 				if (prestore_sql.size()) {
-					stmt = db_conn.prepare(prestore_sql);
+					stmt = mysql.prepare(prestore_sql);
 					for (uint i = 0; i < pbackup.size(); ++i) {
 						if (pbackup[i].first)
 							stmt.bind(i, nullptr);
@@ -615,7 +614,7 @@ void reuploadProblem(StringView job_id, StringView job_owner, StringView info,
 
 				// Restore problem's solutions' submissions in the database
 				if (srestore_sql.size()) {
-					stmt = db_conn.prepare(srestore_sql);
+					stmt = mysql.prepare(srestore_sql);
 					for (auto&& v : sbackup) {
 						for (uint i = 0; i < v.size(); ++i) {
 							if (v[i].first)
