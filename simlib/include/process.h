@@ -132,7 +132,7 @@ typedef SignalBlockerBase<pthread_sigmask> ThreadSignalBlocker;
 
 // Block all signals when function @p f is called
 template<class F, class... Args>
-auto blockSignals(F f, Args&&... args)
+auto blockSignals(F&& f, Args&&... args)
 	-> decltype(f(std::forward<Args>(args)...))
 {
 	SignalBlocker sb;
@@ -143,7 +143,7 @@ auto blockSignals(F f, Args&&... args)
 
 // Block all signals when function @p f is called
 template<class F, class... Args>
-auto threadBlockSignals(F f, Args&&... args)
+auto threadBlockSignals(F&& f, Args&&... args)
 	-> decltype(f(std::forward<Args>(args)...))
 {
 	ThreadSignalBlocker sb;

@@ -23,22 +23,27 @@ class AVLPoolAllocator {
 	static_assert(std::is_base_of<AVLNB, T>::value,
 		"T has to derive from AVLNodeBase");
 
-	using Elem = typename std::aligned_storage<
-		meta::max(sizeof(T), sizeof(size_type)),
-		meta::max(alignof(T), alignof(size_type))>::type;
+	union Elem {
+		size_type ptr;
+		T val;
+
+		Elem() {}
+		~Elem() {}
+	};
 
 	std::unique_ptr<Elem[]> data;
 	size_type capacity_ = 0;
 	size_type head = 0;
 
-	T& elem(size_type i) { return reinterpret_cast<T&>(data[i]); }
+	template<class Array>
+	static T& elem(Array& arr, size_type i) { return arr[i].val; }
 
-	const T& elem(size_type i) const { return reinterpret_cast<T&>(data[i]); }
+	T& elem(size_type i) { return elem(data, i); }
+
+	const T& elem(size_type i) const { return elem(data, i); }
 
 	template<class Array>
-	static size_type& ptr(Array& arr, size_type i) {
-		return reinterpret_cast<size_type&>(arr[i]);
-	}
+	static size_type& ptr(Array& arr, size_type i) { return arr[i].ptr; }
 
 	size_type& ptr(size_type i) { return ptr(data, i); }
 
@@ -94,7 +99,7 @@ public:
 		}
 
 		// All has been destructed, so we can proceed to moving the data
-		return move_assign(apa, AssertAllIsDeallocated{});
+		return move_assign(std::move(apa), AssertAllIsDeallocated{});
 	}
 
 	explicit AVLPoolAllocator(size_type reverve_size)
@@ -139,12 +144,12 @@ public:
 		// Find allocated nodes and move them to the new_data
 		// 0 element has to be moved in a different way
 		if (ptr(new_data, 0) == new_capacity)
-			new (&new_data[0])
+			new (&elem(new_data, 0))
 				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
 
 		for (size_type i = 1; i < capacity(); ++i)
 			if (ptr(new_data, i) == new_capacity) {
-				new (&new_data[i]) T{std::move(elem(i))};
+				new (&elem(new_data, i)) T{std::move(elem(i))};
 				elem(i).~T();
 			}
 
@@ -162,10 +167,10 @@ public:
 			std::unique_ptr<Elem[]> new_data {new Elem[new_capacity]};
 			// Initialize new data (move old and initialize new cells)
 			// 0 element has to be moved in a different way
-			new (&new_data[0])
+			new (&elem(new_data, 0))
 				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
 			for (size_type i = 1; i < capacity(); ++i) {
-				new (&new_data[i]) T(std::move(elem(i)));
+				new (&elem(new_data, i)) T(std::move(elem(i)));
 				elem(i).~T();
 			}
 
@@ -496,8 +501,8 @@ private:
 		// x cannot be taken by reference since allocation may move all the data
 		// in the pool causing these references to become invalid
 		if (x == nil) {
-			x = allocate_node(construct_node_data(key), nil, nil,
-				uint8_t{0});
+			x = allocate_node(construct_node_data(std::forward<T>(key)), nil,
+				nil, uint8_t{0});
 			return {x, x};
 		}
 
@@ -506,7 +511,8 @@ private:
 		if (not dir and not compare(key, pool[x].key()))
 			return {x, x};
 
-		auto p = emplace_if_not_exists_impl<T>(pool[x].kid[dir], key);
+		auto p = emplace_if_not_exists_impl<T>(pool[x].kid[dir],
+			std::forward<T>(key));
 		pool[x].kid[dir] = p.first; // As the pool may have changed this has to
 		                            // be done strictly after the recursive call
 		return {rebalance_and_seth(x), p.second};
@@ -527,8 +533,8 @@ protected:
 	/// Return value - emplaced node id if the insertion took place, or found
 	/// node id otherwise
 	size_type emplace_if_not_exists(typename Node::Key&& key) {
-		auto p =
-			emplace_if_not_exists_impl<typename Node::Key&&>(root, key);
+		auto p = emplace_if_not_exists_impl<typename Node::Key&&>(root,
+			std::move(key));
 		root = p.first; // As the pool may have changed this has to be done
 		                // strictly after the recursive call
 		return p.second;
@@ -965,24 +971,48 @@ public:
 	using RealData = std::pair<Key, Value>;
 	using Data = std::pair<const Key, Value>;
 
-	RealData data_;
+	union DataU {
+		RealData rdt;
+		Data dt;
+
+		static_assert(sizeof(rdt) == sizeof(dt), "Needed to cast between");
+
+		DataU(RealData&& rdata) : rdt(std::move(rdata)) {}
+
+		~DataU() { rdt.~RealData(); }
+
+	} data_;
 
 	template<class... Args>
-	AVLMapNode(RealData data, Args&&... args)
-		: AVLNodeBase<size_type>{std::forward<Args>(args)...},
-			data_{std::move(data)} {}
+	AVLMapNode(RealData rdata, Args&&... args)
+		: AVLNodeBase<size_type>(std::forward<Args>(args)...),
+			data_(std::move(rdata)) {}
 
-	Data& data() noexcept { return reinterpret_cast<Data&>(data_); }
+	AVLMapNode(const AVLMapNode&) = delete;
 
-	const Data& data() const noexcept {
-		return reinterpret_cast<const Data&>(data_);
+	AVLMapNode(AVLMapNode&& amn)
+		: AVLNodeBase<size_type>(std::move(amn)),
+			data_(std::move(amn.data_.rdt)) {}
+
+	AVLMapNode& operator=(const AVLMapNode&) = delete;
+
+	AVLMapNode& operator=(AVLMapNode&& amn) {
+		AVLNodeBase<size_type>::operator=(std::move(amn));
+		data_.rdt = std::move(amn.data_.rdt);
+		return *this;
 	}
 
-	const Key& key() const noexcept { return data_.first; }
+	RealData& real_data() noexcept { return data_.rdt; }
 
-	Value& value() noexcept { return data_.second; }
+	Data& data() noexcept { return data_.dt; }
 
-	const Value& value() const noexcept { return data_.second; }
+	const Data& data() const noexcept { return data_.dt; }
+
+	const Key& key() const noexcept { return data_.dt.first; }
+
+	Value& value() noexcept { return data_.dt.second; }
+
+	const Value& value() const noexcept { return data_.dt.second; }
 };
 
 template<class Key, class Value, class Comp = std::less<>,
@@ -1032,7 +1062,7 @@ public:
 	}
 
 	Value& operator[](Key&& key) {
-		return pool[AVLBase::emplace_if_not_exists(key)].value();
+		return pool[AVLBase::emplace_if_not_exists(std::move(key))].value();
 	}
 
 	/// Changes the key of an element with key @p old_key to a @p new_key
@@ -1044,7 +1074,7 @@ public:
 		if (x == nil)
 			return {false, false};
 
-		pool[x].data_.first = new_key;
+		pool[x].real_data().first = new_key;
 		return {true, not AVLBase::insert_or_replace(x).second};
 	}
 
@@ -1057,7 +1087,7 @@ public:
 		if (x == nil)
 			return {false, false};
 
-		pool[x].data_.first = new_key;
+		pool[x].real_data().first = std::move(new_key);
 		return {true, not AVLBase::insert_or_replace(x).second};
 	}
 };
@@ -1106,7 +1136,7 @@ public:
 		if (x == nil)
 			return false;
 
-		pool[x].data_.first = new_key;
+		pool[x].real_data().first = new_key;
 		AVLBase::insert(x);
 		return true;
 	}
@@ -1119,7 +1149,7 @@ public:
 		if (x == nil)
 			return false;
 
-		pool[x].data_.first = new_key;
+		pool[x].real_data().first = std::move(new_key);
 		AVLBase::insert(x);
 		return true;
 	}

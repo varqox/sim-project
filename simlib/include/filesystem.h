@@ -756,7 +756,7 @@ public:
 			: name_(std::move(new_name)), dirs_(), files_() {}
 
 	Node(const Node&) = delete;
-	Node(Node&& n) noexcept = default;
+	Node(Node&&) noexcept = default;
 	Node& operator=(const Node&) = delete;
 	Node& operator=(Node&&) = default;
 
@@ -841,7 +841,7 @@ std::vector<std::string> findFiles(directory_tree::Node* dir,
 		std::vector<std::string> res;
 
 		Helper(const UnaryPredicate& f, std::string&& pprefix) : func(f),
-			path(pprefix) {}
+			path(std::move(pprefix)) {}
 
 		void find(directory_tree::Node* d) {
 			// Files

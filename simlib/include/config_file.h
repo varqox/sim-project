@@ -15,13 +15,14 @@ public:
 
 		template<class... Args>
 		ParseError(size_t line, size_t pos, Args&&... msg)
-			: runtime_error(concat_tostr("line ", line, ':', pos, ": ", msg...))
+			: runtime_error(concat_tostr("line ", line, ':', pos, ": ",
+				std::forward<Args>(msg)...))
 		{}
 
 		ParseError(const ParseError& pe) = default;
-		ParseError(ParseError&& pe) /*noexcept*/ = default;
+		ParseError(ParseError&&) noexcept = default;
 		ParseError& operator=(const ParseError& pe) = default;
-		ParseError& operator=(ParseError&& pe) /*noexcept*/ = default;
+		ParseError& operator=(ParseError&&) /*noexcept*/ = default;
 
 		using runtime_error::what;
 

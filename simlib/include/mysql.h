@@ -29,11 +29,11 @@ private:
 	Result& operator=(const Result&) = delete;
 
 public:
-	Result(Result&& r) noexcept : res_(r.res_), row_(r.row_),
+	Result(Result&& r) noexcept : res_(r.res_), row_(std::move(r.row_)),
 		lengths_(r.lengths_)
 	{
 		r.res_ = nullptr;
-		r.row_ = {};
+		// r.row_ = {};
 		// r.lengths_ does not have to be changed
 	}
 
@@ -42,11 +42,11 @@ public:
 			mysql_free_result(res_);
 
 		res_ = r.res_;
-		row_ = r.row_;
+		row_ = std::move(r.row_);
 		lengths_ = r.lengths_;
 
 		r.res_ = nullptr;
-		r.row_ = {};
+		// r.row_ = {};
 		// r.lengths_ does not have to be changed
 		return *this;
 	}
@@ -507,10 +507,7 @@ public:
 			mysql_close(conn_);
 	}
 
-	Connection(Connection&& c) noexcept {
-		conn_ = c.conn_;
-		c.conn_ = nullptr;
-	}
+	Connection(Connection&& c) noexcept : conn_(c.conn_) { c.conn_ = nullptr; }
 
 	Connection& operator=(Connection&& c) noexcept {
 		close();

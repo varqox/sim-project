@@ -653,10 +653,10 @@ public:
 
 	constexpr StringView(std::nullptr_t) noexcept : StringView() {}
 
-	constexpr StringView(const StringView& s) noexcept = default;
-	constexpr StringView(StringView&& s) noexcept = default;
-	StringView& operator=(const StringView& s) noexcept = default;
-	StringView& operator=(StringView&& s) noexcept = default;
+	constexpr StringView(const StringView&) noexcept = default;
+	constexpr StringView(StringView&&) noexcept = default;
+	StringView& operator=(const StringView&) noexcept = default;
+	StringView& operator=(StringView&&) noexcept = default;
 
 	constexpr StringView operator=(pointer p) noexcept {
 		return operator=(StringView{p});
@@ -664,7 +664,7 @@ public:
 
 	template<class T,
 		typename = std::enable_if_t<std::is_rvalue_reference<T>::value>>
-	StringView& operator=(T&& s) = delete; // Protect from assigning unsafe data
+	StringView& operator=(T&&) = delete; // Protect from assigning unsafe data
 
 	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
 
@@ -1037,10 +1037,10 @@ protected:
 	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
 		: size(s), max_size_(max_s), p_(p) {}
 
-	constexpr InplaceBuffBase(const InplaceBuffBase&) = default;
-	constexpr InplaceBuffBase(InplaceBuffBase&&) = default;
-	InplaceBuffBase& operator=(const InplaceBuffBase&) = default;
-	InplaceBuffBase& operator=(InplaceBuffBase&&) = default;
+	constexpr InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
+	constexpr InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
+	InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;
+	InplaceBuffBase& operator=(InplaceBuffBase&&) noexcept = default;
 
 	bool is_allocated() const noexcept {
 		// This is not pretty but works...
@@ -1245,7 +1245,7 @@ public:
 
 	template<class A, class B>
 	bool operator()(A&& a, B&& b) const {
-		return special_less(a, b, func);
+		return special_less(std::forward<A>(a), std::forward<B>(b), func);
 	}
 };
 
