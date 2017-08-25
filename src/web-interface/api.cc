@@ -79,6 +79,9 @@ void Sim::api_logs() {
 	// Read the data
 	InplaceBuff<CHUNK_MAX_LEN> buff(len);
 	auto ret = readAll(fd, buff.data(), len);
+	// TODO: readAll() and writeAll() - support offset argument - p(write|read)
+	// TODO: getFileContents() - support offset argument - pread()
+	// TODO: putFileContents() - support offset argument - pwrite()
 	if (ret != len)
 		THROW("read()", error(errno));
 

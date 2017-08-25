@@ -1,9 +1,5 @@
 include ../Makefile.config
 
-MYSQL_CONFIG = $(shell which mariadb_config || which mysql_config)
-EXTRA_CXX_FLAGS += -I '$(shell pwd)/include' -isystem '$(shell pwd)/include/others' $(shell $(MYSQL_CONFIG) --include)
-EXTRA_LD_FLAGS += -L '$(shell pwd)/lib' -L '$(shell pwd)/lib/others' $(shell $(MYSQL_CONFIG) --libs)
-
 .PHONY: all
 all: lib killinstc setup-installation backup web-interface Job-server
 

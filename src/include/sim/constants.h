@@ -198,10 +198,11 @@ constexpr inline bool is_special(SubmissionStatus status) {
 
 enum class JobStatus : uint8_t {
 	PENDING = 1,
-	IN_PROGRESS = 2,
-	DONE = 3,
-	FAILED = 4,
-	CANCELED = 5
+	NOTICED_PENDING = 2,
+	IN_PROGRESS = 3,
+	DONE = 4,
+	FAILED = 5,
+	CANCELED = 6
 };
 
 #define JSTATUS_PENDING_STR "1"
@@ -209,20 +210,25 @@ static_assert(meta::equal(JSTATUS_PENDING_STR,
 	meta::ToString<(int)JobStatus::PENDING>::value),
 	"Update the above #define");
 
-#define JSTATUS_IN_PROGRESS_STR "2"
+#define JSTATUS_NOTICED_PENDING_STR "2"
+static_assert(meta::equal(JSTATUS_NOTICED_PENDING_STR,
+	meta::ToString<(int)JobStatus::NOTICED_PENDING>::value),
+	"Update the above #define");
+
+#define JSTATUS_IN_PROGRESS_STR "3"
 static_assert(meta::equal(JSTATUS_IN_PROGRESS_STR,
 	meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
 	"Update the above #define");
 
-#define JSTATUS_DONE_STR "3"
+#define JSTATUS_DONE_STR "4"
 static_assert(meta::equal(JSTATUS_DONE_STR,
 	meta::ToString<(int)JobStatus::DONE>::value), "Update the above #define");
 
-#define JSTATUS_FAILED_STR "4"
+#define JSTATUS_FAILED_STR "5"
 static_assert(meta::equal(JSTATUS_FAILED_STR,
 	meta::ToString<(int)JobStatus::FAILED>::value), "Update the above #define");
 
-#define JSTATUS_CANCELED_STR "5"
+#define JSTATUS_CANCELED_STR "6"
 static_assert(meta::equal(JSTATUS_CANCELED_STR,
 	meta::ToString<(int)JobStatus::CANCELED>::value),
 	"Update the above #define");
@@ -230,6 +236,7 @@ static_assert(meta::equal(JSTATUS_CANCELED_STR,
 constexpr inline const char* toString(JobStatus x) {
 	switch (x) {
 	case JobStatus::PENDING: return "Pending";
+	case JobStatus::NOTICED_PENDING: return "Pending";
 	case JobStatus::IN_PROGRESS: return "In progress";
 	case JobStatus::DONE: return "Done";
 	case JobStatus::FAILED: return "Failed";

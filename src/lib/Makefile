@@ -6,8 +6,8 @@ all: sim.a simlib.a gtest_main.a sqlite3.a
 $(eval $(call dependencies))
 
 .PHONY: simlib
-simlib: override EXTRA_CXX_FLAGS = $(EXTERNAL_EXTRA_LD_FLAGS)
-simlib: override EXTRA_LD_FLAGS = $(EXTERNAL_EXTRA_CXX_FLAGS)
+simlib: override EXTRA_CXX_FLAGS = $(EXTERNAL_EXTRA_CXX_FLAGS)
+simlib: override EXTRA_LD_FLAGS = $(EXTERNAL_EXTRA_LD_FLAGS)
 simlib: FORCE
 	$(Q)$(MAKE) -C simlib/
 
@@ -18,7 +18,7 @@ simlib.a: simlib
 gtest_main.a: simlib
 	$(Q)ln -s simlib/$@ $@ 2>&1 | true
 
-sim.a: mysql.o cpp_syntax_highlighter.o simlib.a
+sim.a: mysql.o jobs.o cpp_syntax_highlighter.o simlib.a
 	$(RM) $@ # Delete archive because if it has already existed then it will
 	         # contain simlib, but ADDLIB does not replace existing ones so
 	         # after appending simlib.a it will result in duplications

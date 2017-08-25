@@ -84,7 +84,7 @@ int main() {
 	// stdlog like everything writes to stderr, so redirect stdout and stderr to
 	// the log file
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
-		freopen(SERVER_LOG, "a", stderr) == nullptr)
+		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
 	{
 		errlog("Failed to open `", SERVER_LOG, '`', error(errno));
 	}
@@ -152,7 +152,7 @@ int main() {
 		return 8;
 	}
 
-	stdlog("Server launch:\n"
+	stdlog("\n=================== Server launched ===================\n"
 		"PID: ", getpid(), "\n"
 		"workers: ", workers, "\n"
 		"address: ", address.data(), ':', port);

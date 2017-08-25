@@ -120,7 +120,7 @@ void Sim::api_submissions() {
 							cond, " - no such round was found"));
 
 					if (c_owner == session_user_id or
-						(not stmt.isNull(1) and
+						(not stmt.is_null(1) and
 							cu_mode == (uint)CUM::MODERATOR))
 					{
 						allow_access = true;
@@ -166,11 +166,11 @@ void Sim::api_submissions() {
 		StringView sid = res[0];
 		SubmissionType stype = SubmissionType(strtoull(res[1]));
 		StringView sowner = res[2];
-		StringView c_owner = (res.isNull(3) ? "" : res[3]);
+		StringView c_owner = (res.is_null(3) ? "" : res[3]);
 		StringView cu_mode = res[4];
 
 		SubmissionPermissions perms = submission_get_permissions(sowner, stype,
-			c_owner, (res.isNull(4) ? CUM::IS_NULL : CUM(strtoull(cu_mode))));
+			c_owner, (res.is_null(4) ? CUM::IS_NULL : CUM(strtoull(cu_mode))));
 
 		if (perms == PERM::NONE)
 			return api_error403();
@@ -185,7 +185,7 @@ void Sim::api_submissions() {
 		StringView pr_name = res[11];
 		bool reveal_score = (res[12] != "0");
 		bool show_full_results = (bool(uint(perms & PERM::VIEW_FULL_REPORT)) or
-			res.isNull(13) or res[13] <= date());
+			res.is_null(13) or res[13] <= date());
 		StringView c_id = res[14];
 		StringView c_name = res[15];
 		StringView submit_time = res[16];
@@ -205,25 +205,25 @@ void Sim::api_submissions() {
 		}
 
 		// Onwer's id
-		if (res.isNull(2))
+		if (res.is_null(2))
 			append("null,");
 		else
 			append(sowner, ',');
 
 		// Onwer's username
-		if (res.isNull(5))
+		if (res.is_null(5))
 			append("null,");
 		else
 			append("\"", sowner_username, "\",");
 
 		// Problem
-		if (res.isNull(6))
+		if (res.is_null(6))
 			append("null,null,");
 		else
 			append(p_id, ',', jsonStringify(p_name), ',');
 
 		// Rounds
-		if (res.isNull(8))
+		if (res.is_null(8))
 			append("null,null,null,null,null,null,");
 		else {
 			append(r_id, ',',
@@ -286,7 +286,7 @@ void Sim::api_submissions() {
 		}
 
 		// Score
-		if (not res.isNull(18) and (show_full_results or reveal_score))
+		if (not res.is_null(18) and (show_full_results or reveal_score))
 			append(score, ',');
 		else
 			append("null,");
@@ -310,7 +310,7 @@ void Sim::api_submissions() {
 		// Append
 		if (select_one) {
 			// User first and last name
-			if (res.isNull(19))
+			if (res.is_null(19))
 				append(",null,null");
 			else
 				append(',', jsonStringify(res[19]), ',',
@@ -360,8 +360,8 @@ void Sim::api_submission() {
 		return api_error404();
 
 	submission_perms = submission_get_permissions(sowner, SubmissionType(stype),
-		(stmt.isNull(1) ? StringView{} : c_owner),
-		(stmt.isNull(2) ? CUM::IS_NULL : CUM(cu_mode)));
+		(stmt.is_null(1) ? StringView{} : c_owner),
+		(stmt.is_null(2) ? CUM::IS_NULL : CUM(cu_mode)));
 
 	// Subpages
 	next_arg = url_args.extractNextArg();
@@ -421,14 +421,14 @@ void Sim::api_submission_rejudge() {
 	stmt.res_bind_all(problem_id);
 	throw_assert(stmt.next());
 
-	stmt = mysql.prepare("INSERT job_queue (creator, status, priority,"
-			" type, added, aux_id, info, data)"
+	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
+			" aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
 		(uint)JobType::JUDGE_SUBMISSION, date(), submission_id,
 		jobs::dumpString(problem_id));
 
-	notify_job_server();
+	jobs::notify_job_server();
 }
 
 void Sim::api_submission_change_type() {
@@ -461,7 +461,7 @@ void Sim::api_submission_change_type() {
 
 	SS status = SS(strtoull(res[0]));
 	StringView owner = res[1];
-	StringView round_id = (res.isNull(2) ? "" : res[2]);
+	StringView round_id = (res.is_null(2) ? "" : res[2]);
 
 	// Cannot be FINAL
 	if (is_special(status)) {
@@ -503,6 +503,6 @@ void Sim::api_submission_delete() {
 
 	mysql.update(concat("DELETE FROM submissions WHERE id=", submission_id));
 
-	if (not res.isNull(1))
+	if (not res.is_null(1))
 		submission::update_final(mysql, res[0], res[1], false);
 }

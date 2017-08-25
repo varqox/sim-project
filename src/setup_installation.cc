@@ -65,7 +65,7 @@ static void parseOptions(int &argc, char **argv) {
 constexpr array<meta::string, 9> tables {{
 	{"contests_users"},
 	{"files"},
-	{"job_queue"},
+	{"jobs"},
 	{"problems"},
 	{"problems_tags"},
 	{"rounds"},
@@ -287,8 +287,8 @@ int main(int argc, char **argv) {
 			"KEY (final_candidate, owner, round_id, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-	try_to_create_table("job_queue",
-		concat("CREATE TABLE IF NOT EXISTS `job_queue` ("
+	try_to_create_table("jobs",
+		concat("CREATE TABLE IF NOT EXISTS `jobs` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`creator` int unsigned NULL,"
 			"`type` TINYINT NOT NULL,"

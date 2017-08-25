@@ -780,8 +780,8 @@ void Contest::editProblem() {
 			stmt.executeUpdate();
 
 			// Add jobs to rejudge the submissions from that round
-			stmt = db_conn.prepare("INSERT job_queue (creator, status,"
-					" priority, type, added, aux_id, info, data)"
+			stmt = db_conn.prepare("INSERT jobs (creator, status, priority,"
+					" type, added, aux_id, info, data)"
 				"SELECT ?, " JQSTATUS_PENDING_STR ", ?, ?, ?, id, ?, ''"
 				" FROM submissions WHERE round_id=? ORDER BY id");
 			stmt.setString(1, Session::user_id);

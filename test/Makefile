@@ -1,7 +1,5 @@
 include ../Makefile.config
 
-EXTRA_CXX_FLAGS += -I '$(shell pwd)/../src/include' -isystem '$(shell pwd)/../src/include/others' -pthread
-
 .PHONY: run
 run: cth-run exec-run
 

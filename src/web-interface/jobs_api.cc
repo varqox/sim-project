@@ -33,7 +33,7 @@ void Sim::api_jobs() {
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
 			" j.info, j.creator, u.username");
-	qwhere.append(" FROM job_queue j LEFT JOIN users u ON creator=u.id"
+	qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id"
 		" WHERE j.type!=" JTYPE_VOID_STR);
 
 	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
@@ -141,6 +141,7 @@ void Sim::api_jobs() {
 		// Status: (CSS class, text)
 		switch (job_status) {
 		case JobStatus::PENDING: append("[\"\",\"Pending\"],"); break;
+		case JobStatus::NOTICED_PENDING: append("[\"\",\"Pending\"],"); break;
 		case JobStatus::IN_PROGRESS: append("[\"yellow\",\"In progress\"],");
 			break;
 		case JobStatus::DONE: append("[\"green\",\"Done\"],"); break;
@@ -151,13 +152,13 @@ void Sim::api_jobs() {
 		append(res[4], ','); // priority
 
 		// Creator
-		if (res.isNull(7))
+		if (res.is_null(7))
 			append("null,");
 		else
 			append(res[7], ','); // creator
 
 		// Username
-		if (res.isNull(8))
+		if (res.is_null(8))
 			append("null,");
 		else
 			append("\"", res[8], "\","); // username
@@ -168,8 +169,7 @@ void Sim::api_jobs() {
 
 		switch (job_type) {
 		case JobType::JUDGE_SUBMISSION: {
-			StringView info {res[6]};
-			append("\"problem\":", jobs::extractDumpedString(info));
+			append("\"problem\":", jobs::extractDumpedString(res[6]));
 			append(",\"submission\":", res[5]); // aux_id
 			break;
 		}
@@ -197,7 +197,7 @@ void Sim::api_jobs() {
 				",\"ignore simfile\":", info.ignore_simfile ?
 					"\"yes\"" : "\"no\"");
 
-			if (not res.isNull(5)) {
+			if (not res.is_null(5)) {
 				// aux_id
 				append(",\"problem\":", res[5]);
 				actions.append('p'); // View problem
@@ -258,8 +258,8 @@ void Sim::api_job() {
 	InplaceBuff<256> jinfo;
 	uint jtype, jstatus;
 
-	auto stmt = mysql.prepare("SELECT creator, type, status, info"
-		" FROM job_queue WHERE id=?");
+	auto stmt = mysql.prepare("SELECT creator, type, status, info FROM jobs"
+		" WHERE id=?");
 	stmt.bindAndExecute(jobs_job_id);
 	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
 	if (not stmt.next())
@@ -295,15 +295,14 @@ void Sim::api_job_cancel() {
 	}
 
 	// Cancel job
-	auto stmt = mysql.prepare("UPDATE job_queue"
-		" SET status=" JSTATUS_CANCELED_STR " WHERE id=?");
+	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
+		" WHERE id=?");
 	stmt.bindAndExecute(jobs_job_id);
 }
 
 void Sim::api_job_restart(JobType job_type, StringView job_info) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
-	using JT = JobType;
 
 	if (request.method != server::HttpRequest::POST)
 		return api_error400();
@@ -314,33 +313,7 @@ void Sim::api_job_restart(JobType job_type, StringView job_info) {
 		return api_error403();
 	}
 
-	/* Restart job */
-
-	// Restart adding / reuploading problem
-	bool adding = isIn(job_type,
-		{JT::ADD_PROBLEM, JT::ADD_JUDGE_MODEL_SOLUTION});
-	bool reupload = isIn(job_type,
-		{JT::REUPLOAD_PROBLEM, JT::REUPLOAD_JUDGE_MODEL_SOLUTION});
-
-	if (adding or reupload) {
-		jobs::AddProblemInfo info {job_info};
-		info.stage = jobs::AddProblemInfo::FIRST;
-
-		auto stmt = mysql.prepare("UPDATE job_queue"
-			" SET type=?, status=" JSTATUS_PENDING_STR ", info=? WHERE id=?");
-
-		stmt.bindAndExecute(
-			uint(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM),
-			info.dump(), jobs_job_id);
-
-	// Restart job of other type
-	} else {
-		auto stmt = mysql.prepare("UPDATE job_queue"
-			" SET status=" JSTATUS_PENDING_STR " WHERE id=?");
-		stmt.bindAndExecute(jobs_job_id);
-	}
-
-	notify_job_server();
+	jobs::restart_job(mysql, jobs_job_id, job_type, job_info, true);
 }
 
 void Sim::api_job_download_report() {
@@ -356,7 +329,7 @@ void Sim::api_job_download_report() {
 		concat_tostr("attachment; filename=job-", jobs_job_id, "-report");
 
 	// Fetch the report
-	auto stmt = mysql.prepare("SELECT data FROM job_queue WHERE id=?");
+	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
 	stmt.bindAndExecute(jobs_job_id);
 	stmt.res_bind_all(resp.content);
 	throw_assert(stmt.next());
