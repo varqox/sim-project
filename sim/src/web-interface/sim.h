@@ -557,11 +557,8 @@ private:
 		explicit RoundPath(std::string rid) : round_id(std::move(rid)) {}
 
 		RoundPath(const RoundPath&) = delete;
-
 		RoundPath(RoundPath&&) = default;
-
 		RoundPath& operator=(const RoundPath&) = delete;
-
 		RoundPath& operator=(RoundPath&&) = default;
 
 		// void swap(RoundPath& rp) {

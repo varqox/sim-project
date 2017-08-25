@@ -819,6 +819,7 @@ static void eventsLoop() noexcept {
 	}
 }
 
+#if 0
 static void processJobQueue() noexcept {
 	// While job queue is not empty
 	for (;;) try {
@@ -887,6 +888,7 @@ static void processJobQueue() noexcept {
 		usleep(3e6);
 	}
 }
+#endif
 
 // Clean up database
 static void cleanUpDBs() {

@@ -15,7 +15,7 @@ pair<int, string> spawn(Args&&... args) {
 	FileDescriptor output {openUnlinkedTmpFile()};
 	throw_assert(output >= 0);
 
-	vector<string> argv { args... };
+	vector<string> argv { std::forward<Args>(args)... };
 	Spawner::ExitStat es = Spawner::run(argv[0], argv, {-1, output, 2});
 
 	(void)lseek(output, 0, SEEK_SET);

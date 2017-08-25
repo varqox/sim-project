@@ -58,7 +58,8 @@ inline std::string extractDumpedString(StringView& dumped_str) {
 }
 
 inline std::string extractDumpedString(StringView&& dumped_str) {
-	return extractDumpedString(dumped_str);
+	return extractDumpedString(dumped_str); /* std::move() is intentionally
+		omitted in order to call the above implementation */
 }
 
 struct AddProblemInfo {
