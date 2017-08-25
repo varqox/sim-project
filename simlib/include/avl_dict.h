@@ -901,7 +901,8 @@ public:
 
 	template<class... Args>
 	AVLSetNode(Key key, Args&&... args)
-		: AVLNodeBase<size_type>{std::forward<Args>(args)...}, key_{key} {}
+		: AVLNodeBase<size_type>{std::forward<Args>(args)...},
+			key_(std::move(key)) {}
 
 	Key& key() const noexcept { return key_; }
 
@@ -923,7 +924,7 @@ public:
 	template<class... Args>
 	bool emplace(Args&&... args) {
 		auto new_node =
-			AVLBase::allocate_node(Value{std::forward<Args>(args)...}, nil, nil,
+			AVLBase::allocate_node(Value(std::forward<Args>(args)...), nil, nil,
 				uint8_t{0});
 		auto x = AVLBase::insert_if_not_exists(new_node);
 		if (x != new_node) {
