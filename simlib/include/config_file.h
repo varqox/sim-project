@@ -20,7 +20,7 @@ public:
 		{}
 
 		ParseError(const ParseError& pe) = default;
-		ParseError(ParseError&&) noexcept = default;
+		ParseError(ParseError&&) /*noexcept*/ = default;
 		ParseError& operator=(const ParseError& pe) = default;
 		ParseError& operator=(ParseError&&) /*noexcept*/ = default;
 
