@@ -176,11 +176,8 @@ public:
 	Job() = default;
 
 	Job(const Job&) = delete;
-
 	Job(Job&&) = delete;
-
 	Job& operator=(const Job&) = delete;
-
 	Job& operator=(Job&&) = delete;
 
 	~Job() {};
