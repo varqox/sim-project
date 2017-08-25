@@ -138,7 +138,7 @@ public:
 
 				// Other job
 				case JT::ADD_PROBLEM:
-					other_jobs.emplace(jid, priority);
+					other_jobs.insert({jid, priority});
 					break;
 
 				case JT::VOID:
