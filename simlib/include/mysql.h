@@ -496,11 +496,16 @@ public:
 	}
 
 	void close() noexcept {
+		if (conn_) {
+			mysql_close(conn_);
+			conn_ = nullptr;
+		}
+	}
+
+	~Connection() {
 		if (conn_)
 			mysql_close(conn_);
 	}
-
-	~Connection() { close(); }
 
 	Connection(Connection&& c) noexcept {
 		conn_ = c.conn_;

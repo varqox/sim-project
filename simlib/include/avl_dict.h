@@ -165,7 +165,7 @@ public:
 			new (&new_data[0])
 				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
 			for (size_type i = 1; i < capacity(); ++i) {
-				new (&new_data[i]) T{std::move(elem(i))};
+				new (&new_data[i]) T(std::move(elem(i)));
 				elem(i).~T();
 			}
 
@@ -414,7 +414,7 @@ public:
 	}
 
 	template<class T, class FuncNodeToRetVal>
-	typename std::result_of<FuncNodeToRetVal(Node&)>::type find(const T& key,
+	std::result_of_t<FuncNodeToRetVal(Node&)> find(const T& key,
 		FuncNodeToRetVal&& to_ret_val = {})
 	{
 		for (size_type x = root; x != nil; ) {
@@ -429,8 +429,8 @@ public:
 	}
 
 	template<class T, class FuncNodeToRetVal>
-	typename std::result_of<FuncNodeToRetVal(const Node&)>::type find(
-		const T& key, FuncNodeToRetVal&& to_ret_val = {}) const
+	std::result_of_t<FuncNodeToRetVal(const Node&)> find(const T& key,
+		FuncNodeToRetVal&& to_ret_val = {}) const
 	{
 		for (size_type x = root; x != nil; ) {
 			bool dir = compare(pool[x].key(), key);
@@ -469,6 +469,69 @@ protected:
 		auto res = insert_if_not_exists(pool[x].kid[dir], inserted);
 		x = rebalance_and_seth(x);
 		return res;
+	}
+
+private:
+	template<class Key, class NData = typename Node::RealData>
+	static constexpr std::enable_if_t<is_pair<NData>::value, NData>
+		construct_node_data(Key&& key)
+	{
+		return {std::piecewise_construct,
+			std::forward_as_tuple(std::forward<Key>(key)), std::tuple<>()};
+	}
+
+	template<class Key, class NData = typename Node::RealData>
+	static constexpr std::enable_if_t<!is_pair<NData>::value, NData>
+		construct_node_data(Key&& key)
+	{
+		return {std::forward<Key>(key)};
+	}
+
+	/// Return value - what to replace x with and emplaced node id if the
+	/// insertion took place, or found node id otherwise
+	template<class T>
+	std::pair<size_type, size_type> emplace_if_not_exists_impl(size_type x,
+		T key)
+	{
+		// x cannot be taken by reference since allocation may move all the data
+		// in the pool causing these references to become invalid
+		if (x == nil) {
+			x = allocate_node(construct_node_data(key), nil, nil,
+				uint8_t{0});
+			return {x, x};
+		}
+
+		int dir = compare(pool[x].key(), key);
+		// if we have just found a duplicate
+		if (not dir and not compare(key, pool[x].key()))
+			return {x, x};
+
+		auto p = emplace_if_not_exists_impl<T>(pool[x].kid[dir], key);
+		pool[x].kid[dir] = p.first; // As the pool may have changed this has to
+		                            // be done strictly after the recursive call
+		return {rebalance_and_seth(x), p.second};
+	}
+
+protected:
+	/// Return value - emplaced node id if the insertion took place, or found
+	/// node id otherwise
+	size_type emplace_if_not_exists(const typename Node::Key& key)
+	{
+		auto p =
+			emplace_if_not_exists_impl<const typename Node::Key&>(root, key);
+		root = p.first; // As the pool may have changed this has to be done
+		                // strictly after the recursive call
+		return p.second;
+	}
+
+	/// Return value - emplaced node id if the insertion took place, or found
+	/// node id otherwise
+	size_type emplace_if_not_exists(typename Node::Key&& key) {
+		auto p =
+			emplace_if_not_exists_impl<typename Node::Key&&>(root, key);
+		root = p.first; // As the pool may have changed this has to be done
+		                // strictly after the recursive call
+		return p.second;
 	}
 
 	/// Return value - a bool denoting whether the insertion took place
@@ -557,24 +620,27 @@ public:
 		return res;
 	}
 
-	/// Return value - a bool denoting whether the erasing took place
-	bool erase(size_type& x, const typename Node::Key& k) {
+protected:
+	template<class FuncIdxToRetVal>
+	std::result_of_t<FuncIdxToRetVal(size_type)> erase_impl(size_type& x,
+		const typename Node::Key& k, FuncIdxToRetVal&& to_ret_val = {})
+	{
 		if (x == nil)
-			return false;
+			return to_ret_val();
 
 		bool dir = compare(pool[x].key(), k);
 		if (not dir and not compare(k, pool[x].key())) {
 			if (pool[x].kid[L] == nil) {
-				size_type res = pool[x].kid[R];
+				size_type new_x = pool[x].kid[R];
 
-				deallocate_node(x);
+				auto res = to_ret_val(x);
 
-				if (res != nil)
-					x = rebalance_and_seth(res);
+				if (new_x != nil)
+					x = rebalance_and_seth(new_x);
 				else
-					x = res;
+					x = new_x;
 
-				return true;
+				return res;
 
 			} else {
 				auto x_left = pool[x].kid[L];
@@ -583,16 +649,53 @@ public:
 				pool[pulled].kid[L] = x_left;
 				pool[pulled].kid[R] = pool[x].kid[R];
 
-				deallocate_node(x);
+				auto res = to_ret_val(x);
 
 				x = rebalance_and_seth(pulled);
-				return true;
+				return res;
 			}
 		}
 
-		bool res = erase(pool[x].kid[dir], k);
+		auto res = erase_impl(pool[x].kid[dir], k, to_ret_val); /* Intentionally
+			without std::move() to avoid unnecessary move constructing of the
+			to_ret_val, as it will be taken by reference from now on */
 		x = rebalance_and_seth(x);
 		return res;
+	}
+
+public:
+	/// Return value - a bool denoting whether the erasing took place
+	bool erase(size_type& x, const typename Node::Key& k) {
+		using AVLD = decltype(*this);
+		struct SemiLambda {
+			AVLD& avld_;
+			SemiLambda(AVLD& avld) : avld_(avld) {}
+
+			bool operator()() const noexcept { return false; }
+
+			bool operator()(size_type node) const noexcept {
+				avld_.deallocate_node(node);
+				return true;
+			}
+		};
+
+		return erase_impl(x, k, SemiLambda(*this));
+	}
+
+	/// Return value - a node id of pulled out node or nil if no such node was
+	/// found
+	size_type pull_out(size_type& x, const typename Node::Key& k) {
+		using AVLD = decltype(*this);
+		struct SemiLambda {
+			AVLD& avld_;
+			SemiLambda(AVLD& avld) : avld_(avld) {}
+
+			size_type operator()() const noexcept { return avld_.nil; }
+
+			size_type operator()(size_type node) const noexcept { return node; }
+		};
+
+		return erase_impl(x, k, SemiLambda(*this));
 	}
 
 	/// Return value - a bool denoting whether the erasing took place
@@ -713,8 +816,6 @@ public:
 	using AVLBase::empty;
 	using AVLBase::erase;
 
-	// TODO: alter_key() - change key without reallocating node and moving value
-
 	typename Node::Data* front() {
 		auto x = AVLBase::front();
 		return (x ? &x->data() : nullptr);
@@ -787,6 +888,7 @@ class AVLSetNode : public AVLNodeBase<size_type> {
 public:
 	using Key = const ValueT;
 	using Value = Key;
+	using RealData = Key;
 	using Data = Key;
 
 	const Key key_;
@@ -860,18 +962,21 @@ class AVLMapNode : public AVLNodeBase<size_type> {
 public:
 	using Key = KeyT;
 	using Value = ValueT;
+	using RealData = std::pair<Key, Value>;
 	using Data = std::pair<const Key, Value>;
 
-	Data data_;
+	RealData data_;
 
 	template<class... Args>
-	AVLMapNode(Data data, Args&&... args)
+	AVLMapNode(RealData data, Args&&... args)
 		: AVLNodeBase<size_type>{std::forward<Args>(args)...},
 			data_{std::move(data)} {}
 
-	Data& data() noexcept { return data_; }
+	Data& data() noexcept { return reinterpret_cast<Data&>(data_); }
 
-	const Data& data() const noexcept { return data_; }
+	const Data& data() const noexcept {
+		return reinterpret_cast<const Data&>(data_);
+	}
 
 	const Key& key() const noexcept { return data_.first; }
 
@@ -923,27 +1028,37 @@ public:
 	}
 
 	Value& operator[](const Key& key) {
-		auto new_node =
-			AVLBase::allocate_node(KeyValPair{std::piecewise_construct,
-					std::forward_as_tuple(key), std::tuple<>()},
-				nil, nil, uint8_t{0});
-		auto x = AVLBase::insert_if_not_exists(new_node);
-		if (x != new_node)
-			AVLBase::deallocate_node(new_node);
-
-		return pool[x].value();
+		return pool[AVLBase::emplace_if_not_exists(key)].value();
 	}
 
 	Value& operator[](Key&& key) {
-		auto new_node =
-			AVLBase::allocate_node(KeyValPair{std::piecewise_construct,
-					std::forward_as_tuple(std::move(key)), std::tuple<>()},
-				nil, nil, uint8_t{0});
-		auto x = AVLBase::insert_if_not_exists(new_node);
-		if (x != new_node)
-			AVLBase::deallocate_node(new_node);
+		return pool[AVLBase::emplace_if_not_exists(key)].value();
+	}
 
-		return pool[x].value();
+	/// Changes the key of an element with key @p old_key to a @p new_key
+	/// without moving any data. Replaces other element with a @p new_key if
+	/// necessary. Return value: a pair of bools denoting accordingly: whether
+	/// the key change took place and whether some element was replaced.
+	std::pair<bool, bool> alter_key(const Key& old_key, const Key& new_key) {
+		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
+		if (x == nil)
+			return {false, false};
+
+		pool[x].data_.first = new_key;
+		return {true, not AVLBase::insert_or_replace(x).second};
+	}
+
+	/// Changes the key of an element with key @p old_key to a @p new_key
+	/// without moving any data. Replaces other element with a @p new_key if
+	/// necessary. Return value: a pair of bools denoting accordingly: whether
+	/// the key change took place and whether some element was replaced.
+	std::pair<bool, bool> alter_key(const Key& old_key, Key&& new_key) {
+		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
+		if (x == nil)
+			return {false, false};
+
+		pool[x].data_.first = new_key;
+		return {true, not AVLBase::insert_or_replace(x).second};
 	}
 };
 
@@ -981,5 +1096,31 @@ public:
 	/// Return value - a pointer to pair (key, value)
 	KeyValPair* insert(typename Node::Key key, typename Node::Value val) {
 		return insert({std::move(key), std::move(val)});
+	}
+
+	/// Changes the key of an element with key @p old_key to a @p new_key
+	/// without moving any data. Return value: a bool denoting whether the key
+	/// change took place.
+	bool alter_key(const Key& old_key, const Key& new_key) {
+		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
+		if (x == nil)
+			return false;
+
+		pool[x].data_.first = new_key;
+		AVLBase::insert(x);
+		return true;
+	}
+
+	/// Changes the key of an element with key @p old_key to a @p new_key
+	/// without moving any data. Return value: a bool denoting whether the key
+	/// change took place.
+	bool alter_key(const Key& old_key, Key&& new_key) {
+		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
+		if (x == nil)
+			return false;
+
+		pool[x].data_.first = new_key;
+		AVLBase::insert(x);
+		return true;
 	}
 };
