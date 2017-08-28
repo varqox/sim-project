@@ -494,7 +494,7 @@ TEST (Simfile, loadTestsWithFiles) {
 			"tests_files: [\n"
 			"\tfoo0 in/foo0.in out/foo0.out\n"
 			"\tfoo1a foo1a.in foo1a.out\n"
-			"\tfoo1b suspicious/path/1 suspicious/path\n"
+			"\tfoo1b suspicious/path/1 suspicious/path/\n"
 			"\tfoo2 path/3 path/4\n"
 			"]\n"
 		) << "iteration: " << i;

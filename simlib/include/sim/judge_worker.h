@@ -159,26 +159,27 @@ public:
 	int compileChecker(timespec time_limit, std::string* c_errors = nullptr,
 		size_t c_errors_max_len = -1)
 	{
-		return compile(pkg_root + sf.checker,
-			concat_tostr(tmp_dir.path(), CHECKER_FILENAME), verbose, time_limit,
-			c_errors, c_errors_max_len);
+		return compile(concat(pkg_root, sf.checker).to_cstr(),
+			concat(tmp_dir.path(), CHECKER_FILENAME).to_cstr(), verbose,
+			time_limit, c_errors, c_errors_max_len);
 	}
 
 	/// Compiles checker (using sim::compile())
 	int compileChecker(timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
-		return compile(pkg_root + sf.checker,
-			concat_tostr(tmp_dir.path(), CHECKER_FILENAME), verbose, time_limit,
-			c_errors, c_errors_max_len, proot_path);
+		return compile(concat(pkg_root, sf.checker).to_cstr(),
+			concat(tmp_dir.path(), CHECKER_FILENAME).to_cstr(), verbose,
+			time_limit, c_errors, c_errors_max_len, proot_path);
 	}
 
 	/// Compiles solution (using sim::compile())
 	int compileSolution(CStringView source, timespec time_limit,
 		std::string* c_errors = nullptr, size_t c_errors_max_len = -1)
 	{
-		return compile(source, concat_tostr(tmp_dir.path(), SOLUTION_FILENAME),
-			verbose, time_limit, c_errors, c_errors_max_len);
+		return compile(source,
+			concat(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(), verbose,
+			time_limit, c_errors, c_errors_max_len);
 	}
 
 	/// Compiles solution (using sim::compile())
@@ -186,8 +187,9 @@ public:
 		std::string* c_errors, size_t c_errors_max_len,
 		const std::string& proot_path)
 	{
-		return compile(source, concat_tostr(tmp_dir.path(), SOLUTION_FILENAME),
-			verbose, time_limit, c_errors, c_errors_max_len, proot_path);
+		return compile(source,
+			concat(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(), verbose,
+			time_limit, c_errors, c_errors_max_len, proot_path);
 	}
 
 	/**

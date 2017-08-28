@@ -390,8 +390,7 @@ size_t readAll(int fd, void *buf, size_t count) noexcept {
 	return count;
 }
 
-size_t writeAll(int fd, const void *buf, size_t count) noexcept
-{
+size_t writeAll(int fd, const void *buf, size_t count) noexcept {
 	ssize_t k;
 	size_t pos = 0;
 	const uint8_t *buff = static_cast<const uint8_t*>(buf);
@@ -419,6 +418,8 @@ string abspath(StringView path, size_t beg, size_t end, string curr_dir) {
 	// path begins with '/'
 	if (beg < end && path[beg] == '/')
 		curr_dir = '/';
+	else if (curr_dir.size() && curr_dir.back() != '/')
+		curr_dir += '/';
 
 	while (beg < end) {
 		while (beg < end && path[beg] == '/')
@@ -429,6 +430,9 @@ string abspath(StringView path, size_t beg, size_t end, string curr_dir) {
 		// If [beg, next_slash) == "."
 		if (next_slash - beg == 1 && path[beg] == '.') {
 			beg = next_slash;
+			// Append '/' as current location is a directory
+			if (curr_dir.size() && curr_dir.back() != '/')
+				curr_dir += '/';
 			continue;
 
 		// If [beg, next_slash) == ".."
@@ -436,23 +440,20 @@ string abspath(StringView path, size_t beg, size_t end, string curr_dir) {
 			path[beg + 1] == '.')
 		{
 			// Erase last path component
-			size_t new_size = curr_dir.size();
+			size_t new_size = curr_dir.size() - (curr_dir.size() > 1);
 
 			while (new_size > 0 && curr_dir[new_size - 1] != '/')
 				--new_size;
-			// If updated curr_dir != "/" erase trailing '/'
-			if (new_size > 1)
-				--new_size;
+			// Keep trailing '/'
 			curr_dir.resize(new_size);
 
 			beg = next_slash;
 			continue;
 		}
 
-		if (curr_dir.size() && curr_dir.back() != '/')
-			curr_dir += '/';
-
-		curr_dir.append(path.begin() + beg, path.begin() + next_slash);
+		curr_dir.append(path.begin() + beg,
+			path.begin() + next_slash + (next_slash < end)); /* last component
+				ensures '/' is appended if it is in the path */
 		beg = next_slash;
 	}
 
@@ -467,8 +468,11 @@ string getFileContents(int fd, size_t bytes) {
 		// Interrupted by signal
 		if (len < 0 && errno == EINTR)
 			continue;
-		// EOF or error
-		if (len <= 0)
+		// Error
+		if (len < 0)
+			THROW("read() failed", error(errno));
+		// EOF
+		if (len == 0)
 			break;
 
 		bytes -= len;
@@ -483,7 +487,9 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 	off64_t size = lseek64(fd, 0, SEEK_END);
 	if (beg < 0)
 		beg = std::max<off64_t>(size + beg, 0);
-	if (size == (off64_t)-1 || beg > size)
+	if (size == (off64_t)-1)
+		THROW("lseek64() failed", error(errno));
+	if (beg > size)
 		return "";
 
 	// Change end to the valid value
@@ -494,7 +500,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 		end = beg;
 	// Reposition to beg
 	if (beg != lseek64(fd, beg, SEEK_SET))
-		return "";
+		THROW("lseek64() failed", error(errno));
 
 	off64_t bytes_left = end - beg;
 	string res;
@@ -504,8 +510,11 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 		// Interrupted by signal
 		if (len < 0 && errno == EINTR)
 			continue;
-		// EOF or error
-		if (len <= 0)
+		// Error
+		if (len < 0)
+			THROW("read() failed", error(errno));
+		// EOF
+		if (len == 0)
 			break;
 
 		bytes_left -= len;
@@ -570,16 +579,16 @@ vector<string> getFileByLines(CStringView file, int flags, size_t first,
 	return res;
 }
 
-ssize_t putFileContents(CStringView file, const char* data, size_t len) noexcept
-{
+void putFileContents(CStringView file, const char* data, size_t len) {
 	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, S_0644};
 	if (fd == -1)
-		return -1;
+		THROW("open() failed", error(errno));
 
 	if (len == size_t(-1))
 		len = __builtin_strlen(data);
 
-	return writeAll(fd, data, len);
+	if (writeAll(fd, data, len) != len)
+		THROW("write() failed", error(errno));
 }
 
 string humanizeFileSize(uint64_t size) {

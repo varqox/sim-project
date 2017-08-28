@@ -17,7 +17,7 @@ int compile(CStringView source, CStringView exec, unsigned verbosity,
 	}
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
-	if (copy(source, concat_tostr(tmp_dir.name(), "a.cpp")))
+	if (copy(source, concat(tmp_dir.name(), "a.cpp").to_cstr()))
 		THROW("Failed to copy source file", error(errno));
 
 	if (verbosity > 1)
@@ -75,7 +75,7 @@ int compile(CStringView source, CStringView exec, unsigned verbosity,
 		*c_errors = "";
 
 	// Move exec
-	if (move(concat_tostr(tmp_dir.name(), "exec"), exec, false))
+	if (move(concat(tmp_dir.name(), "exec").to_cstr(), exec, false))
 		THROW("Failed to move exec", error(errno));
 
 	return 0;

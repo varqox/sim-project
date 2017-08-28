@@ -1,9 +1,9 @@
 #pragma once
 
 #include "debug.h"
+#include "filesystem.h"
 #include "string.h"
 #include "utilities.h"
-#include "filesystem.h"
 
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
 
@@ -47,6 +47,18 @@ void skim_archive(CStringView filename, Func&& setup_archive,
 
 		entry_callback(entry);
 	}
+}
+/**
+ * @brief Runs @p entry_callback on every archive @p filename's entry
+ *
+ * @param filename path of the zip archive
+ * @param entry_callback function to call on every entry, should take one
+ *   argument - archive_entry*
+ */
+template<class UnaryFunc>
+void skim_zip(CStringView filename, UnaryFunc&& entry_callback) {
+	return skim_archive(filename, archive_read_support_format_zip,
+		std::forward<UnaryFunc>(entry_callback));
 }
 
 /**
@@ -121,6 +133,75 @@ void extract(CStringView filename, int flags,
 	}
 }
 
+/**
+ * @brief Extract @p pathname from the archive @p archive_file
+ *
+ * @param archive_file path of the archive
+ * @param setup_archive function to run before reading the archive, should take
+ *   archive* as the argument, most useful to set the accepted archive formats
+ * @param pathname path of the file (the one in archive) to extracted
+ */
+template<class Func>
+std::string extract_file(CStringView archive_file, Func&& setup_archive,
+	StringView pathname)
+{
+	struct archive* in = archive_read_new();
+	throw_assert(in);
+	auto in_guard = make_call_in_destructor([&] { archive_read_free(in); });
+
+	setup_archive(in);
+
+	FileDescriptor fd {archive_file, O_RDONLY | O_LARGEFILE};
+	if (fd == -1)
+		THROW("Failed to open file `", archive_file, '`', error(errno));
+
+	if (archive_read_open_fd(in, fd, 1 << 18))
+		THROW("archive_read_open_fd() - ", archive_error_string(in));
+
+	// Read contents
+	for (;;) {
+		struct archive_entry *entry;
+		int r = archive_read_next_header(in, &entry);
+		if (r == ARCHIVE_EOF)
+			break;
+		if (r)
+			THROW("archive_read_next_header() - ", archive_error_string(in));
+
+		if (archive_entry_pathname(entry) != pathname)
+			continue;
+
+		std::string res(archive_entry_size(entry), '\0');
+		if (res.size()) {
+		#if __cplusplus > 201402L
+		#warning "Since C++17 std::string::data() returns also char* so it should be used to initialize ptr"
+		#endif
+			auto ptr = &res[0];
+			auto left = res.size();
+			while (left != 0) {
+				auto rr = archive_read_data(in, ptr, left);
+				// Yes, I know that rr == 0 is not an error but is should not
+				//  happen and not checking for it may create an infinity loop
+				if (rr <= 0)
+					THROW("archive_read_data() - ", archive_error_string(in));
+
+				ptr += rr;
+				left -= rr;
+			}
+		}
+
+		return res;
+	}
+
+	return "";
+}
+
+/// Extract @p pathname from the zip archive @p zip_file
+inline std::string extract_file_from_zip(CStringView zip_file,
+	StringView pathname)
+{
+	return extract_file(zip_file, archive_read_support_format_zip, pathname);
+}
+
 // Extracts zip, for details see extract() documentation
 template<class UnaryFunc>
 inline void extract_zip(CStringView filename, int flags,
@@ -131,7 +212,7 @@ inline void extract_zip(CStringView filename, int flags,
 	}, std::forward<UnaryFunc>(extract_entry));
 }
 
-// Extracts zip, for details see extract() documentation
+/// Extracts zip, for details see extract() documentation
 inline void extract_zip(CStringView filename, int flags = ARCHIVE_EXTRACT_TIME)
 {
 	return extract_zip(filename, flags, [](archive_entry*) { return true; });
@@ -149,14 +230,13 @@ template<class Container, class Func>
 void compress(Container&& filenames, CStringView archive_filename,
 	Func&& setup_archive)
 {
-	FileDescriptor fd;
 	struct archive* out = archive_write_new();
 	throw_assert(out);
 	auto out_guard = make_call_in_destructor([&] { archive_write_free(out); });
 
 	setup_archive(out);
 
-	fd.open(archive_filename, O_WRONLY | O_CREAT | O_TRUNC);
+	FileDescriptor fd(archive_filename, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd == -1)
 		THROW("Failed to open file `", archive_filename, '`', error(errno));
 
@@ -166,6 +246,9 @@ void compress(Container&& filenames, CStringView archive_filename,
 	auto write_file = [&] (CStringView pathname, struct stat64& st) {
 		archive_entry* entry = archive_entry_new();
 		throw_assert(entry);
+		auto entry_guard = make_call_in_destructor([&] {
+			archive_entry_free(entry);
+		});
 
 		archive_entry_set_mode(entry, st.st_mode);
 		archive_entry_set_filetype(entry, AE_IFREG);
@@ -191,62 +274,58 @@ void compress(Container&& filenames, CStringView archive_filename,
 
 		if (r)
 			THROW("read()", error(errno));
-
-		archive_entry_free(entry);
 	};
 
 	InplaceBuff<PATH_MAX> pathname;
-	std::function<void(struct stat64&)> impl = [&] (struct stat64& st) {
+	auto impl = [&] (auto&& self, struct stat64& st) -> void {
 		if (!S_ISDIR(st.st_mode))
 			THROW("Unsupported file type");
+
+		stdlog('`', pathname, '`');
 
 		// Directory
 		{
 			archive_entry* entry = archive_entry_new();
 			throw_assert(entry);
+			auto entry_guard = make_call_in_destructor([&] {
+				archive_entry_free(entry);
+			});
 
-			pathname.append('/', '\0');
-			--pathname.size;
+			pathname.append('/');
 
 			archive_entry_set_mode(entry, st.st_mode);
 			archive_entry_set_filetype(entry, AE_IFDIR);
 			archive_entry_set_atime(entry, st.st_atim.tv_sec, st.st_atim.tv_nsec);
 			archive_entry_set_ctime(entry, st.st_ctim.tv_sec, st.st_ctim.tv_nsec);
 			archive_entry_set_mtime(entry, st.st_mtim.tv_sec, st.st_mtim.tv_nsec);
-			archive_entry_set_pathname(entry, pathname.data());
+			archive_entry_set_pathname(entry, pathname.to_cstr().data());
 			archive_entry_set_size(entry, st.st_size);
 
 			if (archive_write_header(out, entry))
 				THROW("archive_write_header() - ", archive_error_string(out));
-
-			archive_entry_free(entry);
 		}
 
-		DIR* dir = opendir(pathname.data());
+		Directory dir(pathname.to_cstr());
 		if (not dir)
 			THROW("opendir(`", pathname, "`)", strerror(errno));
-
-		auto dir_guard = make_call_in_destructor([&] { closedir(dir); });
 
 		dirent* file;
 		while ((file = readdir(dir)))
 			if (strcmp(file->d_name, ".") && strcmp(file->d_name, "..")) {
 				size_t before_size = pathname.size;
-				pathname.append(file->d_name, '\0');
-				--pathname.size;
+				pathname.append(file->d_name);
 
-				if (stat64(pathname.data(), &st))
+				if (stat64(pathname.to_cstr().data(), &st))
 					THROW("stat(`", pathname, "`)", error(errno));
 
 				if (S_ISREG(st.st_mode))
-					write_file(CStringView{pathname.data(), pathname.size}, st);
+					write_file(pathname.to_cstr(), st);
 				else
-					impl(st);
+					self(self, st);
 
 				pathname.size = before_size;
 			}
 	};
-
 
 	for (auto&& filename : filenames) {
 		struct stat64 st;
@@ -254,14 +333,25 @@ void compress(Container&& filenames, CStringView archive_filename,
 			THROW("stat(`", filename, "`)", error(errno));
 
 		pathname = filename;
+		throw_assert(pathname.size > 0);
 
 		if (S_ISREG(st.st_mode)) {
-			pathname.append('\0');
-			--pathname.size;
-			write_file(CStringView{pathname.data(), pathname.size}, st);
-		} else
-			impl(st);
+			write_file(pathname.to_cstr(), st);
+		} else {
+			// Remove trailing '/', but leave "/" if the pathname looks like
+			// this: "/////"
+			while (pathname.size > 1 and pathname.back() == '/')
+				--pathname.size;
+			impl(impl, st);
+		}
 	}
+
+	// It may be omitted because archive_write_free() calls it automatically,
+	// but as it may fail it is better to detect such cases and this check
+	// cannot be safely placed in the out_guard because it may throw and
+	// out_guard is executed from a destructor
+	if (archive_write_close(out))
+		THROW("archive_write_close() - ", archive_error_string(out));
 }
 
 /// Specialization of compress()
@@ -273,4 +363,39 @@ inline void compress(std::initializer_list<T> filenames,
 		archive_filename, std::forward<Func>(setup_archive));
 }
 
+/**
+ * @brief Compresses @p filenames recursively into @p zip_archive_filename
+ *
+ * @param filenames paths of files/directories to archive
+ * @param zip_archive_filename output archive's path
+ */
+template<class Container>
+void compress_into_zip(Container&& filenames, CStringView zip_archive_filename)
+{
+	return compress(std::forward<Container>(filenames), zip_archive_filename,
+		archive_write_set_format_zip);
+}
+
+
+/// Specialization of compress_into_zip()
+template<class T>
+inline void compress_into_zip(std::initializer_list<T> filenames,
+	CStringView zip_archive_filename)
+{
+	return compress_into_zip<std::initializer_list<T>>(std::move(filenames),
+		zip_archive_filename);
+}
+
 #endif // __has_include(<archive.h>) and __has_include(<archive_entry.h>)
+
+/// Places file @p filename (with a replaced path to @p new_filename) into zip
+/// file @p zip_filename. If @p new_filename is empty, then @p filename is used.
+/// This function may be used to add directories to the archive as well.
+void update_add_file_to_zip(CStringView filename, StringView new_filename,
+	CStringView zip_filename);
+
+/// Places data @p data (within a file @p new_filename) into zip
+/// file @p zip_filename. If new_filename ends with '/' data is ignored and only
+/// directory @p new_filename is created.
+void update_add_data_to_zip(StringView data, StringView new_filename,
+	CStringView zip_filename);

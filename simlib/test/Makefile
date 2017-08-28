@@ -14,7 +14,7 @@ $(eval $(call dependencies))
 exec: string.o config_file.o simfile.o filesystem.o
 exec: ../gtest_main.a ../simlib.a
 exec:
-	$(LINK) -lrt
+	$(LINK) -lrt -larchive
 
 .PHONY: clean
 clean:

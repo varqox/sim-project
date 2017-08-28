@@ -903,9 +903,7 @@ public:
 	}
 
 	// Be careful with the constructor below! @p s cannot be null
-	constexpr explicit CStringView(pointer s, size_type n) noexcept
-		: StringBase(s, n)
-	{
+	constexpr CStringView(pointer s, size_type n) noexcept : StringBase(s, n) {
 	#ifdef _GLIBCXX_DEBUG
 		assert(s);
 		assert(s[n] == '\0');
@@ -1029,9 +1027,15 @@ public:
 
 	char operator[](size_t i) const noexcept { return p_[i]; }
 
-	operator StringView() const { return {data(), size}; }
+	operator StringView() const noexcept { return {data(), size}; }
 
 	std::string to_string() const { return {data(), size}; }
+
+	CStringView to_cstr() {
+		resize(size + 1);
+		(*this)[--size] = '\0';
+		return {data(), size};
+	}
 
 protected:
 	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
@@ -1169,6 +1173,7 @@ public:
 	using InplaceBuffBase::operator[];
 	using InplaceBuffBase::operator StringView;
 	using InplaceBuffBase::to_string;
+	using InplaceBuffBase::to_cstr;
 	using InplaceBuffBase::append;
 };
 

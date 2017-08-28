@@ -579,7 +579,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	func.detect_tracee_architecture(cpid);
 
 	// Open /proc/{cpid}/statm
-	FileDescriptor statm_fd {concat_tostr("/proc/", cpid, "/statm"), O_RDONLY};
+	FileDescriptor statm_fd {concat("/proc/", cpid, "/statm").to_cstr(),
+		O_RDONLY};
 	if (statm_fd == -1)
 		THROW("open(/proc/{cpid}/statm)", error(errno));
 
@@ -813,7 +814,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			if (syscall_name.empty()) // Syscall not found
 				message = concat_tostr("forbidden syscall ", syscall_no);
 			else
-				message = concat_tostr("forbidden syscall ", syscall_no, ": ", syscall_name, "()");
+				message = concat_tostr("forbidden syscall ", syscall_no, ": ",
+					syscall_name, "()");
 		}
 
 		return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,

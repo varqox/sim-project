@@ -483,8 +483,8 @@ inline void writeAll_throw(int fd, StringView str) {
 
 /*
 *  Returns an absolute path that does not contain any . or .. components,
-*  nor any repeated path separators (/), and does not end with /
-*  curr_dir can be empty. If path begin with / then curr_dir is ignored.
+*  nor any repeated path separators (/). @p curr_dir can be empty. If path begin
+*  with / then @p curr_dir is ignored.
 */
 std::string abspath(StringView path, size_t beg = 0,
 		size_t end = std::string::npos, std::string curr_dir = "/");
@@ -525,7 +525,8 @@ inline CStringView filename(const CStringView &path) {
  *
  * @return read contents
  *
- * @errors The same that occur for read(2) - check errno
+ * @errors If any error occurs an exception of type std::runtime_error is thrown
+ *   (may happen if read(2) fails)
  */
 std::string getFileContents(int fd, size_t bytes = -1);
 
@@ -538,7 +539,8 @@ std::string getFileContents(int fd, size_t bytes = -1);
  *
  * @return read contents
  *
- * @errors The same that occur for lseek64(3), read(2) - check errno
+ * @errors If any error occurs an exception of type std::runtime_error is thrown
+ *   (may happen if lseek64(3) or read(2) fails)
  */
 std::string getFileContents(int fd, off64_t beg, off64_t end);
 
@@ -549,8 +551,8 @@ std::string getFileContents(int fd, off64_t beg, off64_t end);
  *
  * @return read contents
  *
- * @errors The same that occur for read(2), close(2) - check errno; May throw an
- *   exception of type std::runtime_error if open(2) fails
+ * @errors If any error occurs an exception of type std::runtime_error is thrown
+ *   (may happen if open(2), read(2) or close(2) fails)
  */
 std::string getFileContents(CStringView file);
 
@@ -563,8 +565,8 @@ std::string getFileContents(CStringView file);
  *
  * @return read contents
  *
- * @errors The same that occur for lseek64(3), read(2), close(2) - check errno;
- *   May throw an exception of type std::runtime_error if open(2) fails
+ * @errors If any error occurs an exception of type std::runtime_error is thrown
+ *   (may happen if open(2), lseek64(3), read(2) or close(2) fails)
  */
 std::string getFileContents(CStringView file, off64_t beg, off64_t end = -1);
 
@@ -590,15 +592,12 @@ std::vector<std::string> getFileByLines(CStringView file, int flags = 0,
  * @param file file to write to
  * @param data data to write
  *
- * @return bytes written, if error occurs then errno is > 0
- *
- * @errors The same that occur for open(2) and write(2) except EINTR from
- *   write(2)
+ * @errors If any error occurs an exception of type std::runtime_error is thrown
+ *   (may happen if open(2) or write(2) fails)
  */
-ssize_t putFileContents(CStringView file, const char* data, size_t len)
-	noexcept;
+void putFileContents(CStringView file, const char* data, size_t len);
 
-inline ssize_t putFileContents(CStringView file, StringView data) {
+inline void putFileContents(CStringView file, StringView data) {
 	return putFileContents(file, data.data(), data.size());
 }
 

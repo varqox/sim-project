@@ -1,8 +1,12 @@
 #pragma once
 
+#include "string.h"
+
 #include <algorithm>
+#include <linux/limits.h>
 #include <string>
 #include <sys/wait.h>
+#include <unistd.h>
 #include <vector>
 
 /**
@@ -14,7 +18,7 @@
  * @errors If get_current_dir_name() fails then std::runtime_error will be
  *   thrown
  */
-std::string getCWD();
+InplaceBuff<PATH_MAX> getCWD();
 
 /**
  * @brief Get a process with pid @p pid executable path

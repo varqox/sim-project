@@ -366,7 +366,7 @@ void Simfile::loadTestsFiles() {
 void Simfile::validateFiles(StringView package_path) const {
 	// Checker
 	if (checker.size() &&
-		not isRegularFile(concat_tostr(package_path, '/', checker)))
+		not isRegularFile(concat(package_path, '/', checker).to_cstr()))
 	{
 		throw std::runtime_error{concat_tostr("Simfile: invalid checker file `",
 			checker, '`')};
@@ -374,7 +374,7 @@ void Simfile::validateFiles(StringView package_path) const {
 
 	// Statement
 	if (statement.size() &&
-		!isRegularFile(concat_tostr(package_path, '/', statement)))
+		!isRegularFile(concat(package_path, '/', statement).to_cstr()))
 	{
 		throw std::runtime_error{concat_tostr("Simfile: invalid statement file"
 			" `", statement, '`')};
@@ -382,17 +382,17 @@ void Simfile::validateFiles(StringView package_path) const {
 
 	// Solutions
 	for (auto&& str : solutions)
-		if (!isRegularFile(concat_tostr(package_path, '/', str)))
+		if (!isRegularFile(concat(package_path, '/', str).to_cstr()))
 			throw std::runtime_error{concat_tostr("Simfile: invalid solution"
 				" file `", str, '`')};
 
 	// Tests
 	for (const TestGroup& group : tgroups)
 		for (const Test& test : group.tests) {
-			if (!isRegularFile(concat_tostr(package_path, '/', test.in)))
+			if (!isRegularFile(concat(package_path, '/', test.in).to_cstr()))
 				throw std::runtime_error{concat_tostr("Simfile: invalid test"
 					" input file `", test.in, '`')};
-			if (!isRegularFile(concat_tostr(package_path, '/', test.out)))
+			if (!isRegularFile(concat(package_path, '/', test.out).to_cstr()))
 				throw std::runtime_error{concat_tostr("Simfile: invalid test"
 					" output file `", test.out, '`')};
 		}

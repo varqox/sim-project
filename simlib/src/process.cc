@@ -11,19 +11,22 @@ using std::array;
 using std::string;
 using std::vector;
 
-string getCWD() {
-	array<char, PATH_MAX> buff;
-	if (!getcwd(buff.data(), buff.size()))
+InplaceBuff<PATH_MAX> getCWD() {
+	InplaceBuff<PATH_MAX> res;
+	char* x = get_current_dir_name();
+	if (!x)
 		THROW("Failed to get CWD", error(errno));
 
-	if (buff[0] != '/') {
-		errno = ENOENT; // Improper path, but getcwd() succeed
+	auto x_guard = make_call_in_destructor([x]{ free(x); });
+
+	if (x[0] != '/') {
+		errno = ENOENT;
 		THROW("Failed to get CWD", error(errno));
 	}
 
-	string res(buff.data());
+	res.append(x);
 	if (res.back() != '/')
-		res += '/';
+		res.append('/');
 
 	return res;
 }
@@ -58,10 +61,10 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	if (dir == nullptr)
 		THROW("Cannot open /proc directory", error(errno));
 
-	string cwd;
+	decltype(getCWD()) cwd;
 	for (auto& exec : exec_set) {
 		if (exec.front() != '/') {
-			if (cwd.empty()) // cwd not set
+			if (cwd.size == 0) // cwd is not set
 				cwd = getCWD();
 			exec = concat_tostr(cwd, exec);
 		}
@@ -124,9 +127,8 @@ string chdirToExecDir() {
 }
 
 int8_t detectArchitecture(pid_t pid) {
-	string filename = concat_tostr("/proc/", pid, "/exe");
-
-	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
+	auto filename = concat("/proc/", pid, "/exe");
+	FileDescriptor fd(filename.to_cstr(), O_RDONLY | O_LARGEFILE);
 	if (fd == -1)
 		THROW("open('", filename, "')", error(errno));
 
@@ -144,7 +146,7 @@ int8_t detectArchitecture(pid_t pid) {
 }
 
 string getProcStat(pid_t pid, uint field_no) {
-	string contents = getFileContents(concat_tostr("/proc/", pid, "/stat"));
+	string contents = getFileContents(concat("/proc/", pid, "/stat").to_cstr());
 	SimpleParser sp {contents};
 
 	// [0] - Process pid
