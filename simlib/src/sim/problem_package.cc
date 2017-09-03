@@ -14,8 +14,8 @@ void PackageContents::load_from_directory(string pkg_path) {
 	auto recursive_impl = [&](auto&& self, StringView filename) -> void {
 		auto add_path_to_pc = [&] {
 			// Adds entry without the pkg_path prefix
-			add_entry(StringView(path.data() + pkg_path.size(),
-				path.size - pkg_path.size()));
+			this->add_entry(StringView(path.data() + pkg_path.size(),
+				path.size - pkg_path.size())); // this-> is needed for buggy GCC
 		};
 
 		path.append(filename, '/'); // Update path

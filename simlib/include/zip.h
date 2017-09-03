@@ -205,7 +205,7 @@ void extract(int archive_fd, int flags,
 		if (archive_entry_size(entry) > 0) {
 			constexpr size_t BUFF_SIZE = 1 << 18;
 			char buff[BUFF_SIZE];
-			la_ssize_t rr;
+			decltype(archive_read_data(in, buff, BUFF_SIZE)) rr;
 			while ((rr = archive_read_data(in, buff, BUFF_SIZE)) > 0) {
 				if ((rr = archive_write_data(out, buff, rr)) < 0)
 					THROW("archive_write_data() - ", archive_error_string(out));
