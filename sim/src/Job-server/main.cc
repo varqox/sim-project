@@ -1,4 +1,5 @@
 #include "judge.h"
+#include "main.h"
 #include "problem.h"
 
 #include <future>
@@ -7,7 +8,6 @@
 #include <queue>
 #include <sim/jobs.h>
 #include <sim/mysql.h>
-#include <sim/sqlite.h>
 #include <simlib/avl_dict.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
@@ -15,6 +15,13 @@
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
 
+#if 0
+# define DEBUG_JOB_SERVER(...) __VA_ARGS__
+#else
+# define DEBUG_JOB_SERVER(...)
+#endif
+
+using std::array;
 using std::function;
 using std::lock_guard;
 using std::map;
@@ -34,6 +41,7 @@ public:
 	struct Job {
 		uint64_t id;
 		uint priority;
+		bool locks_problem = false;
 
 		bool operator<(Job x) const {
 			return (priority == x.priority ? id < x.id : priority > x.priority);
@@ -42,6 +50,8 @@ public:
 		bool operator==(Job x) const {
 			return (id == x.id and priority == x.priority);
 		}
+
+		constexpr static Job least() noexcept { return {UINT64_MAX, 0}; }
 	};
 
 private:
@@ -50,16 +60,65 @@ private:
 		AVLDictSet<Job> jobs;
 	};
 
+	struct ProblemInfo {
+		Job its_best_job;
+		uint locks_no = 0;
+	};
+
 	struct {
 		// Strong assumption: any job must belong to AT MOST one problem
-		AVLDictMap<uint64_t, Job> problem_to_its_best_job;
+		AVLDictMap<uint64_t, ProblemInfo> problem_info;
 		AVLDictMap<Job, ProblemJobs> queue; /*
 			(best problem's job => all jobs of the problem) */
-		AVLDictMap<int64_t, pair<uint, ProblemJobs>> locked_problems; /*
+		AVLDictMap<int64_t, ProblemJobs> locked_problems; /*
 			(problem_id  => (locks, problem's jobs)) */
 	} judge_jobs, problem_jobs; // (judge jobs - they need judge machines)
 
 	AVLDictSet<Job> other_jobs;
+
+	void dump_queues() const {
+		auto impl = [](auto&& job_category) {
+			if (job_category.problem_info.size()) {
+				stdlog("problem_info = {");
+				job_category.problem_info.for_each([](auto&& p) {
+					stdlog("   ", p.first, " => {", p.second.its_best_job.id,
+						", ", p.second.locks_no, "},");
+				});
+				stdlog("}");
+			}
+
+			auto log_problem_job = [](auto&& logger, const ProblemJobs& pj) {
+				logger("{", pj.problem_id, ", {");
+				pj.jobs.for_each([&](Job j) { logger(j.id, " "); });
+				logger("}}");
+			};
+
+			if (job_category.queue.size()) {
+				stdlog("queue = {");
+				job_category.queue.for_each([&](auto&& p) {
+					auto tmplog = stdlog("   ", p.first.id, " => ");
+					log_problem_job(tmplog, p.second);
+					tmplog(',');
+				});
+				stdlog("}");
+			}
+
+			if (job_category.locked_problems.size()) {
+				stdlog("locked_problems = {");
+				job_category.locked_problems.for_each([&](auto&& p) {
+					auto tmplog = stdlog("   ", p.first, " => ");
+					log_problem_job(tmplog, p.second);
+					tmplog(',');
+				});
+				stdlog("}");
+			}
+		};
+
+		stdlog("DEBUG: judge_jobs:");
+		impl(judge_jobs);
+		stdlog("DEBUG: problem_jobs:");
+		impl(problem_jobs);
+	}
 
 public:
 	void sync_with_db() {
@@ -74,7 +133,7 @@ public:
 		auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info"
 			" FROM jobs"
 			" WHERE status=" JSTATUS_PENDING_STR " AND type!=" JTYPE_VOID_STR
-			" ORDER BY priority DESC LIMIT 4");
+			" ORDER BY priority DESC, id ASC LIMIT 4");
 		stmt.res_bind_all(jid, jtype_u, priority, aux_id, info);
 		// Sets job's status to NOTICED_PENDING
 		auto mark_stmt = mysql.prepare("UPDATE jobs SET status="
@@ -84,31 +143,35 @@ public:
 		using JT = JobType;
 		for (stmt.execute(); stmt.next(); stmt.execute())
 			do {
+				DEBUG_JOB_SERVER(stdlog("DEBUG: Fetched from DB: job ", jid);)
 				auto queue_job =
-					[&jid, &priority](auto& job_category, uint64_t problem_id)
+					[&jid, &priority](auto& job_category, uint64_t problem_id,
+						bool locks_problem)
 				{
-					auto it =
-						job_category.problem_to_its_best_job.find(problem_id);
-					Job curr_job {jid, priority};
-					if (it) {
-						Job best_job = it->second;
+					auto pinfo = job_category.problem_info.find(problem_id);
+					Job curr_job {jid, priority, locks_problem};
+					if (pinfo) {
+						Job best_job = pinfo->second.its_best_job;
 						// Get the problem's jobs (the problem may be locked)
-						auto lit =
-							job_category.locked_problems.find(problem_id);
-						auto& pjobs = (lit ? lit->second.second
+						auto& pjobs = (pinfo->second.locks_no > 0
+							? job_category.locked_problems[problem_id]
 							: job_category.queue[best_job]);
+						// Ensure field 'problem_id' is set properly (in case of
+						// element creation this line is necessary)
+						pjobs.problem_id = problem_id;
 						// Add job to queue
 						pjobs.jobs.emplace(curr_job);
 						// Alter the problem's best job
-						if (best_job < curr_job) {
-							it->second = curr_job;
-							if (not lit) // Update queue (rekey ProblemJobs)
-								job_category.queue.alter_key(best_job, curr_job);
+						if (curr_job < best_job) {
+							pinfo->second.its_best_job = curr_job;
+							// Update queue (rekey ProblemJobs)
+							if (pinfo->second.locks_no == 0)
+								job_category.queue.alter_key(best_job,
+									curr_job);
 						}
 
 					} else {
-						job_category.problem_to_its_best_job[problem_id] =
-							curr_job;
+						job_category.problem_info[problem_id] = {curr_job, 0};
 						// Add job to the queue (first one to this problem)
 						auto& pjobs = job_category.queue[curr_job];
 						pjobs.problem_id = problem_id;
@@ -121,24 +184,27 @@ public:
 				// Judge job
 				case JT::JUDGE_SUBMISSION:
 					queue_job(judge_jobs,
-						strtoull(jobs::extractDumpedString(info)));
+						strtoull(jobs::extractDumpedString(info)), false);
 					break;
 
 				case JT::ADD_JUDGE_MODEL_SOLUTION:
+					queue_job(judge_jobs, 0, false);
+					break;
+
 				case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-					// TODO: this is a bit more tricky than the above
+					queue_job(judge_jobs, aux_id, true);
 					break;
 
 				// Problem job
 				case JT::REUPLOAD_PROBLEM:
 				case JT::EDIT_PROBLEM:
 				case JT::DELETE_PROBLEM:
-					queue_job(problem_jobs, aux_id);
+					queue_job(problem_jobs, aux_id, true);
 					break;
 
 				// Other job
 				case JT::ADD_PROBLEM:
-					other_jobs.insert({jid, priority});
+					other_jobs.insert({jid, priority, false});
 					break;
 
 				case JT::VOID:
@@ -146,93 +212,145 @@ public:
 				}
 				mark_stmt.execute();
 			} while (stmt.next());
+
+		DEBUG_JOB_SERVER(stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__,
+			"()");)
+		DEBUG_JOB_SERVER(dump_queues();)
 	}
 
 	void lock_problem(uint64_t pid) {
 		STACK_UNWINDING_MARK;
+		DEBUG_JOB_SERVER(stdlog("DEBUG: Locking problem ", pid, "...");)
 
 		auto lock_impl = [&pid](auto& job_category) {
-			auto it = job_category.problem_to_its_best_job.find(pid);
-			if (not it)
-				return;
+			auto pinfo = job_category.problem_info.find(pid);
+			if (not pinfo)
+				pinfo = job_category.problem_info.insert(pid, {Job::least(), 0})
+					.first;
 
-			auto pj = job_category.queue.find(it->second);
-			if (pj) {
-				job_category.locked_problems.insert(pid,
-					{1, std::move(pj->second)});
-				job_category.queue.erase(it->second);
-			} else
-				++job_category.locked_problems[pid].first;
+			if (++pinfo->second.locks_no == 1) {
+				auto pj = job_category.queue.find(pinfo->second.its_best_job);
+				if (pj) {
+					job_category.locked_problems.insert(pid,
+						std::move(pj->second));
+					job_category.queue.erase(pj->first);
+				}
+
+			}
 		};
 
 		lock_impl(judge_jobs);
 		lock_impl(problem_jobs);
+
+		DEBUG_JOB_SERVER(stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__,
+			"()");)
+		DEBUG_JOB_SERVER(dump_queues();)
 	}
 
 	void unlock_problem(uint64_t pid) {
 		STACK_UNWINDING_MARK;
+		DEBUG_JOB_SERVER(stdlog("DEBUG: Unlocking problem ", pid, "...");)
 
-		auto unlock_impl = [&pid](auto& job_category) {
-			auto pl = job_category.locked_problems.find(pid);
-			if (pl and --pl->second.first == 0) {
-				auto best_job = job_category.problem_to_its_best_job[pid];
-				job_category.queue.emplace(best_job,
-					std::move(pl->second.second));
-				job_category.locked_problems.erase(pid);
+		auto unlock_impl = [&pid, this](auto& job_category) {
+			auto pinfo = job_category.problem_info.find(pid);
+			if (not pinfo) {
+				dump_queues();
+				THROW("BUG: unlocking problem that is not locked!");
+			}
+
+			if (--pinfo->second.locks_no == 0) {
+				auto pl = job_category.locked_problems.find(pid);
+				if (pl) {
+					job_category.queue.insert(pinfo->second.its_best_job,
+						std::move(pl->second));
+					job_category.locked_problems.erase(pl->first);
+				} else
+					job_category.problem_info.erase(pid); /* There are no jobs
+						that belong to this problem and it is lock-free now, so
+						its records can be safely removed */
 			}
 		};
 
 		unlock_impl(judge_jobs);
 		unlock_impl(problem_jobs);
+
+		DEBUG_JOB_SERVER(stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__,
+			"()");)
+		DEBUG_JOB_SERVER(dump_queues();)
 	}
 
 	class JobHolder {
+		JobsQueue* jobs_queue;
 		decltype(judge_jobs)* job_category;
 
 	public:
-		int64_t job_id = -1;
-		uint priority = 0;
+		Job job = Job::least(); // If is invalid it will be the last in
+		                        // comparison
 		uint64_t problem_id = 0;
 
-		JobHolder(decltype(judge_jobs)& jc): job_category(&jc) {}
+		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc)
+			: jobs_queue(&jq), job_category(&jc) {}
 
-		JobHolder(decltype(judge_jobs)& jc, Job j, uint64_t pid)
-			: job_category(&jc), job_id(j.id), priority(j.priority),
-			problem_id(pid) {}
+		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc, Job j, uint64_t pid)
+			: jobs_queue(&jq), job_category(&jc), job(j), problem_id(pid) {}
 
-		operator Job() const noexcept { return {(uint64_t)job_id, priority}; }
+		JobHolder(const JobHolder&) = delete;
+		JobHolder(JobHolder&&) = default;
+		JobHolder& operator=(const JobHolder&) = delete;
+		JobHolder& operator=(JobHolder&&) = default;
 
-		bool ok() const noexcept { return (job_id >= 0); }
+		operator Job() const noexcept { return job; }
 
-		void remove() const {
-			auto pit = job_category->problem_to_its_best_job.find(problem_id);
-			if (not pit)
+		bool ok() const noexcept { return not(job == Job::least()); }
+
+		// Removes the job from queue and locks problem if locks_problem is true
+		void was_passed() const {
+			STACK_UNWINDING_MARK;
+
+			auto pinfo = job_category->problem_info.find(problem_id);
+			if (not pinfo)
 				return; // There is no such problem
 
-			Job best_job = pit->second;
-			auto& pjobs = job_category->queue[best_job];
-			pjobs.jobs.erase({(uint64_t)job_id, priority});
+			Job best_job = pinfo->second.its_best_job;
+			auto& pjobs = (pinfo->second.locks_no > 0 ?
+				job_category->locked_problems[problem_id]
+				: job_category->queue[best_job]);
+
+			if (not pjobs.jobs.erase(job))
+				THROW("Job erasion did not take place since the erased job was"
+					" not found");
+
 			// That was the last job of it's problem
 			if (pjobs.jobs.empty()) {
-				job_category->problem_to_its_best_job.erase(problem_id);
-				job_category->queue.erase(best_job);
+				if (pinfo->second.locks_no == 0) {
+					job_category->queue.erase(best_job);
+					job_category->problem_info.erase(problem_id);
+				} else { // Problem is locked
+					job_category->locked_problems.erase(problem_id);
+					pinfo->second.its_best_job = Job::least();
+				}
+
 			// The best job of the extracted job's problem changed
 			} else {
 				Job new_best = *pjobs.jobs.front();
-				job_category->problem_to_its_best_job[problem_id] = new_best;
+				pinfo->second.its_best_job = new_best;
 				// Update queue (rekey ProblemJobs)
-				job_category->queue.alter_key(best_job, new_best);
+				if (pinfo->second.locks_no == 0)
+					job_category->queue.alter_key(best_job, new_best);
 			}
+
+			if (job.locks_problem)
+				jobs_queue->lock_problem(problem_id);
 		}
 	};
 
 private:
 	JobHolder best_job(decltype(judge_jobs)& job_category) {
 		if (job_category.queue.empty())
-			return {job_category}; // No one left
+			return {*this, job_category}; // No one left
 
 		auto it = job_category.queue.front();
-		return {job_category, it->first, it->second.problem_id};
+		return {*this, job_category, it->first, it->second.problem_id};
 	}
 
 public:
@@ -252,21 +370,25 @@ public:
 		decltype(other_jobs)* oj;
 
 	public:
-		int64_t job_id = -1;
-		uint priority = 0;
-
-		operator Job() const noexcept { return {(uint64_t)job_id, priority}; }
-
-		bool ok() const noexcept { return (job_id >= 0); }
+		Job job = Job::least(); // If is invalid it will be the last in
+		                        // comparison
 
 		OtherJobHolder(decltype(other_jobs)& o): oj(&o) {}
 
 		OtherJobHolder(decltype(other_jobs)& o, Job j)
-			: oj(&o), job_id(j.id), priority(j.priority) {}
+			: oj(&o), job(j) {}
 
-		void remove() const {
-			oj->erase({(uint64_t)job_id, priority});
-		}
+		OtherJobHolder(const OtherJobHolder&) = delete;
+		OtherJobHolder(OtherJobHolder&&) = default;
+		OtherJobHolder& operator=(const OtherJobHolder&) = delete;
+		OtherJobHolder& operator=(OtherJobHolder&&) = default;
+
+		operator Job() const noexcept { return job; }
+
+		bool ok() const noexcept { return not(job == Job::least()); }
+
+		// Removes the job from queue
+		void was_passed() const { oj->erase(job); }
 	};
 
 	// Ret val: id of the extracted job or -1 if none was found
@@ -289,7 +411,7 @@ class EventsQueue {
 			return notifier_fd_;
 
 		if ((notifier_fd_ = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) == -1)
-			THROW("eventfd() failed", error(errno));
+			THROW("eventfd() failed", error());
 
 		return notifier_fd_;
 	}
@@ -346,10 +468,11 @@ public:
 		uint64_t id;
 		int64_t problem_id; // negative indicates that no problem is associated
 		                    // with the job
+		bool locked_its_problem;
 	};
 
 	struct WorkerInfo {
-		NextJob next_job {0, -1};
+		NextJob next_job {0, -1, false};
 		std::promise<void> next_job_signalizer;
 		std::future<void> next_job_waiter = next_job_signalizer.get_future();
 		bool is_idle = false;
@@ -454,9 +577,22 @@ public:
 		STACK_UNWINDING_MARK;
 
 		std::thread foo([this]{
-			thread_local Worker w(*this);
-			for (;;)
-				job_handler_(w.wait_for_next_job_id());
+			try {
+				thread_local Worker w(*this);
+				// Connect to databases
+				sqlite = SQLite::Connection(SQLITE_DB_FILE,
+					SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
+				mysql = MySQL::makeConnWithCredFile(".db.config");
+
+				for (;;)
+					job_handler_(w.wait_for_next_job_id());
+
+			} catch (const std::exception& e) {
+				ERRLOG_CATCH(e);
+				// Sleep for a while to prevent exception inundation
+				std::this_thread::sleep_for(std::chrono::seconds(3));
+				pthread_exit(0);
+			}
 		});
 		foo.detach();
 	}
@@ -466,7 +602,9 @@ public:
 		return workers.size();
 	}
 
-	bool pass_job(uint64_t job_id, int64_t problem_id = -1) {
+	bool pass_job(uint64_t job_id, int64_t problem_id = -1,
+		bool locks_problem = false)
+	{
 		STACK_UNWINDING_MARK;
 
 		lock_guard<mutex> lock(mtx_);
@@ -478,7 +616,7 @@ public:
 		idle_workers.pop_back();
 		auto& wi = workers[tid];
 		wi.is_idle = false;
-		wi.next_job = {job_id, problem_id};
+		wi.next_job = {job_id, problem_id, locks_problem};
 		wi.next_job_signalizer.set_value();
 
 		return true;
@@ -486,8 +624,6 @@ public:
 };
 
 } // anonymous namespace
-
-static void assign_jobs();
 
 static void spawn_worker(WorkersPool& wp) noexcept {
 	try {
@@ -501,28 +637,127 @@ static void spawn_worker(WorkersPool& wp) noexcept {
 	}
 }
 
-static WorkersPool local_workers([](WorkersPool::NextJob job) {
-		STACK_UNWINDING_MARK;
+static void process_local_job(WorkersPool::NextJob job) {
+	STACK_UNWINDING_MARK;
 
-		mysql = MySQL::makeConnWithCredFile(".db.config");
-		// auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
-		auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_PENDING_STR " WHERE id=?");
-		stmt.bindAndExecute(job.id);
-		stdlog(pthread_self(), " got local {", job.id, ", ", job.problem_id, '}');
-		std::this_thread::sleep_for(std::chrono::seconds(3));
-		pthread_exit(nullptr);
-
+	auto exit_procedures = [&job]{
 		EventsQueue::register_event([job]{
-			if (job.problem_id >= 0)
+			if (job.locked_its_problem)
 				jobs_queue.unlock_problem(job.problem_id);
 		});
+	};
 
-	}, assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
+		job.problem_id, ", locked: ", job.locked_its_problem, '}');
+
+	uint jtype_u, jstatus_u;
+	InplaceBuff<30> creator, aux_id;
+	InplaceBuff<512> info;
+
+	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
+		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+	stmt.res_bind_all(creator, jtype_u, jstatus_u, aux_id, info);
+	stmt.bindAndExecute(job.id);
+
+	if (not stmt.next()) // Job has been probably cancelled
+		return exit_procedures();
+
+	// Mark as in progress
+	mysql.update(concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
+		" WHERE id=", job.id));
+
+	using JT = JobType;
+	switch (JT(jtype_u)) {
+	case JT::ADD_PROBLEM:
+		addProblem(job.id, creator, info);
+		break;
+
+	case JT::REUPLOAD_PROBLEM:
+		reuploadProblem(job.id, creator, info, aux_id);
+		break;
+
+	case JT::EDIT_PROBLEM:
+	case JT::DELETE_PROBLEM:
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		mysql.update(concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
+			" WHERE id=", job.id));
+		break;
+	default:
+		THROW("Unexpected local job type: ", toString(JT(jtype_u)));
+	}
+
+	exit_procedures();
+}
+
+// static void process_judge_job(WorkersPool::NextJob job) {
+// 	STACK_UNWINDING_MARK;
+
+// 	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
+// 	stmt.bindAndExecute(job.id);
+// 	stdlog(pthread_self(), " got judge {", job.id, ", ", job.problem_id, '}');
+// 	std::this_thread::sleep_for(std::chrono::seconds(3));
+// 	pthread_exit(nullptr);
+// }
+
+static void process_judge_job(WorkersPool::NextJob job) {
+	STACK_UNWINDING_MARK;
+
+	auto exit_procedures = [&job]{
+		EventsQueue::register_event([job]{
+			if (job.locked_its_problem)
+				jobs_queue.unlock_problem(job.problem_id);
+		});
+	};
+
+	stdlog(pthread_self(), " got judge job {id:", job.id, ", problem: ",
+		job.problem_id, ", locked: ", job.locked_its_problem, '}');
+
+	uint jtype_u, jstatus_u;
+	InplaceBuff<30> creator, aux_id, added;
+	InplaceBuff<512> info;
+
+	auto stmt = mysql.prepare("SELECT creator, type, status, added, aux_id, info"
+		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+	stmt.res_bind_all(creator, jtype_u, jstatus_u, added, aux_id, info);
+	stmt.bindAndExecute(job.id);
+
+	if (not stmt.next()) // Job has been probably cancelled
+		return exit_procedures();
+
+	// Mark as in progress
+	mysql.update(concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
+		" WHERE id=", job.id));
+
+	using JT = JobType;
+	switch (JT(jtype_u)) {
+	case JT::JUDGE_SUBMISSION:
+		judgeSubmission(job.id, aux_id, added);
+		break;
+
+	case JT::ADD_JUDGE_MODEL_SOLUTION:
+		judgeModelSolution(job.id, JobType::ADD_PROBLEM);
+		break;
+
+	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
+		judgeModelSolution(job.id, JobType::REUPLOAD_PROBLEM);
+		break;
+
+	default:
+		THROW("Unexpected judge job type: ", toString(JT(jtype_u)));
+	}
+
+	exit_procedures();
+}
+
+static void sync_and_assign_jobs();
+
+static WorkersPool local_workers(process_local_job, sync_and_assign_jobs,
+	[](WorkersPool::WorkerInfo winfo) {
 		STACK_UNWINDING_MARK;
 
-		// Job has to be reset and cleanup done
+		// Job has to be reset and cleanup to be done
 		if (not winfo.is_idle) {
-			if (winfo.next_job.problem_id >= 0)
+			if (winfo.next_job.locked_its_problem)
 				jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
 			jobs::restart_job(mysql, toStr(winfo.next_job.id), false);
@@ -533,29 +768,24 @@ static WorkersPool local_workers([](WorkersPool::NextJob job) {
 		});
 	});
 
-static WorkersPool judge_workers([](WorkersPool::NextJob job) {
+static WorkersPool judge_workers(process_judge_job, sync_and_assign_jobs,
+	[](WorkersPool::WorkerInfo winfo) {
 		STACK_UNWINDING_MARK;
 
-		mysql = MySQL::makeConnWithCredFile(".db.config");
-		auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
-		stmt.bindAndExecute(job.id);
-		stdlog(pthread_self(), " got judge {", job.id, ", ", job.problem_id, '}');
-		std::this_thread::sleep_for(std::chrono::seconds(3));
-		pthread_exit(nullptr);
+		// Job has to be reset and cleanup to be done
+		if (not winfo.is_idle) {
+			if (winfo.next_job.locked_its_problem)
+				jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
-	}, assign_jobs, [](WorkersPool::WorkerInfo winfo) {
-		STACK_UNWINDING_MARK;
-
-		// Job has to be reset and cleanup done
-		if (not winfo.is_idle)
 			jobs::restart_job(mysql, toStr(winfo.next_job.id), false);
+		}
 
 		EventsQueue::register_event([]{
 			spawn_worker(judge_workers);
 		});
 	});
 
-static void assign_jobs() {
+static void sync_and_assign_jobs() {
 	STACK_UNWINDING_MARK;
 
 	jobs_queue.sync_with_db(); // sync before assigning
@@ -564,63 +794,75 @@ static void assign_jobs() {
 	auto other_job = jobs_queue.best_other_job();
 	auto judge_job = jobs_queue.best_judge_job();
 
-	// TODO: maybe just two ifs instead of an AVL tree?
-	AVLDictMap<JobsQueue::Job, function<void()>> selector; // job =>
-	                                             // (job handler, update record)
+	struct SItem {
+		bool ok;
+		JobsQueue::Job job;
+	};
 
-	if (problem_job.ok())
-		selector.emplace(problem_job, [&] {
-				if (local_workers.pass_job(problem_job.job_id,
-					problem_job.problem_id))
-				{
-					problem_job.remove(); // Job has been passed
-					jobs_queue.lock_problem(problem_job.problem_id);
-					// Update selector
-					auto old_key = problem_job;
-					problem_job = jobs_queue.best_problem_job();
-					if (problem_job.ok())
-						selector.alter_key(old_key, problem_job);
-					else
-						selector.erase(old_key);
-				} else
-					selector.erase(problem_job); // No worker to handle the job
-			});
+	array<SItem, 3> selector {{ // (is ok, best job)
+		{problem_job.ok(), problem_job},
+		{other_job.ok(), other_job},
+		{judge_job.ok(), judge_job},
+	}};
 
-	if (other_job.ok())
-		selector.emplace(other_job, [&] {
-				if (local_workers.pass_job(other_job.job_id)) {
-					other_job.remove(); // Job has been passed
-					// Update selector
-					auto old_key = other_job;
-					other_job = jobs_queue.best_other_job();
-					if (other_job.ok())
-						selector.alter_key(old_key, other_job);
-					else
-						selector.erase(old_key);
-				} else
-					selector.erase(other_job); // No worker to handle the job
-			});
-	using Job = JobsQueue::Job;
+	while (selector[0].ok or selector[1].ok or selector[2].ok) {
+		// Select best job
+		auto best_job = JobsQueue::Job::least();
+		uint idx = selector.size();
+		for (uint i = 0; i < selector.size(); ++i)
+			if (selector[i].ok and selector[i].job < best_job) {
+				idx = i;
+				best_job = selector[i].job;
+			}
 
-	if (judge_job.ok())
-		selector.emplace(judge_job, [&] {
-				if (judge_workers.pass_job(judge_job.job_id,
-					judge_job.problem_id))
-				{
-					judge_job.remove(); // Job has been passed
-					// Update selector
-					Job old_key = judge_job.operator Job();
-					judge_job = jobs_queue.best_judge_job();
-					if (judge_job.ok())
-						selector.alter_key(old_key, judge_job);
-					else
-						selector.erase(old_key);
-				} else
-					selector.erase(judge_job); // No worker to handle the job
-			});
+		DEBUG_JOB_SERVER(stdlog("DEBUG: Got job: {id: ", best_job.id, ", pri: ",
+			best_job.priority, ", locks: ", best_job.locks_problem, "}"));
 
-	while (selector.size())
-		selector.front()->second();
+		// Problem job
+		if (idx == 0) {
+			if (local_workers.pass_job(best_job.id, problem_job.problem_id,
+				best_job.locks_problem))
+			{
+				problem_job.was_passed();
+			} else
+				selector[0].ok = false; // No more workers available
+
+		// Other job
+		} else if (idx == 1) {
+			if (local_workers.pass_job(best_job.id))
+				other_job.was_passed();
+			else
+				selector[1].ok = false; // No more workers available
+
+		// Judge job
+		} else if (idx == 2) {
+			if (judge_workers.pass_job(best_job.id, judge_job.problem_id,
+				best_job.locks_problem))
+			{
+				judge_job.was_passed();
+			} else
+				selector[2].ok = false; // No more workers available
+
+		// Invalid
+		} else
+			THROW("Invalid idx: ", idx);
+
+		// Update selector (all types must be updated because some problem may
+		// become locked causing some jobs to become invalid)
+		if (selector[0].ok) {
+			problem_job = jobs_queue.best_problem_job();
+			selector[0] = {problem_job.ok(), problem_job};
+		}
+		if (selector[1].ok) {
+			other_job = jobs_queue.best_other_job();
+			selector[1] = {other_job.ok(), other_job};
+		}
+		if (selector[2].ok) {
+			judge_job = jobs_queue.best_judge_job();
+			selector[2] = {judge_job.ok(), judge_job};
+		}
+
+	}
 }
 
 static void eventsLoop() noexcept {
@@ -639,12 +881,11 @@ static void eventsLoop() noexcept {
 				if (errno == EWOULDBLOCK)
 					return true; // All has been read
 
-				THROW("read() failed", error(errno));
+				THROW("read() failed", error());
 			}
 
 			// Update jobs queue and distribute new jobs
-			jobs_queue.sync_with_db();
-			assign_jobs();
+			sync_and_assign_jobs();
 
 			struct inotify_event *event = (struct inotify_event *) inotify_buff;
 			// If notify file has been moved
@@ -671,8 +912,7 @@ static void eventsLoop() noexcept {
 			constexpr uint SLEEP_INTERVAL = 30; // in milliseconds
 
 			// Update jobs queue
-			jobs_queue.sync_with_db();
-			assign_jobs();
+			sync_and_assign_jobs();
 
 			// Inotify is broken
 			if (inotify_wd == -1) {
@@ -680,7 +920,7 @@ static void eventsLoop() noexcept {
 				if (inotify_fd == -1) {
 					inotify_fd = inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
 					if (inotify_fd == -1)
-						errlog("inotify_init1() failed", error(errno));
+						errlog("inotify_init1() failed", error());
 					else
 						goto inotify_partially_works;
 
@@ -694,7 +934,7 @@ static void eventsLoop() noexcept {
 					inotify_wd = inotify_add_watch(inotify_fd,
 						JOB_SERVER_NOTIFYING_FILE, IN_ATTRIB | IN_MOVE_SELF);
 					if (inotify_wd == -1)
-						errlog("inotify_add_watch() failed", error(errno));
+						errlog("inotify_add_watch() failed", error());
 					else
 						continue; // Fixing was successful
 				}
@@ -703,6 +943,8 @@ static void eventsLoop() noexcept {
 
 				// Try to fix events queue's notifier if it is broken
 				if (EventsQueue::get_notifier_fd() == -1) {
+					STACK_UNWINDING_MARK;
+
 					try {
 						EventsQueue::set_notifier_fd();
 						continue; // Fixing was successful
@@ -727,6 +969,8 @@ static void eventsLoop() noexcept {
 
 				// Events queue is fine
 				} else {
+					STACK_UNWINDING_MARK;
+
 					pollfd pfd = {EventsQueue::get_notifier_fd(), POLLIN, 0};
 					auto tend = std::chrono::steady_clock::now() +
 						std::chrono::seconds(5);
@@ -736,12 +980,11 @@ static void eventsLoop() noexcept {
 							break;
 
 						// Update queue - sth may have changed
-						jobs_queue.sync_with_db();
-						assign_jobs();
+						sync_and_assign_jobs();
 
 						int rc = poll(&pfd, 1, SLEEP_INTERVAL);
-						if (rc == -1)
-							THROW("poll() failed", error(errno));
+						if (rc == -1 and errno != EINTR)
+							THROW("poll() failed", error());
 
 						EventsQueue::reset_notifier();
 						while (EventsQueue::process_next_event()) {}
@@ -751,6 +994,8 @@ static void eventsLoop() noexcept {
 			// Inotify is working well
 			} else {
 				if (EventsQueue::get_notifier_fd() == -1) {
+					STACK_UNWINDING_MARK;
+
 					try {
 						EventsQueue::set_notifier_fd();
 						continue;
@@ -769,8 +1014,8 @@ static void eventsLoop() noexcept {
 							break;
 
 						int rc = poll(&pfd, 1, SLEEP_INTERVAL);
-						if (rc == -1)
-							THROW("poll() failed", error(errno));
+						if (rc == -1 and errno != EINTR)
+							THROW("poll() failed", error());
 
 						if (not process_inotify_event())
 							continue; // inotify has just broken
@@ -781,6 +1026,8 @@ static void eventsLoop() noexcept {
 
 				// Best scenario - everything works well
 				} else {
+					STACK_UNWINDING_MARK;
+
 					constexpr uint INFY_IDX = 0;
 					constexpr uint EQ_IDX = 1;
 					pollfd pfd[2] = {
@@ -790,8 +1037,12 @@ static void eventsLoop() noexcept {
 
 					for (;;) {
 						int rc = poll(pfd, 2, -1);
-						if (rc == -1)
-							THROW("poll() failed", error(errno));
+						if (rc == -1) {
+							if (errno == EINTR)
+								continue;
+
+							THROW("poll() failed", error());
+						}
 
 						// This should be checked (called) first in so as to
 						// update the jobs queue before processing events
@@ -819,79 +1070,10 @@ static void eventsLoop() noexcept {
 	}
 }
 
-#if 0
-static void processJobQueue() noexcept {
-	// While job queue is not empty
-	for (;;) try {
-		STACK_UNWINDING_MARK;
-
-		MySQL::Result res = mysql.query(
-			"SELECT id, type, aux_id, info, creator, added FROM jobs"
-			" WHERE status=" JSTATUS_PENDING_STR " AND type!=" JTYPE_VOID_STR
-			" ORDER BY priority DESC, id LIMIT 1");
-
-		if (!res.next())
-			break;
-
-		StringView job_id = res[0];
-		JobType type = JobType(strtoull(res[1]));
-		StringView aux_id = (res.is_null(2) ? "" : res[2]);
-		StringView info = res[3];
-
-		// Change the job status to IN_PROGRESS
-		auto stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
-		stmt.bindAndExecute(job_id);
-
-		// Choose action depending on the job type
-		switch (type) {
-		case JobType::JUDGE_SUBMISSION:
-			judgeSubmission(job_id, aux_id, res[5]);
-			break;
-
-		case JobType::ADD_PROBLEM:
-			addProblem(job_id, res[4], info);
-			break;
-
-		case JobType::REUPLOAD_PROBLEM:
-			reuploadProblem(job_id, res[4], info, aux_id);
-			break;
-
-		case JobType::ADD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id, JobType::ADD_PROBLEM);
-			break;
-
-		case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job_id, JobType::REUPLOAD_PROBLEM);
-			break;
-
-		case JobType::EDIT_PROBLEM:
-		case JobType::DELETE_PROBLEM:
-			stmt = mysql.prepare("UPDATE jobs"
-				" SET status=" JSTATUS_CANCELED_STR " WHERE id=?");
-			stmt.bindAndExecute(job_id);
-			break;
-
-		case JobType::VOID:
-			break;
-
-		}
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		// Give up for a couple of seconds to not litter the error log
-		usleep(3e6);
-
-	} catch (...) {
-		ERRLOG_CATCH();
-		// Give up for a couple of seconds to not litter the error log
-		usleep(3e6);
-	}
-}
-#endif
-
 // Clean up database
 static void cleanUpDBs() {
+	STACK_UNWINDING_MARK;
+
 	try {
 		// Fix jobs that are in progress after the job-server died
 		auto res = mysql.query("SELECT id, type, info FROM jobs WHERE status="
@@ -924,7 +1106,7 @@ static void cleanUpDBs() {
 				break;
 
 			while (res.next()) {
-				StringView pid = res[1];
+				StringView pid = res[0];
 				// Delete submissions
 				stmt = mysql.prepare("DELETE FROM submissions"
 					" WHERE problem_id=?");
@@ -962,7 +1144,7 @@ int main() {
 	if (freopen(JOB_SERVER_LOG, "a", stdout) == nullptr ||
 		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
 	{
-		errlog("Failed to open `", JOB_SERVER_LOG, '`', error(errno));
+		errlog("Failed to open `", JOB_SERVER_LOG, '`', error());
 	}
 
 	try {
@@ -991,10 +1173,11 @@ int main() {
 
 		cleanUpDBs();
 
-		for (int i = 0; i < 4; ++i)
+		// TODO: load workers no from config file
+		for (int i = 0; i < 2; ++i)
 			spawn_worker(local_workers);
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 2; ++i)
 			spawn_worker(judge_workers);
 
 	} catch (const std::exception& e) {

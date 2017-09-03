@@ -159,6 +159,7 @@ enum class SubmissionStatus : uint8_t {
 	INITIAL_MASK = FINAL_MASK << 3,
 	// Special
 	PENDING                   = (8 << 3) + 0,
+	// Fatal
 	COMPILATION_ERROR         = (8 << 3) + 1,
 	CHECKER_COMPILATION_ERROR = (8 << 3) + 2,
 	JUDGE_ERROR               = (8 << 3) + 3
@@ -167,11 +168,6 @@ enum class SubmissionStatus : uint8_t {
 DECLARE_ENUM_UNARY_OPERATOR(SubmissionStatus, ~)
 DECLARE_ENUM_OPERATOR(SubmissionStatus, |)
 DECLARE_ENUM_OPERATOR(SubmissionStatus, &)
-
-#define SSTATUS_PENDING_STR "64"
-static_assert(meta::equal(SSTATUS_PENDING_STR,
-	meta::ToString<(int)SubmissionStatus::PENDING>::value),
-	"Update the above #define");
 
 // Non-fatal statuses
 static_assert(meta::max(SubmissionStatus::OK, SubmissionStatus::WA,
@@ -190,11 +186,17 @@ static_assert(meta::min(SubmissionStatus::COMPILATION_ERROR,
 	" used during selection of the final submission");
 
 constexpr inline bool is_special(SubmissionStatus status) {
-	return (status == SubmissionStatus::PENDING or
-		status == SubmissionStatus::COMPILATION_ERROR or
-		status == SubmissionStatus::CHECKER_COMPILATION_ERROR or
-		status == SubmissionStatus::JUDGE_ERROR);
+	return (status >= SubmissionStatus::PENDING);
 }
+
+constexpr inline bool is_fatal(SubmissionStatus status) {
+	return (status > SubmissionStatus::PENDING);
+}
+
+#define SSTATUS_PENDING_STR "64"
+static_assert(meta::equal(SSTATUS_PENDING_STR,
+	meta::ToString<(int)SubmissionStatus::PENDING>::value),
+	"Update the above #define");
 
 enum class JobStatus : uint8_t {
 	PENDING = 1,
@@ -296,6 +298,21 @@ static_assert(meta::equal(JTYPE_DELETE_PROBLEM_STR,
 	meta::ToString<(int)JobType::DELETE_PROBLEM>::value),
 	"Update the above #define");
 
+constexpr inline const char* toString(JobType x) {
+	switch (x) {
+	case JobType::VOID: return "VOID";
+	case JobType::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
+	case JobType::ADD_PROBLEM: return "ADD_PROBLEM";
+	case JobType::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
+	case JobType::ADD_JUDGE_MODEL_SOLUTION: return "ADD_JUDGE_MODEL_SOLUTION";
+	case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION:
+		return "REUPLOAD_JUDGE_MODEL_SOLUTION";
+	case JobType::EDIT_PROBLEM: return "EDIT_PROBLEM";
+	case JobType::DELETE_PROBLEM: return "DELETE_PROBLEM";
+	}
+	return "Unknown";
+}
+
 // The greater, the more important
 constexpr uint priority(JobType x) {
 	switch (x) {
@@ -305,8 +322,8 @@ constexpr uint priority(JobType x) {
 	case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
 	case JobType::ADD_PROBLEM: return 10;
 	case JobType::REUPLOAD_PROBLEM: return 10;
-	case JobType::JUDGE_SUBMISSION: return  5;
-	case JobType::VOID: return  0;
+	case JobType::JUDGE_SUBMISSION: return 5;
+	case JobType::VOID: return 0;
 	}
 	return 0;
 }

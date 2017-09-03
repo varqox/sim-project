@@ -455,7 +455,7 @@ static void* reader_thread(void*) {
 		int n = epoll_wait(epoll_fd, events.data(), events.size(), -1);
 		if (n < 0) {
 			errlog(__FILE__, ':', meta::ToString<__LINE__>{}, ": epoll_wait()",
-				error(errno));
+				error());
 			continue;
 		}
 
@@ -516,7 +516,7 @@ static void master_process_cycle() {
 	// epoll(7)
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll_fd == -1) {
-		errlog("Error: epoll_create1()", error(errno));
+		errlog("Error: epoll_create1()", error());
 		exit(9);
 	}
 
@@ -525,7 +525,7 @@ static void master_process_cycle() {
 	if (pthread_create(&reader_pid, nullptr, reader_thread, nullptr) == -1 ||
 		pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1)
 	{
-		errlog("Failed to spawn reader and writer threads", error(errno));
+		errlog("Failed to spawn reader and writer threads", error());
 		exit(10);
 	}
 
@@ -563,7 +563,7 @@ static void master_process_cycle() {
 		event.events = EPOLLIN | EPOLLPRI;
 		event.data.fd = fd;
 		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
-			errlog("Error: epoll_ctl()", error(errno));
+			errlog("Error: epoll_ctl()", error());
 			// TODO: write error 500
 			connset.erase(x.first);
 			close(fd);
@@ -653,7 +653,7 @@ int main() {
 	// Loggers TODO: use global log filenames
 	// Set stderr to write to server.log (stdlog writes to stderr)
 	if (freopen("server2.log", "a", stderr) == NULL) // TODO: remove '2'
-		errlog("Failed to open 'server.log'", error(errno));
+		errlog("Failed to open 'server.log'", error());
 
 	try {
 		errlog.open("server2_error.log"); // TODO: remove '2'
@@ -681,20 +681,20 @@ int main() {
 
 	socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
 	if (socket_fd < 0) {
-		errlog("Failed to create socket", error(errno));
+		errlog("Failed to create socket", error());
 		return 1;
 	}
 
 	int _true = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &_true, sizeof(int))) {
-		errlog("Error: setopt()", error(errno));
+		errlog("Error: setopt()", error());
 		return 2;
 	}
 
 	// Bind
 	constexpr int TRIES = 8;
 	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
-		errlog("Failed to bind (try ", try_no, ')', error(errno));
+		errlog("Failed to bind (try ", try_no, ')', error());
 		if (++try_no > TRIES)
 			return 3;
 
@@ -702,7 +702,7 @@ int main() {
 	}
 
 	if (listen(socket_fd, 10)) {
-		errlog("Error: listen()", error(errno));
+		errlog("Error: listen()", error());
 		return 4;
 	}
 

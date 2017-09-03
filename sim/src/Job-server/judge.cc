@@ -1,23 +1,36 @@
-#include <sim/constants.h>
+#include "main.h"
+
 #include <sim/jobs.h>
-#include <sim/mysql.h>
+#include <sim/submission.h>
 #include <simlib/sim/conver.h>
-#include <simlib/sim/judge_worker.h>
+#include <simlib/sim/problem_package.h>
 #include <simlib/time.h>
-#include <simlib/utilities.h>
+#include <simlib/zip.h>
 
 using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
-extern thread_local MySQL::Connection mysql;
+static constexpr const char* log_span_test_status(JudgeReport::Test::Status s) {
+	switch (s) {
+	case JudgeReport::Test::OK: return "\033[1;32mOK\033[m";
+	case JudgeReport::Test::WA: return "\033[1;31mWRONG\033[m";
+	case JudgeReport::Test::TLE: return "\033[1;33mTLE\033[m";
+	case JudgeReport::Test::MLE: return "\033[1;33mMLE\033[m";
+	case JudgeReport::Test::RTE: return "\033[1;31mRTE\033[m";
+	case JudgeReport::Test::CHECKER_ERROR:
+		return "\033[1;33mCHECKER_ERROR\033[m";
+	}
 
-void judgeSubmission(StringView job_id, StringView submission_id,
+	return "UNKNOWN";
+}
+
+void judgeSubmission(uint64_t job_id, StringView submission_id,
 	StringView job_creation_time)
 {
 	STACK_UNWINDING_MARK;
 
-	InplaceBuff<16384> job_report;
+	InplaceBuff<1 << 14> job_report;
 	auto stdlog_and_append_jreport = [&](auto&&... args) {
 		stdlog(args...);
 		job_report.append(std::forward<decltype(args)>(args)..., '\n');
@@ -29,16 +42,16 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		" FROM submissions s, problems p"
 		" WHERE p.id=problem_id AND s.id=?");
 	stmt.bindAndExecute(submission_id);
-	uint64_t sowner, round_id, problem_id;
+	InplaceBuff<30> sowner, round_id, problem_id;
 	InplaceBuff<64> last_judgment, p_last_edit;
 	stmt.res_bind_all(sowner, round_id, problem_id, last_judgment, p_last_edit);
 	// If the submission doesn't exist (probably was removed)
 	if (not stmt.next()) {
-		// Cancel the job
-		stdlog_and_append_jreport("Canceled judging of the submission ",
+		// Fail the job
+		stdlog_and_append_jreport("Fail the job of judging the submission ",
 			submission_id, ", since there is no such submission.");
 		stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_CANCELED_STR ", data=? WHERE id=?");
+			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
 		return;
 	}
@@ -61,120 +74,41 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
 		')');
-	jworker.loadPackage(concat_tostr("problems/", problem_id),
-		getFileContents(concat_tostr("problems/", problem_id, "/Simfile"))
+	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
+	auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+
+	jworker.loadPackage(package_path.to_string(),
+		extract_file_from_zip(package_path.to_cstr(),
+			concat(pkg_master_dir, "Simfile").to_cstr())
 	);
 
 	// Variables
 	SubmissionStatus status = SubmissionStatus::OK;
-	InplaceBuff<65536> initial_report, final_report;
+	InplaceBuff<1 << 16> initial_report, final_report;
 	int64_t total_score = 0;
 
 	auto send_report = [&] {
-		// TODO: support for the submissions in the problemset
 		static_assert(int(SubmissionType::NORMAL) == 0 &&
 			int(SubmissionType::FINAL) == 1, "Needed below where "
 				"\"... type<= ...\"");
 
-		/* Update submission */
+		// Update submission
+		stmt = mysql.prepare("UPDATE submissions"
+			" SET final_candidate=?, status=?, score=?, last_judgment=?,"
+				" initial_report=?, final_report=? WHERE id=?");
 
-		// Special status
-		if (isIn(status, {SubmissionStatus::COMPILATION_ERROR,
-		                  SubmissionStatus::CHECKER_COMPILATION_ERROR,
-		                  SubmissionStatus::JUDGE_ERROR}))
-		{
-			stmt = mysql.prepare(
-				// x.id - id of a submission which will have set
-				//   type=FINAL (latest with non-fatal status)
-				//   UNION with 0
-				// y.id - id of a submissions which will have set
-				//   type=NORMAL (dropped from type=FINAL)
-				//   UNION with 0
-				// z.id - submission_id
-				//
-				// UNION with 0 - because if x or y was empty then the
-				//   whole query wouldn't be executed (and 0 is safe
-				//   because no submission with id=0 exists)
-				"UPDATE submissions s,"
-					" ((SELECT id FROM submissions WHERE owner=?"
-								" AND round_id=? AND type<=" STYPE_FINAL_STR
-								" AND status<" SSTATUS_PENDING_STR " AND id!=?"
-							" ORDER BY id DESC LIMIT 1)"
-						" UNION (SELECT 0 AS id)) x,"
-					" ((SELECT id FROM submissions WHERE owner=?"
-							" AND round_id=? AND type=" STYPE_FINAL_STR ")"
-						" UNION (SELECT 0 AS id)) y,"
-					" (SELECT (SELECT ?) AS id) z"
-				// Set type properly and other columns ONLY for just
-				//   judged submission
-				" SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
-					"IF(s.type<=" STYPE_FINAL_STR "," STYPE_NORMAL_STR
-						",s.type)),"
-					"s.status=IF(s.id=z.id,?,s.status),"
-					"s.last_judgment=IF(s.id=z.id,?,s.last_judgment),"
-					"s.initial_report=IF(s.id=z.id,?,s.initial_report),"
-					"s.final_report=IF(s.id=z.id,?,s.final_report),"
-					"s.score=IF(s.id=z.id,NULL,s.score)"
-				"WHERE s.id=x.id OR s.id=y.id OR s.id=z.id");
+		if (is_fatal(status))
+			stmt.bindAndExecute(false, (uint)status, nullptr, judging_began,
+				initial_report, final_report, submission_id);
+		else
+			stmt.bindAndExecute(true, (uint)status, total_score, judging_began,
+				initial_report, final_report, submission_id);
 
-		// Normal status
-		} else {
-			stmt = mysql.prepare(
-				// x.id - id of a submission which will have set
-				//   type=FINAL (latest with non-fatal status)
-				//   UNION with 0
-				// y.id - id of a submissions which will have set
-				//   type=NORMAL (dropped from type=FINAL)
-				//   UNION with 0
-				// z.id - submission_id
-				//
-				// UNION with 0 - because if x or y was empty then the
-				//   whole query wouldn't be executed (and 0 is safe
-				//   because no submission with id=0 exists)
-				"UPDATE submissions s,"
-					" ((SELECT id FROM submissions WHERE owner=?"
-							" AND round_id=? AND type<=" STYPE_FINAL_STR
-							" AND (status<" SSTATUS_PENDING_STR " OR id=?)"
-							" ORDER BY id DESC LIMIT 1)"
-						" UNION (SELECT 0 AS id)) x,"
-					" ((SELECT id FROM submissions WHERE owner=?"
-							" AND round_id=? AND type=" STYPE_FINAL_STR ")"
-						" UNION (SELECT 0 AS id)) y,"
-					" (SELECT (SELECT ?) AS id) z"
-				// Set type properly and other columns ONLY for just
-				//   judged submission
-				" SET s.type=IF(s.id=x.id," STYPE_FINAL_STR ","
-					"IF(s.type<=" STYPE_FINAL_STR "," STYPE_NORMAL_STR
-						",s.type)),"
-					"s.status=IF(s.id=z.id,?,s.status),"
-					"s.last_judgment=IF(s.id=z.id,?,s.last_judgment),"
-					"s.initial_report=IF(s.id=z.id,?,s.initial_report),"
-					"s.final_report=IF(s.id=z.id,?,s.final_report),"
-					"s.score=IF(s.id=z.id,?,s.score)"
-				"WHERE s.id=x.id OR s.id=y.id OR s.id=z.id");
-
-			stmt.bind(10, total_score);
-		}
-
-		uint ustatus = static_cast<uint>(status);
-
-		stmt.bind(0, sowner);
-		stmt.bind(1, round_id);
-		stmt.bind(2, submission_id);
-		stmt.bind(3, sowner);
-		stmt.bind(4, round_id);
-		stmt.bind(5, submission_id);
-		stmt.bind(6, ustatus);
-		stmt.bind(7, judging_began);
-		stmt.bind(8, initial_report);
-		stmt.bind(9, final_report);
-		stmt.fixBinds();
-		stmt.execute();
+		submission::update_final(mysql, sowner, round_id);
 
 		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);
-
 	};
 
 	string compilation_errors;
@@ -196,7 +130,8 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 
 	// Compile solution
 	stdlog_and_append_jreport("Compiling solution...");
-	if (jworker.compileSolution(concat_tostr("solutions/", submission_id, ".cpp"),
+	if (jworker.compileSolution(
+		concat("solutions/", submission_id, ".cpp").to_cstr(),
 		SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 		COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
@@ -309,24 +244,11 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 		final_report = construct_report(rep2, true);
 
 		// Log reports
-		auto span_status = [](JudgeReport::Test::Status s) {
-			switch (s) {
-			case JudgeReport::Test::OK: return "\033[1;32mOK\033[m";
-			case JudgeReport::Test::WA: return "\033[1;31mWRONG\033[m";
-			case JudgeReport::Test::TLE: return "\033[1;33mTLE\033[m";
-			case JudgeReport::Test::MLE: return "\033[1;33mMLE\033[m";
-			case JudgeReport::Test::RTE: return "\033[1;31mRTE\033[m";
-			case JudgeReport::Test::CHECKER_ERROR:
-				return "\033[1;33mCHECKER_ERROR\033[m";
-			}
-
-			return "UNKNOWN";
-		};
-
 		stdlog_and_append_jreport("Job ", job_id, " -> submission ",
 			submission_id, " (problem ", problem_id, ")\n"
-			"Initial judge report: ", rep1.pretty_dump(span_status), "\n"
-			"Final judge report: ", rep2.pretty_dump(span_status), "\n");
+			"Initial judge report: ", rep1.pretty_dump(log_span_test_status),
+			"\nFinal judge report: ", rep2.pretty_dump(log_span_test_status),
+			"\n");
 
 		// Count score
 		for (auto&& rep : {rep1, rep2})
@@ -434,30 +356,33 @@ void judgeSubmission(StringView job_id, StringView submission_id,
 	send_report();
 }
 
-void judgeModelSolution(StringView job_id, JobType original_job_type) {
+void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	STACK_UNWINDING_MARK;
 
 	sim::Conver::ReportBuff report;
 	report.append("Stage: Judging the model solution");
 
-	auto set_failure= [&] {
+	auto set_failure = [&] {
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=CONCAT(data,?)"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(report.str, job_id);
 
-		stdlog("Job: ", job_id, '\n', report.str);
+		stdlog("Job ", job_id, ":\n", report.str);
 	};
 
-	StringBuff<PATH_MAX> package_path {"jobs_files/", job_id, '/'};
-	string simfile_str = getFileContents(
-		StringBuff<PATH_MAX>(package_path, "Simfile"));
+	auto package_path = concat<PATH_MAX>("jobs_files/", job_id, ".zip.prep");
+	string pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+
+	string simfile_str = extract_file_from_zip(package_path.to_cstr(),
+		concat(pkg_master_dir, "Simfile").to_cstr());
 
 	sim::Simfile simfile {simfile_str};
 
+
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
-	jworker.loadPackage(package_path.str, std::move(simfile_str));
+	jworker.loadPackage(package_path.to_string(), std::move(simfile_str));
 
 	string compilation_errors;
 
@@ -474,15 +399,20 @@ void judgeModelSolution(StringView job_id, JobType original_job_type) {
 
 	// Compile the model solution
 	simfile.loadAll();
-	report.append("Compiling the model solution...");
-	if (jworker.compileSolution(StringBuff<65536>(package_path,
-			simfile.solutions[0]),
-		SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-		COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		report.append("Solution's compilation failed.");
-		report.append(compilation_errors);
-		return set_failure();
+		TemporaryFile sol_src("/tmp/problem_solution.cpp.XXXXXX");
+		writeAll(sol_src, extract_file_from_zip(package_path.to_cstr(),
+			concat(pkg_master_dir, simfile.solutions[0])));
+
+		report.append("Compiling the model solution...");
+		if (jworker.compileSolution(sol_src.path(),
+			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		{
+			report.append("Solution's compilation failed.");
+			report.append(compilation_errors);
+			return set_failure();
+		}
 	}
 	report.append("Done.");
 
@@ -491,12 +421,14 @@ void judgeModelSolution(StringView job_id, JobType original_job_type) {
 	JudgeReport rep1 = jworker.judge(false);
 	JudgeReport rep2 = jworker.judge(true);
 
-	report.append("Initial judge report: ", rep1.pretty_dump());
-	report.append("Final judge report: ", rep2.pretty_dump());
+	report.append("Initial judge report: ",
+		rep1.pretty_dump(log_span_test_status));
+	report.append("Final judge report: ",
+		rep2.pretty_dump(log_span_test_status));
 
 	sim::Conver conver;
 	conver.setVerbosity(true);
-	conver.setPackagePath(package_path.str);
+	conver.setPackagePath(package_path.to_string());
 
 	try {
 		conver.finishConstructingSimfile(simfile, rep1, rep2);
@@ -508,12 +440,13 @@ void judgeModelSolution(StringView job_id, JobType original_job_type) {
 	}
 
 	// Put the Simfile in the package
-	putFileContents(package_path.append("Simfile"), simfile.dump());
+	update_add_data_to_zip(simfile.dump(),
+		concat(pkg_master_dir, "Simfile").to_cstr(), package_path.to_cstr());
 
 	auto stmt = mysql.prepare("UPDATE jobs"
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 	stmt.bindAndExecute(uint(original_job_type), report.str, job_id);
 
-	stdlog("Job: ", job_id, '\n', report.str);
+	stdlog("Job ", job_id, ":\n", report.str);
 }

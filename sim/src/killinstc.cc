@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 			if (kill(vic.first, SIGTERM) == -1) {
 				// Unsuccessful kill
 				if (errno != ESRCH)
-					eprintf("kill(%i)%s\n", vic.first, error(errno).str);
+					eprintf("kill(%i)%s\n", vic.first, error().str);
 
 				swap(victims[i--], victims.back());
 				victims.pop_back();

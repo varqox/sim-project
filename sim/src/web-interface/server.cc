@@ -86,7 +86,7 @@ int main() {
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
 		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
 	{
-		errlog("Failed to open `", SERVER_LOG, '`', error(errno));
+		errlog("Failed to open `", SERVER_LOG, '`', error());
 	}
 
 	try {
@@ -158,20 +158,20 @@ int main() {
 		"address: ", address.data(), ':', port);
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		errlog("Failed to create socket", error(errno));
+		errlog("Failed to create socket", error());
 		return 1;
 	}
 
 	int true_ = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &true_, sizeof(int))) {
-		errlog("Failed to setopt", error(errno));
+		errlog("Failed to setopt", error());
 		return 2;
 	}
 
 	// Bind
 	constexpr int TRIES = 8;
 	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
-		errlog("Failed to bind (try ", try_no, ')', error(errno));
+		errlog("Failed to bind (try ", try_no, ')', error());
 		if (++try_no > TRIES)
 			return 3;
 
@@ -179,7 +179,7 @@ int main() {
 	}
 
 	if (listen(socket_fd, 10)) {
-		errlog("Failed to listen", error(errno));
+		errlog("Failed to listen", error());
 		return 4;
 	}
 

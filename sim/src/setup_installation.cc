@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
 			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
 		conn = MySQL::makeConnWithCredFile(
-			concat_tostr(argv[1], "/.db.config"));
+			concat(argv[1], "/.db.config").to_cstr());
 
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
