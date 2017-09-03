@@ -1,6 +1,7 @@
 #include "../../include/parsers.h"
 #include "../../include/sim/checker.h"
 #include "../../include/sim/judge_worker.h"
+#include "../../include/sim/problem_package.h"
 
 using std::string;
 
@@ -63,6 +64,40 @@ constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
 constexpr timespec JudgeWorker::CHECKER_TIME_LIMIT;
 
 
+void JudgeWorker::loadPackage(string package_path, string simfile) {
+	sf = Simfile {std::move(simfile)};
+	sf.loadChecker();
+	sf.loadTestsWithFiles();
+
+	pkg_root = std::move(package_path);
+	// Directory
+	if (isDirectory(pkg_root)) {
+		if (pkg_root.back() != '/')
+			pkg_root += '/';
+
+	// Zip
+	} else {
+
+		auto pkg_master_dir = zip_package_master_dir(pkg_root);
+		// Collect all needed files in pc
+		PackageContents pc;
+		pc.add_entry(pkg_master_dir, sf.checker);
+		for (auto&& tgroup : sf.tgroups)
+			for (auto&& test : tgroup.tests) {
+				pc.add_entry(pkg_master_dir, test.in);
+				pc.add_entry(pkg_master_dir, test.out);
+			}
+
+		// Extract only the necessary files
+		extract_zip(pkg_root, 0, [&](archive_entry* entry) {
+			return pc.exists(archive_entry_pathname(entry));
+		}, tmp_dir.path() + "package/");
+
+		// Update root, so it will be relative to the Simfile
+		pkg_root = concat_tostr(tmp_dir.path() + "package/", pkg_master_dir);
+	}
+}
+
 JudgeReport JudgeWorker::judge(bool final) const {
 	auto vlog = [&](auto&&... args) {
 		if (verbose)
@@ -75,13 +110,13 @@ JudgeReport JudgeWorker::judge(bool final) const {
 	// Checker STDOUT
 	FileDescriptor checker_stdout {openUnlinkedTmpFile()};
 	if (checker_stdout < 0)
-		THROW("Failed to create unlinked temporary file", error(errno));
+		THROW("Failed to create unlinked temporary file", error());
 
 	// Solution STDOUT
 	FileDescriptor solution_stdout(sol_stdout_path,
 		O_WRONLY | O_CREAT | O_TRUNC);
 	if (solution_stdout < 0)
-		THROW("Failed to open file `", sol_stdout_path, '`', error(errno));
+		THROW("Failed to open file `", sol_stdout_path, '`', error());
 
 	FileRemover solution_stdout_remover {sol_stdout_path}; // Save disk space
 
@@ -121,7 +156,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 
 			FileDescriptor test_in(test_in_path, O_RDONLY | O_LARGEFILE);
 			if (test_in < 0)
-				THROW("Failed to open file `", test_in_path, '`', error(errno));
+				THROW("Failed to open file `", test_in_path, '`', error());
 
 			// Set time limit to 1.5 * time_limit + 1 s, because CPU time is
 			// measured
@@ -169,7 +204,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				test.time_limit,
 				es.vm_peak,
 				test.memory_limit,
-				std::string {}
+				string {}
 			);
 			auto& test_report = report_group.tests.back();
 

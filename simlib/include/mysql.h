@@ -150,85 +150,86 @@ public:
 
 	// Need to be called before execute()
 private:
-	void bind(unsigned idx, bool x) ND(noexcept) {
-		unsigned char c = x;
-		bind(idx, c);
+	void bind(unsigned idx, const bool& x) ND(noexcept) {
+		static_assert(sizeof(const bool) == sizeof(const char),
+			"Needed below to do the address magic");
+		bind(idx, reinterpret_cast<const char&>(x));
 	}
 
 public:
-	void bind(unsigned idx, char& x) ND(noexcept) {
+	void bind(unsigned idx, const char& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_TINY;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<char*>(&x);
 		params_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned char& x) ND(noexcept) {
+	void bind(unsigned idx, const unsigned char& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_TINY;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<unsigned char*>(&x);
 		params_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, short& x) ND(noexcept) {
+	void bind(unsigned idx, const short& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_SHORT;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<short*>(&x);
 		params_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned short& x) ND(noexcept) {
+	void bind(unsigned idx, const unsigned short& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_SHORT;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<unsigned short*>(&x);
 		params_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, int& x) ND(noexcept) {
+	void bind(unsigned idx, const int& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_LONG;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<int*>(&x);
 		params_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned int& x) ND(noexcept) {
+	void bind(unsigned idx, const unsigned int& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_LONG;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<unsigned int*>(&x);
 		params_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, long long& x) ND(noexcept) {
+	void bind(unsigned idx, const long long& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<long long*>(&x);
 		params_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned long long& x) ND(noexcept) {
+	void bind(unsigned idx, const unsigned long long& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<unsigned long long*>(&x);
 		params_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, long& x) ND(noexcept) {
+	void bind(unsigned idx, const long& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type =
 			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<long*>(&x);
 		params_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned long& x) ND(noexcept) {
+	void bind(unsigned idx, const unsigned long& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type =
 			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
-		params_[idx].buffer = &x;
+		params_[idx].buffer = const_cast<unsigned long*>(&x);
 		params_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, char* str, size_t& length, size_t max_size)
+	void bind(unsigned idx, const char* str, size_t& length, size_t max_size)
 		ND(noexcept)
 	{
 		D(throw_assert(idx < params_.size());)
@@ -247,10 +248,10 @@ public:
 		params_[idx].length_value = str.size();
 	}
 
-	void bind(unsigned idx, std::string&&) = delete;
+	void bind(unsigned idx, const std::string&&) = delete;
 
 	template<size_t BUFF_SIZE>
-	void bind(unsigned idx, StringBuff<BUFF_SIZE>& buff) ND(noexcept) {
+	void bind(unsigned idx, const StringBuff<BUFF_SIZE>& buff) ND(noexcept) {
 		bind(idx, buff.str, buff.len, buff.max_size);
 	}
 
@@ -272,9 +273,9 @@ public:
 	}
 
 	template<class... Args>
-	void bind_all(Args&&... args) {
+	void bind_all(Args&... args) {
 		unsigned idx = 0;
-		int t[] = {(bind(idx++, std::forward<Args>(args)), 0)...};
+		int t[] = {(bind(idx++, args), 0)...};
 		(void)t;
 
 		fixBinds();

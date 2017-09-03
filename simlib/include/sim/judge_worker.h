@@ -3,6 +3,7 @@
 #include "../debug.h"
 #include "../filesystem.h"
 #include "../utilities.h"
+#include "../zip.h"
 #include "compile.h"
 #include "simfile.h"
 
@@ -139,18 +140,7 @@ public:
 	void setVerbosity(bool verbosity) { verbose = verbosity; }
 
 	/// Loads package from @p simfile in @p package_path
-	void loadPackage(std::string package_path, std::string simfile) {
-		sf = Simfile {std::move(simfile)};
-		sf.loadChecker();
-		sf.loadTestsWithFiles();
-
-		pkg_root = std::move(package_path);
-		if (!isDirectory(pkg_root))
-			THROW("Invalid path to package root directory");
-
-		if (pkg_root.back() != '/')
-			pkg_root += '/';
-	}
+	void loadPackage(std::string package_path, std::string simfile);
 
  	// Returns a const reference to the package's Simfile
 	const Simfile& simfile() const noexcept { return sf; }

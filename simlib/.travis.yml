@@ -9,6 +9,7 @@ notifications:
 
 _packages:
   - &default_packages
+    - libarchive-dev
     - time # For build
   - &GCC-5
     addons:

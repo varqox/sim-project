@@ -12,9 +12,16 @@ class Conver {
 public:
 	struct ReportBuff {
 		std::string str;
+		bool log_to_stdlog_;
+
+		ReportBuff(bool log_to_stdlog = false)
+			: log_to_stdlog_(log_to_stdlog) {}
 
 		template<class... Args>
 		void append(Args&&... args) {
+			if (log_to_stdlog_)
+				stdlog(args...);
+
 			back_insert(str, std::forward<Args>(args)..., '\n');
 		}
 	};
@@ -31,11 +38,8 @@ public:
 
 	const std::string& getPackagePath() const noexcept { return package_path_; }
 
-	void setPackagePath(const std::string& path) {
-		package_path_ = path;
-		if (path.size() && path.back() != '/')
-			package_path_ += '/';
-	}
+	// @p path may point to a directory as well as a zip-package
+	void setPackagePath(std::string path) {	package_path_ = std::move(path); }
 
 	const std::string& getReport() const noexcept { return report_.str; }
 
@@ -60,6 +64,13 @@ public:
 	};
 
 	enum class Status { COMPLETE, NEED_MODEL_SOLUTION_JUDGE_REPORT };
+
+	struct ConstructionResult {
+		Status status;
+		Simfile simfile;
+		std::string pkg_master_dir;
+	};
+
 	/**
 	 * @brief Constructs Simfile based on extracted package and options @p opts
 	 * @details Constructs a valid Simfile. See description to each field in
@@ -76,7 +87,7 @@ public:
 	 * @errors If any error is encountered then an exception of type
 	 *   std::runtime_error is thrown with a proper message
 	 */
-	std::pair<Status, Simfile> constructSimfile(const Options& opts);
+	ConstructionResult constructSimfile(const Options& opts);
 
 	 /**
 	  * @brief Finishes constructing the Simfile partially constructed by the

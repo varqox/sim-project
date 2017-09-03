@@ -156,61 +156,6 @@ public:
 	}
 };
 
-/**
- * @brief Creates (and opens) unlinked temporary file
- * @details Uses open(2) if O_TMPFILE is defined, or mkostemp(3)
- *
- * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or passed
- *   to mkostemp(3)
- *
- * @return file descriptor on success, -1 on error
- *
- * @errors The same that occur for open(2) (if O_TMPFILE is defined) or
- *   mkostemp(3)
- */
-int openUnlinkedTmpFile(int flags = 0) noexcept;
-
-class TemporaryDirectory {
-private:
-	std::string path_; // absolute path
-	std::unique_ptr<char[]> name_;
-
-public:
-	TemporaryDirectory() = default; // Does NOT create a temporary directory
-
-	explicit TemporaryDirectory(CStringView templ);
-
-	TemporaryDirectory(const TemporaryDirectory&) = delete;
-
-	TemporaryDirectory(TemporaryDirectory&&) noexcept = default;
-
-	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
-
-	TemporaryDirectory& operator=(TemporaryDirectory&&) = default;
-
-	~TemporaryDirectory();
-
-	// Returns true if object holds a real temporary directory
-	bool exist() const noexcept { return (name_.get() != nullptr); }
-
-	// Directory name (from constructor parameter) with trailing '/'
-	const char* name() const noexcept { return name_.get(); }
-
-	// Directory name (from constructor parameter) with trailing '/'
-	std::string sname() const { return name_.get(); }
-
-	// Directory absolute path with trailing '/'
-	const std::string& path() const noexcept { return path_; }
-};
-
-// Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(CStringView pathname) noexcept {
-	return mkdir(pathname.c_str(), S_0755);
-}
-
-// Create directories recursively (default mode: 0755/rwxr-xr-x)
-int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
-
 // The same as unlink(const char*)
 inline int unlink(CStringView pathname) noexcept {
 	return unlink(pathname.c_str());
@@ -219,32 +164,6 @@ inline int unlink(CStringView pathname) noexcept {
 // The same as remove(const char*)
 inline int remove(CStringView pathname) noexcept {
 	return remove(pathname.c_str());
-}
-
-/**
- * @brief Calls @p func on every component of the @p dir other than "." and ".."
- *
- * @param dir directory object, readdir(3) is used on it so one may want to save
- *   its pos via telldir(3) and use seekdir(3) after the call or just
- *   rewinddir(3) after the call
- * @param func function to call on every component (other than "." and ".."),
- *   it should take one argument - dirent*
- */
-template<class Func>
-void forEachDirComponent(Directory& dir, Func&& func) {
-	dirent* file;
-	while ((file = readdir(dir)))
-		if (strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
-			func(file);
-}
-
-template<class Func>
-void forEachDirComponent(CStringView pathname, Func&& func) {
-	Directory dir {pathname};
-	if (!dir)
-		THROW("opendir()", error(errno));
-
-	return forEachDirComponent(dir, std::forward<Func>(func));
 }
 
 /**
@@ -272,6 +191,203 @@ int remove_rat(int dirfd, CStringView pathname) noexcept;
  */
 inline int remove_r(CStringView pathname) noexcept {
 	return remove_rat(AT_FDCWD, pathname);
+}
+
+/**
+ * @brief Creates (and opens) unlinked temporary file
+ * @details Uses open(2) if O_TMPFILE is defined, or mkostemp(3)
+ *
+ * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or passed
+ *   to mkostemp(3)
+ *
+ * @return file descriptor on success, -1 on error
+ *
+ * @errors The same that occur for open(2) (if O_TMPFILE is defined) or
+ *   mkostemp(3)
+ */
+int openUnlinkedTmpFile(int flags = 0) noexcept;
+
+class TemporaryDirectory {
+private:
+	std::string path_; // absolute path
+	std::unique_ptr<char[]> name_;
+
+public:
+	TemporaryDirectory() = default; // Does NOT create a temporary directory
+
+	explicit TemporaryDirectory(CStringView templ);
+
+	TemporaryDirectory(const TemporaryDirectory&) = delete;
+	TemporaryDirectory(TemporaryDirectory&&) noexcept = default;
+	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
+
+	TemporaryDirectory& operator=(TemporaryDirectory&& td) {
+		if (exist() && remove_r(path_) == -1)
+			THROW("remove_r() failed", error());
+
+		path_ = std::move(td.path_);
+		name_ = std::move(td.name_);
+		return *this;
+	}
+
+	~TemporaryDirectory();
+
+	// Returns true if object holds a real temporary directory
+	bool exist() const noexcept { return (name_.get() != nullptr); }
+
+	// Directory name (from constructor parameter) with trailing '/'
+	const char* name() const noexcept { return name_.get(); }
+
+	// Directory name (from constructor parameter) with trailing '/'
+	std::string sname() const { return name_.get(); }
+
+	// Directory absolute path with trailing '/'
+	const std::string& path() const noexcept { return path_; }
+};
+
+// Create directory (not recursively) (mode: 0755/rwxr-xr-x)
+inline int mkdir(CStringView pathname) noexcept {
+	return mkdir(pathname.c_str(), S_0755);
+}
+
+// Create directories recursively (default mode: 0755/rwxr-xr-x)
+int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
+
+class TemporaryFile {
+	std::string path_; // absolute path
+	int fd_ = -1;
+
+public:
+	TemporaryFile() = default; // Does NOT create a temporary file
+
+	explicit TemporaryFile(std::string templ) {
+		templ.c_str(); // ensure it is NULL-terminated
+		fd_ = mkstemp(&templ[0]);
+		if (fd_ == -1)
+			THROW("mkstemp() failed", error());
+		path_ = std::move(templ);
+	}
+
+	TemporaryFile(const TemporaryFile&) = delete;
+	TemporaryFile& operator=(const TemporaryFile&) = delete;
+
+	TemporaryFile(TemporaryFile&& tf) noexcept
+		: path_(std::move(tf.path_)), fd_(tf.fd_)
+	{
+		tf.fd_ = -1;
+	}
+
+	TemporaryFile& operator=(TemporaryFile&& tf) noexcept {
+		if (is_open()) {
+			unlink(path_);
+			sclose(fd_);
+		}
+
+		path_ = std::move(tf.path_);
+		fd_ = tf.fd_;
+		tf.fd_ = -1;
+
+		return *this;
+	}
+
+	~TemporaryFile() {
+		if (is_open()) {
+			unlink(path_);
+			sclose(fd_);
+		}
+	}
+
+	operator int() const { return fd_; }
+
+	bool is_open() const noexcept { return (fd_ != -1); }
+
+	const std::string& path() const noexcept { return path_; }
+};
+
+class DirectoryChanger {
+	FileDescriptor old_cwd {open(".", O_RDONLY)};
+
+public:
+	DirectoryChanger(CStringView new_wd) {
+		if (old_cwd == -1)
+			THROW("open() failed", error());
+
+		if (chdir(new_wd.data()) == -1) {
+			auto err = errno;
+			old_cwd.close();
+			THROW("chdir() failed", error(err));
+		}
+	}
+
+	DirectoryChanger(const DirectoryChanger&) = delete;
+	DirectoryChanger(DirectoryChanger&&) noexcept = default;
+	DirectoryChanger& operator=(const DirectoryChanger&) = delete;
+	DirectoryChanger& operator=(DirectoryChanger&&) noexcept = default;
+
+	~DirectoryChanger() {
+		if (old_cwd >= 0)
+			(void)fchdir(old_cwd);
+	}
+};
+
+#if __cplusplus > 201402L
+#warning "Use constexpr-if instead std::enable_if<> below"
+#endif
+
+/**
+ * @brief Calls @p func on every component of the @p dir other than "." and ".."
+ *
+ * @param dir directory object, readdir(3) is used on it so one may want to save
+ *   its pos via telldir(3) and use seekdir(3) after the call or just
+ *   rewinddir(3) after the call
+ * @param func function to call on every component (other than "." and ".."),
+ *   it should take one argument - dirent*, if it return sth convertible to
+ *   false the lookup will break
+ */
+template<class Func>
+std::enable_if_t<
+	std::is_convertible<
+		decltype(std::declval<Func>()(std::declval<dirent*>())), bool>::value,
+	void
+> forEachDirComponent(Directory& dir, Func&& func)
+{
+	dirent* file;
+	while ((file = readdir(dir)))
+		if (strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
+			if (!func(file))
+				break;
+}
+
+/**
+ * @brief Calls @p func on every component of the @p dir other than "." and ".."
+ *
+ * @param dir directory object, readdir(3) is used on it so one may want to save
+ *   its pos via telldir(3) and use seekdir(3) after the call or just
+ *   rewinddir(3) after the call
+ * @param func function to call on every component (other than "." and ".."),
+ *   it should take one argument - dirent*, if it return sth convertible to
+ *   false the lookup will break
+ */
+template<class Func>
+std::enable_if_t<
+	!std::is_convertible<
+		decltype(std::declval<Func>()(std::declval<dirent*>())), bool>::value,
+	void
+> forEachDirComponent(Directory& dir, Func&& func)
+{
+	dirent* file;
+	while ((file = readdir(dir)))
+		if (strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
+			func(file);
+}
+
+template<class Func>
+void forEachDirComponent(CStringView pathname, Func&& func) {
+	Directory dir {pathname};
+	if (!dir)
+		THROW("opendir()", error());
+
+	return forEachDirComponent(dir, std::forward<Func>(func));
 }
 
 /**
@@ -380,6 +496,10 @@ inline int access(CStringView pathname, int mode) noexcept {
 	return access(pathname.c_str(), mode);
 }
 
+inline int rename(CStringView source, CStringView destination) noexcept {
+	return rename(source.c_str(), destination.c_str());
+}
+
 /**
  * @brief Moves file from @p oldpath to @p newpath
  * @details First creates directory containing @p newpath
@@ -448,7 +568,7 @@ size_t writeAll(int fd, const void *buff, size_t count) noexcept;
  */
 inline void writeAll_throw(int fd, const void *buff, size_t count) {
 	if (writeAll(fd, buff, count) != count)
-		THROW("write()", error(errno));
+		THROW("write()", error());
 }
 
 /**

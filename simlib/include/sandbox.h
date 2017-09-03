@@ -10,6 +10,13 @@
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
 
+#if 0
+# warning "Before committing disable this debug"
+# define DEBUG_SANDBOX(...) __VA_ARGS__
+#else
+# define DEBUG_SANDBOX(...)
+#endif
+
 class Sandbox : protected Spawner {
 public:
 	Sandbox() = delete;
@@ -378,13 +385,6 @@ public:
 
 /******************************* IMPLEMENTATION *******************************/
 
-#if 0
-# warning "Before committing disable this debug"
-# define DEBUG_SANDBOX(...) __VA_ARGS__
-#else
-# define DEBUG_SANDBOX(...)
-#endif
-
 struct Sandbox::i386_user_regset {
 	uint32_t ebx;
 	uint32_t ecx;
@@ -449,7 +449,7 @@ struct Sandbox::CallbackBase::Registers {
 			sizeof(uregs)
 		};
 		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
-			THROW("Error: ptrace(PTRACE_GETREGS)", error(errno));
+			THROW("Error: ptrace(PTRACE_GETREGS)", error());
 	}
 
 	void set_regs(pid_t pid) {
@@ -459,7 +459,7 @@ struct Sandbox::CallbackBase::Registers {
 		};
 		// Update traced process registers
 		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
-			THROW("Error: ptrace(PTRACE_SETREGS)", error(errno));
+			THROW("Error: ptrace(PTRACE_SETREGS)", error());
 	}
 };
 
@@ -534,11 +534,11 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	// Set up error stream from tracee (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
-		THROW("pipe()", error(errno));
+		THROW("pipe()", error());
 
 	int cpid = fork();
 	if (cpid == -1)
-		THROW("fork()", error(errno));
+		THROW("fork()", error());
 
 	else if (cpid == 0) { // Child = tracee
 		sclose(pfd[0]);
@@ -573,7 +573,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	if (ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD |
 		PTRACE_O_TRACEEXEC | PTRACE_O_EXITKILL))
 	{
-		THROW("ptrace(PTRACE_SETOPTIONS)", error(errno));
+		THROW("ptrace(PTRACE_SETOPTIONS)", error());
 	}
 
 	func.detect_tracee_architecture(cpid);
@@ -582,13 +582,13 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	FileDescriptor statm_fd {concat("/proc/", cpid, "/statm").to_cstr(),
 		O_RDONLY};
 	if (statm_fd == -1)
-		THROW("open(/proc/{cpid}/statm)", error(errno));
+		THROW("open(/proc/{cpid}/statm)", error());
 
 	auto get_vm_size = [&] {
 		std::array<char, 32> buff;
 		ssize_t rc = pread(statm_fd, buff.data(), buff.size() - 1, 0);
 		if (rc <= 0)
-			THROW("pread()", error(errno));
+			THROW("pread()", error());
 
 		buff[rc] = '\0';
 
@@ -688,7 +688,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			if (syscall_no < 0) {
 				if (errno != ESRCH)
 					THROW("failed to get syscall_no - ptrace(): ", syscall_no,
-						error(errno));
+						error());
 
 				// Tracee has just died
 				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead

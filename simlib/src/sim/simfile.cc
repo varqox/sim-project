@@ -359,7 +359,7 @@ void Simfile::loadTestsFiles() {
 			test.out = abspath(it->second.second).erase(0, 1); // The same here
 		}
 
-	// Superfluous files declarations are ignored - those for tests not from
+	// Superfluous files declarations are ignored - those for tests not from the
 	// limits array
 }
 

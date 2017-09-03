@@ -33,13 +33,13 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 	if (fd.open(concat("/proc/", pid, "/mem").to_cstr(),
 		O_RDONLY | O_LARGEFILE | O_NOFOLLOW) == -1)
 	{
-		errlog("Error: open()", error(errno));
+		errlog("Error: open()", error());
 		goto null_path;
 	}
 
 	len = pread64(fd, path, PATH_MAX - 1, ARG1);
 	if (len == -1) {
-		errlog("Error: pread64()", error(errno));
+		errlog("Error: pread64()", error());
 		goto null_path;
 	}
 
@@ -51,7 +51,7 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 
 	len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
 	if (len == -1) {
-		errlog("Error: process_vm_readv()", error(errno));
+		errlog("Error: process_vm_readv()", error());
 		goto null_path;
 	}
 #endif

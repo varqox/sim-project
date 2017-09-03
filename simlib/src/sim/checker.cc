@@ -26,7 +26,7 @@ string obtainCheckerOutput(int fd, size_t max_length) {
 			return res;
 
 		} else if (errno != EINTR)
-			THROW("read()", error(errno));
+			THROW("read()", error());
 
 	} while (pos < max_length);
 

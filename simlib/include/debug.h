@@ -71,6 +71,8 @@ inline StringBuff<4096> error(int errnum) noexcept {
 		buff.size())};
 }
 
+inline auto error() noexcept { return error(errno); }
+
 #if !defined(__cpp_lib_uncaught_exceptions) || __cpp_lib_uncaught_exceptions < 201411
 namespace __cxxabiv1 {
 struct __cxa_eh_globals;

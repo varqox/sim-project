@@ -13,7 +13,7 @@ default_checker_dump.o: default_checker_dump.c.deps
 default_checker_dump.c: default_checker.c Makefile
 	$(Q)$(call P,GEN,$@) xxd -i $< > $@
 
-sim.o: simfile.o compile.o checker.o judge_worker.o
+sim.o: simfile.o compile.o checker.o judge_worker.o problem_package.o
 sim.o: conver.o default_checker_dump.o
 sim.o:
 	$(Q)$(call P,LD,$@)$(LD) -r $^ -o $@

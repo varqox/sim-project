@@ -42,11 +42,11 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 	// Error stream from child (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
-		THROW("pipe()", error(errno));
+		THROW("pipe()", error());
 
 	int cpid = fork();
 	if (cpid == -1)
-		THROW("fork()", error(errno));
+		THROW("fork()", error());
 
 	else if (cpid == 0) {
 		sclose(pfd[0]);

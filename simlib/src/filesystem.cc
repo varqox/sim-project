@@ -56,7 +56,9 @@ TemporaryDirectory::TemporaryDirectory(CStringView templ) {
 			path_ = concat_tostr(getCWD(), name());
 
 		// Make path_ absolute
-		path_ = (abspath(path_) += '/');
+		path_ = abspath(path_);
+		if (path_.back() != '/')
+			path_ += '/';
 
 		name_.get()[size] = '/';
 	}
@@ -65,7 +67,7 @@ TemporaryDirectory::TemporaryDirectory(CStringView templ) {
 TemporaryDirectory::~TemporaryDirectory() {
 #ifdef DEBUG
 	if (exist() && remove_r(path_) == -1)
-		errlog("Error: remove_r()", error(errno)); // We cannot throw because
+		errlog("Error: remove_r()", error()); // We cannot throw because
 		                                           // throwing from the
 		                                           // destructor is UB
 #else
@@ -470,7 +472,7 @@ string getFileContents(int fd, size_t bytes) {
 			continue;
 		// Error
 		if (len < 0)
-			THROW("read() failed", error(errno));
+			THROW("read() failed", error());
 		// EOF
 		if (len == 0)
 			break;
@@ -488,7 +490,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 	if (beg < 0)
 		beg = std::max<off64_t>(size + beg, 0);
 	if (size == (off64_t)-1)
-		THROW("lseek64() failed", error(errno));
+		THROW("lseek64() failed", error());
 	if (beg > size)
 		return "";
 
@@ -500,7 +502,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 		end = beg;
 	// Reposition to beg
 	if (beg != lseek64(fd, beg, SEEK_SET))
-		THROW("lseek64() failed", error(errno));
+		THROW("lseek64() failed", error());
 
 	off64_t bytes_left = end - beg;
 	string res;
@@ -512,7 +514,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 			continue;
 		// Error
 		if (len < 0)
-			THROW("read() failed", error(errno));
+			THROW("read() failed", error());
 		// EOF
 		if (len == 0)
 			break;
@@ -529,7 +531,7 @@ string getFileContents(CStringView file) {
 	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
-		THROW("Failed to open file `", file, '`', error(errno));
+		THROW("Failed to open file `", file, '`', error());
 
 	return getFileContents(fd);
 }
@@ -539,7 +541,7 @@ string getFileContents(CStringView file, off64_t beg, off64_t end) {
 	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
-		THROW("Failed to open file `", file, '`', error(errno));
+		THROW("Failed to open file `", file, '`', error());
 
 	return getFileContents(fd, beg, end);
 }
@@ -582,13 +584,13 @@ vector<string> getFileByLines(CStringView file, int flags, size_t first,
 void putFileContents(CStringView file, const char* data, size_t len) {
 	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, S_0644};
 	if (fd == -1)
-		THROW("open() failed", error(errno));
+		THROW("open() failed", error());
 
 	if (len == size_t(-1))
 		len = __builtin_strlen(data);
 
 	if (writeAll(fd, data, len) != len)
-		THROW("write() failed", error(errno));
+		THROW("write() failed", error());
 }
 
 string humanizeFileSize(uint64_t size) {
