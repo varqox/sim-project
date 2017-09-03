@@ -72,7 +72,7 @@ void Contest::submit(bool admin_view) {
 			if (code.empty()) { // File
 				struct stat sb;
 				if (stat(solution_tmp_path.c_str(), &sb))
-					THROW("stat('", solution_tmp_path, "')", error(errno));
+					THROW("stat('", solution_tmp_path, "')", error());
 
 				// Check if solution is too big
 				if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
@@ -120,11 +120,10 @@ void Contest::submit(bool admin_view) {
 				if (code.empty()) { // File
 					if (copy(solution_tmp_path, location))
 						THROW("copy(`", solution_tmp_path, "`, `", location,
-							"`)", error(errno));
+							"`)", error());
 
 				} else if (putFileContents(location, code) == -1) // Code
-					THROW("putFileContents(`", location, "`, ...)",
-						error(errno));
+					THROW("putFileContents(`", location, "`, ...)", error());
 
 				// Add a job to judge the submission
 				stmt = db_conn.prepare("INSERT jobs (creator, type, priority,"

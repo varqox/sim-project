@@ -52,15 +52,14 @@ void Contest::addFile() {
 				// Get file size
 				struct stat64 sb;
 				if (stat64(file_path.c_str(), &sb))
-					THROW("stat('", file_path, "')", error(errno));
+					THROW("stat('", file_path, "')", error());
 
 				uint64_t file_size = sb.st_size;
 
 				// Move file
 				string location = concat("files/", id);
 				if (move(file_path, location))
-					THROW("move('", file_path, "', '", location, "')",
-						error(errno));
+					THROW("move('", file_path, "', '", location, "')", error());
 
 				stmt = db_conn.prepare(
 					"UPDATE files SET round_id=?, file_size=? WHERE id=?");
@@ -151,7 +150,7 @@ void Contest::editFile(StringView id, string name) {
 					// Get file size
 					struct stat64 sb;
 					if (stat64(file_path.c_str(), &sb))
-						THROW("stat('", file_path, "')", error(errno));
+						THROW("stat('", file_path, "')", error());
 
 					uint64_t file_size = sb.st_size;
 
@@ -159,7 +158,7 @@ void Contest::editFile(StringView id, string name) {
 					string location = concat("files/", id);
 					if (BLOCK_SIGNALS(move(file_path, location)))
 						THROW("move('", file_path, "', '", location, "')",
-							error(errno));
+							error());
 
 					stmt = db_conn.prepare("UPDATE files SET name=?, "
 						"description=?, modified=?, file_size=? WHERE id=?");
@@ -281,7 +280,7 @@ void Contest::deleteFile(StringView id, StringView name) {
 				return error500();
 
 			if (unlink(concat("files/", id)))
-				THROW("unlink('files/", id, "')", error(errno));
+				THROW("unlink('files/", id, "')", error());
 
 			signal_guard.unblock();
 

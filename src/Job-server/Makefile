@@ -8,7 +8,7 @@ $(eval $(call dependencies))
 ../job-server: main.o judge.o problem.o
 ../job-server: ../lib/sim.a ../lib/sqlite3.a
 ../job-server:
-	$(LINK) -lsupc++ -lrt
+	$(LINK) -lsupc++ -lrt -larchive
 
 ../lib/%: FORCE
 ifeq ($(MAKELEVEL), 0)

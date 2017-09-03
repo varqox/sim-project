@@ -6,9 +6,15 @@
 
 namespace submission {
 
-void update_final(MySQL::Connection& mysql, StringView user_id,
+inline void update_final(MySQL::Connection& mysql, StringView submission_owner,
 	StringView round_id, bool lock_table = true)
 {
+	if (submission_owner.empty()) // System submission
+		return; // Nothing to do
+
+	if (round_id.empty())
+		return; // TODO: problemset submissions
+
 	auto impl = [&] {
 		/* Select ids of all submissions that will be affected */
 
@@ -17,7 +23,7 @@ void update_final(MySQL::Connection& mysql, StringView user_id,
 		auto stmt = mysql.prepare("SELECT id FROM submissions"
 			" WHERE owner=? AND round_id=? AND final_candidate=1"
 			" ORDER BY id DESC LIMIT 1");
-		stmt.bindAndExecute(user_id, round_id);
+		stmt.bindAndExecute(submission_owner, round_id);
 
 		uint64_t new_final_id;
 		stmt.res_bind_all(new_final_id);
@@ -34,7 +40,7 @@ void update_final(MySQL::Connection& mysql, StringView user_id,
 		type = uint(SubmissionType::NORMAL);
 		stmt = mysql.prepare("SELECT id FROM submissions WHERE owner=?"
 			" AND round_id=? AND type=" STYPE_FINAL_STR);
-		stmt.bindAndExecute(user_id, round_id);
+		stmt.bindAndExecute(submission_owner, round_id);
 		stmt.res_bind_all(curr_id);
 
 		while (stmt.next())

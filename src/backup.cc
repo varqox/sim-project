@@ -63,7 +63,7 @@ int main2(int argc, char**argv) {
 
 	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC, S_0600};
 	if (fd == -1) {
-		errlog("Failed to open file `" MYSQL_CNF "`: open()", error(errno));
+		errlog("Failed to open file `" MYSQL_CNF "`: open()", error());
 		return 1;
 	}
 

@@ -68,12 +68,12 @@ void Sim::api_logs() {
 	if (end_offset < CHUNK_MAX_LEN) {
 		len = end_offset;
 		if (lseek64(fd, 0, SEEK_SET) == -1)
-			THROW("lseek64()", error(errno));
+			THROW("lseek64()", error());
 
 	} else {
 		len = CHUNK_MAX_LEN;
 		if (lseek64(fd, end_offset - CHUNK_MAX_LEN, SEEK_SET) == -1)
-			THROW("lseek64()", error(errno));
+			THROW("lseek64()", error());
 	}
 
 	// Read the data
@@ -83,7 +83,7 @@ void Sim::api_logs() {
 	// TODO: getFileContents() - support offset argument - pread()
 	// TODO: putFileContents() - support offset argument - pwrite()
 	if (ret != len)
-		THROW("read()", error(errno));
+		THROW("read()", error());
 
 	append(end_offset - len, '\n'); // New offset
 	append(toHex(buff)); // Data

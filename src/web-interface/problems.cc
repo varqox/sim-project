@@ -313,7 +313,7 @@ void Problemset::addProblem() {
 						{"jobs_files/", jobid, ".zip"};
 					if (::move(package_file, new_path))
 						THROW("Error: link(`", package_file, "`, `", new_path,
-							"`)", error(errno));
+							"`)", error());
 
 					package_file = new_path.data();
 				}
@@ -598,7 +598,7 @@ void Problemset::reuploadProblem() {
 						{"jobs_files/", jobid, ".zip"};
 					if (::move(package_file, new_path))
 						THROW("Error: link(`", package_file, "`, `", new_path,
-							"`)", error(errno));
+							"`)", error());
 
 					package_file = new_path.data();
 				}

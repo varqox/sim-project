@@ -240,8 +240,7 @@ void Sim::api_submissions() {
 		/* Status: (CSS class, text) */
 		using SS = SubmissionStatus;
 
-		// Fatal
-		if (status >= SS::PENDING) {
+		if (is_special(status)) {
 			if (status == SS::PENDING)
 				append("[\"\",\"Pending\"],");
 			else if (status == SS::COMPILATION_ERROR)
@@ -391,7 +390,7 @@ void Sim::api_submission_source() {
 		return api_error403();
 
 	append(cpp_syntax_highlighter(getFileContents(
-		concat_tostr("solutions/", submission_id, ".cpp"))));
+		concat("solutions/", submission_id, ".cpp").to_cstr())));
 }
 
 void Sim::api_submission_download() {
@@ -460,7 +459,7 @@ void Sim::api_submission_change_type() {
 	throw_assert(res.next());
 
 	SS status = SS(strtoull(res[0]));
-	StringView owner = res[1];
+	StringView owner = (res.is_null(1) ? "" : res[1]);
 	StringView round_id = (res.is_null(2) ? "" : res[2]);
 
 	// Cannot be FINAL
@@ -479,8 +478,7 @@ void Sim::api_submission_change_type() {
 	stmt.bindAndExecute(uint(new_type), (new_type == ST::NORMAL),
 		submission_id);
 
-	if (round_id.size())
-		submission::update_final(mysql, owner, round_id, false);
+	submission::update_final(mysql, owner, round_id, false);
 }
 
 void Sim::api_submission_delete() {
@@ -503,6 +501,6 @@ void Sim::api_submission_delete() {
 
 	mysql.update(concat("DELETE FROM submissions WHERE id=", submission_id));
 
-	if (not res.is_null(1))
-		submission::update_final(mysql, res[0], res[1], false);
+	submission::update_final(mysql, (res.is_null(0) ? "" : res[0]),
+		(res.is_null(1) ? "" : res[1]), false);
 }
