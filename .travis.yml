@@ -103,7 +103,7 @@ _packages:
       apt:
         sources:
           - ubuntu-toolchain-r-test
-          # - llvm-toolchain-trusty-3.9
+          - llvm-toolchain-trusty-3.9
         packages:
           - *default_packages
           - clang-3.9
@@ -160,16 +160,6 @@ matrix:
       env: DEBUG=1
     - compiler: gcc
       <<: *GCC-6
-      env: DEBUG=2
-    # GCC-7
-    - compiler: gcc
-      <<: *GCC-7
-      env:
-    - compiler: gcc
-      <<: *GCC-7
-      env: DEBUG=1
-    - compiler: gcc
-      <<: *GCC-7
       env: DEBUG=2
     # Clang-3_5
     - compiler: clang
@@ -245,6 +235,16 @@ matrix:
       <<: *Clang-3_7
       env: DEBUG=2
 
+    - compiler: gcc
+      <<: *GCC-7
+      env:
+    - compiler: gcc
+      <<: *GCC-7
+      env: DEBUG=1
+    - compiler: gcc
+      <<: *GCC-7
+      env: DEBUG=2
+
 before_script:
   - $CC -v
   - $CXX -v
@@ -255,7 +255,9 @@ before_script:
 script:
   # Build project
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
+  - cat /src/killinstc.cc.cmd.deps
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG test
+  - cat /src/killinstc.cc.cmd.deps
   # importer does not work due to the major code refactoring
   # - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG importer
   - printf 'sim\nsim\nsim\nlocalhost\n' | make install run
