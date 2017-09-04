@@ -3,8 +3,18 @@ include Makefile.config
 DESTDIR = build
 
 MYSQL_CONFIG = $(shell which mariadb_config || which mysql_config)
-EXTRA_CXX_FLAGS += -I '$(shell pwd)/src/include' -isystem '$(shell pwd)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
-EXTRA_LD_FLAGS += -L '$(shell pwd)/src/lib' -L '$(shell pwd)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs)
+
+# EXTRA_CXX_FLAGS
+TMP_CXX_FLAGS = -I '$(shell pwd)/src/include' -isystem '$(shell pwd)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
+ifeq (, $(findstring $(TMP_CXX_FLAGS), $(EXTRA_CXX_FLAGS)))
+EXTRA_CXX_FLAGS += $(TMP_CXX_FLAGS)
+endif
+
+# EXTRA_LD_FLAGS
+TMP_LD_FLAGS = -L '$(shell pwd)/src/lib' -L '$(shell pwd)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs)
+ifeq (, $(findstring $(TMP_LD_FLAGS), $(EXTRA_LD_FLAGS)))
+EXTRA_LD_FLAGS += $(TMP_LD_FLAGS)
+endif
 
 .PHONY: all
 all: build-info
