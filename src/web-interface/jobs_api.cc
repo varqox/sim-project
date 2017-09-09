@@ -37,7 +37,9 @@ void Sim::api_jobs() {
 		" WHERE j.type!=" JTYPE_VOID_STR);
 
 	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
-	bool select_data = false;
+	bool select_specified_job = false;
+
+	PERM granted_perms = PERM::NONE;
 
 	// Process restrictions
 	StringView next_arg = url_args.extractNextArg();
@@ -54,41 +56,45 @@ void Sim::api_jobs() {
 			return api_error400();
 
 		// conditional
-		if (cond == '<' and ~mask & ID_COND) {
+		if (isIn(cond, "<>") and ~mask & ID_COND) {
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
 		} else if (cond == '=' and ~mask & ID_COND) {
+			select_specified_job = true;
+			// Get job information to grant permissions
+			uint jtype;
+			InplaceBuff<32> aux_id;
+			auto stmt = mysql.prepare("SELECT type, aux_id FROM jobs"
+				" WHERE id=?");
+			stmt.bindAndExecute(arg_id);
+			stmt.res_bind_all(jtype, aux_id);
+			if (not stmt.next())
+				return api_error404();
+
+			// Grant permissions if possible
+			if (is_problem_job(JobType(jtype)))
+				granted_perms |= jobs_granted_permissions_problem(aux_id);
+			else if (is_submission_job(JobType(jtype)))
+				granted_perms |= jobs_granted_permissions_submission(aux_id);
+			allow_access |= (granted_perms != PERM::NONE);
+
 			if (not allow_access) {
-				// If user cannot view all jobs, allow they to view their jobs
+				// If user cannot view all jobs, allow them to view their jobs
 				allow_access = true;
 				qwhere.append(" AND creator=", session_user_id);
 			}
 
 			qfields.append(", SUBSTR(data, 1, ",
 				meta::ToString<REPORT_PREVIEW_MAX_LENGTH + 1>{}, ')');
-			select_data = true;
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
 		// problem
 		} else if (cond == 'p' and ~mask & AUX_ID_COND) {
 			// Check permissions - they may be granted
-			if (not allow_access) {
-				auto stmt = mysql.prepare("SELECT owner, type FROM problems"
-					" WHERE id=?");
-				stmt.bindAndExecute(arg_id);
-
-				InplaceBuff<30> powner;
-				uint ptype;
-				stmt.res_bind_all(powner, ptype);
-				if (stmt.next()) {
-					auto pperms = problems_get_permissions(powner,
-						ProblemType(ptype));
-					allow_access |=
-						bool(uint(pperms & ProblemPermissions::ADMIN));
-				}
-			}
+			granted_perms |= jobs_granted_permissions_problem(arg_id);
+			allow_access |= (granted_perms != PERM::NONE);
 
 			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type IN("
 				JTYPE_ADD_PROBLEM_STR ","
@@ -102,6 +108,10 @@ void Sim::api_jobs() {
 
 		// submission
 		} else if (cond == 's' and ~mask & AUX_ID_COND) {
+			// Check permissions - they may be granted
+			granted_perms |= jobs_granted_permissions_submission(arg_id);
+			allow_access |= (granted_perms != PERM::NONE);
+
 			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type="
 				JTYPE_JUDGE_SUBMISSION_STR);
 
@@ -215,24 +225,25 @@ void Sim::api_jobs() {
 		// Append what buttons to show
 		append('"', actions);
 
-		// res[7] = creator
-		auto job_perms = jobs_get_permissions(res[7], job_type, job_status);
-		if (uint(job_perms & PERM::VIEW))
+		// res[7] == creator
+		auto perms = granted_perms |
+			jobs_get_permissions(res[7], job_type, job_status);
+		if (uint(perms & PERM::VIEW))
 			append('v');
-		if (uint(job_perms & PERM::DOWNLOAD_REPORT))
+		if (uint(perms & PERM::DOWNLOAD_REPORT))
 			append('r');
-		if (uint(job_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
+		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
 			append('u');
-		if (uint(job_perms & PERM::CANCEL))
+		if (uint(perms & PERM::CANCEL))
 			append('C');
-		if (uint(job_perms & PERM::RESTART))
+		if (uint(perms & PERM::RESTART))
 			append('R');
 		append('\"');
 
 		// Append report preview (whether there is more to load, data)
-		if (select_data and uint(job_perms & PERM::DOWNLOAD_REPORT))
-				append(",[", res[9].size() > REPORT_PREVIEW_MAX_LENGTH, ',',
-					jsonStringify(res[9]), ']'); // report preview
+		if (select_specified_job and uint(perms & PERM::DOWNLOAD_REPORT))
+			append(",[", res[9].size() > REPORT_PREVIEW_MAX_LENGTH, ',',
+				jsonStringify(res[9]), ']'); // report preview
 
 		append("],");
 	}
@@ -254,19 +265,24 @@ void Sim::api_job() {
 	if (not isDigit(jobs_job_id))
 		return api_error400();
 
-	InplaceBuff<30> jcreator;
+	InplaceBuff<32> jcreator, aux_id;
 	InplaceBuff<256> jinfo;
 	uint jtype, jstatus;
 
-	auto stmt = mysql.prepare("SELECT creator, type, status, info FROM jobs"
-		" WHERE id=?");
+	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
+		" FROM jobs WHERE id=?");
 	stmt.bindAndExecute(jobs_job_id);
-	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
+	stmt.res_bind_all(jcreator, jtype, jstatus, aux_id, jinfo);
 	if (not stmt.next())
 		return api_error404();
 
 	jobs_perms = jobs_get_permissions(jcreator, JobType(jtype),
 		JobStatus(jstatus));
+	// Grant permissions if possible
+	if (is_problem_job(JobType(jtype)))
+		jobs_perms |= jobs_granted_permissions_problem(aux_id);
+	else if (is_submission_job(JobType(jtype)))
+		jobs_perms |= jobs_granted_permissions_submission(aux_id);
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "cancel")

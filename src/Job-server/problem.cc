@@ -494,13 +494,19 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 				}
 			});
 
+			stmt = mysql.prepare("SELECT added FROM problems WHERE id=?");
+			stmt.bindAndExecute(aux_id);
+			InplaceBuff<32> added;
+			stmt.res_bind_all(added);
+			throw_assert(stmt.next());
+
 			// Delete the old problem
 			stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 			stmt.bindAndExecute(aux_id);
 
 			// Replace the old problem with the new one
 			stmt = mysql.prepare("UPDATE problems"
-				" SET id=?, type=?, owner=? WHERE id=?");
+				" SET id=?, type=?, owner=?, added=? WHERE id=?");
 			uint ptype = uint(p_info.make_public ?
 				ProblemType::PUBLIC : ProblemType::PRIVATE);
 			stmt.bind(0, aux_id);
@@ -511,7 +517,8 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			else
 				stmt.bind(2, p_info.previous_owner);
 
-			stmt.bind(3, tmp_problem_id);
+			stmt.bind(3, added);
+			stmt.bind(4, tmp_problem_id);
 			stmt.fixAndExecute();
 
 			// Replace packages

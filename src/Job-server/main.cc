@@ -651,7 +651,7 @@ static void process_local_job(WorkersPool::NextJob job) {
 		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
 	uint jtype_u, jstatus_u;
-	InplaceBuff<30> creator, aux_id;
+	InplaceBuff<32> creator, aux_id;
 	InplaceBuff<512> info;
 
 	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
@@ -713,7 +713,7 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
 	uint jtype_u, jstatus_u;
-	InplaceBuff<30> creator, aux_id, added;
+	InplaceBuff<32> creator, aux_id, added;
 	InplaceBuff<512> info;
 
 	auto stmt = mysql.prepare("SELECT creator, type, status, added, aux_id, info"

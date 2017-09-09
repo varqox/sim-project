@@ -207,7 +207,9 @@ int main(int argc, char **argv) {
 		concat("CREATE TABLE IF NOT EXISTS `problems_tags` ("
 			"`problem_id` int unsigned NOT NULL,"
 			"`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
+			"`hidden` BOOLEAN NOT NULL,"
 			"PRIMARY KEY (problem_id, tag),"
+			"KEY (problem_id, hidden, tag),"
 			"KEY (tag)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 

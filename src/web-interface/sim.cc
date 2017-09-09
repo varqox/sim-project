@@ -81,8 +81,8 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 			else if (next_arg == "api")
 				api_handle();
 
-			// else if (next_arg == "p")
-				// problemset_handle();
+			else if (next_arg == "p")
+				problems_handle();
 
 			else if (next_arg == "login")
 				login();
