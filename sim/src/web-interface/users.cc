@@ -98,7 +98,7 @@ void Sim::login() {
 				" WHERE username=?");
 			stmt.bindAndExecute(username);
 
-			InplaceBuff<30> uid;
+			InplaceBuff<32> uid;
 			InplaceBuff<SALT_LEN> salt;
 			InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
 			stmt.res_bind_all(uid, salt, passwd_hash);

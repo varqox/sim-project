@@ -80,6 +80,7 @@ enum class ProblemType : uint8_t {
 	VOID = 0,
 	PUBLIC = 1,
 	PRIVATE = 2,
+	CONTEST_ONLY = 3,
 };
 
 #define PTYPE_VOID_STR "0"
@@ -95,6 +96,11 @@ static_assert(meta::equal(PTYPE_PUBLIC_STR,
 #define PTYPE_PRIVATE_STR "2"
 static_assert(meta::equal(PTYPE_PRIVATE_STR,
 	meta::ToString<(int)ProblemType::PRIVATE>::value),
+	"Update the above #define");
+
+#define PTYPE_CONTEST_ONLY_STR "3"
+static_assert(meta::equal(PTYPE_CONTEST_ONLY_STR,
+	meta::ToString<(int)ProblemType::CONTEST_ONLY>::value),
 	"Update the above #define");
 
 enum class SubmissionType : uint8_t {
@@ -198,55 +204,6 @@ static_assert(meta::equal(SSTATUS_PENDING_STR,
 	meta::ToString<(int)SubmissionStatus::PENDING>::value),
 	"Update the above #define");
 
-enum class JobStatus : uint8_t {
-	PENDING = 1,
-	NOTICED_PENDING = 2,
-	IN_PROGRESS = 3,
-	DONE = 4,
-	FAILED = 5,
-	CANCELED = 6
-};
-
-#define JSTATUS_PENDING_STR "1"
-static_assert(meta::equal(JSTATUS_PENDING_STR,
-	meta::ToString<(int)JobStatus::PENDING>::value),
-	"Update the above #define");
-
-#define JSTATUS_NOTICED_PENDING_STR "2"
-static_assert(meta::equal(JSTATUS_NOTICED_PENDING_STR,
-	meta::ToString<(int)JobStatus::NOTICED_PENDING>::value),
-	"Update the above #define");
-
-#define JSTATUS_IN_PROGRESS_STR "3"
-static_assert(meta::equal(JSTATUS_IN_PROGRESS_STR,
-	meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
-	"Update the above #define");
-
-#define JSTATUS_DONE_STR "4"
-static_assert(meta::equal(JSTATUS_DONE_STR,
-	meta::ToString<(int)JobStatus::DONE>::value), "Update the above #define");
-
-#define JSTATUS_FAILED_STR "5"
-static_assert(meta::equal(JSTATUS_FAILED_STR,
-	meta::ToString<(int)JobStatus::FAILED>::value), "Update the above #define");
-
-#define JSTATUS_CANCELED_STR "6"
-static_assert(meta::equal(JSTATUS_CANCELED_STR,
-	meta::ToString<(int)JobStatus::CANCELED>::value),
-	"Update the above #define");
-
-constexpr inline const char* toString(JobStatus x) {
-	switch (x) {
-	case JobStatus::PENDING: return "Pending";
-	case JobStatus::NOTICED_PENDING: return "Pending";
-	case JobStatus::IN_PROGRESS: return "In progress";
-	case JobStatus::DONE: return "Done";
-	case JobStatus::FAILED: return "Failed";
-	case JobStatus::CANCELED: return "Cancelled";
-	}
-	return "Unknown";
-}
-
 enum class JobType : uint8_t {
 	VOID = 0,
 	JUDGE_SUBMISSION = 1,
@@ -299,33 +256,114 @@ static_assert(meta::equal(JTYPE_DELETE_PROBLEM_STR,
 	"Update the above #define");
 
 constexpr inline const char* toString(JobType x) {
+	using JT = JobType;
 	switch (x) {
-	case JobType::VOID: return "VOID";
-	case JobType::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
-	case JobType::ADD_PROBLEM: return "ADD_PROBLEM";
-	case JobType::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
-	case JobType::ADD_JUDGE_MODEL_SOLUTION: return "ADD_JUDGE_MODEL_SOLUTION";
-	case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION:
+	case JT::VOID: return "VOID";
+	case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
+	case JT::ADD_PROBLEM: return "ADD_PROBLEM";
+	case JT::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
+	case JT::ADD_JUDGE_MODEL_SOLUTION: return "ADD_JUDGE_MODEL_SOLUTION";
+	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
 		return "REUPLOAD_JUDGE_MODEL_SOLUTION";
-	case JobType::EDIT_PROBLEM: return "EDIT_PROBLEM";
-	case JobType::DELETE_PROBLEM: return "DELETE_PROBLEM";
+	case JT::EDIT_PROBLEM: return "EDIT_PROBLEM";
+	case JT::DELETE_PROBLEM: return "DELETE_PROBLEM";
 	}
 	return "Unknown";
 }
 
-// The greater, the more important
-constexpr uint priority(JobType x) {
+constexpr inline bool is_problem_job(JobType x) {
+	using JT = JobType;
 	switch (x) {
-	case JobType::EDIT_PROBLEM: return 20;
-	case JobType::DELETE_PROBLEM: return 20;
-	case JobType::ADD_JUDGE_MODEL_SOLUTION: return 15;
-	case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
-	case JobType::ADD_PROBLEM: return 10;
-	case JobType::REUPLOAD_PROBLEM: return 10;
-	case JobType::JUDGE_SUBMISSION: return 5;
-	case JobType::VOID: return 0;
+	case JT::ADD_PROBLEM: return true;
+	case JT::ADD_JUDGE_MODEL_SOLUTION: return true;
+	case JT::REUPLOAD_PROBLEM: return true;
+	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return true;
+	case JT::EDIT_PROBLEM: return true;
+	case JT::DELETE_PROBLEM: return true;
+	case JT::JUDGE_SUBMISSION: return false;
+	case JT::VOID: return false;
+	}
+	return false;
+}
+
+constexpr inline bool is_submission_job(JobType x) {
+	using JT = JobType;
+	switch (x) {
+	case JT::JUDGE_SUBMISSION: return true;
+	case JT::ADD_PROBLEM: return false;
+	case JT::ADD_JUDGE_MODEL_SOLUTION: return false;
+	case JT::REUPLOAD_PROBLEM: return false;
+	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return false;
+	case JT::EDIT_PROBLEM: return false;
+	case JT::DELETE_PROBLEM: return false;
+	case JT::VOID: return false;
+	}
+	return false;
+}
+
+// The greater, the more important
+constexpr inline uint priority(JobType x) {
+	using JT = JobType;
+	switch (x) {
+	case JT::EDIT_PROBLEM: return 20;
+	case JT::DELETE_PROBLEM: return 20;
+	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;
+	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
+	case JT::ADD_PROBLEM: return 10;
+	case JT::REUPLOAD_PROBLEM: return 10;
+	case JT::JUDGE_SUBMISSION: return 5;
+	case JT::VOID: return 0;
 	}
 	return 0;
+}
+
+enum class JobStatus : uint8_t {
+	PENDING = 1,
+	NOTICED_PENDING = 2,
+	IN_PROGRESS = 3,
+	DONE = 4,
+	FAILED = 5,
+	CANCELED = 6
+};
+
+#define JSTATUS_PENDING_STR "1"
+static_assert(meta::equal(JSTATUS_PENDING_STR,
+	meta::ToString<(int)JobStatus::PENDING>::value),
+	"Update the above #define");
+
+#define JSTATUS_NOTICED_PENDING_STR "2"
+static_assert(meta::equal(JSTATUS_NOTICED_PENDING_STR,
+	meta::ToString<(int)JobStatus::NOTICED_PENDING>::value),
+	"Update the above #define");
+
+#define JSTATUS_IN_PROGRESS_STR "3"
+static_assert(meta::equal(JSTATUS_IN_PROGRESS_STR,
+	meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
+	"Update the above #define");
+
+#define JSTATUS_DONE_STR "4"
+static_assert(meta::equal(JSTATUS_DONE_STR,
+	meta::ToString<(int)JobStatus::DONE>::value), "Update the above #define");
+
+#define JSTATUS_FAILED_STR "5"
+static_assert(meta::equal(JSTATUS_FAILED_STR,
+	meta::ToString<(int)JobStatus::FAILED>::value), "Update the above #define");
+
+#define JSTATUS_CANCELED_STR "6"
+static_assert(meta::equal(JSTATUS_CANCELED_STR,
+	meta::ToString<(int)JobStatus::CANCELED>::value),
+	"Update the above #define");
+
+constexpr inline const char* toString(JobStatus x) {
+	switch (x) {
+	case JobStatus::PENDING: return "Pending";
+	case JobStatus::NOTICED_PENDING: return "Pending";
+	case JobStatus::IN_PROGRESS: return "In progress";
+	case JobStatus::DONE: return "Done";
+	case JobStatus::FAILED: return "Failed";
+	case JobStatus::CANCELED: return "Cancelled";
+	}
+	return "Unknown";
 }
 
 // Jobs

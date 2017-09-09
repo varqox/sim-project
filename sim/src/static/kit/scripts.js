@@ -15,6 +15,9 @@ function logged_user_id() {
 function logged_user_is_admin() {
 	return ($('.navbar > div > a[href="/logs"]').length === 1);
 }
+function logged_user_is_tearcher_or_admin() {
+	return ($('.navbar > div > a[href="/u"]').length === 1);
+}
 
 // Dropdowns
 $(document).ready(function(){
@@ -473,7 +476,7 @@ function preview_base(as_modal, new_window_location, func) {
 		func.call($(document.body));
 }
 function preview_ajax(as_modal, ajax_url, success_handler, new_window_location) {
-	preview_base(as_modal, new_window_location, function() {
+	preview_base(as_modal, new_window_location, function impl() {
 		var elem = this;
 		append_loader(elem);
 		$.ajax({
@@ -496,7 +499,7 @@ function preview_ajax(as_modal, ajax_url, success_handler, new_window_location) 
 			},
 			error: function(resp, status) {
 				show_error_via_loader(elem, resp, status, function () {
-					impl(elem);
+					impl.call(elem);
 				});
 			}
 			});
@@ -868,6 +871,63 @@ var ActionsToHTML = {};
 					return function() { delete_submission(sid); }
 				}()
 			}));
+
+		return res;
+	}
+
+	this.problem = function(problem_id, actions_str, problem_preview /*= false*/) {
+		if (problem_preview === undefined)
+			problem_preview = false;
+
+		var res = [];
+		if (!problem_preview && actions_str.indexOf('v') !== -1)
+			res.push(a_preview_button('/p/' + problem_id, 'View', 'btn-small',
+				function() { preview_problem(true, problem_id); }));
+
+		if (actions_str.indexOf('V') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small',
+				href: '/api/problem/' + problem_id + '/statement',
+				text: 'Statement'
+			}));
+
+		if (actions_str.indexOf('s') !== -1)
+			res.push(a_preview_button('/p/' + problem_id + '/submit', 'Submit',
+				'btn-small blue', function() { submit_solution(true, problem_id); }));
+
+		if (actions_str.indexOf('s') !== -1)
+			res.push(a_preview_button('/p/' + problem_id + '/solutions',
+				'Solutions', 'btn-small',
+				function() { preview_problem(true, problem_id, 'solutions'); }));
+
+		if (problem_preview && actions_str.indexOf('d') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small',
+				href: '/api/problem/' + problem_id + '/download',
+				text: 'Download'
+			}));
+
+		if (actions_str.indexOf('E') !== -1)
+			res.push(a_preview_button('/p/' + problem_id + '/edit', 'Edit',
+				'btn-small blue', function() { edit_problem(true, problem_id); }));
+
+		if (problem_preview && actions_str.indexOf('R') !== -1)
+			res.push(a_preview_button('/p/' + problem_id + '/reupload', 'Reupload',
+				'btn-small orange', function() { reupload_problem(true, problem_id); }));
+
+		if (problem_preview && actions_str.indexOf('J') !== -1)
+			res.push($('<a>', {
+				class: 'btn-small blue',
+				text: 'Rejudge all submissions',
+				click: function() {
+					var pid = problem_id;
+					return function() { rejudge_problem_submissions(pid); }
+				}()
+			}));
+
+		if (problem_preview && actions_str.indexOf('D') !== -1)
+			res.push(a_preview_button('/p/' + problem_id + '/delete', 'Delete',
+				'btn-small red', function() { delete_problem(true, problem_id); }));
 
 		return res;
 	}
@@ -1289,10 +1349,16 @@ function preview_job(as_modal, job_id) {
 
 				if (name == "submission")
 					td.append(a_preview_button('/s/' + info[name], info[name],
-						undefined, function() { preview_submission(true, info[name]); }));
+						undefined, function() {
+							var sid = info[name];
+							return function() {preview_submission(true, sid);};
+						}()));
 				else if (name == "problem")
 					td.append(a_preview_button('/p/' + info[name], info[name],
-						undefined, function() { preview_problem(true, info[name]); }));
+						undefined, function() {
+							var pid = info[name];
+							return function() {preview_problem(true, pid);};
+						}()));
 				else
 					td.append(info[name]);
 
@@ -1506,6 +1572,24 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
+function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	parent_elem = $(parent_elem);
+	function retab(tab_qsuff) {
+		parent_elem.children('.jobs, .loader, .loader-info').remove();
+		var table = $('<table class="jobs"></table>').appendTo(parent_elem);
+		new JobsLister(table, query_suffix + tab_qsuff).monitor_scroll();
+	}
+
+	var tabs = [
+		'All', function() { retab(''); },
+		'My', function() { retab('/u' + logged_user_id()); }
+	];
+
+	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
+}
 
 /* ============================== Submissions ============================== */
 /*function rejudgeProblemSubmissions(problem_id) {
@@ -1586,6 +1670,7 @@ function delete_submission(submission_id) {
 function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 	preview_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
 		data = data[0];
+		var actions = data[15];
 
 		if (data[6] !== null)
 			this.append($('<div>', {
@@ -1623,7 +1708,7 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 							text: 'Submission ' + submission_id
 						}),
 						$('<div>', {
-							html: ActionsToHTML.submission(submission_id, data[15],
+							html: ActionsToHTML.submission(submission_id, actions,
 								data[1], true)
 						})
 					]
@@ -1688,8 +1773,11 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 					class: 'results',
 					html: [data[18], data[19], null]
 				}))
-			},
-			'Source', function() {
+			}
+		];
+
+		if (actions.indexOf('s') !== -1)
+			tabs.push('Source', function() {
 				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
 				append_loader(elem);
 				$.ajax({
@@ -1704,10 +1792,9 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 						show_error_via_loader(elem, resp, status);
 					}
 				});
-			}
-		];
+			});
 
-		if (logged_user_is_admin())
+		if (actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
 				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
 				elem.append($('<table>', {class: 'jobs'}));
@@ -1864,7 +1951,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
-function tab_submissions_lister(parent_elem, query_suffix /*= ''*/) {
+function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutions_tab /* = false*/, active_tab /* = 0*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -1880,11 +1967,281 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/) {
 		'Final', function() { retab('/tF'); },
 		'Ignored', function() { retab('/tI'); }
 	];
-	if (query_suffix.indexOf('/u') === -1 && query_suffix.indexOf('/C') === -1 &&
-		query_suffix.indexOf('/R') === -1 && query_suffix.indexOf('/P') === -1)
-	{
+	if (show_solutions_tab)
 		tabs.push('Solutions', function() { retab('/tS'); })
+
+	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs, active_tab);
+}
+/* ============================ Problem's users ============================ */
+function add_problem(as_modal) {
+	preview_base(as_modal, '/u/add', function() {
+		this.append(ajax_form('Add problem', '/api/problem/add',
+			Form.field_group('Username', {
+					type: 'text',
+					name: 'problemname',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				}).add($('<div>', {
+					class: 'field-group',
+					html: $('<label>', {text: 'Type'})
+					.add('<select>', {
+						name: 'type',
+						required: true,
+						html: $('<option>', {
+							value: 'A',
+							text: 'Admin',
+						}).add('<option>', {
+							value: 'T',
+							text: 'Teacher',
+						}).add('<option>', {
+							value: 'N',
+							text: 'Normal',
+							selected: true
+						})
+					})
+				})).add(Form.field_group('First name', {
+					type: 'text',
+					name: 'first_name',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(Form.field_group('Last name', {
+					type: 'text',
+					name: 'last_name',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(Form.field_group('Email', {
+					type: 'email',
+					name: 'email',
+					size: 24,
+					// maxlength: 'TODO...',
+					required: true
+				})).add(Form.field_group('Password', {
+					type: 'password',
+					name: 'pass',
+					size: 24,
+				})).add(Form.field_group('Password (repeat)', {
+					type: 'password',
+					name: 'pass1',
+					size: 24,
+				})).add('<div>', {
+					html: $('<input>', {
+						class: 'btn blue',
+						type: 'submit',
+						value: 'Submit'
+					})
+				}), 'User was added'
+			));
+	})
+}
+function preview_problem(as_modal, problem_id, opt_arg) {
+	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		data = data[0];
+		var actions = data[7];
+
+		this.append($('<div>', {
+			class: 'header',
+			html: $('<h1>', {
+					text: data[3]
+				}).add('<div>', {
+					html: ActionsToHTML.problem(data[0], actions, true)
+				})
+		})).append($('<center>', {
+			html: $('<div>', {
+				class: 'problem-info',
+				html: $('<div>', {
+					class: 'type',
+					html: $('<label>', {text: 'Type'}).add('<span>', {
+						text: String(data[2]).slice(0, 1).toLowerCase() +
+							String(data[2]).slice(1)
+					})
+				})
+				.add($('<div>', {
+					class: 'name',
+					html: $('<label>', {text: 'Name'})
+				}).append(text_to_safe_html(data[3])))
+				.add($('<div>', {
+					class: 'label',
+					html: $('<label>', {text: 'Label'})
+				}).append(text_to_safe_html(data[4])))
+				.add($('<div>', {
+					class: 'tags',
+					html: $('<label>', {text: 'Tags'})
+				}).append(text_to_safe_html('')))
+			})
+		}));
+
+		if (actions.indexOf('o') !== -1)
+			$(this).find('.problem-info').append($('<div>', {
+					class: 'owner',
+					html: $('<label>', {text: 'Owner'}).add(
+						a_preview_button('/u/' + data[5], data[6], undefined, function() { preview_user(true, data[5]); }))
+				}));
+
+		if (actions.indexOf('a') !== -1)
+			$(this).find('.problem-info').append($('<div>', {
+					class: 'added',
+					html: $('<label>', {text: 'Added'})
+				}).append(normalize_datetime($('<span>', {
+					datetime: data[1],
+					text: data[1]
+				}), true)));
+
+		var main = $(this);
+		var tabs = [];
+		if (actions.indexOf('f') !== -1)
+			tabs.push('Simfile', function() {
+				$(this).parent().next().remove();
+				main.append($('<center>', {
+					html: $('<pre>', {
+						class: 'simfile',
+						style: 'text-align: initial',
+						text: data[9]
+					})
+				}));
+			});
+
+		if (actions.indexOf('s') !== -1)
+			tabs.push('Submissions', function() {
+					$(this).parent().next().remove();
+					main.append($('<div>'));
+					tab_submissions_lister(main.children().last(), '/p' + problem_id,
+						true, (opt_arg === 'solutions' ? 3 : undefined));
+				});
+
+		if (actions.indexOf('j') !== -1)
+			tabs.push('Related jobs', function() {
+				$(this).parent().next().remove();
+				var j_table = $('<table>', {
+					class: 'jobs'
+				});
+				main.append($('<div>', {
+					html: j_table
+				}));
+				new JobsLister(j_table, '/p' + problem_id).monitor_scroll();
+			});
+
+		tabmenu(function(x) { x.appendTo(main); }, tabs,
+			(opt_arg === 'solutions' ? 1 : undefined));
+
+	}, '/p/' + problem_id);
+}
+function ProblemsLister(elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	this.show_owner = logged_user_is_tearcher_or_admin();
+	this.show_added = logged_user_is_tearcher_or_admin() ||
+		(query_suffix.indexOf('/u') !== -1);
+
+	Lister.call(this, elem);
+	this.query_url = '/api/problems' + query_suffix;
+	this.query_suffix = '';
+
+	this.fetch_more_impl = function() {
+		var obj = this;
+		$.ajax({
+			type: 'GET',
+			url: obj.query_url + obj.query_suffix,
+			dataType: 'json',
+			success: function(data) {
+				if (elem.children('thead').length === 0) {
+					if (data.length === 0) {
+						obj.elem.parent().append($('<center>', {
+							class: 'problems',
+							html: '<p>There are no problems to show...</p>'
+						}));
+						remove_loader(obj.elem.parent());
+						return;
+					}
+
+					elem.html('<thead><tr>' +
+							'<th>Id</th>' +
+							'<th class="type">Type</th>' +
+							'<th class="label">Label</th>' +
+							'<th class="name_and_tags">Name and tags</th>' +
+							(obj.show_owner ? '<th class="owner">Owner</th>' : '') +
+							(obj.show_added ? '<th class="added">Added</th>' : '') +
+							'<th class="actions">Actions</th>' +
+						'</tr></thead><tbody></tbody>');
+					add_tz_marker(elem.find('thead th.added'));
+				}
+
+				for (x in data) {
+					x = data[x];
+					obj.query_suffix = '/<' + x[0];
+
+					var row = $('<tr>');
+					// Id
+					row.append($('<td>', {text: x[0]}));
+					// Type
+					row.append($('<td>', {text: x[2]}));
+					// Label
+					row.append($('<td>', {text: x[4]}));
+					// Name and tags
+					row.append($('<td>', {text: x[3]}));
+
+					// Owner
+					if (obj.show_owner)
+						row.append($('<td>', {
+							html: x[5] === null ? '' :
+								(a_preview_button('/u/' + x[5], x[6], undefined,
+									function() {
+										var uid = x[5];
+										return function() { preview_user(true, uid); };
+									}()))
+						}));
+
+					// Added
+					if (obj.show_added)
+						row.append(normalize_datetime($('<td>', {
+							datetime: x[1],
+							text: x[1]
+						})));
+
+					// Actions
+					row.append($('<td>', {
+						html: ActionsToHTML.problem(x[0], x[7])
+					}));
+
+					obj.elem.children('tbody').append(row);
+				}
+
+				remove_loader(obj.elem.parent());
+				centerize_modal(obj.elem.parents('.modal'), false);
+
+				if (data.length == 0)
+					return; // No more data to load
+
+				obj.lock = false;
+				if (obj.elem.height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
+				}
+			},
+			error: obj.get_error_handler()
+		});
+	};
+
+	this.fetch_more();
+}
+function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	parent_elem = $(parent_elem);
+	function retab(tab_qsuff) {
+		parent_elem.children('.problems, .loader, .loader-info').remove();
+		var table = $('<table class="problems"></table>').appendTo(parent_elem);
+		new ProblemsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
+
+	var tabs = [
+		'All', function() { retab(''); },
+		'My', function() { retab('/u' + logged_user_id()); }
+	];
 
 	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
 }

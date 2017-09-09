@@ -87,6 +87,23 @@ private:
 
 	void api_job_download_uploaded_package();
 
+	// jobs_api.cc
+	void api_problems();
+
+	// void api_problem();
+
+	// void api_problem_add();
+
+	// void api_problem_reupload();
+
+	// void api_problem_statement();
+
+	// void api_problem_rejudge_all_submissions();
+
+	// void api_problem_edit();
+
+	// void api_problem_delete();
+
 	// users_api.cc
 	void api_users();
 
@@ -105,6 +122,8 @@ private:
 
 	void api_submission();
 
+	// void api_submission_add();
+
 	void api_submission_rejudge();
 
 	void api_submission_change_type();
@@ -121,7 +140,7 @@ private:
 	UserType session_user_type = UserType::NORMAL;
 	InplaceBuff<SESSION_ID_LEN + 1> session_id;
 	InplaceBuff<SESSION_CSRF_TOKEN_LEN + 1> session_csrf_token;
-	InplaceBuff<30> session_user_id;
+	InplaceBuff<32> session_user_id;
 	InplaceBuff<USERNAME_MAX_LEN + 1> session_username;
 	InplaceBuff<4096> session_data;
 
@@ -354,7 +373,7 @@ private:
 
 	UserType users_user_type = UserType::NORMAL;
 	UserPermissions users_perms = UserPermissions::NONE;
-	InplaceBuff<30> users_user_id;
+	InplaceBuff<32> users_user_id;
 	InplaceBuff<USERNAME_MAX_LEN> users_username;
 	InplaceBuff<USER_FIRST_NAME_MAX_LEN> users_first_name;
 	InplaceBuff<USER_LAST_NAME_MAX_LEN> users_last_name;
@@ -431,13 +450,21 @@ private:
 	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
+	friend DECLARE_ENUM_ASSIGN_OPERATOR(JobPermissions, |=)
 
-	InplaceBuff<30> jobs_job_id;
+	InplaceBuff<32> jobs_job_id;
 	JobPermissions jobs_perms = JobPermissions::NONE;
 
 	// Session must be open to access the jobs
 	JobPermissions jobs_get_permissions(StringView creator_id, JobType job_type,
 		JobStatus job_status);
+
+	// Used to get granted permissions to the problem jobs
+	JobPermissions jobs_granted_permissions_problem(StringView problem_id);
+
+	// Used to get granted permissions to the submission jobs
+	JobPermissions jobs_granted_permissions_submission(
+		StringView submission_id);
 
 	JobPermissions jobs_get_permissions() {
 		// Return overall permissions
@@ -458,14 +485,31 @@ private:
 
 	enum class ProblemPermissions : uint {
 		NONE = 0,
-		VIEW = 1,
-		VIEW_ALL = 2,
-		VIEW_SOLUTIONS = 4,
-		DOWNLOAD = 8,
-		SEE_SIMFILE = 16,
-		SEE_OWNER = 32,
-		ADMIN = 64,
-		ADD = 128
+		// Both
+		ADMIN = 1,
+		// Overall
+		ADD = 2,
+		VIEW_TPUBLIC = 4,
+		VIEW_TCONTEST_ONLY = 8,
+		SELECT_BY_OWNER = 1 << 4,
+		// Problem specific
+		VIEW = 1 << 5,
+		VIEW_STATEMENT = VIEW,
+		VIEW_TAGS = VIEW,
+		VIEW_HIDDEN_TAGS = 1 << 6,
+		VIEW_SOLUTIONS_AND_SUBMISSIONS = 1 << 7,
+		VIEW_SIMFILE = 1 << 8,
+		VIEW_OWNER = 1 << 9,
+		VIEW_ADD_TIME = VIEW_OWNER,
+		VIEW_RELATED_JOBS = 1 << 10,
+		DOWNLOAD = 1 << 11,
+		SUBMIT = 1 << 12,
+		EDIT = 1 << 13,
+		REUPLOAD = EDIT,
+		REJUDGE_ALL = EDIT,
+		EDIT_TAGS = 1 << 14,
+		EDIT_HIDDEN_TAGS = 1 << 15,
+		DELETE = EDIT,
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~)
@@ -496,34 +540,6 @@ private:
 
 	/// Main Problemset handler
 	void problems_handle();
-
-	/// WARNING: this function assumes that the user is allowed to view the
-	/// statement
-	void problems_view_statement(StringView problem_id);
-
-	void problems_add_problem();
-
-	void problems_view_problem();
-
-	void problems_edit_problem();
-
-	void problems_download_problem();
-
-	void problems_reupload_problem();
-
-	void problems_rejudge_problem_submissions();
-
-	void problems_delete_problem();
-
-	void problems_problem_solutions();
-
-	void problems_delete_submission(StringView submission_id,
-		StringView submission_owner);
-
-	void problems_change_submission_type_to(StringView submission_id,
-		StringView submission_owner, SubmissionType stype);
-
-	void problems_problem_submissions();
 
 	/* ============================== Contest ============================== */
 
@@ -644,9 +660,10 @@ private:
 		VIEW = 1,
 		VIEW_SOURCE = 2,
 		VIEW_FULL_REPORT = 4,
-		CHANGE_TYPE = 8,
-		REJUDGE = 16,
-		DELETE = 32
+		VIEW_RELATED_JOBS = 8,
+		CHANGE_TYPE = 16,
+		REJUDGE = 32,
+		DELETE = 64
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(SubmissionPermissions, ~)
@@ -655,7 +672,8 @@ private:
 
 	SubmissionPermissions submission_get_permissions(
 		StringView submission_owner, SubmissionType stype,
-		StringView contest_owner, ContestUserMode cu_mode)
+		StringView contest_owner, ContestUserMode cu_mode,
+		StringView problem_owner)
 	{
 		using PERM = SubmissionPermissions;
 		using STYPE = SubmissionType;
@@ -667,9 +685,19 @@ private:
 			session_user_id == contest_owner or cu_mode == CUM::MODERATOR)
 		{
 			static_assert((uint)PERM::NONE == 0, "Needed below");
-			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FULL_REPORT | PERM::REJUDGE | PERM::DELETE |
+			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FULL_REPORT |
+				PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
 				(isIn(stype, {STYPE::NORMAL, STYPE::FINAL, STYPE::IGNORED})
-					? PERM::CHANGE_TYPE : PERM::NONE);
+					? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
+		}
+
+		// This check has to be done as the last one because it gives the least
+		// permissions
+		if (session_user_id == problem_owner) {
+			if (stype == STYPE::PROBLEM_SOLUTION)
+				return PERM::VIEW | PERM::VIEW_SOURCE |	PERM::VIEW_RELATED_JOBS
+					| PERM::REJUDGE;
+			return PERM::VIEW | PERM::REJUDGE;
 		}
 
 		if (session_user_id == submission_owner or cu_mode == CUM::CONTESTANT)
@@ -678,8 +706,8 @@ private:
 		return PERM::NONE;
 	}
 
-	StringView submission_id;
-	SubmissionPermissions submission_perms = SubmissionPermissions::NONE;
+	StringView submissions_sid;
+	SubmissionPermissions submissions_sperms = SubmissionPermissions::NONE;
 
 	// Pages
 	void submission_handle();

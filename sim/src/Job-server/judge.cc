@@ -42,7 +42,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		" FROM submissions s, problems p"
 		" WHERE p.id=problem_id AND s.id=?");
 	stmt.bindAndExecute(submission_id);
-	InplaceBuff<30> sowner, round_id, problem_id;
+	InplaceBuff<32> sowner, round_id, problem_id;
 	InplaceBuff<64> last_judgment, p_last_edit;
 	stmt.res_bind_all(sowner, round_id, problem_id, last_judgment, p_last_edit);
 	// If the submission doesn't exist (probably was removed)
@@ -92,19 +92,37 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 			int(SubmissionType::FINAL) == 1, "Needed below where "
 				"\"... type<= ...\"");
 
-		// Update submission
-		stmt = mysql.prepare("UPDATE submissions"
-			" SET final_candidate=?, status=?, score=?, last_judgment=?,"
-				" initial_report=?, final_report=? WHERE id=?");
+		{
+			// Lock the table to be able to safely modify the submission
+			mysql.update("LOCK TABLES submissions WRITE");
+			auto lock_guard = make_call_in_destructor([&]{
+				mysql.update("UNLOCK TABLES");
+			});
 
-		if (is_fatal(status))
-			stmt.bindAndExecute(false, (uint)status, nullptr, judging_began,
-				initial_report, final_report, submission_id);
-		else
-			stmt.bindAndExecute(true, (uint)status, total_score, judging_began,
-				initial_report, final_report, submission_id);
+			using ST = SubmissionType;
+			// Get the submission's ACTUAL type
+			stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
+			stmt.bindAndExecute(submission_id);
+			uint stype = (uint)ST::VOID;
+			stmt.res_bind_all(stype);
+			(void)stmt.next(); // Ignore errors (deleted submission)
 
-		submission::update_final(mysql, sowner, round_id);
+
+			// Update submission
+			stmt = mysql.prepare("UPDATE submissions"
+				" SET final_candidate=?, status=?, score=?, last_judgment=?,"
+					" initial_report=?, final_report=? WHERE id=?");
+
+			if (is_fatal(status))
+				stmt.bindAndExecute(false, (uint)status, nullptr,
+					judging_began, initial_report, final_report, submission_id);
+			else
+				stmt.bindAndExecute(isIn(ST(stype), {ST::NORMAL, ST::FINAL}),
+					(uint)status, total_score, judging_began, initial_report,
+					final_report, submission_id);
+
+			submission::update_final(mysql, sowner, round_id, false);
+		}
 
 		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");

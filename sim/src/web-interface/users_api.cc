@@ -19,12 +19,13 @@ void Sim::api_users() {
 		" FROM users");
 
 	bool where_added = false;
-	if (session_user_type != UserType::ADMIN) {
+	if (session_user_type == UserType::TEACHER) {
 		where_added = true;
 		query.append(" WHERE id!=" SIM_ROOT_UID);
+	} else if (session_user_type == UserType::NORMAL) {
+		where_added = true;
+		query.append(" WHERE id=", session_user_id);
 	}
-
-	bool allow_access = uint(users_get_permissions() & PERM::VIEW_ALL);
 
 	// Process restrictions
 	StringView next_arg = url_args.extractNextArg();
@@ -58,16 +59,12 @@ void Sim::api_users() {
 			return api_error400();
 
 		// conditional
-		if (cond == '>' and ~mask & ID_COND) {
+		if (isIn(cond, "<>") and ~mask & ID_COND) {
 			query.append((where_added ? " AND id" : " WHERE id"), arg);
 			where_added = true;
 			mask |= ID_COND;
 
 		} else if (cond == '=' and ~mask & ID_COND) {
-			if (not allow_access)
-				// Allow selecting the user's data
-				allow_access = (arg_id == session_user_id);
-
 			query.append((where_added ? " AND id" : " WHERE id"), arg);
 			where_added = true;
 			mask |= ID_COND;
@@ -76,9 +73,6 @@ void Sim::api_users() {
 			return api_error400();
 
 	}
-
-	if (not allow_access)
-		return api_error403();
 
 	query.append(" ORDER BY id LIMIT 50");
 	auto res = mysql.query(query);
@@ -101,9 +95,10 @@ void Sim::api_users() {
 		}
 
 		// Allowed actions
-		UserPermissions perms = users_get_permissions(res[0], utype);
 		append('"');
 
+		// res[0] == id
+		auto perms = users_get_permissions(res[0], utype);
 		if (uint(perms & PERM::VIEW))
 			append('v');
 		if (uint(perms & PERM::EDIT))

@@ -46,6 +46,55 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 	return PERM::NONE;
 }
 
+Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
+{
+	STACK_UNWINDING_MARK;
+	using PERM = JobPermissions;
+
+	auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
+	stmt.bindAndExecute(problem_id);
+
+	InplaceBuff<32> powner;
+	uint ptype;
+	stmt.res_bind_all(powner, ptype);
+	if (stmt.next()) {
+		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
+		if (uint(pperms & ProblemPermissions::VIEW_RELATED_JOBS))
+			return PERM::VIEW | PERM::DOWNLOAD_REPORT |
+				PERM::DOWNLOAD_UPLOADED_PACKAGE;
+	}
+
+	return PERM::NONE;
+}
+
+Sim::JobPermissions Sim::jobs_granted_permissions_submission(
+	StringView submission_id)
+{
+	STACK_UNWINDING_MARK;
+	using PERM = JobPermissions;
+
+	auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type"
+		" FROM submissions s STRAIGHT_JOIN problems p ON p.id=s.problem_id"
+		" WHERE s.id=?");
+	stmt.bindAndExecute(submission_id);
+
+	InplaceBuff<32> powner;
+	uint stype, ptype;
+	stmt.res_bind_all(stype, powner, ptype);
+	if (stmt.next()) {
+		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
+		// Give access to the problem's solutions' jobs to the problem's admin
+		if (SubmissionType(stype) == SubmissionType::PROBLEM_SOLUTION and
+			bool(uint(pperms & ProblemPermissions::EDIT)))
+		{
+			return PERM::VIEW | PERM::DOWNLOAD_REPORT;
+		}
+	}
+
+	return PERM::NONE;
+}
+
+
 void Sim::jobs_handle() {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
@@ -76,9 +125,8 @@ void Sim::jobs_handle() {
 	/* List jobs */
 	page_template("Job queue", "body{padding-left:20px}");
 
-	append("<h1>", (query_suffix.size == 0 ? "All jobs" : "My jobs"), "</h1>"
-		"<table class=\"jobs\"></table>"
+	append("<h1>Jobs</h1>"
 		"<script>"
-			"new JobsLister($('.jobs'),'", query_suffix, "').monitor_scroll();"
+			"tab_jobs_lister($('body'));"
 		"</script>");
 }
