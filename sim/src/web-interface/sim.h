@@ -371,13 +371,8 @@ private:
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, &)
 
-	UserType users_user_type = UserType::NORMAL;
 	UserPermissions users_perms = UserPermissions::NONE;
-	InplaceBuff<32> users_user_id;
-	InplaceBuff<USERNAME_MAX_LEN> users_username;
-	InplaceBuff<USER_FIRST_NAME_MAX_LEN> users_first_name;
-	InplaceBuff<USER_LAST_NAME_MAX_LEN> users_last_name;
-	InplaceBuff<USER_EMAIL_MAX_LEN> users_email;
+	InplaceBuff<32> users_uid;
 
 	/**
 	 * @brief Returns a set of operation the viewer is allowed to do over the
@@ -393,31 +388,6 @@ private:
 	Sim::UserPermissions users_get_permissions() {
 		// Return overall permissions
 		return users_get_permissions("", UserType::NORMAL);
-	}
-
-	void users_page_template(StringView title, StringView styles = {},
-		StringView scripts = {});
-
-	void users_print_user() {
-		STACK_UNWINDING_MARK;
-
-		append("<h4><a href=\"/u/", users_user_id, "\">",
-				htmlEscape(users_username), "</a> (",
-				htmlEscape(users_first_name), ' ', htmlEscape(users_last_name),
-				")</h4>"
-			"<div class=\"right-flow\" style=\"width:87%\">"
-				"<a class=\"btn-small\" href=\"/u/", users_user_id, "\">"
-					"View profile</a>");
-
-		if (uint(users_perms & UserPermissions::EDIT))
-			append("<a class=\"btn-small blue\" href=\"/u/", users_user_id,
-				"/edit\">Edit profile</a>");
-
-		if (uint(users_perms & UserPermissions::CHANGE_PASS))
-			append("<a class=\"btn-small orange\" href=\"/u/", users_user_id,
-				"/change-password\">Change password</a>");
-
-		append("</div>");
 	}
 
 	/* Pages */
@@ -452,7 +422,7 @@ private:
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
 	friend DECLARE_ENUM_ASSIGN_OPERATOR(JobPermissions, |=)
 
-	InplaceBuff<32> jobs_job_id;
+	InplaceBuff<32> jobs_jid;
 	JobPermissions jobs_perms = JobPermissions::NONE;
 
 	// Session must be open to access the jobs
@@ -469,13 +439,6 @@ private:
 	JobPermissions jobs_get_permissions() {
 		// Return overall permissions
 		return jobs_get_permissions("", JobType::VOID, JobStatus::DONE);
-	}
-
-	void jobs_page_template(StringView title, StringView styles = {},
-		StringView scripts = {})
-	{
-		STACK_UNWINDING_MARK;
-		page_template(title, concat("body{padding-left:32px}", styles), scripts);
 	}
 
 	/// Main Jobs handler
@@ -525,18 +488,7 @@ private:
 	}
 
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
-	UserType problems_owner_utype = UserType::NORMAL;
-	std::string problems_owner_username;
-	std::string problems_problem_id;
-	std::string problems_problem_name;
-	std::string problems_problem_label;
-	std::string problems_problem_owner;
-	std::string problems_problem_added;
-	std::string problems_problem_simfile;
-	ProblemType problems_problem_type = ProblemType::VOID;
-
-	void problems_page_template(StringView title, StringView styles = {},
-		StringView scripts = {});
+	InplaceBuff<32> problems_pid;
 
 	/// Main Problemset handler
 	void problems_handle();
@@ -594,9 +546,6 @@ private:
 	// Utilities
 	// contest_utilities.cc
 	RoundPath* get_round_path(StringView round_id);
-
-	void contest_page_template(StringView title, StringView styles = {},
-		StringView scripts = {});
 
 	void print_round_path(StringView page = "", bool force_normal = false);
 
@@ -707,7 +656,7 @@ private:
 	}
 
 	StringView submissions_sid;
-	SubmissionPermissions submissions_sperms = SubmissionPermissions::NONE;
+	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
 	// Pages
 	void submission_handle();

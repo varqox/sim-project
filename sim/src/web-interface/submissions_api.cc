@@ -367,13 +367,13 @@ void Sim::api_submission() {
 		" LEFT JOIN contests_users cu ON cu.contest_id=s.contest_round_id"
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
-	stmt.bindAndExecute(users_user_id, submissions_sid);
+	stmt.bindAndExecute(session_user_id, submissions_sid);
 	stmt.res_bind_all(sowner, stype, c_owner, cu_mode, p_owner);
 	if (not stmt.next())
 		return api_error404();
 
-	submissions_sperms = submission_get_permissions(sowner, SubmissionType(stype),
-		(stmt.is_null(1) ? StringView{} : c_owner),
+	submissions_perms = submission_get_permissions(sowner,
+		SubmissionType(stype), (stmt.is_null(1) ? StringView{} : c_owner),
 		(stmt.is_null(2) ? CUM::IS_NULL : CUM(cu_mode)), p_owner);
 
 	// Subpages
@@ -400,7 +400,7 @@ void Sim::api_submission() {
 void Sim::api_submission_source() {
 	STACK_UNWINDING_MARK;
 
-	if (uint(~submissions_sperms & SubmissionPermissions::VIEW_SOURCE))
+	if (uint(~submissions_perms & SubmissionPermissions::VIEW_SOURCE))
 		return api_error403();
 
 	append(cpp_syntax_highlighter(getFileContents(
@@ -410,7 +410,7 @@ void Sim::api_submission_source() {
 void Sim::api_submission_download() {
 	STACK_UNWINDING_MARK;
 
-	if (uint(~submissions_sperms & SubmissionPermissions::VIEW_SOURCE))
+	if (uint(~submissions_perms & SubmissionPermissions::VIEW_SOURCE))
 		return api_error403();
 
 
@@ -425,7 +425,7 @@ void Sim::api_submission_download() {
 void Sim::api_submission_rejudge() {
 	STACK_UNWINDING_MARK;
 
-	if (uint(~submissions_sperms & SubmissionPermissions::REJUDGE))
+	if (uint(~submissions_perms & SubmissionPermissions::REJUDGE))
 		return api_error403();
 
 	InplaceBuff<32> problem_id;
@@ -449,7 +449,7 @@ void Sim::api_submission_change_type() {
 	using SS = SubmissionStatus;
 	using ST = SubmissionType;
 
-	if (uint(~submissions_sperms & SubmissionPermissions::CHANGE_TYPE))
+	if (uint(~submissions_perms & SubmissionPermissions::CHANGE_TYPE))
 		return api_error403();
 
 	StringView type_s = request.form_data.get("type");
@@ -498,7 +498,7 @@ void Sim::api_submission_change_type() {
 void Sim::api_submission_delete() {
 	STACK_UNWINDING_MARK;
 
-	if (uint(~submissions_sperms & SubmissionPermissions::DELETE))
+	if (uint(~submissions_perms & SubmissionPermissions::DELETE))
 		return api_error403();
 
 	// Lock the table to be able to safely delete the submission

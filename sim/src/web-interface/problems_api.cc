@@ -232,11 +232,8 @@ void Sim::api_job() {
 	STACK_UNWINDING_MARK;
 	using JT = JobType;
 
-	if (not session_open())
-		return api_error403();
-
-	jobs_job_id = url_args.extractNextArg();
-	if (not isDigit(jobs_job_id))
+	problems_id = url_args.extractNextArg();
+	if (not isDigit(problems_id))
 		return api_error400();
 
 	InplaceBuff<32> jcreator;
@@ -245,7 +242,7 @@ void Sim::api_job() {
 
 	auto stmt = mysql.prepare("SELECT creator, type, status, info FROM jobs"
 		" WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
+	stmt.bindAndExecute(problems_id);
 	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
 	if (not stmt.next())
 		return api_error404();
@@ -282,7 +279,7 @@ void Sim::api_job_cancel() {
 	// Cancel job
 	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
 		" WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
+	stmt.bindAndExecute(problems_id);
 }
 
 void Sim::api_job_restart(JobType job_type, StringView job_info) {

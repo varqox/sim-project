@@ -77,7 +77,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView uid, UserType utype)
 void Sim::login() {
 	STACK_UNWINDING_MARK;
 
-	auto& username = users_username = "";
+	InplaceBuff<USERNAME_MAX_LEN> username;
 	bool remember = false;
 	if (request.method == server::HttpRequest::POST) {
 		// Try to login
@@ -165,10 +165,10 @@ void Sim::sign_up() {
 		return redirect("/");
 
 	InplaceBuff<4096> pass1, pass2;
-	auto& username = users_username = "";
-	auto& first_name = users_first_name = "";
-	auto& last_name = users_last_name = "";
-	auto& email = users_email = "";
+	InplaceBuff<USERNAME_MAX_LEN> username;
+	InplaceBuff<USER_FIRST_NAME_MAX_LEN> first_name;
+	InplaceBuff<USER_LAST_NAME_MAX_LEN> last_name;
+	InplaceBuff<USER_EMAIL_MAX_LEN> email;
 
 	if (request.method == server::HttpRequest::POST) {
 		// Validate all fields
@@ -276,12 +276,12 @@ void Sim::users_handle() {
 		return redirect(concat_tostr("/login?", request.target));
 
 	StringView next_arg = url_args.extractNextArg();
-	if (isDigit(next_arg)) {
-		users_user_id = next_arg;
-		return users_user();
-	} else if (next_arg == "add")
+	if (next_arg == "add")
 		return users_add();
-	else if (next_arg.size())
+	else if (isDigit(next_arg)) {
+		users_uid = next_arg;
+		return users_user();
+	} else if (next_arg.size())
 		return error404();
 
 	// List users
@@ -311,24 +311,23 @@ void Sim::users_user() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("User ", users_user_id),
-			"body{padding-left:32px}");
-		append("<script>preview_user(false, ", users_user_id, ");</script>");
+		page_template(concat("User ", users_uid), "body{padding-left:32px}");
+		append("<script>preview_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit user ", users_user_id),
+		page_template(concat("Edit user ", users_uid),
 			"body{padding-left:32px}");
-		append("<script>edit_user(false, ", users_user_id, ");</script>");
+		append("<script>edit_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete user ", users_user_id),
+		page_template(concat("Delete user ", users_uid),
 			"body{padding-left:32px}");
-		append("<script>delete_user(false, ", users_user_id, ");</script>");
+		append("<script>delete_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "change-password") {
-		page_template(concat("Change password of the user ", users_user_id),
+		page_template(concat("Change password of the user ", users_uid),
 			"body{padding-left:32px}");
-		append("<script>change_user_password(false, ", users_user_id,
+		append("<script>change_user_password(false, ", users_uid,
 			");</script>");
 
 	} else
