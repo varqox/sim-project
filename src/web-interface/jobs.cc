@@ -94,7 +94,6 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 	return PERM::NONE;
 }
 
-
 void Sim::jobs_handle() {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
@@ -104,10 +103,10 @@ void Sim::jobs_handle() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (isDigit(next_arg)) {
-		jobs_job_id = next_arg;
+		jobs_jid = next_arg;
 
-		page_template(concat("Job ", jobs_job_id), "body{padding-left:32px}");
-		append("<script>preview_job(false, ", jobs_job_id, ");</script>");
+		page_template(concat("Job ", jobs_jid), "body{padding-left:32px}");
+		append("<script>preview_job(false, ", jobs_jid, ");</script>");
 		return;
 	}
 

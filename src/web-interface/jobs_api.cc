@@ -261,8 +261,8 @@ void Sim::api_job() {
 	if (not session_open())
 		return api_error403();
 
-	jobs_job_id = url_args.extractNextArg();
-	if (not isDigit(jobs_job_id))
+	jobs_jid = url_args.extractNextArg();
+	if (not isDigit(jobs_jid))
 		return api_error400();
 
 	InplaceBuff<32> jcreator, aux_id;
@@ -271,7 +271,7 @@ void Sim::api_job() {
 
 	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
 		" FROM jobs WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
+	stmt.bindAndExecute(jobs_jid);
 	stmt.res_bind_all(jcreator, jtype, jstatus, aux_id, jinfo);
 	if (not stmt.next())
 		return api_error404();
@@ -313,7 +313,7 @@ void Sim::api_job_cancel() {
 	// Cancel job
 	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
 		" WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
+	stmt.bindAndExecute(jobs_jid);
 }
 
 void Sim::api_job_restart(JobType job_type, StringView job_info) {
@@ -329,7 +329,7 @@ void Sim::api_job_restart(JobType job_type, StringView job_info) {
 		return api_error403();
 	}
 
-	jobs::restart_job(mysql, jobs_job_id, job_type, job_info, true);
+	jobs::restart_job(mysql, jobs_jid, job_type, job_info, true);
 }
 
 void Sim::api_job_download_report() {
@@ -342,11 +342,11 @@ void Sim::api_job_download_report() {
 	// Assumption: permissions are already checked
 	resp.headers["Content-type"] = "application/text";
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=job-", jobs_job_id, "-report");
+		concat_tostr("attachment; filename=job-", jobs_jid, "-report");
 
 	// Fetch the report
 	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
+	stmt.bindAndExecute(jobs_jid);
 	stmt.res_bind_all(resp.content);
 	throw_assert(stmt.next());
 }
@@ -359,7 +359,7 @@ void Sim::api_job_download_uploaded_package() {
 		return api_error403();
 
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=", jobs_job_id, ".zip");
+		concat_tostr("attachment; filename=", jobs_jid, ".zip");
 	resp.content_type = server::HttpResponse::FILE;
-	resp.content = concat("jobs_files/", jobs_job_id, ".zip");
+	resp.content = concat("jobs_files/", jobs_jid, ".zip");
 }

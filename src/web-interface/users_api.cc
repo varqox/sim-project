@@ -140,17 +140,16 @@ void Sim::api_user() {
 		return api_error400();
 	}
 
-	users_user_id = next_arg;
+	users_uid = next_arg;
 
 	uint utype;
 	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
-	stmt.bindAndExecute(users_user_id);
+	stmt.bindAndExecute(users_uid);
 	stmt.res_bind_all(utype);
 	if (not stmt.next())
 		return api_error404();
 
-	users_user_type = UserType(utype);
-	users_perms = users_get_permissions(users_user_id, users_user_type);
+	users_perms = users_get_permissions(users_uid, UserType(utype));
 
 	next_arg = url_args.extractNextArg();
 	if (next_arg == "edit")
@@ -293,7 +292,7 @@ void Sim::api_user_edit() {
 		" WHERE id=?");
 	try {
 		stmt.bindAndExecute(username, fname, lname, email, uint(new_utype),
-			users_user_id);
+			users_uid);
 	} catch (const std::exception&) {
 		return api_error400("Username is already taken");
 	}
@@ -323,10 +322,10 @@ void Sim::api_user_delete() {
 	// TODO: add other things like problems,, contests, messages, files etc.
 
 	stmt = mysql.prepare("DELETE FROM submissions WHERE owner=?");
-	stmt.bindAndExecute(users_user_id);
+	stmt.bindAndExecute(users_uid);
 
 	stmt = mysql.prepare("DELETE FROM users WHERE id=?");
-	stmt.bindAndExecute(users_user_id);
+	stmt.bindAndExecute(users_uid);
 }
 
 void Sim::api_user_change_password() {
@@ -350,7 +349,7 @@ void Sim::api_user_change_password() {
 	InplaceBuff<SALT_LEN> salt;
 	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
 	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
-	stmt.bindAndExecute(users_user_id);
+	stmt.bindAndExecute(users_uid);
 	stmt.res_bind_all(salt, passwd_hash);
 	if (!stmt.next())
 		THROW("Cannot get user's password");
@@ -367,5 +366,5 @@ void Sim::api_user_change_password() {
 	salt = toHex(salt_bin, sizeof(salt_bin));
 
 	stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
-	stmt.bindAndExecute(salt, sha3_512(concat(salt, new_pass)), users_user_id);
+	stmt.bindAndExecute(salt, sha3_512(concat(salt, new_pass)), users_uid);
 }
