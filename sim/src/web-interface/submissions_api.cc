@@ -414,7 +414,7 @@ void Sim::api_submission_download() {
 		return api_error403();
 
 
-	resp.headers["Content-type"] = "application/text";
+	resp.headers["Content-type"] = "text/x-c++src";
 	resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=",
 		submissions_sid, ".cpp");
 

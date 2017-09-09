@@ -11,7 +11,7 @@ $(eval $(call dependencies))
 ../sim-server: users.o jobs.o problems.o submission.o
 ../sim-server: ../lib/sim.a ../lib/sqlite3.a
 ../sim-server:
-	$(LINK) -pthread -lsupc++
+	$(LINK) -pthread -lsupc++ -larchive
 
 # ../sim-server2: server2.o connection.o http_request.o http_response.o form_validator.o
 # ../sim-server2: session.o template.o errors.o user.o problemset.o jobs.o
@@ -20,7 +20,8 @@ $(eval $(call dependencies))
 # ../sim-server2:
 	# $(LINK) -lmysqlcppconn -pthread -lsupc++
 
-# Technique used to force browsers to always keep updated version of the files below
+# Technique used to force browsers to always keep up-to-date version of the
+# files below
 template.o: EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/styles.css))"'
 template.o: EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/jquery.js))"'
 template.o: EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' ../static/kit/scripts.js))"'

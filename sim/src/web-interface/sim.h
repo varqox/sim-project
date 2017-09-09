@@ -90,15 +90,17 @@ private:
 	// jobs_api.cc
 	void api_problems();
 
-	// void api_problem();
+	void api_problem();
 
-	// void api_problem_add();
+	void api_problem_add();
 
-	// void api_problem_reupload();
+	void api_problem_statement(StringView problem_label, StringView simfile);
 
-	// void api_problem_statement();
+	void api_problem_download(StringView problem_label);
 
 	// void api_problem_rejudge_all_submissions();
+
+	// void api_problem_reupload();
 
 	// void api_problem_edit();
 
