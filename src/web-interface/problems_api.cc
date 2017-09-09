@@ -1,6 +1,10 @@
 #include "sim.h"
 
 // #include <sim/jobs.h>
+#include <simlib/config_file.h>
+#include <simlib/filesystem.h>
+#include <simlib/sim/problem_package.h>
+#include <simlib/zip.h>
 
 static constexpr const char* proiblem_type_str(ProblemType type) noexcept {
 	using PT = ProblemType;
@@ -227,106 +231,104 @@ void Sim::api_problems() {
 	append("\n]");
 }
 
-#if 1-1
-void Sim::api_job() {
+void Sim::api_problem() {
 	STACK_UNWINDING_MARK;
-	using JT = JobType;
 
-	problems_id = url_args.extractNextArg();
-	if (not isDigit(problems_id))
+	problems_perms = problems_get_permissions();
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "add")
+		return api_problem_add();
+	else if (not isDigit(next_arg))
 		return api_error400();
 
-	InplaceBuff<32> jcreator;
-	InplaceBuff<256> jinfo;
-	uint jtype, jstatus;
+	problems_pid = next_arg;
 
-	auto stmt = mysql.prepare("SELECT creator, type, status, info FROM jobs"
+	InplaceBuff<32> powner;
+	InplaceBuff<PROBLEM_LABEL_MAX_LEN> plabel;
+	InplaceBuff<1 << 16> simfile;
+	uint ptype;
+
+	auto stmt = mysql.prepare("SELECT owner, type, label, simfile FROM problems"
 		" WHERE id=?");
-	stmt.bindAndExecute(problems_id);
-	stmt.res_bind_all(jcreator, jtype, jstatus, jinfo);
+	stmt.bindAndExecute(problems_pid);
+	stmt.res_bind_all(powner, ptype, plabel, simfile);
 	if (not stmt.next())
 		return api_error404();
 
-	jobs_perms = jobs_get_permissions(jcreator, JobType(jtype),
-		JobStatus(jstatus));
+	problems_perms = problems_get_permissions(powner, ProblemType(ptype));
 
-	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "cancel")
-		return api_job_cancel();
-	else if (next_arg == "restart")
-		return api_job_restart(JT(jtype), jinfo);
-	else if (next_arg == "report")
-		return api_job_download_report();
-	else if (next_arg == "uploaded-package")
-		return api_job_download_uploaded_package();
+	next_arg = url_args.extractNextArg();
+	if (next_arg == "statement")
+		return api_problem_statement(plabel, simfile);
+	else if (next_arg == "download")
+		return api_problem_download(plabel);
+	// else if (next_arg == "rejudge_all_submissions")
+	// 	return api_problem_rejudge_all_submissions();
+	// else if (next_arg == "reupload")
+	// 	return api_problem_reupload();
+	// else if (next_arg == "edit")
+	// 	return api_problem_edit();
+	// else if (next_arg == "delete")
+	// 	return api_problem_delete();
 	else
 		return api_error400();
 }
 
-void Sim::api_job_cancel() {
+void Sim::api_problem_add() {
 	STACK_UNWINDING_MARK;
-	using PERM = JobPermissions;
+	using PERM = ProblemPermissions;
 
-	if (request.method != server::HttpRequest::POST)
-		return api_error400();
-
-	if (uint(~jobs_perms & PERM::CANCEL)) {
-		if (uint(jobs_perms & PERM::VIEW))
-			return api_error400("Job has already been canceled or done");
+	if (uint(~problems_perms & PERM::ADD))
 		return api_error403();
-	}
 
-	// Cancel job
-	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
-		" WHERE id=?");
-	stmt.bindAndExecute(problems_id);
+	return api_error403();
 }
 
-void Sim::api_job_restart(JobType job_type, StringView job_info) {
+void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
 	STACK_UNWINDING_MARK;
-	using PERM = JobPermissions;
+	using PERM = ProblemPermissions;
 
-	if (request.method != server::HttpRequest::POST)
-		return api_error400();
-
-	if (uint(~jobs_perms & PERM::RESTART)) {
-		if (uint(jobs_perms & PERM::VIEW))
-			return api_error400("Job has already been restarted");
+	if (uint(~problems_perms & PERM::VIEW_STATEMENT))
 		return api_error403();
+
+	ConfigFile cf;
+	cf.addVars("statement");
+	cf.loadConfigFromString(simfile.to_string());
+
+	auto& statement = cf.getVar("statement").asString();
+	StringView ext;
+	if (hasSuffix(statement, ".pdf")) {
+		ext = ".pdf";
+		resp.headers["Content-type"] = "application/pdf";
+	} else if (hasSuffixIn(statement, {".html", ".htm"})) {
+		ext = ".html";
+		resp.headers["Content-type"] = "text/html";
+	} else if (hasSuffixIn(statement, {".txt", ".md"})) {
+		ext = ".md";
+		resp.headers["Content-type"] = "text/markdown; charset=utf-8";
 	}
 
-	jobs::restart_job(mysql, jobs_job_id, job_type, job_info, true);
-}
-
-void Sim::api_job_download_report() {
-	STACK_UNWINDING_MARK;
-	using PERM = JobPermissions;
-
-	if (uint(~jobs_perms & PERM::DOWNLOAD_REPORT))
-		return api_error403();
-
-	// Assumption: permissions are already checked
-	resp.headers["Content-type"] = "application/text";
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=job-", jobs_job_id, "-report");
+		concat_tostr("inline; filename=",
+			http::quote(concat(problem_label, ext)));
 
-	// Fetch the report
-	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
-	stmt.bindAndExecute(jobs_job_id);
-	stmt.res_bind_all(resp.content);
-	throw_assert(stmt.next());
+	// TODO: add some cache system for the statements
+
+	auto package_zip = concat("problems/", problems_pid, ".zip");
+	resp.content = extract_file_from_zip(package_zip.to_cstr(), concat(
+		sim::zip_package_master_dir(package_zip.to_cstr()), statement).to_cstr());
 }
 
-void Sim::api_job_download_uploaded_package() {
+void Sim::api_problem_download(StringView problem_label) {
 	STACK_UNWINDING_MARK;
-	using PERM = JobPermissions;
+	using PERM = ProblemPermissions;
 
-	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
+	if (uint(~problems_perms & PERM::DOWNLOAD))
 		return api_error403();
 
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=", jobs_job_id, ".zip");
+		concat_tostr("attachment; filename=", problem_label, ".zip");
 	resp.content_type = server::HttpResponse::FILE;
-	resp.content = concat("jobs_files/", jobs_job_id, ".zip");
+	resp.content = concat("problems/", problems_pid, ".zip");
 }
-#endif
