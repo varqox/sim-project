@@ -72,16 +72,31 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
+	using CUM = ContestUserMode;
 
-	auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type"
-		" FROM submissions s STRAIGHT_JOIN problems p ON p.id=s.problem_id"
+	if (not session_is_open)
+		return PERM::NONE;
+
+	auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type, c.owner, cu.mode"
+		" FROM submissions s"
+		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
+		" LEFT JOIN rounds c ON c.id=s.contest_round_id"
+		" LEFT JOIN contests_users cu ON cu.user_id=? AND cu.contest_id=c.id"
 		" WHERE s.id=?");
-	stmt.bindAndExecute(submission_id);
+	stmt.bindAndExecute(session_user_id, submission_id);
 
-	InplaceBuff<32> powner;
-	uint stype, ptype;
-	stmt.res_bind_all(stype, powner, ptype);
+	InplaceBuff<32> powner, cowner;
+	uint stype, ptype, cu_mode;
+	stmt.res_bind_all(stype, powner, ptype, cowner, cu_mode);
 	if (stmt.next()) {
+		if ((not stmt.is_null(3) and cowner == session_user_id) or
+			(not stmt.is_null(4) and CUM(cu_mode) == CUM::MODERATOR))
+		{
+			return PERM::VIEW | PERM::DOWNLOAD_REPORT;
+		}
+
+		// The below check has to be done as the last one because it gives the
+		// least permissions
 		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
 		// Give access to the problem's solutions' jobs to the problem's admin
 		if (SubmissionType(stype) == SubmissionType::PROBLEM_SOLUTION and
