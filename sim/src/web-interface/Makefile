@@ -8,7 +8,7 @@ $(eval $(call dependencies))
 ../sim-server: server.o connection.o http_request.o http_response.o
 ../sim-server: sim.o session.o template.o
 ../sim-server: api.o jobs_api.o users_api.o submissions_api.o problems_api.o
-../sim-server: users.o jobs.o problems.o submission.o
+../sim-server: users.o jobs.o problems.o submissions.o
 ../sim-server: ../lib/sim.a ../lib/sqlite3.a
 ../sim-server:
 	$(LINK) -pthread -lsupc++ -larchive

@@ -2104,12 +2104,18 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 			});
 
 		if (actions.indexOf('s') !== -1)
-			tabs.push('Submissions', function() {
+			tabs.push('All submissions', function() {
 					$(this).parent().next().remove();
 					main.append($('<div>'));
 					tab_submissions_lister(main.children().last(), '/p' + problem_id,
 						true, (opt_arg === 'solutions' ? 3 : undefined));
 				});
+
+		tabs.push('My submissions', function() {
+				$(this).parent().next().remove();
+				main.append($('<div>'));
+				tab_submissions_lister(main.children().last(), '/p' + problem_id + '/u' + logged_user_id());
+			});
 
 		if (actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
