@@ -132,9 +132,11 @@ void Sim::api_user() {
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "add")
+	if (next_arg == "add") {
+		users_perms = users_get_permissions();
 		return api_user_add();
-	else if (not isDigit(next_arg) or
+
+	} else if (not isDigit(next_arg) or
 		request.method != server::HttpRequest::POST)
 	{
 		return api_error400();
@@ -165,8 +167,6 @@ void Sim::api_user() {
 void Sim::api_user_add() {
 	STACK_UNWINDING_MARK;
 	using PERM = UserPermissions;
-
-	users_perms = users_get_permissions();
 
 	if (uint(~users_perms & PERM::ADD_USER))
 		return api_error403();

@@ -92,15 +92,17 @@ private:
 
 	void api_problem();
 
+	void api_problem_add_or_reupload_impl(bool reuploading);
+
 	void api_problem_add();
 
 	void api_problem_statement(StringView problem_label, StringView simfile);
 
 	void api_problem_download(StringView problem_label);
 
-	// void api_problem_rejudge_all_submissions();
+	void api_problem_rejudge_all_submissions();
 
-	// void api_problem_reupload();
+	void api_problem_reupload();
 
 	// void api_problem_edit();
 

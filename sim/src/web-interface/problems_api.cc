@@ -1,6 +1,6 @@
 #include "sim.h"
 
-// #include <sim/jobs.h>
+#include <sim/jobs.h>
 #include <simlib/config_file.h>
 #include <simlib/filesystem.h>
 #include <simlib/sim/problem_package.h>
@@ -263,16 +263,90 @@ void Sim::api_problem() {
 		return api_problem_statement(plabel, simfile);
 	else if (next_arg == "download")
 		return api_problem_download(plabel);
-	// else if (next_arg == "rejudge_all_submissions")
-	// 	return api_problem_rejudge_all_submissions();
-	// else if (next_arg == "reupload")
-	// 	return api_problem_reupload();
+	else if (next_arg == "rejudge_all_submissions")
+		return api_problem_rejudge_all_submissions();
+	else if (next_arg == "reupload")
+		return api_problem_reupload();
 	// else if (next_arg == "edit")
 	// 	return api_problem_edit();
 	// else if (next_arg == "delete")
 	// 	return api_problem_delete();
 	else
 		return api_error400();
+}
+
+void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
+	// Validate fields
+	CStringView name, label, memory_limit, global_time_limit, package_file;
+	bool relative_time_limits = request.form_data.exist("relative_time_limits");
+	bool ignore_simfile = request.form_data.exist("ignore_simfile");
+	// TODO: implement it
+	// bool seek_for_new_tests = request.form_data.exist("seek_for_new_tests");
+
+	form_validate(name, "name", "Problem's name", PROBLEM_NAME_MAX_LEN);
+	form_validate(label, "label", "Problem's label", PROBLEM_LABEL_MAX_LEN);
+	form_validate(memory_limit, "mem_limit", "Memory limit",
+		isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
+		"Memory limit: invalid value");
+	form_validate_file_path_not_blank(package_file, "package",
+		"Zipped package");
+	form_validate(global_time_limit, "global_time_limit", "Global time limit",
+		isReal, "Global time limit: invalid value"); // TODO: add length limit
+	// Convert global_time_limit to usec
+	uint64_t gtl =
+		round(strtod(global_time_limit.c_str(), nullptr) * 1'000'000);
+	if (global_time_limit.size() && gtl < 400000)
+		return api_error400("Global time limit cannot be lower than 0.4 s");
+
+	// Validate problem type
+	StringView ptype_str = request.form_data.get("type");
+	ProblemType ptype /*= ProblemType::VOID*/;
+	if (ptype_str == "PRI")
+		ptype = ProblemType::PRIVATE;
+	else if (ptype_str == "PUB")
+		ptype = ProblemType::PUBLIC;
+	else if (ptype_str == "CON")
+		ptype = ProblemType::CONTEST_ONLY;
+	else
+		return api_error400("Invalid problem's type");
+
+	if (form_validation_error)
+		return api_error400(concat("<div>", notifications, "</div>"));
+
+	jobs::AddProblemInfo ap_info {
+		name.to_string(),
+		label.to_string(),
+		strtoull(memory_limit.c_str()),
+		gtl,
+		relative_time_limits,
+		ignore_simfile,
+		ptype
+	};
+
+	auto stmt = mysql.prepare("INSERT jobs(creator, priority, type, status,"
+			" added, aux_id, info, data)"
+		" VALUES(?, ?, " JTYPE_VOID_STR ", " JSTATUS_PENDING_STR ", ?, ?, ?,"
+			" '')");
+	if (reuploading)
+		stmt.bindAndExecute(session_user_id, priority(JobType::ADD_PROBLEM),
+			date(), problems_pid, ap_info.dump());
+	else
+		stmt.bindAndExecute(session_user_id, priority(JobType::ADD_PROBLEM),
+			date(), nullptr, ap_info.dump());
+
+	auto job_id = stmt.insert_id();
+	// Make the package file the job's file
+	if (rename(package_file, concat("jobs_files/", job_id, ".zip").to_cstr()))
+		THROW("move() failed", error());
+
+	// Activate the job
+	stmt = mysql.prepare("UPDATE jobs SET type=? WHERE id=?");
+	stmt.bindAndExecute(std::underlying_type_t<JobType>(reuploading	?
+		JobType::REUPLOAD_PROBLEM : JobType::ADD_PROBLEM), job_id);
+
+	jobs::notify_job_server();
+
+	append(job_id);
 }
 
 void Sim::api_problem_add() {
@@ -282,7 +356,7 @@ void Sim::api_problem_add() {
 	if (uint(~problems_perms & PERM::ADD))
 		return api_error403();
 
-	return api_error403();
+	api_problem_add_or_reupload_impl(false);
 }
 
 void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
@@ -317,7 +391,8 @@ void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
 
 	auto package_zip = concat("problems/", problems_pid, ".zip");
 	resp.content = extract_file_from_zip(package_zip.to_cstr(), concat(
-		sim::zip_package_master_dir(package_zip.to_cstr()), statement).to_cstr());
+		sim::zip_package_master_dir(package_zip.to_cstr()), statement)
+			.to_cstr());
 }
 
 void Sim::api_problem_download(StringView problem_label) {
@@ -331,4 +406,32 @@ void Sim::api_problem_download(StringView problem_label) {
 		concat_tostr("attachment; filename=", problem_label, ".zip");
 	resp.content_type = server::HttpResponse::FILE;
 	resp.content = concat("problems/", problems_pid, ".zip");
+}
+
+void Sim::api_problem_reupload() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::REUPLOAD))
+		return api_error403();
+
+	api_problem_add_or_reupload_impl(true);
+}
+
+void Sim::api_problem_rejudge_all_submissions() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::REJUDGE_ALL))
+		return api_error403();
+
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
+			", ?, id, ?, ''"
+		" FROM submissions WHERE problem_id=? ORDER BY id");
+	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+		date(), jobs::dumpString(problems_pid), problems_pid);
+
+	jobs::notify_job_server();
 }

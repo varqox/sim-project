@@ -188,9 +188,17 @@ void Sim::api_jobs() {
 		case JobType::REUPLOAD_PROBLEM:
 		case JobType::ADD_JUDGE_MODEL_SOLUTION:
 		case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
+			auto ptype_to_str = [](ProblemType& ptype) {
+				switch (ptype) {
+				case ProblemType::VOID: return "void";
+				case ProblemType::PUBLIC: return "public";
+				case ProblemType::PRIVATE: return "private";
+				case ProblemType::CONTEST_ONLY: return "contest only";
+				}
+				return "unknown";
+			};
 			jobs::AddProblemInfo info {res[6]};
-			append("\"make public\":", info.make_public ?
-				"\"yes\"" : "\"no\"");
+			append("\"problem type\":\"", ptype_to_str(info.problem_type), '"');
 
 			if (info.name.size())
 				append(",\"name\":", jsonStringify(info.name));

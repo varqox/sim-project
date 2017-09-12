@@ -57,6 +57,7 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 
 void Sim::problems_handle() {
 	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
 
 	StringView next_arg = url_args.extractNextArg();
 	if (isDigit(next_arg)) {
@@ -78,9 +79,13 @@ void Sim::problems_handle() {
 
 	/* List problems */
 	page_template("Problems", "body{padding-left:20px}");
+	append("<h1>Problems</h1>");
 
-	append("<h1>Problems</h1>"
-		"<script>"
+	if (uint(problems_perms & PERM::ADD))
+		append("<div><a class=\"btn\" onclick=\"add_problem(true)\">"
+			"Add problem</a><div>");
+
+	append("<script>"
 			"tab_problems_lister($('body'));"
 		"</script>");
 }

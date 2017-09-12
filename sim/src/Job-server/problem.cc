@@ -192,8 +192,8 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 		"INSERT INTO problems (rowid, type, name, label)"
 		" VALUES(?, ?, ?, ?)")};
 	sqlite_stmt.bindInt64(1, problem_id);
-	sqlite_stmt.bindInt(2, int(info.make_public ?
-		ProblemType::PUBLIC : ProblemType::PRIVATE));
+	sqlite_stmt.bindInt(2,
+		std::underlying_type_t<ProblemType>(info.problem_type));
 	sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
 	sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
 	throw_assert(sqlite_stmt.step() == SQLITE_DONE);
@@ -358,9 +358,9 @@ void addProblem(uint64_t job_id, StringView job_owner, StringView info) {
 			auto stmt = mysql.prepare("UPDATE problems p, submissions s"
 				" SET p.type=?, s.type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE p.id=? AND s.problem_id=?");
-			stmt.bindAndExecute(uint(p_info.make_public ?
-				ProblemType::PUBLIC : ProblemType::PRIVATE), problem_id,
-				problem_id);
+			stmt.bindAndExecute(
+				std::underlying_type_t<ProblemType>(p_info.problem_type),
+				problem_id, problem_id);
 
 			add_jobs_to_judge_problem_solutions(problem_id);
 		});
@@ -395,6 +395,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			stmt.resFixBinds();
 
 			string prob_restore_sql;
+			StringView previous_owner;
 			if (stmt.next()) {
 				prob_restore_sql = "REPLACE problems VALUES(";
 				pbackup.resize(n);
@@ -410,7 +411,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 				throw_assert("owner" == StringView{
 					mysql_fetch_field_direct(stmt.resMetadata().get(),
 						OWNER_IDX)->name});
-				p_info.previous_owner = strtoull(pbackup[OWNER_IDX].second);
+				previous_owner = pbackup[OWNER_IDX].second;
 				// Commit the change to the database
 				stmt = mysql.prepare("UPDATE jobs SET info=? WHERE id=?");
 				stmt.bindAndExecute(p_info.dump(), job_id);
@@ -507,19 +508,10 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			// Replace the old problem with the new one
 			stmt = mysql.prepare("UPDATE problems"
 				" SET id=?, type=?, owner=?, added=? WHERE id=?");
-			uint ptype = uint(p_info.make_public ?
-				ProblemType::PUBLIC : ProblemType::PRIVATE);
-			stmt.bind(0, aux_id);
-			stmt.bind(1, ptype);
-			// Owner
-			if (p_info.previous_owner < 0)
-				stmt.bind(2, job_owner);
-			else
-				stmt.bind(2, p_info.previous_owner);
-
-			stmt.bind(3, added);
-			stmt.bind(4, tmp_problem_id);
-			stmt.fixAndExecute();
+			stmt.bindAndExecute(aux_id,
+				std::underlying_type_t<ProblemType>(p_info.problem_type),
+				(previous_owner.empty() ? job_owner : previous_owner),
+				added, tmp_problem_id);
 
 			// Replace packages
 			if (rename(concat("problems/", tmp_problem_id, ".zip").to_cstr(),
