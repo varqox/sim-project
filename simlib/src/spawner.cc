@@ -89,7 +89,7 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 
 	kill_and_wait_child_guard.cancel();
 	cpu_timer.deactivate();
-	syscall(SYS_waitid, P_PID, cpid, nullptr, WEXITED, &ru);
+	syscall(SYS_waitid, P_PID, cpid, &si, WEXITED, &ru);
 	timespec runtime = timer.stop_and_get_runtime(); // This have to be last
 	                                                 // because it may throw
 

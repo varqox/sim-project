@@ -632,7 +632,7 @@ inline StringView getExtension(CStringView file) {
  *
  * @return Extracted filename
  */
-inline CStringView filename(const CStringView &path) {
+inline CStringView filename(CStringView path) {
 	auto pos = path.rfind('/');
 	return path.substr(pos == CStringView::npos ? 0 : pos + 1);
 }

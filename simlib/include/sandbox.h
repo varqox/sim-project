@@ -609,7 +609,11 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	Timer timer(cpid, opts.real_time_limit);
 	CPUTimeMonitor cpu_timer(cpid, opts.cpu_time_limit);
 
-	auto get_cpu_time_and_wait_tracee = [&] {
+	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
+		// Wait cpid so that the CPU runtime will be accurate
+		if (not is_waited)
+			waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
+
 		// Get cpu_time
 		clockid_t cid;
 		if (clock_getcpuclockid(cpid, &cid) == 0)
@@ -617,7 +621,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 		cpu_timer.deactivate();
 		kill_and_wait_tracee_guard.cancel(); // Tracee has died
-		syscall(SYS_waitid, P_PID, cpid, nullptr, WEXITED, &ru);
+		syscall(SYS_waitid, P_PID, cpid, &si, WEXITED, &ru);
 		runtime = timer.stop_and_get_runtime(); // This have to be last because
 		                                        // it may throw
 	};
@@ -628,10 +632,6 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			                                          // the tracee has just
 			                                          // died
 			waitid(P_PID, cpid, &si, WSTOPPED | WEXITED | WNOWAIT);
-
-			// If process terminated
-			if (isIn(si.si_code, {CLD_EXITED, CLD_KILLED, CLD_DUMPED}))
-				get_cpu_time_and_wait_tracee();
 
 			switch (si.si_code) {
 			case CLD_TRAPPED:
@@ -654,13 +654,15 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			case CLD_EXITED:
 			case CLD_DUMPED:
 			case CLD_KILLED:
+				// Process terminated
+				get_cpu_time_and_wait_tracee(true);
 				return -1;
 			}
 		}
 	};
 
 	for (;;) {
-		auto exit_normally = [&]() -> ExitStat {
+		auto exited_normally = [&]() -> ExitStat {
 			if (si.si_code != CLD_EXITED or si.si_status != 0)
 				return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
 					vm_size * sysconf(_SC_PAGESIZE),
@@ -672,7 +674,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 		// Syscall entry
 		if (wait_for_syscall())
-			return exit_normally();
+			return exited_normally();
 
 		// Get syscall no.
 		errno = 0;
@@ -690,13 +692,13 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 					THROW("failed to get syscall_no - ptrace(): ", syscall_no,
 						error());
 
-				// Tracee has just died
+				// Tracee has just died, probably because exceeding the time
+				// limit
 				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead
-				waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
-				get_cpu_time_and_wait_tracee();
+				get_cpu_time_and_wait_tracee(false);
 
 				// Return sandboxing results
-				return exit_normally();
+				return exited_normally();
 			}
 
 			// Some useful debug
@@ -738,7 +740,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			if (allowed) {
 				// Syscall returns
 				if (wait_for_syscall())
-					return exit_normally();
+					return exited_normally();
 
 				// Monitor for vm_size change
 				if (func.get_arch() == ARCH_i386
@@ -777,7 +779,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 			// Check whether the tracee is still controllable - may not become
 			// a zombie in a moment (yes kernel has a minimal delay between
-			// these two, that's waitpid(cpid, ..., WNOHANG) may raturn 0, even
+			// these two, moreover waitpid(cpid, ..., WNOHANG) may raturn 0 even
 			// though the tracee is not controllable anymore. The process state
 			// in /proc/.../stat also may not be `Z`. That is why ptrace(2) is
 			// used here)
@@ -786,11 +788,10 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			// The tracee is no longer controllable
 			if (errno == ESRCH) {
 				kill(-cpid, SIGKILL); // Make sure tracee is (will be) dead
-				waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
-				get_cpu_time_and_wait_tracee();
+				get_cpu_time_and_wait_tracee(false);
 
 				// Return sandboxing results
-				return exit_normally();
+				return exited_normally();
 			}
 
 			// Tracee is controllable and other error occured
@@ -801,8 +802,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 		// Kill and wait tracee
 		kill(-cpid, SIGKILL);
-		waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
-		get_cpu_time_and_wait_tracee();
+		get_cpu_time_and_wait_tracee(false);
 
 		// Not allowed syscall
 		std::string message = func.error_message();

@@ -698,7 +698,11 @@ public:
 
 			size_type operator()() const noexcept { return avld_.nil; }
 
-			size_type operator()(size_type node) const noexcept { return node; }
+			size_type operator()(size_type node) const noexcept {
+				// Reset node kids to nils
+				avld_.pool[node].kid = {{avld_.nil, avld_.nil}};
+				return node;
+			}
 		};
 
 		return erase_impl(x, k, SemiLambda(*this));
@@ -781,21 +785,23 @@ public:
 
 #if 0
 	void print(size_type x, int tabs = 0) const {
+		if (tabs > 50)
+			abort(); // sth went wrong
+
 		if (x == nil)
 			return;
 
 		print(pool[x].kid[R], tabs + 1);
 
-		cout << string(tabs * 3, ' ') << x <<  "- h: " << (int)pool[x].h << ", "
-			<< pool[x].value() << '{' << pool[x].kid[L] << " " << pool[x].kid[R]
-			<< '}' << endl;
+		stdlog(std::string(tabs * 3, ' '), x,  "- h: ", (int)pool[x].h,
+			", {", pool[x].kid[L], " ", pool[x].kid[R], '}');
 
 		print(pool[x].kid[L], tabs + 1);
+
 	}
 
 	void print() const {
-		cout << nl << nil << " NIL: "
-			<< pool[nil].kid[L] << " " << pool[nil].kid[R] << endl;
+		stdlog('\n', nil, " NIL: ", pool[nil].kid[L], " ", pool[nil].kid[R]);
 		print(root);
 		assert(pool[pool[nil].kid[L]].h == 0);
 		assert(pool[nil].kid[L] == nil);
