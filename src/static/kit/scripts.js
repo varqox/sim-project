@@ -2105,7 +2105,7 @@ function reupload_problem(as_modal, problem_id) {
 				})).add(Form.field_group('Memory limit [MB]', {
 					type: 'text',
 					name: 'mem_limit',
-					// value: , // TODO.................................................................................................................................
+					value: data[10],
 					size: 25,
 					// maxlength: 'TODO...',
 					placeholder: 'Take from Simfile',
