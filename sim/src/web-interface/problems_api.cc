@@ -218,9 +218,14 @@ void Sim::api_problems() {
 			append_tags(true);
 		append("]]");
 
-		// Append simfile
-		if (select_specified_problem and uint(perms & PERM::VIEW_SIMFILE))
-			append(',', jsonStringify(res[7])); // simfile
+		// Append simfile and memory limit
+		if (select_specified_problem and uint(perms & PERM::VIEW_SIMFILE)) {
+			ConfigFile cf;
+			cf.addVars("memory_limit");
+			cf.loadConfigFromString(res[7].to_string());
+			append(',', jsonStringify(res[7]), // simfile
+				',', jsonStringify(cf.getVar("memory_limit").asString()));
+		}
 
 		append("],");
 	}
