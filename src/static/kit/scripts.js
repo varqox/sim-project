@@ -249,9 +249,14 @@ var Form = {};
 		$.ajax({
 			type: 'POST',
 			url: url,
-			data: form.serialize(),
-			success: function() {
-				show_success_via_loader(loader_parent, success_msg);
+			processData: false,
+			contentType: false,
+			data: new FormData(form[0]),
+			success: function(resp) {
+				if (typeof success_msg === "function") {
+					success_msg.call(form, resp);
+				} else
+					show_success_via_loader(loader_parent, success_msg);
 			},
 			error: function(resp, status) {
 				show_error_via_loader(loader_parent, resp, status);
@@ -261,9 +266,9 @@ var Form = {};
 	}
 }).call(Form);
 
-function ajax_form(title, target, html, success_msg) {
+function ajax_form(title, target, html, success_msg, classes) {
 	return $('<div>', {
-		class: 'form-container',
+		class: 'form-container' + (classes === undefined ? '' : ' ' + classes),
 		html: $('<h1>', {text: title})
 		.add('<form>', {
 			method: 'post',
@@ -319,7 +324,7 @@ function modal_request(title, form, target_url, success_msg) {
 	var elem = modal($('<h2>', {text: title}));
 	Form.send_via_ajax(form, target_url, success_msg, elem.children());
 }
-function dialogue_modal_request(title, info_html, go_text, go_classes, target_url, success_msg, cancel_text) {
+function dialogue_modal_request(title, info_html, go_text, go_classes, target_url, success_msg, cancel_text, remove_buttons_on_click) {
 	modal($('<h2>', {text: title})
 		.add(info_html).add('<div>', {
 			style: 'margin: 12px auto 0',
@@ -327,11 +332,16 @@ function dialogue_modal_request(title, info_html, go_text, go_classes, target_ur
 				class: go_classes,
 				text: go_text,
 				click: function() {
-					var form = $(this).parent().parent().find('form');
+					var loader_parent = $(this).parent().parent();
+					var form = loader_parent.find('form');
 					if (form.length === 0)
 						form = $('<form>');
+
+					if (remove_buttons_on_click)
+						$(this).parent().remove();
+
 					Form.send_via_ajax(form, target_url, success_msg,
-						$(this).parent().parent());
+						loader_parent);
 				}
 			}).add((cancel_text === undefined ? '' : $('<a>', {
 				class: 'btn-small',
@@ -1146,7 +1156,7 @@ function edit_user(as_modal, user_id) {
 				})
 			));
 
-	}, '/u/' + user_id + "/edit");
+	}, '/u/' + user_id + '/edit');
 }
 function delete_user(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
@@ -1536,7 +1546,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 										return function() {preview_problem(true, pid); };
 									}()));
 
-						var names = ['name', 'memory limit', 'make public'];
+						var names = ['name', 'memory limit', 'problem type'];
 						for (var idx in names) {
 							var x = names[idx];
 							if (info[x] !== undefined)
@@ -1974,67 +1984,176 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 }
 /* ============================ Problem's users ============================ */
 function add_problem(as_modal) {
-	preview_base(as_modal, '/u/add', function() {
+	preview_base(as_modal, '/p/add', function() {
 		this.append(ajax_form('Add problem', '/api/problem/add',
-			Form.field_group('Username', {
+			Form.field_group("Problem's name", {
 					type: 'text',
-					name: 'problemname',
-					size: 24,
+					name: 'name',
+					size: 25,
 					// maxlength: 'TODO...',
-					required: true
-				}).add($('<div>', {
+					placeholder: 'Take from Simfile',
+				}).add(Form.field_group("Problem's label", {
+					type: 'text',
+					name: 'label',
+					size: 25,
+					// maxlength: 'TODO...',
+					placeholder: 'Take from Simfile or make from name',
+				})).add($('<div>', {
 					class: 'field-group',
-					html: $('<label>', {text: 'Type'})
+					html: $('<label>', {text: "Problem's type"})
 					.add('<select>', {
 						name: 'type',
 						required: true,
 						html: $('<option>', {
-							value: 'A',
-							text: 'Admin',
+							value: 'PUB',
+							text: 'Public',
 						}).add('<option>', {
-							value: 'T',
-							text: 'Teacher',
-						}).add('<option>', {
-							value: 'N',
-							text: 'Normal',
+							value: 'PRI',
+							text: 'Private',
 							selected: true
+						}).add('<option>', {
+							value: 'CON',
+							text: 'Contest only',
 						})
 					})
-				})).add(Form.field_group('First name', {
+				})).add(Form.field_group('Memory limit [MB]', {
 					type: 'text',
-					name: 'first_name',
-					size: 24,
+					name: 'mem_limit',
+					size: 25,
 					// maxlength: 'TODO...',
-					required: true
-				})).add(Form.field_group('Last name', {
+					placeholder: 'Take from Simfile',
+				})).add(Form.field_group('Global time limit [s] (for each test)', {
 					type: 'text',
-					name: 'last_name',
-					size: 24,
+					name: 'global_time_limit',
+					size: 25,
 					// maxlength: 'TODO...',
+					placeholder: 'No global time limit',
+				})).add(Form.field_group('Set time limits using model solution', {
+					type: 'checkbox',
+					name: 'relative_time_limits',
+					checked: true
+				})).add(Form.field_group('Ignore Simfile', {
+					type: 'checkbox',
+					name: 'ignore_simfile',
+				})).add(Form.field_group('Seek for new tests', {
+					type: 'checkbox',
+					name: 'seek_for_new_tests',
+					checked: true
+				})).add(Form.field_group('Zipped package', {
+					type: 'file',
+					name: 'package',
 					required: true
-				})).add(Form.field_group('Email', {
-					type: 'email',
-					name: 'email',
-					size: 24,
-					// maxlength: 'TODO...',
-					required: true
-				})).add(Form.field_group('Password', {
-					type: 'password',
-					name: 'pass',
-					size: 24,
-				})).add(Form.field_group('Password (repeat)', {
-					type: 'password',
-					name: 'pass1',
-					size: 24,
 				})).add('<div>', {
 					html: $('<input>', {
 						class: 'btn blue',
 						type: 'submit',
 						value: 'Submit'
 					})
-				}), 'User was added'
-			));
+				}), function(resp) {
+					this.parent().parent().parent().parent().remove();
+					preview_job(true, resp);
+				}, 'add-problem')
+			);
 	})
+}
+function reupload_problem(as_modal, problem_id) {
+	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		data = data[0];
+
+		var actions = data[7];
+		if (actions.indexOf('R') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Reupload problem', '/api/problem/' + problem_id + '/reupload',
+			Form.field_group("Problem's name", {
+					type: 'text',
+					name: 'name',
+					value: data[3],
+					size: 25,
+					// maxlength: 'TODO...',
+					placeholder: 'Take from Simfile',
+				}).add(Form.field_group("Problem's label", {
+					type: 'text',
+					name: 'label',
+					value: data[4],
+					size: 25,
+					// maxlength: 'TODO...',
+					placeholder: 'Take from Simfile or make from name',
+				})).add($('<div>', {
+					class: 'field-group',
+					html: $('<label>', {text: "Problem's type"})
+					.add('<select>', {
+						name: 'type',
+						required: true,
+						html: $('<option>', {
+							value: 'PUB',
+							text: 'Public',
+							selected: ('Public' == data[2] ? true : undefined)
+						}).add('<option>', {
+							value: 'PRI',
+							text: 'Private',
+							selected: ('Private' == data[2] ? true : undefined)
+						}).add('<option>', {
+							value: 'CON',
+							text: 'Contest only',
+							selected: ('Contest only' == data[2] ? true : undefined)
+						})
+					})
+				})).add(Form.field_group('Memory limit [MB]', {
+					type: 'text',
+					name: 'mem_limit',
+					// value: , // TODO.................................................................................................................................
+					size: 25,
+					// maxlength: 'TODO...',
+					placeholder: 'Take from Simfile',
+				})).add(Form.field_group('Global time limit [s] (for each test)', {
+					type: 'text',
+					name: 'global_time_limit',
+					size: 25,
+					// maxlength: 'TODO...',
+					placeholder: 'No global time limit',
+				})).add(Form.field_group('Set time limits using model solution', {
+					type: 'checkbox',
+					name: 'relative_time_limits',
+					checked: true
+				})).add(Form.field_group('Ignore Simfile', {
+					type: 'checkbox',
+					name: 'ignore_simfile',
+				})).add(Form.field_group('Seek for new tests', {
+					type: 'checkbox',
+					name: 'seek_for_new_tests',
+					checked: true
+				})).add(Form.field_group('Zipped package', {
+					type: 'file',
+					name: 'package',
+					required: true
+				})).add('<div>', {
+					html: $('<input>', {
+						class: 'btn blue',
+						type: 'submit',
+						value: 'Submit'
+					})
+				}), function(resp) {
+					this.parent().parent().parent().parent().remove();
+					preview_job(true, resp);
+				}, 'add-problem')
+			);
+	}, '/p/' + problem_id + '/reupload')
+}
+function rejudge_problem_submissions(problem_id) {
+	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {
+			html: [
+				'Are you sure to rejudge all submissions to the ',
+				a_preview_button('/p/' + problem_id, 'problem ' + problem_id, undefined,
+					function() { preview_problem(true, problem_id); }),
+				'?'
+			]
+		}), 'Rejudge all', 'btn-small blue',
+		'/api/problem/' + problem_id + '/rejudge_all_submissions',
+		'The rejudge jobs has been scheduled.', 'No, go back', true);
 }
 function preview_problem(as_modal, problem_id, opt_arg) {
 	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {

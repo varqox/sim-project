@@ -516,6 +516,11 @@ table {
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
+	max-width: 99%;
+}
+.modal > div > * {
+	max-width: 100%;
+	overflow: auto;
 }
 .modal:not(.preview) > div > h2 {
 	margin: 5px 0 12px;
@@ -533,6 +538,7 @@ table {
 	font-weight: bold;
     align-self: flex-end;
     z-index: 2;
+    overflow: hidden;
 }
 .modal .close::after {
 	content: "×";
@@ -1823,7 +1829,7 @@ pre.logs .turquoise {
 /* Forms */
 .form-container {
 	display: table;
-	min-width: 430px;
+	/*min-width: 430px;*/
 	margin: 20px auto 0;
 	background: #fdfdfd;
 	border: 1px solid #dddddd;
@@ -1888,6 +1894,12 @@ form .field-group > textarea {
 .form-container form .loader,
 .form-container form .loader-info {
 	margin-top: 16px;
+}
+.form-container.add-problem form .field-group > :first-child {
+	width: 130px;
+}
+.form-container.add-problem form input[type="submit"] {
+	margin-left: 150px;
 }
 
 /* Notifications */

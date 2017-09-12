@@ -61,7 +61,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	if (last_judgment > p_last_edit and last_judgment > job_creation_time) {
 		// Skip the job - the submission has already been rejudged
 		stdlog_and_append_jreport("Skipped judging of the submission ",
-			submission_id);
+			submission_id, " because it has already been rejudged after this"
+			" job had been scheduled");
 		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_report, job_id);

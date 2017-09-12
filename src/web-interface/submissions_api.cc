@@ -170,7 +170,6 @@ void Sim::api_submissions() {
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
-	// FINISHED HERE!
 	while (res.next()) {
 		StringView sid = res[0];
 		SubmissionType stype = SubmissionType(strtoull(res[1]));
