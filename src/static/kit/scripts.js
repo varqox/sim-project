@@ -8,6 +8,9 @@ function hex2str(hexx) {
 function text_to_safe_html(str) {
 	return $('<div>', {text: str}).html();
 }
+function is_logged_in() {
+	return ($('.navbar .rightbar .user + ul > a:first-child').length > 0);
+}
 function logged_user_id() {
 	var x = $('.navbar .rightbar .user + ul > a:first-child').attr('href');
 	return x.substr(x.lastIndexOf('/') + 1);
@@ -464,7 +467,8 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 
 	attacher(res);
 	res.children().eq(active_tab).addClass('active');
-	tabs[active_tab * 2 + 1].call(res.children().eq(active_tab)[0]);
+	if (tabs.length > active_tab * 2 + 1)
+		tabs[active_tab * 2 + 1].call(res.children().eq(active_tab)[0]);
 }
 
 /* ================================ Preview ================================ */
@@ -885,7 +889,7 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.problem = function(problem_id, actions_str, problem_preview /*= false*/) {
+	this.problem = function(problem_id, actions_str, problem_name, problem_preview /*= false*/) {
 		if (problem_preview === undefined)
 			problem_preview = false;
 
@@ -897,7 +901,7 @@ var ActionsToHTML = {};
 		if (actions_str.indexOf('V') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
-				href: '/api/problem/' + problem_id + '/statement',
+				href: '/api/problem/' + problem_id + '/statement/' + encodeURIComponent(problem_name),
 				text: 'Statement'
 			}));
 
@@ -2165,7 +2169,7 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 			html: $('<h1>', {
 					text: data[3]
 				}).add('<div>', {
-					html: ActionsToHTML.problem(data[0], actions, true)
+					html: ActionsToHTML.problem(data[0], actions, data[3], true)
 				})
 		})).append($('<center>', {
 			html: $('<div>', {
@@ -2230,11 +2234,12 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 						true, (opt_arg === 'solutions' ? 3 : undefined));
 				});
 
-		tabs.push('My submissions', function() {
-				$(this).parent().next().remove();
-				main.append($('<div>'));
-				tab_submissions_lister(main.children().last(), '/p' + problem_id + '/u' + logged_user_id());
-			});
+		if (is_logged_in())
+			tabs.push('My submissions', function() {
+					$(this).parent().next().remove();
+					main.append($('<div>'));
+					tab_submissions_lister(main.children().last(), '/p' + problem_id + '/u' + logged_user_id());
+				});
 
 		if (actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
@@ -2328,7 +2333,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 
 					// Actions
 					row.append($('<td>', {
-						html: ActionsToHTML.problem(x[0], x[7])
+						html: ActionsToHTML.problem(x[0], x[7], x[3])
 					}));
 
 					obj.elem.children('tbody').append(row);
@@ -2364,9 +2369,11 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	}
 
 	var tabs = [
-		'All', function() { retab(''); },
-		'My', function() { retab('/u' + logged_user_id()); }
+		'All', function() { retab(''); }
 	];
+
+	if (is_logged_in())
+		tabs.push('My', function() { retab('/u' + logged_user_id()); });
 
 	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
 }

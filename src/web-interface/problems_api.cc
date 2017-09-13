@@ -30,10 +30,15 @@ void Sim::api_problems() {
 		" WHERE p.type!=" JTYPE_VOID_STR);
 
 	// Get permissions to the overall job queue
+	session_open();
 	problems_perms = problems_get_permissions();
 	// Choose problems to select
 	if (not uint(problems_perms & PERM::ADMIN)) {
-		if (session_user_type == UserType::TEACHER) {
+		if (not session_is_open) {
+			throw_assert(uint(problems_perms & PERM::VIEW_TPUBLIC));
+			qwhere.append(" AND (p.type=" PTYPE_PUBLIC_STR ")");
+
+		} else if (session_user_type == UserType::TEACHER) {
 			throw_assert(uint(problems_perms & PERM::VIEW_TPUBLIC) and
 				uint(problems_perms & PERM::VIEW_TCONTEST_ONLY));
 			qwhere.append(" AND (p.type=" PTYPE_PUBLIC_STR " OR p.type="
@@ -90,8 +95,8 @@ void Sim::api_problems() {
 		// user (owner)
 		} else if (cond == 'u' and ~mask & USER_ID_COND) {
 			// Prevent bypassing not set VIEW_OWNER permission
-			if (arg_id != session_user_id and
-				not uint(problems_perms & PERM::SELECT_BY_OWNER))
+			if (not session_is_open or (arg_id != session_user_id and
+				not uint(problems_perms & PERM::SELECT_BY_OWNER)))
 			{
 				return api_error403("You have no permissions to select others'"
 					" problems by their user id");
@@ -239,6 +244,7 @@ void Sim::api_problems() {
 void Sim::api_problem() {
 	STACK_UNWINDING_MARK;
 
+	session_open();
 	problems_perms = problems_get_permissions();
 
 	StringView next_arg = url_args.extractNextArg();
