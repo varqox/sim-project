@@ -126,7 +126,7 @@ private:
 
 	void api_submission();
 
-	// void api_submission_add();
+	void api_submission_add();
 
 	void api_submission_rejudge();
 
@@ -189,7 +189,7 @@ private:
 	void page_template_end();
 
 	template<class... Args>
-	void addNotification(StringView css_classes, Args&&... message) {
+	void add_notification(StringView css_classes, Args&&... message) {
 		notifications.append("<pre class=\"", css_classes, "\">",
 			std::forward<Args>(message)..., "</pre>");
 	}
@@ -242,12 +242,12 @@ private:
 		auto it = form.find(name);
 		if (not it) {
 			form_validation_error = true;
-			addNotification("error", "Invalid ", htmlEscape(name_to_print));
+			add_notification("error", "Invalid ", htmlEscape(name_to_print));
 			return false;
 
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
-			addNotification("error", htmlEscape(name_to_print),
+			add_notification("error", htmlEscape(name_to_print),
 				" cannot be longer than ", max_size, " bytes");
 			return false;
 		}
@@ -270,10 +270,10 @@ private:
 
 			form_validation_error = true;
 			if (error_msg.empty())
-				addNotification("error",
+				add_notification("error",
 					htmlEscape(concat(name_to_print, " validation error")));
 			else
-				addNotification("error", htmlEscape(error_msg));
+				add_notification("error", htmlEscape(error_msg));
 		}
 
 		return false;
@@ -290,18 +290,18 @@ private:
 		auto it = form.find(name);
 		if (not it) {
 			form_validation_error = true;
-			addNotification("error", "Invalid ", htmlEscape(name_to_print));
+			add_notification("error", "Invalid ", htmlEscape(name_to_print));
 			return false;
 
 		} else if (it->second.empty()) {
 			form_validation_error = true;
-			addNotification("error", htmlEscape(name_to_print),
+			add_notification("error", htmlEscape(name_to_print),
 				" cannot be blank");
 			return false;
 
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
-			addNotification("error", htmlEscape(name_to_print),
+			add_notification("error", htmlEscape(name_to_print),
 				" cannot be longer than ", max_size, " bytes");
 			return false;
 		}
@@ -324,10 +324,10 @@ private:
 
 			form_validation_error = true;
 			if (error_msg.empty())
-				addNotification("error",
+				add_notification("error",
 					htmlEscape(concat(name_to_print, " validation error")));
 			else
-				addNotification("error", htmlEscape(error_msg));
+				add_notification("error", htmlEscape(error_msg));
 		}
 
 		return false;
@@ -345,7 +345,7 @@ private:
 		auto it = form.find(name);
 		if (not it) {
 			form_validation_error = true;
-			addNotification("error", htmlEscape(name_to_print),
+			add_notification("error", htmlEscape(name_to_print),
 				" has to be submitted as a file</pre>");
 			return false;
 		}
@@ -404,8 +404,6 @@ private:
 
 	// @brief Main User handler
 	void users_handle();
-
-	void users_add();
 
 	void users_user();
 
@@ -472,6 +470,7 @@ private:
 		DOWNLOAD = 1 << 11,
 		SUBMIT = 1 << 12,
 		EDIT = 1 << 13,
+		SUBMIT_IGNORED = EDIT,
 		REUPLOAD = EDIT,
 		REJUDGE_ALL = EDIT,
 		EDIT_TAGS = 1 << 14,
@@ -496,6 +495,8 @@ private:
 
 	/// Main Problemset handler
 	void problems_handle();
+
+	void problems_problem();
 
 	/* ============================== Contest ============================== */
 
@@ -658,7 +659,6 @@ private:
 
 		return PERM::NONE;
 	}
-
 	StringView submissions_sid;
 	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 

@@ -580,7 +580,7 @@ public:
 			try {
 				thread_local Worker w(*this);
 				// Connect to databases
-				sqlite = SQLite::Connection(SQLITE_DB_FILE,
+				sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
 					SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 				mysql = MySQL::makeConnWithCredFile(".db.config");
 
@@ -666,24 +666,33 @@ static void process_local_job(WorkersPool::NextJob job) {
 	mysql.update(concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
 		" WHERE id=", job.id));
 
-	using JT = JobType;
-	switch (JT(jtype_u)) {
-	case JT::ADD_PROBLEM:
-		addProblem(job.id, creator, info);
-		break;
+	try {
+		using JT = JobType;
+		switch (JT(jtype_u)) {
+		case JT::ADD_PROBLEM:
+			addProblem(job.id, creator, info);
+			break;
 
-	case JT::REUPLOAD_PROBLEM:
-		reuploadProblem(job.id, creator, info, aux_id);
-		break;
+		case JT::REUPLOAD_PROBLEM:
+			reuploadProblem(job.id, creator, info, aux_id);
+			break;
 
-	case JT::EDIT_PROBLEM:
-	case JT::DELETE_PROBLEM:
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-		mysql.update(concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
-			" WHERE id=", job.id));
-		break;
-	default:
-		THROW("Unexpected local job type: ", toString(JT(jtype_u)));
+		case JT::EDIT_PROBLEM:
+		case JT::DELETE_PROBLEM:
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			mysql.update(concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
+				" WHERE id=", job.id));
+			break;
+		default:
+			THROW("Unexpected local job type: ", toString(JT(jtype_u)));
+		}
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		// Fail job
+		stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
+		stmt.bindAndExecute(concat("Caught exception: ", e.what()), job.id);
 	}
 
 	exit_procedures();
@@ -728,22 +737,31 @@ static void process_judge_job(WorkersPool::NextJob job) {
 	mysql.update(concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
 		" WHERE id=", job.id));
 
-	using JT = JobType;
-	switch (JT(jtype_u)) {
-	case JT::JUDGE_SUBMISSION:
-		judgeSubmission(job.id, aux_id, added);
-		break;
+	try {
+		using JT = JobType;
+		switch (JT(jtype_u)) {
+		case JT::JUDGE_SUBMISSION:
+			judgeSubmission(job.id, aux_id, added);
+			break;
 
-	case JT::ADD_JUDGE_MODEL_SOLUTION:
-		judgeModelSolution(job.id, JobType::ADD_PROBLEM);
-		break;
+		case JT::ADD_JUDGE_MODEL_SOLUTION:
+			judgeModelSolution(job.id, JobType::ADD_PROBLEM);
+			break;
 
-	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-		judgeModelSolution(job.id, JobType::REUPLOAD_PROBLEM);
-		break;
+		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
+			judgeModelSolution(job.id, JobType::REUPLOAD_PROBLEM);
+			break;
 
-	default:
-		THROW("Unexpected judge job type: ", toString(JT(jtype_u)));
+		default:
+			THROW("Unexpected judge job type: ", toString(JT(jtype_u)));
+		}
+
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		// Fail job
+		stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
+		stmt.bindAndExecute(concat("Caught exception: ", e.what()), job.id);
 	}
 
 	exit_procedures();
@@ -1167,8 +1185,8 @@ int main() {
 
 	// Connect to the databases
 	try {
-		sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_READWRITE |
-			SQLITE_OPEN_NOMUTEX);
+		sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
+			SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 		mysql = MySQL::makeConnWithCredFile(".db.config");
 
 		cleanUpDBs();
