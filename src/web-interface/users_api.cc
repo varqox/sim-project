@@ -18,14 +18,19 @@ void Sim::api_users() {
 	query.append("SELECT id, username, first_name, last_name, email, type"
 		" FROM users");
 
-	bool where_added = false;
-	if (session_user_type == UserType::TEACHER) {
-		where_added = true;
-		query.append(" WHERE id!=" SIM_ROOT_UID);
-	} else if (session_user_type == UserType::NORMAL) {
-		where_added = true;
-		query.append(" WHERE id=", session_user_id);
-	}
+	auto query_append = [&, where_was_added = false](auto&&... args) mutable {
+		if (where_was_added)
+			query.append(" AND ", std::forward<decltype(args)>(args)...);
+		else {
+			query.append(" WHERE ", std::forward<decltype(args)>(args)...);
+			where_was_added = true;
+		}
+	};
+
+	if (session_user_type == UserType::TEACHER)
+		query_append("id!=" SIM_ROOT_UID);
+	else if (session_user_type == UserType::NORMAL)
+		query_append("id=", session_user_id);
 
 	// Process restrictions
 	StringView next_arg = url_args.extractNextArg();
@@ -39,15 +44,12 @@ void Sim::api_users() {
 
 		// user type
 		if (cond == 't' and ~mask & UTYPE_COND) {
-			query.append((where_added ? " AND" : " WHERE"));
-			where_added = true;
-
 			if (arg_id == "A")
-				query.append(" type=" UTYPE_ADMIN_STR);
+				query_append("type=" UTYPE_ADMIN_STR);
 			else if (arg_id == "T")
-				query.append(" type=" UTYPE_TEACHER_STR);
+				query_append("type=" UTYPE_TEACHER_STR);
 			else if (arg_id == "N")
-				query.append(" type=" UTYPE_NORMAL_STR);
+				query_append("type=" UTYPE_NORMAL_STR);
 			else
 				return api_error400(concat("Invalid user type: ", arg_id));
 
@@ -60,13 +62,11 @@ void Sim::api_users() {
 
 		// conditional
 		if (isIn(cond, "<>") and ~mask & ID_COND) {
-			query.append((where_added ? " AND id" : " WHERE id"), arg);
-			where_added = true;
+			query_append("id", arg);
 			mask |= ID_COND;
 
 		} else if (cond == '=' and ~mask & ID_COND) {
-			query.append((where_added ? " AND id" : " WHERE id"), arg);
-			where_added = true;
+			query_append("id", arg);
 			mask |= ID_COND;
 
 		} else

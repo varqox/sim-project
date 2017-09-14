@@ -38,16 +38,23 @@ static_assert(meta::equal(UTYPE_NORMAL_STR,
 enum class ContestUserMode : int8_t {
 	IS_NULL = -1,
 	CONTESTANT = 0,
-	MODERATOR = 1
+	MODERATOR = 1,
+	OWNER = 2
 };
-#define CU_MODE_CONTESTANT_STR "0"
-#define CU_MODE_MODERATOR_STR "1"
 
+#define CU_MODE_CONTESTANT_STR "0"
 static_assert(meta::equal(CU_MODE_CONTESTANT_STR,
 	meta::ToString<(int)ContestUserMode::CONTESTANT>::value),
 	"Update the above #define");
+
+#define CU_MODE_MODERATOR_STR "1"
 static_assert(meta::equal(CU_MODE_MODERATOR_STR,
 	meta::ToString<(int)ContestUserMode::MODERATOR>::value),
+	"Update the above #define");
+
+#define CU_MODE_OWNER_STR "2"
+static_assert(meta::equal(CU_MODE_OWNER_STR,
+	meta::ToString<(int)ContestUserMode::OWNER>::value),
 	"Update the above #define");
 
 // Session
@@ -64,8 +71,13 @@ constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
 
-// Rounds
-constexpr uint ROUND_NAME_MAX_LEN = meta::max(128, PROBLEM_NAME_MAX_LEN);
+// Contests
+constexpr uint CONTEST_NAME_MAX_LEN = 128;
+// Contest rounds
+constexpr uint CONTEST_ROUND_NAME_MAX_LEN = 128;
+// Contest problems
+constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
+	meta::max(128, PROBLEM_NAME_MAX_LEN);
 
 // Files
 constexpr uint FILE_ID_LEN = 30;

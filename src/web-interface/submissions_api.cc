@@ -16,17 +16,17 @@ void Sim::api_submissions() {
 		return api_error403();
 
 	InplaceBuff<512> qfields, qwhere;
-	qfields.append("SELECT s.id, s.type, s.owner, c.owner, cu.mode, p.owner,"
-		" u.username, s.problem_id, p.name, s.round_id, r.name,"
-		" s.parent_round_id, pr.name, pr.reveal_score, pr.full_results,"
-		" s.contest_round_id, c.name, s.submit_time, s.status, s.score");
+	qfields.append("SELECT s.id, s.type, s.owner, cu.mode, p.owner,"
+		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
+		" s.contest_round_id, r.name, 0, r.full_results, s.contest_id, c.name,"
+		" s.submit_time, s.status, s.score");
 	qwhere.append(" FROM submissions s"
 		" LEFT JOIN users u ON u.id=s.owner"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
-		" LEFT JOIN rounds r ON r.id=s.round_id"
-		" LEFT JOIN rounds pr ON pr.id=s.parent_round_id"
-		" LEFT JOIN rounds c ON c.id=s.contest_round_id"
-		" LEFT JOIN contests_users cu ON cu.contest_id=s.contest_round_id AND"
+		" LEFT JOIN contest_problems cp ON cp.id=s.contest_problem_id"
+		" LEFT JOIN contest_rounds r ON r.id=s.contest_round_id"
+		" LEFT JOIN contests c ON c.id=s.contest_id"
+		" LEFT JOIN contest_users cu ON cu.contest_id=s.contest_id AND"
 			" cu.user_id=", session_user_id,
 		" WHERE s.type!=" STYPE_VOID_STR);
 
@@ -99,50 +99,46 @@ void Sim::api_submissions() {
 				if (not allow_access) {
 					StringView query;
 					switch (cond) {
-					case 'C': query = "SELECT c.owner, cu.mode FROM rounds c"
-						" LEFT JOIN contests_users cu ON cu.contest_id=c.id"
-							" AND cu.user_id=?"
-						" WHERE c.id=?";
+					case 'C': query = "SELECT mode FROM contest_users"
+							" WHERE user_id=? AND contest_id=?";
 						break;
 
-					case 'R': query = "SELECT c.owner, cu.mode FROM rounds r"
-						" STRAIGHT_JOIN rounds c ON c.id=r.parent"
-						" LEFT JOIN contests_users cu ON cu.contest_id=c.id"
-							" AND cu.user_id=?"
+					case 'R': query = "SELECT cu.mode"
+						" FROM contest_rounds r"
+						" LEFT JOIN contest_users cu"
+							" ON cu.contest_id=r.contest_id AND cu.user_id=?"
 						" WHERE r.id=?";
 						break;
 
-					case 'P': query = "SELECT c.owner, cu.mode FROM rounds r"
-						" STRAIGHT_JOIN rounds c ON c.id=r.grandparent"
-						" LEFT JOIN contests_users cu ON cu.contest_id=c.id"
-							" AND cu.user_id=?"
-						" WHERE r.id=?";
+					case 'P': query = "SELECT cu.mode"
+						" FROM contest_problems p"
+						" LEFT JOIN contest_users cu"
+							"ON cu.contest_id=p.contest_id AND cu.user_id=?"
+						" WHERE p.id=?";
 						break;
 					}
 					auto stmt = mysql.prepare(query);
 					stmt.bindAndExecute(session_user_id, arg_id);
 
-					InplaceBuff<32> c_owner;
 					uint cu_mode;
-					stmt.res_bind_all(c_owner, cu_mode);
+					stmt.res_bind_all(cu_mode);
 					if (not stmt.next())
 						return api_error404(concat("Invalid query condition ",
 							cond, " - no such round was found"));
 
-					if (c_owner == session_user_id or
-						(not stmt.is_null(1) and
-							cu_mode == (uint)CUM::MODERATOR))
+					if (not stmt.is_null(1) and
+						isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
 					{
 						allow_access = true;
 					}
 				}
 
 				if (cond == 'C')
-					qwhere.append(" AND s.contest_round_id=", arg_id);
+					qwhere.append(" AND s.contest_id=", arg_id);
 				else if (cond == 'R')
-					qwhere.append(" AND s.parent_round_id=", arg_id);
+					qwhere.append(" AND s.contest_round_id=", arg_id);
 				else if (cond == 'P')
-					qwhere.append(" AND s.round_id=", arg_id);
+					qwhere.append(" AND s.contest_problem_id=", arg_id);
 			}
 
 			mask |= ROUND_OR_PROBLEM_ID_COND;
@@ -174,32 +170,30 @@ void Sim::api_submissions() {
 		StringView sid = res[0];
 		SubmissionType stype = SubmissionType(strtoull(res[1]));
 		StringView sowner = res[2];
-		StringView c_owner = (res.is_null(3) ? "" : res[3]);
-		StringView cu_mode = res[4];
-		StringView p_owner = res[5];
+		StringView cu_mode = res[3];
+		StringView p_owner = res[4];
 
 		SubmissionPermissions perms = submissions_get_permissions(sowner, stype,
-			c_owner, (res.is_null(4) ? CUM::IS_NULL : CUM(strtoull(cu_mode))),
-			p_owner);
+			(res.is_null(3) ? CUM::IS_NULL : CUM(strtoull(cu_mode))), p_owner);
 
 		if (perms == PERM::NONE)
 			return api_error403();
 
-		StringView sowner_username = res[6];
-		StringView p_id = res[7];
-		StringView p_name = res[8];
-		StringView r_id = res[9];
-		StringView r_name = res[10];
-		StringView pr_id = res[11];
-		StringView pr_name = res[12];
-		bool reveal_score = (res[13] != "0");
+		StringView sowner_username = res[5];
+		StringView p_id = res[6];
+		StringView p_name = res[7];
+		StringView cp_id = res[8];
+		StringView cp_name = res[9];
+		StringView cr_id = res[10];
+		StringView cr_name = res[11];
+		bool reveal_score = (res[12] != "0");
 		bool show_full_results = (bool(uint(perms & PERM::VIEW_FULL_REPORT)) or
-			res.is_null(14) or res[14] <= date());
-		StringView c_id = res[15];
-		StringView c_name = res[16];
-		StringView submit_time = res[17];
-		SubmissionStatus status = SubmissionStatus(strtoull(res[18]));
-		StringView score = res[19];
+			res.is_null(13) or res[13] <= date());
+		StringView c_id = res[14];
+		StringView c_name = res[15];
+		StringView submit_time = res[16];
+		SubmissionStatus status = SubmissionStatus(strtoull(res[17]));
+		StringView score = res[18];
 
 		append("\n[", sid, ',');
 
@@ -220,28 +214,34 @@ void Sim::api_submissions() {
 			append(sowner, ',');
 
 		// Onwer's username
-		if (res.is_null(6))
+		if (res.is_null(5))
 			append("null,");
 		else
 			append("\"", sowner_username, "\",");
 
 		// Problem
-		if (res.is_null(7))
+		if (res.is_null(6))
 			append("null,null,");
 		else
 			append(p_id, ',', jsonStringify(p_name), ',');
 
-		// Rounds
+		// Contest problem
 		if (res.is_null(9))
-			append("null,null,null,null,null,null,");
-		else {
-			append(r_id, ',',
-				jsonStringify(r_name), ',',
-				pr_id, ',',
-				jsonStringify(pr_name), ',',
-				c_id, ',',
-				jsonStringify(c_name), ',');
-		}
+			append("null,null,");
+		else
+			append(cp_id, ',', jsonStringify(cp_name), ',');
+
+		// Contest round
+		if (res.is_null(11))
+			append("null,null,");
+		else
+			append(cr_id, ',', jsonStringify(cr_name), ',');
+
+		// Contest
+		if (res.is_null(15))
+			append("null,null,");
+		else
+			append(c_id, ',', jsonStringify(c_name), ',');
 
 		// Submit time
 		append("\"", submit_time, "\",");
@@ -294,7 +294,7 @@ void Sim::api_submissions() {
 		}
 
 		// Score
-		if (not res.is_null(19) and (show_full_results or reveal_score))
+		if (not res.is_null(18) and (show_full_results or reveal_score))
 			append(score, ',');
 		else
 			append("null,");
@@ -320,16 +320,16 @@ void Sim::api_submissions() {
 		// Append
 		if (select_one) {
 			// User first and last name
-			if (res.is_null(20))
+			if (res.is_null(19))
 				append(",null,null");
 			else
-				append(',', jsonStringify(res[20]), ',',
-					jsonStringify(res[21]));
+				append(',', jsonStringify(res[19]), ',',
+					jsonStringify(res[20]));
 
 			// Reports
-			append(',', jsonStringify(res[22]));
+			append(',', jsonStringify(res[21]));
 			if (show_full_results)
-				append(',', jsonStringify(res[23]));
+				append(',', jsonStringify(res[22]));
 			else
 				append(",null");
 		}
@@ -358,24 +358,22 @@ void Sim::api_submission() {
 
 	submissions_sid = next_arg;
 
-	InplaceBuff<32> sowner, c_owner, p_owner;
+	InplaceBuff<32> sowner, p_owner;
 	uint stype, cu_mode;
-	auto stmt = mysql.prepare("SELECT s.owner, s.type, c.owner, cu.mode,"
-			" p.owner"
+	auto stmt = mysql.prepare("SELECT s.owner, s.type, cu.mode, p.owner"
 		" FROM submissions s"
-		" LEFT JOIN rounds c ON c.id=s.contest_round_id"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
-		" LEFT JOIN contests_users cu ON cu.contest_id=s.contest_round_id"
+		" LEFT JOIN contest_users cu ON cu.contest_id=s.contest_id"
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submissions_sid);
-	stmt.res_bind_all(sowner, stype, c_owner, cu_mode, p_owner);
+	stmt.res_bind_all(sowner, stype, cu_mode, p_owner);
 	if (not stmt.next())
 		return api_error404();
 
 	submissions_perms = submissions_get_permissions(sowner,
-		SubmissionType(stype), (stmt.is_null(1) ? StringView{} : c_owner),
-		(stmt.is_null(2) ? CUM::IS_NULL : CUM(cu_mode)), p_owner);
+		SubmissionType(stype), (stmt.is_null(2) ? CUM::IS_NULL : CUM(cu_mode)),
+		p_owner);
 
 	// Subpages
 	next_arg = url_args.extractNextArg();
@@ -471,9 +469,9 @@ void Sim::api_submission_add() {
 	}
 
 	// Insert submission
-	stmt = mysql.prepare("INSERT submissions (owner, problem_id, round_id,"
-			" parent_round_id, contest_round_id, type, status, submit_time,"
-			" last_judgment, initial_report, final_report)"
+	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
+			" contest_problem_id, contest_round_id, contest_id, type, status,"
+			" submit_time, last_judgment, initial_report, final_report)"
 		" VALUES(?, ?, NULL, NULL, NULL, "
 			STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
 	stmt.bindAndExecute(session_user_id, problem_id, date(),
@@ -580,13 +578,13 @@ void Sim::api_submission_change_type() {
 		mysql.update("UNLOCK TABLES");
 	});
 
-	auto res = mysql.query(concat("SELECT status, owner, round_id"
+	auto res = mysql.query(concat("SELECT status, owner, contest_problem_id"
 		" FROM submissions WHERE id=", submissions_sid));
 	throw_assert(res.next());
 
 	SS status = SS(strtoull(res[0]));
 	StringView owner = (res.is_null(1) ? "" : res[1]);
-	StringView round_id = (res.is_null(2) ? "" : res[2]);
+	StringView contest_problem_id = (res.is_null(2) ? "" : res[2]);
 
 	// Cannot be FINAL
 	if (is_special(status)) {
@@ -604,7 +602,7 @@ void Sim::api_submission_change_type() {
 	stmt.bindAndExecute(uint(new_type), (new_type == ST::NORMAL),
 		submissions_sid);
 
-	submission::update_final(mysql, owner, round_id, false);
+	submission::update_final(mysql, owner, contest_problem_id, false);
 }
 
 void Sim::api_submission_delete() {
@@ -619,8 +617,8 @@ void Sim::api_submission_delete() {
 		mysql.update("UNLOCK TABLES");
 	});
 
-	auto res = mysql.query(concat("SELECT owner, round_id FROM submissions"
-		" WHERE id=", submissions_sid));
+	auto res = mysql.query(concat("SELECT owner, contest_problem_id"
+		" FROM submissions WHERE id=", submissions_sid));
 	throw_assert(res.next());
 
 	SignalBlocker sb; // This part shouldn't be interrupted

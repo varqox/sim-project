@@ -37,14 +37,15 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	};
 
 	// Gather the needed information about the submission
-	auto stmt = mysql.prepare("SELECT s.owner, round_id, problem_id,"
+	auto stmt = mysql.prepare("SELECT s.owner, contest_problem_id, problem_id,"
 			" last_judgment, p.last_edit"
 		" FROM submissions s, problems p"
 		" WHERE p.id=problem_id AND s.id=?");
 	stmt.bindAndExecute(submission_id);
-	InplaceBuff<32> sowner, round_id, problem_id;
+	InplaceBuff<32> sowner, contest_problem_id, problem_id;
 	InplaceBuff<64> last_judgment, p_last_edit;
-	stmt.res_bind_all(sowner, round_id, problem_id, last_judgment, p_last_edit);
+	stmt.res_bind_all(sowner, contest_problem_id, problem_id, last_judgment,
+		p_last_edit);
 	// If the submission doesn't exist (probably was removed)
 	if (not stmt.next()) {
 		// Fail the job
@@ -122,7 +123,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 					(uint)status, total_score, judging_began, initial_report,
 					final_report, submission_id);
 
-			submission::update_final(mysql, sowner, round_id, false);
+			submission::update_final(mysql, sowner, contest_problem_id, false);
 		}
 
 		stmt = mysql.prepare("UPDATE jobs"

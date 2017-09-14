@@ -36,7 +36,7 @@ void Sim::api_problems() {
 	if (not uint(problems_perms & PERM::ADMIN)) {
 		if (not session_is_open) {
 			throw_assert(uint(problems_perms & PERM::VIEW_TPUBLIC));
-			qwhere.append(" AND (p.type=" PTYPE_PUBLIC_STR ")");
+			qwhere.append(" AND p.type=" PTYPE_PUBLIC_STR);
 
 		} else if (session_user_type == UserType::TEACHER) {
 			throw_assert(uint(problems_perms & PERM::VIEW_TPUBLIC) and
@@ -121,7 +121,7 @@ void Sim::api_problems() {
 	uint64_t pid;
 	bool hidden;
 	InplaceBuff<PROBLEM_TAG_MAX_LEN> tag;
-	auto stmt = mysql.prepare("SELECT tag FROM problems_tags"
+	auto stmt = mysql.prepare("SELECT tag FROM problem_tags"
 		" WHERE problem_id=? AND hidden=? ORDER BY tag");
 	stmt.bind_all(pid, hidden);
 	stmt.res_bind_all(tag);

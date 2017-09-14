@@ -138,6 +138,47 @@ private:
 
 	void api_submission_download();
 
+	// contests_api.cc
+	void api_contests();
+
+	void api_contest();
+
+	void api_contest_add();
+
+	void api_contest_edit();
+
+	void api_contest_delete();
+
+	void api_contest_round_add();
+
+	void api_contest_round_edit();
+
+	void api_contest_round_delete();
+
+	void api_contest_problem_add();
+
+	void api_contest_problem_edit();
+
+	void api_contest_problem_delete();
+
+	void api_contest_ranking();
+
+	void api_contest_users();
+
+	void api_contest_user_add();
+
+	void api_contest_user_edit();
+
+	void api_contest_user_expel();
+
+	void api_contest_files();
+
+	void api_contest_file_add();
+
+	void api_contest_file_edit();
+
+	void api_contest_file_delete();
+
 	/* ============================== Session ============================== */
 
 	bool session_is_open = false;
@@ -493,119 +534,51 @@ private:
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	InplaceBuff<32> problems_pid;
 
-	/// Main Problemset handler
+	/// Main Problems handler
 	void problems_handle();
 
 	void problems_problem();
 
 	/* ============================== Contest ============================== */
 
-	struct Round {
-		std::string id, parent, problem_id, name, owner;
-		std::string begins, ends, full_results;
-		bool is_public, visible, show_ranking;
+	enum class ContestPermissions : uint {
+		NONE = 0,
+		// Overall
+		VIEW_PUBLIC = 2,
+		VIEW_ALL = 4,
+		ADD_PRIVATE = 8,
+		ADD_PUBLIC = 1 << 4,
+		SELECT_BY_USER = 1 << 5,
+		// Semi
+		MAKE_PUBLIC = ADD_PUBLIC,
+		// Contest specific
+		VIEW = 1 << 6,
+		PARTICIPATE = 1 << 7,
+		ADMIN = 1 << 8,
+		EDIT_OWNERS = 1 << 9,
+		DELETE = 1 << 10,
 	};
 
-	struct Subround {
-		std::string id, name;
-	};
+	friend DECLARE_ENUM_UNARY_OPERATOR(ContestPermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(ContestPermissions, |)
+	friend DECLARE_ENUM_OPERATOR(ContestPermissions, &)
 
-	struct Problem {
-		std::string id, parent, name;
-	};
+	ContestPermissions contests_get_permissions(bool is_public,
+		ContestUserMode cu_mode);
 
-	enum RoundType : uint8_t {
-		CONTEST = 0,
-		ROUND = 1,
-		PROBLEM = 2
-	};
+	ContestPermissions contests_get_permissions() {
+		return contests_get_permissions(false, ContestUserMode::IS_NULL);
+	}
 
-	class RoundPath {
-	public:
-		bool admin_access = false;
-		RoundType type = CONTEST;
-		std::string round_id;
-		std::unique_ptr<Round> contest, round, problem;
+	ContestPermissions contests_perms = ContestPermissions::NONE;
+	InplaceBuff<32> contests_cid;
+	InplaceBuff<32> contests_crid;
+	InplaceBuff<32> contests_cpid;
 
-		explicit RoundPath(std::string rid) : round_id(std::move(rid)) {}
+	/// Main Contests handler
+	void contests_handle();
 
-		RoundPath(const RoundPath&) = delete;
-		RoundPath(RoundPath&&) = default;
-		RoundPath& operator=(const RoundPath&) = delete;
-		RoundPath& operator=(RoundPath&&) = default;
-
-		// void swap(RoundPath& rp) {
-			// std::swap(admin_access, rp.admin_access);
-			// std::swap(type, rp.type);
-			// round_id.swap(rp.round_id);
-			// contest.swap(rp.contest);
-			// round.swap(rp.round);
-			// problem.swap(rp.problem);
-		// }
-
-		~RoundPath() {}
-	};
-
-	std::unique_ptr<RoundPath> constest_rpath;
-
-	// Utilities
-	// contest_utilities.cc
-	RoundPath* get_round_path(StringView round_id);
-
-	void print_round_path(StringView page = "", bool force_normal = false);
-
-	void print_round_view(bool link_to_problem_statement, bool admin_view = false);
-
-	// Pages
-	// contest.cc
-	/// @brief Main contest handler
-	void contest_handle();
-
-	void contest_add_contest();
-
-	void contest_add_round();
-
-	void contest_add_problem();
-
-	void contest_edit_contest();
-
-	void contest_edit_round();
-
-	void contest_edit_problem();
-
-	void contest_delete_contest();
-
-	void contest_delete_round();
-
-	void contest_delete_problem();
-
-	void contest_users();
-
-	void contest_list_roblems(bool admin_view);
-
-	void contest_ranking(bool admin_view);
-
-	// submissions.cc
-	void constest_submit(bool admin_view);
-
-	void contest_delete_submission(StringView submission_id,
-		StringView submission_owner);
-
-	void contest_change_submission_type_to(StringView submission_id,
-		StringView submission_owner, SubmissionType stype);
-
-	void contest_submissions(bool admin_view);
-
-	// files.cc
-	void contest_add_file();
-
-	void contest_edit_file(StringView id, std::string name);
-
-	void contest_delete_file(StringView id, StringView name);
-
-	void contest_file();
-
-	void contest_files(bool admin_view);
+	void contests_contest();
 
 	/* ============================= Submissions ============================= */
 
@@ -629,45 +602,10 @@ private:
 
 	SubmissionPermissions submissions_get_permissions(
 		StringView submission_owner, SubmissionType stype,
-		StringView contest_owner, ContestUserMode cu_mode,
-		StringView problem_owner)
-	{
-		using PERM = SubmissionPermissions;
-		using STYPE = SubmissionType;
-		using CUM = ContestUserMode;
-
-		if (not session_open())
-			return PERM::NONE;
-
-		static_assert((uint)PERM::NONE == 0, "Needed below");
-		PERM PERM_SUBMISSION_ADMIN = PERM::VIEW | PERM::VIEW_SOURCE |
-			PERM::VIEW_FULL_REPORT | PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
-			(isIn(stype, {STYPE::NORMAL, STYPE::FINAL, STYPE::IGNORED})
-				? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
-
-		if (session_user_type == UserType::ADMIN)
-			return PERM::VIEW_ALL | PERM_SUBMISSION_ADMIN;
-
-		if (session_user_id == contest_owner or cu_mode == CUM::MODERATOR)
-			return PERM_SUBMISSION_ADMIN;
-
-		// This check has to be done as the last one because it gives the least
-		// permissions
-		if (session_user_id == problem_owner) {
-			if (stype == STYPE::PROBLEM_SOLUTION)
-				return PERM::VIEW | PERM::VIEW_SOURCE |	PERM::VIEW_RELATED_JOBS
-					| PERM::REJUDGE;
-			return PERM::VIEW | PERM::REJUDGE;
-		}
-
-		if (session_user_id == submission_owner or cu_mode == CUM::CONTESTANT)
-			return PERM::VIEW | PERM::VIEW_SOURCE;
-
-		return PERM::NONE;
-	}
+		ContestUserMode cu_mode, StringView problem_owner);
 
 	SubmissionPermissions submissions_get_permissions() {
-		return submissions_get_permissions("", SubmissionType::VOID, "",
+		return submissions_get_permissions("", SubmissionType::VOID,
 			ContestUserMode::IS_NULL, "");
 	}
 

@@ -219,9 +219,8 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	report.append("Submitting solutions...");
 	const string zero_date = date("%Y-%m-%d %H:%M:%S", 0);
 	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
-			" round_id, parent_round_id, contest_round_id, type,"
-			" status, submit_time, last_judgment, initial_report,"
-			" final_report)"
+			" contest_problem_id, contest_round_id, contest_id, type, status,"
+			" submit_time, last_judgment, initial_report, final_report)"
 		" VALUES(NULL, ?, NULL, NULL, NULL, "
 			STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
 	stmt.bind_all(problem_id, current_date, zero_date);
