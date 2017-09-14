@@ -70,7 +70,7 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 				// contest_handle();
 
 			else if (next_arg == "s")
-				submission_handle();
+				submissions_handle();
 
 			else if (next_arg == "u")
 				users_handle();
