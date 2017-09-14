@@ -120,7 +120,7 @@ void Sim::login() {
 					: location.to_string());
 			}
 
-			addNotification("error", "Invalid username or password");
+			add_notification("error", "Invalid username or password");
 		}
 	}
 
@@ -189,7 +189,7 @@ void Sim::sign_up() {
 			pass1 != pass2)
 		{
 			form_validation_error = true;
-			addNotification("error", "Passwords do not match");
+			add_notification("error", "Passwords do not match");
 		}
 
 		// If all fields are ok
@@ -217,7 +217,7 @@ void Sim::sign_up() {
 				return redirect("/");
 			}
 
-			addNotification("error", "Username taken");
+			add_notification("error", "Username taken");
 		}
 
 	}
@@ -276,34 +276,41 @@ void Sim::users_handle() {
 		return redirect(concat_tostr("/login?", request.target));
 
 	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "add")
-		return users_add();
-	else if (isDigit(next_arg)) {
+	if (isDigit(next_arg)) {
 		users_uid = next_arg;
 		return users_user();
-	} else if (next_arg.size())
-		return error404();
+	}
+
+	// Get the overall permissions to the users list
+	users_perms = users_get_permissions();
+
+	// Add user
+	if (next_arg == "add") {
+		if (uint(~users_perms & UserPermissions::ADD_USER))
+			return error403();
+
+		page_template("Add user");
+		append("<script>add_user(false);</script>");
+
+	} else if (isDigit(next_arg)) {
+		users_uid = next_arg;
+		return users_user();
 
 	// List users
-	if (uint(~users_get_permissions() & UserPermissions::VIEW_ALL))
-		return error403();
+	} else if (next_arg.empty()) {
+		if (uint(~users_get_permissions() & UserPermissions::VIEW_ALL))
+			return error403();
 
-	page_template("Users", "body{padding-left:30px}");
-	append("<h1>Users</h1>"
-		"<div><a class=\"btn\" onclick=\"add_user(true)\">Add user</a><div>"
-		"<script>"
-			"tab_users_lister($('body'));"
-		"</script>");
-}
+		page_template("Users", "body{padding-left:30px}");
+		append("<h1>Users</h1>"
+			"<div><a class=\"btn\" onclick=\"add_user(true)\">Add user</a><div>"
+			"<script>"
+				"tab_users_lister($('body'));"
+			"</script>");
 
-void Sim::users_add() {
-	STACK_UNWINDING_MARK;
+	} else
+		return error404();
 
-	if (uint(~users_get_permissions() & UserPermissions::ADD_USER))
-		return error403();
-
-	page_template("Add user", "body{padding-left:30px}");
-	append("<script>add_user(false);</script>");
 }
 
 void Sim::users_user() {
@@ -311,22 +318,19 @@ void Sim::users_user() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("User ", users_uid), "body{padding-left:32px}");
+		page_template(concat("User ", users_uid));
 		append("<script>preview_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit user ", users_uid),
-			"body{padding-left:32px}");
+		page_template(concat("Edit user ", users_uid));
 		append("<script>edit_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete user ", users_uid),
-			"body{padding-left:32px}");
+		page_template(concat("Delete user ", users_uid));
 		append("<script>delete_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "change-password") {
-		page_template(concat("Change password of the user ", users_uid),
-			"body{padding-left:32px}");
+		page_template(concat("Change password of the user ", users_uid));
 		append("<script>change_user_password(false, ", users_uid,
 			");</script>");
 

@@ -26,18 +26,18 @@ public:
 
 		/// @brief Returns value of the variable @p name or empty string if such
 		/// does not exist
-		StringView get(StringView name) const noexcept {
+		CStringView get(StringView name) const noexcept {
 			auto it = other.find(name);
-			return (it ? it->second : StringView{});
+			return (it ? it->second : CStringView{});
 		}
 
 		bool exist(StringView name) const noexcept { return other.find(name); }
 
 		/// @brief Returns path of the uploaded file with the form's name
 		/// @p name or empty string if such does not exist
-		StringView file_path(StringView name) const noexcept {
+		CStringView file_path(StringView name) const noexcept {
 			auto it = files.find(name);
-			return (it ? it->second : StringView{});
+			return (it ? it->second : CStringView{});
 		}
 
 		Form() = default;

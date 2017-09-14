@@ -971,7 +971,7 @@ a.btn.red {
 }
 .table {
 	/*display: inline-table;*/
-	margin: 0 auto;
+	margin: 6px auto;
 	border: 1px solid #a2a2a2;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
@@ -1474,7 +1474,7 @@ table.code-view > tbody > tr:last-child td {
 /* Submissions */
 table.submissions {
 	/*display: inline-table;*/
-	margin: 0;
+	margin: 6px 0;
 }
 table.submissions th {
 	padding: 6px;
@@ -1532,7 +1532,7 @@ table.submissions tr > td:last-child {
 /* Problems */
 table.problems {
 	/*display: inline-table;*/
-	margin: 0;
+	margin: 6px 0;
 }
 table.problems th {
 	padding: 6px;
@@ -1565,7 +1565,7 @@ table.problems tr > td:last-child {
 /* Jobs */
 table.jobs {
 	/*display: inline-table;*/
-	margin: 0;
+	margin: 6px 0;
 }
 table.jobs th {
 	padding: 6px;
@@ -1630,7 +1630,7 @@ table.jobs td label::after,
 table.users,
 table.contest-users {
 	/*display: inline-table;*/
-	margin: 0;
+	margin: 6px 0;
 }
 table.users th.username,
 table.contest-users th.username {

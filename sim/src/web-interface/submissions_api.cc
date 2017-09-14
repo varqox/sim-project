@@ -351,7 +351,9 @@ void Sim::api_submission() {
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
-	if (not isDigit(next_arg))
+	if (next_arg == "add")
+		return api_submission_add();
+	else if (not isDigit(next_arg))
 		return api_error400();
 
 	submissions_sid = next_arg;
@@ -394,6 +396,117 @@ void Sim::api_submission() {
 		return api_submission_delete();
 
 	return api_error404();
+}
+
+void Sim::api_submission_add() {
+	STACK_UNWINDING_MARK;
+
+	StringView next_arg = url_args.extractNextArg();
+	// Load problem id and contest problem id (if specified)
+	StringView problem_id, contest_problem_id;
+	for (; next_arg.size(); next_arg = url_args.extractNextArg()) {
+		if (next_arg[0] == 'p' and isDigit(next_arg.substr(1)) and
+			problem_id.empty())
+		{
+			problem_id = next_arg.substr(1);
+		} else if (hasPrefix(next_arg, "cp") and isDigit(next_arg.substr(2)) and
+			contest_problem_id.empty())
+		{
+			contest_problem_id = next_arg.substr(2);
+		} else
+			return api_error400();
+	}
+
+	if (problem_id.empty())
+		return api_error400("problem have to be specified");
+
+	// Check permissions to the problem
+	auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
+	InplaceBuff<32> powner;
+	uint ptype;
+	stmt.bindAndExecute(problem_id);
+	stmt.res_bind_all(powner, ptype);
+	if (not stmt.next())
+		return api_error404();
+
+	ProblemPermissions pperms = problems_get_permissions(powner,
+		ProblemType(ptype));
+	if (uint(~pperms & ProblemPermissions::SUBMIT))
+		return api_error403();
+
+	// TODO: constest_problem_id
+
+	// Validate fields
+	CStringView solution_tmp_path = request.form_data.file_path("solution");
+	StringView code = request.form_data.get("code");
+	bool ignored_submission = (uint(pperms & ProblemPermissions::SUBMIT_IGNORED)
+		and request.form_data.exist("ignored"));
+
+	if ((code.empty() ^ request.form_data.get("solution").empty()) == 0) {
+		add_notification("error", "You have to either choose a file or paste"
+			" the code");
+		return api_error400(notifications);
+	}
+
+	// Check the solution size
+	// File
+	if (code.empty()) {
+		struct stat sb;
+		if (stat(solution_tmp_path.c_str(), &sb))
+			THROW("stat() failed", error());
+
+		// Check if solution is too big
+		if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
+			add_notification("error", "Solution is too big (maximum allowed "
+				"size: ", SOLUTION_MAX_SIZE, " bytes = ",
+				SOLUTION_MAX_SIZE >> 10, " KB)");
+			return api_error400(notifications);
+		}
+	// Code
+	} else if (code.size() > SOLUTION_MAX_SIZE) {
+		add_notification("error", "Solution is too big (maximum allowed "
+			"size: ", SOLUTION_MAX_SIZE, " bytes = ",
+			SOLUTION_MAX_SIZE >> 10, " KB)");
+		return api_error400(notifications);
+	}
+
+	// Insert submission
+	stmt = mysql.prepare("INSERT submissions (owner, problem_id, round_id,"
+			" parent_round_id, contest_round_id, type, status, submit_time,"
+			" last_judgment, initial_report, final_report)"
+		" VALUES(?, ?, NULL, NULL, NULL, "
+			STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, problem_id, date(),
+		date("%Y-%m-%d %H:%M:%S", 0));
+	auto submission_id = stmt.insert_id();
+
+	// Fill the submission's source file
+	// File
+	auto solution_dest = concat<64>("solutions/", submission_id, ".cpp");
+	if (code.empty()) {
+		if (rename(solution_tmp_path, solution_dest.to_cstr()))
+			THROW("rename() failed", error());
+	// Code
+	} else
+		putFileContents(solution_dest.to_cstr(), code);
+
+	// Create a job to judge the submission
+	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
+			" aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+		(uint)JobType::JUDGE_SUBMISSION, date(), submission_id,
+		jobs::dumpString(problem_id));
+
+	// Activate the submission
+	stmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
+	stmt.bindAndExecute(
+		std::underlying_type_t<SubmissionType>(ignored_submission ?
+			SubmissionType::IGNORED : SubmissionType::NORMAL),
+		submission_id);
+
+	jobs::notify_job_server();
+	append(submission_id);
 }
 
 void Sim::api_submission_source() {

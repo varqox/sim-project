@@ -29,7 +29,7 @@ void Sim::api_problems() {
 	qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner=u.id"
 		" WHERE p.type!=" JTYPE_VOID_STR);
 
-	// Get permissions to the overall job queue
+	// Get the overall permissions to the problems set
 	session_open();
 	problems_perms = problems_get_permissions();
 	// Choose problems to select
@@ -185,6 +185,8 @@ void Sim::api_problems() {
 			append('S');
 		if (uint(perms & PERM::EDIT))
 			append('E');
+		if (uint(perms & PERM::SUBMIT_IGNORED))
+			append('i');
 		if (uint(perms & PERM::REUPLOAD))
 			append('R');
 		if (uint(perms & PERM::REJUDGE_ALL))

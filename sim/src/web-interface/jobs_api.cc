@@ -27,7 +27,7 @@ void Sim::api_jobs() {
 
 	using PERM = JobPermissions;
 
-	// Get permissions to the overall job queue
+	// Get the overall permissions to the job queue
 	jobs_perms = jobs_get_permissions();
 
 	InplaceBuff<512> qfields, qwhere;

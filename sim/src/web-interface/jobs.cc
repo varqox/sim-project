@@ -125,7 +125,7 @@ void Sim::jobs_handle() {
 		return;
 	}
 
-	// Get permissions to overall job queue
+	// Get the overall permissions to the job queue
 	jobs_perms = jobs_get_permissions();
 
 	InplaceBuff<32> query_suffix {};
