@@ -178,7 +178,7 @@ void Sim::api_submissions() {
 		StringView cu_mode = res[4];
 		StringView p_owner = res[5];
 
-		SubmissionPermissions perms = submission_get_permissions(sowner, stype,
+		SubmissionPermissions perms = submissions_get_permissions(sowner, stype,
 			c_owner, (res.is_null(4) ? CUM::IS_NULL : CUM(strtoull(cu_mode))),
 			p_owner);
 
@@ -373,7 +373,7 @@ void Sim::api_submission() {
 	if (not stmt.next())
 		return api_error404();
 
-	submissions_perms = submission_get_permissions(sowner,
+	submissions_perms = submissions_get_permissions(sowner,
 		SubmissionType(stype), (stmt.is_null(1) ? StringView{} : c_owner),
 		(stmt.is_null(2) ? CUM::IS_NULL : CUM(cu_mode)), p_owner);
 

@@ -52,6 +52,11 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 		if (uint(users_get_permissions() & UserPermissions::VIEW_ALL))
 			append("<a href=\"/u\">Users</a>");
 
+		if (uint(submissions_get_permissions() &
+			SubmissionPermissions::VIEW_ALL))
+		{
+			append("<a href=\"/s\">Submissions</a>");
+		}
 
 		if (uint(jobs_get_permissions() & JobPermissions::VIEW_ALL))
 			append("<a href=\"/jobs/\">Job queue</a>");

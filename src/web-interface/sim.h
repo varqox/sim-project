@@ -607,24 +607,27 @@ private:
 
 	void contest_files(bool admin_view);
 
-	/* ============================= Submission ============================= */
+	/* ============================= Submissions ============================= */
 
 	enum class SubmissionPermissions : uint {
 		NONE = 0,
-		VIEW = 1,
-		VIEW_SOURCE = 2,
-		VIEW_FULL_REPORT = 4,
-		VIEW_RELATED_JOBS = 8,
-		CHANGE_TYPE = 16,
-		REJUDGE = 32,
-		DELETE = 64
+		// Overall
+		VIEW_ALL = 1,
+		// Submission specific
+		VIEW = 2,
+		VIEW_SOURCE = 4,
+		VIEW_FULL_REPORT = 8,
+		VIEW_RELATED_JOBS = 1 << 4,
+		CHANGE_TYPE = 1 << 5,
+		REJUDGE = 1 << 6,
+		DELETE = 1 << 7
 	};
 
 	friend DECLARE_ENUM_UNARY_OPERATOR(SubmissionPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &)
 
-	SubmissionPermissions submission_get_permissions(
+	SubmissionPermissions submissions_get_permissions(
 		StringView submission_owner, SubmissionType stype,
 		StringView contest_owner, ContestUserMode cu_mode,
 		StringView problem_owner)
@@ -633,17 +636,20 @@ private:
 		using STYPE = SubmissionType;
 		using CUM = ContestUserMode;
 
-		D(throw_assert(session_is_open);) // Session must be open to gain access
+		if (not session_open())
+			return PERM::NONE;
 
-		if (session_user_type == UserType::ADMIN or
-			session_user_id == contest_owner or cu_mode == CUM::MODERATOR)
-		{
-			static_assert((uint)PERM::NONE == 0, "Needed below");
-			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FULL_REPORT |
-				PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
-				(isIn(stype, {STYPE::NORMAL, STYPE::FINAL, STYPE::IGNORED})
-					? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
-		}
+		static_assert((uint)PERM::NONE == 0, "Needed below");
+		PERM PERM_SUBMISSION_ADMIN = PERM::VIEW | PERM::VIEW_SOURCE |
+			PERM::VIEW_FULL_REPORT | PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
+			(isIn(stype, {STYPE::NORMAL, STYPE::FINAL, STYPE::IGNORED})
+				? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
+
+		if (session_user_type == UserType::ADMIN)
+			return PERM::VIEW_ALL | PERM_SUBMISSION_ADMIN;
+
+		if (session_user_id == contest_owner or cu_mode == CUM::MODERATOR)
+			return PERM_SUBMISSION_ADMIN;
 
 		// This check has to be done as the last one because it gives the least
 		// permissions
@@ -659,11 +665,17 @@ private:
 
 		return PERM::NONE;
 	}
+
+	SubmissionPermissions submissions_get_permissions() {
+		return submissions_get_permissions("", SubmissionType::VOID, "",
+			ContestUserMode::IS_NULL, "");
+	}
+
 	StringView submissions_sid;
 	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
 	// Pages
-	void submission_handle();
+	void submissions_handle();
 
 	/* =============================== Other =============================== */
 
