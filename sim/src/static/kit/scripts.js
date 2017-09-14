@@ -948,6 +948,26 @@ var ActionsToHTML = {};
 
 		return res;
 	}
+
+	this.contest = function(contest_id, actions_str, contest_preview /*= false*/) {
+		if (contest_preview === undefined)
+			contest_preview = false;
+
+		var res = [];
+		if (!contest_preview && actions_str.indexOf('v') !== -1)
+			res.push(a_preview_button('/c/' + contest_id, 'View', 'btn-small',
+				function() { preview_contest(true, contest_id); }));
+
+		if (contest_preview && actions_str.indexOf('E') !== -1)
+			res.push(a_preview_button('/c/' + contest_id + '/edit', 'Edit',
+				'btn-small blue', function() { edit_contest(true, contest_id); }));
+
+		if (contest_preview && actions_str.indexOf('D') !== -1)
+			res.push(a_preview_button('/c/' + contest_id + '/delete', 'Delete',
+				'btn-small red', function() { delete_contest(true, contest_id); }));
+
+		return res;
+	}
 }).call(ActionsToHTML);
 
 /* ================================= Users ================================= */
@@ -2408,6 +2428,103 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 
 	if (is_logged_in())
 		tabs.push('My', function() { retab('/u' + logged_user_id()); });
+
+	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
+}
+
+/* ================================ Contests ================================ */
+function ContestsLister(elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	Lister.call(this, elem);
+	this.query_url = '/api/contests' + query_suffix;
+	this.query_suffix = '';
+
+	this.fetch_more_impl = function() {
+		var obj = this;
+		$.ajax({
+			type: 'GET',
+			url: obj.query_url + obj.query_suffix,
+			dataType: 'json',
+			success: function(data) {
+				if (elem.children('thead').length === 0) {
+					if (data.length === 0) {
+						obj.elem.parent().append($('<center>', {
+							class: 'contests',
+							html: '<p>There are no contests to show...</p>'
+						}));
+						remove_loader(obj.elem.parent());
+						return;
+					}
+
+					elem.html('<thead><tr>' +
+							'<th>Id</th>' +
+							'<th class="name">Name</th>' +
+							'<th class="actions">Actions</th>' +
+						'</tr></thead><tbody></tbody>');
+					add_tz_marker(elem.find('thead th.added'));
+				}
+
+				for (x in data) {
+					x = data[x];
+					obj.query_suffix = '/<' + x[0];
+
+					var row = $('<tr>',	{
+						class: (x[2] ? undefined : 'grayed')
+					});
+
+					// Id
+					row.append($('<td>', {text: x[0]}));
+					// Name
+					row.append($('<td>', {
+						html: a_preview_button('/c/' + x[0], x[1], '',
+							function() { preview_contest(true, x[0]); })
+					}));
+
+					// Actions
+					row.append($('<td>', {
+						html: ActionsToHTML.contest(x[0], x[4])
+					}));
+
+					obj.elem.children('tbody').append(row);
+				}
+
+				remove_loader(obj.elem.parent());
+				centerize_modal(obj.elem.parents('.modal'), false);
+
+				if (data.length == 0)
+					return; // No more data to load
+
+				obj.lock = false;
+				if (obj.elem.height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
+				}
+			},
+			error: obj.get_error_handler()
+		});
+	};
+
+	this.fetch_more();
+}
+function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	parent_elem = $(parent_elem);
+	function retab(tab_qsuff) {
+		parent_elem.children('.contests, .loader, .loader-info').remove();
+		var table = $('<table class="contests"></table>').appendTo(parent_elem);
+		new ContestsLister(table, query_suffix + tab_qsuff).monitor_scroll();
+	}
+
+	var tabs = [
+		'All', function() { retab(''); }
+	];
+
+	// if (is_logged_in())
+	// 	tabs.push('My', function() { retab('/u' + logged_user_id()); });
 
 	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
 }

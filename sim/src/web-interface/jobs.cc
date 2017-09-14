@@ -77,20 +77,20 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 	if (not session_is_open)
 		return PERM::NONE;
 
-	auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type, c.owner, cu.mode"
+	auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type, cu.mode"
 		" FROM submissions s"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
-		" LEFT JOIN rounds c ON c.id=s.contest_round_id"
-		" LEFT JOIN contests_users cu ON cu.user_id=? AND cu.contest_id=c.id"
+		" LEFT JOIN contest_users cu ON cu.user_id=?"
+			" AND cu.contest_id=s.contest_id"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submission_id);
 
-	InplaceBuff<32> powner, cowner;
+	InplaceBuff<32> powner;
 	uint stype, ptype, cu_mode;
-	stmt.res_bind_all(stype, powner, ptype, cowner, cu_mode);
+	stmt.res_bind_all(stype, powner, ptype, cu_mode);
 	if (stmt.next()) {
-		if ((not stmt.is_null(3) and cowner == session_user_id) or
-			(not stmt.is_null(4) and CUM(cu_mode) == CUM::MODERATOR))
+		if (not stmt.is_null(3) and
+			isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
 		{
 			return PERM::VIEW | PERM::DOWNLOAD_REPORT;
 		}
@@ -120,7 +120,7 @@ void Sim::jobs_handle() {
 	if (isDigit(next_arg)) {
 		jobs_jid = next_arg;
 
-		page_template(concat("Job ", jobs_jid), "body{padding-left:32px}");
+		page_template(concat("Job ", jobs_jid), "body{padding-left:20px}");
 		append("<script>preview_job(false, ", jobs_jid, ");</script>");
 		return;
 	}

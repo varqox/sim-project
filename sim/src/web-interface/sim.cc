@@ -1,10 +1,6 @@
 #include "sim.h"
 
 #include <simlib/filesystem.h>
-// #include <sim/jobs.h>
-// #include <simlib/debug.h>
-// #include <simlib/logger.h>
-// #include <simlib/time.h>
 
 using std::string;
 using std::unique_ptr;
@@ -66,8 +62,8 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 			if (next_arg == "kit")
 				static_file();
 
-			// else if (next_arg == "c")
-				// contest_handle();
+			else if (next_arg == "c")
+				contests_handle();
 
 			else if (next_arg == "s")
 				submissions_handle();

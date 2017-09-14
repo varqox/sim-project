@@ -98,7 +98,8 @@ void Sim::problems_problem() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("Problem ", problems_pid));
+		page_template(concat("Problem ", problems_pid),
+			"body{padding-left:20px}");
 		append("<script>preview_problem(false, ", problems_pid, ");</script>");
 
 	} else if (next_arg == "submit") {
@@ -121,7 +122,8 @@ void Sim::problems_problem() {
 				", true" : ", false"), ")</script>");
 
 	} else if (next_arg == "solutions") {
-		page_template(concat("Problem ", problems_pid, " solutions"));
+		page_template(concat("Problem ", problems_pid, " solutions"),
+			"body{padding-left:20px}");
 		append("<script>preview_problem(false, ", problems_pid,
 			", 'solutions');</script>");
 
@@ -139,5 +141,4 @@ void Sim::problems_problem() {
 
 	} else
 		return error404();
-	return;
 }

@@ -62,13 +62,15 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 9> tables {{
-	{"contests_users"},
+constexpr array<meta::string, 11> tables {{
+	{"contest_problems"},
+	{"contest_rounds"},
+	{"contest_users"},
+	{"contests"},
 	{"files"},
 	{"jobs"},
+	{"problem_tags"},
 	{"problems"},
-	{"problems_tags"},
-	{"rounds"},
 	{"session"},
 	{"submissions"},
 	{"users"},
@@ -203,8 +205,8 @@ int main(int argc, char **argv) {
 			"KEY (type, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	try_to_create_table("problems_tags",
-		concat("CREATE TABLE IF NOT EXISTS `problems_tags` ("
+	try_to_create_table("problem_tags",
+		concat("CREATE TABLE IF NOT EXISTS `problem_tags` ("
 			"`problem_id` int unsigned NOT NULL,"
 			"`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
 			"`hidden` BOOLEAN NOT NULL,"
@@ -213,37 +215,53 @@ int main(int argc, char **argv) {
 			"KEY (tag)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	try_to_create_table("rounds",
-		concat("CREATE TABLE IF NOT EXISTS `rounds` ("
+	try_to_create_table("contests",
+		concat("CREATE TABLE IF NOT EXISTS `contests` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`parent` int unsigned NULL DEFAULT NULL," // round, problem
-			"`grandparent` int unsigned NULL DEFAULT NULL," // problem
-			"`problem_id` int unsigned DEFAULT NULL," // problem
-			"`name` VARBINARY(", ROUND_NAME_MAX_LEN, ") NOT NULL," // all
-			"`owner` int unsigned NOT NULL," // contest
-			"`item` int unsigned NOT NULL," // round, problem
-			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE," // contest
-			"`reveal_score` BOOLEAN NOT NULL DEFAULT FALSE," // problem
-			"`visible` BOOLEAN NOT NULL DEFAULT FALSE," // round
-			"`show_ranking` BOOLEAN NOT NULL DEFAULT FALSE," // round
-			"`begins` datetime NULL DEFAULT NULL," // round
-			"`full_results` datetime NULL DEFAULT NULL," // round
-			"`ends` datetime NULL DEFAULT NULL," // round
+			"`name` VARBINARY(", CONTEST_NAME_MAX_LEN, ") NOT NULL,"
+			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"PRIMARY KEY (id),"
-			"KEY (parent, visible),"
-			"KEY (parent, begins),"
-			"KEY (parent, is_public),"
-			"KEY (grandparent, item),"
-			"KEY (owner)"
+			"KEY (is_public, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
-	try_to_create_table("contests_users",
-		"CREATE TABLE IF NOT EXISTS `contests_users` ("
+	try_to_create_table("contest_rounds",
+		concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
+			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`contest_id` int unsigned NOT NULL,"
+			"`name` VARBINARY(", CONTEST_ROUND_NAME_MAX_LEN, ") NOT NULL,"
+			"`item` int unsigned NOT NULL,"
+			"`ranking_exposure` datetime NULL DEFAULT NULL," // NULL == do not expose
+			"`begins` datetime NULL NOT NULL,"
+			"`full_results` datetime NULL DEFAULT NULL," // NULL == show immediately
+			"`ends` datetime NULL DEFAULT NULL," // NULL == forever
+			"PRIMARY KEY (id),"
+			"KEY (contest_id, ranking_exposure),"
+			"UNIQUE (contest_id, item)"
+			// "KEY (contest_id, begins)"
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+
+	try_to_create_table("contest_problems",
+		concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
+			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`contest_round_id` int unsigned NOT NULL,"
+			"`contest_id` int unsigned NOT NULL,"
+			"`problem_id` int unsigned NOT NULL,"
+			"`name` VARBINARY(", CONTEST_PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
+			"`item` int unsigned NOT NULL,"
+			"`final_selecting_method` TINYINT NOT NULL,"
+			"PRIMARY KEY (id),"
+			"UNIQUE (contest_round_id, item),"
+			"KEY (contest_id)"
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+
+	try_to_create_table("contest_users",
+		"CREATE TABLE IF NOT EXISTS `contest_users` ("
 			"`user_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
 			"`mode` tinyint(1) unsigned NOT NULL DEFAULT " CU_MODE_CONTESTANT_STR ","
 			"PRIMARY KEY (user_id, contest_id),"
-			"KEY (contest_id)"
+			"KEY (contest_id, user_id),"
+			"KEY (contest_id, mode, user_id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("submissions",
@@ -251,9 +269,9 @@ int main(int argc, char **argv) {
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`owner` int unsigned NULL,"
 			"`problem_id` int unsigned NOT NULL,"
-			"`round_id` int unsigned NULL,"
-			"`parent_round_id` int unsigned NULL,"
+			"`contest_problem_id` int unsigned NULL,"
 			"`contest_round_id` int unsigned NULL,"
+			"`contest_id` int unsigned NULL,"
 			"`type` TINYINT NOT NULL,"
 			"`final_candidate` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`status` TINYINT NOT NULL,"
@@ -267,26 +285,28 @@ int main(int argc, char **argv) {
 			// With owner
 			"KEY (owner, id),"
 			"KEY (owner, problem_id, id),"
-			"KEY (owner, round_id, id),"
-			"KEY (owner, parent_round_id, id),"
+			"KEY (owner, contest_problem_id, id),"
 			"KEY (owner, contest_round_id, id),"
+			"KEY (owner, contest_id, id),"
 			"KEY (owner, type, id),"
 			"KEY (owner, problem_id, type, id),"
-			"KEY (owner, round_id, type, id),"
-			"KEY (owner, parent_round_id, type, id),"
+			"KEY (owner, contest_problem_id, type, id),"
 			"KEY (owner, contest_round_id, type, id),"
+			"KEY (owner, contest_id, type, id),"
 			// Without owner
 			"KEY (problem_id, id),"
-			"KEY (round_id, id),"
-			"KEY (parent_round_id, id),"
+			"KEY (contest_problem_id, id),"
 			"KEY (contest_round_id, id),"
+			"KEY (contest_id, id),"
 			"KEY (type, id),"
 			"KEY (problem_id, type, id),"
-			"KEY (round_id, type, id),"
-			"KEY (parent_round_id, type, id),"
+			"KEY (contest_problem_id, type, id),"
 			"KEY (contest_round_id, type, id),"
+			"KEY (contest_id, type, id),"
 			// Needed to effectively changing type to/from FINAL
-			"KEY (final_candidate, owner, round_id, id)"
+			"KEY (final_candidate, owner, contest_problem_id, id),"
+			"KEY (final_candidate, owner, contest_problem_id, score, id),"
+			"KEY (final_candidate, owner, problem_id, score, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("jobs",
@@ -312,14 +332,14 @@ int main(int argc, char **argv) {
 	try_to_create_table("files",
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
-			"`round_id` int unsigned NULL,"
+			"`contest_id` int unsigned NULL,"
 			"`name` VARBINARY(", FILE_NAME_MAX_LEN, ") NOT NULL,"
 			"`description` VARBINARY(", FILE_DESCRIPTION_MAX_LEN, ") "
 				"NOT NULL,"
 			"`file_size` bigint unsigned NOT NULL,"
 			"`modified` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
-			"KEY (round_id, modified)"
+			"KEY (contest_id, modified)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	// Create SQLite tables

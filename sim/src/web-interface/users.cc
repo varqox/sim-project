@@ -301,7 +301,7 @@ void Sim::users_handle() {
 		if (uint(~users_get_permissions() & UserPermissions::VIEW_ALL))
 			return error403();
 
-		page_template("Users", "body{padding-left:30px}");
+		page_template("Users", "body{padding-left:20px}");
 		append("<h1>Users</h1>"
 			"<div><a class=\"btn\" onclick=\"add_user(true)\">Add user</a><div>"
 			"<script>"
@@ -318,7 +318,7 @@ void Sim::users_user() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("User ", users_uid));
+		page_template(concat("User ", users_uid), "body{padding-left:20px}");
 		append("<script>preview_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "edit") {
