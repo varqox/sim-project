@@ -1672,7 +1672,7 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 				})
 			}), function(resp) {
 				if (as_modal) {
-					this.parent().parent().parent().parent().remove();
+					close_modal(this.parent().parent().parent().parent());
 					preview_submission(as_modal, resp);
 				} else {
 					this.parent().remove();
@@ -1745,17 +1745,17 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 					}),
 					' ~> ',
 					$('<a>', {
-						href: '/c/' + data[8],
+						href: '/c/r' + data[8],
 						text: data[9]
 					}),
 					' ~> ',
 					$('<a>', {
-						href: '/c/' + data[6],
+						href: '/c/p' + data[6],
 						text: data[7]
 					}),
 					$('<a>', {
 						class: 'btn-small',
-						href: '/c/' + data[6] + '/statement',
+						href: '/api/contest/p' + data[6] + '/statement/' + encodeURIComponent(data[7]),
 						text: 'View statement'
 					})
 				]
@@ -2105,7 +2105,7 @@ function add_problem(as_modal) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					this.parent().parent().parent().parent().remove();
+					close_modal(this.parent().parent().parent().parent());
 					preview_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -2197,7 +2197,7 @@ function reupload_problem(as_modal, problem_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					this.parent().parent().parent().parent().remove();
+					close_modal(this.parent().parent().parent().parent());
 					preview_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -2274,18 +2274,6 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 
 		var main = $(this);
 		var tabs = [];
-		if (actions.indexOf('f') !== -1)
-			tabs.push('Simfile', function() {
-				$(this).parent().next().remove();
-				main.append($('<center>', {
-					html: $('<pre>', {
-						class: 'simfile',
-						style: 'text-align: initial',
-						text: data[9]
-					})
-				}));
-			});
-
 		if (actions.indexOf('s') !== -1)
 			tabs.push('All submissions', function() {
 					$(this).parent().next().remove();
@@ -2300,6 +2288,16 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 					main.append($('<div>'));
 					tab_submissions_lister(main.children().last(), '/p' + problem_id + '/u' + logged_user_id());
 				});
+
+		if (actions.indexOf('f') !== -1)
+			tabs.push('Simfile', function() {
+				$(this).parent().next().remove();
+				main.append($('<pre>', {
+					class: 'simfile',
+					style: 'text-align: initial',
+					text: data[9]
+				}));
+			});
 
 		if (actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
@@ -2466,7 +2464,7 @@ function add_contest(as_modal) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					this.parent().parent().parent().parent().remove();
+					close_modal(this.parent().parent().parent().parent());
 					preview_contest(true, resp);
 				} else {
 					this.parent().remove();
@@ -2511,7 +2509,7 @@ function add_contest_round(as_modal, contest_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					this.parent().parent().parent().parent().remove();
+					close_modal(this.parent().parent().parent().parent());
 					preview_contest(true, contest_id);
 				} else {
 					this.parent().remove();
@@ -2549,7 +2547,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					this.parent().parent().parent().parent().remove();
+					close_modal(this.parent().parent().parent().parent());
 					preview_contest(true, contest_id);
 				} else {
 					this.parent().remove();

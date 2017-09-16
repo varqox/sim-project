@@ -9,6 +9,7 @@
 #include <sim/jobs.h>
 #include <sim/mysql.h>
 #include <simlib/avl_dict.h>
+#include <simlib/config_file.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 #include <simlib/time.h>
@@ -285,7 +286,7 @@ public:
 
 	public:
 		Job job = Job::least(); // If is invalid it will be the last in
-		                        // comparison
+								// comparison
 		uint64_t problem_id = 0;
 
 		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc)
@@ -371,7 +372,7 @@ public:
 
 	public:
 		Job job = Job::least(); // If is invalid it will be the last in
-		                        // comparison
+								// comparison
 
 		OtherJobHolder(decltype(other_jobs)& o): oj(&o) {}
 
@@ -467,7 +468,7 @@ public:
 	struct NextJob {
 		uint64_t id;
 		int64_t problem_id; // negative indicates that no problem is associated
-		                    // with the job
+							// with the job
 		bool locked_its_problem;
 	};
 
@@ -482,7 +483,7 @@ private:
 	mutex mtx_;
 	vector<thread::id> idle_workers;
 	map<thread::id, WorkerInfo> workers; // AVLDict cannot be used as addresses
-	                                     // must not change
+										 // must not change
 
 	function<void(NextJob)> job_handler_;
 	function<void()> worker_becomes_idle_callback_;
@@ -699,13 +700,13 @@ static void process_local_job(WorkersPool::NextJob job) {
 }
 
 // static void process_judge_job(WorkersPool::NextJob job) {
-// 	STACK_UNWINDING_MARK;
+//  STACK_UNWINDING_MARK;
 
-// 	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
-// 	stmt.bindAndExecute(job.id);
-// 	stdlog(pthread_self(), " got judge {", job.id, ", ", job.problem_id, '}');
-// 	std::this_thread::sleep_for(std::chrono::seconds(3));
-// 	pthread_exit(nullptr);
+//  auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
+//  stmt.bindAndExecute(job.id);
+//  stdlog(pthread_self(), " got judge {", job.id, ", ", job.problem_id, '}');
+//  std::this_thread::sleep_for(std::chrono::seconds(3));
+//  pthread_exit(nullptr);
 // }
 
 static void process_judge_job(WorkersPool::NextJob job) {
@@ -1171,9 +1172,6 @@ int main() {
 		errlog("Failed to open `", JOB_SERVER_ERROR_LOG, "`: ", e.what());
 	}
 
-	stdlog("\n=================== Job server launched ===================\n"
-		"PID: ", getpid());
-
 	// Install signal handlers
 	struct sigaction sa;
 	memset (&sa, 0, sizeof(sa));
@@ -1191,11 +1189,27 @@ int main() {
 
 		cleanUpDBs();
 
-		// TODO: load workers no from config file
-		for (int i = 0; i < 2; ++i)
+		ConfigFile cf;
+		cf.addVars("js_local_workers", "js_judge_workers");
+		cf.loadConfigFromFile("sim.conf");
+
+		int lworkers_no = cf["js_local_workers"].asInt();
+		if (lworkers_no < 1)
+			THROW("sim.conf: js_local_workers cannot be lower than 1");
+
+		int jworkers_no = cf["js_judge_workers"].asInt();
+		if (jworkers_no < 1)
+			THROW("sim.conf: js_judge_workers cannot be lower than 1");
+
+		stdlog("\n=================== Job server launched ==================="
+			"\nPID: ", getpid(),
+			"\nlocal workers: ", lworkers_no,
+			"\njudge workers: ", jworkers_no);
+
+		for (int i = 0; i < lworkers_no; ++i)
 			spawn_worker(local_workers);
 
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < jworkers_no; ++i)
 			spawn_worker(judge_workers);
 
 	} catch (const std::exception& e) {

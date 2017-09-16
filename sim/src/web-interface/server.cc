@@ -108,9 +108,9 @@ int main() {
 	try {
 		config.addVars("address", "workers");
 
-		config.loadConfigFromFile("server.conf");
+		config.loadConfigFromFile("sim.conf");
 	} catch (const std::exception& e) {
-		errlog("Failed to load server.config: ", e.what());
+		errlog("Failed to load sim.config: ", e.what());
 		return 5;
 	}
 
@@ -118,7 +118,7 @@ int main() {
 	int workers = config["workers"].asInt();
 
 	if (workers < 1) {
-		errlog("sim.config: Number of workers cannot be lower than 1");
+		errlog("sim.conf: Number of workers cannot be lower than 1");
 		return 6;
 	}
 

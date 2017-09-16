@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 			"`ranking_exposure` datetime NULL DEFAULT NULL," // NULL == do not expose
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, ranking_exposure),"
-			"UNIQUE (contest_id, begins),"
+			"KEY (contest_id, begins),"
 			"UNIQUE (contest_id, item)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 

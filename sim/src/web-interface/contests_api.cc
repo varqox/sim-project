@@ -179,6 +179,8 @@ void Sim::api_contest() {
 		next_arg = url_args.extractNextArg();
 		if (next_arg == "add_round")
 			return api_contest_round_add();
+		if (next_arg == "ranking")
+			return api_contest_ranking();
 		else if (not next_arg.empty())
 			return api_error400();
 
@@ -496,4 +498,15 @@ void Sim::api_contest_problem_statement(StringView problem_id) {
 		return api_error404();
 
 	return api_statement_impl(problem_id, label, simfile);
+}
+
+void Sim::api_contest_ranking() {
+	STACK_UNWINDING_MARK;
+
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::VIEW))
+		return api_error403();
+
+
 }
