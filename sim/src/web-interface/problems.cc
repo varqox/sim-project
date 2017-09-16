@@ -79,15 +79,7 @@ void Sim::problems_handle() {
 	// List problems
 	} else if (next_arg.empty()) {
 		page_template("Problems", "body{padding-left:20px}");
-		append("<h1>Problems</h1>");
-
-		if (uint(problems_perms & PERM::ADD))
-			append("<div><a class=\"btn\" onclick=\"add_problem(true)\">"
-				"Add problem</a><div>");
-
-		append("<script>"
-				"tab_problems_lister($('body'));"
-			"</script>");
+		append("<script>tab_problems_lister($('body'));</script>");
 
 	} else
 		return error404();

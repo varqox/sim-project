@@ -99,8 +99,10 @@ void Sim::api_submissions() {
 				if (not allow_access) {
 					StringView query;
 					switch (cond) {
-					case 'C': query = "SELECT mode FROM contest_users"
-							" WHERE user_id=? AND contest_id=?";
+					case 'C': query = "SELECT cu.mode FROM contests c"
+							" LEFT JOIN contest_users cu ON cu.user_id=?"
+								" AND cu.contest_id=c.id"
+							" WHERE c.id=?";
 						break;
 
 					case 'R': query = "SELECT cu.mode"
@@ -126,7 +128,7 @@ void Sim::api_submissions() {
 						return api_error404(concat("Invalid query condition ",
 							cond, " - no such round was found"));
 
-					if (not stmt.is_null(1) and
+					if (not stmt.is_null(0) and
 						isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
 					{
 						allow_access = true;
@@ -399,6 +401,9 @@ void Sim::api_submission() {
 void Sim::api_submission_add() {
 	STACK_UNWINDING_MARK;
 
+	if (not session_open())
+		return api_error403();
+
 	StringView next_arg = url_args.extractNextArg();
 	// Load problem id and contest problem id (if specified)
 	StringView problem_id, contest_problem_id;
@@ -418,27 +423,69 @@ void Sim::api_submission_add() {
 	if (problem_id.empty())
 		return api_error400("problem have to be specified");
 
-	// Check permissions to the problem
-	auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
-	InplaceBuff<32> powner;
-	uint ptype;
-	stmt.bindAndExecute(problem_id);
-	stmt.res_bind_all(powner, ptype);
-	if (not stmt.next())
-		return api_error404();
+	bool may_submit_ignored = false;
+	InplaceBuff<32> contest_id, contest_round_id;
+	// Problem submission
+	if (contest_problem_id.empty()) {
+		// Check permissions to the problem
+		auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
+		InplaceBuff<32> powner;
+		uint ptype;
+		stmt.bindAndExecute(problem_id);
+		stmt.res_bind_all(powner, ptype);
+		if (not stmt.next())
+			return api_error404();
 
-	ProblemPermissions pperms = problems_get_permissions(powner,
-		ProblemType(ptype));
-	if (uint(~pperms & ProblemPermissions::SUBMIT))
-		return api_error403();
+		ProblemPermissions pperms = problems_get_permissions(powner,
+			ProblemType(ptype));
+		if (uint(~pperms & ProblemPermissions::SUBMIT))
+			return api_error403();
 
-	// TODO: constest_problem_id
+		may_submit_ignored = uint(pperms & ProblemPermissions::SUBMIT_IGNORED);
+
+	// Contest submission
+	} else {
+		using CUM = ContestUserMode;
+		// Check permissions to the contest
+		auto stmt = mysql.prepare("SELECT c.id, c.is_public, cr.id, cr.begins,"
+				" cr.ends, cu.mode"
+			" FROM contest_problems cp"
+			" STRAIGHT_JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
+			" STRAIGHT_JOIN contests c ON c.id=cp.contest_id"
+			" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=?"
+			" WHERE cp.id=? AND cp.problem_id=?");
+		stmt.bindAndExecute(session_user_id, contest_problem_id, problem_id);
+
+		bool is_public;
+		InplaceBuff<20> cr_begins, cr_ends;
+		std::underlying_type_t<CUM> umode_u;
+		stmt.res_bind_all(contest_id, is_public, contest_round_id, cr_begins,
+			cr_ends, umode_u);
+		if (not stmt.next())
+			return api_error404();
+
+		auto cperms = contests_get_permissions(is_public,
+			(stmt.is_null(5) ? CUM::IS_NULL : CUM(umode_u)));
+
+		if (uint(~cperms & ContestPermissions::PARTICIPATE))
+			return api_error403(); // Could not participate
+
+		auto curr_date = date();
+		if (uint(~cperms & ContestPermissions::ADMIN) and
+			(curr_date < cr_begins
+				or (not stmt.is_null(4) and cr_ends <= curr_date)))
+		{
+			return api_error403(); // Round has not begun jet or already ended
+		}
+
+		may_submit_ignored = uint(cperms & ContestPermissions::ADMIN);
+	}
 
 	// Validate fields
 	CStringView solution_tmp_path = request.form_data.file_path("solution");
 	StringView code = request.form_data.get("code");
-	bool ignored_submission = (uint(pperms & ProblemPermissions::SUBMIT_IGNORED)
-		and request.form_data.exist("ignored"));
+	bool ignored_submission = (may_submit_ignored and
+		request.form_data.exist("ignored"));
 
 	if ((code.empty() ^ request.form_data.get("solution").empty()) == 0) {
 		add_notification("error", "You have to either choose a file or paste"
@@ -469,13 +516,18 @@ void Sim::api_submission_add() {
 	}
 
 	// Insert submission
-	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
+	auto stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, status,"
 			" submit_time, last_judgment, initial_report, final_report)"
-		" VALUES(?, ?, NULL, NULL, NULL, "
-			STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
-	stmt.bindAndExecute(session_user_id, problem_id, date(),
-		date("%Y-%m-%d %H:%M:%S", 0));
+		" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?,"
+			" ?, '', '')");
+	if (contest_problem_id.empty())
+		stmt.bindAndExecute(session_user_id, problem_id, nullptr, nullptr,
+			nullptr, date(), date("%Y-%m-%d %H:%M:%S", 0));
+	else
+		stmt.bindAndExecute(session_user_id, problem_id, contest_problem_id,
+			contest_round_id, contest_id, date(), date("%Y-%m-%d %H:%M:%S", 0));
+
 	auto submission_id = stmt.insert_id();
 
 	// Fill the submission's source file

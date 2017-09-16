@@ -372,12 +372,10 @@ void Sim::api_problem_add() {
 	api_problem_add_or_reupload_impl(false);
 }
 
-void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
+void Sim::api_statement_impl(StringView problem_id, StringView problem_label,
+	StringView simfile)
+{
 	STACK_UNWINDING_MARK;
-	using PERM = ProblemPermissions;
-
-	if (uint(~problems_perms & PERM::VIEW_STATEMENT))
-		return api_error403();
 
 	ConfigFile cf;
 	cf.addVars("statement");
@@ -402,10 +400,20 @@ void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
 
 	// TODO: add some cache system for the statements
 
-	auto package_zip = concat("problems/", problems_pid, ".zip");
+	auto package_zip = concat("problems/", problem_id, ".zip");
 	resp.content = extract_file_from_zip(package_zip.to_cstr(), concat(
 		sim::zip_package_master_dir(package_zip.to_cstr()), statement)
 			.to_cstr());
+}
+
+void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::VIEW_STATEMENT))
+		return api_error403();
+
+	return api_statement_impl(problems_pid, problem_label, simfile);
 }
 
 void Sim::api_problem_download(StringView problem_label) {

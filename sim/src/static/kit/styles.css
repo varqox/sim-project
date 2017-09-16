@@ -558,7 +558,8 @@ table {
 }
 
 .btn,
-.btn-small {
+.btn-small,
+.btn-tiny {
 	cursor: pointer;
 	color: #000000;
 	text-decoration: none !important;
@@ -585,22 +586,35 @@ table {
 	font-size: 14px;
 	line-height: 20px;
 }
+.btn-tiny {
+	display: inline-block;
+	height: 24px;
+	margin: 1px 3px;
+	padding: 2px 8px;
+	white-space: pre;
+	font-size: 14px;
+	line-height: 18px;
+}
 .btn:hover,
 .btn:focus,
 .btn-small:hover,
-.btn-small:focus {
+.btn-small:focus,
+.btn-tiny:hover,
+.btn-tiny:focus {
 	color: #000000;
 	background-color: #e2e2e2;
 	background-image: none;
 	outline: none;
 }
 .btn:focus,
-.btn-small:focus {
+.btn-small:focus,
+.btn-tiny:focus {
 	border-color: #51a7e8;
 	box-shadow: 0 0 8px 1px #52a8ec;
 }
 .btn:active,
-.btn-small:active {
+.btn-small:active,
+.btn-tiny:active {
 	color: #000000;
 	background-color: #d3d3d3;
 	background-image: none;
@@ -609,7 +623,8 @@ table {
 
 /* Blue button */
 .btn.blue,
-.btn-small.blue {
+.btn-small.blue,
+.btn-tiny.blue {
 	color: #ffffff;
 	background-color: #0074cc;
 	background-image: linear-gradient(#1088cc, #0044cc);
@@ -618,16 +633,20 @@ table {
 .btn.blue:hover,
 .btn.blue:focus,
 .btn-small.blue:hover,
-.btn-small.blue:focus {
+.btn-small.blue:focus,
+.btn-tiny.blue:hover,
+.btn-tiny.blue:focus {
 	background-color: #0063cc;
 	background-image: none;
 }
 .btn.blue:focus,
-.btn-small.blue:focus {
+.btn-small.blue:focus,
+.btn-tiny.blue:focus {
 	box-shadow: 0 0 8px 1px #0055cc;
 }
 .btn.blue:active,
-.btn-small.blue:active {
+.btn-small.blue:active,
+.btn-tiny.blue:active {
 	background-color: #0053cc;
 	background-image: none;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
@@ -635,7 +654,8 @@ table {
 
 /* Red button */
 .btn.red,
-.btn-small.red {
+.btn-small.red,
+.btn-tiny.red {
 	color: #ffffff;
 	background-color: #df524d;
 	background-image: linear-gradient(#ee5f5b, #c73e38);
@@ -644,16 +664,20 @@ table {
 .btn.red:hover,
 .btn.red:focus,
 .btn-small.red:hover,
-.btn-small.red:focus {
+.btn-small.red:focus,
+.btn-tinyl.red:hover,
+.btn-tiny.red:focus {
 	background-color: #d94d48;
 	background-image: none;
 }
 .btn.red:focus,
-.btn-small.red:focus {
+.btn-small.red:focus,
+.btn-tinyl.red:focus {
 	box-shadow: 0 0 8px 1px #cc3d37;
 }
 .btn.red:active,
-.btn-small.red:active {
+.btn-small.red:active,
+.btn-tiny.red:active {
 	background-color: #ca4741;
 	background-image: none;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
@@ -661,7 +685,8 @@ table {
 
 /* Orange button */
 .btn.orange,
-.btn-small.orange {
+.btn-small.orange,
+.btn-tiny.orange {
 	color: #ffffff;
 	background-color: #f6a839;
 	background-image: linear-gradient(#fbba5d, #f19615);
@@ -670,16 +695,20 @@ table {
 .btn.orange:hover,
 .btn.orange:focus,
 .btn-small.orange:hover,
-.btn-small.orange:focus {
+.btn-small.orange:focus,
+.btn.btn-tinyrange:hover,
+.btn.btn-tinynge:focus {
 	background-color: #ef9d2a;
 	background-image: none;
 }
 .btn.orange:focus,
-.btn-small.orange:focus {
+.btn-small.orange:focus,
+.btn-tiny.orange:focus {
 	box-shadow: 0 0 8px 1px #f59b1a;
 }
 .btn.orange:active,
-.btn-small.orange:active {
+.btn-small.orange:active,
+.btn-tiny.orange:active {
 	background-color: #e8941c;
 	background-image: none;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
@@ -687,7 +716,8 @@ table {
 
 /* Green button */
 .btn.green,
-.btn-small.green {
+.btn-small.green,
+.btn-tiny.green {
 	color: #ffffff;
 	background-color: #48a848;
 	background-image: linear-gradient(#4fba4f, #429442);
@@ -696,16 +726,20 @@ table {
 .btn.green:hover,
 .btn.green:focus,
 .btn-small.green:hover,
-.btn-small.green:focus {
+.btn-small.green:focus,
+.btn-tiny.green:hover,
+.btn-tiny.green:focus {
 	background-color: #449d44;
 	background-image: none;
 }
 .btn.green:focus,
-.btn-small.green:focus {
+.btn-small.green:focus,
+.btn-tiny.green:focus {
 	box-shadow: 0 0 8px 1px #359735;
 }
 .btn.green:active,
-.btn-small.green:active {
+.btn-small.green:active,
+.btn-tiny.green:active {
 	background-color: #398439;
 	background-image: none;
 	box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
@@ -1737,6 +1771,58 @@ table.contests td .btn-small {
 }
 table.contests tr > td:last-child {
 	white-space: pre;
+}
+
+/* Contest view */
+div.contest,
+div.round {
+	display: inline-block;
+	padding: 4px 4px 0;
+	margin-right: 16px;
+	margin-bottom: 4px;
+	line-height: 29px;
+	font-size: 16px;
+	border-bottom: 1px solid #bbb;
+}
+div.round {
+	margin-left: 24px;
+}
+div.contest span:last-of-type,
+div.round span:last-of-type {
+	margin-right: 16px;
+}
+div.contest > label,
+div.round > label {
+	padding: 2.5px 4px 2px;
+	margin: 1px 4px 1px 10px;
+	border-radius: 3px;
+	font-size: 14px;
+	/* line-height: 20px; */
+	font-weight: bold;
+	color: #fefefe;
+	white-space: pre;
+	background: #54c32a;
+}
+div.contest > label::after,
+div.round > label::after {
+	content: ":";
+}
+
+div.contest .btn-btn-small,
+div.round .btn-btn-small,
+div.round_problems .btn-btn-small {
+	margin: 1px 3px;
+}
+table.round_problems {
+	margin-left: 64px;
+}
+
+table.round_problems td {
+	padding: 2px;
+}
+table.round_problems td:first-child {
+	font-size: 16px;
+	padding-right: 10px;
 }
 
 /* Files */
