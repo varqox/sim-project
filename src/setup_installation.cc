@@ -230,14 +230,14 @@ int main(int argc, char **argv) {
 			"`contest_id` int unsigned NOT NULL,"
 			"`name` VARBINARY(", CONTEST_ROUND_NAME_MAX_LEN, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
-			"`ranking_exposure` datetime NULL DEFAULT NULL," // NULL == do not expose
 			"`begins` datetime NULL NOT NULL,"
-			"`full_results` datetime NULL DEFAULT NULL," // NULL == show immediately
 			"`ends` datetime NULL DEFAULT NULL," // NULL == forever
+			"`full_results` datetime NULL DEFAULT NULL," // NULL == show immediately
+			"`ranking_exposure` datetime NULL DEFAULT NULL," // NULL == do not expose
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, ranking_exposure),"
+			"UNIQUE (contest_id, begins),"
 			"UNIQUE (contest_id, item)"
-			// "KEY (contest_id, begins)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("contest_problems",

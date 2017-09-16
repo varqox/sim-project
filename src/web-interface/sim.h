@@ -96,6 +96,9 @@ private:
 
 	void api_problem_add();
 
+ 	void api_statement_impl(StringView problem_id, StringView problem_label,
+ 		StringView simfile);
+
 	void api_problem_statement(StringView problem_label, StringView simfile);
 
 	void api_problem_download(StringView problem_label);
@@ -139,6 +142,8 @@ private:
 	void api_submission_download();
 
 	// contests_api.cc
+	void append_contest_actions_str();
+
 	void api_contests();
 
 	void api_contest();
@@ -154,6 +159,8 @@ private:
 	void api_contest_round_edit();
 
 	void api_contest_round_delete();
+
+	void api_contest_problem_statement(StringView problem_id);
 
 	void api_contest_problem_add();
 
