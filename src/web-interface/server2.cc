@@ -677,7 +677,7 @@ int main() {
 
 	// Load config
 	sockaddr_in name;
-	loadServerConfig("server.conf", name);
+	loadServerConfig("sim.conf", name);
 
 	socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
 	if (socket_fd < 0) {
