@@ -159,8 +159,17 @@ private:
 public:
 	void bind(unsigned idx, const char& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
+		static_assert(sizeof(char) == sizeof(signed char),
+			"Needed to do the pointer conversion");
 		params_[idx].buffer_type = MYSQL_TYPE_TINY;
 		params_[idx].buffer = const_cast<char*>(&x);
+		params_[idx].is_unsigned = false;
+	}
+
+	void bind(unsigned idx, const signed char& x) ND(noexcept) {
+		D(throw_assert(idx < params_.size());)
+		params_[idx].buffer_type = MYSQL_TYPE_TINY;
+		params_[idx].buffer = const_cast<signed char*>(&x);
 		params_[idx].is_unsigned = false;
 	}
 
@@ -299,7 +308,22 @@ public:
 	}
 
 	// Need to be called before next()
+	void res_bind(unsigned idx, bool& x) ND(noexcept) {
+		static_assert(sizeof(bool) == sizeof(char),
+			"Needed below to do the address magic");
+		res_bind(idx, reinterpret_cast<int8_t&>(x));
+	}
+
 	void res_bind(unsigned idx, char& x) ND(noexcept) {
+		D(throw_assert(idx < res_.size());)
+		static_assert(sizeof(char) == sizeof(signed char),
+			"Needed to do the pointer conversion");
+		res_[idx].buffer_type = MYSQL_TYPE_TINY;
+		res_[idx].buffer = &x;
+		res_[idx].is_unsigned = false;
+	}
+
+	void res_bind(unsigned idx, signed char& x) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
 		res_[idx].buffer_type = MYSQL_TYPE_TINY;
 		res_[idx].buffer = &x;
