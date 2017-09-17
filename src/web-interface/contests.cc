@@ -8,7 +8,7 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 	using CUM = ContestUserMode;
 
 	if (not session_open())
-		return (is_public ? PERM::VIEW_PUBLIC : PERM::VIEW_PUBLIC | PERM::VIEW);
+		return (is_public ? PERM::VIEW_PUBLIC | PERM::VIEW : PERM::VIEW_PUBLIC);
 
 	if (session_user_type == UserType::ADMIN)
 		return PERM::VIEW_PUBLIC | PERM::VIEW_ALL | PERM::ADD_PRIVATE |

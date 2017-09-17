@@ -146,7 +146,7 @@ void Sim::api_contest() {
 	using CUM = ContestUserMode;
 
 	session_open();
-	problems_perms = problems_get_permissions();
+	contests_perms = contests_get_permissions();
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "add") {
@@ -163,7 +163,7 @@ void Sim::api_contest() {
 			" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=?"
 			" WHERE c.id=?");
 		stmt.bindAndExecute(
-			(session_is_open ? session_user_id : StringView("")), contests_cid);
+			(session_is_open ? session_user_id : StringView()), contests_cid);
 
 		InplaceBuff<meta::max(CONTEST_NAME_MAX_LEN, CONTEST_ROUND_NAME_MAX_LEN,
 			CONTEST_PROBLEM_NAME_MAX_LEN)> name;
@@ -185,7 +185,7 @@ void Sim::api_contest() {
 			return api_error400();
 
 		if (uint(~contests_perms & PERM::VIEW))
-			return api_error403();
+			return api_error403("a");
 
 		// Append contest
 		append("[\n[", contests_cid, ',',

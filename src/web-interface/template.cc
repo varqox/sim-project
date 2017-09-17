@@ -44,7 +44,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 			"<body>"
 				"<div class=\"navbar\">"
 					"<div>"
-						"<a href=\"/\" class=\"brand\">SIM</a>"
+						"<a href=\"/\" class=\"brand\">SIM beta</a>"
 						"<a href=\"/c/\">Contests</a>"
 						"<a href=\"/p\">Problems</a>");
 
