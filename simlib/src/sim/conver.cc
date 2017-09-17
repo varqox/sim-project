@@ -132,7 +132,8 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 
 			sf.checker = concat_tostr("check/checker.c");
 			if (package_path_.back() == '/') {
-				(void)mkdir(concat(package_path_, "check").to_cstr());
+				(void)mkdir(
+					concat(package_path_, master_dir, "check").to_cstr());
 				putFileContents(
 					concat(package_path_, master_dir, sf.checker).to_cstr(),
 					(const char*)default_checker_c, default_checker_c_len);
