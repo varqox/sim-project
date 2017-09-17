@@ -8,6 +8,7 @@ from enum import Enum
 import time
 import sys
 import getpass
+import json
 
 def eprint(*args, **kwargs):
 	print(*args, file=sys.stderr, **kwargs)
@@ -36,13 +37,13 @@ def login():
 
 def AddProblemToProblemset(path):
 	csrf_token = ses.cookies.get_dict()['csrf_token']
-	req = Request('POST', host + "/p/add", data = {
+	req = Request('POST', host + "/api/problem/add", data = {
 			"name" : '',
 			"label" : '',
-			"memory-limit" : '',
-			"global-time-limit" : '',
+			"mem_limit" : '',
+			"global_time_limit" : '',
 			# "force-auto-limit" : 'on',
-			"public-problem" : 'on',
+			"type" : 'PRI',
 			"csrf_token" : csrf_token
 		},
 		files=[('package', ('xd.zip', open(path, 'rb'), 'application/zip'))])
@@ -50,7 +51,7 @@ def AddProblemToProblemset(path):
 	log_html(resp.text)
 
 	assert resp.status_code == 200
-	return resp.url[resp.url.rfind('/') + 1:] # return the job id
+	return resp.text # return the job id
 
 class JobStatus(Enum):
 	DONE = 1
@@ -59,9 +60,8 @@ class JobStatus(Enum):
 
 def waitJob(job_id : str):
 	while True:
-		resp = ses.get(host + "/jobs/" + job_id)
-		bs = BeautifulSoup(resp.text, "lxml")
-		status = bs.find('td', class_ = 'status').text
+		resp = ses.get(host + "/api/jobs/=" + job_id)
+		status = json.loads(resp.text)[0][3][1];
 
 		if status == "Done":
 			return JobStatus.DONE
@@ -73,13 +73,8 @@ def waitJob(job_id : str):
 		time.sleep(.3)
 
 def getproblemId(job_id : str):
-	resp = ses.get(host + "/jobs/" + job_id)
-	bs = BeautifulSoup(resp.text, "lxml")
-	buttons = bs.find_all('a', class_ = 'btn-small')
-	for item in buttons:
-		if item.text == "View problem":
-			url = item['href']
-			return url[url.rfind('/') + 1:] # Return the problem's id
+	resp = ses.get(host + "/api/jobs/=" + job_id)
+	return json.loads(resp.text)[0][7]['problem'];
 
 
 ##############################################

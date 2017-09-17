@@ -1739,19 +1739,16 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 			this.append($('<div>', {
 				class: 'round-path',
 				html: [
-					$('<a>', {
-						href: '/c/' + data[10],
-						text: data[11]
+					a_preview_button('/c/' + data[10], data[11], '', function() {
+						preview_contest(true, data[10]);
 					}),
-					' ~> ',
-					$('<a>', {
-						href: '/c/r' + data[8],
-						text: data[9]
+					' / ',
+					a_preview_button('/c/r' + data[8], data[9], '', function() {
+						preview_contest(true, data[8]);
 					}),
-					' ~> ',
-					$('<a>', {
-						href: '/c/p' + data[6],
-						text: data[7]
+					' / ',
+					a_preview_button('/c/p' + data[6], data[7], '', function() {
+						preview_contest(true, data[6]);
 					}),
 					$('<a>', {
 						class: 'btn-small',
@@ -1831,7 +1828,7 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 		var elem = $(this);
 		var tabs = [
 			'Reports', function() {
-				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
+				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<div>', {
 					class: 'results',
 					html: [data[18], data[19], null]
@@ -1841,7 +1838,7 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 
 		if (actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
-				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
+				elem.children('.tabmenu').nextAll().remove();
 				append_loader(elem);
 				$.ajax({
 					url: '/api/submission/' + submission_id + '/source',
@@ -1859,7 +1856,7 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 
 		if (actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
-				elem.children('.results, .code-view, .jobs, .loader, .loader-info').remove();
+				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<table>', {class: 'jobs'}));
 				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
 			});
@@ -1958,20 +1955,20 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 						}));
 					else
 						row.append($('<td>', {
-							html: [(obj.show_contest ? $('<a>', {
-									href: '/c/' + x[10],
-									text: x[11]
-								}) : ''),
-								(obj.show_contest ? ' ~> ' : ''),
-								$('<a>', {
-									href: '/c/' + x[8],
-									text: x[9]
-								}),
-								' ~> ',
-								$('<a>', {
-									href: '/c/' + x[6],
-									text: x[7]
-								})
+							html: [(obj.show_contest ? a_preview_button('/c/' + x[10], x[11], '', function() {
+									var cid = x[10];
+									return function() { preview_contest(true, cid); };
+								}()) : ''),
+								(obj.show_contest ? ' / ' : ''),
+								a_preview_button('/c/r' + x[8], x[9], '', function() {
+									var crid = x[8];
+									return function() { preview_contest(true, crid); };
+								}()),
+								' / ',
+								a_preview_button('/c/p' + x[6], x[7], '', function() {
+									var cpid = x[6];
+									return function() { preview_contest(true, cpid); };
+								}())
 							]
 						}))
 
@@ -2577,7 +2574,7 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 		var elem = $(this);
 		var tabs = [
 			'Dashboard', function() {
-				elem.children('.dashboard, .submissions, .ranking, .loader, .loader-info').remove();
+				elem.children('.tabmenu').nextAll().remove();
 				var dashboard = $('<div>', {class: 'dashboard'}).appendTo(elem);
 				// Contest
 				dashboard.append($('<div>', {
@@ -2674,16 +2671,14 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 
 		if (actions.indexOf('A') !== -1)
 			tabs.push('All submissions', function() {
-				elem.children('.dashboard, .submissions, .ranking, .loader, .loader-info').remove();
-				elem.append($('<table>', {class: 'submissions'}));
-				new SubmissionsLister(elem.children().last(), '/C' + contest_id).monitor_scroll();
+				elem.children('.tabmenu').nextAll().remove();
+				tab_submissions_lister($('<div>').appendTo(elem), '/C' + contest_id);
 			});
 
 		if (actions.indexOf('p') !== -1)
 			tabs.push('My submissions', function() {
-				elem.children('.dashboard, .submissions, .ranking, .loader, .loader-info').remove();
-				elem.append($('<table>', {class: 'submissions'}));
-				new SubmissionsLister(elem.children().last(), '/C' + contest_id + '/u' + logged_user_id()).monitor_scroll();
+				elem.children('.tabmenu').nextAll().remove();
+				tab_submissions_lister($('<div>').appendTo(elem), '/C' + contest_id + '/u' + logged_user_id());
 			});
 
 		// TODO: rankings
