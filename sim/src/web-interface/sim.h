@@ -125,6 +125,9 @@ private:
 	void api_user_change_password();
 
 	// submissions_api.cc
+	void append_submission_status(SubmissionStatus status,
+		bool show_full_results);
+
 	void api_submissions();
 
 	void api_submission();

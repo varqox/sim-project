@@ -1,5 +1,8 @@
 #!/bin/bash
+
+# TODO: print help if there is no enough arguments
 # Args: <archive name> <repositories>...
+
 files=$(for rep in ${@:2}; do
 	git -C "$rep" ls-files | sed -e "s@^@$rep/@g"
 	for x in $(git -C "$rep" config --file .gitmodules --get-regexp path | awk '{ print $2 }'); do

@@ -185,7 +185,7 @@ void Sim::api_contest() {
 			return api_error400();
 
 		if (uint(~contests_perms & PERM::VIEW))
-			return api_error403("a");
+			return api_error403();
 
 		// Append contest
 		append("[\n[", contests_cid, ',',
@@ -245,31 +245,38 @@ void Sim::api_contest() {
 		// Problems
 		append("\n],\n[");
 		if (uint(contests_perms & PERM::ADMIN)) {
-			stmt = mysql.prepare("SELECT id, contest_round_id, problem_id,"
-				" name, item, final_selecting_method FROM contest_problems"
-				" WHERE contest_id=?");
+			stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
+					" cp.problem_id, p.label, cp.name, cp.item,"
+					" cp.final_selecting_method"
+				" FROM contest_problems cp"
+				" LEFT JOIN problems p ON p.id=cp.problem_id"
+				" WHERE cp.contest_id=?");
 			stmt.bindAndExecute(contests_cid);
 
 		} else {
 			stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
-					" cp.problem_id, cp.name, cp.item,"
+					" cp.problem_id, p.label, cp.name, cp.item,"
 					" cp.final_selecting_method"
 				" FROM contest_problems cp"
 				" JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
 					" AND cr.begins<=?"
+				" LEFT JOIN problems p ON p.id=cp.problem_id"
 				" WHERE cp.contest_id=?");
 			stmt.bindAndExecute(curr_date, contests_cid);
 		}
 
 		uint64_t problem_id;
 		uint final_selecting_method;
-		stmt.res_bind_all(contests_cpid, contests_crid, problem_id, name, item,
-			final_selecting_method);
+		InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
+
+		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
+			problem_label, name, item, final_selecting_method);
 
 		while (stmt.next()) {
 			append("\n[", contests_cpid, ',',
 				contests_crid, ',',
 				problem_id, ',',
+				jsonStringify(problem_label), ',',
 				jsonStringify(name), ',',
 				item, ',',
 				final_selecting_method, "],");
@@ -500,6 +507,24 @@ void Sim::api_contest_problem_statement(StringView problem_id) {
 	return api_statement_impl(problem_id, label, simfile);
 }
 
+namespace {
+
+struct SOwner {
+	uint64_t id;
+	InplaceBuff<32> name; // static size is set manually to save memory
+
+	template<class... Args>
+	SOwner(uint64_t sowner, Args&&... args) : id(sowner) {
+		name.append(std::forward<Args>(args)...);
+	}
+
+	bool operator<(const SOwner& s) const noexcept { return id < s.id; }
+
+	bool operator==(const SOwner& s) const noexcept { return id == s.id; }
+};
+
+} // anonymous namespace
+
 void Sim::api_contest_ranking() {
 	STACK_UNWINDING_MARK;
 
@@ -508,5 +533,96 @@ void Sim::api_contest_ranking() {
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403();
 
+	// Gather submissions owners
+	auto stmt = mysql.prepare("SELECT u.id, u.first_name, u.last_name"
+		" FROM submissions s JOIN users u ON s.owner=u.id"
+		" WHERE s.contest_id=? AND s.type=" STYPE_FINAL_STR
+		" GROUP BY (u.id) ORDER BY u.id");
+	stmt.bindAndExecute(contests_cid);
 
+	uint64_t id;
+	InplaceBuff<USER_FIRST_NAME_MAX_LEN> fname;
+	InplaceBuff<USER_LAST_NAME_MAX_LEN> lname;
+	stmt.res_bind_all(id, fname, lname);
+
+	std::vector<SOwner> sowners;
+	while (stmt.next())
+		sowners.emplace_back(id, fname, ' ' , lname);
+
+	// Gather submissions
+	bool first_owner = true;
+	uint64_t owner, prev_owner;
+	uint64_t crid, cpid;
+	uint status;
+	int64_t score;
+	decltype(date()) curr_date;
+
+	if (uint(contests_perms & PERM::ADMIN)) {
+		stmt = mysql.prepare("SELECT id, owner, contest_round_id,"
+				" contest_problem_id, status, score FROM submissions "
+			" WHERE contest_id=? AND type=" STYPE_FINAL_STR " ORDER BY owner");
+		stmt.bindAndExecute(contests_cid);
+		stmt.res_bind_all(id, owner, crid, cpid, status, score);
+
+	} else {
+		stmt = mysql.prepare("SELECT s.id, s.owner, s.contest_round_id, s.contest_problem_id, s.status, s.score FROM submissions s JOIN contest_rounds cr ON cr.id=s.contest_round_id AND cr.begins<=? AND (cr.full_results IS NULL OR cr.full_results<=?) AND (cr.ranking_exposure IS NOT NULL AND cr.ranking_exposure<=?) WHERE s.contest_id=? AND s.type=" STYPE_FINAL_STR " ORDER BY s.owner");
+		curr_date = date();
+		stmt.bindAndExecute(curr_date, curr_date, curr_date, contests_cid);
+		stmt.res_bind_all(id, owner, crid, cpid, status, score);
+	}
+
+	append('[');
+	const uint64_t session_uid = (session_is_open ? strtoull(session_user_id)
+		: 0);
+	bool show_id = false;
+	while (stmt.next()) {
+		// Owner changes
+		if (first_owner or owner != prev_owner) {
+			auto it = binaryFind(sowners, SOwner(owner));
+			if (it == sowners.end())
+				continue; // Ignore submission as there is no owner to bin to it
+				          // (this maybe a little race condition, but if the
+				          // user will query again it surely will be no case
+				          // again (with the current owner))
+
+			if (first_owner) {
+				append('[');
+				first_owner = false;
+			} else {
+				--resp.content.size; // remove trailing ','
+				append("\n]],[");
+			}
+
+			prev_owner = owner;
+			show_id = (uint(contests_perms & PERM::ADMIN) or
+				(session_is_open and session_uid == owner));
+			// Owner
+			if (show_id)
+				append(owner);
+			else
+				append("null");
+			// Owner name
+			append(',', jsonStringify(it->name), ",[");
+		}
+
+		append("\n[");
+		if (show_id)
+			append(id, ',');
+		else
+			append("null,");
+
+		append(crid, ',',
+			cpid, ',');
+
+		append_submission_status(SubmissionStatus(status), true);
+		// TODO: make score revealing work with the ranking
+		append(',', score, "],");
+	}
+
+	if (first_owner) // no submission was appended
+		append(']');
+	else {
+		--resp.content.size; // remove trailing ','
+		append("\n]]]");
+	}
 }

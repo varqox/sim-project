@@ -170,6 +170,34 @@ $(document).ready(function() {
 	$('form').submit(function() { addCsrfTokenTo(this); });
 });
 
+function StaticMap() {
+	this.data = new Array();
+
+	this.cmp = function(a, b) { return a[0] - b[0]; }
+
+	this.add = function(key, val) {
+		this.data.push([key, val]);
+	}
+
+	this.prepare = function() { this.data.sort(this.cmp); }
+
+	this.get = function(key) {
+		if (this.data.length === 0)
+			return null;
+
+		l = 0, r = this.data.length;
+		while (l < r) {
+			m = (l + r) >> 1;
+			if (this.data[m][0] < key)
+				l = m + 1;
+			else
+				r = m;
+		}
+
+		return (this.data[l][0] == key ? this.data[l][1] : null);
+	}
+}
+
 /* ================================= Loader ================================= */
 function remove_loader(elem) {
 	$(elem).children('.loader, .loader-info').remove();
@@ -448,6 +476,27 @@ function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_butt
 	});
 }*/
 
+function API_call(ajax_url, success_handler, loader_parent) {
+	var thiss = this;
+	var args = arguments;
+	append_loader(loader_parent);
+	$.ajax({
+		type: 'GET',
+		url: ajax_url,
+		dataType: 'json',
+		success: function(data) {
+			remove_loader(loader_parent);
+			success_handler.apply(this, arguments);
+		},
+		error: function(resp, status) {
+			show_error_via_loader(loader_parent, resp, status, function () {
+				// Avoid recursion
+				setTimeout(function(){ API_call.apply(thiss, args); }, 0);
+			});
+		}
+	});
+}
+
 /* ================================ Tab menu ================================ */
 function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 	if (active_tab === undefined)
@@ -478,7 +527,7 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 }
 
 /* ================================ Preview ================================ */
-function preview_base(as_modal, new_window_location, func) {
+function preview_base(as_modal, new_window_location, func, no_modal_elem) {
 	if (as_modal) {
 		var elem = $('<div>', {
 			class: 'modal preview',
@@ -491,40 +540,22 @@ function preview_base(as_modal, new_window_location, func) {
 		func.call(elem.find('div > div'));
 		centerize_modal(elem);
 
-	} else
+	} else if (no_modal_elem === undefined)
 		func.call($(document.body));
+	else
+		func.call($(no_modal_elem));
 
 	window.history.replaceState({}, '', new_window_location);
 }
-function preview_ajax(as_modal, ajax_url, success_handler, new_window_location) {
-	preview_base(as_modal, new_window_location, function impl() {
-		var elem = this;
-		append_loader(elem);
-		$.ajax({
-			type: 'GET',
-			url: ajax_url,
-			dataType: 'json',
-			success: function(data) {
-				remove_loader(elem);
-
-				if (data.length === 0)
-					return show_error_via_loader(elem, {
-						status: '404',
-						statusText: 'Not Found'
-					});
-
-				success_handler.apply(elem, arguments);
-
-				if (as_modal)
-					centerize_modal(elem.parent().parent());
-			},
-			error: function(resp, status) {
-				show_error_via_loader(elem, resp, status, function () {
-					impl.call(elem);
-				});
-			}
-		});
-	});
+function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/) {
+	preview_base(as_modal, new_window_location, function() {
+		var elem = $(this);
+		API_call(ajax_url, function () {
+			success_handler.apply(elem, arguments);
+			if (as_modal)
+				centerize_modal(elem.parent().parent());
+		}, elem);
+	}, no_modal_elem);
 }
 function a_preview_button(href, text, classes, func) {
 	return $('<a>', {
@@ -1042,6 +1073,12 @@ function add_user(as_modal) {
 }
 function preview_user(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 
 		this.append($('<div>', {
@@ -1110,6 +1147,12 @@ function preview_user(as_modal, user_id) {
 }
 function edit_user(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 
 		var actions = data[6];
@@ -1193,6 +1236,12 @@ function edit_user(as_modal, user_id) {
 }
 function delete_user(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 
 		var actions = data[6];
@@ -1241,6 +1290,12 @@ function delete_user(as_modal, user_id) {
 }
 function change_user_password(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 
 		var actions = data[6];
@@ -1381,6 +1436,12 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 /* ================================== Jobs ================================== */
 function preview_job(as_modal, job_id) {
 	preview_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 
 		function info_html(info) {
@@ -1732,6 +1793,12 @@ function delete_submission(submission_id) {
 }
 function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 	preview_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 		var actions = data[15];
 
@@ -2114,6 +2181,12 @@ function add_problem(as_modal) {
 }
 function reupload_problem(as_modal, problem_id) {
 	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 
 		var actions = data[7];
@@ -2218,6 +2291,12 @@ function rejudge_problem_submissions(problem_id) {
 }
 function preview_problem(as_modal, problem_id, opt_arg) {
 	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
 		data = data[0];
 		var actions = data[7];
 
@@ -2309,7 +2388,7 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 			});
 
 		tabmenu(function(x) { x.appendTo(main); }, tabs,
-			(opt_arg === 'solutions' ? 1 : undefined));
+			(opt_arg === 'solutions' ? 0 : undefined));
 
 	}, '/p/' + problem_id);
 }
@@ -2566,7 +2645,7 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 
 		// Sort problems by (round_id, item)
 		problems.sort(function(a, b) {
-			return (a[1] == b[1] ? a[4] - b[4] : a[1] - b[1]);
+			return (a[1] == b[1] ? a[5] - b[5] : a[1] - b[1]);
 		});
 
 		// Header
@@ -2621,7 +2700,7 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 					// Bin-search first problem
 					var l = 0, r = problems.length;
 					while (l < r) {
-						var mid = Math.floor((l + r) / 2);
+						var mid = (l + r) >> 1;
 						p = problems[mid];
 						if (p[1] < round[0])
 							l = mid + 1;
@@ -2642,15 +2721,15 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 					function append_problem(problem) {
 						tb.append($('<tr>', {
 							html: [
-								$('<td>', {text: problem[3]}),
+								$('<td>', {text: problem[4]}),
 								$('<td>', {
 									html: [
 										$('<a>', {
 											class: 'btn-small',
-											href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[3]),
+											href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
 											text: 'Statement'
 										}),
-										(cannot_submit ? '' : a_preview_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', function() { add_submission(true, problem[2], problem[3], (actions.indexOf('A') !== -1), problem[0]); })),
+										(cannot_submit ? '' : a_preview_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', function() { add_submission(true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]); })),
 										(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_problem(true, problem[0]); })),
 										(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_problem(true, problem[0]); })),
 									]
@@ -2681,11 +2760,210 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 				tab_submissions_lister($('<div>').appendTo(elem), '/C' + contest_id + '/u' + logged_user_id());
 			});
 
-		// TODO: rankings
+		if (actions.indexOf('v') !== -1)
+			tabs.push('Ranking', function() {
+				elem.children('.tabmenu').nextAll().remove();
+				contest_ranking($('<div>').appendTo(elem), contest_id);
+			});
 
 		tabmenu(function(x) { x.appendTo(elem); }, tabs, active_tab);
 
 	}, '/c/' + contest_id);
+}
+function contest_ranking(elem_, contest_id_) {
+	var elem = elem_;
+	var contest_id = contest_id_;
+	API_call('/api/contest/c' + contest_id, function(cdata) {
+		var contest = cdata[0];
+		var rounds = cdata[1];
+		var problems = cdata[2];
+		var actions = contest[4];
+		var is_admin = (actions.indexOf('A') !== -1);
+
+		// Sort rounds by items
+		rounds.sort(function(a, b) { return a[2] - b[2]; });
+		// Map rounds (by id) to their items
+		var rid_to_item = new StaticMap();
+		for (var i = 0; i < rounds.length; ++i) {
+			if (!is_admin) {
+				// Add only those rounds that have full results visible and the ranking_exposure point has passed
+				var curr_time = date_to_datetime_str(new Date());
+				var full_results = normalize_datetime($('<span>', {
+					datetime: rounds[i][5]
+				}), false).text();
+				var ranking_exposure = normalize_datetime($('<span>', {
+					datetime: rounds[i][3]
+				}), false).text();
+
+				if (curr_time < full_results || curr_time < ranking_exposure)
+					continue; // Do not show the round
+			}
+
+			// Show the round
+			rid_to_item.add(rounds[i][0], rounds[i][2]);
+		}
+		rid_to_item.prepare();
+
+		// Add round item to the every problem (and remove invalid problems -
+		// the ones which don't belong to the valid rounds)
+		tmp_problems = [];
+		for (var i = 0; i < problems.length; ++i) {
+			x = rid_to_item.get(problems[i][1]);
+			if (x != null) {
+				problems[i].push(x);
+				tmp_problems.push(problems[i]);
+			}
+		}
+		var problems = tmp_problems;
+
+		// Sort problems by (round_item, item)
+		problems.sort(function(a, b) {
+			return (a[7] == b[7] ? a[5] - b[5] : a[7] - b[7]);
+		});
+
+		// Map problems (by id) to their indexes in the above array
+		var problem_to_col_id = new StaticMap();
+		for (var i = 0; i < problems.length; ++i)
+			problem_to_col_id.add(problems[i][0], i);
+		problem_to_col_id.prepare();
+
+		API_call('/api/contest/c' + contest_id + '/ranking', function(data_) {
+			var data = data_;
+			if (data.length == 0)
+				return elem.append($('<center>', {html: '<p>There is no one in the ranking yet...</p>'}));
+
+			// Construct table's head
+			tr = $('<tr>', {
+				html: [
+					$('<th>', {
+						rowspan: 2,
+						text: '#'
+					}),
+					$('<th>', {
+						rowspan: 2,
+						text: 'User'
+					}),
+					$('<th>', {
+						rowspan: 2,
+						text: 'Sum'
+					}),
+				]
+			});
+			// Add rounds
+			colspan = 0;
+			j = 0; // Index of the current round
+			for (var i = 0; i < problems.length; ++i) {
+				var problem = problems[i];
+				while (rounds[j][0] != problem[1])
+					++j; // Skip rounds (that have no problems attached)
+
+				++colspan;
+				// If current round's problems end
+				if (i + 1 == problems.length || problems[i + 1][1] != problem[1]) {
+					tr.append($('<th>', {
+						colspan: colspan,
+						text: rounds[j][1]
+					}));
+					colspan = 0;
+					++j;
+				}
+			}
+			var thead = $('<thead>', {html: tr});
+			tr = $('<tr>');
+			// Add problems
+			for (var i = 0; i < problems.length; ++i)
+				tr.append($('<th>', {
+					text: problems[i][3]
+				}));
+			thead.append(tr);
+
+			// Add score for each user add this to the user's info
+			for (var i = 0; i < data.length; ++i) {
+				submissions = data[i][2];
+				var total_score = 0;
+				// Count only valid problems (to fix potential discrepancies
+				// between ranking submissions and the contest structure)
+				for (var j = 0; j < submissions.length; ++j)
+					if (problem_to_col_id.get(submissions[j][2]) != null)
+						total_score += submissions[j][4];
+
+				data[i].push(total_score);
+			}
+
+			// Sort users (and their submissions) by their score
+			data.sort(function(a, b) { return b[3] - a[3]; });
+
+			// Add rows
+			var tbody = $('<tbody>');
+			var prev_score = data[0][3] + 1;
+			var place;
+			for (var i = 0; i < data.length; ++i) {
+				user_row = data[i];
+				tr = $('<tr>');
+				// Place
+				if (prev_score != user_row[3]) {
+					place = i + 1;
+					prev_score = user_row[3];
+				}
+				tr.append($('<td>', {text: place}));
+				// User
+				if (user_row[0] === null)
+					tr.append($('<td>', {text: user_row[1]}));
+				else {
+					tr.append($('<td>', {
+						html: a_preview_button('/u/' + user_row[0], user_row[1], '', function() {
+								var uid = user_row[0];
+								return function() { preview_user(true, uid); };
+							}())
+					}));
+				}
+				// Score
+				tr.append($('<td>', {text: user_row[3]}));
+				// Submissions
+				var row = new Array(problems.length);
+				submissions = data[i][2];
+				for (var j = 0; j < submissions.length; ++j) {
+					x = problem_to_col_id.get(submissions[j][2]);
+					if (x != null) {
+						if (submissions[j][0] === null)
+							row[x] = $('<td>', {
+								class: 'status ' + submissions[j][3][0],
+								text: submissions[j][4]
+							});
+						else {
+							row[x] = $('<td>', {
+								class: 'status ' + submissions[j][3][0],
+								html: a_preview_button('/s/' + submissions[j][0], submissions[j][4], '', function () {
+									var sid = submissions[j][0];
+									return function () {
+										preview_submission(true, sid);
+									};
+								}())
+							});
+						}
+					}
+				}
+				// Construct the row
+				for (var j = 0; j < problems.length; ++j) {
+					if (row[j] === undefined)
+						$('<td>').appendTo(tr);
+					else
+						row[j].appendTo(tr);
+				}
+
+				tbody.append(tr);
+			}
+
+
+			elem.append($('<table>', {
+				class: 'table ranking stripped',
+				html: [thead, tbody]
+			}));
+
+		}, elem);
+
+
+	}, elem);
 }
 function ContestsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)

@@ -7,6 +7,57 @@
 
 using std::string;
 
+void Sim::append_submission_status(SubmissionStatus status,
+	bool show_full_results)
+{
+	STACK_UNWINDING_MARK;
+	using SS = SubmissionStatus;
+
+	if (is_special(status)) {
+		if (status == SS::PENDING)
+			append("[\"\",\"Pending\"]");
+		else if (status == SS::COMPILATION_ERROR)
+			append("[\" purple\",\"Compilation failed\"]");
+		else if (status == SS::CHECKER_COMPILATION_ERROR)
+			append("[\" blue\",\"Checker compilation failed\"]");
+		else if (status == SS::JUDGE_ERROR)
+			append("[\" blue\",\"Judge error\"]");
+		else
+			append("[\"\",\"Unknown\"]");
+
+	// Final
+	} else if (show_full_results) {
+		if ((status & SS::FINAL_MASK) == SS::OK)
+			append("[\"green\",\"OK\"]");
+		else if ((status & SS::FINAL_MASK) == SS::WA)
+			append("[\"red\",\"Wrong answer\"]");
+		else if ((status & SS::FINAL_MASK) == SS::TLE)
+			append("[\"yellow\",\"Time limit exceeded\"]");
+		else if ((status & SS::FINAL_MASK) == SS::MLE)
+			append("[\"yellow\",\"Memory limit exceeded\"]");
+		else if ((status & SS::FINAL_MASK) == SS::RTE)
+			append("[\"intense-red\",\"Runtime error\"]");
+		else
+			append("[\"\",\"Unknown\"]");
+
+	// Initial
+	} else {
+		if ((status & SS::INITIAL_MASK) == SS::INITIAL_OK)
+			append("[\"initial green\",\"OK\"]");
+		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_WA)
+			append("[\"initial red\",\"Wrong answer\"]");
+		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_TLE)
+			append("[\"initial yellow\",\"Time limit exceeded\"]");
+		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_MLE)
+			append("[\"initial yellow\",\"Memory limit exceeded\"]")
+				;
+		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_RTE)
+			append("[\"initial intense-red\",\"Runtime error\"]");
+		else
+			append("[\"\",\"Unknown\"]");
+	}
+}
+
 void Sim::api_submissions() {
 	STACK_UNWINDING_MARK;
 	using PERM = SubmissionPermissions;
@@ -18,8 +69,8 @@ void Sim::api_submissions() {
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT s.id, s.type, s.owner, cu.mode, p.owner,"
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
-		" s.contest_round_id, r.name, 0, r.full_results, s.contest_id, c.name,"
-		" s.submit_time, s.status, s.score");
+		" s.contest_round_id, r.name, 0, r.full_results, r.ends, s.contest_id,"
+		" c.name, s.submit_time, s.status, s.score");
 	qwhere.append(" FROM submissions s"
 		" LEFT JOIN users u ON u.id=s.owner"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
@@ -72,7 +123,8 @@ void Sim::api_submissions() {
 			mask |= ID_COND;
 
 		} else if (cond == '=' and ~mask & ID_COND) {
-			allow_access = true; // Permissions will be checked on fetching data
+			allow_access = true; // Permissions will be checked while fetching
+			                     // the data
 
 			qfields.append(", u.first_name, u.last_name,"
 				" s.initial_report, s.final_report");
@@ -168,6 +220,7 @@ void Sim::api_submissions() {
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
+	auto curr_date = date();
 	while (res.next()) {
 		StringView sid = res[0];
 		SubmissionType stype = SubmissionType(strtoull(res[1]));
@@ -190,12 +243,13 @@ void Sim::api_submissions() {
 		StringView cr_name = res[11];
 		bool reveal_score = (res[12] != "0");
 		bool show_full_results = (bool(uint(perms & PERM::VIEW_FULL_REPORT)) or
-			res.is_null(13) or res[13] <= date());
-		StringView c_id = res[14];
-		StringView c_name = res[15];
-		StringView submit_time = res[16];
-		SubmissionStatus status = SubmissionStatus(strtoull(res[17]));
-		StringView score = res[18];
+			res.is_null(13) or res[13] <= curr_date);
+		StringView cr_ends = res[14];
+		StringView c_id = res[15];
+		StringView c_name = res[16];
+		StringView submit_time = res[17];
+		SubmissionStatus status = SubmissionStatus(strtoull(res[18]));
+		StringView score = res[19];
 
 		append("\n[", sid, ',');
 
@@ -240,7 +294,7 @@ void Sim::api_submissions() {
 			append(cr_id, ',', jsonStringify(cr_name), ',');
 
 		// Contest
-		if (res.is_null(15))
+		if (res.is_null(16))
 			append("null,null,");
 		else
 			append(c_id, ',', jsonStringify(c_name), ',');
@@ -248,58 +302,14 @@ void Sim::api_submissions() {
 		// Submit time
 		append("\"", submit_time, "\",");
 
-		/* Status: (CSS class, text) */
-		using SS = SubmissionStatus;
-
-		if (is_special(status)) {
-			if (status == SS::PENDING)
-				append("[\"\",\"Pending\"],");
-			else if (status == SS::COMPILATION_ERROR)
-				append("[\" purple\",\"Compilation failed\"],");
-			else if (status == SS::CHECKER_COMPILATION_ERROR)
-				append("[\" blue\",\"Checker compilation failed\"],");
-			else if (status == SS::JUDGE_ERROR)
-				append("[\" blue\",\"Judge error\"],");
-			else
-				append("[\"\",\"Unknown\"],");
-
-		// Final
-		} else if (show_full_results) {
-			if ((status & SS::FINAL_MASK) == SS::OK)
-				append("[\"green\",\"OK\"],");
-			else if ((status & SS::FINAL_MASK) == SS::WA)
-				append("[\"red\",\"Wrong answer\"],");
-			else if ((status & SS::FINAL_MASK) == SS::TLE)
-				append("[\"yellow\",\"Time limit exceeded\"],");
-			else if ((status & SS::FINAL_MASK) == SS::MLE)
-				append("[\"yellow\",\"Memory limit exceeded\"],");
-			else if ((status & SS::FINAL_MASK) == SS::RTE)
-				append("[\"intense-red\",\"Runtime error\"],");
-			else
-				append("[\"\",\"Unknown\"],");
-
-		// Initial
-		} else {
-			if ((status & SS::INITIAL_MASK) == SS::INITIAL_OK)
-				append("[\"initial green\",\"OK\"],");
-			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_WA)
-				append("[\"initial red\",\"Wrong answer\"],");
-			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_TLE)
-				append("[\"initial yellow\",\"Time limit exceeded\"],");
-			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_MLE)
-				append("[\"initial yellow\",\"Memory limit exceeded\"],")
-					;
-			else if ((status & SS::INITIAL_MASK) == SS::INITIAL_RTE)
-				append("[\"initial intense-red\",\"Runtime error\"],");
-			else
-				append("[\"\",\"Unknown\"],");
-		}
+		// Status: (CSS class, text)
+		append_submission_status(status, show_full_results);
 
 		// Score
-		if (not res.is_null(18) and (show_full_results or reveal_score))
-			append(score, ',');
+		if (not res.is_null(19) and (show_full_results or reveal_score))
+			append(',', score, ',');
 		else
-			append("null,");
+			append(",null,");
 
 		// Actions
 		append('"');
@@ -310,6 +320,12 @@ void Sim::api_submissions() {
 			append('s');
 		if (uint(perms & PERM::VIEW_RELATED_JOBS))
 			append('j');
+		if (uint(perms & PERM::VIEW) and
+			(res.is_null(14) or curr_date < cr_ends))
+		{
+			// TODO: implement it in a some way in the UI
+			append('r'); // Resubmit solution
+		}
 		if (uint(perms & PERM::CHANGE_TYPE))
 			append('C');
 		if (uint(perms & PERM::REJUDGE))
@@ -322,16 +338,16 @@ void Sim::api_submissions() {
 		// Append
 		if (select_one) {
 			// User first and last name
-			if (res.is_null(19))
+			if (res.is_null(20))
 				append(",null,null");
 			else
-				append(',', jsonStringify(res[19]), ',',
-					jsonStringify(res[20]));
+				append(',', jsonStringify(res[20]), ',',
+					jsonStringify(res[21]));
 
 			// Reports
-			append(',', jsonStringify(res[21]));
+			append(',', jsonStringify(res[22]));
 			if (show_full_results)
-				append(',', jsonStringify(res[22]));
+				append(',', jsonStringify(res[23]));
 			else
 				append(",null");
 		}
