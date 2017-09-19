@@ -515,15 +515,17 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 						$(this).parent().children('.active').removeClass('active');
 						$(this).addClass('active');
 						handler.call(this);
+						centerize_modal($(this).parents('.modal'), false);
 					}
 				}
 			}()
 		}))
 
 	attacher(res);
-	res.children().eq(active_tab).addClass('active');
-	if (tabs.length > active_tab * 2 + 1)
-		tabs[active_tab * 2 + 1].call(res.children().eq(active_tab)[0]);
+	res.children().eq(active_tab).click();
+	// res.children().eq(active_tab).addClass('active');
+	// if (tabs.length > active_tab * 2 + 1)
+	// 	tabs[active_tab * 2 + 1].call(res.children().eq(active_tab)[0]);
 }
 
 /* ================================ Preview ================================ */
@@ -2954,11 +2956,12 @@ function contest_ranking(elem_, contest_id_) {
 				tbody.append(tr);
 			}
 
-
 			elem.append($('<table>', {
 				class: 'table ranking stripped',
 				html: [thead, tbody]
 			}));
+
+			centerize_modal(elem.parents('.modal'), false);
 
 		}, elem);
 
