@@ -32,7 +32,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 		return PERM::VIEW | PERM::REJUDGE;
 	}
 
-	if (session_user_id == submission_owner or cu_mode == CUM::CONTESTANT)
+	if (session_user_id == submission_owner)
 		return PERM::VIEW | PERM::VIEW_SOURCE;
 
 	return PERM::NONE;
