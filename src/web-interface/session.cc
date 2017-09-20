@@ -11,7 +11,7 @@ bool Sim::session_open() {
 		return true;
 
 	session_id = request.getCookie("session");
-	// Cookie does not exist (or have no value)
+	// Cookie does not exist (or has no value)
 	if (session_id.size == 0)
 		return false;
 
