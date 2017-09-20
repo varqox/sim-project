@@ -12,7 +12,7 @@ bool Session::open() {
 		return true;
 
 	sid = req->getCookie("session");
-	// Cookie does not exist (or have no value)
+	// Cookie does not exist (or has no value)
 	if (sid.empty())
 		return false;
 
