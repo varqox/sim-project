@@ -145,7 +145,7 @@ $(window).resize(normalizeMenu);
 function getCookie(name) {
 	name = name + '=';
 	var arr = document.cookie.split(';');
-	for (i = 0; i < arr.length; ++i) {
+	for (var i = 0; i < arr.length; ++i) {
 		var j = 0;
 		while (arr[i].charAt(j) == ' ')
 			++j;
@@ -185,9 +185,9 @@ function StaticMap() {
 		if (this.data.length === 0)
 			return null;
 
-		l = 0, r = this.data.length;
+		var l = 0, r = this.data.length;
 		while (l < r) {
-			m = (l + r) >> 1;
+			var m = (l + r) >> 1;
 			if (this.data[m][0] < key)
 				l = m + 1;
 			else
@@ -310,7 +310,7 @@ function ajax_form(title, target, html, success_msg, classes) {
 		.add('<form>', {
 			method: 'post',
 			html: html
-		}).submit(function () {
+		}).submit(function() {
 			return Form.send_via_ajax(this, target, success_msg);
 		})
 	});
@@ -390,91 +390,6 @@ function dialogue_modal_request(title, info_html, go_text, go_classes, target_ur
 		})
 	);
 }
-/*function modalForm(form_title, form_body) {
-	modal($('<h2>', {
-		text: form_title
-	}).add('<form>', {
-		// enctype: 'application/x-www-form-urlencoded',
-		style: 'display: flex; flex-flow: column nowrap',
-		html: form_body
-	}));
-}
-function sendModalFrom(url, success_msg) {
-	var form = $('.modal form');
-	addCsrfTokenTo(form);
-	$('#modal_req_status').remove();
-	$('<p>', {
-		id: 'modal_req_status',
-		text: 'Sending request...'
-	}).appendTo(form);
-	console.log(form.serialize());
-	$.ajax({
-		type: 'POST',
-		url: url,
-		data: form.serialize(),
-		success: function() {
-			$('#modal_req_status').html(success_msg + ' <a onclick="location.reload(true)">Reload the page</a> to see changes.')
-				.css('background', '#9ff55f');
-		},
-		error: function(resp) {
-			$('#modal_req_status').replaceWith($('<pre>', {
-				id: 'modal_req_status',
-				text: "Error: " + resp.status + ' ' + resp.statusText,
-				style: 'background: #f55f5f'
-			}));
-			// Additional message
-			try {
-				var xml = $.parseXML(resp.responseText);
-				var msg = $(xml).text();
-
-				if (msg != '') {
-					var x = $('#modal_req_status');
-					x.text(x.text().concat("\nInfo: ", msg));
-				}
-			} catch (err) {
-				if (resp.responseText != '' // There is a message
-					&& resp.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-						!== 0 // Message is not a whole HTML page
-					&& resp.responseText.lastIndexOf('<!doctype html>', 0)
-						!== 0) // Message is not a whole HTML page
-				{
-					var x = $('#modal_req_status');
-					x.text(x.text().concat("\nInfo: ",
-						resp.responseText));
-				}
-			}
-
-		}
-	});
-	return false;
-}
-function modalFormSubmitButton(value, url, success_msg, css_classes, cancel_button_message)
-{
-	// Default arguments
-	if (css_classes === undefined)
-		css_classes = 'blue';
-	if (cancel_button_message === undefined)
-		cancel_button_message = null;
-
-	return $('<div>', {
-		style: 'margin: 8px auto 0',
-		html: $('<input>', {
-			type: 'submit',
-			class: 'btn-small ' + css_classes,
-			value: value,
-			click: function() {
-				return sendModalFrom(url, success_msg);
-			}
-		}).add((cancel_button_message === null ? '' : $('<input>', {
-			type: 'button',
-			class: 'btn-small',
-			value: cancel_button_message,
-			click: function() {
-				$(this).parent().parent().parent().parent().remove();
-			}
-		})))
-	});
-}*/
 
 function API_call(ajax_url, success_handler, loader_parent) {
 	var thiss = this;
@@ -507,8 +422,7 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 	for (var i = 0; i < tabs.length; i += 2)
 		res.append($('<a>', {
 			text: tabs[i],
-			click: function() {
-				var handler = tabs[i + 1];
+			click: function(handler) {
 				return function() {
 					if (!$(this).hasClass('active')) {
 						$(this).parent().css('min-width', $(this).parent().width());
@@ -518,14 +432,11 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 						centerize_modal($(this).parents('.modal'), false);
 					}
 				}
-			}()
+			}(tabs[i + 1])
 		}))
 
 	attacher(res);
 	res.children().eq(active_tab).click();
-	// res.children().eq(active_tab).addClass('active');
-	// if (tabs.length > active_tab * 2 + 1)
-	// 	tabs[active_tab * 2 + 1].call(res.children().eq(active_tab)[0]);
 }
 
 /* ================================ Preview ================================ */
@@ -570,7 +481,6 @@ function a_preview_button(href, text, classes, func) {
 				func();
 				return false;
 			}
-
 		});
 }
 
@@ -595,7 +505,7 @@ function Lister(elem) {
 		var modal_parent = elem.closest('.modal');
 		if (modal_parent.length === 1) {
 			function scres_handler() {
-				if (elem.closest('body').length === 0) {
+				if (obj.elem.closest('body').length === 0) {
 					obj.elem = null;
 					$(this).off('scroll', scres_handler);
 					$(this).off('resize', scres_handler);
@@ -613,7 +523,7 @@ function Lister(elem) {
 
 		} else {
 			function scres_handler() {
-				if (elem.closest('body').length === 0) {
+				if (obj.elem.closest('body').length === 0) {
 					obj.elem = null;
 					$(this).off('scroll', scres_handler);
 					$(this).off('resize', scres_handler);
@@ -778,11 +688,10 @@ function Logs(type, elem) {
 				}
 			},
 			error: function(resp, status) {
-				show_error_via_loader(logs.elem, resp, status,
-					function () {
-						logs.lock = false; // allow only manual unlocking
-						logs.fetch_more();
-					});
+				show_error_via_loader(logs.elem, resp, status, function () {
+					logs.lock = false; // only allow manual unlocking
+					logs.fetch_more();
+				});
 			}
 		});
 	};
@@ -910,20 +819,14 @@ var ActionsToHTML = {};
 			res.push($('<a>', {
 				class: 'btn-small blue',
 				text: 'Rejudge',
-				click: function() {
-					var sid = submission_id;
-					return function() { rejudge_submission(sid); }
-				}()
+				click: function() { rejudge_submission(submission_id); }
 			}));
 
 		if (actions_str.indexOf('D') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small red',
 				text: 'Delete',
-				click: function() {
-					var sid = submission_id;
-					return function() { delete_submission(sid); }
-				}()
+				click: function() { delete_submission(submission_id); }
 			}));
 
 		return res;
@@ -975,10 +878,7 @@ var ActionsToHTML = {};
 			res.push($('<a>', {
 				class: 'btn-small blue',
 				text: 'Rejudge all submissions',
-				click: function() {
-					var pid = problem_id;
-					return function() { rejudge_problem_submissions(pid); }
-				}()
+				click: function() { rejudge_problem_submissions(problem_id); }
 			}));
 
 		if (problem_preview && actions_str.indexOf('D') !== -1)
@@ -1127,7 +1027,7 @@ function preview_user(as_modal, user_id) {
 
 		var main = $(this);
 
-		tabmenu(function(x) { x.appendTo(main); }, [
+		tabmenu(function(elem) { elem.appendTo(main); }, [
 			'Submissions', function() {
 				$(this).parent().next().remove();
 				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
@@ -1352,7 +1252,7 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0) {
+				if (obj.elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
 							class: 'users',
@@ -1373,7 +1273,7 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 						'</tr></thead><tbody></tbody>');
 				}
 
-				for (x in data) {
+				for (var x in data) {
 					x = data[x];
 					obj.query_suffix = '/>' + x[0];
 
@@ -1421,7 +1321,7 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
 		parent_elem.children('.users, .loader, .loader-info').remove();
-		var table = $('<table class="users"></table>').appendTo(parent_elem);
+		var table = $('<table class="users stripped"></table>').appendTo(parent_elem);
 		new UsersLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
 
@@ -1432,7 +1332,7 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 		'Normal', function() { retab('/tN'); }
 	];
 
-	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
+	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 
 /* ================================== Jobs ================================== */
@@ -1564,7 +1464,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0) {
+				if (obj.elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
 							class: 'jobs',
@@ -1587,7 +1487,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					add_tz_marker(elem.find('thead th.added'));
 				}
 
-				for (x in data) {
+				for (var x in data) {
 					x = data[x];
 					obj.query_suffix = '/<' + x[0];
 
@@ -1600,9 +1500,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 							a_preview_button('/jobs/' + x[0], x[1], undefined,
 								function() {
 									var job_id = x[0];
-									return function() {
-										preview_job(true, job_id);
-									};
+									return function() { preview_job(true, job_id); };
 								}()).attr('datetime', x[1]),
 							false)
 					}));
@@ -1631,7 +1529,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 								a_preview_button('/s/' + info.submission,
 									info.submission, undefined, function() {
 										var sid = info.submission;
-										return function() {preview_submission(true, sid); };
+										return function() { preview_submission(true, sid); };
 									}()));
 
 						if (info.problem !== undefined)
@@ -1639,7 +1537,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 								a_preview_button('/p/' + info.problem,
 									info.problem, undefined, function() {
 										var pid = info.problem;
-										return function() {preview_problem(true, pid); };
+										return function() { preview_problem(true, pid); };
 									}()));
 
 						var names = ['name', 'memory limit', 'problem type'];
@@ -1694,7 +1592,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 		'My', function() { retab('/u' + logged_user_id()); }
 	];
 
-	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
+	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 
 /* ============================== Submissions ============================== */
@@ -1956,7 +1854,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0) {
+				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
 							class: 'submissions',
@@ -1979,7 +1877,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 					add_tz_marker(elem.find('thead th.time'));
 				}
 
-				for (x in data) {
+				for (var x in data) {
 					x = data[x];
 					obj.query_suffix = '/<' + x[0];
 
@@ -2099,7 +1997,7 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 	if (show_solutions_tab)
 		tabs.push('Solutions', function() { retab('/tS'); })
 
-	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs, active_tab);
+	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs, active_tab);
 }
 
 /* ================================ Problems ================================ */
@@ -2413,7 +2311,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0) {
+				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
 							class: 'problems',
@@ -2435,7 +2333,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 					add_tz_marker(elem.find('thead th.added'));
 				}
 
-				for (x in data) {
+				for (var x in data) {
 					x = data[x];
 					obj.query_suffix = '/<' + x[0];
 
@@ -2507,7 +2405,7 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 
 	function retab(tab_qsuff) {
 		parent_elem.children('.problems, .loader, .loader-info').remove();
-		var table = $('<table class="problems"></table>').appendTo(parent_elem);
+		var table = $('<table class="problems stripped"></table>').appendTo(parent_elem);
 		new ProblemsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
 
@@ -2518,7 +2416,7 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	if (is_logged_in())
 		tabs.push('My', function() { retab('/u' + logged_user_id()); });
 
-	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
+	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 
 /* ================================ Contests ================================ */
@@ -2614,9 +2512,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				// maxlength: 'TODO...',
 				required: true
 			}).append(a_preview_button('/p', 'Search problems', '', function() {
-				preview_base(true, '/p', function() {
-					tab_problems_lister(this);
-				});
+				preview_base(true, '/p', function() { tab_problems_lister(this); });
 			}))).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -2696,14 +2592,14 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 					}).appendTo($('<div>')).parent());
 				}
 				for (var i = 0; i < rounds.length; ++i) {
-					round = rounds[i];
+					var round = rounds[i];
 					append_round(round);
 					// Round's problems
 					// Bin-search first problem
 					var l = 0, r = problems.length;
 					while (l < r) {
 						var mid = (l + r) >> 1;
-						p = problems[mid];
+						var p = problems[mid];
 						if (p[1] < round[0])
 							l = mid + 1;
 						else
@@ -2808,9 +2704,9 @@ function contest_ranking(elem_, contest_id_) {
 
 		// Add round item to the every problem (and remove invalid problems -
 		// the ones which don't belong to the valid rounds)
-		tmp_problems = [];
+		var tmp_problems = [];
 		for (var i = 0; i < problems.length; ++i) {
-			x = rid_to_item.get(problems[i][1]);
+			var x = rid_to_item.get(problems[i][1]);
 			if (x != null) {
 				problems[i].push(x);
 				tmp_problems.push(problems[i]);
@@ -2835,7 +2731,7 @@ function contest_ranking(elem_, contest_id_) {
 				return elem.append($('<center>', {html: '<p>There is no one in the ranking yet...</p>'}));
 
 			// Construct table's head
-			tr = $('<tr>', {
+			var tr = $('<tr>', {
 				html: [
 					$('<th>', {
 						rowspan: 2,
@@ -2852,8 +2748,8 @@ function contest_ranking(elem_, contest_id_) {
 				]
 			});
 			// Add rounds
-			colspan = 0;
-			j = 0; // Index of the current round
+			var colspan = 0;
+			var j = 0; // Index of the current round
 			for (var i = 0; i < problems.length; ++i) {
 				var problem = problems[i];
 				while (rounds[j][0] != problem[1])
@@ -2881,7 +2777,7 @@ function contest_ranking(elem_, contest_id_) {
 
 			// Add score for each user add this to the user's info
 			for (var i = 0; i < data.length; ++i) {
-				submissions = data[i][2];
+				var submissions = data[i][2];
 				var total_score = 0;
 				// Count only valid problems (to fix potential discrepancies
 				// between ranking submissions and the contest structure)
@@ -2900,7 +2796,7 @@ function contest_ranking(elem_, contest_id_) {
 			var prev_score = data[0][3] + 1;
 			var place;
 			for (var i = 0; i < data.length; ++i) {
-				user_row = data[i];
+				var user_row = data[i];
 				tr = $('<tr>');
 				// Place
 				if (prev_score != user_row[3]) {
@@ -2923,9 +2819,9 @@ function contest_ranking(elem_, contest_id_) {
 				tr.append($('<td>', {text: user_row[3]}));
 				// Submissions
 				var row = new Array(problems.length);
-				submissions = data[i][2];
+				var submissions = data[i][2];
 				for (var j = 0; j < submissions.length; ++j) {
-					x = problem_to_col_id.get(submissions[j][2]);
+					var x = problem_to_col_id.get(submissions[j][2]);
 					if (x != null) {
 						if (submissions[j][0] === null)
 							row[x] = $('<td>', {
@@ -2937,9 +2833,7 @@ function contest_ranking(elem_, contest_id_) {
 								class: 'status ' + submissions[j][3][0],
 								html: a_preview_button('/s/' + submissions[j][0], submissions[j][4], '', function () {
 									var sid = submissions[j][0];
-									return function () {
-										preview_submission(true, sid);
-									};
+									return function () { preview_submission(true, sid); };
 								}())
 							});
 						}
@@ -2983,7 +2877,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
-				if (elem.children('thead').length === 0) {
+				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
 							class: 'contests',
@@ -3001,7 +2895,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 					add_tz_marker(elem.find('thead th.added'));
 				}
 
-				for (x in data) {
+				for (var x in data) {
 					x = data[x];
 					obj.query_suffix = '/<' + x[0];
 
@@ -3060,10 +2954,11 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 		'All', function() { retab(''); }
 	];
 
+	// TODO: implement it
 	// if (is_logged_in())
 	// 	tabs.push('My', function() { retab('/u' + logged_user_id()); });
 
-	tabmenu(function(x) { x.appendTo(parent_elem); }, tabs);
+	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 
 /* ============================ Contest's users ============================ */
