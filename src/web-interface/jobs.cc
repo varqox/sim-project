@@ -121,7 +121,8 @@ void Sim::jobs_handle() {
 		jobs_jid = next_arg;
 
 		page_template(concat("Job ", jobs_jid), "body{padding-left:20px}");
-		append("<script>preview_job(false, ", jobs_jid, ");</script>");
+		append("<script>preview_job(false, ", jobs_jid, ","
+			" window.location.hash);</script>");
 		return;
 	}
 

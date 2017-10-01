@@ -319,7 +319,8 @@ void Sim::users_user() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
 		page_template(concat("User ", users_uid), "body{padding-left:20px}");
-		append("<script>preview_user(false, ", users_uid, ");</script>");
+		append("<script>preview_user(false, ", users_uid, ","
+			" window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
 		page_template(concat("Edit user ", users_uid));
