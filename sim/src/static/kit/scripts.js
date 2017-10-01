@@ -198,6 +198,67 @@ function StaticMap() {
 	}
 }
 
+/* ============================ URL hash parser ============================ */
+var url_hash_parser = {};
+(function () {
+	var args = window.location.hash; // Must begin with '#'
+	if (args == '')
+		args = '#';
+	var beg = 0; // Points to the '#' just before the next argument
+
+	this.next_arg  = function() {
+		var pos = args.indexOf('#', beg + 1);
+		if (pos === -1)
+			return args.substr(beg + 1);
+
+		return args.substring(beg + 1, pos);
+	}
+
+	this.extract_next_arg  = function() {
+		var pos = args.indexOf('#', beg + 1);
+		if (pos === -1) {
+			if (beg >= args.length)
+				return '';
+
+			var res = args.substr(beg + 1);
+			beg = args.length;
+			return res;
+		}
+
+		var res = args.substring(beg + 1, pos);
+		beg = pos;
+		return res;
+	}
+
+	this.empty = function() { return (beg >= args.length); }
+
+	this.assign = function(new_hash) {
+		beg = 0;
+		if (new_hash.charAt(0) !== '#')
+			args = '#' + new_hash;
+		else
+			args = new_hash;
+	}
+
+	this.assign_as_parsed = function(new_hash) {
+		if (new_hash.charAt(0) !== '#')
+			args = '#' + new_hash;
+		else
+			args = new_hash;
+		beg = args.length;
+	}
+
+
+	this.append = function(next_args) {
+		if (next_args.charAt(0) !== '#')
+			args += '#' + next_args;
+		else
+			args += next_args;
+	}
+
+	this.parsed_prefix = function() { return args.substr(0, beg); }
+}).call(url_hash_parser);
+
 /* ================================= Loader ================================= */
 function remove_loader(elem) {
 	$(elem).children('.loader, .loader-info').remove();
@@ -413,11 +474,12 @@ function API_call(ajax_url, success_handler, loader_parent) {
 }
 
 /* ================================ Tab menu ================================ */
-function tabmenu(attacher, tabs, active_tab /*= 0*/) {
-	if (active_tab === undefined)
-		active_tab = 0;
-
+function tabname_to_hash(tabname) {
+	return tabname.toLowerCase().replace(/ /g, '_');
+}
+function tabmenu(attacher, tabs) {
 	var res = $('<div>', {class: 'tabmenu'});
+	/*const*/ var prior_hash = url_hash_parser.parsed_prefix();
 
 	for (var i = 0; i < tabs.length; i += 2)
 		res.append($('<a>', {
@@ -428,6 +490,10 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 						$(this).parent().css('min-width', $(this).parent().width());
 						$(this).parent().children('.active').removeClass('active');
 						$(this).addClass('active');
+
+						window.location.hash = prior_hash + '#' + tabname_to_hash($(this).text());
+						url_hash_parser.assign_as_parsed(window.location.hash);
+
 						handler.call(this);
 						centerize_modal($(this).parents('.modal'), false);
 					}
@@ -436,7 +502,23 @@ function tabmenu(attacher, tabs, active_tab /*= 0*/) {
 		}))
 
 	attacher(res);
-	res.children().eq(active_tab).click();
+
+
+	var arg = url_hash_parser.extract_next_arg();
+	var rc = res.children();
+	for (var i = 0; i < rc.length; ++i) {
+		var elem = $(rc[i]);
+		if (tabname_to_hash(elem.text()) === arg) {
+			elem.parent().css('min-width', elem.parent().width());
+			elem.addClass('active');
+
+			tabs[i << 1 | 1].call(elem);
+			centerize_modal(elem.parents('.modal'), false);
+			return;
+		}
+	}
+
+	rc.first().click();
 }
 
 /* ================================ Preview ================================ */
@@ -459,6 +541,7 @@ function preview_base(as_modal, new_window_location, func, no_modal_elem) {
 		func.call($(no_modal_elem));
 
 	window.history.replaceState({}, '', new_window_location);
+	url_hash_parser.assign(window.location.hash);
 }
 function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/) {
 	preview_base(as_modal, new_window_location, function() {
@@ -800,8 +883,8 @@ var ActionsToHTML = {};
 
 		if (actions_str.indexOf('s') !== -1) {
 			if (!submission_preview)
-				res.push(a_preview_button('/s/' + submission_id + '/source', 'Source',
-					'btn-small', function() { preview_submission(true, submission_id, 1); }));
+				res.push(a_preview_button('/s/' + submission_id + '#source', 'Source',
+					'btn-small', function() { preview_submission(true, submission_id, '#source'); }));
 
 			res.push($('<a>', {
 				class: 'btn-small',
@@ -855,9 +938,10 @@ var ActionsToHTML = {};
 				}));
 
 		if (actions_str.indexOf('s') !== -1)
-			res.push(a_preview_button('/p/' + problem_id + '/solutions',
-				'Solutions', 'btn-small',
-				function() { preview_problem(true, problem_id, 'solutions'); }));
+			res.push(a_preview_button('/p/' + problem_id + '#all_submissions#solutions',
+				'Solutions', 'btn-small', function() {
+					preview_problem(true, problem_id, '#all_submissions#solutions');
+				}));
 
 		if (problem_preview && actions_str.indexOf('d') !== -1)
 			res.push($('<a>', {
@@ -973,7 +1057,7 @@ function add_user(as_modal) {
 		));
 	})
 }
-function preview_user(as_modal, user_id) {
+function preview_user(as_modal, user_id, opt_hash /*= ''*/) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
@@ -1045,7 +1129,7 @@ function preview_user(as_modal, user_id) {
 			}
 		]);
 
-	}, '/u/' + user_id);
+	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash));
 }
 function edit_user(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
@@ -1336,7 +1420,7 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 }
 
 /* ================================== Jobs ================================== */
-function preview_job(as_modal, job_id) {
+function preview_job(as_modal, job_id, opt_hash /*= ''*/) {
 	preview_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
@@ -1432,7 +1516,7 @@ function preview_job(as_modal, job_id) {
 					text: 'Download the full report'
 				})));
 		}
-	}, '/jobs/' + job_id);
+	}, '/jobs/' + job_id + (opt_hash === undefined ? '' : opt_hash));
 }
 function cancel_job(job_id) {
 	modal_request('Canceling job ' + job_id, $('<form>'),
@@ -1691,7 +1775,7 @@ function delete_submission(submission_id) {
 		}), 'Yes, delete it', 'btn-small red', '/api/submission/' + submission_id + '/delete',
 		'The submission has been deleted.', 'No, go back');
 }
-function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
+function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 	preview_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
@@ -1828,9 +1912,9 @@ function preview_submission(as_modal, submission_id, active_tab /*= 0*/) {
 				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
 			});
 
-		tabmenu(function(x) { x.appendTo(elem); }, tabs, active_tab);
+		tabmenu(function(x) { x.appendTo(elem); }, tabs);
 
-	}, '/s/' + submission_id);
+	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash));
 }
 function SubmissionsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
@@ -1978,7 +2062,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
-function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutions_tab /* = false*/, active_tab /* = 0*/) {
+function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutions_tab /* = false*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -1997,7 +2081,7 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 	if (show_solutions_tab)
 		tabs.push('Solutions', function() { retab('/tS'); })
 
-	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs, active_tab);
+	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 
 /* ================================ Problems ================================ */
@@ -2189,7 +2273,7 @@ function rejudge_problem_submissions(problem_id) {
 		'/api/problem/' + problem_id + '/rejudge_all_submissions',
 		'The rejudge jobs has been scheduled.', 'No, go back', true);
 }
-function preview_problem(as_modal, problem_id, opt_arg) {
+function preview_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
@@ -2255,7 +2339,7 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 					$(this).parent().next().remove();
 					main.append($('<div>'));
 					tab_submissions_lister(main.children().last(), '/p' + problem_id,
-						true, (opt_arg === 'solutions' ? 3 : undefined));
+						true);
 				});
 
 		if (is_logged_in())
@@ -2287,10 +2371,9 @@ function preview_problem(as_modal, problem_id, opt_arg) {
 				new JobsLister(j_table, '/p' + problem_id).monitor_scroll();
 			});
 
-		tabmenu(function(x) { x.appendTo(main); }, tabs,
-			(opt_arg === 'solutions' ? 0 : undefined));
+		tabmenu(function(x) { x.appendTo(main); }, tabs);
 
-	}, '/p/' + problem_id);
+	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash));
 }
 function ProblemsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
@@ -2531,7 +2614,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 		);
 	})
 }
-function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
+function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 	preview_ajax(as_modal, '/api/contest/c' + contest_id, function(data) {
 		var contest = data[0];
 		var rounds = data[1];
@@ -2664,9 +2747,9 @@ function preview_contest(as_modal, contest_id, active_tab /*= 0*/) {
 				contest_ranking($('<div>').appendTo(elem), contest_id);
 			});
 
-		tabmenu(function(x) { x.appendTo(elem); }, tabs, active_tab);
+		tabmenu(function(x) { x.appendTo(elem); }, tabs);
 
-	}, '/c/' + contest_id);
+	}, '/c/' + contest_id + (opt_hash === undefined ? '' : opt_hash));
 }
 function contest_ranking(elem_, contest_id_) {
 	var elem = elem_;

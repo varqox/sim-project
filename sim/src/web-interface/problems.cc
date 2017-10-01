@@ -92,7 +92,8 @@ void Sim::problems_problem() {
 	if (next_arg.empty()) {
 		page_template(concat("Problem ", problems_pid),
 			"body{padding-left:20px}");
-		append("<script>preview_problem(false, ", problems_pid, ");</script>");
+		append("<script>preview_problem(false, ", problems_pid, ","
+			" window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
 		InplaceBuff<32> owner;
@@ -112,12 +113,6 @@ void Sim::problems_problem() {
 			jsonStringify(name),
 			(uint(problems_perms & ProblemPermissions::SUBMIT_IGNORED) ?
 				", true" : ", false"), ")</script>");
-
-	} else if (next_arg == "solutions") {
-		page_template(concat("Problem ", problems_pid, " solutions"),
-			"body{padding-left:20px}");
-		append("<script>preview_problem(false, ", problems_pid,
-			", 'solutions');</script>");
 
 	} else if (next_arg == "edit") {
 		page_template(concat("Edit problem ", problems_pid));

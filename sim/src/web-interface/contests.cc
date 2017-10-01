@@ -89,7 +89,8 @@ void Sim::contests_contest() {
 	if (next_arg.empty()) {
 		page_template(concat("Contest ", contests_cid),
 			"body{padding-left:20px}");
-		append("<script>preview_contest(false, ", contests_cid, ");</script>");
+		append("<script>preview_contest(false, ", contests_cid, ","
+			" window.location.hash);</script>");
 
 	} else
 		return error404();

@@ -110,21 +110,25 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
 			error500();
+			session_close(); // Prevent session from being left open
 
 		} catch (...) {
 			ERRLOG_CATCH();
 			error500();
+			session_close(); // Prevent session from being left open
 		}
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
 		// We cannot use error500() because it will probably throw
 		hard_error500();
+		session_is_open = false; // Prevent session from being left open
 
 	} catch (...) {
 		ERRLOG_CATCH();
 		// We cannot use error500() because it will probably throw
 		hard_error500();
+		session_is_open = false; // Prevent session from being left open
 	}
 
 	return std::move(resp);
