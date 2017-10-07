@@ -2614,6 +2614,47 @@ function add_contest_problem(as_modal, contest_round_id) {
 		);
 	})
 }
+function edit_contest(as_modal, contest_id) {
+	preview_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		data = data[0];
+
+		var actions = data[4];
+		if (actions.indexOf('A') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Edit contest', '/api/contest/c' + contest_id + '/edit',
+			Form.field_group("Contest's name", {
+				type: 'text',
+				name: 'name',
+				value: data[1],
+				size: 24,
+				// maxlength: 'TODO...',
+				required: true
+			}).add(Form.field_group('Public', {
+				type: 'checkbox',
+				name: 'public',
+				checked: data[2],
+				disabled: (data[2] || actions.indexOf('M') !== -1 ? undefined : true)
+			})).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Update'
+				})
+			})
+		));
+
+	}, '/c/' + contest_id + '/edit');
+}
 function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 	preview_ajax(as_modal, '/api/contest/c' + contest_id, function(data) {
 		var contest = data[0];

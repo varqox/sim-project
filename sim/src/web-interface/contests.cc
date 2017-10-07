@@ -92,6 +92,12 @@ void Sim::contests_contest() {
 		append("<script>preview_contest(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
+	} else if (next_arg == "edit") {
+		page_template(concat("Edit contest ", contests_cid),
+			"body{padding-left:20px}");
+		append("<script>edit_contest(false, ", contests_cid, ","
+			" window.location.hash);</script>");
+
 	} else
 		return error404();
 }

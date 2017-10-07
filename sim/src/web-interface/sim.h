@@ -153,7 +153,7 @@ private:
 
 	void api_contest_add();
 
-	void api_contest_edit();
+	void api_contest_edit(bool is_public);
 
 	void api_contest_delete();
 
