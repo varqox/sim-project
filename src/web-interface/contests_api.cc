@@ -8,6 +8,8 @@ void Sim::append_contest_actions_str() {
 	append('"');
 	if (uint(contests_perms & (PERM::ADD_PUBLIC | PERM::ADD_PRIVATE)))
 		append('a');
+	if (uint(contests_perms & PERM::MAKE_PUBLIC))
+		append('M');
 	if (uint(contests_perms & PERM::VIEW))
 		append('v');
 	if (uint(contests_perms & PERM::PARTICIPATE))
@@ -179,7 +181,9 @@ void Sim::api_contest() {
 		next_arg = url_args.extractNextArg();
 		if (next_arg == "add_round")
 			return api_contest_round_add();
-		if (next_arg == "ranking")
+		else if (next_arg == "edit")
+			return api_contest_edit(is_public);
+		else if (next_arg == "ranking")
 			return api_contest_ranking();
 		else if (not next_arg.empty())
 			return api_error400();
@@ -318,8 +322,10 @@ void Sim::api_contest() {
 		next_arg = url_args.extractNextArg();
 		if (next_arg == "add_problem")
 			return api_contest_problem_add();
+		else if (next_arg == "edit")
+			return api_contest_round_edit();
 		else
-			return error404();
+			return api_error404();
 
 	// Select by contest problem id
 	} else if (next_arg[0] == 'p' and isDigit(next_arg.substr(1))) {
@@ -357,7 +363,7 @@ void Sim::api_contest() {
 		if (next_arg == "statement")
 			return api_contest_problem_statement(problem_id);
 		else
-			return error404();
+			return api_error404();
 
 	} else
 		return api_error404();
@@ -397,6 +403,36 @@ void Sim::api_contest_add() {
 	stmt.bindAndExecute(session_user_id, contest_id);
 
 	append(contest_id);
+}
+
+void Sim::api_contest_edit(bool is_public) {
+	STACK_UNWINDING_MARK;
+
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+	// Validate fields
+	StringView name;
+	form_validate_not_blank(name, "name", "Contest's name",
+		CONTEST_NAME_MAX_LEN);
+
+	bool will_be_public = request.form_data.exist("public");
+	if (will_be_public and not is_public and
+		uint(~contests_perms & PERM::MAKE_PUBLIC))
+	{
+		return api_error403("You have no permissions to make this contest"
+			" public");
+	}
+
+	if (form_validation_error)
+		return api_error400(notifications);
+
+	// Add contest
+	auto stmt = mysql.prepare("UPDATE contests SET name=?, is_public=?"
+		" WHERE id=?");
+	stmt.bindAndExecute(name, will_be_public, contests_cid);
 }
 
 void Sim::api_contest_round_add() {
@@ -447,6 +483,17 @@ void Sim::api_contest_round_add() {
 	stmt.fixAndExecute();
 
 	append(stmt.insert_id());
+}
+
+void Sim::api_contest_round_edit() {
+	STACK_UNWINDING_MARK;
+
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+	return api_error400();
 }
 
 void Sim::api_contest_problem_add() {
@@ -509,18 +556,22 @@ void Sim::api_contest_problem_statement(StringView problem_id) {
 
 namespace {
 
-struct SOwner {
+struct SubmissionOwner {
 	uint64_t id;
 	InplaceBuff<32> name; // static size is set manually to save memory
 
 	template<class... Args>
-	SOwner(uint64_t sowner, Args&&... args) : id(sowner) {
+	SubmissionOwner(uint64_t sowner, Args&&... args) : id(sowner) {
 		name.append(std::forward<Args>(args)...);
 	}
 
-	bool operator<(const SOwner& s) const noexcept { return id < s.id; }
+	bool operator<(const SubmissionOwner& s) const noexcept {
+		return id < s.id;
+	}
 
-	bool operator==(const SOwner& s) const noexcept { return id == s.id; }
+	bool operator==(const SubmissionOwner& s) const noexcept {
+		return id == s.id;
+	}
 };
 
 } // anonymous namespace
@@ -545,7 +596,7 @@ void Sim::api_contest_ranking() {
 	InplaceBuff<USER_LAST_NAME_MAX_LEN> lname;
 	stmt.res_bind_all(id, fname, lname);
 
-	std::vector<SOwner> sowners;
+	std::vector<SubmissionOwner> sowners;
 	while (stmt.next())
 		sowners.emplace_back(id, fname, ' ' , lname);
 
@@ -578,7 +629,7 @@ void Sim::api_contest_ranking() {
 	while (stmt.next()) {
 		// Owner changes
 		if (first_owner or owner != prev_owner) {
-			auto it = binaryFind(sowners, SOwner(owner));
+			auto it = binaryFind(sowners, SubmissionOwner(owner));
 			if (it == sowners.end())
 				continue; // Ignore submission as there is no owner to bin to it
 				          // (this maybe a little race condition, but if the

@@ -310,7 +310,6 @@ void Sim::users_handle() {
 
 	} else
 		return error404();
-
 }
 
 void Sim::users_user() {
