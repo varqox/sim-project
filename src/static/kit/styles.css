@@ -1012,7 +1012,7 @@ a.btn.red {
 	border-radius: 4px;
 }
 .table td {
-    padding: 4px 8px;
+	padding: 4px 8px;
 	text-align: left;
 	vertical-align: middle;
 	border-top: 1px solid #a2a2a2;
@@ -1227,7 +1227,7 @@ div.header > div:last-child{
 	text-align: center;
 	border: 1px solid #a2a2a2;
 	border-top: 0px;
-	white-space: nowrap;
+	white-space: pre;
 }
 .round-view > div > div > a:first-child, .round-view > :first-child {
 	border: 1px solid #a2a2a2;
