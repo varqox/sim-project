@@ -1758,7 +1758,7 @@ table.contests th {
 table.contests th.name {
 	min-width: 60px;
 }
-table.contests tr > td:first-child {
+table.contests tr > td:nth-last-child(3) {
 	text-align: right;
 }
 table.contests td {
