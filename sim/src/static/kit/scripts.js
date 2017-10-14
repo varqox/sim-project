@@ -259,6 +259,37 @@ var url_hash_parser = {};
 	this.parsed_prefix = function() { return args.substr(0, beg); }
 }).call(url_hash_parser);
 
+/* =========================== History management =========================== */
+var egid = {};
+(function () {
+	var id = 0;
+	this.get_next = function() {
+		return ''.concat(window.performance.timing.responseStart, id++);
+	}
+}).call(egid);
+
+function give_body_egid() {
+	if ($('body').attr('egid') !== undefined)
+		return;
+
+	var body_egid = egid.get_next();
+	$('body').attr('egid', body_egid);
+	window.history.replaceState({egid: body_egid}, document.title, document.URL);
+}
+$(document).ready(give_body_egid);
+
+window.onpopstate = function(event) {
+	var elem = $('*[egid="' + event.state.egid + '"]');
+	if (elem.length === 0)
+		window.location.reload();
+
+	// Remove other modals that cover elem
+	if (elem.is('body'))
+		remove_modals(elem.children('.modal'));
+	else
+		elem.nextAll('.modal').remove();
+}
+
 /* ================================= Loader ================================= */
 function remove_loader(elem) {
 	$(elem).children('.loader, .loader-info').remove();
@@ -378,11 +409,14 @@ function ajax_form(title, target, html, success_msg, classes) {
 }
 
 /* ================================= Modals ================================= */
+function remove_modals(modal) {
+	$(modal).remove();
+}
 function close_modal(modal) {
 	modal = $(modal);
-	modal.remove();
+	remove_modals(modal);
 	if (modal.is('.preview'))
-		window.history.replaceState({}, '', modal.attr('prev-url'));
+		window.history.back();
 }
 $(document).click(function(event) {
 	if ($(event.target).is('.modal'))
@@ -397,6 +431,7 @@ $(document).keydown(function(event) {
 function modal(modal_body) {
 	return $('<div>', {
 		class: 'modal',
+		egid: egid.get_next(),
 		html: $('<div>', {
 			html: $('<span>', { class: 'close' }).add(modal_body)
 		})
@@ -491,7 +526,8 @@ function tabmenu(attacher, tabs) {
 						$(this).parent().children('.active').removeClass('active');
 						$(this).addClass('active');
 
-						window.location.hash = prior_hash + '#' + tabname_to_hash($(this).text());
+						window.history.replaceState(window.history.state, '',
+							document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(this).text()));
 						url_hash_parser.assign_as_parsed(window.location.hash);
 
 						handler.call(this);
@@ -526,30 +562,44 @@ function preview_base(as_modal, new_window_location, func, no_modal_elem) {
 	if (as_modal) {
 		var elem = $('<div>', {
 			class: 'modal preview',
-			'prev-url': window.location.href,
+			egid: egid.get_next(),
 			html: $('<div>', {
 				html: $('<span>', { class: 'close'})
 				.add('<div>', {style: 'display:block'})
 			})
 		}).appendTo('body');
+
+		var next_egid = egid.get_next();
+		$(elem).attr('egid', next_egid);
+		window.history.pushState({egid: next_egid}, '', new_window_location);
+		url_hash_parser.assign(window.location.hash);
+
 		func.call(elem.find('div > div'));
 		centerize_modal(elem);
 
-	} else if (no_modal_elem === undefined)
-		func.call($(document.body));
-	else
-		func.call($(no_modal_elem));
+	// Use body as the parent element
+	} else if (no_modal_elem === undefined) {
+		give_body_egid();
+		window.history.replaceState({egid: $('body').attr('egid')}, document.title, new_window_location);
+		url_hash_parser.assign(window.location.hash);
 
-	window.history.replaceState({}, '', new_window_location);
-	url_hash_parser.assign(window.location.hash);
+		func.call($('body'));
+
+	// Use @p no_modal_elem as the parent element
+	} else {
+		var next_egid = egid.get_next();
+		$(no_modal_elem).attr('egid', next_egid);
+		window.history.pushState({egid: next_egid}, '', new_window_location);
+		url_hash_parser.assign(window.location.hash);
+
+		func.call($(no_modal_elem));
+	}
 }
 function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/) {
 	preview_base(as_modal, new_window_location, function() {
 		var elem = $(this);
 		API_call(ajax_url, function () {
 			success_handler.apply(elem, arguments);
-			if (as_modal)
-				centerize_modal(elem.parent().parent());
 		}, elem);
 	}, no_modal_elem);
 }
