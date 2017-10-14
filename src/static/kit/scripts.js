@@ -3064,7 +3064,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 					}
 
 					elem.html('<thead><tr>' +
-							'<th>Id</th>' +
+							(logged_user_is_admin() ? '<th>Id</th>' : '') +
 							'<th class="name">Name</th>' +
 							'<th class="actions">Actions</th>' +
 						'</tr></thead><tbody></tbody>');
@@ -3080,7 +3080,8 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 					});
 
 					// Id
-					row.append($('<td>', {text: x[0]}));
+					if (logged_user_is_admin())
+						row.append($('<td>', {text: x[0]}));
 					// Name
 					row.append($('<td>', {
 						html: a_preview_button('/c/' + x[0], x[1], '', function() {
