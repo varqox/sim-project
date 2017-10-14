@@ -600,6 +600,8 @@ function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, 
 		var elem = $(this);
 		API_call(ajax_url, function () {
 			success_handler.apply(elem, arguments);
+			if (as_modal)
+				centerize_modal(elem.parent().parent());
 		}, elem);
 	}, no_modal_elem);
 }
