@@ -45,7 +45,11 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 				"<div class=\"navbar\">"
 					"<div>"
 						"<a href=\"/\" class=\"brand\">SIM beta</a>"
-						"<a href=\"/c/\">Contests</a>"
+						"<script>"
+							"a_preview_button('/c', 'Contests', undefined,"
+								"contest_chooser).appendTo('.navbar > div');"
+							"$('.navbar > div > script').remove();"
+						"</script>"
 						"<a href=\"/p\">Problems</a>");
 
 	if (session_open()) {

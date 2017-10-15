@@ -1058,8 +1058,11 @@ var ActionsToHTML = {};
 
 		var res = [];
 		if (!contest_preview && actions_str.indexOf('v') !== -1)
-			res.push(a_preview_button('/c/' + contest_id, 'View', 'btn-small',
-				function() { preview_contest(true, contest_id); }));
+			res.push($('<a>', {
+				class: 'btn-small',
+				href: '/c/' + contest_id,
+				text: 'View'
+			}));
 
 		if (contest_preview && actions_str.indexOf('E') !== -1)
 			res.push(a_preview_button('/c/' + contest_id + '/edit', 'Edit',
@@ -1463,6 +1466,7 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(elem.parent());
+				centerize_modal(obj.elem.parents('.modal'), false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -1498,6 +1502,17 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 	];
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+}
+function user_chooser(parent_elem /*= a new modal*/) {
+	preview_base((parent_elem === undefined), '/u', function() {
+		$(this).append($('<h1>', {text: 'Users'}));
+		if (logged_user_is_admin())
+			$(this).append(a_preview_button('/u/add', 'Add user', 'btn', function() {
+				add_user(true);
+			}));
+
+		tab_users_lister($(this));
+	}, parent_elem);
 }
 
 /* ================================== Jobs ================================== */
@@ -2560,14 +2575,6 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-
-	parent_elem = $(parent_elem);
-	parent_elem.append($('<h1>', {text: 'Problems'}));
-	if (logged_user_is_tearcher_or_admin())
-		parent_elem.append(a_preview_button('/p/add', 'Add problem', 'btn', function() {
-			add_problem(true);
-		}));
-
 	function retab(tab_qsuff) {
 		parent_elem.children('.problems, .loader, .loader-info').remove();
 		var table = $('<table class="problems stripped"></table>').appendTo(parent_elem);
@@ -2582,6 +2589,17 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 		tabs.push('My', function() { retab('/u' + logged_user_id()); });
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+}
+function problem_chooser(parent_elem /*= a new modal*/) {
+	preview_base((parent_elem === undefined), '/p', function() {
+		$(this).append($('<h1>', {text: 'Problems'}));
+		if (logged_user_is_tearcher_or_admin())
+			$(this).append(a_preview_button('/p/add', 'Add problem', 'btn', function() {
+				add_problem(true);
+			}));
+
+		tab_problems_lister($(this));
+	}, parent_elem);
 }
 
 /* ================================ Contests ================================ */
@@ -2676,9 +2694,8 @@ function add_contest_problem(as_modal, contest_round_id) {
 				size: 6,
 				// maxlength: 'TODO...',
 				required: true
-			}).append(a_preview_button('/p', 'Search problems', '', function() {
-				preview_base(true, '/p', function() { tab_problems_lister(this); });
-			}))).add('<div>', {
+			}).append(a_preview_button('/p', 'Search problems', '', problem_chooser))
+			).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
@@ -3170,7 +3187,17 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
+function contest_chooser(parent_elem /*= a new modal*/) {
+	preview_base((parent_elem === undefined), '/c', function() {
+		$(this).append($('<h1>', {text: 'Contests'}));
+		if (logged_user_is_tearcher_or_admin())
+			$(this).append(a_preview_button('/c/add', 'Add contest', 'btn', function() {
+				add_contest(true);
+			}));
 
+		tab_contests_lister($(this));
+	}, parent_elem);
+}
 /* ============================ Contest's users ============================ */
 /*function addContestUser(contest_id) {
 	modalForm('Add user to the contest',

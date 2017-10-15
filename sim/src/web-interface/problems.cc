@@ -79,7 +79,7 @@ void Sim::problems_handle() {
 	// List problems
 	} else if (next_arg.empty()) {
 		page_template("Problems", "body{padding-left:20px}");
-		append("<script>tab_problems_lister($('body'));</script>");
+		append("<script>problem_chooser($('body'));</script>");
 
 	} else
 		return error404();

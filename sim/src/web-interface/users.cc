@@ -271,6 +271,7 @@ void Sim::sign_up() {
 
 void Sim::users_handle() {
 	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
 
 	if (not session_open())
 		return redirect(concat_tostr("/login?", request.target));
@@ -286,7 +287,7 @@ void Sim::users_handle() {
 
 	// Add user
 	if (next_arg == "add") {
-		if (uint(~users_perms & UserPermissions::ADD_USER))
+		if (uint(~users_perms & PERM::ADD_USER))
 			return error403();
 
 		page_template("Add user");
@@ -298,15 +299,11 @@ void Sim::users_handle() {
 
 	// List users
 	} else if (next_arg.empty()) {
-		if (uint(~users_get_permissions() & UserPermissions::VIEW_ALL))
+		if (uint(~users_get_permissions() & PERM::VIEW_ALL))
 			return error403();
 
 		page_template("Users", "body{padding-left:20px}");
-		append("<h1>Users</h1>"
-			"<div><a class=\"btn\" onclick=\"add_user(true)\">Add user</a><div>"
-			"<script>"
-				"tab_users_lister($('body'));"
-			"</script>");
+		append("<script>user_chooser($('body'));</script>");
 
 	} else
 		return error404();
