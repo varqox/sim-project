@@ -66,17 +66,7 @@ void Sim::contests_handle() {
 	// List contests
 	} else if (next_arg.empty()) {
 		page_template("Contests", "body{padding-left:20px}");
-		append("<h1>Contests</h1>");
-
-		if (uint(contests_perms & (PERM::ADD_PRIVATE | PERM::ADD_PUBLIC)))
-			append("<div><a class=\"btn\" onclick=\"add_contest(true,",
-					uint(contests_perms & PERM::ADD_PRIVATE), ",",
-					uint(contests_perms & PERM::ADD_PUBLIC), ")\">"
-				"Add contest</a><div>");
-
-		append("<script>"
-				"tab_contests_lister($('body'));"
-			"</script>");
+		append("<script>contest_chooser($('body'))</script>");
 
 	} else
 		return error404();
