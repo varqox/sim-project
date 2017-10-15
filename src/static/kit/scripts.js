@@ -516,13 +516,41 @@ function tabmenu(attacher, tabs) {
 	var res = $('<div>', {class: 'tabmenu'});
 	/*const*/ var prior_hash = url_hash_parser.parsed_prefix();
 
+	function set_min_width(elem) {
+		var tabm = $(elem).parent();
+		var mdiv = tabm.closest('.modal > div');
+		console.log(mdiv);
+		if (mdiv.length === 0)
+			return; // this is not in the modal
+
+		var mdiv_owidth = mdiv.outerWidth();
+
+		// Get the client width
+		var cw = mdiv.parent()[0].clientWidth;
+		if (cw === undefined) {
+			mdiv.css({
+				'min-width': '100%',
+				'max-width': '100%'
+			});
+			cw = mdiv.outerWidth();
+		}
+
+		console.log(mdiv_owidth, cw);
+
+		var p = Math.min(100, 100 * (mdiv_owidth + 2) / cw);
+		mdiv.css({
+			'min-width': 'calc('.concat(p + '% - 2px)'),
+			'max-width': ''
+		})
+	}
+
 	for (var i = 0; i < tabs.length; i += 2)
 		res.append($('<a>', {
 			text: tabs[i],
 			click: function(handler) {
 				return function() {
 					if (!$(this).hasClass('active')) {
-						$(this).parent().css('min-width', $(this).parent().width());
+						set_min_width(this);
 						$(this).parent().children('.active').removeClass('active');
 						$(this).addClass('active');
 
@@ -545,7 +573,7 @@ function tabmenu(attacher, tabs) {
 	for (var i = 0; i < rc.length; ++i) {
 		var elem = $(rc[i]);
 		if (tabname_to_hash(elem.text()) === arg) {
-			elem.parent().css('min-width', elem.parent().width());
+			set_min_width(this);
 			elem.addClass('active');
 
 			tabs[i << 1 | 1].call(elem);
@@ -1132,6 +1160,7 @@ function preview_user(as_modal, user_id, opt_hash /*= ''*/) {
 				html: ActionsToHTML.user(user_id, data[6], true)
 			})
 		})).append($('<center>', {
+			class: 'always_in_view',
 			html: $('<div>', {
 				class: 'user-info',
 				html: $('<div>', {
@@ -1391,7 +1420,7 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
-							class: 'users',
+							class: 'users always_in_view',
 							html: '<p>There are no users to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
@@ -1603,7 +1632,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
-							class: 'jobs',
+							class: 'jobs always_in_view',
 							html: '<p>There are no jobs to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
@@ -1993,7 +2022,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
-							class: 'submissions',
+							class: 'submissions always_in_view',
 							html: '<p>There are no submissions to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
@@ -2344,6 +2373,7 @@ function preview_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					html: ActionsToHTML.problem(data[0], actions, data[3], true)
 				})
 		})).append($('<center>', {
+			class: 'always_in_view',
 			html: $('<div>', {
 				class: 'problem-info',
 				html: $('<div>', {
@@ -2449,7 +2479,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
-							class: 'problems',
+							class: 'problems always_in_view',
 							html: '<p>There are no problems to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
@@ -2904,7 +2934,10 @@ function contest_ranking(elem_, contest_id_) {
 		API_call('/api/contest/c' + contest_id + '/ranking', function(data_) {
 			var data = data_;
 			if (data.length == 0)
-				return elem.append($('<center>', {html: '<p>There is no one in the ranking yet...</p>'}));
+				return elem.append($('<center>', {
+					class: 'always_in_view',
+					html: '<p>There is no one in the ranking yet...</p>'
+				}));
 
 			// Construct table's head
 			var tr = $('<tr>', {
@@ -3056,7 +3089,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
-							class: 'contests',
+							class: 'contests always_in_view',
 							html: '<p>There are no contests to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
