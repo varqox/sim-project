@@ -1983,22 +1983,28 @@ function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			}
 		];
 
+		var cached_source = undefined;
 		if (actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
 				elem.children('.tabmenu').nextAll().remove();
-				append_loader(elem);
-				$.ajax({
-					url: '/api/submission/' + submission_id + '/source',
-					dataType: 'html',
-					success: function(data) {
-						elem.append(data);
-						remove_loader(elem);
-						centerize_modal(elem.closest('.modal'), false);
-					},
-					error: function(resp, status) {
-						show_error_via_loader(elem, resp, status);
-					}
-				});
+				if (cached_source !== undefined)
+					elem.append(cached_source);
+				else {
+					append_loader(elem);
+					$.ajax({
+						url: '/api/submission/' + submission_id + '/source',
+						dataType: 'html',
+						success: function(data) {
+							cached_source = data;
+							elem.append(data);
+							remove_loader(elem);
+							centerize_modal(elem.closest('.modal'), false);
+						},
+						error: function(resp, status) {
+							show_error_via_loader(elem, resp, status);
+						}
+					});
+				}
 			});
 
 		if (actions.indexOf('j') !== -1)
