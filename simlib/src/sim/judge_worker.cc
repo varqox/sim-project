@@ -128,7 +128,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 		checker_stdout, // STDOUT
 		-1, // STDERR is ignored
 		CHECKER_TIME_LIMIT,
-		CHECKER_MEMORY_LIMIT + page_size // To be able to detect exceeding
+		CHECKER_MEMORY_LIMIT
 	};
 
 	JudgeReport report;
@@ -175,7 +175,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				solution_stdout,
 				-1,
 				tl,
-				test.memory_limit + page_size, // To be able to detect exceeding
+				test.memory_limit,
 				cpu_tl
 			}, ".", JudgeCallback{}); // Allow exceptions to fly upper
 
