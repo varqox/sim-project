@@ -24,6 +24,7 @@ _packages:
         packages:
           - *default_packages
           - g++-5-multilib
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="gcc-5 -fuse-ld=gold"
       - export CXX="g++-5 -fuse-ld=gold"
@@ -34,7 +35,7 @@ _packages:
           - ubuntu-toolchain-r-test
         packages:
           - *default_packages
-          - g++-6-multilib
+          - g++-6-multilib # The proper version of std library
     before_install:
       - export CC="gcc-6 -fuse-ld=gold"
       - export CXX="g++-6 -fuse-ld=gold"
@@ -57,7 +58,7 @@ _packages:
         packages:
           - *default_packages
           - clang-3.5
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-3.5"
       - export CXX="clang++-3.5"
@@ -69,7 +70,7 @@ _packages:
         packages:
           - *default_packages
           - clang-3.6
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-3.6"
       - export CXX="clang++-3.6"
@@ -82,7 +83,7 @@ _packages:
         packages:
           - *default_packages
           - clang-3.7
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-3.7"
       - export CXX="clang++-3.7"
@@ -94,7 +95,7 @@ _packages:
         packages:
           - *default_packages
           - clang-3.8
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-3.8"
       - export CXX="clang++-3.8"
@@ -106,7 +107,7 @@ _packages:
         packages:
           - *default_packages
           - clang-3.9
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-3.9"
       - export CXX="clang++-3.9"
@@ -119,7 +120,7 @@ _packages:
         packages:
           - *default_packages
           - clang-4.0
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-4.0"
       - export CXX="clang++-4.0"
@@ -132,7 +133,7 @@ _packages:
         packages:
           - *default_packages
           - clang-5.0
-          - libstdc++-5-dev # The proper version of std library
+          - libstdc++-6-dev # The proper version of std library
     before_install:
       - export CC="clang-5.0"
       - export CXX="clang++-5.0"
