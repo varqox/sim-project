@@ -1,49 +1,132 @@
-include Makefile.config
+include $(PREFIX)Makefile.config
 
-.PHONY: all
-all: build-info
-	@$(MAKE) src googletest
-ifeq ($(MAKELEVEL), 0)
+.PHONY: $(PREFIX)all
+$(PREFIX)all: build-info
+	@$(MAKE) $(PREFIX)gtest_main.a $(PREFIX)simlib.a
 	@printf "\033[32mBuild finished\033[0m\n"
+
+GOOGLETEST_SRCS := \
+	$(PREFIX)googletest/googletest/src/gtest-all.cc \
+	$(PREFIX)googletest/googletest/src/gtest_main.cc
+
+$(eval $(call load_dependencies, $(GOOGLETEST_SRCS)))
+GOOGLETEST_OBJS := $(call SRCS_TO_OBJS, $(GOOGLETEST_SRCS))
+
+$(PREFIX)gtest_main.a: $(GOOGLETEST_OBJS)
+	$(Q)$(RM) $@
+	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+
+$(GOOGLETEST_OBJS): EXTRA_CXX_FLAGS += -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -I '$(CURDIR)/$(PREFIX)googletest/googletest' -pthread
+
+SIMLIB_SRCS := \
+	$(PREFIX)src/aho_corasick.cc \
+	$(PREFIX)src/config_file.cc \
+	$(PREFIX)src/debug.cc \
+	$(PREFIX)src/filesystem.cc \
+	$(PREFIX)src/http/response.cc \
+	$(PREFIX)src/http/server.cc \
+	$(PREFIX)src/logger.cc \
+	$(PREFIX)src/mysql.cc \
+	$(PREFIX)src/process.cc \
+	$(PREFIX)src/random.cc \
+	$(PREFIX)src/sandbox.cc \
+	$(PREFIX)src/sha.cc \
+	$(PREFIX)src/sha3.c \
+	$(PREFIX)src/sim/checker.cc \
+	$(PREFIX)src/sim/compile.cc \
+	$(PREFIX)src/sim/conver.cc \
+	$(PREFIX)src/sim/default_checker_dump.c \
+	$(PREFIX)src/sim/judge_worker.cc \
+	$(PREFIX)src/sim/problem_package.cc \
+	$(PREFIX)src/sim/simfile.cc \
+	$(PREFIX)src/spawner.cc \
+	$(PREFIX)src/string.cc \
+	$(PREFIX)src/syscall_name_32.cc \
+	$(PREFIX)src/syscall_name_64.cc \
+	$(PREFIX)src/time.cc \
+	$(PREFIX)src/zip.cc
+
+$(eval $(call load_dependencies, $(SIMLIB_SRCS)))
+SIMLIB_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_SRCS))
+
+$(PREFIX)simlib.a: $(SIMLIB_OBJS)
+	$(Q)$(RM) $@
+	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+
+ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_32.h),)
+$(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
+else ifneq ($(wildcard /usr/include/x86-linux-gnu/asm/unistd_32.h),)
+$(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86-linux-gnu/asm/unistd_32.h
+else
+$(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/asm/unistd_32.h
 endif
 
-.PHONY: build-info
-build-info:
-ifeq ($(MAKELEVEL), 0)
-	@echo "DEBUG: $(DEBUG)"
-	@echo "CC -> $(CC)"
-	@echo "CXX -> $(CXX)"
+$(PREFIX)src/syscall_name_32.cc: $(PREFIX)Makefile $(UNISTD_32)
+	$(GEN)
+	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
+	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
+	$(Q)echo "#include \"$(UNISTD_32)\"" >> $@
+	$(Q)echo "" >> $@
+	# 32 bit
+	$(Q) [ -f $(UNISTD_32) ] || \
+		{ echo "Error: $(UNISTD_32): No such file or directory"; $(RM) $@; exit 1; }
+	$(Q)echo "SyscallNameSet x86_syscall_name {" >> $@
+	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_32) | \
+		sed 's/#define\s*__NR_//' | \
+		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
+	$(Q)echo "};" >> $@
+
+ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_64.h),)
+$(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/x86_64-linux-gnu/asm/unistd_64.h
+else ifneq ($(wildcard /usr/include/x86-linux-gnu/asm/unistd_64.h),)
+$(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/x86-linux-gnu/asm/unistd_64.h
+else
+$(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/asm/unistd_64.h
 endif
 
-.PHONY: src
-src: build-info
-	$(Q)$(MAKE) -C $@
+$(PREFIX)src/syscall_name_64.cc: $(PREFIX)Makefile $(UNISTD_64)
+	$(GEN)
+	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
+	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
+	$(Q)echo "#include \"$(UNISTD_64)\"" >> $@
+	$(Q)echo "" >> $@
+	# 64 bit
+	$(Q)echo "SyscallNameSet x86_64_syscall_name {" >> $@
+	$(Q) [ -f $(UNISTD_64) ] || \
+		{ echo "Error: $(UNISTD_64): No such file or directory"; $(RM) $@; exit 1; }
+	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_64) | \
+		sed 's/#define\s*__NR_//' | \
+		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
+	$(Q)echo "};" >> $@
 
-.PHONY: test
-test: src googletest
-	$(Q)$(MAKE) -C test/
+$(PREFIX)src/sim/default_checker_dump.c: $(PREFIX)src/sim/default_checker.c $(PREFIX)Makefile
+	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*default_checker_c@default_checker_c@g' > $@
 
-.PHONY: build-test
-build-test: src googletest
-	$(Q)$(MAKE) -C test/ build
+SIMLIB_TEST_SRCS := \
+	$(PREFIX)test/string.cc \
+	$(PREFIX)test/filesystem.cc \
+	$(PREFIX)test/config_file.cc \
+	$(PREFIX)test/simfile.cc
 
-.PHONY: googletest
-googletest: build-info gtest_main.a
+$(eval $(call load_dependencies, $(SIMLIB_TEST_SRCS)))
+SIMLIB_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_TEST_SRCS))
 
-gtest_main.a googletest/%.deps: EXTRA_CXX_FLAGS += -isystem '$(shell pwd)/googletest/googletest/include' -I googletest/googletest/ -pthread
+$(SIMLIB_TEST_OBJS): EXTRA_CXX_FLAGS += -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include'
 
-gtest_main.a: googletest/googletest/src/gtest-all.o googletest/googletest/src/gtest_main.o
-	$(Q)$(call P,AR,$@)$(AR) cr $@ $?
+$(PREFIX)test/exec: $(SIMLIB_TEST_OBJS) $(PREFIX)simlib.a $(PREFIX)gtest_main.a
+	$(LINK) -lrt -larchive -pthread
 
-# Build dependencies manually because only that two are needed
-$(eval $(call dependencies_list, googletest/googletest/src/gtest-all.cc googletest/googletest/src/gtest_main.cc))
+.PHONY: $(PREFIX)test
+$(PREFIX)test: $(PREFIX)test/exec
+	$(PREFIX)test/exec
 
-.PHONY: clean
-clean:
-	$(Q)$(RM) simlib.a gtest_main.a googletest/googletest/src/*.o src/*.deps
-	$(Q)$(MAKE) clean -C src/
-	$(Q)$(MAKE) clean -C test/
+.PHONY: $(PREFIX)clean
+$(PREFIX)clean: OBJS := $(GOOGLETEST_OBJS) $(SIMLIB_OBJS) $(SIMLIB_TEST_OBJS)
+$(PREFIX)clean:
+	$(Q)$(RM) $(PREFIX)simlib.a $(PREFIX)gtest_main.a $(PREFIX)test/exec
+	$(Q)$(RM) $(OBJS) $(OBJS:o=dwo)
+	$(Q)find $(PREFIX)src $(PREFIX)test $(PREFIX)googletest -type f -name '*.deps' | xargs rm -f
 
-.PHONY: help
-help:
+.PHONY: $(PREFIX)help
+$(PREFIX)help:
 	@echo "Nothing is here yet..."

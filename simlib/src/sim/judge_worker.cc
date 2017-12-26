@@ -120,8 +120,6 @@ JudgeReport JudgeWorker::judge(bool final) const {
 
 	FileRemover solution_stdout_remover {sol_stdout_path}; // Save disk space
 
-	const int page_size = sysconf(_SC_PAGESIZE);
-
 	// Checker parameters
 	Sandbox::Options checker_opts = {
 		-1, // STDIN is ignored

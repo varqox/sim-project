@@ -3,6 +3,9 @@
 *.lo
 *.o
 
+# Compiled debug information (DWARF)
+*.dwo
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
