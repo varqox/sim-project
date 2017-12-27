@@ -249,6 +249,4 @@ before_script:
 
 script:
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
-  - cat googletest/googletest/src/gtest-all.cc.cmd.deps
   - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG test
-  - cat googletest/googletest/src/gtest-all.cc.cmd.deps

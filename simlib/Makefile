@@ -13,8 +13,7 @@ $(eval $(call load_dependencies, $(GOOGLETEST_SRCS)))
 GOOGLETEST_OBJS := $(call SRCS_TO_OBJS, $(GOOGLETEST_SRCS))
 
 $(PREFIX)gtest_main.a: $(GOOGLETEST_OBJS)
-	$(Q)$(RM) $@
-	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+	$(MAKE_STATIC_LIB)
 
 $(GOOGLETEST_OBJS): EXTRA_CXX_FLAGS += -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -I '$(CURDIR)/$(PREFIX)googletest/googletest' -pthread
 
@@ -50,8 +49,7 @@ $(eval $(call load_dependencies, $(SIMLIB_SRCS)))
 SIMLIB_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_SRCS))
 
 $(PREFIX)simlib.a: $(SIMLIB_OBJS)
-	$(Q)$(RM) $@
-	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+	$(MAKE_STATIC_LIB)
 
 ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_32.h),)
 $(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
