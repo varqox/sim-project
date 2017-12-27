@@ -2,7 +2,9 @@ language: cpp
 
 sudo: false
 
-cache: apt
+cache:
+  - apt
+  - ccache
 
 notifications:
   email: false
@@ -246,7 +248,10 @@ before_script:
   - $CXX -v
   - export CC="$CC -Werror"
   - export CXX="$CXX -Werror"
+  - wget 'http://de.archive.ubuntu.com/ubuntu/pool/main/m/make-dfsg/make_4.1-6_amd64.deb'
+  - dpkg -x make_4.1-6_amd64.deb make41
+  - export make="$PWD/make41/usr/bin/make"
 
 script:
-  - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
-  - make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG test
+  - $make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
+  - $make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG test
