@@ -142,8 +142,7 @@ src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
 src/lib/sqlite3.o: EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2
 
 src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
-	$(Q)$(RM) $@
-	$(Q)$(call P,AR,$@)$(AR) cr $@ $^
+	$(MAKE_STATIC_LIB)
 
 SIM_SERVER_SRCS := \
 	src/web-interface/api.cc \
