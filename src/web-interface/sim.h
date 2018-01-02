@@ -83,7 +83,7 @@ private:
 
 	void api_job_cancel();
 
-	void api_job_download_report();
+	void api_job_download_log();
 
 	void api_job_download_uploaded_package();
 
@@ -463,7 +463,7 @@ private:
 	enum class JobPermissions : uint {
 		NONE = 0,
 		VIEW = 1, // allowed to view the job
-		DOWNLOAD_REPORT = 2,
+		DOWNLOAD_LOG = 2,
 		DOWNLOAD_UPLOADED_PACKAGE = 4,
 		CANCEL = 8,
 		RESTART = 16,
@@ -599,7 +599,7 @@ private:
 		// Submission specific
 		VIEW = 2,
 		VIEW_SOURCE = 4,
-		VIEW_FULL_REPORT = 8,
+		VIEW_FINAL_REPORT = 8,
 		VIEW_RELATED_JOBS = 1 << 4,
 		CHANGE_TYPE = 1 << 5,
 		REJUDGE = 1 << 6,

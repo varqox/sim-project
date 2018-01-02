@@ -1337,7 +1337,7 @@ div.right-flow {
 }
 .compilation-errors,
 .simfile,
-.report-preview {
+.job-log {
 	display: inline-block;
 	align-self: flex-start;
 	padding: 8px;
@@ -1350,27 +1350,27 @@ div.right-flow {
 	border-radius: 4px;
 }
 pre.compilation-errors .green,
-pre.report-preview .green {
+pre.job-log .green {
 	color: #49bb00;
 }
 pre.compilation-errors .blue,
-pre.report-preview .blue {
+pre.job-log .blue {
 	color: #5454ff;
 }
 pre.compilation-errors .red,
-pre.report-preview .red {
+pre.job-log .red {
 	color: #ff5454;
 }
 pre.compilation-errors .yellow,
-pre.report-preview .yellow {
+pre.job-log .yellow {
 	color: #cec100;
 }
 pre.compilation-errors .pink,
-pre.report-preview .pink {
+pre.job-log .pink {
 	color: #ff00ff;
 }
 pre.compilation-errors .turquoise,
-pre.report-preview .turquoise {
+pre.job-log .turquoise {
 	color: #1bc7b7;
 }
 

@@ -86,7 +86,7 @@ void Sim::api_jobs() {
 			}
 
 			qfields.append(", SUBSTR(data, 1, ",
-				meta::ToString<REPORT_PREVIEW_MAX_LENGTH + 1>{}, ')');
+				meta::ToString<JOB_LOG_PREVIEW_MAX_LENGTH + 1>{}, ')');
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
@@ -238,7 +238,7 @@ void Sim::api_jobs() {
 			jobs_get_permissions(res[7], job_type, job_status);
 		if (uint(perms & PERM::VIEW))
 			append('v');
-		if (uint(perms & PERM::DOWNLOAD_REPORT))
+		if (uint(perms & PERM::DOWNLOAD_LOG))
 			append('r');
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
 			append('u');
@@ -248,10 +248,10 @@ void Sim::api_jobs() {
 			append('R');
 		append('\"');
 
-		// Append report preview (whether there is more to load, data)
-		if (select_specified_job and uint(perms & PERM::DOWNLOAD_REPORT))
-			append(",[", res[9].size() > REPORT_PREVIEW_MAX_LENGTH, ',',
-				jsonStringify(res[9]), ']'); // report preview
+		// Append log preview (whether there is more to load, data)
+		if (select_specified_job and uint(perms & PERM::DOWNLOAD_LOG))
+			append(",[", res[9].size() > JOB_LOG_PREVIEW_MAX_LENGTH, ',',
+				jsonStringify(res[9]), ']'); // log preview
 
 		append("],");
 	}
@@ -297,8 +297,8 @@ void Sim::api_job() {
 		return api_job_cancel();
 	else if (next_arg == "restart")
 		return api_job_restart(JT(jtype), jinfo);
-	else if (next_arg == "report")
-		return api_job_download_report();
+	else if (next_arg == "log")
+		return api_job_download_log();
 	else if (next_arg == "uploaded-package")
 		return api_job_download_uploaded_package();
 	else
@@ -340,19 +340,19 @@ void Sim::api_job_restart(JobType job_type, StringView job_info) {
 	jobs::restart_job(mysql, jobs_jid, job_type, job_info, true);
 }
 
-void Sim::api_job_download_report() {
+void Sim::api_job_download_log() {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 
-	if (uint(~jobs_perms & PERM::DOWNLOAD_REPORT))
+	if (uint(~jobs_perms & PERM::DOWNLOAD_LOG))
 		return api_error403();
 
 	// Assumption: permissions are already checked
 	resp.headers["Content-type"] = "application/text";
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=job-", jobs_jid, "-report");
+		concat_tostr("attachment; filename=job-", jobs_jid, "-log");
 
-	// Fetch the report
+	// Fetch the log
 	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
 	stmt.bindAndExecute(jobs_jid);
 	stmt.res_bind_all(resp.content);

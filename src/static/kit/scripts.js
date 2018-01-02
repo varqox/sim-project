@@ -959,8 +959,8 @@ var ActionsToHTML = {};
 					text: 'Download'
 				}).add('<ul>', {
 					html: [actions_str.indexOf('r') === -1 ? '' :  $('<a>', {
-							href: '/api/job/' + job_id + '/report',
-							text: 'Report'
+							href: '/api/job/' + job_id + '/log',
+							text: 'Job log'
 						}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
 							href: '/api/job/' + job_id + '/uploaded-package',
 							text: 'Uploaded package'
@@ -1671,19 +1671,19 @@ function preview_job(as_modal, job_id, opt_hash /*= ''*/) {
 		}))
 
 		if (data[8].indexOf('r') !== -1) {
-			this.append('<h2>Report preview</h2>')
+			this.append('<h2>Job log</h2>')
 			.append($('<pre>', {
-				class: 'report-preview',
+				class: 'job-log',
 				html: colorize(text_to_safe_html(data[9][1]))
 			}));
 
 			if (data[9][0])
 				this.append($('<p>', {
-					text: 'The report is too large to show it entirely here. If you want to see the whole, click: '
+					text: 'The job log is too large to show it entirely here. If you want to see the whole, click: '
 				}).append($('<a>', {
 					class: 'btn-small',
-					href: '/api/job/' + job_id + '/report',
-					text: 'Download the full report'
+					href: '/api/job/' + job_id + '/log',
+					text: 'Download the full job log'
 				})));
 		}
 	}, '/jobs/' + job_id + (opt_hash === undefined ? '' : opt_hash));
