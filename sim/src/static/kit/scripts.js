@@ -433,7 +433,7 @@ function remove_modals(modal) {
 function close_modal(modal) {
 	modal = $(modal);
 	remove_modals(modal);
-	if (modal.is('.preview'))
+	if (modal.is('.view'))
 		window.history.back();
 }
 $(document).click(function(event) {
@@ -627,11 +627,11 @@ function tabmenu(attacher, tabs) {
 	rc.first().click();
 }
 
-/* ================================ Preview ================================ */
-function preview_base(as_modal, new_window_location, func, no_modal_elem) {
+/* ================================== View ================================== */
+function view_base(as_modal, new_window_location, func, no_modal_elem) {
 	if (as_modal) {
 		var elem = $('<div>', {
-			class: 'modal preview',
+			class: 'modal view',
 			egid: egid.get_next(),
 			style: 'display: none',
 			html: $('<div>', {
@@ -687,8 +687,8 @@ function timed_hide_show(elem) {
 			this.show();
 	});
 }
-function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/, show_on_success /*= true */) {
-	preview_base(as_modal, new_window_location, function() {
+function view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/, show_on_success /*= true */) {
+	view_base(as_modal, new_window_location, function() {
 		var elem = $(this);
 		var modal = elem.parent().parent();
 		if (as_modal)
@@ -702,7 +702,7 @@ function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, 
 		}, elem);
 	}, no_modal_elem);
 }
-function a_preview_button(href, text, classes, func) {
+function a_view_button(href, text, classes, func) {
 	return $('<a>', {
 			'href': href,
 			'text': text,
@@ -942,14 +942,14 @@ function Logs(type, elem) {
 /* ============================ Actions buttons ============================ */
 var ActionsToHTML = {};
 (function() {
-	this.job = function(job_id, actions_str, problem_id, job_preview /*= false*/) {
-		if (job_preview == undefined)
-			job_preview = false;
+	this.job = function(job_id, actions_str, problem_id, job_view /*= false*/) {
+		if (job_view == undefined)
+			job_view = false;
 
 		var res = [];
-		if (!job_preview && actions_str.indexOf('v') !== -1)
-			res.push(a_preview_button('/jobs/' + job_id, 'View', 'btn-small',
-				function() { preview_job(true, job_id); }));
+		if (!job_view && actions_str.indexOf('v') !== -1)
+			res.push(a_view_button('/jobs/' + job_id, 'View', 'btn-small',
+				function() { view_job(true, job_id); }));
 
 		if (actions_str.indexOf('u') !== -1 || actions_str.indexOf('r') !== -1)
 			res.push($('<div>', {
@@ -970,8 +970,8 @@ var ActionsToHTML = {};
 			}));
 
 		if (actions_str.indexOf('p') !== -1)
-			res.push(a_preview_button('/p/' + problem_id, 'View problem',
-				'btn-small green', function() { preview_problem(true, problem_id); }));
+			res.push(a_view_button('/p/' + problem_id, 'View problem',
+				'btn-small green', function() { view_problem(true, problem_id); }));
 
 		if (actions_str.indexOf('C') !== -1)
 			res.push($('<a>', {
@@ -996,44 +996,44 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.user = function(user_id, actions_str, user_preview /*= false*/) {
-		if (user_preview === undefined)
-			user_preview = false;
+	this.user = function(user_id, actions_str, user_view /*= false*/) {
+		if (user_view === undefined)
+			user_view = false;
 
 		var res = [];
-		if (!user_preview && actions_str.indexOf('v') !== -1)
-			res.push(a_preview_button('/u/' + user_id, 'View', 'btn-small',
-				function() { preview_user(true, user_id); }));
+		if (!user_view && actions_str.indexOf('v') !== -1)
+			res.push(a_view_button('/u/' + user_id, 'View', 'btn-small',
+				function() { view_user(true, user_id); }));
 
 		if (actions_str.indexOf('E') !== -1)
-			res.push(a_preview_button('/u/' + user_id + '/edit', 'Edit',
+			res.push(a_view_button('/u/' + user_id + '/edit', 'Edit',
 				'btn-small blue', function() { edit_user(true, user_id); }));
 
 		if (actions_str.indexOf('D') !== -1)
-			res.push(a_preview_button('/u/' + user_id + '/delete', 'Delete',
+			res.push(a_view_button('/u/' + user_id + '/delete', 'Delete',
 				'btn-small red', function() { delete_user(true, user_id); }));
 
 		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
-			res.push(a_preview_button('/u/' + user_id + '/change-password',
+			res.push(a_view_button('/u/' + user_id + '/change-password',
 				'Change password', 'btn-small orange',
 				function() { change_user_password(true, user_id); }));
 
 		return res;
 	}
 
-	this.submission = function(submission_id, actions_str, submission_type, submission_preview /*= false*/) {
-		if (submission_preview === undefined)
-			submission_preview = false;
+	this.submission = function(submission_id, actions_str, submission_type, submission_view /*= false*/) {
+		if (submission_view === undefined)
+			submission_view = false;
 
 		var res = [];
-		if (!submission_preview && actions_str.indexOf('v') !== -1)
-			res.push(a_preview_button('/s/' + submission_id, 'Preview', 'btn-small',
-				function() { preview_submission(true, submission_id); }));
+		if (!submission_view && actions_str.indexOf('v') !== -1)
+			res.push(a_view_button('/s/' + submission_id, 'View', 'btn-small',
+				function() { view_submission(true, submission_id); }));
 
 		if (actions_str.indexOf('s') !== -1) {
-			if (!submission_preview)
-				res.push(a_preview_button('/s/' + submission_id + '#source', 'Source',
-					'btn-small', function() { preview_submission(true, submission_id, '#source'); }));
+			if (!submission_view)
+				res.push(a_view_button('/s/' + submission_id + '#source', 'Source',
+					'btn-small', function() { view_submission(true, submission_id, '#source'); }));
 
 			res.push($('<a>', {
 				class: 'btn-small',
@@ -1043,7 +1043,7 @@ var ActionsToHTML = {};
 		}
 
 		if (actions_str.indexOf('C') !== -1)
-			res.push(a_preview_button('/s/' + submission_id + '/chtype', 'Change type',
+			res.push(a_view_button('/s/' + submission_id + '/chtype', 'Change type',
 				'btn-small orange',
 				function() { submission_chtype(submission_id, submission_type); }));
 
@@ -1064,14 +1064,14 @@ var ActionsToHTML = {};
 		return res;
 	}
 
-	this.problem = function(problem_id, actions_str, problem_name, problem_preview /*= false*/) {
-		if (problem_preview === undefined)
-			problem_preview = false;
+	this.problem = function(problem_id, actions_str, problem_name, problem_view /*= false*/) {
+		if (problem_view === undefined)
+			problem_view = false;
 
 		var res = [];
-		if (!problem_preview && actions_str.indexOf('v') !== -1)
-			res.push(a_preview_button('/p/' + problem_id, 'View', 'btn-small',
-				function() { preview_problem(true, problem_id); }));
+		if (!problem_view && actions_str.indexOf('v') !== -1)
+			res.push(a_view_button('/p/' + problem_id, 'View', 'btn-small',
+				function() { view_problem(true, problem_id); }));
 
 		if (actions_str.indexOf('V') !== -1)
 			res.push($('<a>', {
@@ -1081,18 +1081,18 @@ var ActionsToHTML = {};
 			}));
 
 		if (actions_str.indexOf('S') !== -1)
-			res.push(a_preview_button('/p/' + problem_id + '/submit', 'Submit',
+			res.push(a_view_button('/p/' + problem_id + '/submit', 'Submit',
 				'btn-small blue', function() {
 					add_submission(true, problem_id, problem_name, (actions_str.indexOf('i') !== -1));
 				}));
 
 		if (actions_str.indexOf('s') !== -1)
-			res.push(a_preview_button('/p/' + problem_id + '#all_submissions#solutions',
+			res.push(a_view_button('/p/' + problem_id + '#all_submissions#solutions',
 				'Solutions', 'btn-small', function() {
-					preview_problem(true, problem_id, '#all_submissions#solutions');
+					view_problem(true, problem_id, '#all_submissions#solutions');
 				}));
 
-		if (problem_preview && actions_str.indexOf('d') !== -1)
+		if (problem_view && actions_str.indexOf('d') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
 				href: '/api/problem/' + problem_id + '/download',
@@ -1100,45 +1100,45 @@ var ActionsToHTML = {};
 			}));
 
 		if (actions_str.indexOf('E') !== -1)
-			res.push(a_preview_button('/p/' + problem_id + '/edit', 'Edit',
+			res.push(a_view_button('/p/' + problem_id + '/edit', 'Edit',
 				'btn-small blue', function() { edit_problem(true, problem_id); }));
 
-		if (problem_preview && actions_str.indexOf('R') !== -1)
-			res.push(a_preview_button('/p/' + problem_id + '/reupload', 'Reupload',
+		if (problem_view && actions_str.indexOf('R') !== -1)
+			res.push(a_view_button('/p/' + problem_id + '/reupload', 'Reupload',
 				'btn-small orange', function() { reupload_problem(true, problem_id); }));
 
-		if (problem_preview && actions_str.indexOf('J') !== -1)
+		if (problem_view && actions_str.indexOf('J') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small blue',
 				text: 'Rejudge all submissions',
 				click: function() { rejudge_problem_submissions(problem_id); }
 			}));
 
-		if (problem_preview && actions_str.indexOf('D') !== -1)
-			res.push(a_preview_button('/p/' + problem_id + '/delete', 'Delete',
+		if (problem_view && actions_str.indexOf('D') !== -1)
+			res.push(a_view_button('/p/' + problem_id + '/delete', 'Delete',
 				'btn-small red', function() { delete_problem(true, problem_id); }));
 
 		return res;
 	}
 
-	this.contest = function(contest_id, actions_str, contest_preview /*= false*/) {
-		if (contest_preview === undefined)
-			contest_preview = false;
+	this.contest = function(contest_id, actions_str, contest_view /*= false*/) {
+		if (contest_view === undefined)
+			contest_view = false;
 
 		var res = [];
-		if (!contest_preview && actions_str.indexOf('v') !== -1)
+		if (!contest_view && actions_str.indexOf('v') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
 				href: '/c/' + contest_id,
 				text: 'View'
 			}));
 
-		if (contest_preview && actions_str.indexOf('E') !== -1)
-			res.push(a_preview_button('/c/' + contest_id + '/edit', 'Edit',
+		if (contest_view && actions_str.indexOf('E') !== -1)
+			res.push(a_view_button('/c/' + contest_id + '/edit', 'Edit',
 				'btn-small blue', function() { edit_contest(true, contest_id); }));
 
-		if (contest_preview && actions_str.indexOf('D') !== -1)
-			res.push(a_preview_button('/c/' + contest_id + '/delete', 'Delete',
+		if (contest_view && actions_str.indexOf('D') !== -1)
+			res.push(a_view_button('/c/' + contest_id + '/delete', 'Delete',
 				'btn-small red', function() { delete_contest(true, contest_id); }));
 
 		return res;
@@ -1147,7 +1147,7 @@ var ActionsToHTML = {};
 
 /* ================================= Users ================================= */
 function add_user(as_modal) {
-	preview_base(as_modal, '/u/add', function() {
+	view_base(as_modal, '/u/add', function() {
 		this.append(ajax_form('Add user', '/api/user/add',
 			Form.field_group('Username', {
 				type: 'text',
@@ -1209,8 +1209,8 @@ function add_user(as_modal) {
 		));
 	})
 }
-function preview_user(as_modal, user_id, opt_hash /*= ''*/) {
-	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+function view_user(as_modal, user_id, opt_hash /*= ''*/) {
+	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1285,7 +1285,7 @@ function preview_user(as_modal, user_id, opt_hash /*= ''*/) {
 	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function edit_user(as_modal, user_id) {
-	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1374,7 +1374,7 @@ function edit_user(as_modal, user_id) {
 	}, '/u/' + user_id + '/edit');
 }
 function delete_user(as_modal, user_id) {
-	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1395,8 +1395,8 @@ function delete_user(as_modal, user_id) {
 		var p = $('<p>', {
 			style: 'margin: 0 0 20px; text-align: center',
 			html: 'You are going to delete the user '
-		}).append(a_preview_button('/u/' + user_id, data[1], undefined, function() {
-			preview_user(true, user_id);
+		}).append(a_view_button('/u/' + user_id, data[1], undefined, function() {
+			view_user(true, user_id);
 		})).append('. As it cannot be undone,<br>you have to confirm it with YOUR password.');
 
 		if (user_id == logged_user_id()) {
@@ -1428,7 +1428,7 @@ function delete_user(as_modal, user_id) {
 	}, '/u/' + user_id + "/delete");
 }
 function change_user_password(as_modal, user_id) {
-	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1576,12 +1576,12 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 function user_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
-	preview_base((parent_elem === undefined),
+	view_base((parent_elem === undefined),
 		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
 		timed_hide($(this).parent().parent().filter('.modal'));
 		$(this).append($('<h1>', {text: 'Users'}));
 		if (logged_user_is_admin())
-			$(this).append(a_preview_button('/u/add', 'Add user', 'btn', function() {
+			$(this).append(a_view_button('/u/add', 'Add user', 'btn', function() {
 				add_user(true);
 			}));
 
@@ -1590,8 +1590,8 @@ function user_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
 }
 
 /* ================================== Jobs ================================== */
-function preview_job(as_modal, job_id, opt_hash /*= ''*/) {
-	preview_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
+function view_job(as_modal, job_id, opt_hash /*= ''*/) {
+	view_ajax(as_modal, '/api/jobs/=' + job_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1608,16 +1608,16 @@ function preview_job(as_modal, job_id, opt_hash /*= ''*/) {
 				td.append($('<label>', {text: name}));
 
 				if (name == "submission")
-					td.append(a_preview_button('/s/' + info[name], info[name],
+					td.append(a_view_button('/s/' + info[name], info[name],
 						undefined, function() {
 							var sid = info[name];
-							return function() {preview_submission(true, sid);};
+							return function() {view_submission(true, sid);};
 						}()));
 				else if (name == "problem")
-					td.append(a_preview_button('/p/' + info[name], info[name],
+					td.append(a_view_button('/p/' + info[name], info[name],
 						undefined, function() {
 							var pid = info[name];
-							return function() {preview_problem(true, pid);};
+							return function() {view_problem(true, pid);};
 						}()));
 				else
 					td.append(info[name]);
@@ -1659,9 +1659,9 @@ function preview_job(as_modal, job_id, opt_hash /*= ''*/) {
 						}).add('<td>', {
 							html: data[5] === null ? 'System' :
 								(data[6] == null ? 'Deleted (id: ' + data[5] + ')'
-								: a_preview_button(
+								: a_view_button(
 								'/u/' + data[5], data[6], undefined,
-								function() { preview_user(true, data[5]); }))
+								function() { view_user(true, data[5]); }))
 						}).add('<td>', {
 							html: info_html(data[7])
 						})
@@ -1696,8 +1696,8 @@ function restart_job(job_id) {
 	dialogue_modal_request('Restart job', $('<label>', {
 			html: [
 				'Are you sure to restart the ',
-				a_preview_button('/jobs/' + job_id, 'job ' + job_id, undefined,
-					function() { preview_job(true, job_id); }),
+				a_view_button('/jobs/' + job_id, 'job ' + job_id, undefined,
+					function() { view_job(true, job_id); }),
 				'?'
 			]
 		}), 'Restart job', 'btn-small orange', '/api/job/' + job_id + '/restart',
@@ -1753,10 +1753,10 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					row.append($('<td>', {text: x[4]}));
 					row.append($('<td>', {
 						html: normalize_datetime(
-							a_preview_button('/jobs/' + x[0], x[1], undefined,
+							a_view_button('/jobs/' + x[0], x[1], undefined,
 								function() {
 									var job_id = x[0];
-									return function() { preview_job(true, job_id); };
+									return function() { view_job(true, job_id); };
 								}()).attr('datetime', x[1]),
 							false)
 					}));
@@ -1766,9 +1766,9 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 					}));
 					row.append($('<td>', {
 						html: x[5] === null ? 'System' : (x[6] == null ? x[5]
-							: a_preview_button('/u/' + x[5], x[6], undefined, function() {
+							: a_view_button('/u/' + x[5], x[6], undefined, function() {
 								var uid = x[5];
-								return function() { preview_user(true, uid); };
+								return function() { view_user(true, uid); };
 							}()))
 					}));
 					// Info
@@ -1782,18 +1782,18 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 						if (info.submission !== undefined)
 							append_tag('submission',
-								a_preview_button('/s/' + info.submission,
+								a_view_button('/s/' + info.submission,
 									info.submission, undefined, function() {
 										var sid = info.submission;
-										return function() { preview_submission(true, sid); };
+										return function() { view_submission(true, sid); };
 									}()));
 
 						if (info.problem !== undefined)
 							append_tag('problem',
-								a_preview_button('/p/' + info.problem,
+								a_view_button('/p/' + info.problem,
 									info.problem, undefined, function() {
 										var pid = info.problem;
-										return function() { preview_problem(true, pid); };
+										return function() { view_problem(true, pid); };
 									}()));
 
 						var names = ['name', 'memory limit', 'problem type'];
@@ -1854,7 +1854,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 
 /* ============================== Submissions ============================== */
 function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignored, contest_problem_id) {
-	preview_base(as_modal, (contest_problem_id === undefined ?
+	view_base(as_modal, (contest_problem_id === undefined ?
 		'/p/' + problem_id + '/submit' : '/todo'), function() {
 		this.append(ajax_form('Submit a solution', '/api/submission/add/p'
 				+ problem_id + (contest_problem_id === undefined ? '' : '/cp' + contest_problem_id),
@@ -1862,8 +1862,8 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 				class: 'field-group',
 				html: [
 					$('<label>', {text: 'Problem'}),
-					a_preview_button('/p/' + problem_id, problem_name_to_show, undefined,
-						function() { preview_problem(true, problem_id); })
+					a_view_button('/p/' + problem_id, problem_name_to_show, undefined,
+						function() { view_problem(true, problem_id); })
 				]
 			}).add(Form.field_group("Solution", {
 					type: 'file',
@@ -1891,7 +1891,7 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 			}), function(resp) {
 				if (as_modal) {
 					close_modal(this.parent().parent().parent().parent());
-					preview_submission(as_modal, resp);
+					view_submission(as_modal, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/s/' + resp;
@@ -1911,9 +1911,9 @@ function submission_chtype(submission_id, submission_type) {
 			$('<label>', {
 				html: [
 					'New type of the ',
-					a_preview_button('/s/' + submission_id, 'submission ' + submission_id,
+					a_view_button('/s/' + submission_id, 'submission ' + submission_id,
 						undefined,
-						function() { preview_submission(true, submission_id); }),
+						function() { view_submission(true, submission_id); }),
 					': '
 				]
 			}),
@@ -1940,16 +1940,16 @@ function delete_submission(submission_id) {
 	dialogue_modal_request('Delete submission', $('<label>', {
 			html: [
 				'Are you sure to delete the ',
-				a_preview_button('/s/' + submission_id, 'submission ' + submission_id,
+				a_view_button('/s/' + submission_id, 'submission ' + submission_id,
 					undefined,
-					function() { preview_submission(true, submission_id); }),
+					function() { view_submission(true, submission_id); }),
 				'?'
 			]
 		}), 'Yes, delete it', 'btn-small red', '/api/submission/' + submission_id + '/delete',
 		'The submission has been deleted.', 'No, go back');
 }
-function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
-	preview_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
+function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
+	view_ajax(as_modal, '/api/submissions/=' + submission_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -1963,16 +1963,16 @@ function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			this.append($('<div>', {
 				class: 'round-path',
 				html: [
-					a_preview_button('/c/' + data[10], data[11], '', function() {
-						preview_contest(true, data[10]);
+					a_view_button('/c/' + data[10], data[11], '', function() {
+						view_contest(true, data[10]);
 					}),
 					' / ',
-					a_preview_button('/c/r' + data[8], data[9], '', function() {
-						preview_contest(true, data[8]);
+					a_view_button('/c/r' + data[8], data[9], '', function() {
+						view_contest(true, data[8]);
 					}),
 					' / ',
-					a_preview_button('/c/p' + data[6], data[7], '', function() {
-						preview_contest(true, data[6]);
+					a_view_button('/c/p' + data[6], data[7], '', function() {
+						view_contest(true, data[6]);
 					}),
 					$('<a>', {
 						class: 'btn-small',
@@ -2014,18 +2014,18 @@ function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 								class: (data[1] === 'Ignored' ? 'ignored' : undefined),
 								html: [
 									(data[2] === null ? '' : $('<td>', {
-										html: [a_preview_button('/u/' + data[2], data[3],
+										html: [a_view_button('/u/' + data[2], data[3],
 												undefined, function() {
-													preview_user(true, data[2]);
+													view_user(true, data[2]);
 												}),
 											' (' + text_to_safe_html(data[16]) + ' ' +
 												text_to_safe_html(data[17]) + ')'
 										]
 									})),
 									$('<td>', {
-										html: a_preview_button('/p/' + data[4], data[5],
+										html: a_view_button('/p/' + data[4], data[5],
 											undefined, function() {
-												preview_problem(true, data[4]);
+												view_problem(true, data[4]);
 											})
 									}),
 									normalize_datetime($('<td>', {
@@ -2157,21 +2157,21 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 					if (obj.show_user)
 						row.append($('<td>', {
 							html: x[2] === null ? 'System' : (x[3] == null ? x[2]
-								: a_preview_button('/u/' + x[2], x[3], undefined,
+								: a_view_button('/u/' + x[2], x[3], undefined,
 									function() {
 										var uid = x[2];
-										return function() { preview_user(true, uid); };
+										return function() { view_user(true, uid); };
 									}()))
 						}));
 
 					// Submission time
 					row.append($('<td>', {
 						html: normalize_datetime(
-							a_preview_button('/s/' + x[0], x[12], undefined,
+							a_view_button('/s/' + x[0], x[12], undefined,
 								function() {
 									var submission_id = x[0];
 									return function() {
-										preview_submission(true, submission_id);
+										view_submission(true, submission_id);
 									};
 								}()).attr('datetime', x[12]),
 							false)
@@ -2180,27 +2180,27 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 					// Problem
 					if (x[6] == null) // Not in the contest
 						row.append($('<td>', {
-							html: a_preview_button('/p/' + x[4], x[5], undefined,
+							html: a_view_button('/p/' + x[4], x[5], undefined,
 								function() {
 									var pid = x[4];
-									return function() { preview_problem(true, pid); };
+									return function() { view_problem(true, pid); };
 							}())
 						}));
 					else
 						row.append($('<td>', {
-							html: [(obj.show_contest ? a_preview_button('/c/' + x[10], x[11], '', function() {
+							html: [(obj.show_contest ? a_view_button('/c/' + x[10], x[11], '', function() {
 									var cid = x[10];
-									return function() { preview_contest(true, cid); };
+									return function() { view_contest(true, cid); };
 								}()) : ''),
 								(obj.show_contest ? ' / ' : ''),
-								a_preview_button('/c/r' + x[8], x[9], '', function() {
+								a_view_button('/c/r' + x[8], x[9], '', function() {
 									var crid = x[8];
-									return function() { preview_contest(true, crid); };
+									return function() { view_contest(true, crid); };
 								}()),
 								' / ',
-								a_preview_button('/c/p' + x[6], x[7], '', function() {
+								a_view_button('/c/p' + x[6], x[7], '', function() {
 									var cpid = x[6];
-									return function() { preview_contest(true, cpid); };
+									return function() { view_contest(true, cpid); };
 								}())
 							]
 						}))
@@ -2269,7 +2269,7 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 
 /* ================================ Problems ================================ */
 function add_problem(as_modal) {
-	preview_base(as_modal, '/p/add', function() {
+	view_base(as_modal, '/p/add', function() {
 		this.append(ajax_form('Add problem', '/api/problem/add',
 			Form.field_group("Problem's name", {
 				type: 'text',
@@ -2337,7 +2337,7 @@ function add_problem(as_modal) {
 			}), function(resp) {
 				if (as_modal) {
 					close_modal(this.parent().parent().parent().parent());
-					preview_job(true, resp);
+					view_job(true, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/jobs/' + resp;
@@ -2347,7 +2347,7 @@ function add_problem(as_modal) {
 	})
 }
 function reupload_problem(as_modal, problem_id) {
-	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -2435,7 +2435,7 @@ function reupload_problem(as_modal, problem_id) {
 			}), function(resp) {
 				if (as_modal) {
 					close_modal(this.parent().parent().parent().parent());
-					preview_job(true, resp);
+					view_job(true, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/jobs/' + resp;
@@ -2448,16 +2448,16 @@ function rejudge_problem_submissions(problem_id) {
 	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {
 			html: [
 				'Are you sure to rejudge all submissions to the ',
-				a_preview_button('/p/' + problem_id, 'problem ' + problem_id, undefined,
-					function() { preview_problem(true, problem_id); }),
+				a_view_button('/p/' + problem_id, 'problem ' + problem_id, undefined,
+					function() { view_problem(true, problem_id); }),
 				'?'
 			]
 		}), 'Rejudge all', 'btn-small blue',
 		'/api/problem/' + problem_id + '/rejudge_all_submissions',
 		'The rejudge jobs has been scheduled.', 'No, go back', true);
 }
-function preview_problem(as_modal, problem_id, opt_hash /*= ''*/) {
-	preview_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -2504,7 +2504,7 @@ function preview_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 			$(this).find('.problem-info').append($('<div>', {
 					class: 'owner',
 					html: $('<label>', {text: 'Owner'}).add(
-						a_preview_button('/u/' + data[5], data[6], undefined, function() { preview_user(true, data[5]); }))
+						a_view_button('/u/' + data[5], data[6], undefined, function() { view_user(true, data[5]); }))
 				}));
 
 		if (actions.indexOf('a') !== -1)
@@ -2621,10 +2621,10 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 					if (obj.show_owner)
 						row.append($('<td>', {
 							html: x[5] === null ? '' :
-								(a_preview_button('/u/' + x[5], x[6], undefined,
+								(a_view_button('/u/' + x[5], x[6], undefined,
 									function() {
 										var uid = x[5];
-										return function() { preview_user(true, uid); };
+										return function() { view_user(true, uid); };
 									}()))
 						}));
 
@@ -2682,12 +2682,12 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 function problem_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
-	preview_base((parent_elem === undefined),
+	view_base((parent_elem === undefined),
 		'/p' + (opt_hash === undefined ? '' : opt_hash), function() {
 		timed_hide($(this).parent().parent().filter('.modal'));
 		$(this).append($('<h1>', {text: 'Problems'}));
 		if (logged_user_is_tearcher_or_admin())
-			$(this).append(a_preview_button('/p/add', 'Add problem', 'btn', function() {
+			$(this).append(a_view_button('/p/add', 'Add problem', 'btn', function() {
 				add_problem(true);
 			}));
 
@@ -2697,7 +2697,7 @@ function problem_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
 
 /* ================================ Contests ================================ */
 function add_contest(as_modal) {
-	preview_base(as_modal, '/c/add', function() {
+	view_base(as_modal, '/c/add', function() {
 		this.append(ajax_form('Add contest', '/api/contest/add',
 			Form.field_group("Contest's name", {
 				type: 'text',
@@ -2717,7 +2717,7 @@ function add_contest(as_modal) {
 			}), function(resp) {
 				if (as_modal) {
 					close_modal(this.parent().parent().parent().parent());
-					preview_contest(true, resp);
+					view_contest(true, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/c/' + resp;
@@ -2727,7 +2727,7 @@ function add_contest(as_modal) {
 	})
 }
 function add_contest_round(as_modal, contest_id) {
-	preview_base(as_modal, '/c/' + contest_id + '/add_round', function() {
+	view_base(as_modal, '/c/' + contest_id + '/add_round', function() {
 		this.append(ajax_form('Add round', '/api/contest/c' + contest_id + '/add_round',
 			Form.field_group("Round's name", {
 				type: 'text',
@@ -2762,7 +2762,7 @@ function add_contest_round(as_modal, contest_id) {
 			}), function(resp) {
 				if (as_modal) {
 					close_modal(this.parent().parent().parent().parent());
-					preview_contest(true, contest_id);
+					view_contest(true, contest_id);
 				} else {
 					this.parent().remove();
 					// window.location.href = '/c/r' + resp;
@@ -2773,7 +2773,7 @@ function add_contest_round(as_modal, contest_id) {
 	})
 }
 function add_contest_problem(as_modal, contest_round_id) {
-	preview_base(as_modal, '/c/r' + contest_round_id + '/add_problem', function() {
+	view_base(as_modal, '/c/r' + contest_round_id + '/add_problem', function() {
 		this.append(ajax_form('Add round', '/api/contest/r' + contest_round_id + '/add_problem',
 			Form.field_group("Problem's name", {
 				type: 'text',
@@ -2787,7 +2787,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				size: 6,
 				// maxlength: 'TODO...',
 				required: true
-			}).append(a_preview_button('/p', 'Search problems', '', problem_chooser))
+			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
 			).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -2797,7 +2797,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 			}), function(resp) {
 				if (as_modal) {
 					close_modal(this.parent().parent().parent().parent());
-					preview_contest(true, contest_id);
+					view_contest(true, contest_id);
 				} else {
 					this.parent().remove();
 					window.location.href = '/c/p' + resp;
@@ -2807,7 +2807,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 	})
 }
 function edit_contest(as_modal, contest_id) {
-	preview_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
+	view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -2847,8 +2847,8 @@ function edit_contest(as_modal, contest_id) {
 
 	}, '/c/' + contest_id + '/edit');
 }
-function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
-	preview_ajax(as_modal, '/api/contest/c' + contest_id, function(data) {
+function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
+	view_ajax(as_modal, '/api/contest/c' + contest_id, function(data) {
 		var contest = data[0];
 		var rounds = data[1];
 		var problems = data[2];
@@ -2875,9 +2875,9 @@ function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 					class: 'contest',
 					html: [
 						$('<span>', {text: contest[1]}),
-						(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/' + contest_id + '/add_round', 'Add round', 'btn-small', function() { add_contest_round(true, contest_id); })),
-						(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/' + contest_id + '/edit', 'Edit', 'btn-small blue', function() { edit_contest(true, contest_id); })),
-						(actions.indexOf('D') === -1 ? '' : a_preview_button('/c/' + contest_id + '/delete', 'Delete', 'btn-small red', function() { delete_contest(true, contest_id); })),
+						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/add_round', 'Add round', 'btn-small', function() { add_contest_round(true, contest_id); })),
+						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/edit', 'Edit', 'btn-small blue', function() { edit_contest(true, contest_id); })),
+						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/' + contest_id + '/delete', 'Delete', 'btn-small red', function() { delete_contest(true, contest_id); })),
 					]
 				}).appendTo($('<div>')).parent());
 
@@ -2902,9 +2902,9 @@ function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 								{text: 'immediately'}
 								: {datetime: round[5], text: round[5]})
 							), true),
-							(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/r' + round[0] + '/add_problem', 'Add problem', 'btn-small', function() { add_contest_problem(true, round[0]); })),
-							(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_round(true, round[0]); })),
-							(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_round(true, round[0]); })),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/add_problem', 'Add problem', 'btn-small', function() { add_contest_problem(true, round[0]); })),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_round(true, round[0]); })),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_round(true, round[0]); })),
 						]
 					}).appendTo($('<div>')).parent());
 				}
@@ -2944,9 +2944,9 @@ function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 											href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
 											text: 'Statement'
 										}),
-										(cannot_submit ? '' : a_preview_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', function() { add_submission(true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]); })),
-										(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_problem(true, problem[0]); })),
-										(actions.indexOf('A') === -1 ? '' : a_preview_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_problem(true, problem[0]); })),
+										(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', function() { add_submission(true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]); })),
+										(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_problem(true, problem[0]); })),
+										(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_problem(true, problem[0]); })),
 									]
 								}),
 							]
@@ -3132,9 +3132,9 @@ function contest_ranking(elem_, contest_id_) {
 					tr.append($('<td>', {text: user_row[1]}));
 				else {
 					tr.append($('<td>', {
-						html: a_preview_button('/u/' + user_row[0], user_row[1], '', function() {
+						html: a_view_button('/u/' + user_row[0], user_row[1], '', function() {
 								var uid = user_row[0];
-								return function() { preview_user(true, uid); };
+								return function() { view_user(true, uid); };
 							}())
 					}));
 				}
@@ -3154,9 +3154,9 @@ function contest_ranking(elem_, contest_id_) {
 						else {
 							row[x] = $('<td>', {
 								class: 'status ' + submissions[j][3][0],
-								html: a_preview_button('/s/' + submissions[j][0], submissions[j][4], '', function () {
+								html: a_view_button('/s/' + submissions[j][0], submissions[j][4], '', function () {
 									var sid = submissions[j][0];
-									return function () { preview_submission(true, sid); };
+									return function () { view_submission(true, sid); };
 								}())
 							});
 						}
@@ -3234,9 +3234,9 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 						row.append($('<td>', {text: x[0]}));
 					// Name
 					row.append($('<td>', {
-						html: a_preview_button('/c/' + x[0], x[1], '', function() {
+						html: a_view_button('/c/' + x[0], x[1], '', function() {
 								var contest_id = x[0];
-								return function () {preview_contest(true, contest_id); }
+								return function () {view_contest(true, contest_id); }
 							}())
 					}));
 
@@ -3289,12 +3289,12 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
 function contest_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
-	preview_base((parent_elem === undefined),
+	view_base((parent_elem === undefined),
 		'/c' + (opt_hash === undefined ? '' : opt_hash), function() {
 		timed_hide($(this).parent().parent().filter('.modal'));
 		$(this).append($('<h1>', {text: 'Contests'}));
 		if (logged_user_is_tearcher_or_admin())
-			$(this).append(a_preview_button('/c/add', 'Add contest', 'btn', function() {
+			$(this).append(a_view_button('/c/add', 'Add contest', 'btn', function() {
 				add_contest(true);
 			}));
 

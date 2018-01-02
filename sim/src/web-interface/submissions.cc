@@ -42,11 +42,11 @@ void Sim::submissions_handle() {
 	STACK_UNWINDING_MARK;
 
 	StringView next_arg = url_args.extractNextArg();
-	// Preview submissions
+	// View submission
 	if (isDigit(next_arg)) {
 		page_template(concat("Submission ", next_arg),
 			"body{padding-left:20px}");
-		append("<script>preview_submission(false, ", next_arg, ","
+		append("<script>view_submission(false, ", next_arg, ","
 			" window.location.hash);</script>");
 
 	// List submissions

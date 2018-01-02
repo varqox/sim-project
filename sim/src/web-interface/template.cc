@@ -46,7 +46,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 					"<div>"
 						"<a href=\"/\" class=\"brand\">SIM beta</a>"
 						"<script>"
-							"a_preview_button('/c', 'Contests', undefined,"
+							"a_view_button('/c', 'Contests', undefined,"
 								"contest_chooser).appendTo('.navbar > div');"
 							"$('.navbar > div > script').remove();"
 						"</script>"

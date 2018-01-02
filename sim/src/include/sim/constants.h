@@ -379,7 +379,7 @@ constexpr inline const char* toString(JobStatus x) {
 }
 
 // Jobs
-constexpr uint JOB_LOG_PREVIEW_MAX_LENGTH = 16 << 10; // 16 KB
+constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 16 << 10; // 16 KB
 
 // Logs
 constexpr const char SERVER_LOG[] = "logs/server.log";
