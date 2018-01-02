@@ -63,7 +63,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 		}
 
 		if (uint(jobs_get_permissions() & JobPermissions::VIEW_ALL))
-			append("<a href=\"/jobs/\">Job queue</a>");
+			append("<a href=\"/jobs\">Job queue</a>");
 
 		if (session_user_type == UserType::ADMIN)
 			append("<a href=\"/logs\">Logs</a>");

@@ -1,5 +1,14 @@
+/* If you add or edit page / lister / tabmenu / chooser or whatever make sure
+   that:
+   - centerize_modal() is put everywhere where needed
+   - timed_hide_show() is also put everywhere where appropriate (to check you
+       could change the timed_hide_delay to something big and see if everything
+       show as soon as it is loaded)
+   - all tabs (from tab-menus) and deeper / subsequent tabs works well with page
+       refreshing
+*/
 function hex2str(hexx) {
-	var hex = hexx.toString(); //force conversion
+	var hex = hexx.toString(); // force conversion
 	var str = '';
 	for (var i = 0; i < hex.length; i += 2)
 		str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
@@ -290,6 +299,12 @@ window.onpopstate = function(event) {
 		elem.nextAll('.modal').remove();
 }
 
+/* const */ var fade_in_duration = 100; // milliseconds
+
+// For best effect, the values below should be the same
+/* const */ var loader_show_delay = 400; // milliseconds
+/* const */ var timed_hide_delay = 400; // milliseconds
+
 /* ================================= Loader ================================= */
 function remove_loader(elem) {
 	$(elem).children('.loader, .loader-info').remove();
@@ -304,16 +319,18 @@ function append_loader(elem) {
 	} else
 		$(elem).append($('<span>', {
 			class: 'loader',
+			style: 'display: none',
 			html: $('<div>', {class: 'spinner'})
-		}));
+		}).delay(loader_show_delay).fadeIn(fade_in_duration));
 }
 function show_success_via_loader(elem, html) {
 	elem = $(elem);
 	remove_loader(elem);
 	elem.append($('<span>', {
 		class: 'loader-info success',
+		style: 'display:none',
 		html: html
-	}));
+	}).fadeIn(fade_in_duration));
 }
 function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	if (err_status == 'success' || err_status == 'error' || err_status === undefined)
@@ -325,13 +342,14 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	remove_loader(elem);
 	elem.append($('<span>', {
 		class: 'loader-info error',
+		style: 'display:none',
 		html: $('<span>', {
 			text: "Error: " + response.status + ' ' + response.statusText + err_status
 		}).add(try_again_handler === undefined ? '' : $('<a>', {
 			text: 'Try again',
 			click: try_again_handler
 		}))
-	}));
+	}).fadeIn(fade_in_duration));
 
 	// Additional message
 	var x = elem.find('.loader-info > span');
@@ -432,18 +450,34 @@ function modal(modal_body) {
 	return $('<div>', {
 		class: 'modal',
 		egid: egid.get_next(),
+		style: 'display: none',
 		html: $('<div>', {
 			html: $('<span>', { class: 'close' }).add(modal_body)
 		})
-	}).appendTo('body');
+	}).appendTo('body').fadeIn(fade_in_duration);
 }
 function centerize_modal(modal, allow_lowering /*= true*/) {
+	var m = $(modal);
+	if (m.length === 0)
+		return;
+
 	if (allow_lowering === undefined)
 		allow_lowering = true;
 
+	var modal_css = m.css(['display', 'position', 'left']);
+	if (modal_css.display === 'none') {
+		// Make visible for a while to get sane width properties
+		m.css({
+			display: 'block',
+			position: 'fixed',
+			left: '200%'
+		});
+	}
+
 	// Update padding-top
-	var m = $(modal);
 	var new_padding = (m.innerHeight() - m.children('div').innerHeight()) / 2;
+	if (modal_css.display === 'none')
+		m.css(modal_css);
 
 	if (!allow_lowering) {
 		var old_padding = m.css('padding-top');
@@ -519,10 +553,18 @@ function tabmenu(attacher, tabs) {
 	function set_min_width(elem) {
 		var tabm = $(elem).parent();
 		var mdiv = tabm.closest('.modal > div');
-		console.log(mdiv);
 		if (mdiv.length === 0)
 			return; // this is not in the modal
 
+		var modal_css = mdiv.parent().css(['display', 'position', 'left']);
+		if (modal_css.display === 'none') {
+			// Make visible for a while to get sane width properties
+			mdiv.parent().css({
+				display: 'block',
+				position: 'fixed',
+				left: '200%'
+			});
+		}
 		var mdiv_owidth = mdiv.outerWidth();
 
 		// Get the client width
@@ -535,13 +577,14 @@ function tabmenu(attacher, tabs) {
 			cw = mdiv.outerWidth();
 		}
 
-		console.log(mdiv_owidth, cw);
+		if (modal_css.display === 'none')
+			mdiv.parent().css(modal_css);
 
 		var p = Math.min(100, 100 * (mdiv_owidth + 2) / cw);
 		mdiv.css({
 			'min-width': 'calc('.concat(p + '% - 2px)'),
 			'max-width': ''
-		})
+		});
 	}
 
 	for (var i = 0; i < tabs.length; i += 2)
@@ -567,7 +610,6 @@ function tabmenu(attacher, tabs) {
 
 	attacher(res);
 
-
 	var arg = url_hash_parser.extract_next_arg();
 	var rc = res.children();
 	for (var i = 0; i < rc.length; ++i) {
@@ -591,17 +633,19 @@ function preview_base(as_modal, new_window_location, func, no_modal_elem) {
 		var elem = $('<div>', {
 			class: 'modal preview',
 			egid: egid.get_next(),
+			style: 'display: none',
 			html: $('<div>', {
 				html: $('<span>', { class: 'close'})
 				.add('<div>', {style: 'display:block'})
 			})
-		}).appendTo('body');
+		});
 
 		var next_egid = egid.get_next();
 		$(elem).attr('egid', next_egid);
 		window.history.pushState({egid: next_egid}, '', new_window_location);
 		url_hash_parser.assign(window.location.hash);
 
+		elem.appendTo('body').fadeIn(fade_in_duration);
 		func.call(elem.find('div > div'));
 		centerize_modal(elem);
 
@@ -623,13 +667,38 @@ function preview_base(as_modal, new_window_location, func, no_modal_elem) {
 		func.call($(no_modal_elem));
 	}
 }
-function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/) {
+function timed_hide(elem, hide_time /*= timed_hide_delay [milliseconds] */) {
+	if (hide_time === undefined)
+		hide_time = timed_hide_delay;
+
+	$(elem).hide();
+	$(elem).each(function() {
+		var xx = this;
+		xx.show = function() {
+			window.clearTimeout(timer);
+			$(xx).fadeIn(fade_in_duration);
+		};
+		var timer = window.setTimeout(xx.show, hide_time);
+	});
+}
+function timed_hide_show(elem) {
+	$(elem).each(function() {
+		if (this.show !== undefined)
+			this.show();
+	});
+}
+function preview_ajax(as_modal, ajax_url, success_handler, new_window_location, no_modal_elem /*= document.body*/, show_on_success /*= true */) {
 	preview_base(as_modal, new_window_location, function() {
 		var elem = $(this);
+		var modal = elem.parent().parent();
+		if (as_modal)
+			timed_hide(modal);
 		API_call(ajax_url, function () {
+			if (as_modal && (show_on_success !== false))
+				timed_hide_show(modal);
 			success_handler.apply(elem, arguments);
 			if (as_modal)
-				centerize_modal(elem.parent().parent());
+				centerize_modal(modal);
 		}, elem);
 	}, no_modal_elem);
 }
@@ -668,7 +737,7 @@ function Lister(elem) {
 		var modal_parent = elem.closest('.modal');
 		if (modal_parent.length === 1) {
 			function scres_handler() {
-				if (obj.elem.closest('body').length === 0) {
+				if ($(obj.elem).closest('body').length === 0) {
 					obj.elem = null;
 					$(this).off('scroll', scres_handler);
 					$(this).off('resize', scres_handler);
@@ -686,7 +755,7 @@ function Lister(elem) {
 
 		} else {
 			function scres_handler() {
-				if (obj.elem.closest('body').length === 0) {
+				if ($(obj.elem).closest('body').length === 0) {
 					obj.elem = null;
 					$(this).off('scroll', scres_handler);
 					$(this).off('resize', scres_handler);
@@ -1213,7 +1282,7 @@ function preview_user(as_modal, user_id, opt_hash /*= ''*/) {
 			}
 		]);
 
-	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash));
+	}, '/u/' + user_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function edit_user(as_modal, user_id) {
 	preview_ajax(as_modal, '/api/users/=' + user_id, function(data) {
@@ -1420,6 +1489,7 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
+				var modal = obj.elem.parents('.modal');
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
@@ -1427,6 +1497,7 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 							html: '<p>There are no users to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
+						timed_hide_show(modal);
 						return;
 					}
 
@@ -1466,7 +1537,8 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(elem.parent());
-				centerize_modal(obj.elem.parents('.modal'), false);
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -1503,8 +1575,10 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
-function user_chooser(parent_elem /*= a new modal*/) {
-	preview_base((parent_elem === undefined), '/u', function() {
+function user_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
+	preview_base((parent_elem === undefined),
+		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
+		timed_hide($(this).parent().parent().filter('.modal'));
 		$(this).append($('<h1>', {text: 'Users'}));
 		if (logged_user_is_admin())
 			$(this).append(a_preview_button('/u/add', 'Add user', 'btn', function() {
@@ -1644,6 +1718,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
+				var modal = obj.elem.parents('.modal');
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length == 0) {
 						obj.elem.parent().append($('<center>', {
@@ -1651,6 +1726,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 							html: '<p>There are no jobs to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
+						timed_hide_show(modal);
 						return;
 					}
 
@@ -1739,7 +1815,8 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(obj.elem.parent());
-				centerize_modal(obj.elem.parents('.modal'), false);
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -1971,10 +2048,10 @@ function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			]
 		}));
 
-
 		var elem = $(this);
 		var tabs = [
 			'Reports', function() {
+				timed_hide_show(elem.parents('.modal'));
 				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<div>', {
 					class: 'results',
@@ -1986,6 +2063,7 @@ function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 		var cached_source = undefined;
 		if (actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
+				timed_hide_show(elem.parents('.modal'));
 				elem.children('.tabmenu').nextAll().remove();
 				if (cached_source !== undefined)
 					elem.append(cached_source);
@@ -2016,7 +2094,7 @@ function preview_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 
 		tabmenu(function(x) { x.appendTo(elem); }, tabs);
 
-	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash));
+	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function SubmissionsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
@@ -2040,6 +2118,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
+				var modal = obj.elem.parents('.modal');
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
@@ -2047,6 +2126,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 							html: '<p>There are no submissions to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
+						timed_hide_show(modal);
 						return;
 					}
 
@@ -2147,7 +2227,8 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(obj.elem.parent());
-				centerize_modal(obj.elem.parents('.modal'), false);
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -2454,6 +2535,7 @@ function preview_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('f') !== -1)
 			tabs.push('Simfile', function() {
+				timed_hide_show(main.parents('.modal'));
 				$(this).parent().next().remove();
 				main.append($('<pre>', {
 					class: 'simfile',
@@ -2476,7 +2558,7 @@ function preview_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 
 		tabmenu(function(x) { x.appendTo(main); }, tabs);
 
-	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash));
+	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function ProblemsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
@@ -2497,6 +2579,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
+				var modal = obj.elem.parents('.modal');
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
@@ -2504,6 +2587,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 							html: '<p>There are no problems to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
+						timed_hide_show(modal);
 						return;
 					}
 
@@ -2560,7 +2644,8 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(obj.elem.parent());
-				centerize_modal(obj.elem.parents('.modal'), false);
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -2596,8 +2681,10 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
-function problem_chooser(parent_elem /*= a new modal*/) {
-	preview_base((parent_elem === undefined), '/p', function() {
+function problem_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
+	preview_base((parent_elem === undefined),
+		'/p' + (opt_hash === undefined ? '' : opt_hash), function() {
+		timed_hide($(this).parent().parent().filter('.modal'));
 		$(this).append($('<h1>', {text: 'Problems'}));
 		if (logged_user_is_tearcher_or_admin())
 			$(this).append(a_preview_button('/p/add', 'Add problem', 'btn', function() {
@@ -2780,6 +2867,7 @@ function preview_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 		var elem = $(this);
 		var tabs = [
 			'Dashboard', function() {
+				timed_hide_show(elem.parents('.modal'));
 				elem.children('.tabmenu').nextAll().remove();
 				var dashboard = $('<div>', {class: 'dashboard'}).appendTo(elem);
 				// Contest
@@ -2955,12 +3043,15 @@ function contest_ranking(elem_, contest_id_) {
 		problem_to_col_id.prepare();
 
 		API_call('/api/contest/c' + contest_id + '/ranking', function(data_) {
+			var modal = elem.parents('.modal');
 			var data = data_;
-			if (data.length == 0)
+			if (data.length == 0) {
+				timed_hide_show(modal);
 				return elem.append($('<center>', {
 					class: 'always_in_view',
 					html: '<p>There is no one in the ranking yet...</p>'
 				}));
+			}
 
 			// Construct table's head
 			var tr = $('<tr>', {
@@ -3087,7 +3178,8 @@ function contest_ranking(elem_, contest_id_) {
 				html: [thead, tbody]
 			}));
 
-			centerize_modal(elem.parents('.modal'), false);
+			timed_hide_show(modal);
+			centerize_modal(modal, false);
 
 		}, elem);
 
@@ -3109,6 +3201,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 			url: obj.query_url + obj.query_suffix,
 			dataType: 'json',
 			success: function(data) {
+				var modal = obj.elem.parents('.modal');
 				if (obj.elem.children('thead').length === 0) {
 					if (data.length === 0) {
 						obj.elem.parent().append($('<center>', {
@@ -3116,6 +3209,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 							html: '<p>There are no contests to show...</p>'
 						}));
 						remove_loader(obj.elem.parent());
+						timed_hide_show(modal);
 						return;
 					}
 
@@ -3155,7 +3249,8 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 				}
 
 				remove_loader(obj.elem.parent());
-				centerize_modal(obj.elem.parents('.modal'), false);
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
 
 				if (data.length == 0)
 					return; // No more data to load
@@ -3193,8 +3288,10 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
-function contest_chooser(parent_elem /*= a new modal*/) {
-	preview_base((parent_elem === undefined), '/c', function() {
+function contest_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
+	preview_base((parent_elem === undefined),
+		'/c' + (opt_hash === undefined ? '' : opt_hash), function() {
+		timed_hide($(this).parent().parent().filter('.modal'));
 		$(this).append($('<h1>', {text: 'Contests'}));
 		if (logged_user_is_tearcher_or_admin())
 			$(this).append(a_preview_button('/c/add', 'Add contest', 'btn', function() {
@@ -3289,3 +3386,128 @@ function expelContestUser(contest_id, user_id, username) {
 			'No, the user may stay'))
 	);
 }*/
+
+function foo() {
+	var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	var time = new Date();
+
+	var header = $('<span>');
+	var calendar = $('<table>', {
+		class: 'calendar',
+		html: $('<thead>', {
+			html: [
+				$('<tr>', {
+					html: [
+						$('<th>', {
+							html: $('<a>', {click: function() {
+								time.setMonth(time.getMonth() - 1);
+								update_header();
+								update_tbody();
+							}, text: 'xd'})
+						}),
+						$('<th>', {
+							colspan: 5,
+							html: header
+						}),
+						$('<th>', {
+							html: $('<a>', {click: function() {
+								time.setMonth(time.getMonth() + 1);
+								update_header();
+								update_tbody();
+								console.log(time);
+							}, text: 'xd'})
+						})
+					]
+				}),
+				$('<tr>', {
+					html: [
+						$('<th>', {text: 'Mon'}),
+						$('<th>', {text: 'Tue'}),
+						$('<th>', {text: 'Wed'}),
+						$('<th>', {text: 'Thu'}),
+						$('<th>', {text: 'Fri'}),
+						$('<th>', {text: 'Sat'}),
+						$('<th>', {text: 'Sun'})
+					]
+				})
+			]
+		})
+	});
+
+	var update_header = function() {
+		header.text(months[time.getMonth()] + ' ' + time.getFullYear());
+	}
+	update_header();
+
+	// Days table
+	function update_tbody() {
+		var tbody = $('<tbody>');
+		var day_onclick = function (that_elem_time) {
+			var tet = new Date(that_elem_time.valueOf());
+			return function() {
+				// Update time
+				time = new Date(tet.getFullYear(),
+					tet.getMonth(),
+					tet.getDate(),
+					tet.getHours(),
+					tet.getMinutes(),
+					tet.getSeconds());
+				console.log(time.toJSON());
+				// Update the calendar
+				update_header();
+				update_tbody();
+			};
+		};
+
+		var tm = new Date(time.valueOf());
+		tm.setDate(1);
+		// Move tm back until it is Monday
+		while (tm.getDay() != 1)
+			tm.setDate(tm.getDate() - 1);
+		// Fill all the table
+		var passed_curr_day = false;
+		var today = new Date();
+		while (!passed_curr_day || tm.getMonth() === time.getMonth()) {
+			// Add row (all the 7 days)
+			var tr = $('<tr>');
+			for (var i = 0; i < 7; ++i) {
+				var td = $('<td>', {
+					html: $('<a>', {
+						text: tm.getDate(),
+						click: day_onclick(tm)
+					})
+				});
+				// Other month than currently selected
+				if (tm.getMonth() !== time.getMonth())
+					td.addClass('gray');
+				// Mark today
+				if (tm.getFullYear() === today.getFullYear() &&
+					tm.getMonth() === today.getMonth() &&
+					tm.getDate() === today.getDate())
+				{
+					td.addClass('today');
+				}
+				// Mark the selected day
+				if (tm.getMonth() === time.getMonth() &&
+					tm.getDate() === time.getDate())
+				{
+					passed_curr_day = true;
+					td.addClass('chosen');
+				}
+				tr.append(td);
+
+				tm.setDate(tm.getDate() + 1);
+			}
+			tbody.append(tr);
+		}
+		calendar.children('tbody').remove();
+		calendar.append(tbody);
+	};
+	update_tbody();
+
+	modal($('<div>', {
+		html: calendar
+	}));
+}
+
+// $(document).ready(foo);
