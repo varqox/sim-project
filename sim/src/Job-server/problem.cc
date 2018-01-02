@@ -31,16 +31,16 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 
 	FileRemover package_remover(dest_package.to_cstr());
 
-	sim::Conver::ReportBuff report;
-	report.append("Stage: FIRST");
+	sim::Conver::ReportBuff job_log;
+	job_log.append("Stage: FIRST");
 
 	auto set_failure = [&] {
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-		stmt.bindAndExecute(report.str, job_id);
+		stmt.bindAndExecute(job_log.str, job_id);
 
-		stdlog("Job ", job_id, ":\n", report.str);
+		stdlog("Job ", job_id, ":\n", job_log.str);
 	};
 
 	// dest_package is initially equal to the source_package
@@ -66,25 +66,25 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 	try {
 		cr = conver.constructSimfile(copts);
 	} catch (const std::exception& e) {
-		report.append(conver.getReport(), "Conver failed: ", e.what());
+		job_log.append(conver.getReport(), "Conver failed: ", e.what());
 		return set_failure();
 	}
 
 	// Check problem's name's length
 	if (cr.simfile.name.size() > PROBLEM_NAME_MAX_LEN) {
-		report.append("Problem's name is too long (max allowed length: ",
+		job_log.append("Problem's name is too long (max allowed length: ",
 			PROBLEM_NAME_MAX_LEN, ')');
 		return set_failure();
 	}
 
 	// Check problem's label's length
 	if (cr.simfile.label.size() > PROBLEM_LABEL_MAX_LEN) {
-		report.append("Problem's label is too long (max allowed length: ",
+		job_log.append("Problem's label is too long (max allowed length: ",
 			PROBLEM_LABEL_MAX_LEN, ')');
 		return set_failure();
 	}
 
-	report.append(conver.getReport());
+	job_log.append(conver.getReport());
 
 	/* Advance the stage */
 
@@ -100,7 +100,7 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_PENDING_STR ", info=?, data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-		stmt.bindAndExecute(info.dump(), report.str, job_id);
+		stmt.bindAndExecute(info.dump(), job_log.str, job_id);
 		break;
 	}
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
@@ -111,12 +111,12 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 		stmt.bindAndExecute(
 			uint(action == Action::ADDING ? JobType::ADD_JUDGE_MODEL_SOLUTION
 				: JobType::REUPLOAD_JUDGE_MODEL_SOLUTION),
-			info.dump(), report.str, job_id);
+			info.dump(), job_log.str, job_id);
 		break;
 	}
 	}
 
-	stdlog("Job ", job_id, ":\n", report.str);
+	stdlog("Job ", job_id, ":\n", job_log.str);
 	package_remover.cancel();
 }
 
@@ -127,7 +127,7 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
  * @param job_id job id
  * @param job_owner job owner
  * @param info add info
- * @param report report to append the log to
+ * @param job_log job_log to append the log to
  * @tparam Trait trait to use
  *
  * @return Id of the added problem
@@ -136,14 +136,14 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
  */
 template<Action action>
 static uint64_t secondStage(uint64_t job_id, StringView job_owner,
-	const AddProblemInfo& info, sim::Conver::ReportBuff& report)
+	const AddProblemInfo& info, sim::Conver::ReportBuff& job_log)
 {
 	STACK_UNWINDING_MARK;
 
 	auto package_path = concat("jobs_files/", job_id, ".zip.prep");
 	FileRemover job_package_remover(package_path.to_cstr());
 
-	report.append("\nStage: SECOND");
+	job_log.append("\nStage: SECOND");
 	auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
 
 	// Load the Simfile
@@ -216,7 +216,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	}, tmp_dir.path());
 
 	// Submit the solutions
-	report.append("Submitting solutions...");
+	job_log.append("Submitting solutions...");
 	const string zero_date = date("%Y-%m-%d %H:%M:%S", 0);
 	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, status,"
@@ -226,7 +226,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	stmt.bind_all(problem_id, current_date, zero_date);
 
 	for (auto&& solution : sf.solutions) {
-		report.append("Submit: ", solution);
+		job_log.append("Submit: ", solution);
 
 		current_date = date();
 		stmt.execute();
@@ -239,7 +239,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 			THROW("Copying solution `", solution, "`: copy()", error());
 		}
 	}
-	report.append("Done.");
+	job_log.append("Done.");
 
 	// Notify the job-server that there are submissions to judge
 	utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
@@ -276,15 +276,15 @@ static void addProblem(uint64_t job_id, StringView job_owner, StringView aux_id,
 		break;
 
 	case AddProblemInfo::SECOND: {
-		sim::Conver::ReportBuff report;
+		sim::Conver::ReportBuff job_log;
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=?, aux_id=?, data=CONCAT(data,?) WHERE id=?");
 		JobStatus status; // [[maybe_uninitilized]]
 		uint64_t apid; // Added problem's id
 		try {
 			sqlite.execute("BEGIN");
-			apid = secondStage<action>(job_id, job_owner, info, report);
-			success_callback(apid, report);
+			apid = secondStage<action>(job_id, job_owner, info, job_log);
+			success_callback(apid, job_log);
 			sqlite.execute("COMMIT");
 
 			status = JobStatus::DONE;
@@ -298,7 +298,7 @@ static void addProblem(uint64_t job_id, StringView job_owner, StringView aux_id,
 			(void)sqlite3_exec(sqlite, "ROLLBACK", nullptr, nullptr, nullptr);
 
 			ERRLOG_CATCH(e);
-			report.append("Caught exception: ", e.what());
+			job_log.append("Caught exception: ", e.what());
 
 			status = JobStatus::FAILED;
 			if (action == Action::REUPLOADING)
@@ -309,11 +309,11 @@ static void addProblem(uint64_t job_id, StringView job_owner, StringView aux_id,
 
 		uint x = (uint)status;
 		stmt.bind(0, x);
-		stmt.bind(2, report.str);
+		stmt.bind(2, job_log.str);
 		stmt.bind(3, job_id);
 		stmt.fixAndExecute();
 
-		stdlog("Job: ", job_id, '\n', report.str);
+		stdlog("Job: ", job_id, '\n', job_log.str);
 		break;
 	}
 	}
@@ -373,10 +373,10 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 
 	AddProblemInfo p_info {info};
 	addProblem<Action::REUPLOADING>(job_id, job_owner, aux_id, p_info,
-		[&](uint64_t tmp_problem_id, sim::Conver::ReportBuff& report) {
+		[&](uint64_t tmp_problem_id, sim::Conver::ReportBuff& job_log) {
 			STACK_UNWINDING_MARK;
 
-			report.append("Replacing the old package with the new one...");
+			job_log.append("Replacing the old package with the new one...");
 
 			// Make a backup of the problem
 			vector<pair<bool, string>> pbackup;

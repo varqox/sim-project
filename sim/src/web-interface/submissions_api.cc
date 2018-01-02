@@ -242,7 +242,7 @@ void Sim::api_submissions() {
 		StringView cr_id = res[10];
 		StringView cr_name = res[11];
 		bool reveal_score = (res[12] != "0");
-		bool show_full_results = (bool(uint(perms & PERM::VIEW_FULL_REPORT)) or
+		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
 			res.is_null(13) or res[13] <= curr_date);
 		StringView cr_ends = res[14];
 		StringView c_id = res[15];

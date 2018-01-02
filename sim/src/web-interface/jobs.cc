@@ -17,23 +17,23 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 	JobPermissions perm = (isIn(job_type, {JT::ADD_PROBLEM,
 		JT::REUPLOAD_PROBLEM, JT::ADD_JUDGE_MODEL_SOLUTION,
 		JT::REUPLOAD_JUDGE_MODEL_SOLUTION})
-		? PERM::DOWNLOAD_REPORT | PERM::DOWNLOAD_UPLOADED_PACKAGE : PERM::NONE);
+		? PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_PACKAGE : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN) {
 		switch (job_status) {
 		case JS::PENDING:
 		case JS::NOTICED_PENDING:
 		case JS::IN_PROGRESS:
-			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL |
+			return perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
 				PERM::CANCEL;
 
 		case JS::FAILED:
 		case JS::CANCELED:
-			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL |
+			return perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL |
 				PERM::RESTART;
 
 		default:
-			return perm | PERM::VIEW | PERM::DOWNLOAD_REPORT | PERM::VIEW_ALL;
+			return perm | PERM::VIEW | PERM::DOWNLOAD_LOG | PERM::VIEW_ALL;
 		}
 	}
 
@@ -60,7 +60,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 	if (stmt.next()) {
 		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
 		if (uint(pperms & ProblemPermissions::VIEW_RELATED_JOBS))
-			return PERM::VIEW | PERM::DOWNLOAD_REPORT |
+			return PERM::VIEW | PERM::DOWNLOAD_LOG |
 				PERM::DOWNLOAD_UPLOADED_PACKAGE;
 	}
 
@@ -92,7 +92,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 		if (not stmt.is_null(3) and
 			isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
 		{
-			return PERM::VIEW | PERM::DOWNLOAD_REPORT;
+			return PERM::VIEW | PERM::DOWNLOAD_LOG;
 		}
 
 		// The below check has to be done as the last one because it gives the
@@ -102,7 +102,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 		if (SubmissionType(stype) == SubmissionType::PROBLEM_SOLUTION and
 			bool(uint(pperms & ProblemPermissions::EDIT)))
 		{
-			return PERM::VIEW | PERM::DOWNLOAD_REPORT;
+			return PERM::VIEW | PERM::DOWNLOAD_LOG;
 		}
 	}
 
