@@ -86,7 +86,7 @@ void Sim::api_jobs() {
 			}
 
 			qfields.append(", SUBSTR(data, 1, ",
-				meta::ToString<JOB_LOG_PREVIEW_MAX_LENGTH + 1>{}, ')');
+				meta::ToString<JOB_LOG_VIEW_MAX_LENGTH + 1>{}, ')');
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
@@ -248,10 +248,10 @@ void Sim::api_jobs() {
 			append('R');
 		append('\"');
 
-		// Append log preview (whether there is more to load, data)
+		// Append log view (whether there is more to load, data)
 		if (select_specified_job and uint(perms & PERM::DOWNLOAD_LOG))
-			append(",[", res[9].size() > JOB_LOG_PREVIEW_MAX_LENGTH, ',',
-				jsonStringify(res[9]), ']'); // log preview
+			append(",[", res[9].size() > JOB_LOG_VIEW_MAX_LENGTH, ',',
+				jsonStringify(res[9]), ']'); // log view
 
 		append("],");
 	}

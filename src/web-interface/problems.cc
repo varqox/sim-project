@@ -93,7 +93,7 @@ void Sim::problems_problem() {
 	if (next_arg.empty()) {
 		page_template(concat("Problem ", problems_pid),
 			"body{padding-left:20px}");
-		append("<script>preview_problem(false, ", problems_pid, ","
+		append("<script>view_problem(false, ", problems_pid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
