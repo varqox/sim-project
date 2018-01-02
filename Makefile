@@ -115,7 +115,7 @@ src/setup-installation: src/setup_installation.o src/lib/sim.a src/lib/simlib/si
 
 $(eval $(call load_dependencies, src/backup.cc))
 src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++
+	$(LINK) -lsupc++ -lrt
 
 JOB_SERVER_SRCS := \
 	src/Job-server/judge.cc \
@@ -126,7 +126,7 @@ $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
 
 src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -larchive
+	$(LINK) -lsupc++ -lrt -larchive
 
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \
@@ -173,7 +173,7 @@ src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(s
 src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
 
 src/sim-server: $(SIM_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -larchive
+	$(LINK) -lsupc++ -lrt -larchive
 
 SIM_TEST_SRCS := \
 	test/jobs.cc
@@ -189,7 +189,7 @@ $(eval $(call load_dependencies, $(CTH_TEST_SRCS)))
 CTH_TEST_OBJS := $(call SRCS_TO_OBJS, $(CTH_TEST_SRCS))
 
 test/cpp_syntax_highlighter/check: $(CTH_TEST_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK)
+	$(LINK) -lrt
 
 SIM_OBJS := $(JOB_SERVER_OBJS) $(SIM_SERVER_OBJS) $(LIB_SIM_OBJS) \
 	$(SIM_TEST_OBJS) $(CTH_TEST_OBJS) src/killinstc.o src/setup_installation.o \
