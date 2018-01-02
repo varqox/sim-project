@@ -68,7 +68,7 @@ endif
 	@printf "\033[;32mInstallation finished\033[0m\n"
 
 .PHONY: reinstall
-reinstall: SETUP_INSTALL_FLAGS += --drop-tables
+reinstall: override SETUP_INSTALL_FLAGS += --drop-tables
 reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
 	@ #     ^ reinstall always have to be executed at the end (but before run)
 	# Kill sim-server and job-server
@@ -80,7 +80,7 @@ reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
 	$(MAKE) install
 
 .PHONY: uninstall
-uninstall: SETUP_INSTALL_FLAGS += --only-drop-tables
+uninstall: override SETUP_INSTALL_FLAGS += --only-drop-tables
 uninstall:
 	# Kill sim-server and job-server
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
@@ -111,11 +111,11 @@ src/killinstc: src/killinstc.o src/lib/simlib/simlib.a
 
 $(eval $(call load_dependencies, src/setup_installation.cc))
 src/setup-installation: src/setup_installation.o src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -pthread -ldl -lmysqlclient
+	$(LINK) -lsupc++
 
 $(eval $(call load_dependencies, src/backup.cc))
 src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -pthread -ldl -lmysqlclient
+	$(LINK) -lsupc++
 
 JOB_SERVER_SRCS := \
 	src/Job-server/judge.cc \
@@ -126,7 +126,7 @@ $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
 
 src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive -pthread -ldl -lmysqlclient
+	$(LINK) -lsupc++ -larchive
 
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \
@@ -139,7 +139,7 @@ LIB_SIM_OBJS := $(call SRCS_TO_OBJS, $(LIB_SIM_SRCS))
 # SQLite
 $(eval $(call load_dependencies, src/lib/sqlite3.c))
 src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
-src/lib/sqlite3.o: EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2
+src/lib/sqlite3.o: override EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2
 
 src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
 	$(MAKE_STATIC_LIB)
@@ -168,12 +168,12 @@ $(eval $(call load_dependencies, $(SIM_SERVER_SRCS)))
 SIM_SERVER_OBJS := $(call SRCS_TO_OBJS, $(SIM_SERVER_SRCS))
 
 # Technique used to force browsers to always keep up-to-date version of the files below
-src/web-interface/template.o: EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
-src/web-interface/template.o: EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
-src/web-interface/template.o: EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
+src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
+src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
+src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
 
 src/sim-server: $(SIM_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive -pthread -ldl -lmysqlclient
+	$(LINK) -lsupc++ -larchive
 
 SIM_TEST_SRCS := \
 	test/jobs.cc
@@ -181,7 +181,7 @@ $(eval $(call load_dependencies, $(SIM_TEST_SRCS)))
 SIM_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIM_TEST_SRCS))
 
 test/exec: $(SIM_TEST_OBJS) src/lib/sim.a src/lib/simlib/gtest_main.a
-	$(LINK) -pthread
+	$(LINK)
 
 CTH_TEST_SRCS := \
 	test/cpp_syntax_highlighter/check.cc
@@ -189,7 +189,7 @@ $(eval $(call load_dependencies, $(CTH_TEST_SRCS)))
 CTH_TEST_OBJS := $(call SRCS_TO_OBJS, $(CTH_TEST_SRCS))
 
 test/cpp_syntax_highlighter/check: $(CTH_TEST_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lrt -pthread
+	$(LINK)
 
 SIM_OBJS := $(JOB_SERVER_OBJS) $(SIM_SERVER_OBJS) $(LIB_SIM_OBJS) \
 	$(SIM_TEST_OBJS) $(CTH_TEST_OBJS) src/killinstc.o src/setup_installation.o \
@@ -197,8 +197,8 @@ SIM_OBJS := $(JOB_SERVER_OBJS) $(SIM_SERVER_OBJS) $(LIB_SIM_OBJS) \
 SIM_EXECS := src/killinstc src/setup-installation src/backup src/job-server \
 	src/sim-server test/exec test/cpp_syntax_highlighter/check
 
-$(SIM_OBJS): EXTRA_CXX_FLAGS += $(SIM_CXX_FLAGS)
-$(SIM_EXECS): private EXTRA_LD_FLAGS += $(SIM_LD_FLAGS)
+$(SIM_OBJS): override EXTRA_CXX_FLAGS += $(SIM_CXX_FLAGS)
+$(SIM_EXECS): private override EXTRA_LD_FLAGS += $(SIM_LD_FLAGS)
 
 .PHONY: clean
 clean: OBJS := $(SIM_OBJS) src/lib/sqlite3.o
