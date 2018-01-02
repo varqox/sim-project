@@ -303,7 +303,8 @@ void Sim::users_handle() {
 			return error403();
 
 		page_template("Users", "body{padding-left:20px}");
-		append("<script>user_chooser($('body'));</script>");
+		append("<script>user_chooser($('body'), window.location.hash"
+			");</script>");
 
 	} else
 		return error404();
@@ -315,8 +316,7 @@ void Sim::users_user() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
 		page_template(concat("User ", users_uid), "body{padding-left:20px}");
-		append("<script>preview_user(false, ", users_uid, ","
-			" window.location.hash);</script>");
+		append("<script>preview_user(false, ", users_uid, ","			" window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
 		page_template(concat("Edit user ", users_uid));

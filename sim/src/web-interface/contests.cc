@@ -66,7 +66,8 @@ void Sim::contests_handle() {
 	// List contests
 	} else if (next_arg.empty()) {
 		page_template("Contests", "body{padding-left:20px}");
-		append("<script>contest_chooser($('body'))</script>");
+		append("<script>contest_chooser($('body'), window.location.hash"
+			")</script>");
 
 	} else
 		return error404();
