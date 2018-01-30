@@ -44,11 +44,11 @@ ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept {
 void readFromDevUrandom(void* dest, size_t bytes) {
 	FileDescriptor fd("/dev/urandom", O_RDONLY);
 	if (fd == -1)
-		THROW("Failed to open /dev/urandom", error());
+		THROW("Failed to open /dev/urandom", errmsg());
 
 	size_t len = readAll(fd, dest, bytes);
 	int errnum = errno;
 
 	if (len != bytes)
-		THROW("Failed to read from /dev/urandom", error(errnum));
+		THROW("Failed to read from /dev/urandom", errmsg(errnum));
 }

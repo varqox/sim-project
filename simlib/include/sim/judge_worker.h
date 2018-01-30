@@ -55,6 +55,7 @@ public:
 	};
 
 	std::vector<Group> groups;
+	std::string judge_log;
 
 	/**
 	 * @brief Returns the pretty-printed judge report

@@ -62,7 +62,7 @@ inline const char* __what(const std::exception& e) {
 
 #define ERRLOG_AND_FORWARD(...) { ERRLOG_FORWARDING(__VA_ARGS__); throw; }
 
-inline StringBuff<4096> error(int errnum) noexcept {
+inline StringBuff<4096> errmsg(int errnum) noexcept {
 	std::array<char, 4000> buff;
 	auto errcode = toStr(errnum);
 	static_assert(decltype(errcode)::max_size < 90,
@@ -71,7 +71,7 @@ inline StringBuff<4096> error(int errnum) noexcept {
 		buff.size())};
 }
 
-inline auto error() noexcept { return error(errno); }
+inline auto errmsg() noexcept { return errmsg(errno); }
 
 #if !defined(__cpp_lib_uncaught_exceptions) || __cpp_lib_uncaught_exceptions < 201411
 namespace __cxxabiv1 {

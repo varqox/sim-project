@@ -108,7 +108,7 @@ void skim_archive(CStringView filename, Func&& setup_archive,
 {
 	FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 	if (fd == -1)
-		THROW("Failed to open file `", filename, '`', error());
+		THROW("Failed to open file `", filename, '`', errmsg());
 
 	return skim_archive(fd, std::forward<Func>(setup_archive),
 		std::forward<UnaryFunc>(entry_callback));
@@ -238,7 +238,7 @@ void extract(CStringView filename, int flags,
 {
 	FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 	if (fd == -1)
-		THROW("Failed to open file `", filename, '`', error());
+		THROW("Failed to open file `", filename, '`', errmsg());
 
 	return extract(fd, flags, std::forward<Func>(setup_archives),
 		std::forward<UnaryFunc>(extract_entry), dest_dir);
@@ -316,7 +316,7 @@ std::string extract_file(CStringView archive_file, Func&& setup_archive,
 {
 	FileDescriptor fd {archive_file, O_RDONLY | O_LARGEFILE};
 	if (fd == -1)
-		THROW("Failed to open file `", archive_file, '`', error());
+		THROW("Failed to open file `", archive_file, '`', errmsg());
 
 	return extract_file(fd, std::forward<Func>(setup_archive), pathname);
 }
@@ -389,7 +389,7 @@ void compress(Container&& filenames, CStringView archive_filename,
 
 	FileDescriptor fd(archive_filename, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd == -1)
-		THROW("Failed to open file `", archive_filename, '`', error());
+		THROW("Failed to open file `", archive_filename, '`', errmsg());
 
 	if (archive_write_open_fd(out, fd))
 		THROW("archive_write_open_fd() - ", archive_error_string(out));
@@ -424,7 +424,7 @@ void compress(Container&& filenames, CStringView archive_filename,
 		}
 
 		if (r)
-			THROW("read()", error());
+			THROW("read()", errmsg());
 	};
 
 	InplaceBuff<PATH_MAX> pathname;
@@ -456,7 +456,7 @@ void compress(Container&& filenames, CStringView archive_filename,
 
 		Directory dir(pathname.to_cstr());
 		if (not dir)
-			THROW("opendir(`", pathname, "`)", error());
+			THROW("opendir(`", pathname, "`)", errmsg());
 
 		dirent* file;
 		while ((file = readdir(dir)))
@@ -465,7 +465,7 @@ void compress(Container&& filenames, CStringView archive_filename,
 				pathname.append(file->d_name);
 
 				if (stat64(pathname.to_cstr().c_str(), &st))
-					THROW("stat(`", pathname, "`)", error());
+					THROW("stat(`", pathname, "`)", errmsg());
 
 				if (S_ISREG(st.st_mode))
 					write_file(pathname.to_cstr(), st);
@@ -479,7 +479,7 @@ void compress(Container&& filenames, CStringView archive_filename,
 	for (auto&& filename : filenames) {
 		struct stat64 st;
 		if (stat64(filename, &st))
-			THROW("stat(`", filename, "`)", error());
+			THROW("stat(`", filename, "`)", errmsg());
 
 		pathname = filename;
 		throw_assert(pathname.size > 0);

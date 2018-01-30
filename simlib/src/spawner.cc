@@ -19,7 +19,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 
 	switch (si.si_code) {
 	case CLD_EXITED:
-		message = concat_tostr("returned ", si.si_status);
+		message = concat_tostr("exited with ", si.si_status);
 		break;
 	case CLD_KILLED:
 		message = concat_tostr("killed by signal ", si.si_status, " - ",
@@ -42,11 +42,11 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 	// Error stream from child (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
-		THROW("pipe()", error());
+		THROW("pipe()", errmsg());
 
 	int cpid = fork();
 	if (cpid == -1)
-		THROW("fork()", error());
+		THROW("fork()", errmsg());
 
 	else if (cpid == 0) {
 		sclose(pfd[0]);

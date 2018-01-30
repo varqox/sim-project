@@ -100,7 +100,7 @@ protected:
 	{
 		writeAll(fd, str.data(), str.size());
 
-		auto err = error(errnum);
+		auto err = errmsg(errnum);
 		writeAll(fd, err.data(), err.size());
 
 		_exit(-1);
@@ -167,7 +167,7 @@ protected:
 		Timer(pid_t pid, timespec time_limit) : pid_ {pid}, tlimit(time_limit) {
 			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
 				if (clock_gettime(CLOCK_MONOTONIC, &begin_point))
-					THROW("clock_gettime()", error());
+					THROW("clock_gettime()", errmsg());
 
 			} else {
 				const int USED_SIGNAL = SIGRTMIN;
@@ -177,7 +177,7 @@ protected:
 				sa.sa_flags = SA_SIGINFO | SA_RESTART;
 				sa.sa_sigaction = handle_timeout;
 				if (sigaction(USED_SIGNAL, &sa, nullptr))
-					THROW("signaction()", error());
+					THROW("signaction()", errmsg());
 
 				// Prepare timer
 				sigevent sev;
@@ -186,7 +186,7 @@ protected:
 				sev.sigev_signo = USED_SIGNAL;
 				sev.sigev_value.sival_ptr = &pid_;
 				if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
-					THROW("timer_create()", error());
+					THROW("timer_create()", errmsg());
 
 				timer_active = true;
 
@@ -195,7 +195,7 @@ protected:
 				if (timer_settime(timerid, 0, &its, nullptr)) {
 					int errnum = errno;
 					delete_timer();
-					THROW("timer_settime()", error(errnum));
+					THROW("timer_settime()", errmsg(errnum));
 				}
 			}
 		}
@@ -204,13 +204,13 @@ protected:
 			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
 				timespec end_point;
 				if (clock_gettime(CLOCK_MONOTONIC, &end_point))
-					THROW("clock_gettime()", error());
+					THROW("clock_gettime()", errmsg());
 				return end_point - begin_point;
 			}
 
 			itimerspec its {{0, 0}, {0, 0}}, old;
 			if (timer_settime(timerid, 0, &its, &old))
-				THROW("timer_settime()", error());
+				THROW("timer_settime()", errmsg());
 
 			delete_timer();
 			return tlimit - old.it_value;
@@ -259,7 +259,7 @@ protected:
 				return; // No limit is set - nothing to do
 
 			if (clock_getcpuclockid(pid, &data.cid))
-				THROW("clock_getcpuclockid()", error());
+				THROW("clock_getcpuclockid()", errmsg());
 
 			const int USED_SIGNAL = SIGRTMIN + 1;
 
@@ -268,7 +268,7 @@ protected:
 			sa.sa_sigaction = handler;
 			sigfillset(&sa.sa_mask); // Prevent interrupting
 			if (sigaction(USED_SIGNAL, &sa, nullptr))
-				THROW("signaction()", error());
+				THROW("signaction()", errmsg());
 
 			// Prepare timer
 			sigevent sev;
@@ -277,7 +277,7 @@ protected:
 			sev.sigev_signo = USED_SIGNAL;
 			sev.sigev_value.sival_ptr = &data;
 			if (timer_create(CLOCK_MONOTONIC, &sev, &data.timerid))
-				THROW("timer_create()", error());
+				THROW("timer_create()", errmsg());
 
 			timer_active = true;
 
@@ -285,7 +285,7 @@ protected:
 			if (timer_settime(data.timerid, 0, &its, nullptr)) {
 				int errnum = errno;
 				deactivate();
-				THROW("timer_settime()", error(errnum));
+				THROW("timer_settime()", errmsg(errnum));
 			}
 		}
 

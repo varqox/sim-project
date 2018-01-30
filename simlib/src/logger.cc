@@ -10,33 +10,35 @@ Logger::Logger(CStringView filename)
 	: f_(fopen(filename.c_str(), "a")), opened_(true)
 {
 	if (f_ == nullptr)
-		THROW("fopen('", filename, "') failed", error());
+		THROW("fopen('", filename, "') failed", errmsg());
 }
 
 void Logger::open(CStringView filename) {
 	FILE *f = fopen(filename.c_str(), "a");
 	if (f == nullptr)
-		THROW("fopen('", filename, "') failed", error());
+		THROW("fopen('", filename, "') failed", errmsg());
 
 	close();
 	f_ = f;
 }
 
-void Logger::Appender::flush() noexcept {
+void Logger::Appender::flush_impl(const char* s1, const char* s2,
+	const char* s3) noexcept
+{
 	if (flushed_)
 		return;
 
 	if (logger_.lock()) {
-		if (logger_.label()) {
+		if (label_) {
 			try {
-				fprintf(logger_.f_, "[ %s ] %.*s\n", localdate().c_str(),
+				fprintf(logger_.f_, s1, localdate().c_str(),
 					(int)buff_.size, buff_.data());
 			} catch (const std::exception&) {
-				fprintf(logger_.f_, "[ unknown time ] %.*s\n", (int)buff_.size,
+				fprintf(logger_.f_, s2, (int)buff_.size,
 					buff_.data());
 			}
 		} else
-			fprintf(logger_.f_, "%.*s\n", (int)buff_.size, buff_.data());
+			fprintf(logger_.f_, s3, (int)buff_.size, buff_.data());
 
 		fflush(logger_.f_);
 		logger_.unlock();

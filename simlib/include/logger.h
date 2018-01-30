@@ -1,6 +1,7 @@
 #pragma once
 
 #include "string.h"
+#include "utilities.h"
 
 #include <atomic>
 
@@ -35,7 +36,7 @@ public:
 	// Like open()
 	explicit Logger(CStringView filename);
 
-	// Like use()
+	// Like use(), it accept nullptr for which a dummy logger is created
 	explicit Logger(FILE *stream) noexcept : f_(stream) {}
 
 	/**
@@ -48,7 +49,8 @@ public:
 	 */
 	void open(CStringView filename);
 
-	/// Use @p stream as log stream
+	/// Use @p stream as log stream, nullptr is acceptable for the logger
+	/// becomes a dummy
 	void use(FILE *stream) noexcept {
 		close();
 		f_ = stream;
@@ -70,26 +72,36 @@ public:
 
 		Logger& logger_;
 		bool flushed_ = true;
+		// *label_ are useful with flush_no_nl() to avoid adding label in the
+		// middle of the line
+		bool orig_label_;
+		bool label_;
 		InplaceBuff<8192> buff_;
 
 		explicit Appender(Logger& logger) : logger_(logger) {}
 
 		template<class... Args>
-		explicit Appender(Logger& logger, Args&&... args) : logger_(logger) {
+		explicit Appender(Logger& logger, Args&&... args) : logger_(logger),
+			orig_label_(logger.label()), label_(orig_label_)
+		{
 			operator()(std::forward<Args>(args)...);
 		}
+
+		/// Deeply integrated with flush() and flush_no_nl()
+		void flush_impl(const char* format1, const char* format2,
+			const char* format3) noexcept;
 
 	public:
 		Appender(const Appender&) = delete;
 
 		Appender(Appender&& app) : logger_(app.logger_), flushed_(app.flushed_),
+			orig_label_(app.orig_label_), label_(app.label_),
 			buff_(std::move(app.buff_))
 		{
 			app.flushed_ = true;
 		}
 
 		Appender& operator=(const Appender&) = delete;
-
 		Appender& operator=(Appender&&) = delete;
 
 		template<class T>
@@ -104,7 +116,16 @@ public:
 			return *this;
 		}
 
-		void flush() noexcept;
+		void flush() noexcept {
+			flush_impl("[ %s ] %.*s\n", "[ unknown time ] %.*s\n", "%.*s\n");
+			label_ = orig_label_;
+		}
+
+		/// Like flush() but does not append the '\n' to the log
+		void flush_no_nl() noexcept {
+			flush_impl("[ %s ] %.*s", "[ unknown time ] %.*s", "%.*s");
+			label_ = false;
+		}
 
 		~Appender() { flush(); }
 	};
@@ -130,3 +151,49 @@ public:
 // By default both write to stderr
 extern Logger stdlog; // Standard (default) log
 extern Logger errlog; // Error log
+
+// Logs to string and Logger simultaneously
+template<class StrType>
+class DoubleAppender {
+	Logger::Appender app_;
+	StrType& str_;
+
+public:
+	template<class... Args>
+	DoubleAppender(Logger& logger, StrType& str, Args&&... args)
+		: app_(logger(args...)), str_(str)
+	{
+		back_insert(str_, std::forward<Args>(args)...);
+	}
+
+	DoubleAppender(const DoubleAppender&) = delete;
+
+	DoubleAppender(DoubleAppender&& dl) : app_(std::move(dl.app_)), str_(dl.str_) {}
+
+	DoubleAppender& operator=(const DoubleAppender&) = delete;
+	DoubleAppender& operator=(DoubleAppender&&) = delete;
+
+	template<class T>
+	DoubleAppender& operator<<(T&& x) {
+		return operator()(std::forward<T>(x));
+	}
+
+	template<class... Args>
+	DoubleAppender& operator()(Args&&... args) {
+		back_insert(str_, args...);
+		app_(std::forward<Args>(args)...);
+		return *this;
+	}
+
+	void flush_no_nl() noexcept { app_.flush_no_nl(); }
+
+	void flush() {
+		back_insert(str_, '\n');
+		app_.flush();
+	}
+
+	~DoubleAppender() {
+		// Flush inline because app_ will flush itself during destruction
+		back_insert(str_, '\n');
+	}
+};

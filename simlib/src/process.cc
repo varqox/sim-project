@@ -15,13 +15,13 @@ InplaceBuff<PATH_MAX> getCWD() {
 	InplaceBuff<PATH_MAX> res;
 	char* x = get_current_dir_name();
 	if (!x)
-		THROW("Failed to get CWD", error());
+		THROW("Failed to get CWD", errmsg());
 
 	auto x_guard = make_call_in_destructor([x]{ free(x); });
 
 	if (x[0] != '/') {
 		errno = ENOENT;
-		THROW("Failed to get CWD", error());
+		THROW("Failed to get CWD", errmsg());
 	}
 
 	res.append(x);
@@ -42,12 +42,12 @@ string getExec(pid_t pid) {
 		array<char, 65536> buff2;
 		rc = readlink(path.c_str(), buff2.data(), buff2.size());
 		if (rc == -1 || rc >= static_cast<int>(buff2.size()))
-			THROW("Failed: readlink('", path, "')", error());
+			THROW("Failed: readlink('", path, "')", errmsg());
 
 		return string(buff2.data(), rc);
 
 	} else if (rc == -1)
-		THROW("Failed: readlink('", path, "')", error());
+		THROW("Failed: readlink('", path, "')", errmsg());
 
 	return string(buff.data(), rc);
 }
@@ -59,7 +59,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	pid_t pid, my_pid = (include_me ? -1 : getpid());
 	DIR *dir = opendir("/proc");
 	if (dir == nullptr)
-		THROW("Cannot open /proc directory", error());
+		THROW("Cannot open /proc directory", errmsg());
 
 	decltype(getCWD()) cwd;
 	for (auto& exec : exec_set) {
@@ -121,7 +121,7 @@ string chdirToExecDir() {
 		exec.resize(slash); // Erase filename
 
 	if (chdir(exec.c_str()))
-		THROW("chdir('", exec, "')", error());
+		THROW("chdir('", exec, "')", errmsg());
 
 	return exec;
 }
@@ -130,12 +130,12 @@ int8_t detectArchitecture(pid_t pid) {
 	auto filename = concat("/proc/", pid, "/exe");
 	FileDescriptor fd(filename.to_cstr(), O_RDONLY | O_LARGEFILE);
 	if (fd == -1)
-		THROW("open('", filename, "')", error());
+		THROW("open('", filename, "')", errmsg());
 
 	// Read fourth byte and detect whether 32 or 64 bit
 	unsigned char c;
 	if (pread(fd, &c, 1, 4) != 1)
-		THROW("pread()", error());
+		THROW("pread()", errmsg());
 
 	if (c == 1)
 		return ARCH_i386;

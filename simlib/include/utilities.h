@@ -18,6 +18,12 @@ T& back_insert(T& reference, Args&&... args) {
 	return reference;
 }
 
+template<size_t N, class... Args>
+InplaceBuff<N>& back_insert(InplaceBuff<N>& ibuff, Args&&... args) {
+	ibuff.append(std::forward<Args>(args)...);
+	return ibuff;
+}
+
 template<class... Args>
 std::string& back_insert(std::string& str, Args&&... args) {
 	[&str](auto&&... xx) {

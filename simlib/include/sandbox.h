@@ -17,6 +17,12 @@
 # define DEBUG_SANDBOX(...)
 #endif
 
+enum class OpenAccess {
+	RDONLY,
+	WRONLY,
+	RDWR
+};
+
 class Sandbox : protected Spawner {
 public:
 	Sandbox() = delete;
@@ -35,30 +41,31 @@ public:
 
 		/**
 		 * @brief Checks whether syscall open(2) is allowed, if not, tries to
-		 *   modify it (by replacing filename with nullptr) so that syscall will
-		 *   fail
+		 *   modify it (by replacing filename with nullptr) so that it will fail
 		 *
 		 * @param pid pid of traced process (via ptrace)
-		 * @param allowed_filed files which are allowed to be opened
+		 * @param allowed_filed files and mode in which they are allowed to be
+		 *   opened
 		 *
 		 * @return true if call is allowed (modified if needed), false otherwise
 		 */
 		bool is_open_allowed(pid_t pid,
-			const std::vector<std::string>& allowed_files = {});
+			const std::vector<std::pair<std::string, OpenAccess>>& allowed_files = {});
 
 		/**
-		 * @brief Checks whether syscall lseek(2) is allowed, if not, tries to
-		 *   modify it (by replacing fd with -1) so that syscall will fail
+		 * @brief Checks whether syscall lseek(2), dup(2), dup2(2), or dup3(2)
+		 *   is allowed, if not, tries to modify it (by replacing fd with -1) so
+		 *   that it will fail
 		 *
 		 * @param pid pid of traced process (via ptrace)
 		 *
 		 * @return true if call is allowed (modified if needed), false otherwise
 		 */
-		bool is_lseek_allowed(pid_t pid);
+		bool is_lseek_or_dup_allowed(pid_t pid);
 
 		/**
 		 * @brief Checks whether syscall sysinfo(2) is allowed, if not, tries to
-		 *   modify it (by replacing info with NULL) so that syscall will fail
+		 *   modify it (by replacing info with NULL) so that it will fail
 		 *
 		 * @param pid pid of traced process (via ptrace)
 		 *
@@ -157,14 +164,18 @@ public:
 			const std::array<int, N2>& syscall_list_x86_64);
 
 		/// Check whether syscall @p syscall is allowed
+		/// @param allowed_filed files and mode in which they are allowed to be
+		///   opened
 		template<size_t N1, size_t N2>
 		bool is_syscall_entry_allowed(pid_t pid, int syscall,
 			const std::array<int, N1>& allowed_syscalls_i386,
 			const std::array<int, N2>& allowed_syscalls_x86_64,
-			const std::vector<std::string>& allowed_files);
+			const std::vector<std::pair<std::string, OpenAccess>>& allowed_files);
 
+		/// @param allowed_filed files and mode in which they are allowed to be
+		///   opened
 		bool is_syscall_entry_allowed(pid_t pid, int syscall,
-			const std::vector<std::string>& allowed_files)
+			const std::vector<std::pair<std::string, OpenAccess>>& allowed_files)
 		{
 			// TODO: make the below syscall numbers more portable
 			constexpr std::array<int, 78> allowed_syscalls_i386 {{
@@ -449,7 +460,7 @@ struct Sandbox::CallbackBase::Registers {
 			sizeof(uregs)
 		};
 		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
-			THROW("Error: ptrace(PTRACE_GETREGS)", error());
+			THROW("Error: ptrace(PTRACE_GETREGS)", errmsg());
 	}
 
 	void set_regs(pid_t pid) {
@@ -459,7 +470,7 @@ struct Sandbox::CallbackBase::Registers {
 		};
 		// Update traced process registers
 		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
-			THROW("Error: ptrace(PTRACE_SETREGS)", error());
+			THROW("Error: ptrace(PTRACE_SETREGS)", errmsg());
 	}
 };
 
@@ -478,7 +489,7 @@ template<size_t N1, size_t N2>
 bool Sandbox::DefaultCallback::is_syscall_entry_allowed(pid_t pid, int syscall,
 	const std::array<int, N1>& allowed_syscalls_i386,
 	const std::array<int, N2>& allowed_syscalls_x86_64,
-	const std::vector<std::string>& allowed_files)
+	const std::vector<std::pair<std::string, OpenAccess>>& allowed_files)
 {
 	// Check if syscall is allowed
 	if (is_syscall_in(syscall, allowed_syscalls_i386, allowed_syscalls_x86_64))
@@ -496,15 +507,23 @@ bool Sandbox::DefaultCallback::is_syscall_entry_allowed(pid_t pid, int syscall,
 	if (syscall == sys_open[arch])
 		return is_open_allowed(pid, allowed_files);
 
-	constexpr int sys_lseek[2] = {
-		19, // SYS_lseek - i386
-		8 // SYS_lseek - x86_64
-	};
-	if (syscall == sys_lseek[arch] ||
-		(arch == ARCH_i386 && syscall == 140)) // SYS__llseek
-	{
-		return is_lseek_allowed(pid);
-	}
+	constexpr std::array<int, 5> sys_lseek_dup_i386 {{
+		19, // SYS_lseek
+		41, // SYS_dup
+		63, // SYS_dup2
+		140, // SYS__llseek
+		330 // SYS_dup3
+	}};
+	constexpr std::array<int, 4> sys_lseek_dup_x86_64 {{
+		8, // SYS_lseek
+		32, // SYS_dup
+		33, // SYS_dup2
+		292 // SYS_dup3
+	}};
+	static_assert(meta::is_sorted(sys_lseek_dup_i386), "binsearch below");
+	static_assert(meta::is_sorted(sys_lseek_dup_x86_64), "binsearch below");
+	if (is_syscall_in(syscall, sys_lseek_dup_i386, sys_lseek_dup_x86_64))
+		return is_lseek_or_dup_allowed(pid);
 
 	constexpr int sys_sysinfo[2] = {
 		116, // SYS_sysinfo - i386
@@ -534,11 +553,11 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	// Set up error stream from tracee (and wait_for_syscall()) via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
-		THROW("pipe()", error());
+		THROW("pipe()", errmsg());
 
 	int cpid = fork();
 	if (cpid == -1)
-		THROW("fork()", error());
+		THROW("fork()", errmsg());
 
 	else if (cpid == 0) { // Child = tracee
 		sclose(pfd[0]);
@@ -573,7 +592,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	if (ptrace(PTRACE_SETOPTIONS, cpid, 0, PTRACE_O_TRACESYSGOOD |
 		PTRACE_O_TRACEEXEC | PTRACE_O_EXITKILL))
 	{
-		THROW("ptrace(PTRACE_SETOPTIONS)", error());
+		THROW("ptrace(PTRACE_SETOPTIONS)", errmsg());
 	}
 
 	func.detect_tracee_architecture(cpid);
@@ -582,13 +601,13 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	FileDescriptor statm_fd {concat("/proc/", cpid, "/statm").to_cstr(),
 		O_RDONLY};
 	if (statm_fd == -1)
-		THROW("open(/proc/{cpid}/statm)", error());
+		THROW("open(/proc/{cpid}/statm)", errmsg());
 
 	auto get_vm_size = [&] {
 		std::array<char, 32> buff;
 		ssize_t rc = pread(statm_fd, buff.data(), buff.size() - 1, 0);
 		if (rc <= 0)
-			THROW("pread()", error());
+			THROW("pread()", errmsg());
 
 		buff[rc] = '\0';
 
@@ -690,7 +709,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			if (syscall_no < 0) {
 				if (errno != ESRCH)
 					THROW("failed to get syscall_no - ptrace(): ", syscall_no,
-						error());
+						errmsg());
 
 				// Tracee has just died, probably because exceeding the time
 				// limit

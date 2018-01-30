@@ -223,7 +223,7 @@ public:
 
 	TemporaryDirectory& operator=(TemporaryDirectory&& td) {
 		if (exist() && remove_r(path_) == -1)
-			THROW("remove_r() failed", error());
+			THROW("remove_r() failed", errmsg());
 
 		path_ = std::move(td.path_);
 		name_ = std::move(td.name_);
@@ -264,7 +264,7 @@ public:
 		templ.c_str(); // ensure it is NULL-terminated
 		fd_ = mkstemp(&templ[0]);
 		if (fd_ == -1)
-			THROW("mkstemp() failed", error());
+			THROW("mkstemp() failed", errmsg());
 		path_ = std::move(templ);
 	}
 
@@ -310,12 +310,12 @@ class DirectoryChanger {
 public:
 	DirectoryChanger(CStringView new_wd) {
 		if (old_cwd == -1)
-			THROW("open() failed", error());
+			THROW("open() failed", errmsg());
 
 		if (chdir(new_wd.data()) == -1) {
 			auto err = errno;
 			old_cwd.close();
-			THROW("chdir() failed", error(err));
+			THROW("chdir() failed", errmsg(err));
 		}
 	}
 
@@ -385,7 +385,7 @@ template<class Func>
 void forEachDirComponent(CStringView pathname, Func&& func) {
 	Directory dir {pathname};
 	if (!dir)
-		THROW("opendir()", error());
+		THROW("opendir()", errmsg());
 
 	return forEachDirComponent(dir, std::forward<Func>(func));
 }
@@ -568,7 +568,7 @@ size_t writeAll(int fd, const void *buff, size_t count) noexcept;
  */
 inline void writeAll_throw(int fd, const void *buff, size_t count) {
 	if (writeAll(fd, buff, count) != count)
-		THROW("write()", error());
+		THROW("write()", errmsg());
 }
 
 /**

@@ -4,6 +4,7 @@
 #include <sys/uio.h>
 
 using std::array;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -17,30 +18,42 @@ using std::vector;
 #define ARG6 (arch ? regs.uregs.x86_64_regs.r9 : regs.uregs.i386_regs.ebp)
 
 bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
-	const vector<string>& allowed_files)
+	const vector<pair<string, OpenAccess>>& allowed_files)
 {
 	Registers regs;
 	regs.get_regs(pid);
 
-	if (ARG1 == 0) // NULL is first argument
+	if (ARG1 == 0) // nullptr is the first argument
 		return true;
 
 	char path[PATH_MAX] = {};
 	ssize_t len;
+
+	auto set_arg1_to_null = [&] {
+		// Set nullptr as the first argument to open
+		if (arch)
+			regs.uregs.x86_64_regs.rdi = 0;
+		else
+			regs.uregs.i386_regs.ebx = 0;
+
+		regs.set_regs(pid); // Update traced process's registers
+	};
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
 	FileDescriptor fd;
 	if (fd.open(concat("/proc/", pid, "/mem").to_cstr(),
 		O_RDONLY | O_LARGEFILE | O_NOFOLLOW) == -1)
 	{
-		errlog("Error: open()", error());
-		goto null_path;
+		errlog("Error: open()", errmsg());
+		set_arg1_to_null();
+		return true; // Allow to open nullptr
 	}
 
 	len = pread64(fd, path, PATH_MAX - 1, ARG1);
 	if (len == -1) {
-		errlog("Error: pread64()", error());
-		goto null_path;
+		errlog("Error: pread64()", errmsg());
+		set_arg1_to_null();
+		return true; // Allow to open nullptr
 	}
 
 #else
@@ -51,28 +64,37 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 
 	len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
 	if (len == -1) {
-		errlog("Error: process_vm_readv()", error());
-		goto null_path;
+		errlog("Error: process_vm_readv()", errmsg());
+		set_arg1_to_null();
+		return true; // Allow to open nullptr
 	}
 #endif
 
 	path[len] = '\0';
-	if (binary_search(allowed_files.begin(), allowed_files.end(), path))
-		return true; // File is allowed to open
+	auto it =
+		binaryFindBy(allowed_files, &pair<string, OpenAccess>::first, path);
+	if (it == allowed_files.end()) {
+		set_arg1_to_null();
+		return true; // Allow to open nullptr
+	}
 
-null_path:
-	// Set NULL as the first argument to open
-	if (arch)
-		regs.uregs.x86_64_regs.rdi = 0;
-	else
-		regs.uregs.i386_regs.ebx = 0;
+	auto arg2 = ARG2;
+	OpenAccess open_mode = it->second;
 
-	regs.set_regs(pid); // Update traced process's registers
+	if ((arg2 & O_RDONLY) == O_RDONLY) {
+		if (open_mode == OpenAccess::RDONLY or open_mode == OpenAccess::RDWR)
+			return true; // File is allowed to be opened
+	} else if ((arg2 & O_WRONLY) == O_WRONLY) {
+		if (open_mode == OpenAccess::WRONLY or open_mode == OpenAccess::RDWR)
+			return true; // File is allowed to be opened
+	} else if ((arg2 & O_RDWR) == O_RDWR and open_mode == OpenAccess::RDWR)
+		return true; // File is allowed to be opened
 
-	return true; // Allow to open NULL
+	set_arg1_to_null();
+	return true; // Allow to open nullptr
 }
 
-bool Sandbox::CallbackBase::is_lseek_allowed(pid_t pid) {
+bool Sandbox::CallbackBase::is_lseek_or_dup_allowed(pid_t pid) {
 	Registers regs;
 	regs.get_regs(pid);
 
@@ -89,7 +111,7 @@ bool Sandbox::CallbackBase::is_lseek_allowed(pid_t pid) {
 
 	regs.set_regs(pid); // Update traced process's registers
 
-	return true; // Allow to lseek -1
+	return true; // Allow to lseek on -1
 }
 
 bool Sandbox::CallbackBase::is_sysinfo_allowed(pid_t pid) {

@@ -240,7 +240,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		if (buff[0] == '\n' || buff[0] == '#') // Newline or comment
 			throw_parse_error("Incomplete directive: `", name, '`');
 		if (buff[0] != '=' && buff[0] != ':')
-			throw_parse_error("Wrong assignment operator: `", buff[0], '`');
+			throw_parse_error("Invalid assignment operator: `", buff[0], '`');
 
 		buff.removePrefix(1); // Assignment operator
 		buff.removeLeading(isWs);

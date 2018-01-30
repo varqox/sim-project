@@ -31,7 +31,7 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 		if (pos != StringView::npos and mkdir_r(concat_tostr(tmpdir.path(),
 			new_filename.substr(0, pos))))
 		{
-			THROW("mkdir() failed", error());
+			THROW("mkdir() failed", errmsg());
 		}
 
 		// Make a symlink
@@ -87,7 +87,7 @@ void update_add_file_to_zip(CStringView filename, StringView new_filename,
 
 				if (symlink(filename.data(), dest_file.data()))
 				{
-					THROW("symlink() failed", error());
+					THROW("symlink() failed", errmsg());
 				}
 			}
 		}, new_filename, zip_filename);

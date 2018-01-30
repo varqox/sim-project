@@ -13,12 +13,12 @@ int compile(CStringView source, CStringView exec, unsigned verbosity,
 	if (c_errors) {
 		cef = openUnlinkedTmpFile();
 		if (cef == -1)
-			THROW("Failed to open 'compile_errors'", error());
+			THROW("Failed to open 'compile_errors'", errmsg());
 	}
 
 	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
 	if (copy(source, concat(tmp_dir.name(), "a.cpp").to_cstr()))
-		THROW("Failed to copy source file", error());
+		THROW("Failed to copy source file", errmsg());
 
 	if (verbosity > 1)
 		stdlog("Compiling: `", source, '`');
@@ -76,7 +76,7 @@ int compile(CStringView source, CStringView exec, unsigned verbosity,
 
 	// Move exec
 	if (move(concat(tmp_dir.name(), "exec").to_cstr(), exec, false))
-		THROW("Failed to move exec", error());
+		THROW("Failed to move exec", errmsg());
 
 	return 0;
 }
