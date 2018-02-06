@@ -34,7 +34,7 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 		return true; // Allow to open nullptr
 	}
 
-	len = pread64(fd, path, PATH_MAX - 1, ARG1);
+	len = pread64(fd, path, PATH_MAX - 1, regs.arg1u());
 	if (len == -1) {
 		errlog("Error: pread64()", errmsg());
 		set_arg1_to_null();
