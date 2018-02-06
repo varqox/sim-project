@@ -8,34 +8,19 @@ using std::pair;
 using std::string;
 using std::vector;
 
-#define USER_REGS (arch ? regs.uregs.x86_64_regs : regs.uregs.i386_regs)
-#define RES (arch ? regs.uregs.x86_64_regs.rax : regs.uregs.i386_regs.eax)
-#define ARG1 (arch ? regs.uregs.x86_64_regs.rdi : regs.uregs.i386_regs.ebx)
-#define ARG2 (arch ? regs.uregs.x86_64_regs.rsi : regs.uregs.i386_regs.ecx)
-#define ARG3 (arch ? regs.uregs.x86_64_regs.rdx : regs.uregs.i386_regs.edx)
-#define ARG4 (arch ? regs.uregs.x86_64_regs.r10 : regs.uregs.i386_regs.esi)
-#define ARG5 (arch ? regs.uregs.x86_64_regs.r8 : regs.uregs.i386_regs.edi)
-#define ARG6 (arch ? regs.uregs.x86_64_regs.r9 : regs.uregs.i386_regs.ebp)
-
 bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 	const vector<pair<string, OpenAccess>>& allowed_files)
 {
-	Registers regs;
-	regs.get_regs(pid);
+	SyscallRegisters regs(pid, arch_);
 
-	if (ARG1 == 0) // nullptr is the first argument
+	if (regs.arg1u() == 0) // nullptr is the first argument
 		return true;
 
 	char path[PATH_MAX] = {};
 	ssize_t len;
 
 	auto set_arg1_to_null = [&] {
-		// Set nullptr as the first argument to open
-		if (arch)
-			regs.uregs.x86_64_regs.rdi = 0;
-		else
-			regs.uregs.i386_regs.ebx = 0;
-
+		regs.set_arg1u(0); // Set nullptr as the first argument to open
 		regs.set_regs(pid); // Update traced process's registers
 	};
 
@@ -59,7 +44,7 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 #else
 	struct iovec local, remote;
 	local.iov_base = path;
-	remote.iov_base = (void*)ARG1;
+	remote.iov_base = (void*)regs.arg1u();
 	local.iov_len = remote.iov_len = PATH_MAX - 1;
 
 	len = process_vm_readv(pid, &local, 1, &remote, 1, 0);
@@ -78,7 +63,7 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 		return true; // Allow to open nullptr
 	}
 
-	auto arg2 = ARG2;
+	auto arg2 = regs.arg2u();
 	OpenAccess open_mode = it->second;
 
 	if ((arg2 & O_RDONLY) == O_RDONLY) {
@@ -94,47 +79,44 @@ bool Sandbox::CallbackBase::is_open_allowed(pid_t pid,
 	return true; // Allow to open nullptr
 }
 
+enum class LseekOrDupData {
+	ORGINAL_ARG1,
+	SUBSTITUTED_ARG1
+};
+
 bool Sandbox::CallbackBase::is_lseek_or_dup_allowed(pid_t pid) {
-	Registers regs;
-	regs.get_regs(pid);
+	SyscallRegisters regs(pid, arch_);
 
 	// Disallow lseek on stdin, stdout and stderr
 	array<int, 3> stdfiles {{STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO}};
-	if (std::find(stdfiles.begin(), stdfiles.end(), ARG1) == stdfiles.end())
+	if (std::find(stdfiles.begin(), stdfiles.end(), regs.arg1i()) ==
+		stdfiles.end())
+	{
+		reinterpret_cast<LseekOrDupData&>(data_) = LseekOrDupData::ORGINAL_ARG1;
 		return true;
+	}
 
-	// Set -1 as the first argument to lseek
-	if (arch)
-		regs.uregs.x86_64_regs.rdi = -1;
-	else
-		regs.uregs.i386_regs.ebx = -1;
-
+	reinterpret_cast<LseekOrDupData&>(data_) = LseekOrDupData::SUBSTITUTED_ARG1;
+	regs.set_arg1i(-1); // Set -1 as the first argument to lseek
 	regs.set_regs(pid); // Update traced process's registers
 
 	return true; // Allow to lseek on -1
 }
 
 bool Sandbox::CallbackBase::is_sysinfo_allowed(pid_t pid) {
-	Registers regs;
-	regs.get_regs(pid);
+	SyscallRegisters regs(pid, arch_);
 
-	// Set NULL as the first argument to sysinfo
-	if (arch)
-		regs.uregs.x86_64_regs.rdi = 0;
-	else
-		regs.uregs.i386_regs.ebx = 0;
-
+	regs.set_arg1u(0); // Set NULL as the first argument to sysinfo
 	regs.set_regs(pid); // Update traced process's registers
 
 	return true; // Allow sysinfo on NULL
 }
 
 bool Sandbox::CallbackBase::is_tgkill_allowed(pid_t pid) {
-	Registers regs;
-	regs.get_regs(pid);
+	SyscallRegisters regs(pid, arch_);
 
 	// The thread (one in the process) is allowed to kill itself ONLY
-	return (ARG1 == (uint64_t)pid && ARG2 == (uint64_t)pid);
+	return (regs.arg1u() == (uint64_t)pid && regs.arg2u() == (uint64_t)pid);
 }
 
 bool Sandbox::DefaultCallback::is_syscall_exit_allowed(pid_t pid, int syscall) {
@@ -151,10 +133,21 @@ bool Sandbox::DefaultCallback::is_syscall_exit_allowed(pid_t pid, int syscall) {
 		12, // SYS_brk - x86_64
 	};
 
-	if (syscall == sys_execve[arch] || syscall == sys_execveat[arch])
+	if (syscall == sys_execve[arch_] || syscall == sys_execveat[arch_])
 		detect_tracee_architecture(pid);
 
-	if (syscall != sys_brk[arch])
+	// If lseek changed the fd argument to -1 then set error to ESPIPE (pretend
+	// stdin, stdout and stderr to be a PIPE)
+	if (is_syslseek(syscall) and reinterpret_cast<LseekOrDupData&>(data_) ==
+		LseekOrDupData::SUBSTITUTED_ARG1)
+	{
+		SyscallRegisters regs(pid, arch_);
+		regs.set_resi(-ESPIPE);
+		regs.set_regs(pid);
+		return true;
+	}
+
+	if (syscall != sys_brk[arch_])
 		return true;
 
 	/* syscall == SYS_brk */
@@ -166,11 +159,10 @@ bool Sandbox::DefaultCallback::is_syscall_exit_allowed(pid_t pid, int syscall) {
 	 * is done to improve readability of ExitStatus.
 	 */
 
-	Registers regs;
-	regs.get_regs(pid);
+	SyscallRegisters regs(pid, arch_);
 
 	// Count unsuccessful series of SYS_brk calls
-	if (ARG1 <= RES) {
+	if (regs.arg1u() <= regs.resu()) {
 		unsuccessful_SYS_brk_counter = 0;
 		return true;
 	}

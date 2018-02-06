@@ -36,8 +36,16 @@ public:
 	protected:
 		friend class Sandbox;
 		struct Registers;
+		struct SyscallRegisters;
 
-		int8_t arch = -1; // arch - architecture: 0 - i386, 1 - x86_64
+		int8_t arch_ = -1; // arch_ - architecture: 0 - i386, 1 - x86_64
+
+
+#if __cplusplus > 201402L
+#warning "Since C++17 std::any or std::variant should be used"
+#endif
+        char data_[64]; // A place to store information for the syscall checking
+                        // functions
 
 		/**
 		 * @brief Checks whether syscall open(2) is allowed, if not, tries to
@@ -87,10 +95,10 @@ public:
 
 	public:
 		void detect_tracee_architecture(pid_t pid) {
-			arch = ::detectArchitecture(pid);
+			arch_ = ::detectArchitecture(pid);
 		}
 
-		int8_t get_arch() const noexcept { return arch; }
+		int8_t get_arch() const noexcept { return arch_; }
 
 		/**
 		 * @brief Checks whether or not entering syscall @p syscall is allowed
@@ -161,7 +169,7 @@ public:
 		template<size_t N1, size_t N2>
 		bool is_syscall_in(int syscall,
 			const std::array<int, N1>& syscall_list_i386,
-			const std::array<int, N2>& syscall_list_x86_64);
+			const std::array<int, N2>& syscall_list_x86_64) const noexcept;
 
 		/// Check whether syscall @p syscall is allowed
 		/// @param allowed_filed files and mode in which they are allowed to be
@@ -332,6 +340,58 @@ public:
 				allowed_syscalls_x86_64, allowed_files);
 		}
 
+		bool is_sysopen(int syscall) const noexcept {
+			constexpr int sys_open[2] = {
+				5, // SYS_open - i386
+				2 // SYS_open - x86_64
+			};
+			return (syscall == sys_open[arch_]);
+		}
+
+		bool is_sysinfo(int syscall) const noexcept {
+			constexpr int sys_sysinfo[2] = {
+				116, // SYS_sysinfo - i386
+				99 // SYS_sysinfo - x86_64
+			};
+			return (syscall == sys_sysinfo[arch_]);
+		}
+
+		bool is_systgkill(int syscall) const noexcept {
+			constexpr int sys_tgkill[2] = {
+				270, // SYS_tgkill - i386
+				234 // SYS_tgkill - x86_64
+			};
+			return (syscall == sys_tgkill[arch_]);
+		}
+
+		bool is_syslseek(int syscall) const noexcept {
+			// ARCH_i386
+			if (arch_ == ARCH_i386)
+				return (syscall == 19 or // SYS_lseek
+					syscall == 140); // SYS__llseek
+
+			// ARCH_x86_64
+			return (syscall == 8); // SYS_lseek
+		}
+
+		bool is_sysdup(int syscall) const noexcept {
+			constexpr std::array<int, 3> sys_dup[2] = {
+				{{ // i386
+					41, // SYS_dup
+					63, // SYS_dup2
+					330 // SYS_dup3
+				}},
+				{{ // x86_64
+					32, // SYS_dup
+					33, // SYS_dup2
+					292 // SYS_dup3
+				}}
+			};
+			static_assert(meta::is_sorted(sys_dup[0]), "binsearch below");
+			static_assert(meta::is_sorted(sys_dup[1]), "binsearch below");
+			return binary_search(sys_dup[arch_], syscall);
+		}
+
 	public:
 		DefaultCallback() = default;
 
@@ -474,12 +534,82 @@ struct Sandbox::CallbackBase::Registers {
 	}
 };
 
+struct Sandbox::CallbackBase::SyscallRegisters :
+	protected Sandbox::CallbackBase::Registers
+{
+private:
+	std::remove_const_t<decltype(ARCH_x86_64)> arch_ = -1;
+
+public:
+	using Registers::uregs;
+
+    SyscallRegisters() = default;
+
+	SyscallRegisters(pid_t pid, decltype(arch_) arch) {
+        get_regs(pid, arch);
+    }
+
+	void get_regs(pid_t pid, decltype(arch_) arch) {
+		Registers::get_regs(pid);
+		arch_ = arch;
+	}
+
+	using Registers::set_regs;
+
+#define GET_REG(name, reg_name_32, reg_name_64)                                \
+    int64_t name ## i() const noexcept {                                       \
+        return (arch_ == ARCH_i386 ? (int32_t)uregs.i386_regs.reg_name_32      \
+            : uregs.x86_64_regs.reg_name_64);                                  \
+    }                                                                          \
+                                                                               \
+    uint64_t name ## u() const noexcept {                                      \
+        return (arch_ == ARCH_i386 ? uregs.i386_regs.reg_name_32               \
+            : uregs.x86_64_regs.reg_name_64);                                  \
+    }
+
+	GET_REG(res, eax, rax)
+	GET_REG(arg1, ebx, rdi)
+	GET_REG(arg2, ecx, rsi)
+	GET_REG(arg3, edx, rdx)
+	GET_REG(arg4, esi, r10)
+	GET_REG(arg5, edi, r8)
+	GET_REG(arg6, ebp, r9)
+
+#undef GET_REG
+
+#define SET_REG(name, reg_name_32, reg_name_64)                                \
+    void set_##name##i(int64_t val) noexcept {                                 \
+        if (arch_ == ARCH_i386)                                                \
+            uregs.i386_regs.reg_name_32 = (int32_t)val;                        \
+        else                                                                   \
+            uregs.x86_64_regs.reg_name_64 = val;                               \
+    }                                                                          \
+                                                                               \
+    void set_##name##u(uint64_t val) noexcept {                                \
+        if (arch_ == ARCH_i386)                                                \
+            uregs.i386_regs.reg_name_32 = val;                                 \
+        else                                                                   \
+            uregs.x86_64_regs.reg_name_64 = val;                               \
+    }
+
+	SET_REG(res, eax, rax)
+	SET_REG(arg1, ebx, rdi)
+	SET_REG(arg2, ecx, rsi)
+	SET_REG(arg3, edx, rdx)
+	SET_REG(arg4, esi, r10)
+	SET_REG(arg5, edi, r8)
+	SET_REG(arg6, ebp, r9)
+
+#undef SET_REG
+#undef SET_REG
+};
+
 template<size_t N1, size_t N2>
 bool Sandbox::DefaultCallback::is_syscall_in(int syscall,
 	const std::array<int, N1>& syscall_list_i386,
-	const std::array<int, N2>& syscall_list_x86_64)
+	const std::array<int, N2>& syscall_list_x86_64) const noexcept
 {
-	if (arch == ARCH_i386)
+	if (arch_ == ARCH_i386)
 		return binary_search(syscall_list_i386, syscall);
 
 	return binary_search(syscall_list_x86_64, syscall);
@@ -496,47 +626,20 @@ bool Sandbox::DefaultCallback::is_syscall_entry_allowed(pid_t pid, int syscall,
 		return true;
 
 	// Check if syscall is limited
-	for (Pair& i : limited_syscalls[arch])
+	for (Pair& i : limited_syscalls[arch_])
 		if (syscall == i.syscall)
 			return (--i.limit >= 0);
 
-	constexpr int sys_open[2] = {
-		5, // SYS_open - i386
-		2 // SYS_open - x86_64
-	};
-	if (syscall == sys_open[arch])
+	if (is_sysopen(syscall))
 		return is_open_allowed(pid, allowed_files);
 
-	constexpr std::array<int, 5> sys_lseek_dup_i386 {{
-		19, // SYS_lseek
-		41, // SYS_dup
-		63, // SYS_dup2
-		140, // SYS__llseek
-		330 // SYS_dup3
-	}};
-	constexpr std::array<int, 4> sys_lseek_dup_x86_64 {{
-		8, // SYS_lseek
-		32, // SYS_dup
-		33, // SYS_dup2
-		292 // SYS_dup3
-	}};
-	static_assert(meta::is_sorted(sys_lseek_dup_i386), "binsearch below");
-	static_assert(meta::is_sorted(sys_lseek_dup_x86_64), "binsearch below");
-	if (is_syscall_in(syscall, sys_lseek_dup_i386, sys_lseek_dup_x86_64))
+	if (is_syslseek(syscall) or is_sysdup(syscall))
 		return is_lseek_or_dup_allowed(pid);
 
-	constexpr int sys_sysinfo[2] = {
-		116, // SYS_sysinfo - i386
-		99 // SYS_sysinfo - x86_64
-	};
-	if (syscall == sys_sysinfo[arch])
+	if (is_sysinfo(syscall))
 		return is_sysinfo_allowed(pid);
 
-	constexpr int sys_tgkill[2] = {
-		270, // SYS_tgkill - i386
-		234 // SYS_tgkill - x86_64
-	};
-	if (syscall == sys_tgkill[arch])
+	if (is_systgkill(syscall))
 		return is_tgkill_allowed(pid);
 
 	return false;
@@ -729,26 +832,13 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 						: x86_64_syscall_name)[syscall_no]);
 
 				auto log_syscall_args = [&] {
-					CallbackBase::Registers regs;
-					regs.get_regs(cpid);
-
-					int64_t arg1 = (func.get_arch() == ARCH_i386 ?
-						int32_t(regs.uregs.i386_regs.ebx)
-						: regs.uregs.x86_64_regs.rdi);
-					int64_t arg2 = (func.get_arch() == ARCH_i386 ?
-						int32_t(regs.uregs.i386_regs.ecx)
-						: regs.uregs.x86_64_regs.rsi);
-
-					syscall_log('(', arg1, ", ", arg2, ", ...)");
+					CallbackBase::SyscallRegisters regs(cpid, func.get_arch());
+					syscall_log('(', regs.arg1i(), ", ", regs.arg2i(), ", ...)");
 				};
 
 				auto log_syscall_retval = [&] {
-					CallbackBase::Registers regs;
-					regs.get_regs(cpid);
-					int64_t ret_val = (func.get_arch() == ARCH_i386 ?
-						int32_t(regs.uregs.i386_regs.eax)
-						: regs.uregs.x86_64_regs.rax);
-					syscall_log(" -> ", ret_val);
+					CallbackBase::SyscallRegisters regs(cpid, func.get_arch());
+					syscall_log(" -> ", regs.resi());
 				};
 			)
 

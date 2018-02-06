@@ -27,29 +27,19 @@ public:
 			230, // SYS_clock_nanosleep - x86_64
 		};
 
-		if (syscall != sys_nanosleep[arch] and
-			syscall != sys_clock_nanosleep[arch])
+		if (syscall != sys_nanosleep[arch_] and
+			syscall != sys_clock_nanosleep[arch_])
 		{
 			return DefaultCallback::is_syscall_entry_allowed(pid, syscall);
 		}
 
-		Registers regs;
-		regs.get_regs(pid);
+		SyscallRegisters regs(pid, arch_);
 
-		if (syscall == sys_nanosleep[arch]) {
-			// Set NULL as the first argument to nanosleep(2)
-			if (arch)
-				regs.uregs.x86_64_regs.rdi = 0;
-			else
-				regs.uregs.i386_regs.ebx = 0;
-
-		} else {
-			// Set NULL as the third argument to clock_nanosleep(2)
-			if (arch)
-				regs.uregs.x86_64_regs.rdx = 0;
-			else
-				regs.uregs.i386_regs.edx = 0;
-		}
+		if (syscall == sys_nanosleep[arch_])
+			regs.set_arg1u(0); // Set NULL as the first argument to nanosleep(2)
+		else
+			regs.set_arg3u(0); // Set NULL as the third argument to
+			                  // clock_nanosleep(2)
 
 		regs.set_regs(pid); // Update traced process's registers
 		return true;

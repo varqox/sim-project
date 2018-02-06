@@ -530,7 +530,7 @@ void create_file(const string& path) {
 
 	// Create file
 	if (createFile(path))
-		THROW('`', path, '`', error());
+		THROW('`', path, '`', errmsg());
 }
 
 void create_files_at(string dir, const vector<string>& v) {

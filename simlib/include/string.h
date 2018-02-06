@@ -1638,7 +1638,7 @@ constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
 	InplaceBuff<N> res;
 	res.append('"');
 	auto safe_append = [&](auto&& arg) {
-		auto p = data(arg);
+		auto p = ::data(arg);
 		for (size_t i = 0, len = string_length(arg); i < len; ++i) {
 			unsigned char c = p[i];
 			if (c == '\"')
