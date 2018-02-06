@@ -1,6 +1,8 @@
 # Simfile - Sim package configuration file
 Simfile is a ConfigFile file, so the syntax is as in ConfigFile.
 
+# TODO: update this file based on the changes that are being made some time now (to simfile.h f.g.)
+
 ## Example:
 ```sh
 name: Simple Package                       # Problem name

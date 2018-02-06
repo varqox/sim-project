@@ -8,19 +8,20 @@
 /// ## Example:
 /// ```sh
 /// name: Simple Package                       # Problem name
-/// label: sim                                 # Problem label (usually a shorten name)
+/// label: sim                                 # Problem label (usually a shortened name)
 /// statement: doc/sim.pdf                     # Path to statement file
 /// checker: check/checker.cpp                 # Path to checker source file
 /// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files
 ///                                            # The first solution is the main
 ///                                            # solution
 /// memory_limit: 64              # Global memory limit in MB (optional)
+/// time_limit: 3.14              # Global time limit in seconds (optional)
 /// limits: [                     # Limits array
 ///         # Group 0
 ///         sim0a 1            # Format: <test name> <time limit> [memory limit]
 ///         sim0b 1.01         # Time limit in seconds, memory limit in MB
 ///         sim1ocen 2 32      # Memory limit is optional if the global memory limit
-///         sim2ocen 3         # is set.
+///         sim2ocen 3         # is set on every test.
 ///                            # Tests may appear in an arbitrary order
 ///         # Group 1
 ///         sim1a 1
@@ -44,7 +45,7 @@
 ///         3 25
 ///         4 25
 /// ]
-/// tests_files: [                # Tests' input and output files
+/// tests_files: [                # Tests' input and output files (optional)
 ///                               # Format: <test name> <in file> <out file>
 ///         sim0a in/sim0a.in out/sim0a.out
 ///         sim0b in/sim0b.in out/sim0b.out
