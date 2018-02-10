@@ -72,27 +72,28 @@ function date_to_datetime_str(date) {
 	return String().concat(date.getFullYear(), '-', month, '-', day,
 		' ', hours, ':', minutes, ':', seconds);
 }
+function utcdt_or_tm_to_Date(time) {
+	if (isNaN(time)) {
+		var args = time.split(/[- :]/);
+		--args[1]; // fit month in [0, 11]
+		return new Date(Date.UTC.apply(this, args));
+	}
+
+	return new Date(time * 1000);
+}
 // Converts datetimes to local
 function normalize_datetime(elem, add_tz) {
 	elem = $(elem);
 	if (elem.attr('datetime') === undefined)
 		return elem;
 
-	var time;
-	if (isNaN(elem.attr('datetime'))) {
-		var args = elem.attr('datetime').split(/[- :]/);
-		--args[1]; // fit month in [0, 11]
-		time = new Date(Date.UTC.apply(this, args));
-	} else
-		time = new Date(elem.attr('datetime') * 1000);
-
 	// Add the timezone part
-	elem.html(date_to_datetime_str(time));
+	elem.html(date_to_datetime_str(utcdt_or_tm_to_Date(elem.attr('datetime'))));
 	if (add_tz)
 		elem.append(tz_marker());
 
 	return elem;
-};
+}
 
 $(document).ready(function() {
 	// Converts datetimes
@@ -102,12 +103,12 @@ $(document).ready(function() {
 	});
 });
 // Clock
-$(document).ready(function updateClock() {
-	if (updateClock.time_difference === undefined)
-		updateClock.time_difference = window.performance.timing.responseStart - start_time;
+$(document).ready(function update_clock() {
+	if (update_clock.time_difference === undefined)
+		update_clock.time_difference = window.performance.timing.responseStart - start_time;
 
 	var time = new Date();
-	time.setTime(time.getTime() - updateClock.time_difference);
+	time.setTime(time.getTime() - update_clock.time_difference);
 	var hours = time.getHours();
 	var minutes = time.getMinutes();
 	var seconds = time.getSeconds();
@@ -116,10 +117,10 @@ $(document).ready(function updateClock() {
 	seconds = (seconds < 10 ? '0' : '') + seconds;
 	// Update the displayed time
 	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, tz_marker());
-	setTimeout(updateClock, 1000 - time.getMilliseconds());
+	setTimeout(update_clock, 1000 - time.getMilliseconds());
 });
 // Handle navbar correct size
-function normalizeNavbar() {
+function normalize_navbar() {
 	var navbar = $('.navbar');
 	navbar.css('width', 'auto');
 
@@ -131,11 +132,11 @@ function normalizeNavbar() {
 		navbar.outerWidth($(document).width());
 	}
 }
-$(document).ready(normalizeNavbar);
-$(window).resize(normalizeNavbar);
+$(document).ready(normalize_navbar);
+$(window).resize(normalize_navbar);
 
 // Handle menu correct size
-function normalizeMenu() {
+function normalize_menu() {
 	var menu = $('.menu');
 	menu.css('height', 'auto');
 
@@ -147,11 +148,11 @@ function normalizeMenu() {
 		menu.outerHeight($(document).height());
 	}
 }
-$(document).ready(normalizeMenu);
-$(window).resize(normalizeMenu);
+$(document).ready(normalize_menu);
+$(window).resize(normalize_menu);
 
-// Returns value of cookie @p name or ... TODO!!!
-function getCookie(name) {
+// Returns value of cookie @p name or empty string
+function get_cookie(name) {
 	name = name + '=';
 	var arr = document.cookie.split(';');
 	for (var i = 0; i < arr.length; ++i) {
@@ -163,48 +164,49 @@ function getCookie(name) {
 	}
 
 	return '';
-};
+}
 
 // Adding csrf token to a form
-function addCsrfTokenTo(form) {
+function add_csrf_token_to(form) {
 	var x = $(form);
 	x.find('input[name="csrf_token"]').remove(); // Avoid duplication
 	x.append('<input type="hidden" name="csrf_token" value="' +
-		getCookie('csrf_token') + '">');
+		get_cookie('csrf_token') + '">');
 	return form;
 }
 
 // Adding csrf token just before submitting a form
 $(document).ready(function() {
-	$('form').submit(function() { addCsrfTokenTo(this); });
+	$('form').submit(function() { add_csrf_token_to(this); });
 });
 
 function StaticMap() {
-	this.data = new Array();
+	var this_ = this;
+	this.data = [];
 
-	this.cmp = function(a, b) { return a[0] - b[0]; }
+	this.cmp = function(a, b) { return a[0] - b[0]; };
 
 	this.add = function(key, val) {
-		this.data.push([key, val]);
-	}
+		this_.data.push([key, val]);
+	};
 
-	this.prepare = function() { this.data.sort(this.cmp); }
+	this.prepare = function() { this_.data.sort(this_.cmp); };
 
 	this.get = function(key) {
-		if (this.data.length === 0)
+		if (this_.data.length === 0)
 			return null;
 
-		var l = 0, r = this.data.length;
+		var l = 0, r = this_.data.length;
 		while (l < r) {
 			var m = (l + r) >> 1;
-			if (this.data[m][0] < key)
+			if (this_.data[m][0] < key)
 				l = m + 1;
 			else
 				r = m;
 		}
 
-		return (this.data[l][0] == key ? this.data[l][1] : null);
-	}
+		return (this_.data[l][0] == key ? this_.data[l][1] : null);
+	};
 }
 
 /* ============================ URL hash parser ============================ */
@@ -221,25 +223,25 @@ var url_hash_parser = {};
 			return args.substr(beg + 1);
 
 		return args.substring(beg + 1, pos);
-	}
+	};
 
 	this.extract_next_arg  = function() {
-		var pos = args.indexOf('#', beg + 1);
+		var pos = args.indexOf('#', beg + 1), res;
 		if (pos === -1) {
 			if (beg >= args.length)
 				return '';
 
-			var res = args.substr(beg + 1);
+			res = args.substr(beg + 1);
 			beg = args.length;
 			return res;
 		}
 
-		var res = args.substring(beg + 1, pos);
+		res = args.substring(beg + 1, pos);
 		beg = pos;
 		return res;
-	}
+	};
 
-	this.empty = function() { return (beg >= args.length); }
+	this.empty = function() { return (beg >= args.length); };
 
 	this.assign = function(new_hash) {
 		beg = 0;
@@ -247,7 +249,7 @@ var url_hash_parser = {};
 			args = '#' + new_hash;
 		else
 			args = new_hash;
-	}
+	};
 
 	this.assign_as_parsed = function(new_hash) {
 		if (new_hash.charAt(0) !== '#')
@@ -255,7 +257,7 @@ var url_hash_parser = {};
 		else
 			args = new_hash;
 		beg = args.length;
-	}
+	};
 
 
 	this.append = function(next_args) {
@@ -263,18 +265,23 @@ var url_hash_parser = {};
 			args += '#' + next_args;
 		else
 			args += next_args;
-	}
+	};
 
-	this.parsed_prefix = function() { return args.substr(0, beg); }
+	this.parsed_prefix = function() { return args.substr(0, beg); };
 }).call(url_hash_parser);
 
 /* =========================== History management =========================== */
 var egid = {};
 (function () {
 	var id = 0;
+	this.next_from = function(egid) {
+		var egid_id = String(egid).replace(/.*-/, '');
+		return String(egid).replace(/[^-]*$/, ++egid_id);
+	};
+
 	this.get_next = function() {
-		return ''.concat(window.performance.timing.responseStart, id++);
-	}
+		return ''.concat(window.performance.timing.responseStart, '-', id++);
+	};
 }).call(egid);
 
 function give_body_egid() {
@@ -292,14 +299,27 @@ window.onpopstate = function(event) {
 	if (elem.length === 0)
 		window.location.reload();
 
-	// Remove other modals that cover elem
+	var modals;
 	if (elem.is('body'))
-		remove_modals(elem.children('.modal'));
+		modals = elem.children('.modal');
 	else
-		elem.nextAll('.modal').remove();
-}
+		modals = elem.nextAll('.modal');
 
-/* const */ var fade_in_duration = 100; // milliseconds
+	// Remove other modals that cover elem
+	var view_element_removed = false;
+	modals.each(function() {
+		var elem = $(this);
+		if (elem.hasClass('view')) {
+			if (view_element_removed)
+				return false;
+			view_element_removed = true;
+		}
+
+		remove_modals(elem);
+	});
+};
+
+/* const */ var fade_in_duration = 50; // milliseconds
 
 // For best effect, the values below should be the same
 /* const */ var loader_show_delay = 400; // milliseconds
@@ -312,8 +332,8 @@ function remove_loader(elem) {
 function append_loader(elem) {
 	remove_loader(elem);
 	elem = $(elem);
-	if (elem[0].style.animationName === undefined &&
-		elem[0].style.WebkitAnimationName === undefined)
+	if (elem.css('animationName') === undefined &&
+		elem.css('WebkitAnimationName') === undefined)
 	{
 		$(elem).append('<img class="loader" src="/kit/img/loader.gif">');
 	} else
@@ -360,11 +380,9 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 			x.text(x.text().concat("\nInfo: ", msg));
 
 	} catch (err) {
-		if (response.responseText != '' // There is a message
-			&& response.responseText.lastIndexOf('<!DOCTYPE html>', 0)
-				!== 0 // Message is not a whole HTML page
-			&& response.responseText.lastIndexOf('<!doctype html>', 0)
-				!== 0) // Message is not a whole HTML page
+		if (response.responseText != '' && // There is a message
+			response.responseText.lastIndexOf('<!DOCTYPE html>', 0) !== 0 && // Message is not a whole HTML page
+			response.responseText.lastIndexOf('<!doctype html>', 0) !== 0) // Message is not a whole HTML page
 		{
 			x.text(x.text().concat("\nInfo: ",
 				response.responseText));
@@ -375,12 +393,21 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 /* ================================= Form ================================= */
 var Form = {};
 (function() {
-	this.field_group = function(label, input_context) {
+	this.field_group = function(label, input_context_or_input) {
+		var input;
+		if (input_context_or_input instanceof jQuery)
+			input = input_context_or_input;
+		else
+			input = $('<input>', input_context_or_input);
+
 		return $('<div>', {
 			class: 'field-group',
-			html: $('<label>', {text: label}).add('<input>', input_context)
+			html: [
+				$('<label>', {text: label}),
+				input
+			]
 		});
-	}
+	};
 
 	this.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_parent)
 	{
@@ -390,7 +417,7 @@ var Form = {};
 			loader_parent = $(form);
 
 		form = $(form);
-		addCsrfTokenTo(form);
+		add_csrf_token_to(form);
 		append_loader(loader_parent);
 
 		$.ajax({
@@ -410,7 +437,7 @@ var Form = {};
 			}
 		});
 		return false;
-	}
+	};
 }).call(Form);
 
 function ajax_form(title, target, html, success_msg, classes) {
@@ -432,9 +459,15 @@ function remove_modals(modal) {
 }
 function close_modal(modal) {
 	modal = $(modal);
-	remove_modals(modal);
+	// Run pre-close callbacks
+	modal.each(function() {
+		if (this.onmodalclose !== undefined)
+			this.onmodalclose();
+	});
 	if (modal.is('.view'))
 		window.history.back();
+	else
+		remove_modals(modal);
 }
 $(document).click(function(event) {
 	if ($(event.target).is('.modal'))
@@ -446,15 +479,20 @@ $(document).keydown(function(event) {
 	if (event.key == 'Escape')
 		close_modal($('body').children('.modal').last());
 });
-function modal(modal_body) {
-	return $('<div>', {
+function modal(modal_body, before_callback /*= undefined*/) {
+	var mod = $('<div>', {
 		class: 'modal',
 		egid: egid.get_next(),
 		style: 'display: none',
 		html: $('<div>', {
 			html: $('<span>', { class: 'close' }).add(modal_body)
 		})
-	}).appendTo('body').fadeIn(fade_in_duration);
+	});
+
+	if (before_callback !== undefined)
+		before_callback(mod);
+
+	return mod.appendTo('body').fadeIn(fade_in_duration);
 }
 function centerize_modal(modal, allow_lowering /*= true*/) {
 	var m = $(modal);
@@ -534,10 +572,8 @@ function API_call(ajax_url, success_handler, loader_parent) {
 			success_handler.apply(this, arguments);
 		},
 		error: function(resp, status) {
-			show_error_via_loader(loader_parent, resp, status, function () {
-				// Avoid recursion
-				setTimeout(function(){ API_call.apply(thiss, args); }, 0);
-			});
+			show_error_via_loader(loader_parent, resp, status,
+				setTimeout.bind(null, API_call.bind(null, thiss), 0)); // Avoid recursion
 		}
 	});
 }
@@ -587,32 +623,33 @@ function tabmenu(attacher, tabs) {
 		});
 	}
 
+	var click_handler = function(handler) {
+		return function() {
+			if (!$(this).hasClass('active')) {
+				set_min_width(this);
+				$(this).parent().children('.active').removeClass('active');
+				$(this).addClass('active');
+
+				window.history.replaceState(window.history.state, '',
+					document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(this).text()));
+				url_hash_parser.assign_as_parsed(window.location.hash);
+
+				handler.call(this);
+				centerize_modal($(this).parents('.modal'), false);
+			}
+		};
+	};
 	for (var i = 0; i < tabs.length; i += 2)
 		res.append($('<a>', {
 			text: tabs[i],
-			click: function(handler) {
-				return function() {
-					if (!$(this).hasClass('active')) {
-						set_min_width(this);
-						$(this).parent().children('.active').removeClass('active');
-						$(this).addClass('active');
-
-						window.history.replaceState(window.history.state, '',
-							document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(this).text()));
-						url_hash_parser.assign_as_parsed(window.location.hash);
-
-						handler.call(this);
-						centerize_modal($(this).parents('.modal'), false);
-					}
-				}
-			}(tabs[i + 1])
-		}))
+			click: click_handler(tabs[i + 1])
+		}));
 
 	attacher(res);
 
 	var arg = url_hash_parser.extract_next_arg();
 	var rc = res.children();
-	for (var i = 0; i < rc.length; ++i) {
+	for (i = 0; i < rc.length; ++i) {
 		var elem = $(rc[i]);
 		if (tabname_to_hash(elem.text()) === arg) {
 			set_min_width(this);
@@ -629,10 +666,12 @@ function tabmenu(attacher, tabs) {
 
 /* ================================== View ================================== */
 function view_base(as_modal, new_window_location, func, no_modal_elem) {
+	var next_egid;
 	if (as_modal) {
+		next_egid = egid.get_next();
 		var elem = $('<div>', {
 			class: 'modal view',
-			egid: egid.get_next(),
+			egid: next_egid,
 			style: 'display: none',
 			html: $('<div>', {
 				html: $('<span>', { class: 'close'})
@@ -640,7 +679,6 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 			})
 		});
 
-		var next_egid = egid.get_next();
 		$(elem).attr('egid', next_egid);
 		window.history.pushState({egid: next_egid}, '', new_window_location);
 		url_hash_parser.assign(window.location.hash);
@@ -650,7 +688,7 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 		centerize_modal(elem);
 
 	// Use body as the parent element
-	} else if (no_modal_elem === undefined) {
+	} else if (no_modal_elem === undefined || $(no_modal_elem).is('body')) {
 		give_body_egid();
 		window.history.replaceState({egid: $('body').attr('egid')}, document.title, new_window_location);
 		url_hash_parser.assign(window.location.hash);
@@ -659,7 +697,7 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 
 	// Use @p no_modal_elem as the parent element
 	} else {
-		var next_egid = egid.get_next();
+		next_egid = egid.get_next();
 		$(no_modal_elem).attr('egid', next_egid);
 		window.history.pushState({egid: next_egid}, '', new_window_location);
 		url_hash_parser.assign(window.location.hash);
@@ -718,72 +756,82 @@ function a_view_button(href, text, classes, func) {
 
 /* ================================= Lister ================================= */
 function Lister(elem) {
+	var this_ = this;
 	this.elem = $(elem);
-	this.lock = false;
+	var lock = false;
 
 	this.fetch_more = function() {
-		if (this.lock)
+		if (lock || !$.contains(document.documentElement, this_.elem[0]))
 			return;
 
-		this.lock = true;
-		append_loader(this.elem.parent());
+		lock = true;
+		append_loader(this_.elem.parent());
 
-		this.fetch_more_impl();
-	}
+		$.ajax({
+			type: 'GET',
+			url: this_.query_url + this_.query_suffix,
+			dataType: 'json',
+			success: function(data) {
+				var modal = this_.elem.parents('.modal');
+				this_.process_api_response(data, modal);
+
+				remove_loader(this_.elem.parent());
+				timed_hide_show(modal);
+				centerize_modal(modal, false);
+
+				if (data.length == 0)
+					return; // No more data to load
+
+				lock = false;
+				if (this_.elem.height() - $(window).height() <= 300) {
+					// Load more if scrolling down did not become possible
+					setTimeout(this_.fetch_more, 0); // avoid recursion
+				}
+			},
+			error: function(resp, status) {
+				show_error_via_loader(this_.elem.parent(), resp, status,
+					function () {
+						lock = false;
+						this_.fetch_more();
+					});
+			}
+		});
+	};
 
 	this.monitor_scroll = function() {
-		var obj = this;
-
-		var modal_parent = elem.closest('.modal');
+		var scres_handler;
+		var scres_unhandle = function() {
+			if (!$.contains(document.documentElement, this_.elem)) {
+				$(this).off('scroll', scres_handler);
+				$(this).off('resize', scres_handler);
+				return;
+			}
+		};
+		var modal_parent = this_.elem.closest('.modal');
 		if (modal_parent.length === 1) {
-			function scres_handler() {
-				if ($(obj.elem).closest('body').length === 0) {
-					obj.elem = null;
-					$(this).off('scroll', scres_handler);
-					$(this).off('resize', scres_handler);
-					return;
-				}
-
+			scres_handler = function() {
+				scres_unhandle();
 				var height = $(this).children('div').height();
 				var scroll_top = $(this).scrollTop();
 				if (height - $(window).height() - scroll_top <= 300)
-					obj.fetch_more();
+					this_.fetch_more();
 			};
 
 			modal_parent.on('scroll', scres_handler);
 			$(window).on('resize', scres_handler);
 
 		} else {
-			function scres_handler() {
-				if ($(obj.elem).closest('body').length === 0) {
-					obj.elem = null;
-					$(this).off('scroll', scres_handler);
-					$(this).off('resize', scres_handler);
-					return;
-				}
-
+			scres_handler = function() {
+				scres_unhandle();
 				var x = $(document);
 				if (x.height() - $(window).height() - x.scrollTop() <= 300)
-					obj.fetch_more();
+					this_.fetch_more();
 			};
 
 			$(document).on('scroll', scres_handler);
 			$(window).on('resize', scres_handler);
 		}
-
-		modal_parent = null;
 	};
-
-	this.get_error_handler = function() {
-		var obj = this;
-		return function(resp, status) {
-			show_error_via_loader(obj.elem.parent(), resp, status,
-				function () {
-					obj.lock = false;
-					obj.fetch_more();
-				});
-		};
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -802,11 +850,12 @@ function colorize(log, end) {
 		else if (opened == 'b')
 			res += '</b>';
 		opened = null;
-	};
+	}
 
 	function contains(idx, str) {
 		return (log.substring(idx, idx + str.length) == str);
-	};
+	}
+
 	for (var i = 0; i < end; ++i) {
 		if (contains(i, '\033[31m')) {
 			close_last_tag();
@@ -880,59 +929,101 @@ function colorize(log, end) {
 	return res + log.substring(end);
 }
 function Logs(type, elem) {
+	var this_ = this;
 	this.type = type;
 	this.elem = $(elem);
 	this.offset = undefined;
-	this.lock = false; // allow only manual unlocking
+	var lock = false; // allow only manual unlocking
+	var offset, first_offset;
+
+	var process_data = function(data) {
+		data = String(data).split('\n');
+		if (first_offset === undefined)
+			first_offset = data[0];
+		else if (data[0] > first_offset) { // Newer logs arrived
+			first_offset = data[0];
+			console.log('newer logs!');
+			this_.elem.empty();
+		}
+
+		offset = data[0];
+		data = hex2str(data[1]);
+
+		var prev_height = this_.elem[0].scrollHeight;
+		var prev = prev_height - this_.elem.scrollTop();
+
+		remove_loader(this_.elem);
+		this_.elem.html(colorize(text_to_safe_html(data) + this_.elem.html(),
+			data.length + 2000));
+		var curr_height = this_.elem[0].scrollHeight;
+		this_.elem.scrollTop(curr_height - prev);
+
+		// Load more logs if scrolling up did not become possible
+		if (offset > 0) {
+			lock = false;
+			if (this_.elem.innerHeight() >= curr_height || prev_height == curr_height) {
+				// avoid recursion
+				setTimeout(this_.fetch_more, 0);
+			}
+		}
+	};
 
 	this.fetch_more = function() {
-		if (this.lock)
+		if (lock)
 			return;
-		this.lock = true;
+		lock = true;
 
-		append_loader(this.elem);
-		var logs = this;
+		append_loader(this_.elem);
 		$.ajax({
 			type: 'GET',
-			url: '/api/logs/' + logs.type +
-				(logs.offset === undefined ? '' : '?' + logs.offset),
-			success: function(data) {
-				data = String(data).split('\n');
-				logs.offset = data[0];
-				data = hex2str(data[1]);
-
-				var prev_height = elem[0].scrollHeight;
-				var prev = prev_height - elem.scrollTop();
-
-				remove_loader(logs.elem);
-				elem.html(colorize(text_to_safe_html(data) + elem.html(),
-					data.length + 2000));
-				var curr_height = elem[0].scrollHeight;
-				elem.scrollTop(curr_height - prev);
-
-				// Load more logs if scrolling up did not become possible
-				if (logs.offset > 0) {
-					logs.lock = false;
-					if (elem.innerHeight() >= curr_height || prev_height == curr_height) {
-						// avoid recursion
-						setTimeout(function(){ logs.fetch_more(); }, 0);
-					}
-				}
-			},
+			url: '/api/logs/' + this_.type +
+				(offset === undefined ? '' : '?' + offset),
+			success: process_data,
 			error: function(resp, status) {
-				show_error_via_loader(logs.elem, resp, status, function () {
-					logs.lock = false; // only allow manual unlocking
-					logs.fetch_more();
+				show_error_via_loader(this_.elem, resp, status, function () {
+					lock = false; // allow only manual unlocking
+					this_.fetch_more();
 				});
 			}
 		});
 	};
 
+	this.try_fetching_newest = function() {
+		if (lock)
+			return;
+		lock = true;
+
+		append_loader(this_.elem);
+		$.ajax({
+			type: 'GET',
+			url: '/api/logs/' + this_.type,
+			success: function(data) {
+				if (String(data).split('\n')[0] !== first_offset)
+					return process_data(data);
+
+				remove_loader(this_.elem);
+				lock = false;
+			},
+			error: function(resp, status) {
+				show_error_via_loader(this_.elem, resp, status, function () {
+					lock = false; // allow only manual unlocking
+					this_.fetch_more();
+				});
+			}
+		});
+	};
+
+	setInterval(function() {
+		var elem = this_.elem[0];
+		console.log(elem.scrollHeight - elem.scrollTop, elem.clientHeight);
+		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight)
+			this_.try_fetching_newest();
+	}, 2000);
+
 	this.monitor_scroll = function() {
-		var logs = this;
-		this.elem.on('scroll', function() {
+		this_.elem.on('scroll', function() {
 			if ($(this).scrollTop() <= 300)
-				logs.fetch_more();
+				this_.fetch_more();
 		});
 	};
 
@@ -949,7 +1040,7 @@ var ActionsToHTML = {};
 		var res = [];
 		if (!job_view && actions_str.indexOf('v') !== -1)
 			res.push(a_view_button('/jobs/' + job_id, 'View', 'btn-small',
-				function() { view_job(true, job_id); }));
+				view_job.bind(null, true, job_id)));
 
 		if (actions_str.indexOf('u') !== -1 || actions_str.indexOf('r') !== -1)
 			res.push($('<div>', {
@@ -971,30 +1062,24 @@ var ActionsToHTML = {};
 
 		if (actions_str.indexOf('p') !== -1)
 			res.push(a_view_button('/p/' + problem_id, 'View problem',
-				'btn-small green', function() { view_problem(true, problem_id); }));
+				'btn-small green', view_problem.bind(null, true, problem_id)));
 
 		if (actions_str.indexOf('C') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small red',
 				text: 'Cancel job',
-				click: function() {
-					var jid = job_id;
-					return function() { cancel_job(jid); }
-				}()
+				click: cancel_job.bind(null, job_id)
 			}));
 
 		if (actions_str.indexOf('R') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small orange',
 				text: 'Restart job',
-				click: function() {
-					var jid = job_id;
-					return function() { restart_job(jid); }
-				}()
+				click: restart_job.bind(null, job_id)
 			}));
 
 		return res;
-	}
+	};
 
 	this.user = function(user_id, actions_str, user_view /*= false*/) {
 		if (user_view === undefined)
@@ -1003,23 +1088,23 @@ var ActionsToHTML = {};
 		var res = [];
 		if (!user_view && actions_str.indexOf('v') !== -1)
 			res.push(a_view_button('/u/' + user_id, 'View', 'btn-small',
-				function() { view_user(true, user_id); }));
+				view_user.bind(null, true, user_id)));
 
 		if (actions_str.indexOf('E') !== -1)
 			res.push(a_view_button('/u/' + user_id + '/edit', 'Edit',
-				'btn-small blue', function() { edit_user(true, user_id); }));
+				'btn-small blue', edit_user.bind(null, true, user_id)));
 
 		if (actions_str.indexOf('D') !== -1)
 			res.push(a_view_button('/u/' + user_id + '/delete', 'Delete',
-				'btn-small red', function() { delete_user(true, user_id); }));
+				'btn-small red', delete_user.bind(null, true, user_id)));
 
 		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
 			res.push(a_view_button('/u/' + user_id + '/change-password',
 				'Change password', 'btn-small orange',
-				function() { change_user_password(true, user_id); }));
+				change_user_password.bind(null, true, user_id)));
 
 		return res;
-	}
+	};
 
 	this.submission = function(submission_id, actions_str, submission_type, submission_view /*= false*/) {
 		if (submission_view === undefined)
@@ -1028,12 +1113,12 @@ var ActionsToHTML = {};
 		var res = [];
 		if (!submission_view && actions_str.indexOf('v') !== -1)
 			res.push(a_view_button('/s/' + submission_id, 'View', 'btn-small',
-				function() { view_submission(true, submission_id); }));
+				view_submission.bind(null, true, submission_id)));
 
 		if (actions_str.indexOf('s') !== -1) {
 			if (!submission_view)
 				res.push(a_view_button('/s/' + submission_id + '#source', 'Source',
-					'btn-small', function() { view_submission(true, submission_id, '#source'); }));
+					'btn-small', view_submission.bind(null, true, submission_id, '#source')));
 
 			res.push($('<a>', {
 				class: 'btn-small',
@@ -1045,24 +1130,24 @@ var ActionsToHTML = {};
 		if (actions_str.indexOf('C') !== -1)
 			res.push(a_view_button('/s/' + submission_id + '/chtype', 'Change type',
 				'btn-small orange',
-				function() { submission_chtype(submission_id, submission_type); }));
+				submission_chtype.bind(null, submission_id, submission_type)));
 
 		if (actions_str.indexOf('R') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small blue',
 				text: 'Rejudge',
-				click: function() { rejudge_submission(submission_id); }
+				click: rejudge_submission.bind(null, submission_id)
 			}));
 
 		if (actions_str.indexOf('D') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small red',
 				text: 'Delete',
-				click: function() { delete_submission(submission_id); }
+				click: delete_submission.bind(null, submission_id)
 			}));
 
 		return res;
-	}
+	};
 
 	this.problem = function(problem_id, actions_str, problem_name, problem_view /*= false*/) {
 		if (problem_view === undefined)
@@ -1071,7 +1156,7 @@ var ActionsToHTML = {};
 		var res = [];
 		if (!problem_view && actions_str.indexOf('v') !== -1)
 			res.push(a_view_button('/p/' + problem_id, 'View', 'btn-small',
-				function() { view_problem(true, problem_id); }));
+				view_problem.bind(null, true, problem_id)));
 
 		if (actions_str.indexOf('V') !== -1)
 			res.push($('<a>', {
@@ -1082,15 +1167,13 @@ var ActionsToHTML = {};
 
 		if (actions_str.indexOf('S') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '/submit', 'Submit',
-				'btn-small blue', function() {
-					add_submission(true, problem_id, problem_name, (actions_str.indexOf('i') !== -1));
-				}));
+				'btn-small blue', add_submission.bind(null, true, problem_id,
+					problem_name, (actions_str.indexOf('i') !== -1))));
 
 		if (actions_str.indexOf('s') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '#all_submissions#solutions',
-				'Solutions', 'btn-small', function() {
-					view_problem(true, problem_id, '#all_submissions#solutions');
-				}));
+				'Solutions', 'btn-small', view_problem.bind(null, true, problem_id,
+					'#all_submissions#solutions')));
 
 		if (problem_view && actions_str.indexOf('d') !== -1)
 			res.push($('<a>', {
@@ -1101,25 +1184,25 @@ var ActionsToHTML = {};
 
 		if (actions_str.indexOf('E') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '/edit', 'Edit',
-				'btn-small blue', function() { edit_problem(true, problem_id); }));
+				'btn-small blue', edit_problem.bind(null, true, problem_id)));
 
 		if (problem_view && actions_str.indexOf('R') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '/reupload', 'Reupload',
-				'btn-small orange', function() { reupload_problem(true, problem_id); }));
+				'btn-small orange', reupload_problem.bind(null, true, problem_id)));
 
 		if (problem_view && actions_str.indexOf('J') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small blue',
 				text: 'Rejudge all submissions',
-				click: function() { rejudge_problem_submissions(problem_id); }
+				click: rejudge_problem_submissions.bind(null, problem_id)
 			}));
 
 		if (problem_view && actions_str.indexOf('D') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '/delete', 'Delete',
-				'btn-small red', function() { delete_problem(true, problem_id); }));
+				'btn-small red', delete_problem.bind(null, true, problem_id)));
 
 		return res;
-	}
+	};
 
 	this.contest = function(contest_id, actions_str, contest_view /*= false*/) {
 		if (contest_view === undefined)
@@ -1135,14 +1218,14 @@ var ActionsToHTML = {};
 
 		if (contest_view && actions_str.indexOf('E') !== -1)
 			res.push(a_view_button('/c/' + contest_id + '/edit', 'Edit',
-				'btn-small blue', function() { edit_contest(true, contest_id); }));
+				'btn-small blue', edit_contest.bind(null, true, contest_id)));
 
 		if (contest_view && actions_str.indexOf('D') !== -1)
 			res.push(a_view_button('/c/' + contest_id + '/delete', 'Delete',
-				'btn-small red', function() { delete_contest(true, contest_id); }));
+				'btn-small red', delete_contest.bind(null, true, contest_id)));
 
 		return res;
-	}
+	};
 }).call(ActionsToHTML);
 
 /* ================================= Users ================================= */
@@ -1155,10 +1238,8 @@ function add_user(as_modal) {
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
-			}).add($('<div>', {
-				class: 'field-group',
-				html: $('<label>', {text: 'Type'})
-				.add('<select>', {
+			}).add(Form.field_group('Type',
+				$('<select>', {
 					name: 'type',
 					required: true,
 					html: $('<option>', {
@@ -1173,7 +1254,7 @@ function add_user(as_modal) {
 						selected: true
 					})
 				})
-			})).add(Form.field_group('First name', {
+			)).add(Form.field_group('First name', {
 				type: 'text',
 				name: 'first_name',
 				size: 24,
@@ -1207,7 +1288,7 @@ function add_user(as_modal) {
 				})
 			}), 'User was added'
 		));
-	})
+	});
 }
 function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
@@ -1309,10 +1390,8 @@ function edit_user(as_modal, user_id) {
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
-			}).add($('<div>', {
-				class: 'field-group',
-				html: $('<label>', {text: 'Type'})
-				.add('<select>', {
+			}).add(Form.field_group('Type',
+				$('<select>', {
 					name: 'type',
 					required: true,
 					html: function() {
@@ -1341,7 +1420,7 @@ function edit_user(as_modal, user_id) {
 						return res;
 					}()
 				})
-			})).add(Form.field_group('First name', {
+			)).add(Form.field_group('First name', {
 				type: 'text',
 				name: 'first_name',
 				value: data[2],
@@ -1395,9 +1474,8 @@ function delete_user(as_modal, user_id) {
 		var p = $('<p>', {
 			style: 'margin: 0 0 20px; text-align: center',
 			html: 'You are going to delete the user '
-		}).append(a_view_button('/u/' + user_id, data[1], undefined, function() {
-			view_user(true, user_id);
-		})).append('. As it cannot be undone,<br>you have to confirm it with YOUR password.');
+		}).append(a_view_button('/u/' + user_id, data[1], undefined,
+			view_user.bind(null, true, user_id))).append('. As it cannot be undone,<br>you have to confirm it with YOUR password.');
 
 		if (user_id == logged_user_id()) {
 			title = confirm_text = 'Delete account';
@@ -1475,6 +1553,7 @@ function change_user_password(as_modal, user_id) {
 	}, '/u/' + user_id + "/change-password");
 }
 function UsersLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -1482,76 +1561,54 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 	this.query_url = '/api/users' + query_suffix;
 	this.query_suffix = '';
 
-	this.fetch_more_impl = function() {
-		var obj = this;
-		$.ajax({
-			type: 'GET',
-			url: obj.query_url + obj.query_suffix,
-			dataType: 'json',
-			success: function(data) {
-				var modal = obj.elem.parents('.modal');
-				if (obj.elem.children('thead').length === 0) {
-					if (data.length == 0) {
-						obj.elem.parent().append($('<center>', {
-							class: 'users always_in_view',
-							html: '<p>There are no users to show...</p>'
-						}));
-						remove_loader(obj.elem.parent());
-						timed_hide_show(modal);
-						return;
-					}
-
-					elem.html('<thead><tr>' +
-							'<th>Id</th>' +
-							'<th class="username">Username</th>' +
-							'<th class="first-name">First name</th>' +
-							'<th class="last-name">Last name</th>' +
-							'<th class="email">Email</th>' +
-							'<th class="type">Type</th>' +
-							'<th class="actions">Actions</th>' +
-						'</tr></thead><tbody></tbody>');
-				}
-
-				for (var x in data) {
-					x = data[x];
-					obj.query_suffix = '/>' + x[0];
-
-					var row = $('<tr>');
-					row.append($('<td>', {text: x[0]}));
-					row.append($('<td>', {text: x[1]}));
-					row.append($('<td>', {text: x[2]}));
-					row.append($('<td>', {text: x[3]}));
-					row.append($('<td>', {text: x[4]}));
-					row.append($('<td>', {
-						class: x[5],
-						text: String(x[5]).slice(0, 1).toUpperCase() +
-							String(x[5]).slice(1)
-					}));
-
-					// Actions
-					row.append($('<td>', {
-						html: ActionsToHTML.user(x[0], x[6])
-					}));
-
-					obj.elem.children('tbody').append(row);
-				}
-
-				remove_loader(elem.parent());
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			if (data.length == 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'users always_in_view',
+					// class: 'users',
+					html: '<p>There are no users to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
-				centerize_modal(modal, false);
+				return;
+			}
 
-				if (data.length == 0)
-					return; // No more data to load
+			this_.elem.html('<thead><tr>' +
+					'<th>Id</th>' +
+					'<th class="username">Username</th>' +
+					'<th class="first-name">First name</th>' +
+					'<th class="last-name">Last name</th>' +
+					'<th class="email">Email</th>' +
+					'<th class="type">Type</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+		}
 
-				obj.lock = false;
-				if (obj.elem.height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
-					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
-				}
-			},
-			error: obj.get_error_handler()
-		});
-	}
+		for (var x in data) {
+			x = data[x];
+			this_.query_suffix = '/>' + x[0];
+
+			var row = $('<tr>');
+			row.append($('<td>', {text: x[0]}));
+			row.append($('<td>', {text: x[1]}));
+			row.append($('<td>', {text: x[2]}));
+			row.append($('<td>', {text: x[3]}));
+			row.append($('<td>', {text: x[4]}));
+			row.append($('<td>', {
+				class: x[5],
+				text: String(x[5]).slice(0, 1).toUpperCase() +
+					String(x[5]).slice(1)
+			}));
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.user(x[0], x[6])
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
+	};
 
 	this.fetch_more();
 }
@@ -1567,26 +1624,25 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 	}
 
 	var tabs = [
-		'All', function() { retab(''); },
-		'Admins', function() { retab('/tA'); },
-		'Teachers', function() { retab('/tT'); },
-		'Normal', function() { retab('/tN'); }
+		'All', retab.bind(null, ''),
+		'Admins', retab.bind(null, '/tA'),
+		'Teachers', retab.bind(null, '/tT'),
+		'Normal', retab.bind(null, '/tN')
 	];
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
-function user_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
-	view_base((parent_elem === undefined),
+function user_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
+	view_base((as_modal === undefined ? true : as_modal),
 		'/u' + (opt_hash === undefined ? '' : opt_hash), function() {
-		timed_hide($(this).parent().parent().filter('.modal'));
-		$(this).append($('<h1>', {text: 'Users'}));
-		if (logged_user_is_admin())
-			$(this).append(a_view_button('/u/add', 'Add user', 'btn', function() {
-				add_user(true);
-			}));
+			timed_hide($(this).parent().parent().filter('.modal'));
+			$(this).append($('<h1>', {text: 'Users'}));
+			if (logged_user_is_admin())
+				$(this).append(a_view_button('/u/add', 'Add user', 'btn',
+					add_user.bind(null, true)));
 
-		tab_users_lister($(this));
-	}, parent_elem);
+			tab_users_lister($(this));
+		});
 }
 
 /* ================================== Jobs ================================== */
@@ -1609,16 +1665,10 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 
 				if (name == "submission")
 					td.append(a_view_button('/s/' + info[name], info[name],
-						undefined, function() {
-							var sid = info[name];
-							return function() {view_submission(true, sid);};
-						}()));
+						undefined, view_submission.bind(null, true, info[name])));
 				else if (name == "problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
-						undefined, function() {
-							var pid = info[name];
-							return function() {view_problem(true, pid);};
-						}()));
+						undefined, view_problem.bind(null, true, info[name])));
 				else
 					td.append(info[name]);
 
@@ -1626,7 +1676,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 			}
 
 			return td;
-		};
+		}
 
 		this.append($('<div>', {
 			class: 'job-info',
@@ -1661,14 +1711,14 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 								(data[6] == null ? 'Deleted (id: ' + data[5] + ')'
 								: a_view_button(
 								'/u/' + data[5], data[6], undefined,
-								function() { view_user(true, data[5]); }))
+								view_user.bind(null, true, data[5])))
 						}).add('<td>', {
 							html: info_html(data[7])
 						})
 					})
 				})
 			})
-		}))
+		}));
 
 		if (data[8].indexOf('r') !== -1) {
 			this.append('<h2>Job log</h2>')
@@ -1697,13 +1747,14 @@ function restart_job(job_id) {
 			html: [
 				'Are you sure to restart the ',
 				a_view_button('/jobs/' + job_id, 'job ' + job_id, undefined,
-					function() { view_job(true, job_id); }),
+					view_job.bind(null, true, job_id)),
 				'?'
 			]
 		}), 'Restart job', 'btn-small orange', '/api/job/' + job_id + '/restart',
 		'The job has been restarted.', 'No, go back');
 }
 function JobsLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -1711,124 +1762,94 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 	this.query_url = '/api/jobs' + query_suffix;
 	this.query_suffix = '';
 
-	this.fetch_more_impl = function() {
-		var obj = this;
-		$.ajax({
-			type: 'GET',
-			url: obj.query_url + obj.query_suffix,
-			dataType: 'json',
-			success: function(data) {
-				var modal = obj.elem.parents('.modal');
-				if (obj.elem.children('thead').length === 0) {
-					if (data.length == 0) {
-						obj.elem.parent().append($('<center>', {
-							class: 'jobs always_in_view',
-							html: '<p>There are no jobs to show...</p>'
-						}));
-						remove_loader(obj.elem.parent());
-						timed_hide_show(modal);
-						return;
-					}
-
-					elem.html('<thead><tr>' +
-							'<th>Id</th>' +
-							'<th class="type">Type</th>' +
-							'<th class="priority">Priority</th>' +
-							'<th class="added">Added</th>' +
-							'<th class="status">Status</th>' +
-							'<th class="owner">Owner</th>' +
-							'<th class="info">Info</th>' +
-							'<th class="actions">Actions</th>' +
-						'</tr></thead><tbody></tbody>');
-					add_tz_marker(elem.find('thead th.added'));
-				}
-
-				for (var x in data) {
-					x = data[x];
-					obj.query_suffix = '/<' + x[0];
-
-					var row = $('<tr>');
-					row.append($('<td>', {text: x[0]}));
-					row.append($('<td>', {text: x[2]}));
-					row.append($('<td>', {text: x[4]}));
-					row.append($('<td>', {
-						html: normalize_datetime(
-							a_view_button('/jobs/' + x[0], x[1], undefined,
-								function() {
-									var job_id = x[0];
-									return function() { view_job(true, job_id); };
-								}()).attr('datetime', x[1]),
-							false)
-					}));
-					row.append($('<td>', {
-						class: 'status ' + x[3][0],
-						text: x[3][1]
-					}));
-					row.append($('<td>', {
-						html: x[5] === null ? 'System' : (x[6] == null ? x[5]
-							: a_view_button('/u/' + x[5], x[6], undefined, function() {
-								var uid = x[5];
-								return function() { view_user(true, uid); };
-							}()))
-					}));
-					// Info
-					var info = x[7];
-					row.append(function() {
-						var td = $('<td>');
-						function append_tag(name, val) {
-							td.append($('<label>', {text: name}));
-							td.append(val);
-						}
-
-						if (info.submission !== undefined)
-							append_tag('submission',
-								a_view_button('/s/' + info.submission,
-									info.submission, undefined, function() {
-										var sid = info.submission;
-										return function() { view_submission(true, sid); };
-									}()));
-
-						if (info.problem !== undefined)
-							append_tag('problem',
-								a_view_button('/p/' + info.problem,
-									info.problem, undefined, function() {
-										var pid = info.problem;
-										return function() { view_problem(true, pid); };
-									}()));
-
-						var names = ['name', 'memory limit', 'problem type'];
-						for (var idx in names) {
-							var x = names[idx];
-							if (info[x] !== undefined)
-								append_tag(x, info[x]);
-						}
-
-						return td;
-					}());
-
-					// Actions
-					row.append($('<td>', {
-						html: ActionsToHTML.job(x[0], x[8], info.problem)
-					}));
-
-					obj.elem.children('tbody').append(row);
-				}
-
-				remove_loader(obj.elem.parent());
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			if (data.length == 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'jobs always_in_view',
+					// class: 'jobs',
+					html: '<p>There are no jobs to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
-				centerize_modal(modal, false);
+				return;
+			}
 
-				if (data.length == 0)
-					return; // No more data to load
+			this_.elem.html('<thead><tr>' +
+					'<th>Id</th>' +
+					'<th class="type">Type</th>' +
+					'<th class="priority">Priority</th>' +
+					'<th class="added">Added</th>' +
+					'<th class="status">Status</th>' +
+					'<th class="owner">Owner</th>' +
+					'<th class="info">Info</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+			add_tz_marker(this_.elem.find('thead th.added'));
+		}
 
-				obj.lock = false;
-				if (obj.elem.height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
-					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
+		for (var x in data) {
+			x = data[x];
+			this_.query_suffix = '/<' + x[0];
+
+			var row = $('<tr>');
+			row.append($('<td>', {text: x[0]}));
+			row.append($('<td>', {text: x[2]}));
+			row.append($('<td>', {text: x[4]}));
+			row.append($('<td>', {
+				html: normalize_datetime(
+					a_view_button('/jobs/' + x[0], x[1], undefined,
+						view_job.bind(null, true, x[0])).attr('datetime', x[1]),
+					false)
+			}));
+			row.append($('<td>', {
+				class: 'status ' + x[3][0],
+				text: x[3][1]
+			}));
+			row.append($('<td>', {
+				html: x[5] === null ? 'System' : (x[6] == null ? x[5]
+					: a_view_button('/u/' + x[5], x[6], undefined,
+						view_user.bind(null, true, x[5])))
+			}));
+			// Info
+			var info = x[7];
+			{
+				/* jshint loopfunc: true */
+				var td = $('<td>');
+				var append_tag = function(name, val) {
+					td.append($('<label>', {text: name}));
+					td.append(val);
+				};
+
+				if (info.submission !== undefined)
+					append_tag('submission',
+						a_view_button('/s/' + info.submission,
+							info.submission, undefined,
+							view_submission.bind(null, true, info.submission)));
+
+				if (info.problem !== undefined)
+					append_tag('problem',
+						a_view_button('/p/' + info.problem,
+							info.problem, undefined,
+							view_problem.bind(null, true, info.problem)));
+
+				var names = ['name', 'memory limit', 'problem type'];
+				for (var idx in names) {
+					var ni = names[idx];
+					if (info[ni] !== undefined)
+						append_tag(ni, info[ni]);
 				}
-			},
-			error: obj.get_error_handler()
-		});
+
+				row.append(td);
+			}
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.job(x[0], x[8], info.problem)
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
 	};
 
 	this.fetch_more();
@@ -1845,8 +1866,8 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 	}
 
 	var tabs = [
-		'All', function() { retab(''); },
-		'My', function() { retab('/u' + logged_user_id()); }
+		'All', retab.bind(null, ''),
+		'My', retab.bind(null, '/u' + logged_user_id())
 	];
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
@@ -1855,31 +1876,23 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 /* ============================== Submissions ============================== */
 function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignored, contest_problem_id) {
 	view_base(as_modal, (contest_problem_id === undefined ?
-		'/p/' + problem_id + '/submit' : '/todo'), function() {
-		this.append(ajax_form('Submit a solution', '/api/submission/add/p'
-				+ problem_id + (contest_problem_id === undefined ? '' : '/cp' + contest_problem_id),
-			$('<div>', {
-				class: 'field-group',
-				html: [
-					$('<label>', {text: 'Problem'}),
-					a_view_button('/p/' + problem_id, problem_name_to_show, undefined,
-						function() { view_problem(true, problem_id); })
-				]
-			}).add(Form.field_group("Solution", {
-					type: 'file',
-					name: 'solution',
-				})).add($('<div>', {
-				class: 'field-group',
-				html: [
-					$('<label>', {text: 'Code'}),
-					$('<textarea>', {
-						class: 'monospace',
-						name: 'code',
-						rows: 8,
-						cols: 50
-					})
-				]
-			})).add(maybe_ignored ? Form.field_group('Ignored submission', {
+		'/p/' + problem_id + '/submit' : '/c/p' + contest_problem_id + '/submit'), function() {
+		this.append(ajax_form('Submit a solution', '/api/submission/add/p' +
+				problem_id + (contest_problem_id === undefined ? '' : '/cp' +
+				contest_problem_id),
+			Form.field_group('Problem', a_view_button('/p/' + problem_id,
+				problem_name_to_show, undefined, view_problem.bind(null, true, problem_id))
+			).add(Form.field_group('Solution', {
+				type: 'file',
+				name: 'solution',
+			})).add(Form.field_group('Code',
+				$('<textarea>', {
+					class: 'monospace',
+					name: 'code',
+					rows: 8,
+					cols: 50
+				})
+			)).add(maybe_ignored ? Form.field_group('Ignored submission', {
 				type: 'checkbox',
 				name: 'ignored'
 			}) : $()).add('<div>', {
@@ -1890,15 +1903,15 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.parent().parent().parent().parent());
-					view_submission(as_modal, resp);
+					show_success_via_loader(this, 'Submitted');
+					view_submission(true, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/s/' + resp;
 				}
 			})
 		);
-	})
+	});
 }
 function rejudge_submission(submission_id) {
 	modal_request('Scheduling submission rejudge ' + submission_id, $('<form>'),
@@ -1912,8 +1925,7 @@ function submission_chtype(submission_id, submission_type) {
 				html: [
 					'New type of the ',
 					a_view_button('/s/' + submission_id, 'submission ' + submission_id,
-						undefined,
-						function() { view_submission(true, submission_id); }),
+						undefined, view_submission.bind(null, true, submission_id)),
 					': '
 				]
 			}),
@@ -1934,15 +1946,14 @@ function submission_chtype(submission_id, submission_type) {
 			})
 		]
 	}), 'Change type', 'btn-small orange', '/api/submission/' + submission_id + '/chtype',
-		'Submission type has been updated.', 'No, go back');
+		'Type of the submission has been updated.', 'No, go back');
 }
 function delete_submission(submission_id) {
 	dialogue_modal_request('Delete submission', $('<label>', {
 			html: [
 				'Are you sure to delete the ',
 				a_view_button('/s/' + submission_id, 'submission ' + submission_id,
-					undefined,
-					function() { view_submission(true, submission_id); }),
+					undefined, view_submission.bind(null, true, submission_id)),
 				'?'
 			]
 		}), 'Yes, delete it', 'btn-small red', '/api/submission/' + submission_id + '/delete',
@@ -1963,20 +1974,18 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			this.append($('<div>', {
 				class: 'round-path',
 				html: [
-					a_view_button('/c/' + data[10], data[11], '', function() {
-						view_contest(true, data[10]);
-					}),
+					a_view_button('/c/' + data[10], data[11], '',
+						view_contest.bind(null, true, data[10])),
 					' / ',
-					a_view_button('/c/r' + data[8], data[9], '', function() {
-						view_contest(true, data[8]);
-					}),
+					a_view_button('/c/r' + data[8], data[9], '',
+						view_contest.bind(null, true, data[8])),
 					' / ',
-					a_view_button('/c/p' + data[6], data[7], '', function() {
-						view_contest(true, data[6]);
-					}),
+					a_view_button('/c/p' + data[6], data[7], '',
+						view_contest.bind(null, true, data[6])),
 					$('<a>', {
 						class: 'btn-small',
-						href: '/api/contest/p' + data[6] + '/statement/' + encodeURIComponent(data[7]),
+						href: '/api/contest/p' + data[6] + '/statement/' +
+							encodeURIComponent(data[7]),
 						text: 'View statement'
 					})
 				]
@@ -2015,18 +2024,14 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 								html: [
 									(data[2] === null ? '' : $('<td>', {
 										html: [a_view_button('/u/' + data[2], data[3],
-												undefined, function() {
-													view_user(true, data[2]);
-												}),
+												undefined, view_user.bind(null, true, data[2])),
 											' (' + text_to_safe_html(data[16]) + ' ' +
 												text_to_safe_html(data[17]) + ')'
 										]
 									})),
 									$('<td>', {
 										html: a_view_button('/p/' + data[4], data[5],
-											undefined, function() {
-												view_problem(true, data[4]);
-											})
+											undefined, view_problem.bind(null, true, data[4]))
 									}),
 									normalize_datetime($('<td>', {
 										datetime: data[12],
@@ -2034,8 +2039,8 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 									}), true),
 									$('<td>', {
 										class: 'status ' + data[13][0],
-										text: (data[13][0].lastIndexOf('initial') === -1
-											? '' : 'Initial: ') + data[13][1]
+										text: (data[13][0].lastIndexOf('initial') === -1 ?
+											'' : 'Initial: ') + data[13][1]
 									}),
 									$('<td>', {text: data[14]}),
 									$('<td>', {text: data[1]})
@@ -2056,11 +2061,11 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				elem.append($('<div>', {
 					class: 'results',
 					html: [data[18], data[19], null]
-				}))
+				}));
 			}
 		];
 
-		var cached_source = undefined;
+		var cached_source;
 		if (actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
 				timed_hide_show(elem.parents('.modal'));
@@ -2097,6 +2102,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function SubmissionsLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -2111,136 +2117,96 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 	this.query_url = '/api/submissions' + query_suffix;
 	this.query_suffix = '';
 
-	this.fetch_more_impl = function() {
-		var obj = this;
-		$.ajax({
-			type: 'GET',
-			url: obj.query_url + obj.query_suffix,
-			dataType: 'json',
-			success: function(data) {
-				var modal = obj.elem.parents('.modal');
-				if (obj.elem.children('thead').length === 0) {
-					if (data.length === 0) {
-						obj.elem.parent().append($('<center>', {
-							class: 'submissions always_in_view',
-							html: '<p>There are no submissions to show...</p>'
-						}));
-						remove_loader(obj.elem.parent());
-						timed_hide_show(modal);
-						return;
-					}
-
-					elem.html('<thead><tr>' +
-							'<th>Id</th>' +
-							(obj.show_user ? '<th class="username">Username</th>' : '') +
-							'<th class="time">Added</th>' +
-							'<th class="problem">Problem</th>' +
-							'<th class="status">Status</th>' +
-							'<th class="score">Score</th>' +
-							'<th class="type">Type</th>' +
-							'<th class="actions">Actions</th>' +
-						'</tr></thead><tbody></tbody>');
-					add_tz_marker(elem.find('thead th.time'));
-				}
-
-				for (var x in data) {
-					x = data[x];
-					obj.query_suffix = '/<' + x[0];
-
-					var row = $('<tr>', {
-						class: (x[1] === 'Ignored' ? 'ignored' : undefined)
-					});
-					// Id
-					row.append($('<td>', {text: x[0]}));
-
-					// Username
-					if (obj.show_user)
-						row.append($('<td>', {
-							html: x[2] === null ? 'System' : (x[3] == null ? x[2]
-								: a_view_button('/u/' + x[2], x[3], undefined,
-									function() {
-										var uid = x[2];
-										return function() { view_user(true, uid); };
-									}()))
-						}));
-
-					// Submission time
-					row.append($('<td>', {
-						html: normalize_datetime(
-							a_view_button('/s/' + x[0], x[12], undefined,
-								function() {
-									var submission_id = x[0];
-									return function() {
-										view_submission(true, submission_id);
-									};
-								}()).attr('datetime', x[12]),
-							false)
-					}));
-
-					// Problem
-					if (x[6] == null) // Not in the contest
-						row.append($('<td>', {
-							html: a_view_button('/p/' + x[4], x[5], undefined,
-								function() {
-									var pid = x[4];
-									return function() { view_problem(true, pid); };
-							}())
-						}));
-					else
-						row.append($('<td>', {
-							html: [(obj.show_contest ? a_view_button('/c/' + x[10], x[11], '', function() {
-									var cid = x[10];
-									return function() { view_contest(true, cid); };
-								}()) : ''),
-								(obj.show_contest ? ' / ' : ''),
-								a_view_button('/c/r' + x[8], x[9], '', function() {
-									var crid = x[8];
-									return function() { view_contest(true, crid); };
-								}()),
-								' / ',
-								a_view_button('/c/p' + x[6], x[7], '', function() {
-									var cpid = x[6];
-									return function() { view_contest(true, cpid); };
-								}())
-							]
-						}))
-
-					// Status
-					row.append($('<td>', {
-						class: 'status ' + x[13][0],
-						text: (x[13][0].lastIndexOf('initial') === -1 ? ''
-							: 'Initial: ') + x[13][1]
-					}));
-
-					// Score
-					row.append($('<td>', {text: x[14]}));
-
-					// Type
-					row.append($('<td>', {text: x[1]}));
-
-					// Actions
-					row.append($('<td>', {
-						html: ActionsToHTML.submission(x[0], x[15], x[1])
-					}));
-
-					obj.elem.children('tbody').append(row);
-				}
-
-				remove_loader(obj.elem.parent());
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			if (data.length === 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'submissions always_in_view',
+					// class: 'submissions',
+					html: '<p>There are no submissions to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
-				centerize_modal(modal, false);
+				return;
+			}
 
-				if (data.length == 0)
-					return; // No more data to load
+			this_.elem.html('<thead><tr>' +
+					'<th>Id</th>' +
+					(this_.show_user ? '<th class="username">Username</th>' : '') +
+					'<th class="time">Added</th>' +
+					'<th class="problem">Problem</th>' +
+					'<th class="status">Status</th>' +
+					'<th class="score">Score</th>' +
+					'<th class="type">Type</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+			add_tz_marker(this_.elem.find('thead th.time'));
+		}
 
-				obj.lock = false;
-				if (obj.elem.height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
-					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
-				}
-			},
-			error: obj.get_error_handler()
-		});
+		for (var x in data) {
+			x = data[x];
+			this_.query_suffix = '/<' + x[0];
+
+			var row = $('<tr>', {
+				class: (x[1] === 'Ignored' ? 'ignored' : undefined)
+			});
+			// Id
+			row.append($('<td>', {text: x[0]}));
+
+			// Username
+			if (this_.show_user)
+				row.append($('<td>', {
+					html: x[2] === null ? 'System' : (x[3] == null ? x[2]
+						: a_view_button('/u/' + x[2], x[3], undefined,
+							view_user.bind(null, true, x[2])))
+				}));
+
+			// Submission time
+			row.append($('<td>', {
+				html: normalize_datetime(
+					a_view_button('/s/' + x[0], x[12], undefined,
+						view_submission.bind(null, true, x[0])).attr('datetime', x[12]),
+					false)
+			}));
+
+			// Problem
+			if (x[6] == null) // Not in the contest
+				row.append($('<td>', {
+					html: a_view_button('/p/' + x[4], x[5], undefined,
+						view_problem.bind(null, true, x[4]))
+				}));
+			else
+				row.append($('<td>', {
+					html: [(this_.show_contest ? a_view_button('/c/' + x[10], x[11], '', view_contest.bind(null, true, x[10])) : ''),
+						(this_.show_contest ? ' / ' : ''),
+						a_view_button('/c/r' + x[8], x[9], '',
+							view_contest.bind(null, true, x[8])),
+						' / ',
+						a_view_button('/c/p' + x[6], x[7], '',
+							view_contest.bind(null, true, x[6]))
+					]
+				}));
+
+			// Status
+			row.append($('<td>', {
+				class: 'status ' + x[13][0],
+				text: (x[13][0].lastIndexOf('initial') === -1 ? ''
+					: 'Initial: ') + x[13][1]
+			}));
+
+			// Score
+			row.append($('<td>', {text: x[14]}));
+
+			// Type
+			row.append($('<td>', {text: x[1]}));
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.submission(x[0], x[15], x[1])
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
 	};
 
 	this.fetch_more();
@@ -2257,12 +2223,12 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 	}
 
 	var tabs = [
-		'All', function() { retab(''); },
-		'Final', function() { retab('/tF'); },
-		'Ignored', function() { retab('/tI'); }
+		'All', retab.bind(null, ''),
+		'Final', retab.bind(null, '/tF'),
+		'Ignored', retab.bind(null, '/tI')
 	];
 	if (show_solutions_tab)
-		tabs.push('Solutions', function() { retab('/tS'); })
+		tabs.push('Solutions', retab.bind(null, '/tS'));
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
@@ -2283,10 +2249,8 @@ function add_problem(as_modal) {
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile or make from name',
-			})).add($('<div>', {
-				class: 'field-group',
-				html: $('<label>', {text: "Problem's type"})
-				.add('<select>', {
+			})).add(Form.field_group("Problem's type",
+				$('<select>', {
 					name: 'type',
 					required: true,
 					html: $('<option>', {
@@ -2301,7 +2265,7 @@ function add_problem(as_modal) {
 						text: 'Contest only',
 					})
 				})
-			})).add(Form.field_group('Memory limit [MB]', {
+			)).add(Form.field_group('Memory limit [MB]', {
 				type: 'text',
 				name: 'mem_limit',
 				size: 25,
@@ -2336,7 +2300,7 @@ function add_problem(as_modal) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.parent().parent().parent().parent());
+					show_success_via_loader(this, 'Added');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -2344,7 +2308,7 @@ function add_problem(as_modal) {
 				}
 			}, 'add-problem')
 		);
-	})
+	});
 }
 function reupload_problem(as_modal, problem_id) {
 	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
@@ -2378,10 +2342,8 @@ function reupload_problem(as_modal, problem_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile or make from name',
-			})).add($('<div>', {
-				class: 'field-group',
-				html: $('<label>', {text: "Problem's type"})
-				.add('<select>', {
+			})).add(Form.field_group("Problem's type",
+				$('<select>', {
 					name: 'type',
 					required: true,
 					html: $('<option>', {
@@ -2398,7 +2360,7 @@ function reupload_problem(as_modal, problem_id) {
 						selected: ('Contest only' == data[2] ? true : undefined)
 					})
 				})
-			})).add(Form.field_group('Memory limit [MB]', {
+			)).add(Form.field_group('Memory limit [MB]', {
 				type: 'text',
 				name: 'mem_limit',
 				value: data[10],
@@ -2434,7 +2396,7 @@ function reupload_problem(as_modal, problem_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.parent().parent().parent().parent());
+					show_success_via_loader(this, 'Reuploaded');
 					view_job(true, resp);
 				} else {
 					this.parent().remove();
@@ -2442,14 +2404,20 @@ function reupload_problem(as_modal, problem_id) {
 				}
 			}, 'add-problem')
 		);
-	}, '/p/' + problem_id + '/reupload')
+	}, '/p/' + problem_id + '/reupload');
+}
+function edit_problem(as_modal, problem_id) {
+	// TODO
+}
+function delete_problem(as_modal, problem_id) {
+	// TODO
 }
 function rejudge_problem_submissions(problem_id) {
 	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {
 			html: [
 				'Are you sure to rejudge all submissions to the ',
 				a_view_button('/p/' + problem_id, 'problem ' + problem_id, undefined,
-					function() { view_problem(true, problem_id); }),
+					view_problem.bind(null, true, problem_id)),
 				'?'
 			]
 		}), 'Rejudge all', 'btn-small blue',
@@ -2504,7 +2472,8 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 			$(this).find('.problem-info').append($('<div>', {
 					class: 'owner',
 					html: $('<label>', {text: 'Owner'}).add(
-						a_view_button('/u/' + data[5], data[6], undefined, function() { view_user(true, data[5]); }))
+						a_view_button('/u/' + data[5], data[6], undefined,
+							view_user.bind(null, true, data[5])))
 				}));
 
 		if (actions.indexOf('a') !== -1)
@@ -2561,6 +2530,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function ProblemsLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -2572,92 +2542,67 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 	this.query_url = '/api/problems' + query_suffix;
 	this.query_suffix = '';
 
-	this.fetch_more_impl = function() {
-		var obj = this;
-		$.ajax({
-			type: 'GET',
-			url: obj.query_url + obj.query_suffix,
-			dataType: 'json',
-			success: function(data) {
-				var modal = obj.elem.parents('.modal');
-				if (obj.elem.children('thead').length === 0) {
-					if (data.length === 0) {
-						obj.elem.parent().append($('<center>', {
-							class: 'problems always_in_view',
-							html: '<p>There are no problems to show...</p>'
-						}));
-						remove_loader(obj.elem.parent());
-						timed_hide_show(modal);
-						return;
-					}
-
-					elem.html('<thead><tr>' +
-							'<th>Id</th>' +
-							'<th class="type">Type</th>' +
-							'<th class="label">Label</th>' +
-							'<th class="name_and_tags">Name and tags</th>' +
-							(obj.show_owner ? '<th class="owner">Owner</th>' : '') +
-							(obj.show_added ? '<th class="added">Added</th>' : '') +
-							'<th class="actions">Actions</th>' +
-						'</tr></thead><tbody></tbody>');
-					add_tz_marker(elem.find('thead th.added'));
-				}
-
-				for (var x in data) {
-					x = data[x];
-					obj.query_suffix = '/<' + x[0];
-
-					var row = $('<tr>');
-					// Id
-					row.append($('<td>', {text: x[0]}));
-					// Type
-					row.append($('<td>', {text: x[2]}));
-					// Label
-					row.append($('<td>', {text: x[4]}));
-					// Name and tags
-					row.append($('<td>', {text: x[3]}));
-
-					// Owner
-					if (obj.show_owner)
-						row.append($('<td>', {
-							html: x[5] === null ? '' :
-								(a_view_button('/u/' + x[5], x[6], undefined,
-									function() {
-										var uid = x[5];
-										return function() { view_user(true, uid); };
-									}()))
-						}));
-
-					// Added
-					if (obj.show_added)
-						row.append(normalize_datetime($('<td>', {
-							datetime: x[1],
-							text: x[1]
-						})));
-
-					// Actions
-					row.append($('<td>', {
-						html: ActionsToHTML.problem(x[0], x[7], x[3])
-					}));
-
-					obj.elem.children('tbody').append(row);
-				}
-
-				remove_loader(obj.elem.parent());
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			if (data.length === 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'problems always_in_view',
+					// class: 'problems',
+					html: '<p>There are no problems to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
-				centerize_modal(modal, false);
+				return;
+			}
 
-				if (data.length == 0)
-					return; // No more data to load
+			this_.elem.html('<thead><tr>' +
+					'<th>Id</th>' +
+					'<th class="type">Type</th>' +
+					'<th class="label">Label</th>' +
+					'<th class="name_and_tags">Name and tags</th>' +
+					(this_.show_owner ? '<th class="owner">Owner</th>' : '') +
+					(this_.show_added ? '<th class="added">Added</th>' : '') +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+			add_tz_marker(this_.elem.find('thead th.added'));
+		}
 
-				obj.lock = false;
-				if (obj.elem.height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
-					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
-				}
-			},
-			error: obj.get_error_handler()
-		});
+		for (var x in data) {
+			x = data[x];
+			this_.query_suffix = '/<' + x[0];
+
+			var row = $('<tr>');
+			// Id
+			row.append($('<td>', {text: x[0]}));
+			// Type
+			row.append($('<td>', {text: x[2]}));
+			// Label
+			row.append($('<td>', {text: x[4]}));
+			// Name and tags
+			row.append($('<td>', {text: x[3]}));
+
+			// Owner
+			if (this_.show_owner)
+				row.append($('<td>', {
+					html: x[5] === null ? '' :
+						(a_view_button('/u/' + x[5], x[6], undefined,
+							view_user.bind(null, true, x[5])))
+				}));
+
+			// Added
+			if (this_.show_added)
+				row.append(normalize_datetime($('<td>', {
+					datetime: x[1],
+					text: x[1]
+				})));
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.problem(x[0], x[7], x[3])
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
 	};
 
 	this.fetch_more();
@@ -2673,26 +2618,25 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	}
 
 	var tabs = [
-		'All', function() { retab(''); }
+		'All', retab.bind(null, '')
 	];
 
 	if (is_logged_in())
-		tabs.push('My', function() { retab('/u' + logged_user_id()); });
+		tabs.push('My', retab.bind(null, '/u' + logged_user_id()));
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
-function problem_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
-	view_base((parent_elem === undefined),
+function problem_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
+	view_base((as_modal === undefined ? true : as_modal),
 		'/p' + (opt_hash === undefined ? '' : opt_hash), function() {
-		timed_hide($(this).parent().parent().filter('.modal'));
-		$(this).append($('<h1>', {text: 'Problems'}));
-		if (logged_user_is_tearcher_or_admin())
-			$(this).append(a_view_button('/p/add', 'Add problem', 'btn', function() {
-				add_problem(true);
-			}));
+			timed_hide($(this).parent().parent().filter('.modal'));
+			$(this).append($('<h1>', {text: 'Problems'}));
+			if (logged_user_is_tearcher_or_admin())
+				$(this).append(a_view_button('/p/add', 'Add problem', 'btn',
+					add_problem.bind(null, true)));
 
-		tab_problems_lister($(this));
-	}, parent_elem);
+			tab_problems_lister($(this));
+		});
 }
 
 /* ================================ Contests ================================ */
@@ -2716,7 +2660,7 @@ function add_contest(as_modal) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.parent().parent().parent().parent());
+					show_success_via_loader(this, 'Added');
 					view_contest(true, resp);
 				} else {
 					this.parent().remove();
@@ -2724,7 +2668,7 @@ function add_contest(as_modal) {
 				}
 			})
 		);
-	})
+	});
 }
 function add_contest_round(as_modal, contest_id) {
 	view_base(as_modal, '/c/' + contest_id + '/add_round', function() {
@@ -2735,25 +2679,17 @@ function add_contest_round(as_modal, contest_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Begin time [UTC]', {
-				type: 'text',
-				name: 'begins',
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'Set current time',
-			})).add(Form.field_group('End time [UTC]', {
-				type: 'text',
-				name: 'ends',
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'yyyy-mm-dd HH:MM:SS',
-			})).add(Form.field_group('Full results time [UTC]', {
-				type: 'text',
-				name: 'full_results',
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'yyyy-mm-dd HH:MM:SS',
-			})).add('<div>', {
+			}).add(Form.field_group('Begin time', datetime_input('begins')
+			)).add(Form.field_group('End time',
+				datetime_input('ends', true, null, 'Never')
+				.attr('placeholder', 'Never')
+			)).add(Form.field_group('Full results time',
+				datetime_input('full_results', true, null, 'Immediately')
+				.attr('placeholder', 'Immediately')
+			)).add(Form.field_group('Show ranking since',
+				datetime_input('ranking_expo', true, null, "Don't show")
+				.attr('placeholder', "Don't show")
+			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
@@ -2761,20 +2697,19 @@ function add_contest_round(as_modal, contest_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.parent().parent().parent().parent());
+					close_modal(this.closest('.modal'));
 					view_contest(true, contest_id);
 				} else {
 					this.parent().remove();
-					// window.location.href = '/c/r' + resp;
-					window.location.href = '/c/' + contest_id;
+					window.location.href = '/c/r' + resp;
 				}
 			})
 		);
-	})
+	});
 }
 function add_contest_problem(as_modal, contest_round_id) {
 	view_base(as_modal, '/c/r' + contest_round_id + '/add_problem', function() {
-		this.append(ajax_form('Add round', '/api/contest/r' + contest_round_id + '/add_problem',
+		this.append(ajax_form('Attach problem', '/api/contest/r' + contest_round_id + '/add_problem',
 			Form.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
@@ -2796,7 +2731,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.parent().parent().parent().parent());
+					close_modal(this.closest('.modal'));
 					view_contest(true, contest_id);
 				} else {
 					this.parent().remove();
@@ -2804,7 +2739,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				}
 			})
 		);
-	})
+	});
 }
 function edit_contest(as_modal, contest_id) {
 	view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
@@ -2847,6 +2782,21 @@ function edit_contest(as_modal, contest_id) {
 
 	}, '/c/' + contest_id + '/edit');
 }
+function edit_contest_round(as_modal, contest_round_id) {
+	// TODO
+}
+function edit_contest_problem(as_modal, contest_problem_id) {
+	// TODO
+}
+function delete_contest(as_modal, contest_id) {
+	// TODO
+}
+function delete_contest_round(as_modal, contest_round_id) {
+	// TODO
+}
+function delete_contest_problem(as_modal, contest_problem_id) {
+	// TODO
+}
 function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 	view_ajax(as_modal, '/api/contest/c' + contest_id, function(data) {
 		var contest = data[0];
@@ -2875,9 +2825,9 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 					class: 'contest',
 					html: [
 						$('<span>', {text: contest[1]}),
-						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/add_round', 'Add round', 'btn-small', function() { add_contest_round(true, contest_id); })),
-						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/edit', 'Edit', 'btn-small blue', function() { edit_contest(true, contest_id); })),
-						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/' + contest_id + '/delete', 'Delete', 'btn-small red', function() { delete_contest(true, contest_id); })),
+						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest_id))),
+						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest_id))),
+						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/' + contest_id + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest_id))),
 					]
 				}).appendTo($('<div>')).parent());
 
@@ -2902,12 +2852,33 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 								{text: 'immediately'}
 								: {datetime: round[5], text: round[5]})
 							), true),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/add_problem', 'Add problem', 'btn-small', function() { add_contest_problem(true, round[0]); })),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_round(true, round[0]); })),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_round(true, round[0]); })),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/add_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, round[0]))),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, round[0]))),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, round[0]))),
 						]
 					}).appendTo($('<div>')).parent());
 				}
+
+				function append_problem(tbody, problem) {
+					tbody.append($('<tr>', {
+						html: [
+							$('<td>', {text: problem[4]}),
+							$('<td>', {
+								html: [
+									$('<a>', {
+										class: 'btn-small',
+										href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
+										text: 'Statement'
+									}),
+									(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]))),
+									(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problem[0]))),
+									(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problem[0]))),
+								]
+							}),
+						]
+					}));
+				}
+
 				for (var i = 0; i < rounds.length; ++i) {
 					var round = rounds[i];
 					append_round(round);
@@ -2933,27 +2904,8 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 					}
 					// Append problems
 					var tb = $('<tbody>');
-					function append_problem(problem) {
-						tb.append($('<tr>', {
-							html: [
-								$('<td>', {text: problem[4]}),
-								$('<td>', {
-									html: [
-										$('<a>', {
-											class: 'btn-small',
-											href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
-											text: 'Statement'
-										}),
-										(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', function() { add_submission(true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]); })),
-										(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', function() { edit_contest_problem(true, problem[0]); })),
-										(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', function() { delete_contest_problem(true, problem[0]); })),
-									]
-								}),
-							]
-						}));
-					}
 					while (l < problems.length && problems[l][1] == round[0])
-						append_problem(problems[l++]);
+						append_problem(tb, problems[l++]);
 
 					dashboard.append($('<table>', {
 						class: 'round_problems',
@@ -3022,14 +2974,14 @@ function contest_ranking(elem_, contest_id_) {
 		// Add round item to the every problem (and remove invalid problems -
 		// the ones which don't belong to the valid rounds)
 		var tmp_problems = [];
-		for (var i = 0; i < problems.length; ++i) {
+		for (i = 0; i < problems.length; ++i) {
 			var x = rid_to_item.get(problems[i][1]);
 			if (x != null) {
 				problems[i].push(x);
 				tmp_problems.push(problems[i]);
 			}
 		}
-		var problems = tmp_problems;
+		problems = tmp_problems;
 
 		// Sort problems by (round_item, item)
 		problems.sort(function(a, b) {
@@ -3038,7 +2990,7 @@ function contest_ranking(elem_, contest_id_) {
 
 		// Map problems (by id) to their indexes in the above array
 		var problem_to_col_id = new StaticMap();
-		for (var i = 0; i < problems.length; ++i)
+		for (i = 0; i < problems.length; ++i)
 			problem_to_col_id.add(problems[i][0], i);
 		problem_to_col_id.prepare();
 
@@ -3092,19 +3044,20 @@ function contest_ranking(elem_, contest_id_) {
 			var thead = $('<thead>', {html: tr});
 			tr = $('<tr>');
 			// Add problems
-			for (var i = 0; i < problems.length; ++i)
+			for (i = 0; i < problems.length; ++i)
 				tr.append($('<th>', {
 					text: problems[i][3]
 				}));
 			thead.append(tr);
 
 			// Add score for each user add this to the user's info
-			for (var i = 0; i < data.length; ++i) {
-				var submissions = data[i][2];
+			var submissions;
+			for (i = 0; i < data.length; ++i) {
+				submissions = data[i][2];
 				var total_score = 0;
 				// Count only valid problems (to fix potential discrepancies
 				// between ranking submissions and the contest structure)
-				for (var j = 0; j < submissions.length; ++j)
+				for (j = 0; j < submissions.length; ++j)
 					if (problem_to_col_id.get(submissions[j][2]) != null)
 						total_score += submissions[j][4];
 
@@ -3118,7 +3071,7 @@ function contest_ranking(elem_, contest_id_) {
 			var tbody = $('<tbody>');
 			var prev_score = data[0][3] + 1;
 			var place;
-			for (var i = 0; i < data.length; ++i) {
+			for (i = 0; i < data.length; ++i) {
 				var user_row = data[i];
 				tr = $('<tr>');
 				// Place
@@ -3132,18 +3085,16 @@ function contest_ranking(elem_, contest_id_) {
 					tr.append($('<td>', {text: user_row[1]}));
 				else {
 					tr.append($('<td>', {
-						html: a_view_button('/u/' + user_row[0], user_row[1], '', function() {
-								var uid = user_row[0];
-								return function() { view_user(true, uid); };
-							}())
+						html: a_view_button('/u/' + user_row[0], user_row[1], '',
+							view_user.bind(null, true, user_row[0]))
 					}));
 				}
 				// Score
 				tr.append($('<td>', {text: user_row[3]}));
 				// Submissions
 				var row = new Array(problems.length);
-				var submissions = data[i][2];
-				for (var j = 0; j < submissions.length; ++j) {
+				submissions = data[i][2];
+				for (j = 0; j < submissions.length; ++j) {
 					var x = problem_to_col_id.get(submissions[j][2]);
 					if (x != null) {
 						if (submissions[j][0] === null)
@@ -3154,16 +3105,15 @@ function contest_ranking(elem_, contest_id_) {
 						else {
 							row[x] = $('<td>', {
 								class: 'status ' + submissions[j][3][0],
-								html: a_view_button('/s/' + submissions[j][0], submissions[j][4], '', function () {
-									var sid = submissions[j][0];
-									return function () { view_submission(true, sid); };
-								}())
+								html: a_view_button('/s/' + submissions[j][0],
+									submissions[j][4], '',
+									view_submission.bind(null, true, submissions[j][0]))
 							});
 						}
 					}
 				}
 				// Construct the row
-				for (var j = 0; j < problems.length; ++j) {
+				for (j = 0; j < problems.length; ++j) {
 					if (row[j] === undefined)
 						$('<td>').appendTo(tr);
 					else
@@ -3182,11 +3132,10 @@ function contest_ranking(elem_, contest_id_) {
 			centerize_modal(modal, false);
 
 		}, elem);
-
-
 	}, elem);
 }
 function ContestsLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
 
@@ -3194,75 +3143,51 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 	this.query_url = '/api/contests' + query_suffix;
 	this.query_suffix = '';
 
-	this.fetch_more_impl = function() {
-		var obj = this;
-		$.ajax({
-			type: 'GET',
-			url: obj.query_url + obj.query_suffix,
-			dataType: 'json',
-			success: function(data) {
-				var modal = obj.elem.parents('.modal');
-				if (obj.elem.children('thead').length === 0) {
-					if (data.length === 0) {
-						obj.elem.parent().append($('<center>', {
-							class: 'contests always_in_view',
-							html: '<p>There are no contests to show...</p>'
-						}));
-						remove_loader(obj.elem.parent());
-						timed_hide_show(modal);
-						return;
-					}
-
-					elem.html('<thead><tr>' +
-							(logged_user_is_admin() ? '<th>Id</th>' : '') +
-							'<th class="name">Name</th>' +
-							'<th class="actions">Actions</th>' +
-						'</tr></thead><tbody></tbody>');
-					add_tz_marker(elem.find('thead th.added'));
-				}
-
-				for (var x in data) {
-					x = data[x];
-					obj.query_suffix = '/<' + x[0];
-
-					var row = $('<tr>',	{
-						class: (x[2] ? undefined : 'grayed')
-					});
-
-					// Id
-					if (logged_user_is_admin())
-						row.append($('<td>', {text: x[0]}));
-					// Name
-					row.append($('<td>', {
-						html: a_view_button('/c/' + x[0], x[1], '', function() {
-								var contest_id = x[0];
-								return function () {view_contest(true, contest_id); }
-							}())
-					}));
-
-					// Actions
-					row.append($('<td>', {
-						html: ActionsToHTML.contest(x[0], x[4])
-					}));
-
-					obj.elem.children('tbody').append(row);
-				}
-
-				remove_loader(obj.elem.parent());
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			if (data.length === 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'contests always_in_view',
+					// class: 'contests',
+					html: '<p>There are no contests to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
-				centerize_modal(modal, false);
+				return;
+			}
 
-				if (data.length == 0)
-					return; // No more data to load
+			this_.elem.html('<thead><tr>' +
+					(logged_user_is_admin() ? '<th>Id</th>' : '') +
+					'<th class="name">Name</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+			add_tz_marker(this_.elem.find('thead th.added'));
+		}
 
-				obj.lock = false;
-				if (obj.elem.height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
-					setTimeout(function(){ obj.fetch_more(); }, 0); // avoid recursion
-				}
-			},
-			error: obj.get_error_handler()
-		});
+		for (var x in data) {
+			x = data[x];
+			this_.query_suffix = '/<' + x[0];
+
+			var row = $('<tr>',	{
+				class: (x[2] ? undefined : 'grayed')
+			});
+
+			// Id
+			if (logged_user_is_admin())
+				row.append($('<td>', {text: x[0]}));
+			// Name
+			row.append($('<td>', {
+				html: a_view_button('/c/' + x[0], x[1], '',
+					view_contest.bind(null, true, x[0]))
+			}));
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.contest(x[0], x[4])
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
 	};
 
 	this.fetch_more();
@@ -3279,27 +3204,26 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 	}
 
 	var tabs = [
-		'All', function() { retab(''); }
+		'All', retab.bind(null, '')
 	];
 
 	// TODO: implement it
 	// if (is_logged_in())
-	// 	tabs.push('My', function() { retab('/u' + logged_user_id()); });
+		// tabs.push('My', retab.bind(null, '/u' + logged_user_id()));
 
 	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
 }
-function contest_chooser(parent_elem /*= a new modal*/, opt_hash /*= ''*/) {
-	view_base((parent_elem === undefined),
+function contest_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
+	view_base((as_modal === undefined ? true : as_modal),
 		'/c' + (opt_hash === undefined ? '' : opt_hash), function() {
-		timed_hide($(this).parent().parent().filter('.modal'));
-		$(this).append($('<h1>', {text: 'Contests'}));
-		if (logged_user_is_tearcher_or_admin())
-			$(this).append(a_view_button('/c/add', 'Add contest', 'btn', function() {
-				add_contest(true);
-			}));
+			timed_hide($(this).parent().parent().filter('.modal'));
+			$(this).append($('<h1>', {text: 'Contests'}));
+			if (logged_user_is_tearcher_or_admin())
+				$(this).append(a_view_button('/c/add', 'Add contest', 'btn',
+					add_contest.bind(null, true)));
 
-		tab_contests_lister($(this));
-	}, parent_elem);
+			tab_contests_lister($(this));
+		});
 }
 /* ============================ Contest's users ============================ */
 /*function addContestUser(contest_id) {
@@ -3387,11 +3311,102 @@ function expelContestUser(contest_id, user_id, username) {
 	);
 }*/
 
-function foo() {
+function open_calendar_on(time, text_input, hidden_input) {
 	var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-	var time = new Date();
+	// var time = new Date();
+	var month_chooser = [];
 
-	var header = $('<span>');
+	var header = $('<span>', {
+		style: 'cursor: pointer; user-select: none',
+		click: function() {
+			var update_month_and_year = function() {
+				var row = month_chooser.find('tr').eq(1).children();
+				row.eq(0).text(months[time.getMonth()]);
+				row.eq(1).text(time.getFullYear());
+			};
+
+			month_chooser = modal($('<table>', {
+				class: 'chooser',
+				style: 'margin-left: -10px',
+				html: $('<tbody>', {
+					html: $('<tr>', {
+						html: $('<td>', {
+							html: $('<a>', {
+								click: function() {
+									change_month(+1);
+									update_month_and_year();
+								},
+								html: '<svg width="60" height="30"><polygon points="60,21 0,21 30,7"></polygon></svg>'
+							})
+						}).add('<td>', {
+							html: $('<a>', {
+								click: function() {
+									change_month(+12);
+									update_month_and_year();
+								},
+								html: '<svg width="60" height="30"><polygon points="60,21 0,21 30,7"></polygon></svg>'
+							})
+						})
+					}).add('<tr>', {
+						html: $('<td>', {
+							style: 'min-width: 170px',
+							text: months[time.getMonth()]
+						}).add('<td>', {
+							text: time.getFullYear()
+						})
+					}).add('<tr>', {
+						html: $('<td>', {
+							html: $('<a>', {
+								click: function() {
+									change_month(-1);
+									update_month_and_year();
+								},
+								html: '<svg width="60" height="30"><polygon points="0,9 60,9 30,23"></polygon></svg>'
+							})
+						}).add('<td>', {
+							html: $('<a>', {
+								click: function() {
+									change_month(-12);
+									update_month_and_year();
+								},
+								html: '<svg width="60" height="30"><polygon points="0,9 60,9 30,23"></polygon></svg>'
+							})
+						})
+					})
+				})
+			}), function(modal) {
+				modal[0].onmodalclose = update_calendar.bind(null);
+			});
+			month_chooser.find('td:first-child').on('wheel', function(e) {
+				e.preventDefault();
+				if (e.originalEvent.deltaY > 0)
+					change_month(-1);
+				else if (e.originalEvent.deltaY < 0)
+					change_month(+1);
+				update_month_and_year();
+			});
+			month_chooser.find('td:last-child').on('wheel', function(e) {
+				e.preventDefault();
+				if (e.originalEvent.deltaY > 0)
+					change_month(-12);
+				else if (e.originalEvent.deltaY < 0)
+					change_month(+12);
+				update_month_and_year();
+			});
+		}
+	});
+
+	var change_month = function(diff_num) {
+		// Prevent changing to one month ahead of the intended one
+		var day_set = time.getDate();
+		time.setDate(10);
+		time.setMonth(time.getMonth() + diff_num);
+		var month = time.getMonth();
+		time.setDate(day_set);
+		if (time.getMonth() !== month)
+			time.setDate(0); // The day no. is too big, so choose the last day of the month
+	};
+
 	var calendar = $('<table>', {
 		class: 'calendar',
 		html: $('<thead>', {
@@ -3400,10 +3415,9 @@ function foo() {
 					html: [
 						$('<th>', {
 							html: $('<a>', {click: function() {
-								time.setMonth(time.getMonth() - 1);
-								update_header();
-								update_tbody();
-							}, text: 'xd'})
+								change_month(-1);
+								update_calendar();
+							}, html: '<svg width="12" height="14"><polygon points="12,0 12,14 0,7"></polygon></svg>'})
 						}),
 						$('<th>', {
 							colspan: 5,
@@ -3411,13 +3425,18 @@ function foo() {
 						}),
 						$('<th>', {
 							html: $('<a>', {click: function() {
-								time.setMonth(time.getMonth() + 1);
-								update_header();
-								update_tbody();
-								console.log(time);
-							}, text: 'xd'})
+								change_month(+1);
+								update_calendar();
+							}, html: '<svg width="12" height="14"><polygon points="0,0 0,14 12,7"></polygon></svg>'})
 						})
 					]
+				}).on('wheel', function(e) {
+					e.preventDefault();
+					if (e.originalEvent.deltaY > 0)
+						change_month(-1);
+					else if (e.originalEvent.deltaY < 0)
+						change_month(+1);
+					update_calendar();
 				}),
 				$('<tr>', {
 					html: [
@@ -3434,28 +3453,157 @@ function foo() {
 		})
 	});
 
-	var update_header = function() {
-		header.text(months[time.getMonth()] + ' ' + time.getFullYear());
-	}
-	update_header();
+	var change_second = function(diff_num) {
+		time.setSeconds(time.getSeconds() + diff_num);
+	};
+	var time_chooser = $('<table>', {
+		class: 'time-chooser',
+		html: $('<tbody>', {
+			html: [
+				$('<tr>', {
+					html: [21600,600,10].map(function(diff) {
+						return $('<td>', {html:
+							$('<a>', { html: '<svg width="60" height="30"><polygon points="50,27 30,19 10,27 30,6"></polygon></svg>'})
+							.on('click', function() {
+								change_second(+diff);
+								update_calendar();
+							})
+						});
+					})
+				}), $('<tr>', {
+					html: [3600,60,1].map(function(diff) {
+						return $('<td>', {html:
+							$('<a>', { html: '<svg width="60" height="30"><polygon points="50,19 10,19 30,9"></polygon></svg>'})
+							.on('click', function() {
+								change_second(+diff);
+								update_calendar();
+							})
+						});
+					})
+				}), $('<tr>', {
+					html: [23,59,59].map(function(max_val, idx) {
+						return $('<td>', {html: $('<input>', {
+								type: 'text',
+								maxlength: 2,
+								click: function() { this.select(); },
+							}).on('focusout', function() {
+								var val = parseInt($(this).val());
+								if (isNaN(val) || val < 0)
+									val = '00';
+								else if (val > max_val)
+									val = max_val;
+								else if (val < 10)
+									val = '0' + val;
+
+								$(this).val(val);
+								if (idx === 0)
+									time.setHours(val);
+								else if (idx === 1)
+									time.setMinutes(val);
+								else if (idx === 2)
+									time.setSeconds(val);
+							})
+						});
+					})
+				}), $('<tr>', {
+					html: [3600,60,1].map(function(diff) {
+						return $('<td>', {html:
+							$('<a>', { html: '<svg width="60" height="30"><polygon points="10,11 50,11 30,21"></polygon></svg>'})
+							.on('click', function() {
+								change_second(-diff);
+								update_calendar();
+							})
+						});
+					})
+				}), $('<tr>', {
+					html: [21600,600,10].map(function(diff) {
+						return $('<td>', {html:
+							$('<a>', { html: '<svg width="60" height="30"><polygon points="10,3 30,11 50,3 30,24"></polygon></svg>'})
+							.on('click', function() {
+								change_second(-diff);
+								update_calendar();
+							})
+						});
+					})
+				})
+			]
+		})
+	});
+	// Wheel handlers on time_chooser
+	time_chooser.find('td:first-child').on('wheel', function(e) {
+		e.preventDefault();
+		var coeff = $(this).parent().is(':first-child, :last-child') ? 6 : 1;
+		if (e.originalEvent.deltaY > 0)
+			change_second(-3600 * coeff);
+		else if (e.originalEvent.deltaY < 0)
+			change_second(+3600 * coeff);
+		update_calendar();
+	});
+	time_chooser.find('td:nth-child(2)').on('wheel', function(e) {
+		e.preventDefault();
+		var coeff = $(this).parent().is(':first-child, :last-child') ? 10 : 1;
+		if (e.originalEvent.deltaY > 0)
+			change_second(-60 * coeff);
+		else if (e.originalEvent.deltaY < 0)
+			change_second(+60 * coeff);
+		update_calendar();
+	});
+	time_chooser.find('td:last-child').on('wheel', function(e) {
+		e.preventDefault();
+		var coeff = $(this).parent().is(':first-child, :last-child') ? 10 : 1;
+		if (e.originalEvent.deltaY > 0)
+			change_second(-1 * coeff);
+		else if (e.originalEvent.deltaY < 0)
+			change_second(+1 * coeff);
+		update_calendar();
+	});
 
 	// Days table
-	function update_tbody() {
-		var tbody = $('<tbody>');
-		var day_onclick = function (that_elem_time) {
+	var tbody, tbody_date = new Date(time);
+	tbody_date.setDate(0); // Change month; this variable is used to skip
+	                       // regenerating the whole table when it is unnecessary
+	function update_calendar() {
+		// Time chooser
+		var x = time_chooser.find('input');
+		var foo = function(x) { return x < 10 ? '0' + x : x; };
+		x.eq(0).val(foo(time.getHours()));
+		x.eq(1).val(foo(time.getMinutes()));
+		x.eq(2).val(foo(time.getSeconds()));
+		// Header
+		header.text(months[time.getMonth()] + ' ' + time.getFullYear());
+		// Tbody
+		// Faster update - skipping regeneration of tbody
+		if (time.getFullYear() === tbody_date.getFullYear() &&
+			time.getMonth() === tbody_date.getMonth())
+		{
+			tbody.find('.chosen').removeClass('chosen');
+			tbody.find('td:not(.gray)').eq(time.getDate() - 1).addClass('chosen');
+			return;
+		}
+
+		tbody_date = new Date(time);
+		tbody = $('<tbody>').on('wheel', function(e) {
+			e.preventDefault();
+			if (e.originalEvent.deltaY > 0)
+				time.setDate(time.getDate() - 1);
+			else if (e.originalEvent.deltaY < 0)
+				time.setDate(time.getDate() + 1);
+
+			update_calendar();
+		});
+
+		var day_onclick = function(that_elem_time) {
 			var tet = new Date(that_elem_time.valueOf());
 			return function() {
 				// Update time
 				time = new Date(tet.getFullYear(),
 					tet.getMonth(),
 					tet.getDate(),
-					tet.getHours(),
-					tet.getMinutes(),
-					tet.getSeconds());
-				console.log(time.toJSON());
-				// Update the calendar
-				update_header();
-				update_tbody();
+					time.getHours(),
+					time.getMinutes(),
+					time.getSeconds());
+
+				update_calendar();
 			};
 		};
 
@@ -3465,9 +3613,9 @@ function foo() {
 		while (tm.getDay() != 1)
 			tm.setDate(tm.getDate() - 1);
 		// Fill all the table
-		var passed_curr_day = false;
+		var passed_selected_day = false;
 		var today = new Date();
-		while (!passed_curr_day || tm.getMonth() === time.getMonth()) {
+		while (!passed_selected_day || tm.getMonth() === time.getMonth()) {
 			// Add row (all the 7 days)
 			var tr = $('<tr>');
 			for (var i = 0; i < 7; ++i) {
@@ -3491,7 +3639,7 @@ function foo() {
 				if (tm.getMonth() === time.getMonth() &&
 					tm.getDate() === time.getDate())
 				{
-					passed_curr_day = true;
+					passed_selected_day = true;
 					td.addClass('chosen');
 				}
 				tr.append(td);
@@ -3502,12 +3650,110 @@ function foo() {
 		}
 		calendar.children('tbody').remove();
 		calendar.append(tbody);
+	}
+	update_calendar();
+
+	var round_to_5_minutes = function() {
+		var k = time.getMinutes() + (time.getSeconds() !== 0) + 4;
+		time.setMinutes(k - k % 5);
+		time.setSeconds(0);
+		update_calendar();
 	};
-	update_tbody();
 
 	modal($('<div>', {
-		html: calendar
-	}));
-}
+		html: [
+			calendar,
+			time_chooser,
+			$('<center>', {html:
+				$('<a>', {
+					class: 'btn-small',
+					text: 'Round to 5 minutes',
+					click: round_to_5_minutes
+				})
+			}),
+			$('<center>', {html:
+				$('<a>', {
+					class: 'btn-small',
+					text: 'Set to now',
+					click: function() {
+						time = new Date();
+						update_calendar();
+					}
+				})
+			})
+		]
+	}), function(modal) {
+		var arrow_update = function(e) {
+			if ($.contains(document.documentElement, month_chooser[0])) {
+				if (e.key === 'ArrowUp')
+					month_chooser.find('td > a').eq(0).click();
+				else if (e.key === 'ArrowDown')
+					month_chooser.find('td > a').eq(2).click();
+				else
+					return;
 
-// $(document).ready(foo);
+				e.preventDefault();
+				return;
+			}
+
+			if (e.key === 'ArrowLeft')
+				time.setDate(time.getDate() - 1);
+			else if (e.key === 'ArrowRight')
+				time.setDate(time.getDate() + 1);
+			else if (e.key === 'ArrowUp')
+				time.setDate(time.getDate() - 7);
+			else if (e.key === 'ArrowDown')
+				time.setDate(time.getDate() + 7);
+			else
+				return;
+
+			e.preventDefault();
+			update_calendar();
+		};
+
+		$(document).on('keydown', arrow_update);
+		modal[0].onmodalclose = function() {
+			$(document).off('keydown', arrow_update);
+			$(text_input).val(date_to_datetime_str(time));
+			$(hidden_input).val(time.getTime() / 1000 | 0);
+		};
+	});
+}
+function datetime_input(name, allow_null /* = false */, initial_time /* = undefined <=> use current time, null <=> no value */, button_text /* = 'Set to null' */) {
+	var dt;
+	if (initial_time === undefined || initial_time === null) {
+		dt = new Date();
+		// Round to 5 minutes
+		var k = dt.getMinutes() + (dt.getSeconds() !== 0) + 4;
+		dt.setMinutes(k - k % 5);
+		dt.setSeconds(0);
+	} else
+		dt = utcdt_or_tm_to_Date(initial_time);
+
+	var elems = $('<input>', {
+		type: 'text',
+		class: 'calendar-input',
+		tm: (initial_time === null ? undefined : dt.getTime() / 1000 | 0),
+		value: (initial_time === null ? '' : date_to_datetime_str(dt)),
+		readonly: true,
+		click: function() {
+			open_calendar_on(dt, elems.eq(0), elems.eq(1));
+		}
+	}).add('<input>', {
+		type: 'hidden',
+		name: name,
+		value: (initial_time === null ? undefined : dt.getTime() / 1000 | 0),
+	});
+
+	if (allow_null)
+		return elems.add('<a>', {
+			class: 'btn-small',
+			text: (button_text === undefined ? 'Set to null' : button_text),
+			click: function () {
+				elems.eq(0).val('');
+				elems.eq(1).val(null);
+			}
+		});
+
+	return elems;
+}

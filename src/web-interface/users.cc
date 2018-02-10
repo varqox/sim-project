@@ -303,8 +303,7 @@ void Sim::users_handle() {
 			return error403();
 
 		page_template("Users", "body{padding-left:20px}");
-		append("<script>user_chooser($('body'), window.location.hash"
-			");</script>");
+		append("<script>user_chooser(false, window.location.hash);</script>");
 
 	} else
 		return error404();

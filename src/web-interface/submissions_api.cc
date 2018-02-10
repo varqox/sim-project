@@ -220,7 +220,7 @@ void Sim::api_submissions() {
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
-	auto curr_date = date();
+	auto curr_date = mysql_date();
 	while (res.next()) {
 		StringView sid = res[0];
 		SubmissionType stype = SubmissionType(strtoull(res[1]));
@@ -486,7 +486,7 @@ void Sim::api_submission_add() {
 		if (uint(~cperms & ContestPermissions::PARTICIPATE))
 			return api_error403(); // Could not participate
 
-		auto curr_date = date();
+		auto curr_date = mysql_date();
 		if (uint(~cperms & ContestPermissions::ADMIN) and
 			(curr_date < cr_begins
 				or (not stmt.is_null(4) and cr_ends <= curr_date)))
@@ -514,7 +514,7 @@ void Sim::api_submission_add() {
 	if (code.empty()) {
 		struct stat sb;
 		if (stat(solution_tmp_path.c_str(), &sb))
-			THROW("stat() failed", error());
+			THROW("stat() failed", errmsg());
 
 		// Check if solution is too big
 		if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
@@ -539,10 +539,10 @@ void Sim::api_submission_add() {
 			" ?, '', '')");
 	if (contest_problem_id.empty())
 		stmt.bindAndExecute(session_user_id, problem_id, nullptr, nullptr,
-			nullptr, date(), date("%Y-%m-%d %H:%M:%S", 0));
+			nullptr, mysql_date(), mysql_date(0));
 	else
 		stmt.bindAndExecute(session_user_id, problem_id, contest_problem_id,
-			contest_round_id, contest_id, date(), date("%Y-%m-%d %H:%M:%S", 0));
+			contest_round_id, contest_id, mysql_date(), mysql_date(0));
 
 	auto submission_id = stmt.insert_id();
 
@@ -551,7 +551,7 @@ void Sim::api_submission_add() {
 	auto solution_dest = concat<64>("solutions/", submission_id, ".cpp");
 	if (code.empty()) {
 		if (rename(solution_tmp_path, solution_dest.to_cstr()))
-			THROW("rename() failed", error());
+			THROW("rename() failed", errmsg());
 	// Code
 	} else
 		putFileContents(solution_dest.to_cstr(), code);
@@ -561,7 +561,7 @@ void Sim::api_submission_add() {
 			" aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
-		(uint)JobType::JUDGE_SUBMISSION, date(), submission_id,
+		(uint)JobType::JUDGE_SUBMISSION, mysql_date(), submission_id,
 		jobs::dumpString(problem_id));
 
 	// Activate the submission
@@ -616,7 +616,7 @@ void Sim::api_submission_rejudge() {
 			" aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
-		(uint)JobType::JUDGE_SUBMISSION, date(), submissions_sid,
+		(uint)JobType::JUDGE_SUBMISSION, mysql_date(), submissions_sid,
 		jobs::dumpString(problem_id));
 
 	jobs::notify_job_server();

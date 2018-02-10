@@ -787,7 +787,7 @@ void Contest::editProblem() {
 			stmt.setString(1, Session::user_id);
 			stmt.setUInt(2, priority(JobQueueType::JUDGE_SUBMISSION));
 			stmt.setUInt(3, (uint)JobQueueType::JUDGE_SUBMISSION);
-			stmt.setString(4, date());
+			stmt.setString(4, mysql_date());
 			stmt.setString(5, jobs::dumpString(rpath->problem->problem_id));
 			stmt.setString(6, rpath->round_id);
 			stmt.executeUpdate();
@@ -1348,7 +1348,7 @@ void Contest::ranking(bool admin_view) {
 	try {
 		MySQL::Statement stmt;
 		MySQL::Result res;
-		string current_time = date();
+		string current_time = mysql_date();
 
 		// Select rounds
 		const char* column = (rpath->type == CONTEST ? "parent" : "id");

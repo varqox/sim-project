@@ -293,18 +293,17 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	CStringView name, label, memory_limit, global_time_limit, package_file;
 	bool relative_time_limits = request.form_data.exist("relative_time_limits");
 	bool ignore_simfile = request.form_data.exist("ignore_simfile");
-	// TODO: implement it
+	// TODO: implement it (the line below)
 	// bool seek_for_new_tests = request.form_data.exist("seek_for_new_tests");
 
 	form_validate(name, "name", "Problem's name", PROBLEM_NAME_MAX_LEN);
 	form_validate(label, "label", "Problem's label", PROBLEM_LABEL_MAX_LEN);
 	form_validate(memory_limit, "mem_limit", "Memory limit",
-		isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>,
-		"Memory limit: invalid value");
+		isDigitNotGreaterThan<(std::numeric_limits<uint64_t>::max() >> 20)>);
 	form_validate_file_path_not_blank(package_file, "package",
 		"Zipped package");
 	form_validate(global_time_limit, "global_time_limit", "Global time limit",
-		isReal, "Global time limit: invalid value"); // TODO: add length limit
+		isReal); // TODO: add length limit
 	// Convert global_time_limit to usec
 	uint64_t gtl =
 		round(strtod(global_time_limit.c_str(), nullptr) * 1'000'000);
@@ -324,7 +323,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 		return api_error400("Invalid problem's type");
 
 	if (form_validation_error)
-		return api_error400(concat("<div>", notifications, "</div>"));
+		return api_error400(notifications);
 
 	jobs::AddProblemInfo ap_info {
 		name.to_string(),
@@ -342,15 +341,15 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 			" '')");
 	if (reuploading)
 		stmt.bindAndExecute(session_user_id, priority(JobType::ADD_PROBLEM),
-			date(), problems_pid, ap_info.dump());
+			mysql_date(), problems_pid, ap_info.dump());
 	else
 		stmt.bindAndExecute(session_user_id, priority(JobType::ADD_PROBLEM),
-			date(), nullptr, ap_info.dump());
+			mysql_date(), nullptr, ap_info.dump());
 
 	auto job_id = stmt.insert_id();
 	// Make the package file the job's file
 	if (rename(package_file, concat("jobs_files/", job_id, ".zip").to_cstr()))
-		THROW("move() failed", error());
+		THROW("move() failed", errmsg());
 
 	// Activate the job
 	stmt = mysql.prepare("UPDATE jobs SET type=? WHERE id=?");
@@ -452,7 +451,7 @@ void Sim::api_problem_rejudge_all_submissions() {
 			", ?, id, ?, ''"
 		" FROM submissions WHERE problem_id=? ORDER BY id");
 	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
-		date(), jobs::dumpString(problems_pid), problems_pid);
+		mysql_date(), jobs::dumpString(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
 }

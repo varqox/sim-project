@@ -66,8 +66,7 @@ void Sim::contests_handle() {
 	// List contests
 	} else if (next_arg.empty()) {
 		page_template("Contests", "body{padding-left:20px}");
-		append("<script>contest_chooser($('body'), window.location.hash"
-			")</script>");
+		append("<script>contest_chooser(false, window.location.hash)</script>");
 
 	} else
 		return error404();
@@ -87,6 +86,12 @@ void Sim::contests_contest() {
 		page_template(concat("Edit contest ", contests_cid),
 			"body{padding-left:20px}");
 		append("<script>edit_contest(false, ", contests_cid, ","
+			" window.location.hash);</script>");
+
+	} else if (next_arg == "add_round") {
+		page_template(concat("Add round ", contests_cid),
+			"body{padding-left:20px}");
+		append("<script>add_contest_round(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
 	} else

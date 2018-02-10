@@ -156,7 +156,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	sf.loadSolutions();
 
 	// Add the problem to the database
-	InplaceBuff<64> current_date = concat<64>(date());
+	InplaceBuff<64> current_date = concat<64>(mysql_date());
 	auto stmt = mysql.prepare(
 		"INSERT problems (type, name, label, simfile, owner, added,"
 			" last_edit)"
@@ -201,7 +201,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	// Move the package to its destination
 	auto package_dest = concat("problems/", pid_str, ".zip");
 	if (move(package_path.to_cstr(), package_dest.to_cstr()))
-		THROW("move() failed", error());
+		THROW("move() failed", errmsg());
 
 	job_package_remover.cancel();
 
@@ -217,7 +217,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 
 	// Submit the solutions
 	job_log.append("Submitting solutions...");
-	const string zero_date = date("%Y-%m-%d %H:%M:%S", 0);
+	const string zero_date = mysql_date(0);
 	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, status,"
 			" submit_time, last_judgment, initial_report, final_report)"
@@ -228,7 +228,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	for (auto&& solution : sf.solutions) {
 		job_log.append("Submit: ", solution);
 
-		current_date = date();
+		current_date = mysql_date();
 		stmt.execute();
 		uint64_t submission_id = mysql.insert_id();
 
@@ -236,7 +236,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 		if (copy(concat<PATH_MAX>(tmp_dir.path(), pkg_master_dir, solution)
 			.to_cstr(), concat("solutions/", submission_id, ".cpp").to_cstr()))
 		{
-			THROW("Copying solution `", solution, "`: copy()", error());
+			THROW("Copying solution `", solution, "`: copy()", errmsg());
 		}
 	}
 	job_log.append("Done.");
@@ -335,7 +335,7 @@ static void add_jobs_to_judge_problem_solutions(uint64_t problem_id) {
 			JTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
 	// Problem's solutions are more important than the ordinary submissions
 	constexpr uint prio = priority(JobType::JUDGE_SUBMISSION) + 1;
-	const auto current_date = date();
+	const auto current_date = mysql_date();
 	const auto info = jobs::dumpString(toStr(problem_id));
 	insert_stmt.bind_all(prio, current_date, submission_id, info);
 
@@ -460,7 +460,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 
 			// Backup old problem's files
 			if (rename(problem_path.to_cstr(), backuped_problem.to_cstr()))
-				THROW("rename() failed", error());
+				THROW("rename() failed", errmsg());
 
 			auto backup_restorer = make_call_in_destructor([&]{
 				// Restore problem's files
@@ -516,7 +516,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			if (rename(concat("problems/", tmp_problem_id, ".zip").to_cstr(),
 				problem_path.to_cstr()))
 			{
-				THROW("rename() failed", error());
+				THROW("rename() failed", errmsg());
 			}
 
 			// Replace the problem in the SQLite FTS5 table `problems`

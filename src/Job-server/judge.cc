@@ -11,29 +11,16 @@ using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
-static constexpr const char* log_span_test_status(JudgeReport::Test::Status s) {
-	switch (s) {
-	case JudgeReport::Test::OK: return "\033[1;32mOK\033[m";
-	case JudgeReport::Test::WA: return "\033[1;31mWRONG\033[m";
-	case JudgeReport::Test::TLE: return "\033[1;33mTLE\033[m";
-	case JudgeReport::Test::MLE: return "\033[1;33mMLE\033[m";
-	case JudgeReport::Test::RTE: return "\033[1;31mRTE\033[m";
-	case JudgeReport::Test::CHECKER_ERROR:
-		return "\033[1;33mCHECKER_ERROR\033[m";
-	}
-
-	return "UNKNOWN";
-}
-
 void judgeSubmission(uint64_t job_id, StringView submission_id,
 	StringView job_creation_time)
 {
 	STACK_UNWINDING_MARK;
 
 	InplaceBuff<1 << 14> job_log;
-	auto stdlog_and_append_jlog = [&](auto&&... args) {
-		stdlog(args...);
-		job_log.append(std::forward<decltype(args)>(args)..., '\n');
+
+	auto judge_log = [&](auto&&... args) {
+		return DoubleAppender<decltype(job_log)>(stdlog, job_log,
+			std::forward<decltype(args)>(args)...);
 	};
 
 	// Gather the needed information about the submission
@@ -49,8 +36,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	// If the submission doesn't exist (probably was removed)
 	if (not stmt.next()) {
 		// Fail the job
-		stdlog_and_append_jlog("Fail the job of judging the submission ",
-			submission_id, ", since there is no such submission.");
+		judge_log("Failed the job of judging the submission ", submission_id,
+			", since there is no such submission.");
 		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_log, job_id);
@@ -61,28 +48,34 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	// already been rejudged after the job was created
 	if (last_judgment > p_last_edit and last_judgment > job_creation_time) {
 		// Skip the job - the submission has already been rejudged
-		stdlog_and_append_jlog("Skipped judging of the submission ",
-			submission_id, " because it has already been rejudged after this"
-			" job had been scheduled");
+		judge_log("Skipped judging of the submission ", submission_id,
+			" because it has already been rejudged after this job had been"
+			" scheduled");
 		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_log, job_id);
 		return;
 	}
 
-	string judging_began = date();
+	string judging_began = mysql_date();
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
 
 	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
 		')');
-	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
-	auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+	{
+		auto tmplog = judge_log("Loading problem package...");
+		tmplog.flush_no_nl();
 
-	jworker.loadPackage(package_path.to_string(),
-		extract_file_from_zip(package_path.to_cstr(),
-			concat(pkg_master_dir, "Simfile").to_cstr())
-	);
+		auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
+		auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+
+		jworker.loadPackage(package_path.to_string(),
+			extract_file_from_zip(package_path.to_cstr(),
+				concat(pkg_master_dir, "Simfile").to_cstr())
+		);
+		tmplog(" done.");
+	}
 
 	// Variables
 	SubmissionStatus status = SubmissionStatus::OK;
@@ -134,38 +127,46 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	string compilation_errors;
 
 	// Compile checker
-	stdlog_and_append_jlog("Compiling checker...");
-	if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
-		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		stdlog_and_append_jlog("Checker compilation failed.");
+		auto tmplog = judge_log("Compiling checker...");
+		tmplog.flush_no_nl();
 
-		status = SubmissionStatus::CHECKER_COMPILATION_ERROR;
-		initial_report = concat("<pre class=\"compilation-errors\">",
-			htmlEscape(compilation_errors), "</pre>");
+		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		{
+			tmplog(" failed.");
 
-		return send_report();
+			status = SubmissionStatus::CHECKER_COMPILATION_ERROR;
+			initial_report = concat("<pre class=\"compilation-errors\">",
+				htmlEscape(compilation_errors), "</pre>");
+
+			return send_report();
+		}
+		tmplog(" done.");
 	}
-	stdlog_and_append_jlog("Done.");
 
 	// Compile solution
-	stdlog_and_append_jlog("Compiling solution...");
-	if (jworker.compileSolution(
-		concat("solutions/", submission_id, ".cpp").to_cstr(),
-		SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-		COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		stdlog_and_append_jlog("Solution compilation failed.");
+		auto tmplog = judge_log("Compiling solution...");
+		tmplog.flush_no_nl();
 
-		status = SubmissionStatus::COMPILATION_ERROR;
-		initial_report = concat("<pre class=\"compilation-errors\">",
-			htmlEscape(compilation_errors), "</pre>");
+		if (jworker.compileSolution(
+			concat("solutions/", submission_id, ".cpp").to_cstr(),
+			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		{
+			tmplog(" failed.");
 
-		return send_report();
+			status = SubmissionStatus::COMPILATION_ERROR;
+			initial_report = concat("<pre class=\"compilation-errors\">",
+				htmlEscape(compilation_errors), "</pre>");
+
+			return send_report();
+		}
+		tmplog(" done.");
 	}
-	stdlog_and_append_jlog("Done.");
 
-	// Creates xml report from JudgeReport
+	// Creates an xml report from JudgeReport
 	auto construct_report = [](const JudgeReport& jr, bool final) {
 		InplaceBuff<65536> report;
 		if (jr.groups.empty())
@@ -264,10 +265,10 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		final_report = construct_report(rep2, true);
 
 		// Log reports
-		stdlog_and_append_jlog("Job ", job_id, " -> submission ",
-			submission_id, " (problem ", problem_id, ")\n"
-			"Initial judge report: ", rep1.pretty_dump(log_span_test_status),
-			"\nFinal judge report: ", rep2.pretty_dump(log_span_test_status),
+		judge_log("Job ", job_id, " -> submission ", submission_id,
+			" (problem ", problem_id, ")\n"
+			"Initial judge report: ", rep1.judge_log,
+			"\nFinal judge report: ", rep2.judge_log,
 			"\n");
 
 		// Count score
@@ -366,7 +367,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
-		stdlog_and_append_jlog("Judge error.");
+		judge_log("Judge error.");
+		judge_log("Caught exception -> ", e.what());
 
 		status = SubmissionStatus::JUDGE_ERROR;
 		initial_report = concat("<pre>", htmlEscape(e.what()), "</pre>");
@@ -379,16 +381,21 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	STACK_UNWINDING_MARK;
 
-	sim::Conver::ReportBuff job_log;
-	job_log.append("Stage: Judging the model solution");
+	InplaceBuff<1 << 14> job_log;
+
+	auto judge_log = [&](auto&&... args) {
+		return DoubleAppender<decltype(job_log)>(stdlog, job_log,
+			std::forward<decltype(args)>(args)...);
+	};
+
+	stdlog("Job ", job_id, ':');
+	judge_log("Stage: Judging the model solution");
 
 	auto set_failure = [&] {
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=CONCAT(data,?)"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-		stmt.bindAndExecute(job_log.str, job_id);
-
-		stdlog("Job ", job_id, ":\n", job_log.str);
+		stmt.bindAndExecute(job_log, job_id);
 	};
 
 	auto package_path = concat<PATH_MAX>("jobs_files/", job_id, ".zip.prep");
@@ -407,15 +414,19 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	string compilation_errors;
 
 	// Compile checker
-	job_log.append("Compiling checker...");
-	if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
-		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
-		job_log.append("Checker's compilation failed:");
-		job_log.append(compilation_errors);
-		return set_failure();
+		auto tmplog = judge_log("Compiling checker...");
+		tmplog.flush_no_nl();
+
+		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		{
+			tmplog(" failed:\n");
+			tmplog(compilation_errors);
+			return set_failure();
+		}
+		tmplog(" done.");
 	}
-	job_log.append("Done.");
 
 	// Compile the model solution
 	simfile.loadAll();
@@ -424,27 +435,26 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 		writeAll(sol_src, extract_file_from_zip(package_path.to_cstr(),
 			concat(pkg_master_dir, simfile.solutions[0])));
 
-		job_log.append("Compiling the model solution...");
+		auto tmplog = judge_log("Compiling the model solution...");
+		tmplog.flush_no_nl();
 		if (jworker.compileSolution(sol_src.path(),
 			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
-			job_log.append("Solution's compilation failed.");
-			job_log.append(compilation_errors);
+			tmplog(" failed:\n");
+			tmplog(compilation_errors);
 			return set_failure();
 		}
+		tmplog(" done.");
 	}
-	job_log.append("Done.");
 
 	// Judge
-	job_log.append("Judging...");
+	judge_log("Judging...");
 	JudgeReport rep1 = jworker.judge(false);
 	JudgeReport rep2 = jworker.judge(true);
 
-	job_log.append("Initial judge report: ",
-		rep1.pretty_dump(log_span_test_status));
-	job_log.append("Final judge report: ",
-		rep2.pretty_dump(log_span_test_status));
+	judge_log("Initial judge report: ", rep1.judge_log);
+	judge_log("Final judge report: ", rep2.judge_log);
 
 	sim::Conver conver;
 	conver.setVerbosity(true);
@@ -454,8 +464,8 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 		conver.finishConstructingSimfile(simfile, rep1, rep2);
 
 	} catch (const std::exception& e) {
-		job_log.str += conver.getReport();
-		job_log.append("Conver failed: ", e.what());
+		job_log.append(conver.getReport());
+		judge_log("Conver failed: ", e.what());
 		return set_failure();
 	}
 
@@ -466,7 +476,5 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	auto stmt = mysql.prepare("UPDATE jobs"
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.bindAndExecute(uint(original_job_type), job_log.str, job_id);
-
-	stdlog("Job ", job_id, ":\n", job_log.str);
+	stmt.bindAndExecute(uint(original_job_type), job_log, job_id);
 }

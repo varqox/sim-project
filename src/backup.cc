@@ -63,7 +63,7 @@ int main2(int argc, char**argv) {
 
 	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC, S_0600};
 	if (fd == -1) {
-		errlog("Failed to open file `" MYSQL_CNF "`: open()", error());
+		errlog("Failed to open file `" MYSQL_CNF "`: open()", errmsg());
 		return 1;
 	}
 
@@ -96,7 +96,7 @@ int main2(int argc, char**argv) {
 	run_command({"git", "config", "--local", "user.name", "Sim backuper"});
 	run_command({"git", "add", "solutions", SQLITE_DB_FILE ".backup",
 		"dump.sql"});
-	run_command({"git", "commit", "-m", concat_tostr("Backup ", date())});
+	run_command({"git", "commit", "-m", concat_tostr("Backup ", mysql_date())});
 
 	return 0;
 }

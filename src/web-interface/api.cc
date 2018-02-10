@@ -70,18 +70,18 @@ void Sim::api_logs() {
 	else if (end_offset > fsize)
 		end_offset = fsize;
 
-	constexpr uint CHUNK_MAX_LEN = 16384;
+	constexpr uint CHUNK_MAX_LEN = 4 << 10; // 4 kB
 	uint len;
 
 	if (end_offset < CHUNK_MAX_LEN) {
 		len = end_offset;
 		if (lseek64(fd, 0, SEEK_SET) == -1)
-			THROW("lseek64()", error());
+			THROW("lseek64()", errmsg());
 
 	} else {
 		len = CHUNK_MAX_LEN;
 		if (lseek64(fd, end_offset - CHUNK_MAX_LEN, SEEK_SET) == -1)
-			THROW("lseek64()", error());
+			THROW("lseek64()", errmsg());
 	}
 
 	// Read the data
@@ -91,7 +91,7 @@ void Sim::api_logs() {
 	// TODO: getFileContents() - support offset argument - pread()
 	// TODO: putFileContents() - support offset argument - pwrite()
 	if (ret != len)
-		THROW("read()", error());
+		THROW("read()", errmsg());
 
 	append(end_offset - len, '\n'); // New offset
 	append(toHex(buff)); // Data
