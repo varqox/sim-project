@@ -497,7 +497,7 @@ table {
 	position: fixed;
 	z-index: 100;
 	text-align: center;
-	padding-top: 20%;
+	padding-top: 20vh;
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -2029,16 +2029,20 @@ form .field-group > textarea {
 
 /* Calendar */
 .calendar {
-	margin: 8px 10px 8px 0;
-	/*border: 1px solid #a2a2a2;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
-	border-radius: 4px;*/
+	margin: 8px 0;
 }
 .calendar > thead > tr:first-child > th {
 	font-weight: normal;
 	text-align: center;
 	vertical-align: middle;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+.calendar > thead a {
+	vertical-align: middle;
+	padding: 2px 8px;
 }
 .calendar > thead > tr:last-child {
 	background: #ccc;
@@ -2058,26 +2062,21 @@ form .field-group > textarea {
 	vertical-align: middle;
 	font-weight: normal;
 	font-size: 12px;
-	/*width: 32px;*/
 	padding: 2px 2px;
 }
+.calendar tbody > tr:first-child > td {
+	padding-top: 1px;
+}
 .calendar td {
-	padding: 1px 2px;
-	/*text-align: right;*/
+	padding: 0;
 	text-align: center;
 	vertical-align: middle;
-	/*border-top: 1px solid #a2a2a2;*/
-	/*border-left: 1px solid #a2a2a2;*/
-	/*border: 1px solid #fff;*/
 }
-/*.calendar > thead th {
-	text-align: center;
-}*/
 .calendar td > a {
 	display: inline-block;
-	padding: 1px 2px;
-	width: 26px;
-	height: 22px;
+	padding: 3px 7px;
+	width: 30px;
+	height: 26px;
 	text-decoration: none;
 	color: #000;
 	text-align: center;
@@ -2097,7 +2096,44 @@ form .field-group > textarea {
 	color: #eee;
 	font-weight: bold;
 	background: #444;
-	/*-webkit-border-radius: 4px;*/
-	/*-moz-border-radius: 4px;*/
-	/*border-radius: 4px;*/
+}
+.calendar td.today.chosen > a {
+	color: #59b531;
+}
+
+.time-chooser {
+	margin: 16px auto;
+}
+.time-chooser input {
+	width: 60px;
+	font-size: 26px;
+	text-align: center;
+}
+.time-chooser a {
+	display: block;
+	user-select: none;
+	height: 30px;
+}
+.chooser {
+	font-size: 30px;
+}
+.chooser td {
+	padding: 0 4px;
+	text-align: center;
+}
+.chooser a {
+	display: block;
+	user-select: none;
+}
+.chooser tr:nth-child(2) {
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	line-height: 32px;
+}
+input.calendar-input {
+	cursor: pointer;
+	background-color: initial;
+	width: 160px;
 }

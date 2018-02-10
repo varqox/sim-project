@@ -36,7 +36,7 @@ void Contest::addFile() {
 		if (fv.noErrors())
 			try {
 				string id;
-				string current_time = date();
+				string current_time = mysql_date();
 				// Insert file to `files`
 				MySQL::Statement stmt = db_conn.prepare("INSERT IGNORE files "
 					"(id, round_id, name, description, file_size, modified) "
@@ -171,7 +171,7 @@ void Contest::editFile(StringView id, string name) {
 					stmt.setString(4, id.to_string());
 				}
 
-				string current_time = date();
+				string current_time = mysql_date();
 				stmt.setString(1, name);
 				stmt.setString(2, description);
 				stmt.setString(3, current_time);

@@ -1,5 +1,7 @@
 #include "sim.h"
 
+#include <sim/utilities.h>
+
 void Sim::append_contest_actions_str() {
 	STACK_UNWINDING_MARK;
 
@@ -198,7 +200,7 @@ void Sim::api_contest() {
 			user_mode_to_json(umode), ',');
 		append_contest_actions_str();
 
-		decltype(date()) curr_date;
+		decltype(mysql_date()) curr_date;
 
 		// Rounds
 		append("],\n[");
@@ -211,7 +213,7 @@ void Sim::api_contest() {
 			stmt = mysql.prepare("SELECT id, name, item, ranking_exposure,"
 					" begins, full_results, ends FROM contest_rounds"
 				" WHERE contest_id=? AND begins<=?");
-			curr_date = date();
+			curr_date = mysql_date();
 			stmt.bindAndExecute(contests_cid, curr_date);
 		}
 
@@ -316,7 +318,7 @@ void Sim::api_contest() {
 		if (uint(~contests_perms & PERM::VIEW))
 			return api_error403(); // Could not participate
 
-		if (cr_begins > date() and uint(~contests_perms & PERM::ADMIN))
+		if (cr_begins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
 			return api_error403(); // Round has not begun jet
 
 		next_arg = url_args.extractNextArg();
@@ -356,7 +358,7 @@ void Sim::api_contest() {
 		if (uint(~contests_perms & PERM::VIEW))
 			return api_error403(); // Could not participate
 
-		if (cr_begins > date() and uint(~contests_perms & PERM::ADMIN))
+		if (cr_begins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
 			return api_error403(); // Round has not begun jet
 
 		next_arg = url_args.extractNextArg();
@@ -444,41 +446,44 @@ void Sim::api_contest_round_add() {
 		return api_error403();
 
 	// Validate fields
-	CStringView name, begins, ends, full_results;
+	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
 		CONTEST_ROUND_NAME_MAX_LEN);
-	form_validate(begins, "begins", "Begin time", isDatetime,
-		"Begin time: invalid value");
-	form_validate(ends, "ends", "End time", isDatetime,
-		"End time: invalid value");
-	form_validate(full_results, "full_results", "Full results time", isDatetime,
-		"Full results time: invalid value");
+	form_validate_not_blank(begins, "begins", "Begin time", is_safe_timestamp);
+	form_validate(ends, "ends", "End time", is_safe_timestamp);
+	form_validate(full_results, "full_results", "Full results time",
+		is_safe_timestamp);
+	form_validate(ranking_expo, "ranking_expo", "Show ranking since",
+		is_safe_timestamp);
+
+	if (form_validation_error)
+		return api_error400(notifications);
 
 	// Add round
-	auto curr_date = date();
+	auto curr_date = mysql_date();
 	auto stmt = mysql.prepare("INSERT contest_rounds(contest_id, name, item,"
 			" begins, ends, full_results, ranking_exposure)"
 		" SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ?"
 		" FROM contest_rounds WHERE contest_id=?");
 	stmt.bind(0, contests_cid);
 	stmt.bind(1, name);
-
-	if (begins.empty())
-		stmt.bind(2, curr_date);
-	else
-		stmt.bind(2, begins);
+	stmt.bind_copy(2, mysql_date(strtoull(begins)));
 
 	if (ends.empty())
 		stmt.bind(3, nullptr);
 	else
-		stmt.bind(3, ends);
+		stmt.bind_copy(3, mysql_date(strtoull(ends)));
 
 	if (full_results.empty())
 		stmt.bind(4, nullptr);
 	else
-		stmt.bind(4, full_results);
+		stmt.bind_copy(4, mysql_date(strtoull(full_results)));
 
-	stmt.bind(5, curr_date);
+	if (ranking_expo.empty())
+		stmt.bind(5, nullptr);
+	else
+		stmt.bind_copy(5, mysql_date(strtoull(ranking_expo)));
+
 	stmt.bind(6, contests_cid);
 	stmt.fixAndExecute();
 
@@ -510,6 +515,9 @@ void Sim::api_contest_problem_add() {
 		CONTEST_PROBLEM_NAME_MAX_LEN);
 	form_validate(problem_id, "problem_id", "Problem ID", isDigit,
 		"Problem ID: invalid value");
+
+	if (form_validation_error)
+		return api_error400(notifications);
 
 	auto stmt = mysql.prepare("SELECT owner, type, name FROM problems"
 		" WHERE id=?");
@@ -606,7 +614,7 @@ void Sim::api_contest_ranking() {
 	uint64_t crid, cpid;
 	uint status;
 	int64_t score;
-	decltype(date()) curr_date;
+	decltype(mysql_date()) curr_date;
 
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare("SELECT id, owner, contest_round_id,"
@@ -617,7 +625,7 @@ void Sim::api_contest_ranking() {
 
 	} else {
 		stmt = mysql.prepare("SELECT s.id, s.owner, s.contest_round_id, s.contest_problem_id, s.status, s.score FROM submissions s JOIN contest_rounds cr ON cr.id=s.contest_round_id AND cr.begins<=? AND (cr.full_results IS NULL OR cr.full_results<=?) AND (cr.ranking_exposure IS NOT NULL AND cr.ranking_exposure<=?) WHERE s.contest_id=? AND s.type=" STYPE_FINAL_STR " ORDER BY s.owner");
-		curr_date = date();
+		curr_date = mysql_date();
 		stmt.bindAndExecute(curr_date, curr_date, curr_date, contests_cid);
 		stmt.res_bind_all(id, owner, crid, cpid, status, score);
 	}

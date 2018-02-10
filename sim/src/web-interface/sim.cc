@@ -193,11 +193,11 @@ void Sim::view_logs() {
 	append("<h2>Server's log:</h2>"
 		"<pre id=\"web\" class=\"logs\"></pre>"
 
-		"<h2>Server's error log:</h2>"
-		"<pre id=\"web_err\" class=\"logs\"></pre>"
-
 		"<h2>Job server's log:</h2>"
 		"<pre id=\"jobs\" class=\"logs\"></pre>"
+
+		"<h2>Server's error log:</h2>"
+		"<pre id=\"web_err\" class=\"logs\"></pre>"
 
 		"<h2>Job server's error log:</h2>"
 		"<pre id=\"jobs_err\" class=\"logs\"></pre>"

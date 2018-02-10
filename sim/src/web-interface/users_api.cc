@@ -217,7 +217,7 @@ void Sim::api_user_add() {
 	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
 	if (form_validation_error)
-		return api_error400(concat("<div>", notifications, "</div>"));
+		return api_error400(notifications);
 
 	// All fields are valid
 	array<char, (SALT_LEN >> 1)> salt_bin;
@@ -284,7 +284,7 @@ void Sim::api_user_edit() {
 	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
 	if (form_validation_error)
-		return api_error400(concat("<div>", notifications, "</div>"));
+		return api_error400(notifications);
 
 	// Commit changes
 	auto stmt = mysql.prepare("UPDATE users"
@@ -316,7 +316,7 @@ void Sim::api_user_delete() {
 	if (not slowEqual(sha3_512(concat(salt, request.form_data.get("password"))),
 		passwd_hash))
 	{
-		return api_error403("Wrong password");
+		return api_error403("Invalid password");
 	}
 
 	// TODO: add other things like problems,, contests, messages, files etc.
@@ -357,7 +357,7 @@ void Sim::api_user_change_password() {
 	if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
 		not slowEqual(sha3_512(concat(salt, old_pass)), passwd_hash))
 	{
-		return api_error403("Wrong old password");
+		return api_error403("Invalid old password");
 	}
 
 	// Commit password change

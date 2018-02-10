@@ -21,7 +21,7 @@ bool Sim::session_open() {
 					"user_agent "
 				"FROM session s, users u "
 				"WHERE s.id=? AND expires>=? AND u.id=s.user_id");
-		stmt.bindAndExecute(session_id, date());
+		stmt.bindAndExecute(session_id, mysql_date());
 
 		InplaceBuff<SESSION_IP_LEN + 1> session_ip;
 		InplaceBuff<4096> user_agent;
@@ -69,7 +69,7 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 
 	// Remove obsolete sessions
 	auto stmt = mysql.prepare("DELETE FROM session WHERE expires<?");
-	stmt.bindAndExecute(date());
+	stmt.bindAndExecute(mysql_date());
 
 	// Create a record in database
 	stmt = mysql.prepare("INSERT IGNORE session"
@@ -80,7 +80,7 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	auto user_agent = request.headers.get("User-Agent");
 	time_t exp_time = time(nullptr) +
 		(temporary_session ? TMP_SESSION_MAX_LIFETIME : SESSION_MAX_LIFETIME);
-	auto exp_datetime = date("%Y-%m-%d %H:%M:%S", exp_time);
+	auto exp_datetime = mysql_date(exp_time);
 
 	stmt.bind(1, session_csrf_token);
 	stmt.bind(2, user_id);

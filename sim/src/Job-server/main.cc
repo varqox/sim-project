@@ -412,7 +412,7 @@ class EventsQueue {
 			return notifier_fd_;
 
 		if ((notifier_fd_ = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) == -1)
-			THROW("eventfd() failed", error());
+			THROW("eventfd() failed", errmsg());
 
 		return notifier_fd_;
 	}
@@ -900,7 +900,7 @@ static void eventsLoop() noexcept {
 				if (errno == EWOULDBLOCK)
 					return true; // All has been read
 
-				THROW("read() failed", error());
+				THROW("read() failed", errmsg());
 			}
 
 			// Update jobs queue and distribute new jobs
@@ -939,7 +939,7 @@ static void eventsLoop() noexcept {
 				if (inotify_fd == -1) {
 					inotify_fd = inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
 					if (inotify_fd == -1)
-						errlog("inotify_init1() failed", error());
+						errlog("inotify_init1() failed", errmsg());
 					else
 						goto inotify_partially_works;
 
@@ -953,7 +953,7 @@ static void eventsLoop() noexcept {
 					inotify_wd = inotify_add_watch(inotify_fd,
 						JOB_SERVER_NOTIFYING_FILE, IN_ATTRIB | IN_MOVE_SELF);
 					if (inotify_wd == -1)
-						errlog("inotify_add_watch() failed", error());
+						errlog("inotify_add_watch() failed", errmsg());
 					else
 						continue; // Fixing was successful
 				}
@@ -1003,7 +1003,7 @@ static void eventsLoop() noexcept {
 
 						int rc = poll(&pfd, 1, SLEEP_INTERVAL);
 						if (rc == -1 and errno != EINTR)
-							THROW("poll() failed", error());
+							THROW("poll() failed", errmsg());
 
 						EventsQueue::reset_notifier();
 						while (EventsQueue::process_next_event()) {}
@@ -1034,7 +1034,7 @@ static void eventsLoop() noexcept {
 
 						int rc = poll(&pfd, 1, SLEEP_INTERVAL);
 						if (rc == -1 and errno != EINTR)
-							THROW("poll() failed", error());
+							THROW("poll() failed", errmsg());
 
 						if (not process_inotify_event())
 							continue; // inotify has just broken
@@ -1060,7 +1060,7 @@ static void eventsLoop() noexcept {
 							if (errno == EINTR)
 								continue;
 
-							THROW("poll() failed", error());
+							THROW("poll() failed", errmsg());
 						}
 
 						// This should be checked (called) first in so as to
@@ -1106,8 +1106,7 @@ static void cleanUpDBs() {
 			" WHERE status=" JSTATUS_NOTICED_PENDING_STR);
 
 		// Remove void (invalid) jobs and submissions that are older than 24 h
-		auto yesterday_date = date("%Y-%m-%d %H:%M:%S",
-			time(nullptr) - 24 * 60 * 60);
+		auto yesterday_date = mysql_date(time(nullptr) - 24 * 60 * 60);
 		auto stmt = mysql.prepare("DELETE FROM jobs WHERE type="
 			JTYPE_VOID_STR " AND added<?");
 		stmt.bindAndExecute(yesterday_date);
@@ -1163,7 +1162,7 @@ int main() {
 	if (freopen(JOB_SERVER_LOG, "a", stdout) == nullptr ||
 		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
 	{
-		errlog("Failed to open `", JOB_SERVER_LOG, '`', error());
+		errlog("Failed to open `", JOB_SERVER_LOG, '`', errmsg());
 	}
 
 	try {

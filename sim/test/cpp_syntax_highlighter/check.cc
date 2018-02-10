@@ -14,7 +14,7 @@ vector<string> findTests(string path = "tests") {
 
 	Directory dir {path};
 	if (!dir)
-		THROW("opendir('", path, "')", error());
+		THROW("opendir('", path, "')", errmsg());
 
 	// Collect *.in and *.out files
 	vector<string> in, out;

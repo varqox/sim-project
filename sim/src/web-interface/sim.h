@@ -242,7 +242,7 @@ private:
 	template<class... Args>
 	void add_notification(StringView css_classes, Args&&... message) {
 		notifications.append("<pre class=\"", css_classes, "\">",
-			std::forward<Args>(message)..., "</pre>");
+			std::forward<Args>(message)..., "</pre>\n");
 	}
 
 	template<class... Args>
@@ -308,9 +308,10 @@ private:
 	}
 
 	/// Validates field and (if not blank) checks it by comp
-	template<class T, class Checker>
+	template<class T, class Checker,
+		typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
 	bool form_validate(T& var, const std::string& name,
-		StringView name_to_print, Checker&& check, StringView error_msg,
+		StringView name_to_print, Checker&& check, StringView error_msg = {},
 		size_t max_size = -1)
 	{
 		STACK_UNWINDING_MARK;
@@ -362,9 +363,10 @@ private:
 	}
 
 	/// Validates field and checks it by comp
-	template<class T, class Checker>
+	template<class T, class Checker,
+		typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
 	bool form_validate_not_blank(T& var, const std::string& name,
-		StringView name_to_print, Checker&& check, StringView error_msg,
+		StringView name_to_print, Checker&& check, StringView error_msg = {},
 		size_t max_size = -1)
 	{
 		STACK_UNWINDING_MARK;
@@ -376,7 +378,7 @@ private:
 			form_validation_error = true;
 			if (error_msg.empty())
 				add_notification("error",
-					htmlEscape(concat(name_to_print, " validation error")));
+					htmlEscape(concat(name_to_print, ": invalid value")));
 			else
 				add_notification("error", htmlEscape(error_msg));
 		}

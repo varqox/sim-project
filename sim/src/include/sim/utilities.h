@@ -8,3 +8,7 @@ inline bool isUsername(StringView str) noexcept {
 		return (isalnum(x) || x == '_' || x == '-');
 	});
 }
+
+constexpr inline bool is_safe_timestamp(StringView str) noexcept {
+	return isDigitNotGreaterThan<std::numeric_limits<time_t>::max()>(str);
+}
