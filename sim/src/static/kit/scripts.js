@@ -390,6 +390,13 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	}
 }
 
+var get_unique_id = function() {
+	var id = 0;
+	return function() {
+		return id++;
+	};
+}();
+
 /* ================================= Form ================================= */
 var Form = {};
 (function() {
@@ -400,10 +407,19 @@ var Form = {};
 		else
 			input = $('<input>', input_context_or_input);
 
+		var id;
+		if (input.is('input[type="checkbox"]')) {
+			id = 'checkbox' + get_unique_id();
+			input.attr('id', id);
+		}
+
 		return $('<div>', {
 			class: 'field-group',
 			html: [
-				$('<label>', {text: label}),
+				$('<label>', {
+					text: label,
+					for: id
+				}),
 				input
 			]
 		});
@@ -942,7 +958,6 @@ function Logs(type, elem) {
 			first_offset = data[0];
 		else if (data[0] > first_offset) { // Newer logs arrived
 			first_offset = data[0];
-			console.log('newer logs!');
 			this_.elem.empty();
 		}
 
@@ -1015,7 +1030,6 @@ function Logs(type, elem) {
 
 	setInterval(function() {
 		var elem = this_.elem[0];
-		console.log(elem.scrollHeight - elem.scrollTop, elem.clientHeight);
 		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight)
 			this_.try_fetching_newest();
 	}, 2000);
