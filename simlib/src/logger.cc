@@ -31,7 +31,7 @@ void Logger::Appender::flush_impl(const char* s1, const char* s2,
 	if (logger_.lock()) {
 		if (label_) {
 			try {
-				fprintf(logger_.f_, s1, localdate().c_str(),
+				fprintf(logger_.f_, s1, mysql_localdate().c_str(),
 					(int)buff_.size, buff_.data());
 			} catch (const std::exception&) {
 				fprintf(logger_.f_, s2, (int)buff_.size,

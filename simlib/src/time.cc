@@ -21,23 +21,23 @@ static string __date(CStringView format, time_t curr_time, F func) {
 	string buff(format.size() + 1 +
 		std::count(format.begin(), format.end(), '%') * 25, '0');
 
-	tm *ptm = func(&curr_time);
-	if (!ptm)
+	tm ptm;
+	if (not func(&curr_time, &ptm))
 		THROW("Failed to convert time");
 
 	size_t rc = strftime(const_cast<char*>(buff.data()), buff.size(),
-		format.c_str(), ptm);
+		format.c_str(), &ptm);
 
 	buff.resize(rc);
 	return buff;
 }
 
 string date(CStringView format, time_t curr_time) {
-	return __date(format, curr_time, gmtime);
+	return __date(format, curr_time, gmtime_r);
 }
 
 string localdate(CStringView format, time_t curr_time) {
-	return __date(format, curr_time, localtime);
+	return __date(format, curr_time, localtime_r);
 }
 
 bool isDatetime(CStringView str) noexcept {

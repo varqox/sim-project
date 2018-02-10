@@ -213,7 +213,7 @@ public:
 
 	template<size_t N1>
 	InplaceArray(const InplaceArray<T, N1>& a) : InplaceArray(a.size_) {
-		copy(a.p_, a.p_ + size_, p_);
+		std::copy(a.p_, a.p_ + size_, p_);
 	}
 
 	template<size_t N1>
@@ -319,7 +319,7 @@ public:
 		if (n > max_size_) {
 			size_t new_ms = meta::max(max_size_ << 1, n);
 			T* new_p = new T[new_ms];
-			std::copy(p_, p_ + size_, new_p);
+			std::move(p_, p_ + size_, new_p);
 			deallocate();
 
 			p_ = new_p;

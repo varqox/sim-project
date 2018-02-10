@@ -94,6 +94,7 @@ private:
 	MYSQL_STMT* stmt_;
 	InplaceArray<MYSQL_BIND, STATIC_BINDS> params_;
 	InplaceArray<MYSQL_BIND, STATIC_RESULTS> res_;
+	InplaceArray<std::unique_ptr<char[]>, 8> buffs_;
 
 	Statement(MYSQL_STMT* stmt)
 		: stmt_ {stmt}, params_ {mysql_stmt_param_count(stmt)},
@@ -255,6 +256,20 @@ public:
 		params_[idx].buffer_length = str.size();
 		params_[idx].length = nullptr;
 		params_[idx].length_value = str.size();
+	}
+
+	// Like bind(StringView) but copies string into internal buffer - useful for
+	// temporary strings
+	void bind_copy(unsigned idx, StringView str) ND(noexcept) {
+		D(throw_assert(idx < params_.size());)
+		if (str.size()) {
+			auto ptr = std::make_unique<char[]>(str.size());
+			std::copy(str.begin(), str.end(), ptr.get());
+			str = StringView(ptr.get(), str.size());
+			buffs_.emplace_back(std::move(ptr));
+		}
+
+		bind(idx, str);
 	}
 
 	void bind(unsigned idx, const std::string&&) = delete;

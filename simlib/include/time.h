@@ -7,14 +7,24 @@
 long long microtime() noexcept;
 
 // Returns UTC date in format of @p format (format like in strftime(3)), if
-// @p curr_time > 0 uses @p curr_time, otherwise uses the current time
-std::string date(CStringView format = CStringView {"%Y-%m-%d %H:%M:%S"},
-	time_t curr_time = -1);
+// @p curr_time >= 0 uses @p curr_time, otherwise uses the current time
+std::string date(CStringView format, time_t curr_time = -1);
+
+// Returns UTC date in format of "%Y-%m-%d %H:%M:%S" (see strftime(3)), if
+// @p curr_time >= 0 uses @p curr_time, otherwise uses the current time
+inline std::string mysql_date(time_t curr_time = -1) {
+	return date("%Y-%m-%d %H:%M:%S", curr_time);
+}
 
 // Returns local date in format of @p format (format like in strftime(3)), if
-// @p curr_time > 0 uses @p curr_time, otherwise uses the current time
-std::string localdate(CStringView format = CStringView {"%Y-%m-%d %H:%M:%S"},
-	time_t curr_time = -1);
+// @p curr_time >= 0 uses @p curr_time, otherwise uses the current time
+std::string localdate(CStringView format, time_t curr_time = -1);
+
+// Returns local date in format of "%Y-%m-%d %H:%M:%S" (see strftime(3)), if
+// @p curr_time >= 0 uses @p curr_time, otherwise uses the current time
+inline std::string mysql_localdate(time_t curr_time = -1) {
+	return localdate("%Y-%m-%d %H:%M:%S", curr_time);
+}
 
 // Checks if format is "%Y-%m-%d %H:%M:%S"
 bool isDatetime(CStringView str) noexcept;
