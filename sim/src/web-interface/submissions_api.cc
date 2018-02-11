@@ -118,7 +118,7 @@ void Sim::api_submissions() {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, "<>") and ~mask & ID_COND) {
+		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
 			qwhere.append(" AND s.id", arg);
 			mask |= ID_COND;
 
@@ -134,7 +134,9 @@ void Sim::api_submissions() {
 			mask |= ID_COND;
 
 		// problem's or round's id
-		} else if (isIn(cond, "pCRP") and ~mask & ROUND_OR_PROBLEM_ID_COND) {
+		} else if (isIn(cond, {'p', 'C', 'R', 'P'}) and
+			~mask & ROUND_OR_PROBLEM_ID_COND)
+		{
 			if (cond == 'p') {
 				qwhere.append(" AND s.problem_id=", arg_id);
 				if (not allow_access) {

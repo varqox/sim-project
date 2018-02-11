@@ -45,9 +45,19 @@ void Sim::contests_handle() {
 	using PERM = ContestPermissions;
 
 	StringView next_arg = url_args.extractNextArg();
-	if (isDigit(next_arg)) {
-		contests_cid = next_arg;
-		return contests_contest();
+	if (not next_arg.empty() and isDigit(next_arg.substr(1))) {
+		if (next_arg[0] == 'c') {
+			contests_cid = next_arg.substr(1);
+			return contests_contest();
+
+		} else if (next_arg[0] == 'r') {
+			contests_crid = next_arg.substr(1);
+			return contests_contest_round();
+
+		} else if (next_arg[0] == 'p') {
+			contests_cpid = next_arg.substr(1);
+			return contests_contest_problem();
+		}
 	}
 
 	// Get the overall permissions to the contest set
@@ -88,10 +98,74 @@ void Sim::contests_contest() {
 		append("<script>edit_contest(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
+	} else if (next_arg == "delete") {
+		page_template(concat("Delete contest ", contests_cid),
+			"body{padding-left:20px}");
+		append("<script>delete_contest(false, ", contests_cid, ","
+			" window.location.hash);</script>");
+
 	} else if (next_arg == "add_round") {
 		page_template(concat("Add round ", contests_cid),
 			"body{padding-left:20px}");
 		append("<script>add_contest_round(false, ", contests_cid, ","
+			" window.location.hash);</script>");
+
+	} else
+		return error404();
+}
+
+void Sim::contests_contest_round() {
+	STACK_UNWINDING_MARK;
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg.empty()) {
+		page_template(concat("Round ", contests_crid),
+			"body{padding-left:20px}");
+		append("<script>view_contest_round(false, ", contests_crid, ","
+			" window.location.hash);</script>");
+
+	} else if (next_arg == "edit") {
+		page_template(concat("Edit round ", contests_crid),
+			"body{padding-left:20px}");
+		append("<script>edit_contest_round(false, ", contests_crid, ","
+			" window.location.hash);</script>");
+
+	} else if (next_arg == "delete") {
+		page_template(concat("Delete round ", contests_crid),
+			"body{padding-left:20px}");
+		append("<script>delete_contest_round(false, ", contests_crid, ","
+			" window.location.hash);</script>");
+
+	} else if (next_arg == "attach_problem") {
+		page_template(concat("Attach problem ", contests_crid),
+			"body{padding-left:20px}");
+		append("<script>add_contest_problem(false, ", contests_crid, ","
+			" window.location.hash);</script>");
+
+	} else
+		return error404();
+}
+
+void Sim::contests_contest_problem() {
+	STACK_UNWINDING_MARK;
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg.empty()) {
+		page_template(concat("Contest problem ", contests_cpid),
+			"body{padding-left:20px}");
+		append("<script>view_contest_problem(false, ", contests_cpid, ","
+			" window.location.hash);</script>");
+
+	} else if (next_arg == "edit") {
+		page_template(concat("Edit contest problem ", contests_cpid),
+			"body{padding-left:20px}");
+		append("<script>edit_contest_problem(false, ", contests_cpid, ","
+			" window.location.hash);</script>");
+
+	} else if (next_arg == "delete") {
+		page_template(concat("Delete contest problem ", contests_cpid),
+			"body{padding-left:20px}");
+		append("<script>delete_contest_problem(false, ", contests_cpid, ","
 			" window.location.hash);</script>");
 
 	} else

@@ -56,7 +56,7 @@ void Sim::api_jobs() {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, "<>") and ~mask & ID_COND) {
+		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 

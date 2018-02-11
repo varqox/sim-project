@@ -61,7 +61,7 @@ void Sim::api_users() {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, "<>") and ~mask & ID_COND) {
+		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
 			query_append("id", arg);
 			mask |= ID_COND;
 

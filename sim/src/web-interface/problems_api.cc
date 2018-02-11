@@ -82,7 +82,7 @@ void Sim::api_problems() {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, "<>") and ~mask & ID_COND) {
+		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
 			qwhere.append(" AND p.id", arg);
 			mask |= ID_COND;
 

@@ -151,6 +151,10 @@ private:
 
 	void api_contest();
 
+	void api_contest_round();
+
+	void api_contest_problem();
+
 	void api_contest_add();
 
 	void api_contest_edit(bool is_public);
@@ -171,7 +175,8 @@ private:
 
 	void api_contest_problem_delete();
 
-	void api_contest_ranking();
+	void api_contest_ranking(StringView submissions_id_name,
+		StringView query_id);
 
 	void api_contest_users();
 
@@ -591,6 +596,10 @@ private:
 	void contests_handle();
 
 	void contests_contest();
+
+	void contests_contest_round();
+
+	void contests_contest_problem();
 
 	/* ============================= Submissions ============================= */
 
