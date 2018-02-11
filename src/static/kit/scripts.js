@@ -1229,16 +1229,16 @@ var ActionsToHTML = {};
 		if (!contest_view && actions_str.indexOf('v') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
-				href: '/c/' + contest_id,
+				href: '/c/c' + contest_id,
 				text: 'View'
 			}));
 
 		if (contest_view && actions_str.indexOf('E') !== -1)
-			res.push(a_view_button('/c/' + contest_id + '/edit', 'Edit',
+			res.push(a_view_button('/c/c' + contest_id + '/edit', 'Edit',
 				'btn-small blue', edit_contest.bind(null, true, contest_id)));
 
 		if (contest_view && actions_str.indexOf('D') !== -1)
-			res.push(a_view_button('/c/' + contest_id + '/delete', 'Delete',
+			res.push(a_view_button('/c/c' + contest_id + '/delete', 'Delete',
 				'btn-small red', delete_contest.bind(null, true, contest_id)));
 
 		return res;
@@ -1991,14 +1991,14 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 			this.append($('<div>', {
 				class: 'round-path',
 				html: [
-					a_view_button('/c/' + data[10], data[11], '',
+					a_view_button('/c/c' + data[10], data[11], '',
 						view_contest.bind(null, true, data[10])),
 					' / ',
 					a_view_button('/c/r' + data[8], data[9], '',
-						view_contest.bind(null, true, data[8])),
+						view_contest_round.bind(null, true, data[8])),
 					' / ',
 					a_view_button('/c/p' + data[6], data[7], '',
-						view_contest.bind(null, true, data[6])),
+						view_contest_problem.bind(null, true, data[6])),
 					$('<a>', {
 						class: 'btn-small',
 						href: '/api/contest/p' + data[6] + '/statement/' +
@@ -2194,13 +2194,13 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 				}));
 			else
 				row.append($('<td>', {
-					html: [(this_.show_contest ? a_view_button('/c/' + x[10], x[11], '', view_contest.bind(null, true, x[10])) : ''),
+					html: [(this_.show_contest ? a_view_button('/c/c' + x[10], x[11], '', view_contest.bind(null, true, x[10])) : ''),
 						(this_.show_contest ? ' / ' : ''),
 						a_view_button('/c/r' + x[8], x[9], '',
-							view_contest.bind(null, true, x[8])),
+							view_contest_round.bind(null, true, x[8])),
 						' / ',
 						a_view_button('/c/p' + x[6], x[7], '',
-							view_contest.bind(null, true, x[6]))
+							view_contest_problem.bind(null, true, x[6]))
 					]
 				}));
 
@@ -2681,14 +2681,14 @@ function add_contest(as_modal) {
 					view_contest(true, resp);
 				} else {
 					this.parent().remove();
-					window.location.href = '/c/' + resp;
+					window.location.href = '/c/c' + resp;
 				}
 			})
 		);
 	});
 }
 function add_contest_round(as_modal, contest_id) {
-	view_base(as_modal, '/c/' + contest_id + '/add_round', function() {
+	view_base(as_modal, '/c/c' + contest_id + '/add_round', function() {
 		this.append(ajax_form('Add round', '/api/contest/c' + contest_id + '/add_round',
 			Form.field_group("Round's name", {
 				type: 'text',
@@ -2714,8 +2714,8 @@ function add_contest_round(as_modal, contest_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.closest('.modal'));
-					view_contest(true, contest_id);
+					show_success_via_loader(this, 'Added');
+					view_contest_round(true, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/c/r' + resp;
@@ -2725,8 +2725,8 @@ function add_contest_round(as_modal, contest_id) {
 	});
 }
 function add_contest_problem(as_modal, contest_round_id) {
-	view_base(as_modal, '/c/r' + contest_round_id + '/add_problem', function() {
-		this.append(ajax_form('Attach problem', '/api/contest/r' + contest_round_id + '/add_problem',
+	view_base(as_modal, '/c/r' + contest_round_id + '/attach_problem', function() {
+		this.append(ajax_form('Attach problem', '/api/contest/r' + contest_round_id + '/attach_problem',
 			Form.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
@@ -2748,8 +2748,8 @@ function add_contest_problem(as_modal, contest_round_id) {
 				})
 			}), function(resp) {
 				if (as_modal) {
-					close_modal(this.closest('.modal'));
-					view_contest(true, contest_id);
+					show_success_via_loader(this, 'Added');
+					view_contest_problem(true, resp);
 				} else {
 					this.parent().remove();
 					window.location.href = '/c/p' + resp;
@@ -2797,7 +2797,7 @@ function edit_contest(as_modal, contest_id) {
 			})
 		));
 
-	}, '/c/' + contest_id + '/edit');
+	}, '/c/c' + contest_id + '/edit');
 }
 function edit_contest_round(as_modal, contest_round_id) {
 	// TODO
@@ -2814,8 +2814,8 @@ function delete_contest_round(as_modal, contest_round_id) {
 function delete_contest_problem(as_modal, contest_problem_id) {
 	// TODO
 }
-function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
-	view_ajax(as_modal, '/api/contest/c' + contest_id, function(data) {
+function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
+	view_ajax(as_modal, '/api/contest/' + id_for_api, function(data) {
 		var contest = data[0];
 		var rounds = data[1];
 		var problems = data[2];
@@ -2830,7 +2830,10 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 		});
 
 		// Header
-		this.append($('<h1>', {text: contest[1]}));
+		this.append($('<h1>', {html: function() {
+				return $('<span>', {text: 'TODO ' + contest[1]});
+			}()
+		}));
 		var elem = $(this);
 		var tabs = [
 			'Dashboard', function() {
@@ -2842,9 +2845,9 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 					class: 'contest',
 					html: [
 						$('<span>', {text: contest[1]}),
-						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest_id))),
-						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/' + contest_id + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest_id))),
-						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/' + contest_id + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest_id))),
+						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest[0]))),
+						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest[0]))),
+						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest[0]))),
 					]
 				}).appendTo($('<div>')).parent());
 
@@ -2869,7 +2872,7 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 								{text: 'immediately'}
 								: {datetime: round[5], text: round[5]})
 							), true),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/add_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, round[0]))),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/attach_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, round[0]))),
 							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, round[0]))),
 							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, round[0]))),
 						]
@@ -2935,29 +2938,37 @@ function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
 		if (actions.indexOf('A') !== -1)
 			tabs.push('All submissions', function() {
 				elem.children('.tabmenu').nextAll().remove();
-				tab_submissions_lister($('<div>').appendTo(elem), '/C' + contest_id);
+				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase());
 			});
 
 		if (actions.indexOf('p') !== -1)
 			tabs.push('My submissions', function() {
 				elem.children('.tabmenu').nextAll().remove();
-				tab_submissions_lister($('<div>').appendTo(elem), '/C' + contest_id + '/u' + logged_user_id());
+				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id());
 			});
 
 		if (actions.indexOf('v') !== -1)
 			tabs.push('Ranking', function() {
 				elem.children('.tabmenu').nextAll().remove();
-				contest_ranking($('<div>').appendTo(elem), contest_id);
+				contest_ranking($('<div>').appendTo(elem), id_for_api);
 			});
 
 		tabmenu(function(x) { x.appendTo(elem); }, tabs);
 
-	}, '/c/' + contest_id + (opt_hash === undefined ? '' : opt_hash));
+	}, '/c/' + id_for_api + (opt_hash === undefined ? '' : opt_hash));
 }
-function contest_ranking(elem_, contest_id_) {
+function view_contest(as_modal, contest_id, opt_hash /*= ''*/) {
+	return view_contest_impl(as_modal, 'c' + contest_id, opt_hash);
+}
+function view_contest_round(as_modal, contest_round_id, opt_hash /*= ''*/) {
+	return view_contest_impl(as_modal, 'r' + contest_round_id, opt_hash);
+}
+function view_contest_problem(as_modal, contest_problem_id, opt_hash /*= ''*/) {
+	return view_contest_impl(as_modal, 'p' + contest_problem_id, opt_hash);
+}
+function contest_ranking(elem_, id_for_api) {
 	var elem = elem_;
-	var contest_id = contest_id_;
-	API_call('/api/contest/c' + contest_id, function(cdata) {
+	API_call('/api/contest/' + id_for_api, function(cdata) {
 		var contest = cdata[0];
 		var rounds = cdata[1];
 		var problems = cdata[2];
@@ -3011,7 +3022,7 @@ function contest_ranking(elem_, contest_id_) {
 			problem_to_col_id.add(problems[i][0], i);
 		problem_to_col_id.prepare();
 
-		API_call('/api/contest/c' + contest_id + '/ranking', function(data_) {
+		API_call('/api/contest/' + id_for_api + '/ranking', function(data_) {
 			var modal = elem.parents('.modal');
 			var data = data_;
 			if (data.length == 0) {
@@ -3052,7 +3063,8 @@ function contest_ranking(elem_, contest_id_) {
 				if (i + 1 == problems.length || problems[i + 1][1] != problem[1]) {
 					tr.append($('<th>', {
 						colspan: colspan,
-						text: rounds[j][1]
+						html: a_view_button('/c/r' + rounds[j][0] + '#ranking', rounds[j][1], '',
+							view_contest_round.bind(null, true, rounds[j][0], '#ranking'))
 					}));
 					colspan = 0;
 					++j;
@@ -3063,7 +3075,8 @@ function contest_ranking(elem_, contest_id_) {
 			// Add problems
 			for (i = 0; i < problems.length; ++i)
 				tr.append($('<th>', {
-					text: problems[i][3]
+					html: a_view_button('/c/p' + problems[i][0] + '#ranking', problems[i][3], '',
+						view_contest_problem.bind(null, true, problems[i][0], '#ranking'))
 				}));
 			thead.append(tr);
 
@@ -3194,7 +3207,7 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 				row.append($('<td>', {text: x[0]}));
 			// Name
 			row.append($('<td>', {
-				html: a_view_button('/c/' + x[0], x[1], '',
+				html: a_view_button('/c/c' + x[0], x[1], '',
 					view_contest.bind(null, true, x[0]))
 			}));
 
