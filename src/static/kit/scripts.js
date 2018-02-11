@@ -944,7 +944,7 @@ function colorize(log, end) {
 
 	return res + log.substring(end);
 }
-function Logs(type, elem) {
+function Logs(type, elem, auto_refresh_checkbox) {
 	var this_ = this;
 	this.type = type;
 	this.elem = $(elem);
@@ -1030,8 +1030,11 @@ function Logs(type, elem) {
 
 	setInterval(function() {
 		var elem = this_.elem[0];
-		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight)
+		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight &&
+			auto_refresh_checkbox.is(':checked'))
+		{
 			this_.try_fetching_newest();
+		}
 	}, 2000);
 
 	this.monitor_scroll = function() {

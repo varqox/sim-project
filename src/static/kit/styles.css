@@ -2137,3 +2137,20 @@ input.calendar-input {
 	background-color: initial;
 	width: 160px;
 }
+
+.logs-header {
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-right: 32px;
+}
+.logs-header > div > * {
+	vertical-align: middle;
+}
+.logs-header > div > input {
+	margin-left: 15px;
+}
+.logs-header > div > label {
+	margin-left: 5px;
+}
