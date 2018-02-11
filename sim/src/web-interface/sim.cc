@@ -190,22 +190,47 @@ void Sim::view_logs() {
 
 	page_template("Logs", "body{padding-left:20px}");
 
-	append("<h2>Server's log:</h2>"
+	append(
+		"<div class=\"logs-header\">"
+			"<h2>Server's log:</h2>"
+			"<div>"
+				"<input type=\"checkbox\" id=\"wc\">"
+				"<label for=\"wc\">auto-refresh</label>"
+			"</div>"
+		"</div>"
 		"<pre id=\"web\" class=\"logs\"></pre>"
 
-		"<h2>Job server's log:</h2>"
+		"<div class=\"logs-header\">"
+			"<h2>Job server's log:</h2>"
+			"<div>"
+				"<input type=\"checkbox\" id=\"jc\" checked>"
+				"<label for=\"jc\">auto-refresh</label>"
+			"</div>"
+		"</div>"
 		"<pre id=\"jobs\" class=\"logs\"></pre>"
 
-		"<h2>Server's error log:</h2>"
+		"<div class=\"logs-header\">"
+			"<h2>Server's error log:</h2>"
+			"<div>"
+				"<input type=\"checkbox\" id=\"wec\">"
+				"<label for=\"wec\">auto-refresh</label>"
+			"</div>"
+		"</div>"
 		"<pre id=\"web_err\" class=\"logs\"></pre>"
 
-		"<h2>Job server's error log:</h2>"
+		"<div class=\"logs-header\">"
+			"<h2>Job server's error log:</h2>"
+			"<div>"
+				"<input type=\"checkbox\" id=\"jec\">"
+				"<label for=\"jec\">auto-refresh</label>"
+			"</div>"
+		"</div>"
 		"<pre id=\"jobs_err\" class=\"logs\"></pre>"
 
 		"<script>"
-			"new Logs('web', $('#web')).monitor_scroll();"
-			"new Logs('web_err', $('#web_err')).monitor_scroll();"
-			"new Logs('jobs', $('#jobs')).monitor_scroll();"
-			"new Logs('jobs_err', $('#jobs_err')).monitor_scroll();"
+			"new Logs('web', $('#web'), $('#wc')).monitor_scroll();"
+			"new Logs('web_err', $('#web_err'), $('#wec')).monitor_scroll();"
+			"new Logs('jobs', $('#jobs'), $('#jc')).monitor_scroll();"
+			"new Logs('jobs_err', $('#jobs_err'), $('#jec')).monitor_scroll();"
 		"</script>");
 }
