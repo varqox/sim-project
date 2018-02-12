@@ -1192,15 +1192,19 @@ div.header > div:last-child{
 	align-self: flex-end;
 	margin-right: 10%;
 }
-.round-path {
+.contest-path {
 	display: flex;
 	flex-flow: row wrap;
 	align-items: center;
+	white-space: pre;
 	margin: 5px 0;
+}
+*:not(h2).contest-path {
 	font-size: 16px;
 	line-height: 22px;
 }
-.round-path > a {
+.contest-path > a,
+.contest-path > span {
 	margin: 0 4px;
 }
 .round-view {

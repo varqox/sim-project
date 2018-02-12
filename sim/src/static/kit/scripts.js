@@ -295,9 +295,12 @@ function give_body_egid() {
 $(document).ready(give_body_egid);
 
 window.onpopstate = function(event) {
+	if (event.state === null)
+		return window.location.reload();
+
 	var elem = $('*[egid="' + event.state.egid + '"]');
 	if (elem.length === 0)
-		window.location.reload();
+		return window.location.reload();
 
 	var modals;
 	if (elem.is('body'))
@@ -598,6 +601,7 @@ function API_call(ajax_url, success_handler, loader_parent) {
 function tabname_to_hash(tabname) {
 	return tabname.toLowerCase().replace(/ /g, '_');
 }
+/// Triggers 'tabmenuTabHasChanged' event on the result every time an active tab is changed
 function tabmenu(attacher, tabs) {
 	var res = $('<div>', {class: 'tabmenu'});
 	/*const*/ var prior_hash = url_hash_parser.parsed_prefix();
@@ -650,6 +654,7 @@ function tabmenu(attacher, tabs) {
 					document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(this).text()));
 				url_hash_parser.assign_as_parsed(window.location.hash);
 
+				res.trigger('tabmenuTabHasChanged', this);
 				handler.call(this);
 				centerize_modal($(this).parents('.modal'), false);
 			}
@@ -670,6 +675,7 @@ function tabmenu(attacher, tabs) {
 		if (tabname_to_hash(elem.text()) === arg) {
 			set_min_width(this);
 			elem.addClass('active');
+			res.trigger('tabmenuTabHasChanged', elem);
 
 			tabs[i << 1 | 1].call(elem);
 			centerize_modal(elem.parents('.modal'), false);
@@ -1231,6 +1237,10 @@ var ActionsToHTML = {};
 				class: 'btn-small',
 				href: '/c/c' + contest_id,
 				text: 'View'
+			}), $('<a>', {
+				class: 'btn-small',
+				href: '/c/c' + contest_id + '#ranking',
+				text: 'Ranking'
 			}));
 
 		if (contest_view && actions_str.indexOf('E') !== -1)
@@ -1989,7 +1999,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 
 		if (data[6] !== null)
 			this.append($('<div>', {
-				class: 'round-path',
+				class: 'contest-path',
 				html: [
 					a_view_button('/c/c' + data[10], data[11], '',
 						view_contest.bind(null, true, data[10])),
@@ -2830,9 +2840,36 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		});
 
 		// Header
-		this.append($('<h1>', {html: function() {
-				return $('<span>', {text: 'TODO ' + contest[1]});
-			}()
+		this.append($('<h2>', {
+				class: 'contest-path',
+				html: function() {
+					var res = [
+						(id_for_api[0] === 'c' ? $('<span>', {text: contest[1]}) :
+							$('<a>', {
+								href: '/c/c' + contest[0],
+								text: contest[1]
+							}))
+					];
+
+					if (id_for_api[0] !== 'c')
+						res.push(' / ', (id_for_api[0] === 'r' ?
+							$('<span>', {text: rounds[0][1]}) :
+							$('<a>', {
+								href: '/c/r' + rounds[0][0],
+								text: rounds[0][1]
+							})));
+
+					if (id_for_api[0] === 'p') {
+						res.push(' / ', $('<span>', {text: problems[0][4]}));
+						res.push($('<a>', {
+							class: 'btn-small',
+							href: '/api/contest/p' + problems[0][0] + '/statement/' +
+								encodeURIComponent(problems[0][4]),
+							text: 'View statement'
+						}));
+					}
+					return res;
+				}()
 		}));
 		var elem = $(this);
 		var tabs = [
@@ -2953,7 +2990,20 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				contest_ranking($('<div>').appendTo(elem), id_for_api);
 			});
 
-		tabmenu(function(x) { x.appendTo(elem); }, tabs);
+		tabmenu(function(x) {
+			x.on('tabmenuTabHasChanged', function(_, active_elem) {
+				// Add / replace hashes in links in the contest-path
+				elem.children('.contest-path').children('a:not(.btn-small)').each(function() {
+					var xx = $(this);
+					var href = xx.attr('href');
+					var pos = href.indexOf('#');
+					if (pos !== -1)
+						href = href.substr(0, pos);
+					xx.attr('href', href + '#' + tabname_to_hash($(active_elem).text()));
+				});
+			});
+			x.appendTo(elem);
+		}, tabs);
 
 	}, '/c/' + id_for_api + (opt_hash === undefined ? '' : opt_hash));
 }
@@ -3063,8 +3113,12 @@ function contest_ranking(elem_, id_for_api) {
 				if (i + 1 == problems.length || problems[i + 1][1] != problem[1]) {
 					tr.append($('<th>', {
 						colspan: colspan,
-						html: a_view_button('/c/r' + rounds[j][0] + '#ranking', rounds[j][1], '',
-							view_contest_round.bind(null, true, rounds[j][0], '#ranking'))
+						html: $('<a>', {
+							href: '/c/r' + rounds[j][0] + '#ranking',
+							text: rounds[j][1]
+						})
+						// html: a_view_button('/c/r' + rounds[j][0] + '#ranking', rounds[j][1], '',
+							// view_contest_round.bind(null, true, rounds[j][0], '#ranking'))
 					}));
 					colspan = 0;
 					++j;
@@ -3075,8 +3129,12 @@ function contest_ranking(elem_, id_for_api) {
 			// Add problems
 			for (i = 0; i < problems.length; ++i)
 				tr.append($('<th>', {
-					html: a_view_button('/c/p' + problems[i][0] + '#ranking', problems[i][3], '',
-						view_contest_problem.bind(null, true, problems[i][0], '#ranking'))
+					html: $('<a>', {
+						href: '/c/p' + problems[i][0] + '#ranking',
+						text: problems[i][3]
+					})
+					// html: a_view_button('/c/p' + problems[i][0] + '#ranking', problems[i][3], '',
+						// view_contest_problem.bind(null, true, problems[i][0], '#ranking'))
 				}));
 			thead.append(tr);
 
@@ -3207,8 +3265,10 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 				row.append($('<td>', {text: x[0]}));
 			// Name
 			row.append($('<td>', {
-				html: a_view_button('/c/c' + x[0], x[1], '',
-					view_contest.bind(null, true, x[0]))
+				html: $('<a>', {
+					href: '/c/c' + x[0],
+					text: x[1]
+				})
 			}));
 
 			// Actions
