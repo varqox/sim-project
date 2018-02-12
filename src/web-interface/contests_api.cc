@@ -2,6 +2,8 @@
 
 #include <sim/utilities.h>
 
+using MySQL::bind_arg;
+
 void Sim::append_contest_actions_str() {
 	STACK_UNWINDING_MARK;
 
@@ -183,15 +185,16 @@ void Sim::api_contest() {
 	stmt.bindAndExecute(
 		(session_is_open ? session_user_id : StringView()), contests_cid);
 
+	bool is_public;
+	my_bool umode_is_null;
 	InplaceBuff<meta::max(CONTEST_NAME_MAX_LEN, CONTEST_ROUND_NAME_MAX_LEN,
 		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
 	std::underlying_type_t<CUM> umode_u;
-	bool is_public;
-	stmt.res_bind_all(name, is_public, umode_u);
+	stmt.res_bind_all(name, is_public, bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
 		return api_error404();
 
-	CUM umode = (stmt.is_null(2) ? CUM::IS_NULL : CUM(umode_u));
+	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	next_arg = url_args.extractNextArg();
@@ -232,28 +235,30 @@ void Sim::api_contest() {
 	}
 
 	uint item;
+	my_bool ranking_exp_is_null, full_res_is_null, ends_is_null;
 	InplaceBuff<20> ranking_exposure, begins, full_results, ends;
-	stmt.res_bind_all(contests_crid, name, item, ranking_exposure, begins,
-		full_results, ends);
+	stmt.res_bind_all(contests_crid, name, item,
+		bind_arg(ranking_exposure, ranking_exp_is_null), begins,
+		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null));
 
 	while (stmt.next()) {
 		append("\n[", contests_crid, ',',
 			jsonStringify(name), ',',
 			item, ',');
 
-		if (stmt.is_null(3))
+		if (ranking_exp_is_null)
 			append("null,");
 		else
 			append('"', ranking_exposure, "\",");
 
 		append('"', begins, "\",");
 
-		if (stmt.is_null(5))
+		if (full_res_is_null)
 			append("null,");
 		else
 			append('"', full_results, "\",");
 
-		if (stmt.is_null(6))
+		if (ends_is_null)
 			append("null],");
 		else
 			append('"', ends, "\"],");
@@ -325,6 +330,7 @@ void Sim::api_contest_round() {
 		contests_crid);
 
 	bool is_public;
+	my_bool ranking_exp_is_null, full_res_is_null, ends_is_null, umode_is_null;
 	InplaceBuff<20> ranking_exposure, begins, full_results, ends;
 	std::underlying_type_t<CUM> umode_u;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
@@ -332,11 +338,13 @@ void Sim::api_contest_round() {
 		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
 	uint item;
 	stmt.res_bind_all(contests_cid, cname, is_public, name, item,
-		ranking_exposure, begins, full_results, ends, umode_u);
+		bind_arg(ranking_exposure, ranking_exp_is_null), begins,
+		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null),
+		bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
 		return api_error404();
 
-	CUM umode = (stmt.is_null(9) ? CUM::IS_NULL : CUM(umode_u));
+	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	if (uint(~contests_perms & PERM::VIEW))
@@ -367,19 +375,19 @@ void Sim::api_contest_round() {
 		jsonStringify(name), ',',
 		item, ',');
 
-	if (stmt.is_null(5))
+	if (ranking_exp_is_null)
 		append("null,");
 	else
 		append('"', ranking_exposure, "\",");
 
 	append('"', begins, "\",");
 
-	if (stmt.is_null(7))
+	if (full_res_is_null)
 		append("null,");
 	else
 		append('"', full_results, "\",");
 
-	if (stmt.is_null(8))
+	if (ends_is_null)
 		append("null]");
 	else
 		append('"', ends, "\"]");
@@ -435,8 +443,9 @@ void Sim::api_contest_problem() {
 	stmt.bindAndExecute((session_is_open ? session_user_id : StringView()),
 		contests_cpid);
 
-
 	bool is_public;
+	my_bool rranking_exp_is_null, rfull_res_is_null, rends_is_null,
+		umode_is_null;
 	InplaceBuff<20> rranking_exposure, rbegins, rfull_results, rends;
 	std::underlying_type_t<CUM> umode_u;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
@@ -447,12 +456,14 @@ void Sim::api_contest_problem() {
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
-		ritem, rranking_exposure, rbegins, rfull_results, rends, problem_id,
-		problem_label, pname, pitem, final_selecting_method, umode_u);
+		ritem, bind_arg(rranking_exposure, rranking_exp_is_null), rbegins,
+		bind_arg(rfull_results, rfull_res_is_null),
+		bind_arg(rends, rends_is_null), problem_id, problem_label, pname, pitem,
+		final_selecting_method, bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
 		return api_error404();
 
-	CUM umode = (stmt.is_null(15) ? CUM::IS_NULL : CUM(umode_u));
+	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	if (uint(~contests_perms & PERM::VIEW))
@@ -481,19 +492,19 @@ void Sim::api_contest_problem() {
 		jsonStringify(rname), ',',
 		ritem, ',');
 
-	if (stmt.is_null(6))
+	if (rranking_exp_is_null)
 		append("null,");
 	else
 		append('"', rranking_exposure, "\",");
 
 	append('"', rbegins, "\",");
 
-	if (stmt.is_null(8))
+	if (rfull_res_is_null)
 		append("null,");
 	else
 		append('"', rfull_results, "\",");
 
-	if (stmt.is_null(9))
+	if (rends_is_null)
 		append("null]");
 	else
 		append('"', rends, "\"]");
@@ -751,7 +762,7 @@ void Sim::api_contest_ranking(StringView submissions_id_name,
 	bool first_owner = true;
 	uint64_t owner, prev_owner;
 	uint64_t crid, cpid;
-	uint status;
+	std::underlying_type_t<SubmissionStatus> status;
 	int64_t score;
 	decltype(mysql_date()) curr_date;
 

@@ -13,7 +13,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView uid, UserType utype)
 	constexpr UserPermissions PERM_ADMIN = PERM::VIEW | PERM::EDIT |
 		PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS | PERM::DELETE;
 
-	uint viewer = (uint8_t)session_user_type +
+	auto viewer = std::underlying_type_t<UserType>(session_user_type) +
 		(session_user_id != SIM_ROOT_UID);
 	if (session_user_id == uid) {
 		constexpr UserPermissions perm[4] = {
@@ -34,7 +34,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView uid, UserType utype)
 		return perm[viewer];
 	}
 
-	uint user = (uint8_t)utype + (uid != SIM_ROOT_UID);
+	auto user = std::underlying_type_t<UserType>(utype) + (uid != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
 		{ // SIM root

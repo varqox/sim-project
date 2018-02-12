@@ -583,7 +583,7 @@ public:
 				// Connect to databases
 				sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
 					SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-				mysql = MySQL::makeConnWithCredFile(".db.config");
+				mysql = MySQL::make_conn_with_credential_file(".db.config");
 
 				for (;;)
 					job_handler_(w.wait_for_next_job_id());
@@ -1184,7 +1184,7 @@ int main() {
 	try {
 		sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
-		mysql = MySQL::makeConnWithCredFile(".db.config");
+		mysql = MySQL::make_conn_with_credential_file(".db.config");
 
 		cleanUpDBs();
 

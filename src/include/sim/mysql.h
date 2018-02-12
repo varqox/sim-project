@@ -18,6 +18,6 @@ namespace MySQL {
  *
  * @errors If any error occurs std::runtime_error is thrown
  */
-Connection makeConnWithCredFile(CStringView filename);
+Connection make_conn_with_credential_file(CStringView filename);
 
 } // namespace MySQL

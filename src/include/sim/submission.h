@@ -33,7 +33,7 @@ inline void update_final(MySQL::Connection& mysql, StringView submission_owner,
 		auto ustmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
 
 		uint64_t curr_id = new_final_id;
-		uint type = uint(SubmissionType::FINAL);
+		auto type = std::underlying_type_t<SubmissionType>(SubmissionType::FINAL);
 		ustmt.bindAndExecute(type, curr_id); // Set final
 
 		// Unset older finals

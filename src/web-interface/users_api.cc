@@ -144,7 +144,7 @@ void Sim::api_user() {
 
 	users_uid = next_arg;
 
-	uint utype;
+	std::underlying_type_t<UserType> utype;
 	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
 	stmt.bindAndExecute(users_uid);
 	stmt.res_bind_all(utype);
