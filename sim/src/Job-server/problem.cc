@@ -307,8 +307,8 @@ static void addProblem(uint64_t job_id, StringView job_owner, StringView aux_id,
 				stmt.bind(1, nullptr);
 		}
 
-		uint x = (uint)status;
-		stmt.bind(0, x);
+		auto jstatus = std::underlying_type_t<JobStatus>(status);
+		stmt.bind(0, jstatus);
 		stmt.bind(2, job_log.str);
 		stmt.bind(3, job_id);
 		stmt.fixAndExecute();

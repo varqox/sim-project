@@ -59,7 +59,7 @@ int main2(int argc, char**argv) {
 	FileRemover mysql_cnf_guard;
 
 	// Get connection
-	auto conn = MySQL::makeConnWithCredFile(".db.config");
+	auto conn = MySQL::make_conn_with_credential_file(".db.config");
 
 	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC, S_0600};
 	if (fd == -1) {

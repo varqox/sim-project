@@ -5,6 +5,7 @@
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 
+using MySQL::bind_arg;
 using std::string;
 
 void Sim::append_submission_status(SubmissionStatus status,
@@ -70,7 +71,7 @@ void Sim::api_submissions() {
 	qfields.append("SELECT s.id, s.type, s.owner, cu.mode, p.owner,"
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
 		" s.contest_round_id, r.name, 0, r.full_results, r.ends, s.contest_id,"
-		" c.name, s.submit_time, s.status, s.score");
+		" c.name, s.submit_time, s.status, s.score"); // TODO: what is that 0? score revealing? see res[12] below
 	qwhere.append(" FROM submissions s"
 		" LEFT JOIN users u ON u.id=s.owner"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
@@ -176,13 +177,14 @@ void Sim::api_submissions() {
 					auto stmt = mysql.prepare(query);
 					stmt.bindAndExecute(session_user_id, arg_id);
 
-					uint cu_mode;
-					stmt.res_bind_all(cu_mode);
+					std::underlying_type_t<CUM> cu_mode;
+					my_bool cu_mode_is_null;
+					stmt.res_bind_all(bind_arg(cu_mode, cu_mode_is_null));
 					if (not stmt.next())
 						return api_error404(concat("Invalid query condition ",
 							cond, " - no such round was found"));
 
-					if (not stmt.is_null(0) and
+					if (not cu_mode_is_null and
 						isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
 					{
 						allow_access = true;
@@ -224,36 +226,15 @@ void Sim::api_submissions() {
 
 	auto curr_date = mysql_date();
 	while (res.next()) {
-		StringView sid = res[0];
 		SubmissionType stype = SubmissionType(strtoull(res[1]));
-		StringView sowner = res[2];
-		StringView cu_mode = res[3];
-		StringView p_owner = res[4];
-
-		SubmissionPermissions perms = submissions_get_permissions(sowner, stype,
-			(res.is_null(3) ? CUM::IS_NULL : CUM(strtoull(cu_mode))), p_owner);
+		SubmissionPermissions perms = submissions_get_permissions(res[2], stype,
+			(res.is_null(3) ? CUM::IS_NULL : CUM(strtoull(res[3]))), res[4]);
 
 		if (perms == PERM::NONE)
 			return api_error403();
 
-		StringView sowner_username = res[5];
-		StringView p_id = res[6];
-		StringView p_name = res[7];
-		StringView cp_id = res[8];
-		StringView cp_name = res[9];
-		StringView cr_id = res[10];
-		StringView cr_name = res[11];
-		bool reveal_score = (res[12] != "0");
-		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
-			res.is_null(13) or res[13] <= curr_date);
-		StringView cr_ends = res[14];
-		StringView c_id = res[15];
-		StringView c_name = res[16];
-		StringView submit_time = res[17];
-		SubmissionStatus status = SubmissionStatus(strtoull(res[18]));
-		StringView score = res[19];
-
-		append("\n[", sid, ',');
+		// Submission id
+		append("\n[", res[0], ',');
 
 		// Type
 		switch (stype) {
@@ -269,47 +250,51 @@ void Sim::api_submissions() {
 		if (res.is_null(2))
 			append("null,");
 		else
-			append(sowner, ',');
+			append(res[2], ',');
 
 		// Onwer's username
 		if (res.is_null(5))
 			append("null,");
 		else
-			append("\"", sowner_username, "\",");
+			append("\"", res[5], "\",");
 
-		// Problem
-		if (res.is_null(6))
+		// Problem (id, name)
+		if (res.is_null(7))
 			append("null,null,");
 		else
-			append(p_id, ',', jsonStringify(p_name), ',');
+			append(res[6], ',', jsonStringify(res[7]), ',');
 
-		// Contest problem
+		// Contest problem (id, name)
 		if (res.is_null(9))
 			append("null,null,");
 		else
-			append(cp_id, ',', jsonStringify(cp_name), ',');
+			append(res[8], ',', jsonStringify(res[9]), ',');
 
-		// Contest round
+		// Contest round (id, name)
 		if (res.is_null(11))
 			append("null,null,");
 		else
-			append(cr_id, ',', jsonStringify(cr_name), ',');
+			append(res[10], ',', jsonStringify(res[11]), ',');
 
-		// Contest
+		// Contest (id, name)
 		if (res.is_null(16))
 			append("null,null,");
 		else
-			append(c_id, ',', jsonStringify(c_name), ',');
+			append(res[15], ',', jsonStringify(res[16]), ',');
 
 		// Submit time
-		append("\"", submit_time, "\",");
+		append("\"", res[17], "\",");
 
 		// Status: (CSS class, text)
-		append_submission_status(status, show_full_results);
+		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
+			res.is_null(13) or res[13] <= curr_date);
+		append_submission_status(SubmissionStatus(strtoull(res[18])),
+			show_full_results);
 
 		// Score
+		bool reveal_score = (res[12] != "0");
 		if (not res.is_null(19) and (show_full_results or reveal_score))
-			append(',', score, ',');
+			append(',', res[19], ',');
 		else
 			append(",null,");
 
@@ -323,7 +308,7 @@ void Sim::api_submissions() {
 		if (uint(perms & PERM::VIEW_RELATED_JOBS))
 			append('j');
 		if (uint(perms & PERM::VIEW) and
-			(res.is_null(14) or curr_date < cr_ends))
+			(res.is_null(14) or curr_date < res[14])) // Round has not ended
 		{
 			// TODO: implement it in a some way in the UI
 			append('r'); // Resubmit solution
@@ -379,7 +364,9 @@ void Sim::api_submission() {
 	submissions_sid = next_arg;
 
 	InplaceBuff<32> sowner, p_owner;
-	uint stype, cu_mode;
+	std::underlying_type_t<SubmissionType> stype;
+	std::underlying_type_t<CUM> cu_mode;
+	my_bool cu_mode_is_null;
 	auto stmt = mysql.prepare("SELECT s.owner, s.type, cu.mode, p.owner"
 		" FROM submissions s"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
@@ -387,12 +374,12 @@ void Sim::api_submission() {
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submissions_sid);
-	stmt.res_bind_all(sowner, stype, cu_mode, p_owner);
+	stmt.res_bind_all(sowner, stype, bind_arg(cu_mode, cu_mode_is_null), p_owner);
 	if (not stmt.next())
 		return api_error404();
 
 	submissions_perms = submissions_get_permissions(sowner,
-		SubmissionType(stype), (stmt.is_null(2) ? CUM::IS_NULL : CUM(cu_mode)),
+		SubmissionType(stype), (cu_mode_is_null ? CUM::IS_NULL : CUM(cu_mode)),
 		p_owner);
 
 	// Subpages
@@ -448,7 +435,7 @@ void Sim::api_submission_add() {
 		// Check permissions to the problem
 		auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
 		InplaceBuff<32> powner;
-		uint ptype;
+		std::underlying_type_t<ProblemType> ptype;
 		stmt.bindAndExecute(problem_id);
 		stmt.res_bind_all(powner, ptype);
 		if (not stmt.next())
@@ -477,13 +464,15 @@ void Sim::api_submission_add() {
 		bool is_public;
 		InplaceBuff<20> cr_begins, cr_ends;
 		std::underlying_type_t<CUM> umode_u;
+		my_bool umode_is_null, cr_ends_is_null;
 		stmt.res_bind_all(contest_id, is_public, contest_round_id, cr_begins,
-			cr_ends, umode_u);
+			bind_arg(cr_ends, cr_ends_is_null),
+			bind_arg(umode_u, umode_is_null));
 		if (not stmt.next())
 			return api_error404();
 
 		auto cperms = contests_get_permissions(is_public,
-			(stmt.is_null(5) ? CUM::IS_NULL : CUM(umode_u)));
+			(umode_is_null ? CUM::IS_NULL : CUM(umode_u)));
 
 		if (uint(~cperms & ContestPermissions::PARTICIPATE))
 			return api_error403(); // Could not participate
@@ -491,7 +480,7 @@ void Sim::api_submission_add() {
 		auto curr_date = mysql_date();
 		if (uint(~cperms & ContestPermissions::ADMIN) and
 			(curr_date < cr_begins
-				or (not stmt.is_null(4) and cr_ends <= curr_date)))
+				or (not cr_ends_is_null and cr_ends <= curr_date)))
 		{
 			return api_error403(); // Round has not begun jet or already ended
 		}

@@ -63,7 +63,7 @@ void Sim::api_jobs() {
 		} else if (cond == '=' and ~mask & ID_COND) {
 			select_specified_job = true;
 			// Get job information to grant permissions
-			uint jtype;
+			std::underlying_type_t<JobType> jtype;
 			InplaceBuff<32> aux_id;
 			auto stmt = mysql.prepare("SELECT type, aux_id FROM jobs"
 				" WHERE id=?");
@@ -275,7 +275,8 @@ void Sim::api_job() {
 
 	InplaceBuff<32> jcreator, aux_id;
 	InplaceBuff<256> jinfo;
-	uint jtype, jstatus;
+	std::underlying_type_t<JT> jtype;
+	std::underlying_type_t<JobStatus> jstatus;
 
 	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
 		" FROM jobs WHERE id=?");

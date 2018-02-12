@@ -260,7 +260,7 @@ void Sim::api_problem() {
 	InplaceBuff<32> powner;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> plabel;
 	InplaceBuff<1 << 16> simfile;
-	uint ptype;
+	std::underlying_type_t<ProblemType> ptype;
 
 	auto stmt = mysql.prepare("SELECT owner, type, label, simfile FROM problems"
 		" WHERE id=?");

@@ -98,7 +98,7 @@ void Sim::problems_problem() {
 
 	} else if (next_arg == "submit") {
 		InplaceBuff<32> owner;
-		uint type = uint(ProblemType::VOID);
+		auto type = std::underlying_type_t<ProblemType>(ProblemType::VOID);
 		InplaceBuff<PROBLEM_NAME_MAX_LEN> name;
 		auto stmt = mysql.prepare("SELECT owner, type, name FROM problems"
 			" WHERE id=?");

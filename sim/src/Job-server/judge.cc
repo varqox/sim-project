@@ -98,7 +98,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 			// Get the submission's ACTUAL type
 			stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
 			stmt.bindAndExecute(submission_id);
-			uint stype = (uint)ST::VOID;
+			auto stype = std::underlying_type_t<ST>(ST::VOID);
 			stmt.res_bind_all(stype);
 			(void)stmt.next(); // Ignore errors (deleted submission)
 

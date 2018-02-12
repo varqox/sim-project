@@ -55,7 +55,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 	stmt.bindAndExecute(problem_id);
 
 	InplaceBuff<32> powner;
-	uint ptype;
+	std::underlying_type_t<ProblemType> ptype;
 	stmt.res_bind_all(powner, ptype);
 	if (stmt.next()) {
 		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
@@ -86,10 +86,14 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 	stmt.bindAndExecute(session_user_id, submission_id);
 
 	InplaceBuff<32> powner;
-	uint stype, ptype, cu_mode;
-	stmt.res_bind_all(stype, powner, ptype, cu_mode);
+	my_bool cu_mode_is_null;
+	std::underlying_type_t<SubmissionType> stype;
+	std::underlying_type_t<ProblemType> ptype;
+	std::underlying_type_t<CUM> cu_mode;
+	stmt.res_bind_all(stype, powner, ptype,
+		MySQL::bind_arg(cu_mode, cu_mode_is_null));
 	if (stmt.next()) {
-		if (not stmt.is_null(3) and
+		if (not cu_mode_is_null and
 			isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
 		{
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;

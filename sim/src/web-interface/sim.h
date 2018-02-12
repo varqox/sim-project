@@ -647,7 +647,7 @@ private:
 
 public:
 	Sim() : sqlite(SQLITE_DB_FILE, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX),
-		mysql(MySQL::makeConnWithCredFile(".db.config")) {}
+		mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
 
 	~Sim() {}
 
