@@ -13,6 +13,11 @@
 
 namespace MySQL {
 
+template<class T>
+std::pair<T&, my_bool&> bind_arg(T& val, my_bool& is_null) {
+	return {val, is_null};
+}
+
 class Connection;
 
 class Result {
@@ -291,15 +296,22 @@ public:
 		params_[idx].is_null = &is_null;
 	}
 
+	/// Binds @p x.first as @p idx parameter and @p x.second as @p idx is_null
+	template<class T>
+	void bind(unsigned idx, const std::pair<T&, my_bool&>& x) ND(noexcept) {
+		bind(idx, x.first);
+		bind_isnull(idx, x.second);
+	}
+
 	void fixBinds() {
 		if (mysql_stmt_bind_param(stmt_, params_.data()))
 			THROW(mysql_stmt_error(stmt_));
 	}
 
 	template<class... Args>
-	void bind_all(Args&... args) {
+	void bind_all(Args&&... args) {
 		unsigned idx = 0;
-		int t[] = {(bind(idx++, args), 0)...};
+		int t[] = {(bind(idx++, std::forward<Args>(args)), 0)...};
 		(void)t;
 
 		fixBinds();
@@ -435,16 +447,23 @@ public:
 		res_[idx].is_null = &is_null;
 	}
 
+	/// Binds to result: @p x.first as @p idx parameter and @p x.second as
+	/// @p idx is_null
+	template<class T>
+	void res_bind(unsigned idx, const std::pair<T&, my_bool&>& x) ND(noexcept) {
+		res_bind(idx, x.first);
+		res_bind_isnull(idx, x.second);
+	}
+
 	void resFixBinds() {
 		if (mysql_stmt_bind_result(stmt_, res_.data()))
 			THROW(mysql_stmt_error(stmt_));
 	}
 
 	template<class... Args>
-	void res_bind_all(Args&... args) {
+	void res_bind_all(Args&&... args) {
 		unsigned idx = 0;
-		int t[] = {(res_bind(idx++, args), 0)...}; // Forward is omitted because
-		                                           // args are references
+		int t[] = {(res_bind(idx++, std::forward<Args>(args)), 0)...};
 		(void)t;
 
 		resFixBinds();
