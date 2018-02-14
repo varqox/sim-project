@@ -308,7 +308,8 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	uint64_t gtl =
 		round(strtod(global_time_limit.c_str(), nullptr) * 1'000'000);
 	if (global_time_limit.size() && gtl < 400000)
-		return api_error400("Global time limit cannot be lower than 0.4 s");
+		add_notification("error",
+			"Global time limit cannot be lower than 0.4 s");
 
 	// Validate problem type
 	StringView ptype_str = request.form_data.get("type");
@@ -320,7 +321,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	else if (ptype_str == "CON")
 		ptype = ProblemType::CONTEST_ONLY;
 	else
-		return api_error400("Invalid problem's type");
+		add_notification("error", "Invalid problem's type");
 
 	if (form_validation_error)
 		return api_error400(notifications);

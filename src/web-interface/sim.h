@@ -44,6 +44,11 @@ private:
 	void set_response(StringView status_code, StringView response_body = {}) {
 		STACK_UNWINDING_MARK;
 
+	#ifdef DEBUG
+		if (response_body.find(notifications) == StringView::npos)
+			THROW("Omitted notifications in the error message: ", response_body);
+	#endif
+
 		resp.status_code = std::move(status_code);
 		resp.content = response_body;
 	}
