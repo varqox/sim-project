@@ -107,6 +107,11 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 			// Make sure that the session is closed
 			session_close();
 
+		#ifdef DEBUG
+			if (notifications.size != 0)
+				THROW("There are notifications left: ", notifications);
+		#endif
+
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
 			error500();

@@ -254,7 +254,7 @@ void Sim::api_user_edit() {
 
 	// Validate user type
 	new_utype_str = request.form_data.get("type");
-	UserType new_utype /*= UserType::NORMAL*/;
+	UserType new_utype = UserType::NORMAL;
 	if (new_utype_str == "A") {
 		new_utype = UserType::ADMIN;
 		if (uint(~users_perms & PERM::MAKE_ADMIN))
