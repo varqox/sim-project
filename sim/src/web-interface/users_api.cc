@@ -190,23 +190,23 @@ void Sim::api_user_add() {
 	if (utype_str == "A") {
 		utype = UserType::ADMIN;
 		if (uint(~users_perms & PERM::MAKE_ADMIN))
-			return api_error403("You have no permissions to make this user an"
-				" admin");
+			add_notification("error",
+				"You have no permissions to make this user an admin");
 
 	} else if (utype_str == "T") {
 		utype = UserType::TEACHER;
 		if (uint(~users_perms & PERM::MAKE_TEACHER))
-			return api_error403("You have no permissions to make this user a"
-				" teacher");
+			add_notification("error",
+				"You have no permissions to make this user a teacher");
 
 	} else if (utype_str == "N") {
 		utype = UserType::NORMAL;
 		if (uint(~users_perms & PERM::MAKE_NORMAL))
-			return api_error403("You have no permissions to make this user a"
-				" normal user");
+			add_notification("error",
+				"You have no permissions to make this user a normal user");
 
 	} else
-		return api_error400("Invalid user's type");
+		add_notification("error", "Invalid user's type");
 
 	form_validate_not_blank(fname, "first_name", "First Name",
 		USER_FIRST_NAME_MAX_LEN);
@@ -245,6 +245,7 @@ void Sim::api_user_edit() {
 	if (uint(~users_perms & PERM::EDIT))
 		return api_error403();
 
+	// TODO: this look very similar to the above validation
 	StringView username, new_utype_str, fname, lname, email;
 	// Validate fields
 	form_validate_not_blank(username, "username", "Username", isUsername,
@@ -257,23 +258,23 @@ void Sim::api_user_edit() {
 	if (new_utype_str == "A") {
 		new_utype = UserType::ADMIN;
 		if (uint(~users_perms & PERM::MAKE_ADMIN))
-			return api_error403("You have no permissions to make this user an"
-				" admin");
+			add_notification("error",
+				"You have no permissions to make this user an admin");
 
 	} else if (new_utype_str == "T") {
 		new_utype = UserType::TEACHER;
 		if (uint(~users_perms & PERM::MAKE_TEACHER))
-			return api_error403("You have no permissions to make this user a"
-				" teacher");
+			add_notification("error",
+				"You have no permissions to make this user a teacher");
 
 	} else if (new_utype_str == "N") {
 		new_utype = UserType::NORMAL;
 		if (uint(~users_perms & PERM::MAKE_NORMAL))
-			return api_error403("You have no permissions to make this user a"
-				" normal user");
+			add_notification("error",
+				"You have no permissions to make this user a normal user");
 
 	} else
-		return api_error400("Invalid user's type");
+		add_notification("error", "Invalid user's type");
 
 	form_validate_not_blank(fname, "first_name", "First Name",
 		USER_FIRST_NAME_MAX_LEN);

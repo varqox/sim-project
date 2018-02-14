@@ -534,10 +534,12 @@ void Sim::api_contest_add() {
 
 	bool is_public = request.form_data.exist("public");
 	if (is_public and uint(~contests_perms & PERM::ADD_PUBLIC))
-		return api_error403("You have no permissions to add a public contest");
+		add_notification("error",
+			"You have no permissions to add a public contest");
 
 	if (not is_public and uint(~contests_perms & PERM::ADD_PRIVATE))
-		return api_error403("You have no permissions to add a private contest");
+		add_notification("error",
+			"You have no permissions to add a private contest");
 
 	if (form_validation_error)
 		return api_error400(notifications);
@@ -572,8 +574,8 @@ void Sim::api_contest_edit(bool is_public) {
 	if (will_be_public and not is_public and
 		uint(~contests_perms & PERM::MAKE_PUBLIC))
 	{
-		return api_error403("You have no permissions to make this contest"
-			" public");
+		add_notification("error",
+			"You have no permissions to make this contest public");
 	}
 
 	if (form_validation_error)
