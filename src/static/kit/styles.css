@@ -1182,8 +1182,8 @@ div.header > div:last-child{
 	margin: 8px 0;
 }
 
-/* Round info, path and view */
-.round-info {
+/* Contest info */
+/*.round-info {
 	display: flex;
 	flex-flow: row nowrap;
 	justify-content: space-between;
@@ -1191,7 +1191,9 @@ div.header > div:last-child{
 .round-info > div {
 	align-self: flex-end;
 	margin-right: 10%;
-}
+}*/
+
+/* Contest path */
 .contest-path {
 	display: flex;
 	flex-flow: row wrap;
@@ -1207,20 +1209,22 @@ div.header > div:last-child{
 .contest-path > span {
 	margin: 0 4px;
 }
-.round-view {
+
+/* Contest dashboard */
+.contest-dashboard {
 	display: table;
 	margin: 8px auto;
 }
-.round-view > :first-child {
+.contest-dashboard .contest {
 	margin-bottom: -1px;
 	-webkit-border-radius: 4px 4px 0 0;
 	-moz-border-radius: 4px 4px 0 0;
 	border-radius: 4px 4px 0 0;
 }
-.round-view > div {
+.contest-dashboard .rounds {
 	display: flex;
 }
-.round-view > div > div {
+.contest-dashboard .round {
 	display: flex;
 	padding: 0;
 	margin: 0;
@@ -1228,10 +1232,21 @@ div.header > div:last-child{
 	-webkit-flex-direction: column;
 	flex-direction: column;
 }
-.round-view > div > div:not(:first-child) {
+.contest-dashboard .round:not(:first-child) {
 	margin-left: -1px;
 }
-.round-view > div > div > a, .round-view > :first-child {
+.contest-dashboard svg {
+	position: absolute;
+	top: calc(50% - 8px);
+	fill: red;
+}
+.contest-dashboard svg.left {
+	left: -24px;
+}
+.contest-dashboard svg.right {
+	right: -24px;
+}
+.contest-dashboard a {
 	display: block;
 	min-width: 100px;
 	padding: 5px;
@@ -1240,14 +1255,16 @@ div.header > div:last-child{
 	border-top: 0px;
 	white-space: pre;
 }
-.round-view > div > div > a:first-child, .round-view > :first-child {
+.contest-dashboard .round > a:first-child,
+.contest-dashboard .round > :first-child > a,
+.contest-dashboard .contest {
 	border: 1px solid #a2a2a2;
 	border-bottom: 2px solid #a2a2a2;
 	padding: 7px;
 	font-weight: bold;
 	line-height: 12px;
 }
-.round-view > div > div > a:first-child > div {
+.contest-dashboard .round > :first-child div {
 	margin: 5px;
 	display: block;
 	text-align: left;
@@ -1255,36 +1272,34 @@ div.header > div:last-child{
 	font-size: 12px;
 	font-weight: normal;
 }
-.round-view > div > div > a:first-child > div:first-child {
+.contest-dashboard .round > :first-child span + div {
 	margin-top: 10px;
 }
-.round-view > div > div > a:first-child > div > label {
+.contest-dashboard .round > :first-child div > label {
 	display: inline-block;
 	padding-right: 8px;
 	min-width: 40px;
 	color: #444;
 }
-.round-view > div > div > a:hover,
-.round-view > div > div > a:focus,
-.round-view > a:first-child:hover,
-.round-view > a:first-child:focus {
+.contest-dashboard a:hover,
+.contest-dashboard a:focus {
 	text-decoration: none;
 	background: #eee;
 }
-.round-view > div > div > a.status.green:hover,
-.round-view > div > div > a.status.green:focus {
+.contest-dashboard a.status.green:hover,
+.contest-dashboard a.status.green:focus {
 	background: #d7f9d7;
 }
-.round-view > div > div > a.status.red:hover,
-.round-view > div > div > a.status.red:focus {
+.contest-dashboard a.status.red:hover,
+.contest-dashboard a.status.red:focus {
 	background: #fad6d6;
 }
-.round-view > div > div > a.status.intense-red:hover,
-.round-view > div > div > a.status.intense-red:focus {
+.contest-dashboard a.status.intense-red:hover,
+.contest-dashboard a.status.intense-red:focus {
 	background: #f3c9b4;
 }
-.round-view > div > div > a.status.yellow:hover,
-.round-view > div > div > a.status.yellow:focus {
+.contest-dashboard a.status.yellow:hover,
+.contest-dashboard a.status.yellow:focus {
 	background: #fbdda2;
 }
 
@@ -1782,58 +1797,6 @@ table.contests td .btn-small {
 }
 table.contests tr > td:last-child {
 	white-space: pre;
-}
-
-/* Contest view */
-div.contest,
-div.round {
-	display: inline-block;
-	padding: 4px 4px 0;
-	margin-right: 16px;
-	margin-bottom: 4px;
-	line-height: 29px;
-	font-size: 16px;
-	border-bottom: 1px solid #bbb;
-}
-div.round {
-	margin-left: 24px;
-}
-div.contest span:last-of-type,
-div.round span:last-of-type {
-	margin-right: 16px;
-}
-div.contest > label,
-div.round > label {
-	padding: 2.5px 4px 2px;
-	margin: 1px 4px 1px 10px;
-	border-radius: 3px;
-	font-size: 14px;
-	/* line-height: 20px; */
-	font-weight: bold;
-	color: #fefefe;
-	white-space: pre;
-	background: #54c32a;
-}
-div.contest > label::after,
-div.round > label::after {
-	content: ":";
-}
-
-div.contest .btn-btn-small,
-div.round .btn-btn-small,
-div.round_problems .btn-btn-small {
-	margin: 1px 3px;
-}
-table.round_problems {
-	margin-left: 64px;
-}
-
-table.round_problems td {
-	padding: 2px;
-}
-table.round_problems td:first-child {
-	font-size: 16px;
-	padding-right: 10px;
 }
 
 /* Files */
