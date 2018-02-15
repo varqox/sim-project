@@ -3044,7 +3044,6 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 									problem2elem.get(data[i][6]).addClass('status ' + data[i][13][0]);
 								}
 								color_problems('/<' + data[data.length - 1][0]);
-								return;
 							}
 
 							// All problems have been colored
@@ -3054,12 +3053,16 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 							rounds_to_check.each(function() {
 								var round = $(this);
+								var round_a = round.find('a').eq(0);
+								if (round_a.hasClass('green'))
+									return;
+
 								var problems = round.find('a').slice(1);
 								if (problems.filter(function() {
-										return $(this).hasClass('status') && $(this).hasClass('green');
+										return $(this).hasClass('green');
 									}).length === problems.length)
 								{
-									round.find('a').eq(0).addClass('status green');
+									round_a.addClass('status green');
 								} else
 									green_contest = false;
 							});
