@@ -95,13 +95,13 @@ function normalize_datetime(elem, add_tz) {
 	return elem;
 }
 
-$(document).ready(function() {
-	// Converts datetimes
-	$('*[datetime]').each(function() {
-		normalize_datetime($(this),
-			$(this).parents('.submissions, .problems, .jobs, .files').length == 0);
-	});
-});
+// $(document).ready(function() {
+// 	// Converts datetimes
+// 	$('*[datetime]').each(function() {
+// 		normalize_datetime($(this),
+// 			$(this).parents('.submissions, .problems, .jobs, .files').length == 0);
+// 	});
+// });
 // Clock
 $(document).ready(function update_clock() {
 	if (update_clock.time_difference === undefined)
@@ -2815,6 +2815,9 @@ function edit_contest_round(as_modal, contest_round_id) {
 function edit_contest_problem(as_modal, contest_problem_id) {
 	// TODO
 }
+function rejudge_contest_problem_submissions(contest_problem_id) {
+	// TODO
+}
 function delete_contest(as_modal, contest_id) {
 	// TODO
 }
@@ -2839,8 +2842,10 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 			return (a[1] == b[1] ? a[5] - b[5] : a[1] - b[1]);
 		});
 
+
 		// Header
-		this.append($('<h2>', {
+		var header = $('<div>', {class: 'header', html:
+			$('<h2>', {
 				class: 'contest-path',
 				html: function() {
 					var res = [
@@ -2861,84 +2866,150 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 					if (id_for_api[0] === 'p') {
 						res.push(' / ', $('<span>', {text: problems[0][4]}));
-						res.push($('<a>', {
-							class: 'btn-small',
-							href: '/api/contest/p' + problems[0][0] + '/statement/' +
-								encodeURIComponent(problems[0][4]),
-							text: 'View statement'
-						}));
+						// res.push($('<a>', {
+						// 	class: 'btn-small',
+						// 	href: '/api/contest/p' + problems[0][0] + '/statement/' +
+						// 		encodeURIComponent(problems[0][4]),
+						// 	text: 'View statement'
+						// }));
 					}
 					return res;
 				}()
-		}));
+		})}).appendTo(this);
+
 		var elem = $(this);
 		var tabs = [
 			'Dashboard', function() {
 				timed_hide_show(elem.parents('.modal'));
 				elem.children('.tabmenu').nextAll().remove();
-				var dashboard = $('<div>', {class: 'dashboard'}).appendTo(elem);
+				var dashboard = $('<div>', {class: 'contest-dashboard'})
+					.appendTo($('<div>', {style: 'margin: 0 16px'}).appendTo(elem));
+
+				var wrap_arrows = function(c, elem) {
+					if (id_for_api[0] === c)
+						return $('<div>', {
+							style: 'position: relative',
+							html: [
+								elem,
+								'<svg class="left" width="16" height="16"><polygon points="0,0 16,8 0,16 4,8"></polygon></svg>',
+								'<svg class="right" width="16" height="16"><polygon points="16,0 0,8 16,16 12,8"></polygon></svg>'
+							]
+						});
+
+					return elem;
+				};
 				// Contest
-				dashboard.append($('<div>', {
+				dashboard.append(wrap_arrows('c', $('<a>', {
 					class: 'contest',
-					html: [
-						$('<span>', {text: contest[1]}),
+					href: '/c/c' + contest[0],
+					text: contest[1]
+				})));
+
+				// Contest buttons
+				if (id_for_api[0] === 'c')
+					header.append($('<div>', {html: [
 						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest[0]))),
 						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest[0]))),
 						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest[0]))),
-					]
-				}).appendTo($('<div>')).parent());
+					]}));
+
+				var dashboard_rounds = $('<div>', {
+					class: 'rounds'
+				}).appendTo(dashboard);
 
 				// Rounds and problems
 				function append_round(round) {
-					dashboard.append($('<div>', {
-						class: 'round',
-						html: [
-							$('<span>', {text: round[1]}),
-							$('<label>', {text: "begins"}),
-							normalize_datetime($('<span>', {
-								datetime: round[4],
-								text: round[4]
-							}), true),
-							$('<label>', {text: "ends"}),
-							normalize_datetime($('<span>', (round[6] === null ?
-								{text: 'never'}
-								: {datetime: round[6], text: round[6]})
-							), true),
-							$('<label>', {text: "full results"}),
-							normalize_datetime($('<span>', (round[5] === null ?
-								{text: 'immediately'}
-								: {datetime: round[5], text: round[5]})
-							), true),
+					// ROund buttons
+					if (id_for_api[0] === 'r')
+						header.append($('<div>', {html: [
 							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/attach_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, round[0]))),
 							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, round[0]))),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, round[0]))),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, round[0])))
+						]}));
+
+					return $('<div>', {
+						class: 'round',
+						html: [
+							wrap_arrows('r', $('<a>', {
+								href: '/c/r' + round[0],
+								html: function() {
+									var res = [$('<span>', {text: round[1]})];
+									if (id_for_api[0] !== 'c')
+										res.push($('<div>', {html: [
+											$('<label>', {text: "Begins"}),
+											normalize_datetime($('<span>', {
+												datetime: round[4],
+												text: round[4]
+											}), false)
+										]}),
+										$('<div>', {html: [
+											$('<label>', {text: "Ends"}),
+											normalize_datetime($('<span>', (round[6] === null ?
+												{text: 'never'}
+												: {datetime: round[6], text: round[6]})
+											), false)
+										]}),
+										$('<div>', {html: [
+											$('<label>', {text: "Full results"}),
+											normalize_datetime($('<span>', (round[5] === null ?
+												{text: 'immediately'}
+												: {datetime: round[5], text: round[5]})
+											), false)
+										]}),
+										$('<div>', {html: [
+											$('<label>', {text: "Ranking since"}),
+											normalize_datetime($('<span>', (round[3] === null ?
+												{text: 'never'}
+												: {datetime: round[3], text: round[3]})
+											), false)
+										]}));
+
+									return res;
+								}()
+							}))
 						]
-					}).appendTo($('<div>')).parent());
+					}).appendTo(dashboard_rounds);
 				}
 
-				function append_problem(tbody, problem) {
-					tbody.append($('<tr>', {
-						html: [
-							$('<td>', {text: problem[4]}),
-							$('<td>', {
-								html: [
-									$('<a>', {
-										class: 'btn-small',
-										href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
-										text: 'Statement'
-									}),
-									(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]))),
-									(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problem[0]))),
-									(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problem[0]))),
-								]
+				var problem2elem = new StaticMap();
+				function append_problem(dashboard_round, problem, cannot_submit) {
+					// Problem buttons
+					if (id_for_api[0] === 'p') {
+						header.append($('<div>', {html: [
+							a_view_button('/p/' + problem[2], 'View in Problems', 'btn-small green', view_problem.bind(null, true, problem[2])),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problem[0]))),
+							(actions.indexOf('A') === -1 ? '' :
+								$('<a>', {
+									class: 'btn-small blue',
+									text: 'Rejudge submissions',
+									click: rejudge_contest_problem_submissions.bind(null, problem[0])
+								})),
+							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problem[0])))
+						]}));
+
+						$('<center>', {html: [
+							$('<a>', {
+								class: 'btn-small',
+								href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
+								text: 'Statement'
 							}),
-						]
-					}));
+							(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]))),
+						]}).appendTo(dashboard.parent());
+					}
+
+					var elem = $('<a>', {
+						href: '/c/p' + problem[0],
+						text: problem[4]
+						// TODO: add info about score revealing when the problem is selected
+					});
+
+					problem2elem.add(problem[0], elem);
+					wrap_arrows('p', elem).appendTo(dashboard_round);
 				}
 
 				for (var i = 0; i < rounds.length; ++i) {
 					var round = rounds[i];
-					append_round(round);
+					var dashboard_round = append_round(round);
 					// Round's problems
 					// Bin-search first problem
 					var l = 0, r = problems.length;
@@ -2954,20 +3025,50 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					var cannot_submit = (actions.indexOf('p') === -1);
 					if (round[6] !== null && actions.indexOf('A') === -1) {
 						var curr_time = date_to_datetime_str(new Date());
-						var end_time = normalize_datetime($('<span>', {
-							datetime: round[6]
-						}), false).text();
+						var end_time = utcdt_or_tm_to_Date(round[6]);
 						cannot_submit |= (end_time <= curr_time);
 					}
 					// Append problems
-					var tb = $('<tbody>');
 					while (l < problems.length && problems[l][1] == round[0])
-						append_problem(tb, problems[l++]);
+						append_problem(dashboard_round, problems[l++], cannot_submit);
+				}
 
-					dashboard.append($('<table>', {
-						class: 'round_problems',
-						html: tb
-					}));
+				if (is_logged_in()) {
+					problem2elem.prepare();
+					var color_problems = function(query_suffix) {
+						API_call('/api/submissions/' + id_for_api.toUpperCase() +
+							'/u' + logged_user_id() + '/tF' + query_suffix, function(data)
+						{
+							if (data.length > 0) {
+								for (var i in data) {
+									problem2elem.get(data[i][6]).addClass('status ' + data[i][13][0]);
+								}
+								color_problems('/<' + data[data.length - 1][0]);
+								return;
+							}
+
+							// All problems have been colored
+							// Mark rounds as green (only the ones that contain a problem)
+							var rounds_to_check = dashboard_rounds.children().filter(function() { return $(this).children().length > 1; });
+							var green_contest = rounds_to_check.length > 0;
+
+							rounds_to_check.each(function() {
+								var round = $(this);
+								var problems = round.find('a').slice(1);
+								if (problems.filter(function() {
+										return $(this).hasClass('status') && $(this).hasClass('green');
+									}).length === problems.length)
+								{
+									round.find('a').eq(0).addClass('status green');
+								} else
+									green_contest = false;
+							});
+
+							if (green_contest)
+								dashboard.find('.contest').addClass('status green');
+						}, $());
+					};
+					color_problems('');
 				}
 			}
 		];
