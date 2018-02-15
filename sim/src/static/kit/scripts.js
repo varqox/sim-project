@@ -2877,13 +2877,51 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				}()
 		})}).appendTo(this);
 
+		// Contest buttons
+		if (id_for_api[0] === 'c')
+			header.append($('<div>', {html: [
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest[0]))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest[0]))),
+				(actions.indexOf('D') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest[0]))),
+			]}));
+
+		// Round buttons
+		else if (id_for_api[0] === 'r')
+			header.append($('<div>', {html: [
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0][0] + '/attach_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, rounds[0][0]))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0][0] + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, rounds[0][0]))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0][0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, rounds[0][0])))
+			]}));
+
+		// Problem buttons
+		else if (id_for_api[0] === 'p')
+			header.append($('<div>', {html: [
+				a_view_button('/p/' + problems[0][2], 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0][2])),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0][0] + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problems[0][0]))),
+				(actions.indexOf('A') === -1 ? '' :
+					$('<a>', {
+						class: 'btn-small blue',
+						text: 'Rejudge submissions',
+						click: rejudge_contest_problem_submissions.bind(null, problems[0][0])
+					})),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0][0] + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problems[0][0])))
+			]}));
+
+		var contest_dashboard;
 		var elem = $(this);
 		var tabs = [
 			'Dashboard', function() {
 				timed_hide_show(elem.parents('.modal'));
 				elem.children('.tabmenu').nextAll().remove();
+				// If already generated, then just show it
+				if (contest_dashboard !== undefined) {
+					contest_dashboard.appendTo(elem);
+					return;
+				}
+
 				var dashboard = $('<div>', {class: 'contest-dashboard'})
 					.appendTo($('<div>', {style: 'margin: 0 16px'}).appendTo(elem));
+				contest_dashboard = dashboard.parent();
 
 				var wrap_arrows = function(c, elem) {
 					if (id_for_api[0] === c)
@@ -2905,28 +2943,12 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					text: contest[1]
 				})));
 
-				// Contest buttons
-				if (id_for_api[0] === 'c')
-					header.append($('<div>', {html: [
-						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest[0]))),
-						(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest[0]))),
-						(actions.indexOf('D') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest[0]))),
-					]}));
-
 				var dashboard_rounds = $('<div>', {
 					class: 'rounds'
 				}).appendTo(dashboard);
 
 				// Rounds and problems
 				function append_round(round) {
-					// ROund buttons
-					if (id_for_api[0] === 'r')
-						header.append($('<div>', {html: [
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/attach_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, round[0]))),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, round[0]))),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + round[0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, round[0])))
-						]}));
-
 					return $('<div>', {
 						class: 'round',
 						html: [
@@ -2974,19 +2996,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				var problem2elem = new StaticMap();
 				function append_problem(dashboard_round, problem, cannot_submit) {
 					// Problem buttons
-					if (id_for_api[0] === 'p') {
-						header.append($('<div>', {html: [
-							a_view_button('/p/' + problem[2], 'View in Problems', 'btn-small green', view_problem.bind(null, true, problem[2])),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problem[0]))),
-							(actions.indexOf('A') === -1 ? '' :
-								$('<a>', {
-									class: 'btn-small blue',
-									text: 'Rejudge submissions',
-									click: rejudge_contest_problem_submissions.bind(null, problem[0])
-								})),
-							(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problem[0] + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problem[0])))
-						]}));
-
+					if (id_for_api[0] === 'p')
 						$('<center>', {html: [
 							$('<a>', {
 								class: 'btn-small',
@@ -2995,7 +3005,6 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 							}),
 							(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]))),
 						]}).appendTo(dashboard.parent());
-					}
 
 					var elem = $('<a>', {
 						href: '/c/p' + problem[0],
@@ -3097,7 +3106,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		tabmenu(function(x) {
 			x.on('tabmenuTabHasChanged', function(_, active_elem) {
 				// Add / replace hashes in links in the contest-path
-				elem.children('.contest-path').children('a:not(.btn-small)').each(function() {
+				elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
 					var xx = $(this);
 					var href = xx.attr('href');
 					var pos = href.indexOf('#');
