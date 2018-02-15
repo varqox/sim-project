@@ -451,7 +451,7 @@ void Sim::api_contest_problem() {
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> rname;
 	InplaceBuff<CONTEST_PROBLEM_NAME_MAX_LEN> pname;
-	uint64_t problem_id;
+	decltype(problems_pid) problem_id;
 	uint ritem, pitem, final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 
@@ -474,7 +474,7 @@ void Sim::api_contest_problem() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "statement")
-		return api_contest_problem_statement(contests_cpid);
+		return api_contest_problem_statement(problem_id);
 	else if (next_arg == "ranking")
 		return api_contest_ranking("contest_problem_id", contests_cpid);
 	else if (not next_arg.empty())
