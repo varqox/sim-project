@@ -170,7 +170,7 @@ void Sim::api_submissions() {
 					case 'P': query = "SELECT cu.mode"
 						" FROM contest_problems p"
 						" LEFT JOIN contest_users cu"
-							"ON cu.contest_id=p.contest_id AND cu.user_id=?"
+							" ON cu.contest_id=p.contest_id AND cu.user_id=?"
 						" WHERE p.id=?";
 						break;
 					}
@@ -331,12 +331,12 @@ void Sim::api_submissions() {
 				append(',', jsonStringify(res[20]), ',',
 					jsonStringify(res[21]));
 
-			// Reports
+			// Reports (and round full results time if full report isn't shown)
 			append(',', jsonStringify(res[22]));
 			if (show_full_results)
 				append(',', jsonStringify(res[23]));
 			else
-				append(",null");
+				append(",null,\"", res[13], '"');
 		}
 
 		append("],");

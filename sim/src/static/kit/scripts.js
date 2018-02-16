@@ -2089,7 +2089,14 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<div>', {
 					class: 'results',
-					html: [data[18], data[19], null]
+					html: function() {
+						var res = [data[18], data[19]];
+						if (data[19] === null)
+							res.push($('<h2>', {text: 'Final testing report'}),
+								$('<p>', {text: 'Final testing report will be visible since: '}).append(
+									normalize_datetime($('<span>', {datetime: data[20]}))));
+						return res;
+					}()
 				}));
 			}
 		];
@@ -2836,8 +2843,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		var problems = data[2];
 		var actions = contest[4];
 
-		// Sort rounds by items
-		rounds.sort(function(a, b) { return a[2] - b[2]; });
+		// Sort rounds by -items
+		rounds.sort(function(a, b) { return b[2] - a[2]; });
 
 		// Sort problems by (round_id, item)
 		problems.sort(function(a, b) {
@@ -3069,7 +3076,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						{
 							if (data.length > 0) {
 								for (var i in data) {
-									problem2elem.get(data[i][6]).addClass('status ' + data[i][13][0]);
+									(problem2elem.get(data[i][6]) || $()).addClass('status ' + data[i][13][0]);
 								}
 								color_problems('/<' + data[data.length - 1][0]);
 							}
@@ -3157,8 +3164,8 @@ function contest_ranking(elem_, id_for_api) {
 		var actions = contest[4];
 		var is_admin = (actions.indexOf('A') !== -1);
 
-		// Sort rounds by items
-		rounds.sort(function(a, b) { return a[2] - b[2]; });
+		// Sort rounds by -items
+		rounds.sort(function(a, b) { return b[2] - a[2]; });
 		// Map rounds (by id) to their items
 		var rid_to_item = new StaticMap();
 		for (var i = 0; i < rounds.length; ++i) {
@@ -3193,9 +3200,9 @@ function contest_ranking(elem_, id_for_api) {
 		}
 		problems = tmp_problems;
 
-		// Sort problems by (round_item, item)
+		// Sort problems by (-round_item, item)
 		problems.sort(function(a, b) {
-			return (a[7] == b[7] ? a[5] - b[5] : a[7] - b[7]);
+			return (a[7] == b[7] ? a[5] - b[5] : b[7] - a[7]);
 		});
 
 		// Map problems (by id) to their indexes in the above array
@@ -3209,9 +3216,17 @@ function contest_ranking(elem_, id_for_api) {
 			var data = data_;
 			if (data.length == 0) {
 				timed_hide_show(modal);
+				var message_to_show = '<p>There is no one in the ranking yet...</p>';
+				if (id_for_api[0] !== 'c') {
+					if (rounds[0][3] === null)
+						message_to_show = '<p>The current round will not be shown in the ranking.</p>';
+					else if (utcdt_or_tm_to_Date(rounds[0][3]) > new Date())
+						message_to_show = $('<p>Ranking will be available since: </p>').append(normalize_datetime($('<span>', {datetime: rounds[0][3]})));
+				}
+
 				return elem.append($('<center>', {
 					class: 'always_in_view',
-					html: '<p>There is no one in the ranking yet...</p>'
+					html: message_to_show
 				}));
 			}
 
