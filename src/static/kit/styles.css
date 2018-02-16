@@ -1258,16 +1258,16 @@ div.header > div:last-child{
 .contest-dashboard .round > a:first-child,
 .contest-dashboard .round > :first-child > a,
 .contest-dashboard .contest {
-	border: 1px solid #a2a2a2;
+	border-top: 1px solid #a2a2a2;
 	border-bottom: 2px solid #a2a2a2;
 	padding: 7px;
 	font-weight: bold;
 	line-height: 12px;
 }
-.contest-dashboard .round > :first-child div {
-	margin: 5px;
-	display: block;
-	text-align: left;
+.contest-dashboard .round > :first-child div,
+.contest-dashboard .round > :first-child table {
+	margin: 5px auto;
+	text-align: center;
 	color: #000;
 	font-size: 12px;
 	font-weight: normal;
@@ -1277,9 +1277,21 @@ div.header > div:last-child{
 }
 .contest-dashboard .round > :first-child div > label {
 	display: inline-block;
-	padding-right: 8px;
-	min-width: 40px;
-	color: #444;
+	padding-right: 2px;
+	min-width: 12px;
+	color: #777;
+}
+.contest-dashboard .round > :first-child table tr {
+	padding-top: 5px;
+}
+.contest-dashboard .round > :first-child table td:first-child {
+	padding: 5px 2px 0 0;
+	text-align: right;
+	color: #777;
+}
+.contest-dashboard .round > :first-child table td:last-child {
+	padding: 5px 0 0 2px;
+	text-align: left;
 }
 .contest-dashboard a:hover,
 .contest-dashboard a:focus {

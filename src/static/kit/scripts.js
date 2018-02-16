@@ -57,7 +57,7 @@ function add_tz_marker(elem) {
 	elem.children('sup').remove();
 	elem.append(tz_marker);
 }
-function date_to_datetime_str(date) {
+function date_to_datetime_str(date, trim_zero_seconds /*= false*/) {
 	var month = date.getMonth() + 1;
 	var day = date.getDate();
 	var hours = date.getHours();
@@ -67,10 +67,12 @@ function date_to_datetime_str(date) {
 	day = (day < 10 ? '0' : '') + day;
 	hours = (hours < 10 ? '0' : '') + hours;
 	minutes = (minutes < 10 ? '0' : '') + minutes;
-	seconds = (seconds < 10 ? '0' : '') + seconds;
 
-	return String().concat(date.getFullYear(), '-', month, '-', day,
-		' ', hours, ':', minutes, ':', seconds);
+	if (trim_zero_seconds && seconds === 0)
+		return String().concat(date.getFullYear(), '-', month, '-', day, ' ', hours, ':', minutes);
+
+	seconds = (seconds < 10 ? '0' : '') + seconds;
+	return String().concat(date.getFullYear(), '-', month, '-', day, ' ', hours, ':', minutes, ':', seconds);
 }
 function utcdt_or_tm_to_Date(time) {
 	if (isNaN(time)) {
@@ -82,13 +84,13 @@ function utcdt_or_tm_to_Date(time) {
 	return new Date(time * 1000);
 }
 // Converts datetimes to local
-function normalize_datetime(elem, add_tz) {
+function normalize_datetime(elem, add_tz /*= false*/, trim_zero_seconds /*= false*/) {
 	elem = $(elem);
 	if (elem.attr('datetime') === undefined)
 		return elem;
 
 	// Add the timezone part
-	elem.html(date_to_datetime_str(utcdt_or_tm_to_Date(elem.attr('datetime'))));
+	elem.text(date_to_datetime_str(utcdt_or_tm_to_Date(elem.attr('datetime')), trim_zero_seconds));
 	if (add_tz)
 		elem.append(tz_marker());
 
@@ -2956,34 +2958,51 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								href: '/c/r' + round[0],
 								html: function() {
 									var res = [$('<span>', {text: round[1]})];
-									if (id_for_api[0] !== 'c')
+									if (id_for_api[0] === 'c')
 										res.push($('<div>', {html: [
-											$('<label>', {text: "Begins"}),
+											$('<label>', {text: "B:"}),
 											normalize_datetime($('<span>', {
 												datetime: round[4],
 												text: round[4]
-											}), false)
+											}), false, true)
 										]}),
 										$('<div>', {html: [
-											$('<label>', {text: "Ends"}),
+											$('<label>', {text: "E:"}),
 											normalize_datetime($('<span>', (round[6] === null ?
 												{text: 'never'}
 												: {datetime: round[6], text: round[6]})
-											), false)
-										]}),
-										$('<div>', {html: [
-											$('<label>', {text: "Full results"}),
-											normalize_datetime($('<span>', (round[5] === null ?
-												{text: 'immediately'}
-												: {datetime: round[5], text: round[5]})
-											), false)
-										]}),
-										$('<div>', {html: [
-											$('<label>', {text: "Ranking since"}),
-											normalize_datetime($('<span>', (round[3] === null ?
-												{text: 'never'}
-												: {datetime: round[3], text: round[3]})
-											), false)
+											), false, true)
+										]}));
+									else
+										res.push($('<table>', {html: [
+											$('<tr>', {html: [
+												$('<td>', {text: 'Beginning'}),
+												normalize_datetime($('<td>', {
+													datetime: round[4],
+													text: round[4]
+												}), false, true)
+											]}),
+											$('<tr>', {html: [
+												$('<td>', {text: 'End'}),
+												normalize_datetime($('<td>', (round[6] === null ?
+													{text: 'never'}
+													: {datetime: round[6], text: round[6]})
+												), false, true)
+											]}),
+											$('<tr>', {html: [
+												$('<td>', {text: "Full results"}),
+												normalize_datetime($('<td>', (round[5] === null ?
+													{text: 'immediately'}
+													: {datetime: round[5], text: round[5]})
+												), false, true)
+											]}),
+											$('<tr>', {html: [
+												$('<td>', {text: "Ranking since"}),
+												normalize_datetime($('<td>', (round[3] === null ?
+													{text: 'never'}
+													: {datetime: round[3], text: round[3]})
+												), false, true)
+											]}),
 										]}));
 
 									return res;
