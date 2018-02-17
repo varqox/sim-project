@@ -477,6 +477,8 @@ void Sim::api_contest_problem() {
 		return api_contest_problem_statement(problem_id);
 	else if (next_arg == "ranking")
 		return api_contest_ranking("contest_problem_id", contests_cpid);
+	else if (next_arg == "edit")
+		return api_contest_problem_edit();
 	else if (not next_arg.empty())
 		return api_error404();
 
@@ -581,7 +583,7 @@ void Sim::api_contest_edit(bool is_public) {
 	if (form_validation_error)
 		return api_error400(notifications);
 
-	// Add contest
+	// Update contest
 	auto stmt = mysql.prepare("UPDATE contests SET name=?, is_public=?"
 		" WHERE id=?");
 	stmt.bindAndExecute(name, will_be_public, contests_cid);
@@ -662,7 +664,7 @@ void Sim::api_contest_round_edit() {
 	if (form_validation_error)
 		return api_error400(notifications);
 
-	// Add round
+	// Update round
 	auto curr_date = mysql_date();
 	auto stmt = mysql.prepare("UPDATE contest_rounds"
 		" SET name=?, begins=?, ends=?, full_results=?, ranking_exposure=?"
@@ -733,6 +735,29 @@ void Sim::api_contest_problem_add() {
 		(name.empty() ? pname : name), contests_crid);
 
 	append(stmt.insert_id());
+}
+
+void Sim::api_contest_problem_edit() {
+	STACK_UNWINDING_MARK;
+
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+	// Validate fields
+	StringView name;
+	form_validate_not_blank(name, "name", "Problem's name",
+		CONTEST_PROBLEM_NAME_MAX_LEN);
+
+	if (form_validation_error)
+		return api_error400(notifications);
+
+	// Update problem
+	auto stmt = mysql.prepare("UPDATE contest_problems"
+		" SET name=?" // , final_selecting_method)"
+		" WHERE id=?");
+	stmt.bindAndExecute(name, contests_cpid);
 }
 
 void Sim::api_contest_problem_statement(StringView problem_id) {

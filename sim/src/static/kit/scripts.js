@@ -2857,7 +2857,32 @@ function edit_contest_round(as_modal, contest_round_id) {
 	}, '/c/r' + contest_round_id + '/edit');
 }
 function edit_contest_problem(as_modal, contest_problem_id) {
-	// TODO
+	view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
+		var actions = data[0][4];
+		if (actions.indexOf('A') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		var problem = data[2][0];
+		this.append(ajax_form('Edit round', '/api/contest/p' + contest_problem_id + '/edit',
+			Form.field_group("Problem's name", {
+				type: 'text',
+				name: 'name',
+				value: problem[4],
+				size: 25,
+				// maxlength: 'TODO...',
+				required: true
+			}).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Update'
+				})
+			})
+		));
+	}, '/c/p' + contest_problem_id + '/edit');
 }
 function rejudge_contest_problem_submissions(contest_problem_id) {
 	// TODO
@@ -3999,10 +4024,8 @@ function datetime_input(name, allow_null /* = false */, initial_utcdt /* = undef
 		var k = dt.getMinutes() + (dt.getSeconds() !== 0) + 4;
 		dt.setMinutes(k - k % 5);
 		dt.setSeconds(0);
-	} else {
+	} else
 		dt = utcdt_or_tm_to_Date(initial_utcdt);
-		console.log(dt);
-	}
 
 	var elems = $('<input>', {
 		type: 'text',
