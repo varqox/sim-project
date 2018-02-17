@@ -2965,7 +2965,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								href: '/c/r' + round[0],
 								html: function() {
 									var res = [$('<span>', {text: round[1]})];
-									if (id_for_api[0] === 'c')
+									if (rounds.length !== 1)
 										res.push($('<div>', {html: [
 											$('<label>', {text: "B:"}),
 											normalize_datetime($('<span>', {
@@ -3217,7 +3217,7 @@ function contest_ranking(elem_, id_for_api) {
 			if (data.length == 0) {
 				timed_hide_show(modal);
 				var message_to_show = '<p>There is no one in the ranking yet...</p>';
-				if (id_for_api[0] !== 'c') {
+				if (rounds.length === 1) {
 					if (rounds[0][3] === null)
 						message_to_show = '<p>The current round will not be shown in the ranking.</p>';
 					else if (utcdt_or_tm_to_Date(rounds[0][3]) > new Date())
