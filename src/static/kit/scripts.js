@@ -2819,7 +2819,42 @@ function edit_contest(as_modal, contest_id) {
 	}, '/c/c' + contest_id + '/edit');
 }
 function edit_contest_round(as_modal, contest_round_id) {
-	// TODO
+	view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
+		var actions = data[0][4];
+		if (actions.indexOf('A') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		var round = data[1][0];
+		this.append(ajax_form('Edit round', '/api/contest/r' + contest_round_id + '/edit',
+			Form.field_group("Round's name", {
+				type: 'text',
+				name: 'name',
+				value: round[1],
+				size: 25,
+				// maxlength: 'TODO...',
+				required: true
+			}).add(Form.field_group('Begin time', datetime_input('begins', false, round[4])
+			)).add(Form.field_group('End time',
+				datetime_input('ends', true, round[6], 'Never')
+				.attr('placeholder', 'Never')
+			)).add(Form.field_group('Full results time',
+				datetime_input('full_results', true, round[5], 'Immediately')
+				.attr('placeholder', 'Immediately')
+			)).add(Form.field_group('Show ranking since',
+				datetime_input('ranking_expo', true, round[3], "Don't show")
+				.attr('placeholder', "Don't show")
+			)).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Update'
+				})
+			})
+		));
+	}, '/c/r' + contest_round_id + '/edit');
 }
 function edit_contest_problem(as_modal, contest_problem_id) {
 	// TODO
@@ -3956,22 +3991,24 @@ function open_calendar_on(time, text_input, hidden_input) {
 		};
 	});
 }
-function datetime_input(name, allow_null /* = false */, initial_time /* = undefined <=> use current time, null <=> no value */, button_text /* = 'Set to null' */) {
+function datetime_input(name, allow_null /* = false */, initial_utcdt /* = undefined <=> use current time, null <=> no value */, button_text /* = 'Set to null' */) {
 	var dt;
-	if (initial_time === undefined || initial_time === null) {
+	if (initial_utcdt === undefined || initial_utcdt === null) {
 		dt = new Date();
 		// Round to 5 minutes
 		var k = dt.getMinutes() + (dt.getSeconds() !== 0) + 4;
 		dt.setMinutes(k - k % 5);
 		dt.setSeconds(0);
-	} else
-		dt = utcdt_or_tm_to_Date(initial_time);
+	} else {
+		dt = utcdt_or_tm_to_Date(initial_utcdt);
+		console.log(dt);
+	}
 
 	var elems = $('<input>', {
 		type: 'text',
 		class: 'calendar-input',
-		tm: (initial_time === null ? undefined : dt.getTime() / 1000 | 0),
-		value: (initial_time === null ? '' : date_to_datetime_str(dt)),
+		tm: (initial_utcdt === null ? undefined : dt.getTime() / 1000 | 0),
+		value: (initial_utcdt === null ? '' : date_to_datetime_str(dt)),
 		readonly: true,
 		click: function() {
 			open_calendar_on(dt, elems.eq(0), elems.eq(1));
@@ -3979,7 +4016,7 @@ function datetime_input(name, allow_null /* = false */, initial_time /* = undefi
 	}).add('<input>', {
 		type: 'hidden',
 		name: name,
-		value: (initial_time === null ? undefined : dt.getTime() / 1000 | 0),
+		value: (initial_utcdt === null ? undefined : dt.getTime() / 1000 | 0),
 	});
 
 	if (allow_null)
