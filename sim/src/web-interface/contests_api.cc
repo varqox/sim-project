@@ -648,7 +648,45 @@ void Sim::api_contest_round_edit() {
 	if (uint(~contests_perms & PERM::ADMIN))
 		return api_error403();
 
-	return api_error400();
+	// Validate fields
+	CStringView name, begins, ends, full_results, ranking_expo;
+	form_validate_not_blank(name, "name", "Round's name",
+		CONTEST_ROUND_NAME_MAX_LEN);
+	form_validate_not_blank(begins, "begins", "Begin time", is_safe_timestamp);
+	form_validate(ends, "ends", "End time", is_safe_timestamp);
+	form_validate(full_results, "full_results", "Full results time",
+		is_safe_timestamp);
+	form_validate(ranking_expo, "ranking_expo", "Show ranking since",
+		is_safe_timestamp);
+
+	if (form_validation_error)
+		return api_error400(notifications);
+
+	// Add round
+	auto curr_date = mysql_date();
+	auto stmt = mysql.prepare("UPDATE contest_rounds"
+		" SET name=?, begins=?, ends=?, full_results=?, ranking_exposure=?"
+		" WHERE id=?");
+	stmt.bind(0, name);
+	stmt.bind_copy(1, mysql_date(strtoull(begins)));
+
+	if (ends.empty())
+		stmt.bind(2, nullptr);
+	else
+		stmt.bind_copy(2, mysql_date(strtoull(ends)));
+
+	if (full_results.empty())
+		stmt.bind(3, nullptr);
+	else
+		stmt.bind_copy(3, mysql_date(strtoull(full_results)));
+
+	if (ranking_expo.empty())
+		stmt.bind(4, nullptr);
+	else
+		stmt.bind_copy(4, mysql_date(strtoull(ranking_expo)));
+
+	stmt.bind(5, contests_crid);
+	stmt.fixAndExecute();
 }
 
 void Sim::api_contest_problem_add() {
