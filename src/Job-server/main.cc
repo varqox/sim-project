@@ -638,8 +638,24 @@ static void spawn_worker(WorkersPool& wp) noexcept {
 	}
 }
 
+// A major BUG has been found in zip.h that makes it unsafe in multithreaded use
+// of files with relative paths (libarchive uses chdir(2) internally) thus job
+// server to remain stable as long as the libarchive is used must run one worker
+// at a time
+#define SERIALIZE_JOBS 1
+#if SERIALIZE_JOBS
+std::mutex blocker;
+#endif
+
 static void process_local_job(WorkersPool::NextJob job) {
 	STACK_UNWINDING_MARK;
+
+#if SERIALIZE_JOBS
+	blocker.lock();
+	auto serializer = make_call_in_destructor([]{
+		blocker.unlock();
+	});
+#endif
 
 	auto exit_procedures = [&job]{
 		EventsQueue::register_event([job]{
@@ -711,6 +727,13 @@ static void process_local_job(WorkersPool::NextJob job) {
 
 static void process_judge_job(WorkersPool::NextJob job) {
 	STACK_UNWINDING_MARK;
+
+#if SERIALIZE_JOBS
+	blocker.lock();
+	auto serializer = make_call_in_destructor([]{
+		blocker.unlock();
+	});
+#endif
 
 	auto exit_procedures = [&job]{
 		EventsQueue::register_event([job]{
