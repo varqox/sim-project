@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 DESTDIR=build
 
@@ -7,7 +7,7 @@ trap '' SIGINT SIGQUIT SIGTERM
 echo "[client]" > .mysql.cnf
 chmod 0600 .mysql.cnf
 grep 'user\|password' "$DESTDIR/.db.config" | sed 's/: /=/' >> .mysql.cnf
-db=$(grep 'db:' "$DESTDIR/.db.config" | sed 's/db: //')
+db=$(grep 'db:' "$DESTDIR/.db.config" | sed 's/db: //' | sed 's/^"\|"$//g')
 echo $db
 
 echo "Stop SIM"
@@ -15,8 +15,8 @@ src/killinstc --wait $DESTDIR/sim-server
 src/killinstc --wait $DESTDIR/job-server
 
 echo "Backup database"
-mysqldump --defaults-file=.mysql.cnf --result-file=upd_db_sch_backup.sql --extended-insert=FALSE $db
-mysqldump --defaults-file=.mysql.cnf --result-file=upd_db_sch.sql --complete-insert -t $db
+mysqldump --defaults-file=.mysql.cnf --result-file=upd_db_sch_backup.sql --extended-insert=FALSE $db || exit 1 # Without backup do nothing!
+mysqldump --defaults-file=.mysql.cnf --result-file=upd_db_sch.sql --complete-insert -t $db || exit 1
 
 echo "Update Schemas"
 src/setup-installation "$DESTDIR" --drop-tables
