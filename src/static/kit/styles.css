@@ -1264,32 +1264,29 @@ div.header > div:last-child{
 	font-weight: bold;
 	line-height: 12px;
 }
-.contest-dashboard .round > :first-child div,
-.contest-dashboard .round > :first-child table {
+.contest-dashboard .round > * div,
+.contest-dashboard .round > * table {
 	margin: 5px auto;
 	text-align: center;
 	color: #000;
 	font-size: 12px;
 	font-weight: normal;
 }
-.contest-dashboard .round > :first-child span + div {
+.contest-dashboard .round > * span + div {
 	margin-top: 10px;
 }
-.contest-dashboard .round > :first-child div > label {
+.contest-dashboard .round > * div > label {
 	display: inline-block;
 	padding-right: 2px;
 	min-width: 12px;
 	color: #777;
 }
-.contest-dashboard .round > :first-child table tr {
-	padding-top: 5px;
-}
-.contest-dashboard .round > :first-child table td:first-child {
+.contest-dashboard .round > * table td:first-child {
 	padding: 5px 2px 0 0;
 	text-align: right;
 	color: #777;
 }
-.contest-dashboard .round > :first-child table td:last-child {
+.contest-dashboard .round > * table td:last-child {
 	padding: 5px 0 0 2px;
 	text-align: left;
 }

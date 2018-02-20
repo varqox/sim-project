@@ -59,6 +59,8 @@ void Sim::append_submission_status(SubmissionStatus status,
 	}
 }
 
+#include <sys/time.h>
+
 void Sim::api_submissions() {
 	STACK_UNWINDING_MARK;
 	using PERM = SubmissionPermissions;
@@ -68,10 +70,12 @@ void Sim::api_submissions() {
 		return api_error403();
 
 	InplaceBuff<512> qfields, qwhere;
+	InplaceBuff<60> qwhere_id_cond;
 	qfields.append("SELECT s.id, s.type, s.owner, cu.mode, p.owner,"
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
-		" s.contest_round_id, r.name, 0, r.full_results, r.ends, s.contest_id,"
-		" c.name, s.submit_time, s.status, s.score"); // TODO: what is that 0? score revealing? see res[12] below
+		" cp.final_selecting_method, cp.reveal_score, s.contest_round_id,"
+		" r.name, r.full_results, r.ends, s.contest_id, c.name, s.submit_time,"
+		" s.status, s.score"); // TODO: what is that 0? score revealing? see res[REVEAL_SCORE] below
 	qwhere.append(" FROM submissions s"
 		" LEFT JOIN users u ON u.id=s.owner"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
@@ -82,8 +86,16 @@ void Sim::api_submissions() {
 			" cu.user_id=", session_user_id,
 		" WHERE s.type!=" STYPE_VOID_STR);
 
+	enum Foo {
+		SID, STYPE, SOWNER, CUMODE, POWNER, SOWN_USERNAME, PROB_ID, PNAME, CPID,
+		CP_NAME, CP_FSM, REVEAL_SCORE, CRID, CR_NAME, FULL_RES, CRENDS, CID,
+		CNAME, SUBMIT_TIME, STATUS, SCORE, SOWN_FNAME, SOWN_LNAME, INIT_REPORT,
+		FINAL_REPORT
+	};
+
 	bool allow_access = (session_user_type == UserType::ADMIN);
 	bool select_one = false;
+	bool only_final_or_only_normal = false;
 
 	// Process restrictions
 	StringView next_arg = url_args.extractNextArg();
@@ -99,11 +111,13 @@ void Sim::api_submissions() {
 
 		// submission type
 		if (cond == 't' and ~mask & STYPE_COND) {
-			if (arg_id == "N")
+			if (arg_id == "N") {
 				qwhere.append(" AND s.type=" STYPE_NORMAL_STR);
-			else if (arg_id == "F")
+				only_final_or_only_normal = true;
+			} else if (arg_id == "F") {
 				qwhere.append(" AND s.type=" STYPE_FINAL_STR);
-			else if (arg_id == "I")
+				only_final_or_only_normal = true;
+			} else if (arg_id == "I")
 				qwhere.append(" AND s.type=" STYPE_IGNORED_STR);
 			else if (arg_id == "S")
 				qwhere.append(" AND s.type=" STYPE_PROBLEM_SOLUTION_STR);
@@ -118,9 +132,12 @@ void Sim::api_submissions() {
 		if (not isDigit(arg_id))
 			return api_error400();
 
-		// conditional
-		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
-			qwhere.append(" AND s.id", arg);
+		// conditional (condition > is not supported because it creates problems
+		// with protecting the final submissions from leak - it is solvable but
+		// it is not easy and not worth it because such queries are not in use
+		// now)
+		if (cond == '<' and ~mask & ID_COND) {
+			qwhere_id_cond.append(" AND s.id", arg);
 			mask |= ID_COND;
 
 		} else if (cond == '=' and ~mask & ID_COND) {
@@ -131,7 +148,7 @@ void Sim::api_submissions() {
 				" s.initial_report, s.final_report");
 			select_one = true;
 
-			qwhere.append(" AND s.id", arg);
+			qwhere_id_cond.append(" AND s.id", arg);
 			mask |= ID_COND;
 
 		// problem's or round's id
@@ -218,89 +235,124 @@ void Sim::api_submissions() {
 		return api_error403();
 
 	// Execute query
-	qfields.append(qwhere, " ORDER BY s.id DESC LIMIT 50");
-	auto res = mysql.query(qfields);
+	qfields.append(qwhere);
+	auto res = mysql.query(concat(qfields, qwhere_id_cond,
+		" ORDER BY s.id DESC LIMIT 50"));
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
 	auto curr_date = mysql_date();
-	while (res.next()) {
-		SubmissionType stype = SubmissionType(strtoull(res[1]));
-		SubmissionPermissions perms = submissions_get_permissions(res[2], stype,
-			(res.is_null(3) ? CUM::IS_NULL : CUM(strtoull(res[3]))), res[4]);
+	InplaceBuff<30> boundary_id;
+	for (int appended_rows = 0; appended_rows < 50; ) {
+		if (not res.next()) {
+			if (select_one or res.rows_num() < 50)
+				break;
+
+			// Run another query to fetch more data
+			// We are assuming here that the there is no condition on id or it
+			// is '<'
+			qwhere_id_cond.clear();
+			qwhere_id_cond.append(" AND s.id<", boundary_id);
+			// Execute query
+			res = mysql.query(concat(qfields, qwhere_id_cond,
+				" ORDER BY s.id DESC LIMIT 50"));
+			continue;
+		}
+
+		boundary_id = res[SID];
+
+		SubmissionType stype = SubmissionType(strtoull(res[STYPE]));
+		SubmissionPermissions perms = submissions_get_permissions(res[SOWNER],
+			stype,
+			(res.is_null(CUMODE) ? CUM::IS_NULL : CUM(strtoull(res[CUMODE]))),
+			res[POWNER]);
 
 		if (perms == PERM::NONE)
 			return api_error403();
 
+		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
+			res.is_null(FULL_RES) or res[FULL_RES] <= curr_date);
+		bool hide_final_type = (not show_full_results and
+			res[CP_FSM] == SFSM_WITH_HIGHEST_SCORE);
+
+		// Hide (skip) submission as it would leak the final type and allow
+		// figuring out the final status of a submission through prepared next
+		// submissions
+		if (hide_final_type and only_final_or_only_normal)
+			continue;
+
+		++appended_rows;
+
 		// Submission id
-		append("\n[", res[0], ',');
+		append("\n[", res[SID], ',');
 
 		// Type
 		switch (stype) {
-		case SubmissionType::NORMAL: append("\"Normal\","); break;
-		case SubmissionType::FINAL: append("\"Final\","); break;
-		case SubmissionType::VOID: throw_assert(false); break;
+		case SubmissionType::NORMAL:
+			append(hide_final_type ? "\"Normal / Final\"," : "\"Normal\",");
+			break;
+		case SubmissionType::FINAL:
+			append(hide_final_type ? "\"Normal / Final\"," : "\"Final\",");
+			break;
 		case SubmissionType::IGNORED: append("\"Ignored\","); break;
 		case SubmissionType::PROBLEM_SOLUTION: append("\"Problem solution\",");
 			break;
+		case SubmissionType::VOID: throw_assert(false); break;
 		}
 
 		// Onwer's id
-		if (res.is_null(2))
+		if (res.is_null(SOWNER))
 			append("null,");
 		else
-			append(res[2], ',');
+			append(res[SOWNER], ',');
 
 		// Onwer's username
-		if (res.is_null(5))
+		if (res.is_null(SOWN_USERNAME))
 			append("null,");
 		else
-			append("\"", res[5], "\",");
+			append("\"", res[SOWN_USERNAME], "\",");
 
 		// Problem (id, name)
-		if (res.is_null(7))
+		if (res.is_null(PNAME))
 			append("null,null,");
 		else
-			append(res[6], ',', jsonStringify(res[7]), ',');
+			append(res[PROB_ID], ',', jsonStringify(res[PNAME]), ',');
 
 		// Contest problem (id, name)
-		if (res.is_null(9))
+		if (res.is_null(CP_NAME))
 			append("null,null,");
 		else
-			append(res[8], ',', jsonStringify(res[9]), ',');
+			append(res[CPID], ',', jsonStringify(res[CP_NAME]), ',');
 
 		// Contest round (id, name)
-		if (res.is_null(11))
+		if (res.is_null(CR_NAME))
 			append("null,null,");
 		else
-			append(res[10], ',', jsonStringify(res[11]), ',');
+			append(res[CRID], ',', jsonStringify(res[CR_NAME]), ',');
 
 		// Contest (id, name)
-		if (res.is_null(16))
+		if (res.is_null(CNAME))
 			append("null,null,");
 		else
-			append(res[15], ',', jsonStringify(res[16]), ',');
+			append(res[CID], ',', jsonStringify(res[CNAME]), ',');
 
 		// Submit time
-		append("\"", res[17], "\",");
+		append("\"", res[SUBMIT_TIME], "\",");
 
 		// Status: (CSS class, text)
-		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
-			res.is_null(13) or res[13] <= curr_date);
-		append_submission_status(SubmissionStatus(strtoull(res[18])),
+		append_submission_status(SubmissionStatus(strtoull(res[STATUS])),
 			show_full_results);
 
 		// Score
-		bool reveal_score = (res[12] != "0");
-		if (not res.is_null(19) and (show_full_results or reveal_score))
-			append(',', res[19], ',');
+		bool reveal_score = strtoull(res[REVEAL_SCORE]);
+		if (not res.is_null(SCORE) and (show_full_results or reveal_score))
+			append(',', res[SCORE], ',');
 		else
 			append(",null,");
 
 		// Actions
 		append('"');
-
 		if (uint(perms & PERM::VIEW))
 			append('v');
 		if (uint(perms & PERM::VIEW_SOURCE))
@@ -308,9 +360,9 @@ void Sim::api_submissions() {
 		if (uint(perms & PERM::VIEW_RELATED_JOBS))
 			append('j');
 		if (uint(perms & PERM::VIEW) and
-			(res.is_null(14) or curr_date < res[14])) // Round has not ended
+			(res.is_null(CRENDS) or curr_date < res[CRENDS])) // Round has not ended
 		{
-			// TODO: implement it in a some way in the UI
+			// TODO: implement it in some way in the UI
 			append('r'); // Resubmit solution
 		}
 		if (uint(perms & PERM::CHANGE_TYPE))
@@ -325,18 +377,18 @@ void Sim::api_submissions() {
 		// Append
 		if (select_one) {
 			// User first and last name
-			if (res.is_null(20))
+			if (res.is_null(SOWN_FNAME))
 				append(",null,null");
 			else
-				append(',', jsonStringify(res[20]), ',',
-					jsonStringify(res[21]));
+				append(',', jsonStringify(res[SOWN_FNAME]), ',',
+					jsonStringify(res[SOWN_LNAME]));
 
 			// Reports (and round full results time if full report isn't shown)
-			append(',', jsonStringify(res[22]));
+			append(',', jsonStringify(res[INIT_REPORT]));
 			if (show_full_results)
-				append(',', jsonStringify(res[23]));
+				append(',', jsonStringify(res[FINAL_REPORT]));
 			else
-				append(",null,\"", res[13], '"');
+				append(",null,\"", res[FULL_RES], '"');
 		}
 
 		append("],");
@@ -552,8 +604,8 @@ void Sim::api_submission_add() {
 			" aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
-		(uint)JobType::JUDGE_SUBMISSION, mysql_date(), submission_id,
-		jobs::dumpString(problem_id));
+		std::underlying_type_t<JobType>(JobType::JUDGE_SUBMISSION),
+		mysql_date(), submission_id, jobs::dumpString(problem_id));
 
 	// Activate the submission
 	stmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
@@ -632,7 +684,8 @@ void Sim::api_submission_change_type() {
 		return api_error400("Invalid type, it must be one of those: I or N");
 
 	// Lock the table to be able to safely modify the submission
-	mysql.update("LOCK TABLES submissions WRITE");
+	// locking contest_problems is required by update_final()
+	mysql.update("LOCK TABLES submissions WRITE, contest_problems READ");
 	auto lock_guard = make_call_in_destructor([&]{
 		mysql.update("UNLOCK TABLES");
 	});
@@ -671,7 +724,8 @@ void Sim::api_submission_delete() {
 		return api_error403();
 
 	// Lock the table to be able to safely delete the submission
-	mysql.update("LOCK TABLES submissions WRITE");
+	// locking contest_problems is required by update_final()
+	mysql.update("LOCK TABLES submissions WRITE, contest_problems READ");
 	auto lock_guard = make_call_in_destructor([&]{
 		mysql.update("UNLOCK TABLES");
 	});

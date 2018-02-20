@@ -180,6 +180,8 @@ private:
 
 	void api_contest_problem_edit();
 
+	void api_contest_problem_change_final_selecting_method();
+
 	void api_contest_problem_delete();
 
 	void api_contest_ranking(StringView submissions_id_name,

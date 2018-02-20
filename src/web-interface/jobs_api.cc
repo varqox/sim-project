@@ -14,8 +14,11 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 		return"Reupload problem - set limits";
 	case JT::EDIT_PROBLEM: return "Edit problem";
 	case JT::DELETE_PROBLEM: return "Delete problem";
+	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
+		return "Reselect final submissions of a contest problem";
 	case JT::VOID: return "Void";
 	}
+
 	return "Unknown";
 }
 
@@ -224,7 +227,14 @@ void Sim::api_jobs() {
 			break;
 		}
 
-		default:
+		case JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: {
+			append("\"contest problem\":", res[5]); // aux_id
+			break;
+		}
+
+		case JobType::VOID:
+		case JobType::EDIT_PROBLEM:
+		case JobType::DELETE_PROBLEM:
 			break;
 		}
 		append("},");
