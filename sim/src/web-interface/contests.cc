@@ -162,6 +162,12 @@ void Sim::contests_contest_problem() {
 		append("<script>edit_contest_problem(false, ", contests_cpid, ","
 			" window.location.hash);</script>");
 
+	// } else if (next_arg == "submit") {
+	// 	page_template(concat("Submit a solution ", contests_cpid),
+	// 		"body{padding-left:20px}");
+	// 	append("<script>add_submission(false, ", contests_cpid, ","
+	// 		" window.location.hash);</script>");
+
 	} else if (next_arg == "delete") {
 		page_template(concat("Delete contest problem ", contests_cpid),
 			"body{padding-left:20px}");

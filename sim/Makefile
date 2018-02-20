@@ -120,7 +120,8 @@ src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
 JOB_SERVER_SRCS := \
 	src/Job-server/judge.cc \
 	src/Job-server/main.cc \
-	src/Job-server/problem.cc
+	src/Job-server/problem.cc \
+	src/Job-server/contest.cc
 
 $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))

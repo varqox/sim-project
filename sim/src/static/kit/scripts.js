@@ -1273,10 +1273,10 @@ function add_user(as_modal) {
 					required: true,
 					html: $('<option>', {
 						value: 'A',
-						text: 'Admin',
+						text: 'Admin'
 					}).add('<option>', {
 						value: 'T',
-						text: 'Teacher',
+						text: 'Teacher'
 					}).add('<option>', {
 						value: 'N',
 						text: 'Normal',
@@ -1698,6 +1698,9 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				else if (name == "problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
 						undefined, view_problem.bind(null, true, info[name])));
+				else if (name == "contest problem")
+					td.append(a_view_button('/c/p' + info[name], info[name],
+						undefined, view_contest_problem.bind(null, true, info[name])));
 				else
 					td.append(info[name]);
 
@@ -1862,11 +1865,17 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 							info.problem, undefined,
 							view_problem.bind(null, true, info.problem)));
 
+				if (info['contest problem'] !== undefined)
+					append_tag('contest problem',
+						a_view_button('/c/p' + info['contest problem'],
+							info['contest problem'], undefined,
+							view_contest_problem.bind(null, true, info['contest problem'])));
+
 				var names = ['name', 'memory limit', 'problem type'];
 				for (var idx in names) {
-					var ni = names[idx];
-					if (info[ni] !== undefined)
-						append_tag(ni, info[ni]);
+					var name = names[idx];
+					if (info[name] !== undefined)
+						append_tag(name, info[name]);
 				}
 
 				row.append(td);
@@ -2759,7 +2768,23 @@ function add_contest_problem(as_modal, contest_round_id) {
 				// maxlength: 'TODO...',
 				required: true
 			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
-			).add('<div>', {
+			).add(Form.field_group("Final submission to select",
+				$('<select>', {
+					name: 'final_selecting_method',
+					required: true,
+					html: $('<option>', {
+						value: 'LC',
+						text: 'The last that compiles'
+					}).add('<option>', {
+						value: 'WHS',
+						text: 'The one with the highest score',
+						selected: true
+					})
+				})
+			)).add(Form.field_group('Reveal score immediately', {
+				type: 'checkbox',
+				name: 'reveal_score'
+			})).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
@@ -2874,13 +2899,48 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
-			}).add('<div>', {
+			}).add(Form.field_group('Reveal score immediately', {
+				type: 'checkbox',
+				name: 'reveal_score',
+				checked: problem[7]
+			})).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
 					value: 'Update'
 				})
 			})
+		));
+		this.append(ajax_form('Final submission selection', '/api/contest/p' + contest_problem_id + '/change_final_selecting_method',
+			Form.field_group("Final submission to select",
+				$('<select>', {
+					name: 'final_selecting_method',
+					required: true,
+					html: $('<option>', {
+						value: 'LC',
+						text: 'The last that compiles',
+						selected: (problem[6] === 'LC')
+					}).add('<option>', {
+						value: 'WHS',
+						text: 'The one with the highest score',
+						selected: (problem[6] === 'WHS')
+					})
+				})
+			).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Update'
+				})
+			}), function(resp) {
+				if (as_modal) {
+					show_success_via_loader(this, 'Updated');
+					view_job(true, resp);
+				} else {
+					this.parent().remove();
+					window.location.href = '/jobs/' + resp;
+				}
+			}
 		));
 	}, '/c/p' + contest_problem_id + '/edit');
 }
@@ -3094,8 +3154,22 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 					var elem = $('<a>', {
 						href: '/c/p' + problem[0],
-						text: problem[4]
-						// TODO: add info about score revealing when the problem is selected
+						style: (id_for_api[0] === 'p' ?
+							'padding: 7px; line-height: 12px' : undefined),
+						html: [
+							$('<span>', {text: problem[4]}),
+							(id_for_api[0] === 'p' ? $('<table>', {html: [
+								$('<tr>', {html: [
+									$('<td>', {text: 'Final submission'}),
+									$('<td>', {text: problem[6] === 'LC' ?
+										'The last compiling' : 'One with highest score'})
+								]}),
+								(problem[7] ? $('<tr>', {html: [
+									$('<td>', {text: 'Score revealing'}),
+									$('<td>', {text: 'Yes'})
+								]}) : $())
+							]}) : $())
+						]
 					});
 
 					problem2elem.add(problem[0], elem);
@@ -3259,10 +3333,12 @@ function contest_ranking(elem_, id_for_api) {
 			}
 		}
 		problems = tmp_problems;
+		var ritem_idx = (problems.length === 0 ? 0 : problems[0].length - 1);
 
 		// Sort problems by (-round_item, item)
 		problems.sort(function(a, b) {
-			return (a[7] == b[7] ? a[5] - b[5] : b[7] - a[7]);
+			return (a[ritem_idx] == b[ritem_idx] ? a[5] - b[5] :
+				b[ritem_idx] - a[ritem_idx]);
 		});
 
 		// Map problems (by id) to their indexes in the above array

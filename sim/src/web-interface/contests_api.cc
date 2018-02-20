@@ -1,8 +1,10 @@
 #include "sim.h"
 
+#include <sim/jobs.h>
 #include <sim/utilities.h>
 
 using MySQL::bind_arg;
+using SFSM = SubmissionFinalSelectingMethod;
 
 void Sim::append_contest_actions_str() {
 	STACK_UNWINDING_MARK;
@@ -35,7 +37,16 @@ static constexpr inline const char* user_mode_to_json(ContestUserMode cum) {
 	case ContestUserMode::OWNER: return "\"owner\"";
 	}
 
-	return "unknown";
+	return "\"unknown\"";
+};
+
+static constexpr inline const char* sfsm_to_json(SFSM sfsm){
+	switch (sfsm) {
+	case SFSM::LAST_COMPILING: return "\"LC\"";
+	case SFSM::WITH_HIGHEST_SCORE: return "\"WHS\"";
+	}
+
+	return "\"unknown\"";
 };
 
 void Sim::api_contests() {
@@ -272,7 +283,7 @@ void Sim::api_contest() {
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
 				" cp.problem_id, p.label, cp.name, cp.item,"
-				" cp.final_selecting_method"
+				" cp.final_selecting_method, cp.reveal_score"
 			" FROM contest_problems cp"
 			" LEFT JOIN problems p ON p.id=cp.problem_id"
 			" WHERE cp.contest_id=?");
@@ -281,7 +292,7 @@ void Sim::api_contest() {
 	} else {
 		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
 				" cp.problem_id, p.label, cp.name, cp.item,"
-				" cp.final_selecting_method"
+				" cp.final_selecting_method, cp.reveal_score"
 			" FROM contest_problems cp"
 			" JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
 				" AND cr.begins<=?"
@@ -291,11 +302,12 @@ void Sim::api_contest() {
 	}
 
 	uint64_t problem_id;
-	uint final_selecting_method;
+	std::underlying_type_t<SFSM> final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
+	bool reveal_score;
 
 	stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
-		problem_label, name, item, final_selecting_method);
+		problem_label, name, item, final_selecting_method, reveal_score);
 
 	while (stmt.next()) {
 		append("\n[", contests_cpid, ',',
@@ -304,7 +316,8 @@ void Sim::api_contest() {
 			jsonStringify(problem_label), ',',
 			jsonStringify(name), ',',
 			item, ',',
-			final_selecting_method, "],");
+			sfsm_to_json(SFSM(final_selecting_method)),
+			(reveal_score ? ",true" : ",false"), "],");
 	}
 
 	if (resp.content.back() == ',')
@@ -395,18 +408,19 @@ void Sim::api_contest_round() {
 	// Problems
 	append("\n],\n[");
 	stmt = mysql.prepare("SELECT cp.id, cp.problem_id, p.label, cp.name,"
-			" cp.item, cp.final_selecting_method"
+			" cp.item, cp.final_selecting_method, cp.reveal_score"
 		" FROM contest_problems cp"
 		" LEFT JOIN problems p ON p.id=cp.problem_id"
 		" WHERE cp.contest_round_id=?");
 	stmt.bindAndExecute(contests_crid);
 
 	uint64_t problem_id;
-	uint final_selecting_method;
+	std::underlying_type_t<SFSM> final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
+	bool reveal_score;
 
 	stmt.res_bind_all(contests_cpid, problem_id, problem_label, name, item,
-		final_selecting_method);
+		final_selecting_method, reveal_score);
 
 	while (stmt.next()) {
 		append("\n[", contests_cpid, ',',
@@ -415,7 +429,8 @@ void Sim::api_contest_round() {
 			jsonStringify(problem_label), ',',
 			jsonStringify(name), ',',
 			item, ',',
-			final_selecting_method, "],");
+			sfsm_to_json(SFSM(final_selecting_method)),
+			(reveal_score ? ",true" : ",false"), "],");
 	}
 
 	if (resp.content.back() == ',')
@@ -433,7 +448,7 @@ void Sim::api_contest_problem() {
 	auto stmt = mysql.prepare("SELECT c.id, c.name, c.is_public, cr.id,"
 			" cr.name, cr.item, cr.ranking_exposure, cr.begins,"
 			" cr.full_results, cr.ends, cp.problem_id, p.label, cp.name,"
-			" cp.item, cp.final_selecting_method, cu.mode"
+			" cp.item, cp.final_selecting_method, cp.reveal_score, cu.mode"
 		" FROM contest_problems cp"
 		" STRAIGHT_JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
 		" STRAIGHT_JOIN contests c ON c.id=cp.contest_id"
@@ -452,14 +467,16 @@ void Sim::api_contest_problem() {
 	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> rname;
 	InplaceBuff<CONTEST_PROBLEM_NAME_MAX_LEN> pname;
 	decltype(problems_pid) problem_id;
-	uint ritem, pitem, final_selecting_method;
+	uint ritem, pitem;
+	std::underlying_type_t<SFSM> final_selecting_method;
+	bool reveal_score;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
 		ritem, bind_arg(rranking_exposure, rranking_exp_is_null), rbegins,
 		bind_arg(rfull_results, rfull_res_is_null),
 		bind_arg(rends, rends_is_null), problem_id, problem_label, pname, pitem,
-		final_selecting_method, bind_arg(umode_u, umode_is_null));
+		final_selecting_method, reveal_score, bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
 		return api_error404();
 
@@ -479,6 +496,8 @@ void Sim::api_contest_problem() {
 		return api_contest_ranking("contest_problem_id", contests_cpid);
 	else if (next_arg == "edit")
 		return api_contest_problem_edit();
+	else if (next_arg == "change_final_selecting_method")
+		return api_contest_problem_change_final_selecting_method();
 	else if (not next_arg.empty())
 		return api_error404();
 
@@ -518,7 +537,8 @@ void Sim::api_contest_problem() {
 		jsonStringify(problem_label), ',',
 		jsonStringify(pname), ',',
 		pitem, ',',
-		final_selecting_method, "]\n]\n]");
+		sfsm_to_json(SFSM(final_selecting_method)),
+		(reveal_score ? ",true" : ",false"), "]\n]\n]");
 }
 
 void Sim::api_contest_add() {
@@ -705,6 +725,16 @@ void Sim::api_contest_problem_add() {
 		CONTEST_PROBLEM_NAME_MAX_LEN);
 	form_validate(problem_id, "problem_id", "Problem ID", isDigit,
 		"Problem ID: invalid value");
+	bool reveal_score = request.form_data.exist("reveal_score");
+	// Validate final_selecting_method
+	auto fsm_str = request.form_data.get("final_selecting_method");
+	SFSM final_selecting_method;
+	if (fsm_str == "LC")
+		final_selecting_method = SFSM::LAST_COMPILING;
+	else if (fsm_str == "WHS")
+		final_selecting_method = SFSM::WITH_HIGHEST_SCORE;
+	else
+		add_notification("error", "Invalid user's type");
 
 	if (form_validation_error)
 		return api_error400(notifications);
@@ -726,13 +756,16 @@ void Sim::api_contest_problem_add() {
 	if (uint(~pperms & ProblemPermissions::VIEW))
 		return api_error403("You have no permissions to use this problem");
 
-	// Add problem
+	// Add contest problem
 	stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id,"
-			" problem_id, name, item, final_selecting_method)"
-		" SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), 0 FROM contest_problems"
-		" WHERE contest_round_id=?");
+			" problem_id, name, item, final_selecting_method, reveal_score)"
+		" SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?"
+			" FROM contest_problems"
+			" WHERE contest_round_id=?");
 	stmt.bindAndExecute(contests_crid, contests_cid, problem_id,
-		(name.empty() ? pname : name), contests_crid);
+		(name.empty() ? pname : name),
+		std::underlying_type_t<SFSM>(final_selecting_method), reveal_score,
+		contests_crid);
 
 	append(stmt.insert_id());
 }
@@ -749,15 +782,57 @@ void Sim::api_contest_problem_edit() {
 	StringView name;
 	form_validate_not_blank(name, "name", "Problem's name",
 		CONTEST_PROBLEM_NAME_MAX_LEN);
+	bool reveal_score = request.form_data.exist("reveal_score");
 
 	if (form_validation_error)
 		return api_error400(notifications);
 
 	// Update problem
 	auto stmt = mysql.prepare("UPDATE contest_problems"
-		" SET name=?" // , final_selecting_method)"
-		" WHERE id=?");
-	stmt.bindAndExecute(name, contests_cpid);
+		" SET name=?, reveal_score=? WHERE id=?");
+	stmt.bindAndExecute(name, reveal_score, contests_cpid);
+}
+
+void Sim::api_contest_problem_change_final_selecting_method() {
+	STACK_UNWINDING_MARK;
+
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+
+	// Validate fields (final_selecting_method)
+	auto fsm_str = request.form_data.get("final_selecting_method");
+	SFSM final_selecting_method;
+	if (fsm_str == "LC")
+		final_selecting_method = SFSM::LAST_COMPILING;
+	else if (fsm_str == "WHS")
+		final_selecting_method = SFSM::WITH_HIGHEST_SCORE;
+	else
+		add_notification("error", "Invalid user's type");
+
+	if (form_validation_error)
+		return api_error400(notifications);
+
+	// Update problem
+	auto stmt = mysql.prepare("UPDATE contest_problems"
+		" SET final_selecting_method=? WHERE id=?");
+	stmt.bindAndExecute(std::underlying_type_t<SFSM>(final_selecting_method),
+		contests_cpid);
+
+	// Queue reselecting final submissions
+	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
+			" aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id,
+		priority(JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
+		std::underlying_type_t<JobType>(
+			JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
+		mysql_date(), contests_cpid);
+
+	jobs::notify_job_server();
+	append(stmt.insert_id());
 }
 
 void Sim::api_contest_problem_statement(StringView problem_id) {

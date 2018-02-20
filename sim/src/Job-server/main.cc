@@ -1,3 +1,4 @@
+#include "contest.h"
 #include "judge.h"
 #include "main.h"
 #include "problem.h"
@@ -205,6 +206,7 @@ public:
 
 				// Other job
 				case JT::ADD_PROBLEM:
+				case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
 					other_jobs.insert({jid, priority, false});
 					break;
 
@@ -700,7 +702,15 @@ static void process_local_job(WorkersPool::NextJob job) {
 			mysql.update(concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
 				" WHERE id=", job.id));
 			break;
-		default:
+
+		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
+			contest_problem_reselect_final_submissions(job.id, aux_id);
+			break;
+
+		case JT::VOID:
+		case JT::JUDGE_SUBMISSION:
+		case JT::ADD_JUDGE_MODEL_SOLUTION:
+		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
 			THROW("Unexpected local job type: ", toString(JT(jtype_u)));
 		}
 
@@ -776,7 +786,12 @@ static void process_judge_job(WorkersPool::NextJob job) {
 			judgeModelSolution(job.id, JobType::REUPLOAD_PROBLEM);
 			break;
 
-		default:
+		case JT::VOID:
+		case JT::ADD_PROBLEM:
+		case JT::REUPLOAD_PROBLEM:
+		case JT::EDIT_PROBLEM:
+		case JT::DELETE_PROBLEM:
+		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
 			THROW("Unexpected judge job type: ", toString(JT(jtype_u)));
 		}
 

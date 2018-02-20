@@ -89,7 +89,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 
 		{
 			// Lock the table to be able to safely modify the submission
-			mysql.update("LOCK TABLES submissions WRITE");
+			// locking contest_problems is required by update_final()
+			mysql.update("LOCK TABLES submissions WRITE, contest_problems READ");
 			auto lock_guard = make_call_in_destructor([&]{
 				mysql.update("UNLOCK TABLES");
 			});

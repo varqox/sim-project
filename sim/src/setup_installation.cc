@@ -19,7 +19,7 @@ static void help(const char* program_name) {
 	if (program_name == nullptr)
 		program_name = "setup-installation";
 
-	printf("Usage: %s [options] INSTALL_DIR", program_name);
+	printf("Usage: %s [options] INSTALL_DIR\n", program_name);
 	puts("Setup database after SIM installation");
 	puts("");
 	puts("Options:");
@@ -249,6 +249,7 @@ int main(int argc, char **argv) {
 			"`name` VARBINARY(", CONTEST_PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
 			"`final_selecting_method` TINYINT NOT NULL,"
+			"`reveal_score` BOOLEAN NOT NULL,"
 			"PRIMARY KEY (id),"
 			"UNIQUE (contest_round_id, item),"
 			"KEY (contest_id)"
@@ -303,10 +304,10 @@ int main(int argc, char **argv) {
 			"KEY (contest_problem_id, type, id),"
 			"KEY (contest_round_id, type, id),"
 			"KEY (contest_id, type, id),"
-			// Needed to effectively changing type to/from FINAL
-			"KEY (final_candidate, owner, contest_problem_id, id),"
-			"KEY (final_candidate, owner, contest_problem_id, score, id),"
-			"KEY (final_candidate, owner, problem_id, score, id)"
+			// Needed to efficiently change type to/from FINAL
+			"KEY final1 (final_candidate, owner, contest_problem_id, id),"
+			"KEY final2 (final_candidate, owner, contest_problem_id, score, status, id),"
+			"KEY final3 (final_candidate, owner, problem_id, score, status, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("jobs",
