@@ -240,7 +240,33 @@ void Sim::api_submissions() {
 		" ORDER BY s.id DESC LIMIT 50"));
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
-	append("[");
+	// Column names
+	append("[\n["
+		"\"id\","
+		"\"type\","
+		"\"owner_id\","
+		"\"owner_username\","
+		"\"problem_id\","
+		"\"problem_name\","
+		"\"contest_problem_id\","
+		"\"contest_problem_name\","
+		"\"contest_round_id\","
+		"\"contest_round_name\","
+		"\"contest_id\","
+		"\"contest_name\","
+		"\"submit_time\","
+		"\"status\","
+		"\"score\","
+		"\"actions\"");
+
+	if (select_one)
+		append(",\"owner_first_name\","
+			"\"owner_last_name\","
+			"\"initial_report\","
+			"\"final_report\","
+			"\"full_results\"");
+
+	append("],");
 
 	auto curr_date = mysql_date();
 	InplaceBuff<30> boundary_id;
@@ -394,10 +420,8 @@ void Sim::api_submissions() {
 		append("],");
 	}
 
-	if (resp.content.back() == ',')
-		--resp.content.size;
-
-	append("\n]");
+	resp.content.back() = '\n'; // replace trailing ','
+	append("]");
 }
 
 void Sim::api_submission() {

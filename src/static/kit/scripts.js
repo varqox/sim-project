@@ -588,7 +588,7 @@ function API_call(ajax_url, success_handler, loader_parent) {
 		type: 'GET',
 		url: ajax_url,
 		dataType: 'json',
-		success: function(data) {
+		success: function() {
 			remove_loader(loader_parent);
 			success_handler.apply(this, arguments);
 		},
@@ -597,6 +597,23 @@ function API_call(ajax_url, success_handler, loader_parent) {
 				setTimeout.bind(null, API_call.bind(null, thiss), 0)); // Avoid recursion
 		}
 	});
+}
+
+function prase_api_resp(data) {
+	var names = data[0];
+	if (names[0] !== 'id') ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: remove lines
+		return data; ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: remove lines
+	var res = [];
+	for (var i = 1; i < data.length; ++i) {
+		var obj = {};
+		var e = Math.min(names.length, data[i].length);
+		e = names.length;
+		for (var j = 0; j < e; ++j)
+			obj[names[j]] = data[i][j];
+		res.push(obj);
+	}
+
+	return res;
 }
 
 /* ================================ Tab menu ================================ */
@@ -755,10 +772,10 @@ function view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_
 		var modal = elem.parent().parent();
 		if (as_modal)
 			timed_hide(modal);
-		API_call(ajax_url, function () {
+		API_call(ajax_url, function(data) {
 			if (as_modal && (show_on_success !== false))
 				timed_hide_show(modal);
-			success_handler.apply(elem, arguments);
+			success_handler.call(elem, prase_api_resp(data));
 			if (as_modal)
 				centerize_modal(modal);
 		}, elem);
@@ -797,7 +814,7 @@ function Lister(elem) {
 			dataType: 'json',
 			success: function(data) {
 				var modal = this_.elem.parents('.modal');
-				this_.process_api_response(data, modal);
+				this_.process_api_response(prase_api_resp(data), modal);
 
 				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
@@ -2005,25 +2022,24 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-		var actions = data[15];
+		var s = data[0];
 
-		if (data[6] !== null)
+		if (s.contest_id !== null)
 			this.append($('<div>', {
 				class: 'contest-path',
 				html: [
-					a_view_button('/c/c' + data[10], data[11], '',
-						view_contest.bind(null, true, data[10])),
+					a_view_button('/c/c' + s.contest_id, s.contest_name, '',
+						view_contest.bind(null, true, s.contest_id)),
 					' / ',
-					a_view_button('/c/r' + data[8], data[9], '',
-						view_contest_round.bind(null, true, data[8])),
+					a_view_button('/c/r' + s.contest_round_id, s.contest_round_name, '',
+						view_contest_round.bind(null, true, s.contest_round_id)),
 					' / ',
-					a_view_button('/c/p' + data[6], data[7], '',
-						view_contest_problem.bind(null, true, data[6])),
+					a_view_button('/c/p' + s.contest_problem_id, s.contest_problem_name, '',
+						view_contest_problem.bind(null, true, s.contest_problem_id)),
 					$('<a>', {
 						class: 'btn-small',
-						href: '/api/contest/p' + data[6] + '/statement/' +
-							encodeURIComponent(data[7]),
+						href: '/api/contest/p' + s.contest_problem_id + '/statement/' +
+							encodeURIComponent(s.contest_problem_name),
 						text: 'View statement'
 					})
 				]
@@ -2039,15 +2055,15 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 							text: 'Submission ' + submission_id
 						}),
 						$('<div>', {
-							html: ActionsToHTML.submission(submission_id, actions,
-								data[1], true)
+							html: ActionsToHTML.submission(submission_id, s.actions,
+								s.type, true)
 						})
 					]
 				}),
 				$('<table>', {
 					html: [
 						$('<thead>', {html: '<tr>' +
-							(data[2] === null ? ''
+							(s.owner_id === null ? ''
 								: '<th style="min-width:120px">User</th>') +
 							'<th style="min-width:120px">Problem</th>' +
 							'<th style="min-width:150px">Submission time</th>' +
@@ -2058,30 +2074,30 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 						}),
 						$('<tbody>', {
 							html: $('<tr>', {
-								class: (data[1] === 'Ignored' ? 'ignored' : undefined),
+								class: (s.type === 'Ignored' ? 'ignored' : undefined),
 								html: [
-									(data[2] === null ? '' : $('<td>', {
-										html: [a_view_button('/u/' + data[2], data[3],
-												undefined, view_user.bind(null, true, data[2])),
-											' (' + text_to_safe_html(data[16]) + ' ' +
-												text_to_safe_html(data[17]) + ')'
+									(s.owner_id === null ? '' : $('<td>', {
+										html: [a_view_button('/u/' + s.owner_id, s.owner_username,
+												undefined, view_user.bind(null, true, s.owner_id)),
+											' (' + text_to_safe_html(s.owner_first_name) + ' ' +
+												text_to_safe_html(s.owner_last_name) + ')'
 										]
 									})),
 									$('<td>', {
-										html: a_view_button('/p/' + data[4], data[5],
-											undefined, view_problem.bind(null, true, data[4]))
+										html: a_view_button('/p/' + s.problem_id, s.problem_name,
+											undefined, view_problem.bind(null, true, s.problem_id))
 									}),
 									normalize_datetime($('<td>', {
-										datetime: data[12],
-										text: data[12]
+										datetime: s.submit_time,
+										text: s.submit_time
 									}), true),
 									$('<td>', {
-										class: 'status ' + data[13][0],
-										text: (data[13][0].lastIndexOf('initial') === -1 ?
-											'' : 'Initial: ') + data[13][1]
+										class: 'status ' + s.status[0],
+										text: (s.status[0].lastIndexOf('initial') === -1 ?
+											'' : 'Initial: ') + s.status[1]
 									}),
-									$('<td>', {text: data[14]}),
-									$('<td>', {text: data[1]})
+									$('<td>', {text: s.score}),
+									$('<td>', {text: s.type})
 
 								]
 							})
@@ -2099,11 +2115,11 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				elem.append($('<div>', {
 					class: 'results',
 					html: function() {
-						var res = [data[18], data[19]];
-						if (data[19] === null)
+						var res = [s.initial_report, s.final_report];
+						if (s.final_report === null)
 							res.push($('<h2>', {text: 'Final testing report'}),
 								$('<p>', {text: 'Final testing report will be visible since: '}).append(
-									normalize_datetime($('<span>', {datetime: data[20]}))));
+									normalize_datetime($('<span>', {datetime: s.full_results}))));
 						return res;
 					}()
 				}));
@@ -2111,7 +2127,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 		];
 
 		var cached_source;
-		if (actions.indexOf('s') !== -1)
+		if (s.actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
 				timed_hide_show(elem.parents('.modal'));
 				elem.children('.tabmenu').nextAll().remove();
@@ -2135,7 +2151,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				}
 			});
 
-		if (actions.indexOf('j') !== -1)
+		if (s.actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
 				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<table>', {class: 'jobs'}));
@@ -2190,64 +2206,65 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 		for (var x in data) {
 			x = data[x];
-			this_.query_suffix = '/<' + x[0];
+			console.log(x);
+			this_.query_suffix = '/<' + x.id;
 
 			var row = $('<tr>', {
-				class: (x[1] === 'Ignored' ? 'ignored' : undefined)
+				class: (x.type === 'Ignored' ? 'ignored' : undefined)
 			});
 			// Id
-			row.append($('<td>', {text: x[0]}));
+			row.append($('<td>', {text: x.id}));
 
 			// Username
 			if (this_.show_user)
 				row.append($('<td>', {
-					html: x[2] === null ? 'System' : (x[3] == null ? x[2]
-						: a_view_button('/u/' + x[2], x[3], undefined,
-							view_user.bind(null, true, x[2])))
+					html: x.owner_id === null ? 'System' : (x.owner_username == null ? x.owner_id
+						: a_view_button('/u/' + x.owner_id, x.owner_username, undefined,
+							view_user.bind(null, true, x.owner_id)))
 				}));
 
 			// Submission time
 			row.append($('<td>', {
 				html: normalize_datetime(
-					a_view_button('/s/' + x[0], x[12], undefined,
-						view_submission.bind(null, true, x[0])).attr('datetime', x[12]),
+					a_view_button('/s/' + x.id, x.submit_time, undefined,
+						view_submission.bind(null, true, x.id)).attr('datetime', x.submit_time),
 					false)
 			}));
 
 			// Problem
-			if (x[6] == null) // Not in the contest
+			if (x.contest_id == null) // Not in the contest
 				row.append($('<td>', {
-					html: a_view_button('/p/' + x[4], x[5], undefined,
-						view_problem.bind(null, true, x[4]))
+					html: a_view_button('/p/' + x.problem_id, x.problem_name, undefined,
+						view_problem.bind(null, true, x.problem_id))
 				}));
 			else
 				row.append($('<td>', {
-					html: [(this_.show_contest ? a_view_button('/c/c' + x[10], x[11], '', view_contest.bind(null, true, x[10])) : ''),
+					html: [(this_.show_contest ? a_view_button('/c/c' + x.contest_id, x.contest_name, '', view_contest.bind(null, true, x.contest_id)) : ''),
 						(this_.show_contest ? ' / ' : ''),
-						a_view_button('/c/r' + x[8], x[9], '',
-							view_contest_round.bind(null, true, x[8])),
+						a_view_button('/c/r' + x.contest_round_id, x.contest_round_name, '',
+							view_contest_round.bind(null, true, x.contest_round_id)),
 						' / ',
-						a_view_button('/c/p' + x[6], x[7], '',
-							view_contest_problem.bind(null, true, x[6]))
+						a_view_button('/c/p' + x.contest_problem_id, x.contest_problem_name, '',
+							view_contest_problem.bind(null, true, x.contest_problem_id))
 					]
 				}));
 
 			// Status
 			row.append($('<td>', {
-				class: 'status ' + x[13][0],
-				text: (x[13][0].lastIndexOf('initial') === -1 ? ''
-					: 'Initial: ') + x[13][1]
+				class: 'status ' + x.status[0],
+				text: (x.status[0].lastIndexOf('initial') === -1 ? ''
+					: 'Initial: ') + x.status[1]
 			}));
 
 			// Score
-			row.append($('<td>', {text: x[14]}));
+			row.append($('<td>', {text: x.score}));
 
 			// Type
-			row.append($('<td>', {text: x[1]}));
+			row.append($('<td>', {text: x.type}));
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.submission(x[0], x[15], x[1])
+				html: ActionsToHTML.submission(x.id, x.actions, x.type)
 			}));
 
 			this_.elem.children('tbody').append(row);
@@ -3208,11 +3225,12 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						API_call('/api/submissions/' + id_for_api.toUpperCase() +
 							'/u' + logged_user_id() + '/tF' + query_suffix, function(data)
 						{
+							data = prase_api_resp(data);
 							if (data.length > 0) {
 								for (var i in data) {
-									(problem2elem.get(data[i][6]) || $()).addClass('status ' + data[i][13][0]);
+									(problem2elem.get(data[i].contest_problem_id) || $()).addClass('status ' + data[i].status[0]);
 								}
-								color_problems('/<' + data[data.length - 1][0]);
+								color_problems('/<' + data[data.length - 1].id);
 							}
 
 							// All problems have been colored
