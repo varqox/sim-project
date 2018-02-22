@@ -2214,7 +2214,6 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 		for (var x in data) {
 			x = data[x];
-			console.log(x);
 			this_.query_suffix = '/<' + x.id;
 
 			var row = $('<tr>', {
@@ -2837,7 +2836,7 @@ function edit_contest(as_modal, contest_id) {
 
 		data = data[0];
 
-		var actions = data[4];
+		var actions = data.actions;
 		if (actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -2848,15 +2847,15 @@ function edit_contest(as_modal, contest_id) {
 			Form.field_group("Contest's name", {
 				type: 'text',
 				name: 'name',
-				value: data[1],
+				value: data.name,
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
 			}).add(Form.field_group('Public', {
 				type: 'checkbox',
 				name: 'public',
-				checked: data[2],
-				disabled: (data[2] || actions.indexOf('M') !== -1 ? undefined : true)
+				checked: data.is_public,
+				disabled: (data.is_public || actions.indexOf('M') !== -1 ? undefined : true)
 			})).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -3560,26 +3559,26 @@ function ContestsLister(elem, query_suffix /*= ''*/) {
 
 		for (var x in data) {
 			x = data[x];
-			this_.query_suffix = '/<' + x[0];
+			this_.query_suffix = '/<' + x.id;
 
 			var row = $('<tr>',	{
-				class: (x[2] ? undefined : 'grayed')
+				class: (x.is_public ? undefined : 'grayed')
 			});
 
 			// Id
 			if (logged_user_is_admin())
-				row.append($('<td>', {text: x[0]}));
+				row.append($('<td>', {text: x.id}));
 			// Name
 			row.append($('<td>', {
 				html: $('<a>', {
-					href: '/c/c' + x[0],
-					text: x[1]
+					href: '/c/c' + x.id,
+					text: x.name
 				})
 			}));
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.contest(x[0], x[4])
+				html: ActionsToHTML.contest(x.id, x.actions)
 			}));
 
 			this_.elem.children('tbody').append(row);

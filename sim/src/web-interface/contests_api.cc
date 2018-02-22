@@ -126,7 +126,14 @@ void Sim::api_contests() {
 	auto res = mysql.query(qfields);
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
-	append("[");
+	// Column names
+	append("[\n["
+		"\"id\","
+		"\"name\","
+		"\"is_public\","
+		"\"user_mode\","
+		"\"actions\"]");
+
 	while (res.next()) {
 		StringView cid = res[0];
 		StringView name = res[1];
@@ -136,7 +143,7 @@ void Sim::api_contests() {
 		contests_perms = contests_get_permissions(is_public, umode);
 
 		// Id
-		append("\n[", cid, ",");
+		append(",\n[", cid, ",");
 		// Name
 		append(jsonStringify(name), ',');
 		// Is public
@@ -148,11 +155,8 @@ void Sim::api_contests() {
 		// Append what buttons to show
 		append(',');
 		append_contest_actions_str();
-		append("],");
+		append(']');
 	}
-
-	if (resp.content.back() == ',')
-		--resp.content.size;
 
 	append("\n]");
 }
