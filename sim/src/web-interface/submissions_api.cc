@@ -266,7 +266,7 @@ void Sim::api_submissions() {
 			"\"final_report\","
 			"\"full_results\"");
 
-	append("],");
+	append(']');
 
 	auto curr_date = mysql_date();
 	InplaceBuff<30> boundary_id;
@@ -311,7 +311,7 @@ void Sim::api_submissions() {
 		++appended_rows;
 
 		// Submission id
-		append("\n[", res[SID], ',');
+		append(",\n[", res[SID], ',');
 
 		// Type
 		switch (stype) {
@@ -417,11 +417,10 @@ void Sim::api_submissions() {
 				append(",null,\"", res[FULL_RES], '"');
 		}
 
-		append("],");
+		append(']');
 	}
 
-	resp.content.back() = '\n'; // replace trailing ','
-	append("]");
+	append(']');
 }
 
 void Sim::api_submission() {

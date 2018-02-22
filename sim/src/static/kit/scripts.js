@@ -601,8 +601,9 @@ function API_call(ajax_url, success_handler, loader_parent) {
 
 function prase_api_resp(data) {
 	var names = data[0];
-	if (names[0] !== 'id') ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: remove lines
-		return data; ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TODO: remove lines
+	if (names === undefined || names[0] !== 'id')
+		return data;
+
 	var res = [];
 	for (var i = 1; i < data.length; ++i) {
 		var obj = {};
@@ -614,6 +615,13 @@ function prase_api_resp(data) {
 	}
 
 	return res;
+}
+function parse_contest_api_resp(data) {
+	return {
+		contest: data.contest,
+		rounds: prase_api_resp(data.rounds),
+		problems: prase_api_resp(data.problems)
+	};
 }
 
 /* ================================ Tab menu ================================ */
@@ -2862,31 +2870,31 @@ function edit_contest(as_modal, contest_id) {
 }
 function edit_contest_round(as_modal, contest_round_id) {
 	view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
-		var actions = data[0][4];
-		if (actions.indexOf('A') === -1)
+		data = parse_contest_api_resp(data);
+		if (data.contest.actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
 
-		var round = data[1][0];
+		var round = data.rounds[0];
 		this.append(ajax_form('Edit round', '/api/contest/r' + contest_round_id + '/edit',
 			Form.field_group("Round's name", {
 				type: 'text',
 				name: 'name',
-				value: round[1],
+				value: round.name,
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Begin time', datetime_input('begins', false, round[4])
+			}).add(Form.field_group('Begin time', datetime_input('begins', false, round.begins)
 			)).add(Form.field_group('End time',
-				datetime_input('ends', true, round[6], 'Never')
+				datetime_input('ends', true, round.ends, 'Never')
 				.attr('placeholder', 'Never')
 			)).add(Form.field_group('Full results time',
-				datetime_input('full_results', true, round[5], 'Immediately')
+				datetime_input('full_results', true, round.full_results, 'Immediately')
 				.attr('placeholder', 'Immediately')
 			)).add(Form.field_group('Show ranking since',
-				datetime_input('ranking_expo', true, round[3], "Don't show")
+				datetime_input('ranking_expo', true, round.ranking_exposure, "Don't show")
 				.attr('placeholder', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
@@ -2900,26 +2908,26 @@ function edit_contest_round(as_modal, contest_round_id) {
 }
 function edit_contest_problem(as_modal, contest_problem_id) {
 	view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
-		var actions = data[0][4];
-		if (actions.indexOf('A') === -1)
+		data = parse_contest_api_resp(data);
+		if (data.contest.actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
 
-		var problem = data[2][0];
-		this.append(ajax_form('Edit round', '/api/contest/p' + contest_problem_id + '/edit',
+		var problem = data.problems[0];
+		this.append(ajax_form('Edit problem', '/api/contest/p' + contest_problem_id + '/edit',
 			Form.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
-				value: problem[4],
+				value: problem.name,
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
 			}).add(Form.field_group('Reveal score immediately', {
 				type: 'checkbox',
 				name: 'reveal_score',
-				checked: problem[7]
+				checked: problem.reveal_score
 			})).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -2936,11 +2944,11 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 					html: $('<option>', {
 						value: 'LC',
 						text: 'The last that compiles',
-						selected: (problem[6] === 'LC')
+						selected: (problem.final_selecting_method === 'LC')
 					}).add('<option>', {
 						value: 'WHS',
 						text: 'The one with the highest score',
-						selected: (problem[6] === 'WHS')
+						selected: (problem.final_selecting_method === 'WHS')
 					})
 				})
 			).add('<div>', {
@@ -2975,17 +2983,19 @@ function delete_contest_problem(as_modal, contest_problem_id) {
 }
 function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 	view_ajax(as_modal, '/api/contest/' + id_for_api, function(data) {
-		var contest = data[0];
-		var rounds = data[1];
-		var problems = data[2];
-		var actions = contest[4];
+		data = parse_contest_api_resp(data);
+		var contest = data.contest;
+		var rounds = data.rounds;
+		var problems = data.problems;
+		var actions = contest.actions;
 
 		// Sort rounds by -items
-		rounds.sort(function(a, b) { return b[2] - a[2]; });
+		rounds.sort(function(a, b) { return b.item - a.item; });
 
 		// Sort problems by (round_id, item)
 		problems.sort(function(a, b) {
-			return (a[1] == b[1] ? a[5] - b[5] : a[1] - b[1]);
+			return (a.round_id == b.round_id ? a.item - b.item :
+				a.round_id - b.round_id);
 		});
 
 
@@ -2995,23 +3005,23 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				class: 'contest-path',
 				html: function() {
 					var res = [
-						(id_for_api[0] === 'c' ? $('<span>', {text: contest[1]}) :
+						(id_for_api[0] === 'c' ? $('<span>', {text: contest.name}) :
 							$('<a>', {
-								href: '/c/c' + contest[0],
-								text: contest[1]
+								href: '/c/c' + contest.id,
+								text: contest.name
 							}))
 					];
 
 					if (id_for_api[0] !== 'c')
 						res.push(' / ', (id_for_api[0] === 'r' ?
-							$('<span>', {text: rounds[0][1]}) :
+							$('<span>', {text: rounds[0].name}) :
 							$('<a>', {
-								href: '/c/r' + rounds[0][0],
-								text: rounds[0][1]
+								href: '/c/r' + rounds[0].id,
+								text: rounds[0].name
 							})));
 
 					if (id_for_api[0] === 'p') {
-						res.push(' / ', $('<span>', {text: problems[0][4]}));
+						res.push(' / ', $('<span>', {text: problems[0].name}));
 						// res.push($('<a>', {
 						// 	class: 'btn-small',
 						// 	href: '/api/contest/p' + problems[0][0] + '/statement/' +
@@ -3026,31 +3036,31 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		// Contest buttons
 		if (id_for_api[0] === 'c')
 			header.append($('<div>', {html: [
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest[0]))),
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest[0]))),
-				(actions.indexOf('D') === -1 ? '' : a_view_button('/c/c' + contest[0] + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest[0]))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest.id + '/add_round', 'Add round', 'btn-small', add_contest_round.bind(null, true, contest.id))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/c' + contest.id + '/edit', 'Edit', 'btn-small blue', edit_contest.bind(null, true, contest.id))),
+				(actions.indexOf('D') === -1 ? '' : a_view_button('/c/c' + contest.id + '/delete', 'Delete', 'btn-small red', delete_contest.bind(null, true, contest.id))),
 			]}));
 
 		// Round buttons
 		else if (id_for_api[0] === 'r')
 			header.append($('<div>', {html: [
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0][0] + '/attach_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, rounds[0][0]))),
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0][0] + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, rounds[0][0]))),
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0][0] + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, rounds[0][0])))
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0].id + '/attach_problem', 'Attach problem', 'btn-small', add_contest_problem.bind(null, true, rounds[0].id))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0].id + '/edit', 'Edit', 'btn-small blue', edit_contest_round.bind(null, true, rounds[0].id))),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/r' + rounds[0].id + '/delete', 'Delete', 'btn-small red', delete_contest_round.bind(null, true, rounds[0].id)))
 			]}));
 
 		// Problem buttons
 		else if (id_for_api[0] === 'p')
 			header.append($('<div>', {html: [
-				a_view_button('/p/' + problems[0][2], 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0][2])),
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0][0] + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problems[0][0]))),
+				a_view_button('/p/' + problems[0].problem_id, 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0].problem_id)),
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0].id + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problems[0].id))),
 				(actions.indexOf('A') === -1 ? '' :
 					$('<a>', {
 						class: 'btn-small blue',
 						text: 'Rejudge submissions',
-						click: rejudge_contest_problem_submissions.bind(null, problems[0][0])
+						click: rejudge_contest_problem_submissions.bind(null, problems[0].id)
 					})),
-				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0][0] + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problems[0][0])))
+				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0].id + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problems[0].id)))
 			]}));
 
 		var contest_dashboard;
@@ -3085,8 +3095,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				// Contest
 				dashboard.append(wrap_arrows('c', $('<a>', {
 					class: 'contest',
-					href: '/c/c' + contest[0],
-					text: contest[1]
+					href: '/c/c' + contest.id,
+					text: contest.name
 				})));
 
 				var dashboard_rounds = $('<div>', {
@@ -3099,22 +3109,22 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						class: 'round',
 						html: [
 							wrap_arrows('r', $('<a>', {
-								href: '/c/r' + round[0],
+								href: '/c/r' + round.id,
 								html: function() {
-									var res = [$('<span>', {text: round[1]})];
+									var res = [$('<span>', {text: round.name})];
 									if (rounds.length !== 1)
 										res.push($('<div>', {html: [
 											$('<label>', {text: "B:"}),
 											normalize_datetime($('<span>', {
-												datetime: round[4],
-												text: round[4]
+												datetime: round.begins,
+												text: round.begins
 											}), false, true)
 										]}),
 										$('<div>', {html: [
 											$('<label>', {text: "E:"}),
-											normalize_datetime($('<span>', (round[6] === null ?
+											normalize_datetime($('<span>', (round.ends === null ?
 												{text: 'never'}
-												: {datetime: round[6], text: round[6]})
+												: {datetime: round.ends, text: round.ends})
 											), false, true)
 										]}));
 									else
@@ -3122,29 +3132,29 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 											$('<tr>', {html: [
 												$('<td>', {text: 'Beginning'}),
 												normalize_datetime($('<td>', {
-													datetime: round[4],
-													text: round[4]
+													datetime: round.begins,
+													text: round.begins
 												}), false, true)
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: 'End'}),
-												normalize_datetime($('<td>', (round[6] === null ?
+												normalize_datetime($('<td>', (round.ends === null ?
 													{text: 'never'}
-													: {datetime: round[6], text: round[6]})
+													: {datetime: round.ends, text: round.ends})
 												), false, true)
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: "Full results"}),
-												normalize_datetime($('<td>', (round[5] === null ?
+												normalize_datetime($('<td>', (round.full_results === null ?
 													{text: 'immediately'}
-													: {datetime: round[5], text: round[5]})
+													: {datetime: round.full_results, text: round.full_results})
 												), false, true)
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: "Ranking since"}),
-												normalize_datetime($('<td>', (round[3] === null ?
+												normalize_datetime($('<td>', (round.ranking_exposure === null ?
 													{text: 'never'}
-													: {datetime: round[3], text: round[3]})
+													: {datetime: round.ranking_exposure, text: round.ranking_exposure})
 												), false, true)
 											]}),
 										]}));
@@ -3163,25 +3173,25 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						$('<center>', {html: [
 							$('<a>', {
 								class: 'btn-small',
-								href: '/api/contest/p' + problem[0] + '/statement/' + encodeURIComponent(problem[4]),
+								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem[4]),
 								text: 'Statement'
 							}),
-							(cannot_submit ? '' : a_view_button('/c/p' + problem[0] + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem[2], problem[4], (actions.indexOf('A') !== -1), problem[0]))),
+							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem.problem_id, problem.name, (actions.indexOf('A') !== -1), problem.id))),
 						]}).appendTo(dashboard.parent());
 
 					var elem = $('<a>', {
-						href: '/c/p' + problem[0],
-						style: (id_for_api[0] === 'p' ?
+						href: '/c/p' + problem.id,
+						style: (id_for_api.id === 'p' ?
 							'padding: 7px; line-height: 12px' : undefined),
 						html: [
-							$('<span>', {text: problem[4]}),
-							(id_for_api[0] === 'p' ? $('<table>', {html: [
+							$('<span>', {text: problem.name}),
+							(id_for_api.id === 'p' ? $('<table>', {html: [
 								$('<tr>', {html: [
 									$('<td>', {text: 'Final submission'}),
-									$('<td>', {text: problem[6] === 'LC' ?
+									$('<td>', {text: problem.final_selecting_method === 'LC' ?
 										'The last compiling' : 'One with highest score'})
 								]}),
-								(problem[7] ? $('<tr>', {html: [
+								(problem.reveal_score ? $('<tr>', {html: [
 									$('<td>', {text: 'Score revealing'}),
 									$('<td>', {text: 'Yes'})
 								]}) : $())
@@ -3189,7 +3199,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						]
 					});
 
-					problem2elem.add(problem[0], elem);
+					problem2elem.add(problem.id, elem);
 					wrap_arrows('p', elem).appendTo(dashboard_round);
 				}
 
@@ -3202,20 +3212,20 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					while (l < r) {
 						var mid = (l + r) >> 1;
 						var p = problems[mid];
-						if (p[1] < round[0])
+						if (p.round_id < round.id)
 							l = mid + 1;
 						else
 							r = mid;
 					}
 					// Check whether the round has ended
 					var cannot_submit = (actions.indexOf('p') === -1);
-					if (round[6] !== null && actions.indexOf('A') === -1) {
+					if (round.ends !== null && actions.indexOf('A') === -1) {
 						var curr_time = date_to_datetime_str(new Date());
-						var end_time = utcdt_or_tm_to_Date(round[6]);
+						var end_time = utcdt_or_tm_to_Date(round.ends);
 						cannot_submit |= (end_time <= curr_time);
 					}
 					// Append problems
-					while (l < problems.length && problems[l][1] == round[0])
+					while (l < problems.length && problems[l].round_id == round.id)
 						append_problem(dashboard_round, problems[l++], cannot_submit);
 				}
 
@@ -3310,14 +3320,14 @@ function view_contest_problem(as_modal, contest_problem_id, opt_hash /*= ''*/) {
 function contest_ranking(elem_, id_for_api) {
 	var elem = elem_;
 	API_call('/api/contest/' + id_for_api, function(cdata) {
-		var contest = cdata[0];
-		var rounds = cdata[1];
-		var problems = cdata[2];
-		var actions = contest[4];
-		var is_admin = (actions.indexOf('A') !== -1);
+		cdata = parse_contest_api_resp(cdata);
+		var contest = cdata.contest;
+		var rounds = cdata.rounds;
+		var problems = cdata.problems;
+		var is_admin = (contest.actions.indexOf('A') !== -1);
 
 		// Sort rounds by -items
-		rounds.sort(function(a, b) { return b[2] - a[2]; });
+		rounds.sort(function(a, b) { return b.item - a.item; });
 		// Map rounds (by id) to their items
 		var rid_to_item = new StaticMap();
 		for (var i = 0; i < rounds.length; ++i) {
@@ -3325,10 +3335,10 @@ function contest_ranking(elem_, id_for_api) {
 				// Add only those rounds that have full results visible and the ranking_exposure point has passed
 				var curr_time = date_to_datetime_str(new Date());
 				var full_results = normalize_datetime($('<span>', {
-					datetime: rounds[i][5]
+					datetime: rounds[i].full_results
 				}), false).text();
 				var ranking_exposure = normalize_datetime($('<span>', {
-					datetime: rounds[i][3]
+					datetime: rounds[i].ranking_exposure
 				}), false).text();
 
 				if (curr_time < full_results || curr_time < ranking_exposure)
@@ -3336,7 +3346,7 @@ function contest_ranking(elem_, id_for_api) {
 			}
 
 			// Show the round
-			rid_to_item.add(rounds[i][0], rounds[i][2]);
+			rid_to_item.add(rounds[i].id, rounds[i].item);
 		}
 		rid_to_item.prepare();
 
@@ -3344,25 +3354,24 @@ function contest_ranking(elem_, id_for_api) {
 		// the ones which don't belong to the valid rounds)
 		var tmp_problems = [];
 		for (i = 0; i < problems.length; ++i) {
-			var x = rid_to_item.get(problems[i][1]);
+			var x = rid_to_item.get(problems[i].round_id);
 			if (x != null) {
-				problems[i].push(x);
+				problems[i].round_item = x;
 				tmp_problems.push(problems[i]);
 			}
 		}
 		problems = tmp_problems;
-		var ritem_idx = (problems.length === 0 ? 0 : problems[0].length - 1);
 
 		// Sort problems by (-round_item, item)
 		problems.sort(function(a, b) {
-			return (a[ritem_idx] == b[ritem_idx] ? a[5] - b[5] :
-				b[ritem_idx] - a[ritem_idx]);
+			return (a.round_item == b.round_item ? a.item - b.item :
+				b.round_item - a.round_item);
 		});
 
 		// Map problems (by id) to their indexes in the above array
 		var problem_to_col_id = new StaticMap();
 		for (i = 0; i < problems.length; ++i)
-			problem_to_col_id.add(problems[i][0], i);
+			problem_to_col_id.add(problems[i].id, i);
 		problem_to_col_id.prepare();
 
 		API_call('/api/contest/' + id_for_api + '/ranking', function(data_) {
@@ -3372,10 +3381,10 @@ function contest_ranking(elem_, id_for_api) {
 				timed_hide_show(modal);
 				var message_to_show = '<p>There is no one in the ranking yet...</p>';
 				if (rounds.length === 1) {
-					if (rounds[0][3] === null)
+					if (rounds[0].ranking_exposure === null)
 						message_to_show = '<p>The current round will not be shown in the ranking.</p>';
-					else if (utcdt_or_tm_to_Date(rounds[0][3]) > new Date())
-						message_to_show = $('<p>Ranking will be available since: </p>').append(normalize_datetime($('<span>', {datetime: rounds[0][3]})));
+					else if (utcdt_or_tm_to_Date(rounds[0].ranking_exposure) > new Date())
+						message_to_show = $('<p>Ranking will be available since: </p>').append(normalize_datetime($('<span>', {datetime: rounds[0].ranking_exposure})));
 				}
 
 				return elem.append($('<center>', {
@@ -3406,20 +3415,18 @@ function contest_ranking(elem_, id_for_api) {
 			var j = 0; // Index of the current round
 			for (var i = 0; i < problems.length; ++i) {
 				var problem = problems[i];
-				while (rounds[j][0] != problem[1])
+				while (rounds[j].id != problem.round_id)
 					++j; // Skip rounds (that have no problems attached)
 
 				++colspan;
 				// If current round's problems end
-				if (i + 1 == problems.length || problems[i + 1][1] != problem[1]) {
+				if (i + 1 == problems.length || problems[i + 1].round_id != problem.round_id) {
 					tr.append($('<th>', {
 						colspan: colspan,
 						html: $('<a>', {
-							href: '/c/r' + rounds[j][0] + '#ranking',
-							text: rounds[j][1]
+							href: '/c/r' + rounds[j].id + '#ranking',
+							text: rounds[j].name
 						})
-						// html: a_view_button('/c/r' + rounds[j][0] + '#ranking', rounds[j][1], '',
-							// view_contest_round.bind(null, true, rounds[j][0], '#ranking'))
 					}));
 					colspan = 0;
 					++j;
@@ -3431,11 +3438,9 @@ function contest_ranking(elem_, id_for_api) {
 			for (i = 0; i < problems.length; ++i)
 				tr.append($('<th>', {
 					html: $('<a>', {
-						href: '/c/p' + problems[i][0] + '#ranking',
-						text: problems[i][3]
+						href: '/c/p' + problems[i].id + '#ranking',
+						text: problems[i].problem_label
 					})
-					// html: a_view_button('/c/p' + problems[i][0] + '#ranking', problems[i][3], '',
-						// view_contest_problem.bind(null, true, problems[i][0], '#ranking'))
 				}));
 			thead.append(tr);
 
