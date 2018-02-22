@@ -4111,7 +4111,7 @@ function open_calendar_on(time, text_input, hidden_input) {
 		modal[0].onmodalclose = function() {
 			$(document).off('keydown', arrow_update);
 			$(text_input).val(date_to_datetime_str(time));
-			$(hidden_input).val(time.getTime() / 1000 | 0);
+			$(hidden_input).val(Math.floor(time.getTime() / 1000));
 		};
 	});
 }
@@ -4129,7 +4129,7 @@ function datetime_input(name, allow_null /* = false */, initial_utcdt /* = undef
 	var elems = $('<input>', {
 		type: 'text',
 		class: 'calendar-input',
-		tm: (initial_utcdt === null ? undefined : dt.getTime() / 1000 | 0),
+		tm: (initial_utcdt === null ? undefined : Math.floor(dt.getTime() / 1000)),
 		value: (initial_utcdt === null ? '' : date_to_datetime_str(dt)),
 		readonly: true,
 		click: function() {
@@ -4138,7 +4138,7 @@ function datetime_input(name, allow_null /* = false */, initial_utcdt /* = undef
 	}).add('<input>', {
 		type: 'hidden',
 		name: name,
-		value: (initial_utcdt === null ? undefined : dt.getTime() / 1000 | 0),
+		value: (initial_utcdt === null ? undefined : Math.floor(dt.getTime() / 1000)),
 	});
 
 	if (allow_null)
