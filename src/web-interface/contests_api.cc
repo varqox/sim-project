@@ -222,16 +222,26 @@ void Sim::api_contest() {
 		return api_error403();
 
 	// Append contest
-	append("[\n[", contests_cid, ',',
-		jsonStringify(name),
-		(is_public ? ",true," : ",false,"),
-		user_mode_to_json(umode), ',');
+	append("{\n\"contest\":{\"id\":", contests_cid, ","
+		"\"name\":", jsonStringify(name), ","
+		"\"is_public\":", (is_public ? "true," : "false,"),
+		"\"user_mode\":", user_mode_to_json(umode), ","
+		"\"actions\":");
 	append_contest_actions_str();
 
 	decltype(mysql_date()) curr_date;
 
 	// Rounds
-	append("],\n[");
+	append("},\n\"rounds\":[");
+	// Rounds column names
+	append("\n[\"id\","
+		"\"name\","
+		"\"item\","
+		"\"ranking_exposure\","
+		"\"begins\","
+		"\"full_results\","
+		"\"ends\"]");
+
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure,"
 				" begins, full_results, ends FROM contest_rounds"
@@ -253,7 +263,7 @@ void Sim::api_contest() {
 		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null));
 
 	while (stmt.next()) {
-		append("\n[", contests_crid, ',',
+		append(",\n[", contests_crid, ',',
 			jsonStringify(name), ',',
 			item, ',');
 
@@ -270,16 +280,23 @@ void Sim::api_contest() {
 			append('"', full_results, "\",");
 
 		if (ends_is_null)
-			append("null],");
+			append("null]");
 		else
-			append('"', ends, "\"],");
+			append('"', ends, "\"]");
 	}
 
-	if (resp.content.back() == ',')
-		--resp.content.size;
-
 	// Problems
-	append("\n],\n[");
+	append("\n],\n\"problems\":[");
+	// Problems column names
+	append("\n[\"id\","
+		"\"round_id\","
+		"\"problem_id\","
+		"\"problem_label\","
+		"\"name\","
+		"\"item\","
+		"\"final_selecting_method\","
+		"\"reveal_score\"]");
+
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
 				" cp.problem_id, p.label, cp.name, cp.item,"
@@ -310,19 +327,17 @@ void Sim::api_contest() {
 		problem_label, name, item, final_selecting_method, reveal_score);
 
 	while (stmt.next()) {
-		append("\n[", contests_cpid, ',',
+		append(",\n[", contests_cpid, ',',
 			contests_crid, ',',
 			problem_id, ',',
 			jsonStringify(problem_label), ',',
 			jsonStringify(name), ',',
 			item, ',',
 			sfsm_to_json(SFSM(final_selecting_method)),
-			(reveal_score ? ",true" : ",false"), "],");
+			(reveal_score ? ",true" : ",false"), ']');
 	}
 
-	if (resp.content.back() == ',')
-		--resp.content.size;
-	append("\n]\n]");
+	append("\n]\n}");
 }
 
 void Sim::api_contest_round() {
@@ -377,36 +392,50 @@ void Sim::api_contest_round() {
 		return api_error404();
 
 	// Append contest
-	append("[\n[", contests_cid, ',',
-		jsonStringify(cname),
-		(is_public ? ",true," : ",false,"),
-		user_mode_to_json(umode), ',');
+	append("{\n\"contest\":{\"id\":", contests_cid, ","
+		"\"name\":", jsonStringify(cname), ","
+		"\"is_public\":", (is_public ? "true," : "false,"),
+		"\"user_mode\":", user_mode_to_json(umode), ","
+		"\"actions\":");
 	append_contest_actions_str();
 
 	// Round
-	append("],\n[\n[", contests_crid, ',',
-		jsonStringify(name), ',',
-		item, ',');
+	append("},\n\"rounds\":[\n{\"id\":", contests_crid, ","
+		"\"name\":", jsonStringify(name), ","
+		"\"item\":", item, ',');
 
+	append("\"ranking_exposure\":");
 	if (ranking_exp_is_null)
 		append("null,");
 	else
 		append('"', ranking_exposure, "\",");
 
-	append('"', begins, "\",");
+	append("\"begins\":\"", begins, "\",");
 
+	append("\"full_results\":");
 	if (full_res_is_null)
 		append("null,");
 	else
 		append('"', full_results, "\",");
 
+	append("\"ends\":");
 	if (ends_is_null)
-		append("null]");
+		append("null}");
 	else
-		append('"', ends, "\"]");
+		append('"', ends, "\"}");
 
 	// Problems
-	append("\n],\n[");
+	append("\n],\n\"problems\":[");
+	// Problems column names
+	append("\n[\"id\","
+		"\"round_id\","
+		"\"problem_id\","
+		"\"problem_label\","
+		"\"name\","
+		"\"item\","
+		"\"final_selecting_method\","
+		"\"reveal_score\"]");
+
 	stmt = mysql.prepare("SELECT cp.id, cp.problem_id, p.label, cp.name,"
 			" cp.item, cp.final_selecting_method, cp.reveal_score"
 		" FROM contest_problems cp"
@@ -423,19 +452,17 @@ void Sim::api_contest_round() {
 		final_selecting_method, reveal_score);
 
 	while (stmt.next()) {
-		append("\n[", contests_cpid, ',',
+		append(",\n[", contests_cpid, ',',
 			contests_crid, ',',
 			problem_id, ',',
 			jsonStringify(problem_label), ',',
 			jsonStringify(name), ',',
 			item, ',',
 			sfsm_to_json(SFSM(final_selecting_method)),
-			(reveal_score ? ",true" : ",false"), "],");
+			(reveal_score ? ",true" : ",false"), ']');
 	}
 
-	if (resp.content.back() == ',')
-		--resp.content.size;
-	append("\n]\n]");
+	append("\n]\n}");
 }
 
 void Sim::api_contest_problem() {
@@ -502,43 +529,48 @@ void Sim::api_contest_problem() {
 		return api_error404();
 
 	// Append contest
-	append("[\n[", contests_cid, ',',
-		jsonStringify(cname),
-		(is_public ? ",true," : ",false,"),
-		user_mode_to_json(umode), ',');
+	append("{\n\"contest\":{\"id\":", contests_cid, ","
+		"\"name\":", jsonStringify(cname), ","
+		"\"is_public\":", (is_public ? "true," : "false,"),
+		"\"user_mode\":", user_mode_to_json(umode), ","
+		"\"actions\":");
 	append_contest_actions_str();
 
 	// Round
-	append("],\n[\n[", contests_crid, ',',
-		jsonStringify(rname), ',',
-		ritem, ',');
+	append("},\n\"rounds\":[\n{\"id\":", contests_crid, ","
+		"\"name\":", jsonStringify(rname), ","
+		"\"item\":", ritem, ',');
 
+	append("\"ranking_exposure\":");
 	if (rranking_exp_is_null)
 		append("null,");
 	else
 		append('"', rranking_exposure, "\",");
 
-	append('"', rbegins, "\",");
+	append("\"begins\":\"", rbegins, "\",");
 
+	append("\"full_results\":");
 	if (rfull_res_is_null)
 		append("null,");
 	else
 		append('"', rfull_results, "\",");
 
+	append("\"ends\":");
 	if (rends_is_null)
-		append("null]");
+		append("null}");
 	else
-		append('"', rends, "\"]");
+		append('"', rends, "\"}");
 
 	// Problem
-	append("\n],\n[\n[", contests_cpid, ',',
-		contests_crid, ',',
-		problem_id, ',',
-		jsonStringify(problem_label), ',',
-		jsonStringify(pname), ',',
-		pitem, ',',
-		sfsm_to_json(SFSM(final_selecting_method)),
-		(reveal_score ? ",true" : ",false"), "]\n]\n]");
+	append("\n],\n\"problems\":[\n{\"id\":", contests_cpid, ","
+		"\"round_id\":", contests_crid, ","
+		"\"problem_id\":", problem_id, ","
+		"\"problem_label\":", jsonStringify(problem_label), ","
+		"\"name\":", jsonStringify(pname), ","
+		"\"item\":", pitem, ","
+		"\"final_selecting_method\":",
+			sfsm_to_json(SFSM(final_selecting_method)), ","
+		"\"reveal_score\":", (reveal_score ? "true" : "false"), "}\n]\n}");
 }
 
 void Sim::api_contest_add() {
