@@ -822,13 +822,14 @@ function Lister(elem) {
 			dataType: 'json',
 			success: function(data) {
 				var modal = this_.elem.parents('.modal');
-				this_.process_api_response(prase_api_resp(data), modal);
+				data = prase_api_resp(data);
+				this_.process_api_response(data, modal);
 
 				remove_loader(this_.elem.parent());
 				timed_hide_show(modal);
 				centerize_modal(modal, false);
 
-				if (data.length == 0)
+				if (data.length === 0)
 					return; // No more data to load
 
 				lock = false;
