@@ -327,7 +327,10 @@ void Sim::api_user_delete() {
 		return api_error403("Invalid password");
 	}
 
-	// TODO: add other things like problems,, contests, messages, files etc.
+	// TODO: make a job out of it
+	api_error403("It is disabled for now because it is not safe");
+
+	// TODO: add other things like problems, contest_users, contests, messages, files etc.
 	stmt = mysql.prepare("DELETE FROM submissions WHERE owner=?");
 	stmt.bindAndExecute(users_uid);
 
