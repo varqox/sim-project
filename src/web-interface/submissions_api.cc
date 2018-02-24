@@ -18,11 +18,11 @@ void Sim::append_submission_status(SubmissionStatus status,
 		if (status == SS::PENDING)
 			append("[\"\",\"Pending\"]");
 		else if (status == SS::COMPILATION_ERROR)
-			append("[\" purple\",\"Compilation failed\"]");
+			append("[\"purple\",\"Compilation failed\"]");
 		else if (status == SS::CHECKER_COMPILATION_ERROR)
-			append("[\" blue\",\"Checker compilation failed\"]");
+			append("[\"blue\",\"Checker compilation failed\"]");
 		else if (status == SS::JUDGE_ERROR)
-			append("[\" blue\",\"Judge error\"]");
+			append("[\"blue\",\"Judge error\"]");
 		else
 			append("[\"\",\"Unknown\"]");
 
@@ -241,7 +241,7 @@ void Sim::api_submissions() {
 
 	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	// Column names
-	append("[\n["
+	append("[\n{\"columns\":["
 		"\"id\","
 		"\"type\","
 		"\"owner_id\","
@@ -255,7 +255,7 @@ void Sim::api_submissions() {
 		"\"contest_id\","
 		"\"contest_name\","
 		"\"submit_time\","
-		"\"status\","
+		"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
 		"\"score\","
 		"\"actions\"");
 
@@ -266,7 +266,7 @@ void Sim::api_submissions() {
 			"\"final_report\","
 			"\"full_results\"");
 
-	append(']');
+	append("]}");
 
 	auto curr_date = mysql_date();
 	InplaceBuff<30> boundary_id;

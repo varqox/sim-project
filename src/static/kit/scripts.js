@@ -580,6 +580,39 @@ function dialogue_modal_request(title, info_html, go_text, go_classes, target_ur
 	);
 }
 
+function parse_api_resp(data) {
+	var names = data[0];
+	if (names === undefined || (names.columns === undefined && names.fields === undefined))
+		return data;
+
+	function transform(names, data) {
+		var to_obj = function(names, array) {
+			var obj = {};
+			var e = Math.min(names.length, array.length);
+			for (var j = 0; j < e; ++j) {
+				if (names[j].name === undefined)
+					obj[names[j]] = array[j];
+				else
+					obj[names[j].name] = transform(names[j], array[j]);
+			}
+
+			return obj;
+		};
+
+		if (names.columns !== undefined) {
+			var res = [];
+			for (var i = 0; i < data.length; ++i)
+				res.push(to_obj(names.columns, data[i]));
+			return res;
+		}
+
+		// names.fields
+		return to_obj(names.fields, data);
+	}
+
+	return transform(names, data.slice(1));
+}
+
 function API_call(ajax_url, success_handler, loader_parent) {
 	var thiss = this;
 	var args = arguments;
@@ -588,40 +621,15 @@ function API_call(ajax_url, success_handler, loader_parent) {
 		type: 'GET',
 		url: ajax_url,
 		dataType: 'json',
-		success: function() {
+		success: function(data, status, jqXHR) {
 			remove_loader(loader_parent);
-			success_handler.apply(this, arguments);
+			success_handler.call(this, parse_api_resp(data), status, jqXHR);
 		},
 		error: function(resp, status) {
 			show_error_via_loader(loader_parent, resp, status,
 				setTimeout.bind(null, API_call.bind(null, thiss), 0)); // Avoid recursion
 		}
 	});
-}
-
-function prase_api_resp(data) {
-	var names = data[0];
-	if (names === undefined || names[0] !== 'id')
-		return data;
-
-	var res = [];
-	for (var i = 1; i < data.length; ++i) {
-		var obj = {};
-		var e = Math.min(names.length, data[i].length);
-		e = names.length;
-		for (var j = 0; j < e; ++j)
-			obj[names[j]] = data[i][j];
-		res.push(obj);
-	}
-
-	return res;
-}
-function parse_contest_api_resp(data) {
-	return {
-		contest: data.contest,
-		rounds: prase_api_resp(data.rounds),
-		problems: prase_api_resp(data.problems)
-	};
 }
 
 /* ================================ Tab menu ================================ */
@@ -780,10 +788,10 @@ function view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_
 		var modal = elem.parent().parent();
 		if (as_modal)
 			timed_hide(modal);
-		API_call(ajax_url, function(data) {
+		API_call(ajax_url, function() {
 			if (as_modal && (show_on_success !== false))
 				timed_hide_show(modal);
-			success_handler.call(elem, prase_api_resp(data));
+			success_handler.apply(elem, arguments);
 			if (as_modal)
 				centerize_modal(modal);
 		}, elem);
@@ -822,7 +830,7 @@ function Lister(elem) {
 			dataType: 'json',
 			success: function(data) {
 				var modal = this_.elem.parents('.modal');
-				data = prase_api_resp(data);
+				data = parse_api_resp(data);
 				this_.process_api_response(data, modal);
 
 				remove_loader(this_.elem.parent());
@@ -2101,9 +2109,9 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 										text: s.submit_time
 									}), true),
 									$('<td>', {
-										class: 'status ' + s.status[0],
-										text: (s.status[0].lastIndexOf('initial') === -1 ?
-											'' : 'Initial: ') + s.status[1]
+										class: 'status ' + s.status.class,
+										text: (s.status.class.lastIndexOf('initial') === -1 ?
+											'' : 'Initial: ') + s.status.text
 									}),
 									$('<td>', {text: s.score}),
 									$('<td>', {text: s.type})
@@ -2259,9 +2267,9 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 			// Status
 			row.append($('<td>', {
-				class: 'status ' + x.status[0],
-				text: (x.status[0].lastIndexOf('initial') === -1 ? ''
-					: 'Initial: ') + x.status[1]
+				class: 'status ' + x.status.class,
+				text: (x.status.class.lastIndexOf('initial') === -1 ? ''
+					: 'Initial: ') + x.status.text
 			}));
 
 			// Score
@@ -2870,7 +2878,6 @@ function edit_contest(as_modal, contest_id) {
 }
 function edit_contest_round(as_modal, contest_round_id) {
 	view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
-		data = parse_contest_api_resp(data);
 		if (data.contest.actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -2908,7 +2915,6 @@ function edit_contest_round(as_modal, contest_round_id) {
 }
 function edit_contest_problem(as_modal, contest_problem_id) {
 	view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
-		data = parse_contest_api_resp(data);
 		if (data.contest.actions.indexOf('A') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -2983,7 +2989,6 @@ function delete_contest_problem(as_modal, contest_problem_id) {
 }
 function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 	view_ajax(as_modal, '/api/contest/' + id_for_api, function(data) {
-		data = parse_contest_api_resp(data);
 		var contest = data.contest;
 		var rounds = data.rounds;
 		var problems = data.problems;
@@ -3235,10 +3240,9 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						API_call('/api/submissions/' + id_for_api.toUpperCase() +
 							'/u' + logged_user_id() + '/tF' + query_suffix, function(data)
 						{
-							data = prase_api_resp(data);
 							if (data.length > 0) {
 								for (var i in data) {
-									(problem2elem.get(data[i].contest_problem_id) || $()).addClass('status ' + data[i].status[0]);
+									(problem2elem.get(data[i].contest_problem_id) || $()).addClass('status ' + data[i].status.class);
 								}
 								color_problems('/<' + data[data.length - 1].id);
 							}
@@ -3320,7 +3324,6 @@ function view_contest_problem(as_modal, contest_problem_id, opt_hash /*= ''*/) {
 function contest_ranking(elem_, id_for_api) {
 	var elem = elem_;
 	API_call('/api/contest/' + id_for_api, function(cdata) {
-		cdata = parse_contest_api_resp(cdata);
 		var contest = cdata.contest;
 		var rounds = cdata.rounds;
 		var problems = cdata.problems;
@@ -3374,9 +3377,8 @@ function contest_ranking(elem_, id_for_api) {
 			problem_to_col_id.add(problems[i].id, i);
 		problem_to_col_id.prepare();
 
-		API_call('/api/contest/' + id_for_api + '/ranking', function(data_) {
+		API_call('/api/contest/' + id_for_api + '/ranking', function(data) {
 			var modal = elem.parents('.modal');
-			var data = data_;
 			if (data.length == 0) {
 				timed_hide_show(modal);
 				var message_to_show = '<p>There is no one in the ranking yet...</p>';
@@ -3447,61 +3449,61 @@ function contest_ranking(elem_, id_for_api) {
 			// Add score for each user add this to the user's info
 			var submissions;
 			for (i = 0; i < data.length; ++i) {
-				submissions = data[i][2];
+				submissions = data[i].submissions;
 				var total_score = 0;
 				// Count only valid problems (to fix potential discrepancies
 				// between ranking submissions and the contest structure)
 				for (j = 0; j < submissions.length; ++j)
-					if (problem_to_col_id.get(submissions[j][2]) != null)
-						total_score += submissions[j][4];
+					if (problem_to_col_id.get(submissions[j].contest_problem_id) !== null)
+						total_score += submissions[j].score;
 
-				data[i].push(total_score);
+				data[i].score = total_score;
 			}
 
-			// Sort users (and their submissions) by their score
-			data.sort(function(a, b) { return b[3] - a[3]; });
+			// Sort users (and their submissions) by their -score
+			data.sort(function(a, b) { return b.score - a.score; });
 
 			// Add rows
 			var tbody = $('<tbody>');
-			var prev_score = data[0][3] + 1;
+			var prev_score = data[0].score + 1;
 			var place;
 			for (i = 0; i < data.length; ++i) {
 				var user_row = data[i];
 				tr = $('<tr>');
 				// Place
-				if (prev_score != user_row[3]) {
+				if (prev_score != user_row.score) {
 					place = i + 1;
-					prev_score = user_row[3];
+					prev_score = user_row.score;
 				}
 				tr.append($('<td>', {text: place}));
 				// User
-				if (user_row[0] === null)
-					tr.append($('<td>', {text: user_row[1]}));
+				if (user_row.id === null)
+					tr.append($('<td>', {text: user_row.name}));
 				else {
 					tr.append($('<td>', {
-						html: a_view_button('/u/' + user_row[0], user_row[1], '',
-							view_user.bind(null, true, user_row[0]))
+						html: a_view_button('/u/' + user_row.id, user_row.name, '',
+							view_user.bind(null, true, user_row.id))
 					}));
 				}
 				// Score
-				tr.append($('<td>', {text: user_row[3]}));
+				tr.append($('<td>', {text: user_row.score}));
 				// Submissions
 				var row = new Array(problems.length);
-				submissions = data[i][2];
+				submissions = data[i].submissions;
 				for (j = 0; j < submissions.length; ++j) {
-					var x = problem_to_col_id.get(submissions[j][2]);
+					var x = problem_to_col_id.get(submissions[j].contest_problem_id);
 					if (x != null) {
-						if (submissions[j][0] === null)
+						if (submissions[j].id === null)
 							row[x] = $('<td>', {
-								class: 'status ' + submissions[j][3][0],
-								text: submissions[j][4]
+								class: 'status ' + submissions[j].status.class,
+								text: submissions[j].score
 							});
 						else {
 							row[x] = $('<td>', {
-								class: 'status ' + submissions[j][3][0],
-								html: a_view_button('/s/' + submissions[j][0],
-									submissions[j][4], '',
-									view_submission.bind(null, true, submissions[j][0]))
+								class: 'status ' + submissions[j].status.class,
+								html: a_view_button('/s/' + submissions[j].id,
+									submissions[j].score, '',
+									view_submission.bind(null, true, submissions[j].id))
 							});
 						}
 					}
