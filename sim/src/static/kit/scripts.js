@@ -2505,15 +2505,15 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-		var actions = data.actions;
+		var problem = data[0];
+		var actions = problem.actions;
 
 		this.append($('<div>', {
 			class: 'header',
 			html: $('<h1>', {
-					text: data.name
+					text: problem.name
 				}).add('<div>', {
-					html: ActionsToHTML.problem(data.id, actions, data.name, true)
+					html: ActionsToHTML.problem(problem.id, actions, problem.name, true)
 				})
 		})).append($('<center>', {
 			class: 'always_in_view',
@@ -2522,17 +2522,17 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 				html: $('<div>', {
 					class: 'type',
 					html: $('<label>', {text: 'Type'}).add('<span>', {
-						text: data.type[0].toLowerCase() + data.type.slice(1)
+						text: problem.type[0].toLowerCase() + problem.type.slice(1)
 					})
 				})
 				.add($('<div>', {
 					class: 'name',
 					html: $('<label>', {text: 'Name'})
-				}).append(text_to_safe_html(data.name)))
+				}).append(text_to_safe_html(problem.name)))
 				.add($('<div>', {
 					class: 'label',
 					html: $('<label>', {text: 'Label'})
-				}).append(text_to_safe_html(data.label)))
+				}).append(text_to_safe_html(problem.label)))
 				.add($('<div>', {
 					class: 'tags',
 					html: $('<label>', {text: 'Tags'})
@@ -2544,8 +2544,8 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 			$(this).find('.problem-info').append($('<div>', {
 					class: 'owner',
 					html: $('<label>', {text: 'Owner'}).add(
-						a_view_button('/u/' + data.owner_id, data.owner_username,
-							undefined, view_user.bind(null, true, data.owner_id)))
+						a_view_button('/u/' + problem.owner_id, problem.owner_username,
+							undefined, view_user.bind(null, true, problem.owner_id)))
 				}));
 
 		if (actions.indexOf('a') !== -1)
@@ -2553,8 +2553,8 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					class: 'added',
 					html: $('<label>', {text: 'Added'})
 				}).append(normalize_datetime($('<span>', {
-					datetime: data.added,
-					text: data.added
+					datetime: problem.added,
+					text: problem.added
 				}), true)));
 
 		var main = $(this);
@@ -2581,7 +2581,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 				main.append($('<pre>', {
 					class: 'simfile',
 					style: 'text-align: initial',
-					text: data.simfile
+					text: problem.simfile
 				}));
 			});
 
@@ -3180,11 +3180,11 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 					var elem = $('<a>', {
 						href: '/c/p' + problem.id,
-						style: (id_for_api.id === 'p' ?
+						style: (id_for_api[0] === 'p' ?
 							'padding: 7px; line-height: 12px' : undefined),
 						html: [
 							$('<span>', {text: problem.name}),
-							(id_for_api.id === 'p' ? $('<table>', {html: [
+							(id_for_api[0] === 'p' ? $('<table>', {html: [
 								$('<tr>', {html: [
 									$('<td>', {text: 'Final submission'}),
 									$('<td>', {text: problem.final_selecting_method === 'LC' ?
