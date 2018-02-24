@@ -18,6 +18,10 @@ void Sim::api_users() {
 	query.append("SELECT id, username, first_name, last_name, email, type"
 		" FROM users");
 
+	enum ColumnIdx {
+		UID, USERNAME, FNAME, LNAME, EMAIL, TYPE
+	};
+
 	auto query_append = [&, where_was_added = false](auto&&... args) mutable {
 		if (where_was_added)
 			query.append(" AND ", std::forward<decltype(args)>(args)...);
@@ -77,27 +81,34 @@ void Sim::api_users() {
 	query.append(" ORDER BY id LIMIT 50");
 	auto res = mysql.query(query);
 
-	append("[");
+	append("[\n{\"columns\":["
+			"\"id\","
+			"\"username\","
+			"\"first_name\","
+			"\"last_name\","
+			"\"email\","
+			"\"type\","
+			"\"actions\""
+		"]}");
 
 	while (res.next()) {
-		append("\n[", res[0], "," // id
-			"\"", res[1], "\",", // username
-			jsonStringify(res[2]), ',', // first_name
-			jsonStringify(res[3]), ',', // last_name
-			jsonStringify(res[4]), ','); // email
+		append(",\n[", res[UID], ","
+			"\"", res[USERNAME], "\",",
+			jsonStringify(res[FNAME]), ',',
+			jsonStringify(res[LNAME]), ',',
+			jsonStringify(res[EMAIL]), ',');
 
-		UserType utype {UserType(strtoull(res[5]))};
+		UserType utype {UserType(strtoull(res[TYPE]))};
 		switch (utype) {
-		case UserType::ADMIN: append("\"admin\","); break;
-		case UserType::TEACHER: append("\"teacher\","); break;
-		case UserType::NORMAL: append("\"normal\","); break;
+		case UserType::ADMIN: append("\"Admin\","); break;
+		case UserType::TEACHER: append("\"Teacher\","); break;
+		case UserType::NORMAL: append("\"Normal\","); break;
 		}
 
 		// Allowed actions
 		append('"');
 
-		// res[0] == id
-		auto perms = users_get_permissions(res[0], utype);
+		auto perms = users_get_permissions(res[UID], utype);
 		if (uint(perms & PERM::VIEW))
 			append('v');
 		if (uint(perms & PERM::EDIT))
@@ -115,11 +126,8 @@ void Sim::api_users() {
 		if (uint(perms & PERM::MAKE_NORMAL))
 			append('N');
 
-		append("\"],");
+		append("\"]");
 	}
-
-	if (resp.content.back() == ',')
-		--resp.content.size;
 
 	append("\n]");
 }
@@ -320,7 +328,6 @@ void Sim::api_user_delete() {
 	}
 
 	// TODO: add other things like problems,, contests, messages, files etc.
-
 	stmt = mysql.prepare("DELETE FROM submissions WHERE owner=?");
 	stmt.bindAndExecute(users_uid);
 

@@ -1361,7 +1361,7 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
+		var user = data[0];
 
 		this.append($('<div>', {
 			class: 'header',
@@ -1369,11 +1369,11 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 				style: 'margin: auto 0',
 				html: $('<a>', {
 					href: '/u/' + user_id,
-					text: data[1]
+					text: user.username
 				})
-			}).append(text_to_safe_html(' (' + data[2] + ' ' + data[3] + ')'))
+			}).append(text_to_safe_html(' (' + user.first_name + ' ' + user.last_name + ')'))
 			.add('<div>', {
-				html: ActionsToHTML.user(user_id, data[6], true)
+				html: ActionsToHTML.user(user_id, user.actions, true)
 			})
 		})).append($('<center>', {
 			class: 'always_in_view',
@@ -1382,27 +1382,26 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 				html: $('<div>', {
 					class: 'first-name',
 					html: $('<label>', {text: 'First name'})
-				}).append(text_to_safe_html(data[2]))
+				}).append(text_to_safe_html(user.first_name))
 				.add($('<div>', {
 					class: 'last-name',
 					html: $('<label>', {text: 'Last name'})
-				}).append(text_to_safe_html(data[3])))
+				}).append(text_to_safe_html(user.last_name)))
 				.add($('<div>', {
 					class: 'username',
 					html: $('<label>', {text: 'Username'})
-				}).append(text_to_safe_html(data[1])))
+				}).append(text_to_safe_html(user.username)))
 				.add($('<div>', {
 					class: 'type',
 					html: $('<label>', {text: 'Account type'}).add('<span>', {
-						class: data[5],
-						text: String(data[5]).slice(0, 1).toUpperCase() +
-							String(data[5]).slice(1)
+						class: user.type[0].toLowerCase() + user.type.slice(1),
+						text: user.type
 					})
 				}))
 				.add($('<div>', {
 					class: 'email',
 					html: $('<label>', {text: 'Email'})
-				}).append(text_to_safe_html(data[4])))
+				}).append(text_to_safe_html(user.email)))
 			})
 		}));
 
@@ -1436,9 +1435,8 @@ function edit_user(as_modal, user_id) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-
-		var actions = data[6];
+		var user = data[0];
+		var actions = user.actions;
 		if (actions.indexOf('E') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -1449,7 +1447,7 @@ function edit_user(as_modal, user_id) {
 			Form.field_group('Username', {
 				type: 'text',
 				name: 'username',
-				value: data[1],
+				value: user.username,
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
@@ -1463,21 +1461,21 @@ function edit_user(as_modal, user_id) {
 							res.push($('<option>', {
 								value: 'A',
 								text: 'Admin',
-								selected: ('admin' === data[5] ? true : undefined)
+								selected: ('Admin' === user.type ? true : undefined)
 							}));
 
 						if (actions.indexOf('T') !== -1)
 							res.push($('<option>', {
 								value: 'T',
 								text: 'Teacher',
-								selected: ('teacher' === data[5] ? true : undefined)
+								selected: ('Teacher' === user.type ? true : undefined)
 							}));
 
 						if (actions.indexOf('N') !== -1)
 							res.push($('<option>', {
 								value: 'N',
 								text: 'Normal',
-								selected: ('normal' === data[5] ? true : undefined)
+								selected: ('Normal' === user.type ? true : undefined)
 							}));
 
 						return res;
@@ -1486,21 +1484,21 @@ function edit_user(as_modal, user_id) {
 			)).add(Form.field_group('First name', {
 				type: 'text',
 				name: 'first_name',
-				value: data[2],
+				value: user.first_name,
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
 			})).add(Form.field_group('Last name', {
 				type: 'text',
 				name: 'last_name',
-				value: data[3],
+				value: user.last_name,
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
 			})).add(Form.field_group('Email', {
 				type: 'email',
 				name: 'email',
-				value: data[4],
+				value: user.email,
 				size: 24,
 				// maxlength: 'TODO...',
 				required: true
@@ -1523,9 +1521,8 @@ function delete_user(as_modal, user_id) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-
-		var actions = data[6];
+		var user = data[0];
+		var actions = user.actions;
 		if (actions.indexOf('D') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -1537,7 +1534,7 @@ function delete_user(as_modal, user_id) {
 		var p = $('<p>', {
 			style: 'margin: 0 0 20px; text-align: center',
 			html: 'You are going to delete the user '
-		}).append(a_view_button('/u/' + user_id, data[1], undefined,
+		}).append(a_view_button('/u/' + user_id, user.username, undefined,
 			view_user.bind(null, true, user_id))).append('. As it cannot be undone,<br>you have to confirm it with YOUR password.');
 
 		if (user_id == logged_user_id()) {
@@ -1576,16 +1573,15 @@ function change_user_password(as_modal, user_id) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-
-		var actions = data[6];
+		var user = data[0];
+		var actions = user.actions;
 		if (actions.indexOf('P') === -1 && actions.indexOf('p') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
 
-		if (actions.indexOf('P') === -1 && $('.navbar .user > strong').text() != data[1])
+		if (actions.indexOf('P') === -1 && $('.navbar .user > strong').text() != user.username)
 			return show_error_via_loader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
@@ -1650,23 +1646,22 @@ function UsersLister(elem, query_suffix /*= ''*/) {
 
 		for (var x in data) {
 			x = data[x];
-			this_.query_suffix = '/>' + x[0];
+			this_.query_suffix = '/>' + x.id;
 
 			var row = $('<tr>');
-			row.append($('<td>', {text: x[0]}));
-			row.append($('<td>', {text: x[1]}));
-			row.append($('<td>', {text: x[2]}));
-			row.append($('<td>', {text: x[3]}));
-			row.append($('<td>', {text: x[4]}));
+			row.append($('<td>', {text: x.id}));
+			row.append($('<td>', {text: x.username}));
+			row.append($('<td>', {text: x.first_name}));
+			row.append($('<td>', {text: x.last_name}));
+			row.append($('<td>', {text: x.email}));
 			row.append($('<td>', {
-				class: x[5],
-				text: String(x[5]).slice(0, 1).toUpperCase() +
-					String(x[5]).slice(1)
+				class: x.type[0].toLowerCase() + x.type.slice(1),
+				text: x.type
 			}));
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.user(x[0], x[6])
+				html: ActionsToHTML.user(x.id, x.actions)
 			}));
 
 			this_.elem.children('tbody').append(row);
