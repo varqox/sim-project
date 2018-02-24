@@ -5,6 +5,8 @@
 void Sim::api_handle() {
 	STACK_UNWINDING_MARK;
 
+	resp.headers["Content-type"] = "text/plain; charset=utf-8";
+
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "logs")
 		return api_logs();

@@ -29,6 +29,10 @@ void Sim::api_problems() {
 	qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner=u.id"
 		" WHERE p.type!=" JTYPE_VOID_STR);
 
+	enum ColumnIdx {
+		PID, ADDED, TYPE, NAME, LABEL, OWNER, OWN_USERNAME, SIMFILE
+	};
+
 	// Get the overall permissions to the problems set
 	session_open();
 	problems_perms = problems_get_permissions();
@@ -114,8 +118,23 @@ void Sim::api_problems() {
 	qfields.append(qwhere, " ORDER BY p.id DESC LIMIT 50");
 	auto res = mysql.query(qfields);
 
-	resp.headers["content-type"] = "text/plain; charset=utf-8";
-	append("[");
+	// Column names
+	append("[\n{\"columns\":["
+			"\"id\","
+			"\"added\","
+			"\"type\","
+			"\"name\","
+			"\"label\","
+			"\"owner_id\","
+			"\"owner_username\","
+			"\"actions\","
+			"{\"name\":\"tags\",\"fields\":["
+				"\"normal\","
+				"\"hidden\""
+			"]},"
+			"\"simfile\","
+			"\"memory_limit\""
+		"]}");
 
 	// Tags selector
 	uint64_t pid;
@@ -127,35 +146,33 @@ void Sim::api_problems() {
 	stmt.res_bind_all(tag);
 
 	while (res.next()) {
-		ProblemType problem_type {ProblemType(strtoull(res[2]))};
-		// res[5] == owner
-		auto perms = problems_get_permissions(res[5], problem_type);
+		ProblemType problem_type {ProblemType(strtoull(res[TYPE]))};
+		auto perms = problems_get_permissions(res[OWNER], problem_type);
 
 		// Id
-		append("\n[", res[0], ",");
+		append(",\n[", res[PID], ",");
 
 		// Added
 		if (uint(perms & PERM::VIEW_ADD_TIME))
-			append("\"", res[1], "\",");
+			append("\"", res[ADDED], "\",");
 		else
 			append("null,");
 
 		// Type
 		append("\"", proiblem_type_str(problem_type), "\",");
 		// Name
-		append(jsonStringify(res[3]), ',');
+		append(jsonStringify(res[NAME]), ',');
 		// Label
-		append(jsonStringify(res[4]), ',');
+		append(jsonStringify(res[LABEL]), ',');
 
+		// Owner
 		if (uint(perms & PERM::VIEW_OWNER)) {
-			// Owner
-			append(res[5], ',');
+			append(res[OWNER], ',');
 
-			// Owner's username
-			if (res.is_null(6))
+			if (res.is_null(OWN_USERNAME))
 				append("null,");
 			else
-				append("\"", res[6], "\","); // username
+				append("\"", res[OWN_USERNAME], "\",");
 		} else
 			append("null,null,");
 
@@ -200,7 +217,7 @@ void Sim::api_problems() {
 		append("\",");
 
 		auto append_tags = [&](bool h) {
-			pid = strtoull(res[0]);
+			pid = strtoull(res[PID]);
 			hidden = h;
 			stmt.execute();
 			if (stmt.next())
@@ -229,16 +246,13 @@ void Sim::api_problems() {
 		if (select_specified_problem and uint(perms & PERM::VIEW_SIMFILE)) {
 			ConfigFile cf;
 			cf.addVars("memory_limit");
-			cf.loadConfigFromString(res[7].to_string());
-			append(',', jsonStringify(res[7]), // simfile
+			cf.loadConfigFromString(res[SIMFILE].to_string());
+			append(',', jsonStringify(res[SIMFILE]), // simfile
 				',', jsonStringify(cf.getVar("memory_limit").asString()));
 		}
 
-		append("],");
+		append("]");
 	}
-
-	if (resp.content.back() == ',')
-		--resp.content.size;
 
 	append("\n]");
 }

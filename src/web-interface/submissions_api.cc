@@ -86,7 +86,7 @@ void Sim::api_submissions() {
 			" cu.user_id=", session_user_id,
 		" WHERE s.type!=" STYPE_VOID_STR);
 
-	enum Foo {
+	enum ColumnIdx {
 		SID, STYPE, SOWNER, CUMODE, POWNER, SOWN_USERNAME, PROB_ID, PNAME, CPID,
 		CP_NAME, CP_FSM, REVEAL_SCORE, CRID, CR_NAME, FULL_RES, CRENDS, CID,
 		CNAME, SUBMIT_TIME, STATUS, SCORE, SOWN_FNAME, SOWN_LNAME, INIT_REPORT,
@@ -239,7 +239,6 @@ void Sim::api_submissions() {
 	auto res = mysql.query(concat(qfields, qwhere_id_cond,
 		" ORDER BY s.id DESC LIMIT 50"));
 
-	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	// Column names
 	append("[\n{\"columns\":["
 		"\"id\","

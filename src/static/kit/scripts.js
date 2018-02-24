@@ -2398,7 +2398,7 @@ function reupload_problem(as_modal, problem_id) {
 
 		data = data[0];
 
-		var actions = data[7];
+		var actions = data.actions;
 		if (actions.indexOf('R') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
@@ -2409,14 +2409,14 @@ function reupload_problem(as_modal, problem_id) {
 			Form.field_group("Problem's name", {
 				type: 'text',
 				name: 'name',
-				value: data[3],
+				value: data.name,
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile',
 			}).add(Form.field_group("Problem's label", {
 				type: 'text',
 				name: 'label',
-				value: data[4],
+				value: data.label,
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile or make from name',
@@ -2427,21 +2427,21 @@ function reupload_problem(as_modal, problem_id) {
 					html: $('<option>', {
 						value: 'PUB',
 						text: 'Public',
-						selected: ('Public' == data[2] ? true : undefined)
+						selected: ('Public' == data.type ? true : undefined)
 					}).add('<option>', {
 						value: 'PRI',
 						text: 'Private',
-						selected: ('Private' == data[2] ? true : undefined)
+						selected: ('Private' == data.type ? true : undefined)
 					}).add('<option>', {
 						value: 'CON',
 						text: 'Contest only',
-						selected: ('Contest only' == data[2] ? true : undefined)
+						selected: ('Contest only' == data.type ? true : undefined)
 					})
 				})
 			)).add(Form.field_group('Memory limit [MB]', {
 				type: 'text',
 				name: 'mem_limit',
-				value: data[10],
+				value: data.memory_limit,
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'Take from Simfile',
@@ -2511,14 +2511,14 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 			});
 
 		data = data[0];
-		var actions = data[7];
+		var actions = data.actions;
 
 		this.append($('<div>', {
 			class: 'header',
 			html: $('<h1>', {
-					text: data[3]
+					text: data.name
 				}).add('<div>', {
-					html: ActionsToHTML.problem(data[0], actions, data[3], true)
+					html: ActionsToHTML.problem(data.id, actions, data.name, true)
 				})
 		})).append($('<center>', {
 			class: 'always_in_view',
@@ -2527,18 +2527,17 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 				html: $('<div>', {
 					class: 'type',
 					html: $('<label>', {text: 'Type'}).add('<span>', {
-						text: String(data[2]).slice(0, 1).toLowerCase() +
-							String(data[2]).slice(1)
+						text: data.type[0].toLowerCase() + data.type.slice(1)
 					})
 				})
 				.add($('<div>', {
 					class: 'name',
 					html: $('<label>', {text: 'Name'})
-				}).append(text_to_safe_html(data[3])))
+				}).append(text_to_safe_html(data.name)))
 				.add($('<div>', {
 					class: 'label',
 					html: $('<label>', {text: 'Label'})
-				}).append(text_to_safe_html(data[4])))
+				}).append(text_to_safe_html(data.label)))
 				.add($('<div>', {
 					class: 'tags',
 					html: $('<label>', {text: 'Tags'})
@@ -2550,8 +2549,8 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 			$(this).find('.problem-info').append($('<div>', {
 					class: 'owner',
 					html: $('<label>', {text: 'Owner'}).add(
-						a_view_button('/u/' + data[5], data[6], undefined,
-							view_user.bind(null, true, data[5])))
+						a_view_button('/u/' + data.owner_id, data.owner_username,
+							undefined, view_user.bind(null, true, data.owner_id)))
 				}));
 
 		if (actions.indexOf('a') !== -1)
@@ -2559,8 +2558,8 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					class: 'added',
 					html: $('<label>', {text: 'Added'})
 				}).append(normalize_datetime($('<span>', {
-					datetime: data[1],
-					text: data[1]
+					datetime: data.added,
+					text: data.added
 				}), true)));
 
 		var main = $(this);
@@ -2587,7 +2586,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 				main.append($('<pre>', {
 					class: 'simfile',
 					style: 'text-align: initial',
-					text: data[9]
+					text: data.simfile
 				}));
 			});
 
@@ -2647,36 +2646,36 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 
 		for (var x in data) {
 			x = data[x];
-			this_.query_suffix = '/<' + x[0];
+			this_.query_suffix = '/<' + x.id;
 
 			var row = $('<tr>');
 			// Id
-			row.append($('<td>', {text: x[0]}));
+			row.append($('<td>', {text: x.id}));
 			// Type
-			row.append($('<td>', {text: x[2]}));
+			row.append($('<td>', {text: x.type}));
 			// Label
-			row.append($('<td>', {text: x[4]}));
-			// Name and tags
-			row.append($('<td>', {text: x[3]}));
+			row.append($('<td>', {text: x.label}));
+			// Name and tags <--- TODO
+			row.append($('<td>', {text: x.name}));
 
 			// Owner
 			if (this_.show_owner)
 				row.append($('<td>', {
-					html: x[5] === null ? '' :
-						(a_view_button('/u/' + x[5], x[6], undefined,
-							view_user.bind(null, true, x[5])))
+					html: x.owner_id === null ? '' :
+						(a_view_button('/u/' + x.owner_id, x.owner_username, undefined,
+							view_user.bind(null, true, x.owner_id)))
 				}));
 
 			// Added
 			if (this_.show_added)
 				row.append(normalize_datetime($('<td>', {
-					datetime: x[1],
-					text: x[1]
+					datetime: x.added,
+					text: x.added
 				})));
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.problem(x[0], x[7], x[3])
+				html: ActionsToHTML.problem(x.id, x.actions, x.name)
 			}));
 
 			this_.elem.children('tbody').append(row);
