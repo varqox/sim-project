@@ -140,7 +140,6 @@ void Sim::api_jobs() {
 	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT 50");
 	auto res = mysql.query(qfields);
 
-	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
 	while (res.next()) {

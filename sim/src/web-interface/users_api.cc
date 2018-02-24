@@ -77,7 +77,6 @@ void Sim::api_users() {
 	query.append(" ORDER BY id LIMIT 50");
 	auto res = mysql.query(query);
 
-	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	append("[");
 
 	while (res.next()) {

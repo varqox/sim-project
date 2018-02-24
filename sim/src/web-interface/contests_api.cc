@@ -125,7 +125,6 @@ void Sim::api_contests() {
 	qfields.append(qwhere, " ORDER BY c.id DESC LIMIT 50");
 	auto res = mysql.query(qfields);
 
-	resp.headers["content-type"] = "text/plain; charset=utf-8";
 	// Column names
 	append("[\n{\"columns\":["
 			"\"id\","
