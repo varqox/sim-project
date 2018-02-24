@@ -1712,8 +1712,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-
+		var job = data[0];
 		function info_html(info) {
 			var td = $('<td>', {
 				style: 'text-align:left'
@@ -1746,7 +1745,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				html: $('<h1>', {
 					text: 'Job ' + job_id
 				}).add('<div>', {
-					html: ActionsToHTML.job(job_id, data[8], data[7].problem, true)
+					html: ActionsToHTML.job(job_id, job.actions, job.info.problem, true)
 				})
 			}).add('<table>', {
 				html: $('<thead>', {html: '<tr>' +
@@ -1759,36 +1758,36 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				}).add('<tbody>', {
 					html: $('<tr>', {
 						html: $('<td>', {
-							text: data[2]
+							text: job.type
 						}).add(normalize_datetime($('<td>', {
-								datetime: data[1],
-								text: data[1]
+								datetime: job.added,
+								text: job.added
 							}), true)
 						).add('<td>', {
-							class: 'status ' + data[3][0],
-							text: data[3][1]
+							class: 'status ' + job.status.class,
+							text: job.status.text
 						}).add('<td>', {
-							html: data[5] === null ? 'System' :
-								(data[6] == null ? 'Deleted (id: ' + data[5] + ')'
+							html: job.creator_id === null ? 'System' :
+								(job.creator_username == null ? 'Deleted (id: ' + job.creator_id + ')'
 								: a_view_button(
-								'/u/' + data[5], data[6], undefined,
-								view_user.bind(null, true, data[5])))
+								'/u/' + job.creator_id, job.creator_username, undefined,
+								view_user.bind(null, true, job.creator_id)))
 						}).add('<td>', {
-							html: info_html(data[7])
+							html: info_html(job.info)
 						})
 					})
 				})
 			})
 		}));
 
-		if (data[8].indexOf('r') !== -1) {
+		if (job.actions.indexOf('r') !== -1) {
 			this.append('<h2>Job log</h2>')
 			.append($('<pre>', {
 				class: 'job-log',
-				html: colorize(text_to_safe_html(data[9][1]))
+				html: colorize(text_to_safe_html(job.log.text))
 			}));
 
-			if (data[9][0])
+			if (job.log.is_incomplete)
 				this.append($('<p>', {
 					text: 'The job log is too large to show it entirely here. If you want to see the whole, click: '
 				}).append($('<a>', {
@@ -1851,29 +1850,29 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 		for (var x in data) {
 			x = data[x];
-			this_.query_suffix = '/<' + x[0];
+			this_.query_suffix = '/<' + x.id;
 
 			var row = $('<tr>');
-			row.append($('<td>', {text: x[0]}));
-			row.append($('<td>', {text: x[2]}));
-			row.append($('<td>', {text: x[4]}));
+			row.append($('<td>', {text: x.id}));
+			row.append($('<td>', {text: x.type}));
+			row.append($('<td>', {text: x.priority}));
 			row.append($('<td>', {
 				html: normalize_datetime(
-					a_view_button('/jobs/' + x[0], x[1], undefined,
-						view_job.bind(null, true, x[0])).attr('datetime', x[1]),
+					a_view_button('/jobs/' + x.id, x.added, undefined,
+						view_job.bind(null, true, x.id)).attr('datetime', x.added),
 					false)
 			}));
 			row.append($('<td>', {
-				class: 'status ' + x[3][0],
-				text: x[3][1]
+				class: 'status ' + x.status.class,
+				text: x.status.text
 			}));
 			row.append($('<td>', {
-				html: x[5] === null ? 'System' : (x[6] == null ? x[5]
-					: a_view_button('/u/' + x[5], x[6], undefined,
-						view_user.bind(null, true, x[5])))
+				html: x.creator_id === null ? 'System' : (x.creator_username == null ? x.creator_id
+					: a_view_button('/u/' + x.creator_id, x.creator_username, undefined,
+						view_user.bind(null, true, x.creator_id)))
 			}));
 			// Info
-			var info = x[7];
+			var info = x.info;
 			{
 				/* jshint loopfunc: true */
 				var td = $('<td>');
@@ -1912,7 +1911,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.job(x[0], x[8], info.problem)
+				html: ActionsToHTML.job(x.id, x.actions, info.problem)
 			}));
 
 			this_.elem.children('tbody').append(row);

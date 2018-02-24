@@ -758,6 +758,8 @@ void Sim::api_submission_delete() {
 
 	SignalBlocker sb; // This part shouldn't be interrupted
 
+	// TODO: maybe make a job out of it
+
 	mysql.update(concat("DELETE FROM submissions WHERE id=", submissions_sid));
 
 	submission::update_final(mysql, (res.is_null(0) ? "" : res[0]),

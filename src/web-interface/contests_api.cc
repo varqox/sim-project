@@ -63,6 +63,10 @@ void Sim::api_contests() {
 		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=",
 			(session_is_open ? session_user_id : StringView("''")));
 
+	enum ColumnIdx {
+		CID, CNAME, IS_PUBLIC, USER_MODE
+	};
+
 	auto qwhere_append = [&, where_was_added = false](auto&&... args) mutable {
 		if (where_was_added)
 			qwhere.append(" AND ", std::forward<decltype(args)>(args)...);
@@ -135,10 +139,11 @@ void Sim::api_contests() {
 		"]}");
 
 	while (res.next()) {
-		StringView cid = res[0];
-		StringView name = res[1];
-		bool is_public = strtoull(res[2]);
-		CUM umode = (res.is_null(3) ? CUM::IS_NULL : CUM(strtoull(res[3])));
+		StringView cid = res[CID];
+		StringView name = res[CNAME];
+		bool is_public = strtoull(res[IS_PUBLIC]);
+		CUM umode = (res.is_null(USER_MODE) ? CUM::IS_NULL :
+			CUM(strtoull(res[USER_MODE])));
 
 		contests_perms = contests_get_permissions(is_public, umode);
 
