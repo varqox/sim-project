@@ -19,7 +19,7 @@ void Sim::api_users() {
 		" FROM users");
 
 	enum ColumnIdx {
-		UID, USERNAME, FNAME, LNAME, EMAIL, TYPE
+		UID, USERNAME, FNAME, LNAME, EMAIL, UTYPE
 	};
 
 	auto query_append = [&, where_was_added = false](auto&&... args) mutable {
@@ -98,7 +98,7 @@ void Sim::api_users() {
 			jsonStringify(res[LNAME]), ',',
 			jsonStringify(res[EMAIL]), ',');
 
-		UserType utype {UserType(strtoull(res[TYPE]))};
+		UserType utype {UserType(strtoull(res[UTYPE]))};
 		switch (utype) {
 		case UserType::ADMIN: append("\"Admin\","); break;
 		case UserType::TEACHER: append("\"Teacher\","); break;

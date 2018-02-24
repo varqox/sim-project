@@ -30,7 +30,7 @@ void Sim::api_problems() {
 		" WHERE p.type!=" JTYPE_VOID_STR);
 
 	enum ColumnIdx {
-		PID, ADDED, TYPE, NAME, LABEL, OWNER, OWN_USERNAME, SIMFILE
+		PID, ADDED, PTYPE, NAME, LABEL, OWNER, OWN_USERNAME, SIMFILE
 	};
 
 	// Get the overall permissions to the problems set
@@ -146,7 +146,7 @@ void Sim::api_problems() {
 	stmt.res_bind_all(tag);
 
 	while (res.next()) {
-		ProblemType problem_type {ProblemType(strtoull(res[TYPE]))};
+		ProblemType problem_type {ProblemType(strtoull(res[PTYPE]))};
 		auto perms = problems_get_permissions(res[OWNER], problem_type);
 
 		// Id
@@ -251,7 +251,7 @@ void Sim::api_problems() {
 				',', jsonStringify(cf.getVar("memory_limit").asString()));
 		}
 
-		append("]");
+		append(']');
 	}
 
 	append("\n]");

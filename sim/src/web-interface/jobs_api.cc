@@ -39,6 +39,11 @@ void Sim::api_jobs() {
 	qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id"
 		" WHERE j.type!=" JTYPE_VOID_STR);
 
+	enum ColumnIdx {
+		JID, ADDED, JTYPE, JSTATUS, PRIORITY, AUX_ID, JINFO, CREATOR,
+		CREATOR_USERNAME, JOB_LOG_VIEW
+	};
+
 	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
 	bool select_specified_job = false;
 
@@ -140,14 +145,26 @@ void Sim::api_jobs() {
 	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT 50");
 	auto res = mysql.query(qfields);
 
-	append("[");
+	// Column names
+	append("[\n{\"columns\":["
+			"\"id\","
+			"\"added\","
+			"\"type\","
+			"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
+			"\"priority\","
+			"\"creator_id\","
+			"\"creator_username\","
+			"\"info\","
+			"\"actions\","
+			"{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
+		"]}");
 
 	while (res.next()) {
-		JobType job_type {JobType(strtoull(res[2]))};
-		JobStatus job_status {JobStatus(strtoull(res[3]))};
+		JobType job_type {JobType(strtoull(res[JTYPE]))};
+		JobStatus job_status {JobStatus(strtoull(res[JSTATUS]))};
 
-		append("\n[", res[0], "," // job_id
-			"\"", res[1], "\"," // added
+		append(",\n[", res[JID], ","
+			"\"", res[ADDED], "\","
 			"\"", job_type_str(job_type), "\",");
 
 		// Status: (CSS class, text)
@@ -161,19 +178,19 @@ void Sim::api_jobs() {
 		case JobStatus::CANCELED: append("[\"blue\",\"Cancelled\"],"); break;
 		}
 
-		append(res[4], ','); // priority
+		append(res[PRIORITY], ',');
 
 		// Creator
-		if (res.is_null(7))
+		if (res.is_null(CREATOR))
 			append("null,");
 		else
-			append(res[7], ','); // creator
+			append(res[CREATOR], ',');
 
 		// Username
-		if (res.is_null(8))
+		if (res.is_null(CREATOR_USERNAME))
 			append("null,");
 		else
-			append("\"", res[8], "\","); // username
+			append("\"", res[CREATOR_USERNAME], "\",");
 
 		// Additional info
 		InplaceBuff<10> actions;
@@ -181,8 +198,8 @@ void Sim::api_jobs() {
 
 		switch (job_type) {
 		case JobType::JUDGE_SUBMISSION: {
-			append("\"problem\":", jobs::extractDumpedString(res[6]));
-			append(",\"submission\":", res[5]); // aux_id
+			append("\"problem\":", jobs::extractDumpedString(res[JINFO]));
+			append(",\"submission\":", res[AUX_ID]);
 			break;
 		}
 
@@ -199,7 +216,7 @@ void Sim::api_jobs() {
 				}
 				return "unknown";
 			};
-			jobs::AddProblemInfo info {res[6]};
+			jobs::AddProblemInfo info {res[JINFO]};
 			append("\"problem type\":\"", ptype_to_str(info.problem_type), '"');
 
 			if (info.name.size())
@@ -217,9 +234,8 @@ void Sim::api_jobs() {
 				",\"ignore simfile\":", info.ignore_simfile ?
 					"\"yes\"" : "\"no\"");
 
-			if (not res.is_null(5)) {
-				// aux_id
-				append(",\"problem\":", res[5]);
+			if (not res.is_null(AUX_ID)) {
+				append(",\"problem\":", res[AUX_ID]);
 				actions.append('p'); // View problem
 			}
 
@@ -227,7 +243,7 @@ void Sim::api_jobs() {
 		}
 
 		case JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: {
-			append("\"contest problem\":", res[5]); // aux_id
+			append("\"contest problem\":", res[AUX_ID]);
 			break;
 		}
 
@@ -242,9 +258,8 @@ void Sim::api_jobs() {
 		// Append what buttons to show
 		append('"', actions);
 
-		// res[7] == creator
 		auto perms = granted_perms |
-			jobs_get_permissions(res[7], job_type, job_status);
+			jobs_get_permissions(res[CREATOR], job_type, job_status);
 		if (uint(perms & PERM::VIEW))
 			append('v');
 		if (uint(perms & PERM::DOWNLOAD_LOG))
@@ -259,14 +274,11 @@ void Sim::api_jobs() {
 
 		// Append log view (whether there is more to load, data)
 		if (select_specified_job and uint(perms & PERM::DOWNLOAD_LOG))
-			append(",[", res[9].size() > JOB_LOG_VIEW_MAX_LENGTH, ',',
-				jsonStringify(res[9]), ']'); // log view
+			append(",[", res[JOB_LOG_VIEW].size() > JOB_LOG_VIEW_MAX_LENGTH,
+				',', jsonStringify(res[JOB_LOG_VIEW]), ']');
 
-		append("],");
+		append(']');
 	}
-
-	if (resp.content.back() == ',')
-		--resp.content.size;
 
 	append("\n]");
 }
