@@ -3124,6 +3124,13 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 												{text: 'never'}
 												: {datetime: round.ends, text: round.ends})
 											), false, true)
+										]}),
+										$('<div>', {html: [
+											$('<label>', {text: "R:"}),
+											normalize_datetime($('<span>', (round.full_results === null ?
+												{text: 'immediately'}
+												: {datetime: round.full_results, text: round.full_results})
+											), false, true)
 										]}));
 									else
 										res.push($('<table>', {html: [
