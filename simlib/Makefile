@@ -1,8 +1,7 @@
 include $(PREFIX)Makefile.config
 
 .PHONY: $(PREFIX)all
-$(PREFIX)all: build-info
-	@$(MAKE) $(PREFIX)gtest_main.a $(PREFIX)simlib.a
+$(PREFIX)all: $(PREFIX)gtest_main.a $(PREFIX)simlib.a
 	@printf "\033[32mBuild finished\033[0m\n"
 
 GOOGLETEST_SRCS := \
