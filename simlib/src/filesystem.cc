@@ -14,7 +14,7 @@ using std::vector;
 int openUnlinkedTmpFile(int flags) noexcept {
 	int fd;
 #ifdef O_TMPFILE
-	fd = open("/tmp", O_TMPFILE | O_RDWR | flags, S_0600);
+	fd = open("/tmp", O_TMPFILE | O_RDWR | O_EXCL | flags, S_0600);
 	if (fd != -1)
 		return fd;
 
