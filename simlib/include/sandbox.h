@@ -93,6 +93,18 @@ public:
 		 */
 		bool is_tgkill_allowed(pid_t pid);
 
+		/**
+		 * @brief Checks whether syscall ioctl(2) is allowed
+		 *
+		 * @details Syscall is altered (by replacing fd with -1) so that it will
+		 *   fail
+		 *
+		 * @param pid pid of traced process (via ptrace)
+		 *
+		 * @return true if call is allowed, false otherwise
+		 */
+		bool is_ioctl_allowed(pid_t pid);
+
 	public:
 		void detect_tracee_architecture(pid_t pid) {
 			arch_ = ::detectArchitecture(pid);
@@ -362,6 +374,14 @@ public:
 				234 // SYS_tgkill - x86_64
 			};
 			return (syscall == sys_tgkill[arch_]);
+		}
+
+		bool is_sysioctl(int syscall) const noexcept {
+			constexpr int sys_ioctl[2] = {
+				54, // SYS_ioctl - i386
+				16 // SYS_ioctl - x86_64
+			};
+			return (syscall == sys_ioctl[arch_]);
 		}
 
 		bool is_syslseek(int syscall) const noexcept {
@@ -641,6 +661,9 @@ bool Sandbox::DefaultCallback::is_syscall_entry_allowed(pid_t pid, int syscall,
 
 	if (is_systgkill(syscall))
 		return is_tgkill_allowed(pid);
+
+	if (is_sysioctl(syscall))
+		return is_ioctl_allowed(pid);
 
 	return false;
 }

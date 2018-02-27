@@ -119,6 +119,15 @@ bool Sandbox::CallbackBase::is_tgkill_allowed(pid_t pid) {
 	return (regs.arg1u() == (uint64_t)pid && regs.arg2u() == (uint64_t)pid);
 }
 
+bool Sandbox::CallbackBase::is_ioctl_allowed(pid_t pid) {
+	SyscallRegisters regs(pid, arch_);
+
+	regs.set_arg1i(-1); // Set -1 as the first argument to ioctl
+	regs.set_regs(pid); // Update traced process's registers
+
+	return true; // Allow to ioctl on -1
+}
+
 bool Sandbox::DefaultCallback::is_syscall_exit_allowed(pid_t pid, int syscall) {
 	constexpr int sys_execve[2] = {
 		11, // SYS_execve - i386
