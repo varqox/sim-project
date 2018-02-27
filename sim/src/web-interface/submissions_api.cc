@@ -71,11 +71,11 @@ void Sim::api_submissions() {
 
 	InplaceBuff<512> qfields, qwhere;
 	InplaceBuff<60> qwhere_id_cond;
-	qfields.append("SELECT s.id, s.type, s.owner, cu.mode, p.owner,"
+	qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
 		" cp.final_selecting_method, cp.reveal_score, s.contest_round_id,"
 		" r.name, r.full_results, r.ends, s.contest_id, c.name, s.submit_time,"
-		" s.status, s.score"); // TODO: what is that 0? score revealing? see res[REVEAL_SCORE] below
+		" s.status, s.score");
 	qwhere.append(" FROM submissions s"
 		" LEFT JOIN users u ON u.id=s.owner"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
@@ -87,10 +87,10 @@ void Sim::api_submissions() {
 		" WHERE s.type!=" STYPE_VOID_STR);
 
 	enum ColumnIdx {
-		SID, STYPE, SOWNER, CUMODE, POWNER, SOWN_USERNAME, PROB_ID, PNAME, CPID,
-		CP_NAME, CP_FSM, REVEAL_SCORE, CRID, CR_NAME, FULL_RES, CRENDS, CID,
-		CNAME, SUBMIT_TIME, STATUS, SCORE, SOWN_FNAME, SOWN_LNAME, INIT_REPORT,
-		FINAL_REPORT
+		SID, STYPE, SLANGUAGE, SOWNER, CUMODE, POWNER, SOWN_USERNAME, PROB_ID,
+		PNAME, CPID, CP_NAME, CP_FSM, REVEAL_SCORE, CRID, CR_NAME, FULL_RES,
+		CRENDS, CID, CNAME, SUBMIT_TIME, STATUS, SCORE, SOWN_FNAME, SOWN_LNAME,
+		INIT_REPORT, FINAL_REPORT
 	};
 
 	bool allow_access = (session_user_type == UserType::ADMIN);
@@ -243,6 +243,7 @@ void Sim::api_submissions() {
 	append("[\n{\"columns\":["
 		"\"id\","
 		"\"type\","
+		"\"language\","
 		"\"owner_id\","
 		"\"owner_username\","
 		"\"problem_id\","
@@ -325,6 +326,9 @@ void Sim::api_submissions() {
 			break;
 		case SubmissionType::VOID: throw_assert(false); break;
 		}
+
+		append('"', toString(SubmissionLanguage(SubmissionLanguage(strtoull(
+			res[SLANGUAGE])))), "\",");
 
 		// Onwer's id
 		if (res.is_null(SOWNER))
@@ -419,7 +423,7 @@ void Sim::api_submissions() {
 		append(']');
 	}
 
-	append(']');
+	append("\n]");
 }
 
 void Sim::api_submission() {
@@ -439,19 +443,23 @@ void Sim::api_submission() {
 
 	InplaceBuff<32> sowner, p_owner;
 	std::underlying_type_t<SubmissionType> stype;
+	std::underlying_type_t<SubmissionLanguage> slang;
 	std::underlying_type_t<CUM> cu_mode;
 	my_bool cu_mode_is_null;
-	auto stmt = mysql.prepare("SELECT s.owner, s.type, cu.mode, p.owner"
+	auto stmt = mysql.prepare("SELECT s.owner, s.type, s.language, cu.mode,"
+			" p.owner"
 		" FROM submissions s"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
 		" LEFT JOIN contest_users cu ON cu.contest_id=s.contest_id"
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submissions_sid);
-	stmt.res_bind_all(sowner, stype, bind_arg(cu_mode, cu_mode_is_null), p_owner);
+	stmt.res_bind_all(sowner, stype, slang, bind_arg(cu_mode, cu_mode_is_null),
+		p_owner);
 	if (not stmt.next())
 		return api_error404();
 
+	submissions_slang = SubmissionLanguage(slang);
 	submissions_perms = submissions_get_permissions(sowner,
 		SubmissionType(stype), (cu_mode_is_null ? CUM::IS_NULL : CUM(cu_mode)),
 		p_owner);
@@ -563,6 +571,17 @@ void Sim::api_submission_add() {
 	}
 
 	// Validate fields
+	SubmissionLanguage slang;
+	auto slang_str = request.form_data.get("language");
+	if (slang_str == "c")
+		slang = SubmissionLanguage::C;
+	else if (slang_str == "cpp")
+		slang = SubmissionLanguage::CPP;
+	else if (slang_str == "pascal")
+		slang = SubmissionLanguage::PASCAL;
+	else
+		add_notification("error", "Invalid language");
+
 	CStringView solution_tmp_path = request.form_data.file_path("solution");
 	StringView code = request.form_data.get("code");
 	bool ignored_submission = (may_submit_ignored and
@@ -598,22 +617,25 @@ void Sim::api_submission_add() {
 
 	// Insert submission
 	auto stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
-			" contest_problem_id, contest_round_id, contest_id, type, status,"
-			" submit_time, last_judgment, initial_report, final_report)"
-		" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?,"
-			" ?, '', '')");
+			" contest_problem_id, contest_round_id, contest_id, type, language,"
+			" status, submit_time, last_judgment, initial_report, final_report)"
+		" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ","
+			" ?, ?, '', '')");
 	if (contest_problem_id.empty())
 		stmt.bindAndExecute(session_user_id, problem_id, nullptr, nullptr,
-			nullptr, mysql_date(), mysql_date(0));
+			nullptr, std::underlying_type_t<SubmissionLanguage>(slang),
+			mysql_date(), mysql_date(0));
 	else
 		stmt.bindAndExecute(session_user_id, problem_id, contest_problem_id,
-			contest_round_id, contest_id, mysql_date(), mysql_date(0));
+			contest_round_id, contest_id,
+			std::underlying_type_t<SubmissionLanguage>(slang), mysql_date(),
+			mysql_date(0));
 
 	auto submission_id = stmt.insert_id();
 
 	// Fill the submission's source file
 	// File
-	auto solution_dest = concat<64>("solutions/", submission_id, ".cpp");
+	auto solution_dest = concat<64>("solutions/", submission_id);
 	if (code.empty()) {
 		if (rename(solution_tmp_path, solution_dest.to_cstr()))
 			THROW("rename() failed", errmsg());
@@ -647,7 +669,7 @@ void Sim::api_submission_source() {
 		return api_error403();
 
 	append(cpp_syntax_highlighter(getFileContents(
-		concat("solutions/", submissions_sid, ".cpp").to_cstr())));
+		concat("solutions/", submissions_sid).to_cstr())));
 }
 
 void Sim::api_submission_download() {
@@ -657,11 +679,11 @@ void Sim::api_submission_download() {
 		return api_error403();
 
 
-	resp.headers["Content-type"] = "text/x-c++src";
+	resp.headers["Content-type"] = to_MIME(submissions_slang);
 	resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=",
-		submissions_sid, ".cpp");
+		submissions_sid, to_extension(submissions_slang));
 
-	resp.content = concat("solutions/", submissions_sid, ".cpp");
+	resp.content = concat("solutions/", submissions_sid);
 	resp.content_type = server::HttpResponse::FILE;
 }
 
