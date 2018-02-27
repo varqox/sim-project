@@ -5,6 +5,7 @@
 #include "../../include/sim/problem_package.h"
 
 using std::string;
+using std::vector;
 
 namespace {
 
@@ -50,10 +51,74 @@ public:
 
 namespace sim {
 
+inline static vector<string> compile_command(SolutionLanguage lang,
+	StringView source, StringView exec)
+{
+	// Makes vector of strings from arguments
+	auto make = [](auto... args) {
+		vector<string> res;
+		res.reserve(sizeof...(args));
+		(void)std::initializer_list<int>{
+			(res.emplace_back(data(args), string_length(args)), 0)...
+		};
+		return res;
+	};
+
+	switch (lang) {
+	case SolutionLanguage::C:
+		return make("gcc", "-O3", "-std=c11", "-static", "-lm", "-m32", "-o",
+			exec, "-xc", source);
+	case SolutionLanguage::CPP:
+		return make("g++", "-O3", "-std=c++11", "-static", "-lm", "-m32", "-o",
+			exec, "-xc++", source);
+	case SolutionLanguage::PASCAL:
+		return make("fpc", "-O2", "-XS", "-Xt", concat("-o", exec), source);
+	case SolutionLanguage::UNKNOWN:
+		THROW("Invalid Language!");
+	}
+
+}
+
 constexpr meta::string JudgeWorker::CHECKER_FILENAME;
 constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
 constexpr timespec JudgeWorker::CHECKER_TIME_LIMIT;
 
+int JudgeWorker::compile_impl(CStringView source, SolutionLanguage lang,
+	timespec time_limit, string* c_errors, size_t c_errors_max_len,
+	const string& proot_path, StringView compilation_source_basename,
+	StringView exec_dest_filename)
+{
+	auto compilation_dir = concat<PATH_MAX>(tmp_dir.path(), "compilation/");
+	if (remove_r(compilation_dir.to_cstr()) and errno != ENOENT)
+		THROW("remove_r()", errmsg());
+
+	if (mkdir(compilation_dir.to_cstr()))
+		THROW("mkdir()", errmsg());
+
+	auto src_filename = concat<PATH_MAX>(compilation_source_basename);
+	switch (lang) {
+	case SolutionLanguage::C: src_filename.append(".c"); break;
+	case SolutionLanguage::CPP: src_filename.append(".cpp"); break;
+	case SolutionLanguage::PASCAL: src_filename.append(".pas"); break;
+	case SolutionLanguage::UNKNOWN: THROW("Invalid language!");
+	}
+
+	if (copy(source, concat<PATH_MAX>(compilation_dir, src_filename).to_cstr()))
+		THROW("copy()", errmsg());
+
+	int rc = compile(compilation_dir,
+		compile_command(lang, src_filename, exec_dest_filename), time_limit,
+		c_errors, c_errors_max_len, proot_path);
+
+	if (rc == 0 and move(
+		concat<PATH_MAX>(compilation_dir, exec_dest_filename).to_cstr(),
+		concat<PATH_MAX>(tmp_dir.path(), exec_dest_filename).to_cstr()))
+	{
+		THROW("move()", errmsg());
+	}
+
+	return rc;
+}
 
 void JudgeWorker::loadPackage(string package_path, string simfile) {
 	sf = Simfile {std::move(simfile)};

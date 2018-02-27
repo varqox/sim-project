@@ -111,6 +111,30 @@ public:
 	}
 };
 
+enum class SolutionLanguage {
+	UNKNOWN, C, CPP, PASCAL
+};
+
+constexpr SolutionLanguage filename_to_lang(StringView filename) {
+	SolutionLanguage res = SolutionLanguage::UNKNOWN;
+	if (hasSuffix(filename, ".c"))
+		res = SolutionLanguage::C;
+	else if (hasSuffixIn(filename, {".cc", ".cpp", ".cxx"}))
+		res = SolutionLanguage::CPP;
+	else if (hasSuffix(filename, ".pas"))
+		res = SolutionLanguage::PASCAL;
+
+	// It is written that way, so the compiler will warn when the enum changes
+	switch (res) {
+	case SolutionLanguage::UNKNOWN:
+	case SolutionLanguage::C:
+	case SolutionLanguage::CPP:
+	case SolutionLanguage::PASCAL:
+	// If missing one, then update above ifs
+		return res;
+	}
+}
+
 /**
  * @brief Manages a judge worker
  * @details Only to use in ONE thread.
@@ -146,41 +170,29 @@ public:
  	// Returns a const reference to the package's Simfile
 	const Simfile& simfile() const noexcept { return sf; }
 
-	/// Compiles checker (using sim::compile())
-	int compileChecker(timespec time_limit, std::string* c_errors = nullptr,
-		size_t c_errors_max_len = -1)
-	{
-		return compile(concat(pkg_root, sf.checker).to_cstr(),
-			concat(tmp_dir.path(), CHECKER_FILENAME).to_cstr(), verbose,
-			time_limit, c_errors, c_errors_max_len);
-	}
+private:
+	int compile_impl(CStringView source, SolutionLanguage lang,
+		timespec time_limit, std::string* c_errors,
+		size_t c_errors_max_len, const std::string& proot_path,
+		StringView compilation_source_basename, StringView exec_dest_filename);
 
+public:
 	/// Compiles checker (using sim::compile())
 	int compileChecker(timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
-		return compile(concat(pkg_root, sf.checker).to_cstr(),
-			concat(tmp_dir.path(), CHECKER_FILENAME).to_cstr(), verbose,
-			time_limit, c_errors, c_errors_max_len, proot_path);
+		return compile_impl(concat(pkg_root, sf.checker).to_cstr(),
+			filename_to_lang(sf.checker), time_limit, c_errors,
+			c_errors_max_len, proot_path, "checker", CHECKER_FILENAME);
 	}
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(CStringView source, timespec time_limit,
-		std::string* c_errors = nullptr, size_t c_errors_max_len = -1)
+	int compileSolution(CStringView source, SolutionLanguage lang,
+		timespec time_limit, std::string* c_errors,
+		size_t c_errors_max_len, const std::string& proot_path)
 	{
-		return compile(source,
-			concat(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(), verbose,
-			time_limit, c_errors, c_errors_max_len);
-	}
-
-	/// Compiles solution (using sim::compile())
-	int compileSolution(CStringView source, timespec time_limit,
-		std::string* c_errors, size_t c_errors_max_len,
-		const std::string& proot_path)
-	{
-		return compile(source,
-			concat(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(), verbose,
-			time_limit, c_errors, c_errors_max_len, proot_path);
+		return compile_impl(source, lang, time_limit, c_errors,
+			c_errors_max_len, proot_path, "source", SOLUTION_FILENAME);
 	}
 
 	/**

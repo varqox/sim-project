@@ -99,7 +99,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 	}
 
 	auto is_source = [](StringView file) {
-		return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx"});
+		return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx", ".pas"});
 	};
 
 	auto collect_files = [&pc](StringView prefix, auto&& cond) {

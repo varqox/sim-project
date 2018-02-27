@@ -5,61 +5,42 @@ using std::vector;
 
 namespace sim {
 
-int compile(CStringView source, CStringView exec, unsigned verbosity,
+int compile(StringView dir_to_chdir, vector<string> compile_command,
 	timespec time_limit, string* c_errors, size_t c_errors_max_len,
-	const std::string& proot_path)
+	const string& proot_path)
 {
 	FileDescriptor cef;
 	if (c_errors) {
-		cef = openUnlinkedTmpFile();
+		cef = openUnlinkedTmpFile(O_APPEND);
 		if (cef == -1)
 			THROW("Failed to open 'compile_errors'", errmsg());
 	}
 
-	TemporaryDirectory tmp_dir("/tmp/tmp_dirXXXXXX");
-	if (copy(source, concat(tmp_dir.name(), "a.cpp").to_cstr()))
-		THROW("Failed to copy source file", errmsg());
-
-	if (verbosity > 1)
-		stdlog("Compiling: `", source, '`');
-
-	/* Compile as a 32-bit executable (not essential, but if the checker is
-	*  x86_64 and tracer is i386, then the checker will not work -
-	*  this method is more secure (see making i386 syscall from x86_64)).
-	*  Compiler is prooted to make compilation safer (e.g. prevents including
+	/*
+	*  Compiler is PRooted to make compilation safer (e.g. prevents including
 	*  unwanted files)
 	*/
 	vector<string> args = std::initializer_list<string> {
 		proot_path,
 		"-v", "-1",
-		"-r", tmp_dir.sname(),
+		"-r", dir_to_chdir.to_string(),
 		"-b", "/usr",
 		"-b", "/bin",
 		"-b", "/lib",
 		"-b", "/lib32",
 		"-b", "/libx32",
 		"-b", "/lib64",
-		"-b", "/etc/alternatives/",
-		// Invoke the compiler
-		"g++",
-		"a.cpp",
-		"-o", "exec",
-		"-O3", // These days -O3 option is safe to use
-		"-std=c++11",
-		"-static",
-		"-lm",
-		"-m32"
+		"-b", "/etc/alternatives/"
 	};
 
-	// Run compiler
+	args.insert(args.end(), compile_command.begin(), compile_command.end());
+
+	// Run the compiler
 	Spawner::ExitStat es = Spawner::run(args[0], args,
 		{-1, cef, cef, time_limit, 1 << 30 /* 1 GiB */});
 
 	// Check for errors
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {
-		if (verbosity > 1)
-			stdlog(es.message);
-
 		if (c_errors)
 			*c_errors = (es.runtime >= time_limit
 				? "Compilation time limit exceeded"
@@ -68,15 +49,8 @@ int compile(CStringView source, CStringView exec, unsigned verbosity,
 		return 2;
 	}
 
-	if (verbosity > 1)
-		stdlog("Completed successfully.");
-
 	if (c_errors)
 		*c_errors = "";
-
-	// Move exec
-	if (move(concat(tmp_dir.name(), "exec").to_cstr(), exec, false))
-		THROW("Failed to move exec", errmsg());
 
 	return 0;
 }
