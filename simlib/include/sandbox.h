@@ -854,6 +854,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				// Monitor for vm_size change
 				if (func.get_arch() == ARCH_i386
 					? isIn(syscall_no, { // i386
+						11, // SYS_execve
 						45, // SYS_brk
 						90, // SYS_mmap
 						163, // SYS_mremap
@@ -863,6 +864,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 						9, // SYS_mmap
 						12, // SYS_brk
 						25, // SYS_mremap
+						59, // SYS_execve
 					}))
 				{
 					vm_size = std::max(vm_size, get_vm_size());
