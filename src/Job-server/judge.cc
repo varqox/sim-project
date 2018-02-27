@@ -11,6 +11,18 @@ using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
+inline constexpr static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang)
+{
+	switch (lang) {
+	case SubmissionLanguage::C: return sim::SolutionLanguage::C;
+	case SubmissionLanguage::CPP: return sim::SolutionLanguage::CPP;
+	case SubmissionLanguage::PASCAL: return sim::SolutionLanguage::PASCAL;
+	}
+
+	THROW("Invalid Language: ",
+		std::underlying_type_t<SubmissionLanguage>(lang));
+}
+
 void judgeSubmission(uint64_t job_id, StringView submission_id,
 	StringView job_creation_time)
 {
@@ -24,15 +36,16 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	};
 
 	// Gather the needed information about the submission
-	auto stmt = mysql.prepare("SELECT s.owner, contest_problem_id, problem_id,"
-			" last_judgment, p.last_edit"
+	auto stmt = mysql.prepare("SELECT s.language, s.owner, contest_problem_id,"
+			" problem_id, last_judgment, p.last_edit"
 		" FROM submissions s, problems p"
 		" WHERE p.id=problem_id AND s.id=?");
 	stmt.bindAndExecute(submission_id);
 	InplaceBuff<32> sowner, contest_problem_id, problem_id;
 	InplaceBuff<64> last_judgment, p_last_edit;
-	stmt.res_bind_all(sowner, contest_problem_id, problem_id, last_judgment,
-		p_last_edit);
+	std::underlying_type_t<SubmissionLanguage> lang_val;
+	stmt.res_bind_all(lang_val, sowner, contest_problem_id, problem_id,
+		last_judgment, p_last_edit);
 	// If the submission doesn't exist (probably was removed)
 	if (not stmt.next()) {
 		// Fail the job
@@ -43,6 +56,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		stmt.bindAndExecute(job_log, job_id);
 		return;
 	}
+
+	auto lang = SubmissionLanguage(lang_val);
 
 	// If the problem wasn't modified since last judgment and submission has
 	// already been rejudged after the job was created
@@ -152,7 +167,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		tmplog.flush_no_nl();
 
 		if (jworker.compileSolution(
-			concat("solutions/", submission_id, ".cpp").to_cstr(),
+			concat("solutions/", submission_id).to_cstr(), to_sol_lang(lang),
 			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
@@ -406,7 +421,8 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 		concat(pkg_master_dir, "Simfile").to_cstr());
 
 	sim::Simfile simfile {simfile_str};
-
+	simfile.loadAll();
+	judge_log("Model solution: ", simfile.solutions[0]);
 
 	JudgeWorker jworker;
 	jworker.setVerbosity(true);
@@ -430,15 +446,15 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	}
 
 	// Compile the model solution
-	simfile.loadAll();
 	{
-		TemporaryFile sol_src("/tmp/problem_solution.cpp.XXXXXX");
+		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
 		writeAll(sol_src, extract_file_from_zip(package_path.to_cstr(),
 			concat(pkg_master_dir, simfile.solutions[0])));
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
 		if (jworker.compileSolution(sol_src.path(),
+			sim::filename_to_lang(simfile.solutions[0]),
 			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{

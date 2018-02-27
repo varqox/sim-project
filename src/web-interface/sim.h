@@ -640,6 +640,7 @@ private:
 	}
 
 	StringView submissions_sid;
+	SubmissionLanguage submissions_slang;
 	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
 	// Pages

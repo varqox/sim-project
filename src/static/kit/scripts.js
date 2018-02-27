@@ -1948,7 +1948,23 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 				contest_problem_id),
 			Form.field_group('Problem', a_view_button('/p/' + problem_id,
 				problem_name_to_show, undefined, view_problem.bind(null, true, problem_id))
-			).add(Form.field_group('Solution', {
+			).add(Form.field_group('Language',
+				$('<select>', {
+					name: 'language',
+					required: true,
+					html: $('<option>', {
+						value: 'c',
+						text: 'C'
+					}).add('<option>', {
+						value: 'cpp',
+						text: 'C++',
+						selected: true
+					}).add('<option>', {
+						value: 'pascal',
+						text: 'PASCAL'
+					})
+				})
+			)).add(Form.field_group('Solution', {
 				type: 'file',
 				name: 'solution',
 			})).add(Form.field_group('Code',
@@ -2074,6 +2090,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				$('<table>', {
 					html: [
 						$('<thead>', {html: '<tr>' +
+							'<th style="min-width:90px">Lang</th>' +
 							(s.owner_id === null ? ''
 								: '<th style="min-width:120px">User</th>') +
 							'<th style="min-width:120px">Problem</th>' +
@@ -2087,6 +2104,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 							html: $('<tr>', {
 								class: (s.type === 'Ignored' ? 'ignored' : undefined),
 								html: [
+									$('<td>', {text: s.language}),
 									(s.owner_id === null ? '' : $('<td>', {
 										html: [a_view_button('/u/' + s.owner_id, s.owner_username,
 												undefined, view_user.bind(null, true, s.owner_id)),
@@ -2204,6 +2222,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 			this_.elem.html('<thead><tr>' +
 					'<th>Id</th>' +
+					'<th>Lang</th>' +
 					(this_.show_user ? '<th class="username">Username</th>' : '') +
 					'<th class="time">Added</th>' +
 					'<th class="problem">Problem</th>' +
@@ -2222,8 +2241,9 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			var row = $('<tr>', {
 				class: (x.type === 'Ignored' ? 'ignored' : undefined)
 			});
-			// Id
+
 			row.append($('<td>', {text: x.id}));
+			row.append($('<td>', {text: x.language}));
 
 			// Username
 			if (this_.show_user)

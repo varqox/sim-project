@@ -159,6 +159,39 @@ constexpr inline const char* toString(SubmissionType x) {
 	return "Unknown";
 }
 
+enum class SubmissionLanguage : uint8_t {
+	C = 0,
+	CPP = 1,
+	PASCAL = 2
+};
+
+constexpr inline const char* toString(SubmissionLanguage x) {
+	switch (x) {
+	case SubmissionLanguage::C: return "C";
+	case SubmissionLanguage::CPP: return "C++";
+	case SubmissionLanguage::PASCAL: return "Pascal";
+	}
+	return "Unknown";
+}
+
+constexpr inline const char* to_extension(SubmissionLanguage x) {
+	switch (x) {
+	case SubmissionLanguage::C: return ".c";
+	case SubmissionLanguage::CPP: return ".cpp";
+	case SubmissionLanguage::PASCAL: return ".pas";
+	}
+	return "Unknown";
+}
+
+constexpr inline const char* to_MIME(SubmissionLanguage x) {
+	switch (x) {
+	case SubmissionLanguage::C: return "text/x-csrc";
+	case SubmissionLanguage::CPP: return "text/x-c++src";
+	case SubmissionLanguage::PASCAL: return "text/x-pascal";
+	}
+	return "Unknown";
+}
+
 // Initial and final values may be combined, but special not
 enum class SubmissionStatus : uint8_t {
 	// Final

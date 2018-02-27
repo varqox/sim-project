@@ -274,6 +274,7 @@ int main(int argc, char **argv) {
 			"`contest_round_id` int unsigned NULL,"
 			"`contest_id` int unsigned NULL,"
 			"`type` TINYINT NOT NULL,"
+			"`language` TINYINT NOT NULL,"
 			"`final_candidate` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"`status` TINYINT NOT NULL,"
 			"`submit_time` datetime NOT NULL,"

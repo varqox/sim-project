@@ -3,6 +3,7 @@
 #include <sim/jobs.h>
 #include <simlib/process.h>
 #include <simlib/sim/conver.h>
+#include <simlib/sim/judge_worker.h>
 #include <simlib/sim/problem_package.h>
 #include <simlib/spawner.h>
 #include <simlib/zip.h>
@@ -215,26 +216,41 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 		return sol_paths.exists(archive_entry_pathname(entry));
 	}, tmp_dir.path());
 
+	auto fname_to_lang = [](StringView extension) {
+		auto lang = sim::filename_to_lang(extension);
+		switch (lang) {
+		case sim::SolutionLanguage::C: return SubmissionLanguage::C;
+		case sim::SolutionLanguage::CPP: return SubmissionLanguage::CPP;
+		case sim::SolutionLanguage::PASCAL: return SubmissionLanguage::PASCAL;
+		case sim::SolutionLanguage::UNKNOWN: THROW("Not supported language");
+		}
+
+		throw_assert(false);
+	};
+
 	// Submit the solutions
 	job_log.append("Submitting solutions...");
 	const string zero_date = mysql_date(0);
+	std::underlying_type_t<SubmissionLanguage> lang;
 	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
-			" contest_problem_id, contest_round_id, contest_id, type, status,"
-			" submit_time, last_judgment, initial_report, final_report)"
+			" contest_problem_id, contest_round_id, contest_id, type, language,"
+			" status, submit_time, last_judgment, initial_report, final_report)"
 		" VALUES(NULL, ?, NULL, NULL, NULL, "
-			STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
-	stmt.bind_all(problem_id, current_date, zero_date);
+			STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ", ?, ?, '', '')");
+	stmt.bind_all(problem_id, lang, current_date, zero_date);
 
 	for (auto&& solution : sf.solutions) {
 		job_log.append("Submit: ", solution);
 
 		current_date = mysql_date();
+		lang = std::underlying_type_t<SubmissionLanguage>(fname_to_lang(
+			solution));
 		stmt.execute();
 		uint64_t submission_id = mysql.insert_id();
 
 		// Make solution's source code the submission's source code
 		if (copy(concat<PATH_MAX>(tmp_dir.path(), pkg_master_dir, solution)
-			.to_cstr(), concat("solutions/", submission_id, ".cpp").to_cstr()))
+			.to_cstr(), concat("solutions/", submission_id).to_cstr()))
 		{
 			THROW("Copying solution `", solution, "`: copy()", errmsg());
 		}
