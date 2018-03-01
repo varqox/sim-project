@@ -1314,7 +1314,7 @@ div.header > div:last-child{
 
 /* Ranking */
 .ranking {
-	margin: 8px 10px 8px 0;
+	margin: 8px auto;
 }
 .ranking > tbody td {
 	text-align: right;
@@ -1366,10 +1366,10 @@ div.right-flow {
 .compilation-errors,
 .simfile,
 .job-log {
-	display: inline-block;
+	display: table;
 	align-self: flex-start;
 	padding: 8px;
-	margin: 8px 0 0;
+	margin: 8px auto 0;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	background: #f5f5f5;
 	border: 1px solid #afafaf;
@@ -1403,7 +1403,9 @@ pre.job-log .turquoise {
 }
 
 .results {
-	margin-left: 10px;
+	display: table;
+	margin: 0 auto;
+	/*margin-left: 10px;*/
 }
 .results > h2 {
 	font-size: 20px;
@@ -1486,7 +1488,7 @@ pre.job-log .turquoise {
 /* Source code view */
 table.code-view {
 	display: table;
-	margin: 8px 2px;
+	margin: 8px auto;
 	line-height: 21px;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	font-size: 16px;
@@ -1522,7 +1524,7 @@ table.code-view > tbody > tr:last-child td {
 /* Submissions */
 table.submissions {
 	/*display: inline-table;*/
-	margin: 6px 0;
+	margin: 6px auto;
 }
 table.submissions th {
 	padding: 6px;
@@ -1580,7 +1582,7 @@ table.submissions tr > td:last-child {
 /* Problems */
 table.problems {
 	/*display: inline-table;*/
-	margin: 6px 0;
+	margin: 6px auto;
 }
 table.problems th {
 	padding: 6px;
@@ -1616,7 +1618,7 @@ table.problems tr > td:last-child {
 /* Jobs */
 table.jobs {
 	/*display: inline-table;*/
-	margin: 6px 0;
+	margin: 6px auto;
 }
 table.jobs th {
 	padding: 6px;
@@ -1681,7 +1683,7 @@ table.jobs td label::after,
 table.users,
 table.contest-users {
 	/*display: inline-table;*/
-	margin: 6px 0;
+	margin: 6px auto;
 }
 table.users th.username,
 table.contest-users th.username {
