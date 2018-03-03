@@ -96,6 +96,9 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 	append("</div>"
 		"</div>"
 		"<div class=\"notifications\">", notifications, "</div>");
+#ifdef DEBUG
+	notifications.clear();
+#endif
 
 	page_template_began = true;
 }
