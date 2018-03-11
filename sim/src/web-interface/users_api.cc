@@ -295,15 +295,14 @@ void Sim::api_user_edit() {
 		return api_error400(notifications);
 
 	// Commit changes
-	auto stmt = mysql.prepare("UPDATE users"
+	auto stmt = mysql.prepare("UPDATE IGNORE users"
 		" SET username=?, first_name=?, last_name=?, email=?, type=?"
 		" WHERE id=?");
-	try {
-		stmt.bindAndExecute(username, fname, lname, email, uint(new_utype),
-			users_uid);
-	} catch (const std::exception&) {
+	stmt.bindAndExecute(username, fname, lname, email, uint(new_utype),
+		users_uid);
+
+	if (stmt.affected_rows() == 0 and mysql_warning_count(mysql))
 		return api_error400("Username is already taken");
-	}
 }
 
 void Sim::api_user_delete() {

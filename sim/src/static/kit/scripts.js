@@ -449,7 +449,7 @@ var Form = {};
 			data: new FormData(form[0]),
 			success: function(resp) {
 				if (typeof success_msg === "function") {
-					success_msg.call(form, resp);
+					success_msg.call(form, resp, loader_parent);
 				} else
 					show_success_via_loader(loader_parent, success_msg);
 			},
@@ -513,7 +513,9 @@ function modal(modal_body, before_callback /*= undefined*/) {
 	if (before_callback !== undefined)
 		before_callback(mod);
 
-	return mod.appendTo('body').fadeIn(fade_in_duration);
+	mod.appendTo('body').fadeIn(fade_in_duration);
+	centerize_modal(mod);
+	return mod;
 }
 function centerize_modal(modal, allow_lowering /*= true*/) {
 	var m = $(modal);
@@ -546,6 +548,7 @@ function centerize_modal(modal, allow_lowering /*= true*/) {
 
 	m.css({'padding-top': Math.max(new_padding, 0)});
 }
+/// Sends ajax form and shows modal with the result
 function modal_request(title, form, target_url, success_msg) {
 	var elem = modal($('<h2>', {text: title}));
 	Form.send_via_ajax(form, target_url, success_msg, elem.children());
@@ -635,6 +638,10 @@ function API_call(ajax_url, success_handler, loader_parent) {
 /* ================================ Tab menu ================================ */
 function tabname_to_hash(tabname) {
 	return tabname.toLowerCase().replace(/ /g, '_');
+}
+function default_tabmenu_attacher(x) {
+	x.on('tabmenuTabHasChanged', function() { x.nextAll().remove(); });
+	x.appendTo(this);
 }
 /// Triggers 'tabmenuTabHasChanged' event on the result every time an active tab is changed
 function tabmenu(attacher, tabs) {
@@ -1131,11 +1138,8 @@ var ActionsToHTML = {};
 			}));
 
 		if (actions_str.indexOf('R') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small orange',
-				text: 'Restart job',
-				click: restart_job.bind(null, job_id)
-			}));
+			res.push(a_view_button(undefined, 'Restart job', 'btn-small orange',
+				restart_job.bind(null, job_id)));
 
 		return res;
 	};
@@ -1187,23 +1191,16 @@ var ActionsToHTML = {};
 		}
 
 		if (actions_str.indexOf('C') !== -1)
-			res.push(a_view_button('/s/' + submission_id + '/chtype', 'Change type',
-				'btn-small orange',
+			res.push(a_view_button(undefined, 'Change type', 'btn-small orange',
 				submission_chtype.bind(null, submission_id, submission_type)));
 
 		if (actions_str.indexOf('R') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small blue',
-				text: 'Rejudge',
-				click: rejudge_submission.bind(null, submission_id)
-			}));
+			res.push(a_view_button(undefined, 'Rejudge', 'btn-small blue',
+				rejudge_submission.bind(null, submission_id)));
 
 		if (actions_str.indexOf('D') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small red',
-				text: 'Delete',
-				click: delete_submission.bind(null, submission_id)
-			}));
+			res.push(a_view_button(undefined, 'Delete', 'btn-small red',
+				delete_submission.bind(null, submission_id)));
 
 		return res;
 	};
@@ -1407,14 +1404,12 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 
 		var main = $(this);
 
-		tabmenu(function(elem) { elem.appendTo(main); }, [
+		tabmenu(default_tabmenu_attacher.bind(main), [
 			'Submissions', function() {
-				$(this).parent().next().remove();
 				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
 				tab_submissions_lister(main.children().last(), '/u' + user_id);
 			},
 			'Jobs', function() {
-				$(this).parent().next().remove();
 				var j_table = $('<table>', {
 					class: 'jobs'
 				});
@@ -1676,7 +1671,6 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
-		parent_elem.children('.users, .loader, .loader-info').remove();
 		var table = $('<table class="users stripped"></table>').appendTo(parent_elem);
 		new UsersLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
@@ -1688,7 +1682,7 @@ function tab_users_lister(parent_elem, query_suffix /*= ''*/) {
 		'Normal', retab.bind(null, '/tN')
 	];
 
-	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 function user_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 	view_base((as_modal === undefined ? true : as_modal),
@@ -1926,7 +1920,6 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
-		parent_elem.children('.jobs, .loader, .loader-info').remove();
 		var table = $('<table class="jobs"></table>').appendTo(parent_elem);
 		new JobsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
@@ -1936,7 +1929,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 		'My', retab.bind(null, '/u' + logged_user_id())
 	];
 
-	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 
 /* ============================== Submissions ============================== */
@@ -2140,7 +2133,6 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 		var tabs = [
 			'Reports', function() {
 				timed_hide_show(elem.parents('.modal'));
-				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<div>', {
 					class: 'results',
 					html: function() {
@@ -2159,7 +2151,6 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 		if (s.actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
 				timed_hide_show(elem.parents('.modal'));
-				elem.children('.tabmenu').nextAll().remove();
 				if (cached_source !== undefined)
 					elem.append(cached_source);
 				else {
@@ -2182,12 +2173,11 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 
 		if (s.actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
-				elem.children('.tabmenu').nextAll().remove();
 				elem.append($('<table>', {class: 'jobs'}));
 				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
 			});
 
-		tabmenu(function(x) { x.appendTo(elem); }, tabs);
+		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
@@ -2309,7 +2299,6 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
-		parent_elem.children('.submissions, .loader, .loader-info').remove();
 		var table = $('<table class="submissions"></table>').appendTo(parent_elem);
 		new SubmissionsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
@@ -2322,7 +2311,7 @@ function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutio
 	if (show_solutions_tab)
 		tabs.push('Solutions', retab.bind(null, '/tS'));
 
-	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 
 /* ================================ Problems ================================ */
@@ -2498,8 +2487,199 @@ function reupload_problem(as_modal, problem_id) {
 		);
 	}, '/p/' + problem_id + '/reupload');
 }
-function edit_problem(as_modal, problem_id) {
-	// TODO
+function edit_problem(as_modal, problem_id, opt_hash) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		var problem = data[0];
+		var actions = problem.actions;
+
+		if (actions.indexOf('E') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		var elem = $(this);
+		elem.append($('<h1>', {
+			class: 'align-center',
+			html: [
+				'Edit problem ', a_view_button('/p/' + problem_id, problem.name, '',
+					view_problem.bind(null, true, problem_id))
+			]
+		}));
+		var tabs = [
+			'Edit tags', function() {
+				var list_tags = function(hidden) {
+					var tags = (hidden ? problem.tags.hidden : problem.tags.public);
+					var tbody = $('<tbody>');
+
+					var add_form = [
+						Form.field_group('Name', {
+							type: 'text',
+							name: 'name',
+							size: 24,
+							// maxlength: 'TODO...'
+							required: true
+						}),
+						$('<input>', {
+							type: 'hidden',
+							name: 'hidden',
+							value: hidden
+						}),
+						$('<div>', {
+							html: $('<input>', {
+								class: 'btn blue',
+								type: 'submit',
+								value: 'Add tag'
+							})
+						})
+					];
+
+					// Add button
+					elem.append($('<center>', {html: [
+						$('<table>', {class: 'tags-edit'}).append($('<thead>', {
+							html: '<tr>' +
+								'<th class="name">Name</th>' +
+								'<th class="actions">Actions</th>' +
+							'</tr>'
+						})).append(tbody),
+						a_view_button(undefined, 'Add tag', 'btn', function() {
+							modal(ajax_form('Add tag',
+								'/api/problem/' + problem_id + '/edit/tags/add_tag',
+								add_form, function() {
+									show_success_via_loader(this, 'The tag has been added.');
+									// Add tag
+									var input = add_form[0].children('input');
+									tags.push(input.val());
+									make_row(input.val()).appendTo(tbody);
+									input.val('');
+									// Close modal
+									var modal = $(this).closest('.modal');
+									modal.fadeOut(150, close_modal.bind(null, modal));
+								}));
+						})
+					]}));
+
+					var make_row = function(tag) {
+						var edit_form = [
+							Form.field_group('Name', {
+								type: 'text',
+								name: 'name',
+								size: 24,
+								value: tag,
+								// maxlength: 'TODO...'
+								required: true
+							}),
+							$('<input>', {
+								type: 'hidden',
+								name: 'old_name',
+								value: tag
+							}),
+							$('<input>', {
+								type: 'hidden',
+								name: 'hidden',
+								value: hidden
+							}),
+							$('<div>', {
+								html: $('<input>', {
+									class: 'btn blue',
+									type: 'submit',
+									value: 'Edit'
+								})
+							})
+						];
+
+						var delete_from = $('<form>', {html: [
+							$('<input>', {
+								type: 'hidden',
+								name: 'name',
+								value: tag
+							}),
+							$('<input>', {
+								type: 'hidden',
+								name: 'hidden',
+								value: hidden
+							})
+						]}).add('<label>', {html: [
+							'Are you sure to delete the tag: ',
+							$('<label>', {
+								class: 'problem-tag' + (hidden ? ' hidden' : ''),
+								text: tag
+							}),
+							'?'
+						]});
+
+						var row = $('<tr>', {html: [
+							$('<td>', {text: tag}),
+							$('<td>', {html: [
+								a_view_button(undefined, 'Edit', 'btn-small blue', function() {
+									edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this line
+									modal(ajax_form('Edit tag',
+										'/api/problem/' + problem_id + '/edit/tags/edit_tag',
+										edit_form, function() {
+											show_success_via_loader(this, 'done.');
+											// Update tag
+											var old_tag = tag;
+											tag = edit_form[0].children('input').val();
+											tags[tags.indexOf(old_tag)] = tag;
+											edit_form[1].children('input').val(tag);
+
+											delete_from.find('label').text(tag);
+											delete_from.find('input').val(tag);
+
+											row.children().eq(0).text(tag).css({
+												'background-color': '#a3ffa3',
+												transition: 'background-color 0s cubic-bezier(0.55, 0.06, 0.68, 0.19)'
+											});
+											// Without this it does not change to green immediately
+											setTimeout(function() {
+												row.children().eq(0).css({
+													'background-color': 'initial',
+													transition: 'background-color 2s cubic-bezier(0.55, 0.06, 0.68, 0.19)'
+												});
+											}, 50);
+											// Close modal
+											var modal = $(this).closest('.modal');
+											modal.fadeOut(150, close_modal.bind(null, modal));
+										}));
+								}),
+								a_view_button(undefined, 'Delete', 'btn-small red',
+									dialogue_modal_request.bind(null, 'Delete tag',
+										delete_from, 'Yes, delete it', 'btn-small red',
+										'/api/problem/' + problem_id + '/edit/tags/delete_tag',
+										function(_, loader_parent) {
+											show_success_via_loader(loader_parent, 'The tag has been deleted.');
+											row.fadeOut(1000);
+											// Delete tag
+											tags.splice(tags.indexOf(tag), 1);
+											// Close modal
+											var modal = $(this).closest('.modal');
+											modal.fadeOut(150, close_modal.bind(null, modal));
+										}, 'No, go back'))
+							]})
+						]});
+						return row;
+					};
+
+					for (var x in tags)
+						make_row(tags[x]).appendTo(tbody);
+				};
+
+				tabmenu(default_tabmenu_attacher.bind(elem), [
+					'Public', list_tags.bind(null, false),
+					'Hidden', list_tags.bind(null, true)
+				]);
+			}
+		];
+
+		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
+
+	}, '/p/' + problem_id + '/edit' + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function delete_problem(as_modal, problem_id) {
 	// TODO
@@ -2553,9 +2733,23 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					html: $('<label>', {text: 'Label'})
 				}).append(text_to_safe_html(problem.label)))
 				.add($('<div>', {
-					class: 'tags',
+					class: 'tags-row',
 					html: $('<label>', {text: 'Tags'})
-				}).append(text_to_safe_html('')))
+				}).append($('<div>', {
+					class: 'tags',
+					html: function() {
+						var tags = [];
+						for (var i in problem.tags.public)
+							tags.push($('<label>', {text: problem.tags.public[i]}));
+						for (i in problem.tags.hidden)
+							tags.push($('<label>', {
+								class: 'hidden',
+								text: problem.tags.hidden[i]
+							}));
+
+						return tags;
+					}()
+				})))
 			})
 		}));
 
@@ -2576,28 +2770,25 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					text: problem.added
 				}), true)));
 
-		var main = $(this);
+		var elem = $(this);
 		var tabs = [];
 		if (actions.indexOf('s') !== -1)
 			tabs.push('All submissions', function() {
-					$(this).parent().next().remove();
-					main.append($('<div>'));
-					tab_submissions_lister(main.children().last(), '/p' + problem_id,
+					elem.append($('<div>'));
+					tab_submissions_lister(elem.children().last(), '/p' + problem_id,
 						true);
 				});
 
 		if (is_logged_in())
 			tabs.push('My submissions', function() {
-					$(this).parent().next().remove();
-					main.append($('<div>'));
-					tab_submissions_lister(main.children().last(), '/p' + problem_id + '/u' + logged_user_id());
+					elem.append($('<div>'));
+					tab_submissions_lister(elem.children().last(), '/p' + problem_id + '/u' + logged_user_id());
 				});
 
 		if (actions.indexOf('f') !== -1)
 			tabs.push('Simfile', function() {
-				timed_hide_show(main.parents('.modal'));
-				$(this).parent().next().remove();
-				main.append($('<pre>', {
+				timed_hide_show(elem.parents('.modal'));
+				elem.append($('<pre>', {
 					class: 'simfile',
 					style: 'text-align: initial',
 					text: problem.simfile
@@ -2606,17 +2797,16 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('j') !== -1)
 			tabs.push('Related jobs', function() {
-				$(this).parent().next().remove();
 				var j_table = $('<table>', {
 					class: 'jobs'
 				});
-				main.append($('<div>', {
+				elem.append($('<div>', {
 					html: j_table
 				}));
 				new JobsLister(j_table, '/p' + problem_id).monitor_scroll();
 			});
 
-		tabmenu(function(x) { x.appendTo(main); }, tabs);
+		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
@@ -2669,8 +2859,27 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			row.append($('<td>', {text: x.type}));
 			// Label
 			row.append($('<td>', {text: x.label}));
-			// Name and tags <--- TODO
-			row.append($('<td>', {text: x.name}));
+
+			// Name and tags
+			var tags = [];
+			for (var i in x.tags.public)
+				tags.push($('<label>', {text: x.tags.public[i]}));
+			for (i in x.tags.hidden)
+				tags.push($('<label>', {
+					class: 'hidden',
+					text: x.tags.hidden[i]
+				}));
+
+			row.append($('<td>', {html: $('<div>', {
+				class: 'name-and-tags',
+				html: [
+					$('<span>', {text: x.name}),
+					$('<div>', {
+						class: 'tags',
+						html: tags
+					})
+				]
+			})}));
 
 			// Owner
 			if (this_.show_owner)
@@ -2703,7 +2912,6 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 		query_suffix = '';
 
 	function retab(tab_qsuff) {
-		parent_elem.children('.problems, .loader, .loader-info').remove();
 		var table = $('<table class="problems stripped"></table>').appendTo(parent_elem);
 		new ProblemsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
@@ -2715,7 +2923,7 @@ function tab_problems_lister(parent_elem, query_suffix /*= ''*/) {
 	if (is_logged_in())
 		tabs.push('My', retab.bind(null, '/u' + logged_user_id()));
 
-	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 function problem_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 	view_base((as_modal === undefined ? true : as_modal),
@@ -3086,7 +3294,6 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		var tabs = [
 			'Dashboard', function() {
 				timed_hide_show(elem.parents('.modal'));
-				elem.children('.tabmenu').nextAll().remove();
 				// If already generated, then just show it
 				if (contest_dashboard !== undefined) {
 					contest_dashboard.appendTo(elem);
@@ -3214,7 +3421,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								$('<tr>', {html: [
 									$('<td>', {text: 'Final submission'}),
 									$('<td>', {text: problem.final_selecting_method === 'LC' ?
-										'The last compiling' : 'One with highest score'})
+										'The last compiling' : 'One with the highest score'})
 								]}),
 								(problem.reveal_score ? $('<tr>', {html: [
 									$('<td>', {text: 'Score revealing'}),
@@ -3299,36 +3506,32 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('A') !== -1)
 			tabs.push('All submissions', function() {
-				elem.children('.tabmenu').nextAll().remove();
 				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase());
 			});
 
 		if (actions.indexOf('p') !== -1)
 			tabs.push('My submissions', function() {
-				elem.children('.tabmenu').nextAll().remove();
 				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id());
 			});
 
 		if (actions.indexOf('v') !== -1)
 			tabs.push('Ranking', function() {
-				elem.children('.tabmenu').nextAll().remove();
 				contest_ranking($('<div>').appendTo(elem), id_for_api);
 			});
 
-		tabmenu(function(x) {
-			x.on('tabmenuTabHasChanged', function(_, active_elem) {
-				// Add / replace hashes in links in the contest-path
-				elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
-					var xx = $(this);
-					var href = xx.attr('href');
-					var pos = href.indexOf('#');
-					if (pos !== -1)
-						href = href.substr(0, pos);
-					xx.attr('href', href + '#' + tabname_to_hash($(active_elem).text()));
-				});
+		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
+			// Add / replace hashes in links in the contest-path
+			elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
+				var xx = $(this);
+				var href = xx.attr('href');
+				var pos = href.indexOf('#');
+				if (pos !== -1)
+					href = href.substr(0, pos);
+				xx.attr('href', href + window.location.hash);
 			});
-			x.appendTo(elem);
-		}, tabs);
+		});
+
+		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/c/' + id_for_api + (opt_hash === undefined ? '' : opt_hash));
 }
@@ -3616,7 +3819,6 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 
 	parent_elem = $(parent_elem);
 	function retab(tab_qsuff) {
-		parent_elem.children('.contests, .loader, .loader-info').remove();
 		var table = $('<table class="contests"></table>').appendTo(parent_elem);
 		new ContestsLister(table, query_suffix + tab_qsuff).monitor_scroll();
 	}
@@ -3629,7 +3831,7 @@ function tab_contests_lister(parent_elem, query_suffix /*= ''*/) {
 	// if (is_logged_in())
 		// tabs.push('My', retab.bind(null, '/u' + logged_user_id()));
 
-	tabmenu(function(elem) { elem.appendTo(parent_elem); }, tabs);
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 function contest_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 	view_base((as_modal === undefined ? true : as_modal),

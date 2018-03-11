@@ -114,7 +114,9 @@ private:
 
 	void api_problem_reupload();
 
-	// void api_problem_edit();
+	void api_problem_edit();
+
+	void api_problem_edit_tags();
 
 	// void api_problem_delete();
 

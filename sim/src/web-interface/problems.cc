@@ -117,7 +117,8 @@ void Sim::problems_problem() {
 
 	} else if (next_arg == "edit") {
 		page_template(concat("Edit problem ", problems_pid));
-		append("TODO");
+		append("<script>edit_problem(false, ", problems_pid, ","
+			" window.location.hash);</script>");
 
 	} else if (next_arg == "reupload") {
 		page_template(concat("Reupload problem ", problems_pid));
