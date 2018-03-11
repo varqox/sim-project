@@ -1589,7 +1589,7 @@ table.problems th {
 	line-height: 20px;
 }
 table.problems th.name {
-	min-width: 60px;
+	min-width: 80px;
 }
 table.problems th.label {
 	min-width: 60px;
@@ -1613,6 +1613,20 @@ table.problems td .btn-small {
 }
 table.problems tr > td:last-child {
 	white-space: pre;
+}
+table.problems .name-and-tags,
+.problem-info .tags-row {
+	display: flex;
+	align-items: center;
+}
+table.problems .tags {
+	display: flex;
+	flex-wrap: wrap;
+	margin-left: 4px;
+}
+.problem-info .tags-row .tags {
+	display: flex;
+	flex-wrap: wrap;
 }
 
 /* Jobs */
@@ -1658,10 +1672,16 @@ table.jobs tr > td:first-child {
 table.jobs tr > td:last-child {
 	white-space: pre;
 }
+
+/* Tags */
 table.jobs td label,
-.job-info table td label {
+.job-info table td label,
+table.problems td label,
+.problem-info .tags-row .tags label,
+label.problem-tag {
 	padding: 1.5px 4px 2.4px;
-	margin: 0 4px;
+	margin: 1.5px 4px;
+	height: 18px;
 	border-radius: 4px;
 	font-size: 12px;
 	line-height: 15px;
@@ -1670,6 +1690,18 @@ table.jobs td label,
 	white-space: pre;
 	background: #54c32a;
 }
+table.problems td label.hidden,
+.problem-info .tags-row .tags label.hidden,
+label.problem-tag.hidden {
+	background: #ff9800;
+}
+table.problems td label,
+.problem-info .tags-row .tags label {
+	margin-left: 1px;
+}
+.problem-info .tags-row .tags label:first-of-type {
+	margin-left: 0;
+}
 table.jobs td label:first-of-type,
 .job-info table td label {
 	margin-left: 0;
@@ -1677,6 +1709,33 @@ table.jobs td label:first-of-type,
 table.jobs td label::after,
 .job-info table td label::after {
 	content: ":";
+}
+
+/* Tags edit */
+table.tags-edit {
+	/*display: inline-table;*/
+	margin: 6px auto;
+}
+table.tags-edit th {
+	padding: 6px;
+	line-height: 20px;
+}
+table.tags-edit th.name {
+	min-width: 80px;
+}
+table.tags-edit tr > td:nth-last-child(3) {
+	text-align: right;
+}
+table.tags-edit td {
+	padding: 4px 16px 4px 8px;
+	line-height: 20px;
+	border-top: 1px solid #bbb;
+}
+table.tags-edit td .btn-small {
+	margin: 0 2px;
+}
+table.tags-edit tr > td:last-child {
+	white-space: pre;
 }
 
 /* Users & Contest users*/
@@ -1793,11 +1852,11 @@ table.contests th {
 	line-height: 20px;
 }
 table.contests th.name {
-	min-width: 60px;
+	min-width: 80px;
 }
-table.contests tr > td:nth-last-child(3) {
+/*table.contests tr > td:nth-last-child(3) {
 	text-align: right;
-}
+}*/
 table.contests td {
 	padding: 4px 16px 4px 8px;
 	line-height: 20px;

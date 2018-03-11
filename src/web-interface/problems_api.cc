@@ -129,7 +129,7 @@ void Sim::api_problems() {
 			"\"owner_username\","
 			"\"actions\","
 			"{\"name\":\"tags\",\"fields\":["
-				"\"normal\","
+				"\"public\","
 				"\"hidden\""
 			"]},"
 			"\"simfile\","
@@ -294,8 +294,8 @@ void Sim::api_problem() {
 		return api_problem_rejudge_all_submissions();
 	else if (next_arg == "reupload")
 		return api_problem_reupload();
-	// else if (next_arg == "edit")
-	// 	return api_problem_edit();
+	else if (next_arg == "edit")
+		return api_problem_edit();
 	// else if (next_arg == "delete")
 	// 	return api_problem_delete();
 	else
@@ -443,16 +443,6 @@ void Sim::api_problem_download(StringView problem_label) {
 	resp.content = concat("problems/", problems_pid, ".zip");
 }
 
-void Sim::api_problem_reupload() {
-	STACK_UNWINDING_MARK;
-	using PERM = ProblemPermissions;
-
-	if (uint(~problems_perms & PERM::REUPLOAD))
-		return api_error403();
-
-	api_problem_add_or_reupload_impl(true);
-}
-
 void Sim::api_problem_rejudge_all_submissions() {
 	STACK_UNWINDING_MARK;
 	using PERM = ProblemPermissions;
@@ -469,4 +459,92 @@ void Sim::api_problem_rejudge_all_submissions() {
 		mysql_date(), jobs::dumpString(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
+}
+
+void Sim::api_problem_reupload() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::REUPLOAD))
+		return api_error403();
+
+	api_problem_add_or_reupload_impl(true);
+}
+
+void Sim::api_problem_edit() {
+	STACK_UNWINDING_MARK;
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "tags")
+		return api_problem_edit_tags();
+	else
+		return api_error400();
+}
+
+void Sim::api_problem_edit_tags() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	auto add_tag = [&] {
+		bool hidden = (request.form_data.get("hidden") == "true");
+		StringView name;
+		form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
+		if (form_validation_error)
+			return api_error400(notifications);
+
+		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
+			return api_error403();
+
+		auto stmt = mysql.prepare("INSERT IGNORE"
+			" INTO problem_tags(problem_id, tag, hidden) VALUES(?, ?, ?)");
+		stmt.bindAndExecute(problems_pid, name, hidden);
+
+		if (stmt.affected_rows() == 0)
+			return api_error400("Tag already exist");
+	};
+
+	auto edit_tag = [&] {
+		bool hidden = (request.form_data.get("hidden") == "true");
+		StringView name, old_name;
+		form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
+		form_validate_not_blank(old_name, "old_name", "Old tag name",
+			PROBLEM_TAG_MAX_LEN);
+		if (form_validation_error)
+			return api_error400(notifications);
+
+		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
+			return api_error403();
+
+		auto stmt = mysql.prepare("UPDATE IGNORE problem_tags SET tag=?"
+			" WHERE problem_id=? AND tag=? AND hidden=?");
+		stmt.bindAndExecute(name, problems_pid, old_name, hidden);
+
+		if (stmt.affected_rows() == 0 and mysql_warning_count(mysql))
+			return api_error400("Tag already exist");
+	};
+
+	auto delete_tag = [&] {
+		StringView name;
+		bool hidden = (request.form_data.get("hidden") == "true");
+		form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
+		if (form_validation_error)
+			return api_error400(notifications);
+
+		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
+			return api_error403();
+
+		auto stmt = mysql.prepare("DELETE FROM problem_tags"
+			" WHERE problem_id=? AND tag=? AND hidden=?");
+		stmt.bindAndExecute(problems_pid, name, hidden);
+	};
+
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "add_tag")
+		return add_tag();
+	if (next_arg == "edit_tag")
+		return edit_tag();
+	if (next_arg == "delete_tag")
+		return delete_tag();
+	else
+		return api_error400();
 }

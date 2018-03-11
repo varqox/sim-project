@@ -210,9 +210,8 @@ int main(int argc, char **argv) {
 			"`problem_id` int unsigned NOT NULL,"
 			"`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
 			"`hidden` BOOLEAN NOT NULL,"
-			"PRIMARY KEY (problem_id, tag),"
-			"KEY (problem_id, hidden, tag),"
-			"KEY (tag)"
+			"PRIMARY KEY (problem_id, hidden, tag),"
+			"KEY (tag, problem_id)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("contests",
