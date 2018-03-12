@@ -1224,7 +1224,7 @@ var ActionsToHTML = {};
 		if (actions_str.indexOf('S') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '/submit', 'Submit',
 				'btn-small blue', add_submission.bind(null, true, problem_id,
-					problem_name, (actions_str.indexOf('i') !== -1))));
+					problem_name, (actions_str.indexOf('i') !== -1), (actions_str.indexOf('i') !== -1))));
 
 		if (actions_str.indexOf('s') !== -1)
 			res.push(a_view_button('/p/' + problem_id + '#all_submissions#solutions',
@@ -1933,7 +1933,7 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 }
 
 /* ============================== Submissions ============================== */
-function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignored, contest_problem_id) {
+function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignored, ignore_by_default, contest_problem_id) {
 	view_base(as_modal, (contest_problem_id === undefined ?
 		'/p/' + problem_id + '/submit' : '/c/p' + contest_problem_id + '/submit'), function() {
 		this.append(ajax_form('Submit a solution', '/api/submission/add/p' +
@@ -1969,7 +1969,8 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 				})
 			)).add(maybe_ignored ? Form.field_group('Ignored submission', {
 				type: 'checkbox',
-				name: 'ignored'
+				name: 'ignored',
+				checked: ignore_by_default
 			}) : $()).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -3408,7 +3409,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem[4]),
 								text: 'Statement'
 							}),
-							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem.problem_id, problem.name, (actions.indexOf('A') !== -1), problem.id))),
+							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem.problem_id, problem.name, (actions.indexOf('A') !== -1), (actions.indexOf('A') !== -1), problem.id))),
 						]}).appendTo(dashboard.parent());
 
 					var elem = $('<a>', {
