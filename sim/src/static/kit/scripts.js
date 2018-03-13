@@ -2525,6 +2525,7 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 							name: 'name',
 							size: 24,
 							// maxlength: 'TODO...'
+							autofocus: true,
 							required: true
 						}),
 						$('<input>', {
@@ -2574,6 +2575,7 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 								size: 24,
 								value: tag,
 								// maxlength: 'TODO...'
+								autofocus: true,
 								required: true
 							}),
 							$('<input>', {
