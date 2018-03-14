@@ -198,7 +198,7 @@ function StaticMap() {
 		if (this_.data.length === 0)
 			return null;
 
-		var l = 0, r = this_.data.length;
+		var l = 0, r = this_.data.length - 1;
 		while (l < r) {
 			var m = (l + r) >> 1;
 			if (this_.data[m][0] < key)
