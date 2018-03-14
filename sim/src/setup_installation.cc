@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
 			"`contest_id` int unsigned NOT NULL,"
 			"`name` VARBINARY(", CONTEST_ROUND_NAME_MAX_LEN, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
-			"`begins` datetime NULL NOT NULL,"
+			"`begins` datetime NULL," // NULL == -infinity (the big bang)
 			"`ends` datetime NULL DEFAULT NULL," // NULL == forever
 			"`full_results` datetime NULL DEFAULT NULL," // NULL == show immediately
 			"`ranking_exposure` datetime NULL DEFAULT NULL," // NULL == do not expose

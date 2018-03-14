@@ -2981,7 +2981,9 @@ function add_contest_round(as_modal, contest_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Begin time', datetime_input('begins')
+			}).add(Form.field_group('Begin time',
+				datetime_input('begins', true, undefined, 'The Big Bang')
+				.attr('placeholder', 'The Big Bang')
 			)).add(Form.field_group('End time',
 				datetime_input('ends', true, null, 'Never')
 				.attr('placeholder', 'Never')
@@ -3117,7 +3119,9 @@ function edit_contest_round(as_modal, contest_round_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Begin time', datetime_input('begins', false, round.begins)
+			}).add(Form.field_group('Begin time',
+				datetime_input('begins', true, round.begins, 'The Big Bang')
+				.attr('placeholder', 'The Big Bang')
 			)).add(Form.field_group('End time',
 				datetime_input('ends', true, round.ends, 'Never')
 				.attr('placeholder', 'Never')
@@ -3343,10 +3347,10 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 									if (rounds.length !== 1)
 										res.push($('<div>', {html: [
 											$('<label>', {text: "B:"}),
-											normalize_datetime($('<span>', {
-												datetime: round.begins,
-												text: round.begins
-											}), false, true)
+											normalize_datetime($('<span>', (round.begins === null ?
+												{text: 'Big Bang'}
+												: {datetime: round.begins, text: round.begins})
+											), false, true)
 										]}),
 										$('<div>', {html: [
 											$('<label>', {text: "E:"}),
@@ -3366,10 +3370,10 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 										res.push($('<table>', {html: [
 											$('<tr>', {html: [
 												$('<td>', {text: 'Beginning'}),
-												normalize_datetime($('<td>', {
-													datetime: round.begins,
-													text: round.begins
-												}), false, true)
+												normalize_datetime($('<td>', (round.begins === null ?
+													{text: 'The Big Bang'}
+													: {datetime: round.begins, text: round.begins})
+												), false, true)
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: 'End'}),
