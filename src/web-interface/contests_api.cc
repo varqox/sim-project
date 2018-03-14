@@ -285,10 +285,11 @@ void Sim::api_contest() {
 	}
 
 	uint item;
-	my_bool ranking_exp_is_null, full_res_is_null, ends_is_null;
+	my_bool ranking_exp_is_null, begins_is_null, full_res_is_null, ends_is_null;
 	InplaceBuff<20> ranking_exposure, begins, full_results, ends;
 	stmt.res_bind_all(contests_crid, name, item,
-		bind_arg(ranking_exposure, ranking_exp_is_null), begins,
+		bind_arg(ranking_exposure, ranking_exp_is_null),
+		bind_arg(begins, begins_is_null),
 		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null));
 
 	while (stmt.next()) {
@@ -301,7 +302,10 @@ void Sim::api_contest() {
 		else
 			append('"', ranking_exposure, "\",");
 
-		append('"', begins, "\",");
+		if (begins_is_null)
+			append("null,");
+		else
+			append('"', begins, "\",");
 
 		if (full_res_is_null)
 			append("null,");
@@ -382,7 +386,8 @@ void Sim::api_contest_round() {
 		contests_crid);
 
 	bool is_public;
-	my_bool ranking_exp_is_null, full_res_is_null, ends_is_null, umode_is_null;
+	my_bool ranking_exp_is_null, begins_is_null, full_res_is_null, ends_is_null,
+		umode_is_null;
 	InplaceBuff<20> ranking_exposure, begins, full_results, ends;
 	std::underlying_type_t<CUM> umode_u;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
@@ -390,7 +395,8 @@ void Sim::api_contest_round() {
 		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
 	uint item;
 	stmt.res_bind_all(contests_cid, cname, is_public, name, item,
-		bind_arg(ranking_exposure, ranking_exp_is_null), begins,
+		bind_arg(ranking_exposure, ranking_exp_is_null),
+		bind_arg(begins, begins_is_null),
 		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null),
 		bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
@@ -462,7 +468,10 @@ void Sim::api_contest_round() {
 	else
 		append('"', ranking_exposure, "\",");
 
-	append('"', begins, "\",");
+	if (begins_is_null)
+		append("null,");
+	else
+		append('"', begins, "\",");
 
 	if (full_res_is_null)
 		append("null,");
@@ -528,8 +537,8 @@ void Sim::api_contest_problem() {
 		contests_cpid);
 
 	bool is_public;
-	my_bool rranking_exp_is_null, rfull_res_is_null, rends_is_null,
-		umode_is_null;
+	my_bool rranking_exp_is_null, rbegins_is_null, rfull_res_is_null,
+		rends_is_null, umode_is_null;
 	InplaceBuff<20> rranking_exposure, rbegins, rfull_results, rends;
 	std::underlying_type_t<CUM> umode_u;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
@@ -542,7 +551,8 @@ void Sim::api_contest_problem() {
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
-		ritem, bind_arg(rranking_exposure, rranking_exp_is_null), rbegins,
+		ritem, bind_arg(rranking_exposure, rranking_exp_is_null),
+		bind_arg(rbegins, rbegins_is_null),
 		bind_arg(rfull_results, rfull_res_is_null),
 		bind_arg(rends, rends_is_null), problem_id, problem_label, pname, pitem,
 		final_selecting_method, reveal_score, bind_arg(umode_u, umode_is_null));
@@ -617,7 +627,10 @@ void Sim::api_contest_problem() {
 	else
 		append('"', rranking_exposure, "\",");
 
-	append('"', rbegins, "\",");
+	if (rbegins_is_null)
+		append("null,");
+	else
+		append('"', rbegins, "\",");
 
 	if (rfull_res_is_null)
 		append("null,");
@@ -773,7 +786,7 @@ void Sim::api_contest_round_edit() {
 	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
 		CONTEST_ROUND_NAME_MAX_LEN);
-	form_validate_not_blank(begins, "begins", "Begin time", is_safe_timestamp);
+	form_validate(begins, "begins", "Begin time", is_safe_timestamp);
 	form_validate(ends, "ends", "End time", is_safe_timestamp);
 	form_validate(full_results, "full_results", "Full results time",
 		is_safe_timestamp);
@@ -789,7 +802,11 @@ void Sim::api_contest_round_edit() {
 		" SET name=?, begins=?, ends=?, full_results=?, ranking_exposure=?"
 		" WHERE id=?");
 	stmt.bind(0, name);
-	stmt.bind_copy(1, mysql_date(strtoull(begins)));
+
+	if (begins.empty())
+		stmt.bind(1, nullptr);
+	else
+		stmt.bind_copy(1, mysql_date(strtoull(begins)));
 
 	if (ends.empty())
 		stmt.bind(2, nullptr);
