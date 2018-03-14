@@ -279,7 +279,7 @@ void Sim::api_contest() {
 	} else {
 		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure,"
 				" begins, full_results, ends FROM contest_rounds"
-			" WHERE contest_id=? AND begins<=?");
+			" WHERE contest_id=? AND (begins IS NULL OR begins<=?)");
 		curr_date = mysql_date();
 		stmt.bindAndExecute(contests_cid, curr_date);
 	}
@@ -338,7 +338,7 @@ void Sim::api_contest() {
 				" cp.final_selecting_method, cp.reveal_score"
 			" FROM contest_problems cp"
 			" JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
-				" AND cr.begins<=?"
+				" AND (cr.begins IS NULL OR cr.begins<=?)"
 			" LEFT JOIN problems p ON p.id=cp.problem_id"
 			" WHERE cp.contest_id=?");
 		stmt.bindAndExecute(curr_date, contests_cid);
@@ -408,8 +408,11 @@ void Sim::api_contest_round() {
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403(); // Could not participate
 
-	if (begins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
+	if (not begins_is_null and begins > mysql_date() and
+		uint(~contests_perms & PERM::ADMIN))
+	{
 		return api_error403(); // Round has not begun yet
+	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "ranking")
@@ -565,8 +568,11 @@ void Sim::api_contest_problem() {
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403(); // Could not participate
 
-	if (rbegins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
+	if (not rbegins_is_null and rbegins > mysql_date() and
+		uint(~contests_perms & PERM::ADMIN))
+	{
 		return api_error403(); // Round has not begun yet
+	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "statement")
@@ -733,7 +739,7 @@ void Sim::api_contest_round_add() {
 	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
 		CONTEST_ROUND_NAME_MAX_LEN);
-	form_validate_not_blank(begins, "begins", "Begin time", is_safe_timestamp);
+	form_validate(begins, "begins", "Begin time", is_safe_timestamp);
 	form_validate(ends, "ends", "End time", is_safe_timestamp);
 	form_validate(full_results, "full_results", "Full results time",
 		is_safe_timestamp);
@@ -751,7 +757,11 @@ void Sim::api_contest_round_add() {
 		" FROM contest_rounds WHERE contest_id=?");
 	stmt.bind(0, contests_cid);
 	stmt.bind(1, name);
-	stmt.bind_copy(2, mysql_date(strtoull(begins)));
+
+	if (begins.empty())
+		stmt.bind(2, nullptr);
+	else
+		stmt.bind_copy(2, mysql_date(strtoull(begins)));
 
 	if (ends.empty())
 		stmt.bind(3, nullptr);
@@ -1034,7 +1044,8 @@ void Sim::api_contest_ranking(StringView submissions_id_name,
 		stmt = mysql.prepare(concat("SELECT s.id, s.owner, s.contest_round_id,"
 				" s.contest_problem_id, s.status, s.score"
 			" FROM submissions s JOIN contest_rounds cr ON"
-				" cr.id=s.contest_round_id AND cr.begins<=? AND"
+				" cr.id=s.contest_round_id AND"
+				" (cr.begins IS NULL OR cr.begins<=?) AND"
 				" (cr.full_results IS NULL OR cr.full_results<=?) AND"
 				" (cr.ranking_exposure IS NOT NULL AND cr.ranking_exposure<=?)"
 			" WHERE s.", submissions_id_name, "=? AND s.type=" STYPE_FINAL_STR

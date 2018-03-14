@@ -546,8 +546,9 @@ void Sim::api_submission_add() {
 		bool is_public;
 		InplaceBuff<20> cr_begins, cr_ends;
 		std::underlying_type_t<CUM> umode_u;
-		my_bool umode_is_null, cr_ends_is_null;
-		stmt.res_bind_all(contest_id, is_public, contest_round_id, cr_begins,
+		my_bool umode_is_null, cr_begins_is_null, cr_ends_is_null;
+		stmt.res_bind_all(contest_id, is_public, contest_round_id,
+			bind_arg(cr_begins, cr_begins_is_null),
 			bind_arg(cr_ends, cr_ends_is_null),
 			bind_arg(umode_u, umode_is_null));
 		if (not stmt.next())
@@ -561,7 +562,7 @@ void Sim::api_submission_add() {
 
 		auto curr_date = mysql_date();
 		if (uint(~cperms & ContestPermissions::ADMIN) and
-			(curr_date < cr_begins
+			((not cr_begins_is_null and curr_date < cr_begins)
 				or (not cr_ends_is_null and cr_ends <= curr_date)))
 		{
 			return api_error403(); // Round has not begun jet or already ended
