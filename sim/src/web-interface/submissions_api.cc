@@ -2,6 +2,7 @@
 
 #include <sim/jobs.h>
 #include <sim/submission.h>
+#include <sim/utilities.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 
@@ -297,8 +298,9 @@ void Sim::api_submissions() {
 		if (perms == PERM::NONE)
 			return api_error403();
 
+		InfDatetime full_results(res[FULL_RES]);
 		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
-			res.is_null(FULL_RES) or res[FULL_RES] <= curr_date);
+			full_results <= curr_date);
 		bool hide_final_type = (not show_full_results and
 			res[CP_FSM] == SFSM_WITH_HIGHEST_SCORE);
 
@@ -388,12 +390,10 @@ void Sim::api_submissions() {
 			append('s');
 		if (uint(perms & PERM::VIEW_RELATED_JOBS))
 			append('j');
-		if (uint(perms & PERM::VIEW) and
-			(res.is_null(CRENDS) or curr_date < res[CRENDS])) // Round has not ended
-		{
+		if (uint(perms & PERM::VIEW) and curr_date < InfDatetime(res[CRENDS]))
+			//                                     ^ Round has not ended
 			// TODO: implement it in some way in the UI
 			append('r'); // Resubmit solution
-		}
 		if (uint(perms & PERM::CHANGE_TYPE))
 			append('C');
 		if (uint(perms & PERM::REJUDGE))
@@ -417,7 +417,7 @@ void Sim::api_submissions() {
 			if (show_full_results)
 				append(',', jsonStringify(res[FINAL_REPORT]));
 			else
-				append(",null,\"", res[FULL_RES], '"');
+				append(",null,\"", full_results.to_api_str(), '"');
 		}
 
 		append(']');
@@ -544,13 +544,11 @@ void Sim::api_submission_add() {
 		stmt.bindAndExecute(session_user_id, contest_problem_id, problem_id);
 
 		bool is_public;
-		InplaceBuff<20> cr_begins, cr_ends;
+		InplaceBuff<20> cr_begins_str, cr_ends_str;
 		std::underlying_type_t<CUM> umode_u;
-		my_bool umode_is_null, cr_begins_is_null, cr_ends_is_null;
+		my_bool umode_is_null;
 		stmt.res_bind_all(contest_id, is_public, contest_round_id,
-			bind_arg(cr_begins, cr_begins_is_null),
-			bind_arg(cr_ends, cr_ends_is_null),
-			bind_arg(umode_u, umode_is_null));
+			cr_begins_str, cr_ends_str, bind_arg(umode_u, umode_is_null));
 		if (not stmt.next())
 			return api_error404();
 
@@ -562,8 +560,8 @@ void Sim::api_submission_add() {
 
 		auto curr_date = mysql_date();
 		if (uint(~cperms & ContestPermissions::ADMIN) and
-			((not cr_begins_is_null and curr_date < cr_begins)
-				or (not cr_ends_is_null and cr_ends <= curr_date)))
+			(curr_date < InfDatetime(cr_begins_str) or
+				InfDatetime(cr_ends_str) <= curr_date))
 		{
 			return api_error403(); // Round has not begun jet or already ended
 		}

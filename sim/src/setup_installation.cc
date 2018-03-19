@@ -229,10 +229,10 @@ int main(int argc, char **argv) {
 			"`contest_id` int unsigned NOT NULL,"
 			"`name` VARBINARY(", CONTEST_ROUND_NAME_MAX_LEN, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
-			"`begins` datetime NULL," // NULL == -infinity (the big bang)
-			"`ends` datetime NULL DEFAULT NULL," // NULL == forever
-			"`full_results` datetime NULL DEFAULT NULL," // NULL == show immediately
-			"`ranking_exposure` datetime NULL DEFAULT NULL," // NULL == do not expose
+			"`begins` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
+			"`ends` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
+			"`full_results` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
+			"`ranking_exposure` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, ranking_exposure),"
 			"KEY (contest_id, begins),"

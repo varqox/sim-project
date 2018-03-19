@@ -279,43 +279,24 @@ void Sim::api_contest() {
 	} else {
 		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure,"
 				" begins, full_results, ends FROM contest_rounds"
-			" WHERE contest_id=? AND (begins IS NULL OR begins<=?)");
+			" WHERE contest_id=? AND begins<=?");
 		curr_date = mysql_date();
 		stmt.bindAndExecute(contests_cid, curr_date);
 	}
 
 	uint item;
-	my_bool ranking_exp_is_null, begins_is_null, full_res_is_null, ends_is_null;
-	InplaceBuff<20> ranking_exposure, begins, full_results, ends;
-	stmt.res_bind_all(contests_crid, name, item,
-		bind_arg(ranking_exposure, ranking_exp_is_null),
-		bind_arg(begins, begins_is_null),
-		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null));
+	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str, ends_str;
+	stmt.res_bind_all(contests_crid, name, item, ranking_exposure_str,
+		begins_str, full_results_str, ends_str);
 
 	while (stmt.next()) {
 		append("\n[", contests_crid, ',',
 			jsonStringify(name), ',',
-			item, ',');
-
-		if (ranking_exp_is_null)
-			append("null,");
-		else
-			append('"', ranking_exposure, "\",");
-
-		if (begins_is_null)
-			append("null,");
-		else
-			append('"', begins, "\",");
-
-		if (full_res_is_null)
-			append("null,");
-		else
-			append('"', full_results, "\",");
-
-		if (ends_is_null)
-			append("null],");
-		else
-			append('"', ends, "\"],");
+			item, ","
+			"\"", InfDatetime(ranking_exposure_str).to_api_str(), "\","
+			"\"", InfDatetime(begins_str).to_api_str(), "\","
+			"\"", InfDatetime(full_results_str).to_api_str(), "\","
+			"\"", InfDatetime(ends_str).to_api_str(), "\"],");
 	}
 
 	if (resp.content.back() == ',')
@@ -338,7 +319,7 @@ void Sim::api_contest() {
 				" cp.final_selecting_method, cp.reveal_score"
 			" FROM contest_problems cp"
 			" JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
-				" AND (cr.begins IS NULL OR cr.begins<=?)"
+				" AND cr.begins<=?"
 			" LEFT JOIN problems p ON p.id=cp.problem_id"
 			" WHERE cp.contest_id=?");
 		stmt.bindAndExecute(curr_date, contests_cid);
@@ -386,18 +367,15 @@ void Sim::api_contest_round() {
 		contests_crid);
 
 	bool is_public;
-	my_bool ranking_exp_is_null, begins_is_null, full_res_is_null, ends_is_null,
-		umode_is_null;
-	InplaceBuff<20> ranking_exposure, begins, full_results, ends;
+	my_bool umode_is_null;
+	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str, ends_str;
 	std::underlying_type_t<CUM> umode_u;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<meta::max(CONTEST_ROUND_NAME_MAX_LEN,
 		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
 	uint item;
 	stmt.res_bind_all(contests_cid, cname, is_public, name, item,
-		bind_arg(ranking_exposure, ranking_exp_is_null),
-		bind_arg(begins, begins_is_null),
-		bind_arg(full_results, full_res_is_null), bind_arg(ends, ends_is_null),
+		ranking_exposure_str, begins_str, full_results_str, ends_str,
 		bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
 		return api_error404();
@@ -408,11 +386,13 @@ void Sim::api_contest_round() {
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403(); // Could not participate
 
-	if (not begins_is_null and begins > mysql_date() and
-		uint(~contests_perms & PERM::ADMIN))
-	{
+	InfDatetime ranking_exposure(ranking_exposure_str);
+	InfDatetime begins(begins_str);
+	InfDatetime full_results(full_results_str);
+	InfDatetime ends(ends_str);
+
+	if (begins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
 		return api_error403(); // Round has not begun yet
-	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "ranking")
@@ -464,27 +444,11 @@ void Sim::api_contest_round() {
 	// Round
 	append("],\n[\n[", contests_crid, ',',
 		jsonStringify(name), ',',
-		item, ',');
-
-	if (ranking_exp_is_null)
-		append("null,");
-	else
-		append('"', ranking_exposure, "\",");
-
-	if (begins_is_null)
-		append("null,");
-	else
-		append('"', begins, "\",");
-
-	if (full_res_is_null)
-		append("null,");
-	else
-		append('"', full_results, "\",");
-
-	if (ends_is_null)
-		append("null]");
-	else
-		append('"', ends, "\"]");
+		item, ","
+		"\"", ranking_exposure.to_api_str(), "\","
+		"\"", begins.to_api_str(), "\","
+		"\"", full_results.to_api_str(), "\","
+		"\"", ends.to_api_str(), "\"]");
 
 	// Problems
 	append("\n],\n[");
@@ -540,9 +504,9 @@ void Sim::api_contest_problem() {
 		contests_cpid);
 
 	bool is_public;
-	my_bool rranking_exp_is_null, rbegins_is_null, rfull_res_is_null,
-		rends_is_null, umode_is_null;
-	InplaceBuff<20> rranking_exposure, rbegins, rfull_results, rends;
+	my_bool umode_is_null;
+	InplaceBuff<20> rranking_exposure_str, rbegins_str, rfull_results_str,
+		rends_str;
 	std::underlying_type_t<CUM> umode_u;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> rname;
@@ -554,25 +518,25 @@ void Sim::api_contest_problem() {
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
-		ritem, bind_arg(rranking_exposure, rranking_exp_is_null),
-		bind_arg(rbegins, rbegins_is_null),
-		bind_arg(rfull_results, rfull_res_is_null),
-		bind_arg(rends, rends_is_null), problem_id, problem_label, pname, pitem,
-		final_selecting_method, reveal_score, bind_arg(umode_u, umode_is_null));
+		ritem, rranking_exposure_str, rbegins_str, rfull_results_str, rends_str,
+		problem_id, problem_label, pname, pitem, final_selecting_method,
+		reveal_score, bind_arg(umode_u, umode_is_null));
 	if (not stmt.next())
 		return api_error404();
 
 	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
+	InfDatetime rranking_exposure(rranking_exposure_str);
+	InfDatetime rbegins(rbegins_str);
+	InfDatetime rfull_results(rfull_results_str);
+	InfDatetime rends(rends_str);
+
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403(); // Could not participate
 
-	if (not rbegins_is_null and rbegins > mysql_date() and
-		uint(~contests_perms & PERM::ADMIN))
-	{
+	if (rbegins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
 		return api_error403(); // Round has not begun yet
-	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "statement")
@@ -626,27 +590,11 @@ void Sim::api_contest_problem() {
 	// Round
 	append("],\n[\n[", contests_crid, ',',
 		jsonStringify(rname), ',',
-		ritem, ',');
-
-	if (rranking_exp_is_null)
-		append("null,");
-	else
-		append('"', rranking_exposure, "\",");
-
-	if (rbegins_is_null)
-		append("null,");
-	else
-		append('"', rbegins, "\",");
-
-	if (rfull_res_is_null)
-		append("null,");
-	else
-		append('"', rfull_results, "\",");
-
-	if (rends_is_null)
-		append("null]");
-	else
-		append('"', rends, "\"]");
+		ritem, ","
+		"\"", rranking_exposure.to_api_str() , "\","
+		"\"", rbegins.to_api_str() , "\","
+		"\"", rfull_results.to_api_str() , "\","
+		"\"", rends.to_api_str() , "\"]");
 
 	// Problem
 	append("\n],\n[\n[", contests_cpid, ',',
@@ -739,12 +687,13 @@ void Sim::api_contest_round_add() {
 	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
 		CONTEST_ROUND_NAME_MAX_LEN);
-	form_validate(begins, "begins", "Begin time", is_safe_timestamp);
-	form_validate(ends, "ends", "End time", is_safe_timestamp);
-	form_validate(full_results, "full_results", "Full results time",
-		is_safe_timestamp);
-	form_validate(ranking_expo, "ranking_expo", "Show ranking since",
-		is_safe_timestamp);
+	form_validate_not_blank(begins, "begins", "Begin time",
+		is_safe_inf_timestamp);
+	form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
+	form_validate_not_blank(full_results, "full_results", "Full results time",
+		is_safe_inf_timestamp);
+	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
+		is_safe_inf_timestamp);
 
 	if (form_validation_error)
 		return api_error400(notifications);
@@ -757,27 +706,10 @@ void Sim::api_contest_round_add() {
 		" FROM contest_rounds WHERE contest_id=?");
 	stmt.bind(0, contests_cid);
 	stmt.bind(1, name);
-
-	if (begins.empty())
-		stmt.bind(2, nullptr);
-	else
-		stmt.bind_copy(2, mysql_date(strtoull(begins)));
-
-	if (ends.empty())
-		stmt.bind(3, nullptr);
-	else
-		stmt.bind_copy(3, mysql_date(strtoull(ends)));
-
-	if (full_results.empty())
-		stmt.bind(4, nullptr);
-	else
-		stmt.bind_copy(4, mysql_date(strtoull(full_results)));
-
-	if (ranking_expo.empty())
-		stmt.bind(5, nullptr);
-	else
-		stmt.bind_copy(5, mysql_date(strtoull(ranking_expo)));
-
+	stmt.bind_copy(2, inf_timestamp_to_InfDatetime(begins).to_str());
+	stmt.bind_copy(3, inf_timestamp_to_InfDatetime(ends).to_str());
+	stmt.bind_copy(4, inf_timestamp_to_InfDatetime(full_results).to_str());
+	stmt.bind_copy(5, inf_timestamp_to_InfDatetime(ranking_expo).to_str());
 	stmt.bind(6, contests_cid);
 	stmt.fixAndExecute();
 
@@ -796,12 +728,13 @@ void Sim::api_contest_round_edit() {
 	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
 		CONTEST_ROUND_NAME_MAX_LEN);
-	form_validate(begins, "begins", "Begin time", is_safe_timestamp);
-	form_validate(ends, "ends", "End time", is_safe_timestamp);
-	form_validate(full_results, "full_results", "Full results time",
-		is_safe_timestamp);
-	form_validate(ranking_expo, "ranking_expo", "Show ranking since",
-		is_safe_timestamp);
+	form_validate_not_blank(begins, "begins", "Begin time",
+		is_safe_inf_timestamp);
+	form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
+	form_validate_not_blank(full_results, "full_results", "Full results time",
+		is_safe_inf_timestamp);
+	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
+		is_safe_inf_timestamp);
 
 	if (form_validation_error)
 		return api_error400(notifications);
@@ -812,27 +745,10 @@ void Sim::api_contest_round_edit() {
 		" SET name=?, begins=?, ends=?, full_results=?, ranking_exposure=?"
 		" WHERE id=?");
 	stmt.bind(0, name);
-
-	if (begins.empty())
-		stmt.bind(1, nullptr);
-	else
-		stmt.bind_copy(1, mysql_date(strtoull(begins)));
-
-	if (ends.empty())
-		stmt.bind(2, nullptr);
-	else
-		stmt.bind_copy(2, mysql_date(strtoull(ends)));
-
-	if (full_results.empty())
-		stmt.bind(3, nullptr);
-	else
-		stmt.bind_copy(3, mysql_date(strtoull(full_results)));
-
-	if (ranking_expo.empty())
-		stmt.bind(4, nullptr);
-	else
-		stmt.bind_copy(4, mysql_date(strtoull(ranking_expo)));
-
+	stmt.bind_copy(1, inf_timestamp_to_InfDatetime(begins).to_str());
+	stmt.bind_copy(2, inf_timestamp_to_InfDatetime(ends).to_str());
+	stmt.bind_copy(3, inf_timestamp_to_InfDatetime(full_results).to_str());
+	stmt.bind_copy(4, inf_timestamp_to_InfDatetime(ranking_expo).to_str());
 	stmt.bind(5, contests_crid);
 	stmt.fixAndExecute();
 }
@@ -1044,10 +960,8 @@ void Sim::api_contest_ranking(StringView submissions_id_name,
 		stmt = mysql.prepare(concat("SELECT s.id, s.owner, s.contest_round_id,"
 				" s.contest_problem_id, s.status, s.score"
 			" FROM submissions s JOIN contest_rounds cr ON"
-				" cr.id=s.contest_round_id AND"
-				" (cr.begins IS NULL OR cr.begins<=?) AND"
-				" (cr.full_results IS NULL OR cr.full_results<=?) AND"
-				" (cr.ranking_exposure IS NOT NULL AND cr.ranking_exposure<=?)"
+				" cr.id=s.contest_round_id AND cr.begins<=? AND"
+				" cr.full_results<=? AND cr.ranking_exposure<=?"
 			" WHERE s.", submissions_id_name, "=? AND s.type=" STYPE_FINAL_STR
 			" ORDER BY s.owner"));
 		curr_date = mysql_date();

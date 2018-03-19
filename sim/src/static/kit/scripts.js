@@ -76,6 +76,12 @@ function date_to_datetime_str(date, trim_zero_seconds /*= false*/) {
 }
 function utcdt_or_tm_to_Date(time) {
 	if (isNaN(time)) {
+		// Convert infinities to infinities so they are comparable with other Dates
+		if (time === '-inf')
+			return -Infinity;
+		if (time == '+inf')
+			return Infinity;
+
 		var args = time.split(/[- :]/);
 		--args[1]; // fit month in [0, 11]
 		return new Date(Date.UTC.apply(this, args));
@@ -96,6 +102,15 @@ function normalize_datetime(elem, add_tz /*= false*/, trim_zero_seconds /*= fals
 
 	return elem;
 }
+function infdatetime_to(elem, infdt, neg_inf_text, inf_text) {
+	if (infdt[0] == '-')
+		return elem.text(neg_inf_text);
+	else if (infdt[0] == '+')
+		return elem.text(inf_text);
+	else
+		return normalize_datetime(elem.text(infdt)
+			.attr('datetime', infdt));
+};
 
 // $(document).ready(function() {
 // 	// Converts datetimes
@@ -2138,10 +2153,16 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 					class: 'results',
 					html: function() {
 						var res = [s.initial_report, s.final_report];
-						if (s.final_report === null)
+						if (s.final_report === null) {
+							var message_to_show;
+							if (utcdt_or_tm_to_Date(s.full_results) === Infinity)
+								message_to_show = $('<p>', {text: 'Final testing report will not be available.'});
+							else
+								message_to_show = $('<p>', {text: 'Final testing report will be visible since: '}).append(normalize_datetime($('<span>', {datetime: s.full_results})));
+
 							res.push($('<h2>', {text: 'Final testing report'}),
-								$('<p>', {text: 'Final testing report will be visible since: '}).append(
-									normalize_datetime($('<span>', {datetime: s.full_results}))));
+								message_to_show);
+						}
 						return res;
 					}()
 				}));
@@ -2982,17 +3003,13 @@ function add_contest_round(as_modal, contest_id) {
 				// maxlength: 'TODO...',
 				required: true
 			}).add(Form.field_group('Begin time',
-				datetime_input('begins', true, undefined, 'The Big Bang')
-				.attr('placeholder', 'The Big Bang')
+				dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
 			)).add(Form.field_group('End time',
-				datetime_input('ends', true, null, 'Never')
-				.attr('placeholder', 'Never')
+				dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
 			)).add(Form.field_group('Full results time',
-				datetime_input('full_results', true, null, 'Immediately')
-				.attr('placeholder', 'Immediately')
+				dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
 			)).add(Form.field_group('Show ranking since',
-				datetime_input('ranking_expo', true, null, "Don't show")
-				.attr('placeholder', "Don't show")
+				dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -3120,17 +3137,13 @@ function edit_contest_round(as_modal, contest_round_id) {
 				// maxlength: 'TODO...',
 				required: true
 			}).add(Form.field_group('Begin time',
-				datetime_input('begins', true, round.begins, 'The Big Bang')
-				.attr('placeholder', 'The Big Bang')
+				dt_chooser_input('begins', true, true, utcdt_or_tm_to_Date(round.begins), 'The Big Bang', 'Never')
 			)).add(Form.field_group('End time',
-				datetime_input('ends', true, round.ends, 'Never')
-				.attr('placeholder', 'Never')
+				dt_chooser_input('ends', true, true, utcdt_or_tm_to_Date(round.ends), 'The Big Bang', 'Never')
 			)).add(Form.field_group('Full results time',
-				datetime_input('full_results', true, round.full_results, 'Immediately')
-				.attr('placeholder', 'Immediately')
+				dt_chooser_input('full_results', true, true, utcdt_or_tm_to_Date(round.full_results), 'Immediately', 'Never')
 			)).add(Form.field_group('Show ranking since',
-				datetime_input('ranking_expo', true, round.ranking_exposure, "Don't show")
-				.attr('placeholder', "Don't show")
+				dt_chooser_input('ranking_expo', true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'Full results', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -3347,54 +3360,40 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 									if (rounds.length !== 1)
 										res.push($('<div>', {html: [
 											$('<label>', {text: "B:"}),
-											normalize_datetime($('<span>', (round.begins === null ?
-												{text: 'Big Bang'}
-												: {datetime: round.begins, text: round.begins})
-											), false, true)
+											infdatetime_to($('<span>'), round.begins,
+												'The Big Bang', 'never')
 										]}),
 										$('<div>', {html: [
 											$('<label>', {text: "E:"}),
-											normalize_datetime($('<span>', (round.ends === null ?
-												{text: 'never'}
-												: {datetime: round.ends, text: round.ends})
-											), false, true)
+											infdatetime_to($('<span>'), round.ends,
+												'The Big Bang', 'never')
 										]}),
 										$('<div>', {html: [
 											$('<label>', {text: "R:"}),
-											normalize_datetime($('<span>', (round.full_results === null ?
-												{text: 'immediately'}
-												: {datetime: round.full_results, text: round.full_results})
-											), false, true)
+											infdatetime_to($('<span>'), round.full_results,
+												'immediately', 'never')
 										]}));
 									else
 										res.push($('<table>', {html: [
 											$('<tr>', {html: [
 												$('<td>', {text: 'Beginning'}),
-												normalize_datetime($('<td>', (round.begins === null ?
-													{text: 'The Big Bang'}
-													: {datetime: round.begins, text: round.begins})
-												), false, true)
+												infdatetime_to($('<td>'), round.begins,
+													'The Big Bang', 'never')
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: 'End'}),
-												normalize_datetime($('<td>', (round.ends === null ?
-													{text: 'never'}
-													: {datetime: round.ends, text: round.ends})
-												), false, true)
+												infdatetime_to($('<td>'), round.ends,
+													'The Big Bang', 'never')
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: "Full results"}),
-												normalize_datetime($('<td>', (round.full_results === null ?
-													{text: 'immediately'}
-													: {datetime: round.full_results, text: round.full_results})
-												), false, true)
+												infdatetime_to($('<td>'), round.full_results,
+													'immediately', 'never')
 											]}),
 											$('<tr>', {html: [
 												$('<td>', {text: "Ranking since"}),
-												normalize_datetime($('<td>', (round.ranking_exposure === null ?
-													{text: 'never'}
-													: {datetime: round.ranking_exposure, text: round.ranking_exposure})
-												), false, true)
+												infdatetime_to($('<td>'), round.ranking_exposure,
+													'full results', 'never')
 											]}),
 										]}));
 
@@ -3458,7 +3457,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					}
 					// Check whether the round has ended
 					var cannot_submit = (actions.indexOf('p') === -1);
-					if (round.ends !== null && actions.indexOf('A') === -1) {
+					if (actions.indexOf('A') === -1) {
 						var curr_time = date_to_datetime_str(new Date());
 						var end_time = utcdt_or_tm_to_Date(round.ends);
 						cannot_submit |= (end_time <= curr_time);
@@ -3566,14 +3565,9 @@ function contest_ranking(elem_, id_for_api) {
 		for (var i = 0; i < rounds.length; ++i) {
 			if (!is_admin) {
 				// Add only those rounds that have full results visible and the ranking_exposure point has passed
-				var curr_time = date_to_datetime_str(new Date());
-				var full_results = normalize_datetime($('<span>', {
-					datetime: rounds[i].full_results
-				}), false).text();
-				var ranking_exposure = normalize_datetime($('<span>', {
-					datetime: rounds[i].ranking_exposure
-				}), false).text();
-
+				var curr_time = new Date();
+				var full_results = utcdt_or_tm_to_Date(rounds[i].full_results);
+				var ranking_exposure = utcdt_or_tm_to_Date(rounds[i].ranking_exposure);
 				if (curr_time < full_results || curr_time < ranking_exposure)
 					continue; // Do not show the round
 			}
@@ -3613,9 +3607,10 @@ function contest_ranking(elem_, id_for_api) {
 				timed_hide_show(modal);
 				var message_to_show = '<p>There is no one in the ranking yet...</p>';
 				if (rounds.length === 1) {
-					if (rounds[0].ranking_exposure === null)
+					var ranking_exposure = utcdt_or_tm_to_Date(rounds[0].ranking_exposure);
+					if (ranking_exposure === Infinity)
 						message_to_show = '<p>The current round will not be shown in the ranking.</p>';
-					else if (utcdt_or_tm_to_Date(rounds[0].ranking_exposure) > new Date())
+					else if (ranking_exposure > new Date())
 						message_to_show = $('<p>Ranking will be available since: </p>').append(normalize_datetime($('<span>', {datetime: rounds[0].ranking_exposure})));
 				}
 
@@ -4346,41 +4341,73 @@ function open_calendar_on(time, text_input, hidden_input) {
 		};
 	});
 }
-function datetime_input(name, allow_null /* = false */, initial_utcdt /* = undefined <=> use current time, null <=> no value */, button_text /* = 'Set to null' */) {
-	var dt;
-	if (initial_utcdt === undefined || initial_utcdt === null) {
-		dt = new Date();
-		// Round to 5 minutes
-		var k = dt.getMinutes() + (dt.getSeconds() !== 0) + 4;
-		dt.setMinutes(k - k % 5);
-		dt.setSeconds(0);
-	} else
-		dt = utcdt_or_tm_to_Date(initial_utcdt);
+function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = false */, initial_dt /* = undefined <=> use current time, Infinity <=> inf, -Infinity <=> -inf */, neg_inf_button_text /* = 'Set to -inf' */, inf_button_text /* = 'Set to inf' */) {
+	/*const*/ var neg_inf_text_to_show = neg_inf_button_text;
+	/*const*/ var inf_text_to_show = inf_button_text;
 
-	var elems = $('<input>', {
+	if (neg_inf_button_text === undefined) {
+		neg_inf_button_text = 'Set to -inf';
+		neg_inf_text_to_show = '-inf';
+	}
+	if (inf_button_text === undefined) {
+		inf_button_text = 'Set to inf';
+		inf_text_to_show = 'inf';
+	}
+
+	if (initial_dt === undefined) {
+		initial_dt = new Date();
+		// Round to 5 minutes
+		var k = initial_dt.getMinutes() + (initial_dt.getSeconds() !== 0) + 4;
+		initial_dt.setMinutes(k - k % 5);
+		initial_dt.setSeconds(0);
+	}
+
+	var dt = (initial_dt === Infinity || initial_dt === -Infinity ? new Date() : initial_dt);
+
+	var open_modal_chooser = function() {
+		open_calendar_on(dt, chooser_input, value_input);
+	};
+
+	var chooser_input = $('<input>', {
 		type: 'text',
 		class: 'calendar-input',
-		tm: (initial_utcdt === null ? undefined : Math.floor(dt.getTime() / 1000)),
-		value: (initial_utcdt === null ? '' : date_to_datetime_str(dt)),
 		readonly: true,
-		click: function() {
-			open_calendar_on(dt, elems.eq(0), elems.eq(1));
-		}
-	}).add('<input>', {
-		type: 'hidden',
-		name: name,
-		value: (initial_utcdt === null ? undefined : Math.floor(dt.getTime() / 1000)),
+		click: open_modal_chooser
 	});
 
-	if (allow_null)
-		return elems.add('<a>', {
+	var value_input = $('<input>', {
+		type: 'hidden',
+		name: name
+	});
+
+	var update_choosen_dt = function(new_dt) {
+		if (new_dt === Infinity) {
+			value_input.val('+inf');
+			chooser_input.val(inf_text_to_show);
+		} else if (new_dt === -Infinity) {
+			value_input.val('-inf');
+			chooser_input.val(neg_inf_text_to_show);
+		} else {
+			value_input.val(Math.floor(new_dt.getTime() / 1000));
+			chooser_input.val(date_to_datetime_str(new_dt));
+		}
+	};
+
+	update_choosen_dt(initial_dt);
+
+	var inf_buttons = $();
+	if (allow_neg_inf)
+		inf_buttons = inf_buttons.add('<a>', {
 			class: 'btn-small',
-			text: (button_text === undefined ? 'Set to null' : button_text),
-			click: function () {
-				elems.eq(0).val('');
-				elems.eq(1).val(null);
-			}
+			text: neg_inf_button_text,
+			click: update_choosen_dt.bind(null, -Infinity)
+		});
+	if (allow_inf)
+		inf_buttons = inf_buttons.add('<a>', {
+			class: 'btn-small',
+			text: inf_button_text,
+			click: update_choosen_dt.bind(null, Infinity)
 		});
 
-	return elems;
+	return chooser_input.add(value_input).add(inf_buttons);
 }
