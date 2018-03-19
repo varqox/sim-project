@@ -2004,7 +2004,7 @@ form .field-group {
 	-webkit-align-items: center;
 	align-items: center;
 }
-form .field-group > * {
+form .field-group > :not(.btn-small) + * {
 	margin-left: 10px;
 }
 form .field-group > :first-child {

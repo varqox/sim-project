@@ -75,6 +75,7 @@ constexpr uint PROBLEM_TAG_MAX_LEN = 128;
 constexpr uint CONTEST_NAME_MAX_LEN = 128;
 // Contest rounds
 constexpr uint CONTEST_ROUND_NAME_MAX_LEN = 128;
+constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
 // Contest problems
 constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
 	meta::max(128, PROBLEM_NAME_MAX_LEN);
