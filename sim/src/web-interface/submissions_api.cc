@@ -298,7 +298,13 @@ void Sim::api_submissions() {
 		if (perms == PERM::NONE)
 			return api_error403();
 
-		InfDatetime full_results(res[FULL_RES]);
+		InfDatetime full_results;
+		if (res.is_null(FULL_RES)) // The submission is not in the contest, so
+			                       // full results are visible immediately
+			full_results.set_neg_inf();
+		else
+			full_results.from_str(res[FULL_RES]);
+
 		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
 			full_results <= curr_date);
 		bool hide_final_type = (not show_full_results and
@@ -390,10 +396,13 @@ void Sim::api_submissions() {
 			append('s');
 		if (uint(perms & PERM::VIEW_RELATED_JOBS))
 			append('j');
-		if (uint(perms & PERM::VIEW) and curr_date < InfDatetime(res[CRENDS]))
-			//                                     ^ Round has not ended
+		if (uint(perms & PERM::VIEW) and
+			(res.is_null(CRENDS) or curr_date < InfDatetime(res[CRENDS])))
+		{
+			//  ^ submission to a problem;    ^ Round has not ended
 			// TODO: implement it in some way in the UI
 			append('r'); // Resubmit solution
+		}
 		if (uint(perms & PERM::CHANGE_TYPE))
 			append('C');
 		if (uint(perms & PERM::REJUDGE))
