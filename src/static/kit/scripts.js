@@ -14,21 +14,32 @@ function hex2str(hexx) {
 		str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
 	return str;
 }
+function elem_with_text(tag, text) {
+	var elem = document.createElement(tag);
+	elem.innerText = text;
+	return elem;
+}
+function appendChildren(elem, elements) {
+	for (var i in elements)
+		elem.appendChild(elements[i]);
+}
 function text_to_safe_html(str) {
-	return $('<div>', {text: str}).html();
+	var x = document.createElement('span');
+	x.innerText = str;
+	return x.innerHTML;
 }
 function is_logged_in() {
-	return ($('.navbar .rightbar .user + ul > a:first-child').length > 0);
+	return (document.querySelector('.navbar .rightbar .user + ul > a:first-child') !== null);
 }
 function logged_user_id() {
-	var x = $('.navbar .rightbar .user + ul > a:first-child').attr('href');
+	var x = document.querySelector('.navbar .rightbar .user + ul > a:first-child').href;
 	return x.substr(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() {
-	return ($('.navbar > div > a[href="/logs"]').length === 1);
+	return (document.querySelector('.navbar > div > a[href="/logs"]') !== null);
 }
 function logged_user_is_tearcher_or_admin() {
-	return ($('.navbar > div > a[href="/u"]').length === 1);
+	return (document.querySelector('.navbar > div > a[href="/u"]') !== null);
 }
 
 // Dropdowns
@@ -110,7 +121,7 @@ function infdatetime_to(elem, infdt, neg_inf_text, inf_text) {
 	else
 		return normalize_datetime(elem.text(infdt)
 			.attr('datetime', infdt));
-};
+}
 
 // $(document).ready(function() {
 // 	// Converts datetimes
@@ -818,17 +829,17 @@ function view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_
 	}, no_modal_elem);
 }
 function a_view_button(href, text, classes, func) {
-	return $('<a>', {
-			'href': href,
-			'text': text,
-			class: classes,
-			click: function(event) {
-				if (event.ctrlKey)
-					return true; // Allow opening the link in a new tab
-				func();
-				return false;
-			}
-		});
+	var a = document.createElement('a');
+	a.href = href;
+	a.innerText = text;
+	a.className = classes;
+	a.onclick = function(event) {
+		if (event.ctrlKey)
+			return true; // Allow opening the link in a new tab
+		func();
+		return false;
+	};
+	return a;
 }
 
 /* ================================= Lister ================================= */
@@ -1258,11 +1269,11 @@ var ActionsToHTML = {};
 				res.push(a_view_button('/s/' + submission_id + '#source', 'Source',
 					'btn-small', view_submission.bind(null, true, submission_id, '#source')));
 
-			res.push($('<a>', {
-				class: 'btn-small',
-				href: '/api/submission/' + submission_id + '/download',
-				text: 'Download'
-			}));
+			var a = document.createElement('a');
+			a.className = 'btn-small';
+			a.href = '/api/submission/' + submission_id + '/download';
+			a.innerText = 'Download';
+			res.push(a);
 		}
 
 		if (actions_str.indexOf('C') !== -1)
@@ -1925,11 +1936,12 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			row.append($('<td>', {text: x.id}));
 			row.append($('<td>', {text: x.type}));
 			row.append($('<td>', {text: x.priority}));
+
+			var avb = a_view_button('/jobs/' + x.id, x.added, undefined,
+				view_job.bind(null, true, x.id));
+			avb.datetime = x.added;
 			row.append($('<td>', {
-				html: normalize_datetime(
-					a_view_button('/jobs/' + x.id, x.added, undefined,
-						view_job.bind(null, true, x.id)).attr('datetime', x.added),
-					false)
+				html: normalize_datetime(avb, false)
 			}));
 			row.append($('<td>', {
 				class: 'status ' + x.status.class,
@@ -2310,66 +2322,76 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			x = data[x];
 			this_.query_suffix = '/<' + x.id;
 
-			var row = $('<tr>', {
-				class: (x.type === 'Ignored' ? 'ignored' : undefined)
-			});
+			var row = document.createElement('tr');
+			var td;
+			row.className = (x.type === 'Ignored' ? 'ignored' : undefined);
 
-			row.append($('<td>', {text: x.id}));
-			row.append($('<td>', {text: x.language}));
+			row.appendChild(elem_with_text('td', x.id));
+			row.appendChild(elem_with_text('td', x.language));
 
 			// Username
-			if (this_.show_user)
-				row.append($('<td>', {
-					html: x.owner_id === null ? 'System' : (x.owner_username == null ? x.owner_id
-						: a_view_button('/u/' + x.owner_id, x.owner_username, undefined,
-							view_user.bind(null, true, x.owner_id)))
-				}));
+			if (this_.show_user) {
+				if (x.owner_id === null)
+					row.appendChild(elem_with_text('td', 'System'));
+				else if (x.owner_username === null)
+					row.appendChild(elem_with_text('td', x.owner_id));
+				else {
+					td = document.createElement('td');
+					td.appendChild(a_view_button('/u/' + x.owner_id, x.owner_username, undefined,
+							view_user.bind(null, true, x.owner_id)));
+					row.appendChild(td);
+				}
+
+			}
 
 			// Submission time
-			row.append($('<td>', {
-				html: normalize_datetime(
-					a_view_button('/s/' + x.id, x.submit_time, undefined,
-						view_submission.bind(null, true, x.id)).attr('datetime', x.submit_time),
-					false)
-			}));
+			td = document.createElement('td');
+			var avb = a_view_button('/s/' + x.id, x.submit_time, undefined,
+				view_submission.bind(null, true, x.id));
+			avb.datetime = x.submit_time;
+			td.appendChild(normalize_datetime(avb, false)[0]);
+			row.appendChild(td);
 
 			// Problem
-			if (x.contest_id == null) // Not in the contest
-				row.append($('<td>', {
-					html: a_view_button('/p/' + x.problem_id, x.problem_name, undefined,
-						view_problem.bind(null, true, x.problem_id))
-				}));
-			else
-				row.append($('<td>', {
-					html: [(this_.show_contest ? a_view_button('/c/c' + x.contest_id, x.contest_name, '', view_contest.bind(null, true, x.contest_id)) : ''),
-						(this_.show_contest ? ' / ' : ''),
-						a_view_button('/c/r' + x.contest_round_id, x.contest_round_name, '',
-							view_contest_round.bind(null, true, x.contest_round_id)),
-						' / ',
-						a_view_button('/c/p' + x.contest_problem_id, x.contest_problem_name, '',
-							view_contest_problem.bind(null, true, x.contest_problem_id))
-					]
-				}));
+			if (x.contest_id == null) { // Not in the contest
+				td = document.createElement('td');
+				td.appendChild(a_view_button('/p/' + x.problem_id, x.problem_name, undefined,
+					view_problem.bind(null, true, x.problem_id)));
+			} else {
+				td = document.createElement('td');
+				// Contest
+				if (this_.show_contest) {
+					td.appendChild(a_view_button('/c/c' + x.contest_id, x.contest_name, '', view_contest.bind(null, true, x.contest_id)));
+					td.appendChild(document.createTextNode(' / '));
+				}
+				td.appendChild(a_view_button('/c/r' + x.contest_round_id,
+					x.contest_round_name, '', view_contest_round.bind(null, true, x.contest_round_id)));
+				td.appendChild(document.createTextNode(' / '));
+				td.appendChild(a_view_button('/c/p' + x.contest_problem_id,
+					x.contest_problem_name, '',
+					view_contest_problem.bind(null, true, x.contest_problem_id)));
+			}
+			row.appendChild(td);
 
 			// Status
-			row.append($('<td>', {
-				class: 'status ' + x.status.class,
-				text: (x.status.class.lastIndexOf('initial') === -1 ? ''
-					: 'Initial: ') + x.status.text
-			}));
+			td = document.createElement('td');
+			td.className = 'status ' + x.status.class;
+			td.innerText = (x.status.class.lastIndexOf('initial') === -1 ? ''
+					: 'Initial: ') + x.status.text;
+			row.appendChild(td);
 
 			// Score
-			row.append($('<td>', {text: x.score}));
+			row.appendChild(elem_with_text('td', x.score));
 
 			// Type
-			row.append($('<td>', {text: x.type}));
+			row.appendChild(elem_with_text('td', x.type));
 
 			// Actions
-			row.append($('<td>', {
-				html: ActionsToHTML.submission(x.id, x.actions, x.type)
-			}));
+			td = document.createElement('td');
+			appendChildren(td, ActionsToHTML.submission(x.id, x.actions, x.type));
+			row.appendChild(td);
 
-			this_.elem.children('tbody').append(row);
+			this_.elem.children('tbody')[0].appendChild(row);
 		}
 	};
 
