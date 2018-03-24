@@ -1900,7 +1900,7 @@ table.files td {
 /* Logs */
 pre.logs {
 	margin: 10px 32px 10px 10px;
-	height: 400px;
+	min-height: 400px;
 	padding: 2px;
 	font-family: "Ubuntu Mono",Monaco,Menlo,Consolas,"Courier New",monospace;
 	white-space: pre-wrap;
@@ -1912,7 +1912,6 @@ pre.logs {
 	border-radius: 4px;
 	overflow-y: auto;
 	position: relative;
-    min-height: 32px;
 }
 pre.logs::-webkit-scrollbar {
     width: 10px;
@@ -2182,12 +2181,23 @@ input.calendar-input {
 	justify-content: space-between;
 	margin-right: 32px;
 }
-.logs-header > div > * {
+.logs-header > div > label {
 	vertical-align: middle;
 }
-.logs-header > div > input {
+.logs-header > div > label > input {
+	vertical-align: middle;
 	margin-left: 15px;
+	margin-right: 5px;
 }
-.logs-header > div > label {
-	margin-left: 5px;
+
+.logs-parent {
+	height: 100vh;
+	display: flex;
+	flex-flow: column nowrap;
+}
+.logs-parent > * {
+	flex-shrink: 0;
+}
+.logs-parent > .logs {
+	flex: 1 1;
 }

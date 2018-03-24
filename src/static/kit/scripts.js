@@ -230,8 +230,6 @@ function StaticMap() {
 var url_hash_parser = {};
 (function () {
 	var args = window.location.hash; // Must begin with '#'
-	if (args == '')
-		args = '#';
 	var beg = 0; // Points to the '#' just before the next argument
 
 	this.next_arg  = function() {
@@ -880,15 +878,17 @@ function Lister(elem) {
 
 	this.monitor_scroll = function() {
 		var scres_handler;
+		var elem_to_listen_on_scroll;
 		var scres_unhandle = function() {
-			if (!$.contains(document.documentElement, this_.elem)) {
-				$(this).off('scroll', scres_handler);
-				$(this).off('resize', scres_handler);
+			if (!$.contains(document.documentElement, this_.elem[0])) {
+				elem_to_listen_on_scroll.off('scroll', scres_handler);
+				$(window).off('resize', scres_handler);
 				return;
 			}
 		};
 		var modal_parent = this_.elem.closest('.modal');
 		if (modal_parent.length === 1) {
+			elem_to_listen_on_scroll = modal_parent;
 			scres_handler = function() {
 				scres_unhandle();
 				var height = $(this).children('div').height();
@@ -897,20 +897,18 @@ function Lister(elem) {
 					this_.fetch_more();
 			};
 
-			modal_parent.on('scroll', scres_handler);
-			$(window).on('resize', scres_handler);
-
 		} else {
+			elem_to_listen_on_scroll = $(document);
 			scres_handler = function() {
 				scres_unhandle();
 				var x = $(document);
 				if (x.height() - $(window).height() - x.scrollTop() <= 300)
 					this_.fetch_more();
 			};
-
-			$(document).on('scroll', scres_handler);
-			$(window).on('resize', scres_handler);
 		}
+
+		elem_to_listen_on_scroll.on('scroll', scres_handler);
+		$(window).on('resize', scres_handler);
 	};
 }
 
@@ -1048,8 +1046,9 @@ function Logs(type, elem, auto_refresh_checkbox) {
 	};
 
 	this.fetch_more = function() {
-		if (lock)
+		if (lock || !$.contains(document.documentElement, this_.elem[0]))
 			return;
+
 		lock = true;
 
 		append_loader(this_.elem);
@@ -1092,7 +1091,12 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		});
 	};
 
-	setInterval(function() {
+	var refreshing_interval_id = setInterval(function() {
+		if (!$.contains(document.documentElement, this_.elem[0])) {
+			clearInterval(refreshing_interval_id);
+			return;
+		}
+
 		var elem = this_.elem[0];
 		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight &&
 			auto_refresh_checkbox.is(':checked'))
@@ -1102,13 +1106,65 @@ function Logs(type, elem, auto_refresh_checkbox) {
 	}, 2000);
 
 	this.monitor_scroll = function() {
-		this_.elem.on('scroll', function() {
-			if ($(this).scrollTop() <= 300)
+		var scres_handler;
+		var scres_unhandle = function() {
+			if (!$.contains(document.documentElement, this_.elem[0])) {
+				this_.elem.off('scroll', scres_handler);
+				$(window).off('resize', scres_handler);
+				return;
+			}
+		};
+
+		scres_handler = function() {
+			scres_unhandle();
+			if (this_.elem.scrollTop() <= 300)
 				this_.fetch_more();
-		});
+		};
+
+		this_.elem.on('scroll', scres_handler);
+		$(window).on('resize', scres_handler);
 	};
 
 	this.fetch_more();
+}
+function tab_logs_view(parent_elem) {
+	// Select job server log by default
+	if (url_hash_parser.next_arg() === '') {
+		url_hash_parser.append('#job_server');
+		window.location.hash += '#job_server';
+	}
+
+	parent_elem = $(parent_elem);
+	function retab(log_type, log_name) {
+		var checkbox = $('<input>', {
+			type: 'checkbox',
+			checked: (log_type !== 'web')
+		});
+
+		$('<div>', {
+			class: 'logs-header',
+			html: [
+				$('<h2>', {text: log_name + ' log:'}),
+				$('<div>', {html:
+					$('<label>', {html: [
+						checkbox, 'auto-refresh'
+					]})
+				})
+			]
+		}).appendTo(parent_elem);
+
+		parent_elem.addClass('logs-parent');
+		new Logs(log_type, $('<pre>', {class: 'logs'}).appendTo(parent_elem), checkbox).monitor_scroll();
+	}
+
+	var tabs = [
+		'Server (web)', retab.bind(null, 'web', "Server's"),
+		'Server error (web)', retab.bind(null, 'web_err', "Server's error"),
+		'Job server', retab.bind(null, 'jobs', "Job server's"),
+		'Job server error', retab.bind(null, 'jobs_err', "Job server's error")
+	];
+
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
 }
 
 /* ============================ Actions buttons ============================ */
