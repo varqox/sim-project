@@ -1898,6 +1898,14 @@ table.files td {
 }
 
 /* Logs */
+pre.logs > span { /* Used to align content to the bottom if there is to little logs loaded */
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	overflow-y: auto;
+	max-height: 100%;
+}
 pre.logs {
 	margin: 10px 32px 10px 10px;
 	min-height: 400px;
@@ -1910,19 +1918,18 @@ pre.logs {
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
-	overflow-y: auto;
 	position: relative;
 }
-pre.logs::-webkit-scrollbar {
+pre.logs > span::-webkit-scrollbar {
     width: 10px;
     background: #606060;
 }
-pre.logs::-webkit-scrollbar-track {
+pre.logs > span::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
     -webkit-border-radius: 10px;
     border-radius: 10px;
 }
-pre.logs::-webkit-scrollbar-thumb {
+pre.logs > span::-webkit-scrollbar-thumb {
     -webkit-border-radius: 10px;
     border-radius: 10px;
     background: #ddd;

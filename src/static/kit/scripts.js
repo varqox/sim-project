@@ -1013,32 +1013,33 @@ function Logs(type, elem, auto_refresh_checkbox) {
 	this.offset = undefined;
 	var lock = false; // allow only manual unlocking
 	var offset, first_offset;
+	var content = $('<span>').appendTo(elem);
 
 	var process_data = function(data) {
-		data = String(data).split('\n');
+		data[0] = parseInt(data[0]);
 		if (first_offset === undefined)
 			first_offset = data[0];
 		else if (data[0] > first_offset) { // Newer logs arrived
 			first_offset = data[0];
-			this_.elem.empty();
+			content.empty();
 		}
 
 		offset = data[0];
 		data = hex2str(data[1]);
 
-		var prev_height = this_.elem[0].scrollHeight;
-		var prev = prev_height - this_.elem.scrollTop();
+		var prev_height = content[0].scrollHeight;
+		var prev = prev_height - content.scrollTop();
 
 		remove_loader(this_.elem);
-		this_.elem.html(colorize(text_to_safe_html(data) + this_.elem.html(),
+		content.html(colorize(text_to_safe_html(data) + content.html(),
 			data.length + 2000));
-		var curr_height = this_.elem[0].scrollHeight;
-		this_.elem.scrollTop(curr_height - prev);
+		var curr_height = content[0].scrollHeight;
+		content.scrollTop(curr_height - prev);
 
 		// Load more logs if scrolling up did not become possible
 		if (offset > 0) {
 			lock = false;
-			if (this_.elem.innerHeight() >= curr_height || prev_height == curr_height) {
+			if (content.innerHeight() >= curr_height || prev_height == curr_height) {
 				// avoid recursion
 				setTimeout(this_.fetch_more, 0);
 			}
@@ -1056,7 +1057,9 @@ function Logs(type, elem, auto_refresh_checkbox) {
 			type: 'GET',
 			url: '/api/logs/' + this_.type +
 				(offset === undefined ? '' : '?' + offset),
-			success: process_data,
+			success: function (data) {
+				process_data(String(data).split('\n'));
+			},
 			error: function(resp, status) {
 				show_error_via_loader(this_.elem, resp, status, function () {
 					lock = false; // allow only manual unlocking
@@ -1076,7 +1079,8 @@ function Logs(type, elem, auto_refresh_checkbox) {
 			type: 'GET',
 			url: '/api/logs/' + this_.type,
 			success: function(data) {
-				if (String(data).split('\n')[0] !== first_offset)
+				data = String(data).split('\n');
+				if (parseInt(data[0]) !== first_offset)
 					return process_data(data);
 
 				remove_loader(this_.elem);
@@ -1097,7 +1101,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 			return;
 		}
 
-		var elem = this_.elem[0];
+		var elem = content[0];
 		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight &&
 			auto_refresh_checkbox.is(':checked'))
 		{
@@ -1109,7 +1113,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var scres_handler;
 		var scres_unhandle = function() {
 			if (!$.contains(document.documentElement, this_.elem[0])) {
-				this_.elem.off('scroll', scres_handler);
+				content.off('scroll', scres_handler);
 				$(window).off('resize', scres_handler);
 				return;
 			}
@@ -1117,11 +1121,11 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		scres_handler = function() {
 			scres_unhandle();
-			if (this_.elem.scrollTop() <= 300)
+			if (content.scrollTop() <= 300)
 				this_.fetch_more();
 		};
 
-		this_.elem.on('scroll', scres_handler);
+		content.on('scroll', scres_handler);
 		$(window).on('resize', scres_handler);
 	};
 
