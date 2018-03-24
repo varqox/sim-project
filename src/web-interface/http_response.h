@@ -30,12 +30,13 @@ public:
 			const std::string& domain ="", bool http_only = false,
 			bool secure = false);
 
-	void setCache(bool to_public, uint max_age) {
+	void setCache(bool to_public, uint max_age, bool must_revalidate) {
 		headers["expires"] = date("%a, %d %b %Y %H:%M:%S GMT",
 			time(nullptr) + max_age);
 		headers["cache-control"] =
 			concat_tostr((to_public ? "public" : "private"),
-				"; must-revalidate; max-age=", max_age);
+				(must_revalidate ? "; must-revalidate" : ""),
+				"; max-age=", max_age);
 	}
 
 	StringView getCookie(StringView name) const noexcept {
