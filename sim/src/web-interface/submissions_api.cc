@@ -235,10 +235,18 @@ void Sim::api_submissions() {
 	if (not allow_access)
 		return api_error403();
 
+	constexpr uint SUBMISSIONS_LIMIT_PER_QUERY = 50;
+	#define SUBMISSIONS_LIMIT_PER_QUERY_STR "50"
+	static_assert(meta::equal(SUBMISSIONS_LIMIT_PER_QUERY_STR,
+		meta::ToString<SUBMISSIONS_LIMIT_PER_QUERY>::value),
+		"Update the above #define");
+
+	constexpr meta::string order_and_limit_suff = " ORDER BY s.id DESC LIMIT " SUBMISSIONS_LIMIT_PER_QUERY_STR;
+
 	// Execute query
 	qfields.append(qwhere);
 	auto res = mysql.query(concat(qfields, qwhere_id_cond,
-		" ORDER BY s.id DESC LIMIT 100"));
+		order_and_limit_suff));
 
 	// Column names
 	append("[\n{\"columns\":["
@@ -271,9 +279,9 @@ void Sim::api_submissions() {
 
 	auto curr_date = mysql_date();
 	InplaceBuff<30> boundary_id;
-	for (int appended_rows = 0; appended_rows < 50; ) {
+	for (int appended_rows = 0; appended_rows < SUBMISSIONS_LIMIT_PER_QUERY; ) {
 		if (not res.next()) {
-			if (select_one or res.rows_num() < 50)
+			if (select_one or res.rows_num() < SUBMISSIONS_LIMIT_PER_QUERY)
 				break;
 
 			// Run another query to fetch more data
@@ -283,7 +291,7 @@ void Sim::api_submissions() {
 			qwhere_id_cond.append(" AND s.id<", boundary_id);
 			// Execute query
 			res = mysql.query(concat(qfields, qwhere_id_cond,
-				" ORDER BY s.id DESC LIMIT 100"));
+				order_and_limit_suff));
 			continue;
 		}
 
