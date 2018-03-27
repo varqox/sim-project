@@ -279,7 +279,7 @@ void Sim::api_submissions() {
 
 	auto curr_date = mysql_date();
 	InplaceBuff<30> boundary_id;
-	for (int appended_rows = 0; appended_rows < SUBMISSIONS_LIMIT_PER_QUERY; ) {
+	for (uint appended_rows = 0; appended_rows < SUBMISSIONS_LIMIT_PER_QUERY; ) {
 		if (not res.next()) {
 			if (select_one or res.rows_num() < SUBMISSIONS_LIMIT_PER_QUERY)
 				break;
