@@ -2292,19 +2292,17 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 	this.query_suffix = '';
 
 	this.process_api_response = function(data, modal) {
-		if (this_.elem.children('thead').length === 0) {
+		var thead = this_.elem[0].querySelector('thead');
+		if (thead === null) {
 			if (data.length === 0) {
-				this_.elem.parent().append($('<center>', {
-					class: 'submissions always_in_view',
-					// class: 'submissions',
-					html: '<p>There are no submissions to show...</p>'
-				}));
-				remove_loader(this_.elem.parent());
-				timed_hide_show(modal);
+				var center = document.createElement('center');
+				center.className = 'submissions always_in_view';
+				center.innerHTML = '<p>There are no submissions to show...</p>';
+				this.elem[0].parentNode.appendChild(center);
 				return;
 			}
 
-			this_.elem.html('<thead><tr>' +
+			this.elem[0].innerHTML = '<thead><tr>' +
 					'<th>Id</th>' +
 					'<th>Lang</th>' +
 					(this_.show_user ? '<th class="username">Username</th>' : '') +
@@ -2314,8 +2312,8 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 					'<th class="score">Score</th>' +
 					'<th class="type">Type</th>' +
 					'<th class="actions">Actions</th>' +
-				'</tr></thead><tbody></tbody>');
-			add_tz_marker(this_.elem.find('thead th.time'));
+				'</tr></thead><tbody></tbody>';
+			add_tz_marker(this_.elem[0].querySelector('thead th.time'));
 		}
 
 		for (var x in data) {
@@ -2391,7 +2389,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			appendChildren(td, ActionsToHTML.submission(x.id, x.actions, x.type));
 			row.appendChild(td);
 
-			this_.elem.children('tbody')[0].appendChild(row);
+			this_.elem[0].querySelector('tbody').appendChild(row);
 		}
 	};
 
