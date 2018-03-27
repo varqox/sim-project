@@ -238,7 +238,7 @@ void Sim::api_submissions() {
 	// Execute query
 	qfields.append(qwhere);
 	auto res = mysql.query(concat(qfields, qwhere_id_cond,
-		" ORDER BY s.id DESC LIMIT 50"));
+		" ORDER BY s.id DESC LIMIT 100"));
 
 	// Column names
 	append("[\n{\"columns\":["
@@ -283,7 +283,7 @@ void Sim::api_submissions() {
 			qwhere_id_cond.append(" AND s.id<", boundary_id);
 			// Execute query
 			res = mysql.query(concat(qfields, qwhere_id_cond,
-				" ORDER BY s.id DESC LIMIT 50"));
+				" ORDER BY s.id DESC LIMIT 100"));
 			continue;
 		}
 
