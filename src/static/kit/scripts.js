@@ -433,6 +433,8 @@ var Form = {};
 		var input;
 		if (input_context_or_input instanceof jQuery)
 			input = input_context_or_input;
+		else if (input_context_or_input instanceof HTMLElement)
+			input = $(input_context_or_input);
 		else
 			input = $('<input>', input_context_or_input);
 
@@ -835,7 +837,7 @@ function a_view_button(href, text, classes, func) {
 	a.className = classes;
 	a.onclick = function(event) {
 		if (event.ctrlKey)
-			return true; // Allow opening the link in a new tab
+			return true; // Allow the link to open in a new tab
 		func();
 		return false;
 	};
