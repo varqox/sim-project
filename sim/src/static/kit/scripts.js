@@ -834,7 +834,8 @@ function a_view_button(href, text, classes, func) {
 	var a = document.createElement('a');
 	a.href = href;
 	a.innerText = text;
-	a.className = classes;
+	if (classes !== undefined)
+		a.className = classes;
 	a.onclick = function(event) {
 		if (event.ctrlKey)
 			return true; // Allow the link to open in a new tab
@@ -1941,7 +1942,7 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 
 			var avb = a_view_button('/jobs/' + x.id, x.added, undefined,
 				view_job.bind(null, true, x.id));
-			avb.datetime = x.added;
+			avb.setAttribute('datetime', x.added);
 			row.append($('<td>', {
 				html: normalize_datetime(avb, false)
 			}));
@@ -2324,7 +2325,8 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 			var row = document.createElement('tr');
 			var td;
-			row.className = (x.type === 'Ignored' ? 'ignored' : undefined);
+			if (x.type === 'Ignored')
+				row.className = 'ignored';
 
 			row.appendChild(elem_with_text('td', x.id));
 			row.appendChild(elem_with_text('td', x.language));
@@ -2348,7 +2350,9 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			td = document.createElement('td');
 			var avb = a_view_button('/s/' + x.id, x.submit_time, undefined,
 				view_submission.bind(null, true, x.id));
-			avb.datetime = x.submit_time;
+			avb.setAttribute('datetime', x.submit_time);
+			console.log(avb);
+			console.log(avb.outerHTML);
 			td.appendChild(normalize_datetime(avb, false)[0]);
 			row.appendChild(td);
 
