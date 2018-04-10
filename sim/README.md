@@ -16,13 +16,12 @@ SIM is an open source platform for carrying out algorithmic contests
 - MySQL client library (Debian packages: _libmysqlclient-dev_)
 - GNU/Make
 - libarchive
-- time
 - zip
 
 #### Ubuntu / Debian
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmysqlclient-dev libarchive-dev make time zip
+  sudo apt-get install g++-multilib mysql-server libmysqlclient-dev libarchive-dev make zip
   ```
 
 ### Instructions

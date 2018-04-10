@@ -2,7 +2,7 @@ include Makefile.config
 
 DESTDIR := build
 
-MYSQL_CONFIG := $(shell which mariadb_config || which mysql_config)
+MYSQL_CONFIG := $(shell which mariadb_config 2> /dev/null || which mysql_config 2> /dev/null)
 
 SIM_CXX_FLAGS := -I '$(CURDIR)/src/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
 SIM_LD_FLAGS := -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs)
