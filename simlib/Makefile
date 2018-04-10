@@ -50,9 +50,9 @@ SIMLIB_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_SRCS))
 $(PREFIX)simlib.a: $(SIMLIB_OBJS)
 	$(MAKE_STATIC_LIB)
 
-ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_32.h),)
+ifneq ("$(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_32.h)","")
 $(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
-else ifneq ($(wildcard /usr/include/x86-linux-gnu/asm/unistd_32.h),)
+else ifneq ("$(wildcard /usr/include/x86-linux-gnu/asm/unistd_32.h)","")
 $(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86-linux-gnu/asm/unistd_32.h
 else
 $(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/asm/unistd_32.h
@@ -73,9 +73,9 @@ $(PREFIX)src/syscall_name_32.cc: $(PREFIX)Makefile $(UNISTD_32)
 		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
 	$(Q)echo "};" >> $@
 
-ifneq ($(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_64.h),)
+ifneq ("$(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_64.h)","")
 $(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/x86_64-linux-gnu/asm/unistd_64.h
-else ifneq ($(wildcard /usr/include/x86-linux-gnu/asm/unistd_64.h),)
+else ifneq ("$(wildcard /usr/include/x86-linux-gnu/asm/unistd_64.h)","")
 $(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/x86-linux-gnu/asm/unistd_64.h
 else
 $(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/asm/unistd_64.h
