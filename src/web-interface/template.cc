@@ -75,9 +75,16 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 				"<time id=\"clock\">", date("%H:%M:%S"),
 					"<sup>UTC</sup></time>");
 
-	if (session_is_open)
+	if (session_is_open) {
+		char utype_c = '?';
+		switch (session_user_type) {
+		case UserType::NORMAL: utype_c = 'N'; break;
+		case UserType::TEACHER: utype_c = 'T'; break;
+		case UserType::ADMIN: utype_c = 'A'; break;
+		}
+
 		append("<div class=\"dropmenu down\">"
-				"<a class=\"user dropmenu-toggle\">"
+				"<a class=\"user dropmenu-toggle\" user-type=\"", utype_c, "\">"
 					"<strong>", htmlEscape(session_username), "</strong>"
 				"</a>"
 				"<ul>"
@@ -90,7 +97,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 				"</ul>"
 				"</div>");
 
-	else
+	} else
 		append("<a href=\"/login\"><strong>Log in</strong></a>"
 			"<a href=\"/signup\">Sign up</a>");
 

@@ -60,10 +60,16 @@ Sim::UserPermissions Sim::users_get_permissions(StringView uid, UserType utype)
 			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL |
 				PERM::VIEW_ALL | PERM::ADD_USER
 		}, { // Teacher
+			PERM::NONE, // SIM root
+			PERM::NONE, // Admin
+			PERM::NONE, // Teacher
+			PERM::NONE // Normal
+			/*
 			PERM::NONE | PERM::VIEW_ALL, // SIM root
 			PERM::VIEW | PERM::VIEW_ALL, // Admin
 			PERM::VIEW | PERM::VIEW_ALL, // Teacher
 			PERM::VIEW | PERM::VIEW_ALL // Normal
+			*/
 		}, { // Normal
 			PERM::NONE, // SIM root
 			PERM::NONE, // Admin

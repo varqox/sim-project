@@ -36,10 +36,13 @@ function logged_user_id() {
 	return x.substr(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() {
-	return (document.querySelector('.navbar > div > a[href="/logs"]') !== null);
+	return (document.querySelector('.navbar .rightbar .user[user-type="A"]') !== null);
 }
-function logged_user_is_tearcher_or_admin() {
-	return (document.querySelector('.navbar > div > a[href="/u"]') !== null);
+function logged_user_is_teacher() {
+	return (document.querySelector('.navbar .rightbar .user[user-type="T"]') !== null);
+}
+function logged_user_is_teacher_or_admin() {
+	return logged_user_is_teacher() || logged_user_is_admin();
 }
 
 // Dropdowns
@@ -2925,8 +2928,8 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
-	this.show_owner = logged_user_is_tearcher_or_admin();
-	this.show_added = logged_user_is_tearcher_or_admin() ||
+	this.show_owner = logged_user_is_teacher_or_admin();
+	this.show_added = logged_user_is_teacher_or_admin() ||
 		(query_suffix.indexOf('/u') !== -1);
 
 	Lister.call(this, elem);
@@ -3040,7 +3043,7 @@ function problem_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 		'/p' + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.modal'));
 			$(this).append($('<h1>', {text: 'Problems'}));
-			if (logged_user_is_tearcher_or_admin())
+			if (logged_user_is_teacher_or_admin())
 				$(this).append(a_view_button('/p/add', 'Add problem', 'btn',
 					add_problem.bind(null, true)));
 
@@ -3926,7 +3929,7 @@ function contest_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 		'/c' + (opt_hash === undefined ? '' : opt_hash), function() {
 			timed_hide($(this).parent().parent().filter('.modal'));
 			$(this).append($('<h1>', {text: 'Contests'}));
-			if (logged_user_is_tearcher_or_admin())
+			if (logged_user_is_teacher_or_admin())
 				$(this).append(a_view_button('/c/add', 'Add contest', 'btn',
 					add_contest.bind(null, true)));
 
