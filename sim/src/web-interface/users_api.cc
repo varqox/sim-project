@@ -32,7 +32,8 @@ void Sim::api_users() {
 	};
 
 	if (session_user_type == UserType::TEACHER)
-		query_append("id!=" SIM_ROOT_UID);
+		query_append("id=", session_user_id);
+		// query_append("id!=" SIM_ROOT_UID);
 	else if (session_user_type == UserType::NORMAL)
 		query_append("id=", session_user_id);
 
