@@ -539,7 +539,7 @@ struct Sandbox::CallbackBase::Registers {
 			&uregs,
 			sizeof(uregs)
 		};
-		if (ptrace(PTRACE_GETREGSET, pid, 1, &ivo) == -1)
+		if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &ivo) == -1)
 			THROW("Error: ptrace(PTRACE_GETREGS)", errmsg());
 	}
 
@@ -549,7 +549,7 @@ struct Sandbox::CallbackBase::Registers {
 			sizeof(uregs)
 		};
 		// Update traced process registers
-		if (ptrace(PTRACE_SETREGSET, pid, 1, &ivo) == -1)
+		if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &ivo) == -1)
 			THROW("Error: ptrace(PTRACE_SETREGS)", errmsg());
 	}
 };
@@ -723,7 +723,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 
 	func.detect_tracee_architecture(cpid);
 
-	// Open /proc/{cpid}/statm
+	// Open /proc/{cpid}/statm for tracking vm_peak (vm stands for virtual memory)
 	FileDescriptor statm_fd {concat("/proc/", cpid, "/statm").to_cstr(),
 		O_RDONLY};
 	if (statm_fd == -1)

@@ -401,7 +401,7 @@ public:
 	}
 
 	// Swaps two StringBase
-	virtual void swap(StringBase& s) noexcept {
+	void swap(StringBase& s) noexcept {
 		// Swap str
 		pointer p = str;
 		str = s.str;
@@ -716,7 +716,11 @@ public:
 		len -= i;
 	}
 
-	constexpr void removeLeading(char c) noexcept {
+
+#if __cplusplus > 201402L
+#warning "Since C++17 constexpr can be used below"
+#endif
+	/*constexpr*/ void removeLeading(char c) noexcept {
 		removeLeading([c](char x) { return (x == c); });
 	}
 
@@ -727,7 +731,10 @@ public:
 			--len;
 	}
 
-	constexpr void removeTrailing(char c) noexcept {
+#if __cplusplus > 201402L
+#warning "Since C++17 constexpr can be used below"
+#endif
+	/*constexpr*/ void removeTrailing(char c) noexcept {
 		removeTrailing([c](char x) { return (x == c); });
 	}
 

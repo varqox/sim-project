@@ -77,6 +77,7 @@ inline static vector<string> compile_command(SolutionLanguage lang,
 		THROW("Invalid Language!");
 	}
 
+	THROW("Should not reach here");
 }
 
 constexpr meta::string JudgeWorker::CHECKER_FILENAME;

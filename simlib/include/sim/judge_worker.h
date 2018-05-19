@@ -115,7 +115,7 @@ enum class SolutionLanguage {
 	UNKNOWN, C, CPP, PASCAL
 };
 
-constexpr SolutionLanguage filename_to_lang(StringView filename) {
+static SolutionLanguage filename_to_lang(StringView filename) {
 	SolutionLanguage res = SolutionLanguage::UNKNOWN;
 	if (hasSuffix(filename, ".c"))
 		res = SolutionLanguage::C;
@@ -133,6 +133,8 @@ constexpr SolutionLanguage filename_to_lang(StringView filename) {
 	// If missing one, then update above ifs
 		return res;
 	}
+
+	THROW("Should not reach here");
 }
 
 /**

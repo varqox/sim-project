@@ -134,7 +134,17 @@ class CallInDtor {
 	bool make_call = true;
 
 public:
-	constexpr explicit CallInDtor(Func f) : func(std::move(f)) {}
+	explicit CallInDtor(Func&& f) try : func(f) {
+	} catch (...) {
+		f();
+		throw;
+	}
+
+	explicit CallInDtor(const Func& f) try : func(f) {
+	} catch (...) {
+		f();
+		throw;
+	}
 
 	CallInDtor(const CallInDtor&) = delete;
 	CallInDtor& operator=(const CallInDtor&) = delete;
@@ -185,6 +195,17 @@ constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
 		if (x == val)
 			return true;
 	return false;
+}
+
+template<class A>
+constexpr bool isOneOf(const A&) { return false; }
+
+template<class A, class B, class... C>
+constexpr bool isOneOf(const A& val, const B& first, const C&... others) {
+	if (sizeof...(others) == 0)
+		return (val == first);
+
+	return (val == first or isOneOf(val, others...));
 }
 
 template<class T, size_t N>
