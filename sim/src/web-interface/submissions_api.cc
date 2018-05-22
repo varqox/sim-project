@@ -653,8 +653,8 @@ void Sim::api_submission_add() {
 	// File
 	auto solution_dest = concat<64>("solutions/", submission_id);
 	if (code.empty()) {
-		if (rename(solution_tmp_path, solution_dest.to_cstr()))
-			THROW("rename() failed", errmsg());
+		if (move(solution_tmp_path, solution_dest.to_cstr()))
+			THROW("move() failed", errmsg());
 	// Code
 	} else
 		putFileContents(solution_dest.to_cstr(), code);
