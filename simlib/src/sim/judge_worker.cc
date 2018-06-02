@@ -1,53 +1,10 @@
 #include "../../include/parsers.h"
 #include "../../include/sim/checker.h"
-#include "../../include/sim/sandbox.h"
 #include "../../include/sim/judge_worker.h"
 #include "../../include/sim/problem_package.h"
 
 using std::string;
 using std::vector;
-
-namespace {
-
-class JudgeCallback : protected Sandbox::DefaultCallback {
-public:
-	JudgeCallback() = default;
-
-	using DefaultCallback::detect_tracee_architecture;
-	using DefaultCallback::get_arch;
-	using DefaultCallback::is_syscall_exit_allowed;
-	using DefaultCallback::error_message;
-
-	bool is_syscall_entry_allowed(pid_t pid, int syscall) {
-		constexpr int sys_nanosleep[2] = {
-			162, // SYS_nanosleep - i386
-			35, // SYS_nanosleep - x86_64
-		};
-		constexpr int sys_clock_nanosleep[2] = {
-			267, // SYS_clock_nanosleep - i386
-			230, // SYS_clock_nanosleep - x86_64
-		};
-
-		if (syscall != sys_nanosleep[arch_] and
-			syscall != sys_clock_nanosleep[arch_])
-		{
-			return DefaultCallback::is_syscall_entry_allowed(pid, syscall);
-		}
-
-		SyscallRegisters regs(pid, arch_);
-
-		if (syscall == sys_nanosleep[arch_])
-			regs.set_arg1u(0); // Set NULL as the first argument to nanosleep(2)
-		else
-			regs.set_arg3u(0); // Set NULL as the third argument to
-			                  // clock_nanosleep(2)
-
-		regs.set_regs(pid); // Update traced process's registers
-		return true;
-	}
-};
-
-} // anonymous namespace
 
 namespace sim {
 
@@ -190,6 +147,8 @@ JudgeReport JudgeWorker::judge(bool final) const {
 		CHECKER_MEMORY_LIMIT
 	};
 
+	Sandbox sandbox;
+
 	string checker_path {concat_tostr(tmp_dir.path(), CHECKER_FILENAME)};
 	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
 
@@ -228,14 +187,14 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			cpu_tl.tv_nsec = (test.time_limit - cpu_tl.tv_sec * 1000000) * 1000;
 
 			// Run solution on the test
-			Sandbox::ExitStat es = Sandbox::run(solution_path, {}, {
+			Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
 				test_in,
 				solution_stdout,
 				-1,
 				tl,
 				test.memory_limit,
 				cpu_tl
-			}, ".", JudgeCallback{}); // Allow exceptions to fly upper
+			}); // Allow exceptions to fly upper
 
 			// Update score_ratio
 			// [0; 2/3 of time limit] => ratio = 1.0
@@ -340,16 +299,14 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			(void)lseek(checker_stdout, 0, SEEK_SET);
 
 			// Run checker
-			auto ces = Sandbox::run(checker_path,
+			auto ces = sandbox.run(checker_path,
 				{checker_path, test_in_path, test_out_path, sol_stdout_path},
 				checker_opts,
-				".",
-				SandboxCallback({
+				{
 					{test_in_path, OpenAccess::RDONLY},
 					{test_out_path, OpenAccess::RDONLY},
 					{sol_stdout_path, OpenAccess::RDONLY}
-				})
-			); // Allow exceptions to fly higher
+				}); // Allow exceptions to fly higher
 
 			InplaceBuff<4096> checker_error_str;
 			// Checker exited with 0
