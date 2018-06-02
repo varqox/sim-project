@@ -93,7 +93,7 @@ uninstall:
 
 .PHONY: run
 run: $(filter-out run, $(MAKECMDGOALS))
-	@ # ^ run always have to be executed at the end
+	@ # ^ run target always have to be executed at the end
 
 	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
 		$(abspath $(DESTDIR)/job-server)
@@ -127,7 +127,7 @@ $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
 
 src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive
+	$(LINK) -lsupc++ -lrt -larchive -lseccomp
 
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \

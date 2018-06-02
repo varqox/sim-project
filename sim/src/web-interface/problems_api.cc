@@ -303,6 +303,8 @@ void Sim::api_problem() {
 }
 
 void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
+	STACK_UNWINDING_MARK;
+
 	// Validate fields
 	CStringView name, label, memory_limit, global_time_limit, package_file;
 	bool relative_time_limits = request.form_data.exist("relative_time_limits");
@@ -363,7 +365,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
 	auto job_id = stmt.insert_id();
 	// Make the package file the job's file
-	if (rename(package_file, concat("jobs_files/", job_id, ".zip").to_cstr()))
+	if (move(package_file, concat("jobs_files/", job_id, ".zip").to_cstr()))
 		THROW("move() failed", errmsg());
 
 	// Activate the job
