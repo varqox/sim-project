@@ -63,7 +63,6 @@ public:
 	using Spawner::Options;
 
 	/**
-	 * TODO: UPDATE THE INFO BELOW
 	 * @brief Runs @p exec with arguments @p args and limits: @p opts.time_limit
 	 *   and @p opts.memory_limit under seccomp(2) and ptrace(2)
 	 * @details
