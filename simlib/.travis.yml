@@ -251,6 +251,10 @@ before_script:
   - wget 'http://de.archive.ubuntu.com/ubuntu/pool/main/m/make-dfsg/make_4.1-6_amd64.deb'
   - dpkg -x make_4.1-6_amd64.deb make41
   - export make="$PWD/make41/usr/bin/make"
+  - apt-get download libseccomp-dev
+  - dpkg -x $(ls | grep libseccomp) libseccomp
+  - export EXTRA_CXX_FLAGS=" -I $PWD/libseccomp/usr/include"
+  - export EXTRA_LD_FLAGS=" -L $PWD/libseccomp/usr/lib/x86_64-linux-gnu"
 
 script:
   - $make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
