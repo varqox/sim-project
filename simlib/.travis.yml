@@ -251,8 +251,7 @@ before_script:
   - wget 'http://de.archive.ubuntu.com/ubuntu/pool/main/m/make-dfsg/make_4.1-6_amd64.deb'
   - dpkg -x make_4.1-6_amd64.deb make41
   - export make="$PWD/make41/usr/bin/make"
-  - wget 'http://de.archive.ubuntu.com/ubuntu/pool/main/libs/libseccomp/libseccomp-dev_2.3.1-2.1ubuntu4_amd64.deb'
-  - dpkg -x $(ls | grep libseccomp) libseccomp
+  - curl -L 'https://github.com/varqox/test/releases/download/static-files/data.tar.xz' | (mkdir libseccomp; tar xJ -C libseccomp)
   - export EXTRA_CXX_FLAGS=" -I $PWD/libseccomp/usr/include"
   - export EXTRA_LD_FLAGS=" -L $PWD/libseccomp/usr/lib/x86_64-linux-gnu"
   - sed 's/LINUX_VERSION_CODE/266241/' -i src/lib/simlib/src/sandbox.cc
