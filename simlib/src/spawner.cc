@@ -39,7 +39,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 	const Spawner::Options& opts, CStringView working_dir)
 {
-	// Error stream from child (and wait_for_syscall()) via pipe
+	// Error stream from child via pipe
 	int pfd[2];
 	if (pipe2(pfd, O_CLOEXEC) == -1)
 		THROW("pipe()", errmsg());
@@ -54,7 +54,7 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 	}
 
 	sclose(pfd[1]);
-	Closer pipe0_closer(pfd[0]);
+	FileDescriptorCloser pipe0_closer(pfd[0]);
 
 	// Wait for child to be ready
 	siginfo_t si;

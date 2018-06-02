@@ -722,10 +722,10 @@ inline void putFileContents(CStringView file, StringView data) {
 }
 
 // Closes file descriptor automatically
-class Closer {
+class FileDescriptorCloser {
 	int fd_;
 public:
-	explicit Closer(int fd) noexcept : fd_(fd) {}
+	explicit FileDescriptorCloser(int fd) noexcept : fd_(fd) {}
 
 	void cancel() noexcept { fd_ = -1; }
 
@@ -745,7 +745,7 @@ public:
 		return rc;
 	}
 
-	~Closer() noexcept {
+	~FileDescriptorCloser() noexcept {
 		if (fd_ >= 0)
 			sclose(fd_);
 	}
