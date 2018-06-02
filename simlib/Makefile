@@ -39,8 +39,6 @@ SIMLIB_SRCS := \
 	$(PREFIX)src/sim/simfile.cc \
 	$(PREFIX)src/spawner.cc \
 	$(PREFIX)src/string.cc \
-	$(PREFIX)src/syscall_name_32.cc \
-	$(PREFIX)src/syscall_name_64.cc \
 	$(PREFIX)src/time.cc \
 	$(PREFIX)src/zip.cc
 
@@ -49,52 +47,6 @@ SIMLIB_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_SRCS))
 
 $(PREFIX)simlib.a: $(SIMLIB_OBJS)
 	$(MAKE_STATIC_LIB)
-
-ifneq ("$(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_32.h)","")
-$(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86_64-linux-gnu/asm/unistd_32.h
-else ifneq ("$(wildcard /usr/include/x86-linux-gnu/asm/unistd_32.h)","")
-$(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/x86-linux-gnu/asm/unistd_32.h
-else
-$(PREFIX)src/syscall_name_32.cc: UNISTD_32 = /usr/include/asm/unistd_32.h
-endif
-
-$(PREFIX)src/syscall_name_32.cc: $(PREFIX)Makefile $(UNISTD_32)
-	$(GEN)
-	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
-	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
-	$(Q)echo "#include \"$(UNISTD_32)\"" >> $@
-	$(Q)echo "" >> $@
-	# 32 bit
-	$(Q) [ -f $(UNISTD_32) ] || \
-		{ echo "Error: $(UNISTD_32): No such file or directory"; $(RM) $@; exit 1; }
-	$(Q)echo "SyscallNameSet x86_syscall_name {" >> $@
-	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_32) | \
-		sed 's/#define\s*__NR_//' | \
-		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
-	$(Q)echo "};" >> $@
-
-ifneq ("$(wildcard /usr/include/x86_64-linux-gnu/asm/unistd_64.h)","")
-$(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/x86_64-linux-gnu/asm/unistd_64.h
-else ifneq ("$(wildcard /usr/include/x86-linux-gnu/asm/unistd_64.h)","")
-$(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/x86-linux-gnu/asm/unistd_64.h
-else
-$(PREFIX)src/syscall_name_64.cc: UNISTD_64 = /usr/include/asm/unistd_64.h
-endif
-
-$(PREFIX)src/syscall_name_64.cc: $(PREFIX)Makefile $(UNISTD_64)
-	$(GEN)
-	$(Q)echo "// WARNING: file generated automatically; changes will not be permanent." > $@
-	$(Q)echo "#include \"../include/syscall_name.h\"" >> $@
-	$(Q)echo "#include \"$(UNISTD_64)\"" >> $@
-	$(Q)echo "" >> $@
-	# 64 bit
-	$(Q)echo "SyscallNameSet x86_64_syscall_name {" >> $@
-	$(Q) [ -f $(UNISTD_64) ] || \
-		{ echo "Error: $(UNISTD_64): No such file or directory"; $(RM) $@; exit 1; }
-	$(Q)grep -E "^\s*#\s*define\s*__NR_" $(UNISTD_64) | \
-		sed 's/#define\s*__NR_//' | \
-		awk '{ printf "\t{"; if (2<=NF) printf $$2; for (i=3; i<=NF; ++i) printf " " $$i; print ", \"" $$1 "\"}," }' >> $@
-	$(Q)echo "};" >> $@
 
 $(PREFIX)src/sim/default_checker_dump.c: $(PREFIX)src/sim/default_checker.c $(PREFIX)Makefile
 	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*default_checker_c@default_checker_c@g' > $@
