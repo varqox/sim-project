@@ -720,7 +720,7 @@ public:
 #if __cplusplus > 201402L
 #warning "Since C++17 constexpr can be used below"
 #endif
-	/*constexpr*/ void removeLeading(char c) noexcept {
+	constexpr void removeLeading(char c) noexcept {
 		removeLeading([c](char x) { return (x == c); });
 	}
 

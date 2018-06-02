@@ -7,9 +7,10 @@
 #include <sys/wait.h>
 
 class Spawner {
-public:
-	Spawner() = delete;
+protected:
+	Spawner() = default;
 
+public:
 	struct ExitStat {
 		timespec runtime = {0, 0};
 		timespec cpu_runtime = {0, 0};
@@ -96,7 +97,7 @@ public:
 protected:
 	// Sends @p str followed by error message of @p errnum through @p fd and
 	// _exits with -1
-	static void send_error_message(int fd, int errnum, CStringView str) noexcept
+	static void send_error_message_and_exit(int fd, int errnum, CStringView str) noexcept
 	{
 		writeAll(fd, str.data(), str.size());
 
@@ -108,8 +109,8 @@ protected:
 
 	/**
 	 * @brief Receives error message from @p fd
-	 * @details Useful in conjunction with send_error_message() and pipe for
-	 *   instance in reporting errors from child process
+	 * @details Useful in conjunction with send_error_message_and_exit() and
+	 *   pipe for instance in reporting errors from child process
 	 *
 	 * @param si sig_info from waitid(2)
 	 * @param fd file descriptor to read from
@@ -308,13 +309,13 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	noexcept
 {
 	// Sends error to parent
-	auto send_error = [fd](int errnum, CStringView str) {
-		send_error_message(fd, errnum, str);
+	auto send_error_and_exit = [fd](int errnum, CStringView str) {
+		send_error_message_and_exit(fd, errnum, str);
 	};
 
 	// Create new process group (useful for killing the whole process group)
 	if (setpgid(0, 0))
-		send_error(errno, "setpgid()");
+		send_error_and_exit(errno, "setpgid()");
 
 	// Convert args
 	const size_t len = args.size();
@@ -327,7 +328,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	// Change working directory
 	if (working_dir != "." && working_dir != "" && working_dir != "./") {
 		if (chdir(working_dir.c_str()) == -1)
-			send_error(errno, "chdir()");
+			send_error_and_exit(errno, "chdir()");
 	}
 
 	// Set virtual memory and stack size limit (to the same value)
@@ -335,9 +336,9 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 		struct rlimit limit;
 		limit.rlim_max = limit.rlim_cur = opts.memory_limit;
 		if (setrlimit(RLIMIT_AS, &limit))
-			send_error(errno, "setrlimit(RLIMIT_AS)");
+			send_error_and_exit(errno, "setrlimit(RLIMIT_AS)");
 		if (setrlimit(RLIMIT_STACK, &limit))
-			send_error(errno, "setrlimit(RLIMIT_STACK)");
+			send_error_and_exit(errno, "setrlimit(RLIMIT_STACK)");
 	}
 
 	// Set CPU time limit [s]
@@ -349,7 +350,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 			                                            // death
 
 		if (setrlimit(RLIMIT_CPU, &limit))
-			send_error(errno, "setrlimit(RLIMIT_CPU)");
+			send_error_and_exit(errno, "setrlimit(RLIMIT_CPU)");
 
 	// Limit below is useful when spawned process becomes orphaned
 	} else if (opts.real_time_limit.tv_sec or opts.real_time_limit.tv_nsec) {
@@ -359,7 +360,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 			(opts.real_time_limit.tv_nsec >= 500000000);
 
 		if (setrlimit(RLIMIT_CPU, &limit))
-			send_error(errno, "setrlimit(RLIMIT_CPU)");
+			send_error_and_exit(errno, "setrlimit(RLIMIT_CPU)");
 	}
 
 	// Change stdin
@@ -369,7 +370,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	else if (opts.new_stdin_fd != STDIN_FILENO)
 		while (dup2(opts.new_stdin_fd, STDIN_FILENO) == -1)
 			if (errno != EINTR)
-				send_error(errno, "dup2()");
+				send_error_and_exit(errno, "dup2()");
 
 	// Change stdout
 	if (opts.new_stdout_fd < 0)
@@ -378,7 +379,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	else if (opts.new_stdout_fd != STDOUT_FILENO)
 		while (dup2(opts.new_stdout_fd, STDOUT_FILENO) == -1)
 			if (errno != EINTR)
-				send_error(errno, "dup2()");
+				send_error_and_exit(errno, "dup2()");
 
 	// Change stderr
 	if (opts.new_stderr_fd < 0)
@@ -387,7 +388,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	else if (opts.new_stderr_fd != STDERR_FILENO)
 		while (dup2(opts.new_stderr_fd, STDERR_FILENO) == -1)
 			if (errno != EINTR)
-				send_error(errno, "dup2()");
+				send_error_and_exit(errno, "dup2()");
 
 	doBeforeExec();
 
@@ -399,8 +400,8 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 
 	// execvp() failed
 	if (exec.size() <= PATH_MAX)
-		send_error(errnum, StringBuff<PATH_MAX + 20>{"execvp('", exec, "')"});
+		send_error_and_exit(errnum, StringBuff<PATH_MAX + 20>{"execvp('", exec, "')"});
 	else
-		send_error(errnum, StringBuff<PATH_MAX + 20>{"execvp('",
+		send_error_and_exit(errnum, StringBuff<PATH_MAX + 20>{"execvp('",
 			exec.substring(0, PATH_MAX), "...')"});
 }
