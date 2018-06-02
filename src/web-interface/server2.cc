@@ -410,7 +410,7 @@ static void* worker(void*) {
 			// accept the connection
 			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
 				&client_name_len);
-			Closer closer(client_socket_fd);
+			FileDescriptorCloser closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;
 
