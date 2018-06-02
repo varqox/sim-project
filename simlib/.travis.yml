@@ -252,7 +252,7 @@ before_script:
   - dpkg -x make_4.1-6_amd64.deb make41
   - export make="$PWD/make41/usr/bin/make"
   - curl -L 'https://github.com/varqox/test/releases/download/static-files/data.tar.xz' | (mkdir libseccomp; tar xJ -C libseccomp)
-  - export EXTRA_CXX_FLAGS=" -I $PWD/libseccomp/usr/include"
+  - export EXTRA_CXX_FLAGS=" -I $PWD/libseccomp/usr/include -D__NR_mlock2=325"
   - export EXTRA_LD_FLAGS=" -L $PWD/libseccomp/usr/lib/x86_64-linux-gnu"
   - sed 's/LINUX_VERSION_CODE/266241/' -i src/sandbox.cc
 
