@@ -50,8 +50,13 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 		std::vector<std::string> zip_args;
 		back_insert(zip_args, command, "-q", "-r", zip_filename.to_string(),
 			new_filename.to_string());
-		es = Spawner::run(zip_args[0], zip_args, {-1, zip_output, zip_output},
-			tmpdir.path());
+
+		es = Spawner::run(zip_args[0], zip_args, {
+			-1,
+			zip_output,
+			zip_output,
+			tmpdir.path(),
+		});
 	}
 
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {

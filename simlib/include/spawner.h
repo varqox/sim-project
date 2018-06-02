@@ -40,24 +40,31 @@ public:
 		int new_stdin_fd; // negative - close, STDIN_FILENO - do not change
 		int new_stdout_fd; // negative - close, STDOUT_FILENO - do not change
 		int new_stderr_fd; // negative - close, STDERR_FILENO - do not change
-		timespec real_time_limit; // ({0, 0} - disable real time limit)
-		uint64_t memory_limit; // in bytes (0 - disable memory limit)
-		timespec cpu_time_limit; // in nanoseconds (0 - if the real time limit
-		                         // is set, then CPU time limit will be set to
-		                         // round(real time limit in seconds) + 1)
-		                         // seconds
+		timespec real_time_limit = {0, 0}; // ({0, 0} - disable real time limit)
+		uint64_t memory_limit = 0; // in bytes (0 - disable memory limit)
+		timespec cpu_time_limit{}; // in nanoseconds (0 - if the real time limit
+		                           // is set, then CPU time limit will be set to
+		                           // round(real time limit in seconds) + 1)
+		                           // seconds
+		CStringView working_dir; // directory at which program will be run
 
 		constexpr Options()
 			: Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO) {}
 
-		constexpr Options(int ifd, int ofd, int efd, timespec rtl = {0, 0},
-				uint64_t ml = 0, timespec ctl = {})
+		constexpr Options(int ifd, int ofd, int efd, CStringView wd)
 			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
-				real_time_limit(rtl), memory_limit(ml), cpu_time_limit(ctl) {}
+				working_dir(std::move(wd)) {}
+
+		constexpr Options(int ifd, int ofd, int efd, timespec rtl = {0, 0},
+				uint64_t ml = 0, timespec ctl = {},
+				CStringView wd = CStringView("."))
+			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
+				real_time_limit(rtl), memory_limit(ml), cpu_time_limit(ctl),
+				working_dir(std::move(wd)) {}
 	};
 
 	/**
-	 * @brief Runs @p exec with arguments @p args with limits @p opts.time_limit
+	 * @brief Runs @p exec with arguments @p args and limits: @p opts.time_limit
 	 *   and @p opts.memory_limit
 	 * @details @p exec is called via execvp()
 	 *   This function is thread-safe.
@@ -68,14 +75,14 @@ public:
 	 *     signals, it must install them again after the function returns.
 	 *
 	 *
-	 * @param exec filename that is to be executed
+	 * @param exec path to file will be executed
 	 * @param args arguments passed to exec
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
 	 *   time_limit set to 0 disables the time limit;
-	 *   memory_limit set to 0 disables memory limit)
-	 * @param working_dir directory at which exec will be run
+	 *   memory_limit set to 0 disables memory limit;
+	 *   working_dir set to "", "." or "./" disables changing working directory)
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - runtime: in timespec structure {sec, nsec}
@@ -91,8 +98,7 @@ public:
 	 *   information if any syscall fails
 	 */
 	static ExitStat run(CStringView exec, const std::vector<std::string>& args,
-		const Options& opts = Options(),
-		CStringView working_dir = CStringView{"."});
+		const Options& opts = Options());
 
 protected:
 	// Sends @p str followed by error message of @p errnum through @p fd and
@@ -130,16 +136,16 @@ protected:
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
 	 *   time_limit set to 0 disables time limit;
-	 *   memory_limit set to 0 disables memory limit)
-	 * @param working_dir directory at which exec will be run
+	 *   memory_limit set to 0 disables memory limit;
+	 *   working_dir set to "", "." or "./" disables changing working directory)
 	 * @param fd file descriptor to which errors will be written
 	 * @param doBeforeExec function that is to be called before executing
 	 *   @p exec
 	 */
 	template<class Func>
 	static void run_child(CStringView exec,
-		const std::vector<std::string>& args, const Options& opts,
-		CStringView working_dir, int fd, Func doBeforeExec) noexcept;
+		const std::vector<std::string>& args, const Options& opts, int fd,
+		Func doBeforeExec) noexcept;
 
 	class Timer {
 	private:
@@ -305,8 +311,7 @@ protected:
 
 template<class Func>
 void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
-	const Options& opts, CStringView working_dir, int fd, Func doBeforeExec)
-	noexcept
+	const Options& opts, int fd, Func doBeforeExec) noexcept
 {
 	// Sends error to parent
 	auto send_error_and_exit = [fd](int errnum, CStringView str) {
@@ -326,8 +331,8 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 		arg[i] = args[i].c_str();
 
 	// Change working directory
-	if (working_dir != "." && working_dir != "" && working_dir != "./") {
-		if (chdir(working_dir.c_str()) == -1)
+	if (not isOneOf(opts.working_dir, "", ".", "./")) {
+		if (chdir(opts.working_dir.c_str()) == -1)
 			send_error_and_exit(errno, "chdir()");
 	}
 

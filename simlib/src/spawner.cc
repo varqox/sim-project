@@ -37,7 +37,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 };
 
 Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
-	const Spawner::Options& opts, CStringView working_dir)
+	const Spawner::Options& opts)
 {
 	// Error stream from child via pipe
 	int pfd[2];
@@ -50,7 +50,7 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 
 	else if (cpid == 0) {
 		sclose(pfd[0]);
-		run_child(exec, args, opts, working_dir, pfd[1], []{});
+		run_child(exec, args, opts, pfd[1], []{});
 	}
 
 	sclose(pfd[1]);
