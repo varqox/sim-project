@@ -789,16 +789,16 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			if (opts.memory_limit > 0) {
 				struct rlimit limit;
 				limit.rlim_max = limit.rlim_cur = opts.memory_limit;
-				if (setrlimit(RLIMIT_AS, &limit))
-					send_error_and_exit(errno, "setrlimit(RLIMIT_AS)");
-				if (setrlimit(RLIMIT_STACK, &limit))
-					send_error_and_exit(errno, "setrlimit(RLIMIT_STACK)");
+				if (prlimit(getpid(), RLIMIT_AS, &limit, nullptr))
+					send_error_and_exit(errno, "prlimit(RLIMIT_AS)");
+				if (prlimit(getpid(), RLIMIT_STACK, &limit, nullptr))
+					send_error_and_exit(errno, "prlimit(RLIMIT_STACK)");
 
-			// Exhaust the limit of calling prlimit64(2) syscall
-			// (here setrlimit()) so that the sandboxed process cannot call it
+			// Exhaust the limit of calling prlimit64(2) syscall so that the
+			// sandboxed process cannot call it
 			} else {
-				(void)setrlimit(RLIMIT_AS, nullptr);
-				(void)setrlimit(RLIMIT_STACK, nullptr);
+				(void)prlimit(getpid(), RLIMIT_AS, nullptr, nullptr);
+				(void)prlimit(getpid(), RLIMIT_STACK, nullptr, nullptr);
 			}
 
 			// The following SIGSTOP issued by run_child() will be ignored
