@@ -59,7 +59,9 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 	// Wait for child to be ready
 	siginfo_t si;
 	rusage ru;
-	syscall(SYS_waitid, P_PID, cpid, &si, WSTOPPED | WEXITED, &ru);
+	if (syscall(SYS_waitid, P_PID, cpid, &si, WSTOPPED | WEXITED, &ru) == -1)
+		THROW("waitid()", errmsg());
+
 	// If something went wrong
 	if (si.si_code != CLD_STOPPED)
 		return ExitStat({0, 0}, {0, 0}, si.si_code, si.si_status, ru, 0,
@@ -81,14 +83,10 @@ Spawner::ExitStat Spawner::run(CStringView exec, const vector<string>& args,
 	waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
 
 	// Get cpu_time
-	{
-		clockid_t cid;
-		if (clock_getcpuclockid(cpid, &cid) == 0)
-			clock_gettime(cid, &cpu_time);
-	}
+	cpu_timer.deactivate();
+	cpu_time = cpu_timer.get_cpu_runtime();
 
 	kill_and_wait_child_guard.cancel();
-	cpu_timer.deactivate();
 	syscall(SYS_waitid, P_PID, cpid, &si, WEXITED, &ru);
 	timespec runtime = timer.stop_and_get_runtime(); // This have to be last
 	                                                 // because it may throw

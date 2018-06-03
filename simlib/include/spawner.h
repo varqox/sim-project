@@ -155,7 +155,7 @@ protected:
 		timespec begin_point;
 		// used only if time_limit != {0, 0}
 		timer_t timerid;
-		bool timer_active = false;
+		bool timer_is_active = false;
 
 		static void handle_timeout(int, siginfo_t* si, void*) noexcept {
 			int errnum = errno;
@@ -164,8 +164,8 @@ protected:
 		}
 
 		void delete_timer() noexcept {
-			if (timer_active) {
-				timer_active = false;
+			if (timer_is_active) {
+				timer_is_active = false;
 				(void)timer_delete(timerid);
 			}
 		}
@@ -195,7 +195,7 @@ protected:
 				if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
 					THROW("timer_create()", errmsg());
 
-				timer_active = true;
+				timer_is_active = true;
 
 				// Arm timer
 				itimerspec its {{0, 0}, tlimit};
@@ -231,25 +231,25 @@ protected:
 		struct Data {
 			pid_t pid;
 			clockid_t cid;
-			timespec cpu_time_limit;
+			timespec cpu_abs_time_limit; // Counting from 0, not from cpu_time_at_start
+			timespec cpu_time_at_start;
 			timer_t timerid;
 		} data;
-		bool timer_active = false;
+		bool timer_is_active = false;
 
 		static void handler(int, siginfo_t* si, void*) noexcept {
 			int errnum = errno;
 
 			Data& data = *(Data*)si->si_value.sival_ptr;
 			timespec ts;
-			if (clock_gettime(data.cid, &ts) or ts >= data.cpu_time_limit)
+			if (clock_gettime(data.cid, &ts) or ts >= data.cpu_abs_time_limit) {
 				kill(-data.pid, SIGKILL); // Failed to get time or
 				                          // cpu_time_limit expired
-
-			else {
+			} else {
 				// There is still time left
 				itimerspec its {
 					{0, 0},
-					meta::max(data.cpu_time_limit - ts,
+					meta::max(data.cpu_abs_time_limit - ts,
 						timespec{0, (int)0.01e9}) // Min. wait duration: 0.01 s
 				};
 				timer_settime(data.timerid, 0, &its, nullptr);
@@ -260,13 +260,19 @@ protected:
 
 	public:
 		CPUTimeMonitor(pid_t pid, timespec cpu_time_limit)
-			: data{pid, {}, cpu_time_limit, {}}
+			: data{pid, {}, cpu_time_limit, {}, {}}
 		{
+			if (clock_getcpuclockid(pid, &data.cid))
+				THROW("clock_getcpuclockid()", errmsg());
+
+			if (clock_gettime(data.cid, &data.cpu_time_at_start))
+				THROW("clock_gettime()", errmsg());
+
 			if (cpu_time_limit == timespec{0, 0})
 				return; // No limit is set - nothing to do
 
-			if (clock_getcpuclockid(pid, &data.cid))
-				THROW("clock_getcpuclockid()", errmsg());
+			// Update the cpu_abs_time_limit to reflect cpu_time_at_start
+			data.cpu_abs_time_limit += data.cpu_time_at_start;
 
 			const int USED_SIGNAL = SIGRTMIN + 1;
 
@@ -275,7 +281,7 @@ protected:
 			sa.sa_sigaction = handler;
 			sigfillset(&sa.sa_mask); // Prevent interrupting
 			if (sigaction(USED_SIGNAL, &sa, nullptr))
-				THROW("signaction()", errmsg());
+				THROW("sigaction()", errmsg());
 
 			// Prepare timer
 			sigevent sev;
@@ -286,7 +292,7 @@ protected:
 			if (timer_create(CLOCK_MONOTONIC, &sev, &data.timerid))
 				THROW("timer_create()", errmsg());
 
-			timer_active = true;
+			timer_is_active = true;
 
 			itimerspec its {{0, 0}, cpu_time_limit};
 			if (timer_settime(data.timerid, 0, &its, nullptr)) {
@@ -297,10 +303,18 @@ protected:
 		}
 
 		void deactivate() noexcept {
-			if (timer_active) {
-				timer_active = false;
+			if (timer_is_active) {
+				timer_is_active = false;
 				timer_delete(data.timerid);
 			}
+		}
+
+		timespec get_cpu_runtime() {
+			timespec ts;
+			if (clock_gettime(data.cid, &ts))
+				THROW("clock_gettime()", errmsg());
+
+			return ts - data.cpu_time_at_start;
 		}
 
 		~CPUTimeMonitor() { deactivate(); }

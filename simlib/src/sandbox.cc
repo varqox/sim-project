@@ -331,6 +331,12 @@ Sandbox::Sandbox() {
 		SCMP_ACT_TRACE(add_limiting_callback(1, "arch_prctl")),
 		SCMP_SYS(arch_prctl), 0);
 
+	// prlimit64() - needed by callback to Sandbox::run_child() to limit the VM
+	// size
+	seccomp_rule_add_both_ctx(
+		SCMP_ACT_TRACE(add_limiting_callback(2, "prlimit64")),
+		SCMP_SYS(prlimit64), 0);
+
 	// access
 	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(access), 0);
 
@@ -695,7 +701,13 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			}
 		)
 
-		run_child(exec, args, opts, pfd[1], [=]{
+		// Memory limit will be set manually after loading the filters as
+		// seccomp_load() needs to allocate more memory and it may fail if this
+		// memory limit is very restrictive, which is not what we want
+		Options run_child_opts = opts;
+		run_child_opts.memory_limit = 0;
+
+		run_child(exec, args, run_child_opts, pfd[1], [=]{
 			tracee_pid_ = getpid();
 			/* =============== Rules depending on tracee_pid_ =============== */
 			// tgkill (allow only killing the calling process / thread)
@@ -707,6 +719,11 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 2,
 				SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
 				SCMP_A1(SCMP_CMP_NE, tracee_pid_));
+			// kill (allow only killing the calling process)
+			seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(kill), 1,
+				SCMP_A0(SCMP_CMP_EQ, tracee_pid_));
+			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(kill), 1,
+				SCMP_A0(SCMP_CMP_NE, tracee_pid_));
 
 			// Merge filters for both architectures into one filter
 			if (seccomp_merge(x86_ctx_, x86_64_ctx_))
@@ -737,9 +754,29 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			// Load filter into the kernel
 			if (seccomp_load(ctx))
 				send_error_and_exit(errno, "seccomp_load()");
+
+			kill(getpid(), SIGSTOP); // Signal the tracer that ptrace is ready
+			                         // and it may proceed to tracing us
+
+			// Set virtual memory and stack size limit (to the same value)
+			if (opts.memory_limit > 0) {
+				struct rlimit limit;
+				limit.rlim_max = limit.rlim_cur = opts.memory_limit;
+				if (setrlimit(RLIMIT_AS, &limit))
+					send_error_and_exit(errno, "setrlimit(RLIMIT_AS)");
+				if (setrlimit(RLIMIT_STACK, &limit))
+					send_error_and_exit(errno, "setrlimit(RLIMIT_STACK)");
+
+			// Exhaust the limit of calling prlimit64(2) syscall
+			// (here setrlimit()) so that the sandboxed process cannot call it
+			} else {
+				(void)setrlimit(RLIMIT_AS, nullptr);
+				(void)setrlimit(RLIMIT_STACK, nullptr);
+			}
+
+			// The following SIGSTOP issued by run_child() will be ignored
 		});
 	}
-
 
 	sclose(pfd[1]);
 	FileDescriptorCloser close_pipe0(pfd[0]); // Guard closing of the pipe's second end
@@ -747,7 +784,14 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	// Wait for tracee to be ready
 	siginfo_t si;
 	rusage ru;
-	waitid(P_PID, tracee_pid_, &si, WSTOPPED);
+	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED) == -1)
+		THROW("waitid()", errmsg());
+
+	DEBUG_SANDBOX(stdlog("waitid(): code: ", si.si_code, " status: ",
+		si.si_status, " pid: ", si.si_pid, " errno: ", si.si_errno,
+		" signo: ", si.si_signo, " syscall: ", si.si_syscall, " arch: ",
+		si.si_arch);)
+
 	// If something went wrong
 	if (si.si_code != CLD_TRAPPED)
 		return ExitStat({0, 0}, {0, 0}, si.si_code, si.si_status, ru, 0,
@@ -779,8 +823,8 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	timespec cpu_time {};
 
 	// Set up timers
-	Timer timer(tracee_pid_, opts.real_time_limit);
-	CPUTimeMonitor cpu_timer(tracee_pid_, opts.cpu_time_limit);
+	unique_ptr<Timer> timer;
+	unique_ptr<CPUTimeMonitor> cpu_timer;
 
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
 		// Wait tracee_pid_ so that the CPU runtime will be accurate
@@ -788,15 +832,16 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			waitid(P_PID, tracee_pid_, &si, WEXITED | WNOWAIT);
 
 		// Get cpu_time
-		clockid_t cid;
-		if (clock_getcpuclockid(tracee_pid_, &cid) == 0)
-			clock_gettime(cid, &cpu_time);
+		if (cpu_timer) {
+			cpu_timer->deactivate();
+			cpu_time = cpu_timer->get_cpu_runtime();
+		} else
+			cpu_time = {0, 0};
 
-		cpu_timer.deactivate();
 		kill_and_wait_tracee_guard.cancel(); // Tracee has died
 		syscall(SYS_waitid, P_PID, tracee_pid_, &si, WEXITED, &ru);
-		runtime = timer.stop_and_get_runtime(); // This have to be last because
-		                                        // it may throw
+		// This have to be the last because it may throw
+		runtime = (timer ? timer->stop_and_get_runtime() : timespec{0, 0});
 	};
 
 	static_assert(LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0),
@@ -819,6 +864,10 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_EXEC<<8))) {
 					tracee_vm_peak_ = get_tracee_vm_size();
 					DEBUG_SANDBOX(stdlog("TRAPPED (exec())"));
+					// Fire timers
+					timer = make_unique<Timer>(tracee_pid_, opts.real_time_limit);
+					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_, opts.cpu_time_limit);
+
 					continue; // Nothing more to do for the exec() event
 				}
 
