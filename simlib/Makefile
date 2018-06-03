@@ -52,10 +52,11 @@ $(PREFIX)src/sim/default_checker_dump.c: $(PREFIX)src/sim/default_checker.c $(PR
 	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*default_checker_c@default_checker_c@g' > $@
 
 SIMLIB_TEST_SRCS := \
-	$(PREFIX)test/string.cc \
-	$(PREFIX)test/filesystem.cc \
 	$(PREFIX)test/config_file.cc \
-	$(PREFIX)test/simfile.cc
+	$(PREFIX)test/filesystem.cc \
+	$(PREFIX)test/sandbox.cc \
+	$(PREFIX)test/simfile.cc \
+	$(PREFIX)test/string.cc
 
 $(eval $(call load_dependencies, $(SIMLIB_TEST_SRCS)))
 SIMLIB_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_TEST_SRCS))
@@ -63,7 +64,7 @@ SIMLIB_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_TEST_SRCS))
 $(SIMLIB_TEST_OBJS): override EXTRA_CXX_FLAGS += -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include'
 
 $(PREFIX)test/exec: $(SIMLIB_TEST_OBJS) $(PREFIX)simlib.a $(PREFIX)gtest_main.a
-	$(LINK) -lrt -larchive -pthread
+	$(LINK) -lrt -larchive -pthread -lseccomp
 
 .PHONY: $(PREFIX)test
 $(PREFIX)test: $(PREFIX)test/exec
