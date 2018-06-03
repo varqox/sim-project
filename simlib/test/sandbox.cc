@@ -49,6 +49,15 @@ TEST (Sandbox, run) {
 
 	Sandbox::ExitStat es;
 
+	auto killed_or_dumped_by_abort = [&](decltype(es.si.code) si_code,
+		const decltype(es.message)& message)
+	{
+		return ((si_code == CLD_KILLED and
+				message == "killed by signal 6 - Aborted") or
+			(si_code == CLD_DUMPED and
+				message == "killed and dumped by signal 6 - Aborted"));
+	};
+
 	compile_test_case("1.c");
 	es = sandbox.run(exec.to_cstr(), {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
@@ -96,9 +105,8 @@ TEST (Sandbox, run) {
 
 	compile_test_case("5.c");
 	es = sandbox.run(exec.to_cstr(), {}, opts);
-	EXPECT_EQ(es.si.code, CLD_DUMPED);
+	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
-	EXPECT_EQ(es.message, "killed and dumped by signal 6 - Aborted");
 	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT((timespec{0, 0}), es.runtime);
@@ -108,9 +116,8 @@ TEST (Sandbox, run) {
 
 	compile_test_case("6.c");
 	es = sandbox.run(exec.to_cstr(), {}, opts);
-	EXPECT_EQ(es.si.code, CLD_DUMPED);
+	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
-	EXPECT_EQ(es.message, "killed and dumped by signal 6 - Aborted");
 	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT((timespec{0, 0}), es.runtime);
@@ -133,9 +140,8 @@ TEST (Sandbox, run) {
 	for (auto perm : {OpenAccess::NONE, OpenAccess::WRONLY, OpenAccess::RDWR}) {
 		// compile_test_case("6.c"); // not needed
 		es = sandbox.run(exec.to_cstr(), {}, opts, {{"/tmp", perm}});
-		EXPECT_EQ(es.si.code, CLD_DUMPED);
+		EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 		EXPECT_EQ(es.si.status, SIGABRT);
-		EXPECT_EQ(es.message, "killed and dumped by signal 6 - Aborted");
 		EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
 		EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 		EXPECT_LT((timespec{0, 0}), es.runtime);
