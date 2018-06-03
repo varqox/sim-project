@@ -63,6 +63,14 @@ constexpr inline timespec operator-(timespec a, timespec b) noexcept {
 	return res;
 }
 
+constexpr inline timespec& operator+=(timespec& a, timespec b) noexcept {
+	return (a = a + b);
+}
+
+constexpr inline timespec& operator-=(timespec& a, timespec b) noexcept {
+	return (a = a - b);
+}
+
 constexpr inline bool operator==(timespec a, timespec b) noexcept {
 	return (a.tv_sec == b.tv_sec and a.tv_nsec == b.tv_nsec);
 }
@@ -110,6 +118,13 @@ constexpr inline timeval operator-(timeval a, timeval b) noexcept {
 	return res;
 }
 
+constexpr inline timeval& operator+=(timeval& a, timeval b) noexcept {
+	return (a = a + b);
+}
+
+constexpr inline timeval& operator-=(timeval& a, timeval b) noexcept {
+	return (a = a - b);
+}
 constexpr inline bool operator==(timeval a, timeval b) noexcept {
 	return (a.tv_sec == b.tv_sec and a.tv_usec == b.tv_usec);
 }
