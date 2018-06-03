@@ -76,7 +76,7 @@ public:
 	 * @brief Holds a test
 	 */
 	struct Test {
-		std::string name, in, out; // in, out - paths to test input and output
+		std::string name, in, out; // in, out - paths to test's input and output
 		uint64_t time_limit; // in usec
 		uint64_t memory_limit; // in bytes
 
