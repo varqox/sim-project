@@ -258,10 +258,16 @@ class TemporaryFile {
 	int fd_ = -1;
 
 public:
-	TemporaryFile() = default; // Does NOT create a temporary file
+	/// Does NOT create a temporary file
+	TemporaryFile() = default;
 
+	/// The last six characters of template must be "XXXXXX" and these are
+	/// replaced with a string that makes the  filename  unique.
 	explicit TemporaryFile(std::string templ) {
-		templ.c_str(); // ensure it is NULL-terminated
+#if __cplusplus > 201402L
+#warning "Since C++17 data() method may be used"
+#endif
+		templ.data(); // Make sure that NULL is appended
 		fd_ = mkstemp(&templ[0]);
 		if (fd_ == -1)
 			THROW("mkstemp() failed", errmsg());
