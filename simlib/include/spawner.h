@@ -64,8 +64,8 @@ public:
 	};
 
 	/**
-	 * @brief Runs @p exec with arguments @p args and limits: @p opts.time_limit
-	 *   and @p opts.memory_limit
+	 * @brief Runs @p exec with arguments @p exec_args and limits:
+	 *   @p opts.time_limit and @p opts.memory_limit
 	 * @details @p exec is called via execvp()
 	 *   This function is thread-safe.
 	 *   IMPORTANT: To function properly this function uses internally signals
@@ -76,7 +76,7 @@ public:
 	 *
 	 *
 	 * @param exec path to file will be executed
-	 * @param args arguments passed to exec
+	 * @param exec_args arguments passed to exec
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
@@ -97,7 +97,8 @@ public:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	static ExitStat run(CStringView exec, const std::vector<std::string>& args,
+	static ExitStat run(CStringView exec,
+		const std::vector<std::string>& exec_args,
 		const Options& opts = Options());
 
 protected:
@@ -138,7 +139,7 @@ protected:
 	 * @details Sets limits and file descriptors specified in opts.
 	 *
 	 * @param exec filename that is to be executed
-	 * @param args arguments passed to exec
+	 * @param exec_args arguments passed to exec
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
@@ -151,7 +152,7 @@ protected:
 	 */
 	template<class Func>
 	static void run_child(CStringView exec,
-		const std::vector<std::string>& args, const Options& opts, int fd,
+		const std::vector<std::string>& exec_args, const Options& opts, int fd,
 		Func doBeforeExec) noexcept;
 
 	class Timer {
@@ -331,8 +332,9 @@ protected:
 /******************************* IMPLEMENTATION *******************************/
 
 template<class Func>
-void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
-	const Options& opts, int fd, Func doBeforeExec) noexcept
+void Spawner::run_child(CStringView exec,
+	const std::vector<std::string>& exec_args, const Options& opts, int fd,
+	Func doBeforeExec) noexcept
 {
 	// Sends error to parent
 	auto send_error_and_exit = [fd](int errnum, CStringView str) {
@@ -343,13 +345,13 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	if (setpgid(0, 0))
 		send_error_and_exit(errno, "setpgid()");
 
-	// Convert args
-	const size_t len = args.size();
-	const char* arg[len + 1];
-	arg[len] = nullptr;
+	// Convert exec_args
+	const size_t len = exec_args.size();
+	const char* args[len + 1];
+	args[len] = nullptr;
 
 	for (size_t i = 0; i < len; ++i)
-		arg[i] = args[i].c_str();
+		args[i] = exec_args[i].c_str();
 
 	// Change working directory
 	if (not isOneOf(opts.working_dir, "", ".", "./")) {
@@ -421,7 +423,7 @@ void Spawner::run_child(CStringView exec, const std::vector<std::string>& args,
 	// Signal parent process that child is ready to execute @p exec
 	kill(getpid(), SIGSTOP);
 
-	execvp(exec.c_str(), (char** const)arg);
+	execvp(exec.c_str(), (char** const)args);
 	int errnum = errno;
 
 	// execvp() failed

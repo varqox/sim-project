@@ -685,7 +685,7 @@ uint64_t Sandbox::get_tracee_vm_size() {
 };
 
 Sandbox::ExitStat Sandbox::run(CStringView exec,
-	const std::vector<std::string>& args, const Options& opts,
+	const std::vector<std::string>& exec_args, const Options& opts,
 	const std::vector<AllowedFile>& allowed_files)
 {
 	// Reset the state
@@ -726,7 +726,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 		Options run_child_opts = opts;
 		run_child_opts.memory_limit = 0;
 
-		run_child(exec, args, run_child_opts, pfd[1], [=]{
+		run_child(exec, exec_args, run_child_opts, pfd[1], [=]{
 			tracee_pid_ = getpid();
 			/* =============== Rules depending on tracee_pid_ =============== */
 			try {

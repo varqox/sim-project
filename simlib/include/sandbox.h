@@ -63,8 +63,9 @@ public:
 	using Spawner::Options;
 
 	/**
-	 * @brief Runs @p exec with arguments @p args and limits: @p opts.time_limit
-	 *   and @p opts.memory_limit under seccomp(2) and ptrace(2)
+	 * @brief Runs @p exec with arguments @p exec_args and limits:
+	 *   @p opts.time_limit and @p opts.memory_limit under seccomp(2) and
+	 *   ptrace(2)
 	 * @details
 	 *   @p exec is called via execvp()
 	 *   This function is thread-safe.
@@ -75,7 +76,7 @@ public:
 	 *     signals, it must install them again after the function returns.
 	 *
 	 * @param exec path to file will be executed
-	 * @param args arguments passed to exec
+	 * @param exec_args arguments passed to exec
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of sandboxed
 	 *   process will be changed or if negative, closed;
@@ -98,7 +99,7 @@ public:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	ExitStat run(CStringView exec, const std::vector<std::string>& args,
+	ExitStat run(CStringView exec, const std::vector<std::string>& exec_args,
 		const Options& opts = Options(),
 		const std::vector<AllowedFile>& allowed_files = {});
 };
