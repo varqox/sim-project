@@ -37,35 +37,35 @@ template<class... Arg>
 static inline void seccomp_rule_add_throw(Arg&&... args) {
 	int errnum = seccomp_rule_add(std::forward<Arg>(args)...);
 	if (errnum)
-		THROW("seccomp_rule_add_throw()", errmsg(errnum));
+		THROW("seccomp_rule_add_throw()", errmsg(-errnum));
 }
 
 template<class... Arg>
 static inline void seccomp_arch_add_throw(Arg&&... args) {
 	int errnum = seccomp_arch_add(std::forward<Arg>(args)...);
 	if (errnum)
-		THROW("seccomp_arch_add()", errmsg(errnum));
+		THROW("seccomp_arch_add()", errmsg(-errnum));
 }
 
 template<class... Arg>
 static inline void seccomp_arch_remove_throw(Arg&&... args) {
 	int errnum = seccomp_arch_remove(std::forward<Arg>(args)...);
 	if (errnum)
-		THROW("seccomp_arch_remove()", errmsg(errnum));
+		THROW("seccomp_arch_remove()", errmsg(-errnum));
 }
 
 template<class... Arg>
 static inline void seccomp_attr_set_throw(Arg&&... args) {
 	int errnum = seccomp_attr_set(std::forward<Arg>(args)...);
 	if (errnum)
-		THROW("seccomp_attr_set()", errmsg(errnum));
+		THROW("seccomp_attr_set()", errmsg(-errnum));
 }
 
 template<class... Arg>
 static inline void seccomp_syscall_priority_throw(Arg&&... args) {
 	int errnum = seccomp_syscall_priority(std::forward<Arg>(args)...);
 	if (errnum)
-		THROW("seccomp_syscall_priority()", errmsg(errnum));
+		THROW("seccomp_syscall_priority()", errmsg(-errnum));
 }
 
 
@@ -752,7 +752,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			// Merge filters for both architectures into one filter
 			int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_);
 			if (errnum)
-				send_error_and_exit(errnum, "seccomp_merge()");
+				send_error_and_exit(-errnum, "seccomp_merge()");
 
 			auto& ctx = x86_ctx_;
 
@@ -761,7 +761,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				if (DEBUG_SANDBOX_LOG_PFC_FILTER) {
 					errnum = seccomp_export_pfc(ctx, stdlog_fd_copy);
 					if (errnum)
-						send_error_and_exit(errnum, "seccomp_export_pfc()");
+						send_error_and_exit(-errnum, "seccomp_export_pfc()");
 				}
 			})
 
@@ -780,7 +780,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			// Load filter into the kernel
 			errnum = seccomp_load(ctx);
 			if (errnum)
-				send_error_and_exit(errnum, "seccomp_load()");
+				send_error_and_exit(-errnum, "seccomp_load()");
 
 			kill(getpid(), SIGSTOP); // Signal the tracer that ptrace is ready
 			                         // and it may proceed to tracing us
