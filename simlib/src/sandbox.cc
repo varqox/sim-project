@@ -479,8 +479,7 @@ Sandbox::Sandbox() {
 			const vector<AllowedFile>& allowed_files)
 		{
 			// Currently opening at directory fd other than AT_FDCWD is not allowed
-			using arg1_t = std::remove_reference_t<decltype(regs.arg1())>;
-			if (regs.arg1() != static_cast<arg1_t>(AT_FDCWD)) {
+			if ((int)regs.arg1() != AT_FDCWD) {
 				DEBUG_SANDBOX(stdlog("Trying to openat at: ", regs.arg1(),
 					" - disallowed");)
 
