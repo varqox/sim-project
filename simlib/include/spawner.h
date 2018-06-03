@@ -101,6 +101,13 @@ public:
 		const Options& opts = Options());
 
 protected:
+	// Sends @p str through @p fd and _exits with -1
+	static void send_error_message_and_exit(int fd, CStringView str) noexcept
+	{
+		writeAll(fd, str.data(), str.size());
+		_exit(-1);
+	};
+
 	// Sends @p str followed by error message of @p errnum through @p fd and
 	// _exits with -1
 	static void send_error_message_and_exit(int fd, int errnum, CStringView str) noexcept

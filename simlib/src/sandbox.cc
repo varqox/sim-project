@@ -35,20 +35,39 @@ constexpr static inline scmp_arg_cmp SCMP_CMP(decltype(scmp_arg_cmp::arg) arg,
 
 template<class... Arg>
 static inline void seccomp_rule_add_throw(Arg&&... args) {
-	if (seccomp_rule_add(std::forward<Arg>(args)...))
-		THROW("seccomp_rule_add_throw()", errmsg());
+	int errnum = seccomp_rule_add(std::forward<Arg>(args)...);
+	if (errnum)
+		THROW("seccomp_rule_add_throw()", errmsg(errnum));
 }
 
-static inline void seccomp_arch_add_throw(scmp_filter_ctx ctx, uint32_t arch_token) {
-	if (seccomp_arch_add(ctx, arch_token))
-		THROW("seccomp_arch_add()", errmsg());
-};
+template<class... Arg>
+static inline void seccomp_arch_add_throw(Arg&&... args) {
+	int errnum = seccomp_arch_add(std::forward<Arg>(args)...);
+	if (errnum)
+		THROW("seccomp_arch_add()", errmsg(errnum));
+}
 
-static inline void seccomp_arch_remove_throw(scmp_filter_ctx ctx, uint32_t arch_token)
-{
-	if (seccomp_arch_remove(ctx, arch_token))
-		THROW("seccomp_arch_remove()", errmsg());
-};
+template<class... Arg>
+static inline void seccomp_arch_remove_throw(Arg&&... args) {
+	int errnum = seccomp_arch_remove(std::forward<Arg>(args)...);
+	if (errnum)
+		THROW("seccomp_arch_remove()", errmsg(errnum));
+}
+
+template<class... Arg>
+static inline void seccomp_attr_set_throw(Arg&&... args) {
+	int errnum = seccomp_attr_set(std::forward<Arg>(args)...);
+	if (errnum)
+		THROW("seccomp_attr_set()", errmsg(errnum));
+}
+
+template<class... Arg>
+static inline void seccomp_syscall_priority_throw(Arg&&... args) {
+	int errnum = seccomp_syscall_priority(std::forward<Arg>(args)...);
+	if (errnum)
+		THROW("seccomp_syscall_priority()", errmsg(errnum));
+}
+
 
 struct x86_user_regset {
 	uint32_t ebx;
@@ -216,13 +235,13 @@ Sandbox::Sandbox() {
 
 	x86_64_ctx_ = seccomp_init(SCMP_ACT_TRAP);
 	if (not x86_64_ctx_) {
-		seccomp_release(x86_ctx_);
+		(void)seccomp_release(x86_ctx_);
 		THROW("seccomp_init()", errmsg());
 	}
 
 	auto ctx_releaser = [&] {
-		seccomp_release(x86_ctx_);
-		seccomp_release(x86_64_ctx_);
+		(void)seccomp_release(x86_ctx_);
+		(void)seccomp_release(x86_64_ctx_);
 	};
 	CallInDtor<decltype(ctx_releaser)> ctx_releaser_guard {ctx_releaser};
 
@@ -241,8 +260,8 @@ Sandbox::Sandbox() {
 
 	// Enable synchronization (it will not matter if the process has one thread,
 	// but it may have more in the future)
-	seccomp_attr_set(x86_ctx_, SCMP_FLTATR_CTL_TSYNC, 1);
-	seccomp_attr_set(x86_64_ctx_, SCMP_FLTATR_CTL_TSYNC, 1);
+	seccomp_attr_set_throw(x86_ctx_, SCMP_FLTATR_CTL_TSYNC, 1);
+	seccomp_attr_set_throw(x86_64_ctx_, SCMP_FLTATR_CTL_TSYNC, 1);
 
 	// Set the proper architectures
 	if (seccomp_arch_native() != SCMP_ARCH_X86) {
@@ -258,9 +277,9 @@ Sandbox::Sandbox() {
 		auto invalid_arch_callback_id = add_callback([&] {
 			return set_message_callback("Invalid architecture of the syscall");
 		});
-		seccomp_attr_set(x86_ctx_, SCMP_FLTATR_ACT_BADARCH,
+		seccomp_attr_set_throw(x86_ctx_, SCMP_FLTATR_ACT_BADARCH,
 			SCMP_ACT_TRACE(invalid_arch_callback_id));
-		seccomp_attr_set(x86_64_ctx_, SCMP_FLTATR_ACT_BADARCH,
+		seccomp_attr_set_throw(x86_64_ctx_, SCMP_FLTATR_ACT_BADARCH,
 			SCMP_ACT_TRACE(invalid_arch_callback_id));
 	}
 
@@ -268,8 +287,8 @@ Sandbox::Sandbox() {
 
 	{
 		auto seccomp_syscall_priority_both_ctx = [&](auto&&... args) {
-			seccomp_syscall_priority(x86_ctx_, args...);
-			seccomp_syscall_priority(x86_64_ctx_, args...);
+			seccomp_syscall_priority_throw(x86_ctx_, args...);
+			seccomp_syscall_priority_throw(x86_64_ctx_, args...);
 		};
 
 		seccomp_syscall_priority_both_ctx(SCMP_SYS(brk), 255);
@@ -537,9 +556,9 @@ Sandbox::Sandbox() {
 	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ERRNO(errno), SCMP_SYS(syscall), 1, \
 		SCMP_A0(SCMP_CMP_EQ, STDERR_FILENO)); \
 \
-	seccomp_rule_add_exact(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
 		SCMP_A0(SCMP_CMP_LT, STDIN_FILENO)); \
-	seccomp_rule_add_exact(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
 		SCMP_A0(SCMP_CMP_GT, STDERR_FILENO));
 
 #define DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(syscall, errno) \
@@ -687,8 +706,9 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	else if (tracee_pid_ == 0) { // Child = tracee
 		sclose(pfd[0]);
 
-		auto send_error_and_exit = [&](int errnum, CStringView str) {
-			send_error_message_and_exit(pfd[1], errnum, str);
+		auto send_error_and_exit = [&](auto&&... args) {
+			send_error_message_and_exit(pfd[1],
+				std::forward<decltype(args)>(args)...);
 		};
 
 		DEBUG_SANDBOX(
@@ -709,32 +729,39 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 		run_child(exec, args, run_child_opts, pfd[1], [=]{
 			tracee_pid_ = getpid();
 			/* =============== Rules depending on tracee_pid_ =============== */
-			// tgkill (allow only killing the calling process / thread)
-			seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(tgkill), 2,
-				SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
-				SCMP_A1(SCMP_CMP_EQ, tracee_pid_));
-			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 1,
-				SCMP_A0(SCMP_CMP_NE, tracee_pid_));
-			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 2,
-				SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
-				SCMP_A1(SCMP_CMP_NE, tracee_pid_));
-			// kill (allow only killing the calling process)
-			seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(kill), 1,
-				SCMP_A0(SCMP_CMP_EQ, tracee_pid_));
-			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(kill), 1,
-				SCMP_A0(SCMP_CMP_NE, tracee_pid_));
+			try {
+				// tgkill (allow only killing the calling process / thread)
+				seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(tgkill), 2,
+					SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
+					SCMP_A1(SCMP_CMP_EQ, tracee_pid_));
+				seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 1,
+					SCMP_A0(SCMP_CMP_NE, tracee_pid_));
+				seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 2,
+					SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
+					SCMP_A1(SCMP_CMP_NE, tracee_pid_));
+				// kill (allow only killing the calling process)
+				seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(kill), 1,
+					SCMP_A0(SCMP_CMP_EQ, tracee_pid_));
+				seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(kill), 1,
+					SCMP_A0(SCMP_CMP_NE, tracee_pid_));
+
+			} catch (const std::exception& e) {
+				send_error_and_exit(CStringView(e.what()));
+			}
 
 			// Merge filters for both architectures into one filter
-			if (seccomp_merge(x86_ctx_, x86_64_ctx_))
-				send_error_and_exit(errno, "seccomp_merge()");
+			int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_);
+			if (errnum)
+				send_error_and_exit(errnum, "seccomp_merge()");
 
 			auto& ctx = x86_ctx_;
 
 			// Dump filter rules
 			DEBUG_SANDBOX({
 				if (DEBUG_SANDBOX_LOG_PFC_FILTER) {
-					if (seccomp_export_pfc(ctx, stdlog_fd_copy))
-						send_error_and_exit(errno, "seccomp_export_pfc()");
+					errnum = seccomp_export_pfc(ctx, stdlog_fd_copy);
+					if (errnum)
+						send_error_and_exit(errnum, "seccomp_export_pfc()");
 				}
 			})
 
@@ -751,8 +778,9 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				send_error_and_exit(errno, "ptrace(PTRACE_TRACEME)");
 
 			// Load filter into the kernel
-			if (seccomp_load(ctx))
-				send_error_and_exit(errno, "seccomp_load()");
+			errnum = seccomp_load(ctx);
+			if (errnum)
+				send_error_and_exit(errnum, "seccomp_load()");
 
 			kill(getpid(), SIGSTOP); // Signal the tracer that ptrace is ready
 			                         // and it may proceed to tracing us
