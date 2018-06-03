@@ -24,7 +24,7 @@ InplaceBuff<PATH_MAX> getCWD();
  * @details executable path is always absolute, notice that if executable is
  *   removed then path will have additional " (deleted)" suffix
  *
- * @param pid process pid
+ * @param pid - PID of a process of which the executable path will be obtained
  *
  * @return absolute path of @p pid executable
  *
@@ -51,12 +51,26 @@ std::vector<pid_t> findProcessesByExec(std::vector<std::string> exec_set,
 	bool include_me = false);
 
 /**
+ * @brief Returns the process executable directory
+ * @details Uses getExec()
+ *
+ * @param pid - PID of a process of which the executable directory will be
+ *   obtained
+ *
+ * @return The current process executable directory - absolute path with
+ *   trailing '/'
+ *
+ * @errors Exceptions from getExec()
+ */
+std::string getExecDir(pid_t pid);
+
+/**
  * @brief Change current working directory to process executable directory
- * @details Uses getExec() and chdir(2)
+ * @details Uses getExecDir() and chdir(2)
  *
  * @return New CWD (with trailing '/')
  *
- * @errors Exceptions from getExec() or if chdir(2) fails then
+ * @errors Exceptions from getExecDir() or if chdir(2) fails then
  *   std::runtime_error will be thrown
  */
 std::string chdirToExecDir();

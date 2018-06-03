@@ -113,17 +113,22 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	return res;
 }
 
-string chdirToExecDir() {
-	string exec = getExec(getpid());
+string getExecDir(pid_t pid) {
+	string exec = getExec(pid);
 	// Erase file component
 	size_t slash = exec.rfind('/');
 	if (slash < exec.size())
-		exec.resize(slash); // Erase filename
-
-	if (chdir(exec.c_str()))
-		THROW("chdir('", exec, "')", errmsg());
+		exec.resize(slash + 1); // Erase filename
 
 	return exec;
+}
+
+string chdirToExecDir() {
+	string exec_dir = getExecDir(getpid());
+	if (chdir(exec_dir.c_str()))
+		THROW("chdir('", exec_dir, "')", errmsg());
+
+	return exec_dir;
 }
 
 int8_t detectArchitecture(pid_t pid) {
