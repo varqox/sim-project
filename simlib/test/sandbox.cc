@@ -23,6 +23,7 @@ TEST (Sandbox, run) {
 	// Compiled test case executable
 	InplaceBuff<40> exec("/tmp/simlib.test.sandbox.XXXXXX");
 	{
+		exec.to_cstr(); // Add trailing '\0'
 		int fd = mkstemp(exec.data());
 		if (fd == -1)
 			THROW("mkstemp()", errmsg());
