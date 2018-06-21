@@ -52,6 +52,7 @@ $(PREFIX)src/sim/default_checker_dump.c: $(PREFIX)src/sim/default_checker.c $(PR
 	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*default_checker_c@default_checker_c@g' > $@
 
 SIMLIB_TEST_SRCS := \
+	$(PREFIX)test/avl_dict.cc \
 	$(PREFIX)test/config_file.cc \
 	$(PREFIX)test/filesystem.cc \
 	$(PREFIX)test/sandbox.cc \

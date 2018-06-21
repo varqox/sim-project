@@ -125,7 +125,7 @@ public:
 			return;
 
 		if (capacity() == max_capacity())
-			THROW("The AVLpool is full");
+			THROW("The AVLPool is full");
 
 		size_type new_capacity = meta::max(n, capacity() < (max_capacity() >> 1)
 			? capacity() << 1 : max_capacity());
@@ -160,7 +160,7 @@ public:
 	size_type allocate() {
 		if (head == capacity()) {
 			if (capacity() == max_capacity())
-				THROW("The AVLpool is full");
+				THROW("The AVLPool is full");
 
 			size_type new_capacity = (capacity() < (max_capacity() >> 1) ?
 				capacity() << 1 : max_capacity());
@@ -275,6 +275,7 @@ public:
 		return *this;
 	}
 
+protected:
 	void deallocate_node(size_type x) noexcept {
 		pool.destruct_and_deallocate(x);
 		--size_;
@@ -317,6 +318,7 @@ public:
 		deallocate_node(x);
 	}
 
+public:
 	~AVLDictionary() {
 		delete_subtree(root);
 
@@ -342,6 +344,7 @@ public:
 
 	bool empty() const noexcept { return (size() == 0); }
 
+protected:
 	void seth(size_type x) noexcept {
 		pool[x].h = uint8_t(1 +
 			meta::max(pool[pool[x].kid[L]].h, pool[pool[x].kid[R]].h));
@@ -390,42 +393,108 @@ public:
 		return x;
 	}
 
+	/**
+	 * @brief Calls @p func on every element of subtree of @p x
+	 * @param x node representing subtree
+	 * @param func function to call on every element, it should take one
+	 *   argument of type Node&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
 	template<class Func>
-	void for_each(size_type x, Func&& func) {
+	std::enable_if_t<
+		std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+		bool
+	> for_each(size_type x, Func&& func) {
+		if (x == nil)
+			return true;
+
+		return (for_each(pool[x].kid[L], func) and
+			func(pool[x]) and
+			for_each(pool[x].kid[R], func));
+	}
+
+	template<class Func>
+	std::enable_if_t<
+		!std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+		void
+	> for_each(size_type x, Func&& func) {
 		if (x == nil)
 			return;
 
 		for_each(pool[x].kid[L], func);
 		func(pool[x]);
 		for_each(pool[x].kid[R], func);
+
+		return;
+	}
+
+	/**
+	 * @brief Calls @p func on every element of subtree of @p x
+	 * @param x node representing subtree
+	 * @param func function to call on every element, it should take one
+	 *   argument of type Node&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
+	template<class Func>
+	std::enable_if_t<
+		std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<const Node&>())), bool>::value,
+		bool
+	> for_each(size_type x, Func&& func) const {
+		if (x == nil)
+			return true;
+
+		return (for_each(pool[x].kid[L], func) and
+			func(pool[x]) and
+			for_each(pool[x].kid[R], func));
 	}
 
 	template<class Func>
-	void for_each(size_type x, Func&& func) const {
+	std::enable_if_t<
+		!std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<const Node&>())), bool>::value,
+		void
+	> for_each(size_type x, Func&& func) const {
 		if (x == nil)
 			return;
 
 		for_each(pool[x].kid[L], func);
 		func(pool[x]);
 		for_each(pool[x].kid[R], func);
+
+		return;
 	}
 
+public:
+	/**
+	 * @brief Calls @p func on every element
+	 * @param func function to call on every element, it should take one
+	 *   argument of type Node&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
 	template<class Func>
 	void for_each(Func&& func) { for_each(root, std::forward<Func>(func)); }
 
+	/**
+	 * @brief Calls @p func on every element
+	 * @param func function to call on every element, it should take one
+	 *   argument of type const Node&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
 	template<class Func>
 	void for_each(Func&& func) const {
 		for_each(root, std::forward<Func>(func));
 	}
 
-	template<class T, class FuncNodeToRetVal>
-	std::result_of_t<FuncNodeToRetVal(Node&)> find(const T& key,
-		FuncNodeToRetVal&& to_ret_val = {})
-	{
+	/// Returns a pointer to the found value or nullptr if there is no such value
+	template<class T>
+	typename Node::Data* find(const T& key) {
 		for (size_type x = root; x != nil; ) {
 			bool dir = compare(pool[x].key(), key);
 			if (not dir and not compare(key, pool[x].key())) // we have a match
-				return to_ret_val(pool[x]);
+				return &pool[x].data();
 
 			x = pool[x].kid[dir];
 		}
@@ -433,14 +502,13 @@ public:
 		return nullptr;
 	}
 
-	template<class T, class FuncNodeToRetVal>
-	std::result_of_t<FuncNodeToRetVal(const Node&)> find(const T& key,
-		FuncNodeToRetVal&& to_ret_val = {}) const
-	{
+	/// Returns a pointer to the found value or nullptr if there is no such value
+	template<class T>
+	const typename Node::Data* find(const T& key) const {
 		for (size_type x = root; x != nil; ) {
 			bool dir = compare(pool[x].key(), key);
 			if (not dir and not compare(key, pool[x].key())) // we have a match
-				return to_ret_val(pool[x]);
+				return &pool[x].data();
 
 			x = pool[x].kid[dir];
 		}
@@ -521,8 +589,7 @@ private:
 protected:
 	/// Return value - emplaced node id if the insertion took place, or found
 	/// node id otherwise
-	size_type emplace_if_not_exists(const typename Node::Key& key)
-	{
+	size_type emplace_if_not_exists(const typename Node::Key& key) {
 		auto p =
 			emplace_if_not_exists_impl<const typename Node::Key&>(root, key);
 		root = p.first; // As the pool may have changed this has to be done
@@ -594,12 +661,14 @@ public:
 	}
 
 
+protected:
 	/// Return value - @p node_id if the insertion took place, found node id
 	/// otherwise (in this case you have to manually deallocate @p node_id)
 	size_type insert_if_not_exists(size_type node_id) {
 		return insert_if_not_exists(root, node_id);
 	}
 
+public:
 	std::pair<Node*, bool> insert_or_replace(size_type node_id) {
 		auto b = insert_or_replace(root, node_id);
 		return {&pool[node_id], b};
@@ -613,6 +682,7 @@ public:
 
 	const Node* back() const noexcept { return dirmost(root, R); }
 
+protected:
 	// return value - pulled out node; x is updated automatically
 	size_type pull_out_rightmost(size_type& x) {
 		if (pool[x].kid[R] == nil) {
@@ -626,7 +696,6 @@ public:
 		return res;
 	}
 
-protected:
 	template<class FuncIdxToRetVal>
 	std::result_of_t<FuncIdxToRetVal(size_type)> erase_impl(size_type& x,
 		const typename Node::Key& k, FuncIdxToRetVal&& to_ret_val = {})
@@ -669,7 +738,6 @@ protected:
 		return res;
 	}
 
-public:
 	/// Return value - a bool denoting whether the erasing took place
 	bool erase(size_type& x, const typename Node::Key& k) {
 		using AVLD = decltype(*this);
@@ -708,20 +776,18 @@ public:
 		return erase_impl(x, k, SemiLambda(*this));
 	}
 
+public:
 	/// Return value - a bool denoting whether the erasing took place
 	bool erase(const typename Node::Key& k) { return erase(root, k); }
 
-	template<class FuncNodeToRetVal>
-	typename std::result_of<FuncNodeToRetVal(Node&)>::type lower_bound(
-		const typename Node::Key& k, FuncNodeToRetVal&& to_ret_val = {})
-	{
-		typename std::result_of<FuncNodeToRetVal(Node&)>::type res = nullptr;
+	typename Node::Data* lower_bound(const typename Node::Key& k) {
+		typename Node::Data* res = nullptr;
 		size_type x = root;
 		while (x != nil) {
 			if (compare(pool[x].key(), k))
 				x = pool[x].kid[R];
 			else {
-				res = to_ret_val(pool[x]);
+				res = &pool[x].data();
 				x = pool[x].kid[L];
 			}
 		}
@@ -729,18 +795,14 @@ public:
 		return res;
 	}
 
-	template<class FuncNodeToRetVal>
-	typename std::result_of<FuncNodeToRetVal(const Node&)>::type lower_bound(
-		const typename Node::Key& k, FuncNodeToRetVal&& to_ret_val = {}) const
-	{
-		typename std::result_of<FuncNodeToRetVal(const Node&)>::type res =
-			nullptr;
+	const typename Node::Data* lower_bound(const typename Node::Key& k) const {
+		typename Node::Data* res = nullptr;
 		size_type x = root;
 		while (x != nil) {
 			if (compare(pool[x].key(), k))
 				x = pool[x].kid[R];
 			else {
-				res = to_ret_val(pool[x]);
+				res = &pool[x].data();
 				x = pool[x].kid[L];
 			}
 		}
@@ -748,15 +810,12 @@ public:
 		return res;
 	}
 
-	template<class FuncNodeToRetVal>
-	typename std::result_of<FuncNodeToRetVal(Node&)>::type upper_bound(
-		const typename Node::Key& k, FuncNodeToRetVal&& to_ret_val = {})
-	{
-		typename std::result_of<FuncNodeToRetVal(Node&)>::type res = nullptr;
+	typename Node::Data* upper_bound(const typename Node::Key& k) {
+		typename Node::Data* res = nullptr;
 		size_type x = root;
 		while (x != nil) {
 			if (compare(k, pool[x].key())) {
-				res = to_ret_val(pool[x]);
+				res = &pool[x].data();
 				x = pool[x].kid[L];
 			} else
 				x = pool[x].kid[R];
@@ -765,16 +824,12 @@ public:
 		return res;
 	}
 
-	template<class FuncNodeToRetVal>
-	typename std::result_of<FuncNodeToRetVal(const Node&)>::type upper_bound(
-		const typename Node::Key& k, FuncNodeToRetVal&& to_ret_val = {}) const
-	{
-		typename std::result_of<FuncNodeToRetVal(const Node&)>::type res =
-			nullptr;
+	const typename Node::Data* upper_bound(const typename Node::Key& k) const {
+		const typename Node::Data* res = nullptr;
 		size_type x = root;
 		while (x != nil) {
 			if (compare(k, pool[x].key())) {
-				res = to_ret_val(pool[x]);
+				res = &pool[x].data();
 				x = pool[x].kid[L];
 			} else
 				x = pool[x].kid[R];
@@ -783,6 +838,82 @@ public:
 		return res;
 	}
 
+protected:
+	template<class Func>
+	bool foreach_since_lower_bound(size_type x, const typename Node::Key& k, Func&& callback) {
+		if (x == nil)
+			return true;
+
+		if (compare(pool[x].key(), k))
+			return foreach_since_lower_bound(pool[x].kid[R], k, callback);
+		else
+			return (foreach_since_lower_bound(pool[x].kid[L], k, callback) and
+				callback(pool[x]) and for_each(pool[x].kid[R], callback));
+	}
+
+	template<class Func>
+	std::enable_if_t<
+		!std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+		void
+	> foreach_since_lower_bound(const typename Node::Key& k, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be taken by
+		// a (maybe const) reference
+		foreach_since_lower_bound(root, k, [&](Node& n) {
+			callback(n);
+			return true;
+		});
+	}
+
+	template<class Func>
+	std::enable_if_t<
+		std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+		void
+	> foreach_since_lower_bound(const typename Node::Key& k, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be taken by
+		// a (maybe const) reference
+		foreach_since_lower_bound(root, k, callback);
+	}
+
+	template<class Func>
+	bool foreach_since_upper_bound(size_type x, const typename Node::Key& k, Func&& callback) {
+		if (x == nil)
+			return true;
+
+		if (compare(k, pool[x].key()))
+			return (foreach_since_upper_bound(pool[x].kid[L], k, callback) and
+				callback(pool[x]) and for_each(pool[x].kid[R], callback));
+		else
+			return foreach_since_upper_bound(pool[x].kid[R], k, callback);
+	}
+
+	template<class Func>
+	std::enable_if_t<
+		!std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+		void
+	> foreach_since_upper_bound(const typename Node::Key& k, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be taken by
+		// a (maybe const) reference
+		foreach_since_upper_bound(root, k, [&](Node& n) {
+			callback(n);
+			return true;
+		});
+	}
+
+	template<class Func>
+	std::enable_if_t<
+		std::is_convertible<
+			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+		void
+	> foreach_since_upper_bound(const typename Node::Key& k, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be taken by
+		// a (maybe const) reference
+		foreach_since_upper_bound(root, k, callback);
+	}
+
+public:
 #if 0
 	void print(size_type x, int tabs = 0) const {
 		if (tabs > 50)
@@ -811,7 +942,7 @@ public:
 };
 
 template<template<class...> class NodeT, class... ArgsToForward>
-class AVLDictContainer : protected AVLDictionary<NodeT, ArgsToForward...> {
+class AVLDictContainer : public AVLDictionary<NodeT, ArgsToForward...> {
 protected:
 	using AVLBase = AVLDictionary<NodeT, ArgsToForward...>;
 	using typename AVLBase::Node;
@@ -820,13 +951,6 @@ protected:
 
 public:
 	using AVLBase::AVLBase;
-	using AVLBase::clear;
-	using AVLBase::size;
-	using AVLBase::capacity;
-	using AVLBase::max_capacity;
-	using AVLBase::reserve_for;
-	using AVLBase::empty;
-	using AVLBase::erase;
 
 	typename Node::Data* front() {
 		auto x = AVLBase::front();
@@ -847,24 +971,23 @@ public:
 		auto x = AVLBase::back();
 		return (x ? &x->data() : nullptr);
 	}
-
-	// Returns a pointer to the found value or nullptr if there is no such value
-	template<class T>
-	typename Node::Data* find(const T& key) {
-		return AVLBase::find(key, [](Node& x) { return &x.data(); });
-	}
-
-	// Returns a pointer to the found value or nullptr if there is no such value
-	template<class T>
-	const typename Node::Data* find(const T& key) const {
-		return AVLBase::find(key, [](const Node& x) { return &x.data(); });
-	}
-
+	/**
+	 * @brief Calls @p func on every element
+	 * @param func function to call on every element, it should take one
+	 *   argument of type Node::Data&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
 	template<class Func>
 	void for_each(Func&& func) {
 		AVLBase::for_each([&func](Node& node) { func(node.data()); });
 	}
 
+	/**
+	 * @brief Calls @p func on every element
+	 * @param func function to call on every element, it should take one
+	 *   argument of type const Node::Data&, if it return sth convertible to
+	 *   false the lookup will break
+	 */
 	template<class Func>
 	void for_each(Func&& func) const {
 		AVLBase::for_each([&func](const Node& node) {
@@ -872,25 +995,55 @@ public:
 		});
 	}
 
-	const typename Node::Data* lower_bound(const typename Node::Key& key) {
-		return AVLBase::lower_bound(key, [](Node& x) { return &x.data(); });
-	}
-
-	const typename Node::Data* lower_bound(const typename Node::Key& key) const
-	{
-		return AVLBase::lower_bound(key, [](const Node& x) {
-			return &x.data();
+	/**
+	 * @brief Calls @p func on every element since the first element >= @p k
+	 * @param func function to call on every element, it should take one
+	 *   argument of type Node::Data&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
+	template<class Func>
+	void foreach_since_lower_bound(const typename Node::Key& k, Func&& callback) {
+		AVLBase::foreach_since_lower_bound(k, [&](Node& node) {
+			return callback(node.data());
 		});
 	}
 
-	const typename Node::Data* upper_bound(const typename Node::Key& key) {
-		return AVLBase::upper_bound(key, [](Node& x) { return &x.data(); });
+	/**
+	 * @brief Calls @p func on every element since the first element >= @p k
+	 * @param func function to call on every element, it should take one
+	 *   argument of type const Node::Data&, if it return sth convertible to
+	 *   false the lookup will break
+	 */
+	template<class Func>
+	void foreach_since_lower_bound(const typename Node::Key& k, Func&& callback) const {
+		AVLBase::foreach_since_lower_bound(k, [&](const Node& node) {
+			return callback(node.data());
+		});
 	}
 
-	const typename Node::Data* upper_bound(const typename Node::Key& key) const
-	{
-		return AVLBase::upper_bound(key, [](const Node& x) {
-			return &x.data();
+	/**
+	 * @brief Calls @p func on every element since the first element > @p k
+	 * @param func function to call on every element, it should take one
+	 *   argument of type Node::Data&, if it return sth convertible to false the
+	 *   lookup will break
+	 */
+	template<class Func>
+	void foreach_since_upper_bound(const typename Node::Key& k, Func&& callback) {
+		AVLBase::foreach_since_upper_bound(k, [&](Node& node) {
+			return callback(node.data());
+		});
+	}
+
+	/**
+	 * @brief Calls @p func on every element since the first element > @p k
+	 * @param func function to call on every element, it should take one
+	 *   argument of type const Node::Data&, if it return sth convertible to
+	 *   false the lookup will break
+	 */
+	template<class Func>
+	void foreach_since_upper_bound(const typename Node::Key& k, Func&& callback) const {
+		AVLBase::foreach_since_upper_bound(k, [&](const Node& node) {
+			return callback(node.data());
 		});
 	}
 };
