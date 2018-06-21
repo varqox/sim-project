@@ -30,10 +30,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 		pc.load_from_zip(package_path_);
 
 	// Find master directory if exists
-	InplaceBuff<PATH_MAX> master_dir_b; // Needed to avoid memory corruption as remove_with_prefix may reallocate the internal buffer of the pc
-	// TODO: prevent such problems in the future
-	master_dir_b.append(pc.master_dir());
-	StringView master_dir = master_dir_b;
+	StringView master_dir = pc.master_dir();
 
 	auto exists_in_pkg = [&](StringView file) {
 		return (not file.empty() and pc.exists(concat(master_dir, file)));

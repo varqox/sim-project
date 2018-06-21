@@ -33,7 +33,7 @@ void PackageContents::load_from_directory(string pkg_path) {
 				}
 			});
 
-		path.size -= filename.size() + 1; // Remove filename/ from the path
+		path.size -= filename.size() + 1; // Remove "filename/" from the path
 	};
 
 	// Pass pkg_path without trailing '/' as this argument should not

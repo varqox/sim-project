@@ -1,8 +1,7 @@
 #pragma once
 
 #include "../string.h"
-
-#include <set>
+#include "../avl_dict.h"
 
 namespace sim {
 
@@ -18,24 +17,20 @@ class PackageContents {
 
 		Comparer(decltype(buff)& br) : buff_ref(br) {}
 
+		static StringView to_str(StringView str) noexcept { return str; }
+
 		StringView to_str(Span x) const {
 			return {buff_ref.data() + x.begin, x.end - x.begin};
 		}
 
-		bool operator()(Span a, Span b) const { return to_str(a) < to_str(b); }
+		template<class A, class B>
+		bool operator()(A&& a, B&& b) const { return to_str(a) < to_str(b); }
 	};
-	std::set<Span, Comparer> entries {Comparer(buff)};
+
+	AVLDictSet<Span, Comparer> entries {Comparer(buff)};
 
 	StringView to_str(Span x) const {
 		return {buff.data() + x.begin, x.end - x.begin};
-	}
-
-	Span to_span(StringView str) {
-		buff.append(str);
-		buff.size -= str.size();
-		// Range in which str resides in the buff is still valid, so we can
-		// use it afterwards, as long as buff won't be modified
-		return {buff.size, buff.size + str.size()};
 	}
 
 public:
@@ -47,24 +42,28 @@ public:
 	}
 
 	void remove_with_prefix(StringView prefix) {
-		auto it = entries.lower_bound(to_span(prefix));
-		while (it != entries.end() and hasPrefix(to_str(*it), prefix))
-			entries.erase(it++);
+		const Span* s = entries.lower_bound(prefix);
+		while (s and hasPrefix(to_str(*s), prefix)) {
+			entries.erase(*s);
+			s = entries.lower_bound(prefix);
+		}
 	}
 
 	/// @p callback should take one argument of type StringView - it will
 	/// contain the entry's path
 	template<class Func>
-	void for_each_with_prefix(StringView prefix, Func&& callback) {
-		auto it = entries.lower_bound(to_span(prefix));
-		while (it != entries.end() and hasPrefix(to_str(*it), prefix)) {
-			callback(to_str(*it));
-			++it;
-		}
+	void for_each_with_prefix(StringView prefix, Func&& callback) const {
+		entries.foreach_since_lower_bound(prefix, [&](Span s) {
+			if (not hasPrefix(to_str(s), prefix))
+				return false;
+
+			callback(to_str(s));
+			return true;
+		});
 	}
 
-	bool exists(StringView entry) {
-		return (entries.find(to_span(entry)) != entries.end());
+	bool exists(StringView entry) const {
+		return (entries.find(entry) != nullptr);
 	}
 
 	/// Finds master directory (with trailing '/') if such does not exist "" is
@@ -73,8 +72,7 @@ public:
 		if (entries.empty())
 			return "";
 
-		auto it = entries.begin();
-		StringView candidate = to_str(*it);
+		StringView candidate = to_str(*entries.front());
 		{
 			auto pos = candidate.find('/');
 			if (pos == StringView::npos)
@@ -82,9 +80,14 @@ public:
 			candidate = candidate.substr(0, pos + 1);
 		}
 
-		while (++it != entries.end())
-			if (not hasPrefix(to_str(*it), candidate))
-				return ""; // There is no master dir
+		entries.for_each([&](Span s) {
+			if (not hasPrefix(to_str(s), candidate)) {
+				candidate = ""; // There is no master dir
+				return false;
+			}
+
+			return true;
+		});
 
 		return candidate;
 	}
