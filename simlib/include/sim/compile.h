@@ -2,10 +2,12 @@
 
 #include "../string.h"
 
+#include <vector>
+
 namespace sim {
 
 /**
- * @brief Runs compiler via PRoot
+ * @brief Runs compiler via PRoot (or not)
  * @details If compilation is not successful then errors are placed in
  *   @p c_errors (if c_errors is not NULL)
  *
@@ -16,7 +18,8 @@ namespace sim {
  * @param time_limit time limit for compiler (set to 0 disables the time limit)
  * @param c_errors pointer to string in which compilation errors will be placed
  * @param c_errors_max_len maximum c_errors length
- * @param proot_path path to PRoot executable (to pass to spawn())
+ * @param proot_path path to PRoot executable (to pass to spawn()), if empty
+ *   then the compiler will be run WITHOUT PRoot
  *
  * @return 0 on success, non-zero value on error
  */

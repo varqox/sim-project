@@ -20,7 +20,8 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 	*  Compiler is PRooted to make compilation safer (e.g. prevents including
 	*  unwanted files)
 	*/
-	vector<string> args = std::initializer_list<string> {
+	vector<string> args = (proot_path.empty() ? std::initializer_list<string>{}
+		: std::initializer_list<string> {
 		proot_path,
 		"-v", "-1",
 		"-r", dir_to_chdir.to_string(),
@@ -31,13 +32,14 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 		"-b", "/libx32",
 		"-b", "/lib64",
 		"-b", "/etc/alternatives/"
-	};
+	});
 
 	args.insert(args.end(), compile_command.begin(), compile_command.end());
 
 	// Run the compiler
 	Spawner::ExitStat es = Spawner::run(args[0], args,
-		{-1, cef, cef, time_limit, 1 << 30 /* 1 GiB */});
+		{-1, cef, cef, time_limit, 1 << 30 /* 1 GiB */, {},
+			(proot_path.empty() ? dir_to_chdir.to_string() : ".")});
 
 	// Check for errors
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {
