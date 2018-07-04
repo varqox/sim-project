@@ -66,17 +66,20 @@ struct AddProblemInfo {
 	std::string name, label;
 	uint64_t memory_limit = 0; // in bytes
 	uint64_t global_time_limit = 0; // in usec
-	bool force_auto_limit = false;
+	bool reset_time_limits = false;
 	bool ignore_simfile = false;
+	bool seek_for_new_tests = false;
+	bool reset_scoring = false;
 	ProblemType problem_type = ProblemType::VOID;
 	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
 
 	AddProblemInfo() = default;
 
 	AddProblemInfo(const std::string& n, const std::string& l, uint64_t ml,
-			uint64_t gtl, bool fal, bool is, ProblemType pt)
+			uint64_t gtl, bool rtl, bool is, bool sfnt, bool rs, ProblemType pt)
 		: name(n), label(l), memory_limit(ml), global_time_limit(gtl),
-			force_auto_limit(fal), ignore_simfile(is), problem_type(pt) {}
+			reset_time_limits(rtl), ignore_simfile(is),
+			seek_for_new_tests(sfnt), reset_scoring(rs), problem_type(pt) {}
 
 	AddProblemInfo(StringView str) {
 		name = extractDumpedString(str);
@@ -85,7 +88,10 @@ struct AddProblemInfo {
 		extractDumpedInt(global_time_limit, str);
 
 		uint8_t mask = extractDumpedInt<uint8_t>(str);
-		force_auto_limit = (mask & 1);
+		reset_time_limits = (mask & 1);
+		ignore_simfile = (mask & 2);
+		seek_for_new_tests = (mask & 4);
+		reset_scoring = (mask & 8);
 
 		problem_type = static_cast<ProblemType>(
 			extractDumpedInt<std::underlying_type_t<ProblemType>>(str));
@@ -100,7 +106,8 @@ struct AddProblemInfo {
 		appendDumpedInt(res, memory_limit);
 		appendDumpedInt(res, global_time_limit);
 
-		uint8_t mask = force_auto_limit | (int(ignore_simfile) << 1);
+		uint8_t mask = reset_time_limits | (int(ignore_simfile) << 1) |
+			(int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
 		appendDumpedInt(res, mask);
 
 		appendDumpedInt(res, std::underlying_type_t<ProblemType>(problem_type));

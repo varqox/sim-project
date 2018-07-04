@@ -307,10 +307,10 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
 	// Validate fields
 	CStringView name, label, memory_limit, global_time_limit, package_file;
-	bool relative_time_limits = request.form_data.exist("relative_time_limits");
+	bool reset_time_limits = request.form_data.exist("reset_time_limits");
 	bool ignore_simfile = request.form_data.exist("ignore_simfile");
-	// TODO: implement it (the line below)
-	// bool seek_for_new_tests = request.form_data.exist("seek_for_new_tests");
+	bool seek_for_new_tests = request.form_data.exist("seek_for_new_tests");
+	bool reset_scoring = request.form_data.exist("reset_scoring");
 
 	form_validate(name, "name", "Problem's name", PROBLEM_NAME_MAX_LEN);
 	form_validate(label, "label", "Problem's label", PROBLEM_LABEL_MAX_LEN);
@@ -339,7 +339,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	else
 		add_notification("error", "Invalid problem's type");
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	jobs::AddProblemInfo ap_info {
@@ -347,8 +347,10 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 		label.to_string(),
 		strtoull(memory_limit.c_str()),
 		gtl,
-		relative_time_limits,
+		reset_time_limits,
 		ignore_simfile,
+		seek_for_new_tests,
+		reset_scoring,
 		ptype
 	};
 
@@ -491,7 +493,7 @@ void Sim::api_problem_edit_tags() {
 		bool hidden = (request.form_data.get("hidden") == "true");
 		StringView name;
 		form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
-		if (form_validation_error)
+		if (notifications.size)
 			return api_error400(notifications);
 
 		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
@@ -511,7 +513,7 @@ void Sim::api_problem_edit_tags() {
 		form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
 		form_validate_not_blank(old_name, "old_name", "Old tag name",
 			PROBLEM_TAG_MAX_LEN);
-		if (form_validation_error)
+		if (notifications.size)
 			return api_error400(notifications);
 
 		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
@@ -529,7 +531,7 @@ void Sim::api_problem_edit_tags() {
 		StringView name;
 		bool hidden = (request.form_data.get("hidden") == "true");
 		form_validate_not_blank(name, "name", "Tag name", PROBLEM_TAG_MAX_LEN);
-		if (form_validation_error)
+		if (notifications.size)
 			return api_error400(notifications);
 
 		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))

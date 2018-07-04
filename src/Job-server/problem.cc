@@ -51,7 +51,6 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 	/* Construct Simfile */
 
 	sim::Conver conver;
-	conver.setVerbosity(true);
 	conver.setPackagePath(dest_package.to_string());
 
 	// Set Conver options
@@ -60,8 +59,10 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 	copts.label = info.label;
 	copts.memory_limit = info.memory_limit;
 	copts.global_time_limit = info.global_time_limit;
+	copts.reset_time_limits_using_model_solution = info.reset_time_limits;
 	copts.ignore_simfile = info.ignore_simfile;
-	copts.force_auto_time_limits_setting = info.force_auto_limit;
+	copts.seek_for_new_tests = info.seek_for_new_tests;
+	copts.reset_scoring = info.reset_scoring;
 
 	sim::Conver::ConstructionResult cr;
 	try {

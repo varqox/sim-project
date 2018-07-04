@@ -224,7 +224,7 @@ void Sim::api_user_add() {
 
 	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// All fields are valid
@@ -292,7 +292,7 @@ void Sim::api_user_edit() {
 
 	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Commit changes

@@ -11,8 +11,7 @@ using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
-inline constexpr static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang)
-{
+inline static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang) {
 	switch (lang) {
 	case SubmissionLanguage::C: return sim::SolutionLanguage::C;
 	case SubmissionLanguage::CPP: return sim::SolutionLanguage::CPP;
@@ -474,7 +473,6 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	judge_log("Final judge report: ", rep2.judge_log);
 
 	sim::Conver conver;
-	conver.setVerbosity(true);
 	conver.setPackagePath(package_path.to_string());
 
 	try {

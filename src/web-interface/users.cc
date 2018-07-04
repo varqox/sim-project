@@ -97,7 +97,7 @@ void Sim::login() {
 
 		remember = request.form_data.exist("persistent-login");
 
-		if (not form_validation_error) {
+		if (not notifications.size) {
 			STACK_UNWINDING_MARK;
 
 			auto stmt = mysql.prepare("SELECT id, salt, password FROM users"
@@ -194,12 +194,11 @@ void Sim::sign_up() {
 			form_validate(pass2, "password2", "Password (repeat)") &&
 			pass1 != pass2)
 		{
-			form_validation_error = true;
 			add_notification("error", "Passwords do not match");
 		}
 
 		// If all fields are ok
-		if (not form_validation_error) {
+		if (not notifications.size) {
 			STACK_UNWINDING_MARK;
 
 			array<char, (SALT_LEN >> 1)> salt_bin;

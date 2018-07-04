@@ -629,7 +629,7 @@ void Sim::api_contest_add() {
 		add_notification("error",
 			"You have no permissions to add a private contest");
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Add contest
@@ -666,7 +666,7 @@ void Sim::api_contest_edit(bool is_public) {
 			"You have no permissions to make this contest public");
 	}
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Update contest
@@ -695,7 +695,7 @@ void Sim::api_contest_round_add() {
 	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
 		is_safe_inf_timestamp);
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Add round
@@ -736,7 +736,7 @@ void Sim::api_contest_round_edit() {
 	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
 		is_safe_inf_timestamp);
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Update round
@@ -778,7 +778,7 @@ void Sim::api_contest_problem_add() {
 	else
 		add_notification("error", "Invalid user's type");
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	auto stmt = mysql.prepare("SELECT owner, type, name FROM problems"
@@ -826,7 +826,7 @@ void Sim::api_contest_problem_edit() {
 		CONTEST_PROBLEM_NAME_MAX_LEN);
 	bool reveal_score = request.form_data.exist("reveal_score");
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Update problem
@@ -854,7 +854,7 @@ void Sim::api_contest_problem_change_final_selecting_method() {
 	else
 		add_notification("error", "Invalid user's type");
 
-	if (form_validation_error)
+	if (notifications.size)
 		return api_error400(notifications);
 
 	// Update problem
