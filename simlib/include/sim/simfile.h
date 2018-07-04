@@ -99,6 +99,8 @@ public:
 private:
 	ConfigFile config;
 
+	friend class Conver; // It needs access to the config
+
 public:
 	Simfile() = default;
 
@@ -182,6 +184,28 @@ public:
 	 */
 	void loadSolutions();
 
+private:
+
+#if __cplusplus > 201402L
+#warning "Since C++17 std::optional should be used for memory limit"
+#endif
+
+	/**
+	 * @brief Parses the item of the variable "limits"
+	 * @param item - the item to parse
+	 * @return (test name, time limit [usec], memory limit [byte] or 0 if not given)
+	 */
+	static std::tuple<StringView, uint64_t, uint64_t> parseLimitsItem(StringView item);
+
+	/**
+	 * @brief Parses the item of the variable "scoring"
+	 * @param item - the item to parse
+	 * @return (tests group id, group's score)
+	 */
+	static std::tuple<StringView, int64_t> parseScoringItem(StringView item);
+
+public:
+
 	/**
 	 * @brief Loads tests, their limits and scoring
 	 * @details Fields:
@@ -206,6 +230,17 @@ public:
 	 *   validation error occurs
 	 */
 	void loadGlobalMemoryLimitOnly();
+
+private:
+	/**
+	 * @brief Parses the item of the variable "tests_files"
+	 * @param item - the item to parse
+	 * @return (test name, path to input file, path to output file)
+	 */
+	static std::tuple<StringView, StringView, StringView>
+	parseTestFilesItem(StringView item);
+
+public:
 
 	/**
 	 * @brief Loads tests files (input and output files)
@@ -258,6 +293,11 @@ public:
 	void validateFiles(StringView package_path) const;
 
 	struct TestNameComparator {
+		struct SplitResult {
+			StringView gid; // Group id
+			StringView tid; // Test id
+		};
+
 		/**
 		 * @brief Splits @p test_name into gid (group id) and tid (test id)
 		 * @details e.g. "test1abc" -> ("1", "abc")
@@ -266,28 +306,30 @@ public:
 		 *
 		 * @return (gid, tid)
 		 */
-		static inline std::pair<StringView, StringView>
-			split(StringView test_name) noexcept
-		{
-			StringView tid = test_name.extractTrailing(::isalpha);
-			StringView gid = test_name.extractTrailing(::isdigit);
-			return {gid, tid};
+		static inline SplitResult split(StringView test_name) noexcept {
+			SplitResult res;
+			res.tid = test_name.extractTrailing(::isalpha);
+			res.gid = test_name.extractTrailing(::isdigit);
+			return res;
 		}
 
 		bool operator()(StringView a, StringView b) const {
 			auto x = split(std::move(a)), y = split(std::move(b));
 			// tid == "ocen" behaves the same as gid == "0"
-			if (x.second == "ocen") {
-				if (y.second == "ocen")
-					return StrNumCompare()(x.first, y.first);
+			if (x.tid == "ocen") {
+				if (y.tid == "ocen")
+					return StrNumCompare()(x.gid, y.gid);
 
-				return (y.first != "0");
+				y.gid.removeLeading('0');
+				return (not y.gid.empty()); // true iff y.gid was not equal to 0
 			}
-			if (y.second == "ocen")
-				return (x.first == "0");
+			if (y.tid == "ocen") {
+				x.gid.removeLeading('0');
+				return x.gid.empty(); // true iff x.gid was equal to 0
+			}
 
-			return (x.first == y.first ?
-				x.second < y.second : StrNumCompare()(x.first, y.first));
+			return (x.gid == y.gid ?
+				x.tid < y.tid : StrNumCompare()(x.gid, y.gid));
 		}
 	};
 };

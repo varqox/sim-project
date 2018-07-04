@@ -29,13 +29,8 @@ public:
 private:
 	ReportBuff report_;
 	std::string package_path_;
-	bool verbose_ = false;
 
 public:
-	bool getVerbosity() const noexcept { return verbose_; }
-
-	void setVerbosity(bool verbosity) noexcept { verbose_ = verbosity; }
-
 	const std::string& getPackagePath() const noexcept { return package_path_; }
 
 	// @p path may point to a directory as well as a zip-package
@@ -44,22 +39,28 @@ public:
 	const std::string& getReport() const noexcept { return report_.str; }
 
 	struct Options {
-		std::string name; // Leave empty to detect it from the Simfile in the
-		                  // package
-		std::string label; // Leave empty to detect it from the Simfile in the
-		                   // package
-		uint64_t memory_limit = 0; // [MB] Set to a non-zero value to overwrite
-		                           // memory limit of every test with this value
-		uint64_t global_time_limit = 0; // [microseconds] If non-zero then every
-		                                // test will get this as time limit
-		uint64_t max_time_limit = 60e6; // [microseconds] Maximum allowed time
-		                                // limit on the test. If
-		                                // global_time_limit != 0 this option is
-		                                // ignored
-		bool ignore_simfile = false; // If true, Simfile in the package will be
-		                             // ignored
-		bool force_auto_time_limits_setting =
-			false; // If global_time_limit != 0 this option is ignored
+		// Leave empty to detect it from the Simfile in the package
+		std::string name;
+		// Leave empty to detect it from the Simfile in the package
+		std::string label;
+		// In MB. Set to a non-zero value to override memory limit of every test
+		uint64_t memory_limit = 0;
+		// In microseconds. Set to a non-zero value to override time limit of
+		// every test (has lower precedence than
+		// reset_time_limits_using_model_solution)
+		uint64_t global_time_limit = 0;
+		// Maximum allowed time limit on the test in microseconds. If
+		// global_time_limit != 0 this option is ignored
+		uint64_t max_time_limit = 60e6;
+		// If global_time_limit != 0 this option is ignored
+		bool reset_time_limits_using_model_solution = false;
+		// If true, Simfile in the package will be ignored
+		bool ignore_simfile = false;
+		// Whether to seek for new tests in the package
+		bool seek_for_new_tests = false;
+		// Whether to recalculate scoring
+		bool reset_scoring = false;
+
 		Options() = default;
 	};
 
@@ -106,12 +107,12 @@ public:
 		const JudgeReport& jrep2);
 
 private:
-	static constexpr double time_limit(double model_sol_runtime) {
-		double x = model_sol_runtime;
+	static constexpr double time_limit(double model_solution_runtime) {
+		double x = model_solution_runtime;
 		return 3*x + 2/(2*x*x + 5);
 	}
 
-	static constexpr uint64_t MODEL_SOL_TLIMIT = 20e6;
+	static constexpr uint64_t MODEL_SOLUTION_TIME_LIMIT = 20e6;
 
 	// Rounds time limits to 0.01 s
 	static void normalize_time_limits(Simfile& sf) {

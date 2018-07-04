@@ -53,9 +53,9 @@ string Simfile::dump() const {
 		for (const TestGroup& group : tgroups)
 			if (group.tests.size()) {
 				auto p = TestNameComparator::split(group.tests[0].name);
-				if (p.second == "ocen")
-					p.first = "0";
-				back_insert(res, '\t', ConfigFile::escapeString(concat(p.first,
+				if (p.tid == "ocen")
+					p.gid = "0";
+				back_insert(res, '\t', ConfigFile::escapeString(concat(p.gid,
 					' ', group.score)), '\n');
 			}
 		res += "]\n";
@@ -163,6 +163,77 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 		global_mem_limit = 0;
 }
 
+std::tuple<StringView, uint64_t, uint64_t>
+Simfile::parseLimitsItem(StringView item) {
+	SimpleParser sp(item);
+	// Test name
+	StringView test_name {sp.extractNextNonEmpty(isspace)};
+	// Time limit
+	StringView x {sp.extractNextNonEmpty(isspace)};
+	if (!isReal(x))
+		throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
+			" for the test `", test_name, '`')};
+
+	double tl = stod(x.to_string());
+	if (tl <= 0)
+		throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
+			" of the test `", test_name, "` - it has to be grater than 0")};
+
+	uint64_t time_limit = round(tl * 1000000LL);
+	if (time_limit == 0)
+		throw std::runtime_error{concat_tostr("Simfile: time limit of the"
+			" test `", test_name, "` is to small - after rounding it is"
+			" equal to 0 microseconds, but it has to be at least"
+			" 1 microsecond")};
+
+	// Memory limit
+	uint64_t memory_limit = 0;
+	sp.removeLeading(isspace);
+	if (not sp.empty()) {
+		auto invalid_mem_limit = [&] {
+			return std::runtime_error{concat_tostr("Simfile: invalid memory "
+				"limit for the test `", test_name, "` - it has to be a "
+				"positive integer")};
+		};
+
+		if (!isDigitNotGreaterThan<(std::numeric_limits<
+			decltype(memory_limit)>::max() >> 20)>(sp))
+		{
+			if (!isDigit(sp))
+				throw invalid_mem_limit();
+
+			throw std::runtime_error{concat_tostr("Simfile: too big memory "
+				"limit value for the test `", test_name, "`")};
+		}
+
+		// Memory limit of the current test is valid
+		strtou(sp, memory_limit);
+		if (memory_limit == 0)
+			throw invalid_mem_limit();
+		else
+			memory_limit <<= 20; // Convert from MB to bytes
+	}
+
+	return {test_name, time_limit, memory_limit};
+}
+
+std::tuple<StringView, int64_t>
+Simfile::parseScoringItem(StringView item) {
+	SimpleParser sp(item);
+	StringView gid = sp.extractNextNonEmpty(isspace);
+	if (!isDigit(gid))
+		throw std::runtime_error{concat_tostr("Simfile: scoring of the invalid"
+			" group `", gid, "` - it has to be a positive integer")};
+
+	int64_t score;
+	sp.removeLeading(isspace);
+	if (strtoi(sp, score) != (int)sp.size()) // TODO: handle overflows!
+		throw std::runtime_error{concat_tostr("Simfile: invalid scoring of the"
+			" group `", gid, "`: ", sp)};
+
+	return {gid, score};
+}
+
 void Simfile::loadTests() {
 	// Global memory limit
 	loadGlobalMemoryLimitOnly();
@@ -182,74 +253,29 @@ void Simfile::loadTests() {
 	// limits.asArray() which is a const reference to vector inside the `limits`
 	// variable which will be valid as long as config is not changed
 	for (const string& str : limits.asArray()) {
-		SimpleParser sp {str};
-		// Test name
-		StringView test_name {sp.extractNextNonEmpty(isspace)};
-		Test test(test_name.to_string());
-
-		// Time limit
-		StringView x {sp.extractNextNonEmpty(isspace)};
-		if (!isReal(x))
-			throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
-				" for the test `", test_name, '`')};
-
-		double tl = stod(x.to_string());
-		if (tl <= 0)
-			throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
-				" of the test `", test_name, "` - it has to be grater than 0")};
-
-		test.time_limit = round(tl * 1000000LL);
-		if (test.time_limit == 0)
-			throw std::runtime_error{concat_tostr("Simfile: time limit of the"
-				" test `", test_name, "` is to small - after rounding it is"
-				" equal to 0 microseconds, but it has to be at least"
-				" 1 microsecond")};
-
-		// Memory limit
-		sp.removeLeading(isspace);
-		if (sp.empty()) { // No memory limit is specified for current test
-			if (!global_mem_limit)
+		StringView test_name;
+		uint64_t time_limit, memory_limit;
+		std::tie(test_name, time_limit, memory_limit) = parseLimitsItem(str);
+		if (memory_limit == 0) {
+			if (not global_mem_limit)
 				throw std::runtime_error{concat_tostr("Simfile: missing memory"
 					" limit for the test `", test_name, '`')};
 
-			test.memory_limit = global_mem_limit;
-
-		// There is an invalid memory limit specified for the current test
-		} else {
-			auto invalid_mem_limit = [&] {
-				return std::runtime_error{concat_tostr("Simfile: invalid memory "
-					"limit for the test `", test_name, "` - it has to be a "
-					"positive integer")};
-			};
-			if (!isDigitNotGreaterThan<(std::numeric_limits<
-				decltype(test.memory_limit)>::max() >> 20)>(sp))
-			{
-				if (!isDigit(sp))
-					throw invalid_mem_limit();
-
-				throw std::runtime_error{concat_tostr("Simfile: too big memory "
-					"limit value for the test `", test_name, "`")};
-			}
-
-			// Memory limit of the current test is valid
-			strtou(sp, test.memory_limit); // TODO: handle overflows!
-			if (test.memory_limit == 0)
-				throw invalid_mem_limit();
-
-			test.memory_limit <<= 20; // Convert from MB to bytes
+			memory_limit = global_mem_limit;
 		}
 
 		// Add test to its group
 		auto p = TestNameComparator::split(test_name);
-		if (p.first.empty())
+		if (p.gid.empty())
 			throw std::runtime_error{concat_tostr("Simfile: missing group id in"
 				" the name of the test `", test_name, '`')};
 
 		// tid == "ocen" belongs to the same group as tests with gid == "0"
-		if (p.second == "ocen")
-			p.first = "0";
+		if (p.tid == "ocen")
+			p.gid = "0";
 
-		tests_groups[p.first].tests.emplace_back(std::move(test));
+		tests_groups[p.gid].tests.emplace_back(test_name.to_string(),
+			time_limit, memory_limit);
 	}
 
 	/* Scoring */
@@ -268,30 +294,21 @@ void Simfile::loadTests() {
 	} else { // Check and implement defined scoring
 		AVLDictMap<StringView, int64_t> sm; // (gid, score)
 		for (const string& str : scoring.asArray()) {
-			SimpleParser sp {str};
-			StringView gid {sp.extractNextNonEmpty(isspace)};
+			StringView gid;
+			int64_t score;
+			std::tie(gid, score) = parseScoringItem(str);
 
-			if (not tests_groups.find(gid)) {
-				// It is safe to do check here because gids in tests_groups are
-				// positive integers
-				if (!isDigit(gid))
-					throw std::runtime_error{concat_tostr("Simfile: scoring of"
-						" the invalid group `", gid, "` - it has to be a"
-						" positive integer")};
+			if (not tests_groups.find(gid))
 				throw std::runtime_error{concat_tostr("Simfile: scoring of the "
 					"invalid group `", gid, "` - there is no test belonging to "
 					"this group")};
-			}
 
-			sp.removeLeading(isspace);
 			auto&& it = sm.emplace(gid, 0);
 			if (!it.second)
 				throw std::runtime_error{concat_tostr("Simfile: redefined"
 					" scoring of the group `", gid, '`')};
 
-			if (strtoi(sp, it.first->second) != (int)sp.size()) // TODO: handle overflows!
-				throw std::runtime_error{concat_tostr("Simfile: invalid scoring"
-					" of the group `", gid, '`')};
+			it.first->second = score;
 		}
 
 		// Assign scoring to each group
@@ -318,6 +335,20 @@ void Simfile::loadTests() {
 			return TestNameComparator()(a.name, b.name);
 		});
 }
+std::tuple<StringView, StringView, StringView>
+Simfile::parseTestFilesItem(StringView item) {
+	SimpleParser sp(item);
+	StringView name = sp.extractNextNonEmpty(isspace);
+	StringView input = sp.extractNextNonEmpty(isspace);
+	StringView output = sp.extractNextNonEmpty(isspace);
+
+	sp.removeLeading(isspace);
+	if (not sp.empty())
+		throw std::runtime_error{concat_tostr("Simfile: `tests_files`: invalid"
+			" format of entry for test `", name, "` - excess part: ", sp)};
+
+	return {name, input, output};
+}
 
 void Simfile::loadTestsFiles() {
 	auto&& tests_files = config["tests_files"];
@@ -331,18 +362,14 @@ void Simfile::loadTestsFiles() {
 	// StringView can be used because it will point to the config variable
 	// "tests_files" member, which becomes unchanged
 	for (const string& str : tests_files.asArray()) {
-		SimpleParser sp {str};
-		StringView test_name {sp.extractNextNonEmpty(isspace)};
+		StringView test_name;
+		pair<StringView, StringView> p;
+		std::tie(test_name, p.first, p.second) = parseTestFilesItem(str);
 
-		auto it = files.emplace(test_name, pair<StringView, StringView>{});
-		if (!it.second)
+		auto it = files.emplace(test_name, p);
+		if (not it.second)
 			throw std::runtime_error{concat_tostr("Simfile: `test_files`: "
 				"redefinition of the test `", test_name, '`')};
-
-		auto& p = it.first->second;
-		p.first = sp.extractNextNonEmpty(isspace);
-		sp.removeLeading(isspace);
-		p.second = sp;
 	}
 
 	// Assign to each test its files

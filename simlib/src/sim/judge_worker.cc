@@ -155,7 +155,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 	for (auto&& group : sf.tgroups) {
 		// Group "0" goes to the initial report, others groups to final
 		auto p = Simfile::TestNameComparator::split(group.tests[0].name);
-		if ((p.first != "0") != final)
+		if ((p.gid != "0") != final)
 			continue;
 
 		report.groups.emplace_back();
