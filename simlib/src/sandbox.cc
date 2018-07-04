@@ -777,13 +777,19 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			if (ptrace(PTRACE_TRACEME, 0, 0, 0))
 				send_error_and_exit(errno, "ptrace(PTRACE_TRACEME)");
 
+			// Signal the tracer that ptrace is ready and it may proceed to
+			// tracing us. It has to be done before loading the filter into the
+			// kernel because if some allocation occurs during the
+			// seccomp_load() but after loading the filter then it will fail
+			// (because of seccomp rules defined for memory allocations) and
+			// probably fail this process - it happened under Address Sanitizer,
+			// so it's better to take precautions.
+			kill(getpid(), SIGSTOP);
+
 			// Load filter into the kernel
 			errnum = seccomp_load(ctx);
 			if (errnum)
 				send_error_and_exit(-errnum, "seccomp_load()");
-
-			kill(getpid(), SIGSTOP); // Signal the tracer that ptrace is ready
-			                         // and it may proceed to tracing us
 
 			// Set virtual memory and stack size limit (to the same value)
 			if (opts.memory_limit > 0) {
@@ -811,7 +817,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	// Wait for tracee to be ready
 	siginfo_t si;
 	rusage ru;
-	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED) == -1)
+	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED) == -1)
 		THROW("waitid()", errmsg());
 
 	DEBUG_SANDBOX(stdlog("waitid(): code: ", si.si_code, " status: ",
@@ -862,8 +868,10 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 		if (cpu_timer) {
 			cpu_timer->deactivate();
 			cpu_time = cpu_timer->get_cpu_runtime();
-		} else
+		} else { // The child did not execve() or the execve() failed
 			cpu_time = {0, 0};
+			tracee_vm_peak_ = 0; // It might contain the vm size from before execve()
+		}
 
 		kill_and_wait_tracee_guard.cancel(); // Tracee has died
 		syscall(SYS_waitid, P_PID, tracee_pid_, &si, WEXITED, &ru);
