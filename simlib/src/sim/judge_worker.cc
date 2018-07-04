@@ -114,10 +114,10 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 
 JudgeReport JudgeWorker::judge(bool final) const {
 	JudgeReport report;
+	Logger dummy_logger(nullptr);
 	auto judge_log = [&](auto&&... args) {
-		Logger dummy(nullptr);
 		return DoubleAppender<decltype(report.judge_log)>(
-			(verbose ? stdlog : dummy), report.judge_log,
+			(verbose ? stdlog : dummy_logger), report.judge_log,
 			std::forward<decltype(args)>(args)...);
 	};
 
