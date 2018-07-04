@@ -1,0 +1,8 @@
+name:
+label:
+memory_limit: 0
+global_time_limit: 0
+reset_time_limits_using_model_solution: true
+ignore_simfile: false
+seek_for_new_tests: false
+reset_scoring: false

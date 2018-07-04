@@ -1,0 +1,9 @@
+name: Test
+label: tes
+statement: foo.txt
+checker: check/checker.c
+solutions: [sol.cpp]
+memory_limit: 32
+limits: []
+tests_files: [
+]

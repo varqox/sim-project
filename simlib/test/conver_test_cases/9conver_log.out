@@ -1,0 +1,23 @@
+Problem's name is not specified in options - loading it from Simfile
+  name loaded from Simfile: Test
+Problem's label is not specified in options - loading it from Simfile
+  Simfile: missing problem's label -> generating label from the problem's name
+  label generated from name: tes
+Missing / invalid checker specified in the package's Simfile - searching for one
+No checker was found - placing the default checker
+Missing / invalid statement specified in the package's Simfile - searching for one
+Chosen statement: foo.txt
+[1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `aa`
+[1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `44`
+[1;35mwarning[m: "limits":  ignoring test `ttt` because it has no group id in its name
+[1;35mwarning[m: "tests_files": output test file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": output test file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": ignoring unparsable item -> Simfile: `tests_files`: invalid format of entry for test `ttt` - excess part: hhh
+[1;35mwarning[m: "tests_files": input test file: `444` not found - ignoring file
+[1;35mwarning[m: "tests_files": output test file: `hhh` not found - ignoring file
+[1;35mwarning[m: ignoring test `8888` because it has no corresponding input file
+[1;35mwarning[m: ignoring test `8888` because it has no corresponding output file
+Global memory limit not specified in options - loading it from Simfile
+[1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it
+[1;35mwarning[m: "scoring": ignoring unparsable item -> Simfile: scoring of the invalid group `oo` - it has to be a positive integer
+Auto-scoring: score of the group with id `3` set to 90
