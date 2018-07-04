@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <simlib/debug.h>
 #include <simlib/string.h>
 #include <simlib/time.h>
@@ -47,6 +48,8 @@ public:
 		case Type::DATE: return date;
 		case Type::INF: return INF_STR;
 		}
+
+		assert(false);
 	}
 
 	bool is_neg_inf() const noexcept { return type == Type::NEG_INF; }
@@ -94,6 +97,8 @@ public:
 		case Type::DATE: return date;
 		case Type::INF: return "+inf";
 		}
+
+		assert(false);
 	}
 
 	friend bool operator<(StringView str, const InfDatetime& d) noexcept {

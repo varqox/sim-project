@@ -2469,17 +2469,20 @@ function add_problem(as_modal) {
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'No global time limit',
-			})).add(Form.field_group('Set time limits using model solution', {
+			})).add(Form.field_group('Reset time limits using model solution', {
 				type: 'checkbox',
-				name: 'relative_time_limits',
+				name: 'reset_time_limits',
 				checked: true
-			})).add(Form.field_group('Ignore Simfile', {
-				type: 'checkbox',
-				name: 'ignore_simfile',
 			})).add(Form.field_group('Seek for new tests', {
 				type: 'checkbox',
 				name: 'seek_for_new_tests',
 				checked: true
+			})).add(Form.field_group('Reset scoring', {
+				type: 'checkbox',
+				name: 'reset_scoring'
+			})).add(Form.field_group('Ignore Simfile', {
+				type: 'checkbox',
+				name: 'ignore_simfile',
 			})).add(Form.field_group('Zipped package', {
 				type: 'file',
 				name: 'package',
@@ -2565,17 +2568,20 @@ function reupload_problem(as_modal, problem_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				placeholder: 'No global time limit',
-			})).add(Form.field_group('Set time limits using model solution', {
+			})).add(Form.field_group('Reset time limits using model solution', {
 				type: 'checkbox',
-				name: 'relative_time_limits',
+				name: 'reset_time_limits',
 				checked: true
-			})).add(Form.field_group('Ignore Simfile', {
-				type: 'checkbox',
-				name: 'ignore_simfile',
 			})).add(Form.field_group('Seek for new tests', {
 				type: 'checkbox',
 				name: 'seek_for_new_tests',
 				checked: true
+			})).add(Form.field_group('Reset scoring', {
+				type: 'checkbox',
+				name: 'reset_scoring'
+			})).add(Form.field_group('Ignore Simfile', {
+				type: 'checkbox',
+				name: 'ignore_simfile',
 			})).add(Form.field_group('Zipped package', {
 				type: 'file',
 				name: 'package',

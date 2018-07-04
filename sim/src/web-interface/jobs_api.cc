@@ -229,9 +229,13 @@ void Sim::api_jobs() {
 				append(",\"global time limit\":",
 					usecToSecStr(info.global_time_limit, 6));
 
-			append(",\"auto time limit setting\":", info.force_auto_limit ?
+			append(",\"reset time limits\":", info.reset_time_limits ?
 					"\"yes\"" : "\"no\"",
 				",\"ignore simfile\":", info.ignore_simfile ?
+					"\"yes\"" : "\"no\"",
+				",\"seek for new tests\":", info.seek_for_new_tests ?
+					"\"yes\"" : "\"no\"",
+				",\"reset scoring\":", info.reset_scoring ?
 					"\"yes\"" : "\"no\"");
 
 			if (not res.is_null(AUX_ID)) {
