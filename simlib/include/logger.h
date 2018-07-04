@@ -7,9 +7,6 @@
 
 class Logger {
 private:
-	Logger(const Logger&) = delete;
-	Logger& operator=(const Logger&) = delete;
-
 	FILE* f_;
 	std::atomic<bool> opened_{false}, label_{true};
 
@@ -38,6 +35,11 @@ public:
 
 	// Like use(), it accept nullptr for which a dummy logger is created
 	explicit Logger(FILE *stream) noexcept : f_(stream) {}
+
+	Logger(const Logger&) = delete;
+	Logger& operator=(const Logger&) = delete;
+	// Logger(Logger&&) = default;
+	// Logger& operator=(Logger&&) = default;
 
 	/**
 	 * @brief Opens file @p filename in append mode as log file, if fopen()

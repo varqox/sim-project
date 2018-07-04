@@ -262,7 +262,7 @@ public:
 	TemporaryFile() = default;
 
 	/// The last six characters of template must be "XXXXXX" and these are
-	/// replaced with a string that makes the  filename  unique.
+	/// replaced with a string that makes the filename unique.
 	explicit TemporaryFile(std::string templ) {
 #if __cplusplus > 201402L
 #warning "Since C++17 data() method may be used"
@@ -387,6 +387,16 @@ std::enable_if_t<
 			func(file);
 }
 
+
+/**
+ * @brief Calls @p func on every component of the directory @p pathname other
+ *   than "." and ".."
+ *
+ * @param pathname path of the directory to scan
+ * @param func function to call on every component (other than "." and ".."),
+ *   it should take one argument - dirent*, if it return sth convertible to
+ *   false the lookup will break
+ */
 template<class Func>
 void forEachDirComponent(CStringView pathname, Func&& func) {
 	Directory dir {pathname};

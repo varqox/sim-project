@@ -41,6 +41,8 @@ public:
 		entries.insert({prev_size, buff.size});
 	}
 
+	bool remove(StringView entry) { return entries.erase(entry); }
+
 	void remove_with_prefix(StringView prefix) {
 		const Span* s = entries.lower_bound(prefix);
 		while (s and hasPrefix(to_str(*s), prefix)) {
@@ -54,10 +56,11 @@ public:
 	template<class Func>
 	void for_each_with_prefix(StringView prefix, Func&& callback) const {
 		entries.foreach_since_lower_bound(prefix, [&](Span s) {
-			if (not hasPrefix(to_str(s), prefix))
+			StringView entry = to_str(s);
+			if (not hasPrefix(entry, prefix))
 				return false;
 
-			callback(to_str(s));
+			callback(entry);
 			return true;
 		});
 	}

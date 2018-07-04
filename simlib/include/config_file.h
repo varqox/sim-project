@@ -105,6 +105,7 @@ public:
 
 private:
 	AVLDictMap<std::string, Variable> vars; // (name => value)
+	// TODO: ^ maybe StringView would be better?
 	static const Variable null_var;
 
 public:
