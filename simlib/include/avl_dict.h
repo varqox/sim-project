@@ -357,8 +357,8 @@ protected:
 		pool[x].kid[revdir] = pool[res].kid[dir];
 		pool[res].kid[dir] = x;
 		seth(x);
-		// assert(nil->kid[L] == nil);
-		// assert(nil->kid[R] == nil);
+		// assert(pool[nil].kid[L] == nil);
+		// assert(pool[nil].kid[R] == nil);
 		return res;
 	}
 
@@ -618,6 +618,7 @@ protected:
 		// if we have just found a duplicate
 		if (not dir and not compare(pool[inserted].key(), pool[x].key())) {
 			pool[inserted].kid = pool[x].kid;
+			pool[inserted].h = pool[x].h;
 			deallocate_node(x);
 			x = inserted;
 			return false;
@@ -1003,7 +1004,7 @@ public:
 		print(pool[x].kid[R], tabs + 1);
 
 		stdlog(std::string(tabs * 3, ' '), x,  "- h: ", (int)pool[x].h,
-			", {", pool[x].kid[L], " ", pool[x].kid[R], '}');
+			", {", pool[x].kid[L], " ", pool[x].kid[R], "}\t", pool[x].key());
 
 		print(pool[x].kid[L], tabs + 1);
 
@@ -1270,7 +1271,8 @@ public:
 	using ADC::operator=;
 
 	/// Return value - a pair of a pointer to pair (key, value) and a bool
-	/// denoting whether the insertion took place
+	/// denoting whether the insertion took place (if false, the replacing took
+	/// place)
 	template<class... Args>
 	std::pair<KeyValPair*, bool> emplace(Args&&... args) {
 		auto new_node =
@@ -1282,13 +1284,15 @@ public:
 	}
 
 	/// Return value - a pair of a pointer to pair (key, value) and a bool
-	/// denoting whether the insertion took place
+	/// denoting whether the insertion took place (if false, the replacing took
+	/// place)
 	std::pair<KeyValPair*, bool> insert(KeyValPair kvp) {
 		return emplace(std::move(kvp));
 	}
 
 	/// Return value - a pair of a pointer to pair (key, value) and a bool
-	/// denoting whether the insertion took place
+	/// denoting whether the insertion took place (if false, the replacing took
+	/// place)
 	std::pair<KeyValPair*, bool> insert(typename Node::Key key,
 		typename Node::Value val)
 	{
@@ -1390,5 +1394,26 @@ public:
 		pool[x].real_data().first = std::move(new_key);
 		AVLBase::insert(x);
 		return true;
+	}
+};
+
+template<class T, class Class, T Class::*member, class Comp = std::less<>>
+class MemberComparator {
+	Comp compare;
+
+	static const T& value(const Class& x) noexcept { return x.*member; }
+
+	static const T& value(Class&& x) noexcept { return x.*member; }
+
+	template<class A>
+	static A value(A&& a) noexcept { return a; }
+
+public:
+	template<class... Args>
+	MemberComparator(Args&&... args) : compare(std::forward<Args>(args)...) {}
+
+	template<class A, class B>
+	bool operator()(A&& a, B&& b) {
+		return compare(value(std::forward<A>(a)), value(std::forward<B>(b)));
 	}
 };
