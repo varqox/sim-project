@@ -97,23 +97,8 @@ void Sim::problems_problem() {
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
-		InplaceBuff<32> owner;
-		auto type = std::underlying_type_t<ProblemType>(ProblemType::VOID);
-		InplaceBuff<PROBLEM_NAME_MAX_LEN> name;
-		auto stmt = mysql.prepare("SELECT owner, type, name FROM problems"
-			" WHERE id=?");
-		stmt.bindAndExecute(problems_pid);
-		stmt.res_bind_all(owner, type, name);
-		if (not stmt.next())
-			return error404();
-
-		problems_perms = problems_get_permissions(owner, ProblemType(type));
-
 		page_template(concat("Submit solution to the problem ", problems_pid));
-		append("<script>add_submission(false, ", problems_pid, ", ",
-			jsonStringify(name),
-			(uint(problems_perms & ProblemPermissions::SUBMIT_IGNORED) ?
-				", true" : ", false"), ")</script>");
+		append("<script>add_problem_submission(false, {id:", problems_pid, "})</script>");
 
 	} else if (next_arg == "edit") {
 		page_template(concat("Edit problem ", problems_pid));

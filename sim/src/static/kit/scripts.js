@@ -300,6 +300,86 @@ var url_hash_parser = {};
 }).call(url_hash_parser);
 
 /* =========================== History management =========================== */
+var History = {};
+(function() {
+	History.waiting_for_popstate = false;
+
+	var queue = new Array();
+	History.process_queue = function() {
+		if (queue.length === 0)
+			return;
+
+		if (!History.waiting_for_popstate)
+			queue.shift()();
+
+		setTimeout(History.process_queue);
+	};
+
+	History.deferUntilFullyUpdated = function(func) {
+		queue.push(func);
+		if (queue.length === 1) // No one is processing
+			History.process_queue();
+	};
+
+	History.pushState = function(egid, new_location) {
+		History.deferUntilFullyUpdated(function() {
+			window.history.pushState({egid: egid}, '', new_location);
+			url_hash_parser.assign(window.location.hash);
+		});
+	};
+
+	History.back = function(egid, new_location) {
+		History.deferUntilFullyUpdated(function() {
+			window.history.back();
+			History.waiting_for_popstate = true;
+		});
+	}
+
+	History.forth = function(egid, new_location) {
+		History.deferUntilFullyUpdated(function() {
+			window.history.go(1);
+			History.waiting_for_popstate = true;
+		});
+	}
+
+	History.replaceState = function(egid, new_location) {
+		History.deferUntilFullyUpdated(function() {
+			window.history.replaceState({egid: egid}, '', new_location);
+			url_hash_parser.assign(window.location.hash);
+		});
+	};
+}).call();
+
+window.onpopstate = function(event) {
+	History.waiting_for_popstate = false;
+
+	if (event.state === null)
+		return window.location.reload();
+
+	var elem = $('*[egid="' + event.state.egid + '"]');
+	if (elem.length === 0)
+		return window.location.reload();
+
+	var modals;
+	if (elem.is('body'))
+		modals = elem.children('.modal');
+	else
+		modals = elem.nextAll('.modal');
+
+	// Remove other modals that cover the elem
+	var view_element_removed = false;
+	modals.each(function() {
+		var elem = $(this);
+		if (elem.hasClass('view')) {
+			if (view_element_removed)
+				return false;
+			view_element_removed = true;
+		}
+
+		remove_modals(elem);
+	});
+};
+
 var egid = {};
 (function () {
 	var id = 0;
@@ -319,37 +399,10 @@ function give_body_egid() {
 
 	var body_egid = egid.get_next();
 	$('body').attr('egid', body_egid);
-	window.history.replaceState({egid: body_egid}, document.title, document.URL);
+
+	History.replaceState(body_egid, document.URL);
 }
 $(document).ready(give_body_egid);
-
-window.onpopstate = function(event) {
-	if (event.state === null)
-		return window.location.reload();
-
-	var elem = $('*[egid="' + event.state.egid + '"]');
-	if (elem.length === 0)
-		return window.location.reload();
-
-	var modals;
-	if (elem.is('body'))
-		modals = elem.children('.modal');
-	else
-		modals = elem.nextAll('.modal');
-
-	// Remove other modals that cover elem
-	var view_element_removed = false;
-	modals.each(function() {
-		var elem = $(this);
-		if (elem.hasClass('view')) {
-			if (view_element_removed)
-				return false;
-			view_element_removed = true;
-		}
-
-		remove_modals(elem);
-	});
-};
 
 /* const */ var fade_in_duration = 50; // milliseconds
 
@@ -432,14 +485,14 @@ var get_unique_id = function() {
 /* ================================= Form ================================= */
 var Form = {};
 (function() {
-	this.field_group = function(label, input_context_or_input) {
+	this.field_group = function(label, input_context_or_html_elem) {
 		var input;
-		if (input_context_or_input instanceof jQuery)
-			input = input_context_or_input;
-		else if (input_context_or_input instanceof HTMLElement)
-			input = $(input_context_or_input);
+		if (input_context_or_html_elem instanceof jQuery)
+			input = input_context_or_html_elem;
+		else if (input_context_or_html_elem instanceof HTMLElement)
+			input = $(input_context_or_html_elem);
 		else
-			input = $('<input>', input_context_or_input);
+			input = $('<input>', input_context_or_html_elem);
 
 		var id;
 		if (input.is('input[type="checkbox"]')) {
@@ -515,7 +568,7 @@ function close_modal(modal) {
 			this.onmodalclose();
 	});
 	if (modal.is('.view'))
-		window.history.back();
+		History.back();
 	else
 		remove_modals(modal);
 }
@@ -659,7 +712,7 @@ function API_call(ajax_url, success_handler, loader_parent) {
 		},
 		error: function(resp, status) {
 			show_error_via_loader(loader_parent, resp, status,
-				setTimeout.bind(null, API_call.bind(null, thiss), 0)); // Avoid recursion
+				setTimeout.bind(null, API_call.bind(thiss, ajax_url, success_handler, loader_parent))); // Avoid recursion
 		}
 	});
 }
@@ -721,13 +774,15 @@ function tabmenu(attacher, tabs) {
 				$(this).parent().children('.active').removeClass('active');
 				$(this).addClass('active');
 
-				window.history.replaceState(window.history.state, '',
-					document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(this).text()));
-				url_hash_parser.assign_as_parsed(window.location.hash);
-
-				res.trigger('tabmenuTabHasChanged', this);
-				handler.call(this);
-				centerize_modal($(this).parents('.modal'), false);
+				var elem = this;
+				History.deferUntilFullyUpdated(function(){
+					window.history.replaceState(window.history.state, '',
+						document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(elem).text()));
+					url_hash_parser.assign_as_parsed(window.location.hash);
+					res.trigger('tabmenuTabHasChanged', elem);
+					handler.call(elem);
+					centerize_modal($(elem).parents('.modal'), false);
+				});
 			}
 		};
 	};
@@ -773,8 +828,7 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 		});
 
 		$(elem).attr('egid', next_egid);
-		window.history.pushState({egid: next_egid}, '', new_window_location);
-		url_hash_parser.assign(window.location.hash);
+		History.pushState(next_egid, new_window_location);
 
 		elem.appendTo('body').fadeIn(fade_in_duration);
 		func.call(elem.find('div > div'));
@@ -783,8 +837,7 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 	// Use body as the parent element
 	} else if (no_modal_elem === undefined || $(no_modal_elem).is('body')) {
 		give_body_egid();
-		window.history.replaceState({egid: $('body').attr('egid')}, document.title, new_window_location);
-		url_hash_parser.assign(window.location.hash);
+		History.replaceState($('body').attr('egid'), new_window_location);
 
 		func.call($('body'));
 
@@ -792,8 +845,7 @@ function view_base(as_modal, new_window_location, func, no_modal_elem) {
 	} else {
 		next_egid = egid.get_next();
 		$(no_modal_elem).attr('egid', next_egid);
-		window.history.pushState({egid: next_egid}, '', new_window_location);
-		url_hash_parser.assign(window.location.hash);
+		History.pushState(next_egid, new_window_location);
 
 		func.call($(no_modal_elem));
 	}
@@ -1297,57 +1349,56 @@ var ActionsToHTML = {};
 		return res;
 	};
 
-	this.problem = function(problem_id, actions_str, problem_name, problem_view /*= false*/) {
+	this.problem = function(problem, problem_view /*= false*/) {
 		if (problem_view === undefined)
 			problem_view = false;
 
 		var res = [];
-		if (!problem_view && actions_str.indexOf('v') !== -1)
-			res.push(a_view_button('/p/' + problem_id, 'View', 'btn-small',
-				view_problem.bind(null, true, problem_id)));
+		if (!problem_view && problem.actions.indexOf('v') !== -1)
+			res.push(a_view_button('/p/' + problem.id, 'View', 'btn-small',
+				view_problem.bind(null, true, problem.id)));
 
-		if (actions_str.indexOf('V') !== -1)
+		if (problem.actions.indexOf('V') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
-				href: '/api/problem/' + problem_id + '/statement/' + encodeURIComponent(problem_name),
+				href: '/api/problem/' + problem.id + '/statement/' + encodeURIComponent(problem.name),
 				text: 'Statement'
 			}));
 
-		if (actions_str.indexOf('S') !== -1)
-			res.push(a_view_button('/p/' + problem_id + '/submit', 'Submit',
-				'btn-small blue', add_submission.bind(null, true, problem_id,
-					problem_name, (actions_str.indexOf('i') !== -1), (actions_str.indexOf('i') !== -1))));
+		if (problem.actions.indexOf('S') !== -1)
+			res.push(a_view_button('/p/' + problem.id + '/submit', 'Submit',
+				'btn-small blue', add_problem_submission.bind(null, true, problem)));
 
-		if (actions_str.indexOf('s') !== -1)
-			res.push(a_view_button('/p/' + problem_id + '#all_submissions#solutions',
-				'Solutions', 'btn-small', view_problem.bind(null, true, problem_id,
+		if (problem.actions.indexOf('s') !== -1)
+			res.push(a_view_button('/p/' + problem.id + '#all_submissions#solutions',
+				'Solutions', 'btn-small', view_problem.bind(null, true, problem.id,
 					'#all_submissions#solutions')));
 
-		if (problem_view && actions_str.indexOf('d') !== -1)
+		if (problem_view && problem.actions.indexOf('d') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small',
-				href: '/api/problem/' + problem_id + '/download',
+				href: '/api/problem/' + problem.id + '/download',
 				text: 'Download'
 			}));
 
-		if (actions_str.indexOf('E') !== -1)
-			res.push(a_view_button('/p/' + problem_id + '/edit', 'Edit',
-				'btn-small blue', edit_problem.bind(null, true, problem_id)));
+		if (problem.actions.indexOf('E') !== -1)
+			res.push(a_view_button('/p/' + problem.id + '/edit', 'Edit',
+				'btn-small blue', edit_problem.bind(null, true, problem.id)));
 
-		if (problem_view && actions_str.indexOf('R') !== -1)
-			res.push(a_view_button('/p/' + problem_id + '/reupload', 'Reupload',
-				'btn-small orange', reupload_problem.bind(null, true, problem_id)));
+		if (problem_view && problem.actions.indexOf('R') !== -1)
+			res.push(a_view_button('/p/' + problem.id + '/reupload', 'Reupload',
+				'btn-small orange', reupload_problem.bind(null, true, problem.id)));
 
-		if (problem_view && actions_str.indexOf('J') !== -1)
+		if (problem_view && problem.actions.indexOf('J') !== -1)
 			res.push($('<a>', {
 				class: 'btn-small blue',
 				text: 'Rejudge all submissions',
-				click: rejudge_problem_submissions.bind(null, problem_id)
+				click: rejudge_problem_submissions.bind(null, problem.id)
 			}));
 
-		if (problem_view && actions_str.indexOf('D') !== -1)
-			res.push(a_view_button('/p/' + problem_id + '/delete', 'Delete',
-				'btn-small red', delete_problem.bind(null, true, problem_id)));
+		if (problem_view && problem.actions.indexOf('D') !== -1)
+			res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
+				'btn-small red', delete_problem.bind(null, true, problem.id)));
 
 		return res;
 	};
@@ -2026,14 +2077,10 @@ function tab_jobs_lister(parent_elem, query_suffix /*= ''*/) {
 }
 
 /* ============================== Submissions ============================== */
-function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignored, ignore_by_default, contest_problem_id) {
-	view_base(as_modal, (contest_problem_id === undefined ?
-		'/p/' + problem_id + '/submit' : '/c/p' + contest_problem_id + '/submit'), function() {
-		this.append(ajax_form('Submit a solution', '/api/submission/add/p' +
-				problem_id + (contest_problem_id === undefined ? '' : '/cp' +
-				contest_problem_id),
-			Form.field_group('Problem', a_view_button('/p/' + problem_id,
-				problem_name_to_show, undefined, view_problem.bind(null, true, problem_id))
+function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_ignored, ignore_by_default, no_modal_elem) {
+	view_base(as_modal, url, function() {
+		this.append(ajax_form('Submit a solution', api_url,
+			Form.field_group('Problem', problem_field_elem
 			).add(Form.field_group('Language',
 				$('<select>', {
 					name: 'language',
@@ -2080,8 +2127,59 @@ function add_submission(as_modal, problem_id, problem_name_to_show, maybe_ignore
 				}
 			})
 		);
-	});
+	}, no_modal_elem);
 }
+function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/) {
+	if (problem.name === undefined) { // Request server for all needed data
+		view_ajax(as_modal, "/api/problems/=" + problem.id, function(data) {
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+			if (as_modal)
+				close_modal($(this).closest('.modal'));
+
+			add_problem_submission(as_modal, data[0]);
+		}, '/p/' + problem.id + '/submit');
+		return;
+	}
+
+	add_submission_impl(as_modal, '/p/' + problem.id + '/submit',
+		'/api/submission/add/p' + problem.id,
+		a_view_button('/p/' + problem.id, problem.name, undefined, view_problem.bind(null, true, problem.id)),
+		(problem.actions.indexOf('i') !== -1), (problem.actions.indexOf('i') !== -1),
+		no_modal_elem);
+}
+function add_contest_submission(as_modal, contest, round, problem, no_modal_elem /*= undefined*/) {
+	if (contest === undefined) { // Request server for all needed data
+		view_ajax(as_modal, "/api/contest/p" + problem.id, function(data) {
+			if (as_modal)
+				close_modal($(this).closest('.modal'));
+
+			add_contest_submission(as_modal, data.contest, data.rounds[0], data.problems[0]);
+		}, '/c/p' + problem.id + '/submit');
+		return;
+	}
+
+	add_submission_impl(as_modal, '/c/p' + problem.id + '/submit',
+		'/api/submission/add/p' + problem.problem_id + '/cp' + problem.id,
+		$('<div>', {
+			class: 'contest-path',
+			html: [
+				a_view_button('/c/c' + contest.id, contest.name, '',
+					view_contest.bind(null, true, contest.id)),
+				' / ',
+				a_view_button('/c/r' + round.id, round.name, '',
+					view_contest_round.bind(null, true, round.id)),
+				' / ',
+				a_view_button('/c/p' + problem.id, problem.name, '',
+					view_contest_problem.bind(null, true, problem.id))
+			]
+		}), (contest.actions.indexOf('A') !== -1),
+		(contest.actions.indexOf('A') !== -1), no_modal_elem);
+}
+
 function rejudge_submission(submission_id) {
 	modal_request('Scheduling submission rejudge ' + submission_id, $('<form>'),
 		'/api/submission/' + submission_id + '/rejudge',
@@ -2354,8 +2452,6 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 			var avb = a_view_button('/s/' + x.id, x.submit_time, undefined,
 				view_submission.bind(null, true, x.id));
 			avb.setAttribute('datetime', x.submit_time);
-			console.log(avb);
-			console.log(avb.outerHTML);
 			td.appendChild(normalize_datetime(avb, false)[0]);
 			row.appendChild(td);
 
@@ -2831,7 +2927,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 			html: $('<h1>', {
 					text: problem.name
 				}).add('<div>', {
-					html: ActionsToHTML.problem(problem.id, actions, problem.name, true)
+					html: ActionsToHTML.problem(problem, true)
 				})
 		})).append($('<center>', {
 			class: 'always_in_view',
@@ -3017,7 +3113,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.problem(x.id, x.actions, x.name)
+				html: ActionsToHTML.problem(x)
 			}));
 
 			this_.elem.children('tbody').append(row);
@@ -3509,7 +3605,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem[4]),
 								text: 'Statement'
 							}),
-							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue', add_submission.bind(null, true, problem.problem_id, problem.name, (actions.indexOf('A') !== -1), (actions.indexOf('A') !== -1), problem.id))),
+							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue',
+								add_contest_submission.bind(null, true, contest, round, problem))),
 						]}).appendTo(dashboard.parent());
 
 					var elem = $('<a>', {
