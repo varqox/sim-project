@@ -2132,10 +2132,11 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 function add_problem_submission(as_modal, problem, no_modal_elem /*= undefined*/) {
 	if (problem.name === undefined) { // Request server for all needed data
 		view_ajax(as_modal, "/api/problems/=" + problem.id, function(data) {
-			return show_error_via_loader(this, {
-				status: '404',
-				statusText: 'Not Found'
-			});
+			if (data.length === 0)
+				return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
 
 			if (as_modal)
 				close_modal($(this).closest('.modal'));
