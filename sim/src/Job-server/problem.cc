@@ -235,9 +235,11 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	std::underlying_type_t<SubmissionLanguage> lang;
 	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, language,"
-			" status, submit_time, last_judgment, initial_report, final_report)"
+			" initial_status, full_status, submit_time, last_judgment,"
+			" initial_report, final_report)"
 		" VALUES(NULL, ?, NULL, NULL, NULL, "
-			STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ", ?, ?, '', '')");
+			STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ", " SSTATUS_PENDING_STR
+			"?, ?, '', '')");
 	stmt.bind_all(problem_id, lang, current_date, zero_date);
 
 	for (auto&& solution : sf.solutions) {
@@ -261,7 +263,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 	// Notify the job-server that there are submissions to judge
 	utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
 
-	// TODO: fix updating submission status so that it will work with PROBLEM_SOLUTION submissions and other queries connected to this problem
+	// TODO: fix updating submission status so that it will work with PROBLEM_SOLUTION submissions and other queries associated with this problem
 
 	// End transaction
 	rollback_maker.cancel();

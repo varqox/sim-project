@@ -14,7 +14,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	static_assert((uint)PERM::NONE == 0, "Needed below");
 	PERM PERM_SUBMISSION_ADMIN = PERM::VIEW | PERM::VIEW_SOURCE |
 		PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
-		(isIn(stype, {STYPE::NORMAL, STYPE::FINAL, STYPE::IGNORED})
+		(isIn(stype, {STYPE::NORMAL, STYPE::IGNORED})
 			? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN)
@@ -29,7 +29,12 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 		if (stype == STYPE::PROBLEM_SOLUTION)
 			return PERM::VIEW | PERM::VIEW_SOURCE |	PERM::VIEW_RELATED_JOBS
 				| PERM::REJUDGE;
-		return PERM::VIEW | PERM::REJUDGE;
+
+		if (session_user_id == submission_owner)
+			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::REJUDGE |
+				PERM::CHANGE_TYPE | PERM::DELETE;
+
+		return PERM::VIEW | PERM::VIEW_SOURCE | PERM::REJUDGE;
 	}
 
 	if (session_user_id == submission_owner)

@@ -1550,7 +1550,7 @@ function view_user(as_modal, user_id, opt_hash /*= ''*/) {
 		tabmenu(default_tabmenu_attacher.bind(main), [
 			'Submissions', function() {
 				main.append($('<div>', {html: "<h2>User's submissions</h2>"}));
-				tab_submissions_lister(main.children().last(), '/u' + user_id);
+				tab_submissions_lister(main.children().last(), '/u' + user_id, false, !logged_user_is_admin());
 			},
 			'Jobs', function() {
 				var j_table = $('<table>', {
@@ -2397,10 +2397,12 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 
 	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
-function SubmissionsLister(elem, query_suffix /*= ''*/) {
+function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= function(){return true;}*/) {
 	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
+	if (show_submission === undefined)
+		show_submission = function() { return true; };
 
 	this.show_user = (query_suffix.indexOf('/u') === -1 &&
 		query_suffix.indexOf('/tS') === -1);
@@ -2441,6 +2443,9 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 		for (var x in data) {
 			x = data[x];
 			this_.query_suffix = '/<' + x.id;
+
+			if (!show_submission(x))
+				continue;
 
 			var row = document.createElement('tr');
 			var td;
@@ -2518,19 +2523,24 @@ function SubmissionsLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
-function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutions_tab /* = false*/) {
+function tab_submissions_lister(parent_elem, query_suffix /*= ''*/, show_solutions_tab /* = false*/, filter_normal_instead_of_querying_final /*= false*/) {
 	if (query_suffix === undefined)
 		query_suffix = '';
 
 	parent_elem = $(parent_elem);
-	function retab(tab_qsuff) {
+	function retab(tab_qsuff, show_submission) {
 		var table = $('<table class="submissions"></table>').appendTo(parent_elem);
-		new SubmissionsLister(table, query_suffix + tab_qsuff).monitor_scroll();
+		new SubmissionsLister(table, query_suffix + tab_qsuff, show_submission).monitor_scroll();
 	}
+
+	var final_binding = (filter_normal_instead_of_querying_final ?
+		retab.bind(null, '', function(s) {
+			return (s.type === 'Final' || s.type === 'Initial final');
+		}) : retab.bind(null, '/tF'));
 
 	var tabs = [
 		'All', retab.bind(null, ''),
-		'Final', retab.bind(null, '/tF'),
+		'Final', final_binding,
 		'Ignored', retab.bind(null, '/tI')
 	];
 	if (show_solutions_tab)
@@ -3086,6 +3096,9 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			this_.query_suffix = '/<' + x.id;
 
 			var row = $('<tr>');
+			if (x.color_class !== null)
+				row.addClass('status ' + x.color_class);
+
 			// Id
 			row.append($('<td>', {text: x.id}));
 			// Type
@@ -3384,16 +3397,7 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				type: 'checkbox',
 				name: 'reveal_score',
 				checked: problem.reveal_score
-			})).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Update'
-				})
-			})
-		));
-		this.append(ajax_form('Final submission selection', '/api/contest/p' + contest_problem_id + '/change_final_selecting_method',
-			Form.field_group("Final submission to select",
+			})).add(Form.field_group("Final submission to select",
 				$('<select>', {
 					name: 'final_selecting_method',
 					required: true,
@@ -3407,14 +3411,16 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 						selected: (problem.final_selecting_method === 'WHS')
 					})
 				})
-			).add('<div>', {
+			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
 					value: 'Update'
 				})
-			}), function(resp) {
-				if (as_modal) {
+			}), function(resp, loader_parent) {
+				if (resp === '')
+					show_success_via_loader(this, 'Updated');
+				else if (as_modal) {
 					show_success_via_loader(this, 'Updated');
 					view_job(true, resp);
 				} else {
@@ -3613,7 +3619,6 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					}).appendTo(dashboard_rounds);
 				}
 
-				var problem2elem = new StaticMap();
 				function append_problem(dashboard_round, problem, cannot_submit) {
 					// Problem buttons
 					if (id_for_api[0] === 'p')
@@ -3631,6 +3636,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						href: '/c/p' + problem.id,
 						style: (id_for_api[0] === 'p' ?
 							'padding: 7px; line-height: 12px' : undefined),
+						class: (problem.color_class === null ? undefined : 'status ' + problem.color_class),
 						html: [
 							$('<span>', {text: problem.name}),
 							(id_for_api[0] === 'p' ? $('<table>', {html: [
@@ -3647,7 +3653,6 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						]
 					});
 
-					problem2elem.add(problem.id, elem);
 					wrap_arrows('p', elem).appendTo(dashboard_round);
 				}
 
@@ -3678,44 +3683,29 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				}
 
 				if (is_logged_in()) {
-					problem2elem.prepare();
-					var color_problems = function(query_suffix) {
-						API_call('/api/submissions/' + id_for_api.toUpperCase() +
-							'/u' + logged_user_id() + '/tF' + query_suffix, function(data)
+					// All problems have been colored
+					// Mark rounds as green (only the ones that contain a problem)
+					var rounds_to_check = dashboard_rounds.children().filter(function() { return $(this).children().length > 1; });
+					var green_contest = rounds_to_check.length > 0;
+
+					rounds_to_check.each(function() {
+						var round = $(this);
+						var round_a = round.find('a').eq(0);
+						if (round_a.hasClass('green'))
+							return;
+
+						var problems = round.find('a').slice(1);
+						if (problems.filter(function() {
+								return $(this).hasClass('green');
+							}).length === problems.length)
 						{
-							if (data.length > 0) {
-								for (var i in data) {
-									(problem2elem.get(data[i].contest_problem_id) || $()).addClass('status ' + data[i].status.class);
-								}
-								color_problems('/<' + data[data.length - 1].id);
-							}
+							round_a.addClass('status green');
+						} else
+							green_contest = false;
+					});
 
-							// All problems have been colored
-							// Mark rounds as green (only the ones that contain a problem)
-							var rounds_to_check = dashboard_rounds.children().filter(function() { return $(this).children().length > 1; });
-							var green_contest = rounds_to_check.length > 0;
-
-							rounds_to_check.each(function() {
-								var round = $(this);
-								var round_a = round.find('a').eq(0);
-								if (round_a.hasClass('green'))
-									return;
-
-								var problems = round.find('a').slice(1);
-								if (problems.filter(function() {
-										return $(this).hasClass('green');
-									}).length === problems.length)
-								{
-									round_a.addClass('status green');
-								} else
-									green_contest = false;
-							});
-
-							if (green_contest)
-								dashboard.find('.contest').addClass('status green');
-						}, $());
-					};
-					color_problems('');
+					if (green_contest)
+						dashboard.find('.contest').addClass('status green');
 				}
 			}
 		];
@@ -3727,7 +3717,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('p') !== -1)
 			tabs.push('My submissions', function() {
-				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id());
+				tab_submissions_lister($('<div>').appendTo(elem), '/' + id_for_api.toUpperCase() + '/u' + logged_user_id(), false, (actions.indexOf('A') === -1));
 			});
 
 		if (actions.indexOf('v') !== -1)

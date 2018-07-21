@@ -25,12 +25,15 @@ void Sim::api_problems() {
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT p.id, p.added, p.type, p.name, p.label, p.owner,"
-		" u.username");
+		" u.username, s.full_status");
 	qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner=u.id"
+		" LEFT JOIN submissions s ON s.owner=",
+			(session_open() ? StringView(session_user_id) : "''"),
+			" AND s.problem_id=p.id AND s.problem_final=1"
 		" WHERE p.type!=" JTYPE_VOID_STR);
 
 	enum ColumnIdx {
-		PID, ADDED, PTYPE, NAME, LABEL, OWNER, OWN_USERNAME, SIMFILE
+		PID, ADDED, PTYPE, NAME, LABEL, OWNER, OWN_USERNAME, SFULL_STATUS, SIMFILE
 	};
 
 	// Get the overall permissions to the problems set
@@ -132,6 +135,7 @@ void Sim::api_problems() {
 				"\"public\","
 				"\"hidden\""
 			"]},"
+			"\"color_class\","
 			"\"simfile\","
 			"\"memory_limit\""
 		"]}");
@@ -241,6 +245,15 @@ void Sim::api_problems() {
 		if (uint(perms & PERM::VIEW_HIDDEN_TAGS))
 			append_tags(true);
 		append("]]");
+
+		// Append color class
+		if (res.is_null(SFULL_STATUS)) {
+			append(",null");
+		} else {
+			append(",\"",
+				css_color_class(SubmissionStatus(strtoull(res[SFULL_STATUS]))),
+				"\"");
+		}
 
 		// Append simfile and memory limit
 		if (select_specified_problem and uint(perms & PERM::VIEW_SIMFILE)) {

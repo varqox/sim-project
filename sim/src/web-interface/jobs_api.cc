@@ -44,6 +44,27 @@ void Sim::api_jobs() {
 		CREATOR_USERNAME, JOB_LOG_VIEW
 	};
 
+	auto append_column_names = [&] {
+		append("[\n{\"columns\":["
+				"\"id\","
+				"\"added\","
+				"\"type\","
+				"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
+				"\"priority\","
+				"\"creator_id\","
+				"\"creator_username\","
+				"\"info\","
+				"\"actions\","
+				"{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
+			"]}");
+	};
+
+	auto set_empty_response = [&] {
+		resp.content.clear();
+		append_column_names();
+		append("\n]");
+	};
+
 	bool allow_access = uint(jobs_perms & PERM::VIEW_ALL);
 	bool select_specified_job = false;
 
@@ -139,25 +160,13 @@ void Sim::api_jobs() {
 	}
 
 	if (not allow_access)
-		return api_error403();
+		return set_empty_response();
 
 	// Execute query
 	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT 50");
 	auto res = mysql.query(qfields);
 
-	// Column names
-	append("[\n{\"columns\":["
-			"\"id\","
-			"\"added\","
-			"\"type\","
-			"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
-			"\"priority\","
-			"\"creator_id\","
-			"\"creator_username\","
-			"\"info\","
-			"\"actions\","
-			"{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
-		"]}");
+	append_column_names();
 
 	while (res.next()) {
 		JobType job_type {JobType(strtoull(res[JTYPE]))};

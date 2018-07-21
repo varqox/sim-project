@@ -92,15 +92,12 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	}
 
 	// Variables
-	SubmissionStatus status = SubmissionStatus::OK;
+	SubmissionStatus initial_status = SubmissionStatus::OK;
+	SubmissionStatus full_status = SubmissionStatus::OK;
 	InplaceBuff<1 << 16> initial_report, final_report;
 	int64_t total_score = 0;
 
 	auto send_report = [&] {
-		static_assert(int(SubmissionType::NORMAL) == 0 &&
-			int(SubmissionType::FINAL) == 1, "Needed below where "
-				"\"... type<= ...\"");
-
 		{
 			// Lock the table to be able to safely modify the submission
 			// locking contest_problems is required by update_final()
@@ -117,21 +114,24 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 			stmt.res_bind_all(stype);
 			(void)stmt.next(); // Ignore errors (deleted submission)
 
-
 			// Update submission
 			stmt = mysql.prepare("UPDATE submissions"
-				" SET final_candidate=?, status=?, score=?, last_judgment=?,"
-					" initial_report=?, final_report=? WHERE id=?");
+				" SET final_candidate=?, initial_status=?, full_status=?,"
+					" score=?, last_judgment=?, initial_report=?,"
+					" final_report=? WHERE id=?");
 
-			if (is_fatal(status))
-				stmt.bindAndExecute(false, (uint)status, nullptr,
-					judging_began, initial_report, final_report, submission_id);
-			else
-				stmt.bindAndExecute(isIn(ST(stype), {ST::NORMAL, ST::FINAL}),
-					(uint)status, total_score, judging_began, initial_report,
+			if (is_fatal(full_status)) {
+				stmt.bindAndExecute(false, (uint)initial_status,
+					(uint)full_status, nullptr, judging_began, initial_report,
 					final_report, submission_id);
+			} else {
+				stmt.bindAndExecute((ST(stype) == ST::NORMAL),
+					(uint)initial_status, (uint)full_status, total_score,
+					judging_began, initial_report, final_report, submission_id);
+			}
 
-			submission::update_final(mysql, sowner, contest_problem_id, false);
+			submission::update_final(mysql, sowner, problem_id,
+				contest_problem_id, false);
 		}
 
 		stmt = mysql.prepare("UPDATE jobs"
@@ -151,7 +151,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		{
 			tmplog(" failed.");
 
-			status = SubmissionStatus::CHECKER_COMPILATION_ERROR;
+			initial_status = full_status =
+				SubmissionStatus::CHECKER_COMPILATION_ERROR;
 			initial_report = concat("<pre class=\"compilation-errors\">",
 				htmlEscape(compilation_errors), "</pre>");
 
@@ -172,7 +173,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		{
 			tmplog(" failed.");
 
-			status = SubmissionStatus::COMPILATION_ERROR;
+			initial_status = full_status = SubmissionStatus::COMPILATION_ERROR;
 			initial_report = concat("<pre class=\"compilation-errors\">",
 				htmlEscape(compilation_errors), "</pre>");
 
@@ -273,60 +274,56 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 
 	try {
 		// Judge
-		JudgeReport rep1 = jworker.judge(false);
-		JudgeReport rep2 = jworker.judge(true);
+		JudgeReport initial_jrep = jworker.judge(false);
+		JudgeReport final_jrep = jworker.judge(true);
 		// Make reports
-		initial_report = construct_report(rep1, false);
-		final_report = construct_report(rep2, true);
+		initial_report = construct_report(initial_jrep, false);
+		final_report = construct_report(final_jrep, true);
 
 		// Log reports
 		judge_log("Job ", job_id, " -> submission ", submission_id,
 			" (problem ", problem_id, ")\n"
-			"Initial judge report: ", rep1.judge_log,
-			"\nFinal judge report: ", rep2.judge_log,
+			"Initial judge report: ", initial_jrep.judge_log,
+			"\nFinal judge report: ", final_jrep.judge_log,
 			"\n");
 
 		// Count score
-		for (auto&& rep : {rep1, rep2})
+		for (auto&& rep : {initial_jrep, final_jrep})
 			for (auto&& group : rep.groups)
 				total_score += group.score;
 
-		/* Determine the submission status */
+		/* Determine the submission initial and final status */
 
-		// Sets status to OK or first encountered error and modifies it
-		// with func
-		auto set_status = [&status] (const JudgeReport& jr, auto&& func) {
+		// Returns OK or the first encountered error status
+		auto calc_status = [] (const JudgeReport& jr) {
 			for (auto&& group : jr.groups)
 				for (auto&& test : group.tests)
-					if (test.status != JudgeReport::Test::OK) {
-						switch (test.status) {
-						case JudgeReport::Test::WA:
-							status = SubmissionStatus::WA; break;
-						case JudgeReport::Test::TLE:
-							status = SubmissionStatus::TLE; break;
-						case JudgeReport::Test::MLE:
-							status = SubmissionStatus::MLE; break;
-						case JudgeReport::Test::RTE:
-							status = SubmissionStatus::RTE; break;
-						default:
-							// We should not get here
-							throw_assert(false);
-						}
-
-						func(status);
-						return;
+					switch (test.status) {
+					case JudgeReport::Test::OK:
+						continue;
+					case JudgeReport::Test::WA:
+						return SubmissionStatus::WA;
+					case JudgeReport::Test::TLE:
+						return SubmissionStatus::TLE;
+					case JudgeReport::Test::MLE:
+						return SubmissionStatus::MLE;
+					case JudgeReport::Test::RTE:
+						return SubmissionStatus::RTE;
+					default:
+						// We should not get here
+						throw_assert(false);
 					}
 
-			status = SubmissionStatus::OK;
-			func(status);
+			return SubmissionStatus::OK;
 		};
 
 		// Search for a CHECKER_ERROR
-		for (auto&& rep : {rep1, rep2})
+		for (auto&& rep : {initial_jrep, final_jrep})
 			for (auto&& group : rep.groups)
 				for (auto&& test : group.tests)
 					if (test.status == JudgeReport::Test::CHECKER_ERROR) {
-						status = SubmissionStatus::JUDGE_ERROR;
+						initial_status = full_status =
+							SubmissionStatus::JUDGE_ERROR;
 						errlog("Checker error: submission ", submission_id,
 							" (problem id: ", problem_id, ") test `", test.name,
 							'`');
@@ -335,7 +332,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 					}
 
 		// Log syscall problems (to errlog)
-		for (auto&& rep : {rep1, rep2})
+		for (auto&& rep : {initial_jrep, final_jrep})
 			for (auto&& group : rep.groups)
 				for (auto&& test : group.tests)
 					if (hasPrefixIn(test.comment, {"Runtime error (Error: ",
@@ -346,46 +343,20 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 							problem_id, "): ", test.name, " -> ", test.comment);
 					}
 
-		static_assert((int)SubmissionStatus::OK < 8, "Needed below");
-		static_assert((int)SubmissionStatus::WA < 8, "Needed below");
-		static_assert((int)SubmissionStatus::TLE < 8, "Needed below");
-		static_assert((int)SubmissionStatus::MLE < 8, "Needed below");
-		static_assert((int)SubmissionStatus::RTE < 8, "Needed below");
-
-		static_assert(((int)SubmissionStatus::OK << 3) ==
-			(int)SubmissionStatus::INITIAL_OK, "Needed below");
-		static_assert(((int)SubmissionStatus::WA << 3) ==
-			(int)SubmissionStatus::INITIAL_WA, "Needed below");
-		static_assert(((int)SubmissionStatus::TLE << 3) ==
-			(int)SubmissionStatus::INITIAL_TLE, "Needed below");
-		static_assert(((int)SubmissionStatus::MLE << 3) ==
-			(int)SubmissionStatus::INITIAL_MLE, "Needed below");
-		static_assert(((int)SubmissionStatus::RTE << 3) ==
-			(int)SubmissionStatus::INITIAL_RTE, "Needed below");
-
 		// Initial status
-		set_status(rep1, [](SubmissionStatus& s) {
-			// s has only final status, we want the same initial and
-			// final status in s
-			int x = static_cast<int>(s);
-			s = static_cast<SubmissionStatus>((x << 3) | x);
-		});
+		initial_status = calc_status(initial_jrep);
 		// If initial tests haven't passed
-		if (status != (SubmissionStatus::OK | SubmissionStatus::INITIAL_OK))
-			return send_report();
-
-		// Final status
-		set_status(rep2, [](SubmissionStatus& s) {
-			// Initial tests have passed, so add INITIAL_OK
-			s = s | SubmissionStatus::INITIAL_OK;
-		});
+		if (initial_status != SubmissionStatus::OK)
+			full_status = initial_status;
+		else
+			full_status = calc_status(final_jrep);
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
 		judge_log("Judge error.");
 		judge_log("Caught exception -> ", e.what());
 
-		status = SubmissionStatus::JUDGE_ERROR;
+		initial_status = full_status = SubmissionStatus::JUDGE_ERROR;
 		initial_report = concat("<pre>", htmlEscape(e.what()), "</pre>");
 		final_report = "";
 	}
@@ -466,17 +437,17 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 
 	// Judge
 	judge_log("Judging...");
-	JudgeReport rep1 = jworker.judge(false);
-	JudgeReport rep2 = jworker.judge(true);
+	JudgeReport initial_jrep = jworker.judge(false);
+	JudgeReport final_jrep = jworker.judge(true);
 
-	judge_log("Initial judge report: ", rep1.judge_log);
-	judge_log("Final judge report: ", rep2.judge_log);
+	judge_log("Initial judge report: ", initial_jrep.judge_log);
+	judge_log("Final judge report: ", final_jrep.judge_log);
 
 	sim::Conver conver;
 	conver.setPackagePath(package_path.to_string());
 
 	try {
-		conver.finishConstructingSimfile(simfile, rep1, rep2);
+		conver.finishConstructingSimfile(simfile, initial_jrep, final_jrep);
 
 	} catch (const std::exception& e) {
 		job_log.append(conver.getReport());
