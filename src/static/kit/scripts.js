@@ -2376,6 +2376,23 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 				new JobsLister(elem.children().last(), '/s' + submission_id).monitor_scroll();
 			});
 
+		if (s.owner_id !== null) {
+			tabs.push((s.owner_id == logged_user_id() ? 'My' : "User's") + ' submissions to this problem', function() {
+				elem.append($('<div>'));
+				tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + (s.contest_id === null ? '/p' + s.problem_id : '/P' + s.contest_problem_id));
+			});
+
+			if (s.contest_id !== null && s.owner_id != logged_user_id()) {
+				tabs.push("User's submissions to this round", function() {
+					elem.append($('<div>'));
+					tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + '/R' + s.contest_round_id);
+				}, "User's submissions to this contest", function() {
+					elem.append($('<div>'));
+					tab_submissions_lister(elem.children().last(), '/u' + s.owner_id + '/C' + s.contest_id);
+				});
+			}
+		}
+
 		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/s/' + submission_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
