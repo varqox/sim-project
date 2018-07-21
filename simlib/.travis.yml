@@ -258,6 +258,7 @@ before_script:
   - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PWD/libseccomp/usr/lib/x86_64-linux-gnu"
   - sed 's/LINUX_VERSION_CODE/266241/' -i src/sandbox.cc
   - sed 's@\t$(PREFIX)test/exec@\t$(PREFIX)test/exec --gtest_filter=-Sandbox.run@' Makefile -i
+  - sed 's/, "-m32"//' src/sim/judge_worker.cc -i # fix errors with compiling to 32 bit
 
 script:
   - $make -kj $(grep -c ^processor /proc/cpuinfo) DEBUG=$DEBUG
