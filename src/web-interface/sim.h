@@ -134,8 +134,8 @@ private:
 	void api_user_change_password();
 
 	// submissions_api.cc
-	void append_submission_status(SubmissionStatus status,
-		bool show_full_results);
+	void append_submission_status(SubmissionStatus initial_status,
+		SubmissionStatus full_status, bool show_full_results);
 
 	void api_submissions();
 
@@ -182,11 +182,9 @@ private:
 
 	void api_contest_problem_edit();
 
-	void api_contest_problem_change_final_selecting_method();
-
 	void api_contest_problem_delete();
 
-	void api_contest_ranking(StringView submissions_id_name,
+	void api_contest_ranking(StringView submissions_query_id_name,
 		StringView query_id);
 
 	void api_contest_users();
@@ -424,7 +422,7 @@ private:
 	}
 
 	/* ============================== Users ============================== */
-
+public:
 	enum class UserPermissions : uint {
 		NONE = 0,
 		VIEW = 1,
@@ -440,6 +438,7 @@ private:
 		ADD_USER = 512
 	};
 
+private:
 	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(UserPermissions, &)
@@ -477,7 +476,7 @@ private:
 	void users_user();
 
 	/* ============================= Job queue ============================= */
-
+public:
 	enum class JobPermissions : uint {
 		NONE = 0,
 		VIEW = 1, // allowed to view the job
@@ -488,6 +487,7 @@ private:
 		VIEW_ALL = 32 // allowed to view all the jobs
 	};
 
+private:
 	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
@@ -516,7 +516,7 @@ private:
 	void jobs_handle();
 
 	/* ============================== Problems ============================== */
-
+public:
 	enum class ProblemPermissions : uint {
 		NONE = 0,
 		// Both
@@ -547,6 +547,7 @@ private:
 		DELETE = EDIT,
 	};
 
+private:
 	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &)
@@ -568,7 +569,7 @@ private:
 	void problems_problem();
 
 	/* ============================== Contest ============================== */
-
+public:
 	enum class ContestPermissions : uint {
 		NONE = 0,
 		// Overall
@@ -585,8 +586,11 @@ private:
 		ADMIN = 1 << 8,
 		EDIT_OWNERS = 1 << 9,
 		DELETE = 1 << 10,
+		SELECT_FINAL_SUBMISSIONS = 1 << 11,
+		VIEW_ALL_CONTEST_SUBMISSIONS = 1 << 12,
 	};
 
+private:
 	friend DECLARE_ENUM_UNARY_OPERATOR(ContestPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(ContestPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(ContestPermissions, &)
@@ -613,7 +617,7 @@ private:
 	void contests_contest_problem();
 
 	/* ============================= Submissions ============================= */
-
+public:
 	enum class SubmissionPermissions : uint {
 		NONE = 0,
 		// Overall
@@ -628,6 +632,7 @@ private:
 		DELETE = 1 << 7
 	};
 
+private:
 	friend DECLARE_ENUM_UNARY_OPERATOR(SubmissionPermissions, ~)
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &)

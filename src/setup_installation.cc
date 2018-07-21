@@ -275,7 +275,12 @@ int main(int argc, char **argv) {
 			"`type` TINYINT NOT NULL,"
 			"`language` TINYINT NOT NULL,"
 			"`final_candidate` BOOLEAN NOT NULL DEFAULT FALSE,"
-			"`status` TINYINT NOT NULL,"
+			"`problem_final` BOOLEAN NOT NULL DEFAULT FALSE,"
+			"`contest_final` BOOLEAN NOT NULL DEFAULT FALSE,"
+			// Used to color problems in the problem view
+			"`contest_initial_final` BOOLEAN NOT NULL DEFAULT FALSE,"
+			"`initial_status` TINYINT NOT NULL,"
+			"`full_status` TINYINT NOT NULL,"
 			"`submit_time` datetime NOT NULL,"
 			"`score` int NULL DEFAULT NULL,"
 			"`last_judgment` datetime NOT NULL,"
@@ -285,29 +290,43 @@ int main(int argc, char **argv) {
 			/* All needed by submissions API */
 			// With owner
 			"KEY (owner, id),"
+			"KEY (owner, type, id),"
 			"KEY (owner, problem_id, id),"
 			"KEY (owner, contest_problem_id, id),"
 			"KEY (owner, contest_round_id, id),"
 			"KEY (owner, contest_id, id),"
-			"KEY (owner, type, id),"
+			"KEY (owner, contest_final, id),"
+			"KEY (owner, problem_final, id),"
 			"KEY (owner, problem_id, type, id),"
+			"KEY (owner, problem_id, problem_final),"
 			"KEY (owner, contest_problem_id, type, id),"
+			"KEY (owner, contest_problem_id, contest_final),"
 			"KEY (owner, contest_round_id, type, id),"
+			"KEY (owner, contest_round_id, contest_final, id),"
 			"KEY (owner, contest_id, type, id),"
+			"KEY (owner, contest_id, contest_final, id),"
 			// Without owner
+			"KEY (type, id),"
 			"KEY (problem_id, id),"
 			"KEY (contest_problem_id, id),"
 			"KEY (contest_round_id, id),"
 			"KEY (contest_id, id),"
-			"KEY (type, id),"
 			"KEY (problem_id, type, id),"
 			"KEY (contest_problem_id, type, id),"
 			"KEY (contest_round_id, type, id),"
 			"KEY (contest_id, type, id),"
 			// Needed to efficiently change type to/from FINAL
 			"KEY final1 (final_candidate, owner, contest_problem_id, id),"
-			"KEY final2 (final_candidate, owner, contest_problem_id, score, status, id),"
-			"KEY final3 (final_candidate, owner, problem_id, score, status, id)"
+			"KEY final2 (final_candidate, owner, contest_problem_id, score, full_status, id),"
+			"KEY final3 (final_candidate, owner, problem_id, score, full_status, id),"
+			// Needed to efficiently query contest view coloring
+			"KEY initial_final (owner, contest_problem_id, contest_initial_final),"
+			// Needed to efficiently update contest view coloring
+			//   final = last compiling: final1
+			//   no revealing and final = best submission:
+			"KEY initial_final2 (final_candidate, owner, contest_problem_id, initial_status, id),"
+			//   revealing score and final = best submission:
+			"KEY initial_final3 (final_candidate, owner, contest_problem_id, score, initial_status, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("jobs",

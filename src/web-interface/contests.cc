@@ -14,7 +14,8 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 		return PERM::VIEW_PUBLIC | PERM::VIEW_ALL | PERM::ADD_PRIVATE |
 			PERM::ADD_PUBLIC | PERM::SELECT_BY_USER | PERM::VIEW |
 			PERM::PARTICIPATE | PERM::ADMIN | PERM::MAKE_PUBLIC |
-			PERM::EDIT_OWNERS | PERM::DELETE;
+			PERM::EDIT_OWNERS | PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
+			PERM::VIEW_ALL_CONTEST_SUBMISSIONS;
 
 	PERM overall_perms = (session_user_type == UserType::TEACHER ?
 		PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE : PERM::VIEW_PUBLIC);
@@ -22,10 +23,12 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 	switch (cu_mode) {
 	case CUM::OWNER:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
-			PERM::EDIT_OWNERS | PERM::DELETE;
+			PERM::EDIT_OWNERS | PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
+			PERM::VIEW_ALL_CONTEST_SUBMISSIONS;
 
 	case CUM::MODERATOR:
-		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN;
+		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
+			PERM::SELECT_FINAL_SUBMISSIONS | PERM::VIEW_ALL_CONTEST_SUBMISSIONS;
 
 	case CUM::CONTESTANT:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE;

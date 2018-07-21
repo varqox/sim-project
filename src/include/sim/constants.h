@@ -118,10 +118,9 @@ static_assert(meta::equal(PTYPE_CONTEST_ONLY_STR,
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
-	FINAL = 1,
-	VOID = 2,
-	IGNORED = 3,
-	PROBLEM_SOLUTION = 4,
+	VOID = 1,
+	IGNORED = 2,
+	PROBLEM_SOLUTION = 3,
 };
 
 #define STYPE_NORMAL_STR "0"
@@ -129,22 +128,17 @@ static_assert(meta::equal(STYPE_NORMAL_STR,
 	meta::ToString<(int)SubmissionType::NORMAL>::value),
 	"Update the above #define");
 
-#define STYPE_FINAL_STR "1"
-static_assert(meta::equal(STYPE_FINAL_STR,
-	meta::ToString<(int)SubmissionType::FINAL>::value),
-	"Update the above #define");
-
-#define STYPE_VOID_STR "2"
+#define STYPE_VOID_STR "1"
 static_assert(meta::equal(STYPE_VOID_STR,
 	meta::ToString<(int)SubmissionType::VOID>::value),
 	"Update the above #define");
 
-#define STYPE_IGNORED_STR "3"
+#define STYPE_IGNORED_STR "2"
 static_assert(meta::equal(STYPE_IGNORED_STR,
 	meta::ToString<(int)SubmissionType::IGNORED>::value),
 	"Update the above #define");
 
-#define STYPE_PROBLEM_SOLUTION_STR "4"
+#define STYPE_PROBLEM_SOLUTION_STR "3"
 static_assert(meta::equal(STYPE_PROBLEM_SOLUTION_STR,
 	meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
 	"Update the above #define");
@@ -152,7 +146,6 @@ static_assert(meta::equal(STYPE_PROBLEM_SOLUTION_STR,
 constexpr inline const char* toString(SubmissionType x) {
 	switch (x) {
 	case SubmissionType::NORMAL: return "Normal";
-	case SubmissionType::FINAL: return "Final";
 	case SubmissionType::IGNORED: return "Ignored";
 	case SubmissionType::PROBLEM_SOLUTION: return "Problem solution";
 	case SubmissionType::VOID: return "Void";
@@ -201,20 +194,12 @@ enum class SubmissionStatus : uint8_t {
 	TLE = 3,
 	MLE = 4,
 	RTE = 5,
-	FINAL_MASK = 7,
-	// Initial
-	INITIAL_OK  = OK << 3,
-	INITIAL_WA  = WA << 3,
-	INITIAL_TLE = TLE << 3,
-	INITIAL_MLE = MLE << 3,
-	INITIAL_RTE = RTE << 3,
-	INITIAL_MASK = FINAL_MASK << 3,
 	// Special
-	PENDING                   = (8 << 3) + 0,
+	PENDING                   = 8 + 0,
 	// Fatal
-	COMPILATION_ERROR         = (8 << 3) + 1,
-	CHECKER_COMPILATION_ERROR = (8 << 3) + 2,
-	JUDGE_ERROR               = (8 << 3) + 3
+	COMPILATION_ERROR         = 8 + 1,
+	CHECKER_COMPILATION_ERROR = 8 + 2,
+	JUDGE_ERROR               = 8 + 3
 };
 
 DECLARE_ENUM_UNARY_OPERATOR(SubmissionStatus, ~)
@@ -223,10 +208,8 @@ DECLARE_ENUM_OPERATOR(SubmissionStatus, &)
 
 // Non-fatal statuses
 static_assert(meta::max(SubmissionStatus::OK, SubmissionStatus::WA,
-	SubmissionStatus::TLE, SubmissionStatus::MLE, SubmissionStatus::RTE,
-	SubmissionStatus::INITIAL_OK, SubmissionStatus::INITIAL_WA,
-	SubmissionStatus::INITIAL_TLE, SubmissionStatus::INITIAL_MLE,
-	SubmissionStatus::INITIAL_RTE) < SubmissionStatus::PENDING,
+		SubmissionStatus::TLE, SubmissionStatus::MLE, SubmissionStatus::RTE) <
+	SubmissionStatus::PENDING,
 	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
 	" used during selection of the final submission");
 
@@ -245,7 +228,21 @@ constexpr inline bool is_fatal(SubmissionStatus status) {
 	return (status > SubmissionStatus::PENDING);
 }
 
-#define SSTATUS_PENDING_STR "64"
+inline constexpr const char* css_color_class(SubmissionStatus status) noexcept {
+	switch (status) {
+	case SubmissionStatus::OK: return "green";
+	case SubmissionStatus::WA: return "red";
+	case SubmissionStatus::TLE: return "yellow";
+	case SubmissionStatus::MLE: return "yellow";
+	case SubmissionStatus::RTE: return "intense-red";
+	case SubmissionStatus::PENDING: return "";
+	case SubmissionStatus::COMPILATION_ERROR: return "purple";
+	case SubmissionStatus::CHECKER_COMPILATION_ERROR: return "blue";
+	case SubmissionStatus::JUDGE_ERROR: return "blue";
+	}
+}
+
+#define SSTATUS_PENDING_STR "8"
 static_assert(meta::equal(SSTATUS_PENDING_STR,
 	meta::ToString<(int)SubmissionStatus::PENDING>::value),
 	"Update the above #define");

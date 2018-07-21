@@ -91,7 +91,7 @@ public:
 		return from_str(concat<20>(str).to_cstr());
 	}
 
-	StringView to_api_str() {
+	StringView to_api_str() const noexcept {
 		switch (type) {
 		case Type::NEG_INF: return "-inf";
 		case Type::DATE: return date;

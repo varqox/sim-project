@@ -132,7 +132,8 @@ src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \
 	src/lib/jobs.cc \
-	src/lib/mysql.cc
+	src/lib/mysql.cc \
+	src/lib/submission.cc
 
 $(eval $(call load_dependencies, $(LIB_SIM_SRCS)))
 LIB_SIM_OBJS := $(call SRCS_TO_OBJS, $(LIB_SIM_SRCS))

@@ -1,63 +1,41 @@
 #include "sim.h"
 
+#include <functional>
 #include <sim/jobs.h>
 #include <sim/submission.h>
 #include <sim/utilities.h>
 #include <simlib/filesystem.h>
+#include <simlib/optional.h>
 #include <simlib/process.h>
 
 using MySQL::bind_arg;
 using std::string;
 
-void Sim::append_submission_status(SubmissionStatus status,
-	bool show_full_results)
+void Sim::append_submission_status(SubmissionStatus initial_status,
+	SubmissionStatus full_status, bool show_full_results)
 {
 	STACK_UNWINDING_MARK;
 	using SS = SubmissionStatus;
 
-	if (is_special(status)) {
-		if (status == SS::PENDING)
-			append("[\"\",\"Pending\"]");
-		else if (status == SS::COMPILATION_ERROR)
-			append("[\"purple\",\"Compilation failed\"]");
-		else if (status == SS::CHECKER_COMPILATION_ERROR)
-			append("[\"blue\",\"Checker compilation failed\"]");
-		else if (status == SS::JUDGE_ERROR)
-			append("[\"blue\",\"Judge error\"]");
-		else
-			append("[\"\",\"Unknown\"]");
+	auto as_str = [](SubmissionStatus status) {
+		switch (status) {
+		case SS::OK: return "\",\"OK\"]";
+		case SS::WA: return "\",\"Wrong answer\"]";
+		case SS::TLE: return "\",\"Time limit exceeded\"]";
+		case SS::MLE: return "\",\"Memory limit exceeded\"]";
+		case SS::RTE: return "\",\"Runtime error\"]";
+		case SS::PENDING: return "\",\"Pending\"]";
+		case SS::COMPILATION_ERROR: return "\",\"Compilation failed\"]";
+		case SS::CHECKER_COMPILATION_ERROR:
+			return "\",\"Checker compilation failed\"]";
+		case SS::JUDGE_ERROR: return "\",\"Judge error\"]";
+		}
+	};
 
-	// Final
-	} else if (show_full_results) {
-		if ((status & SS::FINAL_MASK) == SS::OK)
-			append("[\"green\",\"OK\"]");
-		else if ((status & SS::FINAL_MASK) == SS::WA)
-			append("[\"red\",\"Wrong answer\"]");
-		else if ((status & SS::FINAL_MASK) == SS::TLE)
-			append("[\"yellow\",\"Time limit exceeded\"]");
-		else if ((status & SS::FINAL_MASK) == SS::MLE)
-			append("[\"yellow\",\"Memory limit exceeded\"]");
-		else if ((status & SS::FINAL_MASK) == SS::RTE)
-			append("[\"intense-red\",\"Runtime error\"]");
-		else
-			append("[\"\",\"Unknown\"]");
-
-	// Initial
-	} else {
-		if ((status & SS::INITIAL_MASK) == SS::INITIAL_OK)
-			append("[\"initial green\",\"OK\"]");
-		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_WA)
-			append("[\"initial red\",\"Wrong answer\"]");
-		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_TLE)
-			append("[\"initial yellow\",\"Time limit exceeded\"]");
-		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_MLE)
-			append("[\"initial yellow\",\"Memory limit exceeded\"]")
-				;
-		else if ((status & SS::INITIAL_MASK) == SS::INITIAL_RTE)
-			append("[\"initial intense-red\",\"Runtime error\"]");
-		else
-			append("[\"\",\"Unknown\"]");
-	}
+	if (show_full_results)
+		append("[\"", css_color_class(full_status), as_str(full_status));
+	else
+		append("[\"initial ", css_color_class(initial_status), as_str(initial_status));
 }
 
 #include <sys/time.h>
@@ -76,7 +54,8 @@ void Sim::api_submissions() {
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
 		" cp.final_selecting_method, cp.reveal_score, s.contest_round_id,"
 		" r.name, r.full_results, r.ends, s.contest_id, c.name, s.submit_time,"
-		" s.status, s.score");
+		" s.problem_final, s.contest_final, s.contest_initial_final,"
+		" s.initial_status, s.full_status, s.score");
 	qwhere.append(" FROM submissions s"
 		" LEFT JOIN users u ON u.id=s.owner"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
@@ -90,103 +69,216 @@ void Sim::api_submissions() {
 	enum ColumnIdx {
 		SID, STYPE, SLANGUAGE, SOWNER, CUMODE, POWNER, SOWN_USERNAME, PROB_ID,
 		PNAME, CPID, CP_NAME, CP_FSM, REVEAL_SCORE, CRID, CR_NAME, FULL_RES,
-		CRENDS, CID, CNAME, SUBMIT_TIME, STATUS, SCORE, SOWN_FNAME, SOWN_LNAME,
+		CRENDS, CID, CNAME, SUBMIT_TIME, PFINAL, CFINAL, CINIFINAL,
+		INITIAL_STATUS, FINAL_STATUS, SCORE, SOWN_FNAME, SOWN_LNAME,
 		INIT_REPORT, FINAL_REPORT
 	};
 
 	bool allow_access = (session_user_type == UserType::ADMIN);
 	bool select_one = false;
-	bool only_final_or_only_normal = false;
+	bool selecting_problem_submissions = false;
+	bool selecting_contest_submissions = false;
 
-	// Process restrictions
-	StringView next_arg = url_args.extractNextArg();
-	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
-		constexpr uint ID_COND = 1;
-		constexpr uint STYPE_COND = 2;
-		constexpr uint ROUND_OR_PROBLEM_ID_COND = 4;
-		constexpr uint USER_ID_COND = 8;
+	bool selecting_finals = false;
+	bool may_see_problem_final = (session_user_type == UserType::ADMIN);
 
-		auto arg = decodeURI(next_arg);
-		char cond = arg[0];
-		StringView arg_id = StringView{arg}.substr(1);
+	auto append_column_names = [&] {
+		append("[\n{\"columns\":["
+			"\"id\","
+			"\"type\","
+			"\"language\","
+			"\"owner_id\","
+			"\"owner_username\","
+			"\"problem_id\","
+			"\"problem_name\","
+			"\"contest_problem_id\","
+			"\"contest_problem_name\","
+			"\"contest_round_id\","
+			"\"contest_round_name\","
+			"\"contest_id\","
+			"\"contest_name\","
+			"\"submit_time\","
+			"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
+			"\"score\","
+			"\"actions\"");
 
-		// submission type
-		if (cond == 't' and ~mask & STYPE_COND) {
-			if (arg_id == "N") {
-				qwhere.append(" AND s.type=" STYPE_NORMAL_STR);
-				only_final_or_only_normal = true;
-			} else if (arg_id == "F") {
-				qwhere.append(" AND s.type=" STYPE_FINAL_STR);
-				only_final_or_only_normal = true;
-			} else if (arg_id == "I")
-				qwhere.append(" AND s.type=" STYPE_IGNORED_STR);
-			else if (arg_id == "S")
-				qwhere.append(" AND s.type=" STYPE_PROBLEM_SOLUTION_STR);
-			else
-				return api_error400(concat("Invalid submission type: ",
-					arg_id));
+		if (select_one)
+			append(",\"owner_first_name\","
+				"\"owner_last_name\","
+				"\"initial_report\","
+				"\"final_report\","
+				"\"full_results\"");
 
-			mask |= STYPE_COND;
-			continue;
-		}
+		append("]}");
+	};
 
-		if (not isDigit(arg_id))
-			return api_error400();
+	auto set_empty_response = [&] {
+		resp.content.clear();
+		append_column_names();
+		append("\n]");
+	};
 
-		// conditional (condition > is not supported because it creates problems
-		// with protecting the final submissions from leak - it is solvable but
-		// it is not easy and not worth it because such queries are not in use
-		// now)
-		if (cond == '<' and ~mask & ID_COND) {
-			qwhere_id_cond.append(" AND s.id", arg);
-			mask |= ID_COND;
+	{
+		std::vector<std::function<void()>> after_checks;
+		// At most one perms optional will be set
+		Optional<ContestPermissions> cperms;
+		Optional<ProblemPermissions> pperms;
 
-		} else if (cond == '=' and ~mask & ID_COND) {
-			allow_access = true; // Permissions will be checked while fetching
-			                     // the data
+		bool id_condition_occurred = false;
+		bool type_condition_occurred = false;
+		bool round_or_problem_condition_occurred = false;
+		bool user_condition_occurred = false;
 
-			qfields.append(", u.first_name, u.last_name,"
-				" s.initial_report, s.final_report");
-			select_one = true;
-
-			qwhere_id_cond.append(" AND s.id", arg);
-			mask |= ID_COND;
-
-		// problem's or round's id
-		} else if (isIn(cond, {'p', 'C', 'R', 'P'}) and
-			~mask & ROUND_OR_PROBLEM_ID_COND)
+		for (StringView next_arg = url_args.extractNextArg();
+			not next_arg.empty(); next_arg = url_args.extractNextArg())
 		{
-			if (cond == 'p') {
-				qwhere.append(" AND s.problem_id=", arg_id);
-				if (not allow_access) {
-					InplaceBuff<32> p_owner;
-					auto stmt = mysql.prepare("SELECT owner FROM problems"
-						" WHERE id=?");
-					stmt.bindAndExecute(arg_id);
-					stmt.res_bind_all(p_owner);
-					if (stmt.next() and p_owner == session_user_id)
-						allow_access = true;
+			auto arg = decodeURI(next_arg);
+			char cond_c = arg[0];
+			StringView arg_id = StringView(arg).substr(1);
+
+			// Submission type
+			if (cond_c == 't') {
+				if (type_condition_occurred)
+					return api_error400("Submission type specified more than once");
+
+				type_condition_occurred = true;
+
+				if (arg_id == "N") {
+					qwhere.append(" AND s.type=" STYPE_NORMAL_STR);
+				} else if (arg_id == "F") {
+					selecting_finals = true;
+
+					after_checks.emplace_back([&] {
+						if (cperms.has_value() and
+							uint(~cperms.value() &
+								ContestPermissions::SELECT_FINAL_SUBMISSIONS))
+						{
+							allow_access = false;
+						}
+
+						if (selecting_problem_submissions and not may_see_problem_final)
+							allow_access = false;
+
+						if (not round_or_problem_condition_occurred) {
+							if (may_see_problem_final)
+								qwhere.append(" AND (s.problem_final=1 OR s.contest_final=1)");
+							else
+								qwhere.append(" AND s.contest_final=1");
+						} else if (selecting_problem_submissions) {
+							qwhere.append(" AND s.problem_final=1");
+						} else if (selecting_contest_submissions) {
+							// TODO: double check that it works
+							qwhere.append(" AND s.contest_final=1");
+						}
+					});
+				} else if (arg_id == "I") {
+					qwhere.append(" AND s.type=" STYPE_IGNORED_STR);
+				} else if (arg_id == "S") {
+					qwhere.append(" AND s.type=" STYPE_PROBLEM_SOLUTION_STR);
+				} else {
+					return api_error400(concat("Invalid submission type: ",
+						arg_id));
 				}
 
-			} else {
+				continue;
+			}
+
+			// Next conditions require arg_id to be a valid ID
+			if (not isDigit(arg_id))
+				return api_error400();
+
+			if (isIn(cond_c, {'<', '>'})) {
+				if (id_condition_occurred)
+					return api_error400("Submission ID condition specified more"
+						" than once");
+
+				id_condition_occurred = true;
+				qwhere.append(" AND s.id", arg);
+
+			} else if (cond_c == '=') {
+				if (id_condition_occurred)
+					return api_error400("Submission ID condition specified more"
+						" than once");
+
+				id_condition_occurred = true;
+				select_one = true;
+				allow_access = true; // Permissions will be checked while
+				                     // fetching the data
+
+				qfields.append(", u.first_name, u.last_name,"
+					" s.initial_report, s.final_report");
+				qwhere_id_cond.append(" AND s.id", arg);
+
+			// Problem's id
+			} else if (cond_c == 'p') {
+				if (round_or_problem_condition_occurred)
+					return api_error400("Round or problem ID condition"
+						" specified more than once");
+
+				selecting_problem_submissions = true;
+				round_or_problem_condition_occurred = true;
+				qwhere.append(" AND s.problem_id=", arg_id);
+
+				auto stmt = mysql.prepare("SELECT owner, type FROM problems"
+					" WHERE id=?");
+				stmt.bindAndExecute(arg_id);
+
+				InplaceBuff<32> p_owner;
+				uint p_type_u;
+				stmt.res_bind_all(p_owner, p_type_u);
+				if (not stmt.next())
+					return set_empty_response();
+
+				pperms = problems_get_permissions(p_owner, ProblemType(p_type_u));
+				if (uint(pperms.value() &
+					ProblemPermissions::VIEW_SOLUTIONS_AND_SUBMISSIONS))
+				{
+					allow_access = true;
+				}
+
+				if (uint(pperms.value() &
+					ProblemPermissions::VIEW_SOLUTIONS_AND_SUBMISSIONS))
+				{
+					may_see_problem_final = true;
+				}
+
+			// Round's id
+			} else if (isIn(cond_c, {'C', 'R', 'P'})) {
+				if (round_or_problem_condition_occurred)
+					return api_error400("Round or problem ID condition"
+						" specified more than once");
+
+				selecting_contest_submissions = true;
+				round_or_problem_condition_occurred = true;
+
+				if (cond_c == 'C')
+					qwhere.append(" AND s.contest_id=", arg_id);
+				else if (cond_c == 'R')
+					qwhere.append(" AND s.contest_round_id=", arg_id);
+				else if (cond_c == 'P')
+					qwhere.append(" AND s.contest_problem_id=", arg_id);
+
 				if (not allow_access) {
 					StringView query;
-					switch (cond) {
-					case 'C': query = "SELECT cu.mode FROM contests c"
+					switch (cond_c) {
+					case 'C': query = "SELECT cu.mode, c.is_public"
+							" FROM contests c"
 							" LEFT JOIN contest_users cu ON cu.user_id=?"
 								" AND cu.contest_id=c.id"
 							" WHERE c.id=?";
 						break;
 
-					case 'R': query = "SELECT cu.mode"
+					case 'R': query = "SELECT cu.mode, c.is_public"
 						" FROM contest_rounds r"
+						" LEFT JOIN contests c ON c.id=r.contest_id"
 						" LEFT JOIN contest_users cu"
 							" ON cu.contest_id=r.contest_id AND cu.user_id=?"
 						" WHERE r.id=?";
 						break;
 
-					case 'P': query = "SELECT cu.mode"
+					case 'P': query = "SELECT cu.mode, c.is_public"
 						" FROM contest_problems p"
+						" LEFT JOIN contests c ON c.id=p.contest_id"
 						" LEFT JOIN contest_users cu"
 							" ON cu.contest_id=p.contest_id AND cu.user_id=?"
 						" WHERE p.id=?";
@@ -197,43 +289,53 @@ void Sim::api_submissions() {
 
 					std::underlying_type_t<CUM> cu_mode;
 					my_bool cu_mode_is_null;
-					stmt.res_bind_all(bind_arg(cu_mode, cu_mode_is_null));
+					bool is_public;
+					stmt.res_bind_all(bind_arg(cu_mode, cu_mode_is_null),
+						is_public);
 					if (not stmt.next())
-						return api_error404(concat("Invalid query condition ",
-							cond, " - no such round was found"));
+						return set_empty_response();
 
-					if (not cu_mode_is_null and
-						isIn(CUM(cu_mode), {CUM::MODERATOR, CUM::OWNER}))
+					cperms = contests_get_permissions(is_public,
+						(cu_mode_is_null ? CUM::IS_NULL : CUM(cu_mode)));
+					if (uint(cperms.value() &
+						ContestPermissions::VIEW_ALL_CONTEST_SUBMISSIONS))
 					{
 						allow_access = true;
 					}
 				}
 
-				if (cond == 'C')
-					qwhere.append(" AND s.contest_id=", arg_id);
-				else if (cond == 'R')
-					qwhere.append(" AND s.contest_round_id=", arg_id);
-				else if (cond == 'P')
-					qwhere.append(" AND s.contest_problem_id=", arg_id);
+			// User's ID (submission's owner)
+			} else if (cond_c == 'u') {
+				if (user_condition_occurred)
+					return api_error400("User ID condition specified more than once");
+
+				user_condition_occurred = true;
+				qwhere.append(" AND s.owner=", arg_id);
+
+				// Owner (almost) always has access to theirs submissions
+				if (arg_id == session_user_id)
+					after_checks.emplace_back([&] {
+						if (allow_access)
+							return;
+						// Need to check the problem permissions not to leak the
+						// information about which submission is the final one -
+						// it may be used during the contest with hidden results
+						// where the user is not allowed to access problem in
+						// Problems
+						if (selecting_problem_submissions)
+							allow_access = (may_see_problem_final or not selecting_finals);
+						else
+							allow_access = (not selecting_finals);
+					});
 			}
+		}
 
-			mask |= ROUND_OR_PROBLEM_ID_COND;
-
-		// user (creator)
-		} else if (cond == 'u' and ~mask & USER_ID_COND) {
-			qwhere.append(" AND s.owner=", arg_id);
-			if (arg_id == session_user_id)
-				allow_access = true;
-
-			mask |= USER_ID_COND;
-
-		} else
-			return api_error400();
-
+		for (auto& check : after_checks)
+			check();
 	}
 
 	if (not allow_access)
-		return api_error403();
+		return set_empty_response();
 
 	constexpr uint SUBMISSIONS_LIMIT_PER_QUERY = 50;
 	#define SUBMISSIONS_LIMIT_PER_QUERY_STR "50"
@@ -241,62 +343,16 @@ void Sim::api_submissions() {
 		meta::ToString<SUBMISSIONS_LIMIT_PER_QUERY>::value),
 		"Update the above #define");
 
-	constexpr meta::string order_and_limit_suff = " ORDER BY s.id DESC LIMIT " SUBMISSIONS_LIMIT_PER_QUERY_STR;
+	constexpr meta::string order_and_limit = " ORDER BY s.id DESC LIMIT " SUBMISSIONS_LIMIT_PER_QUERY_STR;
 
 	// Execute query
 	qfields.append(qwhere);
-	auto res = mysql.query(concat(qfields, qwhere_id_cond,
-		order_and_limit_suff));
+	auto res = mysql.query(concat(qfields, qwhere_id_cond, order_and_limit));
 
-	// Column names
-	append("[\n{\"columns\":["
-		"\"id\","
-		"\"type\","
-		"\"language\","
-		"\"owner_id\","
-		"\"owner_username\","
-		"\"problem_id\","
-		"\"problem_name\","
-		"\"contest_problem_id\","
-		"\"contest_problem_name\","
-		"\"contest_round_id\","
-		"\"contest_round_name\","
-		"\"contest_id\","
-		"\"contest_name\","
-		"\"submit_time\","
-		"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
-		"\"score\","
-		"\"actions\"");
-
-	if (select_one)
-		append(",\"owner_first_name\","
-			"\"owner_last_name\","
-			"\"initial_report\","
-			"\"final_report\","
-			"\"full_results\"");
-
-	append("]}");
+	append_column_names();
 
 	auto curr_date = mysql_date();
-	InplaceBuff<30> boundary_id;
-	for (uint appended_rows = 0; appended_rows < SUBMISSIONS_LIMIT_PER_QUERY; ) {
-		if (not res.next()) {
-			if (select_one or res.rows_num() < SUBMISSIONS_LIMIT_PER_QUERY)
-				break;
-
-			// Run another query to fetch more data
-			// We are assuming here that the there is no condition on id or it
-			// is '<'
-			qwhere_id_cond.clear();
-			qwhere_id_cond.append(" AND s.id<", boundary_id);
-			// Execute query
-			res = mysql.query(concat(qfields, qwhere_id_cond,
-				order_and_limit_suff));
-			continue;
-		}
-
-		boundary_id = res[SID];
-
+	while (res.next()) {
 		SubmissionType stype = SubmissionType(strtoull(res[STYPE]));
 		SubmissionPermissions perms = submissions_get_permissions(res[SOWNER],
 			stype,
@@ -304,27 +360,22 @@ void Sim::api_submissions() {
 			res[POWNER]);
 
 		if (perms == PERM::NONE)
-			return api_error403();
+			return set_empty_response();
+
+		bool contest_submission = not res.is_null(CID);
 
 		InfDatetime full_results;
-		if (res.is_null(FULL_RES)) // The submission is not in the contest, so
-			                       // full results are visible immediately
+		if (not contest_submission) // The submission is not in the contest, so
+		                            // full results are visible immediately
 			full_results.set_neg_inf();
 		else
 			full_results.from_str(res[FULL_RES]);
 
 		bool show_full_results = (bool(uint(perms & PERM::VIEW_FINAL_REPORT)) or
 			full_results <= curr_date);
-		bool hide_final_type = (not show_full_results and
-			res[CP_FSM] == SFSM_WITH_HIGHEST_SCORE);
-
-		// Hide (skip) submission as it would leak the final type and allow
-		// figuring out the final status of a submission through prepared next
-		// submissions
-		if (hide_final_type and only_final_or_only_normal)
-			continue;
-
-		++appended_rows;
+		bool is_problem_final = strtoull(res[PFINAL]);
+		bool is_contest_final = strtoull(res[CFINAL]);
+		bool is_contest_initial_final = strtoull(res[CINIFINAL]);
 
 		// Submission id
 		append(",\n[", res[SID], ',');
@@ -332,10 +383,32 @@ void Sim::api_submissions() {
 		// Type
 		switch (stype) {
 		case SubmissionType::NORMAL:
-			append(hide_final_type ? "\"Normal / Final\"," : "\"Normal\",");
-			break;
-		case SubmissionType::FINAL:
-			append(hide_final_type ? "\"Normal / Final\"," : "\"Final\",");
+			enum SubmissionNormalSubtype { NORMAL, FINAL, INITIAL_FINAL } subtype_to_show;
+			if (not contest_submission) {
+				subtype_to_show = (is_problem_final and may_see_problem_final ?
+					FINAL : NORMAL);
+			} else {
+				if (selecting_problem_submissions)
+					subtype_to_show = (is_problem_final and may_see_problem_final ?
+						FINAL : NORMAL);
+				else if (show_full_results)
+					subtype_to_show = (is_contest_final ? FINAL : NORMAL);
+				else
+					subtype_to_show = (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
+			}
+
+			if (subtype_to_show != FINAL and selecting_finals) {
+				if (not select_one)
+					THROW("Cannot show final while selecting finals - this is a bug in the query or the restricting access (URL: ", request.target, ')');
+
+				return set_empty_response();
+			}
+
+			switch (subtype_to_show) {
+			case NORMAL: append("\"Normal\","); break;
+			case FINAL: append("\"Final\","); break;
+			case INITIAL_FINAL: append("\"Initial final\","); break;
+			}
 			break;
 		case SubmissionType::IGNORED: append("\"Ignored\","); break;
 		case SubmissionType::PROBLEM_SOLUTION: append("\"Problem solution\",");
@@ -386,7 +459,9 @@ void Sim::api_submissions() {
 		append("\"", res[SUBMIT_TIME], "\",");
 
 		// Status: (CSS class, text)
-		append_submission_status(SubmissionStatus(strtoull(res[STATUS])),
+		append_submission_status(
+			SubmissionStatus(strtoull(res[INITIAL_STATUS])),
+			SubmissionStatus(strtoull(res[FINAL_STATUS])),
 			show_full_results);
 
 		// Score
@@ -634,9 +709,10 @@ void Sim::api_submission_add() {
 	// Insert submission
 	auto stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, language,"
-			" status, submit_time, last_judgment, initial_report, final_report)"
+			" initial_status, full_status, submit_time, last_judgment,"
+			" initial_report, final_report)"
 		" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ","
-			" ?, ?, '', '')");
+			SSTATUS_PENDING_STR ", ?, ?, '', '')");
 	if (contest_problem_id.empty())
 		stmt.bindAndExecute(session_user_id, problem_id, nullptr, nullptr,
 			nullptr, std::underlying_type_t<SubmissionLanguage>(slang),
@@ -750,17 +826,23 @@ void Sim::api_submission_change_type() {
 		mysql.update("UNLOCK TABLES");
 	});
 
-	auto res = mysql.query(concat("SELECT status, owner, contest_problem_id"
-		" FROM submissions WHERE id=", submissions_sid));
+	auto res = mysql.query(concat("SELECT full_status, owner, problem_id,"
+		" contest_problem_id FROM submissions WHERE id=", submissions_sid));
 	throw_assert(res.next());
 
-	SS status = SS(strtoull(res[0]));
-	StringView owner = (res.is_null(1) ? "" : res[1]);
-	StringView contest_problem_id = (res.is_null(2) ? "" : res[2]);
+	enum ColumnIdx { FULL_STATUS, OWNER, PID, CPID };
+
+	SS full_status = SS(strtoull(res[FULL_STATUS]));
+	StringView owner = (res.is_null(OWNER) ? "" : res[OWNER]);
+	StringView problem_id = res[PID];
+	StringView contest_problem_id = (res.is_null(CPID) ? "" : res[CPID]);
 
 	// Cannot be FINAL
-	if (is_special(status)) {
-		auto stmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
+	if (is_special(full_status)) {
+		auto stmt = mysql.prepare("UPDATE submissions"
+			" SET type=?, problem_final=0, contest_final=0,"
+				" contest_initial_final=0"
+			" WHERE id=?");
 		stmt.bindAndExecute(uint(new_type), submissions_sid);
 		return;
 	}
@@ -774,7 +856,7 @@ void Sim::api_submission_change_type() {
 	stmt.bindAndExecute(uint(new_type), (new_type == ST::NORMAL),
 		submissions_sid);
 
-	submission::update_final(mysql, owner, contest_problem_id, false);
+	submission::update_final(mysql, owner, problem_id, contest_problem_id, false);
 }
 
 void Sim::api_submission_delete() {
@@ -790,7 +872,7 @@ void Sim::api_submission_delete() {
 		mysql.update("UNLOCK TABLES");
 	});
 
-	auto res = mysql.query(concat("SELECT owner, contest_problem_id"
+	auto res = mysql.query(concat("SELECT owner, problem_id, contest_problem_id"
 		" FROM submissions WHERE id=", submissions_sid));
 	throw_assert(res.next());
 
@@ -800,6 +882,6 @@ void Sim::api_submission_delete() {
 
 	mysql.update(concat("DELETE FROM submissions WHERE id=", submissions_sid));
 
-	submission::update_final(mysql, (res.is_null(0) ? "" : res[0]),
-		(res.is_null(1) ? "" : res[1]), false);
+	submission::update_final(mysql, (res.is_null(0) ? "" : res[0]), res[1],
+		(res.is_null(2) ? "" : res[2]), false);
 }

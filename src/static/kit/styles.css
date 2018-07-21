@@ -1295,18 +1295,22 @@ div.header > div:last-child{
 	text-decoration: none;
 	background: #eee;
 }
+table.stripped > tbody > tr:nth-child(3n+1).status.green,
 .contest-dashboard a.status.green:hover,
 .contest-dashboard a.status.green:focus {
 	background: #d7f9d7;
 }
+table.stripped > tbody > tr:nth-child(3n+1).status.red,
 .contest-dashboard a.status.red:hover,
 .contest-dashboard a.status.red:focus {
 	background: #fad6d6;
 }
+table.stripped > tbody > tr:nth-child(3n+1).status.intense-red,
 .contest-dashboard a.status.intense-red:hover,
 .contest-dashboard a.status.intense-red:focus {
 	background: #f3c9b4;
 }
+table.stripped > tbody > tr:nth-child(3n+1).status.yellow,
 .contest-dashboard a.status.yellow:hover,
 .contest-dashboard a.status.yellow:focus {
 	background: #fbdda2;
