@@ -5,7 +5,7 @@
 #include <random>
 
 // Fills @p bytes bytes of @p dest with random values
-void fillRandomly(void* dest, size_t bytes) noexcept;
+void fillRandomly(void* dest, size_t bytes);
 
 /**
  * @brief Reads @p bytes bytes from /dev/urandom to @p dest
@@ -28,14 +28,41 @@ ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept;
  */
 void readFromDevUrandom(void* dest, size_t bytes);
 
-inline std::mt19937 randomlySeededMersene() {
-	std::array<std::mt19937::result_type, std::mt19937::state_size> seeds;
-	readFromDevUrandom(&seeds[0], seeds.size() * sizeof(seeds[0]));
-	std::seed_seq sseq(seeds.begin(), seeds.end());
-	return std::mt19937 {sseq};
-}
+class RandomDevice {
+public:
+	using result_type = unsigned long long;
 
-extern std::mt19937 random_generator;
+	constexpr static result_type min() noexcept {
+		return std::numeric_limits<result_type>::min();
+	}
+
+	constexpr static result_type max() noexcept {
+		return std::numeric_limits<result_type>::max();
+	}
+
+private:
+	std::array<result_type, 256 / sizeof(result_type)> buff;
+	size_t pos = buff.size();
+
+	void fill_buff() {
+		fillRandomly(buff.data(), buff.size() * sizeof(result_type));
+		pos = 0;
+	}
+
+public:
+	RandomDevice() {
+		fill_buff();
+	}
+
+	result_type operator()() {
+		if (pos == buff.size())
+			fill_buff();
+
+		return buff[pos++];
+	}
+};
+
+extern RandomDevice random_generator;
 
 // Get random from [a, b]
 template<class T>
@@ -45,7 +72,7 @@ constexpr inline T getRandom(T&& a, T&& b) {
 }
 
 template<class Iter>
-void randomShuffle (Iter begin, Iter end) {
+void randomShuffle(Iter begin, Iter end) {
 	for (auto n = end - begin, i = n - 1; i > 0; --i)
 		std::swap(begin[i], begin[getRandom(0, i)]);
 }

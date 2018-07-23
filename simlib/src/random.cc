@@ -3,26 +3,17 @@
 #include "../include/logger.h"
 #include "../include/random.h"
 
-std::mt19937 random_generator {randomlySeededMersene()};
+#include <sys/syscall.h>
 
-void fillRandomly(void* dest, size_t bytes) noexcept {
-	if (bytes == 0)
-		return;
+RandomDevice random_generator;
 
-	constexpr size_t byte_length = sizeof(uint32_t);
-	uint32_t* ptr = static_cast<uint32_t*>(dest);
-	for (; bytes >= byte_length; bytes -= byte_length, ++ptr)
-		*ptr = random_generator();
-
-	// Fill last bytes
-	if (bytes > 0) {
-		union {
-			uint32_t x = random_generator();
-			uint8_t t[byte_length];
-		};
-		uint8_t* ptr1 = reinterpret_cast<uint8_t*>(ptr);
-		for (unsigned i = 0; i < bytes; ++i)
-			ptr1[i] = t[i];
+void fillRandomly(void* dest, size_t bytes) {
+	while (bytes > 0) {
+		ssize_t len = syscall(SYS_getrandom, dest, bytes, 0);
+		if (len >= 0)
+			bytes -= len;
+		else if (errno != EINTR)
+			THROW("getrandom()", errmsg());
 	}
 }
 
