@@ -330,15 +330,15 @@ var History = {};
 
 	History.back = function(egid, new_location) {
 		History.deferUntilFullyUpdated(function() {
-			window.history.back();
 			History.waiting_for_popstate = true;
+			window.history.back();
 		});
 	}
 
 	History.forth = function(egid, new_location) {
 		History.deferUntilFullyUpdated(function() {
-			window.history.go(1);
 			History.waiting_for_popstate = true;
+			window.history.go(1);
 		});
 	}
 

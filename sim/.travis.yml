@@ -264,6 +264,8 @@ before_script:
   - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PWD/libseccomp/usr/lib/x86_64-linux-gnu"
   - sed 's/LINUX_VERSION_CODE/266241/' -i src/lib/simlib/src/sandbox.cc
   - sed 's@\t$(PREFIX)test/exec@\t$(PREFIX)test/exec --gtest_filter=-Sandbox.run@' src/lib/simlib/Makefile -i
+  - sed 's/TEST (Sandbox,/TEST (DISABLED_Sandbox,/' src/lib/simlib/test/sandbox.cc -i
+  - sed 's/TEST (Conver,/TEST (DISABLED_Conver,/' src/lib/simlib/test/conver.cc -i
 
 script:
   # Build project
