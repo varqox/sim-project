@@ -239,7 +239,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 			" initial_report, final_report)"
 		" VALUES(NULL, ?, NULL, NULL, NULL, "
 			STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ", " SSTATUS_PENDING_STR
-			"?, ?, '', '')");
+			", ?, ?, '', '')");
 	stmt.bind_all(problem_id, lang, current_date, zero_date);
 
 	for (auto&& solution : sf.solutions) {
@@ -450,8 +450,8 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 				srestore_sql.back() = ')';
 
 				// Backup the submissions
-				buff.lossy_resize(n);
-				is_null.lossy_resize(n);
+				buff.resize(n);
+				is_null.resize(n);
 
 				for (uint i = 0; i < n; ++i) {
 					stmt.res_bind(i, buff[i]);
