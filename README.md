@@ -12,8 +12,8 @@ SIM is an open source platform for carrying out algorithmic contests
 ### Dependencies:
 
 - gcc/g++ (32 bit version) with C++14 support
-- MySQL >= 5.6 (Debian packages: _mysql-server_)
-- MySQL client library (Debian packages: _libmysqlclient-dev_)
+- MariaDB (Debian packages: _mariadb-server_)
+- MariaDB client library (Debian packages: _libmariadbclient-dev_)
 - libseccomp (Debian packages: _libseccomp-dev_)
 - GNU/Make
 - libarchive
@@ -22,7 +22,7 @@ SIM is an open source platform for carrying out algorithmic contests
 #### Ubuntu / Debian
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmysqlclient-dev libseccomp-dev libarchive-dev make zip
+  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libarchive-dev make zip
   ```
 
 ### Instructions
