@@ -11,6 +11,13 @@
 #define SIMLIB_MYSQL_ENABLED 1
 #include <mysql.h>
 
+#if 0
+# warning "Before committing disable this debug"
+# define DEBUG_MYSQL(...) __VA_ARGS__
+#else
+# define DEBUG_MYSQL(...)
+#endif
+
 namespace MySQL {
 
 template<class T>
@@ -546,6 +553,15 @@ private:
 	Connection(const Connection&) = delete;
 	Connection& operator=(const Connection&) = delete;
 
+DEBUG_MYSQL(
+	static size_t get_next_connection_id() noexcept {
+		static volatile size_t next_connection_id = 0;
+		return next_connection_id++;
+	}
+
+	size_t connection_id = get_next_connection_id();
+)
+
 public:
 	Connection() {
 		static std::mutex mysql_protector;
@@ -596,6 +612,7 @@ public:
 	}
 
 	Result query(StringView sql) {
+		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql);)
 		if (mysql_real_query(conn_, sql.data(), sql.size()))
 			THROW(mysql_error(conn_));
 
@@ -607,12 +624,14 @@ public:
 	}
 
 	void update(StringView sql) {
+		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ", sql);)
 		if (mysql_real_query(conn_, sql.data(), sql.size()))
 			THROW(mysql_error(conn_));
 	}
 
 	template<size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
 	Statement<STATIC_BINDS, STATIC_RESULTS> prepare(StringView sql) {
+		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): prepare -> ", sql);)
 		MYSQL_STMT* stmt = mysql_stmt_init(conn_);
 		if (not stmt)
 			THROW(mysql_error(conn_));
