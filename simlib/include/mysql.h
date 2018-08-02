@@ -105,8 +105,10 @@ private:
 		: stmt_ {stmt}, params_ {mysql_stmt_param_count(stmt)},
 		res_ {mysql_stmt_field_count(stmt)}
 	{
-		memset(params_.data(), 0, sizeof(params_[0]) * params_.size());
-		memset(res_.data(), 0, sizeof(res_[0]) * res_.size());
+		for (auto& x : params_)
+			memset(std::addressof(x), 0, sizeof(x));
+		for (auto& x : res_)
+			memset(std::addressof(x), 0, sizeof(x));
 		bind_res_errors_and_nulls();
 	}
 

@@ -208,48 +208,80 @@ constexpr bool isOneOf(const A& val, const B& first, const C&... others) {
 	return (val == first or isOneOf(val, others...));
 }
 
+#if __cplusplus > 201402L
+#warning "Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
+#endif
+
 template<class T, size_t N>
 class InplaceArray {
 	size_t size_, max_size_;
-	std::array<T, N> a_;
-	T* p_;
+	using Elem = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
+	Elem a_[N];
+	Elem* p_;
 
 	void deallocate() noexcept {
-		if (p_ != &a_[0])
+		if (p_ != a_)
 			delete[] p_;
 	}
 
-public:
-	InplaceArray() : size_(0), a_{}, p_(&a_[0]) {}
+#if __cplusplus > 201402L
+#warning "Since C++17 std::destroy() should be used below"
+#endif
+	void destruct_and_deallocate() noexcept {
+		for (size_t i = 0; i < size_; ++i)
+			(*this)[i].~T();
 
+		deallocate();
+	}
+
+public:
+	InplaceArray() : size_(0), max_size_(N), p_(a_) {}
+
+#if __cplusplus > 201402L
+#warning "Since C++17 std::uninitialized_default_construct() should be used below"
+#endif
 	explicit InplaceArray(size_t n)
-		: size_(n), a_{}, p_(n > N ? new T[n] : &a_[0])
-	{}
+		: size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_)
+	{
+		for (size_t i = 0; i < n; ++i)
+			new (std::addressof((*this)[i])) T;
+	}
 
 	InplaceArray(size_t n, const T& val)
-		: size_(n), a_{}, p_(n > N ? new T[n] : &a_[0])
+		: size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_)
 	{
-		fill(begin(), end(), val);
+		for (size_t i = 0; i < n; ++i)
+			new (std::addressof((*this)[i])) T(val);
 	}
 
 	template<size_t N1>
-	InplaceArray(const InplaceArray<T, N1>& a) : InplaceArray(a.size_) {
-		std::copy(a.p_, a.p_ + size_, p_);
+	InplaceArray(const InplaceArray<T, N1>& a)
+		: size_(a.size_), max_size_(std::max(size_, N)),
+		p_(size_ > N ? new Elem[size_] : a_)
+	{
+		std::uninitialized_copy(a.begin(), a.end(), begin());
 	}
 
+#if __cplusplus > 201402L
+#warning "Since C++17 std::uninitialized_move() should be used below"
+#endif
 	template<size_t N1>
-	InplaceArray(InplaceArray<T, N1>&& a) : size_(a.size_) {
+	InplaceArray(InplaceArray<T, N1>&& a)
+		: size_(a.size_), max_size_(std::max(size_, N))
+	{
 		if (size_ <= N) {
-			for (size_t i = 0; i < size_; ++i)
-				(*this)[i] = std::move(a[i]);
+			for (size_t i = 0; i < a.size_; ++i)
+				new (std::addressof((*this)[i])) T(std::move(a[i]));
 
-		} else if (a.p_ != &a.a_[0]) { // move the pointer
+		} else if (a.p_ != a.a_) { // move the pointer
 			p_ = a.p_;
-			a.p_ = &a.a_[0];
-		} else { // allocate memory and then copy
-			p_ = new T[size_];
-			for (size_t i = 0; i < size_; ++i)
-				(*this)[i] = std::move(a[i]);
+			a.p_ = a.a_;
+			a.max_size_ = N1;
+
+		} else { // allocate memory and then move
+			p_ = new Elem[size_];
+			for (size_t i = 0; i < a.size_; ++i)
+				new (std::addressof((*this)[i])) T(std::move(a[i]));
 		}
 
 		a.size_ = 0;
@@ -258,129 +290,294 @@ public:
 	template<size_t N1>
 	InplaceArray& operator=(const InplaceArray<T, N1>& a) {
 		if (a.size_ <= N) {
-			deallocate();
-			p_ = &a_[0];
-			std::copy(a.p_, a.p_ + a.size_, p_);
-		} else if (size_ >= a.size_) {
-			std::copy(a.p_, a.p_ + a.size_, p_);
-		} else {
-			deallocate();
+			destruct_and_deallocate();
+			p_ = a_;
+			max_size_ = N;
 			try {
-				p_ = new T[a.size_];
+				std::uninitialized_copy(a.begin(), a.end(), begin());
+				size_ = a.size_;
 			} catch (...) {
-				p_ = &a_[0];
+				size_ = 0;
 				throw;
 			}
-			std::copy(a.p_, a.p_ + a.size_, p_);
-		}
 
-		size_ = a.size_;
-		return *this;
-	}
+		} else if (a.size_ <= size_) {
+#if __cplusplus > 201402L
+#warning "Since C++17 std::destroy() should be used below"
+#endif
+			// At first, potentially free memory
+			while (size_ > a.size_)
+				(*this)[--size_].~T();
+			// It is OK to use std::copy as the objects in p_[0..a.size_] exist
+			std::copy(a.begin(), a.end(), begin());
 
-	template<size_t N1>
-	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
-		if (a.p_ != &a.a_[0]) {
-			deallocate();
-			p_ = a.p_;
-			a.p_ = &a.a_[0];
-		} else if (a.size_ <= N) {
-			deallocate();
-			p_ = &a_[0];
-			for (size_t i = 0; i < size_; ++i)
-				(*this)[i] = std::move(a[i]);
-		} else if (size_ >= a.size_) {
-			for (size_t i = 0; i < size_; ++i)
-				(*this)[i] = std::move(a[i]);
 		} else {
-			deallocate();
+			destruct_and_deallocate();
 			try {
-				p_ = new T[a.size_];
+				p_ = new Elem[a.size_];
+				max_size_ = size_ = a.size_;
+				std::uninitialized_copy(a.begin(), a.end(), begin());
 			} catch (...) {
-				p_ = &a_[0];
-				throw;
-			}
-			for (size_t i = 0; i < size_; ++i)
-				(*this)[i] = std::move(a[i]);
-		}
-
-		size_ = a.size_;
-		a.size_ = 0;
-		return *this;
-	}
-
-	/**
-	 * @brief Changes array's size and max_size if needed, but in the latter
-	 *   case all the data are lost
-	 *
-	 * @param n new array's size
-	 */
-	void lossy_resize(size_t n) {
-		if (n > max_size_) {
-			max_size_ = meta::max(max_size_ << 1, n);
-			deallocate();
-			try {
-				p_ = new T[max_size_];
-			} catch (...) {
-				p_ = &a_[0];
+				p_ = a_;
+				size_ = 0;
 				max_size_ = N;
 				throw;
 			}
 		}
 
-		size_ = n;
+		return *this;
 	}
 
+#if __cplusplus > 201402L
+#warning "Since C++17 std::uninitialized_move() can be used below"
+#endif
+	template<size_t N1>
+	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
+		if (a.size_ <= N) {
+			destruct_and_deallocate();
+			p_ = a_;
+			max_size_ = N;
+			try {
+				for (size_t i = 0; i < a.size_; ++i)
+					new (std::addressof((*this)[i])) T(std::move(a[i]));
+				size_ = a.size_;
+			} catch (...) {
+				size_ = 0;
+				throw;
+			}
+		} else if (a.p_ != a.a_) {
+			destruct_and_deallocate();
+			p_ = a.p_;
+			size_ = a.size_;
+			max_size_ = a.max_size_;
+
+			a.p_ = a.a_;
+			a.max_size_ = N1;
+		} else if (a.size_ <= size_) {
+#if __cplusplus > 201402L
+#warning "Since C++17 std::destroy() should be used below"
+#endif
+			// At first, potentially free memory
+			while (size_ > a.size_)
+				(*this)[--size_].~T();
+			// It is OK to use std::move as the objects in p_[0..a.size_] exist
+			std::move(a.begin(), a.end(), begin());
+		} else {
+			destruct_and_deallocate();
+			try {
+				p_ = new Elem[a.size_];
+				for (size_t i = 0; i < a.size_; ++i)
+					new (std::addressof((*this)[i])) T(std::move(a[i]));
+				max_size_ = size_ = a.size_;
+			} catch (...) {
+				p_ = a_;
+				size_ = 0;
+				max_size_ = N;
+			}
+		}
+
+		a.size_ = 0;
+		return *this;
+	}
+
+	/**
+	 * @brief Increases array's max_size if needed, on reallcation all data is lost
+	 *
+	 * @param n lower bound on new capacity of the array
+	 */
+	void lossy_reserve_for(size_t n) {
+		if (n > max_size_) {
+			size_t new_max_size = meta::max(max_size_ << 1, n);
+			auto new_p = std::make_unique<Elem[]>(new_max_size);
+			deallocate();
+			p_ = new_p.release();
+			size_ = 0;
+			max_size_ = new_max_size;
+		}
+	}
+
+
+#if __cplusplus > 201402L
+#warning "Since C++17 std::uninitialized_move() can be used below"
+#endif
+	/**
+	 * @brief Increases array's max_size if needed, preserves data
+	 *
+	 * @param n lower bound on new capacity of the array
+	 */
+	void reserve_for(size_t n) {
+		if (n > max_size_) {
+			size_t new_max_size = meta::max(max_size_ << 1, n);
+			auto new_p = std::make_unique<Elem[]>(new_max_size);
+			for (size_t i = 0; i < size_; ++i)
+				new (std::addressof(new_p[i])) T(std::move((*this)[i]));
+
+			deallocate();
+			p_ = new_p.release();
+			max_size_ = new_max_size;
+		}
+	}
+
+
+#if __cplusplus > 201402L
+#warning "Since C++17 std::uninitialized_default_construct() should be used below"
+#endif
 	/**
 	 * @brief Changes array's size and max_size if needed, preserves data
 	 *
 	 * @param n new array's size
 	 */
 	void resize(size_t n) {
-		if (n > max_size_) {
-			size_t new_ms = meta::max(max_size_ << 1, n);
-			T* new_p = new T[new_ms];
-			std::move(p_, p_ + size_, new_p);
-			deallocate();
+		reserve_for(n);
+		while (size_ < n)
+			new (std::addressof((*this)[size_++])) T;
+	}
 
-			p_ = new_p;
-			max_size_ = new_ms;
-		}
-
-		size_ = n;
+	/**
+	 * @brief Changes array's size and max_size if needed, preserves data
+	 *
+	 * @param n new array's size
+	 * @param val the value to which te new elements will be set
+	 */
+	void resize(size_t n, const T& val) {
+		reserve_for(n);
+		while (size_ < n)
+			new (std::addressof((*this)[size_++])) T(val);
 	}
 
 	template<class... Args>
 	T& emplace_back(Args&&... args) {
-		resize(size() + 1);
-		return back() = T{std::forward<Args>(args)...};
+		reserve_for(size_ + 1);
+		return *(new (std::addressof((*this)[size_++])) T(std::forward<Args>(args)...));
 	}
 
 	void clear() noexcept { size_ = 0; }
 
 	size_t size() const noexcept { return size_; }
 
-	T* data() noexcept { return p_; }
+private:
+	template<class Type>
+	class Iterator {
+	public:
+		using iterator_category = std::random_access_iterator_tag;
+		using value_type = Type;
+		using difference_type = std::ptrdiff_t;
+		using pointer = Type*;
+		using reference = Type&;
 
-	const T* data() const noexcept { return p_; }
+	private:
+		Elem* p = nullptr;
 
-	T* begin() noexcept { return data(); }
+		Iterator(Elem *x) : p(x) {}
 
-	T* end() noexcept { return data() + size(); }
+		friend class InplaceArray;
 
-	T& front() noexcept { return (*this)[0]; }
+	public:
+		Iterator() = default;
 
-	const T& front() const noexcept { return (*this)[0]; }
+		reference operator*() const noexcept { return *reinterpret_cast<T*>(p); }
 
-	T& back() noexcept { return (*this)[size() - 1]; }
+		pointer operator->() const noexcept { return reinterpret_cast<T*>(p); }
 
-	const T& back() const noexcept { return (*this)[size() - 1]; }
+		Iterator& operator++() noexcept {
+			++p;
+			return *this;
+		}
 
-	T& operator[](size_t i) noexcept { return p_[i]; }
+		Iterator operator++(int) noexcept { return Iterator(p++); }
 
-	const T& operator[](size_t i) const noexcept { return p_[i]; }
+		Iterator& operator--() noexcept {
+			--p;
+			return *this;
+		}
 
-	~InplaceArray() { deallocate(); }
+		Iterator operator--(int) noexcept { return Iterator(p++); }
+
+		reference operator[](difference_type n) const noexcept {
+			return *reinterpret_cast<T*>(p + n);
+		}
+
+		Iterator& operator+=(difference_type n) const noexcept {
+			p += n;
+			return *this;
+		}
+
+		Iterator operator+(difference_type n) const noexcept {
+			return Iterator(p + n);
+		}
+
+		Iterator& operator-=(difference_type n) const noexcept {
+			p -= n;
+			return *this;
+		}
+
+		Iterator operator-(difference_type n) const noexcept {
+			return Iterator(p - n);
+		}
+
+		friend bool operator==(Iterator a, Iterator b) noexcept {
+			return (a.p == b.p);
+		}
+
+		friend bool operator!=(Iterator a, Iterator b) noexcept {
+			return (a.p != b.p);
+		}
+
+		friend bool operator<(Iterator a, Iterator b) noexcept {
+			return (a.p < b.p);
+		}
+
+		friend bool operator>(Iterator a, Iterator b) noexcept {
+			return (a.p > b.p);
+		}
+
+		friend bool operator<=(Iterator a, Iterator b) noexcept {
+			return (a.p <= b.p);
+		}
+
+		friend bool operator>=(Iterator a, Iterator b) noexcept {
+			return (a.p >= b.p);
+		}
+
+		friend difference_type operator-(Iterator a, Iterator b) noexcept {
+			return (a.p - b.p);
+		}
+
+		friend Iterator operator+(difference_type n, Iterator b) noexcept {
+			return Iterator(n + b.p);
+		}
+	};
+
+public:
+	using iterator = Iterator<T>;
+	using const_iterator = Iterator<const T>;
+
+	static_assert(sizeof(Elem) == sizeof(T), "Needed by data()");
+	T* data() noexcept { return std::addressof(front()); }
+
+	const T* data() const noexcept { return std::addressof(front()); }
+
+	iterator begin() noexcept { return iterator(p_); }
+
+	const_iterator begin() const noexcept { return const_iterator(p_); }
+
+	iterator end() noexcept { return iterator(p_ + size_); }
+
+	const_iterator end() const noexcept { return const_iterator(p_ + size_); }
+
+	T& front() noexcept { return begin()[0]; }
+
+	const T& front() const noexcept { return begin()[0]; }
+
+	T& back() noexcept { return end()[-1]; }
+
+	const T& back() const noexcept { return end()[-1]; }
+
+	T& operator[](size_t i) noexcept { return begin()[i]; }
+
+	const T& operator[](size_t i) const noexcept { return begin()[i]; }
+
+	~InplaceArray() { destruct_and_deallocate(); }
 };
 
 template<class Func>
