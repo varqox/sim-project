@@ -8,6 +8,7 @@
 #include "../../include/zip.h"
 #include "default_checker_dump.h"
 
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -103,9 +104,19 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 		report_.append("Missing / invalid checker specified in the package's"
 			" Simfile - searching for one");
 
-		// Scan check/ directory
+		// Scan check/ and checker/ directory
 		auto x = collect_files(concat(master_dir, "check/"), is_source);
+		{
+			auto y = collect_files(concat(master_dir, "checker/"), is_source);
+			x.insert(x.end(), y.begin(), y.end());
+		}
 		if (x.size()) {
+			// Choose the one with the shortest path to be the checker
+			std::swap(x.front(), *std::min_element(x.begin(), x.end(),
+				[](auto&& a, auto&& b) {
+					return a.size() < b.size();
+				}));
+
 			sf.checker = x.front().substr(master_dir.size()).to_string();
 			report_.append("Chosen checker: ", sf.checker);
 
@@ -150,12 +161,16 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 		if (x.empty())
 			THROW("No statement was found");
 
-		// Prefer PDF to other formats
-		auto it = find_if(x.begin(), x.end(),
-			[](StringView s) { return hasSuffix(s, ".pdf"); });
-		sf.statement = (it != x.end() ? *it : x.front())
-			.substr(master_dir.size()).to_string();
 
+		// Prefer PDF to other formats, then the shorter paths
+		// The ones with shorter paths are preferred
+		std::swap(x.front(), *std::min_element(x.begin(), x.end(),
+			[](auto&& a, auto&& b) {
+				return (pair<bool, size_t>(not hasSuffix(a, ".pdf"), a.size()) <
+					pair<bool, size_t>(not hasSuffix(b, ".pdf"), b.size()));
+			}));
+
+		sf.statement = x.front().substr(master_dir.size()).to_string();
 		report_.append("Chosen statement: ", sf.statement);
 	}
 
