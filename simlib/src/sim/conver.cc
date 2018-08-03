@@ -138,8 +138,9 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 		}
 	}
 
-	// Exclude check/ directory from future searches
+	// Exclude check/ and checker/ directories from future searches
 	pc.remove_with_prefix(concat(master_dir, "check/"));
+	pc.remove_with_prefix(concat(master_dir, "checker/"));
 
 	// Statement
 	try { sf.loadStatement(); } catch (...) {}
