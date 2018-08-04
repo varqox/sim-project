@@ -106,12 +106,17 @@ TEST (ConfigFile, isStringLiteral) {
 					is_beginning(t[0]) && is_ending(t[1]))
 				<< dump(a, b) << endl;
 
+			bool cached_res = is_beginning(t[0]) && is_interior(t[1]);
 			for (int c = t[2] = 0; c < 256; t[2] = ++c) {
 				// Three characters
-				EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 3}),
-						is_beginning(t[0]) && is_interior(t[1]) &&
-						is_ending(t[2]))
-					<< dump(a, b, c) << endl;
+				if (ConfigFile::isStringLiteral({t.data(), 3}) !=
+					cached_res && is_ending(t[2]))
+				{
+					EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 3}),
+							is_beginning(t[0]) && is_interior(t[1]) &&
+							is_ending(t[2]))
+						<< dump(a, b, c) << endl;
+				}
 			}
 		}
 	}
