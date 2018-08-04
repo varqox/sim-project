@@ -150,4 +150,16 @@ TEST (Sandbox, run) {
 		EXPECT_LT(0, es.vm_peak);
 		EXPECT_LT(es.vm_peak, MEM_LIMIT);
 	}
+
+	compile_test_case("7.c"); // not needed
+	es = sandbox.run(exec.to_cstr(), {}, opts, {{"/dev/null", OpenAccess::RDONLY}});
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 0);
+	EXPECT_EQ(es.message, "");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 }

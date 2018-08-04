@@ -545,46 +545,6 @@ Sandbox::Sandbox() {
 	// ioctl
 	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(ioctl), 0);
 
-	static_assert(STDIN_FILENO == 0, "Needed below");
-	static_assert(STDOUT_FILENO == 1, "Needed below");
-	static_assert(STDERR_FILENO == 2, "Needed below");
-#define DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(arch_ctx, syscall, errno) \
-	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ERRNO(errno), SCMP_SYS(syscall), 1, \
-		SCMP_A0(SCMP_CMP_EQ, STDIN_FILENO)); \
-	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ERRNO(errno), SCMP_SYS(syscall), 1, \
-		SCMP_A0(SCMP_CMP_EQ, STDOUT_FILENO)); \
-	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ERRNO(errno), SCMP_SYS(syscall), 1, \
-		SCMP_A0(SCMP_CMP_EQ, STDERR_FILENO)); \
-\
-	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
-		SCMP_A0(SCMP_CMP_LT, STDIN_FILENO)); \
-	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
-		SCMP_A0(SCMP_CMP_GT, STDERR_FILENO));
-
-#define DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(syscall, errno) \
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, syscall, errno); \
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_64_ctx_, syscall, errno)
-
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, _llseek, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, fadvise64_64, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, fstat64, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(dup, EPERM);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(dup2, EPERM);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(dup3, EPERM);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(fadvise64, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(flistxattr, EPERM);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(flock, EPERM);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(fstat, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(fsync, EPERM);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(lseek, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(pread64, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(preadv, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(pwrite64, ESPIPE);
-	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(pwritev, ESPIPE);
-
-#undef DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR
-#undef DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX
-
 	// Allowed syscalls (both architectures)
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(alarm), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(capget), 0);
@@ -711,14 +671,87 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 				std::forward<decltype(args)>(args)...);
 		};
 
-		DEBUG_SANDBOX(
-			int stdlog_fd_copy = -1;
+		try {
+			/* ================== Rules depending on opts ================== */
+			static_assert(STDIN_FILENO == 0, "Needed below");
+			static_assert(STDOUT_FILENO == 1, "Needed below");
+			static_assert(STDERR_FILENO == 2, "Needed below");
+#define DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(arch_ctx, syscall, errno) \
+	seccomp_rule_add_throw(arch_ctx, \
+		(opts.new_stdin_fd < 0 ? SCMP_ACT_ALLOW : SCMP_ACT_ERRNO(errno)),\
+		SCMP_SYS(syscall), 1, SCMP_A0(SCMP_CMP_EQ, STDIN_FILENO)); \
+	seccomp_rule_add_throw(arch_ctx, \
+		(opts.new_stdout_fd < 0 ? SCMP_ACT_ALLOW : SCMP_ACT_ERRNO(errno)),\
+		SCMP_SYS(syscall), 1, SCMP_A0(SCMP_CMP_EQ, STDOUT_FILENO)); \
+	seccomp_rule_add_throw(arch_ctx, \
+		(opts.new_stderr_fd < 0 ? SCMP_ACT_ALLOW : SCMP_ACT_ERRNO(errno)),\
+		SCMP_SYS(syscall), 1, SCMP_A0(SCMP_CMP_EQ, STDERR_FILENO)); \
+\
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+		SCMP_A0(SCMP_CMP_LT, STDIN_FILENO)); \
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+		SCMP_A0(SCMP_CMP_GT, STDERR_FILENO));
+
+#define DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(syscall, errno) \
+	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, syscall, errno); \
+	DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_64_ctx_, syscall, errno)
+
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, _llseek, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, fadvise64_64, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR(x86_ctx_, fstat64, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(dup, EPERM);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(dup2, EPERM);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(dup3, EPERM);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(fadvise64, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(flistxattr, EPERM);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(flock, EPERM);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(fstat, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(fsync, EPERM);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(lseek, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(pread64, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(preadv, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(pwrite64, ESPIPE);
+			DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX(pwritev, ESPIPE);
+
+#undef DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR
+#undef DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX
+
+			/* =============== Rules depending on tracee_pid_ =============== */
+			tracee_pid_ = getpid();
+			// tgkill (allow only killing the calling process / thread)
+			seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(tgkill), 2,
+				SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
+				SCMP_A1(SCMP_CMP_EQ, tracee_pid_));
+			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 1,
+				SCMP_A0(SCMP_CMP_NE, tracee_pid_));
+			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 2,
+				SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
+				SCMP_A1(SCMP_CMP_NE, tracee_pid_));
+			// kill (allow killing the calling process only)
+			seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(kill), 1,
+				SCMP_A0(SCMP_CMP_EQ, tracee_pid_));
+			seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(kill), 1,
+				SCMP_A0(SCMP_CMP_NE, tracee_pid_));
+
+		} catch (const std::exception& e) {
+			send_error_and_exit(CStringView(e.what()));
+		}
+
+		// Merge filters for both architectures into one filter
+		int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_);
+		if (errnum)
+			send_error_and_exit(-errnum, "seccomp_merge()");
+
+		auto& ctx = x86_ctx_;
+
+		// Dump filter rules
+		DEBUG_SANDBOX({
 			if (DEBUG_SANDBOX_LOG_PFC_FILTER) {
-				stdlog_fd_copy = fcntl(stdlog.fileno(), F_DUPFD_CLOEXEC);
-				if (stdlog_fd_copy == -1)
-					send_error_and_exit(errno, "fcntl(F_DUPFD_CLOEXEC)");
+				errnum = seccomp_export_pfc(ctx, stdlog.fileno());
+				if (errnum)
+					send_error_and_exit(-errnum, "seccomp_export_pfc()");
 			}
-		)
+		})
 
 		// Memory limit will be set manually after loading the filters as
 		// seccomp_load() needs to allocate more memory and it may fail if this
@@ -727,44 +760,6 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 		run_child_opts.memory_limit = 0;
 
 		run_child(exec, exec_args, run_child_opts, pfd[1], [=]{
-			tracee_pid_ = getpid();
-			/* =============== Rules depending on tracee_pid_ =============== */
-			try {
-				// tgkill (allow only killing the calling process / thread)
-				seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(tgkill), 2,
-					SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
-					SCMP_A1(SCMP_CMP_EQ, tracee_pid_));
-				seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 1,
-					SCMP_A0(SCMP_CMP_NE, tracee_pid_));
-				seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(tgkill), 2,
-					SCMP_A0(SCMP_CMP_EQ, tracee_pid_),
-					SCMP_A1(SCMP_CMP_NE, tracee_pid_));
-				// kill (allow only killing the calling process)
-				seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(kill), 1,
-					SCMP_A0(SCMP_CMP_EQ, tracee_pid_));
-				seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(kill), 1,
-					SCMP_A0(SCMP_CMP_NE, tracee_pid_));
-
-			} catch (const std::exception& e) {
-				send_error_and_exit(CStringView(e.what()));
-			}
-
-			// Merge filters for both architectures into one filter
-			int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_);
-			if (errnum)
-				send_error_and_exit(-errnum, "seccomp_merge()");
-
-			auto& ctx = x86_ctx_;
-
-			// Dump filter rules
-			DEBUG_SANDBOX({
-				if (DEBUG_SANDBOX_LOG_PFC_FILTER) {
-					errnum = seccomp_export_pfc(ctx, stdlog_fd_copy);
-					if (errnum)
-						send_error_and_exit(-errnum, "seccomp_export_pfc()");
-				}
-			})
-
 			// Set max core dump size to 0 in order to avoid creating redundant
 			// core dumps
 			{
@@ -783,11 +778,13 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 			// seccomp_load() but after loading the filter then it will fail
 			// (because of seccomp rules defined for memory allocations) and
 			// probably fail this process - it happened under Address Sanitizer,
-			// so it's better to take precautions.
+			// so it's better to take precautions. If we start to trace the
+			// process before loading the filter, then we will trace that
+			// allocation thus it will not kill the process.
 			kill(getpid(), SIGSTOP);
 
 			// Load filter into the kernel
-			errnum = seccomp_load(ctx);
+			int errnum = seccomp_load(ctx);
 			if (errnum)
 				send_error_and_exit(-errnum, "seccomp_load()");
 
