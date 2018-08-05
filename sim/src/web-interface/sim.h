@@ -429,12 +429,12 @@ public:
 		EDIT = 2,
 		CHANGE_PASS = 4,
 		ADMIN_CHANGE_PASS = 8,
-		DELETE = 16,
-
-		VIEW_ALL = 32,
-		MAKE_ADMIN = 64,
-		MAKE_TEACHER = 128,
-		MAKE_NORMAL = 256,
+		MAKE_ADMIN = 16,
+		MAKE_TEACHER = 32,
+		MAKE_NORMAL = 64,
+		DELETE = 128,
+		// Overall
+		VIEW_ALL = 256,
 		ADD_USER = 512
 	};
 
@@ -446,6 +446,8 @@ private:
 	UserPermissions users_perms = UserPermissions::NONE;
 	InplaceBuff<32> users_uid;
 
+	UserPermissions users_get_overall_permissions() noexcept;
+
 	/**
 	 * @brief Returns a set of operation the viewer is allowed to do over the
 	 *   user
@@ -455,12 +457,11 @@ private:
 	 *
 	 * @return ORed permissions flags
 	 */
-	Sim::UserPermissions users_get_permissions(StringView uid, UserType utype);
+	Sim::UserPermissions users_get_permissions(StringView user_id,
+		UserType utype) noexcept;
 
-	Sim::UserPermissions users_get_permissions() {
-		// Return overall permissions
-		return users_get_permissions("", UserType::NORMAL);
-	}
+	// Queries MySQL
+	UserPermissions users_get_permissions(StringView user_id);
 
 	/* Pages */
 
@@ -479,12 +480,14 @@ private:
 public:
 	enum class JobPermissions : uint {
 		NONE = 0,
-		VIEW = 1, // allowed to view the job
-		DOWNLOAD_LOG = 2,
-		DOWNLOAD_UPLOADED_PACKAGE = 4,
-		CANCEL = 8,
-		RESTART = 16,
-		VIEW_ALL = 32 // allowed to view all the jobs
+		// Overall
+		VIEW_ALL = 1, // allowed to view all the jobs
+		// Job specific
+		VIEW = 2, // allowed to view the job
+		DOWNLOAD_LOG = 4,
+		DOWNLOAD_UPLOADED_PACKAGE = 8,
+		CANCEL = 16,
+		RESTART = 32,
 	};
 
 private:
@@ -496,9 +499,11 @@ private:
 	InplaceBuff<32> jobs_jid;
 	JobPermissions jobs_perms = JobPermissions::NONE;
 
+	JobPermissions jobs_get_overall_permissions() noexcept;
+
 	// Session must be open to access the jobs
 	JobPermissions jobs_get_permissions(StringView creator_id, JobType job_type,
-		JobStatus job_status);
+		JobStatus job_status) noexcept;
 
 	// Used to get granted permissions to the problem jobs
 	JobPermissions jobs_granted_permissions_problem(StringView problem_id);
@@ -507,11 +512,6 @@ private:
 	JobPermissions jobs_granted_permissions_submission(
 		StringView submission_id);
 
-	JobPermissions jobs_get_permissions() {
-		// Return overall permissions
-		return jobs_get_permissions("", JobType::VOID, JobStatus::DONE);
-	}
-
 	/// Main Jobs handler
 	void jobs_handle();
 
@@ -519,10 +519,9 @@ private:
 public:
 	enum class ProblemPermissions : uint {
 		NONE = 0,
-		// Both
-		ADMIN = 1,
 		// Overall
-		ADD = 2,
+		ADD = 1,
+		VIEW_ALL = 2,
 		VIEW_TPUBLIC = 4,
 		VIEW_TCONTEST_ONLY = 8,
 		SELECT_BY_OWNER = 1 << 4,
@@ -552,13 +551,10 @@ private:
 	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &)
 
-	ProblemPermissions problems_get_permissions(StringView owner_id,
-		ProblemType ptype);
+	ProblemPermissions problems_get_overall_permissions() noexcept;
 
-	ProblemPermissions problems_get_permissions() {
-		// Return overall permissions
-		return problems_get_permissions("", ProblemType::VOID);
-	}
+	ProblemPermissions problems_get_permissions(StringView owner_id,
+		ProblemType ptype) noexcept;
 
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	InplaceBuff<32> problems_pid;
@@ -573,21 +569,18 @@ public:
 	enum class ContestPermissions : uint {
 		NONE = 0,
 		// Overall
+		VIEW_ALL = 1,
 		VIEW_PUBLIC = 2,
-		VIEW_ALL = 4,
-		ADD_PRIVATE = 8,
-		ADD_PUBLIC = 1 << 4,
-		SELECT_BY_USER = 1 << 5,
-		// Semi
-		MAKE_PUBLIC = ADD_PUBLIC,
+		ADD_PRIVATE = 4,
+		ADD_PUBLIC = 1 << 3,
 		// Contest specific
-		VIEW = 1 << 6,
-		PARTICIPATE = 1 << 7,
-		ADMIN = 1 << 8,
-		EDIT_OWNERS = 1 << 9,
-		DELETE = 1 << 10,
-		SELECT_FINAL_SUBMISSIONS = 1 << 11,
-		VIEW_ALL_CONTEST_SUBMISSIONS = 1 << 12,
+		VIEW = 1 << 4,
+		PARTICIPATE = 1 << 5,
+		ADMIN = 1 << 6,
+		DELETE = 1 << 7,
+		MAKE_PUBLIC = 1 << 8,
+		SELECT_FINAL_SUBMISSIONS = 1 << 9,
+		VIEW_ALL_CONTEST_SUBMISSIONS = 1 << 10,
 	};
 
 private:
@@ -595,12 +588,10 @@ private:
 	friend DECLARE_ENUM_OPERATOR(ContestPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(ContestPermissions, &)
 
-	ContestPermissions contests_get_permissions(bool is_public,
-		ContestUserMode cu_mode);
+	ContestPermissions contests_get_overall_permissions() noexcept;
 
-	ContestPermissions contests_get_permissions() {
-		return contests_get_permissions(false, ContestUserMode::IS_NULL);
-	}
+	ContestPermissions contests_get_permissions(bool is_public,
+		ContestUserMode cu_mode) noexcept;
 
 	ContestPermissions contests_perms = ContestPermissions::NONE;
 	InplaceBuff<32> contests_cid;
@@ -637,14 +628,11 @@ private:
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, |)
 	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &)
 
+	SubmissionPermissions submissions_get_overall_permissions() noexcept;
+
 	SubmissionPermissions submissions_get_permissions(
 		StringView submission_owner, SubmissionType stype,
-		ContestUserMode cu_mode, StringView problem_owner);
-
-	SubmissionPermissions submissions_get_permissions() {
-		return submissions_get_permissions("", SubmissionType::VOID,
-			ContestUserMode::IS_NULL, "");
-	}
+		ContestUserMode cu_mode, StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
 	SubmissionLanguage submissions_slang;

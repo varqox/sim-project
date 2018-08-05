@@ -1,29 +1,48 @@
 #include "sim.h"
 
+Sim::ContestPermissions Sim::contests_get_overall_permissions() noexcept {
+	STACK_UNWINDING_MARK;
+	using PERM = ContestPermissions;
+
+	if (not session_is_open)
+		return PERM::VIEW_PUBLIC;
+
+	switch (session_user_type) {
+	case UserType::ADMIN:
+		return PERM::VIEW_ALL | PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE |
+			PERM::ADD_PUBLIC;
+	case UserType::TEACHER:
+		return PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE;
+	case UserType::NORMAL:
+		return PERM::VIEW_PUBLIC;
+	}
+}
+
 Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
-	ContestUserMode cu_mode)
+	ContestUserMode cu_mode) noexcept
 {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
-	if (not session_open())
-		return (is_public ? PERM::VIEW_PUBLIC | PERM::VIEW : PERM::VIEW_PUBLIC);
+	PERM overall_perms = contests_get_overall_permissions();
+
+	if (not session_is_open) {
+		if (is_public)
+			return overall_perms | PERM::VIEW;
+		else
+			return overall_perms;
+	}
 
 	if (session_user_type == UserType::ADMIN)
-		return PERM::VIEW_PUBLIC | PERM::VIEW_ALL | PERM::ADD_PRIVATE |
-			PERM::ADD_PUBLIC | PERM::SELECT_BY_USER | PERM::VIEW |
-			PERM::PARTICIPATE | PERM::ADMIN | PERM::MAKE_PUBLIC |
-			PERM::EDIT_OWNERS | PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
+		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
+			PERM::DELETE | PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
 			PERM::VIEW_ALL_CONTEST_SUBMISSIONS;
-
-	PERM overall_perms = (session_user_type == UserType::TEACHER ?
-		PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE : PERM::VIEW_PUBLIC);
 
 	switch (cu_mode) {
 	case CUM::OWNER:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
-			PERM::EDIT_OWNERS | PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
+			PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
 			PERM::VIEW_ALL_CONTEST_SUBMISSIONS;
 
 	case CUM::MODERATOR:
@@ -64,7 +83,7 @@ void Sim::contests_handle() {
 	}
 
 	// Get the overall permissions to the contest set
-	contests_perms = contests_get_permissions();
+	contests_perms = contests_get_overall_permissions();
 
 	// Add contest
 	if (next_arg == "add") {

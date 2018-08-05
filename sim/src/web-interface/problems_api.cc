@@ -28,7 +28,7 @@ void Sim::api_problems() {
 		" u.username, s.full_status");
 	qwhere.append(" FROM problems p LEFT JOIN users u ON p.owner=u.id"
 		" LEFT JOIN submissions s ON s.owner=",
-			(session_open() ? StringView(session_user_id) : "''"),
+			(session_is_open ? StringView(session_user_id) : "''"),
 			" AND s.problem_id=p.id AND s.problem_final=1"
 		" WHERE p.type!=" JTYPE_VOID_STR);
 
@@ -36,11 +36,9 @@ void Sim::api_problems() {
 		PID, ADDED, PTYPE, NAME, LABEL, OWNER, OWN_USERNAME, SFULL_STATUS, SIMFILE
 	};
 
-	// Get the overall permissions to the problems set
-	session_open();
-	problems_perms = problems_get_permissions();
+	problems_perms = problems_get_overall_permissions();
 	// Choose problems to select
-	if (not uint(problems_perms & PERM::ADMIN)) {
+	if (not uint(problems_perms & PERM::VIEW_ALL)) {
 		if (not session_is_open) {
 			throw_assert(uint(problems_perms & PERM::VIEW_TPUBLIC));
 			qwhere.append(" AND p.type=" PTYPE_PUBLIC_STR);
@@ -273,8 +271,7 @@ void Sim::api_problems() {
 void Sim::api_problem() {
 	STACK_UNWINDING_MARK;
 
-	session_open();
-	problems_perms = problems_get_permissions();
+	problems_perms = problems_get_overall_permissions();
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "add")

@@ -1,14 +1,31 @@
 #include "sim.h"
 
+Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
+	using PERM = SubmissionPermissions;
+
+	if (not session_is_open)
+		return PERM::NONE;
+
+	switch (session_user_type) {
+	case UserType::ADMIN:
+		return PERM::VIEW_ALL;
+	case UserType::TEACHER:
+	case UserType::NORMAL:
+		return PERM::NONE;
+	}
+}
+
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	StringView submission_owner, SubmissionType stype, ContestUserMode cu_mode,
-	StringView problem_owner)
+	StringView problem_owner) noexcept
 {
 	using PERM = SubmissionPermissions;
 	using STYPE = SubmissionType;
 	using CUM = ContestUserMode;
 
-	if (not session_open())
+	PERM overall_perms = submissions_get_overall_permissions();
+
+	if (not session_is_open)
 		return PERM::NONE;
 
 	static_assert((uint)PERM::NONE == 0, "Needed below");
@@ -17,30 +34,32 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 		(isIn(stype, {STYPE::NORMAL, STYPE::IGNORED})
 			? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
 
-	if (session_user_type == UserType::ADMIN)
-		return PERM::VIEW_ALL | PERM_SUBMISSION_ADMIN;
-
-	if (cu_mode == CUM::MODERATOR or cu_mode == CUM::OWNER)
-		return PERM_SUBMISSION_ADMIN;
+	if (session_user_type == UserType::ADMIN or
+		cu_mode == CUM::MODERATOR or
+		cu_mode == CUM::OWNER)
+	{
+		return overall_perms | PERM_SUBMISSION_ADMIN;
+	}
 
 	// This check has to be done as the last one because it gives the least
 	// permissions
 	if (session_user_id == problem_owner) {
 		if (stype == STYPE::PROBLEM_SOLUTION)
-			return PERM::VIEW | PERM::VIEW_SOURCE |	PERM::VIEW_RELATED_JOBS
-				| PERM::REJUDGE;
+			return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
+				PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS |
+				PERM::REJUDGE;
 
 		if (session_user_id == submission_owner)
-			return PERM::VIEW | PERM::VIEW_SOURCE | PERM::REJUDGE |
-				PERM::CHANGE_TYPE | PERM::DELETE;
+			return overall_perms | PERM_SUBMISSION_ADMIN;
 
-		return PERM::VIEW | PERM::VIEW_SOURCE | PERM::REJUDGE;
+		return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
+			PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS | PERM::REJUDGE;
 	}
 
 	if (session_user_id == submission_owner)
-		return PERM::VIEW | PERM::VIEW_SOURCE;
+		return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
 
-	return PERM::NONE;
+	return overall_perms;
 }
 
 void Sim::submissions_handle() {
@@ -55,9 +74,7 @@ void Sim::submissions_handle() {
 			" window.location.hash);</script>");
 
 	// List submissions
-	} else if (next_arg.empty() and
-		uint(submissions_get_permissions() & SubmissionPermissions::VIEW_ALL))
-	{
+	} else if (next_arg.empty()) {
 		page_template("Submissions", "body{padding-left:20px}");
 		append("<h1>Submissions</h1>"
 			"<script>"

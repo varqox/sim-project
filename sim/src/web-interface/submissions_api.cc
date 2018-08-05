@@ -38,18 +38,15 @@ void Sim::append_submission_status(SubmissionStatus initial_status,
 		append("[\"initial ", css_color_class(initial_status), as_str(initial_status));
 }
 
-#include <sys/time.h>
-
 void Sim::api_submissions() {
 	STACK_UNWINDING_MARK;
 	using PERM = SubmissionPermissions;
 	using CUM = ContestUserMode;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	InplaceBuff<512> qfields, qwhere;
-	InplaceBuff<60> qwhere_id_cond;
 	qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
 		" cp.final_selecting_method, cp.reveal_score, s.contest_round_id,"
@@ -207,7 +204,7 @@ void Sim::api_submissions() {
 
 				qfields.append(", u.first_name, u.last_name,"
 					" s.initial_report, s.final_report");
-				qwhere_id_cond.append(" AND s.id", arg);
+				qwhere.append(" AND s.id", arg);
 
 			// Problem's id
 			} else if (cond_c == 'p') {
@@ -327,7 +324,9 @@ void Sim::api_submissions() {
 						else
 							allow_access = (not selecting_finals);
 					});
-			}
+
+			} else
+				return api_error400();
 		}
 
 		for (auto& check : after_checks)
@@ -343,11 +342,9 @@ void Sim::api_submissions() {
 		meta::ToString<SUBMISSIONS_LIMIT_PER_QUERY>::value),
 		"Update the above #define");
 
-	constexpr meta::string order_and_limit = " ORDER BY s.id DESC LIMIT " SUBMISSIONS_LIMIT_PER_QUERY_STR;
-
 	// Execute query
-	qfields.append(qwhere);
-	auto res = mysql.query(concat(qfields, qwhere_id_cond, order_and_limit));
+	auto res = mysql.query(concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT "
+		SUBMISSIONS_LIMIT_PER_QUERY_STR));
 
 	append_column_names();
 
@@ -522,7 +519,7 @@ void Sim::api_submission() {
 	STACK_UNWINDING_MARK;
 	using CUM = ContestUserMode;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
@@ -580,7 +577,7 @@ void Sim::api_submission() {
 void Sim::api_submission_add() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();

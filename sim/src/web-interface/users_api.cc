@@ -11,7 +11,7 @@ void Sim::api_users() {
 	STACK_UNWINDING_MARK;
 	using PERM = UserPermissions;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	InplaceBuff<256> query;
@@ -136,12 +136,12 @@ void Sim::api_users() {
 void Sim::api_user() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "add") {
-		users_perms = users_get_permissions();
+		users_perms = users_get_overall_permissions();
 		return api_user_add();
 
 	} else if (not isDigit(next_arg) or
@@ -151,15 +151,9 @@ void Sim::api_user() {
 	}
 
 	users_uid = next_arg;
-
-	std::underlying_type_t<UserType> utype;
-	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
-	stmt.bindAndExecute(users_uid);
-	stmt.res_bind_all(utype);
-	if (not stmt.next())
+	users_perms = users_get_permissions(users_uid);
+	if (users_perms == UserPermissions::NONE)
 		return api_error404();
-
-	users_perms = users_get_permissions(users_uid, UserType(utype));
 
 	next_arg = url_args.extractNextArg();
 	if (next_arg == "edit")

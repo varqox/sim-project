@@ -39,8 +39,6 @@ void Sim::append_contest_actions_str() {
 		append('p');
 	if (uint(contests_perms & PERM::ADMIN))
 		append('A');
-	if (uint(contests_perms & PERM::EDIT_OWNERS))
-		append('O');
 	if (uint(contests_perms & PERM::DELETE))
 		append('D');
 	append('"');
@@ -72,8 +70,6 @@ void Sim::api_contests() {
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
-	session_open();
-
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT c.id, c.name, c.is_public, cu.mode");
 	qwhere.append(" FROM contests c"
@@ -94,15 +90,20 @@ void Sim::api_contests() {
 	};
 
 	// Get the overall permissions to the contests list
-	contests_perms = contests_get_permissions();
+	contests_perms = contests_get_overall_permissions();
 	// Choose contests to select
 	if (uint(~contests_perms & PERM::VIEW_ALL)) {
-		throw_assert(uint(contests_perms & PERM::VIEW_PUBLIC));
-		if (session_is_open)
-			qwhere_append("(c.is_public=true OR cu.mode IS NOT NULL)");
-
-		else
-			qwhere_append("c.is_public=true");
+		if (uint(contests_perms & PERM::VIEW_PUBLIC)) {
+			if (session_is_open)
+				qwhere_append("(c.is_public=1 OR cu.mode IS NOT NULL)");
+			else
+				qwhere_append("c.is_public=1");
+		} else {
+			if (session_is_open)
+				qwhere_append("cu.mode IS NOT NULL");
+			else
+				qwhere_append("0=1");
+		}
 	}
 
 	// Process restrictions
@@ -118,9 +119,9 @@ void Sim::api_contests() {
 		// Is public
 		if (cond == 'p' and ~mask & PUBLIC_COND) {
 			if (arg_id == "Y")
-				qwhere_append("c.is_public=true");
+				qwhere_append("c.is_public=1");
 			else if (arg_id == "N")
-				qwhere_append("c.is_public=false");
+				qwhere_append("c.is_public=0");
 			else
 				return api_error400(concat("Invalid is_public condition: ",
 					arg_id));
@@ -139,7 +140,6 @@ void Sim::api_contests() {
 
 		} else
 			return api_error400();
-
 	}
 
 	// Execute query
@@ -189,8 +189,7 @@ void Sim::api_contest() {
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
-	session_open();
-	contests_perms = contests_get_permissions();
+	contests_perms = contests_get_overall_permissions();
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "add") {
@@ -344,7 +343,7 @@ void Sim::api_contest() {
 				" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
 			" WHERE cp.contest_id=?");
 
-		throw_assert(session_open());
+		throw_assert(session_is_open);
 		stmt.bindAndExecute(session_user_id, contests_cid);
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
@@ -366,7 +365,7 @@ void Sim::api_contest() {
 				" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
 			" WHERE cp.contest_id=?");
 
-		if (session_open())
+		if (session_is_open)
 			stmt.bindAndExecute(curr_date, session_user_id, session_user_id, contests_cid);
 		else
 			stmt.bindAndExecute(curr_date, nullptr, nullptr, contests_cid);
@@ -513,7 +512,7 @@ void Sim::api_contest_round() {
 			" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
 		" WHERE cp.contest_round_id=?");
 
-	if (session_open())
+	if (session_is_open)
 		stmt.bindAndExecute(session_user_id, session_user_id, contests_crid);
 	else
 		stmt.bindAndExecute(nullptr, nullptr, contests_crid);
@@ -574,7 +573,7 @@ void Sim::api_contest_problem() {
 			" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
 		" WHERE cp.id=?");
 
-	if (session_open())
+	if (session_is_open)
 		stmt.bindAndExecute(session_user_id, session_user_id, session_user_id, contests_cpid);
 	else
 		stmt.bindAndExecute(nullptr, nullptr, nullptr, contests_cpid);
