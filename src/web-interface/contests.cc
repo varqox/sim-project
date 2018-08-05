@@ -132,6 +132,32 @@ void Sim::contests_contest() {
 		append("<script>add_contest_round(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
+	} else if (next_arg == "contest_user") {
+		StringView user_id = url_args.extractNextArg();
+		if (user_id == "add") {
+			page_template(concat("Add contest user"),
+				"body{padding-left:20px}");
+			append("<script>add_contest_user(false, ", contests_cid,
+				", window.location.hash);</script>");
+		} else if (isDigit(user_id)) {
+			next_arg = url_args.extractNextArg();
+			if (next_arg == "change_mode") {
+				page_template(concat("Change contest user mode"),
+					"body{padding-left:20px}");
+				append("<script>change_contest_user_mode(false, ", contests_cid,
+					",", user_id, ", window.location.hash);</script>");
+
+			} else if (next_arg == "expel") {
+				page_template(concat("Expel user from the contest"),
+					"body{padding-left:20px}");
+				append("<script>expel_contest_user(false, ", contests_cid, ",",
+					user_id, ", window.location.hash);</script>");
+
+			} else
+				error404();
+		} else
+			error404();
+
 	} else
 		return error404();
 }

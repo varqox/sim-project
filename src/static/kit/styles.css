@@ -1756,8 +1756,7 @@ table.contest-users th.first-name,
 table.contest-users th.last-name {
 	min-width: 100px;
 }
-table.users th.email,
-table.contest-users th.email {
+table.users th.email {
 	min-width: 120px;
 }
 table.users th.type {
@@ -1828,11 +1827,12 @@ table.contest-users tr > td:last-child {
 
 .users .admin,
 .user-info .admin,
-.contest-users .moderator {
+.contest-users .owner {
 	color: #ff0000;
 	font-weight: bold;
 }
 .users .teacher,
+.contest-users .moderator,
 .user-info .teacher {
 	color: #ff8c00;
 	font-weight: bold;
@@ -2024,7 +2024,7 @@ form .field-group > :first-child {
 form .field-group > textarea {
 	min-width: 65%;
 }
-.form-container form input[type="submit"] {
+.form-container form input[type="submit"].btn {
 	margin-left: 140px;
 }
 .form-container form div.submit-yes-no {
