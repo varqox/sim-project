@@ -7,69 +7,79 @@
 using std::array;
 using std::string;
 
-Sim::UserPermissions Sim::users_get_permissions(StringView uid, UserType utype)
+Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
+	using PERM = UserPermissions;
+
+	if (not session_is_open)
+		return PERM::NONE;
+
+	switch (session_user_type) {
+	case UserType::ADMIN:
+		return PERM::VIEW_ALL | PERM::ADD_USER;
+	case UserType::TEACHER:
+	case UserType::NORMAL:
+		return PERM::NONE;
+	}
+
+	return PERM::NONE; // Should not happen
+}
+
+Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
+	UserType utype) noexcept
 {
 	using PERM = UserPermissions;
 	constexpr UserPermissions PERM_ADMIN = PERM::VIEW | PERM::EDIT |
 		PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS | PERM::DELETE;
 
+	if (not session_is_open)
+		return PERM::NONE;
+
 	auto viewer = std::underlying_type_t<UserType>(session_user_type) +
 		(session_user_id != SIM_ROOT_UID);
-	if (session_user_id == uid) {
+	if (session_user_id == user_id) {
 		constexpr UserPermissions perm[4] = {
 			// SIM root
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::VIEW_ALL |
-				PERM::MAKE_ADMIN | PERM::ADD_USER,
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN,
 			// Admin
 			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN |
-				PERM::MAKE_TEACHER | PERM::MAKE_NORMAL | PERM::DELETE |
-				PERM::VIEW_ALL | PERM::ADD_USER,
+				PERM::MAKE_TEACHER | PERM::MAKE_NORMAL | PERM::DELETE,
 			// Teacher
 			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL | PERM::DELETE | PERM::VIEW_ALL,
+				PERM::MAKE_NORMAL | PERM::DELETE,
 			// Normal
 			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_NORMAL |
 				PERM::DELETE,
 		};
-		return perm[viewer];
+		return perm[viewer] | users_get_overall_permissions();
 	}
 
-	auto user = std::underlying_type_t<UserType>(utype) + (uid != SIM_ROOT_UID);
+	auto user = std::underlying_type_t<UserType>(utype) + (user_id != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
 		{ // SIM root
 			// SIM root
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::VIEW_ALL |
-				PERM::ADD_USER,
+			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS,
 			// Admin
 			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL | PERM::VIEW_ALL | PERM::ADD_USER,
+				PERM::MAKE_NORMAL,
 			// Teacher
 			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL | PERM::VIEW_ALL | PERM::ADD_USER,
+				PERM::MAKE_NORMAL,
 			// Normal
 			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL | PERM::VIEW_ALL | PERM::ADD_USER
+				PERM::MAKE_NORMAL
 		}, { // Admin
-			PERM::VIEW | PERM::VIEW_ALL | PERM::ADD_USER, // SIM root
-			PERM::VIEW | PERM::VIEW_ALL | PERM::ADD_USER, // Admin
+			PERM::VIEW, // SIM root
+			PERM::VIEW, // Admin
 			// Teacher
-			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL |
-				PERM::VIEW_ALL | PERM::ADD_USER,
+			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
 			// Normal
-			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL |
-				PERM::VIEW_ALL | PERM::ADD_USER
+			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL
 		}, { // Teacher
 			PERM::NONE, // SIM root
 			PERM::NONE, // Admin
 			PERM::NONE, // Teacher
 			PERM::NONE // Normal
-			/*
-			PERM::NONE | PERM::VIEW_ALL, // SIM root
-			PERM::VIEW | PERM::VIEW_ALL, // Admin
-			PERM::VIEW | PERM::VIEW_ALL, // Teacher
-			PERM::VIEW | PERM::VIEW_ALL // Normal
-			*/
 		}, { // Normal
 			PERM::NONE, // SIM root
 			PERM::NONE, // Admin
@@ -77,7 +87,21 @@ Sim::UserPermissions Sim::users_get_permissions(StringView uid, UserType utype)
 			PERM::NONE // Normal
 		}
 	};
-	return perm[viewer][user];
+	return perm[viewer][user] | users_get_overall_permissions();
+}
+
+Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
+	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
+
+	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
+	stmt.bindAndExecute(user_id);
+	std::underlying_type_t<UserType> utype;
+	stmt.res_bind_all(utype);
+	if (not stmt.next())
+		return PERM::NONE;
+
+	return users_get_permissions(user_id, UserType(utype));
 }
 
 void Sim::login() {
@@ -114,7 +138,7 @@ void Sim::login() {
 					break;
 
 				// Delete old session
-				if (session_open())
+				if (session_is_open)
 					session_destroy();
 
 				// Create new
@@ -167,7 +191,7 @@ void Sim::logout() {
 void Sim::sign_up() {
 	STACK_UNWINDING_MARK;
 
-	if (session_open())
+	if (session_is_open)
 		return redirect("/");
 
 	InplaceBuff<4096> pass1, pass2;
@@ -276,9 +300,8 @@ void Sim::sign_up() {
 
 void Sim::users_handle() {
 	STACK_UNWINDING_MARK;
-	using PERM = UserPermissions;
 
-	if (not session_open())
+	if (not session_is_open)
 		return redirect(concat_tostr("/login?", request.target));
 
 	StringView next_arg = url_args.extractNextArg();
@@ -287,14 +310,8 @@ void Sim::users_handle() {
 		return users_user();
 	}
 
-	// Get the overall permissions to the users list
-	users_perms = users_get_permissions();
-
 	// Add user
 	if (next_arg == "add") {
-		if (uint(~users_perms & PERM::ADD_USER))
-			return error403();
-
 		page_template("Add user");
 		append("<script>add_user(false);</script>");
 
@@ -304,9 +321,6 @@ void Sim::users_handle() {
 
 	// List users
 	} else if (next_arg.empty()) {
-		if (uint(~users_get_permissions() & PERM::VIEW_ALL))
-			return error403();
-
 		page_template("Users", "body{padding-left:20px}");
 		append("<script>user_chooser(false, window.location.hash);</script>");
 

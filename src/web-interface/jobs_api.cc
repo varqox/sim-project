@@ -25,13 +25,13 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 void Sim::api_jobs() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	using PERM = JobPermissions;
 
 	// Get the overall permissions to the job queue
-	jobs_perms = jobs_get_permissions();
+	jobs_perms = jobs_get_overall_permissions();
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
@@ -300,7 +300,7 @@ void Sim::api_job() {
 	STACK_UNWINDING_MARK;
 	using JT = JobType;
 
-	if (not session_open())
+	if (not session_is_open)
 		return api_error403();
 
 	jobs_jid = url_args.extractNextArg();

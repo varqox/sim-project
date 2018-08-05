@@ -59,47 +59,53 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 				}
 			}
 
-			if (next_arg == "kit")
+			// Subsystems that do not need the session to be opened
+			if (next_arg == "kit") {
 				static_file();
 
-			else if (next_arg == "c")
-				contests_handle();
+			// Other subsystems need the session to be opened in order to work properly
+			} else {
+				session_open();
 
-			else if (next_arg == "s")
-				submissions_handle();
+				if (next_arg == "c")
+					contests_handle();
 
-			else if (next_arg == "u")
-				users_handle();
+				else if (next_arg == "s")
+					submissions_handle();
 
-			else if (next_arg == "")
-				main_page();
+				else if (next_arg == "u")
+					users_handle();
 
-			else if (next_arg == "api")
-				api_handle();
+				else if (next_arg == "")
+					main_page();
 
-			else if (next_arg == "p")
-				problems_handle();
+				else if (next_arg == "api")
+					api_handle();
 
-			else if (next_arg == "login")
-				login();
+				else if (next_arg == "p")
+					problems_handle();
 
-			else if (next_arg == "jobs")
-				jobs_handle();
+				else if (next_arg == "login")
+					login();
 
-			// else if (next_arg == "file")
-				// contest_file();
+				else if (next_arg == "jobs")
+					jobs_handle();
 
-			else if (next_arg == "logout")
-				logout();
+				// else if (next_arg == "file")
+					// contest_file();
 
-			else if (next_arg == "signup")
-				sign_up();
+				else if (next_arg == "logout")
+					logout();
 
-			else if (next_arg == "logs")
-				view_logs();
+				else if (next_arg == "signup")
+					sign_up();
 
-			else
-				error404();
+				else if (next_arg == "logs")
+					view_logs();
+
+				else
+					error404();
+			}
 
 		cleanup:
 			page_template_end();
@@ -190,7 +196,7 @@ void Sim::static_file() {
 void Sim::view_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (!session_open() || session_user_type > UserType::ADMIN)
+	if (!session_is_open || session_user_type > UserType::ADMIN)
 		return error403();
 
 	page_template("Logs", "body{padding-left:20px}");

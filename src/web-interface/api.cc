@@ -37,7 +37,7 @@ void Sim::api_handle() {
 void Sim::api_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_open() || session_user_type != UserType::ADMIN)
+	if (not session_is_open || session_user_type != UserType::ADMIN)
 		return api_error403();
 
 	StringView type = url_args.extractNextArg();

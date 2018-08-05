@@ -1,8 +1,26 @@
 #include "sim.h"
 
+Sim::ProblemPermissions Sim::problems_get_overall_permissions() noexcept {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (not session_is_open)
+		return PERM::VIEW_TPUBLIC;
+
+	switch (session_user_type) {
+	case UserType::ADMIN:
+		return PERM::VIEW_ALL | PERM::ADD | PERM::VIEW_TPUBLIC |
+			PERM::VIEW_TCONTEST_ONLY | PERM::SELECT_BY_OWNER;
+	case UserType::TEACHER:
+		return PERM::ADD | PERM::VIEW_TPUBLIC | PERM::VIEW_TCONTEST_ONLY |
+			PERM::SELECT_BY_OWNER;
+	case UserType::NORMAL:
+		return PERM::VIEW_TPUBLIC;
+	}
+}
 
 Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
-	ProblemType ptype)
+	ProblemType ptype) noexcept
 {
 	STACK_UNWINDING_MARK;
 	using PERM = ProblemPermissions;
@@ -14,50 +32,37 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 		PERM::VIEW_RELATED_JOBS | PERM::DOWNLOAD | PERM::SUBMIT | PERM::EDIT |
 		PERM::SUBMIT_IGNORED | PERM::REUPLOAD | PERM::REJUDGE_ALL |
 		PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS | PERM::DELETE;
-	constexpr PERM PERM_TEACHER = PERM::ADD | PERM::VIEW_TPUBLIC |
-		PERM::VIEW_TCONTEST_ONLY | PERM::SELECT_BY_OWNER;
 
-	if (not session_open())
-		return (ptype == ProblemType::PUBLIC
-			? PERM::VIEW_TPUBLIC | PERM::VIEW | PERM::VIEW_TAGS
-			: PERM::VIEW_TPUBLIC);
+	if (not session_is_open)
+		return (ptype == ProblemType::PUBLIC ? PERM::VIEW | PERM::VIEW_TAGS
+			: PERM::NONE) | problems_get_overall_permissions();
 
 	// Session is open
-	if (session_user_type == UserType::ADMIN)
-		return PERM::ADMIN | PERM::ADD | PERM::VIEW_TPUBLIC |
-			PERM::VIEW_TCONTEST_ONLY | PERM::SELECT_BY_OWNER |
-			PERM_PROBLEM_ADMIN;
-
-	if (session_user_id == owner_id) {
-		if (session_user_type == UserType::TEACHER)
-			return PERM_TEACHER | PERM_PROBLEM_ADMIN;
-
-		return PERM::VIEW_TPUBLIC | PERM_PROBLEM_ADMIN;
-	}
+	if (session_user_type == UserType::ADMIN or session_user_id == owner_id)
+		return PERM_PROBLEM_ADMIN | problems_get_overall_permissions();
 
 	if (session_user_type == UserType::TEACHER) {
 		if (ptype == ProblemType::PUBLIC)
-			return PERM_TEACHER | PERM::VIEW_STATEMENT |
-				PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_TAGS |
+			return PERM::VIEW_STATEMENT| PERM::VIEW_TAGS |
 				PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_SIMFILE |
 				PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::DOWNLOAD |
-				PERM::SUBMIT;
+				PERM::SUBMIT | problems_get_overall_permissions();
 
-		else if (ptype == ProblemType::CONTEST_ONLY)
-			return PERM_TEACHER | PERM::VIEW_STATEMENT | PERM::VIEW_TAGS |
-				PERM::VIEW_SIMFILE | PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME;
+		if (ptype == ProblemType::CONTEST_ONLY)
+			return PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_SIMFILE |
+				PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME |
+				problems_get_overall_permissions();
 
-		return PERM_TEACHER;
+		return problems_get_overall_permissions();
 	}
 
-	return (ptype == ProblemType::PUBLIC
-		? PERM::VIEW_TPUBLIC | PERM::VIEW | PERM::VIEW_TAGS | PERM::SUBMIT
-		: PERM::VIEW_TPUBLIC);
+	return (ptype == ProblemType::PUBLIC ?
+		PERM::VIEW | PERM::VIEW_TAGS | PERM::SUBMIT : PERM::NONE) |
+		problems_get_overall_permissions();
 }
 
 void Sim::problems_handle() {
 	STACK_UNWINDING_MARK;
-	using PERM = ProblemPermissions;
 
 	StringView next_arg = url_args.extractNextArg();
 	if (isDigit(next_arg)) {
@@ -66,13 +71,10 @@ void Sim::problems_handle() {
 	}
 
 	// Get the overall permissions to the problem set
-	problems_perms = problems_get_permissions();
+	problems_perms = problems_get_overall_permissions();
 
 	// Add problem
 	if (next_arg == "add") {
-		if (uint(~problems_perms & PERM::ADD))
-			return error403();
-
 		page_template("Add problem");
 		append("<script>add_problem(false);</script>");
 
