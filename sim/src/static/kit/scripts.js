@@ -489,7 +489,7 @@ var get_unique_id = function() {
 /* ================================= Form ================================= */
 var Form = {};
 (function() {
-	this.field_group = function(label, input_context_or_html_elem) {
+	this.field_group = function(label_text_or_html_content, input_context_or_html_elem) {
 		var input;
 		if (input_context_or_html_elem instanceof jQuery)
 			input = input_context_or_html_elem;
@@ -504,11 +504,14 @@ var Form = {};
 			input.attr('id', id);
 		}
 
+		var is_label_html_content = (Array.isArray(label_text_or_html_content) || label_text_or_html_content instanceof jQuery || input_context_or_html_elem instanceof HTMLElement);
+
 		return $('<div>', {
 			class: 'field-group',
 			html: [
 				$('<label>', {
-					text: label,
+					text: (is_label_html_content ? undefined : label_text_or_html_content),
+					html: (is_label_html_content ? label_text_or_html_content : undefined),
 					for: id
 				}),
 				input
@@ -930,7 +933,7 @@ function Lister(elem) {
 				timed_hide_show(modal);
 				centerize_modal(modal, false);
 
-				if (data.length === 0)
+				if ((Array.isArray(data) && data.length === 0) || (Array.isArray(data.rows) && data.rows.length === 0))
 					return; // No more data to load
 
 				lock = false;
@@ -1432,6 +1435,36 @@ var ActionsToHTML = {};
 				'btn-small red', delete_contest.bind(null, true, contest_id)));
 
 		return res;
+	};
+
+	this.contest_user = function(user_id, contest_id, actions_str) {
+		var res = [];
+		var make_contestant = (actions_str.indexOf('Mc') !== -1);
+		var make_moderator = (actions_str.indexOf('Mm') !== -1);
+		var make_owner = (actions_str.indexOf('Mo') !== -1);
+
+		if (make_contestant + make_moderator + make_owner > 1)
+			res.push(a_view_button('/c/c' + contest_id + '/contest_user/' + user_id + '/change_mode', 'Change mode', 'btn-small orange',
+				change_contest_user_mode.bind(null, true, contest_id, user_id)));
+
+		if (actions_str.indexOf('E') !== -1)
+			res.push(a_view_button('/c/c' + contest_id + '/contest_user/' + user_id + '/expel',
+				'Expel', 'btn-small red',
+				expel_contest_user.bind(null, true, contest_id, user_id)));
+
+		return res;
+	};
+
+	this.contest_users = function(contest_id, overall_actions_str) {
+		var add_contestant = (overall_actions_str.indexOf('Ac') !== -1);
+		var add_moderator = (overall_actions_str.indexOf('Am') !== -1);
+		var add_owner = (overall_actions_str.indexOf('Ao') !== -1);
+
+		if (add_contestant || add_moderator || add_owner)
+			return a_view_button('/c/c' + contest_id + '/contest_user/add',
+				'Add user', 'btn', add_contest_user.bind(null, true, contest_id));
+
+		return [];
 	};
 }).call(ActionsToHTML);
 
@@ -2202,6 +2235,7 @@ function submission_chtype(submission_id, submission_type) {
 				]
 			}),
 			$('<select>', {
+				style: 'margin-left: 4px',
 				name: 'type',
 				html: [
 					$('<option>', {
@@ -3729,6 +3763,11 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				contest_ranking($('<div>').appendTo(elem), id_for_api);
 			});
 
+		if (actions.indexOf('A') !== -1)
+			tabs.push('Users', function() {
+				tab_contest_users_lister($('<div>').appendTo(elem), '/c' + contest.id);
+			});
+
 		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
 			// Add / replace hashes in links in the contest-path
 			elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
@@ -4051,7 +4090,287 @@ function contest_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 			tab_contests_lister($(this));
 		});
 }
+
 /* ============================ Contest's users ============================ */
+
+function ContestUsersLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	Lister.call(this, elem);
+	this.query_url = '/api/contest_users' + query_suffix;
+	this.query_suffix = '';
+
+	var x = query_suffix.indexOf('/c');
+	var y = query_suffix.indexOf('/', x + 2);
+	this.contest_id = query_suffix.substring(x + 2, y == -1 ? undefined : y);
+	console.log(this.contest_id);
+
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			// Overall actions
+			elem.prev('.tabmenu').prevAll().remove();
+			this_.elem.parent().prepend(ActionsToHTML.contest_users(this_.contest_id, data.overall_actions));
+
+			if (data.rows.length == 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'contest-users always_in_view',
+					// class: 'contest-users',
+					html: '<p>There are no contest users to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
+				timed_hide_show(modal);
+				return;
+			}
+
+			this_.elem.html('<thead><tr>' +
+					'<th>Id</th>' +
+					'<th class="username">Username</th>' +
+					'<th class="first-name">First name</th>' +
+					'<th class="last-name">Last name</th>' +
+					'<th class="mode">Mode</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+		}
+
+		for (var x in data.rows) {
+			x = data.rows[x];
+			this_.query_suffix = '/<' + x.id;
+
+			var row = $('<tr>');
+			row.append($('<td>', {text: x.id}));
+			row.append($('<td>', {html: a_view_button('/u/' + x.id, x.username,
+				'', view_user.bind(null, true, x.id))}));
+				// x.username}));
+			row.append($('<td>', {text: x.first_name}));
+			row.append($('<td>', {text: x.last_name}));
+			row.append($('<td>', {
+				class: x.mode[0].toLowerCase() + x.mode.slice(1),
+				text: x.mode
+			}));
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.contest_user(x.id, this_.contest_id, x.actions)
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
+	};
+
+	this.fetch_more();
+}
+function tab_contest_users_lister(parent_elem, query_suffix /*= ''*/) {
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	parent_elem = $(parent_elem);
+	function retab(tab_qsuff) {
+		var table = $('<table class="contest-users stripped"></table>').appendTo(parent_elem);
+		new ContestUsersLister(table, query_suffix + tab_qsuff).monitor_scroll();
+	}
+
+	var tabs = [
+		'All', retab.bind(null, ''),
+		'Owners', retab.bind(null, '/mO'),
+		'Moderators', retab.bind(null, '/mM'),
+		'Contestants', retab.bind(null, '/mC')
+	];
+
+	tabmenu(default_tabmenu_attacher.bind(parent_elem), tabs);
+}
+function add_contest_user(as_modal, contest_id) {
+	view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/<0', function(data) {
+		if (data.overall_actions === undefined)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		var actions = data.overall_actions;
+		var add_contestant = (actions.indexOf('Ac') !== -1);
+		var add_moderator = (actions.indexOf('Am') !== -1);
+		var add_owner = (actions.indexOf('Ao') !== -1);
+		if (add_contestant + add_moderator + add_owner < 1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Add contest user', '/api/contest_user/c' + contest_id + '/add',
+			Form.field_group('User ID', {
+				type: 'text',
+				name: 'user_id',
+				size: 6,
+				// maxlength: 'TODO...',
+				required: true
+			}).append(a_view_button('/u', 'Search users', '', user_chooser))
+			.add(Form.field_group('Mode', $('<select>', {
+				name: 'mode',
+				html: function() {
+					var res = [];
+					if (add_contestant)
+						res.push($('<option>', {
+							value: 'C',
+							text: 'Contestant',
+							selected: (data.mode === 'Contestant' ? true : undefined)
+						}));
+
+					if (add_moderator)
+						res.push($('<option>', {
+							value: 'M',
+							text: 'Moderator',
+							selected: (data.mode === 'Moderator' ? true : undefined)
+						}));
+
+					if (add_owner)
+						res.push($('<option>', {
+							value: 'O',
+							text: 'Owner',
+							selected: (data.mode === 'Owner' ? true : undefined)
+						}));
+
+					return res;
+				}()
+			}))).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Add'
+				})
+			})
+		));
+
+	}, '/c/c' + contest_id + '/contest_user/add');
+}
+function change_contest_user_mode(as_modal, contest_id, user_id) {
+	view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
+		if (data.rows === undefined || data.rows.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+
+		data = data.rows[0];
+
+		var actions = data.actions;
+		var make_contestant = (actions.indexOf('Mc') !== -1);
+		var make_moderator = (actions.indexOf('Mm') !== -1);
+		var make_owner = (actions.indexOf('Mo') !== -1);
+		if (make_contestant + make_moderator + make_owner < 2)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Change mode', '/api/contest_user/c' + contest_id + '/u' + user_id + '/change_mode', $('<center>', {
+			html: [
+				$('<label>', {
+					html: [
+						'Mode of the user ',
+						a_view_button('/u/' + user_id, data.username, '', view_user.bind(null, true, user_id)),
+						': ',
+						$('<select>', {
+							style: 'margin-left: 4px',
+							name: 'mode',
+							html: function() {
+								var res = [];
+								if (make_contestant)
+									res.push($('<option>', {
+										value: 'C',
+										text: 'Contestant',
+										selected: (data.mode === 'Contestant' ? true : undefined)
+									}));
+
+								if (make_moderator)
+									res.push($('<option>', {
+										value: 'M',
+										text: 'Moderator',
+										selected: (data.mode === 'Moderator' ? true : undefined)
+									}));
+
+								if (make_owner)
+									res.push($('<option>', {
+										value: 'O',
+										text: 'Owner',
+										selected: (data.mode === 'Owner' ? true : undefined)
+									}));
+
+								return res;
+							}()
+						})
+					]
+				}),
+				$('<div>', {
+					style: 'margin-top: 12px',
+					html:
+						$('<input>', {
+							class: 'btn-small blue',
+							type: 'submit',
+							value: 'Update'
+						})
+				})
+			]
+		})));
+
+	}, '/c/c' + contest_id + '/contest_user/' + user_id + '/change_mode');
+}
+function expel_contest_user(as_modal, contest_id, user_id) {
+	view_ajax(as_modal, '/api/contest_users/c' + contest_id + '/=' + user_id, function(data) {
+		if (data.rows === undefined || data.rows.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+
+		data = data.rows[0];
+		var actions = data.actions;
+
+		if (actions.indexOf('E') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Expel user from the contest', '/api/contest_user/c' + contest_id + '/u' + user_id + '/expel', $('<center>', {
+			html: [
+				$('<label>', {
+					html: [
+						'Are you sure to expel the user ',
+						a_view_button('/u/' + user_id, data.username,
+							undefined, view_user.bind(null, true, user_id)),
+						'?'
+					]
+				}),
+				$('<div>', {
+					style: 'margin-top: 12px',
+					html: [
+						$('<input>', {
+							class: 'btn-small red',
+							type: 'submit',
+							value: 'Of course!'
+						}),
+						$('<a>', {
+							class: 'btn-small',
+							text: 'No, the user may stay',
+							click: function() {
+								var modal = $(this).closest('.modal');
+								if (modal.length === 0)
+									history.back();
+								else
+									close_modal(modal);
+							}
+						})
+					]
+				})
+			]
+		})));
+
+	}, '/c/c' + contest_id + '/contest_user/' + user_id + '/expel');
+}
 /*function addContestUser(contest_id) {
 	modalForm('Add user to the contest',
 		$('<div>', {

@@ -10,10 +10,14 @@ void Sim::api_handle() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "logs")
 		return api_logs();
-	else if (next_arg == "contest")
-		return api_contest();
 	else if (next_arg == "contests")
 		return api_contests();
+	else if (next_arg == "contest")
+		return api_contest();
+	else if (next_arg == "contest_user")
+		return api_contest_user();
+	else if (next_arg == "contest_users")
+		return api_contest_users();
 	else if (next_arg == "job")
 		return api_job();
 	else if (next_arg == "jobs")

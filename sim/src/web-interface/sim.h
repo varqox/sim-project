@@ -187,21 +187,27 @@ private:
 	void api_contest_ranking(StringView submissions_query_id_name,
 		StringView query_id);
 
+	// contest_users_api.cc
+
 	void api_contest_users();
 
-	void api_contest_user_add();
+	void api_contest_user();
 
-	void api_contest_user_edit();
+	void api_contest_user_add(StringView contest_id);
 
-	void api_contest_user_expel();
+	void api_contest_user_change_mode(StringView contest_id, StringView user_id);
 
-	void api_contest_files();
+	void api_contest_user_expel(StringView contest_id, StringView user_id);
 
-	void api_contest_file_add();
+	// files_api.cc
 
-	void api_contest_file_edit();
+	void api_files();
 
-	void api_contest_file_delete();
+	void api_file_add();
+
+	void api_file_edit();
+
+	void api_file_delete();
 
 	/* ============================== Session ============================== */
 
@@ -606,6 +612,42 @@ private:
 	void contests_contest_round();
 
 	void contests_contest_problem();
+
+	/* =========================== Contest users =========================== */
+public:
+	enum class ContestUserPermissions : uint {
+		NONE = 0,
+		// Overall
+		ACCESS_API = 1,
+		ADD_CONTESTANT = 2,
+		ADD_MODERATOR = 4,
+		ADD_OWNER = 8,
+		// Contest user specific
+		MAKE_CONTESTANT = 1 << 4,
+		MAKE_MODERATOR = 1 << 5,
+		MAKE_OWNER = 1 << 6,
+		EXPEL = 1 << 7
+	};
+
+private:
+	friend DECLARE_ENUM_UNARY_OPERATOR(ContestUserPermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(ContestUserPermissions, |)
+	friend DECLARE_ENUM_OPERATOR(ContestUserPermissions, &)
+
+	// Returns only the overall permissions
+	ContestUserPermissions contest_user_get_overall_permissions(
+		ContestUserMode viewer_mode) noexcept;
+
+	ContestUserPermissions contest_user_get_permissions(
+		ContestUserMode viewer_mode, ContestUserMode user_mode) noexcept;
+
+	// Returns (viewer mode, perms), queries MySQL
+	std::pair<ContestUserMode, Sim::ContestUserPermissions>
+	contest_user_get_overall_permissions(StringView contest_id);
+
+	// Returns (viewer mode, perms, user's mode), queries MySQL
+	std::tuple<ContestUserMode, Sim::ContestUserPermissions, ContestUserMode>
+	contest_user_get_permissions(StringView contest_id, StringView user_id);
 
 	/* ============================= Submissions ============================= */
 public:
