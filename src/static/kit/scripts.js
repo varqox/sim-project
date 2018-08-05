@@ -11,7 +11,7 @@ function hex2str(hexx) {
 	var hex = hexx.toString(); // force conversion
 	var str = '';
 	for (var i = 0; i < hex.length; i += 2)
-		str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+		str += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
 	return str;
 }
 function elem_with_text(tag, text) {
@@ -33,7 +33,7 @@ function is_logged_in() {
 }
 function logged_user_id() {
 	var x = document.querySelector('.navbar .rightbar .user + ul > a:first-child').href;
-	return x.substr(x.lastIndexOf('/') + 1);
+	return x.substring(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() {
 	return (document.querySelector('.navbar .rightbar .user[user-type="A"]') !== null);
@@ -249,7 +249,7 @@ var url_hash_parser = {};
 	this.next_arg  = function() {
 		var pos = args.indexOf('#', beg + 1);
 		if (pos === -1)
-			return args.substr(beg + 1);
+			return args.substring(beg + 1);
 
 		return args.substring(beg + 1, pos);
 	};
@@ -260,7 +260,7 @@ var url_hash_parser = {};
 			if (beg >= args.length)
 				return '';
 
-			res = args.substr(beg + 1);
+			res = args.substring(beg + 1);
 			beg = args.length;
 			return res;
 		}
@@ -296,7 +296,7 @@ var url_hash_parser = {};
 			args += next_args;
 	};
 
-	this.parsed_prefix = function() { return args.substr(0, beg); };
+	this.parsed_prefix = function() { return args.substring(0, beg); };
 }).call(url_hash_parser);
 
 /* =========================== History management =========================== */
@@ -436,6 +436,8 @@ function show_success_via_loader(elem, html) {
 		style: 'display:none',
 		html: html
 	}).fadeIn(fade_in_duration));
+
+	timed_hide_show(elem.closest('.modal'));
 }
 function show_error_via_loader(elem, response, err_status, try_again_handler) {
 	if (err_status == 'success' || err_status == 'error' || err_status === undefined)
@@ -455,6 +457,8 @@ function show_error_via_loader(elem, response, err_status, try_again_handler) {
 			click: try_again_handler
 		}))
 	}).fadeIn(fade_in_duration));
+
+	timed_hide_show(elem.closest('.modal'));
 
 	// Additional message
 	var x = elem.find('.loader-info > span');
@@ -777,7 +781,7 @@ function tabmenu(attacher, tabs) {
 				var elem = this;
 				History.deferUntilFullyUpdated(function(){
 					window.history.replaceState(window.history.state, '',
-						document.URL.substr(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(elem).text()));
+						document.URL.substring(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash($(elem).text()));
 					url_hash_parser.assign_as_parsed(window.location.hash);
 					res.trigger('tabmenuTabHasChanged', elem);
 					handler.call(elem);
@@ -3732,7 +3736,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				var href = xx.attr('href');
 				var pos = href.indexOf('#');
 				if (pos !== -1)
-					href = href.substr(0, pos);
+					href = href.substring(0, pos);
 				xx.attr('href', href + window.location.hash);
 			});
 		});
