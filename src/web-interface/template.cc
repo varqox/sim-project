@@ -32,7 +32,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 					" href=\"/kit/styles.css?" STYLES_CSS_HASH "\">"
 				"<script src=\"/kit/jquery.js?" JQUERY_JS_HASH "\"></script>"
 				"<script src=\"/kit/scripts.js?" SCRIPTS_JS_HASH "\"></script>"
-				"<link rel=\"shortcut icon\" href=\"/kit/img/favicon.png\">");
+				"<link rel=\"shortcut icon\" type=\"image/png\" href=\"/kit/img/favicon.png\"/>");
 
 	if (scripts.size())
 		append("<script>", scripts, "</script>");
