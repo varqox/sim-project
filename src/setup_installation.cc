@@ -62,7 +62,8 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 11> tables {{
+constexpr array<meta::string, 12> tables {{
+	{"contest_entry_tokens"},
 	{"contest_problems"},
 	{"contest_rounds"},
 	{"contest_users"},
@@ -360,6 +361,17 @@ int main(int argc, char **argv) {
 			"`modified` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, modified)"
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+
+	try_to_create_table("contest_entry_tokens",
+		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
+			"`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
+			"`contest_id` int unsigned NULL,"
+			"`short_token` BINARY(", CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
+			"`short_token_expiration` datetime NULL,"
+			"PRIMARY KEY (token),"
+			"UNIQUE KEY (contest_id),"
+			"UNIQUE KEY (short_token)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	// Create SQLite tables

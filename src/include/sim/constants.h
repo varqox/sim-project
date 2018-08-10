@@ -80,6 +80,11 @@ constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
 constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
 	meta::max(128, PROBLEM_NAME_MAX_LEN);
 
+// Contest entry tokens
+constexpr uint CONTEST_ENTRY_TOKEN_LEN = 48;
+constexpr uint CONTEST_ENTRY_SHORT_TOKEN_LEN = 8;
+constexpr uint CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME = 60 * 60; // 1 hour [s]
+
 // Files
 constexpr uint FILE_ID_LEN = 30;
 constexpr uint FILE_NAME_MAX_LEN = 128;

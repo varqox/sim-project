@@ -18,6 +18,8 @@ void Sim::api_handle() {
 		return api_contest_user();
 	else if (next_arg == "contest_users")
 		return api_contest_users();
+	else if (next_arg == "contest_entry_token")
+		return api_contest_entry_token();
 	else if (next_arg == "job")
 		return api_job();
 	else if (next_arg == "jobs")

@@ -1,7 +1,5 @@
 #include "sim.h"
 
-#include <simlib/random.h>
-
 using std::string;
 
 bool Sim::session_open() {
@@ -47,21 +45,6 @@ bool Sim::session_open() {
 	return false;
 }
 
-string Sim::session_generate_id(uint length) {
-	STACK_UNWINDING_MARK;
-
-	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"0123456789";
-	constexpr size_t len = sizeof(t) - 1;
-
-	// Generate random id of length SESSION_ID_LENGTH
-	string res(length, '0');
-	for (char& c : res)
-		c = t[getRandom<int>(0, len - 1)];
-
-	return res;
-}
-
 void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	STACK_UNWINDING_MARK;
 
@@ -76,7 +59,7 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 		" (id, csrf_token, user_id, data, ip, user_agent, expires)"
 		" VALUES(?,?,?,'',?,?,?)");
 
-	session_csrf_token = session_generate_id(SESSION_CSRF_TOKEN_LEN);
+	session_csrf_token = generate_random_token(SESSION_CSRF_TOKEN_LEN);
 	auto user_agent = request.headers.get("User-Agent");
 	time_t exp_time = time(nullptr) +
 		(temporary_session ? TMP_SESSION_MAX_LIFETIME : SESSION_MAX_LIFETIME);
@@ -89,7 +72,7 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	stmt.bind(5, exp_datetime);
 
 	do {
-		session_id = session_generate_id(SESSION_ID_LEN);
+		session_id = generate_random_token(SESSION_ID_LEN);
 		stmt.bind(0, session_id);
 		stmt.fixAndExecute();
 

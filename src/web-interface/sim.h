@@ -55,11 +55,14 @@ private:
 	#endif
 	}
 
-	static std::string submission_status_as_td(SubmissionStatus status,
-		bool show_final);
-
-	static std::string submission_status_css_class(SubmissionStatus status,
-		bool show_final);
+	/**
+	 * @brief Generates token of length @p length which consist of [a-zA-Z0-9]
+	 *
+	 * @param length the length of generated token
+	 *
+	 * @return generated token
+	 */
+	static std::string generate_random_token(uint length);
 
 
 	/* ================================ API ================================ */
@@ -199,6 +202,24 @@ private:
 
 	void api_contest_user_expel(StringView contest_id, StringView user_id);
 
+	// contest_entry_token_api.cc
+
+	void api_contest_entry_token();
+
+	void api_contest_entry_token_add(StringView contest_id);
+
+	void api_contest_entry_token_regen(StringView contest_id);
+
+	void api_contest_entry_token_delete(StringView contest_id);
+
+	void api_contest_entry_token_short_add(StringView contest_id);
+
+	void api_contest_entry_token_short_regen(StringView contest_id);
+
+	void api_contest_entry_token_short_delete(StringView contest_id);
+
+	void api_contest_entry_token_use_to_enter_contest(StringView contest_id);
+
 	// files_api.cc
 
 	void api_files();
@@ -218,15 +239,6 @@ private:
 	InplaceBuff<32> session_user_id;
 	InplaceBuff<USERNAME_MAX_LEN + 1> session_username;
 	InplaceBuff<4096> session_data;
-
-	/**
-	 * @brief Generates id of length @p length which consist of [a-zA-Z0-9]
-	 *
-	 * @param length the length of generated id
-	 *
-	 * @return generated id
-	 */
-	static std::string session_generate_id(uint length);
 
 	/**
 	 * @brief Creates session and opens it
@@ -587,6 +599,7 @@ public:
 		MAKE_PUBLIC = 1 << 8,
 		SELECT_FINAL_SUBMISSIONS = 1 << 9,
 		VIEW_ALL_CONTEST_SUBMISSIONS = 1 << 10,
+		MANAGE_CONTEST_ENTRY_TOKEN = 1 << 11,
 	};
 
 private:

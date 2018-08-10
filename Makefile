@@ -149,6 +149,7 @@ src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
 SIM_SERVER_SRCS := \
 	src/web-interface/api.cc \
 	src/web-interface/connection.cc \
+	src/web-interface/contest_entry_token_api.cc \
 	src/web-interface/contest_users_api.cc \
 	src/web-interface/contests.cc \
 	src/web-interface/contests_api.cc \
