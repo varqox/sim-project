@@ -1,6 +1,7 @@
 #include "sim.h"
 
 #include <simlib/filesystem.h>
+#include <simlib/random.h>
 
 using std::string;
 using std::unique_ptr;
@@ -202,4 +203,19 @@ void Sim::view_logs() {
 	page_template("Logs", "body{padding-left:20px}");
 
 	append("<script>tab_logs_view($('body'))</script>");
+}
+
+string Sim::generate_random_token(uint length) {
+	STACK_UNWINDING_MARK;
+
+	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"0123456789";
+	constexpr size_t len = sizeof(t) - 1;
+
+	// Generate random id of length SESSION_ID_LENGTH
+	string res(length, '0');
+	for (char& c : res)
+		c = t[getRandom<int>(0, len - 1)];
+
+	return res;
 }
