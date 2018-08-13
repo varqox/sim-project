@@ -225,3 +225,11 @@ void Sim::contests_contest_problem() {
 	} else
 		return error404();
 }
+
+void Sim::enter_contest() {
+	STACK_UNWINDING_MARK;
+
+	page_template(concat("Enter contest"), "body{padding-left:20px}");
+	append("<script>enter_contest_using_token(false, '",
+		url_args.extractNextArg(), "');</script>");
+}

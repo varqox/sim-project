@@ -125,21 +125,18 @@ function infdatetime_to(elem, infdt, neg_inf_text, inf_text) {
 		return normalize_datetime(elem.text(infdt)
 			.attr('datetime', infdt));
 }
-
-// $(document).ready(function() {
-// 	// Converts datetimes
-// 	$('*[datetime]').each(function() {
-// 		normalize_datetime($(this),
-// 			$(this).parents('.submissions, .problems, .jobs, .files').length == 0);
-// 	});
-// });
-// Clock
-$(document).ready(function update_clock() {
-	if (update_clock.time_difference === undefined)
-		update_clock.time_difference = window.performance.timing.responseStart - start_time;
+// Calculates the actual server time
+function server_time() {
+	if (server_time.time_difference === undefined)
+		server_time.time_difference = window.performance.timing.responseStart - start_time;
 
 	var time = new Date();
-	time.setTime(time.getTime() - update_clock.time_difference);
+	time.setTime(time.getTime() - server_time.time_difference);
+	return time;
+}
+// Clock
+$(document).ready(function update_clock() {
+	var time = server_time();
 	var hours = time.getHours();
 	var minutes = time.getMinutes();
 	var seconds = time.getSeconds();
@@ -150,6 +147,67 @@ $(document).ready(function update_clock() {
 	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, tz_marker());
 	setTimeout(update_clock, 1000 - time.getMilliseconds());
 });
+// Produces a span that will update every second and show remaining time
+function countdown_clock(target_date) {
+	var span = $('<span>');
+	var update_countdown = function() {
+		var diff = target_date - server_time();
+		if (!$.contains(document.documentElement, span[0]))
+			return;
+
+		if (diff < 0)
+			diff = 0;
+		else
+			setTimeout(update_countdown, (diff + 999) % 1000 + 1);
+
+		diff = Math.round(diff / 1000); // To mitigate little latency that may occur
+		var diff_text = '';
+		var make_diff_text = function(n, singular, plural) {
+			return n + (n == 1 ? singular : plural);
+		};
+
+		if (diff >= 3600)
+			diff_text += make_diff_text(Math.floor(diff / 3600), ' hour', ' hours');
+		if (diff >= 60)
+			diff_text += make_diff_text(Math.floor((diff % 3600) / 60), ' minute', ' minutes');
+		diff_text += ' and ' + make_diff_text(diff % 60, ' second', ' seconds');
+		span.text(diff_text);
+	}
+
+	setTimeout(update_countdown);
+	return span;
+}
+function copy_to_clipboard(text) {
+	var elem = document.createElement('textarea');
+	elem.value = text;
+	elem.setAttribute('readonly', '');
+	elem.style.position = 'absolute';
+	elem.style.left = '-9999px';
+	document.body.appendChild(elem);
+	elem.select();
+	document.execCommand('copy');
+	document.body.removeChild(elem);
+}
+function copy_to_clipboard_btn(btn_text, text_to_copy) {
+	return $('<a>', {
+		class: 'btn',
+		style: 'position: relative',
+		text: btn_text,
+		click: function() {
+			copy_to_clipboard(text_to_copy);
+			var tooltip = $('<span>', {
+				class: 'btn-tooltip',
+				text: 'Copied to clipboard!'
+			});
+			tooltip.appendTo($(this));
+			setTimeout(function() {
+				tooltip.fadeOut('slow', function() {
+					tooltip.remove()
+				});
+			}, 1000);
+		}
+	});
+}
 // Handle navbar correct size
 function normalize_navbar() {
 	var navbar = $('.navbar');
@@ -370,13 +428,10 @@ window.onpopstate = function(event) {
 	var view_element_removed = false;
 	modals.each(function() {
 		var elem = $(this);
-		if (elem.hasClass('view')) {
-			if (view_element_removed)
-				return false;
+		if (elem.hasClass('view') || view_element_removed) {
 			view_element_removed = true;
+			remove_modals(elem);
 		}
-
-		remove_modals(elem);
 	});
 };
 
@@ -894,7 +949,8 @@ function view_ajax(as_modal, ajax_url, success_handler, new_window_location, no_
 }
 function a_view_button(href, text, classes, func) {
 	var a = document.createElement('a');
-	a.href = href;
+	if (href !== undefined)
+		a.href = href;
 	a.innerText = text;
 	if (classes !== undefined)
 		a.className = classes;
@@ -3765,6 +3821,124 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 
 		if (actions.indexOf('A') !== -1)
 			tabs.push('Users', function() {
+				var entry_link_elem = $('<div>').appendTo(elem);
+				var render_entry_link_panel = function() {
+					var this_ = this;
+					entry_link_elem.empty();
+
+					API_call('/api/contest_entry_token/c' + contest.id, function(data) {
+						if (data.token === null) {
+							entry_link_elem.append(a_view_button(undefined,
+								'Add entry link', 'btn', modal_request.bind(null,
+									'Add entry link', $('<form>'),
+									'/api/contest_entry_token/c' + contest.id + '/add', function(resp, loader_parent) {
+										show_success_via_loader(loader_parent, 'Added');
+										render_entry_link_panel.call(this_);
+									})));
+							return;
+						}
+
+						if (document.queryCommandSupported('copy'))
+							entry_link_elem.append(copy_to_clipboard_btn('Copy link', window.location.origin + '/enter_contest/' + data.token));
+
+						entry_link_elem.append(a_view_button(undefined,
+							'Regenerate link', 'btn blue', dialogue_modal_request.bind(null,
+								'Regenerate link', $('<center>', {
+									html: [
+									'Are you sure to regenerate the entry link: ',
+									$('<br>'),
+									a_view_button('/enter_contest/' + data.token, window.location.origin + '/enter_contest/' + data.token, undefined, enter_contest_using_token.bind(null, true, data.token)),
+									$('<br>'),
+									'?'
+									]
+								}), 'Yes, regenerate it', 'btn-small blue', '/api/contest_entry_token/c' + contest.id + '/regen',
+								function(resp, loader_parent) {
+									show_success_via_loader(loader_parent, 'Regenerated');
+									render_entry_link_panel.call(this_);
+								}, 'No, take me back', true)));
+
+						entry_link_elem.append(a_view_button(undefined,
+							'Delete link', 'btn red', dialogue_modal_request.bind(null,
+								'Delete link', $('<center>', {
+									html: [
+									'Are you sure to delete the entry link: ',
+									$('<br>'),
+									a_view_button('/enter_contest/' + data.token, window.location.origin + '/enter_contest/' + data.token, undefined, enter_contest_using_token.bind(null, true, data.token)),
+									$('<br>'),
+									'?'
+									]
+								}), 'Yes, I am sure', 'btn-small red', '/api/contest_entry_token/c' + contest.id + '/delete',
+								function(resp, loader_parent) {
+									show_success_via_loader(loader_parent, 'Deleted');
+									render_entry_link_panel.call(this_);
+								}, 'No, take me back', true)));
+
+						if (data.short_token === null) {
+							entry_link_elem.append(a_view_button(undefined,
+								'Add short entry link', 'btn', modal_request.bind(null,
+									'Add short entry link', $('<form>'),
+									'/api/contest_entry_token/c' + contest.id + '/add_short', function(resp, loader_parent) {
+										show_success_via_loader(loader_parent, 'Added');
+										render_entry_link_panel.call(this_);
+									})));
+						}
+
+						entry_link_elem.append($('<pre>', {
+							text: window.location.origin + '/enter_contest/' + data.token
+						}));
+
+						if (data.short_token === null)
+							return;
+
+						if (document.queryCommandSupported('copy'))
+							entry_link_elem.append(copy_to_clipboard_btn('Copy short link', window.location.origin + '/enter_contest/' + data.short_token));
+
+						entry_link_elem.append(a_view_button(undefined,
+							'Regenerate short link', 'btn blue', dialogue_modal_request.bind(null,
+								'Regenerate short link', $('<center>', {
+									html: [
+									'Are you sure to regenerate the entry short link: ',
+									$('<br>'),
+									a_view_button('/enter_contest/' + data.short_token, window.location.origin + '/enter_contest/' + data.short_token, undefined, enter_contest_using_token.bind(null, true, data.short_token)),
+									$('<br>'),
+									'?'
+									]
+								}), 'Yes, regenerate it', 'btn-small blue', '/api/contest_entry_token/c' + contest.id + '/regen_short',
+								function(resp, loader_parent) {
+									show_success_via_loader(loader_parent, 'Regenerated');
+									render_entry_link_panel.call(this_);
+								}, 'No, take me back', true)));
+
+						entry_link_elem.append(a_view_button(undefined,
+							'Delete short link', 'btn red', dialogue_modal_request.bind(null,
+								'Delete short link', $('<center>', {
+									html: [
+									'Are you sure to delete the entry short link: ',
+									$('<br>'),
+									a_view_button('/enter_contest/' + data.short_token, window.location.origin + '/enter_contest/' + data.short_token, undefined, enter_contest_using_token.bind(null, true, data.short_token)),
+									$('<br>'),
+									'?'
+									]
+								}), 'Yes, I am sure', 'btn-small red', '/api/contest_entry_token/c' + contest.id + '/delete_short',
+								function(resp, loader_parent) {
+									show_success_via_loader(loader_parent, 'Deleted');
+									render_entry_link_panel.call(this_);
+								}, 'No, take me back', true)));
+
+						var exp_date = utcdt_or_tm_to_Date(data.short_token_expiration_date);
+						entry_link_elem.append($('<span>', {
+							style: 'margin-left: 10px; font-size: 12px; color: #777',
+							html: ['Short token will expire in ', countdown_clock(exp_date)]
+						}));
+
+						entry_link_elem.append($('<pre>', {
+							text: window.location.origin + '/enter_contest/' + data.short_token
+						}));
+
+					}, entry_link_elem);
+				};
+
+				render_entry_link_panel();
 				tab_contest_users_lister($('<div>').appendTo(elem), '/c' + contest.id);
 			});
 
@@ -4092,7 +4266,6 @@ function contest_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 }
 
 /* ============================ Contest's users ============================ */
-
 function ContestUsersLister(elem, query_suffix /*= ''*/) {
 	var this_ = this;
 	if (query_suffix === undefined)
@@ -4371,90 +4544,46 @@ function expel_contest_user(as_modal, contest_id, user_id) {
 
 	}, '/c/c' + contest_id + '/contest_user/' + user_id + '/expel');
 }
-/*function addContestUser(contest_id) {
-	modalForm('Add user to the contest',
-		$('<div>', {
-			class: 'field-group',
-			style: 'margin-top: 5px',
-			html: $('<div>', {
-				html: $('<select>', {
-				name: 'user_value_type',
-					html: $('<option>', {
-						value: 'username',
-						text: 'Username',
-						selected: true
-					}).add('<option>', {
-						value: 'uid',
-						text: 'Uid'
-					})
+
+/* ============================ Contest's users ============================ */
+function enter_contest_using_token(as_modal, contest_entry_token) {
+	view_ajax(as_modal, '/api/contest_entry_token/=' + contest_entry_token, function(data) {
+		this.append(ajax_form('Contest entry', '/api/contest_entry_token/=' + contest_entry_token + '/use', $('<center>', {
+			html: [
+				$('<label>', {
+					html: [
+						'You are about to enter the contest ',
+						a_view_button('/c/' + data.contest_id, data.contest_name,
+							undefined, view_contest.bind(null, true, data.contest_id)),
+						'. Are you sure?'
+					]
+				}),
+				$('<div>', {
+					style: 'margin-top: 12px',
+					html: [
+						$('<input>', {
+							class: 'btn-small green',
+							type: 'submit',
+							value: 'Yes, I want to enter'
+						}),
+						$('<a>', {
+							class: 'btn-small',
+							text: 'No, take me back',
+							click: function() {
+								var modal = $(this).closest('.modal');
+								if (modal.length === 0)
+									history.back();
+								else
+									close_modal(modal);
+							}
+						})
+					]
 				})
-			}).add('<input>', {
-				type: 'text',
-				name: 'user'
-			})
-		}).add('<div>', {
-			class: 'field-group',
-			html: $('<label>', {
-				text: 'User mode'
-			}).add('<select>', {
-				name: 'mode',
-				html: $('<option>', {
-					value: 'c',
-					text: 'Contestant',
-					selected: true
-				}).add('<option>', {
-					value: 'm',
-					text: 'Moderator'
-				})
-			})
-		}).add(modalFormSubmitButton('Add user',
-			'/c/' + contest_id + '/users/add',
-			'User has been added.'))
-	);
+			]
+		})));
+
+	}, '/enter_contest/' + contest_entry_token);
 }
-function changeContestUserMode(contest_id, user_id, mode) {
-	modalForm('Change user mode',
-		$('<div>', {
-			html: $('<label>', {
-				text: "New user's mode: "
-			}).add('<select>', {
-				name: 'mode',
-				html: $('<option>', {
-					value: 'c',
-					text: 'Contestant',
-					selected: (mode === 'c')
-				}).add('<option>', {
-					value: 'm',
-					text: 'Moderator',
-					selected: (mode === 'm')
-				})
-			}).add('<input>', {
-				type: 'hidden',
-				name: 'uid',
-				value: user_id
-			})
-		}).add(modalFormSubmitButton('Change mode',
-			'/c/' + contest_id + '/users/change-mode',
-			'User mode has been changed.'))
-	);
-}
-function expelContestUser(contest_id, user_id, username) {
-	modalForm('Expel user from the contest',
-		$('<div>', {
-			html: $('<label>', {
-				html: 'Are you sure to expel the user <a href="/u/' + user_id +
-					'">' + username + '</a> with the id = ' + user_id + '?',
-			}).add('<input>', {
-				type: 'hidden',
-				name: 'uid',
-				value: user_id
-			})
-		}).add(modalFormSubmitButton('Of course!',
-			'/c/' + contest_id + '/users/expel',
-			'User has been expelled.', 'red',
-			'No, the user may stay'))
-	);
-}*/
 
 function open_calendar_on(time, text_input, hidden_input) {
 	var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];

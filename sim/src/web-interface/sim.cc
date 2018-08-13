@@ -71,6 +71,9 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 				if (next_arg == "c")
 					contests_handle();
 
+				else if (next_arg == "enter_contest")
+					enter_contest();
+
 				else if (next_arg == "s")
 					submissions_handle();
 

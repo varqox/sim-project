@@ -626,6 +626,8 @@ private:
 
 	void contests_contest_problem();
 
+	void enter_contest();
+
 	/* =========================== Contest users =========================== */
 public:
 	enum class ContestUserPermissions : uint {
