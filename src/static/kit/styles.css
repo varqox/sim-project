@@ -2210,3 +2210,26 @@ input.calendar-input {
 .logs-parent > .logs {
 	flex: 1 1;
 }
+.btn-tooltip {
+	position: absolute;
+	white-space: pre;
+	/*width: 140px;*/
+	background-color: #555;
+	color: #fff;
+	text-align: center;
+	border-radius: 4px;
+	padding: 5px 8px;
+	z-index: 1;
+	bottom: 150%;
+	left: 0%;
+}
+.btn-tooltip::after {
+	content: "";
+	position: absolute;
+	top: 100%;
+	left: 20%;
+	margin-left: -5px;
+	border-width: 5px;
+	border-style: solid;
+	border-color: #555 transparent transparent transparent;
+}
