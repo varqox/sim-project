@@ -318,7 +318,7 @@ Sandbox::Sandbox() {
 
 		bool operator()() {
 			if (counter_ == 0)
-				return sandbox_.set_message_callback("forbidden syscall: ", syscall_name_, "()");
+				return sandbox_.set_message_callback("forbidden syscall: ", syscall_name_);
 
 			--counter_;
 			return false;
@@ -336,20 +336,6 @@ Sandbox::Sandbox() {
 		SCMP_ACT_TRACE(add_limiting_callback(1, "execve")), SCMP_SYS(execve),
 		0);
 
-	// uname()
-	seccomp_rule_add_both_ctx(
-		SCMP_ACT_TRACE(add_limiting_callback(1, "uname")), SCMP_SYS(uname), 0);
-
-	// set_thread_area()
-	seccomp_rule_add_both_ctx(
-		SCMP_ACT_TRACE(add_limiting_callback(1, "set_thread_area")),
-		SCMP_SYS(set_thread_area), 0);
-
-	// arch_prctl()
-	seccomp_rule_add_throw(x86_64_ctx_,
-		SCMP_ACT_TRACE(add_limiting_callback(1, "arch_prctl")),
-		SCMP_SYS(arch_prctl), 0);
-
 	// prlimit64() - needed by callback to Sandbox::run_child() to limit the VM
 	// size
 	seccomp_rule_add_both_ctx(
@@ -359,8 +345,59 @@ Sandbox::Sandbox() {
 	// access
 	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(access), 0);
 
-	// readlink
-	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(readlink), 0);
+	// readlink(2) is a threshold for the insecure syscalls that are called
+	// during the initialization of glibc - they are allwed before the first
+	// call of readlink(2)
+	{
+		// uname
+		seccomp_rule_add_both_ctx(
+			SCMP_ACT_TRACE(add_callback([&] {
+				if (has_the_readlink_syscall_occurred)
+					return set_message_callback("forbidden syscall: uname");
+
+				return false;
+			})), SCMP_SYS(uname), 0);
+
+		// set_thread_area
+		seccomp_rule_add_throw(x86_ctx_,
+			SCMP_ACT_TRACE(add_callback([&] {
+				if (has_the_readlink_syscall_occurred)
+					return set_message_callback("forbidden syscall: set_thread_area");
+
+				return false;
+			})), SCMP_SYS(set_thread_area), 0);
+
+		// arch_prctl
+		seccomp_rule_add_throw(x86_64_ctx_,
+			SCMP_ACT_TRACE(add_callback([&] {
+				if (has_the_readlink_syscall_occurred)
+					return set_message_callback("forbidden syscall: arch_prctl");
+
+				return false;
+			})), SCMP_SYS(arch_prctl), 0);
+
+		// readlink - x86
+		seccomp_rule_add_throw(x86_ctx_,
+			SCMP_ACT_TRACE(add_callback([&] {
+				has_the_readlink_syscall_occurred = true;
+				X86SyscallRegisters regs(tracee_pid_);
+				regs.syscall() = -1;
+				regs.res() = -ENOENT;
+				regs.set_regs(tracee_pid_);
+				return false;
+			})), SCMP_SYS(readlink), 0);
+
+		// readlink - x86_64
+		seccomp_rule_add_throw(x86_64_ctx_,
+			SCMP_ACT_TRACE(add_callback([&] {
+				has_the_readlink_syscall_occurred = true;
+				X86_64SyscallRegisters regs(tracee_pid_);
+				regs.syscall() = -1;
+				regs.res() = -ENOENT;
+				regs.set_regs(tracee_pid_);
+				return false;
+			})), SCMP_SYS(readlink), 0);
+	}
 
 	// Monitor memory for changes of tracee's virtual memory size
 	{
@@ -650,6 +687,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 {
 	// Reset the state
 	reset_callbacks();
+	has_the_readlink_syscall_occurred = false;
 	tracee_vm_peak_ = 0;
 	message_to_set_in_exit_stat_.clear();
 	allowed_files_ = &allowed_files;
@@ -1005,6 +1043,12 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	}
 
 tracee_died:
+	// trace_vm_peak_ == 0 means that the process did not execve(2)
+	if (not has_the_readlink_syscall_occurred and tracee_vm_peak_ > 0)
+		THROW("The sandbox is somewhat insecure - readlink() as the mark of the"
+			" end of the initialization of glibc in the traced process is not"
+			" reliable now");
+
 	// Message was set
 	if (not message_to_set_in_exit_stat_.empty()) {
 		return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,

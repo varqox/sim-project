@@ -39,6 +39,10 @@ private:
 	FileDescriptor tracee_statm_fd_; // For tracking vm_peak (vm stands for virtual memory)
 	uint64_t tracee_vm_peak_; // In pages
 
+	// Needed by the mechanism that allows more syscalls to be used during the
+	// initialization of glibc in the traced process
+	bool has_the_readlink_syscall_occurred;
+
 	/// Adds rule to x86_ctx_ and x86_64_ctx_
 	template<class... T>
 	void seccomp_rule_add_both_ctx(T&&... args);

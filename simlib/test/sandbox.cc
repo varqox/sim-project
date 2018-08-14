@@ -35,13 +35,14 @@ TEST (Sandbox, run) {
 	const auto test_cases_dir =
 		concat(getExecDir(getpid()), "sandbox_test_cases/");
 
-	auto compile_test_case = [&] (StringView case_filename) {
+	auto compile_test_case = [&] (StringView case_filename, auto&&... cc_flags) {
 		Spawner::ExitStat es = Spawner::run("cc", {
 			"cc",
 			concat_tostr(test_cases_dir, case_filename),
 			"-o",
 			exec.to_string(),
 			"-static",
+			std::forward<decltype(cc_flags)>(cc_flags)...
 		}, {-1, STDOUT_FILENO, STDERR_FILENO});
 
 		// Compilation must be successful
@@ -151,11 +152,110 @@ TEST (Sandbox, run) {
 		EXPECT_LT(es.vm_peak, MEM_LIMIT);
 	}
 
-	compile_test_case("7.c"); // not needed
+	// Testing the allowing of lseek(), dup(), etc. on the closed stdin, stdout and stderr
+	compile_test_case("7.c");
 	es = sandbox.run(exec.to_cstr(), {}, opts, {{"/dev/null", OpenAccess::RDONLY}});
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 0);
 	EXPECT_EQ(es.message, "");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing the use of readlink() as the marking of the end of initialization of glibc
+	compile_test_case("8.c", "-m32");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: uname"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	compile_test_case("8.c", "-m64");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: uname"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	compile_test_case("9.c", "-m32");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: set_thread_area"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	compile_test_case("9.c", "-m64");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 205 - set_thread_area"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	compile_test_case("10.c", "-m32");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 384 - arch_prctl"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	compile_test_case("10.c", "-m64");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: arch_prctl"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing execve
+	compile_test_case("11.c", "-m32");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	compile_test_case("11.c", "-m64");
+	es = sandbox.run(exec.to_cstr(), {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
 	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT((timespec{0, 0}), es.runtime);
