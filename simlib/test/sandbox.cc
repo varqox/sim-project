@@ -2,6 +2,7 @@
 #include "../include/sandbox.h"
 
 #include <gtest/gtest.h>
+#include <linux/version.h>
 #include <sys/syscall.h>
 
 TEST (Sandbox, run) {
@@ -214,17 +215,19 @@ TEST (Sandbox, run) {
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
-	compile_test_case("10.c", "-m32");
-	es = sandbox.run(exec.to_cstr(), {}, opts);
-	EXPECT_EQ(es.si.code, CLD_KILLED);
-	EXPECT_EQ(es.si.status, SIGKILL);
-	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 384 - arch_prctl"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
-	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
-	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
-	EXPECT_LT(0, es.vm_peak);
-	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+	if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)) {
+		compile_test_case("10.c", "-m32");
+		es = sandbox.run(exec.to_cstr(), {}, opts);
+		EXPECT_EQ(es.si.code, CLD_KILLED);
+		EXPECT_EQ(es.si.status, SIGKILL);
+		EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 384 - arch_prctl"));
+		EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+		EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+		EXPECT_LT((timespec{0, 0}), es.runtime);
+		EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+		EXPECT_LT(0, es.vm_peak);
+		EXPECT_LT(es.vm_peak, MEM_LIMIT);
+	}
 
 	compile_test_case("10.c", "-m64");
 	es = sandbox.run(exec.to_cstr(), {}, opts);
