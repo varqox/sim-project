@@ -189,6 +189,9 @@ function copy_to_clipboard(text) {
 	document.body.removeChild(elem);
 }
 function copy_to_clipboard_btn(btn_text, text_to_copy) {
+	if (!document.queryCommandSupported('copy'))
+		return $();
+
 	return $('<a>', {
 		class: 'btn',
 		style: 'position: relative',
@@ -2444,16 +2447,20 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 		if (s.actions.indexOf('s') !== -1)
 			tabs.push('Source', function() {
 				timed_hide_show(elem.parents('.modal'));
-				if (cached_source !== undefined)
+				if (cached_source !== undefined) {
+					elem.append(copy_to_clipboard_btn('Copy to clipboard',
+						$(cached_source).text()));
 					elem.append(cached_source);
-				else {
+				} else {
 					append_loader(elem);
 					$.ajax({
 						url: '/api/submission/' + submission_id + '/source',
 						dataType: 'html',
 						success: function(data) {
 							cached_source = data;
-							elem.append(data);
+							elem.append(copy_to_clipboard_btn('Copy to clipboard',
+								$(cached_source).text()));
+							elem.append(cached_source);
 							remove_loader(elem);
 							centerize_modal(elem.closest('.modal'), false);
 						},
@@ -3838,8 +3845,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 							return;
 						}
 
-						if (document.queryCommandSupported('copy'))
-							entry_link_elem.append(copy_to_clipboard_btn('Copy link', window.location.origin + '/enter_contest/' + data.token));
+						entry_link_elem.append(copy_to_clipboard_btn('Copy link', window.location.origin + '/enter_contest/' + data.token));
 
 						entry_link_elem.append(a_view_button(undefined,
 							'Regenerate link', 'btn blue', dialogue_modal_request.bind(null,
@@ -3890,8 +3896,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						if (data.short_token === null)
 							return;
 
-						if (document.queryCommandSupported('copy'))
-							entry_link_elem.append(copy_to_clipboard_btn('Copy short link', window.location.origin + '/enter_contest/' + data.short_token));
+						entry_link_elem.append(copy_to_clipboard_btn('Copy short link', window.location.origin + '/enter_contest/' + data.short_token));
 
 						entry_link_elem.append(a_view_button(undefined,
 							'Regenerate short link', 'btn blue', dialogue_modal_request.bind(null,
