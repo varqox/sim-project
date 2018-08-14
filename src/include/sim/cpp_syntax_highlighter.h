@@ -17,5 +17,5 @@ public:
 	CppSyntaxHighlighter& operator=(CppSyntaxHighlighter&&) = default;
 
 	// Returns html table containing coloured code @p input
-	std::string operator()(const std::string& input) const;
+	std::string operator()(CStringView input) const;
 };
