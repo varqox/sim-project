@@ -648,9 +648,34 @@ inline StringView getExtension(CStringView file) {
  *
  * @return Extracted filename
  */
-inline CStringView filename(CStringView path) {
-	auto pos = path.rfind('/');
-	return path.substr(pos == CStringView::npos ? 0 : pos + 1);
+template<class T>
+inline std::enable_if_t<std::is_convertible<T, CStringView>::value, CStringView>
+filename(T&& path) {
+	CStringView path_str(std::forward<T>(path));
+	auto pos = path_str.rfind('/');
+	return path_str.substr(pos == CStringView::npos ? 0 : pos + 1);
+}
+
+/**
+ * @brief Returns the filename of the path @p path
+ * @details Examples:
+ *   "/my/path/foo.bar" -> "foo.bar"
+ *   "/my/path/" -> ""
+ *   "/" -> ""
+ *   "/my/path/." -> "."
+ *   "/my/path/.." -> ".."
+ *   "foo" -> "foo"
+ *
+ * @param path given path
+ *
+ * @return Extracted filename
+ */
+template<class T>
+inline std::enable_if_t<!std::is_convertible<T, CStringView>::value, StringView>
+filename(T&& path) {
+	StringView path_str(std::forward<T>(path));
+	auto pos = path_str.rfind('/');
+	return path_str.substr(pos == StringView::npos ? 0 : pos + 1);
 }
 
 /**

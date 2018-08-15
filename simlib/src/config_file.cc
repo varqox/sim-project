@@ -41,10 +41,11 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 
 	Variable tmp; // Used for ignored variables
 	auto buff_beg = buff.data();
+	auto curr_pos = [&]() -> size_t { return buff.data() - buff_beg; };
 
 	auto throw_parse_error = [&](auto&&... args) {
-		string::size_type pos = buff.data() - buff_beg - buff.empty();
-		string::size_type x = pos; // Position of the last newline before pos
+		auto pos = curr_pos() - buff.empty();
+		auto x = pos; // Position of the last newline before pos
 		while (x && config[--x] != '\n') {}
 
 		int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n');
@@ -101,7 +102,6 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			stdlog("Throwing exception: ", pe.what(), "\n", pe.diagnostcs());
 		)
 		throw pe;
-
 	};
 
 	auto extract_value = [&](bool is_in_array) {
@@ -123,8 +123,8 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			}
 			buff.removePrefix(i);
 			throw_parse_error("Missing terminating ' character");
-
 		}
+
 		// Double-quoted string
 		if (buff[0] == '"') {
 			while (buff[++i] != '\n') {
@@ -246,6 +246,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		buff.removeLeading(isWs);
 
 		/* Value */
+
 		Variable *varp; // It is safe to take a pointer to a value in vars, as
 		                // vars is not modified after that
 		if (load_all)
@@ -257,7 +258,10 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 		Variable& var = *varp;
 		if (var.isSet())
 			var.unset();
+
 		var.flag = Variable::SET;
+		var.value_span.beg = curr_pos();
+
 		// Normal
 		if (buff[0] != '[') {
 			if (buff[0] == '\n' || buff[0] == '#') // No value
@@ -270,6 +274,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			DEBUG_CF(stdlog("Array:");)
 			var.flag |= Variable::ARRAY;
 			buff.removePrefix(1); // Skip [
+
 			while (buff.size()) {
 				buff.removeLeading(isspace);
 
@@ -318,6 +323,10 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 				throw_parse_error("Missing terminating ] character at the end "
 					"of an array");
 		}
+
+		// It is not obvious that the below line is correct, but after the
+		// analysis of the above parsing it is correct
+		var.value_span.end = curr_pos();
 
 		/* After the value */
 		buff.removeLeading(isWs);

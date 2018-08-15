@@ -42,6 +42,11 @@ public:
 		std::string s;
 		std::vector<std::string> a;
 
+		struct ValueSpan {
+			size_t beg = 0;
+			size_t end = 0;
+		} value_span; // value occupies [beg, end)
+
 		Variable() : flag(0) {}
 
 		void unset() noexcept {

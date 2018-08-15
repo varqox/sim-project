@@ -105,17 +105,17 @@ public:
 	Simfile() = default;
 
 	/**
-	 * @brief Loads needed variables from @p simfile
+	 * @brief Loads needed variables from @p simfile_contents
 	 * @details Uses ConfigFile::loadConfigFromString
 	 *
-	 * @param simfile Simfile file contents
+	 * @param simfile_contents Simfile file contents
 	 *
 	 * @errors May throw from ConfigFile::loadConfigFromString
 	 */
-	Simfile(std::string simfile) {
+	Simfile(std::string simfile_contents) {
 		config.addVars("name", "label", "checker", "statement", "solutions",
 			"memory_limit", "limits", "scoring", "tests_files");
-		config.loadConfigFromString(std::move(simfile));
+		config.loadConfigFromString(std::move(simfile_contents));
 	}
 
 	Simfile(const Simfile&) = default;

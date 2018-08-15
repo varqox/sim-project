@@ -392,12 +392,16 @@ string dumpConfig(const ConfigFile& cf) {
 			for (auto&& s : p.second.asArray())
 				back_insert(res, "  ",
 					ConfigFile::escapeToDoubleQuotedString(s, 0), '\n');
-			res += "]\n";
+			res += ']';
 		// Other
-		} else
+		} else {
 			back_insert(res, p.first, ": ",
-				ConfigFile::escapeToDoubleQuotedString(p.second.asString(), 0),
-				'\n');
+				ConfigFile::escapeToDoubleQuotedString(p.second.asString(), 0));
+		}
+
+		// Include the value position
+		back_insert(res, " # [", p.second.value_span.beg, ",",
+			p.second.value_span.end, ")\n");
 	});
 	return res;
 }
@@ -406,25 +410,25 @@ TEST (ConfigFile, loadConfigFromString) {
 	// (input, dumped config)
 	vector<pair<string, string>> cases {
 		/*  1 */ {R"===()===", ""},
-		/*  2 */ {"    a  = 1234", "a: \"1234\"\n"},
-		/*  3 */ {" a : eee \t\n ", "a: \"eee\"\n"},
-		/*  4 */ {"a=:eee\t\n ", "a: \":eee\"\n"},
-		/*  5 */ {"a = abą'\n ", "a: \"ab\\xc4\\x85'\"\n"},
-		/*  6 */ {"a: aa'\t\n ", "a: \"aa'\"\n"},
-		/*  7 */ {"a: aa\"\t\n ", "a: \"aa\\\"\"\n"},
-		/*  8 */ {"a: aa\"#aaa\n ", "a: \"aa\\\"\"\n"},
-		/*  9 */ {"a: aa\" #aaa\n ", "a: \"aa\\\"\"\n"},
-		/* 10 */ {"a: aa\" # aaa\n ", "a: \"aa\\\"\"\n"},
-		/* 11 */ {"a: '\"It''s awesome\"'\n ", "a: \"\\\"It's awesome\\\"\"\n"},
-		/* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\"\n"},
-		/* 13 */ {"a = \"ab\\xa61\"\n ", "a: \"ab\\xa61\"\n"},
-		/* 14 */ {"a = b]b", "a: \"b]b\"\n"},
-		/* 15 */ {"a = b,b", "a: \"b,b\"\n"},
-		/* 16 */ {"a = bb]", "a: \"bb]\"\n"},
-		/* 17 */ {"a = bb,", "a: \"bb,\"\n"},
-		/* 18 */ {"a = ,a", "a: \",a\"\n"},
-		/* 19 */ {"a = ]a", "a: \"]a\"\n"},
-		/* 20 */ {"a = a\nb = ,]", "a: \"a\"\nb: \",]\"\n"},
+		/*  2 */ {"    a  = 1234", "a: \"1234\" # [9,13)\n"},
+		/*  3 */ {" a : eee \t\n ", "a: \"eee\" # [5,8)\n"},
+		/*  4 */ {"a=:eee\t\n ", "a: \":eee\" # [2,6)\n"},
+		/*  5 */ {"a = abą'\n ", "a: \"ab\\xc4\\x85'\" # [4,9)\n"},
+		/*  6 */ {"a: aa'\t\n ", "a: \"aa'\" # [3,6)\n"},
+		/*  7 */ {"a: aa\"\t\n ", "a: \"aa\\\"\" # [3,6)\n"},
+		/*  8 */ {"a: aa\"#aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
+		/*  9 */ {"a: aa\" #aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
+		/* 10 */ {"a: aa\" # aaa\n ", "a: \"aa\\\"\" # [3,6)\n"},
+		/* 11 */ {"a: '\"It''s awesome\"'\n ", "a: \"\\\"It's awesome\\\"\" # [3,20)\n"},
+		/* 12 */ {"a = \"abą\"\n ", "a: \"ab\\xc4\\x85\" # [4,10)\n"},
+		/* 13 */ {"a = \"ab\\xa61\"\n ", "a: \"ab\\xa61\" # [4,13)\n"},
+		/* 14 */ {"a = b]b", "a: \"b]b\" # [4,7)\n"},
+		/* 15 */ {"a = b,b", "a: \"b,b\" # [4,7)\n"},
+		/* 16 */ {"a = bb]", "a: \"bb]\" # [4,7)\n"},
+		/* 17 */ {"a = bb,", "a: \"bb,\" # [4,7)\n"},
+		/* 18 */ {"a = ,a", "a: \",a\" # [4,6)\n"},
+		/* 19 */ {"a = ]a", "a: \"]a\" # [4,6)\n"},
+		/* 20 */ {"a = a\nb = ,]", "a: \"a\" # [4,5)\nb: \",]\" # [10,12)\n"},
 		/* 21 */ {R"===(# Server address
 address: 127.7.7.7:8080
 
@@ -475,18 +479,18 @@ test5 = [1, 2
   4
   5 6 7 # This is equivalent to '5 6 7'
 ]
-)===", R"===(a1: " test test "
-a2: "This's awesome"
-address: "127.7.7.7:8080"
-b1: "\n\n'Foo bar'\n\ttest\n # This is not a comment"
-connections: "100"
-empty-var.try_it: ""
-foo: "bar"
+)===", R"===(a1: " test test " # [532,545)
+a2: "This's awesome" # [621,638)
+address: "127.7.7.7:8080" # [26,40)
+b1: "\n\n'Foo bar'\n\ttest\n # This is not a comment" # [686,735)
+connections: "100" # [167,170)
+empty-var.try_it: "" # [303,303)
+foo: "bar" # [415,418)
 test1: [
   "an"
   "inline"
   "array"
-]
+] # [769,788)
 test2: [
   "1"
   "2"
@@ -496,29 +500,29 @@ test2: [
   "6"
   "7"
   "8"
-]
+] # [797,1154)
 test3: [
   "1"
   "2"
   "3"
   "4"
   "5"
-]
+] # [1164,1189)
 test4: [
   "1"
   "2"
   "3"
   "4"
   "5"
-]
+] # [1231,1246)
 test5: [
   "1"
   "2"
   "3"
   "4"
   "5 6 7"
-]
-workers: "2"
+] # [1256,1311)
+workers: "2" # [103,104)
 )==="},
 	};
 
@@ -527,8 +531,8 @@ workers: "2"
 
 		ConfigFile cf;
 		cf.loadConfigFromString(p.first, true);
-		RecordProperty("Case", i);
-		EXPECT_EQ(dumpConfig(cf), p.second) << "Case: " << i << endl;
+		RecordProperty("Case", i + 1);
+		EXPECT_EQ(dumpConfig(cf), p.second) << "Case: " << i + 1 << endl;
 	}
 
 	ConfigFile cf; // It do not have to be cleaned - we watch only for
