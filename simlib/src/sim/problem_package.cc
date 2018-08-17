@@ -21,7 +21,7 @@ void PackageContents::load_from_directory(string pkg_path) {
 		path.append(filename, '/'); // Update path
 		add_path_to_pc();
 		// Go through the directory entries
-		forEachDirComponent(CStringView(path.data(), path.size),
+		forEachDirComponent(path.to_cstr(),
 			[&](dirent* file) {
 				if (file->d_type == DT_DIR)
 					self(self, file->d_name);
