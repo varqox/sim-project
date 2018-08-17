@@ -20,9 +20,9 @@ string Simfile::dump() const {
 		"solutions: [");
 
 	if (solutions.size()) {
-		back_insert(res, solutions[0]);
+		back_insert(res, ConfigFile::escapeString(solutions[0]));
 		for (uint i = 1; i < solutions.size(); ++i)
-			back_insert(res, ", ", solutions[i]);
+			back_insert(res, ", ", ConfigFile::escapeString(solutions[i]));
 	}
 	back_insert(res, "]\n");
 
