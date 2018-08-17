@@ -1740,6 +1740,14 @@ constexpr inline bool isDigitNotGreaterThan(StringView s) noexcept {
 	return isDigit(s) && !StrNumCompare()({x.data(), x.size()}, s);
 }
 
+/// Checks whether string @p s consist only of digits and is not less than
+/// @p MIN_VAL
+template<uintmax_t MIN_VAL>
+constexpr inline bool isDigitNotLessThan(StringView s) noexcept {
+	constexpr auto x = meta::ToString<MIN_VAL>::arr_value;
+	return isDigit(s) && !StrNumCompare()(s, {x.data(), x.size()});
+}
+
 /**
  * @brief Converts s: [beg, end) to @p T
  * @details if end > s.size() or end == StringView::npos then end = s.size()
