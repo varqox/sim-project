@@ -90,9 +90,11 @@ TEST (Conver, constructSimfile) {
 				// problem with random time limit if they were set using the model
 				// solution.
 				for (auto& group : cres.simfile.tgroups)
-					for (auto& test : group.tests)
+					for (auto& test : group.tests) {
+						EXPECT_GT(test.time_limit, 0); // Time limits should not have been set to 0
 						if (test.time_limit < 1e6)
 							test.time_limit = 0;
+					}
 
 				if (regenerate_outs) {
 					putFileContents(concat_tostr(base, "simfile.out"),

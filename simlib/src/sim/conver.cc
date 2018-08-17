@@ -499,7 +499,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 		run_model_solution = opts.reset_time_limits_using_model_solution;
 		for (auto&& g : sf.tgroups)
 			for (auto&& t : g.tests)
-				t.time_limit = opts.global_time_limit;
+				t.time_limit = opts.global_time_limit * 1000000;
 	}
 
 	if (not run_model_solution) {

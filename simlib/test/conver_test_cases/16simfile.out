@@ -5,17 +5,17 @@ checker: check/checker.c
 solutions: [sol.cpp]
 memory_limit: 32
 limits: [
-	000 0
-	6ocen 0
+	000 11
+	6ocen 11
 
-	1a 0
-	1d 0
-	1file 0
+	1a 11
+	1d 11
+	1file 11
 
-	3 0 9
-	3file 0
+	3 11 9
+	3file 11
 
-	5 0
+	5 11
 ]
 scoring: [
 	000 0
