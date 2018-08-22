@@ -3026,7 +3026,65 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 	}, '/p/' + problem_id + '/edit' + (opt_hash === undefined ? '' : opt_hash), undefined, false);
 }
 function delete_problem(as_modal, problem_id) {
-	// TODO
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		console.log(data);
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+		var problem = data[0];
+		if (problem.actions.indexOf('D') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Delete problem', '/api/problem/' + problem_id + '/delete',
+			$('<center>', {
+				html: [
+					$('<label>', {
+						html: [
+							'Are you sure to delete the problem ',
+							a_view_button('/p/' + problem.id, problem.name,
+								undefined, view_problem.bind(null, true, problem.id)),
+							'?'
+						]
+					}),
+					$('<div>', {
+						style: 'margin-top: 12px',
+						html: [
+							$('<input>', {
+								class: 'btn-small red',
+								type: 'submit',
+								value: 'Yes, delete it'
+							}),
+							$('<a>', {
+								class: 'btn-small',
+								text: 'No, take me back',
+								click: function() {
+									var modal = $(this).closest('.modal');
+									if (modal.length === 0)
+										history.back();
+									else
+										close_modal(modal);
+								}
+							})
+						]
+					})
+				]
+			}), function(resp, loader_parent) {
+				if (as_modal) {
+					show_success_via_loader(this, 'Delete has been scheduled.');
+					view_job(true, resp);
+				} else {
+					this.parent().remove();
+					window.location.href = '/jobs/' + resp;
+				}
+			}
+		));
+	}, '/p/' + problem_id + '/delete');
 }
 function rejudge_problem_submissions(problem_id) {
 	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {

@@ -252,7 +252,8 @@ int main(int argc, char **argv) {
 			"`reveal_score` BOOLEAN NOT NULL,"
 			"PRIMARY KEY (id),"
 			"UNIQUE (contest_round_id, item),"
-			"KEY (contest_id)"
+			"KEY (contest_id),"
+			"KEY (problem_id, contest_id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 
 	try_to_create_table("contest_users",

@@ -260,9 +260,13 @@ void Sim::api_jobs() {
 			break;
 		}
 
+		case JobType::DELETE_PROBLEM: {
+			append("\"problem\":", res[AUX_ID]);
+			break;
+		}
+
 		case JobType::VOID:
 		case JobType::EDIT_PROBLEM:
-		case JobType::DELETE_PROBLEM:
 			break;
 		}
 		append("},");

@@ -113,7 +113,7 @@ void Sim::problems_problem() {
 
 	} else if (next_arg == "delete") {
 		page_template(concat("Delete problem ", problems_pid));
-		append("TODO");
+		append("<script>delete_problem(false, ", problems_pid, ");</script>");
 
 	} else
 		return error404();
