@@ -689,18 +689,21 @@ static void process_local_job(WorkersPool::NextJob job) {
 		using JT = JobType;
 		switch (JT(jtype_u)) {
 		case JT::ADD_PROBLEM:
-			addProblem(job.id, creator, info);
+			add_problem(job.id, creator, info);
 			break;
 
 		case JT::REUPLOAD_PROBLEM:
-			reuploadProblem(job.id, creator, info, aux_id);
+			reupload_problem(job.id, creator, info, aux_id);
 			break;
 
 		case JT::EDIT_PROBLEM:
-		case JT::DELETE_PROBLEM:
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			mysql.update(concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
 				" WHERE id=", job.id));
+			break;
+
+		case JT::DELETE_PROBLEM:
+			delete_problem(job.id, aux_id);
 			break;
 
 		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:

@@ -306,8 +306,8 @@ void Sim::api_problem() {
 		return api_problem_reupload();
 	else if (next_arg == "edit")
 		return api_problem_edit();
-	// else if (next_arg == "delete")
-	// 	return api_problem_delete();
+	else if (next_arg == "delete")
+		return api_problem_delete();
 	else
 		return api_error400();
 }
@@ -473,6 +473,26 @@ void Sim::api_problem_rejudge_all_submissions() {
 		mysql_date(), jobs::dumpString(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
+}
+
+void Sim::api_problem_delete() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::DELETE))
+		return api_error403();
+
+	// Queue reselecting final submissions
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_PROBLEM_STR ","
+			" ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_PROBLEM),
+		mysql_date(), problems_pid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
 }
 
 void Sim::api_problem_reupload() {

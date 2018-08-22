@@ -24,7 +24,7 @@ enum Action {
 
 // Before judging the model solution
 template<Action action>
-static void firstStage(uint64_t job_id, AddProblemInfo& info) {
+static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	STACK_UNWINDING_MARK;
 
 	auto source_package = concat<PATH_MAX>("jobs_files/", job_id, ".zip");
@@ -35,7 +35,8 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 	sim::Conver::ReportBuff job_log;
 	job_log.append("Stage: FIRST");
 
-	auto set_failure = [&] {
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
@@ -68,23 +69,19 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
 	try {
 		cr = conver.constructSimfile(copts);
 	} catch (const std::exception& e) {
-		job_log.append(conver.getReport(), "Conver failed: ", e.what());
-		return set_failure();
+		return set_failure(conver.getReport(), "Conver failed: ", e.what());
 	}
 
 	// Check problem's name's length
 	if (cr.simfile.name.size() > PROBLEM_NAME_MAX_LEN) {
-		job_log.append("Problem's name is too long (max allowed length: ",
+		return set_failure("Problem's name is too long (max allowed length: ",
 			PROBLEM_NAME_MAX_LEN, ')');
-		return set_failure();
 	}
 
 	// Check problem's label's length
-	if (cr.simfile.label.size() > PROBLEM_LABEL_MAX_LEN) {
-		job_log.append("Problem's label is too long (max allowed length: ",
+	if (cr.simfile.label.size() > PROBLEM_LABEL_MAX_LEN)
+		return set_failure("Problem's label is too long (max allowed length: ",
 			PROBLEM_LABEL_MAX_LEN, ')');
-		return set_failure();
-	}
 
 	job_log.append(conver.getReport());
 
@@ -137,7 +134,7 @@ static void firstStage(uint64_t job_id, AddProblemInfo& info) {
  * @errors If any error occurs an appropriate exception is thrown
  */
 template<Action action>
-static uint64_t secondStage(uint64_t job_id, StringView job_owner,
+static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 	const AddProblemInfo& info, sim::Conver::ReportBuff& job_log)
 {
 	STACK_UNWINDING_MARK;
@@ -172,7 +169,7 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
 
 	/* Begin transaction */
 
-	// SQLite transaction is handled in the function addProblem() that calls
+	// SQLite transaction is handled in the function add_problem() that calls
 	// this function so we don't have to worry about that
 	auto rollbacker = [&] {
 		SignalBlocker sb; // Prevent the transaction rollback from interruption
@@ -284,14 +281,14 @@ static uint64_t secondStage(uint64_t job_id, StringView job_owner,
  * @tparam Trait trait to use
 */
 template<Action action, class Func>
-static void addProblem(uint64_t job_id, StringView job_owner, StringView aux_id,
+static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id,
 	AddProblemInfo& info, Func&& success_callback)
 {
 	STACK_UNWINDING_MARK;
 
 	switch (info.stage) {
 	case AddProblemInfo::FIRST:
-		firstStage<action>(job_id, info);
+		first_stage<action>(job_id, info);
 		break;
 
 	case AddProblemInfo::SECOND: {
@@ -302,7 +299,7 @@ static void addProblem(uint64_t job_id, StringView job_owner, StringView aux_id,
 		uint64_t apid; // Added problem's id
 		try {
 			sqlite.execute("BEGIN");
-			apid = secondStage<action>(job_id, job_owner, info, job_log);
+			apid = second_stage<action>(job_id, job_owner, info, job_log);
 			success_callback(apid, job_log);
 			sqlite.execute("COMMIT");
 
@@ -364,11 +361,11 @@ static void add_jobs_to_judge_problem_solutions(uint64_t problem_id) {
 	jobs::notify_job_server();
 }
 
-void addProblem(uint64_t job_id, StringView job_owner, StringView info) {
+void add_problem(uint64_t job_id, StringView job_owner, StringView info) {
 	STACK_UNWINDING_MARK;
 
 	AddProblemInfo p_info {info};
-	addProblem<Action::ADDING>(job_id, job_owner, "", p_info,
+	add_problem<Action::ADDING>(job_id, job_owner, "", p_info,
 		[&](uint64_t problem_id, sim::Conver::ReportBuff&) {
 			STACK_UNWINDING_MARK;
 
@@ -385,13 +382,13 @@ void addProblem(uint64_t job_id, StringView job_owner, StringView info) {
 
 }
 
-void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
-	StringView aux_id)
+void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
+	StringView problem_id)
 {
 	STACK_UNWINDING_MARK;
 
 	AddProblemInfo p_info {info};
-	addProblem<Action::REUPLOADING>(job_id, job_owner, aux_id, p_info,
+	add_problem<Action::REUPLOADING>(job_id, job_owner, problem_id, p_info,
 		[&](uint64_t tmp_problem_id, sim::Conver::ReportBuff& job_log) {
 			STACK_UNWINDING_MARK;
 
@@ -401,7 +398,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			vector<pair<bool, string>> pbackup;
 			auto stmt = mysql.prepare("SELECT * FROM problems"
 				" WHERE id=?");
-			stmt.bindAndExecute(aux_id);
+			stmt.bindAndExecute(problem_id);
 			uint n = stmt.fields_num();
 
 			InplaceArray<InplaceBuff<65536>, 16> buff {n};
@@ -440,7 +437,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			string srestore_sql;
 			stmt = mysql.prepare("SELECT * FROM submissions"
 				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR " AND problem_id=?");
-			stmt.bindAndExecute(aux_id);
+			stmt.bindAndExecute(problem_id);
 			if (stmt.next()) {
 				n = stmt.fields_num();
 				// Restore sql
@@ -469,7 +466,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 				} while (stmt.next());
 			}
 
-			auto problem_path = concat<PATH_MAX>("problems/", aux_id, ".zip");
+			auto problem_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
 			auto backuped_problem = concat<PATH_MAX>(problem_path, ".backup");
 
 			(void)remove(backuped_problem.to_cstr());
@@ -514,19 +511,19 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			});
 
 			stmt = mysql.prepare("SELECT added FROM problems WHERE id=?");
-			stmt.bindAndExecute(aux_id);
+			stmt.bindAndExecute(problem_id);
 			InplaceBuff<32> added;
 			stmt.res_bind_all(added);
 			throw_assert(stmt.next());
 
 			// Delete the old problem
 			stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
-			stmt.bindAndExecute(aux_id);
+			stmt.bindAndExecute(problem_id);
 
 			// Replace the old problem with the new one
 			stmt = mysql.prepare("UPDATE problems"
 				" SET id=?, type=?, owner=?, added=? WHERE id=?");
-			stmt.bindAndExecute(aux_id,
+			stmt.bindAndExecute(problem_id,
 				std::underlying_type_t<ProblemType>(p_info.problem_type),
 				(previous_owner.empty() ? job_owner : previous_owner),
 				added, tmp_problem_id);
@@ -541,7 +538,7 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			// Replace the problem in the SQLite FTS5 table `problems`
 			SQLite::Statement sqlite_stmt {sqlite.prepare(
 				"UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
-			sqlite_stmt.bindText(1, aux_id, SQLITE_STATIC);
+			sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
 			sqlite_stmt.bindInt64(2, tmp_problem_id);
 			throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
@@ -549,17 +546,59 @@ void reuploadProblem(uint64_t job_id, StringView job_owner, StringView info,
 			stmt = mysql.prepare("DELETE FROM submissions"
 				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR
 					" AND problem_id=?");
-			stmt.bindAndExecute(aux_id);
+			stmt.bindAndExecute(problem_id);
 
 			// Activate the new problem's solutions' submissions
 			stmt = mysql.prepare("UPDATE submissions"
 				" SET problem_id=?, type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE problem_id=?");
-			stmt.bindAndExecute(aux_id, tmp_problem_id);
+			stmt.bindAndExecute(problem_id, tmp_problem_id);
 
-			add_jobs_to_judge_problem_solutions(strtoull(aux_id));
+			add_jobs_to_judge_problem_solutions(strtoull(problem_id));
 
 			backup_restorer.cancel();
 			(void)remove(backuped_problem.to_cstr());
 		});
+}
+
+void delete_problem(uint64_t job_id, StringView problem_id) {
+	sim::Conver::ReportBuff job_log;
+
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(job_log.str, job_id);
+
+		stdlog("Job ", job_id, ":\n", job_log.str);
+	};
+
+	// Lock the tables to be able to safely delete problem
+	{
+		mysql.update("LOCK TABLES problems WRITE, submissions WRITE,"
+			" contest_problems READ");
+		auto lock_guard = make_call_in_destructor([&]{
+			mysql.update("UNLOCK TABLES");
+		});
+
+		// Check whether the problem is not used as contest problem
+		auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
+			" WHERE problem_id=? LIMIT 1");
+		stmt.bindAndExecute(problem_id);
+		if (stmt.next()) {
+			lock_guard.call_and_cancel();
+			return set_failure("There exists a contest problem that uses this problem");
+		}
+
+		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");
+		stmt.bindAndExecute(problem_id);
+
+		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
+		stmt.bindAndExecute(problem_id);
+	}
+
+	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
+		", data=? WHERE id=?");
+	stmt.bindAndExecute(job_log.str, job_id);
 }

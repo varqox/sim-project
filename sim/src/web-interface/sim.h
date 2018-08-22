@@ -121,7 +121,7 @@ private:
 
 	void api_problem_edit_tags();
 
-	// void api_problem_delete();
+	void api_problem_delete();
 
 	// users_api.cc
 	void api_users();
