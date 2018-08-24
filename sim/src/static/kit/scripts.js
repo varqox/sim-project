@@ -2588,14 +2588,16 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 				td = document.createElement('td');
 				// Contest
 				if (this_.show_contest) {
-					td.appendChild(a_view_button('/c/c' + x.contest_id, x.contest_name, '', view_contest.bind(null, true, x.contest_id)));
+					td.appendChild(a_view_button('/c/c' + x.contest_id, x.contest_name,
+						undefined, view_contest.bind(null, true, x.contest_id)));
 					td.appendChild(document.createTextNode(' / '));
 				}
 				td.appendChild(a_view_button('/c/r' + x.contest_round_id,
-					x.contest_round_name, '', view_contest_round.bind(null, true, x.contest_round_id)));
+					x.contest_round_name, undefined,
+					view_contest_round.bind(null, true, x.contest_round_id)));
 				td.appendChild(document.createTextNode(' / '));
 				td.appendChild(a_view_button('/c/p' + x.contest_problem_id,
-					x.contest_problem_name, '',
+					x.contest_problem_name, undefined,
 					view_contest_problem.bind(null, true, x.contest_problem_id)));
 			}
 			row.appendChild(td);
@@ -3208,6 +3210,17 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 				new JobsLister(j_table, '/p' + problem_id).monitor_scroll();
 			});
 
+		if (actions.indexOf('c') !== -1)
+			tabs.push('Attaching contest problems', function() {
+				var acp_table = $('<table>', {
+					class: 'attaching-contest-problems stripped'
+				});
+				elem.append($('<div>', {
+					html: acp_table
+				}));
+				new AttachingContestProblemsLister(acp_table, problem_id).monitor_scroll();
+			});
+
 		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
 	}, '/p/' + problem_id + (opt_hash === undefined ? '' : opt_hash), undefined, false);
@@ -3341,6 +3354,57 @@ function problem_chooser(as_modal /*= true*/, opt_hash /*= ''*/) {
 
 			tab_problems_lister($(this));
 		});
+}
+function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/) {
+	var this_ = this;
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	Lister.call(this, elem);
+	this.query_url = '/api/problem/' + problem_id + '/attaching_contest_problems' + query_suffix;
+	this.query_suffix = '';
+
+	this.process_api_response = function(data, modal) {
+		if (this_.elem.children('thead').length === 0) {
+			if (data.length === 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'attaching-contest-problems always_in_view',
+					// class: 'attaching-contest-problems',
+					html: '<p>There are no contest problems using (attaching) this problem...</p>'
+				}));
+				remove_loader(this_.elem.parent());
+				timed_hide_show(modal);
+				return;
+			}
+
+			this_.elem.html('<thead><tr>' +
+					'<th>Contest problem</th>' +
+				'</tr></thead><tbody></tbody>');
+		}
+
+		for (var x in data) {
+			x = data[x];
+			this_.query_suffix = '/<' + x.problem_id;
+
+			var row = $('<tr>');
+			row.append($('<td>', {
+				html: [
+					a_view_button('/c/c' + x.contest_id, x.contest_name, undefined,
+						view_contest.bind(null, true, x.contest_id)),
+					' / ',
+					a_view_button('/c/r' + x.round_id, x.round_name, undefined,
+						view_contest_round.bind(null, true, x.round_id)),
+					' / ',
+					a_view_button('/c/p' + x.problem_id, x.problem_name, undefined,
+						view_contest_problem.bind(null, true, x.problem_id))
+				]
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
+	};
+
+	this.fetch_more();
 }
 
 /* ================================ Contests ================================ */

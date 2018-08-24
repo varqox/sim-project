@@ -1631,6 +1631,25 @@ table.problems .tags {
 	flex-wrap: wrap;
 }
 
+/* Attaching contest problems */
+table.attaching-contest-problems {
+	/*display: inline-table;*/
+	margin: 6px 0;
+}
+table.attaching-contest-problems th {
+	padding: 6px;
+	line-height: 20px;
+	min-width: 135px;
+}
+table.attaching-contest-problems td > a {
+	white-space: nowrap;
+}
+table.attaching-contest-problems td {
+	padding: 4px 16px 4px 8px;
+	line-height: 20px;
+	border-top: 1px solid #bbb;
+}
+
 /* Jobs */
 table.jobs {
 	/*display: inline-table;*/

@@ -588,7 +588,9 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 		stmt.bindAndExecute(problem_id);
 		if (stmt.next()) {
 			lock_guard.call_and_cancel();
-			return set_failure("There exists a contest problem that uses this problem");
+			return set_failure("There exists a contest problem that uses"
+				" (attaches) this problem. You have to delete all of them to be"
+				" able to delete this problem.");
 		}
 
 		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");

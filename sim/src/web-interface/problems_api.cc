@@ -216,6 +216,8 @@ void Sim::api_problems() {
 			append('H');
 		if (uint(perms & PERM::DELETE))
 			append('D');
+		if (uint(perms & PERM::VIEW_ATTACHING_CONTEST_PROBLEMS))
+			append('c');
 		append("\",");
 
 		auto append_tags = [&](bool h) {
@@ -308,6 +310,8 @@ void Sim::api_problem() {
 		return api_problem_edit();
 	else if (next_arg == "delete")
 		return api_problem_delete();
+	else if (next_arg == "attaching_contest_problems")
+		return api_problem_attaching_contest_problems();
 	else
 		return api_error400();
 }
@@ -581,4 +585,72 @@ void Sim::api_problem_edit_tags() {
 		return delete_tag();
 	else
 		return api_error400();
+}
+
+void Sim::api_problem_attaching_contest_problems() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::VIEW_ATTACHING_CONTEST_PROBLEMS))
+		return api_error403();
+
+	InplaceBuff<512> query;
+	query.append("SELECT c.id, c.name, r.id, r.name, p.id, p.name"
+		" FROM contest_problems p"
+		" STRAIGHT_JOIN contests c ON c.id=p.contest_id"
+		" STRAIGHT_JOIN contest_rounds r ON r.id=p.contest_round_id"
+		" WHERE p.problem_id=", problems_pid);
+
+	enum ColumnIdx {
+		CID, CNAME, CRID, CRNAME, CPID, CPNAME
+	};
+
+	// Process restrictions
+	StringView next_arg = url_args.extractNextArg();
+	for (bool id_condition_occurred = false; next_arg.size();
+		next_arg = url_args.extractNextArg())
+	{
+		auto arg = decodeURI(next_arg);
+		char cond = arg[0];
+		StringView arg_id = StringView{arg}.substr(1);
+
+		if (not isDigit(arg_id))
+			return api_error400();
+
+		// ID condition
+		if (isIn(cond, {'<', '>', '='})) {
+			if (id_condition_occurred)
+				return api_error400("ID condition specified more than once");
+
+			query.append(" AND p.id", arg);
+			id_condition_occurred = true;
+
+		} else
+			return api_error400();
+	}
+
+	// Execute query
+	query.append(" ORDER BY p.id DESC LIMIT 50");
+	auto res = mysql.query(query);
+
+	// Column names
+	append("[\n{\"columns\":["
+			"\"contest_id\","
+			"\"contest_name\","
+			"\"round_id\","
+			"\"round_name\","
+			"\"problem_id\","
+			"\"problem_name\""
+		"]}");
+
+	while (res.next()) {
+		append(",\n[", res[CID], ",",
+			jsonStringify(res[CNAME]), ",",
+			res[CRID], ",",
+			jsonStringify(res[CRNAME]), ",",
+			res[CPID], ",",
+			jsonStringify(res[CPNAME]), "]");
+	}
+
+	append("\n]");
 }
