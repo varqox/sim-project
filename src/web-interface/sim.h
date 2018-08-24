@@ -123,6 +123,8 @@ private:
 
 	void api_problem_delete();
 
+	void api_problem_attaching_contest_problems();
+
 	// users_api.cc
 	void api_users();
 
@@ -562,6 +564,7 @@ public:
 		EDIT_TAGS = 1 << 14,
 		EDIT_HIDDEN_TAGS = 1 << 15,
 		DELETE = EDIT,
+		VIEW_ATTACHING_CONTEST_PROBLEMS = DELETE,
 	};
 
 private:
