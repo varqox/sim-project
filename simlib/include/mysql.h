@@ -36,7 +36,7 @@ public:
 	EnumVal& operator=(const EnumVal&) = default;
 	EnumVal& operator=(EnumVal&&) = default;
 
-	EnumVal(ValType val) : val_(val) {}
+	explicit EnumVal(ValType val) : val_(val) {}
 
 	EnumVal(Enum val) : val_(static_cast<ValType>(val)) {}
 
@@ -47,9 +47,11 @@ public:
 
 	operator Enum() const noexcept { return Enum(val_); }
 
-	operator ValType() const noexcept { return val_; }
+	ValType int_val() const noexcept { return val_; }
 
-	operator ValType&() noexcept { return val_; }
+	explicit operator ValType() const noexcept { return val_; }
+
+	explicit operator ValType&() & noexcept { return val_; }
 };
 
 #if __cplusplus > 201402L
@@ -417,6 +419,11 @@ public:
 		bind_isnull(idx, x.has_value_);
 	}
 
+	template<class T>
+	void bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
+		bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
+	}
+
 	void fixBinds() {
 		if (mysql_stmt_bind_param(stmt_, params_.data()))
 			THROW(mysql_stmt_error(stmt_));
@@ -566,6 +573,11 @@ public:
 	void res_bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
 		res_bind(idx, x.value_);
 		res_bind_isnull(idx, x.has_value_);
+	}
+
+	template<class T>
+	void res_bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
+		res_bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
 	}
 
 	void resFixBinds() {
