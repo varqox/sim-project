@@ -191,8 +191,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		"INSERT INTO problems (rowid, type, name, label)"
 		" VALUES(?, ?, ?, ?)")};
 	sqlite_stmt.bindInt64(1, problem_id);
-	sqlite_stmt.bindInt(2,
-		std::underlying_type_t<ProblemType>(info.problem_type));
+	sqlite_stmt.bindInt(2, EnumVal<ProblemType>(info.problem_type).int_val());
 	sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
 	sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
 	throw_assert(sqlite_stmt.step() == SQLITE_DONE);
@@ -229,7 +228,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 	// Submit the solutions
 	job_log.append("Submitting solutions...");
 	const string zero_date = mysql_date(0);
-	std::underlying_type_t<SubmissionLanguage> lang;
+	EnumVal<SubmissionLanguage> lang;
 	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, language,"
 			" initial_status, full_status, submit_time, last_judgment,"
@@ -243,8 +242,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		job_log.append("Submit: ", solution);
 
 		current_date = mysql_date();
-		lang = std::underlying_type_t<SubmissionLanguage>(fname_to_lang(
-			solution));
+		lang = fname_to_lang(solution);
 		stmt.execute();
 		uint64_t submission_id = mysql.insert_id();
 
@@ -295,7 +293,7 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 		sim::Conver::ReportBuff job_log;
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=?, aux_id=?, data=CONCAT(data,?) WHERE id=?");
-		JobStatus status; // [[maybe_uninitilized]]
+		EnumVal<JobStatus> status; // [[maybe_uninitilized]]
 		uint64_t apid; // Added problem's id
 		try {
 			sqlite.execute("BEGIN");
@@ -323,8 +321,7 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 				stmt.bind(1, nullptr);
 		}
 
-		auto jstatus = std::underlying_type_t<JobStatus>(status);
-		stmt.bind(0, jstatus);
+		stmt.bind(0, status);
 		stmt.bind(2, job_log.str);
 		stmt.bind(3, job_id);
 		stmt.fixAndExecute();
@@ -373,8 +370,7 @@ void add_problem(uint64_t job_id, StringView job_owner, StringView info) {
 			auto stmt = mysql.prepare("UPDATE problems p, submissions s"
 				" SET p.type=?, s.type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE p.id=? AND s.problem_id=?");
-			stmt.bindAndExecute(
-				std::underlying_type_t<ProblemType>(p_info.problem_type),
+			stmt.bindAndExecute(EnumVal<ProblemType>(p_info.problem_type),
 				problem_id, problem_id);
 
 			add_jobs_to_judge_problem_solutions(problem_id);
@@ -524,7 +520,7 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 			stmt = mysql.prepare("UPDATE problems"
 				" SET id=?, type=?, owner=?, added=? WHERE id=?");
 			stmt.bindAndExecute(problem_id,
-				std::underlying_type_t<ProblemType>(p_info.problem_type),
+				EnumVal<ProblemType>(p_info.problem_type),
 				(previous_owner.empty() ? job_owner : previous_owner),
 				added, tmp_problem_id);
 

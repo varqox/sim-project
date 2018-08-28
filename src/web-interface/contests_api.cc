@@ -3,22 +3,21 @@
 #include <sim/jobs.h>
 #include <sim/utilities.h>
 
-using MySQL::bind_arg;
 using SFSM = SubmissionFinalSelectingMethod;
 
 inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
 	InfDatetime full_results, StringView curr_mysql_date,
-	SubmissionStatus full_status, bool isnull_full_status,
-	SubmissionStatus initial_status, bool isnull_initial_status)
+	Optional<SubmissionStatus> full_status,
+	Optional<SubmissionStatus> initial_status)
 {
 	if (uint(cperms & Sim::ContestPermissions::ADMIN) or
 		full_results <= curr_mysql_date)
 	{
-		if (not isnull_full_status)
-			return {"\"", css_color_class(full_status), "\""};
+		if (full_status.has_value())
+			return {"\"", css_color_class(full_status.value()), "\""};
 
-	} else if (not isnull_initial_status)
-		return {"\"", css_color_class(initial_status), "\""};
+	} else if (initial_status.has_value())
+		return {"\"", css_color_class(initial_status.value()), "\""};
 
 	return "null";
 }
@@ -44,9 +43,11 @@ void Sim::append_contest_actions_str() {
 	append('"');
 }
 
-static constexpr inline const char* user_mode_to_json(ContestUserMode cum) {
-	switch (cum) {
-	case ContestUserMode::IS_NULL: return "null";
+static constexpr inline const char* user_mode_to_json(Optional<ContestUserMode> cum) {
+	if (not cum.has_value())
+		return "null";
+
+	switch (cum.value()) {
 	case ContestUserMode::CONTESTANT: return "\"contestant\"";
 	case ContestUserMode::MODERATOR: return "\"moderator\"";
 	case ContestUserMode::OWNER: return "\"owner\"";
@@ -159,8 +160,8 @@ void Sim::api_contests() {
 		StringView cid = res[CID];
 		StringView name = res[CNAME];
 		bool is_public = strtoull(res[IS_PUBLIC]);
-		CUM umode = (res.is_null(USER_MODE) ? CUM::IS_NULL :
-			CUM(strtoull(res[USER_MODE])));
+		auto umode = (res.is_null(USER_MODE) ? std::nullopt :
+			Optional<CUM>(CUM(strtoull(res[USER_MODE]))));
 
 		contests_perms = contests_get_permissions(is_public, umode);
 
@@ -222,15 +223,13 @@ void Sim::api_contest() {
 		(session_is_open ? session_user_id : StringView()), contests_cid);
 
 	bool is_public;
-	my_bool umode_is_null;
 	InplaceBuff<meta::max(CONTEST_NAME_MAX_LEN, CONTEST_ROUND_NAME_MAX_LEN,
 		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
-	std::underlying_type_t<CUM> umode_u;
-	stmt.res_bind_all(name, is_public, bind_arg(umode_u, umode_is_null));
+	MySQL::Optional<EnumVal<CUM>> umode;
+	stmt.res_bind_all(name, is_public, umode);
 	if (not stmt.next())
 		return api_error404();
 
-	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	next_arg = url_args.extractNextArg();
@@ -326,11 +325,10 @@ void Sim::api_contest() {
 	append("\n],\n[");
 
 	uint64_t problem_id;
-	std::underlying_type_t<SFSM> final_selecting_method;
+	EnumVal<SFSM> final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 	bool reveal_score;
-	std::underlying_type_t<SubmissionStatus> initial_status, full_status;
-	my_bool isnull_initial_status, isnull_full_status;
+	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
@@ -348,7 +346,7 @@ void Sim::api_contest() {
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
 			problem_label, name, item, final_selecting_method, reveal_score,
-			MySQL::bind_arg(full_status, isnull_full_status));
+			full_status);
 
 	} else {
 		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
@@ -372,8 +370,7 @@ void Sim::api_contest() {
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
 			problem_label, name, item, final_selecting_method, reveal_score,
-			MySQL::bind_arg(initial_status, isnull_initial_status),
-			MySQL::bind_arg(full_status, isnull_full_status));
+			initial_status, full_status);
 	}
 
 	while (stmt.next()) {
@@ -383,12 +380,11 @@ void Sim::api_contest() {
 			jsonStringify(problem_label), ',',
 			jsonStringify(name), ',',
 			item, ',',
-			sfsm_to_json(SFSM(final_selecting_method)),
+			sfsm_to_json(final_selecting_method),
 			(reveal_score ? ",true," : ",false,"),
 			color_class_json(contests_perms,
 				round2full_results[strtoull(contests_crid)], curr_date,
-				SubmissionStatus(full_status), isnull_full_status,
-				SubmissionStatus(initial_status), isnull_initial_status),
+				full_status, initial_status),
 			"],");
 	}
 
@@ -415,20 +411,17 @@ void Sim::api_contest_round() {
 		contests_crid);
 
 	bool is_public;
-	my_bool umode_is_null;
 	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str, ends_str;
-	std::underlying_type_t<CUM> umode_u;
+	MySQL::Optional<EnumVal<CUM>> umode;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<meta::max(CONTEST_ROUND_NAME_MAX_LEN,
 		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
 	uint item;
 	stmt.res_bind_all(contests_cid, cname, is_public, name, item,
-		ranking_exposure_str, begins_str, full_results_str, ends_str,
-		bind_arg(umode_u, umode_is_null));
+		ranking_exposure_str, begins_str, full_results_str, ends_str, umode);
 	if (not stmt.next())
 		return api_error404();
 
-	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	if (uint(~contests_perms & PERM::VIEW))
@@ -518,16 +511,13 @@ void Sim::api_contest_round() {
 		stmt.bindAndExecute(nullptr, nullptr, contests_crid);
 
 	uint64_t problem_id;
-	std::underlying_type_t<SFSM> final_selecting_method;
+	EnumVal<SFSM> final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 	bool reveal_score;
-	std::underlying_type_t<SubmissionStatus> initial_status, full_status;
-	my_bool isnull_initial_status, isnull_full_status;
+	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	stmt.res_bind_all(contests_cpid, problem_id, problem_label, name, item,
-		final_selecting_method, reveal_score,
-		MySQL::bind_arg(initial_status, isnull_initial_status),
-		MySQL::bind_arg(full_status, isnull_full_status));
+		final_selecting_method, reveal_score, initial_status, full_status);
 
 	auto curr_date = mysql_date();
 	while (stmt.next()) {
@@ -537,11 +527,10 @@ void Sim::api_contest_round() {
 			jsonStringify(problem_label), ',',
 			jsonStringify(name), ',',
 			item, ',',
-			sfsm_to_json(SFSM(final_selecting_method)),
+			sfsm_to_json(final_selecting_method),
 			(reveal_score ? ",true," : ",false,"),
 			color_class_json(contests_perms, full_results, curr_date,
-				SubmissionStatus(full_status), isnull_full_status,
-				SubmissionStatus(initial_status), isnull_initial_status),
+				full_status, initial_status),
 			"],");
 	}
 
@@ -579,31 +568,26 @@ void Sim::api_contest_problem() {
 		stmt.bindAndExecute(nullptr, nullptr, nullptr, contests_cpid);
 
 	bool is_public;
-	my_bool umode_is_null;
 	InplaceBuff<20> rranking_exposure_str, rbegins_str, rfull_results_str,
 		rends_str;
-	std::underlying_type_t<CUM> umode_u;
+	EnumVal<CUM> umode;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> rname;
 	InplaceBuff<CONTEST_PROBLEM_NAME_MAX_LEN> pname;
 	decltype(problems_pid) problem_id;
 	uint ritem, pitem;
-	std::underlying_type_t<SFSM> final_selecting_method;
+	EnumVal<SFSM> final_selecting_method;
 	bool reveal_score;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
-	std::underlying_type_t<SubmissionStatus> initial_status, full_status;
-	my_bool isnull_initial_status, isnull_full_status;
+	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
 		ritem, rranking_exposure_str, rbegins_str, rfull_results_str, rends_str,
 		problem_id, problem_label, pname, pitem, final_selecting_method,
-		reveal_score, bind_arg(umode_u, umode_is_null),
-		MySQL::bind_arg(initial_status, isnull_initial_status),
-		MySQL::bind_arg(full_status, isnull_full_status));
+		reveal_score, umode, initial_status, full_status);
 	if (not stmt.next())
 		return api_error404();
 
-	CUM umode = (umode_is_null ? CUM::IS_NULL : CUM(umode_u));
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	InfDatetime rranking_exposure(rranking_exposure_str);
@@ -681,11 +665,10 @@ void Sim::api_contest_problem() {
 		jsonStringify(problem_label), ',',
 		jsonStringify(pname), ',',
 		pitem, ',',
-		sfsm_to_json(SFSM(final_selecting_method)),
+		sfsm_to_json(final_selecting_method),
 		(reveal_score ? ",true," : ",false,"),
 		color_class_json(contests_perms, rfull_results, mysql_date(),
-			SubmissionStatus(full_status), isnull_full_status,
-			SubmissionStatus(initial_status), isnull_initial_status),
+			full_status, initial_status),
 		"]\n]\n]");
 }
 
@@ -867,16 +850,15 @@ void Sim::api_contest_problem_add() {
 		" WHERE id=?");
 	stmt.bindAndExecute(problem_id);
 
-	// TODO: check problem permissions
 	InplaceBuff<32> powner;
-	std::underlying_type_t<ProblemType> ptype_u;
+	EnumVal<ProblemType> ptype;
 	InplaceBuff<PROBLEM_NAME_MAX_LEN> pname;
-	stmt.res_bind_all(powner, ptype_u, pname);
+	stmt.res_bind_all(powner, ptype, pname);
 	if (not stmt.next())
 		return api_error404(concat("No problem was found with ID = ",
 			problem_id));
 
-	auto pperms = problems_get_permissions(powner, ProblemType(ptype_u));
+	auto pperms = problems_get_permissions(powner, ptype);
 	if (uint(~pperms & ProblemPermissions::VIEW))
 		return api_error403("You have no permissions to use this problem");
 
@@ -887,9 +869,8 @@ void Sim::api_contest_problem_add() {
 			" FROM contest_problems"
 			" WHERE contest_round_id=?");
 	stmt.bindAndExecute(contests_crid, contests_cid, problem_id,
-		(name.empty() ? pname : name),
-		std::underlying_type_t<SFSM>(final_selecting_method), reveal_score,
-		contests_crid);
+		(name.empty() ? pname : name), EnumVal<SFSM>(final_selecting_method),
+		reveal_score, contests_crid);
 
 	append(stmt.insert_id());
 }
@@ -931,25 +912,25 @@ void Sim::api_contest_problem_edit() {
 		" FROM contest_problems WHERE id=?");
 	stmt.bindAndExecute(contests_cpid);
 
-	std::underlying_type_t<SFSM> old_final_method_u;
+	EnumVal<SFSM> old_final_method;
 	bool old_reveal_score;
-	stmt.res_bind_all(old_final_method_u, old_reveal_score);
+	stmt.res_bind_all(old_final_method, old_reveal_score);
 	if (not stmt.next())
 		return; // Such contest problem does not exist (probably had just
 		        // been deleted)
 
-	if (old_final_method_u != std::underlying_type_t<SFSM>(final_selecting_method) or
+	if (old_final_method != final_selecting_method or
 		(final_selecting_method == SFSM::WITH_HIGHEST_SCORE and
 			reveal_score != old_reveal_score))
 	{
 		// Queue reselecting final submissions
 		stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
 				" aux_id, info, data)"
-			" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, '', '')");
+			" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
+				JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR ", ?, ?,"
+				" '', '')");
 		stmt.bindAndExecute(session_user_id,
 			priority(JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
-			std::underlying_type_t<JobType>(
-				JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
 			mysql_date(), contests_cpid);
 
 		jobs::notify_job_server();
@@ -960,7 +941,7 @@ void Sim::api_contest_problem_edit() {
 	stmt = mysql.prepare("UPDATE contest_problems"
 		" SET name=?, reveal_score=?, final_selecting_method=? WHERE id=?");
 	stmt.bindAndExecute(name, reveal_score,
-		std::underlying_type_t<SFSM>(final_selecting_method), contests_cpid);
+		EnumVal<SFSM>(final_selecting_method), contests_cpid);
 }
 
 void Sim::api_contest_problem_statement(StringView problem_id) {
@@ -1030,7 +1011,7 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 	bool first_owner = true;
 	uint64_t owner, prev_owner;
 	uint64_t crid, cpid;
-	std::underlying_type_t<SubmissionStatus> initial_status, full_status;
+	EnumVal<SubmissionStatus> initial_status, full_status;
 	int64_t score;
 	decltype(mysql_date()) curr_date;
 
@@ -1115,8 +1096,7 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 		append(crid, ',',
 			cpid, ',');
 
-		append_submission_status(SubmissionStatus(initial_status),
-			SubmissionStatus(full_status), true);
+		append_submission_status(initial_status, full_status, true);
 		// TODO: make score revealing work with the ranking
 		append(',', score, "],");
 	}

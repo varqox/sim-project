@@ -34,7 +34,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	if (not session_is_open)
 		return PERM::NONE;
 
-	auto viewer = std::underlying_type_t<UserType>(session_user_type) +
+	auto viewer = EnumVal<UserType>(session_user_type).int_val() +
 		(session_user_id != SIM_ROOT_UID);
 	if (session_user_id == user_id) {
 		constexpr UserPermissions perm[4] = {
@@ -53,7 +53,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 		return perm[viewer] | users_get_overall_permissions();
 	}
 
-	auto user = std::underlying_type_t<UserType>(utype) + (user_id != SIM_ROOT_UID);
+	auto user = EnumVal<UserType>(utype).int_val() + (user_id != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
 		{ // SIM root
@@ -96,12 +96,12 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
 
 	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
 	stmt.bindAndExecute(user_id);
-	std::underlying_type_t<UserType> utype;
+	EnumVal<UserType> utype;
 	stmt.res_bind_all(utype);
 	if (not stmt.next())
 		return PERM::NONE;
 
-	return users_get_permissions(user_id, UserType(utype));
+	return users_get_permissions(user_id, utype);
 }
 
 void Sim::login() {

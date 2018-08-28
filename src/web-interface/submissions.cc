@@ -16,8 +16,8 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 }
 
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
-	StringView submission_owner, SubmissionType stype, ContestUserMode cu_mode,
-	StringView problem_owner) noexcept
+	StringView submission_owner, SubmissionType stype,
+	Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept
 {
 	using PERM = SubmissionPermissions;
 	using STYPE = SubmissionType;
@@ -35,8 +35,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 			? PERM::CHANGE_TYPE | PERM::DELETE : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN or
-		cu_mode == CUM::MODERATOR or
-		cu_mode == CUM::OWNER)
+		(cu_mode.has_value() and
+			isOneOf(cu_mode.value(), CUM::MODERATOR, CUM::OWNER)))
 	{
 		return overall_perms | PERM_SUBMISSION_ADMIN;
 	}

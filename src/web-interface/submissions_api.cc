@@ -8,7 +8,6 @@
 #include <simlib/optional.h>
 #include <simlib/process.h>
 
-using MySQL::bind_arg;
 using std::string;
 
 void Sim::append_submission_status(SubmissionStatus initial_status,
@@ -221,12 +220,12 @@ void Sim::api_submissions() {
 				stmt.bindAndExecute(arg_id);
 
 				InplaceBuff<32> p_owner;
-				uint p_type_u;
-				stmt.res_bind_all(p_owner, p_type_u);
+				EnumVal<ProblemType> p_type;
+				stmt.res_bind_all(p_owner, p_type);
 				if (not stmt.next())
 					return set_empty_response();
 
-				pperms = problems_get_permissions(p_owner, ProblemType(p_type_u));
+				pperms = problems_get_permissions(p_owner, p_type);
 				if (uint(pperms.value() &
 					ProblemPermissions::VIEW_SOLUTIONS_AND_SUBMISSIONS))
 				{
@@ -284,16 +283,13 @@ void Sim::api_submissions() {
 					auto stmt = mysql.prepare(query);
 					stmt.bindAndExecute(session_user_id, arg_id);
 
-					std::underlying_type_t<CUM> cu_mode;
-					my_bool cu_mode_is_null;
+					MySQL::Optional<EnumVal<CUM>> cu_mode;
 					bool is_public;
-					stmt.res_bind_all(bind_arg(cu_mode, cu_mode_is_null),
-						is_public);
+					stmt.res_bind_all(cu_mode, is_public);
 					if (not stmt.next())
 						return set_empty_response();
 
-					cperms = contests_get_permissions(is_public,
-						(cu_mode_is_null ? CUM::IS_NULL : CUM(cu_mode)));
+					cperms = contests_get_permissions(is_public, cu_mode);
 					if (uint(cperms.value() &
 						ContestPermissions::VIEW_ALL_CONTEST_SUBMISSIONS))
 					{
@@ -352,9 +348,8 @@ void Sim::api_submissions() {
 	while (res.next()) {
 		SubmissionType stype = SubmissionType(strtoull(res[STYPE]));
 		SubmissionPermissions perms = submissions_get_permissions(res[SOWNER],
-			stype,
-			(res.is_null(CUMODE) ? CUM::IS_NULL : CUM(strtoull(res[CUMODE]))),
-			res[POWNER]);
+			stype, (res.is_null(CUMODE) ? std::nullopt
+				: Optional<CUM>(CUM(strtoull(res[CUMODE])))), res[POWNER]);
 
 		if (perms == PERM::NONE)
 			return set_empty_response();
@@ -531,10 +526,9 @@ void Sim::api_submission() {
 	submissions_sid = next_arg;
 
 	InplaceBuff<32> sowner, p_owner;
-	std::underlying_type_t<SubmissionType> stype;
-	std::underlying_type_t<SubmissionLanguage> slang;
-	std::underlying_type_t<CUM> cu_mode;
-	my_bool cu_mode_is_null;
+	EnumVal<SubmissionType> stype;
+	EnumVal<SubmissionLanguage> slang;
+	MySQL::Optional<EnumVal<CUM>> cu_mode;
 	auto stmt = mysql.prepare("SELECT s.owner, s.type, s.language, cu.mode,"
 			" p.owner"
 		" FROM submissions s"
@@ -543,14 +537,12 @@ void Sim::api_submission() {
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submissions_sid);
-	stmt.res_bind_all(sowner, stype, slang, bind_arg(cu_mode, cu_mode_is_null),
-		p_owner);
+	stmt.res_bind_all(sowner, stype, slang, cu_mode, p_owner);
 	if (not stmt.next())
 		return api_error404();
 
-	submissions_slang = SubmissionLanguage(slang);
-	submissions_perms = submissions_get_permissions(sowner,
-		SubmissionType(stype), (cu_mode_is_null ? CUM::IS_NULL : CUM(cu_mode)),
+	submissions_slang = slang;
+	submissions_perms = submissions_get_permissions(sowner, stype, cu_mode,
 		p_owner);
 
 	// Subpages
@@ -606,14 +598,13 @@ void Sim::api_submission_add() {
 		// Check permissions to the problem
 		auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
 		InplaceBuff<32> powner;
-		std::underlying_type_t<ProblemType> ptype;
+		EnumVal<ProblemType> ptype;
 		stmt.bindAndExecute(problem_id);
 		stmt.res_bind_all(powner, ptype);
 		if (not stmt.next())
 			return api_error404();
 
-		ProblemPermissions pperms = problems_get_permissions(powner,
-			ProblemType(ptype));
+		ProblemPermissions pperms = problems_get_permissions(powner, ptype);
 		if (uint(~pperms & ProblemPermissions::SUBMIT))
 			return api_error403();
 
@@ -634,15 +625,13 @@ void Sim::api_submission_add() {
 
 		bool is_public;
 		InplaceBuff<20> cr_begins_str, cr_ends_str;
-		std::underlying_type_t<CUM> umode_u;
-		my_bool umode_is_null;
+		MySQL::Optional<EnumVal<CUM>> umode;
 		stmt.res_bind_all(contest_id, is_public, contest_round_id,
-			cr_begins_str, cr_ends_str, bind_arg(umode_u, umode_is_null));
+			cr_begins_str, cr_ends_str, umode);
 		if (not stmt.next())
 			return api_error404();
 
-		auto cperms = contests_get_permissions(is_public,
-			(umode_is_null ? CUM::IS_NULL : CUM(umode_u)));
+		auto cperms = contests_get_permissions(is_public, umode);
 
 		if (uint(~cperms & ContestPermissions::PARTICIPATE))
 			return api_error403(); // Could not participate
@@ -710,15 +699,15 @@ void Sim::api_submission_add() {
 			" initial_report, final_report)"
 		" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ","
 			SSTATUS_PENDING_STR ", ?, ?, '', '')");
-	if (contest_problem_id.empty())
+	if (contest_problem_id.empty()) {
 		stmt.bindAndExecute(session_user_id, problem_id, nullptr, nullptr,
-			nullptr, std::underlying_type_t<SubmissionLanguage>(slang),
-			mysql_date(), mysql_date(0));
-	else
-		stmt.bindAndExecute(session_user_id, problem_id, contest_problem_id,
-			contest_round_id, contest_id,
-			std::underlying_type_t<SubmissionLanguage>(slang), mysql_date(),
+			nullptr, EnumVal<SubmissionLanguage>(slang), mysql_date(),
 			mysql_date(0));
+	} else {
+		stmt.bindAndExecute(session_user_id, problem_id, contest_problem_id,
+			contest_round_id, contest_id, EnumVal<SubmissionLanguage>(slang),
+			mysql_date(), mysql_date(0));
+	}
 
 	auto submission_id = stmt.insert_id();
 
@@ -735,17 +724,15 @@ void Sim::api_submission_add() {
 	// Create a job to judge the submission
 	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
 			" aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
+			", ?, ?, ?, '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
-		std::underlying_type_t<JobType>(JobType::JUDGE_SUBMISSION),
 		mysql_date(), submission_id, jobs::dumpString(problem_id));
 
 	// Activate the submission
 	stmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
-	stmt.bindAndExecute(
-		std::underlying_type_t<SubmissionType>(ignored_submission ?
-			SubmissionType::IGNORED : SubmissionType::NORMAL),
-		submission_id);
+	stmt.bindAndExecute(EnumVal<SubmissionType>(ignored_submission ?
+		SubmissionType::IGNORED : SubmissionType::NORMAL), submission_id);
 
 	jobs::notify_job_server();
 	append(submission_id);

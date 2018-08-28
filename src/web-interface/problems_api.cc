@@ -286,7 +286,7 @@ void Sim::api_problem() {
 	InplaceBuff<32> powner;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> plabel;
 	InplaceBuff<1 << 16> simfile;
-	std::underlying_type_t<ProblemType> ptype;
+	EnumVal<ProblemType> ptype;
 
 	auto stmt = mysql.prepare("SELECT owner, type, label, simfile FROM problems"
 		" WHERE id=?");
@@ -295,7 +295,7 @@ void Sim::api_problem() {
 	if (not stmt.next())
 		return api_error404();
 
-	problems_perms = problems_get_permissions(powner, ProblemType(ptype));
+	problems_perms = problems_get_permissions(powner, ptype);
 
 	next_arg = url_args.extractNextArg();
 	if (next_arg == "statement")
@@ -386,7 +386,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
 	// Activate the job
 	stmt = mysql.prepare("UPDATE jobs SET type=? WHERE id=?");
-	stmt.bindAndExecute(std::underlying_type_t<JobType>(reuploading	?
+	stmt.bindAndExecute(EnumVal<JobType>(reuploading ?
 		JobType::REUPLOAD_PROBLEM : JobType::ADD_PROBLEM), job_id);
 
 	jobs::notify_job_server();
