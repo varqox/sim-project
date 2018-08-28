@@ -51,7 +51,7 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 
 		if (ptype == ProblemType::CONTEST_ONLY)
 			return PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_SIMFILE |
-				PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME |
+				PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::SUBMIT |
 				problems_get_overall_permissions();
 
 		return problems_get_overall_permissions();
