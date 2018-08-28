@@ -241,7 +241,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 				continue;
 			}
 			if (test.memory_limit.value() == 0)
-				test.memory_limit = nullptr; // The memory limit is not given
+				test.memory_limit = std::nullopt; // The memory limit is not given
 
 			if (Simfile::TestNameComparator::split(test.name).gid.empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"limits\":  ignoring"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "debug.h"
+#include "optional.h"
 #include "string.h"
 #include "utilities.h"
 
@@ -18,12 +19,116 @@
 # define DEBUG_MYSQL(...)
 #endif
 
+template<class Enum>
+class EnumVal {
+public:
+	static_assert(std::is_enum<Enum>::value, "This is designed only for enums");
+	using ValType = std::underlying_type_t<Enum>;
+
+private:
+	ValType val_;
+
+public:
+	EnumVal() = default;
+
+	EnumVal(const EnumVal&) = default;
+	EnumVal(EnumVal&&) = default;
+	EnumVal& operator=(const EnumVal&) = default;
+	EnumVal& operator=(EnumVal&&) = default;
+
+	EnumVal(ValType val) : val_(val) {}
+
+	EnumVal(Enum val) : val_(static_cast<ValType>(val)) {}
+
+	EnumVal& operator=(Enum val) {
+		val_ = static_cast<ValType>(val);
+		return *this;
+	}
+
+	operator Enum() const noexcept { return Enum(val_); }
+
+	operator ValType() const noexcept { return val_; }
+
+	operator ValType&() noexcept { return val_; }
+};
+
+#if __cplusplus > 201402L
+#warning "Since C++17 inline constexpr variables and constexpr if will handle this"
+#endif
+
+template<class...>
+struct is_enum_val : std::false_type {};
+
+template<class T>
+struct is_enum_val<EnumVal<T>> : std::true_type {};
+
+template<class T>
+struct EnumValTypeHelper {
+	using type = void;
+};
+
+template<class T>
+struct EnumValTypeHelper<EnumVal<T>> {
+	using type = T;
+};
+
+template<class T>
+using EnumValType = typename EnumValTypeHelper<T>::type;
+
 namespace MySQL {
 
 template<class T>
-std::pair<T&, my_bool&> bind_arg(T& val, my_bool& is_null) {
-	return {val, is_null};
-}
+class Optional {
+	using StoredType = std::remove_const_t<T>;
+	StoredType value_; // This optional always need to contain value
+	my_bool has_value_;
+
+	template<size_t, size_t>
+	friend class Statement;
+public:
+	Optional() : has_value_(false) {}
+
+	Optional(const Optional&) = default;
+	Optional(Optional&&) = default;
+
+private:
+	Optional& operator=(const Optional&) = default;
+	Optional& operator=(Optional&&) = default;
+
+	Optional(const T& value) : has_value_(true), value_(value) {}
+
+	Optional(T&& value) : has_value_(true), value_(value) {}
+
+public:
+	operator ::Optional<T>() const { return has_value_ ? ::Optional<T>() : value_; }
+
+	template<class U = T>
+	operator std::enable_if_t<is_enum_val<U>::value, ::Optional<EnumValType<T>>>() const {
+		return has_value_ ? ::Optional<T>() : value_;
+	}
+
+	// ::Optional<T> opt() const { return has_value_ ? ::Optional<T>() : value_; }
+
+	constexpr explicit operator bool() const noexcept { return has_value_; }
+
+	constexpr const T& operator*() const { return value_; }
+
+	constexpr const T* operator->() const { return std::addressof(value_); }
+
+	constexpr bool has_value() const noexcept { return has_value_; }
+
+	constexpr const T& value() const {
+		if (not has_value_)
+			THROW("bad optional access");
+
+		return value_;
+	}
+
+	template<class U>
+	constexpr T value_or(U&& default_value) const {
+		return (has_value_ ? value_ : std::forward<U>(default_value));
+	}
+};
 
 class Connection;
 
@@ -305,11 +410,11 @@ public:
 		params_[idx].is_null = &is_null;
 	}
 
-	/// Binds @p x.first as @p idx parameter and @p x.second as @p idx is_null
+	/// Binds optional value @p x - std::nullopt corresponds to NULL
 	template<class T>
-	void bind(unsigned idx, const std::pair<T&, my_bool&>& x) ND(noexcept) {
-		bind(idx, x.first);
-		bind_isnull(idx, x.second);
+	void bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
+		bind(idx, x.value_);
+		bind_isnull(idx, x.has_value_);
 	}
 
 	void fixBinds() {
@@ -456,12 +561,11 @@ public:
 		res_[idx].is_null = &is_null;
 	}
 
-	/// Binds to result: @p x.first as @p idx parameter and @p x.second as
-	/// @p idx is_null
+	/// Binds optional value @p x - std::nullopt corresponds to NULL
 	template<class T>
-	void res_bind(unsigned idx, const std::pair<T&, my_bool&>& x) ND(noexcept) {
-		res_bind(idx, x.first);
-		res_bind_isnull(idx, x.second);
+	void res_bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
+		res_bind(idx, x.value_);
+		res_bind_isnull(idx, x.has_value_);
 	}
 
 	void resFixBinds() {

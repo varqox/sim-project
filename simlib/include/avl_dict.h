@@ -144,12 +144,12 @@ public:
 		// Find allocated nodes and move them to the new_data
 		// 0 element has to be moved in a different way
 		if (ptr(new_data, 0) == new_capacity)
-			new (&elem(new_data, 0))
+			::new (&elem(new_data, 0))
 				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
 
 		for (size_type i = 1; i < capacity(); ++i)
 			if (ptr(new_data, i) == new_capacity) {
-				new (&elem(new_data, i)) T{std::move(elem(i))};
+				::new (&elem(new_data, i)) T{std::move(elem(i))};
 				elem(i).~T();
 			}
 
@@ -167,10 +167,10 @@ public:
 			std::unique_ptr<Elem[]> new_data {new Elem[new_capacity]};
 			// Initialize new data (move old and initialize new cells)
 			// 0 element has to be moved in a different way
-			new (&elem(new_data, 0))
+			::new (&elem(new_data, 0))
 				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
 			for (size_type i = 1; i < capacity(); ++i) {
-				new (&elem(new_data, i)) T(std::move(elem(i)));
+				::new (&elem(new_data, i)) T(std::move(elem(i)));
 				elem(i).~T();
 			}
 
@@ -286,7 +286,7 @@ protected:
 		size_t x = pool.allocate();
 
 		try {
-			new (&pool[x]) Node{std::forward<Args>(args)...};
+			::new (&pool[x]) Node{std::forward<Args>(args)...};
 		} catch (...) {
 
 			pool.deallocate(x);

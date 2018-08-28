@@ -244,14 +244,14 @@ public:
 		: size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_)
 	{
 		for (size_t i = 0; i < n; ++i)
-			new (std::addressof((*this)[i])) T;
+			::new (std::addressof((*this)[i])) T;
 	}
 
 	InplaceArray(size_t n, const T& val)
 		: size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_)
 	{
 		for (size_t i = 0; i < n; ++i)
-			new (std::addressof((*this)[i])) T(val);
+			::new (std::addressof((*this)[i])) T(val);
 	}
 
 	template<size_t N1>
@@ -271,7 +271,7 @@ public:
 	{
 		if (size_ <= N) {
 			for (size_t i = 0; i < a.size_; ++i)
-				new (std::addressof((*this)[i])) T(std::move(a[i]));
+				::new (std::addressof((*this)[i])) T(std::move(a[i]));
 
 		} else if (a.p_ != a.a_) { // move the pointer
 			p_ = a.p_;
@@ -281,7 +281,7 @@ public:
 		} else { // allocate memory and then move
 			p_ = new Elem[size_];
 			for (size_t i = 0; i < a.size_; ++i)
-				new (std::addressof((*this)[i])) T(std::move(a[i]));
+				::new (std::addressof((*this)[i])) T(std::move(a[i]));
 		}
 
 		a.size_ = 0;
@@ -339,7 +339,7 @@ public:
 			max_size_ = N;
 			try {
 				for (size_t i = 0; i < a.size_; ++i)
-					new (std::addressof((*this)[i])) T(std::move(a[i]));
+					::new (std::addressof((*this)[i])) T(std::move(a[i]));
 				size_ = a.size_;
 			} catch (...) {
 				size_ = 0;
@@ -367,7 +367,7 @@ public:
 			try {
 				p_ = new Elem[a.size_];
 				for (size_t i = 0; i < a.size_; ++i)
-					new (std::addressof((*this)[i])) T(std::move(a[i]));
+					::new (std::addressof((*this)[i])) T(std::move(a[i]));
 				max_size_ = size_ = a.size_;
 			} catch (...) {
 				p_ = a_;
@@ -410,7 +410,7 @@ public:
 			size_t new_max_size = meta::max(max_size_ << 1, n);
 			auto new_p = std::make_unique<Elem[]>(new_max_size);
 			for (size_t i = 0; i < size_; ++i)
-				new (std::addressof(new_p[i])) T(std::move((*this)[i]));
+				::new (std::addressof(new_p[i])) T(std::move((*this)[i]));
 
 			deallocate();
 			p_ = new_p.release();
@@ -430,7 +430,7 @@ public:
 	void resize(size_t n) {
 		reserve_for(n);
 		while (size_ < n)
-			new (std::addressof((*this)[size_++])) T;
+			::new (std::addressof((*this)[size_++])) T;
 	}
 
 	/**
@@ -442,13 +442,13 @@ public:
 	void resize(size_t n, const T& val) {
 		reserve_for(n);
 		while (size_ < n)
-			new (std::addressof((*this)[size_++])) T(val);
+			::new (std::addressof((*this)[size_++])) T(val);
 	}
 
 	template<class... Args>
 	T& emplace_back(Args&&... args) {
 		reserve_for(size_ + 1);
-		return *(new (std::addressof((*this)[size_++])) T(std::forward<Args>(args)...));
+		return *(::new (std::addressof((*this)[size_++])) T(std::forward<Args>(args)...));
 	}
 
 	void clear() noexcept { size_ = 0; }
