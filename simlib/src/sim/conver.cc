@@ -304,14 +304,14 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 			if (not pc.exists(path)) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\": input"
 					" test file: `", input.value(), "` not found - ignoring file");
-				input = nullptr;
+				input = std::nullopt;
 			}
 
 			path = concat(master_dir, output.value());
 			if (not pc.exists(path)) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
 					" output test file: `", output.value(), "` not found - ignoring file");
-				output = nullptr;
+				output = std::nullopt;
 			}
 
 			if (opts.seek_for_new_tests)

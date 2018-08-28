@@ -269,7 +269,7 @@ protected:
 public:
 	constexpr StringBase() noexcept : str(""), len(0) {}
 
-	constexpr StringBase(std::nullptr_t) noexcept : StringBase() {}
+	constexpr StringBase(std::nullptr_t) = delete;
 
 	#if __cplusplus > 201402L
 	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
@@ -320,6 +320,8 @@ public:
 		len = s.size();
 		return *this;
 	}
+
+	constexpr StringBase& operator=(std::nullptr_t) = delete;
 
 	~StringBase() = default;
 
@@ -651,12 +653,14 @@ public:
 
 	constexpr StringView() noexcept : StringBase("", 0) {}
 
-	constexpr StringView(std::nullptr_t) noexcept : StringView() {}
+	constexpr StringView(std::nullptr_t) noexcept = delete;
 
 	constexpr StringView(const StringView&) noexcept = default;
 	constexpr StringView(StringView&&) noexcept = default;
 	StringView& operator=(const StringView&) noexcept = default;
 	StringView& operator=(StringView&&) noexcept = default;
+
+	constexpr StringView& operator=(std::nullptr_t) noexcept = delete;
 
 	constexpr StringView operator=(pointer p) noexcept {
 		return operator=(StringView{p});
