@@ -127,7 +127,7 @@ public:
 		STACK_UNWINDING_MARK;
 
 		uint64_t jid;
-		uint jtype_u;
+		EnumVal<JobType> jtype;
 		uint64_t aux_id;
 		uint priority;
 		InplaceBuff<512> info;
@@ -136,7 +136,7 @@ public:
 			" FROM jobs"
 			" WHERE status=" JSTATUS_PENDING_STR " AND type!=" JTYPE_VOID_STR
 			" ORDER BY priority DESC, id ASC LIMIT 4");
-		stmt.res_bind_all(jid, jtype_u, priority, aux_id, info);
+		stmt.res_bind_all(jid, jtype, priority, aux_id, info);
 		// Sets job's status to NOTICED_PENDING
 		auto mark_stmt = mysql.prepare("UPDATE jobs SET status="
 			JSTATUS_NOTICED_PENDING_STR " WHERE id=?");
@@ -182,7 +182,7 @@ public:
 				};
 
 				// Assign job to its category
-				switch (JobType(jtype_u)) {
+				switch (jtype) {
 				// Judge job
 				case JT::JUDGE_SUBMISSION:
 					queue_job(judge_jobs,
@@ -669,13 +669,13 @@ static void process_local_job(WorkersPool::NextJob job) {
 	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
 		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
-	uint jtype_u, jstatus_u;
+	EnumVal<JobType> jtype;
 	InplaceBuff<32> creator, aux_id;
 	InplaceBuff<512> info;
 
-	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
+	auto stmt = mysql.prepare("SELECT creator, type, aux_id, info"
 		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(creator, jtype_u, jstatus_u, aux_id, info);
+	stmt.res_bind_all(creator, jtype, aux_id, info);
 	stmt.bindAndExecute(job.id);
 
 	if (not stmt.next()) // Job has been probably cancelled
@@ -687,7 +687,7 @@ static void process_local_job(WorkersPool::NextJob job) {
 
 	try {
 		using JT = JobType;
-		switch (JT(jtype_u)) {
+		switch (jtype) {
 		case JT::ADD_PROBLEM:
 			add_problem(job.id, creator, info);
 			break;
@@ -714,7 +714,7 @@ static void process_local_job(WorkersPool::NextJob job) {
 		case JT::JUDGE_SUBMISSION:
 		case JT::ADD_JUDGE_MODEL_SOLUTION:
 		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			THROW("Unexpected local job type: ", toString(JT(jtype_u)));
+			THROW("Unexpected local job type: ", toString(JT(jtype)));
 		}
 
 	} catch (const std::exception& e) {
@@ -758,13 +758,13 @@ static void process_judge_job(WorkersPool::NextJob job) {
 	stdlog(pthread_self(), " got judge job {id:", job.id, ", problem: ",
 		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
-	uint jtype_u, jstatus_u;
+	EnumVal<JobType> jtype;
 	InplaceBuff<32> creator, aux_id, added;
 	InplaceBuff<512> info;
 
-	auto stmt = mysql.prepare("SELECT creator, type, status, added, aux_id, info"
+	auto stmt = mysql.prepare("SELECT creator, type, added, aux_id, info"
 		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(creator, jtype_u, jstatus_u, added, aux_id, info);
+	stmt.res_bind_all(creator, jtype, added, aux_id, info);
 	stmt.bindAndExecute(job.id);
 
 	if (not stmt.next()) // Job has been probably cancelled
@@ -776,7 +776,7 @@ static void process_judge_job(WorkersPool::NextJob job) {
 
 	try {
 		using JT = JobType;
-		switch (JT(jtype_u)) {
+		switch (jtype) {
 		case JT::JUDGE_SUBMISSION:
 			judgeSubmission(job.id, aux_id, added);
 			break;
@@ -795,7 +795,7 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		case JT::EDIT_PROBLEM:
 		case JT::DELETE_PROBLEM:
 		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
-			THROW("Unexpected judge job type: ", toString(JT(jtype_u)));
+			THROW("Unexpected judge job type: ", toString(JT(jtype)));
 		}
 
 	} catch (const std::exception& e) {

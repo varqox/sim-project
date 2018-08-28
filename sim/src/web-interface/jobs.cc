@@ -77,10 +77,10 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 	stmt.bindAndExecute(problem_id);
 
 	InplaceBuff<32> powner;
-	std::underlying_type_t<ProblemType> ptype;
+	EnumVal<ProblemType> ptype;
 	stmt.res_bind_all(powner, ptype);
 	if (stmt.next()) {
-		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
+		auto pperms = problems_get_permissions(powner, ptype);
 		if (uint(pperms & ProblemPermissions::VIEW_RELATED_JOBS))
 			return PERM::VIEW | PERM::DOWNLOAD_LOG |
 				PERM::DOWNLOAD_UPLOADED_PACKAGE;
@@ -109,19 +109,15 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submission_id);
 
-	bool is_public;
+	MySQL::Optional<bool> is_public;
 	InplaceBuff<32> powner;
-	my_bool cu_mode_is_null;
-	my_bool is_public_is_null;
-	std::underlying_type_t<SubmissionType> stype;
-	std::underlying_type_t<ProblemType> ptype;
-	std::underlying_type_t<CUM> cu_mode;
-	stmt.res_bind_all(stype, powner, ptype,
-		MySQL::bind_arg(cu_mode, cu_mode_is_null),
-		MySQL::bind_arg(is_public, is_public_is_null));
+	EnumVal<SubmissionType> stype;
+	EnumVal<ProblemType> ptype;
+	MySQL::Optional<EnumVal<CUM>> cu_mode;
+	stmt.res_bind_all(stype, powner, ptype, cu_mode, is_public);
 	if (stmt.next()) {
-		if (not is_public_is_null and
-			uint(contests_get_permissions(is_public, CUM(cu_mode)) &
+		if (is_public.has_value() and // <-- contest exists
+			uint(contests_get_permissions(is_public.value(), cu_mode) &
 				ContestPermissions::ADMIN))
 		{
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;
@@ -129,7 +125,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 
 		// The below check has to be done as the last one because it gives the
 		// least permissions
-		auto pperms = problems_get_permissions(powner, ProblemType(ptype));
+		auto pperms = problems_get_permissions(powner, ptype);
 		// Give access to the problem's submissions' jobs to the problem's admin
 		if (bool(uint(pperms & ProblemPermissions::EDIT)))
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;

@@ -23,12 +23,12 @@ bool Sim::session_open() {
 
 		InplaceBuff<SESSION_IP_LEN + 1> session_ip;
 		InplaceBuff<4096> user_agent;
-		std::underlying_type<decltype(session_user_type)>::type sutype;
+		EnumVal<UserType> s_u_type;
 		stmt.res_bind_all(session_csrf_token, session_user_id, session_data,
-			sutype, session_username, session_ip, user_agent);
+			s_u_type, session_username, session_ip, user_agent);
 
 		if (stmt.next()) {
-			session_user_type = decltype(session_user_type)(sutype);
+			session_user_type = s_u_type;
 			// If no session injection
 			if (client_ip == session_ip &&
 				request.headers.isEqualTo("User-Agent", user_agent))

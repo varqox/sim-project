@@ -19,7 +19,7 @@ Sim::ContestPermissions Sim::contests_get_overall_permissions() noexcept {
 }
 
 Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
-	ContestUserMode cu_mode) noexcept
+	Optional<ContestUserMode> cu_mode) noexcept
 {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestPermissions;
@@ -39,7 +39,14 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 			PERM::DELETE | PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
 			PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
 
-	switch (cu_mode) {
+	if (not cu_mode.has_value()) {
+		if (is_public)
+			return overall_perms | PERM::VIEW | PERM::PARTICIPATE;
+		else
+			return overall_perms;
+	}
+
+	switch (cu_mode.value()) {
 	case CUM::OWNER:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
 			PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
@@ -52,12 +59,6 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 
 	case CUM::CONTESTANT:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE;
-
-	case CUM::IS_NULL:
-		if (is_public)
-			return overall_perms | PERM::VIEW | PERM::PARTICIPATE;
-		else
-			return overall_perms;
 	}
 
 	return overall_perms;

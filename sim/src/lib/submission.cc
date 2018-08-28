@@ -24,7 +24,7 @@ static void update_problem_final(MySQL::Connection& mysql,
 		return; // Nothing more to be done
 	}
 
-	std::underlying_type_t<SubmissionStatus> full_status;
+	EnumVal<SubmissionStatus> full_status;
 	stmt = mysql.prepare("SELECT full_status"
 		" FROM submissions USE INDEX(final3)"
 		" WHERE final_candidate=1 AND owner=? AND problem_id=? AND score=?"
@@ -61,9 +61,9 @@ static void update_contest_final(MySQL::Connection& mysql,
 		" FROM contest_problems WHERE id=?");
 	stmt.bindAndExecute(contest_problem_id);
 
-	std::underlying_type_t<SFSM> final_method_u;
+	EnumVal<SFSM> final_method;
 	bool reveal_score;
-	stmt.res_bind_all(final_method_u, reveal_score);
+	stmt.res_bind_all(final_method, reveal_score);
 	if (not stmt.next())
 		return; // Such contest problem does not exist (probably had just
 		        // been deleted)
@@ -78,7 +78,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 	};
 
 	uint64_t new_final_id, new_initial_final_id;
-	switch (SFSM(final_method_u)) {
+	switch (final_method) {
 	case SFSM::LAST_COMPILING: {
 		// Choose the new final submission
 		stmt = mysql.prepare("SELECT id FROM submissions USE INDEX(final1)"
@@ -105,7 +105,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 		if (not stmt.next()) // Nothing to do (no submission that may be final)
 			return unset_all_finals();
 
-		std::underlying_type_t<SubmissionStatus> full_status;
+		EnumVal<SubmissionStatus> full_status;
 		stmt = mysql.prepare("SELECT full_status"
 			" FROM submissions USE INDEX(final2)"
 			" WHERE final_candidate=1 AND owner=? AND contest_problem_id=?"
@@ -131,7 +131,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 			// score DESC, initial_status, id DESC) is what we need, but MySQL
 			// does not support it, so the below workaround is used to select
 			// the initial final submission efficiently
-			std::underlying_type_t<SubmissionStatus> initial_status;
+			EnumVal<SubmissionStatus> initial_status;
 			stmt = mysql.prepare("SELECT initial_status"
 				" FROM submissions USE INDEX(initial_final3)"
 				" WHERE final_candidate=1 AND owner=? AND contest_problem_id=?"
@@ -156,7 +156,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 			// initial_status, id DESC) is what we need, but MySQL does not
 			// support it, so the below workaround is used to select the initial
 			// final submission efficiently
-			std::underlying_type_t<SubmissionStatus> initial_status;
+			EnumVal<SubmissionStatus> initial_status;
 			stmt = mysql.prepare("SELECT initial_status"
 				" FROM submissions USE INDEX(initial_final2)"
 				" WHERE final_candidate=1 AND owner=? AND contest_problem_id=?"

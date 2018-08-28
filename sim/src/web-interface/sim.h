@@ -613,7 +613,7 @@ private:
 	ContestPermissions contests_get_overall_permissions() noexcept;
 
 	ContestPermissions contests_get_permissions(bool is_public,
-		ContestUserMode cu_mode) noexcept;
+		Optional<ContestUserMode> cu_mode) noexcept;
 
 	ContestPermissions contests_perms = ContestPermissions::NONE;
 	InplaceBuff<32> contests_cid;
@@ -654,17 +654,18 @@ private:
 
 	// Returns only the overall permissions
 	ContestUserPermissions contest_user_get_overall_permissions(
-		ContestUserMode viewer_mode) noexcept;
+		Optional<ContestUserMode> viewer_mode) noexcept;
 
 	ContestUserPermissions contest_user_get_permissions(
-		ContestUserMode viewer_mode, ContestUserMode user_mode) noexcept;
+		Optional<ContestUserMode> viewer_mode, Optional<ContestUserMode> user_mode) noexcept;
 
 	// Returns (viewer mode, perms), queries MySQL
-	std::pair<ContestUserMode, Sim::ContestUserPermissions>
+	std::pair<Optional<ContestUserMode>, Sim::ContestUserPermissions>
 	contest_user_get_overall_permissions(StringView contest_id);
 
 	// Returns (viewer mode, perms, user's mode), queries MySQL
-	std::tuple<ContestUserMode, Sim::ContestUserPermissions, ContestUserMode>
+	std::tuple<Optional<ContestUserMode>, Sim::ContestUserPermissions,
+		Optional<ContestUserMode>>
 	contest_user_get_permissions(StringView contest_id, StringView user_id);
 
 	/* ============================= Submissions ============================= */
@@ -692,7 +693,7 @@ private:
 
 	SubmissionPermissions submissions_get_permissions(
 		StringView submission_owner, SubmissionType stype,
-		ContestUserMode cu_mode, StringView problem_owner) noexcept;
+		Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
 	SubmissionLanguage submissions_slang;

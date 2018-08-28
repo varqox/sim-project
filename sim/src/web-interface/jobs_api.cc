@@ -92,7 +92,7 @@ void Sim::api_jobs() {
 		} else if (cond == '=' and ~mask & ID_COND) {
 			select_specified_job = true;
 			// Get job information to grant permissions
-			std::underlying_type_t<JobType> jtype;
+			EnumVal<JobType> jtype;
 			InplaceBuff<32> aux_id;
 			auto stmt = mysql.prepare("SELECT type, aux_id FROM jobs"
 				" WHERE id=?");
@@ -102,9 +102,9 @@ void Sim::api_jobs() {
 				return api_error404();
 
 			// Grant permissions if possible
-			if (is_problem_job(JobType(jtype)))
+			if (is_problem_job(jtype))
 				granted_perms |= jobs_granted_permissions_problem(aux_id);
-			else if (is_submission_job(JobType(jtype)))
+			else if (is_submission_job(jtype))
 				granted_perms |= jobs_granted_permissions_submission(aux_id);
 			allow_access |= (granted_perms != PERM::NONE);
 
@@ -313,8 +313,8 @@ void Sim::api_job() {
 
 	InplaceBuff<32> jcreator, aux_id;
 	InplaceBuff<256> jinfo;
-	std::underlying_type_t<JT> jtype;
-	std::underlying_type_t<JobStatus> jstatus;
+	EnumVal<JT> jtype;
+	EnumVal<JobStatus> jstatus;
 
 	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
 		" FROM jobs WHERE id=?");
@@ -323,19 +323,18 @@ void Sim::api_job() {
 	if (not stmt.next())
 		return api_error404();
 
-	jobs_perms = jobs_get_permissions(jcreator, JobType(jtype),
-		JobStatus(jstatus));
+	jobs_perms = jobs_get_permissions(jcreator, jtype, jstatus);
 	// Grant permissions if possible
-	if (is_problem_job(JobType(jtype)))
+	if (is_problem_job(jtype))
 		jobs_perms |= jobs_granted_permissions_problem(aux_id);
-	else if (is_submission_job(JobType(jtype)))
+	else if (is_submission_job(jtype))
 		jobs_perms |= jobs_granted_permissions_submission(aux_id);
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "cancel")
 		return api_job_cancel();
 	else if (next_arg == "restart")
-		return api_job_restart(JT(jtype), jinfo);
+		return api_job_restart(jtype, jinfo);
 	else if (next_arg == "log")
 		return api_job_download_log();
 	else if (next_arg == "uploaded-package")

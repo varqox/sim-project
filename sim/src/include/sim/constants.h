@@ -35,8 +35,7 @@ static_assert(meta::equal(UTYPE_NORMAL_STR,
 	meta::ToString<(int)UserType::NORMAL>::value), "Update the above #define");
 
 // Contest's users
-enum class ContestUserMode : int8_t {
-	IS_NULL = -1,
+enum class ContestUserMode : uint8_t {
 	CONTESTANT = 0,
 	MODERATOR = 1,
 	OWNER = 2

@@ -1,7 +1,5 @@
 #include "sim.h"
 
-using MySQL::bind_arg;
-
 void Sim::api_contest_entry_token() {
 	STACK_UNWINDING_MARK;
 
@@ -50,15 +48,13 @@ void Sim::api_contest_entry_token() {
 		stmt.bindAndExecute(session_user_id, contest_id);
 
 		bool is_public;
-		std::underlying_type_t<ContestUserMode> cu_mode;
-		my_bool cu_mode_isnull;
+		EnumVal<ContestUserMode> cu_mode;
 
-		stmt.res_bind_all(is_public, bind_arg(cu_mode, cu_mode_isnull));
+		stmt.res_bind_all(is_public, cu_mode);
 		if (not stmt.next())
 			return api_error404();
 
-		ContestPermissions cperms = contests_get_permissions(is_public,
-			ContestUserMode(cu_mode));
+		ContestPermissions cperms = contests_get_permissions(is_public, cu_mode);
 		if (uint(~cperms & ContestPermissions::MANAGE_CONTEST_ENTRY_TOKEN))
 			return api_error404(); // To not reveal that the contest exists
 
@@ -83,11 +79,9 @@ void Sim::api_contest_entry_token() {
 		stmt.bindAndExecute(contest_id);
 
 		InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> token;
-		InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN> short_token;
-		InplaceBuff<20> short_token_expiration;
-		my_bool short_token_isnull, short_token_expiration_isnull;
-		stmt.res_bind_all(token, bind_arg(short_token, short_token_isnull),
-			bind_arg(short_token_expiration, short_token_expiration_isnull));
+		MySQL::Optional<InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
+		MySQL::Optional<InplaceBuff<20>> short_token_expiration;
+		stmt.res_bind_all(token, short_token, short_token_expiration);
 
 		append("[{\"fields\":["
 				"\"token\","
@@ -98,13 +92,13 @@ void Sim::api_contest_entry_token() {
 		if (stmt.next()) {
 			append(jsonStringify(token), ',');
 
-			if (short_token_isnull or short_token_expiration_isnull or
-				short_token_expiration < mysql_date())
+			if (not short_token.has_value() or not short_token_expiration.has_value() or
+				short_token_expiration.value() < mysql_date())
 			{
 				append("null,null]");
 			} else {
-				append(jsonStringify(short_token), ",\"",
-					short_token_expiration, "\"]");
+				append(jsonStringify(short_token.value()), ",\"",
+					short_token_expiration.value(), "\"]");
 			}
 
 		} else {
@@ -179,12 +173,11 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 		" FROM contest_entry_tokens WHERE contest_id=?");
 	stmt.bindAndExecute(contest_id);
 
-	InplaceBuff<20> short_token_expiration;
-	my_bool short_token_expiration_isnull;
-	stmt.res_bind_all(bind_arg(short_token_expiration, short_token_expiration_isnull));
+	MySQL::Optional<InplaceBuff<20>> short_token_expiration;
+	stmt.res_bind_all(short_token_expiration);
 	if (not stmt.next())
 		return api_error400("Contest does not have an entry token");
-	if (not short_token_expiration_isnull and short_token_expiration > mysql_date())
+	if (short_token_expiration.has_value() and short_token_expiration.value() > mysql_date())
 		return api_error400("Contest already has a short entry token");
 
 	stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens"
@@ -209,12 +202,11 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 		" FROM contest_entry_tokens WHERE contest_id=?");
 	stmt.bindAndExecute(contest_id);
 
-	InplaceBuff<20> short_token_expiration;
-	my_bool short_token_expiration_isnull;
-	stmt.res_bind_all(bind_arg(short_token_expiration, short_token_expiration_isnull));
+	MySQL::Optional<InplaceBuff<20>> short_token_expiration;
+	stmt.res_bind_all(short_token_expiration);
 	if (not stmt.next())
 		return api_error400("Contest does not have an entry token");
-	if (short_token_expiration_isnull or short_token_expiration <= mysql_date())
+	if (not short_token_expiration.has_value() or short_token_expiration.value() <= mysql_date())
 		return api_error400("Contest does not have a short entry token");
 
 	stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens"

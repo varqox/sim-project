@@ -42,8 +42,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	stmt.bindAndExecute(submission_id);
 	InplaceBuff<32> sowner, contest_problem_id, problem_id;
 	InplaceBuff<64> last_judgment, p_last_edit;
-	std::underlying_type_t<SubmissionLanguage> lang_val;
-	stmt.res_bind_all(lang_val, sowner, contest_problem_id, problem_id,
+	EnumVal<SubmissionLanguage> lang;
+	stmt.res_bind_all(lang, sowner, contest_problem_id, problem_id,
 		last_judgment, p_last_edit);
 	// If the submission doesn't exist (probably was removed)
 	if (not stmt.next()) {
@@ -55,8 +55,6 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 		stmt.bindAndExecute(job_log, job_id);
 		return;
 	}
-
-	auto lang = SubmissionLanguage(lang_val);
 
 	// If the problem wasn't modified since last judgment and submission has
 	// already been rejudged after the job was created
@@ -110,7 +108,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 			// Get the submission's ACTUAL type
 			stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
 			stmt.bindAndExecute(submission_id);
-			auto stype = std::underlying_type_t<ST>(ST::VOID);
+			EnumVal<ST> stype(ST::VOID);
 			stmt.res_bind_all(stype);
 			(void)stmt.next(); // Ignore errors (deleted submission)
 
@@ -125,7 +123,7 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 					(uint)full_status, nullptr, judging_began, initial_report,
 					final_report, submission_id);
 			} else {
-				stmt.bindAndExecute((ST(stype) == ST::NORMAL),
+				stmt.bindAndExecute((stype == ST::NORMAL),
 					(uint)initial_status, (uint)full_status, total_score,
 					judging_began, initial_report, final_report, submission_id);
 			}
