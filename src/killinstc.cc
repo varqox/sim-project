@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
 	// Parse arguments
 	for (int old_argc = argc, i = argc = 1; i < old_argc; ++i) {
-		StringView arg = argv[i];
+		StringView arg(argv[i]);
 		// Not an option
 		if (!hasPrefix(arg, "-")) {
 			argv[argc++] = argv[i];
