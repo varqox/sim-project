@@ -1673,6 +1673,17 @@ constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
 	return res;
 }
 
+constexpr inline bool isAlnum(StringView s) noexcept {
+	for (char c : s)
+		if (not('A' <= c and c <= 'Z') and not('0' <= c and c <= '9') and
+			not('a' <= c and c <= 'z'))
+		{
+			return false;
+		}
+
+	return true;
+}
+
 /**
  * @brief Check whether string @p s[beg, end) is an integer
  * @details Equivalent to check id string matches regex [+\-]?[0-9]+
