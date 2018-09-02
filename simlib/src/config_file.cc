@@ -351,14 +351,14 @@ bool ConfigFile::isStringLiteral(StringView str) {
 		return false;
 
 	// Special check on the first and last character
-	if (isIn(str[0], {'[', '\'', '"', '#'}) || isspace(str[0]) ||
+	if (isOneOf(str[0], '[', '\'', '"', '#') || isspace(str[0]) ||
 		isspace(str.back()))
 	{
 		return false;
 	}
 
 	for (char c : str)
-		if (isIn(c, {'\n', ']', ',', '#'}))
+		if (isOneOf(c, '\n', ']', ',', '#'))
 			return false;
 
 	return true;

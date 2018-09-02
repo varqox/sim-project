@@ -78,13 +78,13 @@ TEST (ConfigFile, isStringLiteral) {
 			<< "p.first: " << p.first << endl;
 
 	auto is_beginning = [](char c) {
-		return !(isspace(c) || isIn(c, {'[', ',', ']', '#', '\'', '"'}));
+		return !(isspace(c) || isOneOf(c, '[', ',', ']', '#', '\'', '"'));
 	};
 	auto is_interior = [](char c) {
-		return !isIn(c, {'\n', '#', ']', ','});
+		return !isOneOf(c, '\n', '#', ']', ',');
 	};
 	auto is_ending = [](char c) {
-		return !(isspace(c) || isIn(c, {'#', ']', ','}));
+		return !(isspace(c) || isOneOf(c, '#', ']', ','));
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};

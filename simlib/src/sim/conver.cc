@@ -529,8 +529,8 @@ void Conver::finishConstructingSimfile(Simfile& sf, const JudgeReport& jrep1,
 		for (auto&& g : rep.groups)
 			for (auto&& t : g.tests){
 				// Only allow OK and WA to pass through
-				if (not isIn(t.status,
-					{JudgeReport::Test::OK, JudgeReport::Test::WA}))
+				if (not isOneOf(t.status, JudgeReport::Test::OK,
+					JudgeReport::Test::WA))
 				{
 					THROW("Error on test `", t.name, "`: ",
 						JudgeReport::Test::description(t.status));
