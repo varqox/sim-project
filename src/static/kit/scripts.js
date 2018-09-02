@@ -795,7 +795,7 @@ function tabmenu(attacher, tabs) {
 	var res = $('<div>', {class: 'tabmenu'});
 	/*const*/ var prior_hash = url_hash_parser.parsed_prefix();
 
-	function set_min_width(elem) {
+	var set_min_width = function(elem) {
 		var tabm = $(elem).parent();
 		var mdiv = tabm.closest('.modal > div');
 		if (mdiv.length === 0)
@@ -833,7 +833,7 @@ function tabmenu(attacher, tabs) {
 	}
 
 	var click_handler = function(handler) {
-		return function() {
+		return function(e) {
 			if (!$(this).hasClass('active')) {
 				set_min_width(this);
 				$(this).parent().children('.active').removeClass('active');
@@ -849,10 +849,12 @@ function tabmenu(attacher, tabs) {
 					centerize_modal($(elem).parents('.modal'), false);
 				});
 			}
+			e.preventDefault();
 		};
 	};
 	for (var i = 0; i < tabs.length; i += 2)
 		res.append($('<a>', {
+			href: document.URL.substring(0, document.URL.length - window.location.hash.length) + prior_hash + '#' + tabname_to_hash(tabs[i]),
 			text: tabs[i],
 			click: click_handler(tabs[i + 1])
 		}));
