@@ -83,12 +83,12 @@ template<class T>
 class Optional {
 	using StoredType = std::remove_const_t<T>;
 	StoredType value_; // This optional always need to contain value
-	my_bool has_value_;
+	my_bool has_no_value_;
 
 	template<size_t, size_t>
 	friend class Statement;
 public:
-	Optional() : has_value_(false) {}
+	Optional() : has_no_value_(true) {}
 
 	Optional(const Optional&) = default;
 	Optional(Optional&&) = default;
@@ -97,30 +97,30 @@ private:
 	Optional& operator=(const Optional&) = default;
 	Optional& operator=(Optional&&) = default;
 
-	Optional(const T& value) : has_value_(true), value_(value) {}
+	Optional(const T& value) : has_no_value_(false), value_(value) {}
 
-	Optional(T&& value) : has_value_(true), value_(value) {}
+	Optional(T&& value) : has_no_value_(false), value_(value) {}
 
 public:
-	operator ::Optional<T>() const { return has_value_ ? ::Optional<T>() : value_; }
+	operator ::Optional<T>() const { return has_no_value_ ? ::Optional<T>() : value_; }
 
 	template<class U = T>
 	operator std::enable_if_t<is_enum_val<U>::value, ::Optional<EnumValType<T>>>() const {
-		return has_value_ ? ::Optional<T>() : value_;
+		return has_no_value_ ? ::Optional<T>() : value_;
 	}
 
-	// ::Optional<T> opt() const { return has_value_ ? ::Optional<T>() : value_; }
+	// ::Optional<T> opt() const { return has_no_value_ ? ::Optional<T>() : value_; }
 
-	constexpr explicit operator bool() const noexcept { return has_value_; }
+	constexpr explicit operator bool() const noexcept { return not has_no_value_; }
 
 	constexpr const T& operator*() const { return value_; }
 
 	constexpr const T* operator->() const { return std::addressof(value_); }
 
-	constexpr bool has_value() const noexcept { return has_value_; }
+	constexpr bool has_value() const noexcept { return not has_no_value_; }
 
 	constexpr const T& value() const {
-		if (not has_value_)
+		if (has_no_value_)
 			THROW("bad optional access");
 
 		return value_;
@@ -128,7 +128,7 @@ public:
 
 	template<class U>
 	constexpr T value_or(U&& default_value) const {
-		return (has_value_ ? value_ : std::forward<U>(default_value));
+		return (has_no_value_ ? std::forward<U>(default_value) : value_);
 	}
 };
 
@@ -416,7 +416,7 @@ public:
 	template<class T>
 	void bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
 		bind(idx, x.value_);
-		bind_isnull(idx, x.has_value_);
+		bind_isnull(idx, x.has_no_value_);
 	}
 
 	template<class T>
@@ -572,7 +572,7 @@ public:
 	template<class T>
 	void res_bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
 		res_bind(idx, x.value_);
-		res_bind_isnull(idx, x.has_value_);
+		res_bind_isnull(idx, x.has_no_value_);
 	}
 
 	template<class T>
