@@ -848,7 +848,7 @@ typedef RemoverBase<remove_r> DirectoryRemover;
 
 /**
  * @brief Converts @p size, so that it human readable
- * @details It adds proper prefixes, for example:
+ * @details It adds proper suffixes, for example:
  *   1 -> "1 byte"
  *   1023 -> "1023 bytes"
  *   1024 -> "1.0 KB"
@@ -887,6 +887,14 @@ inline bool isRegularFile(CStringView file) noexcept {
 inline bool isDirectory(CStringView file) noexcept {
 	struct stat64 st;
 	return (stat64(file.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
+}
+
+inline uint64_t get_file_size(CStringView file) {
+	struct stat64 st;
+	if (stat64(file.c_str(), &st))
+		THROW("stat()", errmsg());
+
+	return st.st_size;
 }
 
 namespace directory_tree {
