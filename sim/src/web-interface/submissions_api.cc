@@ -176,14 +176,11 @@ void Sim::api_submissions() {
 						arg_id));
 				}
 
-				continue;
-			}
-
 			// Next conditions require arg_id to be a valid ID
-			if (not isDigit(arg_id))
+			} else if (not isDigit(arg_id)) {
 				return api_error400();
 
-			if (isIn(cond_c, {'<', '>'})) {
+			} else if (isOneOf(cond_c, '<', '>')) {
 				if (id_condition_occurred)
 					return api_error400("Submission ID condition specified more"
 						" than once");
@@ -239,7 +236,7 @@ void Sim::api_submissions() {
 				}
 
 			// Round's id
-			} else if (isIn(cond_c, {'C', 'R', 'P'})) {
+			} else if (isOneOf(cond_c, 'C', 'R', 'P')) {
 				if (round_or_problem_condition_occurred)
 					return api_error400("Round or problem ID condition"
 						" specified more than once");
@@ -671,24 +668,10 @@ void Sim::api_submission_add() {
 	}
 
 	// Check the solution size
-	// File
-	if (code.empty()) {
-		struct stat sb;
-		if (stat(solution_tmp_path.c_str(), &sb))
-			THROW("stat() failed", errmsg());
-
-		// Check if solution is too big
-		if ((uint64_t)sb.st_size > SOLUTION_MAX_SIZE) {
-			add_notification("error", "Solution is too big (maximum allowed "
-				"size: ", SOLUTION_MAX_SIZE, " bytes = ",
-				SOLUTION_MAX_SIZE >> 10, " KB)");
-			return api_error400(notifications);
-		}
-	// Code
-	} else if (code.size() > SOLUTION_MAX_SIZE) {
-		add_notification("error", "Solution is too big (maximum allowed "
-			"size: ", SOLUTION_MAX_SIZE, " bytes = ",
-			SOLUTION_MAX_SIZE >> 10, " KB)");
+	if ((code.empty() ? get_file_size(solution_tmp_path) : code.size()) >
+		SOLUTION_MAX_SIZE)
+	{
+		add_notification("error", "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE, " bytes = ", SOLUTION_MAX_SIZE >> 10, " KB)");
 		return api_error400(notifications);
 	}
 

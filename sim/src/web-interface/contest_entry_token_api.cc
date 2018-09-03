@@ -41,20 +41,8 @@ void Sim::api_contest_entry_token() {
 
 	} else if (next_arg[0] == 'c') {
 		StringView contest_id = next_arg.substr(1);
-		auto stmt = mysql.prepare("SELECT c.is_public, cu.mode"
-			" FROM contests c"
-			" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND user_id=?"
-			" WHERE c.id=?");
-		stmt.bindAndExecute(session_user_id, contest_id);
-
-		bool is_public;
-		EnumVal<ContestUserMode> cu_mode;
-
-		stmt.res_bind_all(is_public, cu_mode);
-		if (not stmt.next())
-			return api_error404();
-
-		ContestPermissions cperms = contests_get_permissions(is_public, cu_mode);
+		ContestPermissions cperms = contests_get_permissions(contest_id).
+			value_or(ContestPermissions::NONE);
 		if (uint(~cperms & ContestPermissions::MANAGE_CONTEST_ENTRY_TOKEN))
 			return api_error404(); // To not reveal that the contest exists
 
@@ -74,7 +62,7 @@ void Sim::api_contest_entry_token() {
 		else if (not next_arg.empty())
 			return api_error400();
 
-		stmt = mysql.prepare("SELECT token, short_token, short_token_expiration"
+		auto stmt = mysql.prepare("SELECT token, short_token, short_token_expiration"
 			" FROM contest_entry_tokens WHERE contest_id=?");
 		stmt.bindAndExecute(contest_id);
 

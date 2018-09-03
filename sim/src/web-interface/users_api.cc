@@ -59,14 +59,12 @@ void Sim::api_users() {
 				return api_error400(concat("Invalid user type: ", arg_id));
 
 			mask |= UTYPE_COND;
-			continue;
-		}
 
-		if (not isDigit(arg_id))
+		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
+		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
 			query_append("id", arg);
 			mask |= ID_COND;
 
@@ -76,7 +74,6 @@ void Sim::api_users() {
 
 		} else
 			return api_error400();
-
 	}
 
 	query.append(" ORDER BY id LIMIT 50");

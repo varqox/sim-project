@@ -88,6 +88,7 @@ constexpr uint CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME = 60 * 60; // 1 hour [s]
 constexpr uint FILE_ID_LEN = 30;
 constexpr uint FILE_NAME_MAX_LEN = 128;
 constexpr uint FILE_DESCRIPTION_MAX_LEN = 512;
+constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MB
 
 // Submissions
 constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib

@@ -153,6 +153,8 @@ SIM_SERVER_SRCS := \
 	src/web-interface/contest_users_api.cc \
 	src/web-interface/contests.cc \
 	src/web-interface/contests_api.cc \
+	src/web-interface/files.cc \
+	src/web-interface/files_api.cc \
 	src/web-interface/http_request.cc \
 	src/web-interface/http_response.cc \
 	src/web-interface/jobs.cc \

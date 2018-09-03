@@ -226,7 +226,11 @@ private:
 
 	void api_files();
 
+	void api_file();
+
 	void api_file_add();
+
+	void api_file_download();
 
 	void api_file_edit();
 
@@ -308,7 +312,7 @@ private:
 	// 501
 	void error501() {
 		error_page_template("501 Not Implemented", "501",
-			"This feature has not been implemented yet.");
+			"This feature has not been implemented yet...");
 	}
 
 	/* ============================== Forms ============================== */
@@ -420,8 +424,9 @@ private:
 		return false;
 	}
 
-	/// @brief Sets path of file of form name @p name to @p var or sets an error
-	/// if such does not exist
+	/// @brief Sets @p var to path of the uploaded file (its temporary location)
+	///  or sets an error if no file as @p name was submitted. To obtain the
+	// users's filename of the uploaded file use: request.form_data.get(name)
 	template<class T>
 	bool form_validate_file_path_not_blank(T& var, const std::string& name,
 		StringView name_to_print)
@@ -433,7 +438,7 @@ private:
 		if (not it) {
 			form_validation_error = true;
 			add_notification("error", htmlEscape(name_to_print),
-				" has to be submitted as a file</pre>");
+				" has to be submitted as a file");
 			return false;
 		}
 
@@ -602,7 +607,7 @@ public:
 		MAKE_PUBLIC = 1 << 8,
 		SELECT_FINAL_SUBMISSIONS = 1 << 9,
 		VIEW_ALL_CONTEST_SUBMISSIONS = 1 << 10,
-		MANAGE_CONTEST_ENTRY_TOKEN = 1 << 11,
+		MANAGE_CONTEST_ENTRY_TOKEN = 1 << 11
 	};
 
 private:
@@ -614,6 +619,8 @@ private:
 
 	ContestPermissions contests_get_permissions(bool is_public,
 		Optional<ContestUserMode> cu_mode) noexcept;
+
+	Optional<ContestPermissions> contests_get_permissions(StringView contest_id);
 
 	ContestPermissions contests_perms = ContestPermissions::NONE;
 	InplaceBuff<32> contests_cid;
@@ -701,6 +708,37 @@ private:
 
 	// Pages
 	void submissions_handle();
+
+	/* =============================== Files =============================== */
+
+public:
+	enum class FilePermissions : uint {
+		NONE = 0,
+		// Overall
+		ADD = 1,
+		VIEW_CREATOR = 2,
+		// File specific
+		VIEW = 4,
+		DOWNLOAD = 8,
+		EDIT = 1 << 4,
+		DELETE = 1 << 5
+	};
+
+private:
+	friend DECLARE_ENUM_UNARY_OPERATOR(FilePermissions, ~)
+	friend DECLARE_ENUM_OPERATOR(FilePermissions, |)
+	friend DECLARE_ENUM_OPERATOR(FilePermissions, &)
+
+	FilePermissions files_get_permissions(ContestPermissions cperms) noexcept;
+
+	// No value if the file does not exist
+	Optional<FilePermissions> files_get_permissions(StringView file_id);
+
+	FilePermissions files_perms;
+	StringView files_id;
+
+	// Pages
+	void file_handle();
 
 	/* =============================== Other =============================== */
 

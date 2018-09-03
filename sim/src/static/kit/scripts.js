@@ -301,13 +301,72 @@ function StaticMap() {
 	};
 }
 
+/**
+ * @brief Converts @p size, so that it human readable
+ * @details It adds proper suffixes, for example:
+ *   1 -> "1 byte"
+ *   1023 -> "1023 bytes"
+ *   1024 -> "1.0 KB"
+ *   129747 -> "127 KB"
+ *   97379112 -> "92.9 MB"
+ *
+ * @param size size to humanize
+ *
+ * @return humanized file size
+ */
+function humanizeFileSize(size) {
+	var MIN_KB = 1024;
+	var MIN_MB = 1048576;
+	var MIN_GB = 1073741824;
+	var MIN_TB = 1099511627776;
+	var MIN_PB = 1125899906842624;
+	var MIN_EB = 1152921504606846976;
+	var MIN_3DIGIT_KB = 102349;
+	var MIN_3DIGIT_MB = 104805172;
+	var MIN_3DIGIT_GB = 107320495309;
+	var MIN_3DIGIT_TB = 109896187196212;
+	var MIN_3DIGIT_PB = 112533595688920269;
+
+	// Bytes
+	if (size < MIN_KB)
+		return (size == 1 ? "1 byte" : size + " bytes");
+
+	// KB
+	if (size < MIN_3DIGIT_KB)
+		return parseFloat(size / MIN_KB).toFixed(1) + " KB";
+	if (size < MIN_MB)
+		return Math.round(size / MIN_KB) + " KB";
+	// MB
+	if (size < MIN_3DIGIT_MB)
+		return parseFloat(size / MIN_MB).toFixed(1) + " MB";
+	if (size < MIN_GB)
+		return Math.round(size / MIN_MB) + " MB";
+	// GB
+	if (size < MIN_3DIGIT_GB)
+		return parseFloat(size / MIN_GB).toFixed(1) + " GB";
+	if (size < MIN_TB)
+		return Math.round(size / MIN_GB) + " GB";
+	// TB
+	if (size < MIN_3DIGIT_TB)
+		return parseFloat(size / MIN_TB).toFixed(1) + " TB";
+	if (size < MIN_PB)
+		return Math.round(size / MIN_TB) + " TB";
+	// PB
+	if (size < MIN_3DIGIT_PB)
+		return parseFloat(size / MIN_PB).toFixed(1) + " PB";
+	if (size < MIN_EB)
+		return Math.round(size / MIN_PB) + " PB";
+	// EB
+	return parseFloat(size / MIN_EB).toFixed(1) + " EB";
+}
+
 /* ============================ URL hash parser ============================ */
 var url_hash_parser = {};
 (function () {
 	var args = window.location.hash; // Must begin with '#'
 	var beg = 0; // Points to the '#' just before the next argument
 
-	this.next_arg  = function() {
+	url_hash_parser.next_arg  = function() {
 		var pos = args.indexOf('#', beg + 1);
 		if (pos === -1)
 			return args.substring(beg + 1);
@@ -315,7 +374,7 @@ var url_hash_parser = {};
 		return args.substring(beg + 1, pos);
 	};
 
-	this.extract_next_arg  = function() {
+	url_hash_parser.extract_next_arg  = function() {
 		var pos = args.indexOf('#', beg + 1), res;
 		if (pos === -1) {
 			if (beg >= args.length)
@@ -331,9 +390,9 @@ var url_hash_parser = {};
 		return res;
 	};
 
-	this.empty = function() { return (beg >= args.length); };
+	url_hash_parser.empty = function() { return (beg >= args.length); };
 
-	this.assign = function(new_hash) {
+	url_hash_parser.assign = function(new_hash) {
 		beg = 0;
 		if (new_hash.charAt(0) !== '#')
 			args = '#' + new_hash;
@@ -341,7 +400,7 @@ var url_hash_parser = {};
 			args = new_hash;
 	};
 
-	this.assign_as_parsed = function(new_hash) {
+	url_hash_parser.assign_as_parsed = function(new_hash) {
 		if (new_hash.charAt(0) !== '#')
 			args = '#' + new_hash;
 		else
@@ -350,15 +409,15 @@ var url_hash_parser = {};
 	};
 
 
-	this.append = function(next_args) {
+	url_hash_parser.append = function(next_args) {
 		if (next_args.charAt(0) !== '#')
 			args += '#' + next_args;
 		else
 			args += next_args;
 	};
 
-	this.parsed_prefix = function() { return args.substring(0, beg); };
-}).call(url_hash_parser);
+	url_hash_parser.parsed_prefix = function() { return args.substring(0, beg); };
+}).call();
 
 /* =========================== History management =========================== */
 var History = {};
@@ -441,15 +500,15 @@ window.onpopstate = function(event) {
 var egid = {};
 (function () {
 	var id = 0;
-	this.next_from = function(egid) {
+	egid.next_from = function(egid) {
 		var egid_id = String(egid).replace(/.*-/, '');
 		return String(egid).replace(/[^-]*$/, ++egid_id);
 	};
 
-	this.get_next = function() {
+	egid.get_next = function() {
 		return ''.concat(window.performance.timing.responseStart, '-', id++);
 	};
-}).call(egid);
+}).call();
 
 function give_body_egid() {
 	if ($('body').attr('egid') !== undefined)
@@ -546,67 +605,65 @@ var get_unique_id = function() {
 
 /* ================================= Form ================================= */
 var Form = {};
-(function() {
-	this.field_group = function(label_text_or_html_content, input_context_or_html_elem) {
-		var input;
-		if (input_context_or_html_elem instanceof jQuery)
-			input = input_context_or_html_elem;
-		else if (input_context_or_html_elem instanceof HTMLElement)
-			input = $(input_context_or_html_elem);
-		else
-			input = $('<input>', input_context_or_html_elem);
+Form.field_group = function(label_text_or_html_content, input_context_or_html_elem) {
+	var input;
+	if (input_context_or_html_elem instanceof jQuery)
+		input = input_context_or_html_elem;
+	else if (input_context_or_html_elem instanceof HTMLElement)
+		input = $(input_context_or_html_elem);
+	else
+		input = $('<input>', input_context_or_html_elem);
 
-		var id;
-		if (input.is('input[type="checkbox"]')) {
-			id = 'checkbox' + get_unique_id();
-			input.attr('id', id);
+	var id;
+	if (input.is('input[type="checkbox"]')) {
+		id = 'checkbox' + get_unique_id();
+		input.attr('id', id);
+	}
+
+	var is_label_html_content = (Array.isArray(label_text_or_html_content) || label_text_or_html_content instanceof jQuery || input_context_or_html_elem instanceof HTMLElement);
+
+	return $('<div>', {
+		class: 'field-group',
+		html: [
+			$('<label>', {
+				text: (is_label_html_content ? undefined : label_text_or_html_content),
+				html: (is_label_html_content ? label_text_or_html_content : undefined),
+				for: id
+			}),
+			input
+		]
+	});
+};
+
+Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_parent)
+{
+	if (success_msg === undefined)
+		success_msg = 'Success';
+	if (loader_parent === undefined)
+		loader_parent = $(form);
+
+	form = $(form);
+	add_csrf_token_to(form);
+	append_loader(loader_parent);
+
+	$.ajax({
+		type: 'POST',
+		url: url,
+		processData: false,
+		contentType: false,
+		data: new FormData(form[0]),
+		success: function(resp) {
+			if (typeof success_msg === "function") {
+				success_msg.call(form, resp, loader_parent);
+			} else
+				show_success_via_loader(loader_parent, success_msg);
+		},
+		error: function(resp, status) {
+			show_error_via_loader(loader_parent, resp, status);
 		}
-
-		var is_label_html_content = (Array.isArray(label_text_or_html_content) || label_text_or_html_content instanceof jQuery || input_context_or_html_elem instanceof HTMLElement);
-
-		return $('<div>', {
-			class: 'field-group',
-			html: [
-				$('<label>', {
-					text: (is_label_html_content ? undefined : label_text_or_html_content),
-					html: (is_label_html_content ? label_text_or_html_content : undefined),
-					for: id
-				}),
-				input
-			]
-		});
-	};
-
-	this.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_parent)
-	{
-		if (success_msg === undefined)
-			success_msg = 'Success';
-		if (loader_parent === undefined)
-			loader_parent = $(form);
-
-		form = $(form);
-		add_csrf_token_to(form);
-		append_loader(loader_parent);
-
-		$.ajax({
-			type: 'POST',
-			url: url,
-			processData: false,
-			contentType: false,
-			data: new FormData(form[0]),
-			success: function(resp) {
-				if (typeof success_msg === "function") {
-					success_msg.call(form, resp, loader_parent);
-				} else
-					show_success_via_loader(loader_parent, success_msg);
-			},
-			error: function(resp, status) {
-				show_error_via_loader(loader_parent, resp, status);
-			}
-		});
-		return false;
-	};
-}).call(Form);
+	});
+	return false;
+};
 
 function ajax_form(title, target, html, success_msg, classes) {
 	return $('<div>', {
@@ -1310,224 +1367,252 @@ function tab_logs_view(parent_elem) {
 
 /* ============================ Actions buttons ============================ */
 var ActionsToHTML = {};
-(function() {
-	this.job = function(job_id, actions_str, problem_id, job_view /*= false*/) {
-		if (job_view == undefined)
-			job_view = false;
+ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false*/) {
+	if (job_view == undefined)
+		job_view = false;
 
-		var res = [];
-		if (!job_view && actions_str.indexOf('v') !== -1)
-			res.push(a_view_button('/jobs/' + job_id, 'View', 'btn-small',
-				view_job.bind(null, true, job_id)));
+	var res = [];
+	if (!job_view && actions_str.indexOf('v') !== -1)
+		res.push(a_view_button('/jobs/' + job_id, 'View', 'btn-small',
+			view_job.bind(null, true, job_id)));
 
-		if (actions_str.indexOf('u') !== -1 || actions_str.indexOf('r') !== -1)
-			res.push($('<div>', {
-				class: 'dropmenu down',
-				html: $('<a>', {
-					class: 'btn-small dropmenu-toggle',
-					text: 'Download'
-				}).add('<ul>', {
-					html: [actions_str.indexOf('r') === -1 ? '' :  $('<a>', {
-							href: '/api/job/' + job_id + '/log',
-							text: 'Job log'
-						}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
-							href: '/api/job/' + job_id + '/uploaded-package',
-							text: 'Uploaded package'
-						})
-					]
-				})
-			}));
-
-		if (actions_str.indexOf('p') !== -1)
-			res.push(a_view_button('/p/' + problem_id, 'View problem',
-				'btn-small green', view_problem.bind(null, true, problem_id)));
-
-		if (actions_str.indexOf('C') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small red',
-				text: 'Cancel job',
-				click: cancel_job.bind(null, job_id)
-			}));
-
-		if (actions_str.indexOf('R') !== -1)
-			res.push(a_view_button(undefined, 'Restart job', 'btn-small orange',
-				restart_job.bind(null, job_id)));
-
-		return res;
-	};
-
-	this.user = function(user_id, actions_str, user_view /*= false*/) {
-		if (user_view === undefined)
-			user_view = false;
-
-		var res = [];
-		if (!user_view && actions_str.indexOf('v') !== -1)
-			res.push(a_view_button('/u/' + user_id, 'View', 'btn-small',
-				view_user.bind(null, true, user_id)));
-
-		if (actions_str.indexOf('E') !== -1)
-			res.push(a_view_button('/u/' + user_id + '/edit', 'Edit',
-				'btn-small blue', edit_user.bind(null, true, user_id)));
-
-		if (actions_str.indexOf('D') !== -1)
-			res.push(a_view_button('/u/' + user_id + '/delete', 'Delete',
-				'btn-small red', delete_user.bind(null, true, user_id)));
-
-		if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
-			res.push(a_view_button('/u/' + user_id + '/change-password',
-				'Change password', 'btn-small orange',
-				change_user_password.bind(null, true, user_id)));
-
-		return res;
-	};
-
-	this.submission = function(submission_id, actions_str, submission_type, submission_view /*= false*/) {
-		if (submission_view === undefined)
-			submission_view = false;
-
-		var res = [];
-		if (!submission_view && actions_str.indexOf('v') !== -1)
-			res.push(a_view_button('/s/' + submission_id, 'View', 'btn-small',
-				view_submission.bind(null, true, submission_id)));
-
-		if (actions_str.indexOf('s') !== -1) {
-			if (!submission_view)
-				res.push(a_view_button('/s/' + submission_id + '#source', 'Source',
-					'btn-small', view_submission.bind(null, true, submission_id, '#source')));
-
-			var a = document.createElement('a');
-			a.className = 'btn-small';
-			a.href = '/api/submission/' + submission_id + '/download';
-			a.innerText = 'Download';
-			res.push(a);
-		}
-
-		if (actions_str.indexOf('C') !== -1)
-			res.push(a_view_button(undefined, 'Change type', 'btn-small orange',
-				submission_chtype.bind(null, submission_id, submission_type)));
-
-		if (actions_str.indexOf('R') !== -1)
-			res.push(a_view_button(undefined, 'Rejudge', 'btn-small blue',
-				rejudge_submission.bind(null, submission_id)));
-
-		if (actions_str.indexOf('D') !== -1)
-			res.push(a_view_button(undefined, 'Delete', 'btn-small red',
-				delete_submission.bind(null, submission_id)));
-
-		return res;
-	};
-
-	this.problem = function(problem, problem_view /*= false*/) {
-		if (problem_view === undefined)
-			problem_view = false;
-
-		var res = [];
-		if (!problem_view && problem.actions.indexOf('v') !== -1)
-			res.push(a_view_button('/p/' + problem.id, 'View', 'btn-small',
-				view_problem.bind(null, true, problem.id)));
-
-		if (problem.actions.indexOf('V') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small',
-				href: '/api/problem/' + problem.id + '/statement/' + encodeURIComponent(problem.name),
-				text: 'Statement'
-			}));
-
-		if (problem.actions.indexOf('S') !== -1)
-			res.push(a_view_button('/p/' + problem.id + '/submit', 'Submit',
-				'btn-small blue', add_problem_submission.bind(null, true, problem)));
-
-		if (problem.actions.indexOf('s') !== -1)
-			res.push(a_view_button('/p/' + problem.id + '#all_submissions#solutions',
-				'Solutions', 'btn-small', view_problem.bind(null, true, problem.id,
-					'#all_submissions#solutions')));
-
-		if (problem_view && problem.actions.indexOf('d') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small',
-				href: '/api/problem/' + problem.id + '/download',
+	if (actions_str.indexOf('u') !== -1 || actions_str.indexOf('r') !== -1)
+		res.push($('<div>', {
+			class: 'dropmenu down',
+			html: $('<a>', {
+				class: 'btn-small dropmenu-toggle',
 				text: 'Download'
-			}));
+			}).add('<ul>', {
+				html: [actions_str.indexOf('r') === -1 ? '' :  $('<a>', {
+						href: '/api/job/' + job_id + '/log',
+						text: 'Job log'
+					}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
+						href: '/api/job/' + job_id + '/uploaded-package',
+						text: 'Uploaded package'
+					})
+				]
+			})
+		}));
 
-		if (problem.actions.indexOf('E') !== -1)
-			res.push(a_view_button('/p/' + problem.id + '/edit', 'Edit',
-				'btn-small blue', edit_problem.bind(null, true, problem.id)));
+	if (actions_str.indexOf('p') !== -1)
+		res.push(a_view_button('/p/' + problem_id, 'View problem',
+			'btn-small green', view_problem.bind(null, true, problem_id)));
 
-		if (problem_view && problem.actions.indexOf('R') !== -1)
-			res.push(a_view_button('/p/' + problem.id + '/reupload', 'Reupload',
-				'btn-small orange', reupload_problem.bind(null, true, problem.id)));
+	if (actions_str.indexOf('C') !== -1)
+		res.push($('<a>', {
+			class: 'btn-small red',
+			text: 'Cancel job',
+			click: cancel_job.bind(null, job_id)
+		}));
 
-		if (problem_view && problem.actions.indexOf('J') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small blue',
-				text: 'Rejudge all submissions',
-				click: rejudge_problem_submissions.bind(null, problem.id)
-			}));
+	if (actions_str.indexOf('R') !== -1)
+		res.push(a_view_button(undefined, 'Restart job', 'btn-small orange',
+			restart_job.bind(null, job_id)));
 
-		if (problem_view && problem.actions.indexOf('D') !== -1)
-			res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
-				'btn-small red', delete_problem.bind(null, true, problem.id)));
+	return res;
+};
 
-		return res;
-	};
+ActionsToHTML.user = function(user_id, actions_str, user_view /*= false*/) {
+	if (user_view === undefined)
+		user_view = false;
 
-	this.contest = function(contest_id, actions_str, contest_view /*= false*/) {
-		if (contest_view === undefined)
-			contest_view = false;
+	var res = [];
+	if (!user_view && actions_str.indexOf('v') !== -1)
+		res.push(a_view_button('/u/' + user_id, 'View', 'btn-small',
+			view_user.bind(null, true, user_id)));
 
-		var res = [];
-		if (!contest_view && actions_str.indexOf('v') !== -1)
-			res.push($('<a>', {
-				class: 'btn-small',
-				href: '/c/c' + contest_id,
-				text: 'View'
-			}), $('<a>', {
-				class: 'btn-small',
-				href: '/c/c' + contest_id + '#ranking',
-				text: 'Ranking'
-			}));
+	if (actions_str.indexOf('E') !== -1)
+		res.push(a_view_button('/u/' + user_id + '/edit', 'Edit',
+			'btn-small blue', edit_user.bind(null, true, user_id)));
 
-		if (contest_view && actions_str.indexOf('E') !== -1)
-			res.push(a_view_button('/c/c' + contest_id + '/edit', 'Edit',
-				'btn-small blue', edit_contest.bind(null, true, contest_id)));
+	if (actions_str.indexOf('D') !== -1)
+		res.push(a_view_button('/u/' + user_id + '/delete', 'Delete',
+			'btn-small red', delete_user.bind(null, true, user_id)));
 
-		if (contest_view && actions_str.indexOf('D') !== -1)
-			res.push(a_view_button('/c/c' + contest_id + '/delete', 'Delete',
-				'btn-small red', delete_contest.bind(null, true, contest_id)));
+	if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
+		res.push(a_view_button('/u/' + user_id + '/change-password',
+			'Change password', 'btn-small orange',
+			change_user_password.bind(null, true, user_id)));
 
-		return res;
-	};
+	return res;
+};
 
-	this.contest_user = function(user_id, contest_id, actions_str) {
-		var res = [];
-		var make_contestant = (actions_str.indexOf('Mc') !== -1);
-		var make_moderator = (actions_str.indexOf('Mm') !== -1);
-		var make_owner = (actions_str.indexOf('Mo') !== -1);
+ActionsToHTML.submission = function(submission_id, actions_str, submission_type, submission_view /*= false*/) {
+	if (submission_view === undefined)
+		submission_view = false;
 
-		if (make_contestant + make_moderator + make_owner > 1)
-			res.push(a_view_button('/c/c' + contest_id + '/contest_user/' + user_id + '/change_mode', 'Change mode', 'btn-small orange',
-				change_contest_user_mode.bind(null, true, contest_id, user_id)));
+	var res = [];
+	if (!submission_view && actions_str.indexOf('v') !== -1)
+		res.push(a_view_button('/s/' + submission_id, 'View', 'btn-small',
+			view_submission.bind(null, true, submission_id)));
 
-		if (actions_str.indexOf('E') !== -1)
-			res.push(a_view_button('/c/c' + contest_id + '/contest_user/' + user_id + '/expel',
-				'Expel', 'btn-small red',
-				expel_contest_user.bind(null, true, contest_id, user_id)));
+	if (actions_str.indexOf('s') !== -1) {
+		if (!submission_view)
+			res.push(a_view_button('/s/' + submission_id + '#source', 'Source',
+				'btn-small', view_submission.bind(null, true, submission_id, '#source')));
 
-		return res;
-	};
+		var a = document.createElement('a');
+		a.className = 'btn-small';
+		a.href = '/api/submission/' + submission_id + '/download';
+		a.innerText = 'Download';
+		res.push(a);
+	}
 
-	this.contest_users = function(contest_id, overall_actions_str) {
-		var add_contestant = (overall_actions_str.indexOf('Ac') !== -1);
-		var add_moderator = (overall_actions_str.indexOf('Am') !== -1);
-		var add_owner = (overall_actions_str.indexOf('Ao') !== -1);
+	if (actions_str.indexOf('C') !== -1)
+		res.push(a_view_button(undefined, 'Change type', 'btn-small orange',
+			submission_chtype.bind(null, submission_id, submission_type)));
 
-		if (add_contestant || add_moderator || add_owner)
-			return a_view_button('/c/c' + contest_id + '/contest_user/add',
-				'Add user', 'btn', add_contest_user.bind(null, true, contest_id));
+	if (actions_str.indexOf('R') !== -1)
+		res.push(a_view_button(undefined, 'Rejudge', 'btn-small blue',
+			rejudge_submission.bind(null, submission_id)));
 
-		return [];
-	};
-}).call(ActionsToHTML);
+	if (actions_str.indexOf('D') !== -1)
+		res.push(a_view_button(undefined, 'Delete', 'btn-small red',
+			delete_submission.bind(null, submission_id)));
+
+	return res;
+};
+
+ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
+	if (problem_view === undefined)
+		problem_view = false;
+
+	var res = [];
+	if (!problem_view && problem.actions.indexOf('v') !== -1)
+		res.push(a_view_button('/p/' + problem.id, 'View', 'btn-small',
+			view_problem.bind(null, true, problem.id)));
+
+	if (problem.actions.indexOf('V') !== -1)
+		res.push($('<a>', {
+			class: 'btn-small',
+			href: '/api/problem/' + problem.id + '/statement/' + encodeURIComponent(problem.name),
+			text: 'Statement'
+		}));
+
+	if (problem.actions.indexOf('S') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/submit', 'Submit',
+			'btn-small blue', add_problem_submission.bind(null, true, problem)));
+
+	if (problem.actions.indexOf('s') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '#all_submissions#solutions',
+			'Solutions', 'btn-small', view_problem.bind(null, true, problem.id,
+				'#all_submissions#solutions')));
+
+	if (problem_view && problem.actions.indexOf('d') !== -1)
+		res.push($('<a>', {
+			class: 'btn-small',
+			href: '/api/problem/' + problem.id + '/download',
+			text: 'Download'
+		}));
+
+	if (problem.actions.indexOf('E') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/edit', 'Edit',
+			'btn-small blue', edit_problem.bind(null, true, problem.id)));
+
+	if (problem_view && problem.actions.indexOf('R') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/reupload', 'Reupload',
+			'btn-small orange', reupload_problem.bind(null, true, problem.id)));
+
+	if (problem_view && problem.actions.indexOf('J') !== -1)
+		res.push($('<a>', {
+			class: 'btn-small blue',
+			text: 'Rejudge all submissions',
+			click: rejudge_problem_submissions.bind(null, problem.id)
+		}));
+
+	if (problem_view && problem.actions.indexOf('D') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
+			'btn-small red', delete_problem.bind(null, true, problem.id)));
+
+	return res;
+};
+
+ActionsToHTML.contest = function(contest_id, actions_str, contest_view /*= false*/) {
+	if (contest_view === undefined)
+		contest_view = false;
+
+	var res = [];
+	if (!contest_view && actions_str.indexOf('v') !== -1)
+		res.push($('<a>', {
+			class: 'btn-small',
+			href: '/c/c' + contest_id,
+			text: 'View'
+		}), $('<a>', {
+			class: 'btn-small',
+			href: '/c/c' + contest_id + '#ranking',
+			text: 'Ranking'
+		}));
+
+	if (contest_view && actions_str.indexOf('E') !== -1)
+		res.push(a_view_button('/c/c' + contest_id + '/edit', 'Edit',
+			'btn-small blue', edit_contest.bind(null, true, contest_id)));
+
+	if (contest_view && actions_str.indexOf('D') !== -1)
+		res.push(a_view_button('/c/c' + contest_id + '/delete', 'Delete',
+			'btn-small red', delete_contest.bind(null, true, contest_id)));
+
+	return res;
+};
+
+ActionsToHTML.contest_user = function(user_id, contest_id, actions_str) {
+	var res = [];
+	var make_contestant = (actions_str.indexOf('Mc') !== -1);
+	var make_moderator = (actions_str.indexOf('Mm') !== -1);
+	var make_owner = (actions_str.indexOf('Mo') !== -1);
+
+	if (make_contestant + make_moderator + make_owner > 1)
+		res.push(a_view_button('/c/c' + contest_id + '/contest_user/' + user_id + '/change_mode', 'Change mode', 'btn-small orange',
+			change_contest_user_mode.bind(null, true, contest_id, user_id)));
+
+	if (actions_str.indexOf('E') !== -1)
+		res.push(a_view_button('/c/c' + contest_id + '/contest_user/' + user_id + '/expel',
+			'Expel', 'btn-small red',
+			expel_contest_user.bind(null, true, contest_id, user_id)));
+
+	return res;
+};
+
+ActionsToHTML.contest_users = function(contest_id, overall_actions_str) {
+	var add_contestant = (overall_actions_str.indexOf('Ac') !== -1);
+	var add_moderator = (overall_actions_str.indexOf('Am') !== -1);
+	var add_owner = (overall_actions_str.indexOf('Ao') !== -1);
+
+	if (add_contestant || add_moderator || add_owner)
+		return a_view_button('/c/c' + contest_id + '/contest_user/add',
+			'Add user', 'btn', add_contest_user.bind(null, true, contest_id));
+
+	return [];
+};
+
+ActionsToHTML.file = function(file_id, actions_str) {
+	var res = [];
+
+	if (actions_str.indexOf('O') !== -1) {
+		var a = document.createElement('a');
+		a.className = 'btn-small';
+		a.href = '/api/file/' + file_id + '/download';
+		a.innerText = 'Download';
+		res.push(a);
+	}
+
+	if (actions_str.indexOf('E') !== -1)
+		res.push(a_view_button('/file/' + file_id + '/edit',
+			'Edit', 'btn-small blue', edit_file.bind(null, true, file_id)));
+
+	if (actions_str.indexOf('D') !== -1)
+		res.push(a_view_button('/file/' + file_id + '/delete',
+			'Delete', 'btn-small red', delete_file.bind(null, true, file_id)));
+
+	return res;
+};
+
+ActionsToHTML.files = function(contest_id, overall_actions_str) {
+	if (overall_actions_str.indexOf('A') !== -1)
+		return a_view_button('/c/c' + contest_id + '/files/add',
+			'Add file', 'btn', add_file.bind(null, true, contest_id));
+
+	return [];
+};
 
 /* ================================= Users ================================= */
 function add_user(as_modal) {
@@ -3031,7 +3116,6 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 }
 function delete_problem(as_modal, problem_id) {
 	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
-		console.log(data);
 		if (data.length === 0)
 			return show_error_via_loader(this, {
 					status: '404',
@@ -4071,6 +4155,12 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				tab_contest_users_lister($('<div>').appendTo(elem), '/c' + contest.id);
 			});
 
+		if (actions.indexOf('A') !== -1)
+			tabs.push('Files', function() {
+				var table = $('<table class="files stripped"></table>').appendTo($('<div>').appendTo(elem));
+				new FilesLister(table, '/c' + contest.id).monitor_scroll();
+			});
+
 		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
 			// Add / replace hashes in links in the contest-path
 			elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
@@ -4407,7 +4497,6 @@ function ContestUsersLister(elem, query_suffix /*= ''*/) {
 	var x = query_suffix.indexOf('/c');
 	var y = query_suffix.indexOf('/', x + 2);
 	this.contest_id = query_suffix.substring(x + 2, y == -1 ? undefined : y);
-	console.log(this.contest_id);
 
 	this.process_api_response = function(data, modal) {
 		if (this_.elem.children('thead').length === 0) {
@@ -4672,6 +4761,231 @@ function expel_contest_user(as_modal, contest_id, user_id) {
 		})));
 
 	}, '/c/c' + contest_id + '/contest_user/' + user_id + '/expel');
+}
+
+/* ================================= Files ================================= */
+function FilesLister(elem, query_suffix /*= ''*/) {
+	var this_ = this;
+	if (query_suffix === undefined)
+		query_suffix = '';
+
+	Lister.call(this, elem);
+	this.query_url = '/api/files' + query_suffix;
+	this.query_suffix = '';
+
+	var x = query_suffix.indexOf('/c');
+	var y = query_suffix.indexOf('/', x + 2);
+	this.contest_id = query_suffix.substring(x + 2, y == -1 ? undefined : y);
+
+	this.process_api_response = function(data, modal) {
+		var show_creator = (data.overall_actions.indexOf('C') !== -1);
+		if (this_.elem.children('thead').length === 0) {
+			// Overall actions
+			elem.prev('.tabmenu').prevAll().remove();
+			this_.elem.parent().prepend(ActionsToHTML.files(this_.contest_id, data.overall_actions));
+
+			if (data.rows.length == 0) {
+				this_.elem.parent().append($('<center>', {
+					class: 'files always_in_view',
+					// class: 'files',
+					html: '<p>There are no files to show...</p>'
+				}));
+				remove_loader(this_.elem.parent());
+				timed_hide_show(modal);
+				return;
+			}
+
+			this_.elem.html('<thead><tr>' +
+					(show_creator ? '<th class="creator">Creator</th>' : '') +
+					'<th class="modified">Modified</th>' +
+					'<th class="name">File name</th>' +
+					'<th class="size">File size</th>' +
+					'<th class="description">Description</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr></thead><tbody></tbody>');
+			add_tz_marker(this_.elem[0].querySelector('thead th.modified'));
+		}
+
+		for (var x in data.rows) {
+			x = data.rows[x];
+			this_.query_suffix = '/<' + x.id;
+
+			var row = $('<tr>');
+
+			if (show_creator) {
+				if (x.creator_id === null)
+					row.append($('<td>', {text: '(deleted)'}));
+				else
+					row.append($('<td>', {html: a_view_button('/u/' + x.creator_id,
+						x.creator_username, '',
+						view_user.bind(null, true, x.creator_id))}));
+			}
+
+			row.append(normalize_datetime($('<td>', {
+				datetime: x.modified,
+				text: x.modified
+			})));
+			row.append($('<td>', {html: $('<a>', {
+				href: '/api/file/' + x.id + '/download',
+				text: x.name
+			})}));
+			row.append($('<td>', {text: humanizeFileSize(x.file_size)}));
+
+			row.append($('<td>', {text: x.description}));
+
+			// Actions
+			row.append($('<td>', {
+				html: ActionsToHTML.file(x.id, x.actions)
+			}));
+
+			this_.elem.children('tbody').append(row);
+		}
+	};
+
+	this.fetch_more();
+}
+function add_file(as_modal, contest_id) {
+	view_ajax(as_modal, '/api/files/c' + contest_id, function(data) {
+		if (data.overall_actions === undefined)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		if (data.overall_actions.indexOf('A') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form((contest_id === null ? 'Add file' : 'Add contest file'),
+			'/api/file/add/c' + contest_id, Form.field_group('File name', {
+				type: 'text',
+				name: 'name',
+				size: 24,
+				placeholder: 'The same as name of uploaded file'
+				// maxlength: 'TODO...'
+			}).add(Form.field_group('File', {
+				type: 'file',
+				name: 'file',
+				required: true
+			})).add(Form.field_group('Description',
+				$('<textarea>', {
+					name: 'description',
+					maxlength: 512
+				})
+			)).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Add'
+				})
+			})
+		));
+
+	}, '/c/c' + contest_id + '/files/add');
+}
+function edit_file(as_modal, file_id) {
+	view_ajax(as_modal, '/api/files/=' + file_id, function(data) {
+		if (data.rows === undefined || data.rows.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		file = data.rows[0];
+		if (file.actions.indexOf('E') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form((file.contest_id === null ? 'Edit file' : 'Edit contest file'),
+			'/api/file/' + file_id + '/edit', Form.field_group('File name', {
+				type: 'text',
+				name: 'name',
+				value: file.name,
+				size: 24,
+				placeholder: 'The same as name of uploaded file'
+				// maxlength: 'TODO...'
+			}).add(Form.field_group('File', {
+				type: 'file',
+				name: 'file'
+			})).add(Form.field_group('Description',
+				$('<textarea>', {
+					name: 'description',
+					maxlength: 512,
+					text: file.description
+				})
+			)).add(Form.field_group('File size', {
+				type: 'text',
+				value: humanizeFileSize(file.file_size) + ' (' + file.file_size + ' B)',
+				disabled: true
+			})).add(Form.field_group('Modified', normalize_datetime($('<span>', {
+				datetime: file.modified,
+				text: file.modified
+			}), true))).add('<div>', {
+				html: $('<input>', {
+					class: 'btn blue',
+					type: 'submit',
+					value: 'Update'
+				})
+			})
+		));
+
+	}, '/file/' + file_id + '/edit');
+}
+function delete_file(as_modal, file_id) {
+	view_ajax(as_modal, '/api/files/=' + file_id, function(data) {
+		if (data.rows === undefined || data.rows.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		file = data.rows[0];
+		if (file.actions.indexOf('D') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form((file.contest_id === null ? 'Delete file' : 'Delete contest file'),
+			'/api/file/' + file_id + '/delete', $('<center>', {
+			html: [
+				$('<label>', {
+					html: [
+						'Do you really want to delete the ' + (file.contest_id === null ? 'file' : 'contest file') + ' ',
+						a_view_button('/file/' + file_id + '/edit', file.name,
+							undefined, edit_file.bind(null, true, file_id)),
+						'?'
+					]
+				}),
+				$('<div>', {
+					style: 'margin-top: 12px',
+					html: [
+						$('<input>', {
+							class: 'btn-small red',
+							type: 'submit',
+							value: 'Yes, delete it'
+						}),
+						$('<a>', {
+							class: 'btn-small',
+							text: 'No, take me back',
+							click: function() {
+								var modal = $(this).closest('.modal');
+								if (modal.length === 0)
+									history.back();
+								else
+									close_modal(modal);
+							}
+						})
+					]
+				})
+			]
+		})));
+
+	}, '/file/' + file_id + '/delete');
 }
 
 /* ============================ Contest's users ============================ */

@@ -34,9 +34,9 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 		return overall_perms;
 
 	static_assert(uint(PERM::NONE) == 0, "Needed below");
-	JobPermissions type_perm = (isIn(job_type, {JT::ADD_PROBLEM,
+	JobPermissions type_perm = (isOneOf(job_type, JT::ADD_PROBLEM,
 		JT::REUPLOAD_PROBLEM, JT::ADD_JUDGE_MODEL_SOLUTION,
-		JT::REUPLOAD_JUDGE_MODEL_SOLUTION})
+		JT::REUPLOAD_JUDGE_MODEL_SOLUTION)
 		? PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_PACKAGE : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN) {
@@ -59,7 +59,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 	}
 
 	if (session_user_id == creator_id) {
-		if (isIn(job_status, {JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS}))
+		if (isOneOf(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS))
 			return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
 		else
 			return overall_perms | type_perm | PERM::VIEW;

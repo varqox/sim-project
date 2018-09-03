@@ -128,14 +128,12 @@ void Sim::api_contests() {
 					arg_id));
 
 			mask |= PUBLIC_COND;
-			continue;
-		}
 
-		if (not isDigit(arg_id))
+		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, {'=', '<', '>'}) and ~mask & ID_COND) {
+		} else if (isOneOf(cond, '=', '<', '>') and ~mask & ID_COND) {
 			qwhere_append("c.id", arg);
 			mask |= ID_COND;
 
@@ -570,7 +568,7 @@ void Sim::api_contest_problem() {
 	bool is_public;
 	InplaceBuff<20> rranking_exposure_str, rbegins_str, rfull_results_str,
 		rends_str;
-	EnumVal<CUM> umode;
+	MySQL::Optional<EnumVal<CUM>> umode;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> rname;
 	InplaceBuff<CONTEST_PROBLEM_NAME_MAX_LEN> pname;
