@@ -95,8 +95,8 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 				else if (next_arg == "jobs")
 					jobs_handle();
 
-				// else if (next_arg == "file")
-					// contest_file();
+				else if (next_arg == "file")
+					file_handle();
 
 				else if (next_arg == "logout")
 					logout();

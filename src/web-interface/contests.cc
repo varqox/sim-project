@@ -64,6 +64,26 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 	return overall_perms;
 }
 
+Optional<Sim::ContestPermissions> Sim::contests_get_permissions(StringView contest_id) {
+	auto stmt = mysql.prepare("SELECT c.is_public, cu.mode"
+		" FROM contests c"
+		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND user_id=?"
+		" WHERE c.id=?");
+	if (session_is_open)
+		stmt.bindAndExecute(session_user_id, contest_id);
+	else
+		stmt.bindAndExecute(nullptr, contest_id);
+
+	bool is_public;
+	MySQL::Optional<EnumVal<ContestUserMode>> cu_mode;
+
+	stmt.res_bind_all(is_public, cu_mode);
+	if (not stmt.next())
+		return std::nullopt;
+
+	return contests_get_permissions(is_public, cu_mode);
+}
+
 void Sim::contests_handle() {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestPermissions;
@@ -157,6 +177,16 @@ void Sim::contests_contest() {
 
 			} else
 				error404();
+		} else
+			error404();
+
+	} else if (next_arg == "files") {
+		StringView arg = url_args.extractNextArg();
+		if (arg == "add") {
+			page_template(concat("Add contest file"),
+				"body{padding-left:20px}");
+			append("<script>add_file(false, ", contests_cid,
+				", window.location.hash);</script>");
 		} else
 			error404();
 

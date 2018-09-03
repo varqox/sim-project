@@ -8,22 +8,26 @@ void Sim::api_handle() {
 	resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
 	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "logs")
-		return api_logs();
-	else if (next_arg == "contests")
-		return api_contests();
-	else if (next_arg == "contest")
+	if (next_arg == "contest")
 		return api_contest();
+	else if (next_arg == "contest_entry_token")
+		return api_contest_entry_token();
 	else if (next_arg == "contest_user")
 		return api_contest_user();
 	else if (next_arg == "contest_users")
 		return api_contest_users();
-	else if (next_arg == "contest_entry_token")
-		return api_contest_entry_token();
+	else if (next_arg == "contests")
+		return api_contests();
+	else if (next_arg == "file")
+		return api_file();
+	else if (next_arg == "files")
+		return api_files();
 	else if (next_arg == "job")
 		return api_job();
 	else if (next_arg == "jobs")
 		return api_jobs();
+	else if (next_arg == "logs")
+		return api_logs();
 	else if (next_arg == "problem")
 		return api_problem();
 	else if (next_arg == "problems")

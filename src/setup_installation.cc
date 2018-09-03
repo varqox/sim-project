@@ -354,12 +354,13 @@ int main(int argc, char **argv) {
 	try_to_create_table("files",
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
-			"`contest_id` int unsigned NULL,"
+			"`contest_id` int unsigned NOT NULL,"
 			"`name` VARBINARY(", FILE_NAME_MAX_LEN, ") NOT NULL,"
 			"`description` VARBINARY(", FILE_DESCRIPTION_MAX_LEN, ") "
 				"NOT NULL,"
 			"`file_size` bigint unsigned NOT NULL,"
 			"`modified` datetime NOT NULL,"
+			"`creator` int unsigned NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, modified)"
 		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));

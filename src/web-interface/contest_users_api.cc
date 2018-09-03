@@ -164,7 +164,7 @@ void Sim::api_contest_users() {
 	auto set_empty_response = [&] {
 		resp.content.clear();
 		append_column_names();
-		append("\n]");
+		append(",\n\"\",[\n]]"); // Empty overall actions
 	};
 
 	CUP overall_perms = CUP::NONE;
@@ -197,15 +197,12 @@ void Sim::api_contest_users() {
 				else
 					return api_error400(concat("Invalid user mode: ", arg_id));
 
-				continue;
-			}
-
 			// Next conditions require arg_id to be a valid ID
-			if (not isDigit(arg_id))
+			} else if (not isDigit(arg_id)) {
 				return api_error400();
 
 			// User id
-			if (isIn(cond_c, {'<', '>', '='})) {
+			} else if (isOneOf(cond_c, '<', '>', '=')) {
 				if (user_id_condition_occurred)
 					return api_error400("User ID condition specified more"
 						" than once");
@@ -259,12 +256,12 @@ void Sim::api_contest_users() {
 	append("\",[");
 
 	auto curr_date = mysql_date();
-	bool first = true;
-	while (res.next()) {
+	for (bool first = true; res.next(); ) {
 		if (first)
 			first = false;
 		else
 			append(',');
+
 		// User id, username, first name, last name
 		append("\n[", res[UID], ',',
 			jsonStringify(res[USERNAME]), ',',

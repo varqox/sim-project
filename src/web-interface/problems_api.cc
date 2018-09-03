@@ -80,14 +80,12 @@ void Sim::api_problems() {
 				return api_error400(concat("Invalid problem type: ", arg_id));
 
 			mask |= PTYPE_COND;
-			continue;
-		}
 
-		if (not isDigit(arg_id))
+		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
 		// conditional
-		if (isIn(cond, {'<', '>'}) and ~mask & ID_COND) {
+		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
 			qwhere.append(" AND p.id", arg);
 			mask |= ID_COND;
 
@@ -618,7 +616,7 @@ void Sim::api_problem_attaching_contest_problems() {
 			return api_error400();
 
 		// ID condition
-		if (isIn(cond, {'<', '>', '='})) {
+		if (isOneOf(cond, '<', '>', '=')) {
 			if (id_condition_occurred)
 				return api_error400("ID condition specified more than once");
 
