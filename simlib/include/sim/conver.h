@@ -60,6 +60,9 @@ public:
 		bool seek_for_new_tests = false;
 		// Whether to recalculate scoring
 		bool reset_scoring = false;
+		// Whether to throw an exception or give the warning if the statement is
+		// not present
+		bool require_statement = true;
 
 		Options() = default;
 	};

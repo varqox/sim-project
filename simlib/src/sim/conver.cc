@@ -159,20 +159,24 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 			x = collect_files("", is_statement); // Scan whole directory tree
 
 		// If there is no statement
-		if (x.empty())
-			THROW("No statement was found");
+		if (x.empty()) {
+			if (opts.require_statement)
+				THROW("No statement was found");
+			else
+				report_.append("\033[1;35mwarning\033[m: no statement was found");
 
+		} else {
+			// Prefer PDF to other formats, then the shorter paths
+			// The ones with shorter paths are preferred
+			std::swap(x.front(), *std::min_element(x.begin(), x.end(),
+				[](auto&& a, auto&& b) {
+					return (pair<bool, size_t>(not hasSuffix(a, ".pdf"), a.size()) <
+						pair<bool, size_t>(not hasSuffix(b, ".pdf"), b.size()));
+				}));
 
-		// Prefer PDF to other formats, then the shorter paths
-		// The ones with shorter paths are preferred
-		std::swap(x.front(), *std::min_element(x.begin(), x.end(),
-			[](auto&& a, auto&& b) {
-				return (pair<bool, size_t>(not hasSuffix(a, ".pdf"), a.size()) <
-					pair<bool, size_t>(not hasSuffix(b, ".pdf"), b.size()));
-			}));
-
-		sf.statement = x.front().substr(master_dir.size()).to_string();
-		report_.append("Chosen statement: ", sf.statement);
+			sf.statement = x.front().substr(master_dir.size()).to_string();
+			report_.append("Chosen statement: ", sf.statement);
+		}
 	}
 
 	// Solutions
@@ -244,7 +248,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
 				test.memory_limit = std::nullopt; // The memory limit is not given
 
 			if (Simfile::TestNameComparator::split(test.name).gid.empty()) {
-				report_.append("\033[1;35mwarning\033[m: \"limits\":  ignoring"
+				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
 					" test `", test.name, "` because it has no group id in its name");
 				continue;
 			}
