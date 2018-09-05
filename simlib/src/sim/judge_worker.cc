@@ -112,17 +112,9 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 	}
 }
 
-JudgeReport JudgeWorker::judge(bool final) const {
+JudgeReport JudgeWorker::judge(bool final, JudgeLogger&& judge_log) const {
 	JudgeReport report;
-	Logger dummy_logger(nullptr);
-	auto judge_log = [&](auto&&... args) {
-		return DoubleAppender<decltype(report.judge_log)>(
-			(verbose ? stdlog : dummy_logger), report.judge_log,
-			std::forward<decltype(args)>(args)...);
-	};
-
-	judge_log("Judging on `", pkg_root,"` (", (final ? "final" : "initial"),
-		"): {");
+	judge_log.begin(pkg_root, final);
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
 	// Checker STDOUT
@@ -219,33 +211,6 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			);
 			auto& test_report = report_group.tests.back();
 
-			auto do_logging = [&] {
-				auto tmplog = judge_log("  ", paddedString(test.name, 11, LEFT),
-					paddedString(
-						usecToSecStr(test_report.runtime, 2, false), 4),
-					" / ", usecToSecStr(test_report.time_limit, 2, false),
-					" s  ", test_report.memory_consumed >> 10, " / ",
-					test_report.memory_limit >> 10, " KB  Status: ");
-				// Status
-				switch (test_report.status) {
-				case JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m");
-					break;
-				case JudgeReport::Test::MLE: tmplog("\033[1;33mMLE\033[m");
-					break;
-				case JudgeReport::Test::RTE:
-					tmplog("\033[1;31mRTE\033[m (", es.message, ')');
-					break;
-				case JudgeReport::Test::OK:
-				case JudgeReport::Test::WA:
-				case JudgeReport::Test::CHECKER_ERROR:
-					THROW("Should not reach here");
-				}
-
-				// Rest
-				tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 9, false),
-					" RT: ", timespec_to_str(es.runtime, 9, false), " ]");
-			};
-
 			// OK
 			if (es.si.code == CLD_EXITED and es.si.status == 0 and
 				test_report.runtime <= test_report.time_limit)
@@ -265,7 +230,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				score_ratio = 0;
 				test_report.status = JudgeReport::Test::TLE;
 				test_report.comment = "Time limit exceeded";
-				do_logging();
+				judge_log.test(test.name, test_report, es);
 				continue;
 
 			// MLE
@@ -275,7 +240,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				score_ratio = 0;
 				test_report.status = JudgeReport::Test::MLE;
 				test_report.comment = "Memory limit exceeded";
-				do_logging();
+				judge_log.test(test.name, test_report, es);
 				continue;
 
 			// RTE
@@ -286,7 +251,7 @@ JudgeReport JudgeWorker::judge(bool final) const {
 				if (es.message.size())
 					back_insert(test_report.comment, " (", es.message, ')');
 
-				do_logging();
+				judge_log.test(test.name, test_report, es);
 				continue;
 			}
 
@@ -382,50 +347,19 @@ JudgeReport JudgeWorker::judge(bool final) const {
 			}
 
 			// Logging
-			auto tmplog = judge_log("  ", paddedString(test.name, 11, LEFT),
-				paddedString(
-					usecToSecStr(test_report.runtime, 2, false), 4),
-				" / ", usecToSecStr(test_report.time_limit, 2, false),
-				" s  ", test_report.memory_consumed >> 10, " / ",
-				test_report.memory_limit >> 10, " KB  Status: ");
-
-			if (test_report.status == JudgeReport::Test::OK)
-				tmplog("\033[1;32mOK\033[m");
-			else if (test_report.status == JudgeReport::Test::WA)
-				tmplog("\033[1;31mWA\033[m");
-			else if (test_report.status == JudgeReport::Test::CHECKER_ERROR)
-				tmplog("\033[1;35mCHECKER ERROR\033[m (Running"
-					" \033[1;32mOK\033[m)");
-			else
-				tmplog("\033[1;35mJUDGE ERROR\033[m (Running"
-					" \033[1;32mOK\033[m)");
-
-			tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 9, false),
-				" RT: ", timespec_to_str(es.runtime, 9, false), " ]  Checker: ");
-
-			// Checker status
-			if (test_report.status == JudgeReport::Test::OK)
-				tmplog("\033[1;32mOK\033[m ", test_report.comment);
-			else if (test_report.status == JudgeReport::Test::WA)
-				tmplog("\033[1;31mWA\033[m ", test_report.comment);
-			else {
-				tmplog("\033[1;35mERROR\033[m ", checker_error_str);
-			}
-
-			tmplog(" [ RT: ", timespec_to_str(ces.runtime, 9, false), " ] ",
-				ces.vm_peak >> 10, " / ", CHECKER_MEMORY_LIMIT >> 10,
-				" KB");
+			judge_log.test(test.name, test_report, es, ces, CHECKER_MEMORY_LIMIT,
+				checker_error_str);
 		}
 
 		// Compute group score
 		report_group.score = round(group.score * score_ratio);
 		report_group.max_score = group.score;
 
-		judge_log("Score: ", report_group.score, " / ",
-			report_group.max_score, " (ratio: ", toStr(score_ratio, 4), ')');
+		judge_log.group_score(report_group.score, report_group.max_score, score_ratio);
 	}
 
-	judge_log('}');
+	judge_log.end();
+	report.judge_log = judge_log.render_judge_log();
 	return report;
 }
 

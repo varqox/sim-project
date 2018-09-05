@@ -114,7 +114,6 @@ TEST (Conver, constructSimfile) {
 			case Conver::Status::COMPLETE: check_result(); break;
 			case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 				JudgeWorker jworker;
-				jworker.setVerbosity(false);
 				jworker.loadPackage(package_copy.path(), cres.simfile.dump());
 
 				string compilation_errors;

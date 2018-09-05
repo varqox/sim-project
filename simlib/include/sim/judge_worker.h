@@ -2,6 +2,7 @@
 
 #include "../debug.h"
 #include "../filesystem.h"
+#include "../sandbox.h"
 #include "../utilities.h"
 #include "../zip.h"
 #include "compile.h"
@@ -137,6 +138,131 @@ static SolutionLanguage filename_to_lang(StringView filename) {
 	THROW("Should not reach here");
 }
 
+class JudgeLogger {
+protected:
+	std::string log_;
+
+public:
+	virtual void begin(StringView package_path, bool final) = 0;
+
+	virtual void test(StringView test_name, JudgeReport::Test test_report,
+		Sandbox::ExitStat es) = 0;
+
+	virtual void test(StringView test_name, JudgeReport::Test test_report,
+		Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
+		uint64_t checker_mem_limit, StringView checker_error_str) = 0;
+
+	virtual void group_score(int64_t score, int64_t max_score, double score_ratio) = 0;
+
+	virtual void end() = 0;
+
+	std::string&& render_judge_log() { return std::move(log_); }
+
+	virtual ~JudgeLogger() = default;
+};
+
+class VerboseJudgeLogger : public JudgeLogger {
+	Logger dummy_logger_;
+	Logger& logger_;
+
+	int64_t total_score_;
+	int64_t max_total_score_;
+
+	template<class... Args>
+	auto log(Args&&... args) {
+		return DoubleAppender<decltype(log_)>(logger_, log_,
+			std::forward<Args>(args)...);
+	}
+
+	template<class Func>
+	void log_test(StringView test_name, JudgeReport::Test test_report,
+		Sandbox::ExitStat es, Func&& func)
+	{
+		auto tmplog = log("  ", paddedString(test_name, 11, LEFT),
+			paddedString(usecToSecStr(test_report.runtime, 2, false), 4),
+			" / ", usecToSecStr(test_report.time_limit, 2, false),
+			" s  ", test_report.memory_consumed >> 10, " / ",
+			test_report.memory_limit >> 10, " KB  Status: ");
+		// Status
+		switch (test_report.status) {
+		case JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m");
+			break;
+		case JudgeReport::Test::MLE: tmplog("\033[1;33mMLE\033[m");
+			break;
+		case JudgeReport::Test::RTE:
+			tmplog("\033[1;31mRTE\033[m (", es.message, ')');
+			break;
+		case JudgeReport::Test::OK:
+			tmplog("\033[1;32mOK\033[m");
+			break;
+		case JudgeReport::Test::WA:
+			tmplog("\033[1;31mWA\033[m");
+			break;
+		case JudgeReport::Test::CHECKER_ERROR:
+			tmplog("\033[1;35mCHECKER ERROR\033[m (Running \033[1;32mOK\033[m)");
+			break;
+		}
+
+		// Rest
+		tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 9, false),
+			" RT: ", timespec_to_str(es.runtime, 9, false), " ]");
+
+		func(tmplog);
+	}
+
+public:
+	VerboseJudgeLogger(bool log_to_stdlog = false)
+		: dummy_logger_(nullptr), logger_(log_to_stdlog ? stdlog : dummy_logger_) {}
+
+	void begin(StringView package_path, bool final) override {
+		total_score_ = max_total_score_ = 0;
+		log("Judging on `", package_path,"` (", (final ? "final" : "initial"),
+			"): {");
+	}
+
+	void test(StringView test_name, JudgeReport::Test test_report,
+		Sandbox::ExitStat es) override
+	{
+		log_test(test_name, test_report, es, [](auto&){});
+	}
+
+	void test(StringView test_name, JudgeReport::Test test_report,
+		Sandbox::ExitStat es, Sandbox::ExitStat checker_es, uint64_t checker_mem_limit, StringView checker_error_str) override
+	{
+		log_test(test_name, test_report, es, [&](auto& tmplog) {
+			tmplog("  Checker: ");
+
+			// Checker status
+			if (test_report.status == JudgeReport::Test::OK)
+				tmplog("\033[1;32mOK\033[m ", test_report.comment);
+			else if (test_report.status == JudgeReport::Test::WA)
+				tmplog("\033[1;31mWA\033[m ", test_report.comment);
+			else if (test_report.status == JudgeReport::Test::CHECKER_ERROR)
+				tmplog("\033[1;35mERROR\033[m ", checker_error_str);
+			else
+				return; // Checker was not run
+
+
+			tmplog(" [ RT: ", timespec_to_str(checker_es.runtime, 9, false), " ] ",
+				checker_es.vm_peak >> 10, " / ", checker_mem_limit >> 10, " KB");
+		});
+	}
+
+	void group_score(int64_t score, int64_t max_score, double score_ratio) override {
+		total_score_ += score;
+		if (max_score > 0)
+			max_total_score_ += max_score;
+
+		log("Score: ", score, " / ", max_score, " (ratio: ", toStr(score_ratio, 4), ')');
+	}
+
+	void end() override {
+		if (total_score_ != 0 or max_total_score_ != 0)
+			log("Total score: ", total_score_, " / ", max_total_score_);
+		log('}');
+	}
+};
+
 /**
  * @brief Manages a judge worker
  * @details Only to use in ONE thread.
@@ -145,7 +271,6 @@ class JudgeWorker {
 	TemporaryDirectory tmp_dir {"/tmp/judge-worker.XXXXXX"};
 	Simfile sf;
 	std::string pkg_root; // with terminating '/'
-	bool verbose = false;
 
 	constexpr static meta::string CHECKER_FILENAME {"checker"};
 	constexpr static meta::string SOLUTION_FILENAME {"solution"};
@@ -159,12 +284,6 @@ public:
 	JudgeWorker(JudgeWorker&&) noexcept = default;
 	JudgeWorker& operator=(const JudgeWorker&) = delete;
 	JudgeWorker& operator=(JudgeWorker&&) = default;
-
-	/// Returns whether verbose
-	bool getVerbosity() const { return verbose; }
-
-	/// Set whether to be verbose
-	void setVerbosity(bool verbosity) { verbose = verbosity; }
 
 	/// Loads package from @p simfile in @p package_path
 	void loadPackage(std::string package_path, std::string simfile);
@@ -205,7 +324,11 @@ public:
 	 * @param final Whether judge only on final tests or only initial tests
 	 * @return Judge report
 	 */
-	JudgeReport judge(bool final) const;
+	JudgeReport judge(bool final, JudgeLogger&& judge_log) const;
+
+	JudgeReport judge(bool final) const {
+		return judge(final, VerboseJudgeLogger());
+	}
 };
 
 } // namespace sim

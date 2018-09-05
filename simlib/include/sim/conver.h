@@ -81,6 +81,7 @@ public:
 	 *   Options to learn more.
 	 *
 	 * @param opts options that parameterize Conver behavior
+	 * @param be_verbose whether to log report to the stdlog
 	 *
 	 * @return Status and a valid Simfile; If status == COMPLETE then Simfile is
 	 *   fully constructed - conver has finished its job. Otherwise it is
@@ -91,7 +92,7 @@ public:
 	 * @errors If any error is encountered then an exception of type
 	 *   std::runtime_error is thrown with a proper message
 	 */
-	ConstructionResult constructSimfile(const Options& opts);
+	ConstructionResult constructSimfile(const Options& opts, bool be_verbose = false);
 
 	 /**
 	  * @brief Finishes constructing the Simfile partially constructed by the

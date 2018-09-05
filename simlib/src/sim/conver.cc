@@ -14,7 +14,11 @@ using std::vector;
 
 namespace sim {
 
-Conver::ConstructionResult Conver::constructSimfile(const Options& opts) {
+Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be_verbose) {
+	// Reset report_
+	report_.str.clear();
+	report_.log_to_stdlog_ = be_verbose;
+
 	/* Load contents of the package */
 
 	PackageContents pc;
