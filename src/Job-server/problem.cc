@@ -64,6 +64,7 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	copts.ignore_simfile = info.ignore_simfile;
 	copts.seek_for_new_tests = info.seek_for_new_tests;
 	copts.reset_scoring = info.reset_scoring;
+	copts.require_statement = true;
 
 	sim::Conver::ConstructionResult cr;
 	try {

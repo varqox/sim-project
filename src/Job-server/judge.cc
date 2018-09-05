@@ -71,7 +71,6 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 
 	string judging_began = mysql_date();
 	JudgeWorker jworker;
-	jworker.setVerbosity(true);
 
 	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
 		')');
@@ -272,8 +271,8 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 
 	try {
 		// Judge
-		JudgeReport initial_jrep = jworker.judge(false);
-		JudgeReport final_jrep = jworker.judge(true);
+		JudgeReport initial_jrep = jworker.judge(false, sim::VerboseJudgeLogger(true));
+		JudgeReport final_jrep = jworker.judge(true, sim::VerboseJudgeLogger(true));
 		// Make reports
 		initial_report = construct_report(initial_jrep, false);
 		final_report = construct_report(final_jrep, true);
@@ -393,7 +392,6 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 	judge_log("Model solution: ", simfile.solutions[0]);
 
 	JudgeWorker jworker;
-	jworker.setVerbosity(true);
 	jworker.loadPackage(package_path.to_string(), std::move(simfile_str));
 
 	string compilation_errors;
@@ -435,8 +433,8 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 
 	// Judge
 	judge_log("Judging...");
-	JudgeReport initial_jrep = jworker.judge(false);
-	JudgeReport final_jrep = jworker.judge(true);
+	JudgeReport initial_jrep = jworker.judge(false, sim::VerboseJudgeLogger(true));
+	JudgeReport final_jrep = jworker.judge(true, sim::VerboseJudgeLogger(true));
 
 	judge_log("Initial judge report: ", initial_jrep.judge_log);
 	judge_log("Final judge report: ", final_jrep.judge_log);
