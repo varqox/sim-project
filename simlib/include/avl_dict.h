@@ -1417,3 +1417,6 @@ public:
 		return compare(value(std::forward<A>(a)), value(std::forward<B>(b)));
 	}
 };
+
+#define MEMBER_COMPARATOR(Class, member) MemberComparator<decltype(Class::member), Class, &Class::member>
+
