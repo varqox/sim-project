@@ -434,6 +434,10 @@ inline int removeDirContents(CStringView pathname) noexcept {
 	return removeDirContents_at(AT_FDCWD, pathname);
 }
 
+
+/// @brief Creates directories containing @p file if they don't exist
+int create_subdirectories(StringView file) noexcept;
+
 /**
  * @brief Fast copies file from @p infd to @p outfd
  * @details Reads from @p infd form it's offset and writes to @p outfd from its
@@ -454,12 +458,14 @@ int blast(int infd, int outfd) noexcept;
  *
  * @param src source file
  * @param dest destination file
+ * @param mode access mode of the destination file (will be set iff the file is
+ *   created)
  *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for open(2), blast()
  */
-int copy(CStringView src, CStringView dest) noexcept;
+int copy(CStringView src, CStringView dest, mode_t mode = S_0644) noexcept;
 
 /**
  * @brief Copies (overrides) file @p src to @p dest relative to a directory file

@@ -199,6 +199,14 @@ int removeDirContents_at(int dirfd, CStringView pathname) noexcept {
 	return 0;
 }
 
+int create_subdirectories(StringView file) noexcept {
+	file.removeTrailing([](char c) { return (c != '/'); });
+	if (file.empty())
+		return 0;
+
+	return mkdir_r(file.to_string());
+}
+
 int blast(int infd, int outfd) noexcept {
 	array<char, 65536> buff;
 	ssize_t len, written;
@@ -217,12 +225,12 @@ int blast(int infd, int outfd) noexcept {
 	return 0;
 }
 
-int copy(CStringView src, CStringView dest) noexcept {
+int copy(CStringView src, CStringView dest, mode_t mode) noexcept {
 	int in = open(src.c_str(), O_RDONLY | O_LARGEFILE);
 	if (in == -1)
 		return -1;
 
-	int out = open(dest.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_0644);
+	int out = open(dest.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
 	if (out == -1) {
 		sclose(in);
 		return -1;
@@ -326,32 +334,16 @@ int copy_rat(int dirfd1, CStringView src, int dirfd2, CStringView dest) noexcept
 }
 
 int copy_r(CStringView src, CStringView dest, bool create_subdirs) noexcept {
-	if (!create_subdirs)
-		return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
-
-	size_t len = dest.size();
-	if (len >= PATH_MAX) {
-		errno = ENAMETOOLONG;
-		return -1;
-	}
-
-	// Extract containing directory
-	while (len && dest[len - 1] != '/')
-		--len;
-
-	// Ensure that parent directory exists
-	mkdir_r(string {dest.data(), len});
+	if (create_subdirs)
+		create_subdirectories(dest);
 
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
 int move(CStringView oldpath, CStringView newpath, bool create_subdirs) noexcept
 {
-	if (create_subdirs) {
-		size_t x = newpath.rfind('/');
-		if (x != CStringView::npos)
-			mkdir_r(string {newpath.data(), x});
-	}
+	if (create_subdirs)
+		create_subdirectories(newpath);
 
 	if (rename(oldpath.c_str(), newpath.c_str()) == -1) {
 		if (errno == EXDEV && copy_r(oldpath, newpath, false) == 0)
