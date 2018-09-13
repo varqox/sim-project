@@ -95,7 +95,8 @@ public:
 		return candidate;
 	}
 
-	void load_from_directory(std::string pkg_path);
+	void load_from_directory(StringView pkg_path,
+		bool retain_pkg_path_prefix = false);
 
 	void load_from_zip(CStringView pkg_path);
 };
