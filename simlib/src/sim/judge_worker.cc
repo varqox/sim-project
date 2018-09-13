@@ -112,6 +112,45 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 	}
 }
 
+Sandbox::ExitStat JudgeWorker::run_solution(CStringView input_file,
+	CStringView output_file, uint64_t time_limit, uint64_t memory_limit) const
+{
+	// Solution STDOUT
+	FileDescriptor solution_stdout(output_file, O_WRONLY | O_CREAT | O_TRUNC);
+	if (solution_stdout < 0)
+		THROW("Failed to open file `", output_file, '`', errmsg());
+
+	Sandbox sandbox;
+	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
+
+	FileDescriptor test_in(input_file, O_RDONLY | O_LARGEFILE);
+	if (test_in < 0)
+		THROW("Failed to open file `", input_file, '`', errmsg());
+
+	// Set time limit to 1.5 * time_limit + 1 s, because CPU time is
+	// measured
+	uint64_t real_tl = time_limit * 3 / 2 + 1000000;
+	timespec tl;
+	tl.tv_sec = real_tl / 1000000;
+	tl.tv_nsec = (real_tl - tl.tv_sec * 1000000) * 1000;
+
+	timespec cpu_tl;
+	cpu_tl.tv_sec = time_limit / 1000000;
+	cpu_tl.tv_nsec = (time_limit - cpu_tl.tv_sec * 1000000) * 1000;
+
+	// Run solution on the test
+	Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
+		test_in,
+		solution_stdout,
+		-1,
+		tl,
+		memory_limit,
+		cpu_tl
+	}); // Allow exceptions to fly upper
+
+	return es;
+}
+
 JudgeReport JudgeWorker::judge(bool final, JudgeLogger&& judge_log) const {
 	JudgeReport report;
 	judge_log.begin(pkg_root, final);

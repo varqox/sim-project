@@ -116,7 +116,11 @@ enum class SolutionLanguage {
 	UNKNOWN, C, CPP, PASCAL
 };
 
-static SolutionLanguage filename_to_lang(StringView filename) {
+inline bool is_source(StringView file) noexcept {
+	return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx", ".pas"});
+}
+
+inline SolutionLanguage filename_to_lang(StringView filename) {
 	SolutionLanguage res = SolutionLanguage::UNKNOWN;
 	if (hasSuffix(filename, ".c"))
 		res = SolutionLanguage::C;
@@ -315,6 +319,52 @@ public:
 		return compile_impl(source, lang, time_limit, c_errors,
 			c_errors_max_len, proot_path, "source", SOLUTION_FILENAME);
 	}
+
+	void loadCompiledChecker(CStringView compiled_checker) {
+		if (copy(compiled_checker,
+			concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME).to_cstr(), S_0755))
+		{
+			THROW("copy()", errmsg());
+		}
+	}
+
+	void loadCompiledSolution(CStringView compiled_solution) {
+		if (copy(compiled_solution,
+			concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(), S_0755))
+		{
+			THROW("copy()", errmsg());
+		}
+	}
+
+	void saveCompiledChecker(CStringView destination) {
+		if (copy(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME).to_cstr(),
+			destination, S_0755))
+		{
+			THROW("copy()", errmsg());
+		}
+	}
+
+	void saveCompiledSolution(CStringView destination) {
+		if (copy(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(),
+			destination, S_0755))
+		{
+			THROW("copy()", errmsg());
+		}
+	}
+
+	/**
+	 * @brief Runs solution with @p input_file as stdin and @p output_file as
+	 *   stdout
+	 *
+	 * @param input_file path to file to set as stdin
+	 * @param output_file path to file to set as stdout
+	 * @param time_limit time limit in usec
+	 * @param memory_limit memory limit in bytes
+	 * @return exit status of running the solution (in the sandbox)
+	 */
+	Sandbox::ExitStat run_solution(CStringView input_file,
+		CStringView output_file, uint64_t time_limit, uint64_t memory_limit)
+		const;
 
 	/**
 	 * @brief Judges last compiled solution on the last loaded package.
