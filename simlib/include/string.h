@@ -466,7 +466,7 @@ public:
 	}
 
 	constexpr size_type find(const StringBase& s, size_type beg1) const {
-		return find(s.substr(beg1, len - beg1));
+		return find(s.substr(beg1));
 	}
 
 	constexpr size_type find(const StringBase& s, size_type beg1,
@@ -677,19 +677,21 @@ public:
 	constexpr void clear() noexcept { len = 0; }
 
 	// Removes prefix of length n
-	constexpr void removePrefix(size_type n) noexcept {
+	constexpr StringView& removePrefix(size_type n) noexcept {
 		if (n > len)
 			n = len;
 		str += n;
 		len -= n;
+		return *this;
 	}
 
 	// Removes suffix of length n
-	constexpr void removeSuffix(size_type n) noexcept {
+	constexpr StringView& removeSuffix(size_type n) noexcept {
 		if (n > len)
 			len = 0;
 		else
 			len -= n;
+		return *this;
 	}
 
 	// Extracts prefix of length n
@@ -713,33 +715,34 @@ public:
 
 	// Removes leading characters for which f() returns true
 	template<class Func>
-	constexpr void removeLeading(Func&& f) {
+	constexpr StringView& removeLeading(Func&& f) {
 		size_type i = 0;
 		for (; i < len && f(str[i]); ++i) {}
 		str += i;
 		len -= i;
+		return *this;
 	}
 
-
-#if __cplusplus > 201402L
-#warning "Since C++17 constexpr can be used below"
-#endif
-	constexpr void removeLeading(char c) noexcept {
-		removeLeading([c](char x) { return (x == c); });
+	constexpr StringView& removeLeading(char c) noexcept {
+		size_type i = 0;
+		for (; i < len && str[i] == c; ++i) {}
+		str += i;
+		len -= i;
+		return *this;
 	}
 
 	// Removes trailing characters for which f() returns true
 	template<class Func>
-	constexpr void removeTrailing(Func&& f) {
+	constexpr StringView& removeTrailing(Func&& f) {
 		while (len > 0 && f(back()))
 			--len;
+		return *this;
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 constexpr can be used below"
-#endif
-	/*constexpr*/ void removeTrailing(char c) noexcept {
-		removeTrailing([c](char x) { return (x == c); });
+	constexpr StringView& removeTrailing(char c) noexcept {
+		while (len > 0 and back() == c)
+			--len;
+		return *this;
 	}
 
 	// Extracts leading characters for which f() returns true
@@ -765,6 +768,30 @@ public:
 		len = i;
 
 		return res;
+	}
+
+	constexpr StringView withoutPrefix(size_t n) noexcept {
+		return StringView(*this).removePrefix(n);
+	}
+
+	constexpr StringView withoutSuffix(size_t n) noexcept {
+		return StringView(*this).removeSuffix(n);
+	}
+
+#if __cplusplus > 201402L
+#warning "Since C++17 constexpr can be used below"
+#endif
+	template<class T>
+	/*constexpr*/ StringView withoutLeading(T&& arg) {
+		return StringView(*this).removeLeading(std::forward<T>(arg));
+	}
+
+#if __cplusplus > 201402L
+#warning "Since C++17 constexpr can be used below"
+#endif
+	template<class T>
+	/*constexpr*/ StringView withoutTrailing(T&& arg) {
+		return StringView(*this).removeTrailing(std::forward<T>(arg));
 	}
 
 	using StringBase::substr;
@@ -1906,10 +1933,10 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  * @brief Returns a padded string
  * @details Examples:
  *   paddedString("abc", 5) -> "  abc"
- *   paddedString("abc", 5, false) -> "abc  "
- *   paddedString("1234", 7, true, '0') -> "0001234"
- *   paddedString("1234", 4, true, '0') -> "1234"
- *   paddedString("1234", 2, true, '0') -> "1234"
+ *   paddedString("abc", 5, LEFT) -> "abc  "
+ *   paddedString("1234", 7, RIGHT, '0') -> "0001234"
+ *   paddedString("1234", 4, RIGHT, '0') -> "1234"
+ *   paddedString("1234", 2, RIGHT, '0') -> "1234"
  *
  * @param s string
  * @param len length of result string
