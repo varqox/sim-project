@@ -88,10 +88,6 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		}
 	}
 
-	auto is_source = [](StringView file) {
-		return hasSuffixIn(file, {".c", ".cc", ".cpp", ".cxx", ".pas"});
-	};
-
 	auto collect_files = [&pc](StringView prefix, auto&& cond) {
 		vector<StringView> res;
 		pc.for_each_with_prefix(prefix, [&](StringView file) {

@@ -107,7 +107,7 @@ public:
 	  *   @p sf. Passing @p jrep2 that is not based on the @p sf is
 	  *   undefined-behavior.
 	  */
-	void finishConstructingSimfile(Simfile& sf, const JudgeReport& jrep1,
+	static void finishConstructingSimfile(Simfile& sf, const JudgeReport& jrep1,
 		const JudgeReport& jrep2);
 
 private:
