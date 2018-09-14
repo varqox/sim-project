@@ -5,7 +5,7 @@
 #include "../../include/sim/problem_package.h"
 #include "../../include/spawner.h"
 #include "../../include/utilities.h"
-#include "../../include/zip.h"
+#include "../../include/libarchive_zip.h"
 #include "default_checker_dump.h"
 
 using std::pair;

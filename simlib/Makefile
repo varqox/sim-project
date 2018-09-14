@@ -23,6 +23,7 @@ SIMLIB_SRCS := \
 	$(PREFIX)src/filesystem.cc \
 	$(PREFIX)src/http/response.cc \
 	$(PREFIX)src/http/server.cc \
+	$(PREFIX)src/libarchive_zip.cc \
 	$(PREFIX)src/logger.cc \
 	$(PREFIX)src/mysql.cc \
 	$(PREFIX)src/process.cc \
@@ -39,8 +40,7 @@ SIMLIB_SRCS := \
 	$(PREFIX)src/sim/simfile.cc \
 	$(PREFIX)src/spawner.cc \
 	$(PREFIX)src/string.cc \
-	$(PREFIX)src/time.cc \
-	$(PREFIX)src/zip.cc
+	$(PREFIX)src/time.cc
 
 $(eval $(call load_dependencies, $(SIMLIB_SRCS)))
 SIMLIB_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_SRCS))

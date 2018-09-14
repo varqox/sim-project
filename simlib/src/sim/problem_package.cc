@@ -1,5 +1,5 @@
 #include "../../include/sim/problem_package.h"
-#include "../../include/zip.h"
+#include "../../include/libarchive_zip.h"
 
 using std::string;
 
