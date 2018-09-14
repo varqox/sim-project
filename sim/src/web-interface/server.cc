@@ -2,7 +2,9 @@
 #include "sim.h"
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <csignal>
+#include <pthread.h>
 #include <simlib/config_file.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
@@ -26,20 +28,30 @@ static void* worker(void*) {
 			// accept the connection
 			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
 				&client_name_len);
-			Closer closer(client_socket_fd);
+			FileDescriptorCloser closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;
 
 			// extract IP
 			inet_ntop(AF_INET, &name.sin_addr, ip, INET_ADDRSTRLEN);
-			stdlog("Connection accepted: ", toStr(pthread_self()), " form ",
-				ip);
+			stdlog("Connection accepted: ", pthread_self(), " form ", ip);
 
 			conn.assign(client_socket_fd);
 			HttpRequest req = conn.getRequest();
 
-			if (conn.state() == Connection::OK)
-				conn.sendResponse(sim_worker.handle(ip, req));
+			if (conn.state() == Connection::OK) {
+				using namespace std::chrono;
+				auto beg = steady_clock::now();
+
+				HttpResponse resp = sim_worker.handle(ip, std::move(req));
+
+				auto microdur = duration_cast<microseconds>
+					(steady_clock::now() - beg).count();
+				stdlog("Response generated in ", toString(microdur / 1000.0, 3),
+					" ms.");
+
+				conn.sendResponse(std::move(resp));
+			}
 
 			stdlog("Closing...");
 			closer.close();
@@ -72,9 +84,9 @@ int main() {
 	// stdlog like everything writes to stderr, so redirect stdout and stderr to
 	// the log file
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
-		freopen(SERVER_LOG, "a", stderr) == nullptr)
+		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
 	{
-		errlog("Failed to open `", SERVER_LOG, '`', error(errno));
+		errlog("Failed to open `", SERVER_LOG, '`', errmsg());
 	}
 
 	try {
@@ -96,9 +108,9 @@ int main() {
 	try {
 		config.addVars("address", "workers");
 
-		config.loadConfigFromFile("server.conf");
+		config.loadConfigFromFile("sim.conf");
 	} catch (const std::exception& e) {
-		errlog("Failed to load server.config: ", e.what());
+		errlog("Failed to load sim.config: ", e.what());
 		return 5;
 	}
 
@@ -106,7 +118,7 @@ int main() {
 	int workers = config["workers"].asInt();
 
 	if (workers < 1) {
-		errlog("sim.config: Number of workers cannot be lower than 1");
+		errlog("sim.conf: Number of workers cannot be lower than 1");
 		return 6;
 	}
 
@@ -119,7 +131,7 @@ int main() {
 	size_t colon_pos = address.find(':');
 	// Colon has been found
 	if (colon_pos < address.size()) {
-		if (strtou(address, &port, colon_pos + 1) !=
+		if (strtou(address, port, colon_pos + 1) !=
 			static_cast<int>(address.size() - colon_pos - 1))
 		{
 			errlog("sim.config: incorrect port number");
@@ -140,26 +152,26 @@ int main() {
 		return 8;
 	}
 
-	stdlog("Server launch:\n"
-		"PID: ", toStr(getpid()), "\n"
-		"workers: ", toStr(workers), "\n"
-		"address: ", address.data(), ':', toStr(port));
+	stdlog("\n=================== Server launched ===================\n"
+		"PID: ", getpid(), "\n"
+		"workers: ", workers, "\n"
+		"address: ", address.data(), ':', port);
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		errlog("Failed to create socket", error(errno));
+		errlog("Failed to create socket", errmsg());
 		return 1;
 	}
 
 	int true_ = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &true_, sizeof(int))) {
-		errlog("Failed to setopt", error(errno));
+		errlog("Failed to setopt", errmsg());
 		return 2;
 	}
 
 	// Bind
 	constexpr int TRIES = 8;
-	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
-		errlog("Failed to bind (try ", toStr(try_no), ')', error(errno));
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
+		errlog("Failed to bind (try ", try_no, ')', errmsg());
 		if (++try_no > TRIES)
 			return 3;
 
@@ -167,13 +179,23 @@ int main() {
 	}
 
 	if (listen(socket_fd, 10)) {
-		errlog("Failed to listen", error(errno));
+		errlog("Failed to listen", errmsg());
+		return 4;
+	}
+
+	// Alter default thread stack size
+	pthread_attr_t attr;
+	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MB
+	if (pthread_attr_init(&attr) ||
+		pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE))
+	{
+		errlog("Failed to set new thread stack size");
 		return 4;
 	}
 
 	pthread_t threads[workers];
 	for (int i = 1; i < workers; ++i)
-		pthread_create(threads + i, nullptr, server::worker, nullptr);
+		pthread_create(threads + i, &attr, server::worker, nullptr); // TODO: errors...
 	threads[0] = pthread_self();
 	server::worker(nullptr);
 

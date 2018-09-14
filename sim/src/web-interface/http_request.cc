@@ -1,26 +1,28 @@
 #include "http_request.h"
 
+#include <simlib/debug.h>
 #include <unistd.h>
 
-using std::map;
 using std::string;
 
 namespace server {
 
 HttpRequest::Form::~Form() {
-	for (auto&& p : files)
+	files.for_each([](auto&& p) {
 		unlink(p.second.c_str());
+	});
 }
 
-string HttpRequest::getCookie(const string& name) const {
-	auto it = headers.find("cookie");
+StringView HttpRequest::getCookie(StringView name) const noexcept {
+	STACK_UNWINDING_MARK;
 
-	if (it == headers.end())
+	auto it = headers.find("cookie");
+	if (not it)
 		return "";
 
-	const string &cookie = it->second;
+	StringView cookie = it->second;
 
-	for (size_t beg = 0; beg < cookie.size();) {
+	for (size_t beg = 0; beg < cookie.size(); ) {
 		if (cookie[beg] == ' ' && beg + 1 < cookie.size())
 			++beg;
 

@@ -12,16 +12,17 @@ SIM is an open source platform for carrying out algorithmic contests
 ### Dependencies:
 
 - gcc/g++ (32 bit version) with C++14 support
-- MySQL >= 5.6 (Debian packages: _mysql-server_)
-- [MySQL Connector/C++](http://dev.mysql.com/downloads/connector/cpp/) (Debian package: _libmysqlcppconn-dev_)
-- MySQL client library (Debian packages: libmysqlclient-dev)
+- MariaDB (Debian packages: _mariadb-server_)
+- MariaDB client library (Debian packages: _libmariadbclient-dev_)
+- libseccomp (Debian packages: _libseccomp-dev_)
 - GNU/Make
-- zip + unzip
+- libarchive
+- zip
 
 #### Ubuntu / Debian
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmysqlcppconn-dev make zip unzip
+  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libarchive-dev make zip
   ```
 
 ### Instructions
@@ -72,7 +73,7 @@ SIM is an open source platform for carrying out algorithmic contests
 
   You can combine building, installation and running commands into:
   ```sh
-  make src install run
+  make all install run
   ```
 
 6. Enter http://127.7.7.7:8080 via your web browser, by default there was created SIM root account
@@ -91,9 +92,6 @@ SIM is an open source platform for carrying out algorithmic contests
 Just type (be aware of incompatible database (and other inner) changes)
 ```sh
 git pull
-git submodule update
-make -j4 src install run
+git submodule update --recursive
+make -j4 all install run
 ```
-
-### Problem packages
-You can find some example problem packages in problems/ folder.

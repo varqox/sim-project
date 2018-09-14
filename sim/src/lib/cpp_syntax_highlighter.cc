@@ -208,8 +208,8 @@ constexpr array<meta::string, N> extract_keywords_from_append(
 }
 
 template<size_t N, size_t RES_N, size_t RES_END>
-constexpr typename std::enable_if<
-	RES_END >= RES_N, array<meta::string, RES_N>>::type
+constexpr std::enable_if_t<
+	RES_END >= RES_N, array<meta::string, RES_N>>
 	extract_keywords_from(const array<Word, N>&,
 	const array<meta::string, RES_N>& res = {}, size_t = 0)
 {
@@ -217,8 +217,8 @@ constexpr typename std::enable_if<
 }
 
 template<size_t N, size_t RES_N, size_t RES_END = 0>
-constexpr typename std::enable_if<
-	RES_END < RES_N, array<meta::string, RES_N>>::type
+constexpr std::enable_if_t<
+	RES_END < RES_N, array<meta::string, RES_N>>
 	extract_keywords_from(const array<Word, N>& arr,
 	const array<meta::string, RES_N>& res, size_t idx = 0)
 {
@@ -248,7 +248,21 @@ CppSyntaxHighlighter::CppSyntaxHighlighter() {
 	aho.buildFails();
 }
 
-string CppSyntaxHighlighter::operator()(const std::string& input) const {
+string CppSyntaxHighlighter::operator()(CStringView input) const {
+	string filtered_input; // Used only in the below if
+	// Remove (stupid) windows newlines as they impede parsing a lot
+	if (input.find("\r\n") != CStringView::npos) {
+		filtered_input.reserve(input.size());
+		for (size_t i = 0; i < input.size(); ++i) {
+			// i + 1 is safe - std::string adds extra '\0' at the end
+			if (input[i] == '\r' and input[i + 1] == '\n')
+				++i;
+			filtered_input += input[i];
+		}
+
+		input = filtered_input;
+	}
+
 	constexpr int BEGIN_GUARDS = 2, BEGIN = BEGIN_GUARDS;
 	constexpr int END_GUARDS = 2;
 	constexpr char GUARD_CHARACTER = '\0';
@@ -260,7 +274,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	/* Remove "\\\n" sequences */
 	int end = input.size();
 	// BEGIN_GUARDS x '\0' - guards
-	string str(BEGIN_GUARDS, GUARD_CHARACTER);
+	string str(BEGIN_GUARDS, GUARD_CHARACTER); // input without "\\\n" sequences
 	str.reserve(end + 64); // Pre-allocation
 
 	for (int i = 0; i < end; ++i) {
@@ -277,7 +291,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 
 	// Append end guards (one is already in str - terminating null character)
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
-	DEBUG_CSH(stdlog("end: ", toStr(end));)
+	DEBUG_CSH(stdlog("end: ", end);)
 
 	vector<StyleType> begs(str.size(), -1); // here beginnings of styles are
 	                                        // marked
@@ -323,8 +337,12 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				/* Escape sequence */
 				begs[i++] = ESCAPED_CHARACTER;
 
-				// Octals and Hexadecimal
-				if (isdigit(str[i]) || str[i] == 'x')
+				// Octals
+				if (isdigit(str[i]))
+					i += (isdigit(str[i + 1]) ?
+						1 + bool(isdigit(str[i + 2])) : 0);
+				// Hexadecimal
+				else if (str[i] == 'x')
 					i += 2;
 				// Unicode U+nnnn
 				else if (str[i] == 'u')
@@ -333,7 +351,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				else if (str[i] == 'U')
 					i += 8;
 
-				// i has to point to the last character from escaped sequence
+				// i has to point to the last character of the escaped sequence
 				i = std::min(i + 1, end);
 				++ends[i];
 			}
@@ -342,6 +360,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	}
 
 	DEBUG_CSH(auto dump_begs_ends = [&] {
+		// i iterates over str, j iterates over input
 		for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 			while (str[i] != input[j]) {
 				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
@@ -349,7 +368,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				j += 2;
 				++line;
 			}
-			auto tmplog = stdlog(toStr(i), " (line ", toStr(line), "): '");
+			auto tmplog = stdlog(i, " (line ", line, "): '");
 			if (isprint(str[i]))
 				tmplog(str[i], "'   ");
 			else if (str[i] == '\n')
@@ -365,7 +384,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (ends[i] == 0)
 				tmplog("0, ");
 			else
-				tmplog("\033[1;32m", toStr(ends[i]), "\033[m, ");
+				tmplog("\033[1;32m", (int)ends[i], "\033[m, ");
 
 			switch (begs[i]) {
 			case -1:
@@ -622,13 +641,13 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	// Highlights fragments of code not containing: comments, preprocessor,
 	// number literals, string literals and character literals
 	auto highlight = [&](int beg, int endi) {
-		DEBUG_CSH(stdlog("highlight(", toStr(beg), ", ", toStr(endi), "):");)
+		DEBUG_CSH(stdlog("highlight(", beg, ", ", endi, "):");)
 		if (beg >= endi)
 			return;
 
 		auto aho_res = aho.searchIn(substring(str, beg, endi));
 		// Handle last one to eliminate right boundary checks
-		for (int i = endi - 1; i >= beg;) {
+		for (int i = endi - 1; i >= beg; ) {
 			int k = aho.pattId(aho_res[i - beg]), j;
 
 			static_assert(BEGIN_GUARDS > 0, "");
@@ -637,7 +656,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			if (k && !isName(str[i + 1]) &&
 				!isName(str[j = i - words[k].size]))
 			{
-				DEBUG_CSH(stdlog("aho: ", toStr(j + 1), ": ", words[k].str);)
+				DEBUG_CSH(stdlog("aho: ", j + 1, ": ", words[k].str);)
 				begs[j + 1] = words[k].style;
 				++ends[i + 1];
 				i = j;
@@ -681,13 +700,14 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 	// Stack of styles (needed to properly break on '\n')
 	vector<StyleType> style_stack;
 	int first_unescaped = BEGIN;
+	// i iterates over str, j iterates over input
 	for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 		// End styles
 		if (ends[i]) {
 			appendHtmlEscaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
-			// Leave last style and try to elide it
+			// Leave the last (top) style and try to elide it
 			while (ends[i] > 1) {
 				style_stack.pop_back();
 				res += end_style;
@@ -724,7 +744,7 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 				// very rare situation and gives little profit at the expense of
 				// a not pretty if statement
 				back_insert(res, begin_style[OPERATOR], '\\', end_style,
-					"</td></tr>"
+					"</td></tr>\n"
 					"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 						"\"></td><td>");
 			} while (str[i] != input[j += 2]);
@@ -741,12 +761,9 @@ string CppSyntaxHighlighter::operator()(const std::string& input) const {
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
 				res += end_style;
-			// Fill the empty line with '\n'
-			if (j == 0 || input[j - 1] == '\n')
-				res += '\n';
 			// Break the line
 			auto line_str = toStr(++line);
-			back_insert(res, "</td></tr>"
+			back_insert(res, "</td></tr>\n"
 				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 					"\"></td><td>");
 			// Restore styles

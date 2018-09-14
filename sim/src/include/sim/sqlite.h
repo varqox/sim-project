@@ -5,7 +5,7 @@
 #include <sqlite3.h>
 
 #define THROW_SQLITE_ERROR(db, ...) THROW(__VA_ARGS__, " - ", \
-	toStr(sqlite3_errcode(db)), ": ", sqlite3_errmsg(db))
+	sqlite3_errcode(db), ": ", sqlite3_errmsg(db))
 
 namespace SQLite {
 
@@ -26,6 +26,7 @@ public:
 	Statement& operator=(Statement&& s) {
 		if (stmt)
 			sqlite3_finalize(stmt);
+
 		stmt = s.stmt;
 		s.stmt = nullptr;
 		return *this;
@@ -152,6 +153,7 @@ public:
 	Connection& operator=(Connection&& c) noexcept {
 		if (db)
 			sqlite3_close(db);
+
 		db = c.db;
 		c.db = nullptr;
 		return *this;

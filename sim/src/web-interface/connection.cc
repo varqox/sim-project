@@ -31,7 +31,7 @@ int Connection::peek() {
 
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
-		D(stdlog("peek(): Reading completed; buff_size: ", toStr(buff_size_));)
+		D(stdlog("peek(): Reading completed; buff_size: ", buff_size_);)
 		// D(stdlog("buff: `", StringView((const char*)buffer_, buff_size_), "`");)
 
 		if (buff_size_ <= 0) {
@@ -93,7 +93,8 @@ void Connection::readPOST(HttpRequest& req) {
 	size_t content_length = 0;
 	{
 		auto&& cl = req.headers["Content-Length"];
-		if (strtou(cl, &content_length) != (int)cl.size())
+		// TODO: handle overflows
+		if (strtou(cl, content_length) != (int)cl.size())
 			return error400();
 	}
 
@@ -104,7 +105,7 @@ void Connection::readPOST(HttpRequest& req) {
 	LimitedReader reader(*this, content_length);
 
 	if (hasPrefix(con_type, "text/plain")) {
-		for (; c != -1;) {
+		for (; c != -1; ) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
@@ -130,7 +131,7 @@ void Connection::readPOST(HttpRequest& req) {
 		}
 
 	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
-		for (; c != -1;) {
+		for (; c != -1; ) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
@@ -149,7 +150,8 @@ void Connection::readPOST(HttpRequest& req) {
 			if (state_ == CLOSED)
 				return;
 
-			req.form_data[decodeURI(field_name)] = decodeURI(field_content);
+			req.form_data[decodeURI(field_name).to_string()] =
+				decodeURI(field_content).to_string();
 		}
 
 	} else if (hasPrefix(con_type, "multipart/form-data")) {
@@ -183,7 +185,7 @@ void Connection::readPOST(HttpRequest& req) {
 		bool first_boundary = true;
 		k = 2; // Because "\r\n" may not exist at the beginning
 
-		// TODO: consider changing structure of while below
+		// TODO: consider changing structure of the while below
 		// While we can read
 		// In each loop pass parse EXACTLY one field
 		while ((c = reader.getChar()) != -1) {
@@ -620,7 +622,8 @@ HttpRequest Connection::getRequest() {
 
 	{
 		auto&& cl = req.headers["Content-Length"];
-		if (strtou(cl, &end) != (int)cl.size()) {
+		// TODO: handle overflows
+		if (strtou(cl, end) != (int)cl.size()) {
 			error400();
 			return req;
 		}
@@ -660,7 +663,7 @@ void Connection::send(const char* str, size_t len) {
 
 	while (pos < len) {
 		written = write(sock_fd_, str + pos, len - pos);
-		D(stdlog("written: ", toStr(written));)
+		D(stdlog("written: ", written);)
 
 		if (written == -1) {
 			state_ = CLOSED;
@@ -673,30 +676,31 @@ void Connection::send(const char* str, size_t len) {
 
 void Connection::sendResponse(const HttpResponse& res) {
 	string str = "HTTP/1.1 ";
-	str.append(res.status_code).append("\r\n");
+	str.reserve(res.content.size + 500);
+	str.append(res.status_code.data(), res.status_code.size).append("\r\n");
 	str += "Server: sim-server\r\n";
 	str += "Connection: close\r\n";
 
-	for (auto const& i : res.headers) {
+	res.headers.for_each([&](auto&& i) {
 		if (i.first == "server" || i.first == "connection" ||
 			i.first == "content-length")
 		{
-			continue;
+			return;
 		}
 
 		str += i.first;
 		str += ": ";
 		str += i.second;
 		str += "\r\n";
-	}
+	});
 
-	for (auto const& i : res.cookies) {
+	res.cookies.for_each([&](auto&& i) {
 		str += "Set-Cookie: ";
 		str += i.first;
 		str += '=';
 		str += i.second;
 		str += "\r\n";
-	}
+	});
 
 	D({
 		int pos = str.find('\r');
@@ -717,7 +721,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 	switch (res.content_type) {
 	case HttpResponse::TEXT:
 		str += "Content-Length: ";
-		str += toStr(res.content.size());
+		str += toStr(res.content.size);
 		str += "\r\n\r\n";
 		str += res.content;
 		send(str);
@@ -725,9 +729,13 @@ void Connection::sendResponse(const HttpResponse& res) {
 
 	case HttpResponse::FILE:
 	case HttpResponse::FILE_TO_REMOVE:
+		InplaceBuff<PATH_MAX> filename_s;
+		filename_s.append(res.content, '\0');
+		CStringView filename {filename_s.data(), filename_s.size - 1};
+
 		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
-			? res.content.c_str() : nullptr, res.content.size());
-		FileDescriptor fd {res.content, O_RDONLY | O_LARGEFILE};
+			? filename : "");
+		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
 		if (fd == -1)
 			return error404();
 
