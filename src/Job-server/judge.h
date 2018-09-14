@@ -3,8 +3,7 @@
 #include <simlib/string.h>
 #include <sim/constants.h>
 
-void judgeSubmission(const std::string& job_id,
-	const std::string& submission_id, const std::string& job_creation_time);
+void judgeSubmission(uint64_t job_id, StringView submission_id,
+	StringView job_creation_time);
 
-void judgeModelSolution(const std::string& job_id,
-	JobQueueType original_job_type);
+void judgeModelSolution(uint64_t job_id, JobType original_job_type);

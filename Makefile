@@ -1,58 +1,36 @@
 include Makefile.config
 
-DESTDIR = build
+DESTDIR := build
+
+MYSQL_CONFIG := $(shell which mariadb_config 2> /dev/null || which mysql_config 2> /dev/null)
+
+SIM_CXX_FLAGS := -I '$(CURDIR)/src/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
+SIM_LD_FLAGS := -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs)
 
 .PHONY: all
-all: build-info
-	@$(MAKE) src
-ifeq ($(MAKELEVEL), 0)
-	@echo "\033[32mBuild finished\033[0m"
-endif
+all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server
+	@printf "\033[32mBuild finished\033[0m\n"
 
-.PHONY: build-info
-build-info:
-ifeq ($(MAKELEVEL), 0)
-	@echo "DEBUG: $(DEBUG)"
-	@echo "CC -> $(CC)"
-	@echo "CXX -> $(CXX)"
-endif
-
-.PHONY: src
-src: build-info
-	$(Q)$(MAKE) -C $@
+$(eval $(call include_makefile, src/lib/simlib/Makefile))
 
 .PHONY: test
 test: test-sim test-simlib
-	@echo "\033[1;32mAll tests passed\033[0m"
-
-.PHONY: build-test
-build-test: build-test-sim build-test-simlib
-
-.PHONY: test-sim
-test-sim: src
-	$(Q)$(MAKE) -C test/
-
-.PHONY: build-test-sim
-build-test-sim: src
-	$(Q)$(MAKE) -C test/ build
+	@printf "\033[1;32mAll tests passed\033[0m\n"
 
 .PHONY: test-simlib
-test-simlib: src
-	$(Q)$(MAKE) -C src/lib/simlib/ test
+test-simlib: src/lib/simlib/test
 
-.PHONY: build-test-simlib
-build-test-simlib: src
-	$(Q)$(MAKE) -C src/lib/simlib/ build-test
-
-.PHONY: importer
-importer: src
-	$(Q)$(MAKE) -C importer/
+.PHONY: test-sim
+test-sim: test/exec test/cpp_syntax_highlighter/check
+	test/exec
+	@echo cpp_syntax_highlighter:
+	test/cpp_syntax_highlighter/check
 
 .PHONY: install
 install: $(filter-out install run, $(MAKECMDGOALS))
 	@ #   ^ install always have to be executed at the end (but before run)
 	# Echo log
-	@echo "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m"
+	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
 	# Installation
 	$(MKDIR) $(abspath $(DESTDIR)/problems/)
@@ -61,7 +39,8 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/static src/sim-server src/sim-server2 src/server.conf src/job-server $(abspath $(DESTDIR))
+	$(UPDATE) src/static src/sim-server src/sim.conf src/job-server src/backup $(abspath $(DESTDIR))
+	# $(UPDATE) src/static src/sim-server src/sim-server2 src/sim.conf src/job-server src/backup $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -76,7 +55,7 @@ endif
 			echo Type your password for $$mysql_username:; read -s mysql_password;\
 			echo Type your database which SIM will use:; read db_name;\
 			echo Type your user_host:; read user_host;\
-			printf "$$mysql_username\n$$mysql_password\n$$db_name\n$$user_host\n" > $(abspath $(DESTDIR)/.db.config);\
+			printf "user: \"$$mysql_username\"\npassword: \"$$mysql_password\"\ndb: \"$$db_name\"\nhost: \"$$user_host\"\n" > $(abspath $(DESTDIR)/.db.config);\
 		fi'
 
 	# Set up install
@@ -86,10 +65,10 @@ endif
 	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
 	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/job-server) $(abspath $(DESTDIR)/proot)
 
-	@echo "\033[;32mInstallation finished\033[0m"
+	@printf "\033[;32mInstallation finished\033[0m\n"
 
 .PHONY: reinstall
-reinstall: SETUP_INSTALL_FLAGS += --drop-tables
+reinstall: override SETUP_INSTALL_FLAGS += --drop-tables
 reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
 	@ #     ^ reinstall always have to be executed at the end (but before run)
 	# Kill sim-server and job-server
@@ -101,11 +80,11 @@ reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
 	$(MAKE) install
 
 .PHONY: uninstall
-uninstall: SETUP_INSTALL_FLAGS += --only-drop-tables
+uninstall: override SETUP_INSTALL_FLAGS += --only-drop-tables
 uninstall:
 	# Kill sim-server and job-server
 	src/killinstc $(abspath $(DESTDIR)/sim-server)
-	src/killinstc $(abspath $(DESTDIR)/sim-server2)
+	# src/killinstc $(abspath $(DESTDIR)/sim-server2)
 	src/killinstc $(abspath $(DESTDIR)/job-server)
 
 	# Delete files and database tables
@@ -114,22 +93,125 @@ uninstall:
 
 .PHONY: run
 run: $(filter-out run, $(MAKECMDGOALS))
-	@ # ^ run always have to be executed at the end
+	@ # ^ run target always have to be executed at the end
 
 	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
-		$(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
+		$(abspath $(DESTDIR)/job-server)
+		# $(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
 
 	# Run
 	$(abspath $(DESTDIR)/job-server)&
 	$(abspath $(DESTDIR)/sim-server)&
 	# $(abspath $(DESTDIR)/sim-server2)&
-	@echo "\033[;32mRunning finished\033[0m"
+	@printf "\033[;32mRunning finished\033[0m\n"
+
+$(eval $(call load_dependencies, src/killinstc.cc))
+src/killinstc: src/killinstc.o src/lib/simlib/simlib.a
+	$(LINK) -lsupc++
+
+$(eval $(call load_dependencies, src/setup_installation.cc))
+src/setup-installation: src/setup_installation.o src/lib/sim.a src/lib/simlib/simlib.a
+	$(LINK) -lsupc++
+
+$(eval $(call load_dependencies, src/backup.cc))
+src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
+	$(LINK) -lsupc++ -lrt
+
+JOB_SERVER_SRCS := \
+	src/Job-server/judge.cc \
+	src/Job-server/main.cc \
+	src/Job-server/problem.cc \
+	src/Job-server/contest.cc
+
+$(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
+JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
+
+src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
+	$(LINK) -lsupc++ -lrt -larchive -lseccomp
+
+LIB_SIM_SRCS := \
+	src/lib/cpp_syntax_highlighter.cc \
+	src/lib/jobs.cc \
+	src/lib/mysql.cc \
+	src/lib/submission.cc
+
+$(eval $(call load_dependencies, $(LIB_SIM_SRCS)))
+LIB_SIM_OBJS := $(call SRCS_TO_OBJS, $(LIB_SIM_SRCS))
+
+# SQLite
+$(eval $(call load_dependencies, src/lib/sqlite3.c))
+src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
+src/lib/sqlite3.o: override EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2
+
+src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
+	$(MAKE_STATIC_LIB)
+
+SIM_SERVER_SRCS := \
+	src/web-interface/api.cc \
+	src/web-interface/connection.cc \
+	src/web-interface/contest_entry_token_api.cc \
+	src/web-interface/contest_users_api.cc \
+	src/web-interface/contests.cc \
+	src/web-interface/contests_api.cc \
+	src/web-interface/files.cc \
+	src/web-interface/files_api.cc \
+	src/web-interface/http_request.cc \
+	src/web-interface/http_response.cc \
+	src/web-interface/jobs.cc \
+	src/web-interface/jobs_api.cc \
+	src/web-interface/problems.cc \
+	src/web-interface/problems_api.cc \
+	src/web-interface/server.cc \
+	src/web-interface/session.cc \
+	src/web-interface/sim.cc \
+	src/web-interface/submissions.cc \
+	src/web-interface/submissions_api.cc \
+	src/web-interface/template.cc \
+	src/web-interface/users.cc \
+	src/web-interface/users_api.cc
+
+$(eval $(call load_dependencies, $(SIM_SERVER_SRCS)))
+SIM_SERVER_OBJS := $(call SRCS_TO_OBJS, $(SIM_SERVER_SRCS))
+
+# Technique used to force browsers to always keep up-to-date version of the files below
+src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
+src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
+src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
+
+src/sim-server: $(SIM_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
+	$(LINK) -lsupc++ -lrt -larchive
+
+SIM_TEST_SRCS := \
+	test/jobs.cc
+$(eval $(call load_dependencies, $(SIM_TEST_SRCS)))
+SIM_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIM_TEST_SRCS))
+
+test/exec: $(SIM_TEST_OBJS) src/lib/sim.a src/lib/simlib/gtest_main.a
+	$(LINK)
+
+CTH_TEST_SRCS := \
+	test/cpp_syntax_highlighter/check.cc
+$(eval $(call load_dependencies, $(CTH_TEST_SRCS)))
+CTH_TEST_OBJS := $(call SRCS_TO_OBJS, $(CTH_TEST_SRCS))
+
+test/cpp_syntax_highlighter/check: $(CTH_TEST_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
+	$(LINK) -lrt
+
+SIM_OBJS := $(JOB_SERVER_OBJS) $(SIM_SERVER_OBJS) $(LIB_SIM_OBJS) \
+	$(SIM_TEST_OBJS) $(CTH_TEST_OBJS) src/killinstc.o src/setup_installation.o \
+	src/backup.o
+SIM_EXECS := src/killinstc src/setup-installation src/backup src/job-server \
+	src/sim-server test/exec test/cpp_syntax_highlighter/check
+
+$(SIM_OBJS): override EXTRA_CXX_FLAGS += $(SIM_CXX_FLAGS)
+$(SIM_EXECS): private override EXTRA_LD_FLAGS += $(SIM_LD_FLAGS)
 
 .PHONY: clean
-clean:
-	$(Q)$(MAKE) clean -C src/
-	$(Q)$(MAKE) clean -C test/
-	$(Q)$(MAKE) clean -C importer/
+clean: OBJS := $(SIM_OBJS) src/lib/sqlite3.o
+clean: src/lib/simlib/clean
+	$(Q)$(RM) $(SIM_EXECS) $(OBJS) $(OBJS:o=dwo) src/lib/sim.a
+	$(Q)$(RM) test/cpp_syntax_highlighter/tests/*.ans
+	$(Q)find src test importer -type f -name '*.deps' | xargs rm -f
 
 .PHONY: help
 help:

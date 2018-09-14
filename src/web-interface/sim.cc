@@ -1,24 +1,23 @@
 #include "sim.h"
 
-#include <simlib/debug.h>
-#include <simlib/logger.h>
-#include <simlib/time.h>
+#include <simlib/filesystem.h>
+#include <simlib/random.h>
 
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
-server::HttpResponse Sim::handle(string _client_ip,
-	const server::HttpRequest& request)
+server::HttpResponse Sim::handle(CStringView _client_ip,
+	server::HttpRequest req)
 {
 	client_ip = std::move(_client_ip);
-	req = &request;
+	request = std::move(req);
 	resp = server::HttpResponse(server::HttpResponse::TEXT);
 
-	stdlog(req->target);
+	stdlog(request.target);
 
 	// TODO: this is pretty bad-looking
-	auto hardError500 = [&] {
+	auto hard_error500 = [&] {
 		resp.status_code = "500 Internal Server Error";
 		resp.headers["Content-Type"] = "text/html; charset=utf-8";
 		resp.content = "<!DOCTYPE html>"
@@ -35,68 +34,125 @@ server::HttpResponse Sim::handle(string _client_ip,
 	};
 
 	try {
-		url_args = RequestURIParser {req->target};
-		StringView next_arg = url_args.extractNextArg();
-		Template::reset();
+		STACK_UNWINDING_MARK;
+		try {
+			STACK_UNWINDING_MARK;
 
-		if (next_arg == "kit")
-			getStaticFile();
+			url_args = RequestURIParser {request.target};
+			StringView next_arg = url_args.extractNextArg();
 
-		else if (next_arg == "c")
-			Contest::handle();
+			// Reset state
+			page_template_began = false;
+			notifications.clear();
+			session_is_open = false;
+			form_validation_error = false;
 
-		else if (next_arg == "s")
-			submission();
+			// Check CSRF token
+			if (request.method == server::HttpRequest::POST) {
+				// If no session is open, load value from cookie to pass
+				// verification
+				if (not session_open())
+					session_csrf_token = request.getCookie("csrf_token");
 
-		else if (next_arg == "u")
-			User::handle();
+				if (request.form_data.get("csrf_token") != session_csrf_token) {
+					error403();
+					goto cleanup;
+				}
+			}
 
-		else if (next_arg == "")
-			mainPage();
+			// Subsystems that do not need the session to be opened
+			if (next_arg == "kit") {
+				static_file();
 
-		else if (next_arg == "p")
-			Problemset::handle();
+			// Other subsystems need the session to be opened in order to work properly
+			} else {
+				session_open();
 
-		else if (next_arg == "login")
-			login();
+				if (next_arg == "c")
+					contests_handle();
 
-		else if (next_arg == "jobs")
-			Jobs::handle();
+				else if (next_arg == "enter_contest")
+					enter_contest();
 
-		else if (next_arg == "file")
-			file();
+				else if (next_arg == "s")
+					submissions_handle();
 
-		else if (next_arg == "logout")
-			logout();
+				else if (next_arg == "u")
+					users_handle();
 
-		else if (next_arg == "signup")
-			signUp();
+				else if (next_arg == "")
+					main_page();
 
-		else if (next_arg == "logs")
-			logs();
+				else if (next_arg == "api")
+					api_handle();
 
-		else
-			error404();
+				else if (next_arg == "p")
+					problems_handle();
 
-		Template::endTemplate();
+				else if (next_arg == "login")
+					login();
 
-		// Make sure that the session is closed
-		Session::close();
+				else if (next_arg == "jobs")
+					jobs_handle();
+
+				else if (next_arg == "file")
+					file_handle();
+
+				else if (next_arg == "logout")
+					logout();
+
+				else if (next_arg == "signup")
+					sign_up();
+
+				else if (next_arg == "logs")
+					view_logs();
+
+				else
+					error404();
+			}
+
+		cleanup:
+			page_template_end();
+
+			// Make sure that the session is closed
+			session_close();
+
+		#ifdef DEBUG
+			if (notifications.size != 0)
+				THROW("There are notifications left: ", notifications);
+		#endif
+
+		} catch (const std::exception& e) {
+			ERRLOG_CATCH(e);
+			error500();
+			session_close(); // Prevent session from being left open
+
+		} catch (...) {
+			ERRLOG_CATCH();
+			error500();
+			session_close(); // Prevent session from being left open
+		}
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
-		hardError500(); // We cannot use error500() because it may throw
+		// We cannot use error500() because it will probably throw
+		hard_error500();
+		session_is_open = false; // Prevent session from being left open
 
 	} catch (...) {
 		ERRLOG_CATCH();
-		hardError500(); // We cannot use error500() because it may throw
+		// We cannot use error500() because it will probably throw
+		hard_error500();
+		session_is_open = false; // Prevent session from being left open
 	}
 
 	return std::move(resp);
 }
 
-void Sim::mainPage() {
-	baseTemplate("Main page");
+void Sim::main_page() {
+	STACK_UNWINDING_MARK;
+
+	page_template("Main page");
 	append("<div style=\"text-align: center\">"
 			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
 				"alt=\"\">"
@@ -107,26 +163,29 @@ void Sim::mainPage() {
 		"</div>");
 }
 
-void Sim::getStaticFile() {
-	string file_path = "static";
+void Sim::static_file() {
+	STACK_UNWINDING_MARK;
+
+	string file_path = concat_tostr("static",
+			abspath(decodeURI(StringView{request.target}
+				.substring(1, request.target.find('?')))));
 	// Extract path (ignore query)
-	file_path += abspath(decodeURI(req->target, 1, req->target.find('?')));
 	D(stdlog(file_path);)
 
 	// Get file stat
 	struct stat attr;
 	if (stat(file_path.c_str(), &attr) != -1) {
 		// Extract time of last modification
-		auto it = req->headers.find("if-modified-since");
+		auto it = request.headers.find("if-modified-since");
 		resp.headers["last-modified"] = date("%a, %d %b %Y %H:%M:%S GMT",
 			attr.st_mtime);
-		resp.setCache(true, 7 * 24 * 60 * 60); // 7 days
+		resp.setCache(true, 100 * 24 * 60 * 60, false); // 100 days
 
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
 		struct tm client_mtime;
-		if (it != req->headers.end() && strptime(it->second.c_str(),
-			"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
+		if (it && strptime(it->second.c_str(),
+				"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
 			timegm(&client_mtime) >= attr.st_mtime)
 		{
 			resp.status_code = "304 Not Modified";
@@ -135,158 +194,31 @@ void Sim::getStaticFile() {
 	}
 
 	resp.content_type = server::HttpResponse::FILE;
-	resp.content = file_path;
+	resp.content = std::move(file_path);
 }
 
-static string colorize(const string& str) noexcept {
-	string res;
-	enum : uint8_t { SPAN, B, NONE } opened = NONE;
-	auto closeLastTag = [&] {
-		switch (opened) {
-			case SPAN: res += "</span>"; break;
-			case B: res += "</b>"; break;
-			case NONE: break;
-		}
-	};
+void Sim::view_logs() {
+	STACK_UNWINDING_MARK;
 
-	for (size_t i = 0; i < str.size(); ++i) {
-		if (str.compare(i, 5, "\033[31m") == 0) {
-			closeLastTag();
-			res += "<span class=\"red\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[32m") == 0) {
-			closeLastTag();
-			res += "<span class=\"green\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[33m") == 0) {
-			closeLastTag();
-			res += "<span class=\"yellow\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[34m") == 0) {
-			closeLastTag();
-			res += "<span class=\"blue\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[35m") == 0) {
-			closeLastTag();
-			res += "<span class=\"magentapink\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 5, "\033[36m") == 0) {
-			closeLastTag();
-			res += "<span class=\"turquoise\">";
-			opened = SPAN;
-			i += 4;
-		} else if (str.compare(i, 7, "\033[1;31m") == 0) {
-			closeLastTag();
-			res += "<b class=\"red\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;32m") == 0) {
-			closeLastTag();
-			res += "<b class=\"green\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;33m") == 0) {
-			closeLastTag();
-			res += "<b class=\"yellow\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;34m") == 0) {
-			closeLastTag();
-			res += "<b class=\"blue\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;35m") == 0) {
-			closeLastTag();
-			res += "<b class=\"pink\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 7, "\033[1;36m") == 0) {
-			closeLastTag();
-			res += "<b class=\"turquoise\">";
-			opened = B;
-			i += 6;
-		} else if (str.compare(i, 3, "\033[m") == 0) {
-			closeLastTag();
-			opened = NONE;
-			i += 2;
-		} else
-			appendHtmlEscaped(res, str[i]);
-	}
-	closeLastTag();
-	return res;
-}
-
-void Sim::logs() {
-	if (!Session::open() || Session::user_type > UTYPE_ADMIN)
+	if (!session_is_open || session_user_type > UserType::ADMIN)
 		return error403();
 
-	baseTemplate("Logs", "body{margin-left:20px}");
+	page_template("Logs", "body{padding-left:20px}");
 
-	// TODO: more logs and show less, but add "show more" button???
-	// TODO: active updating logs
-	constexpr int BYTES_TO_READ = 16384;
-	constexpr int MAX_LINES = 128;
+	append("<script>tab_logs_view($('body'))</script>");
+}
 
-	auto dumpLogTail = [&](const CStringView& filename) {
-		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
-		if (fd == -1) {
-			errlog(__FILE__ ":", toStr(__LINE__), ": open()", error(errno));
-			return;
-		}
+string Sim::generate_random_token(uint length) {
+	STACK_UNWINDING_MARK;
 
-		string fdata = getFileContents(fd, -BYTES_TO_READ, -1);
+	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"0123456789";
+	constexpr size_t len = sizeof(t) - 1;
 
-		// The first line is probably not intact so erase it
-		if (int(fdata.size()) == BYTES_TO_READ)
-			fdata.erase(0, fdata.find('\n'));
+	// Generate random id of length SESSION_ID_LENGTH
+	string res(length, '0');
+	for (char& c : res)
+		c = t[getRandom<int>(0, len - 1)];
 
-		// Cuts fdata to a newline character from the ending
-		fdata.erase(std::min(fdata.size(), fdata.rfind('\n')));
-
-		// Shorten to the last MAX_LINES
-		auto it = --fdata.end();
-		for (uint lines = MAX_LINES; it > fdata.begin(); --it)
-			if (*it == '\n' && --lines == 0) {
-				fdata.erase(fdata.begin(), ++it);
-				break;
-			}
-
-		fdata = colorize(fdata);
-		append(fdata);
-	};
-
-	// Server's log
-	append("<h2>Server's log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(SERVER_LOG);
-	append("</pre>");
-
-	// Server's error log
-	append("<h2>Server's error log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(SERVER_ERROR_LOG);
-	append("</pre>");
-
-	// Job server's log
-	append("<h2>Job server's log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(JOB_SERVER_LOG);
-	append("</pre>");
-
-	// Job server's error log
-	append("<h2>Job server's error log:</h2>"
-		"<pre class=\"logs\">");
-	dumpLogTail(JOB_SERVER_ERROR_LOG);
-	append("</pre>"
-		// Script used to scroll down the logs
-		"<script>"
-			"$(\".logs\").each(function(){"
-				"$(this).scrollTop($(this)[0].scrollHeight);"
-			"});"
-		"</script>");
+	return res;
 }

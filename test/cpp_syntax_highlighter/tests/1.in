@@ -51,7 +51,8 @@ n';
 	const char* cc = /*/ aaa */ "bbb"/**/"aaa";
 	cout << '\'' << c << "' '" << c1 << "'"  << endl << cc << endl;
 
-	const char ccc = "\na\x11p\033ooo\u1234oooo\U12345678q0000\u\
+	const char* xd = "\4\1abcdef\1dc\02aas\0123a\123aaaa";
+	const char* ccc = "\na\x11p\033ooo\u1234oooo\U12345678q0000\u\
 1\
 \
 2\

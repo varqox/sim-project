@@ -1,200 +1,123 @@
-#include <sim/constants.h>
+#include "main.h"
+
 #include <sim/jobs.h>
-#include <sim/mysql.h>
-#include <sim/sqlite.h>
-#include <simlib/filesystem.h>
 #include <simlib/process.h>
 #include <simlib/sim/conver.h>
+#include <simlib/sim/judge_worker.h>
+#include <simlib/sim/problem_package.h>
 #include <simlib/spawner.h>
-#include <simlib/time.h>
-#include <simlib/utilities.h>
-#include <utime.h>
-#include <vector>
+#include <simlib/zip.h>
 
 using jobs::AddProblemInfo;
 using std::pair;
 using std::string;
 using std::vector;
 
-extern MySQL::Connection db_conn;
-extern SQLite::Connection sqlite_db;
-
 namespace {
 
-struct AddTrait {
-	static constexpr JobQueueType JUDGE_MODEL_SOLUTION =
-		JobQueueType::ADD_JUDGE_MODEL_SOLUTION;
-};
-
-struct ReuploadTrait {
-	static constexpr JobQueueType JUDGE_MODEL_SOLUTION =
-		JobQueueType::REUPLOAD_JUDGE_MODEL_SOLUTION;
+enum Action {
+	ADDING,
+	REUPLOADING
 };
 
 } // anonymous namespace
 
 // Before judging the model solution
-template<class Trait>
-static void firstStage(const string& job_id, AddProblemInfo info) {
-	sim::Conver::ReportBuff report;
-	report.append("Stage: FIRST");
+template<Action action>
+static void first_stage(uint64_t job_id, AddProblemInfo& info) {
+	STACK_UNWINDING_MARK;
 
-	auto set_failure = [&] {
-		MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_FAILED_STR ", data=?"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-		stmt.setString(1, report.str);
-		stmt.setString(2, job_id);
-		stmt.executeUpdate();
+	auto source_package = concat<PATH_MAX>("jobs_files/", job_id, ".zip");
+	auto dest_package = concat<PATH_MAX>("jobs_files/", job_id, ".zip.prep");
 
-		stdlog("Job: ", job_id, '\n', report.str);
+	FileRemover package_remover(dest_package.to_cstr());
+
+	sim::Conver::ReportBuff job_log;
+	job_log.append("Stage: FIRST");
+
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(job_log.str, job_id);
+
+		stdlog("Job ", job_id, ":\n", job_log.str);
 	};
 
-	/* Extract package */
-
-	// Remove old files/directories if exist
-	StringBuff<PATH_MAX> package_dest {"jobs_files/", job_id};
-	StringBuff<PATH_MAX> tmp_package_path {package_dest, ".tmp/"};
-
-	remove_r(package_dest);
-	remove_r(tmp_package_path);
-
-	vector<string> zip_args;
-	back_insert(zip_args, "unzip", "-o", concat(package_dest, ".zip"), "-d",
-		tmp_package_path.str);
-
-	report.append("Unpacking package...");
-
-	// Run unzip
-	{
-		FileDescriptor zip_output {openUnlinkedTmpFile()};
-		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
-			{-1, zip_output, zip_output, 500'000'000 /* 500 s */, 512 << 20});
-
-		// Append unzip's output to the report
-		(void)lseek(zip_output, 0, SEEK_SET);
-		report.append(getFileContents(zip_output));
-
-		if (es.code) {
-			report.append("Unpacking error: ", es.message);
-			return set_failure();
-		}
-
-		report.append("Unpacking took ", usecToSecStr(es.runtime, 3), "s.");
-	}
-
-
-	// Check if the package has the master directory
-	int entities = 0;
-	StringBuff<PATH_MAX> master_dir;
-	forEachDirComponent(tmp_package_path, [&](const dirent* file) {
-		++entities;
-		if (master_dir.size())
-			return;
-
-		if (file->d_type == DT_DIR ||
-			(file->d_type == DT_UNKNOWN && isDirectory(
-				StringBuff<PATH_MAX>{tmp_package_path, file->d_name})))
-		{
-			master_dir = file->d_name;
-		}
-	});
-
-	if (master_dir.len && entities == 1)
-		tmp_package_path.append(master_dir);
-
-	// Move package to the final destination
-	if (rename(tmp_package_path.str, package_dest.str) != 0) {
-		errlog(__FILE__ ":", toStr(__LINE__), ": rename(`", tmp_package_path,
-			"`, `", package_dest, '`');
-		report.append("Error: rename(`", tmp_package_path, "`, `", package_dest,
-			'`');
-		return set_failure();
-	}
-
-	// Remove the .tmp directory
-	if (master_dir.len) {
-		// Truncate master_dir from the path
-		tmp_package_path[tmp_package_path.len -= master_dir.len] = '\0';
-		remove_r(tmp_package_path);
-	}
+	// dest_package is initially equal to the source_package
+	(void)remove(dest_package.to_cstr());
+	copy(source_package.to_cstr(), dest_package.to_cstr());
 
 	/* Construct Simfile */
 
 	sim::Conver conver;
-	conver.setVerbosity(true);
-	conver.setPackagePath(package_dest.str);
+	conver.setPackagePath(dest_package.to_string());
 
 	// Set Conver options
-	sim::Conver::Options opts;
-	opts.name = info.name;
-	opts.label = info.label;
-	opts.memory_limit = info.memory_limit;
-	opts.global_time_limit = info.global_time_limit;
-	opts.ignore_simfile = info.ignore_simfile;
-	opts.force_auto_time_limits_setting = info.force_auto_limit;
-	opts.compilation_time_limit = SOLUTION_COMPILATION_TIME_LIMIT;
-	opts.compilation_errors_max_length =
-		COMPILATION_ERRORS_MAX_LENGTH;
-	opts.proot_path = PROOT_PATH;
+	sim::Conver::Options copts;
+	copts.name = info.name;
+	copts.label = info.label;
+	copts.memory_limit = info.memory_limit;
+	copts.global_time_limit = info.global_time_limit;
+	copts.reset_time_limits_using_model_solution = info.reset_time_limits;
+	copts.ignore_simfile = info.ignore_simfile;
+	copts.seek_for_new_tests = info.seek_for_new_tests;
+	copts.reset_scoring = info.reset_scoring;
+	copts.require_statement = true;
 
-	std::pair<sim::Conver::Status, sim::Simfile> p;
+	sim::Conver::ConstructionResult cr;
 	try {
-		p = conver.constructSimfile(opts);
+		cr = conver.constructSimfile(copts);
 	} catch (const std::exception& e) {
-		report.str += conver.getReport();
-		report.append("Conver failed: ", e.what());
-		return set_failure();
+		return set_failure(conver.getReport(), "Conver failed: ", e.what());
 	}
 
 	// Check problem's name's length
-	if (p.second.name.size() > PROBLEM_NAME_MAX_LEN) {
-		report.append("Problem's name is too long (max allowed length: ",
-			toStr(PROBLEM_NAME_MAX_LEN), ')');
-		return set_failure();
+	if (cr.simfile.name.size() > PROBLEM_NAME_MAX_LEN) {
+		return set_failure("Problem's name is too long (max allowed length: ",
+			PROBLEM_NAME_MAX_LEN, ')');
 	}
 
 	// Check problem's label's length
-	if (p.second.label.size() > PROBLEM_LABEL_MAX_LEN) {
-		report.append("Problem's label is too long (max allowed length: ",
-			toStr(PROBLEM_LABEL_MAX_LEN), ')');
-		return set_failure();
-	}
+	if (cr.simfile.label.size() > PROBLEM_LABEL_MAX_LEN)
+		return set_failure("Problem's label is too long (max allowed length: ",
+			PROBLEM_LABEL_MAX_LEN, ')');
 
-	report.str += conver.getReport();
+	job_log.append(conver.getReport());
+
+	/* Advance the stage */
 
 	// Put the Simfile into the package
-	putFileContents(package_dest.append("/Simfile"), p.second.dump());
+	update_add_data_to_zip(cr.simfile.dump(),
+		concat(cr.pkg_master_dir, "Simfile").to_cstr(), dest_package.to_cstr());
 
-	info.stage = AddProblemInfo::SECOND; // Advance the stage
+	info.stage = AddProblemInfo::SECOND;
 
-	switch (p.first) {
+	switch (cr.status) {
 	case sim::Conver::Status::COMPLETE: {
 		// Advance the job to the SECOND stage
-		MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
-			" SET status=" JQSTATUS_PENDING_STR ", info=?, data=?"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-		stmt.setString(1, info.dump());
-		stmt.setString(2, report.str);
-		stmt.setString(3, job_id);
-		stmt.executeUpdate();
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_PENDING_STR ", info=?, data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(info.dump(), job_log.str, job_id);
 		break;
 	}
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 		// Transform the job into a JUDGE_MODEL_SOLUTION job
-		MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
-			" SET type=?, status=" JQSTATUS_PENDING_STR ", info=?, data=?"
-			" WHERE id=? AND status!=" JQSTATUS_CANCELED_STR);
-		stmt.setUInt(1, uint(Trait::JUDGE_MODEL_SOLUTION));
-		stmt.setString(2, info.dump());
-		stmt.setString(3, report.str);
-		stmt.setString(4, job_id);
-		stmt.executeUpdate();
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET type=?, status=" JSTATUS_PENDING_STR ", info=?, data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(
+			uint(action == Action::ADDING ? JobType::ADD_JUDGE_MODEL_SOLUTION
+				: JobType::REUPLOAD_JUDGE_MODEL_SOLUTION),
+			info.dump(), job_log.str, job_id);
 		break;
 	}
 	}
 
-	stdlog("Job: ", job_id, '\n', report.str);
+	stdlog("Job ", job_id, ":\n", job_log.str);
+	package_remover.cancel();
 }
 
 /**
@@ -204,22 +127,28 @@ static void firstStage(const string& job_id, AddProblemInfo info) {
  * @param job_id job id
  * @param job_owner job owner
  * @param info add info
- * @param report report to append the log to
+ * @param job_log job_log to append the log to
  * @tparam Trait trait to use
  *
  * @return Id of the added problem
  *
  * @errors If any error occurs an appropriate exception is thrown
  */
-template<class Trait>
-static string secondStage(const string& job_id, const string& job_owner,
-	AddProblemInfo info, sim::Conver::ReportBuff& report)
+template<Action action>
+static uint64_t second_stage(uint64_t job_id, StringView job_owner,
+	const AddProblemInfo& info, sim::Conver::ReportBuff& job_log)
 {
-	report.append("Stage: SECOND");
+	STACK_UNWINDING_MARK;
+
+	auto package_path = concat("jobs_files/", job_id, ".zip.prep");
+	FileRemover job_package_remover(package_path.to_cstr());
+
+	job_log.append("\nStage: SECOND");
+	auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
 
 	// Load the Simfile
-	string simfile_str {getFileContents(
-		StringBuff<PATH_MAX>{"jobs_files/", job_id, "/Simfile"})};
+	string simfile_str = extract_file_from_zip(package_path.to_cstr(),
+		concat(pkg_master_dir, "Simfile").to_cstr());
 
 	sim::Simfile sf {simfile_str};
 	sf.loadName();
@@ -227,123 +156,110 @@ static string secondStage(const string& job_id, const string& job_owner,
 	sf.loadSolutions();
 
 	// Add the problem to the database
-	string current_date = date();
-	MySQL::Statement stmt {db_conn.prepare(
+	InplaceBuff<64> current_date = concat<64>(mysql_date());
+	auto stmt = mysql.prepare(
 		"INSERT problems (type, name, label, simfile, owner, added,"
 			" last_edit)"
-		" VALUES(" PTYPE_VOID_STR ", ?, ?, ?, ?, ?, ?)")};
-	stmt.setString(1, sf.name);
-	stmt.setString(2, sf.label);
-	stmt.setString(3, std::move(simfile_str));
-	stmt.setString(4, job_owner);
-	stmt.setString(5, current_date);
-	stmt.setString(6, current_date);
-	stmt.executeUpdate();
+		" VALUES(" PTYPE_VOID_STR ", ?, ?, ?, ?, ?, ?)");
+	stmt.bindAndExecute(sf.name, sf.label, std::move(simfile_str), job_owner,
+		current_date, current_date);
 
 	// Obtain the new problem's id
-	string problem_id = db_conn.lastInsertId();
+	uint64_t problem_id = stmt.insert_id();
+	auto pid_str = toStr(problem_id);
 
 	/* Begin transaction */
 
-	// SQLite transaction is handled in the function addProblem() that calls
+	// SQLite transaction is handled in the function add_problem() that calls
 	// this function so we don't have to worry about that
 	auto rollbacker = [&] {
 		SignalBlocker sb; // Prevent the transaction rollback from interruption
 
 		// Delete problem's files
-		remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
-		remove_r(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
+		(void)remove(StringBuff<PATH_MAX>{"problems/", pid_str, ".zip"});
 
 		// Delete the problem and its submissions
-		db_conn.executeUpdate("DELETE FROM problems WHERE id=" +
-			problem_id);
-		db_conn.executeUpdate("DELETE FROM submissions WHERE problem_id=" +
-			problem_id);
+		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
+		stmt.bindAndExecute(problem_id);
+
+		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");
+		stmt.bindAndExecute(problem_id);
 	};
 	CallInDtor<decltype(rollbacker)> rollback_maker {rollbacker};
 
 	// Insert the problem into the SQLite FTS5 table `problems`
-	SQLite::Statement sqlite_stmt {sqlite_db.prepare(
+	SQLite::Statement sqlite_stmt {sqlite.prepare(
 		"INSERT INTO problems (rowid, type, name, label)"
 		" VALUES(?, ?, ?, ?)")};
-	sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
-	sqlite_stmt.bindInt(2, int(info.public_problem ?
-		ProblemType::PUBLIC : ProblemType::PRIVATE));
+	sqlite_stmt.bindInt64(1, problem_id);
+	sqlite_stmt.bindInt(2, EnumVal<ProblemType>(info.problem_type).int_val());
 	sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
 	sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
 	throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
-	// Move package's directory to its destination
-	StringBuff<PATH_MAX> package_dest {"problems/", problem_id};
-	if (move(StringBuff<PATH_MAX>{"jobs_files/", job_id}, package_dest))
-		THROW("move()", error(errno));
+	// Move the package to its destination
+	auto package_dest = concat("problems/", pid_str, ".zip");
+	if (move(package_path.to_cstr(), package_dest.to_cstr()))
+		THROW("move() failed", errmsg());
 
-	// Zip the package
-	report.append("Zipping the package...");
-	{
-		FileDescriptor zip_output {openUnlinkedTmpFile()};
-		vector<string> zip_args;
-		back_insert(zip_args, "zip", "-rq", concat(problem_id, ".zip"),
-			problem_id);
-		Spawner::ExitStat es = Spawner::run(zip_args[0], zip_args,
-			{-1, zip_output, zip_output, 0, 512 << 20}, "problems");
+	job_package_remover.cancel();
 
-		// Append zip's output to the the report
-		(void)lseek(zip_output, 0, SEEK_SET);
-		report.append(getFileContents(zip_output));
+	// Extract solutions
+	sim::PackageContents sol_paths;
+	for (auto&& sol : sf.solutions)
+		sol_paths.add_entry(pkg_master_dir, sol);
 
-		if (es.code)
-			THROW("Zip error: ", es.message);
+	TemporaryDirectory tmp_dir("/tmp/job-server.XXXXXX");
+	extract_zip(package_dest.to_cstr(), 0, [&](archive_entry* entry) {
+		return sol_paths.exists(archive_entry_pathname(entry));
+	}, tmp_dir.path());
 
-		report.append("Zipping took ", usecToSecStr(es.runtime, 3), "s.");
-	}
-
-	// Submit the solutions
-	report.append("Submitting solutions...");
-	package_dest.append('/');
-	for (auto&& solution : sf.solutions) {
-		report.append("Submit: ", solution);
-
-		current_date = date();
-		stmt = db_conn.prepare("INSERT submissions (user_id, problem_id,"
-				" round_id, parent_round_id, contest_round_id, type,"
-				" status, submit_time, last_judgment, initial_report,"
-				" final_report)"
-			" VALUES(" SIM_ROOT_UID ", ?, NULL, NULL, NULL, "
-				STYPE_VOID_STR ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
-		stmt.setString(1, problem_id);
-		stmt.setString(2, current_date);
-		stmt.setString(3, date("%Y-%m-%d %H:%M:%S", 0));
-		stmt.executeUpdate();
-
-		string submission_id = db_conn.lastInsertId();
-
-		// Make solution's source code the submission's source code
-		if (copy(StringBuff<PATH_MAX * 2>{package_dest, solution},
-			StringBuff<PATH_MAX>{"solutions/", submission_id, ".cpp"}))
-		{
-			THROW("Copying solution `", solution, "`: copy()",
-				error(errno));
+	auto fname_to_lang = [](StringView extension) {
+		auto lang = sim::filename_to_lang(extension);
+		switch (lang) {
+		case sim::SolutionLanguage::C: return SubmissionLanguage::C;
+		case sim::SolutionLanguage::CPP: return SubmissionLanguage::CPP;
+		case sim::SolutionLanguage::PASCAL: return SubmissionLanguage::PASCAL;
+		case sim::SolutionLanguage::UNKNOWN: THROW("Not supported language");
 		}
 
-		// Create a job to judge the submission
-		stmt = db_conn.prepare("INSERT job_queue (creator, status,"
-				" priority, type, added, aux_id, info, data)"
-			" VALUES(" SIM_ROOT_UID ", " JQSTATUS_PENDING_STR ", ?, "
-				JQTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
-		// Problem's solutions are more important than ordinary submissions
-		stmt.setUInt(1, priority(JobQueueType::JUDGE_SUBMISSION) + 1);
-		stmt.setString(2, current_date);
-		stmt.setString(3, submission_id);
-		stmt.setString(4, jobs::dumpString(problem_id));
-		stmt.executeUpdate();
+		throw_assert(false);
+	};
+
+	// Submit the solutions
+	job_log.append("Submitting solutions...");
+	const string zero_date = mysql_date(0);
+	EnumVal<SubmissionLanguage> lang;
+	stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
+			" contest_problem_id, contest_round_id, contest_id, type, language,"
+			" initial_status, full_status, submit_time, last_judgment,"
+			" initial_report, final_report)"
+		" VALUES(NULL, ?, NULL, NULL, NULL, "
+			STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ", " SSTATUS_PENDING_STR
+			", ?, ?, '', '')");
+	stmt.bind_all(problem_id, lang, current_date, zero_date);
+
+	for (auto&& solution : sf.solutions) {
+		job_log.append("Submit: ", solution);
+
+		current_date = mysql_date();
+		lang = fname_to_lang(solution);
+		stmt.execute();
+		uint64_t submission_id = mysql.insert_id();
+
+		// Make solution's source code the submission's source code
+		if (copy(concat<PATH_MAX>(tmp_dir.path(), pkg_master_dir, solution)
+			.to_cstr(), concat("solutions/", submission_id).to_cstr()))
+		{
+			THROW("Copying solution `", solution, "`: copy()", errmsg());
+		}
 	}
-	report.append("Done.");
+	job_log.append("Done.");
 
 	// Notify the job-server that there are submissions to judge
 	utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
 
-	// TODO: fix updating submission status so that it will work with PROBLEM_SOLUTION submissions and other queries connected to this problem
+	// TODO: fix updating submission status so that it will work with PROBLEM_SOLUTION submissions and other queries associated with this problem
 
 	// End transaction
 	rollback_maker.cancel();
@@ -353,121 +269,174 @@ static string secondStage(const string& job_id, const string& job_owner,
 
 /**
  * @brief Adds problem to the problemset, submits its solutions and calls
- *   @p func. Note that this function does not make the problem visible via
- *   the web-interface.
+ *   @p success_callback. Note that this function does not make the problem
+ *   visible via the web-interface.
  *
  * @param job_id job id
  * @param job_owner job owner
  * @param aux_id job's auxiliary id
  * @param info problem info
- * @param func function to call just after finishing adding the problem
+ * @param success_callback function to call just after finishing adding the problem
  * @tparam Trait trait to use
 */
-template<class Trait, class Func>
-static void addProblem(const string& job_id, const string& job_owner,
-	const string& aux_id, AddProblemInfo info, Func&& func)
+template<Action action, class Func>
+static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id,
+	AddProblemInfo& info, Func&& success_callback)
 {
+	STACK_UNWINDING_MARK;
+
 	switch (info.stage) {
 	case AddProblemInfo::FIRST:
-		firstStage<Trait>(job_id, std::move(info));
+		first_stage<action>(job_id, info);
 		break;
 
 	case AddProblemInfo::SECOND: {
-		sim::Conver::ReportBuff report;
-		MySQL::Statement stmt = db_conn.prepare("UPDATE job_queue"
+		sim::Conver::ReportBuff job_log;
+		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=?, aux_id=?, data=CONCAT(data,?) WHERE id=?");
+		EnumVal<JobStatus> status; // [[maybe_uninitilized]]
+		uint64_t apid; // Added problem's id
 		try {
-			sqlite_db.execute("BEGIN");
-			// Added problem's id
-			string apid =
-				secondStage<Trait>(job_id, job_owner, std::move(info), report);
-			func(apid, report);
-			sqlite_db.execute("COMMIT");
+			sqlite.execute("BEGIN");
+			apid = second_stage<action>(job_id, job_owner, info, job_log);
+			success_callback(apid, job_log);
+			sqlite.execute("COMMIT");
 
-			stmt.setUInt(1, uint(JobQueueStatus::DONE));
-			stmt.setString(2, std::is_same<Trait, AddTrait>::value ?
-				apid : aux_id);
+			status = JobStatus::DONE;
+			if (action == Action::ADDING)
+				stmt.bind(1, apid);
+			else
+				stmt.bind(1, aux_id);
 
 		} catch (const std::exception& e) {
 			// To avoid exceptions C API is used
-			sqlite3_exec(sqlite_db, "ROLLBACK", nullptr, nullptr, nullptr);
+			(void)sqlite3_exec(sqlite, "ROLLBACK", nullptr, nullptr, nullptr);
 
 			ERRLOG_CATCH(e);
-			report.append("Caught exception: ", e.what());
+			job_log.append("Caught exception: ", e.what());
 
-			stmt.setUInt(1, uint(JobQueueStatus::FAILED));
-			if (std::is_same<Trait, ReuploadTrait>::value)
-				stmt.setString(2, aux_id);
+			status = JobStatus::FAILED;
+			if (action == Action::REUPLOADING)
+				stmt.bind(1, aux_id);
 			else
-				stmt.setNull(2);
+				stmt.bind(1, nullptr);
 		}
 
-		stmt.setString(3, report.str);
-		stmt.setString(4, job_id);
-		stmt.executeUpdate();
+		stmt.bind(0, status);
+		stmt.bind(2, job_log.str);
+		stmt.bind(3, job_id);
+		stmt.fixAndExecute();
 
-		stdlog("Job: ", job_id, '\n', report.str);
+		stdlog("Job: ", job_id, '\n', job_log.str);
 		break;
 	}
 	}
 }
 
+static void add_jobs_to_judge_problem_solutions(uint64_t problem_id) {
+	STACK_UNWINDING_MARK;
 
-void addProblem(const string& job_id, const string& job_owner, StringView info)
-{
+	uint64_t submission_id;
+	auto stmt = mysql.prepare("SELECT id FROM submissions"
+		" WHERE type=" STYPE_PROBLEM_SOLUTION_STR " AND problem_id=?");
+	stmt.res_bind_all(submission_id);
+	stmt.bindAndExecute(problem_id);
+
+	// Create a job to judge the submission
+	auto insert_stmt = mysql.prepare("INSERT jobs (creator, status,"
+			" priority, type, added, aux_id, info, data)"
+		" VALUES(NULL, " JSTATUS_PENDING_STR ", ?, "
+			JTYPE_JUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
+	// Problem's solutions are more important than the ordinary submissions
+	constexpr uint prio = priority(JobType::JUDGE_SUBMISSION) + 1;
+	const auto current_date = mysql_date();
+	const auto info = jobs::dumpString(toStr(problem_id));
+	insert_stmt.bind_all(prio, current_date, submission_id, info);
+
+	while (stmt.next())
+		insert_stmt.execute();
+
+	jobs::notify_job_server();
+}
+
+void add_problem(uint64_t job_id, StringView job_owner, StringView info) {
+	STACK_UNWINDING_MARK;
+
 	AddProblemInfo p_info {info};
-	addProblem<AddTrait>(job_id, job_owner, "", p_info,
-		[&](string problem_id, sim::Conver::ReportBuff&) {
+	add_problem<Action::ADDING>(job_id, job_owner, "", p_info,
+		[&](uint64_t problem_id, sim::Conver::ReportBuff&) {
+			STACK_UNWINDING_MARK;
+
 			// Make the problem and its solutions' submissions public
-			MySQL::Statement stmt = db_conn.prepare(
-				"UPDATE problems p, submissions s"
+			auto stmt = mysql.prepare("UPDATE problems p, submissions s"
 				" SET p.type=?, s.type=" STYPE_PROBLEM_SOLUTION_STR
 				" WHERE p.id=? AND s.problem_id=?");
-			stmt.setUInt(1, uint(p_info.public_problem ?
-				ProblemType::PUBLIC : ProblemType::PRIVATE));
-			stmt.setString(2, problem_id);
-			stmt.setString(3, problem_id);
-			stmt.executeUpdate();
+			stmt.bindAndExecute(EnumVal<ProblemType>(p_info.problem_type),
+				problem_id, problem_id);
+
+			add_jobs_to_judge_problem_solutions(problem_id);
 		});
 
 }
 
-void reuploadProblem(const string& job_id, const string& job_owner,
-	StringView info, const std::string& aux_id)
+void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
+	StringView problem_id)
 {
+	STACK_UNWINDING_MARK;
+
 	AddProblemInfo p_info {info};
-	addProblem<ReuploadTrait>(job_id, job_owner, aux_id, p_info,
-		[&](string problem_id, sim::Conver::ReportBuff& report) {
-			// TODO: the problem is invalid for a while - do something so that
-			//   judging worker won't use it during that time
-			report.append("Replacing the old problem with the new one...");
+	add_problem<Action::REUPLOADING>(job_id, job_owner, problem_id, p_info,
+		[&](uint64_t tmp_problem_id, sim::Conver::ReportBuff& job_log) {
+			STACK_UNWINDING_MARK;
+
+			job_log.append("Replacing the old package with the new one...");
 
 			// Make a backup of the problem
 			vector<pair<bool, string>> pbackup;
-			MySQL::Result res {db_conn.executeQuery("SELECT * FROM problems"
-				" WHERE id=" + aux_id)};
-			string prestore_sql;
-			if (res.next()) {
-				prestore_sql = "REPLACE problems VALUES(";
+			auto stmt = mysql.prepare("SELECT * FROM problems"
+				" WHERE id=?");
+			stmt.bindAndExecute(problem_id);
+			uint n = stmt.fields_num();
 
-				uint n = res.impl()->getMetaData()->getColumnCount();
+			InplaceArray<InplaceBuff<65536>, 16> buff {n};
+			InplaceArray<my_bool, 16> is_null {n};
+			for (uint i = 0; i < n; ++i) {
+				stmt.res_bind(i, buff[i]);
+				stmt.res_bind_isnull(i, is_null[i]);
+			}
+			stmt.resFixBinds();
+
+			string prob_restore_sql;
+			StringView previous_owner;
+			if (stmt.next()) {
+				prob_restore_sql = "REPLACE problems VALUES(";
 				pbackup.resize(n);
 				for (uint i = 0; i < n; ++i) {
-					pbackup[i] = {res.isNull(i + 1), res[i + 1]};
-					prestore_sql += "?,";
+					pbackup[i] = {is_null[i], buff[i].to_string()};
+					prob_restore_sql += "?,";
 				}
 
-				prestore_sql.back() = ')';
+				prob_restore_sql.back() = ')';
+
+				// Save the previous owner
+				constexpr uint OWNER_IDX = 5;
+				throw_assert("owner" == StringView{
+					mysql_fetch_field_direct(stmt.resMetadata().get(),
+						OWNER_IDX)->name});
+				previous_owner = pbackup[OWNER_IDX].second;
+				// Commit the change to the database
+				stmt = mysql.prepare("UPDATE jobs SET info=? WHERE id=?");
+				stmt.bindAndExecute(p_info.dump(), job_id);
 			}
 
 			// Make a backup of the problem's solutions' submissions
-			vector<vector<pair<bool, string>>> sbackup;
+			vector<vector<pair<bool, string>>> sol_backup;
 			string srestore_sql;
-			res = db_conn.executeQuery("SELECT * FROM submissions"
-				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR " AND problem_id=" +
-				aux_id);
-			if (res.next()) {
-				uint n = res.impl()->getMetaData()->getColumnCount();
+			stmt = mysql.prepare("SELECT * FROM submissions"
+				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR " AND problem_id=?");
+			stmt.bindAndExecute(problem_id);
+			if (stmt.next()) {
+				n = stmt.fields_num();
 				// Restore sql
 				srestore_sql = "REPLACE submissions VALUES(";
 				for (uint i = 0; i < n; ++i)
@@ -475,115 +444,160 @@ void reuploadProblem(const string& job_id, const string& job_owner,
 				srestore_sql.back() = ')';
 
 				// Backup the submissions
-				do {
-					sbackup.emplace_back();
-					sbackup.back().resize(n);
-					for (uint i = 0; i < n; ++i)
-						sbackup.back()[i] = {res.isNull(i + 1), res[i + 1]};
+				buff.resize(n);
+				is_null.resize(n);
 
-				} while (res.next());
+				for (uint i = 0; i < n; ++i) {
+					stmt.res_bind(i, buff[i]);
+					stmt.res_bind_isnull(i, is_null[i]);
+				}
+				stmt.resFixBinds();
+
+				do {
+					sol_backup.emplace_back();
+					sol_backup.back().resize(n);
+					for (uint i = 0; i < n; ++i)
+						sol_backup.back()[i] =
+							{is_null[i], buff[i].to_string()};
+
+				} while (stmt.next());
 			}
 
-			StringBuff<PATH_MAX> package_path {"problems/", aux_id};
-			StringBuff<PATH_MAX> package_zip {package_path, ".zip"};
-			StringBuff<PATH_MAX> backuped_package {package_path, ".backup"};
-			StringBuff<PATH_MAX> backuped_zip {package_zip, ".backup"};
+			auto problem_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
+			auto backuped_problem = concat<PATH_MAX>(problem_path, ".backup");
 
-			(void)remove_r(backuped_package);
-			(void)remove_r(backuped_zip);
+			(void)remove(backuped_problem.to_cstr());
 
 			ThreadSignalBlocker sb; // This part cannot be interrupted
-			try {
-				// Backup old problem's files
-				if (rename(package_path.str, backuped_package.str)) {
-					package_path = package_zip = {}; // Prevent restoring of
-					                                 // these
-					THROW("rename()", error(errno));
-				}
+			STACK_UNWINDING_MARK;
 
-				if (rename(package_zip.str, backuped_zip.str)) {
-					package_zip = {}; // Prevent restoring of this
-					THROW("rename()", error(errno));
-				}
+			// Backup old problem's files
+			if (rename(problem_path.to_cstr(), backuped_problem.to_cstr()))
+				THROW("rename() failed", errmsg());
 
-				// Delete the old problem
-				db_conn.executeUpdate("DELETE FROM problems WHERE id=" +
-					aux_id);
-
-				// Replace the old problem with the new one
-				MySQL::Statement stmt {db_conn.prepare(
-					"UPDATE problems SET id=?, type=? WHERE id=?")};
-				stmt.setString(1, aux_id);
-				stmt.setUInt(2, uint(p_info.public_problem ?
-					ProblemType::PUBLIC : ProblemType::PRIVATE));
-				stmt.setString(3, problem_id);
-				stmt.executeUpdate();
-
-				// The same with files
-				StringBuff<PATH_MAX> ppath {"problems/", problem_id};
-				StringBuff<PATH_MAX> pzip {ppath, ".zip"};
-				if (rename(ppath.str, package_path.str) ||
-					rename(pzip.str, package_zip.str))
-				{
-					THROW("rename()", error(errno));
-				}
-
-				// Replace the problem in the SQLite FTS5 table `problems`
-				SQLite::Statement sqlite_stmt {sqlite_db.prepare(
-					"UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
-				sqlite_stmt.bindText(1, aux_id, SQLITE_STATIC);
-				sqlite_stmt.bindText(2, problem_id, SQLITE_STATIC);
-				throw_assert(sqlite_stmt.step() == SQLITE_DONE);
-
-				// Delete the old problem's solutions' submissions
-				db_conn.executeUpdate("DELETE FROM submissions WHERE type="
-					STYPE_PROBLEM_SOLUTION_STR " AND problem_id=" + aux_id);
-
-				// Activate the new problem's solutions' submissions
-				stmt = db_conn.prepare("UPDATE submissions"
-					" SET problem_id=?, type=" STYPE_PROBLEM_SOLUTION_STR
-					" WHERE problem_id=?");
-				stmt.setString(1, aux_id);
-				stmt.setString(2, problem_id);
-				stmt.executeUpdate();
-
-				(void)remove_r(backuped_package);
-				(void)remove_r(backuped_zip);
-
-			} catch (const std::exception& e) {
-				ERRLOG_FORWARDING(e);
-
+			auto backup_restorer = make_call_in_destructor([&]{
 				// Restore problem's files
-				(void)rename(backuped_package.str, package_path.str);
-				(void)rename(backuped_zip.str, package_zip.str);
+				(void)rename(backuped_problem.to_cstr(),
+					problem_path.to_cstr());
 
 				// Restore the problem in the database
-				if (prestore_sql.size()) {
-					MySQL::Statement stmt {db_conn.prepare(prestore_sql)};
+				if (prob_restore_sql.size()) {
+					stmt = mysql.prepare(prob_restore_sql);
 					for (uint i = 0; i < pbackup.size(); ++i) {
 						if (pbackup[i].first)
-							stmt.setNull(i + 1);
+							stmt.bind(i, nullptr);
 						else
-							stmt.setString(i + 1, pbackup[i].second);
+							stmt.bind(i, pbackup[i].second);
 					}
-					stmt.executeUpdate();
+					stmt.fixAndExecute();
 				}
 
 				// Restore problem's solutions' submissions in the database
 				if (srestore_sql.size()) {
-					MySQL::Statement stmt = db_conn.prepare(srestore_sql);
-					for (auto&& v : sbackup) {
+					stmt = mysql.prepare(srestore_sql);
+					for (auto&& v : sol_backup) {
 						for (uint i = 0; i < v.size(); ++i) {
 							if (v[i].first)
-								stmt.setNull(i + 1);
+								stmt.bind(i, nullptr);
 							else
-								stmt.setString(i + 1, v[i].second);
+								stmt.bind(i, v[i].second);
 						}
-						stmt.executeUpdate();
+						stmt.fixAndExecute();
 					}
 				}
+			});
 
-				throw;
+			stmt = mysql.prepare("SELECT added FROM problems WHERE id=?");
+			stmt.bindAndExecute(problem_id);
+			InplaceBuff<32> added;
+			stmt.res_bind_all(added);
+			throw_assert(stmt.next());
+
+			// Delete the old problem
+			stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
+			stmt.bindAndExecute(problem_id);
+
+			// Replace the old problem with the new one
+			stmt = mysql.prepare("UPDATE problems"
+				" SET id=?, type=?, owner=?, added=? WHERE id=?");
+			stmt.bindAndExecute(problem_id,
+				EnumVal<ProblemType>(p_info.problem_type),
+				(previous_owner.empty() ? job_owner : previous_owner),
+				added, tmp_problem_id);
+
+			// Replace packages
+			if (rename(concat("problems/", tmp_problem_id, ".zip").to_cstr(),
+				problem_path.to_cstr()))
+			{
+				THROW("rename() failed", errmsg());
 			}
+
+			// Replace the problem in the SQLite FTS5 table `problems`
+			SQLite::Statement sqlite_stmt {sqlite.prepare(
+				"UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
+			sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
+			sqlite_stmt.bindInt64(2, tmp_problem_id);
+			throw_assert(sqlite_stmt.step() == SQLITE_DONE);
+
+			// Delete the old problem's solutions' submissions
+			stmt = mysql.prepare("DELETE FROM submissions"
+				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR
+					" AND problem_id=?");
+			stmt.bindAndExecute(problem_id);
+
+			// Activate the new problem's solutions' submissions
+			stmt = mysql.prepare("UPDATE submissions"
+				" SET problem_id=?, type=" STYPE_PROBLEM_SOLUTION_STR
+				" WHERE problem_id=?");
+			stmt.bindAndExecute(problem_id, tmp_problem_id);
+
+			add_jobs_to_judge_problem_solutions(strtoull(problem_id));
+
+			backup_restorer.cancel();
+			(void)remove(backuped_problem.to_cstr());
 		});
+}
+
+void delete_problem(uint64_t job_id, StringView problem_id) {
+	sim::Conver::ReportBuff job_log;
+
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(job_log.str, job_id);
+
+		stdlog("Job ", job_id, ":\n", job_log.str);
+	};
+
+	// Lock the tables to be able to safely delete problem
+	{
+		mysql.update("LOCK TABLES problems WRITE, submissions WRITE,"
+			" contest_problems READ");
+		auto lock_guard = make_call_in_destructor([&]{
+			mysql.update("UNLOCK TABLES");
+		});
+
+		// Check whether the problem is not used as contest problem
+		auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
+			" WHERE problem_id=? LIMIT 1");
+		stmt.bindAndExecute(problem_id);
+		if (stmt.next()) {
+			lock_guard.call_and_cancel();
+			return set_failure("There exists a contest problem that uses"
+				" (attaches) this problem. You have to delete all of them to be"
+				" able to delete this problem.");
+		}
+
+		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");
+		stmt.bindAndExecute(problem_id);
+
+		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
+		stmt.bindAndExecute(problem_id);
+	}
+
+	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
+		", data=? WHERE id=?");
+	stmt.bindAndExecute(job_log.str, job_id);
 }

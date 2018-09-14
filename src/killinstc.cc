@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
 	// Parse arguments
 	for (int old_argc = argc, i = argc = 1; i < old_argc; ++i) {
-		StringView arg = argv[i];
+		StringView arg(argv[i]);
 		// Not an option
 		if (!hasPrefix(arg, "-")) {
 			argv[argc++] = argv[i];
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 			if (kill(vic.first, SIGTERM) == -1) {
 				// Unsuccessful kill
 				if (errno != ESRCH)
-					eprintf("kill(%i)%s\n", vic.first, error(errno).str);
+					eprintf("kill(%i)%s\n", vic.first, errmsg().str);
 
 				swap(victims[i--], victims.back());
 				victims.pop_back();

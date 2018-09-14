@@ -8,6 +8,7 @@
 #include <simlib/process.h>
 #include <sys/epoll.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 using std::array;
 using std::string;
@@ -37,7 +38,7 @@ struct Headers {
 
 	// Returns value of header with name @p name or empty string if such a
 	// header does not exist
-	StringView find(const StringView& name) {
+	StringView find(StringView name) {
 		decltype(other.begin()) beg = other.begin(), end = other.end(), mid;
 		while (beg < end) {
 			mid = beg + ((end - beg) >> 1);
@@ -175,11 +176,8 @@ public:
 	Job() = default;
 
 	Job(const Job&) = delete;
-
 	Job(Job&&) = delete;
-
 	Job& operator=(const Job&) = delete;
-
 	Job& operator=(Job&&) = delete;
 
 	~Job() {};
@@ -212,7 +210,7 @@ bool Connection::parseHeader(StringView str, StringView& name,
 }
 
 bool Connection::constructHeaders(StringView& data) {
-	DEBUG_HEADERS("Connection ", toStr(fd_), " -> \033[1;33m"
+	DEBUG_HEADERS("Connection ", fd_, " -> \033[1;33m"
 		"Parsing:\033[m ", ConfigFile::escapeString(data, true));
 
 	if (data.empty())
@@ -254,7 +252,7 @@ bool Connection::constructHeaders(StringView& data) {
 	}
 
 	do {
-		DEBUG_HEADERS("Connection ", toStr(fd_),
+		DEBUG_HEADERS("Connection ", fd_,
 			" -> Header: \033[36m", header, "\033[m");
 		++header_no;
 
@@ -308,7 +306,7 @@ bool Connection::constructHeaders(StringView& data) {
 
 		/* Headers are complete */
 		if (header.empty()) {
-			DEBUG_HEADERS("Connection ", toStr(fd_),
+			DEBUG_HEADERS("Connection ", fd_,
 				" -> \033[1;32mHeaders parsed.\033[m");
 
 			std::sort(req_.headers.other.begin(), req_.headers.other.end());
@@ -391,8 +389,8 @@ void Connection::parse(const char *str, size_t len) {
 			data.clear();
 
 		} else { // Bug
-			errlog(__FILE__, ':', toStr(__LINE__), ": Nothing to parse - "
-				"this is probably a bug");
+			errlog(__FILE__, ':', meta::ToString<__LINE__>{},
+				": Nothing to parse - this is probably a bug");
 			// TODO: connection state = CLOSE
 			return;
 		}
@@ -412,14 +410,13 @@ static void* worker(void*) {
 			// accept the connection
 			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
 				&client_name_len);
-			Closer closer(client_socket_fd);
+			FileDescriptorCloser closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;
 
 			// extract IP
 			inet_ntop(AF_INET, &name, ip, INET_ADDRSTRLEN);
-			stdlog("Connection accepted: ", toStr(pthread_self()), " form ",
-				ip);
+			stdlog("Connection accepted: ", pthread_self(), " form ", ip);
 
 			conn.assign(client_socket_fd);
 			server::HttpRequest req = conn.getRequest();
@@ -457,13 +454,13 @@ static void* reader_thread(void*) {
 	for (;;) {
 		int n = epoll_wait(epoll_fd, events.data(), events.size(), -1);
 		if (n < 0) {
-			errlog(__FILE__, ':', toStr(__LINE__), ": epoll_wait()",
-				error(errno));
+			errlog(__FILE__, ':', meta::ToString<__LINE__>{}, ": epoll_wait()",
+				error());
 			continue;
 		}
 
 		for (int i = 0; i < n; ++i) {
-			D(stdlog("Event: ", toStr((int)events[i].data.fd), " -> ",
+			D(stdlog("Event: ", (int)events[i].data.fd, " -> ",
 				(events[i].events & EPOLLIN ? "EPOLLIN | " : ""),
 				(events[i].events & EPOLLOUT ? "EPOLLOUT | " : ""),
 				(events[i].events & EPOLLRDHUP ? "EPOLLRDHUP | " : ""),
@@ -475,7 +472,7 @@ static void* reader_thread(void*) {
 
 			for (uint j = 0; j < MAX_ITERATIONS_PER_ONE; ++j) {
 				ssize_t rc = read(events[i].data.fd, buff.data(), buff.size());
-				D(stdlog("read: ", toStr(rc));)
+				D(stdlog("read: ", rc);)
 
 				if (rc < 0)
 					break;
@@ -519,7 +516,7 @@ static void master_process_cycle() {
 	// epoll(7)
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll_fd == -1) {
-		errlog("Error: epoll_create1()", error(errno));
+		errlog("Error: epoll_create1()", error());
 		exit(9);
 	}
 
@@ -528,7 +525,7 @@ static void master_process_cycle() {
 	if (pthread_create(&reader_pid, nullptr, reader_thread, nullptr) == -1 ||
 		pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1)
 	{
-		errlog("Failed to spawn reader and writer threads", error(errno));
+		errlog("Failed to spawn reader and writer threads", error());
 		exit(10);
 	}
 
@@ -539,7 +536,7 @@ static void master_process_cycle() {
 	                                 // is reached
 	(void)setrlimit(RLIMIT_NOFILE, &limit);
 
-	stdlog("NOFILE limit: ", toStr(limit.rlim_max),
+	stdlog("NOFILE limit: ", limit.rlim_max,
 		"\n=================== Server launched ===================");
 	stdlog.label(true);
 
@@ -557,8 +554,8 @@ static void master_process_cycle() {
 		throw_assert(x.second == true);
 		const Connection &conn = *x.first;
 
-		stdlog("Connection ", toStr(fd), " from ", conn.ip(), ':',
-			toStr(conn.port()), " accepted");
+		stdlog("Connection ", fd, " from ", conn.ip(), ':', conn.port(),
+			" accepted");
 
 		// Add connection epoll
 		epoll_event event;
@@ -566,7 +563,7 @@ static void master_process_cycle() {
 		event.events = EPOLLIN | EPOLLPRI;
 		event.data.fd = fd;
 		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
-			errlog("Error: epoll_ctl()", error(errno));
+			errlog("Error: epoll_ctl()", error());
 			// TODO: write error 500
 			connset.erase(x.first);
 			close(fd);
@@ -616,7 +613,7 @@ static void loadServerConfig(const CStringView config_path,
 	size_t colon_pos = address.find(':');
 	// Colon has been found
 	if (colon_pos < address.size()) {
-		if (strtou(address, &port, colon_pos + 1) !=
+		if (strtou(address, port, colon_pos + 1) !=
 			static_cast<int>(address.size() - colon_pos - 1))
 		{
 			errlog(config_path, ": incorrect port number");
@@ -639,9 +636,9 @@ static void loadServerConfig(const CStringView config_path,
 		exit(8);
 	}
 
-	stdlog("ADDRESS: ", address, ':', toStr(port));
-	stdlog("workers: ", toStr(workers));
-	stdlog("connections: ", toStr(connections));
+	stdlog("ADDRESS: ", address, ':', port);
+	stdlog("workers: ", workers);
+	stdlog("connections: ", connections);
 }
 
 int main() {
@@ -656,7 +653,7 @@ int main() {
 	// Loggers TODO: use global log filenames
 	// Set stderr to write to server.log (stdlog writes to stderr)
 	if (freopen("server2.log", "a", stderr) == NULL) // TODO: remove '2'
-		errlog("Failed to open 'server.log'", error(errno));
+		errlog("Failed to open 'server.log'", error());
 
 	try {
 		errlog.open("server2_error.log"); // TODO: remove '2'
@@ -676,28 +673,28 @@ int main() {
 
 	stdlog("Initializing server...");
 	stdlog.label(false); // Turn label off (temporarily)
-	stdlog("PID: ", toStr(getpid()));
+	stdlog("PID: ", getpid());
 
 	// Load config
 	sockaddr_in name;
-	loadServerConfig("server.conf", name);
+	loadServerConfig("sim.conf", name);
 
 	socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
 	if (socket_fd < 0) {
-		errlog("Failed to create socket", error(errno));
+		errlog("Failed to create socket", error());
 		return 1;
 	}
 
 	int _true = 1;
 	if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &_true, sizeof(int))) {
-		errlog("Error: setopt()", error(errno));
+		errlog("Error: setopt()", error());
 		return 2;
 	}
 
 	// Bind
 	constexpr int TRIES = 8;
-	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
-		errlog("Failed to bind (try ", toStr(try_no), ')', error(errno));
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
+		errlog("Failed to bind (try ", try_no, ')', error());
 		if (++try_no > TRIES)
 			return 3;
 
@@ -705,7 +702,7 @@ int main() {
 	}
 
 	if (listen(socket_fd, 10)) {
-		errlog("Error: listen()", error(errno));
+		errlog("Error: listen()", error());
 		return 4;
 	}
 
