@@ -118,10 +118,11 @@ src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
 	$(LINK) -lsupc++ -lrt
 
 JOB_SERVER_SRCS := \
+	src/Job-server/contest.cc \
 	src/Job-server/judge.cc \
 	src/Job-server/main.cc \
 	src/Job-server/problem.cc \
-	src/Job-server/contest.cc
+	src/Job-server/user.cc
 
 $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
@@ -131,6 +132,7 @@ src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
 
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \
+	src/lib/file.cc \
 	src/lib/jobs.cc \
 	src/lib/mysql.cc \
 	src/lib/submission.cc
@@ -141,7 +143,10 @@ LIB_SIM_OBJS := $(call SRCS_TO_OBJS, $(LIB_SIM_SRCS))
 # SQLite
 $(eval $(call load_dependencies, src/lib/sqlite3.c))
 src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
-src/lib/sqlite3.o: override EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2
+src/lib/sqlite3.o: override EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_OMIT_DEPRECATED \
+	-DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_SHARED_CACHE \
+	-DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_DEFAULT_MEMSTATUS=0 \
+	# -DSQLITE_ENABLE_API_ARMOR
 
 src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
 	$(MAKE_STATIC_LIB)

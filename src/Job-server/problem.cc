@@ -1,6 +1,7 @@
 #include "main.h"
 
 #include <sim/jobs.h>
+#include <sim/submission.h>
 #include <simlib/process.h>
 #include <simlib/sim/conver.h>
 #include <simlib/sim/judge_worker.h>
@@ -182,8 +183,16 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 		stmt.bindAndExecute(problem_id);
 
-		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");
-		stmt.bindAndExecute(problem_id);
+		// Delete submissions
+		{
+			auto stmt = mysql.prepare("SELECT id FROM submissions"
+				" WHERE problem_id=?");
+			stmt.bindAndExecute(problem_id);
+			InplaceBuff<20> submission_id;
+			stmt.res_bind_all(submission_id);
+			while (stmt.next())
+				submission::delete_submission(mysql, submission_id);
+		}
 	};
 	CallInDtor<decltype(rollbacker)> rollback_maker {rollbacker};
 
@@ -540,10 +549,16 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 			throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
 			// Delete the old problem's solutions' submissions
-			stmt = mysql.prepare("DELETE FROM submissions"
-				" WHERE type=" STYPE_PROBLEM_SOLUTION_STR
-					" AND problem_id=?");
-			stmt.bindAndExecute(problem_id);
+			{
+				stmt = mysql.prepare("SELECT id FROM submissions"
+					" WHERE type=" STYPE_PROBLEM_SOLUTION_STR
+						" AND problem_id=?");
+				stmt.bindAndExecute(problem_id);
+				InplaceBuff<20> submission_id;
+				stmt.res_bind_all(submission_id);
+				while (stmt.next())
+					submission::delete_submission(mysql, submission_id);
+			}
 
 			// Activate the new problem's solutions' submissions
 			stmt = mysql.prepare("UPDATE submissions"
@@ -590,14 +605,31 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 				" able to delete this problem.");
 		}
 
-		stmt = mysql.prepare("DELETE FROM submissions WHERE problem_id=?");
-		stmt.bindAndExecute(problem_id);
+		// Delete submissions
+		{
+			stmt = mysql.prepare("SELECT id FROM submissions"
+				" WHERE problem_id=?");
+			stmt.bindAndExecute(problem_id);
+			InplaceBuff<20> submission_id;
+			stmt.res_bind_all(submission_id);
+			while (stmt.next())
+				submission::delete_submission(mysql, submission_id);
+		}
 
 		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 		stmt.bindAndExecute(problem_id);
 	}
 
-	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
+	// Delete problem tags
+	auto stmt = mysql.prepare("DELETE FROM problem_tags WHERE problem_id=?");
+	stmt.bindAndExecute(problem_id);
+
+
+	// Delete problem's files
+	(void)remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
+	(void)remove(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
+
+	stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
 		", data=? WHERE id=?");
 	stmt.bindAndExecute(job_log.str, job_id);
 }

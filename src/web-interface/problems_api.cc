@@ -484,7 +484,10 @@ void Sim::api_problem_delete() {
 	if (uint(~problems_perms & PERM::DELETE))
 		return api_error403();
 
-	// Queue reselecting final submissions
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue deleting job
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
 			" added, aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_PROBLEM_STR ","
