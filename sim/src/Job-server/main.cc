@@ -2,6 +2,7 @@
 #include "judge.h"
 #include "main.h"
 #include "problem.h"
+#include "user.h"
 
 #include <future>
 #include <map>
@@ -9,6 +10,7 @@
 #include <queue>
 #include <sim/jobs.h>
 #include <sim/mysql.h>
+#include <sim/submission.h>
 #include <simlib/avl_dict.h>
 #include <simlib/config_file.h>
 #include <simlib/filesystem.h>
@@ -207,6 +209,10 @@ public:
 				// Other job
 				case JT::ADD_PROBLEM:
 				case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
+				case JT::DELETE_USER:
+				case JT::DELETE_CONTEST:
+				case JT::DELETE_CONTEST_ROUND:
+				case JT::DELETE_CONTEST_PROBLEM:
 					other_jobs.insert({jid, priority, false});
 					break;
 
@@ -706,8 +712,24 @@ static void process_local_job(WorkersPool::NextJob job) {
 			delete_problem(job.id, aux_id);
 			break;
 
+		case JT::DELETE_USER:
+			delete_user(job.id, aux_id);
+			break;
+
 		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
 			contest_problem_reselect_final_submissions(job.id, aux_id);
+			break;
+
+		case JT::DELETE_CONTEST:
+			delete_contest(job.id, aux_id);
+			break;
+
+		case JT::DELETE_CONTEST_ROUND:
+			delete_contest_round(job.id, aux_id);
+			break;
+
+		case JT::DELETE_CONTEST_PROBLEM:
+			delete_contest_problem(job.id, aux_id);
 			break;
 
 		case JT::VOID:
@@ -794,7 +816,11 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		case JT::REUPLOAD_PROBLEM:
 		case JT::EDIT_PROBLEM:
 		case JT::DELETE_PROBLEM:
+		case JT::DELETE_USER:
 		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
+		case JT::DELETE_CONTEST:
+		case JT::DELETE_CONTEST_ROUND:
+		case JT::DELETE_CONTEST_PROBLEM:
 			THROW("Unexpected judge job type: ", toString(JT(jtype)));
 		}
 
@@ -1146,15 +1172,22 @@ static void cleanUpDBs() {
 		mysql.update("UPDATE jobs SET status=" JSTATUS_PENDING_STR
 			" WHERE status=" JSTATUS_NOTICED_PENDING_STR);
 
-		// Remove void (invalid) jobs and submissions that are older than 24 h
+		// Remove void (invalid) jobs that are older than 24 h
 		auto yesterday_date = mysql_date(time(nullptr) - 24 * 60 * 60);
 		auto stmt = mysql.prepare("DELETE FROM jobs WHERE type="
 			JTYPE_VOID_STR " AND added<?");
 		stmt.bindAndExecute(yesterday_date);
 
-		stmt = mysql.prepare("DELETE FROM submissions WHERE type="
-			STYPE_VOID_STR " AND submit_time<?");
-		stmt.bindAndExecute(yesterday_date);
+		// Remove void (invalid) submissions that are older than 24 h
+		{
+			stmt = mysql.prepare("SELECT id FROM submissions"
+				" WHERE type=" STYPE_VOID_STR " AND submit_time<?");
+			stmt.bindAndExecute(yesterday_date);
+			InplaceBuff<20> submission_id;
+			stmt.res_bind_all(submission_id);
+			while (stmt.next())
+				submission::delete_submission(mysql, submission_id);
+		}
 
 		// Remove void (invalid) problems and associated with them submissions
 		// and jobs
@@ -1167,9 +1200,15 @@ static void cleanUpDBs() {
 			while (res.next()) {
 				StringView pid = res[0];
 				// Delete submissions
-				stmt = mysql.prepare("DELETE FROM submissions"
-					" WHERE problem_id=?");
-				stmt.bindAndExecute(pid);
+				{
+					stmt = mysql.prepare("SELECT id FROM submissions"
+						" WHERE problem_id=?");
+					stmt.bindAndExecute(pid);
+					InplaceBuff<20> submission_id;
+					stmt.res_bind_all(submission_id);
+					while (stmt.next())
+						submission::delete_submission(mysql, submission_id);
+				}
 
 				// Delete problem's files
 				(void)remove_r(StringBuff<PATH_MAX>{"problems/", pid});

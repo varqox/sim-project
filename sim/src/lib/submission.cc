@@ -1,5 +1,6 @@
 #include <sim/constants.h>
 #include <sim/submission.h>
+#include <simlib/filesystem.h>
 
 static void update_problem_final(MySQL::Connection& mysql,
 	StringView submission_owner, StringView problem_id)
@@ -224,6 +225,13 @@ void update_final(MySQL::Connection& mysql, StringView submission_owner,
 
 	} else
 		impl();
+}
+
+void delete_submission(MySQL::Connection& mysql, StringView submission_id) {
+	auto stmt = mysql.prepare("DELETE FROM submissions WHERE id=?");
+	stmt.bindAndExecute(submission_id);
+
+	(void)remove(concat("solutions/", submission_id).to_cstr());
 }
 
 } // namespace submission

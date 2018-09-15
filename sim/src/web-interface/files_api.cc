@@ -1,5 +1,6 @@
 #include "sim.h"
 
+#include <sim/file.h>
 #include <simlib/filesystem.h>
 
 Sim::FilePermissions Sim::files_get_permissions(ContestPermissions cperms) noexcept {
@@ -346,7 +347,5 @@ void Sim::api_file_delete() {
 	if (uint(~files_perms & FilePermissions::DELETE))
 		return api_error403();
 
-	// Update file
-	auto stmt = mysql.prepare("DELETE FROM files WHERE id=?");
-	stmt.bindAndExecute(files_id);
+	file::delete_file(mysql, files_id);
 }

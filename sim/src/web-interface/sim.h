@@ -185,6 +185,8 @@ private:
 
 	void api_contest_problem_add();
 
+	void api_contest_problem_rejudge_all_submissions(StringView problem_id);
+
 	void api_contest_problem_edit();
 
 	void api_contest_problem_delete();
@@ -460,7 +462,10 @@ public:
 		DELETE = 128,
 		// Overall
 		VIEW_ALL = 256,
-		ADD_USER = 512
+		ADD_USER = 512,
+		ADD_ADMIN = 1 << 10,
+		ADD_TEACHER = 1 << 11,
+		ADD_NORMAL = 1 << 12
 	};
 
 private:
@@ -487,6 +492,9 @@ private:
 
 	// Queries MySQL
 	UserPermissions users_get_permissions(StringView user_id);
+
+	// Return true if the submitted password is correct, false otherwise
+	bool check_submitted_password(StringView password_field_name = "password");
 
 	/* Pages */
 

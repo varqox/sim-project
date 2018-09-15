@@ -847,7 +847,7 @@ void Sim::api_submission_delete() {
 
 	// TODO: maybe make a job out of it
 
-	mysql.update(concat("DELETE FROM submissions WHERE id=", submissions_sid));
+	submission::delete_submission(mysql, submissions_sid);
 
 	submission::update_final(mysql, (res.is_null(0) ? "" : res[0]), res[1],
 		(res.is_null(2) ? "" : res[2]), false);
