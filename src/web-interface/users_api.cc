@@ -1,5 +1,6 @@
 #include "sim.h"
 
+#include <sim/jobs.h>
 #include <sim/utilities.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
@@ -188,19 +189,19 @@ void Sim::api_user_add() {
 	UserType utype /*= UserType::NORMAL*/;
 	if (utype_str == "A") {
 		utype = UserType::ADMIN;
-		if (uint(~users_perms & PERM::MAKE_ADMIN))
+		if (uint(~users_perms & PERM::ADD_ADMIN))
 			add_notification("error",
 				"You have no permissions to make this user an admin");
 
 	} else if (utype_str == "T") {
 		utype = UserType::TEACHER;
-		if (uint(~users_perms & PERM::MAKE_TEACHER))
+		if (uint(~users_perms & PERM::ADD_TEACHER))
 			add_notification("error",
 				"You have no permissions to make this user a teacher");
 
 	} else if (utype_str == "N") {
 		utype = UserType::NORMAL;
-		if (uint(~users_perms & PERM::MAKE_NORMAL))
+		if (uint(~users_perms & PERM::ADD_NORMAL))
 			add_notification("error",
 				"You have no permissions to make this user a normal user");
 
@@ -297,38 +298,6 @@ void Sim::api_user_edit() {
 		return api_error400("Username is already taken");
 }
 
-void Sim::api_user_delete() {
-	STACK_UNWINDING_MARK;
-	using PERM = UserPermissions;
-
-	if (uint(~users_perms & PERM::DELETE))
-		return api_error403();
-
-	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
-	stmt.bindAndExecute(session_user_id);
-
-	InplaceBuff<SALT_LEN> salt;
-	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
-	stmt.res_bind_all(salt, passwd_hash);
-	throw_assert(stmt.next());
-
-	if (not slowEqual(sha3_512(concat(salt, request.form_data.get("password"))),
-		passwd_hash))
-	{
-		return api_error403("Invalid password");
-	}
-
-	// TODO: make a job out of it
-	api_error403("It is disabled for now because it is not safe");
-
-	// TODO: add other things like problems, contest_users, contests, messages, files etc.
-	stmt = mysql.prepare("DELETE FROM submissions WHERE owner=?");
-	stmt.bindAndExecute(users_uid);
-
-	stmt = mysql.prepare("DELETE FROM users WHERE id=?");
-	stmt.bindAndExecute(users_uid);
-}
-
 void Sim::api_user_change_password() {
 	STACK_UNWINDING_MARK;
 	using PERM = UserPermissions;
@@ -339,33 +308,43 @@ void Sim::api_user_change_password() {
 		return api_error403();
 	}
 
-	StringView old_pass = request.form_data.get("old_pass");
 	StringView new_pass = request.form_data.get("new_pass");
 	StringView new_pass1 = request.form_data.get("new_pass1");
 
 	if (new_pass != new_pass1)
 		return api_error400("Passwords do not match");
 
-	// Get salt and the hash of the password
-	InplaceBuff<SALT_LEN> salt;
-	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
-	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
-	stmt.bindAndExecute(users_uid);
-	stmt.res_bind_all(salt, passwd_hash);
-	if (!stmt.next())
-		THROW("Cannot get user's password");
-
-	if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
-		not slowEqual(sha3_512(concat(salt, old_pass)), passwd_hash))
-	{
+	if (not check_submitted_password("old_pass"))
 		return api_error403("Invalid old password");
-	}
 
 	// Commit password change
 	char salt_bin[SALT_LEN >> 1];
 	fillRandomly(salt_bin, sizeof(salt_bin));
-	salt = toHex(salt_bin, sizeof(salt_bin));
+	InplaceBuff<SALT_LEN> salt(toHex(salt_bin, sizeof(salt_bin)));
 
-	stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
+	auto stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
 	stmt.bindAndExecute(salt, sha3_512(concat(salt, new_pass)), users_uid);
+}
+
+void Sim::api_user_delete() {
+	STACK_UNWINDING_MARK;
+	using PERM = UserPermissions;
+
+	if (uint(~users_perms & PERM::DELETE))
+		return api_error403();
+
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue deleting job
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_USER_STR ","
+			" ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_USER),
+		mysql_date(), users_uid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
 }

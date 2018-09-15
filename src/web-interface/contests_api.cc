@@ -24,7 +24,6 @@ inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
 
 void Sim::append_contest_actions_str() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	append('"');
@@ -67,7 +66,6 @@ static constexpr inline const char* sfsm_to_json(SFSM sfsm){
 
 void Sim::api_contests() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
@@ -184,7 +182,6 @@ void Sim::api_contests() {
 
 void Sim::api_contest() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
@@ -235,6 +232,8 @@ void Sim::api_contest() {
 		return api_contest_ranking("contest_id", contests_cid);
 	else if (next_arg == "edit")
 		return api_contest_edit(is_public);
+	else if (next_arg == "delete")
+		return api_contest_delete();
 	else if (next_arg == "add_round")
 		return api_contest_round_add();
 	else if (not next_arg.empty())
@@ -393,7 +392,6 @@ void Sim::api_contest() {
 
 void Sim::api_contest_round() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
@@ -440,6 +438,8 @@ void Sim::api_contest_round() {
 		return api_contest_problem_add();
 	else if (next_arg == "edit")
 		return api_contest_round_edit();
+	else if (next_arg == "delete")
+		return api_contest_round_delete();
 	else if (not next_arg.empty())
 		return api_error404();
 
@@ -539,7 +539,6 @@ void Sim::api_contest_round() {
 
 void Sim::api_contest_problem() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
@@ -604,8 +603,12 @@ void Sim::api_contest_problem() {
 		return api_contest_problem_statement(problem_id);
 	else if (next_arg == "ranking")
 		return api_contest_ranking("contest_problem_id", contests_cpid);
+	else if (next_arg == "rejudge_all_submissions")
+		return api_contest_problem_rejudge_all_submissions(problem_id);
 	else if (next_arg == "edit")
 		return api_contest_problem_edit();
+	else if (next_arg == "delete")
+		return api_contest_problem_delete();
 	else if (not next_arg.empty())
 		return api_error404();
 
@@ -672,7 +675,6 @@ void Sim::api_contest_problem() {
 
 void Sim::api_contest_add() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & (PERM::ADD_PRIVATE | PERM::ADD_PUBLIC)))
@@ -710,7 +712,6 @@ void Sim::api_contest_add() {
 
 void Sim::api_contest_edit(bool is_public) {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & PERM::ADMIN))
@@ -738,9 +739,31 @@ void Sim::api_contest_edit(bool is_public) {
 	stmt.bindAndExecute(name, will_be_public, contests_cid);
 }
 
+void Sim::api_contest_delete() {
+	STACK_UNWINDING_MARK;
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::DELETE))
+		return api_error403();
+
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue deleting job
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_CONTEST_STR ","
+			" ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_CONTEST),
+		mysql_date(), contests_cid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
+}
+
 void Sim::api_contest_round_add() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & PERM::ADMIN))
@@ -781,7 +804,6 @@ void Sim::api_contest_round_add() {
 
 void Sim::api_contest_round_edit() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & PERM::ADMIN))
@@ -816,9 +838,31 @@ void Sim::api_contest_round_edit() {
 	stmt.fixAndExecute();
 }
 
+void Sim::api_contest_round_delete() {
+	STACK_UNWINDING_MARK;
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue deleting job
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
+			JTYPE_DELETE_CONTEST_ROUND_STR ", ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_CONTEST_ROUND),
+		mysql_date(), contests_crid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
+}
+
 void Sim::api_contest_problem_add() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & PERM::ADMIN))
@@ -873,9 +917,26 @@ void Sim::api_contest_problem_add() {
 	append(stmt.insert_id());
 }
 
+void Sim::api_contest_problem_rejudge_all_submissions(StringView problem_id) {
+	STACK_UNWINDING_MARK;
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
+			", ?, id, ?, ''"
+		" FROM submissions WHERE contest_problem_id=? ORDER BY id");
+	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+		mysql_date(), jobs::dumpString(problem_id), contests_cpid);
+
+	jobs::notify_job_server();
+}
+
 void Sim::api_contest_problem_edit() {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & PERM::ADMIN))
@@ -942,6 +1003,29 @@ void Sim::api_contest_problem_edit() {
 		EnumVal<SFSM>(final_selecting_method), contests_cpid);
 }
 
+void Sim::api_contest_problem_delete() {
+	STACK_UNWINDING_MARK;
+	using PERM = ContestPermissions;
+
+	if (uint(~contests_perms & PERM::ADMIN))
+		return api_error403();
+
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue deleting job
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
+			JTYPE_DELETE_CONTEST_PROBLEM_STR ", ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_CONTEST_PROBLEM),
+		mysql_date(), contests_cpid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
+}
+
 void Sim::api_contest_problem_statement(StringView problem_id) {
 	STACK_UNWINDING_MARK;
 
@@ -983,7 +1067,6 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 	StringView query_id)
 {
 	STACK_UNWINDING_MARK;
-
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & PERM::VIEW))
