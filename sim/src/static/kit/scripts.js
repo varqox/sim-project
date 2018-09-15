@@ -1024,6 +1024,44 @@ function a_view_button(href, text, classes, func) {
 	};
 	return a;
 }
+function delete_with_password_to_job(elem, title, api_url, message_html, confirm_text) {
+	var as_modal = elem.closest('.modal').length !== 0;
+	elem.append(ajax_form(title, api_url,
+		$('<p>', {
+			style: 'margin: 0 0 20px; text-align: center; max-width: 420px',
+			html: message_html
+		}).add(Form.field_group('Your password', {
+			type: 'password',
+			name: 'password',
+			size: 24,
+		})).add('<div>', {
+			html: $('<input>', {
+				class: 'btn red',
+				type: 'submit',
+				value: confirm_text
+			}).add('<a>', {
+				class: 'btn',
+				href: (as_modal ? undefined : '/'),
+				text: 'Go back',
+				click: function() {
+					var modal = $(this).closest('.modal');
+					if (modal.length === 0)
+						history.back();
+					else
+						close_modal(modal);
+				}
+			})
+		}), function(resp, loader_parent) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Deletion has been scheduled.');
+				view_job(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/jobs/' + resp;
+			}
+		}
+	));
+}
 
 /* ================================= Lister ================================= */
 function Lister(elem) {
@@ -1517,7 +1555,7 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 		res.push($('<a>', {
 			class: 'btn-small blue',
 			text: 'Rejudge all submissions',
-			click: rejudge_problem_submissions.bind(null, problem.id)
+			click: rejudge_problem_submissions.bind(null, problem.id, problem.name)
 		}));
 
 	if (problem_view && problem.actions.indexOf('D') !== -1)
@@ -1850,40 +1888,15 @@ function delete_user(as_modal, user_id) {
 					statusText: 'Not Allowed'
 				});
 
-		var title = 'Delete user ' + user_id;
-		var confirm_text = 'Delete user';
-		var p = $('<p>', {
-			style: 'margin: 0 0 20px; text-align: center',
-			html: 'You are going to delete the user '
-		}).append(a_view_button('/u/' + user_id, user.username, undefined,
-			view_user.bind(null, true, user_id))).append('. As it cannot be undone,<br>you have to confirm it with YOUR password.');
-
-		if (user_id == logged_user_id()) {
-			title = confirm_text = 'Delete account';
-			p.html('You are going to delete your account. As it cannot be undone,<br>you have to confirm it with your password.');
-		}
-
-		this.append(ajax_form(title,
-			'/api/user/' + user_id + '/delete',
-			p.add(Form.field_group('Your password', {
-				type: 'password',
-				name: 'password',
-				size: 24,
-			})).add('<div>', {
-				html: $('<input>', {
-					class: 'btn red',
-					type: 'submit',
-					value: confirm_text
-				}).add('<a>', {
-					class: 'btn',
-					href: (as_modal ? undefined : '/'),
-					text: 'Go back',
-					click: (as_modal ? function() {
-						close_modal($(this).closest('.modal'));
-					} : undefined)
-				})
-			}), 'Deletion succeeded'));
-
+		delete_with_password_to_job(this, 'Delete user ' + user_id,
+			'/api/user/' + user_id + '/delete', [
+				'You are going to delete ', (user_id == logged_user_id() ?
+					'your account' : 'the user '), (user_id == logged_user_id() ?
+					'' : a_view_button('/u/' + user_id, user.username, undefined,
+						view_user.bind(null, true, user_id))),
+					'. As it cannot be undone, you have to confirm it with ',
+					(user_id == logged_user_id() ? 'your' : 'YOUR'), ' password.'
+			], (user_id == logged_user_id() ? 'Delete account' : 'Delete user'));
 	}, '/u/' + user_id + "/delete");
 }
 function change_user_password(as_modal, user_id) {
@@ -2043,9 +2056,18 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				if (name == "submission")
 					td.append(a_view_button('/s/' + info[name], info[name],
 						undefined, view_submission.bind(null, true, info[name])));
+				else if (name == "user")
+					td.append(a_view_button('/u/' + info[name], info[name],
+						undefined, view_user.bind(null, true, info[name])));
 				else if (name == "problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
 						undefined, view_problem.bind(null, true, info[name])));
+				else if (name == "contest")
+					td.append(a_view_button('/c/c' + info[name], info[name],
+						undefined, view_contest.bind(null, true, info[name])));
+				else if (name == "contest round")
+					td.append(a_view_button('/c/r' + info[name], info[name],
+						undefined, view_contest_round.bind(null, true, info[name])));
 				else if (name == "contest problem")
 					td.append(a_view_button('/c/p' + info[name], info[name],
 						undefined, view_contest_problem.bind(null, true, info[name])));
@@ -2208,17 +2230,35 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 							info.submission, undefined,
 							view_submission.bind(null, true, info.submission)));
 
+				if (info.user !== undefined)
+					append_tag('user',
+						a_view_button('/u/' + info.user,
+							info.user, undefined,
+							view_user.bind(null, true, info.user)));
+
 				if (info.problem !== undefined)
 					append_tag('problem',
 						a_view_button('/p/' + info.problem,
 							info.problem, undefined,
 							view_problem.bind(null, true, info.problem)));
 
+				if (info.contest !== undefined)
+					append_tag('contest',
+						a_view_button('/c/c' + info.contest,
+							info.contest, undefined,
+							view_contest.bind(null, true, info.contest)));
+
 				if (info['contest problem'] !== undefined)
 					append_tag('contest problem',
 						a_view_button('/c/p' + info['contest problem'],
 							info['contest problem'], undefined,
 							view_contest_problem.bind(null, true, info['contest problem'])));
+
+				if (info['contest round'] !== undefined)
+					append_tag('contest round',
+						a_view_button('/c/r' + info['contest round'],
+							info['contest round'], undefined,
+							view_contest_round.bind(null, true, info['contest round'])));
 
 				var names = ['name', 'memory limit', 'problem type'];
 				for (var idx in names) {
@@ -3129,56 +3169,20 @@ function delete_problem(as_modal, problem_id) {
 					statusText: 'Not Allowed'
 				});
 
-		this.append(ajax_form('Delete problem', '/api/problem/' + problem_id + '/delete',
-			$('<center>', {
-				html: [
-					$('<label>', {
-						html: [
-							'Are you sure to delete the problem ',
-							a_view_button('/p/' + problem.id, problem.name,
-								undefined, view_problem.bind(null, true, problem.id)),
-							'?'
-						]
-					}),
-					$('<div>', {
-						style: 'margin-top: 12px',
-						html: [
-							$('<input>', {
-								class: 'btn-small red',
-								type: 'submit',
-								value: 'Yes, delete it'
-							}),
-							$('<a>', {
-								class: 'btn-small',
-								text: 'No, take me back',
-								click: function() {
-									var modal = $(this).closest('.modal');
-									if (modal.length === 0)
-										history.back();
-									else
-										close_modal(modal);
-								}
-							})
-						]
-					})
-				]
-			}), function(resp, loader_parent) {
-				if (as_modal) {
-					show_success_via_loader(this, 'Delete has been scheduled.');
-					view_job(true, resp);
-				} else {
-					this.parent().remove();
-					window.location.href = '/jobs/' + resp;
-				}
-			}
-		));
+		delete_with_password_to_job(this, 'Delete problem',
+			'/api/problem/' + problem_id + '/delete', [
+				'You are going to delete the problem ',
+				a_view_button('/p/' + problem.id, problem.name,
+					undefined, view_problem.bind(null, true, problem.id)),
+				' and all submissions to it. As it cannot be undone, you have to confirm it with your password.'
+			], 'Delete problem');
 	}, '/p/' + problem_id + '/delete');
 }
-function rejudge_problem_submissions(problem_id) {
+function rejudge_problem_submissions(problem_id, problem_name) {
 	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {
 			html: [
-				'Are you sure to rejudge all submissions to the ',
-				a_view_button('/p/' + problem_id, 'problem ' + problem_id, undefined,
+				'Are you sure to rejudge all submissions to the problem ',
+				a_view_button('/p/' + problem_id, problem_name, undefined,
 					view_problem.bind(null, true, problem_id)),
 				'?'
 			]
@@ -3246,9 +3250,14 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 		if (actions.indexOf('o') !== -1)
 			$(this).find('.problem-info').append($('<div>', {
 					class: 'owner',
-					html: $('<label>', {text: 'Owner'}).add(
-						a_view_button('/u/' + problem.owner_id, problem.owner_username,
-							undefined, view_user.bind(null, true, problem.owner_id)))
+					html: [
+						$('<label>', {text: 'Owner'}),
+						(problem.owner_username === null ?
+							'Deleted (id: ' + problem.owner_id + ')'
+							: a_view_button('/u/' + problem.owner_id,
+								problem.owner_username, undefined,
+								view_user.bind(null, true, problem.owner_id)))
+					]
 				}));
 
 		if (actions.indexOf('a') !== -1)
@@ -3388,9 +3397,9 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			// Owner
 			if (this_.show_owner)
 				row.append($('<td>', {
-					html: x.owner_id === null ? '' :
-						(a_view_button('/u/' + x.owner_id, x.owner_username, undefined,
-							view_user.bind(null, true, x.owner_id)))
+					html: (x.owner_username === null ? x.owner_id
+						: a_view_button('/u/' + x.owner_id, x.owner_username,
+							undefined, view_user.bind(null, true, x.owner_id)))
 				}));
 
 			// Added
@@ -3492,7 +3501,6 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 
 	this.fetch_more();
 }
-
 /* ================================ Contests ================================ */
 function add_contest(as_modal) {
 	view_base(as_modal, '/c/add', function() {
@@ -3740,17 +3748,79 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 		));
 	}, '/c/p' + contest_problem_id + '/edit');
 }
-function rejudge_contest_problem_submissions(contest_problem_id) {
-	// TODO
+function rejudge_contest_problem_submissions(contest_problem_id, contest_problem_name) {
+	dialogue_modal_request("Rejudge all contest problem's submissions", $('<label>', {
+			html: [
+				'Are you sure to rejudge all submissions to the contest problem ',
+				a_view_button('/c/p' + contest_problem_id, contest_problem_name, undefined,
+					view_contest_problem.bind(null, true, contest_problem_id)),
+				'?'
+			]
+		}), 'Rejudge all', 'btn-small blue',
+		'/api/contest/p' + contest_problem_id + '/rejudge_all_submissions',
+		'The rejudge jobs has been scheduled.', 'No, go back', true);
 }
 function delete_contest(as_modal, contest_id) {
-	// TODO
+	view_ajax(as_modal, '/api/contests/=' + contest_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+		var contest = data[0];
+		if (contest.actions.indexOf('D') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		delete_with_password_to_job(this, 'Delete contest',
+			'/api/contest/c' + contest_id + '/delete', [
+				'You are going to delete the contest ',
+				a_view_button('/c/c' + contest.id, contest.name,
+					undefined, view_contest.bind(null, true, contest.id)),
+				' all submissions to it and all attached files. As it cannot be undone, you have to confirm it with your password.'
+			], 'Delete contest');
+	}, '/c/c' + contest_id + '/delete');
 }
 function delete_contest_round(as_modal, contest_round_id) {
-	// TODO
+	view_ajax(as_modal, '/api/contest/r' + contest_round_id, function(data) {
+		var contest = data.contest;
+		var round = data.rounds[0];
+		if (contest.actions.indexOf('A') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		delete_with_password_to_job(this, 'Delete contest round',
+			'/api/contest/r' + contest_round_id + '/delete', [
+					'You are going to delete the contest round ',
+					a_view_button('/c/r' + round.id, round.name,
+						undefined, view_contest_round.bind(null, true, round.id)),
+					' and all submissions to it. As it cannot be undone, you have to confirm it with your password.'
+				], 'Delete round');
+	}, '/c/r' + contest_round_id + '/delete');
 }
 function delete_contest_problem(as_modal, contest_problem_id) {
-	// TODO
+	view_ajax(as_modal, '/api/contest/p' + contest_problem_id, function(data) {
+		var contest = data.contest;
+		var problem = data.problems[0];
+		if (contest.actions.indexOf('A') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		delete_with_password_to_job(this, 'Delete contest problem',
+			'/api/contest/p' + contest_problem_id + '/delete', [
+					'You are going to delete the contest problem ',
+					a_view_button('/c/p' + problem.id, problem.name,
+						undefined, view_contest_problem.bind(null, true, problem.id)),
+					' and all submissions to it. As it cannot be undone, you have to confirm it with your password.'
+				], 'Delete contest problem');
+	}, '/c/p' + contest_problem_id + '/delete');
 }
 function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 	view_ajax(as_modal, '/api/contest/' + id_for_api, function(data) {
@@ -3767,7 +3837,6 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 			return (a.round_id == b.round_id ? a.item - b.item :
 				a.round_id - b.round_id);
 		});
-
 
 		// Header
 		var header = $('<div>', {class: 'header', html:
@@ -3828,7 +3897,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					$('<a>', {
 						class: 'btn-small blue',
 						text: 'Rejudge submissions',
-						click: rejudge_contest_problem_submissions.bind(null, problems[0].id)
+						click: rejudge_contest_problem_submissions.bind(null, problems[0].id, problems[0].name)
 					})),
 				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0].id + '/delete', 'Delete', 'btn-small red', delete_contest_problem.bind(null, true, problems[0].id)))
 			]}));

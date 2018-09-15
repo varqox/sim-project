@@ -15,7 +15,14 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 
 	switch (session_user_type) {
 	case UserType::ADMIN:
-		return PERM::VIEW_ALL | PERM::ADD_USER;
+		if (session_user_id == SIM_ROOT_UID) {
+			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN |
+				PERM::ADD_TEACHER | PERM::ADD_NORMAL;
+		} else {
+			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_TEACHER |
+				PERM::ADD_NORMAL;
+		}
+
 	case UserType::TEACHER:
 	case UserType::NORMAL:
 		return PERM::NONE;
@@ -104,6 +111,27 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
 	return users_get_permissions(user_id, utype);
 }
 
+bool Sim::check_submitted_password(StringView password_field_name) {
+	if (not session_is_open)
+		return false;
+
+	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
+	stmt.bindAndExecute(session_user_id);
+
+	InplaceBuff<SALT_LEN> salt;
+	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
+	stmt.res_bind_all(salt, passwd_hash);
+	throw_assert(stmt.next());
+
+	if (not slowEqual(sha3_512(concat(salt, request.form_data.get(password_field_name))),
+		passwd_hash))
+	{
+		return false;
+	}
+
+	return true;
+}
+
 void Sim::login() {
 	STACK_UNWINDING_MARK;
 
@@ -133,10 +161,9 @@ void Sim::login() {
 			InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
 			stmt.res_bind_all(uid, salt, passwd_hash);
 
-			while (stmt.next()) {
-				if (not slowEqual(sha3_512(concat(salt, password)), passwd_hash))
-					break;
-
+			if (stmt.next() and
+				slowEqual(sha3_512(concat(salt, password)), passwd_hash))
+			{
 				// Delete old session
 				if (session_is_open)
 					session_destroy();

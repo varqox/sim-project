@@ -277,6 +277,10 @@ enum class JobType : uint8_t {
 	EDIT_PROBLEM = 6,
 	DELETE_PROBLEM = 7,
 	CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS = 8,
+	DELETE_USER = 9,
+	DELETE_CONTEST = 10,
+	DELETE_CONTEST_ROUND = 11,
+	DELETE_CONTEST_PROBLEM = 12
 };
 
 #define JTYPE_VOID_STR "0"
@@ -324,6 +328,26 @@ static_assert(meta::equal(JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR,
 	meta::ToString<(int)JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS>::value),
 	"Update the above #define");
 
+#define JTYPE_DELETE_USER_STR "9"
+static_assert(meta::equal(JTYPE_DELETE_USER_STR,
+	meta::ToString<(int)JobType::DELETE_USER>::value),
+	"Update the above #define");
+
+#define JTYPE_DELETE_CONTEST_STR "10"
+static_assert(meta::equal(JTYPE_DELETE_CONTEST_STR,
+	meta::ToString<(int)JobType::DELETE_CONTEST>::value),
+	"Update the above #define");
+
+#define JTYPE_DELETE_CONTEST_ROUND_STR "11"
+static_assert(meta::equal(JTYPE_DELETE_CONTEST_ROUND_STR,
+	meta::ToString<(int)JobType::DELETE_CONTEST_ROUND>::value),
+	"Update the above #define");
+
+#define JTYPE_DELETE_CONTEST_PROBLEM_STR "12"
+static_assert(meta::equal(JTYPE_DELETE_CONTEST_PROBLEM_STR,
+	meta::ToString<(int)JobType::DELETE_CONTEST_PROBLEM>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
@@ -338,6 +362,10 @@ constexpr inline const char* toString(JobType x) {
 	case JT::DELETE_PROBLEM: return "DELETE_PROBLEM";
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
 		return "CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS";
+	case JT::DELETE_USER: return "DELETE_USER";
+	case JT::DELETE_CONTEST: return "DELETE_CONTEST";
+	case JT::DELETE_CONTEST_ROUND: return "DELETE_CONTEST_ROUND";
+	case JT::DELETE_CONTEST_PROBLEM: return "DELETE_CONTEST_PROBLEM";
 	}
 	return "Unknown";
 }
@@ -353,6 +381,10 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::DELETE_PROBLEM: return true;
 	case JT::JUDGE_SUBMISSION: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
+	case JT::DELETE_USER: return false;
+	case JT::DELETE_CONTEST: return false;
+	case JT::DELETE_CONTEST_ROUND: return false;
+	case JT::DELETE_CONTEST_PROBLEM: return false;
 	case JT::VOID: return false;
 	}
 	return false;
@@ -369,6 +401,10 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::EDIT_PROBLEM: return false;
 	case JT::DELETE_PROBLEM: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
+	case JT::DELETE_USER: return false;
+	case JT::DELETE_CONTEST: return false;
+	case JT::DELETE_CONTEST_ROUND: return false;
+	case JT::DELETE_CONTEST_PROBLEM: return false;
 	case JT::VOID: return false;
 	}
 	return false;
@@ -378,9 +414,13 @@ constexpr inline bool is_submission_job(JobType x) {
 constexpr inline uint priority(JobType x) {
 	using JT = JobType;
 	switch (x) {
+	case JT::DELETE_PROBLEM: return 30;
+	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return 30;
+	case JT::DELETE_USER: return 30;
+	case JT::DELETE_CONTEST: return 30;
+	case JT::DELETE_CONTEST_ROUND: return 30;
+	case JT::DELETE_CONTEST_PROBLEM: return 30;
 	case JT::EDIT_PROBLEM: return 20;
-	case JT::DELETE_PROBLEM: return 20;
-	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return 20;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::ADD_PROBLEM: return 10;
