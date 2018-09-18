@@ -3,6 +3,9 @@
 *.lo
 *.o
 
+# Compiled debug information (DWARF)
+*.dwo
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
@@ -15,8 +18,4 @@
 # GNU Make dependences
 *.deps
 
-# Generated files
-src/default_checker_dump.c
-
 # Others
-src/sip
