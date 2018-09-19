@@ -22,7 +22,7 @@ static void help(const char* program_name) {
 	puts("  clean [arg...]        Prepare package to archiving: remove unnecessary files (compiled programs, latex logs, etc.)");
 	puts("                        Allowed args:");
 	puts("                          tests - removes generated tests");
-	puts("  doc                   Compiles latex statements (if there is any)");
+	puts("  doc [watch]           Compiles latex statements (if there is any). If watch is specified as an argument then all statement files will be watched and recompiled on any change");
 	puts("  gen                   Alias to gentests");
 	puts("  genout [sol]          Generate tests outputs using solution [sol] (main solution by default)");
 	puts("  gentests              Generate tests inputs: compile generators, generate tests");
