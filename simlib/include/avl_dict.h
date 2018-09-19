@@ -1223,7 +1223,7 @@ public:
 	} data_;
 
 	template<class... Args>
-	AVLMapNode(RealData rdata, Args&&... args)
+	AVLMapNode(RealData&& rdata, Args&&... args)
 		: AVLNodeBase<size_type>(std::forward<Args>(args)...),
 			data_(std::move(rdata)) {}
 
@@ -1276,7 +1276,8 @@ public:
 	template<class... Args>
 	std::pair<KeyValPair*, bool> emplace(Args&&... args) {
 		auto new_node =
-			AVLBase::allocate_node(KeyValPair{std::forward<Args>(args)...}, nil,
+			AVLBase::allocate_node(
+				typename ADC::Node::RealData(std::forward<Args>(args)...), nil,
 				nil, uint8_t{0});
 
 		auto x = AVLBase::insert_or_replace(new_node);
@@ -1354,7 +1355,8 @@ public:
 	template<class... Args>
 	KeyValPair* emplace(Args&&... args) {
 		auto new_node =
-			AVLBase::allocate_node(KeyValPair{std::forward<Args>(args)...}, nil,
+			AVLBase::allocate_node(
+				typename ADC::Node::RealData{std::forward<Args>(args)...}, nil,
 				nil, uint8_t{0});
 
 		AVLBase::insert(new_node);
