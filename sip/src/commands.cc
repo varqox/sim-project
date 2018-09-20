@@ -193,7 +193,7 @@ static bool gen_test_out(sim::JudgeWorker& jworker, CStringView input,
 }
 
 // Returns whether all was generated successfully
-static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile)
+static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile, bool delete_invalid_test_files)
 {
 	auto parse_test_range = [](StringView test_range, auto&& callback) {
 		auto hypen = test_range.find('-');
@@ -348,13 +348,15 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile)
 				generator = specified_generator;
 			} else if (pc.exists(specified_generator)) {
 				generator = specified_generator;
-			} else if (pc.exists(concat("utils/", specified_generator))) {
-				generator = concat<32>("utils/", specified_generator);
+			// } else if (pc.exists(concat("utils/", specified_generator))) {
+			// 	generator = concat<32>("utils/", specified_generator);
 			} else {
 				// Scan utils for the generator as a subsequence
 				bool found = false;
 				pc.for_each_with_prefix("utils/", [&](StringView file) {
-					if (is_subsequence(specified_generator, file)) {
+					if (is_subsequence(specified_generator, file) and
+						sim::is_source(file))
+					{
 						if (found) {
 							errlog("\033[1;31mError\033[m: Sipfile: specified"
 								" generator '", specified_generator,
@@ -371,7 +373,9 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile)
 				// Scan whole package for the generator as a subsequence
 				if (not found)
 					pc.for_each_with_prefix("", [&](StringView file) {
-						if (is_subsequence(specified_generator, file)) {
+						if (is_subsequence(specified_generator, file) and
+							sim::is_source(file))
+						{
 							if (found) {
 								errlog("\033[1;31mError\033[m: Sipfile:"
 									" specified generator '",
@@ -465,17 +469,34 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile)
 	});
 
 	// Check for tests that are not specified as generated or static
-	if (ensure_all_tests_are_in_sipfile) {
+	if (ensure_all_tests_are_in_sipfile or delete_invalid_test_files) {
 		bool encountered_error = false;
 		test_files.for_each([&](auto&& p) {
 			if (not static_tests.find(p.first) and not gen_tests.find(p.first)) {
 				if (p.second.in.has_value() and p.second.out.has_value()) {
-					errlog("\033[1;31mError\033[m: Test '", p.first,
-						"' is neither specified as static nor as generated");
-					encountered_error = true;
+					if (delete_invalid_test_files) {
+						stdlog("\033[1;35mwarning\033[m: Test '", p.first,
+							"' is neither specified as static nor as generated - deleting");
+						remove(p.second.in.value().to_string());
+						remove(p.second.out.value().to_string());
+					} else {
+						errlog("\033[1;31mError\033[m: Test '", p.first,
+							"' is neither specified as static nor as generated");
+						encountered_error = true;
+					}
 				} else {
-					stdlog("\033[1;35mwarning\033[m: orphaned test file: ",
-						p.second.in.value_or(""), p.second.out.value_or(""));
+					if (delete_invalid_test_files) {
+						stdlog("\033[1;35mwarning\033[m: orphaned test file: ",
+							p.second.in.value_or(""), p.second.out.value_or(""), " - deleting");
+						if (p.second.in.has_value())
+							remove(p.second.in.value().to_string());
+						else
+							remove(p.second.out.value().to_string());
+
+					} else {
+						stdlog("\033[1;35mwarning\033[m: orphaned test file: ",
+							p.second.in.value_or(""), p.second.out.value_or(""));
+					}
 				}
 			}
 		});
@@ -637,7 +658,7 @@ int doc(ArgvParser args) {
 			}, {-1, STDOUT_FILENO, STDERR_FILENO});
 			if (es.si.code != CLD_EXITED or es.si.status != 0) {
 				errlog("\033[1;31mCompilation failed.\033[m");
-				exit(1);
+				// exit(1); // During watching it is not intended to stop on compilation error
 			}
 		}
 
@@ -739,7 +760,7 @@ int genout(ArgvParser) {
 		return 1;
 	}
 
-	if (not gen_impl(false, false)) {
+	if (not gen_impl(false, false, false)) {
 		errlog("\033[1;31mError\033[m: Some tests' outputs were not generated"
 			" successfully");
 		return 1;
@@ -748,7 +769,7 @@ int genout(ArgvParser) {
 	return 0;
 }
 
-int gentests(ArgvParser) {
+int gentests(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0) {
@@ -758,7 +779,14 @@ int gentests(ArgvParser) {
 		return 1;
 	}
 
-	if (not gen_impl(true, true)) {
+	bool force = false;
+	while (args.size()) {
+		StringView arg = args.extract_next();
+		if (arg == "force")
+			force = true;
+	}
+
+	if (not gen_impl(true, true, force)) {
 		errlog("\033[1;31mError\033[m: Some tests were not generated"
 			" successfully");
 		return 1;

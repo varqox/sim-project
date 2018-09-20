@@ -23,9 +23,9 @@ static void help(const char* program_name) {
 	puts("                        Allowed args:");
 	puts("                          tests - removes generated tests");
 	puts("  doc [watch]           Compiles latex statements (if there is any). If watch is specified as an argument then all statement files will be watched and recompiled on any change");
-	puts("  gen                   Alias to gentests");
+	puts("  gen [force]           Alias to gentests");
 	puts("  genout [sol]          Generate tests outputs using solution [sol] (main solution by default)");
-	puts("  gentests              Generate tests inputs: compile generators, generate tests");
+	puts("  gentests [force]      Generate tests inputs: compile generators, generate tests. If force is specified then tests that are not specified in Sipfile are removed");
 	puts("  init [directory] [name]");
 	puts("                        Initialize Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
 	puts("  label [value]         If [value] is specified set label to [value], otherwise print its current value");
