@@ -9,7 +9,19 @@ class CompilationCache {
 
 public:
 	static bool is_cached(StringView path) {
-		return (access(cached_path(path).to_cstr(), F_OK) == 0);
+		struct stat64 path_stat, cached_stat;
+		if (stat64(cached_path(path).to_cstr().data(), &cached_stat)) {
+			if (errno == ENOENT)
+				return false; // File does not exist
+
+			THROW("stat64()", errmsg());
+		}
+
+		if (stat64(concat(path).to_cstr().data(), &path_stat))
+			THROW("stat64()", errmsg());
+
+		// The cached file cannot be older than the source file
+		return (path_stat.st_mtime <= cached_stat.st_mtime);
 	}
 
 	static void clear() {
