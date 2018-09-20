@@ -342,11 +342,11 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		auto const& test = it->second;
 		// Warn if the test was loaded from "limits"
 		if (not test.in.has_value() and test.time_limit.has_value())
-			report_.append("\033[1;35mwarning\033[m: ignoring test `",
+			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
 				test.name, "` because it has no corresponding input file");
 		// Warn if the test was loaded from "limits"
 		if (not test.out.has_value() and test.time_limit.has_value())
-			report_.append("\033[1;35mwarning\033[m: ignoring test `",
+			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
 				test.name, "` because it has no corresponding output file");
 
 		if (not test.in.has_value() or not test.out.has_value())
