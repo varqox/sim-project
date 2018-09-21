@@ -283,10 +283,11 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 	// Collect tests specified in the Sipfile
 	ConfigFile sipfile;
 	sipfile.addVars("static", "gen");
-	sipfile.loadConfigFromFile("Sipfile");
+	if (access("Sipfile", F_OK) == 0)
+		sipfile.loadConfigFromFile("Sipfile");
+
 	auto static_tests_var = sipfile.getVar("static");
 	auto gen_tests_var = sipfile.getVar("gen");
-
 	AVLDictSet<InplaceBuff<16>> static_tests;
 
 	if (static_tests_var.isSet()) {
