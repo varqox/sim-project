@@ -523,11 +523,15 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 		if (tf != nullptr) {
 			if (tf->second.in.has_value()) {
 				input = tf->second.in.value();
-				if (tf->second.out.has_value())
+				if (tf->second.out.has_value()) {
 					output = tf->second.out.value();
-				else
+				} else if (hasPrefix(input, "in/")) {
+					output = concat<32>("out",
+						substring(input, 2, input.size - 2), "out");
+				} else {
 					output = concat<32>(substring(input, 0, input.size - 2),
 						"out");
+				}
 			} else {
 				throw_assert(tf->second.out.has_value());
 				output = tf->second.out.value();
