@@ -1,8 +1,10 @@
 #include "commands.h"
 
+#include <signal.h>
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
 #include <simlib/parsers.h>
+#include <simlib/process.h>
 
 bool verbose = false;
 
@@ -104,10 +106,43 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
+static void kill_signal_handler(int signum) {
+	kill(0, signum); // Kill the whole process group
+
+	// Some process might have changed their group, the above kill would leave them alive
+	pid_t my_pid = getpid();
+	// Kill all children processes
+	forEachDirComponent("/proc/", [&](dirent* file) {
+	#ifdef _DIRENT_HAVE_D_TYPE
+		if (file->d_type == DT_DIR and isDigit(file->d_name)) {
+	#else
+		if (isDigit(file->d_name)) {
+	#endif
+			auto pid = strtoll(file->d_name);
+			if (toStr(my_pid) == getProcStat(pid, 3)) // 3 means PPID
+				(void)kill(-pid, signum);
+		}
+	});
+
+	exit(1);
+}
+
 int main(int argc, char **argv) {
 	stdlog.use(stdout);
 	stdlog.label(false);
 	errlog.label(false);
+
+	// Upon termination kill children processes
+	{
+		// Signal control
+		struct sigaction sa;
+		memset (&sa, 0, sizeof(sa));
+		sa.sa_handler = &kill_signal_handler;
+
+		(void)sigaction(SIGINT, &sa, nullptr);
+		(void)sigaction(SIGTERM, &sa, nullptr);
+		(void)sigaction(SIGQUIT, &sa, nullptr);
+	}
 
 	parseOptions(argc, argv);
 
