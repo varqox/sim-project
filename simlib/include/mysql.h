@@ -713,18 +713,13 @@ public:
 
 	operator MYSQL* () noexcept { return impl(); }
 
-	void connect(CStringView host, CStringView user, CStringView passwd,
-		CStringView db)
-	{
+	void connect(FilePath host, FilePath user, FilePath passwd, FilePath db) {
 		my_bool x = true;
 		mysql_options(conn_, MYSQL_OPT_RECONNECT, &x);
 		mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
-		if (not mysql_real_connect(conn_, host.data(), user.data(),
-			passwd.data(), db.data(), 0, nullptr, 0))
-		{
+		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr, 0))
 			THROW(mysql_error(conn_));
-		}
 	}
 
 	Result query(StringView sql) {

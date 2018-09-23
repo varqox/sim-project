@@ -296,7 +296,7 @@ public:
 	const Simfile& simfile() const noexcept { return sf; }
 
 private:
-	int compile_impl(CStringView source, SolutionLanguage lang,
+	int compile_impl(FilePath source, SolutionLanguage lang,
 		timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path,
 		StringView compilation_source_basename, StringView exec_dest_filename);
@@ -306,13 +306,13 @@ public:
 	int compileChecker(timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
-		return compile_impl(concat(pkg_root, sf.checker).to_cstr(),
+		return compile_impl(concat(pkg_root, sf.checker),
 			filename_to_lang(sf.checker), time_limit, c_errors,
 			c_errors_max_len, proot_path, "checker", CHECKER_FILENAME);
 	}
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(CStringView source, SolutionLanguage lang,
+	int compileSolution(FilePath source, SolutionLanguage lang,
 		timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
@@ -320,32 +320,32 @@ public:
 			c_errors_max_len, proot_path, "source", SOLUTION_FILENAME);
 	}
 
-	void loadCompiledChecker(CStringView compiled_checker) {
+	void loadCompiledChecker(FilePath compiled_checker) {
 		if (copy(compiled_checker,
-			concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME).to_cstr(), S_0755))
+			concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755))
 		{
 			THROW("copy()", errmsg());
 		}
 	}
 
-	void loadCompiledSolution(CStringView compiled_solution) {
+	void loadCompiledSolution(FilePath compiled_solution) {
 		if (copy(compiled_solution,
-			concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(), S_0755))
+			concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755))
 		{
 			THROW("copy()", errmsg());
 		}
 	}
 
-	void saveCompiledChecker(CStringView destination) {
-		if (copy(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME).to_cstr(),
+	void saveCompiledChecker(FilePath destination) {
+		if (copy(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
 			destination, S_0755))
 		{
 			THROW("copy()", errmsg());
 		}
 	}
 
-	void saveCompiledSolution(CStringView destination) {
-		if (copy(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME).to_cstr(),
+	void saveCompiledSolution(FilePath destination) {
+		if (copy(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME),
 			destination, S_0755))
 		{
 			THROW("copy()", errmsg());
@@ -362,8 +362,8 @@ public:
 	 * @param memory_limit memory limit in bytes
 	 * @return exit status of running the solution (in the sandbox)
 	 */
-	Sandbox::ExitStat run_solution(CStringView input_file,
-		CStringView output_file, uint64_t time_limit, uint64_t memory_limit)
+	Sandbox::ExitStat run_solution(FilePath input_file,
+		FilePath output_file, uint64_t time_limit, uint64_t memory_limit)
 		const;
 
 	/**

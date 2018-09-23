@@ -4,7 +4,7 @@
 
 template<class Func>
 static void update_add_file_to_zip_impl(Func&& apply_file,
-	StringView new_filename, CStringView zip_filename, bool easy_case = false)
+	StringView new_filename, FilePath zip_filename, bool easy_case = false)
 {
 	constexpr const char* command = "zip";
 
@@ -14,7 +14,7 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 
 	if (easy_case) {
 		std::vector<std::string> zip_args;
-		back_insert(zip_args, command, "-q", "-r", zip_filename.to_string(),
+		back_insert(zip_args, command, "-q", "-r", zip_filename,
 			new_filename.to_string());
 		es = Spawner::run(zip_args[0], zip_args, {-1, zip_output, zip_output});
 
@@ -36,7 +36,7 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 
 		// Make a symlink
 		decltype(getCWD()) cwd;
-		apply_file(cwd, concat(tmpdir.path(), new_filename).to_cstr());
+		apply_file(cwd, concat(tmpdir.path(), new_filename));
 
 		// Path to zip file is relative we have to make it absolute
 		throw_assert(zip_filename.size() > 0);
@@ -44,11 +44,11 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 			if (cwd.size == 0)
 				cwd = getCWD();
 			cwd.append(zip_filename);
-			zip_filename = cwd.to_cstr();
+			zip_filename = cwd;
 		}
 
 		std::vector<std::string> zip_args;
-		back_insert(zip_args, command, "-q", "-r", zip_filename.to_string(),
+		back_insert(zip_args, command, "-q", "-r", zip_filename,
 			new_filename.to_string());
 
 		es = Spawner::run(zip_args[0], zip_args, {
@@ -66,19 +66,19 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 	}
 }
 
-void update_add_file_to_zip(CStringView filename, StringView new_filename,
-	CStringView zip_filename)
+void update_add_file_to_zip(FilePath filename, StringView new_filename,
+	FilePath zip_filename)
 {
 	if (new_filename.empty())
-		return update_add_file_to_zip_impl([](auto&&, auto&&){}, filename,
-			zip_filename, true);
+		return update_add_file_to_zip_impl([](auto&&, auto&&){},
+			CStringView(filename), zip_filename, true);
 
 	// Remove Trailing '/'
 	while (new_filename.size() > 1 and new_filename.back() == '/')
 		new_filename.removeSuffix(1);
 
 	return update_add_file_to_zip_impl(
-		[&](decltype(getCWD())& cwd, CStringView dest_file) {
+		[&](decltype(getCWD())& cwd, FilePath dest_file) {
 			if (new_filename.back() != '/') {
 				throw_assert(filename.size() > 0);
 				// Make filename absolute
@@ -86,25 +86,23 @@ void update_add_file_to_zip(CStringView filename, StringView new_filename,
 					cwd = getCWD();
 					auto old_size = cwd.size;
 					cwd.append(filename);
-					filename = cwd.to_cstr();
+					filename = cwd;
 					cwd.size = old_size; // Restore cwd to contain only CWD
 				}
 
-				if (symlink(filename.data(), dest_file.data()))
-				{
+				if (symlink(filename, dest_file))
 					THROW("symlink() failed", errmsg());
-				}
 			}
 		}, new_filename, zip_filename);
 }
 
 void update_add_data_to_zip(StringView data, StringView new_filename,
-	CStringView zip_filename)
+	FilePath zip_filename)
 {
 	throw_assert(new_filename.size() > 0);
 		return update_add_file_to_zip_impl(
-		[&](decltype(getCWD())&, CStringView dest_file) {
-			if (dest_file.back() != '/') // Dest file is a directory
+		[&](decltype(getCWD())&, FilePath dest_file) {
+			if (CStringView(dest_file).back() != '/') // Dest file is a directory
 				putFileContents(dest_file, data);
 		}, new_filename, zip_filename);
 }

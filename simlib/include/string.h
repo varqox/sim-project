@@ -297,6 +297,10 @@ public:
 
 	constexpr StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
 
+	constexpr StringBase(std::string&&) noexcept = delete;
+
+	constexpr StringBase(const std::string&&) noexcept = delete;
+
 	// Constructs StringView from substring [beg, beg + n) of string s
 	constexpr StringBase(const std::string& s, size_type beg = 0,
 		size_type n = npos) noexcept
@@ -802,6 +806,15 @@ inline std::string& operator+=(std::string& str, StringView s) {
 	return str.append(s.data(), s.size());
 }
 
+// This function allows std::string&& to be converted to StringView, but keep in
+// mind that if any StringView or alike value generated from the result of this
+// function cannot be saved to variable! - it would (and probably will) cause
+// using of the provided std::string's data that was already deallocated =
+// memory corruption
+inline StringView intentionalUnsafeStringView(const std::string&& str) noexcept {
+	return StringView(static_cast<const std::string&>(str));
+}
+
 // comparison operators
 inline constexpr bool operator==(StringView a, StringView b) noexcept {
 	return (a.size() == b.size() && memcmp(a.data(), b.data(), a.size()) == 0);
@@ -1065,15 +1078,21 @@ public:
 
 	char operator[](size_t i) const noexcept { return p_[i]; }
 
-	operator StringView() const noexcept { return {data(), size}; }
+	operator StringView() const & noexcept { return {data(), size}; }
+
+	// Do not allow to create StringView of a temporary object
+	operator StringView() const && = delete;
 
 	std::string to_string() const { return {data(), size}; }
 
-	CStringView to_cstr() {
+	CStringView to_cstr() & {
 		resize(size + 1);
 		(*this)[--size] = '\0';
 		return {data(), size};
 	}
+
+	// Do not allow to create CStringView of a temporary object
+	CStringView to_cstr() && = delete;
 
 protected:
 	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
@@ -1130,6 +1149,9 @@ class InplaceBuff : protected InplaceBuffBase {
 private:
 	std::array<char, N> a_;
 
+	template<size_t M>
+	friend class InplaceBuff;
+
 public:
 	using InplaceBuffBase::size;
 
@@ -1152,12 +1174,34 @@ public:
 	}
 
 	constexpr InplaceBuff(InplaceBuff&& ibuff) noexcept
-		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.size), ibuff.p_)
+		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.max_size_), ibuff.p_)
 	{
 		if (ibuff.is_allocated()) {
 			p_ = ibuff.p_;
 			ibuff.size = 0;
 			ibuff.max_size_ = N;
+			ibuff.p_ = &ibuff.a_[0];
+
+		} else {
+			p_ = &a_[0];
+			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
+			ibuff.size = 0;
+		}
+	}
+
+	template<size_t M>
+	constexpr InplaceBuff(const InplaceBuff<M>& ibuff) : InplaceBuff(ibuff.size) {
+		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+	}
+
+	template<size_t M>
+	constexpr InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
+		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.max_size_), ibuff.p_)
+	{
+		if (ibuff.is_allocated()) {
+			p_ = ibuff.p_;
+			ibuff.size = 0;
+			ibuff.max_size_ = M;
 			ibuff.p_ = &ibuff.a_[0];
 
 		} else {
@@ -1197,6 +1241,32 @@ public:
 		return *this;
 	}
 
+	template<size_t M>
+	constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
+		lossy_resize(ibuff.size);
+		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+		return *this;
+	}
+
+	template<size_t M>
+	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
+		if (ibuff.is_allocated() and ibuff.max_size() > max_size()) {
+			size = ibuff.size;
+			max_size_ = ibuff.max_size_;
+			p_ = ibuff.p_;
+
+			ibuff.p_ = &ibuff.a_[0];
+			ibuff.size = 0;
+			ibuff.max_size_ = M;
+		} else {
+			size = ibuff.size;
+			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
+			ibuff.size = 0;
+		}
+
+		return *this;
+	}
+
 	using InplaceBuffBase::lossy_resize;
 	using InplaceBuffBase::resize;
 	using InplaceBuffBase::clear;
@@ -1215,12 +1285,108 @@ public:
 	using InplaceBuffBase::append;
 };
 
+template<size_t N>
+inline std::string& operator+=(std::string& str, const InplaceBuff<N>& ibs) {
+	return str.append(ibs.data(), ibs.size);
+}
+
+// This function allows InplaceBuff<N>&& to be converted to StringView, but keep
+// in mind that if any StringView or alike value generated from the result of
+// this function cannot be saved to variable! - it would (and probably will)
+// cause using of the provided InplaceBuff<N>'s data that was already
+// deallocated = memory corruption
+template<size_t N>
+inline StringView intentionalUnsafeStringView(const InplaceBuff<N>&& str) noexcept {
+	return StringView(static_cast<const InplaceBuff<N>&>(str));
+}
+
+// This function allows InplaceBuff<N>&& to be converted to CStringView, but
+// keep in mind that if any CStringView or alike value generated from the result
+// of this function cannot be saved to variable! - it would (and probably will)
+// cause using of the provided InplaceBuff<N>'s data that was already
+// deallocated = memory corruption
+template<size_t N>
+inline CStringView intentionalUnsafeCStringView(InplaceBuff<N>&& str) noexcept {
+	return static_cast<InplaceBuff<N>&>(str).to_cstr();
+}
+
 template<size_t T>
 constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
 	-> decltype(ibuff.size)
 {
 	return ibuff.size;
 }
+
+// This type should NOT be returned from a function call
+class FilePath {
+	const char* str_;
+	size_t size_;
+
+public:
+	constexpr FilePath(const FilePath&) noexcept = default;
+	constexpr FilePath(FilePath&&) noexcept = default;
+
+	constexpr FilePath(const char* str) noexcept
+		: str_(str), size_(__builtin_strlen(str)) {}
+
+	constexpr FilePath(CStringView& str) noexcept
+		: str_(str.c_str()), size_(str.size()) {}
+
+	constexpr FilePath(const std::string& str) noexcept
+		: str_(str.c_str()), size_(str.size()) {}
+
+	template<size_t N>
+	constexpr FilePath(InplaceBuff<N>& str) noexcept
+		: str_(str.to_cstr().data()), size_(str.size) {}
+
+	template<size_t N>
+	constexpr FilePath(InplaceBuff<N>&& str) noexcept
+		: str_(str.to_cstr().data()), size_(str.size) {}
+
+	FilePath& operator=(const FilePath&) noexcept = delete;
+	FilePath& operator=(FilePath&&) noexcept = delete;
+	FilePath& operator=(const FilePath&&) noexcept = delete;
+
+	FilePath& operator=(const char* str) noexcept {
+		str_ = str;
+		size_ = __builtin_strlen(str);
+		return *this;
+	}
+
+	FilePath& operator=(CStringView& str) noexcept {
+		str_ = str.c_str();
+		size_ = str.size();
+		return *this;
+	}
+
+	FilePath& operator=(const std::string& str) noexcept {
+		str_ = str.c_str();
+		size_ = str.size();
+		return *this;
+	}
+
+	template<size_t N>
+	FilePath& operator=(InplaceBuff<N>& str) noexcept {
+		str_ = str.to_cstr().data();
+		size_ = str.size;
+		return *this;
+	}
+
+	template<size_t N>
+	FilePath& operator=(InplaceBuff<N>&& str) noexcept {
+		str_ = str.to_cstr().data();
+		size_ = str.size;
+		return *this;
+	}
+
+	operator const char*() const noexcept { return str_; }
+
+	CStringView to_cstr() const noexcept { return {str_, size_}; }
+
+	const char* data() const noexcept { return str_; }
+
+	size_t size() const noexcept { return size_; }
+};
 
 /**
  * @brief Concentrates @p args into std::string

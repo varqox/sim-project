@@ -103,7 +103,7 @@ public:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	ExitStat run(CStringView exec, const std::vector<std::string>& exec_args,
+	ExitStat run(FilePath exec, const std::vector<std::string>& exec_args,
 		const Options& opts = Options(),
 		const std::vector<AllowedFile>& allowed_files = {});
 };

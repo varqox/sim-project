@@ -41,16 +41,16 @@ constexpr meta::string JudgeWorker::CHECKER_FILENAME;
 constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
 constexpr timespec JudgeWorker::CHECKER_TIME_LIMIT;
 
-int JudgeWorker::compile_impl(CStringView source, SolutionLanguage lang,
+int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 	timespec time_limit, string* c_errors, size_t c_errors_max_len,
 	const string& proot_path, StringView compilation_source_basename,
 	StringView exec_dest_filename)
 {
 	auto compilation_dir = concat<PATH_MAX>(tmp_dir.path(), "compilation/");
-	if (remove_r(compilation_dir.to_cstr()) and errno != ENOENT)
+	if (remove_r(compilation_dir) and errno != ENOENT)
 		THROW("remove_r()", errmsg());
 
-	if (mkdir(compilation_dir.to_cstr()))
+	if (mkdir(compilation_dir))
 		THROW("mkdir()", errmsg());
 
 	auto src_filename = concat<PATH_MAX>(compilation_source_basename);
@@ -61,7 +61,7 @@ int JudgeWorker::compile_impl(CStringView source, SolutionLanguage lang,
 	case SolutionLanguage::UNKNOWN: THROW("Invalid language!");
 	}
 
-	if (copy(source, concat<PATH_MAX>(compilation_dir, src_filename).to_cstr()))
+	if (copy(source, concat<PATH_MAX>(compilation_dir, src_filename)))
 		THROW("copy()", errmsg());
 
 	int rc = compile(compilation_dir,
@@ -69,8 +69,8 @@ int JudgeWorker::compile_impl(CStringView source, SolutionLanguage lang,
 		c_errors, c_errors_max_len, proot_path);
 
 	if (rc == 0 and move(
-		concat<PATH_MAX>(compilation_dir, exec_dest_filename).to_cstr(),
-		concat<PATH_MAX>(tmp_dir.path(), exec_dest_filename).to_cstr()))
+		concat<PATH_MAX>(compilation_dir, exec_dest_filename),
+		concat<PATH_MAX>(tmp_dir.path(), exec_dest_filename)))
 	{
 		THROW("move()", errmsg());
 	}
@@ -105,15 +105,15 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 		// Extract only the necessary files
 		extract_zip(pkg_root, 0, [&](archive_entry* entry) {
 			return pc.exists(archive_entry_pathname(entry));
-		}, tmp_dir.path() + "package/");
+		}, intentionalUnsafeStringView(tmp_dir.path() + "package/"));
 
 		// Update root, so it will be relative to the Simfile
 		pkg_root = concat_tostr(tmp_dir.path() + "package/", pkg_master_dir);
 	}
 }
 
-Sandbox::ExitStat JudgeWorker::run_solution(CStringView input_file,
-	CStringView output_file, uint64_t time_limit, uint64_t memory_limit) const
+Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
+	FilePath output_file, uint64_t time_limit, uint64_t memory_limit) const
 {
 	// Solution STDOUT
 	FileDescriptor solution_stdout(output_file, O_WRONLY | O_CREAT | O_TRUNC);

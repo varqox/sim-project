@@ -31,7 +31,7 @@ private:
 
 public:
 	// Like open()
-	explicit Logger(CStringView filename);
+	explicit Logger(FilePath filename);
 
 	// Like use(), it accept nullptr for which a dummy logger is created
 	explicit Logger(FILE *stream) noexcept : f_(stream) {}
@@ -49,7 +49,7 @@ public:
 	 *
 	 * @errors Throws an exception std::runtime_error if an fopen() error occurs
 	 */
-	void open(CStringView filename);
+	void open(FilePath filename);
 
 	/// Use @p stream as log stream, nullptr is acceptable for the logger
 	/// becomes a dummy

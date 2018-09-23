@@ -55,8 +55,9 @@ string Simfile::dump() const {
 				auto p = TestNameComparator::split(group.tests[0].name);
 				if (p.tid == "ocen")
 					p.gid = "0";
-				back_insert(res, '\t', ConfigFile::escapeString(concat(p.gid,
-					' ', group.score)), '\n');
+				back_insert(res, '\t',
+					ConfigFile::escapeString(intentionalUnsafeStringView(
+						concat(p.gid, ' ', group.score))), '\n');
 			}
 		res += "]\n";
 	}
@@ -66,8 +67,9 @@ string Simfile::dump() const {
 	for (const TestGroup& group : tgroups)
 		for (const Test& test : group.tests)
 			if (test.in.size() && test.out.size())
-				back_insert(res, '\t', ConfigFile::escapeString(
-					concat(test.name, ' ', test.in, ' ', test.out)), '\n');
+				back_insert(res, '\t',
+					ConfigFile::escapeString(intentionalUnsafeStringView(
+						concat(test.name, ' ', test.in, ' ', test.out))), '\n');
 
 	res += "]\n";
 
@@ -393,7 +395,7 @@ void Simfile::loadTestsFiles() {
 void Simfile::validateFiles(StringView package_path) const {
 	// Checker
 	if (checker.size() &&
-		not isRegularFile(concat(package_path, '/', checker).to_cstr()))
+		not isRegularFile(concat(package_path, '/', checker)))
 	{
 		throw std::runtime_error{concat_tostr("Simfile: invalid checker file `",
 			checker, '`')};
@@ -401,7 +403,7 @@ void Simfile::validateFiles(StringView package_path) const {
 
 	// Statement
 	if (statement.size() &&
-		!isRegularFile(concat(package_path, '/', statement).to_cstr()))
+		!isRegularFile(concat(package_path, '/', statement)))
 	{
 		throw std::runtime_error{concat_tostr("Simfile: invalid statement file"
 			" `", statement, '`')};
@@ -409,17 +411,17 @@ void Simfile::validateFiles(StringView package_path) const {
 
 	// Solutions
 	for (auto&& str : solutions)
-		if (!isRegularFile(concat(package_path, '/', str).to_cstr()))
+		if (!isRegularFile(concat(package_path, '/', str)))
 			throw std::runtime_error{concat_tostr("Simfile: invalid solution"
 				" file `", str, '`')};
 
 	// Tests
 	for (const TestGroup& group : tgroups)
 		for (const Test& test : group.tests) {
-			if (!isRegularFile(concat(package_path, '/', test.in).to_cstr()))
+			if (!isRegularFile(concat(package_path, '/', test.in)))
 				throw std::runtime_error{concat_tostr("Simfile: invalid test"
 					" input file `", test.in, '`')};
-			if (!isRegularFile(concat(package_path, '/', test.out).to_cstr()))
+			if (!isRegularFile(concat(package_path, '/', test.out)))
 				throw std::runtime_error{concat_tostr("Simfile: invalid test"
 					" output file `", test.out, '`')};
 		}

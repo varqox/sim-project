@@ -157,7 +157,7 @@ public:
 	 * @errors Throws an exception std::runtime_error if an open(2) error occurs
 	 *   and all exceptions from loadConfigFromString()
 	 */
-	void loadConfigFromFile(CStringView pathname, bool load_all = false);
+	void loadConfigFromFile(FilePath pathname, bool load_all = false);
 
 	/**
 	 * @brief Loads config (variables) form string @p config

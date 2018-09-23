@@ -16,7 +16,7 @@ using std::vector;
 
 const ConfigFile::Variable ConfigFile::null_var;
 
-void ConfigFile::loadConfigFromFile(CStringView pathname, bool load_all) {
+void ConfigFile::loadConfigFromFile(FilePath pathname, bool load_all) {
 	string contents = getFileContents(pathname);
 	loadConfigFromString(contents, load_all);
 }

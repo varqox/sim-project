@@ -6,15 +6,15 @@ using std::string;
 
 Logger stdlog(stderr), errlog(stderr);
 
-Logger::Logger(CStringView filename)
-	: f_(fopen(filename.c_str(), "a")), opened_(true)
+Logger::Logger(FilePath filename)
+	: f_(fopen(filename, "a")), opened_(true)
 {
 	if (f_ == nullptr)
 		THROW("fopen('", filename, "') failed", errmsg());
 }
 
-void Logger::open(CStringView filename) {
-	FILE *f = fopen(filename.c_str(), "a");
+void Logger::open(FilePath filename) {
+	FILE *f = fopen(filename, "a");
 	if (f == nullptr)
 		THROW("fopen('", filename, "') failed", errmsg());
 

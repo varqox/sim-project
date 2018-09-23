@@ -133,7 +133,7 @@ string chdirToExecDir() {
 
 int8_t detectArchitecture(pid_t pid) {
 	auto filename = concat("/proc/", pid, "/exe");
-	FileDescriptor fd(filename.to_cstr(), O_RDONLY | O_LARGEFILE);
+	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 	if (fd == -1)
 		THROW("open('", filename, "')", errmsg());
 
@@ -151,7 +151,7 @@ int8_t detectArchitecture(pid_t pid) {
 }
 
 string getProcStat(pid_t pid, uint field_no) {
-	string contents = getFileContents(concat("/proc/", pid, "/stat").to_cstr());
+	string contents = getFileContents(concat("/proc/", pid, "/stat"));
 	SimpleParser sp {contents};
 
 	// [0] - Process pid

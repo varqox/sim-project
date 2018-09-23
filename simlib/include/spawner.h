@@ -97,7 +97,7 @@ public:
 	 * @errors Throws an exception std::runtime_error with appropriate
 	 *   information if any syscall fails
 	 */
-	static ExitStat run(CStringView exec,
+	static ExitStat run(FilePath exec,
 		const std::vector<std::string>& exec_args,
 		const Options& opts = Options());
 
@@ -151,7 +151,7 @@ protected:
 	 *   @p exec
 	 */
 	template<class Func>
-	static void run_child(CStringView exec,
+	static void run_child(FilePath exec,
 		const std::vector<std::string>& exec_args, const Options& opts, int fd,
 		Func doBeforeExec) noexcept;
 
@@ -332,7 +332,7 @@ protected:
 /******************************* IMPLEMENTATION *******************************/
 
 template<class Func>
-void Spawner::run_child(CStringView exec,
+void Spawner::run_child(FilePath exec,
 	const std::vector<std::string>& exec_args, const Options& opts, int fd,
 	Func doBeforeExec) noexcept
 {
@@ -423,7 +423,7 @@ void Spawner::run_child(CStringView exec,
 	// Signal parent process that child is ready to execute @p exec
 	kill(getpid(), SIGSTOP);
 
-	execvp(exec.c_str(), (char** const)args);
+	execvp(exec, (char** const)args);
 	int errnum = errno;
 
 	// execvp() failed
@@ -431,5 +431,5 @@ void Spawner::run_child(CStringView exec,
 		send_error_and_exit(errnum, StringBuff<PATH_MAX + 20>{"execvp('", exec, "')"});
 	else
 		send_error_and_exit(errnum, StringBuff<PATH_MAX + 20>{"execvp('",
-			exec.substring(0, PATH_MAX), "...')"});
+			exec.to_cstr().substring(0, PATH_MAX), "...')"});
 }

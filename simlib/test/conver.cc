@@ -8,7 +8,7 @@ using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
-static Conver::Options load_options_from_file(CStringView file) {
+static Conver::Options load_options_from_file(FilePath file) {
 	ConfigFile cf;
 	cf.loadConfigFromFile(file, true);
 

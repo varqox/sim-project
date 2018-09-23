@@ -681,7 +681,7 @@ uint64_t Sandbox::get_tracee_vm_size() {
 	return vm_size;
 };
 
-Sandbox::ExitStat Sandbox::run(CStringView exec,
+Sandbox::ExitStat Sandbox::run(FilePath exec,
 	const std::vector<std::string>& exec_args, const Options& opts,
 	const std::vector<AllowedFile>& allowed_files)
 {
@@ -879,7 +879,7 @@ Sandbox::ExitStat Sandbox::run(CStringView exec,
 	}
 
 	// Open /proc/{tracee_pid_}/statm for tracking vm_peak (vm stands for virtual memory)
-	tracee_statm_fd_.open(concat("/proc/", tracee_pid_, "/statm").to_cstr(), O_RDONLY);
+	tracee_statm_fd_.open(concat("/proc/", tracee_pid_, "/statm"), O_RDONLY);
 	if (tracee_statm_fd_ == -1)
 		THROW("open(/proc/{tracee_pid_ = ", tracee_pid_, "}/statm)", errmsg());
 

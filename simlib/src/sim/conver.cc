@@ -35,11 +35,12 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 	StringView master_dir = pc.master_dir(); // Find master directory if exists
 
 	auto exists_in_pkg = [&](StringView file) {
-		return (not file.empty() and pc.exists(concat(master_dir, file)));
+		return (not file.empty() and
+			pc.exists(intentionalUnsafeStringView(concat(master_dir, file))));
 	};
 
 	// "utils/" directory is ignored by Conver
-	pc.remove_with_prefix(concat(master_dir, "utils/"));
+	pc.remove_with_prefix(intentionalUnsafeStringView(concat(master_dir, "utils/")));
 
 	// Load the Simfile from the package
 	Simfile sf;
@@ -48,10 +49,9 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		simfile_is_loaded = true;
 		try {
 			sf = Simfile(package_path_.back() == '/' ?
-				getFileContents(concat(package_path_, master_dir, "Simfile")
-					.to_cstr())
+				getFileContents(concat(package_path_, master_dir, "Simfile"))
 				: extract_file_from_zip(package_path_,
-					concat(master_dir, "Simfile").to_cstr()));
+					intentionalUnsafeStringView(concat(master_dir, "Simfile"))));
 		} catch (const ConfigFile::ParseError& e) {
 			THROW(concat_tostr("(Simfile) ", e.what(), '\n', e.diagnostics()));
 		}
@@ -88,7 +88,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		}
 	}
 
-	auto collect_files = [&pc](StringView prefix, auto&& cond) {
+	auto collect_files = [&pc](auto&& prefix, auto&& cond) {
 		vector<StringView> res;
 		pc.for_each_with_prefix(prefix, [&](StringView file) {
 			if (cond(file))
@@ -126,21 +126,20 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 
 			sf.checker = concat_tostr("check/checker.c");
 			if (package_path_.back() == '/') {
-				(void)mkdir(
-					concat(package_path_, master_dir, "check").to_cstr());
-				putFileContents(
-					concat(package_path_, master_dir, sf.checker).to_cstr(),
+				(void)mkdir(concat(package_path_, master_dir, "check"));
+				putFileContents(concat(package_path_, master_dir, sf.checker),
 					(const char*)default_checker_c, default_checker_c_len);
 			} else
 				update_add_data_to_zip(
 					{(const char*)default_checker_c, default_checker_c_len},
-					concat(master_dir, sf.checker).to_cstr(), package_path_);
+					intentionalUnsafeStringView(concat(master_dir, sf.checker)),
+					package_path_);
 		}
 	}
 
 	// Exclude check/ and checker/ directories from future searches
-	pc.remove_with_prefix(concat(master_dir, "check/"));
-	pc.remove_with_prefix(concat(master_dir, "checker/"));
+	pc.remove_with_prefix(intentionalUnsafeStringView(concat(master_dir, "check/")));
+	pc.remove_with_prefix(intentionalUnsafeStringView(concat(master_dir, "checker/")));
 
 	// Statement
 	try { sf.loadStatement(); } catch (...) {}

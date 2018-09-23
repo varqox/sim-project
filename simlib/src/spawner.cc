@@ -36,7 +36,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 	return message;
 };
 
-Spawner::ExitStat Spawner::run(CStringView exec,
+Spawner::ExitStat Spawner::run(FilePath exec,
 	const vector<string>& exec_args, const Spawner::Options& opts)
 {
 	// Error stream from child via pipe

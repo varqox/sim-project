@@ -25,7 +25,7 @@ void PackageContents::load_from_directory(StringView pkg_path,
 			add_path_to_pc(); // do not add pkg_path as an entry
 
 		// Go through the directory entries
-		forEachDirComponent(path.to_cstr(),
+		forEachDirComponent(path,
 			[&](dirent* file) {
 				if (file->d_type == DT_DIR) {
 					self(self, file->d_name);
@@ -45,7 +45,7 @@ void PackageContents::load_from_directory(StringView pkg_path,
 	recursive_impl(recursive_impl, pkg_path);
 }
 
-void PackageContents::load_from_zip(CStringView pkg_path) {
+void PackageContents::load_from_zip(FilePath pkg_path) {
 	skim_zip(pkg_path, [&](archive_entry* entry) {
 		// Check if entry contains ".." component
 		StringView epath = archive_entry_pathname(entry);
@@ -92,7 +92,7 @@ static string zip_package_master_dir_impl(T&& pkg) {
 	return res;
 }
 
-string zip_package_master_dir(CStringView pkg_path) {
+string zip_package_master_dir(FilePath pkg_path) {
 	return zip_package_master_dir_impl(pkg_path);
 }
 
