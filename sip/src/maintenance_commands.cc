@@ -67,7 +67,7 @@ int zip(ArgvParser args) {
 	// Create zip
 	{
 		DirectoryChanger dc("..");
-		compress_into_zip({dir.data()}, concat(dir, ".zip").to_cstr());
+		compress_into_zip({dir.data()}, concat(dir, ".zip"));
 	}
 
 	return 0;

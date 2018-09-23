@@ -4,11 +4,11 @@
 #include <simlib/sim/simfile.h>
 
 // simfile_commands.cc
-void replace_var_in_simfile(const sim::Simfile& sf, CStringView simfile_path,
+void replace_var_in_simfile(const sim::Simfile& sf, FilePath simfile_path,
 	StringView simfile_contents, StringView var_name, StringView replacement,
 	bool escape_replacement = true);
 
-void replace_var_in_simfile(const sim::Simfile& sf, CStringView simfile_path,
+void replace_var_in_simfile(const sim::Simfile& sf, FilePath simfile_path,
 	StringView simfile_contents, StringView var_name,
 	const std::vector<std::string>& replacement);
 

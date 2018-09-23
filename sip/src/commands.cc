@@ -103,7 +103,8 @@ static void update_time_limits(Simfile& sf, const sim::JudgeReport& jrep1,
 	}
 	val += "]";
 
-	replace_var_in_simfile(sf, "Simfile", getFileContents("Simfile"), "limits",
+	replace_var_in_simfile(sf, "Simfile",
+		intentionalUnsafeStringView(getFileContents("Simfile")), "limits",
 		val, false);
 }
 
@@ -155,8 +156,8 @@ static inline bool isnt_space(int c) noexcept { return not isspace(c); };
 static inline bool isnt_slash(char c) noexcept { return (c != '/'); };
 
 // Returns whether the output was generated successfully
-static bool gen_test_out(sim::JudgeWorker& jworker, CStringView input,
-	CStringView output, uint64_t time_limit, uint64_t memory_limit,
+static bool gen_test_out(sim::JudgeWorker& jworker, FilePath input,
+	FilePath output, uint64_t time_limit, uint64_t memory_limit,
 	StringView pre_gen_comment)
 {
 	auto tmplog = stdlog(pre_gen_comment);
@@ -277,7 +278,7 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 
 		for (auto gid = begin_gid; gid <= end_gid; ++gid)
 			for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid))
-				callback(concat(prefix, gid, tid));
+				callback(intentionalUnsafeStringView(concat(prefix, gid, tid)));
 	};
 
 	// Collect tests specified in the Sipfile
@@ -545,13 +546,13 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 	// Touch the test files so that sim::Conver sees them
 	static_tests.for_each([&](StringView test_name) {
 		auto test = test_files_locations(test_name);
-		CStringView output = test.second.to_cstr();
+		FilePath output = test.second;
 		putFileContents(output, "");
 	});
 
 	gen_tests.for_each([&](auto&& p) {
 		auto test = test_files_locations(p.name);
-		CStringView input = test.first.to_cstr(), output = test.second.to_cstr();
+		FilePath input = test.first, output = test.second;
 		putFileContents(output, "");
 		if (generate_inputs)
 			putFileContents(input, "");
@@ -578,13 +579,14 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 					throw_assert(static_tests.find(test.name));
 				} else { // Generated test
 					// Generate input
-					FileDescriptor gen_stderr(openUnlinkedTmpFile());
-					if (gen_stderr == -1)
-						THROW("openUnlinkedTmpFile()", errmsg());
+					// FileDescriptor gen_stderr(openUnlinkedTmpFile());
+					// if (gen_stderr == -1)
+					// 	THROW("openUnlinkedTmpFile()", errmsg());
 
 					InplaceBuff<32> generator(hasPrefix(gen_test->generator,
 						"sh:") ? substring(gen_test->generator, 3)
-						: CompilationCache::compile(gen_test->generator));
+						: intentionalUnsafeStringView(
+							CompilationCache::compile(gen_test->generator)));
 
 					auto tmplog = stdlog("generating ", test.name, ".in");
 					tmplog.flush_no_nl();
@@ -595,7 +597,7 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 						concat_tostr(generator, ' ', gen_test->generator_args)
 					}, Spawner::Options(-1,
 						FileDescriptor(test.in, O_WRONLY | O_CREAT | O_TRUNC),
-						gen_stderr));
+						STDERR_FILENO));
 
 					uint64_t runtime = timespec_to_usec(es.cpu_runtime);
 					if (es.si.code == CLD_EXITED and es.si.status == 0) {
@@ -611,17 +613,17 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 
 					tmplog.flush();
 
-					if (lseek(gen_stderr, 0, SEEK_SET) == -1)
-						THROW("lseek()", errmsg());
-					if (blast(gen_stderr, STDERR_FILENO) == -1)
-						THROW("blast()", errmsg());
+					// if (lseek(gen_stderr, 0, SEEK_SET) == -1)
+					// 	THROW("lseek()", errmsg());
+					// if (blast(gen_stderr, STDERR_FILENO) == -1)
+					// 	THROW("blast()", errmsg());
 				}
 			}
 
 			// Gen output
 			generated_successfully &= gen_test_out(jworker, test.in, test.out,
 				test.time_limit, test.memory_limit,
-				concat("generating ", test.name, ".out"));
+				intentionalUnsafeStringView(concat("generating ", test.name, ".out")));
 		}
 	}
 
@@ -667,8 +669,8 @@ int doc(ArgvParser args) {
 			}
 		}
 
-		move(concat("utils/latex/", filename(file).withoutSuffix(3), "pdf").to_cstr(),
-			concat(file.withoutSuffix(3), "pdf").to_cstr());
+		move(concat("utils/latex/", filename(file).withoutSuffix(3), "pdf"),
+			concat(file.withoutSuffix(3), "pdf"));
 	};
 
 	for (StringView file : tex_files)

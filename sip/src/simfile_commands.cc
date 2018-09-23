@@ -3,12 +3,13 @@
 
 #include <fstream>
 #include <simlib/filesystem.h>
+#include <simlib/process.h>
 
 using sim::Simfile;
 using std::string;
 using std::vector;
 
-void replace_var_in_simfile(const Simfile& sf, CStringView simfile_path,
+void replace_var_in_simfile(const Simfile& sf, FilePath simfile_path,
 	StringView simfile_contents, StringView var_name, StringView replacement,
 	bool escape_replacement)
 {
@@ -44,7 +45,7 @@ void replace_var_in_simfile(const Simfile& sf, CStringView simfile_path,
 	}
 }
 
-void replace_var_in_simfile(const Simfile& sf, CStringView simfile_path,
+void replace_var_in_simfile(const Simfile& sf, FilePath simfile_path,
 	StringView simfile_contents, StringView var_name,
 	const vector<string>& replacement)
 {
@@ -96,40 +97,41 @@ int init(ArgvParser args) {
 
 	stdlog("Creating directories...");
 	if ((mkdir_r(dir.to_string()) == -1 && errno != EEXIST)
-		|| (mkdir(concat(dir, "check").to_cstr()) == -1 && errno != EEXIST)
-		|| (mkdir(concat(dir, "doc").to_cstr()) == -1 && errno != EEXIST)
-		|| (mkdir(concat(dir, "in").to_cstr()) == -1 && errno != EEXIST)
-		|| (mkdir(concat(dir, "out").to_cstr()) == -1 && errno != EEXIST)
-		|| (mkdir(concat(dir, "prog").to_cstr()) == -1 && errno != EEXIST)
-		|| (mkdir(concat(dir, "utils").to_cstr()) == -1 && errno != EEXIST))
+		|| (mkdir(concat(dir, "check")) == -1 && errno != EEXIST)
+		|| (mkdir(concat(dir, "doc")) == -1 && errno != EEXIST)
+		|| (mkdir(concat(dir, "in")) == -1 && errno != EEXIST)
+		|| (mkdir(concat(dir, "out")) == -1 && errno != EEXIST)
+		|| (mkdir(concat(dir, "prog")) == -1 && errno != EEXIST)
+		|| (mkdir(concat(dir, "utils")) == -1 && errno != EEXIST))
 	{
 		THROW("mkdir()", errmsg());
 	}
 
-	StringView dir_filename = filename(substring(dir, 0, dir.size - 1));
+	auto absoluted_dir = abspath(dir, getCWD().to_string());
+	StringView dir_filename = filename(StringView(absoluted_dir).withoutSuffix(1));
 
 	Simfile sf;
 	auto simfile_path = concat(dir, "Simfile");
 	string simfile_contents;
-	if (access(simfile_path.to_cstr(), F_OK) == 0) {
-		simfile_contents = getFileContents(simfile_path.to_cstr());
+	if (access(simfile_path, F_OK) == 0) {
+		simfile_contents = getFileContents(simfile_path);
 		sf = Simfile(simfile_contents);
 
 		auto replace_name_in_simfile = [&](StringView replacement) {
 			stdlog("Overwriting the problem name with: ", replacement);
-			replace_var_in_simfile(sf, simfile_path.to_cstr(), simfile_contents,
+			replace_var_in_simfile(sf, simfile_path, simfile_contents,
 				"name", replacement);
 		};
 
-		if (args.size() > 0)
+		if (args.size() > 0) { // Name to set was provided as command line parameter
 			replace_name_in_simfile(args.extract_next());
-		else {
+		} else {
 			try { sf.loadName(); } catch (const std::exception& e) {
 				stdlog("\033[1;35mwarning\033[m: ignoring: ", e.what());
 
-				if (not isOneOf(dir_filename, "", ".", "..")) {
+				if (not dir_filename.empty()) {
 					replace_name_in_simfile(dir_filename);
-				} else {
+				} else { // iff absolute path of dir is /
 					errlog("Error: problem name was neither found in Simfile"
 						", nor provided as a command-line argument"
 						" nor deduced from the provided package path");
@@ -138,20 +140,22 @@ int init(ArgvParser args) {
 			}
 		}
 	} else if (args.size() > 0) {
-		putFileContents(simfile_path.to_cstr(), concat("name: ",
-			ConfigFile::escapeString(args.extract_next()), '\n'));
-	} else if (not isOneOf(dir_filename, "", ".", "..")) {
-		putFileContents(simfile_path.to_cstr(), concat("name: ",
-			ConfigFile::escapeString(dir_filename), '\n'));
-	} else {
+		stdlog("name = ", args.extract_next());
+		putFileContents(simfile_path, intentionalUnsafeStringView(concat("name: ",
+			ConfigFile::escapeString(args.extract_next()), '\n')));
+	} else if (not dir_filename.empty()) {
+		stdlog("name = ", dir_filename);
+		putFileContents(simfile_path, intentionalUnsafeStringView(concat("name: ",
+			ConfigFile::escapeString(dir_filename), '\n')));
+	} else { // iff absolute path of dir is /
 		errlog("Error: problem name was neither provided as a command-line"
 			" argument nor deduced from the provided package path");
 		return 1;
 	}
 
 	auto sipfile_path = concat(dir, "Sipfile");
-	if (access(sipfile_path.to_cstr(), F_OK) != 0)
-		putFileContents(sipfile_path.to_cstr(),
+	if (access(sipfile_path, F_OK) != 0)
+		putFileContents(sipfile_path,
 			"default_time_limit: 5\n"
 			"static: [\n"
 				"\t# Here provide tests that are \"hard-coded\"\n"

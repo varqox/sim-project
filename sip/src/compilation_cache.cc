@@ -19,7 +19,7 @@ decltype(concat()) CompilationCache::compile(StringView source) {
 	auto tmplog = stdlog("Compiling ", source);
 	tmplog.flush_no_nl();
 
-	if (jworker.compileSolution(concat(source).to_cstr(),
+	if (jworker.compileSolution(concat(source),
 		sim::filename_to_lang(source), COMPILATION_TIME_LIMIT,
 		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 	{
@@ -32,16 +32,16 @@ decltype(concat()) CompilationCache::compile(StringView source) {
 	tmplog(" done.");
 	auto cached_exec = cached_path(source);
 	create_subdirectories(cached_exec);
-	jworker.saveCompiledSolution(cached_exec.to_cstr());
+	jworker.saveCompiledSolution(cached_exec);
 	return cached_exec;
 }
 
 void CompilationCache::load_checker(sim::JudgeWorker& jworker, StringView checker) {
 	STACK_UNWINDING_MARK;
-	jworker.loadCompiledChecker(compile(checker).to_cstr());
+	jworker.loadCompiledChecker(compile(checker));
 }
 
 void CompilationCache::load_solution(sim::JudgeWorker& jworker, StringView solution) {
 	STACK_UNWINDING_MARK;
-	jworker.loadCompiledSolution(compile(solution).to_cstr());
+	jworker.loadCompiledSolution(compile(solution));
 }
