@@ -55,11 +55,12 @@ public:
 
 	int clearBindings() noexcept { return sqlite3_clear_bindings(stmt); }
 
-	int finalize() noexcept {
-		int rc = sqlite3_reset(stmt);
-		stmt = nullptr;
-		return rc;
-	}
+	// TODO: this is buggy, no time now to fix it
+	// int finalize() noexcept {
+	// 	int rc = sqlite3_reset(stmt);
+	// 	stmt = nullptr;
+	// 	return rc;
+	// }
 
 	// Bind data (throwing)
 	void bindNull(int iCol) {

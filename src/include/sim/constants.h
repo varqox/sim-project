@@ -280,7 +280,8 @@ enum class JobType : uint8_t {
 	DELETE_USER = 9,
 	DELETE_CONTEST = 10,
 	DELETE_CONTEST_ROUND = 11,
-	DELETE_CONTEST_PROBLEM = 12
+	DELETE_CONTEST_PROBLEM = 12,
+	RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION = 13,
 };
 
 #define JTYPE_VOID_STR "0"
@@ -348,6 +349,11 @@ static_assert(meta::equal(JTYPE_DELETE_CONTEST_PROBLEM_STR,
 	meta::ToString<(int)JobType::DELETE_CONTEST_PROBLEM>::value),
 	"Update the above #define");
 
+#define JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR "13"
+static_assert(meta::equal(JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR,
+	meta::ToString<(int)JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
@@ -366,6 +372,8 @@ constexpr inline const char* toString(JobType x) {
 	case JT::DELETE_CONTEST: return "DELETE_CONTEST";
 	case JT::DELETE_CONTEST_ROUND: return "DELETE_CONTEST_ROUND";
 	case JT::DELETE_CONTEST_PROBLEM: return "DELETE_CONTEST_PROBLEM";
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+		return "RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION";
 	}
 	return "Unknown";
 }
@@ -379,6 +387,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return true;
 	case JT::EDIT_PROBLEM: return true;
 	case JT::DELETE_PROBLEM: return true;
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
 	case JT::JUDGE_SUBMISSION: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
 	case JT::DELETE_USER: return false;
@@ -405,6 +414,7 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::DELETE_CONTEST: return false;
 	case JT::DELETE_CONTEST_ROUND: return false;
 	case JT::DELETE_CONTEST_PROBLEM: return false;
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return false;
 	case JT::VOID: return false;
 	}
 	return false;
@@ -421,6 +431,7 @@ constexpr inline uint priority(JobType x) {
 	case JT::DELETE_CONTEST_ROUND: return 30;
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
 	case JT::EDIT_PROBLEM: return 20;
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::ADD_PROBLEM: return 10;

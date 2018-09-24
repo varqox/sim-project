@@ -199,6 +199,10 @@ public:
 					queue_job(judge_jobs, aux_id, true);
 					break;
 
+				case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+					queue_job(judge_jobs, aux_id, true);
+					break;
+
 				// Problem job
 				case JT::REUPLOAD_PROBLEM:
 				case JT::EDIT_PROBLEM:
@@ -736,6 +740,7 @@ static void process_local_job(WorkersPool::NextJob job) {
 		case JT::JUDGE_SUBMISSION:
 		case JT::ADD_JUDGE_MODEL_SOLUTION:
 		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
+		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 			THROW("Unexpected local job type: ", toString(JT(jtype)));
 		}
 
@@ -800,15 +805,21 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		using JT = JobType;
 		switch (jtype) {
 		case JT::JUDGE_SUBMISSION:
-			judgeSubmission(job.id, aux_id, added);
+			judge_submission(job.id, aux_id, added);
 			break;
 
 		case JT::ADD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job.id, JobType::ADD_PROBLEM);
+			problem_add_or_reupload_jugde_model_solution(job.id,
+				JobType::ADD_PROBLEM);
 			break;
 
 		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			judgeModelSolution(job.id, JobType::REUPLOAD_PROBLEM);
+			problem_add_or_reupload_jugde_model_solution(job.id,
+				JobType::REUPLOAD_PROBLEM);
+			break;
+
+		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+			reset_problem_time_limits_using_model_solution(job.id, aux_id);
 			break;
 
 		case JT::VOID:

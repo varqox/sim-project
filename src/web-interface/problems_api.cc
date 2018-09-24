@@ -207,6 +207,8 @@ void Sim::api_problems() {
 		if (uint(perms & PERM::REUPLOAD))
 			append('R');
 		if (uint(perms & PERM::REJUDGE_ALL))
+			append('L');
+		if (uint(perms & PERM::RESET_TIME_LIMITS))
 			append('J');
 		if (uint(perms & PERM::EDIT_TAGS))
 			append('T');
@@ -302,6 +304,8 @@ void Sim::api_problem() {
 		return api_problem_download(plabel);
 	else if (next_arg == "rejudge_all_submissions")
 		return api_problem_rejudge_all_submissions();
+	else if (next_arg == "reset_time_limits")
+		return api_problem_reset_time_limits();
 	else if (next_arg == "reupload")
 		return api_problem_reupload();
 	else if (next_arg == "edit")
@@ -475,6 +479,26 @@ void Sim::api_problem_rejudge_all_submissions() {
 		mysql_date(), jobs::dumpString(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
+}
+
+void Sim::api_problem_reset_time_limits() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::RESET_TIME_LIMITS))
+		return api_error403();
+
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
+			JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR
+			", ?, ?, '', '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+		mysql_date(), problems_pid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
 }
 
 void Sim::api_problem_delete() {

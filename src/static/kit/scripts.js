@@ -1062,6 +1062,44 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 		}
 	));
 }
+function confirm_to_job(elem, title, api_url, message_html, confirm_text) {
+	var as_modal = elem.closest('.modal').length !== 0;
+	elem.append(ajax_form(title, api_url,
+		$('<label>', {
+			style: 'margin: 0 0 20px; text-align: center; max-width: 420px',
+			html: message_html
+		}).add(Form.field_group('Your password', {
+			type: 'password',
+			name: 'password',
+			size: 24,
+		})).add('<div>', {
+			html: $('<input>', {
+				class: 'btn red',
+				type: 'submit',
+				value: confirm_text
+			}).add('<a>', {
+				class: 'btn',
+				href: (as_modal ? undefined : '/'),
+				text: 'Go back',
+				click: function() {
+					var modal = $(this).closest('.modal');
+					if (modal.length === 0)
+						history.back();
+					else
+						close_modal(modal);
+				}
+			})
+		}), function(resp, loader_parent) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Deletion has been scheduled.');
+				view_job(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/jobs/' + resp;
+			}
+		}
+	));
+}
 
 /* ================================= Lister ================================= */
 function Lister(elem) {
@@ -1561,6 +1599,11 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 	if (problem_view && problem.actions.indexOf('D') !== -1)
 		res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
 			'btn-small red', delete_problem.bind(null, true, problem.id)));
+
+	if (problem_view && problem.actions.indexOf('L') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/reset_time_limits',
+			'Reset time limits', 'btn-small blue',
+			reset_problem_time_limits.bind(null, true, problem.id)));
 
 	return res;
 };
@@ -3189,6 +3232,60 @@ function rejudge_problem_submissions(problem_id, problem_name) {
 		}), 'Rejudge all', 'btn-small blue',
 		'/api/problem/' + problem_id + '/rejudge_all_submissions',
 		'The rejudge jobs has been scheduled.', 'No, go back', true);
+}
+function reset_problem_time_limits(as_modal, problem_id) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+				status: '404',
+				statusText: 'Not Found'
+			});
+
+		var problem = data[0];
+		var actions = problem.actions;
+		if (actions.indexOf('L') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		this.append(ajax_form('Reset problem time limits using model solution', '/api/problem/' + problem_id + '/reset_time_limits',
+			$('<p>', {
+			style: 'margin: 0 0 12px; text-align: center',
+			html: [
+				'Do you really want to reset problem ',
+				a_view_button('/p/' + problem_id, problem.name, undefined, view_problem.bind(null, true, problem_id)),
+				' time limits using the model solution?'
+			]
+		}).add('<center>', {
+			style: 'margin: 12px auto 0',
+			html: $('<input>', {
+				class: 'btn-small blue',
+				type: 'submit',
+				value: 'Reset time limits'
+			}).add('<a>', {
+				class: 'btn-small',
+				href: (as_modal ? undefined : '/'),
+				text: 'Go back',
+				click: function() {
+					var modal = $(this).closest('.modal');
+					if (modal.length === 0)
+						history.back();
+					else
+						close_modal(modal);
+				}
+			})
+		}), function(resp, loader_parent) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Reseting time limits has been scheduled.');
+				view_job(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/jobs/' + resp;
+			}
+		}
+		));
+	}, '/p/' + problem_id + '/reset_time_limits');
 }
 function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
