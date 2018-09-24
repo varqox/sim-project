@@ -9,14 +9,16 @@ void Sim::file_handle() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "edit") {
-		page_template(concat("Edit file ", file_id),
-			"body{padding-left:20px}");
+		page_template(intentionalUnsafeStringView(
+			concat("Edit file ", file_id)),
+				"body{padding-left:20px}");
 		append("<script>edit_file(false, '", file_id, "',"
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete file ", file_id),
-			"body{padding-left:20px}");
+		page_template(intentionalUnsafeStringView(
+			concat("Delete file ", file_id)),
+				"body{padding-left:20px}");
 		append("<script>delete_file(false, '", file_id, "',"
 			" window.location.hash);</script>");
 

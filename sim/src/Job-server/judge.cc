@@ -2,10 +2,10 @@
 
 #include <sim/jobs.h>
 #include <sim/submission.h>
+#include <simlib/libarchive_zip.h>
 #include <simlib/sim/conver.h>
 #include <simlib/sim/problem_package.h>
 #include <simlib/time.h>
-#include <simlib/zip.h>
 
 using sim::JudgeReport;
 using sim::JudgeWorker;
@@ -79,11 +79,11 @@ void judge_submission(uint64_t job_id, StringView submission_id,
 		tmplog.flush_no_nl();
 
 		auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
-		auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+		auto pkg_master_dir = sim::zip_package_master_dir(package_path);
 
 		jworker.loadPackage(package_path.to_string(),
-			extract_file_from_zip(package_path.to_cstr(),
-				concat(pkg_master_dir, "Simfile").to_cstr())
+			extract_file_from_zip(package_path,
+				intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")))
 		);
 		tmplog(" done.");
 	}
@@ -163,10 +163,9 @@ void judge_submission(uint64_t job_id, StringView submission_id,
 		auto tmplog = judge_log("Compiling solution...");
 		tmplog.flush_no_nl();
 
-		if (jworker.compileSolution(
-			concat("solutions/", submission_id).to_cstr(), to_sol_lang(lang),
-			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
-			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		if (jworker.compileSolution(concat("solutions/", submission_id),
+			to_sol_lang(lang), SOLUTION_COMPILATION_TIME_LIMIT,
+			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			tmplog(" failed.");
 
@@ -384,10 +383,10 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	};
 
 	auto package_path = concat<PATH_MAX>("jobs_files/", job_id, ".zip.prep");
-	string pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+	string pkg_master_dir = sim::zip_package_master_dir(package_path);
 
-	string simfile_str = extract_file_from_zip(package_path.to_cstr(),
-		concat(pkg_master_dir, "Simfile").to_cstr());
+	string simfile_str = extract_file_from_zip(package_path,
+		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile simfile {simfile_str};
 	simfile.loadAll();
@@ -416,8 +415,10 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	// Compile the model solution
 	{
 		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		writeAll(sol_src, extract_file_from_zip(package_path.to_cstr(),
-			concat(pkg_master_dir, simfile.solutions[0])));
+		writeAll(sol_src, intentionalUnsafeStringView(
+			extract_file_from_zip(package_path,
+			intentionalUnsafeStringView(
+				concat(pkg_master_dir, simfile.solutions[0])))));
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
@@ -454,8 +455,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	}
 
 	// Put the Simfile in the package
-	update_add_data_to_zip(simfile.dump(),
-		concat(pkg_master_dir, "Simfile").to_cstr(), package_path.to_cstr());
+	update_add_data_to_zip(intentionalUnsafeStringView(simfile.dump()),
+		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")),
+		package_path);
 
 	auto stmt = mysql.prepare("UPDATE jobs"
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
@@ -486,10 +488,10 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	};
 
 	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
-	string pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+	string pkg_master_dir = sim::zip_package_master_dir(package_path);
 
-	string simfile_str = extract_file_from_zip(package_path.to_cstr(),
-		concat(pkg_master_dir, "Simfile").to_cstr());
+	string simfile_str = extract_file_from_zip(package_path,
+		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile simfile {simfile_str};
 	simfile.loadAll();
@@ -518,8 +520,9 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	// Compile the model solution
 	{
 		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		writeAll(sol_src, extract_file_from_zip(package_path.to_cstr(),
-			concat(pkg_master_dir, simfile.solutions[0])));
+		writeAll(sol_src, intentionalUnsafeStringView(extract_file_from_zip(package_path,
+			intentionalUnsafeStringView(
+				concat(pkg_master_dir, simfile.solutions[0])))));
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
@@ -557,8 +560,9 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	}
 
 	// Put the Simfile in the package
-	update_add_data_to_zip(simfile.dump(),
-		concat(pkg_master_dir, "Simfile").to_cstr(), package_path.to_cstr());
+	update_add_data_to_zip(intentionalUnsafeStringView(simfile.dump()),
+		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")),
+		package_path);
 
 	auto stmt = mysql.prepare("UPDATE problems SET simfile=? WHERE id=?");
 	stmt.bindAndExecute(simfile.dump(), problem_id);

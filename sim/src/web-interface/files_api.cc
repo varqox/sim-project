@@ -147,8 +147,8 @@ void Sim::api_files() {
 		"Update the above #define");
 
 	// Execute query
-	auto res = mysql.query(concat(query,
-		" ORDER BY f.id DESC LIMIT " FILES_LIMIT_PER_QUERY_STR));
+	auto res = mysql.query(intentionalUnsafeStringView(concat(query,
+		" ORDER BY f.id DESC LIMIT " FILES_LIMIT_PER_QUERY_STR)));
 
 	append_column_names();
 
@@ -293,7 +293,7 @@ void Sim::api_file_add() {
 	} while (stmt.affected_rows() == 0);
 
 	// Move file
-	if (move(file_tmp_path, concat("files/", file_id).to_cstr()))
+	if (move(file_tmp_path, concat("files/", file_id)))
 		THROW("move()", errmsg());
 
 	append(file_id);
@@ -339,7 +339,7 @@ void Sim::api_file_edit() {
 	stmt.bindAndExecute(name, description, file_exists, file_size, mysql_date(), files_id);
 
 	// Move file
-	if (file_exists and move(file_tmp_path, concat("files/", files_id).to_cstr()))
+	if (file_exists and move(file_tmp_path, concat("files/", files_id)))
 		THROW("move()", errmsg());
 }
 

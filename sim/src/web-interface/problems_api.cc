@@ -3,8 +3,8 @@
 #include <sim/jobs.h>
 #include <simlib/config_file.h>
 #include <simlib/filesystem.h>
+#include <simlib/libarchive_zip.h>
 #include <simlib/sim/problem_package.h>
-#include <simlib/zip.h>
 
 static constexpr const char* proiblem_type_str(ProblemType type) noexcept {
 	using PT = ProblemType;
@@ -77,7 +77,8 @@ void Sim::api_problems() {
 			else if (arg_id == "CON")
 				qwhere.append(" AND p.type=" PTYPE_CONTEST_ONLY_STR);
 			else
-				return api_error400(concat("Invalid problem type: ", arg_id));
+				return api_error400(intentionalUnsafeStringView(
+					concat("Invalid problem type: ", arg_id)));
 
 			mask |= PTYPE_COND;
 
@@ -383,7 +384,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
 	auto job_id = stmt.insert_id();
 	// Make the package file the job's file
-	if (move(package_file, concat("jobs_files/", job_id, ".zip").to_cstr()))
+	if (move(package_file, concat("jobs_files/", job_id, ".zip")))
 		THROW("move() failed", errmsg());
 
 	// Activate the job
@@ -430,14 +431,15 @@ void Sim::api_statement_impl(StringView problem_id, StringView problem_label,
 
 	resp.headers["Content-Disposition"] =
 		concat_tostr("inline; filename=",
-			http::quote(concat(problem_label, ext)));
+			http::quote(intentionalUnsafeStringView(
+				concat(problem_label, ext))));
 
 	// TODO: add some cache system for the statements
 
 	auto package_zip = concat("problems/", problem_id, ".zip");
-	resp.content = extract_file_from_zip(package_zip.to_cstr(), concat(
-		sim::zip_package_master_dir(package_zip.to_cstr()), statement)
-			.to_cstr());
+	resp.content = extract_file_from_zip(package_zip,
+		intentionalUnsafeStringView(
+			concat(sim::zip_package_master_dir(package_zip), statement)));
 }
 
 void Sim::api_problem_statement(StringView problem_label, StringView simfile) {

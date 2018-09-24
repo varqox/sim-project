@@ -122,11 +122,9 @@ int main(int argc, char **argv) {
 	MySQL::Connection conn;
 	try {
 		// Get connection
-		sqlite_db = SQLite::Connection(
-			StringBuff<PATH_MAX>{argv[1], "/" SQLITE_DB_FILE},
+		sqlite_db = SQLite::Connection(concat(argv[1], "/" SQLITE_DB_FILE),
 			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
-		conn = MySQL::make_conn_with_credential_file(
-			concat(argv[1], "/.db.config").to_cstr());
+		conn = MySQL::make_conn_with_credential_file(concat(argv[1], "/.db.config"));
 
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
@@ -136,7 +134,8 @@ int main(int argc, char **argv) {
 	if (DROP_TABLES) {
 		try {
 			for (auto&& table : tables)
-				conn.update(concat("DROP TABLE IF EXISTS `", table, '`'));
+				conn.update(intentionalUnsafeStringView(
+					concat("DROP TABLE IF EXISTS `", table, '`')));
 
 			if (ONLY_DROP_TABLES)
 				return 0;
@@ -149,7 +148,7 @@ int main(int argc, char **argv) {
 
 	TryToCreateTable try_to_create_table(conn);
 
-	try_to_create_table("users",
+	try_to_create_table("users", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `users` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`username` VARBINARY(", USERNAME_MAX_LEN, ") NOT NULL,"
@@ -162,7 +161,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"UNIQUE KEY (username),"
 			"KEY(type, id DESC)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"),
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")),
 		[&] {
 			// Add default user sim with password sim
 			char salt_bin[SALT_LEN >> 1];
@@ -174,10 +173,11 @@ int main(int argc, char **argv) {
 					"salt, password, type) "
 				"VALUES (" SIM_ROOT_UID ", 'sim', 'sim', 'sim', 'sim@sim', ?, "
 					"?, 0)");
-			stmt.bindAndExecute(salt, sha3_512(salt + "sim"));
+			stmt.bindAndExecute(salt,
+				sha3_512(intentionalUnsafeStringView(salt + "sim")));
 		});
 
-	try_to_create_table("session",
+	try_to_create_table("session", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `session` ("
 			"`id` BINARY(", SESSION_ID_LEN, ") NOT NULL,"
 			"`csrf_token` BINARY(", SESSION_CSRF_TOKEN_LEN, ") NOT NULL,"
@@ -189,9 +189,9 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (user_id),"
 			"KEY (expires)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"));
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;")));
 
-	try_to_create_table("problems",
+	try_to_create_table("problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`type` TINYINT NOT NULL,"
@@ -204,27 +204,27 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (owner, id),"
 			"KEY (type, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
-	try_to_create_table("problem_tags",
+	try_to_create_table("problem_tags", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `problem_tags` ("
 			"`problem_id` int unsigned NOT NULL,"
 			"`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
 			"`hidden` BOOLEAN NOT NULL,"
 			"PRIMARY KEY (problem_id, hidden, tag),"
 			"KEY (tag, problem_id)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
-	try_to_create_table("contests",
+	try_to_create_table("contests", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contests` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`name` VARBINARY(", CONTEST_NAME_MAX_LEN, ") NOT NULL,"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"PRIMARY KEY (id),"
 			"KEY (is_public, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
-	try_to_create_table("contest_rounds",
+	try_to_create_table("contest_rounds", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`contest_id` int unsigned NOT NULL,"
@@ -238,9 +238,9 @@ int main(int argc, char **argv) {
 			"KEY (contest_id, ranking_exposure),"
 			"KEY (contest_id, begins),"
 			"UNIQUE (contest_id, item)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
-	try_to_create_table("contest_problems",
+	try_to_create_table("contest_problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`contest_round_id` int unsigned NOT NULL,"
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
 			"UNIQUE (contest_round_id, item),"
 			"KEY (contest_id),"
 			"KEY (problem_id, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("contest_users",
 		"CREATE TABLE IF NOT EXISTS `contest_users` ("
@@ -331,7 +331,7 @@ int main(int argc, char **argv) {
 			"KEY initial_final3 (final_candidate, owner, contest_problem_id, score, initial_status, id)"
 		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
-	try_to_create_table("jobs",
+	try_to_create_table("jobs", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `jobs` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`creator` int unsigned NULL,"
@@ -349,9 +349,9 @@ int main(int argc, char **argv) {
 			"KEY (creator, id DESC),"
 			"KEY (creator, type, aux_id, id DESC),"
 			"KEY (creator, aux_id, id DESC)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
-	try_to_create_table("files",
+	try_to_create_table("files", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
@@ -363,9 +363,9 @@ int main(int argc, char **argv) {
 			"`creator` int unsigned NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, modified)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
-	try_to_create_table("contest_entry_tokens",
+	try_to_create_table("contest_entry_tokens", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
 			"`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
 			"`contest_id` int unsigned NULL,"
@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (token),"
 			"UNIQUE KEY (contest_id),"
 			"UNIQUE KEY (short_token)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
+		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	// Create SQLite tables
 	try {

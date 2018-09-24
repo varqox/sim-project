@@ -231,7 +231,7 @@ void delete_submission(MySQL::Connection& mysql, StringView submission_id) {
 	auto stmt = mysql.prepare("DELETE FROM submissions WHERE id=?");
 	stmt.bindAndExecute(submission_id);
 
-	(void)remove(concat("solutions/", submission_id).to_cstr());
+	(void)remove(concat("solutions/", submission_id));
 }
 
 } // namespace submission

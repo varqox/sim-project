@@ -195,7 +195,8 @@ void Sim::api_contest_users() {
 				else if (arg_id == "C")
 					qwhere.append(" AND cu.mode=" CU_MODE_CONTESTANT_STR);
 				else
-					return api_error400(concat("Invalid user mode: ", arg_id));
+					return api_error400(intentionalUnsafeStringView(
+						concat("Invalid user mode: ", arg_id)));
 
 			// Next conditions require arg_id to be a valid ID
 			} else if (not isDigit(arg_id)) {
@@ -240,8 +241,8 @@ void Sim::api_contest_users() {
 		"Update the above #define");
 
 	// Execute query
-	auto res = mysql.query(concat(qfields, qwhere,
-		" ORDER BY cu.user_id DESC LIMIT " USERS_LIMIT_PER_QUERY_STR));
+	auto res = mysql.query(intentionalUnsafeStringView(concat(qfields, qwhere,
+		" ORDER BY cu.user_id DESC LIMIT " USERS_LIMIT_PER_QUERY_STR)));
 
 	append_column_names();
 

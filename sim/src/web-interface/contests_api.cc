@@ -6,7 +6,7 @@
 using SFSM = SubmissionFinalSelectingMethod;
 
 inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
-	InfDatetime full_results, StringView curr_mysql_date,
+	InfDatetime full_results, const decltype(mysql_date())& curr_mysql_date,
 	Optional<SubmissionStatus> full_status,
 	Optional<SubmissionStatus> initial_status)
 {
@@ -122,8 +122,8 @@ void Sim::api_contests() {
 			else if (arg_id == "N")
 				qwhere_append("c.is_public=0");
 			else
-				return api_error400(concat("Invalid is_public condition: ",
-					arg_id));
+				return api_error400(intentionalUnsafeStringView(
+					concat("Invalid is_public condition: ", arg_id)));
 
 			mask |= PUBLIC_COND;
 
@@ -428,8 +428,11 @@ void Sim::api_contest_round() {
 	InfDatetime full_results(full_results_str);
 	InfDatetime ends(ends_str);
 
-	if (begins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
+	if (begins > intentionalUnsafeStringView(mysql_date()) and
+		uint(~contests_perms & PERM::ADMIN))
+	{
 		return api_error403(); // Round has not begun yet
+	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "ranking")
@@ -595,8 +598,11 @@ void Sim::api_contest_problem() {
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403(); // Could not participate
 
-	if (rbegins > mysql_date() and uint(~contests_perms & PERM::ADMIN))
+	if (rbegins > intentionalUnsafeStringView(mysql_date()) and
+		uint(~contests_perms & PERM::ADMIN))
+	{
 		return api_error403(); // Round has not begun yet
+	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "statement")
@@ -897,8 +903,8 @@ void Sim::api_contest_problem_add() {
 	InplaceBuff<PROBLEM_NAME_MAX_LEN> pname;
 	stmt.res_bind_all(powner, ptype, pname);
 	if (not stmt.next())
-		return api_error404(concat("No problem was found with ID = ",
-			problem_id));
+		return api_error404(intentionalUnsafeStringView(
+			concat("No problem was found with ID = ", problem_id)));
 
 	auto pperms = problems_get_permissions(powner, ptype);
 	if (uint(~pperms & ProblemPermissions::VIEW))
@@ -1073,10 +1079,11 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 		return api_error403();
 
 	// Gather submissions owners
-	auto stmt = mysql.prepare(concat("SELECT u.id, u.first_name, u.last_name"
+	auto stmt = mysql.prepare(intentionalUnsafeStringView(
+		concat("SELECT u.id, u.first_name, u.last_name"
 		" FROM submissions s JOIN users u ON s.owner=u.id"
 		" WHERE s.", submissions_query_id_name, "=? AND s.contest_final=1"
-		" GROUP BY (u.id) ORDER BY u.id"));
+		" GROUP BY (u.id) ORDER BY u.id")));
 	stmt.bindAndExecute(query_id);
 
 	uint64_t id;
@@ -1097,23 +1104,25 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 	decltype(mysql_date()) curr_date;
 
 	if (uint(contests_perms & PERM::ADMIN)) {
-		stmt = mysql.prepare(concat("SELECT id, owner, contest_round_id,"
+		stmt = mysql.prepare(intentionalUnsafeStringView(
+			concat("SELECT id, owner, contest_round_id,"
 				" contest_problem_id, initial_status, full_status, score"
 				" FROM submissions "
 			" WHERE ", submissions_query_id_name, "=? AND contest_final=1"
-			" ORDER BY owner"));
+			" ORDER BY owner")));
 		stmt.bindAndExecute(query_id);
 		stmt.res_bind_all(id, owner, crid, cpid, initial_status, full_status,
 			score);
 
 	} else {
-		stmt = mysql.prepare(concat("SELECT s.id, s.owner, s.contest_round_id,"
+		stmt = mysql.prepare(intentionalUnsafeStringView(
+			concat("SELECT s.id, s.owner, s.contest_round_id,"
 				" s.contest_problem_id, s.initial_status, s.full_status, s.score"
 			" FROM submissions s JOIN contest_rounds cr ON"
 				" cr.id=s.contest_round_id AND cr.begins<=? AND"
 				" cr.full_results<=? AND cr.ranking_exposure<=?"
 			" WHERE s.", submissions_query_id_name, "=? AND s.contest_final=1"
-			" ORDER BY s.owner"));
+			" ORDER BY s.owner")));
 		curr_date = mysql_date();
 		stmt.bindAndExecute(curr_date, curr_date, curr_date, query_id);
 		stmt.res_bind_all(id, owner, crid, cpid, initial_status, full_status,

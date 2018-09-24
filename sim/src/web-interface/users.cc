@@ -123,7 +123,9 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 	stmt.res_bind_all(salt, passwd_hash);
 	throw_assert(stmt.next());
 
-	if (not slowEqual(sha3_512(concat(salt, request.form_data.get(password_field_name))),
+	if (not slowEqual(intentionalUnsafeStringView(sha3_512(
+			intentionalUnsafeStringView(
+				concat(salt, request.form_data.get(password_field_name))))),
 		passwd_hash))
 	{
 		return false;
@@ -162,7 +164,9 @@ void Sim::login() {
 			stmt.res_bind_all(uid, salt, passwd_hash);
 
 			if (stmt.next() and
-				slowEqual(sha3_512(concat(salt, password)), passwd_hash))
+				slowEqual(intentionalUnsafeStringView(sha3_512(
+						intentionalUnsafeStringView(concat(salt, password)))),
+					passwd_hash))
 			{
 				// Delete old session
 				if (session_is_open)
@@ -261,7 +265,7 @@ void Sim::sign_up() {
 				"VALUES(?, ?, ?, ?, ?, ?)");
 
 			stmt.bindAndExecute(username, first_name, last_name, email, salt,
-				sha3_512(concat(salt, pass1)));
+				sha3_512(intentionalUnsafeStringView(concat(salt, pass1))));
 
 			// User account successfully created
 			if (stmt.affected_rows() == 1) {
@@ -360,20 +364,24 @@ void Sim::users_user() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("User ", users_uid), "body{padding-left:20px}");
+		page_template(intentionalUnsafeStringView(concat("User ", users_uid)),
+			"body{padding-left:20px}");
 		append("<script>view_user(false, ", users_uid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit user ", users_uid));
+		page_template(intentionalUnsafeStringView(
+			concat("Edit user ", users_uid)));
 		append("<script>edit_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete user ", users_uid));
+		page_template(intentionalUnsafeStringView(
+			concat("Delete user ", users_uid)));
 		append("<script>delete_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "change-password") {
-		page_template(concat("Change password of the user ", users_uid));
+		page_template(intentionalUnsafeStringView(
+			concat("Change password of the user ", users_uid)));
 		append("<script>change_user_password(false, ", users_uid,
 			");</script>");
 

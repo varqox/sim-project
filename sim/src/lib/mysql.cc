@@ -3,7 +3,7 @@
 
 namespace MySQL {
 
-Connection make_conn_with_credential_file(CStringView filename) {
+Connection make_conn_with_credential_file(FilePath filename) {
 	ConfigFile cf;
 	cf.addVars("host", "user", "password", "db");
 	cf.loadConfigFromFile(filename);

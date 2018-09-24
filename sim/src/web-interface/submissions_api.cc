@@ -172,8 +172,8 @@ void Sim::api_submissions() {
 				} else if (arg_id == "S") {
 					qwhere.append(" AND s.type=" STYPE_PROBLEM_SOLUTION_STR);
 				} else {
-					return api_error400(concat("Invalid submission type: ",
-						arg_id));
+					return api_error400(intentionalUnsafeStringView(
+						concat("Invalid submission type: ", arg_id)));
 				}
 
 			// Next conditions require arg_id to be a valid ID
@@ -336,8 +336,9 @@ void Sim::api_submissions() {
 		"Update the above #define");
 
 	// Execute query
-	auto res = mysql.query(concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT "
-		SUBMISSIONS_LIMIT_PER_QUERY_STR));
+	auto res = mysql.query(intentionalUnsafeStringView(
+		concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT "
+		SUBMISSIONS_LIMIT_PER_QUERY_STR)));
 
 	append_column_names();
 
@@ -698,11 +699,11 @@ void Sim::api_submission_add() {
 	// File
 	auto solution_dest = concat<64>("solutions/", submission_id);
 	if (code.empty()) {
-		if (move(solution_tmp_path, solution_dest.to_cstr()))
+		if (move(solution_tmp_path, solution_dest))
 			THROW("move() failed", errmsg());
 	// Code
 	} else
-		putFileContents(solution_dest.to_cstr(), code);
+		putFileContents(solution_dest, code);
 
 	// Create a job to judge the submission
 	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
@@ -728,7 +729,7 @@ void Sim::api_submission_source() {
 		return api_error403();
 
 	append(cpp_syntax_highlighter(getFileContents(
-		concat("solutions/", submissions_sid).to_cstr())));
+		concat("solutions/", submissions_sid))));
 }
 
 void Sim::api_submission_download() {
@@ -793,8 +794,9 @@ void Sim::api_submission_change_type() {
 		mysql.update("UNLOCK TABLES");
 	});
 
-	auto res = mysql.query(concat("SELECT full_status, owner, problem_id,"
-		" contest_problem_id FROM submissions WHERE id=", submissions_sid));
+	auto res = mysql.query(intentionalUnsafeStringView(
+		concat("SELECT full_status, owner, problem_id, contest_problem_id"
+			" FROM submissions WHERE id=", submissions_sid)));
 	throw_assert(res.next());
 
 	enum ColumnIdx { FULL_STATUS, OWNER, PID, CPID };
@@ -839,8 +841,9 @@ void Sim::api_submission_delete() {
 		mysql.update("UNLOCK TABLES");
 	});
 
-	auto res = mysql.query(concat("SELECT owner, problem_id, contest_problem_id"
-		" FROM submissions WHERE id=", submissions_sid));
+	auto res = mysql.query(intentionalUnsafeStringView(
+		concat("SELECT owner, problem_id, contest_problem_id"
+		" FROM submissions WHERE id=", submissions_sid)));
 	throw_assert(res.next());
 
 	SignalBlocker sb; // This part shouldn't be interrupted

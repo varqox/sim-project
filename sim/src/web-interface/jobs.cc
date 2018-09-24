@@ -144,7 +144,8 @@ void Sim::jobs_handle() {
 	if (isDigit(next_arg)) {
 		jobs_jid = next_arg;
 
-		page_template(concat("Job ", jobs_jid), "body{padding-left:20px}");
+		page_template(intentionalUnsafeStringView(concat("Job ", jobs_jid)),
+			"body{padding-left:20px}");
 		append("<script>view_job(false, ", jobs_jid, ","
 			" window.location.hash);</script>");
 		return;

@@ -22,7 +22,7 @@ static void help(const char* program_name) {
 }
 
 // Backup the SQLite database
-static void backup_sqlite_db(CStringView backup_file) {
+static void backup_sqlite_db(FilePath backup_file) {
 	SQLite::Connection sqlite_db {SQLITE_DB_FILE, SQLITE_OPEN_READONLY};
 	SQLite::Connection sqlite_backup {backup_file, SQLITE_OPEN_READWRITE |
 		SQLITE_OPEN_CREATE};
@@ -68,10 +68,10 @@ int main2(int argc, char**argv) {
 	}
 
 	mysql_cnf_guard.reset(MYSQL_CNF);
-	writeAll_throw(fd, concat("[client]\n"
+	writeAll_throw(fd, intentionalUnsafeStringView(concat("[client]\n"
 		"user=", conn.impl()->user, "\n"
 		"password=", conn.impl()->passwd, "\n"
-		"user=", conn.impl()->user, "\n"));
+		"user=", conn.impl()->user, "\n")));
 
 	auto run_command = [](vector<string> args) {
 		auto es = Spawner::run(args[0], args);

@@ -2,12 +2,12 @@
 
 #include <sim/jobs.h>
 #include <sim/submission.h>
+#include <simlib/libarchive_zip.h>
 #include <simlib/process.h>
 #include <simlib/sim/conver.h>
 #include <simlib/sim/judge_worker.h>
 #include <simlib/sim/problem_package.h>
 #include <simlib/spawner.h>
-#include <simlib/zip.h>
 
 using jobs::AddProblemInfo;
 using std::pair;
@@ -47,8 +47,8 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	};
 
 	// dest_package is initially equal to the source_package
-	(void)remove(dest_package.to_cstr());
-	copy(source_package.to_cstr(), dest_package.to_cstr());
+	(void)remove(dest_package);
+	copy(source_package, dest_package);
 
 	/* Construct Simfile */
 
@@ -90,8 +90,9 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	/* Advance the stage */
 
 	// Put the Simfile into the package
-	update_add_data_to_zip(cr.simfile.dump(),
-		concat(cr.pkg_master_dir, "Simfile").to_cstr(), dest_package.to_cstr());
+	update_add_data_to_zip(intentionalUnsafeStringView(cr.simfile.dump()),
+		intentionalUnsafeStringView(concat(cr.pkg_master_dir, "Simfile")),
+		dest_package);
 
 	info.stage = AddProblemInfo::SECOND;
 
@@ -145,11 +146,11 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 	FileRemover job_package_remover(package_path.to_cstr());
 
 	job_log.append("\nStage: SECOND");
-	auto pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+	auto pkg_master_dir = sim::zip_package_master_dir(package_path);
 
 	// Load the Simfile
-	string simfile_str = extract_file_from_zip(package_path.to_cstr(),
-		concat(pkg_master_dir, "Simfile").to_cstr());
+	string simfile_str = extract_file_from_zip(package_path,
+		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile sf {simfile_str};
 	sf.loadName();
@@ -177,7 +178,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		SignalBlocker sb; // Prevent the transaction rollback from interruption
 
 		// Delete problem's files
-		(void)remove(StringBuff<PATH_MAX>{"problems/", pid_str, ".zip"});
+		(void)remove(concat("problems/", pid_str, ".zip"));
 
 		// Delete the problem and its submissions
 		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
@@ -208,7 +209,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 
 	// Move the package to its destination
 	auto package_dest = concat("problems/", pid_str, ".zip");
-	if (move(package_path.to_cstr(), package_dest.to_cstr()))
+	if (move(package_path, package_dest))
 		THROW("move() failed", errmsg());
 
 	job_package_remover.cancel();
@@ -219,7 +220,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		sol_paths.add_entry(pkg_master_dir, sol);
 
 	TemporaryDirectory tmp_dir("/tmp/job-server.XXXXXX");
-	extract_zip(package_dest.to_cstr(), 0, [&](archive_entry* entry) {
+	extract_zip(package_dest, 0, [&](archive_entry* entry) {
 		return sol_paths.exists(archive_entry_pathname(entry));
 	}, tmp_dir.path());
 
@@ -257,8 +258,8 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		uint64_t submission_id = mysql.insert_id();
 
 		// Make solution's source code the submission's source code
-		if (copy(concat<PATH_MAX>(tmp_dir.path(), pkg_master_dir, solution)
-			.to_cstr(), concat("solutions/", submission_id).to_cstr()))
+		if (copy(concat(tmp_dir.path(), pkg_master_dir, solution),
+			concat("solutions/", submission_id)))
 		{
 			THROW("Copying solution `", solution, "`: copy()", errmsg());
 		}
@@ -475,19 +476,18 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 			auto problem_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
 			auto backuped_problem = concat<PATH_MAX>(problem_path, ".backup");
 
-			(void)remove(backuped_problem.to_cstr());
+			(void)remove(backuped_problem);
 
 			ThreadSignalBlocker sb; // This part cannot be interrupted
 			STACK_UNWINDING_MARK;
 
 			// Backup old problem's files
-			if (rename(problem_path.to_cstr(), backuped_problem.to_cstr()))
+			if (rename(problem_path, backuped_problem))
 				THROW("rename() failed", errmsg());
 
 			auto backup_restorer = make_call_in_destructor([&]{
 				// Restore problem's files
-				(void)rename(backuped_problem.to_cstr(),
-					problem_path.to_cstr());
+				(void)rename(backuped_problem, problem_path);
 
 				// Restore the problem in the database
 				if (prob_restore_sql.size()) {
@@ -535,8 +535,8 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 				added, tmp_problem_id);
 
 			// Replace packages
-			if (rename(concat("problems/", tmp_problem_id, ".zip").to_cstr(),
-				problem_path.to_cstr()))
+			if (rename(concat("problems/", tmp_problem_id, ".zip"),
+				problem_path))
 			{
 				THROW("rename() failed", errmsg());
 			}
@@ -569,7 +569,7 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 			add_jobs_to_judge_problem_solutions(strtoull(problem_id));
 
 			backup_restorer.cancel();
-			(void)remove(backuped_problem.to_cstr());
+			(void)remove(backuped_problem);
 		});
 }
 
@@ -626,8 +626,8 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 
 
 	// Delete problem's files
-	(void)remove_r(StringBuff<PATH_MAX>{"problems/", problem_id});
-	(void)remove(StringBuff<PATH_MAX>{"problems/", problem_id, ".zip"});
+	(void)remove_r(concat("problems/", problem_id));
+	(void)remove(concat("problems/", problem_id, ".zip"));
 
 	stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
 		", data=? WHERE id=?");
