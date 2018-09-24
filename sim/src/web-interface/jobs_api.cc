@@ -20,6 +20,8 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 	case JT::DELETE_CONTEST: return "Delete contest";
 	case JT::DELETE_CONTEST_ROUND: return "Delete contest round";
 	case JT::DELETE_CONTEST_PROBLEM: return "Delete contest problem";
+	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+		return "Reset problem time limits using model solution";
 	case JT::VOID: return "Void";
 	}
 
@@ -286,6 +288,11 @@ void Sim::api_jobs() {
 
 		case JobType::DELETE_CONTEST_PROBLEM: {
 			append("\"contest problem\":", res[AUX_ID]);
+			break;
+		}
+
+		case JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: {
+			append("\"problem\":", res[AUX_ID]);
 			break;
 		}
 

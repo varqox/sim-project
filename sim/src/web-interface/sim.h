@@ -115,6 +115,8 @@ private:
 
 	void api_problem_rejudge_all_submissions();
 
+	void api_problem_reset_time_limits();
+
 	void api_problem_reupload();
 
 	void api_problem_edit();
@@ -574,6 +576,7 @@ public:
 		SUBMIT_IGNORED = EDIT,
 		REUPLOAD = EDIT,
 		REJUDGE_ALL = EDIT,
+		RESET_TIME_LIMITS = EDIT,
 		EDIT_TAGS = 1 << 14,
 		EDIT_HIDDEN_TAGS = 1 << 15,
 		DELETE = EDIT,

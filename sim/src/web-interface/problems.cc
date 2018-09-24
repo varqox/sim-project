@@ -31,8 +31,8 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 		PERM::VIEW_SIMFILE | PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME |
 		PERM::VIEW_RELATED_JOBS | PERM::DOWNLOAD | PERM::SUBMIT | PERM::EDIT |
 		PERM::SUBMIT_IGNORED | PERM::REUPLOAD | PERM::REJUDGE_ALL |
-		PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS | PERM::DELETE |
-		PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
+		PERM::RESET_TIME_LIMITS | PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS |
+		PERM::DELETE | PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
 
 	if (not session_is_open)
 		return (ptype == ProblemType::PUBLIC ? PERM::VIEW | PERM::VIEW_TAGS
@@ -111,6 +111,10 @@ void Sim::problems_problem() {
 	} else if (next_arg == "reupload") {
 		page_template(concat("Reupload problem ", problems_pid));
 		append("<script>reupload_problem(false, ", problems_pid, ");</script>");
+
+	} else if (next_arg == "reset_time_limits") {
+		page_template(concat("Reset problem time limits ", problems_pid));
+		append("<script>reset_problem_time_limits(false, ", problems_pid, ");</script>");
 
 	} else if (next_arg == "delete") {
 		page_template(concat("Delete problem ", problems_pid));

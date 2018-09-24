@@ -22,7 +22,7 @@ inline static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang) {
 		std::underlying_type_t<SubmissionLanguage>(lang));
 }
 
-void judgeSubmission(uint64_t job_id, StringView submission_id,
+void judge_submission(uint64_t job_id, StringView submission_id,
 	StringView job_creation_time)
 {
 	STACK_UNWINDING_MARK;
@@ -361,7 +361,9 @@ void judgeSubmission(uint64_t job_id, StringView submission_id,
 	send_report();
 }
 
-void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
+void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
+	JobType original_job_type)
+{
 	STACK_UNWINDING_MARK;
 
 	InplaceBuff<1 << 14> job_log;
@@ -459,4 +461,110 @@ void judgeModelSolution(uint64_t job_id, JobType original_job_type) {
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 	stmt.bindAndExecute(uint(original_job_type), job_log, job_id);
+}
+
+void reset_problem_time_limits_using_model_solution(uint64_t job_id,
+	StringView problem_id)
+{
+	STACK_UNWINDING_MARK;
+
+	InplaceBuff<1 << 14> job_log;
+
+	auto judge_log = [&](auto&&... args) {
+		return DoubleAppender<decltype(job_log)>(stdlog, job_log,
+			std::forward<decltype(args)>(args)...);
+	};
+
+	stdlog("Job ", job_id, ':');
+	judge_log("Judging the model solution");
+
+	auto set_failure = [&] {
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=CONCAT(data,?)"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(job_log, job_id);
+	};
+
+	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
+	string pkg_master_dir = sim::zip_package_master_dir(package_path.to_cstr());
+
+	string simfile_str = extract_file_from_zip(package_path.to_cstr(),
+		concat(pkg_master_dir, "Simfile").to_cstr());
+
+	sim::Simfile simfile {simfile_str};
+	simfile.loadAll();
+	judge_log("Model solution: ", simfile.solutions[0]);
+
+	JudgeWorker jworker;
+	jworker.loadPackage(package_path.to_string(), std::move(simfile_str));
+
+	string compilation_errors;
+
+	// Compile checker
+	{
+		auto tmplog = judge_log("Compiling checker...");
+		tmplog.flush_no_nl();
+
+		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		{
+			tmplog(" failed:\n");
+			tmplog(compilation_errors);
+			return set_failure();
+		}
+		tmplog(" done.");
+	}
+
+	// Compile the model solution
+	{
+		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
+		writeAll(sol_src, extract_file_from_zip(package_path.to_cstr(),
+			concat(pkg_master_dir, simfile.solutions[0])));
+
+		auto tmplog = judge_log("Compiling the model solution...");
+		tmplog.flush_no_nl();
+		if (jworker.compileSolution(sol_src.path(),
+			sim::filename_to_lang(simfile.solutions[0]),
+			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
+		{
+			tmplog(" failed:\n");
+			tmplog(compilation_errors);
+			return set_failure();
+		}
+		tmplog(" done.");
+	}
+
+	// Judge
+	judge_log("Judging...");
+	JudgeReport initial_jrep = jworker.judge(false, sim::VerboseJudgeLogger(true));
+	JudgeReport final_jrep = jworker.judge(true, sim::VerboseJudgeLogger(true));
+
+	judge_log("Initial judge report: ", initial_jrep.judge_log);
+	judge_log("Final judge report: ", final_jrep.judge_log);
+
+	sim::Conver conver;
+	conver.setPackagePath(package_path.to_string());
+
+	try {
+		// TODO: rename finishConstructingSimfile to something like reset_time_limits_using_jugde_reports
+		conver.finishConstructingSimfile(simfile, initial_jrep, final_jrep);
+
+	} catch (const std::exception& e) {
+		job_log.append(conver.getReport());
+		judge_log("Conver failed: ", e.what());
+		return set_failure();
+	}
+
+	// Put the Simfile in the package
+	update_add_data_to_zip(simfile.dump(),
+		concat(pkg_master_dir, "Simfile").to_cstr(), package_path.to_cstr());
+
+	auto stmt = mysql.prepare("UPDATE problems SET simfile=? WHERE id=?");
+	stmt.bindAndExecute(simfile.dump(), problem_id);
+
+	stmt = mysql.prepare("UPDATE jobs"
+		" SET status=" JSTATUS_DONE_STR ", data=CONCAT(data,?)"
+		" WHERE id=?");
+	stmt.bindAndExecute(job_log, job_id);
 }
