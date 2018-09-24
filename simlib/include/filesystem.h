@@ -641,7 +641,7 @@ inline std::string abspath(StringView path, std::string curr_dir) {
 }
 
 // Returns extension (without dot) e.g. "foo.cc" -> "cc", "bar" -> ""
-inline StringView getExtension(CStringView file) {
+inline StringView getExtension(StringView file) {
 	size_t x = file.rfind('.');
 	if (x == file.npos)
 		return {}; // No extension

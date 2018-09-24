@@ -806,6 +806,14 @@ inline std::string& operator+=(std::string& str, StringView s) {
 	return str.append(s.data(), s.size());
 }
 
+inline StringView intentionalUnsafeStringView(const char* str) noexcept {
+	return {str};
+}
+
+inline StringView intentionalUnsafeStringView(StringView str) noexcept {
+	return str;
+}
+
 // This function allows std::string&& to be converted to StringView, but keep in
 // mind that if any StringView or alike value generated from the result of this
 // function cannot be saved to variable! - it would (and probably will) cause
@@ -1165,8 +1173,10 @@ public:
 		p_ = (n <= N ? &a_[0] : new char[n]);
 	}
 
-	constexpr explicit InplaceBuff(StringView sv) : InplaceBuff(sv.size()) {
-		std::copy(sv.begin(), sv.end(), p_);
+	template<class T, typename =
+		std::enable_if_t<!std::is_integral<std::remove_reference_t<T>>()>>
+	constexpr explicit InplaceBuff(T&& str) : InplaceBuff(string_length(str)) {
+		std::copy(::data(str), ::data(str) + size, p_);
 	}
 
 	constexpr InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
@@ -1211,9 +1221,11 @@ public:
 		}
 	}
 
-	constexpr InplaceBuff& operator=(StringView sv) {
-		lossy_resize(sv.size());
-		std::copy(sv.begin(), sv.end(), data());
+	template<class T>
+	constexpr InplaceBuff& operator=(T&& str) {
+		auto len = string_length(str);
+		lossy_resize(len);
+		std::copy(::data(str), ::data(str) + len, data());
 		return *this;
 	}
 
@@ -1827,13 +1839,16 @@ inline void appendHtmlEscaped(std::string& str, char c) {
 }
 
 // Escapes HTML unsafe character sequences and appends them to @p str
-void appendHtmlEscaped(std::string& str, StringView s);
+inline void appendHtmlEscaped(std::string& str, StringView s) {
+	for (char c : s)
+		appendHtmlEscaped(str, c);
+}
 
 // Escapes HTML unsafe character sequences
 template<class T>
 inline std::string htmlEscape(T&& s) {
 	std::string res;
-	appendHtmlEscaped(res, std::forward<T>(s));
+	appendHtmlEscaped(res, intentionalUnsafeStringView(std::forward<T>(s)));
 	return res;
 }
 

@@ -49,11 +49,6 @@ string toHex(const char* str, size_t len) {
 	return res;
 }
 
-void appendHtmlEscaped(string& str, StringView s) {
-	for (size_t i = 0; i < s.size(); ++i)
-		appendHtmlEscaped(str, s[i]);
-}
-
 string paddedString(StringView s, size_t len, Adjustment adj, char filler) {
 	string res;
 	if (adj == LEFT && len > s.size()) {
