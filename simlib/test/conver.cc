@@ -63,7 +63,7 @@ TEST (Conver, constructSimfile) {
 	auto exec_dir = getExecDir(getpid());
 	AVLDictSet<string, StrNumCompare> cases;
 	// Detect available test cases
-	forEachDirComponent(concat(exec_dir, "conver_test_cases/").to_cstr(),
+	forEachDirComponent(concat(exec_dir, "conver_test_cases/"),
 		[&](dirent* file) {
 			constexpr StringView suff("package.zip");
 			StringView file_name(file->d_name);
@@ -98,7 +98,7 @@ TEST (Conver, constructSimfile) {
 
 				if (regenerate_outs) {
 					putFileContents(concat_tostr(base, "simfile.out"),
-						cres.simfile.dump());
+						intentionalUnsafeStringView(cres.simfile.dump()));
 					putFileContents(concat_tostr(base, "conver_log.out"),
 						conver.getReport());
 				}
@@ -121,8 +121,10 @@ TEST (Conver, constructSimfile) {
 					THROW("failed to compile checker: \n", compilation_errors);
 
 				TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-				writeAll(sol_src, extract_file_from_zip(package_copy.path(),
-					concat(cres.pkg_master_dir, cres.simfile.solutions[0])));
+				writeAll(sol_src, intentionalUnsafeStringView(
+					extract_file_from_zip(package_copy.path(),
+						intentionalUnsafeStringView(concat(cres.pkg_master_dir,
+							cres.simfile.solutions[0])))));
 
 				if (jworker.compileSolution(sol_src.path(),
 					sim::filename_to_lang(cres.simfile.solutions[0]), {5, 0},

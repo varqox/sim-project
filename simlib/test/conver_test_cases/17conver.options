@@ -1,7 +1,7 @@
 name:
 label:
 memory_limit: 0
-global_time_limit: 11
+global_time_limit: 11000000
 reset_time_limits_using_model_solution: false
 ignore_simfile: false
 seek_for_new_tests: true
