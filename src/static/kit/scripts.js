@@ -4321,11 +4321,10 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				tab_contest_users_lister($('<div>').appendTo(elem), '/c' + contest.id);
 			});
 
-		if (actions.indexOf('A') !== -1)
-			tabs.push('Files', function() {
-				var table = $('<table class="files stripped"></table>').appendTo($('<div>').appendTo(elem));
-				new FilesLister(table, '/c' + contest.id).monitor_scroll();
-			});
+		tabs.push('Files', function() {
+			var table = $('<table class="files stripped"></table>').appendTo($('<div>').appendTo(elem));
+			new FilesLister(table, '/c' + contest.id).monitor_scroll();
+		});
 
 		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
 			// Add / replace hashes in links in the contest-path
