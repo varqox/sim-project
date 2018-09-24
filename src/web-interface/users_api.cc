@@ -57,7 +57,8 @@ void Sim::api_users() {
 			else if (arg_id == "N")
 				query_append("type=" UTYPE_NORMAL_STR);
 			else
-				return api_error400(concat("Invalid user type: ", arg_id));
+				return api_error400(intentionalUnsafeStringView(
+					concat("Invalid user type: ", arg_id)));
 
 			mask |= UTYPE_COND;
 
@@ -229,7 +230,7 @@ void Sim::api_user_add() {
 		"VALUES(?, ?, ?, ?, ?, ?, ?)");
 
 	stmt.bindAndExecute(username, uint(utype), fname, lname, email, salt,
-		sha3_512(concat(salt, pass)));
+		sha3_512(intentionalUnsafeStringView(concat(salt, pass))));
 
 	// User account successfully created
 	if (stmt.affected_rows() != 1)
@@ -323,7 +324,9 @@ void Sim::api_user_change_password() {
 	InplaceBuff<SALT_LEN> salt(toHex(salt_bin, sizeof(salt_bin)));
 
 	auto stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
-	stmt.bindAndExecute(salt, sha3_512(concat(salt, new_pass)), users_uid);
+	stmt.bindAndExecute(salt,
+		sha3_512(intentionalUnsafeStringView(concat(salt, new_pass))),
+		users_uid);
 }
 
 void Sim::api_user_delete() {

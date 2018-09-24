@@ -731,11 +731,11 @@ void Connection::sendResponse(const HttpResponse& res) {
 	case HttpResponse::FILE_TO_REMOVE:
 		InplaceBuff<PATH_MAX> filename_s;
 		filename_s.append(res.content, '\0');
-		CStringView filename {filename_s.data(), filename_s.size - 1};
+		CStringView filename(filename_s.data(), filename_s.size - 1);
 
 		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
 			? filename : "");
-		FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
+		FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 		if (fd == -1)
 			return error404();
 

@@ -81,7 +81,8 @@ void Sim::api_contest_entry_token() {
 			append(jsonStringify(token), ',');
 
 			if (not short_token.has_value() or not short_token_expiration.has_value() or
-				short_token_expiration.value() < mysql_date())
+				short_token_expiration.value() <
+					intentionalUnsafeStringView(mysql_date()))
 			{
 				append("null,null]");
 			} else {
@@ -165,8 +166,11 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 	stmt.res_bind_all(short_token_expiration);
 	if (not stmt.next())
 		return api_error400("Contest does not have an entry token");
-	if (short_token_expiration.has_value() and short_token_expiration.value() > mysql_date())
+	if (short_token_expiration.has_value() and short_token_expiration.value() >
+		intentionalUnsafeStringView(mysql_date()))
+	{
 		return api_error400("Contest already has a short entry token");
+	}
 
 	stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens"
 		" SET short_token=?, short_token_expiration=? WHERE contest_id=?");
@@ -194,8 +198,10 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 	stmt.res_bind_all(short_token_expiration);
 	if (not stmt.next())
 		return api_error400("Contest does not have an entry token");
-	if (not short_token_expiration.has_value() or short_token_expiration.value() <= mysql_date())
+	if (not short_token_expiration.has_value() or short_token_expiration.value() <= intentionalUnsafeStringView(mysql_date()))
+	{
 		return api_error400("Contest does not have a short entry token");
+	}
 
 	stmt = mysql.prepare("UPDATE IGNORE contest_entry_tokens"
 		" SET short_token=?, short_token_expiration=? WHERE contest_id=?");

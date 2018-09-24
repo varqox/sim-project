@@ -140,8 +140,8 @@ class Connection {
 public:
 	Connection() noexcept = default;
 
-	Connection(CStringView file, int flags, const char *zVfs = nullptr) {
-		if (sqlite3_open_v2(file.c_str(), &db, flags, zVfs))
+	Connection(FilePath file, int flags, const char *zVfs = nullptr) {
+		if (sqlite3_open_v2(file, &db, flags, zVfs))
 			THROW_SQLITE_ERROR(db, "sqlite3_open_v2()");
 	}
 

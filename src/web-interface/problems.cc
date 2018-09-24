@@ -94,30 +94,36 @@ void Sim::problems_problem() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("Problem ", problems_pid),
+		page_template(intentionalUnsafeStringView(
+			concat("Problem ", problems_pid)),
 			"body{padding-left:20px}");
 		append("<script>view_problem(false, ", problems_pid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
-		page_template(concat("Submit solution to the problem ", problems_pid));
+		page_template(intentionalUnsafeStringView(
+			concat("Submit solution to the problem ", problems_pid)));
 		append("<script>add_problem_submission(false, {id:", problems_pid, "})</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit problem ", problems_pid));
+		page_template(intentionalUnsafeStringView(
+			concat("Edit problem ", problems_pid)));
 		append("<script>edit_problem(false, ", problems_pid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "reupload") {
-		page_template(concat("Reupload problem ", problems_pid));
+		page_template(intentionalUnsafeStringView(
+			concat("Reupload problem ", problems_pid)));
 		append("<script>reupload_problem(false, ", problems_pid, ");</script>");
 
 	} else if (next_arg == "reset_time_limits") {
-		page_template(concat("Reset problem time limits ", problems_pid));
+		page_template(intentionalUnsafeStringView(
+			concat("Reset problem time limits ", problems_pid)));
 		append("<script>reset_problem_time_limits(false, ", problems_pid, ");</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete problem ", problems_pid));
+		page_template(intentionalUnsafeStringView(
+			concat("Delete problem ", problems_pid)));
 		append("<script>delete_problem(false, ", problems_pid, ");</script>");
 
 	} else

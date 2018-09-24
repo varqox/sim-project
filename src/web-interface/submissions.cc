@@ -68,7 +68,8 @@ void Sim::submissions_handle() {
 	StringView next_arg = url_args.extractNextArg();
 	// View submission
 	if (isDigit(next_arg)) {
-		page_template(concat("Submission ", next_arg),
+		page_template(intentionalUnsafeStringView(
+			concat("Submission ", next_arg)),
 			"body{padding-left:20px}");
 		append("<script>view_submission(false, ", next_arg, ","
 			" window.location.hash);</script>");

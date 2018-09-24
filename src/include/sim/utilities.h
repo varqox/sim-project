@@ -88,7 +88,8 @@ public:
 	std::enable_if_t<std::is_convertible<T, StringView>::value &&
 		!std::is_convertible<T, CStringView>::value, void>
 	from_str(T&& str) {
-		return from_str(concat<20>(str).to_cstr());
+		auto x = concat<20>(str);
+		return from_str(x.to_cstr());
 	}
 
 	StringView to_api_str() const noexcept {

@@ -74,7 +74,7 @@ void Sim::api_logs() {
 			end_offset = 0;
 	}
 
-	FileDescriptor fd {filename, O_RDONLY | O_LARGEFILE};
+	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
 	off64_t fsize = lseek64(fd, 0, SEEK_END);
 	throw_assert(fsize >= 0);
 	if (que.empty())

@@ -131,25 +131,29 @@ void Sim::contests_contest() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("Contest ", contests_cid),
+		page_template(intentionalUnsafeStringView(
+			concat("Contest ", contests_cid)),
 			"body{padding-left:20px}");
 		append("<script>view_contest(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit contest ", contests_cid),
+		page_template(intentionalUnsafeStringView(
+			concat("Edit contest ", contests_cid)),
 			"body{padding-left:20px}");
 		append("<script>edit_contest(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete contest ", contests_cid),
+		page_template(intentionalUnsafeStringView(
+			concat("Delete contest ", contests_cid)),
 			"body{padding-left:20px}");
 		append("<script>delete_contest(false, ", contests_cid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "add_round") {
-		page_template(concat("Add round ", contests_cid),
+		page_template(intentionalUnsafeStringView(
+			concat("Add round ", contests_cid)),
 			"body{padding-left:20px}");
 		append("<script>add_contest_round(false, ", contests_cid, ","
 			" window.location.hash);</script>");
@@ -157,20 +161,23 @@ void Sim::contests_contest() {
 	} else if (next_arg == "contest_user") {
 		StringView user_id = url_args.extractNextArg();
 		if (user_id == "add") {
-			page_template(concat("Add contest user"),
+			page_template(intentionalUnsafeStringView
+				(concat("Add contest user")),
 				"body{padding-left:20px}");
 			append("<script>add_contest_user(false, ", contests_cid,
 				", window.location.hash);</script>");
 		} else if (isDigit(user_id)) {
 			next_arg = url_args.extractNextArg();
 			if (next_arg == "change_mode") {
-				page_template(concat("Change contest user mode"),
+				page_template(intentionalUnsafeStringView(
+					concat("Change contest user mode")),
 					"body{padding-left:20px}");
 				append("<script>change_contest_user_mode(false, ", contests_cid,
 					",", user_id, ", window.location.hash);</script>");
 
 			} else if (next_arg == "expel") {
-				page_template(concat("Expel user from the contest"),
+				page_template(intentionalUnsafeStringView(
+					concat("Expel user from the contest")),
 					"body{padding-left:20px}");
 				append("<script>expel_contest_user(false, ", contests_cid, ",",
 					user_id, ", window.location.hash);</script>");
@@ -183,7 +190,8 @@ void Sim::contests_contest() {
 	} else if (next_arg == "files") {
 		StringView arg = url_args.extractNextArg();
 		if (arg == "add") {
-			page_template(concat("Add contest file"),
+			page_template(intentionalUnsafeStringView(
+				concat("Add contest file")),
 				"body{padding-left:20px}");
 			append("<script>add_file(false, ", contests_cid,
 				", window.location.hash);</script>");
@@ -199,25 +207,29 @@ void Sim::contests_contest_round() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("Round ", contests_crid),
+		page_template(intentionalUnsafeStringView(
+			concat("Round ", contests_crid)),
 			"body{padding-left:20px}");
 		append("<script>view_contest_round(false, ", contests_crid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit round ", contests_crid),
+		page_template(intentionalUnsafeStringView(
+			concat("Edit round ", contests_crid)),
 			"body{padding-left:20px}");
 		append("<script>edit_contest_round(false, ", contests_crid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete round ", contests_crid),
+		page_template(intentionalUnsafeStringView(
+			concat("Delete round ", contests_crid)),
 			"body{padding-left:20px}");
 		append("<script>delete_contest_round(false, ", contests_crid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "attach_problem") {
-		page_template(concat("Attach problem ", contests_crid),
+		page_template(intentionalUnsafeStringView(
+			concat("Attach problem ", contests_crid)),
 			"body{padding-left:20px}");
 		append("<script>add_contest_problem(false, ", contests_crid, ","
 			" window.location.hash);</script>");
@@ -231,24 +243,28 @@ void Sim::contests_contest_problem() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(concat("Contest problem ", contests_cpid),
+		page_template(intentionalUnsafeStringView(
+			concat("Contest problem ", contests_cpid)),
 			"body{padding-left:20px}");
 		append("<script>view_contest_problem(false, ", contests_cpid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(concat("Edit contest problem ", contests_cpid),
+		page_template(intentionalUnsafeStringView(
+			concat("Edit contest problem ", contests_cpid)),
 			"body{padding-left:20px}");
 		append("<script>edit_contest_problem(false, ", contests_cpid, ","
 			" window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
-		page_template(concat("Submit a solution ", contests_cpid),
+		page_template(intentionalUnsafeStringView(
+			concat("Submit a solution ", contests_cpid)),
 			"body{padding-left:20px}");
 		append("<script>add_contest_submission(false, undefined, undefined, {id:", contests_cpid, "});</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(concat("Delete contest problem ", contests_cpid),
+		page_template(intentionalUnsafeStringView(
+			concat("Delete contest problem ", contests_cpid)),
 			"body{padding-left:20px}");
 		append("<script>delete_contest_problem(false, ", contests_cpid, ","
 			" window.location.hash);</script>");
@@ -260,7 +276,8 @@ void Sim::contests_contest_problem() {
 void Sim::enter_contest() {
 	STACK_UNWINDING_MARK;
 
-	page_template(concat("Enter contest"), "body{padding-left:20px}");
+	page_template(intentionalUnsafeStringView(
+		concat("Enter contest")), "body{padding-left:20px}");
 	append("<script>enter_contest_using_token(false, '",
 		url_args.extractNextArg(), "');</script>");
 }

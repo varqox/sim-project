@@ -187,8 +187,8 @@ public:
 				switch (jtype) {
 				// Judge job
 				case JT::JUDGE_SUBMISSION:
-					queue_job(judge_jobs,
-						strtoull(jobs::extractDumpedString(info)), false);
+					queue_job(judge_jobs, strtoull(intentionalUnsafeStringView(
+						jobs::extractDumpedString(info))), false);
 					break;
 
 				case JT::ADD_JUDGE_MODEL_SOLUTION:
@@ -692,8 +692,9 @@ static void process_local_job(WorkersPool::NextJob job) {
 		return exit_procedures();
 
 	// Mark as in progress
-	mysql.update(concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
-		" WHERE id=", job.id));
+	mysql.update(intentionalUnsafeStringView(
+		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
+			" WHERE id=", job.id)));
 
 	try {
 		using JT = JobType;
@@ -708,8 +709,9 @@ static void process_local_job(WorkersPool::NextJob job) {
 
 		case JT::EDIT_PROBLEM:
 			std::this_thread::sleep_for(std::chrono::seconds(1));
-			mysql.update(concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
-				" WHERE id=", job.id));
+			mysql.update(intentionalUnsafeStringView(
+				concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
+					" WHERE id=", job.id)));
 			break;
 
 		case JT::DELETE_PROBLEM:
@@ -798,8 +800,9 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		return exit_procedures();
 
 	// Mark as in progress
-	mysql.update(concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
-		" WHERE id=", job.id));
+	mysql.update(intentionalUnsafeStringView(
+		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
+			" WHERE id=", job.id)));
 
 	try {
 		using JT = JobType;
@@ -1222,8 +1225,8 @@ static void cleanUpDBs() {
 				}
 
 				// Delete problem's files
-				(void)remove_r(StringBuff<PATH_MAX>{"problems/", pid});
-				(void)remove(StringBuff<PATH_MAX>{"problems/", pid, ".zip"});
+				(void)remove_r(concat("problems/", pid));
+				(void)remove(concat("problems/", pid, ".zip"));
 
 				// Delete the problem (we have to do it here to prevent this
 				// loop from going infinite)
