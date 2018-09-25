@@ -5624,8 +5624,14 @@ function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = fals
 
 	var dt = (initial_dt === Infinity || initial_dt === -Infinity ? new Date() : initial_dt);
 
+	var value_input = $('<input>', {
+		type: 'hidden',
+		name: name
+	});
+
 	var open_modal_chooser = function() {
-		open_calendar_on(dt, chooser_input, value_input);
+		var date_set = utcdt_or_tm_to_Date(value_input.val());
+		open_calendar_on(date_set, chooser_input, value_input);
 	};
 
 	var chooser_input = $('<input>', {
@@ -5633,11 +5639,6 @@ function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = fals
 		class: 'calendar-input',
 		readonly: true,
 		click: open_modal_chooser
-	});
-
-	var value_input = $('<input>', {
-		type: 'hidden',
-		name: name
 	});
 
 	var update_choosen_dt = function(new_dt) {
