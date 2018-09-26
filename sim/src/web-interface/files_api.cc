@@ -268,7 +268,7 @@ void Sim::api_file_add() {
 	// Check the file size
 	auto file_size = (file_exists ? get_file_size(file_tmp_path) : 0);
 	if (file_size > FILE_MAX_SIZE) {
-		add_notification("error", "Solution is too big (maximum allowed size: ", FILE_MAX_SIZE, " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
+		add_notification("error", "File is too big (maximum allowed size: ", FILE_MAX_SIZE, " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
 		return api_error400(notifications);
 	}
 
@@ -325,7 +325,7 @@ void Sim::api_file_edit() {
 	// Check the file size
 	auto file_size = (file_exists ? get_file_size(file_tmp_path) : 0);
 	if (file_size > FILE_MAX_SIZE) {
-		add_notification("error", "Solution is too big (maximum allowed size: ", FILE_MAX_SIZE, " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
+		add_notification("error", "File is too big (maximum allowed size: ", FILE_MAX_SIZE, " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
 		return api_error400(notifications);
 	}
 
