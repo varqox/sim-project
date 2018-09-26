@@ -4100,7 +4100,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						$('<center>', {html: [
 							$('<a>', {
 								class: 'btn-small',
-								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem[4]),
+								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem.name),
 								text: 'Statement'
 							}),
 							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue',
