@@ -315,8 +315,11 @@ void Sim::api_user_change_password() {
 	if (new_pass != new_pass1)
 		return api_error400("Passwords do not match");
 
-	if (not check_submitted_password("old_pass"))
+	if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
+		not check_submitted_password("old_pass"))
+	{
 		return api_error403("Invalid old password");
+	}
 
 	// Commit password change
 	char salt_bin[SALT_LEN >> 1];
