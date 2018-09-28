@@ -513,7 +513,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		// Set the time limits for the model solution
 		for (auto&& g : sf.tgroups)
 			for (auto&& t : g.tests)
-				t.time_limit = MODEL_SOLUTION_TIME_LIMIT;
+				t.time_limit = opts.max_time_limit;
 
 		return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
 			master_dir.to_string()};
