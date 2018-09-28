@@ -33,14 +33,15 @@ static uint64_t default_time_limit() {
 	return 5e6; // 5 seconds
 }
 
-static Simfile construct_full_simfile() {
+static Simfile construct_full_simfile(bool run_with_default_time_limits = false) {
 	sim::Conver conver;
 	conver.setPackagePath(".");
 
 	// Set Conver options
 	sim::Conver::Options copts;
 	copts.max_time_limit = default_time_limit();
-	copts.reset_time_limits_using_model_solution = false;
+	stdlog(copts.max_time_limit);
+	copts.reset_time_limits_using_model_solution = run_with_default_time_limits;
 	copts.ignore_simfile = false;
 	copts.seek_for_new_tests = true;
 	copts.reset_scoring = false;
@@ -558,7 +559,7 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 			putFileContents(input, "");
 	});
 
-	Simfile simfile = construct_full_simfile();
+	Simfile simfile = construct_full_simfile(true);
 	if (simfile.solutions.empty()) {
 		errlog("\033[1;31mError\033[m: no main solution was found");
 		return 1;
