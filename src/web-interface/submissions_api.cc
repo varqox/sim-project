@@ -762,7 +762,8 @@ void Sim::api_submission_rejudge() {
 	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
 			" aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+	stmt.bindAndExecute(session_user_id,
+		priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
 		(uint)JobType::JUDGE_SUBMISSION, mysql_date(), submissions_sid,
 		jobs::dumpString(problem_id));
 

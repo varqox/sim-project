@@ -477,7 +477,8 @@ void Sim::api_problem_rejudge_all_submissions() {
 		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
 			", ?, id, ?, ''"
 		" FROM submissions WHERE problem_id=? ORDER BY id");
-	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+	stmt.bindAndExecute(session_user_id,
+		priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
 		mysql_date(), jobs::dumpString(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
