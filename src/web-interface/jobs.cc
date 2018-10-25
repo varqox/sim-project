@@ -18,6 +18,8 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 	case UserType::NORMAL:
 		return PERM::NONE;
 	}
+
+	return PERM::NONE; // Shouldn't happen
 }
 
 Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,

@@ -13,6 +13,8 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 	case UserType::NORMAL:
 		return PERM::NONE;
 	}
+
+	return PERM::NONE; // Shouldn't happen
 }
 
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
