@@ -776,8 +776,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		}
 
 		// Merge filters for both architectures into one filter
-		int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_);
-		if (errnum)
+		if (int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_))
 			send_error_and_exit(-errnum, "seccomp_merge()");
 
 		auto& ctx = x86_ctx_;
@@ -785,8 +784,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// Dump filter rules
 		DEBUG_SANDBOX({
 			if (DEBUG_SANDBOX_LOG_PFC_FILTER) {
-				errnum = seccomp_export_pfc(ctx, stdlog.fileno());
-				if (errnum)
+				if (int errnum = seccomp_export_pfc(ctx, stdlog.fileno()))
 					send_error_and_exit(-errnum, "seccomp_export_pfc()");
 			}
 		})
@@ -822,8 +820,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			kill(getpid(), SIGSTOP);
 
 			// Load filter into the kernel
-			int errnum = seccomp_load(ctx);
-			if (errnum)
+			if (int errnum = seccomp_load(ctx))
 				send_error_and_exit(-errnum, "seccomp_load()");
 
 			// Set virtual memory and stack size limit (to the same value)
