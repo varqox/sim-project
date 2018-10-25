@@ -264,7 +264,7 @@ function add_csrf_token_to(form) {
 	x.find('input[name="csrf_token"]').remove(); // Avoid duplication
 	x.append('<input type="hidden" name="csrf_token" value="' +
 		get_cookie('csrf_token') + '">');
-	return form;
+	return x;
 }
 
 // Adding csrf token just before submitting a form
@@ -647,8 +647,8 @@ Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_par
 	append_loader(loader_parent);
 
 	$.ajax({
-		type: 'POST',
 		url: url,
+		type: 'POST',
 		processData: false,
 		contentType: false,
 		data: new FormData(form[0]),
@@ -826,8 +826,11 @@ function API_call(ajax_url, success_handler, loader_parent) {
 	var args = arguments;
 	append_loader(loader_parent);
 	$.ajax({
-		type: 'GET',
 		url: ajax_url,
+		type: 'POST',
+		processData: false,
+		contentType: false,
+		data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 		dataType: 'json',
 		success: function(data, status, jqXHR) {
 			remove_loader(loader_parent);
@@ -1078,8 +1081,11 @@ function Lister(elem) {
 		append_loader(this_.elem.parent());
 
 		$.ajax({
-			type: 'GET',
 			url: this_.query_url + this_.query_suffix,
+			type: 'POST',
+			processData: false,
+			contentType: false,
+			data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 			dataType: 'json',
 			success: function(data) {
 				var modal = this_.elem.parents('.modal');
@@ -1287,9 +1293,12 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		append_loader(this_.elem);
 		$.ajax({
-			type: 'GET',
 			url: '/api/logs/' + this_.type +
 				(offset === undefined ? '' : '?' + offset),
+			type: 'POST',
+			processData: false,
+			contentType: false,
+			data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 			success: function (data) {
 				process_data(String(data).split('\n'));
 			},
@@ -1309,8 +1318,11 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		append_loader(this_.elem);
 		$.ajax({
-			type: 'GET',
 			url: '/api/logs/' + this_.type,
+			type: 'POST',
+			processData: false,
+			contentType: false,
+			data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 			success: function(data) {
 				data = String(data).split('\n');
 				if (parseInt(data[0]) !== first_offset)

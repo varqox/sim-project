@@ -5,6 +5,9 @@
 void Sim::api_handle() {
 	STACK_UNWINDING_MARK;
 
+	if (request.method != server::HttpRequest::POST)
+		return api_error403("To access API you have to use POST");
+
 	resp.headers["Content-type"] = "text/plain; charset=utf-8";
 
 	StringView next_arg = url_args.extractNextArg();
