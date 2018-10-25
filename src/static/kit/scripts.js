@@ -2600,6 +2600,10 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 					append_loader(elem);
 					$.ajax({
 						url: '/api/submission/' + submission_id + '/source',
+						type: 'POST',
+						processData: false,
+						contentType: false,
+						data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 						dataType: 'html',
 						success: function(data) {
 							cached_source = data;
