@@ -16,6 +16,8 @@ Sim::ContestPermissions Sim::contests_get_overall_permissions() noexcept {
 	case UserType::NORMAL:
 		return PERM::VIEW_PUBLIC;
 	}
+
+	return PERM::NONE; // Shouldn't happen
 }
 
 Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,

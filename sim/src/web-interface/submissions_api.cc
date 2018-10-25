@@ -29,6 +29,8 @@ void Sim::append_submission_status(SubmissionStatus initial_status,
 			return "\",\"Checker compilation failed\"]";
 		case SS::JUDGE_ERROR: return "\",\"Judge error\"]";
 		}
+
+		return "\",\"Unknown\"]"; // Shouldn't happen
 	};
 
 	if (show_full_results)
