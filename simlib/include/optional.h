@@ -4,6 +4,7 @@
 
 #if __cplusplus > 201402L
 #warning "Since C++17 this is redundant"
+#include <optional>
 #else
 namespace std {
 struct nullopt_t {

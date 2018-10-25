@@ -44,9 +44,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 
 	// Load the Simfile from the package
 	Simfile sf;
-	bool simfile_is_loaded = false;
 	if (not opts.ignore_simfile and exists_in_pkg("Simfile")) {
-		simfile_is_loaded = true;
 		try {
 			sf = Simfile(package_path_.back() == '/' ?
 				getFileContents(concat(package_path_, master_dir, "Simfile"))

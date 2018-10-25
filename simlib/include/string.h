@@ -1344,7 +1344,7 @@ public:
 	constexpr FilePath(CStringView& str) noexcept
 		: str_(str.c_str()), size_(str.size()) {}
 
-	constexpr FilePath(const std::string& str) noexcept
+	FilePath(const std::string& str) noexcept
 		: str_(str.c_str()), size_(str.size()) {}
 
 	template<size_t N>
