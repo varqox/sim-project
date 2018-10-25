@@ -186,7 +186,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 
 		// Delete submissions
 		{
-			auto stmt = mysql.prepare("SELECT id FROM submissions"
+			stmt = mysql.prepare("SELECT id FROM submissions"
 				" WHERE problem_id=?");
 			stmt.bindAndExecute(problem_id);
 			InplaceBuff<20> submission_id;
