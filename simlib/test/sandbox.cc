@@ -61,7 +61,11 @@ TEST (Sandbox, run) {
 				message == "killed and dumped by signal 6 - Aborted"));
 	};
 
+	uint test_case = 0;
+	stdlog.label(false);
+
 	compile_test_case("1.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -74,6 +78,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("2.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGSEGV);
@@ -83,6 +88,7 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.vm_peak, 0);
 
 	compile_test_case("3.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 37);
@@ -95,6 +101,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("4.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -107,6 +114,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("5.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
@@ -118,6 +126,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("6.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
@@ -129,6 +138,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	// compile_test_case("6.c"); // not needed
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts, {{"/tmp", OpenAccess::RDONLY}});
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 0);
@@ -142,6 +152,7 @@ TEST (Sandbox, run) {
 
 	for (auto perm : {OpenAccess::NONE, OpenAccess::WRONLY, OpenAccess::RDWR}) {
 		// compile_test_case("6.c"); // not needed
+		stdlog("Test case: ", test_case++);
 		es = sandbox.run(exec, {}, opts, {{"/tmp", perm}});
 		EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 		EXPECT_EQ(es.si.status, SIGABRT);
@@ -155,6 +166,7 @@ TEST (Sandbox, run) {
 
 	// Testing the allowing of lseek(), dup(), etc. on the closed stdin, stdout and stderr
 	compile_test_case("7.c");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts, {{"/dev/null", OpenAccess::RDONLY}});
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 0);
@@ -168,6 +180,7 @@ TEST (Sandbox, run) {
 
 	// Testing the use of readlink() as the marking of the end of initialization of glibc
 	compile_test_case("8.c", "-m32");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -180,6 +193,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("8.c", "-m64");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -192,6 +206,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("9.c", "-m32");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -204,6 +219,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("9.c", "-m64");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -217,6 +233,7 @@ TEST (Sandbox, run) {
 
 	if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)) {
 		compile_test_case("10.c", "-m32");
+		stdlog("Test case: ", test_case++);
 		es = sandbox.run(exec, {}, opts);
 		EXPECT_EQ(es.si.code, CLD_KILLED);
 		EXPECT_EQ(es.si.status, SIGKILL);
@@ -230,6 +247,7 @@ TEST (Sandbox, run) {
 	}
 
 	compile_test_case("10.c", "-m64");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -243,6 +261,7 @@ TEST (Sandbox, run) {
 
 	// Testing execve
 	compile_test_case("11.c", "-m32");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
@@ -255,6 +274,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 	compile_test_case("11.c", "-m64");
+	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
