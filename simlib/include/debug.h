@@ -62,13 +62,13 @@ inline const char* __what(const std::exception& e) {
 
 #define ERRLOG_AND_FORWARD(...) { ERRLOG_FORWARDING(__VA_ARGS__); throw; }
 
-inline StringBuff<4096> errmsg(int errnum) noexcept {
+inline InplaceBuff<4096> errmsg(int errnum) noexcept {
+	static_assert(string_length(meta::ToString<std::numeric_limits<
+			decltype(errnum)>::max()>{}) + 1 < 90, // +1 for minus a sign
+		"Needed to fit error message in the returned buffer");
 	std::array<char, 4000> buff;
-	auto errcode = toStr(errnum);
-	static_assert(decltype(errcode)::max_size < 90,
-		"Needed to fit in the returned buffer");
-	return {" - ", errcode, ": ", strerror_r(errnum, buff.data(),
-		buff.size())};
+	return concat<4096>(" - ", errnum, ": ",
+		strerror_r(errnum, buff.data(), buff.size()));
 }
 
 inline auto errmsg() noexcept { return errmsg(errno); }

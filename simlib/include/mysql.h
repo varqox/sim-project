@@ -395,11 +395,6 @@ public:
 
 	void bind(unsigned idx, const std::string&&) = delete;
 
-	template<size_t BUFF_SIZE>
-	void bind(unsigned idx, const StringBuff<BUFF_SIZE>& buff) ND(noexcept) {
-		bind(idx, buff.str, buff.len, buff.max_size);
-	}
-
 	void bind(unsigned idx, std::nullptr_t) ND(noexcept) { null_column(idx); }
 
 	void null_column(unsigned idx) ND(noexcept) {

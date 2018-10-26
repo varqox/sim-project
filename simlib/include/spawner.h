@@ -116,7 +116,7 @@ protected:
 		writeAll(fd, str.data(), str.size());
 
 		auto err = errmsg(errnum);
-		writeAll(fd, err.data(), err.size());
+		writeAll(fd, err.data(), err.size);
 
 		_exit(-1);
 	};
@@ -428,8 +428,10 @@ void Spawner::run_child(FilePath exec,
 
 	// execvp() failed
 	if (exec.size() <= PATH_MAX)
-		send_error_and_exit(errnum, StringBuff<PATH_MAX + 20>{"execvp('", exec, "')"});
+		send_error_and_exit(errnum, intentionalUnsafeCStringView(
+			concat<PATH_MAX + 20>("execvp('", exec, "')")));
 	else
-		send_error_and_exit(errnum, StringBuff<PATH_MAX + 20>{"execvp('",
-			exec.to_cstr().substring(0, PATH_MAX), "...')"});
+		send_error_and_exit(errnum,	intentionalUnsafeCStringView(
+			concat<PATH_MAX + 20>("execvp('",
+				exec.to_cstr().substring(0, PATH_MAX), "...')")));
 }

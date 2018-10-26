@@ -1,6 +1,7 @@
 #include "../../include/filesystem.h"
 #include "../../include/parsers.h"
 #include "../../include/sim/simfile.h"
+#include "../../include/time.h"
 #include "../../include/utilities.h"
 
 #include <cmath>

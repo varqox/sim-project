@@ -57,8 +57,7 @@ SIMLIB_TEST_SRCS := \
 	$(PREFIX)test/filesystem.cc \
 	$(PREFIX)test/sandbox.cc \
 	$(PREFIX)test/simfile.cc \
-	$(PREFIX)test/conver.cc \
-	$(PREFIX)test/string.cc
+	$(PREFIX)test/conver.cc
 
 $(eval $(call load_dependencies, $(SIMLIB_TEST_SRCS)))
 SIMLIB_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_TEST_SRCS))

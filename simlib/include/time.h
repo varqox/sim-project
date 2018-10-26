@@ -45,9 +45,9 @@ time_t strToTime(CStringView str,
 /**************************** timespec arithmetic ****************************/
 constexpr inline timespec operator+(timespec a, timespec b) noexcept {
 	timespec res {a.tv_sec + b.tv_sec, a.tv_nsec + b.tv_nsec};
-	if (res.tv_nsec >= 1000000000) {
+	if (res.tv_nsec >= 1'000'000'000) {
 		++res.tv_sec;
-		res.tv_nsec -= 1000000000;
+		res.tv_nsec -= 1'000'000'000;
 	}
 
 	return res;
@@ -57,7 +57,7 @@ constexpr inline timespec operator-(timespec a, timespec b) noexcept {
 	timespec res {a.tv_sec - b.tv_sec, a.tv_nsec - b.tv_nsec};
 	if (res.tv_nsec < 0) {
 		--res.tv_sec;
-		res.tv_nsec += 1000000000;
+		res.tv_nsec += 1'000'000'000;
 	}
 
 	return res;
@@ -100,9 +100,9 @@ constexpr inline bool operator>=(timespec a, timespec b) noexcept {
 /**************************** timeval arithmetic ****************************/
 constexpr inline timeval operator+(timeval a, timeval b) noexcept {
 	timeval res {a.tv_sec + b.tv_sec, a.tv_usec + b.tv_usec};
-	if (res.tv_usec >= 1000000) {
+	if (res.tv_usec >= 1'000'000) {
 		++res.tv_sec;
-		res.tv_usec -= 1000000;
+		res.tv_usec -= 1'000'000;
 	}
 
 	return res;
@@ -112,7 +112,7 @@ constexpr inline timeval operator-(timeval a, timeval b) noexcept {
 	timeval res {a.tv_sec - b.tv_sec, a.tv_usec - b.tv_usec};
 	if (res.tv_usec < 0) {
 		--res.tv_sec;
-		res.tv_usec += 1000000;
+		res.tv_usec += 1'000'000;
 	}
 
 	return res;
@@ -153,54 +153,72 @@ constexpr inline bool operator>=(timeval a, timeval b) noexcept {
 
 template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 11> // +11
     // for terminating null and decimal point and the fraction part
-StringBuff<N> timespec_to_str(timespec x, uint prec, bool trim_zeros = true) {
+InplaceBuff<N> timespec_to_str(timespec x, uint prec, bool trim_zeros = true) {
 	auto res = toString<uint64_t, N>(x.tv_sec);
-
-	res.raw_append('.');
-	for (unsigned i = res.len + 8; i >= res.len; --i) {
+	res[res.size++] = '.';
+	for (unsigned i = res.size + 8; i >= res.size; --i) {
 		res[i] = '0' + x.tv_nsec % 10;
 		x.tv_nsec /= 10;
 	}
 
 	// Truncate trailing zeros
-	unsigned i = res.len + std::min(8, int(prec) - 1);
+	unsigned i = res.size + std::min(8, int(prec) - 1);
 	// i will point to the last character of the result
 	if (trim_zeros)
-		while (i >= res.len && res[i] == '0')
+		while (i >= res.size && res[i] == '0')
 			--i;
 
-	if (i == res.len - 1)
-		res.len = i; // Trim trailing '.'
+	if (i == res.size - 1)
+		res.size = i; // Trim trailing '.'
 	else
-		res.len = ++i;
+		res.size = ++i;
 
-	res[i] = '\0';
 	return res;
 }
 
 template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 8> // +8
     // for terminating null and decimal point and the fraction part
-StringBuff<N> timeval_to_str(timeval x, uint prec, bool trim_zeros = true) {
+InplaceBuff<N> timeval_to_str(timeval x, uint prec, bool trim_zeros = true) {
 	auto res = toString<uint64_t, N>(x.tv_sec);
-
-	res.raw_append('.');
-	for (unsigned i = res.len + 5; i >= res.len; --i) {
+	res[res.size++] = '.';
+	for (unsigned i = res.size + 5; i >= res.size; --i) {
 		res[i] = '0' + x.tv_usec % 10;
 		x.tv_usec /= 10;
 	}
 
 	// Truncate trailing zeros
-	unsigned i = res.len + std::min(5, int(prec) - 1);
+	unsigned i = res.size + std::min(5, int(prec) - 1);
 	// i will point to the last character of the result
 	if (trim_zeros)
-		while (i >= res.len && res[i] == '0')
+		while (i >= res.size && res[i] == '0')
 			--i;
 
-	if (i == res.len - 1)
-		res.len = i; // Trim trailing '.'
+	if (i == res.size - 1)
+		res.size = i; // Trim trailing '.'
 	else
-		res.len = ++i;
+		res.size = ++i;
 
-	res[i] = '\0';
 	return res;
+}
+
+
+/**
+ * @brief Converts usec (ULL) to sec (double as string)
+ *
+ * @param x usec value
+ * @param prec precision (maximum number of digits after '.', if greater than 6,
+ *   then it is downgraded to 6)
+ * @param trim_zeros set whether to trim trailing zeros
+ *
+ * @return floating-point x in seconds as string
+ */
+template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 2> // +2 for
+	// terminating null and decimal point
+InplaceBuff<N> usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true) {
+	uint64_t y = x / 1'000'000;
+	x -= y * 1'000'000;
+	return timeval_to_str<N>(
+		{static_cast<decltype(timeval::tv_sec)>(y),
+			static_cast<decltype(timeval::tv_usec)>(x)},
+		prec, trim_zeros);
 }

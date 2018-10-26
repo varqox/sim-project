@@ -72,7 +72,8 @@ public:
 		for (auto&& group : groups) {
 			for (auto&& test : group.tests) {
 				back_insert(res, "  ", paddedString(test.name, 11, LEFT),
-					paddedString(usecToSecStr(test.runtime, 2, false), 4),
+					paddedString(intentionalUnsafeStringView(
+						usecToSecStr(test.runtime, 2, false)), 4),
 					" / ", usecToSecStr(test.time_limit, 2, false),
 					" s  ", test.memory_consumed >> 10, " / ",
 					test.memory_limit >> 10, " KB"
@@ -183,7 +184,8 @@ class VerboseJudgeLogger : public JudgeLogger {
 		Sandbox::ExitStat es, Func&& func)
 	{
 		auto tmplog = log("  ", paddedString(test_name, 11, LEFT),
-			paddedString(usecToSecStr(test_report.runtime, 2, false), 4),
+			paddedString(intentionalUnsafeStringView(
+				usecToSecStr(test_report.runtime, 2, false)), 4),
 			" / ", usecToSecStr(test_report.time_limit, 2, false),
 			" s  ", test_report.memory_consumed >> 10, " / ",
 			test_report.memory_limit >> 10, " KB  Status: ");

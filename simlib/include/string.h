@@ -101,44 +101,40 @@ inline std::string& operator+=(std::string& str,
 	return str;
 }
 
-template<size_t N, class size_type = size_t>
-class StringBuff;
+template<size_t N>
+class InplaceBuff;
 
 // Only to use with standard integral types
 // +1 for a terminating null char and +1 for the minus sign
 template<class T, size_t N =
 	string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2>
 constexpr inline auto toString(T x) noexcept ->
-	std::enable_if_t<std::is_integral<T>::value, StringBuff<N>>;
+	std::enable_if_t<std::is_integral<T>::value, InplaceBuff<N>>;
 
 template<class T>
-constexpr inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x))
+inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x))
 {
 	return std::forward<T>(x);
 }
 
 // Allows stringifying integers
-constexpr inline auto stringify(bool x) noexcept {
+inline auto stringify(bool x) noexcept {
 	return (x ? "true" : "false");
 }
 
-constexpr inline char stringify(char x) noexcept { return x; }
-constexpr inline auto stringify(unsigned char x) noexcept ->
-	decltype(toString(x));
+inline char stringify(char x) noexcept { return x; }
+inline auto stringify(unsigned char x) noexcept -> decltype(toString(x));
 
-constexpr inline auto stringify(short x) noexcept -> decltype(toString(x));
-constexpr inline auto stringify(unsigned short x) noexcept ->
-	decltype(toString(x));
+inline auto stringify(short x) noexcept -> decltype(toString(x));
+inline auto stringify(unsigned short x) noexcept -> decltype(toString(x));
 
-constexpr inline auto stringify(int x) noexcept -> decltype(toString(x));
-constexpr inline auto stringify(unsigned x) noexcept -> decltype(toString(x));
-constexpr inline auto stringify(long x) noexcept -> decltype(toString(x));
-constexpr inline auto stringify(unsigned long x) noexcept ->
-	decltype(toString(x));
+inline auto stringify(int x) noexcept -> decltype(toString(x));
+inline auto stringify(unsigned x) noexcept -> decltype(toString(x));
+inline auto stringify(long x) noexcept -> decltype(toString(x));
+inline auto stringify(unsigned long x) noexcept -> decltype(toString(x));
 
-constexpr inline auto stringify(long long x) noexcept -> decltype(toString(x));
-constexpr inline auto stringify(unsigned long long x) noexcept ->
-	decltype(toString(x));
+inline auto stringify(long long x) noexcept -> decltype(toString(x));
+inline auto stringify(unsigned long long x) noexcept -> decltype(toString(x));
 
 /**
  * @brief Concentrates @p args into std::string
@@ -165,87 +161,6 @@ inline std::string concat_tostr(Args&&... args) {
 		return res;
 	}(stringify(std::forward<Args>(args))...);
 }
-
-template<size_t N, class size_type>
-class StringBuff {
-public:
-	static constexpr size_t max_size = N - 1;
-	static_assert(N > 0, "max_size would underflow");
-
-	char str[N];
-	size_type len = 0;
-
-	constexpr StringBuff() {}
-
-	constexpr StringBuff(size_type count, char ch) : len(count) {
-		throw_assert(count <= max_size);
-		std::fill(str, str + count, ch);
-		str[count] = '\0';
-	}
-
-	// Variadic constructor, it does not accept an integer as the first argument
-	template<class Arg1, class... Args,
-		typename = std::enable_if_t<!std::is_integral<Arg1>::value, void>>
-	StringBuff(Arg1&& arg1, Args&&... args) {
-		append(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
-	}
-
-	constexpr bool empty() const noexcept { return (len == 0); }
-
-	constexpr size_type size() const noexcept { return len; }
-
-	/// Appends without adding the null terminating character
-	template<class... Args>
-	constexpr StringBuff& raw_append(Args&&... args) {
-		[this](auto&&... xx) {
-			// Sum length of all args
-			size_t final_len = len;
-			(void)std::initializer_list<size_t>{
-				(final_len += string_length(xx))...
-			};
-			throw_assert(final_len <= max_size);
-
-			// Concentrate them into str[]
-			auto impl_append = [&](auto&& s) {
-				auto sl = string_length(s);
-				std::copy(::data(s), ::data(s) + sl, str + len);
-				len += sl;
-			};
-
-			(void)impl_append; // Ignore warning 'unused' when no arguments are
-			                   // provided
-			(void)std::initializer_list<int>{
-				(impl_append(std::forward<decltype(xx)>(xx)), 0)...
-			};
-		}(stringify(std::forward<Args>(args))...);
-
-		return *this;
-	}
-
-	/// Appends and adds the null terminating character
-	template<class... Args>
-	constexpr StringBuff& append(Args&&... args) {
-		raw_append(std::forward<Args>(args)...);
-		str[len] = '\0'; // Terminating null character
-		return *this;
-	}
-
-	constexpr char* data() noexcept { return str; }
-
-	constexpr const char* data() const noexcept { return str; }
-
-	constexpr char& operator[](size_type n) noexcept { return str[n]; }
-
-	constexpr char& operator[](size_type n) const noexcept { return str[n]; }
-};
-
-template<size_t... N>
-constexpr auto merge(const StringBuff<N>&... args) {
-	return StringBuff<meta::sum<N...>>{args...};
-}
-
-template<size_t N, class size_type>
-constexpr size_t StringBuff<N, size_type>::max_size;
 
 template<class Char>
 class StringBase {
@@ -282,10 +197,6 @@ public:
 	constexpr StringBase(char(&s)[N]) : str(s), len(__builtin_strlen(s)) {}
 
 	constexpr StringBase(const meta::string& s) noexcept
-		: str(s.data()), len(s.size()) {}
-
-	template<size_t N>
-	constexpr StringBase(const StringBuff<N>& s) noexcept
 		: str(s.data()), len(s.size()) {}
 
 	constexpr StringBase(pointer s) noexcept
@@ -945,9 +856,6 @@ public:
 
 	constexpr CStringView(const meta::string& s) : StringBase(s) {}
 
-	template<size_t N>
-	constexpr CStringView(const StringBuff<N>& s) : StringBase(s) {}
-
 	constexpr CStringView(const FixedString& s) noexcept
 		: StringBase(s.data(), s.size()) {}
 
@@ -1167,7 +1075,8 @@ public:
 		p_ = &a_[0];
 	}
 
-	constexpr explicit InplaceBuff(size_t n)
+	template<class T, typename = std::enable_if_t<std::is_same<T, size_t>::value>>
+	constexpr explicit InplaceBuff(T n)
 		: InplaceBuffBase(n, meta::max(N, n), nullptr)
 	{
 		p_ = (n <= N ? &a_[0] : new char[n]);
@@ -1476,83 +1385,76 @@ struct LowerStrCompare : public SpecialStrCompare<int(*)(int)> {
 
 template<class T, size_t N>
 constexpr inline auto toString(T x) noexcept ->
-	std::enable_if_t<std::is_integral<T>::value, StringBuff<N>>
+	std::enable_if_t<std::is_integral<T>::value, InplaceBuff<N>>
 {
-	using RType = StringBuff<N>;
+	using RType = InplaceBuff<N>;
 	static_assert(N >=
 		string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2,
 		"Needed to be noexcept");
 
-	if (x == 0)
-		return RType{1, '0'};
+	if (x == 0) {
+		RType res((size_t)1);
+		res[0] = '0';
+		return res;
+	}
 
 	RType buff;
 	if (std::is_signed<T>::value && x < 0) {
 		while (x) {
 			T x2 = x / 10;
-			buff[buff.len++] = x2 * 10 - x + '0';
+			buff[buff.size++] = x2 * 10 - x + '0';
 			x = x2;
 		}
-		buff[buff.len++] = '-';
+		buff[buff.size++] = '-';
 
-		buff[buff.len] = '\0';
-		std::reverse(buff.str, buff.str + buff.len);
+		std::reverse(buff.begin(), buff.end());
 		return buff;
 	}
 
 	while (x) {
 		T x2 = x / 10;
-		buff[buff.len++] = x - x2 * 10 + '0';
+		buff[buff.size++] = x - x2 * 10 + '0';
 		x = x2;
 	}
 
-	buff[buff.len] = '\0';
-	std::reverse(buff.str, buff.str + buff.len);
+	std::reverse(buff.begin(), buff.end());
 	return buff;
 }
 
 // Allows stringifying integers
-constexpr inline auto stringify(unsigned char x) noexcept ->
-	decltype(toString(x))
-{
+inline auto stringify(unsigned char x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(short x) noexcept -> decltype(toString(x)) {
+inline auto stringify(short x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(unsigned short x) noexcept ->
-	decltype(toString(x))
-{
+inline auto stringify(unsigned short x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(int x) noexcept -> decltype(toString(x)) {
+inline auto stringify(int x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(unsigned x) noexcept -> decltype(toString(x)) {
+inline auto stringify(unsigned x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(long x) noexcept -> decltype(toString(x)) {
+inline auto stringify(long x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(unsigned long x) noexcept ->
-	decltype(toString(x))
-{
+inline auto stringify(unsigned long x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(long long x) noexcept -> decltype(toString(x)) {
+inline auto stringify(long long x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
-constexpr inline auto stringify(unsigned long long x) noexcept ->
-	decltype(toString(x))
-{
+inline auto stringify(unsigned long long x) noexcept -> decltype(toString(x)) {
 	return toString(x);
 }
 
@@ -2067,45 +1969,6 @@ constexpr T digitsToU(StringView str) noexcept {
 	for (char c : str)
 		x = 10 * x + c - '0';
 	return x;
-}
-
-/**
- * @brief Converts usec (ULL) to sec (double as string)
- *
- * @param x usec value
- * @param prec precision (maximum number of digits after '.', if greater than 6,
- *   then it is downgraded to 6)
- * @param trim_zeros set whether to trim trailing zeros
- *
- * @return floating-point x in sec as string
- */
-template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 2> // +2 for
-	// terminating null and decimal point
-StringBuff<N> usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true) {
-	uint64_t y = x / 1'000'000;
-	auto res = toString<uint64_t, N>(y);
-
-	y = x - y * 1'000'000;
-	res.raw_append('.');
-	for (unsigned i = res.len + 5; i >= res.len; --i) {
-		res[i] = '0' + y % 10;
-		y /= 10;
-	}
-
-	// Truncate trailing zeros
-	unsigned i = res.len + std::min(5, int(prec) - 1);
-	// i will point to the last character of the result
-	if (trim_zeros)
-		while (i >= res.len && res[i] == '0')
-			--i;
-
-	if (i == res.len - 1)
-		res.len = i; // Trim trailing '.'
-	else
-		res.len = ++i;
-
-	res[i] = '\0';
-	return res;
 }
 
 enum Adjustment : uint8_t { LEFT, RIGHT };
