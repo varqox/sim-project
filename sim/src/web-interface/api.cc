@@ -86,7 +86,7 @@ void Sim::api_logs() {
 		end_offset = fsize;
 
 	constexpr uint CHUNK_MAX_LEN = 4 << 10; // 4 kB
-	uint len;
+	size_t len;
 
 	if (end_offset < CHUNK_MAX_LEN) {
 		len = end_offset;

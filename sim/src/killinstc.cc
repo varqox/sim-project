@@ -11,21 +11,24 @@ void help(const char* program_name) {
 	if (!program_name)
 		program_name = "killinstc";
 
-	printf("Usage: %s [options] <file>\n", program_name);
-	puts("Kill all process which are instances of <file>");
-	puts("");
-	puts("Options:");
-	puts("  --wait    Wait for a process to die after sending the signal");
-	puts("  --wait=t  Wait no longer than t seconds for a process to die after"
+	stdlog("Usage: ", program_name, " [options] <file>");
+	stdlog("Kill all process which are instances of <file>");
+	stdlog("");
+	stdlog("Options:");
+	stdlog("  --wait    Wait for a process to die after sending the signal");
+	stdlog("  --wait=t  Wait no longer than t seconds for a process to die after"
 				" sending signal (t may be a floating point decimal, t equal"
 				" to 0 means to wait indefinitely)");
-	puts("  --kill-after=t");
-	puts("            If a process does not die after t seconds, it will be"
+	stdlog("  --kill-after=t");
+	stdlog("            If a process does not die after t seconds, it will be"
 				" signaled with SIGKILL");
 
 }
 
 int main(int argc, char **argv) {
+	stdlog.label(false);
+	errlog.label(false);
+
 	if (argc == 0) {
 		help(nullptr);
 		return 1;
@@ -56,7 +59,7 @@ int main(int argc, char **argv) {
 			wait = true;
 			wait_interval = atof(arg.data() + 6) * 1e6;
 			if (wait_interval <= 0) {
-				eprintf("Too small value in option --wait=");
+				errlog("Too small value in option --wait=");
 				parameters_error = true;
 			}
 
@@ -64,14 +67,14 @@ int main(int argc, char **argv) {
 		} else if (hasPrefix(arg, "-kill-after=")) {
 			kill_after = atof(arg.data() + 12) * 1e6;
 			if (kill_after == 0) {
-				eprintf("Too small value in option --kill-after=");
+				errlog("Too small value in option --kill-after=");
 				parameters_error = true;
 			}
 
 
 		// Unknown
 		} else {
-			eprintf("Unrecognized option: `%s`\n", argv[i]);
+			errlog("Unrecognized option: `%s`\n", argv[i]);
 			parameters_error = true;
 		}
 	}
@@ -104,7 +107,7 @@ int main(int argc, char **argv) {
 				try {
 					victims.emplace_back(pid, getProcStat(pid, START_TIME_FID));
 				} catch (const std::runtime_error& e) {
-					eprintf("%s\n", e.what());
+					errlog(e.what());
 				}
 		}
 
@@ -126,12 +129,12 @@ int main(int argc, char **argv) {
 		// Send signals
 		for (int i = 0; i < (int)victims.size(); ++i) {
 			auto&& vic = victims[i];
-			printf("%i <- SIGTERM\n", vic.first);
+			stdlog(vic.first, " <- SIGTERM");
 
 			if (kill(vic.first, SIGTERM) == -1) {
 				// Unsuccessful kill
 				if (errno != ESRCH)
-					eprintf("kill(%i)%s\n", vic.first, errmsg().str);
+					errlog("kill(", vic.first, ")", errmsg());
 
 				swap(victims[i--], victims.back());
 				victims.pop_back();
@@ -171,12 +174,12 @@ int main(int argc, char **argv) {
 		// Kill remaining processes (victims)
 		if (kill_after)
 			for (auto vic : victims) {
-				printf("%i <- SIGKILL\n", vic.first);
+				stdlog(vic.first, " <- SIGKILL");
 				(void)kill(vic.first, SIGKILL);
 			}
 
 	} catch(const std::exception& e) {
-		eprintf("%s\n", e.what());
+		errlog(e.what());
 		return 1;
 	}
 

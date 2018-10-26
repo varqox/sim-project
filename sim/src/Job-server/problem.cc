@@ -360,7 +360,8 @@ static void add_jobs_to_judge_problem_solutions(uint64_t problem_id) {
 	// Problem's solutions are more important than the ordinary submissions
 	constexpr uint prio = priority(JobType::JUDGE_SUBMISSION) + 1;
 	const auto current_date = mysql_date();
-	const auto info = jobs::dumpString(toStr(problem_id));
+	const auto info = jobs::dumpString(
+		intentionalUnsafeStringView(toStr(problem_id)));
 	insert_stmt.bind_all(prio, current_date, submission_id, info);
 
 	while (stmt.next())

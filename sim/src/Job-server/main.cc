@@ -860,7 +860,8 @@ static WorkersPool local_workers(process_local_job, sync_and_assign_jobs,
 			if (winfo.next_job.locked_its_problem)
 				jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
-			jobs::restart_job(mysql, toStr(winfo.next_job.id), false);
+			jobs::restart_job(mysql,
+				intentionalUnsafeStringView(toStr(winfo.next_job.id)), false);
 		}
 
 		EventsQueue::register_event([]{
@@ -877,7 +878,8 @@ static WorkersPool judge_workers(process_judge_job, sync_and_assign_jobs,
 			if (winfo.next_job.locked_its_problem)
 				jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
-			jobs::restart_job(mysql, toStr(winfo.next_job.id), false);
+			jobs::restart_job(mysql,
+				intentionalUnsafeStringView(toStr(winfo.next_job.id)), false);
 		}
 
 		EventsQueue::register_event([]{

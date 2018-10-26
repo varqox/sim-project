@@ -5,7 +5,7 @@
 
 using SFSM = SubmissionFinalSelectingMethod;
 
-inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
+inline static InplaceBuff<32> color_class_json(Sim::ContestPermissions cperms,
 	InfDatetime full_results, const decltype(mysql_date())& curr_mysql_date,
 	Optional<SubmissionStatus> full_status,
 	Optional<SubmissionStatus> initial_status)
@@ -14,12 +14,12 @@ inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
 		full_results <= curr_mysql_date)
 	{
 		if (full_status.has_value())
-			return {"\"", css_color_class(full_status.value()), "\""};
+			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 
 	} else if (initial_status.has_value())
-		return {"\"", css_color_class(initial_status.value()), "\""};
+		return concat<32>("\"", css_color_class(initial_status.value()), "\"");
 
-	return "null";
+	return concat<32>("null");
 }
 
 void Sim::append_contest_actions_str() {
