@@ -1435,10 +1435,10 @@ ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false
 				text: 'Download'
 			}).add('<ul>', {
 				html: [actions_str.indexOf('r') === -1 ? '' :  $('<a>', {
-						href: '/api/job/' + job_id + '/log',
+						href: '/api/download/job/' + job_id + '/log',
 						text: 'Job log'
 					}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
-						href: '/api/job/' + job_id + '/uploaded-package',
+						href: '/api/download/job/' + job_id + '/uploaded-package',
 						text: 'Uploaded package'
 					})
 				]
@@ -1504,7 +1504,7 @@ ActionsToHTML.submission = function(submission_id, actions_str, submission_type,
 
 		var a = document.createElement('a');
 		a.className = 'btn-small';
-		a.href = '/api/submission/' + submission_id + '/download';
+		a.href = '/api/download/submission/' + submission_id;
 		a.innerText = 'Download';
 		res.push(a);
 	}
@@ -1536,7 +1536,7 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 	if (problem.actions.indexOf('V') !== -1)
 		res.push($('<a>', {
 			class: 'btn-small',
-			href: '/api/problem/' + problem.id + '/statement/' + encodeURIComponent(problem.name),
+			href: '/api/download/statement/problem/' + problem.id + '/' + encodeURIComponent(problem.name),
 			text: 'Statement'
 		}));
 
@@ -1552,7 +1552,7 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 	if (problem_view && problem.actions.indexOf('d') !== -1)
 		res.push($('<a>', {
 			class: 'btn-small',
-			href: '/api/problem/' + problem.id + '/download',
+			href: '/api/download/problem/' + problem.id,
 			text: 'Download'
 		}));
 
@@ -1646,7 +1646,7 @@ ActionsToHTML.file = function(file_id, actions_str) {
 	if (actions_str.indexOf('O') !== -1) {
 		var a = document.createElement('a');
 		a.className = 'btn-small';
-		a.href = '/api/file/' + file_id + '/download';
+		a.href = '/api/download/file/' + file_id;
 		a.innerText = 'Download';
 		res.push(a);
 	}
@@ -2152,7 +2152,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 					text: 'The job log is too large to show it entirely here. If you want to see the whole, click: '
 				}).append($('<a>', {
 					class: 'btn-small',
-					href: '/api/job/' + job_id + '/log',
+					href: '/api/download/job/' + job_id + '/log',
 					text: 'Download the full job log'
 				})));
 		}
@@ -2493,7 +2493,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 						view_contest_problem.bind(null, true, s.contest_problem_id)),
 					$('<a>', {
 						class: 'btn-small',
-						href: '/api/contest/p' + s.contest_problem_id + '/statement/' +
+						href: '/api/download/statement/contest/p' + s.contest_problem_id + '/' +
 							encodeURIComponent(s.contest_problem_name),
 						text: 'View statement'
 					})
@@ -4079,7 +4079,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						$('<center>', {html: [
 							$('<a>', {
 								class: 'btn-small',
-								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem.name),
+								href: '/api/download/statement/contest/p' + problem.id + '/' + encodeURIComponent(problem.name),
 								text: 'Statement'
 							}),
 							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue',
@@ -4970,7 +4970,7 @@ function FilesLister(elem, query_suffix /*= ''*/) {
 				text: x.modified
 			})));
 			row.append($('<td>', {html: $('<a>', {
-				href: '/api/file/' + x.id + '/download',
+				href: '/api/download/file/' + x.id,
 				text: x.name
 			})}));
 			row.append($('<td>', {text: humanizeFileSize(x.file_size)}));
