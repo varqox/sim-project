@@ -5,12 +5,46 @@
 void Sim::api_handle() {
 	STACK_UNWINDING_MARK;
 
-	if (request.method != server::HttpRequest::POST)
+	resp.headers["Content-type"] = "text/plain; charset=utf-8";
+	// Allow download queries to pass without POST
+	StringView next_arg = url_args.extractNextArg();
+	if (next_arg == "download") {
+		next_arg = url_args.extractNextArg();
+		if (isOneOf(next_arg, "submission", "problem", "file")) {
+			auto id = url_args.extractNextArg();
+			request.target = concat_tostr("/api/", next_arg, '/', id,
+				"/download");
+
+		} else if (next_arg == "statement") {
+			next_arg = url_args.extractNextArg();
+			if (isOneOf(next_arg, "problem", "contest")) {
+				auto id = url_args.extractNextArg();
+				request.target = concat_tostr("/api/", next_arg, '/', id,
+					"/statement");
+			} else
+				return api_error404();
+
+		} else if (next_arg == "job") {
+			auto job_id = url_args.extractNextArg();
+			next_arg = url_args.extractNextArg();
+			if (isOneOf(next_arg, "log", "uploaded-package")) {
+				request.target = concat_tostr("/api/job/", job_id, '/',
+					next_arg);
+			} else {
+				return api_error404();
+			}
+
+		} else
+			return api_error404();
+
+		// Update url_args to reflect the changed URL
+		url_args = RequestURIParser(request.target);
+		url_args.extractNextArg(); // extract "/api"
+		next_arg = url_args.extractNextArg();
+
+	} else if (request.method != server::HttpRequest::POST)
 		return api_error403("To access API you have to use POST");
 
-	resp.headers["Content-type"] = "text/plain; charset=utf-8";
-
-	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "contest")
 		return api_contest();
 	else if (next_arg == "contest_entry_token")
