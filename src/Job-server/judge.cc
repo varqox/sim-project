@@ -482,7 +482,7 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 
 	auto set_failure = [&] {
 		auto stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_FAILED_STR ", data=CONCAT(data,?)"
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(job_log, job_id);
 	};
@@ -568,7 +568,7 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	stmt.bindAndExecute(simfile.dump(), problem_id);
 
 	stmt = mysql.prepare("UPDATE jobs"
-		" SET status=" JSTATUS_DONE_STR ", data=CONCAT(data,?)"
+		" SET status=" JSTATUS_DONE_STR ", data=?"
 		" WHERE id=?");
 	stmt.bindAndExecute(job_log, job_id);
 }
