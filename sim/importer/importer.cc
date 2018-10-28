@@ -168,6 +168,9 @@ int main2(int argc, char **argv) {
 		return 4;
 	}
 
+	old_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+
 	// Kill both webservers and job-servers to not interrupt with the upgrade
 	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
 	Spawner::run(killinstc, {
