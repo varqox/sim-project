@@ -255,7 +255,7 @@ int main2(int argc, char **argv) {
 		MySQL::Optional<InplaceBuff<BUFF_LEN>> parent, grandparent, problem_id, begins, full_results, ends;
 		InplaceBuff<BUFF_LEN> id, name, owner, item, is_public, visible;
 		bool show_ranking;
-		auto ostmt = old_conn.prepare("SELECT id, parent, grandparent, problem_id, name, owner, item, is_public, visible, show_ranking, begins, full_results, ends FROM rounds");
+		auto ostmt = old_conn.prepare("SELECT id, parent, grandparent, problem_id, name, owner, item, is_public, visible, show_ranking, begins, full_results, ends FROM rounds ORDER BY parent"); // order contests before rounds
 		ostmt.bindAndExecute();
 		ostmt.res_bind_all(id, parent, grandparent, problem_id, name, owner, item, is_public, visible, show_ranking, begins, full_results, ends);
 
