@@ -183,6 +183,7 @@ public:
 
 	template<class U>
 	constexpr T value_or(U&& default_value) const {
-		return (has_value_ ? payload_ : std::forward<U>(default_value));
+		return (has_value_ ? payload_ :
+			static_cast<T>(std::forward<U>(default_value)));
 	}
 };
