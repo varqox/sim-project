@@ -267,12 +267,12 @@ int main2(int argc, char **argv) {
 		auto ncpstmt = new_conn.prepare("INSERT INTO contest_problems(id, contest_round_id, contest_id, problem_id, name, item, final_selecting_method, reveal_score) VALUES(?,?,?,?,?,?,?,?)");
 		auto custmt = new_conn.prepare("REPLACE INTO contest_users(user_id, contest_id, mode) VALUES(?, ?, " CU_MODE_OWNER_STR ")");
 
-		map<decltype(id), bool> contest_id2show_ranking;
+		map<string, bool> contest_id2show_ranking;
 		while (ostmt.next()) {
 			// Contest
 			if (not parent.has_value()) {
 				ncstmt.bindAndExecute(id, name, is_public);
-				contest_id2show_ranking[id] = show_ranking;
+				contest_id2show_ranking[id.to_string()] = show_ranking;
 				if (owner != "0")
 					custmt.bindAndExecute(owner, id);
 			// Contest round
@@ -294,8 +294,8 @@ int main2(int argc, char **argv) {
 					full_res.set_neg_inf();
 
 				InfDatetime ranking_exposure;
-				throw_assert(contest_id2show_ranking.count(parent.value()) == 1);
-				if (contest_id2show_ranking[parent.value()])
+				throw_assert(contest_id2show_ranking.count(parent.value().to_string()) == 1);
+				if (contest_id2show_ranking[parent.value().to_string()])
 					ranking_exposure.set_neg_inf();
 				else
 					ranking_exposure.set_inf();
