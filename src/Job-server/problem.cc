@@ -198,14 +198,14 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 	CallInDtor<decltype(rollbacker)> rollback_maker {rollbacker};
 
 	// Insert the problem into the SQLite FTS5 table `problems`
-	SQLite::Statement sqlite_stmt {sqlite.prepare(
-		"INSERT INTO problems (rowid, type, name, label)"
-		" VALUES(?, ?, ?, ?)")};
-	sqlite_stmt.bindInt64(1, problem_id);
-	sqlite_stmt.bindInt(2, EnumVal<ProblemType>(info.problem_type).int_val());
-	sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
-	sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
-	throw_assert(sqlite_stmt.step() == SQLITE_DONE);
+	// SQLite::Statement sqlite_stmt {sqlite.prepare(
+		// "INSERT INTO problems (rowid, type, name, label)"
+		// " VALUES(?, ?, ?, ?)")};
+	// sqlite_stmt.bindInt64(1, problem_id);
+	// sqlite_stmt.bindInt(2, EnumVal<ProblemType>(info.problem_type).int_val());
+	// sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
+	// sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
+	// throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
 	// Move the package to its destination
 	auto package_dest = concat("problems/", pid_str, ".zip");
@@ -307,10 +307,10 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 		EnumVal<JobStatus> status; // [[maybe_uninitilized]]
 		uint64_t apid; // Added problem's id
 		try {
-			sqlite.execute("BEGIN");
+			// sqlite.execute("BEGIN");
 			apid = second_stage<action>(job_id, job_owner, info, job_log);
 			success_callback(apid, job_log);
-			sqlite.execute("COMMIT");
+			// sqlite.execute("COMMIT");
 
 			status = JobStatus::DONE;
 			if (action == Action::ADDING)
@@ -320,7 +320,7 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 
 		} catch (const std::exception& e) {
 			// To avoid exceptions C API is used
-			(void)sqlite3_exec(sqlite, "ROLLBACK", nullptr, nullptr, nullptr);
+			// (void)sqlite3_exec(sqlite, "ROLLBACK", nullptr, nullptr, nullptr);
 
 			ERRLOG_CATCH(e);
 			job_log.append("Caught exception: ", e.what());
@@ -543,11 +543,11 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 			}
 
 			// Replace the problem in the SQLite FTS5 table `problems`
-			SQLite::Statement sqlite_stmt {sqlite.prepare(
-				"UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
-			sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
-			sqlite_stmt.bindInt64(2, tmp_problem_id);
-			throw_assert(sqlite_stmt.step() == SQLITE_DONE);
+			// SQLite::Statement sqlite_stmt {sqlite.prepare(
+				// "UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
+			// sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
+			// sqlite_stmt.bindInt64(2, tmp_problem_id);
+			// throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
 			// Delete the old problem's solutions' submissions
 			{
