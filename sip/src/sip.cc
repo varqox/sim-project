@@ -119,7 +119,7 @@ static void kill_signal_handler(int signum) {
 		if (isDigit(file->d_name)) {
 	#endif
 			auto pid = strtoll(file->d_name);
-			if (toStr(my_pid) == intentionalUnsafeStringView(getProcStat(pid, 3))) // 3 means PPID
+			if (intentionalUnsafeStringView(toStr(my_pid)) == intentionalUnsafeStringView(getProcStat(pid, 3))) // 3 means PPID
 				(void)kill(-pid, signum);
 		}
 	});
