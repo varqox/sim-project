@@ -374,22 +374,28 @@ void Sim::api_submissions() {
 
 		// Type
 		switch (stype) {
-		case SubmissionType::NORMAL:
-			enum SubmissionNormalSubtype { NORMAL, FINAL, INITIAL_FINAL } subtype_to_show;
+		case SubmissionType::NORMAL: {
+			enum SubmissionNormalSubtype { NORMAL, FINAL, PROBLEM_FINAL, INITIAL_FINAL } subtype_to_show;
+			auto problem_final_to_subtype = [&] {
+				return (is_problem_final and may_see_problem_final ?
+					PROBLEM_FINAL : NORMAL);
+			};
 			if (not contest_submission) {
-				subtype_to_show = (is_problem_final and may_see_problem_final ?
-					FINAL : NORMAL);
+				subtype_to_show = problem_final_to_subtype();
 			} else {
 				if (selecting_problem_submissions)
-					subtype_to_show = (is_problem_final and may_see_problem_final ?
-						FINAL : NORMAL);
+					subtype_to_show = problem_final_to_subtype();
 				else if (show_full_results)
-					subtype_to_show = (is_contest_final ? FINAL : NORMAL);
+					subtype_to_show = (is_contest_final ? FINAL
+						: selecting_contest_submissions ? NORMAL
+							: problem_final_to_subtype());
 				else
 					subtype_to_show = (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
 			}
 
-			if (subtype_to_show != FINAL and selecting_finals) {
+			if (subtype_to_show != FINAL and
+				subtype_to_show != PROBLEM_FINAL and selecting_finals)
+			{
 				if (not select_one)
 					THROW("Cannot show final while selecting finals - this is a bug in the query or the restricting access (URL: ", request.target, ')');
 
@@ -399,9 +405,11 @@ void Sim::api_submissions() {
 			switch (subtype_to_show) {
 			case NORMAL: append("\"Normal\","); break;
 			case FINAL: append("\"Final\","); break;
+			case PROBLEM_FINAL: append("\"Problem final\","); break;
 			case INITIAL_FINAL: append("\"Initial final\","); break;
 			}
 			break;
+		}
 		case SubmissionType::IGNORED: append("\"Ignored\","); break;
 		case SubmissionType::PROBLEM_SOLUTION: append("\"Problem solution\",");
 			break;
