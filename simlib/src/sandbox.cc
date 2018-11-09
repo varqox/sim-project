@@ -206,9 +206,10 @@ struct X86_64SyscallRegisters : Registers<x86_64_user_regset> {
 template<class Func>
 class SyscallCallbackLambda : public SyscallCallback {
 	Func func;
+	DEBUG_SANDBOX(const meta::string name);
 
 public:
-	SyscallCallbackLambda(Func&& f) : func(f) {}
+	SyscallCallbackLambda(Func&& f DEBUG_SANDBOX(, meta::string callback_name)) : func(f) DEBUG_SANDBOX(, name(callback_name)) {}
 
 	SyscallCallbackLambda(const SyscallCallbackLambda&) = delete;
 	SyscallCallbackLambda(SyscallCallbackLambda&&) noexcept = default;
@@ -216,6 +217,7 @@ public:
 	SyscallCallbackLambda& operator=(SyscallCallbackLambda&&) noexcept = default;
 
 	bool operator()() final {
+		DEBUG_SANDBOX(stdlog("callback name: \"", name, '"'));
 		return func();
 	}
 };
@@ -224,8 +226,11 @@ public:
 #warning "Since C++17 calling the constructor is OK"
 #endif
 template<class Func>
-inline unique_ptr<SyscallCallbackLambda<Func>> syscall_callback_lambda(Func&& f) {
-	return make_unique<SyscallCallbackLambda<Func>>(std::forward<Func>(f));
+inline unique_ptr<SyscallCallbackLambda<Func>> syscall_callback_lambda(Func&& f
+	DEBUG_SANDBOX(, meta::string callback_name))
+{
+	return make_unique<SyscallCallbackLambda<Func>>(std::forward<Func>(f)
+		DEBUG_SANDBOX(, callback_name));
 }
 
 Sandbox::Sandbox() {
@@ -253,13 +258,15 @@ Sandbox::Sandbox() {
 	};
 
 	// Returns the callback id that can be used in the SCMP_ACT_TRACE()
-	auto add_callback = [&](auto&& callback) {
+	auto add_callback = [&](auto&& callback, meta::string callback_name) {
+		(void)callback_name;
 		return add_unique_ptr_callback(syscall_callback_lambda(
-			std::forward<decltype(callback)>(callback)));
+			std::forward<decltype(callback)>(callback)
+			DEBUG_SANDBOX(, callback_name)));
 	};
 
-	// Enable synchronization (it will not matter if the process has one thread,
-	// but it may have more in the future)
+	// Enable synchronization (it does not matter if the process has one thread,
+	// but it may have more than one in the future)
 	seccomp_attr_set_throw(x86_ctx_, SCMP_FLTATR_CTL_TSYNC, 1);
 	seccomp_attr_set_throw(x86_64_ctx_, SCMP_FLTATR_CTL_TSYNC, 1);
 
@@ -276,7 +283,7 @@ Sandbox::Sandbox() {
 	{
 		auto invalid_arch_callback_id = add_callback([&] {
 			return set_message_callback("Invalid architecture of the syscall");
-		});
+		}, "invalid arch");
 		seccomp_attr_set_throw(x86_ctx_, SCMP_FLTATR_ACT_BADARCH,
 			SCMP_ACT_TRACE(invalid_arch_callback_id));
 		seccomp_attr_set_throw(x86_64_ctx_, SCMP_FLTATR_ACT_BADARCH,
@@ -317,6 +324,7 @@ Sandbox::Sandbox() {
 		}
 
 		bool operator()() {
+			DEBUG_SANDBOX(stdlog("limiting callback name: \"", syscall_name_, "\", current limit: ", counter_));
 			if (counter_ == 0)
 				return sandbox_.set_message_callback("forbidden syscall: ", syscall_name_);
 
@@ -345,6 +353,9 @@ Sandbox::Sandbox() {
 	// access
 	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(access), 0);
 
+	// stat
+	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(ENOENT), SCMP_SYS(stat), 0);
+
 	// readlink(2) is a threshold for the insecure syscalls that are called
 	// during the initialization of glibc - they are allwed before the first
 	// call of readlink(2)
@@ -356,7 +367,7 @@ Sandbox::Sandbox() {
 					return set_message_callback("forbidden syscall: uname");
 
 				return false;
-			})), SCMP_SYS(uname), 0);
+			}, "uname")), SCMP_SYS(uname), 0);
 
 		// set_thread_area
 		seccomp_rule_add_throw(x86_ctx_,
@@ -365,7 +376,7 @@ Sandbox::Sandbox() {
 					return set_message_callback("forbidden syscall: set_thread_area");
 
 				return false;
-			})), SCMP_SYS(set_thread_area), 0);
+			}, "set_thread_area")), SCMP_SYS(set_thread_area), 0);
 
 		// arch_prctl
 		seccomp_rule_add_throw(x86_64_ctx_,
@@ -374,7 +385,7 @@ Sandbox::Sandbox() {
 					return set_message_callback("forbidden syscall: arch_prctl");
 
 				return false;
-			})), SCMP_SYS(arch_prctl), 0);
+			}, "arch_prctl")), SCMP_SYS(arch_prctl), 0);
 
 		// readlink - x86
 		seccomp_rule_add_throw(x86_ctx_,
@@ -385,7 +396,7 @@ Sandbox::Sandbox() {
 				regs.res() = -ENOENT;
 				regs.set_regs(tracee_pid_);
 				return false;
-			})), SCMP_SYS(readlink), 0);
+			}, "readlink")), SCMP_SYS(readlink), 0);
 
 		// readlink - x86_64
 		seccomp_rule_add_throw(x86_64_ctx_,
@@ -396,7 +407,7 @@ Sandbox::Sandbox() {
 				regs.res() = -ENOENT;
 				regs.set_regs(tracee_pid_);
 				return false;
-			})), SCMP_SYS(readlink), 0);
+			}, "readlink")), SCMP_SYS(readlink), 0);
 	}
 
 	// Monitor memory for changes of tracee's virtual memory size
@@ -439,7 +450,9 @@ Sandbox::Sandbox() {
 						sandbox_.tracee_vm_peak_ = vm_size;
 				}
 
-				DEBUG_SANDBOX(stdlog("tracee_vm_peak: -> ", sandbox_.tracee_vm_peak_);)
+				DEBUG_SANDBOX(stdlog("tracee_vm_peak: -> ", sandbox_.tracee_vm_peak_,
+					" (", humanizeFileSize(sandbox_.tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
+					")");)
 				return false;
 			}
 		};
@@ -554,26 +567,26 @@ Sandbox::Sandbox() {
 			X86SyscallRegisters regs(tracee_pid_);
 			return check_opening_syscall(tracee_pid_, regs, regs.syscall(),
 				regs.res(), regs.arg1(), regs.arg2(), *allowed_files_);
-		})), SCMP_SYS(open), 0);
+		}, "open")), SCMP_SYS(open), 0);
 
 		// open() - x86_64
 		seccomp_rule_add_throw(x86_64_ctx_, SCMP_ACT_TRACE(add_callback([&]{
 			X86_64SyscallRegisters regs(tracee_pid_);
 			return check_opening_syscall(tracee_pid_, regs, regs.syscall(),
 				regs.res(), regs.arg1(), regs.arg2(), *allowed_files_);
-		})), SCMP_SYS(open), 0);
+		}, "open")), SCMP_SYS(open), 0);
 
 		// openat() - x86
 		seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_TRACE(add_callback([&]{
 			X86SyscallRegisters regs(tracee_pid_);
 			return check_openat_syscall(tracee_pid_, regs, *allowed_files_);
-		})), SCMP_SYS(openat), 0);
+		}, "openat")), SCMP_SYS(openat), 0);
 
 		// openat() - x86_64
 		seccomp_rule_add_throw(x86_64_ctx_, SCMP_ACT_TRACE(add_callback([&]{
 			X86_64SyscallRegisters regs(tracee_pid_);
 			return check_openat_syscall(tracee_pid_, regs, *allowed_files_);
-		})), SCMP_SYS(openat), 0);
+		}, "openat")), SCMP_SYS(openat), 0);
 	}
 
 	// sysinfo
@@ -677,7 +690,8 @@ uint64_t Sandbox::get_tracee_vm_size() {
 	for (int i = 0; i < 32 && isdigit(buff[i]); ++i)
 		vm_size = vm_size * 10 + buff[i] - '0';
 
-	DEBUG_SANDBOX(stdlog("get_vm_size: -> ", vm_size);)
+	DEBUG_SANDBOX(stdlog("get_vm_size: -> ", vm_size, " (",
+		humanizeFileSize(vm_size * sysconf(_SC_PAGESIZE)), ")");)
 	return vm_size;
 };
 
@@ -846,16 +860,20 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	sclose(pfd[1]);
 	FileDescriptorCloser close_pipe0(pfd[0]); // Guard closing of the pipe's second end
 
+// Verbose debug messages have different color
+#define DEBUG_SANDBOX_VERBOSE_LOG(...) \
+	DEBUG_SANDBOX(stdlog("\033[1;30m", __VA_ARGS__, "\033[m"))
+
 	// Wait for tracee to be ready
 	siginfo_t si;
 	rusage ru;
 	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED) == -1)
 		THROW("waitid()", errmsg());
 
-	DEBUG_SANDBOX(stdlog("waitid(): code: ", si.si_code, " status: ",
+	DEBUG_SANDBOX_VERBOSE_LOG("waitid(): code: ", si.si_code, " status: ",
 		si.si_status, " pid: ", si.si_pid, " errno: ", si.si_errno,
 		" signo: ", si.si_signo, " syscall: ", si.si_syscall, " arch: ",
-		si.si_arch);)
+		si.si_arch);
 
 	// If something went wrong
 	if (si.si_code != CLD_TRAPPED)
@@ -921,16 +939,16 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			// Waiting for events
 			waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED | WNOWAIT);
 
-			DEBUG_SANDBOX(stdlog("waitid(): code: ", si.si_code, " status: ",
+			DEBUG_SANDBOX_VERBOSE_LOG("waitid(): code: ", si.si_code, " status: ",
 				si.si_status, " pid: ", si.si_pid, " errno: ", si.si_errno,
 				" signo: ", si.si_signo, " syscall: ", si.si_syscall, " arch: ",
-				si.si_arch));
+				si.si_arch);
 
 			switch (si.si_code) {
 			case CLD_TRAPPED:
 				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_EXEC<<8))) {
 					tracee_vm_peak_ = get_tracee_vm_size();
-					DEBUG_SANDBOX(stdlog("TRAPPED (exec())"));
+					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
 					// Fire timers
 					timer = make_unique<Timer>(tracee_pid_, opts.real_time_limit);
 					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_, opts.cpu_time_limit);
@@ -939,21 +957,25 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				}
 
 				if (si.si_status == SIGSYS) {
-					DEBUG_SANDBOX(stdlog("TRAPPED (SIGSYS)"));
+					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (SIGSYS)");
 					siginfo_t sii;
 					if (ptrace(PTRACE_GETSIGINFO, tracee_pid_, 0, &sii))
 						THROW("ptrace(PTRACE_GETSIGINFO)", errmsg());
 
-					DEBUG_SANDBOX(stdlog("waitid(): code: ", sii.si_code, " status: ",
-						sii.si_status, " pid: ", sii.si_pid, " errno: ", sii.si_errno,
-						" signo: ", sii.si_signo, " syscall: ", sii.si_syscall, " arch: ",
-						sii.si_arch));
+					DEBUG_SANDBOX_VERBOSE_LOG("siginfo: code: ", sii.si_code,
+						" status: ", sii.si_status, " pid: ", sii.si_pid,
+						" errno: ", sii.si_errno, " signo: ", sii.si_signo,
+						" syscall: ", sii.si_syscall, " arch: ", sii.si_arch);
 
 					if (sii.si_code == SYS_SECCOMP) {
 						unique_ptr<char, decltype(free)*> syscall_name {
 							seccomp_syscall_resolve_num_arch(sii.si_arch, sii.si_syscall),
 							free
 						};
+
+						DEBUG_SANDBOX(stdlog("forbidden syscall: ",
+							sii.si_syscall, " - ",
+							(syscall_name ? syscall_name.get() : "???")));
 
 						if (syscall_name) {
 							set_message_callback("forbidden syscall: ",
@@ -969,12 +991,12 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				}
 
 				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8))) {
-					DEBUG_SANDBOX(stdlog("TRAPPED (SECCOMP_EVENT)"));
+					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (SECCOMP_EVENT)");
 					unsigned long msg;
 					if (ptrace(PTRACE_GETEVENTMSG, tracee_pid_, 0, &msg))
 						THROW("ptrace(PTRACE_GETEVENTMSG)", errmsg());
 
-					DEBUG_SANDBOX(stdlog("callback id: ", msg));
+					DEBUG_SANDBOX_VERBOSE_LOG("callback id: ", msg);
 					if (callbacks_[msg].get()->operator()())
 						kill(-tracee_pid_, SIGKILL);
 
@@ -982,17 +1004,18 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				}
 
 				if (si.si_status == (SIGTRAP | 0x80)) { // Should not happen
-					DEBUG_SANDBOX(stdlog("TRAPPED (PTRACE_SYSCALL)"));
+					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (PTRACE_SYSCALL)");
 					continue;
 				}
 
-				DEBUG_SANDBOX(stdlog("TRAPPED (unknown) - si_status: ", si.si_status));
+				DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (unknown) - si_status: ",
+					si.si_status);
 				// Deliver intercepted signal to tracee
 				(void)ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status);
 				continue;
 
 			case CLD_STOPPED:
-				DEBUG_SANDBOX(stdlog("STOPPED - si_status: ", si.si_status));
+				DEBUG_SANDBOX_VERBOSE_LOG("STOPPED - si_status: ", si.si_status);
 				// Deliver intercepted signal to tracee
 				(void)ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status);
 				continue;
@@ -1000,7 +1023,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			case CLD_EXITED:
 			case CLD_DUMPED:
 			case CLD_KILLED:
-				DEBUG_SANDBOX(stdlog("ENDED"));
+				DEBUG_SANDBOX_VERBOSE_LOG("ENDED");
 				// Process terminated
 				get_cpu_time_and_wait_tracee(true);
 				goto tracee_died;
@@ -1040,7 +1063,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	}
 
 tracee_died:
-	// trace_vm_peak_ == 0 means that the process did not execve(2)
+	// tracee_vm_peak_ == 0 means that the process did not execve(2)
 	if (not has_the_readlink_syscall_occurred and tracee_vm_peak_ > 0)
 		THROW("The sandbox is somewhat insecure - readlink() as the mark of the"
 			" end of the initialization of glibc in the traced process is not"
