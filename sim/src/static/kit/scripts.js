@@ -1174,7 +1174,12 @@ function colorize(log, end) {
 	}
 
 	for (var i = 0; i < end; ++i) {
-		if (contains(i, '\033[31m')) {
+		if (contains(i, '\033[30m')) {
+			close_last_tag();
+			res += '<span class="gray">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[31m')) {
 			close_last_tag();
 			res += '<span class="red">';
 			opened = 'span';
@@ -1204,6 +1209,11 @@ function colorize(log, end) {
 			res += '<span class="turquoise">';
 			opened = 'span';
 			i += 4;
+		} else if (contains(i, '\033[1;30m')) {
+			close_last_tag();
+			res += '<b class="gray">';
+			opened = 'b';
+			i += 6;
 		} else if (contains(i, '\033[1;31m')) {
 			close_last_tag();
 			res += '<b class="red">';
