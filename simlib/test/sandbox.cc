@@ -2,14 +2,20 @@
 #include "../include/sandbox.h"
 
 #include <gtest/gtest.h>
+#include <iomanip>
 #include <linux/version.h>
 #include <sys/syscall.h>
+
+inline std::ostream& operator<<(std::ostream& os, timespec ts) {
+	return os << '{' << ts.tv_sec << '.' << std::setw(9) << ts.tv_nsec << '}';
+}
 
 TEST (Sandbox, run) {
 	Sandbox sandbox;
 
 	constexpr size_t MEM_LIMIT = 16 << 20; // 16 MB (in bytes)
-	constexpr timespec REAL_TIME_LIMIT = {0, (int)0.5e9}; // 0.5 s
+	// Big RT limit is needed for tests where memory dump is created - it is really slow)
+	constexpr timespec REAL_TIME_LIMIT = {3, 0}; // 3.0 s
 	constexpr timespec CPU_TIME_LIMIT = {0, (int)0.2e9}; // 0.2 s
 
 	Sandbox::Options opts {
