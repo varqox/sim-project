@@ -55,6 +55,10 @@ private:
 
 	uint64_t get_tracee_vm_size();
 
+	void update_tracee_vm_peak(uint64_t curr_vm_size);
+
+	void update_tracee_vm_peak() { update_tracee_vm_peak(get_tracee_vm_size()); }
+
 public:
 	Sandbox();
 

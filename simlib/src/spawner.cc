@@ -74,8 +74,8 @@ Spawner::ExitStat Spawner::run(FilePath exec,
 	});
 
 	// Set up timers
-	Timer timer(cpid, opts.real_time_limit);
-	CPUTimeMonitor cpu_timer(cpid, opts.cpu_time_limit);
+	Timer<void(*)(pid_t)> timer(cpid, opts.real_time_limit, defaultTimeoutHandler);
+	CPUTimeMonitor<void(*)(pid_t)> cpu_timer(cpid, opts.cpu_time_limit, defaultTimeoutHandler);
 	kill(cpid, SIGCONT); // There is only one process now, so '-' is not needed
 
 	// Wait for death of the child

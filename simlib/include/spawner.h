@@ -155,9 +155,15 @@ protected:
 		const std::vector<std::string>& exec_args, const Options& opts, int fd,
 		Func doBeforeExec) noexcept;
 
+	static void defaultTimeoutHandler(pid_t pid) { kill(-pid, SIGKILL); };
+
+	template<class TimeoutHandler>
 	class Timer {
 	private:
-		pid_t pid_;
+		struct Data {
+			pid_t pid;
+			TimeoutHandler timeouter;
+		} data;
 		timespec tlimit;
 		// used only if time_limit == {0, 0}
 		timespec begin_point;
@@ -167,7 +173,8 @@ protected:
 
 		static void handle_timeout(int, siginfo_t* si, void*) noexcept {
 			int errnum = errno;
-			kill(-*(pid_t*)si->si_value.sival_ptr, SIGKILL);
+			Data& data = *(Data*)si->si_value.sival_ptr;
+			try { data.timeouter(data.pid); } catch (...) {}
 			errno = errnum;
 		}
 
@@ -179,7 +186,9 @@ protected:
 		}
 
 	public:
-		Timer(pid_t pid, timespec time_limit) : pid_ {pid}, tlimit(time_limit) {
+		Timer(pid_t pid, timespec time_limit, TimeoutHandler timeouter)
+			: data {pid, std::move(timeouter)}, tlimit(time_limit)
+		{
 			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
 				if (clock_gettime(CLOCK_MONOTONIC, &begin_point))
 					THROW("clock_gettime()", errmsg());
@@ -199,7 +208,7 @@ protected:
 				memset(&sev, 0, sizeof(sev));
 				sev.sigev_notify = SIGEV_SIGNAL;
 				sev.sigev_signo = USED_SIGNAL;
-				sev.sigev_value.sival_ptr = &pid_;
+				sev.sigev_value.sival_ptr = &data;
 				if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
 					THROW("timer_create()", errmsg());
 
@@ -234,6 +243,7 @@ protected:
 		~Timer() { delete_timer(); }
 	};
 
+	template<class TimeoutHandler>
 	class CPUTimeMonitor {
 	private:
 		struct Data {
@@ -242,6 +252,7 @@ protected:
 			timespec cpu_abs_time_limit; // Counting from 0, not from cpu_time_at_start
 			timespec cpu_time_at_start;
 			timer_t timerid;
+			TimeoutHandler timeouter;
 		} data;
 		bool timer_is_active = false;
 
@@ -251,8 +262,9 @@ protected:
 			Data& data = *(Data*)si->si_value.sival_ptr;
 			timespec ts;
 			if (clock_gettime(data.cid, &ts) or ts >= data.cpu_abs_time_limit) {
-				kill(-data.pid, SIGKILL); // Failed to get time or
-				                          // cpu_time_limit expired
+				// Failed to get time or cpu_time_limit expired
+				try { data.timeouter(data.pid); } catch (...) {}
+
 			} else {
 				// There is still time left
 				itimerspec its {
@@ -267,8 +279,8 @@ protected:
 		}
 
 	public:
-		CPUTimeMonitor(pid_t pid, timespec cpu_time_limit)
-			: data{pid, {}, cpu_time_limit, {}, {}}
+		CPUTimeMonitor(pid_t pid, timespec cpu_time_limit, TimeoutHandler timeouter)
+			: data{pid, {}, cpu_time_limit, {}, {}, std::move(timeouter)}
 		{
 			if (clock_getcpuclockid(pid, &data.cid))
 				THROW("clock_getcpuclockid()", errmsg());

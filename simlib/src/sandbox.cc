@@ -432,6 +432,7 @@ Sandbox::Sandbox() {
 			}
 
 			bool operator()() {
+				DEBUG_SANDBOX(stdlog("callback name: \"vm_peak updater\""));
 				// Advance to the syscall exit
 				(void)ptrace(PTRACE_SYSCALL, sandbox_.tracee_pid_, 0, 0);
 				siginfo_t si;
@@ -446,13 +447,9 @@ Sandbox::Sandbox() {
 
 				} else {
 					fail_counter_ = 0;
-					if (vm_size > sandbox_.tracee_vm_peak_)
-						sandbox_.tracee_vm_peak_ = vm_size;
+					sandbox_.update_tracee_vm_peak(vm_size);
 				}
 
-				DEBUG_SANDBOX(stdlog("tracee_vm_peak: -> ", sandbox_.tracee_vm_peak_,
-					" (", humanizeFileSize(sandbox_.tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
-					")");)
 				return false;
 			}
 		};
@@ -465,6 +462,21 @@ Sandbox::Sandbox() {
 		seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(update_vm_peak_callback_id), SCMP_SYS(mremap), 0);
 		// Needed here to reset the fail_counter_
 		seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(update_vm_peak_callback_id), SCMP_SYS(munmap), 0);
+
+		// The process is about to die - we have to update the vm_peak, as it
+		// will not be recoverable later (all this because stack segment grows
+		// without any syscall)
+		seccomp_rule_add_both_ctx(
+			SCMP_ACT_TRACE(add_callback([&]{
+				update_tracee_vm_peak();
+				return false;
+			}, "exit")), SCMP_SYS(exit), 0);
+
+		seccomp_rule_add_both_ctx(
+			SCMP_ACT_TRACE(add_callback([&]{
+				update_tracee_vm_peak();
+				return false;
+			}, "exit_group")), SCMP_SYS(exit_group), 0);
 	}
 
 	// Allow only allowed_files_ to be opened
@@ -603,8 +615,6 @@ Sandbox::Sandbox() {
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(clock_gettime), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(clock_nanosleep), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(close), 0);
-	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
-	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(exit_group), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(futex), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(get_robust_list), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(get_thread_area), 0);
@@ -694,6 +704,14 @@ uint64_t Sandbox::get_tracee_vm_size() {
 		humanizeFileSize(vm_size * sysconf(_SC_PAGESIZE)), ")");)
 	return vm_size;
 };
+
+void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
+	if (curr_vm_size > tracee_vm_peak_)
+		tracee_vm_peak_ = curr_vm_size;
+
+	DEBUG_SANDBOX(stdlog("tracee_vm_peak: -> ", tracee_vm_peak_, " (",
+		humanizeFileSize(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)), ")");)
+}
 
 Sandbox::ExitStat Sandbox::run(FilePath exec,
 	const std::vector<std::string>& exec_args, const Options& opts,
@@ -906,8 +924,16 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	timespec cpu_time {};
 
 	// Set up timers
-	unique_ptr<Timer> timer;
-	unique_ptr<CPUTimeMonitor> cpu_timer;
+	volatile bool tracee_timeouted = false;
+	auto timeouter = [&tracee_timeouted](pid_t pid) {
+		tracee_timeouted = true;
+		// Send SIGSTOP (SIGSTOP because it cannot be blocked and we can
+		// intercept it), so that it will be intercepted via ptrace (there we
+		// check for timeout, collect memory status and kill the process)
+		kill(-pid, SIGSTOP);
+	};
+	unique_ptr<Timer<decltype(timeouter)>> timer;
+	unique_ptr<CPUTimeMonitor<decltype(timeouter)>> cpu_timer;
 
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
 		// Wait tracee_pid_ so that the CPU runtime will be accurate
@@ -950,8 +976,10 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 					tracee_vm_peak_ = get_tracee_vm_size();
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
 					// Fire timers
-					timer = make_unique<Timer>(tracee_pid_, opts.real_time_limit);
-					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_, opts.cpu_time_limit);
+					timer = make_unique<Timer<decltype(timeouter)>>(tracee_pid_,
+						opts.real_time_limit, timeouter);
+					cpu_timer = make_unique<CPUTimeMonitor<decltype(timeouter)>>(
+						tracee_pid_, opts.cpu_time_limit, timeouter);
 
 					continue; // Nothing more to do for the exec() event
 				}
@@ -985,8 +1013,13 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 								sii.si_syscall, " (arch: ", sii.si_arch, ')');
 						}
 
+						// The tracee will die, we have to update the vm_peak,
+						// as it will not be recoverable later (all this because
+						// stack segment grows without any syscall)
+						update_tracee_vm_peak();
+
 						kill(-tracee_pid_, SIGKILL);
-						continue; // That is the SIGSYS from seccomp, others SIGSYSes are not what we want
+						continue; // This is the SIGSYS from seccomp, others SIGSYSes are not what we want
 					}
 				}
 
@@ -997,8 +1030,14 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 						THROW("ptrace(PTRACE_GETEVENTMSG)", errmsg());
 
 					DEBUG_SANDBOX_VERBOSE_LOG("callback id: ", msg);
-					if (callbacks_[msg].get()->operator()())
+					if (callbacks_[msg].get()->operator()()) {
+						// The tracee will die, we have to update the vm_peak,
+						// as it will not be recoverable later (all this because
+						// stack segment grows without any syscall)
+						update_tracee_vm_peak();
+
 						kill(-tracee_pid_, SIGKILL);
+					}
 
 					continue;
 				}
@@ -1008,8 +1047,25 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 					continue;
 				}
 
+				// Timeout handler was invoked
+				if (tracee_timeouted) {
+					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (TIMEOUT) - si_status: ",
+						si.si_status);
+					// Tracee will die, we have to update the vm_peak, as it
+					// will not be recoverable later (all this because stack
+					// segment grows without any syscall)
+					update_tracee_vm_peak();
+
+					kill(-tracee_pid_, SIGKILL);
+					continue;
+				}
+
 				DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (unknown) - si_status: ",
 					si.si_status);
+				// If the tracee is about to die, we have to update the vm_peak,
+				// as it will not be recoverable later (all this because stack
+				// segment grows without any syscall)
+				update_tracee_vm_peak();
 				// Deliver intercepted signal to tracee
 				(void)ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status);
 				continue;
@@ -1031,7 +1087,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		}
 
 	// Catch exceptions that occur in the middle of doing something. This may
-	// happen when the tracee is killed (e.g. by timeout) while we are doing
+	// happen when the tracee gets killed (e.g. by timeout) while we are doing
 	// something (e.g. inspecting syscall arguments).
 	} catch (const std::exception& e) {
 		DEBUG_SANDBOX(stdlog(__FILE__ ":", meta::ToString<__LINE__>{},

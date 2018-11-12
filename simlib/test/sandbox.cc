@@ -45,6 +45,7 @@ TEST (Sandbox, run) {
 	auto compile_test_case = [&] (StringView case_filename, auto&&... cc_flags) {
 		Spawner::ExitStat es = Spawner::run("cc", {
 			"cc",
+			"-O2",
 			concat_tostr(test_cases_dir, case_filename),
 			"-o",
 			exec.to_string(),
@@ -65,6 +66,15 @@ TEST (Sandbox, run) {
 				message == "killed by signal 6 - Aborted") or
 			(si_code == CLD_DUMPED and
 				message == "killed and dumped by signal 6 - Aborted"));
+	};
+
+	auto killed_or_dumped_by_segv = [&](decltype(es.si.code) si_code,
+		const decltype(es.message)& message)
+	{
+		return ((si_code == CLD_KILLED and
+				message == "killed by signal 11 - Segmentation fault") or
+			(si_code == CLD_DUMPED and
+				message == "killed and dumped by signal 11 - Segmentation fault"));
 	};
 
 	uint test_case = 0;
@@ -289,6 +299,134 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT((timespec{0, 0}), es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Tests time-outing on time and memory vm_peak calculation on timeout
+	compile_test_case("12.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("killed by signal 9 - Killed"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	constexpr timespec CPU_TL_THRESHOLD = timespec{1, 0} - CPU_TIME_LIMIT;
+	static_assert(CPU_TIME_LIMIT + CPU_TIME_LIMIT < CPU_TL_THRESHOLD,
+		"Needed below to accurately check if the timeout occurred early enough");
+	EXPECT_LE(es.cpu_runtime, CPU_TIME_LIMIT + CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on normal exit
+	compile_test_case("13.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 0);
+	EXPECT_EQ(es.message, concat_tostr(""));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on abort
+	compile_test_case("14.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
+	EXPECT_EQ(es.si.status, SIGABRT);
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on forbidden syscall
+	compile_test_case("15.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on forbidden syscall (according to its callback)
+	compile_test_case("16.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on stack overflow
+	compile_test_case("17.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_PRED2(killed_or_dumped_by_segv, es.si.code, es.message);
+	EXPECT_EQ(es.si.status, SIGSEGV);
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LE(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on exit with exit(2)
+	compile_test_case("18.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 11);
+	EXPECT_EQ(es.message, concat_tostr("exited with 11"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on exit with exit_group(2)
+	compile_test_case("19.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 55);
+	EXPECT_EQ(es.message, concat_tostr("exited with 55"));
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing memory vm_peak calculation on "Memory limit exceeded"
+	compile_test_case("20.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_KILLED);
+	EXPECT_EQ(es.si.status, SIGKILL);
+	EXPECT_EQ(es.message, "Memory limit exceeded");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 }
