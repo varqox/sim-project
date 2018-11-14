@@ -23,10 +23,10 @@ inline static vector<string> compile_command(SolutionLanguage lang,
 
 	switch (lang) {
 	case SolutionLanguage::C:
-		return make("gcc", "-O3", "-std=c11", "-static", "-lm", "-m32", "-o",
+		return make("gcc", "-O2", "-std=c11", "-static", "-lm", "-m32", "-o",
 			exec, "-xc", source);
 	case SolutionLanguage::CPP:
-		return make("g++", "-O3", "-std=c++11", "-static", "-lm", "-m32", "-o",
+		return make("g++", "-O2", "-std=c++11", "-static", "-lm", "-m32", "-o",
 			exec, "-xc++", source);
 	case SolutionLanguage::PASCAL:
 		return make("fpc", "-O2", "-XS", "-Xt", concat("-o", exec), source);
