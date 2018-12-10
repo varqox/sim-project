@@ -12,6 +12,8 @@
 using sim::Simfile;
 using std::string;
 
+constexpr uint64_t DEFAULT_MEMORY_LIMIT = 256; // In MB
+
 /// Returns default time limit specified in Sipfile in microseconds
 static uint64_t default_time_limit() {
 	if (access("Sipfile", F_OK) != 0)
@@ -37,10 +39,33 @@ static Simfile construct_full_simfile(bool run_with_default_time_limits = false)
 	sim::Conver conver;
 	conver.setPackagePath(".");
 
+	uint64_t memory_limit = DEFAULT_MEMORY_LIMIT;
+	string problem_name = "unknown";
+	if (access("Simfile", F_OK) == 0) {
+		Simfile sf(getFileContents("Simfile"));
+		try {
+			sf.loadName();
+			problem_name = sf.name;
+		} catch (...) {
+			stdlog("\033[1;35mwarning\033[m: No problem name was specified in"
+				" Simfile");
+		}
+
+		sf.loadGlobalMemoryLimitOnly();
+		if (sf.global_mem_limit > 0) {
+			memory_limit = sf.global_mem_limit >> 20;
+		} else {
+			stdlog("\033[1;35mwarning\033[m: No memory limit was specified in"
+				" Simfile - using the default memory limit: ",
+				humanizeFileSize(DEFAULT_MEMORY_LIMIT << 20));
+		}
+	}
+
 	// Set Conver options
 	sim::Conver::Options copts;
+	copts.name = problem_name;
+	copts.memory_limit = memory_limit;
 	copts.max_time_limit = default_time_limit();
-	stdlog(copts.max_time_limit);
 	copts.reset_time_limits_using_model_solution = run_with_default_time_limits;
 	copts.ignore_simfile = false;
 	copts.seek_for_new_tests = true;
@@ -104,9 +129,12 @@ static void update_time_limits(Simfile& sf, const sim::JudgeReport& jrep1,
 	}
 	val += "]";
 
-	replace_var_in_simfile(sf, "Simfile",
-		intentionalUnsafeStringView(getFileContents("Simfile")), "limits",
-		val, false);
+	// If no Simfile exist, then do not save the time limits
+	if (access("Simfile", F_OK) == 0) {
+		replace_var_in_simfile(sf, "Simfile",
+			intentionalUnsafeStringView(getFileContents("Simfile")), "limits",
+			val, false);
+	}
 }
 
 static inline bool is_subsequence(StringView sequence, StringView str) noexcept {
@@ -637,10 +665,9 @@ int doc(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0) {
-		errlog("\033[1;31mError\033[m: Simfile is missing. If you are sure that"
-			" you are in the correct directory, running: `sip init . <name>`"
-			" may help.");
-		return 1;
+		stdlog("\033[1;35mwarning\033[m: Simfile is missing. If you are sure"
+			" that you are in the correct directory, running:"
+			" `sip init . <name>` may help.");
 	}
 
 	mkdir_r("utils/latex");
@@ -762,10 +789,9 @@ int genout(ArgvParser) {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0) {
-		errlog("\033[1;31mError\033[m: Simfile is missing. If you are sure that"
-			" you are in the correct directory, running: `sip init . <name>`"
-			" may help.");
-		return 1;
+		stdlog("\033[1;35mwarning\033[m: Simfile is missing. If you are sure"
+			" that you are in the correct directory, running:"
+			" `sip init . <name>` may help.");
 	}
 
 	if (not gen_impl(false, false, false)) {
@@ -781,10 +807,9 @@ int gentests(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0) {
-		errlog("\033[1;31mError\033[m: Simfile is missing. If you are sure that"
-			" you are in the correct directory, running: `sip init . <name>`"
-			" may help.");
-		return 1;
+		stdlog("\033[1;35mwarning\033[m: Simfile is missing. If you are sure"
+			" that you are in the correct directory, running:"
+			" `sip init . <name>` may help.");
 	}
 
 	bool force = false;
@@ -807,10 +832,9 @@ int prog(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0) {
-		errlog("\033[1;31mError\033[m: Simfile is missing. If you are sure that"
-			" you are in the correct directory, running: `sip init . <name>`"
-			" may help.");
-		return 1;
+		stdlog("\033[1;35mwarning\033[m: Simfile is missing. If you are sure"
+			" that you are in the correct directory, running:"
+			" `sip init . <name>` may help.");
 	}
 
 	Simfile simfile = construct_full_simfile();
@@ -845,10 +869,9 @@ int test(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0) {
-		errlog("\033[1;31mError\033[m: Simfile is missing. If you are sure that"
-			" you are in the correct directory, running: `sip init . <name>`"
-			" may help.");
-		return 1;
+		stdlog("\033[1;35mwarning\033[m: Simfile is missing. If you are sure"
+			" that you are in the correct directory, running:"
+			" `sip init . <name>` may help.");
 	}
 
 	Simfile simfile = construct_full_simfile();
