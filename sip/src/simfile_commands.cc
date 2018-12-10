@@ -140,7 +140,7 @@ int init(ArgvParser args) {
 			}
 		}
 	} else if (args.size() > 0) {
-		stdlog("name = ", args.extract_next());
+		stdlog("name = ", args.next());
 		putFileContents(simfile_path, intentionalUnsafeStringView(concat("name: ",
 			ConfigFile::escapeString(args.extract_next()), '\n')));
 	} else if (not dir_filename.empty()) {
