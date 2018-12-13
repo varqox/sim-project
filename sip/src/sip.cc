@@ -124,7 +124,8 @@ static void kill_signal_handler(int signum) {
 		}
 	});
 
-	exit(1);
+	dprintf(STDERR_FILENO, "Killed by signal %i - %s\n", signum, sys_siglist[signum]);
+	_exit(1); // exit() is not safe to call from signal handler see man signal-safety
 }
 
 int main(int argc, char **argv) {
