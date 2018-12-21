@@ -222,94 +222,97 @@ static bool gen_test_out(sim::JudgeWorker& jworker, FilePath input,
 	}
 }
 
-// Returns whether all was generated successfully
-static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile, bool delete_invalid_test_files)
-{
-	auto parse_test_range = [](StringView test_range, auto&& callback) {
-		auto hypen = test_range.find('-');
-		if (hypen == StringView::npos)
-			return callback(test_range);
+template<class Func>
+static void parse_test_range(StringView test_range, Func&& callback) {
+	auto hypen = test_range.find('-');
+	if (hypen == StringView::npos) {
+		callback(test_range);
+		return;
+	}
 
-		if (hypen + 1 == test_range.size()) {
-			errlog("\033[1;31mError\033[m: Invalid test range"
-				" (trailing hypen): ", test_range);
+	if (hypen + 1 == test_range.size()) {
+		errlog("\033[1;31mError\033[m: Invalid test range"
+			" (trailing hypen): ", test_range);
+		exit(1);
+	}
+
+	StringView begin = test_range.substring(0, hypen);
+	StringView end = test_range.substring(hypen + 1);
+
+	auto begin_test = Simfile::TestNameComparator::split(begin);
+	auto end_test = Simfile::TestNameComparator::split(end);
+	// The part before group id
+	StringView prefix = begin.substring(0,
+		begin.size() - begin_test.gid.size() - begin_test.tid.size());
+	{
+		// Allow e.g. test4a-5c
+		StringView end_prefix = end.substring(0,
+			end.size() - end_test.gid.size() - end_test.tid.size());
+		if (not end_prefix.empty() and end_prefix != prefix) {
+			errlog("\033[1;31mError\033[m: Invalid test range (test prefix"
+				" of the end test is not empty and does not match the begin"
+				" test prefix): ", test_range);
 			exit(1);
 		}
+	}
 
-		StringView begin = test_range.substring(0, hypen);
-		StringView end = test_range.substring(hypen + 1);
+	if (not isDigitNotGreaterThan<ULLONG_MAX>(begin_test.gid)) {
+		errlog("\033[1;31mError\033[m: Invalid test range (group id is too"
+			" big): ", test_range);
+		exit(1);
+	}
 
-		auto begin_test = Simfile::TestNameComparator::split(begin);
-		auto end_test = Simfile::TestNameComparator::split(end);
-		// The part before group id
-		StringView prefix = begin.substring(0,
-			begin.size() - begin_test.gid.size() - begin_test.tid.size());
-		{
-			// Allow e.g. test4a-5c
-			StringView end_prefix = end.substring(0,
-				end.size() - end_test.gid.size() - end_test.tid.size());
-			if (not end_prefix.empty() and end_prefix != prefix) {
-				errlog("\033[1;31mError\033[m: Invalid test range (test prefix"
-					" of the end test is not empty and does not match the begin"
-					" test prefix): ", test_range);
-				exit(1);
-			}
+	unsigned long long begin_gid = strtoull(begin_test.gid);
+	unsigned long long end_gid;
+
+	if (end_test.gid.empty()) { // Allow e.g. 4a-d
+		end_gid = begin_gid;
+	} else if (not isDigitNotGreaterThan<ULLONG_MAX>(end_test.gid)) {
+		errlog("\033[1;31mError\033[m: Invalid test range (group id is too"
+			" big): ", test_range);
+		exit(1);
+	} else {
+		end_gid = strtoull(end_test.gid);
+	}
+
+	string begin_tid = tolower(begin_test.tid.to_string());
+	string end_tid = tolower(end_test.tid.to_string());
+
+	// Allow e.g. 4-8c
+	if (begin_tid.empty())
+		begin_tid = end_tid;
+
+	if (begin_tid.size() != end_tid.size()) {
+		errlog("\033[1;31mError\033[m: Invalid test range (test IDs have"
+			" different length): ", test_range);
+		exit(1);
+	}
+
+	if (begin_tid > end_tid) {
+		errlog("\033[1;31mError\033[m: Invalid test range (begin test ID is"
+			" greater than end test ID): ", test_range);
+		exit(1);
+	}
+
+	auto inc_tid = [](auto& tid) {
+		if (tid.size == 0)
+			return;
+
+		++tid.back();
+		for (int i = tid.size - 1; i > 0 and tid[i] > 'z'; --i) {
+			tid[i] -= ('z' - 'a');
+			++tid[i - 1];
 		}
-
-		if (not isDigitNotGreaterThan<ULLONG_MAX>(begin_test.gid)) {
-			errlog("\033[1;31mError\033[m: Invalid test range (group id is too"
-				" big): ", test_range);
-			exit(1);
-		}
-
-		unsigned long long begin_gid = strtoull(begin_test.gid);
-		unsigned long long end_gid;
-
-		if (end_test.gid.empty()) { // Allow e.g. 4a-d
-			end_gid = begin_gid;
-		} else if (not isDigitNotGreaterThan<ULLONG_MAX>(end_test.gid)) {
-			errlog("\033[1;31mError\033[m: Invalid test range (group id is too"
-				" big): ", test_range);
-			exit(1);
-		} else {
-			end_gid = strtoull(end_test.gid);
-		}
-
-		string begin_tid = tolower(begin_test.tid.to_string());
-		string end_tid = tolower(end_test.tid.to_string());
-
-		// Allow e.g. 4-8c
-		if (begin_tid.empty())
-			begin_tid = end_tid;
-
-		if (begin_tid.size() != end_tid.size()) {
-			errlog("\033[1;31mError\033[m: Invalid test range (test IDs have"
-				" different length): ", test_range);
-			exit(1);
-		}
-
-		if (begin_tid > end_tid) {
-			errlog("\033[1;31mError\033[m: Invalid test range (begin test ID is"
-				" greater than end test ID): ", test_range);
-			exit(1);
-		}
-
-		auto inc_tid = [](auto& tid) {
-			if (tid.size == 0)
-				return;
-
-			++tid.back();
-			for (int i = tid.size - 1; i > 0 and tid[i] > 'z'; --i) {
-				tid[i] -= ('z' - 'a');
-				++tid[i - 1];
-			}
-		};
-
-		for (auto gid = begin_gid; gid <= end_gid; ++gid)
-			for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid))
-				callback(intentionalUnsafeStringView(concat(prefix, gid, tid)));
 	};
 
+	for (auto gid = begin_gid; gid <= end_gid; ++gid)
+		for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid))
+			callback(intentionalUnsafeStringView(concat(prefix, gid, tid)));
+};
+
+// Returns whether all tests was generated successfully
+static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile, bool delete_invalid_test_files)
+{
 	// Collect tests specified in the Sipfile
 	ConfigFile sipfile;
 	sipfile.addVars("static", "gen");
@@ -470,7 +473,7 @@ static bool gen_impl(bool generate_inputs, bool ensure_all_tests_are_in_sipfile,
 		return test_path.extractTrailing(isnt_slash);
 	};
 
-	// Path of files that seem to be test inputs / outputs
+	// Paths of files that seem to be test inputs / outputs
 	AVLDictMap<StringView, Test> test_files; // test name => test files
 	pc.for_each_with_prefix("", [&](StringView file) {
 		if (hasSuffix(file, ".in")) {
