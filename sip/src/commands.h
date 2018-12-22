@@ -1,51 +1,43 @@
 #pragma once
 
 #include <simlib/parsers.h>
-#include <simlib/sim/simfile.h>
 
-// simfile_commands.cc
-void replace_var_in_simfile(const sim::Simfile& sf, FilePath simfile_path,
-	StringView simfile_contents, StringView var_name, StringView replacement,
-	bool escape_replacement = true);
-
-void replace_var_in_simfile(const sim::Simfile& sf, FilePath simfile_path,
-	StringView simfile_contents, StringView var_name,
-	const std::vector<std::string>& replacement);
-
-namespace command {
-
-// simfile_commands.cc
-int checker(ArgvParser args);
-
-int init(ArgvParser args);
-
-int label(ArgvParser args);
-
-int main_sol(ArgvParser args);
-
-int mem(ArgvParser args);
-
-int name(ArgvParser args);
-
-int statement(ArgvParser args);
+namespace commands {
 
 // commands.cc
-int doc(ArgvParser args);
+void checker(ArgvParser args);
 
-int genout(ArgvParser args);
+void clean(ArgvParser args);
 
-int gentests(ArgvParser args);
+void doc(ArgvParser args);
 
-int package(ArgvParser args);
+void genout(ArgvParser args);
 
-int prepare(ArgvParser args);
+void gentests(ArgvParser args);
 
-int prog(ArgvParser args);
+// Displays help
+void help(const char* program_name);
 
-int test(ArgvParser args);
+void init(ArgvParser args);
 
-int clean(ArgvParser args);
+void label(ArgvParser args);
 
-int zip(ArgvParser args);
+void main_sol(ArgvParser args);
 
-} // namespace command
+void mem(ArgvParser args);
+
+void name(ArgvParser args);
+
+void package(ArgvParser args);
+
+void prepare(ArgvParser args);
+
+void prog(ArgvParser args);
+
+void statement(ArgvParser args);
+
+void test(ArgvParser args);
+
+void zip(ArgvParser args);
+
+} // namespace commands

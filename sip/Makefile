@@ -53,9 +53,8 @@ uninstall:
 SIP_SRCS := \
 	src/commands.cc \
 	src/compilation_cache.cc \
-	src/maintenance_commands.cc \
-	src/simfile_commands.cc \
-	src/sip.cc
+	src/main.cc \
+	src/sip_package.cc
 
 $(eval $(call load_dependencies, $(SIP_SRCS)))
 SIP_OBJS := $(call SRCS_TO_OBJS, $(SIP_SRCS))
