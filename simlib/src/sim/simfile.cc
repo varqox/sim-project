@@ -14,12 +14,19 @@ namespace sim {
 
 string Simfile::dump() const {
 	string res;
-	back_insert(res, "name: ", ConfigFile::escapeString(name), "\n"
-		"label: ", ConfigFile::escapeString(label), "\n"
-		"statement: ", ConfigFile::escapeString(statement), "\n"
-		"checker: ", ConfigFile::escapeString(checker), "\n"
-		"solutions: [");
+	if (not name.empty())
+		back_insert(res, "name: ", ConfigFile::escapeString(name), '\n');
 
+	if (not label.empty())
+		back_insert(res, "label: ", ConfigFile::escapeString(label), '\n');
+
+	if (not statement.empty())
+		back_insert(res, "statement: ", ConfigFile::escapeString(statement), '\n');
+
+	if (not checker.empty())
+		back_insert(res, "checker: ", ConfigFile::escapeString(checker), '\n');
+
+	back_insert(res, "solutions: [");
 	if (solutions.size()) {
 		back_insert(res, ConfigFile::escapeString(solutions[0]));
 		for (uint i = 1; i < solutions.size(); ++i)

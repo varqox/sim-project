@@ -60,7 +60,7 @@ TEST (Simfile, dump) {
 		sf.loadSolutions();
 		sf.loadTestsWithFiles();
 
-		EXPECT_EQ(sf.dump(), "name: Simple Package\n"
+		EXPECT_EQ("name: Simple Package\n"
 			"label: sim\n"
 			"statement: doc/sim.pdf\n"
 			"checker: check/checker.cpp\n"
@@ -102,8 +102,8 @@ TEST (Simfile, dump) {
 			"\tsim3a in/sim3a.in out/sim3a.out\n"
 			"\tsim3b in/sim3b.in out/sim3b.out\n"
 			"\tsim4 in/sim4.in out/sim4.out\n"
-			"]\n"
-		) << "iteration: " << i;
+			"]\n",
+			sf.dump()) << "iteration: " << i;
 	}
 
 	// Omit memory limit when not necessary
@@ -116,9 +116,7 @@ TEST (Simfile, dump) {
 
 	sf.loadTests();
 
-	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
-		"checker: ''\n"
-		"solutions: []\n"
+	EXPECT_EQ("solutions: []\n"
 		"limits: [\n"
 		"\tsim0 1 32\n"
 		"\n"
@@ -129,8 +127,8 @@ TEST (Simfile, dump) {
 		"\t1 100\n"
 		"]\n"
 		"tests_files: [\n"
-		"]\n"
-	);
+		"]\n",
+		sf.dump());
 }
 
 TEST (Simfile, loadName) {
@@ -138,7 +136,7 @@ TEST (Simfile, loadName) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadName();
-		EXPECT_EQ(sf.name, "Problem 1 2 3") << "iteration: " << i;
+		EXPECT_EQ("Problem 1 2 3", sf.name) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -155,7 +153,7 @@ TEST (Simfile, loadLabel) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadLabel();
-		EXPECT_EQ(sf.label, "Label 1 2 3") << "iteration: " << i;
+		EXPECT_EQ("Label 1 2 3", sf.label) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -172,7 +170,7 @@ TEST (Simfile, loadChecker) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadChecker();
-		EXPECT_EQ(sf.checker, "path/to/checker") << "iteration: " << i;
+		EXPECT_EQ("path/to/checker", sf.checker) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -188,11 +186,11 @@ TEST (Simfile, loadChecker) {
 	// Unsafe paths
 	sf = sim::Simfile {"checker: ../suspicious/path"};
 	sf.loadChecker();
-	EXPECT_EQ(sf.checker, "suspicious/path");
+	EXPECT_EQ("suspicious/path", sf.checker);
 
 	sf = sim::Simfile {"checker: ./suspicious/../../../../path/"};
 	sf.loadChecker();
-	EXPECT_EQ(sf.checker, "path/");
+	EXPECT_EQ("path/", sf.checker);
 }
 
 TEST (Simfile, loadStatement) {
@@ -200,7 +198,7 @@ TEST (Simfile, loadStatement) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadStatement();
-		EXPECT_EQ(sf.statement, "path/to/statement") << "iteration: " << i;
+		EXPECT_EQ("path/to/statement", sf.statement) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -216,11 +214,11 @@ TEST (Simfile, loadStatement) {
 	// Unsafe paths
 	sf = sim::Simfile {"statement: ../suspicious/path"};
 	sf.loadStatement();
-	EXPECT_EQ(sf.statement, "suspicious/path");
+	EXPECT_EQ("suspicious/path", sf.statement);
 
 	sf = sim::Simfile {"statement: ./suspicious/../../../../path/"};
 	sf.loadStatement();
-	EXPECT_EQ(sf.statement, "path/");
+	EXPECT_EQ("path/", sf.statement);
 }
 
 TEST (Simfile, loadSolutions) {
@@ -229,7 +227,7 @@ TEST (Simfile, loadSolutions) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadSolutions();
-		EXPECT_EQ(sf.solutions, (VS{"sol1", "sol/2"})) << "iteration: " << i;
+		EXPECT_EQ((VS{"sol1", "sol/2"}), sf.solutions) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -249,19 +247,19 @@ TEST (Simfile, loadSolutions) {
 	sf = sim::Simfile {"solutions: [../suspicious/path, "
 		"./suspicious/../../../../path/]"};
 	sf.loadSolutions();
-	EXPECT_EQ(sf.solutions, (VS{"suspicious/path", "path/"}));
+	EXPECT_EQ((VS{"suspicious/path", "path/"}), sf.solutions);
 
 	sf = sim::Simfile {"solutions: [./suspicious/../../../../path/, "
 		"../suspicious/path]"};
 	sf.loadSolutions();
-	EXPECT_EQ(sf.solutions, (VS{"path/", "suspicious/path"}));
+	EXPECT_EQ((VS{"path/", "suspicious/path"}), sf.solutions);
 }
 
 TEST (Simfile, loadTests) {
 	// Memory limit
 	sim::Simfile sf {"memory_limit: 123\nlimits: []"};
 	sf.loadTests();
-	EXPECT_EQ(sf.global_mem_limit, 123 << 20);
+	EXPECT_EQ(123 << 20, sf.global_mem_limit);
 
 	// Exceptions - memory_limit
 	sf = sim::Simfile {"memory_limit: []\nlimits: []"};
@@ -293,9 +291,7 @@ TEST (Simfile, loadTests) {
 		"]\n"
 	};
 	sf.loadTests();
-	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
-		"checker: ''\n"
-		"solutions: []\n"
+	EXPECT_EQ("solutions: []\n"
 		"memory_limit: 33\n"
 		"limits: [\n"
 		"\tfoo1a 1.23\n"
@@ -308,8 +304,8 @@ TEST (Simfile, loadTests) {
 		"\t2 75\n"
 		"]\n"
 		"tests_files: [\n"
-		"]\n"
-	);
+		"]\n",
+		sf.dump());
 
 	// Automatic scoring
 	sf = sim::Simfile {
@@ -323,9 +319,7 @@ TEST (Simfile, loadTests) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadTests();
-		EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
-			"checker: ''\n"
-			"solutions: []\n"
+		EXPECT_EQ("solutions: []\n"
 			"memory_limit: 64\n"
 			"limits: [\n"
 			"\t1 1\n"
@@ -340,8 +334,8 @@ TEST (Simfile, loadTests) {
 			"\t3 34\n"
 			"]\n"
 			"tests_files: [\n"
-			"]\n"
-		) << "iteration: " << i;
+			"]\n",
+			sf.dump()) << "iteration: " << i;
 	}
 	// Grouping ocen with 0 tests and giving them score = 0
 	sf = sim::Simfile {
@@ -354,9 +348,7 @@ TEST (Simfile, loadTests) {
 		"]\n"
 	};
 	sf.loadTests();
-	EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
-		"checker: ''\n"
-		"solutions: []\n"
+	EXPECT_EQ("solutions: []\n"
 		"memory_limit: 64\n"
 		"limits: [\n"
 		"\tfoo0 1\n"
@@ -372,8 +364,8 @@ TEST (Simfile, loadTests) {
 		"\t2 50\n"
 		"]\n"
 		"tests_files: [\n"
-		"]\n"
-	);
+		"]\n",
+		sf.dump());
 
 	// Exceptions - limits
 	sf = sim::Simfile {""};
@@ -475,9 +467,7 @@ TEST (Simfile, loadTestsWithFiles) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadTestsWithFiles();
-		EXPECT_EQ(sf.dump(), "name: ''\nlabel: ''\nstatement: ''\n"
-			"checker: ''\n"
-			"solutions: []\n"
+		EXPECT_EQ("solutions: []\n"
 			"limits: [\n"
 			"\tfoo0 1 1\n"
 			"\n"
@@ -496,8 +486,8 @@ TEST (Simfile, loadTestsWithFiles) {
 			"\tfoo1a foo1a.in foo1a.out\n"
 			"\tfoo1b suspicious/path/1 suspicious/path/\n"
 			"\tfoo2 path/3 path/4\n"
-			"]\n"
-		) << "iteration: " << i;
+			"]\n",
+			sf.dump()) << "iteration: " << i;
 	}
 
 	// Exceptions

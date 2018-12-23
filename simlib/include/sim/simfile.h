@@ -99,18 +99,18 @@ public:
 private:
 	ConfigFile config;
 
-	friend class Conver; // It needs access to the config
+	friend class Conver; // It needs access to the parsing methods
 
 public:
 	Simfile() = default;
 
 	/**
 	 * @brief Loads needed variables from @p simfile_contents
-	 * @details Uses ConfigFile::loadConfigFromString
+	 * @details Uses ConfigFile::loadConfigFromString()
 	 *
 	 * @param simfile_contents Simfile file contents
 	 *
-	 * @errors May throw from ConfigFile::loadConfigFromString
+	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
 	Simfile(std::string simfile_contents) {
 		config.addVars("name", "label", "checker", "statement", "solutions",
