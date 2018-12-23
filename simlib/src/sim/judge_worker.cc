@@ -83,8 +83,13 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 	sf = Simfile {std::move(simfile)};
 	sf.loadTestsWithFiles();
 
-	if (not sf.configFile().getVar("checker").asString().empty())
+	if (not sf.configFile().getVar("checker").asString().empty()) {
 		sf.loadChecker();
+	} else {
+		// No checker is set, so place the default checker
+		putFileContents(concat(tmp_dir.path(), "default_checker.c"),
+			(const char*)default_checker_c, default_checker_c_len);
+	}
 
 	pkg_root = std::move(package_path);
 	// Directory
@@ -98,7 +103,9 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 		auto pkg_master_dir = zip_package_master_dir(pkg_root);
 		// Collect all needed files in pc
 		PackageContents pc;
-		pc.add_entry(pkg_master_dir, sf.checker);
+		if (not sf.checker.empty())
+			pc.add_entry(pkg_master_dir, sf.checker);
+
 		for (auto&& tgroup : sf.tgroups)
 			for (auto&& test : tgroup.tests) {
 				pc.add_entry(pkg_master_dir, test.in);
@@ -112,14 +119,6 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 
 		// Update root, so it will be relative to the Simfile
 		pkg_root = concat_tostr(tmp_dir.path() + "package/", pkg_master_dir);
-	}
-
-
-	// If no checker is set then load the default checker
-	if (sf.checker.empty()) {
-		sf.checker = "../default_checker.c";
-		putFileContents(concat(pkg_root, sf.checker),
-			(const char*)default_checker_c, default_checker_c_len);
 	}
 }
 

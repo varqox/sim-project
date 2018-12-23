@@ -308,9 +308,13 @@ public:
 	int compileChecker(timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
-		return compile_impl(concat(pkg_root, sf.checker),
-			filename_to_lang(sf.checker), time_limit, c_errors,
-			c_errors_max_len, proot_path, "checker", CHECKER_FILENAME);
+		auto checker_path = (sf.checker.empty() ?
+			concat(tmp_dir.path(), "default_checker.c") :
+			concat(pkg_root, sf.checker));
+
+		return compile_impl(checker_path, filename_to_lang(checker_path),
+			time_limit, c_errors, c_errors_max_len, proot_path, "checker",
+			CHECKER_FILENAME);
 	}
 
 	/// Compiles solution (using sim::compile())
