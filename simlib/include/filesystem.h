@@ -41,7 +41,7 @@ class FileDescriptor {
 public:
 	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
-	explicit FileDescriptor(FilePath filename, int flags, int mode = S_0644)
+	explicit FileDescriptor(FilePath filename, int flags, mode_t mode = S_0644)
 		noexcept : fd_(::open(filename, flags, mode)) {}
 
 	FileDescriptor(const FileDescriptor&) = delete;
@@ -767,11 +767,12 @@ std::vector<std::string> getFileByLines(FilePath file, int flags = 0,
  *
  * @param file file to write to
  * @param data data to write
+ * @param mode access mode
  *
  * @errors If any error occurs an exception of type std::runtime_error is thrown
  *   (may happen if open(2) or write(2) fails)
  */
-void putFileContents(FilePath file, const char* data, size_t len);
+void putFileContents(FilePath file, const char* data, size_t len, mode_t mode = S_0644);
 
 inline void putFileContents(FilePath file, StringView data) {
 	return putFileContents(file, data.data(), data.size());

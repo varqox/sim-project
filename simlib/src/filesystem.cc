@@ -573,8 +573,8 @@ vector<string> getFileByLines(FilePath file, int flags, size_t first,
 	return res;
 }
 
-void putFileContents(FilePath file, const char* data, size_t len) {
-	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, S_0644};
+void putFileContents(FilePath file, const char* data, size_t len, mode_t mode) {
+	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, mode};
 	if (fd == -1)
 		THROW("open() failed", errmsg());
 
