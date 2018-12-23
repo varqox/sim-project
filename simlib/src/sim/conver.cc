@@ -6,7 +6,6 @@
 #include "../../include/spawner.h"
 #include "../../include/utilities.h"
 #include "../../include/libarchive_zip.h"
-#include "default_checker_dump.h"
 
 using std::pair;
 using std::string;
@@ -118,20 +117,9 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 			sf.checker = x.front().substr(master_dir.size()).to_string();
 			report_.append("Chosen checker: ", sf.checker);
 
-		// We have to put the checker in the package
+		// No checker was found in the package
 		} else {
-			report_.append("No checker was found - placing the default checker");
-
-			sf.checker = concat_tostr("check/checker.c");
-			if (package_path_.back() == '/') {
-				(void)mkdir(concat(package_path_, master_dir, "check"));
-				putFileContents(concat(package_path_, master_dir, sf.checker),
-					(const char*)default_checker_c, default_checker_c_len);
-			} else
-				update_add_data_to_zip(
-					{(const char*)default_checker_c, default_checker_c_len},
-					intentionalUnsafeStringView(concat(master_dir, sf.checker)),
-					package_path_);
+			report_.append("No checker was found - the default checker will be used");
 		}
 	}
 
@@ -376,7 +364,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		tests.for_each([&](auto& keyval) {
 			if (not keyval.second.memory_limit.has_value()) {
 				if (sf.global_mem_limit == 0)
-					THROW("No memory limit is not specified for test `",
+					THROW("Memory limit is not specified for test `",
 						keyval.first, "` and no global memory limit is set");
 
 				keyval.second.memory_limit = sf.global_mem_limit;

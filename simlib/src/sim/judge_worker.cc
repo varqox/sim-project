@@ -2,6 +2,7 @@
 #include "../../include/sim/checker.h"
 #include "../../include/sim/judge_worker.h"
 #include "../../include/sim/problem_package.h"
+#include "default_checker_dump.h"
 
 using std::string;
 using std::vector;
@@ -80,8 +81,10 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 
 void JudgeWorker::loadPackage(string package_path, string simfile) {
 	sf = Simfile {std::move(simfile)};
-	sf.loadChecker();
 	sf.loadTestsWithFiles();
+
+	if (not sf.configFile().getVar("checker").asString().empty())
+		sf.loadChecker();
 
 	pkg_root = std::move(package_path);
 	// Directory
@@ -109,6 +112,14 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 
 		// Update root, so it will be relative to the Simfile
 		pkg_root = concat_tostr(tmp_dir.path() + "package/", pkg_master_dir);
+	}
+
+
+	// If no checker is set then load the default checker
+	if (sf.checker.empty()) {
+		sf.checker = "../default_checker.c";
+		putFileContents(concat(pkg_root, sf.checker),
+			(const char*)default_checker_c, default_checker_c_len);
 	}
 }
 
