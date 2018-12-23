@@ -4,23 +4,7 @@
 
 #include <functional>
 #include <simlib/optional.h>
-#include <simlib/sim/simfile.h>
-
-class SipError : protected std::runtime_error {
-public:
-	template<class... Args>
-	SipError(Args&&... args)
-		: std::runtime_error(concat_tostr(std::forward<Args>(args)...)) {}
-
-	SipError(const SipError&) = default;
-	SipError(SipError&&) = default;
-	SipError& operator=(const SipError&) = default;
-	SipError& operator=(SipError&&) = default;
-
-	using std::runtime_error::what;
-
-	virtual ~SipError() = default;
-};
+#include <simlib/sim/conver.h>
 
 template<class... Args>
 auto log_warning(Args&&... args) {
@@ -35,6 +19,8 @@ public:
 	std::string simfile_contents;
 	sim::Simfile simfile;
 
+	sim::Simfile full_simfile;
+
 	std::string sipfile_contents;
 	Sipfile sipfile;
 
@@ -45,6 +31,9 @@ private:
 	// Runs @p callback for each test in @p test_range
 	void parse_test_range(StringView test_range,
 		const std::function<void(StringView)>& callback);
+
+	// Constructs eligible conver options
+	sim::Conver::Options conver_options(bool set_default_time_limits);
 
 public:
 	// Initializes the package - loads Simfile (if exists) and Sipfile (if
@@ -67,7 +56,7 @@ public:
 	void compile_solution();
 
 	// Compiles all solutions
-	void compile_solutions();
+	void compile_solutions(const std::vector<StringView>& solutions);
 
 	// Compiles checker
 	void compile_checker();
@@ -78,8 +67,8 @@ public:
 	// Removes test files that may be generated
 	void remove_generated_test_files();
 
-	// Runs Conver to update the simfile
-	void rebuild_simfile();
+	// Runs Conver to generate the full_simfile
+	void rebuild_full_simfile(bool set_default_time_limits = false);
 
 	// Saves scoring into the Simfile
 	void save_scoring();

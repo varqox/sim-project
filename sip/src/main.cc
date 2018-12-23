@@ -1,4 +1,5 @@
 #include "commands.h"
+#include "sip_error.h"
 #include "sip_package.h"
 
 #include <signal.h>

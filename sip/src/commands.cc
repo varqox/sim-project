@@ -1,4 +1,5 @@
 #include "commands.h"
+#include "sip_error.h"
 #include "sip_package.h"
 
 #include <simlib/filesystem.h>
@@ -73,6 +74,7 @@ void help(const char* program_name) {
 	puts("  main-sol [sol]        If [sol] is specified: set main solution to [sol]. Otherwise print main solution");
 	puts("  mem [value]           If [value] is specified: set memory limit to [value] MB. Otherwise print its current value");
 	puts("  name [value]          If [value] is specified: set name to [value]. Otherwise print its current value");
+	puts("  prog [sol...]         Compile solutions [sol...] (all solutions by default). [sol] has the same meaning as in command 'test'");
 	puts("  zip [clean args...]   Run clean command with [clean args] and compress the package into zip (named after the current directory) within the upper directory.");
 	puts("");
 	puts("Options:");
@@ -100,9 +102,6 @@ void help(const char* program_name) {
 	puts("  gen [force]           Alias to gentests");
 	puts("  genout [sol]          Generate tests outputs using solution [sol] (main solution by default)");
 	puts("  gentests [force]      Generate tests inputs: compile generators, generate tests. If force is specified then tests that are not specified in Sipfile are removed");
-	// puts("  package               The same as clean");
-	// puts("  prepare               Prepare package to contest: gentests, genout");
-	puts("  prog [sol...]         Compile solutions [sol...] (all solutions by default). [sol] has the same meaning as in command 'test'");
 	puts("  statement [value]     If [value] is specified set statement to [value], otherwise print its current value");
 	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by default) (compiles solutions if necessary). If [sol] is a path to a solution then it is used, otherwise all solutions that have [sol] as a subsequence are used.");
 }
@@ -207,19 +206,65 @@ void name(ArgvParser args) {
 	stdlog("name = ", sp.simfile.name);
 }
 
-void package(ArgvParser args) {
-	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); (void)args;// TODO: implement
+static inline bool is_subsequence(StringView sequence, StringView str) noexcept {
+	if (sequence.empty())
+		return true;
+
+	size_t i = 0;
+	for (char c : str)
+		if (c == sequence[i] and ++i == sequence.size())
+			return true;
+
+	return false;
 }
 
-void prepare(ArgvParser args) {
-	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); (void)args;// TODO: implement
+static AVLDictSet<StringView> parse_args_to_solutions(
+	const sim::Simfile& simfile, ArgvParser args)
+{
+	if (args.size() == 0)
+		return {};
+
+	AVLDictSet<StringView> choosen_solutions;
+	do {
+		auto arg = args.extract_next();
+		// If a path to solution was provided then choose it
+		auto it = std::find(simfile.solutions.begin(), simfile.solutions.end(), arg);
+		if (it != simfile.solutions.end()) {
+			choosen_solutions.emplace(*it);
+		// There is no solution with path equal to the provided path, so
+		// choose all that contain arg as a subsequence
+		} else {
+			throw_assert(is_subsequence("abc", "a b c"));
+
+			for (auto const& solution : simfile.solutions)
+				if (is_subsequence(arg, solution))
+					choosen_solutions.emplace(solution);
+		}
+	} while (args.size() > 0);
+
+	return choosen_solutions;
 }
 
 void prog(ArgvParser args) {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); (void)args;// TODO: implement
+
+	SipPackage sp;
+	sp.rebuild_full_simfile();
+
+	AVLDictSet<StringView> solutions_to_compile;
+	if (args.size() > 0) {
+		solutions_to_compile = parse_args_to_solutions(sp.full_simfile, args);
+	} else {
+		for (auto const& sol : sp.full_simfile.solutions)
+			solutions_to_compile.emplace(sol);
+	}
+
+	std::vector<StringView> sols;
+	solutions_to_compile.for_each([&](StringView solution) {
+		sols.emplace_back(solution);
+	});
+
+	sp.compile_solutions(sols);
 }
 
 void statement(ArgvParser args) {

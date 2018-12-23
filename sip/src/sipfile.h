@@ -7,6 +7,7 @@
  */
 class Sipfile {
 public:
+	uint64_t default_time_limit; // in microseconds
 
 private:
 	ConfigFile config;
@@ -36,7 +37,17 @@ public:
 
 	const ConfigFile& configFile() const { return config; }
 
-// TODO: unneeded?
+	/**
+	 * @brief Loads the default time limit
+	 * @details Fields:
+	 *   - default_time_limit
+	 *
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
+	 */
+	void loadDefaultTimeLimit();
+
+// TODO: not needed?
 //	/**
 //	 * @brief Dumps object to string
 //	 *

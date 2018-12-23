@@ -1,9 +1,15 @@
 #include "compilation_cache.h"
+#include "sip_error.h"
 #include "sip_package.h"
 
+#include <fstream>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
-#include <fstream>
+
+namespace {
+constexpr uint64_t DEFAULT_TIME_LIMIT = 5; // In seconds
+constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MB
+} // anonymous namespace
 
 void SipPackage::generate_test_out_file() {
 	STACK_UNWINDING_MARK;
@@ -51,9 +57,19 @@ void SipPackage::compile_solution() {
 	THROW("unimplemented"); // TODO: implement it
 }
 
-void SipPackage::compile_solutions() {
+void SipPackage::compile_solutions(const std::vector<StringView>& solutions) {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
+
+	sim::JudgeWorker jworker;
+	jworker.loadPackage(".", full_simfile.dump());
+
+	for (StringView solution : solutions) {
+		stdlog("\033[1;34m", solution, "\033[m:");
+		if (CompilationCache::is_cached(solution))
+			stdlog("Solution is already compiled.");
+
+		CompilationCache::load_solution(jworker, solution);
+	}
 }
 
 void SipPackage::compile_checker() {
@@ -79,9 +95,75 @@ void SipPackage::remove_generated_test_files() {
 	THROW("uinmplemented"); // TODO: implement
 }
 
-void SipPackage::rebuild_simfile() {
+sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 	STACK_UNWINDING_MARK;
-	THROW("uinmplemented"); // TODO: implement
+
+	sim::Conver::Options copts;
+	copts.reset_time_limits_using_model_solution = set_default_time_limits;
+	copts.ignore_simfile = false;
+	copts.seek_for_new_tests = true;
+	copts.reset_scoring = false;
+	copts.require_statement = false;
+
+	// Check Simfile
+	if (access("Simfile", F_OK) == 0) {
+		try {
+			simfile.loadName();
+		} catch (...) {
+			log_warning("no problem name was specified in Simfile");
+			copts.name = "unknown";
+		}
+	} else {
+		copts.memory_limit = DEFAULT_MEMORY_LIMIT;
+		copts.name = "unknown";
+	}
+
+	// Check Sipfile
+	if (access("Sipfile", F_OK) == 0) {
+		sipfile.loadDefaultTimeLimit();
+		copts.max_time_limit = sipfile.default_time_limit;
+	} else {
+		copts.max_time_limit = DEFAULT_TIME_LIMIT * 1'000'000;
+	}
+
+	return copts;
+}
+
+void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
+	STACK_UNWINDING_MARK;
+
+	sim::Conver conver;
+	conver.setPackagePath(".");
+	sim::Conver::ConstructionResult cr =
+		conver.constructSimfile(conver_options(set_default_time_limits));
+
+	// TODO: instead false verbose was here - remove this if or resurrect verbose in some way...
+	if (false) {
+		stdlog(conver.getReport());
+	} else {
+		// Filter out ever line except warnings
+		StringView report = conver.getReport();
+		size_t line_beg = 0, line_end = report.find('\n');
+		size_t next_warning = report.find("warning");
+		while (next_warning != StringView::npos) {
+			if (next_warning < line_end)
+				stdlog(report.substring(line_beg, line_end));
+
+			if (line_end == StringView::npos or line_end + 1 == report.size())
+				break;
+
+			line_beg = line_end + 1;
+			line_end = report.find('\n', line_beg);
+			if (next_warning < line_beg)
+				next_warning = report.find(line_beg, "warning");
+		}
+	}
+
+	// Ignore the need for the model solution to set the time limits - the
+	// time limits will be set to max_time_limit
+	// throw_assert(cr.status == sim::Conver::Status::COMPLETE);
+
+	full_simfile = std::move(cr.simfile);
 }
 
 void SipPackage::save_scoring() {
@@ -256,18 +338,18 @@ void SipPackage::create_default_sipfile() {
 	auto tmplog = stdlog("Creating Sipfile...");
 	tmplog.flush_no_nl();
 
-	constexpr const char* DEFAULT_SIPFILE_CONTENTS =
-		"default_time_limit: 5\n"
+	const auto default_sipfile_contents = concat_tostr(
+		"default_time_limit: ", DEFAULT_TIME_LIMIT, "\n"
 		"static: [\n"
 			"\t# Here provide tests that are \"hard-coded\"\n"
 			"\t# Syntax: <test-range>\n"
 		"]\ngen: [\n"
 			"\t# Here provide rules to generate tests\n"
 			"\t# Syntax: <test-range> <generator> [generator arguments]\n"
-		"]\n";
+		"]\n");
 
-	sipfile = Sipfile(DEFAULT_SIPFILE_CONTENTS);
-	putFileContents("Sipfile", DEFAULT_SIPFILE_CONTENTS);
+	sipfile = Sipfile(default_sipfile_contents);
+	putFileContents("Sipfile", default_sipfile_contents);
 
 	tmplog(" done.");
 }
@@ -282,6 +364,7 @@ void SipPackage::create_default_simfile(Optional<CStringView> problem_name) {
 		simfile_contents = getFileContents("Simfile");
 		simfile = sim::Simfile(simfile_contents);
 
+		// Problem name
 		auto replace_name_in_simfile = [&](StringView replacement) {
 			stdlog("Overwriting the problem name with: ", replacement);
 			replace_variable_in_simfile("name", replacement);
@@ -302,14 +385,24 @@ void SipPackage::create_default_simfile(Optional<CStringView> problem_name) {
 				replace_name_in_simfile(package_dir_filename);
 			}
 		}
+
+		// Memory limit
+		if (not simfile.configFile().getVar("memory_limit").isSet())
+			replace_variable_in_simfile("memory_limet",
+				intentionalUnsafeStringView(toStr(DEFAULT_MEMORY_LIMIT)));
+
 	} else if (problem_name.has_value()) {
 		stdlog("name = ", problem_name.value());
-		putFileContents("Simfile", intentionalUnsafeStringView(concat("name: ",
-			ConfigFile::escapeString(problem_name.value()), '\n')));
+		putFileContents("Simfile", intentionalUnsafeStringView(concat(
+			"name: ", ConfigFile::escapeString(problem_name.value()),
+			"\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
+
 	} else if (not package_dir_filename.empty()) {
 		stdlog("name = ", package_dir_filename);
-		putFileContents("Simfile", intentionalUnsafeStringView(concat("name: ",
-			ConfigFile::escapeString(package_dir_filename), '\n')));
+		putFileContents("Simfile", intentionalUnsafeStringView(concat(
+			"name: ", ConfigFile::escapeString(package_dir_filename),
+			"\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
+
 	} else { // iff absolute path of dir is /
 		throw SipError("problem name was neither provided as a command-line"
 			" argument nor deduced from the provided package path");

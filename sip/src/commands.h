@@ -28,10 +28,6 @@ void mem(ArgvParser args);
 
 void name(ArgvParser args);
 
-void package(ArgvParser args);
-
-void prepare(ArgvParser args);
-
 void prog(ArgvParser args);
 
 void statement(ArgvParser args);

@@ -30,15 +30,8 @@ install: $(filter-out install, $(MAKECMDGOALS))
 	# Installation
 	$(UPDATE) src/sip $(abspath $(DESTDIR))
 
-	# Install PRoot
-ifeq ($(shell uname -m), x86_64)
-	$(UPDATE) bin/proot-x86_64 $(abspath $(DESTDIR)/proot)
-else
-	$(UPDATE) bin/proot-x86 $(abspath $(DESTDIR)/proot)
-endif
-
 	# Set owner, group and permission bits
-	chmod +x $(abspath $(DESTDIR)/sip) $(abspath $(DESTDIR)/proot)
+	chmod +x $(abspath $(DESTDIR)/sip)
 
 	@printf "\033[;32mInstallation finished\033[0m\n"
 
@@ -50,11 +43,23 @@ uninstall:
 	# Delete installed files
 	$(RM) $(abspath $(DESTDIR)/sip) $(abspath $(DESTDIR)/proot)
 
+
+
+ifeq ($(shell uname -m), x86_64)
+src/proot_dump.c: bin/proot-x86_64 Makefile
+	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*proot_x86_64@proot_dump@g' > $@
+else
+src/proot_dump.c: bin/proot-x86 Makefile
+	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*proot_x86@proot_dump@g' > $@
+endif
+
 SIP_SRCS := \
 	src/commands.cc \
 	src/compilation_cache.cc \
 	src/main.cc \
-	src/sip_package.cc
+	src/proot_dump.c \
+	src/sip_package.cc \
+	src/sipfile.cc
 
 $(eval $(call load_dependencies, $(SIP_SRCS)))
 SIP_OBJS := $(call SRCS_TO_OBJS, $(SIP_SRCS))
