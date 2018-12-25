@@ -16,7 +16,7 @@ public:
 
 	static decltype(concat()) compile(StringView source);
 
-	static void load_checker(sim::JudgeWorker& jworker, StringView checker);
+	static void load_checker(sim::JudgeWorker& jworker);
 
 	static void load_solution(sim::JudgeWorker& jworker, StringView solution);
 };

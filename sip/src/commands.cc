@@ -75,6 +75,8 @@ void help(const char* program_name) {
 	puts("  mem [value]           If [value] is specified: set memory limit to [value] MB. Otherwise print its current value");
 	puts("  name [value]          If [value] is specified: set name to [value]. Otherwise print its current value");
 	puts("  prog [sol...]         Compile solutions [sol...] (all solutions by default). [sol] has the same meaning as in command 'test'");
+	puts("  statement [value]     If [value] is specified: set statement to [value]. Otherwise print its current value");
+	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by default) (compiles solutions if necessary). If [sol] is a path to a solution then it is used, otherwise all solutions that have [sol] as a subsequence are used.");
 	puts("  zip [clean args...]   Run clean command with [clean args] and compress the package into zip (named after the current directory) within the upper directory.");
 	puts("");
 	puts("Options:");
@@ -102,8 +104,6 @@ void help(const char* program_name) {
 	puts("  gen [force]           Alias to gentests");
 	puts("  genout [sol]          Generate tests outputs using solution [sol] (main solution by default)");
 	puts("  gentests [force]      Generate tests inputs: compile generators, generate tests. If force is specified then tests that are not specified in Sipfile are removed");
-	puts("  statement [value]     If [value] is specified set statement to [value], otherwise print its current value");
-	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by default) (compiles solutions if necessary). If [sol] is a path to a solution then it is used, otherwise all solutions that have [sol] as a subsequence are used.");
 }
 
 void init(ArgvParser args) {
@@ -259,12 +259,9 @@ void prog(ArgvParser args) {
 			solutions_to_compile.emplace(sol);
 	}
 
-	std::vector<StringView> sols;
 	solutions_to_compile.for_each([&](StringView solution) {
-		sols.emplace_back(solution);
+		sp.compile_solution(solution);
 	});
-
-	sp.compile_solutions(sols);
 }
 
 void statement(ArgvParser args) {
@@ -285,7 +282,32 @@ void statement(ArgvParser args) {
 
 void test(ArgvParser args) {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); (void)args;// TODO: implement
+
+	SipPackage sp;
+	sp.rebuild_full_simfile();
+	// Save scoring only if Simfile is already created (because if it creates a Simfile without memory limit it causes sip to fail in the next run)
+	if (access("Simfile", F_OK) == 0)
+		sp.save_scoring();
+
+	if (sp.full_simfile.solutions.empty())
+		throw SipError("no solution was found");
+
+	AVLDictSet<StringView> solutions_to_test;
+	if (args.size() > 0)
+		solutions_to_test = parse_args_to_solutions(sp.full_simfile, args);
+	else
+		solutions_to_test.emplace(sp.full_simfile.solutions.front());
+
+	solutions_to_test.for_each([&](StringView solution) {
+		sp.judge_solution(solution);
+		// Save limits only if Simfile is already created (because if it creates
+		// a Simfile without memory limit it causes sip to fail in the next run)
+		if (solution == sp.full_simfile.solutions.front() and
+			access("Simfile", F_OK) == 0)
+		{
+			sp.save_limits();
+		}
+	});
 }
 
 void zip(ArgvParser args) {

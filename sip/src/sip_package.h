@@ -25,6 +25,11 @@ public:
 	Sipfile sipfile;
 
 private:
+	Optional<sim::JudgeWorker> jworker;
+
+	// Prepares jworker
+	void prepare_judge_worker();
+
 	// TODO: add description
 	void generate_test_out_file();
 
@@ -52,11 +57,11 @@ public:
 	// For every .in file generates the corresponding .out file
 	void generate_test_out_files();
 
-	// Compiles specified solution
-	void compile_solution();
+	// Runs specified solution on all tests
+	void judge_solution(StringView solution);
 
-	// Compiles all solutions
-	void compile_solutions(const std::vector<StringView>& solutions);
+	// Compiles specified solution
+	void compile_solution(StringView solution);
 
 	// Compiles checker
 	void compile_checker();

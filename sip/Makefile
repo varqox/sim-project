@@ -41,7 +41,7 @@ reinstall: install
 .PHONY: uninstall
 uninstall:
 	# Delete installed files
-	$(RM) $(abspath $(DESTDIR)/sip) $(abspath $(DESTDIR)/proot)
+	$(RM) $(abspath $(DESTDIR)/sip)
 
 
 
@@ -76,7 +76,7 @@ $(SIP_EXECS): private override EXTRA_LD_FLAGS += $(SIP_LD_FLAGS)
 .PHONY: clean
 clean: OBJS := $(SIP_OBJS)
 clean: src/lib/simlib/clean
-	$(Q)$(RM) $(SIP_EXECS) $(OBJS) $(OBJS:o=dwo)
+	$(Q)$(RM) $(SIP_EXECS) $(OBJS) $(OBJS:o=dwo) src/proot_dump.c
 	$(Q)find src -type f -name '*.deps' | xargs rm -f
 
 .PHONY: help
