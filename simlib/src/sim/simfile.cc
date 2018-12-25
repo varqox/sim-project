@@ -10,6 +10,38 @@ using std::pair;
 using std::string;
 using std::vector;
 
+static void append_scoring_value(string& res, const sim::Simfile& simfile) {
+	res += "[\n";
+	for (const sim::Simfile::TestGroup& group : simfile.tgroups)
+		if (group.tests.size()) {
+			auto p = sim::Simfile::TestNameComparator::split(group.tests[0].name);
+			if (p.tid == "ocen")
+				p.gid = "0";
+			back_insert(res, '\t',
+				ConfigFile::escapeString(intentionalUnsafeStringView(
+					concat(p.gid, ' ', group.score))), '\n');
+		}
+	res += ']';
+}
+
+static void append_limits_value(string& res, const sim::Simfile& simfile) {
+	back_insert(res, '[');
+	for (const sim::Simfile::TestGroup& group : simfile.tgroups) {
+		if (group.tests.size())
+			res += '\n';
+		for (const sim::Simfile::Test& test : group.tests) {
+			string line {concat_tostr(test.name, ' ',
+				usecToSecStr(test.time_limit, 6))};
+
+			if (test.memory_limit != simfile.global_mem_limit)
+				back_insert(line, ' ', test.memory_limit >> 20);
+
+			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
+		}
+	}
+	res += ']';
+}
+
 namespace sim {
 
 string Simfile::dump() const {
@@ -39,35 +71,15 @@ string Simfile::dump() const {
 		back_insert(res, "memory_limit: ", global_mem_limit >> 20, '\n');
 
 	// Limits
-	back_insert(res, "limits: [");
-	for (const TestGroup& group : tgroups) {
-		if (group.tests.size())
-			res += '\n';
-		for (const Test& test : group.tests) {
-			string line {concat_tostr(test.name, ' ',
-				usecToSecStr(test.time_limit, 6))};
-
-			if (test.memory_limit != global_mem_limit)
-				back_insert(line, ' ', test.memory_limit >> 20);
-
-			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
-		}
-	}
-	res += "]\n";
+	back_insert(res, "limits: ");
+	append_limits_value(res, *this);
+	res += '\n';
 
 	// Scoring
-	if (tgroups.size()) {
-		res += "scoring: [\n";
-		for (const TestGroup& group : tgroups)
-			if (group.tests.size()) {
-				auto p = TestNameComparator::split(group.tests[0].name);
-				if (p.tid == "ocen")
-					p.gid = "0";
-				back_insert(res, '\t',
-					ConfigFile::escapeString(intentionalUnsafeStringView(
-						concat(p.gid, ' ', group.score))), '\n');
-			}
-		res += "]\n";
+	if (not tgroups.empty()) {
+		back_insert(res, "scoring: ");
+		append_scoring_value(res, *this);
+		res += '\n';
 	}
 
 	// Tests files
@@ -81,6 +93,18 @@ string Simfile::dump() const {
 
 	res += "]\n";
 
+	return res;
+}
+
+string Simfile::dump_scoring_value() const {
+	string res;
+	append_scoring_value(res, *this);
+	return res;
+}
+
+string Simfile::dump_limits_value() const {
+	string res;
+	append_limits_value(res, *this);
 	return res;
 }
 

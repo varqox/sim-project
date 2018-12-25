@@ -135,6 +135,22 @@ public:
 	std::string dump() const;
 
 	/**
+	 * @brief Dumps value of scoring variable to string
+	 *
+	 * @return dumped value of scoring variable (which can be placed in config
+	 *   file as scoring value)
+	 */
+	std::string dump_scoring_value() const;
+
+	/**
+	 * @brief Dumps value of limits variable to string
+	 *
+	 * @return dumped value of limits variable (which can be placed in config
+	 *   file as limits value)
+	 */
+	std::string dump_limits_value() const;
+
+	/**
 	 * @brief Loads problem's name
 	 * @details Fields:
 	 *   - name (problem's name)
