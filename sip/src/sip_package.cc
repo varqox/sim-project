@@ -12,6 +12,16 @@ constexpr uint64_t DEFAULT_TIME_LIMIT = 5; // In seconds
 constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MB
 } // anonymous namespace
 
+uint64_t SipPackage::get_default_time_limit() {
+	// Check Sipfile
+	if (access("Sipfile", F_OK) == 0) {
+		sipfile.loadDefaultTimeLimit();
+		return sipfile.default_time_limit;
+	}
+
+	return DEFAULT_TIME_LIMIT * 1'000'000;
+}
+
 void SipPackage::prepare_judge_worker() {
 	STACK_UNWINDING_MARK;
 
@@ -68,6 +78,17 @@ void SipPackage::judge_solution(StringView solution) {
 
 	compile_solution(solution);
 	compile_checker();
+
+	// For the main solution, default time limits are used
+	if (solution == full_simfile.solutions.front()) {
+		auto default_time_limit = get_default_time_limit();
+		for (auto& tgroup : full_simfile.tgroups)
+			for (auto& test : tgroup.tests)
+				test.time_limit = default_time_limit;
+
+		jworker = std::nullopt; // Time limits have changed
+	}
+
 	prepare_judge_worker();
 
 	stdlog('{');
@@ -76,6 +97,13 @@ void SipPackage::judge_solution(StringView solution) {
 	SipJudgeLogger jlogger;
 	auto jrep1 = jworker.value().judge(false, jlogger);
 	auto jrep2 = jworker.value().judge(true, jlogger);
+
+	// Adjust time limits according to the model solution judge times
+	if (solution == full_simfile.solutions.front()) {
+		sim::Conver::finishConstructingSimfile(full_simfile, jrep1, jrep2);
+		jworker = std::nullopt; // Time limits have changed
+	}
+
 	stdlog('}');
 }
 
@@ -137,14 +165,7 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 		copts.name = "unknown";
 	}
 
-	// Check Sipfile
-	if (access("Sipfile", F_OK) == 0) {
-		sipfile.loadDefaultTimeLimit();
-		copts.max_time_limit = sipfile.default_time_limit;
-	} else {
-		copts.max_time_limit = DEFAULT_TIME_LIMIT * 1'000'000;
-	}
-
+	copts.max_time_limit = get_default_time_limit();
 	return copts;
 }
 

@@ -27,8 +27,8 @@ void Sipfile::loadDefaultTimeLimit() {
 	if (tl <= 0)
 		throw SipError("Sipfile: default time limit has to be grater than 0");
 
-	uint64_t time_limit = round(tl * 1000000LL);
-	if (time_limit == 0) {
+	default_time_limit = round(tl * 1000000LL);
+	if (default_time_limit == 0) {
 		throw SipError("Sipfile: default time limit is to small - after"
 			" rounding it is equal to 0 microseconds, but it has to be at least"
 			" 1 microsecond");

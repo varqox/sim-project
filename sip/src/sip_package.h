@@ -27,6 +27,10 @@ public:
 private:
 	Optional<sim::JudgeWorker> jworker;
 
+	// Loads the default time limit from Sipfile or return the default value.
+	// Returned value represents time in microseconds
+	uint64_t get_default_time_limit();
+
 	// Prepares jworker
 	void prepare_judge_worker();
 
