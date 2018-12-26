@@ -172,6 +172,7 @@ class VerboseJudgeLogger : public JudgeLogger {
 
 	int64_t total_score_;
 	int64_t max_total_score_;
+	bool final_;
 
 	template<class... Args>
 	auto log(Args&&... args) {
@@ -222,6 +223,7 @@ public:
 
 	void begin(StringView package_path, bool final) override {
 		total_score_ = max_total_score_ = 0;
+		final_ = final;
 		log("Judging on `", package_path,"` (", (final ? "final" : "initial"),
 			"): {");
 	}
@@ -263,7 +265,7 @@ public:
 	}
 
 	void end() override {
-		if (total_score_ != 0 or max_total_score_ != 0)
+		if (final_)
 			log("Total score: ", total_score_, " / ", max_total_score_);
 		log('}');
 	}
@@ -380,10 +382,11 @@ public:
 	 * @param final Whether judge only on final tests or only initial tests
 	 * @return Judge report
 	 */
-	JudgeReport judge(bool final, JudgeLogger&& judge_log) const;
+	JudgeReport judge(bool final, JudgeLogger& judge_log) const;
 
 	JudgeReport judge(bool final) const {
-		return judge(final, VerboseJudgeLogger());
+		VerboseJudgeLogger logger;
+		return judge(final, logger);
 	}
 };
 

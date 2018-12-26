@@ -161,7 +161,7 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 	return es;
 }
 
-JudgeReport JudgeWorker::judge(bool final, JudgeLogger&& judge_log) const {
+JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 	JudgeReport report;
 	judge_log.begin(pkg_root, final);
 
