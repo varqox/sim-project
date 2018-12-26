@@ -11,6 +11,8 @@ class SipJudgeLogger : public sim::JudgeLogger {
 
 	int64_t total_score_;
 	int64_t max_total_score_;
+	AVLDictMap<EnumVal<sim::JudgeReport::Test::Status>, uint> statistics_;
+	bool final_;
 
 	template<class Func>
 	void log_test(StringView test_name, sim::JudgeReport::Test test_report,
@@ -53,19 +55,22 @@ class SipJudgeLogger : public sim::JudgeLogger {
 	}
 
 public:
-	void begin(StringView, bool) override {
+	void begin(StringView, bool final) override {
 		total_score_ = max_total_score_ = 0;
+		final_ = final;
 	}
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
 		Sandbox::ExitStat es) override
 	{
+		++statistics_[test_report.status];
 		log_test(test_name, test_report, es, [](auto&){});
 	}
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Sandbox::ExitStat checker_es, uint64_t checker_mem_limit, StringView checker_error_str) override
 	{
+		++statistics_[test_report.status];
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
 			tmplog("  Checker: ");
 
@@ -95,7 +100,23 @@ public:
 	}
 
 	void end() override {
-		if (total_score_ != 0 or max_total_score_ != 0)
+		if (final_) {
 			log("Total score: ", total_score_, " / ", max_total_score_);
+			log("------------------");
+			using S = sim::JudgeReport::Test::Status;
+			statistics_.for_each([&](auto&& p) {
+				switch (p.first) {
+				case S::OK: log("\033[1;32mOK\033[m\t\t", p.second); break;
+				case S::WA: log("\033[1;31mWA\033[m\t\t", p.second); break;
+				case S::TLE: log("\033[1;33mTLE\033[m\t\t", p.second); break;
+				case S::MLE: log("\033[1;33mMLE\033[m\t\t", p.second); break;
+				case S::RTE: log("\033[1;31mRTE\033[m\t\t", p.second); break;
+				case S::CHECKER_ERROR:
+					log("\033[1;35mCHECKER_ERROR\033[m\t", p.second);
+					break;
+				}
+			});
+			log("------------------");
+		}
 	}
 };

@@ -73,8 +73,9 @@ void SipPackage::judge_solution(StringView solution) {
 	stdlog('{');
 	CompilationCache::load_solution(jworker.value(), solution);
 	CompilationCache::load_checker(jworker.value());
-	auto jrep1 = jworker.value().judge(false, SipJudgeLogger());
-	auto jrep2 = jworker.value().judge(true, SipJudgeLogger());
+	SipJudgeLogger jlogger;
+	auto jrep1 = jworker.value().judge(false, jlogger);
+	auto jrep2 = jworker.value().judge(true, jlogger);
 	stdlog('}');
 }
 
