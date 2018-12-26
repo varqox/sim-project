@@ -410,7 +410,7 @@ protected:
 			return true;
 
 		return (for_each(pool[x].kid[L], func) and
-			func(pool[x]) and
+			static_cast<bool>(func(pool[x])) and
 			for_each(pool[x].kid[R], func));
 	}
 
@@ -447,7 +447,7 @@ protected:
 			return true;
 
 		return (for_each(pool[x].kid[L], func) and
-			func(pool[x]) and
+			static_cast<bool>(func(pool[x])) and
 			for_each(pool[x].kid[R], func));
 	}
 
@@ -853,7 +853,8 @@ protected:
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
 		else
 			return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
-				callback(pool[x]) and for_each(pool[x].kid[R], callback));
+				static_cast<bool>(callback(pool[x])) and
+				for_each(pool[x].kid[R], callback));
 	}
 
 	template<class T, class Func>
@@ -888,7 +889,8 @@ protected:
 
 		if (compare(key, pool[x].key()))
 			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
-				callback(pool[x]) and for_each(pool[x].kid[R], callback));
+				static_cast<bool>(callback(pool[x])) and
+				for_each(pool[x].kid[R], callback));
 		else
 			return foreach_since_upper_bound(pool[x].kid[R], key, callback);
 	}
@@ -927,7 +929,8 @@ protected:
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
 		else
 			return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
-				callback(pool[x]) and for_each(pool[x].kid[R], callback));
+				static_cast<bool>(callback(pool[x])) and
+				for_each(pool[x].kid[R], callback));
 	}
 
 	template<class T, class Func>
@@ -962,7 +965,8 @@ protected:
 
 		if (compare(key, pool[x].key()))
 			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
-				callback(pool[x]) and for_each(pool[x].kid[R], callback));
+				static_cast<bool>(callback(pool[x])) and
+				for_each(pool[x].kid[R], callback));
 		else
 			return foreach_since_upper_bound(pool[x].kid[R], key, callback);
 	}
@@ -1058,7 +1062,7 @@ public:
 	 */
 	template<class Func>
 	void for_each(Func&& func) {
-		AVLBase::for_each([&func](Node& node) { func(node.data()); });
+		AVLBase::for_each([&func](Node& node) { return func(node.data()); });
 	}
 
 	/**
@@ -1070,7 +1074,7 @@ public:
 	template<class Func>
 	void for_each(Func&& func) const {
 		AVLBase::for_each([&func](const Node& node) {
-			func(node.data());
+			return func(node.data());
 		});
 	}
 
