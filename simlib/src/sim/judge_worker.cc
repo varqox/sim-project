@@ -329,23 +329,34 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 
 				StringView line1 {s.extractNext('\n')}; // "OK" or "WRONG"
 				StringView line2 {s.extractNext('\n')}; // percentage (real)
-				// Second line has to be either empty or be a real number
-				if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
+
+				auto wrong_second_line = [&] {
 					score_ratio = 0; // Do not give score for a checker error
 					test_report.status = JudgeReport::Test::CHECKER_ERROR;
 					test_report.comment = "Checker error";
 					checker_error_str.append("Second line of the stdout is"
-						" invalid: `", line2, '`');
+						" invalid: `", line2, "` - it has be to either empty or"
+						" a real number representing the percentage of score"
+						" that solution will receive");
+				};
+
+				// Second line has to be either empty or be a real number
+				if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
+					wrong_second_line();
 
 				// "OK" -> Checker: OK
 				} else if (line1 == "OK") {
 					// Test status is already set to OK
 					// line2 format was checked above
-					if (line2.size()) // Empty line means 100%
-						score_ratio = std::min(score_ratio,
-							atof(line2.to_string().data()) * 0.01); /*
-								.to_string() is safer than tricky indexing over
-								chout */
+					if (line2.size()) { // Empty line means 100%
+						errno = 0;
+						char* ptr;
+						double x = strtod(line2.data(), &ptr);
+						if (errno != 0 or ptr == line2.data())
+							wrong_second_line();
+						else
+							score_ratio = std::min(score_ratio, x) * 0.01;
+					}
 
 					// Leave the checker comment only
 					chout.erase(chout.begin(), chout.end() - s.size());
@@ -354,7 +365,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 				// "WRONG" -> Checker: WA
 				} else if (line1 == "WRONG") {
 					test_report.status = JudgeReport::Test::WA;
-					score_ratio = 0;
+					score_ratio = 0; // Ignoring second line
 					// Leave the checker comment only
 					chout.erase(chout.begin(), chout.end() - s.size());
 					test_report.comment = std::move(chout);
@@ -365,7 +376,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 					test_report.status = JudgeReport::Test::CHECKER_ERROR;
 					test_report.comment = "Checker error";
 					checker_error_str.append("First line of the stdout is"
-						" invalid: `", line2, '`');
+						" invalid: `", line1, "` - it has to be either `OK` or"
+						" `WRONG`");
 				}
 
 			// Checker TLE
