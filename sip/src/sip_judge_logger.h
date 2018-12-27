@@ -101,18 +101,33 @@ public:
 
 	void end() override {
 		if (final_) {
-			log("Total score: ", total_score_, " / ", max_total_score_);
+			if (total_score_ != 0 or max_total_score_ != 0)
+				log("Total score: ", total_score_, " / ", max_total_score_);
+
 			log("------------------");
 			using S = sim::JudgeReport::Test::Status;
+
 			statistics_.for_each([&](auto&& p) {
+				auto no = paddedString(intentionalUnsafeStringView(
+					toStr(p.second)), 4);
 				switch (p.first) {
-				case S::OK: log("\033[1;32mOK\033[m\t\t", p.second); break;
-				case S::WA: log("\033[1;31mWA\033[m\t\t", p.second); break;
-				case S::TLE: log("\033[1;33mTLE\033[m\t\t", p.second); break;
-				case S::MLE: log("\033[1;33mMLE\033[m\t\t", p.second); break;
-				case S::RTE: log("\033[1;31mRTE\033[m\t\t", p.second); break;
+				case S::OK:
+					log("\033[1;32mOK\033[m            ", no);
+					break;
+				case S::WA:
+					log("\033[1;31mWA\033[m            ", no);
+					break;
+				case S::TLE:
+					log("\033[1;33mTLE\033[m           ", no);
+					break;
+				case S::MLE:
+					log("\033[1;33mMLE\033[m           ", no);
+					break;
+				case S::RTE:
+					log("\033[1;31mRTE\033[m           ", no);
+					break;
 				case S::CHECKER_ERROR:
-					log("\033[1;35mCHECKER_ERROR\033[m\t", p.second);
+					log("\033[1;35mCHECKER_ERROR\033[m ", no);
 					break;
 				}
 			});
