@@ -269,8 +269,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 			} else if (test_report.runtime >= test_report.time_limit or
 				es.runtime == tl)
 			{
-				// If works if es.runtime == tl which means that real_time_limit
-				// exceeded
+				// es.runtime == tl means that real_time_limit has been exceeded
 				if (test_report.runtime < test_report.time_limit)
 					test_report.runtime = test_report.time_limit;
 
