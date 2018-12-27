@@ -261,9 +261,31 @@ Simfile::parseScoringItem(StringView item) {
 
 	int64_t score;
 	sp.removeLeading(isspace);
-	if (strtoi(sp, score) != (int)sp.size()) // TODO: handle overflows!
+
+	auto throw_invalid_scoring = [&] {
 		throw std::runtime_error{concat_tostr("Simfile: invalid scoring of the"
 			" group `", gid, "`: ", sp)};
+	};
+
+	if (sp.empty())
+		throw_invalid_scoring();
+
+	// Check for overflows
+	using score_limits = std::numeric_limits<decltype(score)>;
+	constexpr uintmax_t min_digits = -uintmax_t(std::numeric_limits<decltype(score)>::min() + 1) + 1;
+
+	if (not isDigitNotGreaterThan<score_limits::max()>(sp))
+		throw_invalid_scoring();
+
+	if (sp.front() == '-' and
+		not isDigitNotGreaterThan<min_digits>(sp.substr(1)))
+	{
+		throw_invalid_scoring();
+	}
+
+	// Safe to use strtoi as overflow checks were have passed
+	if (strtoi(sp, score) != (int)sp.size())
+		throw_invalid_scoring();
 
 	return {gid, score};
 }
