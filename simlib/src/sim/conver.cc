@@ -260,7 +260,13 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 			tname.removeSuffix(3);
 			tname = tname.extractTrailing([](char c) { return (c != '/'); });
 			input.removePrefix(master_dir.size());
-			tests[tname].in = input;
+
+			auto& test = tests[tname];
+			if (test.in.has_value()) {
+				report_.append("\033[1;35mwarning\033[m: input file for test `", tname, "` was found in more than one location: `", test.in.value(), "` and `", input, "` - choosing the later");
+			}
+
+			test.in = input;
 		}
 	});
 
@@ -270,7 +276,13 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 			tname.removeSuffix(4);
 			tname = tname.extractTrailing([](char c) { return (c != '/'); });
 			output.removePrefix(master_dir.size());
-			tests[tname].out = output;
+
+			auto& test = tests[tname];
+			if (test.out.has_value()) {
+				report_.append("\033[1;35mwarning\033[m: output file for test `", tname, "` was found in more than one location: `", test.out.value(), "` and `", output, "` - choosing the later");
+			}
+
+			test.out = output;
 		}
 	});
 
