@@ -1,9 +1,10 @@
 #pragma once
 
+#include "sip_judge_logger.h"
 #include "sipfile.h"
+#include "tests_files.h"
 
 #include <functional>
-#include <simlib/optional.h>
 #include <simlib/sim/conver.h>
 
 template<class... Args>
@@ -26,16 +27,22 @@ public:
 
 private:
 	Optional<sim::JudgeWorker> jworker;
+	Optional<TestsFiles> tests_files;
 
 	// Loads the default time limit from Sipfile or return the default value.
 	// Returned value represents time in microseconds
 	uint64_t get_default_time_limit();
 
+	// Detects all .in files and .out files
+	void prepare_tests_files();
+
 	// Prepares jworker
 	void prepare_judge_worker();
 
-	// TODO: add description
-	void generate_test_out_file();
+	// Runs model solution on @p in_file and places the output in the
+	// @p out_file
+	sim::JudgeReport::Test generate_test_out_file(
+		const sim::Simfile::Test& test, SipJudgeLogger& logger);
 
 	// Runs @p callback for each test in @p test_range
 	void parse_test_range(StringView test_range,
@@ -48,12 +55,6 @@ public:
 	// Initializes the package - loads Simfile (if exists) and Sipfile (if
 	// exists)
 	SipPackage();
-
-	// Detects all .in files
-	void detect_test_in_files();
-
-	// Detects all .out files
-	void detect_test_out_files();
 
 	// Generates .in files that have recipe provided in Sipfile
 	void generate_test_in_files();
@@ -84,9 +85,6 @@ public:
 
 	// Saves time and memory limits into the Simfile
 	void save_limits();
-
-	// Saves the main solution into the Simfile
-	void set_main_solution();
 
 	// Compiles all .tex files found in the package
 	void compile_tex_files();

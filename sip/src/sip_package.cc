@@ -1,6 +1,5 @@
 #include "compilation_cache.h"
 #include "sip_error.h"
-#include "sip_judge_logger.h"
 #include "sip_package.h"
 
 #include <fstream>
@@ -22,6 +21,15 @@ uint64_t SipPackage::get_default_time_limit() {
 	return DEFAULT_TIME_LIMIT * 1'000'000;
 }
 
+void SipPackage::prepare_tests_files() {
+	STACK_UNWINDING_MARK;
+
+	if (tests_files.has_value())
+		return;
+
+	tests_files = TestsFiles();
+}
+
 void SipPackage::prepare_judge_worker() {
 	STACK_UNWINDING_MARK;
 
@@ -32,9 +40,58 @@ void SipPackage::prepare_judge_worker() {
 	jworker.value().loadPackage(".", full_simfile.dump());
 }
 
-void SipPackage::generate_test_out_file() {
+static inline uint64_t timespec_to_usec(timespec t) noexcept {
+	return t.tv_sec * 1000000 + t.tv_nsec / 1000;
+}
+
+sim::JudgeReport::Test SipPackage::generate_test_out_file(const sim::Simfile::Test& test, SipJudgeLogger& logger) {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
+
+	stdlog("generating ", test.name, ".out...").flush_no_nl();
+
+	auto es = jworker.value().run_solution(test.in, test.out, test.time_limit, test.memory_limit);
+
+	sim::JudgeReport::Test res(
+		test.name,
+		sim::JudgeReport::Test::OK,
+		timespec_to_usec(es.cpu_runtime),
+		test.time_limit,
+		es.vm_peak,
+		test.memory_limit,
+		std::string {}
+	);
+
+	// OK
+	if (es.si.code == CLD_EXITED and es.si.status == 0 and
+		res.runtime <= res.time_limit)
+	{
+
+	// TLE
+	} else if (res.runtime >= res.time_limit or
+		timespec_to_usec(es.runtime) == res.time_limit)
+	{
+		res.status = sim::JudgeReport::Test::TLE;
+		res.comment = "Time limit exceeded";
+
+	// MLE
+	} else if (es.message == "Memory limit exceeded" or
+		res.memory_consumed > res.memory_limit)
+	{
+		res.status = sim::JudgeReport::Test::MLE;
+		res.comment = "Memory limit exceeded";
+
+	// RTE
+	} else {
+		res.status = sim::JudgeReport::Test::RTE;
+		res.comment = "Runtime error";
+		if (es.message.size())
+			back_insert(res.comment, " (", es.message, ')');
+	}
+
+	stdlog("\033[G").flush_no_nl(); // Move cursor back to the beginning of the line
+
+	logger.test(test.name, res, es);
+	return res;
 }
 
 void SipPackage::parse_test_range(StringView test_range, const std::function<void(StringView)>& callback) {
@@ -53,24 +110,76 @@ SipPackage::SipPackage() {
 	}
 }
 
-void SipPackage::detect_test_in_files() {
-	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
-}
-
-void SipPackage::detect_test_out_files() {
-	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
-}
-
 void SipPackage::generate_test_in_files() {
 	STACK_UNWINDING_MARK;
 	THROW("unimplemented"); // TODO: implement it
 }
 
+static auto test_out_file(StringView test_in_file) {
+	if (hasPrefix(test_in_file, "in/")) {
+		return concat<32>("out",
+			test_in_file.substring(2, test_in_file.size() - 2), "out");
+	}
+
+	return concat<32>(test_in_file.substring(0, test_in_file.size() - 2), "out");
+}
+
 void SipPackage::generate_test_out_files() {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
+
+	prepare_tests_files();
+	// Create out/ dir if needed
+	tests_files.value().tests.for_each([&](auto&& p) {
+		if (hasPrefix(p.second.in.value_or(""), "in/")) {
+			mkdir("out");
+			return false;
+		}
+
+		return true;
+	});
+
+	// Touch .out files and give warnings
+	tests_files.value().tests.for_each([&](auto&& p) {
+		if (not p.second.in.has_value()) {
+			log_warning("orphaned test out file: ", p.second.out.value());
+			return;
+		}
+
+		if (p.second.out.has_value())
+			putFileContents(concat(p.second.out.value()), "");
+		else
+			putFileContents(test_out_file(p.second.in.value()), "");
+	});
+	tests_files = std::nullopt; // New .out files may have been created
+
+	rebuild_full_simfile(true); // TODO: I don't like that -> maybe convert to "prepare_full_simfile" or something like that. The problem is that it gets called two times from command gen: one time for genin and one for genout - sure of that? - TODO: check it
+	if (full_simfile.solutions.empty())
+		throw SipError("no main solution was found");
+
+	compile_solution(full_simfile.solutions.front());
+
+	// Generate .out files and construct judge reports for adjusting time limits
+	sim::JudgeReport jrep1, jrep2;
+	SipJudgeLogger logger;
+	logger.begin({}, false);
+	for (auto const& group : full_simfile.tgroups) {
+		auto p = sim::Simfile::TestNameComparator::split(group.tests[0].name);
+		if (p.gid != "0")
+			logger.begin({}, true); // Assumption: initial tests come as first
+
+		auto& rep = (p.gid != "0" ? jrep2 : jrep1);
+		rep.groups.emplace_back();
+		for (auto const& test : group.tests) {
+			rep.groups.back().tests.emplace_back(
+				generate_test_out_file(test, logger));
+		}
+	}
+
+	logger.end();
+
+	// Adjust time limits
+	sim::Conver::finishConstructingSimfile(full_simfile, jrep1, jrep2);
+	jworker = std::nullopt; // Time limits have changed
 }
 
 void SipPackage::judge_solution(StringView solution) {
@@ -177,7 +286,7 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 	sim::Conver::ConstructionResult cr =
 		conver.constructSimfile(conver_options(set_default_time_limits));
 
-	// TODO: instead false verbose was here - remove this if or resurrect verbose in some way...
+	// TODO: instead false, verbose was here - remove this if or resurrect verbose in some way...
 	if (false) {
 		stdlog(conver.getReport());
 	} else {
@@ -226,11 +335,6 @@ void SipPackage::save_limits() {
 		intentionalUnsafeStringView(full_simfile.dump_limits_value()), false);
 
 	stdlog(" done.");
-}
-
-void SipPackage::set_main_solution() {
-	STACK_UNWINDING_MARK;
-	THROW("uinmplemented"); // TODO: implement
 }
 
 void SipPackage::compile_tex_files() {

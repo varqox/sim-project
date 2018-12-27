@@ -90,11 +90,13 @@ static void run_command(int argc, char **argv) {
 	if (command == "doc")
 		return commands::doc(args);
 	if (command == "gen")
-		return commands::gentests(args);
+		return commands::gen(args);
+	if (command == "genin")
+		return commands::genin(args);
 	if (command == "genout")
 		return commands::genout(args);
 	if (command == "gentests")
-		return commands::gentests(args);
+		return commands::gen(args);
 	if (command == "help")
 		return commands::help(argv[0]);
 	if (command == "init")

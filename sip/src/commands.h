@@ -11,9 +11,11 @@ void clean(ArgvParser args);
 
 void doc(ArgvParser args);
 
+void genin(ArgvParser args);
+
 void genout(ArgvParser args);
 
-void gentests(ArgvParser args);
+void gen(ArgvParser args);
 
 // Displays help
 void help(const char* program_name);

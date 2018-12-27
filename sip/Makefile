@@ -59,7 +59,8 @@ SIP_SRCS := \
 	src/main.cc \
 	src/proot_dump.c \
 	src/sip_package.cc \
-	src/sipfile.cc
+	src/sipfile.cc \
+	src/tests_files.cc
 
 $(eval $(call load_dependencies, $(SIP_SRCS)))
 SIP_OBJS := $(call SRCS_TO_OBJS, $(SIP_SRCS))
