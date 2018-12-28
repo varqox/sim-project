@@ -184,7 +184,7 @@ class VerboseJudgeLogger : public JudgeLogger {
 	void log_test(StringView test_name, JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Func&& func)
 	{
-		auto tmplog = log("  ", paddedString(test_name, 11, LEFT),
+		auto tmplog = log("  ", paddedString(test_name, 12, LEFT), ' ',
 			paddedString(intentionalUnsafeStringView(
 				usecToSecStr(test_report.runtime, 2, false)), 4),
 			" / ", usecToSecStr(test_report.time_limit, 2, false),
