@@ -19,10 +19,24 @@ SIM is an open source platform for carrying out algorithmic contests
 - libarchive
 - zip
 
-#### Ubuntu / Debian
+#### Debian
 
   ```sh
   sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libarchive-dev make zip
+  ```
+
+#### Ubuntu
+
+  ```sh
+  sudo apt-get install g++-multilib mysql-server libmariadbclient-dev libseccomp-dev libarchive-dev make zip
+  ```
+
+#### Arch Linux
+
+  ```sh
+  sudo pacman -S gcc mariadb libmariadbclient libseccomp libarchive make zip
+  sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+  sudo systemctl enable mariadb && sudo systemctl start mariadb
   ```
 
 ### Instructions
@@ -30,17 +44,17 @@ SIM is an open source platform for carrying out algorithmic contests
 1. First of all clone the SIM repository and all its submodules
 
   ```sh
-  git clone --recursive https://github.com/varqox/sim
+  git clone --recursive --branch develop https://github.com/varqox/sim
   cd sim
   ```
 
 2. Build
 
   ```sh
-  make -j 4
+  make -j $(nproc)
   ```
 
-3. Make sure that you have created MySQL account and database for SIM, use command below to create user sim@localhost (password: sim) and database sim:
+3. Make sure that you have created MySQL account and database for SIM, use command below to create user sim@localhost and database sim (when asked for password, enter your mariadb root password, by default it is empty):
 
   ```sh
   mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root -p
@@ -51,7 +65,7 @@ SIM is an open source platform for carrying out algorithmic contests
   ```sh
   make install
   ```
-  It will ask for MySQL credentials
+  It will ask for MySQL credentials. For testing purposes, you can type sim, sim, sim, localhost for MariaDB username, password, database and user host.
 
   If you want to install SIM in other location that build/ type
 
@@ -84,7 +98,7 @@ SIM is an open source platform for carrying out algorithmic contests
 
   Remember to change the password later (or now) if you want to make SIM site public. Do not make hacker's life easier!
 
-7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/server.conf` in which are server parameters like ADDRESS etc. There are also log files `log/*.log` which you would find useful if something did not work.
+7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/sim.conf` in which are server parameters like ADDRESS etc. There are also log files `log/*.log` which you would find useful if something did not work.
 
 8. Feel free to report bugs and irregularities.
 
