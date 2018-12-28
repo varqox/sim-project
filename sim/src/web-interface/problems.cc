@@ -17,6 +17,8 @@ Sim::ProblemPermissions Sim::problems_get_overall_permissions() noexcept {
 	case UserType::NORMAL:
 		return PERM::VIEW_TPUBLIC;
 	}
+
+	return PERM::NONE; // Shouldn't happen
 }
 
 Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,

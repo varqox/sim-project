@@ -245,6 +245,8 @@ inline constexpr const char* css_color_class(SubmissionStatus status) noexcept {
 	case SubmissionStatus::CHECKER_COMPILATION_ERROR: return "blue";
 	case SubmissionStatus::JUDGE_ERROR: return "blue";
 	}
+
+	return ""; // Shouldn't happen
 }
 
 #define SSTATUS_PENDING_STR "8"

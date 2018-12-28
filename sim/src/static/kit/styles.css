@@ -1973,6 +1973,9 @@ pre.logs span.loader {
 	transform: perspective(1px) translateX(-50%);
 }
 
+pre.logs .gray {
+	color: #555555;
+}
 pre.logs .green {
 	color: #54ff54;
 }

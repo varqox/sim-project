@@ -5,7 +5,7 @@
 
 using SFSM = SubmissionFinalSelectingMethod;
 
-inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
+inline static InplaceBuff<32> color_class_json(Sim::ContestPermissions cperms,
 	InfDatetime full_results, const decltype(mysql_date())& curr_mysql_date,
 	Optional<SubmissionStatus> full_status,
 	Optional<SubmissionStatus> initial_status)
@@ -14,12 +14,12 @@ inline static StringBuff<32> color_class_json(Sim::ContestPermissions cperms,
 		full_results <= curr_mysql_date)
 	{
 		if (full_status.has_value())
-			return {"\"", css_color_class(full_status.value()), "\""};
+			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 
 	} else if (initial_status.has_value())
-		return {"\"", css_color_class(initial_status.value()), "\""};
+		return concat<32>("\"", css_color_class(initial_status.value()), "\"");
 
-	return "null";
+	return concat<32>("null");
 }
 
 void Sim::append_contest_actions_str() {
@@ -935,7 +935,8 @@ void Sim::api_contest_problem_rejudge_all_submissions(StringView problem_id) {
 		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
 			", ?, id, ?, ''"
 		" FROM submissions WHERE contest_problem_id=? ORDER BY id");
-	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+	stmt.bindAndExecute(session_user_id,
+		priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
 		mysql_date(), jobs::dumpString(problem_id), contests_cpid);
 
 	jobs::notify_job_server();
