@@ -11,7 +11,7 @@ SIM is an open source platform for carrying out algorithmic contests
 
 ### Dependencies:
 
-- gcc/g++ (32 bit version) with C++14 support
+- gcc/g++ (with 32 bit support) with C++14 support
 - MariaDB (Debian packages: _mariadb-server_)
 - MariaDB client library (Debian packages: _libmariadbclient-dev_)
 - libseccomp (Debian packages: _libseccomp-dev_)
