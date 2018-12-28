@@ -18,7 +18,7 @@ class SipJudgeLogger : public sim::JudgeLogger {
 	void log_test(StringView test_name, sim::JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Func&& func)
 	{
-		auto tmplog = log("  ", paddedString(test_name, 8, LEFT),
+		auto tmplog = log("  ", paddedString(test_name, 8, LEFT), ' ',
 			paddedString(intentionalUnsafeStringView(
 				usecToSecStr(test_report.runtime, 2, false)), 4),
 			" / ", usecToSecStr(test_report.time_limit, 2, false),
