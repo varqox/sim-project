@@ -27,7 +27,7 @@ SIM is an open source platform for carrying out algorithmic contests
 #### Ubuntu
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmariadbclient-dev libseccomp-dev libarchive-dev make zip
+  sudo apt-get install g++-multilib mysql-server libmariadbclient-dev libseccomp-dev libarchive-dev make
   ```
 
 #### Arch Linux
