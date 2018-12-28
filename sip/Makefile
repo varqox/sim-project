@@ -9,6 +9,9 @@ SIP_LD_FLAGS := -L '$(CURDIR)/src/lib'
 all: src/sip
 	@printf "\033[32mBuild finished\033[0m\n"
 
+.PHONY: static
+static: src/sip-static
+
 $(eval $(call include_makefile, src/lib/simlib/Makefile))
 
 .PHONY: test
@@ -68,8 +71,11 @@ SIP_OBJS := $(call SRCS_TO_OBJS, $(SIP_SRCS))
 src/sip: $(SIP_OBJS) src/lib/simlib/simlib.a
 	$(LINK) -lsupc++ -lrt -larchive -lseccomp
 
+src/sip-static: $(SIP_OBJS) src/lib/simlib/simlib.a
+	$(LINK) -lrt -larchive -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
+
 # SIP_OBJS := $(SIP_OBJS)
-SIP_EXECS := src/sip
+SIP_EXECS := src/sip src/sip-static
 
 $(SIP_OBJS): override EXTRA_CXX_FLAGS += $(SIP_CXX_FLAGS)
 $(SIP_EXECS): private override EXTRA_LD_FLAGS += $(SIP_LD_FLAGS)
