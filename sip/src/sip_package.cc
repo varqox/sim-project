@@ -239,7 +239,7 @@ void SipPackage::generate_test_out_files() {
 	});
 	tests_files = std::nullopt; // New .out files may have been created
 
-	rebuild_full_simfile(true); // TODO: I don't like that -> maybe convert to "prepare_full_simfile" or something like that. The problem is that it gets called two times from command gen: one time for genin and one for genout - sure of that? - TODO: check it
+	rebuild_full_simfile(true);
 	if (full_simfile.solutions.empty())
 		throw SipError("no main solution was found");
 
@@ -373,26 +373,21 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 	sim::Conver::ConstructionResult cr =
 		conver.constructSimfile(conver_options(set_default_time_limits));
 
-	// TODO: instead false, verbose was here - remove this if or resurrect verbose in some way...
-	if (false) {
-		stdlog(conver.getReport());
-	} else {
-		// Filter out ever line except warnings
-		StringView report = conver.getReport();
-		size_t line_beg = 0, line_end = report.find('\n');
-		size_t next_warning = report.find("warning");
-		while (next_warning != StringView::npos) {
-			if (next_warning < line_end)
-				stdlog(report.substring(line_beg, line_end));
+	// Filter out ever line except warnings
+	StringView report = conver.getReport();
+	size_t line_beg = 0, line_end = report.find('\n');
+	size_t next_warning = report.find("warning");
+	while (next_warning != StringView::npos) {
+		if (next_warning < line_end)
+			stdlog(report.substring(line_beg, line_end));
 
-			if (line_end == StringView::npos or line_end + 1 == report.size())
-				break;
+		if (line_end == StringView::npos or line_end + 1 == report.size())
+			break;
 
-			line_beg = line_end + 1;
-			line_end = report.find('\n', line_beg);
-			if (next_warning < line_beg)
-				next_warning = report.find(line_beg, "warning");
-		}
+		line_beg = line_end + 1;
+		line_end = report.find('\n', line_beg);
+		if (next_warning < line_beg)
+			next_warning = report.find(line_beg, "warning");
 	}
 
 	// Ignore the need for the model solution to set the time limits - the
@@ -400,8 +395,7 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 	// throw_assert(cr.status == sim::Conver::Status::COMPLETE);
 
 	full_simfile = std::move(cr.simfile);
-	// jworker has become outdated
-	jworker = std::nullopt;
+	jworker = std::nullopt; // jworker has become outdated
 }
 
 void SipPackage::save_scoring() {

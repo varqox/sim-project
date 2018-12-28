@@ -140,15 +140,10 @@ int main(int argc, char **argv) {
 
 	parseOptions(argc, argv);
 
-	if(argc < 2) {
+	if (argc < 2) {
 		commands::help(argc > 0 ? argv[0] : nullptr);
 		return 1;
 	}
-
-	// TODO: maybe put it in SipPackage (it is sometimes unnecessary here e.g. sip init .)
-	// if (access("Simfile", F_OK) != 0) {
-	// 	log_warning("Simfile is missing. If you are sure that you are in the correct directory, running the this command may help: sip init . <name>");
-	// }
 
 	try {
 		run_command(argc, argv);
