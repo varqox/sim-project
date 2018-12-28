@@ -335,7 +335,25 @@ void SipPackage::clean() {
 
 void SipPackage::remove_generated_test_files() {
 	STACK_UNWINDING_MARK;
-	THROW("uinmplemented"); // TODO: implement
+
+	sipfile.loadGenTests();
+	prepare_tests_files();
+
+	stdlog("Removing generated test files...").flush_no_nl();
+	// Remove generated .in files
+	sipfile.gen_tests.for_each([&](auto const& test) {
+		auto it = tests_files->tests.find(test.name);
+		if (it and it->second.in.has_value())
+			remove(it->second.in.value().to_string());
+	});
+
+	// Remove generated .out files
+	tests_files->tests.for_each([](auto const& p) {
+		if (p.second.in.has_value() and p.second.out.has_value())
+			remove(p.second.out.value().to_string());
+	});
+
+	stdlog(" done.");
 }
 
 sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
