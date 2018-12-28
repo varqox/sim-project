@@ -270,8 +270,9 @@ void judge_submission(uint64_t job_id, StringView submission_id,
 
 	try {
 		// Judge
-		JudgeReport initial_jrep = jworker.judge(false, sim::VerboseJudgeLogger(true));
-		JudgeReport final_jrep = jworker.judge(true, sim::VerboseJudgeLogger(true));
+		sim::VerboseJudgeLogger logger(true);
+		JudgeReport initial_jrep = jworker.judge(false, logger);
+		JudgeReport final_jrep = jworker.judge(true, logger);
 		// Make reports
 		initial_report = construct_report(initial_jrep, false);
 		final_report = construct_report(final_jrep, true);
@@ -436,8 +437,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 
 	// Judge
 	judge_log("Judging...");
-	JudgeReport initial_jrep = jworker.judge(false, sim::VerboseJudgeLogger(true));
-	JudgeReport final_jrep = jworker.judge(true, sim::VerboseJudgeLogger(true));
+	sim::VerboseJudgeLogger logger(true);
+	JudgeReport initial_jrep = jworker.judge(false, logger);
+	JudgeReport final_jrep = jworker.judge(true, logger);
 
 	judge_log("Initial judge report: ", initial_jrep.judge_log);
 	judge_log("Final judge report: ", final_jrep.judge_log);
@@ -540,8 +542,9 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 
 	// Judge
 	judge_log("Judging...");
-	JudgeReport initial_jrep = jworker.judge(false, sim::VerboseJudgeLogger(true));
-	JudgeReport final_jrep = jworker.judge(true, sim::VerboseJudgeLogger(true));
+	sim::VerboseJudgeLogger logger(true);
+	JudgeReport initial_jrep = jworker.judge(false, logger);
+	JudgeReport final_jrep = jworker.judge(true, logger);
 
 	judge_log("Initial judge report: ", initial_jrep.judge_log);
 	judge_log("Final judge report: ", final_jrep.judge_log);
