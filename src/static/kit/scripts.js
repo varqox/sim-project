@@ -264,7 +264,7 @@ function add_csrf_token_to(form) {
 	x.find('input[name="csrf_token"]').remove(); // Avoid duplication
 	x.append('<input type="hidden" name="csrf_token" value="' +
 		get_cookie('csrf_token') + '">');
-	return form;
+	return x;
 }
 
 // Adding csrf token just before submitting a form
@@ -647,8 +647,8 @@ Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_par
 	append_loader(loader_parent);
 
 	$.ajax({
-		type: 'POST',
 		url: url,
+		type: 'POST',
 		processData: false,
 		contentType: false,
 		data: new FormData(form[0]),
@@ -686,13 +686,14 @@ function close_modal(modal) {
 	modal = $(modal);
 	// Run pre-close callbacks
 	modal.each(function() {
-		if (this.onmodalclose !== undefined)
-			this.onmodalclose();
+		if (this.onmodalclose !== undefined && this.onmodalclose() === false)
+			return;
+
+		if ($(this).is('.view'))
+			History.back();
+		else
+			remove_modals(this);
 	});
-	if (modal.is('.view'))
-		History.back();
-	else
-		remove_modals(modal);
 }
 $(document).click(function(event) {
 	if ($(event.target).is('.modal'))
@@ -825,8 +826,11 @@ function API_call(ajax_url, success_handler, loader_parent) {
 	var args = arguments;
 	append_loader(loader_parent);
 	$.ajax({
-		type: 'GET',
 		url: ajax_url,
+		type: 'POST',
+		processData: false,
+		contentType: false,
+		data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 		dataType: 'json',
 		success: function(data, status, jqXHR) {
 			remove_loader(loader_parent);
@@ -1062,44 +1066,6 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 		}
 	));
 }
-function confirm_to_job(elem, title, api_url, message_html, confirm_text) {
-	var as_modal = elem.closest('.modal').length !== 0;
-	elem.append(ajax_form(title, api_url,
-		$('<label>', {
-			style: 'margin: 0 0 20px; text-align: center; max-width: 420px',
-			html: message_html
-		}).add(Form.field_group('Your password', {
-			type: 'password',
-			name: 'password',
-			size: 24,
-		})).add('<div>', {
-			html: $('<input>', {
-				class: 'btn red',
-				type: 'submit',
-				value: confirm_text
-			}).add('<a>', {
-				class: 'btn',
-				href: (as_modal ? undefined : '/'),
-				text: 'Go back',
-				click: function() {
-					var modal = $(this).closest('.modal');
-					if (modal.length === 0)
-						history.back();
-					else
-						close_modal(modal);
-				}
-			})
-		}), function(resp, loader_parent) {
-			if (as_modal) {
-				show_success_via_loader(this, 'Deletion has been scheduled.');
-				view_job(true, resp);
-			} else {
-				this.parent().remove();
-				window.location.href = '/jobs/' + resp;
-			}
-		}
-	));
-}
 
 /* ================================= Lister ================================= */
 function Lister(elem) {
@@ -1115,8 +1081,11 @@ function Lister(elem) {
 		append_loader(this_.elem.parent());
 
 		$.ajax({
-			type: 'GET',
 			url: this_.query_url + this_.query_suffix,
+			type: 'POST',
+			processData: false,
+			contentType: false,
+			data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 			dataType: 'json',
 			success: function(data) {
 				var modal = this_.elem.parents('.modal');
@@ -1205,7 +1174,12 @@ function colorize(log, end) {
 	}
 
 	for (var i = 0; i < end; ++i) {
-		if (contains(i, '\033[31m')) {
+		if (contains(i, '\033[30m')) {
+			close_last_tag();
+			res += '<span class="gray">';
+			opened = 'span';
+			i += 4;
+		} else if (contains(i, '\033[31m')) {
 			close_last_tag();
 			res += '<span class="red">';
 			opened = 'span';
@@ -1235,6 +1209,11 @@ function colorize(log, end) {
 			res += '<span class="turquoise">';
 			opened = 'span';
 			i += 4;
+		} else if (contains(i, '\033[1;30m')) {
+			close_last_tag();
+			res += '<b class="gray">';
+			opened = 'b';
+			i += 6;
 		} else if (contains(i, '\033[1;31m')) {
 			close_last_tag();
 			res += '<b class="red">';
@@ -1324,9 +1303,12 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		append_loader(this_.elem);
 		$.ajax({
-			type: 'GET',
 			url: '/api/logs/' + this_.type +
 				(offset === undefined ? '' : '?' + offset),
+			type: 'POST',
+			processData: false,
+			contentType: false,
+			data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 			success: function (data) {
 				process_data(String(data).split('\n'));
 			},
@@ -1346,8 +1328,11 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		append_loader(this_.elem);
 		$.ajax({
-			type: 'GET',
 			url: '/api/logs/' + this_.type,
+			type: 'POST',
+			processData: false,
+			contentType: false,
+			data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 			success: function(data) {
 				data = String(data).split('\n');
 				if (parseInt(data[0]) !== first_offset)
@@ -1460,10 +1445,10 @@ ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false
 				text: 'Download'
 			}).add('<ul>', {
 				html: [actions_str.indexOf('r') === -1 ? '' :  $('<a>', {
-						href: '/api/job/' + job_id + '/log',
+						href: '/api/download/job/' + job_id + '/log',
 						text: 'Job log'
 					}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
-						href: '/api/job/' + job_id + '/uploaded-package',
+						href: '/api/download/job/' + job_id + '/uploaded-package',
 						text: 'Uploaded package'
 					})
 				]
@@ -1529,7 +1514,7 @@ ActionsToHTML.submission = function(submission_id, actions_str, submission_type,
 
 		var a = document.createElement('a');
 		a.className = 'btn-small';
-		a.href = '/api/submission/' + submission_id + '/download';
+		a.href = '/api/download/submission/' + submission_id;
 		a.innerText = 'Download';
 		res.push(a);
 	}
@@ -1561,7 +1546,7 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 	if (problem.actions.indexOf('V') !== -1)
 		res.push($('<a>', {
 			class: 'btn-small',
-			href: '/api/problem/' + problem.id + '/statement/' + encodeURIComponent(problem.name),
+			href: '/api/download/statement/problem/' + problem.id + '/' + encodeURIComponent(problem.name),
 			text: 'Statement'
 		}));
 
@@ -1577,7 +1562,7 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 	if (problem_view && problem.actions.indexOf('d') !== -1)
 		res.push($('<a>', {
 			class: 'btn-small',
-			href: '/api/problem/' + problem.id + '/download',
+			href: '/api/download/problem/' + problem.id,
 			text: 'Download'
 		}));
 
@@ -1671,7 +1656,7 @@ ActionsToHTML.file = function(file_id, actions_str) {
 	if (actions_str.indexOf('O') !== -1) {
 		var a = document.createElement('a');
 		a.className = 'btn-small';
-		a.href = '/api/file/' + file_id + '/download';
+		a.href = '/api/download/file/' + file_id;
 		a.innerText = 'Download';
 		res.push(a);
 	}
@@ -2177,7 +2162,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 					text: 'The job log is too large to show it entirely here. If you want to see the whole, click: '
 				}).append($('<a>', {
 					class: 'btn-small',
-					href: '/api/job/' + job_id + '/log',
+					href: '/api/download/job/' + job_id + '/log',
 					text: 'Download the full job log'
 				})));
 		}
@@ -2518,7 +2503,7 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 						view_contest_problem.bind(null, true, s.contest_problem_id)),
 					$('<a>', {
 						class: 'btn-small',
-						href: '/api/contest/p' + s.contest_problem_id + '/statement/' +
+						href: '/api/download/statement/contest/p' + s.contest_problem_id + '/' +
 							encodeURIComponent(s.contest_problem_name),
 						text: 'View statement'
 					})
@@ -2625,6 +2610,10 @@ function view_submission(as_modal, submission_id, opt_hash /*= ''*/) {
 					append_loader(elem);
 					$.ajax({
 						url: '/api/submission/' + submission_id + '/source',
+						type: 'POST',
+						processData: false,
+						contentType: false,
+						data: new FormData(add_csrf_token_to($('<form>')).get(0)),
 						dataType: 'html',
 						success: function(data) {
 							cached_source = data;
@@ -3251,39 +3240,39 @@ function reset_problem_time_limits(as_modal, problem_id) {
 
 		this.append(ajax_form('Reset problem time limits using model solution', '/api/problem/' + problem_id + '/reset_time_limits',
 			$('<p>', {
-			style: 'margin: 0 0 12px; text-align: center',
-			html: [
-				'Do you really want to reset problem ',
-				a_view_button('/p/' + problem_id, problem.name, undefined, view_problem.bind(null, true, problem_id)),
-				' time limits using the model solution?'
-			]
-		}).add('<center>', {
-			style: 'margin: 12px auto 0',
-			html: $('<input>', {
-				class: 'btn-small blue',
-				type: 'submit',
-				value: 'Reset time limits'
-			}).add('<a>', {
-				class: 'btn-small',
-				href: (as_modal ? undefined : '/'),
-				text: 'Go back',
-				click: function() {
-					var modal = $(this).closest('.modal');
-					if (modal.length === 0)
-						history.back();
-					else
-						close_modal(modal);
+				style: 'margin: 0 0 12px; text-align: center',
+				html: [
+					'Do you really want to reset problem ',
+					a_view_button('/p/' + problem_id, problem.name, undefined, view_problem.bind(null, true, problem_id)),
+					' time limits using the model solution?'
+				]
+			}).add('<center>', {
+				style: 'margin: 12px auto 0',
+				html: $('<input>', {
+					class: 'btn-small blue',
+					type: 'submit',
+					value: 'Reset time limits'
+				}).add('<a>', {
+					class: 'btn-small',
+					href: (as_modal ? undefined : '/'),
+					text: 'Go back',
+					click: function() {
+						var modal = $(this).closest('.modal');
+						if (modal.length === 0)
+							history.back();
+						else
+							close_modal(modal);
+					}
+				})
+			}), function(resp, loader_parent) {
+				if (as_modal) {
+					show_success_via_loader(this, 'Reseting time limits has been scheduled.');
+					view_job(true, resp);
+				} else {
+					this.parent().remove();
+					window.location.href = '/jobs/' + resp;
 				}
-			})
-		}), function(resp, loader_parent) {
-			if (as_modal) {
-				show_success_via_loader(this, 'Reseting time limits has been scheduled.');
-				view_job(true, resp);
-			} else {
-				this.parent().remove();
-				window.location.href = '/jobs/' + resp;
 			}
-		}
 		));
 	}, '/p/' + problem_id + '/reset_time_limits');
 }
@@ -4100,7 +4089,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 						$('<center>', {html: [
 							$('<a>', {
 								class: 'btn-small',
-								href: '/api/contest/p' + problem.id + '/statement/' + encodeURIComponent(problem[4]),
+								href: '/api/download/statement/contest/p' + problem.id + '/' + encodeURIComponent(problem.name),
 								text: 'Statement'
 							}),
 							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue',
@@ -4991,7 +4980,7 @@ function FilesLister(elem, query_suffix /*= ''*/) {
 				text: x.modified
 			})));
 			row.append($('<td>', {html: $('<a>', {
-				href: '/api/file/' + x.id + '/download',
+				href: '/api/download/file/' + x.id,
 				text: x.name
 			})}));
 			row.append($('<td>', {text: humanizeFileSize(x.file_size)}));
@@ -5444,7 +5433,10 @@ function open_calendar_on(time, text_input, hidden_input) {
 	var tbody, tbody_date = new Date(time);
 	tbody_date.setDate(0); // Change month; this variable is used to skip
 	                       // regenerating the whole table when it is unnecessary
-	function update_calendar() {
+	function update_calendar(update_input) {
+		if (update_input !== false)
+			$(datetime_info_input).val(date_to_datetime_str(time));
+
 		// Time chooser
 		var x = time_chooser.find('input');
 		var foo = function(x) { return x < 10 ? '0' + x : x; };
@@ -5535,22 +5527,34 @@ function open_calendar_on(time, text_input, hidden_input) {
 	}
 	update_calendar();
 
-	var round_to_5_minutes = function() {
+	var round_up_5_minutes = function() {
 		var k = time.getMinutes() + (time.getSeconds() !== 0) + 4;
 		time.setMinutes(k - k % 5);
 		time.setSeconds(0);
 		update_calendar();
 	};
 
+	var save_changes = function() {
+		$(text_input).val(date_to_datetime_str(time));
+		$(hidden_input).val(Math.floor(time.getTime() / 1000));
+	};
+
+	var datetime_info_input = $('<input>', {
+		type: 'text',
+		class: 'calendar-input',
+		value: date_to_datetime_str(time)
+	});
+
 	modal($('<div>', {
 		html: [
+			$('<center>').append(datetime_info_input),
 			calendar,
 			time_chooser,
 			$('<center>', {html:
 				$('<a>', {
 					class: 'btn-small',
-					text: 'Round to 5 minutes',
-					click: round_to_5_minutes
+					text: 'Round up 5 minutes',
+					click: round_up_5_minutes
 				})
 			}),
 			$('<center>', {html:
@@ -5562,10 +5566,40 @@ function open_calendar_on(time, text_input, hidden_input) {
 						update_calendar();
 					}
 				})
-			})
+			}),
+			$('<center>', {html:
+				$('<a>', {
+					class: 'btn blue',
+					text: 'Save changes',
+					click: function() {
+						save_changes();
+						close_modal($(this).closest('.modal'));
+					}
+				})
+			}),
 		]
-	}), function(modal) {
-		var arrow_update = function(e) {
+	}), function(modal_elem) {
+		var keystorke_update = function(e) {
+			if (datetime_info_input.is(':focus')) {
+				setTimeout(function() {
+					var miliseconds_dt = Date.parse(datetime_info_input.val());
+					console.log(e.key, ' ', miliseconds_dt);
+					if (isNaN(miliseconds_dt)) {
+						datetime_info_input.css('background-color', '#ff9393');
+					} else {
+						time = new Date(miliseconds_dt);
+						datetime_info_input.css('background-color', 'initial');
+						update_calendar(false);
+						if (e.key == 'Enter') {
+							save_changes();
+							close_modal(modal_elem);
+						}
+					}
+				});
+
+				return;
+			}
+
 			if ($.contains(document.documentElement, month_chooser[0])) {
 				if (e.key === 'ArrowUp')
 					month_chooser.find('td > a').eq(0).click();
@@ -5593,13 +5627,43 @@ function open_calendar_on(time, text_input, hidden_input) {
 			update_calendar();
 		};
 
-		$(document).on('keydown', arrow_update);
-		modal[0].onmodalclose = function() {
-			$(document).off('keydown', arrow_update);
-			$(text_input).val(date_to_datetime_str(time));
-			$(hidden_input).val(Math.floor(time.getTime() / 1000));
+		$(document).on('keydown', keystorke_update);
+		modal_elem[0].onmodalclose = function() {
+			$(document).off('keydown', keystorke_update);
+			if (date_to_datetime_str(time) != $(text_input).val()) {
+				modal($('<p>', {
+					style: 'margin: 0; text-align: center',
+					text: 'Your change to the datetime will be lost. Unsaved change: ' + date_to_datetime_str(time) + '.'
+				}).add('<center>', {
+					style: 'margin: 12px auto 0',
+					html: $('<a>', {
+						class: 'btn-small blue',
+						text: 'Save changes',
+						click: function() {
+							save_changes();
+							close_modal($(this).closest('.modal'));
+							remove_modals(modal_elem);
+						}
+					}).add('<a>', {
+						class: 'btn-small',
+						text: 'Discard changes',
+						click: function() {
+							close_modal($(this).closest('.modal'));
+							remove_modals(modal_elem);
+						}
+					})
+				}), function(modal) {
+					modal[0].onmodalclose = function() {
+						remove_modals(modal_elem);
+					};
+				});
+
+				return false;
+			}
 		};
 	});
+
+	datetime_info_input[0].select();
 }
 function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = false */, initial_dt /* = undefined <=> use current time, Infinity <=> inf, -Infinity <=> -inf */, neg_inf_button_text /* = 'Set to -inf' */, inf_button_text /* = 'Set to inf' */) {
 	/*const*/ var neg_inf_text_to_show = neg_inf_button_text;
@@ -5614,18 +5678,28 @@ function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = fals
 		inf_text_to_show = 'inf';
 	}
 
-	if (initial_dt === undefined) {
-		initial_dt = new Date();
+	var now_round_up_5_minutes = function() {
+		var dt = new Date();
 		// Round to 5 minutes
-		var k = initial_dt.getMinutes() + (initial_dt.getSeconds() !== 0) + 4;
-		initial_dt.setMinutes(k - k % 5);
-		initial_dt.setSeconds(0);
+		var k = dt.getMinutes() + (dt.getSeconds() !== 0) + 4;
+		dt.setMinutes(k - k % 5);
+		dt.setSeconds(0);
+		return dt;
 	}
 
-	var dt = (initial_dt === Infinity || initial_dt === -Infinity ? new Date() : initial_dt);
+	if (initial_dt === undefined)
+		initial_dt = now_round_up_5_minutes();
+
+	var value_input = $('<input>', {
+		type: 'hidden',
+		name: name
+	});
 
 	var open_modal_chooser = function() {
-		open_calendar_on(dt, chooser_input, value_input);
+		var date_set = utcdt_or_tm_to_Date(value_input.val());
+		if (date_set == Infinity || date_set == -Infinity)
+			date_set = now_round_up_5_minutes();
+		open_calendar_on(date_set, chooser_input, value_input);
 	};
 
 	var chooser_input = $('<input>', {
@@ -5633,11 +5707,6 @@ function dt_chooser_input(name, allow_neg_inf /* = false */, allow_inf /* = fals
 		class: 'calendar-input',
 		readonly: true,
 		click: open_modal_chooser
-	});
-
-	var value_input = $('<input>', {
-		type: 'hidden',
-		name: name
 	});
 
 	var update_choosen_dt = function(new_dt) {

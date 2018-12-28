@@ -39,7 +39,9 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(MKDIR) $(abspath $(DESTDIR)/files/)
 	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/static src/sim-server src/sim.conf src/job-server src/backup $(abspath $(DESTDIR))
+	$(UPDATE) src/static src/sim-server src/job-server src/backup $(abspath $(DESTDIR))
+	# Do not override the config if it already exists
+	$(UPDATE) -n src/sim.conf $(abspath $(DESTDIR))
 	# $(UPDATE) src/static src/sim-server src/sim-server2 src/sim.conf src/job-server src/backup $(abspath $(DESTDIR))
 
 	# Install PRoot

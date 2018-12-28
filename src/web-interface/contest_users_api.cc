@@ -20,6 +20,8 @@ get_overall_perm(Optional<ContestUserMode> viewer_mode) noexcept
 	case CUM::CONTESTANT:
 		return PERM::NONE;
 	}
+
+	return PERM::NONE; // Shouldn't happen
 }
 
 Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
@@ -66,10 +68,13 @@ Sim::ContestUserPermissions Sim::contest_user_get_permissions(
 			return get_overall_perm(viewer_mode) | PERM::MAKE_CONTESTANT |
 				PERM::MAKE_MODERATOR | PERM::EXPEL;
 		}
+		return PERM::NONE; // Shouldn't happen
 	}
 	case CUM::CONTESTANT:
 		return get_overall_perm(viewer_mode);
 	}
+
+	return PERM::NONE; // Shouldn't happen
 }
 
 pair<Optional<ContestUserMode>, Sim::ContestUserPermissions>

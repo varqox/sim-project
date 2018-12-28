@@ -88,7 +88,8 @@ void regenerate(const vector<string>& tests) {
 	for (auto&& test : tests) {
 		string in_fname = concat_tostr("tests/", test, ".in");
 		string out_fname = concat_tostr("tests/", test, ".out");
-		putFileContents(out_fname, csh(getFileContents(in_fname)));
+		putFileContents(out_fname,
+			intentionalUnsafeStringView(csh(getFileContents(in_fname))));
 	}
 }
 
