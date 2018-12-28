@@ -1,6 +1,7 @@
 #include "commands.h"
 #include "sip_error.h"
 #include "sip_package.h"
+#include "utils.h"
 
 #include <simlib/filesystem.h>
 #include <simlib/libarchive_zip.h>
@@ -44,15 +45,19 @@ void doc(ArgvParser args) {
 	THROW("unimplemented"); (void)args;// TODO: implement
 }
 
-void genin(ArgvParser args) {
+void genin(ArgvParser) {
 	STACK_UNWINDING_MARK;
 
-	// SipPackage sp;
-	// sp.generate_test_in_files();
-	THROW("unimplemented"); (void)args;// TODO: implement
+	SipPackage sp;
+	sp.generate_test_in_files();
+
+	if (access("Simfile", F_OK) == 0) {
+		sp.save_scoring();
+		sp.save_limits();
+	}
 }
 
-void genout(ArgvParser args) {
+void genout(ArgvParser) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -64,13 +69,17 @@ void genout(ArgvParser args) {
 	}
 }
 
-void gen(ArgvParser args) {
+void gen(ArgvParser) {
 	STACK_UNWINDING_MARK;
 
-	// SipPackage sp;
-	// sp.generate_test_in_files();
-	// sp.generate_test_out_files();
-	THROW("unimplemented"); (void)args;// TODO: implement
+	SipPackage sp;
+	sp.generate_test_in_files();
+	sp.generate_test_out_files();
+
+	if (access("Simfile", F_OK) == 0) {
+		sp.save_scoring();
+		sp.save_limits();
+	}
 }
 
 void help(const char* program_name) {
@@ -89,7 +98,9 @@ void help(const char* program_name) {
 	puts("                          tests - removes all generated tests files");
 	puts("  init [directory] [name]");
 	puts("                        Initialize Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
-	puts("  genout                Generate tests outputs using the main solution");
+	puts("  gen                   Generate tests input and output files");
+	puts("  genin                 Generate tests input files");
+	puts("  genout                Generate tests output files using the main solution");
 	puts("  label [value]         If [value] is specified: set label to [value]. Otherwise print its current value");
 	puts("  main-sol [sol]        If [sol] is specified: set main solution to [sol]. Otherwise print main solution");
 	puts("  mem [value]           If [value] is specified: set memory limit to [value] MB. Otherwise print its current value");
@@ -97,6 +108,7 @@ void help(const char* program_name) {
 	puts("  prog [sol...]         Compile solutions [sol...] (all solutions by default). [sol] has the same meaning as in command 'test'");
 	puts("  statement [value]     If [value] is specified: set statement to [value]. Otherwise print its current value");
 	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by default) (compiles solutions if necessary). If [sol] is a path to a solution then it is used, otherwise all solutions that have [sol] as a subsequence are used.");
+	// puts("  verify [sol...]       Run inver and solutions [sol...] on tests (all solutions by default) (compiles solutions if necessary)");
 	puts("  zip [clean args...]   Run clean command with [clean args] and compress the package into zip (named after the current directory) within the upper directory.");
 	puts("");
 	puts("Options:");
@@ -111,18 +123,14 @@ void help(const char* program_name) {
 	puts("   |-- doc/              Documents folder - holds problem statement, elaboration, etc.");
 	puts("   |-- prog/             Solutions folder - holds solutions");
 	puts("   |-- in/               Tests input files folder - holds tests input files");
-	puts("   |-- out/               Tests output files folder - holds tests output files");
+	puts("   |-- out/              Tests output files folder - holds tests output files");
 	puts("   |-- utils/            Utilities folder - holds test input generators, input verifiers and other files used by Sip");
 	puts("   |-- Simfile           Simfile - holds package primary config");
 	puts("   `-- Sipfile           Sip file - holds Sip configuration and rules for generating test inputs");
 
 	// TODO: Update the below help message
 
-
-	// puts("  verify [sol...]       Run inver and solutions [sol...] on tests (all solutions by default) (compiles solutions if necessary)");
 	// puts("  doc [watch]           Compiles latex statements (if there is any). If watch is specified as an argument then all statement files will be watched and recompiled on any change");
-	// puts("  gen [force]           Alias to gentests");
-	// puts("  gentests [force]      Generate tests inputs: compile generators, generate tests. If force is specified then tests that are not specified in Sipfile are removed");
 }
 
 void init(ArgvParser args) {
@@ -223,18 +231,6 @@ void name(ArgvParser args) {
 
 	sp.simfile.loadName();
 	stdlog("name = ", sp.simfile.name);
-}
-
-static inline bool is_subsequence(StringView sequence, StringView str) noexcept {
-	if (sequence.empty())
-		return true;
-
-	size_t i = 0;
-	for (char c : str)
-		if (c == sequence[i] and ++i == sequence.size())
-			return true;
-
-	return false;
 }
 
 static AVLDictSet<StringView> parse_args_to_solutions(

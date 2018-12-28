@@ -44,7 +44,45 @@ static inline uint64_t timespec_to_usec(timespec t) noexcept {
 	return t.tv_sec * 1000000 + t.tv_nsec / 1000;
 }
 
-sim::JudgeReport::Test SipPackage::generate_test_out_file(const sim::Simfile::Test& test, SipJudgeLogger& logger) {
+void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
+	CStringView in_file)
+{
+	STACK_UNWINDING_MARK;
+
+	InplaceBuff<32> generator([&]() -> InplaceBuff<32> {
+		if (hasPrefix(test.generator, "sh:"))
+			return InplaceBuff<32>(substring(test.generator, 3));
+
+		return CompilationCache::compile(test.generator);
+	}());
+
+	stdlog("generating ", test.name, ".in...").flush_no_nl();
+	auto es = Spawner::run("sh", {
+		"sh",
+		"-c",
+		concat_tostr(generator, ' ', test.generator_args)
+	}, Spawner::Options(-1, FileDescriptor(in_file, O_WRONLY | O_CREAT | O_TRUNC), STDERR_FILENO));
+
+	// OK
+	if (es.si.code == CLD_EXITED and es.si.status == 0) {
+		stdlog(" \033[1;32mdone\033[m in ",
+			timespec_to_str(es.cpu_runtime, 2, false),
+			" [ RT: ", timespec_to_str(es.runtime, 2, false), " ]");
+
+	// RTE
+	} else {
+		stdlog(" \033[1;31mfailed\033[m in ",
+			timespec_to_str(es.cpu_runtime, 2, false),
+			" [ RT: ", timespec_to_str(es.runtime, 2, false), " ]"
+			" (", es.message, ')');
+
+		throw SipError("failed to generate test: ", test.name);
+	}
+}
+
+sim::JudgeReport::Test SipPackage::generate_test_out_file(
+	const sim::Simfile::Test& test, SipJudgeLogger& logger)
+{
 	STACK_UNWINDING_MARK;
 
 	stdlog("generating ", test.name, ".out...").flush_no_nl();
@@ -94,11 +132,6 @@ sim::JudgeReport::Test SipPackage::generate_test_out_file(const sim::Simfile::Te
 	return res;
 }
 
-void SipPackage::parse_test_range(StringView test_range, const std::function<void(StringView)>& callback) {
-	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
-}
-
 SipPackage::SipPackage() {
 	if (access("Simfile", F_OK) == 0) {
 		simfile_contents = getFileContents("Simfile");
@@ -112,7 +145,59 @@ SipPackage::SipPackage() {
 
 void SipPackage::generate_test_in_files() {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); // TODO: implement it
+
+	stdlog("\033[1;36mGenerating input files...\033[m");
+
+	sipfile.loadStaticTests();
+	sipfile.loadGenTests();
+
+	// Check for tests that are both static and generated
+	sipfile.static_tests.for_each([&](StringView test) {
+		if (sipfile.gen_tests.find(test))
+			log_warning("test `", test, "` is specified as static and as"
+				" generated - treating it as generated");
+	});
+
+	prepare_tests_files();
+
+	// Ensure that static tests have their .in files
+	sipfile.static_tests.for_each([&](StringView test) {
+		auto it = tests_files->tests.find(test);
+		if (not it or not it->second.in.has_value()) {
+			throw SipError("static test `", test, "` does not have a"
+				" corresponding input file");
+		}
+	});
+
+	CStringView in_dir;
+	if (isDirectory("tests/"))
+		in_dir = "tests/";
+	else
+		mkdir(in_dir = "in/");
+
+	// Generate .in files
+	sipfile.gen_tests.for_each([&](const Sipfile::GenTest& test) {
+		auto it = tests_files->tests.find(test.name);
+		if (not it or not it->second.in.has_value()) {
+			generate_test_in_file(test,
+				intentionalUnsafeCStringView(concat(in_dir, test.name, ".in")));
+		} else {
+			generate_test_in_file(test, it->second.in.value().to_string());
+		}
+	});
+
+	// Warn about files that are not specified as static or generated
+	tests_files->tests.for_each([&](auto&& p) {
+		if (p.second.in.has_value() and
+			not sipfile.static_tests.find(p.first) and
+			not sipfile.gen_tests.find(p.first))
+		{
+			log_warning("test `", p.first, "` (file: ", p.second.in.value(), ")"
+				" is neither specified as static nor as generated");
+		}
+	});
+
+	tests_files = std::nullopt; // Probably new .in files were just created
 }
 
 static auto test_out_file(StringView test_in_file) {
@@ -126,6 +211,8 @@ static auto test_out_file(StringView test_in_file) {
 
 void SipPackage::generate_test_out_files() {
 	STACK_UNWINDING_MARK;
+
+	stdlog("\033[1;36mGenerating output files...\033[m");
 
 	prepare_tests_files();
 	// Create out/ dir if needed

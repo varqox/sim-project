@@ -1,6 +1,12 @@
 #pragma once
 
+#include <simlib/logger.h>
 #include <simlib/string.h>
+
+template<class... Args>
+auto log_warning(Args&&... args) {
+	return stdlog("\033[1;35mwarning\033[m: ", std::forward<Args>(args)...);
+}
 
 class SipError : protected std::runtime_error {
 public:

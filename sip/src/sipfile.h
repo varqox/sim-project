@@ -9,6 +9,18 @@ class Sipfile {
 public:
 	uint64_t default_time_limit; // in microseconds
 
+	struct GenTest {
+		InplaceBuff<16> name;
+		InplaceBuff<16> generator;
+		InplaceBuff<32> generator_args;
+
+		GenTest(StringView n, StringView g, StringView ga)
+			: name(n), generator(g), generator_args(ga) {}
+	};
+
+	AVLDictSet<InplaceBuff<16>> static_tests;
+	AVLDictSet<GenTest, MEMBER_COMPARATOR(GenTest, name)> gen_tests;
+
 private:
 	ConfigFile config;
 
@@ -47,11 +59,23 @@ public:
 	 */
 	void loadDefaultTimeLimit();
 
-// TODO: not needed?
-//	/**
-//	 * @brief Dumps object to string
-//	 *
-//	 * @return dumped config (which can be placed in a file)
-//	 */
-//	std::string dump() const;
+	/**
+	 * @brief Loads non-generated test rules (variable "static")
+	 * @details Fields:
+	 *   - static_tests
+	 *
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
+	 */
+	void loadStaticTests();
+
+	/**
+	 * @brief Loads generated test rules (variable "gen")
+	 * @details Fields:
+	 *   - gen_tests
+	 *
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
+	 */
+	void loadGenTests();
 };

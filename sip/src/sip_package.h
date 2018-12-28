@@ -7,11 +7,6 @@
 #include <functional>
 #include <simlib/sim/conver.h>
 
-template<class... Args>
-auto log_warning(Args&&... args) {
-	return stdlog("\033[1;35mwarning\033[m: ", std::forward<Args>(args)...);
-}
-
 class SipPackage {
 private:
 	class CompilationCache;
@@ -39,8 +34,12 @@ private:
 	// Prepares jworker
 	void prepare_judge_worker();
 
-	// Runs model solution on @p in_file and places the output in the
-	// @p out_file
+	// Runs @p test.generator and places its output in the @p in_file
+	void generate_test_in_file(const Sipfile::GenTest& test,
+		CStringView in_file);
+
+	// Runs model solution on @p test.in and places the output in the
+	// @p test.out file
 	sim::JudgeReport::Test generate_test_out_file(
 		const sim::Simfile::Test& test, SipJudgeLogger& logger);
 
