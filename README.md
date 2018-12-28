@@ -21,7 +21,7 @@ SIM is an open source platform for carrying out algorithmic contests
 #### Debian
 
   ```sh
-   sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libarchive-dev make
+  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libarchive-dev make
   ```
 
 #### Ubuntu
