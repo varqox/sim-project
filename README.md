@@ -44,7 +44,7 @@ SIM is an open source platform for carrying out algorithmic contests
 1. First of all clone the SIM repository and all its submodules
 
   ```sh
-  git clone --recursive --branch develop https://github.com/varqox/sim
+  git clone --recursive https://github.com/varqox/sim
   cd sim
   ```
 
