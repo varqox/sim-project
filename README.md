@@ -17,7 +17,6 @@ SIM is an open source platform for carrying out algorithmic contests
 - libseccomp (Debian packages: _libseccomp-dev_)
 - GNU/Make
 - libarchive
-- zip
 
 #### Debian
 
