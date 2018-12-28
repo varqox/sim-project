@@ -106,5 +106,5 @@ Just type (be aware of incompatible database (and other inner) changes)
 ```sh
 git pull
 git submodule update --recursive
-make -j4 all install run
+make -j $(nproc) install run
 ```
