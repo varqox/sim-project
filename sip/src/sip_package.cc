@@ -3,8 +3,10 @@
 #include "sip_package.h"
 
 #include <fstream>
+#include <poll.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
+#include <sys/inotify.h>
 
 namespace {
 constexpr uint64_t DEFAULT_TIME_LIMIT = 5; // In seconds
@@ -436,9 +438,128 @@ void SipPackage::save_limits() {
 	stdlog(" done.");
 }
 
-void SipPackage::compile_tex_files() {
+static void compile_tex_file(StringView file) {
+	stdlog("\033[1mCompiling ", file, "\033[m");
+	// It is necessary (essential) to run latex two times
+	for (int iter = 0; iter < 1; ++iter) {
+		auto es = Spawner::run("pdflatex", {
+			"pdflatex",
+			"-output-dir=utils/latex",
+			file.to_string()
+		}, {-1, STDOUT_FILENO, STDERR_FILENO});
+
+		if (es.si.code != CLD_EXITED or es.si.status != 0) {
+			// During watching it is not intended to stop on compilation error
+			errlog("\033[1;31mCompilation failed.\033[m");
+		}
+	}
+
+	move(concat("utils/latex/", filename(file).withoutSuffix(3), "pdf"),
+		concat(file.withoutSuffix(3), "pdf"));
+}
+
+static void watch_tex_files(const std::vector<std::string>& tex_files) {
+	FileDescriptor ino_fd(inotify_init());
+	if (ino_fd == -1)
+		THROW("inotify_init()", errmsg());
+
+	AVLDictSet<CStringView> unwatched_files;
+	for (CStringView file : tex_files)
+		unwatched_files.emplace(file);
+
+	AVLDictMap<FileDescriptor, CStringView> watched_files; // fd => file
+	auto process_unwatched_files = [&] {
+		for (auto it = unwatched_files.front(); it; ) {
+			CStringView file = *it;
+			FileDescriptor fd(inotify_add_watch(ino_fd, file.data(),
+				IN_MODIFY | IN_MOVE_SELF));
+			if (fd == -1) {
+				log_warning("could not watch file ", file, ":"
+					" inotify_add_watch()", errmsg());
+
+				it = unwatched_files.upper_bound(file);
+				continue;
+			}
+
+			// File is now watched
+			stdlog("\033[1mStarted watching ", file, "\033[m");
+			watched_files.emplace(std::move(fd), file);
+			it = unwatched_files.upper_bound(file);
+			unwatched_files.erase(file);
+		}
+	};
+
+	// Inotify buffer
+	// WARNING: this assumes that no directory is watched
+	char inotify_buf[sizeof(inotify_event) * tex_files.size()];
+	for (;;) {
+		process_unwatched_files();
+		// Wait for notification
+		pollfd pfd = {ino_fd, POLLIN, 0};
+		int rc = poll(&pfd, 1, -1);
+		if (rc < 0)
+			THROW("poll()", errmsg());
+
+		ssize_t len = read(ino_fd, inotify_buf, sizeof(inotify_buf));
+		if (len < 1) {
+			log_warning("read()", errmsg());
+			continue;
+		}
+
+		struct inotify_event *event;
+		// Process files for which an event occurred
+		for (char *ptr = inotify_buf; ptr < inotify_buf + len;
+			ptr += sizeof(inotify_event)) // WARNING: if you want to watch
+			                              // directories, add + events->len
+		{
+			event = (struct inotify_event*)ptr;
+			CStringView file = watched_files.find(event->wd)->second;
+			auto unwatch_file = [&] {
+				unwatched_files.emplace(file);
+				watched_files.erase(event->wd);
+			};
+
+			// If file was moved, stop watching it
+			if (event->mask & IN_MOVE_SELF) {
+				if (inotify_rm_watch(ino_fd, event->wd))
+					THROW("inotify_rm_watch()", errmsg());
+				unwatch_file();
+
+			// If file has disappeared, stop watching it
+			} else if (event->mask & IN_IGNORED) {
+				unwatch_file();
+
+			// Other (normal) event occurred
+			} else {
+				compile_tex_file(file);
+			}
+		}
+	}
+}
+
+void SipPackage::compile_tex_files(bool watch) {
 	STACK_UNWINDING_MARK;
-	THROW("uinmplemented"); // TODO: implement
+
+	sim::PackageContents pc;
+	pc.load_from_directory("doc/", true);
+
+	std::vector<std::string> tex_files;
+	pc.for_each_with_prefix("", [&](StringView file) {
+		if (hasSuffix(file, ".tex"))
+			tex_files.emplace_back(file.to_string());
+	});
+
+	if (tex_files.empty()) {
+		log_warning("no .tex file was found in doc/");
+		return;
+	}
+
+	mkdir_r("utils/latex");
+	for (auto const& file : tex_files)
+		compile_tex_file(file);
+
+	if (watch)
+		watch_tex_files(tex_files);
 }
 
 void SipPackage::archive_into_zip(CStringView dest_file) {

@@ -85,8 +85,9 @@ public:
 	// Saves time and memory limits into the Simfile
 	void save_limits();
 
-	// Compiles all .tex files found in the package
-	void compile_tex_files();
+	// Compiles all .tex files found in the package, if watch is true, then
+	// every .tex file will be recompiled on any change
+	void compile_tex_files(bool watch);
 
 	// Archives package contents into the file @p dest_file using .zip
 	void archive_into_zip(CStringView dest_file);

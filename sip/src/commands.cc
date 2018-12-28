@@ -42,7 +42,18 @@ void clean(ArgvParser args) {
 
 void doc(ArgvParser args) {
 	STACK_UNWINDING_MARK;
-	THROW("unimplemented"); (void)args;// TODO: implement
+
+	bool watch = false;
+	while (args.size() > 0) {
+		auto arg = args.extract_next();
+		if (arg == "watch")
+			watch = true;
+		else
+			throw SipError("clean: unrecognized argument: ", arg);
+	}
+
+	SipPackage sp;
+	sp.compile_tex_files(watch);
 }
 
 void genin(ArgvParser) {
@@ -96,11 +107,12 @@ void help(const char* program_name) {
 	puts("  clean [arg...]        Prepare package to archiving: remove unnecessary files (compiled programs, latex logs, etc.).");
 	puts("                        Allowed args:");
 	puts("                          tests - removes all generated tests files");
-	puts("  init [directory] [name]");
-	puts("                        Initialize Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
+	puts("  doc [watch]           Compiles latex statements (if there are any). If watch is specified as an argument, then all statement files will be watched and recompiled on any change");
 	puts("  gen                   Generate tests input and output files");
 	puts("  genin                 Generate tests input files");
 	puts("  genout                Generate tests output files using the main solution");
+	puts("  init [directory] [name]");
+	puts("                        Initialize Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
 	puts("  label [value]         If [value] is specified: set label to [value]. Otherwise print its current value");
 	puts("  main-sol [sol]        If [sol] is specified: set main solution to [sol]. Otherwise print main solution");
 	puts("  mem [value]           If [value] is specified: set memory limit to [value] MB. Otherwise print its current value");
@@ -127,10 +139,6 @@ void help(const char* program_name) {
 	puts("   |-- utils/            Utilities folder - holds test input generators, input verifiers and other files used by Sip");
 	puts("   |-- Simfile           Simfile - holds package primary config");
 	puts("   `-- Sipfile           Sip file - holds Sip configuration and rules for generating test inputs");
-
-	// TODO: Update the below help message
-
-	// puts("  doc [watch]           Compiles latex statements (if there is any). If watch is specified as an argument then all statement files will be watched and recompiled on any change");
 }
 
 void init(ArgvParser args) {
