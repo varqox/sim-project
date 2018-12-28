@@ -33,7 +33,7 @@ SIM is an open source platform for carrying out algorithmic contests
 #### Arch Linux
 
   ```sh
-  sudo pacman -S gcc mariadb libmariadbclient libseccomp libarchive make zip
+  sudo pacman -S gcc mariadb libmariadbclient libseccomp libarchive make
   sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
   sudo systemctl enable mariadb && sudo systemctl start mariadb
   ```
