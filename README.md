@@ -64,7 +64,7 @@ SIM is an open source platform for carrying out algorithmic contests
   ```sh
   make install
   ```
-  It will ask for MySQL credentials. For testing purposes, you can type sim, sim, sim, localhost for MariaDB username, password, database and user host.
+  It will ask for MySQL credentials. By default, step 3 created MariaDB username 'sim', password 'sim', database 'sim' and user host 'localhost'.
 
   If you want to install SIM in other location that build/ type
 
