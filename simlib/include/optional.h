@@ -75,7 +75,10 @@ public:
 			::new(std::addressof(payload_)) StoredType(other.payload_);
 	}
 
-	constexpr Optional(Optional&& other) : Base(other.has_value_) {
+	constexpr Optional(Optional&& other)
+		noexcept(std::is_nothrow_move_constructible<T>::value)
+		: Base(other.has_value_)
+	{
 		if (other.has_value_) {
 			::new(std::addressof(payload_)) StoredType(std::move(other.payload_));
 			other.has_value_ = false;
@@ -108,7 +111,9 @@ public:
 		return operator=<T>(other);
 	}
 
-	constexpr Optional& operator=(Optional&& other) {
+	constexpr Optional& operator=(Optional&& other)
+		noexcept(std::is_nothrow_move_assignable<T>::value)
+	{
 		return operator=<T>(other);
 	}
 
