@@ -80,11 +80,11 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 
 	auto cached_default_checker = cached_path(DEFAULT_CHECKER_PATH);
 	auto const& checker = jworker.simfile().checker;
-	if (checker.empty() and access(cached_default_checker, F_OK) == 0)
+	if (not checker.has_value() and access(cached_default_checker, F_OK) == 0)
 		return jworker.loadCompiledChecker(cached_default_checker);
 
-	if (not checker.empty() and is_cached(checker))
-		return jworker.loadCompiledChecker(cached_path(checker));
+	if (checker.has_value() and is_cached(checker.value()))
+		return jworker.loadCompiledChecker(cached_path(checker.value()));
 
 	cache_proot(cached_path(PROOT_PATH));
 
@@ -100,8 +100,8 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 	}
 
 	stdlog(" done.");
-	auto cached_exec = (checker.empty() ?
-		cached_default_checker : cached_path(checker));
+	auto cached_exec = (checker.has_value() ? cached_path(checker.value())
+		: cached_default_checker);
 	create_subdirectories(cached_exec);
 	jworker.saveCompiledChecker(cached_exec);
 }

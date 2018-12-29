@@ -23,7 +23,7 @@ void checker(ArgvParser args) {
 	}
 
 	sp.simfile.loadChecker();
-	stdlog("checker = ", sp.simfile.checker);
+	stdlog("checker = ", sp.simfile.checker.value_or(""));
 }
 
 void clean(ArgvParser args) {
