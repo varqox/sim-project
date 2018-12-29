@@ -95,12 +95,22 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 	};
 
 	// Checker
-	try { sf.loadChecker(); } catch (...) {}
+	try {
+		sf.loadChecker();
+		if (not sf.checker.has_value()) {
+			report_.append("Missing checker in the package's Simfile -"
+				" searching for one");
+		} else if (not exists_in_pkg(sf.checker.value())) {
+			report_.append("Invalid checker specified in the package's Simfile"
+				" - searching for one");
+			sf.checker = std::nullopt;
+		}
+	} catch (...) {
+		report_.append("Invalid checker specified in the package's Simfile -"
+			" searching for one");
+	}
 
-	if (not exists_in_pkg(sf.checker)) {
-		report_.append("Missing / invalid checker specified in the package's"
-			" Simfile - searching for one");
-
+	if (not sf.checker.has_value()) {
 		// Scan check/ and checker/ directory
 		auto x = collect_files(concat(master_dir, "check/"), is_source);
 		{
@@ -115,7 +125,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 				}));
 
 			sf.checker = x.front().substr(master_dir.size()).to_string();
-			report_.append("Chosen checker: ", sf.checker);
+			report_.append("Chosen checker: ", sf.checker.value());
 
 		// No checker was found in the package
 		} else {

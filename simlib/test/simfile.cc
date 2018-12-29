@@ -170,27 +170,33 @@ TEST (Simfile, loadChecker) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.loadChecker();
-		EXPECT_EQ("path/to/checker", sf.checker) << "iteration: " << i;
+		EXPECT_EQ("path/to/checker", sf.checker.value()) << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadChecker(), std::runtime_error);
+	sf.loadChecker();
+	EXPECT_FALSE(sf.checker.has_value());
 
 	sf = sim::Simfile {"checker: []"};
 	EXPECT_THROW(sf.loadChecker(), std::runtime_error);
 
 	sf = sim::Simfile {"checker:"};
-	EXPECT_THROW(sf.loadChecker(), std::runtime_error);
+	sf.loadChecker();
+	EXPECT_FALSE(sf.checker.has_value());
+
+	sf = sim::Simfile {"checker: ''"};
+	sf.loadChecker();
+	EXPECT_FALSE(sf.checker.has_value());
 
 	// Unsafe paths
 	sf = sim::Simfile {"checker: ../suspicious/path"};
 	sf.loadChecker();
-	EXPECT_EQ("suspicious/path", sf.checker);
+	EXPECT_EQ("suspicious/path", sf.checker.value());
 
 	sf = sim::Simfile {"checker: ./suspicious/../../../../path/"};
 	sf.loadChecker();
-	EXPECT_EQ("path/", sf.checker);
+	EXPECT_EQ("path/", sf.checker.value());
 }
 
 TEST (Simfile, loadStatement) {

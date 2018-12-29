@@ -310,9 +310,9 @@ public:
 	int compileChecker(timespec time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
-		auto checker_path = (sf.checker.empty() ?
-			concat(tmp_dir.path(), "default_checker.c") :
-			concat(pkg_root, sf.checker));
+		auto checker_path = (sf.checker.has_value() ?
+			concat(pkg_root, sf.checker.value()) :
+			concat(tmp_dir.path(), "default_checker.c"));
 
 		return compile_impl(checker_path, filename_to_lang(checker_path),
 			time_limit, c_errors, c_errors_max_len, proot_path, "checker",

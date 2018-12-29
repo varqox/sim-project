@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../config_file.h"
+#include "../optional.h"
 
 /// # Simfile - Sim package configuration file
 /// Simfile is a ConfigFile file, so the syntax is as in ConfigFile
@@ -68,7 +69,8 @@ namespace sim {
  */
 class Simfile {
 public:
-	std::string name, label, statement, checker;
+	std::string name, label, statement;
+	Optional<std::string> checker; // std::nullopt if default checker should be used
 	std::vector<std::string> solutions;
 	uint64_t global_mem_limit = 0; // in bytes
 
@@ -171,9 +173,10 @@ public:
 	void loadLabel();
 
 	/**
-	 * @brief Loads path to checker source file
+	 * @brief Loads path to checker source file (if there is any)
 	 * @details Fields:
-	 *   - checker (path to checker source file)
+	 *   - checker (path to checker source file or std::nullopt if default
+	 *       checker should be used)
 	 *
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs

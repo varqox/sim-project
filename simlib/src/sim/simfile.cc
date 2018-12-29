@@ -55,8 +55,8 @@ string Simfile::dump() const {
 	if (not statement.empty())
 		back_insert(res, "statement: ", ConfigFile::escapeString(statement), '\n');
 
-	if (not checker.empty())
-		back_insert(res, "checker: ", ConfigFile::escapeString(checker), '\n');
+	if (checker.has_value())
+		back_insert(res, "checker: ", ConfigFile::escapeString(*checker), '\n');
 
 	back_insert(res, "solutions: [");
 	if (solutions.size()) {
@@ -136,8 +136,11 @@ void Simfile::loadLabel() {
 void Simfile::loadChecker() {
 	auto&& var = config["checker"];
 	CHECK_IF_NOT_ARR(var, "checker");
-	if (var.asString().empty())
-		throw std::runtime_error{"Simfile: missing checker"};
+
+	if (var.asString().empty()) {
+		checker = std::nullopt; // No checker - default checker should be used
+		return;
+	}
 
 	// Secure path, so that it is not going outside the package
 	checker = abspath(var.asString()).erase(0, 1); // Erase '/' from the
@@ -452,11 +455,11 @@ void Simfile::loadTestsFiles() {
 
 void Simfile::validateFiles(StringView package_path) const {
 	// Checker
-	if (checker.size() &&
-		not isRegularFile(concat(package_path, '/', checker)))
+	if (checker.has_value() and (checker->empty() or
+		not isRegularFile(concat(package_path, '/', checker.value()))))
 	{
 		throw std::runtime_error{concat_tostr("Simfile: invalid checker file `",
-			checker, '`')};
+			checker.value(), '`')};
 	}
 
 	// Statement
