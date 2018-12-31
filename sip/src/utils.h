@@ -13,3 +13,5 @@ inline bool is_subsequence(StringView sequence, StringView str) noexcept {
 
 	return false;
 }
+
+inline bool not_isspace(int c) noexcept { return not isspace(c); }

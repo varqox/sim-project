@@ -122,8 +122,6 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 			callback(intentionalUnsafeStringView(concat(prefix, gid, tid)));
 }
 
-static inline bool not_isspace(int c) { return not isspace(c); }
-
 void Sipfile::loadStaticTests() {
 	STACK_UNWINDING_MARK;
 

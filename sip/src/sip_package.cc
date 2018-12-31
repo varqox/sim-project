@@ -1,6 +1,7 @@
 #include "compilation_cache.h"
 #include "sip_error.h"
 #include "sip_package.h"
+#include "utils.h"
 
 #include <fstream>
 #include <poll.h>
@@ -43,7 +44,7 @@ void SipPackage::prepare_judge_worker() {
 }
 
 static inline uint64_t timespec_to_usec(timespec t) noexcept {
-	return t.tv_sec * 1000000 + t.tv_nsec / 1000;
+	return t.tv_sec * 1'000'000 + t.tv_nsec / 1'000;
 }
 
 void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
@@ -211,6 +212,25 @@ static auto test_out_file(StringView test_in_file) {
 	return concat<32>(test_in_file.substring(0, test_in_file.size() - 2), "out");
 }
 
+void SipPackage::remove_tests_with_no_in_file_from_limits_in_simfile() {
+	prepare_tests_files();
+
+	// Remove tests that have no corresponding input file
+	auto const& limits = simfile.configFile().getVar("limits").asArray();
+	std::vector<std::string> new_limits;
+	for (auto const& entry : limits) {
+		StringView test_name = StringView(entry).extractLeading(not_isspace);
+		auto it = tests_files->tests.find(test_name);
+		if (not it or not it->second.in.has_value())
+			continue;
+
+		new_limits.emplace_back(entry);
+	}
+
+	replace_variable_in_simfile("limits",
+		intentionalUnsafeStringView(simfile.dump_limits_value()), false);
+}
+
 void SipPackage::generate_test_out_files() {
 	STACK_UNWINDING_MARK;
 
@@ -226,6 +246,10 @@ void SipPackage::generate_test_out_files() {
 
 		return true;
 	});
+
+	// We need to remove invalid entries from limits as Conver will give
+	// warnings about them
+	remove_tests_with_no_in_file_from_limits_in_simfile();
 
 	// Touch .out files and give warnings
 	tests_files.value().tests.for_each([&](auto&& p) {

@@ -58,6 +58,10 @@ public:
 	// Generates .in files that have recipe provided in Sipfile
 	void generate_test_in_files();
 
+	// Removes tests from "limits" variable in Simfile that have no
+	// corresponding input file
+	void remove_tests_with_no_in_file_from_limits_in_simfile();
+
 	// For every .in file generates the corresponding .out file
 	void generate_test_out_files();
 
