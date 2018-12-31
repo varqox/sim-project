@@ -200,6 +200,10 @@ void Sipfile::loadGenTests() {
 		entry.extractTrailing(isspace);
 		StringView generator_args = entry;
 
+		if (specified_generator.empty())
+			throw SipError("Sipfile (gen): missing generator for the test range"
+				" `", test_range, '`');
+
 		// Match generator
 		InplaceBuff<32> generator;
 		if (hasPrefix(specified_generator, "sh:") or
