@@ -80,6 +80,9 @@ public:
 	// Removes test files that may be generated
 	void remove_generated_test_files();
 
+	// Removes tests files that are not specified as generated or static
+	void remove_test_files_not_specified_in_sipfile();
+
 	// Runs Conver to generate the full_simfile
 	void rebuild_full_simfile(bool set_default_time_limits = false);
 

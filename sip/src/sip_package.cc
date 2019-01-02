@@ -382,6 +382,32 @@ void SipPackage::remove_generated_test_files() {
 	stdlog(" done.");
 }
 
+void SipPackage::remove_test_files_not_specified_in_sipfile() {
+	STACK_UNWINDING_MARK;
+
+	sipfile.loadStaticTests();
+	sipfile.loadGenTests();
+	prepare_tests_files();
+
+	stdlog("Removing test files that are not specified as generated or"
+		" static...").flush_no_nl();
+
+	tests_files->tests.for_each([&](auto const& p) {
+		bool is_static = sipfile.static_tests.find(p.first);
+		bool is_generated = sipfile.gen_tests.find(p.first);
+		if (is_static or is_generated)
+			return;
+
+		if (p.second.in.has_value())
+			remove(concat(p.second.in.value()));
+		if (p.second.out.has_value())
+			remove(concat(p.second.out.value()));
+	});
+
+	tests_files = std::nullopt; // Probably some test files were just removed
+	stdlog(" done.");
+}
+
 sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 	STACK_UNWINDING_MARK;
 

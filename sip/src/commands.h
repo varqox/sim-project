@@ -17,6 +17,10 @@ void genout(ArgvParser args);
 
 void gen(ArgvParser args);
 
+void regenin(ArgvParser);
+
+void regen(ArgvParser);
+
 // Displays help
 void help(const char* program_name);
 

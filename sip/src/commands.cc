@@ -62,10 +62,8 @@ void genin(ArgvParser) {
 	SipPackage sp;
 	sp.generate_test_in_files();
 
-	if (access("Simfile", F_OK) == 0) {
+	if (access("Simfile", F_OK) == 0)
 		sp.save_scoring();
-		sp.save_limits();
-	}
 }
 
 void genout(ArgvParser) {
@@ -93,6 +91,31 @@ void gen(ArgvParser) {
 	}
 }
 
+void regenin(ArgvParser) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	sp.remove_test_files_not_specified_in_sipfile();
+	sp.generate_test_in_files();
+
+	if (access("Simfile", F_OK) == 0)
+		sp.save_scoring();
+}
+
+void regen(ArgvParser) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	sp.remove_test_files_not_specified_in_sipfile();
+	sp.generate_test_in_files();
+	sp.generate_test_out_files();
+
+	if (access("Simfile", F_OK) == 0) {
+		sp.save_scoring();
+		sp.save_limits();
+	}
+}
+
 void help(const char* program_name) {
 	STACK_UNWINDING_MARK;
 
@@ -106,11 +129,12 @@ void help(const char* program_name) {
 	puts("  checker [value]       If [value] is specified: set checker to [value]. Otherwise print its current value");
 	puts("  clean [arg...]        Prepare package to archiving: remove unnecessary files (compiled programs, latex logs, etc.).");
 	puts("                        Allowed args:");
-	puts("                          tests - removes all generated tests files");
-	puts("  doc [watch]           Compiles latex statements (if there are any). If watch is specified as an argument, then all statement files will be watched and recompiled on any change");
+	puts("                          tests - remove all generated tests files");
+	puts("  doc [watch]           Compile latex statements (if there are any). If watch is specified as an argument, then all statement files will be watched and recompiled on any change");
 	puts("  gen                   Generate tests input and output files");
 	puts("  genin                 Generate tests input files");
 	puts("  genout                Generate tests output files using the main solution");
+	puts("  gentests              Alias to command: gen");
 	puts("  init [directory] [name]");
 	puts("                        Initialize Sip package in [directory] (by default current working directory) if [name] is specified, set problem name to it");
 	puts("  label [value]         If [value] is specified: set label to [value]. Otherwise print its current value");
@@ -118,27 +142,29 @@ void help(const char* program_name) {
 	puts("  mem [value]           If [value] is specified: set memory limit to [value] MB. Otherwise print its current value");
 	puts("  name [value]          If [value] is specified: set name to [value]. Otherwise print its current value");
 	puts("  prog [sol...]         Compile solutions [sol...] (all solutions by default). [sol] has the same meaning as in command 'test'");
+	puts("  regen                 Remove test files that don't belong to either static or generated tests. Then generate tests input and output files");
+	puts("  regenin               Remove test files that don't belong to either static or generated tests. Then generate tests input files");
 	puts("  statement [value]     If [value] is specified: set statement to [value]. Otherwise print its current value");
-	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by default) (compiles solutions if necessary). If [sol] is a path to a solution then it is used, otherwise all solutions that have [sol] as a subsequence are used.");
+	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by default) (compile solutions if necessary). If [sol] is a path to a solution then it is used, otherwise all solutions that have [sol] as a subsequence are used.");
 	// puts("  verify [sol...]       Run inver and solutions [sol...] on tests (all solutions by default) (compiles solutions if necessary)");
 	puts("  zip [clean args...]   Run clean command with [clean args] and compress the package into zip (named after the current directory) within the upper directory.");
 	puts("");
 	puts("Options:");
-	puts("  -C <directory>         Change working directory to <directory> before doing anything");
-	puts("  -h, --help             Display this information");
-	puts("  -q, --quiet            Quiet mode");
+	puts("  -C <directory>        Change working directory to <directory> before doing anything");
+	puts("  -h, --help            Display this information");
+	puts("  -q, --quiet           Quiet mode");
 	// puts("  -v, --verbose          Verbose mode (the default option)");
 	puts("");
 	puts("Sip package tree:");
-	puts("   main/                 Main package folder");
-	puts("   |-- check/            Checker folder - holds checker");
-	puts("   |-- doc/              Documents folder - holds problem statement, elaboration, etc.");
-	puts("   |-- prog/             Solutions folder - holds solutions");
-	puts("   |-- in/               Tests input files folder - holds tests input files");
-	puts("   |-- out/              Tests output files folder - holds tests output files");
-	puts("   |-- utils/            Utilities folder - holds test input generators, input verifiers and other files used by Sip");
-	puts("   |-- Simfile           Simfile - holds package primary config");
-	puts("   `-- Sipfile           Sip file - holds Sip configuration and rules for generating test inputs");
+	puts("   main/                Main package folder");
+	puts("   |-- check/           Checker folder - holds checker");
+	puts("   |-- doc/             Documents folder - holds problem statement, elaboration, etc.");
+	puts("   |-- prog/            Solutions folder - holds solutions");
+	puts("   |-- in/              Tests' input files folder - holds tests input files");
+	puts("   |-- out/             Tests' output files folder - holds tests output files");
+	puts("   |-- utils/           Utilities folder - holds test input generators, input verifiers and other files used by Sip");
+	puts("   |-- Simfile          Simfile - holds package primary config");
+	puts("   `-- Sipfile          Sip file - holds Sip configuration and rules for generating test inputs");
 }
 
 void init(ArgvParser args) {

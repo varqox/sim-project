@@ -111,6 +111,10 @@ static void run_command(int argc, char **argv) {
 		return commands::name(args);
 	if (command == "prog")
 		return commands::prog(args);
+	if (command == "regen")
+		return commands::regen(args);
+	if (command == "regenin")
+		return commands::regenin(args);
 	if (command == "statement")
 		return commands::statement(args);
 	if (command == "test")
