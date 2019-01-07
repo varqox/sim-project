@@ -354,7 +354,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 						if (errno != 0 or ptr == line2.data())
 							wrong_second_line();
 						else
-							score_ratio = std::min(score_ratio, x) * 0.01;
+							score_ratio = std::min(score_ratio, x * 0.01);
 					}
 
 					// Leave the checker comment only
