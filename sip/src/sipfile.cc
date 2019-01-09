@@ -20,6 +20,8 @@
 		" specified as an array")
 
 void Sipfile::loadDefaultTimeLimit() {
+	STACK_UNWINDING_MARK;
+
 	auto&& dtl = config["default_time_limit"];
 	CHECK_IF_NOT_ARR(dtl, "default_time_limit");
 

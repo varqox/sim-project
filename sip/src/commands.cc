@@ -294,6 +294,8 @@ void name(ArgvParser args) {
 static AVLDictSet<StringView> parse_args_to_solutions(
 	const sim::Simfile& simfile, ArgvParser args)
 {
+	STACK_UNWINDING_MARK;
+
 	if (args.size() == 0)
 		return {};
 

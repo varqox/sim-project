@@ -15,6 +15,8 @@ constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MB
 } // anonymous namespace
 
 uint64_t SipPackage::get_default_time_limit() {
+	STACK_UNWINDING_MARK;
+
 	// Check Sipfile
 	if (access("Sipfile", F_OK) == 0) {
 		sipfile.loadDefaultTimeLimit();
@@ -136,6 +138,8 @@ sim::JudgeReport::Test SipPackage::generate_test_out_file(
 }
 
 SipPackage::SipPackage() {
+	STACK_UNWINDING_MARK;
+
 	if (access("Simfile", F_OK) == 0) {
 		simfile_contents = getFileContents("Simfile");
 		simfile = sim::Simfile(simfile_contents);
@@ -204,6 +208,8 @@ void SipPackage::generate_test_in_files() {
 }
 
 static auto test_out_file(StringView test_in_file) {
+	STACK_UNWINDING_MARK;
+
 	if (hasPrefix(test_in_file, "in/")) {
 		return concat<32>("out",
 			test_in_file.substring(2, test_in_file.size() - 2), "out");
@@ -213,6 +219,11 @@ static auto test_out_file(StringView test_in_file) {
 }
 
 void SipPackage::remove_tests_with_no_in_file_from_limits_in_simfile() {
+	STACK_UNWINDING_MARK;
+
+	if (access("Simfile", F_OK) != 0)
+		return; // Nothing to do (no Simfile)
+
 	prepare_tests_files();
 
 	// Remove tests that have no corresponding input file
@@ -489,6 +500,8 @@ void SipPackage::save_limits() {
 }
 
 static void compile_tex_file(StringView file) {
+	STACK_UNWINDING_MARK;
+
 	stdlog("\033[1mCompiling ", file, "\033[m");
 	// It is necessary (essential) to run latex two times
 	for (int iter = 0; iter < 1; ++iter) {
@@ -509,6 +522,8 @@ static void compile_tex_file(StringView file) {
 }
 
 static void watch_tex_files(const std::vector<std::string>& tex_files) {
+	STACK_UNWINDING_MARK;
+
 	FileDescriptor ino_fd(inotify_init());
 	if (ino_fd == -1)
 		THROW("inotify_init()", errmsg());

@@ -15,6 +15,8 @@
  * @param argv like in main (holds arguments)
  */
 static void parseOptions(int &argc, char **argv) {
+	STACK_UNWINDING_MARK;
+
 	int new_argc = 1;
 
 	for (int i = 1; i < argc; ++i) {
@@ -79,6 +81,8 @@ static void kill_signal_handler(int signum) {
 }
 
 static void run_command(int argc, char **argv) {
+	STACK_UNWINDING_MARK;
+
 	ArgvParser args(argc, argv);
 	StringView command = args.extract_next();
 
