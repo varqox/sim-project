@@ -61,9 +61,6 @@ void genin(ArgvParser) {
 
 	SipPackage sp;
 	sp.generate_test_in_files();
-
-	if (access("Simfile", F_OK) == 0)
-		sp.save_scoring();
 }
 
 void genout(ArgvParser) {
@@ -72,10 +69,8 @@ void genout(ArgvParser) {
 	SipPackage sp;
 	sp.generate_test_out_files();
 
-	if (access("Simfile", F_OK) == 0) {
-		sp.save_scoring();
+	if (access("Simfile", F_OK) == 0)
 		sp.save_limits();
-	}
 }
 
 void gen(ArgvParser) {
@@ -85,10 +80,8 @@ void gen(ArgvParser) {
 	sp.generate_test_in_files();
 	sp.generate_test_out_files();
 
-	if (access("Simfile", F_OK) == 0) {
-		sp.save_scoring();
+	if (access("Simfile", F_OK) == 0)
 		sp.save_limits();
-	}
 }
 
 void regenin(ArgvParser) {
@@ -97,9 +90,6 @@ void regenin(ArgvParser) {
 	SipPackage sp;
 	sp.remove_test_files_not_specified_in_sipfile();
 	sp.generate_test_in_files();
-
-	if (access("Simfile", F_OK) == 0)
-		sp.save_scoring();
 }
 
 void regen(ArgvParser) {
@@ -110,10 +100,8 @@ void regen(ArgvParser) {
 	sp.generate_test_in_files();
 	sp.generate_test_out_files();
 
-	if (access("Simfile", F_OK) == 0) {
-		sp.save_scoring();
+	if (access("Simfile", F_OK) == 0)
 		sp.save_limits();
-	}
 }
 
 void help(const char* program_name) {
@@ -158,6 +146,8 @@ void help(const char* program_name) {
 	puts("                          files");
 	puts("  regenin               Remove test files that don't belong to either static or");
 	puts("                          generated tests. Then generate tests input files");
+	puts("  save <args...>        Saves args... Allowed args:");
+	puts("                          scoring - saves scoring to Simfile");
 	puts("  statement [value]     If [value] is specified: set statement to [value].");
 	puts("                          Otherwise print its current value");
 	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by");
@@ -339,6 +329,24 @@ void prog(ArgvParser args) {
 	});
 }
 
+void save(ArgvParser args) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	if (args.size() == 0)
+		throw SipError("nothing to save");
+
+	while (args.size()) {
+		auto arg = args.extract_next();
+		if (arg == "scoring") {
+			sp.rebuild_full_simfile();
+			sp.save_scoring();
+		} else {
+			throw SipError("save: unrecognized argument ", arg);
+		}
+	}
+}
+
 void statement(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
@@ -360,10 +368,6 @@ void test(ArgvParser args) {
 
 	SipPackage sp;
 	sp.rebuild_full_simfile();
-	// Save scoring only if Simfile is already created (because if it creates a Simfile without memory limit it causes sip to fail in the next run)
-	if (access("Simfile", F_OK) == 0)
-		sp.save_scoring();
-
 	if (sp.full_simfile.solutions.empty())
 		throw SipError("no solution was found");
 

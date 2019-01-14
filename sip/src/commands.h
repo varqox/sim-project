@@ -36,6 +36,8 @@ void name(ArgvParser args);
 
 void prog(ArgvParser args);
 
+void save(ArgvParser args);
+
 void statement(ArgvParser args);
 
 void test(ArgvParser args);
