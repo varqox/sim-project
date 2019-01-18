@@ -1499,7 +1499,6 @@ table.code-view {
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	border-radius: 4px;
-	white-space: pre;
 	-moz-tab-size: 4;
 	tab-size: 4;
 }
@@ -1509,11 +1508,16 @@ table.code-view > tbody > tr > td:first-child {
 	margin-right: 10px;
 	color: #3c3c3c;
 	text-align: right;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
 }
 table.code-view > tbody > tr > td:first-child::before {
 	content: attr(line);
 }
 table.code-view > tbody > tr > td:last-child {
+	white-space: pre;
 	padding: 0 10px;
 }
 table.code-view > tbody > tr:first-child td {
@@ -2179,6 +2183,9 @@ form .field-group > textarea {
 .time-chooser a {
 	display: block;
 	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
 	height: 30px;
 }
 .chooser {
@@ -2191,6 +2198,9 @@ form .field-group > textarea {
 .chooser a {
 	display: block;
 	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
 }
 .chooser tr:nth-child(2) {
 	user-select: none;
