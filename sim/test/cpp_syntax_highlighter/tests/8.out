@@ -1,6 +1,6 @@
-<table class="code-view"><tbody><tr><td id="L1" line="1"></td><td><span style="color:#0000ff;font-weight:bold">char</span> trolololo_char <span style="color:#515125">=</span> <span style="color:#e0a000">&apos;<span style="color:#d923e9">\n</span>&apos;</span><span style="color:#515125">;</span></td></tr>
-<tr><td id="L2" line="2"></td><td><span style="color:#0000ff;font-weight:bold">char</span> char_trolololo <span style="color:#515125">=</span> <span style="color:#e0a000">&apos;<span style="color:#d923e9">\\</span>&apos;</span><span style="color:#515125">;</span></td></tr>
-<tr><td id="L3" line="3"></td><td><span style="color:#0000ff;font-weight:bold">char</span> trolololo_char_ <span style="color:#515125">=</span> trolololo_char <span style="color:#515125">+</span> char_trolololo<span style="color:#515125">;</span></td></tr>
-<tr><td id="L4" line="4"></td><td></td></tr>
-<tr><td id="L5" line="5"></td><td></td></tr>
-<tr><td id="L6" line="6"></td><td></td></tr></tbody></table>
+<table class="code-view"><tbody><tr><td id="L1" line="1"></td><td><span style="color:#0000ff;font-weight:bold">char</span> trolololo_char <span style="color:#515125">=</span> <span style="color:#e0a000">&apos;<span style="color:#d923e9">\n</span>&apos;</span><span style="color:#515125">;</span>
+</td></tr><tr><td id="L2" line="2"></td><td><span style="color:#0000ff;font-weight:bold">char</span> char_trolololo <span style="color:#515125">=</span> <span style="color:#e0a000">&apos;<span style="color:#d923e9">\\</span>&apos;</span><span style="color:#515125">;</span>
+</td></tr><tr><td id="L3" line="3"></td><td><span style="color:#0000ff;font-weight:bold">char</span> trolololo_char_ <span style="color:#515125">=</span> trolololo_char <span style="color:#515125">+</span> char_trolololo<span style="color:#515125">;</span>
+</td></tr><tr><td id="L4" line="4"></td><td>
+</td></tr><tr><td id="L5" line="5"></td><td>
+</td></tr><tr><td id="L6" line="6"></td><td></td></tr></tbody></table>

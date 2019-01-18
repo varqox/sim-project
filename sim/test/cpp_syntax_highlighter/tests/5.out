@@ -1,4 +1,4 @@
-<table class="code-view"><tbody><tr><td id="L1" line="1"></td><td><span style="color:#00a000">#include &lt;vector&gt;</span></td></tr>
-<tr><td id="L2" line="2"></td><td><span style="color:#a0a0a0">/* vector&lt;int&gt; is (?) an awesome structure */</span> std<span style="color:#515125">::</span>vector<span style="color:#515125">&lt;</span><span style="color:#0000ff;font-weight:bold">int</span><span style="color:#515125">&gt;</span> xxxx<span style="color:#515125">;</span></td></tr>
-<tr><td id="L3" line="3"></td><td><span style="color:#0086b3">main</span><span style="color:#515125">(){}</span></td></tr>
-<tr><td id="L4" line="4"></td><td></td></tr></tbody></table>
+<table class="code-view"><tbody><tr><td id="L1" line="1"></td><td><span style="color:#00a000">#include &lt;vector&gt;</span>
+</td></tr><tr><td id="L2" line="2"></td><td><span style="color:#a0a0a0">/* vector&lt;int&gt; is (?) an awesome structure */</span> std<span style="color:#515125">::</span>vector<span style="color:#515125">&lt;</span><span style="color:#0000ff;font-weight:bold">int</span><span style="color:#515125">&gt;</span> xxxx<span style="color:#515125">;</span>
+</td></tr><tr><td id="L3" line="3"></td><td><span style="color:#0086b3">main</span><span style="color:#515125">(){}</span>
+</td></tr><tr><td id="L4" line="4"></td><td></td></tr></tbody></table>
