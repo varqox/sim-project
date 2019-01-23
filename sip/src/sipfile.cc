@@ -109,8 +109,11 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 
 	// Increments tid by one
 	auto inc_tid = [](auto& tid) {
-		if (tid.size == 0)
+		if (tid.size == 0) {
+			// Have to produce sth greater than "" to end inner loop below
+			tid.append('a');
 			return;
+		}
 
 		++tid.back();
 		for (int i = tid.size - 1; i > 0 and tid[i] > 'z'; --i) {
