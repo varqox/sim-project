@@ -158,6 +158,10 @@ static InplaceBuff<32> matching_generator(StringView pattern,
 {
 	STACK_UNWINDING_MARK;
 
+	// Generators specified by path always match
+	if (utils_contents.exists(pattern))
+		return InplaceBuff<32>(pattern);
+
 	Optional<StringView> res;
 	utils_contents.for_each_with_prefix("", [&](StringView file) {
 		if (is_subsequence(pattern, file) and sim::is_source(file)) {
