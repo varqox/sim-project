@@ -153,17 +153,18 @@ void Sipfile::loadStaticTests() {
 	}
 }
 
+/// @p pkg_contents should contain all files that @p pattern will be watched with
 static InplaceBuff<32> matching_generator(StringView pattern,
-	const sim::PackageContents& utils_contents)
+	const sim::PackageContents& pkg_contents)
 {
 	STACK_UNWINDING_MARK;
 
 	// Generators specified by path always match
-	if (utils_contents.exists(pattern))
+	if (pkg_contents.exists(pattern))
 		return InplaceBuff<32>(pattern);
 
 	Optional<StringView> res;
-	utils_contents.for_each_with_prefix("", [&](StringView file) {
+	pkg_contents.for_each_with_prefix("utils/", [&](StringView file) {
 		if (is_subsequence(pattern, file) and sim::is_source(file)) {
 			if (res.has_value()) {
 				throw SipError("Sipfile: specified generator `", pattern,
@@ -178,9 +179,9 @@ static InplaceBuff<32> matching_generator(StringView pattern,
 	if (res.has_value())
 		return InplaceBuff<32>(*res);
 
-	log_warning("Simfile (gen): no file matches specified generator: `",
-		pattern, "`. It will be treated as a shell command; to remove this"
-		" warning, prefix the generator with sh: - e.g. sh:echo");
+	log_warning("Sipfile (gen): no file in utils/ matches specified generator: `",
+		pattern, "`. It will be treated as a shell command.\n  To remove this"
+		" warning you have to choose one of the following options:\n    1. Provide full path to the generator file e.g. generators/gen1.cpp\n    2. If it is a shell command, prefix the generator with sh: - e.g. sh:echo");
 	return concat<32>("sh:", pattern);
 }
 
@@ -190,9 +191,9 @@ void Sipfile::loadGenTests() {
 	auto gen_tests_var = config.getVar("gen");
 	CHECK_IF_ARR(gen_tests_var, "gen");
 
-	sim::PackageContents utils_contents;
-	utils_contents.load_from_directory("utils/", true);
-	utils_contents.remove_with_prefix("utils/cache/");
+	sim::PackageContents pkg_contents;
+	pkg_contents.load_from_directory(".");
+	pkg_contents.remove_with_prefix("utils/cache/");
 
 	gen_tests.clear();
 	for (StringView entry : gen_tests_var.asArray()) {
@@ -218,7 +219,7 @@ void Sipfile::loadGenTests() {
 		{
 			generator = specified_generator;
 		} else {
-			generator = matching_generator(specified_generator, utils_contents);
+			generator = matching_generator(specified_generator, pkg_contents);
 		}
 
 		for_each_test_in_range(test_range, [&](StringView test) {
