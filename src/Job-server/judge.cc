@@ -366,6 +366,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 {
 	STACK_UNWINDING_MARK;
 
+	auto package_path = concat<PATH_MAX>("jobs_files/", job_id, ".zip.prep");
+	FileRemover job_package_remover(package_path.to_cstr());
+
 	InplaceBuff<1 << 14> job_log;
 
 	auto judge_log = [&](auto&&... args) {
@@ -383,7 +386,6 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 		stmt.bindAndExecute(job_log, job_id);
 	};
 
-	auto package_path = concat<PATH_MAX>("jobs_files/", job_id, ".zip.prep");
 	string pkg_master_dir = sim::zip_package_master_dir(package_path);
 
 	string simfile_str = extract_file_from_zip(package_path,
@@ -465,6 +467,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
 		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 	stmt.bindAndExecute(uint(original_job_type), job_log, job_id);
+
+	if (stmt.affected_rows() > 0)
+		job_package_remover.cancel(); // The job was not canceled
 }
 
 void reset_problem_time_limits_using_model_solution(uint64_t job_id,
