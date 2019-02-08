@@ -96,10 +96,11 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 
 	info.stage = AddProblemInfo::SECOND;
 
+	decltype(mysql.prepare("")) stmt;
 	switch (cr.status) {
 	case sim::Conver::Status::COMPLETE: {
 		// Advance the job to the SECOND stage
-		auto stmt = mysql.prepare("UPDATE jobs"
+		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_PENDING_STR ", info=?, data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(info.dump(), job_log.str, job_id);
@@ -107,7 +108,7 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	}
 	case sim::Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 		// Transform the job into a JUDGE_MODEL_SOLUTION job
-		auto stmt = mysql.prepare("UPDATE jobs"
+		stmt = mysql.prepare("UPDATE jobs"
 			" SET type=?, status=" JSTATUS_PENDING_STR ", info=?, data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(
@@ -119,7 +120,8 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	}
 
 	stdlog("Job ", job_id, ":\n", job_log.str);
-	package_remover.cancel();
+	if (stmt.affected_rows() > 0)
+		package_remover.cancel(); // The job was not canceled
 }
 
 /**
@@ -138,7 +140,7 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
  */
 template<Action action>
 static uint64_t second_stage(uint64_t job_id, StringView job_owner,
-	const AddProblemInfo& info, sim::Conver::ReportBuff& job_log)
+	const AddProblemInfo&, sim::Conver::ReportBuff& job_log)
 {
 	STACK_UNWINDING_MARK;
 
@@ -330,6 +332,9 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 				stmt.bind(1, aux_id);
 			else
 				stmt.bind(1, nullptr);
+
+			// Remove temporary package
+			remove(concat("jobs_files/", job_id, ".zip.prep"));
 		}
 
 		stmt.bind(0, status);
@@ -624,7 +629,6 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 	// Delete problem tags
 	auto stmt = mysql.prepare("DELETE FROM problem_tags WHERE problem_id=?");
 	stmt.bindAndExecute(problem_id);
-
 
 	// Delete problem's files
 	(void)remove_r(concat("problems/", problem_id));
