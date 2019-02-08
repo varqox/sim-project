@@ -1068,6 +1068,8 @@ private:
 	template<size_t M>
 	friend class InplaceBuff;
 
+	static_assert(N > 0, "Needed for accessing the array's 0-th element");
+
 public:
 	using InplaceBuffBase::size;
 

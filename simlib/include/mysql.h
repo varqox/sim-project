@@ -44,6 +44,7 @@ using EnumValType = typename EnumValTypeHelper<T>::type;
 
 namespace MySQL {
 
+// Optional type used to access data retrieved from MySQL
 template<class T>
 class Optional {
 	using StoredType = std::remove_const_t<T>;
@@ -52,19 +53,20 @@ class Optional {
 
 	template<size_t, size_t>
 	friend class Statement;
+
 public:
 	Optional() : has_no_value_(true) {}
 
 	Optional(const Optional&) = default;
 	Optional(Optional&&) = default;
 
-private:
-	Optional& operator=(const Optional&) = default;
-	Optional& operator=(Optional&&) = default;
+	// As optional may hold InplaceBuff<>, changing its value when it is bounded is dangerous (may result in buffer overflow, as we store in MYSQL_BIND its max_size() along with data pointer which become invalid after the assignment)
+	Optional& operator=(const Optional&) = delete;
+	Optional& operator=(Optional&&) = delete;
 
 	Optional(const T& value) : has_no_value_(false), value_(value) {}
 
-	Optional(T&& value) : has_no_value_(false), value_(value) {}
+	Optional(T&& value) : has_no_value_(false), value_(std::move(value)) {}
 
 public:
 	operator ::Optional<T>() const { return has_no_value_ ? ::Optional<T>() : value_; }
@@ -379,6 +381,17 @@ public:
 		bind_isnull(idx, x.has_no_value_);
 	}
 
+private: // For use only by bindAndExecute()
+	/// Binds optional value @p x - std::nullopt corresponds to NULL
+	template<class T>
+	void bind(unsigned idx, ::Optional<T>& x) ND(noexcept) {
+		if (x.has_value())
+			bind(idx, *x);
+		else
+			null_column(idx);
+	}
+
+public:
 	template<class T>
 	void bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
 		bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
