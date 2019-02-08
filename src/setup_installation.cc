@@ -368,7 +368,7 @@ int main(int argc, char **argv) {
 	try_to_create_table("contest_entry_tokens", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
 			"`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
-			"`contest_id` int unsigned NULL,"
+			"`contest_id` int unsigned NOT NULL,"
 			"`short_token` BINARY(", CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
 			"`short_token_expiration` datetime NULL,"
 			"PRIMARY KEY (token),"

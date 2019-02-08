@@ -12,7 +12,7 @@ void Sim::api_contest_entry_token() {
 	} else if (next_arg[0] == '=') {
 		StringView token = next_arg.substr(1);
 		static_assert(CONTEST_ENTRY_TOKEN_LEN != CONTEST_ENTRY_SHORT_TOKEN_LEN,
-			"These cannot be equal because this would case conflict in"
+			"These cannot be equal because this would cause conflict in"
 			" selecting the token in the below query");
 		auto stmt = mysql.prepare("SELECT c.id, c.name"
 			" FROM contest_entry_tokens t"
