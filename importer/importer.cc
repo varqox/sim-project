@@ -96,6 +96,16 @@ void load_users() {
 					}
 
 					u.replacer = &nu;
+					// Actualize new user data
+					if (&skipped_users == &skipped_a_users) {
+						nu.username = u.username;
+						nu.first_name = u.first_name;
+						nu.last_name = u.last_name;
+						nu.email = u.email;
+						nu.salt = u.salt;
+						nu.password = u.password;
+						nu.type = u.type;
+					}
 				}
 			}
 
@@ -128,9 +138,9 @@ void load_users() {
 		if (maps.size() > 1) {
 			auto& nu = p.second;
 			stdlog("");
-			stdlog("Mappings to user ", nu.username, ", ", nu.first_name, ", ", nu.last_name, ":");
+			stdlog("Mappings to user ", nu.username, ", ", nu.first_name, ", ", nu.last_name, ", ", nu.email, ":");
 			for (auto q : maps)
-				stdlog("  ", "AB"[q.second], " ", q.first->username, ", ", q.first->first_name, ", ", q.first->last_name);
+				stdlog("  ", "AB"[q.second], " ", q.first->username, ", ", q.first->first_name, ", ", q.first->last_name, ", ", q.first->email);
 		}
 	}
 
@@ -308,7 +318,7 @@ void load_problems() {
 	merge(a_problems.begin(), a_problems.end(), b_problems.begin(), b_problems.end(),
 		[&](auto&& p) { add_to_new_problems(p.second, last_a_pid, skipped_a_problems, a_build, a_users); },
 		[&](auto&& p) { add_to_new_problems(p.second, last_b_pid, skipped_b_problems, b_build, b_users); },
-		[](auto&& l, auto&& r) { return l.second.added < r.second.added; });
+		[](auto&& l, auto&& r) { return l.second.added <= r.second.added; });
 
 	// List merges
 	stdlog("======================= Problems =======================");
@@ -567,7 +577,7 @@ void load_contest_users() {
 		auto instmt = conn.prepare("SELECT user_id, contest_id, mode FROM contest_users");
 		instmt.bindAndExecute();
 		instmt.res_bind_all(user_id, contest_id, mode);
-		auto outstmt = new_conn.prepare("INSERT INTO contest_users(user_id, contest_id, mode) VALUES(?,?,?)");
+		auto outstmt = new_conn.prepare("INSERT IGNORE INTO contest_users(user_id, contest_id, mode) VALUES(?,?,?)"); // IGNORE because of merged accounts
 		while (instmt.next())
 			outstmt.bindAndExecute(new_user_id(umap, user_id), new_contest_id(cmap, contest_id), mode);
 	};
@@ -675,13 +685,18 @@ void load_submissions() {
 	remove_r(concat(new_build, "/solutions/"));
 	mkdir(concat(new_build, "/solutions/"));
 	auto stmt = new_conn.prepare("INSERT INTO submissions(id, owner, problem_id, contest_problem_id, contest_round_id, contest_id, type, language, final_candidate, problem_final, contest_final, contest_initial_final, initial_status, full_status, submit_time, score, last_judgment, initial_report, final_report) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+	AVLDictSet<array<InplaceBuff<6>, 3>> finals_to_update;
+
 	auto add_submission = [&, nid = 0ll](Submission& s, auto& last_sid, auto& skipped_submissions, auto& umap, auto& cmap, auto& crmap, auto& cpmap, auto& pmap, auto&& old_build) mutable {
-		// To avoid model solution duplications, we import solutions of the newest package of the problem
-		if (EnumVal<SubmissionType>(s.type) == SubmissionType::PROBLEM_SOLUTION and &pmap[s.problem_id] != pmap[s.problem_id].replacer->replacer)
-			return;
 
 		while (++last_sid < s.id)
 			skipped_submissions.emplace(last_sid, ++nid);
+
+		// To avoid model solution duplications, we import solutions of the newest package of the problem
+		if (EnumVal<SubmissionType>(s.type) == SubmissionType::PROBLEM_SOLUTION and &pmap[s.problem_id] != pmap[s.problem_id].replacer->replacer) {
+			skipped_submissions.emplace(last_sid, ++nid);
+			return;
+		}
 
 		auto& ns = new_submissions[++nid] = s;
 		ns.id = nid;
@@ -702,11 +717,15 @@ void load_submissions() {
 			stdlog("Submissions ", ns.id);
 
 		link(concat(old_build, "/solutions/", s.id), concat(new_build, "/solutions/", nid));
-		submission::update_final(new_conn,
-			(ns.owner.has_value() ? intentionalUnsafeStringView(toStr(*ns.owner)) : ""),
-			intentionalUnsafeStringView(toStr(ns.problem_id)),
-			(ns.contest_problem_id.has_value() ? intentionalUnsafeStringView(toStr(*ns.contest_problem_id)) : ""),
-			false);
+
+		array<InplaceBuff<6>, 3> ftu_elem;
+		if (ns.owner.has_value())
+			ftu_elem[0] = toStr(*ns.owner);
+		ftu_elem[1] = toStr(ns.problem_id);
+		if (ns.contest_problem_id.has_value())
+			ftu_elem[2] = toStr(ns.contest_problem_id.value());
+
+		finals_to_update.emplace(ftu_elem);
 	};
 
 	int64_t last_a_sid = 0, last_b_sid = 0;
@@ -714,6 +733,13 @@ void load_submissions() {
 		[&](auto&& p) { add_submission(p.second, last_a_sid, skipped_a_submissions, a_users, a_contests, a_contest_rounds, a_contest_problems, a_problems, a_build); },
 		[&](auto&& p) { add_submission(p.second, last_b_sid, skipped_b_submissions, b_users, b_contests, b_contest_rounds, b_contest_problems, b_problems, b_build); },
 		[](auto&& l, auto&& r) { return l.second.submit_time <= r.second.submit_time; });
+
+	stdlog("Updating finals (", finals_to_update.size(), " to go)");
+	finals_to_update.for_each([&, i = 0](auto&& ftu_elem) mutable {
+		submission::update_final(new_conn, ftu_elem[0], ftu_elem[1], ftu_elem[2]);
+		if ((++i & 255) == 0)
+			stdlog("Updated ", i);
+	});
 }
 
 int64_t new_submission_id(decltype(a_submissions)& smap, int64_t submission_id, bool try_skipped = false) {
