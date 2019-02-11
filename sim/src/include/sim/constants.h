@@ -286,6 +286,7 @@ enum class JobType : uint8_t {
 	DELETE_CONTEST_PROBLEM = 12,
 	RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION = 13,
 	MERGE_PROBLEMS = 14,
+	REJUDGE_SUBMISSION = 15,
 };
 
 #define JTYPE_VOID_STR "0"
@@ -363,6 +364,11 @@ static_assert(meta::equal(JTYPE_MERGE_PROBLEMS_STR,
 	meta::ToString<(int)JobType::MERGE_PROBLEMS>::value),
 	"Update the above #define");
 
+#define JTYPE_REJUDGE_SUBMISSION_STR "15"
+static_assert(meta::equal(JTYPE_REJUDGE_SUBMISSION_STR,
+	meta::ToString<(int)JobType::REJUDGE_SUBMISSION>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
@@ -384,6 +390,7 @@ constexpr inline const char* toString(JobType x) {
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		return "RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION";
 	case JT::MERGE_PROBLEMS: return "MERGE_PROBLEMS";
+	case JT::REJUDGE_SUBMISSION: return "REJUDGE_SUBMISSION";
 	}
 	return "Unknown";
 }
@@ -400,6 +407,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
 	case JT::MERGE_PROBLEMS: return true;
 	case JT::JUDGE_SUBMISSION: return false;
+	case JT::REJUDGE_SUBMISSION: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
 	case JT::DELETE_USER: return false;
 	case JT::DELETE_CONTEST: return false;
@@ -414,6 +422,7 @@ constexpr inline bool is_submission_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::JUDGE_SUBMISSION: return true;
+	case JT::REJUDGE_SUBMISSION: return true;
 	case JT::ADD_PROBLEM: return false;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return false;
 	case JT::REUPLOAD_PROBLEM: return false;
@@ -450,6 +459,7 @@ constexpr inline uint priority(JobType x) {
 	case JT::ADD_PROBLEM: return 10;
 	case JT::REUPLOAD_PROBLEM: return 10;
 	case JT::JUDGE_SUBMISSION: return 5;
+	case JT::REJUDGE_SUBMISSION: return 4;
 	case JT::VOID: return 0;
 	}
 	return 0;

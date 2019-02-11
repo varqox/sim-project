@@ -3,7 +3,7 @@
 #include <simlib/string.h>
 #include <sim/constants.h>
 
-void judge_submission(uint64_t job_id, StringView submission_id,
+void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 	StringView job_creation_time);
 
 void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
