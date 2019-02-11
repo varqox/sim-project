@@ -487,12 +487,21 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	stdlog("Job ", job_id, ':');
 	judge_log("Judging the model solution");
 
-	auto set_failure = [&] {
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 		stmt.bindAndExecute(job_log, job_id);
 	};
+
+	// Check if the problem still exists
+	{
+		auto stmt = mysql.prepare("SELECT 1 FROM problems WHERE id=?");
+		stmt.bindAndExecute(problem_id);
+		if (not stmt.next())
+			return set_failure("Problem with ID ", problem_id, " does not exist");
+	}
 
 	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
 	string pkg_master_dir = sim::zip_package_master_dir(package_path);
