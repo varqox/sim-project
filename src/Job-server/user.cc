@@ -18,14 +18,20 @@ void delete_user(uint64_t job_id, StringView user_id) {
 
 	// Log some info about the deleted user
 	{
-		auto stmt = mysql.prepare("SELECT username FROM users WHERE id=?");
+		auto stmt = mysql.prepare("SELECT username, type FROM users WHERE id=?");
 		stmt.bindAndExecute(user_id);
 		InplaceBuff<32> username;
-		stmt.res_bind_all(username);
+		EnumVal<UserType> user_type;
+		stmt.res_bind_all(username, user_type);
 		if (not stmt.next())
 			return set_failure("User with id: ", user_id, " does not exist");
 
 		job_log.append("username: ", username, "\n");
+		switch (user_type) {
+		case UserType::ADMIN: job_log.append("type: admin\n");
+		case UserType::TEACHER: job_log.append("type: teacher\n");
+		case UserType::NORMAL: job_log.append("type: normal\n");
+		}
 	}
 
 	// Run deletion twice - because race condition may occur and e.g. user may
