@@ -62,6 +62,7 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	copts.label = info.label;
 	copts.memory_limit = info.memory_limit;
 	copts.global_time_limit = info.global_time_limit;
+	copts.max_time_limit = PROBLEM_MAX_TIME_LIMIT;
 	copts.reset_time_limits_using_model_solution = info.reset_time_limits;
 	copts.ignore_simfile = info.ignore_simfile;
 	copts.seek_for_new_tests = info.seek_for_new_tests;

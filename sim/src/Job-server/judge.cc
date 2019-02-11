@@ -509,12 +509,17 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	string simfile_str = extract_file_from_zip(package_path,
 		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
 
-	sim::Simfile simfile {simfile_str};
+	sim::Simfile simfile {std::move(simfile_str)};
 	simfile.loadAll();
 	judge_log("Model solution: ", simfile.solutions[0]);
 
+	// Change time limits to max limits (for judging the model solution)
+	for (auto& group : simfile.tgroups)
+		for (auto& test : group.tests)
+			test.time_limit = PROBLEM_MAX_TIME_LIMIT;
+
 	JudgeWorker jworker;
-	jworker.loadPackage(package_path.to_string(), std::move(simfile_str));
+	jworker.loadPackage(package_path.to_string(), simfile.dump());
 
 	string compilation_errors;
 
