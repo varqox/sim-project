@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include <deque>
 #include <sim/jobs.h>
 #include <sim/submission.h>
 #include <simlib/libarchive_zip.h>
@@ -584,6 +585,7 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 
 	auto set_failure = [&](auto&&... args) {
 		job_log.append(std::forward<decltype(args)>(args)...);
+		mysql.update("UNLOCK TABLES");
 		auto stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_FAILED_STR ", data=?"
 			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
@@ -628,6 +630,133 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 
 	// Delete problem tags
 	auto stmt = mysql.prepare("DELETE FROM problem_tags WHERE problem_id=?");
+	stmt.bindAndExecute(problem_id);
+
+	// Delete problem's files
+	(void)remove_r(concat("problems/", problem_id));
+	(void)remove(concat("problems/", problem_id, ".zip"));
+
+	stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
+		", data=? WHERE id=?");
+	stmt.bindAndExecute(job_log.str, job_id);
+}
+
+void merge_problem_into_another(uint64_t job_id, StringView problem_id,
+	jobs::MergeProblemsInfo info)
+{
+	sim::Conver::ReportBuff job_log;
+
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
+		// mysql.update("UNLOCK TABLES"); // Unneeded as the jobs table is write-locked
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(job_log.str, job_id);
+
+		stdlog("Job ", job_id, ":\n", job_log.str);
+	};
+
+	// Lock the tables to be able to safely transfer problem usages
+	{
+		mysql.update("LOCK TABLES problems WRITE, contest_problems WRITE,"
+			" submissions WRITE, jobs WRITE");
+		auto lock_guard = make_call_in_destructor([&]{
+			mysql.update("UNLOCK TABLES");
+		});
+
+		// Assure that both problems exist
+		{
+			auto stmt = mysql.prepare("SELECT simfile FROM problems"
+				" WHERE id=? AND type!=" PTYPE_VOID_STR);
+			stmt.bindAndExecute(problem_id);
+			InplaceBuff<1> simfile;
+			stmt.res_bind_all(simfile);
+			if (not stmt.next())
+				return set_failure("Problem does not exist");
+
+			job_log.append("Merged problem Simfile:\n", simfile);
+
+			stmt.bindAndExecute(info.target_problem_id);
+			if (not stmt.next())
+				return set_failure("Target problem does not exist");
+		}
+
+		// Transfer contest problems
+		{
+			auto stmt = mysql.prepare("UPDATE contest_problems SET problem_id=?"
+				" WHERE problem_id=?");
+			stmt.bindAndExecute(info.target_problem_id, problem_id);
+		}
+
+		// Delete problem solutions
+		{
+			auto stmt = mysql.prepare("SELECT id FROM submissions"
+				" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR);
+			stmt.bindAndExecute(problem_id);
+			InplaceBuff<20> submission_id;
+			stmt.res_bind_all(submission_id);
+			while (stmt.next())
+				submission::delete_submission(mysql, submission_id);
+		}
+
+		// Collect update finals
+		std::deque<std::array<MySQL::Optional<int64_t>, 2>> finals_to_update;
+		{
+			auto stmt = mysql.prepare("SELECT DISTINCT owner, contest_problem_id"
+				" FROM submissions WHERE problem_id=?");
+			stmt.bindAndExecute(problem_id);
+			std::array<MySQL::Optional<int64_t>, 2> ftu_elem {};
+			stmt.res_bind_all(ftu_elem[0], ftu_elem[1]);
+			while (stmt.next())
+				finals_to_update.emplace_back(ftu_elem);
+		}
+
+		// Schedule rejudge of the transferred submissions
+		if (info.rejudge_transferred_submissions) {
+			// Safe as the jobs table is locked and jobs server won't read the jobs
+			auto stmt = mysql.prepare("INSERT INTO jobs(creator, status,"
+					" priority, type, added, aux_id, info, data)"
+				" SELECT NULL, " JSTATUS_PENDING_STR ", ?, "
+					JTYPE_JUDGE_SUBMISSION_STR ", ?, id, ?, ''"
+				" FROM submissions WHERE problem_id=? ORDER BY id");
+			stmt.bindAndExecute(
+				priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
+				mysql_date(),
+				jobs::dumpString(intentionalUnsafeStringView(toStr(info.target_problem_id))),
+				problem_id);
+		}
+
+		// Transfer problem submissions that are not problem solutions
+		{
+			auto stmt = mysql.prepare("UPDATE submissions SET problem_id=?"
+				" WHERE problem_id=?");
+			stmt.bindAndExecute(info.target_problem_id, problem_id);
+		}
+
+		// Update finals
+		for (auto const& ftu_elem : finals_to_update) {
+			InplaceBuff<32> owner, contest_problem_id;
+			if (ftu_elem[0].has_value())
+				owner = toStr(*ftu_elem[0]);
+			if (ftu_elem[1].has_value())
+				contest_problem_id = toStr(*ftu_elem[1]);
+
+			submission::update_final(mysql, owner,
+				intentionalUnsafeStringView(toStr(info.target_problem_id)),
+				contest_problem_id);
+		}
+	}
+
+	// Transfer problem tags
+	auto stmt = mysql.prepare("UPDATE IGNORE problem_tags SET problem_id=? WHERE problem_id=?");
+	stmt.bindAndExecute(info.target_problem_id, problem_id);
+	// Duplicates will not be updated or removed, so we need to delete them
+	stmt = mysql.prepare("DELETE FROM problem_tags WHERE problem_id=?");
+	stmt.bindAndExecute(problem_id);
+
+	// Finally, delete the problem
+	stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 	stmt.bindAndExecute(problem_id);
 
 	// Delete problem's files

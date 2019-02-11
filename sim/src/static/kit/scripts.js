@@ -1028,13 +1028,14 @@ function a_view_button(href, text, classes, func) {
 	};
 	return a;
 }
-function delete_with_password_to_job(elem, title, api_url, message_html, confirm_text) {
+function api_request_with_password_to_job(elem, title, api_url, message_html, confirm_text, success_msg, form_elements) {
 	var as_modal = elem.closest('.modal').length !== 0;
 	elem.append(ajax_form(title, api_url,
 		$('<p>', {
 			style: 'margin: 0 0 20px; text-align: center; max-width: 420px',
 			html: message_html
-		}).add(Form.field_group('Your password', {
+		}).add(form_elements)
+		.add(Form.field_group('Your password', {
 			type: 'password',
 			name: 'password',
 			size: 24,
@@ -1057,7 +1058,7 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 			})
 		}), function(resp, loader_parent) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Deletion has been scheduled.');
+				show_success_via_loader(this, success_msg);
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -1065,6 +1066,9 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 			}
 		}
 	));
+}
+function delete_with_password_to_job(elem, title, api_url, message_html, confirm_text) {
+	return api_request_with_password_to_job(elem, title, api_url, message_html, confirm_text, 'Deletion has been scheduled.');
 }
 
 /* ================================= Lister ================================= */
@@ -1590,6 +1594,10 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 			'Reset time limits', 'btn-small blue',
 			reset_problem_time_limits.bind(null, true, problem.id)));
 
+	if (problem_view && problem.actions.indexOf('M') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/merge', 'Merge',
+			'btn-small red', merge_problem.bind(null, true, problem.id)));
+
 	return res;
 };
 
@@ -2087,7 +2095,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				else if (name == "user")
 					td.append(a_view_button('/u/' + info[name], info[name],
 						undefined, view_user.bind(null, true, info[name])));
-				else if (name == "problem")
+				else if (name == "problem" || name == "deleted problem" || name == "target problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
 						undefined, view_problem.bind(null, true, info[name])));
 				else if (name == "contest")
@@ -2269,6 +2277,18 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 						a_view_button('/p/' + info.problem,
 							info.problem, undefined,
 							view_problem.bind(null, true, info.problem)));
+
+				if (info['deleted problem'] !== undefined)
+					append_tag('deleted problem',
+						a_view_button('/c/p' + info['deleted problem'],
+							info['deleted problem'], undefined,
+							view_problem.bind(null, true, info['deleted problem'])));
+
+				if (info['target problem'] !== undefined)
+					append_tag('target problem',
+						a_view_button('/c/p' + info['target problem'],
+							info['target problem'], undefined,
+							view_problem.bind(null, true, info['target problem'])));
 
 				if (info.contest !== undefined)
 					append_tag('contest',
@@ -3206,9 +3226,45 @@ function delete_problem(as_modal, problem_id) {
 				'You are going to delete the problem ',
 				a_view_button('/p/' + problem.id, problem.name,
 					undefined, view_problem.bind(null, true, problem.id)),
-				' and all submissions to it. As it cannot be undone, you have to confirm it with your password.'
+				' and all submissions to it. As this cannot be undone, you have to confirm this with your password.'
 			], 'Delete problem');
 	}, '/p/' + problem_id + '/delete');
+}
+function merge_problem(as_modal, problem_id) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+		var problem = data[0];
+		if (problem.actions.indexOf('M') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		api_request_with_password_to_job(this, 'Merge into another problem',
+			'/api/problem/' + problem_id + '/merge_into_another', [
+				'The problem ',
+				a_view_button('/p/' + problem.id, problem.name,
+					undefined, view_problem.bind(null, true, problem.id)),
+				' is going to be deleted. All its tags and submissions will be transfered to the target problem. Every contest problem that attaches this problem will be updated to attach the target problem.',
+				'<br>',
+				'Be aware that problem packages will not be merged - this behaves exactly as problem deletion but first transfers everything that uses this problem to use the target problem.',
+				'<br>',
+				'As this cannot be undone, you have to confirm this with your password.'
+			], 'Merge problem', 'Merging has been scheduled.',
+			Form.field_group('Target problem ID', {
+				type: 'text',
+				name: 'target_problem',
+				size: 6
+			}).add(Form.field_group('Rejudge transferred submissions', {
+				type: 'checkbox',
+				name: 'rejudge_transferred_submissions'
+			})));
+	}, '/p/' + problem_id + '/merge');
 }
 function rejudge_problem_submissions(problem_id, problem_name) {
 	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {

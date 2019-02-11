@@ -284,6 +284,7 @@ enum class JobType : uint8_t {
 	DELETE_CONTEST_ROUND = 11,
 	DELETE_CONTEST_PROBLEM = 12,
 	RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION = 13,
+	MERGE_PROBLEMS = 14,
 };
 
 #define JTYPE_VOID_STR "0"
@@ -356,6 +357,11 @@ static_assert(meta::equal(JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_S
 	meta::ToString<(int)JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION>::value),
 	"Update the above #define");
 
+#define JTYPE_MERGE_PROBLEMS_STR "14"
+static_assert(meta::equal(JTYPE_MERGE_PROBLEMS_STR,
+	meta::ToString<(int)JobType::MERGE_PROBLEMS>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
@@ -376,6 +382,7 @@ constexpr inline const char* toString(JobType x) {
 	case JT::DELETE_CONTEST_PROBLEM: return "DELETE_CONTEST_PROBLEM";
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		return "RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION";
+	case JT::MERGE_PROBLEMS: return "MERGE_PROBLEMS";
 	}
 	return "Unknown";
 }
@@ -390,6 +397,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::EDIT_PROBLEM: return true;
 	case JT::DELETE_PROBLEM: return true;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
+	case JT::MERGE_PROBLEMS: return true;
 	case JT::JUDGE_SUBMISSION: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
 	case JT::DELETE_USER: return false;
@@ -417,6 +425,7 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::DELETE_CONTEST_ROUND: return false;
 	case JT::DELETE_CONTEST_PROBLEM: return false;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return false;
+	case JT::MERGE_PROBLEMS: return false;
 	case JT::VOID: return false;
 	}
 	return false;
@@ -432,6 +441,7 @@ constexpr inline uint priority(JobType x) {
 	case JT::DELETE_CONTEST: return 30;
 	case JT::DELETE_CONTEST_ROUND: return 30;
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
+	case JT::MERGE_PROBLEMS: return 25;
 	case JT::EDIT_PROBLEM: return 20;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;

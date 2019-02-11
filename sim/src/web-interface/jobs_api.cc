@@ -22,6 +22,8 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 	case JT::DELETE_CONTEST_PROBLEM: return "Delete contest problem";
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		return "Reset problem time limits using model solution";
+	case JT::MERGE_PROBLEMS:
+		return "Merge problems";
 	case JT::VOID: return "Void";
 	}
 
@@ -293,6 +295,15 @@ void Sim::api_jobs() {
 
 		case JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: {
 			append("\"problem\":", res[AUX_ID]);
+			break;
+		}
+
+		case JobType::MERGE_PROBLEMS: {
+			append("\"deleted problem\":", res[AUX_ID]);
+			jobs::MergeProblemsInfo info(res[JINFO]);
+			append(",\"target problem\":", info.target_problem_id);
+			append(",\"rejudge transferred submissions\":",
+				info.rejudge_transferred_submissions ? "\"yes\"" : "\"no\"");
 			break;
 		}
 
