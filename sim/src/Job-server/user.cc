@@ -4,6 +4,30 @@
 #include <sim/submission.h>
 
 void delete_user(uint64_t job_id, StringView user_id) {
+	InplaceBuff<256> job_log;
+
+	auto set_failure = [&](auto&&... args) {
+		job_log.append(std::forward<decltype(args)>(args)...);
+		auto stmt = mysql.prepare("UPDATE jobs"
+			" SET status=" JSTATUS_FAILED_STR ", data=?"
+			" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.bindAndExecute(job_log, job_id);
+
+		stdlog("Job ", job_id, ":\n", job_log);
+	};
+
+	// Log some info about the deleted user
+	{
+		auto stmt = mysql.prepare("SELECT username FROM users WHERE id=?");
+		stmt.bindAndExecute(user_id);
+		InplaceBuff<32> username;
+		stmt.res_bind_all(username);
+		if (not stmt.next())
+			return set_failure("User with id: ", user_id, " does not exist");
+
+		job_log.append("username: ", username, "\n");
+	}
+
 	// Run deletion twice - because race condition may occur and e.g. user may
 	// add submission after the submissions were deleted (thus it would not be
 	// deleted). Other order e.g. removing contest first would expose corrupted
@@ -44,6 +68,6 @@ void delete_user(uint64_t job_id, StringView user_id) {
 	}
 
 	auto stmt = mysql.prepare("UPDATE jobs"
-		" SET status=" JSTATUS_DONE_STR ", data='' WHERE id=?");
-	stmt.bindAndExecute(job_id);
+		" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
+	stmt.bindAndExecute(job_log, job_id);
 }

@@ -604,19 +604,34 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 		});
 
 		// Check whether the problem is not used as contest problem
-		auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
-			" WHERE problem_id=? LIMIT 1");
-		stmt.bindAndExecute(problem_id);
-		if (stmt.next()) {
-			lock_guard.call_and_cancel();
-			return set_failure("There exists a contest problem that uses"
-				" (attaches) this problem. You have to delete all of them to be"
-				" able to delete this problem.");
+		{
+			auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
+				" WHERE problem_id=? LIMIT 1");
+			stmt.bindAndExecute(problem_id);
+			if (stmt.next()) {
+				lock_guard.call_and_cancel();
+				return set_failure("There exists a contest problem that uses"
+					" (attaches) this problem. You have to delete all of them"
+					" to be able to delete this problem.");
+			}
+		}
+
+		// Assure that the problems exist and log its Simfile
+		{
+			auto stmt = mysql.prepare("SELECT simfile FROM problems"
+				" WHERE id=? AND type!=" PTYPE_VOID_STR);
+			stmt.bindAndExecute(problem_id);
+			InplaceBuff<1> simfile;
+			stmt.res_bind_all(simfile);
+			if (not stmt.next())
+				return set_failure("Problem does not exist");
+
+			job_log.append("Deleted problem Simfile:\n", simfile);
 		}
 
 		// Delete submissions
 		{
-			stmt = mysql.prepare("SELECT id FROM submissions"
+			auto stmt = mysql.prepare("SELECT id FROM submissions"
 				" WHERE problem_id=?");
 			stmt.bindAndExecute(problem_id);
 			InplaceBuff<20> submission_id;
@@ -625,7 +640,7 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 				submission::delete_submission(mysql, submission_id);
 		}
 
-		stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
+		auto stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
 		stmt.bindAndExecute(problem_id);
 	}
 
@@ -678,6 +693,8 @@ void merge_problem_into_another(uint64_t job_id, StringView problem_id,
 
 			job_log.append("Merged problem Simfile:\n", simfile);
 
+			stmt = mysql.prepare("SELECT 1 FROM problems"
+				" WHERE id=? AND type!=" PTYPE_VOID_STR);
 			stmt.bindAndExecute(info.target_problem_id);
 			if (not stmt.next())
 				return set_failure("Target problem does not exist");
