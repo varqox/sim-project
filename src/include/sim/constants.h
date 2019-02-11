@@ -66,6 +66,7 @@ constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
 constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
+constexpr uint64_t PROBLEM_MAX_TIME_LIMIT = 30e6; // 30 s [us]
 
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
