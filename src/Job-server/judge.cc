@@ -22,7 +22,7 @@ inline static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang) {
 		std::underlying_type_t<SubmissionLanguage>(lang));
 }
 
-void judge_submission(uint64_t job_id, StringView submission_id,
+void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 	StringView job_creation_time)
 {
 	STACK_UNWINDING_MARK;

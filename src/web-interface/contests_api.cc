@@ -932,11 +932,11 @@ void Sim::api_contest_problem_rejudge_all_submissions(StringView problem_id) {
 
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
 			" added, aux_id, info, data)"
-		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
+		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_REJUDGE_SUBMISSION_STR
 			", ?, id, ?, ''"
 		" FROM submissions WHERE contest_problem_id=? ORDER BY id");
 	stmt.bindAndExecute(session_user_id,
-		priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
+		priority(JobType::REJUDGE_SUBMISSION),
 		mysql_date(), jobs::dumpString(problem_id), contests_cpid);
 
 	jobs::notify_job_server();

@@ -736,10 +736,10 @@ void merge_problem_into_another(uint64_t job_id, StringView problem_id,
 			auto stmt = mysql.prepare("INSERT INTO jobs(creator, status,"
 					" priority, type, added, aux_id, info, data)"
 				" SELECT NULL, " JSTATUS_PENDING_STR ", ?, "
-					JTYPE_JUDGE_SUBMISSION_STR ", ?, id, ?, ''"
+					JTYPE_REJUDGE_SUBMISSION_STR ", ?, id, ?, ''"
 				" FROM submissions WHERE problem_id=? ORDER BY id");
 			stmt.bindAndExecute(
-				priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
+				priority(JobType::REJUDGE_SUBMISSION),
 				mysql_date(),
 				jobs::dumpString(intentionalUnsafeStringView(toStr(info.target_problem_id))),
 				problem_id);

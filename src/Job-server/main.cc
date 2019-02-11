@@ -185,8 +185,8 @@ public:
 
 				// Assign job to its category
 				switch (jtype) {
-				// Judge job
 				case JT::JUDGE_SUBMISSION:
+				case JT::REJUDGE_SUBMISSION:
 					queue_job(judge_jobs, strtoull(intentionalUnsafeStringView(
 						jobs::extractDumpedString(info))), false);
 					break;
@@ -745,6 +745,7 @@ static void process_local_job(WorkersPool::NextJob job) {
 
 		case JT::VOID:
 		case JT::JUDGE_SUBMISSION:
+		case JT::REJUDGE_SUBMISSION:
 		case JT::ADD_JUDGE_MODEL_SOLUTION:
 		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
 		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
@@ -813,7 +814,8 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		using JT = JobType;
 		switch (jtype) {
 		case JT::JUDGE_SUBMISSION:
-			judge_submission(job.id, aux_id, added);
+		case JT::REJUDGE_SUBMISSION:
+			judge_or_rejudge_submission(job.id, aux_id, added);
 			break;
 
 		case JT::ADD_JUDGE_MODEL_SOLUTION:

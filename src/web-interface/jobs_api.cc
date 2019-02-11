@@ -7,6 +7,7 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 
 	switch (type) {
 	case JT::JUDGE_SUBMISSION: return "Judge submission";
+	case JT::REJUDGE_SUBMISSION: return "Rejudge submission";
 	case JT::ADD_PROBLEM: return "Add problem";
 	case JT::REUPLOAD_PROBLEM: return "Reupload problem";
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return "Add problem - set limits";
@@ -149,8 +150,9 @@ void Sim::api_jobs() {
 			granted_perms |= jobs_granted_permissions_submission(arg_id);
 			allow_access |= (granted_perms != PERM::NONE);
 
-			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type="
-				JTYPE_JUDGE_SUBMISSION_STR);
+			qwhere.append(" AND j.aux_id=", arg_id, " AND (j.type="
+				JTYPE_JUDGE_SUBMISSION_STR " OR j.type="
+				JTYPE_REJUDGE_SUBMISSION_STR ")");
 
 			mask |= AUX_ID_COND;
 
@@ -214,7 +216,8 @@ void Sim::api_jobs() {
 		append('{');
 
 		switch (job_type) {
-		case JobType::JUDGE_SUBMISSION: {
+		case JobType::JUDGE_SUBMISSION:
+		case JobType::REJUDGE_SUBMISSION: {
 			append("\"problem\":", jobs::extractDumpedString(res[JINFO]));
 			append(",\"submission\":", res[AUX_ID]);
 			break;
