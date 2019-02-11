@@ -99,7 +99,7 @@ struct AddProblemInfo {
 			extractDumpedInt<std::underlying_type_t<Stage>>(str));
 	}
 
-	std::string dump() {
+	std::string dump() const {
 		std::string res;
 		appendDumpedString(res, name);
 		appendDumpedString(res, label);
@@ -112,6 +112,31 @@ struct AddProblemInfo {
 
 		appendDumpedInt(res, std::underlying_type_t<ProblemType>(problem_type));
 		appendDumpedInt<std::underlying_type_t<Stage>>(res, stage);
+		return res;
+	}
+};
+
+struct MergeProblemsInfo {
+	uint64_t target_problem_id;
+	bool rejudge_transferred_submissions;
+
+	MergeProblemsInfo() = default;
+
+	MergeProblemsInfo(uint64_t tpid, bool rts) noexcept : target_problem_id(tpid), rejudge_transferred_submissions(rts) {}
+
+	MergeProblemsInfo(StringView str) {
+		extractDumpedInt(target_problem_id, str);
+
+		auto mask = extractDumpedInt<uint8_t>(str);
+		rejudge_transferred_submissions = (mask & 1);
+	}
+
+	std::string dump() {
+		std::string res;
+		appendDumpedInt(res, target_problem_id);
+
+		uint8_t mask = rejudge_transferred_submissions;
+		appendDumpedInt(res, mask);
 		return res;
 	}
 };

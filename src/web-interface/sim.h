@@ -125,6 +125,8 @@ private:
 
 	void api_problem_delete();
 
+	void api_problem_merge_into_another();
+
 	void api_problem_attaching_contest_problems();
 
 	// users_api.cc
@@ -580,6 +582,7 @@ public:
 		EDIT_TAGS = 1 << 14,
 		EDIT_HIDDEN_TAGS = 1 << 15,
 		DELETE = EDIT,
+		MERGE = DELETE,
 		VIEW_ATTACHING_CONTEST_PROBLEMS = DELETE,
 	};
 

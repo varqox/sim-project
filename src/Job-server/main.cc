@@ -207,6 +207,7 @@ public:
 				case JT::REUPLOAD_PROBLEM:
 				case JT::EDIT_PROBLEM:
 				case JT::DELETE_PROBLEM:
+				case JT::MERGE_PROBLEMS:
 					queue_job(problem_jobs, aux_id, true);
 					break;
 
@@ -718,6 +719,10 @@ static void process_local_job(WorkersPool::NextJob job) {
 			delete_problem(job.id, aux_id);
 			break;
 
+		case JT::MERGE_PROBLEMS:
+			merge_problem_into_another(job.id, aux_id, jobs::MergeProblemsInfo(info));
+			break;
+
 		case JT::DELETE_USER:
 			delete_user(job.id, aux_id);
 			break;
@@ -835,6 +840,7 @@ static void process_judge_job(WorkersPool::NextJob job) {
 		case JT::DELETE_CONTEST:
 		case JT::DELETE_CONTEST_ROUND:
 		case JT::DELETE_CONTEST_PROBLEM:
+		case JT::MERGE_PROBLEMS:
 			THROW("Unexpected judge job type: ", toString(JT(jtype)));
 		}
 

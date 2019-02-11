@@ -217,6 +217,8 @@ void Sim::api_problems() {
 			append('H');
 		if (uint(perms & PERM::DELETE))
 			append('D');
+		if (uint(perms & PERM::MERGE))
+			append('M');
 		if (uint(perms & PERM::VIEW_ATTACHING_CONTEST_PROBLEMS))
 			append('c');
 		append("\",");
@@ -290,7 +292,7 @@ void Sim::api_problem() {
 	EnumVal<ProblemType> ptype;
 
 	auto stmt = mysql.prepare("SELECT owner, type, label, simfile FROM problems"
-		" WHERE id=?");
+		" WHERE id=? AND type!=" PTYPE_VOID_STR);
 	stmt.bindAndExecute(problems_pid);
 	stmt.res_bind_all(powner, ptype, plabel, simfile);
 	if (not stmt.next())
@@ -313,6 +315,8 @@ void Sim::api_problem() {
 		return api_problem_edit();
 	else if (next_arg == "delete")
 		return api_problem_delete();
+	else if (next_arg == "merge_into_another")
+		return api_problem_merge_into_another();
 	else if (next_arg == "attaching_contest_problems")
 		return api_problem_attaching_contest_problems();
 	else
@@ -521,6 +525,59 @@ void Sim::api_problem_delete() {
 			" ?, ?, '', '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_PROBLEM),
 		mysql_date(), problems_pid);
+
+	jobs::notify_job_server();
+
+	append(stmt.insert_id());
+}
+
+void Sim::api_problem_merge_into_another() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::MERGE))
+		return api_error403();
+
+	InplaceBuff<32> target_problem_id;
+	bool rejudge_transferred_submissions = request.form_data.exist("rejudge_transferred_submissions");
+	form_validate_not_blank(target_problem_id, "target_problem",
+		"Target problem ID",
+		isDigitNotGreaterThan<std::numeric_limits<
+			decltype(jobs::MergeProblemsInfo::target_problem_id)>::max()>);
+
+	if (problems_pid == target_problem_id)
+		return api_error400("You cannot merge problem with itself");
+
+	if (notifications.size)
+		return api_error400(notifications);
+
+	auto stmt = mysql.prepare("SELECT owner, type FROM problems"
+		" WHERE id=? AND type!=" PTYPE_VOID_STR);
+	stmt.bindAndExecute(target_problem_id);
+
+	InplaceBuff<32> tp_owner;
+	EnumVal<ProblemType> tp_type;
+	stmt.res_bind_all(tp_owner, tp_type);
+
+	if (not stmt.next())
+		return api_error400("Target problem does not exist");
+
+	ProblemPermissions tp_perms = problems_get_permissions(tp_owner, tp_type);
+	if (uint(~tp_perms & PERM::MERGE))
+		return api_error403("You do not have permission to merge to the target problem");
+
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue deleting job
+	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_MERGE_PROBLEMS_STR ","
+			" ?, ?, ?, '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::MERGE_PROBLEMS),
+		mysql_date(), problems_pid,
+		jobs::MergeProblemsInfo(strtoull(target_problem_id),
+			rejudge_transferred_submissions).dump());
 
 	jobs::notify_job_server();
 
