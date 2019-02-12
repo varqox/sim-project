@@ -1,3 +1,4 @@
+#include "../include/libzip.h"
 #include "../include/process.h"
 #include "../include/sim/conver.h"
 
@@ -121,10 +122,8 @@ TEST (Conver, constructSimfile) {
 					THROW("failed to compile checker: \n", compilation_errors);
 
 				TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-				writeAll(sol_src, intentionalUnsafeStringView(
-					extract_file_from_zip(package_copy.path(),
-						intentionalUnsafeStringView(concat(cres.pkg_master_dir,
-							cres.simfile.solutions[0])))));
+				ZipFile zip(package_copy.path());
+				zip.extract_to_fd(zip.get_index(concat(cres.pkg_master_dir, cres.simfile.solutions[0])), sol_src);
 
 				if (jworker.compileSolution(sol_src.path(),
 					sim::filename_to_lang(cres.simfile.solutions[0]), {5, 0},

@@ -65,7 +65,7 @@ SIMLIB_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_TEST_SRCS))
 $(SIMLIB_TEST_OBJS): override EXTRA_CXX_FLAGS += -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include'
 
 $(PREFIX)test/exec: $(SIMLIB_TEST_OBJS) $(PREFIX)simlib.a $(PREFIX)gtest_main.a
-	$(LINK) -lrt -larchive -pthread -lseccomp
+	$(LINK) -lrt -pthread -lseccomp -lzip
 
 .PHONY: $(PREFIX)test
 $(PREFIX)test: $(PREFIX)test/exec

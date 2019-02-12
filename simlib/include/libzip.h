@@ -214,7 +214,7 @@ public:
 		return res;
 	}
 
-	void extract_to_fd(index_t index, FileDescriptor& fd) {
+	void extract_to_fd(index_t index, int fd) {
 		auto entry = get_entry(index);
 		for (;;) {
 			constexpr auto BUFF_SIZE = 1 << 16;
