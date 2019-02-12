@@ -2,7 +2,7 @@
 
 #include <sim/jobs.h>
 #include <sim/submission.h>
-#include <simlib/libarchive_zip.h>
+#include <simlib/libzip.h>
 #include <simlib/sim/conver.h>
 #include <simlib/sim/problem_package.h>
 #include <simlib/time.h>
@@ -81,10 +81,11 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 		auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
 		auto pkg_master_dir = sim::zip_package_master_dir(package_path);
 
-		jworker.loadPackage(package_path.to_string(),
-			extract_file_from_zip(package_path,
-				intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")))
-		);
+		{
+			ZipFile zip(package_path.to_string(), ZIP_RDONLY);
+			jworker.loadPackage(package_path.to_string(),
+				zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile"))));
+		}
 		tmplog(" done.");
 	}
 
@@ -388,8 +389,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 
 	string pkg_master_dir = sim::zip_package_master_dir(package_path);
 
-	string simfile_str = extract_file_from_zip(package_path,
-		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
+	ZipFile zip(package_path);
+	string simfile_str =
+		zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile simfile {simfile_str};
 	simfile.loadAll();
@@ -418,10 +420,8 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	// Compile the model solution
 	{
 		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		writeAll(sol_src, intentionalUnsafeStringView(
-			extract_file_from_zip(package_path,
-			intentionalUnsafeStringView(
-				concat(pkg_master_dir, simfile.solutions[0])))));
+		writeAll(sol_src, intentionalUnsafeStringView(zip.extract_to_str(
+			zip.get_index(concat(pkg_master_dir, simfile.solutions[0])))));
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
@@ -459,9 +459,10 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	}
 
 	// Put the Simfile in the package
-	update_add_data_to_zip(intentionalUnsafeStringView(simfile.dump()),
-		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")),
-		package_path);
+	simfile_str = simfile.dump();
+	zip.file_add(concat(pkg_master_dir, "Simfile"),
+		zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
+	zip.close();
 
 	auto stmt = mysql.prepare("UPDATE jobs"
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
@@ -506,8 +507,9 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
 	string pkg_master_dir = sim::zip_package_master_dir(package_path);
 
-	string simfile_str = extract_file_from_zip(package_path,
-		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
+	ZipFile zip(package_path);
+	string simfile_str =
+		zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile simfile {std::move(simfile_str)};
 	simfile.loadAll();
@@ -541,9 +543,7 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	// Compile the model solution
 	{
 		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		writeAll(sol_src, intentionalUnsafeStringView(extract_file_from_zip(package_path,
-			intentionalUnsafeStringView(
-				concat(pkg_master_dir, simfile.solutions[0])))));
+		writeAll(sol_src, intentionalUnsafeStringView(zip.extract_to_str(zip.get_index(concat(pkg_master_dir, simfile.solutions[0])))));
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
@@ -582,9 +582,10 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	}
 
 	// Put the Simfile in the package
-	update_add_data_to_zip(intentionalUnsafeStringView(simfile.dump()),
-		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")),
-		package_path);
+	simfile_str = simfile.dump();
+	zip.file_add(concat(pkg_master_dir, "Simfile"),
+		zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
+	zip.close();
 
 	auto stmt = mysql.prepare("UPDATE problems SET simfile=? WHERE id=?");
 	stmt.bindAndExecute(simfile.dump(), problem_id);

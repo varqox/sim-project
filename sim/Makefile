@@ -130,7 +130,7 @@ $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
 
 src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive -lseccomp
+	$(LINK) -lsupc++ -lrt -lseccomp -lzip
 
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \
@@ -186,7 +186,7 @@ src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(s
 src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
 
 src/sim-server: $(SIM_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive
+	$(LINK) -lsupc++ -lrt -lzip
 
 SIM_TEST_SRCS := \
 	test/jobs.cc
