@@ -420,8 +420,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	// Compile the model solution
 	{
 		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		writeAll(sol_src, intentionalUnsafeStringView(zip.extract_to_str(
-			zip.get_index(concat(pkg_master_dir, simfile.solutions[0])))));
+		zip.extract_to_fd(
+			zip.get_index(concat(pkg_master_dir, simfile.solutions[0])),
+			sol_src);
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
@@ -543,7 +544,9 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	// Compile the model solution
 	{
 		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		writeAll(sol_src, intentionalUnsafeStringView(zip.extract_to_str(zip.get_index(concat(pkg_master_dir, simfile.solutions[0])))));
+		zip.extract_to_fd(
+			zip.get_index(concat(pkg_master_dir, simfile.solutions[0])),
+			sol_src);
 
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
