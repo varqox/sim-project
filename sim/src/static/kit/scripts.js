@@ -1392,10 +1392,8 @@ function Logs(type, elem, auto_refresh_checkbox) {
 }
 function tab_logs_view(parent_elem) {
 	// Select job server log by default
-	if (url_hash_parser.next_arg() === '') {
-		url_hash_parser.append('#job_server');
-		window.location.hash += '#job_server';
-	}
+	if (url_hash_parser.next_arg() === '')
+		url_hash_parser.assign('#job_server');
 
 	parent_elem = $(parent_elem);
 	function retab(log_type, log_name) {
