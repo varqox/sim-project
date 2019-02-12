@@ -16,24 +16,24 @@ SIM is an open source platform for carrying out algorithmic contests
 - MariaDB client library (Debian packages: _libmariadbclient-dev_)
 - libseccomp (Debian packages: _libseccomp-dev_)
 - GNU/Make
-- libarchive
+- libzip
 
 #### Debian
 
   ```sh
-  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libarchive-dev make
+  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev make
   ```
 
 #### Ubuntu
 
   ```sh
-  sudo apt-get install g++-multilib mysql-server libmariadbclient-dev libseccomp-dev libarchive-dev make
+  sudo apt-get install g++-multilib mysql-server libmariadbclient-dev libseccomp-dev libzip-dev make
   ```
 
 #### Arch Linux
 
   ```sh
-  sudo pacman -S gcc mariadb mariadb-libs libseccomp libarchive make
+  sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip make
   sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
   sudo systemctl enable mariadb && sudo systemctl start mariadb
   ```

@@ -3,7 +3,7 @@
 #include <deque>
 #include <sim/jobs.h>
 #include <sim/submission.h>
-#include <simlib/libarchive_zip.h>
+#include <simlib/libzip.h>
 #include <simlib/process.h>
 #include <simlib/sim/conver.h>
 #include <simlib/sim/judge_worker.h>
@@ -92,9 +92,13 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	/* Advance the stage */
 
 	// Put the Simfile into the package
-	update_add_data_to_zip(intentionalUnsafeStringView(cr.simfile.dump()),
-		intentionalUnsafeStringView(concat(cr.pkg_master_dir, "Simfile")),
-		dest_package);
+	ZipFile zip(dest_package);
+	{
+		auto simfile_str = cr.simfile.dump();
+		zip.file_add(concat(cr.pkg_master_dir, "Simfile"),
+			zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
+		zip.close();
+	}
 
 	info.stage = AddProblemInfo::SECOND;
 
@@ -153,8 +157,9 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 	auto pkg_master_dir = sim::zip_package_master_dir(package_path);
 
 	// Load the Simfile
-	string simfile_str = extract_file_from_zip(package_path,
-		intentionalUnsafeStringView(concat(pkg_master_dir, "Simfile")));
+	ZipFile zip(package_path, ZIP_RDONLY);
+	string simfile_str =
+		zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile sf {simfile_str};
 	sf.loadName();
@@ -218,16 +223,6 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 
 	job_package_remover.cancel();
 
-	// Extract solutions
-	sim::PackageContents sol_paths;
-	for (auto&& sol : sf.solutions)
-		sol_paths.add_entry(pkg_master_dir, sol);
-
-	TemporaryDirectory tmp_dir("/tmp/job-server.XXXXXX");
-	extract_zip(package_dest, 0, [&](archive_entry* entry) {
-		return sol_paths.exists(archive_entry_pathname(entry));
-	}, tmp_dir.path());
-
 	auto fname_to_lang = [](StringView extension) {
 		auto lang = sim::filename_to_lang(extension);
 		switch (lang) {
@@ -261,12 +256,9 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		stmt.execute();
 		uint64_t submission_id = mysql.insert_id();
 
-		// Make solution's source code the submission's source code
-		if (copy(concat(tmp_dir.path(), pkg_master_dir, solution),
-			concat("solutions/", submission_id)))
-		{
-			THROW("Copying solution `", solution, "`: copy()", errmsg());
-		}
+		// Save the submission source code
+		zip.extract_to_file(zip.get_index(concat(pkg_master_dir, solution)),
+			concat("solutions/", submission_id));
 	}
 	job_log.append("Done.");
 

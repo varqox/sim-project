@@ -3,7 +3,7 @@
 #include <sim/jobs.h>
 #include <simlib/config_file.h>
 #include <simlib/filesystem.h>
-#include <simlib/libarchive_zip.h>
+#include <simlib/libzip.h>
 #include <simlib/sim/problem_package.h>
 
 static constexpr const char* proiblem_type_str(ProblemType type) noexcept {
@@ -438,12 +438,11 @@ void Sim::api_statement_impl(StringView problem_id, StringView problem_label,
 			http::quote(intentionalUnsafeStringView(
 				concat(problem_label, ext))));
 
-	// TODO: add some cache system for the statements
-
+	// TODO: maybe add some cache system for the statements?
 	auto package_zip = concat("problems/", problem_id, ".zip");
-	resp.content = extract_file_from_zip(package_zip,
-		intentionalUnsafeStringView(
-			concat(sim::zip_package_master_dir(package_zip), statement)));
+	ZipFile zip(package_zip, ZIP_RDONLY);
+	resp.content = zip.extract_to_str(zip.get_index(concat(
+		sim::zip_package_master_dir(package_zip), statement)));
 }
 
 void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
