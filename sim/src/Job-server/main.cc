@@ -651,24 +651,8 @@ static void spawn_worker(WorkersPool& wp) noexcept {
 	}
 }
 
-// A major BUG has been found in zip.h that makes it unsafe in multithreaded use
-// of files with relative paths (libarchive uses chdir(2) internally) thus job
-// server to remain stable as long as the libarchive is used must run one worker
-// at a time
-#define SERIALIZE_JOBS 1
-#if SERIALIZE_JOBS
-std::mutex blocker;
-#endif
-
 static void process_local_job(WorkersPool::NextJob job) {
 	STACK_UNWINDING_MARK;
-
-#if SERIALIZE_JOBS
-	blocker.lock();
-	auto serializer = make_call_in_destructor([]{
-		blocker.unlock();
-	});
-#endif
 
 	auto exit_procedures = [&job]{
 		EventsQueue::register_event([job]{
@@ -763,25 +747,8 @@ static void process_local_job(WorkersPool::NextJob job) {
 	exit_procedures();
 }
 
-// static void process_judge_job(WorkersPool::NextJob job) {
-//  STACK_UNWINDING_MARK;
-
-//  auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
-//  stmt.bindAndExecute(job.id);
-//  stdlog(pthread_self(), " got judge {", job.id, ", ", job.problem_id, '}');
-//  std::this_thread::sleep_for(std::chrono::seconds(3));
-//  pthread_exit(nullptr);
-// }
-
 static void process_judge_job(WorkersPool::NextJob job) {
 	STACK_UNWINDING_MARK;
-
-#if SERIALIZE_JOBS
-	blocker.lock();
-	auto serializer = make_call_in_destructor([]{
-		blocker.unlock();
-	});
-#endif
 
 	auto exit_procedures = [&job]{
 		EventsQueue::register_event([job]{
