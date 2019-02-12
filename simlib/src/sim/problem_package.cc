@@ -1,5 +1,5 @@
 #include "../../include/sim/problem_package.h"
-#include "../../include/libarchive_zip.h"
+#include "../../include/libzip.h"
 
 using std::string;
 
@@ -46,9 +46,11 @@ void PackageContents::load_from_directory(StringView pkg_path,
 }
 
 void PackageContents::load_from_zip(FilePath pkg_path) {
-	skim_zip(pkg_path, [&](archive_entry* entry) {
+	ZipFile zip(pkg_path, ZIP_RDONLY);
+	auto size = zip.entries_no();
+	for (zip_int64_t i = 0; i < size; ++i) {
 		// Check if entry contains ".." component
-		StringView epath = archive_entry_pathname(entry);
+		StringView epath = zip.get_name(i);
 		if (hasPrefix(epath, "../") or
 			epath.find("/../") != StringView::npos)
 		{
@@ -57,15 +59,16 @@ void PackageContents::load_from_zip(FilePath pkg_path) {
 		}
 
 		add_entry(epath);
-	});
+	}
 }
 
-template<class T>
-static string zip_package_master_dir_impl(T&& pkg) {
+string zip_package_master_dir(FilePath pkg_path) {
 	string res;
-	skim_zip(pkg, [&](archive_entry* entry) {
+	ZipFile zip(pkg_path, ZIP_RDONLY);
+	auto eno = zip.entries_no();
+	for (decltype(eno) i = 0; i < eno; ++i) {
+		StringView epath = zip.get_name(i);
 		// Check if entry contains ".." component
-		StringView epath = archive_entry_pathname(entry);
 		if (hasPrefix(epath, "../") or
 			epath.find("/../") != StringView::npos)
 		{
@@ -75,29 +78,18 @@ static string zip_package_master_dir_impl(T&& pkg) {
 
 		if (res.empty()) { // Init res
 			auto pos = epath.find('/');
-			if (pos == StringView::npos) {
-				res = "";
-				return false; // Break lookup
-			} else
-				res = epath.substr(0, pos + 1).to_string();
+			if (pos == StringView::npos)
+				return "";
 
-		} else if (not hasPrefix(epath, res)) {
-			res = "";
-			return false; // Break lookup
+			res = epath.substr(0, pos + 1).to_string();
+			continue;
 		}
 
-		return true; // Everything is ok
-	});
+		if (not hasPrefix(epath, res))
+			return "";
+	}
 
 	return res;
-}
-
-string zip_package_master_dir(FilePath pkg_path) {
-	return zip_package_master_dir_impl(pkg_path);
-}
-
-string zip_package_master_dir(int pkg_fd) {
-	return zip_package_master_dir_impl(pkg_fd);
 }
 
 } // namespace sim

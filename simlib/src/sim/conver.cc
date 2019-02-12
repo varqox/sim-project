@@ -1,11 +1,11 @@
 #include "../../include/debug.h"
+#include "../../include/libzip.h"
 #include "../../include/optional.h"
 #include "../../include/sim/conver.h"
 #include "../../include/sim/judge_worker.h"
 #include "../../include/sim/problem_package.h"
 #include "../../include/spawner.h"
 #include "../../include/utilities.h"
-#include "../../include/libarchive_zip.h"
 
 using std::pair;
 using std::string;
@@ -45,10 +45,13 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 	Simfile sf;
 	if (not opts.ignore_simfile and exists_in_pkg("Simfile")) {
 		try {
-			sf = Simfile(package_path_.back() == '/' ?
-				getFileContents(concat(package_path_, master_dir, "Simfile"))
-				: extract_file_from_zip(package_path_,
-					intentionalUnsafeStringView(concat(master_dir, "Simfile"))));
+			sf = Simfile([&] {
+				if (package_path_.back() == '/')
+					return getFileContents(concat(package_path_, master_dir, "Simfile"));
+
+				ZipFile zip(package_path_, ZIP_RDONLY);
+				return zip.extract_to_str(zip.get_index(concat(master_dir, "Simfile")));
+			}());
 		} catch (const ConfigFile::ParseError& e) {
 			THROW(concat_tostr("(Simfile) ", e.what(), '\n', e.diagnostics()));
 		}

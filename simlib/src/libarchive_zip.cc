@@ -2,6 +2,8 @@
 #include "../include/process.h"
 #include "../include/spawner.h"
 
+#if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
+
 template<class Func>
 static void update_add_file_to_zip_impl(Func&& apply_file,
 	StringView new_filename, FilePath zip_filename, bool easy_case = false)
@@ -106,3 +108,5 @@ void update_add_data_to_zip(StringView data, StringView new_filename,
 				putFileContents(dest_file, data);
 		}, new_filename, zip_filename);
 }
+
+#endif // __has_include

@@ -105,8 +105,4 @@ public:
 /// exist "" is returned
 std::string zip_package_master_dir(FilePath pkg_path);
 
-/// Finds master directory (with trailing '/') in @p pkg_path if such does not
-/// exist "" is returned
-std::string zip_package_master_dir(int pkg_fd);
-
 } // namespace sim

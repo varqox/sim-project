@@ -4,7 +4,6 @@
 #include "../filesystem.h"
 #include "../sandbox.h"
 #include "../utilities.h"
-#include "../libarchive_zip.h"
 #include "compile.h"
 #include "simfile.h"
 

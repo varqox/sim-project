@@ -1,3 +1,4 @@
+#include "../../include/libzip.h"
 #include "../../include/parsers.h"
 #include "../../include/sim/checker.h"
 #include "../../include/sim/judge_worker.h"
@@ -112,9 +113,17 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 			}
 
 		// Extract only the necessary files
-		extract_zip(pkg_root, 0, [&](archive_entry* entry) {
-			return pc.exists(archive_entry_pathname(entry));
-		}, intentionalUnsafeStringView(tmp_dir.path() + "package/"));
+		// TODO: find a way to extract files in the fly - e.g. during judging
+		ZipFile zip(pkg_root, ZIP_RDONLY);
+		auto eno = zip.entries_no();
+		for (decltype(eno) i = 0; i < eno; ++i) {
+			StringView ename = zip.get_name(i);
+			if (pc.exists(ename)) {
+				auto fpath = concat(tmp_dir.path(), "package/", ename);
+				create_subdirectories(fpath);
+				zip.extract_to_file(i, fpath);
+			}
+		}
 
 		// Update root, so it will be relative to the Simfile
 		pkg_root = concat_tostr(tmp_dir.path() + "package/", pkg_master_dir);
