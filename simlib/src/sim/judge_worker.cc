@@ -132,7 +132,7 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 	Sandbox sandbox;
 	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
 
-	FileDescriptor test_in(input_file, O_RDONLY | O_LARGEFILE);
+	FileDescriptor test_in(input_file, O_RDONLY);
 	if (test_in < 0)
 		THROW("Failed to open file `", input_file, '`', errmsg());
 
@@ -211,7 +211,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 			string test_in_path {pkg_root + test.in};
 			string test_out_path {pkg_root + test.out};
 
-			FileDescriptor test_in(test_in_path, O_RDONLY | O_LARGEFILE);
+			FileDescriptor test_in(test_in_path, O_RDONLY);
 			if (test_in < 0)
 				THROW("Failed to open file `", test_in_path, '`', errmsg());
 

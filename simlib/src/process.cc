@@ -133,7 +133,7 @@ string chdirToExecDir() {
 
 int8_t detectArchitecture(pid_t pid) {
 	auto filename = concat("/proc/", pid, "/exe");
-	FileDescriptor fd(filename, O_RDONLY | O_LARGEFILE);
+	FileDescriptor fd(filename, O_RDONLY);
 	if (fd == -1)
 		THROW("open('", filename, "')", errmsg());
 

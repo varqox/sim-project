@@ -118,7 +118,7 @@ int mkdir_r(string path, mode_t mode) noexcept {
  *   fdopendir(3)
  */
 static int __remove_rat(int dirfd, FilePath path) noexcept {
-	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY
+	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY
 		| O_NOFOLLOW);
 	if (fd == -1)
 		return unlinkat(dirfd, path, 0);
@@ -160,7 +160,7 @@ int remove_rat(int dirfd, FilePath path) noexcept {
 }
 
 int removeDirContents_at(int dirfd, FilePath pathname) noexcept {
-	int fd = openat(dirfd, pathname, O_RDONLY | O_LARGEFILE
+	int fd = openat(dirfd, pathname, O_RDONLY
 		| O_DIRECTORY | O_NOFOLLOW);
 	if (fd == -1)
 		return -1;
@@ -226,7 +226,7 @@ int blast(int infd, int outfd) noexcept {
 }
 
 int copy(FilePath src, FilePath dest, mode_t mode) noexcept {
-	int in = open(src, O_RDONLY | O_LARGEFILE);
+	int in = open(src, O_RDONLY);
 	if (in == -1)
 		return -1;
 
@@ -243,7 +243,7 @@ int copy(FilePath src, FilePath dest, mode_t mode) noexcept {
 }
 
 int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
-	int in = openat(dirfd1, src, O_RDONLY | O_LARGEFILE);
+	int in = openat(dirfd1, src, O_RDONLY);
 	if (in == -1)
 		return -1;
 
@@ -277,7 +277,7 @@ int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
 static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 	noexcept
 {
-	int src_fd = openat(dirfd1, src, O_RDONLY |	O_LARGEFILE
+	int src_fd = openat(dirfd1, src, O_RDONLY
 		| O_DIRECTORY);
 	if (src_fd == -1){
 		if (errno == ENOTDIR)
@@ -289,7 +289,7 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 	// Do not use src permissions
 	mkdirat(dirfd2, dest, S_0755);
 
-	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_LARGEFILE
+	int dest_fd = openat(dirfd2, dest, O_RDONLY
 		| O_DIRECTORY);
 	if (dest_fd == -1) {
 		sclose(src_fd);
@@ -520,7 +520,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 
 string getFileContents(FilePath file) {
 	FileDescriptor fd;
-	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', errmsg());
@@ -530,7 +530,7 @@ string getFileContents(FilePath file) {
 
 string getFileContents(FilePath file, off64_t beg, off64_t end) {
 	FileDescriptor fd;
-	while (fd.open(file, O_RDONLY | O_LARGEFILE) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', errmsg());
@@ -723,7 +723,7 @@ static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd, FilePath path) {
 
 	unique_ptr<Node> root {new Node({path.data(), len})}; // Exception approved
 
-	int fd = openat(dirfd, path, O_RDONLY | O_LARGEFILE | O_DIRECTORY);
+	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY);
 	if (fd == -1)
 		return root;
 
