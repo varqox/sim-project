@@ -6,6 +6,7 @@
 #include <fstream>
 #include <poll.h>
 #include <simlib/filesystem.h>
+#include <simlib/libzip.h>
 #include <simlib/process.h>
 #include <sys/inotify.h>
 
@@ -627,6 +628,11 @@ void SipPackage::compile_tex_files(bool watch) {
 		watch_tex_files(tex_files);
 }
 
+void progress_callback(zip_t*, double p, void*) {
+	stdlog("\033[2K\033[GZipping... Progress: ",
+		usecToSecStr(p * 100000000, 1, false), '%').flush_no_nl();
+}
+
 void SipPackage::archive_into_zip(CStringView dest_file) {
 	STACK_UNWINDING_MARK;
 
@@ -634,11 +640,23 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
 
 	// Create zip
 	{
-		DirectoryChanger dc("..");
-		compress_into_zip({dest_file.c_str()}, concat(dest_file, ".zip"));
+		ZipFile zip(concat("../", dest_file, ".zip"), ZIP_CREATE | ZIP_TRUNCATE);
+		zip_register_progress_callback_with_state(zip, 0.001, progress_callback, nullptr, nullptr);
+		sim::PackageContents pkg;
+		pkg.load_from_directory(".");
+		pkg.for_each_with_prefix("", [&](StringView path) {
+			auto name = concat(dest_file, '/', path);
+			if (name.back() == '/')
+				zip.dir_add(name);
+			else {
+				zip.file_add(name, zip.source_file(concat(path)));
+			}
+		});
+
+		zip.close();
 	}
 
-	stdlog(" done.");
+	stdlog("\033[2K\033[GZipping... done.");
 }
 
 void SipPackage::replace_variable_in_configfile(const ConfigFile& cf,

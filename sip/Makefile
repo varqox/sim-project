@@ -69,10 +69,10 @@ $(eval $(call load_dependencies, $(SIP_SRCS)))
 SIP_OBJS := $(call SRCS_TO_OBJS, $(SIP_SRCS))
 
 src/sip: $(SIP_OBJS) src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive -lseccomp
+	$(LINK) -lsupc++ -lrt -lzip -lseccomp
 
 src/sip-static: $(SIP_OBJS) src/lib/simlib/simlib.a
-	$(LINK) -lrt -larchive -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
+	$(LINK) -lrt -lzip -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
 
 # SIP_OBJS := $(SIP_OBJS)
 SIP_EXECS := src/sip src/sip-static
