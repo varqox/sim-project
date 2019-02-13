@@ -285,7 +285,7 @@ public:
 
 		source.zsource_ = nullptr;
 		if (compression_level > 0)
-			file_set_compression(res, ZIP_CM_DEFAULT, compression_level);
+			file_set_compression(res, ZIP_CM_DEFLATE, compression_level);
 
 		return res;
 	}
@@ -297,7 +297,7 @@ public:
 
 		source.zsource_ = nullptr;
 		if (compression_level > 0)
-			file_set_compression(index, ZIP_CM_DEFAULT, compression_level);
+			file_set_compression(index, ZIP_CM_DEFLATE, compression_level);
 	}
 
 	void file_rename(index_t index, FilePath name, zip_flags_t flags = 0) {
