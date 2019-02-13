@@ -1,4 +1,5 @@
 #include "../include/sandbox.h"
+#include "../include/process.h"
 
 #include <linux/version.h>
 #include <sys/ptrace.h>
@@ -924,7 +925,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	timespec cpu_time {};
 
 	// Set up timers
-	volatile bool tracee_timeouted = false;
+	std::atomic_bool tracee_timeouted(false);
 	auto timeouter = [&tracee_timeouted](pid_t pid) {
 		tracee_timeouted = true;
 		// Send SIGSTOP (SIGSTOP because it cannot be blocked and we can
@@ -932,8 +933,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// check for timeout, collect memory status and kill the process)
 		kill(-pid, SIGSTOP);
 	};
-	unique_ptr<Timer<decltype(timeouter)>> timer;
-	unique_ptr<CPUTimeMonitor<decltype(timeouter)>> cpu_timer;
+	unique_ptr<Timer> timer;
+	unique_ptr<CPUTimeMonitor> cpu_timer;
 
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
 		// Wait tracee_pid_ so that the CPU runtime will be accurate
@@ -976,10 +977,10 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 					tracee_vm_peak_ = get_tracee_vm_size();
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
 					// Fire timers
-					timer = make_unique<Timer<decltype(timeouter)>>(tracee_pid_,
+					timer = make_unique<Timer>(tracee_pid_,
 						opts.real_time_limit, timeouter);
-					cpu_timer = make_unique<CPUTimeMonitor<decltype(timeouter)>>(
-						tracee_pid_, opts.cpu_time_limit, timeouter);
+					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_,
+						opts.cpu_time_limit, timeouter);
 
 					continue; // Nothing more to do for the exec() event
 				}

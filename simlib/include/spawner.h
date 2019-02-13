@@ -3,6 +3,7 @@
 #include "filesystem.h"
 #include "time.h"
 
+#include <functional>
 #include <sys/resource.h>
 #include <sys/wait.h>
 
@@ -72,7 +73,8 @@ public:
 	 *     SIGRTMIN and SIGRTMIN + 1 and installs handlers for them. So be aware
 	 *     that using these signals while this function runs (in any thread) is
 	 *     not safe. Moreover if your program installed handler for the above
-	 *     signals, it must install them again after the function returns.
+	 *     signals, it must install them again after the function returns in
+	 *     all threads.
 	 *
 	 *
 	 * @param exec path to file will be executed
@@ -150,15 +152,16 @@ protected:
 	 * @param doBeforeExec function that is to be called before executing
 	 *   @p exec
 	 */
-	template<class Func>
 	static void run_child(FilePath exec,
 		const std::vector<std::string>& exec_args, const Options& opts, int fd,
-		Func doBeforeExec) noexcept;
+		std::function<void()> doBeforeExec) noexcept;
 
 	static void defaultTimeoutHandler(pid_t pid) { kill(-pid, SIGKILL); };
 
-	template<class TimeoutHandler>
 	class Timer {
+	public:
+		using TimeoutHandler = std::function<void(pid_t)>;
+
 	private:
 		struct Data {
 			pid_t pid;
@@ -171,80 +174,23 @@ protected:
 		timer_t timerid;
 		bool timer_is_active = false;
 
-		static void handle_timeout(int, siginfo_t* si, void*) noexcept {
-			int errnum = errno;
-			Data& data = *(Data*)si->si_value.sival_ptr;
-			try { data.timeouter(data.pid); } catch (...) {}
-			errno = errnum;
-		}
+		static void handle_timeout(int, siginfo_t* si, void*) noexcept;
 
-		void delete_timer() noexcept {
-			if (timer_is_active) {
-				timer_is_active = false;
-				(void)timer_delete(timerid);
-			}
-		}
+		void delete_timer() noexcept;
 
 	public:
-		Timer(pid_t pid, timespec time_limit, TimeoutHandler timeouter)
-			: data {pid, std::move(timeouter)}, tlimit(time_limit)
-		{
-			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
-				if (clock_gettime(CLOCK_MONOTONIC, &begin_point))
-					THROW("clock_gettime()", errmsg());
+		Timer(pid_t pid, timespec time_limit,
+			TimeoutHandler timeouter = defaultTimeoutHandler);
 
-			} else {
-				const int USED_SIGNAL = SIGRTMIN;
-
-				// Install (timeout) signal handler
-				struct sigaction sa;
-				sa.sa_flags = SA_SIGINFO | SA_RESTART;
-				sa.sa_sigaction = handle_timeout;
-				if (sigaction(USED_SIGNAL, &sa, nullptr))
-					THROW("signaction()", errmsg());
-
-				// Prepare timer
-				sigevent sev;
-				memset(&sev, 0, sizeof(sev));
-				sev.sigev_notify = SIGEV_SIGNAL;
-				sev.sigev_signo = USED_SIGNAL;
-				sev.sigev_value.sival_ptr = &data;
-				if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
-					THROW("timer_create()", errmsg());
-
-				timer_is_active = true;
-
-				// Arm timer
-				itimerspec its {{0, 0}, tlimit};
-				if (timer_settime(timerid, 0, &its, nullptr)) {
-					int errnum = errno;
-					delete_timer();
-					THROW("timer_settime()", errmsg(errnum));
-				}
-			}
-		}
-
-		timespec stop_and_get_runtime() {
-			if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
-				timespec end_point;
-				if (clock_gettime(CLOCK_MONOTONIC, &end_point))
-					THROW("clock_gettime()", errmsg());
-				return end_point - begin_point;
-			}
-
-			itimerspec its {{0, 0}, {0, 0}}, old;
-			if (timer_settime(timerid, 0, &its, &old))
-				THROW("timer_settime()", errmsg());
-
-			delete_timer();
-			return tlimit - old.it_value;
-		}
+		timespec stop_and_get_runtime();
 
 		~Timer() { delete_timer(); }
 	};
 
-	template<class TimeoutHandler>
 	class CPUTimeMonitor {
+	public:
+		using TimeoutHandler = std::function<void(pid_t)>;
+
 	private:
 		struct Data {
 			pid_t pid;
@@ -256,194 +202,16 @@ protected:
 		} data;
 		bool timer_is_active = false;
 
-		static void handler(int, siginfo_t* si, void*) noexcept {
-			int errnum = errno;
-
-			Data& data = *(Data*)si->si_value.sival_ptr;
-			timespec ts;
-			if (clock_gettime(data.cid, &ts) or ts >= data.cpu_abs_time_limit) {
-				// Failed to get time or cpu_time_limit expired
-				try { data.timeouter(data.pid); } catch (...) {}
-
-			} else {
-				// There is still time left
-				itimerspec its {
-					{0, 0},
-					meta::max(data.cpu_abs_time_limit - ts,
-						timespec{0, (int)0.01e9}) // Min. wait duration: 0.01 s
-				};
-				timer_settime(data.timerid, 0, &its, nullptr);
-			}
-
-			errno = errnum;
-		}
+		static void handler(int, siginfo_t* si, void*) noexcept;
 
 	public:
-		CPUTimeMonitor(pid_t pid, timespec cpu_time_limit, TimeoutHandler timeouter)
-			: data{pid, {}, cpu_time_limit, {}, {}, std::move(timeouter)}
-		{
-			if (clock_getcpuclockid(pid, &data.cid))
-				THROW("clock_getcpuclockid()", errmsg());
+		CPUTimeMonitor(pid_t pid, timespec cpu_time_limit,
+			TimeoutHandler timeouter = defaultTimeoutHandler);
 
-			if (clock_gettime(data.cid, &data.cpu_time_at_start))
-				THROW("clock_gettime()", errmsg());
+		void deactivate() noexcept;
 
-			if (cpu_time_limit == timespec{0, 0})
-				return; // No limit is set - nothing to do
-
-			// Update the cpu_abs_time_limit to reflect cpu_time_at_start
-			data.cpu_abs_time_limit += data.cpu_time_at_start;
-
-			const int USED_SIGNAL = SIGRTMIN + 1;
-
-			struct sigaction sa;
-			sa.sa_flags = SA_SIGINFO | SA_RESTART;
-			sa.sa_sigaction = handler;
-			sigfillset(&sa.sa_mask); // Prevent interrupting
-			if (sigaction(USED_SIGNAL, &sa, nullptr))
-				THROW("sigaction()", errmsg());
-
-			// Prepare timer
-			sigevent sev;
-			memset(&sev, 0, sizeof(sev));
-			sev.sigev_notify = SIGEV_SIGNAL;
-			sev.sigev_signo = USED_SIGNAL;
-			sev.sigev_value.sival_ptr = &data;
-			if (timer_create(CLOCK_MONOTONIC, &sev, &data.timerid))
-				THROW("timer_create()", errmsg());
-
-			timer_is_active = true;
-
-			itimerspec its {{0, 0}, cpu_time_limit};
-			if (timer_settime(data.timerid, 0, &its, nullptr)) {
-				int errnum = errno;
-				deactivate();
-				THROW("timer_settime()", errmsg(errnum));
-			}
-		}
-
-		void deactivate() noexcept {
-			if (timer_is_active) {
-				timer_is_active = false;
-				timer_delete(data.timerid);
-			}
-		}
-
-		timespec get_cpu_runtime() {
-			timespec ts;
-			if (clock_gettime(data.cid, &ts))
-				THROW("clock_gettime()", errmsg());
-
-			return ts - data.cpu_time_at_start;
-		}
+		timespec get_cpu_runtime();
 
 		~CPUTimeMonitor() { deactivate(); }
 	};
 };
-
-/******************************* IMPLEMENTATION *******************************/
-
-template<class Func>
-void Spawner::run_child(FilePath exec,
-	const std::vector<std::string>& exec_args, const Options& opts, int fd,
-	Func doBeforeExec) noexcept
-{
-	// Sends error to parent
-	auto send_error_and_exit = [fd](int errnum, CStringView str) {
-		send_error_message_and_exit(fd, errnum, str);
-	};
-
-	// Create new process group (useful for killing the whole process group)
-	if (setpgid(0, 0))
-		send_error_and_exit(errno, "setpgid()");
-
-	// Convert exec_args
-	const size_t len = exec_args.size();
-	const char* args[len + 1];
-	args[len] = nullptr;
-
-	for (size_t i = 0; i < len; ++i)
-		args[i] = exec_args[i].c_str();
-
-	// Change working directory
-	if (not isOneOf(opts.working_dir, "", ".", "./")) {
-		if (chdir(opts.working_dir.c_str()) == -1)
-			send_error_and_exit(errno, "chdir()");
-	}
-
-	// Set virtual memory and stack size limit (to the same value)
-	if (opts.memory_limit > 0) {
-		struct rlimit limit;
-		limit.rlim_max = limit.rlim_cur = opts.memory_limit;
-		if (setrlimit(RLIMIT_AS, &limit))
-			send_error_and_exit(errno, "setrlimit(RLIMIT_AS)");
-		if (setrlimit(RLIMIT_STACK, &limit))
-			send_error_and_exit(errno, "setrlimit(RLIMIT_STACK)");
-	}
-
-	// Set CPU time limit [s]
-	// Limit below is useful when spawned process becomes orphaned
-	if (opts.cpu_time_limit > timespec{0, 0}) {
-		rlimit limit;
-		limit.rlim_cur = limit.rlim_max = opts.cpu_time_limit.tv_sec + 1 +
-			(opts.cpu_time_limit.tv_nsec >= 500000000); // + to avoid premature
-			                                            // death
-
-		if (setrlimit(RLIMIT_CPU, &limit))
-			send_error_and_exit(errno, "setrlimit(RLIMIT_CPU)");
-
-	// Limit below is useful when spawned process becomes orphaned
-	} else if (opts.real_time_limit.tv_sec or opts.real_time_limit.tv_nsec) {
-		rlimit limit;
-		limit.rlim_max = limit.rlim_cur =
-			opts.real_time_limit.tv_sec + 1 + // + to avoid premature death
-			(opts.real_time_limit.tv_nsec >= 500000000);
-
-		if (setrlimit(RLIMIT_CPU, &limit))
-			send_error_and_exit(errno, "setrlimit(RLIMIT_CPU)");
-	}
-
-	// Change stdin
-	if (opts.new_stdin_fd < 0)
-		sclose(STDIN_FILENO);
-
-	else if (opts.new_stdin_fd != STDIN_FILENO)
-		while (dup2(opts.new_stdin_fd, STDIN_FILENO) == -1)
-			if (errno != EINTR)
-				send_error_and_exit(errno, "dup2()");
-
-	// Change stdout
-	if (opts.new_stdout_fd < 0)
-		sclose(STDOUT_FILENO);
-
-	else if (opts.new_stdout_fd != STDOUT_FILENO)
-		while (dup2(opts.new_stdout_fd, STDOUT_FILENO) == -1)
-			if (errno != EINTR)
-				send_error_and_exit(errno, "dup2()");
-
-	// Change stderr
-	if (opts.new_stderr_fd < 0)
-		sclose(STDERR_FILENO);
-
-	else if (opts.new_stderr_fd != STDERR_FILENO)
-		while (dup2(opts.new_stderr_fd, STDERR_FILENO) == -1)
-			if (errno != EINTR)
-				send_error_and_exit(errno, "dup2()");
-
-	doBeforeExec();
-
-	// Signal parent process that child is ready to execute @p exec
-	kill(getpid(), SIGSTOP);
-
-	execvp(exec, (char** const)args);
-	int errnum = errno;
-
-	// execvp() failed
-	if (exec.size() <= PATH_MAX)
-		send_error_and_exit(errnum, intentionalUnsafeCStringView(
-			concat<PATH_MAX + 20>("execvp('", exec, "')")));
-	else
-		send_error_and_exit(errnum,	intentionalUnsafeCStringView(
-			concat<PATH_MAX + 20>("execvp('",
-				exec.to_cstr().substring(0, PATH_MAX), "...')")));
-}
