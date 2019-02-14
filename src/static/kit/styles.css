@@ -1964,6 +1964,7 @@ pre.logs .loader,
 pre.logs .loader-info {
 	position: absolute;
 	top: 0;
+	bottom: auto;
 	left: 50%;
 }
 pre.logs img.loader {
