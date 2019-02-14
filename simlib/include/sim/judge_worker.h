@@ -250,7 +250,8 @@ public:
 				return; // Checker was not run
 
 
-			tmplog(" [ RT: ", timespec_to_str(checker_es.runtime, 9, false), " ] ",
+			tmplog(" [ CPU: ", timespec_to_str(checker_es.cpu_runtime, 9, false),
+				" RT: ", timespec_to_str(checker_es.runtime, 9, false), " ] ",
 				checker_es.vm_peak >> 10, " / ", checker_mem_limit >> 10, " KB");
 		});
 	}

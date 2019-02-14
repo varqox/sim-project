@@ -1080,9 +1080,14 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			case CLD_EXITED:
 			case CLD_DUMPED:
 			case CLD_KILLED:
-				DEBUG_SANDBOX_VERBOSE_LOG("ENDED");
 				// Process terminated
 				get_cpu_time_and_wait_tracee(true);
+				DEBUG_SANDBOX_VERBOSE_LOG("ENDED -> [ RT: ",
+					timespec_to_str(runtime, 9, false), " ] [ CPU: ",
+					timespec_to_str(cpu_time, 9, false), " ]  VmPeak: ",
+					humanizeFileSize(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
+					"   ", message_to_set_in_exit_stat_);
+
 				goto tracee_died;
 			}
 		}
