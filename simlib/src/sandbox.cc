@@ -642,8 +642,6 @@ Sandbox::Sandbox() {
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(poll), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(ppoll), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(pselect6), 0);
-	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
-	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(readv), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(rt_sigaction), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(rt_sigpending), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(rt_sigprocmask), 0);
@@ -652,8 +650,6 @@ Sandbox::Sandbox() {
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(select), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(sendfile), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(time), 0);
-	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
-	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(writev), 0);
 	// Allowed syscalls (x86 architecture)
 	seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ALLOW, SCMP_SYS(_newselect), 0);
 	seccomp_rule_add_throw(x86_ctx_, SCMP_ACT_ALLOW, SCMP_SYS(getegid32), 0);
@@ -786,6 +782,51 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 
 #undef DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR
 #undef DISALLOW_ONLY_ON_STDIN_STDOUT_STDERR_BOTH_CTX
+
+#define DISALLOW_ONLY_ON_STDIN(arch_ctx, syscall, errno) \
+	seccomp_rule_add_throw(arch_ctx, \
+		(opts.new_stdin_fd < 0 ? SCMP_ACT_ALLOW : SCMP_ACT_ERRNO(errno)),\
+		SCMP_SYS(syscall), 1, SCMP_A0(SCMP_CMP_EQ, STDIN_FILENO)); \
+\
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+		SCMP_A0(SCMP_CMP_LT, STDIN_FILENO)); \
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+		SCMP_A0(SCMP_CMP_GT, STDIN_FILENO));
+
+#define DISALLOW_ONLY_ON_STDIN_BOTH_CTX(syscall, errno) \
+	DISALLOW_ONLY_ON_STDIN(x86_ctx_, syscall, errno); \
+	DISALLOW_ONLY_ON_STDIN(x86_64_ctx_, syscall, errno)
+
+			// Disallow writing to stdin
+			DISALLOW_ONLY_ON_STDIN_BOTH_CTX(write, EBADF);
+			DISALLOW_ONLY_ON_STDIN_BOTH_CTX(writev, EBADF);
+
+#undef DISALLOW_ONLY_ON_STDIN
+#undef DISALLOW_ONLY_ON_STDIN_BOTH_CTX
+
+#define DISALLOW_ONLY_ON_STDOUT_STDERR(arch_ctx, syscall, errno) \
+	seccomp_rule_add_throw(arch_ctx, \
+		(opts.new_stdout_fd < 0 ? SCMP_ACT_ALLOW : SCMP_ACT_ERRNO(errno)),\
+		SCMP_SYS(syscall), 1, SCMP_A0(SCMP_CMP_EQ, STDOUT_FILENO)); \
+	seccomp_rule_add_throw(arch_ctx, \
+		(opts.new_stderr_fd < 0 ? SCMP_ACT_ALLOW : SCMP_ACT_ERRNO(errno)),\
+		SCMP_SYS(syscall), 1, SCMP_A0(SCMP_CMP_EQ, STDERR_FILENO)); \
+\
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+		SCMP_A0(SCMP_CMP_LT, STDOUT_FILENO)); \
+	seccomp_rule_add_throw(arch_ctx, SCMP_ACT_ALLOW, SCMP_SYS(syscall), 1, \
+		SCMP_A0(SCMP_CMP_GT, STDERR_FILENO));
+
+#define DISALLOW_ONLY_ON_STDOUT_STDERR_BOTH_CTX(syscall, errno) \
+	DISALLOW_ONLY_ON_STDOUT_STDERR(x86_ctx_, syscall, errno); \
+	DISALLOW_ONLY_ON_STDOUT_STDERR(x86_64_ctx_, syscall, errno)
+
+			// Disallow reading from stdout and stderr
+			DISALLOW_ONLY_ON_STDOUT_STDERR_BOTH_CTX(read, EBADF);
+			DISALLOW_ONLY_ON_STDOUT_STDERR_BOTH_CTX(readv, EBADF);
+
+#undef DISALLOW_ONLY_ON_STDIN
+#undef DISALLOW_ONLY_ON_STDIN_BOTH_CTX
 
 			/* =============== Rules depending on tracee_pid_ =============== */
 			tracee_pid_ = getpid();

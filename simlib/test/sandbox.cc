@@ -429,4 +429,72 @@ TEST (Sandbox, run) {
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+
+	FileDescriptor dev_null("/dev/null", O_RDWR);
+	throw_assert(dev_null != -1);
+	Sandbox::Options rw_opts {
+		dev_null,
+		dev_null,
+		dev_null,
+		REAL_TIME_LIMIT,
+		MEM_LIMIT,
+		CPU_TIME_LIMIT
+	};
+
+	// Testing writing to open stdin
+	compile_test_case("21.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, rw_opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 1);
+	EXPECT_EQ(es.message, "exited with 1");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing writing to closed stdin
+	// compile_test_case("21.c"); // not needed
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 7);
+	EXPECT_EQ(es.message, "exited with 7");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing reading from open stdout and stderr
+	compile_test_case("22.c");
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, rw_opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 6);
+	EXPECT_EQ(es.message, "exited with 6");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
+
+	// Testing reading from closed stdout and stderr
+	// compile_test_case("22.c"); // not needed
+	stdlog("Test case: ", test_case++);
+	es = sandbox.run(exec, {}, opts);
+	EXPECT_EQ(es.si.code, CLD_EXITED);
+	EXPECT_EQ(es.si.status, 7);
+	EXPECT_EQ(es.message, "exited with 7");
+	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
+	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
+	EXPECT_LT(0, es.vm_peak);
+	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 }
