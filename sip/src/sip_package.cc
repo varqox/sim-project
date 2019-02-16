@@ -648,9 +648,8 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
 			auto name = concat(dest_file, '/', path);
 			if (name.back() == '/')
 				zip.dir_add(name);
-			else {
+			else
 				zip.file_add(name, zip.source_file(concat(path)));
-			}
 		});
 
 		zip.close();

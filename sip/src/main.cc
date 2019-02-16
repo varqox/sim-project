@@ -61,22 +61,43 @@ static void parseOptions(int &argc, char **argv) {
 static void kill_signal_handler(int signum) {
 	kill(0, signum); // Kill the whole process group
 
-	// Some process might have changed their group, the above kill would leave them alive
-	pid_t my_pid = getpid();
-	// Kill all children processes
-	forEachDirComponent("/proc/", [&](dirent* file) {
-	#ifdef _DIRENT_HAVE_D_TYPE
-		if (file->d_type == DT_DIR and isDigit(file->d_name)) {
-	#else
-		if (isDigit(file->d_name)) {
-	#endif
-			auto pid = strtoll(file->d_name);
-			if (intentionalUnsafeStringView(toStr(my_pid)) == intentionalUnsafeStringView(getProcStat(pid, 3))) // 3 means PPID
-				(void)kill(-pid, signum);
-		}
-	});
+	// print message: "Sip was just killed by signal %i - %s\n"
+	{
+		InplaceBuff<4096> buff("Sip was just killed by signal ");
+		buff.append(signum, " - ", sys_siglist[signum], '\n');
+		write(STDERR_FILENO, buff.data(), buff.size);
+	}
 
-	dprintf(STDERR_FILENO, "Sip was just killed by signal %i - %s\n", signum, sys_siglist[signum]);
+	auto zip_path_prefix = [] {
+		InplaceBuff<PATH_MAX + 16> path;
+		ssize_t rc = readlink("/proc/self/cwd", path.data(), PATH_MAX);
+		if (rc == -1)
+			return path; // Cannot read CWD
+
+		path.size = rc;
+		path.append(".zip.");
+		return path;
+	}();
+
+	// Check for temporary zip file
+	if (zip_path_prefix.size > 0) {
+		// We don't touch stdin, stdout and stderr
+		for (uint i = 3; i < 100; ++i) {
+			InplaceBuff<64> src("/proc/self/fd/");
+			src.append(i);
+
+			constexpr size_t path_len = PATH_MAX + 1; // This 1 is for trailing null
+			InplaceBuff<path_len> path;
+			ssize_t rc = readlink(src.to_cstr().data(), path.data(), path_len - 1);
+			if (rc == -1)
+				continue; // Ignore errors
+
+			path.size = rc;
+			if (hasPrefix(path, zip_path_prefix))
+				(void)unlink(path.to_cstr().data());
+		}
+	}
+
 	_exit(1); // exit() is not safe to call from signal handler see man signal-safety
 }
 
