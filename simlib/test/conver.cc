@@ -12,34 +12,34 @@ using std::string;
 
 static Conver::Options load_options_from_file(FilePath file) {
 	ConfigFile cf;
-	cf.loadConfigFromFile(file, true);
+	cf.load_config_from_file(file, true);
 
 	auto get_var = [&](StringView name) -> decltype(auto) {
 		auto const& var = cf[name];
-		if (not var.isSet())
+		if (not var.is_set())
 			THROW("Variable \"", name, "\" is not set");
-		if (var.isArray())
+		if (var.is_array())
 			THROW("Variable \"", name, "\" is an array");
 		return var;
 	};
 
 	auto get_string = [&](StringView name) -> decltype(auto) {
-		return get_var(name).asString();
+		return get_var(name).as_string();
 	};
 
 	auto get_uint64 = [&](StringView name) {
-		return get_var(name).asInt<uint64_t>();
+		return get_var(name).as_int<uint64_t>();
 	};
 
 	auto get_optional_uint64 = [&](StringView name) -> Optional<uint64_t> {
-		if (get_var(name).asString() == "null")
+		if (get_var(name).as_string() == "null")
 			return std::nullopt;
 
 		return get_uint64(name);
 	};
 
 	auto get_double = [&](StringView name) {
-		return get_var(name).asDouble();
+		return get_var(name).as_double();
 	};
 
 	auto get_duration = [&](StringView name) {
@@ -48,7 +48,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_optional_duration = [&](StringView name) -> Optional<std::chrono::nanoseconds> {
-		if (get_var(name).asString() == "null")
+		if (get_var(name).as_string() == "null")
 			return std::nullopt;
 
 		return get_duration(name);
@@ -159,17 +159,17 @@ TEST (Conver, constructSimfile) {
 
 				case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 					JudgeWorker jworker;
-					jworker.loadPackage(package_copy.path(), post_simfile.dump());
+					jworker.load_package(package_copy.path(), post_simfile.dump());
 
 					string compilation_errors;
-					if (jworker.compileChecker(5s, &compilation_errors, 4096, ""))
+					if (jworker.compile_checker(5s, &compilation_errors, 4096, ""))
 						THROW("failed to compile checker: \n", compilation_errors);
 
 					TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
 					ZipFile zip(package_copy.path());
 					zip.extract_to_fd(zip.get_index(concat(cres.pkg_master_dir, post_simfile.solutions[0])), sol_src);
 
-					if (jworker.compileSolution(sol_src.path(),
+					if (jworker.compile_solution(sol_src.path(),
 						sim::filename_to_lang(post_simfile.solutions[0]), 5s,
 						&compilation_errors, 4096, ""))
 					{

@@ -1306,6 +1306,8 @@ public:
 
 	CStringView to_cstr() const noexcept { return {str_, size_}; }
 
+	std::string to_str() const noexcept { return std::string(str_, size_); }
+
 	const char* data() const noexcept { return str_; }
 
 	size_t size() const noexcept { return size_; }

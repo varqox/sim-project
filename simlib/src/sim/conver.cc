@@ -79,7 +79,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 	} else {
 		report_.append("Problem's name is not specified in options - loading it"
 			" from Simfile");
-		sf.loadName();
+		sf.load_name();
 		report_.append("  name loaded from Simfile: ", sf.name);
 	}
 
@@ -91,14 +91,14 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 		report_.append("Problem's label is not specified in options - loading"
 			" it from Simfile");
 		try {
-			sf.loadLabel();
+			sf.load_label();
 			report_.append("  label loaded from Simfile: ", sf.label);
 
 		} catch (const std::exception& e) {
 			report_.append("  ", e.what(), " -> generating label from the"
 				" problem's name");
 
-			sf.label = shortenName(sf.name);
+			sf.label = shorten_name(sf.name);
 			report_.append("  label generated from name: ", sf.label);
 		}
 	}
@@ -114,7 +114,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
 	// Checker
 	try {
-		sf.loadChecker();
+		sf.load_checker();
 		if (not sf.checker.has_value()) {
 			report_.append("Missing checker in the package's Simfile -"
 				" searching for one");
@@ -156,7 +156,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 	pc.remove_with_prefix(intentionalUnsafeStringView(concat(master_dir, "checker/")));
 
 	// Statement
-	try { sf.loadStatement(); } catch (...) {}
+	try { sf.load_statement(); } catch (...) {}
 
 	if (not exists_in_pkg(sf.statement)) {
 		report_.append("Missing / invalid statement specified in the package's"
@@ -193,7 +193,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 	}
 
 	// Solutions
-	try { sf.loadSolutions(); } catch (...) {}
+	try { sf.load_solutions(); } catch (...) {}
 	{
 		vector<std::string> solutions;
 		AVLDictSet<StringView> solutions_set; // Used to detect and eliminate
@@ -246,12 +246,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
 	// Load tests and limits form variable "limits"
 	auto const& limits = sf.config["limits"];
-	if (not opts.ignore_simfile and limits.isSet() and limits.isArray())
-		for (auto const& str : limits.asArray()) {
+	if (not opts.ignore_simfile and limits.is_set() and limits.is_array())
+		for (auto const& str : limits.as_array()) {
 			Test test;
 			try {
 				std::tie(test.name, test.time_limit, test.memory_limit) =
-					Simfile::parseLimitsItem(str);
+					Simfile::parse_limits_item(str);
 			} catch (const std::exception& e) {
 				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
 					" unparsable item -> ", e.what());
@@ -314,13 +314,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
 	// Load test files (this one may overwrite the files form previous step)
 	auto const& tests_files = sf.config["tests_files"];
-	if (not opts.ignore_simfile and tests_files.isSet() and tests_files.isArray())
-		for (auto const& str : tests_files.asArray()) {
+	if (not opts.ignore_simfile and tests_files.is_set() and tests_files.is_array())
+		for (auto const& str : tests_files.as_array()) {
 			StringView tname;
 			Optional<StringView> input;
 			Optional<StringView> output;
 			try {
-				std::tie(tname, input, output) = Simfile::parseTestFilesItem(str);
+				std::tie(tname, input, output) = Simfile::parse_test_files_item(str);
 			} catch (const std::exception& e) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
 					" ignoring unparsable item -> ", e.what());
@@ -384,7 +384,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 		report_.append("Global memory limit not specified in options - loading"
 			" it from Simfile");
 
-		sf.loadGlobalMemoryLimitOnly();
+		sf.load_global_memory_limit_only();
 		if (not sf.global_mem_limit.has_value()) {
 			report_.append("Memory limit is not specified in the Simfile");
 			report_.append("\033[1;35mwarning\033[m: no global memory limit is set");
@@ -435,13 +435,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 	// Load scoring
 	auto const& scoring = sf.config["scoring"];
 	if (not opts.ignore_simfile and not opts.reset_scoring and
-		scoring.isSet() and scoring.isArray())
+		scoring.is_set() and scoring.is_array())
 	{
-		for (auto const& str : scoring.asArray()) {
+		for (auto const& str : scoring.as_array()) {
 			StringView gid;
 			int64_t score;
 			try {
-				std::tie(gid, score) = Simfile::parseScoringItem(str);
+				std::tie(gid, score) = Simfile::parse_scoring_item(str);
 			} catch (const std::exception& e) {
 				report_.append("\033[1;35mwarning\033[m: \"scoring\": ignoring"
 					" unparsable item -> ", e.what());

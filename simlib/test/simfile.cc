@@ -53,12 +53,12 @@ TEST (Simfile, dump) {
 	};
 
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadName();
-		sf.loadLabel();
-		sf.loadChecker();
-		sf.loadStatement();
-		sf.loadSolutions();
-		sf.loadTestsWithFiles();
+		sf.load_name();
+		sf.load_label();
+		sf.load_checker();
+		sf.load_statement();
+		sf.load_solutions();
+		sf.load_tests_with_files();
 
 		EXPECT_EQ("name: Simple Package\n"
 			"label: sim\n"
@@ -114,7 +114,7 @@ TEST (Simfile, dump) {
 		"]\n"
 	};
 
-	sf.loadTests();
+	sf.load_tests();
 
 	EXPECT_EQ("solutions: []\n"
 		"limits: [\n"
@@ -135,67 +135,67 @@ TEST (Simfile, loadName) {
 	sim::Simfile sf {"name: Problem 1 2 3"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadName();
+		sf.load_name();
 		EXPECT_EQ("Problem 1 2 3", sf.name) << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadName(), std::runtime_error);
+	EXPECT_THROW(sf.load_name(), std::runtime_error);
 	sf = sim::Simfile {"name: []"};
-	EXPECT_THROW(sf.loadName(), std::runtime_error);
+	EXPECT_THROW(sf.load_name(), std::runtime_error);
 	sf = sim::Simfile {"name:"};
-	EXPECT_THROW(sf.loadName(), std::runtime_error);
+	EXPECT_THROW(sf.load_name(), std::runtime_error);
 }
 
 TEST (Simfile, loadLabel) {
 	sim::Simfile sf {"label: Label 1 2 3"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadLabel();
+		sf.load_label();
 		EXPECT_EQ("Label 1 2 3", sf.label) << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadLabel(), std::runtime_error);
+	EXPECT_THROW(sf.load_label(), std::runtime_error);
 	sf = sim::Simfile {"label: []"};
-	EXPECT_THROW(sf.loadLabel(), std::runtime_error);
+	EXPECT_THROW(sf.load_label(), std::runtime_error);
 	sf = sim::Simfile {"label:"};
-	EXPECT_THROW(sf.loadLabel(), std::runtime_error);
+	EXPECT_THROW(sf.load_label(), std::runtime_error);
 }
 
 TEST (Simfile, loadChecker) {
 	sim::Simfile sf {"checker: path/to/checker"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadChecker();
+		sf.load_checker();
 		EXPECT_EQ("path/to/checker", sf.checker.value()) << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	sf.loadChecker();
+	sf.load_checker();
 	EXPECT_FALSE(sf.checker.has_value());
 
 	sf = sim::Simfile {"checker: []"};
-	EXPECT_THROW(sf.loadChecker(), std::runtime_error);
+	EXPECT_THROW(sf.load_checker(), std::runtime_error);
 
 	sf = sim::Simfile {"checker:"};
-	sf.loadChecker();
+	sf.load_checker();
 	EXPECT_FALSE(sf.checker.has_value());
 
 	sf = sim::Simfile {"checker: ''"};
-	sf.loadChecker();
+	sf.load_checker();
 	EXPECT_FALSE(sf.checker.has_value());
 
 	// Unsafe paths
 	sf = sim::Simfile {"checker: ../suspicious/path"};
-	sf.loadChecker();
+	sf.load_checker();
 	EXPECT_EQ("suspicious/path", sf.checker.value());
 
 	sf = sim::Simfile {"checker: ./suspicious/../../../../path/"};
-	sf.loadChecker();
+	sf.load_checker();
 	EXPECT_EQ("path/", sf.checker.value());
 }
 
@@ -203,27 +203,27 @@ TEST (Simfile, loadStatement) {
 	sim::Simfile sf {"statement: path/to/statement"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadStatement();
+		sf.load_statement();
 		EXPECT_EQ("path/to/statement", sf.statement) << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadStatement(), std::runtime_error);
+	EXPECT_THROW(sf.load_statement(), std::runtime_error);
 
 	sf = sim::Simfile {"statement: []"};
-	EXPECT_THROW(sf.loadStatement(), std::runtime_error);
+	EXPECT_THROW(sf.load_statement(), std::runtime_error);
 
 	sf = sim::Simfile {"statement:"};
-	EXPECT_THROW(sf.loadStatement(), std::runtime_error);
+	EXPECT_THROW(sf.load_statement(), std::runtime_error);
 
 	// Unsafe paths
 	sf = sim::Simfile {"statement: ../suspicious/path"};
-	sf.loadStatement();
+	sf.load_statement();
 	EXPECT_EQ("suspicious/path", sf.statement);
 
 	sf = sim::Simfile {"statement: ./suspicious/../../../../path/"};
-	sf.loadStatement();
+	sf.load_statement();
 	EXPECT_EQ("path/", sf.statement);
 }
 
@@ -232,56 +232,56 @@ TEST (Simfile, loadSolutions) {
 	sim::Simfile sf {"solutions: [sol1, sol/2]"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadSolutions();
+		sf.load_solutions();
 		EXPECT_EQ((VS{"sol1", "sol/2"}), sf.solutions) << "iteration: " << i;
 	}
 
 	// Exceptions
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadSolutions(), std::runtime_error);
+	EXPECT_THROW(sf.load_solutions(), std::runtime_error);
 
 	sf = sim::Simfile {"solutions: foo"};
-	EXPECT_THROW(sf.loadSolutions(), std::runtime_error);
+	EXPECT_THROW(sf.load_solutions(), std::runtime_error);
 
 	sf = sim::Simfile {"solutions: []"};
-	EXPECT_THROW(sf.loadSolutions(), std::runtime_error);
+	EXPECT_THROW(sf.load_solutions(), std::runtime_error);
 
 	sf = sim::Simfile {"solutions:"};
-	EXPECT_THROW(sf.loadSolutions(), std::runtime_error);
+	EXPECT_THROW(sf.load_solutions(), std::runtime_error);
 
 	// Unsafe paths
 	sf = sim::Simfile {"solutions: [../suspicious/path, "
 		"./suspicious/../../../../path/]"};
-	sf.loadSolutions();
+	sf.load_solutions();
 	EXPECT_EQ((VS{"suspicious/path", "path/"}), sf.solutions);
 
 	sf = sim::Simfile {"solutions: [./suspicious/../../../../path/, "
 		"../suspicious/path]"};
-	sf.loadSolutions();
+	sf.load_solutions();
 	EXPECT_EQ((VS{"path/", "suspicious/path"}), sf.solutions);
 }
 
 TEST (Simfile, loadTests) {
 	// Memory limit
 	sim::Simfile sf {"memory_limit: 123\nlimits: []"};
-	sf.loadTests();
+	sf.load_tests();
 	EXPECT_EQ(123 << 20, sf.global_mem_limit.value_or(0));
 
 	// Exceptions - memory_limit
 	sf = sim::Simfile {"memory_limit: []\nlimits: []"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"memory_limit: 0\nlimits: []"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"memory_limit: 18446744073709551616\nlimits: []"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"memory_limit: -178\nlimits: []"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"memory_limit: 3.14\nlimits: []"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Limits + scoring
 	sf = sim::Simfile {
@@ -296,7 +296,7 @@ TEST (Simfile, loadTests) {
 		"  2 75\n"
 		"]\n"
 	};
-	sf.loadTests();
+	sf.load_tests();
 	EXPECT_EQ("solutions: []\n"
 		"memory_limit: 33\n"
 		"limits: [\n"
@@ -324,7 +324,7 @@ TEST (Simfile, loadTests) {
 	};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadTests();
+		sf.load_tests();
 		EXPECT_EQ("solutions: []\n"
 			"memory_limit: 64\n"
 			"limits: [\n"
@@ -353,7 +353,7 @@ TEST (Simfile, loadTests) {
 		"  foo2 1\n"
 		"]\n"
 	};
-	sf.loadTests();
+	sf.load_tests();
 	EXPECT_EQ("solutions: []\n"
 		"memory_limit: 64\n"
 		"limits: [\n"
@@ -375,86 +375,86 @@ TEST (Simfile, loadTests) {
 
 	// Exceptions - limits
 	sf = sim::Simfile {""};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: foo"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - time limit
 	sf = sim::Simfile {"limits: [1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1..2]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1a2]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 -12]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 0]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 0.00000049]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - memory limit
 	sf = sim::Simfile {"limits: [1 1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 a]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 -1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 0]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 18446744073709551616]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [1 1 3.14]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - test group
 	sf = sim::Simfile {"limits: [no_group 1 33]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - scoring
 	sf = sim::Simfile {"limits: []\nscoring: aaa"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - scoring - group
 	sf = sim::Simfile {"limits: []\nscoring: [a 1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: []\nscoring: [1 1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [foo1a 1 2]\nscoring: [1 1, 1 1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - scoring - group score
 	sf = sim::Simfile {"limits: [foo1a 1 2]\nscoring: [1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [foo1a 1 2]\nscoring: [1 1.0]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [foo1a 1 2]\nscoring: [1 1a2]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	// Exceptions - scoring - missing scoring
 	sf = sim::Simfile {"limits: [foo1a 1 2]\nscoring: []"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: [foo1a 1 2, foo2b 3 4]\nscoring: [1 1]"};
-	EXPECT_THROW(sf.loadTests(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 }
 
-TEST (Simfile, loadTestsWithFiles) {
+TEST (Simfile, loadTests_With_Files) {
 	sim::Simfile sf {
 		"limits: [\n"
 		"  foo0 1 1\n"
@@ -472,7 +472,7 @@ TEST (Simfile, loadTestsWithFiles) {
 	};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
-		sf.loadTestsWithFiles();
+		sf.load_tests_with_files();
 		EXPECT_EQ("solutions: []\n"
 			"limits: [\n"
 			"\tfoo0 1 1\n"
@@ -498,22 +498,22 @@ TEST (Simfile, loadTestsWithFiles) {
 
 	// Exceptions
 	sf = sim::Simfile {"limits: []"};
-	EXPECT_THROW(sf.loadTestsWithFiles(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests_with_files(), std::runtime_error);
 
 	sf = sim::Simfile {"limits: []\ntests_files: foo"};
-	EXPECT_THROW(sf.loadTestsWithFiles(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests_with_files(), std::runtime_error);
 
 	// Exceptions - redefinition
 	sf = sim::Simfile {"limits: []\ntests_files: [1 in out, 1 in out]"};
-	EXPECT_THROW(sf.loadTestsWithFiles(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests_with_files(), std::runtime_error);
 
 	// Exceptions - test without files
 	sf = sim::Simfile {"limits: [t1a 2 3, t2d 3 4]\ntests_files: [t1a in out]"};
-	EXPECT_THROW(sf.loadTestsWithFiles(), std::runtime_error);
+	EXPECT_THROW(sf.load_tests_with_files(), std::runtime_error);
 
 	// Exceptions - superfluous files declarations are ignored
 	sf = sim::Simfile {"limits: [1 0.14 2]\ntests_files: [1 in out, 2 in out]"};
-	EXPECT_NO_THROW(sf.loadTestsWithFiles());
+	EXPECT_NO_THROW(sf.load_tests_with_files());
 }
 
 void create_file(const string& path) {
@@ -537,7 +537,7 @@ void create_files_at(string dir, const vector<string>& v) {
 		create_file(dir + s);
 }
 
-TEST (Simfile, validateFiles) {
+TEST (Simfile, validate_files) {
 	TemporaryDirectory tmp_dir("/tmp/simlib-test.XXXXXX");
 
 	create_files_at(tmp_dir.path(), {
@@ -578,40 +578,40 @@ TEST (Simfile, validateFiles) {
 		"]\n"
 	};
 
-	sf.loadStatement();
-	sf.loadChecker();
-	sf.loadSolutions();
-	sf.loadTestsWithFiles();
+	sf.load_statement();
+	sf.load_checker();
+	sf.load_solutions();
+	sf.load_tests_with_files();
 
 	// Make sure that the method is const
-	EXPECT_NO_THROW(const_cast<const sim::Simfile&>(sf).validateFiles(
+	EXPECT_NO_THROW(const_cast<const sim::Simfile&>(sf).validate_files(
 		tmp_dir.path()));
 
 	// Check if not loaded values are ignored
 	sf = sim::Simfile {};
-	EXPECT_NO_THROW(sf.validateFiles(tmp_dir.path()));
+	EXPECT_NO_THROW(sf.validate_files(tmp_dir.path()));
 
 	/* Exceptions */
 
 	// Checker - non-existing file
 	sf = sim::Simfile {"checker: foo/bar"};
-	sf.loadChecker();
-	EXPECT_THROW(sf.validateFiles(tmp_dir.path()), std::runtime_error);
+	sf.load_checker();
+	EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error);
 
 	// Checker - invalid type of a file
 	sf = sim::Simfile {"checker: prog"};
-	sf.loadChecker();
-	EXPECT_THROW(sf.validateFiles(tmp_dir.path()), std::runtime_error);
+	sf.load_checker();
+	EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error);
 
 	// Statement - non-existing file
 	sf = sim::Simfile {"statement: foo/bar"};
-	sf.loadStatement();
-	EXPECT_THROW(sf.validateFiles(tmp_dir.path()), std::runtime_error);
+	sf.load_statement();
+	EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error);
 
 	// Statement - invalid type of a file
 	sf = sim::Simfile {"statement: prog"};
-	sf.loadStatement();
-	EXPECT_THROW(sf.validateFiles(tmp_dir.path()), std::runtime_error);
+	sf.load_statement();
+	EXPECT_THROW(sf.validate_files(tmp_dir.path()), std::runtime_error);
 
 	// Solutions
 	{
@@ -624,8 +624,8 @@ TEST (Simfile, validateFiles) {
 				contents += ']';
 
 				sf = sim::Simfile {contents};
-				sf.loadSolutions();
-				EXPECT_THROW(sf.validateFiles(tmp_dir.path()),
+				sf.load_solutions();
+				EXPECT_THROW(sf.validate_files(tmp_dir.path()),
 					std::runtime_error) << "i: " << i;
 			};
 
@@ -669,8 +669,8 @@ TEST (Simfile, validateFiles) {
 				contents += "\n]";
 
 				sf = sim::Simfile {contents};
-				sf.loadTestsWithFiles();
-				EXPECT_THROW(sf.validateFiles(tmp_dir.path()),
+				sf.load_tests_with_files();
+				EXPECT_THROW(sf.validate_files(tmp_dir.path()),
 					std::runtime_error) << "i: " << i;
 			};
 

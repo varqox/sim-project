@@ -110,17 +110,14 @@ public:
 
 	/**
 	 * @brief Loads needed variables from @p simfile_contents
-	 * @details Uses ConfigFile::loadConfigFromString()
-	 *
+	 * @details Uses ConfigFile::load_config_from_string()
 	 * @param simfile_contents Simfile file contents
 	 *
 	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
 	explicit Simfile(std::string simfile_contents) {
-		config.addVars("name", "label", "checker", "statement", "solutions",
-			"memory_limit", "limits", "scoring", "tests_files");
-		config.loadConfigFromString(std::move(simfile_contents));
-	}
+		config.add_vars("name", "label", "checker", "statement", "solutions", "memory_limit", "limits", "scoring", "tests_files");
+		config.load_config_from_string(std::move(simfile_contents)); }
 
 	Simfile(const Simfile&) = default;
 	Simfile(Simfile&&) noexcept = default;
@@ -129,8 +126,7 @@ public:
 
 	~Simfile() = default;
 
-	const ConfigFile& configFile() const { return config; }
-
+	const ConfigFile& config_file() const { return config; }
 	/**
 	 * @brief Dumps object to string
 	 *
@@ -162,8 +158,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadName();
-
+	void load_name();
 	/**
 	 * @brief Loads problem's label
 	 * @details Fields:
@@ -172,8 +167,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadLabel();
-
+	void load_label();
 	/**
 	 * @brief Loads path to checker source file (if there is any)
 	 * @details Fields:
@@ -183,8 +177,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadChecker();
-
+	void load_checker();
 	/**
 	 * @brief Loads path to statement
 	 * @details Fields:
@@ -193,8 +186,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadStatement();
-
+	void load_statement();
 	/**
 	 * @brief Loads paths to solutions (the first one is the main solution)
 	 * @details Fields:
@@ -203,8 +195,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadSolutions();
-
+	void load_solutions();
 private:
 
 #if __cplusplus > 201402L
@@ -217,15 +208,13 @@ private:
 	 * @return (test name, time limit [usec], memory limit [byte])
 	 */
 	static std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
-		parseLimitsItem(StringView item);
-
+		parse_limits_item(StringView item);
 	/**
 	 * @brief Parses the item of the variable "scoring"
 	 * @param item - the item to parse
 	 * @return (tests group id, group's score)
 	 */
-	static std::tuple<StringView, int64_t> parseScoringItem(StringView item);
-
+	static std::tuple<StringView, int64_t> parse_scoring_item(StringView item);
 public:
 
 	/**
@@ -240,8 +229,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadTests();
-
+	void load_tests();
 	/**
 	 * @brief Loads only the global memory limit
 	 * @details Fields:
@@ -251,8 +239,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadGlobalMemoryLimitOnly();
-
+	void load_global_memory_limit_only();
 private:
 	/**
 	 * @brief Parses the item of the variable "tests_files"
@@ -260,8 +247,7 @@ private:
 	 * @return (test name, path to input file, path to output file)
 	 */
 	static std::tuple<StringView, StringView, StringView>
-		parseTestFilesItem(StringView item);
-
+		parse_test_files_item(StringView item);
 public:
 
 	/**
@@ -272,48 +258,31 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadTestsFiles();
-
+	void load_tests_files();
 	/**
 	 * @brief Loads tests, their limits, scoring and files
-	 * @details Fields are identical to these of loadTests(), with addition of:
-	 *   - tests_files (array of the tests' input and output files)
+	 * @details Fields are identical to these of load_tests(), with addition of: - tests_files (array of the tests' input and output files)
 	 *
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadTestsWithFiles() {
-		loadTests();
-		loadTestsFiles();
-	}
+	void load_tests_with_files() { load_tests(); load_tests_files(); }
 
 	/**
 	 * @brief Loads everything = the whole Simfile
 	 */
-	void loadAll() {
-		loadName();
-		loadLabel();
-		loadChecker();
-		loadStatement();
-		loadSolutions();
-		loadTestsWithFiles();
-	}
+	void load_all() { load_name(); load_label(); load_checker(); load_statement(); load_solutions(); load_tests_with_files(); }
 
 	/**
 	 * @brief Validates all previously loaded files
-	 * @details Validates all files loaded by calling methods: loadChecker(),
-	 *   loadStatement(), loadSolutions(), loadTestsWithFiles(). All files are
-	 *   loaded safely, so that no file is outside of the  package (any path
-	 *   cannot go outside)
-	 *
+	 * @details Validates all files loaded by calling methods: load_checker(), load_statement(), load_solutions(), load_tests_with_files(). All files are loaded safely, so that no file is outside of the  package (any path cannot go outside)
 	 * @param package_path path of the package main directory, used as package
 	 *   root directory during the validation
 	 *
 	 *   @errors Throws an exception of type std::runtime_error if any
 	 *     validation error occurs
 	 */
-	void validateFiles(StringView package_path) const;
-
+	void validate_files(StringView package_path) const;
 	struct TestNameComparator {
 		struct SplitResult {
 			StringView gid; // Group id
@@ -330,9 +299,7 @@ public:
 		 */
 		static inline SplitResult split(StringView test_name) noexcept {
 			SplitResult res;
-			res.tid = test_name.extractTrailing(::isalpha);
-			res.gid = test_name.extractTrailing(::isdigit);
-			return res;
+			res.tid = test_name.extractTrailing(::isalpha); res.gid = test_name.extractTrailing(::isdigit); return res;
 		}
 
 		bool operator()(StringView a, StringView b) const {
@@ -342,12 +309,10 @@ public:
 				if (y.tid == "ocen")
 					return StrNumCompare()(x.gid, y.gid);
 
-				y.gid.removeLeading('0');
-				return (not y.gid.empty()); // true iff y.gid was not equal to 0
+				y.gid.removeLeading('0'); return (not y.gid.empty()); // true iff y.gid was not equal to 0
 			}
 			if (y.tid == "ocen") {
-				x.gid.removeLeading('0');
-				return x.gid.empty(); // true iff x.gid was equal to 0
+				x.gid.removeLeading('0'); return x.gid.empty(); // true iff x.gid was equal to 0
 			}
 
 			return (x.gid == y.gid ?
@@ -365,8 +330,7 @@ public:
  *
  * @return label
  */
-inline std::string shortenName(StringView str) {
-	std::string label;
+inline std::string shorten_name(StringView str) { std::string label;
 	for (char c : str)
 		if (isgraph(c) && (label += ::tolower(c)).size() == 3)
 			break;

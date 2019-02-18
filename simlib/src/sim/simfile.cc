@@ -19,7 +19,7 @@ static void append_scoring_value(string& res, const sim::Simfile& simfile) {
 			if (p.tid == "ocen")
 				p.gid = "0";
 			back_insert(res, '\t',
-				ConfigFile::escapeString(intentionalUnsafeStringView(
+				ConfigFile::escape_string(intentionalUnsafeStringView(
 					concat(p.gid, ' ', group.score))), '\n');
 		}
 	res += ']';
@@ -39,7 +39,7 @@ static void append_limits_value(string& res, const sim::Simfile& simfile) {
 				back_insert(line, ' ', test.memory_limit >> 20);
 			}
 
-			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
+			back_insert(res, '\t', ConfigFile::escape_string(line), '\n');
 		}
 	}
 	res += ']';
@@ -50,22 +50,22 @@ namespace sim {
 string Simfile::dump() const {
 	string res;
 	if (not name.empty())
-		back_insert(res, "name: ", ConfigFile::escapeString(name), '\n');
+		back_insert(res, "name: ", ConfigFile::escape_string(name), '\n');
 
 	if (not label.empty())
-		back_insert(res, "label: ", ConfigFile::escapeString(label), '\n');
+		back_insert(res, "label: ", ConfigFile::escape_string(label), '\n');
 
 	if (not statement.empty())
-		back_insert(res, "statement: ", ConfigFile::escapeString(statement), '\n');
+		back_insert(res, "statement: ", ConfigFile::escape_string(statement), '\n');
 
 	if (checker.has_value())
-		back_insert(res, "checker: ", ConfigFile::escapeString(*checker), '\n');
+		back_insert(res, "checker: ", ConfigFile::escape_string(*checker), '\n');
 
 	back_insert(res, "solutions: [");
 	if (solutions.size()) {
-		back_insert(res, ConfigFile::escapeString(solutions[0]));
+		back_insert(res, ConfigFile::escape_string(solutions[0]));
 		for (uint i = 1; i < solutions.size(); ++i)
-			back_insert(res, ", ", ConfigFile::escapeString(solutions[i]));
+			back_insert(res, ", ", ConfigFile::escape_string(solutions[i]));
 	}
 	back_insert(res, "]\n");
 
@@ -91,7 +91,7 @@ string Simfile::dump() const {
 		for (const Test& test : group.tests)
 			if (test.in.size() && test.out.size())
 				back_insert(res, '\t',
-					ConfigFile::escapeString(intentionalUnsafeStringView(
+					ConfigFile::escape_string(intentionalUnsafeStringView(
 						concat(test.name, ' ', test.in, ' ', test.out))), '\n');
 
 	res += "]\n";
@@ -115,79 +115,79 @@ string Simfile::dump_limits_value() const {
 // to achieve in the other way and this macros are pretty more readable than
 // some template meta-programming code that concentrates string literals. Also,
 // the macros are used only locally, so after all, they are not so evil...)
-#define CHECK_IF_ARR(var, name) if (!var.isArray() && var.isSet()) \
+#define CHECK_IF_ARR(var, name) if (!var.is_array() && var.is_set()) \
 	throw std::runtime_error{"Simfile: variable `" name "` has to be" \
 		" specified as an array"}
-#define CHECK_IF_NOT_ARR(var, name) if (var.isArray()) \
+#define CHECK_IF_NOT_ARR(var, name) if (var.is_array()) \
 	throw std::runtime_error{"Simfile: variable `" name "` cannot be" \
 		" specified as an array"}
 
-void Simfile::loadName() {
+void Simfile::load_name() {
 	auto&& var = config["name"];
 	CHECK_IF_NOT_ARR(var, "name");
-	if ((name = var.asString()).empty())
+	if ((name = var.as_string()).empty())
 		throw std::runtime_error{"Simfile: missing problem's name"};
 }
 
-void Simfile::loadLabel() {
+void Simfile::load_label() {
 	auto&& var = config["label"];
 	CHECK_IF_NOT_ARR(var, "label");
-	if ((label = var.asString()).empty())
+	if ((label = var.as_string()).empty())
 		throw std::runtime_error{"Simfile: missing problem's label"};
 }
 
-void Simfile::loadChecker() {
+void Simfile::load_checker() {
 	auto&& var = config["checker"];
 	CHECK_IF_NOT_ARR(var, "checker");
 
-	if (var.asString().empty()) {
+	if (var.as_string().empty()) {
 		checker = std::nullopt; // No checker - default checker should be used
 		return;
 	}
 
 	// Secure path, so that it is not going outside the package
-	checker = abspath(var.asString()).erase(0, 1); // Erase '/' from the
+	checker = abspath(var.as_string()).erase(0, 1); // Erase '/' from the
 	                                               // beginning
 }
 
-void Simfile::loadStatement() {
+void Simfile::load_statement() {
 	auto&& var = config["statement"];
 	CHECK_IF_NOT_ARR(var, "statement");
-	if (var.asString().empty())
+	if (var.as_string().empty())
 		throw std::runtime_error{"Simfile: missing statement"};
 
 	// Secure path, so that it is not going outside the package
-	statement = abspath(var.asString()).erase(0, 1); // Erase '/' from the
+	statement = abspath(var.as_string()).erase(0, 1); // Erase '/' from the
 	                                                 // beginning
 }
 
-void Simfile::loadSolutions() {
+void Simfile::load_solutions() {
 	auto&& var = config["solutions"];
 	CHECK_IF_ARR(var, "solutions");
-	if (var.asArray().empty())
+	if (var.as_array().empty())
 		throw std::runtime_error{"Simfile: missing solution"};
 
 	solutions.clear();
-	solutions.reserve(var.asArray().size());
-	for (const string& str : var.asArray())
+	solutions.reserve(var.as_array().size());
+	for (const string& str : var.as_array())
 		// Secure path, so that it is not going outside the package
 		solutions.emplace_back(abspath(str).erase(0, 1)); // Erase '/' from the
 		                                                  // beginning
 }
 
-void Simfile::loadGlobalMemoryLimitOnly() {
+void Simfile::load_global_memory_limit_only() {
 	auto&& ml = config["memory_limit"];
 	CHECK_IF_NOT_ARR(ml, "memory_limit");
-	if (ml.isSet()) {
+	if (ml.is_set()) {
 		auto invalid_mem_limit = [] {
 			return std::runtime_error{"Simfile: invalid memory_limit - it has "
 				"to be a positive integer"};
 		};
 
 		if (!isDigitNotGreaterThan<(std::numeric_limits<
-			decltype(global_mem_limit)::StoredType>::max() >> 20)>(ml.asString()))
+			decltype(global_mem_limit)::StoredType>::max() >> 20)>(ml.as_string()))
 		{
-			if (!isDigit(ml.asString()))
+			if (!isDigit(ml.as_string()))
 				throw invalid_mem_limit();
 
 			throw std::runtime_error{"Simfile: too big value of the "
@@ -195,7 +195,7 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 		}
 
 		// Convert from MB to bytes
-		auto gml = ml.asInt<decltype(global_mem_limit)::StoredType>() << 20;
+		auto gml = ml.as_int<decltype(global_mem_limit)::StoredType>() << 20;
 		if (gml <= 0)
 			throw invalid_mem_limit();
 
@@ -207,7 +207,7 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 }
 
 std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
-Simfile::parseLimitsItem(StringView item) {
+Simfile::parse_limits_item(StringView item) {
 	SimpleParser sp(item);
 	// Test name
 	StringView test_name {sp.extractNextNonEmpty(isspace)};
@@ -267,7 +267,7 @@ Simfile::parseLimitsItem(StringView item) {
 }
 
 std::tuple<StringView, int64_t>
-Simfile::parseScoringItem(StringView item) {
+Simfile::parse_scoring_item(StringView item) {
 	SimpleParser sp(item);
 	StringView gid = sp.extractNextNonEmpty(isspace);
 	if (!isDigit(gid))
@@ -309,9 +309,9 @@ Simfile::parseScoringItem(StringView item) {
 	return {gid, score};
 }
 
-void Simfile::loadTests() {
+void Simfile::load_tests() {
 	// Global memory limit
-	loadGlobalMemoryLimitOnly();
+	load_global_memory_limit_only();
 
 	// Now if global_mem_limit == 0 then it is unset
 
@@ -320,18 +320,18 @@ void Simfile::loadTests() {
 	auto&& limits = config["limits"];
 	CHECK_IF_ARR(limits, "limits");
 
-	if (!limits.isSet())
+	if (!limits.is_set())
 		throw std::runtime_error{"Simfile: missing limits array"};
 
 	AVLDictMap<StringView, TestGroup, StrNumCompare> tests_groups;
 	// StringView may be used as Key because it will point to a string in
-	// limits.asArray() which is a const reference to vector inside the `limits`
+	// limits.as_array() which is a const reference to vector inside the `limits`
 	// variable which will be valid as long as config is not changed
-	for (const string& str : limits.asArray()) {
+	for (const string& str : limits.as_array()) {
 		StringView test_name;
 		std::chrono::nanoseconds time_limit;
 		Optional<uint64_t> memory_limit;
-		std::tie(test_name, time_limit, memory_limit) = parseLimitsItem(str);
+		std::tie(test_name, time_limit, memory_limit) = parse_limits_item(str);
 		if (not memory_limit.has_value()) {
 			if (not global_mem_limit.has_value())
 				throw std::runtime_error{concat_tostr("Simfile: missing memory"
@@ -358,7 +358,7 @@ void Simfile::loadTests() {
 
 	auto&& scoring = config["scoring"];
 	CHECK_IF_ARR(scoring, "scoring");
-	if (!scoring.isSet()) { // Calculate scoring automatically
+	if (!scoring.is_set()) { // Calculate scoring automatically
 		int groups_no = tests_groups.size() - bool(tests_groups.find("0"));
 		int total_score = 100;
 
@@ -369,10 +369,10 @@ void Simfile::loadTests() {
 
 	} else { // Check and implement defined scoring
 		AVLDictMap<StringView, int64_t> sm; // (gid, score)
-		for (const string& str : scoring.asArray()) {
+		for (const string& str : scoring.as_array()) {
 			StringView gid;
 			int64_t score;
-			std::tie(gid, score) = parseScoringItem(str);
+			std::tie(gid, score) = parse_scoring_item(str);
 
 			if (not tests_groups.find(gid))
 				throw std::runtime_error{concat_tostr("Simfile: scoring of the "
@@ -413,7 +413,7 @@ void Simfile::loadTests() {
 }
 
 std::tuple<StringView, StringView, StringView>
-Simfile::parseTestFilesItem(StringView item) {
+Simfile::parse_test_files_item(StringView item) {
 	SimpleParser sp(item);
 	StringView name = sp.extractNextNonEmpty(isspace);
 	StringView input = sp.extractNextNonEmpty(isspace);
@@ -427,21 +427,21 @@ Simfile::parseTestFilesItem(StringView item) {
 	return {name, input, output};
 }
 
-void Simfile::loadTestsFiles() {
+void Simfile::load_tests_files() {
 	auto&& tests_files = config["tests_files"];
 	CHECK_IF_ARR(tests_files, "tests_files");
 
-	if (!tests_files.isSet())
+	if (!tests_files.is_set())
 		throw std::runtime_error{"Simfile: missing tests_files array"};
 
 	AVLDictMap<StringView, pair<StringView, StringView>> files; // test =>
 	                                                            // (in, out)
 	// StringView can be used because it will point to the config variable
 	// "tests_files" member, which becomes unchanged
-	for (const string& str : tests_files.asArray()) {
+	for (const string& str : tests_files.as_array()) {
 		StringView test_name;
 		pair<StringView, StringView> p;
-		std::tie(test_name, p.first, p.second) = parseTestFilesItem(str);
+		std::tie(test_name, p.first, p.second) = parse_test_files_item(str);
 
 		auto it = files.emplace(test_name, p);
 		if (not it.second)
@@ -467,7 +467,7 @@ void Simfile::loadTestsFiles() {
 	// limits array
 }
 
-void Simfile::validateFiles(StringView package_path) const {
+void Simfile::validate_files(StringView package_path) const {
 	// Checker
 	if (checker.has_value() and (checker->empty() or
 		not isRegularFile(concat(package_path, '/', checker.value()))))

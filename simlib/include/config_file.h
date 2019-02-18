@@ -55,12 +55,12 @@ public:
 			a.clear();
 		}
 
-		bool isSet() const noexcept { return flag & SET; }
+		bool is_set() const noexcept { return flag & SET; }
 
-		bool isArray() const noexcept { return flag & ARRAY; }
+		bool is_array() const noexcept { return flag & ARRAY; }
 
 		// Returns value as bool or false on error
-		bool asBool() const noexcept {
+		bool as_bool() const noexcept {
 			return (s == "1" || lower_equal(s, "on") || lower_equal(s, "true"));
 		}
 
@@ -69,7 +69,7 @@ public:
 		// before calling this function. If the errno != 0 after the call, then
 		// an error was encountered.
 		template<class Type>
-		std::enable_if_t<std::is_unsigned<Type>::value, Type> asInt() const
+		std::enable_if_t<std::is_unsigned<Type>::value, Type> as_int() const
 			noexcept
 		{
 			Type x{};
@@ -85,7 +85,7 @@ public:
 		// function. If the errno != 0 after the call, then an error was
 		// encountered.
 		template<class Type = int32_t>
-		std::enable_if_t<!std::is_unsigned<Type>::value, Type> asInt() const
+		std::enable_if_t<!std::is_unsigned<Type>::value, Type> as_int() const
 			noexcept
 		{
 			Type x{};
@@ -97,15 +97,15 @@ public:
 		};
 
 		// Returns value as double or 0 on error, uses strtod(3)
-		double asDouble() const noexcept {
-			return (isSet() ? strtod(s.c_str(), nullptr) : 0);
+		double as_double() const noexcept {
+			return (is_set() ? strtod(s.c_str(), nullptr) : 0);
 		}
 
 		// Returns value as string (empty if not a string or variable isn't set)
-		const std::string& asString() const noexcept { return s; }
+		const std::string& as_string() const noexcept { return s; }
 
 		// Returns value as array (empty if not an array or variable isn't set)
-		const std::vector<std::string>& asArray() const noexcept { return a; }
+		const std::vector<std::string>& as_array() const noexcept { return a; }
 	};
 
 private:
@@ -125,7 +125,7 @@ public:
 
 	// Adds variables @p names to variable set, ignores duplications
 	template<class... Args>
-	void addVars(Args&&... names) {
+	void add_vars(Args&&... names) {
 		int t[] = {(vars.emplace(std::forward<Args>(names), Variable{}), 0)...};
 		(void)t;
 	}
@@ -135,7 +135,7 @@ public:
 
 	// Returns a reference to a variable @p name from variable set or to a
 	// null_var
-	const Variable& getVar(StringView name) const noexcept {
+	const Variable& get_var(StringView name) const noexcept {
 		return (*this)[name];
 	}
 
@@ -144,20 +144,20 @@ public:
 		return (it != vars.end() ? it->second : null_var);
 	}
 
-	const decltype(vars)& getVars() const { return vars; }
+	const decltype(vars)& get_vars() const { return vars; }
 
 	 /**
 	 * @brief Loads config (variables) form file @p pathname
-	 * @details Uses loadConfigFromString()
+	 * @details Uses load_config_from_string()
 	 *
 	 * @param pathname config file
 	 * @param load_all whether load all variables from @p pathname or load only
 	 *   these from variable set
 	 *
 	 * @errors Throws an exception std::runtime_error if an open(2) error occurs
-	 *   and all exceptions from loadConfigFromString()
+	 *   and all exceptions from load_config_from_string()
 	 */
-	void loadConfigFromFile(FilePath pathname, bool load_all = false);
+	void load_config_from_file(FilePath pathname, bool load_all = false);
 
 	/**
 	 * @brief Loads config (variables) form string @p config
@@ -168,10 +168,10 @@ public:
 	 *
 	 * @errors Throws an exception (ParseError) if an error occurs
 	 */
-	void loadConfigFromString(std::string config, bool load_all = false);
+	void load_config_from_string(std::string config, bool load_all = false);
 
 	// Check if string @p str is a valid string literal
-	static bool isStringLiteral(StringView str);
+	static bool is_string_literal(StringView str);
 
 	/**
 	 * @brief Escapes unsafe sequences in str
@@ -181,7 +181,7 @@ public:
 	 *
 	 * @return escaped, single-quoted string
 	 */
-	static std::string escapeToSingleQuotedString(StringView str);
+	static std::string escape_to_single_quoted_string(StringView str);
 
 	/**
 	 * @brief Escapes unsafe sequences in str
@@ -192,7 +192,7 @@ public:
 	 *
 	 * @return escaped, double-quoted string
 	 */
-	static std::string escapeToDoubleQuotedString(StringView str);
+	static std::string escape_to_double_quoted_string(StringView str);
 
 	/**
 	 * @brief Escapes unsafe sequences in str
@@ -208,19 +208,19 @@ public:
 	 *
 	 * @return escaped, double-quoted string
 	 */
-	static std::string escapeToDoubleQuotedString(StringView str, int);
+	static std::string escape_to_double_quoted_string(StringView str, int);
 
 	/**
 	 * @brief Converts string @p str so that it can be safely placed in config
 	 *   file
 	 * @details Possible cases:
 	 *   1) @p str contains '\'' or character for which iscrtnl(3) != 0:
-	 *     Escaped @p str via one-argument escapeToDoubleQuotedString() will be
+	 *     Escaped @p str via one-argument escape_to_double_quoted_string() will be
 	 *     returned.
-	 *   2) Otherwise if @p str is string literal (isStringLiteral(@p str)):
+	 *   2) Otherwise if @p str is string literal (is_string_literal(@p str)):
 	 *     Unchanged @p str will be returned.
 	 *   3) Otherwise:
-	 *     Escaped @p str via escapeToSingleQuotedString() will be returned.
+	 *     Escaped @p str via escape_to_single_quoted_string() will be returned.
 	 *
 	 *   Examples:
 	 *     "" -> '' (single quoted string, special case)
@@ -234,23 +234,23 @@ public:
 	 *
 	 * @return escaped (and possibly quoted) string
 	 */
-	static std::string escapeString(StringView str);
+	static std::string escape_string(StringView str);
 
 	/**
 	 * @brief Converts string @p str so that it can be safely placed in config
 	 *   file
 	 * @details Possible cases:
 	 *   1) @p str contains '\'' or character for which isprint(3) == 0:
-	 *     Escaped @p str via two-argument escapeToDoubleQuotedString() will be
+	 *     Escaped @p str via two-argument escape_to_double_quoted_string() will be
 	 *     returned.
-	 *   2) Otherwise if @p str is string literal (isStringLiteral(@p str)):
+	 *   2) Otherwise if @p str is string literal (is_string_literal(@p str)):
 	 *     Unchanged @p str will be returned.
 	 *   3) Otherwise:
-	 *     Escaped @p str via escapeToSingleQuotedString() will be returned.
+	 *     Escaped @p str via escape_to_single_quoted_string() will be returned.
 	 *
 	 *   The difference between one-argument version is that in this version
 	 *   characters not from interval [0, 127] are also escaped hexadecimally
-	 *   with two-argument escapeToDoubleQuotedString()
+	 *   with two-argument escape_to_double_quoted_string()
 	 *
 	 *   Examples:
 	 *     "" -> '' (single quoted string, special case)
@@ -264,5 +264,5 @@ public:
 	 *
 	 * @return escaped (and possibly quoted) string
 	 */
-	static std::string escapeString(StringView str, int);
+	static std::string escape_string(StringView str, int);
 };

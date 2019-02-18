@@ -157,7 +157,7 @@ protected:
 	std::string log_;
 
 public:
-	virtual void begin(StringView package_path, bool final) = 0;
+	virtual void begin(bool final) = 0;
 
 	virtual void test(StringView test_name, JudgeReport::Test test_report,
 		Sandbox::ExitStat es) = 0;
@@ -230,11 +230,10 @@ public:
 	VerboseJudgeLogger(bool log_to_stdlog = false)
 		: dummy_logger_(nullptr), logger_(log_to_stdlog ? stdlog : dummy_logger_) {}
 
-	void begin(StringView package_path, bool final) override {
+	void begin(bool final) override {
 		total_score_ = max_total_score_ = 0;
 		final_ = final;
-		log("Judging on `", package_path,"` (", (final ? "final" : "initial"),
-			"): {");
+		log("Judging (", (final ? "final" : "initial"), "): {");
 	}
 
 	void test(StringView test_name, JudgeReport::Test test_report,
@@ -284,6 +283,43 @@ public:
 	}
 };
 
+class PackageLoader {
+public:
+	/**
+	 * @brief Loads file with path @p path from package to file @p dest
+	 *
+	 * @param path path to file in package. If master dir == "foo/" and
+	 *   desired file has path "foo/bar/test", then @p path should be "bar/test"
+	 * @param dest path of the destination file
+	 *
+	 * @return @p dest is returned
+	 */
+	virtual std::string load_into_dest_file(FilePath path, FilePath dest) = 0;
+
+	/**
+	 * @brief Loads file with path @p path from package to a file
+	 *
+	 * @param path path to file in package. If master dir == "foo/" and
+	 *   desired file has path "foo/bar/test", then @p path should be "bar/test"
+	 * @param hint_name A proposition of the file name if a new file is created
+	 *
+	 * @return path to a loaded file
+	 */
+	virtual std::string load_as_file(FilePath path, FilePath hint_name) = 0;
+
+	/**
+	 * @brief Loads file with path @p path from package to a file
+	 *
+	 * @param path path to file in package. If master dir == "foo/" and
+	 *   desired file has path "foo/bar/test", then @p path should be "bar/test"
+	 *
+	 * @return contents of the loaded file
+	 */
+	virtual std::string load_as_str(FilePath path) = 0;
+
+	virtual ~PackageLoader() = default;
+};
+
 /**
  * @brief Manages a judge worker
  * @details Only to use in ONE thread.
@@ -291,10 +327,11 @@ public:
 class JudgeWorker {
 	TemporaryDirectory tmp_dir {"/tmp/judge-worker.XXXXXX"};
 	Simfile sf;
-	std::string pkg_root; // with terminating '/'
 
-	constexpr static meta::string CHECKER_FILENAME {"checker"};
-	constexpr static meta::string SOLUTION_FILENAME {"solution"};
+	constexpr static const char* CHECKER_FILENAME = "checker";
+	constexpr static const char* SOLUTION_FILENAME = "solution";
+
+	std::unique_ptr<PackageLoader> package_loader;
 
 public:
 	Optional<std::chrono::nanoseconds> checker_time_limit = std::chrono::seconds(10);
@@ -320,10 +357,14 @@ public:
 	JudgeWorker& operator=(const JudgeWorker&) = delete;
 	JudgeWorker& operator=(JudgeWorker&&) = default;
 
-	/// Loads package from @p simfile in @p package_path
-	void loadPackage(std::string package_path, std::string simfile);
+	/// Loads package from @p package_path using @p simfile (if not specified,
+	/// uses one found in the package)
+	void load_package(FilePath package_path, Optional<std::string> simfile);
 
- 	// Returns a const reference to the package's Simfile
+	// Returns a reference to the loaded package's Simfile
+	Simfile& simfile() noexcept { return sf; }
+
+	// Returns a const reference to the loaded package's Simfile
 	const Simfile& simfile() const noexcept { return sf; }
 
 private:
@@ -334,21 +375,12 @@ private:
 
 public:
 	/// Compiles checker (using sim::compile())
-	int compileChecker(Optional<std::chrono::nanoseconds> time_limit,
+	int compile_checker(Optional<std::chrono::nanoseconds> time_limit,
 		std::string* c_errors, size_t c_errors_max_len,
-		const std::string& proot_path)
-	{
-		auto checker_path = (sf.checker.has_value() ?
-			concat(pkg_root, sf.checker.value()) :
-			concat(tmp_dir.path(), "default_checker.c"));
-
-		return compile_impl(checker_path, filename_to_lang(checker_path),
-			time_limit, c_errors, c_errors_max_len, proot_path, "checker",
-			CHECKER_FILENAME);
-	}
+		const std::string& proot_path);
 
 	/// Compiles solution (using sim::compile())
-	int compileSolution(FilePath source, SolutionLanguage lang,
+	int compile_solution(FilePath source, SolutionLanguage lang,
 		Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
@@ -356,7 +388,20 @@ public:
 			c_errors_max_len, proot_path, "source", SOLUTION_FILENAME);
 	}
 
-	void loadCompiledChecker(FilePath compiled_checker) {
+	/// Compiles solution (using sim::compile())
+	/// @p source should be a path in package master dir e.g. If master dir ==
+	/// "foo/" and solution has path "foo/bar/test", then @p source should be
+	/// "bar/test"
+	int compile_solution_from_package(FilePath source, SolutionLanguage lang,
+		Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
+		size_t c_errors_max_len, const std::string& proot_path)
+	{
+		auto solution_path = package_loader->load_as_file(source, "source");
+		return compile_impl(source, lang, time_limit, c_errors, c_errors_max_len,
+			proot_path, "source", SOLUTION_FILENAME);
+	}
+
+	void load_compiled_checker(FilePath compiled_checker) {
 		if (copy(compiled_checker,
 			concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755))
 		{
@@ -364,7 +409,7 @@ public:
 		}
 	}
 
-	void loadCompiledSolution(FilePath compiled_solution) {
+	void load_compiled_solution(FilePath compiled_solution) {
 		if (copy(compiled_solution,
 			concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755))
 		{
@@ -372,7 +417,7 @@ public:
 		}
 	}
 
-	void saveCompiledChecker(FilePath destination) {
+	void save_compiled_checker(FilePath destination) {
 		if (copy(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
 			destination, S_0755))
 		{
@@ -380,7 +425,7 @@ public:
 		}
 	}
 
-	void saveCompiledSolution(FilePath destination) {
+	void save_compiled_solution(FilePath destination) {
 		if (copy(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME),
 			destination, S_0755))
 		{
@@ -405,7 +450,7 @@ public:
 	/**
 	 * @brief Judges last compiled solution on the last loaded package.
 	 * @details Before calling this method, the methods loadPackage(),
-	 *   compileChecker() and compileSolution() have to be called.
+	 *   compile_checker() and compile_solution() have to be called.
 	 *
 	 * @param final Whether judge only on final tests or only initial tests
 	 * @return Judge report

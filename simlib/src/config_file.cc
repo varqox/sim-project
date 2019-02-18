@@ -16,12 +16,12 @@ using std::vector;
 
 const ConfigFile::Variable ConfigFile::null_var;
 
-void ConfigFile::loadConfigFromFile(FilePath pathname, bool load_all) {
+void ConfigFile::load_config_from_file(FilePath pathname, bool load_all) {
 	string contents = getFileContents(pathname);
-	loadConfigFromString(contents, load_all);
+	load_config_from_string(contents, load_all);
 }
 
-void ConfigFile::loadConfigFromString(string config, bool load_all) {
+void ConfigFile::load_config_from_string(string config, bool load_all) {
 	// Set all variables as unused
 	for (auto it : vars)
 		it.second.unset();
@@ -255,7 +255,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			varp = (it != vars.end() ? &it->second : &tmp);
 		}
 		Variable& var = *varp;
-		if (var.isSet())
+		if (var.is_set())
 			var.unset();
 
 		var.flag = Variable::SET;
@@ -267,7 +267,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 				var.s.clear();
 			else
 				var.s = extract_value(false);
-			DEBUG_CF(stdlog("  value: ", escapeToDoubleQuotedString(var.s));)
+			DEBUG_CF(stdlog("  value: ", escape_to_double_quoted_string(var.s));)
 		// Array
 		} else {
 			DEBUG_CF(stdlog("Array:");)
@@ -294,7 +294,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 				// Value
 				var.a.emplace_back(extract_value(true));
 				DEBUG_CF(stdlog("->\t",
-					escapeToDoubleQuotedString(var.a.back()));)
+					escape_to_double_quoted_string(var.a.back()));)
 
 				buff.removeLeading(isWs);
 				// Delimiter
@@ -345,7 +345,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	DEBUG_CF(stdlog("End of the config file.");)
 }
 
-bool ConfigFile::isStringLiteral(StringView str) {
+bool ConfigFile::is_string_literal(StringView str) {
 	if (str.empty())
 		return false;
 
@@ -363,7 +363,7 @@ bool ConfigFile::isStringLiteral(StringView str) {
 	return true;
 }
 
-string ConfigFile::escapeToSingleQuotedString(StringView str) {
+string ConfigFile::escape_to_single_quoted_string(StringView str) {
 	string res {'\''};
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i) {
@@ -375,7 +375,7 @@ string ConfigFile::escapeToSingleQuotedString(StringView str) {
 }
 
 template<class Func>
-static string _escapeToDoubleQuotedString(StringView str, Func&& func) {
+static string _escape_to_double_quoted_string(StringView str, Func&& func) {
 	string res {'"'};
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i)
@@ -425,32 +425,32 @@ static string _escapeToDoubleQuotedString(StringView str, Func&& func) {
 	return (res += '"');
 }
 
-string ConfigFile::escapeToDoubleQuotedString(StringView str) {
-	return _escapeToDoubleQuotedString(str, ::iscntrl);
+string ConfigFile::escape_to_double_quoted_string(StringView str) {
+	return _escape_to_double_quoted_string(str, ::iscntrl);
 }
 
-string ConfigFile::escapeToDoubleQuotedString(StringView str, int) {
-	return _escapeToDoubleQuotedString(str, [](int x) { return !isprint(x); });
+string ConfigFile::escape_to_double_quoted_string(StringView str, int) {
+	return _escape_to_double_quoted_string(str, [](int x) { return !isprint(x); });
 }
 
-string ConfigFile::escapeString(StringView str) {
+string ConfigFile::escape_string(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i)
 		if (str[i] == '\'' || iscntrl(str[i]))
-			return escapeToDoubleQuotedString(str);
+			return escape_to_double_quoted_string(str);
 
-	if (isStringLiteral(str))
+	if (is_string_literal(str))
 		return str.to_string();
 
-	return escapeToSingleQuotedString(str);
+	return escape_to_single_quoted_string(str);
 }
 
-string ConfigFile::escapeString(StringView str, int) {
+string ConfigFile::escape_string(StringView str, int) {
 	for (size_t i = 0; i < str.size(); ++i)
 		if (str[i] == '\'' || !isprint(str[i]))
-			return escapeToDoubleQuotedString(str, 0);
+			return escape_to_double_quoted_string(str, 0);
 
-	if (isStringLiteral(str))
+	if (is_string_literal(str))
 		return str.to_string();
 
-	return escapeToSingleQuotedString(str);
+	return escape_to_single_quoted_string(str);
 }

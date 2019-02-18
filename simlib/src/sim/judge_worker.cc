@@ -10,6 +10,67 @@ using std::vector;
 
 namespace sim {
 
+class DirPackageLoader : public PackageLoader {
+	InplaceBuff<PATH_MAX> pkg_root_;
+
+public:
+	DirPackageLoader(FilePath pkg_path) : pkg_root_(pkg_path) {
+		if (pkg_root_.size and pkg_root_.back() != '/')
+			pkg_root_.append('/');
+	}
+
+	std::string load_into_dest_file(FilePath path, FilePath dest) override {
+		if (copy(concat(pkg_root_, path), dest))
+			THROW("copy()", errmsg());
+
+		return dest.to_str();
+	}
+
+	std::string load_as_file(FilePath path, FilePath) override {
+		auto res = concat_tostr(pkg_root_, path);
+		if (access(res, F_OK) != 0)
+			THROW("load_as_file() - Such file does not exist");
+
+		return res;
+	}
+
+	std::string load_as_str(FilePath path) override {
+		return getFileContents(concat(pkg_root_, path));
+	}
+
+	virtual ~DirPackageLoader() = default;
+};
+
+class ZipPackageLoader : public PackageLoader {
+	TemporaryDirectory& tmp_dir_;
+	ZipFile zip_;
+	std::string pkg_master_dir_;
+
+	auto as_pkg_path(FilePath path) { return concat(pkg_master_dir_, path); }
+
+public:
+	ZipPackageLoader(TemporaryDirectory& tmp_dir, FilePath pkg_path)
+		: tmp_dir_(tmp_dir), zip_(pkg_path, ZIP_RDONLY),
+			pkg_master_dir_(sim::zip_package_master_dir(pkg_path)) {}
+
+	std::string load_into_dest_file(FilePath path, FilePath dest) override {
+		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest);
+		return dest.to_str();
+	}
+
+	std::string load_as_file(FilePath path, FilePath hint_name) override {
+		auto dest = concat_tostr(tmp_dir_.path(), "pkg_loader_", hint_name);
+		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest);
+		return dest;
+	}
+
+	std::string load_as_str(FilePath path) override {
+		return zip_.extract_to_str(zip_.get_index(as_pkg_path(path)));
+	}
+
+	virtual ~ZipPackageLoader() = default;
+};
+
 inline static vector<string> compile_command(SolutionLanguage lang,
 	StringView source, StringView exec)
 {
@@ -42,8 +103,8 @@ inline static vector<string> compile_command(SolutionLanguage lang,
 	THROW("Should not reach here");
 }
 
-constexpr meta::string JudgeWorker::CHECKER_FILENAME;
-constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
+constexpr const char* sim::JudgeWorker::SOLUTION_FILENAME;
+constexpr const char* sim::JudgeWorker::CHECKER_FILENAME;
 
 int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 	Optional<std::chrono::nanoseconds> time_limit, string* c_errors,
@@ -59,13 +120,21 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 
 	auto src_filename = concat<PATH_MAX>(compilation_source_basename);
 	switch (lang) {
-	case SolutionLanguage::C11: src_filename.append(".c"); break;
+	case SolutionLanguage::C11:
+		src_filename.append(".c");
+		break;
+
 	case SolutionLanguage::CPP11:
 	case SolutionLanguage::CPP14:
 		src_filename.append(".cpp");
 		break;
-	case SolutionLanguage::PASCAL: src_filename.append(".pas"); break;
-	case SolutionLanguage::UNKNOWN: THROW("Invalid language!");
+
+	case SolutionLanguage::PASCAL:
+		src_filename.append(".pas");
+		break;
+
+	case SolutionLanguage::UNKNOWN:
+		THROW("Invalid language: ", (int)EnumVal<SolutionLanguage>(lang).int_val());
 	}
 
 	if (copy(source, concat<PATH_MAX>(compilation_dir, src_filename)))
@@ -85,54 +154,44 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 	return rc;
 }
 
-void JudgeWorker::loadPackage(string package_path, string simfile) {
-	sf = Simfile {std::move(simfile)};
-	sf.loadTestsWithFiles();
-	sf.loadChecker();
 
-	if (not sf.checker.has_value()) {
-		// No checker is set, so place the default checker
-		putFileContents(concat(tmp_dir.path(), "default_checker.c"),
-			(const char*)default_checker_c, default_checker_c_len);
-	}
+int JudgeWorker::compile_checker(Optional<std::chrono::nanoseconds> time_limit,
+	std::string* c_errors, size_t c_errors_max_len,
+	const std::string& proot_path)
+{
 
-	pkg_root = std::move(package_path);
-	// Directory
-	if (isDirectory(pkg_root)) {
-		if (pkg_root.back() != '/')
-			pkg_root += '/';
-
-	// Zip
-	} else {
-
-		auto pkg_master_dir = zip_package_master_dir(pkg_root);
-		// Collect all needed files in pc
-		PackageContents pc;
-		if (sf.checker.has_value())
-			pc.add_entry(pkg_master_dir, sf.checker.value());
-
-		for (auto&& tgroup : sf.tgroups)
-			for (auto&& test : tgroup.tests) {
-				pc.add_entry(pkg_master_dir, test.in);
-				pc.add_entry(pkg_master_dir, test.out);
-			}
-
-		// Extract only the necessary files
-		// TODO: find a way to extract files in the fly - e.g. during judging
-		ZipFile zip(pkg_root, ZIP_RDONLY);
-		auto eno = zip.entries_no();
-		for (decltype(eno) i = 0; i < eno; ++i) {
-			StringView ename = zip.get_name(i);
-			if (pc.exists(ename)) {
-				auto fpath = concat(tmp_dir.path(), "package/", ename);
-				create_subdirectories(fpath);
-				zip.extract_to_file(i, fpath);
-			}
+	auto checker_path_and_lang = [&]() -> std::pair<std::string, SolutionLanguage> {
+		if (sf.checker.has_value()) {
+			return {package_loader->load_as_file(sf.checker.value(), "checker"),
+				filename_to_lang(sf.checker.value())};
 		}
 
-		// Update root, so it will be relative to the Simfile
-		pkg_root = concat_tostr(tmp_dir.path() + "package/", pkg_master_dir);
-	}
+		auto path = concat_tostr(tmp_dir.path(), "default_checker.c");
+		putFileContents(path, (const char*)default_checker_c,
+			default_checker_c_len);
+
+		return {path, SolutionLanguage::C};
+	}();
+
+	return compile_impl(checker_path_and_lang.first, checker_path_and_lang.second,
+		time_limit, c_errors, c_errors_max_len, proot_path, "checker",
+		CHECKER_FILENAME);
+}
+
+void JudgeWorker::load_package(FilePath package_path, Optional<string> simfile) {
+	if (isDirectory(package_path))
+		package_loader = std::make_unique<DirPackageLoader>(package_path);
+	else
+		package_loader = std::make_unique<ZipPackageLoader>(tmp_dir, package_path);
+
+
+	if (simfile.has_value())
+		sf = Simfile(std::move(simfile.value()));
+	else
+		sf = Simfile(package_loader->load_as_str("Simfile"));
+
+	sf.load_tests_with_files();
+	sf.load_checker();
 }
 
 // Real time limit is set to 1.5 * time_limit + 1s, because CPU time is measured
@@ -160,7 +219,7 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 		THROW("Failed to open file `", output_file, '`', errmsg());
 
 	Sandbox sandbox;
-	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
+	string solution_path(concat_tostr(tmp_dir.path(), SOLUTION_FILENAME));
 
 	FileDescriptor test_in(input_file, O_RDONLY);
 	if (test_in < 0)
@@ -198,7 +257,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 		THROW("score_cut_lambda has to be from [0, 1]");
 
 	JudgeReport report;
-	judge_log.begin(pkg_root, final);
+	judge_log.begin(final);
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
 	// Checker STDOUT
@@ -246,8 +305,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 			(void)ftruncate(solution_stdout, 0);
 			(void)lseek(solution_stdout, 0, SEEK_SET);
 
-			string test_in_path {pkg_root + test.in};
-			string test_out_path {pkg_root + test.out};
+			string test_in_path = package_loader->load_as_file(test.in, "test.in");
+			string test_out_path = package_loader->load_as_file(test.out, "test.out");
 
 			FileDescriptor test_in(test_in_path, O_RDONLY);
 			if (test_in < 0)

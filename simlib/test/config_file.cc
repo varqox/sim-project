@@ -9,7 +9,7 @@ using std::array;
 using std::string;
 using std::vector;
 
-TEST (ConfigFile, isStringLiteral) {
+TEST (ConfigFile, is_string_literal) {
 	// (input, output)
 	vector<pair<string, bool>> cases {
 		{"", false},
@@ -74,7 +74,7 @@ TEST (ConfigFile, isStringLiteral) {
 
 	// Hardcoded tests
 	for (auto&& p : cases)
-		EXPECT_EQ(ConfigFile::isStringLiteral(p.first), p.second)
+		EXPECT_EQ(ConfigFile::is_string_literal(p.first), p.second)
 			<< "p.first: " << p.first << endl;
 
 	auto is_beginning = [](char c) {
@@ -96,23 +96,23 @@ TEST (ConfigFile, isStringLiteral) {
 	array<char, 4> t;
 	for (int a = t[0] = 0; a < 256; t[0] = ++a) {
 		// One character
-		EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 1}),
+		EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 1}),
 				is_beginning(t[0]) && is_ending(t[0]))
 			<< dump(a) << endl;
 
 		for (int b = t[1] = 0; b < 256; t[1] = ++b) {
 			// Two characters
-			EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 2}),
+			EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 2}),
 					is_beginning(t[0]) && is_ending(t[1]))
 				<< dump(a, b) << endl;
 
 			bool cached_res = is_beginning(t[0]) && is_interior(t[1]);
 			for (int c = t[2] = 0; c < 256; t[2] = ++c) {
 				// Three characters
-				if (ConfigFile::isStringLiteral({t.data(), 3}) !=
+				if (ConfigFile::is_string_literal({t.data(), 3}) !=
 					cached_res && is_ending(t[2]))
 				{
-					EXPECT_EQ(ConfigFile::isStringLiteral({t.data(), 3}),
+					EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 3}),
 							is_beginning(t[0]) && is_interior(t[1]) &&
 							is_ending(t[2]))
 						<< dump(a, b, c) << endl;
@@ -125,7 +125,7 @@ TEST (ConfigFile, isStringLiteral) {
 	for (int a = 0; a < 256; ++a)
 		for (int b = 0; b < 256; ++b) {
 			t = {{(char)a, ' ', '#', (char)b}};
-			EXPECT_EQ(ConfigFile::isStringLiteral(StringView(t.data(), 4)),
+			EXPECT_EQ(ConfigFile::is_string_literal(StringView(t.data(), 4)),
 					false)
 				<< "a: " << a << " b: " << b << " str: "
 				<< StringView(t.data(), 4) << endl;
@@ -133,7 +133,7 @@ TEST (ConfigFile, isStringLiteral) {
 
 }
 
-TEST (ConfigFile, escapeToSingleQuotedString) {
+TEST (ConfigFile, escape_to_single_quoted_string) {
 	// (input, output)
 	vector<pair<string, string>> cases {
 		{"", "''"},
@@ -197,11 +197,11 @@ TEST (ConfigFile, escapeToSingleQuotedString) {
 	};
 
 	for (auto&& p : cases)
-		EXPECT_EQ(ConfigFile::escapeToSingleQuotedString(p.first), p.second)
+		EXPECT_EQ(ConfigFile::escape_to_single_quoted_string(p.first), p.second)
 			<< "p.first: " << p.first << endl;
 }
 
-TEST (ConfigFile, escapeToDoubleQuotedString) {
+TEST (ConfigFile, escape_to_double_quoted_string) {
 	// (input, output)
 	vector<pair<string, string>> cases {
 		{"", R"===("")==="},
@@ -265,33 +265,33 @@ TEST (ConfigFile, escapeToDoubleQuotedString) {
 
 	for (auto&& p : cases) {
 		// First version
-		EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString(p.first), p.second)
+		EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(p.first), p.second)
 			<< "p.first: " << p.first << endl;
 		// Second version
-		EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString(p.first, 0), p.second)
+		EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(p.first, 0), p.second)
 			<< "p.first: " << p.first << endl;
 	}
 
 	// Escaping control characters
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString("\x07\x0e\n\x15\x1f"),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
 		R"===("\a\x0e\n\x15\x1f")===");
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString("\x02\x03\tśćąłź\x11"),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
 		R"===("\x02\x03\tśćąłź\x11")===");
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString("ś"), R"===("ś")===");
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString(" '\t\n' ś "),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("ś"), R"===("ś")===");
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(" '\t\n' ś "),
 		R"===(" '\t\n' ś ")===");
 	// Escaping unprintable characters
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString("\x07\x0e\n\x15\x1f", 0),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x07\x0e\n\x15\x1f", 0),
 		R"===("\a\x0e\n\x15\x1f")===");
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString("\x02\x03\tśćąłź\x11", 0),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("\x02\x03\tśćąłź\x11", 0),
 		R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString("ś", 0),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("ś", 0),
 		R"===("\xc5\x9b")===");
-	EXPECT_EQ(ConfigFile::escapeToDoubleQuotedString(" '\t\n' ś ", 0),
+	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(" '\t\n' ś ", 0),
 		R"===(" '\t\n' \xc5\x9b ")===");
 }
 
-TEST (ConfigFile, escapeString) {
+TEST (ConfigFile, escape_string) {
 	// (input, output)
 	vector<pair<string, string>> cases {
 		{"", "''"},
@@ -355,48 +355,48 @@ TEST (ConfigFile, escapeString) {
 
 	for (auto&& p : cases) {
 		// First version
-		EXPECT_EQ(ConfigFile::escapeString(p.first), p.second)
+		EXPECT_EQ(ConfigFile::escape_string(p.first), p.second)
 			<< "p.first: " << p.first << endl;
 		// Second version
-		EXPECT_EQ(ConfigFile::escapeString(p.first, 0), p.second)
+		EXPECT_EQ(ConfigFile::escape_string(p.first, 0), p.second)
 			<< "p.first: " << p.first << endl;
 	}
 
 	// Escaping control characters
-	EXPECT_EQ(ConfigFile::escapeString("\x07\x0e\n\x15\x1f"),
+	EXPECT_EQ(ConfigFile::escape_string("\x07\x0e\n\x15\x1f"),
 		R"===("\a\x0e\n\x15\x1f")===");
-	EXPECT_EQ(ConfigFile::escapeString("\x02\x03\tśćąłź\x11"),
+	EXPECT_EQ(ConfigFile::escape_string("\x02\x03\tśćąłź\x11"),
 		R"===("\x02\x03\tśćąłź\x11")===");
 
-	EXPECT_EQ(ConfigFile::escapeString("ś"), R"===(ś)===");
-	EXPECT_EQ(ConfigFile::escapeString(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
+	EXPECT_EQ(ConfigFile::escape_string("ś"), R"===(ś)===");
+	EXPECT_EQ(ConfigFile::escape_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
 
 	// Escaping unprintable characters
-	EXPECT_EQ(ConfigFile::escapeString("\x07\x0e\n\x15\x1f", 0),
+	EXPECT_EQ(ConfigFile::escape_string("\x07\x0e\n\x15\x1f", 0),
 		R"===("\a\x0e\n\x15\x1f")===");
-	EXPECT_EQ(ConfigFile::escapeString("\x02\x03\tśćąłź\x11", 0),
+	EXPECT_EQ(ConfigFile::escape_string("\x02\x03\tśćąłź\x11", 0),
 		R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
 
-	EXPECT_EQ(ConfigFile::escapeString("ś", 0), R"===("\xc5\x9b")===");
-	EXPECT_EQ(ConfigFile::escapeString(" '\t\n' ś ", 0),
+	EXPECT_EQ(ConfigFile::escape_string("ś", 0), R"===("\xc5\x9b")===");
+	EXPECT_EQ(ConfigFile::escape_string(" '\t\n' ś ", 0),
 		R"===(" '\t\n' \xc5\x9b ")===");
 }
 
 string dumpConfig(const ConfigFile& cf) {
-	auto&& vars = cf.getVars();
+	auto&& vars = cf.get_vars();
 	string res;
 	for (auto p : vars) {
 		// Array
-		if (p.second.isArray()) {
+		if (p.second.is_array()) {
 			back_insert(res, p.first, ": [\n");
-			for (auto&& s : p.second.asArray())
+			for (auto&& s : p.second.as_array())
 				back_insert(res, "  ",
-					ConfigFile::escapeToDoubleQuotedString(s, 0), '\n');
+					ConfigFile::escape_to_double_quoted_string(s, 0), '\n');
 			res += ']';
 		// Other
 		} else {
 			back_insert(res, p.first, ": ",
-				ConfigFile::escapeToDoubleQuotedString(p.second.asString(), 0));
+				ConfigFile::escape_to_double_quoted_string(p.second.as_string(), 0));
 		}
 
 		// Include the value position
@@ -406,7 +406,7 @@ string dumpConfig(const ConfigFile& cf) {
 	return res;
 }
 
-TEST (ConfigFile, loadConfigFromString) {
+TEST (ConfigFile, load_config_from_string) {
 	// (input, dumped config)
 	vector<pair<string, string>> cases {
 		/*  1 */ {R"===()===", ""},
@@ -530,7 +530,7 @@ workers: "2" # [103,104)
 		auto&& p = cases[i];
 
 		ConfigFile cf;
-		cf.loadConfigFromString(p.first, true);
+		cf.load_config_from_string(p.first, true);
 		RecordProperty("Case", i + 1);
 		EXPECT_EQ(dumpConfig(cf), p.second) << "Case: " << i + 1 << endl;
 	}
@@ -539,21 +539,21 @@ workers: "2" # [103,104)
 	               // exceptions
 	// TODO: if / when EXPECT_THROW_WHAT will be available in Google Test,
 	// use it here
-	EXPECT_THROW(cf.loadConfigFromString("a & eee "), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = [a"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = 'a"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"a"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = b\nb"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"b\nb\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = 'b\nb'"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = 'b'b'"), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"b\"b\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"\\q\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = a\n\n&" ), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = a\n\na = '" ), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"\\xg21\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"\\x2g1\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"\\x\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString("a = \"\\xa\""), ConfigFile::ParseError);
-	EXPECT_THROW(cf.loadConfigFromString(";"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a & eee "), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = [a"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = 'a"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"a"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = b\nb"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"b\nb\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = 'b\nb'"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = 'b'b'"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"b\"b\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"\\q\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = a\n\n&" ), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = a\n\na = '" ), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"\\xg21\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"\\x2g1\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"\\x\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = \"\\xa\""), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string(";"), ConfigFile::ParseError);
 }
