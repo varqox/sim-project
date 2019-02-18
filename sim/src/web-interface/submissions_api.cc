@@ -658,10 +658,12 @@ void Sim::api_submission_add() {
 	// Validate fields
 	SubmissionLanguage slang;
 	auto slang_str = request.form_data.get("language");
-	if (slang_str == "c")
-		slang = SubmissionLanguage::C;
-	else if (slang_str == "cpp")
-		slang = SubmissionLanguage::CPP;
+	if (slang_str == "c11")
+		slang = SubmissionLanguage::C11;
+	else if (slang_str == "cpp11")
+		slang = SubmissionLanguage::CPP11;
+	else if (slang_str == "cpp14")
+		slang = SubmissionLanguage::CPP14;
 	else if (slang_str == "pascal")
 		slang = SubmissionLanguage::PASCAL;
 	else
