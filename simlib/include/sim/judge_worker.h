@@ -115,7 +115,13 @@ public:
 };
 
 enum class SolutionLanguage {
-	UNKNOWN, C, CPP, PASCAL
+	UNKNOWN,
+	C11,
+	C = C11,
+	CPP11,
+	CPP14,
+	CPP = CPP14,
+	PASCAL
 };
 
 inline bool is_source(StringView file) noexcept {
@@ -139,6 +145,8 @@ inline SolutionLanguage filename_to_lang(StringView filename) {
 	case SolutionLanguage::PASCAL:
 	// If missing one, then update above ifs
 		return res;
+	case SolutionLanguage::CPP11:
+		break;
 	}
 
 	THROW("Should not reach here");

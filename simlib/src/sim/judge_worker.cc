@@ -24,11 +24,14 @@ inline static vector<string> compile_command(SolutionLanguage lang,
 	};
 
 	switch (lang) {
-	case SolutionLanguage::C:
+	case SolutionLanguage::C11:
 		return make("gcc", "-O2", "-std=c11", "-static", "-lm", "-m32", "-o",
 			exec, "-xc", source);
-	case SolutionLanguage::CPP:
+	case SolutionLanguage::CPP11:
 		return make("g++", "-O2", "-std=c++11", "-static", "-lm", "-m32", "-o",
+			exec, "-xc++", source);
+	case SolutionLanguage::CPP14:
+		return make("g++", "-O2", "-std=c++14", "-static", "-lm", "-m32", "-o",
 			exec, "-xc++", source);
 	case SolutionLanguage::PASCAL:
 		return make("fpc", "-O2", "-XS", "-Xt", concat("-o", exec), source);
@@ -56,8 +59,11 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 
 	auto src_filename = concat<PATH_MAX>(compilation_source_basename);
 	switch (lang) {
-	case SolutionLanguage::C: src_filename.append(".c"); break;
-	case SolutionLanguage::CPP: src_filename.append(".cpp"); break;
+	case SolutionLanguage::C11: src_filename.append(".c"); break;
+	case SolutionLanguage::CPP11:
+	case SolutionLanguage::CPP14:
+		src_filename.append(".cpp");
+		break;
 	case SolutionLanguage::PASCAL: src_filename.append(".pas"); break;
 	case SolutionLanguage::UNKNOWN: THROW("Invalid language!");
 	}
