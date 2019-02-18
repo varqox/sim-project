@@ -45,10 +45,8 @@ static void* worker(void*) {
 
 				HttpResponse resp = sim_worker.handle(ip, std::move(req));
 
-				auto microdur = duration_cast<microseconds>
-					(steady_clock::now() - beg).count();
-				stdlog("Response generated in ", toString(microdur / 1000.0, 3),
-					" ms.");
+				auto microdur = duration_cast<microseconds>(steady_clock::now() - beg);
+				stdlog("Response generated in ", toString(microdur * 1000), " ms.");
 
 				conn.sendResponse(std::move(resp));
 			}

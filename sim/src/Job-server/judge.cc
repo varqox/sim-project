@@ -71,6 +71,9 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 
 	string judging_began = mysql_date();
 	JudgeWorker jworker;
+	jworker.checker_time_limit = CHECKER_COMPILATION_TIME_LIMIT;
+	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
+	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
 
 	stdlog("Judging submission ", submission_id, " (problem: ", problem_id,
 		')');
@@ -224,8 +227,9 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 			};
 			report.append("<td>", htmlEscape(test.name), "</td>",
 				asTdString(test.status),
-				"<td>", usecToSecStr(test.runtime, 2, false),
-					" / ", usecToSecStr(test.time_limit, 2, false), "</td>"
+				"<td>", toString(floor_to_10ms(test.runtime), false),
+					" / ", toString(floor_to_10ms(test.time_limit), false),
+				"</td>"
 				"<td>", test.memory_consumed >> 10, " / ",
 					test.memory_limit >> 10, "</td>");
 		};
@@ -398,6 +402,10 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	judge_log("Model solution: ", simfile.solutions[0]);
 
 	JudgeWorker jworker;
+	jworker.checker_time_limit = CHECKER_COMPILATION_TIME_LIMIT;
+	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
+	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
+
 	jworker.loadPackage(package_path.to_string(), std::move(simfile_str));
 
 	string compilation_errors;
@@ -447,14 +455,15 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	judge_log("Initial judge report: ", initial_jrep.judge_log);
 	judge_log("Final judge report: ", final_jrep.judge_log);
 
-	sim::Conver conver;
-	conver.setPackagePath(package_path.to_string());
-
 	try {
-		conver.finishConstructingSimfile(simfile, initial_jrep, final_jrep);
+		sim::Conver::ResetTimeLimitsOptions opts;
+		opts.min_time_limit = MIN_TIME_LIMIT;
+		opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
+
+		sim::Conver::reset_time_limits_using_jugde_reports(simfile, initial_jrep,
+			final_jrep, opts);
 
 	} catch (const std::exception& e) {
-		job_log.append(conver.getReport());
 		judge_log("Conver failed: ", e.what());
 		return set_failure();
 	}
@@ -519,9 +528,15 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	// Change time limits to max limits (for judging the model solution)
 	for (auto& group : simfile.tgroups)
 		for (auto& test : group.tests)
-			test.time_limit = PROBLEM_MAX_TIME_LIMIT;
+			test.time_limit = std::chrono::duration_cast<std::chrono::nanoseconds>(
+				sim::Conver::time_limit_to_solution_runtime(MAX_TIME_LIMIT,
+					SOLUTION_RUNTIME_COEFFICIENT, MIN_TIME_LIMIT));
 
 	JudgeWorker jworker;
+	jworker.checker_time_limit = CHECKER_COMPILATION_TIME_LIMIT;
+	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
+	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
+
 	jworker.loadPackage(package_path.to_string(), simfile.dump());
 
 	string compilation_errors;
@@ -571,15 +586,15 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	judge_log("Initial judge report: ", initial_jrep.judge_log);
 	judge_log("Final judge report: ", final_jrep.judge_log);
 
-	sim::Conver conver;
-	conver.setPackagePath(package_path.to_string());
-
 	try {
-		// TODO: rename finishConstructingSimfile to something like reset_time_limits_using_jugde_reports
-		conver.finishConstructingSimfile(simfile, initial_jrep, final_jrep);
+		sim::Conver::ResetTimeLimitsOptions opts;
+		opts.min_time_limit = MIN_TIME_LIMIT;
+		opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
+
+		sim::Conver::reset_time_limits_using_jugde_reports(simfile, initial_jrep,
+			final_jrep, opts);
 
 	} catch (const std::exception& e) {
-		job_log.append(conver.getReport());
 		judge_log("Conver failed: ", e.what());
 		return set_failure();
 	}

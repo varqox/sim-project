@@ -341,12 +341,25 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 		"Zipped package");
 	form_validate(global_time_limit, "global_time_limit", "Global time limit",
 		isReal); // TODO: add length limit
-	// Convert global_time_limit to usec
-	uint64_t gtl =
-		round(strtod(global_time_limit.c_str(), nullptr) * 1'000'000);
-	if (global_time_limit.size() && gtl < 400000)
-		add_notification("error",
-			"Global time limit cannot be lower than 0.4 s");
+
+	using std::chrono::duration;
+	using std::chrono::duration_cast;
+	using std::chrono::nanoseconds;
+
+	// Convert global_time_limit
+	decltype(jobs::AddProblemInfo::global_time_limit) gtl;
+	if (not global_time_limit.empty()) {
+		gtl = duration_cast<nanoseconds>(duration<double>(
+			strtod(global_time_limit.c_str(), nullptr)));
+		if (gtl.value() < MIN_TIME_LIMIT)
+			add_notification("error", "Global time limit cannot be lower than ",
+				toString(MIN_TIME_LIMIT), " s");
+	}
+
+	// Memory limit
+	decltype(jobs::AddProblemInfo::memory_limit) mem_limit;
+	if (not memory_limit.empty())
+		mem_limit = strtoull(memory_limit.c_str());
 
 	// Validate problem type
 	StringView ptype_str = request.form_data.get("type");
@@ -366,7 +379,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	jobs::AddProblemInfo ap_info {
 		name.to_string(),
 		label.to_string(),
-		strtoull(memory_limit.c_str()),
+		mem_limit,
 		gtl,
 		reset_time_limits,
 		ignore_simfile,
