@@ -1,3 +1,4 @@
+#include "../../include/avl_dict.h"
 #include "../../include/filesystem.h"
 #include "../../include/parsers.h"
 #include "../../include/sim/simfile.h"
@@ -30,11 +31,13 @@ static void append_limits_value(string& res, const sim::Simfile& simfile) {
 		if (group.tests.size())
 			res += '\n';
 		for (const sim::Simfile::Test& test : group.tests) {
-			string line {concat_tostr(test.name, ' ',
-				usecToSecStr(test.time_limit, 6))};
+			string line(concat_tostr(test.name, ' ', toString(test.time_limit)));
 
-			if (test.memory_limit != simfile.global_mem_limit)
+			if (not simfile.global_mem_limit.has_value() or
+				test.memory_limit != simfile.global_mem_limit.value())
+			{
 				back_insert(line, ' ', test.memory_limit >> 20);
+			}
 
 			back_insert(res, '\t', ConfigFile::escapeString(line), '\n');
 		}
@@ -67,8 +70,8 @@ string Simfile::dump() const {
 	back_insert(res, "]\n");
 
 	// Memory limit
-	if (global_mem_limit >= (1 << 10))
-		back_insert(res, "memory_limit: ", global_mem_limit >> 20, '\n');
+	if (global_mem_limit.has_value() and global_mem_limit.value() >= (1 << 20))
+		back_insert(res, "memory_limit: ", global_mem_limit.value() >> 20, '\n');
 
 	// Limits
 	back_insert(res, "limits: ");
@@ -182,7 +185,7 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 		};
 
 		if (!isDigitNotGreaterThan<(std::numeric_limits<
-			decltype(global_mem_limit)>::max() >> 20)>(ml.asString()))
+			decltype(global_mem_limit)::StoredType>::max() >> 20)>(ml.asString()))
 		{
 			if (!isDigit(ml.asString()))
 				throw invalid_mem_limit();
@@ -191,16 +194,19 @@ void Simfile::loadGlobalMemoryLimitOnly() {
 				"`memory_limit`"};
 		}
 
-		global_mem_limit =
-			ml.asInt<decltype(global_mem_limit)>() << 20; // Convert from MB to
-			                                              // bytes
-		if (global_mem_limit == 0)
+		// Convert from MB to bytes
+		auto gml = ml.asInt<decltype(global_mem_limit)::StoredType>() << 20;
+		if (gml <= 0)
 			throw invalid_mem_limit();
-	} else
-		global_mem_limit = 0;
+
+		global_mem_limit = gml;
+
+	} else {
+		global_mem_limit = std::nullopt;
+	}
 }
 
-std::tuple<StringView, uint64_t, uint64_t>
+std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
 Simfile::parseLimitsItem(StringView item) {
 	SimpleParser sp(item);
 	// Test name
@@ -216,15 +222,20 @@ Simfile::parseLimitsItem(StringView item) {
 		throw std::runtime_error{concat_tostr("Simfile: invalid time limit"
 			" of the test `", test_name, "` - it has to be grater than 0")};
 
-	uint64_t time_limit = round(tl * 1000000LL);
-	if (time_limit == 0)
+	using std::chrono::duration;
+	using std::chrono::duration_cast;
+	using std::chrono_literals::operator""ns;
+	using std::chrono::nanoseconds;
+
+	auto time_limit = duration_cast<nanoseconds>(duration<double>(tl) + 0.5ns);
+	if (time_limit == 0ns)
 		throw std::runtime_error{concat_tostr("Simfile: time limit of the"
 			" test `", test_name, "` is to small - after rounding it is"
-			" equal to 0 microseconds, but it has to be at least"
-			" 1 microsecond")};
+			" equal to 0 nanoseconds, but it has to be at least"
+			" 1 nanosecond")};
 
 	// Memory limit
-	uint64_t memory_limit = 0;
+	Optional<uint64_t> memory_limit;
 	sp.removeLeading(isspace);
 	if (not sp.empty()) {
 		auto invalid_mem_limit = [&] {
@@ -234,7 +245,7 @@ Simfile::parseLimitsItem(StringView item) {
 		};
 
 		if (!isDigitNotGreaterThan<(std::numeric_limits<
-			decltype(memory_limit)>::max() >> 20)>(sp))
+			decltype(memory_limit)::StoredType>::max() >> 20)>(sp))
 		{
 			if (!isDigit(sp))
 				throw invalid_mem_limit();
@@ -244,11 +255,12 @@ Simfile::parseLimitsItem(StringView item) {
 		}
 
 		// Memory limit of the current test is valid
-		strtou(sp, memory_limit);
-		if (memory_limit == 0)
+		uint64_t mem = 0;
+		strtou(sp, mem);
+		if (mem <= 0)
 			throw invalid_mem_limit();
-		else
-			memory_limit <<= 20; // Convert from MB to bytes
+
+		memory_limit = mem << 20; // Convert from MB to bytes
 	}
 
 	return {test_name, time_limit, memory_limit};
@@ -317,14 +329,15 @@ void Simfile::loadTests() {
 	// variable which will be valid as long as config is not changed
 	for (const string& str : limits.asArray()) {
 		StringView test_name;
-		uint64_t time_limit, memory_limit;
+		std::chrono::nanoseconds time_limit;
+		Optional<uint64_t> memory_limit;
 		std::tie(test_name, time_limit, memory_limit) = parseLimitsItem(str);
-		if (memory_limit == 0) {
-			if (not global_mem_limit)
+		if (not memory_limit.has_value()) {
+			if (not global_mem_limit.has_value())
 				throw std::runtime_error{concat_tostr("Simfile: missing memory"
 					" limit for the test `", test_name, '`')};
 
-			memory_limit = global_mem_limit;
+			memory_limit = global_mem_limit.value();
 		}
 
 		// Add test to its group
@@ -338,7 +351,7 @@ void Simfile::loadTests() {
 			p.gid = "0";
 
 		tests_groups[p.gid].tests.emplace_back(test_name.to_string(),
-			time_limit, memory_limit);
+			time_limit, memory_limit.value());
 	}
 
 	/* Scoring */
@@ -398,6 +411,7 @@ void Simfile::loadTests() {
 			return TestNameComparator()(a.name, b.name);
 		});
 }
+
 std::tuple<StringView, StringView, StringView>
 Simfile::parseTestFilesItem(StringView item) {
 	SimpleParser sp(item);

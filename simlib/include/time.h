@@ -2,7 +2,7 @@
 
 #include "string.h"
 
-#include <ctime>
+#include <chrono>
 
 long long microtime() noexcept;
 
@@ -153,7 +153,7 @@ constexpr inline bool operator>=(timeval a, timeval b) noexcept {
 
 template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 11> // +11
     // for terminating null and decimal point and the fraction part
-InplaceBuff<N> timespec_to_str(timespec x, uint prec, bool trim_zeros = true) {
+InplaceBuff<N> timespec_to_str(timespec x, uint prec, bool trim_zeros = true) noexcept {
 	auto res = toString<uint64_t, N>(x.tv_sec);
 	res[res.size++] = '.';
 	for (unsigned i = res.size + 8; i >= res.size; --i) {
@@ -178,7 +178,7 @@ InplaceBuff<N> timespec_to_str(timespec x, uint prec, bool trim_zeros = true) {
 
 template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 8> // +8
     // for terminating null and decimal point and the fraction part
-InplaceBuff<N> timeval_to_str(timeval x, uint prec, bool trim_zeros = true) {
+InplaceBuff<N> timeval_to_str(timeval x, uint prec, bool trim_zeros = true) noexcept {
 	auto res = toString<uint64_t, N>(x.tv_sec);
 	res[res.size++] = '.';
 	for (unsigned i = res.size + 5; i >= res.size; --i) {
@@ -201,24 +201,75 @@ InplaceBuff<N> timeval_to_str(timeval x, uint prec, bool trim_zeros = true) {
 	return res;
 }
 
+constexpr bool is_power_of_10(intmax_t x) {
+	if (x <= 0)
+		return false;
+
+	while (x > 1) {
+		if (x % 10 != 0)
+			return false;
+		x /= 10;
+	}
+
+	return (x == 1);
+}
 
 /**
- * @brief Converts usec (ULL) to sec (double as string)
+ * @brief Converts std::chrono::duration to string (as seconds)
  *
- * @param x usec value
- * @param prec precision (maximum number of digits after '.', if greater than 6,
- *   then it is downgraded to 6)
+ * @param dur std::chrono::duration to convert to string
  * @param trim_zeros set whether to trim trailing zeros
  *
- * @return floating-point x in seconds as string
+ * @return floating-point @p dur in seconds as string
  */
-template<size_t N = meta::ToString<UINT64_MAX>::arr_value.size() + 2> // +2 for
-	// terminating null and decimal point
-InplaceBuff<N> usecToSecStr(uint64_t x, uint prec, bool trim_zeros = true) {
-	uint64_t y = x / 1'000'000;
-	x -= y * 1'000'000;
-	return timeval_to_str<N>(
-		{static_cast<decltype(timeval::tv_sec)>(y),
-			static_cast<decltype(timeval::tv_usec)>(x)},
-		prec, trim_zeros);
+template<class Rep, class Period,
+	size_t N = meta::ToString<std::numeric_limits<Rep>::max()>::arr_value.size() + 3
+> // +3 for sign, terminating null and decimal point
+InplaceBuff<N> toString(const std::chrono::duration<Rep, Period>& dur, bool trim_zeros = true) noexcept {
+	static_assert(Period::num == 1, "Needed below");
+	static_assert(is_power_of_10(Period::den), "Needed below");
+	auto dec_dur = std::chrono::duration_cast<std::chrono::duration<intmax_t>>(dur);
+	auto res = toString(dec_dur.count());
+	res[res.size++] = '.';
+
+	auto x = std::chrono::duration<intmax_t, Period>(dur - dec_dur).count();
+	constexpr int prec = meta::ToString<Period::den>::arr_value.size() - 1;
+	for (auto i = res.size + prec - 1; i >= res.size; --i) {
+		res[i] = '0' + x % 10;
+		x /= 10;
+	}
+
+	if (trim_zeros) {
+		// Truncate trailing zeros
+		auto i = res.size + prec - 1;
+		// i will point to the last character of the result
+		while (i >= res.size and res[i] == '0')
+			--i;
+
+		if (i == res.size - 1)
+			res.size = i; // Trim trailing '.'
+		else
+			res.size = i + 1;
+	} else {
+		res.size += prec;
+	}
+
+	return res;
+}
+
+// TODO: This works for positive durations - check it for negative
+template<class Rep, class Period>
+timespec to_timespec(const std::chrono::duration<Rep, Period>& dur) noexcept {
+	auto sec_dur = std::chrono::duration_cast<std::chrono::seconds>(dur);
+	auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(dur - sec_dur);
+	return {sec_dur.count(), nsec.count()};
+}
+
+inline std::chrono::nanoseconds to_nanoseconds(const timespec& ts) noexcept {
+	return std::chrono::seconds(ts.tv_sec) + std::chrono::nanoseconds(ts.tv_nsec);
+}
+
+template<class Rep, class Period>
+inline auto floor_to_10ms(const std::chrono::duration<Rep, Period>& time) noexcept {
+	return std::chrono::duration_cast<std::chrono::duration<intmax_t, std::centi>>(time);
 }

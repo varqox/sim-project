@@ -88,8 +88,9 @@ public:
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of sandboxed
 	 *   process will be changed or if negative, closed;
-	 *   time_limit set to 0 disables the time limit;
-	 *   memory_limit set to 0 disables memory limit;
+	 *   time_limit set to std::nullopt disables the time limit;
+	 *   cpu_time_limit set to std::nullopt disables the CPU time limit;
+	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working directory)
 	 * @param func callback functor (used to determine if a syscall should be
 	 *   executed)

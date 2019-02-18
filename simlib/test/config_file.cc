@@ -385,7 +385,7 @@ TEST (ConfigFile, escapeString) {
 string dumpConfig(const ConfigFile& cf) {
 	auto&& vars = cf.getVars();
 	string res;
-	vars.for_each([&](auto&& p) {
+	for (auto p : vars) {
 		// Array
 		if (p.second.isArray()) {
 			back_insert(res, p.first, ": [\n");
@@ -402,7 +402,7 @@ string dumpConfig(const ConfigFile& cf) {
 		// Include the value position
 		back_insert(res, " # [", p.second.value_span.beg, ",",
 			p.second.value_span.end, ")\n");
-	});
+	};
 	return res;
 }
 

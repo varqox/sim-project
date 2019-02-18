@@ -1,8 +1,8 @@
 #pragma once
 
-#include "avl_dict.h"
 #include "string.h"
 
+#include <map>
 #include <vector>
 
 class ConfigFile {
@@ -109,7 +109,7 @@ public:
 	};
 
 private:
-	AVLDictMap<std::string, Variable> vars; // (name => value)
+	std::map<std::string, Variable, std::less<>> vars; // (name => value)
 	// TODO: ^ maybe StringView would be better?
 	static const Variable null_var;
 
@@ -141,10 +141,10 @@ public:
 
 	const Variable& operator[](StringView name) const noexcept {
 		auto it = vars.find(name);
-		return (it ? it->second : null_var);
+		return (it != vars.end() ? it->second : null_var);
 	}
 
-	const AVLDictMap<std::string, Variable>& getVars() const { return vars; }
+	const decltype(vars)& getVars() const { return vars; }
 
 	 /**
 	 * @brief Loads config (variables) form file @p pathname

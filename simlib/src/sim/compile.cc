@@ -6,9 +6,14 @@ using std::vector;
 namespace sim {
 
 int compile(StringView dir_to_chdir, vector<string> compile_command,
-	timespec time_limit, string* c_errors, size_t c_errors_max_len,
-	const string& proot_path)
+	Optional<std::chrono::nanoseconds> time_limit, string* c_errors,
+	size_t c_errors_max_len, const string& proot_path)
 {
+	using std::chrono_literals::operator""ns;
+
+	if (time_limit.has_value() and time_limit.value() <= 0ns)
+		THROW("If set, time_limit has to be greater than 0");
+
 	FileDescriptor cef;
 	if (c_errors) {
 		cef = openUnlinkedTmpFile(O_APPEND);
@@ -44,7 +49,7 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 	// Check for errors
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {
 		if (c_errors)
-			*c_errors = (es.runtime >= time_limit
+			*c_errors = (time_limit.has_value() and es.runtime >= time_limit.value()
 				? "Compilation time limit exceeded"
 				: getFileContents(cef, 0, c_errors_max_len));
 

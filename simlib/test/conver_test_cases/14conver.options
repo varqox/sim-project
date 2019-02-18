@@ -1,8 +1,12 @@
 name: Test
 label:
 memory_limit: 32
-global_time_limit: 0
+global_time_limit: null
+max_time_limit: 44.444
 reset_time_limits_using_model_solution: true
 ignore_simfile: true
 seek_for_new_tests: true
 reset_scoring: false
+require_statement: true
+min_time_limit: 4.2
+solution_rutnime_coefficient: 7.3

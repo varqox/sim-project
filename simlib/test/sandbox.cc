@@ -6,17 +6,15 @@
 #include <linux/version.h>
 #include <sys/syscall.h>
 
-inline std::ostream& operator<<(std::ostream& os, timespec ts) {
-	return os << '{' << ts.tv_sec << '.' << std::setw(9) << ts.tv_nsec << '}';
-}
-
 TEST (Sandbox, run) {
+	using namespace std::chrono_literals;
+
 	Sandbox sandbox;
 
 	constexpr size_t MEM_LIMIT = 16 << 20; // 16 MB (in bytes)
 	// Big RT limit is needed for tests where memory dump is created - it is really slow)
-	constexpr timespec REAL_TIME_LIMIT = {3, 0}; // 3.0 s
-	constexpr timespec CPU_TIME_LIMIT = {0, (int)0.2e9}; // 0.2 s
+	constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 3s;
+	constexpr std::chrono::nanoseconds CPU_TIME_LIMIT = 200ms;
 
 	Sandbox::Options opts {
 		-1,
@@ -86,9 +84,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, "Memory limit exceeded");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -99,8 +97,8 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGSEGV);
 	EXPECT_EQ(es.message, "killed by signal 11 - Segmentation fault");
-	EXPECT_EQ(es.cpu_runtime, (timespec{0, 0}));
-	EXPECT_EQ(es.runtime, (timespec{0, 0}));
+	EXPECT_EQ(es.cpu_runtime, 0s);
+	EXPECT_EQ(es.runtime, 0s);
 	EXPECT_EQ(es.vm_peak, 0);
 
 	compile_test_case("3.c");
@@ -109,9 +107,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 37);
 	EXPECT_EQ(es.message, "exited with 37");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -122,9 +120,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -134,9 +132,9 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -146,9 +144,9 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -159,9 +157,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 0);
 	EXPECT_EQ(es.message, "");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -172,9 +170,9 @@ TEST (Sandbox, run) {
 		es = sandbox.run(exec, {}, opts, {{"/tmp", perm}});
 		EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 		EXPECT_EQ(es.si.status, SIGABRT);
-		EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+		EXPECT_LT(0s, es.cpu_runtime);
 		EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-		EXPECT_LT((timespec{0, 0}), es.runtime);
+		EXPECT_LT(0s, es.runtime);
 		EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 		EXPECT_LT(0, es.vm_peak);
 		EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -187,9 +185,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 0);
 	EXPECT_EQ(es.message, "");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -201,9 +199,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: uname"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -214,9 +212,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: uname"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -227,9 +225,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: set_thread_area"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -240,9 +238,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 205 - set_thread_area"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -254,9 +252,9 @@ TEST (Sandbox, run) {
 		EXPECT_EQ(es.si.code, CLD_KILLED);
 		EXPECT_EQ(es.si.status, SIGKILL);
 		EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 384 - arch_prctl"));
-		EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+		EXPECT_LT(0s, es.cpu_runtime);
 		EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-		EXPECT_LT((timespec{0, 0}), es.runtime);
+		EXPECT_LT(0s, es.runtime);
 		EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 		EXPECT_LT(0, es.vm_peak);
 		EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -268,9 +266,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: arch_prctl"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -282,9 +280,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -295,9 +293,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -309,12 +307,12 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("killed by signal 9 - Killed"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
-	constexpr timespec CPU_TL_THRESHOLD = timespec{1, 0} - CPU_TIME_LIMIT;
+	EXPECT_LT(0s, es.cpu_runtime);
+	constexpr std::chrono::nanoseconds CPU_TL_THRESHOLD = 1s - CPU_TIME_LIMIT;
 	static_assert(CPU_TIME_LIMIT + CPU_TIME_LIMIT < CPU_TL_THRESHOLD,
 		"Needed below to accurately check if the timeout occurred early enough");
 	EXPECT_LE(es.cpu_runtime, CPU_TIME_LIMIT + CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -326,9 +324,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 0);
 	EXPECT_EQ(es.message, concat_tostr(""));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -339,9 +337,9 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_PRED2(killed_or_dumped_by_abort, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGABRT);
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -353,9 +351,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -367,9 +365,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: execve"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -380,9 +378,9 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_PRED2(killed_or_dumped_by_segv, es.si.code, es.message);
 	EXPECT_EQ(es.si.status, SIGSEGV);
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LE(es.vm_peak, MEM_LIMIT);
@@ -394,9 +392,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 11);
 	EXPECT_EQ(es.message, concat_tostr("exited with 11"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -408,9 +406,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 55);
 	EXPECT_EQ(es.message, concat_tostr("exited with 55"));
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -422,9 +420,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
 	EXPECT_EQ(es.message, "Memory limit exceeded");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(0, es.vm_peak);
@@ -449,9 +447,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 1);
 	EXPECT_EQ(es.message, "exited with 1");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -463,9 +461,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 7);
 	EXPECT_EQ(es.message, "exited with 7");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -477,9 +475,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 6);
 	EXPECT_EQ(es.message, "exited with 6");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
@@ -491,9 +489,9 @@ TEST (Sandbox, run) {
 	EXPECT_EQ(es.si.code, CLD_EXITED);
 	EXPECT_EQ(es.si.status, 7);
 	EXPECT_EQ(es.message, "exited with 7");
-	EXPECT_LT((timespec{0, 0}), es.cpu_runtime);
+	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
-	EXPECT_LT((timespec{0, 0}), es.runtime);
+	EXPECT_LT(0s, es.runtime);
 	EXPECT_LT(es.runtime, REAL_TIME_LIMIT);
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);

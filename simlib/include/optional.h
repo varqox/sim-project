@@ -53,7 +53,6 @@ protected:
 template<class T>
 class Optional : private OptionalBase<T, std::is_trivially_destructible<T>::value> {
 	using Base = OptionalBase<T, std::is_trivially_destructible<T>::value>;
-	using StoredType = typename Base::StoredType;
 	using Base::payload_;
 	using Base::has_value_;
 
@@ -61,6 +60,8 @@ class Optional : private OptionalBase<T, std::is_trivially_destructible<T>::valu
 	friend class Optional;
 
 public:
+	using StoredType = typename Base::StoredType;
+
 	constexpr Optional() noexcept : Base(false) {}
 
 	constexpr Optional(std::nullopt_t) noexcept : Optional() {}

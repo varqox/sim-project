@@ -265,7 +265,7 @@ TEST (Simfile, loadTests) {
 	// Memory limit
 	sim::Simfile sf {"memory_limit: 123\nlimits: []"};
 	sf.loadTests();
-	EXPECT_EQ(123 << 20, sf.global_mem_limit);
+	EXPECT_EQ(123 << 20, sf.global_mem_limit.value_or(0));
 
 	// Exceptions - memory_limit
 	sf = sim::Simfile {"memory_limit: []\nlimits: []"};

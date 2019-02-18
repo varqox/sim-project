@@ -3,6 +3,8 @@
 #include "../config_file.h"
 #include "../optional.h"
 
+#include <chrono>
+
 /// # Simfile - Sim package configuration file
 /// Simfile is a ConfigFile file, so the syntax is as in ConfigFile
 ///
@@ -16,7 +18,6 @@
 ///                                            # The first solution is the main
 ///                                            # solution
 /// memory_limit: 64              # Global memory limit in MB (optional)
-/// time_limit: 3.14              # Global time limit in seconds (optional)
 /// limits: [                     # Limits array
 ///         # Group 0
 ///         sim0a 1            # Format: <test name> <time limit> [memory limit]
@@ -72,17 +73,18 @@ public:
 	std::string name, label, statement;
 	Optional<std::string> checker; // std::nullopt if default checker should be used
 	std::vector<std::string> solutions;
-	uint64_t global_mem_limit = 0; // in bytes
+	Optional<uint64_t> global_mem_limit; // in bytes
 
 	/**
 	 * @brief Holds a test
 	 */
 	struct Test {
 		std::string name, in, out; // in, out - paths to test's input and output
-		uint64_t time_limit; // in usec
+		std::chrono::nanoseconds time_limit;
 		uint64_t memory_limit; // in bytes
 
-		explicit Test(const std::string& n = "", uint64_t tl = 0,
+		explicit Test(const std::string& n = "",
+				std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
 				uint64_t ml = 0)
 			: name(n), time_limit(tl), memory_limit(ml) {}
 	};
@@ -114,7 +116,7 @@ public:
 	 *
 	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
-	Simfile(std::string simfile_contents) {
+	explicit Simfile(std::string simfile_contents) {
 		config.addVars("name", "label", "checker", "statement", "solutions",
 			"memory_limit", "limits", "scoring", "tests_files");
 		config.loadConfigFromString(std::move(simfile_contents));
@@ -212,9 +214,10 @@ private:
 	/**
 	 * @brief Parses the item of the variable "limits"
 	 * @param item - the item to parse
-	 * @return (test name, time limit [usec], memory limit [byte] or 0 if not given)
+	 * @return (test name, time limit [usec], memory limit [byte])
 	 */
-	static std::tuple<StringView, uint64_t, uint64_t> parseLimitsItem(StringView item);
+	static std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
+		parseLimitsItem(StringView item);
 
 	/**
 	 * @brief Parses the item of the variable "scoring"
@@ -257,7 +260,7 @@ private:
 	 * @return (test name, path to input file, path to output file)
 	 */
 	static std::tuple<StringView, StringView, StringView>
-	parseTestFilesItem(StringView item);
+		parseTestFilesItem(StringView item);
 
 public:
 

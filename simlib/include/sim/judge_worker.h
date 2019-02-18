@@ -4,6 +4,7 @@
 #include "../filesystem.h"
 #include "../sandbox.h"
 #include "../utilities.h"
+#include "../time.h"
 #include "compile.h"
 #include "simfile.h"
 
@@ -37,11 +38,12 @@ public:
 
 		std::string name;
 		Status status;
-		uint64_t runtime, time_limit;
+		std::chrono::nanoseconds runtime, time_limit;
 		uint64_t memory_consumed, memory_limit; // in bytes
 		std::string comment;
 
-		Test(std::string n, Status s, uint64_t rt, uint64_t tl, uint64_t mc,
+		Test(std::string n, Status s, std::chrono::nanoseconds rt,
+				std::chrono::nanoseconds tl, uint64_t mc,
 				uint64_t ml, std::string c)
 			: name(std::move(n)), status(s), runtime(rt), time_limit(tl),
 			memory_consumed(mc), memory_limit(ml), comment(std::move(c))
@@ -72,8 +74,8 @@ public:
 			for (auto&& test : group.tests) {
 				back_insert(res, "  ", paddedString(test.name, 11, LEFT),
 					paddedString(intentionalUnsafeStringView(
-						usecToSecStr(test.runtime, 2, false)), 4),
-					" / ", usecToSecStr(test.time_limit, 2, false),
+						toString(floor_to_10ms(test.runtime), false)), 4),
+					" / ", toString(floor_to_10ms(test.time_limit), false),
 					" s  ", test.memory_consumed >> 10, " / ",
 					test.memory_limit >> 10, " KB"
 					"    Status: ");
@@ -154,7 +156,7 @@ public:
 
 	virtual void test(StringView test_name, JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
-		uint64_t checker_mem_limit, StringView checker_error_str) = 0;
+		Optional<uint64_t> checker_mem_limit, StringView checker_error_str) = 0;
 
 	virtual void group_score(int64_t score, int64_t max_score, double score_ratio) = 0;
 
@@ -185,8 +187,8 @@ class VerboseJudgeLogger : public JudgeLogger {
 	{
 		auto tmplog = log("  ", paddedString(test_name, 12, LEFT), ' ',
 			paddedString(intentionalUnsafeStringView(
-				usecToSecStr(test_report.runtime, 2, false)), 4),
-			" / ", usecToSecStr(test_report.time_limit, 2, false),
+				toString(floor_to_10ms(test_report.runtime), false)), 4),
+			" / ", toString(floor_to_10ms(test_report.time_limit), false),
 			" s  ", test_report.memory_consumed >> 10, " / ",
 			test_report.memory_limit >> 10, " KB  Status: ");
 		// Status
@@ -210,8 +212,8 @@ class VerboseJudgeLogger : public JudgeLogger {
 		}
 
 		// Rest
-		tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 9, false),
-			" RT: ", timespec_to_str(es.runtime, 9, false), " ]");
+		tmplog(" [ CPU: ", toString(es.cpu_runtime, false),
+			" RT: ", toString(es.runtime, false), " ]");
 
 		func(tmplog);
 	}
@@ -234,7 +236,8 @@ public:
 	}
 
 	void test(StringView test_name, JudgeReport::Test test_report,
-		Sandbox::ExitStat es, Sandbox::ExitStat checker_es, uint64_t checker_mem_limit, StringView checker_error_str) override
+		Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
+		Optional<uint64_t> checker_mem_limit, StringView checker_error_str) override
 	{
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
 			tmplog("  Checker: ");
@@ -250,9 +253,11 @@ public:
 				return; // Checker was not run
 
 
-			tmplog(" [ CPU: ", timespec_to_str(checker_es.cpu_runtime, 9, false),
-				" RT: ", timespec_to_str(checker_es.runtime, 9, false), " ] ",
-				checker_es.vm_peak >> 10, " / ", checker_mem_limit >> 10, " KB");
+			tmplog(" [ CPU: ", toString(checker_es.cpu_runtime, false),
+				" RT: ", toString(checker_es.runtime, false), " ] ",
+				checker_es.vm_peak >> 10);
+			if (checker_mem_limit.has_value())
+				tmplog(" / ", checker_mem_limit.value() >> 10, " KB");
 		});
 	}
 
@@ -282,8 +287,22 @@ class JudgeWorker {
 
 	constexpr static meta::string CHECKER_FILENAME {"checker"};
 	constexpr static meta::string SOLUTION_FILENAME {"solution"};
-	constexpr static timespec CHECKER_TIME_LIMIT = {10, 0}; // 10 s
-	constexpr static uint64_t CHECKER_MEMORY_LIMIT = 256 << 20; // 256 MiB
+
+public:
+	Optional<std::chrono::nanoseconds> checker_time_limit = std::chrono::seconds(10);
+	Optional<uint64_t> checker_memory_limit = 256 << 20; // 256 MiB
+	// It means that score ratio for runtime in range
+	// [score_cut_lambda * time_limit, time_limit] falls linearly to 0.
+	// For T = time limit, A = score_cut_lambda * T, the plot of score ratio
+	// looks as follows:
+	//   ^
+	//   | score ratio
+	// 1 +--------------*
+	//   |              |\
+	//   |              | \
+	//   |              |  \
+	//   +--------------A---T---> time
+	double score_cut_lambda = 2.0 / 3; // has to be from [0, 1]
 
 public:
 	JudgeWorker() = default;
@@ -301,14 +320,15 @@ public:
 
 private:
 	int compile_impl(FilePath source, SolutionLanguage lang,
-		timespec time_limit, std::string* c_errors,
+		Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path,
 		StringView compilation_source_basename, StringView exec_dest_filename);
 
 public:
 	/// Compiles checker (using sim::compile())
-	int compileChecker(timespec time_limit, std::string* c_errors,
-		size_t c_errors_max_len, const std::string& proot_path)
+	int compileChecker(Optional<std::chrono::nanoseconds> time_limit,
+		std::string* c_errors, size_t c_errors_max_len,
+		const std::string& proot_path)
 	{
 		auto checker_path = (sf.checker.has_value() ?
 			concat(pkg_root, sf.checker.value()) :
@@ -321,7 +341,7 @@ public:
 
 	/// Compiles solution (using sim::compile())
 	int compileSolution(FilePath source, SolutionLanguage lang,
-		timespec time_limit, std::string* c_errors,
+		Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
 		return compile_impl(source, lang, time_limit, c_errors,
@@ -366,13 +386,13 @@ public:
 	 *
 	 * @param input_file path to file to set as stdin
 	 * @param output_file path to file to set as stdout
-	 * @param time_limit time limit in usec
+	 * @param time_limit time limit
 	 * @param memory_limit memory limit in bytes
 	 * @return exit status of running the solution (in the sandbox)
 	 */
 	Sandbox::ExitStat run_solution(FilePath input_file,
-		FilePath output_file, uint64_t time_limit, uint64_t memory_limit)
-		const;
+		FilePath output_file, Optional<std::chrono::nanoseconds> time_limit,
+		Optional<uint64_t> memory_limit) const;
 
 	/**
 	 * @brief Judges last compiled solution on the last loaded package.

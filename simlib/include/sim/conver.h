@@ -31,28 +31,38 @@ private:
 	std::string package_path_;
 
 public:
-	const std::string& getPackagePath() const noexcept { return package_path_; }
+	const std::string& package_path() const noexcept { return package_path_; }
 
 	// @p path may point to a directory as well as a zip-package
-	void setPackagePath(std::string path) {	package_path_ = std::move(path); }
+	void package_path(std::string path) { package_path_ = std::move(path); }
 
-	const std::string& getReport() const noexcept { return report_.str; }
+	const std::string& report() const noexcept { return report_.str; }
+
+	struct ResetTimeLimitsOptions {
+		// Minimum allowed time limit
+		std::chrono::nanoseconds min_time_limit = std::chrono::milliseconds(300);
+		// Solution runtime coefficient - the time limit will be set to solution
+		// runtime * solution_runtime_coefficient + adjustment based on
+		// minimum_time_limit.
+		double solution_runtime_coefficient = 3;
+
+		constexpr ResetTimeLimitsOptions() = default;
+	};
 
 	struct Options {
 		// Leave empty to detect it from the Simfile in the package
 		std::string name;
 		// Leave empty to detect it from the Simfile in the package
 		std::string label;
-		// In MB. Set to a non-zero value to override memory limit of every test
-		uint64_t memory_limit = 0;
-		// In microseconds. Set to a non-zero value to override time limit of
-		// every test (has lower precedence than
+		// In MB. If set, overrides memory limit of every test
+		Optional<uint64_t> memory_limit;
+		// If set, overrides time limit of every test (has lower precedence than
 		// reset_time_limits_using_model_solution)
-		uint64_t global_time_limit = 0;
-		// Maximum allowed time limit on the test in microseconds. If
-		// global_time_limit != 0 this option is ignored
-		uint64_t max_time_limit = 60e6;
-		// If global_time_limit != 0 this option is ignored
+		Optional<std::chrono::nanoseconds> global_time_limit;
+		// Maximum allowed time limit on the test. If global_time_limit is set
+		// this option is ignored
+		std::chrono::nanoseconds max_time_limit = std::chrono::seconds(60);
+		// If global_time_limit is set this option is ignored
 		bool reset_time_limits_using_model_solution = false;
 		// If true, Simfile in the package will be ignored
 		bool ignore_simfile = false;
@@ -63,6 +73,8 @@ public:
 		// Whether to throw an exception or give the warning if the statement is
 		// not present
 		bool require_statement = true;
+		// Ignored if global_time_limit is set
+		ResetTimeLimitsOptions rtl_opts;
 
 		Options() = default;
 	};
@@ -85,46 +97,70 @@ public:
 	 *
 	 * @return Status and a valid Simfile; If status == COMPLETE then Simfile is
 	 *   fully constructed - conver has finished its job. Otherwise it is
-	 *   necessary to run finishConstructingSimfile() method with the returned
-	 *   Simfile and a judge report of the model solution on the returned
-	 *   Simfile.
+	 *   necessary to run reset_time_limits_using_jugde_reports() method with
+	 *   the returned Simfile and a judge report of the model solution on the
+	 *   returned Simfile.
 	 *
 	 * @errors If any error is encountered then an exception of type
 	 *   std::runtime_error is thrown with a proper message
 	 */
-	ConstructionResult constructSimfile(const Options& opts, bool be_verbose = false);
+	ConstructionResult construct_simfile(const Options& opts, bool be_verbose = false);
 
 	 /**
 	  * @brief Finishes constructing the Simfile partially constructed by the
-	  *   constructSimfile() method
+	  *   construct_simfile() method
 	  * @details Sets the time limits based on the model solution's judge report
 	  *
-	  * @param sf Simfile to update (returned by constructSimfile())
+	  * @param sf Simfile to update (returned by construct_simfile())
 	  * @param jrep1 Initial judge report of the model solution, based on the
 	  *   @p sf. Passing @p jrep1 that is not based on the @p sf is
 	  *   undefined-behavior.
 	  * @param jrep2 Final judge report of the model solution, based on the
 	  *   @p sf. Passing @p jrep2 that is not based on the @p sf is
 	  *   undefined-behavior.
+	 * @param opts options that parameterize calculating time limits
 	  */
-	static void finishConstructingSimfile(Simfile& sf, const JudgeReport& jrep1,
-		const JudgeReport& jrep2);
+	static void reset_time_limits_using_jugde_reports(Simfile& sf,
+		const JudgeReport& jrep1, const JudgeReport& jrep2,
+		const ResetTimeLimitsOptions& opts);
 
-private:
-	static constexpr double time_limit(double model_solution_runtime) {
-		double x = model_solution_runtime;
-		return 3*x + 2/(2*x*x + 5);
+	static constexpr std::chrono::duration<double> solution_runtime_to_time_limit(
+		std::chrono::duration<double> model_solution_runtime,
+		double solution_runtime_coefficient,
+		std::chrono::duration<double> min_time_limit) noexcept
+	{
+		double x = model_solution_runtime.count();
+		return solution_runtime_coefficient * model_solution_runtime +
+			min_time_limit * 2/(x*x + 2);
 	}
 
-	static constexpr uint64_t MODEL_SOLUTION_TIME_LIMIT = 20e6;
+	static constexpr std::chrono::duration<double> time_limit_to_solution_runtime(
+		std::chrono::duration<double> time_limit,
+		double solution_runtime_coefficient,
+		std::chrono::duration<double> min_time_limit) noexcept
+	{
+		using DS = std::chrono::duration<double>;
+		// Use newton method, as it is simpler than solving the equation
+		double x = time_limit.count();
+		for (;;) {
+			double fx = (time_limit - solution_runtime_to_time_limit(DS(x),
+				solution_runtime_coefficient, min_time_limit)).count();
+			if (-1e-9 < fx and fx < 1e-9)
+				return DS(x);
 
+			double dfx = -solution_runtime_coefficient +
+				4 * min_time_limit.count() * x / (x * x + 2) / (x * x + 2);
+			x = x - fx / dfx;
+		}
+	}
+
+private:
 	// Rounds time limits to 0.01 s
 	static void normalize_time_limits(Simfile& sf) {
-		constexpr unsigned GRANULARITY = 0.01e6; // 0.01s
+		using namespace std::chrono_literals;
 		for (auto&& g : sf.tgroups)
 			for (auto&& t : g.tests)
-				t.time_limit = (t.time_limit + GRANULARITY / 2) / GRANULARITY *
-					GRANULARITY;
+				t.time_limit = floor_to_10ms(t.time_limit + 5ms);
 	};
 };
 

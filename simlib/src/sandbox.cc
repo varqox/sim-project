@@ -1,5 +1,6 @@
-#include "../include/sandbox.h"
 #include "../include/process.h"
+#include "../include/sandbox.h"
+#include "../include/time.h"
 
 #include <linux/version.h>
 #include <sys/ptrace.h>
@@ -714,6 +715,17 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	const std::vector<std::string>& exec_args, const Options& opts,
 	const std::vector<AllowedFile>& allowed_files)
 {
+	using std::chrono_literals::operator""ns;
+
+	if (opts.real_time_limit.has_value() and opts.real_time_limit.value() <= 0ns)
+		THROW("If set, real_time_limit has to be greater than 0");
+
+	if (opts.cpu_time_limit.has_value() and opts.cpu_time_limit.value() <= 0ns)
+		THROW("If set, cpu_time_limit has to be greater than 0");
+
+	if (opts.memory_limit.has_value() and opts.memory_limit.value() <= 0)
+		THROW("If set, memory_limit has to be greater than 0");
+
 	// Reset the state
 	reset_callbacks();
 	has_the_readlink_syscall_occurred = false;
@@ -867,7 +879,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// seccomp_load() needs to allocate more memory and it may fail if this
 		// memory limit is very restrictive, which is not what we want
 		Options run_child_opts = opts;
-		run_child_opts.memory_limit = 0;
+		run_child_opts.memory_limit = std::nullopt;
 
 		run_child(exec, exec_args, run_child_opts, pfd[1], [=]{
 			// Set max core dump size to 0 in order to avoid creating redundant
@@ -898,9 +910,9 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				send_error_and_exit(-errnum, "seccomp_load()");
 
 			// Set virtual memory and stack size limit (to the same value)
-			if (opts.memory_limit > 0) {
+			if (opts.memory_limit.has_value()) {
 				struct rlimit limit;
-				limit.rlim_max = limit.rlim_cur = opts.memory_limit;
+				limit.rlim_max = limit.rlim_cur = opts.memory_limit.value();
 				if (prlimit(getpid(), RLIMIT_AS, &limit, nullptr))
 					send_error_and_exit(errno, "prlimit(RLIMIT_AS)");
 				if (prlimit(getpid(), RLIMIT_STACK, &limit, nullptr))
@@ -937,7 +949,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 
 	// If something went wrong
 	if (si.si_code != CLD_TRAPPED)
-		return ExitStat({0, 0}, {0, 0}, si.si_code, si.si_status, ru, 0,
+		return ExitStat(0ns, 0ns, si.si_code, si.si_status, ru, 0,
 			receive_error_message(si, pfd[0]));
 
 	// Useful when exception is thrown
@@ -962,8 +974,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		tracee_statm_fd_.close();
 	});
 
-	timespec runtime {};
-	timespec cpu_time {};
+	std::chrono::nanoseconds runtime {0};
+	std::chrono::nanoseconds cpu_time {0};
 
 	// Set up timers
 	std::atomic_bool tracee_timeouted(false);
@@ -987,14 +999,14 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			cpu_timer->deactivate();
 			cpu_time = cpu_timer->get_cpu_runtime();
 		} else { // The child did not execve() or the execve() failed
-			cpu_time = {0, 0};
+			cpu_time = 0ns;
 			tracee_vm_peak_ = 0; // It might contain the vm size from before execve()
 		}
 
 		kill_and_wait_tracee_guard.cancel(); // Tracee has died
 		syscall(SYS_waitid, P_PID, tracee_pid_, &si, WEXITED, &ru);
 		// This have to be the last because it may throw
-		runtime = (timer ? timer->stop_and_get_runtime() : timespec{0, 0});
+		runtime = (timer ? timer->stop_and_get_runtime() : 0ns);
 	};
 
 	static_assert(LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0),
@@ -1019,9 +1031,9 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
 					// Fire timers
 					timer = make_unique<Timer>(tracee_pid_,
-						opts.real_time_limit, timeouter);
+						opts.real_time_limit.value_or(0ns), timeouter);
 					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_,
-						opts.cpu_time_limit, timeouter);
+						opts.cpu_time_limit.value_or(0ns), timeouter);
 
 					continue; // Nothing more to do for the exec() event
 				}
@@ -1124,8 +1136,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				// Process terminated
 				get_cpu_time_and_wait_tracee(true);
 				DEBUG_SANDBOX_VERBOSE_LOG("ENDED -> [ RT: ",
-					timespec_to_str(runtime, 9, false), " ] [ CPU: ",
-					timespec_to_str(cpu_time, 9, false), " ]  VmPeak: ",
+					toString(runtime, false), " ] [ CPU: ",
+					toString(cpu_time, false), " ]  VmPeak: ",
 					humanizeFileSize(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
 					"   ", message_to_set_in_exit_stat_);
 
@@ -1167,10 +1179,17 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 
 tracee_died:
 	// tracee_vm_peak_ == 0 means that the process did not execve(2)
-	if (not has_the_readlink_syscall_occurred and tracee_vm_peak_ > 0)
-		THROW("The sandbox is somewhat insecure - readlink() as the mark of the"
-			" end of the initialization of glibc in the traced process is not"
-			" reliable now");
+	if (not has_the_readlink_syscall_occurred and tracee_vm_peak_ > 0) {
+		bool tle = (si.si_code == CLD_KILLED and si.si_status == SIGKILL and
+			((opts.real_time_limit.has_value() and
+				runtime >= opts.real_time_limit.value()) or
+			(opts.cpu_time_limit.has_value() and
+				cpu_time >= opts.cpu_time_limit.value())));
+		if (not tle)
+			THROW("The sandbox is somewhat insecure - readlink() as the mark of"
+				" the end of the initialization of glibc in the traced process"
+				" is not reliable now");
+	}
 
 	// Message was set
 	if (not message_to_set_in_exit_stat_.empty()) {

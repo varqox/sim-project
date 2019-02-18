@@ -13,7 +13,22 @@ using std::vector;
 
 namespace sim {
 
-Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be_verbose) {
+Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool be_verbose) {
+	STACK_UNWINDING_MARK;
+
+	using std::chrono_literals::operator""ns;
+
+	if (opts.memory_limit.has_value() and opts.memory_limit.value() <= 0)
+		THROW("If set, memory_limit has to be greater than 0");
+	if (opts.global_time_limit.has_value() and opts.global_time_limit.value() <= 0ns)
+		THROW("If set, global_time_limit has to be greater than 0");
+	if (opts.max_time_limit <= 0ns)
+		THROW("max_time_limit has to be greater than 0");
+	if (opts.rtl_opts.min_time_limit < 0ns)
+		THROW("min_time_limit has to be non-negative");
+	if (opts.rtl_opts.solution_runtime_coefficient < 0)
+		THROW("solution_runtime_coefficient has to be non-negative");
+
 	// Reset report_
 	report_.str.clear();
 	report_.log_to_stdlog_ = be_verbose;
@@ -223,7 +238,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		StringView name;
 		Optional<StringView> in;
 		Optional<StringView> out;
-		Optional<uint64_t> time_limit;
+		Optional<std::chrono::nanoseconds> time_limit;
 		Optional<uint64_t> memory_limit;
 	};
 
@@ -242,8 +257,6 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 					" unparsable item -> ", e.what());
 				continue;
 			}
-			if (test.memory_limit.value() == 0)
-				test.memory_limit = std::nullopt; // The memory limit is not given
 
 			if (Simfile::TestNameComparator::split(test.name).gid.empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
@@ -363,7 +376,7 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 			tests.erase(test.name);
 	}
 
-	if (opts.memory_limit == 0) {
+	if (not opts.memory_limit.has_value()) {
 		if (opts.ignore_simfile)
 			THROW("Missing memory limit - global memory limit not specified in"
 				" options and simfile is ignored");
@@ -372,23 +385,23 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 			" it from Simfile");
 
 		sf.loadGlobalMemoryLimitOnly();
-		if (sf.global_mem_limit == 0) {
+		if (not sf.global_mem_limit.has_value()) {
 			report_.append("Memory limit is not specified in the Simfile");
 			report_.append("\033[1;35mwarning\033[m: no global memory limit is set");
 		}
 	}
 
 	// Update the memory limits
-	if (opts.memory_limit != 0) {
-		sf.global_mem_limit = opts.memory_limit << 20; // Convert from MB to
-		                                               // bytes
+	if (opts.memory_limit.has_value()) {
+		// Convert from MB to bytes
+		sf.global_mem_limit = opts.memory_limit.value() << 20;
 		tests.for_each([&](auto& keyval) {
 			keyval.second.memory_limit = sf.global_mem_limit ;
 		});
 	} else { // Give tests without specified memory limit the global memory limit
 		tests.for_each([&](auto& keyval) {
 			if (not keyval.second.memory_limit.has_value()) {
-				if (sf.global_mem_limit == 0)
+				if (not sf.global_mem_limit.has_value())
 					THROW("Memory limit is not specified for test `",
 						keyval.first, "` and no global memory limit is set");
 
@@ -497,7 +510,8 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 		for (auto const& test : group.tests) {
 			run_model_solution |= not test.time_limit.has_value();
 
-			Simfile::Test t(test.name.to_string(), test.time_limit.value_or(0),
+			Simfile::Test t(test.name.to_string(),
+				std::chrono::nanoseconds(test.time_limit.value_or(0)),
 				test.memory_limit.value());
 			t.in = test.in.value().to_string();
 			t.out = test.out.value().to_string();
@@ -509,11 +523,11 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 	});
 
 	// Override the time limits
-	if (opts.global_time_limit > 0) {
+	if (opts.global_time_limit.has_value()) {
 		run_model_solution = opts.reset_time_limits_using_model_solution;
 		for (auto&& g : sf.tgroups)
 			for (auto&& t : g.tests)
-				t.time_limit = opts.global_time_limit;
+				t.time_limit = opts.global_time_limit.value();
 	}
 
 	if (not run_model_solution) {
@@ -524,20 +538,34 @@ Conver::ConstructionResult Conver::constructSimfile(const Options& opts, bool be
 	// The model solution's judge report is needed
 	} else {
 		// Set the time limits for the model solution
+		auto sol_time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(
+			time_limit_to_solution_runtime(opts.max_time_limit,
+				opts.rtl_opts.solution_runtime_coefficient, opts.rtl_opts.min_time_limit));
 		for (auto&& g : sf.tgroups)
 			for (auto&& t : g.tests)
-				t.time_limit = opts.max_time_limit;
+				t.time_limit = sol_time_limit;
 
 		return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
 			master_dir.to_string()};
 	}
 }
 
-void Conver::finishConstructingSimfile(Simfile& sf, const JudgeReport& jrep1,
-	const JudgeReport& jrep2)
+void Conver::reset_time_limits_using_jugde_reports(Simfile& sf,
+	const JudgeReport& jrep1, const JudgeReport& jrep2,
+	const ResetTimeLimitsOptions& opts)
 {
+	STACK_UNWINDING_MARK;
+
+	using namespace std::chrono;
+	using std::chrono_literals::operator""ns;
+
+	if (opts.min_time_limit < 0ns)
+		THROW("min_time_limit has to be non-negative");
+	if (opts.solution_runtime_coefficient < 0)
+		THROW("solution_runtime_coefficient has to be non-negative");
+
 	// Map every test to its time limit
-	AVLDictMap<StringView, uint64_t> tls; // test name => time limit
+	AVLDictMap<StringView, nanoseconds> tls; // test name => time limit
 	for (auto ptr : {&jrep1, &jrep2}) {
 		auto&& rep = *ptr;
 		for (auto&& g : rep.groups)
@@ -550,7 +578,9 @@ void Conver::finishConstructingSimfile(Simfile& sf, const JudgeReport& jrep1,
 						JudgeReport::Test::description(t.status));
 				}
 
-				tls[t.name] = time_limit(t.runtime / 1e6) * 1e6;
+				tls[t.name] = floor_to_10ms(
+					solution_runtime_to_time_limit(t.runtime,
+						opts.solution_runtime_coefficient, opts.min_time_limit));
 			}
 	}
 

@@ -1,0 +1,30 @@
+name: Test
+label: tes
+statement: foo.txt
+solutions: [sol.c]
+memory_limit: 32
+limits: [
+	000 4
+	6ocen 4
+
+	1a 4
+	1d 4
+
+	3 4
+
+	5 4
+]
+scoring: [
+	000 0
+	1 33
+	3 33
+	5 34
+]
+tests_files: [
+	000 tests/000.in tests/000.out
+	6ocen tests/6ocen.in tests/6ocen.out
+	1a tests/1a.in tests/1a.out
+	1d tests/1d.in tests/1d.out
+	3 tests/3.in tests/3.out
+	5 tests/5.in tests/5.out
+]

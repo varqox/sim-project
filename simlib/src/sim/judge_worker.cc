@@ -41,12 +41,11 @@ inline static vector<string> compile_command(SolutionLanguage lang,
 
 constexpr meta::string JudgeWorker::CHECKER_FILENAME;
 constexpr meta::string JudgeWorker::SOLUTION_FILENAME;
-constexpr timespec JudgeWorker::CHECKER_TIME_LIMIT;
 
 int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
-	timespec time_limit, string* c_errors, size_t c_errors_max_len,
-	const string& proot_path, StringView compilation_source_basename,
-	StringView exec_dest_filename)
+	Optional<std::chrono::nanoseconds> time_limit, string* c_errors,
+	size_t c_errors_max_len, const string& proot_path,
+	StringView compilation_source_basename, StringView exec_dest_filename)
 {
 	auto compilation_dir = concat<PATH_MAX>(tmp_dir.path(), "compilation/");
 	if (remove_r(compilation_dir) and errno != ENOENT)
@@ -130,9 +129,25 @@ void JudgeWorker::loadPackage(string package_path, string simfile) {
 	}
 }
 
-Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
-	FilePath output_file, uint64_t time_limit, uint64_t memory_limit) const
+// Real time limit is set to 1.5 * time_limit + 1s, because CPU time is measured
+static inline auto cpu_time_limit_to_real_time_limit(
+	std::chrono::nanoseconds cpu_tl) noexcept
 {
+	return cpu_tl * 3 / 2 + std::chrono::seconds(1);
+}
+
+Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
+	FilePath output_file, Optional<std::chrono::nanoseconds> time_limit,
+	Optional<uint64_t> memory_limit) const
+{
+	using std::chrono_literals::operator""ns;
+
+	if (time_limit.has_value() and time_limit.value() <= 0ns)
+		THROW("If set, time_limit has to be greater than 0");
+
+	if (memory_limit.has_value() and memory_limit.value() <= 0)
+		THROW("If set, memory_limit has to be greater than 0");
+
 	// Solution STDOUT
 	FileDescriptor solution_stdout(output_file, O_WRONLY | O_CREAT | O_TRUNC);
 	if (solution_stdout < 0)
@@ -145,31 +160,37 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 	if (test_in < 0)
 		THROW("Failed to open file `", input_file, '`', errmsg());
 
-	// Set time limit to 1.5 * time_limit + 1 s, because CPU time is
-	// measured
-	uint64_t real_tl = time_limit * 3 / 2 + 1000000;
-	timespec tl;
-	tl.tv_sec = real_tl / 1000000;
-	tl.tv_nsec = (real_tl - tl.tv_sec * 1000000) * 1000;
-
-	timespec cpu_tl;
-	cpu_tl.tv_sec = time_limit / 1000000;
-	cpu_tl.tv_nsec = (time_limit - cpu_tl.tv_sec * 1000000) * 1000;
+	Optional<std::chrono::nanoseconds> real_time_limit;
+	if (time_limit.has_value())
+		real_time_limit = cpu_time_limit_to_real_time_limit(time_limit.value());
 
 	// Run solution on the test
 	Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
 		test_in,
 		solution_stdout,
 		-1,
-		tl,
+		real_time_limit,
 		memory_limit,
-		cpu_tl
+		time_limit
 	}); // Allow exceptions to fly upper
 
 	return es;
 }
 
 JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
+	STACK_UNWINDING_MARK;
+
+	using std::chrono_literals::operator""ns;
+
+	if (checker_time_limit.has_value() and checker_time_limit.value() <= 0ns)
+		THROW("If set, checker_time_limit has to be greater than 0");
+
+	if (checker_memory_limit.has_value() and checker_memory_limit.value() <= 0)
+		THROW("If set, checker_memory_limit has to be greater than 0");
+
+	if (score_cut_lambda < 0 or score_cut_lambda > 1)
+		THROW("score_cut_lambda has to be from [0, 1]");
+
 	JudgeReport report;
 	judge_log.begin(pkg_root, final);
 
@@ -192,8 +213,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 		-1, // STDIN is ignored
 		checker_stdout, // STDOUT
 		-1, // STDERR is ignored
-		CHECKER_TIME_LIMIT,
-		CHECKER_MEMORY_LIMIT
+		checker_time_limit,
+		checker_memory_limit
 	};
 
 	Sandbox sandbox;
@@ -212,6 +233,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 
 		double score_ratio = 1.0;
 
+		using std::chrono_literals::operator""s;
+
 		for (auto&& test : group.tests) {
 			// Prepare solution fds
 			(void)ftruncate(solution_stdout, 0);
@@ -224,49 +247,41 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 			if (test_in < 0)
 				THROW("Failed to open file `", test_in_path, '`', errmsg());
 
-			// Set time limit to 1.5 * time_limit + 1 s, because CPU time is
-			// measured
-			uint64_t real_tl = test.time_limit * 3 / 2 + 1000000;
-			timespec tl;
-			tl.tv_sec = real_tl / 1000000;
-			tl.tv_nsec = (real_tl - tl.tv_sec * 1000000) * 1000;
-
-			timespec cpu_tl;
-			cpu_tl.tv_sec = test.time_limit / 1000000;
-			cpu_tl.tv_nsec = (test.time_limit - cpu_tl.tv_sec * 1000000) * 1000;
-
 			// Run solution on the test
 			Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
 				test_in,
 				solution_stdout,
 				-1,
-				tl,
+				cpu_time_limit_to_real_time_limit(test.time_limit),
 				test.memory_limit,
-				cpu_tl
+				test.time_limit
 			}); // Allow exceptions to fly upper
-
-			// Update score_ratio
-			// [0; 2/3 of time limit] => ratio = 1.0
-			// (2/3 of time limit; time limit] => ratio linearly decreases to 0
-			score_ratio = std::min(score_ratio, 3.0 -
-				3.0 * (es.cpu_runtime.tv_sec * 100 +
-					es.cpu_runtime.tv_nsec / 10000000)
-				/ (test.time_limit / 10000));
-			// cpu_runtime may be grater than test.time_limit therefore
-			// score_ratio may be negative which is impermissible
-			if (score_ratio < 0)
-				score_ratio = 0;
 
 			report_group.tests.emplace_back(
 				test.name,
 				JudgeReport::Test::OK,
-				es.cpu_runtime.tv_sec * 1000000 + es.cpu_runtime.tv_nsec / 1000,
+				es.cpu_runtime,
 				test.time_limit,
 				es.vm_peak,
 				test.memory_limit,
 				string {}
 			);
 			auto& test_report = report_group.tests.back();
+
+			// Update score_ratio
+			if (score_cut_lambda < 1) { // Only then the scaling occurs
+				const double x =
+					std::chrono::duration<double>(test_report.runtime).count();
+				const double t =
+					std::chrono::duration<double>(test_report.time_limit).count();
+				score_ratio = std::min(score_ratio,
+					(x / t - 1) / (score_cut_lambda - 1));
+				// Runtime may be greater than time_limit therefore score_ratio
+				// may become negative which is undesired
+				if (score_ratio < 0)
+					score_ratio = 0;
+
+			}
 
 			// OK
 			if (es.si.code == CLD_EXITED and es.si.status == 0 and
@@ -275,7 +290,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 
 			// TLE
 			} else if (test_report.runtime >= test_report.time_limit or
-				es.runtime == tl)
+				es.runtime == test.time_limit)
 			{
 				// es.runtime == tl means that real_time_limit has been exceeded
 				if (test_report.runtime < test_report.time_limit)
@@ -389,15 +404,18 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 				}
 
 			// Checker TLE
-			} else if (ces.runtime >= CHECKER_TIME_LIMIT) {
+			} else if (checker_time_limit.has_value() and
+				ces.runtime >= checker_time_limit.value())
+			{
 				score_ratio = 0; // Do not give score for a checker error
 				test_report.status = JudgeReport::Test::CHECKER_ERROR;
 				test_report.comment = "Checker error";
 				checker_error_str.append("Time limit exceeded");
 
 			// Checker MLE
-			} else if (ces.message == "Memory limit exceeded" ||
-				ces.vm_peak > CHECKER_MEMORY_LIMIT)
+			} else if (ces.message == "Memory limit exceeded" or
+				(checker_memory_limit.has_value() and
+					ces.vm_peak > checker_memory_limit.value()))
 			{
 				score_ratio = 0; // Do not give score for a checker error
 				test_report.status = JudgeReport::Test::CHECKER_ERROR;
@@ -415,8 +433,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 			}
 
 			// Logging
-			judge_log.test(test.name, test_report, es, ces, CHECKER_MEMORY_LIMIT,
-				checker_error_str);
+			judge_log.test(test.name, test_report, es, ces,
+				checker_memory_limit, checker_error_str);
 		}
 
 		// Compute group score

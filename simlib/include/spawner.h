@@ -1,8 +1,9 @@
 #pragma once
 
 #include "filesystem.h"
-#include "time.h"
+#include "optional.h"
 
+#include <chrono>
 #include <functional>
 #include <sys/resource.h>
 #include <sys/wait.h>
@@ -13,8 +14,8 @@ protected:
 
 public:
 	struct ExitStat {
-		timespec runtime = {0, 0};
-		timespec cpu_runtime = {0, 0};
+		std::chrono::nanoseconds runtime {0};
+		std::chrono::nanoseconds cpu_runtime {0};
 		struct {
 			int code; // si_code field from siginfo_t from waitid(2)
 			int status; // si_status field from siginfo_t from waitid(2)
@@ -25,8 +26,8 @@ public:
 
 		ExitStat() = default;
 
-		ExitStat(timespec rt, timespec cpu_time, int sic, int sis,
-				const struct rusage& rus, uint64_t vp,
+		ExitStat(std::chrono::nanoseconds rt, std::chrono::nanoseconds cpu_time,
+				int sic, int sis, const struct rusage& rus, uint64_t vp,
 				const std::string& msg = {})
 			: runtime(rt), cpu_runtime(cpu_time), si {sic, sis}, rusage(rus),
 				vm_peak(vp), message(msg) {}
@@ -41,12 +42,12 @@ public:
 		int new_stdin_fd; // negative - close, STDIN_FILENO - do not change
 		int new_stdout_fd; // negative - close, STDOUT_FILENO - do not change
 		int new_stderr_fd; // negative - close, STDERR_FILENO - do not change
-		timespec real_time_limit = {0, 0}; // ({0, 0} - disable real time limit)
-		uint64_t memory_limit = 0; // in bytes (0 - disable memory limit)
-		timespec cpu_time_limit{}; // in nanoseconds (0 - if the real time limit
-		                           // is set, then CPU time limit will be set to
-		                           // round(real time limit in seconds) + 1)
-		                           // seconds
+		Optional<std::chrono::nanoseconds> real_time_limit;
+		Optional<uint64_t> memory_limit; // in bytes
+		Optional<std::chrono::nanoseconds> cpu_time_limit; // if not set and
+		                     // real time limit is set, then CPU time limit will
+		                     // be set to round(real time limit in seconds) + 1
+		                     // seconds
 		CStringView working_dir; // directory at which program will be run
 
 		constexpr Options()
@@ -56,8 +57,10 @@ public:
 			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
 				working_dir(std::move(wd)) {}
 
-		constexpr Options(int ifd, int ofd, int efd, timespec rtl = {0, 0},
-				uint64_t ml = 0, timespec ctl = {},
+		constexpr Options(int ifd, int ofd, int efd,
+				Optional<std::chrono::nanoseconds> rtl = std::nullopt,
+				Optional<uint64_t> ml = std::nullopt,
+				Optional<std::chrono::nanoseconds> ctl = std::nullopt,
 				CStringView wd = CStringView("."))
 			: new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
 				real_time_limit(rtl), memory_limit(ml), cpu_time_limit(ctl),
@@ -82,8 +85,9 @@ public:
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
-	 *   time_limit set to 0 disables the time limit;
-	 *   memory_limit set to 0 disables memory limit;
+	 *   time_limit set to std::nullopt disables the time limit;
+	 *   cpu_time_limit set to std::nullopt disables the CPU time limit;
+	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working directory)
 	 *
 	 * @return Returns ExitStat structure with fields:
@@ -145,8 +149,9 @@ protected:
 	 * @param opts options (new_stdin_fd, new_stdout_fd, new_stderr_fd - file
 	 *   descriptors to which respectively stdin, stdout, stderr of spawned
 	 *   process will be changed or if negative, closed;
-	 *   time_limit set to 0 disables time limit;
-	 *   memory_limit set to 0 disables memory limit;
+	 *   time_limit set to std::nullopt disables time limit;
+	 *   cpu_time_limit set to std::nullopt disables CPU time limit;
+	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working directory)
 	 * @param fd file descriptor to which errors will be written
 	 * @param doBeforeExec function that is to be called before executing
@@ -168,10 +173,8 @@ protected:
 			TimeoutHandler timeouter;
 		} data;
 		timespec tlimit;
-		// used only if time_limit == {0, 0}
-		timespec begin_point;
-		// used only if time_limit != {0, 0}
-		timer_t timerid;
+		timespec begin_point; // used only if time_limit == {0, 0}
+		timer_t timerid; // used only if time_limit != {0, 0}
 		bool timer_is_active = false;
 
 		static void handle_timeout(int, siginfo_t* si, void*) noexcept;
@@ -179,10 +182,10 @@ protected:
 		void delete_timer() noexcept;
 
 	public:
-		Timer(pid_t pid, timespec time_limit,
+		Timer(pid_t pid, std::chrono::nanoseconds time_limit,
 			TimeoutHandler timeouter = defaultTimeoutHandler);
 
-		timespec stop_and_get_runtime();
+		std::chrono::nanoseconds stop_and_get_runtime();
 
 		~Timer() { delete_timer(); }
 	};
@@ -205,12 +208,12 @@ protected:
 		static void handler(int, siginfo_t* si, void*) noexcept;
 
 	public:
-		CPUTimeMonitor(pid_t pid, timespec cpu_time_limit,
+		CPUTimeMonitor(pid_t pid, std::chrono::nanoseconds cpu_time_limit,
 			TimeoutHandler timeouter = defaultTimeoutHandler);
 
 		void deactivate() noexcept;
 
-		timespec get_cpu_runtime();
+		std::chrono::nanoseconds get_cpu_runtime();
 
 		~CPUTimeMonitor() { deactivate(); }
 	};

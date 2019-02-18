@@ -23,9 +23,8 @@ void ConfigFile::loadConfigFromFile(FilePath pathname, bool load_all) {
 
 void ConfigFile::loadConfigFromString(string config, bool load_all) {
 	// Set all variables as unused
-	vars.for_each([](auto&& it) {
+	for (auto it : vars)
 		it.second.unset();
-	});
 
 	// Checks whether c is a white-space but not a newline
 	auto isWs = [](int c) { return (c != '\n' && isspace(c)); };
@@ -253,7 +252,7 @@ void ConfigFile::loadConfigFromString(string config, bool load_all) {
 			varp = &vars[name.to_string()];
 		else {
 			auto it = vars.find(name.to_string());
-			varp = (it ? &it->second : &tmp);
+			varp = (it != vars.end() ? &it->second : &tmp);
 		}
 		Variable& var = *varp;
 		if (var.isSet())
