@@ -160,15 +160,17 @@ constexpr inline const char* toString(SubmissionType x) {
 }
 
 enum class SubmissionLanguage : uint8_t {
-	C = 0,
-	CPP = 1,
-	PASCAL = 2
+	C11 = 0,
+	CPP11 = 1,
+	PASCAL = 2,
+	CPP14 = 3,
 };
 
 constexpr inline const char* toString(SubmissionLanguage x) {
 	switch (x) {
-	case SubmissionLanguage::C: return "C";
-	case SubmissionLanguage::CPP: return "C++";
+	case SubmissionLanguage::C11: return "C11";
+	case SubmissionLanguage::CPP11: return "C++11";
+	case SubmissionLanguage::CPP14: return "C++14";
 	case SubmissionLanguage::PASCAL: return "Pascal";
 	}
 	return "Unknown";
@@ -176,8 +178,10 @@ constexpr inline const char* toString(SubmissionLanguage x) {
 
 constexpr inline const char* to_extension(SubmissionLanguage x) {
 	switch (x) {
-	case SubmissionLanguage::C: return ".c";
-	case SubmissionLanguage::CPP: return ".cpp";
+	case SubmissionLanguage::C11: return ".c";
+	case SubmissionLanguage::CPP11:
+	case SubmissionLanguage::CPP14:
+		return ".cpp";
 	case SubmissionLanguage::PASCAL: return ".pas";
 	}
 	return "Unknown";
@@ -185,8 +189,10 @@ constexpr inline const char* to_extension(SubmissionLanguage x) {
 
 constexpr inline const char* to_MIME(SubmissionLanguage x) {
 	switch (x) {
-	case SubmissionLanguage::C: return "text/x-csrc";
-	case SubmissionLanguage::CPP: return "text/x-c++src";
+	case SubmissionLanguage::C11: return "text/x-csrc";
+	case SubmissionLanguage::CPP11:
+	case SubmissionLanguage::CPP14:
+		return "text/x-c++src";
 	case SubmissionLanguage::PASCAL: return "text/x-pascal";
 	}
 	return "Unknown";

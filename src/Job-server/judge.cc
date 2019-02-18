@@ -13,8 +13,9 @@ using std::string;
 
 inline static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang) {
 	switch (lang) {
-	case SubmissionLanguage::C: return sim::SolutionLanguage::C;
-	case SubmissionLanguage::CPP: return sim::SolutionLanguage::CPP;
+	case SubmissionLanguage::C11: return sim::SolutionLanguage::C11;
+	case SubmissionLanguage::CPP11: return sim::SolutionLanguage::CPP11;
+	case SubmissionLanguage::CPP14: return sim::SolutionLanguage::CPP14;
 	case SubmissionLanguage::PASCAL: return sim::SolutionLanguage::PASCAL;
 	}
 
