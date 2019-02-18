@@ -243,11 +243,11 @@ void Sim::api_jobs() {
 				append(",\"name\":", jsonStringify(info.name));
 			if (info.label.size())
 				append(",\"label\":", jsonStringify(info.label));
-			if (info.memory_limit)
-				append(",\"memory limit\":\"", info.memory_limit, " MB\"");
-			if (info.global_time_limit)
+			if (info.memory_limit.has_value())
+				append(",\"memory limit\":\"", info.memory_limit.value(), " MB\"");
+			if (info.global_time_limit.has_value())
 				append(",\"global time limit\":",
-					usecToSecStr(info.global_time_limit, 6));
+					toString(info.global_time_limit.value()));
 
 			append(",\"reset time limits\":", info.reset_time_limits ?
 					"\"yes\"" : "\"no\"",

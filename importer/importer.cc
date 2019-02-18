@@ -7,7 +7,7 @@
 #include <sim/sqlite.h>
 #include <sim/submission.h>
 #include <sim/utilities.h>
-#include <simlib/libarchive_zip.h>
+#include <simlib/libzip.h>
 #include <simlib/process.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
@@ -220,10 +220,9 @@ void load_problems() {
 
 		auto zip_to_components = [&](FilePath zipfile) {
 			vector<string> entries;
-			skim_zip(zipfile, [&](archive_entry* entry) {
-				StringView epath = archive_entry_pathname(entry);
-				entries.emplace_back(epath.to_string());
-			});
+			ZipFile zip(zipfile);
+			for (int i = 0; i < zip.entries_no(); ++i)
+				entries.emplace_back(zip.get_name(i));
 
 			sort(entries.begin(), entries.end());
 			return entries;
@@ -244,12 +243,14 @@ void load_problems() {
 			auto old_masterdir = sim::zip_package_master_dir(old_pkg);
 			auto old_simfile = sim::Simfile(oldp.simfile.to_string());
 			old_simfile.loadStatement();
-			auto old_doc = extract_file_from_zip(old_pkg, intentionalUnsafeStringView(concat(old_masterdir, old_simfile.statement)));
+			ZipFile old_zip(old_pkg);
+			auto old_doc = old_zip.extract_to_str(old_zip.get_index(concat(old_masterdir, old_simfile.statement)));
 
 			auto new_masterdir = sim::zip_package_master_dir(new_pkg);
 			auto new_simfile = sim::Simfile(newp.simfile.to_string());
 			new_simfile.loadStatement();
-			auto new_doc = extract_file_from_zip(new_pkg, intentionalUnsafeStringView(concat(new_masterdir, new_simfile.statement)));
+			ZipFile new_zip(new_pkg);
+			auto new_doc = new_zip.extract_to_str(new_zip.get_index(concat(new_masterdir, new_simfile.statement)));
 
 			// Compare by statement
 			if (old_doc != new_doc)
@@ -953,10 +954,227 @@ int main2(int argc, char **argv) {
 	return 0;
 }
 
+namespace old_jobs {
+
+/// Append an integer @p x in binary format to the @p buff
+template<class Integer>
+inline std::enable_if_t<std::is_integral<Integer>::value, void>
+	appendDumpedInt(std::string& buff, Integer x)
+{
+	buff.append(sizeof(x), '\0');
+	for (uint i = 1, shift = 0; i <= sizeof(x); ++i, shift += 8)
+		buff[buff.size() - i] = (x >> shift) & 0xFF;
+}
+
+template<class Integer>
+inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
+	extractDumpedInt(StringView& dumped_str)
+{
+	throw_assert(dumped_str.size() >= sizeof(Integer));
+	Integer x = 0;
+	for (int i = sizeof(x) - 1, shift = 0; i >= 0; --i, shift += 8)
+		x |= ((static_cast<Integer>((uint8_t)dumped_str[i])) << shift);
+	dumped_str.removePrefix(sizeof(x));
+	return x;
+}
+
+template<class Integer>
+inline std::enable_if_t<std::is_integral<Integer>::value, void>
+	extractDumpedInt(Integer& x, StringView& dumped_str)
+{
+	x = extractDumpedInt<Integer>(dumped_str);
+}
+
+/// Dumps @p str to binary format XXXXABC... where XXXX code string's size and
+/// ABC... is the @p str and appends it to the @p buff
+inline void appendDumpedString(std::string& buff, StringView str) {
+	appendDumpedInt<uint32_t>(buff, str.size());
+	buff += str;
+}
+
+/// Returns dumped @p str to binary format XXXXABC... where XXXX code string's
+/// size and ABC... is the @p str
+inline std::string dumpString(StringView str) {
+	std::string res;
+	appendDumpedString(res, str);
+	return res;
+}
+
+inline std::string extractDumpedString(StringView& dumped_str) {
+	uint32_t size;
+	extractDumpedInt(size, dumped_str);
+	throw_assert(dumped_str.size() >= size);
+	return dumped_str.extractPrefix(size).to_string();
+}
+
+inline std::string extractDumpedString(StringView&& dumped_str) {
+	return extractDumpedString(dumped_str); /* std::move() is intentionally
+		omitted in order to call the above implementation */
+}
+
+struct AddProblemInfo {
+	std::string name, label;
+	uint64_t memory_limit = 0; // in bytes
+	uint64_t global_time_limit = 0; // in usec
+	bool reset_time_limits = false;
+	bool ignore_simfile = false;
+	bool seek_for_new_tests = false;
+	bool reset_scoring = false;
+	ProblemType problem_type = ProblemType::VOID;
+	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
+
+	AddProblemInfo() = default;
+
+	AddProblemInfo(const std::string& n, const std::string& l, uint64_t ml,
+			uint64_t gtl, bool rtl, bool is, bool sfnt, bool rs, ProblemType pt)
+		: name(n), label(l), memory_limit(ml), global_time_limit(gtl),
+			reset_time_limits(rtl), ignore_simfile(is),
+			seek_for_new_tests(sfnt), reset_scoring(rs), problem_type(pt) {}
+
+	AddProblemInfo(StringView str) {
+		name = extractDumpedString(str);
+		label = extractDumpedString(str);
+		extractDumpedInt(memory_limit, str);
+		extractDumpedInt(global_time_limit, str);
+
+		uint8_t mask = extractDumpedInt<uint8_t>(str);
+		reset_time_limits = (mask & 1);
+		ignore_simfile = (mask & 2);
+		seek_for_new_tests = (mask & 4);
+		reset_scoring = (mask & 8);
+
+		problem_type = static_cast<ProblemType>(
+			extractDumpedInt<std::underlying_type_t<ProblemType>>(str));
+		stage = static_cast<Stage>(
+			extractDumpedInt<std::underlying_type_t<Stage>>(str));
+	}
+
+	std::string dump() const {
+		std::string res;
+		appendDumpedString(res, name);
+		appendDumpedString(res, label);
+		appendDumpedInt(res, memory_limit);
+		appendDumpedInt(res, global_time_limit);
+
+		uint8_t mask = reset_time_limits | (int(ignore_simfile) << 1) |
+			(int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
+		appendDumpedInt(res, mask);
+
+		appendDumpedInt(res, std::underlying_type_t<ProblemType>(problem_type));
+		appendDumpedInt<std::underlying_type_t<Stage>>(res, stage);
+		return res;
+	}
+};
+
+struct MergeProblemsInfo {
+	uint64_t target_problem_id;
+	bool rejudge_transferred_submissions;
+
+	MergeProblemsInfo() = default;
+
+	MergeProblemsInfo(uint64_t tpid, bool rts) noexcept : target_problem_id(tpid), rejudge_transferred_submissions(rts) {}
+
+	MergeProblemsInfo(StringView str) {
+		extractDumpedInt(target_problem_id, str);
+
+		auto mask = extractDumpedInt<uint8_t>(str);
+		rejudge_transferred_submissions = (mask & 1);
+	}
+
+	std::string dump() {
+		std::string res;
+		appendDumpedInt(res, target_problem_id);
+
+		uint8_t mask = rejudge_transferred_submissions;
+		appendDumpedInt(res, mask);
+		return res;
+	}
+};
+
+void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
+	StringView job_info, bool notify_job_server);
+
+void restart_job(MySQL::Connection& mysql, StringView job_id,
+	bool notify_job_server);
+
+// Notifies the Job server that there are jobs to do
+inline void notify_job_server() noexcept {
+	utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
+}
+
+} // namespace old_jobs
+
+int main3(int argc, char **argv) {
+	STACK_UNWINDING_MARK;
+
+	stdlog.use(stdout);
+
+	if (argc != 2) {
+		errlog.label(false);
+		errlog("Use: importer <sim_build> where sim_build is a path to sim");
+		return 1;
+	}
+
+	try {
+		// Get connection
+		new_conn = MySQL::make_conn_with_credential_file(
+			concat_tostr(new_build = argv[1], "/.db.config"));
+		// importer_db = SQLite::Connection("importer.db",
+			// SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+	} catch (const std::exception& e) {
+		errlog("\033[31mFailed to connect to databases\033[m - ", e.what());
+		return 4;
+	}
+
+	// a_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+
+	// Kill both webservers and job-servers to not interrupt with the merging
+	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
+	Spawner::run(killinstc, {
+		killinstc,
+		concat_tostr(new_build, "/sim-server"),
+		concat_tostr(new_build, "/job-server"),
+	});
+
+	// Upgrade jobs
+	auto in_stmt = new_conn.prepare("SELECT id, info FROM jobs WHERE type IN (" JTYPE_ADD_PROBLEM_STR "," JTYPE_REUPLOAD_PROBLEM_STR "," JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "," JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR ")");
+	in_stmt.bindAndExecute();
+
+	InplaceBuff<64> id, info;
+	in_stmt.res_bind_all(id, info);
+
+	auto out_stmt = new_conn.prepare("UPDATE jobs SET info=? WHERE id=?");
+	while (in_stmt.next()) {
+		old_jobs::AddProblemInfo old_apinfo(info);
+		jobs::AddProblemInfo new_apinfo;
+
+		new_apinfo.name = old_apinfo.name;
+		new_apinfo.label = old_apinfo.label;
+
+		if (old_apinfo.memory_limit != 0)
+			new_apinfo.memory_limit = old_apinfo.memory_limit;
+
+		if (old_apinfo.global_time_limit != 0)
+			new_apinfo.global_time_limit = old_apinfo.global_time_limit;
+
+		new_apinfo.reset_time_limits = old_apinfo.reset_time_limits;
+		new_apinfo.ignore_simfile = old_apinfo.ignore_simfile;
+		new_apinfo.seek_for_new_tests = old_apinfo.seek_for_new_tests;
+		new_apinfo.reset_scoring = old_apinfo.reset_scoring;
+		new_apinfo.problem_type = old_apinfo.problem_type;
+		new_apinfo.stage = EnumVal<jobs::AddProblemInfo::Stage>(old_apinfo.stage);
+
+		out_stmt.bindAndExecute(new_apinfo.dump(), id);
+	}
+
+	return 0;
+}
 
 int main(int argc, char **argv) {
 	// try {
-		return main2(argc, argv);
+		return main3(argc, argv);
 
 	// } catch (const std::exception& e) {
 		// ERRLOG_CATCH(e);

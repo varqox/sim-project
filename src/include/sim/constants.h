@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <simlib/meta.h>
 
@@ -66,7 +67,6 @@ constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
 constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
-constexpr uint64_t PROBLEM_MAX_TIME_LIMIT = 30e6; // 30 s [us]
 
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
@@ -527,6 +527,14 @@ constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
 constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
 constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
-constexpr timespec CHECKER_COMPILATION_TIME_LIMIT = {30, 0}; // 30 s
-constexpr timespec SOLUTION_COMPILATION_TIME_LIMIT = {30, 0}; // 30 s
+constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
+constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
+ // Conver::ResetTimeLimitsOptions and Conver::Options
+constexpr std::chrono::nanoseconds MIN_TIME_LIMIT = std::chrono::milliseconds(400);
+constexpr std::chrono::nanoseconds MAX_TIME_LIMIT = std::chrono::seconds(22);
+constexpr double SOLUTION_RUNTIME_COEFFICIENT = 3;
+// JudgeWorker
+constexpr std::chrono::nanoseconds CHECKER_TIME_LIMIT = std::chrono::seconds(22);
+constexpr uint64_t CHECKER_MEMORY_LIMIT = 512 << 20; // 256 MiB
+constexpr double SCORE_CUT_LAMBDA = 2. / 3.; // See JudgeWorker::score_cut_lambda
 constexpr const char PROOT_PATH[] = "./proot";

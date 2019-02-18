@@ -54,7 +54,7 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	/* Construct Simfile */
 
 	sim::Conver conver;
-	conver.setPackagePath(dest_package.to_string());
+	conver.package_path(dest_package.to_string());
 
 	// Set Conver options
 	sim::Conver::Options copts;
@@ -62,18 +62,20 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 	copts.label = info.label;
 	copts.memory_limit = info.memory_limit;
 	copts.global_time_limit = info.global_time_limit;
-	copts.max_time_limit = PROBLEM_MAX_TIME_LIMIT;
+	copts.max_time_limit = MAX_TIME_LIMIT;
 	copts.reset_time_limits_using_model_solution = info.reset_time_limits;
 	copts.ignore_simfile = info.ignore_simfile;
 	copts.seek_for_new_tests = info.seek_for_new_tests;
 	copts.reset_scoring = info.reset_scoring;
 	copts.require_statement = true;
+	copts.rtl_opts.min_time_limit = MIN_TIME_LIMIT;
+	copts.rtl_opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
 
 	sim::Conver::ConstructionResult cr;
 	try {
-		cr = conver.constructSimfile(copts);
+		cr = conver.construct_simfile(copts);
 	} catch (const std::exception& e) {
-		return set_failure(conver.getReport(), "Conver failed: ", e.what());
+		return set_failure(conver.report(), "Conver failed: ", e.what());
 	}
 
 	// Check problem's name's length
@@ -87,7 +89,7 @@ static void first_stage(uint64_t job_id, AddProblemInfo& info) {
 		return set_failure("Problem's label is too long (max allowed length: ",
 			PROBLEM_LABEL_MAX_LEN, ')');
 
-	job_log.append(conver.getReport());
+	job_log.append(conver.report());
 
 	/* Advance the stage */
 
@@ -263,7 +265,7 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 	job_log.append("Done.");
 
 	// Notify the job-server that there are submissions to judge
-	utime(JOB_SERVER_NOTIFYING_FILE, nullptr);
+	jobs::notify_job_server();
 
 	// TODO: fix updating submission status so that it will work with PROBLEM_SOLUTION submissions and other queries associated with this problem
 
