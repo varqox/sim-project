@@ -164,9 +164,9 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile")));
 
 	sim::Simfile sf {simfile_str};
-	sf.loadName();
-	sf.loadLabel();
-	sf.loadSolutions();
+	sf.load_name();
+	sf.load_label();
+	sf.load_solutions();
 
 	// Add the problem to the database
 	InplaceBuff<64> current_date = concat<64>(mysql_date());

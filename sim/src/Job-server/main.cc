@@ -1260,14 +1260,14 @@ int main() {
 		cleanUpDBs();
 
 		ConfigFile cf;
-		cf.addVars("js_local_workers", "js_judge_workers");
-		cf.loadConfigFromFile("sim.conf");
+		cf.add_vars("js_local_workers", "js_judge_workers");
+		cf.load_config_from_file("sim.conf");
 
-		int lworkers_no = cf["js_local_workers"].asInt();
+		int lworkers_no = cf["js_local_workers"].as_int();
 		if (lworkers_no < 1)
 			THROW("sim.conf: js_local_workers cannot be lower than 1");
 
-		int jworkers_no = cf["js_judge_workers"].asInt();
+		int jworkers_no = cf["js_judge_workers"].as_int();
 		if (jworkers_no < 1)
 			THROW("sim.conf: js_judge_workers cannot be lower than 1");
 

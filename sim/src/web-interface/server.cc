@@ -104,16 +104,16 @@ int main() {
 
 	ConfigFile config;
 	try {
-		config.addVars("address", "workers");
+		config.add_vars("address", "workers");
 
-		config.loadConfigFromFile("sim.conf");
+		config.load_config_from_file("sim.conf");
 	} catch (const std::exception& e) {
 		errlog("Failed to load sim.config: ", e.what());
 		return 5;
 	}
 
-	string address = config["address"].asString();
-	int workers = config["workers"].asInt();
+	string address = config["address"].as_string();
+	int workers = config["workers"].as_int();
 
 	if (workers < 1) {
 		errlog("sim.conf: Number of workers cannot be lower than 1");

@@ -261,10 +261,10 @@ void Sim::api_problems() {
 		// Append simfile and memory limit
 		if (select_specified_problem and uint(perms & PERM::VIEW_SIMFILE)) {
 			ConfigFile cf;
-			cf.addVars("memory_limit");
-			cf.loadConfigFromString(res[SIMFILE].to_string());
+			cf.add_vars("memory_limit");
+			cf.load_config_from_string(res[SIMFILE].to_string());
 			append(',', jsonStringify(res[SIMFILE]), // simfile
-				',', jsonStringify(cf.getVar("memory_limit").asString()));
+				',', jsonStringify(cf.get_var("memory_limit").as_string()));
 		}
 
 		append(']');
@@ -430,10 +430,10 @@ void Sim::api_statement_impl(StringView problem_id, StringView problem_label,
 	STACK_UNWINDING_MARK;
 
 	ConfigFile cf;
-	cf.addVars("statement");
-	cf.loadConfigFromString(simfile.to_string());
+	cf.add_vars("statement");
+	cf.load_config_from_string(simfile.to_string());
 
-	auto& statement = cf.getVar("statement").asString();
+	auto& statement = cf.get_var("statement").as_string();
 	StringView ext;
 	if (hasSuffix(statement, ".pdf")) {
 		ext = ".pdf";
