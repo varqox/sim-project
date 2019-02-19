@@ -19,8 +19,7 @@ inline static sim::SolutionLanguage to_sol_lang(SubmissionLanguage lang) {
 	case SubmissionLanguage::PASCAL: return sim::SolutionLanguage::PASCAL;
 	}
 
-	THROW("Invalid Language: ",
-		std::underlying_type_t<SubmissionLanguage>(lang));
+	THROW("Invalid Language: ", (int)EnumVal<SubmissionLanguage>(lang).int_val());
 }
 
 void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
@@ -81,15 +80,7 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 	{
 		auto tmplog = judge_log("Loading problem package...");
 		tmplog.flush_no_nl();
-
-		auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
-		auto pkg_master_dir = sim::zip_package_master_dir(package_path);
-
-		{
-			ZipFile zip(package_path.to_string(), ZIP_RDONLY);
-			jworker.loadPackage(package_path.to_string(),
-				zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile"))));
-		}
+		jworker.load_package(concat("problems/", problem_id, ".zip"), std::nullopt);
 		tmplog(" done.");
 	}
 
@@ -148,7 +139,7 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 		auto tmplog = judge_log("Compiling checker...");
 		tmplog.flush_no_nl();
 
-		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+		if (jworker.compile_checker(CHECKER_COMPILATION_TIME_LIMIT,
 			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			tmplog(" failed.");
@@ -168,7 +159,7 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 		auto tmplog = judge_log("Compiling solution...");
 		tmplog.flush_no_nl();
 
-		if (jworker.compileSolution(concat("solutions/", submission_id),
+		if (jworker.compile_solution(concat("solutions/", submission_id),
 			to_sol_lang(lang), SOLUTION_COMPILATION_TIME_LIMIT,
 			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
@@ -392,22 +383,16 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 		stmt.bindAndExecute(job_log, job_id);
 	};
 
-	string pkg_master_dir = sim::zip_package_master_dir(package_path);
-
-	ZipFile zip(package_path);
-	string simfile_str =
-		zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile")));
-
-	sim::Simfile simfile {simfile_str};
-	simfile.loadAll();
-	judge_log("Model solution: ", simfile.solutions[0]);
-
 	JudgeWorker jworker;
 	jworker.checker_time_limit = CHECKER_COMPILATION_TIME_LIMIT;
 	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
 	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
 
-	jworker.loadPackage(package_path.to_string(), std::move(simfile_str));
+	jworker.load_package(package_path, std::nullopt);
+
+	sim::Simfile& simfile = jworker.simfile();
+	simfile.load_all();
+	judge_log("Model solution: ", simfile.solutions[0]);
 
 	string compilation_errors;
 
@@ -416,7 +401,7 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 		auto tmplog = judge_log("Compiling checker...");
 		tmplog.flush_no_nl();
 
-		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+		if (jworker.compile_checker(CHECKER_COMPILATION_TIME_LIMIT,
 			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			tmplog(" failed:\n");
@@ -428,14 +413,9 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 
 	// Compile the model solution
 	{
-		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		zip.extract_to_fd(
-			zip.get_index(concat(pkg_master_dir, simfile.solutions[0])),
-			sol_src);
-
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
-		if (jworker.compileSolution(sol_src.path(),
+		if (jworker.compile_solution_from_package(simfile.solutions[0],
 			sim::filename_to_lang(simfile.solutions[0]),
 			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
@@ -470,10 +450,13 @@ void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
 	}
 
 	// Put the Simfile in the package
-	simfile_str = simfile.dump();
-	zip.file_add(concat(pkg_master_dir, "Simfile"),
-		zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
-	zip.close();
+	{
+		auto simfile_str = simfile.dump();
+		ZipFile zip(package_path);
+		zip.file_add(concat(sim::zip_package_master_dir(package_path), "Simfile"),
+			zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
+		zip.close();
+	}
 
 	auto stmt = mysql.prepare("UPDATE jobs"
 		" SET type=?, status=" JSTATUS_PENDING_STR ", data=CONCAT(data,?)"
@@ -515,15 +498,17 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 			return set_failure("Problem with ID ", problem_id, " does not exist");
 	}
 
-	auto package_path = concat<PATH_MAX>("problems/", problem_id, ".zip");
-	string pkg_master_dir = sim::zip_package_master_dir(package_path);
+	auto package_path = concat("problems/", problem_id, ".zip");
 
-	ZipFile zip(package_path);
-	string simfile_str =
-		zip.extract_to_str(zip.get_index(concat(pkg_master_dir, "Simfile")));
+	JudgeWorker jworker;
+	jworker.checker_time_limit = CHECKER_COMPILATION_TIME_LIMIT;
+	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
+	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
 
-	sim::Simfile simfile {std::move(simfile_str)};
-	simfile.loadAll();
+	jworker.load_package(package_path, std::nullopt);
+
+	sim::Simfile& simfile = jworker.simfile();
+	simfile.load_all();
 	judge_log("Model solution: ", simfile.solutions[0]);
 
 	// Change time limits to max limits (for judging the model solution)
@@ -533,13 +518,6 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 				sim::Conver::time_limit_to_solution_runtime(MAX_TIME_LIMIT,
 					SOLUTION_RUNTIME_COEFFICIENT, MIN_TIME_LIMIT));
 
-	JudgeWorker jworker;
-	jworker.checker_time_limit = CHECKER_COMPILATION_TIME_LIMIT;
-	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
-	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
-
-	jworker.loadPackage(package_path.to_string(), simfile.dump());
-
 	string compilation_errors;
 
 	// Compile checker
@@ -547,7 +525,7 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 		auto tmplog = judge_log("Compiling checker...");
 		tmplog.flush_no_nl();
 
-		if (jworker.compileChecker(CHECKER_COMPILATION_TIME_LIMIT,
+		if (jworker.compile_checker(CHECKER_COMPILATION_TIME_LIMIT,
 			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			tmplog(" failed:\n");
@@ -559,14 +537,9 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 
 	// Compile the model solution
 	{
-		TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
-		zip.extract_to_fd(
-			zip.get_index(concat(pkg_master_dir, simfile.solutions[0])),
-			sol_src);
-
 		auto tmplog = judge_log("Compiling the model solution...");
 		tmplog.flush_no_nl();
-		if (jworker.compileSolution(sol_src.path(),
+		if (jworker.compile_solution_from_package(simfile.solutions[0],
 			sim::filename_to_lang(simfile.solutions[0]),
 			SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
 			COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
@@ -601,13 +574,16 @@ void reset_problem_time_limits_using_model_solution(uint64_t job_id,
 	}
 
 	// Put the Simfile in the package
-	simfile_str = simfile.dump();
-	zip.file_add(concat(pkg_master_dir, "Simfile"),
-		zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
-	zip.close();
+	auto simfile_str = simfile.dump();
+	{
+		ZipFile zip(package_path);
+		zip.file_add(concat(sim::zip_package_master_dir(package_path), "Simfile"),
+			zip.source_buffer(simfile_str), ZIP_FL_OVERWRITE);
+		zip.close();
+	}
 
 	auto stmt = mysql.prepare("UPDATE problems SET simfile=? WHERE id=?");
-	stmt.bindAndExecute(simfile.dump(), problem_id);
+	stmt.bindAndExecute(simfile_str, problem_id);
 
 	stmt = mysql.prepare("UPDATE jobs"
 		" SET status=" JSTATUS_DONE_STR ", data=?"
