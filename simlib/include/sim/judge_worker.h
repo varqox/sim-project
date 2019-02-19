@@ -384,6 +384,7 @@ public:
 		Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
+		STACK_UNWINDING_MARK;
 		return compile_impl(source, lang, time_limit, c_errors,
 			c_errors_max_len, proot_path, "source", SOLUTION_FILENAME);
 	}
@@ -396,12 +397,14 @@ public:
 		Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
 		size_t c_errors_max_len, const std::string& proot_path)
 	{
+		STACK_UNWINDING_MARK;
 		auto solution_path = package_loader->load_as_file(source, "source");
-		return compile_impl(source, lang, time_limit, c_errors, c_errors_max_len,
-			proot_path, "source", SOLUTION_FILENAME);
+		return compile_impl(solution_path, lang, time_limit, c_errors,
+			c_errors_max_len, proot_path, "source", SOLUTION_FILENAME);
 	}
 
 	void load_compiled_checker(FilePath compiled_checker) {
+		STACK_UNWINDING_MARK;
 		if (copy(compiled_checker,
 			concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755))
 		{
@@ -410,6 +413,7 @@ public:
 	}
 
 	void load_compiled_solution(FilePath compiled_solution) {
+		STACK_UNWINDING_MARK;
 		if (copy(compiled_solution,
 			concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755))
 		{
@@ -418,6 +422,7 @@ public:
 	}
 
 	void save_compiled_checker(FilePath destination) {
+		STACK_UNWINDING_MARK;
 		if (copy(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
 			destination, S_0755))
 		{
@@ -426,6 +431,7 @@ public:
 	}
 
 	void save_compiled_solution(FilePath destination) {
+		STACK_UNWINDING_MARK;
 		if (copy(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME),
 			destination, S_0755))
 		{

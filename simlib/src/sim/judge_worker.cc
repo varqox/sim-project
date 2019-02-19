@@ -74,6 +74,8 @@ public:
 inline static vector<string> compile_command(SolutionLanguage lang,
 	StringView source, StringView exec)
 {
+	STACK_UNWINDING_MARK;
+
 	// Makes vector of strings from arguments
 	auto make = [](auto... args) {
 		vector<string> res;
@@ -111,6 +113,8 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 	size_t c_errors_max_len, const string& proot_path,
 	StringView compilation_source_basename, StringView exec_dest_filename)
 {
+	STACK_UNWINDING_MARK;
+
 	auto compilation_dir = concat<PATH_MAX>(tmp_dir.path(), "compilation/");
 	if (remove_r(compilation_dir) and errno != ENOENT)
 		THROW("remove_r()", errmsg());
@@ -159,6 +163,7 @@ int JudgeWorker::compile_checker(Optional<std::chrono::nanoseconds> time_limit,
 	std::string* c_errors, size_t c_errors_max_len,
 	const std::string& proot_path)
 {
+	STACK_UNWINDING_MARK;
 
 	auto checker_path_and_lang = [&]() -> std::pair<std::string, SolutionLanguage> {
 		if (sf.checker.has_value()) {
@@ -179,6 +184,8 @@ int JudgeWorker::compile_checker(Optional<std::chrono::nanoseconds> time_limit,
 }
 
 void JudgeWorker::load_package(FilePath package_path, Optional<string> simfile) {
+	STACK_UNWINDING_MARK;
+
 	if (isDirectory(package_path))
 		package_loader = std::make_unique<DirPackageLoader>(package_path);
 	else
@@ -205,6 +212,8 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 	FilePath output_file, Optional<std::chrono::nanoseconds> time_limit,
 	Optional<uint64_t> memory_limit) const
 {
+	STACK_UNWINDING_MARK;
+
 	using std::chrono_literals::operator""ns;
 
 	if (time_limit.has_value() and time_limit.value() <= 0ns)
