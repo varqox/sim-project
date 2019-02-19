@@ -1,5 +1,6 @@
 #pragma once
 
+#include <simlib/avl_dict.h>
 #include <simlib/sim/judge_worker.h>
 
 class SipJudgeLogger : public sim::JudgeLogger {
@@ -20,8 +21,8 @@ class SipJudgeLogger : public sim::JudgeLogger {
 	{
 		auto tmplog = log("  ", paddedString(test_name, 8, LEFT), ' ',
 			paddedString(intentionalUnsafeStringView(
-				usecToSecStr(test_report.runtime, 2, false)), 4),
-			" / ", usecToSecStr(test_report.time_limit, 2, false),
+				toString(floor_to_10ms(test_report.runtime), false)), 4),
+			" / ", toString(floor_to_10ms(test_report.time_limit), false),
 			" s ",
 			paddedString(intentionalUnsafeStringView(
 				humanizeFileSize(test_report.memory_consumed)), 7),
@@ -47,15 +48,13 @@ class SipJudgeLogger : public sim::JudgeLogger {
 		}
 
 		// Rest
-		// tmplog(" [ CPU: ", timespec_to_str(es.cpu_runtime, 2, false),
-			// " R: ", timespec_to_str(es.runtime, 2, false), " ]");
-		tmplog(" [ RT: ", timespec_to_str(es.runtime, 2, false), " ]");
+		tmplog(" [ RT: ", toString(floor_to_10ms(es.runtime), false), " ]");
 
 		func(tmplog);
 	}
 
 public:
-	void begin(StringView, bool final) override {
+	void begin(bool final) override {
 		total_score_ = max_total_score_ = 0;
 		final_ = final;
 	}
@@ -68,7 +67,7 @@ public:
 	}
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
-		Sandbox::ExitStat es, Sandbox::ExitStat checker_es, uint64_t checker_mem_limit, StringView checker_error_str) override
+		Sandbox::ExitStat es, Sandbox::ExitStat checker_es, Optional<uint64_t> checker_mem_limit, StringView checker_error_str) override
 	{
 		++statistics_[test_report.status];
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
@@ -85,9 +84,10 @@ public:
 				return; // Checker was not run
 
 
-			tmplog(" [ RT: ", timespec_to_str(checker_es.runtime, 2, false), " ] ",
-				humanizeFileSize(checker_es.vm_peak), " / ",
-				humanizeFileSize(checker_mem_limit));
+			tmplog(" [ RT: ", toString(floor_to_10ms(checker_es.runtime), false),
+				 " ] ", humanizeFileSize(checker_es.vm_peak));
+			if (checker_mem_limit.has_value())
+				tmplog(" / ", humanizeFileSize(checker_mem_limit.value()));
 		});
 	}
 

@@ -22,7 +22,7 @@ void checker(ArgvParser args) {
 		sp.replace_variable_in_simfile("checker", checker);
 	}
 
-	sp.simfile.loadChecker();
+	sp.simfile.load_checker();
 	stdlog("checker = ", sp.simfile.checker.value_or(""));
 }
 
@@ -212,7 +212,7 @@ void label(ArgvParser args) {
 	if (args.size() > 0)
 		sp.replace_variable_in_simfile("label", args.extract_next());
 
-	sp.simfile.loadLabel();
+	sp.simfile.load_label();
 	stdlog("label = ", sp.simfile.label);
 }
 
@@ -225,13 +225,13 @@ void main_sol(ArgvParser args) {
 		if (access(new_main_sol, F_OK) != 0)
 			throw SipError("file: ", new_main_sol, " does not exist");
 
-		auto solutions = sp.simfile.configFile().getVar("solutions");
-		if (not solutions.isSet()) {
+		auto solutions = sp.simfile.config_file().get_var("solutions");
+		if (not solutions.is_set()) {
 			sp.replace_variable_in_simfile("solutions",
 				std::vector<std::string>{new_main_sol.to_string()});
 		} else {
 			try {
-				sp.simfile.loadSolutions();
+				sp.simfile.load_solutions();
 				auto& sols = sp.simfile.solutions;
 				auto it = std::find(sols.begin(), sols.end(), new_main_sol);
 				if (it != sols.end())
@@ -247,7 +247,7 @@ void main_sol(ArgvParser args) {
 		}
 	}
 
-	sp.simfile.loadSolutions();
+	sp.simfile.load_solutions();
 	if (sp.simfile.solutions.empty())
 		stdlog("no solution is set");
 	else
@@ -266,8 +266,11 @@ void mem(ArgvParser args) {
 		sp.replace_variable_in_simfile("memory_limit", new_mem_limit);
 	}
 
-	sp.simfile.loadGlobalMemoryLimitOnly();
-	stdlog("mem = ", sp.simfile.global_mem_limit >> 20);
+	sp.simfile.load_global_memory_limit_only();
+	if (not sp.simfile.global_mem_limit.has_value())
+		stdlog("mem is not set");
+	else
+		stdlog("mem = ", sp.simfile.global_mem_limit.value() >> 20);
 }
 
 void name(ArgvParser args) {
@@ -277,7 +280,7 @@ void name(ArgvParser args) {
 	if (args.size() > 0)
 		sp.replace_variable_in_simfile("name", args.extract_next());
 
-	sp.simfile.loadName();
+	sp.simfile.load_name();
 	stdlog("name = ", sp.simfile.name);
 }
 
@@ -359,7 +362,7 @@ void statement(ArgvParser args) {
 		sp.replace_variable_in_simfile("statement", statement);
 	}
 
-	sp.simfile.loadStatement();
+	sp.simfile.load_statement();
 	stdlog("statement = ", sp.simfile.statement);
 }
 

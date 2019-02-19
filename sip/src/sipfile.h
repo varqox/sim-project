@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <simlib/avl_dict.h>
 #include <simlib/config_file.h>
 
 /**
@@ -7,7 +9,7 @@
  */
 class Sipfile {
 public:
-	uint64_t default_time_limit; // in microseconds
+	std::chrono::nanoseconds default_time_limit;
 
 	struct GenTest {
 		InplaceBuff<16> name;
@@ -36,8 +38,8 @@ public:
 	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
 	Sipfile(std::string sipfile_contents) {
-		config.addVars("default_time_limit", "static", "gen");
-		config.loadConfigFromString(std::move(sipfile_contents));
+		config.add_vars("default_time_limit", "static", "gen");
+		config.load_config_from_string(std::move(sipfile_contents));
 	}
 
 	Sipfile(const Sipfile&) = default;
@@ -47,7 +49,7 @@ public:
 
 	~Sipfile() = default;
 
-	const ConfigFile& configFile() const { return config; }
+	const ConfigFile& config_file() const { return config; }
 
 	/**
 	 * @brief Loads the default time limit
@@ -57,7 +59,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadDefaultTimeLimit();
+	void load_default_time_limit();
 
 	/**
 	 * @brief Loads non-generated test rules (variable "static")
@@ -67,7 +69,7 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadStaticTests();
+	void load_static_tests();
 
 	/**
 	 * @brief Loads generated test rules (variable "gen")
@@ -77,5 +79,5 @@ public:
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void loadGenTests();
+	void load_gen_tests();
 };

@@ -1,12 +1,11 @@
 #include "compilation_cache.h"
+#include "constants.h"
 #include "proot_dump.h"
 #include "sip_error.h"
 
 using std::string;
 
 namespace {
-constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
-constexpr timespec COMPILATION_TIME_LIMIT = {30, 0}; // 30 s
 constexpr const char PROOT_PATH[] = "proot";
 constexpr const char DEFAULT_CHECKER_PATH[] = "default_checker";
 } // anonymous namespace
@@ -58,8 +57,8 @@ decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
 	string compilation_errors;
 	stdlog("Compiling ", source, "...").flush_no_nl();
 
-	if (jworker.compileSolution(concat(source),
-		sim::filename_to_lang(source), COMPILATION_TIME_LIMIT,
+	if (jworker.compile_solution(concat(source),
+		sim::filename_to_lang(source), SOLUTION_COMPILATION_TIME_LIMIT,
 		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH,
 		cached_path(PROOT_PATH).to_string()))
 	{
@@ -71,7 +70,7 @@ decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
 	stdlog(" done.");
 	auto cached_exec = cached_path(source);
 	create_subdirectories(cached_exec);
-	jworker.saveCompiledSolution(cached_exec);
+	jworker.save_compiled_solution(cached_exec);
 	return cached_exec;
 }
 
@@ -81,18 +80,19 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 	auto cached_default_checker = cached_path(DEFAULT_CHECKER_PATH);
 	auto const& checker = jworker.simfile().checker;
 	if (not checker.has_value() and access(cached_default_checker, F_OK) == 0)
-		return jworker.loadCompiledChecker(cached_default_checker);
+		return jworker.load_compiled_checker(cached_default_checker);
 
 	if (checker.has_value() and is_cached(checker.value()))
-		return jworker.loadCompiledChecker(cached_path(checker.value()));
+		return jworker.load_compiled_checker(cached_path(checker.value()));
 
 	cache_proot(cached_path(PROOT_PATH));
 
 	string compilation_errors;
 	stdlog("Compiling checker...").flush_no_nl();
 
-	if (jworker.compileChecker(COMPILATION_TIME_LIMIT, &compilation_errors,
-		COMPILATION_ERRORS_MAX_LENGTH, cached_path(PROOT_PATH).to_string()))
+	if (jworker.compile_checker(CHECKER_COMPILATION_TIME_LIMIT,
+		&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH,
+		cached_path(PROOT_PATH).to_string()))
 	{
 		stdlog(" \033[1;31mfailed\033[m.");
 		errlog(compilation_errors);
@@ -103,10 +103,10 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 	auto cached_exec = (checker.has_value() ? cached_path(checker.value())
 		: cached_default_checker);
 	create_subdirectories(cached_exec);
-	jworker.saveCompiledChecker(cached_exec);
+	jworker.save_compiled_checker(cached_exec);
 }
 
 void SipPackage::CompilationCache::load_solution(sim::JudgeWorker& jworker, StringView solution) {
 	STACK_UNWINDING_MARK;
-	jworker.loadCompiledSolution(compile(solution));
+	jworker.load_compiled_solution(compile(solution));
 }

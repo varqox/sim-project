@@ -26,7 +26,7 @@ private:
 
 	// Loads the default time limit from Sipfile or return the default value.
 	// Returned value represents time in microseconds
-	uint64_t get_default_time_limit();
+	std::chrono::nanoseconds get_default_time_limit();
 
 	// Detects all .in files and .out files
 	void prepare_tests_files();

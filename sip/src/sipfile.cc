@@ -12,36 +12,39 @@
 // to achieve in the other way and this macros are pretty more readable than
 // some template meta-programming code that concentrates string literals. Also,
 // the macros are used only locally, so after all, they are not so evil...)
-#define CHECK_IF_ARR(var, name) if (!var.isArray() && var.isSet()) \
+#define CHECK_IF_ARR(var, name) if (!var.is_array() && var.is_set()) \
 	throw SipError("Sipfile: variable `" name "` has to be" \
 		" specified as an array")
-#define CHECK_IF_NOT_ARR(var, name) if (var.isArray()) \
+#define CHECK_IF_NOT_ARR(var, name) if (var.is_array()) \
 	throw SipError("Sipfile: variable `" name "` cannot be" \
 		" specified as an array")
 
-void Sipfile::loadDefaultTimeLimit() {
+void Sipfile::load_default_time_limit() {
 	STACK_UNWINDING_MARK;
 
 	auto&& dtl = config["default_time_limit"];
 	CHECK_IF_NOT_ARR(dtl, "default_time_limit");
 
-	if (dtl.asString().empty())
+	if (dtl.as_string().empty())
 		throw SipError("Sipfile: missing default_time_limit");
 
-	auto x = dtl.asString();
-	if (!isReal(x))
+	if (!isReal(dtl.as_string()))
 		throw SipError("Sipfile: invalid default time limit");
 
-	double tl = stod(x);
+	double tl = stod(dtl.as_string());
 	if (tl <= 0)
 		throw SipError("Sipfile: default time limit has to be grater than 0");
 
-	default_time_limit = round(tl * 1000000LL);
-	if (default_time_limit == 0) {
+	using std::chrono::duration;
+	using std::chrono::duration_cast;
+	using std::chrono_literals::operator""ns;
+	using std::chrono::nanoseconds;
+
+	default_time_limit = duration_cast<nanoseconds>(duration<double>(tl) + 0.5ns);
+	if (default_time_limit == 0ns)
 		throw SipError("Sipfile: default time limit is to small - after"
-			" rounding it is equal to 0 microseconds, but it has to be at least"
-			" 1 microsecond");
-	}
+			" rounding it is equal to 0 nanoseconds, but it has to be at least"
+			" 1 nanosecond");
 }
 
 template<class Func>
@@ -127,14 +130,14 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 			callback(intentionalUnsafeStringView(concat(prefix, gid, tid)));
 }
 
-void Sipfile::loadStaticTests() {
+void Sipfile::load_static_tests() {
 	STACK_UNWINDING_MARK;
 
-	auto static_tests_var = config.getVar("static");
+	auto static_tests_var = config.get_var("static");
 	CHECK_IF_ARR(static_tests_var, "static");
 
 	static_tests.clear();
-	for (StringView entry : static_tests_var.asArray()) {
+	for (StringView entry : static_tests_var.as_array()) {
 		entry.extractLeading(isspace);
 		StringView test_range = entry.extractLeading(not_isspace);
 		entry.extractLeading(isspace);
@@ -185,10 +188,10 @@ static InplaceBuff<32> matching_generator(StringView pattern,
 	return concat<32>("sh:", pattern);
 }
 
-void Sipfile::loadGenTests() {
+void Sipfile::load_gen_tests() {
 	STACK_UNWINDING_MARK;
 
-	auto gen_tests_var = config.getVar("gen");
+	auto gen_tests_var = config.get_var("gen");
 	CHECK_IF_ARR(gen_tests_var, "gen");
 
 	sim::PackageContents pkg_contents;
@@ -196,7 +199,7 @@ void Sipfile::loadGenTests() {
 	pkg_contents.remove_with_prefix("utils/cache/");
 
 	gen_tests.clear();
-	for (StringView entry : gen_tests_var.asArray()) {
+	for (StringView entry : gen_tests_var.as_array()) {
 		// Test range
 		entry.extractLeading(isspace);
 		StringView test_range = entry.extractLeading(not_isspace);

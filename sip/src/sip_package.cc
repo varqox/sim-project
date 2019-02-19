@@ -1,4 +1,5 @@
 #include "compilation_cache.h"
+#include "constants.h"
 #include "sip_error.h"
 #include "sip_package.h"
 #include "utils.h"
@@ -11,20 +12,20 @@
 #include <sys/inotify.h>
 
 namespace {
-constexpr uint64_t DEFAULT_TIME_LIMIT = 5; // In seconds
+constexpr std::chrono::nanoseconds DEFAULT_TIME_LIMIT = std::chrono::seconds(5);
 constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MB
 } // anonymous namespace
 
-uint64_t SipPackage::get_default_time_limit() {
+std::chrono::nanoseconds SipPackage::get_default_time_limit() {
 	STACK_UNWINDING_MARK;
 
 	// Check Sipfile
 	if (access("Sipfile", F_OK) == 0) {
-		sipfile.loadDefaultTimeLimit();
+		sipfile.load_default_time_limit();
 		return sipfile.default_time_limit;
 	}
 
-	return DEFAULT_TIME_LIMIT * 1'000'000;
+	return DEFAULT_TIME_LIMIT;
 }
 
 void SipPackage::prepare_tests_files() {
@@ -43,11 +44,11 @@ void SipPackage::prepare_judge_worker() {
 		return;
 
 	jworker = sim::JudgeWorker();
-	jworker.value().loadPackage(".", full_simfile.dump());
-}
+	jworker.value().checker_time_limit = CHECKER_TIME_LIMIT;
+	jworker.value().checker_memory_limit = CHECKER_MEMORY_LIMIT;
+	jworker.value().score_cut_lambda = SCORE_CUT_LAMBDA;
 
-static inline uint64_t timespec_to_usec(timespec t) noexcept {
-	return t.tv_sec * 1'000'000 + t.tv_nsec / 1'000;
+	jworker.value().load_package(".", full_simfile.dump());
 }
 
 void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
@@ -72,14 +73,14 @@ void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
 	// OK
 	if (es.si.code == CLD_EXITED and es.si.status == 0) {
 		stdlog(" \033[1;32mdone\033[m in ",
-			timespec_to_str(es.cpu_runtime, 2, false),
-			" [ RT: ", timespec_to_str(es.runtime, 2, false), " ]");
+			toString(floor_to_10ms(es.cpu_runtime), false),
+			" [ RT: ", toString(floor_to_10ms(es.runtime), false), " ]");
 
 	// RTE
 	} else {
 		stdlog(" \033[1;31mfailed\033[m in ",
-			timespec_to_str(es.cpu_runtime, 2, false),
-			" [ RT: ", timespec_to_str(es.runtime, 2, false), " ]"
+			toString(floor_to_10ms(es.cpu_runtime), false),
+			" [ RT: ", toString(floor_to_10ms(es.runtime), false), " ]"
 			" (", es.message, ')');
 
 		throw SipError("failed to generate test: ", test.name);
@@ -98,7 +99,7 @@ sim::JudgeReport::Test SipPackage::generate_test_out_file(
 	sim::JudgeReport::Test res(
 		test.name,
 		sim::JudgeReport::Test::OK,
-		timespec_to_usec(es.cpu_runtime),
+		es.cpu_runtime,
 		test.time_limit,
 		es.vm_peak,
 		test.memory_limit,
@@ -111,9 +112,7 @@ sim::JudgeReport::Test SipPackage::generate_test_out_file(
 	{
 
 	// TLE
-	} else if (res.runtime >= res.time_limit or
-		timespec_to_usec(es.runtime) == res.time_limit)
-	{
+	} else if (res.runtime >= res.time_limit or es.runtime >= res.time_limit) {
 		res.status = sim::JudgeReport::Test::TLE;
 		res.comment = "Time limit exceeded";
 
@@ -156,8 +155,8 @@ void SipPackage::generate_test_in_files() {
 
 	stdlog("\033[1;36mGenerating input files...\033[m");
 
-	sipfile.loadStaticTests();
-	sipfile.loadGenTests();
+	sipfile.load_static_tests();
+	sipfile.load_gen_tests();
 
 	// Check for tests that are both static and generated
 	sipfile.static_tests.for_each([&](StringView test) {
@@ -228,7 +227,7 @@ void SipPackage::remove_tests_with_no_in_file_from_limits_in_simfile() {
 	prepare_tests_files();
 
 	// Remove tests that have no corresponding input file
-	auto const& limits = simfile.configFile().getVar("limits").asArray();
+	auto const& limits = simfile.config_file().get_var("limits").as_array();
 	std::vector<std::string> new_limits;
 	for (auto const& entry : limits) {
 		StringView test_name = StringView(entry).extractLeading(not_isspace);
@@ -286,11 +285,11 @@ void SipPackage::generate_test_out_files() {
 	// Generate .out files and construct judge reports for adjusting time limits
 	sim::JudgeReport jrep1, jrep2;
 	SipJudgeLogger logger;
-	logger.begin({}, false);
+	logger.begin(false);
 	for (auto const& group : full_simfile.tgroups) {
 		auto p = sim::Simfile::TestNameComparator::split(group.tests[0].name);
 		if (p.gid != "0")
-			logger.begin({}, true); // Assumption: initial tests come as first
+			logger.begin(true); // Assumption: initial tests come as first
 
 		auto& rep = (p.gid != "0" ? jrep2 : jrep1);
 		rep.groups.emplace_back();
@@ -303,7 +302,8 @@ void SipPackage::generate_test_out_files() {
 	logger.end();
 
 	// Adjust time limits
-	sim::Conver::finishConstructingSimfile(full_simfile, jrep1, jrep2);
+	sim::Conver::reset_time_limits_using_jugde_reports(full_simfile, jrep1,
+		jrep2, conver_options(false).rtl_opts);
 	jworker = std::nullopt; // Time limits have changed
 }
 
@@ -334,7 +334,8 @@ void SipPackage::judge_solution(StringView solution) {
 
 	// Adjust time limits according to the model solution judge times
 	if (solution == full_simfile.solutions.front()) {
-		sim::Conver::finishConstructingSimfile(full_simfile, jrep1, jrep2);
+		sim::Conver::reset_time_limits_using_jugde_reports(full_simfile, jrep1,
+			jrep2, conver_options(false).rtl_opts);
 		jworker = std::nullopt; // Time limits have changed
 	}
 
@@ -374,7 +375,7 @@ void SipPackage::clean() {
 void SipPackage::remove_generated_test_files() {
 	STACK_UNWINDING_MARK;
 
-	sipfile.loadGenTests();
+	sipfile.load_gen_tests();
 	prepare_tests_files();
 
 	stdlog("Removing generated test files...").flush_no_nl();
@@ -397,8 +398,8 @@ void SipPackage::remove_generated_test_files() {
 void SipPackage::remove_test_files_not_specified_in_sipfile() {
 	STACK_UNWINDING_MARK;
 
-	sipfile.loadStaticTests();
-	sipfile.loadGenTests();
+	sipfile.load_static_tests();
+	sipfile.load_gen_tests();
 	prepare_tests_files();
 
 	stdlog("Removing test files that are not specified as generated or"
@@ -429,11 +430,13 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 	copts.seek_for_new_tests = true;
 	copts.reset_scoring = false;
 	copts.require_statement = false;
+	copts.rtl_opts.min_time_limit = MIN_TIME_LIMIT;
+	copts.rtl_opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
 
 	// Check Simfile
 	if (access("Simfile", F_OK) == 0) {
 		try {
-			simfile.loadName();
+			simfile.load_name();
 		} catch (...) {
 			log_warning("no problem name was specified in Simfile");
 			copts.name = "unknown";
@@ -443,7 +446,14 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 		copts.name = "unknown";
 	}
 
-	copts.max_time_limit = get_default_time_limit();
+	using std::chrono_literals::operator""ns;
+
+	copts.max_time_limit =
+		std::chrono::duration_cast<decltype(copts.max_time_limit)>(
+			sim::Conver::solution_runtime_to_time_limit(
+				get_default_time_limit(), SOLUTION_RUNTIME_COEFFICIENT,
+				MIN_TIME_LIMIT) + 0.5ns);
+
 	return copts;
 }
 
@@ -451,12 +461,12 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 	STACK_UNWINDING_MARK;
 
 	sim::Conver conver;
-	conver.setPackagePath(".");
+	conver.package_path(".");
 	sim::Conver::ConstructionResult cr =
-		conver.constructSimfile(conver_options(set_default_time_limits));
+		conver.construct_simfile(conver_options(set_default_time_limits));
 
 	// Filter out ever line except warnings
-	StringView report = conver.getReport();
+	StringView report = conver.report();
 	size_t line_beg = 0, line_end = report.find('\n');
 	size_t next_warning = report.find("warning");
 	while (next_warning != StringView::npos) {
@@ -629,8 +639,10 @@ void SipPackage::compile_tex_files(bool watch) {
 }
 
 void progress_callback(zip_t*, double p, void*) {
+	using namespace std::chrono;
 	stdlog("\033[2K\033[GZipping... Progress: ",
-		usecToSecStr(p * 100000000, 1, false), '%').flush_no_nl();
+		toString(duration<int, std::deci>(int(p * 1e3)), false),
+		'%').flush_no_nl();
 }
 
 void SipPackage::archive_into_zip(CStringView dest_file) {
@@ -665,13 +677,13 @@ void SipPackage::replace_variable_in_configfile(const ConfigFile& cf,
 	STACK_UNWINDING_MARK;
 
 	std::ofstream out(configfile_path.data());
-	auto var = cf.getVar(var_name);
-	if (var.isSet()) {
+	auto var = cf.get_var(var_name);
+	if (var.is_set()) {
 		auto var_span = var.value_span;
 		out.write(configfile_contents.data(), var_span.beg);
 		if (not replacement.empty()) {
 			if (escape_replacement)
-				out << ConfigFile::escapeString(replacement);
+				out << ConfigFile::escape_string(replacement);
 			else
 				out.write(replacement.data(), replacement.size());
 		}
@@ -688,7 +700,7 @@ void SipPackage::replace_variable_in_configfile(const ConfigFile& cf,
 		} else {
 			out << var_name << ": ";
 			if (escape_replacement)
-				out << ConfigFile::escapeString(replacement);
+				out << ConfigFile::escape_string(replacement);
 			else
 				out.write(replacement.data(), replacement.size());
 			out << '\n';
@@ -706,16 +718,16 @@ void SipPackage::replace_variable_in_configfile(const ConfigFile& cf,
 	auto print_replacement = [&] {
 		out << "[";
 		if (not replacement.empty()) {
-			out << "\n\t" << ConfigFile::escapeString(replacement[0]);
+			out << "\n\t" << ConfigFile::escape_string(replacement[0]);
 			for (uint i = 1; i < replacement.size(); ++i)
-				out << ",\n\t" << ConfigFile::escapeString(replacement[i]);
+				out << ",\n\t" << ConfigFile::escape_string(replacement[i]);
 			out << '\n';
 		}
 		out << ']';
 	};
 
-	auto var = cf.getVar(var_name);
-	if (var.isSet()) {
+	auto var = cf.get_var(var_name);
+	if (var.is_set()) {
 		auto var_span = var.value_span;
 		out.write(configfile_contents.data(), var_span.beg);
 		print_replacement();
@@ -738,7 +750,7 @@ void SipPackage::replace_variable_in_simfile(StringView var_name,
 {
 	STACK_UNWINDING_MARK;
 
-	replace_variable_in_configfile(simfile.configFile(), "Simfile",
+	replace_variable_in_configfile(simfile.config_file(), "Simfile",
 		simfile_contents, var_name, replacement, escape_replacement);
 	simfile_contents = getFileContents("Simfile");
 	simfile = sim::Simfile(simfile_contents);
@@ -749,7 +761,7 @@ void SipPackage::replace_variable_in_simfile(StringView var_name,
 {
 	STACK_UNWINDING_MARK;
 
-	replace_variable_in_configfile(simfile.configFile(), "Simfile",
+	replace_variable_in_configfile(simfile.config_file(), "Simfile",
 		simfile_contents, var_name, replacement);
 	simfile_contents = getFileContents("Simfile");
 	simfile = sim::Simfile(simfile_contents);
@@ -760,7 +772,7 @@ void SipPackage::replace_variable_in_sipfile(StringView var_name,
 {
 	STACK_UNWINDING_MARK;
 
-	replace_variable_in_configfile(sipfile.configFile(), "Sipfile",
+	replace_variable_in_configfile(sipfile.config_file(), "Sipfile",
 		sipfile_contents, var_name, replacement, escape_replacement);
 	sipfile_contents = getFileContents("Sipfile");
 	sipfile = Sipfile(sipfile_contents);
@@ -771,7 +783,7 @@ void SipPackage::replace_variable_in_sipfile(StringView var_name,
 {
 	STACK_UNWINDING_MARK;
 
-	replace_variable_in_configfile(sipfile.configFile(), "Sipfile",
+	replace_variable_in_configfile(sipfile.config_file(), "Sipfile",
 		sipfile_contents, var_name, replacement);
 	sipfile_contents = getFileContents("Sipfile");
 	sipfile = Sipfile(sipfile_contents);
@@ -806,7 +818,7 @@ void SipPackage::create_default_sipfile() {
 	stdlog("Creating Sipfile...").flush_no_nl();
 
 	const auto default_sipfile_contents = concat_tostr(
-		"default_time_limit: ", DEFAULT_TIME_LIMIT, "\n"
+		"default_time_limit: ", toString(DEFAULT_TIME_LIMIT), "\n"
 		"static: [\n"
 			"\t# Here provide tests that are \"hard-coded\"\n"
 			"\t# Syntax: <test-range>\n"
@@ -840,7 +852,7 @@ void SipPackage::create_default_simfile(Optional<CStringView> problem_name) {
 		if (problem_name.has_value()) {
 			replace_name_in_simfile(problem_name.value());
 		} else {
-			try { simfile.loadName(); } catch (const std::exception& e) {
+			try { simfile.load_name(); } catch (const std::exception& e) {
 				stdlog("\033[1;35mwarning\033[m: ignoring: ", e.what());
 
 				if (package_dir_filename.empty()) {
@@ -854,20 +866,20 @@ void SipPackage::create_default_simfile(Optional<CStringView> problem_name) {
 		}
 
 		// Memory limit
-		if (not simfile.configFile().getVar("memory_limit").isSet())
+		if (not simfile.config_file().get_var("memory_limit").is_set())
 			replace_variable_in_simfile("memory_limet",
 				intentionalUnsafeStringView(toStr(DEFAULT_MEMORY_LIMIT)));
 
 	} else if (problem_name.has_value()) {
 		stdlog("name = ", problem_name.value());
 		putFileContents("Simfile", intentionalUnsafeStringView(concat(
-			"name: ", ConfigFile::escapeString(problem_name.value()),
+			"name: ", ConfigFile::escape_string(problem_name.value()),
 			"\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
 
 	} else if (not package_dir_filename.empty()) {
 		stdlog("name = ", package_dir_filename);
 		putFileContents("Simfile", intentionalUnsafeStringView(concat(
-			"name: ", ConfigFile::escapeString(package_dir_filename),
+			"name: ", ConfigFile::escape_string(package_dir_filename),
 			"\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
 
 	} else { // iff absolute path of dir is /
