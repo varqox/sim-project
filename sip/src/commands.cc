@@ -4,7 +4,6 @@
 #include "utils.h"
 
 #include <simlib/filesystem.h>
-#include <simlib/libarchive_zip.h>
 #include <simlib/process.h>
 
 namespace commands {

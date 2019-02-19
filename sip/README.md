@@ -7,19 +7,19 @@ Sip is a tool for preparing and managing Sim problem packages
 ### Dependencies
 - gcc/g++ (with 32 bit support) with C++14 support
 - libseccomp
-- libarchive
+- libzip
 - GNU/Make
 
 #### Debian / Ubuntu
 
   ```sh
-  sudo apt-get install g++-multilib libseccomp-dev libarchive-dev make
+  sudo apt-get install g++-multilib libseccomp-dev libzip-dev make
   ```
 
 #### Arch Linux
 
   ```sh
-  sudo pacman -S gcc libseccomp libarchive make
+  sudo pacman -S gcc libseccomp libzip make
   ```
 
 ### Instructions
