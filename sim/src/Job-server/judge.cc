@@ -84,13 +84,7 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 		tmplog(" done.");
 	}
 
-	// Variables
-	SubmissionStatus initial_status = SubmissionStatus::OK;
-	SubmissionStatus full_status = SubmissionStatus::OK;
-	InplaceBuff<1 << 16> initial_report, final_report;
-	int64_t total_score = 0;
-
-	auto send_report = [&] {
+	auto update_submission = [&](SubmissionStatus initial_status, SubmissionStatus full_status, Optional<int64_t> score, auto&& initial_report, auto&& final_report) {
 		{
 			// Lock the table to be able to safely modify the submission
 			// locking contest_problems is required by update_final()
@@ -118,15 +112,17 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 					(uint)full_status, nullptr, judging_began, initial_report,
 					final_report, submission_id);
 			} else {
-				stmt.bindAndExecute((stype == ST::NORMAL),
-					(uint)initial_status, (uint)full_status, total_score,
+				stmt.bindAndExecute((stype == ST::NORMAL and score.has_value()),
+					(uint)initial_status, (uint)full_status, score,
 					judging_began, initial_report, final_report, submission_id);
 			}
 
 			submission::update_final(mysql, sowner, problem_id,
 				contest_problem_id, false);
 		}
+	};
 
+	auto job_done = [&] {
 		stmt = mysql.prepare("UPDATE jobs"
 			" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
 		stmt.bindAndExecute(job_log, job_id);
@@ -143,13 +139,14 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			tmplog(" failed.");
+			update_submission(SubmissionStatus::CHECKER_COMPILATION_ERROR,
+				SubmissionStatus::CHECKER_COMPILATION_ERROR,
+				std::nullopt,
+				concat("<pre class=\"compilation-errors\">",
+					htmlEscape(compilation_errors), "</pre>"),
+				"");
 
-			initial_status = full_status =
-				SubmissionStatus::CHECKER_COMPILATION_ERROR;
-			initial_report = concat("<pre class=\"compilation-errors\">",
-				htmlEscape(compilation_errors), "</pre>");
-
-			return send_report();
+			return job_done();
 		}
 		tmplog(" done.");
 	}
@@ -164,12 +161,14 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 			&compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH))
 		{
 			tmplog(" failed.");
+			update_submission(SubmissionStatus::COMPILATION_ERROR,
+				SubmissionStatus::COMPILATION_ERROR,
+				std::nullopt,
+				concat("<pre class=\"compilation-errors\">",
+					htmlEscape(compilation_errors), "</pre>"),
+				"");
 
-			initial_status = full_status = SubmissionStatus::COMPILATION_ERROR;
-			initial_report = concat("<pre class=\"compilation-errors\">",
-				htmlEscape(compilation_errors), "</pre>");
-
-			return send_report();
+			return job_done();
 		}
 		tmplog(" done.");
 	}
@@ -213,17 +212,31 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 						"Runtime error</td>";
 				case JudgeReport::Test::CHECKER_ERROR:
 					return "<td class=\"status blue\">Checker error</td>";
+				case JudgeReport::Test::SKIPPED:
+					return "<td class=\"status\">Pending</td>";
 				}
 
 				throw_assert(false); // We shouldn't get here
 			};
+
 			report.append("<td>", htmlEscape(test.name), "</td>",
 				asTdString(test.status),
-				"<td>", toString(floor_to_10ms(test.runtime), false),
-					" / ", toString(floor_to_10ms(test.time_limit), false),
-				"</td>"
-				"<td>", test.memory_consumed >> 10, " / ",
-					test.memory_limit >> 10, "</td>");
+				"<td>");
+
+			if (test.status == JudgeReport::Test::SKIPPED)
+				report.append('?');
+			else
+				report.append(toString(floor_to_10ms(test.runtime), false));
+
+			report.append(" / ", toString(floor_to_10ms(test.time_limit), false),
+				"</td><td>");
+
+			if (test.status == JudgeReport::Test::SKIPPED)
+				report.append('?');
+			else
+				report.append(test.memory_consumed >> 10);
+
+			report.append(" / ", test.memory_limit >> 10, "</td>");
 		};
 
 		bool there_are_comments = false;
@@ -265,64 +278,101 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 		return report;
 	};
 
+	// Returns OK or the first encountered error status
+	auto calc_status = [](const JudgeReport& jr) {
+		// Check for judge errors
+		for (auto&& group : jr.groups)
+			for (auto&& test : group.tests)
+				if (test.status == JudgeReport::Test::CHECKER_ERROR)
+					return SubmissionStatus::JUDGE_ERROR;
+
+		for (auto&& group : jr.groups)
+			for (auto&& test : group.tests)
+				switch (test.status) {
+				case JudgeReport::Test::OK:
+				case JudgeReport::Test::SKIPPED:
+					continue;
+				case JudgeReport::Test::WA:
+					return SubmissionStatus::WA;
+				case JudgeReport::Test::TLE:
+					return SubmissionStatus::TLE;
+				case JudgeReport::Test::MLE:
+					return SubmissionStatus::MLE;
+				case JudgeReport::Test::RTE:
+					return SubmissionStatus::RTE;
+				case JudgeReport::Test::CHECKER_ERROR:
+					throw_assert(false); // This should be handled in the above loops
+				}
+
+		return SubmissionStatus::OK;
+	};
+
+	auto send_judge_report = [&, initial_status = SubmissionStatus::OK,
+		initial_report = InplaceBuff<1 << 16>(), initial_score = (int64_t)0
+		](const JudgeReport& jreport, bool final, bool partial) mutable
+	{
+		auto rep = construct_report(jreport, final);
+		auto status = calc_status(jreport);
+		// Count score
+		int64_t score = 0;
+		for (auto&& group : jreport.groups)
+			score += group.score;
+
+		// Log reports
+		auto job_log_len = job_log.size;
+		judge_log("Job ", job_id, " -> submission ", submission_id,
+			" (problem ", problem_id, ")\n",
+			(partial ? "Partial j" : "J"), "udge report: ", jreport.judge_log);
+
+		stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
+		stmt.bindAndExecute(job_log, job_id);
+		if (partial)
+			job_log.size = job_log_len;
+
+		if (not final) {
+			initial_report = rep;
+			initial_status = status;
+			initial_score = score;
+			return update_submission(status, SubmissionStatus::PENDING,
+				std::nullopt, rep, "");
+		}
+
+		// Final
+		score += initial_score;
+		// If initial tests haven't passed
+		if (initial_status != SubmissionStatus::OK and
+			status != SubmissionStatus::JUDGE_ERROR)
+		{
+			status = initial_status;
+		}
+
+		update_submission(initial_status, status, score, initial_report, rep);
+	};
+
 	try {
 		// Judge
 		sim::VerboseJudgeLogger logger(true);
-		JudgeReport initial_jrep = jworker.judge(false, logger);
-		JudgeReport final_jrep = jworker.judge(true, logger);
-		// Make reports
-		initial_report = construct_report(initial_jrep, false);
-		final_report = construct_report(final_jrep, true);
 
-		// Log reports
-		judge_log("Job ", job_id, " -> submission ", submission_id,
-			" (problem ", problem_id, ")\n"
-			"Initial judge report: ", initial_jrep.judge_log,
-			"\nFinal judge report: ", final_jrep.judge_log,
-			"\n");
+		JudgeReport initial_jrep = jworker.judge(false, logger,
+			[&](const JudgeReport& partial) {
+				send_judge_report(partial, false, true);
+			});
+		send_judge_report(initial_jrep, false, false);
 
-		// Count score
-		for (auto&& rep : {initial_jrep, final_jrep})
-			for (auto&& group : rep.groups)
-				total_score += group.score;
+		JudgeReport final_jrep = jworker.judge(true, logger,
+			[&](const JudgeReport& partial) {
+				send_judge_report(partial, true, true);
+			});
+		send_judge_report(final_jrep, true, false);
 
-		/* Determine the submission initial and final status */
-
-		// Returns OK or the first encountered error status
-		auto calc_status = [] (const JudgeReport& jr) {
-			for (auto&& group : jr.groups)
-				for (auto&& test : group.tests)
-					switch (test.status) {
-					case JudgeReport::Test::OK:
-						continue;
-					case JudgeReport::Test::WA:
-						return SubmissionStatus::WA;
-					case JudgeReport::Test::TLE:
-						return SubmissionStatus::TLE;
-					case JudgeReport::Test::MLE:
-						return SubmissionStatus::MLE;
-					case JudgeReport::Test::RTE:
-						return SubmissionStatus::RTE;
-					default:
-						// We should not get here
-						throw_assert(false);
-					}
-
-			return SubmissionStatus::OK;
-		};
-
-		// Search for a CHECKER_ERROR
+		// Log checker errors
 		for (auto&& rep : {initial_jrep, final_jrep})
 			for (auto&& group : rep.groups)
 				for (auto&& test : group.tests)
 					if (test.status == JudgeReport::Test::CHECKER_ERROR) {
-						initial_status = full_status =
-							SubmissionStatus::JUDGE_ERROR;
 						errlog("Checker error: submission ", submission_id,
 							" (problem id: ", problem_id, ") test `", test.name,
 							'`');
-
-						return send_report();
 					}
 
 		// Log syscall problems (to errlog)
@@ -337,25 +387,21 @@ void judge_or_rejudge_submission(uint64_t job_id, StringView submission_id,
 							problem_id, "): ", test.name, " -> ", test.comment);
 					}
 
-		// Initial status
-		initial_status = calc_status(initial_jrep);
-		// If initial tests haven't passed
-		if (initial_status != SubmissionStatus::OK)
-			full_status = initial_status;
-		else
-			full_status = calc_status(final_jrep);
+		return job_done();
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
 		judge_log("Judge error.");
 		judge_log("Caught exception -> ", e.what());
 
-		initial_status = full_status = SubmissionStatus::JUDGE_ERROR;
-		initial_report = concat("<pre>", htmlEscape(e.what()), "</pre>");
-		final_report = "";
-	}
+		update_submission(SubmissionStatus::JUDGE_ERROR,
+			SubmissionStatus::JUDGE_ERROR,
+			std::nullopt,
+			concat("<pre>", htmlEscape(e.what()), "</pre>"),
+			"");
 
-	send_report();
+		return job_done();
+	}
 }
 
 void problem_add_or_reupload_jugde_model_solution(uint64_t job_id,
