@@ -1,6 +1,5 @@
 #include <sim/constants.h>
 #include <sim/mysql.h>
-#include <sim/sqlite.h>
 #include <simlib/filesystem.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
@@ -118,13 +117,11 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	SQLite::Connection sqlite_db;
 	MySQL::Connection conn;
 	try {
 		// Get connection
-		sqlite_db = SQLite::Connection(concat(argv[1], "/" SQLITE_DB_FILE),
-			SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX);
 		conn = MySQL::make_conn_with_credential_file(concat(argv[1], "/.db.config"));
+		conn.update("SET foreign_key_checks=1"); // Just for sure
 
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
@@ -133,15 +130,18 @@ int main(int argc, char **argv) {
 
 	if (DROP_TABLES) {
 		try {
+			conn.update("SET foreign_key_checks=0");
 			for (auto&& table : tables)
 				conn.update(intentionalUnsafeStringView(
 					concat("DROP TABLE IF EXISTS `", table, '`')));
+			conn.update("SET foreign_key_checks=1");
 
 			if (ONLY_DROP_TABLES)
 				return 0;
 
 		} catch (const std::exception& e) {
 			errlog("\033[31mFailed to drop tables\033[m - ", e.what());
+			conn.update("SET foreign_key_checks=1");
 			return 5;
 		}
 	}
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"UNIQUE KEY (username),"
 			"KEY(type, id DESC)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")),
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")),
 		[&] {
 			// Add default user sim with password sim
 			char salt_bin[SALT_LEN >> 1];
@@ -188,8 +188,9 @@ int main(int argc, char **argv) {
 			"`expires` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (user_id),"
-			"KEY (expires)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;")));
+			"KEY (expires),"
+			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;")));
 
 	try_to_create_table("problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `problems` ("
@@ -198,13 +199,14 @@ int main(int argc, char **argv) {
 			"`name` VARBINARY(", PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
 			"`label` VARBINARY(", PROBLEM_LABEL_MAX_LEN, ") NOT NULL,"
 			"`simfile` mediumblob NOT NULL,"
-			"`owner` int unsigned NOT NULL,"
+			"`owner` int unsigned NULL,"
 			"`added` datetime NOT NULL,"
 			"`last_edit` datetime NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (owner, id),"
-			"KEY (type, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+			"KEY (type, id),"
+			"FOREIGN KEY (owner) REFERENCES users(id) ON DELETE SET NULL"
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("problem_tags", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `problem_tags` ("
@@ -212,8 +214,9 @@ int main(int argc, char **argv) {
 			"`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
 			"`hidden` BOOLEAN NOT NULL,"
 			"PRIMARY KEY (problem_id, hidden, tag),"
-			"KEY (tag, problem_id)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+			"KEY (tag, problem_id),"
+			"FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("contests", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contests` ("
@@ -222,7 +225,7 @@ int main(int argc, char **argv) {
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"PRIMARY KEY (id),"
 			"KEY (is_public, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("contest_rounds", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
@@ -237,8 +240,9 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, ranking_exposure),"
 			"KEY (contest_id, begins),"
-			"UNIQUE (contest_id, item)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+			"UNIQUE (contest_id, item),"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("contest_problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
@@ -253,8 +257,11 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"UNIQUE (contest_round_id, item),"
 			"KEY (contest_id),"
-			"KEY (problem_id, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+			"KEY (problem_id, id),"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (contest_round_id) REFERENCES contest_rounds(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE RESTRICT"
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("contest_users",
 		"CREATE TABLE IF NOT EXISTS `contest_users` ("
@@ -263,8 +270,10 @@ int main(int argc, char **argv) {
 			"`mode` tinyint(1) unsigned NOT NULL DEFAULT " CU_MODE_CONTESTANT_STR ","
 			"PRIMARY KEY (user_id, contest_id),"
 			"KEY (contest_id, user_id),"
-			"KEY (contest_id, mode, user_id)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+			"KEY (contest_id, mode, user_id),"
+			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("submissions",
 		"CREATE TABLE IF NOT EXISTS `submissions` ("
@@ -328,8 +337,14 @@ int main(int argc, char **argv) {
 			//   no revealing and final = best submission:
 			"KEY initial_final2 (final_candidate, owner, contest_problem_id, initial_status, id),"
 			//   revealing score and final = best submission:
-			"KEY initial_final3 (final_candidate, owner, contest_problem_id, score, initial_status, id)"
-		") ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+			"KEY initial_final3 (final_candidate, owner, contest_problem_id, score, initial_status, id),"
+			// Foreign keys
+			"FOREIGN KEY (owner) REFERENCES users(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (contest_problem_id) REFERENCES contest_problems(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (contest_round_id) REFERENCES contest_rounds(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
 
 	try_to_create_table("jobs", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `jobs` ("
@@ -349,7 +364,9 @@ int main(int argc, char **argv) {
 			"KEY (creator, id DESC),"
 			"KEY (creator, type, aux_id, id DESC),"
 			"KEY (creator, aux_id, id DESC)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+			// Foreign keys cannot be used as we want to preserve information
+			// about who created jobs and what the job referred to
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("files", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
@@ -362,8 +379,10 @@ int main(int argc, char **argv) {
 			"`modified` datetime NOT NULL,"
 			"`creator` int unsigned NULL,"
 			"PRIMARY KEY (id),"
-			"KEY (contest_id, modified)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+			"KEY (contest_id, modified),"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (creator) REFERENCES users(id) ON DELETE SET NULL"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("contest_entry_tokens", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
@@ -373,19 +392,9 @@ int main(int argc, char **argv) {
 			"`short_token_expiration` datetime NULL,"
 			"PRIMARY KEY (token),"
 			"UNIQUE KEY (contest_id),"
-			"UNIQUE KEY (short_token)"
-		") ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
-
-	// Create SQLite tables
-	try {
-		sqlite_db.execute("PRAGMA journal_mode=WAL");
-		sqlite_db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS problems"
-			" USING fts5(type, name, label)");
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		return 6;
-	}
+			"UNIQUE KEY (short_token),"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	if (try_to_create_table.error)
 		return 7;

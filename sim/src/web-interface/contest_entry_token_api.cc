@@ -146,8 +146,8 @@ void Sim::api_contest_entry_token_regen(StringView contest_id) {
 void Sim::api_contest_entry_token_delete(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	auto stmt = mysql.prepare("DELETE FROM contest_entry_tokens WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	mysql.prepare("DELETE FROM contest_entry_tokens WHERE contest_id=?")
+		.bindAndExecute(contest_id);
 }
 
 void Sim::api_contest_entry_token_short_add(StringView contest_id) {

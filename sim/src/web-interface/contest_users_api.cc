@@ -417,7 +417,6 @@ void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
 	if (uint(~perms & PERMS::EXPEL))
 		return api_error403();
 
-	auto stmt = mysql.prepare("DELETE FROM contest_users"
-		" WHERE contest_id=? AND user_id=?");
-	stmt.bindAndExecute(contest_id, user_id);
+	mysql.prepare("DELETE FROM contest_users WHERE contest_id=? AND user_id=?")
+		.bindAndExecute(contest_id, user_id);
 }
