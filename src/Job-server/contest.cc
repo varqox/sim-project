@@ -44,6 +44,8 @@ void delete_contest(uint64_t job_id, StringView contest_id) {
 		stdlog("Job ", job_id, ":\n", job_log);
 	};
 
+	// TODO: create transaction - check contest information, add jobs to delete submission files (when the global file-system will be created, and then delete the contest with all consequent actions)
+
 	// Log some info about the deleted contest
 	{
 		auto stmt = mysql.prepare("SELECT name FROM contests WHERE id=?");
@@ -58,58 +60,12 @@ void delete_contest(uint64_t job_id, StringView contest_id) {
 		job_log.append("Contest: ", cname, " (", contest_id, ")\n");
 	}
 
-	// Run deletion twice - because race condition may occur and e.g. user may
-	// add submission after the submissions were deleted (thus it would not be
-	// deleted). Other order e.g. removing contest first would expose corrupted
-	// structure during the whole process of deletion.
-	for (int i = 0; i < 2; ++i) {
-		// Delete submissions
-		{
-			auto stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE contest_id=?");
-			stmt.bindAndExecute(contest_id);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
+	// Delete contest (all necessary actions will take place thanks to foreign
+	// key constrains)
+	mysql.prepare("DELETE FROM contests WHERE id=?").bindAndExecute(contest_id);
 
-		// Delete files
-		{
-			auto stmt = mysql.prepare("SELECT id FROM files"
-				" WHERE contest_id=?");
-			stmt.bindAndExecute(contest_id);
-			InplaceBuff<FILE_ID_LEN> file_id;
-			stmt.res_bind_all(file_id);
-			while (stmt.next())
-				file::delete_file(mysql, file_id);
-		}
-
-		// Delete contest users
-		auto stmt = mysql.prepare("DELETE FROM contest_users WHERE contest_id=?");
-		stmt.bindAndExecute(contest_id);
-
-		// Delete contest entry tokens
-		stmt = mysql.prepare("DELETE FROM contest_entry_tokens"
-			" WHERE contest_id=?");
-		stmt.bindAndExecute(contest_id);
-
-		// Delete contest problems
-		stmt = mysql.prepare("DELETE FROM contest_problems WHERE contest_id=?");
-		stmt.bindAndExecute(contest_id);
-
-		// Delete contest rounds
-		stmt = mysql.prepare("DELETE FROM contest_rounds WHERE contest_id=?");
-		stmt.bindAndExecute(contest_id);
-
-		// Delete contest
-		stmt = mysql.prepare("DELETE FROM contests WHERE id=?");
-		stmt.bindAndExecute(contest_id);
-	}
-
-	auto stmt = mysql.prepare("UPDATE jobs"
-		" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
-	stmt.bindAndExecute(job_log, job_id);
+	mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", data=?"
+		" WHERE id=?").bindAndExecute(job_log, job_id);
 }
 
 void delete_contest_round(uint64_t job_id, StringView contest_round_id) {
@@ -124,6 +80,8 @@ void delete_contest_round(uint64_t job_id, StringView contest_round_id) {
 
 		stdlog("Job ", job_id, ":\n", job_log);
 	};
+
+	// TODO: create transaction - check contest round information, add jobs to delete submission files (when the global file-system will be created, and then delete the contest round with all consequent actions)
 
 	// Log some info about the deleted contest round
 	{
@@ -144,34 +102,13 @@ void delete_contest_round(uint64_t job_id, StringView contest_round_id) {
 			"Contest round: ", rname, " (", contest_round_id, ")\n");
 	}
 
-	// Run deletion twice - because race condition may occur and e.g. user may
-	// add submission after the submissions were deleted (thus it would not be
-	// deleted). Other order e.g. removing contest round first would expose
-	// corrupted structure during the whole process of deletion.
-	for (int i = 0; i < 2; ++i) {
-		// Delete submissions
-		{
-			auto stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE contest_round_id=?");
-			stmt.bindAndExecute(contest_round_id);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
+	// Delete contest round (all necessary actions will take place thanks to
+	// foreign key constrains)
+	mysql.prepare("DELETE FROM contest_rounds WHERE id=?")
+		.bindAndExecute(contest_round_id);
 
-		// Delete contest problems
-		auto stmt = mysql.prepare("DELETE FROM contest_problems WHERE contest_round_id=?");
-		stmt.bindAndExecute(contest_round_id);
-
-		// Delete contest round
-		stmt = mysql.prepare("DELETE FROM contest_rounds WHERE id=?");
-		stmt.bindAndExecute(contest_round_id);
-	}
-
-	auto stmt = mysql.prepare("UPDATE jobs"
-		" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
-	stmt.bindAndExecute(job_log, job_id);
+	mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", data=?"
+		" WHERE id=?").bindAndExecute(job_log, job_id);
 }
 
 void delete_contest_problem(uint64_t job_id, StringView contest_problem_id) {
@@ -186,6 +123,8 @@ void delete_contest_problem(uint64_t job_id, StringView contest_problem_id) {
 
 		stdlog("Job ", job_id, ":\n", job_log);
 	};
+
+	// TODO: create transaction - check contest problem information, add jobs to delete submission files (when the global file-system will be created, and then delete the contest round with all consequent actions)
 
 	// Log some info about the deleted contest problem
 	{
@@ -211,28 +150,11 @@ void delete_contest_problem(uint64_t job_id, StringView contest_problem_id) {
 			"Attached problem: ", pname, " (", pid, ")\n");
 	}
 
-	// Run deletion twice - because race condition may occur and e.g. user may
-	// add submission after the submissions were deleted (thus it would not be
-	// deleted). Other order e.g. removing contest problem first would expose
-	// corrupted structure during the whole process of deletion.
-	for (int i = 0; i < 2; ++i) {
-		// Delete submissions
-		{
-			auto stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE contest_problem_id=?");
-			stmt.bindAndExecute(contest_problem_id);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
+	// Delete contest problem (all necessary actions will take place thanks to
+	// foreign key constrains)
+	mysql.prepare("DELETE FROM contest_problems WHERE id=?")
+		.bindAndExecute(contest_problem_id);
 
-		// Delete contest problem
-		auto stmt = mysql.prepare("DELETE FROM contest_problems WHERE id=?");
-		stmt.bindAndExecute(contest_problem_id);
-	}
-
-	auto stmt = mysql.prepare("UPDATE jobs"
-		" SET status=" JSTATUS_DONE_STR ", data=? WHERE id=?");
-	stmt.bindAndExecute(job_log, job_id);
+	mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", data=?"
+		" WHERE id=?").bindAndExecute(job_log, job_id);
 }

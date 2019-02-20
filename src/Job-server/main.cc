@@ -36,7 +36,6 @@ using std::thread;
 using std::vector;
 
 thread_local MySQL::Connection mysql;
-thread_local SQLite::Connection sqlite;
 
 namespace {
 
@@ -594,8 +593,6 @@ public:
 			try {
 				thread_local Worker w(*this);
 				// Connect to databases
-				sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
-					SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 				mysql = MySQL::make_conn_with_credential_file(".db.config");
 
 				for (;;)
@@ -1148,7 +1145,7 @@ static void eventsLoop() noexcept {
 }
 
 // Clean up database
-static void cleanUpDBs() {
+static void cleanUpDB() {
 	STACK_UNWINDING_MARK;
 
 	try {
@@ -1162,56 +1159,6 @@ static void cleanUpDBs() {
 		// Fix jobs that are noticed [ending] after the job-server died
 		mysql.update("UPDATE jobs SET status=" JSTATUS_PENDING_STR
 			" WHERE status=" JSTATUS_NOTICED_PENDING_STR);
-
-		// Remove void (invalid) jobs that are older than 24 h
-		auto yesterday_date = mysql_date(time(nullptr) - 24 * 60 * 60);
-		auto stmt = mysql.prepare("DELETE FROM jobs WHERE type="
-			JTYPE_VOID_STR " AND added<?");
-		stmt.bindAndExecute(yesterday_date);
-
-		// Remove void (invalid) submissions that are older than 24 h
-		{
-			stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE type=" STYPE_VOID_STR " AND submit_time<?");
-			stmt.bindAndExecute(yesterday_date);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
-
-		// Remove void (invalid) problems and associated with them submissions
-		// and jobs
-		for (;;) { // TODO test it
-			res = mysql.query("SELECT id FROM problems"
-				" WHERE type=" PTYPE_VOID_STR " LIMIT 32");
-			if (res.rows_num() == 0)
-				break;
-
-			while (res.next()) {
-				StringView pid = res[0];
-				// Delete submissions
-				{
-					stmt = mysql.prepare("SELECT id FROM submissions"
-						" WHERE problem_id=?");
-					stmt.bindAndExecute(pid);
-					InplaceBuff<20> submission_id;
-					stmt.res_bind_all(submission_id);
-					while (stmt.next())
-						submission::delete_submission(mysql, submission_id);
-				}
-
-				// Delete problem's files
-				(void)remove_r(concat("problems/", pid));
-				(void)remove(concat("problems/", pid, ".zip"));
-
-				// Delete the problem (we have to do it here to prevent this
-				// loop from going infinite)
-				stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
-				stmt.bindAndExecute(pid);
-			}
-		}
-
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
@@ -1253,11 +1200,9 @@ int main() {
 
 	// Connect to the databases
 	try {
-		sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
-			SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 		mysql = MySQL::make_conn_with_credential_file(".db.config");
 
-		cleanUpDBs();
+		cleanUpDB();
 
 		ConfigFile cf;
 		cf.add_vars("js_local_workers", "js_judge_workers");

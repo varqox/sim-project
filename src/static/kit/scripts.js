@@ -3395,8 +3395,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					class: 'owner',
 					html: [
 						$('<label>', {text: 'Owner'}),
-						(problem.owner_username === null ?
-							'Deleted (id: ' + problem.owner_id + ')'
+						(problem.owner_id === null ? '(Deleted)'
 							: a_view_button('/u/' + problem.owner_id,
 								problem.owner_username, undefined,
 								view_user.bind(null, true, problem.owner_id)))
@@ -3540,7 +3539,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			// Owner
 			if (this_.show_owner)
 				row.append($('<td>', {
-					html: (x.owner_username === null ? x.owner_id
+					html: (x.owner_id === null ? '(Deleted)'
 						: a_view_button('/u/' + x.owner_id, x.owner_username,
 							undefined, view_user.bind(null, true, x.owner_id)))
 				}));

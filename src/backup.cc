@@ -1,6 +1,5 @@
 #include <sim/constants.h>
 #include <sim/mysql.h>
-#include <sim/sqlite.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 #include <simlib/spawner.h>
@@ -8,7 +7,6 @@
 
 using std::string;
 using std::vector;
-
 
 /**
  * @brief Displays help
@@ -19,32 +17,6 @@ static void help(const char* program_name) {
 
 	printf("Usage: %s [options]\n", program_name);
 	puts("Make a backup of solutions and database contents");
-}
-
-// Backup the SQLite database
-static void backup_sqlite_db(FilePath backup_file) {
-	SQLite::Connection sqlite_db {SQLITE_DB_FILE, SQLITE_OPEN_READONLY};
-	SQLite::Connection sqlite_backup {backup_file, SQLITE_OPEN_READWRITE |
-		SQLITE_OPEN_CREATE};
-	sqlite_backup.execute("PRAGMA journal_mode=WAL");
-
-	// Initialize backup
-	sqlite3_backup* backuper = sqlite3_backup_init(sqlite_backup, "main",
-		sqlite_db, "main");
-	if (!backuper)
-		THROW_SQLITE_ERROR(sqlite_backup, "sqlite3_backup_init()");
-
-	for (;;) {
-		int rc = sqlite3_backup_step(backuper, 164);
-
-		if (rc != SQLITE_OK and rc != SQLITE_BUSY and rc != SQLITE_LOCKED)
-			break;
-
-		sqlite3_sleep(250); // 250 ms
-	}
-
-	if (sqlite3_backup_finish(backuper))
-		THROW_SQLITE_ERROR(sqlite_backup, "sqlite3_backup_step()");
 }
 
 int main2(int argc, char**argv) {
@@ -90,12 +62,9 @@ int main2(int argc, char**argv) {
 		conn.impl()->db,
 	});
 
-	backup_sqlite_db(SQLITE_DB_FILE ".backup");
-
 	run_command({"git", "init"});
 	run_command({"git", "config", "--local", "user.name", "Sim backuper"});
-	run_command({"git", "add", "solutions", SQLITE_DB_FILE ".backup",
-		"dump.sql"});
+	run_command({"git", "add", "solutions", "dump.sql"});
 	run_command({"git", "commit", "-m", concat_tostr("Backup ", mysql_date())});
 
 	return 0;

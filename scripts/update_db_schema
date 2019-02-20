@@ -22,7 +22,7 @@ echo "Update Schemas"
 src/setup-installation "$DESTDIR" --drop-tables
 
 echo "Fill with data"
-echo "TRUNCATE TABLE users;" | mysql --defaults-file=.mysql.cnf $db
+echo "DELETE FROM users;" | mysql --defaults-file=.mysql.cnf $db
 mysql --defaults-file=.mysql.cnf $db < upd_db_sch.sql || mysql --defaults-file=.mysql.cnf $db < upd_db_sch_backup.sql
 
 echo "Restore SIM"

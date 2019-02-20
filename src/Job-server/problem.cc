@@ -183,8 +183,6 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 
 	/* Begin transaction */
 
-	// SQLite transaction is handled in the function add_problem() that calls
-	// this function so we don't have to worry about that
 	auto rollbacker = [&] {
 		SignalBlocker sb; // Prevent the transaction rollback from interruption
 
@@ -207,16 +205,6 @@ static uint64_t second_stage(uint64_t job_id, StringView job_owner,
 		}
 	};
 	CallInDtor<decltype(rollbacker)> rollback_maker {rollbacker};
-
-	// Insert the problem into the SQLite FTS5 table `problems`
-	// SQLite::Statement sqlite_stmt {sqlite.prepare(
-		// "INSERT INTO problems (rowid, type, name, label)"
-		// " VALUES(?, ?, ?, ?)")};
-	// sqlite_stmt.bindInt64(1, problem_id);
-	// sqlite_stmt.bindInt(2, EnumVal<ProblemType>(info.problem_type).int_val());
-	// sqlite_stmt.bindText(3, sf.name, SQLITE_STATIC);
-	// sqlite_stmt.bindText(4, sf.label, SQLITE_STATIC);
-	// throw_assert(sqlite_stmt.step() == SQLITE_DONE);
 
 	// Move the package to its destination
 	auto package_dest = concat("problems/", pid_str, ".zip");
@@ -306,10 +294,8 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 		EnumVal<JobStatus> status; // [[maybe_uninitilized]]
 		uint64_t apid; // Added problem's id
 		try {
-			// sqlite.execute("BEGIN");
 			apid = second_stage<action>(job_id, job_owner, info, job_log);
 			success_callback(apid, job_log);
-			// sqlite.execute("COMMIT");
 
 			status = JobStatus::DONE;
 			if (action == Action::ADDING)
@@ -318,9 +304,6 @@ static void add_problem(uint64_t job_id, StringView job_owner, StringView aux_id
 				stmt.bind(1, aux_id);
 
 		} catch (const std::exception& e) {
-			// To avoid exceptions C API is used
-			// (void)sqlite3_exec(sqlite, "ROLLBACK", nullptr, nullptr, nullptr);
-
 			ERRLOG_CATCH(e);
 			job_log.append("Caught exception: ", e.what());
 
@@ -544,13 +527,6 @@ void reupload_problem(uint64_t job_id, StringView job_owner, StringView info,
 				THROW("rename() failed", errmsg());
 			}
 
-			// Replace the problem in the SQLite FTS5 table `problems`
-			// SQLite::Statement sqlite_stmt {sqlite.prepare(
-				// "UPDATE OR REPLACE problems SET rowid=? WHERE rowid=?")};
-			// sqlite_stmt.bindText(1, problem_id, SQLITE_STATIC);
-			// sqlite_stmt.bindInt64(2, tmp_problem_id);
-			// throw_assert(sqlite_stmt.step() == SQLITE_DONE);
-
 			// Delete the old problem's solutions' submissions
 			{
 				stmt = mysql.prepare("SELECT id FROM submissions"
@@ -590,66 +566,44 @@ void delete_problem(uint64_t job_id, StringView problem_id) {
 		stdlog("Job ", job_id, ":\n", job_log.str);
 	};
 
-	// Lock the tables to be able to safely delete problem
+	// TODO: create transaction - check for attaching contest problems, check problem information, add jobs to delete submission files and problem files (when the global file-system will be created, and then delete the user with all consequent actions)
+
+	// Check whether the problem is not used as contest problem
 	{
-		mysql.update("LOCK TABLES problems WRITE, submissions WRITE,"
-			" contest_problems READ");
-		auto lock_guard = make_call_in_destructor([&]{
-			mysql.update("UNLOCK TABLES");
-		});
-
-		// Check whether the problem is not used as contest problem
-		{
-			auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
-				" WHERE problem_id=? LIMIT 1");
-			stmt.bindAndExecute(problem_id);
-			if (stmt.next()) {
-				lock_guard.call_and_cancel();
-				return set_failure("There exists a contest problem that uses"
-					" (attaches) this problem. You have to delete all of them"
-					" to be able to delete this problem.");
-			}
-		}
-
-		// Assure that the problems exist and log its Simfile
-		{
-			auto stmt = mysql.prepare("SELECT simfile FROM problems"
-				" WHERE id=? AND type!=" PTYPE_VOID_STR);
-			stmt.bindAndExecute(problem_id);
-			InplaceBuff<1> simfile;
-			stmt.res_bind_all(simfile);
-			if (not stmt.next())
-				return set_failure("Problem does not exist");
-
-			job_log.append("Deleted problem Simfile:\n", simfile);
-		}
-
-		// Delete submissions
-		{
-			auto stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE problem_id=?");
-			stmt.bindAndExecute(problem_id);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
-
-		auto stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
+		auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
+			" WHERE problem_id=? LIMIT 1");
 		stmt.bindAndExecute(problem_id);
+		if (stmt.next()) {
+			return set_failure("There exists a contest problem that uses"
+				" (attaches) this problem. You have to delete all of them"
+				" to be able to delete this problem.");
+		}
 	}
 
-	// Delete problem tags
-	auto stmt = mysql.prepare("DELETE FROM problem_tags WHERE problem_id=?");
-	stmt.bindAndExecute(problem_id);
+	// Assure that the problems exist and log its Simfile
+	{
+		auto stmt = mysql.prepare("SELECT simfile FROM problems"
+			" WHERE id=? AND type!=" PTYPE_VOID_STR);
+		stmt.bindAndExecute(problem_id);
+		InplaceBuff<1> simfile;
+		stmt.res_bind_all(simfile);
+		if (not stmt.next())
+			return set_failure("Problem does not exist");
+
+		job_log.append("Deleted problem Simfile:\n", simfile);
+	}
+
+	// Delete problem (all necessary actions will take place thanks to foreign
+	// key constrains)
+	mysql.prepare("DELETE FROM problems WHERE id=?").bindAndExecute(problem_id);
 
 	// Delete problem's files
+	// TODO: rewrite it to the new system (when it will be implemented) and move the deletion of files before deletion of the problem
 	(void)remove_r(concat("problems/", problem_id));
 	(void)remove(concat("problems/", problem_id, ".zip"));
 
-	stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
-		", data=? WHERE id=?");
-	stmt.bindAndExecute(job_log.str, job_id);
+	mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", data=?"
+		" WHERE id=?").bindAndExecute(job_log.str, job_id);
 }
 
 void merge_problem_into_another(uint64_t job_id, StringView problem_id,
@@ -668,115 +622,104 @@ void merge_problem_into_another(uint64_t job_id, StringView problem_id,
 		stdlog("Job ", job_id, ":\n", job_log.str);
 	};
 
-	// Lock the tables to be able to safely transfer problem usages
+	// TODO: create transaction - check problems information, transfer everything, add jobs to delete solution submission files and problem files (when the global file-system will be created, and then delete the user with all consequent actions)
+
+	// Assure that both problems exist
 	{
-		mysql.update("LOCK TABLES problems WRITE, contest_problems WRITE,"
-			" submissions WRITE, jobs WRITE");
-		auto lock_guard = make_call_in_destructor([&]{
-			mysql.update("UNLOCK TABLES");
-		});
+		auto stmt = mysql.prepare("SELECT simfile FROM problems"
+			" WHERE id=? AND type!=" PTYPE_VOID_STR);
+		stmt.bindAndExecute(problem_id);
+		InplaceBuff<1> simfile;
+		stmt.res_bind_all(simfile);
+		if (not stmt.next())
+			return set_failure("Problem does not exist");
 
-		// Assure that both problems exist
-		{
-			auto stmt = mysql.prepare("SELECT simfile FROM problems"
-				" WHERE id=? AND type!=" PTYPE_VOID_STR);
-			stmt.bindAndExecute(problem_id);
-			InplaceBuff<1> simfile;
-			stmt.res_bind_all(simfile);
-			if (not stmt.next())
-				return set_failure("Problem does not exist");
+		job_log.append("Merged problem Simfile:\n", simfile);
 
-			job_log.append("Merged problem Simfile:\n", simfile);
-
-			stmt = mysql.prepare("SELECT 1 FROM problems"
-				" WHERE id=? AND type!=" PTYPE_VOID_STR);
-			stmt.bindAndExecute(info.target_problem_id);
-			if (not stmt.next())
-				return set_failure("Target problem does not exist");
-		}
-
-		// Transfer contest problems
-		{
-			auto stmt = mysql.prepare("UPDATE contest_problems SET problem_id=?"
-				" WHERE problem_id=?");
-			stmt.bindAndExecute(info.target_problem_id, problem_id);
-		}
-
-		// Delete problem solutions
-		{
-			auto stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR);
-			stmt.bindAndExecute(problem_id);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
-
-		// Collect update finals
-		std::deque<std::array<MySQL::Optional<int64_t>, 2>> finals_to_update;
-		{
-			auto stmt = mysql.prepare("SELECT DISTINCT owner, contest_problem_id"
-				" FROM submissions WHERE problem_id=?");
-			stmt.bindAndExecute(problem_id);
-			std::array<MySQL::Optional<int64_t>, 2> ftu_elem {};
-			stmt.res_bind_all(ftu_elem[0], ftu_elem[1]);
-			while (stmt.next())
-				finals_to_update.emplace_back(ftu_elem);
-		}
-
-		// Schedule rejudge of the transferred submissions
-		if (info.rejudge_transferred_submissions) {
-			// Safe as the jobs table is locked and jobs server won't read the jobs
-			auto stmt = mysql.prepare("INSERT INTO jobs(creator, status,"
-					" priority, type, added, aux_id, info, data)"
-				" SELECT NULL, " JSTATUS_PENDING_STR ", ?, "
-					JTYPE_REJUDGE_SUBMISSION_STR ", ?, id, ?, ''"
-				" FROM submissions WHERE problem_id=? ORDER BY id");
-			stmt.bindAndExecute(
-				priority(JobType::REJUDGE_SUBMISSION),
-				mysql_date(),
-				jobs::dumpString(intentionalUnsafeStringView(toStr(info.target_problem_id))),
-				problem_id);
-		}
-
-		// Transfer problem submissions that are not problem solutions
-		{
-			auto stmt = mysql.prepare("UPDATE submissions SET problem_id=?"
-				" WHERE problem_id=?");
-			stmt.bindAndExecute(info.target_problem_id, problem_id);
-		}
-
-		// Update finals
-		for (auto const& ftu_elem : finals_to_update) {
-			InplaceBuff<32> owner, contest_problem_id;
-			if (ftu_elem[0].has_value())
-				owner = toStr(*ftu_elem[0]);
-			if (ftu_elem[1].has_value())
-				contest_problem_id = toStr(*ftu_elem[1]);
-
-			submission::update_final(mysql, owner,
-				intentionalUnsafeStringView(toStr(info.target_problem_id)),
-				contest_problem_id);
-		}
+		stmt = mysql.prepare("SELECT 1 FROM problems"
+			" WHERE id=? AND type!=" PTYPE_VOID_STR);
+		stmt.bindAndExecute(info.target_problem_id);
+		if (not stmt.next())
+			return set_failure("Target problem does not exist");
 	}
 
-	// Transfer problem tags
-	auto stmt = mysql.prepare("UPDATE IGNORE problem_tags SET problem_id=? WHERE problem_id=?");
-	stmt.bindAndExecute(info.target_problem_id, problem_id);
-	// Duplicates will not be updated or removed, so we need to delete them
-	stmt = mysql.prepare("DELETE FROM problem_tags WHERE problem_id=?");
-	stmt.bindAndExecute(problem_id);
+	// Transfer contest problems
+	{
+		auto stmt = mysql.prepare("UPDATE contest_problems SET problem_id=?"
+			" WHERE problem_id=?");
+		stmt.bindAndExecute(info.target_problem_id, problem_id);
+	}
+
+	// Delete problem solutions
+	{
+		auto stmt = mysql.prepare("SELECT id FROM submissions"
+			" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR);
+		stmt.bindAndExecute(problem_id);
+		InplaceBuff<20> submission_id;
+		stmt.res_bind_all(submission_id);
+		while (stmt.next())
+			submission::delete_submission(mysql, submission_id);
+	}
+
+	// Collect update finals
+	std::deque<std::array<MySQL::Optional<int64_t>, 2>> finals_to_update;
+	{
+		auto stmt = mysql.prepare("SELECT DISTINCT owner, contest_problem_id"
+			" FROM submissions WHERE problem_id=?");
+		stmt.bindAndExecute(problem_id);
+		std::array<MySQL::Optional<int64_t>, 2> ftu_elem {};
+		stmt.res_bind_all(ftu_elem[0], ftu_elem[1]);
+		while (stmt.next())
+			finals_to_update.emplace_back(ftu_elem);
+	}
+
+	// Schedule rejudge of the transferred submissions
+	if (info.rejudge_transferred_submissions) {
+		// Safe as the jobs table is locked and jobs server won't read the jobs
+		auto stmt = mysql.prepare("INSERT INTO jobs(creator, status,"
+				" priority, type, added, aux_id, info, data)"
+			" SELECT NULL, " JSTATUS_PENDING_STR ", ?, "
+				JTYPE_REJUDGE_SUBMISSION_STR ", ?, id, ?, ''"
+			" FROM submissions WHERE problem_id=? ORDER BY id");
+		stmt.bindAndExecute(
+			priority(JobType::REJUDGE_SUBMISSION),
+			mysql_date(),
+			jobs::dumpString(intentionalUnsafeStringView(toStr(info.target_problem_id))),
+			problem_id);
+	}
+
+	// Transfer problem submissions that are not problem solutions
+	{
+		auto stmt = mysql.prepare("UPDATE submissions SET problem_id=?"
+			" WHERE problem_id=?");
+		stmt.bindAndExecute(info.target_problem_id, problem_id);
+	}
+
+	// Update finals
+	for (auto const& ftu_elem : finals_to_update) {
+		InplaceBuff<32> owner, contest_problem_id;
+		if (ftu_elem[0].has_value())
+			owner = toStr(*ftu_elem[0]);
+		if (ftu_elem[1].has_value())
+			contest_problem_id = toStr(*ftu_elem[1]);
+
+		submission::update_final(mysql, owner,
+			intentionalUnsafeStringView(toStr(info.target_problem_id)),
+			contest_problem_id);
+	}
+
+	// Transfer problem tags (duplicates will not be deleted automatically)
+	mysql.prepare("UPDATE IGNORE problem_tags SET problem_id=?"
+		" WHERE problem_id=?").bindAndExecute(info.target_problem_id, problem_id);
 
 	// Finally, delete the problem
-	stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
-	stmt.bindAndExecute(problem_id);
+	mysql.prepare("DELETE FROM problems WHERE id=?").bindAndExecute(problem_id);
 
 	// Delete problem's files
+	// TODO: rewrite it to the new system (when it will be implemented) and move the deletion of files before deletion of the problem
 	(void)remove_r(concat("problems/", problem_id));
 	(void)remove(concat("problems/", problem_id, ".zip"));
 
-	stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR
-		", data=? WHERE id=?");
-	stmt.bindAndExecute(job_log.str, job_id);
+	mysql.prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", data=?"
+		" WHERE id=?").bindAndExecute(job_log.str, job_id);
 }

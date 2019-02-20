@@ -7,7 +7,6 @@
 #include <sim/constants.h>
 #include <sim/cpp_syntax_highlighter.h>
 #include <sim/mysql.h>
-#include <sim/sqlite.h>
 #include <simlib/http/response.h>
 #include <simlib/parsers.h>
 #include <utime.h>
@@ -18,7 +17,6 @@ class Sim final {
 private:
 	/* ============================== General ============================== */
 
-	SQLite::Connection sqlite;
 	MySQL::Connection mysql;
 	CStringView client_ip; // TODO: put in request?
 	server::HttpRequest request;
@@ -764,8 +762,7 @@ private:
 	void view_logs();
 
 public:
-	Sim() : sqlite(SQLITE_DB_FILE, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX),
-		mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
+	Sim() : mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
 
 	~Sim() {}
 

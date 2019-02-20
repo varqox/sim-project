@@ -1,10 +1,9 @@
+// TODO: remove void types: we have transactions now!
 #pragma once
 
 #include <chrono>
 #include <cstdint>
 #include <simlib/meta.h>
-
-#define SQLITE_DB_FILE "sqlite-sim.db"
 
 // User
 constexpr uint USERNAME_MAX_LEN = 30;

@@ -169,14 +169,9 @@ void Sim::api_problems() {
 		append(jsonStringify(res[LABEL]), ',');
 
 		// Owner
-		if (uint(perms & PERM::VIEW_OWNER)) {
-			append(res[OWNER], ',');
-
-			if (res.is_null(OWN_USERNAME))
-				append("null,");
-			else
-				append("\"", res[OWN_USERNAME], "\",");
-		} else
+		if (uint(perms & PERM::VIEW_OWNER) and not res.is_null(OWNER))
+			append(res[OWNER], ",\"", res[OWN_USERNAME], "\",");
+		else
 			append("null,null,");
 
 		// Append what buttons to show
@@ -670,9 +665,9 @@ void Sim::api_problem_edit_tags() {
 		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
 			return api_error403();
 
-		auto stmt = mysql.prepare("DELETE FROM problem_tags"
-			" WHERE problem_id=? AND tag=? AND hidden=?");
-		stmt.bindAndExecute(problems_pid, name, hidden);
+		mysql.prepare("DELETE FROM problem_tags"
+			" WHERE problem_id=? AND tag=? AND hidden=?")
+			.bindAndExecute(problems_pid, name, hidden);
 	};
 
 	StringView next_arg = url_args.extractNextArg();
