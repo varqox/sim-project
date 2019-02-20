@@ -1284,8 +1284,8 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var prev = prev_height - content.scrollTop();
 
 		remove_loader(this_.elem);
-		content.html(colorize(text_to_safe_html(data) + content.html(),
-			data.length + 2000));
+		var html_data = text_to_safe_html(data);
+		content.html(colorize(html_data + content.html(), html_data.length + 2000));
 		var curr_height = content[0].scrollHeight;
 		content.scrollTop(curr_height - prev);
 
