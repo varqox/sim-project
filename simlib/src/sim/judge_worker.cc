@@ -251,7 +251,9 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 	return es;
 }
 
-JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
+JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
+	Optional<std::function<void(const JudgeReport&)>> partial_report_callback) const
+{
 	STACK_UNWINDING_MARK;
 
 	using std::chrono_literals::operator""ns;
@@ -296,7 +298,217 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 	string checker_path {concat_tostr(tmp_dir.path(), CHECKER_FILENAME)};
 	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
 
-	for (auto&& group : sf.tgroups) {
+	using std::chrono_literals::operator""s;
+
+	auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
+		STACK_UNWINDING_MARK;
+
+		// Prepare solution fds
+		(void)ftruncate(solution_stdout, 0);
+		(void)lseek(solution_stdout, 0, SEEK_SET);
+
+		string test_in_path = package_loader->load_as_file(test.in, "test.in");
+		string test_out_path = package_loader->load_as_file(test.out, "test.out");
+
+		FileDescriptor test_in(test_in_path, O_RDONLY);
+		if (test_in < 0)
+			THROW("Failed to open file `", test_in_path, '`', errmsg());
+
+		// Run solution on the test
+		Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
+			test_in,
+			solution_stdout,
+			-1,
+			cpu_time_limit_to_real_time_limit(test.time_limit),
+			test.memory_limit,
+			test.time_limit
+		}); // Allow exceptions to fly upper
+
+		JudgeReport::Test test_report(
+			test.name,
+			JudgeReport::Test::OK,
+			es.cpu_runtime,
+			test.time_limit,
+			es.vm_peak,
+			test.memory_limit,
+			string {}
+		);
+
+		// Update group_score_ratio
+		if (score_cut_lambda < 1) { // Only then the scaling occurs
+			const double x =
+				std::chrono::duration<double>(test_report.runtime).count();
+			const double t =
+				std::chrono::duration<double>(test_report.time_limit).count();
+			group_score_ratio = std::min(group_score_ratio,
+				(x / t - 1) / (score_cut_lambda - 1));
+			// Runtime may be greater than time_limit therefore group_score_ratio
+			// may become negative which is undesired
+			if (group_score_ratio < 0)
+				group_score_ratio = 0;
+
+		}
+
+		// OK
+		if (es.si.code == CLD_EXITED and es.si.status == 0 and
+			test_report.runtime <= test_report.time_limit)
+		{
+
+		// TLE
+		} else if (test_report.runtime >= test_report.time_limit or
+			es.runtime >= test.time_limit)
+		{
+			// es.runtime >= tl means that real_time_limit has been exceeded
+			if (test_report.runtime < test_report.time_limit)
+				test_report.runtime = test_report.time_limit;
+
+			// After checking status for OK `>=` comparison is safe to
+			// detect exceeding
+			group_score_ratio = 0;
+			test_report.status = JudgeReport::Test::TLE;
+			test_report.comment = "Time limit exceeded";
+			judge_log.test(test.name, test_report, es);
+			return test_report;
+
+		// MLE
+		} else if (es.message == "Memory limit exceeded" ||
+			test_report.memory_consumed > test_report.memory_limit)
+		{
+			group_score_ratio = 0;
+			test_report.status = JudgeReport::Test::MLE;
+			test_report.comment = "Memory limit exceeded";
+			judge_log.test(test.name, test_report, es);
+			return test_report;
+
+		// RTE
+		} else {
+			group_score_ratio = 0;
+			test_report.status = JudgeReport::Test::RTE;
+			test_report.comment = "Runtime error";
+			if (es.message.size())
+				back_insert(test_report.comment, " (", es.message, ')');
+
+			judge_log.test(test.name, test_report, es);
+			return test_report;
+		}
+
+		// Status == OK
+
+		/* Checking solution output with checker */
+
+		// Prepare checker fds
+		(void)ftruncate(checker_stdout, 0);
+		(void)lseek(checker_stdout, 0, SEEK_SET);
+
+		// Run checker
+		auto ces = sandbox.run(checker_path,
+			{checker_path, test_in_path, test_out_path, sol_stdout_path},
+			checker_opts,
+			{
+				{test_in_path, OpenAccess::RDONLY},
+				{test_out_path, OpenAccess::RDONLY},
+				{sol_stdout_path, OpenAccess::RDONLY}
+			}); // Allow exceptions to fly higher
+
+		InplaceBuff<4096> checker_error_str;
+		// Checker exited with 0
+		if (ces.si.code == CLD_EXITED and ces.si.status == 0) {
+			string chout = sim::obtainCheckerOutput(checker_stdout, 512);
+			SimpleParser s {chout};
+
+			StringView line1 {s.extractNext('\n')}; // "OK" or "WRONG"
+			StringView line2 {s.extractNext('\n')}; // percentage (real)
+
+			auto wrong_second_line = [&] {
+				group_score_ratio = 0; // Do not give score for a checker error
+				test_report.status = JudgeReport::Test::CHECKER_ERROR;
+				test_report.comment = "Checker error";
+				checker_error_str.append("Second line of the stdout is"
+					" invalid: `", line2, "` - it has be to either empty or"
+					" a real number representing the percentage of score"
+					" that solution will receive");
+			};
+
+			// Second line has to be either empty or be a real number
+			if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
+				wrong_second_line();
+
+			// "OK" -> Checker: OK
+			} else if (line1 == "OK") {
+				// Test status is already set to OK
+				// line2 format was checked above
+				if (line2.size()) { // Empty line means 100%
+					errno = 0;
+					char* ptr;
+					double x = strtod(line2.data(), &ptr);
+					if (errno != 0 or ptr == line2.data())
+						wrong_second_line();
+					else
+						group_score_ratio = std::min(group_score_ratio, x * 0.01);
+				}
+
+				// Leave the checker comment only
+				chout.erase(chout.begin(), chout.end() - s.size());
+				test_report.comment = std::move(chout);
+
+			// "WRONG" -> Checker: WA
+			} else if (line1 == "WRONG") {
+				test_report.status = JudgeReport::Test::WA;
+				group_score_ratio = 0; // Ignoring second line
+				// Leave the checker comment only
+				chout.erase(chout.begin(), chout.end() - s.size());
+				test_report.comment = std::move(chout);
+
+			// * -> Checker error
+			} else {
+				group_score_ratio = 0; // Do not give score for a checker error
+				test_report.status = JudgeReport::Test::CHECKER_ERROR;
+				test_report.comment = "Checker error";
+				checker_error_str.append("First line of the stdout is"
+					" invalid: `", line1, "` - it has to be either `OK` or"
+					" `WRONG`");
+			}
+
+		// Checker TLE
+		} else if (checker_time_limit.has_value() and
+			ces.runtime >= checker_time_limit.value())
+		{
+			group_score_ratio = 0; // Do not give score for a checker error
+			test_report.status = JudgeReport::Test::CHECKER_ERROR;
+			test_report.comment = "Checker error";
+			checker_error_str.append("Time limit exceeded");
+
+		// Checker MLE
+		} else if (ces.message == "Memory limit exceeded" or
+			(checker_memory_limit.has_value() and
+				ces.vm_peak > checker_memory_limit.value()))
+		{
+			group_score_ratio = 0; // Do not give score for a checker error
+			test_report.status = JudgeReport::Test::CHECKER_ERROR;
+			test_report.comment = "Checker error";
+			checker_error_str.append("Memory limit exceeded");
+
+		// Checker RTE
+		} else {
+			group_score_ratio = 0; // Do not give score for a checker error
+			test_report.status = JudgeReport::Test::CHECKER_ERROR;
+			test_report.comment = "Checker error";
+			checker_error_str.append("Runtime error");
+			if (ces.message.size())
+				checker_error_str.append(" (", ces.message, ')');
+		}
+
+		// Logging
+		judge_log.test(test.name, test_report, es, ces,
+			checker_memory_limit, checker_error_str);
+
+		return test_report;
+	};
+
+	// First round - judge as little as possible to compute total score
+	bool test_were_skipped = false;
+	uint64_t total_score = 0, max_score = 0;
+	for (auto const& group : sf.tgroups) {
 		// Group "0" goes to the initial report, others groups to final
 		auto p = Simfile::TestNameComparator::split(group.tests[0].name);
 		if ((p.gid != "0") != final)
@@ -305,221 +517,71 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log) const {
 		report.groups.emplace_back();
 		auto& report_group = report.groups.back();
 
-		double score_ratio = 1.0;
+		double group_score_ratio = 1.0;
+		auto calc_group_score = [&] {
+			return (int64_t)round(group.score * group_score_ratio);
+		};
 
-		using std::chrono_literals::operator""s;
-
-		for (auto&& test : group.tests) {
-			// Prepare solution fds
-			(void)ftruncate(solution_stdout, 0);
-			(void)lseek(solution_stdout, 0, SEEK_SET);
-
-			string test_in_path = package_loader->load_as_file(test.in, "test.in");
-			string test_out_path = package_loader->load_as_file(test.out, "test.out");
-
-			FileDescriptor test_in(test_in_path, O_RDONLY);
-			if (test_in < 0)
-				THROW("Failed to open file `", test_in_path, '`', errmsg());
-
-			// Run solution on the test
-			Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
-				test_in,
-				solution_stdout,
-				-1,
-				cpu_time_limit_to_real_time_limit(test.time_limit),
-				test.memory_limit,
-				test.time_limit
-			}); // Allow exceptions to fly upper
-
-			report_group.tests.emplace_back(
-				test.name,
-				JudgeReport::Test::OK,
-				es.cpu_runtime,
-				test.time_limit,
-				es.vm_peak,
-				test.memory_limit,
-				string {}
-			);
-			auto& test_report = report_group.tests.back();
-
-			// Update score_ratio
-			if (score_cut_lambda < 1) { // Only then the scaling occurs
-				const double x =
-					std::chrono::duration<double>(test_report.runtime).count();
-				const double t =
-					std::chrono::duration<double>(test_report.time_limit).count();
-				score_ratio = std::min(score_ratio,
-					(x / t - 1) / (score_cut_lambda - 1));
-				// Runtime may be greater than time_limit therefore score_ratio
-				// may become negative which is undesired
-				if (score_ratio < 0)
-					score_ratio = 0;
-
-			}
-
-			// OK
-			if (es.si.code == CLD_EXITED and es.si.status == 0 and
-				test_report.runtime <= test_report.time_limit)
-			{
-
-			// TLE
-			} else if (test_report.runtime >= test_report.time_limit or
-				es.runtime >= test.time_limit)
-			{
-				// es.runtime >= tl means that real_time_limit has been exceeded
-				if (test_report.runtime < test_report.time_limit)
-					test_report.runtime = test_report.time_limit;
-
-				// After checking status for OK `>=` comparison is safe to
-				// detect exceeding
-				score_ratio = 0;
-				test_report.status = JudgeReport::Test::TLE;
-				test_report.comment = "Time limit exceeded";
-				judge_log.test(test.name, test_report, es);
-				continue;
-
-			// MLE
-			} else if (es.message == "Memory limit exceeded" ||
-				test_report.memory_consumed > test_report.memory_limit)
-			{
-				score_ratio = 0;
-				test_report.status = JudgeReport::Test::MLE;
-				test_report.comment = "Memory limit exceeded";
-				judge_log.test(test.name, test_report, es);
-				continue;
-
-			// RTE
+		bool skip_tests = false;
+		for (auto const& test : group.tests) {
+			if (skip_tests) {
+				test_were_skipped = true;
+				report_group.tests.emplace_back(
+					test.name,
+					JudgeReport::Test::SKIPPED,
+					0s,
+					test.time_limit,
+					0,
+					test.memory_limit,
+					string {}
+				);
 			} else {
-				score_ratio = 0;
-				test_report.status = JudgeReport::Test::RTE;
-				test_report.comment = "Runtime error";
-				if (es.message.size())
-					back_insert(test_report.comment, " (", es.message, ')');
-
-				judge_log.test(test.name, test_report, es);
-				continue;
+				report_group.tests.emplace_back(judge_on_test(test, group_score_ratio));
+				if (group_score_ratio < 1e-6 and calc_group_score() == 0)
+					skip_tests = partial_report_callback.has_value();
 			}
-
-			// Status == OK
-
-			/* Checking solution output with checker */
-
-			// Prepare checker fds
-			(void)ftruncate(checker_stdout, 0);
-			(void)lseek(checker_stdout, 0, SEEK_SET);
-
-			// Run checker
-			auto ces = sandbox.run(checker_path,
-				{checker_path, test_in_path, test_out_path, sol_stdout_path},
-				checker_opts,
-				{
-					{test_in_path, OpenAccess::RDONLY},
-					{test_out_path, OpenAccess::RDONLY},
-					{sol_stdout_path, OpenAccess::RDONLY}
-				}); // Allow exceptions to fly higher
-
-			InplaceBuff<4096> checker_error_str;
-			// Checker exited with 0
-			if (ces.si.code == CLD_EXITED and ces.si.status == 0) {
-				string chout = sim::obtainCheckerOutput(checker_stdout, 512);
-				SimpleParser s {chout};
-
-				StringView line1 {s.extractNext('\n')}; // "OK" or "WRONG"
-				StringView line2 {s.extractNext('\n')}; // percentage (real)
-
-				auto wrong_second_line = [&] {
-					score_ratio = 0; // Do not give score for a checker error
-					test_report.status = JudgeReport::Test::CHECKER_ERROR;
-					test_report.comment = "Checker error";
-					checker_error_str.append("Second line of the stdout is"
-						" invalid: `", line2, "` - it has be to either empty or"
-						" a real number representing the percentage of score"
-						" that solution will receive");
-				};
-
-				// Second line has to be either empty or be a real number
-				if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
-					wrong_second_line();
-
-				// "OK" -> Checker: OK
-				} else if (line1 == "OK") {
-					// Test status is already set to OK
-					// line2 format was checked above
-					if (line2.size()) { // Empty line means 100%
-						errno = 0;
-						char* ptr;
-						double x = strtod(line2.data(), &ptr);
-						if (errno != 0 or ptr == line2.data())
-							wrong_second_line();
-						else
-							score_ratio = std::min(score_ratio, x * 0.01);
-					}
-
-					// Leave the checker comment only
-					chout.erase(chout.begin(), chout.end() - s.size());
-					test_report.comment = std::move(chout);
-
-				// "WRONG" -> Checker: WA
-				} else if (line1 == "WRONG") {
-					test_report.status = JudgeReport::Test::WA;
-					score_ratio = 0; // Ignoring second line
-					// Leave the checker comment only
-					chout.erase(chout.begin(), chout.end() - s.size());
-					test_report.comment = std::move(chout);
-
-				// * -> Checker error
-				} else {
-					score_ratio = 0; // Do not give score for a checker error
-					test_report.status = JudgeReport::Test::CHECKER_ERROR;
-					test_report.comment = "Checker error";
-					checker_error_str.append("First line of the stdout is"
-						" invalid: `", line1, "` - it has to be either `OK` or"
-						" `WRONG`");
-				}
-
-			// Checker TLE
-			} else if (checker_time_limit.has_value() and
-				ces.runtime >= checker_time_limit.value())
-			{
-				score_ratio = 0; // Do not give score for a checker error
-				test_report.status = JudgeReport::Test::CHECKER_ERROR;
-				test_report.comment = "Checker error";
-				checker_error_str.append("Time limit exceeded");
-
-			// Checker MLE
-			} else if (ces.message == "Memory limit exceeded" or
-				(checker_memory_limit.has_value() and
-					ces.vm_peak > checker_memory_limit.value()))
-			{
-				score_ratio = 0; // Do not give score for a checker error
-				test_report.status = JudgeReport::Test::CHECKER_ERROR;
-				test_report.comment = "Checker error";
-				checker_error_str.append("Memory limit exceeded");
-
-			// Checker RTE
-			} else {
-				score_ratio = 0; // Do not give score for a checker error
-				test_report.status = JudgeReport::Test::CHECKER_ERROR;
-				test_report.comment = "Checker error";
-				checker_error_str.append("Runtime error");
-				if (ces.message.size())
-					checker_error_str.append(" (", ces.message, ')');
-			}
-
-			// Logging
-			judge_log.test(test.name, test_report, es, ces,
-				checker_memory_limit, checker_error_str);
 		}
 
 		// Compute group score
-		report_group.score = round(group.score * score_ratio);
+		report_group.score = calc_group_score();
 		report_group.max_score = group.score;
 
-		judge_log.group_score(report_group.score, report_group.max_score, score_ratio);
+		total_score += report_group.score;
+		if (report_group.max_score > 0)
+			max_score += report_group.max_score;
+
+		judge_log.group_score(report_group.score, report_group.max_score, group_score_ratio);
+	}
+
+	judge_log.final_score(total_score, max_score);
+
+	if (test_were_skipped) {
+		report.judge_log = judge_log.judge_log();
+		partial_report_callback.value()(report);
+
+		// Second round - judge remaining tests
+		for (size_t gi = 0, rgi = 0; gi < sf.tgroups.size(); ++gi) {
+			auto const& group = sf.tgroups[gi];
+
+			// Group "0" goes to the initial report, others groups to final
+			auto p = Simfile::TestNameComparator::split(group.tests[0].name);
+			if ((p.gid != "0") != final)
+				continue;
+
+			auto& report_group = report.groups[rgi++];
+
+			double group_score_ratio = 0; // Remaining tests have ratio == 0
+			for (size_t ti = 0; ti < group.tests.size(); ++ti) {
+				auto const& test = group.tests[ti];
+				auto& test_report = report_group.tests[ti];
+				if (test_report.status == JudgeReport::Test::SKIPPED)
+					test_report = judge_on_test(test, group_score_ratio);
+			}
+		}
 	}
 
 	judge_log.end();
-	report.judge_log = judge_log.render_judge_log();
+	report.judge_log = judge_log.judge_log();
 	return report;
 }
 

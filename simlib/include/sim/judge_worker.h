@@ -20,6 +20,7 @@ public:
 			MLE, // Memory limit exceeded
 			RTE, // Runtime error
 			CHECKER_ERROR,
+			SKIPPED,
 		};
 
 		constexpr static CStringView description(Status st) {
@@ -30,6 +31,7 @@ public:
 			case MLE: return CStringView{"Memory limit exceeded"};
 			case RTE: return CStringView{"Runtime error"};
 			case CHECKER_ERROR: return CStringView{"Checker error"};
+			case SKIPPED: return CStringView{"Skipped"};
 			}
 
 			// Should not happen but GCC complains about it
@@ -107,6 +109,7 @@ public:
 			case Test::MLE: return "MLE";
 			case Test::RTE: return "RTE";
 			case Test::CHECKER_ERROR: return "CHECKER_ERROR";
+			case Test::SKIPPED: return "SKIPPED";
 			}
 
 			return "UNKNOWN";
@@ -168,9 +171,11 @@ public:
 
 	virtual void group_score(int64_t score, int64_t max_score, double score_ratio) = 0;
 
+	virtual void final_score(int64_t score, int64_t max_score) = 0;
+
 	virtual void end() = 0;
 
-	std::string&& render_judge_log() { return std::move(log_); }
+	const std::string& judge_log() const noexcept { return log_; }
 
 	virtual ~JudgeLogger() = default;
 };
@@ -179,8 +184,9 @@ class VerboseJudgeLogger : public JudgeLogger {
 	Logger dummy_logger_;
 	Logger& logger_;
 
-	int64_t total_score_;
-	int64_t max_total_score_;
+	bool after_final_score_;
+	bool first_test_after_final_score_;
+	InplaceBuff<8> last_gid;
 	bool final_;
 
 	template<class... Args>
@@ -193,6 +199,16 @@ class VerboseJudgeLogger : public JudgeLogger {
 	void log_test(StringView test_name, JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Func&& func)
 	{
+		if (after_final_score_) {
+			auto gid = sim::Simfile::TestNameComparator::split(test_name).gid;
+			if (first_test_after_final_score_)
+				first_test_after_final_score_ = false;
+			else if (gid != last_gid)
+				log("");
+
+			last_gid = gid;
+		}
+
 		auto tmplog = log("  ", paddedString(test_name, 12, LEFT), ' ',
 			paddedString(intentionalUnsafeStringView(
 				toString(floor_to_10ms(test_report.runtime), false)), 4),
@@ -217,6 +233,9 @@ class VerboseJudgeLogger : public JudgeLogger {
 		case JudgeReport::Test::CHECKER_ERROR:
 			tmplog("\033[1;35mCHECKER ERROR\033[m (Running \033[1;32mOK\033[m)");
 			break;
+		case JudgeReport::Test::SKIPPED:
+			tmplog("\033[1;36mSKIPPED\033[m");
+			break;
 		}
 
 		// Rest
@@ -231,7 +250,8 @@ public:
 		: dummy_logger_(nullptr), logger_(log_to_stdlog ? stdlog : dummy_logger_) {}
 
 	void begin(bool final) override {
-		total_score_ = max_total_score_ = 0;
+		log_.clear();
+		after_final_score_ = first_test_after_final_score_ = false;
 		final_ = final;
 		log("Judging (", (final ? "final" : "initial"), "): {");
 	}
@@ -269,18 +289,16 @@ public:
 	}
 
 	void group_score(int64_t score, int64_t max_score, double score_ratio) override {
-		total_score_ += score;
-		if (max_score > 0)
-			max_total_score_ += max_score;
-
 		log("Score: ", score, " / ", max_score, " (ratio: ", toStr(score_ratio, 4), ')');
 	}
 
-	void end() override {
+	void final_score(int64_t total_score, int64_t max_score) override {
+		after_final_score_ = first_test_after_final_score_ = true;
 		if (final_)
-			log("Total score: ", total_score_, " / ", max_total_score_);
-		log('}');
+			log("Total score: ", total_score, " / ", max_score);
 	}
+
+	void end() override { log('}'); }
 };
 
 class PackageLoader {
@@ -461,7 +479,9 @@ public:
 	 * @param final Whether judge only on final tests or only initial tests
 	 * @return Judge report
 	 */
-	JudgeReport judge(bool final, JudgeLogger& judge_log) const;
+	JudgeReport judge(bool final, JudgeLogger& judge_log,
+		Optional<std::function<void(const JudgeReport&)>>
+			partial_report_callback = std::nullopt) const;
 
 	JudgeReport judge(bool final) const {
 		VerboseJudgeLogger logger;
