@@ -172,6 +172,8 @@ void Sim::api_contest_users() {
 		append(",\n\"\",[\n]]"); // Empty overall actions
 	};
 
+	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	CUP overall_perms = CUP::NONE;
 	Optional<ContestUserMode> cuser_mode;
 	{
@@ -213,6 +215,7 @@ void Sim::api_contest_users() {
 					return api_error400("User ID condition specified more"
 						" than once");
 
+				rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 				user_id_condition_occurred = true;
 				qwhere.append(" AND cu.user_id", arg);
 
@@ -239,15 +242,9 @@ void Sim::api_contest_users() {
 	if (not allow_access)
 		return set_empty_response();
 
-	constexpr uint USERS_LIMIT_PER_QUERY = 50;
-	#define USERS_LIMIT_PER_QUERY_STR "50"
-	static_assert(meta::equal(USERS_LIMIT_PER_QUERY_STR,
-		meta::ToString<USERS_LIMIT_PER_QUERY>::value),
-		"Update the above #define");
-
 	// Execute query
 	auto res = mysql.query(intentionalUnsafeStringView(concat(qfields, qwhere,
-		" ORDER BY cu.user_id DESC LIMIT " USERS_LIMIT_PER_QUERY_STR)));
+		" ORDER BY cu.user_id DESC LIMIT ", rows_limit)));
 
 	append_column_names();
 

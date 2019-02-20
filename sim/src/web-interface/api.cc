@@ -102,13 +102,13 @@ void Sim::api_logs() {
 
 	off64_t end_offset = 0;
 	StringView que = url_args.extractQuery();
+	uint chunk_max_len = LOGS_FIRST_CHUNK_MAX_LEN;
 	if (que.size()) {
-		if (strtou(que, end_offset) == -1)
+		if (not isDigitNotGreaterThan<std::numeric_limits<off64_t>::max()>(que))
 			return api_error400();
 
-		// If overflow occurred
-		if (end_offset < 0)
-			end_offset = 0;
+		(void)strtou(que, end_offset);
+		chunk_max_len = LOGS_OTHER_CHUNK_MAX_LEN;
 	}
 
 	FileDescriptor fd(filename, O_RDONLY);
@@ -119,22 +119,20 @@ void Sim::api_logs() {
 	else if (end_offset > fsize)
 		end_offset = fsize;
 
-	constexpr uint CHUNK_MAX_LEN = 4 << 10; // 4 kB
 	size_t len;
-
-	if (end_offset < CHUNK_MAX_LEN) {
+	if (end_offset < chunk_max_len) {
 		len = end_offset;
 		if (lseek64(fd, 0, SEEK_SET) == -1)
 			THROW("lseek64()", errmsg());
 
 	} else {
-		len = CHUNK_MAX_LEN;
-		if (lseek64(fd, end_offset - CHUNK_MAX_LEN, SEEK_SET) == -1)
+		len = chunk_max_len;
+		if (lseek64(fd, end_offset - chunk_max_len, SEEK_SET) == -1)
 			THROW("lseek64()", errmsg());
 	}
 
 	// Read the data
-	InplaceBuff<CHUNK_MAX_LEN> buff(len);
+	InplaceBuff<meta::max(LOGS_FIRST_CHUNK_MAX_LEN, LOGS_OTHER_CHUNK_MAX_LEN)> buff(len);
 	auto ret = readAll(fd, buff.data(), len);
 	// TODO: readAll() and writeAll() - support offset argument - p(write|read)
 	// TODO: getFileContents() - support offset argument - pread()

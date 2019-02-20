@@ -528,6 +528,13 @@ constexpr const char SERVER_LOG[] = "logs/server.log";
 constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
+// Logs API
+constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 6 << 10; // 6 kB
+constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 kB
+
+// API
+constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
+constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
 
 // Job-server notifying file
 constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";

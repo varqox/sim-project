@@ -39,6 +39,7 @@ void Sim::api_users() {
 		query_append("id=", session_user_id);
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
@@ -67,6 +68,7 @@ void Sim::api_users() {
 
 		// conditional
 		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			query_append("id", arg);
 			mask |= ID_COND;
 
@@ -78,7 +80,7 @@ void Sim::api_users() {
 			return api_error400();
 	}
 
-	query.append(" ORDER BY id LIMIT 50");
+	query.append(" ORDER BY id LIMIT ", rows_limit);
 	auto res = mysql.query(query);
 
 	append("[\n{\"columns\":["

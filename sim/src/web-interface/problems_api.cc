@@ -57,6 +57,7 @@ void Sim::api_problems() {
 	}
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	bool select_specified_problem = false;
 	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
@@ -87,6 +88,7 @@ void Sim::api_problems() {
 
 		// conditional
 		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND p.id", arg);
 			mask |= ID_COND;
 
@@ -115,7 +117,7 @@ void Sim::api_problems() {
 	}
 
 	// Execute query
-	qfields.append(qwhere, " ORDER BY p.id DESC LIMIT 50");
+	qfields.append(qwhere, " ORDER BY p.id DESC LIMIT ", rows_limit);
 	auto res = mysql.query(qfields);
 
 	// Column names
@@ -703,6 +705,7 @@ void Sim::api_problem_attaching_contest_problems() {
 	};
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extractNextArg();
 	for (bool id_condition_occurred = false; next_arg.size();
 		next_arg = url_args.extractNextArg())
@@ -719,6 +722,7 @@ void Sim::api_problem_attaching_contest_problems() {
 			if (id_condition_occurred)
 				return api_error400("ID condition specified more than once");
 
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			query.append(" AND p.id", arg);
 			id_condition_occurred = true;
 
@@ -727,7 +731,7 @@ void Sim::api_problem_attaching_contest_problems() {
 	}
 
 	// Execute query
-	query.append(" ORDER BY p.id DESC LIMIT 50");
+	query.append(" ORDER BY p.id DESC LIMIT ", rows_limit);
 	auto res = mysql.query(query);
 
 	// Column names
