@@ -106,6 +106,7 @@ void Sim::api_contests() {
 	}
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
@@ -132,6 +133,7 @@ void Sim::api_contests() {
 
 		// conditional
 		} else if (isOneOf(cond, '=', '<', '>') and ~mask & ID_COND) {
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere_append("c.id", arg);
 			mask |= ID_COND;
 
@@ -140,7 +142,7 @@ void Sim::api_contests() {
 	}
 
 	// Execute query
-	qfields.append(qwhere, " ORDER BY c.id DESC LIMIT 50");
+	qfields.append(qwhere, " ORDER BY c.id DESC LIMIT ", rows_limit);
 	auto res = mysql.query(qfields);
 
 	// Column names

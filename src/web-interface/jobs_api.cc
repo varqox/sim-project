@@ -80,6 +80,7 @@ void Sim::api_jobs() {
 	PERM granted_perms = PERM::NONE;
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
@@ -95,6 +96,7 @@ void Sim::api_jobs() {
 
 		// conditional
 		if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
@@ -173,7 +175,7 @@ void Sim::api_jobs() {
 		return set_empty_response();
 
 	// Execute query
-	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT 50");
+	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT ", rows_limit);
 	auto res = mysql.query(qfields);
 
 	append_column_names();

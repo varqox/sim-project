@@ -116,6 +116,8 @@ void Sim::api_submissions() {
 		append("\n]");
 	};
 
+	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	{
 		std::vector<std::function<void()>> after_checks;
 		// At most one perms optional will be set
@@ -187,6 +189,7 @@ void Sim::api_submissions() {
 					return api_error400("Submission ID condition specified more"
 						" than once");
 
+				rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 				id_condition_occurred = true;
 				qwhere.append(" AND s.id", arg);
 
@@ -331,16 +334,9 @@ void Sim::api_submissions() {
 	if (not allow_access)
 		return set_empty_response();
 
-	constexpr uint SUBMISSIONS_LIMIT_PER_QUERY = 50;
-	#define SUBMISSIONS_LIMIT_PER_QUERY_STR "50"
-	static_assert(meta::equal(SUBMISSIONS_LIMIT_PER_QUERY_STR,
-		meta::ToString<SUBMISSIONS_LIMIT_PER_QUERY>::value),
-		"Update the above #define");
-
 	// Execute query
 	auto res = mysql.query(intentionalUnsafeStringView(
-		concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT "
-		SUBMISSIONS_LIMIT_PER_QUERY_STR)));
+		concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT ", rows_limit)));
 
 	append_column_names();
 

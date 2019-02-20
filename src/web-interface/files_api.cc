@@ -81,6 +81,8 @@ void Sim::api_files() {
 		append(",\n\"\",[\n]]"); // Empty overall actions
 	};
 
+	// Precess restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	FilePermissions perms = FilePermissions::NONE;
 	{
 		bool id_condition_occurred = false;
@@ -102,6 +104,7 @@ void Sim::api_files() {
 					return api_error400("File ID condition specified more"
 						" than once");
 
+				rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 				id_condition_occurred = true;
 
 				if (cond_c == '=' and not allow_access) {
@@ -140,15 +143,9 @@ void Sim::api_files() {
 	if (not allow_access)
 		return set_empty_response();
 
-	constexpr uint FILES_LIMIT_PER_QUERY = 50;
-	#define FILES_LIMIT_PER_QUERY_STR "50"
-	static_assert(meta::equal(FILES_LIMIT_PER_QUERY_STR,
-		meta::ToString<FILES_LIMIT_PER_QUERY>::value),
-		"Update the above #define");
-
 	// Execute query
 	auto res = mysql.query(intentionalUnsafeStringView(concat(query,
-		" ORDER BY f.id DESC LIMIT " FILES_LIMIT_PER_QUERY_STR)));
+		" ORDER BY f.id DESC LIMIT ", rows_limit)));
 
 	append_column_names();
 
