@@ -1929,6 +1929,7 @@ pre.logs > span { /* Used to align content to the bottom if there is to little l
 	right: 0;
 	bottom: 0;
 	overflow-y: auto;
+	overflow-x: hidden;
 	max-height: 100%;
 }
 pre.logs {
