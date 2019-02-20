@@ -327,7 +327,7 @@ public:
 		params_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, const char* str, size_t& length, size_t max_size)
+	void bind(unsigned idx, char* str, size_t& length, size_t max_size)
 		ND(noexcept)
 	{
 		D(throw_assert(idx < params_.size());)
@@ -337,6 +337,18 @@ public:
 		params_[idx].length = &length;
 	}
 
+private:
+	void bind(unsigned idx, const char* str) ND(noexcept) {
+		D(throw_assert(idx < params_.size());)
+		auto len = strlen(str);
+		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
+		params_[idx].buffer = const_cast<char*>(str);
+		params_[idx].buffer_length = len;
+		params_[idx].length = nullptr;
+		params_[idx].length_value = len;
+	}
+
+public:
 	void bind(unsigned idx, StringView str) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
