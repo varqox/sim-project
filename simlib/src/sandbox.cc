@@ -609,6 +609,9 @@ Sandbox::Sandbox() {
 	// ioctl
 	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(ioctl), 0);
 
+	// clone
+	seccomp_rule_add_both_ctx(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 0);
+
 	// Allowed syscalls (both architectures)
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(alarm), 0);
 	seccomp_rule_add_both_ctx(SCMP_ACT_ALLOW, SCMP_SYS(capget), 0);
