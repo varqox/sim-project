@@ -6,6 +6,7 @@
 #include "utilities.h"
 
 #include <cstddef>
+#include <functional>
 #include <mutex>
 
 #if __has_include(<mysql.h>)
@@ -69,14 +70,14 @@ public:
 	Optional(T&& value) : has_no_value_(false), value_(std::move(value)) {}
 
 public:
-	operator ::Optional<T>() const { return has_no_value_ ? ::Optional<T>() : value_; }
+	operator ::Optional<T>() const { return opt(); }
 
 	template<class U = T>
 	operator std::enable_if_t<is_enum_val<U>::value, ::Optional<EnumValType<T>>>() const {
 		return has_no_value_ ? ::Optional<T>() : value_;
 	}
 
-	// ::Optional<T> opt() const { return has_no_value_ ? ::Optional<T>() : value_; }
+	::Optional<T> opt() const { return has_no_value_ ? ::Optional<T>() : value_; }
 
 	constexpr explicit operator bool() const noexcept { return not has_no_value_; }
 
@@ -636,6 +637,43 @@ public:
 	}
 };
 
+class Transaction {
+	friend class Connection;
+
+	Connection* conn_;
+	std::function<void()> rollback_action_;
+
+	Transaction(Connection& conn);
+
+public:
+	Transaction() : conn_(nullptr) {}
+
+	Transaction(const Transaction&) = delete;
+	Transaction& operator=(const Transaction&) = delete;
+
+	Transaction(Transaction&& trans) noexcept
+		: conn_(std::exchange(trans.conn_, nullptr)) {}
+
+	Transaction& operator=(Transaction&& trans) {
+		rollback();
+		conn_ = std::exchange(trans.conn_, nullptr);
+		return *this;
+	}
+
+	void rollback();
+
+	// Sets a callback that will be called AFTER transaction rollback
+	void set_rollback_action(std::function<void()> rollback_action) {
+		rollback_action_ = std::move(rollback_action);
+	}
+
+	void commit();
+
+	~Transaction() {
+		try { rollback(); } catch (...) {} // There is nothing we can do with exceptions
+	}
+};
+
 class Connection {
 private:
 	struct Library {
@@ -743,7 +781,30 @@ public:
 	}
 
 	my_ulonglong insert_id() noexcept { return mysql_insert_id(conn_); }
+
+	Transaction start_transaction() { return Transaction(*this); }
+
+	Transaction start_serializable_transaction() {
+		update("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+		return Transaction(*this);
+	}
 };
+
+inline Transaction::Transaction(Connection& conn) : conn_(&conn) {
+	conn_->update("START TRANSACTION");
+}
+
+inline void Transaction::rollback() {
+	if (conn_) {
+		conn_->update("ROLLBACK");
+		conn_ = nullptr;
+
+		if (rollback_action_)
+			rollback_action_();
+	}
+}
+
+inline void Transaction::commit() { conn_->update("COMMIT"); }
 
 } // namespace MySQL
 
