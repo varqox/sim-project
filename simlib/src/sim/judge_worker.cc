@@ -51,7 +51,7 @@ class ZipPackageLoader : public PackageLoader {
 public:
 	ZipPackageLoader(TemporaryDirectory& tmp_dir, FilePath pkg_path)
 		: tmp_dir_(tmp_dir), zip_(pkg_path, ZIP_RDONLY),
-			pkg_master_dir_(sim::zip_package_master_dir(pkg_path)) {}
+			pkg_master_dir_(sim::zip_package_master_dir(zip_)) {}
 
 	std::string load_into_dest_file(FilePath path, FilePath dest) override {
 		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest);

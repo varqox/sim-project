@@ -133,11 +133,25 @@ class ZipFile {
 public:
 	using index_t = zip_int64_t;
 
+	ZipFile() = default;
+
 	ZipFile(FilePath file, int flags = 0) {
 		int error;
 		zip_ = zip_open(file.data(), flags, &error);
 		if (zip_ == nullptr)
 			THROW("zip_open() - ", ZipError(error).str());
+	}
+
+	ZipFile(const ZipFile&) = delete;
+
+	ZipFile(ZipFile&& zf) noexcept : zip_(std::exchange(zf.zip_, nullptr)) {}
+
+	ZipFile& operator=(const ZipFile&) = delete;
+
+	ZipFile& operator=(ZipFile&& zf) {
+		discard();
+		zip_ = std::exchange(zf.zip_, nullptr);
+		return *this;
 	}
 
 	operator zip_t*() & noexcept { return zip_; }

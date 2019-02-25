@@ -62,9 +62,8 @@ void PackageContents::load_from_zip(FilePath pkg_path) {
 	}
 }
 
-string zip_package_master_dir(FilePath pkg_path) {
+string zip_package_master_dir(ZipFile& zip) {
 	string res;
-	ZipFile zip(pkg_path, ZIP_RDONLY);
 	auto eno = zip.entries_no();
 	for (decltype(eno) i = 0; i < eno; ++i) {
 		StringView epath = zip.get_name(i);

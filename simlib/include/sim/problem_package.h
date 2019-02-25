@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../string.h"
 #include "../avl_dict.h"
+#include "../libzip.h"
+#include "../string.h"
 
 namespace sim {
 
@@ -103,6 +104,13 @@ public:
 
 /// Finds master directory (with trailing '/') in @p pkg_path if such does not
 /// exist "" is returned
-std::string zip_package_master_dir(FilePath pkg_path);
+std::string zip_package_master_dir(ZipFile& zip);
+
+/// Finds master directory (with trailing '/') in @p pkg_path if such does not
+/// exist "" is returned
+inline std::string zip_package_master_dir(FilePath pkg_path) {
+	ZipFile zip(pkg_path, ZIP_RDONLY);
+	return zip_package_master_dir(zip);
+}
 
 } // namespace sim

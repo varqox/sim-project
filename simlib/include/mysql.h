@@ -65,11 +65,10 @@ public:
 	Optional& operator=(const Optional&) = delete;
 	Optional& operator=(Optional&&) = delete;
 
-	Optional(const T& value) : has_no_value_(false), value_(value) {}
+	Optional(const T& value) : value_(value), has_no_value_(false) {}
 
-	Optional(T&& value) : has_no_value_(false), value_(std::move(value)) {}
+	Optional(T&& value) : value_(std::move(value)), has_no_value_(false) {}
 
-public:
 	operator ::Optional<T>() const { return opt(); }
 
 	template<class U = T>
@@ -170,6 +169,13 @@ public:
 	StringView operator[](unsigned idx) ND(noexcept) {
 		D(throw_assert(idx < fields_num());)
 		return {row_[idx], lengths_[idx]};
+	}
+
+	Optional<StringView> opt(unsigned idx) ND(noexcept) {
+		if (is_null(idx))
+			return {};
+
+		return {(*this)[idx]};
 	}
 };
 
@@ -738,7 +744,7 @@ public:
 
 	void connect(FilePath host, FilePath user, FilePath passwd, FilePath db) {
 		my_bool x = true;
-		mysql_options(conn_, MYSQL_OPT_RECONNECT, &x);
+		// mysql_options(conn_, MYSQL_OPT_RECONNECT, &x);
 		mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
 		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr, 0))
@@ -788,6 +794,11 @@ public:
 		update("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 		return Transaction(*this);
 	}
+
+	Transaction start_read_committed_transaction() {
+		update("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+		return Transaction(*this);
+	}
 };
 
 inline Transaction::Transaction(Connection& conn) : conn_(&conn) {
@@ -796,7 +807,8 @@ inline Transaction::Transaction(Connection& conn) : conn_(&conn) {
 
 inline void Transaction::rollback() {
 	if (conn_) {
-		conn_->update("ROLLBACK");
+		if (mysql_rollback(*conn_))
+			THROW(mysql_error(*conn_));
 		conn_ = nullptr;
 
 		if (rollback_action_)
@@ -804,7 +816,10 @@ inline void Transaction::rollback() {
 	}
 }
 
-inline void Transaction::commit() { conn_->update("COMMIT"); }
+inline void Transaction::commit() {
+	if (mysql_commit(*conn_))
+		THROW(mysql_error(*conn_));
+}
 
 } // namespace MySQL
 

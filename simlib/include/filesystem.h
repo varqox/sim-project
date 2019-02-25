@@ -3,6 +3,7 @@
 #include "debug.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
@@ -820,7 +821,7 @@ class RemoverBase {
 public:
 	RemoverBase() : name() {}
 
-	explicit RemoverBase(CStringView str)
+	explicit RemoverBase(FilePath str)
 		: RemoverBase(str.data(), str.size()) {}
 
 	/// If @p str is null then @p len is ignored
@@ -837,7 +838,7 @@ public:
 
 	void cancel() noexcept { name.size = 0; }
 
-	void reset(CStringView str) { reset(str.data(), str.size()); }
+	void reset(FilePath str) { reset(str.data(), str.size()); }
 
 	void reset(const char* str, size_t len) {
 		cancel();
@@ -911,6 +912,22 @@ inline uint64_t get_file_size(FilePath file) {
 		THROW("stat()", errmsg());
 
 	return st.st_size;
+}
+
+// Returns file modification time (with second precision) as a time_point
+inline std::chrono::system_clock::time_point get_modification_time(
+	const struct stat64& st) noexcept
+{
+	return std::chrono::system_clock::from_time_t(st.st_mtime);
+}
+
+// Returns file modification time (with second precision) as a time_point
+inline std::chrono::system_clock::time_point get_modification_time(FilePath file) {
+	struct stat64 st;
+	if (stat64(file, &st))
+		THROW("stat()", errmsg());
+
+	return get_modification_time(st);
 }
 
 namespace directory_tree {

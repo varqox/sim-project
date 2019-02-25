@@ -1252,7 +1252,7 @@ public:
 	constexpr FilePath(const char* str) noexcept
 		: str_(str), size_(__builtin_strlen(str)) {}
 
-	constexpr FilePath(CStringView& str) noexcept
+	constexpr FilePath(const CStringView& str) noexcept
 		: str_(str.c_str()), size_(str.size()) {}
 
 	FilePath(const std::string& str) noexcept
@@ -1276,7 +1276,7 @@ public:
 		return *this;
 	}
 
-	FilePath& operator=(CStringView& str) noexcept {
+	FilePath& operator=(const CStringView& str) noexcept {
 		str_ = str.c_str();
 		size_ = str.size();
 		return *this;
