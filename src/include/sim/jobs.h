@@ -106,8 +106,8 @@ struct AddProblemInfo {
 	bool ignore_simfile = false;
 	bool seek_for_new_tests = false;
 	bool reset_scoring = false;
-	ProblemType problem_type = ProblemType::VOID;
-	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
+	ProblemType problem_type = ProblemType::PRIVATE;
+	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST; // TODO: remove this
 
 	AddProblemInfo() = default;
 

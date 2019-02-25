@@ -15,6 +15,10 @@ void Sim::api_users() {
 	if (not session_is_open)
 		return api_error403();
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	InplaceBuff<256> query;
 	query.append("SELECT id, username, first_name, last_name, email, type"
 		" FROM users");
@@ -227,9 +231,9 @@ void Sim::api_user_add() {
 	fillRandomly(salt_bin.data(), salt_bin.size());
 	auto salt = toHex(salt_bin.data(), salt_bin.size());
 
-	auto stmt = mysql.prepare("INSERT IGNORE `users` (username, type,"
-			"first_name, last_name, email, salt, password) "
-		"VALUES(?, ?, ?, ?, ?, ?, ?)");
+	auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
+			" first_name, last_name, email, salt, password)"
+		" VALUES(?, ?, ?, ?, ?, ?, ?)");
 
 	stmt.bindAndExecute(username, uint(utype), fname, lname, email, salt,
 		sha3_512(intentionalUnsafeStringView(concat(salt, pass))));
@@ -248,7 +252,7 @@ void Sim::api_user_edit() {
 	if (uint(~users_perms & PERM::EDIT))
 		return api_error403();
 
-	// TODO: this look very similar to the above validation
+	// TODO: this looks very similar to the above validation
 	StringView username, new_utype_str, fname, lname, email;
 	// Validate fields
 	form_validate_not_blank(username, "username", "Username", isUsername,
@@ -290,15 +294,20 @@ void Sim::api_user_edit() {
 	if (notifications.size)
 		return api_error400(notifications);
 
-	// Commit changes
-	auto stmt = mysql.prepare("UPDATE IGNORE users"
-		" SET username=?, first_name=?, last_name=?, email=?, type=?"
-		" WHERE id=?");
-	stmt.bindAndExecute(username, fname, lname, email, uint(new_utype),
-		users_uid);
+	auto transaction = mysql.start_transaction();
 
-	if (stmt.affected_rows() == 0 and mysql_warning_count(mysql))
+	auto stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id!=?");
+	stmt.bindAndExecute(username, users_uid);
+	if (stmt.next())
 		return api_error400("Username is already taken");
+
+	mysql.prepare("UPDATE IGNORE users"
+		" SET username=?, first_name=?, last_name=?, email=?, type=?"
+		" WHERE id=?")
+		.bindAndExecute(username, fname, lname, email, uint(new_utype),
+			users_uid);
+
+	transaction.commit();
 }
 
 void Sim::api_user_change_password() {
@@ -353,6 +362,5 @@ void Sim::api_user_delete() {
 		mysql_date(), users_uid);
 
 	jobs::notify_job_server();
-
 	append(stmt.insert_id());
 }

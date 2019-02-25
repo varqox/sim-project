@@ -61,13 +61,14 @@ static void parseOptions(int &argc, char **argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 12> tables {{
+constexpr array<meta::string, 13> tables {{
 	{"contest_entry_tokens"},
 	{"contest_problems"},
 	{"contest_rounds"},
 	{"contest_users"},
 	{"contests"},
 	{"files"},
+	{"internal_files"},
 	{"jobs"},
 	{"problem_tags"},
 	{"problems"},
@@ -141,12 +142,17 @@ int main(int argc, char **argv) {
 
 		} catch (const std::exception& e) {
 			errlog("\033[31mFailed to drop tables\033[m - ", e.what());
-			conn.update("SET foreign_key_checks=1");
 			return 5;
 		}
 	}
 
 	TryToCreateTable try_to_create_table(conn);
+
+	try_to_create_table("internal_files", intentionalUnsafeStringView(
+		concat("CREATE TABLE IF NOT EXISTS `internal_files` ("
+			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"PRIMARY KEY (id)"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
 	try_to_create_table("users", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `users` ("
@@ -195,6 +201,7 @@ int main(int argc, char **argv) {
 	try_to_create_table("problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`file_id` int unsigned NOT NULL,"
 			"`type` TINYINT NOT NULL,"
 			"`name` VARBINARY(", PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
 			"`label` VARBINARY(", PROBLEM_LABEL_MAX_LEN, ") NOT NULL,"
@@ -205,6 +212,7 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (owner, id),"
 			"KEY (type, id),"
+			"FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (owner) REFERENCES users(id) ON DELETE SET NULL"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
@@ -278,6 +286,7 @@ int main(int argc, char **argv) {
 	try_to_create_table("submissions",
 		"CREATE TABLE IF NOT EXISTS `submissions` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`file_id` int unsigned NOT NULL,"
 			"`owner` int unsigned NULL,"
 			"`problem_id` int unsigned NOT NULL,"
 			"`contest_problem_id` int unsigned NULL,"
@@ -339,6 +348,7 @@ int main(int argc, char **argv) {
 			//   revealing score and final = best submission:
 			"KEY initial_final3 (final_candidate, owner, contest_problem_id, score, initial_status, id),"
 			// Foreign keys
+			"FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (owner) REFERENCES users(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (contest_problem_id) REFERENCES contest_problems(id) ON DELETE CASCADE,"
@@ -349,6 +359,8 @@ int main(int argc, char **argv) {
 	try_to_create_table("jobs", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `jobs` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
+			"`file_id` int unsigned NULL DEFAULT NULL,"
+			"`tmp_file_id` int unsigned NULL DEFAULT NULL,"
 			"`creator` int unsigned NULL,"
 			"`type` TINYINT NOT NULL,"
 			"`priority` TINYINT NOT NULL,"
@@ -368,9 +380,11 @@ int main(int argc, char **argv) {
 			// about who created jobs and what the job referred to
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 
+	// TODO: rename to contest_files
 	try_to_create_table("files", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
+			"`file_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
 			"`name` VARBINARY(", FILE_NAME_MAX_LEN, ") NOT NULL,"
 			"`description` VARBINARY(", FILE_DESCRIPTION_MAX_LEN, ") "
@@ -380,6 +394,7 @@ int main(int argc, char **argv) {
 			"`creator` int unsigned NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, modified),"
+			"FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (creator) REFERENCES users(id) ON DELETE SET NULL"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));

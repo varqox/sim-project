@@ -1,6 +1,6 @@
 #include "sim.h"
 
-#include <sim/file.h>
+#include <sim/jobs.h>
 #include <simlib/filesystem.h>
 
 Sim::FilePermissions Sim::files_get_permissions(ContestPermissions cperms) noexcept {
@@ -44,6 +44,10 @@ Optional<Sim::FilePermissions> Sim::files_get_permissions(StringView file_id) {
 
 void Sim::api_files() {
 	STACK_UNWINDING_MARK;
+
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
 
 	bool allow_access = false; // Either contest or specific id condition must occur
 
@@ -222,17 +226,18 @@ void Sim::api_file_download() {
 	if (uint(~files_perms & FilePermissions::DOWNLOAD))
 		return api_error403();
 
+	uint64_t internal_file_id;
 	InplaceBuff<FILE_NAME_MAX_LEN> filename;
-	auto stmt = mysql.prepare("SELECT name FROM files WHERE id=?");
+	auto stmt = mysql.prepare("SELECT file_id, name FROM files WHERE id=?");
 	stmt.bindAndExecute(files_id);
-	stmt.res_bind_all(filename);
+	stmt.res_bind_all(internal_file_id, filename);
 	if (not stmt.next())
 		return error404(); // Should not happen as the file existed a moment ago
 
 	resp.headers["Content-Disposition"] =
 		concat_tostr("attachment; filename=", http::quote(filename));
 	resp.content_type = server::HttpResponse::FILE;
-	resp.content = concat("files/", files_id);
+	resp.content = internal_file_path(internal_file_id);
 }
 
 void Sim::api_file_add() {
@@ -272,16 +277,24 @@ void Sim::api_file_add() {
 	if (notifications.size)
 		return api_error400(notifications);
 
+	auto transaction = mysql.start_transaction();
+
+	mysql.update("INSERT INTO internal_files VALUES()");
+	auto internal_file_id = mysql.insert_id();
+	auto internal_file_remover = make_call_in_destructor([internal_file_id] {
+		(void)unlink(internal_file_path(internal_file_id));
+	});
+
 	// Insert file
-	auto stmt = mysql.prepare("INSERT IGNORE files (id, contest_id, name,"
+	auto stmt = mysql.prepare("INSERT IGNORE files (id, file_id, contest_id, name,"
 			" description, file_size, modified, creator)"
-		" VALUES(?, ?, ?, ?, ?, ?, ?)");
+		" VALUES(?,?,?,?,?,?,?,?)");
 
 	InplaceBuff<FILE_ID_LEN> file_id;
 	auto curr_date = mysql_date();
 	throw_assert(session_is_open);
-	stmt.bind_all(file_id, contest_id, name, description, file_size, curr_date,
-		session_user_id);
+	stmt.bind_all(file_id, internal_file_id, contest_id, name, description,
+		file_size, curr_date, session_user_id);
 
 	do {
 		file_id = generate_random_token(FILE_ID_LEN);
@@ -290,8 +303,11 @@ void Sim::api_file_add() {
 	} while (stmt.affected_rows() == 0);
 
 	// Move file
-	if (move(file_tmp_path, concat("files/", file_id)))
+	if (move(file_tmp_path, internal_file_path(internal_file_id)))
 		THROW("move()", errmsg());
+
+	transaction.commit();
+	internal_file_remover.cancel();
 
 	append(file_id);
 }
@@ -303,10 +319,10 @@ void Sim::api_file_edit() {
 	CStringView name, description, file_tmp_path;
 	form_validate(name, "name", "File name", FILE_NAME_MAX_LEN);
 	form_validate(description, "description", "Description", FILE_DESCRIPTION_MAX_LEN);
-	bool file_exists = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
+	bool reuploading_file = form_validate_file_path_not_blank(file_tmp_path, "file", "File");
 
 	CStringView user_filename = request.form_data.get("file");
-	file_exists &= not user_filename.empty();
+	reuploading_file &= not user_filename.empty();
 
 	if (name.empty()) {
 		if (user_filename.size() > FILE_NAME_MAX_LEN)
@@ -320,7 +336,7 @@ void Sim::api_file_edit() {
 	}
 
 	// Check the file size
-	auto file_size = (file_exists ? get_file_size(file_tmp_path) : 0);
+	auto file_size = (reuploading_file ? get_file_size(file_tmp_path) : 0);
 	if (file_size > FILE_MAX_SIZE) {
 		add_notification("error", "File is too big (maximum allowed size: ", FILE_MAX_SIZE, " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
 		return api_error400(notifications);
@@ -329,20 +345,57 @@ void Sim::api_file_edit() {
 	if (notifications.size)
 		return api_error400(notifications);
 
-	// Update file
-	auto stmt = mysql.prepare("UPDATE files SET name=?, description=?,"
-			" file_size=IF(?, ?, file_size), modified=?"
-		" WHERE id=?");
-	stmt.bindAndExecute(name, description, file_exists, file_size, mysql_date(), files_id);
+	auto transaction = mysql.start_transaction();
 
-	// Move file
-	if (file_exists and move(file_tmp_path, concat("files/", files_id)))
-		THROW("move()", errmsg());
+	uint64_t internal_file_id = 0;
+	auto internal_file_remover = make_call_in_destructor([internal_file_id] {
+		if (internal_file_id > 0)
+			(void)unlink(internal_file_path(internal_file_id));
+	});
+
+	if (reuploading_file) {
+		mysql.update("INSERT INTO internal_files VALUES()");
+		internal_file_id = mysql.insert_id();
+
+		// Move file
+		if (move(file_tmp_path, internal_file_path(internal_file_id)))
+			THROW("move()", errmsg());
+
+		mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority,"
+				" status, added, aux_id, info, data)"
+			" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
+				JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM files WHERE id=?")
+			.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
+				files_id);
+	}
+
+	// Update file
+	auto stmt = mysql.prepare("UPDATE files SET file_id=IF(?, ?, file_id),"
+			" name=?, description=?, file_size=IF(?, ?, file_size), modified=?"
+		" WHERE id=?");
+	stmt.bindAndExecute(reuploading_file, internal_file_id, name, description,
+		reuploading_file, file_size, mysql_date(), files_id);
+
+	transaction.commit();
+	internal_file_remover.cancel();
+	if (reuploading_file)
+		jobs::notify_job_server();
 }
 
 void Sim::api_file_delete() {
 	if (uint(~files_perms & FilePermissions::DELETE))
 		return api_error403();
 
-	file::delete_file(mysql, files_id);
+	auto transaction = mysql.start_transaction();
+
+	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+			" added, aux_id, info, data)"
+		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
+			JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM files WHERE id=?")
+		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), files_id);
+
+	mysql.prepare("DELETE FROM files WHERE id=?").bindAndExecute(files_id);
+
+	transaction.commit();
+	jobs::notify_job_server();
 }

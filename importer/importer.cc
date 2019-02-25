@@ -242,13 +242,13 @@ void load_problems() {
 
 			auto old_masterdir = sim::zip_package_master_dir(old_pkg);
 			auto old_simfile = sim::Simfile(oldp.simfile.to_string());
-			old_simfile.loadStatement();
+			old_simfile.load_statement();
 			ZipFile old_zip(old_pkg);
 			auto old_doc = old_zip.extract_to_str(old_zip.get_index(concat(old_masterdir, old_simfile.statement)));
 
 			auto new_masterdir = sim::zip_package_master_dir(new_pkg);
 			auto new_simfile = sim::Simfile(newp.simfile.to_string());
-			new_simfile.loadStatement();
+			new_simfile.load_statement();
 			ZipFile new_zip(new_pkg);
 			auto new_doc = new_zip.extract_to_str(new_zip.get_index(concat(new_masterdir, new_simfile.statement)));
 
@@ -658,6 +658,14 @@ struct Submission {
 map<int64_t, int64_t> skipped_a_submissions, skipped_b_submissions;
 map<int64_t, Submission> a_submissions, b_submissions, new_submissions;
 
+template<class T>
+bool operator<(const Optional<T>& a, const Optional<T>& b) noexcept {
+	if (a.has_value() and b.has_value())
+		return a.value() < b.value();
+
+	return b.has_value();
+}
+
 void load_submissions() {
 	Submission s;
 	auto process_submissions = [&](MySQL::Connection& conn, auto& cmap) {
@@ -686,7 +694,7 @@ void load_submissions() {
 	remove_r(concat(new_build, "/solutions/"));
 	mkdir(concat(new_build, "/solutions/"));
 	auto stmt = new_conn.prepare("INSERT INTO submissions(id, owner, problem_id, contest_problem_id, contest_round_id, contest_id, type, language, final_candidate, problem_final, contest_final, contest_initial_final, initial_status, full_status, submit_time, score, last_judgment, initial_report, final_report) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-	AVLDictSet<array<InplaceBuff<6>, 3>> finals_to_update;
+	AVLDictSet<array<Optional<int64_t>, 3>> finals_to_update;
 
 	auto add_submission = [&, nid = 0ll](Submission& s, auto& last_sid, auto& skipped_submissions, auto& umap, auto& cmap, auto& crmap, auto& cpmap, auto& pmap, auto&& old_build) mutable {
 
@@ -719,12 +727,11 @@ void load_submissions() {
 
 		link(concat(old_build, "/solutions/", s.id), concat(new_build, "/solutions/", nid));
 
-		array<InplaceBuff<6>, 3> ftu_elem;
-		if (ns.owner.has_value())
-			ftu_elem[0] = toStr(*ns.owner);
-		ftu_elem[1] = toStr(ns.problem_id);
-		if (ns.contest_problem_id.has_value())
-			ftu_elem[2] = toStr(ns.contest_problem_id.value());
+		array<Optional<int64_t>, 3> ftu_elem {{
+			ns.owner,
+			ns.problem_id,
+			ns.contest_problem_id
+		}};
 
 		finals_to_update.emplace(ftu_elem);
 	};
@@ -737,7 +744,7 @@ void load_submissions() {
 
 	stdlog("Updating finals (", finals_to_update.size(), " to go)");
 	finals_to_update.for_each([&, i = 0](auto&& ftu_elem) mutable {
-		submission::update_final(new_conn, ftu_elem[0], ftu_elem[1], ftu_elem[2]);
+		submission::update_final(new_conn, ftu_elem[0], ftu_elem[1].value(), ftu_elem[2]);
 		if ((++i & 255) == 0)
 			stdlog("Updated ", i);
 	});
@@ -800,8 +807,6 @@ void load_jobs() {
 			nj.creator = new_user_id(umap, *nj.creator, true);
 
 		switch (JobType(nj.type)) {
-		case JobType::VOID: assert(false);
-
 		case JobType::JUDGE_SUBMISSION: {
 			int64_t sid = nj.aux_id.value();
 			int64_t pid = strtoull(intentionalUnsafeStringView(jobs::extractDumpedString(nj.info)));
@@ -902,7 +907,7 @@ int main2(int argc, char **argv) {
 	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
 	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
 
-	// Kill both webservers and job-servers to not interrupt with the merging
+	// Kill both web-servers and job-servers to not interrupt with the merging
 	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
 	Spawner::run(killinstc, {
 		killinstc,
@@ -1020,7 +1025,7 @@ struct AddProblemInfo {
 	bool ignore_simfile = false;
 	bool seek_for_new_tests = false;
 	bool reset_scoring = false;
-	ProblemType problem_type = ProblemType::VOID;
+	ProblemType problem_type = ProblemType::PRIVATE;
 	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
 
 	AddProblemInfo() = default;
@@ -1130,7 +1135,7 @@ int main3(int argc, char **argv) {
 	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
 	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
 
-	// Kill both webservers and job-servers to not interrupt with the merging
+	// Kill both web-servers and job-servers to not interrupt with the merging
 	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
 	Spawner::run(killinstc, {
 		killinstc,
@@ -1172,9 +1177,171 @@ int main3(int argc, char **argv) {
 	return 0;
 }
 
+int main4(int argc, char **argv) {
+	STACK_UNWINDING_MARK;
+
+	stdlog.use(stdout);
+
+	if (argc != 2) {
+		errlog.label(false);
+		errlog("Use: importer <sim_build> where sim_build is a path to sim");
+		return 1;
+	}
+
+	try {
+		// Get connection
+		new_conn = MySQL::make_conn_with_credential_file(
+			concat_tostr(new_build = argv[1], "/.db.config"));
+		// importer_db = SQLite::Connection("importer.db",
+			// SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+	} catch (const std::exception& e) {
+		errlog("\033[31mFailed to connect to databases\033[m - ", e.what());
+		return 4;
+	}
+
+	// a_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+
+	// Kill both web-servers and job-servers to not interrupt with the merging
+	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
+	Spawner::run(killinstc, {
+		killinstc,
+		concat_tostr(new_build, "/sim-server"),
+		concat_tostr(new_build, "/job-server"),
+	});
+
+	try { new_conn.update("ALTER TABLE problems ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
+	try { new_conn.update("ALTER TABLE submissions ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
+	try { new_conn.update("ALTER TABLE jobs ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
+	try { new_conn.update("ALTER TABLE files ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
+
+	enum FileType { SUBMISSION, FILE, PROBLEM, JOB };
+
+	struct File {
+		FileType type = FILE;
+		InplaceBuff<32> orig_id;
+		InplaceBuff<24> date;
+		int64_t new_file_id = -1;
+	};
+
+	deque<File> final_files;
+
+	// Collect problems
+	{
+		auto stmt = new_conn.prepare("SELECT id, added FROM problems ORDER BY id");
+		stmt.bindAndExecute();
+		File file;
+		file.type = PROBLEM;
+		stmt.res_bind_all(file.orig_id, file.date);
+		while (stmt.next())
+			final_files.emplace_back(file);
+	}
+
+	// Collect submissions
+	{
+		auto stmt = new_conn.prepare("SELECT id, submit_time FROM submissions ORDER BY id");
+		stmt.bindAndExecute();
+		File file;
+		file.type = SUBMISSION;
+		stmt.res_bind_all(file.orig_id, file.date);
+		deque<File> submissions;
+		while (stmt.next())
+			submissions.emplace_back(file);
+
+		// Merge
+		deque<File> merged;
+		merge(final_files.begin(), final_files.end(), submissions.begin(), submissions.end(), [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& a, auto&& b) { return a.date <= b.date; });
+		final_files = merged;
+	}
+
+	// Collect jobs
+	{
+		auto stmt = new_conn.prepare("SELECT id, added FROM jobs ORDER BY id");
+		stmt.bindAndExecute();
+		File file;
+		file.type = JOB;
+		stmt.res_bind_all(file.orig_id, file.date);
+		deque<File> jobs;
+		while (stmt.next())
+			jobs.emplace_back(file);
+
+		// Merge
+		deque<File> merged;
+		merge(final_files.begin(), final_files.end(), jobs.begin(), jobs.end(), [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& a, auto&& b) { return a.date <= b.date; });
+		final_files = merged;
+	}
+
+	// Collect files
+	{
+		auto stmt = new_conn.prepare("SELECT id, modified FROM files ORDER BY id");
+		stmt.bindAndExecute();
+		File file;
+		file.type = FILE;
+		stmt.res_bind_all(file.orig_id, file.date);
+		deque<File> files;
+		while (stmt.next())
+			files.emplace_back(file);
+
+		// Merge
+		deque<File> merged;
+		merge(final_files.begin(), final_files.end(), files.begin(), files.end(), [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& a, auto&& b) { return a.date <= b.date; });
+		final_files = merged;
+	}
+
+	auto problem_updater = new_conn.prepare("UPDATE problems SET file_id=? WHERE id=?");
+	auto submission_updater = new_conn.prepare("UPDATE submissions SET file_id=? WHERE id=?");
+	auto job_updater = new_conn.prepare("UPDATE jobs SET file_id=? WHERE id=?");
+	auto file_updater = new_conn.prepare("UPDATE files SET file_id=? WHERE id=?");
+
+	auto internal_file_inserter = new_conn.prepare("INSERT INTO internal_files(id) VALUES(?)");
+
+	new_conn.update("SET foreign_key_checks=0");
+	new_conn.update("DELETE FROM internal_files");
+
+	remove_r(concat(new_build, "/internal_files/"));
+	mkdir(concat(new_build, "/internal_files/"));
+
+	auto transaction = new_conn.start_transaction();
+
+	int64_t fid = 0;
+	for (auto& file : final_files) {
+		file.new_file_id = ++fid;
+		if (file.type == PROBLEM) {
+			link(concat(new_build, "/problems/", file.orig_id, ".zip"),
+				concat(new_build, "/internal_files/", fid));
+			problem_updater.bindAndExecute(fid, file.orig_id);
+		} else if (file.type == SUBMISSION) {
+			link(concat(new_build, "/solutions/", file.orig_id),
+				concat(new_build, "/internal_files/", fid));
+			submission_updater.bindAndExecute(fid, file.orig_id);
+		} else if (file.type == JOB) {
+			if (access(concat(new_build, "/jobs_files/", file.orig_id, ".zip"), F_OK)) {
+				--fid;
+				continue;
+			}
+
+			link(concat(new_build, "/jobs_files/", file.orig_id, ".zip"),
+				concat(new_build, "/internal_files/", fid));
+			job_updater.bindAndExecute(fid, file.orig_id);
+		} else if (file.type == FILE) {
+			link(concat(new_build, "/files/", file.orig_id),
+				concat(new_build, "/internal_files/", fid));
+			file_updater.bindAndExecute(fid, file.orig_id);
+		}
+
+		internal_file_inserter.bindAndExecute(fid);
+	}
+
+	transaction.commit();
+	new_conn.update("SET foreign_key_checks=1");
+
+	return 0;
+}
+
 int main(int argc, char **argv) {
 	// try {
-		return main3(argc, argv);
+		return main4(argc, argv);
 
 	// } catch (const std::exception& e) {
 		// ERRLOG_CATCH(e);

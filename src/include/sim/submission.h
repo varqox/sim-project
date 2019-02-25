@@ -4,11 +4,8 @@
 
 namespace submission {
 
-// TODO: owner and contest_problem_id should be an Optional
-void update_final(MySQL::Connection& mysql, StringView submission_owner,
-	StringView problem_id, StringView contest_problem_id,
-	bool lock_tables = true);
-
-void delete_submission(MySQL::Connection& mysql, StringView submission_id);
+void update_final(MySQL::Connection& mysql, Optional<uint64_t> submission_owner,
+	uint64_t problem_id, Optional<uint64_t> contest_problem_id,
+	bool make_transaction = true);
 
 } // namespace submission
