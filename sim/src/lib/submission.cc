@@ -1,9 +1,10 @@
 #include <sim/constants.h>
 #include <sim/submission.h>
 #include <simlib/filesystem.h>
+#include <simlib/time.h>
 
 static void update_problem_final(MySQL::Connection& mysql,
-	StringView submission_owner, StringView problem_id)
+	uint64_t submission_owner, uint64_t problem_id)
 {
 	STACK_UNWINDING_MARK;
 
@@ -19,9 +20,9 @@ static void update_problem_final(MySQL::Connection& mysql,
 	if (not stmt.next()) {
 		// Unset final submissions if there are any because there are no
 		// candidates now
-		stmt = mysql.prepare("UPDATE submissions SET problem_final=0"
-			" WHERE owner=? AND problem_id=? AND problem_final=1");
-		stmt.bindAndExecute(submission_owner, problem_id);
+		mysql.prepare("UPDATE submissions SET problem_final=0"
+			" WHERE owner=? AND problem_id=? AND problem_final=1")
+			.bindAndExecute(submission_owner, problem_id);
 		return; // Nothing more to be done
 	}
 
@@ -46,14 +47,15 @@ static void update_problem_final(MySQL::Connection& mysql,
 	throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
 	// Update finals
-	stmt = mysql.prepare("UPDATE submissions SET problem_final=IF(id=?, 1, 0)"
-		" WHERE owner=? AND problem_id=? AND (problem_final=1 OR id=?)");
-	stmt.bindAndExecute(new_final_id, submission_owner, problem_id, new_final_id);
+	mysql.prepare("UPDATE submissions SET problem_final=IF(id=?, 1, 0)"
+		" WHERE owner=? AND problem_id=? AND (problem_final=1 OR id=?)")
+		.bindAndExecute(new_final_id, submission_owner, problem_id, new_final_id);
 }
 
 static void update_contest_final(MySQL::Connection& mysql,
-	StringView submission_owner, StringView contest_problem_id)
+	uint64_t submission_owner, uint64_t contest_problem_id)
 {
+	// TODO: update the initial_final if the submission is half-judged (only initial_status is set and final selecting method does not show points)
 	STACK_UNWINDING_MARK;
 	using SFSM = SubmissionFinalSelectingMethod;
 
@@ -72,10 +74,10 @@ static void update_contest_final(MySQL::Connection& mysql,
 	auto unset_all_finals = [&] {
 		// Unset final submissions if there are any because there are no
 		// candidates now
-		stmt = mysql.prepare("UPDATE submissions"
+		mysql.prepare("UPDATE submissions"
 			" SET contest_final=0, contest_initial_final=0"
-			" WHERE owner=? AND contest_problem_id=? AND (contest_final=1 OR contest_initial_final=1)");
-		stmt.bindAndExecute(submission_owner, contest_problem_id);
+			" WHERE owner=? AND contest_problem_id=? AND (contest_final=1 OR contest_initial_final=1)")
+			.bindAndExecute(submission_owner, contest_problem_id);
 	};
 
 	uint64_t new_final_id, new_initial_final_id;
@@ -182,56 +184,47 @@ static void update_contest_final(MySQL::Connection& mysql,
 	}
 
 	// Update finals
-	stmt = mysql.prepare("UPDATE submissions"
+	mysql.prepare("UPDATE submissions"
 		" SET contest_final=IF(id=?, 1, 0)"
 		" WHERE id=?"
-			" OR (owner=? AND contest_problem_id=? AND contest_final=1)");
-	stmt.bindAndExecute(new_final_id, new_final_id, submission_owner,
-		contest_problem_id);
+			" OR (owner=? AND contest_problem_id=? AND contest_final=1)")
+		.bindAndExecute(new_final_id, new_final_id, submission_owner,
+			contest_problem_id);
 
 	// Update initial finals
-	stmt = mysql.prepare("UPDATE submissions"
+	mysql.prepare("UPDATE submissions"
 		" SET contest_initial_final=IF(id=?, 1, 0)"
 		" WHERE id=?"
 			" OR (owner=? AND contest_problem_id=?"
-			" AND contest_initial_final=1)");
-	stmt.bindAndExecute(new_initial_final_id, new_initial_final_id,
-		submission_owner, contest_problem_id);
+			" AND contest_initial_final=1)")
+		.bindAndExecute(new_initial_final_id, new_initial_final_id,
+			submission_owner, contest_problem_id);
 }
 
 namespace submission {
 
-void update_final(MySQL::Connection& mysql, StringView submission_owner,
-	StringView problem_id, StringView contest_problem_id, bool lock_tables)
+void update_final(MySQL::Connection& mysql, Optional<uint64_t> submission_owner,
+	uint64_t problem_id, Optional<uint64_t> contest_problem_id,
+	bool make_transaction)
 {
 	STACK_UNWINDING_MARK;
 
-	if (submission_owner.empty()) // System submission
+	if (not submission_owner.has_value()) // System submission
 		return; // Nothing to do
 
 	auto impl = [&] {
-		update_problem_final(mysql, submission_owner, problem_id);
-		if (not contest_problem_id.empty())
-			update_contest_final(mysql, submission_owner, contest_problem_id);
+		update_problem_final(mysql, submission_owner.value(), problem_id);
+		if (contest_problem_id.has_value())
+			update_contest_final(mysql, submission_owner.value(), contest_problem_id.value());
 	};
 
-	if (lock_tables) {
-		mysql.update("LOCK TABLES submissions WRITE, contest_problems READ");
-		auto lock_guard = make_call_in_destructor([&]{
-			mysql.update("UNLOCK TABLES");
-		});
-
+	if (make_transaction) {
+		auto transaction = mysql.start_serializable_transaction();
 		impl();
-
-	} else
+		transaction.commit();
+	} else {
 		impl();
-}
-
-void delete_submission(MySQL::Connection& mysql, StringView submission_id) {
-	mysql.prepare("DELETE FROM submissions WHERE id=?")
-		.bindAndExecute(submission_id);
-
-	(void)remove(concat("solutions/", submission_id));
+	}
 }
 
 } // namespace submission

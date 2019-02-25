@@ -1,8 +1,4 @@
-#include "contest.h"
-#include "judge.h"
-#include "main.h"
-#include "problem.h"
-#include "user.h"
+#include "dispatcher.h"
 
 #include <future>
 #include <map>
@@ -135,7 +131,7 @@ public:
 		// Select jobs
 		auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info"
 			" FROM jobs"
-			" WHERE status=" JSTATUS_PENDING_STR " AND type!=" JTYPE_VOID_STR
+			" WHERE status=" JSTATUS_PENDING_STR
 			" ORDER BY priority DESC, id ASC LIMIT 4");
 		stmt.res_bind_all(jid, jtype, priority, aux_id, info);
 		// Sets job's status to NOTICED_PENDING
@@ -210,18 +206,16 @@ public:
 					queue_job(problem_jobs, aux_id, true);
 					break;
 
-				// Other job
+				// Other job (local jobs that don't have associated problem)
 				case JT::ADD_PROBLEM:
 				case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
 				case JT::DELETE_USER:
 				case JT::DELETE_CONTEST:
 				case JT::DELETE_CONTEST_ROUND:
 				case JT::DELETE_CONTEST_PROBLEM:
+				case JT::DELETE_FILE:
 					other_jobs.insert({jid, priority, false});
 					break;
-
-				case JT::VOID:
-					throw_assert(false);
 				}
 				mark_stmt.execute();
 			} while (stmt.next());
@@ -648,7 +642,7 @@ static void spawn_worker(WorkersPool& wp) noexcept {
 	}
 }
 
-static void process_local_job(WorkersPool::NextJob job) {
+static void process_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
 
 	auto exit_procedures = [&job]{
@@ -658,19 +652,20 @@ static void process_local_job(WorkersPool::NextJob job) {
 		});
 	};
 
-	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
-		job.problem_id, ", locked: ", job.locked_its_problem, '}');
-
 	EnumVal<JobType> jtype;
-	InplaceBuff<32> creator, aux_id;
+	MySQL::Optional<uint64_t> file_id, tmp_file_id;
+	MySQL::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
+	InplaceBuff<32> added;
+	MySQL::Optional<uint64_t> aux_id; // TODO: normalize this column...
 	InplaceBuff<512> info;
 
-	auto stmt = mysql.prepare("SELECT creator, type, aux_id, info"
+	auto stmt = mysql.prepare("SELECT file_id, tmp_file_id, creator, added,"
+			" type, aux_id, info"
 		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(creator, jtype, aux_id, info);
+	stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
 	stmt.bindAndExecute(job.id);
 
-	if (not stmt.next()) // Job has been probably cancelled
+	if (not stmt.next()) // Job has been probably canceled
 		return exit_procedures();
 
 	// Mark as in progress
@@ -678,147 +673,33 @@ static void process_local_job(WorkersPool::NextJob job) {
 		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
 			" WHERE id=", job.id)));
 
-	try {
-		using JT = JobType;
-		switch (jtype) {
-		case JT::ADD_PROBLEM:
-			add_problem(job.id, creator, info);
-			break;
+	stdlog("Processing job ", job.id, "...");
 
-		case JT::REUPLOAD_PROBLEM:
-			reupload_problem(job.id, creator, info, aux_id);
-			break;
-
-		case JT::EDIT_PROBLEM:
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-			mysql.update(intentionalUnsafeStringView(
-				concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
-					" WHERE id=", job.id)));
-			break;
-
-		case JT::DELETE_PROBLEM:
-			delete_problem(job.id, aux_id);
-			break;
-
-		case JT::MERGE_PROBLEMS:
-			merge_problem_into_another(job.id, aux_id, jobs::MergeProblemsInfo(info));
-			break;
-
-		case JT::DELETE_USER:
-			delete_user(job.id, aux_id);
-			break;
-
-		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
-			contest_problem_reselect_final_submissions(job.id, aux_id);
-			break;
-
-		case JT::DELETE_CONTEST:
-			delete_contest(job.id, aux_id);
-			break;
-
-		case JT::DELETE_CONTEST_ROUND:
-			delete_contest_round(job.id, aux_id);
-			break;
-
-		case JT::DELETE_CONTEST_PROBLEM:
-			delete_contest_problem(job.id, aux_id);
-			break;
-
-		case JT::VOID:
-		case JT::JUDGE_SUBMISSION:
-		case JT::REJUDGE_SUBMISSION:
-		case JT::ADD_JUDGE_MODEL_SOLUTION:
-		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-			THROW("Unexpected local job type: ", toString(JT(jtype)));
-		}
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		// Fail job
-		stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
-		stmt.bindAndExecute(concat("Caught exception: ", e.what()), job.id);
-	}
+	Optional<StringView> creat;
+	if (creator.has_value())
+		creat = creator.value();
+	job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info,
+		added);
 
 	exit_procedures();
 }
 
-static void process_judge_job(WorkersPool::NextJob job) {
+static void process_local_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
 
-	auto exit_procedures = [&job]{
-		EventsQueue::register_event([job]{
-			if (job.locked_its_problem)
-				jobs_queue.unlock_problem(job.problem_id);
-		});
-	};
+	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
+		job.problem_id, ", locked: ", job.locked_its_problem, '}');
+
+	process_job(job);
+}
+
+static void process_judge_job(const WorkersPool::NextJob& job) {
+	STACK_UNWINDING_MARK;
 
 	stdlog(pthread_self(), " got judge job {id:", job.id, ", problem: ",
 		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
-	EnumVal<JobType> jtype;
-	InplaceBuff<32> creator, aux_id, added;
-	InplaceBuff<512> info;
-
-	auto stmt = mysql.prepare("SELECT creator, type, added, aux_id, info"
-		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(creator, jtype, added, aux_id, info);
-	stmt.bindAndExecute(job.id);
-
-	if (not stmt.next()) // Job has been probably cancelled
-		return exit_procedures();
-
-	// Mark as in progress
-	mysql.update(intentionalUnsafeStringView(
-		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
-			" WHERE id=", job.id)));
-
-	try {
-		using JT = JobType;
-		switch (jtype) {
-		case JT::JUDGE_SUBMISSION:
-		case JT::REJUDGE_SUBMISSION:
-			judge_or_rejudge_submission(job.id, aux_id, added);
-			break;
-
-		case JT::ADD_JUDGE_MODEL_SOLUTION:
-			problem_add_or_reupload_jugde_model_solution(job.id,
-				JobType::ADD_PROBLEM);
-			break;
-
-		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			problem_add_or_reupload_jugde_model_solution(job.id,
-				JobType::REUPLOAD_PROBLEM);
-			break;
-
-		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-			reset_problem_time_limits_using_model_solution(job.id, aux_id);
-			break;
-
-		case JT::VOID:
-		case JT::ADD_PROBLEM:
-		case JT::REUPLOAD_PROBLEM:
-		case JT::EDIT_PROBLEM:
-		case JT::DELETE_PROBLEM:
-		case JT::DELETE_USER:
-		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
-		case JT::DELETE_CONTEST:
-		case JT::DELETE_CONTEST_ROUND:
-		case JT::DELETE_CONTEST_PROBLEM:
-		case JT::MERGE_PROBLEMS:
-			THROW("Unexpected judge job type: ", toString(JT(jtype)));
-		}
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		// Fail job
-		stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
-		stmt.bindAndExecute(concat("Caught exception: ", e.what()), job.id);
-	}
-
-	exit_procedures();
+	process_job(job);
 }
 
 static void sync_and_assign_jobs();
@@ -1149,6 +1030,9 @@ static void cleanUpDB() {
 	STACK_UNWINDING_MARK;
 
 	try {
+		// Do it in a transaction to speed things up
+		auto transaction = mysql.start_transaction();
+
 		// Fix jobs that are in progress after the job-server died
 		auto res = mysql.query("SELECT id, type, info FROM jobs WHERE status="
 			JSTATUS_IN_PROGRESS_STR);
@@ -1159,6 +1043,7 @@ static void cleanUpDB() {
 		// Fix jobs that are noticed [ending] after the job-server died
 		mysql.update("UPDATE jobs SET status=" JSTATUS_PENDING_STR
 			" WHERE status=" JSTATUS_NOTICED_PENDING_STR);
+		transaction.commit();
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

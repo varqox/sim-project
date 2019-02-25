@@ -22,7 +22,7 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 	return PERM::NONE; // Shouldn't happen
 }
 
-Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
+Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 	JobType job_type, JobStatus job_status) noexcept
 {
 	STACK_UNWINDING_MARK;
@@ -60,7 +60,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(StringView creator_id,
 		}
 	}
 
-	if (session_user_id == creator_id) {
+	if (creator_id.has_value() and session_user_id == creator_id.value()) {
 		if (isOneOf(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS))
 			return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
 		else

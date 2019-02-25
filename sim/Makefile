@@ -33,11 +33,8 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
 	# Installation
-	$(MKDIR) $(abspath $(DESTDIR)/problems/)
-	$(MKDIR) $(abspath $(DESTDIR)/solutions/)
 	$(MKDIR) $(abspath $(DESTDIR)/static/)
-	$(MKDIR) $(abspath $(DESTDIR)/files/)
-	$(MKDIR) $(abspath $(DESTDIR)/jobs_files/)
+	$(MKDIR) $(abspath $(DESTDIR)/internal_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
 	$(UPDATE) src/static src/sim-server src/job-server src/backup $(abspath $(DESTDIR))
 	# Do not override the config if it already exists
@@ -64,7 +61,7 @@ endif
 	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
 
 	# Set owner, group and permission bits
-	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/solutions) $(abspath $(DESTDIR)/problems)
+	chmod 0700 $(abspath $(DESTDIR)/.db.config) $(abspath $(DESTDIR)/internal_files)
 	chmod +x $(abspath $(DESTDIR)/sim-server) $(abspath $(DESTDIR)/job-server) $(abspath $(DESTDIR)/proot)
 
 	@printf "\033[;32mInstallation finished\033[0m\n"
@@ -117,14 +114,28 @@ src/setup-installation: src/setup_installation.o src/lib/sim.a src/lib/simlib/si
 
 $(eval $(call load_dependencies, src/backup.cc))
 src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt
+	$(LINK) -lsupc++ -lrt -lzip
 
 JOB_SERVER_SRCS := \
-	src/Job-server/contest.cc \
-	src/Job-server/judge.cc \
+	src/Job-server/contest_problem_reselect_final_submissions.cc \
+	src/Job-server/delete_contest_job_handler.cc \
+	src/Job-server/delete_contest_problem_job_handler.cc \
+	src/Job-server/delete_contest_round_job_handler.cc \
+	src/Job-server/delete_internal_file_job_handler.cc \
+	src/Job-server/delete_problem_job_handler.cc \
+	src/Job-server/delete_user_job_handler.cc \
+	src/Job-server/dispatcher.cc \
+	src/Job-server/job_handler.cc \
+	src/Job-server/judge_job_handler_base.cc \
+	src/Job-server/judge_or_rejudge_job_handler.cc \
 	src/Job-server/main.cc \
-	src/Job-server/problem.cc \
-	src/Job-server/user.cc
+	src/Job-server/merge_problems_job_handler.cc \
+	src/Job-server/problem_add_job_handler.cc \
+	src/Job-server/problem_add_or_reupload_job_handler_base.cc \
+	src/Job-server/problem_add_or_reupload_judge_model_solution_job_handler_base.cc \
+	src/Job-server/problem_package_reset_limits_job_handler_base.cc \
+	src/Job-server/problem_reupload_job_handler.cc \
+	src/Job-server/reset_problem_time_limits_job_handler.cc
 
 $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
@@ -134,7 +145,6 @@ src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
 
 LIB_SIM_SRCS := \
 	src/lib/cpp_syntax_highlighter.cc \
-	src/lib/file.cc \
 	src/lib/jobs.cc \
 	src/lib/mysql.cc \
 	src/lib/submission.cc

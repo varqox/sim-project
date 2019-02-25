@@ -13,7 +13,6 @@ static constexpr const char* proiblem_type_str(ProblemType type) noexcept {
 	case PT::PUBLIC: return "Public";
 	case PT::PRIVATE: return "Private";
 	case PT::CONTEST_ONLY: return "Contest only";
-	case PT::VOID: return "Void";
 	}
 	return "Unknown";
 }
@@ -23,6 +22,10 @@ void Sim::api_problems() {
 
 	using PERM = ProblemPermissions;
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT p.id, p.added, p.type, p.name, p.label, p.owner,"
 		" u.username, s.full_status");
@@ -30,7 +33,7 @@ void Sim::api_problems() {
 		" LEFT JOIN submissions s ON s.owner=",
 			(session_is_open ? StringView(session_user_id) : "''"),
 			" AND s.problem_id=p.id AND s.problem_final=1"
-		" WHERE p.type!=" JTYPE_VOID_STR);
+		" WHERE TRUE"); // Needed to append constraints
 
 	enum ColumnIdx {
 		PID, ADDED, PTYPE, NAME, LABEL, OWNER, OWN_USERNAME, SFULL_STATUS, SIMFILE
@@ -288,10 +291,10 @@ void Sim::api_problem() {
 	InplaceBuff<1 << 16> simfile;
 	EnumVal<ProblemType> ptype;
 
-	auto stmt = mysql.prepare("SELECT owner, type, label, simfile FROM problems"
-		" WHERE id=? AND type!=" PTYPE_VOID_STR);
+	auto stmt = mysql.prepare("SELECT file_id, owner, type, label, simfile"
+		" FROM problems WHERE id=?");
 	stmt.bindAndExecute(problems_pid);
-	stmt.res_bind_all(powner, ptype, plabel, simfile);
+	stmt.res_bind_all(problems_file_id, powner, ptype, plabel, simfile);
 	if (not stmt.next())
 		return api_error404();
 
@@ -360,7 +363,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
 	// Validate problem type
 	StringView ptype_str = request.form_data.get("type");
-	ProblemType ptype /*= ProblemType::VOID*/;
+	ProblemType ptype;
 	if (ptype_str == "PRI")
 		ptype = ProblemType::PRIVATE;
 	else if (ptype_str == "PUB")
@@ -385,27 +388,31 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 		ptype
 	};
 
-	auto stmt = mysql.prepare("INSERT jobs(creator, priority, type, status,"
-			" added, aux_id, info, data)"
-		" VALUES(?, ?, " JTYPE_VOID_STR ", " JSTATUS_PENDING_STR ", ?, ?, ?,"
-			" '')");
-	if (reuploading)
-		stmt.bindAndExecute(session_user_id, priority(JobType::ADD_PROBLEM),
-			mysql_date(), problems_pid, ap_info.dump());
-	else
-		stmt.bindAndExecute(session_user_id, priority(JobType::ADD_PROBLEM),
-			mysql_date(), nullptr, ap_info.dump());
+	auto transaction = mysql.start_transaction();
+	mysql.update("INSERT INTO internal_files VALUES()");
+	auto job_file_id = mysql.insert_id();
+	auto job_file_remover = make_call_in_destructor([job_file_id] {
+		(void)unlink(internal_file_path(job_file_id));
+	});
 
-	auto job_id = stmt.insert_id();
-	// Make the package file the job's file
-	if (move(package_file, concat("jobs_files/", job_id, ".zip")))
-		THROW("move() failed", errmsg());
+	// Make the uploaded package file the job's file
+	if (move(package_file, internal_file_path(job_file_id)))
+		THROW("move()", errmsg());
 
-	// Activate the job
-	stmt = mysql.prepare("UPDATE jobs SET type=? WHERE id=?");
-	stmt.bindAndExecute(EnumVal<JobType>(reuploading ?
-		JobType::REUPLOAD_PROBLEM : JobType::ADD_PROBLEM), job_id);
+	EnumVal<JobType> jtype = (reuploading ? JobType::REUPLOAD_PROBLEM
+		: JobType::ADD_PROBLEM);
+	mysql.prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
+			" aux_id, info, data)"
+		" VALUES(?,?,?,?," JSTATUS_PENDING_STR ",?,?,?,'')")
+		.bindAndExecute(job_file_id, session_user_id, priority(jtype), jtype,
+			mysql_date(),
+			(reuploading ? Optional<StringView>(problems_pid) : std::nullopt),
+			ap_info.dump());
 
+	auto job_id = mysql.insert_id(); // Has to be retrieved before commit
+
+	transaction.commit();
+	job_file_remover.cancel();
 	jobs::notify_job_server();
 
 	append(job_id);
@@ -421,7 +428,7 @@ void Sim::api_problem_add() {
 	api_problem_add_or_reupload_impl(false);
 }
 
-void Sim::api_statement_impl(StringView problem_id, StringView problem_label,
+void Sim::api_statement_impl(uint64_t problem_file_id, StringView problem_label,
 	StringView simfile)
 {
 	STACK_UNWINDING_MARK;
@@ -449,10 +456,9 @@ void Sim::api_statement_impl(StringView problem_id, StringView problem_label,
 				concat(problem_label, ext))));
 
 	// TODO: maybe add some cache system for the statements?
-	auto package_zip = concat("problems/", problem_id, ".zip");
-	ZipFile zip(package_zip, ZIP_RDONLY);
+	ZipFile zip(internal_file_path(problem_file_id), ZIP_RDONLY);
 	resp.content = zip.extract_to_str(zip.get_index(concat(
-		sim::zip_package_master_dir(package_zip), statement)));
+		sim::zip_package_master_dir(zip), statement)));
 }
 
 void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
@@ -462,7 +468,7 @@ void Sim::api_problem_statement(StringView problem_label, StringView simfile) {
 	if (uint(~problems_perms & PERM::VIEW_STATEMENT))
 		return api_error403();
 
-	return api_statement_impl(problems_pid, problem_label, simfile);
+	return api_statement_impl(problems_file_id, problem_label, simfile);
 }
 
 void Sim::api_problem_download(StringView problem_label) {
@@ -475,7 +481,7 @@ void Sim::api_problem_download(StringView problem_label) {
 	resp.headers["Content-Disposition"] =
 		concat_tostr("attachment; filename=", problem_label, ".zip");
 	resp.content_type = server::HttpResponse::FILE;
-	resp.content = concat("problems/", problems_pid, ".zip");
+	resp.content = internal_file_path(problems_file_id);
 }
 
 void Sim::api_problem_rejudge_all_submissions() {
@@ -485,14 +491,13 @@ void Sim::api_problem_rejudge_all_submissions() {
 	if (uint(~problems_perms & PERM::REJUDGE_ALL))
 		return api_error403();
 
-	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
+	mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+			" info, data)"
 		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_REJUDGE_SUBMISSION_STR
 			", ?, id, ?, ''"
-		" FROM submissions WHERE problem_id=? ORDER BY id");
-	stmt.bindAndExecute(session_user_id,
-		priority(JobType::REJUDGE_SUBMISSION),
-		mysql_date(), jobs::dumpString(problems_pid), problems_pid);
+		" FROM submissions WHERE problem_id=? ORDER BY id")
+		.bindAndExecute(session_user_id, priority(JobType::REJUDGE_SUBMISSION),
+			mysql_date(), jobs::dumpString(problems_pid), problems_pid);
 
 	jobs::notify_job_server();
 }
@@ -504,17 +509,17 @@ void Sim::api_problem_reset_time_limits() {
 	if (uint(~problems_perms & PERM::RESET_TIME_LIMITS))
 		return api_error403();
 
-	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
+	mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+			" info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
 			JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR
-			", ?, ?, '', '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
-		mysql_date(), problems_pid);
+			", ?, ?, '', '')")
+		.bindAndExecute(session_user_id,
+			priority(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+			mysql_date(), problems_pid);
 
 	jobs::notify_job_server();
-
-	append(stmt.insert_id());
+	append(mysql.insert_id());
 }
 
 void Sim::api_problem_delete() {
@@ -528,16 +533,15 @@ void Sim::api_problem_delete() {
 		return api_error403("Invalid password");
 
 	// Queue deleting job
-	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
+	mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+			" info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_PROBLEM_STR ","
-			" ?, ?, '', '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_PROBLEM),
-		mysql_date(), problems_pid);
+			" ?, ?, '', '')")
+		.bindAndExecute(session_user_id, priority(JobType::DELETE_PROBLEM),
+			mysql_date(), problems_pid);
 
 	jobs::notify_job_server();
-
-	append(stmt.insert_id());
+	append(mysql.insert_id());
 }
 
 void Sim::api_problem_merge_into_another() {
@@ -560,8 +564,7 @@ void Sim::api_problem_merge_into_another() {
 	if (notifications.size)
 		return api_error400(notifications);
 
-	auto stmt = mysql.prepare("SELECT owner, type FROM problems"
-		" WHERE id=? AND type!=" PTYPE_VOID_STR);
+	auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
 	stmt.bindAndExecute(target_problem_id);
 
 	InplaceBuff<32> tp_owner;
@@ -579,18 +582,17 @@ void Sim::api_problem_merge_into_another() {
 		return api_error403("Invalid password");
 
 	// Queue deleting job
-	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
+	mysql.prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
+			" info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_MERGE_PROBLEMS_STR ","
-			" ?, ?, ?, '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::MERGE_PROBLEMS),
-		mysql_date(), problems_pid,
-		jobs::MergeProblemsInfo(strtoull(target_problem_id),
-			rejudge_transferred_submissions).dump());
+			" ?, ?, ?, '')")
+		.bindAndExecute(session_user_id, priority(JobType::MERGE_PROBLEMS),
+			mysql_date(), problems_pid,
+			jobs::MergeProblemsInfo(strtoull(target_problem_id),
+				rejudge_transferred_submissions).dump());
 
 	jobs::notify_job_server();
-
-	append(stmt.insert_id());
+	append(mysql.insert_id());
 }
 
 void Sim::api_problem_reupload() {
@@ -647,12 +649,21 @@ void Sim::api_problem_edit_tags() {
 		if (uint(~problems_perms & (hidden ? PERM::EDIT_HIDDEN_TAGS : PERM::EDIT_TAGS)))
 			return api_error403();
 
-		auto stmt = mysql.prepare("UPDATE IGNORE problem_tags SET tag=?"
+		if (name == old_name)
+			return;
+
+		auto transaction = mysql.start_transaction();
+		auto stmt = mysql.prepare("SELECT 1 FROM problem_tags"
+			" WHERE tag=? AND problem_id=? AND hidden=?");
+		stmt.bindAndExecute(name, problems_pid, hidden);
+		if (stmt.next())
+			return api_error400("Tag already exist");
+
+		stmt = mysql.prepare("UPDATE problem_tags SET tag=?"
 			" WHERE problem_id=? AND tag=? AND hidden=?");
 		stmt.bindAndExecute(name, problems_pid, old_name, hidden);
-
-		if (stmt.affected_rows() == 0 and mysql_warning_count(mysql))
-			return api_error400("Tag already exist");
+		if (stmt.affected_rows() == 0)
+			return api_error400("Tag does not exist");
 	};
 
 	auto delete_tag = [&] {
@@ -687,6 +698,10 @@ void Sim::api_problem_attaching_contest_problems() {
 
 	if (uint(~problems_perms & PERM::VIEW_ATTACHING_CONTEST_PROBLEMS))
 		return api_error403();
+
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
 
 	InplaceBuff<512> query;
 	query.append("SELECT c.id, c.name, r.id, r.name, p.id, p.name"

@@ -141,6 +141,10 @@ void Sim::api_contest_users() {
 
 	bool allow_access = false; // Contest argument must occur
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT cu.user_id, u.username, u.first_name, u.last_name,"
 		" cu.mode");
@@ -327,7 +331,6 @@ void Sim::api_contest_user() {
 		return api_error404();
 }
 
-
 void Sim::api_contest_user_add(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 	using PERMS = ContestUserPermissions;
@@ -404,9 +407,9 @@ void Sim::api_contest_user_change_mode(StringView contest_id, StringView user_id
 	if (uint(~perms & needed_perm))
 		return api_error403();
 
-	auto stmt = mysql.prepare("UPDATE contest_users SET mode=?"
-		" WHERE contest_id=? AND user_id=?");
-	stmt.bindAndExecute(EnumVal<CUM>(new_mode), contest_id, user_id);
+	mysql.prepare("UPDATE contest_users SET mode=?"
+		" WHERE contest_id=? AND user_id=?")
+		.bindAndExecute(EnumVal<CUM>(new_mode), contest_id, user_id);
 }
 
 void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {

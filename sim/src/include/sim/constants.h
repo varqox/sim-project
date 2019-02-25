@@ -1,9 +1,8 @@
-// TODO: remove void types: we have transactions now!
 #pragma once
 
 #include <chrono>
 #include <cstdint>
-#include <simlib/meta.h>
+#include <simlib/string.h>
 
 // User
 constexpr uint USERNAME_MAX_LEN = 30;
@@ -95,16 +94,10 @@ constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
 
 
 enum class ProblemType : uint8_t {
-	VOID = 0,
 	PUBLIC = 1,
 	PRIVATE = 2,
 	CONTEST_ONLY = 3,
 };
-
-#define PTYPE_VOID_STR "0"
-static_assert(meta::equal(PTYPE_VOID_STR,
-	meta::ToString<(int)ProblemType::VOID>::value),
-	"Update the above #define");
 
 #define PTYPE_PUBLIC_STR "1"
 static_assert(meta::equal(PTYPE_PUBLIC_STR,
@@ -123,7 +116,6 @@ static_assert(meta::equal(PTYPE_CONTEST_ONLY_STR,
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
-	VOID = 1,
 	IGNORED = 2,
 	PROBLEM_SOLUTION = 3,
 };
@@ -131,11 +123,6 @@ enum class SubmissionType : uint8_t {
 #define STYPE_NORMAL_STR "0"
 static_assert(meta::equal(STYPE_NORMAL_STR,
 	meta::ToString<(int)SubmissionType::NORMAL>::value),
-	"Update the above #define");
-
-#define STYPE_VOID_STR "1"
-static_assert(meta::equal(STYPE_VOID_STR,
-	meta::ToString<(int)SubmissionType::VOID>::value),
 	"Update the above #define");
 
 #define STYPE_IGNORED_STR "2"
@@ -153,7 +140,6 @@ constexpr inline const char* toString(SubmissionType x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::IGNORED: return "Ignored";
 	case SubmissionType::PROBLEM_SOLUTION: return "Problem solution";
-	case SubmissionType::VOID: return "Void";
 	}
 	return "Unknown";
 }
@@ -276,7 +262,6 @@ static_assert(meta::equal(SFSM_WITH_HIGHEST_SCORE,
 	"Update the above #define");
 
 enum class JobType : uint8_t {
-	VOID = 0,
 	JUDGE_SUBMISSION = 1,
 	ADD_PROBLEM = 2,
 	REUPLOAD_PROBLEM = 3,
@@ -292,12 +277,8 @@ enum class JobType : uint8_t {
 	RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION = 13,
 	MERGE_PROBLEMS = 14,
 	REJUDGE_SUBMISSION = 15,
+	DELETE_FILE = 16,
 };
-
-#define JTYPE_VOID_STR "0"
-static_assert(meta::equal(JTYPE_VOID_STR,
-	meta::ToString<(int)JobType::VOID>::value),
-	"Update the above #define");
 
 #define JTYPE_JUDGE_SUBMISSION_STR "1"
 static_assert(meta::equal(JTYPE_JUDGE_SUBMISSION_STR,
@@ -374,10 +355,14 @@ static_assert(meta::equal(JTYPE_REJUDGE_SUBMISSION_STR,
 	meta::ToString<(int)JobType::REJUDGE_SUBMISSION>::value),
 	"Update the above #define");
 
+#define JTYPE_DELETE_FILE_STR "16"
+static_assert(meta::equal(JTYPE_DELETE_FILE_STR,
+	meta::ToString<(int)JobType::DELETE_FILE>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
-	case JT::VOID: return "VOID";
 	case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
 	case JT::ADD_PROBLEM: return "ADD_PROBLEM";
 	case JT::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
@@ -396,6 +381,7 @@ constexpr inline const char* toString(JobType x) {
 		return "RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION";
 	case JT::MERGE_PROBLEMS: return "MERGE_PROBLEMS";
 	case JT::REJUDGE_SUBMISSION: return "REJUDGE_SUBMISSION";
+	case JT::DELETE_FILE: return "DELETE_FILE";
 	}
 	return "Unknown";
 }
@@ -418,7 +404,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::DELETE_CONTEST: return false;
 	case JT::DELETE_CONTEST_ROUND: return false;
 	case JT::DELETE_CONTEST_PROBLEM: return false;
-	case JT::VOID: return false;
+	case JT::DELETE_FILE: return false;
 	}
 	return false;
 }
@@ -441,7 +427,7 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::DELETE_CONTEST_PROBLEM: return false;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return false;
 	case JT::MERGE_PROBLEMS: return false;
-	case JT::VOID: return false;
+	case JT::DELETE_FILE: return false;
 	}
 	return false;
 }
@@ -450,6 +436,7 @@ constexpr inline bool is_submission_job(JobType x) {
 constexpr inline uint priority(JobType x) {
 	using JT = JobType;
 	switch (x) {
+	case JT::DELETE_FILE: return 40;
 	case JT::DELETE_PROBLEM: return 30;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return 30;
 	case JT::DELETE_USER: return 30;
@@ -465,7 +452,6 @@ constexpr inline uint priority(JobType x) {
 	case JT::REUPLOAD_PROBLEM: return 10;
 	case JT::JUDGE_SUBMISSION: return 5;
 	case JT::REJUDGE_SUBMISSION: return 4;
-	case JT::VOID: return 0;
 	}
 	return 0;
 }
@@ -514,10 +500,16 @@ constexpr inline const char* toString(JobStatus x) {
 	case JobStatus::IN_PROGRESS: return "In progress";
 	case JobStatus::DONE: return "Done";
 	case JobStatus::FAILED: return "Failed";
-	case JobStatus::CANCELED: return "Cancelled";
+	case JobStatus::CANCELED: return "Canceled";
 	}
 	return "Unknown";
 }
+
+// Internal files
+constexpr const char INTERNAL_FILES_DIR[] = "internal_files/";
+
+template<class T>
+auto internal_file_path(T file_id) { return concat<64>(INTERNAL_FILES_DIR, file_id); }
 
 // Jobs
 constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KB
@@ -528,7 +520,7 @@ constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
 // Logs API
-constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 6 << 10; // 6 kB
+constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 kB
 constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 kB
 
 // API

@@ -93,7 +93,7 @@ private:
 
 	void api_job_download_log();
 
-	void api_job_download_uploaded_package();
+	void api_job_download_uploaded_package(Optional<uint64_t> file_id);
 
 	// jobs_api.cc
 	void api_problems();
@@ -104,7 +104,7 @@ private:
 
 	void api_problem_add();
 
- 	void api_statement_impl(StringView problem_id, StringView problem_label,
+ 	void api_statement_impl(uint64_t problem_file_id, StringView problem_label,
  		StringView simfile);
 
 	void api_problem_statement(StringView problem_label, StringView simfile);
@@ -537,8 +537,8 @@ private:
 	JobPermissions jobs_get_overall_permissions() noexcept;
 
 	// Session must be open to access the jobs
-	JobPermissions jobs_get_permissions(StringView creator_id, JobType job_type,
-		JobStatus job_status) noexcept;
+	JobPermissions jobs_get_permissions(Optional<StringView> creator_id,
+		JobType job_type, JobStatus job_status) noexcept;
 
 	// Used to get granted permissions to the problem jobs
 	JobPermissions jobs_granted_permissions_problem(StringView problem_id);
@@ -596,6 +596,7 @@ private:
 
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	InplaceBuff<32> problems_pid;
+	uint64_t problems_file_id;
 
 	/// Main Problems handler
 	void problems_handle();
@@ -715,6 +716,7 @@ private:
 		Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
+	uint64_t submissions_file_id;
 	SubmissionLanguage submissions_slang;
 	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
