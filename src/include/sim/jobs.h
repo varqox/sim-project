@@ -178,6 +178,19 @@ struct MergeProblemsInfo {
 	}
 };
 
+struct ChangeProblemStatementInfo {
+	std::string new_statement_path;
+
+	ChangeProblemStatementInfo() = default;
+
+	ChangeProblemStatementInfo(StringView nsp)
+		: new_statement_path(nsp.to_string()) {}
+
+	std::string dump() {
+		return new_statement_path;
+	}
+};
+
 void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
 	StringView job_info, bool notify_job_server);
 

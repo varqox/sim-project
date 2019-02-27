@@ -215,6 +215,8 @@ void Sim::api_problems() {
 			append('T');
 		if (uint(perms & PERM::EDIT_HIDDEN_TAGS))
 			append('H');
+		if (uint(perms & PERM::CHANGE_STATEMENT))
+			append('C');
 		if (uint(perms & PERM::DELETE))
 			append('D');
 		if (uint(perms & PERM::MERGE))
@@ -313,6 +315,8 @@ void Sim::api_problem() {
 		return api_problem_reupload();
 	else if (next_arg == "edit")
 		return api_problem_edit();
+	else if (next_arg == "change_statement")
+		return api_problem_change_statement();
 	else if (next_arg == "delete")
 		return api_problem_delete();
 	else if (next_arg == "merge_into_another")
@@ -391,9 +395,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	auto transaction = mysql.start_transaction();
 	mysql.update("INSERT INTO internal_files VALUES()");
 	auto job_file_id = mysql.insert_id();
-	auto job_file_remover = make_call_in_destructor([job_file_id] {
-		(void)unlink(internal_file_path(job_file_id));
-	});
+	FileRemover job_file_remover(internal_file_path(job_file_id));
 
 	// Make the uploaded package file the job's file
 	if (move(package_file, internal_file_path(job_file_id)))
@@ -690,6 +692,56 @@ void Sim::api_problem_edit_tags() {
 		return delete_tag();
 	else
 		return api_error400();
+}
+
+void Sim::api_problem_change_statement() {
+	STACK_UNWINDING_MARK;
+	using PERM = ProblemPermissions;
+
+	if (uint(~problems_perms & PERM::CHANGE_STATEMENT))
+		return api_error403();
+
+	CStringView statement_path, statement_file;
+	form_validate(statement_path, "path", "New statement path");
+	form_validate_file_path_not_blank(statement_file, "statement",
+		"New statement");
+
+	if (get_file_size(statement_file) > NEW_STATEMENT_MAX_SIZE) {
+		add_notification("error", "New statement file is too big (maximum"
+			" allowed size: ", NEW_STATEMENT_MAX_SIZE, " bytes = ",
+			humanizeFileSize(NEW_STATEMENT_MAX_SIZE), ')');
+	}
+
+	if (notifications.size)
+		return api_error400(notifications);
+
+	jobs::ChangeProblemStatementInfo cps_info(statement_path);
+
+	auto transaction = mysql.start_transaction();
+	mysql.update("INSERT INTO internal_files VALUES()");
+	auto job_file_id = mysql.insert_id();
+	FileRemover job_file_remover(internal_file_path(job_file_id));
+
+	// Make uploaded statement file the job's file
+	if (move(statement_file, internal_file_path(job_file_id)))
+		THROW("move()", errmsg());
+
+	mysql.prepare("INSERT jobs (file_id, creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(?, ?, " JSTATUS_PENDING_STR ", ?, "
+			JTYPE_CHANGE_PROBLEM_STATEMENT_STR
+			", ?, ?, ?, '')")
+		.bindAndExecute(job_file_id, session_user_id,
+			priority(JobType::CHANGE_PROBLEM_STATEMENT), mysql_date(),
+			problems_pid, cps_info.dump());
+
+	auto job_id = mysql.insert_id(); // Has to be retrieved before commit
+
+	transaction.commit();
+	job_file_remover.cancel();
+	jobs::notify_job_server();
+
+	append(job_id);
 }
 
 void Sim::api_problem_attaching_contest_problems() {

@@ -117,6 +117,7 @@ src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
 	$(LINK) -lsupc++ -lrt -lzip
 
 JOB_SERVER_SRCS := \
+	src/Job-server/change_problem_statement_job_handler.cc \
 	src/Job-server/contest_problem_reselect_final_submissions.cc \
 	src/Job-server/delete_contest_job_handler.cc \
 	src/Job-server/delete_contest_problem_job_handler.cc \

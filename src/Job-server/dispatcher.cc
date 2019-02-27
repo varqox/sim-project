@@ -1,3 +1,4 @@
+#include "change_problem_statement_job_handler.h"
 #include "contest_problem_reselect_final_submissions.h"
 #include "delete_contest_job_handler.h"
 #include "delete_contest_problem_job_handler.h"
@@ -81,6 +82,12 @@ void job_dispatcher(uint64_t job_id, JobType jtype, Optional<uint64_t> file_id,
 
 		case JT::DELETE_FILE:
 			job_handler = make_unique<DeleteInternalFileJobHandler>(job_id, file_id.value());
+			break;
+
+		case JT::CHANGE_PROBLEM_STATEMENT:
+			job_handler = make_unique<ChangeProblemStatementJobHandler>(job_id,
+				aux_id.value(), file_id.value(),
+				jobs::ChangeProblemStatementInfo(info));
 			break;
 
 		case JT::JUDGE_SUBMISSION:

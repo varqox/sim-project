@@ -1,6 +1,7 @@
 #include "sim.h"
 
 #include <sim/jobs.h>
+#include <simlib/filesystem.h>
 
 static constexpr const char* job_type_str(JobType type) noexcept {
 	using JT = JobType;
@@ -25,6 +26,7 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 		return "Reset problem time limits using model solution";
 	case JT::MERGE_PROBLEMS: return "Merge problems";
 	case JT::DELETE_FILE: return "Delete internal file";
+	case JT::CHANGE_PROBLEM_STATEMENT: return "Change problem statement";
 	}
 
 	return "Unknown";
@@ -314,6 +316,13 @@ void Sim::api_jobs() {
 			break;
 		}
 
+		case JobType::CHANGE_PROBLEM_STATEMENT: {
+			append("\"problem\":", res[AUX_ID]);
+			jobs::ChangeProblemStatementInfo info(res[JINFO]);
+			append(",\"new statement path\":", jsonStringify(info.new_statement_path));
+			break;
+		}
+
 		case JobType::DELETE_FILE:
 			break; // Nothing to show
 
@@ -332,8 +341,15 @@ void Sim::api_jobs() {
 			append('v');
 		if (uint(perms & PERM::DOWNLOAD_LOG))
 			append('r');
-		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
-			append('u');
+		using JT = JobType;
+		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
+			isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+				JT::ADD_JUDGE_MODEL_SOLUTION, JT::REUPLOAD_JUDGE_MODEL_SOLUTION))
+		{
+			append('u'); // TODO: ^ this is very nasty
+		}
+		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and job_type == JT::CHANGE_PROBLEM_STATEMENT)
+			append('s'); // TODO: ^ this is very nasty
 		if (uint(perms & PERM::CANCEL))
 			append('C');
 		if (uint(perms & PERM::RESTART))
@@ -396,7 +412,9 @@ void Sim::api_job() {
 	else if (next_arg == "log")
 		return api_job_download_log();
 	else if (next_arg == "uploaded-package")
-		return api_job_download_uploaded_package(file_id);
+		return api_job_download_uploaded_package(file_id, jtype);
+	else if (next_arg == "uploaded-statement")
+		return api_job_download_uploaded_statement(file_id, jtype, jinfo);
 	else
 		return api_error400();
 }
@@ -454,15 +472,43 @@ void Sim::api_job_download_log() {
 	throw_assert(stmt.next());
 }
 
-void Sim::api_job_download_uploaded_package(Optional<uint64_t> file_id) {
+void Sim::api_job_download_uploaded_package(Optional<uint64_t> file_id,
+	JobType job_type)
+{
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
+	using JT = JobType;
 
-	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
-		return api_error403();
+	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or not isOneOf(job_type,
+			JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+			JT::ADD_JUDGE_MODEL_SOLUTION, JT::REUPLOAD_JUDGE_MODEL_SOLUTION))
+	{
+		return api_error403(); // TODO: ^ this is very nasty
+	}
 
 	resp.headers["Content-Disposition"] =
 		concat_tostr("attachment; filename=", jobs_jid, ".zip");
+	resp.content_type = server::HttpResponse::FILE;
+	resp.content = internal_file_path(file_id.value());
+}
+
+void Sim::api_job_download_uploaded_statement(Optional<uint64_t> file_id,
+	JobType job_type, StringView info)
+{
+	STACK_UNWINDING_MARK;
+	using PERM = JobPermissions;
+	using JT = JobType;
+
+	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) or
+		job_type != JT::CHANGE_PROBLEM_STATEMENT)
+	{
+		return api_error403(); // TODO: ^ this is very nasty
+	}
+
+	resp.headers["Content-Disposition"] =
+		concat_tostr("attachment; filename=",
+			encodeURI(intentionalUnsafeStringView(
+				filename(jobs::ChangeProblemStatementInfo(info).new_statement_path))));
 	resp.content_type = server::HttpResponse::FILE;
 	resp.content = internal_file_path(file_id.value());
 }

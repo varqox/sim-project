@@ -684,7 +684,8 @@ void Sim::api_submission_add() {
 	if ((code.empty() ? get_file_size(solution_tmp_path) : code.size()) >
 		SOLUTION_MAX_SIZE)
 	{
-		add_notification("error", "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE, " bytes = ", SOLUTION_MAX_SIZE >> 10, " KB)");
+		add_notification("error", "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE, " bytes = ", humanizeFileSize(SOLUTION_MAX_SIZE),
+			')');
 		return api_error400(notifications);
 	}
 

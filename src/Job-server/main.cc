@@ -194,7 +194,6 @@ public:
 					queue_job(judge_jobs, aux_id, true);
 					break;
 
-				case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 					queue_job(judge_jobs, aux_id, true);
 					break;
 
@@ -203,6 +202,8 @@ public:
 				case JT::EDIT_PROBLEM:
 				case JT::DELETE_PROBLEM:
 				case JT::MERGE_PROBLEMS:
+				case JT::CHANGE_PROBLEM_STATEMENT:
+				case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 					queue_job(problem_jobs, aux_id, true);
 					break;
 

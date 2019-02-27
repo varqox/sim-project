@@ -93,7 +93,11 @@ private:
 
 	void api_job_download_log();
 
-	void api_job_download_uploaded_package(Optional<uint64_t> file_id);
+	void api_job_download_uploaded_package(Optional<uint64_t> file_id,
+		JobType job_type);
+
+	void api_job_download_uploaded_statement(Optional<uint64_t> file_id,
+		JobType job_type, StringView info);
 
 	// jobs_api.cc
 	void api_problems();
@@ -124,6 +128,8 @@ private:
 	void api_problem_delete();
 
 	void api_problem_merge_into_another();
+
+	void api_problem_change_statement();
 
 	void api_problem_attaching_contest_problems();
 
@@ -523,6 +529,7 @@ public:
 		DOWNLOAD_UPLOADED_PACKAGE = 8,
 		CANCEL = 16,
 		RESTART = 32,
+		DOWNLOAD_UPLOADED_STATEMENT = 64,
 	};
 
 private:
@@ -581,6 +588,7 @@ public:
 		EDIT_HIDDEN_TAGS = 1 << 15,
 		DELETE = EDIT,
 		MERGE = DELETE,
+		CHANGE_STATEMENT = EDIT,
 		VIEW_ATTACHING_CONTEST_PROBLEMS = DELETE,
 	};
 
