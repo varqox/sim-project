@@ -12,7 +12,8 @@ void ResetProblemTimeLimitsJobHandler::run() {
 		stmt.bindAndExecute(problem_id);
 		stmt.res_bind_all(problem_file_id);
 		if (not stmt.next())
-			return set_failure("Problem with ID = ", problem_id, " does not exist");
+			return set_failure("Problem with ID = ", problem_id,
+				" does not exist");
 	}
 
 	auto pkg_path = internal_file_path(problem_file_id);

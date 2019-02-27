@@ -65,6 +65,7 @@ constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
 constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
+constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MB
 
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
@@ -278,6 +279,7 @@ enum class JobType : uint8_t {
 	MERGE_PROBLEMS = 14,
 	REJUDGE_SUBMISSION = 15,
 	DELETE_FILE = 16,
+	CHANGE_PROBLEM_STATEMENT = 17,
 };
 
 #define JTYPE_JUDGE_SUBMISSION_STR "1"
@@ -360,6 +362,11 @@ static_assert(meta::equal(JTYPE_DELETE_FILE_STR,
 	meta::ToString<(int)JobType::DELETE_FILE>::value),
 	"Update the above #define");
 
+#define JTYPE_CHANGE_PROBLEM_STATEMENT_STR "17"
+static_assert(meta::equal(JTYPE_CHANGE_PROBLEM_STATEMENT_STR,
+	meta::ToString<(int)JobType::CHANGE_PROBLEM_STATEMENT>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
@@ -382,6 +389,7 @@ constexpr inline const char* toString(JobType x) {
 	case JT::MERGE_PROBLEMS: return "MERGE_PROBLEMS";
 	case JT::REJUDGE_SUBMISSION: return "REJUDGE_SUBMISSION";
 	case JT::DELETE_FILE: return "DELETE_FILE";
+	case JT::CHANGE_PROBLEM_STATEMENT: return "CHANGE_PROBLEM_STATEMENT";
 	}
 	return "Unknown";
 }
@@ -397,6 +405,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::DELETE_PROBLEM: return true;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
 	case JT::MERGE_PROBLEMS: return true;
+	case JT::CHANGE_PROBLEM_STATEMENT: return true;
 	case JT::JUDGE_SUBMISSION: return false;
 	case JT::REJUDGE_SUBMISSION: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
@@ -428,6 +437,7 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return false;
 	case JT::MERGE_PROBLEMS: return false;
 	case JT::DELETE_FILE: return false;
+	case JT::CHANGE_PROBLEM_STATEMENT: return false;
 	}
 	return false;
 }
@@ -445,6 +455,7 @@ constexpr inline uint priority(JobType x) {
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
 	case JT::MERGE_PROBLEMS: return 25;
 	case JT::EDIT_PROBLEM: return 20;
+	case JT::CHANGE_PROBLEM_STATEMENT: return 20;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;

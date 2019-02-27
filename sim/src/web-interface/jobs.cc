@@ -36,10 +36,32 @@ Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 		return overall_perms;
 
 	static_assert(uint(PERM::NONE) == 0, "Needed below");
-	JobPermissions type_perm = (isOneOf(job_type, JT::ADD_PROBLEM,
-		JT::REUPLOAD_PROBLEM, JT::ADD_JUDGE_MODEL_SOLUTION,
-		JT::REUPLOAD_JUDGE_MODEL_SOLUTION)
-		? PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_PACKAGE : PERM::NONE);
+	JobPermissions type_perm = [job_type] {
+		switch (job_type) {
+		case JT::ADD_PROBLEM:
+		case JT::REUPLOAD_PROBLEM:
+		case JT::ADD_JUDGE_MODEL_SOLUTION:
+		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
+			return PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_PACKAGE;
+
+		case JT::CHANGE_PROBLEM_STATEMENT:
+			return PERM::DOWNLOAD_LOG | PERM::DOWNLOAD_UPLOADED_STATEMENT;
+
+		case JT::JUDGE_SUBMISSION:
+		case JT::REJUDGE_SUBMISSION:
+		case JT::EDIT_PROBLEM:
+		case JT::DELETE_PROBLEM:
+		case JT::MERGE_PROBLEMS:
+		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
+		case JT::DELETE_USER:
+		case JT::DELETE_CONTEST:
+		case JT::DELETE_CONTEST_ROUND:
+		case JT::DELETE_CONTEST_PROBLEM:
+		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
+		case JT::DELETE_FILE:
+			return PERM::NONE;
+		}
+	}();
 
 	if (session_user_type == UserType::ADMIN) {
 		switch (job_status) {
@@ -85,7 +107,7 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 		auto pperms = problems_get_permissions(powner, ptype);
 		if (uint(pperms & ProblemPermissions::VIEW_RELATED_JOBS))
 			return PERM::VIEW | PERM::DOWNLOAD_LOG |
-				PERM::DOWNLOAD_UPLOADED_PACKAGE;
+				PERM::DOWNLOAD_UPLOADED_PACKAGE | PERM::DOWNLOAD_UPLOADED_STATEMENT;
 	}
 
 	return PERM::NONE;

@@ -2070,10 +2070,12 @@ form .field-group > textarea {
 .form-container form .loader-info {
 	margin-top: 16px;
 }
-.form-container.add-problem form .field-group > :first-child {
+.form-container.add-problem form .field-group > :first-child,
+.form-container.reupload-problem form .field-group > :first-child {
 	width: 130px;
 }
-.form-container.add-problem form input[type="submit"] {
+.form-container.add-problem form input[type="submit"],
+.form-container.reupload-problem form input[type="submit"] {
 	margin-left: 150px;
 }
 

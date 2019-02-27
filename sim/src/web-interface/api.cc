@@ -27,7 +27,7 @@ void Sim::api_handle() {
 		} else if (next_arg == "job") {
 			auto job_id = url_args.extractNextArg();
 			next_arg = url_args.extractNextArg();
-			if (isOneOf(next_arg, "log", "uploaded-package")) {
+			if (isOneOf(next_arg, "log", "uploaded-package", "uploaded-statement")) {
 				request.target = concat_tostr("/api/job/", job_id, '/',
 					next_arg);
 			} else {

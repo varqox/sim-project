@@ -31,6 +31,8 @@ protected:
 
 	virtual void job_done();
 
+	virtual void job_done(StringView new_info);
+
 public:
 	virtual void run() = 0;
 
