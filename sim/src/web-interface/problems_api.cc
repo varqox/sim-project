@@ -666,6 +666,8 @@ void Sim::api_problem_edit_tags() {
 		stmt.bindAndExecute(name, problems_pid, old_name, hidden);
 		if (stmt.affected_rows() == 0)
 			return api_error400("Tag does not exist");
+
+		transaction.commit();
 	};
 
 	auto delete_tag = [&] {
