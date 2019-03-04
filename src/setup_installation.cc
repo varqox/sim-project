@@ -125,7 +125,8 @@ int main(int argc, char **argv) {
 		conn.update("SET foreign_key_checks=1"); // Just for sure
 
 	} catch (const std::exception& e) {
-		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
+		errlog("\033[31mFailed to connect to database\033[m");
+		ERRLOG_CATCH(e);
 		return 4;
 	}
 
