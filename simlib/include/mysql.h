@@ -5,12 +5,14 @@
 #include "string.h"
 #include "utilities.h"
 
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <mutex>
 
-#if __has_include(<mysql.h>)
+#if __has_include(<mysql.h>) && __has_include(<errmsg.h>)
 #define SIMLIB_MYSQL_ENABLED 1
+#include <errmsg.h>
 #include <mysql.h>
 
 #if 0
@@ -105,20 +107,27 @@ class Result {
 private:
 	friend Connection;
 
+	size_t* connection_referencing_objects_no_;
 	MYSQL_RES* res_;
 	MYSQL_ROW row_ {};
 	unsigned long* lengths_ {};
 
-	Result(MYSQL_RES* res) : res_{res} {}
+	Result(MYSQL_RES* res, size_t& conn_ref_objs_no)
+		: connection_referencing_objects_no_(&conn_ref_objs_no), res_(res)
+	{
+		++conn_ref_objs_no;
+	}
 
 	Result(const Result&) = delete;
 	Result& operator=(const Result&) = delete;
 
 public:
-	Result(Result&& r) noexcept : res_(r.res_), row_(std::move(r.row_)),
+	Result(Result&& r) noexcept
+		: connection_referencing_objects_no_(
+			std::exchange(r.connection_referencing_objects_no_, nullptr)),
+		res_(std::exchange(r.res_, nullptr)), row_(std::move(r.row_)),
 		lengths_(r.lengths_)
 	{
-		r.res_ = nullptr;
 		// r.row_ = {};
 		// r.lengths_ does not have to be changed
 	}
@@ -126,12 +135,15 @@ public:
 	Result& operator=(Result&& r) {
 		if (res_)
 			mysql_free_result(res_);
+		if (connection_referencing_objects_no_)
+			--*connection_referencing_objects_no_;
 
-		res_ = r.res_;
+		connection_referencing_objects_no_ =
+			std::exchange(r.connection_referencing_objects_no_, nullptr);
+		res_ = std::exchange(r.res_, nullptr);
 		row_ = std::move(r.row_);
 		lengths_ = r.lengths_;
 
-		r.res_ = nullptr;
 		// r.row_ = {};
 		// r.lengths_ does not have to be changed
 		return *this;
@@ -141,6 +153,8 @@ public:
 	~Result() {
 		if (res_)
 			mysql_free_result(res_);
+		if (connection_referencing_objects_no_)
+			--*connection_referencing_objects_no_;
 	}
 
 	MYSQL_RES* impl() noexcept { return res_; }
@@ -184,20 +198,24 @@ class Statement {
 private:
 	friend Connection;
 
+	size_t* connection_referencing_objects_no_;
 	MYSQL_STMT* stmt_;
 	InplaceArray<MYSQL_BIND, STATIC_BINDS> params_;
 	InplaceArray<MYSQL_BIND, STATIC_RESULTS> res_;
 	InplaceArray<std::unique_ptr<char[]>, 8> buffs_;
 
-	Statement(MYSQL_STMT* stmt)
-		: stmt_ {stmt}, params_ {mysql_stmt_param_count(stmt)},
-		res_ {mysql_stmt_field_count(stmt)}
+	Statement(MYSQL_STMT* stmt, size_t& conn_ref_objs_no)
+		: connection_referencing_objects_no_(&conn_ref_objs_no), stmt_(stmt),
+			params_(mysql_stmt_param_count(stmt)),
+			res_(mysql_stmt_field_count(stmt))
 	{
 		for (auto& x : params_)
 			memset(std::addressof(x), 0, sizeof(x));
 		for (auto& x : res_)
 			memset(std::addressof(x), 0, sizeof(x));
 		bind_res_errors_and_nulls();
+
+		++conn_ref_objs_no;
 	}
 
 	Statement(const Statement&) = delete;
@@ -213,21 +231,27 @@ private:
 	}
 
 public:
-	Statement() : stmt_ {nullptr}, params_ {0}, res_ {0} {}
+	Statement() : connection_referencing_objects_no_(nullptr), stmt_(nullptr),
+		params_(0), res_(0) {}
 
-	Statement(Statement&& s) noexcept : stmt_ {s.stmt_},
-		params_ {std::move(s.params_)}, res_ {std::move(s.res_)}
+	Statement(Statement&& s) noexcept
+		: connection_referencing_objects_no_(
+				std::exchange(s.connection_referencing_objects_no_, nullptr)),
+			stmt_(std::exchange(s.stmt_, nullptr)),
+			params_(std::move(s.params_)), res_(std::move(s.res_))
 	{
-		s.stmt_ = nullptr;
 		bind_res_errors_and_nulls();
 	}
 
-	Statement& operator=(Statement&& s) {
+	Statement& operator=(Statement&& s) noexcept {
 		if (stmt_)
-			mysql_stmt_close(stmt_);
+			(void)mysql_stmt_close(stmt_);
+		if (connection_referencing_objects_no_)
+			--*connection_referencing_objects_no_;
 
-		stmt_ = s.stmt_;
-		s.stmt_ = nullptr;
+		connection_referencing_objects_no_ =
+			std::exchange(s.connection_referencing_objects_no_, nullptr);
+		stmt_ = std::exchange(s.stmt_, nullptr);
 		params_ = std::move(s.params_);
 		res_ = std::move(s.res_);
 		bind_res_errors_and_nulls();
@@ -237,7 +261,10 @@ public:
 
 	~Statement() {
 		if (stmt_)
-			mysql_stmt_close(stmt_);
+			(void)mysql_stmt_close(stmt_);
+
+		if (connection_referencing_objects_no_)
+			--*connection_referencing_objects_no_;
 	}
 
 	MYSQL_STMT* impl() noexcept { return stmt_; }
@@ -675,9 +702,7 @@ public:
 
 	void commit();
 
-	~Transaction() {
-		try { rollback(); } catch (...) {} // There is nothing we can do with exceptions
-	}
+	~Transaction();
 };
 
 class Connection {
@@ -694,18 +719,72 @@ private:
 	static const Library init_;
 
 	MYSQL* conn_;
+	size_t referencing_objects_no_ = 0;
 
 	Connection(const Connection&) = delete;
 	Connection& operator=(const Connection&) = delete;
 
+	friend class Transaction;
+
 DEBUG_MYSQL(
 	static size_t get_next_connection_id() noexcept {
-		static volatile size_t next_connection_id = 0;
+		static std::atomic_size_t next_connection_id = 0;
 		return next_connection_id++;
 	}
 
 	size_t connection_id = get_next_connection_id();
 )
+
+	void reconnect() {
+		InplaceBuff<32> host(conn_->host), user(conn_->user),
+			passwd(conn_->passwd), db(conn_->db);
+
+		Connection c;
+		c.connect(host, user, passwd, db);
+		*this = std::move(c);
+	}
+
+	template<class T>
+	static bool ret_val_success(T* ret) noexcept { return (ret != nullptr); }
+
+	template<class T>
+	static std::enable_if_t<std::is_integral<T>::value, bool>
+	ret_val_success(T ret) noexcept { return ret == T(); }
+
+	template<class Func2, class Func3, class Func, class... Args>
+	auto call_and_try_reconnecting_on_error_impl(Func2&& resetter,
+		Func3&& error_msg, Func&& func, Args&&... args)
+	{
+		STACK_UNWINDING_MARK;
+		// std::forward is omitted as we may use arguments second time
+		auto rc = func(args...);
+		if (ret_val_success(rc))
+			return rc;
+
+		if (not isOneOf((int)mysql_errno(conn_), CR_SERVER_GONE_ERROR, CR_SERVER_LOST))
+			THROW(error_msg());
+
+		// Cannot reconnect if other objects already uses this connection
+		if (referencing_objects_no_ != 0)
+			THROW(error_msg());
+
+		reconnect();
+		resetter();
+
+		rc = func(args...);
+		if (ret_val_success(rc))
+			return rc;
+
+		THROW(error_msg());
+	}
+
+	template<class Func, class... Args>
+	auto call_and_try_reconnecting_on_error(Func&& func, Args&&... args) {
+		STACK_UNWINDING_MARK;
+		return call_and_try_reconnecting_on_error_impl([]{},
+			[&] { return mysql_error(conn_); },
+			std::forward<Func>(func), std::forward<Args>(args)...);
+	}
 
 public:
 	Connection() {
@@ -715,6 +794,18 @@ public:
 		mysql_protector.unlock();
 		if (not conn_)
 			THROW("mysql_init() failed - not enough memory is available");
+	}
+
+	Connection(Connection&& c) : conn_(std::exchange(c.conn_, nullptr)),
+		referencing_objects_no_(c.referencing_objects_no_)
+		DEBUG_MYSQL(, connection_id(c.connection_id)) {}
+
+	Connection& operator=(Connection&& c) {
+		close();
+		conn_ = std::exchange(c.conn_, nullptr);
+		referencing_objects_no_ = c.referencing_objects_no_;
+		DEBUG_MYSQL(connection_id = c.connection_id);
+		return *this;
 	}
 
 	void close() noexcept {
@@ -729,61 +820,60 @@ public:
 			mysql_close(conn_);
 	}
 
-	Connection(Connection&& c) noexcept : conn_(c.conn_) { c.conn_ = nullptr; }
-
-	Connection& operator=(Connection&& c) noexcept {
-		close();
-		conn_ = c.conn_;
-		c.conn_ = nullptr;
-		return *this;
-	}
-
 	MYSQL* impl() noexcept { return conn_; }
 
 	operator MYSQL* () noexcept { return impl(); }
 
 	void connect(FilePath host, FilePath user, FilePath passwd, FilePath db) {
+		STACK_UNWINDING_MARK;
+
 		my_bool x = true;
-		// mysql_options(conn_, MYSQL_OPT_RECONNECT, &x);
-		mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
+		(void)mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
 		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr, 0))
 			THROW(mysql_error(conn_));
 	}
 
+	bool disconnected() noexcept {
+		return (mysql_ping(conn_) != 0 and mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
+	}
+
 	Result query(StringView sql) {
+		STACK_UNWINDING_MARK;
 		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql);)
-		if (mysql_real_query(conn_, sql.data(), sql.size()))
-			THROW(mysql_error(conn_));
+		call_and_try_reconnecting_on_error(mysql_real_query, *this,
+			sql.data(), sql.size());
 
-		MYSQL_RES* res = mysql_store_result(conn_);
-		if (not res)
-			THROW(mysql_error(conn_));
-
-		return {res};
+		MYSQL_RES* res = call_and_try_reconnecting_on_error(mysql_store_result,
+			*this);
+		return {res, referencing_objects_no_};
 	}
 
 	void update(StringView sql) {
+		STACK_UNWINDING_MARK;
 		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ", sql);)
-		if (mysql_real_query(conn_, sql.data(), sql.size()))
-			THROW(mysql_error(conn_));
+		call_and_try_reconnecting_on_error(mysql_real_query, *this,
+			sql.data(), sql.size());
 	}
 
 	template<size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
 	Statement<STATIC_BINDS, STATIC_RESULTS> prepare(StringView sql) {
+		STACK_UNWINDING_MARK;
 		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): prepare -> ", sql);)
-		MYSQL_STMT* stmt = mysql_stmt_init(conn_);
-		if (not stmt)
-			THROW(mysql_error(conn_));
+		MYSQL_STMT* stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+		try {
+			call_and_try_reconnecting_on_error_impl([&]{
+				(void)mysql_stmt_close(stmt);
+				stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+			}, [&]{ return mysql_stmt_error(stmt); },
+			mysql_stmt_prepare, stmt, sql.data(), sql.size());
 
-		if (mysql_stmt_prepare(stmt, sql.data(), sql.size())) {
-			auto close_stmt = [&] { mysql_stmt_close(stmt); };
-			CallInDtor<decltype(close_stmt)> closer {close_stmt};
-
-			THROW(mysql_error(conn_));
+		} catch (...) {
+			(void)mysql_stmt_close(stmt);
+			throw;
 		}
 
-		return {stmt};
+		return {stmt, referencing_objects_no_};
 	}
 
 	my_ulonglong insert_id() noexcept { return mysql_insert_id(conn_); }
@@ -791,11 +881,13 @@ public:
 	Transaction start_transaction() { return Transaction(*this); }
 
 	Transaction start_serializable_transaction() {
+		STACK_UNWINDING_MARK;
 		update("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 		return Transaction(*this);
 	}
 
 	Transaction start_read_committed_transaction() {
+		STACK_UNWINDING_MARK;
 		update("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
 		return Transaction(*this);
 	}
@@ -803,12 +895,16 @@ public:
 
 inline Transaction::Transaction(Connection& conn) : conn_(&conn) {
 	conn_->update("START TRANSACTION");
+	// This have to be done last because of potential exceptions
+	++conn_->referencing_objects_no_;
 }
 
 inline void Transaction::rollback() {
 	if (conn_) {
 		if (mysql_rollback(*conn_))
 			THROW(mysql_error(*conn_));
+
+		--conn_->referencing_objects_no_;
 		conn_ = nullptr;
 
 		if (rollback_action_)
@@ -817,8 +913,19 @@ inline void Transaction::rollback() {
 }
 
 inline void Transaction::commit() {
-	if (mysql_commit(*conn_))
+	if (mysql_commit(*conn_)) {
 		THROW(mysql_error(*conn_));
+	}
+
+	--conn_->referencing_objects_no_;
+	conn_ = nullptr;
+}
+
+inline Transaction::~Transaction() {
+	try { rollback(); } catch (...) {} // There is nothing we can do with exceptions
+	// If the exception was thrown the counter may have not been decremented
+	if (conn_)
+		--conn_->referencing_objects_no_;
 }
 
 } // namespace MySQL

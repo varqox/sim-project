@@ -630,7 +630,7 @@ inline void writeAll_throw(int fd, StringView str) {
 *  with / then @p curr_dir is ignored.
 */
 std::string abspath(StringView path, size_t beg = 0,
-		size_t end = std::string::npos, std::string curr_dir = "/");
+	size_t end = std::string::npos, std::string curr_dir = "/");
 
 /*
 *  Returns an absolute path that does not contain any . or .. components,

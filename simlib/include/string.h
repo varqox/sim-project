@@ -1070,6 +1070,8 @@ private:
 
 	static_assert(N > 0, "Needed for accessing the array's 0-th element");
 
+	using InplaceBuffBase::is_allocated;
+
 public:
 	using InplaceBuffBase::size;
 
@@ -1117,19 +1119,30 @@ public:
 
 	template<size_t M>
 	constexpr InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
-		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.max_size_), ibuff.p_)
+		: InplaceBuffBase(ibuff.size, N, ibuff.p_)
 	{
-		if (ibuff.is_allocated()) {
-			p_ = ibuff.p_;
-			ibuff.size = 0;
-			ibuff.max_size_ = M;
-			ibuff.p_ = &ibuff.a_[0];
-
-		} else {
+		if (ibuff.size <= N) {
 			p_ = &a_[0];
+			// max_size_ = N;
 			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
-			ibuff.size = 0;
+			// Deallocate ibuff memory
+			if (ibuff.is_allocated())
+				delete[] std::exchange(ibuff.p_, nullptr);
+
+		} else if (ibuff.is_allocated()) {
+			p_ = ibuff.p_; // Steal the allocated string
+			max_size_ = ibuff.max_size_;
+		} else {
+			// N < ibuff.size <= M
+			p_ = new char[ibuff.size];
+			max_size_ = ibuff.size;
+			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
 		}
+
+		// Take care of the ibuff's state
+		ibuff.size = 0;
+		ibuff.max_size_ = M;
+		ibuff.p_ = &ibuff.a_[0];
 	}
 
 	template<class T>
@@ -1146,24 +1159,6 @@ public:
 		return *this;
 	}
 
-	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) noexcept {
-		if (ibuff.is_allocated() and ibuff.max_size() > max_size()) {
-			size = ibuff.size;
-			max_size_ = ibuff.max_size_;
-			p_ = ibuff.p_;
-
-			ibuff.p_ = &ibuff.a_[0];
-			ibuff.size = 0;
-			ibuff.max_size_ = N;
-		} else {
-			size = ibuff.size;
-			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
-			ibuff.size = 0;
-		}
-
-		return *this;
-	}
-
 	template<size_t M>
 	constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
 		lossy_resize(ibuff.size);
@@ -1171,23 +1166,40 @@ public:
 		return *this;
 	}
 
+private:
 	template<size_t M>
-	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
-		if (ibuff.is_allocated() and ibuff.max_size() > max_size()) {
+	constexpr InplaceBuff& assign_move_impl(InplaceBuff<M>&& ibuff) {
+		if (ibuff.is_allocated() and ibuff.max_size() >= max_size()) {
+			// Steal the allocated string
+			if (is_allocated())
+				delete[] p_;
+
+			p_ = ibuff.p_;
 			size = ibuff.size;
 			max_size_ = ibuff.max_size_;
-			p_ = ibuff.p_;
 
-			ibuff.p_ = &ibuff.a_[0];
-			ibuff.size = 0;
-			ibuff.max_size_ = M;
 		} else {
-			size = ibuff.size;
-			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
-			ibuff.size = 0;
+			*this = ibuff; // Copy data
+			if (ibuff.is_allocated())
+				delete[] ibuff.p_;
 		}
 
+		// Take care of the ibuff's state
+		ibuff.p_ = &ibuff.a_[0];
+		ibuff.size = 0;
+		ibuff.max_size_ = M;
+
 		return *this;
+	}
+
+public:
+	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) noexcept {
+		return assign_move_impl(std::move(ibuff));
+	}
+
+	template<size_t M>
+	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
+		return assign_move_impl(std::move(ibuff));
 	}
 
 	using InplaceBuffBase::lossy_resize;

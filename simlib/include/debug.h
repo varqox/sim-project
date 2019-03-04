@@ -112,7 +112,7 @@ public:
 
 	~Guard() {
 		if (uncaught_counter_ != std::uncaught_exceptions())
-			func_();
+			try { func_(); } catch (...) {}
 	}
 };
 
@@ -124,7 +124,7 @@ constexpr inline auto make_guard(Func&& func) {
 	return Guard<Func>(std::forward<Func>(func));
 }
 
-extern thread_local InplaceArray<InplaceBuff<256>, 32> marks_collected;
+extern thread_local InplaceArray<InplaceBuff<1024>, 64> marks_collected;
 
 #define STACK_UNWINDING_MARK auto CONCAT(stack_unwind_mark, __COUNTER__) = \
 	stack_unwinding::make_guard([upper_func_name = __PRETTY_FUNCTION__]{ \
