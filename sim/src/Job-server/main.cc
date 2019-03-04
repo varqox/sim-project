@@ -660,14 +660,16 @@ static void process_job(const WorkersPool::NextJob& job) {
 	MySQL::Optional<uint64_t> aux_id; // TODO: normalize this column...
 	InplaceBuff<512> info;
 
-	auto stmt = mysql.prepare("SELECT file_id, tmp_file_id, creator, added,"
-			" type, aux_id, info"
-		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
-	stmt.bindAndExecute(job.id);
+	{
+		auto stmt = mysql.prepare("SELECT file_id, tmp_file_id, creator, added,"
+				" type, aux_id, info"
+			" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
+		stmt.bindAndExecute(job.id);
 
-	if (not stmt.next()) // Job has been probably canceled
-		return exit_procedures();
+		if (not stmt.next()) // Job has been probably canceled
+			return exit_procedures();
+	}
 
 	// Mark as in progress
 	mysql.update(intentionalUnsafeStringView(
@@ -1017,11 +1019,11 @@ static void eventsLoop() noexcept {
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
 			// Sleep for a while to prevent exception inundation
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::seconds(8));
 		} catch (...) {
 			ERRLOG_CATCH();
 			// Sleep for a while to prevent exception inundation
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::seconds(8));
 		}
 	}
 }
