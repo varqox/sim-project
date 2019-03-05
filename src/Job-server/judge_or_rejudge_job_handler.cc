@@ -30,7 +30,7 @@ void JudgeOrRejudgeJobHandler::run() {
 	// already been rejudged after the job was created
 	if (last_judgment > p_last_edit and last_judgment > job_creation_time) {
 		// Skip the job - the submission has already been rejudged
-		return set_failure("Skipped judging of the submission ", submission_id,
+		return job_cancelled("Skipped judging of the submission ", submission_id,
 			" because it has already been rejudged after this job had been"
 			" scheduled");
 	}
