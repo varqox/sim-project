@@ -141,6 +141,10 @@ void Sim::api_contest_users() {
 
 	bool allow_access = false; // Contest argument must occur
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT cu.user_id, u.username, u.first_name, u.last_name,"
 		" cu.mode");
@@ -172,6 +176,8 @@ void Sim::api_contest_users() {
 		append(",\n\"\",[\n]]"); // Empty overall actions
 	};
 
+	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	CUP overall_perms = CUP::NONE;
 	Optional<ContestUserMode> cuser_mode;
 	{
@@ -213,6 +219,7 @@ void Sim::api_contest_users() {
 					return api_error400("User ID condition specified more"
 						" than once");
 
+				rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 				user_id_condition_occurred = true;
 				qwhere.append(" AND cu.user_id", arg);
 
@@ -239,15 +246,9 @@ void Sim::api_contest_users() {
 	if (not allow_access)
 		return set_empty_response();
 
-	constexpr uint USERS_LIMIT_PER_QUERY = 50;
-	#define USERS_LIMIT_PER_QUERY_STR "50"
-	static_assert(meta::equal(USERS_LIMIT_PER_QUERY_STR,
-		meta::ToString<USERS_LIMIT_PER_QUERY>::value),
-		"Update the above #define");
-
 	// Execute query
 	auto res = mysql.query(intentionalUnsafeStringView(concat(qfields, qwhere,
-		" ORDER BY cu.user_id DESC LIMIT " USERS_LIMIT_PER_QUERY_STR)));
+		" ORDER BY cu.user_id DESC LIMIT ", rows_limit)));
 
 	append_column_names();
 
@@ -330,7 +331,6 @@ void Sim::api_contest_user() {
 		return api_error404();
 }
 
-
 void Sim::api_contest_user_add(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 	using PERMS = ContestUserPermissions;
@@ -407,9 +407,9 @@ void Sim::api_contest_user_change_mode(StringView contest_id, StringView user_id
 	if (uint(~perms & needed_perm))
 		return api_error403();
 
-	auto stmt = mysql.prepare("UPDATE contest_users SET mode=?"
-		" WHERE contest_id=? AND user_id=?");
-	stmt.bindAndExecute(EnumVal<CUM>(new_mode), contest_id, user_id);
+	mysql.prepare("UPDATE contest_users SET mode=?"
+		" WHERE contest_id=? AND user_id=?")
+		.bindAndExecute(EnumVal<CUM>(new_mode), contest_id, user_id);
 }
 
 void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
@@ -420,7 +420,6 @@ void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
 	if (uint(~perms & PERMS::EXPEL))
 		return api_error403();
 
-	auto stmt = mysql.prepare("DELETE FROM contest_users"
-		" WHERE contest_id=? AND user_id=?");
-	stmt.bindAndExecute(contest_id, user_id);
+	mysql.prepare("DELETE FROM contest_users WHERE contest_id=? AND user_id=?")
+		.bindAndExecute(contest_id, user_id);
 }

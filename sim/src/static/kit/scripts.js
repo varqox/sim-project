@@ -1028,13 +1028,14 @@ function a_view_button(href, text, classes, func) {
 	};
 	return a;
 }
-function delete_with_password_to_job(elem, title, api_url, message_html, confirm_text) {
+function api_request_with_password_to_job(elem, title, api_url, message_html, confirm_text, success_msg, form_elements) {
 	var as_modal = elem.closest('.modal').length !== 0;
 	elem.append(ajax_form(title, api_url,
 		$('<p>', {
 			style: 'margin: 0 0 20px; text-align: center; max-width: 420px',
 			html: message_html
-		}).add(Form.field_group('Your password', {
+		}).add(form_elements)
+		.add(Form.field_group('Your password', {
 			type: 'password',
 			name: 'password',
 			size: 24,
@@ -1057,7 +1058,7 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 			})
 		}), function(resp, loader_parent) {
 			if (as_modal) {
-				show_success_via_loader(this, 'Deletion has been scheduled.');
+				show_success_via_loader(this, success_msg);
 				view_job(true, resp);
 			} else {
 				this.parent().remove();
@@ -1065,6 +1066,9 @@ function delete_with_password_to_job(elem, title, api_url, message_html, confirm
 			}
 		}
 	));
+}
+function delete_with_password_to_job(elem, title, api_url, message_html, confirm_text) {
+	return api_request_with_password_to_job(elem, title, api_url, message_html, confirm_text, 'Deletion has been scheduled.');
 }
 
 /* ================================= Lister ================================= */
@@ -1280,8 +1284,8 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var prev = prev_height - content.scrollTop();
 
 		remove_loader(this_.elem);
-		content.html(colorize(text_to_safe_html(data) + content.html(),
-			data.length + 2000));
+		var html_data = text_to_safe_html(data);
+		content.html(colorize(html_data + content.html(), html_data.length + 2000));
 		var curr_height = content[0].scrollHeight;
 		content.scrollTop(curr_height - prev);
 
@@ -1388,10 +1392,8 @@ function Logs(type, elem, auto_refresh_checkbox) {
 }
 function tab_logs_view(parent_elem) {
 	// Select job server log by default
-	if (url_hash_parser.next_arg() === '') {
-		url_hash_parser.append('#job_server');
-		window.location.hash += '#job_server';
-	}
+	if (url_hash_parser.next_arg() === '')
+		url_hash_parser.assign('#job_server');
 
 	parent_elem = $(parent_elem);
 	function retab(log_type, log_name) {
@@ -1450,6 +1452,9 @@ ActionsToHTML.job = function(job_id, actions_str, problem_id, job_view /*= false
 					}), actions_str.indexOf('u') === -1 ? '' : $('<a>', {
 						href: '/api/download/job/' + job_id + '/uploaded-package',
 						text: 'Uploaded package'
+					}), actions_str.indexOf('s') === -1 ? '' : $('<a>', {
+						href: '/api/download/job/' + job_id + '/uploaded-statement',
+						text: 'Uploaded statement'
 					})
 				]
 			})
@@ -1570,9 +1575,17 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 		res.push(a_view_button('/p/' + problem.id + '/edit', 'Edit',
 			'btn-small blue', edit_problem.bind(null, true, problem.id)));
 
-	if (problem_view && problem.actions.indexOf('R') !== -1)
-		res.push(a_view_button('/p/' + problem.id + '/reupload', 'Reupload',
-			'btn-small orange', reupload_problem.bind(null, true, problem.id)));
+	// if (problem_view && problem.actions.indexOf('R') !== -1)
+	// 	res.push(a_view_button('/p/' + problem.id + '/reupload', 'Reupload',
+	// 		'btn-small orange', reupload_problem.bind(null, true, problem.id)));
+
+	if (problem_view && problem.actions.indexOf('D') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
+			'btn-small red', delete_problem.bind(null, true, problem.id)));
+
+	if (problem_view && problem.actions.indexOf('M') !== -1)
+		res.push(a_view_button('/p/' + problem.id + '/merge', 'Merge',
+			'btn-small red', merge_problem.bind(null, true, problem.id)));
 
 	if (problem_view && problem.actions.indexOf('J') !== -1)
 		res.push($('<a>', {
@@ -1580,10 +1593,6 @@ ActionsToHTML.problem = function(problem, problem_view /*= false*/) {
 			text: 'Rejudge all submissions',
 			click: rejudge_problem_submissions.bind(null, problem.id, problem.name)
 		}));
-
-	if (problem_view && problem.actions.indexOf('D') !== -1)
-		res.push(a_view_button('/p/' + problem.id + '/delete', 'Delete',
-			'btn-small red', delete_problem.bind(null, true, problem.id)));
 
 	if (problem_view && problem.actions.indexOf('L') !== -1)
 		res.push(a_view_button('/p/' + problem.id + '/reset_time_limits',
@@ -2087,7 +2096,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				else if (name == "user")
 					td.append(a_view_button('/u/' + info[name], info[name],
 						undefined, view_user.bind(null, true, info[name])));
-				else if (name == "problem")
+				else if (name == "problem" || name == "deleted problem" || name == "target problem")
 					td.append(a_view_button('/p/' + info[name], info[name],
 						undefined, view_problem.bind(null, true, info[name])));
 				else if (name == "contest")
@@ -2270,6 +2279,18 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 							info.problem, undefined,
 							view_problem.bind(null, true, info.problem)));
 
+				if (info['deleted problem'] !== undefined)
+					append_tag('deleted problem',
+						a_view_button('/c/p' + info['deleted problem'],
+							info['deleted problem'], undefined,
+							view_problem.bind(null, true, info['deleted problem'])));
+
+				if (info['target problem'] !== undefined)
+					append_tag('target problem',
+						a_view_button('/c/p' + info['target problem'],
+							info['target problem'], undefined,
+							view_problem.bind(null, true, info['target problem'])));
+
 				if (info.contest !== undefined)
 					append_tag('contest',
 						a_view_button('/c/c' + info.contest,
@@ -2337,12 +2358,15 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 					name: 'language',
 					required: true,
 					html: $('<option>', {
-						value: 'c',
-						text: 'C'
+						value: 'c11',
+						text: 'C11'
 					}).add('<option>', {
-						value: 'cpp',
-						text: 'C++',
+						value: 'cpp11',
+						text: 'C++11',
 						selected: true
+					}).add('<option>', {
+						value: 'cpp14',
+						text: 'C++14'
 					}).add('<option>', {
 						value: 'pascal',
 						text: 'PASCAL'
@@ -2891,6 +2915,88 @@ function add_problem(as_modal) {
 		);
 	});
 }
+function append_reupload_problem(elem, as_modal, problem) {
+	elem.append(ajax_form('Reupload problem', '/api/problem/' + problem.id + '/reupload',
+		Form.field_group("Problem's name", {
+			type: 'text',
+			name: 'name',
+			value: problem.name,
+			size: 25,
+			// maxlength: 'TODO...',
+			placeholder: 'Take from Simfile',
+		}).add(Form.field_group("Problem's label", {
+			type: 'text',
+			name: 'label',
+			value: problem.label,
+			size: 25,
+			// maxlength: 'TODO...',
+			placeholder: 'Take from Simfile or make from name',
+		})).add(Form.field_group("Problem's type",
+			$('<select>', {
+				name: 'type',
+				required: true,
+				html: $('<option>', {
+					value: 'PUB',
+					text: 'Public',
+					selected: ('Public' == problem.type ? true : undefined)
+				}).add('<option>', {
+					value: 'PRI',
+					text: 'Private',
+					selected: ('Private' == problem.type ? true : undefined)
+				}).add('<option>', {
+					value: 'CON',
+					text: 'Contest only',
+					selected: ('Contest only' == problem.type ? true : undefined)
+				})
+			})
+		)).add(Form.field_group('Memory limit [MB]', {
+			type: 'text',
+			name: 'mem_limit',
+			value: problem.memory_limit,
+			size: 25,
+			// maxlength: 'TODO...',
+			placeholder: 'Take from Simfile',
+		})).add(Form.field_group('Global time limit [s] (for each test)', {
+			type: 'text',
+			name: 'global_time_limit',
+			size: 25,
+			// maxlength: 'TODO...',
+			placeholder: 'No global time limit',
+		})).add(Form.field_group('Reset time limits using model solution', {
+			type: 'checkbox',
+			name: 'reset_time_limits',
+			checked: true
+		})).add(Form.field_group('Seek for new tests', {
+			type: 'checkbox',
+			name: 'seek_for_new_tests',
+			checked: true
+		})).add(Form.field_group('Reset scoring', {
+			type: 'checkbox',
+			name: 'reset_scoring'
+		})).add(Form.field_group('Ignore Simfile', {
+			type: 'checkbox',
+			name: 'ignore_simfile',
+		})).add(Form.field_group('Zipped package', {
+			type: 'file',
+			name: 'package',
+			required: true
+		})).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Submit'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Reuploaded');
+				view_job(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/jobs/' + resp;
+			}
+		}, 'reupload-problem')
+	);
+}
 function reupload_problem(as_modal, problem_id) {
 	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
 		if (data.length === 0)
@@ -2899,96 +3005,231 @@ function reupload_problem(as_modal, problem_id) {
 				statusText: 'Not Found'
 			});
 
-		data = data[0];
-
-		var actions = data.actions;
+		problem = data[0];
+		var actions = problem.actions;
 		if (actions.indexOf('R') === -1)
 			return show_error_via_loader(this, {
 					status: '403',
 					statusText: 'Not Allowed'
 				});
 
-		this.append(ajax_form('Reupload problem', '/api/problem/' + problem_id + '/reupload',
-			Form.field_group("Problem's name", {
+		append_reupload_problem(this, as_modal, problem);
+
+	}, '/p/' + problem_id + '/reupload');
+}
+function append_problem_tags(elem, problem_id, problem_tags) {
+	elem = $(elem);
+
+	var list_tags = function(hidden) {
+		var tags = (hidden ? problem_tags.hidden : problem_tags.public);
+		var tbody = $('<tbody>');
+
+		var add_form = [
+			Form.field_group('Name', {
 				type: 'text',
 				name: 'name',
-				value: data.name,
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'Take from Simfile',
-			}).add(Form.field_group("Problem's label", {
-				type: 'text',
-				name: 'label',
-				value: data.label,
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'Take from Simfile or make from name',
-			})).add(Form.field_group("Problem's type",
-				$('<select>', {
-					name: 'type',
-					required: true,
-					html: $('<option>', {
-						value: 'PUB',
-						text: 'Public',
-						selected: ('Public' == data.type ? true : undefined)
-					}).add('<option>', {
-						value: 'PRI',
-						text: 'Private',
-						selected: ('Private' == data.type ? true : undefined)
-					}).add('<option>', {
-						value: 'CON',
-						text: 'Contest only',
-						selected: ('Contest only' == data.type ? true : undefined)
-					})
-				})
-			)).add(Form.field_group('Memory limit [MB]', {
-				type: 'text',
-				name: 'mem_limit',
-				value: data.memory_limit,
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'Take from Simfile',
-			})).add(Form.field_group('Global time limit [s] (for each test)', {
-				type: 'text',
-				name: 'global_time_limit',
-				size: 25,
-				// maxlength: 'TODO...',
-				placeholder: 'No global time limit',
-			})).add(Form.field_group('Reset time limits using model solution', {
-				type: 'checkbox',
-				name: 'reset_time_limits',
-				checked: true
-			})).add(Form.field_group('Seek for new tests', {
-				type: 'checkbox',
-				name: 'seek_for_new_tests',
-				checked: true
-			})).add(Form.field_group('Reset scoring', {
-				type: 'checkbox',
-				name: 'reset_scoring'
-			})).add(Form.field_group('Ignore Simfile', {
-				type: 'checkbox',
-				name: 'ignore_simfile',
-			})).add(Form.field_group('Zipped package', {
-				type: 'file',
-				name: 'package',
+				size: 24,
+				// maxlength: 'TODO...'
+				autofocus: true,
 				required: true
-			})).add('<div>', {
+			}),
+			$('<input>', {
+				type: 'hidden',
+				name: 'hidden',
+				value: hidden
+			}),
+			$('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
-					value: 'Submit'
+					value: 'Add tag'
 				})
-			}), function(resp) {
-				if (as_modal) {
-					show_success_via_loader(this, 'Reuploaded');
-					view_job(true, resp);
-				} else {
-					this.parent().remove();
-					window.location.href = '/jobs/' + resp;
-				}
-			}, 'add-problem')
-		);
-	}, '/p/' + problem_id + '/reupload');
+			})
+		];
+
+		// Add button
+		elem.append($('<center>', {html: [
+			$('<table>', {class: 'tags-edit'}).append($('<thead>', {
+				html: '<tr>' +
+					'<th class="name">Name</th>' +
+					'<th class="actions">Actions</th>' +
+				'</tr>'
+			})).append(tbody),
+			a_view_button(undefined, 'Add tag', 'btn', function() {
+				modal(ajax_form('Add tag',
+					'/api/problem/' + problem_id + '/edit/tags/add_tag',
+					add_form, function() {
+						show_success_via_loader(this, 'The tag has been added.');
+						// Add tag
+						var input = add_form[0].children('input');
+						tags.push(input.val());
+						make_row(input.val()).appendTo(tbody);
+						input.val('');
+						// Close modal
+						var modal = $(this).closest('.modal');
+						modal.fadeOut(150, close_modal.bind(null, modal));
+					}));
+			})
+		]}));
+
+		var make_row = function(tag) {
+			var edit_form = [
+				Form.field_group('Name', {
+					type: 'text',
+					name: 'name',
+					size: 24,
+					value: tag,
+					// maxlength: 'TODO...'
+					autofocus: true,
+					required: true
+				}),
+				$('<input>', {
+					type: 'hidden',
+					name: 'old_name',
+					value: tag
+				}),
+				$('<input>', {
+					type: 'hidden',
+					name: 'hidden',
+					value: hidden
+				}),
+				$('<div>', {
+					html: $('<input>', {
+						class: 'btn blue',
+						type: 'submit',
+						value: 'Edit'
+					})
+				})
+			];
+
+			var delete_from = $('<form>', {html: [
+				$('<input>', {
+					type: 'hidden',
+					name: 'name',
+					value: tag
+				}),
+				$('<input>', {
+					type: 'hidden',
+					name: 'hidden',
+					value: hidden
+				})
+			]}).add('<label>', {html: [
+				'Are you sure to delete the tag: ',
+				$('<label>', {
+					class: 'problem-tag' + (hidden ? ' hidden' : ''),
+					text: tag
+				}),
+				'?'
+			]});
+
+			var row = $('<tr>', {html: [
+				$('<td>', {text: tag}),
+				$('<td>', {html: [
+					a_view_button(undefined, 'Edit', 'btn-small blue', function() {
+						edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this line
+						modal(ajax_form('Edit tag',
+							'/api/problem/' + problem_id + '/edit/tags/edit_tag',
+							edit_form, function() {
+								show_success_via_loader(this, 'done.');
+								// Update tag
+								var old_tag = tag;
+								tag = edit_form[0].children('input').val();
+								tags[tags.indexOf(old_tag)] = tag;
+								edit_form[1].children('input').val(tag);
+
+								delete_from.find('label').text(tag);
+								delete_from.find('input').val(tag);
+
+								row.children().eq(0).text(tag).css({
+									'background-color': '#a3ffa3',
+									transition: 'background-color 0s cubic-bezier(0.55, 0.06, 0.68, 0.19)'
+								});
+								// Without this it does not change to green immediately
+								setTimeout(function() {
+									row.children().eq(0).css({
+										'background-color': 'initial',
+										transition: 'background-color 2s cubic-bezier(0.55, 0.06, 0.68, 0.19)'
+									});
+								}, 50);
+								// Close modal
+								var modal = $(this).closest('.modal');
+								modal.fadeOut(150, close_modal.bind(null, modal));
+							}));
+					}),
+					a_view_button(undefined, 'Delete', 'btn-small red',
+						dialogue_modal_request.bind(null, 'Delete tag',
+							delete_from, 'Yes, delete it', 'btn-small red',
+							'/api/problem/' + problem_id + '/edit/tags/delete_tag',
+							function(_, loader_parent) {
+								show_success_via_loader(loader_parent, 'The tag has been deleted.');
+								row.fadeOut(1000);
+								// Delete tag
+								tags.splice(tags.indexOf(tag), 1);
+								// Close modal
+								var modal = $(this).closest('.modal');
+								modal.fadeOut(150, close_modal.bind(null, modal));
+							}, 'No, go back'))
+				]})
+			]});
+			return row;
+		};
+
+		for (var x in tags)
+			make_row(tags[x]).appendTo(tbody);
+	};
+
+	tabmenu(default_tabmenu_attacher.bind(elem), [
+		'Public', list_tags.bind(null, false),
+		'Hidden', list_tags.bind(null, true)
+	]);
+}
+function append_change_problem_statement_form(elem, as_modal, problem_id) {
+	$(elem).append(ajax_form('Change statement',
+		'/api/problem/' + problem_id + '/change_statement',
+		Form.field_group("New statement's path", {
+			type: 'text',
+			name: 'path',
+			size: 24,
+			placeholder: 'The same as the old statement path'
+			// maxlength: 'TODO...'
+		}).add(Form.field_group('File', {
+			type: 'file',
+			name: 'statement',
+			required: true
+		})).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Change statement'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Statement change was scheduled');
+				view_job(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/jobs/' + resp;
+			}
+		}));
+}
+function change_problem_statement(as_modal, problem_id) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+		var problem = data[0];
+		if (problem.actions.indexOf('C') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		append_change_problem_statement_form(this, problem_id);
+
+	}, '/p/' + problem_id + '/change_statement');
 }
 function edit_problem(as_modal, problem_id, opt_hash) {
 	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
@@ -3015,172 +3256,20 @@ function edit_problem(as_modal, problem_id, opt_hash) {
 					view_problem.bind(null, true, problem_id))
 			]
 		}));
+
 		var tabs = [
-			'Edit tags', function() {
-				var list_tags = function(hidden) {
-					var tags = (hidden ? problem.tags.hidden : problem.tags.public);
-					var tbody = $('<tbody>');
-
-					var add_form = [
-						Form.field_group('Name', {
-							type: 'text',
-							name: 'name',
-							size: 24,
-							// maxlength: 'TODO...'
-							autofocus: true,
-							required: true
-						}),
-						$('<input>', {
-							type: 'hidden',
-							name: 'hidden',
-							value: hidden
-						}),
-						$('<div>', {
-							html: $('<input>', {
-								class: 'btn blue',
-								type: 'submit',
-								value: 'Add tag'
-							})
-						})
-					];
-
-					// Add button
-					elem.append($('<center>', {html: [
-						$('<table>', {class: 'tags-edit'}).append($('<thead>', {
-							html: '<tr>' +
-								'<th class="name">Name</th>' +
-								'<th class="actions">Actions</th>' +
-							'</tr>'
-						})).append(tbody),
-						a_view_button(undefined, 'Add tag', 'btn', function() {
-							modal(ajax_form('Add tag',
-								'/api/problem/' + problem_id + '/edit/tags/add_tag',
-								add_form, function() {
-									show_success_via_loader(this, 'The tag has been added.');
-									// Add tag
-									var input = add_form[0].children('input');
-									tags.push(input.val());
-									make_row(input.val()).appendTo(tbody);
-									input.val('');
-									// Close modal
-									var modal = $(this).closest('.modal');
-									modal.fadeOut(150, close_modal.bind(null, modal));
-								}));
-						})
-					]}));
-
-					var make_row = function(tag) {
-						var edit_form = [
-							Form.field_group('Name', {
-								type: 'text',
-								name: 'name',
-								size: 24,
-								value: tag,
-								// maxlength: 'TODO...'
-								autofocus: true,
-								required: true
-							}),
-							$('<input>', {
-								type: 'hidden',
-								name: 'old_name',
-								value: tag
-							}),
-							$('<input>', {
-								type: 'hidden',
-								name: 'hidden',
-								value: hidden
-							}),
-							$('<div>', {
-								html: $('<input>', {
-									class: 'btn blue',
-									type: 'submit',
-									value: 'Edit'
-								})
-							})
-						];
-
-						var delete_from = $('<form>', {html: [
-							$('<input>', {
-								type: 'hidden',
-								name: 'name',
-								value: tag
-							}),
-							$('<input>', {
-								type: 'hidden',
-								name: 'hidden',
-								value: hidden
-							})
-						]}).add('<label>', {html: [
-							'Are you sure to delete the tag: ',
-							$('<label>', {
-								class: 'problem-tag' + (hidden ? ' hidden' : ''),
-								text: tag
-							}),
-							'?'
-						]});
-
-						var row = $('<tr>', {html: [
-							$('<td>', {text: tag}),
-							$('<td>', {html: [
-								a_view_button(undefined, 'Edit', 'btn-small blue', function() {
-									edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this line
-									modal(ajax_form('Edit tag',
-										'/api/problem/' + problem_id + '/edit/tags/edit_tag',
-										edit_form, function() {
-											show_success_via_loader(this, 'done.');
-											// Update tag
-											var old_tag = tag;
-											tag = edit_form[0].children('input').val();
-											tags[tags.indexOf(old_tag)] = tag;
-											edit_form[1].children('input').val(tag);
-
-											delete_from.find('label').text(tag);
-											delete_from.find('input').val(tag);
-
-											row.children().eq(0).text(tag).css({
-												'background-color': '#a3ffa3',
-												transition: 'background-color 0s cubic-bezier(0.55, 0.06, 0.68, 0.19)'
-											});
-											// Without this it does not change to green immediately
-											setTimeout(function() {
-												row.children().eq(0).css({
-													'background-color': 'initial',
-													transition: 'background-color 2s cubic-bezier(0.55, 0.06, 0.68, 0.19)'
-												});
-											}, 50);
-											// Close modal
-											var modal = $(this).closest('.modal');
-											modal.fadeOut(150, close_modal.bind(null, modal));
-										}));
-								}),
-								a_view_button(undefined, 'Delete', 'btn-small red',
-									dialogue_modal_request.bind(null, 'Delete tag',
-										delete_from, 'Yes, delete it', 'btn-small red',
-										'/api/problem/' + problem_id + '/edit/tags/delete_tag',
-										function(_, loader_parent) {
-											show_success_via_loader(loader_parent, 'The tag has been deleted.');
-											row.fadeOut(1000);
-											// Delete tag
-											tags.splice(tags.indexOf(tag), 1);
-											// Close modal
-											var modal = $(this).closest('.modal');
-											modal.fadeOut(150, close_modal.bind(null, modal));
-										}, 'No, go back'))
-							]})
-						]});
-						return row;
-					};
-
-					for (var x in tags)
-						make_row(tags[x]).appendTo(tbody);
-				};
-
-				tabmenu(default_tabmenu_attacher.bind(elem), [
-					'Public', list_tags.bind(null, false),
-					'Hidden', list_tags.bind(null, true)
-				]);
-			}
+			'Edit tags', append_problem_tags.bind(null, elem, problem_id, problem.tags)
 		];
+
+		if (problem.actions.indexOf('C') !== -1) {
+			tabs.push('Change statement',
+				append_change_problem_statement_form.bind(null, elem, as_modal, problem_id));
+		}
+
+		if (problem.actions.indexOf('R') !== -1) {
+			tabs.push('Reupload',
+				append_reupload_problem.bind(null, elem, as_modal, problem));
+		}
 
 		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
 
@@ -3206,9 +3295,45 @@ function delete_problem(as_modal, problem_id) {
 				'You are going to delete the problem ',
 				a_view_button('/p/' + problem.id, problem.name,
 					undefined, view_problem.bind(null, true, problem.id)),
-				' and all submissions to it. As it cannot be undone, you have to confirm it with your password.'
+				' and all submissions to it. As this cannot be undone, you have to confirm this with your password.'
 			], 'Delete problem');
 	}, '/p/' + problem_id + '/delete');
+}
+function merge_problem(as_modal, problem_id) {
+	view_ajax(as_modal, '/api/problems/=' + problem_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+		var problem = data[0];
+		if (problem.actions.indexOf('M') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		api_request_with_password_to_job(this, 'Merge into another problem',
+			'/api/problem/' + problem_id + '/merge_into_another', [
+				'The problem ',
+				a_view_button('/p/' + problem.id, problem.name,
+					undefined, view_problem.bind(null, true, problem.id)),
+				' is going to be deleted. All its tags and submissions will be transfered to the target problem. Every contest problem that attaches this problem will be updated to attach the target problem.',
+				'<br>',
+				'Be aware that problem packages will not be merged - this behaves exactly as problem deletion but first transfers everything that uses this problem to use the target problem.',
+				'<br>',
+				'As this cannot be undone, you have to confirm this with your password.'
+			], 'Merge problem', 'Merging has been scheduled.',
+			Form.field_group('Target problem ID', {
+				type: 'text',
+				name: 'target_problem',
+				size: 6
+			}).add(Form.field_group('Rejudge transferred submissions', {
+				type: 'checkbox',
+				name: 'rejudge_transferred_submissions'
+			})));
+	}, '/p/' + problem_id + '/merge');
 }
 function rejudge_problem_submissions(problem_id, problem_name) {
 	dialogue_modal_request("Rejudge all problem's submissions", $('<label>', {
@@ -3338,8 +3463,7 @@ function view_problem(as_modal, problem_id, opt_hash /*= ''*/) {
 					class: 'owner',
 					html: [
 						$('<label>', {text: 'Owner'}),
-						(problem.owner_username === null ?
-							'Deleted (id: ' + problem.owner_id + ')'
+						(problem.owner_id === null ? '(Deleted)'
 							: a_view_button('/u/' + problem.owner_id,
 								problem.owner_username, undefined,
 								view_user.bind(null, true, problem.owner_id)))
@@ -3483,7 +3607,7 @@ function ProblemsLister(elem, query_suffix /*= ''*/) {
 			// Owner
 			if (this_.show_owner)
 				row.append($('<td>', {
-					html: (x.owner_username === null ? x.owner_id
+					html: (x.owner_id === null ? '(Deleted)'
 						: a_view_button('/u/' + x.owner_id, x.owner_username,
 							undefined, view_user.bind(null, true, x.owner_id)))
 				}));

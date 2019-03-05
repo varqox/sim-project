@@ -65,7 +65,7 @@ public:
 			type = Type::DATE;
 			date = datetime;
 		} else {
-			THROW("Invalid date datetimeing: ", datetime);
+			THROW("Invalid date datetime string: ", datetime);
 		}
 	}
 

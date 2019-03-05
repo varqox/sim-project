@@ -45,10 +45,8 @@ static void* worker(void*) {
 
 				HttpResponse resp = sim_worker.handle(ip, std::move(req));
 
-				auto microdur = duration_cast<microseconds>
-					(steady_clock::now() - beg).count();
-				stdlog("Response generated in ", toString(microdur / 1000.0, 3),
-					" ms.");
+				auto microdur = duration_cast<microseconds>(steady_clock::now() - beg);
+				stdlog("Response generated in ", toString(microdur * 1000), " ms.");
 
 				conn.sendResponse(std::move(resp));
 			}
@@ -106,16 +104,16 @@ int main() {
 
 	ConfigFile config;
 	try {
-		config.addVars("address", "workers");
+		config.add_vars("address", "workers");
 
-		config.loadConfigFromFile("sim.conf");
+		config.load_config_from_file("sim.conf");
 	} catch (const std::exception& e) {
 		errlog("Failed to load sim.config: ", e.what());
 		return 5;
 	}
 
-	string address = config["address"].asString();
-	int workers = config["workers"].asInt();
+	string address = config["address"].as_string();
+	int workers = config["workers"].as_int();
 
 	if (workers < 1) {
 		errlog("sim.conf: Number of workers cannot be lower than 1");

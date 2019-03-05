@@ -1,4 +1,5 @@
 #include <sim/jobs.h>
+#include <simlib/time.h>
 
 namespace jobs {
 
@@ -18,18 +19,29 @@ void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
 		jobs::AddProblemInfo info {job_info};
 		info.stage = jobs::AddProblemInfo::FIRST;
 
-		auto stmt = mysql.prepare("UPDATE jobs"
-			" SET type=?, status=" JSTATUS_PENDING_STR ", info=? WHERE id=?");
+		auto transaction = mysql.start_transaction();
 
-		stmt.bindAndExecute(
-			uint(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM), info.dump(),
-			job_id);
+		// Delete temporary files created during problem adding
+		mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority,"
+				" status, added, aux_id, info, data)"
+			" SELECT tmp_file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
+				JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM jobs WHERE id=?"
+				" AND tmp_file_id IS NOT NULL")
+			.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), job_id);
+
+		// Restart job
+		mysql.prepare("UPDATE jobs"
+			" SET type=?, status=" JSTATUS_PENDING_STR ", tmp_file_id=NULL,"
+				" info=? WHERE id=?")
+			.bindAndExecute(uint(adding ? JT::ADD_PROBLEM : JT::REUPLOAD_PROBLEM),
+				info.dump(), job_id);
+
+		transaction.commit();
 
 	// Restart job of other type
 	} else {
-		auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_PENDING_STR
-			" WHERE id=?");
-		stmt.bindAndExecute(job_id);
+		mysql.prepare("UPDATE jobs SET status=" JSTATUS_PENDING_STR
+			" WHERE id=?").bindAndExecute(job_id);
 	}
 
 	if (notify_job_server)

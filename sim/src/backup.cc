@@ -1,14 +1,13 @@
 #include <sim/constants.h>
 #include <sim/mysql.h>
-#include <sim/sqlite.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 #include <simlib/spawner.h>
 #include <simlib/time.h>
+#include <simlib/sim/problem_package.h>
 
 using std::string;
 using std::vector;
-
 
 /**
  * @brief Displays help
@@ -19,32 +18,6 @@ static void help(const char* program_name) {
 
 	printf("Usage: %s [options]\n", program_name);
 	puts("Make a backup of solutions and database contents");
-}
-
-// Backup the SQLite database
-static void backup_sqlite_db(FilePath backup_file) {
-	SQLite::Connection sqlite_db {SQLITE_DB_FILE, SQLITE_OPEN_READONLY};
-	SQLite::Connection sqlite_backup {backup_file, SQLITE_OPEN_READWRITE |
-		SQLITE_OPEN_CREATE};
-	sqlite_backup.execute("PRAGMA journal_mode=WAL");
-
-	// Initialize backup
-	sqlite3_backup* backuper = sqlite3_backup_init(sqlite_backup, "main",
-		sqlite_db, "main");
-	if (!backuper)
-		THROW_SQLITE_ERROR(sqlite_backup, "sqlite3_backup_init()");
-
-	for (;;) {
-		int rc = sqlite3_backup_step(backuper, 164);
-
-		if (rc != SQLITE_OK and rc != SQLITE_BUSY and rc != SQLITE_LOCKED)
-			break;
-
-		sqlite3_sleep(250); // 250 ms
-	}
-
-	if (sqlite3_backup_finish(backuper))
-		THROW_SQLITE_ERROR(sqlite_backup, "sqlite3_backup_step()");
 }
 
 int main2(int argc, char**argv) {
@@ -81,6 +54,69 @@ int main2(int argc, char**argv) {
 		}
 	};
 
+	// Remove temporary internal files that were not removed (e.g. a problem
+	// adding job was canceled between the first and second stage while it was
+	// pending)
+	{
+		using namespace std::chrono;
+		using namespace std::chrono_literals;
+
+		auto transaction = conn.start_transaction();
+		auto stmt = conn.prepare("SELECT tmp_file_id FROM jobs"
+			" WHERE tmp_file_id IS NOT NULL AND status IN (" JSTATUS_DONE_STR
+				"," JSTATUS_FAILED_STR "," JSTATUS_CANCELED_STR ")");
+		stmt.bindAndExecute();
+		uint64_t tmp_file_id;
+		stmt.res_bind_all(tmp_file_id);
+
+		auto deleter = conn.prepare("DELETE FROM internal_files WHERE id=?");
+		// Remove jobs temporary internal files
+		while (stmt.next()) {
+			auto file_path = internal_file_path(tmp_file_id);
+			if (access(file_path, F_OK) == 0 and
+				system_clock::now() - get_modification_time(file_path) > 2h)
+			{
+				deleter.bindAndExecute(tmp_file_id);
+				(void)unlink(file_path);
+			}
+		}
+
+		// Remove internal files that do not have an entry in internal_files
+		sim::PackageContents fc;
+		fc.load_from_directory(INTERNAL_FILES_DIR);
+		AVLDictSet<std::string> orphaned_files;
+		fc.for_each_with_prefix("", [&](StringView file) {
+			orphaned_files.emplace(file.to_string());
+		});
+
+		stmt = conn.prepare("SELECT id FROM internal_files");
+		stmt.bindAndExecute();
+		InplaceBuff<32> file_id;
+		stmt.res_bind_all(file_id);
+		while (stmt.next())
+			orphaned_files.erase(file_id);
+
+		// Remove orphaned files that are older than 2h (not to delete files
+		// that are just created but not committed)
+		orphaned_files.for_each([&](std::string const& file) {
+			struct stat64 st;
+			auto file_path = concat(INTERNAL_FILES_DIR, file);
+			if (stat64(file_path.to_cstr().data(), &st)) {
+				if (errno == ENOENT)
+					return;
+
+				THROW("stat64", errmsg());
+			}
+
+			if (system_clock::now() - get_modification_time(st) > 2h) {
+				stdlog("Deleting: ", file);
+				(void)unlink(file_path);
+			}
+		});
+
+		transaction.commit();
+	}
+
 	FileRemover mysql_dump_guard {"dump.sql"};
 	run_command({
 		"mysqldump",
@@ -90,12 +126,12 @@ int main2(int argc, char**argv) {
 		conn.impl()->db,
 	});
 
-	backup_sqlite_db(SQLITE_DB_FILE ".backup");
-
 	run_command({"git", "init"});
 	run_command({"git", "config", "--local", "user.name", "Sim backuper"});
-	run_command({"git", "add", "solutions", SQLITE_DB_FILE ".backup",
-		"dump.sql"});
+	run_command({"git", "add", "--verbose", "static"});
+	run_command({"git", "add", "--verbose", "dump.sql"});
+	run_command({"git", "add", "--verbose", "internal_files/"});
+	run_command({"git", "add", "--verbose", "logs/"});
 	run_command({"git", "commit", "-m", concat_tostr("Backup ", mysql_date())});
 
 	return 0;

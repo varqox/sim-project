@@ -9,7 +9,7 @@ namespace jobs {
 /// Append an integer @p x in binary format to the @p buff
 template<class Integer>
 inline std::enable_if_t<std::is_integral<Integer>::value, void>
-	appendDumpedInt(std::string& buff, Integer x)
+	appendDumped(std::string& buff, Integer x)
 {
 	buff.append(sizeof(x), '\0');
 	for (uint i = 1, shift = 0; i <= sizeof(x); ++i, shift += 8)
@@ -30,29 +30,64 @@ inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
 
 template<class Integer>
 inline std::enable_if_t<std::is_integral<Integer>::value, void>
-	extractDumpedInt(Integer& x, StringView& dumped_str)
+	extractDumped(Integer& x, StringView& dumped_str)
 {
 	x = extractDumpedInt<Integer>(dumped_str);
 }
 
 /// Dumps @p str to binary format XXXXABC... where XXXX code string's size and
 /// ABC... is the @p str and appends it to the @p buff
-inline void appendDumpedString(std::string& buff, StringView str) {
-	appendDumpedInt<uint32_t>(buff, str.size());
+inline void appendDumped(std::string& buff, StringView str) {
+	appendDumped<uint32_t>(buff, str.size());
 	buff += str;
+}
+
+template<class Rep, class Period>
+inline void appendDumped(std::string& buff, const std::chrono::duration<Rep, Period>& dur) {
+	appendDumped(buff, dur.count());
+}
+
+template<class Rep, class Period>
+inline void extractDumped(std::chrono::duration<Rep, Period>& dur, StringView& dumped_str) {
+	Rep rep;
+	extractDumped(rep, dumped_str);
+	dur = decltype(dur)(rep);
+}
+
+template<class T>
+inline void appendDumped(std::string& buff, const Optional<T>& opt) {
+	if (opt.has_value()) {
+		appendDumped(buff, true);
+		appendDumped(buff, opt.value());
+	} else {
+		appendDumped(buff, false);
+	}
+}
+
+template<class T>
+inline void extractDumped(Optional<T>& opt, StringView& dumped_str) {
+	bool has_val;
+	extractDumped(has_val, dumped_str);
+	if (has_val) {
+		T val;
+		extractDumped(val, dumped_str);
+		opt = val;
+	} else {
+		opt = std::nullopt;
+	}
 }
 
 /// Returns dumped @p str to binary format XXXXABC... where XXXX code string's
 /// size and ABC... is the @p str
 inline std::string dumpString(StringView str) {
 	std::string res;
-	appendDumpedString(res, str);
+	appendDumped(res, str);
 	return res;
 }
 
 inline std::string extractDumpedString(StringView& dumped_str) {
 	uint32_t size;
-	extractDumpedInt(size, dumped_str);
+	extractDumped(size, dumped_str);
 	throw_assert(dumped_str.size() >= size);
 	return dumped_str.extractPrefix(size).to_string();
 }
@@ -63,20 +98,22 @@ inline std::string extractDumpedString(StringView&& dumped_str) {
 }
 
 struct AddProblemInfo {
-	std::string name, label;
-	uint64_t memory_limit = 0; // in bytes
-	uint64_t global_time_limit = 0; // in usec
+	std::string name;
+	std::string label;
+	Optional<uint64_t> memory_limit; // in bytes
+	Optional<std::chrono::nanoseconds> global_time_limit;
 	bool reset_time_limits = false;
 	bool ignore_simfile = false;
 	bool seek_for_new_tests = false;
 	bool reset_scoring = false;
-	ProblemType problem_type = ProblemType::VOID;
-	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST;
+	ProblemType problem_type = ProblemType::PRIVATE;
+	enum Stage : uint8_t { FIRST = 0, SECOND = 1 } stage = FIRST; // TODO: remove this
 
 	AddProblemInfo() = default;
 
-	AddProblemInfo(const std::string& n, const std::string& l, uint64_t ml,
-			uint64_t gtl, bool rtl, bool is, bool sfnt, bool rs, ProblemType pt)
+	AddProblemInfo(const std::string& n, const std::string& l,
+			Optional<uint64_t> ml, Optional<std::chrono::nanoseconds> gtl,
+			bool rtl, bool is, bool sfnt, bool rs, ProblemType pt)
 		: name(n), label(l), memory_limit(ml), global_time_limit(gtl),
 			reset_time_limits(rtl), ignore_simfile(is),
 			seek_for_new_tests(sfnt), reset_scoring(rs), problem_type(pt) {}
@@ -84,8 +121,8 @@ struct AddProblemInfo {
 	AddProblemInfo(StringView str) {
 		name = extractDumpedString(str);
 		label = extractDumpedString(str);
-		extractDumpedInt(memory_limit, str);
-		extractDumpedInt(global_time_limit, str);
+		extractDumped(memory_limit, str);
+		extractDumped(global_time_limit, str);
 
 		uint8_t mask = extractDumpedInt<uint8_t>(str);
 		reset_time_limits = (mask & 1);
@@ -93,26 +130,64 @@ struct AddProblemInfo {
 		seek_for_new_tests = (mask & 4);
 		reset_scoring = (mask & 8);
 
-		problem_type = static_cast<ProblemType>(
+		problem_type = EnumVal<ProblemType>(
 			extractDumpedInt<std::underlying_type_t<ProblemType>>(str));
-		stage = static_cast<Stage>(
+		stage = EnumVal<Stage>(
 			extractDumpedInt<std::underlying_type_t<Stage>>(str));
+	}
+
+	std::string dump() const {
+		std::string res;
+		appendDumped(res, name);
+		appendDumped(res, label);
+		appendDumped(res, memory_limit);
+		appendDumped(res, global_time_limit);
+
+		uint8_t mask = reset_time_limits | (int(ignore_simfile) << 1) |
+			(int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
+		appendDumped(res, mask);
+
+		appendDumped(res, std::underlying_type_t<ProblemType>(problem_type));
+		appendDumped<std::underlying_type_t<Stage>>(res, stage);
+		return res;
+	}
+};
+
+struct MergeProblemsInfo {
+	uint64_t target_problem_id;
+	bool rejudge_transferred_submissions;
+
+	MergeProblemsInfo() = default;
+
+	MergeProblemsInfo(uint64_t tpid, bool rts) noexcept : target_problem_id(tpid), rejudge_transferred_submissions(rts) {}
+
+	MergeProblemsInfo(StringView str) {
+		extractDumped(target_problem_id, str);
+
+		auto mask = extractDumpedInt<uint8_t>(str);
+		rejudge_transferred_submissions = (mask & 1);
 	}
 
 	std::string dump() {
 		std::string res;
-		appendDumpedString(res, name);
-		appendDumpedString(res, label);
-		appendDumpedInt(res, memory_limit);
-		appendDumpedInt(res, global_time_limit);
+		appendDumped(res, target_problem_id);
 
-		uint8_t mask = reset_time_limits | (int(ignore_simfile) << 1) |
-			(int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
-		appendDumpedInt(res, mask);
-
-		appendDumpedInt(res, std::underlying_type_t<ProblemType>(problem_type));
-		appendDumpedInt<std::underlying_type_t<Stage>>(res, stage);
+		uint8_t mask = rejudge_transferred_submissions;
+		appendDumped(res, mask);
 		return res;
+	}
+};
+
+struct ChangeProblemStatementInfo {
+	std::string new_statement_path;
+
+	ChangeProblemStatementInfo() = default;
+
+	ChangeProblemStatementInfo(StringView nsp)
+		: new_statement_path(nsp.to_string()) {}
+
+	std::string dump() {
+		return new_statement_path;
 	}
 };
 

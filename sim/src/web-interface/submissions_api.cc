@@ -47,6 +47,10 @@ void Sim::api_submissions() {
 	if (not session_is_open)
 		return api_error403();
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
 		" u.username, s.problem_id, p.name, s.contest_problem_id, cp.name,"
@@ -62,7 +66,7 @@ void Sim::api_submissions() {
 		" LEFT JOIN contests c ON c.id=s.contest_id"
 		" LEFT JOIN contest_users cu ON cu.contest_id=s.contest_id AND"
 			" cu.user_id=", session_user_id,
-		" WHERE s.type!=" STYPE_VOID_STR);
+		" WHERE TRUE"); // Needed to append constraints
 
 	enum ColumnIdx {
 		SID, STYPE, SLANGUAGE, SOWNER, CUMODE, POWNER, SOWN_USERNAME, PROB_ID,
@@ -116,6 +120,8 @@ void Sim::api_submissions() {
 		append("\n]");
 	};
 
+	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	{
 		std::vector<std::function<void()>> after_checks;
 		// At most one perms optional will be set
@@ -187,6 +193,7 @@ void Sim::api_submissions() {
 					return api_error400("Submission ID condition specified more"
 						" than once");
 
+				rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 				id_condition_occurred = true;
 				qwhere.append(" AND s.id", arg);
 
@@ -331,16 +338,9 @@ void Sim::api_submissions() {
 	if (not allow_access)
 		return set_empty_response();
 
-	constexpr uint SUBMISSIONS_LIMIT_PER_QUERY = 50;
-	#define SUBMISSIONS_LIMIT_PER_QUERY_STR "50"
-	static_assert(meta::equal(SUBMISSIONS_LIMIT_PER_QUERY_STR,
-		meta::ToString<SUBMISSIONS_LIMIT_PER_QUERY>::value),
-		"Update the above #define");
-
 	// Execute query
 	auto res = mysql.query(intentionalUnsafeStringView(
-		concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT "
-		SUBMISSIONS_LIMIT_PER_QUERY_STR)));
+		concat(qfields, qwhere, " ORDER BY s.id DESC LIMIT ", rows_limit)));
 
 	append_column_names();
 
@@ -413,7 +413,6 @@ void Sim::api_submissions() {
 		case SubmissionType::IGNORED: append("\"Ignored\","); break;
 		case SubmissionType::PROBLEM_SOLUTION: append("\"Problem solution\",");
 			break;
-		case SubmissionType::VOID: throw_assert(false); break;
 		}
 
 		append('"', toString(SubmissionLanguage(SubmissionLanguage(strtoull(
@@ -537,15 +536,15 @@ void Sim::api_submission() {
 	EnumVal<SubmissionType> stype;
 	EnumVal<SubmissionLanguage> slang;
 	MySQL::Optional<EnumVal<CUM>> cu_mode;
-	auto stmt = mysql.prepare("SELECT s.owner, s.type, s.language, cu.mode,"
-			" p.owner"
+	auto stmt = mysql.prepare("SELECT s.file_id, s.owner, s.type, s.language,"
+			" cu.mode, p.owner"
 		" FROM submissions s"
 		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
 		" LEFT JOIN contest_users cu ON cu.contest_id=s.contest_id"
 			" AND cu.user_id=?"
 		" WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submissions_sid);
-	stmt.res_bind_all(sowner, stype, slang, cu_mode, p_owner);
+	stmt.res_bind_all(submissions_file_id, sowner, stype, slang, cu_mode, p_owner);
 	if (not stmt.next())
 		return api_error404();
 
@@ -582,14 +581,15 @@ void Sim::api_submission_add() {
 
 	StringView next_arg = url_args.extractNextArg();
 	// Load problem id and contest problem id (if specified)
-	StringView problem_id, contest_problem_id;
+	StringView problem_id;
+	Optional<StringView> contest_problem_id;
 	for (; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		if (next_arg[0] == 'p' and isDigit(next_arg.substr(1)) and
 			problem_id.empty())
 		{
 			problem_id = next_arg.substr(1);
 		} else if (hasPrefix(next_arg, "cp") and isDigit(next_arg.substr(2)) and
-			contest_problem_id.empty())
+			not contest_problem_id.has_value())
 		{
 			contest_problem_id = next_arg.substr(2);
 		} else
@@ -600,9 +600,9 @@ void Sim::api_submission_add() {
 		return api_error400("problem have to be specified");
 
 	bool may_submit_ignored = false;
-	InplaceBuff<32> contest_id, contest_round_id;
+	MySQL::Optional<InplaceBuff<32>> contest_id, contest_round_id;
 	// Problem submission
-	if (contest_problem_id.empty()) {
+	if (not contest_problem_id.has_value()) {
 		// Check permissions to the problem
 		auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
 		InplaceBuff<32> powner;
@@ -629,7 +629,7 @@ void Sim::api_submission_add() {
 			" STRAIGHT_JOIN contests c ON c.id=cp.contest_id"
 			" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=?"
 			" WHERE cp.id=? AND cp.problem_id=?");
-		stmt.bindAndExecute(session_user_id, contest_problem_id, problem_id);
+		stmt.bindAndExecute(session_user_id, contest_problem_id.value(), problem_id);
 
 		bool is_public;
 		InplaceBuff<20> cr_begins_str, cr_ends_str;
@@ -658,10 +658,12 @@ void Sim::api_submission_add() {
 	// Validate fields
 	SubmissionLanguage slang;
 	auto slang_str = request.form_data.get("language");
-	if (slang_str == "c")
-		slang = SubmissionLanguage::C;
-	else if (slang_str == "cpp")
-		slang = SubmissionLanguage::CPP;
+	if (slang_str == "c11")
+		slang = SubmissionLanguage::C11;
+	else if (slang_str == "cpp11")
+		slang = SubmissionLanguage::CPP11;
+	else if (slang_str == "cpp14")
+		slang = SubmissionLanguage::CPP14;
 	else if (slang_str == "pascal")
 		slang = SubmissionLanguage::PASCAL;
 	else
@@ -682,51 +684,49 @@ void Sim::api_submission_add() {
 	if ((code.empty() ? get_file_size(solution_tmp_path) : code.size()) >
 		SOLUTION_MAX_SIZE)
 	{
-		add_notification("error", "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE, " bytes = ", SOLUTION_MAX_SIZE >> 10, " KB)");
+		add_notification("error", "Solution is too big (maximum allowed size: ", SOLUTION_MAX_SIZE, " bytes = ", humanizeFileSize(SOLUTION_MAX_SIZE),
+			')');
 		return api_error400(notifications);
 	}
 
+	auto transaction = mysql.start_transaction();
+
+	mysql.update("INSERT INTO internal_files VALUES()");
+	auto file_id = mysql.insert_id();
+	auto file_remover = make_call_in_destructor([file_id] {
+		(void)unlink(internal_file_path(file_id));
+	});
+
+	// Save source file
+	if (not code.empty())
+		putFileContents(internal_file_path(file_id), code);
+	else if (move(solution_tmp_path, internal_file_path(file_id)))
+		THROW("move()", errmsg());
+
 	// Insert submission
-	auto stmt = mysql.prepare("INSERT submissions (owner, problem_id,"
+	auto stmt = mysql.prepare("INSERT submissions (file_id, owner, problem_id,"
 			" contest_problem_id, contest_round_id, contest_id, type, language,"
 			" initial_status, full_status, submit_time, last_judgment,"
 			" initial_report, final_report)"
-		" VALUES(?, ?, ?, ?, ?, " STYPE_VOID_STR ", ?, " SSTATUS_PENDING_STR ","
-			SSTATUS_PENDING_STR ", ?, ?, '', '')");
-	if (contest_problem_id.empty()) {
-		stmt.bindAndExecute(session_user_id, problem_id, nullptr, nullptr,
-			nullptr, EnumVal<SubmissionLanguage>(slang), mysql_date(),
-			mysql_date(0));
-	} else {
-		stmt.bindAndExecute(session_user_id, problem_id, contest_problem_id,
-			contest_round_id, contest_id, EnumVal<SubmissionLanguage>(slang),
-			mysql_date(), mysql_date(0));
-	}
-
-	auto submission_id = stmt.insert_id();
-
-	// Fill the submission's source file
-	// File
-	auto solution_dest = concat<64>("solutions/", submission_id);
-	if (code.empty()) {
-		if (move(solution_tmp_path, solution_dest))
-			THROW("move() failed", errmsg());
-	// Code
-	} else
-		putFileContents(solution_dest, code);
+		" VALUES(?, ?, ?, ?, ?, ?, ?, ?, " SSTATUS_PENDING_STR
+			"," SSTATUS_PENDING_STR ", ?, ?, '', '')");
+	stmt.bindAndExecute(file_id, session_user_id, problem_id,
+		contest_problem_id, contest_round_id, contest_id,
+		EnumVal<SubmissionType>(ignored_submission ?
+			SubmissionType::IGNORED : SubmissionType::NORMAL),
+		EnumVal<SubmissionLanguage>(slang), mysql_date(), mysql_date(0));
 
 	// Create a job to judge the submission
-	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
-			" aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
-			", ?, ?, ?, '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
-		mysql_date(), submission_id, jobs::dumpString(problem_id));
+	auto submission_id = stmt.insert_id();
+	mysql.prepare("INSERT jobs (file_id, creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(NULL, ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
+			", ?, ?, ?, '')")
+		.bindAndExecute(session_user_id, priority(JobType::JUDGE_SUBMISSION),
+			mysql_date(), submission_id, jobs::dumpString(problem_id));
 
-	// Activate the submission
-	stmt = mysql.prepare("UPDATE submissions SET type=? WHERE id=?");
-	stmt.bindAndExecute(EnumVal<SubmissionType>(ignored_submission ?
-		SubmissionType::IGNORED : SubmissionType::NORMAL), submission_id);
+	transaction.commit();
+	file_remover.cancel();
 
 	jobs::notify_job_server();
 	append(submission_id);
@@ -738,8 +738,8 @@ void Sim::api_submission_source() {
 	if (uint(~submissions_perms & SubmissionPermissions::VIEW_SOURCE))
 		return api_error403();
 
-	append(cpp_syntax_highlighter(getFileContents(
-		concat("solutions/", submissions_sid))));
+	append(cpp_syntax_highlighter(getFileContents(internal_file_path(
+		submissions_file_id))));
 }
 
 void Sim::api_submission_download() {
@@ -753,7 +753,7 @@ void Sim::api_submission_download() {
 	resp.headers["Content-Disposition"] = concat_tostr("attachment; filename=",
 		submissions_sid, to_extension(submissions_slang));
 
-	resp.content = concat("solutions/", submissions_sid);
+	resp.content = internal_file_path(submissions_file_id);
 	resp.content_type = server::HttpResponse::FILE;
 }
 
@@ -769,13 +769,12 @@ void Sim::api_submission_rejudge() {
 	stmt.res_bind_all(problem_id);
 	throw_assert(stmt.next());
 
-	stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
-			" aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, ?, ?, ?, ?, '')");
-	stmt.bindAndExecute(session_user_id,
-		priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
-		(uint)JobType::JUDGE_SUBMISSION, mysql_date(), submissions_sid,
-		jobs::dumpString(problem_id));
+	stmt = mysql.prepare("INSERT jobs (file_id, creator, status, priority, type,"
+			" added, aux_id, info, data)"
+		" VALUES(NULL, ?, " JSTATUS_PENDING_STR ", ?, "
+			JTYPE_REJUDGE_SUBMISSION_STR ", ?, ?, ?, '')");
+	stmt.bindAndExecute(session_user_id, priority(JobType::REJUDGE_SUBMISSION),
+		mysql_date(), submissions_sid, jobs::dumpString(problem_id));
 
 	jobs::notify_job_server();
 }
@@ -790,7 +789,7 @@ void Sim::api_submission_change_type() {
 
 	StringView type_s = request.form_data.get("type");
 
-	SubmissionType new_type;
+	EnumVal<SubmissionType> new_type;
 	if (type_s == "I")
 		new_type = ST::IGNORED;
 	else if (type_s == "N")
@@ -798,45 +797,37 @@ void Sim::api_submission_change_type() {
 	else
 		return api_error400("Invalid type, it must be one of those: I or N");
 
-	// Lock the table to be able to safely modify the submission
-	// locking contest_problems is required by update_final()
-	mysql.update("LOCK TABLES submissions WRITE, contest_problems READ");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
-	auto res = mysql.query(intentionalUnsafeStringView(
-		concat("SELECT full_status, owner, problem_id, contest_problem_id"
-			" FROM submissions WHERE id=", submissions_sid)));
-	throw_assert(res.next());
+	auto stmt = mysql.prepare("SELECT full_status, owner, problem_id,"
+		" contest_problem_id FROM submissions WHERE id=?");
+	stmt.bindAndExecute(submissions_sid);
+	EnumVal<SS> full_status;
+	MySQL::Optional<uint64_t> owner, contest_problem_id;
+	uint64_t problem_id;
+	stmt.res_bind_all(full_status, owner, problem_id, contest_problem_id);
+	throw_assert(stmt.next());
 
-	enum ColumnIdx { FULL_STATUS, OWNER, PID, CPID };
-
-	SS full_status = SS(strtoull(res[FULL_STATUS]));
-	StringView owner = (res.is_null(OWNER) ? "" : res[OWNER]);
-	StringView problem_id = res[PID];
-	StringView contest_problem_id = (res.is_null(CPID) ? "" : res[CPID]);
+	submission::update_final_lock(mysql, owner, problem_id);
 
 	// Cannot be FINAL
 	if (is_special(full_status)) {
-		auto stmt = mysql.prepare("UPDATE submissions"
-			" SET type=?, problem_final=0, contest_final=0,"
-				" contest_initial_final=0"
-			" WHERE id=?");
-		stmt.bindAndExecute(uint(new_type), submissions_sid);
-		return;
+		mysql.prepare("UPDATE submissions"
+			" SET type=?, problem_final=FALSE, contest_final=FALSE,"
+				" contest_initial_final=FALSE"
+			" WHERE id=?").bindAndExecute(new_type, submissions_sid);
+		return transaction.commit();
 	}
 
 	// May be of type FINAL
-	SignalBlocker sb; // This part shouldn't be interrupted
 
 	// Update the submission first
-	auto stmt = mysql.prepare("UPDATE submissions SET type=?, final_candidate=?"
-		" WHERE id=?");
-	stmt.bindAndExecute(uint(new_type), (new_type == ST::NORMAL),
+	mysql.prepare("UPDATE submissions SET type=?, final_candidate=?"
+		" WHERE id=?").bindAndExecute(new_type, (new_type == ST::NORMAL),
 		submissions_sid);
 
 	submission::update_final(mysql, owner, problem_id, contest_problem_id, false);
+	transaction.commit();
 }
 
 void Sim::api_submission_delete() {
@@ -845,24 +836,30 @@ void Sim::api_submission_delete() {
 	if (uint(~submissions_perms & SubmissionPermissions::DELETE))
 		return api_error403();
 
-	// Lock the table to be able to safely delete the submission
-	// locking contest_problems is required by update_final()
-	mysql.update("LOCK TABLES submissions WRITE, contest_problems READ");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
-	auto res = mysql.query(intentionalUnsafeStringView(
-		concat("SELECT owner, problem_id, contest_problem_id"
-		" FROM submissions WHERE id=", submissions_sid)));
-	throw_assert(res.next());
+	auto stmt = mysql.prepare("SELECT owner, problem_id, contest_problem_id"
+		" FROM submissions WHERE id=?");
+	stmt.bindAndExecute(submissions_sid);
+	MySQL::Optional<uint64_t> owner, contest_problem_id;
+	uint64_t problem_id;
+	stmt.res_bind_all(owner, problem_id, contest_problem_id);
+	throw_assert(stmt.next());
 
-	SignalBlocker sb; // This part shouldn't be interrupted
+	submission::update_final_lock(mysql, owner, problem_id);
 
-	// TODO: maybe make a job out of it
+	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+			" added, aux_id, info, data)"
+		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
+			JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM submissions WHERE id=?")
+		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
+			submissions_sid);
 
-	submission::delete_submission(mysql, submissions_sid);
+	mysql.prepare("DELETE FROM submissions WHERE id=?")
+		.bindAndExecute(submissions_sid);
 
-	submission::update_final(mysql, (res.is_null(0) ? "" : res[0]), res[1],
-		(res.is_null(2) ? "" : res[2]), false);
+	submission::update_final(mysql, owner, problem_id, contest_problem_id, false);
+
+	transaction.commit();
+	jobs::notify_job_server();
 }

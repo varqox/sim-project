@@ -269,7 +269,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 	// Make sure we can use int
 	if (input.size() + BEGIN_GUARDS + END_GUARDS > INT_MAX)
-		THROW("Input string too long");
+		THROW("Input string is too long");
 
 	/* Remove "\\\n" sequences */
 	int end = input.size();
@@ -744,7 +744,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				// very rare situation and gives little profit at the expense of
 				// a not pretty if statement
 				back_insert(res, begin_style[OPERATOR], '\\', end_style,
-					"</td></tr>\n"
+					"\n</td></tr>"
 					"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 						"\"></td><td>");
 			} while (str[i] != input[j += 2]);
@@ -763,7 +763,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				res += end_style;
 			// Break the line
 			auto line_str = toStr(++line);
-			back_insert(res, "</td></tr>\n"
+			back_insert(res, "\n</td></tr>"
 				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
 					"\"></td><td>");
 			// Restore styles

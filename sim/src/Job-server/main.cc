@@ -1,8 +1,4 @@
-#include "contest.h"
-#include "judge.h"
-#include "main.h"
-#include "problem.h"
-#include "user.h"
+#include "dispatcher.h"
 
 #include <future>
 #include <map>
@@ -36,7 +32,6 @@ using std::thread;
 using std::vector;
 
 thread_local MySQL::Connection mysql;
-thread_local SQLite::Connection sqlite;
 
 namespace {
 
@@ -136,7 +131,7 @@ public:
 		// Select jobs
 		auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info"
 			" FROM jobs"
-			" WHERE status=" JSTATUS_PENDING_STR " AND type!=" JTYPE_VOID_STR
+			" WHERE status=" JSTATUS_PENDING_STR
 			" ORDER BY priority DESC, id ASC LIMIT 4");
 		stmt.res_bind_all(jid, jtype, priority, aux_id, info);
 		// Sets job's status to NOTICED_PENDING
@@ -185,8 +180,8 @@ public:
 
 				// Assign job to its category
 				switch (jtype) {
-				// Judge job
 				case JT::JUDGE_SUBMISSION:
+				case JT::REJUDGE_SUBMISSION:
 					queue_job(judge_jobs, strtoull(intentionalUnsafeStringView(
 						jobs::extractDumpedString(info))), false);
 					break;
@@ -199,7 +194,6 @@ public:
 					queue_job(judge_jobs, aux_id, true);
 					break;
 
-				case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 					queue_job(judge_jobs, aux_id, true);
 					break;
 
@@ -207,21 +201,22 @@ public:
 				case JT::REUPLOAD_PROBLEM:
 				case JT::EDIT_PROBLEM:
 				case JT::DELETE_PROBLEM:
+				case JT::MERGE_PROBLEMS:
+				case JT::CHANGE_PROBLEM_STATEMENT:
+				case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 					queue_job(problem_jobs, aux_id, true);
 					break;
 
-				// Other job
+				// Other job (local jobs that don't have associated problem)
 				case JT::ADD_PROBLEM:
 				case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
 				case JT::DELETE_USER:
 				case JT::DELETE_CONTEST:
 				case JT::DELETE_CONTEST_ROUND:
 				case JT::DELETE_CONTEST_PROBLEM:
+				case JT::DELETE_FILE:
 					other_jobs.insert({jid, priority, false});
 					break;
-
-				case JT::VOID:
-					throw_assert(false);
 				}
 				mark_stmt.execute();
 			} while (stmt.next());
@@ -593,8 +588,6 @@ public:
 			try {
 				thread_local Worker w(*this);
 				// Connect to databases
-				sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
-					SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 				mysql = MySQL::make_conn_with_credential_file(".db.config");
 
 				for (;;)
@@ -650,24 +643,8 @@ static void spawn_worker(WorkersPool& wp) noexcept {
 	}
 }
 
-// A major BUG has been found in zip.h that makes it unsafe in multithreaded use
-// of files with relative paths (libarchive uses chdir(2) internally) thus job
-// server to remain stable as long as the libarchive is used must run one worker
-// at a time
-#define SERIALIZE_JOBS 1
-#if SERIALIZE_JOBS
-std::mutex blocker;
-#endif
-
-static void process_local_job(WorkersPool::NextJob job) {
+static void process_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
-
-#if SERIALIZE_JOBS
-	blocker.lock();
-	auto serializer = make_call_in_destructor([]{
-		blocker.unlock();
-	});
-#endif
 
 	auto exit_procedures = [&job]{
 		EventsQueue::register_event([job]{
@@ -676,177 +653,56 @@ static void process_local_job(WorkersPool::NextJob job) {
 		});
 	};
 
-	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
-		job.problem_id, ", locked: ", job.locked_its_problem, '}');
-
 	EnumVal<JobType> jtype;
-	InplaceBuff<32> creator, aux_id;
+	MySQL::Optional<uint64_t> file_id, tmp_file_id;
+	MySQL::Optional<InplaceBuff<32>> creator; // TODO: use uint64_t
+	InplaceBuff<32> added;
+	MySQL::Optional<uint64_t> aux_id; // TODO: normalize this column...
 	InplaceBuff<512> info;
 
-	auto stmt = mysql.prepare("SELECT creator, type, aux_id, info"
-		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(creator, jtype, aux_id, info);
-	stmt.bindAndExecute(job.id);
+	{
+		auto stmt = mysql.prepare("SELECT file_id, tmp_file_id, creator, added,"
+				" type, aux_id, info"
+			" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
+		stmt.bindAndExecute(job.id);
 
-	if (not stmt.next()) // Job has been probably cancelled
-		return exit_procedures();
+		if (not stmt.next()) // Job has been probably canceled
+			return exit_procedures();
+	}
 
 	// Mark as in progress
 	mysql.update(intentionalUnsafeStringView(
 		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
 			" WHERE id=", job.id)));
 
-	try {
-		using JT = JobType;
-		switch (jtype) {
-		case JT::ADD_PROBLEM:
-			add_problem(job.id, creator, info);
-			break;
+	stdlog("Processing job ", job.id, "...");
 
-		case JT::REUPLOAD_PROBLEM:
-			reupload_problem(job.id, creator, info, aux_id);
-			break;
-
-		case JT::EDIT_PROBLEM:
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-			mysql.update(intentionalUnsafeStringView(
-				concat("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
-					" WHERE id=", job.id)));
-			break;
-
-		case JT::DELETE_PROBLEM:
-			delete_problem(job.id, aux_id);
-			break;
-
-		case JT::DELETE_USER:
-			delete_user(job.id, aux_id);
-			break;
-
-		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
-			contest_problem_reselect_final_submissions(job.id, aux_id);
-			break;
-
-		case JT::DELETE_CONTEST:
-			delete_contest(job.id, aux_id);
-			break;
-
-		case JT::DELETE_CONTEST_ROUND:
-			delete_contest_round(job.id, aux_id);
-			break;
-
-		case JT::DELETE_CONTEST_PROBLEM:
-			delete_contest_problem(job.id, aux_id);
-			break;
-
-		case JT::VOID:
-		case JT::JUDGE_SUBMISSION:
-		case JT::ADD_JUDGE_MODEL_SOLUTION:
-		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-			THROW("Unexpected local job type: ", toString(JT(jtype)));
-		}
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		// Fail job
-		stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
-		stmt.bindAndExecute(concat("Caught exception: ", e.what()), job.id);
-	}
+	Optional<StringView> creat;
+	if (creator.has_value())
+		creat = creator.value();
+	job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info,
+		added);
 
 	exit_procedures();
 }
 
-// static void process_judge_job(WorkersPool::NextJob job) {
-//  STACK_UNWINDING_MARK;
-
-//  auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=?");
-//  stmt.bindAndExecute(job.id);
-//  stdlog(pthread_self(), " got judge {", job.id, ", ", job.problem_id, '}');
-//  std::this_thread::sleep_for(std::chrono::seconds(3));
-//  pthread_exit(nullptr);
-// }
-
-static void process_judge_job(WorkersPool::NextJob job) {
+static void process_local_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
 
-#if SERIALIZE_JOBS
-	blocker.lock();
-	auto serializer = make_call_in_destructor([]{
-		blocker.unlock();
-	});
-#endif
+	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
+		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
-	auto exit_procedures = [&job]{
-		EventsQueue::register_event([job]{
-			if (job.locked_its_problem)
-				jobs_queue.unlock_problem(job.problem_id);
-		});
-	};
+	process_job(job);
+}
+
+static void process_judge_job(const WorkersPool::NextJob& job) {
+	STACK_UNWINDING_MARK;
 
 	stdlog(pthread_self(), " got judge job {id:", job.id, ", problem: ",
 		job.problem_id, ", locked: ", job.locked_its_problem, '}');
 
-	EnumVal<JobType> jtype;
-	InplaceBuff<32> creator, aux_id, added;
-	InplaceBuff<512> info;
-
-	auto stmt = mysql.prepare("SELECT creator, type, added, aux_id, info"
-		" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.res_bind_all(creator, jtype, added, aux_id, info);
-	stmt.bindAndExecute(job.id);
-
-	if (not stmt.next()) // Job has been probably cancelled
-		return exit_procedures();
-
-	// Mark as in progress
-	mysql.update(intentionalUnsafeStringView(
-		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
-			" WHERE id=", job.id)));
-
-	try {
-		using JT = JobType;
-		switch (jtype) {
-		case JT::JUDGE_SUBMISSION:
-			judge_submission(job.id, aux_id, added);
-			break;
-
-		case JT::ADD_JUDGE_MODEL_SOLUTION:
-			problem_add_or_reupload_jugde_model_solution(job.id,
-				JobType::ADD_PROBLEM);
-			break;
-
-		case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-			problem_add_or_reupload_jugde_model_solution(job.id,
-				JobType::REUPLOAD_PROBLEM);
-			break;
-
-		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-			reset_problem_time_limits_using_model_solution(job.id, aux_id);
-			break;
-
-		case JT::VOID:
-		case JT::ADD_PROBLEM:
-		case JT::REUPLOAD_PROBLEM:
-		case JT::EDIT_PROBLEM:
-		case JT::DELETE_PROBLEM:
-		case JT::DELETE_USER:
-		case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
-		case JT::DELETE_CONTEST:
-		case JT::DELETE_CONTEST_ROUND:
-		case JT::DELETE_CONTEST_PROBLEM:
-			THROW("Unexpected judge job type: ", toString(JT(jtype)));
-		}
-
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		// Fail job
-		stmt = mysql.prepare("UPDATE jobs"
-			" SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?");
-		stmt.bindAndExecute(concat("Caught exception: ", e.what()), job.id);
-	}
-
-	exit_procedures();
+	process_job(job);
 }
 
 static void sync_and_assign_jobs();
@@ -1163,20 +1019,23 @@ static void eventsLoop() noexcept {
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
 			// Sleep for a while to prevent exception inundation
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::seconds(8));
 		} catch (...) {
 			ERRLOG_CATCH();
 			// Sleep for a while to prevent exception inundation
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::seconds(8));
 		}
 	}
 }
 
 // Clean up database
-static void cleanUpDBs() {
+static void cleanUpDB() {
 	STACK_UNWINDING_MARK;
 
 	try {
+		// Do it in a transaction to speed things up
+		auto transaction = mysql.start_transaction();
+
 		// Fix jobs that are in progress after the job-server died
 		auto res = mysql.query("SELECT id, type, info FROM jobs WHERE status="
 			JSTATUS_IN_PROGRESS_STR);
@@ -1187,56 +1046,7 @@ static void cleanUpDBs() {
 		// Fix jobs that are noticed [ending] after the job-server died
 		mysql.update("UPDATE jobs SET status=" JSTATUS_PENDING_STR
 			" WHERE status=" JSTATUS_NOTICED_PENDING_STR);
-
-		// Remove void (invalid) jobs that are older than 24 h
-		auto yesterday_date = mysql_date(time(nullptr) - 24 * 60 * 60);
-		auto stmt = mysql.prepare("DELETE FROM jobs WHERE type="
-			JTYPE_VOID_STR " AND added<?");
-		stmt.bindAndExecute(yesterday_date);
-
-		// Remove void (invalid) submissions that are older than 24 h
-		{
-			stmt = mysql.prepare("SELECT id FROM submissions"
-				" WHERE type=" STYPE_VOID_STR " AND submit_time<?");
-			stmt.bindAndExecute(yesterday_date);
-			InplaceBuff<20> submission_id;
-			stmt.res_bind_all(submission_id);
-			while (stmt.next())
-				submission::delete_submission(mysql, submission_id);
-		}
-
-		// Remove void (invalid) problems and associated with them submissions
-		// and jobs
-		for (;;) { // TODO test it
-			res = mysql.query("SELECT id FROM problems"
-				" WHERE type=" PTYPE_VOID_STR " LIMIT 32");
-			if (res.rows_num() == 0)
-				break;
-
-			while (res.next()) {
-				StringView pid = res[0];
-				// Delete submissions
-				{
-					stmt = mysql.prepare("SELECT id FROM submissions"
-						" WHERE problem_id=?");
-					stmt.bindAndExecute(pid);
-					InplaceBuff<20> submission_id;
-					stmt.res_bind_all(submission_id);
-					while (stmt.next())
-						submission::delete_submission(mysql, submission_id);
-				}
-
-				// Delete problem's files
-				(void)remove_r(concat("problems/", pid));
-				(void)remove(concat("problems/", pid, ".zip"));
-
-				// Delete the problem (we have to do it here to prevent this
-				// loop from going infinite)
-				stmt = mysql.prepare("DELETE FROM problems WHERE id=?");
-				stmt.bindAndExecute(pid);
-			}
-		}
-
+		transaction.commit();
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
@@ -1278,21 +1088,19 @@ int main() {
 
 	// Connect to the databases
 	try {
-		sqlite = SQLite::Connection(SQLITE_DB_FILE, SQLITE_OPEN_CREATE |
-			SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX);
 		mysql = MySQL::make_conn_with_credential_file(".db.config");
 
-		cleanUpDBs();
+		cleanUpDB();
 
 		ConfigFile cf;
-		cf.addVars("js_local_workers", "js_judge_workers");
-		cf.loadConfigFromFile("sim.conf");
+		cf.add_vars("js_local_workers", "js_judge_workers");
+		cf.load_config_from_file("sim.conf");
 
-		int lworkers_no = cf["js_local_workers"].asInt();
+		int lworkers_no = cf["js_local_workers"].as_int();
 		if (lworkers_no < 1)
 			THROW("sim.conf: js_local_workers cannot be lower than 1");
 
-		int jworkers_no = cf["js_judge_workers"].asInt();
+		int jworkers_no = cf["js_judge_workers"].as_int();
 		if (jworkers_no < 1)
 			THROW("sim.conf: js_judge_workers cannot be lower than 1");
 
