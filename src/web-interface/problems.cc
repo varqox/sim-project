@@ -34,7 +34,8 @@ Sim::ProblemPermissions Sim::problems_get_permissions(StringView owner_id,
 		PERM::VIEW_RELATED_JOBS | PERM::DOWNLOAD | PERM::SUBMIT | PERM::EDIT |
 		PERM::SUBMIT_IGNORED | PERM::REUPLOAD | PERM::REJUDGE_ALL |
 		PERM::RESET_TIME_LIMITS | PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS |
-		PERM::DELETE | PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
+		PERM::DELETE | PERM::MERGE | PERM::CHANGE_STATEMENT |
+		PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
 
 	if (not session_is_open)
 		return (ptype == ProblemType::PUBLIC ? PERM::VIEW | PERM::VIEW_TAGS
@@ -127,6 +128,11 @@ void Sim::problems_problem() {
 		page_template(intentionalUnsafeStringView(
 			concat("Delete problem ", problems_pid)));
 		append("<script>delete_problem(false, ", problems_pid, ");</script>");
+
+	} else if (next_arg == "merge") {
+		page_template(intentionalUnsafeStringView(
+			concat("Merge problem ", problems_pid)));
+		append("<script>merge_problem(false, ", problems_pid, ");</script>");
 
 	} else
 		return error404();

@@ -51,11 +51,11 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	session_close();
 
 	// Remove obsolete sessions
-	auto stmt = mysql.prepare("DELETE FROM session WHERE expires<?");
-	stmt.bindAndExecute(mysql_date());
+	mysql.prepare("DELETE FROM session WHERE expires<?")
+		.bindAndExecute(mysql_date());
 
 	// Create a record in database
-	stmt = mysql.prepare("INSERT IGNORE session"
+	auto stmt = mysql.prepare("INSERT IGNORE session"
 		" (id, csrf_token, user_id, data, ip, user_agent, expires)"
 		" VALUES(?,?,?,'',?,?,?)");
 
@@ -97,9 +97,8 @@ void Sim::session_destroy() {
 		return;
 
 	try {
-		auto stmt = mysql.prepare("DELETE FROM session WHERE id=?");
-		stmt.bindAndExecute(session_id);
-
+		mysql.prepare("DELETE FROM session WHERE id=?")
+			.bindAndExecute(session_id);
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
 	}

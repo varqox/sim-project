@@ -12,7 +12,7 @@ void Sim::api_contest_entry_token() {
 	} else if (next_arg[0] == '=') {
 		StringView token = next_arg.substr(1);
 		static_assert(CONTEST_ENTRY_TOKEN_LEN != CONTEST_ENTRY_SHORT_TOKEN_LEN,
-			"These cannot be equal because this would case conflict in"
+			"These cannot be equal because this would cause conflict in"
 			" selecting the token in the below query");
 		auto stmt = mysql.prepare("SELECT c.id, c.name"
 			" FROM contest_entry_tokens t"
@@ -102,10 +102,7 @@ void Sim::api_contest_entry_token() {
 void Sim::api_contest_entry_token_add(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	mysql.update("LOCK TABLES contest_entry_tokens WRITE");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT 1 FROM contest_entry_tokens WHERE contest_id=?");
 	stmt.bindAndExecute(contest_id);
@@ -119,15 +116,14 @@ void Sim::api_contest_entry_token_add(StringView contest_id) {
 		token = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
 		stmt.bindAndExecute(token, contest_id);
 	} while (stmt.affected_rows() == 0);
+
+	transaction.commit();
 }
 
 void Sim::api_contest_entry_token_regen(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	mysql.update("LOCK TABLES contest_entry_tokens WRITE");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT 1 FROM contest_entry_tokens WHERE contest_id=?");
 	stmt.bindAndExecute(contest_id);
@@ -141,22 +137,21 @@ void Sim::api_contest_entry_token_regen(StringView contest_id) {
 		new_token = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
 		stmt.bindAndExecute(new_token, contest_id);
 	} while (stmt.affected_rows() == 0);
+
+	transaction.commit();
 }
 
 void Sim::api_contest_entry_token_delete(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	auto stmt = mysql.prepare("DELETE FROM contest_entry_tokens WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	mysql.prepare("DELETE FROM contest_entry_tokens WHERE contest_id=?")
+		.bindAndExecute(contest_id);
 }
 
 void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	mysql.update("LOCK TABLES contest_entry_tokens WRITE");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT short_token_expiration"
 		" FROM contest_entry_tokens WHERE contest_id=?");
@@ -180,15 +175,14 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 		new_token = generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
 		stmt.bindAndExecute(new_token, exp_date, contest_id);
 	} while (stmt.affected_rows() == 0);
+
+	transaction.commit();
 }
 
 void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
-	mysql.update("LOCK TABLES contest_entry_tokens WRITE");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT short_token_expiration"
 		" FROM contest_entry_tokens WHERE contest_id=?");
@@ -211,6 +205,8 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 		new_token = generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
 		stmt.bindAndExecute(new_token, exp_date, contest_id);
 	} while (stmt.affected_rows() == 0);
+
+	transaction.commit();
 }
 
 void Sim::api_contest_entry_token_short_delete(StringView contest_id) {

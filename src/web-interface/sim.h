@@ -7,7 +7,6 @@
 #include <sim/constants.h>
 #include <sim/cpp_syntax_highlighter.h>
 #include <sim/mysql.h>
-#include <sim/sqlite.h>
 #include <simlib/http/response.h>
 #include <simlib/parsers.h>
 #include <utime.h>
@@ -18,7 +17,6 @@ class Sim final {
 private:
 	/* ============================== General ============================== */
 
-	SQLite::Connection sqlite;
 	MySQL::Connection mysql;
 	CStringView client_ip; // TODO: put in request?
 	server::HttpRequest request;
@@ -95,7 +93,11 @@ private:
 
 	void api_job_download_log();
 
-	void api_job_download_uploaded_package();
+	void api_job_download_uploaded_package(Optional<uint64_t> file_id,
+		JobType job_type);
+
+	void api_job_download_uploaded_statement(Optional<uint64_t> file_id,
+		JobType job_type, StringView info);
 
 	// jobs_api.cc
 	void api_problems();
@@ -106,7 +108,7 @@ private:
 
 	void api_problem_add();
 
- 	void api_statement_impl(StringView problem_id, StringView problem_label,
+ 	void api_statement_impl(uint64_t problem_file_id, StringView problem_label,
  		StringView simfile);
 
 	void api_problem_statement(StringView problem_label, StringView simfile);
@@ -124,6 +126,10 @@ private:
 	void api_problem_edit_tags();
 
 	void api_problem_delete();
+
+	void api_problem_merge_into_another();
+
+	void api_problem_change_statement();
 
 	void api_problem_attaching_contest_problems();
 
@@ -523,6 +529,7 @@ public:
 		DOWNLOAD_UPLOADED_PACKAGE = 8,
 		CANCEL = 16,
 		RESTART = 32,
+		DOWNLOAD_UPLOADED_STATEMENT = 64,
 	};
 
 private:
@@ -537,8 +544,8 @@ private:
 	JobPermissions jobs_get_overall_permissions() noexcept;
 
 	// Session must be open to access the jobs
-	JobPermissions jobs_get_permissions(StringView creator_id, JobType job_type,
-		JobStatus job_status) noexcept;
+	JobPermissions jobs_get_permissions(Optional<StringView> creator_id,
+		JobType job_type, JobStatus job_status) noexcept;
 
 	// Used to get granted permissions to the problem jobs
 	JobPermissions jobs_granted_permissions_problem(StringView problem_id);
@@ -580,6 +587,8 @@ public:
 		EDIT_TAGS = 1 << 14,
 		EDIT_HIDDEN_TAGS = 1 << 15,
 		DELETE = EDIT,
+		MERGE = DELETE,
+		CHANGE_STATEMENT = EDIT,
 		VIEW_ATTACHING_CONTEST_PROBLEMS = DELETE,
 	};
 
@@ -595,6 +604,7 @@ private:
 
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	InplaceBuff<32> problems_pid;
+	uint64_t problems_file_id;
 
 	/// Main Problems handler
 	void problems_handle();
@@ -714,6 +724,7 @@ private:
 		Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
+	uint64_t submissions_file_id;
 	SubmissionLanguage submissions_slang;
 	SubmissionPermissions submissions_perms = SubmissionPermissions::NONE;
 
@@ -761,8 +772,7 @@ private:
 	void view_logs();
 
 public:
-	Sim() : sqlite(SQLITE_DB_FILE, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX),
-		mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
+	Sim() : mysql(MySQL::make_conn_with_credential_file(".db.config")) {}
 
 	~Sim() {}
 

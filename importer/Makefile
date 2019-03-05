@@ -14,7 +14,7 @@ $(eval $(call load_dependencies, $(IMPORTER_SRCS)))
 IMPORTER_OBJS := $(call SRCS_TO_OBJS, $(IMPORTER_SRCS))
 
 importer: $(IMPORTER_OBJS) ../src/lib/sim.a ../src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -larchive
+	$(LINK) -lsupc++ -lrt -lzip
 
 ../src/lib/sim.a ../src/lib/simlib/simlib.a:
 	$(MAKE) -C .. src/lib/sim.a src/lib/simlib/simlib.a

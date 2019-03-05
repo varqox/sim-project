@@ -69,6 +69,10 @@ void Sim::api_contests() {
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT c.id, c.name, c.is_public, cu.mode");
 	qwhere.append(" FROM contests c"
@@ -106,6 +110,7 @@ void Sim::api_contests() {
 	}
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
@@ -132,6 +137,7 @@ void Sim::api_contests() {
 
 		// conditional
 		} else if (isOneOf(cond, '=', '<', '>') and ~mask & ID_COND) {
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere_append("c.id", arg);
 			mask |= ID_COND;
 
@@ -140,7 +146,7 @@ void Sim::api_contests() {
 	}
 
 	// Execute query
-	qfields.append(qwhere, " ORDER BY c.id DESC LIMIT 50");
+	qfields.append(qwhere, " ORDER BY c.id DESC LIMIT ", rows_limit);
 	auto res = mysql.query(qfields);
 
 	// Column names
@@ -208,6 +214,9 @@ void Sim::api_contest() {
 	} else if (not (next_arg[0] == 'c' and isDigit(next_arg.substr(1))))
 		return api_error404();
 
+	// We read data in several queries - transaction will make the data consistent
+	auto transaction = mysql.start_transaction();
+
 	// Select by contest id
 	contests_cid = next_arg.substr(1);
 	auto stmt = mysql.prepare("SELECT c.name, c.is_public, cu.mode"
@@ -228,16 +237,22 @@ void Sim::api_contest() {
 	contests_perms = contests_get_permissions(is_public, umode);
 
 	next_arg = url_args.extractNextArg();
-	if (next_arg == "ranking")
+	if (next_arg == "ranking") {
+		transaction.rollback(); // We only read data...
 		return api_contest_ranking("contest_id", contests_cid);
-	else if (next_arg == "edit")
+	} else if (next_arg == "edit") {
+		transaction.rollback(); // We only read data...
 		return api_contest_edit(is_public);
-	else if (next_arg == "delete")
+	} else if (next_arg == "delete") {
+		transaction.rollback(); // We only read data...
 		return api_contest_delete();
-	else if (next_arg == "add_round")
+	} else if (next_arg == "add_round") {
+		transaction.rollback(); // We only read data...
 		return api_contest_round_add();
-	else if (not next_arg.empty())
+	} else if (not next_arg.empty()) {
+		transaction.rollback(); // We only read data...
 		return api_error400();
+	}
 
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403();
@@ -395,6 +410,9 @@ void Sim::api_contest_round() {
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
+	// We read data in several queries - transaction will make the data consistent
+	auto transaction = mysql.start_transaction();
+
 	auto stmt = mysql.prepare("SELECT c.id, c.name, c.is_public, cr.name,"
 			" cr.item, cr.ranking_exposure, cr.begins, cr.full_results,"
 			" cr.ends, cu.mode"
@@ -435,16 +453,22 @@ void Sim::api_contest_round() {
 	}
 
 	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "ranking")
+	if (next_arg == "ranking") {
+		transaction.rollback(); // We only read data...
 		return api_contest_ranking("contest_round_id", contests_crid);
-	else if (next_arg == "attach_problem")
+	} else if (next_arg == "attach_problem") {
+		transaction.rollback(); // We only read data...
 		return api_contest_problem_add();
-	else if (next_arg == "edit")
+	} else if (next_arg == "edit") {
+		transaction.rollback(); // We only read data...
 		return api_contest_round_edit();
-	else if (next_arg == "delete")
+	} else if (next_arg == "delete") {
+		transaction.rollback(); // We only read data...
 		return api_contest_round_delete();
-	else if (not next_arg.empty())
+	} else if (not next_arg.empty()) {
+		transaction.rollback(); // We only read data...
 		return api_error404();
+	}
 
 	// Append names
 	append("[\n{\"fields\":["
@@ -703,16 +727,19 @@ void Sim::api_contest_add() {
 	if (notifications.size)
 		return api_error400(notifications);
 
+	auto transaction = mysql.start_transaction();
+
 	// Add contest
 	auto stmt = mysql.prepare("INSERT contests(name, is_public) VALUES(?, ?)");
 	stmt.bindAndExecute(name, is_public);
 
 	auto contest_id = stmt.insert_id();
 	// Add user to owners
-	stmt = mysql.prepare("INSERT contest_users(user_id, contest_id, mode)"
-		" VALUES(?, ?, " CU_MODE_OWNER_STR ")");
-	stmt.bindAndExecute(session_user_id, contest_id);
+	mysql.prepare("INSERT contest_users(user_id, contest_id, mode)"
+		" VALUES(?, ?, " CU_MODE_OWNER_STR ")")
+		.bindAndExecute(session_user_id, contest_id);
 
+	transaction.commit();
 	append(contest_id);
 }
 
@@ -740,9 +767,8 @@ void Sim::api_contest_edit(bool is_public) {
 		return api_error400(notifications);
 
 	// Update contest
-	auto stmt = mysql.prepare("UPDATE contests SET name=?, is_public=?"
-		" WHERE id=?");
-	stmt.bindAndExecute(name, will_be_public, contests_cid);
+	mysql.prepare("UPDATE contests SET name=?, is_public=? WHERE id=?")
+		.bindAndExecute(name, will_be_public, contests_cid);
 }
 
 void Sim::api_contest_delete() {
@@ -764,7 +790,6 @@ void Sim::api_contest_delete() {
 		mysql_date(), contests_cid);
 
 	jobs::notify_job_server();
-
 	append(stmt.insert_id());
 }
 
@@ -894,6 +919,8 @@ void Sim::api_contest_problem_add() {
 	if (notifications.size)
 		return api_error400(notifications);
 
+	auto transaction = mysql.start_transaction();
+
 	auto stmt = mysql.prepare("SELECT owner, type, name FROM problems"
 		" WHERE id=?");
 	stmt.bindAndExecute(problem_id);
@@ -920,6 +947,7 @@ void Sim::api_contest_problem_add() {
 		(name.empty() ? pname : name), EnumVal<SFSM>(final_selecting_method),
 		reveal_score, contests_crid);
 
+	transaction.commit();
 	append(stmt.insert_id());
 }
 
@@ -930,14 +958,13 @@ void Sim::api_contest_problem_rejudge_all_submissions(StringView problem_id) {
 	if (uint(~contests_perms & PERM::ADMIN))
 		return api_error403();
 
-	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+	mysql.prepare("INSERT jobs (creator, status, priority, type,"
 			" added, aux_id, info, data)"
-		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_JUDGE_SUBMISSION_STR
+		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_REJUDGE_SUBMISSION_STR
 			", ?, id, ?, ''"
-		" FROM submissions WHERE contest_problem_id=? ORDER BY id");
-	stmt.bindAndExecute(session_user_id,
-		priority(JobType::JUDGE_SUBMISSION) - 1, // Rejudge is less important
-		mysql_date(), jobs::dumpString(problem_id), contests_cpid);
+		" FROM submissions WHERE contest_problem_id=? ORDER BY id")
+		.bindAndExecute(session_user_id, priority(JobType::REJUDGE_SUBMISSION),
+			mysql_date(), jobs::dumpString(problem_id), contests_cpid);
 
 	jobs::notify_job_server();
 }
@@ -968,10 +995,7 @@ void Sim::api_contest_problem_edit() {
 		return api_error400(notifications);
 
 	// Have to check if it is necessary to reselect problem final submissions
-	mysql.update("LOCK TABLES contest_problems WRITE, jobs WRITE");
-	auto lock_guard = make_call_in_destructor([&]{
-		mysql.update("UNLOCK TABLES");
-	});
+	auto transaction = mysql.start_transaction();
 
 	// Get the old final selecting method and whether the score was revealed
 	auto stmt = mysql.prepare("SELECT final_selecting_method, reveal_score"
@@ -999,7 +1023,6 @@ void Sim::api_contest_problem_edit() {
 			priority(JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
 			mysql_date(), contests_cpid);
 
-		jobs::notify_job_server();
 		append(stmt.insert_id());
 	}
 
@@ -1008,6 +1031,9 @@ void Sim::api_contest_problem_edit() {
 		" SET name=?, reveal_score=?, final_selecting_method=? WHERE id=?");
 	stmt.bindAndExecute(name, reveal_score,
 		EnumVal<SFSM>(final_selecting_method), contests_cpid);
+
+	transaction.commit();
+	jobs::notify_job_server();
 }
 
 void Sim::api_contest_problem_delete() {
@@ -1025,27 +1051,27 @@ void Sim::api_contest_problem_delete() {
 			" added, aux_id, info, data)"
 		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
 			JTYPE_DELETE_CONTEST_PROBLEM_STR ", ?, ?, '', '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_CONTEST_PROBLEM),
-		mysql_date(), contests_cpid);
+	stmt.bindAndExecute(session_user_id,
+		priority(JobType::DELETE_CONTEST_PROBLEM), mysql_date(), contests_cpid);
 
 	jobs::notify_job_server();
-
 	append(stmt.insert_id());
 }
 
 void Sim::api_contest_problem_statement(StringView problem_id) {
 	STACK_UNWINDING_MARK;
 
-	auto stmt = mysql.prepare("SELECT label, simfile FROM problems WHERE id=?");
+	auto stmt = mysql.prepare("SELECT file_id, label, simfile FROM problems WHERE id=?");
 	stmt.bindAndExecute(problem_id);
 
+	uint64_t problem_file_id;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> label;
 	InplaceBuff<1 << 16> simfile;
-	stmt.res_bind_all(label, simfile);
+	stmt.res_bind_all(problem_file_id, label, simfile);
 	if (not stmt.next())
 		return api_error404();
 
-	return api_statement_impl(problem_id, label, simfile);
+	return api_statement_impl(problem_file_id, label, simfile);
 }
 
 namespace {
@@ -1078,6 +1104,9 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 
 	if (uint(~contests_perms & PERM::VIEW))
 		return api_error403();
+
+	// We read data several times, so transaction makes it consistent
+	auto transaction = mysql.start_transaction();
 
 	// Gather submissions owners
 	auto stmt = mysql.prepare(intentionalUnsafeStringView(

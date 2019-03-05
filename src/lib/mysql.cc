@@ -5,22 +5,22 @@ namespace MySQL {
 
 Connection make_conn_with_credential_file(FilePath filename) {
 	ConfigFile cf;
-	cf.addVars("host", "user", "password", "db");
-	cf.loadConfigFromFile(filename);
+	cf.add_vars("host", "user", "password", "db");
+	cf.load_config_from_file(filename);
 
-	cf.getVars().for_each([](auto&& it) {
-		if (it.second.isArray())
+	for (auto it : cf.get_vars()) {
+		if (it.second.is_array())
 			THROW("Simfile: variable `", it.first, "` cannot be specified as an"
 				" array");
-		if (not it.second.isSet())
+		if (not it.second.is_set())
 			THROW("Simfile: variable `", it.first, "` is not set");
-	});
+	};
 
 	// Connect
 	try {
 		Connection conn;
-		conn.connect(cf["host"].asString(), cf["user"].asString(),
-			cf["password"].asString(), cf["db"].asString());
+		conn.connect(cf["host"].as_string(), cf["user"].as_string(),
+			cf["password"].as_string(), cf["db"].as_string());
 		return conn;
 
 	} catch (const std::exception& e) {

@@ -1,9 +1,8 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
-#include <simlib/meta.h>
-
-#define SQLITE_DB_FILE "sqlite-sim.db"
+#include <simlib/string.h>
 
 // User
 constexpr uint USERNAME_MAX_LEN = 30;
@@ -66,6 +65,7 @@ constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
 constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
+constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MB
 
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
@@ -95,16 +95,10 @@ constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
 
 
 enum class ProblemType : uint8_t {
-	VOID = 0,
 	PUBLIC = 1,
 	PRIVATE = 2,
 	CONTEST_ONLY = 3,
 };
-
-#define PTYPE_VOID_STR "0"
-static_assert(meta::equal(PTYPE_VOID_STR,
-	meta::ToString<(int)ProblemType::VOID>::value),
-	"Update the above #define");
 
 #define PTYPE_PUBLIC_STR "1"
 static_assert(meta::equal(PTYPE_PUBLIC_STR,
@@ -123,7 +117,6 @@ static_assert(meta::equal(PTYPE_CONTEST_ONLY_STR,
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
-	VOID = 1,
 	IGNORED = 2,
 	PROBLEM_SOLUTION = 3,
 };
@@ -131,11 +124,6 @@ enum class SubmissionType : uint8_t {
 #define STYPE_NORMAL_STR "0"
 static_assert(meta::equal(STYPE_NORMAL_STR,
 	meta::ToString<(int)SubmissionType::NORMAL>::value),
-	"Update the above #define");
-
-#define STYPE_VOID_STR "1"
-static_assert(meta::equal(STYPE_VOID_STR,
-	meta::ToString<(int)SubmissionType::VOID>::value),
 	"Update the above #define");
 
 #define STYPE_IGNORED_STR "2"
@@ -153,21 +141,22 @@ constexpr inline const char* toString(SubmissionType x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::IGNORED: return "Ignored";
 	case SubmissionType::PROBLEM_SOLUTION: return "Problem solution";
-	case SubmissionType::VOID: return "Void";
 	}
 	return "Unknown";
 }
 
 enum class SubmissionLanguage : uint8_t {
-	C = 0,
-	CPP = 1,
-	PASCAL = 2
+	C11 = 0,
+	CPP11 = 1,
+	PASCAL = 2,
+	CPP14 = 3,
 };
 
 constexpr inline const char* toString(SubmissionLanguage x) {
 	switch (x) {
-	case SubmissionLanguage::C: return "C";
-	case SubmissionLanguage::CPP: return "C++";
+	case SubmissionLanguage::C11: return "C11";
+	case SubmissionLanguage::CPP11: return "C++11";
+	case SubmissionLanguage::CPP14: return "C++14";
 	case SubmissionLanguage::PASCAL: return "Pascal";
 	}
 	return "Unknown";
@@ -175,8 +164,10 @@ constexpr inline const char* toString(SubmissionLanguage x) {
 
 constexpr inline const char* to_extension(SubmissionLanguage x) {
 	switch (x) {
-	case SubmissionLanguage::C: return ".c";
-	case SubmissionLanguage::CPP: return ".cpp";
+	case SubmissionLanguage::C11: return ".c";
+	case SubmissionLanguage::CPP11:
+	case SubmissionLanguage::CPP14:
+		return ".cpp";
 	case SubmissionLanguage::PASCAL: return ".pas";
 	}
 	return "Unknown";
@@ -184,8 +175,10 @@ constexpr inline const char* to_extension(SubmissionLanguage x) {
 
 constexpr inline const char* to_MIME(SubmissionLanguage x) {
 	switch (x) {
-	case SubmissionLanguage::C: return "text/x-csrc";
-	case SubmissionLanguage::CPP: return "text/x-c++src";
+	case SubmissionLanguage::C11: return "text/x-csrc";
+	case SubmissionLanguage::CPP11:
+	case SubmissionLanguage::CPP14:
+		return "text/x-c++src";
 	case SubmissionLanguage::PASCAL: return "text/x-pascal";
 	}
 	return "Unknown";
@@ -270,7 +263,6 @@ static_assert(meta::equal(SFSM_WITH_HIGHEST_SCORE,
 	"Update the above #define");
 
 enum class JobType : uint8_t {
-	VOID = 0,
 	JUDGE_SUBMISSION = 1,
 	ADD_PROBLEM = 2,
 	REUPLOAD_PROBLEM = 3,
@@ -284,12 +276,11 @@ enum class JobType : uint8_t {
 	DELETE_CONTEST_ROUND = 11,
 	DELETE_CONTEST_PROBLEM = 12,
 	RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION = 13,
+	MERGE_PROBLEMS = 14,
+	REJUDGE_SUBMISSION = 15,
+	DELETE_FILE = 16,
+	CHANGE_PROBLEM_STATEMENT = 17,
 };
-
-#define JTYPE_VOID_STR "0"
-static_assert(meta::equal(JTYPE_VOID_STR,
-	meta::ToString<(int)JobType::VOID>::value),
-	"Update the above #define");
 
 #define JTYPE_JUDGE_SUBMISSION_STR "1"
 static_assert(meta::equal(JTYPE_JUDGE_SUBMISSION_STR,
@@ -356,10 +347,29 @@ static_assert(meta::equal(JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_S
 	meta::ToString<(int)JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION>::value),
 	"Update the above #define");
 
+#define JTYPE_MERGE_PROBLEMS_STR "14"
+static_assert(meta::equal(JTYPE_MERGE_PROBLEMS_STR,
+	meta::ToString<(int)JobType::MERGE_PROBLEMS>::value),
+	"Update the above #define");
+
+#define JTYPE_REJUDGE_SUBMISSION_STR "15"
+static_assert(meta::equal(JTYPE_REJUDGE_SUBMISSION_STR,
+	meta::ToString<(int)JobType::REJUDGE_SUBMISSION>::value),
+	"Update the above #define");
+
+#define JTYPE_DELETE_FILE_STR "16"
+static_assert(meta::equal(JTYPE_DELETE_FILE_STR,
+	meta::ToString<(int)JobType::DELETE_FILE>::value),
+	"Update the above #define");
+
+#define JTYPE_CHANGE_PROBLEM_STATEMENT_STR "17"
+static_assert(meta::equal(JTYPE_CHANGE_PROBLEM_STATEMENT_STR,
+	meta::ToString<(int)JobType::CHANGE_PROBLEM_STATEMENT>::value),
+	"Update the above #define");
+
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
-	case JT::VOID: return "VOID";
 	case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
 	case JT::ADD_PROBLEM: return "ADD_PROBLEM";
 	case JT::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
@@ -376,6 +386,10 @@ constexpr inline const char* toString(JobType x) {
 	case JT::DELETE_CONTEST_PROBLEM: return "DELETE_CONTEST_PROBLEM";
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		return "RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION";
+	case JT::MERGE_PROBLEMS: return "MERGE_PROBLEMS";
+	case JT::REJUDGE_SUBMISSION: return "REJUDGE_SUBMISSION";
+	case JT::DELETE_FILE: return "DELETE_FILE";
+	case JT::CHANGE_PROBLEM_STATEMENT: return "CHANGE_PROBLEM_STATEMENT";
 	}
 	return "Unknown";
 }
@@ -390,13 +404,16 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::EDIT_PROBLEM: return true;
 	case JT::DELETE_PROBLEM: return true;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
+	case JT::MERGE_PROBLEMS: return true;
+	case JT::CHANGE_PROBLEM_STATEMENT: return true;
 	case JT::JUDGE_SUBMISSION: return false;
+	case JT::REJUDGE_SUBMISSION: return false;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
 	case JT::DELETE_USER: return false;
 	case JT::DELETE_CONTEST: return false;
 	case JT::DELETE_CONTEST_ROUND: return false;
 	case JT::DELETE_CONTEST_PROBLEM: return false;
-	case JT::VOID: return false;
+	case JT::DELETE_FILE: return false;
 	}
 	return false;
 }
@@ -405,6 +422,7 @@ constexpr inline bool is_submission_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::JUDGE_SUBMISSION: return true;
+	case JT::REJUDGE_SUBMISSION: return true;
 	case JT::ADD_PROBLEM: return false;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return false;
 	case JT::REUPLOAD_PROBLEM: return false;
@@ -417,7 +435,9 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::DELETE_CONTEST_ROUND: return false;
 	case JT::DELETE_CONTEST_PROBLEM: return false;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return false;
-	case JT::VOID: return false;
+	case JT::MERGE_PROBLEMS: return false;
+	case JT::DELETE_FILE: return false;
+	case JT::CHANGE_PROBLEM_STATEMENT: return false;
 	}
 	return false;
 }
@@ -426,20 +446,23 @@ constexpr inline bool is_submission_job(JobType x) {
 constexpr inline uint priority(JobType x) {
 	using JT = JobType;
 	switch (x) {
+	case JT::DELETE_FILE: return 40;
 	case JT::DELETE_PROBLEM: return 30;
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return 30;
 	case JT::DELETE_USER: return 30;
 	case JT::DELETE_CONTEST: return 30;
 	case JT::DELETE_CONTEST_ROUND: return 30;
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
+	case JT::MERGE_PROBLEMS: return 25;
 	case JT::EDIT_PROBLEM: return 20;
+	case JT::CHANGE_PROBLEM_STATEMENT: return 20;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
 	case JT::ADD_PROBLEM: return 10;
 	case JT::REUPLOAD_PROBLEM: return 10;
 	case JT::JUDGE_SUBMISSION: return 5;
-	case JT::VOID: return 0;
+	case JT::REJUDGE_SUBMISSION: return 4;
 	}
 	return 0;
 }
@@ -488,10 +511,16 @@ constexpr inline const char* toString(JobStatus x) {
 	case JobStatus::IN_PROGRESS: return "In progress";
 	case JobStatus::DONE: return "Done";
 	case JobStatus::FAILED: return "Failed";
-	case JobStatus::CANCELED: return "Cancelled";
+	case JobStatus::CANCELED: return "Canceled";
 	}
 	return "Unknown";
 }
+
+// Internal files
+constexpr const char INTERNAL_FILES_DIR[] = "internal_files/";
+
+template<class T>
+auto internal_file_path(T file_id) { return concat<64>(INTERNAL_FILES_DIR, file_id); }
 
 // Jobs
 constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KB
@@ -501,11 +530,26 @@ constexpr const char SERVER_LOG[] = "logs/server.log";
 constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
+// Logs API
+constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 kB
+constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 kB
+
+// API
+constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
+constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
 
 // Job-server notifying file
 constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
 constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
-constexpr timespec CHECKER_COMPILATION_TIME_LIMIT = {30, 0}; // 30 s
-constexpr timespec SOLUTION_COMPILATION_TIME_LIMIT = {30, 0}; // 30 s
+constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
+constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
+ // Conver::ResetTimeLimitsOptions and Conver::Options
+constexpr std::chrono::nanoseconds MIN_TIME_LIMIT = std::chrono::milliseconds(300);
+constexpr std::chrono::nanoseconds MAX_TIME_LIMIT = std::chrono::seconds(22);
+constexpr double SOLUTION_RUNTIME_COEFFICIENT = 3;
+// JudgeWorker
+constexpr std::chrono::nanoseconds CHECKER_TIME_LIMIT = std::chrono::seconds(22);
+constexpr uint64_t CHECKER_MEMORY_LIMIT = 512 << 20; // 256 MiB
+constexpr double SCORE_CUT_LAMBDA = 2. / 3.; // See JudgeWorker::score_cut_lambda
 constexpr const char PROOT_PATH[] = "./proot";

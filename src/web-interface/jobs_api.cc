@@ -1,12 +1,14 @@
 #include "sim.h"
 
 #include <sim/jobs.h>
+#include <simlib/filesystem.h>
 
 static constexpr const char* job_type_str(JobType type) noexcept {
 	using JT = JobType;
 
 	switch (type) {
 	case JT::JUDGE_SUBMISSION: return "Judge submission";
+	case JT::REJUDGE_SUBMISSION: return "Rejudge submission";
 	case JT::ADD_PROBLEM: return "Add problem";
 	case JT::REUPLOAD_PROBLEM: return "Reupload problem";
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return "Add problem - set limits";
@@ -22,7 +24,9 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 	case JT::DELETE_CONTEST_PROBLEM: return "Delete contest problem";
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		return "Reset problem time limits using model solution";
-	case JT::VOID: return "Void";
+	case JT::MERGE_PROBLEMS: return "Merge problems";
+	case JT::DELETE_FILE: return "Delete internal file";
+	case JT::CHANGE_PROBLEM_STATEMENT: return "Change problem statement";
 	}
 
 	return "Unknown";
@@ -36,6 +40,10 @@ void Sim::api_jobs() {
 
 	using PERM = JobPermissions;
 
+	// We may read data several times (permission checking), so transaction is
+	// used to ensure data consistency
+	auto transaction = mysql.start_transaction();
+
 	// Get the overall permissions to the job queue
 	jobs_perms = jobs_get_overall_permissions();
 
@@ -43,7 +51,7 @@ void Sim::api_jobs() {
 	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
 			" j.info, j.creator, u.username");
 	qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id"
-		" WHERE j.type!=" JTYPE_VOID_STR);
+		" WHERE TRUE"); // Needed to append constraints
 
 	enum ColumnIdx {
 		JID, ADDED, JTYPE, JSTATUS, PRIORITY, AUX_ID, JINFO, CREATOR,
@@ -77,6 +85,7 @@ void Sim::api_jobs() {
 	PERM granted_perms = PERM::NONE;
 
 	// Process restrictions
+	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	StringView next_arg = url_args.extractNextArg();
 	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		constexpr uint ID_COND = 1;
@@ -92,6 +101,7 @@ void Sim::api_jobs() {
 
 		// conditional
 		if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
+			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
@@ -147,8 +157,9 @@ void Sim::api_jobs() {
 			granted_perms |= jobs_granted_permissions_submission(arg_id);
 			allow_access |= (granted_perms != PERM::NONE);
 
-			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type="
-				JTYPE_JUDGE_SUBMISSION_STR);
+			qwhere.append(" AND j.aux_id=", arg_id, " AND (j.type="
+				JTYPE_JUDGE_SUBMISSION_STR " OR j.type="
+				JTYPE_REJUDGE_SUBMISSION_STR ")");
 
 			mask |= AUX_ID_COND;
 
@@ -169,7 +180,7 @@ void Sim::api_jobs() {
 		return set_empty_response();
 
 	// Execute query
-	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT 50");
+	qfields.append(qwhere, " ORDER BY j.id DESC LIMIT ", rows_limit);
 	auto res = mysql.query(qfields);
 
 	append_column_names();
@@ -190,7 +201,7 @@ void Sim::api_jobs() {
 			break;
 		case JobStatus::DONE: append("[\"green\",\"Done\"],"); break;
 		case JobStatus::FAILED: append("[\"red\",\"Failed\"],"); break;
-		case JobStatus::CANCELED: append("[\"blue\",\"Cancelled\"],"); break;
+		case JobStatus::CANCELED: append("[\"blue\",\"Canceled\"],"); break;
 		}
 
 		append(res[PRIORITY], ',');
@@ -212,7 +223,8 @@ void Sim::api_jobs() {
 		append('{');
 
 		switch (job_type) {
-		case JobType::JUDGE_SUBMISSION: {
+		case JobType::JUDGE_SUBMISSION:
+		case JobType::REJUDGE_SUBMISSION: {
 			append("\"problem\":", jobs::extractDumpedString(res[JINFO]));
 			append(",\"submission\":", res[AUX_ID]);
 			break;
@@ -224,7 +236,6 @@ void Sim::api_jobs() {
 		case JobType::REUPLOAD_JUDGE_MODEL_SOLUTION: {
 			auto ptype_to_str = [](ProblemType& ptype) {
 				switch (ptype) {
-				case ProblemType::VOID: return "void";
 				case ProblemType::PUBLIC: return "public";
 				case ProblemType::PRIVATE: return "private";
 				case ProblemType::CONTEST_ONLY: return "contest only";
@@ -238,11 +249,11 @@ void Sim::api_jobs() {
 				append(",\"name\":", jsonStringify(info.name));
 			if (info.label.size())
 				append(",\"label\":", jsonStringify(info.label));
-			if (info.memory_limit)
-				append(",\"memory limit\":\"", info.memory_limit, " MB\"");
-			if (info.global_time_limit)
+			if (info.memory_limit.has_value())
+				append(",\"memory limit\":\"", info.memory_limit.value(), " MB\"");
+			if (info.global_time_limit.has_value())
 				append(",\"global time limit\":",
-					usecToSecStr(info.global_time_limit, 6));
+					toString(info.global_time_limit.value()));
 
 			append(",\"reset time limits\":", info.reset_time_limits ?
 					"\"yes\"" : "\"no\"",
@@ -296,7 +307,25 @@ void Sim::api_jobs() {
 			break;
 		}
 
-		case JobType::VOID:
+		case JobType::MERGE_PROBLEMS: {
+			append("\"deleted problem\":", res[AUX_ID]);
+			jobs::MergeProblemsInfo info(res[JINFO]);
+			append(",\"target problem\":", info.target_problem_id);
+			append(",\"rejudge transferred submissions\":",
+				info.rejudge_transferred_submissions ? "\"yes\"" : "\"no\"");
+			break;
+		}
+
+		case JobType::CHANGE_PROBLEM_STATEMENT: {
+			append("\"problem\":", res[AUX_ID]);
+			jobs::ChangeProblemStatementInfo info(res[JINFO]);
+			append(",\"new statement path\":", jsonStringify(info.new_statement_path));
+			break;
+		}
+
+		case JobType::DELETE_FILE:
+			break; // Nothing to show
+
 		case JobType::EDIT_PROBLEM:
 			break;
 		}
@@ -312,8 +341,15 @@ void Sim::api_jobs() {
 			append('v');
 		if (uint(perms & PERM::DOWNLOAD_LOG))
 			append('r');
-		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
-			append('u');
+		using JT = JobType;
+		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
+			isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+				JT::ADD_JUDGE_MODEL_SOLUTION, JT::REUPLOAD_JUDGE_MODEL_SOLUTION))
+		{
+			append('u'); // TODO: ^ this is very nasty
+		}
+		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and job_type == JT::CHANGE_PROBLEM_STATEMENT)
+			append('s'); // TODO: ^ this is very nasty
 		if (uint(perms & PERM::CANCEL))
 			append('C');
 		if (uint(perms & PERM::RESTART))
@@ -342,19 +378,26 @@ void Sim::api_job() {
 	if (not isDigit(jobs_jid))
 		return api_error400();
 
-	InplaceBuff<32> jcreator, aux_id;
+	MySQL::Optional<uint64_t> file_id;
+	MySQL::Optional<InplaceBuff<32>> jcreator;
+	InplaceBuff<32> aux_id;
 	InplaceBuff<256> jinfo;
 	EnumVal<JT> jtype;
 	EnumVal<JobStatus> jstatus;
 
-	auto stmt = mysql.prepare("SELECT creator, type, status, aux_id, info"
+	auto stmt = mysql.prepare("SELECT file_id, creator, type, status, aux_id, info"
 		" FROM jobs WHERE id=?");
 	stmt.bindAndExecute(jobs_jid);
-	stmt.res_bind_all(jcreator, jtype, jstatus, aux_id, jinfo);
+	stmt.res_bind_all(file_id, jcreator, jtype, jstatus, aux_id, jinfo);
 	if (not stmt.next())
 		return api_error404();
 
-	jobs_perms = jobs_get_permissions(jcreator, jtype, jstatus);
+	{
+		Optional<StringView> creator;
+		if (jcreator.has_value())
+			creator = jcreator.value();
+		jobs_perms = jobs_get_permissions(creator, jtype, jstatus);
+	}
 	// Grant permissions if possible
 	if (is_problem_job(jtype))
 		jobs_perms |= jobs_granted_permissions_problem(aux_id);
@@ -369,7 +412,9 @@ void Sim::api_job() {
 	else if (next_arg == "log")
 		return api_job_download_log();
 	else if (next_arg == "uploaded-package")
-		return api_job_download_uploaded_package();
+		return api_job_download_uploaded_package(file_id, jtype);
+	else if (next_arg == "uploaded-statement")
+		return api_job_download_uploaded_statement(file_id, jtype, jinfo);
 	else
 		return api_error400();
 }
@@ -388,9 +433,8 @@ void Sim::api_job_cancel() {
 	}
 
 	// Cancel job
-	auto stmt = mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR
-		" WHERE id=?");
-	stmt.bindAndExecute(jobs_jid);
+	mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR " WHERE id=?")
+		.bindAndExecute(jobs_jid);
 }
 
 void Sim::api_job_restart(JobType job_type, StringView job_info) {
@@ -428,15 +472,43 @@ void Sim::api_job_download_log() {
 	throw_assert(stmt.next());
 }
 
-void Sim::api_job_download_uploaded_package() {
+void Sim::api_job_download_uploaded_package(Optional<uint64_t> file_id,
+	JobType job_type)
+{
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
+	using JT = JobType;
 
-	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE))
-		return api_error403();
+	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or not isOneOf(job_type,
+			JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+			JT::ADD_JUDGE_MODEL_SOLUTION, JT::REUPLOAD_JUDGE_MODEL_SOLUTION))
+	{
+		return api_error403(); // TODO: ^ this is very nasty
+	}
 
 	resp.headers["Content-Disposition"] =
 		concat_tostr("attachment; filename=", jobs_jid, ".zip");
 	resp.content_type = server::HttpResponse::FILE;
-	resp.content = concat("jobs_files/", jobs_jid, ".zip");
+	resp.content = internal_file_path(file_id.value());
+}
+
+void Sim::api_job_download_uploaded_statement(Optional<uint64_t> file_id,
+	JobType job_type, StringView info)
+{
+	STACK_UNWINDING_MARK;
+	using PERM = JobPermissions;
+	using JT = JobType;
+
+	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) or
+		job_type != JT::CHANGE_PROBLEM_STATEMENT)
+	{
+		return api_error403(); // TODO: ^ this is very nasty
+	}
+
+	resp.headers["Content-Disposition"] =
+		concat_tostr("attachment; filename=",
+			encodeURI(intentionalUnsafeStringView(
+				filename(jobs::ChangeProblemStatementInfo(info).new_statement_path))));
+	resp.content_type = server::HttpResponse::FILE;
+	resp.content = internal_file_path(file_id.value());
 }
