@@ -42,8 +42,8 @@ void JudgeOrRejudgeJobHandler::run() {
 
 	auto update_submission = [&](SubmissionStatus initial_status, SubmissionStatus full_status, Optional<int64_t> score, auto&& initial_report, auto&& final_report) {
 		{
-			// Serializable transaction is required by update_final
-			auto transaction = mysql.start_serializable_transaction();
+			auto transaction = mysql.start_transaction();
+			submission::update_final_lock(mysql, sowner, problem_id);
 
 			using ST = SubmissionType;
 			// Get the submission's ACTUAL type

@@ -7,8 +7,7 @@
 void MergeProblemsJobHandler::run() {
 	STACK_UNWINDING_MARK;
 
-	// Serializable transaction is required by update_final
-	auto transaction = mysql.start_serializable_transaction();
+	auto transaction = mysql.start_transaction();
 
 	// Assure that both problems exist
 	{
@@ -84,6 +83,7 @@ void MergeProblemsJobHandler::run() {
 
 	// Update finals
 	for (auto const& ftu_elem : finals_to_update) {
+		submission::update_final_lock(mysql, ftu_elem[0], info.target_problem_id);
 		submission::update_final(mysql, ftu_elem[0], info.target_problem_id,
 			ftu_elem[1], false);
 	}

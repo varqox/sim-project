@@ -797,8 +797,7 @@ void Sim::api_submission_change_type() {
 	else
 		return api_error400("Invalid type, it must be one of those: I or N");
 
-	// Serializable transaction is required by update_final
-	auto transaction = mysql.start_serializable_transaction();
+	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT full_status, owner, problem_id,"
 		" contest_problem_id FROM submissions WHERE id=?");
@@ -808,6 +807,8 @@ void Sim::api_submission_change_type() {
 	uint64_t problem_id;
 	stmt.res_bind_all(full_status, owner, problem_id, contest_problem_id);
 	throw_assert(stmt.next());
+
+	submission::update_final_lock(mysql, owner, problem_id);
 
 	// Cannot be FINAL
 	if (is_special(full_status)) {
@@ -835,8 +836,7 @@ void Sim::api_submission_delete() {
 	if (uint(~submissions_perms & SubmissionPermissions::DELETE))
 		return api_error403();
 
-	// Serializable transaction is required by update_final
-	auto transaction = mysql.start_serializable_transaction();
+	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT owner, problem_id, contest_problem_id"
 		" FROM submissions WHERE id=?");
@@ -845,6 +845,8 @@ void Sim::api_submission_delete() {
 	uint64_t problem_id;
 	stmt.res_bind_all(owner, problem_id, contest_problem_id);
 	throw_assert(stmt.next());
+
+	submission::update_final_lock(mysql, owner, problem_id);
 
 	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 			" added, aux_id, info, data)"
