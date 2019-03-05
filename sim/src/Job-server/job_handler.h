@@ -29,6 +29,14 @@ protected:
 		job_failed = true;
 	}
 
+	template<class Arg1, class... Args>
+	void job_cancelled(Arg1&& arg1, Args&&... args) {
+		job_log(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
+		job_canceled();
+	}
+
+	virtual void job_canceled();
+
 	virtual void job_done();
 
 	virtual void job_done(StringView new_info);
