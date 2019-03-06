@@ -10,8 +10,6 @@ class SipJudgeLogger : public sim::JudgeLogger {
 			std::forward<Args>(args)...);
 	}
 
-	int64_t total_score_;
-	int64_t max_total_score_;
 	AVLDictMap<EnumVal<sim::JudgeReport::Test::Status>, uint> statistics_;
 	bool final_;
 
@@ -19,6 +17,7 @@ class SipJudgeLogger : public sim::JudgeLogger {
 	void log_test(StringView test_name, sim::JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Func&& func)
 	{
+		++statistics_[test_report.status];
 		auto tmplog = log("  ", paddedString(test_name, 8, LEFT), ' ',
 			paddedString(intentionalUnsafeStringView(
 				toString(floor_to_10ms(test_report.runtime), false)), 4),
@@ -45,6 +44,9 @@ class SipJudgeLogger : public sim::JudgeLogger {
 		case sim::JudgeReport::Test::CHECKER_ERROR:
 			tmplog("\033[1;35mCHECKER ERROR\033[m (Running \033[1;32mOK\033[m)");
 			break;
+		case sim::JudgeReport::Test::SKIPPED:
+			tmplog("\033[1;36mSKIPPED\033[m");
+			break;
 		}
 
 		// Rest
@@ -55,21 +57,18 @@ class SipJudgeLogger : public sim::JudgeLogger {
 
 public:
 	void begin(bool final) override {
-		total_score_ = max_total_score_ = 0;
 		final_ = final;
 	}
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
 		Sandbox::ExitStat es) override
 	{
-		++statistics_[test_report.status];
 		log_test(test_name, test_report, es, [](auto&){});
 	}
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
 		Sandbox::ExitStat es, Sandbox::ExitStat checker_es, Optional<uint64_t> checker_mem_limit, StringView checker_error_str) override
 	{
-		++statistics_[test_report.status];
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
 			tmplog("  Checker: ");
 
@@ -92,18 +91,16 @@ public:
 	}
 
 	void group_score(int64_t score, int64_t max_score, double) override {
-		total_score_ += score;
-		if (max_score > 0)
-			max_total_score_ += max_score;
-
 		log("Score: ", score, " / ", max_score);
+	}
+
+	void final_score(int64_t total_score, int64_t max_score) override {
+		if (final_ and (total_score != 0 or max_score != 0))
+			log("Total score: ", total_score, " / ", max_score);
 	}
 
 	void end() override {
 		if (final_) {
-			if (total_score_ != 0 or max_total_score_ != 0)
-				log("Total score: ", total_score_, " / ", max_total_score_);
-
 			log("------------------");
 			using S = sim::JudgeReport::Test::Status;
 
@@ -128,6 +125,9 @@ public:
 					break;
 				case S::CHECKER_ERROR:
 					log("\033[1;35mCHECKER_ERROR\033[m ", no);
+					break;
+				case S::SKIPPED:
+					log("\033[1;36mSKIPPED\033[m       ", no);
 					break;
 				}
 			});

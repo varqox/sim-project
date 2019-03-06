@@ -120,7 +120,7 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 
 		++tid.back();
 		for (int i = tid.size - 1; i > 0 and tid[i] > 'z'; --i) {
-			tid[i] -= ('z' - 'a');
+			tid[i] -= ('z' - 'a' + 1);
 			++tid[i - 1];
 		}
 	};
