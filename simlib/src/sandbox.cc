@@ -26,6 +26,19 @@ using std::vector;
 static_assert(std::is_same<decltype(SCMP_CMP(0, SCMP_CMP_MASKED_EQ, 0, 0)),
 	scmp_arg_cmp>::value, "It is needed for the below wrapper to work");
 
+// Fix macros used by macros SCMP_A{0,1,...} because initializers in C work differently
+#ifdef SCMP_CMP64
+#undef SCMP_CMP64
+
+constexpr static inline scmp_arg_cmp SCMP_CMP64(
+	decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
+	decltype(scmp_arg_cmp::datum_a) datum_a,
+	decltype(scmp_arg_cmp::datum_b) datum_b = {})
+{
+	return (scmp_arg_cmp){arg, op, datum_a, datum_b};
+}
+
+#else
 #undef SCMP_CMP
 
 constexpr static inline scmp_arg_cmp SCMP_CMP(decltype(scmp_arg_cmp::arg) arg,
@@ -34,6 +47,8 @@ constexpr static inline scmp_arg_cmp SCMP_CMP(decltype(scmp_arg_cmp::arg) arg,
 {
 	return (scmp_arg_cmp){arg, op, datum_a, datum_b};
 }
+
+#endif
 
 template<class... Arg>
 static inline void seccomp_rule_add_throw(Arg&&... args) {
