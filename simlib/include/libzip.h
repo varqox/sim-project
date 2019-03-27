@@ -291,8 +291,16 @@ public:
 			THROW("zip_set_file_compression() - ", zip_strerror(zip_));
 	}
 
+	// If name ends with '/' the directory will be created. If you want to
+	// create directory using this method, you should end it with '/' as libzip
+	// has some problems if you do not do so (e.g. with source created from zip
+	// archive).
 	// @p compression_level == 0 means default compression level
 	index_t file_add(FilePath name, ZipSource&& source, zip_flags_t flags = 0, zip_uint32_t compression_level = 4) {
+		// Directory has to be added via zip_dir_add()
+		if (name.size() > 0 and name[name.size() - 1] == '/')
+			return dir_add(name, flags);
+
 		index_t res = zip_file_add(zip_, name, source.zsource_, flags);
 		if (res == -1)
 			THROW("zip_file_add() - ", zip_strerror(zip_));
