@@ -515,7 +515,7 @@ static void compile_tex_file(StringView file) {
 
 	stdlog("\033[1mCompiling ", file, "\033[m");
 	// It is necessary (essential) to run latex two times
-	for (int iter = 0; iter < 1; ++iter) {
+	for (int iter = 0; iter < 2; ++iter) {
 		auto es = Spawner::run("pdflatex", {
 			"pdflatex",
 			"-output-dir=utils/latex",
@@ -565,15 +565,35 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 		}
 	};
 
+	using std::chrono::milliseconds;
+	using std::chrono_literals::operator""ms;
+	constexpr milliseconds STILNESS_THRESHOLD = 10ms;
+
 	// Inotify buffer
 	// WARNING: this assumes that no directory is watched
 	char inotify_buf[sizeof(inotify_event) * tex_files.size()];
-	for (;;) {
+	for (AVLDictSet<CStringView> files_to_recompile;;) {
 		process_unwatched_files();
+
+		// Multiple normal events on the same file may occur in quick
+		// succession and running latex compiler while the file is still
+		// changing is not a good idea. So we collect the events till a
+		// stillness moment occurs and then we compile them. It is not an ideal
+		// solution (waiting for stillness on every file), but works well in
+		// practice and it seems there is no need to implement move
+		// sophisticated one (monitoring stillness on each file individually)
+
 		// Wait for notification
 		pollfd pfd = {ino_fd, POLLIN, 0};
-		int rc = poll(&pfd, 1, -1);
-		if (rc < 0)
+		int rc = poll(&pfd, 1, milliseconds(STILNESS_THRESHOLD).count());
+		if (rc == 0) {
+			// Stillness happened -> safe to recompile files that changed
+			files_to_recompile.for_each(compile_tex_file);
+			files_to_recompile.clear();
+			rc = poll(&pfd, 1, -1); // Wait indefinitely for new events
+		}
+
+		if (rc < 0) // Handles error of the first or the second poll
 			THROW("poll()", errmsg());
 
 		ssize_t len = read(ino_fd, inotify_buf, sizeof(inotify_buf));
@@ -607,7 +627,7 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 
 			// Other (normal) event occurred
 			} else {
-				compile_tex_file(file);
+				files_to_recompile.emplace(file);
 			}
 		}
 	}
