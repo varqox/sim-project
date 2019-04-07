@@ -637,7 +637,7 @@ void SipPackage::compile_tex_files(bool watch) {
 	STACK_UNWINDING_MARK;
 
 	sim::PackageContents pc;
-	pc.load_from_directory("doc/", true);
+	pc.load_from_directory(".");
 
 	std::vector<std::string> tex_files;
 	pc.for_each_with_prefix("", [&](StringView file) {
@@ -646,7 +646,7 @@ void SipPackage::compile_tex_files(bool watch) {
 	});
 
 	if (tex_files.empty()) {
-		log_warning("no .tex file was found in doc/");
+		log_warning("no .tex file was found");
 		return;
 	}
 
