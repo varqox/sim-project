@@ -54,8 +54,61 @@ public:
 
 	AVLPoolAllocator() : data(new Elem[1]), capacity_(1) { ptr(0) = 1; }
 
-	AVLPoolAllocator(const AVLPoolAllocator&) = delete;
-	AVLPoolAllocator& operator=(const AVLPoolAllocator&) = delete;
+	// Provides strong exception guarantee
+	AVLPoolAllocator(const AVLPoolAllocator& apa)
+		: data(new Elem[apa.capacity_]), capacity_(apa.capacity_),
+		head(apa.head)
+	{
+		// Initialize pool -> unallocated nodes will have value max_capacity()
+		for (size_type i = 0; i < capacity(); ++i)
+			ptr(i) = 0;
+		for (size_type i = head; i != capacity(); i = apa.ptr(i))
+			ptr(i) = max_capacity();
+
+		// Update pool -> copy allocated nodes and initialize unallocated nodes
+		auto emergency_destruct = [&](int beg) {
+			for (size_type i = beg; i < capacity(); ++i)
+				if (i == head) // unallocated
+					head = ptr(i); // next unallocated
+				else
+					elem(i).~T();
+		};
+
+		head = capacity();
+		for (size_type i = capacity() - 1; i > 0; --i) {
+			if (ptr(i) == max_capacity()) {
+				ptr(i) = head;
+				head = i;
+			} else {
+				try {
+					::new (&elem(i)) T(apa.elem(i));
+				} catch (...) {
+					// Need to deallocate already copied elements
+					emergency_destruct(i + 1);
+					throw;
+				}
+			}
+		}
+
+		// 0 element has to be copied in a different way
+		if (ptr(0) == max_capacity()) {
+			ptr(0) = head;
+			head = 0;
+		} else {
+			try {
+				::new (&elem(0)) AVLNB(reinterpret_cast<AVLNB&>(data[0]));
+			} catch (...) {
+				// Need to deallocate already copied elements
+				emergency_destruct(1);
+				throw;
+			}
+		}
+	}
+
+	// Provides strong exception guarantee
+	AVLPoolAllocator& operator=(const AVLPoolAllocator& apa) {
+		*this = AVLPoolAllocator(apa);
+	}
 
 	// After moving out @p apa should be reinitialized (e.g. apa = {}), before
 	// using it in any way other than destructing
@@ -120,7 +173,10 @@ public:
 		return std::numeric_limits<size_type>::max();
 	}
 
+	// Provides strong exception guarantee
 	void reserve_for(size_type n) {
+		static_assert(std::is_nothrow_move_constructible<T>::value,
+			"Needed below");
 		if (n < capacity())
 			return;
 
@@ -137,8 +193,8 @@ public:
 			ptr(new_data, i) = i + 1;
 
 		// Move and mark unallocated cells (allocated cells will still have
-		// new_capacity as value)
-		for (size_type i = head; i < capacity(); i = ptr(i))
+		// new_capacity as value, it works because new_capacity > capacity())
+		for (size_type i = head; i != capacity(); i = ptr(i))
 			ptr(new_data, i) = ptr(i);
 
 		// Find allocated nodes and move them to the new_data
@@ -157,7 +213,10 @@ public:
 		capacity_ = new_capacity;
 	}
 
+	// Provides strong exception guarantee
 	size_type allocate() {
+		static_assert(std::is_nothrow_move_constructible<T>::value,
+			"Needed below");
 		if (head == capacity()) {
 			if (capacity() == max_capacity())
 				THROW("The AVLPool is full");
@@ -228,7 +287,7 @@ protected:
 
 	AVLPoolAllocator<Node, size_type> pool;
 
-	const size_type nil = pool.allocate();
+	size_type nil = pool.allocate(); // it is always equal to 0
 	size_type root = nil;
 	size_type size_ = 0;
 	Comp compare;
@@ -245,8 +304,8 @@ public:
 
 	AVLDictionary(Comp cmp) : AVLDictionary(1, std::move(cmp)) {}
 
-	AVLDictionary(const AVLDictionary&) = delete;
-	AVLDictionary& operator=(const AVLDictionary&) = delete;
+	AVLDictionary(const AVLDictionary&) = default;
+	AVLDictionary& operator=(const AVLDictionary&) = default;
 
 	// After moving out @p avld should be reinitialized (e.g. avld = {}), before
 	// using it in any way other than destructing
@@ -1134,21 +1193,28 @@ public:
 template<class size_type, class ValueT>
 class AVLSetNode : public AVLNodeBase<size_type> {
 public:
-	using Key = const ValueT;
-	using Value = Key;
+	using Key = ValueT;
+	using Value = const Key;
 	using RealData = Key;
-	using Data = Key;
+	using Data = const Key;
 
-	const Key key_;
+	Key key_;
 
 	template<class... Args>
 	AVLSetNode(Key key, Args&&... args)
 		: AVLNodeBase<size_type>{std::forward<Args>(args)...},
 			key_(std::move(key)) {}
 
-	Key& key() const noexcept { return key_; }
+	AVLSetNode(const AVLSetNode&) = default;
+	AVLSetNode(AVLSetNode&&)
+		noexcept(std::is_nothrow_move_constructible<Key>::value) = default;
 
-	Data& data() const { return key(); }
+	AVLSetNode& operator=(const AVLSetNode&) = delete;
+	AVLSetNode& operator=(AVLSetNode&&) = delete;
+
+	const Key& key() const noexcept { return key_; }
+
+	const Data& data() const { return key(); }
 };
 
 template<class Value, class Comp = std::less<>, class size_type = size_t>
@@ -1220,7 +1286,9 @@ public:
 
 		static_assert(sizeof(rdt) == sizeof(dt), "Needed to cast between");
 
-		DataU(RealData&& rdata) : rdt(std::move(rdata)) {}
+		DataU(RealData&& rdata)
+			noexcept(std::is_move_constructible<RealData>::value)
+			: rdt(std::move(rdata)) {}
 
 		~DataU() { rdt.~RealData(); }
 
@@ -1234,12 +1302,17 @@ public:
 	AVLMapNode(const AVLMapNode&) = delete;
 
 	AVLMapNode(AVLMapNode&& amn)
+		noexcept(std::is_nothrow_move_constructible<AVLNodeBase<size_type>>::value &&
+			std::is_nothrow_move_constructible<RealData>::value)
 		: AVLNodeBase<size_type>(std::move(amn)),
 			data_(std::move(amn.data_.rdt)) {}
 
 	AVLMapNode& operator=(const AVLMapNode&) = delete;
 
-	AVLMapNode& operator=(AVLMapNode&& amn) {
+	AVLMapNode& operator=(AVLMapNode&& amn)
+		noexcept(std::is_nothrow_move_assignable<AVLNodeBase<size_type>>::value &&
+			std::is_nothrow_move_assignable<decltype(data_)>::value)
+	{
 		AVLNodeBase<size_type>::operator=(std::move(amn));
 		data_.rdt = std::move(amn.data_.rdt);
 		return *this;
