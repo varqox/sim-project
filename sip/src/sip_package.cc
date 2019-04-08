@@ -369,6 +369,8 @@ void SipPackage::clean() {
 	if (remove_r("utils/latex/") and errno != ENOENT)
 		THROW("remove_r()", errmsg());
 
+	(void)rmdir("utils/"); // Remove utils/ directory if empty
+
 	stdlog(" done.");
 }
 
