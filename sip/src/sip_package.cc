@@ -137,16 +137,32 @@ sim::JudgeReport::Test SipPackage::generate_test_out_file(
 	return res;
 }
 
+void SipPackage::reload_simfile_from_str(std::string contents) {
+	try {
+		simfile = sim::Simfile(std::move(contents));
+	} catch (const std::exception& e) {
+		throw SipError("(Simfile) ", e.what());
+	}
+}
+
+void SipPackage::reload_sipfile_from_str(std::string contents) {
+	try {
+		sipfile = Sipfile(std::move(contents));
+	} catch (const std::exception& e) {
+		throw SipError("(Sipfile) ", e.what());
+	}
+}
+
 SipPackage::SipPackage() {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) == 0) {
 		simfile_contents = getFileContents("Simfile");
-		simfile = sim::Simfile(simfile_contents);
+		reload_simfile_from_str(simfile_contents);
 	}
 	if (access("Sipfile", F_OK) == 0) {
 		sipfile_contents = getFileContents("Sipfile");
-		sipfile = Sipfile(sipfile_contents);
+		reload_sipfile_from_str(sipfile_contents);
 	}
 }
 
@@ -775,7 +791,7 @@ void SipPackage::replace_variable_in_simfile(StringView var_name,
 	replace_variable_in_configfile(simfile.config_file(), "Simfile",
 		simfile_contents, var_name, replacement, escape_replacement);
 	simfile_contents = getFileContents("Simfile");
-	simfile = sim::Simfile(simfile_contents);
+	reload_simfile_from_str(simfile_contents);
 }
 
 void SipPackage::replace_variable_in_simfile(StringView var_name,
@@ -786,7 +802,7 @@ void SipPackage::replace_variable_in_simfile(StringView var_name,
 	replace_variable_in_configfile(simfile.config_file(), "Simfile",
 		simfile_contents, var_name, replacement);
 	simfile_contents = getFileContents("Simfile");
-	simfile = sim::Simfile(simfile_contents);
+	reload_simfile_from_str(simfile_contents);
 }
 
 void SipPackage::replace_variable_in_sipfile(StringView var_name,
@@ -797,7 +813,7 @@ void SipPackage::replace_variable_in_sipfile(StringView var_name,
 	replace_variable_in_configfile(sipfile.config_file(), "Sipfile",
 		sipfile_contents, var_name, replacement, escape_replacement);
 	sipfile_contents = getFileContents("Sipfile");
-	sipfile = Sipfile(sipfile_contents);
+	reload_sipfile_from_str(sipfile_contents);
 }
 
 void SipPackage::replace_variable_in_sipfile(StringView var_name,
@@ -808,7 +824,7 @@ void SipPackage::replace_variable_in_sipfile(StringView var_name,
 	replace_variable_in_configfile(sipfile.config_file(), "Sipfile",
 		sipfile_contents, var_name, replacement);
 	sipfile_contents = getFileContents("Sipfile");
-	sipfile = Sipfile(sipfile_contents);
+	reload_sipfile_from_str(sipfile_contents);
 }
 
 void SipPackage::create_default_directory_structure() {
@@ -849,7 +865,7 @@ void SipPackage::create_default_sipfile() {
 			"\t# Syntax: <test-range> <generator> [generator arguments]\n"
 		"]\n");
 
-	sipfile = Sipfile(default_sipfile_contents);
+	reload_sipfile_from_str(default_sipfile_contents);
 	putFileContents("Sipfile", default_sipfile_contents);
 
 	stdlog(" done.");
@@ -863,7 +879,7 @@ void SipPackage::create_default_simfile(Optional<CStringView> problem_name) {
 	auto package_dir_filename = filename(intentionalUnsafeStringView(getCWD()).withoutSuffix(1)).to_string();
 	if (access("Simfile", F_OK) == 0) {
 		simfile_contents = getFileContents("Simfile");
-		simfile = sim::Simfile(simfile_contents);
+		reload_simfile_from_str(simfile_contents);
 
 		// Problem name
 		auto replace_name_in_simfile = [&](StringView replacement) {

@@ -50,6 +50,10 @@ private:
 	// Constructs eligible conver options
 	sim::Conver::Options conver_options(bool set_default_time_limits);
 
+	void reload_simfile_from_str(std::string contents);
+
+	void reload_sipfile_from_str(std::string contents);
+
 public:
 	// Initializes the package - loads Simfile (if exists) and Sipfile (if
 	// exists)
