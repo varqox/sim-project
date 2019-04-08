@@ -274,8 +274,12 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 			var.flag |= Variable::ARRAY;
 			buff.removePrefix(1); // Skip [
 
-			while (buff.size()) {
+			for (;;) {
 				buff.removeLeading(isspace);
+				if (buff.empty()) {
+					throw_parse_error("Missing terminating ] character at the"
+						" end of an array");
+				}
 
 				if (buff[0] == ']') { // End of the array
 					buff.removePrefix(1);
@@ -317,14 +321,10 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				throw_parse_error("Unknown sequence after the value: `", buff[0],
 					'`');
 			}
-
-			if (buff.empty())
-				throw_parse_error("Missing terminating ] character at the end "
-					"of an array");
 		}
 
 		// It is not obvious that the below line is correct, but after the
-		// analysis of the above parsing it is correct
+		// analysis of the above parsing it is correct (see the loop breaks)
 		var.value_span.end = curr_pos();
 
 		/* After the value */

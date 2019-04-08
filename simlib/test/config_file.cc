@@ -556,4 +556,5 @@ workers: "2" # [103,104)
 	EXPECT_THROW(cf.load_config_from_string("a = \"\\x\""), ConfigFile::ParseError);
 	EXPECT_THROW(cf.load_config_from_string("a = \"\\xa\""), ConfigFile::ParseError);
 	EXPECT_THROW(cf.load_config_from_string(";"), ConfigFile::ParseError);
+	EXPECT_THROW(cf.load_config_from_string("a = ["), ConfigFile::ParseError);
 }
