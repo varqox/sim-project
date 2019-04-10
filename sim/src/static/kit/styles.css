@@ -938,18 +938,14 @@ a.btn.red {
 /* Navigation bar */
 .navbar {
 	display: flex;
-	/*flex-flow: row wrap;*/
 	flex-flow: row nowrap;
-	justify-content: space-between;
 	position: fixed;
 	top: 0;
 	min-width: 100%;
-	/*right: 0;*/
 	left: 0;
 	z-index: 2;
 	min-height: 40px;
 	padding-right: 15px;
-	/*overflow-x: visible;*/
 	color: #999999;
 	background-color: #1b1b1b;
 	background-image: linear-gradient(to bottom, #222222, #111111);
@@ -960,20 +956,15 @@ a.btn.red {
 		position: absolute;
 	}
 }
-.navbar > div {
-	display: flex;
-	/*flex-flow: row wrap;*/
-	flex-flow: row nowrap;
-}
-.navbar > div > a,
+.navbar > a,
 .navbar a.user {
 	padding: 10px;
 	color: #999999;
 	white-space: nowrap;
 	text-decoration: none;
 }
-.navbar > div > a:hover,
-.navbar > div > a:focus,
+.navbar > a:hover,
+.navbar > a:focus,
 .navbar a.user:hover,
 .navbar a.user:focus {
 	color: #ffffff;
@@ -985,7 +976,7 @@ a.btn.red {
 	text-decoration: none;
 }
 .navbar #clock {
-	float: left;
+	margin-left: auto;
 	padding: 10px;
 	color: #999999;
 	white-space: nowrap;

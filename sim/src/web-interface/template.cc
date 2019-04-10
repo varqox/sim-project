@@ -43,15 +43,14 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 	append("</head>"
 			"<body>"
 				"<div class=\"navbar\">"
-					"<div>"
-						"<a href=\"/\" class=\"brand\">SIM beta</a>"
-						"<script>"
-							"var nav = document.querySelector('.navbar > div');"
-							"nav.appendChild(a_view_button('/c', 'Contests', undefined,"
-								"contest_chooser));"
-							"nav.querySelector('script').remove()"
-						"</script>"
-						"<a href=\"/p\">Problems</a>");
+					"<a href=\"/\" class=\"brand\">SIM beta</a>"
+					"<script>"
+						"var nav = document.querySelector('.navbar');"
+						"nav.appendChild(a_view_button('/c', 'Contests', undefined,"
+							"contest_chooser));"
+						"nav.querySelector('script').remove()"
+					"</script>"
+					"<a href=\"/p\">Problems</a>");
 
 	if (session_is_open) {
 		if (uint(users_get_overall_permissions() & UserPermissions::VIEW_ALL))
@@ -70,10 +69,7 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 			append("<a href=\"/logs\">Logs</a>");
 	}
 
-	append("</div>"
-			"<div class=\"rightbar\">"
-				"<time id=\"clock\">", date("%H:%M:%S"),
-					"<sup>UTC</sup></time>");
+	append("<time id=\"clock\">", date("%H:%M:%S"), "<sup>UTC</sup></time>");
 
 	if (session_is_open) {
 		char utype_c = '?';
@@ -102,7 +98,6 @@ void Sim::page_template(StringView title, StringView styles, StringView scripts)
 			"<a href=\"/signup\">Sign up</a>");
 
 	append("</div>"
-		"</div>"
 		"<div class=\"notifications\">", notifications, "</div>");
 #ifdef DEBUG
 	notifications.clear();
