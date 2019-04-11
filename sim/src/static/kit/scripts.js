@@ -29,17 +29,17 @@ function text_to_safe_html(str) {
 	return x.innerHTML;
 }
 function is_logged_in() {
-	return (document.querySelector('.navbar .rightbar .user + ul > a:first-child') !== null);
+	return (document.querySelector('.navbar .user + ul > a:first-child') !== null);
 }
 function logged_user_id() {
-	var x = document.querySelector('.navbar .rightbar .user + ul > a:first-child').href;
+	var x = document.querySelector('.navbar .user + ul > a:first-child').href;
 	return x.substring(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() {
-	return (document.querySelector('.navbar .rightbar .user[user-type="A"]') !== null);
+	return (document.querySelector('.navbar .user[user-type="A"]') !== null);
 }
 function logged_user_is_teacher() {
-	return (document.querySelector('.navbar .rightbar .user[user-type="T"]') !== null);
+	return (document.querySelector('.navbar .user[user-type="T"]') !== null);
 }
 function logged_user_is_teacher_or_admin() {
 	return logged_user_is_teacher() || logged_user_is_admin();
