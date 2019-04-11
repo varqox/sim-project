@@ -950,8 +950,11 @@ a.btn.red {
 	background-color: #1b1b1b;
 	background-image: linear-gradient(to bottom, #222222, #111111);
 }
+body {
+	position: relative;
+}
 /* On too narrow screen menu would overflow (this is just a fallback to the javascript solution) */
-@media screen and (max-width: 650px) {
+@media screen and (max-width: 800px) {
 	.navbar {
 		position: absolute;
 	}
