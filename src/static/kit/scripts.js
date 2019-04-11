@@ -214,15 +214,10 @@ function copy_to_clipboard_btn(btn_text, text_to_copy) {
 // Handle navbar correct size
 function normalize_navbar() {
 	var navbar = $('.navbar');
-	navbar.css('width', 'auto');
+	navbar.css('position', 'fixed');
 
-	if (navbar.outerWidth() <= $(window).width()) {
-		navbar.css('width', '100%');
-		navbar.css('position', 'fixed');
-	} else {
+	if (navbar.outerWidth() > $(window).width())
 		navbar.css('position', 'absolute');
-		navbar.outerWidth($(document).width());
-	}
 }
 $(document).ready(normalize_navbar);
 $(window).resize(normalize_navbar);
