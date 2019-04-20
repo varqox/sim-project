@@ -140,7 +140,7 @@ inline SolutionLanguage filename_to_lang(StringView filename) {
 	else if (hasSuffix(filename, ".pas"))
 		res = SolutionLanguage::PASCAL;
 
-	// It is written that way, so the compiler will warn when the enum changes
+	// It is written that way, so the compiler warns when the enum changes
 	switch (res) {
 	case SolutionLanguage::UNKNOWN:
 	case SolutionLanguage::C:
