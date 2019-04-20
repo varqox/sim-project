@@ -6,7 +6,12 @@ Proces sprawdzania kodu użytkownika przebiega intuicyjnie. Gdy submitujemy kod,
 
 # Pierwsze użycie programu sip
 
-Dla wygody, przenieś skompilowany program pod nazwą `sip` do folderu `/usr/local/bin/` lub `~/.local/bin/`, dzięki czemu możesz użyć polecenia `sip`.
+* Pobranie i zainstalowanie już skompilowanego sipa:
+```sh
+sh -c 'mkdir -p "$HOME/.local/bin" && curl https://sim.ugo.si/kit/sip -o "$HOME/.local/bin/sip" -z "$HOME/.local/bin/sip" && chmod +x "$HOME/.local/bin/sip"'
+```
+
+* Własnoręczna kompilacja sipa: Jest opisana w https://github.com/varqox/sip. Dla wygody, przenieś skompilowany program pod nazwą `sip` do folderu `~/.local/bin/` lub `/usr/local/bin/`, dzięki czemu możesz użyć polecenia `sip`.
 
 Ustal jak będzie się nazywało twoje zadanie i jaki będzie jego tag/label (zazwyczaj trzyliterowe słowo złożone z małych liter alfabetu angielskiego). W przykładach będzie używany label `tag` oraz nazwa zadania `Nazwa Zadania`.
 
@@ -93,10 +98,10 @@ static: [
 gen: [
 	# Tu umieść zasady do generowania testów
 	# Syntax: <test-range> <generator> [generator arguments]
-	tag1a-f utils/generatorka 5 10
-	tag2a utils/generatorka 100 100000
-	tag2b utils/generatorka 1000 10000
-	tag3a-5d utils/generatorka 100000 1000000000
+	tag1a-f utils/generatorka.cpp 5 10
+	tag2a utils/generatorka.cpp 100 100000
+	tag2b utils/generatorka.cpp 1000 10000
+	tag3a-5d utils/generatorka.cpp 100000 1000000000
 ]
 ```
 
