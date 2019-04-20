@@ -60,6 +60,21 @@ void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
 		if (hasPrefix(test.generator, "sh:"))
 			return InplaceBuff<32>(substring(test.generator, 3));
 
+		if (sim::filename_to_lang(test.generator) == sim::SolutionLanguage::UNKNOWN) {
+			log_warning("generator source file `", test.generator, "` has an"
+					" invalid extension. It will be treated as a shell command.\n"
+				"  To remove this warning you have to choose one of the"
+					" following options:\n"
+				"    1. Change specified generator in Sipfile to a valid source"
+					" file e.g. utils/gen.cpp\n"
+				"    2. Rename the generator source file to have appropriate"
+					" extension e.g. utils/gen.cpp\n"
+				"    3. If it is a shell command or a binary file, prefix the"
+					" generator with sh: in Sipfile - e.g. sh:echo");
+
+			return test.generator;
+		}
+
 		return CompilationCache::compile(test.generator);
 	}());
 
@@ -170,6 +185,9 @@ void SipPackage::generate_test_in_files() {
 	STACK_UNWINDING_MARK;
 
 	stdlog("\033[1;36mGenerating input files...\033[m");
+
+	if (access("Sipfile", F_OK) != 0)
+		throw SipError("No Sipfile was found");
 
 	sipfile.load_static_tests();
 	sipfile.load_gen_tests();
@@ -483,7 +501,7 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 	sim::Conver::ConstructionResult cr =
 		conver.construct_simfile(conver_options(set_default_time_limits));
 
-	// Filter out ever line except warnings
+	// Filter out every line except warnings
 	StringView report = conver.report();
 	size_t line_beg = 0, line_end = report.find('\n');
 	size_t next_warning = report.find("warning");
@@ -593,7 +611,7 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 	for (AVLDictSet<CStringView> files_to_recompile;;) {
 		process_unwatched_files();
 
-		// Multiple normal events on the same file may occur in quick
+		// Several normal events on the same file may occur in a quick
 		// succession and running latex compiler while the file is still
 		// changing is not a good idea. So we collect the events till a
 		// stillness moment occurs and then we compile them. It is not an ideal
