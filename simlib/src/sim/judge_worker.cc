@@ -272,13 +272,13 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
 	// Checker STDOUT
-	FileDescriptor checker_stdout {openUnlinkedTmpFile()};
+	FileDescriptor checker_stdout {openUnlinkedTmpFile(O_CLOEXEC)};
 	if (checker_stdout < 0)
 		THROW("Failed to create unlinked temporary file", errmsg());
 
 	// Solution STDOUT
 	FileDescriptor solution_stdout(sol_stdout_path,
-		O_WRONLY | O_CREAT | O_TRUNC);
+		O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
 	if (solution_stdout < 0)
 		THROW("Failed to open file `", sol_stdout_path, '`', errmsg());
 
@@ -310,7 +310,7 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		string test_in_path = package_loader->load_as_file(test.in, "test.in");
 		string test_out_path = package_loader->load_as_file(test.out, "test.out");
 
-		FileDescriptor test_in(test_in_path, O_RDONLY);
+		FileDescriptor test_in(test_in_path, O_RDONLY | O_CLOEXEC);
 		if (test_in < 0)
 			THROW("Failed to open file `", test_in_path, '`', errmsg());
 
