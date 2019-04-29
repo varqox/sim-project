@@ -334,18 +334,29 @@ public:
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template<class Func>
+template<class Func, class ErrFunc>
 std::enable_if_t<
 	std::is_convertible<
 		decltype(std::declval<Func>()(std::declval<dirent*>())), bool>::value,
 	void
-> forEachDirComponent(Directory& dir, Func&& func)
+> forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed)
 {
 	dirent* file;
-	while ((file = readdir(dir)))
-		if (strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
-			if (!func(file))
-				break;
+	for (;;) {
+		errno = 0;
+		file = readdir(dir);
+		if (file == nullptr) {
+			if (errno == 0)
+				return; // No more entries
+
+			readdir_failed();
+			return;
+		}
+
+		if (strcmp(file->d_name, ".") and strcmp(file->d_name, ".."))
+			if (not func(file))
+				return;
+	}
 }
 
 /**
@@ -358,17 +369,28 @@ std::enable_if_t<
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template<class Func>
+template<class Func, class ErrFunc>
 std::enable_if_t<
 	!std::is_convertible<
 		decltype(std::declval<Func>()(std::declval<dirent*>())), bool>::value,
 	void
-> forEachDirComponent(Directory& dir, Func&& func)
+> forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed)
 {
 	dirent* file;
-	while ((file = readdir(dir)))
-		if (strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
+	for (;;) {
+		errno = 0;
+		file = readdir(dir);
+		if (file == nullptr) {
+			if (errno == 0)
+				return; // No more entries
+
+			readdir_failed();
+			return;
+		}
+
+		if (strcmp(file->d_name, ".") and strcmp(file->d_name, ".."))
 			func(file);
+	}
 }
 
 
@@ -381,13 +403,21 @@ std::enable_if_t<
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template<class Func>
-void forEachDirComponent(FilePath pathname, Func&& func) {
+template<class Func, class ErrFunc>
+void forEachDirComponent(FilePath pathname, Func&& func, ErrFunc&& readdir_failed) {
 	Directory dir {pathname};
 	if (!dir)
 		THROW("opendir()", errmsg());
 
-	return forEachDirComponent(dir, std::forward<Func>(func));
+	return forEachDirComponent(dir, std::forward<Func>(func),
+		std::forward<ErrFunc>(readdir_failed));
+}
+
+template<class A, class Func>
+auto forEachDirComponent(A&& a, Func&& func) {
+	return forEachDirComponent(std::forward<A>(a), std::forward<Func>(func), [] {
+		THROW("readdir()", errmsg());
+	});
 }
 
 /**

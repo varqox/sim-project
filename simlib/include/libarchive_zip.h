@@ -458,22 +458,20 @@ void compress(Container&& filenames, FilePath archive_filename,
 		if (not dir)
 			THROW("opendir(`", pathname, "`)", errmsg());
 
-		dirent* file;
-		while ((file = readdir(dir)))
-			if (strcmp(file->d_name, ".") && strcmp(file->d_name, "..")) {
-				size_t before_size = pathname.size;
-				pathname.append(file->d_name);
+		forEachDirComponent(dir, [&](dirent* file) {
+			size_t before_size = pathname.size;
+			pathname.append(file->d_name);
 
-				if (stat64(FilePath(pathname), &st))
-					THROW("stat(`", pathname, "`)", errmsg());
+			if (stat64(FilePath(pathname), &st))
+				THROW("stat(`", pathname, "`)", errmsg());
 
-				if (S_ISREG(st.st_mode))
-					write_file(pathname, st);
-				else
-					self(self, st);
+			if (S_ISREG(st.st_mode))
+				write_file(pathname, st);
+			else
+				self(self, st);
 
-				pathname.size = before_size;
-			}
+			pathname.size = before_size;
+		});
 	};
 
 	for (auto&& filename : filenames) {

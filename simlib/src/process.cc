@@ -85,15 +85,14 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	sort(exec_set); // To make binary search possible
 	++buff_size; // For a terminating null character
 
-	dirent *file;
 	vector<pid_t> res;
-	while ((file = readdir(dir)) != nullptr) {
+	forEachDirComponent(dir, [&](dirent* file) {
 		if (!isDigit(file->d_name))
-			continue; // Not a process
+			return; // Not a process
 
 		pid = atoi(file->d_name);
 		if (pid == my_pid)
-			continue; // Do not need to check myself
+			return; // Do not need to check myself
 
 		// Process exe_path (/proc/pid/exe)
 		string exe_path = concat_tostr("/proc/", file->d_name, "/exe");
@@ -101,13 +100,13 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 		char buff[buff_size];
 		ssize_t len = readlink(exe_path.c_str(), buff, buff_size);
 		if (len == -1 || len >= buff_size)
-			continue; // Error or name too long
+			return; // Error or name too long
 
 		buff[len] = '\0';
 
 		if (binary_search(exec_set, StringView{buff}))
 			res.emplace_back(pid); // We have a match
-	}
+	});
 
 	return res;
 }

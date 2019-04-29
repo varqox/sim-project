@@ -129,29 +129,37 @@ static int __remove_rat(int dirfd, FilePath path) noexcept {
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 	}
 
-	dirent *file;
-	while ((file = readdir(dir)))
-		if (strcmp(file->d_name, ".") && strcmp(file->d_name, "..")) {
-		#ifdef _DIRENT_HAVE_D_TYPE
-			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
-		#endif
-				if (__remove_rat(fd, file->d_name)) {
-					int ec = errno;
-					closedir(dir);
-					errno = ec;
-					return -1;
-				}
-		#ifdef _DIRENT_HAVE_D_TYPE
-			} else if (unlinkat(fd, file->d_name, 0)) {
-				int ec = errno;
-				closedir(dir);
-				errno = ec;
-				return -1;
+	int ec, rc = 0;
+	forEachDirComponent(dir, [&](dirent* file) -> bool {
+	#ifdef _DIRENT_HAVE_D_TYPE
+		if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+	#endif
+			if (__remove_rat(fd, file->d_name)) {
+				ec = errno;
+				rc = -1;
+				return false;
 			}
-		#endif
+	#ifdef _DIRENT_HAVE_D_TYPE
+		} else if (unlinkat(fd, file->d_name, 0)) {
+			ec = errno;
+			rc = -1;
+			return false;
 		}
+	#endif
 
-	closedir(dir);
+		return true;
+	}, [&] {
+		ec = errno;
+		rc = -1;
+	});
+
+	(void)closedir(dir);
+
+	if (rc == -1) {
+		errno = ec;
+		return -1;
+	}
+
 	return unlinkat(dirfd, path, AT_REMOVEDIR);
 }
 
@@ -173,30 +181,36 @@ int removeDirContents_at(int dirfd, FilePath pathname) noexcept {
 		return -1;
 	}
 
-	dirent *file;
-	while ((file = readdir(dir)))
-		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
-		#ifdef _DIRENT_HAVE_D_TYPE
-			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
-		#endif
-				if (__remove_rat(fd, file->d_name)) {
-					int ec = errno;
-					closedir(dir);
-					errno = ec;
-					return -1;
-				}
-		#ifdef _DIRENT_HAVE_D_TYPE
-			} else if (unlinkat(fd, file->d_name, 0)) {
-				int ec = errno;
-				closedir(dir);
-				errno = ec;
-				return -1;
+	int ec, rc = 0;
+	forEachDirComponent(dir, [&](dirent* file) -> bool {
+	#ifdef _DIRENT_HAVE_D_TYPE
+		if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+	#endif
+			if (__remove_rat(fd, file->d_name)) {
+				ec = errno;
+				rc = -1;
+				return false;
 			}
-		#endif
+	#ifdef _DIRENT_HAVE_D_TYPE
+		} else if (unlinkat(fd, file->d_name, 0)) {
+			ec = errno;
+			rc = -1;
+			return false;
 		}
+	#endif
 
-	closedir(dir);
-	return 0;
+		return true;
+	}, [&] {
+		ec = errno;
+		rc = -1;
+	});
+
+	(void)closedir(dir);
+
+	if (rc == -1)
+		errno = ec;
+
+	return rc;
 }
 
 int create_subdirectories(StringView file) noexcept {
@@ -301,22 +315,40 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 		return -1;
 	}
 
-	dirent *file;
-	while ((file = readdir(src_dir)))
-		if (0 != strcmp(file->d_name, ".") && 0 != strcmp(file->d_name, "..")) {
-		#ifdef _DIRENT_HAVE_D_TYPE
-			if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN)
-		#endif
-				__copy_rat(src_fd, file->d_name, dest_fd, file->d_name);
-		#ifdef _DIRENT_HAVE_D_TYPE
-			else
-				copyat(src_fd, file->d_name, dest_fd, file->d_name);
-		#endif
+	int ec, rc = 0;
+	forEachDirComponent(src_dir, [&](dirent* file) -> bool {
+	#ifdef _DIRENT_HAVE_D_TYPE
+		if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+	#endif
+			if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
+				ec = errno;
+				rc = -1;
+				return false;
+			}
+
+	#ifdef _DIRENT_HAVE_D_TYPE
+		} else {
+			if (copyat(src_fd, file->d_name, dest_fd, file->d_name)) {
+				ec = errno;
+				rc = -1;
+				return false;
+			}
 		}
+	#endif
+
+		return true;
+	}, [&] {
+		ec = errno;
+		rc = -1;
+	});
 
 	closedir(src_dir);
 	close(dest_fd);
-	return 0;
+
+	if (rc == -1)
+		errno = ec;
+
+	return rc;
 }
 
 int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept
