@@ -46,7 +46,7 @@ public:
 
 	auto read(void* buff, zip_uint64_t nbytes) {
 		auto rc = zip_fread(zfile_, buff, nbytes);
-		// TODO: check if -1 value prodces a meaningful error
+		// TODO: check if -1 value produces a meaningful error
 		if (rc == -1)
 			THROW("zip_fread() - ", zip_file_strerror(zfile_));
 
@@ -136,22 +136,10 @@ public:
 	ZipFile() = default;
 
 	ZipFile(FilePath file, int flags = 0) {
-		FILE* f = fopen(file, "r+be"); // Open with CLOEXEC flag
-		if (f == nullptr)
-			THROW("fopen()", errmsg());
-
-		ZipError zip_error;
-		zip_source_t *zsrc = zip_source_filep_create(f, 0, 0, zip_error);
-		if (zsrc == 0) {
-			(void)fclose(f);
-			THROW("zip_source_filep_create() - ", zip_error.str());
-		}
-
-		zip_ = zip_open_from_source(zsrc, flags, zip_error);
-		if (zip_ == nullptr) {
-			zip_source_free(zsrc);
-			THROW("zip_open() - ", zip_error.str());
-		}
+		int error;
+		zip_ = zip_open(file.data(), flags, &error);
+		if (zip_ == nullptr)
+			THROW("zip_open() - ", ZipError(error).str());
 	}
 
 	ZipFile(const ZipFile&) = delete;

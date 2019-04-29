@@ -376,7 +376,47 @@ void Spawner::run_child(FilePath exec,
 			if (errno != EINTR)
 				send_error_and_exit(errno, "dup2()");
 
-	doBeforeExec();
+	// Close file descriptors that are not needed to be open (for security reasons)
+	{
+		Directory dir("/proc/self/fd");
+		if (dir == nullptr)
+			send_error_and_exit(errno, "opendir()");
+
+		auto fd_str = toStr(fd);
+		auto fd_cstr = fd_str.to_cstr().c_str();
+
+		auto dir_fd = dirfd(dir);
+		auto dir_fd_str = (dir_fd < 0 ? fd_str : toStr(dir_fd));
+		auto dir_fd_cstr = dir_fd_str.to_cstr().c_str();
+
+	#define AS_STR(x) AS_STR_IMPL(x)
+	#define AS_STR_IMPL(x) #x
+		std::array<const char*, 5> permitted_fds {{
+			dir_fd_cstr,
+			fd_cstr, // Needed in case of errors (it has FD_CLOEXEC flag set)
+			(opts.new_stdin_fd < 0 ? fd_cstr : AS_STR(STDIN_FILENO)),
+			(opts.new_stdout_fd < 0 ? fd_cstr : AS_STR(STDOUT_FILENO)),
+			(opts.new_stderr_fd < 0 ? fd_cstr : AS_STR(STDERR_FILENO)),
+		}};
+	#undef AS_STR_IMPL
+	#undef AS_STR
+
+		forEachDirComponent(dir, [&](dirent* file) {
+			for (auto&& str : permitted_fds)
+				if (strcmp(str, file->d_name) == 0)
+					return;
+
+			close(atoi(file->d_name));
+		}, [&] {
+			send_error_and_exit(errno, "readdir()");
+		});
+	}
+
+	try {
+		doBeforeExec();
+	} catch (std::exception& e) {
+		send_error_message_and_exit(fd, CStringView(e.what()));
+	}
 
 	// Signal parent process that child is ready to execute @p exec
 	kill(getpid(), SIGSTOP);
