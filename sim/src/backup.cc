@@ -34,7 +34,10 @@ int main2(int argc, char**argv) {
 	// Get connection
 	auto conn = MySQL::make_conn_with_credential_file(".db.config");
 
-	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC, S_0600};
+	FileDescriptor fd {
+		MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+		S_0600
+	};
 	if (fd == -1) {
 		errlog("Failed to open file `" MYSQL_CNF "`: open()", errmsg());
 		return 1;

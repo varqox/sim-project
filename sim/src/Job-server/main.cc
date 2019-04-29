@@ -1065,8 +1065,8 @@ int main() {
 	// Loggers
 	// stdlog, like everything, writes to stderr, so redirect stdout and stderr
 	// to the log file
-	if (freopen(JOB_SERVER_LOG, "a", stdout) == nullptr ||
-		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
+	if (freopen(JOB_SERVER_LOG, "ae", stdout) == nullptr ||
+		dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
 	{
 		errlog("Failed to open `", JOB_SERVER_LOG, '`', errmsg());
 	}

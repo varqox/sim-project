@@ -735,7 +735,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 
 		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
 			? filename : "");
-		FileDescriptor fd(filename, O_RDONLY);
+		FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 		if (fd == -1)
 			return error404();
 
