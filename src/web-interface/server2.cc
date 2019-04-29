@@ -408,8 +408,8 @@ static void* worker(void*) {
 
 		for (;;) {
 			// accept the connection
-			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
-				&client_name_len);
+			int client_socket_fd = accept4(socket_fd, (sockaddr*)&name,
+				&client_name_len, SOCK_CLOEXEC);
 			FileDescriptorCloser closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;

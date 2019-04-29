@@ -111,7 +111,7 @@ void Sim::api_logs() {
 		chunk_max_len = LOGS_OTHER_CHUNK_MAX_LEN;
 	}
 
-	FileDescriptor fd(filename, O_RDONLY);
+	FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 	off64_t fsize = lseek64(fd, 0, SEEK_END);
 	throw_assert(fsize >= 0);
 	if (que.empty())

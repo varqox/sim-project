@@ -26,8 +26,8 @@ static void* worker(void*) {
 
 		for (;;) {
 			// accept the connection
-			int client_socket_fd = accept(socket_fd, (sockaddr*)&name,
-				&client_name_len);
+			int client_socket_fd = accept4(socket_fd, (sockaddr*)&name,
+				&client_name_len, SOCK_CLOEXEC);
 			FileDescriptorCloser closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;
@@ -82,7 +82,7 @@ int main() {
 	// stdlog like everything writes to stderr, so redirect stdout and stderr to
 	// the log file
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
-		dup2(STDOUT_FILENO, STDERR_FILENO) == -1)
+		dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
 	{
 		errlog("Failed to open `", SERVER_LOG, '`', errmsg());
 	}
@@ -155,7 +155,7 @@ int main() {
 		"workers: ", workers, "\n"
 		"address: ", address.data(), ':', port);
 
-	if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	if ((socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)) < 0) {
 		errlog("Failed to create socket", errmsg());
 		return 1;
 	}
@@ -197,6 +197,6 @@ int main() {
 	threads[0] = pthread_self();
 	server::worker(nullptr);
 
-	sclose(socket_fd);
+	close(socket_fd);
 	return 0;
 }
