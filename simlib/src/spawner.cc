@@ -227,11 +227,11 @@ Spawner::ExitStat Spawner::run(FilePath exec,
 		THROW("fork()", errmsg());
 
 	else if (cpid == 0) {
-		sclose(pfd[0]);
+		close(pfd[0]);
 		run_child(exec, exec_args, opts, pfd[1], []{});
 	}
 
-	sclose(pfd[1]);
+	close(pfd[1]);
 	FileDescriptorCloser pipe0_closer(pfd[0]);
 
 	// Wait for child to be ready
@@ -351,7 +351,7 @@ void Spawner::run_child(FilePath exec,
 
 	// Change stdin
 	if (opts.new_stdin_fd < 0)
-		sclose(STDIN_FILENO);
+		close(STDIN_FILENO);
 
 	else if (opts.new_stdin_fd != STDIN_FILENO)
 		while (dup2(opts.new_stdin_fd, STDIN_FILENO) == -1)
@@ -360,7 +360,7 @@ void Spawner::run_child(FilePath exec,
 
 	// Change stdout
 	if (opts.new_stdout_fd < 0)
-		sclose(STDOUT_FILENO);
+		close(STDOUT_FILENO);
 
 	else if (opts.new_stdout_fd != STDOUT_FILENO)
 		while (dup2(opts.new_stdout_fd, STDOUT_FILENO) == -1)
@@ -369,7 +369,7 @@ void Spawner::run_child(FilePath exec,
 
 	// Change stderr
 	if (opts.new_stderr_fd < 0)
-		sclose(STDERR_FILENO);
+		close(STDERR_FILENO);
 
 	else if (opts.new_stderr_fd != STDERR_FILENO)
 		while (dup2(opts.new_stderr_fd, STDERR_FILENO) == -1)

@@ -16,7 +16,7 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 
 	FileDescriptor cef;
 	if (c_errors) {
-		cef = openUnlinkedTmpFile(O_APPEND);
+		cef = openUnlinkedTmpFile(O_APPEND | O_CLOEXEC);
 		if (cef == -1)
 			THROW("Failed to open 'compile_errors'", errmsg());
 	}

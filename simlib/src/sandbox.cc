@@ -761,7 +761,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		THROW("fork()", errmsg());
 
 	else if (tracee_pid_ == 0) { // Child = tracee
-		sclose(pfd[0]);
+		close(pfd[0]);
 
 		auto send_error_and_exit = [&](auto&&... args) {
 			send_error_message_and_exit(pfd[1],
@@ -947,7 +947,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		});
 	}
 
-	sclose(pfd[1]);
+	close(pfd[1]);
 	FileDescriptorCloser close_pipe0(pfd[0]); // Guard closing of the pipe's second end
 
 // Verbose debug messages have different color
@@ -984,7 +984,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	}
 
 	// Open /proc/{tracee_pid_}/statm for tracking vm_peak (vm stands for virtual memory)
-	tracee_statm_fd_.open(concat("/proc/", tracee_pid_, "/statm"), O_RDONLY);
+	tracee_statm_fd_.open(concat("/proc/", tracee_pid_, "/statm"), O_RDONLY | O_CLOEXEC);
 	if (tracee_statm_fd_ == -1)
 		THROW("open(/proc/{tracee_pid_ = ", tracee_pid_, "}/statm)", errmsg());
 

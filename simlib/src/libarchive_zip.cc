@@ -11,8 +11,8 @@ static void update_add_file_to_zip_impl(Func&& apply_file,
 	constexpr const char* command = "zip";
 
 	Spawner::ExitStat es;
-	FileDescriptor zip_output {openUnlinkedTmpFile()}; /* It isn't a fatal error
-		if zip_output is invalid, so it can be ignored */
+	FileDescriptor zip_output {openUnlinkedTmpFile(O_CLOEXEC)}; /* It isn't a
+		fatal error if zip_output is invalid, so it can be ignored */
 
 	if (easy_case) {
 		std::vector<std::string> zip_args;

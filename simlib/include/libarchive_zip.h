@@ -106,7 +106,7 @@ template<class Func, class UnaryFunc>
 void skim_archive(FilePath filename, Func&& setup_archive,
 	UnaryFunc&& entry_callback)
 {
-	FileDescriptor fd {filename, O_RDONLY};
+	FileDescriptor fd {filename, O_RDONLY | O_CLOEXEC};
 	if (fd == -1)
 		THROW("Failed to open file `", filename, '`', errmsg());
 
@@ -236,7 +236,7 @@ template<class Func, class UnaryFunc>
 void extract(FilePath filename, int flags,
 	Func&& setup_archives, UnaryFunc&& extract_entry, StringView dest_dir = ".")
 {
-	FileDescriptor fd {filename, O_RDONLY};
+	FileDescriptor fd {filename, O_RDONLY | O_CLOEXEC};
 	if (fd == -1)
 		THROW("Failed to open file `", filename, '`', errmsg());
 
@@ -314,7 +314,7 @@ template<class Func>
 std::string extract_file(FilePath archive_file, Func&& setup_archive,
 	StringView pathname)
 {
-	FileDescriptor fd {archive_file, O_RDONLY};
+	FileDescriptor fd {archive_file, O_RDONLY | O_CLOEXEC};
 	if (fd == -1)
 		THROW("Failed to open file `", archive_file, '`', errmsg());
 
@@ -387,7 +387,7 @@ void compress(Container&& filenames, FilePath archive_filename,
 
 	setup_archive(out);
 
-	FileDescriptor fd(archive_filename, O_WRONLY | O_CREAT | O_TRUNC);
+	FileDescriptor fd(archive_filename, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
 	if (fd == -1)
 		THROW("Failed to open file `", archive_filename, '`', errmsg());
 
@@ -412,7 +412,7 @@ void compress(Container&& filenames, FilePath archive_filename,
 		if (archive_write_header(out, entry))
 			THROW("archive_write_header() - ", archive_error_string(out));
 
-		FileDescriptor f {pathname, O_RDONLY};
+		FileDescriptor f {pathname, O_RDONLY | O_CLOEXEC};
 		throw_assert(f != -1);
 
 		constexpr size_t BUFF_SIZE = 1 << 18;

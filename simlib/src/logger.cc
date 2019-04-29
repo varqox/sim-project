@@ -7,14 +7,14 @@ using std::string;
 Logger stdlog(stderr), errlog(stderr);
 
 Logger::Logger(FilePath filename)
-	: f_(fopen(filename, "a")), opened_(true)
+	: f_(fopen(filename, "abe")), opened_(true)
 {
 	if (f_ == nullptr)
 		THROW("fopen('", filename, "') failed", errmsg());
 }
 
 void Logger::open(FilePath filename) {
-	FILE *f = fopen(filename, "a");
+	FILE *f = fopen(filename, "abe");
 	if (f == nullptr)
 		THROW("fopen('", filename, "') failed", errmsg());
 

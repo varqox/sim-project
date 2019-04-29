@@ -7,12 +7,12 @@ class ZipError {
 	zip_error_t error_;
 
 public:
-	ZipError() { zip_error_init(&error_); }
+	ZipError() noexcept { zip_error_init(&error_); }
 
 	ZipError(const ZipError&) = delete;
 	ZipError& operator=(const ZipError&) = delete;
 
-	ZipError(int ze) { zip_error_init_with_code(&error_, ze); }
+	ZipError(int ze) noexcept { zip_error_init_with_code(&error_, ze); }
 
 	operator zip_error_t*() noexcept { return &error_; }
 
@@ -136,10 +136,22 @@ public:
 	ZipFile() = default;
 
 	ZipFile(FilePath file, int flags = 0) {
-		int error;
-		zip_ = zip_open(file.data(), flags, &error);
-		if (zip_ == nullptr)
-			THROW("zip_open() - ", ZipError(error).str());
+		FILE* f = fopen(file, "r+be"); // Open with CLOEXEC flag
+		if (f == nullptr)
+			THROW("fopen()", errmsg());
+
+		ZipError zip_error;
+		zip_source_t *zsrc = zip_source_filep_create(f, 0, 0, zip_error);
+		if (zsrc == 0) {
+			(void)fclose(f);
+			THROW("zip_source_filep_create() - ", zip_error.str());
+		}
+
+		zip_ = zip_open_from_source(zsrc, flags, zip_error);
+		if (zip_ == nullptr) {
+			zip_source_free(zsrc);
+			THROW("zip_open() - ", zip_error.str());
+		}
 	}
 
 	ZipFile(const ZipFile&) = delete;
@@ -242,7 +254,7 @@ public:
 	}
 
 	void extract_to_file(index_t index, FilePath fpath, mode_t mode = S_0644) {
-		FileDescriptor fd(fpath, O_WRONLY | O_CREAT | O_TRUNC, mode);
+		FileDescriptor fd(fpath, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode);
 		if (fd == -1)
 			THROW("open()", errmsg());
 

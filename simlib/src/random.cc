@@ -18,7 +18,7 @@ void fillRandomly(void* dest, size_t bytes) {
 }
 
 ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept {
-	FileDescriptor fd("/dev/urandom", O_RDONLY);
+	FileDescriptor fd("/dev/urandom", O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
 		return -1;
 
@@ -33,7 +33,7 @@ ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept {
 }
 
 void readFromDevUrandom(void* dest, size_t bytes) {
-	FileDescriptor fd("/dev/urandom", O_RDONLY);
+	FileDescriptor fd("/dev/urandom", O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
 		THROW("Failed to open /dev/urandom", errmsg());
 

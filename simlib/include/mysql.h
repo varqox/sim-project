@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <fcntl.h>
 #include <functional>
 #include <mutex>
 
@@ -832,6 +833,14 @@ public:
 
 		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr, 0))
 			THROW(mysql_error(conn_));
+
+		// Set CLOEXEC flag on the mysql socket
+		int mysql_socket = mysql_get_socket(conn_);
+		int flags = fcntl(mysql_socket, F_GETFD);
+		if (flags == -1)
+			THROW("fcntl()", errmsg());
+		if (fcntl(mysql_socket, F_SETFD, flags | FD_CLOEXEC) == -1)
+			THROW("fcntl()", errmsg());
 	}
 
 	bool disconnected() noexcept {

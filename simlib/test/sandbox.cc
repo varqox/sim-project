@@ -33,7 +33,7 @@ TEST (Sandbox, run) {
 		if (fd == -1)
 			THROW("mkstemp()", errmsg());
 
-		sclose(fd);
+		close(fd);
 	}
 	FileRemover exec_remover(exec.to_cstr());
 
@@ -429,7 +429,7 @@ TEST (Sandbox, run) {
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
 
-	FileDescriptor dev_null("/dev/null", O_RDWR);
+	FileDescriptor dev_null("/dev/null", O_RDWR | O_CLOEXEC);
 	throw_assert(dev_null != -1);
 	Sandbox::Options rw_opts {
 		dev_null,

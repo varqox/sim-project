@@ -18,23 +18,6 @@ constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 constexpr int S_0700 = S_IRWXU;
 constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
-/**
- * @brief Behaves like close(2) but cannot be interrupted by signal
- *
- * @param fd file descriptor to close
- *
- * @return 0 on success, -1 on error
- *
- * @errors The same that occur for close(2) expect EINTR
- */
-inline int sclose(int fd) noexcept {
-	while (close(fd) == -1)
-		if (errno != EINTR)
-			return -1;
-
-	return 0;
-}
-
 // Encapsulates file descriptor
 class FileDescriptor {
 	int fd_;
@@ -71,7 +54,7 @@ public:
 
 	void reset(int fd) noexcept {
 		if (fd_ >= 0)
-			(void)sclose(fd_);
+			(void)::close(fd_);
 		fd_ = fd;
 	}
 
@@ -88,14 +71,14 @@ public:
 		if (fd_ < 0)
 			return 0;
 
-		int rc = sclose(fd_);
+		int rc = ::close(fd_);
 		fd_ = -1;
 		return rc;
 	}
 
 	~FileDescriptor() {
 		if (fd_ >= 0)
-			(void)sclose(fd_);
+			(void)::close(fd_);
 	}
 };
 
@@ -135,13 +118,13 @@ public:
 
 	void reset(DIR* d) noexcept {
 		if (dir_)
-			closedir(dir_);
+			(void)closedir(dir_);
 		dir_ = d;
 	}
 
 	void close() noexcept {
 		if (dir_) {
-			closedir(dir_);
+			(void)closedir(dir_);
 			dir_ = nullptr;
 		}
 	}
@@ -153,7 +136,7 @@ public:
 
 	~Directory() {
 		if (dir_)
-			closedir(dir_);
+			(void)closedir(dir_);
 	}
 };
 
@@ -287,7 +270,7 @@ public:
 	TemporaryFile& operator=(TemporaryFile&& tf) noexcept {
 		if (is_open()) {
 			unlink(path_);
-			sclose(fd_);
+			(void)close(fd_);
 		}
 
 		path_ = std::move(tf.path_);
@@ -300,7 +283,7 @@ public:
 	~TemporaryFile() {
 		if (is_open()) {
 			unlink(path_);
-			sclose(fd_);
+			(void)close(fd_);
 		}
 	}
 
@@ -312,7 +295,7 @@ public:
 };
 
 class DirectoryChanger {
-	FileDescriptor old_cwd {open(".", O_RDONLY)};
+	FileDescriptor old_cwd {open(".", O_RDONLY | O_CLOEXEC)};
 
 public:
 	DirectoryChanger(FilePath new_wd) {
@@ -792,20 +775,20 @@ public:
 	 *
 	 * @return 0 on success, -1 on error
 	 *
-	 * @errors The same that occur to sclose()
+	 * @errors The same that occur to close()
 	 */
 	int close() noexcept {
 		if (fd_ < 0)
 			return 0;
 
-		int rc = sclose(fd_);
+		int rc = ::close(fd_);
 		fd_ = -1;
 		return rc;
 	}
 
 	~FileDescriptorCloser() noexcept {
 		if (fd_ >= 0)
-			sclose(fd_);
+			(void)::close(fd_);
 	}
 };
 

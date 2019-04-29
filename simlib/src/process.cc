@@ -57,7 +57,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 		return {};
 
 	pid_t pid, my_pid = (include_me ? -1 : getpid());
-	DIR *dir = opendir("/proc");
+	Directory dir("/proc");
 	if (dir == nullptr)
 		THROW("Cannot open /proc directory", errmsg());
 
@@ -109,7 +109,6 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 			res.emplace_back(pid); // We have a match
 	}
 
-	closedir(dir);
 	return res;
 }
 
@@ -133,7 +132,7 @@ string chdirToExecDir() {
 
 int8_t detectArchitecture(pid_t pid) {
 	auto filename = concat("/proc/", pid, "/exe");
-	FileDescriptor fd(filename, O_RDONLY);
+	FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
 		THROW("open('", filename, "')", errmsg());
 

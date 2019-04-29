@@ -118,14 +118,14 @@ int mkdir_r(string path, mode_t mode) noexcept {
  *   fdopendir(3)
  */
 static int __remove_rat(int dirfd, FilePath path) noexcept {
-	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY
-		| O_NOFOLLOW);
+	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW |
+		O_CLOEXEC);
 	if (fd == -1)
 		return unlinkat(dirfd, path, 0);
 
 	DIR *dir = fdopendir(fd);
 	if (dir == nullptr) {
-		sclose(fd);
+		close(fd);
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 	}
 
@@ -160,15 +160,15 @@ int remove_rat(int dirfd, FilePath path) noexcept {
 }
 
 int removeDirContents_at(int dirfd, FilePath pathname) noexcept {
-	int fd = openat(dirfd, pathname, O_RDONLY
-		| O_DIRECTORY | O_NOFOLLOW);
+	int fd = openat(dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW |
+		O_CLOEXEC);
 	if (fd == -1)
 		return -1;
 
 	DIR *dir = fdopendir(fd);
 	if (dir == nullptr) {
 		int ec = errno;
-		sclose(fd);
+		close(fd);
 		errno = ec;
 		return -1;
 	}
@@ -226,37 +226,37 @@ int blast(int infd, int outfd) noexcept {
 }
 
 int copy(FilePath src, FilePath dest, mode_t mode) noexcept {
-	int in = open(src, O_RDONLY);
+	int in = open(src, O_RDONLY | O_CLOEXEC);
 	if (in == -1)
 		return -1;
 
-	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC, mode);
+	int out = open(dest, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode);
 	if (out == -1) {
-		sclose(in);
+		close(in);
 		return -1;
 	}
 
 	int res = blast(in, out);
-	sclose(in);
-	sclose(out);
+	close(in);
+	close(out);
 	return res;
 }
 
 int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
-	int in = openat(dirfd1, src, O_RDONLY);
+	int in = openat(dirfd1, src, O_RDONLY | O_CLOEXEC);
 	if (in == -1)
 		return -1;
 
-	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT
-		| O_TRUNC, S_0644);
+	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+		S_0644);
 	if (out == -1) {
-		sclose(in);
+		close(in);
 		return -1;
 	}
 
 	int res = blast(in, out);
-	sclose(in);
-	sclose(out);
+	close(in);
+	close(out);
 	return res;
 }
 
@@ -277,8 +277,7 @@ int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
 static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 	noexcept
 {
-	int src_fd = openat(dirfd1, src, O_RDONLY
-		| O_DIRECTORY);
+	int src_fd = openat(dirfd1, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (src_fd == -1){
 		if (errno == ENOTDIR)
 			return copyat(dirfd1, src, dirfd2, dest);
@@ -289,17 +288,16 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 	// Do not use src permissions
 	mkdirat(dirfd2, dest, S_0755);
 
-	int dest_fd = openat(dirfd2, dest, O_RDONLY
-		| O_DIRECTORY);
+	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (dest_fd == -1) {
-		sclose(src_fd);
+		close(src_fd);
 		return -1;
 	}
 
 	DIR *src_dir = fdopendir(src_fd);
 	if (src_dir == nullptr) {
-		sclose(src_fd);
-		sclose(dest_fd);
+		close(src_fd);
+		close(dest_fd);
 		return -1;
 	}
 
@@ -317,7 +315,7 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 		}
 
 	closedir(src_dir);
-	sclose(dest_fd);
+	close(dest_fd);
 	return 0;
 }
 
@@ -360,7 +358,7 @@ int createFile(FilePath pathname, mode_t mode) noexcept {
 	if (fd == -1)
 		return -1;
 
-	return sclose(fd);
+	return close(fd);
 }
 
 size_t readAll(int fd, void *buf, size_t count) noexcept {
@@ -388,20 +386,17 @@ size_t writeAll(int fd, const void *buf, size_t count) noexcept {
 	ssize_t k;
 	size_t pos = 0;
 	const uint8_t *buff = static_cast<const uint8_t*>(buf);
+	errno = 0;
 	do {
 		k = write(fd, buff + pos, count - pos);
-		if (k > 0)
+		if (k >= 0)
 			pos += k;
-		else if (k == 0) {
-			errno = 0; // No error
-			return pos;
-
-		} else if (errno != EINTR)
+		else if (errno != EINTR)
 			return pos; // Error
 
 	} while (pos < count);
 
-	errno = 0; // No error
+	errno = 0; // No error (need to set again because errno may equal to EINTR)
 	return count;
 }
 
@@ -520,7 +515,7 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 
 string getFileContents(FilePath file) {
 	FileDescriptor fd;
-	while (fd.open(file, O_RDONLY) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY | O_CLOEXEC) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', errmsg());
@@ -530,7 +525,7 @@ string getFileContents(FilePath file) {
 
 string getFileContents(FilePath file, off64_t beg, off64_t end) {
 	FileDescriptor fd;
-	while (fd.open(file, O_RDONLY) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY | O_CLOEXEC) == -1 && errno == EINTR) {}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', errmsg());
@@ -543,7 +538,7 @@ vector<string> getFileByLines(FilePath file, int flags, size_t first,
 {
 	vector<string> res;
 
-	FILE *f = fopen(file, "r");
+	FILE *f = fopen(file, "re");
 	if (f == nullptr)
 		return res;
 
@@ -574,7 +569,7 @@ vector<string> getFileByLines(FilePath file, int flags, size_t first,
 }
 
 void putFileContents(FilePath file, const char* data, size_t len, mode_t mode) {
-	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC, mode};
+	FileDescriptor fd {file, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode};
 	if (fd == -1)
 		THROW("open() failed", errmsg());
 
@@ -723,13 +718,13 @@ static unique_ptr<Node> __dumpDirectoryTreeAt(int dirfd, FilePath path) {
 
 	unique_ptr<Node> root {new Node({path.data(), len})}; // Exception approved
 
-	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY);
+	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (fd == -1)
 		return root;
 
 	Directory dir {fdopendir(fd)};
 	if (dir == nullptr) {
-		sclose(fd);
+		close(fd);
 		return root;
 	}
 

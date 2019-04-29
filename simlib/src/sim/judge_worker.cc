@@ -223,14 +223,14 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 		THROW("If set, memory_limit has to be greater than 0");
 
 	// Solution STDOUT
-	FileDescriptor solution_stdout(output_file, O_WRONLY | O_CREAT | O_TRUNC);
+	FileDescriptor solution_stdout(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
 	if (solution_stdout < 0)
 		THROW("Failed to open file `", output_file, '`', errmsg());
 
 	Sandbox sandbox;
 	string solution_path(concat_tostr(tmp_dir.path(), SOLUTION_FILENAME));
 
-	FileDescriptor test_in(input_file, O_RDONLY);
+	FileDescriptor test_in(input_file, O_RDONLY | O_CLOEXEC);
 	if (test_in < 0)
 		THROW("Failed to open file `", input_file, '`', errmsg());
 
