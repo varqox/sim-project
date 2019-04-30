@@ -11,6 +11,7 @@
 # warning "Before committing disable this debug"
 # define DEBUG_SANDBOX(...) __VA_ARGS__
 constexpr bool DEBUG_SANDBOX_LOG_PFC_FILTER = false;
+constexpr bool DEBUG_SANDBOX_LOG_BPF_FILTER = false;
 #else
 # define DEBUG_SANDBOX(...)
 #endif
@@ -891,6 +892,14 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				if (int errnum = seccomp_export_pfc(ctx, stdlog.fileno()))
 					send_error_and_exit(-errnum, "seccomp_export_pfc()");
 			}
+
+			if (DEBUG_SANDBOX_LOG_BPF_FILTER) {
+				FileDescriptor fd("/tmp/sim-sandbox-filter.bpf", O_WRONLY | O_CREAT | O_TRUNC , S_0644);
+				if (fd < 0)
+					send_error_and_exit(errno, "open()");
+				if (int errnum = seccomp_export_bpf(ctx, fd))
+					send_error_and_exit(-errnum, "seccomp_export_pfc()");
+			}
 		})
 
 		// Memory limit will be set manually after loading the filters as
@@ -1044,17 +1053,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 
 			switch (si.si_code) {
 			case CLD_TRAPPED:
-				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_EXEC<<8))) {
-					tracee_vm_peak_ = get_tracee_vm_size();
-					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
-					// Fire timers
-					timer = make_unique<Timer>(tracee_pid_,
-						opts.real_time_limit.value_or(0ns), timeouter);
-					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_,
-						opts.cpu_time_limit.value_or(0ns), timeouter);
-
-					continue; // Nothing more to do for the exec() event
-				}
+				throw_assert(si.si_signo == SIGCHLD);
 
 				if (si.si_status == SIGSYS) {
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (SIGSYS)");
@@ -1093,6 +1092,18 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 						kill(-tracee_pid_, SIGKILL);
 						continue; // This is the SIGSYS from seccomp, others SIGSYSes are not what we want
 					}
+				}
+
+				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_EXEC<<8))) {
+					tracee_vm_peak_ = get_tracee_vm_size();
+					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
+					// Fire timers
+					timer = make_unique<Timer>(tracee_pid_,
+						opts.real_time_limit.value_or(0ns), timeouter);
+					cpu_timer = make_unique<CPUTimeMonitor>(tracee_pid_,
+						opts.cpu_time_limit.value_or(0ns), timeouter);
+
+					continue; // Nothing more to do for the exec() event
 				}
 
 				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_SECCOMP<<8))) {
