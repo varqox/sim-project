@@ -77,7 +77,10 @@ void gen(ArgvParser) {
 
 	SipPackage sp;
 	sp.generate_test_in_files();
-	sp.generate_test_out_files();
+
+	sp.simfile.load_interactive();
+	if (not sp.simfile.interactive)
+		sp.generate_test_out_files();
 
 	if (access("Simfile", F_OK) == 0)
 		sp.save_limits();
@@ -97,7 +100,10 @@ void regen(ArgvParser) {
 	SipPackage sp;
 	sp.remove_test_files_not_specified_in_sipfile();
 	sp.generate_test_in_files();
-	sp.generate_test_out_files();
+
+	sp.simfile.load_interactive();
+	if (not sp.simfile.interactive)
+		sp.generate_test_out_files();
 
 	if (access("Simfile", F_OK) == 0)
 		sp.save_limits();
@@ -130,6 +136,8 @@ void help(const char* program_name) {
 	puts("                        Initialize Sip package in [directory] (by default");
 	puts("                          current working directory) if [name] is specified, set");
 	puts("                          problem name to it");
+	puts("  interactive [value]   If [value] is specified: set interactive to [value].");
+	puts("                          Otherwise print its current value");
 	puts("  label [value]         If [value] is specified: set label to [value]. Otherwise");
 	puts("                          print its current value");
 	puts("  main-sol [sol]        If [sol] is specified: set main solution to [sol].");
@@ -202,6 +210,22 @@ void init(ArgvParser args) {
 		sp.create_default_simfile(args.extract_next());
 	else
 		sp.create_default_simfile(std::nullopt);
+}
+
+void interactive(ArgvParser args) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	if (args.size() > 0) {
+		auto new_interactive = args.extract_next();
+		if (not isOneOf(new_interactive, "true", "false"))
+			throw SipError("interactive has to be either \"true\" or \"false\"");
+
+		sp.replace_variable_in_simfile("interactive", new_interactive);
+	}
+
+	sp.simfile.load_interactive();
+	stdlog("interactive = ", sp.simfile.interactive);
 }
 
 void label(ArgvParser args) {

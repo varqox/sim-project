@@ -26,6 +26,8 @@ void help(const char* program_name);
 
 void init(ArgvParser args);
 
+void interactive(ArgvParser args);
+
 void label(ArgvParser args);
 
 void main_sol(ArgvParser args);

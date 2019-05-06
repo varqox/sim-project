@@ -109,7 +109,8 @@ sim::JudgeReport::Test SipPackage::generate_test_out_file(
 
 	stdlog("generating ", test.name, ".out...").flush_no_nl();
 
-	auto es = jworker.value().run_solution(test.in, test.out, test.time_limit, test.memory_limit);
+	auto es = jworker.value().run_solution(test.in, test.out.value(),
+		test.time_limit, test.memory_limit);
 
 	sim::JudgeReport::Test res(
 		test.name,
@@ -278,6 +279,11 @@ void SipPackage::remove_tests_with_no_in_file_from_limits_in_simfile() {
 
 void SipPackage::generate_test_out_files() {
 	STACK_UNWINDING_MARK;
+
+	simfile.load_interactive();
+	if (simfile.interactive)
+		throw SipError("Generating output files is not possible for interactive"
+			" problems");
 
 	stdlog("\033[1;36mGenerating output files...\033[m");
 
@@ -853,7 +859,6 @@ void SipPackage::create_default_directory_structure() {
 	if ((mkdir("check") == -1 and errno != EEXIST)
 		or (mkdir("doc") == -1 and errno != EEXIST)
 		or (mkdir("in") == -1 and errno != EEXIST)
-		or (mkdir("out") == -1 and errno != EEXIST)
 		or (mkdir("prog") == -1 and errno != EEXIST)
 		or (mkdir("utils") == -1 and errno != EEXIST))
 	{

@@ -126,6 +126,8 @@ static void run_command(int argc, char **argv) {
 		return commands::help(argv[0]);
 	if (command == "init")
 		return commands::init(args);
+	if (command == "interactive")
+		return commands::interactive(args);
 	if (command == "label")
 		return commands::label(args);
 	if (command == "main-sol")
