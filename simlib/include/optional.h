@@ -68,7 +68,7 @@ public:
 
 	template<class U = T, class X = std::enable_if_t<std::is_constructible<StoredType, U&&>::value>>
 	constexpr Optional(U&& value) : Base(true) {
-		::new (std::addressof(payload_)) StoredType(value);
+		::new (std::addressof(payload_)) StoredType(std::forward<U>(value));
 	}
 
 	constexpr Optional(const Optional& other) : Base(other.has_value_) {
