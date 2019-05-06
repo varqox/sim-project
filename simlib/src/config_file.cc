@@ -345,7 +345,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 	DEBUG_CF(stdlog("End of the config file.");)
 }
 
-bool ConfigFile::is_string_literal(StringView str) {
+bool ConfigFile::is_string_literal(StringView str) noexcept {
 	if (str.empty())
 		return false;
 

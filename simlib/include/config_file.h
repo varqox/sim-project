@@ -1,6 +1,7 @@
 #pragma once
 
 #include "string.h"
+#include "utilities.h"
 
 #include <map>
 #include <vector>
@@ -171,7 +172,7 @@ public:
 	void load_config_from_string(std::string config, bool load_all = false);
 
 	// Check if string @p str is a valid string literal
-	static bool is_string_literal(StringView str);
+	static bool is_string_literal(StringView str) noexcept;
 
 	/**
 	 * @brief Escapes unsafe sequences in str

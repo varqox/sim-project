@@ -100,7 +100,7 @@ class Guard {
 	Guard& operator=(const Guard&) = delete;
 
 public:
-	Guard(Func func) : func_(std::move(func)) {}
+	Guard(Func func) noexcept : func_(std::move(func)) {}
 	#if __cplusplus > 201402L
 	#warning "Mark move constructor as deleted - copy elision is now guarantied"
 	#endif
