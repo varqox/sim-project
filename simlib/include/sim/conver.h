@@ -54,6 +54,9 @@ public:
 		std::string name;
 		// Leave empty to detect it from the Simfile in the package
 		std::string label;
+		// Whether the problem is interactive or not, leave unset to detect it
+		// from Simfile in the package
+		Optional<bool> interactive;
 		// In MB. If set, overrides memory limit of every test
 		Optional<uint64_t> memory_limit;
 		// If set, overrides time limit of every test (has lower precedence than
@@ -140,7 +143,7 @@ public:
 		std::chrono::duration<double> min_time_limit) noexcept
 	{
 		using DS = std::chrono::duration<double>;
-		// Use newton method, as it is simpler than solving the equation
+		// Use Newton method, as it is simpler than solving the equation
 		double x = time_limit.count();
 		for (;;) {
 			double fx = (time_limit - solution_runtime_to_time_limit(DS(x),

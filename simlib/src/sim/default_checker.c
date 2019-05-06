@@ -38,9 +38,9 @@ int main(int argc, char **argv) {
   //
   // Output:
   // Line 1: "OK" or "WRONG"
-  // Line 2 (optional): leave empty or provide a real number x from interval
-  //   [0, 100], which means that the test will get no more than x percent of
-  //   its maximal score
+  // Line 2 (optional; ignored if line 1 == "WRONG" - score is set to 0 anyway):
+  //   leave empty or provide a real number x from interval [0, 100], which
+  //   means that the test will get no more than x percent of its maximal score.
   // Line 3 and next (optional): A checker comment
 
   my_assert(argc == 4);

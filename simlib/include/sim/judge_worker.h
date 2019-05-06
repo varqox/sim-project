@@ -459,7 +459,7 @@ public:
 
 	/**
 	 * @brief Runs solution with @p input_file as stdin and @p output_file as
-	 *   stdout
+	 *   stdout (this function makes no sense for the interactive problems)
 	 *
 	 * @param input_file path to file to set as stdin
 	 * @param output_file path to file to set as stdout
@@ -471,6 +471,17 @@ public:
 		FilePath output_file, Optional<std::chrono::nanoseconds> time_limit,
 		Optional<uint64_t> memory_limit) const;
 
+private:
+	template<class Func>
+	JudgeReport process_tests(bool final, JudgeLogger& judge_log,
+		const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback,
+		Func&& judge_on_test) const;
+
+	JudgeReport judge_interactive(bool final, JudgeLogger& judge_log,
+		const Optional<std::function<void(const JudgeReport&)>>&
+			partial_report_callback = std::nullopt) const;
+
+public:
 	/**
 	 * @brief Judges last compiled solution on the last loaded package.
 	 * @details Before calling this method, the methods loadPackage(),
@@ -480,7 +491,7 @@ public:
 	 * @return Judge report
 	 */
 	JudgeReport judge(bool final, JudgeLogger& judge_log,
-		Optional<std::function<void(const JudgeReport&)>>
+		const Optional<std::function<void(const JudgeReport&)>>&
 			partial_report_callback = std::nullopt) const;
 
 	JudgeReport judge(bool final) const {

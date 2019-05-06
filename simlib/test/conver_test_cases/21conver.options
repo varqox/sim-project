@@ -1,5 +1,6 @@
 name:
 label:
+interactive: false
 memory_limit: null
 global_time_limit: null
 max_time_limit: 44.444

@@ -55,6 +55,9 @@ string Simfile::dump() const {
 	if (not label.empty())
 		back_insert(res, "label: ", ConfigFile::escape_string(label), '\n');
 
+	if (interactive)
+		back_insert(res, "interactive: ", interactive, '\n');
+
 	if (not statement.empty())
 		back_insert(res, "statement: ", ConfigFile::escape_string(statement), '\n');
 
@@ -89,10 +92,13 @@ string Simfile::dump() const {
 	res += "tests_files: [\n";
 	for (const TestGroup& group : tgroups)
 		for (const Test& test : group.tests)
-			if (test.in.size() && test.out.size())
-				back_insert(res, '\t',
-					ConfigFile::escape_string(intentionalUnsafeStringView(
-						concat(test.name, ' ', test.in, ' ', test.out))), '\n');
+			if (test.in.size() and (interactive or test.out.value().size())) {
+				auto item = concat(test.name, ' ', test.in);
+				if (not interactive)
+					item.append(' ', test.out.value());
+
+				back_insert(res, '\t', ConfigFile::escape_string(item), '\n');
+			}
 
 	res += "]\n";
 
@@ -136,11 +142,27 @@ void Simfile::load_label() {
 		throw std::runtime_error{"Simfile: missing problem's label"};
 }
 
+void Simfile::load_interactive() {
+	auto&& var = config["interactive"];
+	CHECK_IF_NOT_ARR(var, "label");
+	if (var.as_string().empty())
+		interactive = false;
+	else
+		interactive = var.as_bool();
+}
+
 void Simfile::load_checker() {
+	load_interactive();
+
 	auto&& var = config["checker"];
 	CHECK_IF_NOT_ARR(var, "checker");
 
 	if (var.as_string().empty()) {
+		if (interactive) {
+			throw std::runtime_error("Simfile: interactive problems require"
+				" checker (checker is not set)");
+		}
+
 		checker = std::nullopt; // No checker - default checker should be used
 		return;
 	}
@@ -428,6 +450,8 @@ Simfile::parse_test_files_item(StringView item) {
 }
 
 void Simfile::load_tests_files() {
+	load_interactive();
+
 	auto&& tests_files = config["tests_files"];
 	CHECK_IF_ARR(tests_files, "tests_files");
 
@@ -439,11 +463,26 @@ void Simfile::load_tests_files() {
 	// StringView can be used because it will point to the config variable
 	// "tests_files" member, which becomes unchanged
 	for (const string& str : tests_files.as_array()) {
-		StringView test_name;
-		pair<StringView, StringView> p;
-		std::tie(test_name, p.first, p.second) = parse_test_files_item(str);
+		StringView test_name, in_file, out_file;
+		std::tie(test_name, in_file, out_file) = parse_test_files_item(str);
+		if (test_name.empty())
+			continue; // Ignore empty entries
 
-		auto it = files.emplace(test_name, p);
+		if (in_file.empty())
+			throw std::runtime_error(concat_tostr("Simfile: `test_files`:"
+				" missing input file for test `", test_name, '`'));
+
+		if (interactive and not out_file.empty())
+			throw std::runtime_error(concat_tostr("Simfile: `test_files`:"
+				" output file specified for test `", test_name, "`, but"
+				" interactive problems have no test output files"));
+
+		if (not interactive and out_file.empty())
+			throw std::runtime_error(concat_tostr("Simfile: `test_files`:"
+				" missing output file for test: `", test_name, '`'));
+
+		auto it = files.emplace(test_name,
+			pair<StringView, StringView>(in_file, out_file));
 		if (not it.second)
 			throw std::runtime_error{concat_tostr("Simfile: `test_files`: "
 				"redefinition of the test `", test_name, '`')};
@@ -460,7 +499,10 @@ void Simfile::load_tests_files() {
 			// Secure paths, so that it is not going outside the package
 			test.in = abspath(it->second.first).erase(0, 1); // Erase '/' from
 			                                                 // the beginning
-			test.out = abspath(it->second.second).erase(0, 1); // The same here
+			if (interactive)
+				test.out = std::nullopt;
+			else
+				test.out = abspath(it->second.second).erase(0, 1); // Same here
 		}
 
 	// Superfluous files declarations are ignored - those for tests not from the
@@ -496,9 +538,12 @@ void Simfile::validate_files(StringView package_path) const {
 			if (!isRegularFile(concat(package_path, '/', test.in)))
 				throw std::runtime_error{concat_tostr("Simfile: invalid test"
 					" input file `", test.in, '`')};
-			if (!isRegularFile(concat(package_path, '/', test.out)))
+			if (test.out.has_value() and
+				!isRegularFile(concat(package_path, '/', test.out.value())))
+			{
 				throw std::runtime_error{concat_tostr("Simfile: invalid test"
-					" output file `", test.out, '`')};
+					" output file `", test.out.value(), '`')};
+			}
 		}
 }
 

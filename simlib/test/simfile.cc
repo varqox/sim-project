@@ -165,6 +165,45 @@ TEST (Simfile, loadLabel) {
 	EXPECT_THROW(sf.load_label(), std::runtime_error);
 }
 
+TEST (Simfile, loadInteractive) {
+	sim::Simfile sf {"interactive: true"};
+	// Load two times - make sure that it is safe
+	for (int i = 1; i <= 2; ++i) {
+		sf.load_interactive();
+		EXPECT_EQ(true, sf.interactive) << "iteration: " << i;
+	}
+
+	EXPECT_EQ("interactive: true\n"
+		"solutions: []\n"
+		"limits: []\n"
+		"tests_files: [\n"
+		"]\n", sf.dump());
+
+	sf = sim::Simfile {"interactive: false"};
+	// Load two times - make sure that it is safe
+	for (int i = 1; i <= 2; ++i) {
+		sf.load_interactive();
+		EXPECT_EQ(false, sf.interactive) << "iteration: " << i;
+	}
+
+	sf = sim::Simfile {""};
+	sf.load_interactive();
+	EXPECT_EQ(false, sf.interactive);
+
+	sf = sim::Simfile {"interactive:"};
+	sf.load_interactive();
+	EXPECT_EQ(false, sf.interactive);
+
+	EXPECT_EQ("solutions: []\n"
+		"limits: []\n"
+		"tests_files: [\n"
+		"]\n", sf.dump());
+
+	// Exceptions
+	sf = sim::Simfile {"interactive: []"};
+	EXPECT_THROW(sf.load_interactive(), std::runtime_error);
+}
+
 TEST (Simfile, loadChecker) {
 	sim::Simfile sf {"checker: path/to/checker"};
 	// Load two times - make sure that it is safe

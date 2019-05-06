@@ -7,8 +7,8 @@ Missing checker in the package's Simfile - searching for one
 No checker was found - the default checker will be used
 Missing / invalid statement specified in the package's Simfile - searching for one
 Chosen statement: foo.txt
-[1;35mwarning[m: "tests_files": output test file: `nothing` not found - ignoring file
-[1;35mwarning[m: "tests_files": output test file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": test output file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": test output file: `nothing` not found - ignoring file
 Global memory limit not specified in options - loading it from Simfile
 [1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it
 Auto-scoring: score of the group with id `3` set to 90

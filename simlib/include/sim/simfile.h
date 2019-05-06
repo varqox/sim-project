@@ -6,25 +6,31 @@
 #include <chrono>
 
 /// # Simfile - Sim package configuration file
-/// Simfile is a ConfigFile file, so the syntax is as in ConfigFile
+/// Simfile is a ConfigFile file, so the syntax is the same as in the ConfigFile
 ///
 /// ## Example:
 /// ```sh
 /// name: Simple Package                       # Problem name
 /// label: sim                                 # Problem label (usually a shortened name)
+/// interactive: false                         # Whether the problem is interactive
+///                                            #   or not (optional - default false)
 /// statement: doc/sim.pdf                     # Path to statement file
-/// checker: check/checker.cpp                 # Path to checker source file
-/// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files
-///                                            # The first solution is the main
-///                                            # solution
+/// checker: check/checker.cpp                 # Path to checker source file (optional 
+///                                            #   if the problem is not interactive),
+///                                            #   if not set, the default checker
+///                                            #   will be used
+/// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files.
+///                                            #   The first solution is the main
+///                                            #   solution
 /// memory_limit: 64              # Global memory limit in MB (optional)
 /// limits: [                     # Limits array
 ///         # Group 0
 ///         sim0a 1            # Format: <test name> <time limit> [memory limit]
 ///         sim0b 1.01         # Time limit in seconds, memory limit in MB
-///         sim1ocen 2 32      # Memory limit is optional if the global memory limit
-///         sim2ocen 3         # is set on every test.
-///                            # Tests may appear in an arbitrary order
+///         sim1ocen 2 32      # Individual memory limit is optional if the global
+///                            #   memory limit is set.
+///         sim2ocen 3         # Tests may appear in an arbitrary order
+///
 ///         # Group 1
 ///         sim1a 1
 ///         sim1b 1
@@ -40,7 +46,7 @@
 ///         # Group 4
 ///         sim4 5 32
 /// ]
-/// scoring: [                    # Scoring of the tests group (optional)
+/// scoring: [                    # Scoring of the tests groups (optional)
 ///         0 0      # Format: <group id> <score>
 ///         1 20     # Score is a signed integer value
 ///         2 30     # Groups may appear in an arbitrary order
@@ -48,7 +54,8 @@
 ///         4 25
 /// ]
 /// tests_files: [                # Tests' input and output files (optional)
-///                               # Format: <test name> <in file> <out file>
+///                               # Format: <test name> <in file> <out file - present
+///                               #   only if the package is not interactive>
 ///         sim0a in/sim0a.in out/sim0a.out
 ///         sim0b in/sim0b.in out/sim0b.out
 ///         sim1ocen in/sim1ocen.in out/sim1ocen.out
@@ -71,6 +78,7 @@ namespace sim {
 class Simfile {
 public:
 	std::string name, label, statement;
+	bool interactive = false;
 	Optional<std::string> checker; // std::nullopt if default checker should be used
 	std::vector<std::string> solutions;
 	Optional<uint64_t> global_mem_limit; // in bytes
@@ -79,7 +87,9 @@ public:
 	 * @brief Holds a test
 	 */
 	struct Test {
-		std::string name, in, out; // in, out - paths to test's input and output
+		std::string name, in; // in - path to the test's input file
+		Optional<std::string> out; // out - path to the test's output file (set
+		                           //   only if the package is not interactive)
 		std::chrono::nanoseconds time_limit;
 		uint64_t memory_limit; // in bytes
 
@@ -116,7 +126,8 @@ public:
 	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
 	explicit Simfile(std::string simfile_contents) {
-		config.add_vars("name", "label", "checker", "statement", "solutions", "memory_limit", "limits", "scoring", "tests_files");
+		config.add_vars("name", "label", "interactive", "checker", "statement",
+			"solutions", "memory_limit", "limits", "scoring", "tests_files");
 		config.load_config_from_string(std::move(simfile_contents)); }
 
 	Simfile(const Simfile&) = default;
@@ -169,10 +180,20 @@ public:
 	 */
 	void load_label();
 	/**
+	 * @brief Loads problem's interactive setting
+	 * @details Fields:
+	 *   - interactive (whether the problem is interactive or not)
+	 *
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
+	 */
+	void load_interactive();
+	/**
 	 * @brief Loads path to checker source file (if there is any)
 	 * @details Fields:
 	 *   - checker (path to checker source file or std::nullopt if default
 	 *       checker should be used)
+	 *   - interactive (whether the problem is interactive or not)
 	 *
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
@@ -196,8 +217,8 @@ public:
 	 *   validation error occurs
 	 */
 	void load_solutions();
-private:
 
+private:
 #if __cplusplus > 201402L
 #warning "Since C++17 std::optional should be used for memory limit"
 #endif
@@ -215,8 +236,8 @@ private:
 	 * @return (tests group id, group's score)
 	 */
 	static std::tuple<StringView, int64_t> parse_scoring_item(StringView item);
-public:
 
+public:
 	/**
 	 * @brief Loads tests, their limits and scoring
 	 * @details Fields:
@@ -240,16 +261,19 @@ public:
 	 *   validation error occurs
 	 */
 	void load_global_memory_limit_only();
+
 private:
 	/**
 	 * @brief Parses the item of the variable "tests_files"
+	 * @detail each of the returned field may be empty - validation occurs only
+	 *   for excessive columns
 	 * @param item - the item to parse
 	 * @return (test name, path to input file, path to output file)
 	 */
 	static std::tuple<StringView, StringView, StringView>
 		parse_test_files_item(StringView item);
-public:
 
+public:
 	/**
 	 * @brief Loads tests files (input and output files)
 	 * @details Fields:

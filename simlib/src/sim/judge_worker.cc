@@ -5,7 +5,12 @@
 #include "../../include/sim/problem_package.h"
 #include "default_checker_dump.h"
 
+#include <thread>
+#include <future>
+
+using std::promise;
 using std::string;
+using std::thread;
 using std::vector;
 
 namespace sim {
@@ -251,259 +256,112 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 	return es;
 }
 
-JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
-	Optional<std::function<void(const JudgeReport&)>> partial_report_callback) const
+namespace {
+
+struct CheckerStatus {
+	enum { OK, WRONG, ERROR } status;
+	double ratio;
+	std::string message;
+};
+
+} // anonymous namespace
+
+static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
+	const Sandbox::Options& opts, int output_fd, const char* output_name)
 {
-	STACK_UNWINDING_MARK;
+	// Checker exited with 0
+	if (es.si.code == CLD_EXITED and es.si.status == 0) {
+		auto chout = sim::obtainCheckerOutput(output_fd, 512);
+		SimpleParser parser(chout);
 
-	using std::chrono_literals::operator""ns;
+		StringView line1(parser.extractNext('\n')); // "OK" or "WRONG"
+		StringView line2(parser.extractNext('\n')); // percentage (real)
 
-	if (checker_time_limit.has_value() and checker_time_limit.value() <= 0ns)
-		THROW("If set, checker_time_limit has to be greater than 0");
+		auto wrong_second_line = [&]() -> CheckerStatus {
+			return {
+				CheckerStatus::ERROR,
+				0,
+				concat_tostr("Second line of the ", output_name, " is invalid:"
+					" `", line2, "` - it has to be either empty or a real"
+					" number representing the percentage of the score that"
+					" solution will receive")
+			};
+		};
 
-	if (checker_memory_limit.has_value() and checker_memory_limit.value() <= 0)
-		THROW("If set, checker_memory_limit has to be greater than 0");
+		// Second line has to be either empty or be a real number
+		if (line2.size() and (line2[0] == '-' or !isReal(line2))) {
+			wrong_second_line();
+		// "OK" -> Checker: OK
+		} else if (line1 == "OK") {
+			CheckerStatus res;
+			// line2 format was checked above
+			if (line2.empty()) {
+				res.ratio = 1; // Empty line means 100%
+			} else {
+				errno = 0;
+				char* ptr;
+				double x = strtod(line2.data(), &ptr);
+				if (errno != 0 or ptr == line2.data())
+					return wrong_second_line();
 
-	if (score_cut_lambda < 0 or score_cut_lambda > 1)
-		THROW("score_cut_lambda has to be from [0, 1]");
+				res.ratio = x * 0.01;
+			}
+
+			res.status = CheckerStatus::OK;
+			// Leave the checker comment only
+			chout.erase(chout.begin(), chout.end() - parser.size());
+			res.message = std::move(chout);
+			return res;
+		}
+
+		// "WRONG" -> Checker: WA
+		if (line1 == "WRONG") {
+			// Leave the checker comment only
+			chout.erase(chout.begin(), chout.end() - parser.size());
+			return {CheckerStatus::WRONG, 0, std::move(chout)};
+		}
+
+		// * -> Checker error
+		return {
+			CheckerStatus::ERROR,
+			0,
+			concat_tostr("First line of the ", output_name, " is invalid: `",
+				line1, "` - it has to be either `OK` or `WRONG`")
+		};
+	}
+
+	// Checker TLE
+	if (opts.real_time_limit.has_value() and
+		es.runtime >= opts.real_time_limit.value())
+	{
+		return {CheckerStatus::ERROR, 0, "Time limit exceeded"};
+	}
+
+	// Checker MLE
+	if (es.message == "Memory limit exceeded" or
+		(opts.memory_limit.has_value() and
+			es.vm_peak > opts.memory_limit.value()))
+	{
+		return {CheckerStatus::ERROR, 0, "Memory limit exceeded"};
+	}
+
+	// Checker RTE
+	CheckerStatus res {CheckerStatus::ERROR, 0, "Runtime error"};
+	if (es.message.size())
+		back_insert(res.message, " (", es.message, ')');
+	return res;
+}
+
+
+template<class Func>
+JudgeReport JudgeWorker::process_tests(bool final, JudgeLogger& judge_log,
+	const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback,
+	Func&& judge_on_test) const
+{
+	using std::chrono_literals::operator""s;
 
 	JudgeReport report;
 	judge_log.begin(final);
-
-	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
-	// Checker STDOUT
-	FileDescriptor checker_stdout {openUnlinkedTmpFile(O_CLOEXEC)};
-	if (checker_stdout < 0)
-		THROW("Failed to create unlinked temporary file", errmsg());
-
-	// Solution STDOUT
-	FileDescriptor solution_stdout(sol_stdout_path,
-		O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
-	if (solution_stdout < 0)
-		THROW("Failed to open file `", sol_stdout_path, '`', errmsg());
-
-	FileRemover solution_stdout_remover {sol_stdout_path}; // Save disk space
-
-	// Checker parameters
-	Sandbox::Options checker_opts = {
-		-1, // STDIN is ignored
-		checker_stdout, // STDOUT
-		-1, // STDERR is ignored
-		checker_time_limit,
-		checker_memory_limit
-	};
-
-	Sandbox sandbox;
-
-	string checker_path {concat_tostr(tmp_dir.path(), CHECKER_FILENAME)};
-	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
-
-	using std::chrono_literals::operator""s;
-
-	auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
-		STACK_UNWINDING_MARK;
-
-		// Prepare solution fds
-		(void)ftruncate(solution_stdout, 0);
-		(void)lseek(solution_stdout, 0, SEEK_SET);
-
-		string test_in_path = package_loader->load_as_file(test.in, "test.in");
-		string test_out_path = package_loader->load_as_file(test.out, "test.out");
-
-		FileDescriptor test_in(test_in_path, O_RDONLY | O_CLOEXEC);
-		if (test_in < 0)
-			THROW("Failed to open file `", test_in_path, '`', errmsg());
-
-		// Run solution on the test
-		Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
-			test_in,
-			solution_stdout,
-			-1,
-			cpu_time_limit_to_real_time_limit(test.time_limit),
-			test.memory_limit,
-			test.time_limit
-		}); // Allow exceptions to fly upper
-
-		JudgeReport::Test test_report(
-			test.name,
-			JudgeReport::Test::OK,
-			es.cpu_runtime,
-			test.time_limit,
-			es.vm_peak,
-			test.memory_limit,
-			string {}
-		);
-
-		// Update group_score_ratio
-		if (score_cut_lambda < 1) { // Only then the scaling occurs
-			const double x =
-				std::chrono::duration<double>(test_report.runtime).count();
-			const double t =
-				std::chrono::duration<double>(test_report.time_limit).count();
-			group_score_ratio = std::min(group_score_ratio,
-				(x / t - 1) / (score_cut_lambda - 1));
-			// Runtime may be greater than time_limit therefore group_score_ratio
-			// may become negative which is undesired
-			if (group_score_ratio < 0)
-				group_score_ratio = 0;
-
-		}
-
-		// OK
-		if (es.si.code == CLD_EXITED and es.si.status == 0 and
-			test_report.runtime <= test_report.time_limit)
-		{
-
-		// TLE
-		} else if (test_report.runtime >= test_report.time_limit or
-			es.runtime >= test.time_limit)
-		{
-			// es.runtime >= tl means that real_time_limit has been exceeded
-			if (test_report.runtime < test_report.time_limit)
-				test_report.runtime = test_report.time_limit;
-
-			// After checking status for OK `>=` comparison is safe to
-			// detect exceeding
-			group_score_ratio = 0;
-			test_report.status = JudgeReport::Test::TLE;
-			test_report.comment = "Time limit exceeded";
-			judge_log.test(test.name, test_report, es);
-			return test_report;
-
-		// MLE
-		} else if (es.message == "Memory limit exceeded" ||
-			test_report.memory_consumed > test_report.memory_limit)
-		{
-			group_score_ratio = 0;
-			test_report.status = JudgeReport::Test::MLE;
-			test_report.comment = "Memory limit exceeded";
-			judge_log.test(test.name, test_report, es);
-			return test_report;
-
-		// RTE
-		} else {
-			group_score_ratio = 0;
-			test_report.status = JudgeReport::Test::RTE;
-			test_report.comment = "Runtime error";
-			if (es.message.size())
-				back_insert(test_report.comment, " (", es.message, ')');
-
-			judge_log.test(test.name, test_report, es);
-			return test_report;
-		}
-
-		// Status == OK
-
-		/* Checking solution output with checker */
-
-		// Prepare checker fds
-		(void)ftruncate(checker_stdout, 0);
-		(void)lseek(checker_stdout, 0, SEEK_SET);
-
-		// Run checker
-		auto ces = sandbox.run(checker_path,
-			{checker_path, test_in_path, test_out_path, sol_stdout_path},
-			checker_opts,
-			{
-				{test_in_path, OpenAccess::RDONLY},
-				{test_out_path, OpenAccess::RDONLY},
-				{sol_stdout_path, OpenAccess::RDONLY}
-			}); // Allow exceptions to fly higher
-
-		InplaceBuff<4096> checker_error_str;
-		// Checker exited with 0
-		if (ces.si.code == CLD_EXITED and ces.si.status == 0) {
-			string chout = sim::obtainCheckerOutput(checker_stdout, 512);
-			SimpleParser s {chout};
-
-			StringView line1 {s.extractNext('\n')}; // "OK" or "WRONG"
-			StringView line2 {s.extractNext('\n')}; // percentage (real)
-
-			auto wrong_second_line = [&] {
-				group_score_ratio = 0; // Do not give score for a checker error
-				test_report.status = JudgeReport::Test::CHECKER_ERROR;
-				test_report.comment = "Checker error";
-				checker_error_str.append("Second line of the stdout is"
-					" invalid: `", line2, "` - it has be to either empty or"
-					" a real number representing the percentage of score"
-					" that solution will receive");
-			};
-
-			// Second line has to be either empty or be a real number
-			if (line2.size() && (line2[0] == '-' || !isReal(line2))) {
-				wrong_second_line();
-
-			// "OK" -> Checker: OK
-			} else if (line1 == "OK") {
-				// Test status is already set to OK
-				// line2 format was checked above
-				if (line2.size()) { // Empty line means 100%
-					errno = 0;
-					char* ptr;
-					double x = strtod(line2.data(), &ptr);
-					if (errno != 0 or ptr == line2.data())
-						wrong_second_line();
-					else
-						group_score_ratio = std::min(group_score_ratio, x * 0.01);
-				}
-
-				// Leave the checker comment only
-				chout.erase(chout.begin(), chout.end() - s.size());
-				test_report.comment = std::move(chout);
-
-			// "WRONG" -> Checker: WA
-			} else if (line1 == "WRONG") {
-				test_report.status = JudgeReport::Test::WA;
-				group_score_ratio = 0; // Ignoring second line
-				// Leave the checker comment only
-				chout.erase(chout.begin(), chout.end() - s.size());
-				test_report.comment = std::move(chout);
-
-			// * -> Checker error
-			} else {
-				group_score_ratio = 0; // Do not give score for a checker error
-				test_report.status = JudgeReport::Test::CHECKER_ERROR;
-				test_report.comment = "Checker error";
-				checker_error_str.append("First line of the stdout is"
-					" invalid: `", line1, "` - it has to be either `OK` or"
-					" `WRONG`");
-			}
-
-		// Checker TLE
-		} else if (checker_time_limit.has_value() and
-			ces.runtime >= checker_time_limit.value())
-		{
-			group_score_ratio = 0; // Do not give score for a checker error
-			test_report.status = JudgeReport::Test::CHECKER_ERROR;
-			test_report.comment = "Checker error";
-			checker_error_str.append("Time limit exceeded");
-
-		// Checker MLE
-		} else if (ces.message == "Memory limit exceeded" or
-			(checker_memory_limit.has_value() and
-				ces.vm_peak > checker_memory_limit.value()))
-		{
-			group_score_ratio = 0; // Do not give score for a checker error
-			test_report.status = JudgeReport::Test::CHECKER_ERROR;
-			test_report.comment = "Checker error";
-			checker_error_str.append("Memory limit exceeded");
-
-		// Checker RTE
-		} else {
-			group_score_ratio = 0; // Do not give score for a checker error
-			test_report.status = JudgeReport::Test::CHECKER_ERROR;
-			test_report.comment = "Checker error";
-			checker_error_str.append("Runtime error");
-			if (ces.message.size())
-				checker_error_str.append(" (", ces.message, ')');
-		}
-
-		// Logging
-		judge_log.test(test.name, test_report, es, ces,
-			checker_memory_limit, checker_error_str);
-
-		return test_report;
-	};
 
 	// First round - judge as little as possible to compute total score
 	bool test_were_skipped = false;
@@ -537,6 +395,22 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 				);
 			} else {
 				report_group.tests.emplace_back(judge_on_test(test, group_score_ratio));
+
+				// Update group_score_ratio
+				if (score_cut_lambda < 1) { // Only then the scaling occurs
+					const auto& test_report = report_group.tests.back();
+					const double x =
+						std::chrono::duration<double>(test_report.runtime).count();
+					const double t =
+						std::chrono::duration<double>(test_report.time_limit).count();
+					group_score_ratio = std::min(group_score_ratio,
+						(x / t - 1) / (score_cut_lambda - 1));
+					// Runtime may be greater than time_limit therefore group_score_ratio
+					// may become negative which is undesired
+					if (group_score_ratio < 0)
+						group_score_ratio = 0;
+				}
+
 				if (group_score_ratio < 1e-6 and calc_group_score() == 0)
 					skip_tests = partial_report_callback.has_value();
 			}
@@ -583,6 +457,432 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 	judge_log.end();
 	report.judge_log = judge_log.judge_log();
 	return report;
+}
+
+JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
+	const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback) const
+{
+	STACK_UNWINDING_MARK;
+
+	struct NextJob {
+		FileDescriptor checker_stdin;
+		FileDescriptor checker_stdout;
+		const string& test_in_path;
+		std::chrono::nanoseconds solution_real_time_limit;
+	};
+
+	std::promise<void> checker_supervisor_ready; // Used to pass exceptions
+	std::promise<Optional<NextJob>> next_job_promise;
+	std::promise<CheckerStatus> checker_status_promise;
+	Sandbox::ExitStat ces;
+
+	auto checker_supervisor = [&] {
+		try {
+			STACK_UNWINDING_MARK;
+
+			// Setup
+			FileDescriptor output(openUnlinkedTmpFile());
+			if (output < 0) // Needs to be done this way because constructing exception may throw
+				THROW("Cannot create checker output file descriptor");
+
+			Sandbox sandbox;
+			const auto checker_path = concat_tostr(tmp_dir.path(), CHECKER_FILENAME);
+
+			checker_supervisor_ready.set_value();
+			for (;;) {
+				STACK_UNWINDING_MARK;
+
+				auto job_opt = next_job_promise.get_future().get();
+				next_job_promise = {}; // reset promise
+				checker_supervisor_ready.set_value(); // Notify solution supervisor that we received the job
+				if (not job_opt.has_value())
+					return;
+
+				auto& job = job_opt.value();
+
+				try {
+					STACK_UNWINDING_MARK;
+
+					auto rtl = checker_time_limit;
+					if (rtl.has_value())
+						rtl.value() += job.solution_real_time_limit;
+
+					// Checker parameters
+					Sandbox::Options opts = {
+						job.checker_stdin,
+						job.checker_stdout,
+						output, // STDERR
+						rtl,
+						checker_memory_limit
+					};
+
+
+					// Prepare checker fds
+					(void)ftruncate(output, 0);
+					(void)lseek(output, 0, SEEK_SET);
+
+					// Run checker
+					ces = sandbox.run(checker_path,
+						{checker_path, job.test_in_path},
+						opts,
+						{{job.test_in_path, OpenAccess::RDONLY}},
+						[&] {
+							job.checker_stdin.close();
+							job.checker_stdout.close();
+						}
+					);
+
+					// Make sure the pipes are closed
+					job.checker_stdin.close();
+					job.checker_stdout.close();
+
+					checker_status_promise.set_value(
+						exit_to_checker_status(ces, opts, output, "stderr"));
+
+				} catch (...) {
+					ERRLOG_CATCH();
+					checker_status_promise.set_exception(std::current_exception());
+				}
+			}
+		} catch (...) {
+			ERRLOG_CATCH();
+			checker_supervisor_ready.set_exception(std::current_exception());
+		}
+	};
+
+	Sandbox sandbox;
+	const auto solution_path = concat_tostr(tmp_dir.path(), SOLUTION_FILENAME);
+
+	auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
+		STACK_UNWINDING_MARK;
+		// Prepare pipes
+		int pfds[2];
+		if (pipe2(pfds, O_CLOEXEC))
+			THROW("pipe2()", errmsg());
+		FileDescriptor checker_input(pfds[0]), solution_output(pfds[1]);
+
+		if (pipe2(pfds, O_CLOEXEC))
+			THROW("pipe2()", errmsg());
+		FileDescriptor solution_input(pfds[0]), checker_output(pfds[1]);
+
+		string test_in_path = package_loader->load_as_file(test.in, "test.in");
+		auto solution_real_time_limit = cpu_time_limit_to_real_time_limit(test.time_limit);
+
+		// Schedule checker supervisor
+		next_job_promise.set_value(NextJob {
+			std::move(checker_input),
+			std::move(checker_output),
+			test_in_path,
+			solution_real_time_limit
+		});
+		// Synchronize with checker supervisor to safely recover later in case
+		// of exceptions (need to set next_job_promise to std::nullopt)
+		checker_supervisor_ready.get_future().get();
+		checker_supervisor_ready = {}; // reset promise
+
+		// Run solution
+		auto es = sandbox.run(solution_path, {}, {
+			solution_input,
+			solution_output,
+			-1,
+			solution_real_time_limit,
+			test.memory_limit,
+			test.time_limit
+		}, {}, [&] {
+			solution_input.close();
+			solution_output.close();
+		}); // Allow exceptions to fly upper
+
+		// Make sure the pipes are closed
+		solution_input.close();
+		solution_output.close();
+
+		// Get checker status
+		auto checker_result = checker_status_promise.get_future().get();
+		checker_status_promise = {}; // reset promise
+
+		JudgeReport::Test test_report(
+			test.name,
+			JudgeReport::Test::OK,
+			es.cpu_runtime,
+			test.time_limit,
+			es.vm_peak,
+			test.memory_limit,
+			string {}
+		);
+
+		// Update group_score_ratio
+		group_score_ratio = std::min(group_score_ratio, checker_result.ratio);
+
+		switch (checker_result.status) {
+		case CheckerStatus::ERROR:
+			test_report.status = JudgeReport::Test::CHECKER_ERROR;
+			test_report.comment = "Checker error";
+			judge_log.test(test.name, test_report, es, ces,
+				checker_memory_limit, checker_result.message);
+			return test_report;
+
+		case CheckerStatus::OK:
+		case CheckerStatus::WRONG:
+			break; // This way to make the compiler warning on development
+		}
+
+		// Solution: OK or killed by SIGPIPE and checker returned WRONG
+		if ((es.si.code == CLD_EXITED and es.si.status == 0 and
+				test_report.runtime <= test_report.time_limit) or
+			(isOneOf(es.si.code, CLD_KILLED, CLD_DUMPED) and
+				es.si.status == SIGPIPE and
+				checker_result.status == CheckerStatus::WRONG))
+		{
+			switch (checker_result.status) {
+			case CheckerStatus::OK:
+				// Test status is already set to OK
+				test_report.comment = std::move(checker_result.message);
+				break;
+
+			case CheckerStatus::WRONG:
+				test_report.status = JudgeReport::Test::WA;
+				test_report.comment = std::move(checker_result.message);
+				break;
+
+			case CheckerStatus::ERROR:
+				throw_assert(false); // This way to make the compiler warning on development
+			}
+
+			judge_log.test(test.name, test_report, es, ces, checker_memory_limit,
+				checker_result.message);
+			return test_report;
+		}
+
+		group_score_ratio = 0; // Other statuses are fatal
+
+		// Solution: TLE
+		// After checking status for OK >= comparison is safe to detect exceeding
+		if (test_report.runtime >= test_report.time_limit or
+			es.runtime >= test.time_limit)
+		{
+			// es.runtime >= tl meas that real_time_limit has been exceeded
+			if (test_report.runtime < test_report.time_limit)
+				test_report.runtime = test_report.time_limit;
+
+			test_report.status = JudgeReport::Test::TLE;
+			test_report.comment = "Time limit exceeded";
+		// Solution: MLE
+		} else if (es.message == "Memory limit exceeded" or
+			test_report.memory_consumed > test_report.memory_limit)
+		{
+			test_report.status = JudgeReport::Test::MLE;
+			test_report.comment = "Memory limit exceeded";
+		// Solution: RTE
+		} else {
+			test_report.status = JudgeReport::Test::RTE;
+			test_report.comment = "Runtime error";
+			if (es.message.size())
+				back_insert(test_report.comment, " (", es.message, ')');
+		}
+
+		// Logging
+		judge_log.test(test.name, test_report, es);
+		return test_report;
+	};
+
+	auto solution_supervisor = [&] {
+		STACK_UNWINDING_MARK;
+		// Wait for checker supervisor to set up
+		checker_supervisor_ready.get_future().get();
+		checker_supervisor_ready = {}; // reset promise
+
+		return process_tests(final, judge_log, partial_report_callback, judge_on_test);
+	};
+
+	std::thread checker_supervisor_thread(checker_supervisor);
+	try {
+		// This thread is a solution supervisor thread
+		auto report = solution_supervisor();
+		next_job_promise.set_value(std::nullopt); // No more jobs
+		checker_supervisor_thread.join();
+		return report;
+
+	} catch (...) {
+		next_job_promise.set_value(std::nullopt);
+		if (checker_supervisor_thread.joinable()) // Join above may have thrown
+			checker_supervisor_thread.join();
+		throw;
+	}
+}
+
+JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
+	const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback) const
+{
+	STACK_UNWINDING_MARK;
+
+	using std::chrono_literals::operator""ns;
+
+	if (checker_time_limit.has_value() and checker_time_limit.value() <= 0ns)
+		THROW("If set, checker_time_limit has to be greater than 0");
+
+	if (checker_memory_limit.has_value() and checker_memory_limit.value() <= 0)
+		THROW("If set, checker_memory_limit has to be greater than 0");
+
+	if (score_cut_lambda < 0 or score_cut_lambda > 1)
+		THROW("score_cut_lambda has to be from [0, 1]");
+
+	if (sf.interactive)
+		return judge_interactive(final, judge_log, std::move(partial_report_callback));
+
+	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
+	// Checker STDOUT
+	FileDescriptor checker_stdout {openUnlinkedTmpFile(O_CLOEXEC)};
+	if (checker_stdout < 0)
+		THROW("Failed to create unlinked temporary file", errmsg());
+
+	// Solution STDOUT
+	FileDescriptor solution_stdout(sol_stdout_path,
+		O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
+	if (solution_stdout < 0)
+		THROW("Failed to open file `", sol_stdout_path, '`', errmsg());
+
+	FileRemover solution_stdout_remover {sol_stdout_path}; // Save disk space
+
+	// Checker parameters
+	Sandbox::Options checker_opts = {
+		-1, // STDIN is ignored
+		checker_stdout, // STDOUT
+		-1, // STDERR is ignored
+		checker_time_limit,
+		checker_memory_limit
+	};
+
+	Sandbox sandbox;
+
+	string checker_path {concat_tostr(tmp_dir.path(), CHECKER_FILENAME)};
+	string solution_path {concat_tostr(tmp_dir.path(), SOLUTION_FILENAME)};
+
+	using std::chrono_literals::operator""s;
+
+	auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
+		STACK_UNWINDING_MARK;
+
+		// Prepare solution fds
+		(void)ftruncate(solution_stdout, 0);
+		(void)lseek(solution_stdout, 0, SEEK_SET);
+
+		string test_in_path = package_loader->load_as_file(test.in, "test.in");
+		string test_out_path = package_loader->load_as_file(test.out.value(), "test.out");
+
+		FileDescriptor test_in(test_in_path, O_RDONLY | O_CLOEXEC);
+		if (test_in < 0)
+			THROW("Failed to open file `", test_in_path, '`', errmsg());
+
+		// Run solution on the test
+		Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
+			test_in,
+			solution_stdout,
+			-1,
+			cpu_time_limit_to_real_time_limit(test.time_limit),
+			test.memory_limit,
+			test.time_limit
+		}); // Allow exceptions to fly upper
+
+		JudgeReport::Test test_report(
+			test.name,
+			JudgeReport::Test::OK,
+			es.cpu_runtime,
+			test.time_limit,
+			es.vm_peak,
+			test.memory_limit,
+			string {}
+		);
+
+		// OK
+		if (es.si.code == CLD_EXITED and es.si.status == 0 and
+			test_report.runtime <= test_report.time_limit)
+		{
+
+		// TLE
+		// After checking status for OK `>=` comparison is safe to detect exceeding
+		} else if (test_report.runtime >= test_report.time_limit or
+			es.runtime >= test.time_limit)
+		{
+			// es.runtime >= tl means that real_time_limit has been exceeded
+			if (test_report.runtime < test_report.time_limit)
+				test_report.runtime = test_report.time_limit;
+
+			group_score_ratio = 0;
+			test_report.status = JudgeReport::Test::TLE;
+			test_report.comment = "Time limit exceeded";
+			judge_log.test(test.name, test_report, es);
+			return test_report;
+
+		// MLE
+		} else if (es.message == "Memory limit exceeded" or
+			test_report.memory_consumed > test_report.memory_limit)
+		{
+			group_score_ratio = 0;
+			test_report.status = JudgeReport::Test::MLE;
+			test_report.comment = "Memory limit exceeded";
+			judge_log.test(test.name, test_report, es);
+			return test_report;
+
+		// RTE
+		} else {
+			group_score_ratio = 0;
+			test_report.status = JudgeReport::Test::RTE;
+			test_report.comment = "Runtime error";
+			if (es.message.size())
+				back_insert(test_report.comment, " (", es.message, ')');
+
+			judge_log.test(test.name, test_report, es);
+			return test_report;
+		}
+
+		// Status == OK
+
+		/* Checking solution output with checker */
+
+		// Prepare checker fds
+		(void)ftruncate(checker_stdout, 0);
+		(void)lseek(checker_stdout, 0, SEEK_SET);
+
+		// Run checker
+		auto ces = sandbox.run(checker_path,
+			{checker_path, test_in_path, test_out_path, sol_stdout_path},
+			checker_opts,
+			{
+				{test_in_path, OpenAccess::RDONLY},
+				{test_out_path, OpenAccess::RDONLY},
+				{sol_stdout_path, OpenAccess::RDONLY}
+			}); // Allow exceptions to fly higher
+
+		auto checker_result = exit_to_checker_status(ces, checker_opts,
+			checker_stdout, "stdout");
+
+		// Update group_score_ratio
+		group_score_ratio = std::min(group_score_ratio, checker_result.ratio);
+
+		switch (checker_result.status) {
+		case CheckerStatus::OK:
+			// Test status is already set to OK
+			test_report.comment = std::move(checker_result.message);
+			break;
+		case CheckerStatus::WRONG:
+			test_report.status = JudgeReport::Test::WA;
+			test_report.comment = std::move(checker_result.message);
+			break;
+		case CheckerStatus::ERROR:
+			test_report.status = JudgeReport::Test::CHECKER_ERROR;
+			test_report.comment = "Checker error";
+			break;
+		}
+
+		// Logging
+		judge_log.test(test.name, test_report, es, ces,
+			checker_memory_limit, checker_result.message);
+
+		return test_report;
+	};
+
+	return process_tests(final, judge_log, partial_report_callback, judge_on_test);
 }
 
 } // namespace sim

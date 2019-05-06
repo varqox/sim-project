@@ -1,25 +1,29 @@
 # Simfile - Sim package configuration file
-Simfile is a ConfigFile file, so the syntax is as in ConfigFile.
-
-# TODO: update this file based on the changes that are being made some time now (to simfile.h e.g.)
+Simfile is a ConfigFile file, so the syntax is the same as in the ConfigFile
 
 ## Example:
 ```sh
 name: Simple Package                       # Problem name
-label: sim                                 # Problem label (usually a shorten name)
+label: sim                                 # Problem label (usually a shortened name)
+interactive: false                         # Whether the problem is interactive
+                                           #   or not (optional - default false)
 statement: doc/sim.pdf                     # Path to statement file
-checker: check/checker.cpp                 # Path to checker source file
-solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files
-                                           # The first solution is the main
-                                           # solution
+checker: check/checker.cpp                 # Path to checker source file (optional 
+                                           #   if the problem is not interactive),
+                                           #   if not set, the default checker
+                                           #   will be used
+solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files.
+                                           #   The first solution is the main
+                                           #   solution
 memory_limit: 64              # Global memory limit in MB (optional)
 limits: [                     # Limits array
         # Group 0
         sim0a 1            # Format: <test name> <time limit> [memory limit]
         sim0b 1.01         # Time limit in seconds, memory limit in MB
-        sim1ocen 2 32      # Memory limit is optional if the global memory limit
-        sim2ocen 3         # is set.
-                           # Tests may appear in an arbitrary order
+        sim1ocen 2 32      # Individual memory limit is optional if the global
+                           #   memory limit is set.
+        sim2ocen 3         # Tests may appear in an arbitrary order
+
         # Group 1
         sim1a 1
         sim1b 1
@@ -42,8 +46,9 @@ scoring: [                    # Scoring of the tests groups (optional)
         3 25
         4 25
 ]
-tests_files: [                # Tests' input and output files
-                              # Format: <test name> <in file> <out file>
+tests_files: [                # Tests' input and output files (optional)
+                              # Format: <test name> <in file> <out file - present
+                              #   only if the package is not interactive>
         sim0a in/sim0a.in out/sim0a.out
         sim0b in/sim0b.in out/sim0b.out
         sim1ocen in/sim1ocen.in out/sim1ocen.out

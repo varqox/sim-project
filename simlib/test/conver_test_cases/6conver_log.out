@@ -10,8 +10,8 @@ Chosen statement: foo.txt
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `aa`
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `44`
 [1;35mwarning[m: "limits": ignoring test `ttt` because it has no group id in its name
-[1;35mwarning[m: "tests_files": output test file: `nothing` not found - ignoring file
-[1;35mwarning[m: "tests_files": output test file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": test output file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": test output file: `nothing` not found - ignoring file
 [1;35mwarning[m: "tests_files": ignoring unparsable item -> Simfile: `tests_files`: invalid format of entry for test `ttt` - excess part: hhh
 Global memory limit not specified in options - loading it from Simfile
 [1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it

@@ -63,10 +63,18 @@ static Conver::Options load_options_from_file(FilePath file) {
 		THROW("variable \"", name, "\" is not a bool: ", str);
 	};
 
+	auto get_optional_bool = [&](StringView name) -> Optional<bool> {
+		if (get_var(name).as_string() == "null")
+			return std::nullopt;
+
+		return get_bool(name);
+	};
+
 	Conver::Options opts;
 
 	opts.name = get_string("name");
 	opts.label = get_string("label");
+	opts.interactive = get_optional_bool("interactive");
 	opts.memory_limit = get_optional_uint64("memory_limit");
 	opts.global_time_limit = get_optional_duration("global_time_limit");
 	opts.max_time_limit = get_duration("max_time_limit");
@@ -83,6 +91,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 }
 
 TEST (Conver, constructSimfile) {
+	// TODO: make tests for interactive problem packages
 	stdlog.label(false);
 	TemporaryFile package_copy("/tmp/conver_test.XXXXXX");
 

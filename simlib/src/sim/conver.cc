@@ -128,6 +128,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 			" searching for one");
 	}
 
+	// Interactive
+	if (opts.interactive.has_value())
+		sf.interactive = opts.interactive.value();
+
 	if (not sf.checker.has_value()) {
 		// Scan check/ and checker/ directory
 		auto x = collect_files(concat(master_dir, "check/"), is_source);
@@ -146,6 +150,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 			report_.append("Chosen checker: ", sf.checker.value());
 
 		// No checker was found in the package
+		} else if (sf.interactive) {
+			report_.append("No checker was found");
+			THROW("No checker was found, but interactive problems require checker");
 		} else {
 			report_.append("No checker was found - the default checker will be used");
 		}
@@ -269,7 +276,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 
 	if (opts.seek_for_new_tests)
 		pc.for_each_with_prefix("", [&](StringView entry) {
-			if (hasSuffixIn(entry, {".in", ".out"})) {
+			if (hasSuffix(entry, ".in") or
+				(not sf.interactive and hasSuffix(entry, ".out")))
+			{
 				entry.removeTrailing([](char c) { return (c != '.'); });
 				entry.removeSuffix(1);
 				StringView name =
@@ -296,21 +305,26 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 		}
 	});
 
-	pc.for_each_with_prefix("", [&](StringView output) {
-		if (hasSuffix(output, ".out")) {
-			StringView tname = output;
-			tname.removeSuffix(4);
-			tname = tname.extractTrailing([](char c) { return (c != '/'); });
-			output.removePrefix(master_dir.size());
+	if (not sf.interactive) {
+		pc.for_each_with_prefix("", [&](StringView output) {
+			if (hasSuffix(output, ".out")) {
+				StringView tname = output;
+				tname.removeSuffix(4);
+				tname = tname.extractTrailing([](char c) { return (c != '/'); });
+				output.removePrefix(master_dir.size());
 
-			auto& test = tests[tname];
-			if (test.out.has_value()) {
-				report_.append("\033[1;35mwarning\033[m: output file for test `", tname, "` was found in more than one location: `", test.out.value(), "` and `", output, "` - choosing the later");
+				auto& test = tests[tname];
+				if (test.out.has_value()) {
+					report_.append("\033[1;35mwarning\033[m: output file for"
+						" test `", tname, "` was found in more than one"
+						" location: `", test.out.value(), "` and `", output, "`"
+						" - choosing the later");
+				}
+
+				test.out = output;
 			}
-
-			test.out = output;
-		}
-	});
+		});
+	}
 
 	// Load test files (this one may overwrite the files form previous step)
 	auto const& tests_files = sf.config["tests_files"];
@@ -327,17 +341,42 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 				continue;
 			}
 
+			if (tname.empty())
+				continue; // Ignore empty entries
+
+			if (input.value().empty()) {
+				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
+					" missing test input file for test `", tname, "` - ignoring");
+
+				throw_assert(output.value().empty());
+				continue; // Nothing more to do
+			}
+
 			auto path = concat(master_dir, input.value());
 			if (not pc.exists(path)) {
-				report_.append("\033[1;35mwarning\033[m: \"tests_files\": input"
-					" test file: `", input.value(), "` not found - ignoring file");
+				report_.append("\033[1;35mwarning\033[m: \"tests_files\": test"
+					" input file: `", input.value(), "` not found - ignoring file");
 				input = std::nullopt;
 			}
 
+
 			path = concat(master_dir, output.value());
-			if (not pc.exists(path)) {
+			if (sf.interactive) {
+				if (not output.value().empty()) {
+					report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
+						" test output file: `", input.value(), "` specified,"
+						" but the problem is interactive - ignoring file");
+				}
+				output = std::nullopt;
+
+			} else if (output.value().empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
-					" output test file: `", output.value(), "` not found - ignoring file");
+					" missing test output file for test `", tname, "` - ignoring");
+				output = std::nullopt;
+
+			} else if (not pc.exists(path)) {
+				report_.append("\033[1;35mwarning\033[m: \"tests_files\": test"
+					" output file: `", output.value(), "` not found - ignoring file");
 				output = std::nullopt;
 			}
 
@@ -368,11 +407,14 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
 				test.name, "` because it has no corresponding input file");
 		// Warn if the test was loaded from "limits"
-		if (not test.out.has_value() and test.time_limit.has_value())
+		if (not sf.interactive and not test.out.has_value() and
+			test.time_limit.has_value())
+		{
 			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
 				test.name, "` because it has no corresponding output file");
+		}
 
-		if (not test.in.has_value() or not test.out.has_value())
+		if (not test.in.has_value() or (not sf.interactive and not test.out.has_value()))
 			tests.erase(test.name);
 	}
 
@@ -514,7 +556,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts, bool b
 				std::chrono::nanoseconds(test.time_limit.value_or(0)),
 				test.memory_limit.value());
 			t.in = test.in.value().to_string();
-			t.out = test.out.value().to_string();
+			if (sf.interactive)
+				t.out = std::nullopt;
+			else
+				t.out = test.out.value().to_string();
 
 			tg.tests.emplace_back(std::move(t));
 		}
