@@ -202,7 +202,8 @@ std::chrono::nanoseconds Spawner::CPUTimeMonitor::get_cpu_runtime() {
 }
 
 Spawner::ExitStat Spawner::run(FilePath exec,
-	const vector<string>& exec_args, const Spawner::Options& opts)
+	const vector<string>& exec_args, const Spawner::Options& opts,
+	const std::function<void()>& do_after_fork)
 {
 	STACK_UNWINDING_MARK;
 
@@ -251,6 +252,8 @@ Spawner::ExitStat Spawner::run(FilePath exec,
 		waitid(P_PID, cpid, &si, WEXITED);
 	});
 
+	do_after_fork();
+
 	// Set up timers
 	Timer timer(cpid, opts.real_time_limit.value_or(0ns));
 	CPUTimeMonitor cpu_timer(cpid, opts.cpu_time_limit.value_or(0ns));
@@ -277,7 +280,7 @@ Spawner::ExitStat Spawner::run(FilePath exec,
 
 void Spawner::run_child(FilePath exec,
 	const std::vector<std::string>& exec_args, const Options& opts, int fd,
-	std::function<void()> doBeforeExec) noexcept
+	const std::function<void()>& do_before_exec) noexcept
 {
 	STACK_UNWINDING_MARK;
 	// Sends error to parent
@@ -413,7 +416,7 @@ void Spawner::run_child(FilePath exec,
 	}
 
 	try {
-		doBeforeExec();
+		do_before_exec();
 	} catch (std::exception& e) {
 		send_error_message_and_exit(fd, CStringView(e.what()));
 	}

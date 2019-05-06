@@ -89,6 +89,8 @@ public:
 	 *   cpu_time_limit set to std::nullopt disables the CPU time limit;
 	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working directory)
+	 * @param do_after_fork function that will be called in the parent process
+	 *   just after fork() - useful for closing pipe ends
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - runtime: in timespec structure {sec, nsec}
@@ -105,7 +107,8 @@ public:
 	 */
 	static ExitStat run(FilePath exec,
 		const std::vector<std::string>& exec_args,
-		const Options& opts = Options());
+		const Options& opts = Options(),
+		const std::function<void()>& do_after_fork = []{});
 
 protected:
 	// Sends @p str through @p fd and _exits with -1
@@ -154,12 +157,12 @@ protected:
 	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working directory)
 	 * @param fd file descriptor to which errors will be written
-	 * @param doBeforeExec function that is to be called before executing
+	 * @param do_before_exec function that is to be called before executing
 	 *   @p exec
 	 */
 	static void run_child(FilePath exec,
 		const std::vector<std::string>& exec_args, const Options& opts, int fd,
-		std::function<void()> doBeforeExec) noexcept;
+		const std::function<void()>& do_before_exec) noexcept;
 
 	static void defaultTimeoutHandler(pid_t pid) { kill(-pid, SIGKILL); };
 

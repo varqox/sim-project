@@ -92,8 +92,10 @@ public:
 	 *   cpu_time_limit set to std::nullopt disables the CPU time limit;
 	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working directory)
-	 * @param func callback functor (used to determine if a syscall should be
-	 *   executed)
+	 * @param allowed_files list of files (with access modes) that the sandboxed
+	 *   program is allowed to open
+	 * @param do_after_fork function that will be called in the parent process
+	 *   just after fork() - useful for closing pipe ends
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - runtime: in timespec structure {sec, nsec}
@@ -110,5 +112,6 @@ public:
 	 */
 	ExitStat run(FilePath exec, const std::vector<std::string>& exec_args,
 		const Options& opts = Options(),
-		const std::vector<AllowedFile>& allowed_files = {});
+		const std::vector<AllowedFile>& allowed_files = {},
+		const std::function<void()>& do_after_fork = []{});
 };

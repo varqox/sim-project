@@ -732,7 +732,8 @@ void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
 
 Sandbox::ExitStat Sandbox::run(FilePath exec,
 	const std::vector<std::string>& exec_args, const Options& opts,
-	const std::vector<AllowedFile>& allowed_files)
+	const std::vector<AllowedFile>& allowed_files,
+	const std::function<void()>& do_after_fork)
 {
 	using std::chrono_literals::operator""ns;
 
@@ -984,6 +985,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		kill(-tracee_pid_, SIGKILL);
 		waitid(P_PID, tracee_pid_, &si, WEXITED);
 	});
+
+	do_after_fork();
 
 	// Set up ptrace options
 	if (ptrace(PTRACE_SETOPTIONS, tracee_pid_, 0, PTRACE_O_TRACESYSGOOD |
