@@ -16,22 +16,21 @@ constexpr uintmax_t MAX_UID = 4294967295;
 #define SIM_ROOT_UID "1"
 
 // user_type - strongly used -> do not change!
-enum class UserType : uint8_t {
-	ADMIN = 0,
-	TEACHER = 1,
-	NORMAL = 2
-};
+enum class UserType : uint8_t { ADMIN = 0, TEACHER = 1, NORMAL = 2 };
 
 #define UTYPE_ADMIN_STR "0"
 #define UTYPE_TEACHER_STR "1"
 #define UTYPE_NORMAL_STR "2"
 
 static_assert(meta::equal(UTYPE_ADMIN_STR,
-	meta::ToString<(int)UserType::ADMIN>::value), "Update the above #define");
+                          meta::ToString<(int)UserType::ADMIN>::value),
+              "Update the above #define");
 static_assert(meta::equal(UTYPE_TEACHER_STR,
-	meta::ToString<(int)UserType::TEACHER>::value), "Update the above #define");
+                          meta::ToString<(int)UserType::TEACHER>::value),
+              "Update the above #define");
 static_assert(meta::equal(UTYPE_NORMAL_STR,
-	meta::ToString<(int)UserType::NORMAL>::value), "Update the above #define");
+                          meta::ToString<(int)UserType::NORMAL>::value),
+              "Update the above #define");
 
 // Contest's users
 enum class ContestUserMode : uint8_t {
@@ -41,19 +40,21 @@ enum class ContestUserMode : uint8_t {
 };
 
 #define CU_MODE_CONTESTANT_STR "0"
-static_assert(meta::equal(CU_MODE_CONTESTANT_STR,
-	meta::ToString<(int)ContestUserMode::CONTESTANT>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(CU_MODE_CONTESTANT_STR,
+               meta::ToString<(int)ContestUserMode::CONTESTANT>::value),
+   "Update the above #define");
 
 #define CU_MODE_MODERATOR_STR "1"
-static_assert(meta::equal(CU_MODE_MODERATOR_STR,
-	meta::ToString<(int)ContestUserMode::MODERATOR>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(CU_MODE_MODERATOR_STR,
+               meta::ToString<(int)ContestUserMode::MODERATOR>::value),
+   "Update the above #define");
 
 #define CU_MODE_OWNER_STR "2"
 static_assert(meta::equal(CU_MODE_OWNER_STR,
-	meta::ToString<(int)ContestUserMode::OWNER>::value),
-	"Update the above #define");
+                          meta::ToString<(int)ContestUserMode::OWNER>::value),
+              "Update the above #define");
 
 // Session
 constexpr uint SESSION_ID_LEN = 30;
@@ -77,7 +78,7 @@ constexpr uint CONTEST_ROUND_NAME_MAX_LEN = 128;
 constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
 // Contest problems
 constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
-	meta::max(128, PROBLEM_NAME_MAX_LEN);
+   meta::max(128, PROBLEM_NAME_MAX_LEN);
 
 // Contest entry tokens
 constexpr uint CONTEST_ENTRY_TOKEN_LEN = 48;
@@ -93,7 +94,6 @@ constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MB
 // Submissions
 constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
 
-
 enum class ProblemType : uint8_t {
 	PUBLIC = 1,
 	PRIVATE = 2,
@@ -102,18 +102,19 @@ enum class ProblemType : uint8_t {
 
 #define PTYPE_PUBLIC_STR "1"
 static_assert(meta::equal(PTYPE_PUBLIC_STR,
-	meta::ToString<(int)ProblemType::PUBLIC>::value),
-	"Update the above #define");
+                          meta::ToString<(int)ProblemType::PUBLIC>::value),
+              "Update the above #define");
 
 #define PTYPE_PRIVATE_STR "2"
 static_assert(meta::equal(PTYPE_PRIVATE_STR,
-	meta::ToString<(int)ProblemType::PRIVATE>::value),
-	"Update the above #define");
+                          meta::ToString<(int)ProblemType::PRIVATE>::value),
+              "Update the above #define");
 
 #define PTYPE_CONTEST_ONLY_STR "3"
-static_assert(meta::equal(PTYPE_CONTEST_ONLY_STR,
-	meta::ToString<(int)ProblemType::CONTEST_ONLY>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(PTYPE_CONTEST_ONLY_STR,
+               meta::ToString<(int)ProblemType::CONTEST_ONLY>::value),
+   "Update the above #define");
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
@@ -123,18 +124,19 @@ enum class SubmissionType : uint8_t {
 
 #define STYPE_NORMAL_STR "0"
 static_assert(meta::equal(STYPE_NORMAL_STR,
-	meta::ToString<(int)SubmissionType::NORMAL>::value),
-	"Update the above #define");
+                          meta::ToString<(int)SubmissionType::NORMAL>::value),
+              "Update the above #define");
 
 #define STYPE_IGNORED_STR "2"
 static_assert(meta::equal(STYPE_IGNORED_STR,
-	meta::ToString<(int)SubmissionType::IGNORED>::value),
-	"Update the above #define");
+                          meta::ToString<(int)SubmissionType::IGNORED>::value),
+              "Update the above #define");
 
 #define STYPE_PROBLEM_SOLUTION_STR "3"
-static_assert(meta::equal(STYPE_PROBLEM_SOLUTION_STR,
-	meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(STYPE_PROBLEM_SOLUTION_STR,
+               meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
+   "Update the above #define");
 
 constexpr inline const char* toString(SubmissionType x) {
 	switch (x) {
@@ -166,8 +168,7 @@ constexpr inline const char* to_extension(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return ".c";
 	case SubmissionLanguage::CPP11:
-	case SubmissionLanguage::CPP14:
-		return ".cpp";
+	case SubmissionLanguage::CPP14: return ".cpp";
 	case SubmissionLanguage::PASCAL: return ".pas";
 	}
 	return "Unknown";
@@ -177,8 +178,7 @@ constexpr inline const char* to_MIME(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return "text/x-csrc";
 	case SubmissionLanguage::CPP11:
-	case SubmissionLanguage::CPP14:
-		return "text/x-c++src";
+	case SubmissionLanguage::CPP14: return "text/x-c++src";
 	case SubmissionLanguage::PASCAL: return "text/x-pascal";
 	}
 	return "Unknown";
@@ -193,11 +193,11 @@ enum class SubmissionStatus : uint8_t {
 	MLE = 4,
 	RTE = 5,
 	// Special
-	PENDING                   = 8 + 0,
+	PENDING = 8 + 0,
 	// Fatal
-	COMPILATION_ERROR         = 8 + 1,
+	COMPILATION_ERROR = 8 + 1,
 	CHECKER_COMPILATION_ERROR = 8 + 2,
-	JUDGE_ERROR               = 8 + 3
+	JUDGE_ERROR = 8 + 3
 };
 
 DECLARE_ENUM_UNARY_OPERATOR(SubmissionStatus, ~)
@@ -205,18 +205,20 @@ DECLARE_ENUM_OPERATOR(SubmissionStatus, |)
 DECLARE_ENUM_OPERATOR(SubmissionStatus, &)
 
 // Non-fatal statuses
-static_assert(meta::max(SubmissionStatus::OK, SubmissionStatus::WA,
-		SubmissionStatus::TLE, SubmissionStatus::MLE, SubmissionStatus::RTE) <
-	SubmissionStatus::PENDING,
-	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-	" used during selection of the final submission");
+static_assert(
+   meta::max(SubmissionStatus::OK, SubmissionStatus::WA, SubmissionStatus::TLE,
+             SubmissionStatus::MLE,
+             SubmissionStatus::RTE) < SubmissionStatus::PENDING,
+   "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+   " used during selection of the final submission");
 
 // Fatal statuses
-static_assert(meta::min(SubmissionStatus::COMPILATION_ERROR,
-	SubmissionStatus::CHECKER_COMPILATION_ERROR, SubmissionStatus::JUDGE_ERROR)
-	> SubmissionStatus::PENDING,
-	"Needed as a boundary between non-fatal and fatal statuses - it is strongly"
-	" used during selection of the final submission");
+static_assert(
+   meta::min(SubmissionStatus::COMPILATION_ERROR,
+             SubmissionStatus::CHECKER_COMPILATION_ERROR,
+             SubmissionStatus::JUDGE_ERROR) > SubmissionStatus::PENDING,
+   "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
+   " used during selection of the final submission");
 
 constexpr inline bool is_special(SubmissionStatus status) {
 	return (status >= SubmissionStatus::PENDING);
@@ -243,9 +245,10 @@ inline constexpr const char* css_color_class(SubmissionStatus status) noexcept {
 }
 
 #define SSTATUS_PENDING_STR "8"
-static_assert(meta::equal(SSTATUS_PENDING_STR,
-	meta::ToString<(int)SubmissionStatus::PENDING>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(SSTATUS_PENDING_STR,
+               meta::ToString<(int)SubmissionStatus::PENDING>::value),
+   "Update the above #define");
 
 enum class SubmissionFinalSelectingMethod {
 	LAST_COMPILING = 0,
@@ -253,14 +256,19 @@ enum class SubmissionFinalSelectingMethod {
 };
 
 #define SFSM_LAST_COMPILING "0"
-static_assert(meta::equal(SFSM_LAST_COMPILING,
-	meta::ToString<(int)SubmissionFinalSelectingMethod::LAST_COMPILING>::value),
+static_assert(
+   meta::equal(SFSM_LAST_COMPILING,
+               meta::ToString<
+                  (int)SubmissionFinalSelectingMethod::LAST_COMPILING>::value),
+   "Update the above #define");
 
 #define SFSM_WITH_HIGHEST_SCORE "1"
-	"Update the above #define");
-static_assert(meta::equal(SFSM_WITH_HIGHEST_SCORE,
-	meta::ToString<(int)SubmissionFinalSelectingMethod::WITH_HIGHEST_SCORE>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(
+      SFSM_WITH_HIGHEST_SCORE,
+      meta::ToString<
+         (int)SubmissionFinalSelectingMethod::WITH_HIGHEST_SCORE>::value),
+   "Update the above #define");
 
 enum class JobType : uint8_t {
 	JUDGE_SUBMISSION = 1,
@@ -283,89 +291,104 @@ enum class JobType : uint8_t {
 };
 
 #define JTYPE_JUDGE_SUBMISSION_STR "1"
-static_assert(meta::equal(JTYPE_JUDGE_SUBMISSION_STR,
-	meta::ToString<(int)JobType::JUDGE_SUBMISSION>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_JUDGE_SUBMISSION_STR,
+               meta::ToString<(int)JobType::JUDGE_SUBMISSION>::value),
+   "Update the above #define");
 
 #define JTYPE_ADD_PROBLEM_STR "2"
 static_assert(meta::equal(JTYPE_ADD_PROBLEM_STR,
-	meta::ToString<(int)JobType::ADD_PROBLEM>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::ADD_PROBLEM>::value),
+              "Update the above #define");
 
 #define JTYPE_REUPLOAD_PROBLEM_STR "3"
-static_assert(meta::equal(JTYPE_REUPLOAD_PROBLEM_STR,
-	meta::ToString<(int)JobType::REUPLOAD_PROBLEM>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_REUPLOAD_PROBLEM_STR,
+               meta::ToString<(int)JobType::REUPLOAD_PROBLEM>::value),
+   "Update the above #define");
 
 #define JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "4"
-static_assert(meta::equal(JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR,
-	meta::ToString<(int)JobType::ADD_JUDGE_MODEL_SOLUTION>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR,
+               meta::ToString<(int)JobType::ADD_JUDGE_MODEL_SOLUTION>::value),
+   "Update the above #define");
 
 #define JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR "5"
-static_assert(meta::equal(JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR,
-	meta::ToString<(int)JobType::REUPLOAD_JUDGE_MODEL_SOLUTION>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(
+      JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR,
+      meta::ToString<(int)JobType::REUPLOAD_JUDGE_MODEL_SOLUTION>::value),
+   "Update the above #define");
 
 #define JTYPE_EDIT_PROBLEM_STR "6"
 static_assert(meta::equal(JTYPE_EDIT_PROBLEM_STR,
-	meta::ToString<(int)JobType::EDIT_PROBLEM>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::EDIT_PROBLEM>::value),
+              "Update the above #define");
 
 #define JTYPE_DELETE_PROBLEM_STR "7"
 static_assert(meta::equal(JTYPE_DELETE_PROBLEM_STR,
-	meta::ToString<(int)JobType::DELETE_PROBLEM>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::DELETE_PROBLEM>::value),
+              "Update the above #define");
 
 #define JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR "8"
-static_assert(meta::equal(JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR,
-	meta::ToString<(int)JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(
+      JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR,
+      meta::ToString<
+         (int)JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS>::value),
+   "Update the above #define");
 
 #define JTYPE_DELETE_USER_STR "9"
 static_assert(meta::equal(JTYPE_DELETE_USER_STR,
-	meta::ToString<(int)JobType::DELETE_USER>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::DELETE_USER>::value),
+              "Update the above #define");
 
 #define JTYPE_DELETE_CONTEST_STR "10"
 static_assert(meta::equal(JTYPE_DELETE_CONTEST_STR,
-	meta::ToString<(int)JobType::DELETE_CONTEST>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::DELETE_CONTEST>::value),
+              "Update the above #define");
 
 #define JTYPE_DELETE_CONTEST_ROUND_STR "11"
-static_assert(meta::equal(JTYPE_DELETE_CONTEST_ROUND_STR,
-	meta::ToString<(int)JobType::DELETE_CONTEST_ROUND>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_DELETE_CONTEST_ROUND_STR,
+               meta::ToString<(int)JobType::DELETE_CONTEST_ROUND>::value),
+   "Update the above #define");
 
 #define JTYPE_DELETE_CONTEST_PROBLEM_STR "12"
-static_assert(meta::equal(JTYPE_DELETE_CONTEST_PROBLEM_STR,
-	meta::ToString<(int)JobType::DELETE_CONTEST_PROBLEM>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_DELETE_CONTEST_PROBLEM_STR,
+               meta::ToString<(int)JobType::DELETE_CONTEST_PROBLEM>::value),
+   "Update the above #define");
 
 #define JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR "13"
-static_assert(meta::equal(JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR,
-	meta::ToString<(int)JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(
+      JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR,
+      meta::ToString<
+         (int)JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION>::value),
+   "Update the above #define");
 
 #define JTYPE_MERGE_PROBLEMS_STR "14"
 static_assert(meta::equal(JTYPE_MERGE_PROBLEMS_STR,
-	meta::ToString<(int)JobType::MERGE_PROBLEMS>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::MERGE_PROBLEMS>::value),
+              "Update the above #define");
 
 #define JTYPE_REJUDGE_SUBMISSION_STR "15"
-static_assert(meta::equal(JTYPE_REJUDGE_SUBMISSION_STR,
-	meta::ToString<(int)JobType::REJUDGE_SUBMISSION>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_REJUDGE_SUBMISSION_STR,
+               meta::ToString<(int)JobType::REJUDGE_SUBMISSION>::value),
+   "Update the above #define");
 
 #define JTYPE_DELETE_FILE_STR "16"
 static_assert(meta::equal(JTYPE_DELETE_FILE_STR,
-	meta::ToString<(int)JobType::DELETE_FILE>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobType::DELETE_FILE>::value),
+              "Update the above #define");
 
 #define JTYPE_CHANGE_PROBLEM_STATEMENT_STR "17"
-static_assert(meta::equal(JTYPE_CHANGE_PROBLEM_STATEMENT_STR,
-	meta::ToString<(int)JobType::CHANGE_PROBLEM_STATEMENT>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JTYPE_CHANGE_PROBLEM_STATEMENT_STR,
+               meta::ToString<(int)JobType::CHANGE_PROBLEM_STATEMENT>::value),
+   "Update the above #define");
 
 constexpr inline const char* toString(JobType x) {
 	using JT = JobType;
@@ -478,31 +501,34 @@ enum class JobStatus : uint8_t {
 
 #define JSTATUS_PENDING_STR "1"
 static_assert(meta::equal(JSTATUS_PENDING_STR,
-	meta::ToString<(int)JobStatus::PENDING>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobStatus::PENDING>::value),
+              "Update the above #define");
 
 #define JSTATUS_NOTICED_PENDING_STR "2"
-static_assert(meta::equal(JSTATUS_NOTICED_PENDING_STR,
-	meta::ToString<(int)JobStatus::NOTICED_PENDING>::value),
-	"Update the above #define");
+static_assert(
+   meta::equal(JSTATUS_NOTICED_PENDING_STR,
+               meta::ToString<(int)JobStatus::NOTICED_PENDING>::value),
+   "Update the above #define");
 
 #define JSTATUS_IN_PROGRESS_STR "3"
 static_assert(meta::equal(JSTATUS_IN_PROGRESS_STR,
-	meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
+              "Update the above #define");
 
 #define JSTATUS_DONE_STR "4"
 static_assert(meta::equal(JSTATUS_DONE_STR,
-	meta::ToString<(int)JobStatus::DONE>::value), "Update the above #define");
+                          meta::ToString<(int)JobStatus::DONE>::value),
+              "Update the above #define");
 
 #define JSTATUS_FAILED_STR "5"
 static_assert(meta::equal(JSTATUS_FAILED_STR,
-	meta::ToString<(int)JobStatus::FAILED>::value), "Update the above #define");
+                          meta::ToString<(int)JobStatus::FAILED>::value),
+              "Update the above #define");
 
 #define JSTATUS_CANCELED_STR "6"
 static_assert(meta::equal(JSTATUS_CANCELED_STR,
-	meta::ToString<(int)JobStatus::CANCELED>::value),
-	"Update the above #define");
+                          meta::ToString<(int)JobStatus::CANCELED>::value),
+              "Update the above #define");
 
 constexpr inline const char* toString(JobStatus x) {
 	switch (x) {
@@ -519,8 +545,10 @@ constexpr inline const char* toString(JobStatus x) {
 // Internal files
 constexpr const char INTERNAL_FILES_DIR[] = "internal_files/";
 
-template<class T>
-auto internal_file_path(T file_id) { return concat<64>(INTERNAL_FILES_DIR, file_id); }
+template <class T>
+auto internal_file_path(T file_id) {
+	return concat<64>(INTERNAL_FILES_DIR, file_id);
+}
 
 // Jobs
 constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KB
@@ -542,14 +570,19 @@ constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
 constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
 constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
-constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
-constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
- // Conver::ResetTimeLimitsOptions and Conver::Options
-constexpr std::chrono::nanoseconds MIN_TIME_LIMIT = std::chrono::milliseconds(300);
+constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT =
+   std::chrono::seconds(30);
+constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT =
+   std::chrono::seconds(30);
+// Conver::ResetTimeLimitsOptions and Conver::Options
+constexpr std::chrono::nanoseconds MIN_TIME_LIMIT =
+   std::chrono::milliseconds(300);
 constexpr std::chrono::nanoseconds MAX_TIME_LIMIT = std::chrono::seconds(22);
 constexpr double SOLUTION_RUNTIME_COEFFICIENT = 3;
 // JudgeWorker
-constexpr std::chrono::nanoseconds CHECKER_TIME_LIMIT = std::chrono::seconds(22);
+constexpr std::chrono::nanoseconds CHECKER_TIME_LIMIT =
+   std::chrono::seconds(22);
 constexpr uint64_t CHECKER_MEMORY_LIMIT = 512 << 20; // 256 MiB
-constexpr double SCORE_CUT_LAMBDA = 2. / 3.; // See JudgeWorker::score_cut_lambda
+constexpr double SCORE_CUT_LAMBDA =
+   2. / 3.; // See JudgeWorker::score_cut_lambda
 constexpr const char PROOT_PATH[] = "./proot";

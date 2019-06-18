@@ -10,7 +10,8 @@ void DeleteUserJobHandler::run() {
 
 	// Log some info about the deleted user
 	{
-		auto stmt = mysql.prepare("SELECT username, type FROM users WHERE id=?");
+		auto stmt =
+		   mysql.prepare("SELECT username, type FROM users WHERE id=?");
 		stmt.bindAndExecute(user_id);
 		InplaceBuff<32> username;
 		EnumVal<UserType> user_type;
@@ -27,12 +28,13 @@ void DeleteUserJobHandler::run() {
 	}
 
 	// Add jobs to delete submission files
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-		" FROM submissions WHERE owner=?")
-		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), user_id);
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
+	            " FROM submissions WHERE owner=?")
+	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), user_id);
 
 	// Delete user (all necessary actions will take place thanks to foreign key
 	// constrains)

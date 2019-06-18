@@ -8,16 +8,16 @@ using std::string;
 namespace server {
 
 void HttpResponse::setCookie(const string& name, const string& val,
-	time_t expire, const string& path, const string& domain, bool http_only,
-	bool secure)
-{
+                             time_t expire, const string& path,
+                             const string& domain, bool http_only,
+                             bool secure) {
 	STACK_UNWINDING_MARK;
 
 	string value = val;
 
 	if (expire != -1) {
 		char buff[35];
-		tm *ptm = gmtime(&expire);
+		tm* ptm = gmtime(&expire);
 		if (strftime(buff, 35, "%a, %d %b %Y %H:%M:%S GMT", ptm))
 			value.append("; Expires=").append(buff);
 	}

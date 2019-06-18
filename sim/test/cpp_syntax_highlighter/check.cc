@@ -5,8 +5,8 @@
 #include <simlib/spawner.h>
 #include <simlib/utilities.h>
 
-using std::vector;
 using std::string;
+using std::vector;
 
 vector<string> findTests(string path = "tests") {
 	if (path.empty())
@@ -19,7 +19,7 @@ vector<string> findTests(string path = "tests") {
 	// Collect *.in and *.out files
 	vector<string> in, out;
 
-	dirent *file;
+	dirent* file;
 	while ((file = readdir(dir)))
 		if (hasSuffix(file->d_name, ".in")) {
 			in.emplace_back(file->d_name, __builtin_strlen(file->d_name) - 3);
@@ -48,27 +48,20 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 		string out_fname = concat_tostr("tests/", test, ".out");
 		string ans = csh(getFileContents(in_fname));
 
-		// OK
-		if (ans == getFileContents(out_fname)) {
+		if (ans == getFileContents(out_fname)) { // OK
 			++passed;
 			puts("\033[1;32mOK\033[m");
 
-		// WRONG
-		} else {
+		} else { // WRONG
 			puts("\033[1;31mWRONG\033[m");
 			string ans_fname = concat_tostr("tests/", test, ".ans");
 			putFileContents(ans_fname, ans);
 			if (show_diff) {
-				(void)Spawner::run("git", {
-					"git",
-					"--no-pager",
-					"diff",
-					"--no-index",
-					"-a",
-					"--color=always",
-					out_fname,
-					ans_fname
-				}, {-1, STDOUT_FILENO, STDERR_FILENO});
+				(void)Spawner::run("git",
+				                   {"git", "--no-pager", "diff", "--no-index",
+				                    "-a", "--color=always", out_fname,
+				                    ans_fname},
+				                   {-1, STDOUT_FILENO, STDERR_FILENO});
 			}
 		}
 	}
@@ -79,7 +72,7 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 	}
 
 	printf("Passed %u / %u (%u%%)\n", passed, (uint)tests.size(),
-		(uint)round(double(passed * 100)/tests.size()));
+	       (uint)round(double(passed * 100) / tests.size()));
 	return passed;
 }
 
@@ -88,14 +81,14 @@ void regenerate(const vector<string>& tests) {
 	for (auto&& test : tests) {
 		string in_fname = concat_tostr("tests/", test, ".in");
 		string out_fname = concat_tostr("tests/", test, ".out");
-		putFileContents(out_fname,
-			intentionalUnsafeStringView(csh(getFileContents(in_fname))));
+		putFileContents(out_fname, intentionalUnsafeStringView(
+		                              csh(getFileContents(in_fname))));
 	}
 }
 
 // argv[1] == "--diff" -> show diff if test failed
 // argv[1] == "--regen" -> regenerate ALL *.out files
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	try {
 		stdlog.label(false);
 		errlog.label(false);
@@ -134,7 +127,6 @@ int main(int argc, char **argv) {
 
 		if (check(tests, diff) != tests.size())
 			return 2;
-
 
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);

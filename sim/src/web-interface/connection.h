@@ -47,12 +47,13 @@ private:
 	};
 
 	std::string getHeaderLine();
-	std::pair<std::string, std::string> parseHeaderline(const std::string& header);
+	std::pair<std::string, std::string>
+	parseHeaderline(const std::string& header);
 	void readPOST(HttpRequest& req);
 
 public:
-	explicit Connection(int client_socket_fd) : state_(OK),
-		sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
+	explicit Connection(int client_socket_fd)
+	   : state_(OK), sock_fd_(client_socket_fd), buff_size_(0), pos_(0) {}
 
 	~Connection() {}
 

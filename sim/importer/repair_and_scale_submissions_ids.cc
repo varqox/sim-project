@@ -10,12 +10,12 @@ using std::vector;
 MySQL::Connection conn;
 string build;
 
-template<class... Args>
+template <class... Args>
 pair<int, string> spawn(Args&&... args) {
 	FileDescriptor output {openUnlinkedTmpFile()};
 	throw_assert(output >= 0);
 
-	vector<string> argv { std::forward<Args>(args)... };
+	vector<string> argv {std::forward<Args>(args)...};
 	Spawner::ExitStat es = Spawner::run(argv[0], argv, {-1, output, 2});
 
 	(void)lseek(output, 0, SEEK_SET);
@@ -50,8 +50,8 @@ string build_query(string table, uint columns) {
 #include <sim/jobs.h>
 
 void work() {
-	auto res = conn.executeQuery("SELECT * FROM submissions"
-		" ORDER BY submit_time ASC, type ASC, id ASC");
+	auto res = conn.executeQuery("SELECT * FROM submissions "
+	                             "ORDER BY submit_time ASC, type ASC, id ASC");
 	// Collect submissions
 	stdlog("Collecting submissions...");
 	map<string, int> M; // old_id => new_id
@@ -60,7 +60,8 @@ void work() {
 	while (res.next()) {
 		data.emplace_back(get_row(res));
 		string oldid = data.back()[0].second;
-		sources.emplace_back(getFileContents(concat(build, "/solutions/", oldid, ".cpp")));
+		sources.emplace_back(
+		   getFileContents(concat(build, "/solutions/", oldid, ".cpp")));
 		M[oldid] = data.size();
 	}
 
@@ -80,16 +81,17 @@ void work() {
 		set_row(stmt, row);
 		stmt.executeUpdate();
 
-		putFileContents(concat(build, "/solutions/", row[0].second, ".cpp"), sources[i]);
+		putFileContents(concat(build, "/solutions/", row[0].second, ".cpp"),
+		                sources[i]);
 	}
 
-	conn.executeUpdate(concat("ALTER TABLE submissions AUTO_INCREMENT=",
-		data.size()));
+	conn.executeUpdate(
+	   concat("ALTER TABLE submissions AUTO_INCREMENT=", data.size()));
 
 	// Update submissions' ids in jobs
 	stdlog("Updating jobs...");
-	res = conn.executeQuery("SELECT id, aux_id FROM jobs WHERE type="
-		JQTYPE_JUDGE_SUBMISSION_STR);
+	res = conn.executeQuery(
+	   "SELECT id, aux_id FROM jobs WHERE type=" JQTYPE_JUDGE_SUBMISSION_STR);
 	auto stmt = conn.prepare("UPDATE jobs SET aux_id=? WHERE id=?");
 	while (res.next()) {
 		stmt.setString(1, toStr(M[res[2]]).str);
@@ -98,18 +100,19 @@ void work() {
 	}
 }
 
-int main2(int argc, char **argv) {
+int main2(int argc, char** argv) {
 	stdlog.use(stdout);
 
 	if (argc != 2) {
-		errlog("You have to specify the path to the sim installation as the first argument");
+		errlog("You have to specify the path to the sim installation as the "
+		       "first argument");
 		return 1;
 	}
 
 	try {
 		// Get connection
 		conn = MySQL::createConnectionUsingPassFile(
-			concat(build = argv[1], "/.db.config"));
+		   concat(build = argv[1], "/.db.config"));
 
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to database\033[m - ", e.what());
@@ -121,7 +124,7 @@ int main2(int argc, char **argv) {
 	return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	try {
 		return main2(argc, argv);
 

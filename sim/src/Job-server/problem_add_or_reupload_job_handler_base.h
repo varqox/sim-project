@@ -29,12 +29,13 @@ private:
 
 protected:
 	ProblemAddOrReuploadJobHandlerBase(JobType job_type, StringView job_creator,
-			const jobs::AddProblemInfo& info, uint64_t job_file_id,
-			Optional<uint64_t> tmp_file_id, Optional<uint64_t> problem_id)
-		: job_type(job_type), job_creator(job_creator), info(info),
-			job_file_id(job_file_id), tmp_file_id(tmp_file_id),
-			problem_id(problem_id)
-	{
+	                                   const jobs::AddProblemInfo& info,
+	                                   uint64_t job_file_id,
+	                                   Optional<uint64_t> tmp_file_id,
+	                                   Optional<uint64_t> problem_id)
+	   : job_type(job_type), job_creator(job_creator), info(info),
+	     job_file_id(job_file_id), tmp_file_id(tmp_file_id),
+	     problem_id(problem_id) {
 		if (tmp_file_id.has_value())
 			load_job_log_from_DB();
 	}

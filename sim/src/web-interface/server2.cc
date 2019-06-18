@@ -48,7 +48,8 @@ struct Headers {
 				end = mid;
 		}
 		return (mid == other.end() || lower_equal(mid->first, name)
-			? "" : mid->second);
+		           ? ""
+		           : mid->second);
 	}
 };
 
@@ -61,8 +62,8 @@ struct Request {
 
 class Connection {
 	static constexpr size_t MAX_HEADER_LENGTH = 8192;
-	static constexpr uint8_t MAX_HEADERS_NO = 100; // be careful with type (see
-	                                               // field: header_no)
+	static constexpr uint8_t MAX_HEADERS_NO =
+	   100; // be careful with type (see field: header_no)
 	static constexpr size_t MAX_NON_FORM_CONTENT_LENGTH = 1 << 20; // 1 MiB
 
 	int fd_;
@@ -72,20 +73,20 @@ class Connection {
 	Request req_; // Currently parsed request
 	string buff_;
 	uint8_t header_no = 0;
-	uint8_t making_headers:1;
+	uint8_t making_headers : 1;
 
 public:
-	uint8_t idle:1;
-	uint8_t reading:1;
-	uint8_t writing:1;
+	uint8_t idle : 1;
+	uint8_t reading : 1;
+	uint8_t writing : 1;
 
 	vector<Request> requests;
 
 	Connection(int fde, const sockaddr_in& sock_addr, bool idl = true,
-		bool rd = false, bool wr = false)
-		: fd_(fde), sin_addr_(sock_addr.sin_addr),
-			port_(ntohs(sock_addr.sin_port)), making_headers(true), idle(idl),
-			reading(rd), writing(wr) {}
+	           bool rd = false, bool wr = false)
+	   : fd_(fde), sin_addr_(sock_addr.sin_addr),
+	     port_(ntohs(sock_addr.sin_port)), making_headers(true), idle(idl),
+	     reading(rd), writing(wr) {}
 
 	Connection(const Connection&) = delete;
 
@@ -117,7 +118,7 @@ private:
 	// Parses @p str header to construct @p name and value on it; returns false
 	// on success, true on error
 	static bool parseHeader(StringView str, StringView& name,
-		StringView& value);
+	                        StringView& value);
 
 	// Constructs headers, returns false on success, true otherwise (and may add
 	// proper response to TODO: where?)
@@ -147,10 +148,10 @@ public:
 	ConnectionSet& operator=(ConnectionSet&&) = delete;
 
 	using BaseType::begin;
+	using BaseType::const_iterator;
 	using BaseType::emplace;
 	using BaseType::end;
 	using BaseType::iterator;
-	using BaseType::const_iterator;
 
 	iterator find(int fd) {
 		return BaseType::find(Connection(fd, {0, 0, {0}, {}}));
@@ -187,18 +188,16 @@ public:
 
 #if 1
 // # warning "Before committing disable this debug"
-# define DEBUG_HEADERS(...) stdlog(__VA_ARGS__)
+#define DEBUG_HEADERS(...) stdlog(__VA_ARGS__)
 #else
-# define DEBUG_HEADERS(...)
+#define DEBUG_HEADERS(...)
 #endif
 
 bool Connection::parseHeader(StringView str, StringView& name,
-	StringView& value)
-{
+                             StringView& value) {
 	name = str.substr(0, str.find(':'));
-	if (name.find(' ') != StringView::npos || name.size() == 0
-		|| name.size() == str.size())
-	{
+	if (name.find(' ') != StringView::npos || name.size() == 0 ||
+	    name.size() == str.size()) {
 		return true; // Invalid header
 	}
 
@@ -210,8 +209,8 @@ bool Connection::parseHeader(StringView str, StringView& name,
 }
 
 bool Connection::constructHeaders(StringView& data) {
-	DEBUG_HEADERS("Connection ", fd_, " -> \033[1;33m"
-		"Parsing:\033[m ", ConfigFile::escapeString(data, true));
+	DEBUG_HEADERS("Connection ", fd_, " -> \033[1;33mParsing:\033[m ",
+	              ConfigFile::escapeString(data, true));
 
 	if (data.empty())
 		return false;
@@ -252,8 +251,8 @@ bool Connection::constructHeaders(StringView& data) {
 	}
 
 	do {
-		DEBUG_HEADERS("Connection ", fd_,
-			" -> Header: \033[36m", header, "\033[m");
+		DEBUG_HEADERS("Connection ", fd_, " -> Header: \033[36m", header,
+		              "\033[m");
 		++header_no;
 
 		/* Request line */
@@ -267,7 +266,8 @@ bool Connection::constructHeaders(StringView& data) {
 
 			// Method
 			size_t pos = 0;
-			for (; pos < header.size() && !isspace(header[pos]); ++pos) {}
+			for (; pos < header.size() && !isspace(header[pos]); ++pos) {
+			}
 
 			if (header.substr(0, pos) == "GET")
 				req_.method = Request::GET;
@@ -282,8 +282,8 @@ bool Connection::constructHeaders(StringView& data) {
 
 			// Target
 			header.removeLeading(isspace);
-			for (pos = 0; pos < header.size() && !isspace(header[pos]);
-				++pos) {}
+			for (pos = 0; pos < header.size() && !isspace(header[pos]); ++pos) {
+			}
 			req_.target = header.substr(0, pos);
 			header.removePrefix(pos);
 
@@ -307,14 +307,14 @@ bool Connection::constructHeaders(StringView& data) {
 		/* Headers are complete */
 		if (header.empty()) {
 			DEBUG_HEADERS("Connection ", fd_,
-				" -> \033[1;32mHeaders parsed.\033[m");
+			              " -> \033[1;32mHeaders parsed.\033[m");
 
 			std::sort(req_.headers.other.begin(), req_.headers.other.end());
-			if (req_.headers.find("Expect") == "100-continue")
-				{}// TODO: add response: 100
+			if (req_.headers.find("Expect") == "100-continue") {
+			} // TODO: add response: 100
 
-			if (req_.headers.content_length == 0)
-				{}// TODO: add request to queue
+			if (req_.headers.content_length == 0) {
+			} // TODO: add request to queue
 			else
 				making_headers = false;
 
@@ -364,7 +364,7 @@ bool Connection::constructHeaders(StringView& data) {
 	return false;
 }
 
-void Connection::parse(const char *str, size_t len) {
+void Connection::parse(const char* str, size_t len) {
 	StringView data(str, len);
 	while (data.size()) {
 		if (making_headers) { // Headers
@@ -372,7 +372,7 @@ void Connection::parse(const char *str, size_t len) {
 
 		} else if (req_.method == Request::GET) { // Content (GET)
 			size_t x = std::min(data.size(),
-				req_.headers.content_length - buff_.size());
+			                    req_.headers.content_length - buff_.size());
 			buff_.append(data.data(), x);
 			data.removePrefix(x);
 
@@ -389,8 +389,8 @@ void Connection::parse(const char *str, size_t len) {
 			data.clear();
 
 		} else { // Bug
-			errlog(__FILE__, ':', meta::ToString<__LINE__>{},
-				": Nothing to parse - this is probably a bug");
+			errlog(__FILE__, ':', meta::ToString<__LINE__> {},
+			       ": Nothing to parse - this is probably a bug");
 			// TODO: connection state = CLOSE
 			return;
 		}
@@ -454,21 +454,22 @@ static void* reader_thread(void*) {
 	for (;;) {
 		int n = epoll_wait(epoll_fd, events.data(), events.size(), -1);
 		if (n < 0) {
-			errlog(__FILE__, ':', meta::ToString<__LINE__>{}, ": epoll_wait()",
-				error());
+			errlog(__FILE__, ':', meta::ToString<__LINE__> {}, ": epoll_wait()",
+			       error());
 			continue;
 		}
 
 		for (int i = 0; i < n; ++i) {
-			D(stdlog("Event: ", (int)events[i].data.fd, " -> ",
-				(events[i].events & EPOLLIN ? "EPOLLIN | " : ""),
-				(events[i].events & EPOLLOUT ? "EPOLLOUT | " : ""),
-				(events[i].events & EPOLLRDHUP ? "EPOLLRDHUP | " : ""),
-				(events[i].events & EPOLLPRI ? "EPOLLPRI | " : ""),
-				(events[i].events & EPOLLERR ? "EPOLLERR | " : ""),
-				(events[i].events & EPOLLHUP ? "EPOLLHUP | " : ""),
-				(events[i].events & EPOLLET ? "EPOLLET | " : ""),
-				(events[i].events & EPOLLONESHOT ? "EPOLLONESHOT | " : ""));)
+			D(stdlog(
+			     "Event: ", (int)events[i].data.fd, " -> ",
+			     (events[i].events & EPOLLIN ? "EPOLLIN | " : ""),
+			     (events[i].events & EPOLLOUT ? "EPOLLOUT | " : ""),
+			     (events[i].events & EPOLLRDHUP ? "EPOLLRDHUP | " : ""),
+			     (events[i].events & EPOLLPRI ? "EPOLLPRI | " : ""),
+			     (events[i].events & EPOLLERR ? "EPOLLERR | " : ""),
+			     (events[i].events & EPOLLHUP ? "EPOLLHUP | " : ""),
+			     (events[i].events & EPOLLET ? "EPOLLET | " : ""),
+			     (events[i].events & EPOLLONESHOT ? "EPOLLONESHOT | " : ""));)
 
 			for (uint j = 0; j < MAX_ITERATIONS_PER_ONE; ++j) {
 				ssize_t rc = read(events[i].data.fd, buff.data(), buff.size());
@@ -480,12 +481,12 @@ static void* reader_thread(void*) {
 				if (rc == 0) { // Connection was closed
 					// TODO: create job to close connection
 					(void)epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd,
-						nullptr);
+					                nullptr);
 					break;
 				}
 
 				const_cast<Connection&>(*connset.find(events[i].data.fd))
-					.parse(buff.data(), rc);
+				   .parse(buff.data(), rc);
 			}
 		}
 		// TODO: exceptions
@@ -504,11 +505,11 @@ static void* writer_thread(void*) {
 /*
 // Manages workers
 static void* workers_manager_thread(void*) {
-	// Leave all signals to the master thread
-	pthread_sigmask(SIG_SETMASK, &SignalBlocker::full_mask, nullptr);
+    // Leave all signals to the master thread
+    pthread_sigmask(SIG_SETMASK, &SignalBlocker::full_mask, nullptr);
 
-	// TODO: exceptions
-	return nullptr;
+    // TODO: exceptions
+    return nullptr;
 }*/
 
 // Manages workers, accepts connections
@@ -523,8 +524,7 @@ static void master_process_cycle() {
 	// Run reader and writer threads
 	pthread_t reader_pid, writer_pid;
 	if (pthread_create(&reader_pid, nullptr, reader_thread, nullptr) == -1 ||
-		pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1)
-	{
+	    pthread_create(&writer_pid, nullptr, writer_thread, nullptr) == -1) {
 		errlog("Failed to spawn reader and writer threads", error());
 		exit(10);
 	}
@@ -537,25 +537,25 @@ static void master_process_cycle() {
 	(void)setrlimit(RLIMIT_NOFILE, &limit);
 
 	stdlog("NOFILE limit: ", limit.rlim_max,
-		"\n=================== Server launched ===================");
+	       "\n=================== Server launched ===================");
 	stdlog.label(true);
 
 	for (;;) {
 		sockaddr_in name;
 		socklen_t name_len = sizeof(name);
 		// Accept connection
-		int fd = accept4(socket_fd, (sockaddr*)&name, &name_len, SOCK_NONBLOCK |
-			SOCK_CLOEXEC);
+		int fd = accept4(socket_fd, (sockaddr*)&name, &name_len,
+		                 SOCK_NONBLOCK | SOCK_CLOEXEC);
 		if (fd == -1)
 			continue;
 
 		// Insert connection to connset
 		auto x = connset.emplace(fd, name, false, true);
 		throw_assert(x.second == true);
-		const Connection &conn = *x.first;
+		const Connection& conn = *x.first;
 
 		stdlog("Connection ", fd, " from ", conn.ip(), ':', conn.port(),
-			" accepted");
+		       " accepted");
 
 		// Add connection epoll
 		epoll_event event;
@@ -573,8 +573,7 @@ static void master_process_cycle() {
 
 // Loads server configuration
 static void loadServerConfig(const CStringView config_path,
-	sockaddr_in& sock_name)
-{
+                             sockaddr_in& sock_name) {
 	ConfigFile config;
 	try {
 		config.addVars("address", "workers", "connections");
@@ -614,8 +613,7 @@ static void loadServerConfig(const CStringView config_path,
 	// Colon has been found
 	if (colon_pos < address.size()) {
 		if (strtou(address, port, colon_pos + 1) !=
-			static_cast<int>(address.size() - colon_pos - 1))
-		{
+		    static_cast<int>(address.size() - colon_pos - 1)) {
 			errlog(config_path, ": incorrect port number");
 			exit(7);
 		}
@@ -630,8 +628,7 @@ static void loadServerConfig(const CStringView config_path,
 	if (0 == strcmp(address.data(), "*")) // strcmp because of '\0' in address
 		sock_name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
 	else if (address.empty() ||
-		inet_aton(address.data(), &sock_name.sin_addr) == 0)
-	{
+	         inet_aton(address.data(), &sock_name.sin_addr) == 0) {
 		errlog(config_path, ": incorrect IPv4 address");
 		exit(8);
 	}
@@ -693,7 +690,7 @@ int main() {
 
 	// Bind
 	constexpr int TRIES = 8;
-	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
 		errlog("Failed to bind (try ", try_no, ')', error());
 		if (++try_no > TRIES)
 			return 3;

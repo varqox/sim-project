@@ -224,6 +224,10 @@ SIM_EXECS := src/killinstc src/setup-installation src/backup src/job-server \
 $(SIM_OBJS): override EXTRA_CXX_FLAGS += $(SIM_CXX_FLAGS)
 $(SIM_EXECS): private override EXTRA_LD_FLAGS += $(SIM_LD_FLAGS)
 
+.PHONY: format
+format: src/lib/simlib/format
+format: $(shell find bin importer scripts src test | grep -E '\.(cc?|h)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*|src/lib/sqlite(/.*|3.c))$$' | sed 's/$$/-make-format/')
+
 .PHONY: clean
 clean: OBJS := $(SIM_OBJS) src/lib/sqlite3.o
 clean: src/lib/simlib/clean

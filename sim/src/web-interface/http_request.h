@@ -28,7 +28,7 @@ public:
 		/// does not exist
 		CStringView get(StringView name) const noexcept {
 			auto it = other.find(name);
-			return (it ? it->second : CStringView{});
+			return (it ? it->second : CStringView());
 		}
 
 		bool exist(StringView name) const noexcept { return other.find(name); }
@@ -37,7 +37,7 @@ public:
 		/// @p name or empty string if such does not exist
 		CStringView file_path(StringView name) const noexcept {
 			auto it = files.find(name);
-			return (it ? it->second : CStringView{});
+			return (it ? it->second : CStringView());
 		}
 
 		Form() = default;

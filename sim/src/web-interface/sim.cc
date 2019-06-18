@@ -8,8 +8,7 @@ using std::unique_ptr;
 using std::vector;
 
 server::HttpResponse Sim::handle(CStringView _client_ip,
-	server::HttpRequest req)
-{
+                                 server::HttpRequest req) {
 	client_ip = std::move(_client_ip);
 	request = std::move(req);
 	resp = server::HttpResponse(server::HttpResponse::TEXT);
@@ -21,16 +20,16 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 		resp.status_code = "500 Internal Server Error";
 		resp.headers["Content-Type"] = "text/html; charset=utf-8";
 		resp.content = "<!DOCTYPE html>"
-				"<html lang=\"en\">"
-				"<head><title>500 Internal Server Error</title></head>"
-				"<body>"
-					"<center>"
-						"<h1>500 Internal Server Error</h1>"
-						"<p>Try to reload the page in a few seconds.</p>"
-						"<button onclick=\"history.go(0)\">Reload</button>"
-						"</center>"
-				"</body>"
-			"</html>";
+		               "<html lang=\"en\">"
+		               "<head><title>500 Internal Server Error</title></head>"
+		               "<body>"
+		               "<center>"
+		               "<h1>500 Internal Server Error</h1>"
+		               "<p>Try to reload the page in a few seconds.</p>"
+		               "<button onclick=\"history.go(0)\">Reload</button>"
+		               "</center>"
+		               "</body>"
+		               "</html>";
 	};
 
 	try {
@@ -60,12 +59,13 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 				}
 			}
 
-			// Subsystems that do not need the session to be opened
 			if (next_arg == "kit") {
+				// Subsystems that do not need the session to be opened
 				static_file();
 
-			// Other subsystems need the session to be opened in order to work properly
 			} else {
+				// Other subsystems need the session to be opened in order to
+				// work properly
 				session_open();
 
 				if (next_arg == "c")
@@ -117,10 +117,10 @@ server::HttpResponse Sim::handle(CStringView _client_ip,
 			// Make sure that the session is closed
 			session_close();
 
-		#ifdef DEBUG
+#ifdef DEBUG
 			if (notifications.size != 0)
 				THROW("There are notifications left: ", notifications);
-		#endif
+#endif
 
 		} catch (const std::exception& e) {
 			ERRLOG_CATCH(e);
@@ -154,21 +154,21 @@ void Sim::main_page() {
 
 	page_template("Main page");
 	append("<div style=\"text-align: center\">"
-			"<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
-				"alt=\"\">"
-			"<p style=\"font-size: 30px\">Welcome to SIM</p>"
-			"<hr>"
-			"<p>SIM is an open source platform for carrying out algorithmic "
-				"contests</p>"
-		"</div>");
+	       "<img src=\"/kit/img/SIM-logo.png\" width=\"260\" height=\"336\" "
+	       "alt=\"\">"
+	       "<p style=\"font-size: 30px\">Welcome to SIM</p>"
+	       "<hr>"
+	       "<p>SIM is an open source platform for carrying out algorithmic "
+	       "contests</p>"
+	       "</div>");
 }
 
 void Sim::static_file() {
 	STACK_UNWINDING_MARK;
 
-	string file_path = concat_tostr("static",
-			abspath(intentionalUnsafeStringView(decodeURI(
-				substring(request.target, 1, request.target.find('?'))))));
+	string file_path = concat_tostr(
+	   "static", abspath(intentionalUnsafeStringView(decodeURI(
+	                substring(request.target, 1, request.target.find('?'))))));
 	// Extract path (ignore query)
 	D(stdlog(file_path);)
 
@@ -177,17 +177,17 @@ void Sim::static_file() {
 	if (stat(file_path.c_str(), &attr) != -1) {
 		// Extract time of last modification
 		auto it = request.headers.find("if-modified-since");
-		resp.headers["last-modified"] = date("%a, %d %b %Y %H:%M:%S GMT",
-			attr.st_mtime);
+		resp.headers["last-modified"] =
+		   date("%a, %d %b %Y %H:%M:%S GMT", attr.st_mtime);
 		resp.setCache(true, 100 * 24 * 60 * 60, false); // 100 days
 
 		// If "If-Modified-Since" header is set and its value is not lower than
 		// attr.st_mtime
 		struct tm client_mtime;
-		if (it && strptime(it->second.c_str(),
-				"%a, %d %b %Y %H:%M:%S GMT", &client_mtime) != nullptr &&
-			timegm(&client_mtime) >= attr.st_mtime)
-		{
+		if (it &&
+		    strptime(it->second.c_str(), "%a, %d %b %Y %H:%M:%S GMT",
+		             &client_mtime) != nullptr &&
+		    timegm(&client_mtime) >= attr.st_mtime) {
 			resp.status_code = "304 Not Modified";
 			return;
 		}
@@ -211,8 +211,8 @@ void Sim::view_logs() {
 string Sim::generate_random_token(uint length) {
 	STACK_UNWINDING_MARK;
 
-	constexpr char t[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"0123456789";
+	constexpr char t[] =
+	   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	constexpr size_t len = sizeof(t) - 1;
 
 	// Generate random id of length SESSION_ID_LENGTH

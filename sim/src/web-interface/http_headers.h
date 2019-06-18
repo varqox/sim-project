@@ -5,8 +5,7 @@
 namespace server {
 
 class HttpHeaders final
-	: public AVLDictMap<std::string, std::string, LowerStrCompare>
-{
+   : public AVLDictMap<std::string, std::string, LowerStrCompare> {
 public:
 	HttpHeaders() = default;
 
@@ -26,7 +25,7 @@ public:
 
 	StringView get(StringView key) const noexcept {
 		auto it = find(key);
-		return (it ? it->second : StringView{});
+		return (it ? it->second : StringView());
 	}
 
 	~HttpHeaders() {}

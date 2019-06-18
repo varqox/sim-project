@@ -17,45 +17,44 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 	case UserType::ADMIN:
 		if (session_user_id == SIM_ROOT_UID) {
 			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN |
-				PERM::ADD_TEACHER | PERM::ADD_NORMAL;
+			       PERM::ADD_TEACHER | PERM::ADD_NORMAL;
 		} else {
 			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_TEACHER |
-				PERM::ADD_NORMAL;
+			       PERM::ADD_NORMAL;
 		}
 
 	case UserType::TEACHER:
-	case UserType::NORMAL:
-		return PERM::NONE;
+	case UserType::NORMAL: return PERM::NONE;
 	}
 
 	return PERM::NONE; // Should not happen
 }
 
 Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
-	UserType utype) noexcept
-{
+                                                UserType utype) noexcept {
 	using PERM = UserPermissions;
-	constexpr UserPermissions PERM_ADMIN = PERM::VIEW | PERM::EDIT |
-		PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS | PERM::DELETE;
+	constexpr UserPermissions PERM_ADMIN =
+	   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS |
+	   PERM::DELETE;
 
 	if (not session_is_open)
 		return PERM::NONE;
 
 	auto viewer = EnumVal<UserType>(session_user_type).int_val() +
-		(session_user_id != SIM_ROOT_UID);
+	              (session_user_id != SIM_ROOT_UID);
 	if (session_user_id == user_id) {
 		constexpr UserPermissions perm[4] = {
-			// SIM root
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN,
-			// Admin
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN |
-				PERM::MAKE_TEACHER | PERM::MAKE_NORMAL | PERM::DELETE,
-			// Teacher
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL | PERM::DELETE,
-			// Normal
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_NORMAL |
-				PERM::DELETE,
+		   // SIM root
+		   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN,
+		   // Admin
+		   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN |
+		      PERM::MAKE_TEACHER | PERM::MAKE_NORMAL | PERM::DELETE,
+		   // Teacher
+		   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_TEACHER |
+		      PERM::MAKE_NORMAL | PERM::DELETE,
+		   // Normal
+		   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_NORMAL |
+		      PERM::DELETE,
 		};
 		return perm[viewer] | users_get_overall_permissions();
 	}
@@ -63,37 +62,36 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	auto user = EnumVal<UserType>(utype).int_val() + (user_id != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
-		{ // SIM root
-			// SIM root
-			PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS,
-			// Admin
-			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL,
-			// Teacher
-			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL,
-			// Normal
-			PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER |
-				PERM::MAKE_NORMAL
-		}, { // Admin
-			PERM::VIEW, // SIM root
-			PERM::VIEW, // Admin
-			// Teacher
-			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
-			// Normal
-			PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL
-		}, { // Teacher
-			PERM::NONE, // SIM root
-			PERM::NONE, // Admin
-			PERM::NONE, // Teacher
-			PERM::NONE // Normal
-		}, { // Normal
-			PERM::NONE, // SIM root
-			PERM::NONE, // Admin
-			PERM::NONE, // Teacher
-			PERM::NONE // Normal
-		}
-	};
+	   {// SIM root
+	    // SIM root
+	    PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS,
+	    // Admin
+	    PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
+	    // Teacher
+	    PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
+	    // Normal
+	    PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL},
+	   {// Admin
+	    PERM::VIEW, // SIM root
+	    PERM::VIEW, // Admin
+	                // Teacher
+	    PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
+	    // Normal
+	    PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL},
+	   {
+	      // Teacher
+	      PERM::NONE, // SIM root
+	      PERM::NONE, // Admin
+	      PERM::NONE, // Teacher
+	      PERM::NONE // Normal
+	   },
+	   {
+	      // Normal
+	      PERM::NONE, // SIM root
+	      PERM::NONE, // Admin
+	      PERM::NONE, // Teacher
+	      PERM::NONE // Normal
+	   }};
 	return perm[viewer][user] | users_get_overall_permissions();
 }
 
@@ -123,11 +121,10 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 	stmt.res_bind_all(salt, passwd_hash);
 	throw_assert(stmt.next());
 
-	if (not slowEqual(intentionalUnsafeStringView(sha3_512(
-			intentionalUnsafeStringView(
-				concat(salt, request.form_data.get(password_field_name))))),
-		passwd_hash))
-	{
+	if (not slowEqual(
+	       intentionalUnsafeStringView(sha3_512(intentionalUnsafeStringView(
+	          concat(salt, request.form_data.get(password_field_name))))),
+	       passwd_hash)) {
 		return false;
 	}
 
@@ -143,9 +140,10 @@ void Sim::login() {
 		// Try to login
 		InplaceBuff<4096> password;
 		// Validate all fields
-		form_validate_not_blank(username, "username", "Username", isUsername,
-			"Username can only consist of characters [a-zA-Z0-9_-]",
-			USERNAME_MAX_LEN);
+		form_validate_not_blank(
+		   username, "username", "Username", isUsername,
+		   "Username can only consist of characters [a-zA-Z0-9_-]",
+		   USERNAME_MAX_LEN);
 
 		form_validate(password, "password", "Password");
 
@@ -154,8 +152,8 @@ void Sim::login() {
 		if (not notifications.size) {
 			STACK_UNWINDING_MARK;
 
-			auto stmt = mysql.prepare("SELECT id, salt, password FROM users"
-				" WHERE username=?");
+			auto stmt = mysql.prepare(
+			   "SELECT id, salt, password FROM users WHERE username=?");
 			stmt.bindAndExecute(username);
 
 			InplaceBuff<32> uid;
@@ -163,11 +161,10 @@ void Sim::login() {
 			InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
 			stmt.res_bind_all(uid, salt, passwd_hash);
 
-			if (stmt.next() and
-				slowEqual(intentionalUnsafeStringView(sha3_512(
-						intentionalUnsafeStringView(concat(salt, password)))),
-					passwd_hash))
-			{
+			if (stmt.next() and slowEqual(intentionalUnsafeStringView(sha3_512(
+			                                 intentionalUnsafeStringView(
+			                                    concat(salt, password)))),
+			                              passwd_hash)) {
 				// Delete old session
 				if (session_is_open)
 					session_destroy();
@@ -178,7 +175,7 @@ void Sim::login() {
 				// If there is a redirection string, redirect to it
 				InplaceBuff<4096> location {url_args.extractQuery()};
 				return redirect(location.size == 0 ? "/"
-					: location.to_string());
+				                                   : location.to_string());
 			}
 
 			add_notification("error", "Invalid username or password");
@@ -186,30 +183,33 @@ void Sim::login() {
 	}
 
 	page_template("Login");
+	// clang-format off
 	append("<div class=\"form-container\">"
-			"<h1>Log in</h1>"
-			"<form method=\"post\">"
-				// Username
-				"<div class=\"field-group\">"
-					"<label>Username</label>"
-					"<input type=\"text\" name=\"username\" value=\"",
-						htmlEscape(username), "\" size=\"24\" "
-						"maxlength=\"", USERNAME_MAX_LEN, "\" required>"
-				"</div>"
-				// Password
-				"<div class=\"field-group\">"
-					"<label>Password</label>"
-					"<input type=\"password\" name=\"password\" size=\"24\">"
-				"</div>"
-				// Remember
-				"<div class=\"field-group\">"
-					"<label>Remember me for a month</label>"
-					"<input type=\"checkbox\" name=\"persistent-login\"",
-						(remember ? " checked" : ""), ">"
-				"</div>"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
-			"</form>"
-		"</div>");
+	           "<h1>Log in</h1>"
+	           "<form method=\"post\">"
+	               // Username
+	               "<div class=\"field-group\">"
+	                   "<label>Username</label>"
+	                   "<input type=\"text\" name=\"username\" "
+	                          "value=\"", htmlEscape(username), "\" "
+	                          "size=\"24\" "
+	                          "maxlength=\"", USERNAME_MAX_LEN, "\" required>"
+	               "</div>"
+	               // Password
+	               "<div class=\"field-group\">"
+	                   "<label>Password</label>"
+	                   "<input type=\"password\" name=\"password\" size=\"24\">"
+	               "</div>"
+	               // Remember
+	               "<div class=\"field-group\">"
+	                   "<label>Remember me for a month</label>"
+	                   "<input type=\"checkbox\" name=\"persistent-login\"",
+	                           (remember ? " checked" : ""), ">"
+	               "</div>"
+	               "<input class=\"btn blue\" type=\"submit\" value=\"Log in\">"
+	           "</form>"
+	       "</div>");
+	// clang-format on
 }
 
 void Sim::logout() {
@@ -233,22 +233,19 @@ void Sim::sign_up() {
 
 	if (request.method == server::HttpRequest::POST) {
 		// Validate all fields
-		form_validate_not_blank(username, "username", "Username", isUsername,
-			"Username can only consist of characters [a-zA-Z0-9_-]",
-			USERNAME_MAX_LEN);
-
+		form_validate_not_blank(
+		   username, "username", "Username", isUsername,
+		   "Username can only consist of characters [a-zA-Z0-9_-]",
+		   USERNAME_MAX_LEN);
 		form_validate_not_blank(first_name, "first_name", "First Name",
-			USER_FIRST_NAME_MAX_LEN);
-
+		                        USER_FIRST_NAME_MAX_LEN);
 		form_validate_not_blank(last_name, "last_name", "Last Name",
-			USER_LAST_NAME_MAX_LEN);
-
+		                        USER_LAST_NAME_MAX_LEN);
 		form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
 		if (form_validate(pass1, "password1", "Password") &&
-			form_validate(pass2, "password2", "Password (repeat)") &&
-			pass1 != pass2)
-		{
+		    form_validate(pass2, "password2", "Password (repeat)") &&
+		    pass1 != pass2) {
 			add_notification("error", "Passwords do not match");
 		}
 
@@ -260,12 +257,14 @@ void Sim::sign_up() {
 			fillRandomly(salt_bin.data(), salt_bin.size());
 			auto salt = toHex(salt_bin.data(), salt_bin.size());
 
-			auto stmt = mysql.prepare("INSERT IGNORE `users` (username, "
-					"first_name, last_name, email, salt, password) "
-				"VALUES(?, ?, ?, ?, ?, ?)");
+			auto stmt = mysql.prepare("INSERT IGNORE `users` (username,"
+			                          " first_name, last_name, email, salt,"
+			                          " password) "
+			                          "VALUES(?, ?, ?, ?, ?, ?)");
 
-			stmt.bindAndExecute(username, first_name, last_name, email, salt,
-				sha3_512(intentionalUnsafeStringView(concat(salt, pass1))));
+			stmt.bindAndExecute(
+			   username, first_name, last_name, email, salt,
+			   sha3_512(intentionalUnsafeStringView(concat(salt, pass1))));
 
 			// User account successfully created
 			if (stmt.affected_rows() == 1) {
@@ -279,54 +278,63 @@ void Sim::sign_up() {
 
 			add_notification("error", "Username taken");
 		}
-
 	}
 
 	page_template("Sign up");
+	// clang-format off
 	append("<div class=\"form-container\">"
-			"<h1>Sign up</h1>"
-			"<form method=\"post\">"
-				// Username
-				"<div class=\"field-group\">"
-					"<label>Username</label>"
-					"<input type=\"text\" name=\"username\" value=\"",
-						htmlEscape(username), "\" size=\"24\" "
-						"maxlength=\"", USERNAME_MAX_LEN, "\" required>"
-				"</div>"
-				// First Name
-				"<div class=\"field-group\">"
-					"<label>First name</label>"
-					"<input type=\"text\" name=\"first_name\" value=\"",
-						htmlEscape(first_name), "\" size=\"24\" "
-						"maxlength=\"", USER_FIRST_NAME_MAX_LEN, "\" required>"
-				"</div>"
-				// Last name
-				"<div class=\"field-group\">"
-					"<label>Last name</label>"
-					"<input type=\"text\" name=\"last_name\" value=\"",
-						htmlEscape(last_name), "\" size=\"24\" "
-						"maxlength=\"", USER_LAST_NAME_MAX_LEN, "\" required>"
-				"</div>"
-				// Email
-				"<div class=\"field-group\">"
-					"<label>Email</label>"
-					"<input type=\"email\" name=\"email\" value=\"",
-						htmlEscape(email), "\" size=\"24\" "
-						"maxlength=\"", USER_EMAIL_MAX_LEN, "\" required>"
-				"</div>"
-				// Password
-				"<div class=\"field-group\">"
-					"<label>Password</label>"
-					"<input type=\"password\" name=\"password1\" size=\"24\">"
-				"</div>"
-				// Password (repeat)
-				"<div class=\"field-group\">"
-					"<label>Password (repeat)</label>"
-					"<input type=\"password\" name=\"password2\" size=\"24\">"
-				"</div>"
-				"<input class=\"btn blue\" type=\"submit\" value=\"Sign up\">"
-			"</form>"
-		"</div>");
+	           "<h1>Sign up</h1>"
+	           "<form method=\"post\">"
+	               // Username
+	               "<div class=\"field-group\">"
+	                   "<label>Username</label>"
+	                   "<input type=\"text\" name=\"username\" "
+	                          "value=\"", htmlEscape(username), "\" "
+	                          "size=\"24\" "
+	                          "maxlength=\"", USERNAME_MAX_LEN, "\" required>"
+	               "</div>"
+	               // First Name
+	               "<div class=\"field-group\">"
+	                   "<label>First name</label>"
+	                   "<input type=\"text\" name=\"first_name\" "
+	                          "value=\"", htmlEscape(first_name), "\" "
+	                          "size=\"24\" "
+	                          "maxlength=\"", USER_FIRST_NAME_MAX_LEN, "\" "
+	                          "required>"
+	               "</div>"
+	               // Last name
+	               "<div class=\"field-group\">"
+	                   "<label>Last name</label>"
+	                   "<input type=\"text\" name=\"last_name\" "
+	                          "value=\"", htmlEscape(last_name), "\" "
+	                          "size=\"24\" "
+	                          "maxlength=\"", USER_LAST_NAME_MAX_LEN, "\" "
+	                          "required>"
+	               "</div>"
+	               // Email
+	               "<div class=\"field-group\">"
+	                   "<label>Email</label>"
+	                   "<input type=\"email\" name=\"email\" "
+	                          "value=\"", htmlEscape(email), "\" size=\"24\" "
+	                          "maxlength=\"", USER_EMAIL_MAX_LEN, "\" required>"
+	               "</div>"
+	               // Password
+	               "<div class=\"field-group\">"
+	                   "<label>Password</label>"
+	                   "<input type=\"password\" name=\"password1\" "
+	                          "size=\"24\">"
+	               "</div>"
+	               // Password (repeat)
+	               "<div class=\"field-group\">"
+	                   "<label>Password (repeat)</label>"
+	                   "<input type=\"password\" name=\"password2\" "
+	                          "size=\"24\">"
+	               "</div>"
+	               "<input class=\"btn blue\" type=\"submit\" "
+	                      "value=\"Sign up\">"
+	           "</form>"
+	       "</div>");
+	// clang-format on
 }
 
 void Sim::users_handle() {
@@ -341,22 +349,21 @@ void Sim::users_handle() {
 		return users_user();
 	}
 
-	// Add user
-	if (next_arg == "add") {
+	if (next_arg == "add") { // Add user
 		page_template("Add user");
 		append("<script>add_user(false);</script>");
 
-	} else if (isDigit(next_arg)) {
+	} else if (isDigit(next_arg)) { // View user
 		users_uid = next_arg;
 		return users_user();
 
-	// List users
-	} else if (next_arg.empty()) {
+	} else if (next_arg.empty()) { // List users
 		page_template("Users", "body{padding-left:20px}");
 		append("<script>user_chooser(false, window.location.hash);</script>");
 
-	} else
+	} else {
 		return error404();
+	}
 }
 
 void Sim::users_user() {
@@ -365,26 +372,27 @@ void Sim::users_user() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
 		page_template(intentionalUnsafeStringView(concat("User ", users_uid)),
-			"body{padding-left:20px}");
-		append("<script>view_user(false, ", users_uid, ","
-			" window.location.hash);</script>");
+		              "body{padding-left:20px}");
+		append("<script>view_user(false, ", users_uid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(intentionalUnsafeStringView(
-			concat("Edit user ", users_uid)));
+		page_template(
+		   intentionalUnsafeStringView(concat("Edit user ", users_uid)));
 		append("<script>edit_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(intentionalUnsafeStringView(
-			concat("Delete user ", users_uid)));
+		page_template(
+		   intentionalUnsafeStringView(concat("Delete user ", users_uid)));
 		append("<script>delete_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "change-password") {
 		page_template(intentionalUnsafeStringView(
-			concat("Change password of the user ", users_uid)));
+		   concat("Change password of the user ", users_uid)));
 		append("<script>change_user_password(false, ", users_uid,
-			");</script>");
+		       ");</script>");
 
-	} else
+	} else {
 		return error404();
+	}
 }

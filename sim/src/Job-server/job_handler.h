@@ -17,19 +17,19 @@ protected:
 	JobHandler& operator=(const JobHandler&) = delete;
 	JobHandler& operator=(JobHandler&&) = delete;
 
-	template<class... Args>
+	template <class... Args>
 	auto job_log(Args&&... args) {
-		return DoubleAppender<decltype(job_log_holder)>(stdlog, job_log_holder,
-			std::forward<Args>(args)...);
+		return DoubleAppender<decltype(job_log_holder)>(
+		   stdlog, job_log_holder, std::forward<Args>(args)...);
 	}
 
-	template<class... Args>
+	template <class... Args>
 	void set_failure(Args&&... args) {
 		job_log(std::forward<Args>(args)...);
 		job_failed = true;
 	}
 
-	template<class Arg1, class... Args>
+	template <class Arg1, class... Args>
 	void job_cancelled(Arg1&& arg1, Args&&... args) {
 		job_log(std::forward<Arg1>(arg1), std::forward<Args>(args)...);
 		job_canceled();

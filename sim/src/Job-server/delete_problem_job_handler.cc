@@ -10,12 +10,13 @@ void DeleteProblemJobHandler::run() {
 	// Check whether the problem is not used as a contest problem
 	{
 		auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
-			" WHERE problem_id=? LIMIT 1");
+		                          " WHERE problem_id=? LIMIT 1");
 		stmt.bindAndExecute(problem_id);
 		if (stmt.next()) {
-			return set_failure("There exists a contest problem that uses"
-				" (attaches) this problem. You have to delete all of them"
-				" to be able to delete this problem.");
+			return set_failure(
+			   "There exists a contest problem that uses (attaches) this "
+			   "problem. You have to delete all of them to be able to delete "
+			   "this problem.");
 		}
 	}
 
@@ -32,20 +33,24 @@ void DeleteProblemJobHandler::run() {
 	}
 
 	// Add job to delete problem file
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-		" FROM problems WHERE id=?")
-		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), problem_id);
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
+	            " FROM problems WHERE id=?")
+	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
+	                   problem_id);
 
 	// Add jobs to delete problem submissions' files
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-		" FROM submissions WHERE problem_id=?")
-		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), problem_id);
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
+	            " FROM submissions WHERE problem_id=?")
+	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
+	                   problem_id);
 
 	// Delete problem (all necessary actions will take plate thanks to foreign
 	// key constrains)

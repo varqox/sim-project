@@ -12,24 +12,25 @@ void Sim::api_handle() {
 		next_arg = url_args.extractNextArg();
 		if (isOneOf(next_arg, "submission", "problem", "file")) {
 			auto id = url_args.extractNextArg();
-			request.target = concat_tostr("/api/", next_arg, '/', id,
-				"/download");
+			request.target =
+			   concat_tostr("/api/", next_arg, '/', id, "/download");
 
 		} else if (next_arg == "statement") {
 			next_arg = url_args.extractNextArg();
 			if (isOneOf(next_arg, "problem", "contest")) {
 				auto id = url_args.extractNextArg();
-				request.target = concat_tostr("/api/", next_arg, '/', id,
-					"/statement");
+				request.target =
+				   concat_tostr("/api/", next_arg, '/', id, "/statement");
 			} else
 				return api_error404();
 
 		} else if (next_arg == "job") {
 			auto job_id = url_args.extractNextArg();
 			next_arg = url_args.extractNextArg();
-			if (isOneOf(next_arg, "log", "uploaded-package", "uploaded-statement")) {
-				request.target = concat_tostr("/api/job/", job_id, '/',
-					next_arg);
+			if (isOneOf(next_arg, "log", "uploaded-package",
+			            "uploaded-statement")) {
+				request.target =
+				   concat_tostr("/api/job/", job_id, '/', next_arg);
 			} else {
 				return api_error404();
 			}
@@ -132,7 +133,8 @@ void Sim::api_logs() {
 	}
 
 	// Read the data
-	InplaceBuff<meta::max(LOGS_FIRST_CHUNK_MAX_LEN, LOGS_OTHER_CHUNK_MAX_LEN)> buff(len);
+	InplaceBuff<meta::max(LOGS_FIRST_CHUNK_MAX_LEN, LOGS_OTHER_CHUNK_MAX_LEN)>
+	   buff(len);
 	auto ret = readAll(fd, buff.data(), len);
 	// TODO: readAll() and writeAll() - support offset argument - p(write|read)
 	// TODO: getFileContents() - support offset argument - pread()

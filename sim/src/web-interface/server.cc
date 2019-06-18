@@ -27,7 +27,7 @@ static void* worker(void*) {
 		for (;;) {
 			// accept the connection
 			int client_socket_fd = accept4(socket_fd, (sockaddr*)&name,
-				&client_name_len, SOCK_CLOEXEC);
+			                               &client_name_len, SOCK_CLOEXEC);
 			FileDescriptorCloser closer(client_socket_fd);
 			if (client_socket_fd == -1)
 				continue;
@@ -45,8 +45,10 @@ static void* worker(void*) {
 
 				HttpResponse resp = sim_worker.handle(ip, std::move(req));
 
-				auto microdur = duration_cast<microseconds>(steady_clock::now() - beg);
-				stdlog("Response generated in ", toString(microdur * 1000), " ms.");
+				auto microdur =
+				   duration_cast<microseconds>(steady_clock::now() - beg);
+				stdlog("Response generated in ", toString(microdur * 1000),
+				       " ms.");
 
 				conn.sendResponse(std::move(resp));
 			}
@@ -79,11 +81,10 @@ int main() {
 	}
 
 	// Loggers
-	// stdlog like everything writes to stderr, so redirect stdout and stderr to
-	// the log file
+	// stdlog (like everything) writes to stderr, so redirect stdout and stderr
+	// to the log file
 	if (freopen(SERVER_LOG, "a", stdout) == nullptr ||
-		dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
-	{
+	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1) {
 		errlog("Failed to open `", SERVER_LOG, '`', errmsg());
 	}
 
@@ -95,7 +96,7 @@ int main() {
 
 	// Signal control
 	struct sigaction sa;
-	memset (&sa, 0, sizeof(sa));
+	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
 	(void)sigaction(SIGINT, &sa, nullptr);
@@ -130,8 +131,7 @@ int main() {
 	// Colon has been found
 	if (colon_pos < address.size()) {
 		if (strtou(address, port, colon_pos + 1) !=
-			static_cast<int>(address.size() - colon_pos - 1))
-		{
+		    static_cast<int>(address.size() - colon_pos - 1)) {
 			errlog("sim.config: incorrect port number");
 			return 7;
 		}
@@ -144,18 +144,21 @@ int main() {
 	// Extract IPv4 address
 	if (0 == strcmp(address.data(), "*")) // strcmp because of '\0' in address
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
-	else if (address.empty() || inet_aton(address.data(), &name.sin_addr) == 0)
-	{
+	else if (address.empty() ||
+	         inet_aton(address.data(), &name.sin_addr) == 0) {
 		errlog("sim.config: incorrect IPv4 address");
 		return 8;
 	}
 
-	stdlog("\n=================== Server launched ===================\n"
-		"PID: ", getpid(), "\n"
-		"workers: ", workers, "\n"
-		"address: ", address.data(), ':', port);
+	// clang-format off
+	stdlog("\n=================== Server launched ==================="
+	       "\nPID: ", getpid(),
+	       "\nworkers: ", workers,
+	       "\naddress: ", address.data(), ':', port);
+	// clang-format on
 
-	if ((socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)) < 0) {
+	if ((socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)) <
+	    0) {
 		errlog("Failed to create socket", errmsg());
 		return 1;
 	}
@@ -168,7 +171,7 @@ int main() {
 
 	// Bind
 	constexpr int TRIES = 8;
-	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name)); ) {
+	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
 		errlog("Failed to bind (try ", try_no, ')', errmsg());
 		if (++try_no > TRIES)
 			return 3;
@@ -185,15 +188,15 @@ int main() {
 	pthread_attr_t attr;
 	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MB
 	if (pthread_attr_init(&attr) ||
-		pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE))
-	{
+	    pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE)) {
 		errlog("Failed to set new thread stack size");
 		return 4;
 	}
 
 	pthread_t threads[workers];
 	for (int i = 1; i < workers; ++i)
-		pthread_create(threads + i, &attr, server::worker, nullptr); // TODO: errors...
+		pthread_create(threads + i, &attr, server::worker,
+		               nullptr); // TODO: errors...
 	threads[0] = pthread_self();
 	server::worker(nullptr);
 

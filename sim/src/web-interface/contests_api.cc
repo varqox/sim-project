@@ -5,14 +5,13 @@
 
 using SFSM = SubmissionFinalSelectingMethod;
 
-inline static InplaceBuff<32> color_class_json(Sim::ContestPermissions cperms,
-	InfDatetime full_results, const decltype(mysql_date())& curr_mysql_date,
-	Optional<SubmissionStatus> full_status,
-	Optional<SubmissionStatus> initial_status)
-{
+inline static InplaceBuff<32>
+color_class_json(Sim::ContestPermissions cperms, InfDatetime full_results,
+                 const decltype(mysql_date())& curr_mysql_date,
+                 Optional<SubmissionStatus> full_status,
+                 Optional<SubmissionStatus> initial_status) {
 	if (uint(cperms & Sim::ContestPermissions::ADMIN) or
-		full_results <= curr_mysql_date)
-	{
+	    full_results <= curr_mysql_date) {
 		if (full_status.has_value())
 			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 
@@ -42,7 +41,8 @@ void Sim::append_contest_actions_str() {
 	append('"');
 }
 
-static constexpr inline const char* user_mode_to_json(Optional<ContestUserMode> cum) {
+static constexpr inline const char*
+user_mode_to_json(Optional<ContestUserMode> cum) {
 	if (not cum.has_value())
 		return "null";
 
@@ -55,7 +55,7 @@ static constexpr inline const char* user_mode_to_json(Optional<ContestUserMode> 
 	return "\"unknown\"";
 };
 
-static constexpr inline const char* sfsm_to_json(SFSM sfsm){
+static constexpr inline const char* sfsm_to_json(SFSM sfsm) {
 	switch (sfsm) {
 	case SFSM::LAST_COMPILING: return "\"LC\"";
 	case SFSM::WITH_HIGHEST_SCORE: return "\"WHS\"";
@@ -63,6 +63,41 @@ static constexpr inline const char* sfsm_to_json(SFSM sfsm){
 
 	return "\"unknown\"";
 };
+
+namespace {
+// clang-format off
+constexpr const char* api_contest_names =
+   "[\n{\"fields\":["
+          "{\"name\":\"contest\",\"fields\":["
+              "\"id\","
+              "\"name\","
+              "\"is_public\","
+              "\"user_mode\","
+              "\"actions\""
+          "]},"
+          "{\"name\":\"rounds\",\"columns\":["
+              "\"id\","
+              "\"name\","
+              "\"item\","
+              "\"ranking_exposure\","
+              "\"begins\","
+              "\"full_results\","
+              "\"ends\""
+          "]},"
+          "{\"name\":\"problems\",\"columns\":["
+              "\"id\","
+              "\"round_id\","
+              "\"problem_id\","
+              "\"problem_label\","
+              "\"name\","
+              "\"item\","
+              "\"final_selecting_method\","
+              "\"reveal_score\","
+              "\"color_class\""
+          "]}"
+      "]},";
+// clang-format on
+} // namespace
 
 void Sim::api_contests() {
 	STACK_UNWINDING_MARK;
@@ -75,18 +110,16 @@ void Sim::api_contests() {
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT c.id, c.name, c.is_public, cu.mode");
-	qwhere.append(" FROM contests c"
-		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=",
-			(session_is_open ? session_user_id : StringView("''")));
+	qwhere.append(" FROM contests c LEFT JOIN contest_users cu ON "
+	              "cu.contest_id=c.id AND cu.user_id=",
+	              (session_is_open ? session_user_id : StringView("''")));
 
-	enum ColumnIdx {
-		CID, CNAME, IS_PUBLIC, USER_MODE
-	};
+	enum ColumnIdx { CID, CNAME, IS_PUBLIC, USER_MODE };
 
 	auto qwhere_append = [&, where_was_added = false](auto&&... args) mutable {
-		if (where_was_added)
+		if (where_was_added) {
 			qwhere.append(" AND ", std::forward<decltype(args)>(args)...);
-		else {
+		} else {
 			qwhere.append(" WHERE ", std::forward<decltype(args)>(args)...);
 			where_was_added = true;
 		}
@@ -118,31 +151,32 @@ void Sim::api_contests() {
 
 		auto arg = decodeURI(next_arg);
 		char cond = arg[0];
-		StringView arg_id = StringView{arg}.substr(1);
+		StringView arg_id = StringView(arg).substr(1);
 
-		// Is public
-		if (cond == 'p' and ~mask & PUBLIC_COND) {
-			if (arg_id == "Y")
+		if (cond == 'p' and ~mask & PUBLIC_COND) { // Is public
+			if (arg_id == "Y") {
 				qwhere_append("c.is_public=1");
-			else if (arg_id == "N")
+			} else if (arg_id == "N") {
 				qwhere_append("c.is_public=0");
-			else
+			} else {
 				return api_error400(intentionalUnsafeStringView(
-					concat("Invalid is_public condition: ", arg_id)));
+				   concat("Invalid is_public condition: ", arg_id)));
+			}
 
 			mask |= PUBLIC_COND;
 
 		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
-		// conditional
-		} else if (isOneOf(cond, '=', '<', '>') and ~mask & ID_COND) {
+		} else if (isOneOf(cond, '=', '<', '>') and
+		           ~mask & ID_COND) { // conditional
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere_append("c.id", arg);
 			mask |= ID_COND;
 
-		} else
+		} else {
 			return api_error400();
+		}
 	}
 
 	// Execute query
@@ -150,20 +184,23 @@ void Sim::api_contests() {
 	auto res = mysql.query(qfields);
 
 	// Column names
+	// clang-format off
 	append("[\n{\"columns\":["
-			"\"id\","
-			"\"name\","
-			"\"is_public\","
-			"\"user_mode\","
-			"\"actions\""
-		"]}");
+	           "\"id\","
+	           "\"name\","
+	           "\"is_public\","
+	           "\"user_mode\","
+	           "\"actions\""
+	       "]}");
+	// clang-format on
 
 	while (res.next()) {
 		StringView cid = res[CID];
 		StringView name = res[CNAME];
 		bool is_public = strtoull(res[IS_PUBLIC]);
-		auto umode = (res.is_null(USER_MODE) ? std::nullopt :
-			Optional<CUM>(CUM(strtoull(res[USER_MODE]))));
+		auto umode = (res.is_null(USER_MODE)
+		                 ? std::nullopt
+		                 : Optional<CUM>(CUM(strtoull(res[USER_MODE]))));
 
 		contests_perms = contests_get_permissions(is_public, umode);
 
@@ -200,35 +237,38 @@ void Sim::api_contest() {
 	} else if (next_arg.empty()) {
 		return api_error400();
 
-	// Select by contest round id
+		// Select by contest round id
 	} else if (next_arg[0] == 'r' and isDigit(next_arg.substr(1))) {
 		contests_crid = next_arg.substr(1);
 		return api_contest_round();
 
-	// Select by contest problem id
+		// Select by contest problem id
 	} else if (next_arg[0] == 'p' and isDigit(next_arg.substr(1))) {
 		contests_cpid = next_arg.substr(1);
 		return api_contest_problem();
 
-
-	} else if (not (next_arg[0] == 'c' and isDigit(next_arg.substr(1))))
+	} else if (not(next_arg[0] == 'c' and isDigit(next_arg.substr(1)))) {
 		return api_error404();
+	}
 
-	// We read data in several queries - transaction will make the data consistent
+	// We read data in several queries - transaction will make the data
+	// consistent
 	auto transaction = mysql.start_transaction();
 
 	// Select by contest id
 	contests_cid = next_arg.substr(1);
-	auto stmt = mysql.prepare("SELECT c.name, c.is_public, cu.mode"
-		" FROM contests c"
-		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=?"
-		" WHERE c.id=?");
-	stmt.bindAndExecute(
-		(session_is_open ? session_user_id : StringView()), contests_cid);
+	auto stmt = mysql.prepare("SELECT c.name, c.is_public, cu.mode "
+	                          "FROM contests c "
+	                          "LEFT JOIN contest_users cu"
+	                          " ON cu.contest_id=c.id AND cu.user_id=? "
+	                          "WHERE c.id=?");
+	stmt.bindAndExecute((session_is_open ? session_user_id : StringView()),
+	                    contests_cid);
 
 	bool is_public;
 	InplaceBuff<meta::max(CONTEST_NAME_MAX_LEN, CONTEST_ROUND_NAME_MAX_LEN,
-		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
+	                      CONTEST_PROBLEM_NAME_MAX_LEN)>
+	   name;
 	MySQL::Optional<EnumVal<CUM>> umode;
 	stmt.res_bind_all(name, is_public, umode);
 	if (not stmt.next())
@@ -258,41 +298,11 @@ void Sim::api_contest() {
 		return api_error403();
 
 	// Append names
-	append("[\n{\"fields\":["
-			"{\"name\":\"contest\",\"fields\":["
-				"\"id\","
-				"\"name\","
-				"\"is_public\","
-				"\"user_mode\","
-				"\"actions\""
-			"]},"
-			"{\"name\":\"rounds\",\"columns\":["
-				"\"id\","
-				"\"name\","
-				"\"item\","
-				"\"ranking_exposure\","
-				"\"begins\","
-				"\"full_results\","
-				"\"ends\""
-			"]},"
-			"{\"name\":\"problems\",\"columns\":["
-				"\"id\","
-				"\"round_id\","
-				"\"problem_id\","
-				"\"problem_label\","
-				"\"name\","
-				"\"item\","
-				"\"final_selecting_method\","
-				"\"reveal_score\","
-				"\"color_class\""
-			"]}"
-		"]},");
+	append(api_contest_names);
 
 	// Append contest
-	append("\n[", contests_cid, ',',
-		jsonStringify(name),
-		(is_public ? ",true," : ",false,"),
-		user_mode_to_json(umode), ',');
+	append("\n[", contests_cid, ',', jsonStringify(name),
+	       (is_public ? ",true," : ",false,"), user_mode_to_json(umode), ',');
 	append_contest_actions_str();
 
 	auto curr_date = mysql_date();
@@ -300,34 +310,34 @@ void Sim::api_contest() {
 	// Rounds
 	append("],\n[");
 	if (uint(contests_perms & PERM::ADMIN)) {
-		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure,"
-				" begins, full_results, ends FROM contest_rounds"
-			" WHERE contest_id=?");
+		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure, begins,"
+		                     " full_results, ends FROM contest_rounds "
+		                     "WHERE contest_id=?");
 		stmt.bindAndExecute(contests_cid);
 	} else {
-		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure,"
-				" begins, full_results, ends FROM contest_rounds"
-			" WHERE contest_id=? AND begins<=?");
+		stmt = mysql.prepare("SELECT id, name, item, ranking_exposure, begins,"
+		                     " full_results, ends FROM contest_rounds "
+		                     "WHERE contest_id=? AND begins<=?");
 		stmt.bindAndExecute(contests_cid, curr_date);
 	}
 
 	uint item;
-	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str, ends_str;
+	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str,
+	   ends_str;
 	stmt.res_bind_all(contests_crid, name, item, ranking_exposure_str,
-		begins_str, full_results_str, ends_str);
+	                  begins_str, full_results_str, ends_str);
 
 	AVLDictMap<uint64_t, InfDatetime> round2full_results;
 
 	while (stmt.next()) {
 		round2full_results.emplace(strtoull(contests_crid), full_results_str);
-
-		append("\n[", contests_crid, ',',
-			jsonStringify(name), ',',
-			item, ","
-			"\"", InfDatetime(ranking_exposure_str).to_api_str(), "\","
-			"\"", InfDatetime(begins_str).to_api_str(), "\","
-			"\"", InfDatetime(full_results_str).to_api_str(), "\","
-			"\"", InfDatetime(ends_str).to_api_str(), "\"],");
+		// clang-format off
+		append("\n[", contests_crid, ',', jsonStringify(name), ',', item, ","
+		       "\"", InfDatetime(ranking_exposure_str).to_api_str(), "\","
+		       "\"", InfDatetime(begins_str).to_api_str(), "\","
+		       "\"", InfDatetime(full_results_str).to_api_str(), "\","
+		       "\"", InfDatetime(ends_str).to_api_str(), "\"],");
+		// clang-format on
 	}
 
 	if (resp.content.back() == ',')
@@ -343,61 +353,62 @@ void Sim::api_contest() {
 	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	if (uint(contests_perms & PERM::ADMIN)) {
-		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
-				" cp.problem_id, p.label, cp.name, cp.item,"
-				" cp.final_selecting_method, cp.reveal_score,"
-				" sf.full_status"
-			" FROM contest_problems cp"
-			" LEFT JOIN problems p ON p.id=cp.problem_id"
-			" LEFT JOIN submissions sf ON sf.owner=?"
-				" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
-			" WHERE cp.contest_id=?");
+		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id, cp.problem_id,"
+		                     " p.label, cp.name, cp.item,"
+		                     " cp.final_selecting_method, cp.reveal_score,"
+		                     " sf.full_status "
+		                     "FROM contest_problems cp "
+		                     "LEFT JOIN problems p ON p.id=cp.problem_id "
+		                     "LEFT JOIN submissions sf ON sf.owner=?"
+		                     " AND sf.contest_problem_id=cp.id"
+		                     " AND sf.contest_final=1 "
+		                     "WHERE cp.contest_id=?");
 
 		throw_assert(session_is_open);
 		stmt.bindAndExecute(session_user_id, contests_cid);
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
-			problem_label, name, item, final_selecting_method, reveal_score,
-			full_status);
+		                  problem_label, name, item, final_selecting_method,
+		                  reveal_score, full_status);
 
 	} else {
-		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id,"
-				" cp.problem_id, p.label, cp.name, cp.item,"
-				" cp.final_selecting_method, cp.reveal_score,"
-				" si.initial_status, sf.full_status"
-			" FROM contest_problems cp"
-			" JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
-				" AND cr.begins<=?"
-			" LEFT JOIN problems p ON p.id=cp.problem_id"
-			" LEFT JOIN submissions si ON si.owner=?"
-				" AND si.contest_problem_id=cp.id AND si.contest_initial_final=1"
-			" LEFT JOIN submissions sf ON sf.owner=?"
-				" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
-			" WHERE cp.contest_id=?");
+		stmt =
+		   mysql.prepare("SELECT cp.id, cp.contest_round_id, cp.problem_id,"
+		                 " p.label, cp.name, cp.item,"
+		                 " cp.final_selecting_method, cp.reveal_score,"
+		                 " si.initial_status, sf.full_status "
+		                 "FROM contest_problems cp "
+		                 "JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
+		                 " AND cr.begins<=? "
+		                 "LEFT JOIN problems p ON p.id=cp.problem_id "
+		                 "LEFT JOIN submissions si ON si.owner=?"
+		                 " AND si.contest_problem_id=cp.id"
+		                 " AND si.contest_initial_final=1 "
+		                 "LEFT JOIN submissions sf ON sf.owner=?"
+		                 " AND sf.contest_problem_id=cp.id"
+		                 " AND sf.contest_final=1 "
+		                 "WHERE cp.contest_id=?");
 
 		if (session_is_open)
-			stmt.bindAndExecute(curr_date, session_user_id, session_user_id, contests_cid);
+			stmt.bindAndExecute(curr_date, session_user_id, session_user_id,
+			                    contests_cid);
 		else
 			stmt.bindAndExecute(curr_date, nullptr, nullptr, contests_cid);
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
-			problem_label, name, item, final_selecting_method, reveal_score,
-			initial_status, full_status);
+		                  problem_label, name, item, final_selecting_method,
+		                  reveal_score, initial_status, full_status);
 	}
 
 	while (stmt.next()) {
-		append("\n[", contests_cpid, ',',
-			contests_crid, ',',
-			problem_id, ',',
-			jsonStringify(problem_label), ',',
-			jsonStringify(name), ',',
-			item, ',',
-			sfsm_to_json(final_selecting_method),
-			(reveal_score ? ",true," : ",false,"),
-			color_class_json(contests_perms,
-				round2full_results[strtoull(contests_crid)], curr_date,
-				full_status, initial_status),
-			"],");
+		append("\n[", contests_cpid, ',', contests_crid, ',', problem_id, ',',
+		       jsonStringify(problem_label), ',', jsonStringify(name), ',',
+		       item, ',', sfsm_to_json(final_selecting_method),
+		       (reveal_score ? ",true," : ",false,"),
+		       color_class_json(contests_perms,
+		                        round2full_results[strtoull(contests_crid)],
+		                        curr_date, full_status, initial_status),
+		       "],");
 	}
 
 	if (resp.content.back() == ',')
@@ -410,29 +421,34 @@ void Sim::api_contest_round() {
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
 
-	// We read data in several queries - transaction will make the data consistent
+	// We read data in several queries - transaction will make the data
+	// consistent
 	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT c.id, c.name, c.is_public, cr.name,"
-			" cr.item, cr.ranking_exposure, cr.begins, cr.full_results,"
-			" cr.ends, cu.mode"
-		" FROM contest_rounds cr "
-		" STRAIGHT_JOIN contests c ON c.id=cr.contest_id"
-		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=?"
-		" WHERE cr.id=?");
+	                          " cr.item, cr.ranking_exposure, cr.begins,"
+	                          " cr.full_results, cr.ends, cu.mode "
+	                          "FROM contest_rounds cr "
+	                          "STRAIGHT_JOIN contests c ON c.id=cr.contest_id "
+	                          "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
+	                          " AND cu.user_id=? "
+	                          "WHERE cr.id=?");
 
 	stmt.bindAndExecute((session_is_open ? session_user_id : StringView()),
-		contests_crid);
+	                    contests_crid);
 
 	bool is_public;
-	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str, ends_str;
+	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str,
+	   ends_str;
 	MySQL::Optional<EnumVal<CUM>> umode;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<meta::max(CONTEST_ROUND_NAME_MAX_LEN,
-		CONTEST_PROBLEM_NAME_MAX_LEN)> name;
+	                      CONTEST_PROBLEM_NAME_MAX_LEN)>
+	   name;
 	uint item;
 	stmt.res_bind_all(contests_cid, cname, is_public, name, item,
-		ranking_exposure_str, begins_str, full_results_str, ends_str, umode);
+	                  ranking_exposure_str, begins_str, full_results_str,
+	                  ends_str, umode);
 	if (not stmt.next())
 		return api_error404();
 
@@ -447,8 +463,7 @@ void Sim::api_contest_round() {
 	InfDatetime ends(ends_str);
 
 	if (begins > intentionalUnsafeStringView(mysql_date()) and
-		uint(~contests_perms & PERM::ADMIN))
-	{
+	    uint(~contests_perms & PERM::ADMIN)) {
 		return api_error403(); // Round has not begun yet
 	}
 
@@ -471,64 +486,36 @@ void Sim::api_contest_round() {
 	}
 
 	// Append names
-	append("[\n{\"fields\":["
-			"{\"name\":\"contest\",\"fields\":["
-				"\"id\","
-				"\"name\","
-				"\"is_public\","
-				"\"user_mode\","
-				"\"actions\""
-			"]},"
-			"{\"name\":\"rounds\",\"columns\":["
-				"\"id\","
-				"\"name\","
-				"\"item\","
-				"\"ranking_exposure\","
-				"\"begins\","
-				"\"full_results\","
-				"\"ends\""
-			"]},"
-			"{\"name\":\"problems\",\"columns\":["
-				"\"id\","
-				"\"round_id\","
-				"\"problem_id\","
-				"\"problem_label\","
-				"\"name\","
-				"\"item\","
-				"\"final_selecting_method\","
-				"\"reveal_score\","
-				"\"color_class\""
-			"]}"
-		"]},");
+	append(api_contest_names);
 
 	// Append contest
-	append("\n[", contests_cid, ',',
-		jsonStringify(cname),
-		(is_public ? ",true," : ",false,"),
-		user_mode_to_json(umode), ',');
+	append("\n[", contests_cid, ',', jsonStringify(cname),
+	       (is_public ? ",true," : ",false,"), user_mode_to_json(umode), ',');
 	append_contest_actions_str();
 
 	// Round
-	append("],\n[\n[", contests_crid, ',',
-		jsonStringify(name), ',',
-		item, ","
-		"\"", ranking_exposure.to_api_str(), "\","
-		"\"", begins.to_api_str(), "\","
-		"\"", full_results.to_api_str(), "\","
-		"\"", ends.to_api_str(), "\"]");
+	// clang-format off
+	append("],\n[\n[", contests_crid, ',', jsonStringify(name), ',', item, ","
+	       "\"", ranking_exposure.to_api_str(), "\","
+	       "\"", begins.to_api_str(), "\","
+	       "\"", full_results.to_api_str(), "\","
+	       "\"", ends.to_api_str(), "\"]");
+	// clang-format on
 
 	// Problems
 	append("\n],\n[");
 	stmt = mysql.prepare("SELECT cp.id, cp.problem_id, p.label, cp.name,"
-			" cp.item, cp.final_selecting_method, cp.reveal_score,"
-			" si.initial_status, sf.full_status"
-		" FROM contest_problems cp"
-		" LEFT JOIN problems p ON p.id=cp.problem_id"
-		" LEFT JOIN submissions si ON si.owner=?"
-			" AND si.contest_problem_id=cp.id AND si.contest_initial_final=1"
-		" LEFT JOIN submissions sf ON sf.owner=?"
-			" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
-		" WHERE cp.contest_round_id=?");
+	                     " cp.item, cp.final_selecting_method, cp.reveal_score,"
+	                     " si.initial_status, sf.full_status "
+	                     "FROM contest_problems cp "
+	                     "LEFT JOIN problems p ON p.id=cp.problem_id "
+	                     "LEFT JOIN submissions si ON si.owner=?"
+	                     " AND si.contest_problem_id=cp.id"
+	                     " AND si.contest_initial_final=1 "
+	                     "LEFT JOIN submissions sf ON sf.owner=?"
+	                     " AND sf.contest_problem_id=cp.id"
+	                     " AND sf.contest_final=1 "
+	                     "WHERE cp.contest_round_id=?");
 
 	if (session_is_open)
 		stmt.bindAndExecute(session_user_id, session_user_id, contests_crid);
@@ -542,21 +529,18 @@ void Sim::api_contest_round() {
 	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	stmt.res_bind_all(contests_cpid, problem_id, problem_label, name, item,
-		final_selecting_method, reveal_score, initial_status, full_status);
+	                  final_selecting_method, reveal_score, initial_status,
+	                  full_status);
 
 	auto curr_date = mysql_date();
 	while (stmt.next()) {
-		append("\n[", contests_cpid, ',',
-			contests_crid, ',',
-			problem_id, ',',
-			jsonStringify(problem_label), ',',
-			jsonStringify(name), ',',
-			item, ',',
-			sfsm_to_json(final_selecting_method),
-			(reveal_score ? ",true," : ",false,"),
-			color_class_json(contests_perms, full_results, curr_date,
-				full_status, initial_status),
-			"],");
+		append("\n[", contests_cpid, ',', contests_crid, ',', problem_id, ',',
+		       jsonStringify(problem_label), ',', jsonStringify(name), ',',
+		       item, ',', sfsm_to_json(final_selecting_method),
+		       (reveal_score ? ",true," : ",false,"),
+		       color_class_json(contests_perms, full_results, curr_date,
+		                        full_status, initial_status),
+		       "],");
 	}
 
 	if (resp.content.back() == ',')
@@ -571,29 +555,35 @@ void Sim::api_contest_problem() {
 
 	// Check permissions to the contest
 	auto stmt = mysql.prepare("SELECT c.id, c.name, c.is_public, cr.id,"
-			" cr.name, cr.item, cr.ranking_exposure, cr.begins,"
-			" cr.full_results, cr.ends, cp.problem_id, p.label, cp.name,"
-			" cp.item, cp.final_selecting_method, cp.reveal_score, cu.mode,"
-			" si.initial_status, sf.full_status"
-		" FROM contest_problems cp"
-		" STRAIGHT_JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
-		" STRAIGHT_JOIN contests c ON c.id=cp.contest_id"
-		" LEFT JOIN problems p ON p.id=cp.problem_id"
-		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND cu.user_id=?"
-		" LEFT JOIN submissions si ON si.owner=?"
-			" AND si.contest_problem_id=cp.id AND si.contest_initial_final=1"
-		" LEFT JOIN submissions sf ON sf.owner=?"
-			" AND sf.contest_problem_id=cp.id AND sf.contest_final=1"
-		" WHERE cp.id=?");
+	                          " cr.name, cr.item, cr.ranking_exposure,"
+	                          " cr.begins, cr.full_results, cr.ends,"
+	                          " cp.problem_id, p.label, cp.name, cp.item,"
+	                          " cp.final_selecting_method, cp.reveal_score,"
+	                          " cu.mode, si.initial_status, sf.full_status "
+	                          "FROM contest_problems cp "
+	                          "STRAIGHT_JOIN contest_rounds cr"
+	                          " ON cr.id=cp.contest_round_id "
+	                          "STRAIGHT_JOIN contests c ON c.id=cp.contest_id "
+	                          "LEFT JOIN problems p ON p.id=cp.problem_id "
+	                          "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
+	                          " AND cu.user_id=? "
+	                          "LEFT JOIN submissions si ON si.owner=?"
+	                          " AND si.contest_problem_id=cp.id"
+	                          " AND si.contest_initial_final=1 "
+	                          "LEFT JOIN submissions sf ON sf.owner=?"
+	                          " AND sf.contest_problem_id=cp.id"
+	                          " AND sf.contest_final=1 "
+	                          "WHERE cp.id=?");
 
 	if (session_is_open)
-		stmt.bindAndExecute(session_user_id, session_user_id, session_user_id, contests_cpid);
+		stmt.bindAndExecute(session_user_id, session_user_id, session_user_id,
+		                    contests_cpid);
 	else
 		stmt.bindAndExecute(nullptr, nullptr, nullptr, contests_cpid);
 
 	bool is_public;
 	InplaceBuff<20> rranking_exposure_str, rbegins_str, rfull_results_str,
-		rends_str;
+	   rends_str;
 	MySQL::Optional<EnumVal<CUM>> umode;
 	InplaceBuff<CONTEST_NAME_MAX_LEN> cname;
 	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> rname;
@@ -606,9 +596,10 @@ void Sim::api_contest_problem() {
 	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
-		ritem, rranking_exposure_str, rbegins_str, rfull_results_str, rends_str,
-		problem_id, problem_label, pname, pitem, final_selecting_method,
-		reveal_score, umode, initial_status, full_status);
+	                  ritem, rranking_exposure_str, rbegins_str,
+	                  rfull_results_str, rends_str, problem_id, problem_label,
+	                  pname, pitem, final_selecting_method, reveal_score, umode,
+	                  initial_status, full_status);
 	if (not stmt.next())
 		return api_error404();
 
@@ -623,8 +614,7 @@ void Sim::api_contest_problem() {
 		return api_error403(); // Could not participate
 
 	if (rbegins > intentionalUnsafeStringView(mysql_date()) and
-		uint(~contests_perms & PERM::ADMIN))
-	{
+	    uint(~contests_perms & PERM::ADMIN)) {
 		return api_error403(); // Round has not begun yet
 	}
 
@@ -643,64 +633,30 @@ void Sim::api_contest_problem() {
 		return api_error404();
 
 	// Append names
-	append("[\n{\"fields\":["
-			"{\"name\":\"contest\",\"fields\":["
-				"\"id\","
-				"\"name\","
-				"\"is_public\","
-				"\"user_mode\","
-				"\"actions\""
-			"]},"
-			"{\"name\":\"rounds\",\"columns\":["
-				"\"id\","
-				"\"name\","
-				"\"item\","
-				"\"ranking_exposure\","
-				"\"begins\","
-				"\"full_results\","
-				"\"ends\""
-			"]},"
-			"{\"name\":\"problems\",\"columns\":["
-				"\"id\","
-				"\"round_id\","
-				"\"problem_id\","
-				"\"problem_label\","
-				"\"name\","
-				"\"item\","
-				"\"final_selecting_method\","
-				"\"reveal_score\","
-				"\"color_class\""
-			"]}"
-		"]},");
+	append(api_contest_names);
 
 	// Append contest
-	append("\n[", contests_cid, ',',
-		jsonStringify(cname),
-		(is_public ? ",true," : ",false,"),
-		user_mode_to_json(umode), ',');
+	append("\n[", contests_cid, ',', jsonStringify(cname),
+	       (is_public ? ",true," : ",false,"), user_mode_to_json(umode), ',');
 	append_contest_actions_str();
 
 	// Round
-	append("],\n[\n[", contests_crid, ',',
-		jsonStringify(rname), ',',
-		ritem, ","
-		"\"", rranking_exposure.to_api_str() , "\","
-		"\"", rbegins.to_api_str() , "\","
-		"\"", rfull_results.to_api_str() , "\","
-		"\"", rends.to_api_str() , "\"]");
+	// clang-format off
+	append("],\n[\n[", contests_crid, ',', jsonStringify(rname), ',', ritem, ","
+	       "\"", rranking_exposure.to_api_str(), "\","
+	       "\"", rbegins.to_api_str(), "\","
+	       "\"", rfull_results.to_api_str(), "\","
+	       "\"", rends.to_api_str(), "\"]");
+	// clang-format on
 
 	// Problem
-	append("\n],\n[\n[", contests_cpid, ',',
-		contests_crid, ',',
-		problem_id, ',',
-		jsonStringify(problem_label), ',',
-		jsonStringify(pname), ',',
-		pitem, ',',
-		sfsm_to_json(final_selecting_method),
-		(reveal_score ? ",true," : ",false,"),
-		color_class_json(contests_perms, rfull_results, mysql_date(),
-			full_status, initial_status),
-		"]\n]\n]");
+	append("\n],\n[\n[", contests_cpid, ',', contests_crid, ',', problem_id,
+	       ',', jsonStringify(problem_label), ',', jsonStringify(pname), ',',
+	       pitem, ',', sfsm_to_json(final_selecting_method),
+	       (reveal_score ? ",true," : ",false,"),
+	       color_class_json(contests_perms, rfull_results, mysql_date(),
+	                        full_status, initial_status),
+	       "]\n]\n]");
 }
 
 void Sim::api_contest_add() {
@@ -708,21 +664,22 @@ void Sim::api_contest_add() {
 	using PERM = ContestPermissions;
 
 	if (uint(~contests_perms & (PERM::ADD_PRIVATE | PERM::ADD_PUBLIC)))
+		// clang-format onames
 		return api_error403();
 
 	// Validate fields
 	StringView name;
 	form_validate_not_blank(name, "name", "Contest's name",
-		CONTEST_NAME_MAX_LEN);
+	                        CONTEST_NAME_MAX_LEN);
 
 	bool is_public = request.form_data.exist("public");
 	if (is_public and uint(~contests_perms & PERM::ADD_PUBLIC))
 		add_notification("error",
-			"You have no permissions to add a public contest");
+		                 "You have no permissions to add a public contest");
 
 	if (not is_public and uint(~contests_perms & PERM::ADD_PRIVATE))
 		add_notification("error",
-			"You have no permissions to add a private contest");
+		                 "You have no permissions to add a private contest");
 
 	if (notifications.size)
 		return api_error400(notifications);
@@ -735,9 +692,10 @@ void Sim::api_contest_add() {
 
 	auto contest_id = stmt.insert_id();
 	// Add user to owners
-	mysql.prepare("INSERT contest_users(user_id, contest_id, mode)"
-		" VALUES(?, ?, " CU_MODE_OWNER_STR ")")
-		.bindAndExecute(session_user_id, contest_id);
+	mysql
+	   .prepare("INSERT contest_users(user_id, contest_id, mode) "
+	            "VALUES(?, ?, " CU_MODE_OWNER_STR ")")
+	   .bindAndExecute(session_user_id, contest_id);
 
 	transaction.commit();
 	append(contest_id);
@@ -753,14 +711,13 @@ void Sim::api_contest_edit(bool is_public) {
 	// Validate fields
 	StringView name;
 	form_validate_not_blank(name, "name", "Contest's name",
-		CONTEST_NAME_MAX_LEN);
+	                        CONTEST_NAME_MAX_LEN);
 
 	bool will_be_public = request.form_data.exist("public");
 	if (will_be_public and not is_public and
-		uint(~contests_perms & PERM::MAKE_PUBLIC))
-	{
+	    uint(~contests_perms & PERM::MAKE_PUBLIC)) {
 		add_notification("error",
-			"You have no permissions to make this contest public");
+		                 "You have no permissions to make this contest public");
 	}
 
 	if (notifications.size)
@@ -768,7 +725,7 @@ void Sim::api_contest_edit(bool is_public) {
 
 	// Update contest
 	mysql.prepare("UPDATE contests SET name=?, is_public=? WHERE id=?")
-		.bindAndExecute(name, will_be_public, contests_cid);
+	   .bindAndExecute(name, will_be_public, contests_cid);
 }
 
 void Sim::api_contest_delete() {
@@ -783,11 +740,11 @@ void Sim::api_contest_delete() {
 
 	// Queue deleting job
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_CONTEST_STR ","
-			" ?, ?, '', '')");
+	                          " added, aux_id, info, data) "
+	                          "VALUES(?, " JSTATUS_PENDING_STR ", ?,"
+	                          " " JTYPE_DELETE_CONTEST_STR ", ?, ?, '', '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_CONTEST),
-		mysql_date(), contests_cid);
+	                    mysql_date(), contests_cid);
 
 	jobs::notify_job_server();
 	append(stmt.insert_id());
@@ -803,14 +760,14 @@ void Sim::api_contest_round_add() {
 	// Validate fields
 	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
-		CONTEST_ROUND_NAME_MAX_LEN);
+	                        CONTEST_ROUND_NAME_MAX_LEN);
 	form_validate_not_blank(begins, "begins", "Begin time",
-		is_safe_inf_timestamp);
+	                        is_safe_inf_timestamp);
 	form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
 	form_validate_not_blank(full_results, "full_results", "Full results time",
-		is_safe_inf_timestamp);
+	                        is_safe_inf_timestamp);
 	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
-		is_safe_inf_timestamp);
+	                        is_safe_inf_timestamp);
 
 	if (notifications.size)
 		return api_error400(notifications);
@@ -818,9 +775,10 @@ void Sim::api_contest_round_add() {
 	// Add round
 	auto curr_date = mysql_date();
 	auto stmt = mysql.prepare("INSERT contest_rounds(contest_id, name, item,"
-			" begins, ends, full_results, ranking_exposure)"
-		" SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ?"
-		" FROM contest_rounds WHERE contest_id=?");
+	                          " begins, ends, full_results, ranking_exposure) "
+	                          "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?,"
+	                          " ? "
+	                          "FROM contest_rounds WHERE contest_id=?");
 	stmt.bind(0, contests_cid);
 	stmt.bind(1, name);
 	stmt.bind_copy(2, inf_timestamp_to_InfDatetime(begins).to_str());
@@ -843,23 +801,24 @@ void Sim::api_contest_round_edit() {
 	// Validate fields
 	CStringView name, begins, ends, full_results, ranking_expo;
 	form_validate_not_blank(name, "name", "Round's name",
-		CONTEST_ROUND_NAME_MAX_LEN);
+	                        CONTEST_ROUND_NAME_MAX_LEN);
 	form_validate_not_blank(begins, "begins", "Begin time",
-		is_safe_inf_timestamp);
+	                        is_safe_inf_timestamp);
 	form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
 	form_validate_not_blank(full_results, "full_results", "Full results time",
-		is_safe_inf_timestamp);
+	                        is_safe_inf_timestamp);
 	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
-		is_safe_inf_timestamp);
+	                        is_safe_inf_timestamp);
 
 	if (notifications.size)
 		return api_error400(notifications);
 
 	// Update round
 	auto curr_date = mysql_date();
-	auto stmt = mysql.prepare("UPDATE contest_rounds"
-		" SET name=?, begins=?, ends=?, full_results=?, ranking_exposure=?"
-		" WHERE id=?");
+	auto stmt = mysql.prepare("UPDATE contest_rounds "
+	                          "SET name=?, begins=?, ends=?, full_results=?,"
+	                          " ranking_exposure=? "
+	                          "WHERE id=?");
 	stmt.bind(0, name);
 	stmt.bind_copy(1, inf_timestamp_to_InfDatetime(begins).to_str());
 	stmt.bind_copy(2, inf_timestamp_to_InfDatetime(ends).to_str());
@@ -881,11 +840,13 @@ void Sim::api_contest_round_delete() {
 
 	// Queue deleting job
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
-			JTYPE_DELETE_CONTEST_ROUND_STR ", ?, ?, '', '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_CONTEST_ROUND),
-		mysql_date(), contests_crid);
+	                          " added, aux_id, info, data) "
+	                          "VALUES(?, " JSTATUS_PENDING_STR ", ?,"
+	                          " " JTYPE_DELETE_CONTEST_ROUND_STR ", ?, ?, '',"
+	                          " '')");
+	stmt.bindAndExecute(session_user_id,
+	                    priority(JobType::DELETE_CONTEST_ROUND), mysql_date(),
+	                    contests_crid);
 
 	jobs::notify_job_server();
 
@@ -901,10 +862,9 @@ void Sim::api_contest_problem_add() {
 
 	// Validate fields
 	StringView name, problem_id;
-	form_validate(name, "name", "Problem's name",
-		CONTEST_PROBLEM_NAME_MAX_LEN);
+	form_validate(name, "name", "Problem's name", CONTEST_PROBLEM_NAME_MAX_LEN);
 	form_validate(problem_id, "problem_id", "Problem ID", isDigit,
-		"Problem ID: invalid value");
+	              "Problem ID: invalid value");
 	bool reveal_score = request.form_data.exist("reveal_score");
 	// Validate final_selecting_method
 	auto fsm_str = request.form_data.get("final_selecting_method");
@@ -921,8 +881,8 @@ void Sim::api_contest_problem_add() {
 
 	auto transaction = mysql.start_transaction();
 
-	auto stmt = mysql.prepare("SELECT owner, type, name FROM problems"
-		" WHERE id=?");
+	auto stmt =
+	   mysql.prepare("SELECT owner, type, name FROM problems WHERE id=?");
 	stmt.bindAndExecute(problem_id);
 
 	InplaceBuff<32> powner;
@@ -931,7 +891,7 @@ void Sim::api_contest_problem_add() {
 	stmt.res_bind_all(powner, ptype, pname);
 	if (not stmt.next())
 		return api_error404(intentionalUnsafeStringView(
-			concat("No problem was found with ID = ", problem_id)));
+		   concat("No problem was found with ID = ", problem_id)));
 
 	auto pperms = problems_get_permissions(powner, ptype);
 	if (uint(~pperms & ProblemPermissions::VIEW))
@@ -939,13 +899,14 @@ void Sim::api_contest_problem_add() {
 
 	// Add contest problem
 	stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id,"
-			" problem_id, name, item, final_selecting_method, reveal_score)"
-		" SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ?"
-			" FROM contest_problems"
-			" WHERE contest_round_id=?");
-	stmt.bindAndExecute(contests_crid, contests_cid, problem_id,
-		(name.empty() ? pname : name), EnumVal<SFSM>(final_selecting_method),
-		reveal_score, contests_crid);
+	                     " problem_id, name, item, final_selecting_method,"
+	                     " reveal_score) "
+	                     "SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
+	                     "FROM contest_problems "
+	                     "WHERE contest_round_id=?");
+	stmt.bindAndExecute(
+	   contests_crid, contests_cid, problem_id, (name.empty() ? pname : name),
+	   EnumVal<SFSM>(final_selecting_method), reveal_score, contests_crid);
 
 	transaction.commit();
 	append(stmt.insert_id());
@@ -958,13 +919,15 @@ void Sim::api_contest_problem_rejudge_all_submissions(StringView problem_id) {
 	if (uint(~contests_perms & PERM::ADMIN))
 		return api_error403();
 
-	mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
-		" SELECT ?, " JSTATUS_PENDING_STR ", ?, " JTYPE_REJUDGE_SUBMISSION_STR
-			", ?, id, ?, ''"
-		" FROM submissions WHERE contest_problem_id=? ORDER BY id")
-		.bindAndExecute(session_user_id, priority(JobType::REJUDGE_SUBMISSION),
-			mysql_date(), jobs::dumpString(problem_id), contests_cpid);
+	mysql
+	   .prepare("INSERT jobs (creator, status, priority, type,"
+	            " added, aux_id, info, data) "
+	            "SELECT ?, " JSTATUS_PENDING_STR ", ?,"
+	            " " JTYPE_REJUDGE_SUBMISSION_STR ", ?, id, ?, '' "
+	            "FROM submissions WHERE contest_problem_id=? ORDER BY id")
+	   .bindAndExecute(session_user_id, priority(JobType::REJUDGE_SUBMISSION),
+	                   mysql_date(), jobs::dumpString(problem_id),
+	                   contests_cpid);
 
 	jobs::notify_job_server();
 }
@@ -979,7 +942,7 @@ void Sim::api_contest_problem_edit() {
 	// Validate fields
 	StringView name;
 	form_validate_not_blank(name, "name", "Problem's name",
-		CONTEST_PROBLEM_NAME_MAX_LEN);
+	                        CONTEST_PROBLEM_NAME_MAX_LEN);
 	bool reveal_score = request.form_data.exist("reveal_score");
 	// Validate final_selecting_method
 	auto fsm_str = request.form_data.get("final_selecting_method");
@@ -998,8 +961,8 @@ void Sim::api_contest_problem_edit() {
 	auto transaction = mysql.start_transaction();
 
 	// Get the old final selecting method and whether the score was revealed
-	auto stmt = mysql.prepare("SELECT final_selecting_method, reveal_score"
-		" FROM contest_problems WHERE id=?");
+	auto stmt = mysql.prepare("SELECT final_selecting_method, reveal_score "
+	                          "FROM contest_problems WHERE id=?");
 	stmt.bindAndExecute(contests_cpid);
 
 	EnumVal<SFSM> old_final_method;
@@ -1010,27 +973,30 @@ void Sim::api_contest_problem_edit() {
 		        // been deleted)
 
 	if (old_final_method != final_selecting_method or
-		(final_selecting_method == SFSM::WITH_HIGHEST_SCORE and
-			reveal_score != old_reveal_score))
-	{
+	    (final_selecting_method == SFSM::WITH_HIGHEST_SCORE and
+	     reveal_score != old_reveal_score)) {
 		// Queue reselecting final submissions
-		stmt = mysql.prepare("INSERT jobs (creator, status, priority, type, added,"
-				" aux_id, info, data)"
-			" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
-				JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR ", ?, ?,"
-				" '', '')");
-		stmt.bindAndExecute(session_user_id,
-			priority(JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
-			mysql_date(), contests_cpid);
+		stmt = mysql.prepare(
+		   "INSERT jobs (creator, status, priority, type, added,"
+		   " aux_id, info, data) "
+		   "VALUES(?, " JSTATUS_PENDING_STR
+		   ", ?, " JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR
+		   ", ?, ?,"
+		   " '', '')");
+		stmt.bindAndExecute(
+		   session_user_id,
+		   priority(JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS),
+		   mysql_date(), contests_cpid);
 
 		append(stmt.insert_id());
 	}
 
 	// Update problem
-	stmt = mysql.prepare("UPDATE contest_problems"
-		" SET name=?, reveal_score=?, final_selecting_method=? WHERE id=?");
+	stmt = mysql.prepare("UPDATE contest_problems "
+	                     "SET name=?, reveal_score=?, final_selecting_method=? "
+	                     "WHERE id=?");
 	stmt.bindAndExecute(name, reveal_score,
-		EnumVal<SFSM>(final_selecting_method), contests_cpid);
+	                    EnumVal<SFSM>(final_selecting_method), contests_cpid);
 
 	transaction.commit();
 	jobs::notify_job_server();
@@ -1048,11 +1014,13 @@ void Sim::api_contest_problem_delete() {
 
 	// Queue deleting job
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, "
-			JTYPE_DELETE_CONTEST_PROBLEM_STR ", ?, ?, '', '')");
+	                          " added, aux_id, info, data) "
+	                          "VALUES(?, " JSTATUS_PENDING_STR ", ?,"
+	                          " " JTYPE_DELETE_CONTEST_PROBLEM_STR ", ?, ?, '',"
+	                          " '')");
 	stmt.bindAndExecute(session_user_id,
-		priority(JobType::DELETE_CONTEST_PROBLEM), mysql_date(), contests_cpid);
+	                    priority(JobType::DELETE_CONTEST_PROBLEM), mysql_date(),
+	                    contests_cpid);
 
 	jobs::notify_job_server();
 	append(stmt.insert_id());
@@ -1061,7 +1029,8 @@ void Sim::api_contest_problem_delete() {
 void Sim::api_contest_problem_statement(StringView problem_id) {
 	STACK_UNWINDING_MARK;
 
-	auto stmt = mysql.prepare("SELECT file_id, label, simfile FROM problems WHERE id=?");
+	auto stmt =
+	   mysql.prepare("SELECT file_id, label, simfile FROM problems WHERE id=?");
 	stmt.bindAndExecute(problem_id);
 
 	uint64_t problem_file_id;
@@ -1080,7 +1049,7 @@ struct SubmissionOwner {
 	uint64_t id;
 	InplaceBuff<32> name; // static size is set manually to save memory
 
-	template<class... Args>
+	template <class... Args>
 	SubmissionOwner(uint64_t sowner, Args&&... args) : id(sowner) {
 		name.append(std::forward<Args>(args)...);
 	}
@@ -1097,8 +1066,7 @@ struct SubmissionOwner {
 } // anonymous namespace
 
 void Sim::api_contest_ranking(StringView submissions_query_id_name,
-	StringView query_id)
-{
+                              StringView query_id) {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestPermissions;
 
@@ -1110,10 +1078,10 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 
 	// Gather submissions owners
 	auto stmt = mysql.prepare(intentionalUnsafeStringView(
-		concat("SELECT u.id, u.first_name, u.last_name"
-		" FROM submissions s JOIN users u ON s.owner=u.id"
-		" WHERE s.", submissions_query_id_name, "=? AND s.contest_final=1"
-		" GROUP BY (u.id) ORDER BY u.id")));
+	   concat("SELECT u.id, u.first_name, u.last_name FROM submissions s JOIN "
+	          "users u ON s.owner=u.id WHERE s.",
+	          submissions_query_id_name,
+	          "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id")));
 	stmt.bindAndExecute(query_id);
 
 	uint64_t id;
@@ -1123,7 +1091,7 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 
 	std::vector<SubmissionOwner> sowners;
 	while (stmt.next())
-		sowners.emplace_back(id, fname, ' ' , lname);
+		sowners.emplace_back(id, fname, ' ', lname);
 
 	// Gather submissions
 	bool first_owner = true;
@@ -1135,47 +1103,47 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare(intentionalUnsafeStringView(
-			concat("SELECT id, owner, contest_round_id,"
-				" contest_problem_id, initial_status, full_status, score"
-				" FROM submissions "
-			" WHERE ", submissions_query_id_name, "=? AND contest_final=1"
-			" ORDER BY owner")));
+		   concat("SELECT id, owner, contest_round_id, contest_problem_id, "
+		          "initial_status, full_status, score FROM submissions  WHERE ",
+		          submissions_query_id_name,
+		          "=? AND contest_final=1 ORDER BY owner")));
 		stmt.bindAndExecute(query_id);
 		stmt.res_bind_all(id, owner, crid, cpid, initial_status, full_status,
-			score);
+		                  score);
 
 	} else {
-		stmt = mysql.prepare(intentionalUnsafeStringView(
-			concat("SELECT s.id, s.owner, s.contest_round_id,"
-				" s.contest_problem_id, s.initial_status, s.full_status, s.score"
-			" FROM submissions s JOIN contest_rounds cr ON"
-				" cr.id=s.contest_round_id AND cr.begins<=? AND"
-				" cr.full_results<=? AND cr.ranking_exposure<=?"
-			" WHERE s.", submissions_query_id_name, "=? AND s.contest_final=1"
-			" ORDER BY s.owner")));
+		stmt = mysql.prepare(intentionalUnsafeStringView(concat(
+		   "SELECT s.id, s.owner, s.contest_round_id, s.contest_problem_id, "
+		   "s.initial_status, s.full_status, s.score FROM submissions s JOIN "
+		   "contest_rounds cr ON cr.id=s.contest_round_id AND cr.begins<=? AND "
+		   "cr.full_results<=? AND cr.ranking_exposure<=? WHERE s.",
+		   submissions_query_id_name,
+		   "=? AND s.contest_final=1 ORDER BY s.owner")));
 		curr_date = mysql_date();
 		stmt.bindAndExecute(curr_date, curr_date, curr_date, query_id);
 		stmt.res_bind_all(id, owner, crid, cpid, initial_status, full_status,
-			score);
+		                  score);
 	}
 
 	append('[');
 	// Column names
+	// clang-format off
 	append("\n{\"columns\":["
-			"\"id\",\"name\","
-			"{\"name\":\"submissions\",\"columns\":["
-				"\"id\",\"contest_round_id\","
-				"\"contest_problem_id\","
-				"{\"name\":\"status\",\"fields\":["
-					"\"class\","
-					"\"text\""
-				"]},"
-				"\"score\""
-			"]}"
-		"]}");
+	           "\"id\",\"name\","
+	           "{\"name\":\"submissions\",\"columns\":["
+	               "\"id\",\"contest_round_id\","
+	               "\"contest_problem_id\","
+	               "{\"name\":\"status\",\"fields\":["
+	                   "\"class\","
+	                   "\"text\""
+	               "]},"
+	               "\"score\""
+	           "]}"
+	       "]}");
+	// clang-format on
 
-	const uint64_t session_uid = (session_is_open ? strtoull(session_user_id)
-		: 0);
+	const uint64_t session_uid =
+	   (session_is_open ? strtoull(session_user_id) : 0);
 	bool show_id = false;
 	while (stmt.next()) {
 		// Owner changes
@@ -1197,7 +1165,7 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 
 			prev_owner = owner;
 			show_id = (uint(contests_perms & PERM::ADMIN) or
-				(session_is_open and session_uid == owner));
+			           (session_is_open and session_uid == owner));
 			// Owner
 			if (show_id)
 				append(owner);
@@ -1213,8 +1181,7 @@ void Sim::api_contest_ranking(StringView submissions_query_id_name,
 		else
 			append("null,");
 
-		append(crid, ',',
-			cpid, ',');
+		append(crid, ',', cpid, ',');
 
 		append_submission_status(initial_status, full_status, true);
 		// TODO: make score revealing work with the ranking

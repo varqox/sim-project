@@ -10,8 +10,8 @@ class MergeProblemsJobHandler final : public JobHandler {
 
 public:
 	MergeProblemsJobHandler(uint64_t job_id, uint64_t problem_id,
-			const jobs::MergeProblemsInfo& info)
-		: JobHandler(job_id), problem_id(problem_id), info(info) {}
+	                        const jobs::MergeProblemsInfo& info)
+	   : JobHandler(job_id), problem_id(problem_id), info(info) {}
 
 	void run() override final;
 };

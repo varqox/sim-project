@@ -22,12 +22,13 @@ static void help(const char* program_name) {
 	puts("Setup database after SIM installation");
 	puts("");
 	puts("Options:");
-	puts("  --drop-tables          Drop database tables before recreating them");
+	puts("  --drop-tables          Drop database tables before recreating "
+	     "them");
 	puts("  -h, --help             Display this information");
 	puts("  --only-drop-tables     Drop database tables and exit");
 }
 
-static void parseOptions(int &argc, char **argv) {
+static void parseOptions(int& argc, char** argv) {
 	int new_argc = 1;
 	for (int i = 1; i < argc; ++i) {
 
@@ -38,8 +39,7 @@ static void parseOptions(int &argc, char **argv) {
 
 			// Help
 			else if (0 == strcmp(argv[i], "-h") ||
-				0 == strcmp(argv[i], "--help"))
-			{
+			         0 == strcmp(argv[i], "--help")) {
 				help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 			}
@@ -62,19 +62,19 @@ static void parseOptions(int &argc, char **argv) {
 }
 
 constexpr array<meta::string, 13> tables {{
-	{"contest_entry_tokens"},
-	{"contest_problems"},
-	{"contest_rounds"},
-	{"contest_users"},
-	{"contests"},
-	{"files"},
-	{"internal_files"},
-	{"jobs"},
-	{"problem_tags"},
-	{"problems"},
-	{"session"},
-	{"submissions"},
-	{"users"},
+   {"contest_entry_tokens"},
+   {"contest_problems"},
+   {"contest_rounds"},
+   {"contest_users"},
+   {"contests"},
+   {"files"},
+   {"internal_files"},
+   {"jobs"},
+   {"problem_tags"},
+   {"problems"},
+   {"session"},
+   {"submissions"},
+   {"users"},
 }};
 
 static_assert(meta::is_sorted(tables), "Needed for binary search");
@@ -85,12 +85,11 @@ struct TryToCreateTable {
 
 	explicit TryToCreateTable(MySQL::Connection& conn) : conn_(conn) {}
 
-	template<class Func>
-	void operator()(const char* table_name, StringView query, Func&& f)
-		noexcept
-	{
+	template <class Func>
+	void operator()(const char* table_name, StringView query,
+	                Func&& f) noexcept {
 		try {
-			if (!binary_search(tables, StringView{table_name}))
+			if (!binary_search(tables, StringView {table_name}))
 				THROW("Table `", table_name, "` not found in the table list");
 
 			conn_.update(query);
@@ -98,22 +97,22 @@ struct TryToCreateTable {
 
 		} catch (const std::exception& e) {
 			errlog("\033[31mFailed to create table `", table_name, "`\033[m - ",
-				e.what());
+			       e.what());
 			error = true;
 		}
 	}
 
 	void operator()(const char* table_name, StringView query) noexcept {
-		operator()(table_name, query, []{});
+		operator()(table_name, query, [] {});
 	}
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	errlog.label(false);
 
 	parseOptions(argc, argv);
 
-	if(argc != 2) {
+	if (argc != 2) {
 		help(argc > 0 ? argv[0] : nullptr);
 		return 1;
 	}
@@ -121,7 +120,8 @@ int main(int argc, char **argv) {
 	MySQL::Connection conn;
 	try {
 		// Get connection
-		conn = MySQL::make_conn_with_credential_file(concat(argv[1], "/.db.config"));
+		conn = MySQL::make_conn_with_credential_file(
+		   concat(argv[1], "/.db.config"));
 		conn.update("SET foreign_key_checks=1"); // Just for sure
 
 	} catch (const std::exception& e) {
@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 			conn.update("SET foreign_key_checks=0");
 			for (auto&& table : tables)
 				conn.update(intentionalUnsafeStringView(
-					concat("DROP TABLE IF EXISTS `", table, '`')));
+				   concat("DROP TABLE IF EXISTS `", table, '`')));
 			conn.update("SET foreign_key_checks=1");
 
 			if (ONLY_DROP_TABLES)
@@ -149,14 +149,17 @@ int main(int argc, char **argv) {
 
 	TryToCreateTable try_to_create_table(conn);
 
-	try_to_create_table("internal_files", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `internal_files` ("
+	// clang-format off
+	try_to_create_table("internal_files", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `internal_files` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"PRIMARY KEY (id)"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
-	try_to_create_table("users", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `users` ("
+	// clang-format off
+	try_to_create_table("users", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `users` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`username` VARBINARY(", USERNAME_MAX_LEN, ") NOT NULL,"
 			"`first_name` VARBINARY(", USER_FIRST_NAME_MAX_LEN, ") NOT NULL,"
@@ -175,17 +178,19 @@ int main(int argc, char **argv) {
 			fillRandomly(salt_bin, sizeof(salt_bin));
 			string salt = toHex(salt_bin, sizeof(salt_bin));
 
-			auto stmt = conn.prepare(
-				"INSERT IGNORE users (id, username, first_name, last_name, email, "
-					"salt, password, type) "
-				"VALUES (" SIM_ROOT_UID ", 'sim', 'sim', 'sim', 'sim@sim', ?, "
-					"?, 0)");
-			stmt.bindAndExecute(salt,
-				sha3_512(intentionalUnsafeStringView(salt + "sim")));
+			auto stmt = conn.prepare("INSERT IGNORE users (id, username,"
+			                         " first_name, last_name, email, salt,"
+			                         " password, type) "
+			                         "VALUES (" SIM_ROOT_UID ", 'sim', 'sim',"
+			                         " 'sim', 'sim@sim', ?, ?, 0)");
+			stmt.bindAndExecute(
+			   salt, sha3_512(intentionalUnsafeStringView(salt + "sim")));
 		});
+	// clang-format on
 
-	try_to_create_table("session", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `session` ("
+	// clang-format off
+	try_to_create_table("session", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `session` ("
 			"`id` BINARY(", SESSION_ID_LEN, ") NOT NULL,"
 			"`csrf_token` BINARY(", SESSION_CSRF_TOKEN_LEN, ") NOT NULL,"
 			"`user_id` int unsigned NOT NULL,"
@@ -198,9 +203,11 @@ int main(int argc, char **argv) {
 			"KEY (expires),"
 			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;")));
+	// clang-format on
 
-	try_to_create_table("problems", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `problems` ("
+	// clang-format off
+	try_to_create_table("problems", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`file_id` int unsigned NOT NULL,"
 			"`type` TINYINT NOT NULL,"
@@ -216,9 +223,11 @@ int main(int argc, char **argv) {
 			"FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (owner) REFERENCES users(id) ON DELETE SET NULL"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
-	try_to_create_table("problem_tags", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `problem_tags` ("
+	// clang-format off
+	try_to_create_table("problem_tags", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `problem_tags` ("
 			"`problem_id` int unsigned NOT NULL,"
 			"`tag` VARBINARY(", PROBLEM_TAG_MAX_LEN, ") NOT NULL,"
 			"`hidden` BOOLEAN NOT NULL,"
@@ -226,7 +235,9 @@ int main(int argc, char **argv) {
 			"KEY (tag, problem_id),"
 			"FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
+	// clang-format off
 	try_to_create_table("contests", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contests` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
@@ -235,7 +246,9 @@ int main(int argc, char **argv) {
 			"PRIMARY KEY (id),"
 			"KEY (is_public, id)"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
+	// clang-format off
 	try_to_create_table("contest_rounds", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
@@ -252,7 +265,9 @@ int main(int argc, char **argv) {
 			"UNIQUE (contest_id, item),"
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
+	// clang-format off
 	try_to_create_table("contest_problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
@@ -271,7 +286,9 @@ int main(int argc, char **argv) {
 			"FOREIGN KEY (contest_round_id) REFERENCES contest_rounds(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE RESTRICT"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
+	// clang-format off
 	try_to_create_table("contest_users",
 		"CREATE TABLE IF NOT EXISTS `contest_users` ("
 			"`user_id` int unsigned NOT NULL,"
@@ -283,7 +300,9 @@ int main(int argc, char **argv) {
 			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+	// clang-format on
 
+	// clang-format off
 	try_to_create_table("submissions",
 		"CREATE TABLE IF NOT EXISTS `submissions` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
@@ -356,9 +375,11 @@ int main(int argc, char **argv) {
 			"FOREIGN KEY (contest_round_id) REFERENCES contest_rounds(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+	// clang-format on
 
-	try_to_create_table("jobs", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `jobs` ("
+	// clang-format off
+	try_to_create_table("jobs", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `jobs` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`file_id` int unsigned NULL DEFAULT NULL,"
 			"`tmp_file_id` int unsigned NULL DEFAULT NULL,"
@@ -380,10 +401,12 @@ int main(int argc, char **argv) {
 			// Foreign keys cannot be used as we want to preserve information
 			// about who created jobs and what the job referred to
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
+	// clang-format off
 	// TODO: rename to contest_files
-	try_to_create_table("files", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `files` ("
+	try_to_create_table("files", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `files` ("
 			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
 			"`file_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
@@ -399,7 +422,9 @@ int main(int argc, char **argv) {
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (creator) REFERENCES users(id) ON DELETE SET NULL"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
+	// clang-format off
 	try_to_create_table("contest_entry_tokens", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
 			"`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
@@ -411,6 +436,7 @@ int main(int argc, char **argv) {
 			"UNIQUE KEY (short_token),"
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
 
 	if (try_to_create_table.error)
 		return 7;

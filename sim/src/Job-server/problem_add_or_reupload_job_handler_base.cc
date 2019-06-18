@@ -1,5 +1,5 @@
-#include "main.h"
 #include "problem_add_or_reupload_job_handler_base.h"
+#include "main.h"
 
 #include <simlib/libzip.h>
 #include <simlib/sim/problem_package.h>
@@ -66,13 +66,13 @@ void ProblemAddOrReuploadJobHandlerBase::build_package() {
 	// Check problem's name's length
 	if (cr.simfile.name.size() > PROBLEM_NAME_MAX_LEN) {
 		return set_failure("Problem's name is too long (max allowed length: ",
-			PROBLEM_NAME_MAX_LEN, ')');
+		                   PROBLEM_NAME_MAX_LEN, ')');
 	}
 
 	// Check problem's label's length
 	if (cr.simfile.label.size() > PROBLEM_LABEL_MAX_LEN) {
 		return set_failure("Problem's label is too long (max allowed length: ",
-			PROBLEM_LABEL_MAX_LEN, ')');
+		                   PROBLEM_LABEL_MAX_LEN, ')');
 	}
 
 	job_log(conver.report());
@@ -81,7 +81,7 @@ void ProblemAddOrReuploadJobHandlerBase::build_package() {
 
 	// Update job record
 	mysql.prepare("UPDATE jobs SET tmp_file_id=? WHERE id=?")
-		.bindAndExecute(tmp_file_id.value(), job_id);
+	   .bindAndExecute(tmp_file_id.value(), job_id);
 	auto tmp_package = internal_file_path(tmp_file_id.value());
 	// Copy source_package to tmp_package, substituting Simfile in the fly
 	{
@@ -97,7 +97,7 @@ void ProblemAddOrReuploadJobHandlerBase::build_package() {
 			auto entry_name = src_zip.get_name(i);
 			if (entry_name == simfile_path) {
 				dest_zip.file_add(simfile_path,
-					dest_zip.source_buffer(simfile_str));
+				                  dest_zip.source_buffer(simfile_str));
 			} else {
 				dest_zip.file_add(entry_name, dest_zip.source_zip(src_zip, i));
 			}
@@ -134,15 +134,13 @@ void ProblemAddOrReuploadJobHandlerBase::job_done(bool& job_was_canceled) {
 			type = JobType::REUPLOAD_JUDGE_MODEL_SOLUTION;
 			break;
 
-		default:
-			THROW("Unexpected job type");
+		default: THROW("Unexpected job type");
 		}
 
 	} else {
 		switch (job_type) {
 		case JobType::ADD_PROBLEM:
-		case JobType::REUPLOAD_PROBLEM:
-			break;
+		case JobType::REUPLOAD_PROBLEM: break;
 
 		case JobType::ADD_JUDGE_MODEL_SOLUTION:
 			status = JobStatus::PENDING;
@@ -154,17 +152,16 @@ void ProblemAddOrReuploadJobHandlerBase::job_done(bool& job_was_canceled) {
 			type = JobType::REUPLOAD_PROBLEM;
 			break;
 
-		default:
-			THROW("Unexpected job type");
+		default: THROW("Unexpected job type");
 		}
 	}
 
-	auto stmt = mysql.prepare("UPDATE jobs"
-		" SET tmp_file_id=?, type=?, priority=?, status=?, aux_id=?, info=?,"
-			" data=?"
-		" WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+	auto stmt = mysql.prepare("UPDATE jobs "
+	                          "SET tmp_file_id=?, type=?, priority=?,"
+	                          " status=?, aux_id=?, info=?, data=? "
+	                          "WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
 	stmt.bindAndExecute(tmp_file_id, type, priority(type), status, problem_id,
-		info.dump(), get_log(), job_id);
+	                    info.dump(), get_log(), job_id);
 	job_was_canceled = (stmt.affected_rows() == 0);
 }
 
@@ -192,7 +189,8 @@ void ProblemAddOrReuploadJobHandlerBase::open_package() {
 
 	zip = ZipFile(internal_file_path(tmp_file_id.value()), ZIP_RDONLY);
 	master_dir = sim::zip_package_master_dir(zip);
-	simfile_str = zip.extract_to_str(zip.get_index(concat(master_dir, "Simfile")));
+	simfile_str =
+	   zip.extract_to_str(zip.get_index(concat(master_dir, "Simfile")));
 
 	simfile = sim::Simfile(simfile_str);
 	simfile.load_name();
@@ -210,11 +208,12 @@ void ProblemAddOrReuploadJobHandlerBase::add_problem_to_DB() {
 	open_package();
 
 	auto stmt = mysql.prepare("INSERT INTO problems(file_id, type, name, label,"
-			" simfile, owner, added, last_edit)"
-		" VALUES(?,?,?,?,?,?,?,?)");
+	                          " simfile, owner, added, last_edit) "
+	                          "VALUES(?,?,?,?,?,?,?,?)");
 	stmt.bindAndExecute(tmp_file_id.value(),
-		EnumVal<ProblemType>(info.problem_type), simfile.name, simfile.label,
-		simfile_str, job_creator, current_date, current_date);
+	                    EnumVal<ProblemType>(info.problem_type), simfile.name,
+	                    simfile.label, simfile_str, job_creator, current_date,
+	                    current_date);
 
 	tmp_file_id = std::nullopt;
 	problem_id = stmt.insert_id();
@@ -228,36 +227,43 @@ void ProblemAddOrReuploadJobHandlerBase::replace_problem_in_DB() {
 	open_package();
 
 	// Add job to delete old problem file
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM problems WHERE id=?")
-		.bindAndExecute(priority(JobType::DELETE_FILE), current_date,
-			problem_id.value());
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR
+	            ", ?, NULL, '', '' FROM problems WHERE id=?")
+	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date,
+	                   problem_id.value());
 
 	// Update problem
-	auto stmt = mysql.prepare("UPDATE problems"
-		" SET file_id=?, type=?, name=?, label=?, simfile=?, last_edit=?"
-		" WHERE id=?");
+	auto stmt = mysql.prepare("UPDATE problems "
+	                          "SET file_id=?, type=?, name=?, label=?,"
+	                          " simfile=?, last_edit=? "
+	                          "WHERE id=?");
 	stmt.bindAndExecute(tmp_file_id.value(),
-		EnumVal<ProblemType>(info.problem_type), simfile.name, simfile.label,
-		simfile_str, current_date, problem_id.value());
+	                    EnumVal<ProblemType>(info.problem_type), simfile.name,
+	                    simfile.label, simfile_str, current_date,
+	                    problem_id.value());
 
 	tmp_file_id = std::nullopt;
 
 	// Schedule jobs to delete old solutions files
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-		" FROM submissions"
-		" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
-		.bindAndExecute(priority(JobType::DELETE_FILE), current_date, problem_id);
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
+	            "FROM submissions "
+	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
+	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date,
+	                   problem_id);
 
 	// Delete old solution submissions
-	mysql.prepare("DELETE FROM submissions"
-		" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
-		.bindAndExecute(problem_id);
+	mysql
+	   .prepare("DELETE FROM submissions "
+	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
+	   .bindAndExecute(problem_id);
 }
 
 void ProblemAddOrReuploadJobHandlerBase::submit_solutions() {
@@ -270,16 +276,16 @@ void ProblemAddOrReuploadJobHandlerBase::submit_solutions() {
 	job_log("Submitting solutions...");
 	const auto zero_date = mysql_date(0);
 	EnumVal<SubmissionLanguage> lang;
-	auto submission_inserter = mysql.prepare("INSERT INTO submissions (file_id,"
-			" owner, problem_id, contest_problem_id, contest_round_id,"
-			" contest_id, type, language, initial_status, full_status,"
-			" submit_time, last_judgment, initial_report, final_report)"
-		" VALUES(?, NULL, ?, NULL, NULL, NULL, " STYPE_PROBLEM_SOLUTION_STR
-			", ?, " SSTATUS_PENDING_STR ", " SSTATUS_PENDING_STR
-			", ?, ?, '', '')");
+	auto submission_inserter = mysql.prepare(
+	   "INSERT INTO submissions (file_id, owner, problem_id, "
+	   "contest_problem_id, contest_round_id, contest_id, type, language, "
+	   "initial_status, full_status, submit_time, last_judgment, "
+	   "initial_report, final_report) VALUES(?, NULL, ?, NULL, NULL, "
+	   "NULL, " STYPE_PROBLEM_SOLUTION_STR ", ?, " SSTATUS_PENDING_STR
+	   ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
 	uint64_t file_id;
 	submission_inserter.bind_all(file_id, problem_id, lang, current_date,
-		zero_date);
+	                             zero_date);
 
 	auto file_inserter = mysql.prepare("INSERT INTO internal_files VALUES()");
 
@@ -293,21 +299,23 @@ void ProblemAddOrReuploadJobHandlerBase::submit_solutions() {
 
 		// Save the submission source code
 		zip.extract_to_file(zip.get_index(concat(master_dir, solution)),
-			internal_file_path(file_id));
+		                    internal_file_path(file_id));
 	}
 
 	// Add jobs to judge the solutions
-	mysql.prepare("INSERT INTO jobs(creator, type, priority, status, added,"
-			" aux_id, info, data)"
-		" SELECT NULL, " JTYPE_JUDGE_SUBMISSION_STR ", ?, " JSTATUS_PENDING_STR
-			", ?, id, ?, ''"
-		" FROM submissions"
-		" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR
-		" ORDER BY id")
-		// Problem's solutions are more important than the ordinary submissions
-		.bindAndExecute(priority(JobType::JUDGE_SUBMISSION) + 1, current_date,
-			jobs::dumpString(intentionalUnsafeStringView(toStr(problem_id.value()))),
-			problem_id.value());
+	mysql
+	   .prepare("INSERT INTO jobs(creator, type, priority, status, added,"
+	            " aux_id, info, data) "
+	            "SELECT NULL, " JTYPE_JUDGE_SUBMISSION_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, id, ?, '' "
+	            "FROM submissions "
+	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR
+	            " ORDER BY id")
+	   // Problem's solutions are more important than the ordinary submissions
+	   .bindAndExecute(priority(JobType::JUDGE_SUBMISSION) + 1, current_date,
+	                   jobs::dumpString(intentionalUnsafeStringView(
+	                      toStr(problem_id.value()))),
+	                   problem_id.value());
 
 	job_log("Done.");
 }

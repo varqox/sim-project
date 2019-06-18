@@ -13,7 +13,7 @@ static constexpr const char* job_type_str(JobType type) noexcept {
 	case JT::REUPLOAD_PROBLEM: return "Reupload problem";
 	case JT::ADD_JUDGE_MODEL_SOLUTION: return "Add problem - set limits";
 	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-		return"Reupload problem - set limits";
+		return "Reupload problem - set limits";
 	case JT::EDIT_PROBLEM: return "Edit problem";
 	case JT::DELETE_PROBLEM: return "Delete problem";
 	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
@@ -49,28 +49,42 @@ void Sim::api_jobs() {
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT j.id, added, j.type, j.status, j.priority, j.aux_id,"
-			" j.info, j.creator, u.username");
-	qwhere.append(" FROM jobs j LEFT JOIN users u ON creator=u.id"
-		" WHERE TRUE"); // Needed to append constraints
+	               " j.info, j.creator, u.username");
+	qwhere.append(
+	   " FROM jobs j LEFT JOIN users u ON creator=u.id WHERE TRUE"); // Needed
+	                                                                 // to
+	                                                                 // easily
+	                                                                 // append
+	                                                                 // constraints
 
 	enum ColumnIdx {
-		JID, ADDED, JTYPE, JSTATUS, PRIORITY, AUX_ID, JINFO, CREATOR,
-		CREATOR_USERNAME, JOB_LOG_VIEW
+		JID,
+		ADDED,
+		JTYPE,
+		JSTATUS,
+		PRIORITY,
+		AUX_ID,
+		JINFO,
+		CREATOR,
+		CREATOR_USERNAME,
+		JOB_LOG_VIEW
 	};
 
 	auto append_column_names = [&] {
+		// clang-format off
 		append("[\n{\"columns\":["
-				"\"id\","
-				"\"added\","
-				"\"type\","
-				"{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
-				"\"priority\","
-				"\"creator_id\","
-				"\"creator_username\","
-				"\"info\","
-				"\"actions\","
-				"{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
-			"]}");
+		           "\"id\","
+		           "\"added\","
+		           "\"type\","
+		           "{\"name\":\"status\",\"fields\":[\"class\",\"text\"]},"
+		           "\"priority\","
+		           "\"creator_id\","
+		           "\"creator_username\","
+		           "\"info\","
+		           "\"actions\","
+		           "{\"name\":\"log\",\"fields\":[\"is_incomplete\",\"text\"]}"
+		       "]}");
+		// clang-format on
 	};
 
 	auto set_empty_response = [&] {
@@ -94,7 +108,7 @@ void Sim::api_jobs() {
 
 		auto arg = decodeURI(next_arg);
 		char cond = arg[0];
-		StringView arg_id = StringView{arg}.substr(1);
+		StringView arg_id = StringView(arg).substr(1);
 
 		if (not isDigit(arg_id))
 			return api_error400();
@@ -110,8 +124,8 @@ void Sim::api_jobs() {
 			// Get job information to grant permissions
 			EnumVal<JobType> jtype;
 			InplaceBuff<32> aux_id;
-			auto stmt = mysql.prepare("SELECT type, aux_id FROM jobs"
-				" WHERE id=?");
+			auto stmt =
+			   mysql.prepare("SELECT type, aux_id FROM jobs WHERE id=?");
 			stmt.bindAndExecute(arg_id);
 			stmt.res_bind_all(jtype, aux_id);
 			if (not stmt.next())
@@ -131,49 +145,46 @@ void Sim::api_jobs() {
 			}
 
 			qfields.append(", SUBSTR(data, 1, ",
-				meta::ToString<JOB_LOG_VIEW_MAX_LENGTH + 1>{}, ')');
+			               meta::ToString<JOB_LOG_VIEW_MAX_LENGTH + 1> {}, ')');
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
 
-		// problem
-		} else if (cond == 'p' and ~mask & AUX_ID_COND) {
+		} else if (cond == 'p' and ~mask & AUX_ID_COND) { // Problem
 			// Check permissions - they may be granted
 			granted_perms |= jobs_granted_permissions_problem(arg_id);
 			allow_access |= (granted_perms != PERM::NONE);
 
-			qwhere.append(" AND j.aux_id=", arg_id, " AND j.type IN("
-				JTYPE_ADD_PROBLEM_STR ","
-				JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR ","
-				JTYPE_REUPLOAD_PROBLEM_STR ","
-				JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR ","
-				JTYPE_DELETE_PROBLEM_STR ","
-				JTYPE_EDIT_PROBLEM_STR ")");
+			qwhere.append(" AND j.aux_id=", arg_id,
+			              " AND j.type IN(" JTYPE_ADD_PROBLEM_STR
+			              "," JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR
+			              "," JTYPE_REUPLOAD_PROBLEM_STR
+			              "," JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR
+			              "," JTYPE_DELETE_PROBLEM_STR
+			              "," JTYPE_EDIT_PROBLEM_STR ")");
 
 			mask |= AUX_ID_COND;
 
-		// submission
-		} else if (cond == 's' and ~mask & AUX_ID_COND) {
+		} else if (cond == 's' and ~mask & AUX_ID_COND) { // Submission
 			// Check permissions - they may be granted
 			granted_perms |= jobs_granted_permissions_submission(arg_id);
 			allow_access |= (granted_perms != PERM::NONE);
 
-			qwhere.append(" AND j.aux_id=", arg_id, " AND (j.type="
-				JTYPE_JUDGE_SUBMISSION_STR " OR j.type="
-				JTYPE_REJUDGE_SUBMISSION_STR ")");
+			qwhere.append(" AND j.aux_id=", arg_id,
+			              " AND (j.type=" JTYPE_JUDGE_SUBMISSION_STR
+			              " OR j.type=" JTYPE_REJUDGE_SUBMISSION_STR ")");
 
 			mask |= AUX_ID_COND;
 
-		// user (creator)
-		} else if (cond == 'u' and ~mask & USER_ID_COND) {
+		} else if (cond == 'u' and ~mask & USER_ID_COND) { // User (creator)
 			qwhere.append(" AND creator=", arg_id);
 			if (arg_id == session_user_id)
 				allow_access = true;
 
 			mask |= USER_ID_COND;
 
-		} else
+		} else {
 			return api_error400();
-
+		}
 	}
 
 	if (not allow_access)
@@ -189,15 +200,18 @@ void Sim::api_jobs() {
 		JobType job_type {JobType(strtoull(res[JTYPE]))};
 		JobStatus job_status {JobStatus(strtoull(res[JSTATUS]))};
 
+		// clang-format off
 		append(",\n[", res[JID], ","
-			"\"", res[ADDED], "\","
-			"\"", job_type_str(job_type), "\",");
+		       "\"", res[ADDED], "\","
+		       "\"", job_type_str(job_type), "\",");
+		// clang-format on
 
 		// Status: (CSS class, text)
 		switch (job_status) {
 		case JobStatus::PENDING: append("[\"\",\"Pending\"],"); break;
 		case JobStatus::NOTICED_PENDING: append("[\"\",\"Pending\"],"); break;
-		case JobStatus::IN_PROGRESS: append("[\"yellow\",\"In progress\"],");
+		case JobStatus::IN_PROGRESS:
+			append("[\"yellow\",\"In progress\"],");
 			break;
 		case JobStatus::DONE: append("[\"green\",\"Done\"],"); break;
 		case JobStatus::FAILED: append("[\"red\",\"Failed\"],"); break;
@@ -250,19 +264,20 @@ void Sim::api_jobs() {
 			if (info.label.size())
 				append(",\"label\":", jsonStringify(info.label));
 			if (info.memory_limit.has_value())
-				append(",\"memory limit\":\"", info.memory_limit.value(), " MB\"");
+				append(",\"memory limit\":\"", info.memory_limit.value(),
+				       " MB\"");
 			if (info.global_time_limit.has_value())
 				append(",\"global time limit\":",
-					toString(info.global_time_limit.value()));
+				       toString(info.global_time_limit.value()));
 
-			append(",\"reset time limits\":", info.reset_time_limits ?
-					"\"yes\"" : "\"no\"",
-				",\"ignore simfile\":", info.ignore_simfile ?
-					"\"yes\"" : "\"no\"",
-				",\"seek for new tests\":", info.seek_for_new_tests ?
-					"\"yes\"" : "\"no\"",
-				",\"reset scoring\":", info.reset_scoring ?
-					"\"yes\"" : "\"no\"");
+			append(",\"reset time limits\":",
+			       info.reset_time_limits ? "\"yes\"" : "\"no\"",
+			       ",\"ignore simfile\":",
+			       info.ignore_simfile ? "\"yes\"" : "\"no\"",
+			       ",\"seek for new tests\":",
+			       info.seek_for_new_tests ? "\"yes\"" : "\"no\"",
+			       ",\"reset scoring\":",
+			       info.reset_scoring ? "\"yes\"" : "\"no\"");
 
 			if (not res.is_null(AUX_ID)) {
 				append(",\"problem\":", res[AUX_ID]);
@@ -312,44 +327,43 @@ void Sim::api_jobs() {
 			jobs::MergeProblemsInfo info(res[JINFO]);
 			append(",\"target problem\":", info.target_problem_id);
 			append(",\"rejudge transferred submissions\":",
-				info.rejudge_transferred_submissions ? "\"yes\"" : "\"no\"");
+			       info.rejudge_transferred_submissions ? "\"yes\"" : "\"no\"");
 			break;
 		}
 
 		case JobType::CHANGE_PROBLEM_STATEMENT: {
 			append("\"problem\":", res[AUX_ID]);
 			jobs::ChangeProblemStatementInfo info(res[JINFO]);
-			append(",\"new statement path\":", jsonStringify(info.new_statement_path));
+			append(",\"new statement path\":",
+			       jsonStringify(info.new_statement_path));
 			break;
 		}
 
-		case JobType::DELETE_FILE:
-			break; // Nothing to show
+		case JobType::DELETE_FILE: break; // Nothing to show
 
-		case JobType::EDIT_PROBLEM:
-			break;
+		case JobType::EDIT_PROBLEM: break;
 		}
 		append("},");
-
 
 		// Append what buttons to show
 		append('"', actions);
 
 		auto perms = granted_perms |
-			jobs_get_permissions(res[CREATOR], job_type, job_status);
+		             jobs_get_permissions(res[CREATOR], job_type, job_status);
 		if (uint(perms & PERM::VIEW))
 			append('v');
 		if (uint(perms & PERM::DOWNLOAD_LOG))
 			append('r');
 		using JT = JobType;
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
-			isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
-				JT::ADD_JUDGE_MODEL_SOLUTION, JT::REUPLOAD_JUDGE_MODEL_SOLUTION))
-		{
-			append('u'); // TODO: ^ this is very nasty
+		    isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+		            JT::ADD_JUDGE_MODEL_SOLUTION,
+		            JT::REUPLOAD_JUDGE_MODEL_SOLUTION)) {
+			append('u'); // TODO: ^ that is very nasty
 		}
-		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and job_type == JT::CHANGE_PROBLEM_STATEMENT)
-			append('s'); // TODO: ^ this is very nasty
+		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and
+		    job_type == JT::CHANGE_PROBLEM_STATEMENT)
+			append('s'); // TODO: ^ that is very nasty
 		if (uint(perms & PERM::CANCEL))
 			append('C');
 		if (uint(perms & PERM::RESTART))
@@ -359,7 +373,7 @@ void Sim::api_jobs() {
 		// Append log view (whether there is more to load, data)
 		if (select_specified_job and uint(perms & PERM::DOWNLOAD_LOG))
 			append(",[", res[JOB_LOG_VIEW].size() > JOB_LOG_VIEW_MAX_LENGTH,
-				',', jsonStringify(res[JOB_LOG_VIEW]), ']');
+			       ',', jsonStringify(res[JOB_LOG_VIEW]), ']');
 
 		append(']');
 	}
@@ -385,8 +399,9 @@ void Sim::api_job() {
 	EnumVal<JT> jtype;
 	EnumVal<JobStatus> jstatus;
 
-	auto stmt = mysql.prepare("SELECT file_id, creator, type, status, aux_id, info"
-		" FROM jobs WHERE id=?");
+	auto stmt =
+	   mysql.prepare("SELECT file_id, creator, type, status, aux_id, info "
+	                 "FROM jobs WHERE id=?");
 	stmt.bindAndExecute(jobs_jid);
 	stmt.res_bind_all(file_id, jcreator, jtype, jstatus, aux_id, jinfo);
 	if (not stmt.next())
@@ -434,7 +449,7 @@ void Sim::api_job_cancel() {
 
 	// Cancel job
 	mysql.prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR " WHERE id=?")
-		.bindAndExecute(jobs_jid);
+	   .bindAndExecute(jobs_jid);
 }
 
 void Sim::api_job_restart(JobType job_type, StringView job_info) {
@@ -463,7 +478,7 @@ void Sim::api_job_download_log() {
 	// Assumption: permissions are already checked
 	resp.headers["Content-type"] = "application/text";
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=job-", jobs_jid, "-log");
+	   concat_tostr("attachment; filename=job-", jobs_jid, "-log");
 
 	// Fetch the log
 	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
@@ -473,42 +488,40 @@ void Sim::api_job_download_log() {
 }
 
 void Sim::api_job_download_uploaded_package(Optional<uint64_t> file_id,
-	JobType job_type)
-{
+                                            JobType job_type) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using JT = JobType;
 
-	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or not isOneOf(job_type,
-			JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
-			JT::ADD_JUDGE_MODEL_SOLUTION, JT::REUPLOAD_JUDGE_MODEL_SOLUTION))
-	{
-		return api_error403(); // TODO: ^ this is very nasty
+	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or
+	    not isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+	                JT::ADD_JUDGE_MODEL_SOLUTION,
+	                JT::REUPLOAD_JUDGE_MODEL_SOLUTION)) {
+		return api_error403(); // TODO: ^ that is very nasty
 	}
 
 	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=", jobs_jid, ".zip");
+	   concat_tostr("attachment; filename=", jobs_jid, ".zip");
 	resp.content_type = server::HttpResponse::FILE;
 	resp.content = internal_file_path(file_id.value());
 }
 
 void Sim::api_job_download_uploaded_statement(Optional<uint64_t> file_id,
-	JobType job_type, StringView info)
-{
+                                              JobType job_type,
+                                              StringView info) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using JT = JobType;
 
 	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) or
-		job_type != JT::CHANGE_PROBLEM_STATEMENT)
-	{
-		return api_error403(); // TODO: ^ this is very nasty
+	    job_type != JT::CHANGE_PROBLEM_STATEMENT) {
+		return api_error403(); // TODO: ^ that is very nasty
 	}
 
-	resp.headers["Content-Disposition"] =
-		concat_tostr("attachment; filename=",
-			encodeURI(intentionalUnsafeStringView(
-				filename(jobs::ChangeProblemStatementInfo(info).new_statement_path))));
+	resp.headers["Content-Disposition"] = concat_tostr(
+	   "attachment; filename=",
+	   encodeURI(intentionalUnsafeStringView(filename(
+	      jobs::ChangeProblemStatementInfo(info).new_statement_path))));
 	resp.content_type = server::HttpResponse::FILE;
 	resp.content = internal_file_path(file_id.value());
 }

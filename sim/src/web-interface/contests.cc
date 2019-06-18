@@ -10,19 +10,17 @@ Sim::ContestPermissions Sim::contests_get_overall_permissions() noexcept {
 	switch (session_user_type) {
 	case UserType::ADMIN:
 		return PERM::VIEW_ALL | PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE |
-			PERM::ADD_PUBLIC;
-	case UserType::TEACHER:
-		return PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE;
-	case UserType::NORMAL:
-		return PERM::VIEW_PUBLIC;
+		       PERM::ADD_PUBLIC;
+	case UserType::TEACHER: return PERM::VIEW_PUBLIC | PERM::ADD_PRIVATE;
+	case UserType::NORMAL: return PERM::VIEW_PUBLIC;
 	}
 
 	return PERM::NONE; // Shouldn't happen
 }
 
-Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
-	Optional<ContestUserMode> cu_mode) noexcept
-{
+Sim::ContestPermissions
+Sim::contests_get_permissions(bool is_public,
+                              Optional<ContestUserMode> cu_mode) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
@@ -38,8 +36,10 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 
 	if (session_user_type == UserType::ADMIN)
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
-			PERM::DELETE | PERM::MAKE_PUBLIC | PERM::SELECT_FINAL_SUBMISSIONS |
-			PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+		       PERM::DELETE | PERM::MAKE_PUBLIC |
+		       PERM::SELECT_FINAL_SUBMISSIONS |
+		       PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
+		       PERM::MANAGE_CONTEST_ENTRY_TOKEN;
 
 	if (not cu_mode.has_value()) {
 		if (is_public)
@@ -51,26 +51,28 @@ Sim::ContestPermissions Sim::contests_get_permissions(bool is_public,
 	switch (cu_mode.value()) {
 	case CUM::OWNER:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
-			PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
-			PERM::VIEW_ALL_CONTEST_SUBMISSIONS | PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+		       PERM::DELETE | PERM::SELECT_FINAL_SUBMISSIONS |
+		       PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
+		       PERM::MANAGE_CONTEST_ENTRY_TOKEN;
 
 	case CUM::MODERATOR:
 		return overall_perms | PERM::VIEW | PERM::PARTICIPATE | PERM::ADMIN |
-			PERM::SELECT_FINAL_SUBMISSIONS | PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
-			PERM::MANAGE_CONTEST_ENTRY_TOKEN;
+		       PERM::SELECT_FINAL_SUBMISSIONS |
+		       PERM::VIEW_ALL_CONTEST_SUBMISSIONS |
+		       PERM::MANAGE_CONTEST_ENTRY_TOKEN;
 
-	case CUM::CONTESTANT:
-		return overall_perms | PERM::VIEW | PERM::PARTICIPATE;
+	case CUM::CONTESTANT: return overall_perms | PERM::VIEW | PERM::PARTICIPATE;
 	}
 
 	return overall_perms;
 }
 
-Optional<Sim::ContestPermissions> Sim::contests_get_permissions(StringView contest_id) {
-	auto stmt = mysql.prepare("SELECT c.is_public, cu.mode"
-		" FROM contests c"
-		" LEFT JOIN contest_users cu ON cu.contest_id=c.id AND user_id=?"
-		" WHERE c.id=?");
+Optional<Sim::ContestPermissions>
+Sim::contests_get_permissions(StringView contest_id) {
+	auto stmt = mysql.prepare("SELECT c.is_public, cu.mode FROM contests c "
+	                          "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
+	                          " AND user_id=? "
+	                          "WHERE c.id=?");
 	if (session_is_open)
 		stmt.bindAndExecute(session_user_id, contest_id);
 	else
@@ -109,23 +111,22 @@ void Sim::contests_handle() {
 	// Get the overall permissions to the contest set
 	contests_perms = contests_get_overall_permissions();
 
-	// Add contest
-	if (next_arg == "add") {
+	if (next_arg == "add") { // Add contest
 		if (uint(~contests_perms & (PERM::ADD_PRIVATE | PERM::ADD_PUBLIC)))
 			return error403();
 
 		page_template("Add contest");
 		append("<script>add_contest(false,",
-			uint(contests_perms & PERM::ADD_PRIVATE), ",",
-			uint(contests_perms & PERM::ADD_PUBLIC), ");</script>");
+		       uint(contests_perms & PERM::ADD_PRIVATE), ",",
+		       uint(contests_perms & PERM::ADD_PUBLIC), ");</script>");
 
-	// List contests
-	} else if (next_arg.empty()) {
+	} else if (next_arg.empty()) { // List contests
 		page_template("Contests", "body{padding-left:20px}");
 		append("<script>contest_chooser(false, window.location.hash)</script>");
 
-	} else
+	} else {
 		return error404();
+	}
 }
 
 void Sim::contests_contest() {
@@ -133,56 +134,52 @@ void Sim::contests_contest() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(intentionalUnsafeStringView(
-			concat("Contest ", contests_cid)),
-			"body{padding-left:20px}");
-		append("<script>view_contest(false, ", contests_cid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Contest ", contests_cid)),
+		   "body{padding-left:20px}");
+		append("<script>view_contest(false, ", contests_cid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(intentionalUnsafeStringView(
-			concat("Edit contest ", contests_cid)),
-			"body{padding-left:20px}");
-		append("<script>edit_contest(false, ", contests_cid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Edit contest ", contests_cid)),
+		   "body{padding-left:20px}");
+		append("<script>edit_contest(false, ", contests_cid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(intentionalUnsafeStringView(
-			concat("Delete contest ", contests_cid)),
-			"body{padding-left:20px}");
-		append("<script>delete_contest(false, ", contests_cid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Delete contest ", contests_cid)),
+		   "body{padding-left:20px}");
+		append("<script>delete_contest(false, ", contests_cid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "add_round") {
-		page_template(intentionalUnsafeStringView(
-			concat("Add round ", contests_cid)),
-			"body{padding-left:20px}");
-		append("<script>add_contest_round(false, ", contests_cid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Add round ", contests_cid)),
+		   "body{padding-left:20px}");
+		append("<script>add_contest_round(false, ", contests_cid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "contest_user") {
 		StringView user_id = url_args.extractNextArg();
 		if (user_id == "add") {
-			page_template(intentionalUnsafeStringView
-				(concat("Add contest user")),
-				"body{padding-left:20px}");
+			page_template("Add contest user", "body{padding-left:20px}");
 			append("<script>add_contest_user(false, ", contests_cid,
-				", window.location.hash);</script>");
+			       ", window.location.hash);</script>");
 		} else if (isDigit(user_id)) {
 			next_arg = url_args.extractNextArg();
 			if (next_arg == "change_mode") {
-				page_template(intentionalUnsafeStringView(
-					concat("Change contest user mode")),
-					"body{padding-left:20px}");
+				page_template("Change contest user mode",
+				              "body{padding-left:20px}");
 				append("<script>change_contest_user_mode(false, ", contests_cid,
-					",", user_id, ", window.location.hash);</script>");
+				       ",", user_id, ", window.location.hash);</script>");
 
 			} else if (next_arg == "expel") {
-				page_template(intentionalUnsafeStringView(
-					concat("Expel user from the contest")),
-					"body{padding-left:20px}");
+				page_template("Expel user from the contest",
+				              "body{padding-left:20px}");
 				append("<script>expel_contest_user(false, ", contests_cid, ",",
-					user_id, ", window.location.hash);</script>");
+				       user_id, ", window.location.hash);</script>");
 
 			} else
 				error404();
@@ -192,11 +189,9 @@ void Sim::contests_contest() {
 	} else if (next_arg == "files") {
 		StringView arg = url_args.extractNextArg();
 		if (arg == "add") {
-			page_template(intentionalUnsafeStringView(
-				concat("Add contest file")),
-				"body{padding-left:20px}");
+			page_template("Add contest file", "body{padding-left:20px}");
 			append("<script>add_file(false, ", contests_cid,
-				", window.location.hash);</script>");
+			       ", window.location.hash);</script>");
 		} else
 			error404();
 
@@ -209,35 +204,36 @@ void Sim::contests_contest_round() {
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
-		page_template(intentionalUnsafeStringView(
-			concat("Round ", contests_crid)),
-			"body{padding-left:20px}");
-		append("<script>view_contest_round(false, ", contests_crid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Round ", contests_crid)),
+		   "body{padding-left:20px}");
+		append("<script>view_contest_round(false, ", contests_crid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(intentionalUnsafeStringView(
-			concat("Edit round ", contests_crid)),
-			"body{padding-left:20px}");
-		append("<script>edit_contest_round(false, ", contests_crid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Edit round ", contests_crid)),
+		   "body{padding-left:20px}");
+		append("<script>edit_contest_round(false, ", contests_crid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(intentionalUnsafeStringView(
-			concat("Delete round ", contests_crid)),
-			"body{padding-left:20px}");
-		append("<script>delete_contest_round(false, ", contests_crid, ","
-			" window.location.hash);</script>");
+		page_template(
+		   intentionalUnsafeStringView(concat("Delete round ", contests_crid)),
+		   "body{padding-left:20px}");
+		append("<script>delete_contest_round(false, ", contests_crid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "attach_problem") {
 		page_template(intentionalUnsafeStringView(
-			concat("Attach problem ", contests_crid)),
-			"body{padding-left:20px}");
-		append("<script>add_contest_problem(false, ", contests_crid, ","
-			" window.location.hash);</script>");
+		                 concat("Attach problem ", contests_crid)),
+		              "body{padding-left:20px}");
+		append("<script>add_contest_problem(false, ", contests_crid,
+		       ", window.location.hash);</script>");
 
-	} else
+	} else {
 		return error404();
+	}
 }
 
 void Sim::contests_contest_problem() {
@@ -246,30 +242,32 @@ void Sim::contests_contest_problem() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg.empty()) {
 		page_template(intentionalUnsafeStringView(
-			concat("Contest problem ", contests_cpid)),
-			"body{padding-left:20px}");
-		append("<script>view_contest_problem(false, ", contests_cpid, ","
-			" window.location.hash);</script>");
+		                 concat("Contest problem ", contests_cpid)),
+		              "body{padding-left:20px}");
+		append("<script>view_contest_problem(false, ", contests_cpid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
 		page_template(intentionalUnsafeStringView(
-			concat("Edit contest problem ", contests_cpid)),
-			"body{padding-left:20px}");
-		append("<script>edit_contest_problem(false, ", contests_cpid, ","
-			" window.location.hash);</script>");
+		                 concat("Edit contest problem ", contests_cpid)),
+		              "body{padding-left:20px}");
+		append("<script>edit_contest_problem(false, ", contests_cpid,
+		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
 		page_template(intentionalUnsafeStringView(
-			concat("Submit a solution ", contests_cpid)),
-			"body{padding-left:20px}");
-		append("<script>add_contest_submission(false, undefined, undefined, {id:", contests_cpid, "});</script>");
+		                 concat("Submit a solution ", contests_cpid)),
+		              "body{padding-left:20px}");
+		append(
+		   "<script>add_contest_submission(false, undefined, undefined, {id:",
+		   contests_cpid, "});</script>");
 
 	} else if (next_arg == "delete") {
 		page_template(intentionalUnsafeStringView(
-			concat("Delete contest problem ", contests_cpid)),
-			"body{padding-left:20px}");
-		append("<script>delete_contest_problem(false, ", contests_cpid, ","
-			" window.location.hash);</script>");
+		                 concat("Delete contest problem ", contests_cpid)),
+		              "body{padding-left:20px}");
+		append("<script>delete_contest_problem(false, ", contests_cpid,
+		       ", window.location.hash);</script>");
 
 	} else
 		return error404();
@@ -278,8 +276,7 @@ void Sim::contests_contest_problem() {
 void Sim::enter_contest() {
 	STACK_UNWINDING_MARK;
 
-	page_template(intentionalUnsafeStringView(
-		concat("Enter contest")), "body{padding-left:20px}");
+	page_template("Enter contest", "body{padding-left:20px}");
 	append("<script>enter_contest_using_token(false, '",
-		url_args.extractNextArg(), "');</script>");
+	       url_args.extractNextArg(), "');</script>");
 }

@@ -4,7 +4,7 @@
 using namespace jobs;
 using std::string;
 
-TEST (jobs, appendDumpedInt) {
+TEST(jobs, appendDumpedInt) {
 	string buff;
 
 	appendDumped(buff, (uint32_t)0x1ad35af6);
@@ -17,11 +17,11 @@ TEST (jobs, appendDumpedInt) {
 	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6\x92\xb6\x8a");
 
 	appendDumped(buff, (uint64_t)0x1040aab9c4aa3973);
-	ASSERT_EQ(buff, "\x1a\xd3\x5a\xf6\x92\xb6\x8a"
-		"\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
+	ASSERT_EQ(buff,
+	          "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 }
 
-TEST (jobs, appendDumpedString) {
+TEST(jobs, appendDumpedString) {
 	string buff;
 
 	appendDumped(buff, "te2i0j192jeo");
@@ -32,16 +32,18 @@ TEST (jobs, appendDumpedString) {
 
 	appendDumped(buff, "12213");
 	ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-		"12213", 29));
+	                           "12213",
+	                           29));
 
 	appendDumped(buff, "qdsp\x03l\xffr3");
 	ASSERT_EQ(buff, StringView("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-		"12213\0\0\0\x09qdsp\x03l\xffr3", 42));
+	                           "12213\0\0\0\x09qdsp\x03l\xffr3",
+	                           42));
 }
 
-TEST (jobs, extractDumpedInt1) {
-	StringView buff {"\x1a\xd3\x5a\xf6\x92\xb6\x8a"
-		"\x10\x40\xaa\xb9\xc4\xaa\x39\x73"};
+TEST(jobs, extractDumpedInt1) {
+	StringView buff(
+	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
 	ASSERT_EQ(extractDumpedInt<uint32_t>(buff), 0x1ad35af6);
 	ASSERT_EQ(buff, "\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
@@ -56,9 +58,9 @@ TEST (jobs, extractDumpedInt1) {
 	ASSERT_EQ(buff, "");
 }
 
-TEST (jobs, extractDumpedInt2) {
-	StringView buff {"\x1a\xd3\x5a\xf6\x92\xb6\x8a"
-		"\x10\x40\xaa\xb9\xc4\xaa\x39\x73"};
+TEST(jobs, extractDumpedInt2) {
+	StringView buff(
+	   "\x1a\xd3\x5a\xf6\x92\xb6\x8a\x10\x40\xaa\xb9\xc4\xaa\x39\x73");
 
 	uint32_t a;
 	uint8_t b;
@@ -82,17 +84,20 @@ TEST (jobs, extractDumpedInt2) {
 	ASSERT_EQ(buff, "");
 }
 
-TEST (jobs, extractDumpedString) {
-	StringView buff {"\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
-		"12213\0\0\0\x09qdsp\x03l\xffr3", 42};
+TEST(jobs, extractDumpedString) {
+	StringView buff("\0\0\0\x0cte2i0j192jeo\0\0\0\0\0\0\0\x05"
+	                "12213\0\0\0\x09qdsp\x03l\xffr3",
+	                42);
 
 	ASSERT_EQ(extractDumpedString(buff), "te2i0j192jeo");
 	ASSERT_EQ(buff, StringView("\0\0\0\0\0\0\0\x05"
-		"12213\0\0\0\x09qdsp\x03l\xffr3", 26));
+	                           "12213\0\0\0\x09qdsp\x03l\xffr3",
+	                           26));
 
 	ASSERT_EQ(extractDumpedString(buff), "");
 	ASSERT_EQ(buff, StringView("\0\0\0\x05"
-		"12213\0\0\0\x09qdsp\x03l\xffr3", 22));
+	                           "12213\0\0\0\x09qdsp\x03l\xffr3",
+	                           22));
 
 	ASSERT_EQ(extractDumpedString(buff), "12213");
 	ASSERT_EQ(buff, StringView("\0\0\0\x09qdsp\x03l\xffr3", 13));
