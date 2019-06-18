@@ -66,7 +66,7 @@ constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 // Problems
 constexpr uint PROBLEM_NAME_MAX_LEN = 128;
 constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
-constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MB
+constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
 
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
@@ -89,7 +89,7 @@ constexpr uint CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME = 60 * 60; // 1 hour [s]
 constexpr uint FILE_ID_LEN = 30;
 constexpr uint FILE_NAME_MAX_LEN = 128;
 constexpr uint FILE_DESCRIPTION_MAX_LEN = 512;
-constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MB
+constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MiB
 
 // Submissions
 constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
@@ -551,7 +551,7 @@ auto internal_file_path(T file_id) {
 }
 
 // Jobs
-constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KB
+constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KiB
 
 // Logs
 constexpr const char SERVER_LOG[] = "logs/server.log";
@@ -559,8 +559,8 @@ constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
 // Logs API
-constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 kB
-constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 kB
+constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 KiB
+constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 KiB
 
 // API
 constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
@@ -569,7 +569,7 @@ constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
 // Job-server notifying file
 constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
-constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
+constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KiB
 constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT =
    std::chrono::seconds(30);
 constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT =

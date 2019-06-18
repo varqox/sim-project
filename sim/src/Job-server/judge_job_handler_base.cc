@@ -40,7 +40,7 @@ JudgeJobHandlerBase::construct_report(const sim::JudgeReport& jr, bool final) {
 	                          "<th class=\"test\">Test</th>"
 	                          "<th class=\"result\">Result</th>"
 	                          "<th class=\"time\">Time [s]</th>"
-	                          "<th class=\"memory\">Memory [KB]</th>"
+	                          "<th class=\"memory\">Memory [KiB]</th>"
 	                          "<th class=\"points\">Score</th>"
 	                      "</tr>"
 	                  "</thead>"

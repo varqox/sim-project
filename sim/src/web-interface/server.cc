@@ -186,7 +186,7 @@ int main() {
 
 	// Alter default thread stack size
 	pthread_attr_t attr;
-	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MB
+	constexpr size_t THREAD_STACK_SIZE = 4 << 20; // 4 MiB
 	if (pthread_attr_init(&attr) ||
 	    pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE)) {
 		errlog("Failed to set new thread stack size");
