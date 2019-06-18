@@ -72,7 +72,7 @@ $(PREFIX)test: $(PREFIX)test/exec
 	$(PREFIX)test/exec
 
 .PHONY: $(PREFIX)format
-$(PREFIX)format: $(shell find include src test doc | grep -E '\.(cc?|h)$$' | grep -vE '^($(PREFIX)src/sha3.c|$(PREFIX)src/sim/default_checker_dump.c)$$' | sed 's/$$/-make-format/')
+$(PREFIX)format: $(shell find $(PREFIX)include $(PREFIX)src $(PREFIX)test $(PREFIX)doc | grep -E '\.(cc?|h)$$' | grep -vE '^($(PREFIX)src/sha3.c|$(PREFIX)src/sim/default_checker_dump.c)$$' | sed 's/$$/-make-format/')
 
 %-make-format: %
 	$(Q)$(call P,FORMAT,$*) \
