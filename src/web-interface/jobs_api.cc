@@ -265,7 +265,7 @@ void Sim::api_jobs() {
 				append(",\"label\":", jsonStringify(info.label));
 			if (info.memory_limit.has_value())
 				append(",\"memory limit\":\"", info.memory_limit.value(),
-				       " MB\"");
+				       " MiB\"");
 			if (info.global_time_limit.has_value())
 				append(",\"global time limit\":",
 				       toString(info.global_time_limit.value()));

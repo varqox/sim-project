@@ -301,58 +301,58 @@ function StaticMap() {
  * @details It adds proper suffixes, for example:
  *   1 -> "1 byte"
  *   1023 -> "1023 bytes"
- *   1024 -> "1.0 KB"
- *   129747 -> "127 KB"
- *   97379112 -> "92.9 MB"
+ *   1024 -> "1.0 KiB"
+ *   129747 -> "127 KiB"
+ *   97379112 -> "92.9 MiB"
  *
  * @param size size to humanize
  *
  * @return humanized file size
  */
 function humanizeFileSize(size) {
-	var MIN_KB = 1024;
-	var MIN_MB = 1048576;
-	var MIN_GB = 1073741824;
-	var MIN_TB = 1099511627776;
-	var MIN_PB = 1125899906842624;
-	var MIN_EB = 1152921504606846976;
-	var MIN_3DIGIT_KB = 102349;
-	var MIN_3DIGIT_MB = 104805172;
-	var MIN_3DIGIT_GB = 107320495309;
-	var MIN_3DIGIT_TB = 109896187196212;
-	var MIN_3DIGIT_PB = 112533595688920269;
+	var MIN_KIB = 1024;
+	var MIN_MIB = 1048576;
+	var MIN_GIB = 1073741824;
+	var MIN_TIB = 1099511627776;
+	var MIN_PIB = 1125899906842624;
+	var MIN_EIB = 1152921504606846976;
+	var MIN_3DIGIT_KIB = 102349;
+	var MIN_3DIGIT_MIB = 104805172;
+	var MIN_3DIGIT_GIB = 107320495309;
+	var MIN_3DIGIT_TIB = 109896187196212;
+	var MIN_3DIGIT_PIB = 112533595688920269;
 
 	// Bytes
-	if (size < MIN_KB)
+	if (size < MIN_KIIB)
 		return (size == 1 ? "1 byte" : size + " bytes");
 
-	// KB
-	if (size < MIN_3DIGIT_KB)
-		return parseFloat(size / MIN_KB).toFixed(1) + " KB";
-	if (size < MIN_MB)
-		return Math.round(size / MIN_KB) + " KB";
-	// MB
-	if (size < MIN_3DIGIT_MB)
-		return parseFloat(size / MIN_MB).toFixed(1) + " MB";
-	if (size < MIN_GB)
-		return Math.round(size / MIN_MB) + " MB";
-	// GB
-	if (size < MIN_3DIGIT_GB)
-		return parseFloat(size / MIN_GB).toFixed(1) + " GB";
-	if (size < MIN_TB)
-		return Math.round(size / MIN_GB) + " GB";
-	// TB
-	if (size < MIN_3DIGIT_TB)
-		return parseFloat(size / MIN_TB).toFixed(1) + " TB";
-	if (size < MIN_PB)
-		return Math.round(size / MIN_TB) + " TB";
-	// PB
-	if (size < MIN_3DIGIT_PB)
-		return parseFloat(size / MIN_PB).toFixed(1) + " PB";
-	if (size < MIN_EB)
-		return Math.round(size / MIN_PB) + " PB";
-	// EB
-	return parseFloat(size / MIN_EB).toFixed(1) + " EB";
+	// KiB
+	if (size < MIN_3DIGIT_KIB)
+		return parseFloat(size / MIN_KIIB).toFixed(1) + " KiB";
+	if (size < MIN_MIIB)
+		return Math.round(size / MIN_KIIB) + " KiB";
+	// MiB
+	if (size < MIN_3DIGIT_MIB)
+		return parseFloat(size / MIN_MIIB).toFixed(1) + " MiB";
+	if (size < MIN_GIB)
+		return Math.round(size / MIN_MIIB) + " MiB";
+	// GiB
+	if (size < MIN_3DIGIT_GIB)
+		return parseFloat(size / MIN_GIB).toFixed(1) + " GiB";
+	if (size < MIN_TIB)
+		return Math.round(size / MIN_GIB) + " GiB";
+	// TiB
+	if (size < MIN_3DIGIT_TIB)
+		return parseFloat(size / MIN_TIB).toFixed(1) + " TiB";
+	if (size < MIN_PIB)
+		return Math.round(size / MIN_TIB) + " TiB";
+	// PiB
+	if (size < MIN_3DIGIT_PIB)
+		return parseFloat(size / MIN_PIB).toFixed(1) + " PiB";
+	if (size < MIN_EIB)
+		return Math.round(size / MIN_PIB) + " PiB";
+	// EiB
+	return parseFloat(size / MIN_EIB).toFixed(1) + " EiB";
 }
 
 /* ============================ URL hash parser ============================ */
@@ -2862,7 +2862,7 @@ function add_problem(as_modal) {
 						text: 'Contest only',
 					})
 				})
-			)).add(Form.field_group('Memory limit [MB]', {
+			)).add(Form.field_group('Memory limit [MiB]', {
 				type: 'text',
 				name: 'mem_limit',
 				size: 25,
@@ -2944,7 +2944,7 @@ function append_reupload_problem(elem, as_modal, problem) {
 					selected: ('Contest only' == problem.type ? true : undefined)
 				})
 			})
-		)).add(Form.field_group('Memory limit [MB]', {
+		)).add(Form.field_group('Memory limit [MiB]', {
 			type: 'text',
 			name: 'mem_limit',
 			value: problem.memory_limit,
