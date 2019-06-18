@@ -116,76 +116,74 @@ void help(const char* program_name) {
 		program_name = "sip";
 
 	printf("Usage: %s [options] <command> [<command args>]\n", program_name);
-	puts("Sip is a tool for preparing and managing Sim problem packages");
-	puts("");
-	puts("Commands:");
-	puts("  checker [value]       If [value] is specified: set checker to [value].");
-	puts("                          Otherwise print its current value");
-	puts("  clean [arg...]        Prepare package to archiving: remove unnecessary files");
-	puts("                          (compiled programs, latex logs, etc.).");
-	puts("                        Allowed args:");
-	puts("                          tests - remove all generated tests files");
-	puts("  doc [watch]           Compile latex statements (if there are any). If watch is");
-	puts("                          specified as an argument, then all statement files");
-	puts("                          will be watched and recompiled on any change");
-	puts("  gen                   Generate tests input and output files");
-	puts("  genin                 Generate tests input files");
-	puts("  genout                Generate tests output files using the main solution");
-	puts("  gentests              Alias to command: gen");
-	puts("  init [directory] [name]");
-	puts("                        Initialize Sip package in [directory] (by default");
-	puts("                          current working directory) if [name] is specified, set");
-	puts("                          problem name to it");
-	puts("  interactive [value]   If [value] is specified: set interactive to [value].");
-	puts("                          Otherwise print its current value");
-	puts("  label [value]         If [value] is specified: set label to [value]. Otherwise");
-	puts("                          print its current value");
-	puts("  main-sol [sol]        If [sol] is specified: set main solution to [sol].");
-	puts("                          Otherwise print main solution");
-	puts("  mem [value]           If [value] is specified: set memory limit to [value] MiB.");
-	puts("                          Otherwise print its current value");
-	puts("  name [value]          If [value] is specified: set name to [value]. Otherwise");
-	puts("                          print its current value");
-	puts("  prog [sol...]         Compile solutions [sol...] (all solutions by default).");
-	puts("                          [sol] has the same meaning as in command 'test'");
-	puts("  regen                 Remove test files that don't belong to either static or");
-	puts("                          generated tests. Then generate tests input and output");
-	puts("                          files");
-	puts("  regenin               Remove test files that don't belong to either static or");
-	puts("                          generated tests. Then generate tests input files");
-	puts("  save <args...>        Saves args... Allowed args:");
-	puts("                          scoring - saves scoring to Simfile");
-	puts("  statement [value]     If [value] is specified: set statement to [value].");
-	puts("                          Otherwise print its current value");
-	puts("  test [sol...]         Run solutions [sol...] on tests (only main solution by");
-	puts("                          default) (compile solutions if necessary). If [sol] is");
-	puts("                          a path to a solution then it is used, otherwise all");
-	puts("                          solutions that have [sol] as a subsequence are used.");
-	// puts("  verify [sol...]       Run inver and solutions [sol...] on tests (model");
-	// puts("                          solution by default) (compile solutions if necessary)");
-	puts("  zip [clean args...]   Run clean command with [clean args] and compress the");
-	puts("                          package into zip (named after the current directory)");
-	puts("                          within the upper directory.");
-	puts("");
-	puts("Options:");
-	puts("  -C <directory>        Change working directory to <directory> before doing");
-	puts("                          anything");
-	puts("  -h, --help            Display this information");
-	puts("  -q, --quiet           Quiet mode");
-	puts("");
-	puts("Sip package tree:");
-	puts("   main/                Main package folder");
-	puts("   |-- check/           Checker folder - holds checker");
-	puts("   |-- doc/             Documents folder - holds problem statement, elaboration,");
-	puts("                          etc.");
-	puts("   |-- prog/            Solutions folder - holds solutions");
-	puts("   |-- in/              Tests' input files folder - holds tests input files");
-	puts("   |-- out/             Tests' output files folder - holds tests output files");
-	puts("   |-- utils/           Utilities folder - holds test input generators, input");
-	puts("                          verifiers and other files used by Sip");
-	puts("   |-- Simfile          Simfile - holds package primary config");
-	puts("   `-- Sipfile          Sip file - holds Sip configuration and rules for");
-	puts("                          generating test inputs");
+	puts(R"==(Sip is a tool for preparing and managing Sim problem packages
+
+Commands:
+  checker [value]       If [value] is specified: set checker to [value].
+                          Otherwise print its current value
+  clean [arg...]        Prepare package to archiving: remove unnecessary files
+                          (compiled programs, latex logs, etc.).
+                        Allowed args:
+                          tests - remove all generated tests files
+  doc [watch]           Compile latex statements (if there are any). If watch is
+                          specified as an argument, then all statement files
+                          will be watched and recompiled on any change
+  gen                   Generate tests input and output files
+  genin                 Generate tests input files
+  genout                Generate tests output files using the main solution
+  gentests              Alias to command: gen
+  init [directory] [name]
+                        Initialize Sip package in [directory] (by default
+                          current working directory) if [name] is specified, set
+                          problem name to it
+  interactive [value]   If [value] is specified: set interactive to [value].
+                          Otherwise print its current value
+  label [value]         If [value] is specified: set label to [value]. Otherwise
+                          print its current value
+  main-sol [sol]        If [sol] is specified: set main solution to [sol].
+                          Otherwise print main solution
+  mem [value]           If [value] is specified: set memory limit to
+                          [value] MiB. Otherwise print its current value
+  name [value]          If [value] is specified: set name to [value]. Otherwise
+                          print its current value
+  prog [sol...]         Compile solutions [sol...] (all solutions by default).
+                          [sol] has the same meaning as in command 'test'
+  regen                 Remove test files that don't belong to either static or
+                          generated tests. Then generate tests input and output
+                          files
+  regenin               Remove test files that don't belong to either static or
+                          generated tests. Then generate tests input files
+  save <args...>        Saves args... Allowed args:
+                          scoring - saves scoring to Simfile
+  statement [value]     If [value] is specified: set statement to [value].
+                          Otherwise print its current value
+  test [sol...]         Run solutions [sol...] on tests (only main solution by
+                          default) (compile solutions if necessary). If [sol] is
+                          a path to a solution then it is used, otherwise all
+                          solutions that have [sol] as a subsequence are used.
+  zip [clean args...]   Run clean command with [clean args] and compress the
+                          package into zip (named after the current directory)
+                          within the upper directory.
+
+Options:
+  -C <directory>        Change working directory to <directory> before doing
+                          anything
+  -h, --help            Display this information
+  -q, --quiet           Quiet mode
+
+Sip package tree:
+   main/                Main package folder
+   |-- check/           Checker folder - holds checker
+   |-- doc/             Documents folder - holds problem statement, elaboration,
+                          etc.
+   |-- prog/            Solutions folder - holds solutions
+   |-- in/              Tests' input files folder - holds tests input files
+   |-- out/             Tests' output files folder - holds tests output files
+   |-- utils/           Utilities folder - holds test input generators, input
+                          verifiers and other files used by Sip
+   |-- Simfile          Simfile - holds package primary config
+   `-- Sipfile          Sip file - holds Sip configuration and rules for
+                          generating test inputs)==");
 }
 
 void init(ArgvParser args) {
@@ -197,7 +195,7 @@ void init(ArgvParser args) {
 	auto specified_dir = args.extract_next();
 	if (mkdir_r(specified_dir.to_string()) == -1 and errno != EEXIST)
 		throw SipError("failed to create directory: ", specified_dir,
-			"(mkdir_r()", errmsg(), ')');
+		               "(mkdir_r()", errmsg(), ')');
 
 	if (chdir(specified_dir.data()) == -1)
 		THROW("chdir()", errmsg());
@@ -218,8 +216,10 @@ void interactive(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto new_interactive = args.extract_next();
-		if (not isOneOf(new_interactive, "true", "false"))
-			throw SipError("interactive has to be either \"true\" or \"false\"");
+		if (not isOneOf(new_interactive, "true", "false")) {
+			throw SipError(
+			   "interactive has to be either \"true\" or \"false\"");
+		}
 
 		sp.replace_variable_in_simfile("interactive", new_interactive);
 	}
@@ -250,8 +250,9 @@ void main_sol(ArgvParser args) {
 
 		auto solutions = sp.simfile.config_file().get_var("solutions");
 		if (not solutions.is_set()) {
-			sp.replace_variable_in_simfile("solutions",
-				std::vector<std::string>{new_main_sol.to_string()});
+			sp.replace_variable_in_simfile(
+			   "solutions",
+			   std::vector<std::string> {new_main_sol.to_string()});
 		} else {
 			try {
 				sp.simfile.load_solutions();
@@ -264,8 +265,9 @@ void main_sol(ArgvParser args) {
 				sp.replace_variable_in_simfile("solutions", sols);
 
 			} catch (...) {
-				sp.replace_variable_in_simfile("solutions",
-					std::vector<std::string>{new_main_sol.to_string()});
+				sp.replace_variable_in_simfile(
+				   "solutions",
+				   std::vector<std::string> {new_main_sol.to_string()});
 			}
 		}
 	}
@@ -307,9 +309,8 @@ void name(ArgvParser args) {
 	stdlog("name = ", sp.simfile.name);
 }
 
-static AVLDictSet<StringView> parse_args_to_solutions(
-	const sim::Simfile& simfile, ArgvParser args)
-{
+static AVLDictSet<StringView>
+parse_args_to_solutions(const sim::Simfile& simfile, ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	if (args.size() == 0)
@@ -319,14 +320,13 @@ static AVLDictSet<StringView> parse_args_to_solutions(
 	do {
 		auto arg = args.extract_next();
 		// If a path to solution was provided then choose it
-		auto it = std::find(simfile.solutions.begin(), simfile.solutions.end(), arg);
+		auto it =
+		   std::find(simfile.solutions.begin(), simfile.solutions.end(), arg);
 		if (it != simfile.solutions.end()) {
 			choosen_solutions.emplace(*it);
-		// There is no solution with path equal to the provided path, so
-		// choose all that contain arg as a subsequence
 		} else {
-			throw_assert(is_subsequence("abc", "a b c"));
-
+			// There is no solution with path equal to the provided path, so
+			// choose all that contain arg as a subsequence
 			for (auto const& solution : simfile.solutions)
 				if (is_subsequence(arg, solution))
 					choosen_solutions.emplace(solution);
@@ -350,9 +350,8 @@ void prog(ArgvParser args) {
 			solutions_to_compile.emplace(sol);
 	}
 
-	solutions_to_compile.for_each([&](StringView solution) {
-		sp.compile_solution(solution);
-	});
+	solutions_to_compile.for_each(
+	   [&](StringView solution) { sp.compile_solution(solution); });
 }
 
 void save(ArgvParser args) {
@@ -408,8 +407,7 @@ void test(ArgvParser args) {
 		// Save limits only if Simfile is already created (because if it creates
 		// a Simfile without memory limit it causes sip to fail in the next run)
 		if (solution == sp.full_simfile.solutions.front() and
-			access("Simfile", F_OK) == 0)
-		{
+		    access("Simfile", F_OK) == 0) {
 			sp.save_limits();
 		}
 	});

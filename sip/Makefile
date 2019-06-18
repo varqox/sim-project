@@ -80,6 +80,10 @@ SIP_EXECS := src/sip src/sip-static
 $(SIP_OBJS): override EXTRA_CXX_FLAGS += $(SIP_CXX_FLAGS)
 $(SIP_EXECS): private override EXTRA_LD_FLAGS += $(SIP_LD_FLAGS)
 
+.PHONY: format
+format: src/lib/simlib/format
+format: $(shell find bin src | grep -E '\.(cc?|h)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')
+
 .PHONY: clean
 clean: OBJS := $(SIP_OBJS)
 clean: src/lib/simlib/clean

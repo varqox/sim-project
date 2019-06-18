@@ -14,7 +14,7 @@
  * parameters)
  * @param argv like in main (holds arguments)
  */
-static void parseOptions(int &argc, char **argv) {
+static void parseOptions(int& argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	int new_argc = 1;
@@ -22,32 +22,28 @@ static void parseOptions(int &argc, char **argv) {
 	for (int i = 1; i < argc; ++i) {
 
 		if (argv[i][0] == '-') {
-			// Working directory
-			if (0 == strcmp(argv[i], "-C") and i + 1 < argc) {
+			if (0 == strcmp(argv[i], "-C") and
+			    i + 1 < argc) { // Working directory
 				if (chdir(argv[++i]) == -1) {
 					eprintf("Error: chdir() - %s\n", strerror(errno));
 					exit(1);
 				}
 
-			// Help
 			} else if (0 == strcmp(argv[i], "-h") or
-					0 == strcmp(argv[i], "--help")) {
+			           0 == strcmp(argv[i], "--help")) { // Help
 				commands::help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 
-			// Quiet mode
 			} else if (0 == strcmp(argv[i], "-q") or
-					0 == strcmp(argv[i], "--quiet")) {
+			           0 == strcmp(argv[i], "--quiet")) { // Quiet mode
 				stdlog.open("/dev/null");
 
-			// // Verbose mode
-			// } else if (0 == strcmp(argv[i], "-v") or
-			// 		0 == strcmp(argv[i], "--verbose")) {
-			// 	stdlog.use(stdout);
-			// 	verbose = true;
+				// } else if (0 == strcmp(argv[i], "-v") or
+				// 		0 == strcmp(argv[i], "--verbose")) { // Verbose mode
+				// 	stdlog.use(stdout);
+				// 	verbose = true;
 
-			// Unknown
-			} else {
+			} else { // Unknown
 				eprintf("Unknown option: '%s'\n", argv[i]);
 			}
 
@@ -86,9 +82,11 @@ static void kill_signal_handler(int signum) {
 			InplaceBuff<64> src("/proc/self/fd/");
 			src.append(i);
 
-			constexpr size_t path_len = PATH_MAX + 1; // This 1 is for trailing null
+			constexpr size_t path_len =
+			   PATH_MAX + 1; // This 1 is for trailing null
 			InplaceBuff<path_len> path;
-			ssize_t rc = readlink(src.to_cstr().data(), path.data(), path_len - 1);
+			ssize_t rc =
+			   readlink(src.to_cstr().data(), path.data(), path_len - 1);
 			if (rc == -1)
 				continue; // Ignore errors
 
@@ -98,10 +96,11 @@ static void kill_signal_handler(int signum) {
 		}
 	}
 
-	_exit(1); // exit() is not safe to call from signal handler see man signal-safety
+	_exit(1); // exit() is not safe to call from signal handler see man
+	          // signal-safety
 }
 
-static void run_command(int argc, char **argv) {
+static void run_command(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	ArgvParser args(argc, argv);
@@ -154,7 +153,7 @@ static void run_command(int argc, char **argv) {
 	throw SipError("unknown command: ", command);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	stdlog.use(stdout);
 	stdlog.label(false);
 	errlog.label(false);
@@ -163,7 +162,7 @@ int main(int argc, char **argv) {
 	{
 		// Signal control
 		struct sigaction sa;
-		memset (&sa, 0, sizeof(sa));
+		memset(&sa, 0, sizeof(sa));
 		sa.sa_handler = &kill_signal_handler;
 
 		(void)sigaction(SIGINT, &sa, nullptr);

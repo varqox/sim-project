@@ -17,7 +17,7 @@ public:
 		InplaceBuff<32> generator_args;
 
 		GenTest(StringView n, StringView g, StringView ga)
-			: name(n), generator(g), generator_args(ga) {}
+		   : name(n), generator(g), generator_args(ga) {}
 	};
 
 	AVLDictSet<InplaceBuff<16>> static_tests;
