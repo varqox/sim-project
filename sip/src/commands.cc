@@ -112,7 +112,7 @@ void regen(ArgvParser) {
 void help(const char* program_name) {
 	STACK_UNWINDING_MARK;
 
-	if (program_name == NULL)
+	if (program_name == nullptr)
 		program_name = "sip";
 
 	printf("Usage: %s [options] <command> [<command args>]\n", program_name);
@@ -142,7 +142,7 @@ void help(const char* program_name) {
 	puts("                          print its current value");
 	puts("  main-sol [sol]        If [sol] is specified: set main solution to [sol].");
 	puts("                          Otherwise print main solution");
-	puts("  mem [value]           If [value] is specified: set memory limit to [value] MB.");
+	puts("  mem [value]           If [value] is specified: set memory limit to [value] MiB.");
 	puts("                          Otherwise print its current value");
 	puts("  name [value]          If [value] is specified: set name to [value]. Otherwise");
 	puts("                          print its current value");

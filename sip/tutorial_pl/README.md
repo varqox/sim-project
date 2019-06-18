@@ -141,7 +141,7 @@ tests_files: [
 ```
 * name: nazwa zadania
 * label: tag zadania
-* memory_limit: limit pamięci (w MB)
+* memory_limit: limit pamięci (w MiB)
 * scoring: dla każdej grupy testów ilość przyznawanych punktów (domyślnie daje po równo dla każdej grupy testów, tak by się sumowało do 100, oraz przydziela 0 pkt dla testów z grupy 0)
 
 Następnie ustawienia, które sim zazwyczaj generuje samemu:

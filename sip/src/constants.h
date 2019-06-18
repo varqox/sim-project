@@ -4,7 +4,7 @@
 
 using uint = unsigned;
 
-constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KB
+constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KiB
 constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
 constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT = std::chrono::seconds(30);
  // Conver::ResetTimeLimitsOptions and Conver::Options

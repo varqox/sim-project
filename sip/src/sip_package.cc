@@ -13,7 +13,7 @@
 
 namespace {
 constexpr std::chrono::nanoseconds DEFAULT_TIME_LIMIT = std::chrono::seconds(5);
-constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MB
+constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MiB
 } // anonymous namespace
 
 std::chrono::nanoseconds SipPackage::get_default_time_limit() {
