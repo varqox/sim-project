@@ -80,7 +80,7 @@ public:
 				                4),
 				   " / ", toString(floor_to_10ms(test.time_limit), false),
 				   " s  ", test.memory_consumed >> 10, " / ",
-				   test.memory_limit >> 10, " KB    Status: ");
+				   test.memory_limit >> 10, " KiB    Status: ");
 				// Status
 				res += span_status(test.status);
 
@@ -216,7 +216,7 @@ class VerboseJudgeLogger : public JudgeLogger {
 		                    4),
 		       " / ", toString(floor_to_10ms(test_report.time_limit), false),
 		       " s  ", test_report.memory_consumed >> 10, " / ",
-		       test_report.memory_limit >> 10, " KB  Status: ");
+		       test_report.memory_limit >> 10, " KiB  Status: ");
 		// Status
 		switch (test_report.status) {
 		case JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
@@ -280,7 +280,7 @@ public:
 			       " RT: ", toString(checker_es.runtime, false), " ] ",
 			       checker_es.vm_peak >> 10);
 			if (checker_mem_limit.has_value())
-				tmplog(" / ", checker_mem_limit.value() >> 10, " KB");
+				tmplog(" / ", checker_mem_limit.value() >> 10, " KiB");
 		});
 	}
 

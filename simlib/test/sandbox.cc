@@ -11,7 +11,7 @@ TEST(Sandbox, run) {
 
 	Sandbox sandbox;
 
-	constexpr size_t MEM_LIMIT = 16 << 20; // 16 MB (in bytes)
+	constexpr size_t MEM_LIMIT = 16 << 20; // 16 MiB (in bytes)
 	// Big RT limit is needed for tests where memory dump is created - it is
 	// really slow)
 	constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 3s;

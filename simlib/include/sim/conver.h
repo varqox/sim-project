@@ -59,7 +59,7 @@ public:
 		// Whether the problem is interactive or not, leave unset to detect it
 		// from Simfile in the package
 		Optional<bool> interactive;
-		// In MB. If set, overrides memory limit of every test
+		// In MiB. If set, overrides memory limit of every test
 		Optional<uint64_t> memory_limit;
 		// If set, overrides time limit of every test (has lower precedence
 		// than reset_time_limits_using_model_solution)

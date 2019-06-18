@@ -614,50 +614,50 @@ void putFileContents(FilePath file, const char* data, size_t len, mode_t mode) {
 }
 
 string humanizeFileSize(uint64_t size) {
-	constexpr uint64_t MIN_KB = 1ull << 10;
-	constexpr uint64_t MIN_MB = 1ull << 20;
-	constexpr uint64_t MIN_GB = 1ull << 30;
-	constexpr uint64_t MIN_TB = 1ull << 40;
-	constexpr uint64_t MIN_PB = 1ull << 50;
-	constexpr uint64_t MIN_EB = 1ull << 60;
-	constexpr uint64_t MIN_3DIGIT_KB = 102349ull;
-	constexpr uint64_t MIN_3DIGIT_MB = 104805172ull;
-	constexpr uint64_t MIN_3DIGIT_GB = 107320495309ull;
-	constexpr uint64_t MIN_3DIGIT_TB = 109896187196212ull;
-	constexpr uint64_t MIN_3DIGIT_PB = 112533595688920269ull;
+	constexpr uint64_t MIN_KIB = 1ull << 10;
+	constexpr uint64_t MIN_MIB = 1ull << 20;
+	constexpr uint64_t MIN_GIB = 1ull << 30;
+	constexpr uint64_t MIN_TIB = 1ull << 40;
+	constexpr uint64_t MIN_PIB = 1ull << 50;
+	constexpr uint64_t MIN_EIB = 1ull << 60;
+	constexpr uint64_t MIN_3DIGIT_KIB = 102349ull;
+	constexpr uint64_t MIN_3DIGIT_MIB = 104805172ull;
+	constexpr uint64_t MIN_3DIGIT_GIB = 107320495309ull;
+	constexpr uint64_t MIN_3DIGIT_TIB = 109896187196212ull;
+	constexpr uint64_t MIN_3DIGIT_PIB = 112533595688920269ull;
 
 	// Bytes
-	if (size < MIN_KB)
+	if (size < MIN_KIB)
 		return (size == 1 ? "1 byte" : concat_tostr(size, " bytes"));
 
 	double dsize = size;
-	// KB
-	if (size < MIN_3DIGIT_KB)
-		return toStr(dsize / MIN_KB, 1) + " KB";
-	if (size < MIN_MB)
-		return toStr(dsize / MIN_KB, 0) + " KB";
-	// MB
-	if (size < MIN_3DIGIT_MB)
-		return toStr(dsize / MIN_MB, 1) + " MB";
-	if (size < MIN_GB)
-		return toStr(dsize / MIN_MB, 0) + " MB";
-	// GB
-	if (size < MIN_3DIGIT_GB)
-		return toStr(dsize / MIN_GB, 1) + " GB";
-	if (size < MIN_TB)
-		return toStr(dsize / MIN_GB, 0) + " GB";
-	// TB
-	if (size < MIN_3DIGIT_TB)
-		return toStr(dsize / MIN_TB, 1) + " TB";
-	if (size < MIN_PB)
-		return toStr(dsize / MIN_TB, 0) + " TB";
-	// PB
-	if (size < MIN_3DIGIT_PB)
-		return toStr(dsize / MIN_PB, 1) + " PB";
-	if (size < MIN_EB)
-		return toStr(dsize / MIN_PB, 0) + " PB";
-	// EB
-	return toStr(dsize / MIN_EB, 1) + " EB";
+	// KiB
+	if (size < MIN_3DIGIT_KIB)
+		return toStr(dsize / MIN_KIB, 1) + " KiB";
+	if (size < MIN_MIB)
+		return toStr(dsize / MIN_KIB, 0) + " KiB";
+	// MiB
+	if (size < MIN_3DIGIT_MIB)
+		return toStr(dsize / MIN_MIB, 1) + " MiB";
+	if (size < MIN_GIB)
+		return toStr(dsize / MIN_MIB, 0) + " MiB";
+	// GiB
+	if (size < MIN_3DIGIT_GIB)
+		return toStr(dsize / MIN_GIB, 1) + " GiB";
+	if (size < MIN_TIB)
+		return toStr(dsize / MIN_GIB, 0) + " GiB";
+	// TiB
+	if (size < MIN_3DIGIT_TIB)
+		return toStr(dsize / MIN_TIB, 1) + " TiB";
+	if (size < MIN_PIB)
+		return toStr(dsize / MIN_TIB, 0) + " TiB";
+	// PiB
+	if (size < MIN_3DIGIT_PIB)
+		return toStr(dsize / MIN_PIB, 1) + " PiB";
+	if (size < MIN_EIB)
+		return toStr(dsize / MIN_PIB, 0) + " PiB";
+	// EiB
+	return toStr(dsize / MIN_EIB, 1) + " EiB";
 }
 
 namespace directory_tree {

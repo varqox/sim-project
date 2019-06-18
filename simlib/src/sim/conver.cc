@@ -478,7 +478,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// Update the memory limits
 	if (opts.memory_limit.has_value()) {
-		// Convert from MB to bytes
+		// Convert from MiB to bytes
 		sf.global_mem_limit = opts.memory_limit.value() << 20;
 		tests.for_each([&](auto& keyval) {
 			keyval.second.memory_limit = sf.global_mem_limit;

@@ -26,11 +26,11 @@
 /// solutions: [prog/sim.cpp, prog/sim1.cpp] # Paths to solutions' source files.
 ///                                          #   The first solution is the main
 ///                                          #   solution
-/// memory_limit: 64           # Global memory limit in MB (optional)
+/// memory_limit: 64           # Global memory limit in MiB (optional)
 /// limits: [                  # Limits array
 ///         # Group 0
 ///         sim0a 1        # Format: <test name> <time limit> [memory limit]
-///         sim0b 1.01     # Time limit in seconds, memory limit in MB
+///         sim0b 1.01     # Time limit in seconds, memory limit in MiB
 ///         sim1ocen 2 32  # Individual memory limit is optional if the global
 ///                        #   memory limit is set.
 ///         sim2ocen 3     # Tests may appear in an arbitrary order
@@ -248,10 +248,10 @@ public:
 	/**
 	 * @brief Loads tests, their limits and scoring
 	 * @details Fields:
-	 *   - memory_limit (optional global memory limit [MB], if specified then
+	 *   - memory_limit (optional global memory limit [MiB], if specified then
 	 *     glogal_mem_limit > 0 and memory limit in `limits` variable is
 	 *     optional)
-	 *   - limits (array of tests limits: time [seconds] and memory [MB])
+	 *   - limits (array of tests limits: time [seconds] and memory [MiB])
 	 *   - scoring (optional array of scoring of the tests groups)
 	 *
 	 * @errors Throws an exception of type std::runtime_error if any
@@ -261,7 +261,7 @@ public:
 	/**
 	 * @brief Loads only the global memory limit
 	 * @details Fields:
-	 *   - memory_limit (optional global memory limit [MB], if specified then
+	 *   - memory_limit (optional global memory limit [MiB], if specified then
 	 *     glogal_mem_limit > 0 )
 	 *
 	 * @errors Throws an exception of type std::runtime_error if any

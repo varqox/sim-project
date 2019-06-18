@@ -229,7 +229,7 @@ void Simfile::load_global_memory_limit_only() {
 			   "Simfile: too big value of the `memory_limit`"};
 		}
 
-		// Convert from MB to bytes
+		// Convert from MiB to bytes
 		auto gml = ml.as_int<decltype(global_mem_limit)::StoredType>() << 20;
 		if (gml <= 0)
 			throw invalid_mem_limit();
@@ -299,7 +299,7 @@ Simfile::parse_limits_item(StringView item) {
 		if (mem <= 0)
 			throw invalid_mem_limit();
 
-		memory_limit = mem << 20; // Convert from MB to bytes
+		memory_limit = mem << 20; // Convert from MiB to bytes
 	}
 
 	return {test_name, time_limit, memory_limit};

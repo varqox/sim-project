@@ -19,11 +19,11 @@ checker: check/checker.cpp               # Path to checker source file
 solutions: [prog/sim.cpp, prog/sim1.cpp] # Paths to solutions' source files.
                                          #   The first solution is the main
                                          #   solution
-memory_limit: 64           # Global memory limit in MB (optional)
+memory_limit: 64           # Global memory limit in MiB (optional)
 limits: [                  # Limits array
         # Group 0
         sim0a 1        # Format: <test name> <time limit> [memory limit]
-        sim0b 1.01     # Time limit in seconds, memory limit in MB
+        sim0b 1.01     # Time limit in seconds, memory limit in MiB
         sim1ocen 2 32  # Individual memory limit is optional if the global
                        #   memory limit is set.
         sim2ocen 3     # Tests may appear in an arbitrary order

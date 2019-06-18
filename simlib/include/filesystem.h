@@ -875,9 +875,9 @@ typedef RemoverBase<remove_r> DirectoryRemover;
  * @details It adds proper suffixes, for example:
  *   1 -> "1 byte"
  *   1023 -> "1023 bytes"
- *   1024 -> "1.0 KB"
- *   129747 -> "127 KB"
- *   97379112 -> "92.9 MB"
+ *   1024 -> "1.0 KiB"
+ *   129747 -> "127 KiB"
+ *   97379112 -> "92.9 MiB"
  *
  * @param size size to humanize
  *
