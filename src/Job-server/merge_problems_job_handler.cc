@@ -1,5 +1,5 @@
-#include "main.h"
 #include "merge_problems_job_handler.h"
+#include "main.h"
 
 #include <deque>
 #include <sim/submission.h>
@@ -28,36 +28,40 @@ void MergeProblemsJobHandler::run() {
 
 	// Transfer contest problems
 	mysql.prepare("UPDATE contest_problems SET problem_id=? WHERE problem_id=?")
-		.bindAndExecute(info.target_problem_id, problem_id);
+	   .bindAndExecute(info.target_problem_id, problem_id);
 
 	// Add job to delete problem file
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-		" FROM problems WHERE id=?")
-		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-			problem_id);
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
+	            "FROM problems WHERE id=?")
+	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
+	                   problem_id);
 
 	// Add jobs to delete problem solutions' files
-	mysql.prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
-			" added, aux_id, info, data)"
-		" SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?, "
-			JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-		" FROM submissions WHERE problem_id=? AND type="
-			STYPE_PROBLEM_SOLUTION_STR)
-		.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), problem_id);
+	mysql
+	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
+	            " added, aux_id, info, data) "
+	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
+	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
+	            "FROM submissions WHERE problem_id=? AND "
+	            "type=" STYPE_PROBLEM_SOLUTION_STR)
+	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
+	                   problem_id);
 
 	// Delete problem solutions
-	mysql.prepare("DELETE FROM submissions"
-		" WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
-		.bindAndExecute(problem_id);
+	mysql
+	   .prepare("DELETE FROM submissions "
+	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
+	   .bindAndExecute(problem_id);
 
 	// Collect update finals
 	std::deque<std::array<MySQL::Optional<uint64_t>, 2>> finals_to_update;
 	{
-		auto stmt = mysql.prepare("SELECT DISTINCT owner, contest_problem_id"
-			" FROM submissions WHERE problem_id=?");
+		auto stmt = mysql.prepare("SELECT DISTINCT owner, contest_problem_id "
+		                          "FROM submissions WHERE problem_id=?");
 		stmt.bindAndExecute(problem_id);
 		std::array<MySQL::Optional<uint64_t>, 2> ftu_elem {};
 		stmt.res_bind_all(ftu_elem[0], ftu_elem[1]);
@@ -67,32 +71,36 @@ void MergeProblemsJobHandler::run() {
 
 	// Schedule rejudge of the transferred submissions
 	if (info.rejudge_transferred_submissions) {
-		mysql.prepare("INSERT INTO jobs(creator, status, priority, type, added,"
-				" aux_id, info, data)"
-			" SELECT NULL, " JSTATUS_PENDING_STR ", ?, "
-				JTYPE_REJUDGE_SUBMISSION_STR ", ?, id, ?, ''"
-			" FROM submissions WHERE problem_id=? ORDER BY id")
-			.bindAndExecute(priority(JobType::REJUDGE_SUBMISSION), mysql_date(),
-				jobs::dumpString(intentionalUnsafeStringView(toStr(info.target_problem_id))),
-				problem_id);
+		mysql
+		   .prepare("INSERT INTO jobs(creator, status, priority, type, added,"
+		            " aux_id, info, data) "
+		            "SELECT NULL, " JSTATUS_PENDING_STR
+		            ", ?, " JTYPE_REJUDGE_SUBMISSION_STR ", ?, id, ?, '' "
+		            "FROM submissions WHERE problem_id=? ORDER BY id")
+		   .bindAndExecute(priority(JobType::REJUDGE_SUBMISSION), mysql_date(),
+		                   jobs::dumpString(intentionalUnsafeStringView(
+		                      toStr(info.target_problem_id))),
+		                   problem_id);
 	}
 
 	// Transfer problem submissions that are not problem solutions
 	mysql.prepare("UPDATE submissions SET problem_id=? WHERE problem_id=?")
-		.bindAndExecute(info.target_problem_id, problem_id);
+	   .bindAndExecute(info.target_problem_id, problem_id);
 
 	// Update finals
 	for (auto const& ftu_elem : finals_to_update) {
-		submission::update_final_lock(mysql, ftu_elem[0], info.target_problem_id);
+		submission::update_final_lock(mysql, ftu_elem[0],
+		                              info.target_problem_id);
 		submission::update_final(mysql, ftu_elem[0], info.target_problem_id,
-			ftu_elem[1], false);
+		                         ftu_elem[1], false);
 	}
 
 	// Transfer problem tags (duplicates will not be transferred - they will be
 	// deleted on problem deletion)
-	mysql.prepare("UPDATE IGNORE problem_tags SET problem_id=?"
-		" WHERE problem_id=?")
-		.bindAndExecute(info.target_problem_id, problem_id);
+	mysql
+	   .prepare(
+	      "UPDATE IGNORE problem_tags SET problem_id=? WHERE problem_id=?")
+	   .bindAndExecute(info.target_problem_id, problem_id);
 
 	// Finally, delete the problem (solution and remaining tags will be deleted
 	// automatically thanks to foreign key constraints)

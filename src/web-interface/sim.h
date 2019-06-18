@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "http_request.h"
 #include "http_response.h"
 
@@ -45,12 +44,14 @@ private:
 		resp.status_code = std::move(status_code);
 		resp.content = response_body;
 
-	#ifdef DEBUG
-		if (response_body.find(notifications) == StringView::npos)
-			THROW("Omitted notifications in the error message: ", response_body);
+#ifdef DEBUG
+		if (response_body.find(notifications) == StringView::npos) {
+			THROW("Omitted notifications in the error message: ",
+			      response_body);
+		}
 
 		notifications.clear();
-	#endif
+#endif
 	}
 
 	/**
@@ -61,7 +62,6 @@ private:
 	 * @return generated token
 	 */
 	static std::string generate_random_token(uint length);
-
 
 	/* ================================ API ================================ */
 
@@ -94,10 +94,10 @@ private:
 	void api_job_download_log();
 
 	void api_job_download_uploaded_package(Optional<uint64_t> file_id,
-		JobType job_type);
+	                                       JobType job_type);
 
 	void api_job_download_uploaded_statement(Optional<uint64_t> file_id,
-		JobType job_type, StringView info);
+	                                         JobType job_type, StringView info);
 
 	// jobs_api.cc
 	void api_problems();
@@ -108,8 +108,8 @@ private:
 
 	void api_problem_add();
 
- 	void api_statement_impl(uint64_t problem_file_id, StringView problem_label,
- 		StringView simfile);
+	void api_statement_impl(uint64_t problem_file_id, StringView problem_label,
+	                        StringView simfile);
 
 	void api_problem_statement(StringView problem_label, StringView simfile);
 
@@ -148,7 +148,8 @@ private:
 
 	// submissions_api.cc
 	void append_submission_status(SubmissionStatus initial_status,
-		SubmissionStatus full_status, bool show_full_results);
+	                              SubmissionStatus full_status,
+	                              bool show_full_results);
 
 	void api_submissions();
 
@@ -200,7 +201,7 @@ private:
 	void api_contest_problem_delete();
 
 	void api_contest_ranking(StringView submissions_query_id_name,
-		StringView query_id);
+	                         StringView query_id);
 
 	// contest_users_api.cc
 
@@ -210,7 +211,8 @@ private:
 
 	void api_contest_user_add(StringView contest_id);
 
-	void api_contest_user_change_mode(StringView contest_id, StringView user_id);
+	void api_contest_user_change_mode(StringView contest_id,
+	                                  StringView user_id);
 
 	void api_contest_user_expel(StringView contest_id, StringView user_id);
 
@@ -283,29 +285,30 @@ private:
 
 	// Appends
 	void page_template(StringView title, StringView styles = {},
-		StringView scripts = {});
+	                   StringView scripts = {});
 
 	void page_template_end();
 
-	template<class... Args>
+	template <class... Args>
 	void add_notification(StringView css_classes, Args&&... message) {
 		notifications.append("<pre class=\"", css_classes, "\">",
-			std::forward<Args>(message)..., "</pre>\n");
+		                     std::forward<Args>(message)..., "</pre>\n");
 	}
 
-	template<class... Args>
+	template <class... Args>
 	Sim& append(Args&&... args) {
 		resp.content.append(std::forward<Args>(args)...);
 		return *this;
 	}
 
 	void error_page_template(StringView status, StringView code,
-		StringView message);
+	                         StringView message);
 
 	// 403
 	void error403() {
-		error_page_template("403 Forbidden", "403",
-			"Sorry, but you're not allowed to see anything here.");
+		error_page_template(
+		   "403 Forbidden", "403",
+		   "Sorry, but you're not allowed to see anything here.");
 	}
 
 	// 404
@@ -316,13 +319,13 @@ private:
 	// 500
 	void error500() {
 		error_page_template("500 Internal Server Error", "500",
-			"Internal Server Error");
+		                    "Internal Server Error");
 	}
 
 	// 501
 	void error501() {
 		error_page_template("501 Not Implemented", "501",
-			"This feature has not been implemented yet...");
+		                    "This feature has not been implemented yet...");
 	}
 
 	/* ============================== Forms ============================== */
@@ -331,10 +334,9 @@ private:
 
 	/// Returns true if and only if the field @p name exists and its value is no
 	/// longer than max_size
-	template<class T>
+	template <class T>
 	bool form_validate(T& var, const std::string& name,
-		StringView name_to_print, size_t max_size = -1)
-	{
+	                   StringView name_to_print, size_t max_size = -1) {
 		STACK_UNWINDING_MARK;
 
 		auto const& form = request.form_data.other;
@@ -347,7 +349,7 @@ private:
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
 			add_notification("error", htmlEscape(name_to_print),
-				" cannot be longer than ", max_size, " bytes");
+			                 " cannot be longer than ", max_size, " bytes");
 			return false;
 		}
 
@@ -356,12 +358,12 @@ private:
 	}
 
 	/// Validates field and (if not blank) checks it by comp
-	template<class T, class Checker,
-		typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
+	template <class T, class Checker,
+	          typename =
+	             std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
 	bool form_validate(T& var, const std::string& name,
-		StringView name_to_print, Checker&& check, StringView error_msg = {},
-		size_t max_size = -1)
-	{
+	                   StringView name_to_print, Checker&& check,
+	                   StringView error_msg = {}, size_t max_size = -1) {
 		STACK_UNWINDING_MARK;
 
 		if (form_validate(var, name, name_to_print, max_size)) {
@@ -369,21 +371,23 @@ private:
 				return true;
 
 			form_validation_error = true;
-			if (error_msg.empty())
-				add_notification("error",
-					htmlEscape(concat(name_to_print, " validation error")));
-			else
+			if (error_msg.empty()) {
+				add_notification(
+				   "error",
+				   htmlEscape(concat(name_to_print, " validation error")));
+			} else {
 				add_notification("error", htmlEscape(error_msg));
+			}
 		}
 
 		return false;
 	}
 
 	/// Like validate() but also validate not blank
-	template<class T>
+	template <class T>
 	bool form_validate_not_blank(T& var, const std::string& name,
-		StringView name_to_print, size_t max_size = -1)
-	{
+	                             StringView name_to_print,
+	                             size_t max_size = -1) {
 		STACK_UNWINDING_MARK;
 
 		auto const& form = request.form_data.other;
@@ -396,13 +400,13 @@ private:
 		} else if (it->second.empty()) {
 			form_validation_error = true;
 			add_notification("error", htmlEscape(name_to_print),
-				" cannot be blank");
+			                 " cannot be blank");
 			return false;
 
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
 			add_notification("error", htmlEscape(name_to_print),
-				" cannot be longer than ", max_size, " bytes");
+			                 " cannot be longer than ", max_size, " bytes");
 			return false;
 		}
 
@@ -411,12 +415,13 @@ private:
 	}
 
 	/// Validates field and checks it by comp
-	template<class T, class Checker,
-		typename = std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
+	template <class T, class Checker,
+	          typename =
+	             std::enable_if_t<!std::is_convertible<Checker, size_t>::value>>
 	bool form_validate_not_blank(T& var, const std::string& name,
-		StringView name_to_print, Checker&& check, StringView error_msg = {},
-		size_t max_size = -1)
-	{
+	                             StringView name_to_print, Checker&& check,
+	                             StringView error_msg = {},
+	                             size_t max_size = -1) {
 		STACK_UNWINDING_MARK;
 
 		if (form_validate_not_blank(var, name, name_to_print, max_size)) {
@@ -424,11 +429,13 @@ private:
 				return true;
 
 			form_validation_error = true;
-			if (error_msg.empty())
-				add_notification("error",
-					htmlEscape(concat(name_to_print, ": invalid value")));
-			else
+			if (error_msg.empty()) {
+				add_notification(
+				   "error",
+				   htmlEscape(concat(name_to_print, ": invalid value")));
+			} else {
 				add_notification("error", htmlEscape(error_msg));
+			}
 		}
 
 		return false;
@@ -437,10 +444,9 @@ private:
 	/// @brief Sets @p var to path of the uploaded file (its temporary location)
 	///  or sets an error if no file as @p name was submitted. To obtain the
 	// users's filename of the uploaded file use: request.form_data.get(name)
-	template<class T>
+	template <class T>
 	bool form_validate_file_path_not_blank(T& var, const std::string& name,
-		StringView name_to_print)
-	{
+	                                       StringView name_to_print) {
 		STACK_UNWINDING_MARK;
 
 		auto const& form = request.form_data.files;
@@ -448,7 +454,7 @@ private:
 		if (not it) {
 			form_validation_error = true;
 			add_notification("error", htmlEscape(name_to_print),
-				" has to be submitted as a file");
+			                 " has to be submitted as a file");
 			return false;
 		}
 
@@ -477,9 +483,9 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(UserPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(UserPermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(UserPermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(UserPermissions, |);
+	friend DECLARE_ENUM_OPERATOR(UserPermissions, &);
 
 	UserPermissions users_perms = UserPermissions::NONE;
 	InplaceBuff<32> users_uid;
@@ -496,7 +502,7 @@ private:
 	 * @return ORed permissions flags
 	 */
 	Sim::UserPermissions users_get_permissions(StringView user_id,
-		UserType utype) noexcept;
+	                                           UserType utype) noexcept;
 
 	// Queries MySQL
 	UserPermissions users_get_permissions(StringView user_id);
@@ -533,10 +539,10 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(JobPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(JobPermissions, &)
-	friend DECLARE_ENUM_ASSIGN_OPERATOR(JobPermissions, |=)
+	friend DECLARE_ENUM_UNARY_OPERATOR(JobPermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(JobPermissions, |);
+	friend DECLARE_ENUM_OPERATOR(JobPermissions, &);
+	friend DECLARE_ENUM_ASSIGN_OPERATOR(JobPermissions, |=);
 
 	InplaceBuff<32> jobs_jid;
 	JobPermissions jobs_perms = JobPermissions::NONE;
@@ -545,14 +551,15 @@ private:
 
 	// Session must be open to access the jobs
 	JobPermissions jobs_get_permissions(Optional<StringView> creator_id,
-		JobType job_type, JobStatus job_status) noexcept;
+	                                    JobType job_type,
+	                                    JobStatus job_status) noexcept;
 
 	// Used to get granted permissions to the problem jobs
 	JobPermissions jobs_granted_permissions_problem(StringView problem_id);
 
 	// Used to get granted permissions to the submission jobs
-	JobPermissions jobs_granted_permissions_submission(
-		StringView submission_id);
+	JobPermissions
+	jobs_granted_permissions_submission(StringView submission_id);
 
 	/// Main Jobs handler
 	void jobs_handle();
@@ -593,14 +600,14 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |);
+	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &);
 
 	ProblemPermissions problems_get_overall_permissions() noexcept;
 
 	ProblemPermissions problems_get_permissions(StringView owner_id,
-		ProblemType ptype) noexcept;
+	                                            ProblemType ptype) noexcept;
 
 	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	InplaceBuff<32> problems_pid;
@@ -632,16 +639,18 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(ContestPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(ContestPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(ContestPermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(ContestPermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(ContestPermissions, |);
+	friend DECLARE_ENUM_OPERATOR(ContestPermissions, &);
 
 	ContestPermissions contests_get_overall_permissions() noexcept;
 
-	ContestPermissions contests_get_permissions(bool is_public,
-		Optional<ContestUserMode> cu_mode) noexcept;
+	ContestPermissions
+	contests_get_permissions(bool is_public,
+	                         Optional<ContestUserMode> cu_mode) noexcept;
 
-	Optional<ContestPermissions> contests_get_permissions(StringView contest_id);
+	Optional<ContestPermissions>
+	contests_get_permissions(StringView contest_id);
 
 	ContestPermissions contests_perms = ContestPermissions::NONE;
 	InplaceBuff<32> contests_cid;
@@ -676,16 +685,17 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(ContestUserPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(ContestUserPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(ContestUserPermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(ContestUserPermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(ContestUserPermissions, |);
+	friend DECLARE_ENUM_OPERATOR(ContestUserPermissions, &);
 
 	// Returns only the overall permissions
 	ContestUserPermissions contest_user_get_overall_permissions(
-		Optional<ContestUserMode> viewer_mode) noexcept;
+	   Optional<ContestUserMode> viewer_mode) noexcept;
 
-	ContestUserPermissions contest_user_get_permissions(
-		Optional<ContestUserMode> viewer_mode, Optional<ContestUserMode> user_mode) noexcept;
+	ContestUserPermissions
+	contest_user_get_permissions(Optional<ContestUserMode> viewer_mode,
+	                             Optional<ContestUserMode> user_mode) noexcept;
 
 	// Returns (viewer mode, perms), queries MySQL
 	std::pair<Optional<ContestUserMode>, Sim::ContestUserPermissions>
@@ -693,10 +703,11 @@ private:
 
 	// Returns (viewer mode, perms, user's mode), queries MySQL
 	std::tuple<Optional<ContestUserMode>, Sim::ContestUserPermissions,
-		Optional<ContestUserMode>>
+	           Optional<ContestUserMode>>
 	contest_user_get_permissions(StringView contest_id, StringView user_id);
 
-	/* ============================= Submissions ============================= */
+	/* ============================= Submissions =============================
+	 */
 public:
 	enum class SubmissionPermissions : uint {
 		NONE = 0,
@@ -713,15 +724,15 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(SubmissionPermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, |)
-	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(SubmissionPermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, |);
+	friend DECLARE_ENUM_OPERATOR(SubmissionPermissions, &);
 
 	SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
 	SubmissionPermissions submissions_get_permissions(
-		StringView submission_owner, SubmissionType stype,
-		Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept;
+	   StringView submission_owner, SubmissionType stype,
+	   Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
 	uint64_t submissions_file_id;
@@ -747,9 +758,9 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(FilePermissions, ~)
-	friend DECLARE_ENUM_OPERATOR(FilePermissions, |)
-	friend DECLARE_ENUM_OPERATOR(FilePermissions, &)
+	friend DECLARE_ENUM_UNARY_OPERATOR(FilePermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(FilePermissions, |);
+	friend DECLARE_ENUM_OPERATOR(FilePermissions, &);
 
 	FilePermissions files_get_permissions(ContestPermissions cperms) noexcept;
 
@@ -792,5 +803,5 @@ public:
 	 * @return response
 	 */
 	server::HttpResponse handle(CStringView _client_ip,
-		server::HttpRequest req); // TODO: close session
+	                            server::HttpRequest req); // TODO: close session
 };

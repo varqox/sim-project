@@ -28,8 +28,9 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-template<class IterA, class IterB, class FuncA, class FuncB, class Compare>
-void merge(IterA a_beg, IterA a_end, IterB b_beg, IterB b_end, FuncA&& a_merge, FuncB&& b_merge, Compare&& is_left_lower) {
+template <class IterA, class IterB, class FuncA, class FuncB, class Compare>
+void merge(IterA a_beg, IterA a_end, IterB b_beg, IterB b_end, FuncA&& a_merge,
+           FuncB&& b_merge, Compare&& is_left_lower) {
 	while (a_beg != a_end or b_beg != b_end) {
 		if (a_beg == a_end) {
 			b_merge(*b_beg);
@@ -67,11 +68,15 @@ map<int64_t, User> a_users, b_users, new_users; // (user_id -> user)
 
 // Works in O(n^2) where n is the total number of users
 void load_users() {
-	auto read_users = [&, nid = 0ll](auto& conn, auto& skipped_users, auto& users_map) mutable {
+	auto read_users = [&, nid = 0ll](auto& conn, auto& skipped_users,
+	                                 auto& users_map) mutable {
 		User u;
-		auto stmt = conn.prepare("SELECT id, username, first_name, last_name, email, salt, password, type FROM users ORDER BY id");
+		auto stmt =
+		   conn.prepare("SELECT id, username, first_name, last_name, email, "
+		                "salt, password, type FROM users ORDER BY id");
 		stmt.bindAndExecute();
-		stmt.res_bind_all(u.id, u.username, u.first_name, u.last_name, u.email, u.salt, u.password, u.type);
+		stmt.res_bind_all(u.id, u.username, u.first_name, u.last_name, u.email,
+		                  u.salt, u.password, u.type);
 
 		int64_t last_uid = 0;
 		while (stmt.next()) {
@@ -80,19 +85,20 @@ void load_users() {
 
 			u.replacer = nullptr;
 
-			// Check if there is already another user which might be a candidate for merging
+			// Check if there is already another user which might be a candidate
+			// for merging
 			for (auto&& p : new_users) {
 				auto& nu = p.second;
-				if ((u.first_name == nu.first_name and u.last_name == nu.last_name) or
-					u.username == nu.username)
-				{
+				if ((u.first_name == nu.first_name and
+				     u.last_name == nu.last_name) or
+				    u.username == nu.username) {
 					if (u.replacer != nullptr) {
-						THROW("User collision was found: ",
-							u.username, ", ", u.first_name, ", ", u.last_name,
-							" matches with ",
-								u.replacer->username, ", ", u.replacer->first_name, ", ", u.replacer->last_name,
-							"  and  ",
-								nu.username, ", ", nu.first_name, ", ", nu.last_name);
+						THROW("User collision was found: ", u.username, ", ",
+						      u.first_name, ", ", u.last_name, " matches with ",
+						      u.replacer->username, ", ",
+						      u.replacer->first_name, ", ",
+						      u.replacer->last_name, "  and  ", nu.username,
+						      ", ", nu.first_name, ", ", nu.last_name);
 					}
 
 					u.replacer = &nu;
@@ -138,27 +144,35 @@ void load_users() {
 		if (maps.size() > 1) {
 			auto& nu = p.second;
 			stdlog("");
-			stdlog("Mappings to user ", nu.username, ", ", nu.first_name, ", ", nu.last_name, ", ", nu.email, ":");
+			stdlog("Mappings to user ", nu.username, ", ", nu.first_name, ", ",
+			       nu.last_name, ", ", nu.email, ":");
 			for (auto q : maps)
-				stdlog("  ", "AB"[q.second], " ", q.first->username, ", ", q.first->first_name, ", ", q.first->last_name, ", ", q.first->email);
+				stdlog("  ", "AB"[q.second], " ", q.first->username, ", ",
+				       q.first->first_name, ", ", q.first->last_name, ", ",
+				       q.first->email);
 		}
 	}
 
 	// Insert users into the new sim
 	new_conn.update("DELETE FROM users");
-	auto stmt = new_conn.prepare("INSERT INTO users(id, username, first_name, last_name, email, salt, password, type) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO users(id, username, first_name, last_name, email, salt, "
+	   "password, type) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 	User u;
 	for (auto&& p : new_users) {
 		u = p.second;
-		stmt.bindAndExecute(u.id, u.username, u.first_name, u.last_name, u.email, u.salt, u.password, u.type);
+		stmt.bindAndExecute(u.id, u.username, u.first_name, u.last_name,
+		                    u.email, u.salt, u.password, u.type);
 	}
 }
 
-int64_t new_user_id(const decltype(a_users)& umap, int64_t user_id, bool try_skipped = false) {
+int64_t new_user_id(const decltype(a_users)& umap, int64_t user_id,
+                    bool try_skipped = false) {
 	auto it = umap.find(user_id);
 	if (it == umap.end()) {
 		if (try_skipped) {
-			auto& skipped = (&umap == &a_users ? skipped_a_users : skipped_b_users);
+			auto& skipped =
+			   (&umap == &a_users ? skipped_a_users : skipped_b_users);
 			auto it2 = skipped.find(user_id);
 			if (it2 != skipped.end())
 				return it2->second;
@@ -177,7 +191,8 @@ struct Problem {
 	int64_t owner;
 	InplaceBuff<40> added, last_edit;
 
-	Problem* replacer = nullptr; // In new_problems it points to the newest problem that maps to it
+	Problem* replacer = nullptr; // In new_problems it points to the newest
+	                             // problem that maps to it
 };
 
 map<int64_t, int64_t> skipped_a_problems, skipped_b_problems;
@@ -202,9 +217,12 @@ void load_problems() {
 	// Collect all problems
 	auto read_problems = [&](auto& conn, auto& problems_map) {
 		Problem p;
-		auto stmt = conn.prepare("SELECT id, type, name, label, simfile, owner, added, last_edit FROM problems ORDER BY id");
+		auto stmt =
+		   conn.prepare("SELECT id, type, name, label, simfile, owner, added, "
+		                "last_edit FROM problems ORDER BY id");
 		stmt.bindAndExecute();
-		stmt.res_bind_all(p.id, p.type, p.name, p.label, p.simfile, p.owner, p.added, p.last_edit);
+		stmt.res_bind_all(p.id, p.type, p.name, p.label, p.simfile, p.owner,
+		                  p.added, p.last_edit);
 
 		while (stmt.next())
 			problems_map.emplace(p.id, p);
@@ -213,8 +231,12 @@ void load_problems() {
 	read_problems(a_conn, a_problems);
 	read_problems(b_conn, b_problems);
 
-	// Adds to new_problems and hardlinks problem package (or maps to already added problem)
-	auto add_to_new_problems = [&, nid = 0ll](auto& prob, auto& last_pid, auto& skipped_problems, auto&& build_dir, auto&& user_map) mutable {
+	// Adds to new_problems and hardlinks problem package (or maps to already
+	// added problem)
+	auto add_to_new_problems = [&, nid = 0ll](auto& prob, auto& last_pid,
+	                                          auto& skipped_problems,
+	                                          auto&& build_dir,
+	                                          auto&& user_map) mutable {
 		while (++last_pid < prob.id)
 			skipped_problems.emplace(last_pid, ++nid);
 
@@ -244,13 +266,15 @@ void load_problems() {
 			auto old_simfile = sim::Simfile(oldp.simfile.to_string());
 			old_simfile.load_statement();
 			ZipFile old_zip(old_pkg);
-			auto old_doc = old_zip.extract_to_str(old_zip.get_index(concat(old_masterdir, old_simfile.statement)));
+			auto old_doc = old_zip.extract_to_str(
+			   old_zip.get_index(concat(old_masterdir, old_simfile.statement)));
 
 			auto new_masterdir = sim::zip_package_master_dir(new_pkg);
 			auto new_simfile = sim::Simfile(newp.simfile.to_string());
 			new_simfile.load_statement();
 			ZipFile new_zip(new_pkg);
-			auto new_doc = new_zip.extract_to_str(new_zip.get_index(concat(new_masterdir, new_simfile.statement)));
+			auto new_doc = new_zip.extract_to_str(
+			   new_zip.get_index(concat(new_masterdir, new_simfile.statement)));
 
 			// Compare by statement
 			if (old_doc != new_doc)
@@ -259,17 +283,17 @@ void load_problems() {
 			return true;
 		};
 
-		// Check if there is already another problem which might be a candidate for merging
+		// Check if there is already another problem which might be a candidate
+		// for merging
 		for (auto&& i : new_problems) {
 			auto& np = i.second;
 			if (match(prob, np)) {
 				if (prob.replacer != nullptr) {
-					THROW("Problem collision was found: ",
-						prob.id, ", ", prob.name, ", ", prob.label,
-						" matches with ",
-							prob.replacer->id, ", ", prob.replacer->name, ", ", prob.replacer->label,
-						"  and  ",
-							np.id, ", ", np.name, ", ", np.label);
+					THROW("Problem collision was found: ", prob.id, ", ",
+					      prob.name, ", ", prob.label, " matches with ",
+					      prob.replacer->id, ", ", prob.replacer->name, ", ",
+					      prob.replacer->label, "  and  ", np.id, ", ", np.name,
+					      ", ", np.label);
 				}
 
 				prob.replacer = &np;
@@ -286,12 +310,13 @@ void load_problems() {
 
 			// Hardlink package files
 			link(concat(build_dir, "/problems/", prob.id, ".zip"),
-				concat(new_build, "/problems/", nid, ".zip"));
+			     concat(new_build, "/problems/", nid, ".zip"));
 
-		// Actualize replacing problem
 		} else {
-			auto &np = *prob.replacer;
-			assert(prob.added >= np.added); // We process problems in the same order they were added
+			// Actualize replacing problem
+			auto& np = *prob.replacer;
+			assert(prob.added >= np.added); // We process problems in the same
+			                                // order they were added
 			// if (prob.added < np.added) {
 			// 	np.added = prob.added;
 			// 	np.owner = new_user_id(user_map, prob.owner);
@@ -309,17 +334,25 @@ void load_problems() {
 				// Hardlink package files
 				remove(concat(new_build, "/problems/", np.id, ".zip"));
 				link(concat(build_dir, "/problems/", prob.id, ".zip"),
-					concat(new_build, "/problems/", np.id, ".zip"));
+				     concat(new_build, "/problems/", np.id, ".zip"));
 			}
 		}
 	};
 
 	// Merge a_problems and b_problems into new_problems (order by added_date)
 	int64_t last_a_pid = 0, last_b_pid = 0;
-	merge(a_problems.begin(), a_problems.end(), b_problems.begin(), b_problems.end(),
-		[&](auto&& p) { add_to_new_problems(p.second, last_a_pid, skipped_a_problems, a_build, a_users); },
-		[&](auto&& p) { add_to_new_problems(p.second, last_b_pid, skipped_b_problems, b_build, b_users); },
-		[](auto&& l, auto&& r) { return l.second.added <= r.second.added; });
+	merge(
+	   a_problems.begin(), a_problems.end(), b_problems.begin(),
+	   b_problems.end(),
+	   [&](auto&& p) {
+		   add_to_new_problems(p.second, last_a_pid, skipped_a_problems,
+		                       a_build, a_users);
+	   },
+	   [&](auto&& p) {
+		   add_to_new_problems(p.second, last_b_pid, skipped_b_problems,
+		                       b_build, b_users);
+	   },
+	   [](auto&& l, auto&& r) { return l.second.added <= r.second.added; });
 
 	// List merges
 	stdlog("======================= Problems =======================");
@@ -336,32 +369,42 @@ void load_problems() {
 		if (maps.size() > 1) {
 			auto& np = i.second;
 			stdlog("");
-			stdlog("Mappings to problem ", np.id, ", ", np.name, ", ", np.label, ":");
-			for (auto q : maps)
-				stdlog("  ", "AB"[q.second], " ", q.first->id, ", ", q.first->name, ", ", q.first->label);
+			stdlog("Mappings to problem ", np.id, ", ", np.name, ", ", np.label,
+			       ":");
+			for (auto q : maps) {
+				stdlog("  ", "AB"[q.second], " ", q.first->id, ", ",
+				       q.first->name, ", ", q.first->label);
+			}
 		}
 	}
 
 	// Insert problems into the new sim
-	auto stmt = new_conn.prepare("INSERT INTO problems(id, type, name, label, simfile, owner, added, last_edit) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO problems(id, type, name, label, simfile, owner, added,"
+	   " last_edit) "
+	   "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 	Problem p;
 	for (auto&& i : new_problems) {
 		p = i.second;
-		stmt.bindAndExecute(p.id, p.type, p.name, p.label, p.simfile, p.owner, p.added, p.last_edit);
+		stmt.bindAndExecute(p.id, p.type, p.name, p.label, p.simfile, p.owner,
+		                    p.added, p.last_edit);
 	}
 }
 
-int64_t new_problem_id(decltype(a_problems)& pmap, int64_t problem_id, bool try_skipped = false) {
+int64_t new_problem_id(decltype(a_problems)& pmap, int64_t problem_id,
+                       bool try_skipped = false) {
 	auto it = pmap.find(problem_id);
 	if (it == pmap.end()) {
 		if (try_skipped) {
-			auto& skipped = (&pmap == &a_problems ? skipped_a_problems : skipped_b_problems);
+			auto& skipped =
+			   (&pmap == &a_problems ? skipped_a_problems : skipped_b_problems);
 			auto it2 = skipped.find(problem_id);
 			if (it2 != skipped.end())
 				return it2->second;
 		}
 
-		THROW("Trying to get new id of a nonexistent problem (id: ", problem_id, ')');
+		THROW("Trying to get new id of a nonexistent problem (id: ", problem_id,
+		      ')');
 	}
 
 	return it->second.replacer->id;
@@ -372,10 +415,15 @@ void load_problem_tags() {
 		int64_t pid;
 		InplaceBuff<64> tag;
 		bool hidden;
-		auto instmt = conn.prepare("SELECT problem_id, tag, hidden FROM problem_tags WHERE (SELECT id FROM problems WHERE id=problem_id) IS NOT NULL");
+		auto instmt = conn.prepare(
+		   "SELECT problem_id, tag, hidden FROM problem_tags WHERE (SELECT id "
+		   "FROM problems WHERE id=problem_id) IS NOT NULL");
 		instmt.bindAndExecute();
 		instmt.res_bind_all(pid, tag, hidden);
-		auto outstmt = new_conn.prepare("INSERT IGNORE INTO problem_tags(problem_id, tag, hidden) VALUES(?,?,?)");
+		auto outstmt =
+		   new_conn.prepare("INSERT IGNORE INTO problem_tags(problem_id, tag,"
+		                    " hidden) "
+		                    "VALUES(?,?,?)");
 		while (instmt.next())
 			outstmt.bindAndExecute(new_problem_id(pmap, pid), tag, hidden);
 	};
@@ -400,7 +448,11 @@ map<int64_t, Contest> a_contests, b_contests, new_contests;
 void load_contests() {
 	Contest c;
 	auto process_contests = [&](MySQL::Connection& conn, auto& cmap) {
-		auto stmt = conn.prepare("SELECT id, name, is_public, COALESCE((SELECT submit_time FROM submissions s WHERE contest_id=c.id ORDER BY s.id LIMIT 1),'') FROM contests c ORDER BY c.id");
+		auto stmt =
+		   conn.prepare("SELECT id, name, is_public,"
+		                " COALESCE((SELECT submit_time FROM submissions s"
+		                " WHERE contest_id=c.id ORDER BY s.id LIMIT 1),'') "
+		                "FROM contests c ORDER BY c.id");
 		stmt.bindAndExecute();
 		stmt.res_bind_all(c.id, c.name, c.is_public, c.first_submit_time);
 		while (stmt.next())
@@ -411,8 +463,10 @@ void load_contests() {
 	process_contests(b_conn, b_contests);
 
 	new_conn.update("DELETE FROM contests");
-	auto stmt = new_conn.prepare("INSERT INTO contests(id, name, is_public) VALUES(?,?,?)");
-	auto add_contest = [&, nid = 0ll](Contest& con, auto& last_cid, auto& skipped_contests) mutable {
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO contests(id, name, is_public) VALUES(?,?,?)");
+	auto add_contest = [&, nid = 0ll](Contest& con, auto& last_cid,
+	                                  auto& skipped_contests) mutable {
 		while (++last_cid < con.id)
 			skipped_contests.emplace(last_cid, ++nid);
 
@@ -424,23 +478,30 @@ void load_contests() {
 	};
 
 	int64_t last_a_cid = 0, last_b_cid = 0;
-	merge(a_contests.begin(), a_contests.end(), b_contests.begin(), b_contests.end(),
-		[&](auto&& p) { add_contest(p.second, last_a_cid, skipped_a_contests); },
-		[&](auto&& p) { add_contest(p.second, last_b_cid, skipped_b_contests); },
-		[](auto&& l, auto&& r) { return l.second.first_submit_time <= r.second.first_submit_time; });
+	merge(
+	   a_contests.begin(), a_contests.end(), b_contests.begin(),
+	   b_contests.end(),
+	   [&](auto&& p) { add_contest(p.second, last_a_cid, skipped_a_contests); },
+	   [&](auto&& p) { add_contest(p.second, last_b_cid, skipped_b_contests); },
+	   [](auto&& l, auto&& r) {
+		   return l.second.first_submit_time <= r.second.first_submit_time;
+	   });
 }
 
-int64_t new_contest_id(decltype(a_contests)& cmap, int64_t contest_id, bool try_skipped = false) {
+int64_t new_contest_id(decltype(a_contests)& cmap, int64_t contest_id,
+                       bool try_skipped = false) {
 	auto it = cmap.find(contest_id);
 	if (it == cmap.end()) {
 		if (try_skipped) {
-			auto& skipped = (&cmap == &a_contests ? skipped_a_contests : skipped_b_contests);
+			auto& skipped =
+			   (&cmap == &a_contests ? skipped_a_contests : skipped_b_contests);
 			auto it2 = skipped.find(contest_id);
 			if (it2 != skipped.end())
 				return it2->second;
 		}
 
-		THROW("Trying to get new id of a nonexistent contest (id: ", contest_id, ')');
+		THROW("Trying to get new id of a nonexistent contest (id: ", contest_id,
+		      ')');
 	}
 
 	return it->second.replacer->id;
@@ -456,14 +517,18 @@ struct ContestRound {
 };
 
 map<int64_t, int64_t> skipped_a_contest_rounds, skipped_b_contest_rounds;
-map<int64_t, ContestRound> a_contest_rounds, b_contest_rounds, new_contest_rounds;
+map<int64_t, ContestRound> a_contest_rounds, b_contest_rounds,
+   new_contest_rounds;
 
 void load_contest_rounds() {
 	ContestRound cr;
 	auto process_contest_rounds = [&](MySQL::Connection& conn, auto& cmap) {
-		auto stmt = conn.prepare("SELECT id, contest_id, name, item, begins, ends, full_results, ranking_exposure FROM contest_rounds ORDER BY id");
+		auto stmt = conn.prepare(
+		   "SELECT id, contest_id, name, item, begins, ends, full_results, "
+		   "ranking_exposure FROM contest_rounds ORDER BY id");
 		stmt.bindAndExecute();
-		stmt.res_bind_all(cr.id, cr.contest_id, cr.name, cr.item, cr.begins, cr.ends, cr.full_results, cr.ranking_exposure);
+		stmt.res_bind_all(cr.id, cr.contest_id, cr.name, cr.item, cr.begins,
+		                  cr.ends, cr.full_results, cr.ranking_exposure);
 		while (stmt.next())
 			cmap.emplace(cr.id, cr);
 	};
@@ -472,8 +537,12 @@ void load_contest_rounds() {
 	process_contest_rounds(b_conn, b_contest_rounds);
 
 	new_conn.update("DELETE FROM contest_rounds");
-	auto stmt = new_conn.prepare("INSERT INTO contest_rounds(id, contest_id, name, item, begins, ends, full_results, ranking_exposure) VALUES(?,?,?,?,?,?,?,?)");
-	auto add_contest_round = [&, nid = 0ll](ContestRound& cr, auto& last_crid, auto& skipped_contest_rounds, auto& cmap) mutable {
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO contest_rounds(id, contest_id, name, item, begins, ends, "
+	   "full_results, ranking_exposure) VALUES(?,?,?,?,?,?,?,?)");
+	auto add_contest_round = [&, nid = 0ll](ContestRound& cr, auto& last_crid,
+	                                        auto& skipped_contest_rounds,
+	                                        auto& cmap) mutable {
 		while (++last_crid < cr.id)
 			skipped_contest_rounds.emplace(last_crid, ++nid);
 
@@ -482,27 +551,42 @@ void load_contest_rounds() {
 		ncr.contest_id = new_contest_id(cmap, ncr.contest_id);
 		cr.replacer = &ncr;
 
-		stmt.bindAndExecute(ncr.id, ncr.contest_id, ncr.name, ncr.item, ncr.begins, ncr.ends, ncr.full_results, ncr.ranking_exposure);
+		stmt.bindAndExecute(ncr.id, ncr.contest_id, ncr.name, ncr.item,
+		                    ncr.begins, ncr.ends, ncr.full_results,
+		                    ncr.ranking_exposure);
 	};
 
 	int64_t last_a_crid = 0, last_b_crid = 0;
-	merge(a_contest_rounds.begin(), a_contest_rounds.end(), b_contest_rounds.begin(), b_contest_rounds.end(),
-		[&](auto&& p) { add_contest_round(p.second, last_a_crid, skipped_a_contest_rounds, a_contests); },
-		[&](auto&& p) { add_contest_round(p.second, last_b_crid, skipped_b_contest_rounds, b_contests); },
-		[](auto&& l, auto&& r) { return l.second.begins <= r.second.begins; });
+	merge(
+	   a_contest_rounds.begin(), a_contest_rounds.end(),
+	   b_contest_rounds.begin(), b_contest_rounds.end(),
+	   [&](auto&& p) {
+		   add_contest_round(p.second, last_a_crid, skipped_a_contest_rounds,
+		                     a_contests);
+	   },
+	   [&](auto&& p) {
+		   add_contest_round(p.second, last_b_crid, skipped_b_contest_rounds,
+		                     b_contests);
+	   },
+	   [](auto&& l, auto&& r) { return l.second.begins <= r.second.begins; });
 }
 
-int64_t new_contest_round_id(decltype(a_contest_rounds)& crmap, int64_t contest_round_id, bool try_skipped = false) {
+int64_t new_contest_round_id(decltype(a_contest_rounds)& crmap,
+                             int64_t contest_round_id,
+                             bool try_skipped = false) {
 	auto it = crmap.find(contest_round_id);
 	if (it == crmap.end()) {
 		if (try_skipped) {
-			auto& skipped = (&crmap == &a_contest_rounds ? skipped_a_contest_rounds : skipped_b_contest_rounds);
+			auto& skipped =
+			   (&crmap == &a_contest_rounds ? skipped_a_contest_rounds
+			                                : skipped_b_contest_rounds);
 			auto it2 = skipped.find(contest_round_id);
 			if (it2 != skipped.end())
 				return it2->second;
 		}
 
-		THROW("Trying to get new id of a nonexistent contest_round (id: ", contest_round_id, ')');
+		THROW("Trying to get new id of a nonexistent contest_round (id: ",
+		      contest_round_id, ')');
 	}
 
 	return it->second.replacer->id;
@@ -517,14 +601,20 @@ struct ContestProblem {
 };
 
 map<int64_t, int64_t> skipped_a_contest_problems, skipped_b_contest_problems;
-map<int64_t, ContestProblem> a_contest_problems, b_contest_problems, new_contest_problems;
+map<int64_t, ContestProblem> a_contest_problems, b_contest_problems,
+   new_contest_problems;
 
 void load_contest_problems() {
 	ContestProblem cp;
 	auto process_contest_problems = [&](MySQL::Connection& conn, auto& cmap) {
-		auto stmt = conn.prepare("SELECT id, contest_round_id, contest_id, problem_id, name, item, final_selecting_method, reveal_score FROM contest_problems ORDER BY id");
+		auto stmt =
+		   conn.prepare("SELECT id, contest_round_id, contest_id, problem_id, "
+		                "name, item, final_selecting_method, reveal_score FROM "
+		                "contest_problems ORDER BY id");
 		stmt.bindAndExecute();
-		stmt.res_bind_all(cp.id, cp.contest_round_id, cp.contest_id, cp.problem_id, cp.name, cp.item, cp.final_selecting_method, cp.reveal_score);
+		stmt.res_bind_all(cp.id, cp.contest_round_id, cp.contest_id,
+		                  cp.problem_id, cp.name, cp.item,
+		                  cp.final_selecting_method, cp.reveal_score);
 		while (stmt.next())
 			cmap.emplace(cp.id, cp);
 	};
@@ -533,39 +623,65 @@ void load_contest_problems() {
 	process_contest_problems(b_conn, b_contest_problems);
 
 	new_conn.update("DELETE FROM contest_problems");
-	auto stmt = new_conn.prepare("INSERT INTO contest_problems(id, contest_round_id, contest_id, problem_id, name, item, final_selecting_method, reveal_score) VALUES(?,?,?,?,?,?,?,?)");
-	auto add_contest_problem = [&, nid = 0ll](ContestProblem& cp, auto& last_cpid, auto& skipped_contest_problems, auto& cmap, auto& crmap, auto& pmap) mutable {
-		while (++last_cpid < cp.id)
-			skipped_contest_problems.emplace(last_cpid, ++nid);
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO contest_problems(id, contest_round_id, contest_id, "
+	   "problem_id, name, item, final_selecting_method, reveal_score) "
+	   "VALUES(?,?,?,?,?,?,?,?)");
+	auto add_contest_problem =
+	   [&, nid = 0ll](ContestProblem& cp, auto& last_cpid,
+	                  auto& skipped_contest_problems, auto& cmap, auto& crmap,
+	                  auto& pmap) mutable {
+		   while (++last_cpid < cp.id)
+			   skipped_contest_problems.emplace(last_cpid, ++nid);
 
-		auto& ncp = new_contest_problems[++nid] = cp;
-		ncp.id = nid;
-		ncp.contest_id = new_contest_id(cmap, ncp.contest_id);
-		ncp.contest_round_id = new_contest_round_id(crmap, ncp.contest_round_id);
-		ncp.problem_id = new_problem_id(pmap, ncp.problem_id);
-		cp.replacer = &ncp;
+		   auto& ncp = new_contest_problems[++nid] = cp;
+		   ncp.id = nid;
+		   ncp.contest_id = new_contest_id(cmap, ncp.contest_id);
+		   ncp.contest_round_id =
+		      new_contest_round_id(crmap, ncp.contest_round_id);
+		   ncp.problem_id = new_problem_id(pmap, ncp.problem_id);
+		   cp.replacer = &ncp;
 
-		stmt.bindAndExecute(ncp.id, ncp.contest_round_id, ncp.contest_id, ncp.problem_id, ncp.name, ncp.item, ncp.final_selecting_method, ncp.reveal_score);
-	};
+		   stmt.bindAndExecute(ncp.id, ncp.contest_round_id, ncp.contest_id,
+		                       ncp.problem_id, ncp.name, ncp.item,
+		                       ncp.final_selecting_method, ncp.reveal_score);
+	   };
 
 	int64_t last_a_cpid = 0, last_b_cpid = 0;
-	merge(a_contest_problems.begin(), a_contest_problems.end(), b_contest_problems.begin(), b_contest_problems.end(),
-		[&](auto&& p) { add_contest_problem(p.second, last_a_cpid, skipped_a_contest_problems, a_contests, a_contest_rounds, a_problems); },
-		[&](auto&& p) { add_contest_problem(p.second, last_b_cpid, skipped_b_contest_problems, b_contests, b_contest_rounds, b_problems); },
-		[](auto&& l, auto&& r) { return l.second.contest_round_id <= r.second.contest_round_id; });
+	merge(
+	   a_contest_problems.begin(), a_contest_problems.end(),
+	   b_contest_problems.begin(), b_contest_problems.end(),
+	   [&](auto&& p) {
+		   add_contest_problem(p.second, last_a_cpid,
+		                       skipped_a_contest_problems, a_contests,
+		                       a_contest_rounds, a_problems);
+	   },
+	   [&](auto&& p) {
+		   add_contest_problem(p.second, last_b_cpid,
+		                       skipped_b_contest_problems, b_contests,
+		                       b_contest_rounds, b_problems);
+	   },
+	   [](auto&& l, auto&& r) {
+		   return l.second.contest_round_id <= r.second.contest_round_id;
+	   });
 }
 
-int64_t new_contest_problem_id(decltype(a_contest_problems)& cpmap, int64_t contest_problem_id, bool try_skipped = false) {
+int64_t new_contest_problem_id(decltype(a_contest_problems)& cpmap,
+                               int64_t contest_problem_id,
+                               bool try_skipped = false) {
 	auto it = cpmap.find(contest_problem_id);
 	if (it == cpmap.end()) {
 		if (try_skipped) {
-			auto& skipped = (&cpmap == &a_contest_problems ? skipped_a_contest_problems : skipped_b_contest_problems);
+			auto& skipped =
+			   (&cpmap == &a_contest_problems ? skipped_a_contest_problems
+			                                  : skipped_b_contest_problems);
 			auto it2 = skipped.find(contest_problem_id);
 			if (it2 != skipped.end())
 				return it2->second;
 		}
 
-		THROW("Trying to get new id of a nonexistent contest_problem (id: ", contest_problem_id, ')');
+		THROW("Trying to get new id of a nonexistent contest_problem (id: ",
+		      contest_problem_id, ')');
 	}
 
 	return it->second.replacer->id;
@@ -575,12 +691,16 @@ void load_contest_users() {
 	auto process_ptags = [&](MySQL::Connection& conn, auto& umap, auto& cmap) {
 		int64_t user_id, contest_id;
 		int mode;
-		auto instmt = conn.prepare("SELECT user_id, contest_id, mode FROM contest_users");
+		auto instmt =
+		   conn.prepare("SELECT user_id, contest_id, mode FROM contest_users");
 		instmt.bindAndExecute();
 		instmt.res_bind_all(user_id, contest_id, mode);
-		auto outstmt = new_conn.prepare("INSERT IGNORE INTO contest_users(user_id, contest_id, mode) VALUES(?,?,?)"); // IGNORE because of merged accounts
+		auto outstmt = new_conn.prepare(
+		   "INSERT IGNORE INTO contest_users(user_id, contest_id, mode) "
+		   "VALUES(?,?,?)"); // IGNORE because of merged accounts
 		while (instmt.next())
-			outstmt.bindAndExecute(new_user_id(umap, user_id), new_contest_id(cmap, contest_id), mode);
+			outstmt.bindAndExecute(new_user_id(umap, user_id),
+			                       new_contest_id(cmap, contest_id), mode);
 	};
 
 	new_conn.update("DELETE FROM contest_users");
@@ -592,8 +712,11 @@ void load_contest_files() {
 	remove_r(concat(new_build, "/files/"));
 	mkdir(concat(new_build, "/files/"));
 	new_conn.update("DELETE FROM files");
-	auto instmt = new_conn.prepare("INSERT INTO files(id, contest_id, name, description, file_size, modified, creator) VALUES(?,?,?,?,?,?,?)");
-	auto process_files = [&](MySQL::Connection& conn, auto& umap, auto& cmap, auto&& build_dir) {
+	auto instmt =
+	   new_conn.prepare("INSERT INTO files(id, contest_id, name, description, "
+	                    "file_size, modified, creator) VALUES(?,?,?,?,?,?,?)");
+	auto process_files = [&](MySQL::Connection& conn, auto& umap, auto& cmap,
+	                         auto&& build_dir) {
 		InplaceBuff<64> id;
 		int64_t contest_id;
 		InplaceBuff<64> name, description;
@@ -601,16 +724,20 @@ void load_contest_files() {
 		InplaceBuff<32> modified;
 		MySQL::Optional<int64_t> creator;
 
-		auto stmt = conn.prepare("SELECT id, contest_id, name, description, file_size, modified, creator FROM files");
+		auto stmt = conn.prepare("SELECT id, contest_id, name, description, "
+		                         "file_size, modified, creator FROM files");
 		stmt.bindAndExecute();
-		stmt.res_bind_all(id, contest_id, name, description, file_size, modified, creator);
+		stmt.res_bind_all(id, contest_id, name, description, file_size,
+		                  modified, creator);
 		while (stmt.next()) {
 			contest_id = new_contest_id(cmap, contest_id);
 			Optional<int64_t> new_creator = creator;
 			if (creator.has_value())
 				new_creator = new_user_id(umap, *creator);
-			instmt.bindAndExecute(id, contest_id, name, description, file_size, modified, new_creator);
-			link(concat(build_dir, "/files/", id), concat(new_build, "/files/", id));
+			instmt.bindAndExecute(id, contest_id, name, description, file_size,
+			                      modified, new_creator);
+			link(concat(build_dir, "/files/", id),
+			     concat(new_build, "/files/", id));
 		}
 	};
 
@@ -620,18 +747,24 @@ void load_contest_files() {
 
 void load_contest_entry_tokens() {
 	new_conn.update("DELETE FROM contest_entry_tokens");
-	auto instmt = new_conn.prepare("INSERT INTO contest_entry_tokens(token, contest_id, short_token, short_token_expiration) VALUES(?,?,?,?)");
+	auto instmt =
+	   new_conn.prepare("INSERT INTO contest_entry_tokens(token, contest_id, "
+	                    "short_token, short_token_expiration) VALUES(?,?,?,?)");
 	auto process_files = [&](MySQL::Connection& conn, auto& cmap) {
 		InplaceBuff<64> token;
 		int64_t contest_id;
 		MySQL::Optional<InplaceBuff<64>> short_token, short_token_expiration;
 
-		auto stmt = conn.prepare("SELECT token, contest_id, short_token, short_token_expiration FROM contest_entry_tokens");
+		auto stmt =
+		   conn.prepare("SELECT token, contest_id, short_token, "
+		                "short_token_expiration FROM contest_entry_tokens");
 		stmt.bindAndExecute();
-		stmt.res_bind_all(token, contest_id, short_token, short_token_expiration);
+		stmt.res_bind_all(token, contest_id, short_token,
+		                  short_token_expiration);
 		while (stmt.next()) {
 			contest_id = new_contest_id(cmap, contest_id);
-			instmt.bindAndExecute(token, contest_id, short_token, short_token_expiration);
+			instmt.bindAndExecute(token, contest_id, short_token,
+			                      short_token_expiration);
 		}
 	};
 
@@ -658,7 +791,7 @@ struct Submission {
 map<int64_t, int64_t> skipped_a_submissions, skipped_b_submissions;
 map<int64_t, Submission> a_submissions, b_submissions, new_submissions;
 
-template<class T>
+template <class T>
 bool operator<(const Optional<T>& a, const Optional<T>& b) noexcept {
 	if (a.has_value() and b.has_value())
 		return a.value() < b.value();
@@ -669,14 +802,25 @@ bool operator<(const Optional<T>& a, const Optional<T>& b) noexcept {
 void load_submissions() {
 	Submission s;
 	auto process_submissions = [&](MySQL::Connection& conn, auto& cmap) {
-		auto stmt = conn.prepare("SELECT id, owner, problem_id, contest_problem_id, contest_round_id, contest_id, type, language, final_candidate, problem_final, contest_final, contest_initial_final, initial_status, full_status, submit_time, score, last_judgment, initial_report, final_report FROM submissions ORDER BY id");
+		auto stmt = conn.prepare(
+		   "SELECT id, owner, problem_id, contest_problem_id, "
+		   "contest_round_id, contest_id, type, language, final_candidate, "
+		   "problem_final, contest_final, contest_initial_final, "
+		   "initial_status, full_status, submit_time, score, last_judgment, "
+		   "initial_report, final_report FROM submissions ORDER BY id");
 		stmt.bindAndExecute();
 
 		MySQL::Optional<int64_t> owner;
-		MySQL::Optional<int64_t> contest_problem_id, contest_round_id, contest_id;
+		MySQL::Optional<int64_t> contest_problem_id, contest_round_id,
+		   contest_id;
 		MySQL::Optional<int64_t> score;
 
-		stmt.res_bind_all(s.id, owner, s.problem_id, contest_problem_id, contest_round_id, contest_id, s.type, s.language, s.final_candidate, s.problem_final, s.contest_final, s.contest_initial_final, s.initial_status, s.full_status, s.submit_time, score, s.last_judgment, s.initial_report, s.final_report);
+		stmt.res_bind_all(s.id, owner, s.problem_id, contest_problem_id,
+		                  contest_round_id, contest_id, s.type, s.language,
+		                  s.final_candidate, s.problem_final, s.contest_final,
+		                  s.contest_initial_final, s.initial_status,
+		                  s.full_status, s.submit_time, score, s.last_judgment,
+		                  s.initial_report, s.final_report);
 		while (stmt.next()) {
 			s.owner = owner;
 			s.contest_problem_id = contest_problem_id;
@@ -693,16 +837,26 @@ void load_submissions() {
 	new_conn.update("DELETE FROM submissions");
 	remove_r(concat(new_build, "/solutions/"));
 	mkdir(concat(new_build, "/solutions/"));
-	auto stmt = new_conn.prepare("INSERT INTO submissions(id, owner, problem_id, contest_problem_id, contest_round_id, contest_id, type, language, final_candidate, problem_final, contest_final, contest_initial_final, initial_status, full_status, submit_time, score, last_judgment, initial_report, final_report) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO submissions(id, owner, problem_id, contest_problem_id, "
+	   "contest_round_id, contest_id, type, language, final_candidate, "
+	   "problem_final, contest_final, contest_initial_final, initial_status, "
+	   "full_status, submit_time, score, last_judgment, initial_report, "
+	   "final_report) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 	AVLDictSet<array<Optional<int64_t>, 3>> finals_to_update;
 
-	auto add_submission = [&, nid = 0ll](Submission& s, auto& last_sid, auto& skipped_submissions, auto& umap, auto& cmap, auto& crmap, auto& cpmap, auto& pmap, auto&& old_build) mutable {
-
+	auto add_submission = [&, nid = 0ll](Submission& s, auto& last_sid,
+	                                     auto& skipped_submissions, auto& umap,
+	                                     auto& cmap, auto& crmap, auto& cpmap,
+	                                     auto& pmap, auto&& old_build) mutable {
 		while (++last_sid < s.id)
 			skipped_submissions.emplace(last_sid, ++nid);
 
-		// To avoid model solution duplications, we import solutions of the newest package of the problem
-		if (EnumVal<SubmissionType>(s.type) == SubmissionType::PROBLEM_SOLUTION and &pmap[s.problem_id] != pmap[s.problem_id].replacer->replacer) {
+		// To avoid model solution duplications, we import solutions of the
+		// newest package of the problem
+		if (EnumVal<SubmissionType>(s.type) ==
+		       SubmissionType::PROBLEM_SOLUTION and
+		    &pmap[s.problem_id] != pmap[s.problem_id].replacer->replacer) {
 			skipped_submissions.emplace(last_sid, ++nid);
 			return;
 		}
@@ -715,52 +869,77 @@ void load_submissions() {
 		if (ns.contest_id.has_value())
 			ns.contest_id = new_contest_id(cmap, *ns.contest_id);
 		if (ns.contest_round_id.has_value())
-			ns.contest_round_id = new_contest_round_id(crmap, *ns.contest_round_id);
+			ns.contest_round_id =
+			   new_contest_round_id(crmap, *ns.contest_round_id);
 		if (ns.contest_problem_id.has_value())
-			ns.contest_problem_id = new_contest_problem_id(cpmap, *ns.contest_problem_id);
+			ns.contest_problem_id =
+			   new_contest_problem_id(cpmap, *ns.contest_problem_id);
 		s.replacer = &ns;
 
-		stmt.bindAndExecute(ns.id, ns.owner, ns.problem_id, ns.contest_problem_id, ns.contest_round_id, ns.contest_id, ns.type, ns.language, ns.final_candidate, ns.problem_final, ns.contest_final, ns.contest_initial_final, ns.initial_status, ns.full_status, ns.submit_time, ns.score, ns.last_judgment, ns.initial_report, ns.final_report);
+		stmt.bindAndExecute(
+		   ns.id, ns.owner, ns.problem_id, ns.contest_problem_id,
+		   ns.contest_round_id, ns.contest_id, ns.type, ns.language,
+		   ns.final_candidate, ns.problem_final, ns.contest_final,
+		   ns.contest_initial_final, ns.initial_status, ns.full_status,
+		   ns.submit_time, ns.score, ns.last_judgment, ns.initial_report,
+		   ns.final_report);
 
 		if ((ns.id & 255) == 0)
 			stdlog("Submissions ", ns.id);
 
-		link(concat(old_build, "/solutions/", s.id), concat(new_build, "/solutions/", nid));
+		link(concat(old_build, "/solutions/", s.id),
+		     concat(new_build, "/solutions/", nid));
 
-		array<Optional<int64_t>, 3> ftu_elem {{
-			ns.owner,
-			ns.problem_id,
-			ns.contest_problem_id
-		}};
+		array<Optional<int64_t>, 3> ftu_elem {
+		   {ns.owner, ns.problem_id, ns.contest_problem_id}};
 
 		finals_to_update.emplace(ftu_elem);
 	};
 
 	int64_t last_a_sid = 0, last_b_sid = 0;
-	merge(a_submissions.begin(), a_submissions.end(), b_submissions.begin(), b_submissions.end(),
-		[&](auto&& p) { add_submission(p.second, last_a_sid, skipped_a_submissions, a_users, a_contests, a_contest_rounds, a_contest_problems, a_problems, a_build); },
-		[&](auto&& p) { add_submission(p.second, last_b_sid, skipped_b_submissions, b_users, b_contests, b_contest_rounds, b_contest_problems, b_problems, b_build); },
-		[](auto&& l, auto&& r) { return l.second.submit_time <= r.second.submit_time; });
+	merge(
+	   a_submissions.begin(), a_submissions.end(), b_submissions.begin(),
+	   b_submissions.end(),
+	   [&](auto&& p) {
+		   add_submission(p.second, last_a_sid, skipped_a_submissions, a_users,
+		                  a_contests, a_contest_rounds, a_contest_problems,
+		                  a_problems, a_build);
+	   },
+	   [&](auto&& p) {
+		   add_submission(p.second, last_b_sid, skipped_b_submissions, b_users,
+		                  b_contests, b_contest_rounds, b_contest_problems,
+		                  b_problems, b_build);
+	   },
+	   [](auto&& l, auto&& r) {
+		   return l.second.submit_time <= r.second.submit_time;
+	   });
 
 	stdlog("Updating finals (", finals_to_update.size(), " to go)");
 	finals_to_update.for_each([&, i = 0](auto&& ftu_elem) mutable {
-		submission::update_final(new_conn, ftu_elem[0], ftu_elem[1].value(), ftu_elem[2]);
+		submission::update_final(new_conn, ftu_elem[0], ftu_elem[1].value(),
+		                         ftu_elem[2]);
 		if ((++i & 255) == 0)
 			stdlog("Updated ", i);
 	});
 }
 
-int64_t new_submission_id(decltype(a_submissions)& smap, int64_t submission_id, bool try_skipped = false) {
+int64_t new_submission_id(decltype(a_submissions)& smap, int64_t submission_id,
+                          bool try_skipped = false) {
 	auto it = smap.find(submission_id);
-	if (it == smap.end() or it->second.replacer == nullptr) { // replacer == nullptr means that solution submission was ignored while merging submissions
+	if (it == smap.end() or
+	    it->second.replacer ==
+	       nullptr) { // replacer == nullptr means that solution submission was
+		              // ignored while merging submissions
 		if (try_skipped) {
-			auto& skipped = (&smap == &a_submissions ? skipped_a_submissions : skipped_b_submissions);
+			auto& skipped = (&smap == &a_submissions ? skipped_a_submissions
+			                                         : skipped_b_submissions);
 			auto it2 = skipped.find(submission_id);
 			if (it2 != skipped.end())
 				return it2->second;
 		}
 
-		THROW("Trying to get new id of a nonexistent submission (id: ", submission_id, ')');
+		THROW("Trying to get new id of a nonexistent submission (id: ",
+		      submission_id, ')');
 	}
 
 	return it->second.replacer->id;
@@ -779,13 +958,16 @@ struct Job {
 void load_jobs() {
 	deque<Job> a_jobs, b_jobs;
 	auto process_jobs = [&](MySQL::Connection& conn, auto& jdeq) {
-		auto stmt = conn.prepare("SELECT id, creator, type, priority, status, added, aux_id, info, data FROM jobs ORDER BY id");
+		auto stmt =
+		   conn.prepare("SELECT id, creator, type, priority, status, added, "
+		                "aux_id, info, data FROM jobs ORDER BY id");
 		stmt.bindAndExecute();
 
 		Job j;
 		MySQL::Optional<int64_t> creator, aux_id;
 
-		stmt.res_bind_all(j.id, creator, j.type, j.priority, j.status, j.added, aux_id, j.info, j.data);
+		stmt.res_bind_all(j.id, creator, j.type, j.priority, j.status, j.added,
+		                  aux_id, j.info, j.data);
 		while (stmt.next()) {
 			j.creator = creator;
 			j.aux_id = aux_id;
@@ -799,8 +981,12 @@ void load_jobs() {
 	new_conn.update("DELETE FROM jobs");
 	remove_r(concat(new_build, "/jobs_files/"));
 	mkdir(concat(new_build, "/jobs_files/"));
-	auto stmt = new_conn.prepare("INSERT INTO jobs(id, creator, type, priority, status, added, aux_id, info, data) VALUES(?,?,?,?,?,?,?,?,?)");
-	auto add_job = [&, next_id=0ll](Job& j, auto& umap, auto& cmap, auto& crmap, auto& cpmap, auto& pmap, auto& smap, auto&& old_build) mutable {
+	auto stmt =
+	   new_conn.prepare("INSERT INTO jobs(id, creator, type, priority, status, "
+	                    "added, aux_id, info, data) VALUES(?,?,?,?,?,?,?,?,?)");
+	auto add_job = [&, next_id = 0ll](Job& j, auto& umap, auto& cmap,
+	                                  auto& crmap, auto& cpmap, auto& pmap,
+	                                  auto& smap, auto&& old_build) mutable {
 		Job nj = j;
 		nj.id = ++next_id;
 		if (nj.creator.has_value())
@@ -809,7 +995,8 @@ void load_jobs() {
 		switch (JobType(nj.type)) {
 		case JobType::JUDGE_SUBMISSION: {
 			int64_t sid = nj.aux_id.value();
-			int64_t pid = strtoull(intentionalUnsafeStringView(jobs::extractDumpedString(nj.info)));
+			int64_t pid = strtoull(
+			   intentionalUnsafeStringView(jobs::extractDumpedString(nj.info)));
 			sid = new_submission_id(smap, sid, true);
 			pid = new_problem_id(pmap, pid, true);
 
@@ -856,68 +1043,90 @@ void load_jobs() {
 		}
 		}
 
-		stmt.bindAndExecute(nj.id, nj.creator, nj.type, nj.priority, nj.status, nj.added, nj.aux_id, nj.info, nj.data);
+		stmt.bindAndExecute(nj.id, nj.creator, nj.type, nj.priority, nj.status,
+		                    nj.added, nj.aux_id, nj.info, nj.data);
 
 		auto old_job_zip = concat(old_build, "/jobs_files/", j.id, ".zip");
 		if (access(old_job_zip, F_OK) == 0)
 			link(old_job_zip, concat(new_build, "/jobs_files/", nj.id, ".zip"));
 	};
 
-	merge(a_jobs.begin(), a_jobs.end(), b_jobs.begin(), b_jobs.end(),
-		[&](auto&& x) { add_job(x, a_users, a_contests, a_contest_rounds, a_contest_problems, a_problems, a_submissions, a_build); },
-		[&](auto&& x) { add_job(x, b_users, b_contests, b_contest_rounds, b_contest_problems, b_problems, b_submissions, b_build); },
-		[](auto&& l, auto&& r) { return l.added <= r.added; });
+	merge(
+	   a_jobs.begin(), a_jobs.end(), b_jobs.begin(), b_jobs.end(),
+	   [&](auto&& x) {
+		   add_job(x, a_users, a_contests, a_contest_rounds, a_contest_problems,
+		           a_problems, a_submissions, a_build);
+	   },
+	   [&](auto&& x) {
+		   add_job(x, b_users, b_contests, b_contest_rounds, b_contest_problems,
+		           b_problems, b_submissions, b_build);
+	   },
+	   [](auto&& l, auto&& r) { return l.added <= r.added; });
 }
 
 void insert_problem_time_limits_reseting_jobs() {
-	auto stmt = new_conn.prepare("INSERT INTO jobs(creator, status, priority, type, added, aux_id, info, data) VALUES(NULL, " JSTATUS_PENDING_STR ", ?, " JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR ", ?, ?, '', '')");
+	auto stmt = new_conn.prepare(
+	   "INSERT INTO jobs(creator, status, priority, type, added, aux_id, info, "
+	   "data) VALUES(NULL, " JSTATUS_PENDING_STR
+	   ", ?, " JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR
+	   ", ?, ?, '', '')");
 	for (auto&& p : new_problems) {
 		auto pid = p.first;
-		stmt.bindAndExecute(priority(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION), mysql_date(), pid);
+		stmt.bindAndExecute(
+		   priority(JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION),
+		   mysql_date(), pid);
 	}
 }
 
-int main2(int argc, char **argv) {
+int main2(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	stdlog.use(stdout);
 
 	if (argc != 4) {
 		errlog.label(false);
-		errlog("Use: importer <sim1_build> <sim2_build> <sim_result_build> where sim1_build and sim2_build are paths to merged sims build/ directories and sim_result_build is a path to fresh installed sim where the result will be placed.\nAll big files will be hard linked instead of copies, overwriting old files will overwrite the new ones");
+		errlog("Use: importer <sim1_build> <sim2_build> <sim_result_build> "
+		       "where sim1_build and sim2_build are paths to merged sims "
+		       "build/ directories and sim_result_build is a path to fresh "
+		       "installed sim where the result will be placed.\n"
+		       "All big files will be hard linked instead of copies, "
+		       "overwriting old files will overwrite the new ones");
 		return 1;
 	}
 
 	try {
 		// Get connection
 		a_conn = MySQL::make_conn_with_credential_file(
-			concat_tostr(a_build = argv[1], "/.db.config"));
+		   concat_tostr(a_build = argv[1], "/.db.config"));
 		b_conn = MySQL::make_conn_with_credential_file(
-			concat_tostr(b_build = argv[2], "/.db.config"));
+		   concat_tostr(b_build = argv[2], "/.db.config"));
 		new_conn = MySQL::make_conn_with_credential_file(
-			concat_tostr(new_build = argv[3], "/.db.config"));
-		// importer_db = SQLite::Connection("importer.db",
-			// SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+		   concat_tostr(new_build = argv[3], "/.db.config"));
+		// importer_db = SQLite::Connection("importer.db", SQLITE_OPEN_READWRITE
+		// | SQLITE_OPEN_CREATE);
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to databases\033[m - ", e.what());
 		return 4;
 	}
 
-	// a_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
-	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
-	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// a_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
+	// b_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
+	// new_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
 
 	// Kill both web-servers and job-servers to not interrupt with the merging
 	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
 	Spawner::run(killinstc, {
-		killinstc,
-		concat_tostr(a_build, "/sim-server"),
-		concat_tostr(a_build, "/job-server"),
-		concat_tostr(b_build, "/sim-server"),
-		concat_tostr(b_build, "/job-server"),
-		concat_tostr(new_build, "/sim-server"),
-		concat_tostr(new_build, "/job-server"),
-	});
+	                           killinstc,
+	                           concat_tostr(a_build, "/sim-server"),
+	                           concat_tostr(a_build, "/job-server"),
+	                           concat_tostr(b_build, "/sim-server"),
+	                           concat_tostr(b_build, "/job-server"),
+	                           concat_tostr(new_build, "/sim-server"),
+	                           concat_tostr(new_build, "/job-server"),
+	                        });
 
 	// Users
 	load_users();
@@ -962,19 +1171,17 @@ int main2(int argc, char **argv) {
 namespace old_jobs {
 
 /// Append an integer @p x in binary format to the @p buff
-template<class Integer>
+template <class Integer>
 inline std::enable_if_t<std::is_integral<Integer>::value, void>
-	appendDumpedInt(std::string& buff, Integer x)
-{
+appendDumpedInt(std::string& buff, Integer x) {
 	buff.append(sizeof(x), '\0');
 	for (uint i = 1, shift = 0; i <= sizeof(x); ++i, shift += 8)
 		buff[buff.size() - i] = (x >> shift) & 0xFF;
 }
 
-template<class Integer>
+template <class Integer>
 inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
-	extractDumpedInt(StringView& dumped_str)
-{
+extractDumpedInt(StringView& dumped_str) {
 	throw_assert(dumped_str.size() >= sizeof(Integer));
 	Integer x = 0;
 	for (int i = sizeof(x) - 1, shift = 0; i >= 0; --i, shift += 8)
@@ -983,10 +1190,9 @@ inline std::enable_if_t<std::is_integral<Integer>::value, Integer>
 	return x;
 }
 
-template<class Integer>
+template <class Integer>
 inline std::enable_if_t<std::is_integral<Integer>::value, void>
-	extractDumpedInt(Integer& x, StringView& dumped_str)
-{
+extractDumpedInt(Integer& x, StringView& dumped_str) {
 	x = extractDumpedInt<Integer>(dumped_str);
 }
 
@@ -1014,7 +1220,7 @@ inline std::string extractDumpedString(StringView& dumped_str) {
 
 inline std::string extractDumpedString(StringView&& dumped_str) {
 	return extractDumpedString(dumped_str); /* std::move() is intentionally
-		omitted in order to call the above implementation */
+	    omitted in order to call the above implementation */
 }
 
 struct AddProblemInfo {
@@ -1031,10 +1237,11 @@ struct AddProblemInfo {
 	AddProblemInfo() = default;
 
 	AddProblemInfo(const std::string& n, const std::string& l, uint64_t ml,
-			uint64_t gtl, bool rtl, bool is, bool sfnt, bool rs, ProblemType pt)
-		: name(n), label(l), memory_limit(ml), global_time_limit(gtl),
-			reset_time_limits(rtl), ignore_simfile(is),
-			seek_for_new_tests(sfnt), reset_scoring(rs), problem_type(pt) {}
+	               uint64_t gtl, bool rtl, bool is, bool sfnt, bool rs,
+	               ProblemType pt)
+	   : name(n), label(l), memory_limit(ml), global_time_limit(gtl),
+	     reset_time_limits(rtl), ignore_simfile(is), seek_for_new_tests(sfnt),
+	     reset_scoring(rs), problem_type(pt) {}
 
 	AddProblemInfo(StringView str) {
 		name = extractDumpedString(str);
@@ -1049,9 +1256,9 @@ struct AddProblemInfo {
 		reset_scoring = (mask & 8);
 
 		problem_type = static_cast<ProblemType>(
-			extractDumpedInt<std::underlying_type_t<ProblemType>>(str));
+		   extractDumpedInt<std::underlying_type_t<ProblemType>>(str));
 		stage = static_cast<Stage>(
-			extractDumpedInt<std::underlying_type_t<Stage>>(str));
+		   extractDumpedInt<std::underlying_type_t<Stage>>(str));
 	}
 
 	std::string dump() const {
@@ -1062,7 +1269,8 @@ struct AddProblemInfo {
 		appendDumpedInt(res, global_time_limit);
 
 		uint8_t mask = reset_time_limits | (int(ignore_simfile) << 1) |
-			(int(seek_for_new_tests) << 2) | (int(reset_scoring) << 3);
+		               (int(seek_for_new_tests) << 2) |
+		               (int(reset_scoring) << 3);
 		appendDumpedInt(res, mask);
 
 		appendDumpedInt(res, std::underlying_type_t<ProblemType>(problem_type));
@@ -1077,7 +1285,8 @@ struct MergeProblemsInfo {
 
 	MergeProblemsInfo() = default;
 
-	MergeProblemsInfo(uint64_t tpid, bool rts) noexcept : target_problem_id(tpid), rejudge_transferred_submissions(rts) {}
+	MergeProblemsInfo(uint64_t tpid, bool rts) noexcept
+	   : target_problem_id(tpid), rejudge_transferred_submissions(rts) {}
 
 	MergeProblemsInfo(StringView str) {
 		extractDumpedInt(target_problem_id, str);
@@ -1097,10 +1306,10 @@ struct MergeProblemsInfo {
 };
 
 void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
-	StringView job_info, bool notify_job_server);
+                 StringView job_info, bool notify_job_server);
 
 void restart_job(MySQL::Connection& mysql, StringView job_id,
-	bool notify_job_server);
+                 bool notify_job_server);
 
 // Notifies the Job server that there are jobs to do
 inline void notify_job_server() noexcept {
@@ -1109,7 +1318,7 @@ inline void notify_job_server() noexcept {
 
 } // namespace old_jobs
 
-int main3(int argc, char **argv) {
+int main3(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	stdlog.use(stdout);
@@ -1123,28 +1332,34 @@ int main3(int argc, char **argv) {
 	try {
 		// Get connection
 		new_conn = MySQL::make_conn_with_credential_file(
-			concat_tostr(new_build = argv[1], "/.db.config"));
-		// importer_db = SQLite::Connection("importer.db",
-			// SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+		   concat_tostr(new_build = argv[1], "/.db.config"));
+		// importer_db = SQLite::Connection(
+		//    "importer.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to databases\033[m - ", e.what());
 		return 4;
 	}
 
-	// a_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
-	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
-	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// a_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
+	// b_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
+	// new_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
 
 	// Kill both web-servers and job-servers to not interrupt with the merging
 	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
 	Spawner::run(killinstc, {
-		killinstc,
-		concat_tostr(new_build, "/sim-server"),
-		concat_tostr(new_build, "/job-server"),
-	});
+	                           killinstc,
+	                           concat_tostr(new_build, "/sim-server"),
+	                           concat_tostr(new_build, "/job-server"),
+	                        });
 
 	// Upgrade jobs
-	auto in_stmt = new_conn.prepare("SELECT id, info FROM jobs WHERE type IN (" JTYPE_ADD_PROBLEM_STR "," JTYPE_REUPLOAD_PROBLEM_STR "," JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "," JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR ")");
+	auto in_stmt = new_conn.prepare(
+	   "SELECT id, info FROM jobs WHERE type IN (" JTYPE_ADD_PROBLEM_STR
+	   "," JTYPE_REUPLOAD_PROBLEM_STR "," JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR
+	   "," JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR ")");
 	in_stmt.bindAndExecute();
 
 	InplaceBuff<64> id, info;
@@ -1169,7 +1384,8 @@ int main3(int argc, char **argv) {
 		new_apinfo.seek_for_new_tests = old_apinfo.seek_for_new_tests;
 		new_apinfo.reset_scoring = old_apinfo.reset_scoring;
 		new_apinfo.problem_type = old_apinfo.problem_type;
-		new_apinfo.stage = EnumVal<jobs::AddProblemInfo::Stage>(old_apinfo.stage);
+		new_apinfo.stage =
+		   EnumVal<jobs::AddProblemInfo::Stage>(old_apinfo.stage);
 
 		out_stmt.bindAndExecute(new_apinfo.dump(), id);
 	}
@@ -1177,7 +1393,7 @@ int main3(int argc, char **argv) {
 	return 0;
 }
 
-int main4(int argc, char **argv) {
+int main4(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
 	stdlog.use(stdout);
@@ -1191,30 +1407,53 @@ int main4(int argc, char **argv) {
 	try {
 		// Get connection
 		new_conn = MySQL::make_conn_with_credential_file(
-			concat_tostr(new_build = argv[1], "/.db.config"));
-		// importer_db = SQLite::Connection("importer.db",
-			// SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+		   concat_tostr(new_build = argv[1], "/.db.config"));
+		// importer_db = SQLite::Connection(
+		//    "importer.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
 	} catch (const std::exception& e) {
 		errlog("\033[31mFailed to connect to databases\033[m - ", e.what());
 		return 4;
 	}
 
-	// a_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
-	// b_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
-	// new_conn.update("SET character_set_results=NULL"); // Disable stupid conversions
+	// a_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
+	// b_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
+	// new_conn.update(
+	//    "SET character_set_results=NULL"); // Disable stupid conversions
 
 	// Kill both web-servers and job-servers to not interrupt with the merging
 	auto killinstc = concat_tostr(getExecDir(getpid()), "/../src/killinstc");
 	Spawner::run(killinstc, {
-		killinstc,
-		concat_tostr(new_build, "/sim-server"),
-		concat_tostr(new_build, "/job-server"),
-	});
+	                           killinstc,
+	                           concat_tostr(new_build, "/sim-server"),
+	                           concat_tostr(new_build, "/job-server"),
+	                        });
 
-	try { new_conn.update("ALTER TABLE problems ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
-	try { new_conn.update("ALTER TABLE submissions ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
-	try { new_conn.update("ALTER TABLE jobs ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
-	try { new_conn.update("ALTER TABLE files ADD COLUMN file_id int unsigned NULL AFTER id"); } catch (...) { stdlog("exception in line: ", __LINE__); }
+	try {
+		new_conn.update("ALTER TABLE problems ADD COLUMN file_id int unsigned "
+		                "NULL AFTER id");
+	} catch (...) {
+		stdlog("exception in line: ", __LINE__);
+	}
+	try {
+		new_conn.update("ALTER TABLE submissions ADD COLUMN file_id int "
+		                "unsigned NULL AFTER id");
+	} catch (...) {
+		stdlog("exception in line: ", __LINE__);
+	}
+	try {
+		new_conn.update(
+		   "ALTER TABLE jobs ADD COLUMN file_id int unsigned NULL AFTER id");
+	} catch (...) {
+		stdlog("exception in line: ", __LINE__);
+	}
+	try {
+		new_conn.update(
+		   "ALTER TABLE files ADD COLUMN file_id int unsigned NULL AFTER id");
+	} catch (...) {
+		stdlog("exception in line: ", __LINE__);
+	}
 
 	enum FileType { SUBMISSION, FILE, PROBLEM, JOB };
 
@@ -1229,7 +1468,8 @@ int main4(int argc, char **argv) {
 
 	// Collect problems
 	{
-		auto stmt = new_conn.prepare("SELECT id, added FROM problems ORDER BY id");
+		auto stmt =
+		   new_conn.prepare("SELECT id, added FROM problems ORDER BY id");
 		stmt.bindAndExecute();
 		File file;
 		file.type = PROBLEM;
@@ -1240,7 +1480,8 @@ int main4(int argc, char **argv) {
 
 	// Collect submissions
 	{
-		auto stmt = new_conn.prepare("SELECT id, submit_time FROM submissions ORDER BY id");
+		auto stmt = new_conn.prepare(
+		   "SELECT id, submit_time FROM submissions ORDER BY id");
 		stmt.bindAndExecute();
 		File file;
 		file.type = SUBMISSION;
@@ -1251,7 +1492,11 @@ int main4(int argc, char **argv) {
 
 		// Merge
 		deque<File> merged;
-		merge(final_files.begin(), final_files.end(), submissions.begin(), submissions.end(), [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& a, auto&& b) { return a.date <= b.date; });
+		merge(
+		   final_files.begin(), final_files.end(), submissions.begin(),
+		   submissions.end(), [&](auto&& x) { merged.emplace_back(x); },
+		   [&](auto&& x) { merged.emplace_back(x); },
+		   [&](auto&& a, auto&& b) { return a.date <= b.date; });
 		final_files = merged;
 	}
 
@@ -1268,13 +1513,18 @@ int main4(int argc, char **argv) {
 
 		// Merge
 		deque<File> merged;
-		merge(final_files.begin(), final_files.end(), jobs.begin(), jobs.end(), [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& a, auto&& b) { return a.date <= b.date; });
+		merge(
+		   final_files.begin(), final_files.end(), jobs.begin(), jobs.end(),
+		   [&](auto&& x) { merged.emplace_back(x); },
+		   [&](auto&& x) { merged.emplace_back(x); },
+		   [&](auto&& a, auto&& b) { return a.date <= b.date; });
 		final_files = merged;
 	}
 
 	// Collect files
 	{
-		auto stmt = new_conn.prepare("SELECT id, modified FROM files ORDER BY id");
+		auto stmt =
+		   new_conn.prepare("SELECT id, modified FROM files ORDER BY id");
 		stmt.bindAndExecute();
 		File file;
 		file.type = FILE;
@@ -1285,16 +1535,24 @@ int main4(int argc, char **argv) {
 
 		// Merge
 		deque<File> merged;
-		merge(final_files.begin(), final_files.end(), files.begin(), files.end(), [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& x) { merged.emplace_back(x); }, [&](auto&& a, auto&& b) { return a.date <= b.date; });
+		merge(
+		   final_files.begin(), final_files.end(), files.begin(), files.end(),
+		   [&](auto&& x) { merged.emplace_back(x); },
+		   [&](auto&& x) { merged.emplace_back(x); },
+		   [&](auto&& a, auto&& b) { return a.date <= b.date; });
 		final_files = merged;
 	}
 
-	auto problem_updater = new_conn.prepare("UPDATE problems SET file_id=? WHERE id=?");
-	auto submission_updater = new_conn.prepare("UPDATE submissions SET file_id=? WHERE id=?");
+	auto problem_updater =
+	   new_conn.prepare("UPDATE problems SET file_id=? WHERE id=?");
+	auto submission_updater =
+	   new_conn.prepare("UPDATE submissions SET file_id=? WHERE id=?");
 	auto job_updater = new_conn.prepare("UPDATE jobs SET file_id=? WHERE id=?");
-	auto file_updater = new_conn.prepare("UPDATE files SET file_id=? WHERE id=?");
+	auto file_updater =
+	   new_conn.prepare("UPDATE files SET file_id=? WHERE id=?");
 
-	auto internal_file_inserter = new_conn.prepare("INSERT INTO internal_files(id) VALUES(?)");
+	auto internal_file_inserter =
+	   new_conn.prepare("INSERT INTO internal_files(id) VALUES(?)");
 
 	new_conn.update("SET foreign_key_checks=0");
 	new_conn.update("DELETE FROM internal_files");
@@ -1309,24 +1567,25 @@ int main4(int argc, char **argv) {
 		file.new_file_id = ++fid;
 		if (file.type == PROBLEM) {
 			link(concat(new_build, "/problems/", file.orig_id, ".zip"),
-				concat(new_build, "/internal_files/", fid));
+			     concat(new_build, "/internal_files/", fid));
 			problem_updater.bindAndExecute(fid, file.orig_id);
 		} else if (file.type == SUBMISSION) {
 			link(concat(new_build, "/solutions/", file.orig_id),
-				concat(new_build, "/internal_files/", fid));
+			     concat(new_build, "/internal_files/", fid));
 			submission_updater.bindAndExecute(fid, file.orig_id);
 		} else if (file.type == JOB) {
-			if (access(concat(new_build, "/jobs_files/", file.orig_id, ".zip"), F_OK)) {
+			if (access(concat(new_build, "/jobs_files/", file.orig_id, ".zip"),
+			           F_OK)) {
 				--fid;
 				continue;
 			}
 
 			link(concat(new_build, "/jobs_files/", file.orig_id, ".zip"),
-				concat(new_build, "/internal_files/", fid));
+			     concat(new_build, "/internal_files/", fid));
 			job_updater.bindAndExecute(fid, file.orig_id);
 		} else if (file.type == FILE) {
 			link(concat(new_build, "/files/", file.orig_id),
-				concat(new_build, "/internal_files/", fid));
+			     concat(new_build, "/internal_files/", fid));
 			file_updater.bindAndExecute(fid, file.orig_id);
 		}
 
@@ -1339,12 +1598,12 @@ int main4(int argc, char **argv) {
 	return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	// try {
-		return main4(argc, argv);
+	return main4(argc, argv);
 
 	// } catch (const std::exception& e) {
-		// ERRLOG_CATCH(e);
-		// return 1;
+	// ERRLOG_CATCH(e);
+	// return 1;
 	// }
 }

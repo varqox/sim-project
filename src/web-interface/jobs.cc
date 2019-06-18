@@ -12,19 +12,17 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 		return PERM::NONE;
 
 	switch (session_user_type) {
-	case UserType::ADMIN:
-		return PERM::VIEW_ALL;
+	case UserType::ADMIN: return PERM::VIEW_ALL;
 	case UserType::TEACHER:
-	case UserType::NORMAL:
-		return PERM::NONE;
+	case UserType::NORMAL: return PERM::NONE;
 	}
 
 	return PERM::NONE; // Shouldn't happen
 }
 
 Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
-	JobType job_type, JobStatus job_status) noexcept
-{
+                                              JobType job_type,
+                                              JobStatus job_status) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using JT = JobType;
@@ -58,8 +56,7 @@ Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 		case JT::DELETE_CONTEST_ROUND:
 		case JT::DELETE_CONTEST_PROBLEM:
 		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-		case JT::DELETE_FILE:
-			return PERM::NONE;
+		case JT::DELETE_FILE: return PERM::NONE;
 		}
 	}();
 
@@ -69,21 +66,22 @@ Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 		case JS::NOTICED_PENDING:
 		case JS::IN_PROGRESS:
 			return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-				PERM::VIEW_ALL | PERM::CANCEL;
+			       PERM::VIEW_ALL | PERM::CANCEL;
 
 		case JS::FAILED:
 		case JS::CANCELED:
 			return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-				PERM::VIEW_ALL | PERM::RESTART;
+			       PERM::VIEW_ALL | PERM::RESTART;
 
 		case JS::DONE:
 			return overall_perms | type_perm | PERM::VIEW | PERM::DOWNLOAD_LOG |
-				PERM::VIEW_ALL;
+			       PERM::VIEW_ALL;
 		}
 	}
 
 	if (creator_id.has_value() and session_user_id == creator_id.value()) {
-		if (isOneOf(job_status, JS::PENDING, JS::NOTICED_PENDING, JS::IN_PROGRESS))
+		if (isOneOf(job_status, JS::PENDING, JS::NOTICED_PENDING,
+		            JS::IN_PROGRESS))
 			return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
 		else
 			return overall_perms | type_perm | PERM::VIEW;
@@ -92,8 +90,8 @@ Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 	return overall_perms;
 }
 
-Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
-{
+Sim::JobPermissions
+Sim::jobs_granted_permissions_problem(StringView problem_id) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 
@@ -107,15 +105,15 @@ Sim::JobPermissions Sim::jobs_granted_permissions_problem(StringView problem_id)
 		auto pperms = problems_get_permissions(powner, ptype);
 		if (uint(pperms & ProblemPermissions::VIEW_RELATED_JOBS))
 			return PERM::VIEW | PERM::DOWNLOAD_LOG |
-				PERM::DOWNLOAD_UPLOADED_PACKAGE | PERM::DOWNLOAD_UPLOADED_STATEMENT;
+			       PERM::DOWNLOAD_UPLOADED_PACKAGE |
+			       PERM::DOWNLOAD_UPLOADED_STATEMENT;
 	}
 
 	return PERM::NONE;
 }
 
-Sim::JobPermissions Sim::jobs_granted_permissions_submission(
-	StringView submission_id)
-{
+Sim::JobPermissions
+Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using CUM = ContestUserMode;
@@ -124,13 +122,13 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 		return PERM::NONE;
 
 	auto stmt = mysql.prepare("SELECT s.type, p.owner, p.type, cu.mode,"
-			" c.is_public"
-		" FROM submissions s"
-		" STRAIGHT_JOIN problems p ON p.id=s.problem_id"
-		" LEFT JOIN contests c ON c.id=s.contest_id"
-		" LEFT JOIN contest_users cu ON cu.user_id=?"
-			" AND cu.contest_id=s.contest_id"
-		" WHERE s.id=?");
+	                          " c.is_public "
+	                          "FROM submissions s "
+	                          "STRAIGHT_JOIN problems p ON p.id=s.problem_id "
+	                          "LEFT JOIN contests c ON c.id=s.contest_id "
+	                          "LEFT JOIN contest_users cu ON cu.user_id=?"
+	                          " AND cu.contest_id=s.contest_id "
+	                          "WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submission_id);
 
 	MySQL::Optional<bool> is_public;
@@ -141,9 +139,8 @@ Sim::JobPermissions Sim::jobs_granted_permissions_submission(
 	stmt.res_bind_all(stype, powner, ptype, cu_mode, is_public);
 	if (stmt.next()) {
 		if (is_public.has_value() and // <-- contest exists
-			uint(contests_get_permissions(is_public.value(), cu_mode) &
-				ContestPermissions::ADMIN))
-		{
+		    uint(contests_get_permissions(is_public.value(), cu_mode) &
+		         ContestPermissions::ADMIN)) {
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;
 		}
 
@@ -169,9 +166,9 @@ void Sim::jobs_handle() {
 		jobs_jid = next_arg;
 
 		page_template(intentionalUnsafeStringView(concat("Job ", jobs_jid)),
-			"body{padding-left:20px}");
-		append("<script>view_job(false, ", jobs_jid, ","
-			" window.location.hash);</script>");
+		              "body{padding-left:20px}");
+		append("<script>view_job(false, ", jobs_jid,
+		       ", window.location.hash);</script>");
 		return;
 	}
 
@@ -185,7 +182,5 @@ void Sim::jobs_handle() {
 	page_template("Job queue", "body{padding-left:20px}");
 
 	append("<h1>Jobs</h1>"
-		"<script>"
-			"tab_jobs_lister($('body'));"
-		"</script>");
+	       "<script>tab_jobs_lister($('body'));</script>");
 }

@@ -6,10 +6,10 @@
 #include <simlib/filesystem.h>
 #include <simlib/logger.h>
 
-using std::string;
-using std::pair;
 using std::cerr;
 using std::endl;
+using std::pair;
+using std::string;
 
 namespace server {
 
@@ -32,7 +32,8 @@ int Connection::peek() {
 		pos_ = 0;
 		buff_size_ = read(sock_fd_, buffer_, BUFFER_SIZE);
 		D(stdlog("peek(): Reading completed; buff_size: ", buff_size_);)
-		// D(stdlog("buff: `", StringView((const char*)buffer_, buff_size_), "`");)
+		// D(stdlog("buff: `", StringView((const char*)buffer_, buff_size_),
+		//          "`");)
 
 		if (buff_size_ <= 0) {
 			state_ = CLOSED;
@@ -84,7 +85,8 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 		--end;
 
 	// Erase trailing white space
-	while (++beg < header.size() && isspace(header[beg])) {}
+	while (++beg < header.size() && isspace(header[beg])) {
+	}
 
 	return make_pair(ret, header.substr(beg, end - beg));
 }
@@ -101,11 +103,11 @@ void Connection::readPOST(HttpRequest& req) {
 	int c = '\0';
 	string field_name, field_content;
 	bool is_name;
-	string &con_type = req.headers["Content-Type"];
+	string& con_type = req.headers["Content-Type"];
 	LimitedReader reader(*this, content_length);
 
 	if (hasPrefix(con_type, "text/plain")) {
-		for (; c != -1; ) {
+		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
@@ -131,7 +133,7 @@ void Connection::readPOST(HttpRequest& req) {
 		}
 
 	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
-		for (; c != -1; ) {
+		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
 			is_name = true;
@@ -151,7 +153,7 @@ void Connection::readPOST(HttpRequest& req) {
 				return;
 
 			req.form_data[decodeURI(field_name).to_string()] =
-				decodeURI(field_content).to_string();
+			   decodeURI(field_content).to_string();
 		}
 
 	} else if (hasPrefix(con_type, "multipart/form-data")) {
@@ -161,8 +163,8 @@ void Connection::readPOST(HttpRequest& req) {
 			return;
 		}
 
-		string boundary = "\r\n--"; // Is always part of a request, except at
-		                            // the beginning
+		string boundary =
+		   "\r\n--"; // Is always part of a request, except at the beginning
 		boundary += con_type.substr(beg + 9);
 
 		// Compute p array for KMP algorithm
@@ -181,7 +183,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 		// Search for boundary
 		int fd = -1;
-		FILE *tmp_file = nullptr;
+		FILE* tmp_file = nullptr;
 		bool first_boundary = true;
 		k = 2; // Because "\r\n" may not exist at the beginning
 
@@ -196,22 +198,20 @@ void Connection::readPOST(HttpRequest& req) {
 				++k;
 			// If we have found a boundary
 			if (k == boundary.size()) {
-				if (first_boundary)
+				if (first_boundary) {
 					first_boundary = false;
-
-				// Manage last field
-				else {
-					// Normal variable
-					if (fd == -1) {
+				} else {
+					// Manage last field
+					if (fd == -1) { // Normal variable
 						// Erase boundary: +1 because we did not append the last
 						// character to the boundary
 						field_content.erase(
-							(field_content.size() < boundary.size() ? 0 :
-								field_content.size() - boundary.size() + 1));
+						   (field_content.size() < boundary.size()
+						       ? 0
+						       : field_content.size() - boundary.size() + 1));
 						req.form_data[field_name] = field_content;
 
-					// File
-					} else {
+					} else { // File
 						// Get file size
 						fflush(tmp_file);
 						fseek(tmp_file, 0, SEEK_END);
@@ -219,8 +219,9 @@ void Connection::readPOST(HttpRequest& req) {
 						// Erase boundary: +1 because we did not append the last
 						// character to the boundary
 						ftruncate(fileno(tmp_file),
-							(tmp_file_size < boundary.size() ? 0 :
-								tmp_file_size - boundary.size() + 1));
+						          (tmp_file_size < boundary.size()
+						              ? 0
+						              : tmp_file_size - boundary.size() + 1));
 
 						fclose(tmp_file);
 						tmp_file = nullptr;
@@ -243,8 +244,7 @@ void Connection::readPOST(HttpRequest& req) {
 					while ((c = reader.getChar()) != -1) {
 						// Found CRLF
 						if (c == '\n' && field_content.size() &&
-							field_content.back() == '\r')
-						{
+						    field_content.back() == '\r') {
 							field_content.pop_back();
 							break;
 
@@ -264,7 +264,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 					D(stdlog("header: '", field_content, '\'');)
 					pair<string, string> header =
-						parseHeaderline(field_content);
+					   parseHeaderline(field_content);
 					if (state_ != OK) // Something went wrong
 						goto safe_return;
 
@@ -278,16 +278,14 @@ void Connection::readPOST(HttpRequest& req) {
 
 						// extract all variables from header content
 						while ((last = header.second.find(';', st)) !=
-							string::npos)
-						{
+						       string::npos) {
 							while (isblank(header.second[st]))
 								++st;
 
 							var_name = var_val = "";
 							// extract var_name
 							while (st < last && !isblank(header.second[st]) &&
-								header.second[st] != '=')
-							{
+							       header.second[st] != '=') {
 								var_name += header.second[st++];
 							}
 
@@ -298,18 +296,16 @@ void Connection::readPOST(HttpRequest& req) {
 
 								if (header.second[st] == '"')
 									while (++st < last &&
-										header.second[st] != '"')
-									{
+									       header.second[st] != '"') {
 										if (header.second[st] == '\\')
 											++st; // safe because last character
-												  // is ';'
+											      // is ';'
 										var_val += header.second[st];
 									}
 
 								else
 									while (st < last &&
-										!isblank(header.second[st]))
-									{
+									       !isblank(header.second[st])) {
 										var_val += header.second[st++];
 									}
 							}
@@ -317,8 +313,8 @@ void Connection::readPOST(HttpRequest& req) {
 
 							// Check for specific values
 							if (var_name == "filename" && fd == -1) {
-								umask(077); // Only we can access temporary
-								            // files
+								umask(
+								   077); // Only we can access temporary files
 								if ((fd = mkstemp(tmp_filename)) == -1) {
 									error507();
 									goto safe_return;
@@ -358,7 +354,7 @@ void Connection::readPOST(HttpRequest& req) {
 				putc(c, tmp_file);
 		}
 
-	 safe_return:
+	safe_return:
 		// Remove trash
 		if (fd != -1)
 			fclose(tmp_file);
@@ -369,171 +365,171 @@ void Connection::readPOST(HttpRequest& req) {
 
 void Connection::error400() {
 	send("<html>\n"
-		"<head><title>400 Bad Request</title></head>\n"
-		"<body>\n"
-		"<center><h1>400 Bad Request</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "<head><title>400 Bad Request</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>400 Bad Request</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error403() {
 	send("HTTP/1.1 403 Forbidden\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 112\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>403 Forbidden</title></head>\n"
-		"<body>\n"
-		"<center><h1>403 Forbidden</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 112\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>403 Forbidden</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>403 Forbidden</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error404() {
 	send("HTTP/1.1 404 Not Found\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 112\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>404 Not Found</title></head>\n"
-		"<body>\n"
-		"<center><h1>404 Not Found</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 112\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>404 Not Found</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>404 Not Found</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error408() {
 	send("HTTP/1.1 408 Request Timeout\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 124\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>408 Request Timeout</title></head>\n"
-		"<body>\n"
-		"<center><h1>408 Request Timeout</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 124\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>408 Request Timeout</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>408 Request Timeout</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error413() {
 	send("HTTP/1.1 413 Request Entity Too Large\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 142\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>413 Request Entity Too Large</title></head>\n"
-		"<body>\n"
-		"<center><h1>413 Request Entity Too Large</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 142\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>413 Request Entity Too Large</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>413 Request Entity Too Large</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error415() {
 	send("HTTP/1.1 415 Unsupported Media Type\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 138\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>415 Unsupported Media Type</title></head>\n"
-		"<body>\n"
-		"<center><h1>415 Unsupported Media Type</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 138\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>415 Unsupported Media Type</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>415 Unsupported Media Type</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error431() {
 	send("HTTP/1.1 431 Request Header Fields Too Large\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 156\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>431 Request Header Fields Too Large</title></head>\n"
-		"<body>\n"
-		"<center><h1>431 Request Header Fields Too Large</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 156\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>431 Request Header Fields Too Large</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>431 Request Header Fields Too Large</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error500() {
 	send("HTTP/1.1 500 Internal Server Error\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 136\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>500 Internal Server Error</title></head>\n"
-		"<body>\n"
-		"<center><h1>500 Internal Server Error</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 136\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>500 Internal Server Error</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>500 Internal Server Error</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error501() {
 	send("HTTP/1.1 501 Not Implemented\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 124\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>501 Not Implemented</title></head>\n"
-		"<body>\n"
-		"<center><h1>501 Not Implemented</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 124\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>501 Not Implemented</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>501 Not Implemented</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error504() {
 	send("HTTP/1.1 504 Gateway Timeout\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 124\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>504 Gateway Timeout</title></head>\n"
-		"<body>\n"
-		"<center><h1>504 Gateway Timeout</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 124\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>504 Gateway Timeout</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>504 Gateway Timeout</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
 void Connection::error507() {
 	send("HTTP/1.1 507 Insufficient Storage\r\n"
-		"Server: sim-server\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html; charset=utf-8\r\n"
-		"Content-Length: 134\r\n"
-		"\r\n"
-		"<html>\n"
-		"<head><title>507 Insufficient Storage</title></head>\n"
-		"<body>\n"
-		"<center><h1>507 Insufficient Storage</h1></center>\n"
-		"</body>\n"
-		"</html>\n");
+	     "Server: sim-server\r\n"
+	     "Connection: close\r\n"
+	     "Content-Type: text/html; charset=utf-8\r\n"
+	     "Content-Length: 134\r\n"
+	     "\r\n"
+	     "<html>\n"
+	     "<head><title>507 Insufficient Storage</title></head>\n"
+	     "<body>\n"
+	     "<center><h1>507 Insufficient Storage</h1></center>\n"
+	     "</body>\n"
+	     "</html>\n");
 	state_ = CLOSED;
 }
 
@@ -589,8 +585,8 @@ HttpRequest Connection::getRequest() {
 
 	req.http_version = request_line.substr(beg, end - beg);
 	if (req.http_version.compare(0, 7, "HTTP/1.") != 0 ||
-		(req.http_version.compare(7, string::npos, "0") != 0 &&
-		req.http_version.compare(7, string::npos, "1") != 0)) {
+	    (req.http_version.compare(7, string::npos, "0") != 0 &&
+	     req.http_version.compare(7, string::npos, "1") != 0)) {
 		error400();
 		return req;
 	}
@@ -683,8 +679,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 
 	res.headers.for_each([&](auto&& i) {
 		if (i.first == "server" || i.first == "connection" ||
-			i.first == "content-length")
-		{
+		    i.first == "content-length") {
 			return;
 		}
 
@@ -704,8 +699,8 @@ void Connection::sendResponse(const HttpResponse& res) {
 
 	D({
 		int pos = str.find('\r');
-		auto tmplog = stdlog("\033[36mRESPONSE: ", substring(str, 0, pos),
-			"\033[m");
+		auto tmplog =
+		   stdlog("\033[36mRESPONSE: ", substring(str, 0, pos), "\033[m");
 
 		StringView rest = substring(str, pos + 1); // omit '\r'
 		for (char c : rest) {
@@ -733,8 +728,8 @@ void Connection::sendResponse(const HttpResponse& res) {
 		filename_s.append(res.content, '\0');
 		CStringView filename(filename_s.data(), filename_s.size - 1);
 
-		FileRemover remover(res.content_type == HttpResponse::FILE_TO_REMOVE
-			? filename : "");
+		FileRemover remover(
+		   res.content_type == HttpResponse::FILE_TO_REMOVE ? filename : "");
 		FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 		if (fd == -1)
 			return error404();
@@ -769,12 +764,10 @@ void Connection::sendResponse(const HttpResponse& res) {
 		off64_t pos = 0;
 		ssize_t read_len;
 		while (pos < fsize && state_ == OK &&
-			(read_len = read(fd, buff, buff_length)) != -1)
-		{
+		       (read_len = read(fd, buff, buff_length)) != -1) {
 			send(buff, read_len);
 			pos += read_len;
 		}
-
 	}
 
 	state_ = CLOSED;

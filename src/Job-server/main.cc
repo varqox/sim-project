@@ -16,9 +16,9 @@
 #include <sys/inotify.h>
 
 #if 0
-# define DEBUG_JOB_SERVER(...) __VA_ARGS__
+#define DEBUG_JOB_SERVER(...) __VA_ARGS__
 #else
-# define DEBUG_JOB_SERVER(...)
+#define DEBUG_JOB_SERVER(...)
 #endif
 
 using std::array;
@@ -67,10 +67,10 @@ private:
 	struct {
 		// Strong assumption: any job must belong to AT MOST one problem
 		AVLDictMap<uint64_t, ProblemInfo> problem_info;
-		AVLDictMap<Job, ProblemJobs> queue; /*
-			(best problem's job => all jobs of the problem) */
-		AVLDictMap<int64_t, ProblemJobs> locked_problems; /*
-			(problem_id  => (locks, problem's jobs)) */
+		AVLDictMap<Job, ProblemJobs>
+		   queue; // (best problem's job => all jobs of the problem)
+		AVLDictMap<int64_t, ProblemJobs>
+		   locked_problems; // (problem_id  => (locks, problem's jobs))
 	} judge_jobs, problem_jobs; // (judge jobs - they need judge machines)
 
 	AVLDictSet<Job> other_jobs;
@@ -81,7 +81,7 @@ private:
 				stdlog("problem_info = {");
 				job_category.problem_info.for_each([](auto&& p) {
 					stdlog("   ", p.first, " => {", p.second.its_best_job.id,
-						", ", p.second.locks_no, "},");
+					       ", ", p.second.locks_no, "},");
 				});
 				stdlog("}");
 			}
@@ -129,32 +129,32 @@ public:
 		uint priority;
 		InplaceBuff<512> info;
 		// Select jobs
-		auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info"
-			" FROM jobs"
-			" WHERE status=" JSTATUS_PENDING_STR
-			" ORDER BY priority DESC, id ASC LIMIT 4");
+		auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info "
+		                          "FROM jobs "
+		                          "WHERE status=" JSTATUS_PENDING_STR " "
+		                          "ORDER BY priority DESC, id ASC LIMIT 4");
 		stmt.res_bind_all(jid, jtype, priority, aux_id, info);
 		// Sets job's status to NOTICED_PENDING
-		auto mark_stmt = mysql.prepare("UPDATE jobs SET status="
-			JSTATUS_NOTICED_PENDING_STR " WHERE id=?");
+		auto mark_stmt = mysql.prepare(
+		   "UPDATE jobs SET status=" JSTATUS_NOTICED_PENDING_STR " WHERE id=?");
 		mark_stmt.bind_all(jid);
 		// Add jobs to internal queue
 		using JT = JobType;
 		for (stmt.execute(); stmt.next(); stmt.execute())
 			do {
 				DEBUG_JOB_SERVER(stdlog("DEBUG: Fetched from DB: job ", jid);)
-				auto queue_job =
-					[&jid, &priority](auto& job_category, uint64_t problem_id,
-						bool locks_problem)
-				{
+				auto queue_job = [&jid, &priority](auto& job_category,
+				                                   uint64_t problem_id,
+				                                   bool locks_problem) {
 					auto pinfo = job_category.problem_info.find(problem_id);
 					Job curr_job {jid, priority, locks_problem};
 					if (pinfo) {
 						Job best_job = pinfo->second.its_best_job;
 						// Get the problem's jobs (the problem may be locked)
-						auto& pjobs = (pinfo->second.locks_no > 0
-							? job_category.locked_problems[problem_id]
-							: job_category.queue[best_job]);
+						auto& pjobs =
+						   (pinfo->second.locks_no > 0
+						       ? job_category.locked_problems[problem_id]
+						       : job_category.queue[best_job]);
 						// Ensure field 'problem_id' is set properly (in case of
 						// element creation this line is necessary)
 						pjobs.problem_id = problem_id;
@@ -166,7 +166,7 @@ public:
 							// Update queue (rekey ProblemJobs)
 							if (pinfo->second.locks_no == 0)
 								job_category.queue.alter_key(best_job,
-									curr_job);
+								                             curr_job);
 						}
 
 					} else {
@@ -182,8 +182,10 @@ public:
 				switch (jtype) {
 				case JT::JUDGE_SUBMISSION:
 				case JT::REJUDGE_SUBMISSION:
-					queue_job(judge_jobs, strtoull(intentionalUnsafeStringView(
-						jobs::extractDumpedString(info))), false);
+					queue_job(judge_jobs,
+					          strtoull(intentionalUnsafeStringView(
+					             jobs::extractDumpedString(info))),
+					          false);
 					break;
 
 				case JT::ADD_JUDGE_MODEL_SOLUTION:
@@ -221,8 +223,8 @@ public:
 				mark_stmt.execute();
 			} while (stmt.next());
 
-		DEBUG_JOB_SERVER(stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__,
-			"()");)
+		DEBUG_JOB_SERVER(
+		   stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__, "()");)
 		DEBUG_JOB_SERVER(dump_queues();)
 	}
 
@@ -234,24 +236,23 @@ public:
 			auto pinfo = job_category.problem_info.find(pid);
 			if (not pinfo)
 				pinfo = job_category.problem_info.insert(pid, {Job::least(), 0})
-					.first;
+				           .first;
 
 			if (++pinfo->second.locks_no == 1) {
 				auto pj = job_category.queue.find(pinfo->second.its_best_job);
 				if (pj) {
 					job_category.locked_problems.insert(pid,
-						std::move(pj->second));
+					                                    std::move(pj->second));
 					job_category.queue.erase(pj->first);
 				}
-
 			}
 		};
 
 		lock_impl(judge_jobs);
 		lock_impl(problem_jobs);
 
-		DEBUG_JOB_SERVER(stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__,
-			"()");)
+		DEBUG_JOB_SERVER(
+		   stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__, "()");)
 		DEBUG_JOB_SERVER(dump_queues();)
 	}
 
@@ -270,20 +271,20 @@ public:
 				auto pl = job_category.locked_problems.find(pid);
 				if (pl) {
 					job_category.queue.insert(pinfo->second.its_best_job,
-						std::move(pl->second));
+					                          std::move(pl->second));
 					job_category.locked_problems.erase(pl->first);
 				} else
 					job_category.problem_info.erase(pid); /* There are no jobs
-						that belong to this problem and it is lock-free now, so
-						its records can be safely removed */
+					    that belong to this problem and it is lock-free now, so
+					    its records can be safely removed */
 			}
 		};
 
 		unlock_impl(judge_jobs);
 		unlock_impl(problem_jobs);
 
-		DEBUG_JOB_SERVER(stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__,
-			"()");)
+		DEBUG_JOB_SERVER(
+		   stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__, "()");)
 		DEBUG_JOB_SERVER(dump_queues();)
 	}
 
@@ -292,15 +293,15 @@ public:
 		decltype(judge_jobs)* job_category;
 
 	public:
-		Job job = Job::least(); // If is invalid it will be the last in
-								// comparison
+		Job job =
+		   Job::least(); // If is invalid it will be the last in comparison
 		uint64_t problem_id = 0;
 
 		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc)
-			: jobs_queue(&jq), job_category(&jc) {}
+		   : jobs_queue(&jq), job_category(&jc) {}
 
 		JobHolder(JobsQueue& jq, decltype(judge_jobs)& jc, Job j, uint64_t pid)
-			: jobs_queue(&jq), job_category(&jc), job(j), problem_id(pid) {}
+		   : jobs_queue(&jq), job_category(&jc), job(j), problem_id(pid) {}
 
 		JobHolder(const JobHolder&) = delete;
 		JobHolder(JobHolder&&) = default;
@@ -320,16 +321,17 @@ public:
 				return; // There is no such problem
 
 			Job best_job = pinfo->second.its_best_job;
-			auto& pjobs = (pinfo->second.locks_no > 0 ?
-				job_category->locked_problems[problem_id]
-				: job_category->queue[best_job]);
+			auto& pjobs = (pinfo->second.locks_no > 0
+			                  ? job_category->locked_problems[problem_id]
+			                  : job_category->queue[best_job]);
 
-			if (not pjobs.jobs.erase(job))
-				THROW("Job erasion did not take place since the erased job was"
-					" not found");
+			if (not pjobs.jobs.erase(job)) {
+				THROW("Job erasion did not take place since the erased job was "
+				      "not found");
+			}
 
-			// That was the last job of it's problem
 			if (pjobs.jobs.empty()) {
+				// That was the last job of it's problem
 				if (pinfo->second.locks_no == 0) {
 					job_category->queue.erase(best_job);
 					job_category->problem_info.erase(problem_id);
@@ -338,8 +340,8 @@ public:
 					pinfo->second.its_best_job = Job::least();
 				}
 
-			// The best job of the extracted job's problem changed
 			} else {
+				// The best job of the extracted job's problem changed
 				Job new_best = *pjobs.jobs.front();
 				pinfo->second.its_best_job = new_best;
 				// Update queue (rekey ProblemJobs)
@@ -378,13 +380,12 @@ public:
 		decltype(other_jobs)* oj;
 
 	public:
-		Job job = Job::least(); // If is invalid it will be the last in
-								// comparison
+		Job job =
+		   Job::least(); // If is invalid it will be the last in comparison
 
-		OtherJobHolder(decltype(other_jobs)& o): oj(&o) {}
+		OtherJobHolder(decltype(other_jobs)& o) : oj(&o) {}
 
-		OtherJobHolder(decltype(other_jobs)& o, Job j)
-			: oj(&o), job(j) {}
+		OtherJobHolder(decltype(other_jobs)& o, Job j) : oj(&o), job(j) {}
 
 		OtherJobHolder(const OtherJobHolder&) = delete;
 		OtherJobHolder(OtherJobHolder&&) = default;
@@ -441,7 +442,7 @@ public:
 		eventfd_read(eq.notifier_fd_, &x);
 	}
 
-	template<class Callable>
+	template <class Callable>
 	static void register_event(Callable&& ev) {
 		STACK_UNWINDING_MARK;
 		lock_guard<mutex> lock(eq.events_lock);
@@ -475,7 +476,7 @@ public:
 	struct NextJob {
 		uint64_t id;
 		int64_t problem_id; // negative indicates that no problem is associated
-							// with the job
+		                    // with the job
 		bool locked_its_problem;
 	};
 
@@ -489,8 +490,8 @@ public:
 private:
 	mutex mtx_;
 	vector<thread::id> idle_workers;
-	map<thread::id, WorkerInfo> workers; // AVLDict cannot be used as addresses
-										 // must not change
+	map<thread::id, WorkerInfo>
+	   workers; // AVLDict cannot be used as addresses must not change
 
 	function<void(NextJob)> job_handler_;
 	function<void()> worker_becomes_idle_callback_;
@@ -504,7 +505,7 @@ private:
 			STACK_UNWINDING_MARK;
 			auto tid = std::this_thread::get_id();
 			lock_guard<mutex> lock(wp_.mtx_);
-			wp_.workers.emplace(tid, WorkerInfo{});
+			wp_.workers.emplace(tid, WorkerInfo {});
 		}
 
 		~Worker() {
@@ -518,8 +519,7 @@ private:
 			// Remove it from idle workers
 			if (wi.is_idle) {
 				for (auto k = wp_.idle_workers.begin();
-					k != wp_.idle_workers.end(); ++k)
-				{
+				     k != wp_.idle_workers.end(); ++k) {
 					if (*k == tid) {
 						wp_.idle_workers.erase(k);
 						break;
@@ -527,13 +527,13 @@ private:
 				}
 			}
 
-			if (wp_.worker_dies_callback_)
-				EventsQueue::register_event(make_shared_function(
-					[&callback = wp_.worker_dies_callback_,
-						winfo = std::move(wi)]() mutable
-					{
-						callback(std::move(winfo));
-					}));
+			if (wp_.worker_dies_callback_) {
+				EventsQueue::register_event(
+				   make_shared_function([& callback = wp_.worker_dies_callback_,
+				                         winfo = std::move(wi)]() mutable {
+					   callback(std::move(winfo));
+				   }));
+			}
 		}
 
 		NextJob wait_for_next_job_id() {
@@ -572,19 +572,18 @@ public:
 	 * @param idle_callback a function to call when a worker becomes idle
 	 */
 	WorkersPool(function<void(NextJob)> job_handler,
-			function<void()> idle_callback,
-			function<void(WorkerInfo)> dead_callback)
-		: job_handler_(std::move(job_handler)),
-			worker_becomes_idle_callback_(std::move(idle_callback)),
-			worker_dies_callback_(std::move(dead_callback))
-	{
+	            function<void()> idle_callback,
+	            function<void(WorkerInfo)> dead_callback)
+	   : job_handler_(std::move(job_handler)),
+	     worker_becomes_idle_callback_(std::move(idle_callback)),
+	     worker_dies_callback_(std::move(dead_callback)) {
 		throw_assert(job_handler_);
 	}
 
 	void spawn_worker() {
 		STACK_UNWINDING_MARK;
 
-		std::thread foo([this]{
+		std::thread foo([this] {
 			try {
 				thread_local Worker w(*this);
 				// Connect to databases
@@ -609,8 +608,7 @@ public:
 	}
 
 	bool pass_job(uint64_t job_id, int64_t problem_id = -1,
-		bool locks_problem = false)
-	{
+	              bool locks_problem = false) {
 		STACK_UNWINDING_MARK;
 
 		lock_guard<mutex> lock(mtx_);
@@ -639,15 +637,15 @@ static void spawn_worker(WorkersPool& wp) noexcept {
 		// Give the system some time (yes I know it will block the whole thread,
 		// but currently EventsQueue does not support delaying events)
 		std::this_thread::sleep_for(std::chrono::seconds(1));
-		EventsQueue::register_event([&]{ spawn_worker(wp); });
+		EventsQueue::register_event([&] { spawn_worker(wp); });
 	}
 }
 
 static void process_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
 
-	auto exit_procedures = [&job]{
-		EventsQueue::register_event([job]{
+	auto exit_procedures = [&job] {
+		EventsQueue::register_event([job] {
 			if (job.locked_its_problem)
 				jobs_queue.unlock_problem(job.problem_id);
 		});
@@ -661,10 +659,11 @@ static void process_job(const WorkersPool::NextJob& job) {
 	InplaceBuff<512> info;
 
 	{
-		auto stmt = mysql.prepare("SELECT file_id, tmp_file_id, creator, added,"
-				" type, aux_id, info"
-			" FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-		stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id, info);
+		auto stmt = mysql.prepare(
+		   "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
+		   "FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id,
+		                  info);
 		stmt.bindAndExecute(job.id);
 
 		if (not stmt.next()) // Job has been probably canceled
@@ -673,8 +672,8 @@ static void process_job(const WorkersPool::NextJob& job) {
 
 	// Mark as in progress
 	mysql.update(intentionalUnsafeStringView(
-		concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR
-			" WHERE id=", job.id)));
+	   concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=",
+	          job.id)));
 
 	stdlog("Processing job ", job.id, "...");
 
@@ -682,7 +681,7 @@ static void process_job(const WorkersPool::NextJob& job) {
 	if (creator.has_value())
 		creat = creator.value();
 	job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info,
-		added);
+	               added);
 
 	exit_procedures();
 }
@@ -690,8 +689,9 @@ static void process_job(const WorkersPool::NextJob& job) {
 static void process_local_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
 
-	stdlog(pthread_self(), " got local job {id:", job.id, ", problem: ",
-		job.problem_id, ", locked: ", job.locked_its_problem, '}');
+	stdlog(pthread_self(), " got local job {id:", job.id,
+	       ", problem: ", job.problem_id, ", locked: ", job.locked_its_problem,
+	       '}');
 
 	process_job(job);
 }
@@ -699,49 +699,48 @@ static void process_local_job(const WorkersPool::NextJob& job) {
 static void process_judge_job(const WorkersPool::NextJob& job) {
 	STACK_UNWINDING_MARK;
 
-	stdlog(pthread_self(), " got judge job {id:", job.id, ", problem: ",
-		job.problem_id, ", locked: ", job.locked_its_problem, '}');
+	stdlog(pthread_self(), " got judge job {id:", job.id,
+	       ", problem: ", job.problem_id, ", locked: ", job.locked_its_problem,
+	       '}');
 
 	process_job(job);
 }
 
 static void sync_and_assign_jobs();
 
-static WorkersPool local_workers(process_local_job, sync_and_assign_jobs,
-	[](WorkersPool::WorkerInfo winfo) {
-		STACK_UNWINDING_MARK;
+static WorkersPool local_workers(
+   process_local_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+	   STACK_UNWINDING_MARK;
 
-		// Job has to be reset and cleanup to be done
-		if (not winfo.is_idle) {
-			if (winfo.next_job.locked_its_problem)
-				jobs_queue.unlock_problem(winfo.next_job.problem_id);
+	   // Job has to be reset and cleanup to be done
+	   if (not winfo.is_idle) {
+		   if (winfo.next_job.locked_its_problem)
+			   jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
-			jobs::restart_job(mysql,
-				intentionalUnsafeStringView(toStr(winfo.next_job.id)), false);
-		}
+		   jobs::restart_job(
+		      mysql, intentionalUnsafeStringView(toStr(winfo.next_job.id)),
+		      false);
+	   }
 
-		EventsQueue::register_event([]{
-			spawn_worker(local_workers);
-		});
-	});
+	   EventsQueue::register_event([] { spawn_worker(local_workers); });
+   });
 
-static WorkersPool judge_workers(process_judge_job, sync_and_assign_jobs,
-	[](WorkersPool::WorkerInfo winfo) {
-		STACK_UNWINDING_MARK;
+static WorkersPool judge_workers(
+   process_judge_job, sync_and_assign_jobs, [](WorkersPool::WorkerInfo winfo) {
+	   STACK_UNWINDING_MARK;
 
-		// Job has to be reset and cleanup to be done
-		if (not winfo.is_idle) {
-			if (winfo.next_job.locked_its_problem)
-				jobs_queue.unlock_problem(winfo.next_job.problem_id);
+	   // Job has to be reset and cleanup to be done
+	   if (not winfo.is_idle) {
+		   if (winfo.next_job.locked_its_problem)
+			   jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
-			jobs::restart_job(mysql,
-				intentionalUnsafeStringView(toStr(winfo.next_job.id)), false);
-		}
+		   jobs::restart_job(
+		      mysql, intentionalUnsafeStringView(toStr(winfo.next_job.id)),
+		      false);
+	   }
 
-		EventsQueue::register_event([]{
-			spawn_worker(judge_workers);
-		});
-	});
+	   EventsQueue::register_event([] { spawn_worker(judge_workers); });
+   });
 
 static void sync_and_assign_jobs() {
 	STACK_UNWINDING_MARK;
@@ -757,10 +756,11 @@ static void sync_and_assign_jobs() {
 		JobsQueue::Job job;
 	};
 
-	array<SItem, 3> selector {{ // (is ok, best job)
-		{problem_job.ok(), problem_job},
-		{other_job.ok(), other_job},
-		{judge_job.ok(), judge_job},
+	array<SItem, 3> selector {{
+	   // (is ok, best job)
+	   {problem_job.ok(), problem_job},
+	   {other_job.ok(), other_job},
+	   {judge_job.ok(), judge_job},
 	}};
 
 	while (selector[0].ok or selector[1].ok or selector[2].ok) {
@@ -773,37 +773,33 @@ static void sync_and_assign_jobs() {
 				best_job = selector[i].job;
 			}
 
-		DEBUG_JOB_SERVER(stdlog("DEBUG: Got job: {id: ", best_job.id, ", pri: ",
-			best_job.priority, ", locks: ", best_job.locks_problem, "}"));
+		DEBUG_JOB_SERVER(stdlog("DEBUG: Got job: {id: ", best_job.id,
+		                        ", pri: ", best_job.priority,
+		                        ", locks: ", best_job.locks_problem, "}"));
 
-		// Problem job
-		if (idx == 0) {
+		if (idx == 0) { // Problem job
 			if (local_workers.pass_job(best_job.id, problem_job.problem_id,
-				best_job.locks_problem))
-			{
+			                           best_job.locks_problem)) {
 				problem_job.was_passed();
 			} else
 				selector[0].ok = false; // No more workers available
 
-		// Other job
-		} else if (idx == 1) {
+		} else if (idx == 1) { // Other job
 			if (local_workers.pass_job(best_job.id))
 				other_job.was_passed();
 			else
 				selector[1].ok = false; // No more workers available
 
-		// Judge job
-		} else if (idx == 2) {
+		} else if (idx == 2) { // Judge job
 			if (judge_workers.pass_job(best_job.id, judge_job.problem_id,
-				best_job.locks_problem))
-			{
+			                           best_job.locks_problem)) {
 				judge_job.was_passed();
 			} else
 				selector[2].ok = false; // No more workers available
 
-		// Invalid
-		} else
+		} else { // Invalid
 			THROW("Invalid idx: ", idx);
+		}
 
 		// Update selector (all types must be updated because some problem may
 		// become locked causing some jobs to become invalid)
@@ -819,7 +815,6 @@ static void sync_and_assign_jobs() {
 			judge_job = jobs_queue.best_judge_job();
 			selector[2] = {judge_job.ok(), judge_job};
 		}
-
 	}
 }
 
@@ -845,16 +840,16 @@ static void eventsLoop() noexcept {
 			// Update jobs queue and distribute new jobs
 			sync_and_assign_jobs();
 
-			struct inotify_event *event = (struct inotify_event *) inotify_buff;
-			// If notify file has been moved
+			struct inotify_event* event = (struct inotify_event*)inotify_buff;
 			if (event->mask & IN_MOVE_SELF) {
+				// If notify file has been moved
 				(void)createFile(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
 				inotify_rm_watch(inotify_fd, inotify_wd);
 				inotify_wd = -1;
 				return false;
 
-			// If notify file has disappeared
 			} else if (event->mask & IN_IGNORED) {
+				// If notify file has disappeared
 				(void)createFile(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
 				inotify_wd = -1;
 				return false;
@@ -882,15 +877,16 @@ static void eventsLoop() noexcept {
 					else
 						goto inotify_partially_works;
 
-				// Try to fix inotify_wd
 				} else {
+					// Try to fix inotify_wd
 				inotify_partially_works:
 					// Ensure that notify-file exists
 					if (access(JOB_SERVER_NOTIFYING_FILE, F_OK) == -1)
 						(void)createFile(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
 
-					inotify_wd = inotify_add_watch(inotify_fd,
-						JOB_SERVER_NOTIFYING_FILE, IN_ATTRIB | IN_MOVE_SELF);
+					inotify_wd =
+					   inotify_add_watch(inotify_fd, JOB_SERVER_NOTIFYING_FILE,
+					                     IN_ATTRIB | IN_MOVE_SELF);
 					if (inotify_wd == -1)
 						errlog("inotify_add_watch() failed", errmsg());
 					else
@@ -911,7 +907,7 @@ static void eventsLoop() noexcept {
 					}
 
 					auto tend = std::chrono::steady_clock::now() +
-						std::chrono::seconds(5);
+					            std::chrono::seconds(5);
 					// Events queue is still broken, so process events for
 					// approximately 1 s and try fixing again
 					for (;;) {
@@ -919,19 +915,20 @@ static void eventsLoop() noexcept {
 							break;
 
 						jobs_queue.sync_with_db();
-						while (EventsQueue::process_next_event()) {}
+						while (EventsQueue::process_next_event()) {
+						}
 
 						std::this_thread::sleep_for(
-							std::chrono::milliseconds(SLEEP_INTERVAL));
+						   std::chrono::milliseconds(SLEEP_INTERVAL));
 					}
 
-				// Events queue is fine
 				} else {
+					// Events queue is fine
 					STACK_UNWINDING_MARK;
 
 					pollfd pfd = {EventsQueue::get_notifier_fd(), POLLIN, 0};
 					auto tend = std::chrono::steady_clock::now() +
-						std::chrono::seconds(5);
+					            std::chrono::seconds(5);
 					// Process events for 5 seconds
 					for (;;) {
 						if (tend < std::chrono::steady_clock::now())
@@ -945,12 +942,13 @@ static void eventsLoop() noexcept {
 							THROW("poll() failed", errmsg());
 
 						EventsQueue::reset_notifier();
-						while (EventsQueue::process_next_event()) {}
+						while (EventsQueue::process_next_event()) {
+						}
 					}
 				}
 
-			// Inotify is working well
 			} else {
+				// Inotify works well
 				if (EventsQueue::get_notifier_fd() == -1) {
 					STACK_UNWINDING_MARK;
 
@@ -965,7 +963,7 @@ static void eventsLoop() noexcept {
 					/* Events queue is still broken */
 					pollfd pfd = {inotify_fd, POLLIN, 0};
 					auto tend = std::chrono::steady_clock::now() +
-						std::chrono::seconds(5);
+					            std::chrono::seconds(5);
 					// Process events for approx 5 seconds
 					for (;;) {
 						if (tend < std::chrono::steady_clock::now())
@@ -978,20 +976,19 @@ static void eventsLoop() noexcept {
 						if (not process_inotify_event())
 							continue; // inotify has just broken
 
-						while (EventsQueue::process_next_event()) {}
+						while (EventsQueue::process_next_event()) {
+						}
 					}
 
-
-				// Best scenario - everything works well
 				} else {
+					// Best scenario - everything works well
 					STACK_UNWINDING_MARK;
 
 					constexpr uint INFY_IDX = 0;
 					constexpr uint EQ_IDX = 1;
 					pollfd pfd[2] = {
-						{inotify_fd, POLLIN, 0},
-						{EventsQueue::get_notifier_fd(), POLLIN, 0}
-					};
+					   {inotify_fd, POLLIN, 0},
+					   {EventsQueue::get_notifier_fd(), POLLIN, 0}};
 
 					for (;;) {
 						int rc = poll(pfd, 2, -1);
@@ -1010,7 +1007,8 @@ static void eventsLoop() noexcept {
 
 						if (pfd[EQ_IDX].revents != 0) {
 							EventsQueue::reset_notifier();
-							while (EventsQueue::process_next_event()) {}
+							while (EventsQueue::process_next_event()) {
+							}
 						}
 					}
 				}
@@ -1037,15 +1035,15 @@ static void cleanUpDB() {
 		auto transaction = mysql.start_transaction();
 
 		// Fix jobs that are in progress after the job-server died
-		auto res = mysql.query("SELECT id, type, info FROM jobs WHERE status="
-			JSTATUS_IN_PROGRESS_STR);
+		auto res = mysql.query("SELECT id, type, info FROM jobs WHERE "
+		                       "status=" JSTATUS_IN_PROGRESS_STR);
 		while (res.next())
 			jobs::restart_job(mysql, res[0], JobType(strtoull(res[1])), res[2],
-				false);
+			                  false);
 
 		// Fix jobs that are noticed [ending] after the job-server died
 		mysql.update("UPDATE jobs SET status=" JSTATUS_PENDING_STR
-			" WHERE status=" JSTATUS_NOTICED_PENDING_STR);
+		             " WHERE status=" JSTATUS_NOTICED_PENDING_STR);
 		transaction.commit();
 
 	} catch (const std::exception& e) {
@@ -1066,8 +1064,7 @@ int main() {
 	// stdlog, like everything, writes to stderr, so redirect stdout and stderr
 	// to the log file
 	if (freopen(JOB_SERVER_LOG, "ae", stdout) == nullptr ||
-		dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1)
-	{
+	    dup3(STDOUT_FILENO, STDERR_FILENO, O_CLOEXEC) == -1) {
 		errlog("Failed to open `", JOB_SERVER_LOG, '`', errmsg());
 	}
 
@@ -1079,7 +1076,7 @@ int main() {
 
 	// Install signal handlers
 	struct sigaction sa;
-	memset (&sa, 0, sizeof(sa));
+	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &exit;
 
 	(void)sigaction(SIGINT, &sa, nullptr);
@@ -1104,10 +1101,12 @@ int main() {
 		if (jworkers_no < 1)
 			THROW("sim.conf: js_judge_workers cannot be lower than 1");
 
+		// clang-format off
 		stdlog("\n=================== Job server launched ==================="
-			"\nPID: ", getpid(),
-			"\nlocal workers: ", lworkers_no,
-			"\njudge workers: ", jworkers_no);
+		       "\nPID: ", getpid(),
+		       "\nlocal workers: ", lworkers_no,
+		       "\njudge workers: ", jworkers_no);
+		// clang-format on
 
 		for (int i = 0; i < lworkers_no; ++i)
 			spawn_worker(local_workers);

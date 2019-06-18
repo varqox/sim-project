@@ -20,12 +20,10 @@ void Sim::api_users() {
 	auto transaction = mysql.start_transaction();
 
 	InplaceBuff<256> query;
-	query.append("SELECT id, username, first_name, last_name, email, type"
-		" FROM users");
+	query.append("SELECT id, username, first_name, last_name, email, type "
+	             "FROM users");
 
-	enum ColumnIdx {
-		UID, USERNAME, FNAME, LNAME, EMAIL, UTYPE
-	};
+	enum ColumnIdx { UID, USERNAME, FNAME, LNAME, EMAIL, UTYPE };
 
 	auto query_append = [&, where_was_added = false](auto&&... args) mutable {
 		if (where_was_added)
@@ -38,7 +36,7 @@ void Sim::api_users() {
 
 	if (session_user_type == UserType::TEACHER)
 		query_append("id=", session_user_id);
-		// query_append("id!=" SIM_ROOT_UID);
+	// query_append("id!=" SIM_ROOT_UID);
 	else if (session_user_type == UserType::NORMAL)
 		query_append("id=", session_user_id);
 
@@ -51,10 +49,9 @@ void Sim::api_users() {
 
 		auto arg = decodeURI(next_arg);
 		char cond = arg[0];
-		StringView arg_id = StringView{arg}.substr(1);
+		StringView arg_id = StringView(arg).substr(1);
 
-		// user type
-		if (cond == 't' and ~mask & UTYPE_COND) {
+		if (cond == 't' and ~mask & UTYPE_COND) { // User type
 			if (arg_id == "A")
 				query_append("type=" UTYPE_ADMIN_STR);
 			else if (arg_id == "T")
@@ -63,14 +60,13 @@ void Sim::api_users() {
 				query_append("type=" UTYPE_NORMAL_STR);
 			else
 				return api_error400(intentionalUnsafeStringView(
-					concat("Invalid user type: ", arg_id)));
+				   concat("Invalid user type: ", arg_id)));
 
 			mask |= UTYPE_COND;
 
 		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
-		// conditional
 		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			query_append("id", arg);
@@ -80,29 +76,30 @@ void Sim::api_users() {
 			query_append("id", arg);
 			mask |= ID_COND;
 
-		} else
+		} else {
 			return api_error400();
+		}
 	}
 
 	query.append(" ORDER BY id LIMIT ", rows_limit);
 	auto res = mysql.query(query);
 
+	// clang-format off
 	append("[\n{\"columns\":["
-			"\"id\","
-			"\"username\","
-			"\"first_name\","
-			"\"last_name\","
-			"\"email\","
-			"\"type\","
-			"\"actions\""
-		"]}");
+	           "\"id\","
+	           "\"username\","
+	           "\"first_name\","
+	           "\"last_name\","
+	           "\"email\","
+	           "\"type\","
+	           "\"actions\""
+	       "]}");
+	// clang-format on
 
 	while (res.next()) {
-		append(",\n[", res[UID], ","
-			"\"", res[USERNAME], "\",",
-			jsonStringify(res[FNAME]), ',',
-			jsonStringify(res[LNAME]), ',',
-			jsonStringify(res[EMAIL]), ',');
+		append(",\n[", res[UID], ",\"", res[USERNAME], "\",",
+		       jsonStringify(res[FNAME]), ',', jsonStringify(res[LNAME]), ',',
+		       jsonStringify(res[EMAIL]), ',');
 
 		UserType utype {UserType(strtoull(res[UTYPE]))};
 		switch (utype) {
@@ -150,8 +147,7 @@ void Sim::api_user() {
 		return api_user_add();
 
 	} else if (not isDigit(next_arg) or
-		request.method != server::HttpRequest::POST)
-	{
+	           request.method != server::HttpRequest::POST) {
 		return api_error400();
 	}
 
@@ -187,9 +183,10 @@ void Sim::api_user_add() {
 
 	StringView username, utype_str, fname, lname, email;
 
-	form_validate_not_blank(username, "username", "Username", isUsername,
-		"Username can only consist of characters [a-zA-Z0-9_-]",
-		USERNAME_MAX_LEN);
+	form_validate_not_blank(
+	   username, "username", "Username", isUsername,
+	   "Username can only consist of characters [a-zA-Z0-9_-]",
+	   USERNAME_MAX_LEN);
 
 	// Validate user type
 	utype_str = request.form_data.get("type");
@@ -197,29 +194,30 @@ void Sim::api_user_add() {
 	if (utype_str == "A") {
 		utype = UserType::ADMIN;
 		if (uint(~users_perms & PERM::ADD_ADMIN))
-			add_notification("error",
-				"You have no permissions to make this user an admin");
+			add_notification(
+			   "error", "You have no permissions to make this user an admin");
 
 	} else if (utype_str == "T") {
 		utype = UserType::TEACHER;
 		if (uint(~users_perms & PERM::ADD_TEACHER))
-			add_notification("error",
-				"You have no permissions to make this user a teacher");
+			add_notification(
+			   "error", "You have no permissions to make this user a teacher");
 
 	} else if (utype_str == "N") {
 		utype = UserType::NORMAL;
 		if (uint(~users_perms & PERM::ADD_NORMAL))
-			add_notification("error",
-				"You have no permissions to make this user a normal user");
+			add_notification(
+			   "error",
+			   "You have no permissions to make this user a normal user");
 
 	} else
 		add_notification("error", "Invalid user's type");
 
 	form_validate_not_blank(fname, "first_name", "First Name",
-		USER_FIRST_NAME_MAX_LEN);
+	                        USER_FIRST_NAME_MAX_LEN);
 
 	form_validate_not_blank(lname, "last_name", "Last Name",
-		USER_LAST_NAME_MAX_LEN);
+	                        USER_LAST_NAME_MAX_LEN);
 
 	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
@@ -232,11 +230,12 @@ void Sim::api_user_add() {
 	auto salt = toHex(salt_bin.data(), salt_bin.size());
 
 	auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
-			" first_name, last_name, email, salt, password)"
-		" VALUES(?, ?, ?, ?, ?, ?, ?)");
+	                          " first_name, last_name, email, salt, password) "
+	                          "VALUES(?, ?, ?, ?, ?, ?, ?)");
 
-	stmt.bindAndExecute(username, uint(utype), fname, lname, email, salt,
-		sha3_512(intentionalUnsafeStringView(concat(salt, pass))));
+	stmt.bindAndExecute(
+	   username, uint(utype), fname, lname, email, salt,
+	   sha3_512(intentionalUnsafeStringView(concat(salt, pass))));
 
 	// User account successfully created
 	if (stmt.affected_rows() != 1)
@@ -255,9 +254,10 @@ void Sim::api_user_edit() {
 	// TODO: this looks very similar to the above validation
 	StringView username, new_utype_str, fname, lname, email;
 	// Validate fields
-	form_validate_not_blank(username, "username", "Username", isUsername,
-		"Username can only consist of characters [a-zA-Z0-9_-]",
-		USERNAME_MAX_LEN);
+	form_validate_not_blank(
+	   username, "username", "Username", isUsername,
+	   "Username can only consist of characters [a-zA-Z0-9_-]",
+	   USERNAME_MAX_LEN);
 
 	// Validate user type
 	new_utype_str = request.form_data.get("type");
@@ -265,29 +265,30 @@ void Sim::api_user_edit() {
 	if (new_utype_str == "A") {
 		new_utype = UserType::ADMIN;
 		if (uint(~users_perms & PERM::MAKE_ADMIN))
-			add_notification("error",
-				"You have no permissions to make this user an admin");
+			add_notification(
+			   "error", "You have no permissions to make this user an admin");
 
 	} else if (new_utype_str == "T") {
 		new_utype = UserType::TEACHER;
 		if (uint(~users_perms & PERM::MAKE_TEACHER))
-			add_notification("error",
-				"You have no permissions to make this user a teacher");
+			add_notification(
+			   "error", "You have no permissions to make this user a teacher");
 
 	} else if (new_utype_str == "N") {
 		new_utype = UserType::NORMAL;
 		if (uint(~users_perms & PERM::MAKE_NORMAL))
-			add_notification("error",
-				"You have no permissions to make this user a normal user");
+			add_notification(
+			   "error",
+			   "You have no permissions to make this user a normal user");
 
 	} else
 		add_notification("error", "Invalid user's type");
 
 	form_validate_not_blank(fname, "first_name", "First Name",
-		USER_FIRST_NAME_MAX_LEN);
+	                        USER_FIRST_NAME_MAX_LEN);
 
 	form_validate_not_blank(lname, "last_name", "Last Name",
-		USER_LAST_NAME_MAX_LEN);
+	                        USER_LAST_NAME_MAX_LEN);
 
 	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
 
@@ -301,11 +302,12 @@ void Sim::api_user_edit() {
 	if (stmt.next())
 		return api_error400("Username is already taken");
 
-	mysql.prepare("UPDATE IGNORE users"
-		" SET username=?, first_name=?, last_name=?, email=?, type=?"
-		" WHERE id=?")
-		.bindAndExecute(username, fname, lname, email, uint(new_utype),
-			users_uid);
+	mysql
+	   .prepare("UPDATE IGNORE users "
+	            "SET username=?, first_name=?, last_name=?, email=?, type=? "
+	            "WHERE id=?")
+	   .bindAndExecute(username, fname, lname, email, uint(new_utype),
+	                   users_uid);
 
 	transaction.commit();
 }
@@ -315,8 +317,7 @@ void Sim::api_user_change_password() {
 	using PERM = UserPermissions;
 
 	if (uint(~users_perms & PERM::CHANGE_PASS) and
-		uint(~users_perms & PERM::ADMIN_CHANGE_PASS))
-	{
+	    uint(~users_perms & PERM::ADMIN_CHANGE_PASS)) {
 		return api_error403();
 	}
 
@@ -327,8 +328,7 @@ void Sim::api_user_change_password() {
 		return api_error400("Passwords do not match");
 
 	if (uint(~users_perms & PERM::ADMIN_CHANGE_PASS) and
-		not check_submitted_password("old_pass"))
-	{
+	    not check_submitted_password("old_pass")) {
 		return api_error403("Invalid old password");
 	}
 
@@ -338,9 +338,9 @@ void Sim::api_user_change_password() {
 	InplaceBuff<SALT_LEN> salt(toHex(salt_bin, sizeof(salt_bin)));
 
 	auto stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
-	stmt.bindAndExecute(salt,
-		sha3_512(intentionalUnsafeStringView(concat(salt, new_pass))),
-		users_uid);
+	stmt.bindAndExecute(
+	   salt, sha3_512(intentionalUnsafeStringView(concat(salt, new_pass))),
+	   users_uid);
 }
 
 void Sim::api_user_delete() {
@@ -355,11 +355,11 @@ void Sim::api_user_delete() {
 
 	// Queue deleting job
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
-			" added, aux_id, info, data)"
-		" VALUES(?, " JSTATUS_PENDING_STR ", ?, " JTYPE_DELETE_USER_STR ","
-			" ?, ?, '', '')");
+	                          " added, aux_id, info, data)"
+	                          "VALUES(?, " JSTATUS_PENDING_STR ", ?,"
+	                          " " JTYPE_DELETE_USER_STR ", ?, ?, '', '')");
 	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_USER),
-		mysql_date(), users_uid);
+	                    mysql_date(), users_uid);
 
 	jobs::notify_job_server();
 	append(stmt.insert_id());

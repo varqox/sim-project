@@ -1,11 +1,10 @@
-#include "main.h"
 #include "problem_package_reset_limits_job_handler_base.h"
+#include "main.h"
 
 #include <simlib/sim/problem_package.h>
 
 void ProblemPackageResetLimitsJobHandlerBase::reset_package_time_limits(
-	FilePath package_path)
-{
+   FilePath package_path) {
 	STACK_UNWINDING_MARK;
 
 	job_log("Judging the model solution...");
@@ -13,11 +12,12 @@ void ProblemPackageResetLimitsJobHandlerBase::reset_package_time_limits(
 	load_problem_package(package_path);
 
 	auto& simfile = jworker.simfile();
-	simfile.load_all(); // Everything is needed as we will dump it to Simfile file
+	simfile
+	   .load_all(); // Everything is needed as we will dump it to Simfile file
 	job_log("Model solution: ", simfile.solutions[0]);
 
 	auto compilation_errors = compile_solution_from_problem_package(
-		simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0]));
+	   simfile.solutions[0], sim::filename_to_lang(simfile.solutions[0]));
 	if (compilation_errors.has_value())
 		return set_failure();
 
@@ -40,7 +40,7 @@ void ProblemPackageResetLimitsJobHandlerBase::reset_package_time_limits(
 		opts.solution_runtime_coefficient = SOLUTION_RUNTIME_COEFFICIENT;
 
 		sim::Conver::reset_time_limits_using_jugde_reports(simfile, initial_rep,
-			final_rep, opts);
+		                                                   final_rep, opts);
 
 	} catch (const std::exception& e) {
 		return set_failure("Conver failed: ", e.what());
