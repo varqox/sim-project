@@ -26,6 +26,7 @@ int main() {
 	assert(0 == sigprocmask(SIG_BLOCK, &set, NULL));
 	assert(foo() > 0);
 
-	for (;;) {}
+	for (;;) {
+	}
 	return 0;
 }

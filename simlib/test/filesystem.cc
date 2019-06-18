@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-TEST (Filesystem, abspath) {
+TEST(Filesystem, abspath) {
 	EXPECT_EQ(abspath("/foo/bar/"), "/foo/bar/");
 	EXPECT_EQ(abspath("/foo/bar/////"), "/foo/bar/");
 	EXPECT_EQ(abspath("/foo/bar/../"), "/foo/");
@@ -38,7 +38,7 @@ TEST (Filesystem, abspath) {
 	EXPECT_EQ(abspath("gg", 0, -1, "foo/bar"), "foo/bar/gg");
 }
 
-TEST (Filesystem, filename) {
+TEST(Filesystem, filename) {
 	EXPECT_EQ(filename("/my/path/foo.bar"), "foo.bar");
 	EXPECT_EQ(filename("/my/path/"), "");
 	EXPECT_EQ(filename("/"), "");

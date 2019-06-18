@@ -24,7 +24,8 @@ ssize_t readFromDevUrandom_nothrow(void* dest, size_t bytes) noexcept;
  * @param dest destination
  * @param bytes number of bytes to read
  *
- * @errors If any error occurs an exception of type std::runtime_error is thrown
+ * @errors If any error occurs an exception of type std::runtime_error is
+ *   thrown
  */
 void readFromDevUrandom(void* dest, size_t bytes);
 
@@ -50,9 +51,7 @@ private:
 	}
 
 public:
-	RandomDevice() {
-		fill_buff();
-	}
+	RandomDevice() { fill_buff(); }
 
 	result_type operator()() {
 		if (pos == buff.size())
@@ -65,13 +64,13 @@ public:
 extern RandomDevice random_generator;
 
 // Get random from [a, b]
-template<class T>
+template <class T>
 constexpr inline T getRandom(T&& a, T&& b) {
-	return std::uniform_int_distribution<T>(std::forward<T>(a),
-		std::forward<T>(b)) (random_generator);
+	return std::uniform_int_distribution<T>(
+	   std::forward<T>(a), std::forward<T>(b))(random_generator);
 }
 
-template<class Iter>
+template <class Iter>
 void randomShuffle(Iter begin, Iter end) {
 	for (auto n = end - begin, i = n - 1; i > 0; --i)
 		std::swap(begin[i], begin[getRandom(0, i)]);

@@ -10,14 +10,14 @@ namespace std {
 struct nullopt_t {
 	explicit constexpr nullopt_t(int) {}
 };
-constexpr nullopt_t nullopt{1};
-}
+constexpr nullopt_t nullopt {1};
+} // namespace std
 #endif
 
-template<class T, bool>
+template <class T, bool>
 class OptionalBase;
 
-template<class T>
+template <class T>
 class OptionalBase<T, true> {
 protected:
 	using StoredType = std::remove_const_t<T>;
@@ -31,7 +31,7 @@ protected:
 	constexpr OptionalBase(bool has_value) noexcept : has_value_(has_value) {}
 };
 
-template<class T>
+template <class T>
 class OptionalBase<T, false> {
 protected:
 	using StoredType = std::remove_const_t<T>;
@@ -50,13 +50,14 @@ protected:
 	}
 };
 
-template<class T>
-class Optional : private OptionalBase<T, std::is_trivially_destructible<T>::value> {
+template <class T>
+class Optional
+   : private OptionalBase<T, std::is_trivially_destructible<T>::value> {
 	using Base = OptionalBase<T, std::is_trivially_destructible<T>::value>;
-	using Base::payload_;
 	using Base::has_value_;
+	using Base::payload_;
 
-	template<class U>
+	template <class U>
 	friend class Optional;
 
 public:
@@ -66,36 +67,38 @@ public:
 
 	constexpr Optional(std::nullopt_t) noexcept : Optional() {}
 
-	template<class U = T, class X = std::enable_if_t<std::is_constructible<StoredType, U&&>::value>>
+	template <class U = T, class X = std::enable_if_t<
+	                          std::is_constructible<StoredType, U&&>::value>>
 	constexpr Optional(U&& value) : Base(true) {
 		::new (std::addressof(payload_)) StoredType(std::forward<U>(value));
 	}
 
 	constexpr Optional(const Optional& other) : Base(other.has_value_) {
 		if (other.has_value_)
-			::new(std::addressof(payload_)) StoredType(other.payload_);
+			::new (std::addressof(payload_)) StoredType(other.payload_);
 	}
 
-	constexpr Optional(Optional&& other)
-		noexcept(std::is_nothrow_move_constructible<T>::value)
-		: Base(other.has_value_)
-	{
+	constexpr Optional(Optional&& other) noexcept(
+	   std::is_nothrow_move_constructible<T>::value)
+	   : Base(other.has_value_) {
 		if (other.has_value_) {
-			::new(std::addressof(payload_)) StoredType(std::move(other.payload_));
+			::new (std::addressof(payload_))
+			   StoredType(std::move(other.payload_));
 			other.has_value_ = false;
 		}
 	}
 
-	template<class U>
+	template <class U>
 	constexpr Optional(const Optional<U>& other) : Base(other.has_value_) {
 		if (other.has_value_)
-			::new(std::addressof(payload_)) StoredType(other.payload_);
+			::new (std::addressof(payload_)) StoredType(other.payload_);
 	}
 
-	template<class U>
+	template <class U>
 	constexpr Optional(Optional<U>&& other) : Base(other.has_value_) {
 		if (other.has_value_) {
-			::new(std::addressof(payload_)) StoredType(std::move(other.payload_));
+			::new (std::addressof(payload_))
+			   StoredType(std::move(other.payload_));
 			other.has_value_ = false;
 		}
 	}
@@ -112,13 +115,12 @@ public:
 		return operator=<T>(other);
 	}
 
-	constexpr Optional& operator=(Optional&& other)
-		noexcept(std::is_nothrow_move_assignable<T>::value)
-	{
+	constexpr Optional& operator=(Optional&& other) noexcept(
+	   std::is_nothrow_move_assignable<T>::value) {
 		return operator=<T>(other);
 	}
 
-	template<class U>
+	template <class U>
 	constexpr Optional& operator=(const Optional<U>& other) {
 		if (has_value_) {
 			payload_.~StoredType();
@@ -126,14 +128,14 @@ public:
 		}
 
 		if (other.has_value_) {
-			::new(std::addressof(payload_)) StoredType(other.payload_);
+			::new (std::addressof(payload_)) StoredType(other.payload_);
 			has_value_ = true;
 		}
 
 		return *this;
 	}
 
-	template<class U>
+	template <class U>
 	constexpr Optional& operator=(Optional<U>&& other) {
 		if (has_value_) {
 			payload_.~StoredType();
@@ -141,7 +143,8 @@ public:
 		}
 
 		if (other.has_value_) {
-			::new(std::addressof(payload_)) StoredType(std::move(other.payload_));
+			::new (std::addressof(payload_))
+			   StoredType(std::move(other.payload_));
 			other.has_value_ = false;
 			has_value_ = true;
 		}
@@ -149,14 +152,15 @@ public:
 		return *this;
 	}
 
-	template<class U = T, class X = std::enable_if_t<std::is_constructible<StoredType, U&&>::value>>
+	template <class U = T, class X = std::enable_if_t<
+	                          std::is_constructible<StoredType, U&&>::value>>
 	constexpr Optional& operator=(U&& value) {
 		if (has_value_) {
 			payload_.~StoredType();
 			has_value_ = false;
 		}
 
-		::new(std::addressof(payload_)) StoredType(std::forward<U>(value));
+		::new (std::addressof(payload_)) StoredType(std::forward<U>(value));
 		has_value_ = true;
 		return *this;
 	}
@@ -187,9 +191,9 @@ public:
 		return payload_;
 	}
 
-	template<class U>
+	template <class U>
 	constexpr T value_or(U&& default_value) const {
-		return (has_value_ ? payload_ :
-			static_cast<T>(std::forward<U>(default_value)));
+		return (has_value_ ? payload_
+		                   : static_cast<T>(std::forward<U>(default_value)));
 	}
 };

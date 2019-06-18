@@ -1,5 +1,5 @@
-#include "../include/debug.h"
 #include "../include/filesystem.h"
+#include "../include/debug.h"
 #include "../include/logger.h"
 #include "../include/process.h"
 #include "../include/utilities.h"
@@ -106,8 +106,8 @@ int mkdir_r(string path, mode_t mode) noexcept {
 }
 
 /**
- * @brief Removes recursively directory @p pathname relative to a directory file
- *   descriptor @p dirfd
+ * @brief Removes recursively directory @p pathname relative to a directory
+ *   file descriptor @p dirfd
  *
  * @param dirfd directory file descriptor
  * @param pathname directory pathname (relative to @p dirfd)
@@ -118,40 +118,43 @@ int mkdir_r(string path, mode_t mode) noexcept {
  *   fdopendir(3)
  */
 static int __remove_rat(int dirfd, FilePath path) noexcept {
-	int fd = openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW |
-		O_CLOEXEC);
+	int fd =
+	   openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 	if (fd == -1)
 		return unlinkat(dirfd, path, 0);
 
-	DIR *dir = fdopendir(fd);
+	DIR* dir = fdopendir(fd);
 	if (dir == nullptr) {
 		close(fd);
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 	}
 
 	int ec, rc = 0;
-	forEachDirComponent(dir, [&](dirent* file) -> bool {
-	#ifdef _DIRENT_HAVE_D_TYPE
-		if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
-	#endif
-			if (__remove_rat(fd, file->d_name)) {
-				ec = errno;
-				rc = -1;
-				return false;
-			}
-	#ifdef _DIRENT_HAVE_D_TYPE
-		} else if (unlinkat(fd, file->d_name, 0)) {
-			ec = errno;
-			rc = -1;
-			return false;
-		}
-	#endif
+	forEachDirComponent(
+	   dir,
+	   [&](dirent* file) -> bool {
+#ifdef _DIRENT_HAVE_D_TYPE
+		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+#endif
+			   if (__remove_rat(fd, file->d_name)) {
+				   ec = errno;
+				   rc = -1;
+				   return false;
+			   }
+#ifdef _DIRENT_HAVE_D_TYPE
+		   } else if (unlinkat(fd, file->d_name, 0)) {
+			   ec = errno;
+			   rc = -1;
+			   return false;
+		   }
+#endif
 
-		return true;
-	}, [&] {
-		ec = errno;
-		rc = -1;
-	});
+		   return true;
+	   },
+	   [&] {
+		   ec = errno;
+		   rc = -1;
+	   });
 
 	(void)closedir(dir);
 
@@ -168,12 +171,12 @@ int remove_rat(int dirfd, FilePath path) noexcept {
 }
 
 int removeDirContents_at(int dirfd, FilePath pathname) noexcept {
-	int fd = openat(dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW |
-		O_CLOEXEC);
+	int fd =
+	   openat(dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 	if (fd == -1)
 		return -1;
 
-	DIR *dir = fdopendir(fd);
+	DIR* dir = fdopendir(fd);
 	if (dir == nullptr) {
 		int ec = errno;
 		close(fd);
@@ -182,28 +185,31 @@ int removeDirContents_at(int dirfd, FilePath pathname) noexcept {
 	}
 
 	int ec, rc = 0;
-	forEachDirComponent(dir, [&](dirent* file) -> bool {
-	#ifdef _DIRENT_HAVE_D_TYPE
-		if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
-	#endif
-			if (__remove_rat(fd, file->d_name)) {
-				ec = errno;
-				rc = -1;
-				return false;
-			}
-	#ifdef _DIRENT_HAVE_D_TYPE
-		} else if (unlinkat(fd, file->d_name, 0)) {
-			ec = errno;
-			rc = -1;
-			return false;
-		}
-	#endif
+	forEachDirComponent(
+	   dir,
+	   [&](dirent* file) -> bool {
+#ifdef _DIRENT_HAVE_D_TYPE
+		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+#endif
+			   if (__remove_rat(fd, file->d_name)) {
+				   ec = errno;
+				   rc = -1;
+				   return false;
+			   }
+#ifdef _DIRENT_HAVE_D_TYPE
+		   } else if (unlinkat(fd, file->d_name, 0)) {
+			   ec = errno;
+			   rc = -1;
+			   return false;
+		   }
+#endif
 
-		return true;
-	}, [&] {
-		ec = errno;
-		rc = -1;
-	});
+		   return true;
+	   },
+	   [&] {
+		   ec = errno;
+		   rc = -1;
+	   });
 
 	(void)closedir(dir);
 
@@ -224,9 +230,8 @@ int create_subdirectories(StringView file) noexcept {
 int blast(int infd, int outfd) noexcept {
 	array<char, 65536> buff;
 	ssize_t len, written;
-	while (len = read(infd, buff.data(), buff.size()), len > 0 ||
-		(len == -1 && errno == EINTR))
-	{
+	while (len = read(infd, buff.data(), buff.size()),
+	       len > 0 || (len == -1 && errno == EINTR)) {
 		ssize_t pos = 0;
 		while (pos < len) {
 			written = write(outfd, buff.data() + pos, len - pos);
@@ -261,8 +266,8 @@ int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
 	if (in == -1)
 		return -1;
 
-	int out = openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
-		S_0644);
+	int out =
+	   openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_0644);
 	if (out == -1) {
 		close(in);
 		return -1;
@@ -288,11 +293,10 @@ int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
-	noexcept
-{
+static int __copy_rat(int dirfd1, FilePath src, int dirfd2,
+                      FilePath dest) noexcept {
 	int src_fd = openat(dirfd1, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-	if (src_fd == -1){
+	if (src_fd == -1) {
 		if (errno == ENOTDIR)
 			return copyat(dirfd1, src, dirfd2, dest);
 
@@ -308,7 +312,7 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 		return -1;
 	}
 
-	DIR *src_dir = fdopendir(src_fd);
+	DIR* src_dir = fdopendir(src_fd);
 	if (src_dir == nullptr) {
 		close(src_fd);
 		close(dest_fd);
@@ -316,31 +320,34 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 	}
 
 	int ec, rc = 0;
-	forEachDirComponent(src_dir, [&](dirent* file) -> bool {
-	#ifdef _DIRENT_HAVE_D_TYPE
-		if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
-	#endif
-			if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
-				ec = errno;
-				rc = -1;
-				return false;
-			}
+	forEachDirComponent(
+	   src_dir,
+	   [&](dirent* file) -> bool {
+#ifdef _DIRENT_HAVE_D_TYPE
+		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
+#endif
+			   if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
+				   ec = errno;
+				   rc = -1;
+				   return false;
+			   }
 
-	#ifdef _DIRENT_HAVE_D_TYPE
-		} else {
-			if (copyat(src_fd, file->d_name, dest_fd, file->d_name)) {
-				ec = errno;
-				rc = -1;
-				return false;
-			}
-		}
-	#endif
+#ifdef _DIRENT_HAVE_D_TYPE
+		   } else {
+			   if (copyat(src_fd, file->d_name, dest_fd, file->d_name)) {
+				   ec = errno;
+				   rc = -1;
+				   return false;
+			   }
+		   }
+#endif
 
-		return true;
-	}, [&] {
-		ec = errno;
-		rc = -1;
-	});
+		   return true;
+	   },
+	   [&] {
+		   ec = errno;
+		   rc = -1;
+	   });
 
 	closedir(src_dir);
 	close(dest_fd);
@@ -351,8 +358,7 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
 	return rc;
 }
 
-int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept
-{
+int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
 	struct stat64 sb;
 	if (fstatat64(dirfd1, src, &sb, AT_SYMLINK_NOFOLLOW) == -1)
 		return -1;
@@ -370,8 +376,7 @@ int copy_r(FilePath src, FilePath dest, bool create_subdirs) noexcept {
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
-int move(FilePath oldpath, FilePath newpath, bool create_subdirs) noexcept
-{
+int move(FilePath oldpath, FilePath newpath, bool create_subdirs) noexcept {
 	if (create_subdirs)
 		create_subdirectories(CStringView(newpath));
 
@@ -393,10 +398,10 @@ int createFile(FilePath pathname, mode_t mode) noexcept {
 	return close(fd);
 }
 
-size_t readAll(int fd, void *buf, size_t count) noexcept {
+size_t readAll(int fd, void* buf, size_t count) noexcept {
 	ssize_t k;
 	size_t pos = 0;
-	uint8_t *buff = static_cast<uint8_t*>(buf);
+	uint8_t* buff = static_cast<uint8_t*>(buf);
 	do {
 		k = read(fd, buff + pos, count - pos);
 		if (k > 0)
@@ -414,10 +419,10 @@ size_t readAll(int fd, void *buf, size_t count) noexcept {
 	return count;
 }
 
-size_t writeAll(int fd, const void *buf, size_t count) noexcept {
+size_t writeAll(int fd, const void* buf, size_t count) noexcept {
 	ssize_t k;
 	size_t pos = 0;
-	const uint8_t *buff = static_cast<const uint8_t*>(buf);
+	const uint8_t* buff = static_cast<const uint8_t*>(buf);
 	errno = 0;
 	do {
 		k = write(fd, buff + pos, count - pos);
@@ -447,19 +452,14 @@ string abspath(StringView path, size_t beg, size_t end, string curr_dir) {
 			++beg;
 
 		size_t next_slash = std::min(end, find(path, '/', beg, end));
-
-		// If [beg, next_slash) == "."
-		if (next_slash - beg == 1 && path[beg] == '.') {
+		if (path.substring(beg, next_slash) == ".") {
 			beg = next_slash;
 			// Append '/' as current location is a directory
 			if (curr_dir.size() && curr_dir.back() != '/')
 				curr_dir += '/';
 			continue;
 
-		// If [beg, next_slash) == ".."
-		} else if (next_slash - beg == 2 && path[beg] == '.' &&
-			path[beg + 1] == '.')
-		{
+		} else if (path.substring(beg, next_slash) == "..") {
 			// Erase last path component
 			size_t new_size = curr_dir.size() - (curr_dir.size() > 1);
 
@@ -472,9 +472,9 @@ string abspath(StringView path, size_t beg, size_t end, string curr_dir) {
 			continue;
 		}
 
-		curr_dir.append(path.begin() + beg,
-			path.begin() + next_slash + (next_slash < end)); /* last component
-				ensures '/' is appended if it is in the path */
+		curr_dir.append(path.begin() + beg, path.begin() + next_slash +
+		                                       (next_slash < end)); /* last
+		               component ensures '/' is appended if it is in the path */
 		beg = next_slash;
 	}
 
@@ -526,8 +526,8 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 	off64_t bytes_left = end - beg;
 	string res;
 	while (bytes_left > 0) {
-		ssize_t len = read(fd, buff.data(),
-			std::min<off64_t>(buff.size(), bytes_left));
+		ssize_t len =
+		   read(fd, buff.data(), std::min<off64_t>(buff.size(), bytes_left));
 		// Interrupted by signal
 		if (len < 0 && errno == EINTR)
 			continue;
@@ -547,7 +547,8 @@ string getFileContents(int fd, off64_t beg, off64_t end) {
 
 string getFileContents(FilePath file) {
 	FileDescriptor fd;
-	while (fd.open(file, O_RDONLY | O_CLOEXEC) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY | O_CLOEXEC) == -1 && errno == EINTR) {
+	}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', errmsg());
@@ -557,7 +558,8 @@ string getFileContents(FilePath file) {
 
 string getFileContents(FilePath file, off64_t beg, off64_t end) {
 	FileDescriptor fd;
-	while (fd.open(file, O_RDONLY | O_CLOEXEC) == -1 && errno == EINTR) {}
+	while (fd.open(file, O_RDONLY | O_CLOEXEC) == -1 && errno == EINTR) {
+	}
 
 	if (fd == -1)
 		THROW("Failed to open file `", file, '`', errmsg());
@@ -566,15 +568,14 @@ string getFileContents(FilePath file, off64_t beg, off64_t end) {
 }
 
 vector<string> getFileByLines(FilePath file, int flags, size_t first,
-	size_t last)
-{
+                              size_t last) {
 	vector<string> res;
 
-	FILE *f = fopen(file, "re");
+	FILE* f = fopen(file, "re");
 	if (f == nullptr)
 		return res;
 
-	char *buff = nullptr;
+	char* buff = nullptr;
 	size_t n = 0, line = 0;
 	ssize_t read;
 	// TODO: getline fails on '\0' ??? - check it out
@@ -627,7 +628,7 @@ string humanizeFileSize(uint64_t size) {
 
 	// Bytes
 	if (size < MIN_KB)
-		return (size == 1 ? "1 byte" : concat_tostr(size," bytes"));
+		return (size == 1 ? "1 byte" : concat_tostr(size, " bytes"));
 
 	double dsize = size;
 	// KB
@@ -661,7 +662,7 @@ string humanizeFileSize(uint64_t size) {
 
 namespace directory_tree {
 
-void Node::__print(FILE *stream, string buff) const {
+void Node::__print(FILE* stream, string buff) const {
 	fprintf(stream, "%s%s/\n", buff.c_str(), name_.c_str());
 
 	// Update buffer
@@ -674,13 +675,14 @@ void Node::__print(FILE *stream, string buff) const {
 	size_t dirs_len = dirs_.size(), files_len = files_.size();
 	// Directories
 	for (size_t i = 0; i < dirs_len; ++i)
-		dirs_[i]->__print(stream, buff +
-				(i + 1 == dirs_len && files_len == 0 ? "`-- " : "|-- "));
+		dirs_[i]->__print(
+		   stream,
+		   buff + (i + 1 == dirs_len && files_len == 0 ? "`-- " : "|-- "));
 
 	// Files
 	for (size_t i = 0; i < files_len; ++i)
 		fprintf(stream, "%s%c-- %s\n", buff.c_str(),
-				(i + 1 == files_len ? '`' : '|'), files_[i].c_str());
+		        (i + 1 == files_len ? '`' : '|'), files_[i].c_str());
 }
 
 bool Node::__pathExists(StringView s) const noexcept {

@@ -1,7 +1,7 @@
+#include "../include/sim/conver.h"
 #include "../include/avl_dict.h"
 #include "../include/libzip.h"
 #include "../include/process.h"
-#include "../include/sim/conver.h"
 
 #include <gtest/gtest.h>
 
@@ -47,7 +47,8 @@ static Conver::Options load_options_from_file(FilePath file) {
 		return duration_cast<nanoseconds>(duration<double>(get_double(name)));
 	};
 
-	auto get_optional_duration = [&](StringView name) -> Optional<std::chrono::nanoseconds> {
+	auto get_optional_duration =
+	   [&](StringView name) -> Optional<std::chrono::nanoseconds> {
 		if (get_var(name).as_string() == "null")
 			return std::nullopt;
 
@@ -79,18 +80,19 @@ static Conver::Options load_options_from_file(FilePath file) {
 	opts.global_time_limit = get_optional_duration("global_time_limit");
 	opts.max_time_limit = get_duration("max_time_limit");
 	opts.reset_time_limits_using_model_solution =
-		get_bool("reset_time_limits_using_model_solution");
+	   get_bool("reset_time_limits_using_model_solution");
 	opts.ignore_simfile = get_bool("ignore_simfile");
 	opts.seek_for_new_tests = get_bool("seek_for_new_tests");
 	opts.reset_scoring = get_bool("reset_scoring");
 	opts.require_statement = get_bool("require_statement");
 	opts.rtl_opts.min_time_limit = get_duration("min_time_limit");
-	opts.rtl_opts.solution_runtime_coefficient = get_double("solution_rutnime_coefficient");
+	opts.rtl_opts.solution_runtime_coefficient =
+	   get_double("solution_rutnime_coefficient");
 
 	return opts;
 }
 
-TEST (Conver, constructSimfile) {
+TEST(Conver, constructSimfile) {
 	// TODO: make tests for interactive problem packages
 	stdlog.label(false);
 	TemporaryFile package_copy("/tmp/conver_test.XXXXXX");
@@ -105,20 +107,21 @@ TEST (Conver, constructSimfile) {
 	AVLDictSet<string, StrNumCompare> cases;
 	// Detect available test cases
 	forEachDirComponent(concat(exec_dir, "conver_test_cases/"),
-		[&](dirent* file) {
-			constexpr StringView suff("package.zip");
-			StringView file_name(file->d_name);
-			if (hasSuffix(file_name, suff)) {
-				file_name.removeSuffix(suff.size());
-				cases.emplace(file_name.to_string());
-			}
-		});
+	                    [&](dirent* file) {
+		                    constexpr StringView suff("package.zip");
+		                    StringView file_name(file->d_name);
+		                    if (hasSuffix(file_name, suff)) {
+			                    file_name.removeSuffix(suff.size());
+			                    cases.emplace(file_name.to_string());
+		                    }
+	                    });
 
 	cases.for_each([&](StringView i) {
 		stdlog("Test case: ", i);
 		try {
 			auto base = concat(exec_dir, "conver_test_cases/", i);
-			auto options = load_options_from_file(concat_tostr(base, "conver.options"));
+			auto options =
+			   load_options_from_file(concat_tostr(base, "conver.options"));
 
 			copy(concat_tostr(base, "package.zip"), package_copy.path());
 
@@ -131,30 +134,37 @@ TEST (Conver, constructSimfile) {
 				// Round time limits to whole seconds. This should remove the
 				// problem with random time limit if they were set using the
 				// model solution.
-				for (auto& group : post_simfile.tgroups)
+				for (auto& group : post_simfile.tgroups) {
 					for (auto& test : group.tests) {
-						EXPECT_GT(test.time_limit, 0s); // Time limits should not have been set to 0
+						EXPECT_GT(
+						   test.time_limit,
+						   0s); // Time limits should not have been set to 0
 						test.time_limit =
-							duration_cast<seconds>(test.time_limit + 0.5s);
+						   duration_cast<seconds>(test.time_limit + 0.5s);
 					}
-
-				if (regenerate_outs) {
-					putFileContents(concat_tostr(base, "pre_simfile.out"),
-						intentionalUnsafeStringView(pre_simfile.dump()));
-					putFileContents(concat_tostr(base, "post_simfile.out"),
-						intentionalUnsafeStringView(post_simfile.dump()));
-					putFileContents(concat_tostr(base, "conver_log.out"),
-						report);
 				}
 
-				EXPECT_EQ(getFileContents(concat_tostr(base, "pre_simfile.out")),
-					pre_simfile.dump());
+				if (regenerate_outs) {
+					putFileContents(
+					   concat_tostr(base, "pre_simfile.out"),
+					   intentionalUnsafeStringView(pre_simfile.dump()));
+					putFileContents(
+					   concat_tostr(base, "post_simfile.out"),
+					   intentionalUnsafeStringView(post_simfile.dump()));
+					putFileContents(concat_tostr(base, "conver_log.out"),
+					                report);
+				}
 
-				EXPECT_EQ(getFileContents(concat_tostr(base, "post_simfile.out")),
-					post_simfile.dump());
+				EXPECT_EQ(
+				   getFileContents(concat_tostr(base, "pre_simfile.out")),
+				   pre_simfile.dump());
+
+				EXPECT_EQ(
+				   getFileContents(concat_tostr(base, "post_simfile.out")),
+				   post_simfile.dump());
 
 				EXPECT_EQ(getFileContents(concat_tostr(base, "conver_log.out")),
-					report);
+				          report);
 			};
 
 			try {
@@ -168,28 +178,36 @@ TEST (Conver, constructSimfile) {
 
 				case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: {
 					JudgeWorker jworker;
-					jworker.load_package(package_copy.path(), post_simfile.dump());
+					jworker.load_package(package_copy.path(),
+					                     post_simfile.dump());
 
 					string compilation_errors;
-					if (jworker.compile_checker(5s, &compilation_errors, 4096, ""))
-						THROW("failed to compile checker: \n", compilation_errors);
+					if (jworker.compile_checker(5s, &compilation_errors, 4096,
+					                            "")) {
+						THROW("failed to compile checker: \n",
+						      compilation_errors);
+					}
 
 					TemporaryFile sol_src("/tmp/problem_solution.XXXXXX");
 					ZipFile zip(package_copy.path());
-					zip.extract_to_fd(zip.get_index(concat(cres.pkg_master_dir, post_simfile.solutions[0])), sol_src);
+					zip.extract_to_fd(
+					   zip.get_index(concat(cres.pkg_master_dir,
+					                        post_simfile.solutions[0])),
+					   sol_src);
 
-					if (jworker.compile_solution(sol_src.path(),
-						sim::filename_to_lang(post_simfile.solutions[0]), 5s,
-						&compilation_errors, 4096, ""))
-					{
-						THROW("failed to compile solution: \n", compilation_errors);
+					if (jworker.compile_solution(
+					       sol_src.path(),
+					       sim::filename_to_lang(post_simfile.solutions[0]), 5s,
+					       &compilation_errors, 4096, "")) {
+						THROW("failed to compile solution: \n",
+						      compilation_errors);
 					}
 
 					JudgeReport rep1 = jworker.judge(false);
 					JudgeReport rep2 = jworker.judge(true);
 
-					Conver::reset_time_limits_using_jugde_reports(post_simfile, rep1,
-						rep2, options.rtl_opts);
+					Conver::reset_time_limits_using_jugde_reports(
+					   post_simfile, rep1, rep2, options.rtl_opts);
 
 					break;
 				}

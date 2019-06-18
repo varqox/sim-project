@@ -8,7 +8,7 @@
 class Logger {
 private:
 	FILE* f_;
-	std::atomic<bool> opened_{false}, label_{true};
+	std::atomic<bool> opened_ {false}, label_ {true};
 
 	void close() noexcept {
 		if (opened_.load()) {
@@ -34,7 +34,7 @@ public:
 	explicit Logger(FilePath filename);
 
 	// Like use(), it accept nullptr for which a dummy logger is created
-	explicit Logger(FILE *stream) noexcept : f_(stream) {}
+	explicit Logger(FILE* stream) noexcept : f_(stream) {}
 
 	Logger(const Logger&) = delete;
 	Logger& operator=(const Logger&) = delete;
@@ -47,13 +47,14 @@ public:
 	 *
 	 * @param filename file to open
 	 *
-	 * @errors Throws an exception std::runtime_error if an fopen() error occurs
+	 * @errors Throws an exception std::runtime_error if an fopen() error
+	 *   occurs
 	 */
 	void open(FilePath filename);
 
 	/// Use @p stream as log stream, nullptr is acceptable for the logger
 	/// becomes a dummy
-	void use(FILE *stream) noexcept {
+	void use(FILE* stream) noexcept {
 		close();
 		f_ = stream;
 	}
@@ -82,36 +83,35 @@ public:
 
 		explicit Appender(Logger& logger) : logger_(logger) {}
 
-		template<class... Args>
-		explicit Appender(Logger& logger, Args&&... args) : logger_(logger),
-			orig_label_(logger.label()), label_(orig_label_)
-		{
+		template <class... Args>
+		explicit Appender(Logger& logger, Args&&... args)
+		   : logger_(logger), orig_label_(logger.label()), label_(orig_label_) {
 			operator()(std::forward<Args>(args)...);
 		}
 
 		/// Deeply integrated with flush() and flush_no_nl()
 		void flush_impl(const char* format1, const char* format2,
-			const char* format3) noexcept;
+		                const char* format3) noexcept;
 
 	public:
 		Appender(const Appender&) = delete;
 
-		Appender(Appender&& app) : logger_(app.logger_), flushed_(app.flushed_),
-			orig_label_(app.orig_label_), label_(app.label_),
-			buff_(std::move(app.buff_))
-		{
+		Appender(Appender&& app)
+		   : logger_(app.logger_), flushed_(app.flushed_),
+		     orig_label_(app.orig_label_), label_(app.label_),
+		     buff_(std::move(app.buff_)) {
 			app.flushed_ = true;
 		}
 
 		Appender& operator=(const Appender&) = delete;
 		Appender& operator=(Appender&&) = delete;
 
-		template<class T>
+		template <class T>
 		Appender& operator<<(T&& x) {
 			return operator()(std::forward<T>(x));
 		}
 
-		template<class... Args>
+		template <class... Args>
 		Appender& operator()(Args&&... args) {
 			buff_.append(std::forward<Args>(args)...);
 			flushed_ = false;
@@ -132,12 +132,12 @@ public:
 		~Appender() { flush(); }
 	};
 
-	template<class T>
+	template <class T>
 	Appender operator<<(T&& x) noexcept {
 		return Appender(*this, std::forward<T>(x));
 	}
 
-	template<class... Args>
+	template <class... Args>
 	Appender operator()(Args&&... args) noexcept {
 		return Appender(*this, std::forward<Args>(args)...);
 	}
@@ -155,32 +155,32 @@ extern Logger stdlog; // Standard (default) log
 extern Logger errlog; // Error log
 
 // Logs to string and Logger simultaneously
-template<class StrType>
+template <class StrType>
 class DoubleAppender {
 	Logger::Appender app_;
 	StrType& str_;
 
 public:
-	template<class... Args>
+	template <class... Args>
 	DoubleAppender(Logger& logger, StrType& str, Args&&... args)
-		: app_(logger(args...)), str_(str)
-	{
+	   : app_(logger(args...)), str_(str) {
 		back_insert(str_, std::forward<Args>(args)...);
 	}
 
 	DoubleAppender(const DoubleAppender&) = delete;
 
-	DoubleAppender(DoubleAppender&& dl) : app_(std::move(dl.app_)), str_(dl.str_) {}
+	DoubleAppender(DoubleAppender&& dl)
+	   : app_(std::move(dl.app_)), str_(dl.str_) {}
 
 	DoubleAppender& operator=(const DoubleAppender&) = delete;
 	DoubleAppender& operator=(DoubleAppender&&) = delete;
 
-	template<class T>
+	template <class T>
 	DoubleAppender& operator<<(T&& x) {
 		return operator()(std::forward<T>(x));
 	}
 
-	template<class... Args>
+	template <class... Args>
 	DoubleAppender& operator()(Args&&... args) {
 		back_insert(str_, args...);
 		app_(std::forward<Args>(args)...);

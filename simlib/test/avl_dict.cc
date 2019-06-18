@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 #include <set>
 
-TEST (AvlDictContainer, foreach_since_lower_bound) {
+TEST(AvlDictContainer, foreach_since_lower_bound) {
 	AVLDictMultiset<int> avl;
 	std::multiset<int> rbt;
 
@@ -41,11 +41,11 @@ TEST (AvlDictContainer, foreach_since_lower_bound) {
 			while (it != rbt.end() and *it <= end)
 				r.emplace_back(*it++);
 
-			EXPECT_EQ(a, r) << "beg: " << beg  << "end: " << end;
+			EXPECT_EQ(a, r) << "beg: " << beg << "end: " << end;
 		}
 }
 
-TEST (AvlDictContainer, foreach_since_upper_bound) {
+TEST(AvlDictContainer, foreach_since_upper_bound) {
 	AVLDictMultiset<int> avl;
 	std::multiset<int> rbt;
 
@@ -83,6 +83,6 @@ TEST (AvlDictContainer, foreach_since_upper_bound) {
 			while (it != rbt.end() and *it <= end)
 				r.emplace_back(*it++);
 
-			EXPECT_EQ(a, r) << "beg: " << beg  << "end: " << end;
+			EXPECT_EQ(a, r) << "beg: " << beg << "end: " << end;
 		}
 }

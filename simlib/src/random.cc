@@ -1,7 +1,7 @@
+#include "../include/random.h"
 #include "../include/debug.h"
 #include "../include/filesystem.h"
 #include "../include/logger.h"
-#include "../include/random.h"
 
 #include <sys/syscall.h>
 

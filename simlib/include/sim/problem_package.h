@@ -24,8 +24,10 @@ class PackageContents {
 			return {buff_ref.data() + x.begin, x.end - x.begin};
 		}
 
-		template<class A, class B>
-		bool operator()(A&& a, B&& b) const { return to_str(a) < to_str(b); }
+		template <class A, class B>
+		bool operator()(A&& a, B&& b) const {
+			return to_str(a) < to_str(b);
+		}
 	};
 
 	AVLDictSet<Span, Comparer> entries {Comparer(buff)};
@@ -35,7 +37,7 @@ class PackageContents {
 	}
 
 public:
-	template<class... Args>
+	template <class... Args>
 	void add_entry(Args&&... args) {
 		auto prev_size = buff.size;
 		buff.append(std::forward<Args>(args)...);
@@ -54,7 +56,7 @@ public:
 
 	/// @p callback should take one argument of type StringView - it will
 	/// contain the entry's path
-	template<class Func>
+	template <class Func>
 	void for_each_with_prefix(StringView prefix, Func&& callback) const {
 		entries.foreach_since_lower_bound(prefix, [&](Span s) {
 			StringView entry = to_str(s);
@@ -97,7 +99,7 @@ public:
 	}
 
 	void load_from_directory(StringView pkg_path,
-		bool retain_pkg_path_prefix = false);
+	                         bool retain_pkg_path_prefix = false);
 
 	void load_from_zip(FilePath pkg_path);
 };

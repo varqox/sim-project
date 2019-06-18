@@ -1,8 +1,8 @@
+#include "../include/process.h"
 #include "../include/debug.h"
 #include "../include/logger.h"
 #include "../include/memory.h"
 #include "../include/parsers.h"
-#include "../include/process.h"
 #include "../include/utilities.h"
 
 #include <dirent.h>
@@ -17,7 +17,7 @@ InplaceBuff<PATH_MAX> getCWD() {
 	if (!x)
 		THROW("Failed to get CWD", errmsg());
 
-	auto x_guard = make_call_in_destructor([x]{ free(x); });
+	auto x_guard = make_call_in_destructor([x] { free(x); });
 
 	if (x[0] != '/') {
 		errno = ENOENT;
@@ -36,9 +36,8 @@ string getExec(pid_t pid) {
 	string path = concat_tostr("/proc/", pid, "/exe");
 
 	ssize_t rc = readlink(path.c_str(), buff.data(), buff.size());
-	if ((rc == -1 && errno == ENAMETOOLONG)
-		|| rc >= static_cast<int>(buff.size()))
-	{
+	if ((rc == -1 && errno == ENAMETOOLONG) ||
+	    rc >= static_cast<int>(buff.size())) {
 		array<char, 65536> buff2;
 		rc = readlink(path.c_str(), buff2.data(), buff2.size());
 		if (rc == -1 || rc >= static_cast<int>(buff2.size()))
@@ -104,7 +103,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 
 		buff[len] = '\0';
 
-		if (binary_search(exec_set, StringView{buff}))
+		if (binary_search(exec_set, StringView {buff}))
 			res.emplace_back(pid); // We have a match
 	});
 

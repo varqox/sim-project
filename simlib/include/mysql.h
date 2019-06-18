@@ -17,45 +17,46 @@
 #include <mysql.h>
 
 #if 0
-# warning "Before committing disable this debug"
-# define DEBUG_MYSQL(...) __VA_ARGS__
+#warning "Before committing disable this debug"
+#define DEBUG_MYSQL(...) __VA_ARGS__
 #else
-# define DEBUG_MYSQL(...)
+#define DEBUG_MYSQL(...)
 #endif
 
 #if __cplusplus > 201402L
-#warning "Since C++17 inline constexpr variables and constexpr if will handle this"
+#warning                                                                       \
+   "Since C++17 inline constexpr variables and constexpr if will handle this"
 #endif
 
-template<class...>
+template <class...>
 struct is_enum_val : std::false_type {};
 
-template<class T>
+template <class T>
 struct is_enum_val<EnumVal<T>> : std::true_type {};
 
-template<class T>
+template <class T>
 struct EnumValTypeHelper {
 	using type = void;
 };
 
-template<class T>
+template <class T>
 struct EnumValTypeHelper<EnumVal<T>> {
 	using type = T;
 };
 
-template<class T>
+template <class T>
 using EnumValType = typename EnumValTypeHelper<T>::type;
 
 namespace MySQL {
 
 // Optional type used to access data retrieved from MySQL
-template<class T>
+template <class T>
 class Optional {
 	using StoredType = std::remove_const_t<T>;
 	StoredType value_; // This optional always need to contain value
 	my_bool has_no_value_;
 
-	template<size_t, size_t>
+	template <size_t, size_t>
 	friend class Statement;
 
 public:
@@ -64,7 +65,10 @@ public:
 	Optional(const Optional&) = default;
 	Optional(Optional&&) = default;
 
-	// As optional may hold InplaceBuff<>, changing its value when it is bounded is dangerous (may result in buffer overflow, as we store in MYSQL_BIND its max_size() along with data pointer which become invalid after the assignment)
+	// As optional may hold InplaceBuff<>, changing its value when it is
+	// bounded is dangerous (may result in buffer overflow, as we store in
+	// MYSQL_BIND its max_size() along with data pointer which become invalid
+	// after the assignment)
 	Optional& operator=(const Optional&) = delete;
 	Optional& operator=(Optional&&) = delete;
 
@@ -74,14 +78,19 @@ public:
 
 	operator ::Optional<T>() const { return opt(); }
 
-	template<class U = T>
-	operator std::enable_if_t<is_enum_val<U>::value, ::Optional<EnumValType<T>>>() const {
+	template <class U = T>
+	operator std::enable_if_t<is_enum_val<U>::value,
+	                          ::Optional<EnumValType<T>>>() const {
 		return has_no_value_ ? ::Optional<T>() : value_;
 	}
 
-	::Optional<T> opt() const { return has_no_value_ ? ::Optional<T>() : value_; }
+	::Optional<T> opt() const {
+		return has_no_value_ ? ::Optional<T>() : value_;
+	}
 
-	constexpr explicit operator bool() const noexcept { return not has_no_value_; }
+	constexpr explicit operator bool() const noexcept {
+		return not has_no_value_;
+	}
 
 	constexpr const T& operator*() const { return value_; }
 
@@ -96,7 +105,7 @@ public:
 		return value_;
 	}
 
-	template<class U>
+	template <class U>
 	constexpr T value_or(U&& default_value) const {
 		return (has_no_value_ ? std::forward<U>(default_value) : value_);
 	}
@@ -114,8 +123,7 @@ private:
 	unsigned long* lengths_ {};
 
 	Result(MYSQL_RES* res, size_t& conn_ref_objs_no)
-		: connection_referencing_objects_no_(&conn_ref_objs_no), res_(res)
-	{
+	   : connection_referencing_objects_no_(&conn_ref_objs_no), res_(res) {
 		++conn_ref_objs_no;
 	}
 
@@ -124,11 +132,10 @@ private:
 
 public:
 	Result(Result&& r) noexcept
-		: connection_referencing_objects_no_(
-			std::exchange(r.connection_referencing_objects_no_, nullptr)),
-		res_(std::exchange(r.res_, nullptr)), row_(std::move(r.row_)),
-		lengths_(r.lengths_)
-	{
+	   : connection_referencing_objects_no_(
+	        std::exchange(r.connection_referencing_objects_no_, nullptr)),
+	     res_(std::exchange(r.res_, nullptr)), row_(std::move(r.row_)),
+	     lengths_(r.lengths_) {
 		// r.row_ = {};
 		// r.lengths_ does not have to be changed
 	}
@@ -140,7 +147,7 @@ public:
 			--*connection_referencing_objects_no_;
 
 		connection_referencing_objects_no_ =
-			std::exchange(r.connection_referencing_objects_no_, nullptr);
+		   std::exchange(r.connection_referencing_objects_no_, nullptr);
 		res_ = std::exchange(r.res_, nullptr);
 		row_ = std::move(r.row_);
 		lengths_ = r.lengths_;
@@ -149,7 +156,6 @@ public:
 		// r.lengths_ does not have to be changed
 		return *this;
 	}
-
 
 	~Result() {
 		if (res_)
@@ -160,12 +166,11 @@ public:
 
 	MYSQL_RES* impl() noexcept { return res_; }
 
-	operator MYSQL_RES* () noexcept { return impl(); }
+	operator MYSQL_RES*() noexcept { return impl(); }
 
 	bool next() noexcept {
 		if ((row_ = mysql_fetch_row(res_)) and
-			(lengths_ = mysql_fetch_lengths(res_)))
-		{
+		    (lengths_ = mysql_fetch_lengths(res_))) {
 			return true;
 		}
 
@@ -194,7 +199,7 @@ public:
 	}
 };
 
-template<size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
+template <size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
 class Statement {
 private:
 	friend Connection;
@@ -206,10 +211,9 @@ private:
 	InplaceArray<std::unique_ptr<char[]>, 8> buffs_;
 
 	Statement(MYSQL_STMT* stmt, size_t& conn_ref_objs_no)
-		: connection_referencing_objects_no_(&conn_ref_objs_no), stmt_(stmt),
-			params_(mysql_stmt_param_count(stmt)),
-			res_(mysql_stmt_field_count(stmt))
-	{
+	   : connection_referencing_objects_no_(&conn_ref_objs_no), stmt_(stmt),
+	     params_(mysql_stmt_param_count(stmt)),
+	     res_(mysql_stmt_field_count(stmt)) {
 		for (auto& x : params_)
 			memset(std::addressof(x), 0, sizeof(x));
 		for (auto& x : res_)
@@ -232,15 +236,15 @@ private:
 	}
 
 public:
-	Statement() : connection_referencing_objects_no_(nullptr), stmt_(nullptr),
-		params_(0), res_(0) {}
+	Statement()
+	   : connection_referencing_objects_no_(nullptr), stmt_(nullptr),
+	     params_(0), res_(0) {}
 
 	Statement(Statement&& s) noexcept
-		: connection_referencing_objects_no_(
-				std::exchange(s.connection_referencing_objects_no_, nullptr)),
-			stmt_(std::exchange(s.stmt_, nullptr)),
-			params_(std::move(s.params_)), res_(std::move(s.res_))
-	{
+	   : connection_referencing_objects_no_(
+	        std::exchange(s.connection_referencing_objects_no_, nullptr)),
+	     stmt_(std::exchange(s.stmt_, nullptr)), params_(std::move(s.params_)),
+	     res_(std::move(s.res_)) {
 		bind_res_errors_and_nulls();
 	}
 
@@ -251,7 +255,7 @@ public:
 			--*connection_referencing_objects_no_;
 
 		connection_referencing_objects_no_ =
-			std::exchange(s.connection_referencing_objects_no_, nullptr);
+		   std::exchange(s.connection_referencing_objects_no_, nullptr);
 		stmt_ = std::exchange(s.stmt_, nullptr);
 		params_ = std::move(s.params_);
 		res_ = std::move(s.res_);
@@ -270,13 +274,13 @@ public:
 
 	MYSQL_STMT* impl() noexcept { return stmt_; }
 
-	operator MYSQL_STMT* () noexcept { return impl(); }
+	operator MYSQL_STMT*() noexcept { return impl(); }
 
 	// Need to be called before execute()
 private:
 	void bind(unsigned idx, const bool& x) ND(noexcept) {
 		static_assert(sizeof(const bool) == sizeof(const char),
-			"Needed below to do the address magic");
+		              "Needed below to do the address magic");
 		bind(idx, reinterpret_cast<const char&>(x));
 	}
 
@@ -284,7 +288,7 @@ public:
 	void bind(unsigned idx, const char& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		static_assert(sizeof(char) == sizeof(signed char),
-			"Needed to do the pointer conversion");
+		              "Needed to do the pointer conversion");
 		params_[idx].buffer_type = MYSQL_TYPE_TINY;
 		params_[idx].buffer = const_cast<char*>(&x);
 		params_[idx].is_unsigned = false;
@@ -349,7 +353,7 @@ public:
 	void bind(unsigned idx, const long& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type =
-			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
 		params_[idx].buffer = const_cast<long*>(&x);
 		params_[idx].is_unsigned = false;
 	}
@@ -357,14 +361,13 @@ public:
 	void bind(unsigned idx, const unsigned long& x) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type =
-			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
 		params_[idx].buffer = const_cast<unsigned long*>(&x);
 		params_[idx].is_unsigned = true;
 	}
 
 	void bind(unsigned idx, char* str, size_t& length, size_t max_size)
-		ND(noexcept)
-	{
+	   ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
 		params_[idx].buffer = str;
@@ -393,8 +396,8 @@ public:
 		params_[idx].length_value = str.size();
 	}
 
-	// Like bind(StringView) but copies string into internal buffer - useful for
-	// temporary strings
+	// Like bind(StringView) but copies string into internal buffer - useful
+	// for temporary strings
 	void bind_copy(unsigned idx, StringView str) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
 		if (str.size()) {
@@ -422,7 +425,7 @@ public:
 	}
 
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
-	template<class T>
+	template <class T>
 	void bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
 		bind(idx, x.value_);
 		bind_isnull(idx, x.has_no_value_);
@@ -430,7 +433,7 @@ public:
 
 private: // For use only by bindAndExecute()
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
-	template<class T>
+	template <class T>
 	void bind(unsigned idx, ::Optional<T>& x) ND(noexcept) {
 		if (x.has_value())
 			bind(idx, *x);
@@ -439,7 +442,7 @@ private: // For use only by bindAndExecute()
 	}
 
 public:
-	template<class T>
+	template <class T>
 	void bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
 		bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
 	}
@@ -449,7 +452,7 @@ public:
 			THROW(mysql_stmt_error(stmt_));
 	}
 
-	template<class... Args>
+	template <class... Args>
 	void bind_all(Args&&... args) {
 		unsigned idx = 0;
 		int t[] = {(bind(idx++, std::forward<Args>(args)), 0)...};
@@ -468,7 +471,7 @@ public:
 		execute();
 	}
 
-	template<class... Args>
+	template <class... Args>
 	void bindAndExecute(Args&&... args) {
 		bind_all(args...); // std::forward is omitted intentionally to make
 		                   // bind_all() think that all arguments are references
@@ -478,14 +481,14 @@ public:
 	// Need to be called before next()
 	void res_bind(unsigned idx, bool& x) ND(noexcept) {
 		static_assert(sizeof(bool) == sizeof(char),
-			"Needed below to do the address magic");
+		              "Needed below to do the address magic");
 		res_bind(idx, reinterpret_cast<int8_t&>(x));
 	}
 
 	void res_bind(unsigned idx, char& x) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
 		static_assert(sizeof(char) == sizeof(signed char),
-			"Needed to do the pointer conversion");
+		              "Needed to do the pointer conversion");
 		res_[idx].buffer_type = MYSQL_TYPE_TINY;
 		res_[idx].buffer = &x;
 		res_[idx].is_unsigned = false;
@@ -550,7 +553,7 @@ public:
 	void res_bind(unsigned idx, long& x) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
 		res_[idx].buffer_type =
-			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
 		res_[idx].buffer = &x;
 		res_[idx].is_unsigned = false;
 	}
@@ -558,16 +561,17 @@ public:
 	void res_bind(unsigned idx, unsigned long& x) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
 		res_[idx].buffer_type =
-			(sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
+		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
 		res_[idx].buffer = &x;
 		res_[idx].is_unsigned = true;
 	}
 
-	template<size_t BUFF_SIZE>
+	template <size_t BUFF_SIZE>
 	void res_bind(unsigned idx, InplaceBuff<BUFF_SIZE>& buff) ND(noexcept) {
 		D(throw_assert(idx < res_.size());)
-		static_assert(std::is_base_of<InplaceBuffBase, InplaceBuff<BUFF_SIZE>>
-			::value, "Needed by next()");
+		static_assert(
+		   std::is_base_of<InplaceBuffBase, InplaceBuff<BUFF_SIZE>>::value,
+		   "Needed by next()");
 		res_[idx].buffer_type = MYSQL_TYPE_BLOB;
 		res_[idx].buffer = buff.data();
 		res_[idx].buffer_length = buff.max_size();
@@ -589,13 +593,13 @@ public:
 	}
 
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
-	template<class T>
+	template <class T>
 	void res_bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
 		res_bind(idx, x.value_);
 		res_bind_isnull(idx, x.has_no_value_);
 	}
 
-	template<class T>
+	template <class T>
 	void res_bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
 		res_bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
 	}
@@ -605,7 +609,7 @@ public:
 			THROW(mysql_stmt_error(stmt_));
 	}
 
-	template<class... Args>
+	template <class... Args>
 	void res_bind_all(Args&&... args) {
 		unsigned idx = 0;
 		int t[] = {(res_bind(idx++, std::forward<Args>(args)), 0)...};
@@ -633,14 +637,14 @@ public:
 
 		// Truncation occurred
 		for (unsigned i = 0; i < res_.size(); ++i) {
-			if (not *res_[i].error)
+			if (not*res_[i].error)
 				continue;
 
 			if (res_[i].buffer_type != MYSQL_TYPE_BLOB)
 				THROW("Truncated data at column ", i);
 
-			InplaceBuffBase* buff = reinterpret_cast<InplaceBuffBase*>
-				((int8_t*)res_[i].length - offsetof(InplaceBuffBase, size));
+			InplaceBuffBase* buff = reinterpret_cast<InplaceBuffBase*>(
+			   (int8_t*)res_[i].length - offsetof(InplaceBuffBase, size));
 			buff->lossy_resize(buff->size);
 
 			res_[i].buffer = buff->data();
@@ -664,9 +668,8 @@ public:
 		return mysql_stmt_affected_rows(stmt_);
 	}
 
-	std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)> resMetadata()
-		noexcept
-	{
+	std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)>
+	resMetadata() noexcept {
 		return {mysql_stmt_result_metadata(stmt_), &mysql_free_result};
 	}
 };
@@ -686,7 +689,7 @@ public:
 	Transaction& operator=(const Transaction&) = delete;
 
 	Transaction(Transaction&& trans) noexcept
-		: conn_(std::exchange(trans.conn_, nullptr)) {}
+	   : conn_(std::exchange(trans.conn_, nullptr)) {}
 
 	Transaction& operator=(Transaction&& trans) {
 		rollback();
@@ -727,42 +730,45 @@ private:
 
 	friend class Transaction;
 
-DEBUG_MYSQL(
-	static size_t get_next_connection_id() noexcept {
+	DEBUG_MYSQL(static size_t get_next_connection_id() noexcept {
 		static std::atomic_size_t next_connection_id = 0;
 		return next_connection_id++;
 	}
 
-	size_t connection_id = get_next_connection_id();
-)
+	            size_t connection_id = get_next_connection_id();)
 
 	void reconnect() {
 		InplaceBuff<32> host(conn_->host), user(conn_->user),
-			passwd(conn_->passwd), db(conn_->db);
+		   passwd(conn_->passwd), db(conn_->db);
 
 		Connection c;
 		c.connect(host, user, passwd, db);
 		*this = std::move(c);
 	}
 
-	template<class T>
-	static bool ret_val_success(T* ret) noexcept { return (ret != nullptr); }
+	template <class T>
+	static bool ret_val_success(T* ret) noexcept {
+		return (ret != nullptr);
+	}
 
-	template<class T>
+	template <class T>
 	static std::enable_if_t<std::is_integral<T>::value, bool>
-	ret_val_success(T ret) noexcept { return ret == T(); }
+	ret_val_success(T ret) noexcept {
+		return ret == T();
+	}
 
-	template<class Func2, class Func3, class Func, class... Args>
+	template <class Func2, class Func3, class Func, class... Args>
 	auto call_and_try_reconnecting_on_error_impl(Func2&& resetter,
-		Func3&& error_msg, Func&& func, Args&&... args)
-	{
+	                                             Func3&& error_msg, Func&& func,
+	                                             Args&&... args) {
 		STACK_UNWINDING_MARK;
 		// std::forward is omitted as we may use arguments second time
 		auto rc = func(args...);
 		if (ret_val_success(rc))
 			return rc;
 
-		if (not isOneOf((int)mysql_errno(conn_), CR_SERVER_GONE_ERROR, CR_SERVER_LOST))
+		if (not isOneOf((int)mysql_errno(conn_), CR_SERVER_GONE_ERROR,
+		                CR_SERVER_LOST))
 			THROW(error_msg());
 
 		// Cannot reconnect if other objects already uses this connection
@@ -779,12 +785,12 @@ DEBUG_MYSQL(
 		THROW(error_msg());
 	}
 
-	template<class Func, class... Args>
+	template <class Func, class... Args>
 	auto call_and_try_reconnecting_on_error(Func&& func, Args&&... args) {
 		STACK_UNWINDING_MARK;
-		return call_and_try_reconnecting_on_error_impl([]{},
-			[&] { return mysql_error(conn_); },
-			std::forward<Func>(func), std::forward<Args>(args)...);
+		return call_and_try_reconnecting_on_error_impl(
+		   [] {}, [&] { return mysql_error(conn_); }, std::forward<Func>(func),
+		   std::forward<Args>(args)...);
 	}
 
 public:
@@ -797,9 +803,10 @@ public:
 			THROW("mysql_init() failed - not enough memory is available");
 	}
 
-	Connection(Connection&& c) : conn_(std::exchange(c.conn_, nullptr)),
-		referencing_objects_no_(c.referencing_objects_no_)
-		DEBUG_MYSQL(, connection_id(c.connection_id)) {}
+	Connection(Connection&& c)
+	   : conn_(std::exchange(c.conn_, nullptr)),
+	     referencing_objects_no_(c.referencing_objects_no_)
+	        DEBUG_MYSQL(, connection_id(c.connection_id)) {}
 
 	Connection& operator=(Connection&& c) {
 		close();
@@ -823,7 +830,7 @@ public:
 
 	MYSQL* impl() noexcept { return conn_; }
 
-	operator MYSQL* () noexcept { return impl(); }
+	operator MYSQL*() noexcept { return impl(); }
 
 	void connect(FilePath host, FilePath user, FilePath passwd, FilePath db) {
 		STACK_UNWINDING_MARK;
@@ -831,7 +838,8 @@ public:
 		my_bool x = true;
 		(void)mysql_options(conn_, MYSQL_REPORT_DATA_TRUNCATION, &x);
 
-		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr, 0))
+		if (not mysql_real_connect(conn_, host, user, passwd, db, 0, nullptr,
+		                           0))
 			THROW(mysql_error(conn_));
 
 		// Set CLOEXEC flag on the mysql socket
@@ -844,38 +852,46 @@ public:
 	}
 
 	bool disconnected() noexcept {
-		return (mysql_ping(conn_) != 0 and mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
+		return (mysql_ping(conn_) != 0 and
+		        mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
 	}
 
 	Result query(StringView sql) {
 		STACK_UNWINDING_MARK;
-		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): query -> ", sql);)
-		call_and_try_reconnecting_on_error(mysql_real_query, *this,
-			sql.data(), sql.size());
+		DEBUG_MYSQL(
+		   errlog("MySQL (connection ", connection_id, "): query -> ", sql);)
+		call_and_try_reconnecting_on_error(mysql_real_query, *this, sql.data(),
+		                                   sql.size());
 
-		MYSQL_RES* res = call_and_try_reconnecting_on_error(mysql_store_result,
-			*this);
+		MYSQL_RES* res =
+		   call_and_try_reconnecting_on_error(mysql_store_result, *this);
 		return {res, referencing_objects_no_};
 	}
 
 	void update(StringView sql) {
 		STACK_UNWINDING_MARK;
-		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): update -> ", sql);)
-		call_and_try_reconnecting_on_error(mysql_real_query, *this,
-			sql.data(), sql.size());
+		DEBUG_MYSQL(
+		   errlog("MySQL (connection ", connection_id, "): update -> ", sql);)
+		call_and_try_reconnecting_on_error(mysql_real_query, *this, sql.data(),
+		                                   sql.size());
 	}
 
-	template<size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
+	template <size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
 	Statement<STATIC_BINDS, STATIC_RESULTS> prepare(StringView sql) {
 		STACK_UNWINDING_MARK;
-		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id, "): prepare -> ", sql);)
-		MYSQL_STMT* stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
+		DEBUG_MYSQL(
+		   errlog("MySQL (connection ", connection_id, "): prepare -> ", sql);)
+		MYSQL_STMT* stmt =
+		   call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
 		try {
-			call_and_try_reconnecting_on_error_impl([&]{
-				(void)mysql_stmt_close(stmt);
-				stmt = call_and_try_reconnecting_on_error(mysql_stmt_init, *this);
-			}, [&]{ return mysql_stmt_error(stmt); },
-			mysql_stmt_prepare, stmt, sql.data(), sql.size());
+			call_and_try_reconnecting_on_error_impl(
+			   [&] {
+				   (void)mysql_stmt_close(stmt);
+				   stmt = call_and_try_reconnecting_on_error(mysql_stmt_init,
+				                                             *this);
+			   },
+			   [&] { return mysql_stmt_error(stmt); }, mysql_stmt_prepare, stmt,
+			   sql.data(), sql.size());
 
 		} catch (...) {
 			(void)mysql_stmt_close(stmt);
@@ -931,7 +947,10 @@ inline void Transaction::commit() {
 }
 
 inline Transaction::~Transaction() {
-	try { rollback(); } catch (...) {} // There is nothing we can do with exceptions
+	try {
+		rollback();
+	} catch (...) {
+	} // There is nothing we can do with exceptions
 	// If the exception was thrown the counter may have not been decremented
 	if (conn_)
 		--conn_->referencing_objects_no_;

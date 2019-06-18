@@ -4,7 +4,7 @@
 
 #include <vector>
 
-template<class size_type>
+template <class size_type>
 struct AVLNodeBase {
 	static constexpr int L = 0; // left
 	static constexpr int R = 1; // right
@@ -13,15 +13,15 @@ struct AVLNodeBase {
 	uint8_t h;
 
 	AVLNodeBase(size_type left_kid, size_type right_kid, uint8_t height)
-		: kid{{left_kid, right_kid}}, h{height} {}
+	   : kid {{left_kid, right_kid}}, h {height} {}
 };
 
 /// To use within AVLDictionary only
-template<class T, class size_type = size_t>
+template <class T, class size_type = size_t>
 class AVLPoolAllocator {
 	using AVLNB = AVLNodeBase<size_type>;
 	static_assert(std::is_base_of<AVLNB, T>::value,
-		"T has to derive from AVLNodeBase");
+	              "T has to derive from AVLNodeBase");
 
 	union Elem {
 		size_type ptr;
@@ -35,15 +35,19 @@ class AVLPoolAllocator {
 	size_type capacity_ = 0;
 	size_type head = 0;
 
-	template<class Array>
-	static T& elem(Array& arr, size_type i) { return arr[i].val; }
+	template <class Array>
+	static T& elem(Array& arr, size_type i) {
+		return arr[i].val;
+	}
 
 	T& elem(size_type i) { return elem(data, i); }
 
 	const T& elem(size_type i) const { return elem(data, i); }
 
-	template<class Array>
-	static size_type& ptr(Array& arr, size_type i) { return arr[i].ptr; }
+	template <class Array>
+	static size_type& ptr(Array& arr, size_type i) {
+		return arr[i].ptr;
+	}
 
 	size_type& ptr(size_type i) { return ptr(data, i); }
 
@@ -56,16 +60,17 @@ public:
 
 	// Provides strong exception guarantee
 	AVLPoolAllocator(const AVLPoolAllocator& apa)
-		: data(new Elem[apa.capacity_]), capacity_(apa.capacity_),
-		head(apa.head)
-	{
-		// Initialize pool -> unallocated nodes will have value max_capacity()
+	   : data(new Elem[apa.capacity_]), capacity_(apa.capacity_),
+	     head(apa.head) {
+		// Initialize pool -> unallocated nodes will have value
+		// max_capacity()
 		for (size_type i = 0; i < capacity(); ++i)
 			ptr(i) = 0;
 		for (size_type i = head; i != capacity(); i = apa.ptr(i))
 			ptr(i) = max_capacity();
 
-		// Update pool -> copy allocated nodes and initialize unallocated nodes
+		// Update pool -> copy allocated nodes and initialize
+		// unallocated nodes
 		auto emergency_destruct = [&](int beg) {
 			for (size_type i = beg; i < capacity(); ++i)
 				if (i == head) // unallocated
@@ -110,21 +115,20 @@ public:
 		*this = AVLPoolAllocator(apa);
 	}
 
-	// After moving out @p apa should be reinitialized (e.g. apa = {}), before
-	// using it in any way other than destructing
+	// After moving out @p apa should be reinitialized (e.g. apa =
+	// {}), before using it in any way other than destructing
 	AVLPoolAllocator(AVLPoolAllocator&& apa) noexcept
-		: data(std::move(apa.data)), capacity_(apa.capacity_), head(apa.head)
-	{
+	   : data(std::move(apa.data)), capacity_(apa.capacity_), head(apa.head) {
 		apa.capacity_ = 0;
 		// apa.head = 0; // It is not necessary to set head
 	}
 
-	// After moving out @p apa should be reinitialized (e.g. apa = {}), before
-	// using it in any way other than destructing
+	// After moving out @p apa should be reinitialized (e.g. apa =
+	// {}), before using it in any way other than destructing
 	AVLPoolAllocator& move_assign(AVLPoolAllocator&& apa,
-		AssertAllIsDeallocated) noexcept
-	{
-		// As there is nothing to destruct we can proceed to moving the data
+	                              AssertAllIsDeallocated) noexcept {
+		// As there is nothing to destruct we can proceed to moving
+		// the data
 		data = std::move(apa.data);
 		capacity_ = apa.capacity_;
 		head = apa.head;
@@ -134,8 +138,8 @@ public:
 		return *this;
 	}
 
-	// After moving out @p apa should be reinitialized (e.g. apa = {}), before
-	// using it in any way other than destructing
+	// After moving out @p apa should be reinitialized (e.g. apa =
+	// {}), before using it in any way other than destructing
 	AVLPoolAllocator& operator=(AVLPoolAllocator&& apa) {
 		if (capacity() > 0) {
 			// Destruct all previously held data
@@ -151,14 +155,14 @@ public:
 					elem(i).~T();
 		}
 
-		// All has been destructed, so we can proceed to moving the data
-		return move_assign(std::move(apa), AssertAllIsDeallocated{});
+		// All has been destructed, so we can proceed to moving the
+		// data
+		return move_assign(std::move(apa), AssertAllIsDeallocated {});
 	}
 
 	explicit AVLPoolAllocator(size_type reverve_size)
-		: data {new Elem[meta::max(1, reverve_size)]},
-		capacity_ {meta::max(1, reverve_size)}
-	{
+	   : data {new Elem[meta::max(1, reverve_size)]}, capacity_ {meta::max(
+	                                                     1, reverve_size)} {
 		for (size_type i = 0; i < capacity(); ++i)
 			ptr(i) = i + 1;
 	}
@@ -176,15 +180,16 @@ public:
 	// Provides strong exception guarantee
 	void reserve_for(size_type n) {
 		static_assert(std::is_nothrow_move_constructible<T>::value,
-			"Needed below");
+		              "Needed below");
 		if (n < capacity())
 			return;
 
 		if (capacity() == max_capacity())
 			THROW("The AVLPool is full");
 
-		size_type new_capacity = meta::max(n, capacity() < (max_capacity() >> 1)
-			? capacity() << 1 : max_capacity());
+		size_type new_capacity =
+		   meta::max(n, capacity() < (max_capacity() >> 1) ? capacity() << 1
+		                                                   : max_capacity());
 		std::unique_ptr<Elem[]> new_data {new Elem[new_capacity]};
 		// Initialize new data
 		for (size_type i = 0; i < capacity(); ++i)
@@ -192,8 +197,9 @@ public:
 		for (size_type i = capacity(); i < new_capacity; ++i)
 			ptr(new_data, i) = i + 1;
 
-		// Move and mark unallocated cells (allocated cells will still have
-		// new_capacity as value, it works because new_capacity > capacity())
+		// Move and mark unallocated cells (allocated cells will
+		// still have new_capacity as value, it works because
+		// new_capacity > capacity())
 		for (size_type i = head; i != capacity(); i = ptr(i))
 			ptr(new_data, i) = ptr(i);
 
@@ -201,11 +207,11 @@ public:
 		// 0 element has to be moved in a different way
 		if (ptr(new_data, 0) == new_capacity)
 			::new (&elem(new_data, 0))
-				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
+			   AVLNB {std::move(reinterpret_cast<AVLNB&>(data[0]))};
 
 		for (size_type i = 1; i < capacity(); ++i)
 			if (ptr(new_data, i) == new_capacity) {
-				::new (&elem(new_data, i)) T{std::move(elem(i))};
+				::new (&elem(new_data, i)) T {std::move(elem(i))};
 				elem(i).~T();
 			}
 
@@ -216,18 +222,19 @@ public:
 	// Provides strong exception guarantee
 	size_type allocate() {
 		static_assert(std::is_nothrow_move_constructible<T>::value,
-			"Needed below");
+		              "Needed below");
 		if (head == capacity()) {
 			if (capacity() == max_capacity())
 				THROW("The AVLPool is full");
 
-			size_type new_capacity = (capacity() < (max_capacity() >> 1) ?
-				capacity() << 1 : max_capacity());
+			size_type new_capacity =
+			   (capacity() < (max_capacity() >> 1) ? capacity() << 1
+			                                       : max_capacity());
 			std::unique_ptr<Elem[]> new_data {new Elem[new_capacity]};
-			// Initialize new data (move old and initialize new cells)
-			// 0 element has to be moved in a different way
+			// Initialize new data (move old and initialize new
+			// cells) 0 element has to be moved in a different way
 			::new (&elem(new_data, 0))
-				AVLNB{std::move(reinterpret_cast<AVLNB&>(data[0]))};
+			   AVLNB {std::move(reinterpret_cast<AVLNB&>(data[0]))};
 			for (size_type i = 1; i < capacity(); ++i) {
 				::new (&elem(new_data, i)) T(std::move(elem(i)));
 				elem(i).~T();
@@ -270,17 +277,17 @@ public:
 	}
 #endif
 
-	~AVLPoolAllocator() {}  // It is user duty to destruct all the held objects
+	~AVLPoolAllocator() {} // It is user duty to destruct all the held objects
 };
 
-template<template<class...> class NodeT, class Comp = std::less<>,
-	class size_type = size_t, class... NodeArgs>
+template <template <class...> class NodeT, class Comp = std::less<>,
+          class size_type = size_t, class... NodeArgs>
 class AVLDictionary {
 protected:
 	using Node = NodeT<size_type, NodeArgs...>;
 
 	static_assert(std::is_base_of<AVLNodeBase<size_type>, Node>::value,
-		"NodeT has to derive from AVLNodeBase");
+	              "NodeT has to derive from AVLNodeBase");
 
 	static constexpr int L = Node::L;
 	static constexpr int R = Node::R;
@@ -294,8 +301,7 @@ protected:
 
 public:
 	AVLDictionary(size_type reserve_n = 1, Comp cmp = {})
-		: pool(reserve_n), compare(std::move(cmp))
-	{
+	   : pool(reserve_n), compare(std::move(cmp)) {
 		throw_assert(nil == 0);
 		pool[nil].kid[L] = nil;
 		pool[nil].kid[R] = nil;
@@ -307,23 +313,22 @@ public:
 	AVLDictionary(const AVLDictionary&) = default;
 	AVLDictionary& operator=(const AVLDictionary&) = default;
 
-	// After moving out @p avld should be reinitialized (e.g. avld = {}), before
-	// using it in any way other than destructing
+	// After moving out @p avld should be reinitialized (e.g. avld =
+	// {}), before using it in any way other than destructing
 	AVLDictionary(AVLDictionary&& avld) noexcept
-		: pool(std::move(avld.pool)), nil(avld.nil), root(avld.root),
-			size_(avld.size_), compare(std::move(avld.compare))
-	{
+	   : pool(std::move(avld.pool)), nil(avld.nil), root(avld.root),
+	     size_(avld.size_), compare(std::move(avld.compare)) {
 		// Set avld to a clear state
 		avld.root = nil;
 	}
 
-	// After moving out @p avld should be reinitialized (e.g. avld = {}), before
-	// using it in any way other than destructing
+	// After moving out @p avld should be reinitialized (e.g. avld =
+	// {}), before using it in any way other than destructing
 	AVLDictionary& operator=(AVLDictionary&& avld) noexcept {
 		delete_subtree(root);
 
 		pool.move_assign(std::move(avld.pool),
-			typename decltype(pool)::AssertAllIsDeallocated{});
+		                 typename decltype(pool)::AssertAllIsDeallocated {});
 		// nil = avld.nil; (nil is always equal to 0)
 		root = avld.root;
 		size_ = avld.size_;
@@ -340,12 +345,12 @@ protected:
 		--size_;
 	}
 
-	template<class... Args>
+	template <class... Args>
 	size_type allocate_node(Args&&... args) {
 		size_t x = pool.allocate();
 
 		try {
-			::new (&pool[x]) Node{std::forward<Args>(args)...};
+			::new (&pool[x]) Node {std::forward<Args>(args)...};
 		} catch (...) {
 
 			pool.deallocate(x);
@@ -356,18 +361,16 @@ protected:
 		return x;
 	}
 
-
 #if __cplusplus > 201402L
 #warning "Since C++17 constexpr if is a better option below"
 #endif
-	template<class U = Node>
+	template <class U = Node>
 	std::enable_if_t<std::is_trivially_destructible<U>::value, void>
-		delete_subtree(size_type) noexcept {}
+	delete_subtree(size_type) noexcept {}
 
-	template<class U = Node>
+	template <class U = Node>
 	std::enable_if_t<!std::is_trivially_destructible<U>::value, void>
-		delete_subtree(size_type x) noexcept
-	{
+	delete_subtree(size_type x) noexcept {
 		if (x == nil)
 			return;
 
@@ -382,8 +385,9 @@ public:
 		delete_subtree(root);
 
 		static_assert(
-			std::is_trivially_destructible<AVLNodeBase<size_type>>::value,
-			"Needed to avoid destructing nil and simplify move assignments");
+		   std::is_trivially_destructible<AVLNodeBase<size_type>>::value,
+		   "Needed to avoid destructing nil and simplify "
+		   "move assignments");
 	}
 
 	void clear() {
@@ -405,8 +409,8 @@ public:
 
 protected:
 	void seth(size_type x) noexcept {
-		pool[x].h = uint8_t(1 +
-			meta::max(pool[pool[x].kid[L]].h, pool[pool[x].kid[R]].h));
+		pool[x].h = uint8_t(
+		   1 + meta::max(pool[pool[x].kid[L]].h, pool[pool[x].kid[R]].h));
 	}
 
 	/// rotating nil node up is invalid
@@ -455,30 +459,30 @@ protected:
 	/**
 	 * @brief Calls @p func on every element of subtree of @p x
 	 * @param x node representing subtree
-	 * @param func function to call on every element, it should take one
-	 *   argument of type Node&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @param func function to call on every element, it should take
+	 *   one argument of type Node&, if it return sth convertible to
+	 *   false the lookup will break
 	 */
-	template<class Func>
+	template <class Func>
 	std::enable_if_t<
-		std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		bool
-	> for_each(size_type x, Func&& func) {
+	   std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   bool>
+	for_each(size_type x, Func&& func) {
 		if (x == nil)
 			return true;
 
 		return (for_each(pool[x].kid[L], func) and
-			static_cast<bool>(func(pool[x])) and
-			for_each(pool[x].kid[R], func));
+		        static_cast<bool>(func(pool[x])) and
+		        for_each(pool[x].kid[R], func));
 	}
 
-	template<class Func>
+	template <class Func>
 	std::enable_if_t<
-		!std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> for_each(size_type x, Func&& func) {
+	   !std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	for_each(size_type x, Func&& func) {
 		if (x == nil)
 			return;
 
@@ -492,30 +496,30 @@ protected:
 	/**
 	 * @brief Calls @p func on every element of subtree of @p x
 	 * @param x node representing subtree
-	 * @param func function to call on every element, it should take one
-	 *   argument of type Node&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @param func function to call on every element, it should take
+	 *   one argument of type Node&, if it return sth convertible to
+	 *   false the lookup will break
 	 */
-	template<class Func>
-	std::enable_if_t<
-		std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<const Node&>())), bool>::value,
-		bool
-	> for_each(size_type x, Func&& func) const {
+	template <class Func>
+	std::enable_if_t<std::is_convertible<decltype(std::declval<Func>()(
+	                                        std::declval<const Node&>())),
+	                                     bool>::value,
+	                 bool>
+	for_each(size_type x, Func&& func) const {
 		if (x == nil)
 			return true;
 
 		return (for_each(pool[x].kid[L], func) and
-			static_cast<bool>(func(pool[x])) and
-			for_each(pool[x].kid[R], func));
+		        static_cast<bool>(func(pool[x])) and
+		        for_each(pool[x].kid[R], func));
 	}
 
-	template<class Func>
-	std::enable_if_t<
-		!std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<const Node&>())), bool>::value,
-		void
-	> for_each(size_type x, Func&& func) const {
+	template <class Func>
+	std::enable_if_t<!std::is_convertible<decltype(std::declval<Func>()(
+	                                         std::declval<const Node&>())),
+	                                      bool>::value,
+	                 void>
+	for_each(size_type x, Func&& func) const {
 		if (x == nil)
 			return;
 
@@ -529,28 +533,31 @@ protected:
 public:
 	/**
 	 * @brief Calls @p func on every element
-	 * @param func function to call on every element, it should take one
-	 *   argument of type Node&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @param func function to call on every element, it should take
+	 *   one argument of type Node&, if it return sth convertible to
+	 *   false the lookup will break
 	 */
-	template<class Func>
-	void for_each(Func&& func) { for_each(root, std::forward<Func>(func)); }
+	template <class Func>
+	void for_each(Func&& func) {
+		for_each(root, std::forward<Func>(func));
+	}
 
 	/**
 	 * @brief Calls @p func on every element
-	 * @param func function to call on every element, it should take one
-	 *   argument of type const Node&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @param func function to call on every element, it should take
+	 *   one argument of type const Node&, if it return sth convertible
+	 *   to false the lookup will break
 	 */
-	template<class Func>
+	template <class Func>
 	void for_each(Func&& func) const {
 		for_each(root, std::forward<Func>(func));
 	}
 
-	/// Returns a pointer to the found value or nullptr if there is no such value
-	template<class T>
+	/// Returns a pointer to the found value or nullptr if there is
+	/// no such value
+	template <class T>
 	typename Node::Data* find(T&& key) {
-		for (size_type x = root; x != nil; ) {
+		for (size_type x = root; x != nil;) {
 			bool dir = compare(pool[x].key(), key);
 			if (not dir and not compare(key, pool[x].key())) // we have a match
 				return &pool[x].data();
@@ -561,10 +568,11 @@ public:
 		return nullptr;
 	}
 
-	/// Returns a pointer to the found value or nullptr if there is no such value
-	template<class T>
+	/// Returns a pointer to the found value or nullptr if there is
+	/// no such value
+	template <class T>
 	const typename Node::Data* find(T&& key) const {
-		for (size_type x = root; x != nil; ) {
+		for (size_type x = root; x != nil;) {
 			bool dir = compare(pool[x].key(), key);
 			if (not dir and not compare(key, pool[x].key())) // we have a match
 				return &pool[x].data();
@@ -587,8 +595,8 @@ protected:
 		x = rebalance_and_seth(x);
 	}
 
-	/// Return value - @p inserted if the insertion took place, found node id
-	/// otherwise
+	/// Return value - @p inserted if the insertion took place, found
+	/// node id otherwise
 	size_type insert_if_not_exists(size_type& x, size_type inserted) {
 		if (x == nil)
 			return x = inserted;
@@ -604,32 +612,30 @@ protected:
 	}
 
 private:
-	template<class Key, class NData = typename Node::RealData>
+	template <class Key, class NData = typename Node::RealData>
 	static constexpr std::enable_if_t<is_pair<NData>::value, NData>
-		construct_node_data(Key&& key)
-	{
+	construct_node_data(Key&& key) {
 		return {std::piecewise_construct,
-			std::forward_as_tuple(std::forward<Key>(key)), std::tuple<>()};
+		        std::forward_as_tuple(std::forward<Key>(key)), std::tuple<>()};
 	}
 
-	template<class Key, class NData = typename Node::RealData>
+	template <class Key, class NData = typename Node::RealData>
 	static constexpr std::enable_if_t<!is_pair<NData>::value, NData>
-		construct_node_data(Key&& key)
-	{
+	construct_node_data(Key&& key) {
 		return {std::forward<Key>(key)};
 	}
 
-	/// Return value - what to replace x with and emplaced node id if the
-	/// insertion took place, or found node id otherwise
-	template<class T>
+	/// Return value - what to replace x with and emplaced node id if
+	/// the insertion took place, or found node id otherwise
+	template <class T>
 	std::pair<size_type, size_type> emplace_if_not_exists_impl(size_type x,
-		T key)
-	{
-		// x cannot be taken by reference since allocation may move all the data
-		// in the pool causing these references to become invalid
+	                                                           T key) {
+		// x cannot be taken by reference since allocation may move
+		// all the data in the pool causing these references to
+		// become invalid
 		if (x == nil) {
 			x = allocate_node(construct_node_data(std::forward<T>(key)), nil,
-				nil, uint8_t{0});
+			                  nil, uint8_t {0});
 			return {x, x};
 		}
 
@@ -639,34 +645,35 @@ private:
 			return {x, x};
 
 		auto p = emplace_if_not_exists_impl<T>(pool[x].kid[dir],
-			std::forward<T>(key));
+		                                       std::forward<T>(key));
 		pool[x].kid[dir] = p.first; // As the pool may have changed this has to
 		                            // be done strictly after the recursive call
 		return {rebalance_and_seth(x), p.second};
 	}
 
 protected:
-	/// Return value - emplaced node id if the insertion took place, or found
-	/// node id otherwise
+	/// Return value - emplaced node id if the insertion took place,
+	/// or found node id otherwise
 	size_type emplace_if_not_exists(const typename Node::Key& key) {
 		auto p =
-			emplace_if_not_exists_impl<const typename Node::Key&>(root, key);
-		root = p.first; // As the pool may have changed this has to be done
-		                // strictly after the recursive call
+		   emplace_if_not_exists_impl<const typename Node::Key&>(root, key);
+		root = p.first; // As the pool may have changed this has to
+		                // be done strictly after the recursive call
 		return p.second;
 	}
 
-	/// Return value - emplaced node id if the insertion took place, or found
-	/// node id otherwise
+	/// Return value - emplaced node id if the insertion took place,
+	/// or found node id otherwise
 	size_type emplace_if_not_exists(typename Node::Key&& key) {
-		auto p = emplace_if_not_exists_impl<typename Node::Key&&>(root,
-			std::move(key));
-		root = p.first; // As the pool may have changed this has to be done
-		                // strictly after the recursive call
+		auto p = emplace_if_not_exists_impl<typename Node::Key&&>(
+		   root, std::move(key));
+		root = p.first; // As the pool may have changed this has to
+		                // be done strictly after the recursive call
 		return p.second;
 	}
 
-	/// Return value - a bool denoting whether the insertion took place
+	/// Return value - a bool denoting whether the insertion took
+	/// place
 	bool insert_or_replace(size_type& x, size_type inserted) {
 		if (x == nil) {
 			x = inserted;
@@ -719,8 +726,9 @@ protected:
 		return &pool[node_id];
 	}
 
-	/// Return value - @p node_id if the insertion took place, found node id
-	/// otherwise (in this case you have to manually deallocate @p node_id)
+	/// Return value - @p node_id if the insertion took place, found
+	/// node id otherwise (in this case you have to manually
+	/// deallocate @p node_id)
 	size_type insert_if_not_exists(size_type node_id) {
 		return insert_if_not_exists(root, node_id);
 	}
@@ -753,10 +761,9 @@ protected:
 		return res;
 	}
 
-	template<class T, class FuncIdxToRetVal>
-	std::result_of_t<FuncIdxToRetVal(size_type)> erase_impl(size_type& x,
-		T&& key, FuncIdxToRetVal&& to_ret_val = {})
-	{
+	template <class T, class FuncIdxToRetVal>
+	std::result_of_t<FuncIdxToRetVal(size_type)>
+	erase_impl(size_type& x, T&& key, FuncIdxToRetVal&& to_ret_val = {}) {
 		if (x == nil)
 			return to_ret_val();
 
@@ -788,15 +795,16 @@ protected:
 			}
 		}
 
-		auto res = erase_impl(pool[x].kid[dir], key, to_ret_val); /* Intentionally
-			without std::move() to avoid unnecessary move constructing of the
-			to_ret_val, as it will be taken by reference from now on */
+		auto res =
+		   erase_impl(pool[x].kid[dir], key, to_ret_val); /* Intentionally
+		       without std::move() to avoid unnecessary move constructing of
+		       the to_ret_val, as it will be taken by reference from now on */
 		x = rebalance_and_seth(x);
 		return res;
 	}
 
 	/// Return value - a bool denoting whether the erasing took place
-	template<class T>
+	template <class T>
 	bool erase(size_type& x, T&& key) {
 		using AVLD = decltype(*this);
 		struct SemiLambda {
@@ -814,9 +822,9 @@ protected:
 		return erase_impl(x, key, SemiLambda(*this));
 	}
 
-	/// Return value - a node id of pulled out node or nil if no such node was
-	/// found
-	template<class T>
+	/// Return value - a node id of pulled out node or nil if no such
+	/// node was found
+	template <class T>
 	size_type pull_out(size_type& x, T&& key) {
 		using AVLD = decltype(*this);
 		struct SemiLambda {
@@ -837,10 +845,12 @@ protected:
 
 public:
 	/// Return value - a bool denoting whether the erasing took place
-	template<class T>
-	bool erase(T&& key) { return erase(root, key); }
+	template <class T>
+	bool erase(T&& key) {
+		return erase(root, key);
+	}
 
-	template<class T>
+	template <class T>
 	typename Node::Data* lower_bound(T&& key) {
 		typename Node::Data* res = nullptr;
 		size_type x = root;
@@ -856,7 +866,7 @@ public:
 		return res;
 	}
 
-	template<class T>
+	template <class T>
 	const typename Node::Data* lower_bound(T&& key) const {
 		typename Node::Data* res = nullptr;
 		size_type x = root;
@@ -872,7 +882,7 @@ public:
 		return res;
 	}
 
-	template<class T>
+	template <class T>
 	typename Node::Data* upper_bound(T&& key) {
 		typename Node::Data* res = nullptr;
 		size_type x = root;
@@ -887,7 +897,7 @@ public:
 		return res;
 	}
 
-	template<class T>
+	template <class T>
 	const typename Node::Data* upper_bound(T&& key) const {
 		const typename Node::Data* res = nullptr;
 		size_type x = root;
@@ -903,7 +913,7 @@ public:
 	}
 
 protected:
-	template<class T, class Func>
+	template <class T, class Func>
 	bool foreach_since_lower_bound(size_type x, T&& key, Func&& callback) {
 		if (x == nil)
 			return true;
@@ -912,75 +922,76 @@ protected:
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
 		else
 			return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
-				static_cast<bool>(callback(pool[x])) and
-				for_each(pool[x].kid[R], callback));
+			        static_cast<bool>(callback(pool[x])) and
+			        for_each(pool[x].kid[R], callback));
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		!std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_lower_bound(T&& key, Func&& callback) {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   !std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_lower_bound(T&& key, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, [&](Node& n) {
 			callback(n);
 			return true;
 		});
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_lower_bound(T&& key, Func&& callback) {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_lower_bound(T&& key, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, callback);
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	bool foreach_since_upper_bound(size_type x, T&& key, Func&& callback) {
 		if (x == nil)
 			return true;
 
 		if (compare(key, pool[x].key()))
 			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
-				static_cast<bool>(callback(pool[x])) and
-				for_each(pool[x].kid[R], callback));
+			        static_cast<bool>(callback(pool[x])) and
+			        for_each(pool[x].kid[R], callback));
 		else
 			return foreach_since_upper_bound(pool[x].kid[R], key, callback);
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		!std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_upper_bound(T&& key, Func&& callback) {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   !std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_upper_bound(T&& key, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, [&](Node& n) {
 			callback(n);
 			return true;
 		});
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_upper_bound(T&& key, Func&& callback) {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_upper_bound(T&& key, Func&& callback) {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, callback);
 	}
 
-	template<class T, class Func>
-	bool foreach_since_lower_bound(size_type x, T&& key, Func&& callback) const {
+	template <class T, class Func>
+	bool foreach_since_lower_bound(size_type x, T&& key,
+	                               Func&& callback) const {
 		if (x == nil)
 			return true;
 
@@ -988,70 +999,71 @@ protected:
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
 		else
 			return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
-				static_cast<bool>(callback(pool[x])) and
-				for_each(pool[x].kid[R], callback));
+			        static_cast<bool>(callback(pool[x])) and
+			        for_each(pool[x].kid[R], callback));
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		!std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_lower_bound(T&& key, Func&& callback) const {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   !std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_lower_bound(T&& key, Func&& callback) const {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, [&](Node& n) {
 			callback(n);
 			return true;
 		});
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_lower_bound(T&& key, Func&& callback) const {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_lower_bound(T&& key, Func&& callback) const {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, callback);
 	}
 
-	template<class T, class Func>
-	bool foreach_since_upper_bound(size_type x, T&& key, Func&& callback) const {
+	template <class T, class Func>
+	bool foreach_since_upper_bound(size_type x, T&& key,
+	                               Func&& callback) const {
 		if (x == nil)
 			return true;
 
 		if (compare(key, pool[x].key()))
 			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
-				static_cast<bool>(callback(pool[x])) and
-				for_each(pool[x].kid[R], callback));
+			        static_cast<bool>(callback(pool[x])) and
+			        for_each(pool[x].kid[R], callback));
 		else
 			return foreach_since_upper_bound(pool[x].kid[R], key, callback);
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		!std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_upper_bound(T&& key, Func&& callback) const {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   !std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_upper_bound(T&& key, Func&& callback) const {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, [&](Node& n) {
 			callback(n);
 			return true;
 		});
 	}
 
-	template<class T, class Func>
+	template <class T, class Func>
 	std::enable_if_t<
-		std::is_convertible<
-			decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-		void
-	> foreach_since_upper_bound(T&& key, Func&& callback) const {
-		// std::forward omitted intentionally as the callback will be taken by
-		// a (maybe const) reference
+	   std::is_convertible<
+	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
+	   void>
+	foreach_since_upper_bound(T&& key, Func&& callback) const {
+		// std::forward omitted intentionally as the callback will be
+		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, callback);
 	}
 
@@ -1083,13 +1095,13 @@ public:
 #endif
 };
 
-template<template<class...> class NodeT, class... ArgsToForward>
+template <template <class...> class NodeT, class... ArgsToForward>
 class AVLDictContainer : public AVLDictionary<NodeT, ArgsToForward...> {
 protected:
 	using AVLBase = AVLDictionary<NodeT, ArgsToForward...>;
-	using typename AVLBase::Node;
-	using AVLBase::pool;
 	using AVLBase::nil;
+	using AVLBase::pool;
+	using typename AVLBase::Node;
 
 public:
 	using AVLBase::AVLBase;
@@ -1115,82 +1127,81 @@ public:
 	}
 	/**
 	 * @brief Calls @p func on every element
-	 * @param func function to call on every element, it should take one
-	 *   argument of type Node::Data&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @param func function to call on every element, it should take
+	 *   one argument of type Node::Data&, if it return sth convertible
+	 *   to false the lookup will break
 	 */
-	template<class Func>
+	template <class Func>
 	void for_each(Func&& func) {
 		AVLBase::for_each([&func](Node& node) { return func(node.data()); });
 	}
 
 	/**
 	 * @brief Calls @p func on every element
-	 * @param func function to call on every element, it should take one
-	 *   argument of type const Node::Data&, if it return sth convertible to
-	 *   false the lookup will break
+	 * @param func function to call on every element, it should take
+	 *   one argument of type const Node::Data&, if it return sth
+	 *   convertible to false the lookup will break
 	 */
-	template<class Func>
+	template <class Func>
 	void for_each(Func&& func) const {
-		AVLBase::for_each([&func](const Node& node) {
-			return func(node.data());
-		});
+		AVLBase::for_each(
+		   [&func](const Node& node) { return func(node.data()); });
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element >= @p k
-	 * @param func function to call on every element, it should take one
-	 *   argument of type Node::Data&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @brief Calls @p func on every element since the first element
+	 *   >= @p k
+	 * @param func function to call on every element, it should take
+	 *   one argument of type Node::Data&, if it return sth convertible
+	 *   to false the lookup will break
 	 */
-	template<class T, class Func>
+	template <class T, class Func>
 	void foreach_since_lower_bound(T&& key, Func&& callback) {
-		AVLBase::foreach_since_lower_bound(key, [&](Node& node) {
-			return callback(node.data());
-		});
+		AVLBase::foreach_since_lower_bound(
+		   key, [&](Node& node) { return callback(node.data()); });
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element >= @p k
-	 * @param func function to call on every element, it should take one
-	 *   argument of type const Node::Data&, if it return sth convertible to
-	 *   false the lookup will break
+	 * @brief Calls @p func on every element since the first element
+	 *   >= @p k
+	 * @param func function to call on every element, it should take
+	 *   one argument of type const Node::Data&, if it return sth
+	 *   convertible to false the lookup will break
 	 */
-	template<class T, class Func>
+	template <class T, class Func>
 	void foreach_since_lower_bound(T&& key, Func&& callback) const {
-		AVLBase::foreach_since_lower_bound(key, [&](const Node& node) {
-			return callback(node.data());
-		});
+		AVLBase::foreach_since_lower_bound(
+		   key, [&](const Node& node) { return callback(node.data()); });
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element > @p k
-	 * @param func function to call on every element, it should take one
-	 *   argument of type Node::Data&, if it return sth convertible to false the
-	 *   lookup will break
+	 * @brief Calls @p func on every element since the first element
+	 *   > @p k
+	 * @param func function to call on every element, it should take
+	 *   one argument of type Node::Data&, if it return sth convertible
+	 *   to false the lookup will break
 	 */
-	template<class T, class Func>
+	template <class T, class Func>
 	void foreach_since_upper_bound(T&& key, Func&& callback) {
-		AVLBase::foreach_since_upper_bound(key, [&](Node& node) {
-			return callback(node.data());
-		});
+		AVLBase::foreach_since_upper_bound(
+		   key, [&](Node& node) { return callback(node.data()); });
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element > @p k
-	 * @param func function to call on every element, it should take one
-	 *   argument of type const Node::Data&, if it return sth convertible to
-	 *   false the lookup will break
+	 * @brief Calls @p func on every element since the first element
+	 *   > @p k
+	 * @param func function to call on every element, it should take
+	 *   one argument of type const Node::Data&, if it return sth
+	 *   convertible to false the lookup will break
 	 */
-	template<class T, class Func>
+	template <class T, class Func>
 	void foreach_since_upper_bound(T&& key, Func&& callback) const {
-		AVLBase::foreach_since_upper_bound(key, [&](const Node& node) {
-			return callback(node.data());
-		});
+		AVLBase::foreach_since_upper_bound(
+		   key, [&](const Node& node) { return callback(node.data()); });
 	}
 };
 
-template<class size_type, class ValueT>
+template <class size_type, class ValueT>
 class AVLSetNode : public AVLNodeBase<size_type> {
 public:
 	using Key = ValueT;
@@ -1200,14 +1211,14 @@ public:
 
 	Key key_;
 
-	template<class... Args>
+	template <class... Args>
 	AVLSetNode(Key key, Args&&... args)
-		: AVLNodeBase<size_type>{std::forward<Args>(args)...},
-			key_(std::move(key)) {}
+	   : AVLNodeBase<size_type> {std::forward<Args>(args)...},
+	     key_(std::move(key)) {}
 
 	AVLSetNode(const AVLSetNode&) = default;
-	AVLSetNode(AVLSetNode&&)
-		noexcept(std::is_nothrow_move_constructible<Key>::value) = default;
+	AVLSetNode(AVLSetNode&&) noexcept(
+	   std::is_nothrow_move_constructible<Key>::value) = default;
 
 	AVLSetNode& operator=(const AVLSetNode&) = delete;
 	AVLSetNode& operator=(AVLSetNode&&) = delete;
@@ -1217,23 +1228,23 @@ public:
 	const Data& data() const { return key(); }
 };
 
-template<class Value, class Comp = std::less<>, class size_type = size_t>
+template <class Value, class Comp = std::less<>, class size_type = size_t>
 class AVLDictSet : public AVLDictContainer<AVLSetNode, Comp, size_type, Value> {
 	using ADC = AVLDictContainer<AVLSetNode, Comp, size_type, Value>;
+	using ADC::nil;
 	using typename ADC::AVLBase;
 	using typename ADC::Node;
-	using ADC::nil;
 
 public:
 	using ADC::ADC;
 	using ADC::operator=;
 
-	/// Return value - a bool denoting whether the insertion took place
-	template<class... Args>
+	/// Return value - a bool denoting whether the insertion took
+	/// place
+	template <class... Args>
 	bool emplace(Args&&... args) {
-		auto new_node =
-			AVLBase::allocate_node(Value(std::forward<Args>(args)...), nil, nil,
-				uint8_t{0});
+		auto new_node = AVLBase::allocate_node(
+		   Value(std::forward<Args>(args)...), nil, nil, uint8_t {0});
 		auto x = AVLBase::insert_if_not_exists(new_node);
 		if (x != new_node) {
 			AVLBase::deallocate_node(new_node);
@@ -1243,36 +1254,37 @@ public:
 		return true;
 	}
 
-	/// Return value - a bool denoting whether the insertion took place
+	/// Return value - a bool denoting whether the insertion took
+	/// place
 	bool insert(Value val) { return emplace(std::move(val)); }
 };
 
-template<class Value, class Comp = std::less<>, class size_type = size_t>
-class AVLDictMultiset :
-	public AVLDictContainer<AVLSetNode, Comp, size_type, Value>
-{
+template <class Value, class Comp = std::less<>, class size_type = size_t>
+class AVLDictMultiset
+   : public AVLDictContainer<AVLSetNode, Comp, size_type, Value> {
 	using ADC = AVLDictContainer<AVLSetNode, Comp, size_type, Value>;
+	using ADC::nil;
 	using typename ADC::AVLBase;
 	using typename ADC::Node;
-	using ADC::nil;
 
 public:
 	using ADC::ADC;
 	using ADC::operator=;
 
-	/// Return value - a bool denoting whether the insertion took place
-	template<class... Args>
+	/// Return value - a bool denoting whether the insertion took
+	/// place
+	template <class... Args>
 	void emplace(Args&&... args) {
-		AVLBase::insert(
-			AVLBase::allocate_node(Value{std::forward<Args>(args)...}, nil, nil,
-				uint8_t{0}));
+		AVLBase::insert(AVLBase::allocate_node(
+		   Value {std::forward<Args>(args)...}, nil, nil, uint8_t {0}));
 	}
 
-	/// Return value - a bool denoting whether the insertion took place
+	/// Return value - a bool denoting whether the insertion took
+	/// place
 	void insert(Value val) { emplace(std::move(val)); }
 };
 
-template<class size_type, class KeyT, class ValueT>
+template <class size_type, class KeyT, class ValueT>
 class AVLMapNode : public AVLNodeBase<size_type> {
 public:
 	using Key = KeyT;
@@ -1286,33 +1298,32 @@ public:
 
 		static_assert(sizeof(rdt) == sizeof(dt), "Needed to cast between");
 
-		DataU(RealData&& rdata)
-			noexcept(std::is_move_constructible<RealData>::value)
-			: rdt(std::move(rdata)) {}
+		DataU(RealData&& rdata) noexcept(
+		   std::is_move_constructible<RealData>::value)
+		   : rdt(std::move(rdata)) {}
 
 		~DataU() { rdt.~RealData(); }
 
 	} data_;
 
-	template<class... Args>
+	template <class... Args>
 	AVLMapNode(RealData&& rdata, Args&&... args)
-		: AVLNodeBase<size_type>(std::forward<Args>(args)...),
-			data_(std::move(rdata)) {}
+	   : AVLNodeBase<size_type>(std::forward<Args>(args)...),
+	     data_(std::move(rdata)) {}
 
 	AVLMapNode(const AVLMapNode&) = delete;
 
-	AVLMapNode(AVLMapNode&& amn)
-		noexcept(std::is_nothrow_move_constructible<AVLNodeBase<size_type>>::value &&
-			std::is_nothrow_move_constructible<RealData>::value)
-		: AVLNodeBase<size_type>(std::move(amn)),
-			data_(std::move(amn.data_.rdt)) {}
+	AVLMapNode(AVLMapNode&& amn) noexcept(
+	   std::is_nothrow_move_constructible<AVLNodeBase<size_type>>::value&&
+	      std::is_nothrow_move_constructible<RealData>::value)
+	   : AVLNodeBase<size_type>(std::move(amn)),
+	     data_(std::move(amn.data_.rdt)) {}
 
 	AVLMapNode& operator=(const AVLMapNode&) = delete;
 
-	AVLMapNode& operator=(AVLMapNode&& amn)
-		noexcept(std::is_nothrow_move_assignable<AVLNodeBase<size_type>>::value &&
-			std::is_nothrow_move_assignable<decltype(data_)>::value)
-	{
+	AVLMapNode& operator=(AVLMapNode&& amn) noexcept(
+	   std::is_nothrow_move_assignable<AVLNodeBase<size_type>>::value&&
+	      std::is_nothrow_move_assignable<decltype(data_)>::value) {
 		AVLNodeBase<size_type>::operator=(std::move(amn));
 		data_.rdt = std::move(amn.data_.rdt);
 		return *this;
@@ -1331,49 +1342,46 @@ public:
 	const Value& value() const noexcept { return data_.dt.second; }
 };
 
-template<class Key, class Value, class Comp = std::less<>,
-	class size_type = size_t>
-class AVLDictMap :
-	public AVLDictContainer<AVLMapNode, Comp, size_type, Key, Value>
-{
+template <class Key, class Value, class Comp = std::less<>,
+          class size_type = size_t>
+class AVLDictMap
+   : public AVLDictContainer<AVLMapNode, Comp, size_type, Key, Value> {
 	using ADC = AVLDictContainer<AVLMapNode, Comp, size_type, Key, Value>;
 	using typename ADC::AVLBase;
 	using typename ADC::Node;
 	using KeyValPair = typename ADC::Node::Data;
-	using ADC::pool;
 	using ADC::nil;
+	using ADC::pool;
 
 public:
 	using ADC::ADC;
 	using ADC::operator=;
 
-	/// Return value - a pair of a pointer to pair (key, value) and a bool
-	/// denoting whether the insertion took place (if false, the replacing took
-	/// place)
-	template<class... Args>
+	/// Return value - a pair of a pointer to pair (key, value) and a
+	/// bool denoting whether the insertion took place (if false, the
+	/// replacing took place)
+	template <class... Args>
 	std::pair<KeyValPair*, bool> emplace(Args&&... args) {
-		auto new_node =
-			AVLBase::allocate_node(
-				typename ADC::Node::RealData(std::forward<Args>(args)...), nil,
-				nil, uint8_t{0});
+		auto new_node = AVLBase::allocate_node(
+		   typename ADC::Node::RealData(std::forward<Args>(args)...), nil, nil,
+		   uint8_t {0});
 
 		auto x = AVLBase::insert_or_replace(new_node);
 		return {&x.first->data(), x.second};
 	}
 
-	/// Return value - a pair of a pointer to pair (key, value) and a bool
-	/// denoting whether the insertion took place (if false, the replacing took
-	/// place)
+	/// Return value - a pair of a pointer to pair (key, value) and a
+	/// bool denoting whether the insertion took place (if false, the
+	/// replacing took place)
 	std::pair<KeyValPair*, bool> insert(KeyValPair kvp) {
 		return emplace(std::move(kvp));
 	}
 
-	/// Return value - a pair of a pointer to pair (key, value) and a bool
-	/// denoting whether the insertion took place (if false, the replacing took
-	/// place)
+	/// Return value - a pair of a pointer to pair (key, value) and a
+	/// bool denoting whether the insertion took place (if false, the
+	/// replacing took place)
 	std::pair<KeyValPair*, bool> insert(typename Node::Key key,
-		typename Node::Value val)
-	{
+	                                    typename Node::Value val) {
 		return insert({std::move(key), std::move(val)});
 	}
 
@@ -1385,10 +1393,11 @@ public:
 		return pool[AVLBase::emplace_if_not_exists(std::move(key))].value();
 	}
 
-	/// Changes the key of an element with key @p old_key to a @p new_key
-	/// without moving any data. Replaces other element with a @p new_key if
-	/// necessary. Return value: a pair of bools denoting accordingly: whether
-	/// the key change took place and whether some element was replaced.
+	/// Changes the key of an element with key @p old_key to a @p
+	/// new_key without moving any data. Replaces other element with
+	/// a @p new_key if necessary. Return value: a pair of bools
+	/// denoting accordingly: whether the key change took place and
+	/// whether some element was replaced.
 	std::pair<bool, bool> alter_key(const Key& old_key, const Key& new_key) {
 		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
 		if (x == nil)
@@ -1398,10 +1407,11 @@ public:
 		return {true, not AVLBase::insert_or_replace(x).second};
 	}
 
-	/// Changes the key of an element with key @p old_key to a @p new_key
-	/// without moving any data. Replaces other element with a @p new_key if
-	/// necessary. Return value: a pair of bools denoting accordingly: whether
-	/// the key change took place and whether some element was replaced.
+	/// Changes the key of an element with key @p old_key to a @p
+	/// new_key without moving any data. Replaces other element with
+	/// a @p new_key if necessary. Return value: a pair of bools
+	/// denoting accordingly: whether the key change took place and
+	/// whether some element was replaced.
 	std::pair<bool, bool> alter_key(const Key& old_key, Key&& new_key) {
 		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
 		if (x == nil)
@@ -1412,29 +1422,27 @@ public:
 	}
 };
 
-template<class Key, class Value, class Comp = std::less<>,
-	class size_type = size_t>
-class AVLDictMultimap :
-	public AVLDictContainer<AVLMapNode, Comp, size_type, Key, Value>
-{
+template <class Key, class Value, class Comp = std::less<>,
+          class size_type = size_t>
+class AVLDictMultimap
+   : public AVLDictContainer<AVLMapNode, Comp, size_type, Key, Value> {
 	using ADC = AVLDictContainer<AVLMapNode, Comp, size_type, Key, Value>;
 	using typename ADC::AVLBase;
 	using typename ADC::Node;
 	using KeyValPair = typename ADC::Node::Data;
-	using ADC::pool;
 	using ADC::nil;
+	using ADC::pool;
 
 public:
 	using ADC::ADC;
 	using ADC::operator=;
 
 	/// Return value - a pointer to pair (key, value)
-	template<class... Args>
+	template <class... Args>
 	KeyValPair* emplace(Args&&... args) {
-		auto new_node =
-			AVLBase::allocate_node(
-				typename ADC::Node::RealData{std::forward<Args>(args)...}, nil,
-				nil, uint8_t{0});
+		auto new_node = AVLBase::allocate_node(
+		   typename ADC::Node::RealData {std::forward<Args>(args)...}, nil, nil,
+		   uint8_t {0});
 
 		AVLBase::insert(new_node);
 		return &pool[new_node].data();
@@ -1443,15 +1451,14 @@ public:
 	/// Return value - a pointer to pair (key, value)
 	KeyValPair* insert(KeyValPair kvp) { return emplace(std::move(kvp)); }
 
-
 	/// Return value - a pointer to pair (key, value)
 	KeyValPair* insert(typename Node::Key key, typename Node::Value val) {
 		return insert({std::move(key), std::move(val)});
 	}
 
-	/// Changes the key of an element with key @p old_key to a @p new_key
-	/// without moving any data. Return value: a bool denoting whether the key
-	/// change took place.
+	/// Changes the key of an element with key @p old_key to a @p
+	/// new_key without moving any data. Return value: a bool
+	/// denoting whether the key change took place.
 	bool alter_key(const Key& old_key, const Key& new_key) {
 		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
 		if (x == nil)
@@ -1462,9 +1469,9 @@ public:
 		return true;
 	}
 
-	/// Changes the key of an element with key @p old_key to a @p new_key
-	/// without moving any data. Return value: a bool denoting whether the key
-	/// change took place.
+	/// Changes the key of an element with key @p old_key to a @p
+	/// new_key without moving any data. Return value: a bool
+	/// denoting whether the key change took place.
 	bool alter_key(const Key& old_key, Key&& new_key) {
 		size_type x = AVLBase::pull_out(AVLBase::root, old_key);
 		if (x == nil)
@@ -1476,7 +1483,7 @@ public:
 	}
 };
 
-template<class T, class Class, T Class::*member, class Comp = std::less<>>
+template <class T, class Class, T Class::*member, class Comp = std::less<>>
 class MemberComparator {
 	Comp compare;
 
@@ -1484,18 +1491,20 @@ class MemberComparator {
 
 	static const T& value(Class&& x) noexcept { return x.*member; }
 
-	template<class A>
-	static A value(A&& a) noexcept { return a; }
+	template <class A>
+	static A value(A&& a) noexcept {
+		return a;
+	}
 
 public:
-	template<class... Args>
+	template <class... Args>
 	MemberComparator(Args&&... args) : compare(std::forward<Args>(args)...) {}
 
-	template<class A, class B>
+	template <class A, class B>
 	bool operator()(A&& a, B&& b) {
 		return compare(value(std::forward<A>(a)), value(std::forward<B>(b)));
 	}
 };
 
-#define MEMBER_COMPARATOR(Class, member) MemberComparator<decltype(Class::member), Class, &Class::member>
-
+#define MEMBER_COMPARATOR(Class, member)                                       \
+	MemberComparator<decltype(Class::member), Class, &Class::member>

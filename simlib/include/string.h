@@ -11,7 +11,7 @@
 #include <string>
 
 #ifdef _GLIBCXX_DEBUG
-# include <cassert>
+#include <cassert>
 #endif
 
 #define STRINGIZE2(x) #x
@@ -20,44 +20,49 @@
 #define CONCATENATE_DETAIL(x, y) x##y
 #define CONCAT(x, y) CONCATENATE_DETAIL(x, y)
 
-#define throw_assert(expr) \
-	((expr) ? (void)0 : throw std::runtime_error(std::string(__FILE__ ":" \
-	STRINGIZE(__LINE__) ": ").append(__PRETTY_FUNCTION__).append( \
-	": Assertion `" #expr "` failed.")))
+#define throw_assert(expr)                                                     \
+	((expr) ? (void)0                                                          \
+	        : throw std::runtime_error(                                        \
+	             std::string(__FILE__ ":" STRINGIZE(__LINE__) ": ")            \
+	                .append(__PRETTY_FUNCTION__)                               \
+	                .append(": Assertion `" #expr "` failed.")))
 
-template<class T>
+template <class T>
 constexpr inline auto string_length(const T& x) noexcept -> decltype(x.size()) {
 	return x.size();
 }
 
-template<uint LEN, uint... Digits>
+template <uint LEN, uint... Digits>
 constexpr inline uint string_length(meta::ToStringHelper<LEN, Digits...>) {
 	return LEN;
 }
 
-template<class T>
+template <class T>
 constexpr inline size_t string_length(T* x) noexcept {
 	return __builtin_strlen(x);
 }
 
 constexpr inline size_t string_length(char) noexcept { return 1; }
 
-template<class T>
-constexpr inline auto data(const T& x) noexcept { return x.data(); }
+template <class T>
+constexpr inline auto data(const T& x) noexcept {
+	return x.data();
+}
 
 // Some stuff to provide a mechanism to call std::copy on meta::ToString<>
-template<uintmax_t N>
+template <uintmax_t N>
 struct meta_to_string_helper_iter {
 	meta_to_string_helper_iter() = default;
 };
 
-template<uintmax_t N, class T>
-auto operator+(meta_to_string_helper_iter<N> x, T) { return x; }
+template <uintmax_t N, class T>
+auto operator+(meta_to_string_helper_iter<N> x, T) {
+	return x;
+}
 
-template<uint LEN, uint... Digits, class OIter>
-constexpr inline OIter copy_meta_to_string_helper(
-	meta::ToStringHelper<LEN, Digits...>, OIter result)
-{
+template <uint LEN, uint... Digits, class OIter>
+constexpr inline OIter
+copy_meta_to_string_helper(meta::ToStringHelper<LEN, Digits...>, OIter result) {
 	for (auto c : {Digits...})
 		*result++ = '0' + c;
 
@@ -66,22 +71,23 @@ constexpr inline OIter copy_meta_to_string_helper(
 
 namespace std {
 
-template<uintmax_t N, class OIter>
+template <uintmax_t N, class OIter>
 constexpr inline OIter copy(meta_to_string_helper_iter<N>,
-	meta_to_string_helper_iter<N>, OIter result)
-{
-	return copy_meta_to_string_helper(meta::ToString<N>{}, result);
+                            meta_to_string_helper_iter<N>, OIter result) {
+	return copy_meta_to_string_helper(meta::ToString<N> {}, result);
 }
 
 } // namespace std
 
-template<uintmax_t N>
+template <uintmax_t N>
 constexpr inline auto data(meta::ToString<N>) {
-	return meta_to_string_helper_iter<N>{};
+	return meta_to_string_helper_iter<N> {};
 }
 
-template<class T, size_t N>
-constexpr inline auto data(const T (&x)[N]) noexcept { return x; }
+template <class T, size_t N>
+constexpr inline auto data(const T (&x)[N]) noexcept {
+	return x;
+}
 
 constexpr inline auto data(const char* const x) noexcept { return x; }
 
@@ -93,34 +99,31 @@ inline std::string& operator+=(std::string& str, const meta::string& s) {
 	return str.append(s.data(), s.size());
 }
 
-template<uint LEN, uint... Digits>
+template <uint LEN, uint... Digits>
 inline std::string& operator+=(std::string& str,
-	meta::ToStringHelper<LEN, Digits...>)
-{
-	(void)std::initializer_list<int>{(str += '0' + Digits, 0)...};
+                               meta::ToStringHelper<LEN, Digits...>) {
+	(void)std::initializer_list<int> {(str += '0' + Digits, 0)...};
 	return str;
 }
 
-template<size_t N>
+template <size_t N>
 class InplaceBuff;
 
 // Only to use with standard integral types
 // +1 for a terminating null char and +1 for the minus sign
-template<class T, size_t N =
-	string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2>
-constexpr inline auto toString(T x) noexcept ->
-	std::enable_if_t<std::is_integral<T>::value, InplaceBuff<N>>;
+template <class T, size_t N = string_length(meta::ToString<
+                                            std::numeric_limits<T>::max()> {}) +
+                              2>
+constexpr inline auto toString(T x) noexcept
+   -> std::enable_if_t<std::is_integral<T>::value, InplaceBuff<N>>;
 
-template<class T>
-inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x))
-{
+template <class T>
+inline auto stringify(T&& x) noexcept -> decltype(std::forward<T>(x)) {
 	return std::forward<T>(x);
 }
 
 // Allows stringifying integers
-inline auto stringify(bool x) noexcept {
-	return (x ? "true" : "false");
-}
+inline auto stringify(bool x) noexcept { return (x ? "true" : "false"); }
 
 inline char stringify(char x) noexcept { return x; }
 inline auto stringify(unsigned char x) noexcept -> decltype(toString(x));
@@ -143,26 +146,24 @@ inline auto stringify(unsigned long long x) noexcept -> decltype(toString(x));
  *
  * @return concentration of @p args
  */
-template<class... Args>
+template <class... Args>
 inline std::string concat_tostr(Args&&... args) {
 	return [](auto&&... xx) {
 		size_t total_length = 0;
-		(void)std::initializer_list<int>{
-			(total_length += string_length(xx), 0)...
-		};
+		(void)std::initializer_list<int> {
+		   (total_length += string_length(xx), 0)...};
 
 		std::string res;
 		res.reserve(total_length);
 
-		(void)std::initializer_list<int>{
-			(res += std::forward<decltype(xx)>(xx), 0)...
-		};
+		(void)std::initializer_list<int> {
+		   (res += std::forward<decltype(xx)>(xx), 0)...};
 
 		return res;
 	}(stringify(std::forward<Args>(args))...);
 }
 
-template<class Char>
+template <class Char>
 class StringBase {
 public:
 	// Types
@@ -186,21 +187,21 @@ public:
 
 	constexpr StringBase(std::nullptr_t) = delete;
 
-	#if __cplusplus > 201402L
-	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
-	#endif
-	template<size_t N>
-	constexpr StringBase(const char(&s)[N]) : str(s), len(meta::strlen(s)) {}
+#if __cplusplus > 201402L
+#warning "Use below std::chair_traits<Char>::length() which became constexpr"
+#endif
+	template <size_t N>
+	constexpr StringBase(const char (&s)[N]) : str(s), len(meta::strlen(s)) {}
 
 	// Do not treat as possible string literal
-	template<size_t N>
-	constexpr StringBase(char(&s)[N]) : str(s), len(__builtin_strlen(s)) {}
+	template <size_t N>
+	constexpr StringBase(char (&s)[N]) : str(s), len(__builtin_strlen(s)) {}
 
 	constexpr StringBase(const meta::string& s) noexcept
-		: str(s.data()), len(s.size()) {}
+	   : str(s.data()), len(s.size()) {}
 
 	constexpr StringBase(pointer s) noexcept
-		: str(s), len(__builtin_strlen(s)) {}
+	   : str(s), len(__builtin_strlen(s)) {}
 
 	// A prototype: template<N> ...(const char(&a)[N]){} is not used because it
 	// takes const char[] wrongly (sets len to array size instead of stored
@@ -214,15 +215,15 @@ public:
 
 	// Constructs StringView from substring [beg, beg + n) of string s
 	constexpr StringBase(const std::string& s, size_type beg = 0,
-		size_type n = npos) noexcept
-		: str(s.data() + std::min(beg, s.size())),
-			len(std::min(n, s.size() - std::min(beg, s.size()))) {}
+	                     size_type n = npos) noexcept
+	   : str(s.data() + std::min(beg, s.size())),
+	     len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	constexpr StringBase(const StringBase& s) noexcept
-		: str(s.data()), len(s.size()) {}
+	   : str(s.data()), len(s.size()) {}
 
 	constexpr StringBase(StringBase<Char>&& s) noexcept
-		: str(s.data()), len(s.size()) {}
+	   : str(s.data()), len(s.size()) {}
 
 	constexpr StringBase& operator=(StringBase&& s) noexcept {
 		str = s.data();
@@ -281,19 +282,19 @@ public:
 
 	// Returns reference to n-th element
 	constexpr reference operator[](size_type n) noexcept {
-	#ifdef _GLIBCXX_DEBUG
+#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
-	#endif
+#endif
 		return str[n];
 	}
 
 	// Returns const_reference to n-th element
 	constexpr const_reference operator[](size_type n) const noexcept {
-	#ifdef _GLIBCXX_DEBUG
+#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
-	#endif
+#endif
 		return str[n];
 	}
 
@@ -302,10 +303,10 @@ public:
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
-	#ifdef _GLIBCXX_DEBUG
+#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
-	#endif
+#endif
 		return str[n];
 	}
 
@@ -342,9 +343,8 @@ public:
 		return rc != 0 ? rc : (len == s.len ? 0 : ((len < s.len) ? -1 : 1));
 	}
 
-	constexpr int compare(size_type pos, size_type count, const StringBase& s)
-		const
-	{
+	constexpr int compare(size_type pos, size_type count,
+	                      const StringBase& s) const {
 		return substr(pos, count).compare(s);
 	}
 
@@ -385,34 +385,29 @@ public:
 	}
 
 	constexpr size_type find(const StringBase& s, size_type beg1,
-		size_type endi1) const
-	{
+	                         size_type endi1) const {
 		return find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	constexpr size_type find(size_type beg, const StringBase& s,
-		size_type beg1 = 0) const
-	{
+	                         size_type beg1 = 0) const {
 		return substr(beg).find(s.substr(beg1, len - beg1));
 	}
 
 	constexpr size_type find(size_type beg, const StringBase& s, size_type beg1,
-		size_type endi1) const
-	{
+	                         size_type endi1) const {
 		return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
-		size_type beg1 = 0) const
-	{
+	                         size_type beg1 = 0) const {
 		return substr(beg, endi).find(s.substr(beg1, len - beg1));
 	}
 
 	constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
-		size_type beg1, size_type endi1) const
-	{
+	                         size_type beg1, size_type endi1) const {
 		return substr(beg, endi).find(
-			s.substr(beg1, std::min(endi1, len) - beg1));
+		   s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	constexpr size_type find(char c, size_type beg = 0) const noexcept {
@@ -424,8 +419,7 @@ public:
 	}
 
 	constexpr size_type find(char c, size_type beg, size_type endi) const
-		noexcept
-	{
+	   noexcept {
 		if (endi > len)
 			endi = len;
 
@@ -473,38 +467,34 @@ public:
 	}
 
 	constexpr size_type rfind(const StringBase& s, size_type beg1,
-		size_type endi1) const
-	{
+	                          size_type endi1) const {
 		return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	constexpr size_type rfind(size_type beg, const StringBase& s,
-		size_type beg1 = 0) const
-	{
+	                          size_type beg1 = 0) const {
 		return substr(beg).rfind(s.substr(beg1, len - beg1));
 	}
 
 	constexpr size_type rfind(size_type beg, const StringBase& s,
-		size_type beg1, size_type endi1) const
-	{
+	                          size_type beg1, size_type endi1) const {
 		return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	constexpr size_type rfind(size_type beg, size_type endi,
-		const StringBase& s, size_type beg1 = 0) const
-	{
+	                          const StringBase& s, size_type beg1 = 0) const {
 		return substr(beg, endi).rfind(s.substr(beg1, len - beg1));
 	}
 
 	constexpr size_type rfind(size_type beg, size_type endi,
-		const StringBase& s, size_type beg1, size_type endi1) const
-	{
+	                          const StringBase& s, size_type beg1,
+	                          size_type endi1) const {
 		return substr(beg, endi).rfind(
-			s.substr(beg1, std::min(endi1, len) - beg1));
+		   s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
 	constexpr size_type rfind(char c, size_type beg = 0) const noexcept {
-		for (size_type endi = len; endi > beg; )
+		for (size_type endi = len; endi > beg;)
 			if (str[--endi] == c)
 				return endi;
 
@@ -512,12 +502,11 @@ public:
 	}
 
 	constexpr size_type rfind(char c, size_type beg, size_type endi) const
-		noexcept
-	{
+	   noexcept {
 		if (endi > len)
 			endi = len;
 
-		for (; endi > beg; )
+		for (; endi > beg;)
 			if (str[--endi] == c)
 				return endi;
 
@@ -555,10 +544,9 @@ public:
 	std::string to_string() const { return std::string(str, len); }
 };
 
-template<class Char>
+template <class Char>
 constexpr inline std::string& operator+=(std::string& str,
-	const StringBase<Char>& s)
-{
+                                         const StringBase<Char>& s) {
 	return str.append(s.data(), s.size());
 }
 
@@ -578,11 +566,11 @@ public:
 	constexpr StringView& operator=(std::nullptr_t) noexcept = delete;
 
 	constexpr StringView operator=(pointer p) noexcept {
-		return operator=(StringView{p});
+		return operator=(StringView {p});
 	}
 
-	template<class T,
-		typename = std::enable_if_t<std::is_rvalue_reference<T>::value>>
+	template <class T,
+	          typename = std::enable_if_t<std::is_rvalue_reference<T>::value>>
 	StringView& operator=(T&&) = delete; // Protect from assigning unsafe data
 
 	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
@@ -629,10 +617,11 @@ public:
 	}
 
 	// Removes leading characters for which f() returns true
-	template<class Func>
+	template <class Func>
 	constexpr StringView& removeLeading(Func&& f) {
 		size_type i = 0;
-		for (; i < len && f(str[i]); ++i) {}
+		for (; i < len && f(str[i]); ++i) {
+		}
 		str += i;
 		len -= i;
 		return *this;
@@ -640,14 +629,15 @@ public:
 
 	constexpr StringView& removeLeading(char c) noexcept {
 		size_type i = 0;
-		for (; i < len && str[i] == c; ++i) {}
+		for (; i < len && str[i] == c; ++i) {
+		}
 		str += i;
 		len -= i;
 		return *this;
 	}
 
 	// Removes trailing characters for which f() returns true
-	template<class Func>
+	template <class Func>
 	constexpr StringView& removeTrailing(Func&& f) {
 		while (len > 0 && f(back()))
 			--len;
@@ -661,10 +651,11 @@ public:
 	}
 
 	// Extracts leading characters for which f() returns true
-	template<class Func>
+	template <class Func>
 	constexpr StringView extractLeading(Func&& f) {
 		size_type i = 0;
-		for (; i < len && f(str[i]); ++i) {}
+		for (; i < len && f(str[i]); ++i) {
+		}
 
 		StringView res = substring(0, i);
 		str += i;
@@ -674,10 +665,11 @@ public:
 	}
 
 	// Extracts trailing characters for which f() returns true
-	template<class Func>
+	template <class Func>
 	constexpr StringView extractTrailing(Func&& f) {
 		size_type i = len;
-		for (; i > 0 && f(str[i - 1]); --i) {}
+		for (; i > 0 && f(str[i - 1]); --i) {
+		}
 
 		StringView res = substring(i, len);
 		len = i;
@@ -696,7 +688,7 @@ public:
 #if __cplusplus > 201402L
 #warning "Since C++17 constexpr can be used below"
 #endif
-	template<class T>
+	template <class T>
 	/*constexpr*/ StringView withoutLeading(T&& arg) {
 		return StringView(*this).removeLeading(std::forward<T>(arg));
 	}
@@ -704,7 +696,7 @@ public:
 #if __cplusplus > 201402L
 #warning "Since C++17 constexpr can be used below"
 #endif
-	template<class T>
+	template <class T>
 	/*constexpr*/ StringView withoutTrailing(T&& arg) {
 		return StringView(*this).removeTrailing(std::forward<T>(arg));
 	}
@@ -725,12 +717,13 @@ inline StringView intentionalUnsafeStringView(StringView str) noexcept {
 	return str;
 }
 
-// This function allows std::string&& to be converted to StringView, but keep in
-// mind that if any StringView or alike value generated from the result of this
-// function cannot be saved to variable! - it would (and probably will) cause
-// using of the provided std::string's data that was already deallocated =
-// memory corruption
-inline StringView intentionalUnsafeStringView(const std::string&& str) noexcept {
+// This function allows std::string&& to be converted to StringView, but keep
+// in mind that if any StringView or alike value generated from the result of
+// this function cannot be saved to variable! - it would (and probably will)
+// cause using of the provided std::string's data that was already deallocated
+// = memory corruption
+inline StringView
+intentionalUnsafeStringView(const std::string&& str) noexcept {
 	return StringView(static_cast<const std::string&>(str));
 }
 
@@ -779,18 +772,17 @@ public:
 		str[len] = '\0';
 	}
 
-	FixedString(const StringBase& s)
-		: FixedString(s.data(), s.size()) {}
+	FixedString(const StringBase& s) : FixedString(s.data(), s.size()) {}
 
 	FixedString(const StringBase<const value_type>& s)
-		: FixedString(s.data(), s.size()) {}
+	   : FixedString(s.data(), s.size()) {}
 
 	// s cannot be nullptr
 	FixedString(const_pointer s) : FixedString(s, __builtin_strlen(s)) {}
 
 	FixedString(const std::string& s, size_type beg = 0, size_type n = npos)
-		: FixedString(s.data() + std::min(beg, s.size()),
-			std::min(n, s.size() - std::min(beg, s.size()))) {}
+	   : FixedString(s.data() + std::min(beg, s.size()),
+	                 std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	FixedString(const FixedString& fs) : FixedString(fs.str, fs.len) {}
 
@@ -844,37 +836,38 @@ public:
 
 	constexpr CStringView(std::nullptr_t) : CStringView() {}
 
-	#if __cplusplus > 201402L
-	#warning "Use below std::chair_traits<Char>::length() which became constexpr"
-	#endif
-	template<size_t N>
-	constexpr CStringView(const char(&s)[N]) : StringBase(s, meta::strlen(s)) {}
+#if __cplusplus > 201402L
+#warning "Use below std::chair_traits<Char>::length() which became constexpr"
+#endif
+	template <size_t N>
+	constexpr CStringView(const char (&s)[N])
+	   : StringBase(s, meta::strlen(s)) {}
 
 	// Do not treat as possible string literal
-	template<size_t N>
-	constexpr CStringView(char(&s)[N]) : StringBase(s) {}
+	template <size_t N>
+	constexpr CStringView(char (&s)[N]) : StringBase(s) {}
 
 	constexpr CStringView(const meta::string& s) : StringBase(s) {}
 
 	constexpr CStringView(const FixedString& s) noexcept
-		: StringBase(s.data(), s.size()) {}
+	   : StringBase(s.data(), s.size()) {}
 
 	CStringView(const std::string& s) noexcept
-		: StringBase(s.data(), s.size()) {}
+	   : StringBase(s.data(), s.size()) {}
 
 	// Be careful with the constructor below! @p s cannot be null
 	constexpr explicit CStringView(pointer s) noexcept : StringBase(s) {
-	#ifdef _GLIBCXX_DEBUG
+#ifdef _GLIBCXX_DEBUG
 		assert(s);
-	#endif
+#endif
 	}
 
 	// Be careful with the constructor below! @p s cannot be null
 	constexpr CStringView(pointer s, size_type n) noexcept : StringBase(s, n) {
-	#ifdef _GLIBCXX_DEBUG
+#ifdef _GLIBCXX_DEBUG
 		assert(s);
 		assert(s[n] == '\0');
-	#endif
+#endif
 	}
 
 	constexpr CStringView(const CStringView&) noexcept = default;
@@ -886,7 +879,7 @@ public:
 
 	constexpr CStringView substr(size_type pos) const {
 		const auto x = StringBase::substr(pos);
-		return CStringView{x.data(), x.size()};
+		return CStringView {x.data(), x.size()};
 	}
 
 	constexpr StringView substr(size_type pos, size_type count) const {
@@ -902,16 +895,15 @@ public:
 	constexpr const_pointer c_str() const noexcept { return data(); }
 };
 
-constexpr inline StringView substring(StringView str, StringView::size_type beg,
-	StringView::size_type end = StringView::npos)
-{
+constexpr inline StringView
+substring(StringView str, StringView::size_type beg,
+          StringView::size_type end = StringView::npos) {
 	return str.substring(beg, end);
 }
 
-template<class CharT, class Traits, class Char>
-constexpr std::basic_ostream<CharT, Traits>& operator<<(
-	std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s)
-{
+template <class CharT, class Traits, class Char>
+constexpr std::basic_ostream<CharT, Traits>&
+operator<<(std::basic_ostream<CharT, Traits>& os, const StringBase<Char>& s) {
 	return os.write(s.data(), s.size());
 }
 
@@ -919,7 +911,7 @@ class InplaceBuffBase {
 public:
 	size_t size = 0;
 	size_t max_size_;
-	char *p_;
+	char* p_;
 
 	/**
 	 * @brief Changes buffer's size and max_size if needed, but in the latter
@@ -994,10 +986,10 @@ public:
 
 	char operator[](size_t i) const noexcept { return p_[i]; }
 
-	operator StringView() const & noexcept { return {data(), size}; }
+	operator StringView() const& noexcept { return {data(), size}; }
 
 	// Do not allow to create StringView of a temporary object
-	operator StringView() const && = delete;
+	operator StringView() const&& = delete;
 
 	std::string to_string() const { return {data(), size}; }
 
@@ -1012,7 +1004,7 @@ public:
 
 protected:
 	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
-		: size(s), max_size_(max_s), p_(p) {}
+	   : size(s), max_size_(max_s), p_(p) {}
 
 	constexpr InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
 	constexpr InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
@@ -1032,14 +1024,13 @@ protected:
 public:
 	~InplaceBuffBase() { deallocate(); }
 
-	template<class... Args>
+	template <class... Args>
 	constexpr InplaceBuffBase& append(Args&&... args) {
 		[this](auto&&... xx) {
 			// Sum length of all args
 			size_t k = size, final_len = size;
-			(void)std::initializer_list<size_t>{
-				(final_len += string_length(xx))...
-			};
+			(void)std::initializer_list<size_t> {
+			   (final_len += string_length(xx))...};
 			resize(final_len);
 
 			// Concentrate them into str[]
@@ -1051,21 +1042,20 @@ public:
 
 			(void)impl_append; // Ignore warning 'unused' when no arguments are
 			                   // provided
-			(void)std::initializer_list<int>{
-				(impl_append(std::forward<decltype(xx)>(xx)), 0)...
-			};
+			(void)std::initializer_list<int> {
+			   (impl_append(std::forward<decltype(xx)>(xx)), 0)...};
 		}(stringify(std::forward<Args>(args))...);
 
 		return *this;
 	}
 };
 
-template<size_t N>
+template <size_t N>
 class InplaceBuff : protected InplaceBuffBase {
 private:
 	std::array<char, N> a_;
 
-	template<size_t M>
+	template <size_t M>
 	friend class InplaceBuff;
 
 	static_assert(N > 0, "Needed for accessing the array's 0-th element");
@@ -1079,15 +1069,15 @@ public:
 		p_ = &a_[0];
 	}
 
-	template<class T, typename = std::enable_if_t<std::is_same<T, size_t>::value>>
+	template <class T,
+	          typename = std::enable_if_t<std::is_same<T, size_t>::value>>
 	constexpr explicit InplaceBuff(T n)
-		: InplaceBuffBase(n, meta::max(N, n), nullptr)
-	{
+	   : InplaceBuffBase(n, meta::max(N, n), nullptr) {
 		p_ = (n <= N ? &a_[0] : new char[n]);
 	}
 
-	template<class T, typename =
-		std::enable_if_t<!std::is_integral<std::remove_reference_t<T>>()>>
+	template <class T, typename = std::enable_if_t<
+	                      !std::is_integral<std::remove_reference_t<T>>()>>
 	constexpr explicit InplaceBuff(T&& str) : InplaceBuff(string_length(str)) {
 		std::copy(::data(str), ::data(str) + size, p_);
 	}
@@ -1097,8 +1087,7 @@ public:
 	}
 
 	constexpr InplaceBuff(InplaceBuff&& ibuff) noexcept
-		: InplaceBuffBase(ibuff.size, meta::max(N, ibuff.max_size_), ibuff.p_)
-	{
+	   : InplaceBuffBase(ibuff.size, meta::max(N, ibuff.max_size_), ibuff.p_) {
 		if (ibuff.is_allocated()) {
 			p_ = ibuff.p_;
 			ibuff.size = 0;
@@ -1112,15 +1101,15 @@ public:
 		}
 	}
 
-	template<size_t M>
-	constexpr InplaceBuff(const InplaceBuff<M>& ibuff) : InplaceBuff(ibuff.size) {
+	template <size_t M>
+	constexpr InplaceBuff(const InplaceBuff<M>& ibuff)
+	   : InplaceBuff(ibuff.size) {
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
-	template<size_t M>
+	template <size_t M>
 	constexpr InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
-		: InplaceBuffBase(ibuff.size, N, ibuff.p_)
-	{
+	   : InplaceBuffBase(ibuff.size, N, ibuff.p_) {
 		if (ibuff.size <= N) {
 			p_ = &a_[0];
 			// max_size_ = N;
@@ -1145,7 +1134,7 @@ public:
 		ibuff.p_ = &ibuff.a_[0];
 	}
 
-	template<class T>
+	template <class T>
 	constexpr InplaceBuff& operator=(T&& str) {
 		auto len = string_length(str);
 		lossy_resize(len);
@@ -1159,7 +1148,7 @@ public:
 		return *this;
 	}
 
-	template<size_t M>
+	template <size_t M>
 	constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
 		lossy_resize(ibuff.size);
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
@@ -1167,7 +1156,7 @@ public:
 	}
 
 private:
-	template<size_t M>
+	template <size_t M>
 	constexpr InplaceBuff& assign_move_impl(InplaceBuff<M>&& ibuff) {
 		if (ibuff.is_allocated() and ibuff.max_size() >= max_size()) {
 			// Steal the allocated string
@@ -1197,58 +1186,58 @@ public:
 		return assign_move_impl(std::move(ibuff));
 	}
 
-	template<size_t M>
+	template <size_t M>
 	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
 		return assign_move_impl(std::move(ibuff));
 	}
 
-	using InplaceBuffBase::lossy_resize;
-	using InplaceBuffBase::resize;
-	using InplaceBuffBase::clear;
+	using InplaceBuffBase::back;
 	using InplaceBuffBase::begin;
-	using InplaceBuffBase::end;
 	using InplaceBuffBase::cbegin;
 	using InplaceBuffBase::cend;
+	using InplaceBuffBase::clear;
 	using InplaceBuffBase::data;
-	using InplaceBuffBase::max_size;
+	using InplaceBuffBase::end;
 	using InplaceBuffBase::front;
-	using InplaceBuffBase::back;
+	using InplaceBuffBase::lossy_resize;
+	using InplaceBuffBase::max_size;
+	using InplaceBuffBase::resize;
 	using InplaceBuffBase::operator[];
 	using InplaceBuffBase::operator StringView;
-	using InplaceBuffBase::to_string;
-	using InplaceBuffBase::to_cstr;
 	using InplaceBuffBase::append;
+	using InplaceBuffBase::to_cstr;
+	using InplaceBuffBase::to_string;
 };
 
-template<size_t N>
+template <size_t N>
 inline std::string& operator+=(std::string& str, const InplaceBuff<N>& ibs) {
 	return str.append(ibs.data(), ibs.size);
 }
 
-// This function allows InplaceBuff<N>&& to be converted to StringView, but keep
-// in mind that if any StringView or alike value generated from the result of
-// this function cannot be saved to variable! - it would (and probably will)
+// This function allows InplaceBuff<N>&& to be converted to StringView, but
+// keep in mind that if any StringView or alike value generated from the result
+// of this function cannot be saved to variable! - it would (and probably will)
 // cause using of the provided InplaceBuff<N>'s data that was already
 // deallocated = memory corruption
-template<size_t N>
-inline StringView intentionalUnsafeStringView(const InplaceBuff<N>&& str) noexcept {
+template <size_t N>
+inline StringView
+intentionalUnsafeStringView(const InplaceBuff<N>&& str) noexcept {
 	return StringView(static_cast<const InplaceBuff<N>&>(str));
 }
 
 // This function allows InplaceBuff<N>&& to be converted to CStringView, but
-// keep in mind that if any CStringView or alike value generated from the result
-// of this function cannot be saved to variable! - it would (and probably will)
-// cause using of the provided InplaceBuff<N>'s data that was already
-// deallocated = memory corruption
-template<size_t N>
+// keep in mind that if any CStringView or alike value generated from the
+// result of this function cannot be saved to variable! - it would (and
+// probably will) cause using of the provided InplaceBuff<N>'s data that was
+// already deallocated = memory corruption
+template <size_t N>
 inline CStringView intentionalUnsafeCStringView(InplaceBuff<N>&& str) noexcept {
 	return static_cast<InplaceBuff<N>&>(str).to_cstr();
 }
 
-template<size_t T>
+template <size_t T>
 constexpr inline auto string_length(const InplaceBuff<T>& ibuff)
-	-> decltype(ibuff.size)
-{
+   -> decltype(ibuff.size) {
 	return ibuff.size;
 }
 
@@ -1262,21 +1251,21 @@ public:
 	constexpr FilePath(FilePath&&) noexcept = default;
 
 	constexpr FilePath(const char* str) noexcept
-		: str_(str), size_(__builtin_strlen(str)) {}
+	   : str_(str), size_(__builtin_strlen(str)) {}
 
 	constexpr FilePath(const CStringView& str) noexcept
-		: str_(str.c_str()), size_(str.size()) {}
+	   : str_(str.c_str()), size_(str.size()) {}
 
 	FilePath(const std::string& str) noexcept
-		: str_(str.c_str()), size_(str.size()) {}
+	   : str_(str.c_str()), size_(str.size()) {}
 
-	template<size_t N>
+	template <size_t N>
 	constexpr FilePath(InplaceBuff<N>& str) noexcept
-		: str_(str.to_cstr().data()), size_(str.size) {}
+	   : str_(str.to_cstr().data()), size_(str.size) {}
 
-	template<size_t N>
+	template <size_t N>
 	constexpr FilePath(InplaceBuff<N>&& str) noexcept
-		: str_(str.to_cstr().data()), size_(str.size) {}
+	   : str_(str.to_cstr().data()), size_(str.size) {}
 
 	FilePath& operator=(const FilePath&) noexcept = delete;
 	FilePath& operator=(FilePath&&) noexcept = delete;
@@ -1300,14 +1289,14 @@ public:
 		return *this;
 	}
 
-	template<size_t N>
+	template <size_t N>
 	FilePath& operator=(InplaceBuff<N>& str) noexcept {
 		str_ = str.to_cstr().data();
 		size_ = str.size;
 		return *this;
 	}
 
-	template<size_t N>
+	template <size_t N>
 	FilePath& operator=(InplaceBuff<N>&& str) noexcept {
 		str_ = str.to_cstr().data();
 		size_ = str.size;
@@ -1332,7 +1321,7 @@ public:
  *
  * @return concentration of @p args
  */
-template<size_t IBUFF_SIZE = 4096, class... Args>
+template <size_t IBUFF_SIZE = 4096, class... Args>
 constexpr inline InplaceBuff<IBUFF_SIZE> concat(Args&&... args) {
 	InplaceBuff<IBUFF_SIZE> res;
 	res.append(std::forward<Args>(args)...);
@@ -1341,7 +1330,7 @@ constexpr inline InplaceBuff<IBUFF_SIZE> concat(Args&&... args) {
 
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
-template<class Func>
+template <class Func>
 constexpr bool special_less(StringView a, StringView b, Func&& f) {
 	size_t len = std::min(a.size(), b.size());
 	for (size_t i = 0; i < len; ++i)
@@ -1353,14 +1342,14 @@ constexpr bool special_less(StringView a, StringView b, Func&& f) {
 
 // Checks whether two StringView are equal, but before comparing two characters
 // modifies them with f()
-template<class Func>
+template <class Func>
 constexpr bool special_equal(StringView a, StringView b, Func&& f) {
 	if (a.size() != b.size())
 		return false;
 
 	for (size_t i = 0; i < a.size(); ++i)
 		if (f(a[i]) != f(b[i]))
-			return  false;
+			return false;
 
 	return true;
 }
@@ -1382,31 +1371,30 @@ struct StrNumCompare {
 	}
 };
 
-template<class Func>
+template <class Func>
 class SpecialStrCompare {
 	Func func;
 
 public:
 	SpecialStrCompare(Func f = {}) : func(std::move(f)) {}
 
-	template<class A, class B>
+	template <class A, class B>
 	bool operator()(A&& a, B&& b) const {
 		return special_less(std::forward<A>(a), std::forward<B>(b), func);
 	}
 };
 
-struct LowerStrCompare : public SpecialStrCompare<int(*)(int)> {
+struct LowerStrCompare : public SpecialStrCompare<int (*)(int)> {
 	LowerStrCompare() : SpecialStrCompare(tolower) {}
 };
 
-template<class T, size_t N>
-constexpr inline auto toString(T x) noexcept ->
-	std::enable_if_t<std::is_integral<T>::value, InplaceBuff<N>>
-{
+template <class T, size_t N>
+constexpr inline auto toString(T x) noexcept
+   -> std::enable_if_t<std::is_integral<T>::value, InplaceBuff<N>> {
 	using RType = InplaceBuff<N>;
-	static_assert(N >=
-		string_length(meta::ToString<std::numeric_limits<T>::max()>{}) + 2,
-		"Needed to be noexcept");
+	static_assert(
+	   N >= string_length(meta::ToString<std::numeric_limits<T>::max()> {}) + 2,
+	   "Needed to be noexcept");
 
 	if (x == 0) {
 		RType res((size_t)1);
@@ -1475,7 +1463,7 @@ inline auto stringify(unsigned long long x) noexcept -> decltype(toString(x)) {
 }
 
 // Converts T to std::string
-template<class T>
+template <class T>
 std::enable_if_t<!std::is_integral<T>::value, std::string> toString(T x) {
 	if (x == T())
 		return std::string(1, '0');
@@ -1520,7 +1508,7 @@ inline std::string toString(long double x, int precision = 6) {
 }
 
 // Alias to toString()
-template<class... Args>
+template <class... Args>
 constexpr inline auto toStr(Args&&... args) {
 	return toString(std::forward<Args>(args)...);
 }
@@ -1557,16 +1545,13 @@ constexpr inline size_t find(StringView str, char c, size_t beg = 0) {
 }
 
 // Like string::find() but searches in [beg, end)
-constexpr inline size_t find(StringView str, char c, size_t beg,
-	size_t end)
-{
+constexpr inline size_t find(StringView str, char c, size_t beg, size_t end) {
 	return str.find(c, beg, end);
 }
 
 // Compares two strings: @p str[beg, end) and @p s
 constexpr inline int compare(StringView str, size_t beg, size_t end,
-	StringView s) noexcept
-{
+                             StringView s) noexcept {
 	if (end > str.size())
 		end = str.size();
 	if (beg > end)
@@ -1576,9 +1561,8 @@ constexpr inline int compare(StringView str, size_t beg, size_t end,
 }
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
-constexpr inline int compareTo(StringView str, size_t pos, char c, StringView s)
-	noexcept
-{
+constexpr inline int compareTo(StringView str, size_t pos, char c,
+                               StringView s) noexcept {
 	return compare(str, pos, str.find(c, pos), s);
 }
 
@@ -1589,11 +1573,12 @@ bool slowEqual(const char* str1, const char* str2, size_t len) noexcept;
 
 inline bool slowEqual(StringView str1, StringView str2) noexcept {
 	return slowEqual(str1.data(), str2.data(),
-		std::min(str1.size(), str2.size())) && str1.size() == str2.size();
+	                 std::min(str1.size(), str2.size())) &&
+	       str1.size() == str2.size();
 }
 
 // Removes trailing characters for which f() returns true
-template<class Func>
+template <class Func>
 void removeTrailing(std::string& str, Func&& f) {
 	auto it = str.end();
 	while (it != str.begin())
@@ -1638,16 +1623,16 @@ inline std::string toHex(StringView str) {
 
 // TODO: rewrite using InplaceBuff
 std::string encodeURI(StringView str, size_t beg = 0,
-	size_t end = StringView::npos);
+                      size_t end = StringView::npos);
 
 /// Decodes URI, WARNING: it does not validate hex digits
-template<size_t N = 4096>
+template <size_t N = 4096>
 InplaceBuff<N> decodeURI(StringView str) {
 	InplaceBuff<N> res;
 	for (size_t i = 0; i < str.size(); ++i) {
 		if (str[i] == '%' and i + 2 < str.size()) {
-			res.template append<char>(
-				(hextodec(str[i + 1]) << 4) | hextodec(str[i + 2]));
+			res.template append<char>((hextodec(str[i + 1]) << 4) |
+			                          hextodec(str[i + 2]));
 			i += 2;
 		} else if (str[i] == '+')
 			res.append(' ');
@@ -1662,7 +1647,7 @@ constexpr inline bool hasPrefix(StringView str, StringView prefix) noexcept {
 	return (str.compare(0, prefix.size(), prefix) == 0);
 }
 
-template<class Iter>
+template <class Iter>
 constexpr bool hasPrefixIn(StringView str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
 		if (hasPrefix(str, *beg))
@@ -1672,7 +1657,7 @@ constexpr bool hasPrefixIn(StringView str, Iter beg, Iter end) noexcept {
 	return false;
 }
 
-template<class T>
+template <class T>
 constexpr inline bool hasPrefixIn(StringView str, T&& x) noexcept {
 	for (auto&& a : x)
 		if (hasPrefix(str, a))
@@ -1681,9 +1666,9 @@ constexpr inline bool hasPrefixIn(StringView str, T&& x) noexcept {
 	return false;
 }
 
-constexpr inline bool hasPrefixIn(StringView str,
-	const std::initializer_list<StringView>& x) noexcept
-{
+constexpr inline bool
+hasPrefixIn(StringView str,
+            const std::initializer_list<StringView>& x) noexcept {
 	for (auto&& a : x)
 		if (hasPrefix(str, a))
 			return true;
@@ -1691,14 +1676,13 @@ constexpr inline bool hasPrefixIn(StringView str,
 	return false;
 }
 
-constexpr inline bool hasSuffix(StringView str, StringView suffix)
-	noexcept
-{
+constexpr inline bool hasSuffix(StringView str, StringView suffix) noexcept {
 	return (str.size() >= suffix.size() &&
-		str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
+	        str.compare(str.size() - suffix.size(), suffix.size(), suffix) ==
+	           0);
 }
 
-template<class Iter>
+template <class Iter>
 constexpr bool hasSuffixIn(StringView str, Iter beg, Iter end) noexcept {
 	while (beg != end) {
 		if (hasSuffix(str, *beg))
@@ -1708,7 +1692,7 @@ constexpr bool hasSuffixIn(StringView str, Iter beg, Iter end) noexcept {
 	return false;
 }
 
-template<class T>
+template <class T>
 constexpr inline bool hasSuffixIn(StringView str, T&& x) noexcept {
 	for (auto&& a : x)
 		if (hasSuffix(str, a))
@@ -1717,9 +1701,9 @@ constexpr inline bool hasSuffixIn(StringView str, T&& x) noexcept {
 	return false;
 }
 
-constexpr inline bool hasSuffixIn(StringView str,
-	const std::initializer_list<StringView>& x) noexcept
-{
+constexpr inline bool
+hasSuffixIn(StringView str,
+            const std::initializer_list<StringView>& x) noexcept {
 	for (auto&& a : x)
 		if (hasSuffix(str, a))
 			return true;
@@ -1731,28 +1715,17 @@ constexpr inline bool hasSuffixIn(StringView str,
 inline void appendHtmlEscaped(std::string& str, char c) {
 	switch (c) {
 	// To preserve spaces use CSS: white-space: pre | pre-wrap;
-	case '&':
-		str += "&amp;";
-		break;
+	case '&': str += "&amp;"; break;
 
-	case '"':
-		str += "&quot;";
-		break;
+	case '"': str += "&quot;"; break;
 
-	case '\'':
-		str += "&apos;";
-		break;
+	case '\'': str += "&apos;"; break;
 
-	case '<':
-		str += "&lt;";
-		break;
+	case '<': str += "&lt;"; break;
 
-	case '>':
-		str += "&gt;";
-		break;
+	case '>': str += "&gt;"; break;
 
-	default:
-		str += c;
+	default: str += c;
 	}
 }
 
@@ -1763,14 +1736,14 @@ inline void appendHtmlEscaped(std::string& str, StringView s) {
 }
 
 // Escapes HTML unsafe character sequences
-template<class T>
+template <class T>
 inline std::string htmlEscape(T&& s) {
 	std::string res;
 	appendHtmlEscaped(res, intentionalUnsafeStringView(std::forward<T>(s)));
 	return res;
 }
 
-template<size_t N = 512, class... Args>
+template <size_t N = 512, class... Args>
 constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
 	InplaceBuff<N> res;
 	res.append('"');
@@ -1791,9 +1764,8 @@ constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
 		}
 	};
 
-	(void)std::initializer_list<int>{
-		(safe_append(stringify(std::forward<Args>(args))), 0)...
-	};
+	(void)std::initializer_list<int> {
+	   (safe_append(stringify(std::forward<Args>(args))), 0)...};
 
 	res.append('"');
 	return res;
@@ -1802,8 +1774,7 @@ constexpr inline InplaceBuff<N> jsonStringify(Args&&... args) {
 constexpr inline bool isAlnum(StringView s) noexcept {
 	for (char c : s)
 		if (not('A' <= c and c <= 'Z') and not('0' <= c and c <= '9') and
-			not('a' <= c and c <= 'z'))
-		{
+		    not('a' <= c and c <= 'z')) {
 			return false;
 		}
 
@@ -1825,15 +1796,14 @@ constexpr inline bool isAlnum(StringView s) noexcept {
  */
 
 constexpr inline bool isInteger(StringView s, size_t beg = 0,
-	size_t end = StringView::npos) noexcept
-{
+                                size_t end = StringView::npos) noexcept {
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end)
 		return false; // empty string is not a number
 
 	if ((s[beg] == '-' || s[beg] == '+') && ++beg == end)
-			return false; // sign is not a number
+		return false; // sign is not a number
 
 	for (; beg < end; ++beg)
 		if (s[beg] < '0' || s[beg] > '9')
@@ -1859,7 +1829,7 @@ constexpr inline bool isReal(StringView s) noexcept {
 
 	size_t beg = 0;
 	if ((s.front() == '-' || s.front() == '+') && ++beg == s.size())
-			return false; // sign is not a number
+		return false; // sign is not a number
 
 	bool dot = false;
 	for (; beg < s.size(); ++beg)
@@ -1875,7 +1845,7 @@ constexpr inline bool isReal(StringView s) noexcept {
 
 /// Checks whether string @p s consist only of digits and is not greater than
 /// @p MAX_VAL
-template<uintmax_t MAX_VAL>
+template <uintmax_t MAX_VAL>
 constexpr inline bool isDigitNotGreaterThan(StringView s) noexcept {
 	constexpr auto x = meta::ToString<MAX_VAL>::arr_value;
 	return isDigit(s) && !StrNumCompare()({x.data(), x.size()}, s);
@@ -1883,7 +1853,7 @@ constexpr inline bool isDigitNotGreaterThan(StringView s) noexcept {
 
 /// Checks whether string @p s consist only of digits and is not less than
 /// @p MIN_VAL
-template<uintmax_t MIN_VAL>
+template <uintmax_t MIN_VAL>
 constexpr inline bool isDigitNotLessThan(StringView s) noexcept {
 	constexpr auto x = meta::ToString<MIN_VAL>::arr_value;
 	return isDigit(s) && !StrNumCompare()(s, {x.data(), x.size()});
@@ -1901,13 +1871,12 @@ constexpr inline bool isDigitNotLessThan(StringView s) noexcept {
  * @param end position to which (exclusively) @p s is considered
  * @return -1 if s: [beg, end) is not a number (empty string is not a number),
  *   otherwise return the number of characters parsed.
- *   Warning! If return value is -1 then x may not be assigned, so using x after
- *   unsuccessful call is not safe.
+ *   Warning! If return value is -1 then x may not be assigned, so using x
+ *   after unsuccessful call is not safe.
  */
-template<class T>
+template <class T>
 constexpr int strtoi(StringView s, T& x, size_t beg = 0,
-	size_t end = StringView::npos) noexcept
-{
+                     size_t end = StringView::npos) noexcept {
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end)
@@ -1917,7 +1886,7 @@ constexpr int strtoi(StringView s, T& x, size_t beg = 0,
 	int res = 0;
 	x = 0;
 	if ((s[beg] == '-' || s[beg] == '+') && (++res, ++beg) == end)
-			return -1; // sign is not a number
+		return -1; // sign is not a number
 	for (size_t i = beg; i < end; ++i) {
 		if (s[i] >= '0' && s[i] <= '9')
 			x = x * 10 + s[i] - '0';
@@ -1932,10 +1901,9 @@ constexpr int strtoi(StringView s, T& x, size_t beg = 0,
 }
 
 // Like strtoi() but assumes that @p s is a unsigned integer
-template<class T>
+template <class T>
 constexpr int strtou(StringView s, T& x, size_t beg = 0,
-	size_t end = StringView::npos) noexcept
-{
+                     size_t end = StringView::npos) noexcept {
 	if (end > s.size())
 		end = s.size();
 	if (beg >= end)
@@ -1958,8 +1926,7 @@ constexpr int strtou(StringView s, T& x, size_t beg = 0,
 
 // Converts string to long long using strtoi()
 constexpr inline long long strtoll(StringView s, size_t beg = 0,
-	size_t end = StringView::npos) noexcept
-{
+                                   size_t end = StringView::npos) noexcept {
 	// TODO: when argument is not a valid number, strtoi() won't parse all the
 	// string, and may (but don't have to) return parsed value
 	long long x = 0;
@@ -1968,9 +1935,8 @@ constexpr inline long long strtoll(StringView s, size_t beg = 0,
 }
 
 // Converts string to unsigned long long using strtou()
-constexpr inline unsigned long long strtoull(StringView s, size_t beg = 0,
-	size_t end = StringView::npos) noexcept
-{
+constexpr inline unsigned long long
+strtoull(StringView s, size_t beg = 0, size_t end = StringView::npos) noexcept {
 	// TODO: when argument is not a valid number, strtou() won't parse all the
 	// string, and may (but don't have to) return parsed value
 	unsigned long long x = 0;
@@ -1979,7 +1945,7 @@ constexpr inline unsigned long long strtoull(StringView s, size_t beg = 0,
 }
 
 // Converts digits @p str to @p T, WARNING: assumes that isDigit(str) == true
-template<class T>
+template <class T>
 constexpr T digitsToU(StringView str) noexcept {
 	T x = 0;
 	for (char c : str)
@@ -2006,4 +1972,4 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  * @return formatted string
  */
 std::string paddedString(StringView s, size_t len, Adjustment adj = RIGHT,
-	char filler = ' ');
+                         char filler = ' ');

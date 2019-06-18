@@ -6,30 +6,34 @@
 #include <chrono>
 
 /// # Simfile - Sim package configuration file
-/// Simfile is a ConfigFile file, so the syntax is the same as in the ConfigFile
+/// Simfile is a ConfigFile file, so the syntax is the same as in the
+/// ConfigFile
 ///
 /// ## Example:
 /// ```sh
-/// name: Simple Package                       # Problem name
-/// label: sim                                 # Problem label (usually a shortened name)
-/// interactive: false                         # Whether the problem is interactive
-///                                            #   or not (optional - default false)
-/// statement: doc/sim.pdf                     # Path to statement file
-/// checker: check/checker.cpp                 # Path to checker source file (optional 
-///                                            #   if the problem is not interactive),
-///                                            #   if not set, the default checker
-///                                            #   will be used
-/// solutions: [prog/sim.cpp, prog/sim1.cpp]   # Paths to solutions' source files.
-///                                            #   The first solution is the main
-///                                            #   solution
-/// memory_limit: 64              # Global memory limit in MB (optional)
-/// limits: [                     # Limits array
+/// name: Simple Package                     # Problem name
+/// label: sim                               # Problem label (usually a
+///                                          #   shortened name)
+/// interactive: false                       # Whether the problem is
+///                                          #   interactive or not
+///                                          #   (optional - default false)
+/// statement: doc/sim.pdf                   # Path to statement file
+/// checker: check/checker.cpp               # Path to checker source file
+///                                          #   (optional if the problem
+///                                          #     is not interactive),
+///                                          #   if not set, the default
+///                                          #   checker will be used
+/// solutions: [prog/sim.cpp, prog/sim1.cpp] # Paths to solutions' source files.
+///                                          #   The first solution is the main
+///                                          #   solution
+/// memory_limit: 64           # Global memory limit in MB (optional)
+/// limits: [                  # Limits array
 ///         # Group 0
-///         sim0a 1            # Format: <test name> <time limit> [memory limit]
-///         sim0b 1.01         # Time limit in seconds, memory limit in MB
-///         sim1ocen 2 32      # Individual memory limit is optional if the global
-///                            #   memory limit is set.
-///         sim2ocen 3         # Tests may appear in an arbitrary order
+///         sim0a 1        # Format: <test name> <time limit> [memory limit]
+///         sim0b 1.01     # Time limit in seconds, memory limit in MB
+///         sim1ocen 2 32  # Individual memory limit is optional if the global
+///                        #   memory limit is set.
+///         sim2ocen 3     # Tests may appear in an arbitrary order
 ///
 ///         # Group 1
 ///         sim1a 1
@@ -46,16 +50,16 @@
 ///         # Group 4
 ///         sim4 5 32
 /// ]
-/// scoring: [                    # Scoring of the tests groups (optional)
+/// scoring: [                 # Scoring of the tests groups (optional)
 ///         0 0      # Format: <group id> <score>
 ///         1 20     # Score is a signed integer value
 ///         2 30     # Groups may appear in an arbitrary order
 ///         3 25
 ///         4 25
 /// ]
-/// tests_files: [                # Tests' input and output files (optional)
-///                               # Format: <test name> <in file> <out file - present
-///                               #   only if the package is not interactive>
+/// tests_files: [         # Tests' input and output files (optional)
+///                        # Format: <test name> <in file> <out file - present
+///                        #   only if the package is not interactive>
 ///         sim0a in/sim0a.in out/sim0a.out
 ///         sim0b in/sim0b.in out/sim0b.out
 ///         sim1ocen in/sim1ocen.in out/sim1ocen.out
@@ -79,7 +83,8 @@ class Simfile {
 public:
 	std::string name, label, statement;
 	bool interactive = false;
-	Optional<std::string> checker; // std::nullopt if default checker should be used
+	Optional<std::string>
+	   checker; // std::nullopt if default checker should be used
 	std::vector<std::string> solutions;
 	Optional<uint64_t> global_mem_limit; // in bytes
 
@@ -94,9 +99,9 @@ public:
 		uint64_t memory_limit; // in bytes
 
 		explicit Test(const std::string& n = "",
-				std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
-				uint64_t ml = 0)
-			: name(n), time_limit(tl), memory_limit(ml) {}
+		              std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
+		              uint64_t ml = 0)
+		   : name(n), time_limit(tl), memory_limit(ml) {}
 	};
 
 	/**
@@ -127,8 +132,10 @@ public:
 	 */
 	explicit Simfile(std::string simfile_contents) {
 		config.add_vars("name", "label", "interactive", "checker", "statement",
-			"solutions", "memory_limit", "limits", "scoring", "tests_files");
-		config.load_config_from_string(std::move(simfile_contents)); }
+		                "solutions", "memory_limit", "limits", "scoring",
+		                "tests_files");
+		config.load_config_from_string(std::move(simfile_contents));
+	}
 
 	Simfile(const Simfile&) = default;
 	Simfile(Simfile&&) noexcept = default;
@@ -229,7 +236,7 @@ private:
 	 * @return (test name, time limit [usec], memory limit [byte])
 	 */
 	static std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
-		parse_limits_item(StringView item);
+	parse_limits_item(StringView item);
 	/**
 	 * @brief Parses the item of the variable "scoring"
 	 * @param item - the item to parse
@@ -271,7 +278,7 @@ private:
 	 * @return (test name, path to input file, path to output file)
 	 */
 	static std::tuple<StringView, StringView, StringView>
-		parse_test_files_item(StringView item);
+	parse_test_files_item(StringView item);
 
 public:
 	/**
@@ -285,21 +292,35 @@ public:
 	void load_tests_files();
 	/**
 	 * @brief Loads tests, their limits, scoring and files
-	 * @details Fields are identical to these of load_tests(), with addition of: - tests_files (array of the tests' input and output files)
+	 * @details Fields are identical to these of load_tests(), with addition of:
+	 *   - tests_files (array of the tests' input and output files)
 	 *
 	 * @errors Throws an exception of type std::runtime_error if any
 	 *   validation error occurs
 	 */
-	void load_tests_with_files() { load_tests(); load_tests_files(); }
+	void load_tests_with_files() {
+		load_tests();
+		load_tests_files();
+	}
 
 	/**
 	 * @brief Loads everything = the whole Simfile
 	 */
-	void load_all() { load_name(); load_label(); load_checker(); load_statement(); load_solutions(); load_tests_with_files(); }
+	void load_all() {
+		load_name();
+		load_label();
+		load_checker();
+		load_statement();
+		load_solutions();
+		load_tests_with_files();
+	}
 
 	/**
 	 * @brief Validates all previously loaded files
-	 * @details Validates all files loaded by calling methods: load_checker(), load_statement(), load_solutions(), load_tests_with_files(). All files are loaded safely, so that no file is outside of the  package (any path cannot go outside)
+	 * @details Validates all files loaded by calling methods: load_checker(),
+	 *   load_statement(), load_solutions(), load_tests_with_files(). All files
+	 *   are loaded safely, so that no file is outside of the  package (any path
+	 *   cannot go outside)
 	 * @param package_path path of the package main directory, used as package
 	 *   root directory during the validation
 	 *
@@ -323,7 +344,9 @@ public:
 		 */
 		static inline SplitResult split(StringView test_name) noexcept {
 			SplitResult res;
-			res.tid = test_name.extractTrailing(::isalpha); res.gid = test_name.extractTrailing(::isdigit); return res;
+			res.tid = test_name.extractTrailing(::isalpha);
+			res.gid = test_name.extractTrailing(::isdigit);
+			return res;
 		}
 
 		bool operator()(StringView a, StringView b) const {
@@ -333,14 +356,16 @@ public:
 				if (y.tid == "ocen")
 					return StrNumCompare()(x.gid, y.gid);
 
-				y.gid.removeLeading('0'); return (not y.gid.empty()); // true iff y.gid was not equal to 0
+				y.gid.removeLeading('0');
+				return (not y.gid.empty()); // true iff y.gid was not equal to 0
 			}
 			if (y.tid == "ocen") {
-				x.gid.removeLeading('0'); return x.gid.empty(); // true iff x.gid was equal to 0
+				x.gid.removeLeading('0');
+				return x.gid.empty(); // true iff x.gid was equal to 0
 			}
 
-			return (x.gid == y.gid ?
-				x.tid < y.tid : StrNumCompare()(x.gid, y.gid));
+			return (x.gid == y.gid ? x.tid < y.tid
+			                       : StrNumCompare()(x.gid, y.gid));
 		}
 	};
 };
@@ -354,7 +379,8 @@ public:
  *
  * @return label
  */
-inline std::string shorten_name(StringView str) { std::string label;
+inline std::string shorten_name(StringView str) {
+	std::string label;
 	for (char c : str)
 		if (isgraph(c) && (label += ::tolower(c)).size() == 3)
 			break;

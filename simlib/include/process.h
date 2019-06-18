@@ -48,7 +48,7 @@ std::string getExec(pid_t pid);
  *   std::runtime_error will be thrown
  */
 std::vector<pid_t> findProcessesByExec(std::vector<std::string> exec_set,
-	bool include_me = false);
+                                       bool include_me = false);
 
 /**
  * @brief Returns the process executable directory
@@ -106,7 +106,7 @@ int8_t detectArchitecture(pid_t pid);
 std::string getProcStat(pid_t pid, uint field_no);
 
 // Block all signals
-template<int (*func)(int, const sigset_t*, sigset_t*)>
+template <int (*func)(int, const sigset_t*, sigset_t*)>
 class SignalBlockerBase {
 private:
 	sigset_t old_mask;
@@ -136,35 +136,34 @@ private:
 	};
 };
 
-template<int (*func)(int, const sigset_t*, sigset_t*)>
+template <int (*func)(int, const sigset_t*, sigset_t*)>
 const sigset_t SignalBlockerBase<func>::empty_mask =
-	SignalBlockerBase<func>::empty_mask_val();
+   SignalBlockerBase<func>::empty_mask_val();
 
-template<int (*func)(int, const sigset_t*, sigset_t*)>
+template <int (*func)(int, const sigset_t*, sigset_t*)>
 const sigset_t SignalBlockerBase<func>::full_mask =
-	SignalBlockerBase<func>::full_mask_val();
+   SignalBlockerBase<func>::full_mask_val();
 
 typedef SignalBlockerBase<sigprocmask> SignalBlocker;
 typedef SignalBlockerBase<pthread_sigmask> ThreadSignalBlocker;
 
 // Block all signals when function @p f is called
-template<class F, class... Args>
+template <class F, class... Args>
 auto blockSignals(F&& f, Args&&... args)
-	-> decltype(f(std::forward<Args>(args)...))
-{
+   -> decltype(f(std::forward<Args>(args)...)) {
 	SignalBlocker sb;
 	return f(std::forward<Args>(args)...);
 }
 
-#define BLOCK_SIGNALS(...) blockSignals([&]{ return __VA_ARGS__; })
+#define BLOCK_SIGNALS(...) blockSignals([&] { return __VA_ARGS__; })
 
 // Block all signals when function @p f is called
-template<class F, class... Args>
+template <class F, class... Args>
 auto threadBlockSignals(F&& f, Args&&... args)
-	-> decltype(f(std::forward<Args>(args)...))
-{
+   -> decltype(f(std::forward<Args>(args)...)) {
 	ThreadSignalBlocker sb;
 	return f(std::forward<Args>(args)...);
 }
 
-#define THREAD_BLOCK_SIGNALS(...) threadBlockSignals([&]{ return __VA_ARGS__; })
+#define THREAD_BLOCK_SIGNALS(...)                                              \
+	threadBlockSignals([&] { return __VA_ARGS__; })

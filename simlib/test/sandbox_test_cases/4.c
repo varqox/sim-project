@@ -9,12 +9,14 @@
 
 int main() {
 	const int page_size = sysconf(_SC_PAGESIZE);
-	char* ptr = (char*)mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	char* ptr = (char*)mmap(NULL, page_size, PROT_READ | PROT_WRITE,
+	                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	for (int i = 0; i < page_size; ++i)
 		ptr[i] = 'x';
 
 	char* fake_name = ptr + page_size - 10;
-	assert(syscall(SYS_open, fake_name, O_RDONLY) == -1 && errno == ENAMETOOLONG);
+	assert(syscall(SYS_open, fake_name, O_RDONLY) == -1 &&
+	       errno == ENAMETOOLONG);
 	assert(syscall(SYS_open, NULL, O_RDONLY) == -1 && errno == EFAULT);
 	assert(syscall(SYS_open, "exec", O_RDONLY) == -1 && errno == EPERM);
 

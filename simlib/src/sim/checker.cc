@@ -13,7 +13,7 @@ string obtainCheckerOutput(int fd, size_t max_length) {
 	ssize_t k;
 	do {
 		k = pread(fd, const_cast<char*>(res.data()) + pos, max_length - pos,
-				pos);
+		          pos);
 		if (k > 0) {
 			pos += k;
 		} else if (k == 0) {

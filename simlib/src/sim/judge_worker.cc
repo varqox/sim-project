@@ -1,12 +1,12 @@
+#include "../../include/sim/judge_worker.h"
 #include "../../include/libzip.h"
 #include "../../include/parsers.h"
 #include "../../include/sim/checker.h"
-#include "../../include/sim/judge_worker.h"
 #include "../../include/sim/problem_package.h"
 #include "default_checker_dump.h"
 
-#include <thread>
 #include <future>
+#include <thread>
 
 using std::promise;
 using std::string;
@@ -55,8 +55,8 @@ class ZipPackageLoader : public PackageLoader {
 
 public:
 	ZipPackageLoader(TemporaryDirectory& tmp_dir, FilePath pkg_path)
-		: tmp_dir_(tmp_dir), zip_(pkg_path, ZIP_RDONLY),
-			pkg_master_dir_(sim::zip_package_master_dir(zip_)) {}
+	   : tmp_dir_(tmp_dir), zip_(pkg_path, ZIP_RDONLY),
+	     pkg_master_dir_(sim::zip_package_master_dir(zip_)) {}
 
 	std::string load_into_dest_file(FilePath path, FilePath dest) override {
 		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest);
@@ -76,35 +76,32 @@ public:
 	virtual ~ZipPackageLoader() = default;
 };
 
-inline static vector<string> compile_command(SolutionLanguage lang,
-	StringView source, StringView exec)
-{
+inline static vector<string>
+compile_command(SolutionLanguage lang, StringView source, StringView exec) {
 	STACK_UNWINDING_MARK;
 
 	// Makes vector of strings from arguments
 	auto make = [](auto... args) {
 		vector<string> res;
 		res.reserve(sizeof...(args));
-		(void)std::initializer_list<int>{
-			(res.emplace_back(data(args), string_length(args)), 0)...
-		};
+		(void)std::initializer_list<int> {
+		   (res.emplace_back(data(args), string_length(args)), 0)...};
 		return res;
 	};
 
 	switch (lang) {
 	case SolutionLanguage::C11:
 		return make("gcc", "-O2", "-std=c11", "-static", "-lm", "-m32", "-o",
-			exec, "-xc", source);
+		            exec, "-xc", source);
 	case SolutionLanguage::CPP11:
 		return make("g++", "-O2", "-std=c++11", "-static", "-lm", "-m32", "-o",
-			exec, "-xc++", source);
+		            exec, "-xc++", source);
 	case SolutionLanguage::CPP14:
 		return make("g++", "-O2", "-std=c++14", "-static", "-lm", "-m32", "-o",
-			exec, "-xc++", source);
+		            exec, "-xc++", source);
 	case SolutionLanguage::PASCAL:
 		return make("fpc", "-O2", "-XS", "-Xt", concat("-o", exec), source);
-	case SolutionLanguage::UNKNOWN:
-		THROW("Invalid Language!");
+	case SolutionLanguage::UNKNOWN: THROW("Invalid Language!");
 	}
 
 	THROW("Should not reach here");
@@ -114,10 +111,11 @@ constexpr const char* sim::JudgeWorker::SOLUTION_FILENAME;
 constexpr const char* sim::JudgeWorker::CHECKER_FILENAME;
 
 int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
-	Optional<std::chrono::nanoseconds> time_limit, string* c_errors,
-	size_t c_errors_max_len, const string& proot_path,
-	StringView compilation_source_basename, StringView exec_dest_filename)
-{
+                              Optional<std::chrono::nanoseconds> time_limit,
+                              string* c_errors, size_t c_errors_max_len,
+                              const string& proot_path,
+                              StringView compilation_source_basename,
+                              StringView exec_dest_filename) {
 	STACK_UNWINDING_MARK;
 
 	auto compilation_dir = concat<PATH_MAX>(tmp_dir.path(), "compilation/");
@@ -129,73 +127,68 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 
 	auto src_filename = concat<PATH_MAX>(compilation_source_basename);
 	switch (lang) {
-	case SolutionLanguage::C11:
-		src_filename.append(".c");
-		break;
+	case SolutionLanguage::C11: src_filename.append(".c"); break;
 
 	case SolutionLanguage::CPP11:
-	case SolutionLanguage::CPP14:
-		src_filename.append(".cpp");
-		break;
+	case SolutionLanguage::CPP14: src_filename.append(".cpp"); break;
 
-	case SolutionLanguage::PASCAL:
-		src_filename.append(".pas");
-		break;
+	case SolutionLanguage::PASCAL: src_filename.append(".pas"); break;
 
 	case SolutionLanguage::UNKNOWN:
-		THROW("Invalid language: ", (int)EnumVal<SolutionLanguage>(lang).int_val());
+		THROW("Invalid language: ",
+		      (int)EnumVal<SolutionLanguage>(lang).int_val());
 	}
 
 	if (copy(source, concat<PATH_MAX>(compilation_dir, src_filename)))
 		THROW("copy()", errmsg());
 
 	int rc = compile(compilation_dir,
-		compile_command(lang, src_filename, exec_dest_filename), time_limit,
-		c_errors, c_errors_max_len, proot_path);
+	                 compile_command(lang, src_filename, exec_dest_filename),
+	                 time_limit, c_errors, c_errors_max_len, proot_path);
 
-	if (rc == 0 and move(
-		concat<PATH_MAX>(compilation_dir, exec_dest_filename),
-		concat<PATH_MAX>(tmp_dir.path(), exec_dest_filename)))
-	{
+	if (rc == 0 and
+	    move(concat<PATH_MAX>(compilation_dir, exec_dest_filename),
+	         concat<PATH_MAX>(tmp_dir.path(), exec_dest_filename))) {
 		THROW("move()", errmsg());
 	}
 
 	return rc;
 }
 
-
 int JudgeWorker::compile_checker(Optional<std::chrono::nanoseconds> time_limit,
-	std::string* c_errors, size_t c_errors_max_len,
-	const std::string& proot_path)
-{
+                                 std::string* c_errors, size_t c_errors_max_len,
+                                 const std::string& proot_path) {
 	STACK_UNWINDING_MARK;
 
-	auto checker_path_and_lang = [&]() -> std::pair<std::string, SolutionLanguage> {
+	auto checker_path_and_lang =
+	   [&]() -> std::pair<std::string, SolutionLanguage> {
 		if (sf.checker.has_value()) {
 			return {package_loader->load_as_file(sf.checker.value(), "checker"),
-				filename_to_lang(sf.checker.value())};
+			        filename_to_lang(sf.checker.value())};
 		}
 
 		auto path = concat_tostr(tmp_dir.path(), "default_checker.c");
 		putFileContents(path, (const char*)default_checker_c,
-			default_checker_c_len);
+		                default_checker_c_len);
 
 		return {path, SolutionLanguage::C};
 	}();
 
-	return compile_impl(checker_path_and_lang.first, checker_path_and_lang.second,
-		time_limit, c_errors, c_errors_max_len, proot_path, "checker",
-		CHECKER_FILENAME);
+	return compile_impl(
+	   checker_path_and_lang.first, checker_path_and_lang.second, time_limit,
+	   c_errors, c_errors_max_len, proot_path, "checker", CHECKER_FILENAME);
 }
 
-void JudgeWorker::load_package(FilePath package_path, Optional<string> simfile) {
+void JudgeWorker::load_package(FilePath package_path,
+                               Optional<string> simfile) {
 	STACK_UNWINDING_MARK;
 
-	if (isDirectory(package_path))
+	if (isDirectory(package_path)) {
 		package_loader = std::make_unique<DirPackageLoader>(package_path);
-	else
-		package_loader = std::make_unique<ZipPackageLoader>(tmp_dir, package_path);
-
+	} else {
+		package_loader =
+		   std::make_unique<ZipPackageLoader>(tmp_dir, package_path);
+	}
 
 	if (simfile.has_value())
 		sf = Simfile(std::move(simfile.value()));
@@ -206,17 +199,17 @@ void JudgeWorker::load_package(FilePath package_path, Optional<string> simfile) 
 	sf.load_checker();
 }
 
-// Real time limit is set to 1.5 * time_limit + 1s, because CPU time is measured
-static inline auto cpu_time_limit_to_real_time_limit(
-	std::chrono::nanoseconds cpu_tl) noexcept
-{
+// Real time limit is set to 1.5 * time_limit + 1s, because CPU time is
+// measured
+static inline auto
+cpu_time_limit_to_real_time_limit(std::chrono::nanoseconds cpu_tl) noexcept {
 	return cpu_tl * 3 / 2 + std::chrono::seconds(1);
 }
 
-Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
-	FilePath output_file, Optional<std::chrono::nanoseconds> time_limit,
-	Optional<uint64_t> memory_limit) const
-{
+Sandbox::ExitStat
+JudgeWorker::run_solution(FilePath input_file, FilePath output_file,
+                          Optional<std::chrono::nanoseconds> time_limit,
+                          Optional<uint64_t> memory_limit) const {
 	STACK_UNWINDING_MARK;
 
 	using std::chrono_literals::operator""ns;
@@ -228,7 +221,8 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 		THROW("If set, memory_limit has to be greater than 0");
 
 	// Solution STDOUT
-	FileDescriptor solution_stdout(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
+	FileDescriptor solution_stdout(output_file,
+	                               O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
 	if (solution_stdout < 0)
 		THROW("Failed to open file `", output_file, '`', errmsg());
 
@@ -244,14 +238,10 @@ Sandbox::ExitStat JudgeWorker::run_solution(FilePath input_file,
 		real_time_limit = cpu_time_limit_to_real_time_limit(time_limit.value());
 
 	// Run solution on the test
-	Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
-		test_in,
-		solution_stdout,
-		-1,
-		real_time_limit,
-		memory_limit,
-		time_limit
-	}); // Allow exceptions to fly upper
+	Sandbox::ExitStat es =
+	   sandbox.run(solution_path, {},
+	               {test_in, solution_stdout, -1, real_time_limit, memory_limit,
+	                time_limit}); // Allow exceptions to fly upper
 
 	return es;
 }
@@ -267,8 +257,9 @@ struct CheckerStatus {
 } // anonymous namespace
 
 static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
-	const Sandbox::Options& opts, int output_fd, const char* output_name)
-{
+                                            const Sandbox::Options& opts,
+                                            int output_fd,
+                                            const char* output_name) {
 	// Checker exited with 0
 	if (es.si.code == CLD_EXITED and es.si.status == 0) {
 		auto chout = sim::obtainCheckerOutput(output_fd, 512);
@@ -279,20 +270,17 @@ static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
 
 		auto wrong_second_line = [&]() -> CheckerStatus {
 			return {
-				CheckerStatus::ERROR,
-				0,
-				concat_tostr("Second line of the ", output_name, " is invalid:"
-					" `", line2, "` - it has to be either empty or a real"
-					" number representing the percentage of the score that"
-					" solution will receive")
-			};
+			   CheckerStatus::ERROR, 0,
+			   concat_tostr(
+			      "Second line of the ", output_name, " is invalid: `", line2,
+			      "` - it has to be either empty or a real number representing "
+			      "the percentage of the score that solution will receive")};
 		};
 
 		// Second line has to be either empty or be a real number
 		if (line2.size() and (line2[0] == '-' or !isReal(line2))) {
 			wrong_second_line();
-		// "OK" -> Checker: OK
-		} else if (line1 == "OK") {
+		} else if (line1 == "OK") { // "OK" -> Checker: OK
 			CheckerStatus res;
 			// line2 format was checked above
 			if (line2.empty()) {
@@ -322,26 +310,22 @@ static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
 		}
 
 		// * -> Checker error
-		return {
-			CheckerStatus::ERROR,
-			0,
-			concat_tostr("First line of the ", output_name, " is invalid: `",
-				line1, "` - it has to be either `OK` or `WRONG`")
-		};
+		return {CheckerStatus::ERROR, 0,
+		        concat_tostr("First line of the ", output_name,
+		                     " is invalid: `", line1,
+		                     "` - it has to be either `OK` or `WRONG`")};
 	}
 
 	// Checker TLE
 	if (opts.real_time_limit.has_value() and
-		es.runtime >= opts.real_time_limit.value())
-	{
+	    es.runtime >= opts.real_time_limit.value()) {
 		return {CheckerStatus::ERROR, 0, "Time limit exceeded"};
 	}
 
 	// Checker MLE
 	if (es.message == "Memory limit exceeded" or
-		(opts.memory_limit.has_value() and
-			es.vm_peak > opts.memory_limit.value()))
-	{
+	    (opts.memory_limit.has_value() and
+	     es.vm_peak > opts.memory_limit.value())) {
 		return {CheckerStatus::ERROR, 0, "Memory limit exceeded"};
 	}
 
@@ -352,12 +336,12 @@ static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
 	return res;
 }
 
-
-template<class Func>
-JudgeReport JudgeWorker::process_tests(bool final, JudgeLogger& judge_log,
-	const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback,
-	Func&& judge_on_test) const
-{
+template <class Func>
+JudgeReport JudgeWorker::process_tests(
+   bool final, JudgeLogger& judge_log,
+   const Optional<std::function<void(const JudgeReport&)>>&
+      partial_report_callback,
+   Func&& judge_on_test) const {
 	using std::chrono_literals::operator""s;
 
 	JudgeReport report;
@@ -385,28 +369,25 @@ JudgeReport JudgeWorker::process_tests(bool final, JudgeLogger& judge_log,
 			if (skip_tests) {
 				test_were_skipped = true;
 				report_group.tests.emplace_back(
-					test.name,
-					JudgeReport::Test::SKIPPED,
-					0s,
-					test.time_limit,
-					0,
-					test.memory_limit,
-					string {}
-				);
+				   test.name, JudgeReport::Test::SKIPPED, 0s, test.time_limit,
+				   0, test.memory_limit, string {});
 			} else {
-				report_group.tests.emplace_back(judge_on_test(test, group_score_ratio));
+				report_group.tests.emplace_back(
+				   judge_on_test(test, group_score_ratio));
 
 				// Update group_score_ratio
 				if (score_cut_lambda < 1) { // Only then the scaling occurs
 					const auto& test_report = report_group.tests.back();
 					const double x =
-						std::chrono::duration<double>(test_report.runtime).count();
+					   std::chrono::duration<double>(test_report.runtime)
+					      .count();
 					const double t =
-						std::chrono::duration<double>(test_report.time_limit).count();
-					group_score_ratio = std::min(group_score_ratio,
-						(x / t - 1) / (score_cut_lambda - 1));
-					// Runtime may be greater than time_limit therefore group_score_ratio
-					// may become negative which is undesired
+					   std::chrono::duration<double>(test_report.time_limit)
+					      .count();
+					group_score_ratio = std::min(
+					   group_score_ratio, (x / t - 1) / (score_cut_lambda - 1));
+					// Runtime may be greater than time_limit therefore
+					// group_score_ratio may become negative which is undesired
 					if (group_score_ratio < 0)
 						group_score_ratio = 0;
 				}
@@ -424,7 +405,8 @@ JudgeReport JudgeWorker::process_tests(bool final, JudgeLogger& judge_log,
 		if (report_group.max_score > 0)
 			max_score += report_group.max_score;
 
-		judge_log.group_score(report_group.score, report_group.max_score, group_score_ratio);
+		judge_log.group_score(report_group.score, report_group.max_score,
+		                      group_score_ratio);
 	}
 
 	judge_log.final_score(total_score, max_score);
@@ -459,9 +441,10 @@ JudgeReport JudgeWorker::process_tests(bool final, JudgeLogger& judge_log,
 	return report;
 }
 
-JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
-	const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback) const
-{
+JudgeReport JudgeWorker::judge_interactive(
+   bool final, JudgeLogger& judge_log,
+   const Optional<std::function<void(const JudgeReport&)>>&
+      partial_report_callback) const {
 	STACK_UNWINDING_MARK;
 
 	struct NextJob {
@@ -482,11 +465,13 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 
 			// Setup
 			FileDescriptor output(openUnlinkedTmpFile());
-			if (output < 0) // Needs to be done this way because constructing exception may throw
+			if (output < 0) // Needs to be done this way because constructing
+			                // exception may throw
 				THROW("Cannot create checker output file descriptor");
 
 			Sandbox sandbox;
-			const auto checker_path = concat_tostr(tmp_dir.path(), CHECKER_FILENAME);
+			const auto checker_path =
+			   concat_tostr(tmp_dir.path(), CHECKER_FILENAME);
 
 			checker_supervisor_ready.set_value();
 			for (;;) {
@@ -494,7 +479,9 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 
 				auto job_opt = next_job_promise.get_future().get();
 				next_job_promise = {}; // reset promise
-				checker_supervisor_ready.set_value(); // Notify solution supervisor that we received the job
+				checker_supervisor_ready
+				   .set_value(); // Notify solution supervisor that we received
+				                 // the job
 				if (not job_opt.has_value())
 					return;
 
@@ -508,40 +495,34 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 						rtl.value() += job.solution_real_time_limit;
 
 					// Checker parameters
-					Sandbox::Options opts = {
-						job.checker_stdin,
-						job.checker_stdout,
-						output, // STDERR
-						rtl,
-						checker_memory_limit
-					};
-
+					Sandbox::Options opts = {job.checker_stdin,
+					                         job.checker_stdout,
+					                         output, // STDERR
+					                         rtl, checker_memory_limit};
 
 					// Prepare checker fds
 					(void)ftruncate(output, 0);
 					(void)lseek(output, 0, SEEK_SET);
 
 					// Run checker
-					ces = sandbox.run(checker_path,
-						{checker_path, job.test_in_path},
-						opts,
-						{{job.test_in_path, OpenAccess::RDONLY}},
-						[&] {
-							job.checker_stdin.close();
-							job.checker_stdout.close();
-						}
-					);
+					ces = sandbox.run(
+					   checker_path, {checker_path, job.test_in_path}, opts,
+					   {{job.test_in_path, OpenAccess::RDONLY}}, [&] {
+						   job.checker_stdin.close();
+						   job.checker_stdout.close();
+					   });
 
 					// Make sure the pipes are closed
 					job.checker_stdin.close();
 					job.checker_stdout.close();
 
 					checker_status_promise.set_value(
-						exit_to_checker_status(ces, opts, output, "stderr"));
+					   exit_to_checker_status(ces, opts, output, "stderr"));
 
 				} catch (...) {
 					ERRLOG_CATCH();
-					checker_status_promise.set_exception(std::current_exception());
+					checker_status_promise.set_exception(
+					   std::current_exception());
 				}
 			}
 		} catch (...) {
@@ -553,7 +534,8 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 	Sandbox sandbox;
 	const auto solution_path = concat_tostr(tmp_dir.path(), SOLUTION_FILENAME);
 
-	auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
+	auto judge_on_test = [&](const sim::Simfile::Test& test,
+	                         double& group_score_ratio) {
 		STACK_UNWINDING_MARK;
 		// Prepare pipes
 		int pfds[2];
@@ -566,32 +548,27 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 		FileDescriptor solution_input(pfds[0]), checker_output(pfds[1]);
 
 		string test_in_path = package_loader->load_as_file(test.in, "test.in");
-		auto solution_real_time_limit = cpu_time_limit_to_real_time_limit(test.time_limit);
+		auto solution_real_time_limit =
+		   cpu_time_limit_to_real_time_limit(test.time_limit);
 
 		// Schedule checker supervisor
-		next_job_promise.set_value(NextJob {
-			std::move(checker_input),
-			std::move(checker_output),
-			test_in_path,
-			solution_real_time_limit
-		});
+		next_job_promise.set_value(
+		   NextJob {std::move(checker_input), std::move(checker_output),
+		            test_in_path, solution_real_time_limit});
 		// Synchronize with checker supervisor to safely recover later in case
 		// of exceptions (need to set next_job_promise to std::nullopt)
 		checker_supervisor_ready.get_future().get();
 		checker_supervisor_ready = {}; // reset promise
 
 		// Run solution
-		auto es = sandbox.run(solution_path, {}, {
-			solution_input,
-			solution_output,
-			-1,
-			solution_real_time_limit,
-			test.memory_limit,
-			test.time_limit
-		}, {}, [&] {
-			solution_input.close();
-			solution_output.close();
-		}); // Allow exceptions to fly upper
+		auto es = sandbox.run(solution_path, {},
+		                      {solution_input, solution_output, -1,
+		                       solution_real_time_limit, test.memory_limit,
+		                       test.time_limit},
+		                      {}, [&] {
+			                      solution_input.close();
+			                      solution_output.close();
+		                      }); // Allow exceptions to fly upper
 
 		// Make sure the pipes are closed
 		solution_input.close();
@@ -601,15 +578,9 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 		auto checker_result = checker_status_promise.get_future().get();
 		checker_status_promise = {}; // reset promise
 
-		JudgeReport::Test test_report(
-			test.name,
-			JudgeReport::Test::OK,
-			es.cpu_runtime,
-			test.time_limit,
-			es.vm_peak,
-			test.memory_limit,
-			string {}
-		);
+		JudgeReport::Test test_report(test.name, JudgeReport::Test::OK,
+		                              es.cpu_runtime, test.time_limit,
+		                              es.vm_peak, test.memory_limit, string {});
 
 		// Update group_score_ratio
 		group_score_ratio = std::min(group_score_ratio, checker_result.ratio);
@@ -619,7 +590,7 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 			test_report.status = JudgeReport::Test::CHECKER_ERROR;
 			test_report.comment = "Checker error";
 			judge_log.test(test.name, test_report, es, ces,
-				checker_memory_limit, checker_result.message);
+			               checker_memory_limit, checker_result.message);
 			return test_report;
 
 		case CheckerStatus::OK:
@@ -629,11 +600,10 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 
 		// Solution: OK or killed by SIGPIPE and checker returned WRONG
 		if ((es.si.code == CLD_EXITED and es.si.status == 0 and
-				test_report.runtime <= test_report.time_limit) or
-			(isOneOf(es.si.code, CLD_KILLED, CLD_DUMPED) and
-				es.si.status == SIGPIPE and
-				checker_result.status == CheckerStatus::WRONG))
-		{
+		     test_report.runtime <= test_report.time_limit) or
+		    (isOneOf(es.si.code, CLD_KILLED, CLD_DUMPED) and
+		     es.si.status == SIGPIPE and
+		     checker_result.status == CheckerStatus::WRONG)) {
 			switch (checker_result.status) {
 			case CheckerStatus::OK:
 				// Test status is already set to OK
@@ -646,35 +616,35 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 				break;
 
 			case CheckerStatus::ERROR:
-				throw_assert(false); // This way to make the compiler warning on development
+				throw_assert(false); // This way to make the compiler warning
+				                     // on development
 			}
 
-			judge_log.test(test.name, test_report, es, ces, checker_memory_limit,
-				checker_result.message);
+			judge_log.test(test.name, test_report, es, ces,
+			               checker_memory_limit, checker_result.message);
 			return test_report;
 		}
 
 		group_score_ratio = 0; // Other statuses are fatal
 
-		// Solution: TLE
-		// After checking status for OK >= comparison is safe to detect exceeding
+		// After checking status for OK >= comparison is safe to detect
+		// exceeding
 		if (test_report.runtime >= test_report.time_limit or
-			es.runtime >= test.time_limit)
-		{
+		    es.runtime >= test.time_limit) {
+			// Solution: TLE
 			// es.runtime >= tl meas that real_time_limit has been exceeded
 			if (test_report.runtime < test_report.time_limit)
 				test_report.runtime = test_report.time_limit;
 
 			test_report.status = JudgeReport::Test::TLE;
 			test_report.comment = "Time limit exceeded";
-		// Solution: MLE
 		} else if (es.message == "Memory limit exceeded" or
-			test_report.memory_consumed > test_report.memory_limit)
-		{
+		           test_report.memory_consumed > test_report.memory_limit) {
+			// Solution: MLE
 			test_report.status = JudgeReport::Test::MLE;
 			test_report.comment = "Memory limit exceeded";
-		// Solution: RTE
 		} else {
+			// Solution: RTE
 			test_report.status = JudgeReport::Test::RTE;
 			test_report.comment = "Runtime error";
 			if (es.message.size())
@@ -692,7 +662,8 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 		checker_supervisor_ready.get_future().get();
 		checker_supervisor_ready = {}; // reset promise
 
-		return process_tests(final, judge_log, partial_report_callback, judge_on_test);
+		return process_tests(final, judge_log, partial_report_callback,
+		                     judge_on_test);
 	};
 
 	std::thread checker_supervisor_thread(checker_supervisor);
@@ -711,9 +682,10 @@ JudgeReport JudgeWorker::judge_interactive(bool final, JudgeLogger& judge_log,
 	}
 }
 
-JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
-	const Optional<std::function<void(const JudgeReport&)>>& partial_report_callback) const
-{
+JudgeReport
+JudgeWorker::judge(bool final, JudgeLogger& judge_log,
+                   const Optional<std::function<void(const JudgeReport&)>>&
+                      partial_report_callback) const {
 	STACK_UNWINDING_MARK;
 
 	using std::chrono_literals::operator""ns;
@@ -728,7 +700,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		THROW("score_cut_lambda has to be from [0, 1]");
 
 	if (sf.interactive)
-		return judge_interactive(final, judge_log, std::move(partial_report_callback));
+		return judge_interactive(final, judge_log,
+		                         std::move(partial_report_callback));
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
 	// Checker STDOUT
@@ -738,20 +711,17 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 
 	// Solution STDOUT
 	FileDescriptor solution_stdout(sol_stdout_path,
-		O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
+	                               O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
 	if (solution_stdout < 0)
 		THROW("Failed to open file `", sol_stdout_path, '`', errmsg());
 
 	FileRemover solution_stdout_remover {sol_stdout_path}; // Save disk space
 
 	// Checker parameters
-	Sandbox::Options checker_opts = {
-		-1, // STDIN is ignored
-		checker_stdout, // STDOUT
-		-1, // STDERR is ignored
-		checker_time_limit,
-		checker_memory_limit
-	};
+	Sandbox::Options checker_opts = {-1, // STDIN is ignored
+	                                 checker_stdout, // STDOUT
+	                                 -1, // STDERR is ignored
+	                                 checker_time_limit, checker_memory_limit};
 
 	Sandbox sandbox;
 
@@ -760,7 +730,8 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 
 	using std::chrono_literals::operator""s;
 
-	auto judge_on_test = [&](const sim::Simfile::Test& test, double& group_score_ratio) {
+	auto judge_on_test = [&](const sim::Simfile::Test& test,
+	                         double& group_score_ratio) {
 		STACK_UNWINDING_MARK;
 
 		// Prepare solution fds
@@ -768,42 +739,34 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		(void)lseek(solution_stdout, 0, SEEK_SET);
 
 		string test_in_path = package_loader->load_as_file(test.in, "test.in");
-		string test_out_path = package_loader->load_as_file(test.out.value(), "test.out");
+		string test_out_path =
+		   package_loader->load_as_file(test.out.value(), "test.out");
 
 		FileDescriptor test_in(test_in_path, O_RDONLY | O_CLOEXEC);
 		if (test_in < 0)
 			THROW("Failed to open file `", test_in_path, '`', errmsg());
 
 		// Run solution on the test
-		Sandbox::ExitStat es = sandbox.run(solution_path, {}, {
-			test_in,
-			solution_stdout,
-			-1,
-			cpu_time_limit_to_real_time_limit(test.time_limit),
-			test.memory_limit,
-			test.time_limit
-		}); // Allow exceptions to fly upper
+		Sandbox::ExitStat es =
+		   sandbox.run(solution_path, {},
+		               {test_in, solution_stdout, -1,
+		                cpu_time_limit_to_real_time_limit(test.time_limit),
+		                test.memory_limit,
+		                test.time_limit}); // Allow exceptions to fly upper
 
-		JudgeReport::Test test_report(
-			test.name,
-			JudgeReport::Test::OK,
-			es.cpu_runtime,
-			test.time_limit,
-			es.vm_peak,
-			test.memory_limit,
-			string {}
-		);
+		JudgeReport::Test test_report(test.name, JudgeReport::Test::OK,
+		                              es.cpu_runtime, test.time_limit,
+		                              es.vm_peak, test.memory_limit, string {});
 
-		// OK
 		if (es.si.code == CLD_EXITED and es.si.status == 0 and
-			test_report.runtime <= test_report.time_limit)
-		{
+		    test_report.runtime <= test_report.time_limit) {
+			// OK
 
-		// TLE
-		// After checking status for OK `>=` comparison is safe to detect exceeding
 		} else if (test_report.runtime >= test_report.time_limit or
-			es.runtime >= test.time_limit)
-		{
+		           es.runtime >= test.time_limit) { // After checking status for
+			                                        // OK `>=` comparison is
+			                                        // safe to detect exceeding
+			// TLE
 			// es.runtime >= tl means that real_time_limit has been exceeded
 			if (test_report.runtime < test_report.time_limit)
 				test_report.runtime = test_report.time_limit;
@@ -814,18 +777,17 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 			judge_log.test(test.name, test_report, es);
 			return test_report;
 
-		// MLE
 		} else if (es.message == "Memory limit exceeded" or
-			test_report.memory_consumed > test_report.memory_limit)
-		{
+		           test_report.memory_consumed > test_report.memory_limit) {
+			// MLE
 			group_score_ratio = 0;
 			test_report.status = JudgeReport::Test::MLE;
 			test_report.comment = "Memory limit exceeded";
 			judge_log.test(test.name, test_report, es);
 			return test_report;
 
-		// RTE
 		} else {
+			// RTE
 			group_score_ratio = 0;
 			test_report.status = JudgeReport::Test::RTE;
 			test_report.comment = "Runtime error";
@@ -845,17 +807,17 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		(void)lseek(checker_stdout, 0, SEEK_SET);
 
 		// Run checker
-		auto ces = sandbox.run(checker_path,
-			{checker_path, test_in_path, test_out_path, sol_stdout_path},
-			checker_opts,
-			{
-				{test_in_path, OpenAccess::RDONLY},
-				{test_out_path, OpenAccess::RDONLY},
-				{sol_stdout_path, OpenAccess::RDONLY}
-			}); // Allow exceptions to fly higher
+		auto ces = sandbox.run(
+		   checker_path,
+		   {checker_path, test_in_path, test_out_path, sol_stdout_path},
+		   checker_opts,
+		   {{test_in_path, OpenAccess::RDONLY},
+		    {test_out_path, OpenAccess::RDONLY},
+		    {sol_stdout_path,
+		     OpenAccess::RDONLY}}); // Allow exceptions to fly higher
 
-		auto checker_result = exit_to_checker_status(ces, checker_opts,
-			checker_stdout, "stdout");
+		auto checker_result =
+		   exit_to_checker_status(ces, checker_opts, checker_stdout, "stdout");
 
 		// Update group_score_ratio
 		group_score_ratio = std::min(group_score_ratio, checker_result.ratio);
@@ -876,13 +838,14 @@ JudgeReport JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		}
 
 		// Logging
-		judge_log.test(test.name, test_report, es, ces,
-			checker_memory_limit, checker_result.message);
+		judge_log.test(test.name, test_report, es, ces, checker_memory_limit,
+		               checker_result.message);
 
 		return test_report;
 	};
 
-	return process_tests(final, judge_log, partial_report_callback, judge_on_test);
+	return process_tests(final, judge_log, partial_report_callback,
+	                     judge_on_test);
 }
 
 } // namespace sim

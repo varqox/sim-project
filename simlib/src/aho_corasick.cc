@@ -34,8 +34,9 @@ uint AhoCorasick::son(uint id, char c) {
 
 	if (beg == nodes[id].sons.size() || nodes[id].sons[beg].first != c) {
 		nodes.emplace_back();
-		return nodes[id].sons.emplace(nodes[id].sons.begin() + beg,
-			c, nodes.size() - 1)->second;
+		return nodes[id]
+		   .sons.emplace(nodes[id].sons.begin() + beg, c, nodes.size() - 1)
+		   ->second;
 	}
 
 	return nodes[id].sons[beg].second;
@@ -70,8 +71,8 @@ void AhoCorasick::buildFails() {
 			while ((x = nodes[v][p.first]) == 0 && v)
 				v = nodes[v].fail;
 			nodes[p.second].fail = x;
-			nodes[p.second].next_pattern = (nodes[x].patt_id ? x
-				: nodes[x].next_pattern);
+			nodes[p.second].next_pattern =
+			   (nodes[x].patt_id ? x : nodes[x].next_pattern);
 			queue.emplace_back(p.second);
 		}
 	}

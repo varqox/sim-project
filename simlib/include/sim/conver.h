@@ -15,9 +15,9 @@ public:
 		bool log_to_stdlog_;
 
 		ReportBuff(bool log_to_stdlog = false)
-			: log_to_stdlog_(log_to_stdlog) {}
+		   : log_to_stdlog_(log_to_stdlog) {}
 
-		template<class... Args>
+		template <class... Args>
 		void append(Args&&... args) {
 			if (log_to_stdlog_)
 				stdlog(args...);
@@ -40,10 +40,12 @@ public:
 
 	struct ResetTimeLimitsOptions {
 		// Minimum allowed time limit
-		std::chrono::nanoseconds min_time_limit = std::chrono::milliseconds(300);
-		// Solution runtime coefficient - the time limit will be set to solution
-		// runtime * solution_runtime_coefficient + adjustment based on
-		// minimum_time_limit.
+		std::chrono::nanoseconds min_time_limit =
+		   std::chrono::milliseconds(300);
+
+		// Solution runtime coefficient - the time limit will be set to
+		// solution runtime * solution_runtime_coefficient + adjustment based
+		// on minimum_time_limit.
 		double solution_runtime_coefficient = 3;
 
 		constexpr ResetTimeLimitsOptions() = default;
@@ -59,8 +61,8 @@ public:
 		Optional<bool> interactive;
 		// In MB. If set, overrides memory limit of every test
 		Optional<uint64_t> memory_limit;
-		// If set, overrides time limit of every test (has lower precedence than
-		// reset_time_limits_using_model_solution)
+		// If set, overrides time limit of every test (has lower precedence
+		// than reset_time_limits_using_model_solution)
 		Optional<std::chrono::nanoseconds> global_time_limit;
 		// Maximum allowed time limit on the test. If global_time_limit is set
 		// this option is ignored
@@ -73,8 +75,8 @@ public:
 		bool seek_for_new_tests = false;
 		// Whether to recalculate scoring
 		bool reset_scoring = false;
-		// Whether to throw an exception or give the warning if the statement is
-		// not present
+		// Whether to throw an exception or give the warning if the statement
+		// is not present
 		bool require_statement = true;
 		// Ignored if global_time_limit is set
 		ResetTimeLimitsOptions rtl_opts;
@@ -98,8 +100,8 @@ public:
 	 * @param opts options that parameterize Conver behavior
 	 * @param be_verbose whether to log report to the stdlog
 	 *
-	 * @return Status and a valid Simfile; If status == COMPLETE then Simfile is
-	 *   fully constructed - conver has finished its job. Otherwise it is
+	 * @return Status and a valid Simfile; If status == COMPLETE then Simfile
+	 *   is fully constructed - conver has finished its job. Otherwise it is
 	 *   necessary to run reset_time_limits_using_jugde_reports() method with
 	 *   the returned Simfile and a judge report of the model solution on the
 	 *   returned Simfile.
@@ -107,52 +109,57 @@ public:
 	 * @errors If any error is encountered then an exception of type
 	 *   std::runtime_error is thrown with a proper message
 	 */
-	ConstructionResult construct_simfile(const Options& opts, bool be_verbose = false);
+	ConstructionResult construct_simfile(const Options& opts,
+	                                     bool be_verbose = false);
 
-	 /**
-	  * @brief Finishes constructing the Simfile partially constructed by the
-	  *   construct_simfile() method
-	  * @details Sets the time limits based on the model solution's judge report
-	  *
-	  * @param sf Simfile to update (returned by construct_simfile())
-	  * @param jrep1 Initial judge report of the model solution, based on the
-	  *   @p sf. Passing @p jrep1 that is not based on the @p sf is
-	  *   undefined-behavior.
-	  * @param jrep2 Final judge report of the model solution, based on the
-	  *   @p sf. Passing @p jrep2 that is not based on the @p sf is
-	  *   undefined-behavior.
+	/**
+	 * @brief Finishes constructing the Simfile partially constructed by the
+	 *   construct_simfile() method
+	 * @details Sets the time limits based on the model solution's judge report
+	 *
+	 * @param sf Simfile to update (returned by construct_simfile())
+	 * @param jrep1 Initial judge report of the model solution, based on the
+	 *   @p sf. Passing @p jrep1 that is not based on the @p sf is
+	 *   undefined-behavior.
+	 * @param jrep2 Final judge report of the model solution, based on the
+	 *   @p sf. Passing @p jrep2 that is not based on the @p sf is
+	 *   undefined-behavior.
 	 * @param opts options that parameterize calculating time limits
-	  */
-	static void reset_time_limits_using_jugde_reports(Simfile& sf,
-		const JudgeReport& jrep1, const JudgeReport& jrep2,
-		const ResetTimeLimitsOptions& opts);
+	 */
+	static void
+	reset_time_limits_using_jugde_reports(Simfile& sf, const JudgeReport& jrep1,
+	                                      const JudgeReport& jrep2,
+	                                      const ResetTimeLimitsOptions& opts);
 
-	static constexpr std::chrono::duration<double> solution_runtime_to_time_limit(
-		std::chrono::duration<double> model_solution_runtime,
-		double solution_runtime_coefficient,
-		std::chrono::duration<double> min_time_limit) noexcept
-	{
+	static constexpr std::chrono::duration<double>
+	solution_runtime_to_time_limit(
+	   std::chrono::duration<double> model_solution_runtime,
+	   double solution_runtime_coefficient,
+	   std::chrono::duration<double> min_time_limit) noexcept {
 		double x = model_solution_runtime.count();
 		return solution_runtime_coefficient * model_solution_runtime +
-			min_time_limit * 2/(x*x + 2);
+		       min_time_limit * 2 / (x * x + 2);
 	}
 
-	static constexpr std::chrono::duration<double> time_limit_to_solution_runtime(
-		std::chrono::duration<double> time_limit,
-		double solution_runtime_coefficient,
-		std::chrono::duration<double> min_time_limit) noexcept
-	{
+	static constexpr std::chrono::duration<double>
+	time_limit_to_solution_runtime(
+	   std::chrono::duration<double> time_limit,
+	   double solution_runtime_coefficient,
+	   std::chrono::duration<double> min_time_limit) noexcept {
 		using DS = std::chrono::duration<double>;
 		// Use Newton method, as it is simpler than solving the equation
 		double x = time_limit.count();
 		for (;;) {
-			double fx = (time_limit - solution_runtime_to_time_limit(DS(x),
-				solution_runtime_coefficient, min_time_limit)).count();
+			double fx = (time_limit - solution_runtime_to_time_limit(
+			                             DS(x), solution_runtime_coefficient,
+			                             min_time_limit))
+			               .count();
 			if (-1e-9 < fx and fx < 1e-9)
 				return DS(x);
 
-			double dfx = -solution_runtime_coefficient +
-				4 * min_time_limit.count() * x / (x * x + 2) / (x * x + 2);
+			double dfx =
+			   -solution_runtime_coefficient +
+			   4 * min_time_limit.count() * x / (x * x + 2) / (x * x + 2);
 			x = x - fx / dfx;
 		}
 	}

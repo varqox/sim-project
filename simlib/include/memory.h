@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 
 // Deleter which use free to deallocate, useful for std::unique_ptr
-template<class T>
+template <class T>
 struct delete_using_free {
 	void operator()(T* p) const noexcept { free(p); }
 };
@@ -19,9 +19,8 @@ private:
 
 public:
 	explicit SharedMemorySegment(size_t size)
-		: id_(shmget(IPC_PRIVATE, size, IPC_CREAT | IPC_EXCL | S_0600)),
-			addr_(nullptr)
-	{
+	   : id_(shmget(IPC_PRIVATE, size, IPC_CREAT | IPC_EXCL | S_0600)),
+	     addr_(nullptr) {
 		if (id_ != -1) {
 			if ((addr_ = shmat(id_, nullptr, 0)) == (void*)-1)
 				addr_ = nullptr;
@@ -31,8 +30,8 @@ public:
 
 	SharedMemorySegment(const SharedMemorySegment&) = delete;
 
-	SharedMemorySegment(SharedMemorySegment&& sms) : id_(sms.id_),
-		addr_(sms.addr_) {
+	SharedMemorySegment(SharedMemorySegment&& sms)
+	   : id_(sms.id_), addr_(sms.addr_) {
 		sms.addr_ = nullptr;
 	}
 

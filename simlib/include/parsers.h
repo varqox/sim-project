@@ -4,10 +4,10 @@
 #include "string.h"
 
 #if 0
-# warning "Before committing disable this debug"
-# define DEBUG_PARSER(...) __VA_ARGS__
+#warning "Before committing disable this debug"
+#define DEBUG_PARSER(...) __VA_ARGS__
 #else
-# define DEBUG_PARSER(...)
+#define DEBUG_PARSER(...)
 #endif
 
 class SimpleParser : public StringView {
@@ -21,7 +21,7 @@ public:
 
 	bool isNext(StringView s, char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', buff, "' -> compared with: '", s, "' -> ",
-			compareTo(buff, 0, delimiter, s));)
+		                    compareTo(buff, 0, delimiter, s));)
 		return (compareTo(*this, 0, delimiter, s) == 0);
 	}
 
@@ -34,7 +34,7 @@ public:
 	 *
 	 * @return Extracted data
 	 */
-	template<class Func>
+	template <class Func>
 	StringView extractNext(Func&& isDelimiter) {
 		size_t pos = 0;
 		while (pos < size() && !isDelimiter((*this)[pos]))
@@ -59,16 +59,15 @@ public:
 	 *
 	 * @return Extracted data (empty if there is no more data)
 	 */
-	template<class Func>
+	template <class Func>
 	StringView extractNextNonEmpty(Func&& isDelimiter) {
 		removeLeading(isDelimiter); // Ignore delimiters
 		return extractNext(std::forward<Func>(isDelimiter));
 	}
 
 	StringView extractNextNonEmpty(char delimiter = '/') noexcept {
-		return extractNextNonEmpty([delimiter](char c) {
-				return (c == delimiter);
-			});
+		return extractNextNonEmpty(
+		   [delimiter](char c) { return (c == delimiter); });
 	}
 };
 
@@ -85,7 +84,7 @@ class RequestURIParser {
 
 public:
 	constexpr explicit RequestURIParser(StringView str)
-		: buff(std::move(str)) {}
+	   : buff(std::move(str)) {}
 
 	constexpr RequestURIParser(const RequestURIParser&) noexcept = default;
 	constexpr RequestURIParser(RequestURIParser&&) noexcept = default;
@@ -106,7 +105,7 @@ public:
 		StringView res {buff.substr(1, pos - 1)};
 		buff.removePrefix(pos);
 		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res,
-			" \tleft: ", buff);)
+		                    " \tleft: ", buff);)
 		return res;
 	}
 
@@ -132,7 +131,8 @@ class ArgvParser {
 	char** argv_;
 
 public:
-	ArgvParser(int argc, char** argv) : argc_(std::max(argc - 1, 0)), argv_(argv + 1) {}
+	ArgvParser(int argc, char** argv)
+	   : argc_(std::max(argc - 1, 0)), argv_(argv + 1) {}
 
 	ArgvParser(const ArgvParser&) = default;
 	ArgvParser(ArgvParser&&) noexcept = default;
@@ -152,8 +152,9 @@ public:
 	CStringView extract_next() noexcept {
 		if (argc_ > 0) {
 			--argc_;
-			return CStringView(argv_++[0]);
-		} else
+			return CStringView(argv_++ [0]);
+		} else {
 			return {};
+		}
 	}
 };

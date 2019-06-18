@@ -14,11 +14,10 @@ public:
 	public:
 		explicit ParseError(const std::string& msg) : runtime_error(msg) {}
 
-		template<class... Args>
+		template <class... Args>
 		ParseError(size_t line, size_t pos, Args&&... msg)
-			: runtime_error(concat_tostr("line ", line, ':', pos, ": ",
-				std::forward<Args>(msg)...))
-		{}
+		   : runtime_error(concat_tostr("line ", line, ':', pos, ": ",
+		                                std::forward<Args>(msg)...)) {}
 
 		ParseError(const ParseError& pe) = default;
 		ParseError(ParseError&&) /*noexcept*/ = default;
@@ -66,14 +65,13 @@ public:
 		}
 
 		// Returns value as Integer (unsigned only) or 0 on error. To
-		// distinguish error from success when return value is 0, set errno to 0
-		// before calling this function. If the errno != 0 after the call, then
-		// an error was encountered.
-		template<class Type>
+		// distinguish error from success when return value is 0, set errno to
+		// 0 before calling this function. If the errno != 0 after the call,
+		// then an error was encountered.
+		template <class Type>
 		std::enable_if_t<std::is_unsigned<Type>::value, Type> as_int() const
-			noexcept
-		{
-			Type x{};
+		   noexcept {
+			Type x {};
 			if (strtou<Type>(s, x) != (int)s.size()) {
 				errno = EINVAL;
 				return 0; // TODO: maybe throw
@@ -85,11 +83,10 @@ public:
 		// success when return value is 0, set errno to 0 before calling this
 		// function. If the errno != 0 after the call, then an error was
 		// encountered.
-		template<class Type = int32_t>
+		template <class Type = int32_t>
 		std::enable_if_t<!std::is_unsigned<Type>::value, Type> as_int() const
-			noexcept
-		{
-			Type x{};
+		   noexcept {
+			Type x {};
 			if (strtoi<Type>(s, x) != (int)s.size()) {
 				errno = EINVAL;
 				return 0; // TODO: maybe throw
@@ -102,7 +99,8 @@ public:
 			return (is_set() ? strtod(s.c_str(), nullptr) : 0);
 		}
 
-		// Returns value as string (empty if not a string or variable isn't set)
+		// Returns value as string (empty if not a string or variable isn't
+		// set)
 		const std::string& as_string() const noexcept { return s; }
 
 		// Returns value as array (empty if not an array or variable isn't set)
@@ -125,9 +123,10 @@ public:
 	~ConfigFile() {}
 
 	// Adds variables @p names to variable set, ignores duplications
-	template<class... Args>
+	template <class... Args>
 	void add_vars(Args&&... names) {
-		int t[] = {(vars.emplace(std::forward<Args>(names), Variable{}), 0)...};
+		int t[] = {
+		   (vars.emplace(std::forward<Args>(names), Variable {}), 0)...};
 		(void)t;
 	}
 
@@ -147,7 +146,7 @@ public:
 
 	const decltype(vars)& get_vars() const { return vars; }
 
-	 /**
+	/**
 	 * @brief Loads config (variables) form file @p pathname
 	 * @details Uses load_config_from_string()
 	 *
@@ -155,8 +154,8 @@ public:
 	 * @param load_all whether load all variables from @p pathname or load only
 	 *   these from variable set
 	 *
-	 * @errors Throws an exception std::runtime_error if an open(2) error occurs
-	 *   and all exceptions from load_config_from_string()
+	 * @errors Throws an exception std::runtime_error if an open(2) error
+	 *   occurs and all exceptions from load_config_from_string()
 	 */
 	void load_config_from_file(FilePath pathname, bool load_all = false);
 
@@ -216,8 +215,8 @@ public:
 	 *   file
 	 * @details Possible cases:
 	 *   1) @p str contains '\'' or character for which iscrtnl(3) != 0:
-	 *     Escaped @p str via one-argument escape_to_double_quoted_string() will be
-	 *     returned.
+	 *     Escaped @p str via one-argument escape_to_double_quoted_string()
+	 *     will be returned.
 	 *   2) Otherwise if @p str is string literal (is_string_literal(@p str)):
 	 *     Unchanged @p str will be returned.
 	 *   3) Otherwise:
@@ -242,8 +241,8 @@ public:
 	 *   file
 	 * @details Possible cases:
 	 *   1) @p str contains '\'' or character for which isprint(3) == 0:
-	 *     Escaped @p str via two-argument escape_to_double_quoted_string() will be
-	 *     returned.
+	 *     Escaped @p str via two-argument escape_to_double_quoted_string()
+	 *     will be returned.
 	 *   2) Otherwise if @p str is string literal (is_string_literal(@p str)):
 	 *     Unchanged @p str will be returned.
 	 *   3) Otherwise:

@@ -11,7 +11,7 @@ public:
 
 	struct Node {
 		uint patt_id = 0; // pattern id which ends in this node or zero if such
-		             // does not exist
+		                  // does not exist
 		uint fail = 0; // fail edge
 		uint next_pattern = 0; // id of the longest pattern which is prefix of
 		                       // one ending in this node or zero if such
@@ -25,7 +25,7 @@ public:
 	};
 
 private:
-	std::vector<Node> nodes = {Node{}}; // root
+	std::vector<Node> nodes = {Node {}}; // root
 
 	// Returns id of son @p c (creates one if such does not exist)
 	uint son(uint id, char c);
@@ -55,7 +55,8 @@ public:
 	// Returns id of the pattern which ends in node @p node_id
 	uint pattId(uint node_id) const { return nodes[node_id].patt_id; }
 
-	// Returns id of next pattern node for pattern which ends in node @p node_id
+	// Returns id of next pattern node for pattern which ends in node @p
+	// node_id
 	uint nextPatt(uint node_id) const { return nodes[node_id].next_pattern; }
 
 	// Builds fail edges (have to be invoked before calls to searchIn())

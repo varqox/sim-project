@@ -5,47 +5,44 @@
 #include <algorithm>
 #include <array>
 
-template<class T, class... Args>
+template <class T, class... Args>
 T& back_insert(T& reference, Args&&... args) {
 	// Allocate more space (reserve is inefficient)
 	size_t old_size = reference.size();
 	reference.resize(old_size + sizeof...(args));
 	reference.resize(old_size);
 
-	(void)std::initializer_list<int>{
-		(reference.emplace_back(std::forward<Args>(args)), 0)...
-	};
+	(void)std::initializer_list<int> {
+	   (reference.emplace_back(std::forward<Args>(args)), 0)...};
 	return reference;
 }
 
-template<size_t N, class... Args>
+template <size_t N, class... Args>
 InplaceBuff<N>& back_insert(InplaceBuff<N>& ibuff, Args&&... args) {
 	ibuff.append(std::forward<Args>(args)...);
 	return ibuff;
 }
 
-template<class... Args>
+template <class... Args>
 std::string& back_insert(std::string& str, Args&&... args) {
 	[&str](auto&&... xx) {
 		size_t total_length = str.size();
-		(void)std::initializer_list<int>{
-			(total_length += string_length(xx), 0)...
-		};
+		(void)std::initializer_list<int> {
+		   (total_length += string_length(xx), 0)...};
 
 		// Allocate more space (reserve is inefficient)
 		size_t old_size = str.size();
 		str.resize(total_length);
 		str.resize(old_size);
 
-		(void)std::initializer_list<int>{
-			(str += std::forward<decltype(xx)>(xx), 0)...
-		};
+		(void)std::initializer_list<int> {
+		   (str += std::forward<decltype(xx)>(xx), 0)...};
 	}(stringify(std::forward<Args>(args))...);
 
 	return str;
 }
 
-template<class T, class C>
+template <class T, class C>
 constexpr typename T::const_iterator binaryFind(const T& x, const C& val) {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
@@ -58,10 +55,9 @@ constexpr typename T::const_iterator binaryFind(const T& x, const C& val) {
 	return (beg != x.end() && *beg == val ? beg : x.end());
 }
 
-template<class T, class C, class Comp>
+template <class T, class C, class Comp>
 constexpr typename T::const_iterator binaryFind(const T& x, const C& val,
-	Comp&& comp)
-{
+                                                Comp&& comp) {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
 		auto mid = beg + ((end - beg) >> 1);
@@ -70,14 +66,13 @@ constexpr typename T::const_iterator binaryFind(const T& x, const C& val,
 		else
 			end = mid;
 	}
-	return (beg != x.end() && !comp(*beg, val) && !comp(val, *beg) ?
-		beg : x.end());
+	return (beg != x.end() && !comp(*beg, val) && !comp(val, *beg) ? beg
+	                                                               : x.end());
 }
 
-template<class T, typename B, class C>
-constexpr typename T::const_iterator binaryFindBy(const T& x,
-	B T::value_type::*field, const C& val)
-{
+template <class T, typename B, class C>
+constexpr typename T::const_iterator
+binaryFindBy(const T& x, B T::value_type::*field, const C& val) {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
 		auto mid = beg + ((end - beg) >> 1);
@@ -89,10 +84,9 @@ constexpr typename T::const_iterator binaryFindBy(const T& x,
 	return (beg != x.end() && (*beg).*field == val ? beg : x.end());
 }
 
-template<class T, typename B, class C, class Comp>
-constexpr typename T::const_iterator binaryFindBy(const T& x,
-	B T::value_type::*field, const C& val, Comp&& comp)
-{
+template <class T, typename B, class C, class Comp>
+constexpr typename T::const_iterator
+binaryFindBy(const T& x, B T::value_type::*field, const C& val, Comp&& comp) {
 	auto beg = x.begin(), end = x.end();
 	while (beg != end) {
 		auto mid = beg + ((end - beg) >> 1);
@@ -105,30 +99,32 @@ constexpr typename T::const_iterator binaryFindBy(const T& x,
 }
 
 // Aliases - take container instead of range
-template<class A, class B>
+template <class A, class B>
 inline bool binary_search(const A& a, B&& val) {
 	return std::binary_search(a.begin(), a.end(), std::forward<B>(val));
 }
 
-template<class A, class B>
+template <class A, class B>
 inline auto lower_bound(const A& a, B&& val) -> decltype(a.begin()) {
 	return std::lower_bound(a.begin(), a.end(), std::forward<B>(val));
 }
 
-template<class A, class B>
+template <class A, class B>
 inline auto upper_bound(const A& a, B&& val) -> decltype(a.begin()) {
 	return std::upper_bound(a.begin(), a.end(), std::forward<B>(val));
 }
 
-template<class A>
-inline void sort(A& a) { std::sort(a.begin(), a.end()); }
+template <class A>
+inline void sort(A& a) {
+	std::sort(a.begin(), a.end());
+}
 
-template<class A, class Func>
+template <class A, class Func>
 inline void sort(A& a, Func&& func) {
 	std::sort(a.begin(), a.end(), std::forward<Func>(func));
 }
 
-template<class Func>
+template <class Func>
 class CallInDtor {
 	Func func;
 	bool make_call = true;
@@ -149,9 +145,7 @@ public:
 	CallInDtor(const CallInDtor&) = delete;
 	CallInDtor& operator=(const CallInDtor&) = delete;
 
-	CallInDtor(CallInDtor&& cid) : func(std::move(cid.func)) {
-		cid.cancel();
-	}
+	CallInDtor(CallInDtor&& cid) : func(std::move(cid.func)) { cid.cancel(); }
 
 	CallInDtor& operator=(CallInDtor&& cid) {
 		func = std::move(cid.func);
@@ -171,17 +165,21 @@ public:
 	}
 
 	~CallInDtor() {
-		if (make_call)
-			try { func(); } catch (...) {} // We cannot throw
+		if (make_call) {
+			try {
+				func();
+			} catch (...) {
+			} // We cannot throw
+		}
 	}
 };
 
-template<class Func>
+template <class Func>
 inline CallInDtor<Func> make_call_in_destructor(Func func) {
-	return CallInDtor<Func>{std::move(func)};
+	return CallInDtor<Func> {std::move(func)};
 }
 
-template<class A, class B>
+template <class A, class B>
 constexpr bool isIn(const A& val, const B& sequence) {
 	for (auto&& x : sequence)
 		if (x == val)
@@ -189,7 +187,7 @@ constexpr bool isIn(const A& val, const B& sequence) {
 	return false;
 }
 
-template<class A, class B>
+template <class A, class B>
 constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
 	for (auto&& x : sequence)
 		if (x == val)
@@ -197,10 +195,12 @@ constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
 	return false;
 }
 
-template<class A>
-constexpr bool isOneOf(const A&) { return false; }
+template <class A>
+constexpr bool isOneOf(const A&) {
+	return false;
+}
 
-template<class A, class B, class... C>
+template <class A, class B, class... C>
 constexpr bool isOneOf(const A& val, const B& first, const C&... others) {
 	if (sizeof...(others) == 0)
 		return (val == first);
@@ -209,10 +209,11 @@ constexpr bool isOneOf(const A& val, const B& first, const C&... others) {
 }
 
 #if __cplusplus > 201402L
-#warning "Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
+#warning                                                                       \
+   "Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
 #endif
 
-template<class T, size_t N>
+template <class T, size_t N>
 class InplaceArray {
 	size_t size_, max_size_;
 	using Elem = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
@@ -238,37 +239,34 @@ public:
 	InplaceArray() : size_(0), max_size_(N), p_(a_) {}
 
 #if __cplusplus > 201402L
-#warning "Since C++17 std::uninitialized_default_construct() should be used below"
+#warning                                                                       \
+   "Since C++17 std::uninitialized_default_construct() should be used below"
 #endif
 	explicit InplaceArray(size_t n)
-		: size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_)
-	{
+	   : size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_) {
 		for (size_t i = 0; i < n; ++i)
 			::new (std::addressof((*this)[i])) T;
 	}
 
 	InplaceArray(size_t n, const T& val)
-		: size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_)
-	{
+	   : size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_) {
 		for (size_t i = 0; i < n; ++i)
 			::new (std::addressof((*this)[i])) T(val);
 	}
 
-	template<size_t N1>
+	template <size_t N1>
 	InplaceArray(const InplaceArray<T, N1>& a)
-		: size_(a.size_), max_size_(std::max(size_, N)),
-		p_(size_ > N ? new Elem[size_] : a_)
-	{
+	   : size_(a.size_), max_size_(std::max(size_, N)),
+	     p_(size_ > N ? new Elem[size_] : a_) {
 		std::uninitialized_copy(a.begin(), a.end(), begin());
 	}
 
 #if __cplusplus > 201402L
 #warning "Since C++17 std::uninitialized_move() should be used below"
 #endif
-	template<size_t N1>
+	template <size_t N1>
 	InplaceArray(InplaceArray<T, N1>&& a)
-		: size_(a.size_), max_size_(std::max(size_, N))
-	{
+	   : size_(a.size_), max_size_(std::max(size_, N)) {
 		if (size_ <= N) {
 			for (size_t i = 0; i < a.size_; ++i)
 				::new (std::addressof((*this)[i])) T(std::move(a[i]));
@@ -287,7 +285,7 @@ public:
 		a.size_ = 0;
 	}
 
-	template<size_t N1>
+	template <size_t N1>
 	InplaceArray& operator=(const InplaceArray<T, N1>& a) {
 		if (a.size_ <= N) {
 			destruct_and_deallocate();
@@ -331,7 +329,7 @@ public:
 #if __cplusplus > 201402L
 #warning "Since C++17 std::uninitialized_move() can be used below"
 #endif
-	template<size_t N1>
+	template <size_t N1>
 	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
 		if (a.size_ <= N) {
 			destruct_and_deallocate();
@@ -381,7 +379,8 @@ public:
 	}
 
 	/**
-	 * @brief Increases array's max_size if needed, on reallcation all data is lost
+	 * @brief Increases array's max_size if needed, on reallcation all data is
+	 *   lost
 	 *
 	 * @param n lower bound on new capacity of the array
 	 */
@@ -395,7 +394,6 @@ public:
 			max_size_ = new_max_size;
 		}
 	}
-
 
 #if __cplusplus > 201402L
 #warning "Since C++17 std::uninitialized_move() can be used below"
@@ -418,9 +416,9 @@ public:
 		}
 	}
 
-
 #if __cplusplus > 201402L
-#warning "Since C++17 std::uninitialized_default_construct() should be used below"
+#warning                                                                       \
+   "Since C++17 std::uninitialized_default_construct() should be used below"
 #endif
 	/**
 	 * @brief Changes array's size and max_size if needed, preserves data
@@ -445,10 +443,11 @@ public:
 			::new (std::addressof((*this)[size_++])) T(val);
 	}
 
-	template<class... Args>
+	template <class... Args>
 	T& emplace_back(Args&&... args) {
 		reserve_for(size_ + 1);
-		return *(::new (std::addressof((*this)[size_++])) T(std::forward<Args>(args)...));
+		return *(::new (std::addressof((*this)[size_++]))
+		            T(std::forward<Args>(args)...));
 	}
 
 	void clear() noexcept { size_ = 0; }
@@ -456,7 +455,7 @@ public:
 	size_t size() const noexcept { return size_; }
 
 private:
-	template<class Type>
+	template <class Type>
 	class Iterator {
 	public:
 		using iterator_category = std::random_access_iterator_tag;
@@ -468,14 +467,16 @@ private:
 	private:
 		Elem* p = nullptr;
 
-		Iterator(Elem *x) : p(x) {}
+		Iterator(Elem* x) : p(x) {}
 
 		friend class InplaceArray;
 
 	public:
 		Iterator() = default;
 
-		reference operator*() const noexcept { return *reinterpret_cast<T*>(p); }
+		reference operator*() const noexcept {
+			return *reinterpret_cast<T*>(p);
+		}
 
 		pointer operator->() const noexcept { return reinterpret_cast<T*>(p); }
 
@@ -580,36 +581,37 @@ public:
 	~InplaceArray() { destruct_and_deallocate(); }
 };
 
-template<class Func>
+template <class Func>
 class shared_function {
 	std::shared_ptr<Func> func_;
 
 public:
 	shared_function(Func&& func)
-		: func_(std::make_shared<Func>(std::forward<Func>(func))) {}
+	   : func_(std::make_shared<Func>(std::forward<Func>(func))) {}
 
-	template<class... Args>
+	template <class... Args>
 	auto operator()(Args&&... args) const {
 		return (*func_)(std::forward<Args>(args)...);
 	}
 };
 
-template<class Func>
+template <class Func>
 auto make_shared_function(Func&& func) {
 	return shared_function<Func>(std::forward<Func>(func));
 }
 
 #if __cplusplus > 201402L
-#warning "Since C++17 inline constexpr variables and constexpr if will handle this"
+#warning                                                                       \
+   "Since C++17 inline constexpr variables and constexpr if will handle this"
 #endif
 
-template<class...>
+template <class...>
 struct is_pair : std::false_type {};
 
-template<class A, class B>
+template <class A, class B>
 struct is_pair<std::pair<A, B>> : std::true_type {};
 
-template<class Enum>
+template <class Enum>
 class EnumVal {
 public:
 	static_assert(std::is_enum<Enum>::value, "This is designed only for enums");

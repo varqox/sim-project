@@ -25,8 +25,9 @@ class FileDescriptor {
 public:
 	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
 
-	explicit FileDescriptor(FilePath filename, int flags, mode_t mode = S_0644)
-		noexcept : fd_(::open(filename, flags, mode)) {}
+	explicit FileDescriptor(FilePath filename, int flags,
+	                        mode_t mode = S_0644) noexcept
+	   : fd_(::open(filename, flags, mode)) {}
 
 	FileDescriptor(const FileDescriptor&) = delete;
 
@@ -89,8 +90,7 @@ class Directory {
 public:
 	explicit Directory(DIR* dir = nullptr) noexcept : dir_(dir) {}
 
-	explicit Directory(FilePath pathname) noexcept
-		: dir_(opendir(pathname)) {}
+	explicit Directory(FilePath pathname) noexcept : dir_(opendir(pathname)) {}
 
 	Directory(const Directory&) = delete;
 
@@ -111,7 +111,7 @@ public:
 	operator DIR*() const noexcept { return dir_; }
 
 	DIR* release() noexcept {
-		DIR *d = dir_;
+		DIR* d = dir_;
 		dir_ = nullptr;
 		return d;
 	}
@@ -181,8 +181,8 @@ inline int remove_r(FilePath pathname) noexcept {
  * @brief Creates (and opens) unlinked temporary file
  * @details Uses open(2) if O_TMPFILE is defined, or mkostemp(3)
  *
- * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or passed
- *   to mkostemp(3)
+ * @param flags flags which be ORed with O_TMPFILE | O_RDWR in open(2) or
+ *   passed to mkostemp(3)
  *
  * @return file descriptor on success, -1 on error
  *
@@ -230,9 +230,7 @@ public:
 };
 
 // Create directory (not recursively) (mode: 0755/rwxr-xr-x)
-inline int mkdir(FilePath pathname) noexcept {
-	return mkdir(pathname, S_0755);
-}
+inline int mkdir(FilePath pathname) noexcept { return mkdir(pathname, S_0755); }
 
 // Create directories recursively (default mode: 0755/rwxr-xr-x)
 int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
@@ -262,8 +260,7 @@ public:
 	TemporaryFile& operator=(const TemporaryFile&) = delete;
 
 	TemporaryFile(TemporaryFile&& tf) noexcept
-		: path_(std::move(tf.path_)), fd_(tf.fd_)
-	{
+	   : path_(std::move(tf.path_)), fd_(tf.fd_) {
 		tf.fd_ = -1;
 	}
 
@@ -325,22 +322,22 @@ public:
 #endif
 
 /**
- * @brief Calls @p func on every component of the @p dir other than "." and ".."
+ * @brief Calls @p func on every component of the @p dir other than "." and
+ *   ".."
  *
- * @param dir directory object, readdir(3) is used on it so one may want to save
- *   its pos via telldir(3) and use seekdir(3) after the call or just
+ * @param dir directory object, readdir(3) is used on it so one may want to
+ *   save its pos via telldir(3) and use seekdir(3) after the call or just
  *   rewinddir(3) after the call
  * @param func function to call on every component (other than "." and ".."),
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template<class Func, class ErrFunc>
+template <class Func, class ErrFunc>
 std::enable_if_t<
-	std::is_convertible<
-		decltype(std::declval<Func>()(std::declval<dirent*>())), bool>::value,
-	void
-> forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed)
-{
+   std::is_convertible<decltype(std::declval<Func>()(std::declval<dirent*>())),
+                       bool>::value,
+   void>
+forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
 	dirent* file;
 	for (;;) {
 		errno = 0;
@@ -360,22 +357,22 @@ std::enable_if_t<
 }
 
 /**
- * @brief Calls @p func on every component of the @p dir other than "." and ".."
+ * @brief Calls @p func on every component of the @p dir other than "." and
+ *   ".."
  *
- * @param dir directory object, readdir(3) is used on it so one may want to save
- *   its pos via telldir(3) and use seekdir(3) after the call or just
+ * @param dir directory object, readdir(3) is used on it so one may want to
+ *   save its pos via telldir(3) and use seekdir(3) after the call or just
  *   rewinddir(3) after the call
  * @param func function to call on every component (other than "." and ".."),
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template<class Func, class ErrFunc>
+template <class Func, class ErrFunc>
 std::enable_if_t<
-	!std::is_convertible<
-		decltype(std::declval<Func>()(std::declval<dirent*>())), bool>::value,
-	void
-> forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed)
-{
+   !std::is_convertible<decltype(std::declval<Func>()(std::declval<dirent*>())),
+                        bool>::value,
+   void>
+forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
 	dirent* file;
 	for (;;) {
 		errno = 0;
@@ -393,7 +390,6 @@ std::enable_if_t<
 	}
 }
 
-
 /**
  * @brief Calls @p func on every component of the directory @p pathname other
  *   than "." and ".."
@@ -403,21 +399,21 @@ std::enable_if_t<
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template<class Func, class ErrFunc>
-void forEachDirComponent(FilePath pathname, Func&& func, ErrFunc&& readdir_failed) {
+template <class Func, class ErrFunc>
+void forEachDirComponent(FilePath pathname, Func&& func,
+                         ErrFunc&& readdir_failed) {
 	Directory dir {pathname};
 	if (!dir)
 		THROW("opendir()", errmsg());
 
 	return forEachDirComponent(dir, std::forward<Func>(func),
-		std::forward<ErrFunc>(readdir_failed));
+	                           std::forward<ErrFunc>(readdir_failed));
 }
 
-template<class A, class Func>
+template <class A, class Func>
 auto forEachDirComponent(A&& a, Func&& func) {
-	return forEachDirComponent(std::forward<A>(a), std::forward<Func>(func), [] {
-		THROW("readdir()", errmsg());
-	});
+	return forEachDirComponent(std::forward<A>(a), std::forward<Func>(func),
+	                           [] { THROW("readdir()", errmsg()); });
 }
 
 /**
@@ -447,7 +443,6 @@ int removeDirContents_at(int dirfd, FilePath pathname) noexcept;
 inline int removeDirContents(FilePath pathname) noexcept {
 	return removeDirContents_at(AT_FDCWD, pathname);
 }
-
 
 /// @brief Creates directories containing @p file if they don't exist
 int create_subdirectories(StringView file) noexcept;
@@ -482,8 +477,8 @@ int blast(int infd, int outfd) noexcept;
 int copy(FilePath src, FilePath dest, mode_t mode = S_0644) noexcept;
 
 /**
- * @brief Copies (overrides) file @p src to @p dest relative to a directory file
- *   descriptor
+ * @brief Copies (overrides) file @p src to @p dest relative to a directory
+ *   file descriptor
  *
  * @param dirfd1 directory file descriptor
  * @param src source file (relative to @p dirfd1)
@@ -510,8 +505,7 @@ int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept;
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
-	noexcept;
+int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept;
 
 /**
  * @brief Copies (overrides) recursively files and folders
@@ -525,8 +519,7 @@ int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest)
  *
  * @errors The same that occur for copy_rat()
  */
-int copy_r(FilePath src, FilePath dest, bool create_subdirs = true)
-	noexcept;
+int copy_r(FilePath src, FilePath dest, bool create_subdirs = true) noexcept;
 
 inline int access(FilePath pathname, int mode) noexcept {
 	return access(pathname.data(), mode);
@@ -549,8 +542,8 @@ inline int rename(FilePath source, FilePath destination) noexcept {
  *
  * @return Return value of rename(2) or copy_r() or remove_r()
  */
-int move(FilePath oldpath, FilePath newpath, bool create_subdirs = true)
-	noexcept;
+int move(FilePath oldpath, FilePath newpath,
+         bool create_subdirs = true) noexcept;
 
 /**
  * @brief Creates file pathname with access mode @p mode
@@ -576,7 +569,7 @@ int createFile(FilePath pathname, mode_t mode = S_0644) noexcept;
  *
  * @errors The same as for read(2) except EINTR
  */
-size_t readAll(int fd, void *buff, size_t count) noexcept;
+size_t readAll(int fd, void* buff, size_t count) noexcept;
 
 /**
  * @brief Write @p count bytes to @p fd from @p buff
@@ -590,7 +583,7 @@ size_t readAll(int fd, void *buff, size_t count) noexcept;
  *
  * @errors The same as for write(2) except EINTR
  */
-size_t writeAll(int fd, const void *buff, size_t count) noexcept;
+size_t writeAll(int fd, const void* buff, size_t count) noexcept;
 
 /**
  * @brief Write @p count bytes to @p fd from @p str
@@ -602,7 +595,7 @@ size_t writeAll(int fd, const void *buff, size_t count) noexcept;
  *
  * @errors If any error occurs then an exception is thrown
  */
-inline void writeAll_throw(int fd, const void *buff, size_t count) {
+inline void writeAll_throw(int fd, const void* buff, size_t count) {
 	if (writeAll(fd, buff, count) != count)
 		THROW("write()", errmsg());
 }
@@ -638,18 +631,18 @@ inline void writeAll_throw(int fd, StringView str) {
 }
 
 /*
-*  Returns an absolute path that does not contain any . or .. components,
-*  nor any repeated path separators (/). @p curr_dir can be empty. If path begin
-*  with / then @p curr_dir is ignored.
-*/
+ *  Returns an absolute path that does not contain any . or .. components,
+ *  nor any repeated path separators (/). @p curr_dir can be empty. If path
+ * begins with / then @p curr_dir is ignored.
+ */
 std::string abspath(StringView path, size_t beg = 0,
-	size_t end = std::string::npos, std::string curr_dir = "/");
+                    size_t end = std::string::npos, std::string curr_dir = "/");
 
 /*
-*  Returns an absolute path that does not contain any . or .. components,
-*  nor any repeated path separators (/). @p curr_dir can be empty. If path begin
-*  with / then @p curr_dir is ignored.
-*/
+ *  Returns an absolute path that does not contain any . or .. components,
+ *  nor any repeated path separators (/). @p curr_dir can be empty. If path
+ * begins with / then @p curr_dir is ignored.
+ */
 inline std::string abspath(StringView path, std::string curr_dir) {
 	return abspath(path, 0, std::string::npos, std::move(curr_dir));
 }
@@ -677,7 +670,7 @@ inline StringView getExtension(StringView file) {
  *
  * @return Extracted filename
  */
-template<class T>
+template <class T>
 inline std::enable_if_t<std::is_convertible<T, CStringView>::value, CStringView>
 filename(T&& path) {
 	CStringView path_str(std::forward<T>(path));
@@ -699,7 +692,7 @@ filename(T&& path) {
  *
  * @return Extracted filename
  */
-template<class T>
+template <class T>
 inline std::enable_if_t<!std::is_convertible<T, CStringView>::value, StringView>
 filename(T&& path) {
 	StringView path_str(std::forward<T>(path));
@@ -715,8 +708,8 @@ filename(T&& path) {
  *
  * @return read contents
  *
- * @errors If any error occurs an exception of type std::runtime_error is thrown
- *   (may happen if read(2) fails)
+ * @errors If any error occurs an exception of type std::runtime_error is
+ *   thrown (may happen if read(2) fails)
  */
 std::string getFileContents(int fd, size_t bytes = -1);
 
@@ -729,8 +722,8 @@ std::string getFileContents(int fd, size_t bytes = -1);
  *
  * @return read contents
  *
- * @errors If any error occurs an exception of type std::runtime_error is thrown
- *   (may happen if lseek64(3) or read(2) fails)
+ * @errors If any error occurs an exception of type std::runtime_error is
+ *   thrown (may happen if lseek64(3) or read(2) fails)
  */
 std::string getFileContents(int fd, off64_t beg, off64_t end);
 
@@ -741,8 +734,8 @@ std::string getFileContents(int fd, off64_t beg, off64_t end);
  *
  * @return read contents
  *
- * @errors If any error occurs an exception of type std::runtime_error is thrown
- *   (may happen if open(2), read(2) or close(2) fails)
+ * @errors If any error occurs an exception of type std::runtime_error is
+ *   thrown (may happen if open(2), read(2) or close(2) fails)
  */
 std::string getFileContents(FilePath file);
 
@@ -755,8 +748,8 @@ std::string getFileContents(FilePath file);
  *
  * @return read contents
  *
- * @errors If any error occurs an exception of type std::runtime_error is thrown
- *   (may happen if open(2), lseek64(3), read(2) or close(2) fails)
+ * @errors If any error occurs an exception of type std::runtime_error is
+ *   thrown (may happen if open(2), lseek64(3), read(2) or close(2) fails)
  */
 std::string getFileContents(FilePath file, off64_t beg, off64_t end = -1);
 
@@ -773,7 +766,7 @@ constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
  * @return vector<string> containing fetched lines
  */
 std::vector<std::string> getFileByLines(FilePath file, int flags = 0,
-	size_t first = 0, size_t last = -1);
+                                        size_t first = 0, size_t last = -1);
 
 /**
  * @brief Writes @p data to file @p file
@@ -783,10 +776,11 @@ std::vector<std::string> getFileByLines(FilePath file, int flags = 0,
  * @param data data to write
  * @param mode access mode
  *
- * @errors If any error occurs an exception of type std::runtime_error is thrown
- *   (may happen if open(2) or write(2) fails)
+ * @errors If any error occurs an exception of type std::runtime_error is
+ *   thrown (may happen if open(2) or write(2) fails)
  */
-void putFileContents(FilePath file, const char* data, size_t len, mode_t mode = S_0644);
+void putFileContents(FilePath file, const char* data, size_t len,
+                     mode_t mode = S_0644);
 
 inline void putFileContents(FilePath file, StringView data) {
 	return putFileContents(file, data.data(), data.size());
@@ -795,6 +789,7 @@ inline void putFileContents(FilePath file, StringView data) {
 // Closes file descriptor automatically
 class FileDescriptorCloser {
 	int fd_;
+
 public:
 	explicit FileDescriptorCloser(int fd) noexcept : fd_(fd) {}
 
@@ -822,7 +817,7 @@ public:
 	}
 };
 
-template<int (*func)(FilePath) >
+template <int (*func)(FilePath)>
 class RemoverBase {
 	InplaceBuff<PATH_MAX> name;
 
@@ -834,8 +829,7 @@ class RemoverBase {
 public:
 	RemoverBase() : name() {}
 
-	explicit RemoverBase(FilePath str)
-		: RemoverBase(str.data(), str.size()) {}
+	explicit RemoverBase(FilePath str) : RemoverBase(str.data(), str.size()) {}
 
 	/// If @p str is null then @p len is ignored
 	RemoverBase(const char* str, size_t len) : name(len + 1) {
@@ -928,14 +922,14 @@ inline uint64_t get_file_size(FilePath file) {
 }
 
 // Returns file modification time (with second precision) as a time_point
-inline std::chrono::system_clock::time_point get_modification_time(
-	const struct stat64& st) noexcept
-{
+inline std::chrono::system_clock::time_point
+get_modification_time(const struct stat64& st) noexcept {
 	return std::chrono::system_clock::from_time_t(st.st_mtime);
 }
 
 // Returns file modification time (with second precision) as a time_point
-inline std::chrono::system_clock::time_point get_modification_time(FilePath file) {
+inline std::chrono::system_clock::time_point
+get_modification_time(FilePath file) {
 	struct stat64 st;
 	if (stat64(file, &st))
 		THROW("stat()", errmsg());
@@ -954,11 +948,10 @@ private:
 	 * @param stream file to which write (cannot be NULL - does not check that)
 	 * @param buff buffer used to printing tree structure
 	 */
-	void __print(FILE *stream, std::string buff = "") const;
-
+	void __print(FILE* stream, std::string buff = "") const;
 
 	/// @brief Checks if path is valid in this directory, but path cannot
-	/// contain "." and ".." parts
+	///   contain "." and ".." parts
 	bool __pathExists(StringView s) const noexcept;
 
 public:
@@ -967,7 +960,7 @@ public:
 	std::vector<std::string> files_;
 
 	explicit Node(std::string new_name)
-			: name_(std::move(new_name)), dirs_(), files_() {}
+	   : name_(std::move(new_name)), dirs_(), files_() {}
 
 	Node(const Node&) = delete;
 	Node(Node&&) noexcept = default;
@@ -1011,7 +1004,7 @@ public:
 	 */
 	bool pathExists(StringView path) const {
 		return (path.size() and
-			__pathExists(intentionalUnsafeStringView(abspath(path))));
+		        __pathExists(intentionalUnsafeStringView(abspath(path))));
 	}
 
 	/**
@@ -1019,7 +1012,7 @@ public:
 	 *
 	 * @param stream file to write to (if nullptr returns immediately)
 	 */
-	inline void print(FILE *stream) const {
+	inline void print(FILE* stream) const {
 		if (stream)
 			return __print(stream);
 	}
@@ -1043,10 +1036,10 @@ std::unique_ptr<Node> dumpDirectoryTree(FilePath path);
  *
  * @return vector of paths (relative to @p dir) of files matched by @p func
  */
-template<class UnaryPredicate>
+template <class UnaryPredicate>
 std::vector<std::string> findFiles(directory_tree::Node* dir,
-	UnaryPredicate&& func, std::string path_prefix = "")
-{
+                                   UnaryPredicate&& func,
+                                   std::string path_prefix = "") {
 	if (!dir)
 		return {};
 
@@ -1055,8 +1048,8 @@ std::vector<std::string> findFiles(directory_tree::Node* dir,
 		std::string path;
 		std::vector<std::string> res;
 
-		Helper(const UnaryPredicate& f, std::string&& pprefix) : func(f),
-			path(std::move(pprefix)) {}
+		Helper(const UnaryPredicate& f, std::string&& pprefix)
+		   : func(f), path(std::move(pprefix)) {}
 
 		void find(directory_tree::Node* d) {
 			// Files

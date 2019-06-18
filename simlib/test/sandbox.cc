@@ -1,29 +1,24 @@
-#include "../include/process.h"
 #include "../include/sandbox.h"
+#include "../include/process.h"
 
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <linux/version.h>
 #include <sys/syscall.h>
 
-TEST (Sandbox, run) {
+TEST(Sandbox, run) {
 	using namespace std::chrono_literals;
 
 	Sandbox sandbox;
 
 	constexpr size_t MEM_LIMIT = 16 << 20; // 16 MB (in bytes)
-	// Big RT limit is needed for tests where memory dump is created - it is really slow)
+	// Big RT limit is needed for tests where memory dump is created - it is
+	// really slow)
 	constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 3s;
 	constexpr std::chrono::nanoseconds CPU_TIME_LIMIT = 200ms;
 
 	Sandbox::Options opts {
-		-1,
-		-1,
-		-1,
-		REAL_TIME_LIMIT,
-		MEM_LIMIT,
-		CPU_TIME_LIMIT
-	};
+	   -1, -1, -1, REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT};
 
 	// Compiled test case executable
 	InplaceBuff<40> exec("/tmp/simlib.test.sandbox.XXXXXX");
@@ -38,18 +33,15 @@ TEST (Sandbox, run) {
 	FileRemover exec_remover(exec.to_cstr());
 
 	const auto test_cases_dir =
-		concat(getExecDir(getpid()), "sandbox_test_cases/");
+	   concat(getExecDir(getpid()), "sandbox_test_cases/");
 
-	auto compile_test_case = [&] (StringView case_filename, auto&&... cc_flags) {
-		Spawner::ExitStat es = Spawner::run("cc", {
-			"cc",
-			"-O2",
-			concat_tostr(test_cases_dir, case_filename),
-			"-o",
-			exec.to_string(),
-			"-static",
-			std::forward<decltype(cc_flags)>(cc_flags)...
-		}, {-1, STDOUT_FILENO, STDERR_FILENO});
+	auto compile_test_case = [&](StringView case_filename, auto&&... cc_flags) {
+		Spawner::ExitStat es = Spawner::run(
+		   "cc",
+		   {"cc", "-O2", concat_tostr(test_cases_dir, case_filename), "-o",
+		    exec.to_string(), "-static",
+		    std::forward<decltype(cc_flags)>(cc_flags)...},
+		   {-1, STDOUT_FILENO, STDERR_FILENO});
 
 		// Compilation must be successful
 		throw_assert(es.si.code == CLD_EXITED and es.si.status == 0);
@@ -58,21 +50,20 @@ TEST (Sandbox, run) {
 	Sandbox::ExitStat es;
 
 	auto killed_or_dumped_by_abort = [&](decltype(es.si.code) si_code,
-		const decltype(es.message)& message)
-	{
+	                                     const decltype(es.message)& message) {
 		return ((si_code == CLD_KILLED and
-				message == "killed by signal 6 - Aborted") or
-			(si_code == CLD_DUMPED and
-				message == "killed and dumped by signal 6 - Aborted"));
+		         message == "killed by signal 6 - Aborted") or
+		        (si_code == CLD_DUMPED and
+		         message == "killed and dumped by signal 6 - Aborted"));
 	};
 
 	auto killed_or_dumped_by_segv = [&](decltype(es.si.code) si_code,
-		const decltype(es.message)& message)
-	{
-		return ((si_code == CLD_KILLED and
-				message == "killed by signal 11 - Segmentation fault") or
-			(si_code == CLD_DUMPED and
-				message == "killed and dumped by signal 11 - Segmentation fault"));
+	                                    const decltype(es.message)& message) {
+		return (
+		   (si_code == CLD_KILLED and
+		    message == "killed by signal 11 - Segmentation fault") or
+		   (si_code == CLD_DUMPED and
+		    message == "killed and dumped by signal 11 - Segmentation fault"));
 	};
 
 	uint test_case = 0;
@@ -119,7 +110,8 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
-	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
+	EXPECT_EQ(es.message,
+	          concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
 	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT(0s, es.runtime);
@@ -178,7 +170,8 @@ TEST (Sandbox, run) {
 		EXPECT_LT(es.vm_peak, MEM_LIMIT);
 	}
 
-	// Testing the allowing of lseek(), dup(), etc. on the closed stdin, stdout and stderr
+	// Testing the allowing of lseek(), dup(), etc. on the closed stdin, stdout
+	// and stderr
 	compile_test_case("7.c");
 	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts, {{"/dev/null", OpenAccess::RDONLY}});
@@ -192,7 +185,8 @@ TEST (Sandbox, run) {
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
-	// Testing the use of readlink() as the marking of the end of initialization of glibc
+	// Testing the use of readlink() as the marking of the end of
+	// initialization of glibc
 	compile_test_case("8.c", "-m32");
 	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
@@ -237,7 +231,8 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
-	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 205 - set_thread_area"));
+	EXPECT_EQ(es.message,
+	          concat_tostr("forbidden syscall: 205 - set_thread_area"));
 	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT(0s, es.runtime);
@@ -245,13 +240,14 @@ TEST (Sandbox, run) {
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
-	if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)) {
+	if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)) {
 		compile_test_case("10.c", "-m32");
 		stdlog("Test case: ", test_case++);
 		es = sandbox.run(exec, {}, opts);
 		EXPECT_EQ(es.si.code, CLD_KILLED);
 		EXPECT_EQ(es.si.status, SIGKILL);
-		EXPECT_EQ(es.message, concat_tostr("forbidden syscall: 384 - arch_prctl"));
+		EXPECT_EQ(es.message,
+		          concat_tostr("forbidden syscall: 384 - arch_prctl"));
 		EXPECT_LT(0s, es.cpu_runtime);
 		EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 		EXPECT_LT(0s, es.runtime);
@@ -310,7 +306,8 @@ TEST (Sandbox, run) {
 	EXPECT_LT(0s, es.cpu_runtime);
 	constexpr std::chrono::nanoseconds CPU_TL_THRESHOLD = 1s - CPU_TIME_LIMIT;
 	static_assert(CPU_TIME_LIMIT + CPU_TIME_LIMIT < CPU_TL_THRESHOLD,
-		"Needed below to accurately check if the timeout occurred early enough");
+	              "Needed below to accurately check if the timeout occurred "
+	              "early enough");
 	EXPECT_LE(es.cpu_runtime, CPU_TIME_LIMIT + CPU_TIME_LIMIT);
 	EXPECT_LT(0s, es.runtime);
 	EXPECT_LE(es.runtime, REAL_TIME_LIMIT);
@@ -350,7 +347,8 @@ TEST (Sandbox, run) {
 	es = sandbox.run(exec, {}, opts);
 	EXPECT_EQ(es.si.code, CLD_KILLED);
 	EXPECT_EQ(es.si.status, SIGKILL);
-	EXPECT_EQ(es.message, concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
+	EXPECT_EQ(es.message,
+	          concat_tostr("forbidden syscall: ", SYS_socket, " - socket"));
 	EXPECT_LT(0s, es.cpu_runtime);
 	EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 	EXPECT_LT(0s, es.runtime);
@@ -358,7 +356,8 @@ TEST (Sandbox, run) {
 	EXPECT_LT(10 << 20, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
-	// Testing memory vm_peak calculation on forbidden syscall (according to its callback)
+	// Testing memory vm_peak calculation on forbidden syscall (according to
+	// its callback)
 	compile_test_case("16.c");
 	stdlog("Test case: ", test_case++);
 	es = sandbox.run(exec, {}, opts);
@@ -428,17 +427,10 @@ TEST (Sandbox, run) {
 	EXPECT_LT(0, es.vm_peak);
 	EXPECT_LT(es.vm_peak, MEM_LIMIT);
 
-
 	FileDescriptor dev_null("/dev/null", O_RDWR | O_CLOEXEC);
 	throw_assert(dev_null != -1);
-	Sandbox::Options rw_opts {
-		dev_null,
-		dev_null,
-		dev_null,
-		REAL_TIME_LIMIT,
-		MEM_LIMIT,
-		CPU_TIME_LIMIT
-	};
+	Sandbox::Options rw_opts {dev_null,        dev_null,  dev_null,
+	                          REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT};
 
 	// Testing writing to open stdin
 	compile_test_case("21.c");
