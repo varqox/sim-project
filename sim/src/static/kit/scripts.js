@@ -134,19 +134,6 @@ function server_time() {
 	time.setTime(time.getTime() - server_time.time_difference);
 	return time;
 }
-// Clock
-$(document).ready(function update_clock() {
-	var time = server_time();
-	var hours = time.getHours();
-	var minutes = time.getMinutes();
-	var seconds = time.getSeconds();
-	hours = (hours < 10 ? '0' : '') + hours;
-	minutes = (minutes < 10 ? '0' : '') + minutes;
-	seconds = (seconds < 10 ? '0' : '') + seconds;
-	// Update the displayed time
-	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, tz_marker());
-	setTimeout(update_clock, 1000 - time.getMilliseconds());
-});
 // Produces a span that will update every second and show remaining time
 function countdown_clock(target_date) {
 	var span = $('<span>');

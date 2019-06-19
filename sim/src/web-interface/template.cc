@@ -121,8 +121,28 @@ void Sim::page_template_end() {
 
 	if (page_template_began) {
 		page_template_began = false;
-		append("<script>var start_time=", microtime() / 1000,
-		       ";</script></body></html>");
+		// clang-format off
+		append("<script>var start_time=", microtime() / 1000, ";"
+		       "function update_clock() {"
+		           "var t = new Date();"
+		           "t.setTime(t.getTime() -"
+		                        "window.performance.timing.responseStart +"
+		                        "start_time);"
+		           "var h = t.getHours();"
+		           "var m = t.getMinutes();"
+		           "var s = t.getSeconds();"
+		           "h = (h < 10 ? '0' : '') + h;"
+		           "m = (m < 10 ? '0' : '') + m;"
+		           "s = (s < 10 ? '0' : '') + s;"
+		           // Update the displayed time
+		           "var tzo = -t.getTimezoneOffset();"
+		           "document.getElementById('clock').innerHTML = "
+		              "String().concat(h, ':', m, ':', s, '<sup>UTC', (tzo >= 0 ? '+' : ''), tzo / 60, '</sup>');"
+		           "setTimeout(update_clock, 1000 - t.getMilliseconds());"
+		       "}"
+		       "update_clock();"
+		       "</script></body></html>");
+		// clang-format on
 	}
 }
 
