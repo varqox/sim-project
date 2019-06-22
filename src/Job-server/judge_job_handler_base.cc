@@ -185,7 +185,7 @@ JudgeJobHandlerBase::compile_solution_impl(FilePath solution_path,
 	if ((jworker.*compile_method)(
 	       solution_path, lang, SOLUTION_COMPILATION_TIME_LIMIT,
 	       &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
-		tmplog(" failed.\n", compilation_errors);
+		tmplog(" failed:\n", compilation_errors);
 		return compilation_errors;
 	}
 
@@ -221,7 +221,7 @@ Optional<std::string> JudgeJobHandlerBase::compile_checker() {
 	if (jworker.compile_checker(SOLUTION_COMPILATION_TIME_LIMIT,
 	                            &compilation_errors,
 	                            COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
-		tmplog(" failed.");
+		tmplog(" failed:\n", compilation_errors);
 		return compilation_errors;
 	}
 

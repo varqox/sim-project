@@ -101,6 +101,8 @@ void JudgeOrRejudgeJobHandler::run() {
 	// Compile checker
 	compilation_errors = compile_checker();
 	if (compilation_errors.has_value()) {
+		errlog("Job ", job_id, " (submission ", submission_id, ", problem ",
+		       problem_id, "): Checker compilation failed");
 		update_submission(
 		   SubmissionStatus::CHECKER_COMPILATION_ERROR,
 		   SubmissionStatus::CHECKER_COMPILATION_ERROR, std::nullopt,
