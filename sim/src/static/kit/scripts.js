@@ -310,19 +310,19 @@ function humanizeFileSize(size) {
 	var MIN_3DIGIT_PIB = 112533595688920269;
 
 	// Bytes
-	if (size < MIN_KIIB)
+	if (size < MIN_KIB)
 		return (size == 1 ? "1 byte" : size + " bytes");
 
 	// KiB
 	if (size < MIN_3DIGIT_KIB)
-		return parseFloat(size / MIN_KIIB).toFixed(1) + " KiB";
-	if (size < MIN_MIIB)
-		return Math.round(size / MIN_KIIB) + " KiB";
+		return parseFloat(size / MIN_KIB).toFixed(1) + " KiB";
+	if (size < MIN_MIB)
+		return Math.round(size / MIN_KIB) + " KiB";
 	// MiB
 	if (size < MIN_3DIGIT_MIB)
-		return parseFloat(size / MIN_MIIB).toFixed(1) + " MiB";
+		return parseFloat(size / MIN_MIB).toFixed(1) + " MiB";
 	if (size < MIN_GIB)
-		return Math.round(size / MIN_MIIB) + " MiB";
+		return Math.round(size / MIN_MIB) + " MiB";
 	// GiB
 	if (size < MIN_3DIGIT_GIB)
 		return parseFloat(size / MIN_GIB).toFixed(1) + " GiB";
