@@ -3006,15 +3006,17 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 		var tags = (hidden ? problem_tags.hidden : problem_tags.public);
 		var tbody = $('<tbody>');
 
-		var add_form = [
-			Form.field_group('Name', {
+		var name_input = $('<input>', {
 				type: 'text',
 				name: 'name',
 				size: 24,
 				// maxlength: 'TODO...'
 				autofocus: true,
 				required: true
-			}),
+		});
+
+		var add_form = [
+			Form.field_group('Name', name_input),
 			$('<input>', {
 				type: 'hidden',
 				name: 'hidden',
@@ -3051,20 +3053,24 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 						var modal = $(this).closest('.modal');
 						modal.fadeOut(150, close_modal.bind(null, modal));
 					}));
+
+				// Focus tag name
+				name_input.focus();
 			})
 		]}));
 
 		var make_row = function(tag) {
+			var name_input = $('<input>', {
+				type: 'text',
+				name: 'name',
+				size: 24,
+				value: tag,
+				// maxlength: 'TODO...'
+				required: true
+			});
+
 			var edit_form = [
-				Form.field_group('Name', {
-					type: 'text',
-					name: 'name',
-					size: 24,
-					value: tag,
-					// maxlength: 'TODO...'
-					autofocus: true,
-					required: true
-				}),
+				Form.field_group('Name', name_input),
 				$('<input>', {
 					type: 'hidden',
 					name: 'old_name',
@@ -3108,7 +3114,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 				$('<td>', {text: tag}),
 				$('<td>', {html: [
 					a_view_button(undefined, 'Edit', 'btn-small blue', function() {
-						edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this line
+						edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this change
 						modal(ajax_form('Edit tag',
 							'/api/problem/' + problem_id + '/edit/tags/edit_tag',
 							edit_form, function() {
@@ -3137,6 +3143,9 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 								var modal = $(this).closest('.modal');
 								modal.fadeOut(150, close_modal.bind(null, modal));
 							}));
+
+						// Focus tag name
+						name_input.focus();
 					}),
 					a_view_button(undefined, 'Delete', 'btn-small red',
 						dialogue_modal_request.bind(null, 'Delete tag',
@@ -3144,12 +3153,13 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 							'/api/problem/' + problem_id + '/edit/tags/delete_tag',
 							function(_, loader_parent) {
 								show_success_via_loader(loader_parent, 'The tag has been deleted.');
-								row.fadeOut(1000);
+								row.fadeOut(800);
+								setTimeout(function() { row.remove(); }, 800);
 								// Delete tag
 								tags.splice(tags.indexOf(tag), 1);
 								// Close modal
 								var modal = $(this).closest('.modal');
-								modal.fadeOut(150, close_modal.bind(null, modal));
+								modal.fadeOut(250, close_modal.bind(null, modal));
 							}, 'No, go back'))
 				]})
 			]});
