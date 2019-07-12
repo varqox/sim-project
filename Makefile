@@ -117,26 +117,26 @@ src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
 	$(LINK) -lsupc++ -lrt -lzip
 
 JOB_SERVER_SRCS := \
-	src/Job-server/change_problem_statement_job_handler.cc \
-	src/Job-server/contest_problem_reselect_final_submissions.cc \
-	src/Job-server/delete_contest_job_handler.cc \
-	src/Job-server/delete_contest_problem_job_handler.cc \
-	src/Job-server/delete_contest_round_job_handler.cc \
-	src/Job-server/delete_internal_file_job_handler.cc \
-	src/Job-server/delete_problem_job_handler.cc \
-	src/Job-server/delete_user_job_handler.cc \
-	src/Job-server/dispatcher.cc \
-	src/Job-server/job_handler.cc \
-	src/Job-server/judge_job_handler_base.cc \
-	src/Job-server/judge_or_rejudge_job_handler.cc \
-	src/Job-server/main.cc \
-	src/Job-server/merge_problems_job_handler.cc \
-	src/Job-server/problem_add_job_handler.cc \
-	src/Job-server/problem_add_or_reupload_job_handler_base.cc \
-	src/Job-server/problem_add_or_reupload_judge_model_solution_job_handler_base.cc \
-	src/Job-server/problem_package_reset_limits_job_handler_base.cc \
-	src/Job-server/problem_reupload_job_handler.cc \
-	src/Job-server/reset_problem_time_limits_job_handler.cc
+	src/job_server/dispatcher.cc \
+	src/job_server/job_handlers/add_or_reupload_problem__judge_model_solution_base.cc \
+	src/job_server/job_handlers/add_or_reupload_problem_base.cc \
+	src/job_server/job_handlers/add_problem.cc \
+	src/job_server/job_handlers/change_problem_statement.cc \
+	src/job_server/job_handlers/delete_contest.cc \
+	src/job_server/job_handlers/delete_contest_problem.cc \
+	src/job_server/job_handlers/delete_contest_round.cc \
+	src/job_server/job_handlers/delete_internal_file.cc \
+	src/job_server/job_handlers/delete_problem.cc \
+	src/job_server/job_handlers/delete_user.cc \
+	src/job_server/job_handlers/job_handler.cc \
+	src/job_server/job_handlers/judge_base.cc \
+	src/job_server/job_handlers/judge_or_rejudge.cc \
+	src/job_server/job_handlers/merge_problems.cc \
+	src/job_server/job_handlers/reselect_final_submissions_in_contest_problem.cc \
+	src/job_server/job_handlers/reset_problem_time_limits.cc \
+	src/job_server/job_handlers/reset_time_limits_in_problem_package_base.cc \
+	src/job_server/job_handlers/reupload_problem.cc \
+	src/job_server/main.cc
 
 $(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
 JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
@@ -165,36 +165,36 @@ src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
 	$(MAKE_STATIC_LIB)
 
 SIM_SERVER_SRCS := \
-	src/web-interface/api.cc \
-	src/web-interface/connection.cc \
-	src/web-interface/contest_entry_token_api.cc \
-	src/web-interface/contest_users_api.cc \
-	src/web-interface/contests.cc \
-	src/web-interface/contests_api.cc \
-	src/web-interface/files.cc \
-	src/web-interface/files_api.cc \
-	src/web-interface/http_request.cc \
-	src/web-interface/http_response.cc \
-	src/web-interface/jobs.cc \
-	src/web-interface/jobs_api.cc \
-	src/web-interface/problems.cc \
-	src/web-interface/problems_api.cc \
-	src/web-interface/server.cc \
-	src/web-interface/session.cc \
-	src/web-interface/sim.cc \
-	src/web-interface/submissions.cc \
-	src/web-interface/submissions_api.cc \
-	src/web-interface/template.cc \
-	src/web-interface/users.cc \
-	src/web-interface/users_api.cc
+	src/web_interface/api.cc \
+	src/web_interface/connection.cc \
+	src/web_interface/contest_entry_token_api.cc \
+	src/web_interface/contest_users_api.cc \
+	src/web_interface/contests.cc \
+	src/web_interface/contests_api.cc \
+	src/web_interface/files.cc \
+	src/web_interface/files_api.cc \
+	src/web_interface/http_request.cc \
+	src/web_interface/http_response.cc \
+	src/web_interface/jobs.cc \
+	src/web_interface/jobs_api.cc \
+	src/web_interface/problems.cc \
+	src/web_interface/problems_api.cc \
+	src/web_interface/server.cc \
+	src/web_interface/session.cc \
+	src/web_interface/sim.cc \
+	src/web_interface/submissions.cc \
+	src/web_interface/submissions_api.cc \
+	src/web_interface/template.cc \
+	src/web_interface/users.cc \
+	src/web_interface/users_api.cc
 
 $(eval $(call load_dependencies, $(SIM_SERVER_SRCS)))
 SIM_SERVER_OBJS := $(call SRCS_TO_OBJS, $(SIM_SERVER_SRCS))
 
 # Technique used to force browsers to always keep up-to-date version of the files below
-src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
-src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
-src/web-interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
+src/web_interface/template.o: override EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
+src/web_interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
+src/web_interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
 
 src/sim-server: $(SIM_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
 	$(LINK) -lsupc++ -lrt -lzip
