@@ -274,11 +274,11 @@ enum class JobType : uint8_t {
 	JUDGE_SUBMISSION = 1,
 	ADD_PROBLEM = 2,
 	REUPLOAD_PROBLEM = 3,
-	ADD_JUDGE_MODEL_SOLUTION = 4,
-	REUPLOAD_JUDGE_MODEL_SOLUTION = 5,
+	ADD_PROBLEM__JUDGE_MODEL_SOLUTION = 4,
+	REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION = 5,
 	EDIT_PROBLEM = 6,
 	DELETE_PROBLEM = 7,
-	CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS = 8,
+	RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM = 8,
 	DELETE_USER = 9,
 	DELETE_CONTEST = 10,
 	DELETE_CONTEST_ROUND = 11,
@@ -307,17 +307,18 @@ static_assert(
                meta::ToString<(int)JobType::REUPLOAD_PROBLEM>::value),
    "Update the above #define");
 
-#define JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR "4"
-static_assert(
-   meta::equal(JTYPE_ADD_JUDGE_MODEL_SOLUTION_STR,
-               meta::ToString<(int)JobType::ADD_JUDGE_MODEL_SOLUTION>::value),
-   "Update the above #define");
-
-#define JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR "5"
+#define JTYPE_ADD_PROBLEM__JUDGE_MODEL_SOLUTION_STR "4"
 static_assert(
    meta::equal(
-      JTYPE_REUPLOAD_JUDGE_MODEL_SOLUTION_STR,
-      meta::ToString<(int)JobType::REUPLOAD_JUDGE_MODEL_SOLUTION>::value),
+      JTYPE_ADD_PROBLEM__JUDGE_MODEL_SOLUTION_STR,
+      meta::ToString<(int)JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION>::value),
+   "Update the above #define");
+
+#define JTYPE_REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION_STR "5"
+static_assert(
+   meta::equal(JTYPE_REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION_STR,
+               meta::ToString<
+                  (int)JobType::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION>::value),
    "Update the above #define");
 
 #define JTYPE_EDIT_PROBLEM_STR "6"
@@ -330,12 +331,12 @@ static_assert(meta::equal(JTYPE_DELETE_PROBLEM_STR,
                           meta::ToString<(int)JobType::DELETE_PROBLEM>::value),
               "Update the above #define");
 
-#define JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR "8"
+#define JTYPE_RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM_STR "8"
 static_assert(
    meta::equal(
-      JTYPE_CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS_STR,
+      JTYPE_RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM_STR,
       meta::ToString<
-         (int)JobType::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS>::value),
+         (int)JobType::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM>::value),
    "Update the above #define");
 
 #define JTYPE_DELETE_USER_STR "9"
@@ -396,13 +397,14 @@ constexpr inline const char* toString(JobType x) {
 	case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
 	case JT::ADD_PROBLEM: return "ADD_PROBLEM";
 	case JT::REUPLOAD_PROBLEM: return "REUPLOAD_PROBLEM";
-	case JT::ADD_JUDGE_MODEL_SOLUTION: return "ADD_JUDGE_MODEL_SOLUTION";
-	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION:
-		return "REUPLOAD_JUDGE_MODEL_SOLUTION";
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
+		return "ADD_PROBLEM__JUDGE_MODEL_SOLUTION";
+	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
+		return "REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION";
 	case JT::EDIT_PROBLEM: return "EDIT_PROBLEM";
 	case JT::DELETE_PROBLEM: return "DELETE_PROBLEM";
-	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS:
-		return "CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS";
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+		return "RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM";
 	case JT::DELETE_USER: return "DELETE_USER";
 	case JT::DELETE_CONTEST: return "DELETE_CONTEST";
 	case JT::DELETE_CONTEST_ROUND: return "DELETE_CONTEST_ROUND";
@@ -421,9 +423,9 @@ constexpr inline bool is_problem_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::ADD_PROBLEM: return true;
-	case JT::ADD_JUDGE_MODEL_SOLUTION: return true;
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return true;
 	case JT::REUPLOAD_PROBLEM: return true;
-	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return true;
+	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return true;
 	case JT::EDIT_PROBLEM: return true;
 	case JT::DELETE_PROBLEM: return true;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return true;
@@ -431,7 +433,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	case JT::CHANGE_PROBLEM_STATEMENT: return true;
 	case JT::JUDGE_SUBMISSION: return false;
 	case JT::REJUDGE_SUBMISSION: return false;
-	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: return false;
 	case JT::DELETE_USER: return false;
 	case JT::DELETE_CONTEST: return false;
 	case JT::DELETE_CONTEST_ROUND: return false;
@@ -447,12 +449,12 @@ constexpr inline bool is_submission_job(JobType x) {
 	case JT::JUDGE_SUBMISSION: return true;
 	case JT::REJUDGE_SUBMISSION: return true;
 	case JT::ADD_PROBLEM: return false;
-	case JT::ADD_JUDGE_MODEL_SOLUTION: return false;
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return false;
 	case JT::REUPLOAD_PROBLEM: return false;
-	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return false;
+	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return false;
 	case JT::EDIT_PROBLEM: return false;
 	case JT::DELETE_PROBLEM: return false;
-	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return false;
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: return false;
 	case JT::DELETE_USER: return false;
 	case JT::DELETE_CONTEST: return false;
 	case JT::DELETE_CONTEST_ROUND: return false;
@@ -471,7 +473,7 @@ constexpr inline uint priority(JobType x) {
 	switch (x) {
 	case JT::DELETE_FILE: return 40;
 	case JT::DELETE_PROBLEM: return 30;
-	case JT::CONTEST_PROBLEM_RESELECT_FINAL_SUBMISSIONS: return 30;
+	case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM: return 30;
 	case JT::DELETE_USER: return 30;
 	case JT::DELETE_CONTEST: return 30;
 	case JT::DELETE_CONTEST_ROUND: return 30;
@@ -480,8 +482,8 @@ constexpr inline uint priority(JobType x) {
 	case JT::EDIT_PROBLEM: return 20;
 	case JT::CHANGE_PROBLEM_STATEMENT: return 20;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
-	case JT::ADD_JUDGE_MODEL_SOLUTION: return 15;
-	case JT::REUPLOAD_JUDGE_MODEL_SOLUTION: return 15;
+	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
+	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
 	case JT::ADD_PROBLEM: return 10;
 	case JT::REUPLOAD_PROBLEM: return 10;
 	case JT::JUDGE_SUBMISSION: return 5;
@@ -566,7 +568,7 @@ constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 KiB
 constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
 constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
 
-// Job-server notifying file
+// Job server notifying file
 constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
 constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KiB
