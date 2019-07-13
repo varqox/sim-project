@@ -16,17 +16,17 @@ void DeleteContestRound::run() {
 		                          " FROM contest_rounds r"
 		                          " JOIN contests c ON c.id=r.contest_id"
 		                          " WHERE r.id=?");
-		stmt.bindAndExecute(contest_round_id);
+		stmt.bindAndExecute(contest_round_id_);
 		InplaceBuff<32> cname, cid, rname;
 		stmt.res_bind_all(cname, cid, rname);
 		if (not stmt.next()) {
-			return set_failure("Contest round with id: ", contest_round_id,
+			return set_failure("Contest round with id: ", contest_round_id_,
 			                   " does not exist or the contest hierarchy is "
 			                   "broken (likely the former).");
 		}
 
 		job_log("Contest: ", cname, " (", cid, ')');
-		job_log("Contest round: ", rname, " (", contest_round_id, ')');
+		job_log("Contest round: ", rname, " (", contest_round_id_, ')');
 	}
 
 	// Add jobs to delete submission files
@@ -37,12 +37,12 @@ void DeleteContestRound::run() {
 	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
 	            " FROM submissions WHERE contest_round_id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   contest_round_id);
+	                   contest_round_id_);
 
 	// Delete contest round (all necessary actions will take place thanks to
 	// foreign key constrains)
 	mysql.prepare("DELETE FROM contest_rounds WHERE id=?")
-	   .bindAndExecute(contest_round_id);
+	   .bindAndExecute(contest_round_id_);
 
 	job_done();
 

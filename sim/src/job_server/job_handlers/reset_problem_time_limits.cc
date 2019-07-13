@@ -11,10 +11,10 @@ void ResetProblemTimeLimits::run() {
 	uint64_t problem_file_id;
 	{
 		auto stmt = mysql.prepare("SELECT file_id FROM problems WHERE id=?");
-		stmt.bindAndExecute(problem_id);
+		stmt.bindAndExecute(problem_id_);
 		stmt.res_bind_all(problem_file_id);
 		if (not stmt.next())
-			return set_failure("Problem with ID = ", problem_id,
+			return set_failure("Problem with ID = ", problem_id_,
 			                   " does not exist");
 	}
 
@@ -42,7 +42,7 @@ void ResetProblemTimeLimits::run() {
 		auto entry_name = src_zip.get_name(i);
 		if (entry_name == simfile_path) {
 			dest_zip.file_add(simfile_path,
-			                  dest_zip.source_buffer(new_simfile));
+			                  dest_zip.source_buffer(new_simfile_));
 		} else {
 			dest_zip.file_add(entry_name, dest_zip.source_zip(src_zip, i));
 		}
@@ -59,13 +59,13 @@ void ResetProblemTimeLimits::run() {
 	            ", ?, " JSTATUS_PENDING_STR
 	            ", ?, NULL, '', '' FROM problems WHERE id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date,
-	                   problem_id);
+	                   problem_id_);
 
 	// Use new package as problem file
 	mysql
 	   .prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=? "
 	            "WHERE id=?")
-	   .bindAndExecute(new_file_id, new_simfile, current_date, problem_id);
+	   .bindAndExecute(new_file_id, new_simfile_, current_date, problem_id_);
 
 	job_done();
 

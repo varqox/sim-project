@@ -11,7 +11,7 @@ void JobHandler::job_canceled() {
 	mysql
 	   .prepare("UPDATE jobs SET status=" JSTATUS_CANCELED_STR ", data=?"
 	            " WHERE id=?")
-	   .bindAndExecute(get_log(), job_id);
+	   .bindAndExecute(get_log(), job_id_);
 }
 
 void JobHandler::job_done() {
@@ -20,7 +20,7 @@ void JobHandler::job_done() {
 	mysql
 	   .prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", data=?"
 	            " WHERE id=?")
-	   .bindAndExecute(get_log(), job_id);
+	   .bindAndExecute(get_log(), job_id_);
 }
 
 void JobHandler::job_done(StringView new_info) {
@@ -29,7 +29,7 @@ void JobHandler::job_done(StringView new_info) {
 	mysql
 	   .prepare("UPDATE jobs SET status=" JSTATUS_DONE_STR ", info=?, data=?"
 	            " WHERE id=?")
-	   .bindAndExecute(new_info, get_log(), job_id);
+	   .bindAndExecute(new_info, get_log(), job_id_);
 }
 
 } // namespace job_handlers

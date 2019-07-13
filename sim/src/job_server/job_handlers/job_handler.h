@@ -6,13 +6,13 @@ namespace job_handlers {
 
 class JobHandler {
 private:
-	bool job_failed = false;
+	bool job_failed_ = false;
 
 protected:
-	const uint64_t job_id;
-	InplaceBuff<1 << 14> job_log_holder;
+	const uint64_t job_id_;
+	InplaceBuff<1 << 14> job_log_holder_;
 
-	JobHandler(uint64_t job_id) : job_id(job_id) {}
+	JobHandler(uint64_t job_id) : job_id_(job_id) {}
 
 	JobHandler(const JobHandler&) = delete;
 	JobHandler(JobHandler&&) = delete;
@@ -21,14 +21,14 @@ protected:
 
 	template <class... Args>
 	auto job_log(Args&&... args) {
-		return DoubleAppender<decltype(job_log_holder)>(
-		   stdlog, job_log_holder, std::forward<Args>(args)...);
+		return DoubleAppender<decltype(job_log_holder_)>(
+		   stdlog, job_log_holder_, std::forward<Args>(args)...);
 	}
 
 	template <class... Args>
 	void set_failure(Args&&... args) {
 		job_log(std::forward<Args>(args)...);
-		job_failed = true;
+		job_failed_ = true;
 	}
 
 	template <class Arg1, class... Args>
@@ -46,9 +46,9 @@ protected:
 public:
 	virtual void run() = 0;
 
-	bool failed() const noexcept { return job_failed; }
+	bool failed() const noexcept { return job_failed_; }
 
-	const auto& get_log() const noexcept { return job_log_holder; }
+	const auto& get_log() const noexcept { return job_log_holder_; }
 
 	virtual ~JobHandler() = default;
 };
