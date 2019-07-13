@@ -441,7 +441,7 @@ void Spawner::run_child(FilePath exec,
 	// Signal parent process that child is ready to execute @p exec
 	kill(getpid(), SIGSTOP);
 
-	execvp(exec, (char** const)args);
+	execvp(exec, const_cast<char* const*>(args));
 	int errnum = errno;
 
 	// execvp() failed

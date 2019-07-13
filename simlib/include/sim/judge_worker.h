@@ -360,13 +360,17 @@ public:
 	// [score_cut_lambda * time_limit, time_limit] falls linearly to 0.
 	// For T = time limit, A = score_cut_lambda * T, the plot of score ratio
 	// looks as follows:
-	//   ^
-	//   | score ratio
-	// 1 +--------------*
-	//   |              |\
-	//   |              | \
-	//   |              |  \
-	//   +--------------A---T---> time
+	// +------------------------------------------+
+	// |                                          |
+	// |        ^                                 |
+	// |        | score ratio                     |
+	// |      1 +--------------*                  |
+	// |        |              |\                 |
+	// |        |              | \                |
+	// |        |              |  \               |
+	// |        +--------------A---T---> time     |
+	// |                                          |
+	// +------------------------------------------+
 	double score_cut_lambda = 2.0 / 3; // has to be from [0, 1]
 
 public:

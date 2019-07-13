@@ -498,10 +498,12 @@ Sandbox::Sandbox() {
 		   make_unique<SyscallCallbackVmPeakUpdater>(*this));
 		seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(update_vm_peak_callback_id),
 		                          SCMP_SYS(brk), 0);
-		seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(update_vm_peak_callback_id),
-		                          SCMP_SYS(mmap), 0);
-		seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(update_vm_peak_callback_id),
-		                          SCMP_SYS(mmap2), 0);
+		seccomp_rule_add_both_ctx(
+		   SCMP_ACT_TRACE(update_vm_peak_callback_id), SCMP_SYS(mmap),
+		   0); // TODO: what about mmaping stdin, stdout or stderr
+		seccomp_rule_add_both_ctx(
+		   SCMP_ACT_TRACE(update_vm_peak_callback_id), SCMP_SYS(mmap2),
+		   0); // TODO: what about mmaping stdin, stdout or stderr
 		seccomp_rule_add_both_ctx(SCMP_ACT_TRACE(update_vm_peak_callback_id),
 		                          SCMP_SYS(mremap), 0);
 		// Needed here to reset the fail_counter_
