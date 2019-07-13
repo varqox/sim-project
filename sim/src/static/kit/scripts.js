@@ -29,17 +29,17 @@ function text_to_safe_html(str) {
 	return x.innerHTML;
 }
 function is_logged_in() {
-	return (document.querySelector('.navbar .rightbar .user + ul > a:first-child') !== null);
+	return (document.querySelector('.navbar .user + ul > a:first-child') !== null);
 }
 function logged_user_id() {
-	var x = document.querySelector('.navbar .rightbar .user + ul > a:first-child').href;
+	var x = document.querySelector('.navbar .user + ul > a:first-child').href;
 	return x.substring(x.lastIndexOf('/') + 1);
 }
 function logged_user_is_admin() {
-	return (document.querySelector('.navbar .rightbar .user[user-type="A"]') !== null);
+	return (document.querySelector('.navbar .user[user-type="A"]') !== null);
 }
 function logged_user_is_teacher() {
-	return (document.querySelector('.navbar .rightbar .user[user-type="T"]') !== null);
+	return (document.querySelector('.navbar .user[user-type="T"]') !== null);
 }
 function logged_user_is_teacher_or_admin() {
 	return logged_user_is_teacher() || logged_user_is_admin();
@@ -134,19 +134,6 @@ function server_time() {
 	time.setTime(time.getTime() - server_time.time_difference);
 	return time;
 }
-// Clock
-$(document).ready(function update_clock() {
-	var time = server_time();
-	var hours = time.getHours();
-	var minutes = time.getMinutes();
-	var seconds = time.getSeconds();
-	hours = (hours < 10 ? '0' : '') + hours;
-	minutes = (minutes < 10 ? '0' : '') + minutes;
-	seconds = (seconds < 10 ? '0' : '') + seconds;
-	// Update the displayed time
-	document.getElementById('clock').innerHTML = String().concat(hours, ':', minutes, ':', seconds, tz_marker());
-	setTimeout(update_clock, 1000 - time.getMilliseconds());
-});
 // Produces a span that will update every second and show remaining time
 function countdown_clock(target_date) {
 	var span = $('<span>');
@@ -214,15 +201,10 @@ function copy_to_clipboard_btn(btn_text, text_to_copy) {
 // Handle navbar correct size
 function normalize_navbar() {
 	var navbar = $('.navbar');
-	navbar.css('width', 'auto');
+	navbar.css('position', 'fixed');
 
-	if (navbar.outerWidth() <= $(window).width()) {
-		navbar.css('width', '100%');
-		navbar.css('position', 'fixed');
-	} else {
+	if (navbar.outerWidth() > $(window).width())
 		navbar.css('position', 'absolute');
-		navbar.outerWidth($(document).width());
-	}
 }
 $(document).ready(normalize_navbar);
 $(window).resize(normalize_navbar);
@@ -306,58 +288,58 @@ function StaticMap() {
  * @details It adds proper suffixes, for example:
  *   1 -> "1 byte"
  *   1023 -> "1023 bytes"
- *   1024 -> "1.0 KB"
- *   129747 -> "127 KB"
- *   97379112 -> "92.9 MB"
+ *   1024 -> "1.0 KiB"
+ *   129747 -> "127 KiB"
+ *   97379112 -> "92.9 MiB"
  *
  * @param size size to humanize
  *
  * @return humanized file size
  */
 function humanizeFileSize(size) {
-	var MIN_KB = 1024;
-	var MIN_MB = 1048576;
-	var MIN_GB = 1073741824;
-	var MIN_TB = 1099511627776;
-	var MIN_PB = 1125899906842624;
-	var MIN_EB = 1152921504606846976;
-	var MIN_3DIGIT_KB = 102349;
-	var MIN_3DIGIT_MB = 104805172;
-	var MIN_3DIGIT_GB = 107320495309;
-	var MIN_3DIGIT_TB = 109896187196212;
-	var MIN_3DIGIT_PB = 112533595688920269;
+	var MIN_KIB = 1024;
+	var MIN_MIB = 1048576;
+	var MIN_GIB = 1073741824;
+	var MIN_TIB = 1099511627776;
+	var MIN_PIB = 1125899906842624;
+	var MIN_EIB = 1152921504606846976;
+	var MIN_3DIGIT_KIB = 102349;
+	var MIN_3DIGIT_MIB = 104805172;
+	var MIN_3DIGIT_GIB = 107320495309;
+	var MIN_3DIGIT_TIB = 109896187196212;
+	var MIN_3DIGIT_PIB = 112533595688920269;
 
 	// Bytes
-	if (size < MIN_KB)
+	if (size < MIN_KIB)
 		return (size == 1 ? "1 byte" : size + " bytes");
 
-	// KB
-	if (size < MIN_3DIGIT_KB)
-		return parseFloat(size / MIN_KB).toFixed(1) + " KB";
-	if (size < MIN_MB)
-		return Math.round(size / MIN_KB) + " KB";
-	// MB
-	if (size < MIN_3DIGIT_MB)
-		return parseFloat(size / MIN_MB).toFixed(1) + " MB";
-	if (size < MIN_GB)
-		return Math.round(size / MIN_MB) + " MB";
-	// GB
-	if (size < MIN_3DIGIT_GB)
-		return parseFloat(size / MIN_GB).toFixed(1) + " GB";
-	if (size < MIN_TB)
-		return Math.round(size / MIN_GB) + " GB";
-	// TB
-	if (size < MIN_3DIGIT_TB)
-		return parseFloat(size / MIN_TB).toFixed(1) + " TB";
-	if (size < MIN_PB)
-		return Math.round(size / MIN_TB) + " TB";
-	// PB
-	if (size < MIN_3DIGIT_PB)
-		return parseFloat(size / MIN_PB).toFixed(1) + " PB";
-	if (size < MIN_EB)
-		return Math.round(size / MIN_PB) + " PB";
-	// EB
-	return parseFloat(size / MIN_EB).toFixed(1) + " EB";
+	// KiB
+	if (size < MIN_3DIGIT_KIB)
+		return parseFloat(size / MIN_KIB).toFixed(1) + " KiB";
+	if (size < MIN_MIB)
+		return Math.round(size / MIN_KIB) + " KiB";
+	// MiB
+	if (size < MIN_3DIGIT_MIB)
+		return parseFloat(size / MIN_MIB).toFixed(1) + " MiB";
+	if (size < MIN_GIB)
+		return Math.round(size / MIN_MIB) + " MiB";
+	// GiB
+	if (size < MIN_3DIGIT_GIB)
+		return parseFloat(size / MIN_GIB).toFixed(1) + " GiB";
+	if (size < MIN_TIB)
+		return Math.round(size / MIN_GIB) + " GiB";
+	// TiB
+	if (size < MIN_3DIGIT_TIB)
+		return parseFloat(size / MIN_TIB).toFixed(1) + " TiB";
+	if (size < MIN_PIB)
+		return Math.round(size / MIN_TIB) + " TiB";
+	// PiB
+	if (size < MIN_3DIGIT_PIB)
+		return parseFloat(size / MIN_PIB).toFixed(1) + " PiB";
+	if (size < MIN_EIB)
+		return Math.round(size / MIN_PIB) + " PiB";
+	// EiB
+	return parseFloat(size / MIN_EIB).toFixed(1) + " EiB";
 }
 
 /* ============================ URL hash parser ============================ */
@@ -2867,7 +2849,7 @@ function add_problem(as_modal) {
 						text: 'Contest only',
 					})
 				})
-			)).add(Form.field_group('Memory limit [MB]', {
+			)).add(Form.field_group('Memory limit [MiB]', {
 				type: 'text',
 				name: 'mem_limit',
 				size: 25,
@@ -2949,7 +2931,7 @@ function append_reupload_problem(elem, as_modal, problem) {
 					selected: ('Contest only' == problem.type ? true : undefined)
 				})
 			})
-		)).add(Form.field_group('Memory limit [MB]', {
+		)).add(Form.field_group('Memory limit [MiB]', {
 			type: 'text',
 			name: 'mem_limit',
 			value: problem.memory_limit,
@@ -3024,15 +3006,17 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 		var tags = (hidden ? problem_tags.hidden : problem_tags.public);
 		var tbody = $('<tbody>');
 
-		var add_form = [
-			Form.field_group('Name', {
+		var name_input = $('<input>', {
 				type: 'text',
 				name: 'name',
 				size: 24,
 				// maxlength: 'TODO...'
 				autofocus: true,
 				required: true
-			}),
+		});
+
+		var add_form = [
+			Form.field_group('Name', name_input),
 			$('<input>', {
 				type: 'hidden',
 				name: 'hidden',
@@ -3069,20 +3053,24 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 						var modal = $(this).closest('.modal');
 						modal.fadeOut(150, close_modal.bind(null, modal));
 					}));
+
+				// Focus tag name
+				name_input.focus();
 			})
 		]}));
 
 		var make_row = function(tag) {
+			var name_input = $('<input>', {
+				type: 'text',
+				name: 'name',
+				size: 24,
+				value: tag,
+				// maxlength: 'TODO...'
+				required: true
+			});
+
 			var edit_form = [
-				Form.field_group('Name', {
-					type: 'text',
-					name: 'name',
-					size: 24,
-					value: tag,
-					// maxlength: 'TODO...'
-					autofocus: true,
-					required: true
-				}),
+				Form.field_group('Name', name_input),
 				$('<input>', {
 					type: 'hidden',
 					name: 'old_name',
@@ -3126,7 +3114,7 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 				$('<td>', {text: tag}),
 				$('<td>', {html: [
 					a_view_button(undefined, 'Edit', 'btn-small blue', function() {
-						edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this line
+						edit_form[0].children('input').val(tag); // If one opened edit, typed something and closed edit, it would appear in the next edit without this change
 						modal(ajax_form('Edit tag',
 							'/api/problem/' + problem_id + '/edit/tags/edit_tag',
 							edit_form, function() {
@@ -3155,6 +3143,9 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 								var modal = $(this).closest('.modal');
 								modal.fadeOut(150, close_modal.bind(null, modal));
 							}));
+
+						// Focus tag name
+						name_input.focus();
 					}),
 					a_view_button(undefined, 'Delete', 'btn-small red',
 						dialogue_modal_request.bind(null, 'Delete tag',
@@ -3162,12 +3153,13 @@ function append_problem_tags(elem, problem_id, problem_tags) {
 							'/api/problem/' + problem_id + '/edit/tags/delete_tag',
 							function(_, loader_parent) {
 								show_success_via_loader(loader_parent, 'The tag has been deleted.');
-								row.fadeOut(1000);
+								row.fadeOut(800);
+								setTimeout(function() { row.remove(); }, 800);
 								// Delete tag
 								tags.splice(tags.indexOf(tag), 1);
 								// Close modal
 								var modal = $(this).closest('.modal');
-								modal.fadeOut(150, close_modal.bind(null, modal));
+								modal.fadeOut(250, close_modal.bind(null, modal));
 							}, 'No, go back'))
 				]})
 			]});

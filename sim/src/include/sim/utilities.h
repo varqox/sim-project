@@ -31,8 +31,10 @@ class InfDatetime {
 public:
 	InfDatetime() : type(Type::INF) {}
 
-	template<class T>
-	explicit InfDatetime(T&& str) { from_str(std::forward<T>(str)); }
+	template <class T>
+	explicit InfDatetime(T&& str) {
+		from_str(std::forward<T>(str));
+	}
 
 	InfDatetime(const InfDatetime&) = default;
 	InfDatetime(InfDatetime&&) noexcept = default;
@@ -61,7 +63,7 @@ public:
 	void set_inf() noexcept { type = Type::INF; }
 
 	void set_datetime(CStringView datetime) {
-		 if (isDatetime(datetime)) {
+		if (isDatetime(datetime)) {
 			type = Type::DATE;
 			date = datetime;
 		} else {
@@ -78,15 +80,16 @@ public:
 			set_datetime(str);
 	}
 
-	template<class T>
+	template <class T>
 	std::enable_if_t<std::is_convertible<T, CStringView>::value, void>
 	from_str(T&& str) {
 		return from_str(CStringView(str));
 	}
 
-	template<class T>
+	template <class T>
 	std::enable_if_t<std::is_convertible<T, StringView>::value &&
-		!std::is_convertible<T, CStringView>::value, void>
+	                    !std::is_convertible<T, CStringView>::value,
+	                 void>
 	from_str(T&& str) {
 		auto x = concat<20>(str);
 		return from_str(x.to_cstr());
@@ -106,7 +109,8 @@ public:
 		return str < d.to_str();
 	}
 
-	friend bool operator<(const InfDatetime& d1, const InfDatetime& d2) noexcept {
+	friend bool operator<(const InfDatetime& d1,
+	                      const InfDatetime& d2) noexcept {
 		return d1.to_str() < d2.to_str();
 	}
 
@@ -118,7 +122,8 @@ public:
 		return d < str;
 	}
 
-	friend bool operator>(const InfDatetime& d1, const InfDatetime& d2) noexcept {
+	friend bool operator>(const InfDatetime& d1,
+	                      const InfDatetime& d2) noexcept {
 		return d2 < d1;
 	}
 
@@ -127,22 +132,24 @@ public:
 	}
 
 	friend bool operator<=(StringView str, const InfDatetime& d) noexcept {
-		return not (d < str);
+		return not(d < str);
 	}
 
-	friend bool operator<=(const InfDatetime& d1, const InfDatetime& d2) noexcept {
-		return not (d2 < d1);
+	friend bool operator<=(const InfDatetime& d1,
+	                       const InfDatetime& d2) noexcept {
+		return not(d2 < d1);
 	}
 
 	friend bool operator<=(const InfDatetime& d, StringView str) noexcept {
-		return not (str < d);
+		return not(str < d);
 	}
 
 	friend bool operator>=(StringView str, const InfDatetime& d) noexcept {
 		return d <= str;
 	}
 
-	friend bool operator>=(const InfDatetime& d1, const InfDatetime& d2) noexcept {
+	friend bool operator>=(const InfDatetime& d1,
+	                       const InfDatetime& d2) noexcept {
 		return d2 <= d1;
 	}
 

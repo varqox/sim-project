@@ -9,13 +9,13 @@ using std::string;
 using std::vector;
 
 #if 0
-# warning "Before committing disable this debug"
-# define DEBUG_CSH(...) __VA_ARGS__
-# include <cassert>
-# undef throw_assert
-# define throw_assert assert
+#warning "Before committing disable this debug"
+#define DEBUG_CSH(...) __VA_ARGS__
+#include <cassert>
+#undef throw_assert
+#define throw_assert assert
 #else
-# define DEBUG_CSH(...)
+#define DEBUG_CSH(...)
 #endif
 
 typedef int8_t StyleType;
@@ -41,207 +41,210 @@ struct Word {
 	uint8_t size;
 	Style style;
 
-	template<uint8_t N>
-	constexpr Word(const char(&s)[N], Style stl) : str(s), size(N - 1),
-		style(stl) {}
+	template <uint8_t N>
+	constexpr Word(const char (&s)[N], Style stl)
+	   : str(s), size(N - 1), style(stl) {}
 };
 
 constexpr array<meta::string, 11> begin_style {{
-	{"<span style=\"color:#00a000\">"},
-	{"<span style=\"color:#a0a0a0\">"},
-	{"<span style=\"color:#0000ff;font-weight:bold\">"},
-	{"<span style=\"color:#c90049;font-weight:bold;\">"},
-	{"<span style=\"color:#ff0000\">"},
-	{"<span style=\"color:#e0a000\">"},
-	{"<span style=\"color:#d923e9\">"},
-	{"<span style=\"color:#d923e9\">"},
-	{"<span style=\"color:#a800ff\">"},
-	{"<span style=\"color:#0086b3\">"},
-	{"<span style=\"color:#515125\">"},
+   {"<span style=\"color:#00a000\">"},
+   {"<span style=\"color:#a0a0a0\">"},
+   {"<span style=\"color:#0000ff;font-weight:bold\">"},
+   {"<span style=\"color:#c90049;font-weight:bold;\">"},
+   {"<span style=\"color:#ff0000\">"},
+   {"<span style=\"color:#e0a000\">"},
+   {"<span style=\"color:#d923e9\">"},
+   {"<span style=\"color:#d923e9\">"},
+   {"<span style=\"color:#a800ff\">"},
+   {"<span style=\"color:#0086b3\">"},
+   {"<span style=\"color:#515125\">"},
 }};
 
 constexpr CStringView end_style = "</span>";
 
 constexpr array<Word, 124> words {{
-	{"", COMMENT}, // Guard - ignored
-	{"uint_least16_t", BUILTIN_TYPE},
-	{"uint_least32_t", BUILTIN_TYPE},
-	{"uint_least64_t", BUILTIN_TYPE},
-	{"uint_fast16_t", BUILTIN_TYPE},
-	{"uint_fast64_t", BUILTIN_TYPE},
-	{"uint_least8_t", BUILTIN_TYPE},
-	{"int_least16_t", BUILTIN_TYPE},
-	{"int_least32_t", BUILTIN_TYPE},
-	{"int_least64_t", BUILTIN_TYPE},
-	{"uint_fast32_t", BUILTIN_TYPE},
-	{"uint_fast8_t", BUILTIN_TYPE},
-	{"int_fast16_t", BUILTIN_TYPE},
-	{"int_least8_t", BUILTIN_TYPE},
-	{"int_fast32_t", BUILTIN_TYPE},
-	{"int_fast64_t", BUILTIN_TYPE},
-	{"int_fast8_t", BUILTIN_TYPE},
-	{"_Char16_t", BUILTIN_TYPE},
-	{"_Char32_t", BUILTIN_TYPE},
-	{"uintptr_t", BUILTIN_TYPE},
-	{"uintmax_t", BUILTIN_TYPE},
-	{"wint_t", BUILTIN_TYPE},
-	{"wctrans_t", BUILTIN_TYPE},
-	{"unsigned", BUILTIN_TYPE},
-	{"uint16_t", BUILTIN_TYPE},
-	{"uint32_t", BUILTIN_TYPE},
-	{"uint64_t", BUILTIN_TYPE},
-	{"intmax_t", BUILTIN_TYPE},
-	{"wctype_t", BUILTIN_TYPE},
-	{"intptr_t", BUILTIN_TYPE},
-	{"wchar_t", BUILTIN_TYPE},
-	{"uint8_t", BUILTIN_TYPE},
-	{"int16_t", BUILTIN_TYPE},
-	{"int32_t", BUILTIN_TYPE},
-	{"int64_t", BUILTIN_TYPE},
-	{"wchar_t", BUILTIN_TYPE},
-	{"double", BUILTIN_TYPE},
-	{"signed", BUILTIN_TYPE},
-	{"size_t", BUILTIN_TYPE},
-	{"time_t", BUILTIN_TYPE},
-	{"int8_t", BUILTIN_TYPE},
-	{"short", BUILTIN_TYPE},
-	{"float", BUILTIN_TYPE},
-	{"void", BUILTIN_TYPE},
-	{"char", BUILTIN_TYPE},
-	{"bool", BUILTIN_TYPE},
-	{"long", BUILTIN_TYPE},
-	{"int", BUILTIN_TYPE},
-	{"nullptr_t", BUILTIN_TYPE},
-	{"auto", BUILTIN_TYPE},
-	{"align_union", KEYWORD},
-	{"alignof", KEYWORD},
-	{"and", KEYWORD},
-	{"and_eq", KEYWORD},
-	{"asm", KEYWORD},
-	{"bitand", KEYWORD},
-	{"bitor", KEYWORD},
-	{"break", KEYWORD},
-	{"case", KEYWORD},
-	{"catch", KEYWORD},
-	{"class", KEYWORD},
-	{"compl", KEYWORD},
-	{"const", KEYWORD},
-	{"const_cast", KEYWORD},
-	{"constexpr", KEYWORD},
-	{"continue", KEYWORD},
-	{"decltype", KEYWORD},
-	{"default", KEYWORD},
-	{"delete", KEYWORD},
-	{"do", KEYWORD},
-	{"dynamic_cast", KEYWORD},
-	{"else", KEYWORD},
-	{"enum", KEYWORD},
-	{"explicit", KEYWORD},
-	{"export", KEYWORD},
-	{"extern", KEYWORD},
-	{"final", KEYWORD},
-	{"for", KEYWORD},
-	{"friend", KEYWORD},
-	{"goto", KEYWORD},
-	{"if", KEYWORD},
-	{"import", KEYWORD},
-	{"inline", KEYWORD},
-	{"mutable", KEYWORD},
-	{"namespace", KEYWORD},
-	{"new", KEYWORD},
-	{"noexcept", KEYWORD},
-	{"not", KEYWORD},
-	{"not_eq", KEYWORD},
-	{"nullptr", KEYWORD},
-	{"operator", KEYWORD},
-	{"or", KEYWORD},
-	{"or_eq", KEYWORD},
-	{"override", KEYWORD},
-	{"private", KEYWORD},
-	{"protected", KEYWORD},
-	{"public", KEYWORD},
-	{"register", KEYWORD},
-	{"reinterpret_cast", KEYWORD},
-	{"return", KEYWORD},
-	{"sizeof", KEYWORD},
-	{"static", KEYWORD},
-	{"static_assert", KEYWORD},
-	{"static_cast", KEYWORD},
-	{"struct", KEYWORD},
-	{"switch", KEYWORD},
-	{"template", KEYWORD},
-	{"this", KEYWORD},
-	{"throw", KEYWORD},
-	{"try", KEYWORD},
-	{"typedef", KEYWORD},
-	{"typeid", KEYWORD},
-	{"typename", KEYWORD},
-	{"union", KEYWORD},
-	{"using", KEYWORD},
-	{"virtual", KEYWORD},
-	{"volatile", KEYWORD},
-	{"while", KEYWORD},
-	{"xor", KEYWORD},
-	{"xor_eq", KEYWORD},
-	{"true", CONSTANT},
-	{"false", CONSTANT},
-	{"NULL", CONSTANT},
-	{"nullptr", CONSTANT},
+   {"", COMMENT}, // Guard - ignored
+   {"uint_least16_t", BUILTIN_TYPE},
+   {"uint_least32_t", BUILTIN_TYPE},
+   {"uint_least64_t", BUILTIN_TYPE},
+   {"uint_fast16_t", BUILTIN_TYPE},
+   {"uint_fast64_t", BUILTIN_TYPE},
+   {"uint_least8_t", BUILTIN_TYPE},
+   {"int_least16_t", BUILTIN_TYPE},
+   {"int_least32_t", BUILTIN_TYPE},
+   {"int_least64_t", BUILTIN_TYPE},
+   {"uint_fast32_t", BUILTIN_TYPE},
+   {"uint_fast8_t", BUILTIN_TYPE},
+   {"int_fast16_t", BUILTIN_TYPE},
+   {"int_least8_t", BUILTIN_TYPE},
+   {"int_fast32_t", BUILTIN_TYPE},
+   {"int_fast64_t", BUILTIN_TYPE},
+   {"int_fast8_t", BUILTIN_TYPE},
+   {"_Char16_t", BUILTIN_TYPE},
+   {"_Char32_t", BUILTIN_TYPE},
+   {"uintptr_t", BUILTIN_TYPE},
+   {"uintmax_t", BUILTIN_TYPE},
+   {"wint_t", BUILTIN_TYPE},
+   {"wctrans_t", BUILTIN_TYPE},
+   {"unsigned", BUILTIN_TYPE},
+   {"uint16_t", BUILTIN_TYPE},
+   {"uint32_t", BUILTIN_TYPE},
+   {"uint64_t", BUILTIN_TYPE},
+   {"intmax_t", BUILTIN_TYPE},
+   {"wctype_t", BUILTIN_TYPE},
+   {"intptr_t", BUILTIN_TYPE},
+   {"wchar_t", BUILTIN_TYPE},
+   {"uint8_t", BUILTIN_TYPE},
+   {"int16_t", BUILTIN_TYPE},
+   {"int32_t", BUILTIN_TYPE},
+   {"int64_t", BUILTIN_TYPE},
+   {"wchar_t", BUILTIN_TYPE},
+   {"double", BUILTIN_TYPE},
+   {"signed", BUILTIN_TYPE},
+   {"size_t", BUILTIN_TYPE},
+   {"time_t", BUILTIN_TYPE},
+   {"int8_t", BUILTIN_TYPE},
+   {"short", BUILTIN_TYPE},
+   {"float", BUILTIN_TYPE},
+   {"void", BUILTIN_TYPE},
+   {"char", BUILTIN_TYPE},
+   {"bool", BUILTIN_TYPE},
+   {"long", BUILTIN_TYPE},
+   {"int", BUILTIN_TYPE},
+   {"nullptr_t", BUILTIN_TYPE},
+   {"auto", BUILTIN_TYPE},
+   {"align_union", KEYWORD},
+   {"alignof", KEYWORD},
+   {"and", KEYWORD},
+   {"and_eq", KEYWORD},
+   {"asm", KEYWORD},
+   {"bitand", KEYWORD},
+   {"bitor", KEYWORD},
+   {"break", KEYWORD},
+   {"case", KEYWORD},
+   {"catch", KEYWORD},
+   {"class", KEYWORD},
+   {"compl", KEYWORD},
+   {"const", KEYWORD},
+   {"const_cast", KEYWORD},
+   {"constexpr", KEYWORD},
+   {"continue", KEYWORD},
+   {"decltype", KEYWORD},
+   {"default", KEYWORD},
+   {"delete", KEYWORD},
+   {"do", KEYWORD},
+   {"dynamic_cast", KEYWORD},
+   {"else", KEYWORD},
+   {"enum", KEYWORD},
+   {"explicit", KEYWORD},
+   {"export", KEYWORD},
+   {"extern", KEYWORD},
+   {"final", KEYWORD},
+   {"for", KEYWORD},
+   {"friend", KEYWORD},
+   {"goto", KEYWORD},
+   {"if", KEYWORD},
+   {"import", KEYWORD},
+   {"inline", KEYWORD},
+   {"mutable", KEYWORD},
+   {"namespace", KEYWORD},
+   {"new", KEYWORD},
+   {"noexcept", KEYWORD},
+   {"not", KEYWORD},
+   {"not_eq", KEYWORD},
+   {"nullptr", KEYWORD},
+   {"operator", KEYWORD},
+   {"or", KEYWORD},
+   {"or_eq", KEYWORD},
+   {"override", KEYWORD},
+   {"private", KEYWORD},
+   {"protected", KEYWORD},
+   {"public", KEYWORD},
+   {"register", KEYWORD},
+   {"reinterpret_cast", KEYWORD},
+   {"return", KEYWORD},
+   {"sizeof", KEYWORD},
+   {"static", KEYWORD},
+   {"static_assert", KEYWORD},
+   {"static_cast", KEYWORD},
+   {"struct", KEYWORD},
+   {"switch", KEYWORD},
+   {"template", KEYWORD},
+   {"this", KEYWORD},
+   {"throw", KEYWORD},
+   {"try", KEYWORD},
+   {"typedef", KEYWORD},
+   {"typeid", KEYWORD},
+   {"typename", KEYWORD},
+   {"union", KEYWORD},
+   {"using", KEYWORD},
+   {"virtual", KEYWORD},
+   {"volatile", KEYWORD},
+   {"while", KEYWORD},
+   {"xor", KEYWORD},
+   {"xor_eq", KEYWORD},
+   {"true", CONSTANT},
+   {"false", CONSTANT},
+   {"NULL", CONSTANT},
+   {"nullptr", CONSTANT},
 }};
 
 } // anonymous namespace
 
 /* Some ugly meta programming used to extract KEYWORDS from words */
 
-template<size_t N>
+template <size_t N>
 constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
-	return (idx == N ? 0 :
-		(arr[idx].style == KEYWORD) + count_keywords(arr, idx + 1));
+	return (idx == N
+	           ? 0
+	           : (arr[idx].style == KEYWORD) + count_keywords(arr, idx + 1));
 }
 
-template<size_t N, size_t... Idx>
-constexpr array<meta::string, N> extract_keywords_from_append(
-	const array<meta::string, N>& base, meta::string x,
-	std::integer_sequence<size_t, Idx...>)
-{
+template <size_t N, size_t... Idx>
+constexpr array<meta::string, N>
+extract_keywords_from_append(const array<meta::string, N>& base, meta::string x,
+                             std::integer_sequence<size_t, Idx...>) {
 	return {{base[Idx]..., x}};
 }
 
-template<size_t N, size_t RES_N, size_t RES_END>
-constexpr std::enable_if_t<
-	RES_END >= RES_N, array<meta::string, RES_N>>
-	extract_keywords_from(const array<Word, N>&,
-	const array<meta::string, RES_N>& res = {}, size_t = 0)
-{
+template <size_t N, size_t RES_N, size_t RES_END>
+constexpr std::enable_if_t<RES_END >= RES_N, array<meta::string, RES_N>>
+extract_keywords_from(const array<Word, N>&,
+                      const array<meta::string, RES_N>& res = {}, size_t = 0) {
 	return res;
 }
 
-template<size_t N, size_t RES_N, size_t RES_END = 0>
-constexpr std::enable_if_t<
-	RES_END < RES_N, array<meta::string, RES_N>>
-	extract_keywords_from(const array<Word, N>& arr,
-	const array<meta::string, RES_N>& res, size_t idx = 0)
-{
-	return (idx == N ? res : (arr[idx].style == KEYWORD ?
-		extract_keywords_from<N, RES_N, RES_END + 1>(
-			arr, extract_keywords_from_append(res,
-				{arr[idx].str, arr[idx].size},
-				std::make_integer_sequence<size_t, RES_END>{}),
-			idx + 1)
-		: extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
+template <size_t N, size_t RES_N, size_t RES_END = 0>
+   constexpr std::enable_if_t <
+   RES_END<RES_N, array<meta::string, RES_N>>
+   extract_keywords_from(const array<Word, N>& arr,
+                         const array<meta::string, RES_N>& res,
+                         size_t idx = 0) {
+	return (
+	   idx == N
+	      ? res
+	      : (arr[idx].style == KEYWORD
+	            ? extract_keywords_from<N, RES_N, RES_END + 1>(
+	                 arr,
+	                 extract_keywords_from_append(
+	                    res, {arr[idx].str, arr[idx].size},
+	                    std::make_integer_sequence<size_t, RES_END> {}),
+	                 idx + 1)
+	            : extract_keywords_from<N, RES_N, RES_END>(arr, res, idx + 1)));
 }
 
 static constexpr auto cpp_keywords =
-	extract_keywords_from<words.size(), count_keywords(words)>(words, {});
+   extract_keywords_from<words.size(), count_keywords(words)>(words, {});
 
 // Important: elements have to be sorted!
 static_assert(meta::is_sorted(cpp_keywords),
-	"cpp_keywords has to be sorted, fields in words with style KEYWORD are "
-	"probably unsorted");
+              "cpp_keywords has to be sorted, fields in words with style "
+              "KEYWORD are probably unsorted");
 
 CppSyntaxHighlighter::CppSyntaxHighlighter() {
-	static_assert(words[0].size == 0, "First (zero) element of words is a guard"
-		" - because Aho-Corasick implementation takes only positive IDs");
+	static_assert(words[0].size == 0,
+	              "First (zero) element of words is a guard - because "
+	              "Aho-Corasick implementation takes only positive IDs");
 	for (uint i = 1; i < words.size(); ++i)
 		aho.addPattern({words[i].str, words[i].size}, i);
 
@@ -293,26 +296,24 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	str.insert(str.end(), std::max(0, END_GUARDS - 1), GUARD_CHARACTER);
 	DEBUG_CSH(stdlog("end: ", end);)
 
-	vector<StyleType> begs(str.size(), -1); // here beginnings of styles are
-	                                        // marked
-	vector<int8_t> ends(str.size() + 1); // ends[i] = # of endings (of styles)
-	                                     // JUST BEFORE str[i]
+	vector<StyleType> begs(str.size(),
+	                       -1); // here beginnings of styles are marked
+	vector<int8_t> ends(
+	   str.size() + 1); // ends[i] = # of endings (of styles) JUST BEFORE str[i]
 
 	/* Mark comments string / character literals */
 
 	for (int i = BEGIN; i < end; ++i) {
 		// Comments
 		if (str[i] == '/') {
-			// (One-)line comment
-			if (str[i + 1] == '/') {
+			if (str[i + 1] == '/') { // (One-)line comment
 				begs[i] = COMMENT;
 				i += 2;
 				while (i < end && str[i] != '\n')
 					++i;
 				++ends[i];
 
-			// Multi-line comment
-			} else if (str[i + 1] == '*') {
+			} else if (str[i + 1] == '*') { // Multi-line comment
 				begs[i] = COMMENT;
 				i += 3;
 				while (i < end && !(str[i - 1] == '*' && str[i] == '/'))
@@ -338,9 +339,10 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				begs[i++] = ESCAPED_CHARACTER;
 
 				// Octals
-				if (isdigit(str[i]))
-					i += (isdigit(str[i + 1]) ?
-						1 + bool(isdigit(str[i + 2])) : 0);
+				if (isdigit(str[i])) {
+					i += (isdigit(str[i + 1]) ? 1 + bool(isdigit(str[i + 2]))
+					                          : 0);
+				}
 				// Hexadecimal
 				else if (str[i] == 'x')
 					i += 2;
@@ -363,8 +365,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		// i iterates over str, j iterates over input
 		for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 			while (str[i] != input[j]) {
-				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
-					&& input[j + 1] == '\n');
+				throw_assert(input[j] == '\\' && j + 1 < (int)input.size() &&
+				             input[j + 1] == '\n');
 				j += 2;
 				++line;
 			}
@@ -387,30 +389,18 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				tmplog("\033[1;32m", (int)ends[i], "\033[m, ");
 
 			switch (begs[i]) {
-			case -1:
-				tmplog("-1"); break;
-			case PREPROCESSOR:
-				tmplog("PREPROCESSOR"); break;
-			case COMMENT:
-				tmplog("COMMENT"); break;
-			case BUILTIN_TYPE:
-				tmplog("BUILTIN_TYPE"); break;
-			case KEYWORD:
-				tmplog("KEYWORD"); break;
-			case STRING_LITERAL:
-				tmplog("STRING_LITERAL"); break;
-			case CHARACTER:
-				tmplog("CHARACTER"); break;
-			case ESCAPED_CHARACTER:
-				tmplog("ESCAPED_CHARACTER"); break;
-			case DIGIT:
-				tmplog("DIGIT"); break;
-			case CONSTANT:
-				tmplog("CONSTANT"); break;
-			case FUNCTION:
-				tmplog("FUNCTION"); break;
-			case OPERATOR:
-				tmplog("OPERATOR"); break;
+			case -1: tmplog("-1"); break;
+			case PREPROCESSOR: tmplog("PREPROCESSOR"); break;
+			case COMMENT: tmplog("COMMENT"); break;
+			case BUILTIN_TYPE: tmplog("BUILTIN_TYPE"); break;
+			case KEYWORD: tmplog("KEYWORD"); break;
+			case STRING_LITERAL: tmplog("STRING_LITERAL"); break;
+			case CHARACTER: tmplog("CHARACTER"); break;
+			case ESCAPED_CHARACTER: tmplog("ESCAPED_CHARACTER"); break;
+			case DIGIT: tmplog("DIGIT"); break;
+			case CONSTANT: tmplog("CONSTANT"); break;
+			case FUNCTION: tmplog("FUNCTION"); break;
+			case OPERATOR: tmplog("OPERATOR"); break;
 			default: tmplog("???");
 			}
 
@@ -434,8 +424,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		if (styles_depth > 0)
 			continue;
 
-		// Preprocessor
-		if (str[i] == '#') {
+		if (str[i] == '#') { // Preprocessor
 			begs[i] = PREPROCESSOR;
 			do {
 				++i;
@@ -446,8 +435,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 			++ends[i];
 
-		// Function
-		} else if (str[i] == '(' && i) {
+		} else if (str[i] == '(' && i) { // Function
 			int k = i - 1;
 			// Omit white-spaces between function name and '('
 			static_assert(BEGIN_GUARDS > 0, "Need for unguarded search");
@@ -475,13 +463,13 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				// It is important that function_name is taken as StringView
 				// below!
 				begs[k] = (std::binary_search(cpp_keywords.begin(),
-						cpp_keywords.end(), function_name)
-					? KEYWORD : FUNCTION);
+				                              cpp_keywords.end(), function_name)
+				              ? KEYWORD
+				              : FUNCTION);
 				++ends[name_end];
 			}
 
-		// Digits - numeric literals
-		} else if (isdigit(str[i])) {
+		} else if (isdigit(str[i])) { // Digits - numeric literals
 			static_assert(BEGIN_GUARDS > 0, "");
 			// Ignore digits in names
 			if (isName(str[i - 1]))
@@ -494,7 +482,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 			// Number begins with dot
 			bool dot_appeared = false, dot_as_beginning = false,
-				exponent_appeared = false;
+			     exponent_appeared = false;
 			if (str[i - 1] == '.') {
 				dot_as_beginning = dot_appeared = true;
 				begs[i - 1] = DIGIT;
@@ -514,8 +502,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 					dot_as_beginning = dot_appeared = true;
 					++k;
 
-				// Disallow numeric literal "0x"
-				} else if (!is_digit(str[k])) {
+				} else if (!is_digit(str[k])) { // Disallow numeric literal "0x"
 					begs[i - dot_as_beginning] = -1;
 					i = k - 1;
 					continue;
@@ -528,42 +515,38 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				if (is_digit(str[k]))
 					continue;
 
-				// Dot
-				if (str[k] == '.') {
+				if (str[k] == '.') { // Dot
 					// Disallow double dot and double exponent
 					if (dot_appeared || exponent_appeared)
 						goto kill_try;
 
 					dot_appeared = true;
 
-				// Exponent
-				} else if (tolower(str[k]) == exp_sign) {
+				} else if (tolower(str[k]) == exp_sign) { // Exponent
 					// Do not allow cases like: 0.1e1e or .e2
 					if (exponent_appeared ||
-						(str[k - 1] == '.' && dot_as_beginning))
-					{
+					    (str[k - 1] == '.' && dot_as_beginning)) {
 						goto kill_try;
 					}
 
 					exponent_appeared = true;
 
-				// Sign after exponent
 				} else if (str[k - 1] == exp_sign &&
-				(str[k] == '-' || str[k] == '+'))
-				{
+				           (str[k] == '-' ||
+				            str[k] == '+')) { // Sign after exponent
 					continue;
 
-				} else
+				} else {
 					break;
+				}
 			}
 
 			// Ignore invalid numeric literals
 			if ((str[k - 1] == '.' && dot_as_beginning) ||
-				// In floating-point hexadecimals exponent has to appear
-				(exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
-				// Allow literals like: "111."
-				(str[k - 1] != '.' && !is_digit(str[k - 1])))
-			{
+			    // In floating-point hexadecimals exponent has to appear
+			    (exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
+			    // Allow literals like: "111."
+			    (str[k - 1] != '.' && !is_digit(str[k - 1]))) {
 			kill_try:
 				// dot_as_beginning does not imply beg[i - 1] in hexadecimals
 				begs[i - (dot_as_beginning && exp_sign == 'e')] = -1;
@@ -576,9 +559,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			static_assert(END_GUARDS > 0, "");
 			// Float-point: (f|l)
 			if (dot_appeared || exponent_appeared) {
-				if (str[i] == 'f' || str[i] == 'F' ||
-					str[i] == 'l' || str[i] == 'L')
-				{
+				if (str[i] == 'f' || str[i] == 'F' || str[i] == 'l' ||
+				    str[i] == 'L') {
 					++i;
 				}
 				++ends[i];
@@ -623,15 +605,15 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	auto isOperator = [](unsigned char c) {
 		// In xxx are marked characters from "!%&()*+,-./:;<=>?[\\]^{|}~";
 		constexpr array<bool, 128> xxx {{
-		//      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-		/* 0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		/* 1 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		/* 2 */ 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-		/* 3 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-		/* 4 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		/* 5 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
-		/* 6 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		/* 7 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+		   //      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+		   /* 0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   /* 1 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   /* 2 */ 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+		   /* 3 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+		   /* 4 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   /* 5 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+		   /* 6 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		   /* 7 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
 		}};
 		return (c < 128 && xxx[c]);
 	};
@@ -647,15 +629,14 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 		auto aho_res = aho.searchIn(substring(str, beg, endi));
 		// Handle last one to eliminate right boundary checks
-		for (int i = endi - 1; i >= beg; ) {
+		for (int i = endi - 1; i >= beg;) {
 			int k = aho.pattId(aho_res[i - beg]), j;
 
 			static_assert(BEGIN_GUARDS > 0, "");
 			static_assert(END_GUARDS > 0, "");
 			// Found a word
 			if (k && !isName(str[i + 1]) &&
-				!isName(str[j = i - words[k].size]))
-			{
+			    !isName(str[j = i - words[k].size])) {
 				DEBUG_CSH(stdlog("aho: ", j + 1, ": ", words[k].str);)
 				begs[j + 1] = words[k].style;
 				++ends[i + 1];
@@ -695,8 +676,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	/* Parse styles and produce result */
 
 	string res = "<table class=\"code-view\">"
-		"<tbody>"
-		"<tr><td id=\"L1\" line=\"1\"></td><td>";
+	             "<tbody>"
+	             "<tr><td id=\"L1\" line=\"1\"></td><td>";
 	// Stack of styles (needed to properly break on '\n')
 	vector<StyleType> style_stack;
 	int first_unescaped = BEGIN;
@@ -734,8 +715,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				res += end_style;
 			// Handle "\\\n"
 			do {
-				throw_assert(input[j] == '\\' && j + 1 < (int)input.size()
-					&& input[j + 1] == '\n');
+				throw_assert(input[j] == '\\' && j + 1 < (int)input.size() &&
+				             input[j + 1] == '\n');
 
 				auto line_str = toStr(++line);
 				// When we were ending styles (somewhere above), there can be
@@ -744,9 +725,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				// very rare situation and gives little profit at the expense of
 				// a not pretty if statement
 				back_insert(res, begin_style[OPERATOR], '\\', end_style,
-					"\n</td></tr>"
-					"<tr><td id=\"L", line_str, "\" line=\"", line_str,
-						"\"></td><td>");
+				            "\n</td></tr><tr><td id=\"L", line_str,
+				            "\" line=\"", line_str, "\"></td><td>");
 			} while (str[i] != input[j += 2]);
 
 			// Restore styles
@@ -763,9 +743,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				res += end_style;
 			// Break the line
 			auto line_str = toStr(++line);
-			back_insert(res, "\n</td></tr>"
-				"<tr><td id=\"L", line_str, "\" line=\"", line_str,
-					"\"></td><td>");
+			back_insert(res, "\n</td></tr><tr><td id=\"L", line_str,
+			            "\" line=\"", line_str, "\"></td><td>");
 			// Restore styles
 			for (StyleType style : style_stack)
 				res += begin_style[style];
@@ -788,9 +767,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		while (ends[i]--)
 			res += end_style;
 	// End table
-	res += "</td></tr>"
-			"</tbody>"
-		"</table>";
+	res += "</td></tr></tbody></table>";
 
 	return res;
 }
