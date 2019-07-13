@@ -16,11 +16,11 @@ void ChangeProblemStatement::run() {
 	{
 		auto stmt = mysql.prepare("SELECT file_id, simfile FROM problems"
 		                          " WHERE id=?");
-		stmt.bindAndExecute(problem_id);
+		stmt.bindAndExecute(problem_id_);
 		InplaceBuff<1> simfile_str;
 		stmt.res_bind_all(problem_file_id, simfile_str);
 		if (not stmt.next()) {
-			return set_failure("Problem with ID = ", problem_id,
+			return set_failure("Problem with ID = ", problem_id_,
 			                   " does not exist");
 		}
 
@@ -37,22 +37,23 @@ void ChangeProblemStatement::run() {
 	// Replace old statement with new statement
 
 	// Escape info.new_statement_path
-	if (info.new_statement_path.empty())
-		info.new_statement_path = simfile.statement;
+	if (info_.new_statement_path.empty())
+		info_.new_statement_path = simfile.statement;
 	else
-		info.new_statement_path = abspath(info.new_statement_path).erase(0, 1);
+		info_.new_statement_path =
+		   abspath(info_.new_statement_path).erase(0, 1);
 
 	ZipFile src_zip(pkg_path, ZIP_RDONLY);
 	auto master_dir = sim::zip_package_master_dir(src_zip);
 	auto old_statement_path = concat(master_dir, simfile.statement);
-	auto new_statement_path = concat(master_dir, info.new_statement_path);
+	auto new_statement_path = concat(master_dir, info_.new_statement_path);
 	auto simfile_path = concat(master_dir, "Simfile");
 	if (new_statement_path == simfile_path) {
 		return set_failure(
 		   "Invalid new statement path - it would overwrite Simfile");
 	}
 
-	simfile.statement = info.new_statement_path;
+	simfile.statement = info_.new_statement_path;
 	auto simfile_str = simfile.dump();
 
 	FileRemover new_pkg_remover(new_pkg_path);
@@ -70,7 +71,7 @@ void ChangeProblemStatement::run() {
 
 	// Add new statement file entry
 	dest_zip.file_add(new_statement_path,
-	                  dest_zip.source_file(internal_file_path(job_file_id)));
+	                  dest_zip.source_file(internal_file_path(job_file_id_)));
 
 	dest_zip.close(); // Write all data to the dest_zip
 
@@ -83,15 +84,15 @@ void ChangeProblemStatement::run() {
 	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM problems"
 	            " WHERE id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date,
-	                   problem_id);
+	                   problem_id_);
 
 	// Use new package as problem file
 	mysql
 	   .prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=?"
 	            " WHERE id=?")
-	   .bindAndExecute(new_file_id, simfile_str, current_date, problem_id);
+	   .bindAndExecute(new_file_id, simfile_str, current_date, problem_id_);
 
-	job_done(intentionalUnsafeStringView(info.dump()));
+	job_done(intentionalUnsafeStringView(info_.dump()));
 
 	transaction.commit();
 	new_pkg_remover.cancel();

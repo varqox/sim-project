@@ -13,7 +13,7 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(
 
 	load_problem_package(package_path);
 
-	auto& simfile = jworker.simfile();
+	auto& simfile = jworker_.simfile();
 	simfile
 	   .load_all(); // Everything is needed as we will dump it to Simfile file
 	job_log("Model solution: ", simfile.solutions[0]);
@@ -30,10 +30,10 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(
 	job_log("Judging...");
 
 	sim::VerboseJudgeLogger logger(true);
-	sim::JudgeReport initial_rep = jworker.judge(false, logger);
+	sim::JudgeReport initial_rep = jworker_.judge(false, logger);
 	job_log("Initial judge report: ", initial_rep.judge_log);
 
-	sim::JudgeReport final_rep = jworker.judge(true, logger);
+	sim::JudgeReport final_rep = jworker_.judge(true, logger);
 	job_log("Final judge report: ", final_rep.judge_log);
 
 	try {
@@ -48,7 +48,7 @@ void ResetTimeLimitsInProblemPackageBase::reset_package_time_limits(
 		return set_failure("Conver failed: ", e.what());
 	}
 
-	new_simfile = simfile.dump();
+	new_simfile_ = simfile.dump();
 }
 
 } // namespace job_handlers

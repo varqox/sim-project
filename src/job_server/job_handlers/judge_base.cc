@@ -3,9 +3,9 @@
 namespace job_handlers {
 
 JudgeBase::JudgeBase() {
-	jworker.checker_time_limit = CHECKER_TIME_LIMIT;
-	jworker.checker_memory_limit = CHECKER_MEMORY_LIMIT;
-	jworker.score_cut_lambda = SCORE_CUT_LAMBDA;
+	jworker_.checker_time_limit = CHECKER_TIME_LIMIT;
+	jworker_.checker_memory_limit = CHECKER_MEMORY_LIMIT;
+	jworker_.score_cut_lambda = SCORE_CUT_LAMBDA;
 }
 
 sim::SolutionLanguage JudgeBase::to_sol_lang(SubmissionLanguage lang) {
@@ -166,7 +166,7 @@ void JudgeBase::load_problem_package(FilePath problem_pkg_path) {
 
 	auto tmplog = job_log("Loading problem package...");
 	tmplog.flush_no_nl();
-	jworker.load_package(problem_pkg_path, std::nullopt);
+	jworker_.load_package(problem_pkg_path, std::nullopt);
 	tmplog(" done.");
 }
 
@@ -183,7 +183,7 @@ JudgeBase::compile_solution_impl(FilePath solution_path,
 	tmplog.flush_no_nl();
 
 	std::string compilation_errors;
-	if ((jworker.*compile_method)(
+	if ((jworker_.*compile_method)(
 	       solution_path, lang, SOLUTION_COMPILATION_TIME_LIMIT,
 	       &compilation_errors, COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
 		tmplog(" failed:\n", compilation_errors);
@@ -218,9 +218,9 @@ Optional<std::string> JudgeBase::compile_checker() {
 	tmplog.flush_no_nl();
 
 	std::string compilation_errors;
-	if (jworker.compile_checker(SOLUTION_COMPILATION_TIME_LIMIT,
-	                            &compilation_errors,
-	                            COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
+	if (jworker_.compile_checker(SOLUTION_COMPILATION_TIME_LIMIT,
+	                             &compilation_errors,
+	                             COMPILATION_ERRORS_MAX_LENGTH, PROOT_PATH)) {
 		tmplog(" failed:\n", compilation_errors);
 		return compilation_errors;
 	}

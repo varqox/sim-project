@@ -13,7 +13,7 @@ void DeleteProblem::run() {
 	{
 		auto stmt = mysql.prepare("SELECT 1 FROM contest_problems"
 		                          " WHERE problem_id=? LIMIT 1");
-		stmt.bindAndExecute(problem_id);
+		stmt.bindAndExecute(problem_id_);
 		if (stmt.next()) {
 			return set_failure(
 			   "There exists a contest problem that uses (attaches) this "
@@ -25,7 +25,7 @@ void DeleteProblem::run() {
 	// Assure that problem exist and log its Simfile
 	{
 		auto stmt = mysql.prepare("SELECT simfile FROM problems WHERE id=?");
-		stmt.bindAndExecute(problem_id);
+		stmt.bindAndExecute(problem_id_);
 		InplaceBuff<1> simfile;
 		stmt.res_bind_all(simfile);
 		if (not stmt.next())
@@ -42,7 +42,7 @@ void DeleteProblem::run() {
 	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
 	            " FROM problems WHERE id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   problem_id);
+	                   problem_id_);
 
 	// Add jobs to delete problem submissions' files
 	mysql
@@ -52,11 +52,12 @@ void DeleteProblem::run() {
 	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
 	            " FROM submissions WHERE problem_id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   problem_id);
+	                   problem_id_);
 
 	// Delete problem (all necessary actions will take plate thanks to foreign
 	// key constrains)
-	mysql.prepare("DELETE FROM problems WHERE id=?").bindAndExecute(problem_id);
+	mysql.prepare("DELETE FROM problems WHERE id=?")
+	   .bindAndExecute(problem_id_);
 
 	job_done();
 

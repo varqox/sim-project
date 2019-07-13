@@ -58,6 +58,8 @@ Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		case JT::DELETE_FILE: return PERM::NONE;
 		}
+
+		return PERM::NONE; // Shouldn't happen
 	}();
 
 	if (session_user_type == UserType::ADMIN) {

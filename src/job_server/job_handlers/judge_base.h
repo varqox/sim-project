@@ -9,7 +9,7 @@ namespace job_handlers {
 
 class JudgeBase : virtual public JobHandler {
 protected:
-	sim::JudgeWorker jworker;
+	sim::JudgeWorker jworker_;
 
 	JudgeBase();
 

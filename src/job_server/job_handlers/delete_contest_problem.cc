@@ -20,19 +20,19 @@ void DeleteContestProblem::run() {
 		                 "JOIN contests c ON c.id=cp.contest_id "
 		                 "JOIN problems p ON p.id=cp.problem_id "
 		                 "WHERE cp.id=?");
-		stmt.bindAndExecute(contest_problem_id);
+		stmt.bindAndExecute(contest_problem_id_);
 		InplaceBuff<32> cname, cid, rname, rid, cpname, pname, pid;
 		stmt.res_bind_all(cname, cid, rname, rid, cpname, pname, pid);
 		if (not stmt.next()) {
 			return set_failure(
-			   "Contest problem with id: ", contest_problem_id,
+			   "Contest problem with id: ", contest_problem_id_,
 			   " does not exist or the contest hierarchy is broken (likely the"
 			   " former).");
 		}
 
 		job_log("Contest: ", cname, " (", cid, ')');
 		job_log("Contest round: ", rname, " (", rid, ')');
-		job_log("Contest problem: ", cpname, " (", contest_problem_id, ')');
+		job_log("Contest problem: ", cpname, " (", contest_problem_id_, ')');
 		job_log("Attached problem: ", pname, " (", pid, ')');
 	}
 
@@ -44,12 +44,12 @@ void DeleteContestProblem::run() {
 	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
 	            " FROM submissions WHERE contest_problem_id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   contest_problem_id);
+	                   contest_problem_id_);
 
 	// Delete contest problem (all necessary actions will take place thanks to
 	// foreign key constrains)
 	mysql.prepare("DELETE FROM contest_problems WHERE id=?")
-	   .bindAndExecute(contest_problem_id);
+	   .bindAndExecute(contest_problem_id_);
 
 	job_done();
 
