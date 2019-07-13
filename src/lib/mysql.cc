@@ -9,9 +9,10 @@ Connection make_conn_with_credential_file(FilePath filename) {
 	cf.load_config_from_file(filename);
 
 	for (auto it : cf.get_vars()) {
-		if (it.second.is_array())
-			THROW("Simfile: variable `", it.first, "` cannot be specified as an"
-				" array");
+		if (it.second.is_array()) {
+			THROW("Simfile: variable `", it.first,
+			      "` cannot be specified as an array");
+		}
 		if (not it.second.is_set())
 			THROW("Simfile: variable `", it.first, "` is not set");
 	};
@@ -20,7 +21,7 @@ Connection make_conn_with_credential_file(FilePath filename) {
 	try {
 		Connection conn;
 		conn.connect(cf["host"].as_string(), cf["user"].as_string(),
-			cf["password"].as_string(), cf["db"].as_string());
+		             cf["password"].as_string(), cf["db"].as_string());
 		return conn;
 
 	} catch (const std::exception& e) {

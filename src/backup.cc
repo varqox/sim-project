@@ -2,9 +2,9 @@
 #include <sim/mysql.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
+#include <simlib/sim/problem_package.h>
 #include <simlib/spawner.h>
 #include <simlib/time.h>
-#include <simlib/sim/problem_package.h>
 
 using std::string;
 using std::vector;
@@ -20,31 +20,32 @@ static void help(const char* program_name) {
 	puts("Make a backup of solutions and database contents");
 }
 
-int main2(int argc, char**argv) {
-	if(argc != 1) {
+int main2(int argc, char** argv) {
+	if (argc != 1) {
 		help(argc > 0 ? argv[0] : nullptr);
 		return 1;
 	}
 
 	chdirToExecDir();
 
-	#define MYSQL_CNF ".mysql.cnf"
+#define MYSQL_CNF ".mysql.cnf"
 	FileRemover mysql_cnf_guard;
 
 	// Get connection
 	auto conn = MySQL::make_conn_with_credential_file(".db.config");
 
-	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC, S_0600};
+	FileDescriptor fd {MYSQL_CNF, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
+	                   S_0600};
 	if (fd == -1) {
 		errlog("Failed to open file `" MYSQL_CNF "`: open()", errmsg());
 		return 1;
 	}
 
 	mysql_cnf_guard.reset(MYSQL_CNF);
-	writeAll_throw(fd, intentionalUnsafeStringView(concat("[client]\n"
-		"user=", conn.impl()->user, "\n"
-		"password=", conn.impl()->passwd, "\n"
-		"user=", conn.impl()->user, "\n")));
+	writeAll_throw(fd, intentionalUnsafeStringView(
+	                      concat("[client]\nuser=", conn.impl()->user,
+	                             "\npassword=", conn.impl()->passwd,
+	                             "\nuser=", conn.impl()->user, "\n")));
 
 	auto run_command = [](vector<string> args) {
 		auto es = Spawner::run(args[0], args);
@@ -62,9 +63,10 @@ int main2(int argc, char**argv) {
 		using namespace std::chrono_literals;
 
 		auto transaction = conn.start_transaction();
-		auto stmt = conn.prepare("SELECT tmp_file_id FROM jobs"
-			" WHERE tmp_file_id IS NOT NULL AND status IN (" JSTATUS_DONE_STR
-				"," JSTATUS_FAILED_STR "," JSTATUS_CANCELED_STR ")");
+		auto stmt = conn.prepare(
+		   "SELECT tmp_file_id FROM jobs "
+		   "WHERE tmp_file_id IS NOT NULL AND status IN (" JSTATUS_DONE_STR
+		   "," JSTATUS_FAILED_STR "," JSTATUS_CANCELED_STR ")");
 		stmt.bindAndExecute();
 		uint64_t tmp_file_id;
 		stmt.res_bind_all(tmp_file_id);
@@ -74,8 +76,7 @@ int main2(int argc, char**argv) {
 		while (stmt.next()) {
 			auto file_path = internal_file_path(tmp_file_id);
 			if (access(file_path, F_OK) == 0 and
-				system_clock::now() - get_modification_time(file_path) > 2h)
-			{
+			    system_clock::now() - get_modification_time(file_path) > 2h) {
 				deleter.bindAndExecute(tmp_file_id);
 				(void)unlink(file_path);
 			}
@@ -119,11 +120,11 @@ int main2(int argc, char**argv) {
 
 	FileRemover mysql_dump_guard {"dump.sql"};
 	run_command({
-		"mysqldump",
-		"--defaults-file=" MYSQL_CNF,
-		"--result-file=dump.sql",
-		"--extended-insert=FALSE",
-		conn.impl()->db,
+	   "mysqldump",
+	   "--defaults-file=" MYSQL_CNF,
+	   "--result-file=dump.sql",
+	   "--extended-insert=FALSE",
+	   conn.impl()->db,
 	});
 
 	run_command({"git", "init"});
@@ -137,7 +138,7 @@ int main2(int argc, char**argv) {
 	return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	try {
 		return main2(argc, argv);
 

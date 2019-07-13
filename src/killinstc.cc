@@ -16,16 +16,15 @@ void help(const char* program_name) {
 	stdlog("");
 	stdlog("Options:");
 	stdlog("  --wait    Wait for a process to die after sending the signal");
-	stdlog("  --wait=t  Wait no longer than t seconds for a process to die after"
-				" sending signal (t may be a floating point decimal, t equal"
-				" to 0 means to wait indefinitely)");
+	stdlog("  --wait=t  Wait no longer than t seconds for a process to die "
+	       "after sending signal (t may be a floating point decimal, t equal "
+	       "to 0 means to wait indefinitely)");
 	stdlog("  --kill-after=t");
-	stdlog("            If a process does not die after t seconds, it will be"
-				" signaled with SIGKILL");
-
+	stdlog("            If a process does not die after t seconds, it will be "
+	       "signaled with SIGKILL");
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	stdlog.label(false);
 	errlog.label(false);
 
@@ -50,12 +49,12 @@ int main(int argc, char **argv) {
 
 		// Options
 		arg.removePrefix(1); // remove '-'
-		// Wait
-		if (arg == "-wait")
+		if (arg == "-wait") {
+			// Wait
 			wait = true;
 
-		// Wait no longer than
-		else if (hasPrefix(arg, "-wait=")) {
+		} else if (hasPrefix(arg, "-wait=")) {
+			// Wait no longer than
 			wait = true;
 			wait_interval = atof(arg.data() + 6) * 1e6;
 			if (wait_interval <= 0) {
@@ -63,17 +62,16 @@ int main(int argc, char **argv) {
 				parameters_error = true;
 			}
 
-		// Kill after
 		} else if (hasPrefix(arg, "-kill-after=")) {
+			// Kill after
 			kill_after = atof(arg.data() + 12) * 1e6;
 			if (kill_after == 0) {
 				errlog("Too small value in option --kill-after=");
 				parameters_error = true;
 			}
 
-
-		// Unknown
 		} else {
+			// Unknown
 			errlog("Unrecognized option: `%s`\n", argv[i]);
 			parameters_error = true;
 		}
@@ -84,14 +82,14 @@ int main(int argc, char **argv) {
 		return 1;
 
 	// Only options, nothing to do
-	 if (argc == 1) {
+	if (argc == 1) {
 		help(argv[0]);
 		return 1;
 	}
 
-	constexpr uint START_TIME_FID = 21; // Number of the field in
-	                                    // /proc/[pid]/stat that contains
-	                                    // process start time
+	constexpr uint START_TIME_FID =
+	   21; // Number of the field in /proc/[pid]/stat that contains process
+	       // start time
 
 	try {
 		// Collect pids
@@ -118,10 +116,11 @@ int main(int argc, char **argv) {
 			// If one of the processes has just appeared, wait for a clock tick
 			// to distinguish it from a process that may appear (just after
 			// killing) with the same pid
-			Victim& oldest = *std::max_element(victims.begin(), victims.end(),
-				[](const Victim& a, const Victim& b) {
-					return StrNumCompare()(a.second, b.second);
-				});
+			Victim& oldest =
+			   *std::max_element(victims.begin(), victims.end(),
+			                     [](const Victim& a, const Victim& b) {
+				                     return StrNumCompare()(a.second, b.second);
+			                     });
 			if (oldest.second == getProcStat(getpid(), START_TIME_FID))
 				usleep(ceil(1.0e6 / sysconf(_SC_CLK_TCK))); // Wait for a tick
 		}
@@ -144,8 +143,8 @@ int main(int argc, char **argv) {
 		if (kill_after)
 			wait_interval = kill_after;
 
-		wait = (wait && wait_interval == 0); // Wait now tells whether to wait
-		                                     // indefinitely
+		wait = (wait && wait_interval ==
+		                   0); // Wait now tells whether to wait indefinitely
 		uint sleep_interval = 0.25e6; // 0.25 s
 		while (victims.size() && (wait || wait_interval > 0)) {
 			if (!wait) {
@@ -163,7 +162,8 @@ int main(int argc, char **argv) {
 					if (vic.second == getProcStat(vic.first, START_TIME_FID))
 						continue; // Process is still not dead
 
-				} catch (std::runtime_error const&) {}
+				} catch (std::runtime_error const&) {
+				}
 
 				// Process has died
 				swap(victims[i--], victims.back());
@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
 				(void)kill(vic.first, SIGKILL);
 			}
 
-	} catch(const std::exception& e) {
+	} catch (const std::exception& e) {
 		errlog(e.what());
 		return 1;
 	}

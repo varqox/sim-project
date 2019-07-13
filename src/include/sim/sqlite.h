@@ -4,13 +4,13 @@
 #include <simlib/string.h>
 #include <sqlite3.h>
 
-#define THROW_SQLITE_ERROR(db, ...) THROW(__VA_ARGS__, " - ", \
-	sqlite3_errcode(db), ": ", sqlite3_errmsg(db))
+#define THROW_SQLITE_ERROR(db, ...)                                            \
+	THROW(__VA_ARGS__, " - ", sqlite3_errcode(db), ": ", sqlite3_errmsg(db))
 
 namespace SQLite {
 
 class Statement {
-	sqlite3_stmt *stmt = nullptr;
+	sqlite3_stmt* stmt = nullptr;
 
 	explicit Statement(sqlite3_stmt* st) noexcept : stmt(st) {}
 
@@ -38,7 +38,7 @@ public:
 
 	int prepare(sqlite3* db, CStringView zSql) {
 		return sqlite3_prepare_v2(db, zSql.data(), zSql.size() + 1, &stmt,
-			nullptr);
+		                          nullptr);
 	}
 
 	int step() {
@@ -68,7 +68,7 @@ public:
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt), "sqlite3_bind_null()");
 	}
 
-	void bindText(int iCol, StringView val, void(*func)(void*)) {
+	void bindText(int iCol, StringView val, void (*func)(void*)) {
 		if (sqlite3_bind_text(stmt, iCol, val.data(), val.size(), func))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt), "sqlite3_bind_text()");
 	}
@@ -86,7 +86,7 @@ public:
 	void bindDouble(int iCol, double val) {
 		if (sqlite3_bind_double(stmt, iCol, val))
 			THROW_SQLITE_ERROR(sqlite3_db_handle(stmt),
-				"sqlite3_bind_double()");
+			                   "sqlite3_bind_double()");
 	}
 
 	// Bind data (nothrow)
@@ -94,8 +94,8 @@ public:
 		return sqlite3_bind_null(stmt, iCol);
 	}
 
-	int bindText_nothrow(int iCol, StringView val, void(*func)(void*)) noexcept
-	{
+	int bindText_nothrow(int iCol, StringView val,
+	                     void (*func)(void*)) noexcept {
 		return sqlite3_bind_text(stmt, iCol, val.data(), val.size(), func);
 	}
 
@@ -117,7 +117,8 @@ public:
 	}
 
 	CStringView getStr(int iCol) noexcept {
-		return CStringView((const char*)sqlite3_column_text(stmt, iCol), sqlite3_column_bytes(stmt, iCol));
+		return CStringView((const char*)sqlite3_column_text(stmt, iCol),
+		                   sqlite3_column_bytes(stmt, iCol));
 	}
 
 	int getInt(int iCol) noexcept { return sqlite3_column_int(stmt, iCol); }
@@ -130,17 +131,16 @@ public:
 		return sqlite3_column_double(stmt, iCol);
 	}
 
-
 	friend class Connection;
 };
 
 class Connection {
-	sqlite3 *db = nullptr;
+	sqlite3* db = nullptr;
 
 public:
 	Connection() noexcept = default;
 
-	Connection(FilePath file, int flags, const char *zVfs = nullptr) {
+	Connection(FilePath file, int flags, const char* zVfs = nullptr) {
 		if (sqlite3_open_v2(file, &db, flags, zVfs))
 			THROW_SQLITE_ERROR(db, "sqlite3_open_v2()");
 	}
@@ -175,10 +175,9 @@ public:
 	}
 
 	Statement prepare(CStringView zSql) {
-		sqlite3_stmt *stmt;
+		sqlite3_stmt* stmt;
 		if (sqlite3_prepare_v2(db, zSql.data(), zSql.size() + 1, &stmt,
-			nullptr))
-		{
+		                       nullptr)) {
 			THROW_SQLITE_ERROR(db, "sqlite3_prepare_v2()");
 		}
 		return Statement {stmt};
