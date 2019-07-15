@@ -7,9 +7,9 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-server::HttpResponse Sim::handle(CStringView _client_ip,
+server::HttpResponse Sim::handle(CStringView client_ip_addr,
                                  server::HttpRequest req) {
-	client_ip = std::move(_client_ip);
+	client_ip = std::move(client_ip_addr);
 	request = std::move(req);
 	resp = server::HttpResponse(server::HttpResponse::TEXT);
 

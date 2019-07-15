@@ -130,7 +130,7 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 	}
 
 	return report;
-};
+}
 
 SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
 	STACK_UNWINDING_MARK;
@@ -157,7 +157,7 @@ SubmissionStatus JudgeBase::calc_status(const sim::JudgeReport& jr) {
 			}
 
 	return SubmissionStatus::OK;
-};
+}
 
 void JudgeBase::load_problem_package(FilePath problem_pkg_path) {
 	STACK_UNWINDING_MARK;
@@ -171,7 +171,7 @@ void JudgeBase::load_problem_package(FilePath problem_pkg_path) {
 }
 
 template <class MethodPtr>
-Optional<std::string>
+std::optional<std::string>
 JudgeBase::compile_solution_impl(FilePath solution_path,
                                  sim::SolutionLanguage lang,
                                  MethodPtr compile_method) {
@@ -194,14 +194,15 @@ JudgeBase::compile_solution_impl(FilePath solution_path,
 	return std::nullopt;
 }
 
-Optional<std::string> JudgeBase::compile_solution(FilePath solution_path,
-                                                  sim::SolutionLanguage lang) {
+std::optional<std::string>
+JudgeBase::compile_solution(FilePath solution_path,
+                            sim::SolutionLanguage lang) {
 	STACK_UNWINDING_MARK;
 	return compile_solution_impl(solution_path, lang,
 	                             &sim::JudgeWorker::compile_solution);
 }
 
-Optional<std::string>
+std::optional<std::string>
 JudgeBase::compile_solution_from_problem_package(FilePath solution_path,
                                                  sim::SolutionLanguage lang) {
 	STACK_UNWINDING_MARK;
@@ -209,7 +210,7 @@ JudgeBase::compile_solution_from_problem_package(FilePath solution_path,
 	   solution_path, lang, &sim::JudgeWorker::compile_solution_from_package);
 }
 
-Optional<std::string> JudgeBase::compile_checker() {
+std::optional<std::string> JudgeBase::compile_checker() {
 	STACK_UNWINDING_MARK;
 	if (failed())
 		return std::nullopt;

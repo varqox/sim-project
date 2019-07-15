@@ -101,12 +101,13 @@ int main(int argc, char** argv) {
 				exec_set.emplace_back(argv[i]);
 
 			auto x = findProcessesByExec(std::move(exec_set), false);
-			for (pid_t pid : x)
+			for (pid_t pid : x) {
 				try {
 					victims.emplace_back(pid, getProcStat(pid, START_TIME_FID));
 				} catch (const std::runtime_error& e) {
 					errlog(e.what());
 				}
+			}
 		}
 
 		if (victims.empty())
