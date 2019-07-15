@@ -46,7 +46,7 @@ struct Word {
 	   : str(s), size(N - 1), style(stl) {}
 };
 
-inline constexpr array<meta::string, 11> begin_style {{
+constexpr array<meta::string, 11> begin_style {{
    {"<span style=\"color:#00a000\">"},
    {"<span style=\"color:#a0a0a0\">"},
    {"<span style=\"color:#0000ff;font-weight:bold\">"},
@@ -60,9 +60,9 @@ inline constexpr array<meta::string, 11> begin_style {{
    {"<span style=\"color:#515125\">"},
 }};
 
-inline constexpr CStringView end_style = "</span>";
+constexpr CStringView end_style = "</span>";
 
-inline constexpr array<Word, 124> words {{
+constexpr array<Word, 124> words {{
    {"", COMMENT}, // Guard - ignored
    {"uint_least16_t", BUILTIN_TYPE},
    {"uint_least32_t", BUILTIN_TYPE},
