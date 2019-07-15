@@ -61,7 +61,7 @@ static void parseOptions(int& argc, char** argv) {
 	argc = new_argc;
 }
 
-inline constexpr array<meta::string, 13> tables {{
+constexpr array<meta::string, 13> tables {{
    {"contest_entry_tokens"},
    {"contest_problems"},
    {"contest_rounds"},

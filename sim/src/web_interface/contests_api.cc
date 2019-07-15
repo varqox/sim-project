@@ -41,7 +41,7 @@ void Sim::append_contest_actions_str() {
 	append('"');
 }
 
-static constexpr inline const char*
+static constexpr const char*
 user_mode_to_json(std::optional<ContestUserMode> cum) {
 	if (not cum.has_value())
 		return "null";
@@ -55,7 +55,7 @@ user_mode_to_json(std::optional<ContestUserMode> cum) {
 	return "\"unknown\"";
 }
 
-static constexpr inline const char* sfsm_to_json(SFSM sfsm) {
+static constexpr const char* sfsm_to_json(SFSM sfsm) {
 	switch (sfsm) {
 	case SFSM::LAST_COMPILING: return "\"LC\"";
 	case SFSM::WITH_HIGHEST_SCORE: return "\"WHS\"";
@@ -66,7 +66,7 @@ static constexpr inline const char* sfsm_to_json(SFSM sfsm) {
 
 namespace {
 // clang-format off
-inline constexpr const char* api_contest_names =
+constexpr const char* api_contest_names =
    "[\n{\"fields\":["
           "{\"name\":\"contest\",\"fields\":["
               "\"id\","
