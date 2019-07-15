@@ -10,8 +10,8 @@
 #if 0
 #warning "Before committing disable this debug"
 #define DEBUG_SANDBOX(...) __VA_ARGS__
-inline constexpr bool DEBUG_SANDBOX_LOG_PFC_FILTER = false;
-inline constexpr bool DEBUG_SANDBOX_LOG_BPF_FILTER = false;
+constexpr bool DEBUG_SANDBOX_LOG_PFC_FILTER = false;
+constexpr bool DEBUG_SANDBOX_LOG_BPF_FILTER = false;
 #else
 #define DEBUG_SANDBOX(...)
 #endif
@@ -38,7 +38,7 @@ static_assert(std::is_same<decltype(SCMP_CMP(0, SCMP_CMP_MASKED_EQ, 0, 0)),
 #ifdef SCMP_CMP64
 #undef SCMP_CMP64
 
-constexpr static inline scmp_arg_cmp
+constexpr static scmp_arg_cmp
 SCMP_CMP64(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
            decltype(scmp_arg_cmp::datum_a) datum_a,
            decltype(scmp_arg_cmp::datum_b) datum_b = {}) {
@@ -48,7 +48,7 @@ SCMP_CMP64(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
 #else
 #undef SCMP_CMP
 
-constexpr static inline scmp_arg_cmp
+constexpr static scmp_arg_cmp
 SCMP_CMP(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
          decltype(scmp_arg_cmp::datum_a) datum_a,
          decltype(scmp_arg_cmp::datum_b) datum_b = {}) {

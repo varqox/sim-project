@@ -164,7 +164,7 @@ template <intmax_t x>
 constexpr intmax_t sum<x> = x;
 
 template <typename T1, typename T2>
-inline size_t constexpr offset_of(T1 T2::*member) {
+constexpr size_t offset_of(T1 T2::*member) {
 	constexpr T2 object {};
 	return size_t(&(object.*member)) - size_t(&object);
 }
@@ -172,32 +172,30 @@ inline size_t constexpr offset_of(T1 T2::*member) {
 } // namespace meta
 
 #define DECLARE_ENUM_OPERATOR(enu, oper)                                       \
-	constexpr inline enu operator oper(enu a, enu b) {                         \
+	constexpr enu operator oper(enu a, enu b) {                                \
 		using UT = std::underlying_type<enu>::type;                            \
 		return static_cast<enu>(static_cast<UT>(a) oper static_cast<UT>(b));   \
 	}
 
 #define DECLARE_ENUM_ASSIGN_OPERATOR(enu, oper)                                \
-	constexpr inline enu& operator oper(enu& a, enu b) {                       \
+	constexpr enu& operator oper(enu& a, enu b) {                              \
 		using UT = std::underlying_type<enu>::type;                            \
 		UT x = static_cast<UT>(a);                                             \
 		return (a = static_cast<enu>(x oper static_cast<UT>(b)));              \
 	}
 
 #define DECLARE_ENUM_UNARY_OPERATOR(enu, oper)                                 \
-	constexpr inline enu operator oper(enu a) {                                \
+	constexpr enu operator oper(enu a) {                                       \
 		using UT = std::underlying_type<enu>::type;                            \
 		return static_cast<enu>(oper static_cast<UT>(a));                      \
 	}
 
 #define DECLARE_ENUM_COMPARE1(enu, oper)                                       \
-	constexpr inline bool operator oper(enu a,                                 \
-	                                    std::underlying_type<enu>::type b) {   \
+	constexpr bool operator oper(enu a, std::underlying_type<enu>::type b) {   \
 		return static_cast<decltype(b)>(a) oper b;                             \
 	}
 
 #define DECLARE_ENUM_COMPARE2(enu, oper)                                       \
-	constexpr inline bool operator oper(std::underlying_type<enu>::type a,     \
-	                                    enu b) {                               \
+	constexpr bool operator oper(std::underlying_type<enu>::type a, enu b) {   \
 		return a oper static_cast<decltype(a)>(b);                             \
 	}

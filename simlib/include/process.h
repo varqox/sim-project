@@ -75,8 +75,8 @@ std::string getExecDir(pid_t pid);
  */
 std::string chdirToExecDir();
 
-inline constexpr int8_t ARCH_i386 = 0;
-inline constexpr int8_t ARCH_x86_64 = 1;
+constexpr int8_t ARCH_i386 = 0;
+constexpr int8_t ARCH_x86_64 = 1;
 /**
  * @brief Detects architecture of running process @p pid
  * @details Currently it only detects i386 and x86_64 (see defined ARCH_ values

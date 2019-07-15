@@ -24,10 +24,10 @@
 #endif
 
 template <class...>
-inline constexpr bool is_enum_val = false;
+constexpr bool is_enum_val = false;
 
 template <class T>
-inline constexpr bool is_enum_val<EnumVal<T>> = true;
+constexpr bool is_enum_val<EnumVal<T>> = true;
 
 template <class T>
 struct EnumValTypeHelper {

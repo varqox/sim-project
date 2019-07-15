@@ -65,7 +65,7 @@ extern RandomDevice random_generator;
 
 // Get random from [a, b]
 template <class T>
-constexpr inline T getRandom(T&& a, T&& b) {
+constexpr T getRandom(T&& a, T&& b) {
 	return std::uniform_int_distribution<T>(
 	   std::forward<T>(a), std::forward<T>(b))(random_generator);
 }

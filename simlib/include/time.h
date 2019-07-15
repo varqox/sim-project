@@ -44,7 +44,7 @@ time_t strToTime(CStringView str, CStringView format = CStringView {
                                      "%Y-%m-%d %H:%M:%S"}) noexcept;
 
 /**************************** timespec arithmetic ****************************/
-constexpr inline timespec operator+(timespec a, timespec b) noexcept {
+constexpr timespec operator+(timespec a, timespec b) noexcept {
 	timespec res {a.tv_sec + b.tv_sec, a.tv_nsec + b.tv_nsec};
 	if (res.tv_nsec >= 1'000'000'000) {
 		++res.tv_sec;
@@ -54,7 +54,7 @@ constexpr inline timespec operator+(timespec a, timespec b) noexcept {
 	return res;
 }
 
-constexpr inline timespec operator-(timespec a, timespec b) noexcept {
+constexpr timespec operator-(timespec a, timespec b) noexcept {
 	timespec res {a.tv_sec - b.tv_sec, a.tv_nsec - b.tv_nsec};
 	if (res.tv_nsec < 0) {
 		--res.tv_sec;
@@ -64,42 +64,38 @@ constexpr inline timespec operator-(timespec a, timespec b) noexcept {
 	return res;
 }
 
-constexpr inline timespec& operator+=(timespec& a, timespec b) noexcept {
+constexpr timespec& operator+=(timespec& a, timespec b) noexcept {
 	return (a = a + b);
 }
 
-constexpr inline timespec& operator-=(timespec& a, timespec b) noexcept {
+constexpr timespec& operator-=(timespec& a, timespec b) noexcept {
 	return (a = a - b);
 }
 
-constexpr inline bool operator==(timespec a, timespec b) noexcept {
+constexpr bool operator==(timespec a, timespec b) noexcept {
 	return (a.tv_sec == b.tv_sec and a.tv_nsec == b.tv_nsec);
 }
 
-constexpr inline bool operator!=(timespec a, timespec b) noexcept {
+constexpr bool operator!=(timespec a, timespec b) noexcept {
 	return (a.tv_sec != b.tv_sec or a.tv_nsec != b.tv_nsec);
 }
 
-constexpr inline bool operator<(timespec a, timespec b) noexcept {
+constexpr bool operator<(timespec a, timespec b) noexcept {
 	return (a.tv_sec < b.tv_sec or
 	        (a.tv_sec == b.tv_sec and a.tv_nsec < b.tv_nsec));
 }
 
-constexpr inline bool operator>(timespec a, timespec b) noexcept {
-	return b < a;
-}
+constexpr bool operator>(timespec a, timespec b) noexcept { return b < a; }
 
-constexpr inline bool operator<=(timespec a, timespec b) noexcept {
+constexpr bool operator<=(timespec a, timespec b) noexcept {
 	return (a.tv_sec < b.tv_sec or
 	        (a.tv_sec == b.tv_sec and a.tv_nsec <= b.tv_nsec));
 }
 
-constexpr inline bool operator>=(timespec a, timespec b) noexcept {
-	return b <= a;
-}
+constexpr bool operator>=(timespec a, timespec b) noexcept { return b <= a; }
 
 /**************************** timeval arithmetic ****************************/
-constexpr inline timeval operator+(timeval a, timeval b) noexcept {
+constexpr timeval operator+(timeval a, timeval b) noexcept {
 	timeval res {a.tv_sec + b.tv_sec, a.tv_usec + b.tv_usec};
 	if (res.tv_usec >= 1'000'000) {
 		++res.tv_sec;
@@ -109,7 +105,7 @@ constexpr inline timeval operator+(timeval a, timeval b) noexcept {
 	return res;
 }
 
-constexpr inline timeval operator-(timeval a, timeval b) noexcept {
+constexpr timeval operator-(timeval a, timeval b) noexcept {
 	timeval res {a.tv_sec - b.tv_sec, a.tv_usec - b.tv_usec};
 	if (res.tv_usec < 0) {
 		--res.tv_sec;
@@ -119,36 +115,34 @@ constexpr inline timeval operator-(timeval a, timeval b) noexcept {
 	return res;
 }
 
-constexpr inline timeval& operator+=(timeval& a, timeval b) noexcept {
+constexpr timeval& operator+=(timeval& a, timeval b) noexcept {
 	return (a = a + b);
 }
 
-constexpr inline timeval& operator-=(timeval& a, timeval b) noexcept {
+constexpr timeval& operator-=(timeval& a, timeval b) noexcept {
 	return (a = a - b);
 }
-constexpr inline bool operator==(timeval a, timeval b) noexcept {
+constexpr bool operator==(timeval a, timeval b) noexcept {
 	return (a.tv_sec == b.tv_sec and a.tv_usec == b.tv_usec);
 }
 
-constexpr inline bool operator!=(timeval a, timeval b) noexcept {
+constexpr bool operator!=(timeval a, timeval b) noexcept {
 	return (a.tv_sec != b.tv_sec or a.tv_usec != b.tv_usec);
 }
 
-constexpr inline bool operator<(timeval a, timeval b) noexcept {
+constexpr bool operator<(timeval a, timeval b) noexcept {
 	return (a.tv_sec < b.tv_sec or
 	        (a.tv_sec == b.tv_sec and a.tv_usec < b.tv_usec));
 }
 
-constexpr inline bool operator>(timeval a, timeval b) noexcept { return b < a; }
+constexpr bool operator>(timeval a, timeval b) noexcept { return b < a; }
 
-constexpr inline bool operator<=(timeval a, timeval b) noexcept {
+constexpr bool operator<=(timeval a, timeval b) noexcept {
 	return (a.tv_sec < b.tv_sec or
 	        (a.tv_sec == b.tv_sec and a.tv_usec <= b.tv_usec));
 }
 
-constexpr inline bool operator>=(timeval a, timeval b) noexcept {
-	return b <= a;
-}
+constexpr bool operator>=(timeval a, timeval b) noexcept { return b <= a; }
 
 template <size_t N = meta::ToString<UINT64_MAX>::arr_value.size() +
                      11> // +11
@@ -206,7 +200,7 @@ InplaceBuff<N> timeval_to_str(timeval x, uint prec,
 	return res;
 }
 
-constexpr inline bool is_power_of_10(intmax_t x) {
+constexpr bool is_power_of_10(intmax_t x) {
 	if (x <= 0)
 		return false;
 

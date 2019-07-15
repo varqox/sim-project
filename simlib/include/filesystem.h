@@ -13,10 +13,10 @@
 #include <vector>
 
 // File modes
-inline constexpr int S_0600 = S_IRUSR | S_IWUSR;
-inline constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-inline constexpr int S_0700 = S_IRWXU;
-inline constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+constexpr int S_0600 = S_IRUSR | S_IWUSR;
+constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+constexpr int S_0700 = S_IRWXU;
+constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
 // Encapsulates file descriptor
 class FileDescriptor {
@@ -711,7 +711,7 @@ std::string getFileContents(FilePath file);
  */
 std::string getFileContents(FilePath file, off64_t beg, off64_t end = -1);
 
-inline constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
+constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
 /**
  * @brief Get file contents by lines in range [first, last)
  *

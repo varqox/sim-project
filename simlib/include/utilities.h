@@ -571,10 +571,10 @@ auto make_shared_function(Func&& func) {
 }
 
 template <class...>
-inline constexpr bool is_pair = false;
+constexpr bool is_pair = false;
 
 template <class A, class B>
-inline constexpr bool is_pair<std::pair<A, B>> = true;
+constexpr bool is_pair<std::pair<A, B>> = true;
 
 template <class Enum>
 class EnumVal {

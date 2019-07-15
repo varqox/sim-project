@@ -30,14 +30,14 @@
 
 namespace simlib_debug {
 
-constexpr inline bool is_VA_empty() { return true; }
+constexpr bool is_VA_empty() { return true; }
 
 template <class T1, class... T>
-constexpr inline bool is_VA_empty(T1&&, T&&...) {
+constexpr bool is_VA_empty(T1&&, T&&...) {
 	return false;
 }
 
-constexpr inline const char* __what() { return ""; }
+constexpr const char* __what() { return ""; }
 
 inline const char* __what(const std::exception& e) { return e.what(); }
 
