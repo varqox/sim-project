@@ -347,8 +347,8 @@ class JudgeWorker {
 	TemporaryDirectory tmp_dir {"/tmp/judge-worker.XXXXXX"};
 	Simfile sf;
 
-	static constexpr const char* CHECKER_FILENAME = "checker";
-	static constexpr const char* SOLUTION_FILENAME = "solution";
+	static constexpr const char CHECKER_FILENAME[] = "checker";
+	static constexpr const char SOLUTION_FILENAME[] = "solution";
 
 	std::unique_ptr<PackageLoader> package_loader;
 
