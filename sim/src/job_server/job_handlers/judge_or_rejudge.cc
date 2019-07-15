@@ -47,8 +47,8 @@ void JudgeOrRejudge::run() {
 
 	auto update_submission = [&](SubmissionStatus initial_status,
 	                             SubmissionStatus full_status,
-	                             Optional<int64_t> score, auto&& initial_report,
-	                             auto&& final_report) {
+	                             std::optional<int64_t> score,
+	                             auto&& initial_report, auto&& final_report) {
 		{
 			auto transaction = mysql.start_transaction();
 			submission::update_final_lock(mysql, sowner, problem_id);

@@ -5,13 +5,13 @@
 #include <simlib/string.h>
 
 // User
-constexpr uint USERNAME_MAX_LEN = 30;
-constexpr uint USER_FIRST_NAME_MAX_LEN = 60;
-constexpr uint USER_LAST_NAME_MAX_LEN = 60;
-constexpr uint USER_EMAIL_MAX_LEN = 60;
-constexpr uint SALT_LEN = 64;
-constexpr uint PASSWORD_HASH_LEN = 128;
-constexpr uintmax_t MAX_UID = 4294967295;
+inline constexpr uint USERNAME_MAX_LEN = 30;
+inline constexpr uint USER_FIRST_NAME_MAX_LEN = 60;
+inline constexpr uint USER_LAST_NAME_MAX_LEN = 60;
+inline constexpr uint USER_EMAIL_MAX_LEN = 60;
+inline constexpr uint SALT_LEN = 64;
+inline constexpr uint PASSWORD_HASH_LEN = 128;
+inline constexpr uintmax_t MAX_UID = 4294967295;
 
 #define SIM_ROOT_UID "1"
 
@@ -57,42 +57,43 @@ static_assert(meta::equal(CU_MODE_OWNER_STR,
               "Update the above #define");
 
 // Session
-constexpr uint SESSION_ID_LEN = 30;
-constexpr uint SESSION_CSRF_TOKEN_LEN = 20;
-constexpr uint SESSION_IP_LEN = 15;
-constexpr uint TMP_SESSION_MAX_LIFETIME = 60 * 60; // 1 hour [s]
-constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
+inline constexpr uint SESSION_ID_LEN = 30;
+inline constexpr uint SESSION_CSRF_TOKEN_LEN = 20;
+inline constexpr uint SESSION_IP_LEN = 15;
+inline constexpr uint TMP_SESSION_MAX_LIFETIME = 60 * 60; // 1 hour [s]
+inline constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 
 // Problems
-constexpr uint PROBLEM_NAME_MAX_LEN = 128;
-constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
-constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
+inline constexpr uint PROBLEM_NAME_MAX_LEN = 128;
+inline constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
+inline constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
 
 // Problems' tags
-constexpr uint PROBLEM_TAG_MAX_LEN = 128;
+inline constexpr uint PROBLEM_TAG_MAX_LEN = 128;
 
 // Contests
-constexpr uint CONTEST_NAME_MAX_LEN = 128;
+inline constexpr uint CONTEST_NAME_MAX_LEN = 128;
 // Contest rounds
-constexpr uint CONTEST_ROUND_NAME_MAX_LEN = 128;
-constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
+inline constexpr uint CONTEST_ROUND_NAME_MAX_LEN = 128;
+inline constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
 // Contest problems
-constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
+inline constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
    meta::max(128, PROBLEM_NAME_MAX_LEN);
 
 // Contest entry tokens
-constexpr uint CONTEST_ENTRY_TOKEN_LEN = 48;
-constexpr uint CONTEST_ENTRY_SHORT_TOKEN_LEN = 8;
-constexpr uint CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME = 60 * 60; // 1 hour [s]
+inline constexpr uint CONTEST_ENTRY_TOKEN_LEN = 48;
+inline constexpr uint CONTEST_ENTRY_SHORT_TOKEN_LEN = 8;
+inline constexpr uint CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME =
+   60 * 60; // 1 hour [s]
 
 // Files
-constexpr uint FILE_ID_LEN = 30;
-constexpr uint FILE_NAME_MAX_LEN = 128;
-constexpr uint FILE_DESCRIPTION_MAX_LEN = 512;
-constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MiB
+inline constexpr uint FILE_ID_LEN = 30;
+inline constexpr uint FILE_NAME_MAX_LEN = 128;
+inline constexpr uint FILE_DESCRIPTION_MAX_LEN = 512;
+inline constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MiB
 
 // Submissions
-constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
+inline constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
 
 enum class ProblemType : uint8_t {
 	PUBLIC = 1,
@@ -545,7 +546,7 @@ constexpr inline const char* toString(JobStatus x) {
 }
 
 // Internal files
-constexpr const char INTERNAL_FILES_DIR[] = "internal_files/";
+inline constexpr const char INTERNAL_FILES_DIR[] = "internal_files/";
 
 template <class T>
 auto internal_file_path(T file_id) {
@@ -553,38 +554,40 @@ auto internal_file_path(T file_id) {
 }
 
 // Jobs
-constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KiB
+inline constexpr uint JOB_LOG_VIEW_MAX_LENGTH = 128 << 10; // 128 KiB
 
 // Logs
-constexpr const char SERVER_LOG[] = "logs/server.log";
-constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
-constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
-constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
+inline constexpr const char SERVER_LOG[] = "logs/server.log";
+inline constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
+inline constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
+inline constexpr const char JOB_SERVER_ERROR_LOG[] =
+   "logs/job-server-error.log";
 // Logs API
-constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 KiB
-constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 KiB
+inline constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 KiB
+inline constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 KiB
 
 // API
-constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
-constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
+inline constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
+inline constexpr uint API_OTHER_QUERY_ROWS_LIMIT = 200;
 
 // Job server notifying file
-constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
+inline constexpr const char JOB_SERVER_NOTIFYING_FILE[] = ".job-server.notify";
 
-constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KiB
-constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT =
+inline constexpr uint COMPILATION_ERRORS_MAX_LENGTH = 16 << 10; // 32 KiB
+inline constexpr std::chrono::nanoseconds SOLUTION_COMPILATION_TIME_LIMIT =
    std::chrono::seconds(30);
-constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT =
+inline constexpr std::chrono::nanoseconds CHECKER_COMPILATION_TIME_LIMIT =
    std::chrono::seconds(30);
 // Conver::ResetTimeLimitsOptions and Conver::Options
-constexpr std::chrono::nanoseconds MIN_TIME_LIMIT =
+inline constexpr std::chrono::nanoseconds MIN_TIME_LIMIT =
    std::chrono::milliseconds(300);
-constexpr std::chrono::nanoseconds MAX_TIME_LIMIT = std::chrono::seconds(22);
-constexpr double SOLUTION_RUNTIME_COEFFICIENT = 3;
-// JudgeWorker
-constexpr std::chrono::nanoseconds CHECKER_TIME_LIMIT =
+inline constexpr std::chrono::nanoseconds MAX_TIME_LIMIT =
    std::chrono::seconds(22);
-constexpr uint64_t CHECKER_MEMORY_LIMIT = 512 << 20; // 256 MiB
-constexpr double SCORE_CUT_LAMBDA =
+inline constexpr double SOLUTION_RUNTIME_COEFFICIENT = 3;
+// JudgeWorker
+inline constexpr std::chrono::nanoseconds CHECKER_TIME_LIMIT =
+   std::chrono::seconds(22);
+inline constexpr uint64_t CHECKER_MEMORY_LIMIT = 512 << 20; // 256 MiB
+inline constexpr double SCORE_CUT_LAMBDA =
    2. / 3.; // See JudgeWorker::score_cut_lambda
-constexpr const char PROOT_PATH[] = "./proot";
+inline constexpr const char PROOT_PATH[] = "./proot";

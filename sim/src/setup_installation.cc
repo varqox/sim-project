@@ -9,7 +9,7 @@ using std::array;
 using std::string;
 using std::unique_ptr;
 
-static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
+inline static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
 
 /**
  * @brief Displays help
@@ -61,7 +61,7 @@ static void parseOptions(int& argc, char** argv) {
 	argc = new_argc;
 }
 
-constexpr array<meta::string, 13> tables {{
+inline constexpr array<meta::string, 13> tables {{
    {"contest_entry_tokens"},
    {"contest_problems"},
    {"contest_rounds"},

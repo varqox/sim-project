@@ -54,7 +54,7 @@ inline void extractDumped(std::chrono::duration<Rep, Period>& dur,
 }
 
 template <class T>
-inline void appendDumped(std::string& buff, const Optional<T>& opt) {
+inline void appendDumped(std::string& buff, const std::optional<T>& opt) {
 	if (opt.has_value()) {
 		appendDumped(buff, true);
 		appendDumped(buff, opt.value());
@@ -64,7 +64,7 @@ inline void appendDumped(std::string& buff, const Optional<T>& opt) {
 }
 
 template <class T>
-inline void extractDumped(Optional<T>& opt, StringView& dumped_str) {
+inline void extractDumped(std::optional<T>& opt, StringView& dumped_str) {
 	bool has_val;
 	extractDumped(has_val, dumped_str);
 	if (has_val) {
@@ -99,8 +99,8 @@ inline std::string extractDumpedString(StringView&& dumped_str) {
 struct AddProblemInfo {
 	std::string name;
 	std::string label;
-	Optional<uint64_t> memory_limit; // in bytes
-	Optional<std::chrono::nanoseconds> global_time_limit;
+	std::optional<uint64_t> memory_limit; // in bytes
+	std::optional<std::chrono::nanoseconds> global_time_limit;
 	bool reset_time_limits = false;
 	bool ignore_simfile = false;
 	bool seek_for_new_tests = false;
@@ -114,9 +114,9 @@ struct AddProblemInfo {
 	AddProblemInfo() = default;
 
 	AddProblemInfo(const std::string& n, const std::string& l,
-	               Optional<uint64_t> ml,
-	               Optional<std::chrono::nanoseconds> gtl, bool rtl, bool is,
-	               bool sfnt, bool rs, ProblemType pt)
+	               std::optional<uint64_t> ml,
+	               std::optional<std::chrono::nanoseconds> gtl, bool rtl,
+	               bool is, bool sfnt, bool rs, ProblemType pt)
 	   : name(n), label(l), memory_limit(ml), global_time_limit(gtl),
 	     reset_time_limits(rtl), ignore_simfile(is), seek_for_new_tests(sfnt),
 	     reset_scoring(rs), problem_type(pt) {}

@@ -20,9 +20,9 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 	return PERM::NONE; // Shouldn't happen
 }
 
-Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
-                                              JobType job_type,
-                                              JobStatus job_status) noexcept {
+Sim::JobPermissions
+Sim::jobs_get_permissions(std::optional<StringView> creator_id,
+                          JobType job_type, JobStatus job_status) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using JT = JobType;

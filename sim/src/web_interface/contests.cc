@@ -20,7 +20,7 @@ Sim::ContestPermissions Sim::contests_get_overall_permissions() noexcept {
 
 Sim::ContestPermissions
 Sim::contests_get_permissions(bool is_public,
-                              Optional<ContestUserMode> cu_mode) noexcept {
+                              std::optional<ContestUserMode> cu_mode) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestPermissions;
 	using CUM = ContestUserMode;
@@ -67,7 +67,7 @@ Sim::contests_get_permissions(bool is_public,
 	return overall_perms;
 }
 
-Optional<Sim::ContestPermissions>
+std::optional<Sim::ContestPermissions>
 Sim::contests_get_permissions(StringView contest_id) {
 	auto stmt = mysql.prepare("SELECT c.is_public, cu.mode FROM contests c "
 	                          "LEFT JOIN contest_users cu ON cu.contest_id=c.id"

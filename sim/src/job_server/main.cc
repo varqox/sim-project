@@ -196,9 +196,6 @@ public:
 					queue_job(judge_jobs, aux_id, true);
 					break;
 
-					queue_job(judge_jobs, aux_id, true);
-					break;
-
 				// Problem job
 				case JT::REUPLOAD_PROBLEM:
 				case JT::EDIT_PROBLEM:
@@ -425,29 +422,29 @@ class EventsQueue {
 		return notifier_fd_;
 	}
 
-	static EventsQueue eq;
+	static EventsQueue events_queue;
 
 public:
 	static int set_notifier_fd() {
 		STACK_UNWINDING_MARK;
-		lock_guard<mutex> lock(eq.events_lock);
-		return eq.set_notifier_fd_impl();
+		lock_guard<mutex> lock(events_queue.events_lock);
+		return events_queue.set_notifier_fd_impl();
 	}
 
-	static int get_notifier_fd() { return eq.notifier_fd_; }
+	static int get_notifier_fd() { return events_queue.notifier_fd_; }
 
 	static void reset_notifier() {
-		lock_guard<mutex> lock(eq.events_lock);
+		lock_guard<mutex> lock(events_queue.events_lock);
 		eventfd_t x;
-		eventfd_read(eq.notifier_fd_, &x);
+		eventfd_read(events_queue.notifier_fd_, &x);
 	}
 
 	template <class Callable>
 	static void register_event(Callable&& ev) {
 		STACK_UNWINDING_MARK;
-		lock_guard<mutex> lock(eq.events_lock);
-		eq.events.push(std::forward<Callable>(ev));
-		eventfd_write(eq.notifier_fd_, 1);
+		lock_guard<mutex> lock(events_queue.events_lock);
+		events_queue.events.push(std::forward<Callable>(ev));
+		eventfd_write(events_queue.notifier_fd_, 1);
 	}
 
 	/// Return value - a bool denoting whether the event processing took place
@@ -456,12 +453,12 @@ public:
 
 		function<void()> ev;
 		{
-			lock_guard<mutex> lock(eq.events_lock);
-			if (eq.events.empty())
+			lock_guard<mutex> lock(events_queue.events_lock);
+			if (events_queue.events.empty())
 				return false;
 
-			ev = eq.events.front();
-			eq.events.pop();
+			ev = events_queue.events.front();
+			events_queue.events.pop();
 		}
 
 		ev();
@@ -469,7 +466,7 @@ public:
 	}
 };
 
-EventsQueue EventsQueue::eq;
+EventsQueue EventsQueue::events_queue;
 
 class WorkersPool {
 public:
@@ -677,7 +674,7 @@ static void process_job(const WorkersPool::NextJob& job) {
 
 	stdlog("Processing job ", job.id, "...");
 
-	Optional<StringView> creat;
+	std::optional<StringView> creat;
 	if (creator.has_value())
 		creat = creator.value();
 	job_dispatcher(job.id, jtype, file_id, tmp_file_id, creat, aux_id, info,

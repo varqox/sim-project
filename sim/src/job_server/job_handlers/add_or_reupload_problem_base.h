@@ -14,8 +14,8 @@ protected:
 	jobs::AddProblemInfo info_;
 	FileRemover package_file_remover_;
 	uint64_t job_file_id_;
-	Optional<uint64_t> tmp_file_id_;
-	Optional<uint64_t> problem_id_;
+	std::optional<uint64_t> tmp_file_id_;
+	std::optional<uint64_t> problem_id_;
 	// Internal state
 	bool need_model_solution_judge_report_ = false;
 
@@ -33,8 +33,8 @@ protected:
 	AddOrReuploadProblemBase(JobType job_type, StringView job_creator,
 	                         const jobs::AddProblemInfo& info,
 	                         uint64_t job_file_id,
-	                         Optional<uint64_t> tmp_file_id,
-	                         Optional<uint64_t> problem_id)
+	                         std::optional<uint64_t> tmp_file_id,
+	                         std::optional<uint64_t> problem_id)
 	   : job_type_(job_type), job_creator_(job_creator), info_(info),
 	     job_file_id_(job_file_id), tmp_file_id_(tmp_file_id),
 	     problem_id_(problem_id) {

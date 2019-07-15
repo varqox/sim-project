@@ -18,10 +18,12 @@
 
 #include <thread>
 
-void job_dispatcher(uint64_t job_id, JobType jtype, Optional<uint64_t> file_id,
-                    Optional<uint64_t> tmp_file_id,
-                    Optional<StringView> creator, Optional<uint64_t> aux_id,
-                    StringView info, StringView added) {
+void job_dispatcher(uint64_t job_id, JobType jtype,
+                    std::optional<uint64_t> file_id,
+                    std::optional<uint64_t> tmp_file_id,
+                    std::optional<StringView> creator,
+                    std::optional<uint64_t> aux_id, StringView info,
+                    StringView added) {
 	STACK_UNWINDING_MARK;
 	using std::make_unique;
 	std::unique_ptr<job_handlers::JobHandler> job_handler;

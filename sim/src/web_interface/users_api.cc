@@ -193,25 +193,29 @@ void Sim::api_user_add() {
 	UserType utype /*= UserType::NORMAL*/;
 	if (utype_str == "A") {
 		utype = UserType::ADMIN;
-		if (uint(~users_perms & PERM::ADD_ADMIN))
+		if (uint(~users_perms & PERM::ADD_ADMIN)) {
 			add_notification(
 			   "error", "You have no permissions to make this user an admin");
+		}
 
 	} else if (utype_str == "T") {
 		utype = UserType::TEACHER;
-		if (uint(~users_perms & PERM::ADD_TEACHER))
+		if (uint(~users_perms & PERM::ADD_TEACHER)) {
 			add_notification(
 			   "error", "You have no permissions to make this user a teacher");
+		}
 
 	} else if (utype_str == "N") {
 		utype = UserType::NORMAL;
-		if (uint(~users_perms & PERM::ADD_NORMAL))
+		if (uint(~users_perms & PERM::ADD_NORMAL)) {
 			add_notification(
 			   "error",
 			   "You have no permissions to make this user a normal user");
+		}
 
-	} else
+	} else {
 		add_notification("error", "Invalid user's type");
+	}
 
 	form_validate_not_blank(fname, "first_name", "First Name",
 	                        USER_FIRST_NAME_MAX_LEN);

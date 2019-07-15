@@ -93,10 +93,10 @@ private:
 
 	void api_job_download_log();
 
-	void api_job_download_uploaded_package(Optional<uint64_t> file_id,
+	void api_job_download_uploaded_package(std::optional<uint64_t> file_id,
 	                                       JobType job_type);
 
-	void api_job_download_uploaded_statement(Optional<uint64_t> file_id,
+	void api_job_download_uploaded_statement(std::optional<uint64_t> file_id,
 	                                         JobType job_type, StringView info);
 
 	// jobs_api.cc
@@ -496,7 +496,7 @@ private:
 	 * @brief Returns a set of operation the viewer is allowed to do over the
 	 *   user
 	 *
-	 * @param uid uid of (viewed) user
+	 * @param user_id uid of (viewed) user
 	 * @param utype type of (viewed) user
 	 *
 	 * @return ORed permissions flags
@@ -550,7 +550,7 @@ private:
 	JobPermissions jobs_get_overall_permissions() noexcept;
 
 	// Session must be open to access the jobs
-	JobPermissions jobs_get_permissions(Optional<StringView> creator_id,
+	JobPermissions jobs_get_permissions(std::optional<StringView> creator_id,
 	                                    JobType job_type,
 	                                    JobStatus job_status) noexcept;
 
@@ -647,9 +647,9 @@ private:
 
 	ContestPermissions
 	contests_get_permissions(bool is_public,
-	                         Optional<ContestUserMode> cu_mode) noexcept;
+	                         std::optional<ContestUserMode> cu_mode) noexcept;
 
-	Optional<ContestPermissions>
+	std::optional<ContestPermissions>
 	contests_get_permissions(StringView contest_id);
 
 	ContestPermissions contests_perms = ContestPermissions::NONE;
@@ -691,19 +691,19 @@ private:
 
 	// Returns only the overall permissions
 	ContestUserPermissions contest_user_get_overall_permissions(
-	   Optional<ContestUserMode> viewer_mode) noexcept;
+	   std::optional<ContestUserMode> viewer_mode) noexcept;
 
-	ContestUserPermissions
-	contest_user_get_permissions(Optional<ContestUserMode> viewer_mode,
-	                             Optional<ContestUserMode> user_mode) noexcept;
+	ContestUserPermissions contest_user_get_permissions(
+	   std::optional<ContestUserMode> viewer_mode,
+	   std::optional<ContestUserMode> user_mode) noexcept;
 
 	// Returns (viewer mode, perms), queries MySQL
-	std::pair<Optional<ContestUserMode>, Sim::ContestUserPermissions>
+	std::pair<std::optional<ContestUserMode>, Sim::ContestUserPermissions>
 	contest_user_get_overall_permissions(StringView contest_id);
 
 	// Returns (viewer mode, perms, user's mode), queries MySQL
-	std::tuple<Optional<ContestUserMode>, Sim::ContestUserPermissions,
-	           Optional<ContestUserMode>>
+	std::tuple<std::optional<ContestUserMode>, Sim::ContestUserPermissions,
+	           std::optional<ContestUserMode>>
 	contest_user_get_permissions(StringView contest_id, StringView user_id);
 
 	/* ============================= Submissions =============================
@@ -730,9 +730,11 @@ private:
 
 	SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
-	SubmissionPermissions submissions_get_permissions(
-	   StringView submission_owner, SubmissionType stype,
-	   Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept;
+	SubmissionPermissions
+	submissions_get_permissions(StringView submission_owner,
+	                            SubmissionType stype,
+	                            std::optional<ContestUserMode> cu_mode,
+	                            StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
 	uint64_t submissions_file_id;
@@ -765,7 +767,7 @@ private:
 	FilePermissions files_get_permissions(ContestPermissions cperms) noexcept;
 
 	// No value if the file does not exist
-	Optional<FilePermissions> files_get_permissions(StringView file_id);
+	std::optional<FilePermissions> files_get_permissions(StringView file_id);
 
 	FilePermissions files_perms;
 	StringView files_id;
@@ -797,11 +799,11 @@ public:
 	 * @details Takes requests, handle it and returns response.
 	 *   This function is not thread-safe
 	 *
-	 * @param client_ip IP address of the client
+	 * @param client_ip_addr IP address of the client
 	 * @param req request
 	 *
 	 * @return response
 	 */
-	server::HttpResponse handle(CStringView _client_ip,
+	server::HttpResponse handle(CStringView client_ip_addr,
 	                            server::HttpRequest req); // TODO: close session
 };

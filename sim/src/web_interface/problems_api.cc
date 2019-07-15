@@ -417,10 +417,11 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	   .prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
 	            " aux_id, info, data) "
 	            "VALUES(?,?,?,?," JSTATUS_PENDING_STR ",?,?,?,'')")
-	   .bindAndExecute(
-	      job_file_id, session_user_id, priority(jtype), jtype, mysql_date(),
-	      (reuploading ? Optional<StringView>(problems_pid) : std::nullopt),
-	      ap_info.dump());
+	   .bindAndExecute(job_file_id, session_user_id, priority(jtype), jtype,
+	                   mysql_date(),
+	                   (reuploading ? std::optional<StringView>(problems_pid)
+	                                : std::nullopt),
+	                   ap_info.dump());
 
 	auto job_id = mysql.insert_id(); // Has to be retrieved before commit
 
