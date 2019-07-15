@@ -216,11 +216,8 @@ public:
 		std::string res(size, '\0');
 		auto entry = get_entry(index);
 		decltype(size) pos = 0;
-#if __cplusplus > 201402L
-#warning "Since C++17 data() method may be used in the below read"
-#endif
 		while (pos < size)
-			pos += entry.read(&res[pos], size - pos);
+			pos += entry.read(res.data() + pos, size - pos);
 
 		return res;
 	}

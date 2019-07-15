@@ -13,10 +13,10 @@
 #include <vector>
 
 // File modes
-constexpr int S_0600 = S_IRUSR | S_IWUSR;
-constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-constexpr int S_0700 = S_IRWXU;
-constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+inline constexpr int S_0600 = S_IRUSR | S_IWUSR;
+inline constexpr int S_0644 = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+inline constexpr int S_0700 = S_IRWXU;
+inline constexpr int S_0755 = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
 // Encapsulates file descriptor
 class FileDescriptor {
@@ -246,11 +246,8 @@ public:
 	/// The last six characters of template must be "XXXXXX" and these are
 	/// replaced with a string that makes the filename unique.
 	explicit TemporaryFile(std::string templ) {
-#if __cplusplus > 201402L
-#warning "Since C++17 data() method may be used"
-#endif
 		templ.data(); // Make sure that NULL is appended
-		fd_ = mkstemp(&templ[0]);
+		fd_ = mkstemp(templ.data());
 		if (fd_ == -1)
 			THROW("mkstemp() failed", errmsg());
 		path_ = std::move(templ);
@@ -317,10 +314,6 @@ public:
 	}
 };
 
-#if __cplusplus > 201402L
-#warning "Use constexpr-if instead std::enable_if<> below"
-#endif
-
 /**
  * @brief Calls @p func on every component of the @p dir other than "." and
  *   ".."
@@ -333,11 +326,7 @@ public:
  *   false the lookup will break
  */
 template <class Func, class ErrFunc>
-std::enable_if_t<
-   std::is_convertible<decltype(std::declval<Func>()(std::declval<dirent*>())),
-                       bool>::value,
-   void>
-forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
+void forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
 	dirent* file;
 	for (;;) {
 		errno = 0;
@@ -350,43 +339,14 @@ forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
 			return;
 		}
 
-		if (strcmp(file->d_name, ".") and strcmp(file->d_name, ".."))
-			if (not func(file))
-				return;
-	}
-}
-
-/**
- * @brief Calls @p func on every component of the @p dir other than "." and
- *   ".."
- *
- * @param dir directory object, readdir(3) is used on it so one may want to
- *   save its pos via telldir(3) and use seekdir(3) after the call or just
- *   rewinddir(3) after the call
- * @param func function to call on every component (other than "." and ".."),
- *   it should take one argument - dirent*, if it return sth convertible to
- *   false the lookup will break
- */
-template <class Func, class ErrFunc>
-std::enable_if_t<
-   !std::is_convertible<decltype(std::declval<Func>()(std::declval<dirent*>())),
-                        bool>::value,
-   void>
-forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
-	dirent* file;
-	for (;;) {
-		errno = 0;
-		file = readdir(dir);
-		if (file == nullptr) {
-			if (errno == 0)
-				return; // No more entries
-
-			readdir_failed();
-			return;
+		if (strcmp(file->d_name, ".") and strcmp(file->d_name, "..")) {
+			if constexpr (std::is_constructible_v<decltype(func(file)), bool>) {
+				if (not func(file))
+					return;
+			} else {
+				func(file);
+			}
 		}
-
-		if (strcmp(file->d_name, ".") and strcmp(file->d_name, ".."))
-			func(file);
 	}
 }
 
@@ -622,8 +582,6 @@ inline size_t writeAll(int fd, StringView str) noexcept {
  * @param fd file descriptor
  * @param str where write bytes from
  *
- * @return number of bytes written
- *
  * @errors If any error occurs then an exception is thrown
  */
 inline void writeAll_throw(int fd, StringView str) {
@@ -753,7 +711,7 @@ std::string getFileContents(FilePath file);
  */
 std::string getFileContents(FilePath file, off64_t beg, off64_t end = -1);
 
-constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
+inline constexpr int GFBL_IGNORE_NEW_LINES = 1; // Erase '\n' from each line
 /**
  * @brief Get file contents by lines in range [first, last)
  *
@@ -1069,6 +1027,6 @@ std::vector<std::string> findFiles(directory_tree::Node* dir,
 
 	foo.find(dir);
 	return foo.res;
-};
+}
 
 } // namespace directory_tree

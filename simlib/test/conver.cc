@@ -31,7 +31,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 		return get_var(name).as_int<uint64_t>();
 	};
 
-	auto get_optional_uint64 = [&](StringView name) -> Optional<uint64_t> {
+	auto get_optional_uint64 = [&](StringView name) -> std::optional<uint64_t> {
 		if (get_var(name).as_string() == "null")
 			return std::nullopt;
 
@@ -48,7 +48,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_optional_duration =
-	   [&](StringView name) -> Optional<std::chrono::nanoseconds> {
+	   [&](StringView name) -> std::optional<std::chrono::nanoseconds> {
 		if (get_var(name).as_string() == "null")
 			return std::nullopt;
 
@@ -64,7 +64,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 		THROW("variable \"", name, "\" is not a bool: ", str);
 	};
 
-	auto get_optional_bool = [&](StringView name) -> Optional<bool> {
+	auto get_optional_bool = [&](StringView name) -> std::optional<bool> {
 		if (get_var(name).as_string() == "null")
 			return std::nullopt;
 

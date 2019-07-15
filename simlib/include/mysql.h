@@ -1,7 +1,6 @@
 #pragma once
 
 #include "debug.h"
-#include "optional.h"
 #include "string.h"
 #include "utilities.h"
 
@@ -10,6 +9,7 @@
 #include <fcntl.h>
 #include <functional>
 #include <mutex>
+#include <optional>
 
 #if __has_include(<mysql.h>) && __has_include(<errmsg.h>)
 #define SIMLIB_MYSQL_ENABLED 1
@@ -23,16 +23,11 @@
 #define DEBUG_MYSQL(...)
 #endif
 
-#if __cplusplus > 201402L
-#warning                                                                       \
-   "Since C++17 inline constexpr variables and constexpr if will handle this"
-#endif
-
 template <class...>
-struct is_enum_val : std::false_type {};
+inline constexpr bool is_enum_val = false;
 
 template <class T>
-struct is_enum_val<EnumVal<T>> : std::true_type {};
+inline constexpr bool is_enum_val<EnumVal<T>> = true;
 
 template <class T>
 struct EnumValTypeHelper {
@@ -76,16 +71,16 @@ public:
 
 	Optional(T&& value) : value_(std::move(value)), has_no_value_(false) {}
 
-	operator ::Optional<T>() const { return opt(); }
+	operator std::optional<T>() const { return opt(); }
 
 	template <class U = T>
-	operator std::enable_if_t<is_enum_val<U>::value,
-	                          ::Optional<EnumValType<T>>>() const {
-		return has_no_value_ ? ::Optional<T>() : value_;
+	operator std::enable_if_t<is_enum_val<U>, std::optional<EnumValType<T>>>()
+	   const {
+		return has_no_value_ ? std::optional<T>() : value_;
 	}
 
-	::Optional<T> opt() const {
-		return has_no_value_ ? ::Optional<T>() : value_;
+	std::optional<T> opt() const {
+		return has_no_value_ ? std::optional<T>() : value_;
 	}
 
 	constexpr explicit operator bool() const noexcept {
@@ -378,7 +373,7 @@ public:
 private:
 	void bind(unsigned idx, const char* str) ND(noexcept) {
 		D(throw_assert(idx < params_.size());)
-		auto len = strlen(str);
+		auto len = std::char_traits<char>::length(str);
 		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
 		params_[idx].buffer = const_cast<char*>(str);
 		params_[idx].buffer_length = len;
@@ -434,7 +429,7 @@ public:
 private: // For use only by bindAndExecute()
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
 	template <class T>
-	void bind(unsigned idx, ::Optional<T>& x) ND(noexcept) {
+	void bind(unsigned idx, std::optional<T>& x) ND(noexcept) {
 		if (x.has_value())
 			bind(idx, *x);
 		else
@@ -455,9 +450,7 @@ public:
 	template <class... Args>
 	void bind_all(Args&&... args) {
 		unsigned idx = 0;
-		int t[] = {(bind(idx++, std::forward<Args>(args)), 0)...};
-		(void)t;
-
+		(bind(idx++, std::forward<Args>(args)), ...);
 		fixBinds();
 	}
 
@@ -473,7 +466,7 @@ public:
 
 	template <class... Args>
 	void bindAndExecute(Args&&... args) {
-		bind_all(args...); // std::forward is omitted intentionally to make
+		bind_all(args...); // std::forward is intentionally omitted to make
 		                   // bind_all() think that all arguments are references
 		execute();
 	}

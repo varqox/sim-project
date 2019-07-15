@@ -361,16 +361,10 @@ protected:
 		return x;
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 constexpr if is a better option below"
-#endif
-	template <class U = Node>
-	std::enable_if_t<std::is_trivially_destructible<U>::value, void>
-	delete_subtree(size_type) noexcept {}
+	void delete_subtree(size_type x) {
+		if constexpr (std::is_trivially_destructible_v<Node>)
+			return;
 
-	template <class U = Node>
-	std::enable_if_t<!std::is_trivially_destructible<U>::value, void>
-	delete_subtree(size_type x) noexcept {
 		if (x == nil)
 			return;
 
@@ -613,14 +607,14 @@ protected:
 
 private:
 	template <class Key, class NData = typename Node::RealData>
-	static constexpr std::enable_if_t<is_pair<NData>::value, NData>
+	static constexpr std::enable_if_t<is_pair<NData>, NData>
 	construct_node_data(Key&& key) {
 		return {std::piecewise_construct,
 		        std::forward_as_tuple(std::forward<Key>(key)), std::tuple<>()};
 	}
 
 	template <class Key, class NData = typename Node::RealData>
-	static constexpr std::enable_if_t<!is_pair<NData>::value, NData>
+	static constexpr std::enable_if_t<!is_pair<NData>, NData>
 	construct_node_data(Key&& key) {
 		return {std::forward<Key>(key)};
 	}
@@ -1149,9 +1143,9 @@ public:
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element
+	 * @brief Calls @p callback on every element since the first element
 	 *   >= @p k
-	 * @param func function to call on every element, it should take
+	 * @param callback function to call on every element, it should take
 	 *   one argument of type Node::Data&, if it return sth convertible
 	 *   to false the lookup will break
 	 */
@@ -1162,9 +1156,9 @@ public:
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element
+	 * @brief Calls @p callback on every element since the first element
 	 *   >= @p k
-	 * @param func function to call on every element, it should take
+	 * @param callback function to call on every element, it should take
 	 *   one argument of type const Node::Data&, if it return sth
 	 *   convertible to false the lookup will break
 	 */
@@ -1175,9 +1169,9 @@ public:
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element
+	 * @brief Calls @p callback on every element since the first element
 	 *   > @p k
-	 * @param func function to call on every element, it should take
+	 * @param callback function to call on every element, it should take
 	 *   one argument of type Node::Data&, if it return sth convertible
 	 *   to false the lookup will break
 	 */
@@ -1188,9 +1182,9 @@ public:
 	}
 
 	/**
-	 * @brief Calls @p func on every element since the first element
+	 * @brief Calls @p callback on every element since the first element
 	 *   > @p k
-	 * @param func function to call on every element, it should take
+	 * @param callback function to call on every element, it should take
 	 *   one argument of type const Node::Data&, if it return sth
 	 *   convertible to false the lookup will break
 	 */

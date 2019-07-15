@@ -36,7 +36,7 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 	}
 
 	return message;
-};
+}
 
 void Spawner::Timer::handle_timeout(int, siginfo_t* si, void*) noexcept {
 	int errnum = errno;
@@ -252,7 +252,7 @@ Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
 		                receive_error_message(si, pfd[0]));
 
 	// Useful when exception is thrown
-	auto kill_and_wait_child_guard = make_call_in_destructor([&] {
+	CallInDtor kill_and_wait_child_guard([&] {
 		kill(-cpid, SIGKILL);
 		waitid(P_PID, cpid, &si, WEXITED);
 	});
@@ -318,9 +318,12 @@ void Spawner::run_child(FilePath exec,
 
 	// Convert exec_args
 	const size_t len = exec_args.size();
-	const char* args[len + 1];
-	args[len] = nullptr;
+	std::unique_ptr<const char*[]> args(new (std::nothrow)
+	                                       const char*[len + 1]);
+	if (not args)
+		send_error_message_and_exit(fd, "Out of memory");
 
+	args[len] = nullptr;
 	for (size_t i = 0; i < len; ++i)
 		args[i] = exec_args[i].c_str();
 
@@ -404,21 +407,13 @@ void Spawner::run_child(FilePath exec,
 		auto dir_fd_str = (dir_fd < 0 ? fd_str : toStr(dir_fd));
 		auto dir_fd_cstr = dir_fd_str.to_cstr().c_str();
 
-#if __cplusplus > 201402L
-#warning "Use below meta::toStr<> instead of AS_STR()"
-#endif
-
-#define AS_STR(x) AS_STR_IMPL(x)
-#define AS_STR_IMPL(x) #x
 		std::array<const char*, 5> permitted_fds {{
 		   dir_fd_cstr,
 		   fd_cstr, // Needed in case of errors (it has FD_CLOEXEC flag set)
-		   (opts.new_stdin_fd < 0 ? fd_cstr : AS_STR(STDIN_FILENO)),
-		   (opts.new_stdout_fd < 0 ? fd_cstr : AS_STR(STDOUT_FILENO)),
-		   (opts.new_stderr_fd < 0 ? fd_cstr : AS_STR(STDERR_FILENO)),
+		   (opts.new_stdin_fd < 0 ? fd_cstr : meta::toStr<STDIN_FILENO>),
+		   (opts.new_stdout_fd < 0 ? fd_cstr : meta::toStr<STDOUT_FILENO>),
+		   (opts.new_stderr_fd < 0 ? fd_cstr : meta::toStr<STDERR_FILENO>),
 		}};
-#undef AS_STR_IMPL
-#undef AS_STR
 
 		forEachDirComponent(
 		   dir,
@@ -441,7 +436,7 @@ void Spawner::run_child(FilePath exec,
 	// Signal parent process that child is ready to execute @p exec
 	kill(getpid(), SIGSTOP);
 
-	execvp(exec, const_cast<char* const*>(args));
+	execvp(exec, const_cast<char* const*>(args.get()));
 	int errnum = errno;
 
 	// execvp() failed

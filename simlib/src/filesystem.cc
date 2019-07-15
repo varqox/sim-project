@@ -106,11 +106,11 @@ int mkdir_r(string path, mode_t mode) noexcept {
 }
 
 /**
- * @brief Removes recursively directory @p pathname relative to a directory
+ * @brief Removes recursively directory @p path relative to a directory
  *   file descriptor @p dirfd
  *
  * @param dirfd directory file descriptor
- * @param pathname directory pathname (relative to @p dirfd)
+ * @param path directory pathname (relative to @p dirfd)
  *
  * @return 0 on success, -1 on error
  *
@@ -607,7 +607,7 @@ void putFileContents(FilePath file, const char* data, size_t len, mode_t mode) {
 		THROW("open() failed", errmsg());
 
 	if (len == size_t(-1))
-		len = __builtin_strlen(data);
+		len = std::char_traits<char>::length(data);
 
 	if (writeAll(fd, data, len) != len)
 		THROW("write() failed", errmsg());

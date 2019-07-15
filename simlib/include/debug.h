@@ -107,18 +107,12 @@ class Guard {
 	Func func_;
 
 	Guard(const Guard&) = delete;
+	Guard(Guard&&) = delete;
 	Guard& operator=(const Guard&) = delete;
+	Guard& operator=(Guard&&) = delete;
 
 public:
 	Guard(Func func) noexcept : func_(std::move(func)) {}
-#if __cplusplus > 201402L
-#warning "Mark move constructor as deleted - copy elision is now guarantied"
-#endif
-	Guard(Guard&& g) : func_(std::move(g.func_)) {
-		THROW("This function may not be used!");
-	}
-
-	Guard& operator=(Guard&&) = delete;
 
 	~Guard() {
 		if (uncaught_counter_ != std::uncaught_exceptions()) {
@@ -130,19 +124,11 @@ public:
 	}
 };
 
-#if __cplusplus > 201402L
-#warning "Since C++17 deduced template arguments allow to not use this function"
-#endif
-template <class Func>
-constexpr inline auto make_guard(Func&& func) {
-	return Guard<Func>(std::forward<Func>(func));
-}
-
 extern thread_local InplaceArray<InplaceBuff<1024>, 64> marks_collected;
 
 #define STACK_UNWINDING_MARK                                                   \
-	auto CONCAT(stack_unwind_mark, __COUNTER__) =                              \
-	   stack_unwinding::make_guard([upper_func_name = __PRETTY_FUNCTION__] {   \
+	stack_unwinding::Guard CONCAT(stack_unwind_mark, __COUNTER__)(             \
+	   [upper_func_name = __PRETTY_FUNCTION__] {                               \
 		   auto& marks = stack_unwinding::marks_collected;                     \
 		   marks.resize(marks.size() + 1);                                     \
 		   marks.back() = concat(upper_func_name,                              \

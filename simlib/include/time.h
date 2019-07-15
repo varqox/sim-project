@@ -206,7 +206,7 @@ InplaceBuff<N> timeval_to_str(timeval x, uint prec,
 	return res;
 }
 
-constexpr bool is_power_of_10(intmax_t x) {
+constexpr inline bool is_power_of_10(intmax_t x) {
 	if (x <= 0)
 		return false;
 

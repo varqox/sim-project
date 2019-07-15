@@ -10,8 +10,8 @@
 #if 0
 #warning "Before committing disable this debug"
 #define DEBUG_SANDBOX(...) __VA_ARGS__
-constexpr bool DEBUG_SANDBOX_LOG_PFC_FILTER = false;
-constexpr bool DEBUG_SANDBOX_LOG_BPF_FILTER = false;
+inline constexpr bool DEBUG_SANDBOX_LOG_PFC_FILTER = false;
+inline constexpr bool DEBUG_SANDBOX_LOG_BPF_FILTER = false;
 #else
 #define DEBUG_SANDBOX(...)
 #endif
@@ -24,9 +24,14 @@ using std::vector;
 #define SYS_SECCOMP 1
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc99-extensions"
+
 static_assert(std::is_same<decltype(SCMP_CMP(0, SCMP_CMP_MASKED_EQ, 0, 0)),
                            scmp_arg_cmp>::value,
               "It is needed for the below wrapper to work");
+
+#pragma clang diagnostic pop
 
 // Fix macros used by macros SCMP_A{0,1,...} because initializers in C work
 // differently
@@ -37,7 +42,7 @@ constexpr static inline scmp_arg_cmp
 SCMP_CMP64(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
            decltype(scmp_arg_cmp::datum_a) datum_a,
            decltype(scmp_arg_cmp::datum_b) datum_b = {}) {
-	return (scmp_arg_cmp) {arg, op, datum_a, datum_b};
+	return scmp_arg_cmp {arg, op, datum_a, datum_b};
 }
 
 #else
@@ -218,7 +223,7 @@ struct X86_64SyscallRegisters : Registers<x86_64_user_regset> {
 template <class Func>
 class SyscallCallbackLambda : public SyscallCallback {
 	Func func;
-	DEBUG_SANDBOX(const meta::string name);
+	DEBUG_SANDBOX(const meta::string name;)
 
 public:
 	SyscallCallbackLambda(Func&& f DEBUG_SANDBOX(, meta::string callback_name))
@@ -236,11 +241,8 @@ public:
 	}
 };
 
-#if __cplusplus > 201402L
-#warning "Since C++17 calling the constructor is OK"
-#endif
 template <class Func>
-inline unique_ptr<SyscallCallbackLambda<Func>>
+inline auto
 syscall_callback_lambda(Func&& f DEBUG_SANDBOX(, meta::string callback_name)) {
 	return make_unique<SyscallCallbackLambda<Func>>(
 	   std::forward<Func>(f) DEBUG_SANDBOX(, callback_name));
@@ -779,7 +781,7 @@ uint64_t Sandbox::get_tracee_vm_size() {
 	                     humanizeFileSize(vm_size * sysconf(_SC_PAGESIZE)),
 	                     ")");)
 	return vm_size;
-};
+}
 
 void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
 	if (curr_vm_size > tracee_vm_peak_)
@@ -1051,7 +1053,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		                receive_error_message(si, pfd[0]));
 
 	// Useful when exception is thrown
-	auto kill_and_wait_tracee_guard = make_call_in_destructor([&] {
+	CallInDtor kill_and_wait_tracee_guard([&] {
 		kill(-tracee_pid_, SIGKILL);
 		waitid(P_PID, tracee_pid_, &si, WEXITED);
 	});
@@ -1072,8 +1074,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	if (tracee_statm_fd_ == -1)
 		THROW("open(/proc/{tracee_pid_ = ", tracee_pid_, "}/statm)", errmsg());
 
-	auto tracee_statm_fd_guard =
-	   make_call_in_destructor([&] { tracee_statm_fd_.close(); });
+	CallInDtor tracee_statm_fd_guard([&] { tracee_statm_fd_.close(); });
 
 	std::chrono::nanoseconds runtime {0};
 	std::chrono::nanoseconds cpu_time {0};

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../optional.h"
 #include "../string.h"
 
 #include <chrono>
+#include <optional>
 #include <vector>
 
 namespace sim {
@@ -26,7 +26,7 @@ namespace sim {
  * @return 0 on success, non-zero value on error
  */
 int compile(StringView dir_to_chdir, std::vector<std::string> compile_command,
-            Optional<std::chrono::nanoseconds> time_limit,
+            std::optional<std::chrono::nanoseconds> time_limit,
             std::string* c_errors, size_t c_errors_max_len,
             const std::string& proot_path);
 

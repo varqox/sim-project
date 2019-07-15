@@ -107,15 +107,11 @@ compile_command(SolutionLanguage lang, StringView source, StringView exec) {
 	THROW("Should not reach here");
 }
 
-constexpr const char* sim::JudgeWorker::SOLUTION_FILENAME;
-constexpr const char* sim::JudgeWorker::CHECKER_FILENAME;
-
-int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
-                              Optional<std::chrono::nanoseconds> time_limit,
-                              string* c_errors, size_t c_errors_max_len,
-                              const string& proot_path,
-                              StringView compilation_source_basename,
-                              StringView exec_dest_filename) {
+int JudgeWorker::compile_impl(
+   FilePath source, SolutionLanguage lang,
+   std::optional<std::chrono::nanoseconds> time_limit, string* c_errors,
+   size_t c_errors_max_len, const string& proot_path,
+   StringView compilation_source_basename, StringView exec_dest_filename) {
 	STACK_UNWINDING_MARK;
 
 	auto compilation_dir = concat<PATH_MAX>(tmp_dir.path(), "compilation/");
@@ -155,9 +151,9 @@ int JudgeWorker::compile_impl(FilePath source, SolutionLanguage lang,
 	return rc;
 }
 
-int JudgeWorker::compile_checker(Optional<std::chrono::nanoseconds> time_limit,
-                                 std::string* c_errors, size_t c_errors_max_len,
-                                 const std::string& proot_path) {
+int JudgeWorker::compile_checker(
+   std::optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
+   size_t c_errors_max_len, const std::string& proot_path) {
 	STACK_UNWINDING_MARK;
 
 	auto checker_path_and_lang =
@@ -180,7 +176,7 @@ int JudgeWorker::compile_checker(Optional<std::chrono::nanoseconds> time_limit,
 }
 
 void JudgeWorker::load_package(FilePath package_path,
-                               Optional<string> simfile) {
+                               std::optional<string> simfile) {
 	STACK_UNWINDING_MARK;
 
 	if (isDirectory(package_path)) {
@@ -208,8 +204,8 @@ cpu_time_limit_to_real_time_limit(std::chrono::nanoseconds cpu_tl) noexcept {
 
 Sandbox::ExitStat
 JudgeWorker::run_solution(FilePath input_file, FilePath output_file,
-                          Optional<std::chrono::nanoseconds> time_limit,
-                          Optional<uint64_t> memory_limit) const {
+                          std::optional<std::chrono::nanoseconds> time_limit,
+                          std::optional<uint64_t> memory_limit) const {
 	STACK_UNWINDING_MARK;
 
 	using std::chrono_literals::operator""ns;
@@ -233,7 +229,7 @@ JudgeWorker::run_solution(FilePath input_file, FilePath output_file,
 	if (test_in < 0)
 		THROW("Failed to open file `", input_file, '`', errmsg());
 
-	Optional<std::chrono::nanoseconds> real_time_limit;
+	std::optional<std::chrono::nanoseconds> real_time_limit;
 	if (time_limit.has_value())
 		real_time_limit = cpu_time_limit_to_real_time_limit(time_limit.value());
 
@@ -339,7 +335,7 @@ static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
 template <class Func>
 JudgeReport JudgeWorker::process_tests(
    bool final, JudgeLogger& judge_log,
-   const Optional<std::function<void(const JudgeReport&)>>&
+   const std::optional<std::function<void(const JudgeReport&)>>&
       partial_report_callback,
    Func&& judge_on_test) const {
 	using std::chrono_literals::operator""s;
@@ -443,7 +439,7 @@ JudgeReport JudgeWorker::process_tests(
 
 JudgeReport JudgeWorker::judge_interactive(
    bool final, JudgeLogger& judge_log,
-   const Optional<std::function<void(const JudgeReport&)>>&
+   const std::optional<std::function<void(const JudgeReport&)>>&
       partial_report_callback) const {
 	STACK_UNWINDING_MARK;
 
@@ -455,7 +451,7 @@ JudgeReport JudgeWorker::judge_interactive(
 	};
 
 	std::promise<void> checker_supervisor_ready; // Used to pass exceptions
-	std::promise<Optional<NextJob>> next_job_promise;
+	std::promise<std::optional<NextJob>> next_job_promise;
 	std::promise<CheckerStatus> checker_status_promise;
 	Sandbox::ExitStat ces;
 
@@ -684,7 +680,7 @@ JudgeReport JudgeWorker::judge_interactive(
 
 JudgeReport
 JudgeWorker::judge(bool final, JudgeLogger& judge_log,
-                   const Optional<std::function<void(const JudgeReport&)>>&
+                   const std::optional<std::function<void(const JudgeReport&)>>&
                       partial_report_callback) const {
 	STACK_UNWINDING_MARK;
 

@@ -17,7 +17,7 @@ InplaceBuff<PATH_MAX> getCWD() {
 	if (!x)
 		THROW("Failed to get CWD", errmsg());
 
-	auto x_guard = make_call_in_destructor([x] { free(x); });
+	CallInDtor x_guard([x] { free(x); });
 
 	if (x[0] != '/') {
 		errno = ENOENT;
@@ -74,10 +74,10 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 
 	// Process with deleted exec will have " (deleted)" suffix in result of
 	// readlink(2)
-	ssize_t buff_size = 0;
+	size_t buff_size = 0;
 	for (int i = 0, n = exec_set.size(); i < n; ++i) {
 		string deleted = concat_tostr(exec_set[i], " (deleted)");
-		buff_size = meta::max(buff_size, (ssize_t)deleted.size());
+		buff_size = meta::max(buff_size, deleted.size());
 		exec_set.emplace_back(std::move(deleted));
 	}
 
@@ -96,11 +96,12 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 		// Process exe_path (/proc/pid/exe)
 		string exe_path = concat_tostr("/proc/", file->d_name, "/exe");
 
-		char buff[buff_size];
-		ssize_t len = readlink(exe_path.c_str(), buff, buff_size);
-		if (len == -1 || len >= buff_size)
+		InplaceBuff<32> buff(buff_size);
+		ssize_t len = readlink(exe_path.c_str(), buff.data(), buff_size);
+		if (len == -1 || len >= (ssize_t)buff_size)
 			return; // Error or name too long
 
+		buff.size = len;
 		buff[len] = '\0';
 
 		if (binary_search(exec_set, StringView {buff}))

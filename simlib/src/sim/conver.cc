@@ -1,7 +1,6 @@
 #include "../../include/sim/conver.h"
 #include "../../include/debug.h"
 #include "../../include/libzip.h"
-#include "../../include/optional.h"
 #include "../../include/sim/judge_worker.h"
 #include "../../include/sim/problem_package.h"
 #include "../../include/spawner.h"
@@ -256,16 +255,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		sf.solutions = std::move(solutions);
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 std::optional should be used"
-#endif
-
 	struct Test {
 		StringView name;
-		Optional<StringView> in;
-		Optional<StringView> out;
-		Optional<std::chrono::nanoseconds> time_limit;
-		Optional<uint64_t> memory_limit;
+		std::optional<StringView> in;
+		std::optional<StringView> out;
+		std::optional<std::chrono::nanoseconds> time_limit;
+		std::optional<uint64_t> memory_limit;
 	};
 
 	AVLDictMap<StringView, Test> tests;
@@ -362,8 +357,8 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	    tests_files.is_array())
 		for (auto const& str : tests_files.as_array()) {
 			StringView tname;
-			Optional<StringView> input;
-			Optional<StringView> output;
+			std::optional<StringView> input;
+			std::optional<StringView> output;
 			try {
 				std::tie(tname, input, output) =
 				   Simfile::parse_test_files_item(str);
@@ -498,7 +493,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	struct TestsGroup {
 		StringView name;
-		Optional<int64_t> score;
+		std::optional<int64_t> score;
 		vector<Test> tests;
 	};
 
@@ -598,7 +593,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 			Simfile::Test t(
 			   test.name.to_string(),
-			   std::chrono::nanoseconds(test.time_limit.value_or(0)),
+			   test.time_limit.value_or(std::chrono::nanoseconds(0)),
 			   test.memory_limit.value());
 			t.in = test.in.value().to_string();
 			if (sf.interactive)

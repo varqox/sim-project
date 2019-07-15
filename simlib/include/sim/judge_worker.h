@@ -166,7 +166,7 @@ public:
 
 	virtual void test(StringView test_name, JudgeReport::Test test_report,
 	                  Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
-	                  Optional<uint64_t> checker_mem_limit,
+	                  std::optional<uint64_t> checker_mem_limit,
 	                  StringView checker_error_str) = 0;
 
 	virtual void group_score(int64_t score, int64_t max_score,
@@ -261,7 +261,7 @@ public:
 
 	void test(StringView test_name, JudgeReport::Test test_report,
 	          Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
-	          Optional<uint64_t> checker_mem_limit,
+	          std::optional<uint64_t> checker_mem_limit,
 	          StringView checker_error_str) override {
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
 			tmplog("  Checker: ");
@@ -347,15 +347,15 @@ class JudgeWorker {
 	TemporaryDirectory tmp_dir {"/tmp/judge-worker.XXXXXX"};
 	Simfile sf;
 
-	constexpr static const char* CHECKER_FILENAME = "checker";
-	constexpr static const char* SOLUTION_FILENAME = "solution";
+	static constexpr const char* CHECKER_FILENAME = "checker";
+	static constexpr const char* SOLUTION_FILENAME = "solution";
 
 	std::unique_ptr<PackageLoader> package_loader;
 
 public:
-	Optional<std::chrono::nanoseconds> checker_time_limit =
+	std::optional<std::chrono::nanoseconds> checker_time_limit =
 	   std::chrono::seconds(10);
-	Optional<uint64_t> checker_memory_limit = 256 << 20; // 256 MiB
+	std::optional<uint64_t> checker_memory_limit = 256 << 20; // 256 MiB
 	// It means that score ratio for runtime in range
 	// [score_cut_lambda * time_limit, time_limit] falls linearly to 0.
 	// For T = time limit, A = score_cut_lambda * T, the plot of score ratio
@@ -383,7 +383,8 @@ public:
 
 	/// Loads package from @p package_path using @p simfile (if not specified,
 	/// uses one found in the package)
-	void load_package(FilePath package_path, Optional<std::string> simfile);
+	void load_package(FilePath package_path,
+	                  std::optional<std::string> simfile);
 
 	// Returns a reference to the loaded package's Simfile
 	Simfile& simfile() noexcept { return sf; }
@@ -393,7 +394,7 @@ public:
 
 private:
 	int compile_impl(FilePath source, SolutionLanguage lang,
-	                 Optional<std::chrono::nanoseconds> time_limit,
+	                 std::optional<std::chrono::nanoseconds> time_limit,
 	                 std::string* c_errors, size_t c_errors_max_len,
 	                 const std::string& proot_path,
 	                 StringView compilation_source_basename,
@@ -401,13 +402,13 @@ private:
 
 public:
 	/// Compiles checker (using sim::compile())
-	int compile_checker(Optional<std::chrono::nanoseconds> time_limit,
+	int compile_checker(std::optional<std::chrono::nanoseconds> time_limit,
 	                    std::string* c_errors, size_t c_errors_max_len,
 	                    const std::string& proot_path);
 
 	/// Compiles solution (using sim::compile())
 	int compile_solution(FilePath source, SolutionLanguage lang,
-	                     Optional<std::chrono::nanoseconds> time_limit,
+	                     std::optional<std::chrono::nanoseconds> time_limit,
 	                     std::string* c_errors, size_t c_errors_max_len,
 	                     const std::string& proot_path) {
 		STACK_UNWINDING_MARK;
@@ -422,8 +423,9 @@ public:
 	/// "bar/test"
 	int compile_solution_from_package(
 	   FilePath source, SolutionLanguage lang,
-	   Optional<std::chrono::nanoseconds> time_limit, std::string* c_errors,
-	   size_t c_errors_max_len, const std::string& proot_path) {
+	   std::optional<std::chrono::nanoseconds> time_limit,
+	   std::string* c_errors, size_t c_errors_max_len,
+	   const std::string& proot_path) {
 		STACK_UNWINDING_MARK;
 		auto solution_path = package_loader->load_as_file(source, "source");
 		return compile_impl(solution_path, lang, time_limit, c_errors,
@@ -475,21 +477,21 @@ public:
 	 */
 	Sandbox::ExitStat
 	run_solution(FilePath input_file, FilePath output_file,
-	             Optional<std::chrono::nanoseconds> time_limit,
-	             Optional<uint64_t> memory_limit) const;
+	             std::optional<std::chrono::nanoseconds> time_limit,
+	             std::optional<uint64_t> memory_limit) const;
 
 private:
 	template <class Func>
 	JudgeReport
 	process_tests(bool final, JudgeLogger& judge_log,
-	              const Optional<std::function<void(const JudgeReport&)>>&
+	              const std::optional<std::function<void(const JudgeReport&)>>&
 	                 partial_report_callback,
 	              Func&& judge_on_test) const;
 
-	JudgeReport
-	judge_interactive(bool final, JudgeLogger& judge_log,
-	                  const Optional<std::function<void(const JudgeReport&)>>&
-	                     partial_report_callback = std::nullopt) const;
+	JudgeReport judge_interactive(
+	   bool final, JudgeLogger& judge_log,
+	   const std::optional<std::function<void(const JudgeReport&)>>&
+	      partial_report_callback = std::nullopt) const;
 
 public:
 	/**
@@ -500,9 +502,10 @@ public:
 	 * @param final Whether judge only on final tests or only initial tests
 	 * @return Judge report
 	 */
-	JudgeReport judge(bool final, JudgeLogger& judge_log,
-	                  const Optional<std::function<void(const JudgeReport&)>>&
-	                     partial_report_callback = std::nullopt) const;
+	JudgeReport
+	judge(bool final, JudgeLogger& judge_log,
+	      const std::optional<std::function<void(const JudgeReport&)>>&
+	         partial_report_callback = std::nullopt) const;
 
 	JudgeReport judge(bool final) const {
 		VerboseJudgeLogger logger;

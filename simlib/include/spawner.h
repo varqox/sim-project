@@ -1,10 +1,10 @@
 #pragma once
 
 #include "filesystem.h"
-#include "optional.h"
 
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <sys/resource.h>
 #include <sys/wait.h>
 
@@ -42,9 +42,9 @@ public:
 		int new_stdin_fd; // negative - close, STDIN_FILENO - do not change
 		int new_stdout_fd; // negative - close, STDOUT_FILENO - do not change
 		int new_stderr_fd; // negative - close, STDERR_FILENO - do not change
-		Optional<std::chrono::nanoseconds> real_time_limit;
-		Optional<uint64_t> memory_limit; // in bytes
-		Optional<std::chrono::nanoseconds>
+		std::optional<std::chrono::nanoseconds> real_time_limit;
+		std::optional<uint64_t> memory_limit; // in bytes
+		std::optional<std::chrono::nanoseconds>
 		   cpu_time_limit; // if not set and real time limit is set, then CPU
 		                   // time limit will be set to round(real time limit in
 		                   // seconds) + 1 seconds
@@ -57,11 +57,12 @@ public:
 		   : new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
 		     working_dir(std::move(wd)) {}
 
-		constexpr Options(int ifd, int ofd, int efd,
-		                  Optional<std::chrono::nanoseconds> rtl = std::nullopt,
-		                  Optional<uint64_t> ml = std::nullopt,
-		                  Optional<std::chrono::nanoseconds> ctl = std::nullopt,
-		                  CStringView wd = CStringView("."))
+		constexpr Options(
+		   int ifd, int ofd, int efd,
+		   std::optional<std::chrono::nanoseconds> rtl = std::nullopt,
+		   std::optional<uint64_t> ml = std::nullopt,
+		   std::optional<std::chrono::nanoseconds> ctl = std::nullopt,
+		   CStringView wd = CStringView("."))
 		   : new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
 		     real_time_limit(rtl), memory_limit(ml), cpu_time_limit(ctl),
 		     working_dir(std::move(wd)) {}

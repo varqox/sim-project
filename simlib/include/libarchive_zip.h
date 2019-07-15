@@ -10,10 +10,6 @@
 #include <archive.h>
 #include <archive_entry.h>
 
-#if __cplusplus > 201402L
-#warning "Use constexpr-if instead std::enable_if<> below"
-#endif
-
 /**
  * @brief Runs @p entry_callback on every archive @p filename's entry
  *
@@ -25,14 +21,10 @@
  *   false the lookup will break
  */
 template <class Func, class UnaryFunc>
-std::enable_if_t<std::is_convertible<decltype(std::declval<UnaryFunc>()(
-                                        std::declval<archive_entry*>())),
-                                     bool>::value,
-                 void>
-skim_archive(int fd, Func&& setup_archive, UnaryFunc&& entry_callback) {
+void skim_archive(int fd, Func&& setup_archive, UnaryFunc&& entry_callback) {
 	struct archive* in = archive_read_new();
 	throw_assert(in);
-	auto in_guard = make_call_in_destructor([&] { archive_read_free(in); });
+	CallInDtor in_guard([&] { archive_read_free(in); });
 
 	setup_archive(in);
 
@@ -48,46 +40,13 @@ skim_archive(int fd, Func&& setup_archive, UnaryFunc&& entry_callback) {
 		if (r)
 			THROW("archive_read_next_header() - ", archive_error_string(in));
 
-		if (!entry_callback(entry))
-			break;
-	}
-}
-
-/**
- * @brief Runs @p entry_callback on every archive @p filename's entry
- *
- * @param fd file descriptor of the archive
- * @param setup_archive function to run before reading the archive, should take
- *   archive* as the argument, most useful to set the accepted archive formats
- * @param entry_callback function to call on every entry, should take one
- *   argument - archive_entry*, if it return sth convertible to
- *   false the lookup will break
- */
-template <class Func, class UnaryFunc>
-std::enable_if_t<!std::is_convertible<decltype(std::declval<UnaryFunc>()(
-                                         std::declval<archive_entry*>())),
-                                      bool>::value,
-                 void>
-skim_archive(int fd, Func&& setup_archive, UnaryFunc&& entry_callback) {
-	struct archive* in = archive_read_new();
-	throw_assert(in);
-	auto in_guard = make_call_in_destructor([&] { archive_read_free(in); });
-
-	setup_archive(in);
-
-	if (archive_read_open_fd(in, fd, 1 << 18))
-		THROW("archive_read_open_fd() - ", archive_error_string(in));
-
-	// Read contents
-	for (;;) {
-		struct archive_entry* entry;
-		int r = archive_read_next_header(in, &entry);
-		if (r == ARCHIVE_EOF)
-			break;
-		if (r)
-			THROW("archive_read_next_header() - ", archive_error_string(in));
-
-		entry_callback(entry);
+		if constexpr (std::is_convertible_v<decltype(entry_callback(entry)),
+		                                    bool>) {
+			if (not entry_callback(entry))
+				break;
+		} else {
+			entry_callback(entry);
+		}
 	}
 }
 
@@ -164,11 +123,11 @@ void extract(int archive_fd, int flags, Func&& setup_archives,
 
 	struct archive* in = archive_read_new();
 	throw_assert(in);
-	auto in_guard = make_call_in_destructor([&] { archive_read_free(in); });
+	CallInDtor in_guard([&] { archive_read_free(in); });
 
 	struct archive* out = archive_write_disk_new();
 	throw_assert(out);
-	auto out_guard = make_call_in_destructor([&] { archive_write_free(out); });
+	CallInDtor out_guard([&] { archive_write_free(out); });
 
 	archive_write_disk_set_options(out, flags);
 	setup_archives(in, out);
@@ -252,7 +211,7 @@ std::string extract_file(int archive_fd, Func&& setup_archive,
                          StringView pathname) {
 	struct archive* in = archive_read_new();
 	throw_assert(in);
-	auto in_guard = make_call_in_destructor([&] { archive_read_free(in); });
+	CallInDtor in_guard([&] { archive_read_free(in); });
 
 	setup_archive(in);
 
@@ -273,11 +232,7 @@ std::string extract_file(int archive_fd, Func&& setup_archive,
 
 		std::string res(archive_entry_size(entry), '\0');
 		if (res.size()) {
-#if __cplusplus > 201402L
-#warning                                                                       \
-   "Since C++17 std::string::data() returns also char* so it should be used to initialize ptr"
-#endif
-			auto ptr = &res[0];
+			auto ptr = res.data();
 			auto left = res.size();
 			while (left != 0) {
 				auto rr = archive_read_data(in, ptr, left);
@@ -373,7 +328,7 @@ void compress(Container&& filenames, FilePath archive_filename,
               Func&& setup_archive) {
 	struct archive* out = archive_write_new();
 	throw_assert(out);
-	auto out_guard = make_call_in_destructor([&] { archive_write_free(out); });
+	CallInDtor out_guard([&] { archive_write_free(out); });
 
 	setup_archive(out);
 
@@ -388,8 +343,7 @@ void compress(Container&& filenames, FilePath archive_filename,
 	auto write_file = [&](FilePath pathname, struct stat64& st) {
 		archive_entry* entry = archive_entry_new();
 		throw_assert(entry);
-		auto entry_guard =
-		   make_call_in_destructor([&] { archive_entry_free(entry); });
+		CallInDtor entry_guard([&] { archive_entry_free(entry); });
 
 		archive_entry_set_mode(entry, st.st_mode);
 		archive_entry_set_filetype(entry, AE_IFREG);
@@ -426,8 +380,7 @@ void compress(Container&& filenames, FilePath archive_filename,
 		{
 			archive_entry* entry = archive_entry_new();
 			throw_assert(entry);
-			auto entry_guard =
-			   make_call_in_destructor([&] { archive_entry_free(entry); });
+			CallInDtor entry_guard([&] { archive_entry_free(entry); });
 
 			pathname.append('/');
 

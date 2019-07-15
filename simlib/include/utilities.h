@@ -174,11 +174,6 @@ public:
 	}
 };
 
-template <class Func>
-inline CallInDtor<Func> make_call_in_destructor(Func func) {
-	return CallInDtor<Func> {std::move(func)};
-}
-
 template <class A, class B>
 constexpr bool isIn(const A& val, const B& sequence) {
 	for (auto&& x : sequence)
@@ -208,9 +203,11 @@ constexpr bool isOneOf(const A& val, const B& first, const C&... others) {
 	return (val == first or isOneOf(val, others...));
 }
 
+#if 0 // Clang does not support std::launder yet
 #if __cplusplus > 201402L
 #warning                                                                       \
    "Since C++17 std::launder() has to be used to wrap the reinterpret_casts below"
+#endif
 #endif
 
 template <class T, size_t N>
@@ -225,33 +222,22 @@ class InplaceArray {
 			delete[] p_;
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 std::destroy() should be used below"
-#endif
 	void destruct_and_deallocate() noexcept {
-		for (size_t i = 0; i < size_; ++i)
-			(*this)[i].~T();
-
+		std::destroy(begin(), end());
 		deallocate();
 	}
 
 public:
 	InplaceArray() : size_(0), max_size_(N), p_(a_) {}
 
-#if __cplusplus > 201402L
-#warning                                                                       \
-   "Since C++17 std::uninitialized_default_construct() should be used below"
-#endif
 	explicit InplaceArray(size_t n)
 	   : size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_) {
-		for (size_t i = 0; i < n; ++i)
-			::new (std::addressof((*this)[i])) T;
+		std::uninitialized_default_construct(begin(), end());
 	}
 
 	InplaceArray(size_t n, const T& val)
 	   : size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_) {
-		for (size_t i = 0; i < n; ++i)
-			::new (std::addressof((*this)[i])) T(val);
+		std::uninitialized_fill(begin(), end(), val);
 	}
 
 	template <size_t N1>
@@ -261,15 +247,11 @@ public:
 		std::uninitialized_copy(a.begin(), a.end(), begin());
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 std::uninitialized_move() should be used below"
-#endif
 	template <size_t N1>
 	InplaceArray(InplaceArray<T, N1>&& a)
 	   : size_(a.size_), max_size_(std::max(size_, N)) {
 		if (size_ <= N) {
-			for (size_t i = 0; i < a.size_; ++i)
-				::new (std::addressof((*this)[i])) T(std::move(a[i]));
+			std::uninitialized_move(a.begin(), a.end(), begin());
 
 		} else if (a.p_ != a.a_) { // move the pointer
 			p_ = a.p_;
@@ -278,8 +260,7 @@ public:
 
 		} else { // allocate memory and then move
 			p_ = new Elem[size_];
-			for (size_t i = 0; i < a.size_; ++i)
-				::new (std::addressof((*this)[i])) T(std::move(a[i]));
+			std::uninitialized_move(a.begin(), a.end(), begin());
 		}
 
 		a.size_ = 0;
@@ -300,12 +281,12 @@ public:
 			}
 
 		} else if (a.size_ <= size_) {
-#if __cplusplus > 201402L
-#warning "Since C++17 std::destroy() should be used below"
-#endif
 			// At first, potentially free memory
-			while (size_ > a.size_)
-				(*this)[--size_].~T();
+			if (size_ > a.size_) {
+				std::destroy(begin() + a.size_, end());
+				size_ = a.size_;
+			}
+
 			// It is OK to use std::copy as the objects in p_[0..a.size_] exist
 			std::copy(a.begin(), a.end(), begin());
 
@@ -326,9 +307,6 @@ public:
 		return *this;
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 std::uninitialized_move() can be used below"
-#endif
 	template <size_t N1>
 	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
 		if (a.size_ <= N) {
@@ -336,8 +314,7 @@ public:
 			p_ = a_;
 			max_size_ = N;
 			try {
-				for (size_t i = 0; i < a.size_; ++i)
-					::new (std::addressof((*this)[i])) T(std::move(a[i]));
+				std::uninitialized_move(a.begin(), a.end(), begin());
 				size_ = a.size_;
 			} catch (...) {
 				size_ = 0;
@@ -352,20 +329,18 @@ public:
 			a.p_ = a.a_;
 			a.max_size_ = N1;
 		} else if (a.size_ <= size_) {
-#if __cplusplus > 201402L
-#warning "Since C++17 std::destroy() should be used below"
-#endif
 			// At first, potentially free memory
-			while (size_ > a.size_)
-				(*this)[--size_].~T();
+			if (size_ > a.size_) {
+				std::destroy(begin() + a.size_, end());
+				size_ = a.size_;
+			}
 			// It is OK to use std::move as the objects in p_[0..a.size_] exist
 			std::move(a.begin(), a.end(), begin());
 		} else {
 			destruct_and_deallocate();
 			try {
 				p_ = new Elem[a.size_];
-				for (size_t i = 0; i < a.size_; ++i)
-					::new (std::addressof((*this)[i])) T(std::move(a[i]));
+				std::uninitialized_move(a.begin(), a.end(), begin());
 				max_size_ = size_ = a.size_;
 			} catch (...) {
 				p_ = a_;
@@ -395,9 +370,6 @@ public:
 		}
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 std::uninitialized_move() can be used below"
-#endif
 	/**
 	 * @brief Increases array's max_size if needed, preserves data
 	 *
@@ -407,19 +379,14 @@ public:
 		if (n > max_size_) {
 			size_t new_max_size = meta::max(max_size_ << 1, n);
 			auto new_p = std::make_unique<Elem[]>(new_max_size);
-			for (size_t i = 0; i < size_; ++i)
-				::new (std::addressof(new_p[i])) T(std::move((*this)[i]));
-
+			std::uninitialized_move(iterator(new_p.get()),
+			                        iterator(new_p.get() + size_), begin());
 			deallocate();
 			p_ = new_p.release();
 			max_size_ = new_max_size;
 		}
 	}
 
-#if __cplusplus > 201402L
-#warning                                                                       \
-   "Since C++17 std::uninitialized_default_construct() should be used below"
-#endif
 	/**
 	 * @brief Changes array's size and max_size if needed, preserves data
 	 *
@@ -427,20 +394,23 @@ public:
 	 */
 	void resize(size_t n) {
 		reserve_for(n);
-		while (size_ < n)
-			::new (std::addressof((*this)[size_++])) T;
+		std::uninitialized_default_construct(begin(), begin() + n);
+		size_ = n;
 	}
 
 	/**
 	 * @brief Changes array's size and max_size if needed, preserves data
 	 *
 	 * @param n new array's size
-	 * @param val the value to which te new elements will be set
+	 * @param val the value to which the new elements will be set
 	 */
 	void resize(size_t n, const T& val) {
 		reserve_for(n);
-		while (size_ < n)
-			::new (std::addressof((*this)[size_++])) T(val);
+
+		if (n < size_)
+			std::destroy(begin() + n, end());
+		else
+			std::uninitialized_fill(end(), begin() + n, val);
 	}
 
 	template <class... Args>
@@ -600,16 +570,11 @@ auto make_shared_function(Func&& func) {
 	return shared_function<Func>(std::forward<Func>(func));
 }
 
-#if __cplusplus > 201402L
-#warning                                                                       \
-   "Since C++17 inline constexpr variables and constexpr if will handle this"
-#endif
-
 template <class...>
-struct is_pair : std::false_type {};
+inline constexpr bool is_pair = false;
 
 template <class A, class B>
-struct is_pair<std::pair<A, B>> : std::true_type {};
+inline constexpr bool is_pair<std::pair<A, B>> = true;
 
 template <class Enum>
 class EnumVal {

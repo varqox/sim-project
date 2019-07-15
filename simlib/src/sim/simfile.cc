@@ -220,7 +220,7 @@ void Simfile::load_global_memory_limit_only() {
 		};
 
 		if (!isDigitNotGreaterThan<(std::numeric_limits<decltype(
-		                               global_mem_limit)::StoredType>::max() >>
+		                               global_mem_limit)::value_type>::max() >>
 		                            20)>(ml.as_string())) {
 			if (!isDigit(ml.as_string()))
 				throw invalid_mem_limit();
@@ -230,7 +230,7 @@ void Simfile::load_global_memory_limit_only() {
 		}
 
 		// Convert from MiB to bytes
-		auto gml = ml.as_int<decltype(global_mem_limit)::StoredType>() << 20;
+		auto gml = ml.as_int<decltype(global_mem_limit)::value_type>() << 20;
 		if (gml <= 0)
 			throw invalid_mem_limit();
 
@@ -241,7 +241,7 @@ void Simfile::load_global_memory_limit_only() {
 	}
 }
 
-std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
+std::tuple<StringView, std::chrono::nanoseconds, std::optional<uint64_t>>
 Simfile::parse_limits_item(StringView item) {
 	SimpleParser sp(item);
 	// Test name
@@ -273,7 +273,7 @@ Simfile::parse_limits_item(StringView item) {
 	}
 
 	// Memory limit
-	Optional<uint64_t> memory_limit;
+	std::optional<uint64_t> memory_limit;
 	sp.removeLeading(isspace);
 	if (not sp.empty()) {
 		auto invalid_mem_limit = [&] {
@@ -283,7 +283,7 @@ Simfile::parse_limits_item(StringView item) {
 		};
 
 		if (!isDigitNotGreaterThan<(
-		       std::numeric_limits<decltype(memory_limit)::StoredType>::max() >>
+		       std::numeric_limits<decltype(memory_limit)::value_type>::max() >>
 		       20)>(sp)) {
 			if (!isDigit(sp))
 				throw invalid_mem_limit();
@@ -368,7 +368,7 @@ void Simfile::load_tests() {
 	for (const string& str : limits.as_array()) {
 		StringView test_name;
 		std::chrono::nanoseconds time_limit;
-		Optional<uint64_t> memory_limit;
+		std::optional<uint64_t> memory_limit;
 		std::tie(test_name, time_limit, memory_limit) = parse_limits_item(str);
 		if (not memory_limit.has_value()) {
 			if (not global_mem_limit.has_value()) {

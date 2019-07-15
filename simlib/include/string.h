@@ -39,7 +39,7 @@ constexpr inline uint string_length(meta::ToStringHelper<LEN, Digits...>) {
 
 template <class T>
 constexpr inline size_t string_length(T* x) noexcept {
-	return __builtin_strlen(x);
+	return std::char_traits<char>::length(x);
 }
 
 constexpr inline size_t string_length(char) noexcept { return 1; }
@@ -187,21 +187,20 @@ public:
 
 	constexpr StringBase(std::nullptr_t) = delete;
 
-#if __cplusplus > 201402L
-#warning "Use below std::chair_traits<Char>::length() which became constexpr"
-#endif
 	template <size_t N>
-	constexpr StringBase(const char (&s)[N]) : str(s), len(meta::strlen(s)) {}
+	constexpr StringBase(const char (&s)[N])
+	   : str(s), len(std::char_traits<char>::length(s)) {}
 
 	// Do not treat as possible string literal
 	template <size_t N>
-	constexpr StringBase(char (&s)[N]) : str(s), len(__builtin_strlen(s)) {}
+	constexpr StringBase(char (&s)[N])
+	   : str(s), len(std::char_traits<char>::length(s)) {}
 
 	constexpr StringBase(const meta::string& s) noexcept
 	   : str(s.data()), len(s.size()) {}
 
 	constexpr StringBase(pointer s) noexcept
-	   : str(s), len(__builtin_strlen(s)) {}
+	   : str(s), len(std::char_traits<char>::length(s)) {}
 
 	// A prototype: template<N> ...(const char(&a)[N]){} is not used because it
 	// takes const char[] wrongly (sets len to array size instead of stored
@@ -685,19 +684,13 @@ public:
 		return StringView(*this).removeSuffix(n);
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 constexpr can be used below"
-#endif
 	template <class T>
-	/*constexpr*/ StringView withoutLeading(T&& arg) {
+	constexpr StringView withoutLeading(T&& arg) {
 		return StringView(*this).removeLeading(std::forward<T>(arg));
 	}
 
-#if __cplusplus > 201402L
-#warning "Since C++17 constexpr can be used below"
-#endif
 	template <class T>
-	/*constexpr*/ StringView withoutTrailing(T&& arg) {
+	constexpr StringView withoutTrailing(T&& arg) {
 		return StringView(*this).removeTrailing(std::forward<T>(arg));
 	}
 
@@ -778,7 +771,8 @@ public:
 	   : FixedString(s.data(), s.size()) {}
 
 	// s cannot be nullptr
-	FixedString(const_pointer s) : FixedString(s, __builtin_strlen(s)) {}
+	FixedString(const_pointer s)
+	   : FixedString(s, std::char_traits<char>::length(s)) {}
 
 	FixedString(const std::string& s, size_type beg = 0, size_type n = npos)
 	   : FixedString(s.data() + std::min(beg, s.size()),
@@ -836,12 +830,9 @@ public:
 
 	constexpr CStringView(std::nullptr_t) : CStringView() {}
 
-#if __cplusplus > 201402L
-#warning "Use below std::chair_traits<Char>::length() which became constexpr"
-#endif
 	template <size_t N>
 	constexpr CStringView(const char (&s)[N])
-	   : StringBase(s, meta::strlen(s)) {}
+	   : StringBase(s, std::char_traits<char>::length(s)) {}
 
 	// Do not treat as possible string literal
 	template <size_t N>
@@ -1069,9 +1060,7 @@ public:
 		p_ = &a_[0];
 	}
 
-	template <class T,
-	          typename = std::enable_if_t<std::is_same<T, size_t>::value>>
-	constexpr explicit InplaceBuff(T n)
+	constexpr explicit InplaceBuff(size_t n)
 	   : InplaceBuffBase(n, meta::max(N, n), nullptr) {
 		p_ = (n <= N ? &a_[0] : new char[n]);
 	}
@@ -1251,7 +1240,7 @@ public:
 	constexpr FilePath(FilePath&&) noexcept = default;
 
 	constexpr FilePath(const char* str) noexcept
-	   : str_(str), size_(__builtin_strlen(str)) {}
+	   : str_(str), size_(std::char_traits<char>::length(str)) {}
 
 	constexpr FilePath(const CStringView& str) noexcept
 	   : str_(str.c_str()), size_(str.size()) {}
@@ -1273,7 +1262,7 @@ public:
 
 	FilePath& operator=(const char* str) noexcept {
 		str_ = str;
-		size_ = __builtin_strlen(str);
+		size_ = std::char_traits<char>::length(str);
 		return *this;
 	}
 
@@ -1966,7 +1955,7 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
  *
  * @param s string
  * @param len length of result string
- * @param left whether adjust to left or right
+ * @param adj whether adjust to left or right
  * @param filler character used to fill blank fields
  *
  * @return formatted string

@@ -58,12 +58,12 @@ public:
 		std::string label;
 		// Whether the problem is interactive or not, leave unset to detect it
 		// from Simfile in the package
-		Optional<bool> interactive;
+		std::optional<bool> interactive;
 		// In MiB. If set, overrides memory limit of every test
-		Optional<uint64_t> memory_limit;
+		std::optional<uint64_t> memory_limit;
 		// If set, overrides time limit of every test (has lower precedence
 		// than reset_time_limits_using_model_solution)
-		Optional<std::chrono::nanoseconds> global_time_limit;
+		std::optional<std::chrono::nanoseconds> global_time_limit;
 		// Maximum allowed time limit on the test. If global_time_limit is set
 		// this option is ignored
 		std::chrono::nanoseconds max_time_limit = std::chrono::seconds(60);

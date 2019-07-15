@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../config_file.h"
-#include "../optional.h"
 
 #include <chrono>
+#include <optional>
 
 /// # Simfile - Sim package configuration file
 /// Simfile is a ConfigFile file, so the syntax is the same as in the
@@ -83,18 +83,19 @@ class Simfile {
 public:
 	std::string name, label, statement;
 	bool interactive = false;
-	Optional<std::string>
+	std::optional<std::string>
 	   checker; // std::nullopt if default checker should be used
 	std::vector<std::string> solutions;
-	Optional<uint64_t> global_mem_limit; // in bytes
+	std::optional<uint64_t> global_mem_limit; // in bytes
 
 	/**
 	 * @brief Holds a test
 	 */
 	struct Test {
 		std::string name, in; // in - path to the test's input file
-		Optional<std::string> out; // out - path to the test's output file (set
-		                           //   only if the package is not interactive)
+		std::optional<std::string>
+		   out; // out - path to the test's output file (set
+		        //   only if the package is not interactive)
 		std::chrono::nanoseconds time_limit;
 		uint64_t memory_limit; // in bytes
 
@@ -226,16 +227,13 @@ public:
 	void load_solutions();
 
 private:
-#if __cplusplus > 201402L
-#warning "Since C++17 std::optional should be used for memory limit"
-#endif
-
 	/**
 	 * @brief Parses the item of the variable "limits"
 	 * @param item - the item to parse
 	 * @return (test name, time limit [usec], memory limit [byte])
 	 */
-	static std::tuple<StringView, std::chrono::nanoseconds, Optional<uint64_t>>
+	static std::tuple<StringView, std::chrono::nanoseconds,
+	                  std::optional<uint64_t>>
 	parse_limits_item(StringView item);
 	/**
 	 * @brief Parses the item of the variable "scoring"

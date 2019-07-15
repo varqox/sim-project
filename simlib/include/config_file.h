@@ -77,7 +77,7 @@ public:
 				return 0; // TODO: maybe throw
 			}
 			return x;
-		};
+		}
 
 		// Returns value as Integer or 0 on error. To distinguish error from
 		// success when return value is 0, set errno to 0 before calling this
@@ -92,7 +92,7 @@ public:
 				return 0; // TODO: maybe throw
 			}
 			return x;
-		};
+		}
 
 		// Returns value as double or 0 on error, uses strtod(3)
 		double as_double() const noexcept {
@@ -204,11 +204,11 @@ public:
 	 *   escape every non-ascii character (byte)
 	 *
 	 * @param str input string
-	 * @param int - it is totally unused (used only to distinguish functions)
+	 * @param x - it is totally unused (used only to distinguish functions)
 	 *
 	 * @return escaped, double-quoted string
 	 */
-	static std::string escape_to_double_quoted_string(StringView str, int);
+	static std::string escape_to_double_quoted_string(StringView str, int x);
 
 	/**
 	 * @brief Converts string @p str so that it can be safely placed in config
