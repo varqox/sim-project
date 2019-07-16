@@ -24,14 +24,18 @@ using std::vector;
 #define SYS_SECCOMP 1
 #endif
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc99-extensions"
+#endif
 
 static_assert(std::is_same<decltype(SCMP_CMP(0, SCMP_CMP_MASKED_EQ, 0, 0)),
                            scmp_arg_cmp>::value,
               "It is needed for the below wrapper to work");
 
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
 // Fix macros used by macros SCMP_A{0,1,...} because initializers in C work
 // differently
