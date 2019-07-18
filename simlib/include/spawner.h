@@ -209,6 +209,7 @@ protected:
 			timespec cpu_time_at_start;
 			timer_t timerid;
 			TimeoutHandler timeouter;
+			std::atomic_bool flag;
 		} data;
 		bool timer_is_active = false;
 

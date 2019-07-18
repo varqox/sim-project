@@ -117,8 +117,18 @@ std::chrono::nanoseconds Spawner::Timer::stop_and_get_runtime() {
 
 void Spawner::CPUTimeMonitor::handler(int, siginfo_t* si, void*) noexcept {
 	int errnum = errno;
+	const Data& data = *(Data*)si->si_value.sival_ptr;
 
-	Data& data = *(Data*)si->si_value.sival_ptr;
+	static_assert(decltype(data.flag)::is_always_lock_free,
+	              "data::flag atomic has to be lock-free as it is used in a "
+	              "signal handler");
+	data.flag
+	   .load(); // Used to synchronize memory with the thread that created the
+	            // data object -- this handler may by called in a different
+	            // thread that the one that created the data object and that may
+	            // be the source of an inconsistency in the memory -- that is
+	            // why the atomic variable is used to synchronize memory
+
 	timespec ts;
 	if (clock_gettime(data.cid, &ts) or ts >= data.cpu_abs_time_limit) {
 		// Failed to get time or cpu_time_limit expired
@@ -144,7 +154,8 @@ void Spawner::CPUTimeMonitor::handler(int, siginfo_t* si, void*) noexcept {
 Spawner::CPUTimeMonitor::CPUTimeMonitor(pid_t pid,
                                         std::chrono::nanoseconds cpu_time_limit,
                                         TimeoutHandler timeouter)
-   : data {pid, {}, to_timespec(cpu_time_limit), {}, {}, std::move(timeouter)} {
+   : data {pid, {}, to_timespec(cpu_time_limit), {}, {}, std::move(timeouter),
+           {}} {
 	STACK_UNWINDING_MARK;
 
 	throw_assert(cpu_time_limit >= decltype(cpu_time_limit)::zero());
@@ -160,6 +171,12 @@ Spawner::CPUTimeMonitor::CPUTimeMonitor(pid_t pid,
 
 	// Update the cpu_abs_time_limit to reflect cpu_time_at_start
 	data.cpu_abs_time_limit += data.cpu_time_at_start;
+	data.flag.store(
+	   0); // Used to synchronize memory with the thread that will execute the
+	       // signal handler -- the signal handler may by called in a different
+	       // thread (not the one that created the data object) and that may be
+	       // the source of an inconsistency in the memory -- that is why the
+	       // atomic variable is used to synchronize memory
 
 	const int USED_SIGNAL = SIGRTMIN + 1;
 

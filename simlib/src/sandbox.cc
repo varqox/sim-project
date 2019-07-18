@@ -837,6 +837,11 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			                            std::forward<decltype(args)>(args)...);
 		};
 
+		// BUG: Adding seccomp rules using libseccomp calls malloc()/calloc()
+		// which under Sanitizers can cause deadlocks (because Sanitizers
+		// allocators are not implemented in a fork-safe way) when the sandbox
+		// is executed from a multi-threaded program.
+
 		try {
 			/* ================== Rules depending on opts ================== */
 			static_assert(STDIN_FILENO == 0, "Needed below");
@@ -1052,9 +1057,10 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	   " syscall: ", si.si_syscall, " arch: ", si.si_arch);
 
 	// If something went wrong
-	if (si.si_code != CLD_TRAPPED)
+	if (si.si_code != CLD_TRAPPED) {
 		return ExitStat(0ns, 0ns, si.si_code, si.si_status, ru, 0,
 		                receive_error_message(si, pfd[0]));
+	}
 
 	// Useful when exception is thrown
 	CallInDtor kill_and_wait_tracee_guard([&] {
@@ -1084,9 +1090,12 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	std::chrono::nanoseconds cpu_time {0};
 
 	// Set up timers
-	std::atomic_bool tracee_timeouted(false);
-	auto timeouter = [&tracee_timeouted](pid_t pid) {
-		tracee_timeouted = true;
+	auto tracee_timeouted = std::make_shared<std::atomic_flag>();
+	tracee_timeouted->test_and_set();
+	// This signal handler may be executed in a different thread, so we need to
+	// use an atomic
+	auto timeouter = [tracee_timeouted](pid_t pid) {
+		tracee_timeouted->clear();
 		// Send SIGSTOP (SIGSTOP because it cannot be blocked and we can
 		// intercept it), so that it will be intercepted via ptrace (there we
 		// check for timeout, collect memory status and kill the process)
@@ -1218,7 +1227,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				}
 
 				// Timeout handler was invoked
-				if (tracee_timeouted) {
+				if (not tracee_timeouted->test_and_set()) {
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (TIMEOUT) - si_status: ",
 					                          si.si_status);
 					// Tracee will die, we have to update the vm_peak, as it
