@@ -45,6 +45,8 @@ public:
 		return *this;
 	}
 
+	bool opened() const noexcept { return (fd_ >= 0); }
+
 	operator int() const noexcept { return fd_; }
 
 	int release() noexcept {
@@ -237,7 +239,6 @@ int mkdir_r(std::string path, mode_t mode = S_0755) noexcept;
 
 class TemporaryFile {
 	std::string path_; // absolute path
-	int fd_ = -1;
 
 public:
 	/// Does NOT create a temporary file
@@ -246,44 +247,77 @@ public:
 	/// The last six characters of template must be "XXXXXX" and these are
 	/// replaced with a string that makes the filename unique.
 	explicit TemporaryFile(std::string templ) {
-		templ.data(); // Make sure that NULL is appended
-		fd_ = mkstemp(templ.data());
-		if (fd_ == -1)
+		throw_assert(hasSuffix(templ, "XXXXXX") && "this is needed by mkstemp");
+		FileDescriptor fd(mkstemp(templ.data()));
+		if (not fd.opened())
 			THROW("mkstemp() failed", errmsg());
 		path_ = std::move(templ);
 	}
 
 	TemporaryFile(const TemporaryFile&) = delete;
 	TemporaryFile& operator=(const TemporaryFile&) = delete;
-
-	TemporaryFile(TemporaryFile&& tf) noexcept
-	   : path_(std::move(tf.path_)), fd_(tf.fd_) {
-		tf.fd_ = -1;
-	}
+	TemporaryFile(TemporaryFile&&) noexcept = default;
 
 	TemporaryFile& operator=(TemporaryFile&& tf) noexcept {
-		if (is_open()) {
+		if (is_open())
 			unlink(path_);
-			(void)close(fd_);
-		}
 
 		path_ = std::move(tf.path_);
-		fd_ = tf.fd_;
-		tf.fd_ = -1;
-
 		return *this;
 	}
 
 	~TemporaryFile() {
-		if (is_open()) {
+		if (is_open())
 			unlink(path_);
-			(void)close(fd_);
-		}
 	}
+
+	bool is_open() const noexcept { return not path_.empty(); }
+
+	const std::string& path() const noexcept { return path_; }
+};
+
+class OpenedTemporaryFile {
+	std::string path_; // absolute path
+	FileDescriptor fd_;
+
+public:
+	/// Does NOT create a temporary file
+	OpenedTemporaryFile() = default;
+
+	/// The last six characters of template must be "XXXXXX" and these are
+	/// replaced with a string that makes the filename unique.
+	explicit OpenedTemporaryFile(std::string templ) {
+		throw_assert(hasSuffix(templ, "XXXXXX") && "this is needed by mkstemp");
+		fd_ = mkstemp(templ.data());
+		if (not fd_.opened())
+			THROW("mkstemp() failed", errmsg());
+		path_ = std::move(templ);
+	}
+
+	OpenedTemporaryFile(const OpenedTemporaryFile&) = delete;
+	OpenedTemporaryFile& operator=(const OpenedTemporaryFile&) = delete;
+	OpenedTemporaryFile(OpenedTemporaryFile&&) noexcept = default;
+
+	OpenedTemporaryFile& operator=(OpenedTemporaryFile&& tf) noexcept {
+		if (is_open())
+			unlink(path_);
+
+		path_ = std::move(tf.path_);
+		fd_ = std::move(tf.fd_);
+
+		return *this;
+	}
+
+	~OpenedTemporaryFile() {
+		if (is_open())
+			unlink(path_);
+	}
+
+	operator const FileDescriptor&() const { return fd_; }
 
 	operator int() const { return fd_; }
 
-	bool is_open() const noexcept { return (fd_ != -1); }
+	bool is_open() const noexcept { return fd_.opened(); }
 
 	const std::string& path() const noexcept { return path_; }
 };
