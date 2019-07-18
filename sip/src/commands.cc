@@ -328,7 +328,7 @@ parse_args_to_solutions(const sim::Simfile& simfile, ArgvParser args) {
 			// There is no solution with path equal to the provided path, so
 			// choose all that contain arg as a subsequence
 			for (auto const& solution : simfile.solutions)
-				if (is_subsequence(arg, solution))
+				if (matches_pattern(arg, solution))
 					choosen_solutions.emplace(solution);
 		}
 	} while (args.size() > 0);

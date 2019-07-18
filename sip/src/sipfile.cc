@@ -181,7 +181,7 @@ matching_generator(StringView pattern,
 
 	std::optional<StringView> res;
 	pkg_contents.for_each_with_prefix("utils/", [&](StringView file) {
-		if (is_subsequence(pattern, file) and sim::is_source(file)) {
+		if (matches_pattern(pattern, file) and sim::is_source(file)) {
 			if (res.has_value()) {
 				throw SipError("Sipfile: specified generator `", pattern,
 				               "` matches more than one file: `", res.value(),

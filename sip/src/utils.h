@@ -14,4 +14,17 @@ inline bool is_subsequence(StringView sequence, StringView str) noexcept {
 	return false;
 }
 
+inline bool matches_pattern(StringView pattern, StringView str) noexcept {
+	// Match as a subsequence whole str if pattern contains '.'
+	if (pattern.find('.') != StringView::npos)
+		return is_subsequence(pattern, str);
+
+	// Otherwise match as a subsequence the part of str before last '.'
+	auto pos = str.rfind('.');
+	if (pos == StringView::npos)
+		pos = str.size();
+
+	return is_subsequence(pattern, str.substring(0, pos));
+}
+
 inline bool not_isspace(int c) noexcept { return not isspace(c); }
