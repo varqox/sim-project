@@ -14,14 +14,14 @@ class PackageContents {
 
 	InplaceBuff<1> buff;
 	struct Comparer {
-		decltype(buff)& buff_ref;
+		decltype(buff)* buff_ref;
 
-		Comparer(decltype(buff)& br) : buff_ref(br) {}
+		Comparer(decltype(buff)& br) : buff_ref(&br) {}
 
 		static StringView to_str(StringView str) noexcept { return str; }
 
 		StringView to_str(Span x) const {
-			return {buff_ref.data() + x.begin, x.end - x.begin};
+			return {buff_ref->data() + x.begin, x.end - x.begin};
 		}
 
 		template <class A, class B>

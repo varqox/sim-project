@@ -352,7 +352,6 @@ protected:
 		try {
 			::new (&pool[x]) Node {std::forward<Args>(args)...};
 		} catch (...) {
-
 			pool.deallocate(x);
 			throw;
 		}
