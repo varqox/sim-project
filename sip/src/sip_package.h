@@ -21,8 +21,8 @@ public:
 	Sipfile sipfile;
 
 private:
-	Optional<sim::JudgeWorker> jworker;
-	Optional<TestsFiles> tests_files;
+	std::optional<sim::JudgeWorker> jworker;
+	std::optional<TestsFiles> tests_files;
 
 	// Loads the default time limit from Sipfile or return the default value.
 	// Returned value represents time in microseconds
@@ -148,5 +148,5 @@ public:
 	void create_default_sipfile();
 
 	// Creates the default Simfile. Then sets name to @p problem_name
-	void create_default_simfile(Optional<CStringView> problem_name);
+	void create_default_simfile(std::optional<CStringView> problem_name);
 };

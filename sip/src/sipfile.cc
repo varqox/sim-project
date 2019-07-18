@@ -2,8 +2,8 @@
 #include "sip_error.h"
 #include "utils.h"
 
+#include <optional>
 #include <simlib/filesystem.h>
-#include <simlib/optional.h>
 #include <simlib/sim/judge_worker.h>
 #include <simlib/sim/problem_package.h>
 #include <simlib/sim/simfile.h>
@@ -179,7 +179,7 @@ matching_generator(StringView pattern,
 	if (pkg_contents.exists(pattern))
 		return InplaceBuff<32>(pattern);
 
-	Optional<StringView> res;
+	std::optional<StringView> res;
 	pkg_contents.for_each_with_prefix("utils/", [&](StringView file) {
 		if (is_subsequence(pattern, file) and sim::is_source(file)) {
 			if (res.has_value()) {

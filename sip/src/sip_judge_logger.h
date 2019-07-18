@@ -61,7 +61,7 @@ public:
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
 	          Sandbox::ExitStat es, Sandbox::ExitStat checker_es,
-	          Optional<uint64_t> checker_mem_limit,
+	          std::optional<uint64_t> checker_mem_limit,
 	          StringView checker_error_str) override {
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
 			tmplog("  Checker: ");

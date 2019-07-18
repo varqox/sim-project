@@ -612,7 +612,7 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 
 	// Inotify buffer
 	// WARNING: this assumes that no directory is watched
-	char inotify_buf[sizeof(inotify_event) * tex_files.size()];
+	std::string inotify_buf(sizeof(inotify_event) * tex_files.size(), '\0');
 	for (AVLDictSet<CStringView> files_to_recompile;;) {
 		process_unwatched_files();
 
@@ -637,7 +637,7 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 		if (rc < 0) // Handles error of the first or the second poll
 			THROW("poll()", errmsg());
 
-		ssize_t len = read(ino_fd, inotify_buf, sizeof(inotify_buf));
+		ssize_t len = read(ino_fd, inotify_buf.data(), inotify_buf.size());
 		if (len < 1) {
 			log_warning("read()", errmsg());
 			continue;
@@ -645,7 +645,7 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 
 		struct inotify_event* event;
 		// Process files for which an event occurred
-		for (char* ptr = inotify_buf; ptr < inotify_buf + len;
+		for (char* ptr = inotify_buf.data(); ptr < inotify_buf.data() + len;
 		     ptr += sizeof(inotify_event)) { // WARNING: if you want to watch
 			                                 // directories, add + events->len
 			event = (struct inotify_event*)ptr;
@@ -897,7 +897,8 @@ void SipPackage::create_default_sipfile() {
 	stdlog(" done.");
 }
 
-void SipPackage::create_default_simfile(Optional<CStringView> problem_name) {
+void SipPackage::create_default_simfile(
+   std::optional<CStringView> problem_name) {
 	STACK_UNWINDING_MARK;
 
 	stdlog("Creating Simfile...");
