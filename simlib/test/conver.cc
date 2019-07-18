@@ -99,12 +99,10 @@ class ConverTestRunner : public concurrent::JobProcessor<string> {
 
 public:
 	// TODO: make tests for interactive problem packages
-	ConverTestRunner(string tests_dir) : tests_dir_(std::move(tests_dir)) {
-		stdlog.label(false);
-	}
+	ConverTestRunner(string tests_dir) : tests_dir_(std::move(tests_dir)) {}
 
 protected:
-	void produce_jobs() {
+	void produce_jobs() override final {
 		std::vector<string> test_cases;
 		collect_available_test_cases(test_cases);
 		sort(test_cases.begin(), test_cases.end(), StrNumCompare());
@@ -112,6 +110,7 @@ protected:
 			add_job(std::move(test_case));
 	}
 
+private:
 	void collect_available_test_cases(std::vector<string>& test_cases) {
 		forEachDirComponent(tests_dir_, [&](dirent* file) {
 			constexpr StringView suffix("package.zip");
@@ -123,7 +122,8 @@ protected:
 		});
 	}
 
-	void process_job(string test_case) {
+protected:
+	void process_job(string test_case) override final {
 		try {
 			run_test_case(std::move(test_case));
 		} catch (const std::exception& e) {
@@ -233,8 +233,8 @@ private:
 				}
 			}
 
-			TemporaryFile extract_solution() {
-				TemporaryFile solution_source_code(
+			OpenedTemporaryFile extract_solution() {
+				OpenedTemporaryFile solution_source_code(
 				   "/tmp/problem_solution.XXXXXX");
 				ZipFile zip(package_path_);
 				zip.extract_to_fd(zip.get_index(concat(pkg_master_dir_,
@@ -244,7 +244,7 @@ private:
 				return solution_source_code;
 			}
 
-			void compile_solution(TemporaryFile&& solution_source_code) {
+			void compile_solution(OpenedTemporaryFile&& solution_source_code) {
 				string compilation_errors;
 				if (jworker_.compile_solution(
 				       solution_source_code.path(),
@@ -327,6 +327,7 @@ private:
 };
 
 TEST(Conver, constructSimfile) {
+	stdlog.label(false);
 	ConverTestRunner(concat_tostr(getExecDir(getpid()), "conver_test_cases/"))
 	   .run();
 }

@@ -40,9 +40,10 @@ protected:
 
 public:
 	void run() {
-		std::vector<std::thread> workers(std::max(
+		const int workers_no = std::max(
 		   (int)std::thread::hardware_concurrency() - 1,
-		   1)); // One has to remain to prevent deadlock if queue gets full
+		   1); // One has to remain to prevent deadlock if queue gets full
+		std::vector<std::thread> workers(workers_no);
 		spawn_workers(workers);
 		generate_jobs_and_signal_no_more();
 		worker(); // Use current thread to process remaining jobs
