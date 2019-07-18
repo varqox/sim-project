@@ -41,6 +41,17 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 void Spawner::Timer::handle_timeout(int, siginfo_t* si, void*) noexcept {
 	int errnum = errno;
 	Data& data = *(Data*)si->si_value.sival_ptr;
+
+	static_assert(decltype(data.flag)::is_always_lock_free,
+	              "data::flag atomic has to be lock-free as it is used in a "
+	              "signal handler");
+	data.flag
+	   .load(); // Used to synchronize memory with the thread that created the
+	            // data object -- this handler may by called in a different
+	            // thread that the one that created the data object and that may
+	            // be the source of an inconsistency in the memory -- that is
+	            // why the atomic variable is used to synchronize memory
+
 	try {
 		data.timeouter(data.pid);
 	} catch (...) {
@@ -57,8 +68,15 @@ void Spawner::Timer::delete_timer() noexcept {
 
 Spawner::Timer::Timer(pid_t pid, std::chrono::nanoseconds time_limit,
                       TimeoutHandler timeouter)
-   : data {pid, std::move(timeouter)}, tlimit(to_timespec(time_limit)) {
+   : data {pid, std::move(timeouter), {}}, tlimit(to_timespec(time_limit)) {
 	STACK_UNWINDING_MARK;
+
+	data.flag.store(
+	   0); // Used to synchronize memory with the thread that will execute the
+	       // signal handler -- the signal handler may by called in a different
+	       // thread (not the one that created the data object) and that may be
+	       // the source of an inconsistency in the memory -- that is why the
+	       // atomic variable is used to synchronize memory
 
 	throw_assert(time_limit >= decltype(time_limit)::zero());
 
@@ -84,6 +102,16 @@ Spawner::Timer::Timer(pid_t pid, std::chrono::nanoseconds time_limit,
 		sev.sigev_value.sival_ptr = &data;
 		if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
 			THROW("timer_create()", errmsg());
+
+		data.flag.store( // TODO: it looks like a race condition because the
+		                 // signal handler may be called just before, we
+		                 // synchronize via data.flag
+		   0); // Used to synchronize memory with the thread that will execute
+		       // the signal handler -- the signal handler may by called in a
+		       // different thread (not the one that created the data object)
+		       // and that may be the source of an inconsistency in the memory
+		       // -- that is why the atomic variable is used to synchronize
+		       // memory
 
 		timer_is_active = true;
 
@@ -195,6 +223,15 @@ Spawner::CPUTimeMonitor::CPUTimeMonitor(pid_t pid,
 	sev.sigev_value.sival_ptr = &data;
 	if (timer_create(CLOCK_MONOTONIC, &sev, &data.timerid))
 		THROW("timer_create()", errmsg());
+
+	data.flag.store( // TODO: it looks like a race condition because the signal
+	                 // handler may be called just before, we synchronize via
+	                 // data.flag
+	   0); // Used to synchronize memory with the thread that will execute the
+	       // signal handler -- the signal handler may by called in a different
+	       // thread (not the one that created the data object) and that may be
+	       // the source of an inconsistency in the memory -- that is why the
+	       // atomic variable is used to synchronize memory
 
 	timer_is_active = true;
 

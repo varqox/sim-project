@@ -177,6 +177,7 @@ protected:
 		struct Data {
 			pid_t pid;
 			TimeoutHandler timeouter;
+			std::atomic_uint8_t flag;
 		} data;
 		timespec tlimit;
 		timespec begin_point; // used only if time_limit == {0, 0}
@@ -209,7 +210,7 @@ protected:
 			timespec cpu_time_at_start;
 			timer_t timerid;
 			TimeoutHandler timeouter;
-			std::atomic_bool flag;
+			std::atomic_uint8_t flag;
 		} data;
 		bool timer_is_active = false;
 

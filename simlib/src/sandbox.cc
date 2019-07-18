@@ -1090,8 +1090,12 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	std::chrono::nanoseconds cpu_time {0};
 
 	// Set up timers
+	unique_ptr<Timer> timer;
+	unique_ptr<CPUTimeMonitor> cpu_timer;
+
 	auto tracee_timeouted = std::make_shared<std::atomic_flag>();
 	tracee_timeouted->test_and_set();
+
 	// This signal handler may be executed in a different thread, so we need to
 	// use an atomic
 	auto timeouter = [tracee_timeouted](pid_t pid) {
@@ -1101,8 +1105,6 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// check for timeout, collect memory status and kill the process)
 		kill(-pid, SIGSTOP);
 	};
-	unique_ptr<Timer> timer;
-	unique_ptr<CPUTimeMonitor> cpu_timer;
 
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
 		// Wait tracee_pid_ so that the CPU runtime will be accurate
