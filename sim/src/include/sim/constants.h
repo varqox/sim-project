@@ -561,8 +561,8 @@ constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
 // Logs API
-constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 KiB
-constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 KiB
+constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 16 << 10; // 16 KiB
+constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 128 << 10; // 128 KiB
 
 // API
 constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
