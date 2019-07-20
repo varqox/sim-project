@@ -25,8 +25,8 @@ class InfDatetime {
 	// Format: YYYY-mm-dd HH:MM:SS
 	InplaceBuff<19> date;
 
-	static constexpr const char* NEG_INF_STR = "#";
-	static constexpr const char* INF_STR = "@";
+	static constexpr const char NEG_INF_STR[] = "#";
+	static constexpr const char INF_STR[] = "@";
 
 public:
 	InfDatetime() : type(Type::INF) {}

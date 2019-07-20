@@ -66,7 +66,7 @@ static constexpr const char* sfsm_to_json(SFSM sfsm) {
 
 namespace {
 // clang-format off
-constexpr const char* api_contest_names =
+constexpr const char api_contest_names[] =
    "[\n{\"fields\":["
           "{\"name\":\"contest\",\"fields\":["
               "\"id\","
