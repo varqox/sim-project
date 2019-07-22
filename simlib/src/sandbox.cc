@@ -781,7 +781,7 @@ uint64_t Sandbox::get_tracee_vm_size() {
 	for (int i = 0; i < 32 && isdigit(buff[i]); ++i)
 		vm_size = vm_size * 10 + buff[i] - '0';
 
-	DEBUG_SANDBOX(stdlog("get_vm_size: -> ", vm_size, " (",
+	DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] get_vm_size: -> ", vm_size, " (",
 	                     humanizeFileSize(vm_size * sysconf(_SC_PAGESIZE)),
 	                     ")");)
 	return vm_size;
@@ -792,7 +792,7 @@ void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
 		tracee_vm_peak_ = curr_vm_size;
 
 	DEBUG_SANDBOX(
-	   stdlog("tracee_vm_peak: -> ", tracee_vm_peak_, " (",
+	   stdlog('[', tracee_pid_, "] tracee_vm_peak: -> ", tracee_vm_peak_, " (",
 	          humanizeFileSize(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)), ")");)
 }
 
@@ -1043,7 +1043,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 
 // Verbose debug messages have different color
 #define DEBUG_SANDBOX_VERBOSE_LOG(...)                                         \
-	DEBUG_SANDBOX(stdlog("\033[1;30m", __VA_ARGS__, "\033[m"))
+	DEBUG_SANDBOX(stdlog("\033[1;30m[", tracee_pid_, "] ", __VA_ARGS__, "\033[m"))
 
 	// Wait for tracee to be ready
 	siginfo_t si;
@@ -1166,7 +1166,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 						   free};
 
 						DEBUG_SANDBOX(
-						   stdlog("forbidden syscall: ", sii.si_syscall, " - ",
+						   stdlog('[', tracee_pid_, "] forbidden syscall: ", sii.si_syscall, " - ",
 						          (syscall_name ? syscall_name.get() : "???")));
 
 						if (syscall_name) {
@@ -1277,7 +1277,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// may happen when the tracee gets killed (e.g. by timeout) while we
 		// are doing something (e.g. inspecting syscall arguments).
 	} catch (const std::exception& e) {
-		DEBUG_SANDBOX(stdlog(__FILE__ ":", meta::ToString<__LINE__> {},
+		DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] " __FILE__ ":", meta::ToString<__LINE__> {},
 		                     ": Caught exception: ", e.what());)
 
 		// Exception after tracee is dead and waited
