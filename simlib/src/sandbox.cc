@@ -1001,6 +1001,19 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 			if (ptrace(PTRACE_TRACEME, 0, 0, 0))
 				send_error_and_exit(errno, "ptrace(PTRACE_TRACEME)");
 
+			// Reset blocked signals
+			sigset_t sigset;
+			if (sigemptyset(&sigset))
+				send_error_and_exit(errno, "sigemptyset()");
+			if (sigprocmask(SIG_SETMASK, &sigset, nullptr))
+				send_error_and_exit(errno, "sigprocmask()");
+
+			// SIGPIPE may be used to kill the process e.g. in interactive task
+			struct sigaction sa;
+			memset(&sa, 0, sizeof(sa));
+			sa.sa_handler = SIG_DFL;
+			(void)sigaction(SIGPIPE, &sa, nullptr);
+
 			// Signal the tracer that ptrace is ready and it may proceed to
 			// tracing us. It has to be done before loading the filter into the
 			// kernel because if some allocation occurs during the
@@ -1042,7 +1055,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 
 // Verbose debug messages have different color
 #define DEBUG_SANDBOX_VERBOSE_LOG(...)                                         \
-	DEBUG_SANDBOX(stdlog("\033[1;30m[", tracee_pid_, "] ", __VA_ARGS__, "\033[m"))
+	DEBUG_SANDBOX(                                                             \
+	   stdlog("\033[1;30m[", tracee_pid_, "] ", __VA_ARGS__, "\033[m"))
 
 	// Wait for tracee to be ready
 	siginfo_t si;
@@ -1164,9 +1178,10 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 						                                    sii.si_syscall),
 						   free};
 
-						DEBUG_SANDBOX(
-						   stdlog('[', tracee_pid_, "] forbidden syscall: ", sii.si_syscall, " - ",
-						          (syscall_name ? syscall_name.get() : "???")));
+						DEBUG_SANDBOX(stdlog(
+						   '[', tracee_pid_,
+						   "] forbidden syscall: ", sii.si_syscall, " - ",
+						   (syscall_name ? syscall_name.get() : "???")));
 
 						if (syscall_name) {
 							set_message_callback(
@@ -1247,14 +1262,22 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				// because stack segment grows without any syscall)
 				update_tracee_vm_peak();
 				// Deliver intercepted signal to tracee
-				(void)ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status);
+				if (ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status)) {
+					DEBUG_SANDBOX(stdlog('[', tracee_pid_,
+					                     "] ptrace(PTRACE_CONT)", errmsg()));
+				}
+
 				continue;
 
 			case CLD_STOPPED:
 				DEBUG_SANDBOX_VERBOSE_LOG("STOPPED - si_status: ",
 				                          si.si_status);
 				// Deliver intercepted signal to tracee
-				(void)ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status);
+				if (ptrace(PTRACE_CONT, tracee_pid_, 0, si.si_status)) {
+					DEBUG_SANDBOX(stdlog('[', tracee_pid_,
+					                     "] ptrace(PTRACE_CONT)", errmsg()));
+				}
+
 				continue;
 
 			case CLD_EXITED:
@@ -1276,7 +1299,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// may happen when the tracee gets killed (e.g. by timeout) while we
 		// are doing something (e.g. inspecting syscall arguments).
 	} catch (const std::exception& e) {
-		DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] " __FILE__ ":", meta::ToString<__LINE__> {},
+		DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] " __FILE__ ":",
+		                     meta::ToString<__LINE__> {},
 		                     ": Caught exception: ", e.what());)
 
 		// Exception after tracee is dead and waited
