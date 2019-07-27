@@ -397,8 +397,7 @@ Sandbox::Sandbox() {
 		                          SCMP_SYS(uname), 0);
 
 		// set_thread_area
-		seccomp_rule_add_throw(
-		   x86_ctx_,
+		seccomp_rule_add_both_ctx(
 		   SCMP_ACT_TRACE(add_callback(
 		      [&] {
 			      if (has_the_readlink_syscall_occurred)
@@ -411,17 +410,17 @@ Sandbox::Sandbox() {
 		   SCMP_SYS(set_thread_area), 0);
 
 		// arch_prctl
-		seccomp_rule_add_throw(x86_64_ctx_,
-		                       SCMP_ACT_TRACE(add_callback(
-		                          [&] {
-			                          if (has_the_readlink_syscall_occurred)
-				                          return set_message_callback(
-				                             "forbidden syscall: arch_prctl");
+		seccomp_rule_add_both_ctx(
+		   SCMP_ACT_TRACE(add_callback(
+		      [&] {
+			      if (has_the_readlink_syscall_occurred)
+				      return set_message_callback(
+				         "forbidden syscall: arch_prctl");
 
-			                          return false;
-		                          },
-		                          "arch_prctl")),
-		                       SCMP_SYS(arch_prctl), 0);
+			      return false;
+		      },
+		      "arch_prctl")),
+		   SCMP_SYS(arch_prctl), 0);
 
 		// readlink - x86
 		seccomp_rule_add_throw(x86_ctx_,
