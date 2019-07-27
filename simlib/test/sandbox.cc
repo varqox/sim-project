@@ -234,7 +234,7 @@ public:
 		EXPECT_EQ(es.si.code, CLD_KILLED);
 		EXPECT_EQ(es.si.status, SIGKILL);
 		EXPECT_EQ(es.message,
-		          concat_tostr("forbidden syscall: 205 - set_thread_area"));
+		          concat_tostr("forbidden syscall: set_thread_area"));
 		EXPECT_LT(0s, es.cpu_runtime);
 		EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 		EXPECT_LT(0s, es.runtime);
@@ -252,7 +252,7 @@ public:
 			EXPECT_EQ(es.si.code, CLD_KILLED);
 			EXPECT_EQ(es.si.status, SIGKILL);
 			EXPECT_EQ(es.message,
-			          concat_tostr("forbidden syscall: 384 - arch_prctl"));
+			          concat_tostr("forbidden syscall: arch_prctl"));
 			EXPECT_LT(0s, es.cpu_runtime);
 			EXPECT_LT(es.cpu_runtime, CPU_TIME_LIMIT);
 			EXPECT_LT(0s, es.runtime);
