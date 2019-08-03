@@ -174,7 +174,9 @@ protected:
 	void produce_jobs() override final {
 		std::vector<string> test_cases;
 		collect_available_test_cases(test_cases);
-		sort(test_cases.begin(), test_cases.end(), StrNumCompare());
+		sort(test_cases.begin(), test_cases.end(), [&](auto& a, auto& b) {
+			return StrNumCompare()(b, a);
+		});
 		for (auto& test_case_name : test_cases)
 			add_job(std::move(test_case_name));
 	}
