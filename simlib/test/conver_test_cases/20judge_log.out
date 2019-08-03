@@ -1,0 +1,17 @@
+Judging (initial): {
+  0         [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+  000       [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+  6ocen     [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+Score: 0 / 0 (ratio: 1.0000)
+}
+Judging (final): {
+  1a        [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+  1d        [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+  1file     [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+Score: -4 / -4 (ratio: 1.0000)
+  3         [ TL: 6.05 s ML: 9216 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+  3file     [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+Score: 94 / 94 (ratio: 1.0000)
+  5         [ TL: 6.05 s ML: 32768 KiB ]  Status: OK  Checker: OK:  [ ML: 262144 KiB ]
+Score: 6 / 6 (ratio: 1.0000)
+}

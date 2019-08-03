@@ -71,8 +71,8 @@ public:
 	template <class Func>
 	std::string pretty_dump(Func&& span_status) const {
 		std::string res = "{\n";
-		for (auto&& group : groups) {
-			for (auto&& test : group.tests) {
+		for (auto const& group : groups) {
+			for (auto const& test : group.tests) {
 				back_insert(
 				   res, "  ", paddedString(test.name, 11, LEFT),
 				   paddedString(intentionalUnsafeStringView(toString(
@@ -99,22 +99,22 @@ public:
 		return res += '}';
 	}
 
-	/// Returns the pretty-printed judge report
-	std::string pretty_dump() const {
-		return pretty_dump([](Test::Status status) {
-			switch (status) {
-			case Test::OK: return "OK";
-			case Test::WA: return "WA";
-			case Test::TLE: return "TLE";
-			case Test::MLE: return "MLE";
-			case Test::RTE: return "RTE";
-			case Test::CHECKER_ERROR: return "CHECKER_ERROR";
-			case Test::SKIPPED: return "SKIPPED";
-			}
+	static const char* simple_span_status(Test::Status status) {
+		switch (status) {
+		case Test::OK: return "OK";
+		case Test::WA: return "WA";
+		case Test::TLE: return "TLE";
+		case Test::MLE: return "MLE";
+		case Test::RTE: return "RTE";
+		case Test::CHECKER_ERROR: return "CHECKER_ERROR";
+		case Test::SKIPPED: return "SKIPPED";
+		}
 
-			return "UNKNOWN";
-		});
+		return "UNKNOWN";
 	}
+
+	/// Returns the pretty-printed judge report
+	std::string pretty_dump() const { return pretty_dump(&simple_span_status); }
 };
 
 enum class SolutionLanguage {

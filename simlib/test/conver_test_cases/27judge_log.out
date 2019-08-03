@@ -1,0 +1,17 @@
+Judging (initial): {
+  0         [ TL: 0.30 s ML: 32768 KiB ]  Status: WA  Checker: WA: Line 4: Read '?', expected EOF [ ML: 262144 KiB ]
+Score: 0 / 0 (ratio: 0.0000)
+}
+Judging (final): {
+  1         [ TL: 0.30 s ML: 32768 KiB ]  Status: OK  Checker: OK: Used 1 queries out of 1 [ ML: 262144 KiB ]
+Score: 25 / 25 (ratio: 1.0000)
+  2a        [ TL: 0.30 s ML: 32768 KiB ]  Status: WA  Checker: WA: Line 3: Read '?', expected EOF [ ML: 262144 KiB ]
+  2b        [ TL: 0.30 s ML: 32768 KiB ]  Status: WA  Checker: WA: Line 3: Read '?', expected EOF [ ML: 262144 KiB ]
+Score: 0 / 25 (ratio: 0.0000)
+  3a        [ TL: 0.30 s ML: 32768 KiB ]  Status: OK  Checker: OK: Used 3 queries out of 2 [ ML: 262144 KiB ]
+  3b        [ TL: 0.30 s ML: 32768 KiB ]  Status: WA  Checker: WA: Line 3: Read '?', expected EOF [ ML: 262144 KiB ]
+Score: 0 / 25 (ratio: 0.0000)
+  4a        [ TL: 0.30 s ML: 32768 KiB ]  Status: WA  Checker: WA: Line 493: Read '?', expected EOF [ ML: 262144 KiB ]
+  4b        [ TL: 0.30 s ML: 32768 KiB ]  Status: WA  Checker: WA: Line 336: Read '?', expected EOF [ ML: 262144 KiB ]
+Score: 0 / 25 (ratio: 0.0000)
+}
