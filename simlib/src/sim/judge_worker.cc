@@ -195,11 +195,11 @@ void JudgeWorker::load_package(FilePath package_path,
 	sf.load_checker();
 }
 
-// Real time limit is set to 1.5 * time_limit + 1s, because CPU time is
+// Real time limit is set to 1.5 * time_limit + 0.5s, because CPU time is
 // measured
 static inline auto
 cpu_time_limit_to_real_time_limit(std::chrono::nanoseconds cpu_tl) noexcept {
-	return cpu_tl * 3 / 2 + std::chrono::seconds(1);
+	return cpu_tl * 3 / 2 + std::chrono::milliseconds(500);
 }
 
 Sandbox::ExitStat
