@@ -11,7 +11,7 @@ SIM is an open source platform for carrying out algorithmic contests
 
 ### Dependencies:
 
-- gcc/g++ (with 32 bit support) with C++14 support
+- gcc/g++ (with 32 bit support -- for compiling submissions) with C++17 support
 - MariaDB (Debian packages: _mariadb-server_)
 - MariaDB client library (Debian packages: _libmariadbclient-dev_)
 - libseccomp (Debian packages: _libseccomp-dev_)
@@ -33,8 +33,8 @@ SIM is an open source platform for carrying out algorithmic contests
 #### Arch Linux
 
   ```sh
-  sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip make
-  sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+  sudo pacman -S gcc mariadb mariadb-libs libseccomp libzip make && \
+  sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql && \
   sudo systemctl enable mariadb && sudo systemctl start mariadb
   ```
 
@@ -43,7 +43,7 @@ SIM is an open source platform for carrying out algorithmic contests
 1. First of all clone the SIM repository and all its submodules
 
   ```sh
-  git clone --recursive https://github.com/varqox/sim
+  git clone --recursive https://github.com/varqox/sim && \
   cd sim
   ```
 
@@ -104,7 +104,7 @@ SIM is an open source platform for carrying out algorithmic contests
 ### Upgrading
 Just type (be aware of incompatible database (and other inner) changes)
 ```sh
-git pull
-git submodule update --recursive
+git pull && \
+git submodule update --recursive && \
 make -j $(nproc) install run
 ```

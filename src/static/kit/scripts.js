@@ -7,13 +7,6 @@
    - all tabs (from tab-menus) and deeper / subsequent tabs works well with page
        refreshing
 */
-function hex2str(hexx) {
-	var hex = hexx.toString(); // force conversion
-	var str = '';
-	for (var i = 0; i < hex.length; i += 2)
-		str += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16));
-	return str;
-}
 function elem_with_text(tag, text) {
 	var elem = document.createElement(tag);
 	elem.innerText = text;
@@ -1140,6 +1133,63 @@ function Lister(elem) {
 ////////////////////////////////////////////////////////////////////////////////
 
 /* ================================== Logs ================================== */
+function HexToUtf8Parser() {
+	var state = 0;
+	var value = 0;
+
+	this.feed = function(hexstr) {
+		hexstr = hexstr.toString(); // force conversion
+		if (hexstr.length % 2 !== 0)
+			throw new Error("hexstr has to have even length");
+
+		var res = '';
+		for (var i = 0; i < hexstr.length; i += 2) {
+			var char = parseInt(hexstr.substring(i, i + 2), 16);
+			if (state == 0) {
+				// No sequence has started yet
+				if (char < 128) { // 128 = 0b10000000
+					res += String.fromCharCode(char);
+					continue;
+				}
+
+				if (char < 192) // 192 == 0b11000000
+					continue; // Ignore invalid character
+
+				if (char < 224) { // 224 == 0b11100000
+					// 0b110xxxxx <--> one more byte to read
+					state = 1;
+					value = char & ((1 << 5) - 1);
+					continue;
+				}
+
+				if (char < 240) { // 240 == 0b11110000
+					// 0b1110xxxx <--> two more bytes to read
+					state = 2;
+					value = char & ((1 << 4) - 1);
+					continue;
+				}
+
+				if (char < 248) { // 248 == 0b11111000
+					// 0b11110xxx <--> two more bytes to read
+					state = 3;
+					value = char & ((1 << 3) - 1);
+					continue;
+				}
+
+				continue; // Ignore invalid character
+			}
+
+			if (char < 128 || char >= 192) // 192 = 0b11000000
+				continue; // Ignore invalid character
+
+			value = (value << 6) | (char & ((1 << 6) - 1));
+			if (--state == 0)
+				res += String.fromCharCode(value);
+		}
+
+		return res;
+	}
+};
 function colorize(log, end) {
 	if (end === undefined || end > log.length)
 		end = log.length;
@@ -1249,6 +1299,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 	var lock = false; // allow only manual unlocking
 	var offset, first_offset;
 	var content = $('<span>').appendTo(elem);
+	var hex_parser = new HexToUtf8Parser();
 
 	var process_data = function(data) {
 		data[0] = parseInt(data[0]);
@@ -1260,7 +1311,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		}
 
 		offset = data[0];
-		data = hex2str(data[1]);
+		data = hex_parser.feed(data[1]);
 
 		var prev_height = content[0].scrollHeight;
 		var prev = prev_height - content.scrollTop();

@@ -3,7 +3,7 @@
 using std::pair;
 
 static Sim::ContestUserPermissions
-get_overall_perm(Optional<ContestUserMode> viewer_mode) noexcept {
+get_overall_perm(std::optional<ContestUserMode> viewer_mode) noexcept {
 	using PERM = Sim::ContestUserPermissions;
 	using CUM = ContestUserMode;
 
@@ -23,7 +23,7 @@ get_overall_perm(Optional<ContestUserMode> viewer_mode) noexcept {
 }
 
 Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
-   Optional<ContestUserMode> viewer_mode) noexcept {
+   std::optional<ContestUserMode> viewer_mode) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestUserPermissions;
 	using CUM = ContestUserMode;
@@ -38,8 +38,8 @@ Sim::ContestUserPermissions Sim::contest_user_get_overall_permissions(
 }
 
 Sim::ContestUserPermissions Sim::contest_user_get_permissions(
-   Optional<ContestUserMode> viewer_mode,
-   Optional<ContestUserMode> user_mode) noexcept {
+   std::optional<ContestUserMode> viewer_mode,
+   std::optional<ContestUserMode> user_mode) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = ContestUserPermissions;
 	using CUM = ContestUserMode;
@@ -73,7 +73,7 @@ Sim::ContestUserPermissions Sim::contest_user_get_permissions(
 	return PERM::NONE; // Shouldn't happen
 }
 
-pair<Optional<ContestUserMode>, Sim::ContestUserPermissions>
+pair<std::optional<ContestUserMode>, Sim::ContestUserPermissions>
 Sim::contest_user_get_overall_permissions(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
@@ -94,8 +94,8 @@ Sim::contest_user_get_overall_permissions(StringView contest_id) {
 	return {cu_mode, contest_user_get_overall_permissions(cu_mode)};
 }
 
-std::tuple<Optional<ContestUserMode>, Sim::ContestUserPermissions,
-           Optional<ContestUserMode>>
+std::tuple<std::optional<ContestUserMode>, Sim::ContestUserPermissions,
+           std::optional<ContestUserMode>>
 Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
 	STACK_UNWINDING_MARK;
 
@@ -168,7 +168,7 @@ void Sim::api_contest_users() {
 	// Process restrictions
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
 	CUP overall_perms = CUP::NONE;
-	Optional<ContestUserMode> cuser_mode;
+	std::optional<ContestUserMode> cuser_mode;
 	{
 		bool mode_condition_occurred = false;
 		bool user_id_condition_occurred = false;

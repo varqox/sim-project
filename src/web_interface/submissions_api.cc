@@ -1,11 +1,11 @@
 #include "sim.h"
 
 #include <functional>
+#include <optional>
 #include <sim/jobs.h>
 #include <sim/submission.h>
 #include <sim/utilities.h>
 #include <simlib/filesystem.h>
-#include <simlib/optional.h>
 #include <simlib/process.h>
 
 using std::string;
@@ -156,8 +156,8 @@ void Sim::api_submissions() {
 	{
 		std::vector<std::function<void()>> after_checks;
 		// At most one perms optional will be set
-		Optional<ContestPermissions> cperms;
-		Optional<ProblemPermissions> pperms;
+		std::optional<ContestPermissions> cperms;
+		std::optional<ProblemPermissions> pperms;
 
 		bool id_condition_occurred = false;
 		bool type_condition_occurred = false;
@@ -386,8 +386,9 @@ void Sim::api_submissions() {
 		SubmissionType stype = SubmissionType(strtoull(res[STYPE]));
 		SubmissionPermissions perms = submissions_get_permissions(
 		   res[SOWNER], stype,
-		   (res.is_null(CUMODE) ? std::nullopt
-		                        : Optional<CUM>(CUM(strtoull(res[CUMODE])))),
+		   (res.is_null(CUMODE)
+		       ? std::nullopt
+		       : std::optional<CUM>(CUM(strtoull(res[CUMODE])))),
 		   res[POWNER]);
 
 		if (perms == PERM::NONE)
@@ -634,7 +635,7 @@ void Sim::api_submission_add() {
 	StringView next_arg = url_args.extractNextArg();
 	// Load problem id and contest problem id (if specified)
 	StringView problem_id;
-	Optional<StringView> contest_problem_id;
+	std::optional<StringView> contest_problem_id;
 	for (; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		if (next_arg[0] == 'p' and isDigit(next_arg.substr(1)) and
 		    problem_id.empty()) {
@@ -745,7 +746,7 @@ void Sim::api_submission_add() {
 
 	mysql.update("INSERT INTO internal_files VALUES()");
 	auto file_id = mysql.insert_id();
-	auto file_remover = make_call_in_destructor(
+	CallInDtor file_remover(
 	   [file_id] { (void)unlink(internal_file_path(file_id)); });
 
 	// Save source file

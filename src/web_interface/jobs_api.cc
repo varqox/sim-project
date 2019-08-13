@@ -409,7 +409,7 @@ void Sim::api_job() {
 		return api_error404();
 
 	{
-		Optional<StringView> creator;
+		std::optional<StringView> creator;
 		if (jcreator.has_value())
 			creator = jcreator.value();
 		jobs_perms = jobs_get_permissions(creator, jtype, jstatus);
@@ -488,7 +488,7 @@ void Sim::api_job_download_log() {
 	throw_assert(stmt.next());
 }
 
-void Sim::api_job_download_uploaded_package(Optional<uint64_t> file_id,
+void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id,
                                             JobType job_type) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
@@ -507,7 +507,7 @@ void Sim::api_job_download_uploaded_package(Optional<uint64_t> file_id,
 	resp.content = internal_file_path(file_id.value());
 }
 
-void Sim::api_job_download_uploaded_statement(Optional<uint64_t> file_id,
+void Sim::api_job_download_uploaded_statement(std::optional<uint64_t> file_id,
                                               JobType job_type,
                                               StringView info) {
 	STACK_UNWINDING_MARK;

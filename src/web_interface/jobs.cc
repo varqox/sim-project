@@ -20,9 +20,9 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 	return PERM::NONE; // Shouldn't happen
 }
 
-Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
-                                              JobType job_type,
-                                              JobStatus job_status) noexcept {
+Sim::JobPermissions
+Sim::jobs_get_permissions(std::optional<StringView> creator_id,
+                          JobType job_type, JobStatus job_status) noexcept {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
 	using JT = JobType;
@@ -58,6 +58,8 @@ Sim::JobPermissions Sim::jobs_get_permissions(Optional<StringView> creator_id,
 		case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
 		case JT::DELETE_FILE: return PERM::NONE;
 		}
+
+		return PERM::NONE; // Shouldn't happen
 	}();
 
 	if (session_user_type == UserType::ADMIN) {

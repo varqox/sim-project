@@ -8,8 +8,8 @@ using SFSM = SubmissionFinalSelectingMethod;
 inline static InplaceBuff<32>
 color_class_json(Sim::ContestPermissions cperms, InfDatetime full_results,
                  const decltype(mysql_date())& curr_mysql_date,
-                 Optional<SubmissionStatus> full_status,
-                 Optional<SubmissionStatus> initial_status) {
+                 std::optional<SubmissionStatus> full_status,
+                 std::optional<SubmissionStatus> initial_status) {
 	if (uint(cperms & Sim::ContestPermissions::ADMIN) or
 	    full_results <= curr_mysql_date) {
 		if (full_status.has_value())
@@ -41,8 +41,8 @@ void Sim::append_contest_actions_str() {
 	append('"');
 }
 
-static constexpr inline const char*
-user_mode_to_json(Optional<ContestUserMode> cum) {
+static constexpr const char*
+user_mode_to_json(std::optional<ContestUserMode> cum) {
 	if (not cum.has_value())
 		return "null";
 
@@ -53,20 +53,20 @@ user_mode_to_json(Optional<ContestUserMode> cum) {
 	}
 
 	return "\"unknown\"";
-};
+}
 
-static constexpr inline const char* sfsm_to_json(SFSM sfsm) {
+static constexpr const char* sfsm_to_json(SFSM sfsm) {
 	switch (sfsm) {
 	case SFSM::LAST_COMPILING: return "\"LC\"";
 	case SFSM::WITH_HIGHEST_SCORE: return "\"WHS\"";
 	}
 
 	return "\"unknown\"";
-};
+}
 
 namespace {
 // clang-format off
-constexpr const char* api_contest_names =
+constexpr const char api_contest_names[] =
    "[\n{\"fields\":["
           "{\"name\":\"contest\",\"fields\":["
               "\"id\","
@@ -200,7 +200,7 @@ void Sim::api_contests() {
 		bool is_public = strtoull(res[IS_PUBLIC]);
 		auto umode = (res.is_null(USER_MODE)
 		                 ? std::nullopt
-		                 : Optional<CUM>(CUM(strtoull(res[USER_MODE]))));
+		                 : std::optional<CUM>(CUM(strtoull(res[USER_MODE]))));
 
 		contests_perms = contests_get_permissions(is_public, umode);
 

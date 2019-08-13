@@ -168,7 +168,7 @@ void Connection::readPOST(HttpRequest& req) {
 		boundary += con_type.substr(beg + 9);
 
 		// Compute p array for KMP algorithm
-		int p[boundary.size()];
+		std::vector<int> p(boundary.size());
 		size_t k = 0;
 		p[0] = 0;
 

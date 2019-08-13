@@ -138,7 +138,7 @@ static_assert(
                meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
    "Update the above #define");
 
-constexpr inline const char* toString(SubmissionType x) {
+constexpr const char* toString(SubmissionType x) {
 	switch (x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::IGNORED: return "Ignored";
@@ -154,7 +154,7 @@ enum class SubmissionLanguage : uint8_t {
 	CPP14 = 3,
 };
 
-constexpr inline const char* toString(SubmissionLanguage x) {
+constexpr const char* toString(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return "C11";
 	case SubmissionLanguage::CPP11: return "C++11";
@@ -164,7 +164,7 @@ constexpr inline const char* toString(SubmissionLanguage x) {
 	return "Unknown";
 }
 
-constexpr inline const char* to_extension(SubmissionLanguage x) {
+constexpr const char* to_extension(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return ".c";
 	case SubmissionLanguage::CPP11:
@@ -174,7 +174,7 @@ constexpr inline const char* to_extension(SubmissionLanguage x) {
 	return "Unknown";
 }
 
-constexpr inline const char* to_MIME(SubmissionLanguage x) {
+constexpr const char* to_MIME(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return "text/x-csrc";
 	case SubmissionLanguage::CPP11:
@@ -220,15 +220,15 @@ static_assert(
    "Needed as a boundary between non-fatal and fatal statuses - it is strongly"
    " used during selection of the final submission");
 
-constexpr inline bool is_special(SubmissionStatus status) {
+constexpr bool is_special(SubmissionStatus status) {
 	return (status >= SubmissionStatus::PENDING);
 }
 
-constexpr inline bool is_fatal(SubmissionStatus status) {
+constexpr bool is_fatal(SubmissionStatus status) {
 	return (status > SubmissionStatus::PENDING);
 }
 
-inline constexpr const char* css_color_class(SubmissionStatus status) noexcept {
+constexpr const char* css_color_class(SubmissionStatus status) noexcept {
 	switch (status) {
 	case SubmissionStatus::OK: return "green";
 	case SubmissionStatus::WA: return "red";
@@ -391,7 +391,7 @@ static_assert(
                meta::ToString<(int)JobType::CHANGE_PROBLEM_STATEMENT>::value),
    "Update the above #define");
 
-constexpr inline const char* toString(JobType x) {
+constexpr const char* toString(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
@@ -419,7 +419,7 @@ constexpr inline const char* toString(JobType x) {
 	return "Unknown";
 }
 
-constexpr inline bool is_problem_job(JobType x) {
+constexpr bool is_problem_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::ADD_PROBLEM: return true;
@@ -443,7 +443,7 @@ constexpr inline bool is_problem_job(JobType x) {
 	return false;
 }
 
-constexpr inline bool is_submission_job(JobType x) {
+constexpr bool is_submission_job(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::JUDGE_SUBMISSION: return true;
@@ -468,7 +468,7 @@ constexpr inline bool is_submission_job(JobType x) {
 }
 
 // The greater, the more important
-constexpr inline uint priority(JobType x) {
+constexpr uint priority(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::DELETE_FILE: return 40;
@@ -532,7 +532,7 @@ static_assert(meta::equal(JSTATUS_CANCELED_STR,
                           meta::ToString<(int)JobStatus::CANCELED>::value),
               "Update the above #define");
 
-constexpr inline const char* toString(JobStatus x) {
+constexpr const char* toString(JobStatus x) {
 	switch (x) {
 	case JobStatus::PENDING: return "Pending";
 	case JobStatus::NOTICED_PENDING: return "Pending";
@@ -561,8 +561,8 @@ constexpr const char SERVER_ERROR_LOG[] = "logs/server-error.log";
 constexpr const char JOB_SERVER_LOG[] = "logs/job-server.log";
 constexpr const char JOB_SERVER_ERROR_LOG[] = "logs/job-server-error.log";
 // Logs API
-constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 8 << 10; // 8 KiB
-constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 64 << 10; // 64 KiB
+constexpr uint LOGS_FIRST_CHUNK_MAX_LEN = 16 << 10; // 16 KiB
+constexpr uint LOGS_OTHER_CHUNK_MAX_LEN = 128 << 10; // 128 KiB
 
 // API
 constexpr uint API_FIRST_QUERY_ROWS_LIMIT = 50;
