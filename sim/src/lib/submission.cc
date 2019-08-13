@@ -224,7 +224,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 namespace submission {
 
 void update_final_lock(MySQL::Connection& mysql,
-                       Optional<uint64_t> submission_owner,
+                       std::optional<uint64_t> submission_owner,
                        uint64_t problem_id) {
 	if (not submission_owner.has_value())
 		return; // update_final on System submission is no-op
@@ -236,8 +236,9 @@ void update_final_lock(MySQL::Connection& mysql,
 	   .bindAndExecute(submission_owner, problem_id);
 }
 
-void update_final(MySQL::Connection& mysql, Optional<uint64_t> submission_owner,
-                  uint64_t problem_id, Optional<uint64_t> contest_problem_id,
+void update_final(MySQL::Connection& mysql,
+                  std::optional<uint64_t> submission_owner, uint64_t problem_id,
+                  std::optional<uint64_t> contest_problem_id,
                   bool make_transaction) {
 	STACK_UNWINDING_MARK;
 

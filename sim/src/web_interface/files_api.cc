@@ -20,7 +20,8 @@ Sim::files_get_permissions(ContestPermissions cperms) noexcept {
 	return PERM::NONE;
 }
 
-Optional<Sim::FilePermissions> Sim::files_get_permissions(StringView file_id) {
+std::optional<Sim::FilePermissions>
+Sim::files_get_permissions(StringView file_id) {
 	STACK_UNWINDING_MARK;
 
 	auto stmt = mysql.prepare("SELECT c.is_public, cu.mode "
@@ -300,7 +301,7 @@ void Sim::api_file_add() {
 
 	mysql.update("INSERT INTO internal_files VALUES()");
 	auto internal_file_id = mysql.insert_id();
-	auto internal_file_remover = make_call_in_destructor([internal_file_id] {
+	CallInDtor internal_file_remover([internal_file_id] {
 		(void)unlink(internal_file_path(internal_file_id));
 	});
 
@@ -375,7 +376,7 @@ void Sim::api_file_edit() {
 	auto transaction = mysql.start_transaction();
 
 	uint64_t internal_file_id = 0;
-	auto internal_file_remover = make_call_in_destructor([internal_file_id] {
+	CallInDtor internal_file_remover([internal_file_id] {
 		if (internal_file_id > 0)
 			(void)unlink(internal_file_path(internal_file_id));
 	});

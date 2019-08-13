@@ -9,23 +9,23 @@ namespace job_handlers {
 
 class AddOrReuploadProblemBase : virtual public JobHandler {
 protected:
-	JobType job_type;
-	StringView job_creator;
-	jobs::AddProblemInfo info;
-	FileRemover package_file_remover;
-	uint64_t job_file_id;
-	Optional<uint64_t> tmp_file_id;
-	Optional<uint64_t> problem_id;
+	JobType job_type_;
+	StringView job_creator_;
+	jobs::AddProblemInfo info_;
+	FileRemover package_file_remover_;
+	uint64_t job_file_id_;
+	std::optional<uint64_t> tmp_file_id_;
+	std::optional<uint64_t> problem_id_;
 	// Internal state
-	bool need_model_solution_judge_report = false;
+	bool need_model_solution_judge_report_ = false;
 
 private:
-	bool replace_db_job_log = false;
-	ZipFile zip;
-	std::string master_dir;
-	std::string current_date;
-	std::string simfile_str;
-	sim::Simfile simfile;
+	bool replace_db_job_log_ = false;
+	ZipFile zip_;
+	std::string master_dir_;
+	std::string current_date_;
+	std::string simfile_str_;
+	sim::Simfile simfile_;
 
 	void load_job_log_from_DB();
 
@@ -33,11 +33,11 @@ protected:
 	AddOrReuploadProblemBase(JobType job_type, StringView job_creator,
 	                         const jobs::AddProblemInfo& info,
 	                         uint64_t job_file_id,
-	                         Optional<uint64_t> tmp_file_id,
-	                         Optional<uint64_t> problem_id)
-	   : job_type(job_type), job_creator(job_creator), info(info),
-	     job_file_id(job_file_id), tmp_file_id(tmp_file_id),
-	     problem_id(problem_id) {
+	                         std::optional<uint64_t> tmp_file_id,
+	                         std::optional<uint64_t> problem_id)
+	   : job_type_(job_type), job_creator_(job_creator), info_(info),
+	     job_file_id_(job_file_id), tmp_file_id_(tmp_file_id),
+	     problem_id_(problem_id) {
 		if (tmp_file_id.has_value())
 			load_job_log_from_DB();
 	}

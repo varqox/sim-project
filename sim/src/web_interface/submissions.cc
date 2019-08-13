@@ -17,7 +17,7 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 
 Sim::SubmissionPermissions Sim::submissions_get_permissions(
    StringView submission_owner, SubmissionType stype,
-   Optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept {
+   std::optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept {
 	using PERM = SubmissionPermissions;
 	using STYPE = SubmissionType;
 	using CUM = ContestUserMode;

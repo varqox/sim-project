@@ -193,10 +193,11 @@ int main() {
 		return 4;
 	}
 
-	pthread_t threads[workers];
-	for (int i = 1; i < workers; ++i)
-		pthread_create(threads + i, &attr, server::worker,
+	std::vector<pthread_t> threads(workers);
+	for (int i = 1; i < workers; ++i) {
+		pthread_create(&threads[i], &attr, server::worker,
 		               nullptr); // TODO: errors...
+	}
 	threads[0] = pthread_self();
 	server::worker(nullptr);
 

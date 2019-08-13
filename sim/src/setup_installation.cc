@@ -9,7 +9,7 @@ using std::array;
 using std::string;
 using std::unique_ptr;
 
-static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
+inline static bool DROP_TABLES = false, ONLY_DROP_TABLES = false;
 
 /**
  * @brief Displays help

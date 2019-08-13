@@ -10,7 +10,7 @@ public:
 	AddProblemJudgeModelSolution(uint64_t job_id, StringView job_creator,
 	                             const jobs::AddProblemInfo& info,
 	                             uint64_t job_file_id,
-	                             Optional<uint64_t> tmp_file_id)
+	                             std::optional<uint64_t> tmp_file_id)
 	   : JobHandler(job_id),
 	     AddOrReuploadProblemJudgeModelSolutionBase(
 	        job_id, JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION, job_creator,

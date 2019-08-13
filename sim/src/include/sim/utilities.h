@@ -12,11 +12,11 @@ inline bool isUsername(StringView str) noexcept {
 	});
 }
 
-constexpr inline bool is_safe_timestamp(StringView str) noexcept {
+constexpr bool is_safe_timestamp(StringView str) noexcept {
 	return isDigitNotGreaterThan<std::numeric_limits<time_t>::max()>(str);
 }
 
-constexpr inline bool is_safe_inf_timestamp(StringView str) noexcept {
+constexpr bool is_safe_inf_timestamp(StringView str) noexcept {
 	return (str == "+inf" or str == "-inf" or is_safe_timestamp(str));
 }
 
@@ -25,8 +25,8 @@ class InfDatetime {
 	// Format: YYYY-mm-dd HH:MM:SS
 	InplaceBuff<19> date;
 
-	static constexpr const char* NEG_INF_STR = "#";
-	static constexpr const char* INF_STR = "@";
+	static constexpr const char NEG_INF_STR[] = "#";
+	static constexpr const char INF_STR[] = "@";
 
 public:
 	InfDatetime() : type(Type::INF) {}

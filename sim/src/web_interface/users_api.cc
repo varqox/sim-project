@@ -193,25 +193,29 @@ void Sim::api_user_add() {
 	UserType utype /*= UserType::NORMAL*/;
 	if (utype_str == "A") {
 		utype = UserType::ADMIN;
-		if (uint(~users_perms & PERM::ADD_ADMIN))
+		if (uint(~users_perms & PERM::ADD_ADMIN)) {
 			add_notification(
 			   "error", "You have no permissions to make this user an admin");
+		}
 
 	} else if (utype_str == "T") {
 		utype = UserType::TEACHER;
-		if (uint(~users_perms & PERM::ADD_TEACHER))
+		if (uint(~users_perms & PERM::ADD_TEACHER)) {
 			add_notification(
 			   "error", "You have no permissions to make this user a teacher");
+		}
 
 	} else if (utype_str == "N") {
 		utype = UserType::NORMAL;
-		if (uint(~users_perms & PERM::ADD_NORMAL))
+		if (uint(~users_perms & PERM::ADD_NORMAL)) {
 			add_notification(
 			   "error",
 			   "You have no permissions to make this user a normal user");
+		}
 
-	} else
+	} else {
 		add_notification("error", "Invalid user's type");
+	}
 
 	form_validate_not_blank(fname, "first_name", "First Name",
 	                        USER_FIRST_NAME_MAX_LEN);
@@ -302,6 +306,14 @@ void Sim::api_user_edit() {
 	if (stmt.next())
 		return api_error400("Username is already taken");
 
+	// If username changes, remove other sessions (for security reasons)
+	stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id=?");
+	stmt.bindAndExecute(username, users_uid);
+	if (not stmt.next()) {
+		mysql.prepare("DELETE FROM session WHERE user_id=? AND id!=?")
+		   .bindAndExecute(users_uid, session_id);
+	}
+
 	mysql
 	   .prepare("UPDATE IGNORE users "
 	            "SET username=?, first_name=?, last_name=?, email=?, type=? "
@@ -337,10 +349,18 @@ void Sim::api_user_change_password() {
 	fillRandomly(salt_bin, sizeof(salt_bin));
 	InplaceBuff<SALT_LEN> salt(toHex(salt_bin, sizeof(salt_bin)));
 
-	auto stmt = mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?");
-	stmt.bindAndExecute(
-	   salt, sha3_512(intentionalUnsafeStringView(concat(salt, new_pass))),
-	   users_uid);
+	auto transaction = mysql.start_transaction();
+
+	mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?")
+	   .bindAndExecute(
+	      salt, sha3_512(intentionalUnsafeStringView(concat(salt, new_pass))),
+	      users_uid);
+
+	// Remove other sessions (for security reasons)
+	mysql.prepare("DELETE FROM session WHERE user_id=? AND id!=?")
+	   .bindAndExecute(users_uid, session_id);
+
+	transaction.commit();
 }
 
 void Sim::api_user_delete() {
