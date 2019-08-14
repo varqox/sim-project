@@ -1,4 +1,4 @@
-include $(PREFIX)Makefile.config
+include $(PREFIX)makefile-utils/Makefile.config
 
 .PHONY: $(PREFIX)all
 $(PREFIX)all: $(PREFIX)gtest_main.a $(PREFIX)simlib.a
@@ -64,6 +64,8 @@ SIMLIB_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIMLIB_TEST_SRCS))
 
 $(SIMLIB_TEST_OBJS): override EXTRA_CXX_FLAGS += -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include'
 
+$(SIMLIB_OBJS) $(SIMLIB_TEST_OBJS): override CXXSTD_FLAG = -std=c++17
+
 $(PREFIX)test/exec: $(SIMLIB_TEST_OBJS) $(PREFIX)simlib.a $(PREFIX)gtest_main.a
 	$(LINK) -lrt -pthread -lseccomp -lzip
 
@@ -73,10 +75,6 @@ $(PREFIX)test: $(PREFIX)test/exec
 
 .PHONY: $(PREFIX)format
 $(PREFIX)format: $(shell find $(PREFIX)include $(PREFIX)src $(PREFIX)test $(PREFIX)doc | grep -E '\.(cc?|h)$$' | grep -vE '^($(PREFIX)src/sha3.c|$(PREFIX)src/sim/default_checker_dump.c)$$' | sed 's/$$/-make-format/')
-
-%-make-format: %
-	$(Q)$(call P,FORMAT,$*) \
-		clang-format -i $*
 
 .PHONY: $(PREFIX)clean
 $(PREFIX)clean: OBJS := $(GOOGLETEST_OBJS) $(SIMLIB_OBJS) $(SIMLIB_TEST_OBJS)
