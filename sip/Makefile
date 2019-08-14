@@ -1,4 +1,4 @@
-include Makefile.config
+include src/lib/simlib/makefile-utils/Makefile.config
 
 DESTDIR := /usr/local/bin
 
@@ -74,10 +74,11 @@ src/sip: $(SIP_OBJS) src/lib/simlib/simlib.a
 src/sip-static: $(SIP_OBJS) src/lib/simlib/simlib.a
 	$(LINK) -lrt -lzip -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
 
-# SIP_OBJS := $(SIP_OBJS)
+SIP_ALL_OBJS := $(SIP_OBJS)
 SIP_EXECS := src/sip src/sip-static
 
-$(SIP_OBJS): override EXTRA_CXX_FLAGS += $(SIP_CXX_FLAGS)
+$(SIP_ALL_OBJS): override EXTRA_CXX_FLAGS += $(SIP_CXX_FLAGS)
+$(SIP_ALL_OBJS): override CXXSTD_FLAG = -std=c++17
 $(SIP_EXECS): private override EXTRA_LD_FLAGS += $(SIP_LD_FLAGS)
 
 .PHONY: format
@@ -85,7 +86,7 @@ format: src/lib/simlib/format
 format: $(shell find bin src | grep -E '\.(cc?|h)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')
 
 .PHONY: clean
-clean: OBJS := $(SIP_OBJS)
+clean: OBJS := $(SIP_ALL_OBJS)
 clean: src/lib/simlib/clean
 	$(Q)$(RM) $(SIP_EXECS) $(OBJS) $(OBJS:o=dwo) src/proot_dump.c
 	$(Q)find src -type f -name '*.deps' | xargs rm -f
