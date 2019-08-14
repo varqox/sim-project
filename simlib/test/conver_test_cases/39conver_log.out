@@ -15,4 +15,4 @@ Auto-scoring: score of the group with id `3` set to 25
 Auto-scoring: score of the group with id `4` set to 25
 
 >>>> Exception caught <<<<
-Error on test `0`: Time limit exceeded (thrown at src/lib/simlib/src/sim/conver.cc:663)
+Error on test `0`: Time limit exceeded (thrown at ...)

@@ -8,4 +8,4 @@ No checker was found - the default checker will be used
 Missing / invalid statement specified in the package's Simfile - searching for one
 
 >>>> Exception caught <<<<
-No statement was found (thrown at src/lib/simlib/src/sim/conver.cc:195)
+No statement was found (thrown at ...)
