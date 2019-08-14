@@ -1,4 +1,4 @@
-include Makefile.config
+include src/lib/simlib/makefile-utils/Makefile.config
 
 DESTDIR := build
 
@@ -222,6 +222,7 @@ SIM_EXECS := src/killinstc src/setup-installation src/backup src/job-server \
 	src/sim-server test/exec test/cpp_syntax_highlighter/check
 
 $(SIM_OBJS): override EXTRA_CXX_FLAGS += $(SIM_CXX_FLAGS)
+$(SIM_OBJS): override CXXSTD_FLAG = -std=c++17
 $(SIM_EXECS): private override EXTRA_LD_FLAGS += $(SIM_LD_FLAGS)
 
 .PHONY: format
