@@ -1,6 +1,6 @@
-# sim [![Build Status](https://travis-ci.org/varqox/sim.svg?branch=master)](https://travis-ci.org/varqox/sim) [![Coverity Scan Build Status](https://scan.coverity.com/projects/6466/badge.svg)](https://scan.coverity.com/projects/varqox-sim) [![Gitter chat](https://badges.gitter.im/varqox/sim.png)](https://gitter.im/varqox/sim)
+# Sim [![Build Status](https://travis-ci.org/varqox/sim.svg?branch=master)](https://travis-ci.org/varqox/sim) [![Coverity Scan Build Status](https://scan.coverity.com/projects/6466/badge.svg)](https://scan.coverity.com/projects/varqox-sim) [![Gitter chat](https://badges.gitter.im/varqox/sim.png)](https://gitter.im/varqox/sim)
 
-SIM is an open source platform for carrying out algorithmic contests
+Sim is an open source platform for carrying out algorithmic contests
 
 <div align="center">
   <img src="http://varqox.github.io/img/sim.png"/>
@@ -11,23 +11,17 @@ SIM is an open source platform for carrying out algorithmic contests
 
 ### Dependencies:
 
-- gcc/g++ (with 32 bit support -- for compiling submissions) with C++17 support
-- MariaDB (Debian packages: _mariadb-server_)
+- gcc/g++ (with 32 bit support &ndash; for compiling submissions) with C++17 support (Debian package: _g++-multilib_)
+- MariaDB (Debian package: _mariadb-server_)
 - MariaDB client library (Debian packages: _libmariadbclient-dev_)
-- libseccomp (Debian packages: _libseccomp-dev_)
-- GNU/Make
-- libzip
+- libseccomp (Debian package: _libseccomp-dev_)
+- GNU/Make (Debian package: _make_)
+- libzip  (Debian package: _libzip-dev_)
 
-#### Debian
+#### Debian / Ubuntu
 
   ```sh
   sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev make
-  ```
-
-#### Ubuntu
-
-  ```sh
-  sudo apt-get install g++-multilib mysql-server libmariadbclient-dev libseccomp-dev libzip-dev make
   ```
 
 #### Arch Linux
@@ -40,48 +34,52 @@ SIM is an open source platform for carrying out algorithmic contests
 
 ### Instructions
 
-1. First of all clone the SIM repository and all its submodules
-
+1. In case you installed MariaDB server for the first time, you should run:
   ```sh
-  git clone --recursive https://github.com/varqox/sim && \
-  cd sim
+  sudo mysql_secure_installation
   ```
 
-2. Build
+2. First of all clone the Sim repository and all its submodules
+
+  ```sh
+  git clone --recursive https://github.com/varqox/sim && cd sim
+  ```
+
+3. Build
 
   ```sh
   make -j $(nproc)
   ```
 
-3. Make sure that you have created MySQL account and database for SIM, use command below to create user sim@localhost and database sim (when asked for password, enter your mariadb root password, by default it is empty):
+4. Make sure that you have created MariaDB account and database for Sim, use command below to create user `sim@localhost` and database `simdb` (when asked for password, enter your mariadb root password, by default it is empty &ndash; if that does not work try running the below command with `sudo`):
 
   ```sh
-  mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE sim; GRANT ALL ON sim.* TO 'sim'@'localhost';" -u root -p
+  mysql -e "CREATE USER sim@localhost IDENTIFIED BY 'sim'; CREATE DATABASE simdb; GRANT ALL ON simdb.* TO 'sim'@'localhost';" -u root -p
   ```
 
-4. Install
+5. Install
 
   ```sh
   make install
   ```
-  It will ask for MySQL credentials. By default, step 3 created MariaDB username 'sim', password 'sim', database 'sim' and user host 'localhost'.
+  It will ask for MariaDB credentials. By default, step 4 created MariaDB username `sim`, password `sim`, database `simdb` and user host `localhost`.
 
-  If you want to install SIM in other location that build/ type
+  If you want to install Sim in other location that `build/` type
 
   ```sh
-  make install DESTDIR=where-you-want-SIM-to-install
+  make install DESTDIR=where-you-want-Sim-to-install
   ```
 
-5. Run sim-server and job-machine
+6. Run sim-server and job-machine
 
   ```sh
   make run
   ```
 
-  If you have not installed SIM in default location use command:
+  If you have not installed Sim in the default location use command:
 
   ```sh
-  make run DESTDIR=where-you-installed-SIM
+  make run DESTDIR=where-you-installed-Sim
   ```
 
   You can combine building, installation and running commands into:
@@ -89,22 +87,22 @@ SIM is an open source platform for carrying out algorithmic contests
   make all install run
   ```
 
-6. Enter http://127.7.7.7:8080 via your web browser, by default there was created SIM root account
+7. Enter http://127.7.7.7:8080 via your web browser, by default a Sim root account was created there
   ```
   username: sim
   password: sim
   ```
 
-  Remember to change the password later (or now) if you want to make SIM site public. Do not make hacker's life easier!
+  Remember to change the password now (or later) if you want to make Sim website accessible to others. Do not make hacker's life easier!
 
-7. Well done! You have just installed SIM. There is a sim-server configuration file `where-you-installed-SIM/sim.conf` in which are server parameters like ADDRESS etc. There are also log files `log/*.log` which you would find useful if something did not work.
+8. Well done! You have just installed Sim. There is a sim-server configuration file `where-you-installed-Sim/sim.conf` (`build/sim.conf` by default) where server parameters like `address`, `workers` etc. are. Also, there are log files `log/*.log` that you would find useful if something didn't work.
 
-8. Feel free to report bugs and irregularities.
+9. Feel free to report any bugs or things you don't like.
 
 ### Upgrading
-Just type (be aware of incompatible database (and other inner) changes)
+Be aware that sometimes incompatible database or other inner changes won't allow for a smooth upgrade.
+
+To upgrade just type:
 ```sh
-git pull && \
-git submodule update --recursive && \
-make -j $(nproc) install run
+git pull && git submodule update --recursive && make -j $(nproc) install run
 ```
