@@ -597,7 +597,7 @@ JudgeReport JudgeWorker::judge_interactive(
 		// Solution: OK or killed by SIGPIPE and checker returned WRONG
 		if ((es.si.code == CLD_EXITED and es.si.status == 0 and
 		     test_report.runtime <= test_report.time_limit) or
-		    (isOneOf(es.si.code, CLD_KILLED, CLD_DUMPED) and
+		    (is_one_of(es.si.code, CLD_KILLED, CLD_DUMPED) and
 		     es.si.status == SIGPIPE and
 		     checker_result.status == CheckerStatus::WRONG)) {
 			switch (checker_result.status) {

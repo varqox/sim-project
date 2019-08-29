@@ -760,7 +760,7 @@ private:
 		if (ret_val_success(rc))
 			return rc;
 
-		if (not isOneOf((int)mysql_errno(conn_), CR_SERVER_GONE_ERROR,
+		if (not is_one_of((int)mysql_errno(conn_), CR_SERVER_GONE_ERROR,
 		                CR_SERVER_LOST))
 			THROW(error_msg());
 

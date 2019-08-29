@@ -77,7 +77,7 @@
 namespace sim {
 
 /**
- * @brief Simfile holds SIM package configuration file
+ * @brief Simfile holds Sim package configuration file
  */
 class Simfile {
 public:

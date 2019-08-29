@@ -1664,7 +1664,7 @@ hasPrefixIn(StringView str,
 }
 
 constexpr bool hasSuffix(StringView str, StringView suffix) noexcept {
-	return (str.size() >= suffix.size() &&
+	return (str.size() >= suffix.size() and
 	        str.compare(str.size() - suffix.size(), suffix.size(), suffix) ==
 	           0);
 }

@@ -78,11 +78,11 @@ TEST(ConfigFile, is_string_literal) {
 		   << "p.first: " << p.first << endl;
 
 	auto is_beginning = [](char c) {
-		return !(isspace(c) || isOneOf(c, '[', ',', ']', '#', '\'', '"'));
+		return !(isspace(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
 	};
-	auto is_interior = [](char c) { return !isOneOf(c, '\n', '#', ']', ','); };
+	auto is_interior = [](char c) { return !is_one_of(c, '\n', '#', ']', ','); };
 	auto is_ending = [](char c) {
-		return !(isspace(c) || isOneOf(c, '#', ']', ','));
+		return !(isspace(c) || is_one_of(c, '#', ']', ','));
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};

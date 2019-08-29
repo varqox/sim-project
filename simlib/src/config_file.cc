@@ -345,13 +345,13 @@ bool ConfigFile::is_string_literal(StringView str) noexcept {
 		return false;
 
 	// Special check on the first and last character
-	if (isOneOf(str[0], '[', '\'', '"', '#') || isspace(str[0]) ||
+	if (is_one_of(str[0], '[', '\'', '"', '#') || isspace(str[0]) ||
 	    isspace(str.back())) {
 		return false;
 	}
 
 	for (char c : str)
-		if (isOneOf(c, '\n', ']', ',', '#'))
+		if (is_one_of(c, '\n', ']', ',', '#'))
 			return false;
 
 	return true;

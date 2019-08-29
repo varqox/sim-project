@@ -657,7 +657,7 @@ void Conver::reset_time_limits_using_jugde_reports(
 		for (auto&& g : rep.groups)
 			for (auto&& t : g.tests) {
 				// Only allow OK and WA to pass through
-				if (not isOneOf(t.status, JudgeReport::Test::OK,
+				if (not is_one_of(t.status, JudgeReport::Test::OK,
 				                JudgeReport::Test::WA)) {
 					THROW("Error on test `", t.name,
 					      "`: ", JudgeReport::Test::description(t.status));

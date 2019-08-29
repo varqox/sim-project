@@ -382,7 +382,7 @@ void Spawner::run_child(FilePath exec,
 		args[i] = exec_args[i].c_str();
 
 	// Change working directory
-	if (not isOneOf(opts.working_dir, "", ".", "./")) {
+	if (not is_one_of(opts.working_dir, "", ".", "./")) {
 		if (chdir(opts.working_dir.c_str()) == -1)
 			send_error_and_exit(errno, "chdir()");
 	}

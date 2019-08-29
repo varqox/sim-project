@@ -174,34 +174,11 @@ public:
 	}
 };
 
-template <class A, class B>
-constexpr bool isIn(const A& val, const B& sequence) {
-	for (auto&& x : sequence)
-		if (x == val)
-			return true;
-	return false;
+template <class A, class... Option>
+constexpr bool is_one_of(A&& val, Option&&... option) {
+	return ((val == option) or ...);
 }
 
-template <class A, class B>
-constexpr bool isIn(const A& val, const std::initializer_list<B>& sequence) {
-	for (auto&& x : sequence)
-		if (x == val)
-			return true;
-	return false;
-}
-
-template <class A>
-constexpr bool isOneOf(const A&) {
-	return false;
-}
-
-template <class A, class B, class... C>
-constexpr bool isOneOf(const A& val, const B& first, const C&... others) {
-	if (sizeof...(others) == 0)
-		return (val == first);
-
-	return (val == first or isOneOf(val, others...));
-}
 
 #if 0 // Clang does not support std::launder yet
 #if __cplusplus > 201402L
