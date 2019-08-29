@@ -9,9 +9,9 @@ void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
 	using JT = JobType;
 
 	// Restart adding / reuploading problem
-	bool adding = isOneOf(job_type, JT::ADD_PROBLEM,
+	bool adding = is_one_of(job_type, JT::ADD_PROBLEM,
 	                      JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION);
-	bool reupload = isOneOf(job_type, JT::REUPLOAD_PROBLEM,
+	bool reupload = is_one_of(job_type, JT::REUPLOAD_PROBLEM,
 	                        JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION);
 
 	if (adding or reupload) {

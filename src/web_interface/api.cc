@@ -10,14 +10,14 @@ void Sim::api_handle() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "download") {
 		next_arg = url_args.extractNextArg();
-		if (isOneOf(next_arg, "submission", "problem", "file")) {
+		if (is_one_of(next_arg, "submission", "file")) {
 			auto id = url_args.extractNextArg();
 			request.target =
 			   concat_tostr("/api/", next_arg, '/', id, "/download");
 
 		} else if (next_arg == "statement") {
 			next_arg = url_args.extractNextArg();
-			if (isOneOf(next_arg, "problem", "contest")) {
+			if (is_one_of(next_arg, "problem", "contest")) {
 				auto id = url_args.extractNextArg();
 				request.target =
 				   concat_tostr("/api/", next_arg, '/', id, "/statement");
@@ -27,7 +27,7 @@ void Sim::api_handle() {
 		} else if (next_arg == "job") {
 			auto job_id = url_args.extractNextArg();
 			next_arg = url_args.extractNextArg();
-			if (isOneOf(next_arg, "log", "uploaded-package",
+			if (is_one_of(next_arg, "log", "uploaded-package",
 			            "uploaded-statement")) {
 				request.target =
 				   concat_tostr("/api/job/", job_id, '/', next_arg);

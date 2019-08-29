@@ -31,13 +31,13 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	PERM PERM_SUBMISSION_ADMIN = PERM::VIEW | PERM::VIEW_SOURCE |
 	                             PERM::VIEW_FINAL_REPORT |
 	                             PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
-	                             (isOneOf(stype, STYPE::NORMAL, STYPE::IGNORED)
+	                             (is_one_of(stype, STYPE::NORMAL, STYPE::IGNORED)
 	                                 ? PERM::CHANGE_TYPE | PERM::DELETE
 	                                 : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN or
 	    (cu_mode.has_value() and
-	     isOneOf(cu_mode.value(), CUM::MODERATOR, CUM::OWNER))) {
+	     is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER))) {
 		return overall_perms | PERM_SUBMISSION_ADMIN;
 	}
 

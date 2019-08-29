@@ -67,7 +67,7 @@ void Sim::api_users() {
 		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
-		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
+		} else if (is_one_of(cond, '<', '>') and ~mask & ID_COND) {
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			query_append("id", arg);
 			mask |= ID_COND;

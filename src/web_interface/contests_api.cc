@@ -168,7 +168,7 @@ void Sim::api_contests() {
 		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
-		} else if (isOneOf(cond, '=', '<', '>') and
+		} else if (is_one_of(cond, '=', '<', '>') and
 		           ~mask & ID_COND) { // conditional
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere_append("c.id", arg);

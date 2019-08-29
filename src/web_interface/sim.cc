@@ -156,7 +156,7 @@ void Sim::main_page() {
 	append("<div style=\"text-align: center\">"
 	       "<img src=\"/kit/img/sim-logo.png\" width=\"260\" height=\"336\" "
 	       "alt=\"\">"
-	       "<p style=\"font-size: 30px\">Welcome to SIM</p>"
+	       "<p style=\"font-size: 30px\">Welcome to Sim</p>"
 	       "<hr>"
 	       "<p>Sim is an open source platform for carrying out algorithmic "
 	       "contests</p>"
