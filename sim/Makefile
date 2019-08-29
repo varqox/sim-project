@@ -4,8 +4,10 @@ DESTDIR := build
 
 MYSQL_CONFIG := $(shell which mariadb_config 2> /dev/null || which mysql_config 2> /dev/null)
 
-SIM_CXX_FLAGS := -I '$(CURDIR)/src/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
-SIM_LD_FLAGS := -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs)
+define SIM_FLAGS =
+INTERNAL_EXTRA_CXX_FLAGS = -I '$(CURDIR)/src/include' -isystem '$(CURDIR)/src/include/others' $(shell $(MYSQL_CONFIG) --include)
+INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $(shell $(MYSQL_CONFIG) --libs) -lsupc++ -pthread -lrt -lzip -lseccomp
+endef
 
 .PHONY: all
 all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server
@@ -104,19 +106,26 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	# $(abspath $(DESTDIR)/sim-server2)&
 	@printf "\033[;32mRunning finished\033[0m\n"
 
-$(eval $(call load_dependencies, src/killinstc.cc))
-src/killinstc: src/killinstc.o src/lib/simlib/simlib.a
-	$(LINK) -lsupc++
+$(eval $(call add_static_library, src/lib/sim.a, $(SIM_FLAGS), \
+	src/lib/cpp_syntax_highlighter.cc \
+	src/lib/jobs.cc \
+	src/lib/mysql.cc \
+	src/lib/submission.cc \
+))
 
-$(eval $(call load_dependencies, src/setup_installation.cc))
-src/setup-installation: src/setup_installation.o src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++
+define SQLITE_FLAGS =
+INTERNAL_EXTRA_C_FLAGS = -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_OMIT_DEPRECATED \
+	-DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_SHARED_CACHE \
+	-DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_DEFAULT_MEMSTATUS=0 \
+	# -DSQLITE_ENABLE_API_ARMOR
+endef
 
-$(eval $(call load_dependencies, src/backup.cc))
-src/backup: src/backup.o src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -lzip
+src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
+$(eval $(call add_static_library, src/lib/sqlite3.a, $(SQLITE_FLAGS), \
+	src/lib/sqlite3.c \
+))
 
-JOB_SERVER_SRCS := \
+$(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/dispatcher.cc \
 	src/job_server/job_handlers/add_or_reupload_problem__judge_model_solution_base.cc \
 	src/job_server/job_handlers/add_or_reupload_problem_base.cc \
@@ -136,35 +145,36 @@ JOB_SERVER_SRCS := \
 	src/job_server/job_handlers/reset_problem_time_limits.cc \
 	src/job_server/job_handlers/reset_time_limits_in_problem_package_base.cc \
 	src/job_server/job_handlers/reupload_problem.cc \
-	src/job_server/main.cc
+	src/job_server/main.cc \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
+))
 
-$(eval $(call load_dependencies, $(JOB_SERVER_SRCS)))
-JOB_SERVER_OBJS := $(call SRCS_TO_OBJS, $(JOB_SERVER_SRCS))
+$(eval $(call add_executable, src/killinstc, $(SIM_FLAGS), \
+	src/killinstc.cc \
+	src/lib/simlib/simlib.a \
+))
 
-src/job-server: $(JOB_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -lseccomp -lzip -pthread
+$(eval $(call add_executable, src/setup-installation, $(SIM_FLAGS), \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
+	src/setup_installation.cc \
+))
 
-LIB_SIM_SRCS := \
-	src/lib/cpp_syntax_highlighter.cc \
-	src/lib/jobs.cc \
-	src/lib/mysql.cc \
-	src/lib/submission.cc
+$(eval $(call add_executable, src/backup, $(SIM_FLAGS), \
+	src/backup.cc \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
+))
 
-$(eval $(call load_dependencies, $(LIB_SIM_SRCS)))
-LIB_SIM_OBJS := $(call SRCS_TO_OBJS, $(LIB_SIM_SRCS))
+# Technique used to force browsers to always keep up-to-date version of the files below
+src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
+src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
+src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
 
-# SQLite
-$(eval $(call load_dependencies, src/lib/sqlite3.c))
-src/lib/sqlite3.c: src/lib/sqlite/sqlite3.c # It is a symlink
-src/lib/sqlite3.o: override EXTRA_C_FLAGS += -w -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=2 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_OMIT_DEPRECATED \
-	-DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_SHARED_CACHE \
-	-DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_DEFAULT_MEMSTATUS=0 \
-	# -DSQLITE_ENABLE_API_ARMOR
-
-src/lib/sim.a: $(LIB_SIM_OBJS) src/lib/sqlite3.o
-	$(MAKE_STATIC_LIB)
-
-SIM_SERVER_SRCS := \
+$(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
 	src/web_interface/api.cc \
 	src/web_interface/connection.cc \
 	src/web_interface/contest_entry_token_api.cc \
@@ -186,56 +196,23 @@ SIM_SERVER_SRCS := \
 	src/web_interface/submissions_api.cc \
 	src/web_interface/template.cc \
 	src/web_interface/users.cc \
-	src/web_interface/users_api.cc
+	src/web_interface/users_api.cc \
+))
 
-$(eval $(call load_dependencies, $(SIM_SERVER_SRCS)))
-SIM_SERVER_OBJS := $(call SRCS_TO_OBJS, $(SIM_SERVER_SRCS))
+$(eval $(call add_executable, test/exec, $(SIM_FLAGS), \
+	src/lib/sim.a \
+	src/lib/simlib/gtest_main.a \
+	src/lib/simlib/simlib.a \
+	test/jobs.cc \
+))
 
-# Technique used to force browsers to always keep up-to-date version of the files below
-src/web_interface/template.o: override EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
-src/web_interface/template.o: override EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
-src/web_interface/template.o: override EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
-
-src/sim-server: $(SIM_SERVER_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -lzip -pthread
-
-SIM_TEST_SRCS := \
-	test/jobs.cc
-$(eval $(call load_dependencies, $(SIM_TEST_SRCS)))
-SIM_TEST_OBJS := $(call SRCS_TO_OBJS, $(SIM_TEST_SRCS))
-
-test/exec: $(SIM_TEST_OBJS) src/lib/sim.a src/lib/simlib/gtest_main.a
-	$(LINK)
-
-CTH_TEST_SRCS := \
-	test/cpp_syntax_highlighter/check.cc
-$(eval $(call load_dependencies, $(CTH_TEST_SRCS)))
-CTH_TEST_OBJS := $(call SRCS_TO_OBJS, $(CTH_TEST_SRCS))
-
-test/cpp_syntax_highlighter/check: $(CTH_TEST_OBJS) src/lib/sim.a src/lib/simlib/simlib.a
-	$(LINK) -lrt
-
-SIM_OBJS := $(JOB_SERVER_OBJS) $(SIM_SERVER_OBJS) $(LIB_SIM_OBJS) \
-	$(SIM_TEST_OBJS) $(CTH_TEST_OBJS) src/killinstc.o src/setup_installation.o \
-	src/backup.o
-SIM_EXECS := src/killinstc src/setup-installation src/backup src/job-server \
-	src/sim-server test/exec test/cpp_syntax_highlighter/check
-
-$(SIM_OBJS): override EXTRA_CXX_FLAGS += $(SIM_CXX_FLAGS)
-$(SIM_OBJS): override CXXSTD_FLAG = -std=c++17
-$(SIM_EXECS): private override EXTRA_LD_FLAGS += $(SIM_LD_FLAGS)
+BUILD_ARTIFACTS += $(wildcard test/cpp_syntax_highlighter/tests/*.ans)
+$(eval $(call add_executable, test/cpp_syntax_highlighter/check, $(SIM_FLAGS), \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
+	test/cpp_syntax_highlighter/check.cc \
+))
 
 .PHONY: format
 format: src/lib/simlib/format
 format: $(shell find bin importer scripts src test | grep -E '\.(cc?|h)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*|src/lib/sqlite(/.*|3.c))$$' | sed 's/$$/-make-format/')
-
-.PHONY: clean
-clean: OBJS := $(SIM_OBJS) src/lib/sqlite3.o
-clean: src/lib/simlib/clean
-	$(Q)$(RM) $(SIM_EXECS) $(OBJS) $(OBJS:o=dwo) src/lib/sim.a
-	$(Q)$(RM) test/cpp_syntax_highlighter/tests/*.ans
-	$(Q)find src test importer -type f -name '*.deps' | xargs rm -f
-
-.PHONY: help
-help:
-	@echo "Nothing is here yet..."
