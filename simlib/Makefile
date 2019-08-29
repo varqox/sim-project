@@ -42,8 +42,10 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a,, \
 	$(PREFIX)src/time.cc \
 ))
 
-$(PREFIX)src/sim/default_checker_dump.c: $(PREFIX)src/sim/default_checker.c $(PREFIX)Makefile
-	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*default_checker_c@default_checker_c@g' > $@
+$(eval $(call add_generated_target, $(PREFIX)src/sim/default_checker_dump.c, \
+	xxd -i $$< | sed 's@\w*default_checker_c@default_checker_c@g' > $$@, \
+	$(PREFIX)src/sim/default_checker.c $(PREFIX)Makefile \
+))
 
 define SIMLIB_TEST_FLAGS =
 INTERNAL_EXTRA_CXX_FLAGS = -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include'
