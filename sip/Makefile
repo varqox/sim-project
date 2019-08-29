@@ -2,8 +2,10 @@ include src/lib/simlib/makefile-utils/Makefile.config
 
 DESTDIR := /usr/local/bin
 
-SIP_CXX_FLAGS := -I '$(CURDIR)/src/include'
-SIP_LD_FLAGS := -L '$(CURDIR)/src/lib'
+define SIP_FLAGS =
+INTERNAL_EXTRA_CXX_FLAGS := -I '$(CURDIR)/src/include'
+INTERNAL_EXTRA_LD_FLAGS := -L '$(CURDIR)/src/lib' -lsupc++ -lrt -lzip -lseccomp -pthread
+endef
 
 .PHONY: all
 all: src/sip
@@ -46,51 +48,37 @@ uninstall:
 	# Delete installed files
 	$(RM) $(abspath $(DESTDIR)/sip)
 
-
-
 ifeq ($(shell uname -m), x86_64)
-src/proot_dump.c: bin/proot-x86_64 Makefile
-	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*proot_x86_64@proot_dump@g' > $@
+$(eval $(call add_generated_target, src/proot_dump.c,\
+	xxd -i $$< | sed 's@\w*proot_x86_64@proot_dump@g' > $$@, \
+	bin/proot-x86_64 \
+	Makefile \
+))
 else
-src/proot_dump.c: bin/proot-x86 Makefile
-	$(Q)$(call P,GEN,$@) xxd -i $< | sed 's@\w*proot_x86@proot_dump@g' > $@
+$(eval $(call add_generated_target, src/proot_dump.c,\
+	xxd -i $$< | sed 's@\w*proot_x86@proot_dump@g' > $$@, \
+	bin/proot-x86 Makefile
+))
 endif
 
 SIP_SRCS := \
 	src/commands.cc \
 	src/compilation_cache.cc \
+	src/lib/simlib/simlib.a \
 	src/main.cc \
 	src/proot_dump.c \
 	src/sip_package.cc \
 	src/sipfile.cc \
-	src/tests_files.cc
+	src/tests_files.cc \
 
-$(eval $(call load_dependencies, $(SIP_SRCS)))
-SIP_OBJS := $(call SRCS_TO_OBJS, $(SIP_SRCS))
+$(eval $(call add_executable, src/sip, $(SIP_FLAGS), $(SIP_SRCS)))
 
-src/sip: $(SIP_OBJS) src/lib/simlib/simlib.a
-	$(LINK) -lsupc++ -lrt -lzip -lseccomp -pthread
+define SIP_STATIC_FLAGS =
+INTERNAL_EXTRA_LD_FLAGS += -lrt -lzip -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
+endef
 
-src/sip-static: $(SIP_OBJS) src/lib/simlib/simlib.a
-	$(LINK) -lrt -lzip -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
-
-SIP_ALL_OBJS := $(SIP_OBJS)
-SIP_EXECS := src/sip src/sip-static
-
-$(SIP_ALL_OBJS): override EXTRA_CXX_FLAGS += $(SIP_CXX_FLAGS)
-$(SIP_ALL_OBJS): override CXXSTD_FLAG = -std=c++17
-$(SIP_EXECS): private override EXTRA_LD_FLAGS += $(SIP_LD_FLAGS)
+$(eval $(call add_executable, src/sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), $(SIP_SRCS)))
 
 .PHONY: format
 format: src/lib/simlib/format
 format: $(shell find bin src | grep -E '\.(cc?|h)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')
-
-.PHONY: clean
-clean: OBJS := $(SIP_ALL_OBJS)
-clean: src/lib/simlib/clean
-	$(Q)$(RM) $(SIP_EXECS) $(OBJS) $(OBJS:o=dwo) src/proot_dump.c
-	$(Q)find src -type f -name '*.deps' | xargs rm -f
-
-.PHONY: help
-help:
-	@echo "Nothing is here yet..."

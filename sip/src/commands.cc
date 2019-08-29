@@ -216,7 +216,7 @@ void interactive(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto new_interactive = args.extract_next();
-		if (not isOneOf(new_interactive, "true", "false")) {
+		if (not is_one_of(new_interactive, "true", "false")) {
 			throw SipError(
 			   "interactive has to be either \"true\" or \"false\"");
 		}
