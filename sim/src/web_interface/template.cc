@@ -47,7 +47,7 @@ void Sim::page_template(StringView title, StringView styles,
 	append("</head>"
 	        "<body>"
 	            "<div class=\"navbar\">"
-	                "<a href=\"/\" class=\"brand\">SIM beta</a>"
+	                "<a href=\"/\" class=\"brand\">Sim beta</a>"
 	                "<script>"
 	                    "var nav = document.querySelector('.navbar');"
 	                    "nav.appendChild(a_view_button('/c', 'Contests',"

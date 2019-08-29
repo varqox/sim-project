@@ -112,7 +112,7 @@ void Sim::api_files() {
 			StringView arg_id = StringView(arg).substr(1);
 
 			// File ID
-			if (isOneOf(cond_c, '<', '>', '=')) {
+			if (is_one_of(cond_c, '<', '>', '=')) {
 				if (not isAlnum(arg_id))
 					return api_error400("Invalid File ID");
 

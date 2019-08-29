@@ -222,7 +222,7 @@ void Sim::api_submissions() {
 				                              // to be a valid ID
 				return api_error400();
 
-			} else if (isOneOf(cond_c, '<', '>')) {
+			} else if (is_one_of(cond_c, '<', '>')) {
 				if (id_condition_occurred)
 					return api_error400(
 					   "Submission ID condition specified more than once");
@@ -275,7 +275,7 @@ void Sim::api_submissions() {
 					may_see_problem_final = true;
 				}
 
-			} else if (isOneOf(cond_c, 'C', 'R', 'P')) { // Round's id
+			} else if (is_one_of(cond_c, 'C', 'R', 'P')) { // Round's id
 				if (round_or_problem_condition_occurred)
 					return api_error400("Round or problem ID condition is "
 					                    "specified more than once");

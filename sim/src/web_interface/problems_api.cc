@@ -98,7 +98,7 @@ void Sim::api_problems() {
 		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
-		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) { // Conditional
+		} else if (is_one_of(cond, '<', '>') and ~mask & ID_COND) { // Conditional
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND p.id", arg);
 			mask |= ID_COND;
@@ -806,7 +806,7 @@ void Sim::api_problem_attaching_contest_problems() {
 			return api_error400();
 
 		// ID condition
-		if (isOneOf(cond, '<', '>', '=')) {
+		if (is_one_of(cond, '<', '>', '=')) {
 			if (id_condition_occurred)
 				return api_error400("ID condition specified more than once");
 
