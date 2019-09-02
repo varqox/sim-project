@@ -5,18 +5,33 @@
 
 using SFSM = SubmissionFinalSelectingMethod;
 
+// TODO: almost duplication (logic duplication) with append_submission_status()
 inline static InplaceBuff<32>
 color_class_json(Sim::ContestPermissions cperms, InfDatetime full_results,
                  const decltype(mysql_date())& curr_mysql_date,
                  std::optional<SubmissionStatus> full_status,
-                 std::optional<SubmissionStatus> initial_status) {
-	if (uint(cperms & Sim::ContestPermissions::ADMIN) or
-	    full_results <= curr_mysql_date) {
+                 std::optional<SubmissionStatus> initial_status,
+                 ScoreRevealingMode score_revealing) {
+
+	bool show_full_status = bool(cperms & Sim::ContestPermissions::ADMIN) or
+	                        full_results <= curr_mysql_date or [&] {
+		                        switch (score_revealing) {
+		                        case ScoreRevealingMode::NONE: return false;
+		                        case ScoreRevealingMode::ONLY_SCORE:
+			                        return false;
+		                        case ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+			                        return true;
+		                        }
+
+		                        return false; // For GCC
+	                        }();
+
+	if (show_full_status) {
 		if (full_status.has_value())
 			return concat<32>("\"", css_color_class(full_status.value()), "\"");
-
-	} else if (initial_status.has_value())
+	} else if (initial_status.has_value()) {
 		return concat<32>("\"", css_color_class(initial_status.value()), "\"");
+	}
 
 	return concat<32>("null");
 }
@@ -64,6 +79,17 @@ static constexpr const char* sfsm_to_json(SFSM sfsm) {
 	return "\"unknown\"";
 }
 
+static constexpr const char* score_revealing_to_json(ScoreRevealingMode srm) {
+	switch (srm) {
+	case ScoreRevealingMode::NONE: return "\"none\"";
+	case ScoreRevealingMode::ONLY_SCORE: return "\"only_score\"";
+	case ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+		return "\"score_and_full_status\"";
+	}
+
+	return "\"unknown\"";
+}
+
 namespace {
 // clang-format off
 constexpr const char api_contest_names[] =
@@ -92,7 +118,7 @@ constexpr const char api_contest_names[] =
               "\"name\","
               "\"item\","
               "\"final_selecting_method\","
-              "\"reveal_score\","
+              "\"score_revealing\","
               "\"color_class\""
           "]}"
       "]},";
@@ -349,13 +375,13 @@ void Sim::api_contest() {
 	uint64_t problem_id;
 	EnumVal<SFSM> final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
-	bool reveal_score;
+	EnumVal<ScoreRevealingMode> score_revealing;
 	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	if (uint(contests_perms & PERM::ADMIN)) {
 		stmt = mysql.prepare("SELECT cp.id, cp.contest_round_id, cp.problem_id,"
 		                     " p.label, cp.name, cp.item,"
-		                     " cp.final_selecting_method, cp.reveal_score,"
+		                     " cp.final_selecting_method, cp.score_revealing,"
 		                     " sf.full_status "
 		                     "FROM contest_problems cp "
 		                     "LEFT JOIN problems p ON p.id=cp.problem_id "
@@ -369,13 +395,13 @@ void Sim::api_contest() {
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
 		                  problem_label, name, item, final_selecting_method,
-		                  reveal_score, full_status);
+		                  score_revealing, full_status);
 
 	} else {
 		stmt =
 		   mysql.prepare("SELECT cp.id, cp.contest_round_id, cp.problem_id,"
 		                 " p.label, cp.name, cp.item,"
-		                 " cp.final_selecting_method, cp.reveal_score,"
+		                 " cp.final_selecting_method, cp.score_revealing,"
 		                 " si.initial_status, sf.full_status "
 		                 "FROM contest_problems cp "
 		                 "JOIN contest_rounds cr ON cr.id=cp.contest_round_id"
@@ -397,17 +423,17 @@ void Sim::api_contest() {
 
 		stmt.res_bind_all(contests_cpid, contests_crid, problem_id,
 		                  problem_label, name, item, final_selecting_method,
-		                  reveal_score, initial_status, full_status);
+		                  score_revealing, initial_status, full_status);
 	}
 
 	while (stmt.next()) {
 		append("\n[", contests_cpid, ',', contests_crid, ',', problem_id, ',',
 		       jsonStringify(problem_label), ',', jsonStringify(name), ',',
-		       item, ',', sfsm_to_json(final_selecting_method),
-		       (reveal_score ? ",true," : ",false,"),
-		       color_class_json(contests_perms,
-		                        round2full_results[strtoull(contests_crid)],
-		                        curr_date, full_status, initial_status),
+		       item, ',', sfsm_to_json(final_selecting_method), ',',
+		       score_revealing_to_json(score_revealing), ',',
+		       color_class_json(
+		          contests_perms, round2full_results[strtoull(contests_crid)],
+		          curr_date, full_status, initial_status, score_revealing),
 		       "],");
 	}
 
@@ -504,18 +530,19 @@ void Sim::api_contest_round() {
 
 	// Problems
 	append("\n],\n[");
-	stmt = mysql.prepare("SELECT cp.id, cp.problem_id, p.label, cp.name,"
-	                     " cp.item, cp.final_selecting_method, cp.reveal_score,"
-	                     " si.initial_status, sf.full_status "
-	                     "FROM contest_problems cp "
-	                     "LEFT JOIN problems p ON p.id=cp.problem_id "
-	                     "LEFT JOIN submissions si ON si.owner=?"
-	                     " AND si.contest_problem_id=cp.id"
-	                     " AND si.contest_initial_final=1 "
-	                     "LEFT JOIN submissions sf ON sf.owner=?"
-	                     " AND sf.contest_problem_id=cp.id"
-	                     " AND sf.contest_final=1 "
-	                     "WHERE cp.contest_round_id=?");
+	stmt =
+	   mysql.prepare("SELECT cp.id, cp.problem_id, p.label, cp.name,"
+	                 " cp.item, cp.final_selecting_method, cp.score_revealing,"
+	                 " si.initial_status, sf.full_status "
+	                 "FROM contest_problems cp "
+	                 "LEFT JOIN problems p ON p.id=cp.problem_id "
+	                 "LEFT JOIN submissions si ON si.owner=?"
+	                 " AND si.contest_problem_id=cp.id"
+	                 " AND si.contest_initial_final=1 "
+	                 "LEFT JOIN submissions sf ON sf.owner=?"
+	                 " AND sf.contest_problem_id=cp.id"
+	                 " AND sf.contest_final=1 "
+	                 "WHERE cp.contest_round_id=?");
 
 	if (session_is_open)
 		stmt.bindAndExecute(session_user_id, session_user_id, contests_crid);
@@ -525,21 +552,21 @@ void Sim::api_contest_round() {
 	uint64_t problem_id;
 	EnumVal<SFSM> final_selecting_method;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
-	bool reveal_score;
+	EnumVal<ScoreRevealingMode> score_revealing;
 	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	stmt.res_bind_all(contests_cpid, problem_id, problem_label, name, item,
-	                  final_selecting_method, reveal_score, initial_status,
+	                  final_selecting_method, score_revealing, initial_status,
 	                  full_status);
 
 	auto curr_date = mysql_date();
 	while (stmt.next()) {
 		append("\n[", contests_cpid, ',', contests_crid, ',', problem_id, ',',
 		       jsonStringify(problem_label), ',', jsonStringify(name), ',',
-		       item, ',', sfsm_to_json(final_selecting_method),
-		       (reveal_score ? ",true," : ",false,"),
+		       item, ',', sfsm_to_json(final_selecting_method), ',',
+		       score_revealing_to_json(score_revealing), ',',
 		       color_class_json(contests_perms, full_results, curr_date,
-		                        full_status, initial_status),
+		                        full_status, initial_status, score_revealing),
 		       "],");
 	}
 
@@ -558,7 +585,7 @@ void Sim::api_contest_problem() {
 	                          " cr.name, cr.item, cr.ranking_exposure,"
 	                          " cr.begins, cr.full_results, cr.ends,"
 	                          " cp.problem_id, p.label, cp.name, cp.item,"
-	                          " cp.final_selecting_method, cp.reveal_score,"
+	                          " cp.final_selecting_method, cp.score_revealing,"
 	                          " cu.mode, si.initial_status, sf.full_status "
 	                          "FROM contest_problems cp "
 	                          "STRAIGHT_JOIN contest_rounds cr"
@@ -591,15 +618,15 @@ void Sim::api_contest_problem() {
 	decltype(problems_pid) problem_id;
 	uint ritem, pitem;
 	EnumVal<SFSM> final_selecting_method;
-	bool reveal_score;
+	EnumVal<ScoreRevealingMode> score_revealing;
 	InplaceBuff<PROBLEM_LABEL_MAX_LEN> problem_label;
 	MySQL::Optional<EnumVal<SubmissionStatus>> initial_status, full_status;
 
 	stmt.res_bind_all(contests_cid, cname, is_public, contests_crid, rname,
 	                  ritem, rranking_exposure_str, rbegins_str,
 	                  rfull_results_str, rends_str, problem_id, problem_label,
-	                  pname, pitem, final_selecting_method, reveal_score, umode,
-	                  initial_status, full_status);
+	                  pname, pitem, final_selecting_method, score_revealing,
+	                  umode, initial_status, full_status);
 	if (not stmt.next())
 		return api_error404();
 
@@ -652,10 +679,10 @@ void Sim::api_contest_problem() {
 	// Problem
 	append("\n],\n[\n[", contests_cpid, ',', contests_crid, ',', problem_id,
 	       ',', jsonStringify(problem_label), ',', jsonStringify(pname), ',',
-	       pitem, ',', sfsm_to_json(final_selecting_method),
-	       (reveal_score ? ",true," : ",false,"),
+	       pitem, ',', sfsm_to_json(final_selecting_method), ',',
+	       score_revealing_to_json(score_revealing), ',',
 	       color_class_json(contests_perms, rfull_results, mysql_date(),
-	                        full_status, initial_status),
+	                        full_status, initial_status, score_revealing),
 	       "]\n]\n]");
 }
 
@@ -865,7 +892,18 @@ void Sim::api_contest_problem_add() {
 	form_validate(name, "name", "Problem's name", CONTEST_PROBLEM_NAME_MAX_LEN);
 	form_validate(problem_id, "problem_id", "Problem ID", isDigit,
 	              "Problem ID: invalid value");
-	bool reveal_score = request.form_data.exist("reveal_score");
+	// Validate score_revealing
+	auto score_revealing_str = request.form_data.get("score_revealing");
+	EnumVal<ScoreRevealingMode> score_revealing;
+	if (score_revealing_str == "none")
+		score_revealing = ScoreRevealingMode::NONE;
+	else if (score_revealing_str == "only_score")
+		score_revealing = ScoreRevealingMode::ONLY_SCORE;
+	else if (score_revealing_str == "score_and_full_status")
+		score_revealing = ScoreRevealingMode::SCORE_AND_FULL_STATUS;
+	else
+		add_notification("error", "Invalid score revealing");
+
 	// Validate final_selecting_method
 	auto fsm_str = request.form_data.get("final_selecting_method");
 	SFSM final_selecting_method;
@@ -874,7 +912,7 @@ void Sim::api_contest_problem_add() {
 	else if (fsm_str == "WHS")
 		final_selecting_method = SFSM::WITH_HIGHEST_SCORE;
 	else
-		add_notification("error", "Invalid user's type");
+		add_notification("error", "Invalid final selecting method");
 
 	if (notifications.size)
 		return api_error400(notifications);
@@ -900,13 +938,13 @@ void Sim::api_contest_problem_add() {
 	// Add contest problem
 	stmt = mysql.prepare("INSERT contest_problems(contest_round_id, contest_id,"
 	                     " problem_id, name, item, final_selecting_method,"
-	                     " reveal_score) "
+	                     " score_revealing) "
 	                     "SELECT ?, ?, ?, ?, COALESCE(MAX(item)+1, 0), ?, ? "
 	                     "FROM contest_problems "
 	                     "WHERE contest_round_id=?");
 	stmt.bindAndExecute(
 	   contests_crid, contests_cid, problem_id, (name.empty() ? pname : name),
-	   EnumVal<SFSM>(final_selecting_method), reveal_score, contests_crid);
+	   EnumVal<SFSM>(final_selecting_method), score_revealing, contests_crid);
 
 	transaction.commit();
 	append(stmt.insert_id());
@@ -943,7 +981,18 @@ void Sim::api_contest_problem_edit() {
 	StringView name;
 	form_validate_not_blank(name, "name", "Problem's name",
 	                        CONTEST_PROBLEM_NAME_MAX_LEN);
-	bool reveal_score = request.form_data.exist("reveal_score");
+
+	auto score_revealing_str = request.form_data.get("score_revealing");
+	EnumVal<ScoreRevealingMode> score_revealing;
+	if (score_revealing_str == "none")
+		score_revealing = ScoreRevealingMode::NONE;
+	else if (score_revealing_str == "only_score")
+		score_revealing = ScoreRevealingMode::ONLY_SCORE;
+	else if (score_revealing_str == "score_and_full_status")
+		score_revealing = ScoreRevealingMode::SCORE_AND_FULL_STATUS;
+	else
+		add_notification("error", "Invalid score revealing");
+
 	// Validate final_selecting_method
 	auto fsm_str = request.form_data.get("final_selecting_method");
 	SFSM final_selecting_method;
@@ -952,7 +1001,7 @@ void Sim::api_contest_problem_edit() {
 	else if (fsm_str == "WHS")
 		final_selecting_method = SFSM::WITH_HIGHEST_SCORE;
 	else
-		add_notification("error", "Invalid user's type");
+		add_notification("error", "Invalid final selecting method");
 
 	if (notifications.size)
 		return api_error400(notifications);
@@ -961,20 +1010,23 @@ void Sim::api_contest_problem_edit() {
 	auto transaction = mysql.start_transaction();
 
 	// Get the old final selecting method and whether the score was revealed
-	auto stmt = mysql.prepare("SELECT final_selecting_method, reveal_score "
+	auto stmt = mysql.prepare("SELECT final_selecting_method, score_revealing "
 	                          "FROM contest_problems WHERE id=?");
 	stmt.bindAndExecute(contests_cpid);
 
 	EnumVal<SFSM> old_final_method;
-	bool old_reveal_score;
-	stmt.res_bind_all(old_final_method, old_reveal_score);
+	EnumVal<ScoreRevealingMode> old_score_revealing;
+	stmt.res_bind_all(old_final_method, old_score_revealing);
 	if (not stmt.next())
 		return; // Such contest problem does not exist (probably had just
 		        // been deleted)
 
-	if (old_final_method != final_selecting_method or
+	bool reselect_final_sumbissions =
+	   (old_final_method != final_selecting_method or
 	    (final_selecting_method == SFSM::WITH_HIGHEST_SCORE and
-	     reveal_score != old_reveal_score)) {
+	     score_revealing != old_score_revealing));
+
+	if (reselect_final_sumbissions) {
 		// Queue reselecting final submissions
 		stmt = mysql.prepare(
 		   "INSERT jobs (creator, status, priority, type, added,"
@@ -992,10 +1044,11 @@ void Sim::api_contest_problem_edit() {
 	}
 
 	// Update problem
-	stmt = mysql.prepare("UPDATE contest_problems "
-	                     "SET name=?, reveal_score=?, final_selecting_method=? "
-	                     "WHERE id=?");
-	stmt.bindAndExecute(name, reveal_score,
+	stmt =
+	   mysql.prepare("UPDATE contest_problems "
+	                 "SET name=?, score_revealing=?, final_selecting_method=? "
+	                 "WHERE id=?");
+	stmt.bindAndExecute(name, score_revealing,
 	                    EnumVal<SFSM>(final_selecting_method), contests_cpid);
 
 	transaction.commit();

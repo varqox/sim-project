@@ -80,6 +80,12 @@ constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
 constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
    meta::max(128, PROBLEM_NAME_MAX_LEN);
 
+enum class ScoreRevealingMode : uint8_t {
+	NONE = 0,
+	ONLY_SCORE = 1,
+	SCORE_AND_FULL_STATUS = 2,
+};
+
 // Contest entry tokens
 constexpr uint CONTEST_ENTRY_TOKEN_LEN = 48;
 constexpr uint CONTEST_ENTRY_SHORT_TOKEN_LEN = 8;

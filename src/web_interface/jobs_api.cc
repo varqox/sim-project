@@ -358,8 +358,8 @@ void Sim::api_jobs() {
 		using JT = JobType;
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
 		    is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
-		            JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
-		            JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
+		              JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
+		              JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
 			append('u'); // TODO: ^ that is very nasty
 		}
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and
@@ -496,8 +496,8 @@ void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id,
 
 	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or
 	    not is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
-	                JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
-	                JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
+	                  JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
+	                  JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
 		return api_error403(); // TODO: ^ that is very nasty
 	}
 

@@ -3836,7 +3836,7 @@ function add_contest_problem(as_modal, contest_round_id) {
 				// maxlength: 'TODO...',
 				required: true
 			}).append(a_view_button('/p', 'Search problems', '', problem_chooser))
-			).add(Form.field_group("Final submission to select",
+			).add(Form.field_group('Final submission to select',
 				$('<select>', {
 					name: 'final_selecting_method',
 					required: true,
@@ -3849,10 +3849,23 @@ function add_contest_problem(as_modal, contest_round_id) {
 						selected: true
 					})
 				})
-			)).add(Form.field_group('Reveal score immediately', {
-				type: 'checkbox',
-				name: 'reveal_score'
-			})).add('<div>', {
+			)).add(Form.field_group('Score revealing',
+				$('<select>', {
+					name: 'score_revealing',
+					required: true,
+					html: $('<option>', {
+						value: 'none',
+						text: 'None',
+						selected: true
+					}).add('<option>', {
+						value: 'only_score',
+						text: 'Only score'
+					}).add('<option>', {
+						value: 'score_and_full_status',
+						text: 'Score and full status'
+					})
+				})
+			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
@@ -3963,11 +3976,25 @@ function edit_contest_problem(as_modal, contest_problem_id) {
 				size: 25,
 				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Reveal score immediately', {
-				type: 'checkbox',
-				name: 'reveal_score',
-				checked: problem.reveal_score
-			})).add(Form.field_group("Final submission to select",
+			}).add(Form.field_group('Score revealing',
+				$('<select>', {
+					name: 'score_revealing',
+					required: true,
+					html: $('<option>', {
+						value: 'none',
+						text: 'None',
+						selected: (problem.score_revealing === 'none')
+					}).add('<option>', {
+						value: 'only_score',
+						text: 'Only score',
+						selected: (problem.score_revealing === 'only_score')
+					}).add('<option>', {
+						value: 'score_and_full_status',
+						text: 'Score and full status',
+						selected: (problem.score_revealing === 'score_and_full_status')
+					})
+				})
+			)).add(Form.field_group("Final submission to select",
 				$('<select>', {
 					name: 'final_selecting_method',
 					required: true,
@@ -4276,9 +4303,9 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 									$('<td>', {text: problem.final_selecting_method === 'LC' ?
 										'The last compiling' : 'One with the highest score'})
 								]}),
-								(problem.reveal_score ? $('<tr>', {html: [
+								(problem.score_revealing !== 'none' ? $('<tr>', {html: [
 									$('<td>', {text: 'Score revealing'}),
-									$('<td>', {text: 'Yes'})
+									$('<td>', {text: problem.score_revealing === 'only_score' ? 'Only score' : 'Score and full status'})
 								]}) : $())
 							]}) : $())
 						]
