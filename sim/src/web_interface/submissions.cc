@@ -28,12 +28,12 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 		return PERM::NONE;
 
 	static_assert((uint)PERM::NONE == 0, "Needed below");
-	PERM PERM_SUBMISSION_ADMIN = PERM::VIEW | PERM::VIEW_SOURCE |
-	                             PERM::VIEW_FINAL_REPORT |
-	                             PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
-	                             (is_one_of(stype, STYPE::NORMAL, STYPE::IGNORED)
-	                                 ? PERM::CHANGE_TYPE | PERM::DELETE
-	                                 : PERM::NONE);
+	PERM PERM_SUBMISSION_ADMIN =
+	   PERM::VIEW | PERM::VIEW_SOURCE | PERM::VIEW_FINAL_REPORT |
+	   PERM::VIEW_RELATED_JOBS | PERM::REJUDGE |
+	   (is_one_of(stype, STYPE::NORMAL, STYPE::IGNORED)
+	       ? PERM::CHANGE_TYPE | PERM::DELETE
+	       : PERM::NONE);
 
 	if (session_user_type == UserType::ADMIN or
 	    (cu_mode.has_value() and

@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
 			"`name` VARBINARY(", CONTEST_PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
 			"`final_selecting_method` TINYINT NOT NULL,"
-			"`reveal_score` BOOLEAN NOT NULL,"
+			"`score_revealing` TINYINT NOT NULL,"
 			"PRIMARY KEY (id),"
 			"UNIQUE (contest_round_id, item),"
 			"KEY (contest_id),"

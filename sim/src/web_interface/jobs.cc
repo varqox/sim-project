@@ -83,7 +83,7 @@ Sim::jobs_get_permissions(std::optional<StringView> creator_id,
 
 	if (creator_id.has_value() and session_user_id == creator_id.value()) {
 		if (is_one_of(job_status, JS::PENDING, JS::NOTICED_PENDING,
-		            JS::IN_PROGRESS))
+		              JS::IN_PROGRESS))
 			return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
 		else
 			return overall_perms | type_perm | PERM::VIEW;
