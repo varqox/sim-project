@@ -184,10 +184,14 @@ private:
 	void collect_available_test_cases(std::vector<string>& test_cases) {
 		forEachDirComponent(tests_dir_, [&](dirent* file) {
 			constexpr StringView suffix("package.zip");
-			StringView file_name(file->d_name);
-			if (hasSuffix(file_name, suffix)) {
-				file_name.removeSuffix(suffix.size());
-				test_cases.emplace_back(file_name.to_string());
+			constexpr StringView disabled_suffix("package.zip.disabled");
+			StringView filename(file->d_name);
+			if (hasSuffix(filename, suffix)) {
+				filename.removeSuffix(suffix.size());
+				test_cases.emplace_back(filename.to_string());
+			} else if (hasSuffix(filename, disabled_suffix)) {
+				filename.removeSuffix(disabled_suffix.size());
+				stdlog("WARNING: disabled test case: ", filename);
 			}
 		});
 	}
@@ -434,6 +438,7 @@ private:
 
 TEST(Conver, constructSimfile) {
 	stdlog.label(false);
+	stdlog.use(stdout);
 	ConverTestRunner(concat_tostr(getExecDir(getpid()), "conver_test_cases/"))
 	   .run();
 }
