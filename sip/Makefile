@@ -74,7 +74,7 @@ SIP_SRCS := \
 $(eval $(call add_executable, src/sip, $(SIP_FLAGS), $(SIP_SRCS)))
 
 define SIP_STATIC_FLAGS =
-INTERNAL_EXTRA_LD_FLAGS += -lrt -lzip -lseccomp -static -pthread -lrt -lz -Wl,--unresolved-symbols=ignore-in-object-files
+INTERNAL_EXTRA_LD_FLAGS += -static -lzip -lseccomp -lrt -lz -Wl,--whole-archive -lpthread -Wl,--no-whole-archive -Wl,--unresolved-symbols=ignore-in-object-files
 endef
 
 $(eval $(call add_executable, src/sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), $(SIP_SRCS)))
