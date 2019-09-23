@@ -10,7 +10,7 @@ void Sim::api_handle() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "download") {
 		next_arg = url_args.extractNextArg();
-		if (is_one_of(next_arg, "submission", "file")) {
+		if (is_one_of(next_arg, "submission", "problem", "file")) {
 			auto id = url_args.extractNextArg();
 			request.target =
 			   concat_tostr("/api/", next_arg, '/', id, "/download");
