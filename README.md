@@ -97,12 +97,20 @@ Sim is an open source platform for carrying out algorithmic contests
 
 8. Well done! You have just installed Sim. There is a sim-server configuration file `where-you-installed-Sim/sim.conf` (`build/sim.conf` by default) where server parameters like `address`, `workers` etc. are. Also, there are log files `log/*.log` that you would find useful if something didn't work.
 
-9. Feel free to report any bugs or things you don't like.
+9. If you want to run Sim at system startup then you can use `crontab` -- just add these lines to your crontab (using command `crontab -e`):
+```
+@reboot sh -c 'while true; do stat /var/run/mysqld/mysqld.sock && where-you-installed-Sim/sim-server; sleep 4; done'
+@reboot sh -c 'while true; do stat /var/run/mysqld/mysqld.sock && where-you-installed-Sim/job-server; sleep 4; done'
+```
+
+`where-you-installed-Sim` = absolute path to Sim build directory e.g. `/home/your_username/sim/build`
+
+10. Feel free to report any bugs or things you don't like.
 
 ### Upgrading
 Be aware that sometimes incompatible database or other inner changes won't allow for a smooth upgrade.
 
 To upgrade just type:
 ```sh
-git pull && git submodule update --recursive && make -j $(nproc) install run
+git pull && git submodule update --init --recursive && make -j $(nproc) install run
 ```
