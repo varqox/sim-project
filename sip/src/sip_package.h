@@ -35,14 +35,14 @@ private:
 	void prepare_judge_worker();
 
 	// Runs @p test.generator and places its output in the @p in_file
-	void generate_test_in_file(const Sipfile::GenTest& test,
-	                           CStringView in_file);
+	void generate_test_input_file(const Sipfile::GenTest& test,
+	                              CStringView in_file);
 
 	// Runs model solution on @p test.in and places the output in the
 	// @p test.out file
 	sim::JudgeReport::Test
-	generate_test_out_file(const sim::Simfile::Test& test,
-	                       SipJudgeLogger& logger);
+	generate_test_output_file(const sim::Simfile::Test& test,
+	                          SipJudgeLogger& logger);
 
 	// Runs @p callback for each test in @p test_range
 	void parse_test_range(StringView test_range,
@@ -61,14 +61,14 @@ public:
 	SipPackage();
 
 	// Generates .in files that have recipe provided in Sipfile
-	void generate_test_in_files();
+	void generate_test_input_files();
 
 	// Removes tests from "limits" variable in Simfile that have no
 	// corresponding input file
-	void remove_tests_with_no_in_file_from_limits_in_simfile();
+	void remove_tests_with_no_input_file_from_limits_in_simfile();
 
 	// For every .in file generates the corresponding .out file
-	void generate_test_out_files();
+	void generate_test_output_files();
 
 	// Runs specified solution on all tests
 	void judge_solution(StringView solution);

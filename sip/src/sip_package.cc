@@ -52,8 +52,8 @@ void SipPackage::prepare_judge_worker() {
 	jworker.value().load_package(".", full_simfile.dump());
 }
 
-void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
-                                       CStringView in_file) {
+void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
+                                          CStringView in_file) {
 	STACK_UNWINDING_MARK;
 
 	InplaceBuff<32> generator([&]() -> InplaceBuff<32> {
@@ -104,8 +104,8 @@ void SipPackage::generate_test_in_file(const Sipfile::GenTest& test,
 }
 
 sim::JudgeReport::Test
-SipPackage::generate_test_out_file(const sim::Simfile::Test& test,
-                                   SipJudgeLogger& logger) {
+SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
+                                      SipJudgeLogger& logger) {
 	STACK_UNWINDING_MARK;
 
 	stdlog("generating ", test.name, ".out...").flush_no_nl();
@@ -176,7 +176,7 @@ SipPackage::SipPackage() {
 	}
 }
 
-void SipPackage::generate_test_in_files() {
+void SipPackage::generate_test_input_files() {
 	STACK_UNWINDING_MARK;
 
 	stdlog("\033[1;36mGenerating input files...\033[m");
@@ -216,10 +216,10 @@ void SipPackage::generate_test_in_files() {
 	sipfile.gen_tests.for_each([&](const Sipfile::GenTest& test) {
 		auto it = tests_files->tests.find(test.name);
 		if (not it or not it->second.in.has_value()) {
-			generate_test_in_file(test, intentionalUnsafeCStringView(
-			                               concat(in_dir, test.name, ".in")));
+			generate_test_input_file(test, intentionalUnsafeCStringView(concat(
+			                                  in_dir, test.name, ".in")));
 		} else {
-			generate_test_in_file(test, it->second.in.value().to_string());
+			generate_test_input_file(test, it->second.in.value().to_string());
 		}
 	});
 
@@ -236,19 +236,20 @@ void SipPackage::generate_test_in_files() {
 	tests_files = std::nullopt; // Probably new .in files were just created
 }
 
-static auto test_out_file(StringView test_in_file) {
+static auto test_output_file(StringView test_input_file) {
 	STACK_UNWINDING_MARK;
 
-	if (hasPrefix(test_in_file, "in/")) {
+	if (hasPrefix(test_input_file, "in/")) {
 		return concat<32>(
-		   "out", test_in_file.substring(2, test_in_file.size() - 2), "out");
+		   "out", test_input_file.substring(2, test_input_file.size() - 2),
+		   "out");
 	}
 
-	return concat<32>(test_in_file.substring(0, test_in_file.size() - 2),
+	return concat<32>(test_input_file.substring(0, test_input_file.size() - 2),
 	                  "out");
 }
 
-void SipPackage::remove_tests_with_no_in_file_from_limits_in_simfile() {
+void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 	STACK_UNWINDING_MARK;
 
 	if (access("Simfile", F_OK) != 0)
@@ -273,7 +274,7 @@ void SipPackage::remove_tests_with_no_in_file_from_limits_in_simfile() {
 	   false);
 }
 
-void SipPackage::generate_test_out_files() {
+void SipPackage::generate_test_output_files() {
 	STACK_UNWINDING_MARK;
 
 	simfile.load_interactive();
@@ -297,7 +298,7 @@ void SipPackage::generate_test_out_files() {
 
 	// We need to remove invalid entries from limits as Conver will give
 	// warnings about them
-	remove_tests_with_no_in_file_from_limits_in_simfile();
+	remove_tests_with_no_input_file_from_limits_in_simfile();
 
 	// Touch .out files and give warnings
 	tests_files.value().tests.for_each([&](auto&& p) {
@@ -309,7 +310,7 @@ void SipPackage::generate_test_out_files() {
 		if (p.second.out.has_value())
 			putFileContents(concat(p.second.out.value()), "");
 		else
-			putFileContents(test_out_file(p.second.in.value()), "");
+			putFileContents(test_output_file(p.second.in.value()), "");
 	});
 	tests_files = std::nullopt; // New .out files may have been created
 
@@ -332,7 +333,7 @@ void SipPackage::generate_test_out_files() {
 		rep.groups.emplace_back();
 		for (auto const& test : group.tests) {
 			rep.groups.back().tests.emplace_back(
-			   generate_test_out_file(test, logger));
+			   generate_test_output_file(test, logger));
 		}
 	}
 
