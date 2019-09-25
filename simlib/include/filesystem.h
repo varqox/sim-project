@@ -361,15 +361,18 @@ public:
  */
 template <class DirType, class Func, class ErrFunc>
 void forEachDirComponent(DirType&& dir, Func&& func, ErrFunc&& readdir_failed) {
-	static_assert(std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
-	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or std::is_invocable_v<Func, dirent*>);
+	static_assert(std::is_convertible_v<DirType, FilePath> or
+	              std::is_convertible_v<DirType, DIR*>);
+	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or
+	              std::is_invocable_v<Func, dirent*>);
 
 	if constexpr (not std::is_convertible_v<DirType, DIR*>) {
 		Directory directory {dir};
 		if (!directory)
 			THROW("opendir()", errmsg());
 
-		return forEachDirComponent(directory, std::forward<Func>(func), std::forward<ErrFunc>(readdir_failed));
+		return forEachDirComponent(directory, std::forward<Func>(func),
+		                           std::forward<ErrFunc>(readdir_failed));
 
 	} else {
 		dirent* file;
@@ -385,7 +388,8 @@ void forEachDirComponent(DirType&& dir, Func&& func, ErrFunc&& readdir_failed) {
 			}
 
 			if (strcmp(file->d_name, ".") and strcmp(file->d_name, "..")) {
-				if constexpr (std::is_constructible_v<decltype(func(file)), bool>) {
+				if constexpr (std::is_constructible_v<decltype(func(file)),
+				                                      bool>) {
 					if (not func(file))
 						return;
 				} else {
@@ -398,9 +402,12 @@ void forEachDirComponent(DirType&& dir, Func&& func, ErrFunc&& readdir_failed) {
 
 template <class DirType, class Func>
 auto forEachDirComponent(DirType&& dir, Func&& func) {
-	static_assert(std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
-	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or std::is_invocable_v<Func, dirent*>);
-	return forEachDirComponent(std::forward<DirType>(dir), std::forward<Func>(func),
+	static_assert(std::is_convertible_v<DirType, FilePath> or
+	              std::is_convertible_v<DirType, DIR*>);
+	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or
+	              std::is_invocable_v<Func, dirent*>);
+	return forEachDirComponent(std::forward<DirType>(dir),
+	                           std::forward<Func>(func),
 	                           [] { THROW("readdir()", errmsg()); });
 }
 

@@ -179,7 +179,6 @@ constexpr bool is_one_of(A&& val, Option&&... option) {
 	return ((val == option) or ...);
 }
 
-
 #if 0 // Clang does not support std::launder yet
 #if __cplusplus > 201402L
 #warning                                                                       \

@@ -761,7 +761,7 @@ private:
 			return rc;
 
 		if (not is_one_of((int)mysql_errno(conn_), CR_SERVER_GONE_ERROR,
-		                CR_SERVER_LOST))
+		                  CR_SERVER_LOST))
 			THROW(error_msg());
 
 		// Cannot reconnect if other objects already uses this connection

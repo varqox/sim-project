@@ -80,7 +80,9 @@ TEST(ConfigFile, is_string_literal) {
 	auto is_beginning = [](char c) {
 		return !(isspace(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
 	};
-	auto is_interior = [](char c) { return !is_one_of(c, '\n', '#', ']', ','); };
+	auto is_interior = [](char c) {
+		return !is_one_of(c, '\n', '#', ']', ',');
+	};
 	auto is_ending = [](char c) {
 		return !(isspace(c) || is_one_of(c, '#', ']', ','));
 	};
