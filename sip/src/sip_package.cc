@@ -904,6 +904,7 @@ void SipPackage::create_default_directory_structure() {
 	if ((mkdir("check") == -1 and errno != EEXIST) or
 	    (mkdir("doc") == -1 and errno != EEXIST) or
 	    (mkdir("in") == -1 and errno != EEXIST) or
+	    (mkdir("out") == -1 and errno != EEXIST) or
 	    (mkdir("prog") == -1 and errno != EEXIST) or
 	    (mkdir("utils") == -1 and errno != EEXIST)) {
 		THROW("mkdir()", errmsg());
