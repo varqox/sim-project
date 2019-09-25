@@ -474,6 +474,9 @@ void SipPackage::remove_generated_test_files() {
 void SipPackage::remove_test_files_not_specified_in_sipfile() {
 	STACK_UNWINDING_MARK;
 
+	if (access("Sipfile", F_OK) != 0)
+		throw SipError("No Sipfile was found");
+
 	sipfile.load_static_tests();
 	sipfile.load_gen_tests();
 	prepare_tests_files();
