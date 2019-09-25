@@ -2401,6 +2401,9 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 						value: 'cpp14',
 						text: 'C++14'
 					}).add('<option>', {
+						value: 'cpp17',
+						text: 'C++17'
+					}).add('<option>', {
 						value: 'pascal',
 						text: 'PASCAL'
 					})

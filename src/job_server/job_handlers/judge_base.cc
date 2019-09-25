@@ -15,6 +15,7 @@ sim::SolutionLanguage JudgeBase::to_sol_lang(SubmissionLanguage lang) {
 	case SubmissionLanguage::C11: return sim::SolutionLanguage::C11;
 	case SubmissionLanguage::CPP11: return sim::SolutionLanguage::CPP11;
 	case SubmissionLanguage::CPP14: return sim::SolutionLanguage::CPP14;
+	case SubmissionLanguage::CPP17: return sim::SolutionLanguage::CPP17;
 	case SubmissionLanguage::PASCAL: return sim::SolutionLanguage::PASCAL;
 	}
 
