@@ -345,9 +345,9 @@ private:
 		void check_result() {
 			round_post_simfile_time_limits_to_whole_seconds();
 			if (REGENERATE_OUTS)
-				overwrite_test_out_files();
+				overwrite_test_output_files();
 
-			check_result_with_out_files();
+			check_result_with_output_files();
 		}
 
 		void round_post_simfile_time_limits_to_whole_seconds() {
@@ -366,7 +366,7 @@ private:
 			}
 		}
 
-		void overwrite_test_out_files() const {
+		void overwrite_test_output_files() const {
 			overwrite_pre_simfile_out();
 			overwrite_post_simfile_out();
 			overwrite_conver_log_out();
@@ -399,7 +399,7 @@ private:
 			       final_judge_report.judge_log;
 		}
 
-		void check_result_with_out_files() const {
+		void check_result_with_output_files() const {
 			check_result_with_pre_simfile_out();
 			check_result_with_post_simfile_out();
 			check_result_with_conver_log_out();

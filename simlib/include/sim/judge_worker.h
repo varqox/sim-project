@@ -123,7 +123,8 @@ enum class SolutionLanguage {
 	C = C11,
 	CPP11,
 	CPP14,
-	CPP = CPP14,
+	CPP17,
+	CPP = CPP17,
 	PASCAL
 };
 
@@ -149,6 +150,7 @@ inline SolutionLanguage filename_to_lang(StringView filename) {
 		// If missing one, then update above ifs
 		return res;
 	case SolutionLanguage::CPP11: break;
+	case SolutionLanguage::CPP14: break;
 	}
 
 	THROW("Should not reach here");

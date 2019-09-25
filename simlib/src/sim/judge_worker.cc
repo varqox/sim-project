@@ -99,6 +99,9 @@ compile_command(SolutionLanguage lang, StringView source, StringView exec) {
 	case SolutionLanguage::CPP14:
 		return make("g++", "-O2", "-std=c++14", "-static", "-lm", "-m32", "-o",
 		            exec, "-xc++", source);
+	case SolutionLanguage::CPP17:
+		return make("g++", "-O2", "-std=c++17", "-static", "-lm", "-m32", "-o",
+		            exec, "-xc++", source);
 	case SolutionLanguage::PASCAL:
 		return make("fpc", "-O2", "-XS", "-Xt", concat("-o", exec), source);
 	case SolutionLanguage::UNKNOWN: THROW("Invalid Language!");
@@ -126,7 +129,8 @@ int JudgeWorker::compile_impl(
 	case SolutionLanguage::C11: src_filename.append(".c"); break;
 
 	case SolutionLanguage::CPP11:
-	case SolutionLanguage::CPP14: src_filename.append(".cpp"); break;
+	case SolutionLanguage::CPP14:
+	case SolutionLanguage::CPP17: src_filename.append(".cpp"); break;
 
 	case SolutionLanguage::PASCAL: src_filename.append(".pas"); break;
 
