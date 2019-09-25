@@ -175,6 +175,7 @@ static SubmissionLanguage filename_to_lang(StringView extension) {
 	case sim::SolutionLanguage::C11: return SubmissionLanguage::C11;
 	case sim::SolutionLanguage::CPP11: return SubmissionLanguage::CPP11;
 	case sim::SolutionLanguage::CPP14: return SubmissionLanguage::CPP14;
+	case sim::SolutionLanguage::CPP17: return SubmissionLanguage::CPP17;
 	case sim::SolutionLanguage::PASCAL: return SubmissionLanguage::PASCAL;
 	case sim::SolutionLanguage::UNKNOWN: THROW("Not supported language");
 	}

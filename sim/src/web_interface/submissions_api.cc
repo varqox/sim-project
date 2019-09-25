@@ -762,6 +762,8 @@ void Sim::api_submission_add() {
 		slang = SubmissionLanguage::CPP11;
 	else if (slang_str == "cpp14")
 		slang = SubmissionLanguage::CPP14;
+	else if (slang_str == "cpp17")
+		slang = SubmissionLanguage::CPP17;
 	else if (slang_str == "pascal")
 		slang = SubmissionLanguage::PASCAL;
 	else
