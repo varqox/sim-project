@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <poll.h>
+#include <simlib/defer.h>
 #include <simlib/filesystem.h>
 #include <simlib/libzip.h>
 #include <simlib/process.h>
@@ -396,6 +397,44 @@ void SipPackage::compile_checker() {
 	CompilationCache::load_checker(jworker.value());
 }
 
+static bool is_elf_file(FilePath path) noexcept {
+	FileDescriptor fd(path, O_RDONLY);
+	if (not fd.opened())
+		return false;
+
+	constexpr StringView ELF_MAGIC = "\x7F"
+	                                 "ELF";
+	InplaceBuff<ELF_MAGIC.size()> buff;
+	buff.size = readAll(fd, buff.data(), ELF_MAGIC.size());
+	return (buff == ELF_MAGIC);
+}
+
+static void remove_elf_files_and_empty_dirs() {
+	InplaceBuff<PATH_MAX> path("./");
+	// Returns whether there are remaining dir entries or not
+	auto process_dir = [&path](auto& process_dir) -> bool {
+		bool is_curr_dir_empty = true;
+		forEachDirComponent(path, [&](dirent* file) {
+			Defer path_guard = [&path, len = path.size] { path.size = len; };
+			path.append(file->d_name);
+			bool is_dir = (file->d_type == DT_UNKNOWN ? isDirectory(path)
+			                                          : file->d_type == DT_DIR);
+			if (is_dir) {
+				path.append('/');
+				bool empty = process_dir(process_dir);
+				if (not empty != 0 or rmdir(FilePath(path)))
+					is_curr_dir_empty = false;
+			} else if (not is_elf_file(path) or unlink(path)) {
+				is_curr_dir_empty = false;
+			}
+		});
+
+		return is_curr_dir_empty;
+	};
+
+	process_dir(process_dir);
+}
+
 void SipPackage::clean() {
 	STACK_UNWINDING_MARK;
 
@@ -405,8 +444,7 @@ void SipPackage::clean() {
 	if (remove_r("utils/latex/") and errno != ENOENT)
 		THROW("remove_r()", errmsg());
 
-	(void)rmdir("utils/"); // Remove utils/ directory if empty
-
+	remove_elf_files_and_empty_dirs();
 	stdlog(" done.");
 }
 
