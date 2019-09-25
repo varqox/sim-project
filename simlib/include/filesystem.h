@@ -352,61 +352,55 @@ public:
  * @brief Calls @p func on every component of the @p dir other than "." and
  *   ".."
  *
- * @param dir directory object, readdir(3) is used on it so one may want to
- *   save its pos via telldir(3) and use seekdir(3) after the call or just
- *   rewinddir(3) after the call
+ * @param dir path to directory or directory object, readdir(3) is used on it so
+     one may want to save its pos via telldir(3) and use seekdir(3) after the
+     call or just rewinddir(3) after the call
  * @param func function to call on every component (other than "." and ".."),
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template <class Func, class ErrFunc>
-void forEachDirComponent(DIR* dir, Func&& func, ErrFunc&& readdir_failed) {
-	dirent* file;
-	for (;;) {
-		errno = 0;
-		file = readdir(dir);
-		if (file == nullptr) {
-			if (errno == 0)
-				return; // No more entries
+template <class DirType, class Func, class ErrFunc>
+void forEachDirComponent(DirType&& dir, Func&& func, ErrFunc&& readdir_failed) {
+	static_assert(std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
+	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or std::is_invocable_v<Func, dirent*>);
 
-			readdir_failed();
-			return;
-		}
+	if constexpr (not std::is_convertible_v<DirType, DIR*>) {
+		Directory directory {dir};
+		if (!directory)
+			THROW("opendir()", errmsg());
 
-		if (strcmp(file->d_name, ".") and strcmp(file->d_name, "..")) {
-			if constexpr (std::is_constructible_v<decltype(func(file)), bool>) {
-				if (not func(file))
-					return;
-			} else {
-				func(file);
+		return forEachDirComponent(directory, std::forward<Func>(func), std::forward<ErrFunc>(readdir_failed));
+
+	} else {
+		dirent* file;
+		for (;;) {
+			errno = 0;
+			file = readdir(dir);
+			if (file == nullptr) {
+				if (errno == 0)
+					return; // No more entries
+
+				readdir_failed();
+				return;
+			}
+
+			if (strcmp(file->d_name, ".") and strcmp(file->d_name, "..")) {
+				if constexpr (std::is_constructible_v<decltype(func(file)), bool>) {
+					if (not func(file))
+						return;
+				} else {
+					func(file);
+				}
 			}
 		}
 	}
 }
 
-/**
- * @brief Calls @p func on every component of the directory @p pathname other
- *   than "." and ".."
- *
- * @param pathname path of the directory to scan
- * @param func function to call on every component (other than "." and ".."),
- *   it should take one argument - dirent*, if it return sth convertible to
- *   false the lookup will break
- */
-template <class Func, class ErrFunc>
-void forEachDirComponent(FilePath pathname, Func&& func,
-                         ErrFunc&& readdir_failed) {
-	Directory dir {pathname};
-	if (!dir)
-		THROW("opendir()", errmsg());
-
-	return forEachDirComponent(dir, std::forward<Func>(func),
-	                           std::forward<ErrFunc>(readdir_failed));
-}
-
-template <class A, class Func>
-auto forEachDirComponent(A&& a, Func&& func) {
-	return forEachDirComponent(std::forward<A>(a), std::forward<Func>(func),
+template <class DirType, class Func>
+auto forEachDirComponent(DirType&& dir, Func&& func) {
+	static_assert(std::is_convertible_v<DirType, FilePath> or std::is_convertible_v<DirType, DIR*>);
+	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or std::is_invocable_v<Func, dirent*>);
+	return forEachDirComponent(std::forward<DirType>(dir), std::forward<Func>(func),
 	                           [] { THROW("readdir()", errmsg()); });
 }
 
