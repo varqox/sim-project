@@ -99,8 +99,7 @@ Sim is an open source platform for carrying out algorithmic contests
 
 9. If you want to run Sim at system startup then you can use `crontab` -- just add these lines to your crontab (using command `crontab -e`):
 ```
-@reboot sh -c 'while true; do stat /var/run/mysqld/mysqld.sock && where-you-installed-Sim/sim-server; sleep 4; done'
-@reboot sh -c 'while true; do stat /var/run/mysqld/mysqld.sock && where-you-installed-Sim/job-server; sleep 4; done'
+@reboot sh -c 'until test -e /var/run/mysqld/mysqld.sock; do sleep 0.4; done; BUILD="where-you-installed-Sim"; "$BUILD/sim-server"& "$BUILD/job-server"&'
 ```
 
 `where-you-installed-Sim` = absolute path to Sim build directory e.g. `/home/your_username/sim/build`
