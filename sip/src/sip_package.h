@@ -5,6 +5,7 @@
 #include "tests_files.h"
 
 #include <functional>
+#include <optional>
 #include <simlib/sim/conver.h>
 
 class SipPackage {
@@ -105,13 +106,11 @@ public:
 	void archive_into_zip(CStringView dest_file);
 
 	// Replaces or creates variable in the specified config file
-	// (deletes variable if @p replacement is empty)
-	static void replace_variable_in_configfile(const ConfigFile& cf,
-	                                           FilePath configfile_path,
-	                                           StringView configfile_contents,
-	                                           StringView var_name,
-	                                           StringView replacement,
-	                                           bool escape_replacement = true);
+	// (deletes variable if @p replacement is not set)
+	static void replace_variable_in_configfile(
+	   const ConfigFile& cf, FilePath configfile_path,
+	   StringView configfile_contents, StringView var_name,
+	   std::optional<StringView> replacement, bool escape_replacement = true);
 
 	// Replaces or creates variable in the specified config file
 	static void replace_variable_in_configfile(
@@ -120,9 +119,9 @@ public:
 	   const std::vector<std::string>& replacement);
 
 	// Replaces or creates variable in the Simfile (deletes variable if
-	// @p replacement is empty)
+	// @p replacement is not set)
 	void replace_variable_in_simfile(StringView var_name,
-	                                 StringView replacement,
+	                                 std::optional<StringView> replacement,
 	                                 bool escape_replacement = true);
 
 	// Replaces or creates variable in the Simfile

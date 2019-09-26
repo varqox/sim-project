@@ -161,6 +161,8 @@ Commands:
                           default) (compile solutions if necessary). If [sol] is
                           a path to a solution then it is used, otherwise all
                           solutions that have [sol] as a subsequence are used.
+  unset <names...>      Remove variables names... form Simfile e.g.
+                          sip unset label interactive
   zip [clean args...]   Run clean command with [clean args] and compress the
                           package into zip (named after the current directory)
                           within the upper directory.
@@ -411,6 +413,14 @@ void test(ArgvParser args) {
 			sp.save_limits();
 		}
 	});
+}
+
+void unset(ArgvParser args) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	while (args.size() > 0)
+		sp.replace_variable_in_simfile(args.extract_next(), std::nullopt);
 }
 
 void zip(ArgvParser args) {

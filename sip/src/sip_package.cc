@@ -774,45 +774,53 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
 	stdlog("\033[2K\033[GZipping... done.");
 }
 
-void SipPackage::replace_variable_in_configfile(const ConfigFile& cf,
-                                                FilePath configfile_path,
-                                                StringView configfile_contents,
-                                                StringView var_name,
-                                                StringView replacement,
-                                                bool escape_replacement) {
+void SipPackage::replace_variable_in_configfile(
+   const ConfigFile& cf, FilePath configfile_path,
+   StringView configfile_contents, StringView var_name,
+   std::optional<StringView> replacement, bool escape_replacement) {
 	STACK_UNWINDING_MARK;
 
 	std::ofstream out(configfile_path.data());
 	auto var = cf.get_var(var_name);
 	if (var.is_set()) {
-		auto var_span = var.value_span;
-		out.write(configfile_contents.data(), var_span.beg);
-		if (not replacement.empty()) {
-			if (escape_replacement)
-				out << ConfigFile::escape_string(replacement);
-			else
-				out.write(replacement.data(), replacement.size());
-		}
-		out.write(configfile_contents.data() + var_span.end,
-		          configfile_contents.size() - var_span.end);
+		auto val_span = var.value_span;
+		StringView before = configfile_contents.substring(0, val_span.beg);
+		StringView after = configfile_contents.substring(val_span.end);
+		// Delete variable
+		if (not replacement) {
+			// Remove remaining variable declaration
+			before.removeTrailing([](char c) { return (c != '\n'); });
+			// Remove line if empty
+			if (hasPrefix(after, "\n"))
+				after.extractPrefix(1);
 
-	} else {
-		out.write(configfile_contents.data(), configfile_contents.size());
-		if (not configfile_contents.empty() and
-		    configfile_contents.back() != '\n')
-			out << '\n';
-
-		if (replacement.empty()) {
-			out << var_name << ": \n";
-		} else {
-			out << var_name << ": ";
-			if (escape_replacement)
-				out << ConfigFile::escape_string(replacement);
-			else
-				out.write(replacement.data(), replacement.size());
-			out << '\n';
+			out << before << after;
+			return;
 		}
+
+		// Replace current variable value
+		if (escape_replacement)
+			out << before << ConfigFile::escape_string(*replacement) << after;
+		else
+			out << before << *replacement << after;
+
+		return;
 	}
+
+	// New variable
+	out << configfile_contents;
+	if (not replacement)
+		return;
+
+	if (not hasSuffix(configfile_contents, "\n"))
+		out << '\n';
+
+	out << var_name << ": ";
+	if (escape_replacement)
+		out << ConfigFile::escape_string(*replacement);
+	else
+		out << *replacement;
+	out << '\n';
 }
 
 void SipPackage::replace_variable_in_configfile(
@@ -835,15 +843,17 @@ void SipPackage::replace_variable_in_configfile(
 
 	auto var = cf.get_var(var_name);
 	if (var.is_set()) {
-		auto var_span = var.value_span;
-		out.write(configfile_contents.data(), var_span.beg);
+		auto val_span = var.value_span;
+		StringView before = configfile_contents.substring(0, val_span.beg);
+		StringView after = configfile_contents.substring(val_span.end);
+
+		out << before;
 		print_replacement();
-		out.write(configfile_contents.data() + var_span.end,
-		          configfile_contents.size() - var_span.end);
+		out << after;
 
 	} else {
-		out.write(configfile_contents.data(), configfile_contents.size());
-		if (configfile_contents.back() != '\n')
+		out << configfile_contents;
+		if (not hasSuffix(configfile_contents, "\n"))
 			out << '\n';
 
 		out << var_name << ": ";
@@ -852,9 +862,9 @@ void SipPackage::replace_variable_in_configfile(
 	}
 }
 
-void SipPackage::replace_variable_in_simfile(StringView var_name,
-                                             StringView replacement,
-                                             bool escape_replacement) {
+void SipPackage::replace_variable_in_simfile(
+   StringView var_name, std::optional<StringView> replacement,
+   bool escape_replacement) {
 	STACK_UNWINDING_MARK;
 
 	replace_variable_in_configfile(simfile.config_file(), "Simfile",

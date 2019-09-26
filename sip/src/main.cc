@@ -147,6 +147,8 @@ static void run_command(int argc, char** argv) {
 		return commands::statement(args);
 	if (command == "test")
 		return commands::test(args);
+	if (command == "unset")
+		return commands::unset(args);
 	if (command == "zip")
 		return commands::zip(args);
 

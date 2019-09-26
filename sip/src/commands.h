@@ -4,7 +4,6 @@
 
 namespace commands {
 
-// commands.cc
 void checker(ArgvParser args);
 
 void clean(ArgvParser args);
@@ -43,6 +42,8 @@ void save(ArgvParser args);
 void statement(ArgvParser args);
 
 void test(ArgvParser args);
+
+void unset(ArgvParser args);
 
 void zip(ArgvParser args);
 
