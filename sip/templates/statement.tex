@@ -1,0 +1,92 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper, total={480pt, 720pt}]{geometry}
+\usepackage{array}
+\usepackage[polish]{babel}
+\renewcommand{\arraystretch}{1.25}
+
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage[lastpage,user]{zref}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{calc}
+\usepackage{scalerel}
+\usepackage{fancyvrb}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=blue}
+
+\let\oldverbatim\verbatim
+\let\oldendverbatim\endverbatim
+\def\verbatim{\Verbatim[samepage=true]}
+\def\endverbatim{\endVerbatim}
+
+\let\OldIncludegraphics\includegraphics
+\renewcommand{\includegraphics}[2][]{\OldIncludegraphics[scale=0.55, #1]{#2}}
+
+\providecommand{\tightlist}{%
+    \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\setcounter{secnumdepth}{0}
+
+\def \problemName           {<<<name>>>}
+\def \memoryLimit           {<<<mem>>>}
+\def \additionalFooterInfo  {}
+\def \contestName           {}
+\def \roundDate             {}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.5pt}
+\lfoot{\additionalFooterInfo}
+\cfoot{\thepage/\zpageref{LastPage}}
+\rfoot{\problemName}
+
+\begin{document}
+\section*{\huge\problemName\hfill\small{Dostępna pamięć: \memoryLimit}\newline
+\rule{480pt}{0.5pt}
+%\newline\small\contestName\hfill\normalfont\textit\roundDate}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.4\baselineskip}
+
+\begin{sloppypar}
+
+Problem statement.
+
+\section{Wejście}
+
+Input description.
+
+\section{Wyjście}
+
+Output description.
+
+\section{Przykłady}
+\begin{tabularx}{\textwidth}{*{2}{|>{\ttfamily}X}|}
+	\hline
+		\multicolumn{1}{|c|}{\textbf{Wejście}}
+	&
+		\multicolumn{1}{c|}{\textbf{Wyjście}}
+	\\ \hline
+		a\newline
+		b
+	&
+		out a b
+	\\ \hline
+		c\newline
+		d
+	&
+		out c d
+	\\ \hline
+\end{tabularx}
+
+\end{sloppypar}
+
+\end{document}

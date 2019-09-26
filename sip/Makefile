@@ -61,15 +61,34 @@ $(eval $(call add_generated_target, src/proot_dump.c,\
 ))
 endif
 
+$(eval $(call add_generated_target, templates/checker.cc.dump.c, \
+	xxd -i $$< | sed 's@\w*checker_cc@checker_cc@g' > $$@, \
+	templates/checker.cc Makefile \
+))
+
+$(eval $(call add_generated_target, templates/interactive_checker.cc.dump.c, \
+	xxd -i $$< | sed 's@\w*interactive_checker_cc@interactive_checker_cc@g' > $$@, \
+	templates/interactive_checker.cc Makefile \
+))
+
+$(eval $(call add_generated_target, templates/statement.tex.dump.c, \
+	xxd -i $$< | sed 's@\w*statement_tex@statement_tex@g' > $$@, \
+	templates/statement.tex Makefile \
+))
+
 SIP_SRCS := \
 	src/commands.cc \
 	src/compilation_cache.cc \
 	src/lib/simlib/simlib.a \
 	src/main.cc \
 	src/proot_dump.c \
+	src/templates.cc \
 	src/sip_package.cc \
 	src/sipfile.cc \
 	src/tests_files.cc \
+	templates/checker.cc.dump.c \
+	templates/interactive_checker.cc.dump.c \
+	templates/statement.tex.dump.c \
 
 $(eval $(call add_executable, src/sip, $(SIP_FLAGS), $(SIP_SRCS)))
 
@@ -81,4 +100,4 @@ $(eval $(call add_executable, src/sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), 
 
 .PHONY: format
 format: src/lib/simlib/format
-format: $(shell find bin src | grep -E '\.(cc?|h)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')
+format: $(shell find bin src | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')

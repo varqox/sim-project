@@ -41,6 +41,8 @@ void save(ArgvParser args);
 
 void statement(ArgvParser args);
 
+void template_command(ArgvParser args);
+
 void test(ArgvParser args);
 
 void unset(ArgvParser args);

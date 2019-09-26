@@ -157,6 +157,19 @@ Commands:
                           scoring - saves scoring to Simfile
   statement [value]     If [value] is specified: set statement to [value].
                           Otherwise print its current value
+  templ [names...]      Alias to command template names...
+  template [names...]   Save templates of names. Available templates:
+                          - statement -- saved to doc/statement.tex
+                          - checker -- saved to check/checker.cc
+                            There are two checker templates: for interactive and
+                            non-interactive problems -- it will be chosen based
+                            on 'interactive' property from Simfile.
+                          Sip will search for templates in
+                          ~/.config/sip/templates/ but if specified template is
+                          not there, it will use the default one. Template files
+                          should have names: statement.tex, checker.cc,
+                          interactive_checker.cc. Default templates can be found
+                          here: https://github.com/varqox/sip/tree/master/templates
   test [sol...]         Run solutions [sol...] on tests (only main solution by
                           default) (compile solutions if necessary). If [sol] is
                           a path to a solution then it is used, otherwise all
@@ -388,6 +401,14 @@ void statement(ArgvParser args) {
 
 	sp.simfile.load_statement();
 	stdlog("statement = ", sp.simfile.statement);
+}
+
+void template_command(ArgvParser args) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	while (args.size() > 0)
+		sp.save_template(args.extract_next());
 }
 
 void test(ArgvParser args) {

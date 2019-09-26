@@ -2,6 +2,7 @@
 #include "compilation_cache.h"
 #include "constants.h"
 #include "sip_error.h"
+#include "templates.hh"
 #include "utils.h"
 
 #include <fstream>
@@ -592,6 +593,28 @@ void SipPackage::save_limits() {
 	   false);
 
 	stdlog(" done.");
+}
+
+void SipPackage::save_template(StringView template_name) {
+	STACK_UNWINDING_MARK;
+
+	if (template_name == "statement") {
+		simfile.load_name();
+		simfile.load_global_memory_limit_only();
+		(void)mkdir("doc");
+		putFileContents("doc/statement.tex",
+		                intentionalUnsafeStringView(templates::statement_tex(
+		                   simfile.name, simfile.global_mem_limit)));
+	} else if (template_name == "checker") {
+		(void)mkdir("check");
+		putFileContents(
+		   "check/checker.cc",
+		   intentionalUnsafeStringView(simfile.interactive
+		                                  ? templates::interactive_checker_cc()
+		                                  : templates::checker_cc()));
+	} else {
+		throw SipError("Unrecognized template name: ", template_name);
+	}
 }
 
 static void compile_tex_file(StringView file) {

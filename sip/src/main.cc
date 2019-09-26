@@ -145,6 +145,10 @@ static void run_command(int argc, char** argv) {
 		return commands::save(args);
 	if (command == "statement")
 		return commands::statement(args);
+	if (command == "templ")
+		return commands::template_command(args);
+	if (command == "template")
+		return commands::template_command(args);
 	if (command == "test")
 		return commands::test(args);
 	if (command == "unset")

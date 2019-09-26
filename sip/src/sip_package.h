@@ -98,6 +98,9 @@ public:
 	// Saves time and memory limits into the Simfile
 	void save_limits();
 
+	// Saves specified template to its corresponding location in the package
+	void save_template(StringView template_name);
+
 	// Compiles all .tex files found in the package, if watch is true, then
 	// every .tex file will be recompiled on any change
 	void compile_tex_files(bool watch);
