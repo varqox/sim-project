@@ -47,6 +47,9 @@ public:
 
 	bool opened() const noexcept { return (fd_ >= 0); }
 
+	// To check for validity opened() should be used
+	explicit operator bool() const noexcept = delete;
+
 	operator int() const noexcept { return fd_; }
 
 	int release() noexcept {
