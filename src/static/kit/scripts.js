@@ -4294,10 +4294,10 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 								add_contest_submission.bind(null, true, contest, round, problem))),
 						]}).appendTo(dashboard.parent());
 
-						$('<object>').attr({
+						$('<object>').prop({
 							class: 'statement',
 							data: statement_url
-						}).appendTo('body');
+						}).appendTo(dashboard.parent().parent());
 					}
 
 					var elem = $('<a>', {
