@@ -4281,17 +4281,24 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 				}
 
 				function append_problem(dashboard_round, problem, cannot_submit) {
-					// Problem buttons
-					if (id_for_api[0] === 'p')
+					// Problem buttons and statement preview
+					if (id_for_api[0] === 'p') {
+						var statement_url = '/api/download/statement/contest/p' + problem.id + '/' + encodeURIComponent(problem.name);
 						$('<center>', {html: [
 							$('<a>', {
 								class: 'btn-small',
-								href: '/api/download/statement/contest/p' + problem.id + '/' + encodeURIComponent(problem.name),
+								href: statement_url,
 								text: 'Statement'
 							}),
 							(cannot_submit ? '' : a_view_button('/c/p' + problem.id + '/submit', 'Submit', 'btn-small blue',
 								add_contest_submission.bind(null, true, contest, round, problem))),
 						]}).appendTo(dashboard.parent());
+
+						$('<object>').attr({
+							class: 'statement',
+							data: statement_url
+						}).appendTo('body');
+					}
 
 					var elem = $('<a>', {
 						href: '/c/p' + problem.id,
