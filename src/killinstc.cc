@@ -96,6 +96,7 @@ int main(int argc, char** argv) {
 	for (auto pid : victims)
 		stdlog("Killing ", pid);
 
-	kill_processes_by_exec(std::move(exec_set), wait_timeout, kill_after_waiting);
+	kill_processes_by_exec(std::move(exec_set), wait_timeout,
+	                       kill_after_waiting);
 	return 0;
 }
