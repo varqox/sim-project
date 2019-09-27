@@ -6,10 +6,15 @@
 #include "../include/utilities.h"
 
 #include <dirent.h>
+#include <thread>
 
 using std::array;
+using std::not_fn;
+using std::optional;
+using std::pair;
 using std::string;
 using std::vector;
+using std::chrono::duration;
 
 InplaceBuff<PATH_MAX> getCWD() {
 	InplaceBuff<PATH_MAX> res;
@@ -109,6 +114,166 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	});
 
 	return res;
+}
+
+template <class...>
+constexpr bool always_false = false;
+
+// TODO: remove it
+// Converts whole @p str to @p T or returns std::nullopt on errors like value
+// represented in @p str is too big or invalid
+template <class T, std::enable_if_t<not std::is_integral_v<std::remove_cv_t<
+                                       std::remove_reference_t<T>>>,
+                                    int> = 0>
+std::optional<T> str2num(StringView str) noexcept {
+#if 0 // TODO: use it when std::from_chars for double becomes implemented in
+      // libstdc++ (also remove always false from the above and include
+      // <cstdlib>)
+	std::optional<T> res {std::in_place};
+	auto [ptr, ec] = std::from_chars(str.begin(), str.end(), &*res);
+	if (ptr != str.end() or ec != std::errc())
+		return std::nullopt;
+
+	return res;
+#else
+	static_assert(std::is_floating_point_v<T>);
+	if (str.empty() or isspace(str[0]))
+		return std::nullopt;
+
+	try {
+		InplaceBuff<4096> buff {str};
+		CStringView cstr = buff.to_cstr();
+		auto err = std::exchange(errno, 0);
+
+		char* ptr;
+		T res = [&] {
+			if constexpr (std::is_same_v<T, float>)
+				return ::strtof(cstr.data(), &ptr);
+			else if constexpr (std::is_same_v<T, double>)
+				return ::strtod(cstr.data(), &ptr);
+			else if constexpr (std::is_same_v<T, long double>)
+				return ::strtold(cstr.data(), &ptr);
+			else
+				static_assert(always_false<T>, "Cannot convert this type");
+		}();
+
+		std::swap(err, errno);
+		if (err or ptr != cstr.end())
+			return std::nullopt;
+
+		return res;
+
+	} catch (...) {
+		return std::nullopt;
+	}
+
+#endif
+}
+
+void kill_processes_by_exec(vector<string> exec_set,
+                            optional<duration<double>> wait_timeout,
+                            bool kill_after_waiting, int terminate_signal) {
+	STACK_UNWINDING_MARK;
+	// TODO: change every getProcStat() to open file by FileDescriptor and don't
+	// fail if the file does not exists -- it means that the process is already
+	// dead
+	constexpr uint START_TIME_FID =
+	   21; // Number of the field in /proc/[pid]/stat that contains process
+	       // start time
+
+	using Victim = pair<pid_t, string>;
+	vector<Victim> victims;
+	for (pid_t pid : findProcessesByExec(std::move(exec_set))) {
+		try {
+			victims.emplace_back(pid, getProcStat(pid, START_TIME_FID));
+		} catch (...) {
+			// Ignore if process already died
+			if (kill(pid, 0) == 0 or errno != ESRCH)
+				throw;
+		}
+	}
+
+	if (victims.empty())
+		return;
+
+	using std::chrono_literals::operator""s;
+
+	auto ticks_per_second = sysconf(_SC_CLK_TCK);
+	if (ticks_per_second == -1)
+		THROW("sysconf(_SC_CLK_TCK) failed");
+
+	StringView max_victim_start_time;
+	for (auto& [pid, start_time] : victims) {
+		if (start_time > max_victim_start_time)
+			max_victim_start_time = start_time;
+	}
+
+	auto proc_uptime = getFileContents("/proc/uptime");
+	auto current_uptime = toString(
+	   str2num<double>(StringView(proc_uptime).extractLeading(not_fn(isspace)))
+	         .value() *
+	      ticks_per_second,
+	   0);
+
+	// If one of the processes has just appeared, wait for a clock tick
+	// to distinguish it from a new process that may appear just after killing
+	// with the same pid
+	if (max_victim_start_time >= proc_uptime)
+		std::this_thread::sleep_for(1s / ticks_per_second);
+
+	// First try terminate_signal
+	for (size_t i = 0; i < victims.size(); ++i) {
+		auto pid = victims[i].first;
+		if (kill(pid, terminate_signal) == 0)
+			continue;
+
+		if (errno != ESRCH)
+			THROW("kill(", pid, ")", errmsg());
+
+		swap(victims[i--], victims.back());
+		victims.pop_back();
+	}
+
+	// Wait for victims to terminate
+	auto wait_start_time = std::chrono::system_clock::now();
+	auto curr_time = wait_start_time;
+	while (curr_time < wait_start_time) {
+		// Remove dead victims
+		for (size_t i = 0; i < victims.size(); ++i) {
+			auto& [pid, start_time] = victims[i];
+			try {
+				if (getProcStat(pid, START_TIME_FID) == start_time)
+					continue; // Still alive
+			} catch (...) {
+				// Exception means that the process is dead
+			}
+
+			swap(victims[i--], victims.back());
+			victims.pop_back();
+		}
+
+		if (victims.empty())
+			break;
+
+		curr_time = std::chrono::system_clock::now();
+		auto sleep_interval = 0.04s;
+		if (wait_timeout.has_value()) {
+			auto remaining_wait = *wait_timeout - (curr_time - wait_start_time);
+			if (remaining_wait <= 0s)
+				break;
+
+			if (remaining_wait < sleep_interval)
+				sleep_interval = remaining_wait;
+		}
+
+		std::this_thread::sleep_for(sleep_interval);
+	}
+
+	// Kill remaining victims
+	if (kill_after_waiting) {
+		for (auto& [pid, start_time] : victims)
+			(void)kill(pid, SIGKILL);
+	}
 }
 
 string getExecDir(pid_t pid) {

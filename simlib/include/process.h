@@ -3,6 +3,7 @@
 #include "string.h"
 
 #include <algorithm>
+#include <chrono>
 #include <linux/limits.h>
 #include <string>
 #include <sys/wait.h>
@@ -49,6 +50,21 @@ std::string getExec(pid_t pid);
  */
 std::vector<pid_t> findProcessesByExec(std::vector<std::string> exec_set,
                                        bool include_me = false);
+/**
+ * @brief Kills processes that have executable files in @p exec_set
+ * @details First tries with SIGTERM, but after @p wait_timeout sends SIGKILL if
+ *   @p kill_after_waiting is true
+ *
+ * @param exec_set paths to executables (if absolute, getting CWD is omitted)
+ * @param wait_timeout how long to wait for processes to die (if unset, wait
+ *   indefinitely)
+ * @param kill_after_waiting whether to send SIGKILL if process is still alive
+ *   after wait_timeout
+ */
+void kill_processes_by_exec(
+   std::vector<std::string> exec_set,
+   std::optional<std::chrono::duration<double>> wait_timeout = std::nullopt,
+   bool kill_after_waiting = false, int terminate_signal = SIGTERM);
 
 /**
  * @brief Returns the process executable directory
