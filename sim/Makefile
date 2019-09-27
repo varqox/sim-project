@@ -68,26 +68,24 @@ endif
 
 	@printf "\033[;32mInstallation finished\033[0m\n"
 
+.PHONY: kill
+kill: $(filter-out kill run reinstall uninstall, $(MAKECMDGOALS))
+	# Kill sim-server and job-server
+	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
+		$(abspath $(DESTDIR)/job-server)
+		# $(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
+
 .PHONY: reinstall
 reinstall: override SETUP_INSTALL_FLAGS += --drop-tables
-reinstall: $(filter-out reinstall run, $(MAKECMDGOALS))
+reinstall: $(filter-out reinstall run, $(MAKECMDGOALS)) kill
 	@ #     ^ reinstall always have to be executed at the end (but before run)
-	# Kill sim-server and job-server
-	src/killinstc $(abspath $(DESTDIR)/sim-server)
-	src/killinstc $(abspath $(DESTDIR)/job-server)
-
 	# Delete files
 	$(RM) -r $(abspath $(DESTDIR)/)
 	$(MAKE) install
 
 .PHONY: uninstall
 uninstall: override SETUP_INSTALL_FLAGS += --only-drop-tables
-uninstall:
-	# Kill sim-server and job-server
-	src/killinstc $(abspath $(DESTDIR)/sim-server)
-	# src/killinstc $(abspath $(DESTDIR)/sim-server2)
-	src/killinstc $(abspath $(DESTDIR)/job-server)
-
+uninstall: kill
 	# Delete files and database tables
 	src/setup-installation $(abspath $(DESTDIR)) $(SETUP_INSTALL_FLAGS)
 	$(RM) -r $(abspath $(DESTDIR)/)
@@ -95,12 +93,6 @@ uninstall:
 .PHONY: run
 run: $(filter-out run, $(MAKECMDGOALS))
 	@ # ^ run target always have to be executed at the end
-
-	src/killinstc --kill-after=3 $(abspath $(DESTDIR)/sim-server) \
-		$(abspath $(DESTDIR)/job-server)
-		# $(abspath $(DESTDIR)/sim-server2) $(abspath $(DESTDIR)/job-server)
-
-	# Run
 	$(abspath $(DESTDIR)/job-server)&
 	$(abspath $(DESTDIR)/sim-server)&
 	# $(abspath $(DESTDIR)/sim-server2)&
