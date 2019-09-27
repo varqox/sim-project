@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <chrono>
 #include <linux/limits.h>
+#include <optional>
 #include <string>
 #include <sys/wait.h>
 #include <vector>
