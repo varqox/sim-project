@@ -1012,13 +1012,13 @@ void SipPackage::create_default_simfile(
 		}
 
 		// Memory limit
-		if (not simfile.config_file().get_var("memory_limit").is_set())
+		constexpr char mem_limit_var_name[] = "memory_limit";
+		if (not simfile.config_file().get_var(mem_limit_var_name).is_set())
 			replace_variable_in_simfile(
-			   "memory_limet",
+			   mem_limit_var_name,
 			   intentionalUnsafeStringView(toStr(DEFAULT_MEMORY_LIMIT)));
 
 	} else if (problem_name.has_value()) {
-		stdlog("name = ", problem_name.value());
 		putFileContents(
 		   "Simfile",
 		   intentionalUnsafeStringView(
@@ -1026,7 +1026,6 @@ void SipPackage::create_default_simfile(
 		             "\nmemory_limit: ", DEFAULT_MEMORY_LIMIT, '\n')));
 
 	} else if (not package_dir_filename.empty()) {
-		stdlog("name = ", package_dir_filename);
 		putFileContents(
 		   "Simfile",
 		   intentionalUnsafeStringView(
@@ -1037,4 +1036,14 @@ void SipPackage::create_default_simfile(
 		throw SipError("problem name was neither provided as a command-line"
 		               " argument nor deduced from the provided package path");
 	}
+
+	reload_simfile_from_str(getFileContents("Simfile"));
+	simfile.load_name();
+	simfile.load_global_memory_limit_only();
+
+	stdlog("name = ", simfile.name);
+	if (simfile.global_mem_limit)
+		stdlog("mem = ", *simfile.global_mem_limit >> 20, " MiB");
+	else
+		stdlog("mem is not set");
 }
