@@ -427,6 +427,7 @@ protected:
 
 	size_type rebalance_and_seth(size_type x) noexcept {
 		int b = (pool[pool[x].kid[L]].h - pool[pool[x].kid[R]].h) / 2;
+		assert(-1 <= b and b <= 1);
 		if (b) {
 			int dir = (b + 1) >> 1, revdir = dir ^ 1;
 			size_type aux_B = pool[x].kid[revdir];
@@ -583,7 +584,7 @@ protected:
 			return;
 		}
 
-		int dir = compare(pool[x].key(), pool[inserted].key());
+		bool dir = compare(pool[x].key(), pool[inserted].key());
 		insert(pool[x].kid[dir], inserted);
 		x = rebalance_and_seth(x);
 	}
@@ -594,7 +595,7 @@ protected:
 		if (x == nil)
 			return x = inserted;
 
-		int dir = compare(pool[x].key(), pool[inserted].key());
+		bool dir = compare(pool[x].key(), pool[inserted].key());
 		// if we have just found a duplicate
 		if (not dir and not compare(pool[inserted].key(), pool[x].key()))
 			return x;
@@ -632,7 +633,7 @@ private:
 			return {x, x};
 		}
 
-		int dir = compare(pool[x].key(), key);
+		bool dir = compare(pool[x].key(), key);
 		// if we have just found a duplicate
 		if (not dir and not compare(key, pool[x].key()))
 			return {x, x};
@@ -673,7 +674,7 @@ protected:
 			return true;
 		}
 
-		int dir = compare(pool[x].key(), pool[inserted].key());
+		bool dir = compare(pool[x].key(), pool[inserted].key());
 		// if we have just found a duplicate
 		if (not dir and not compare(pool[inserted].key(), pool[x].key())) {
 			pool[inserted].kid = pool[x].kid;
@@ -911,12 +912,13 @@ protected:
 		if (x == nil)
 			return true;
 
-		if (compare(pool[x].key(), key))
+		if (compare(pool[x].key(), key)) {
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
-		else
+		} else {
 			return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
 			        static_cast<bool>(callback(pool[x])) and
 			        for_each(pool[x].kid[R], callback));
+		}
 	}
 
 	template <class T, class Func>
@@ -949,12 +951,13 @@ protected:
 		if (x == nil)
 			return true;
 
-		if (compare(key, pool[x].key()))
+		if (compare(key, pool[x].key())) {
 			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
 			        static_cast<bool>(callback(pool[x])) and
 			        for_each(pool[x].kid[R], callback));
-		else
+		} else {
 			return foreach_since_upper_bound(pool[x].kid[R], key, callback);
+		}
 	}
 
 	template <class T, class Func>
@@ -988,12 +991,13 @@ protected:
 		if (x == nil)
 			return true;
 
-		if (compare(pool[x].key(), key))
+		if (compare(pool[x].key(), key)) {
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
-		else
+		} else {
 			return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
 			        static_cast<bool>(callback(pool[x])) and
 			        for_each(pool[x].kid[R], callback));
+		}
 	}
 
 	template <class T, class Func>
@@ -1027,12 +1031,13 @@ protected:
 		if (x == nil)
 			return true;
 
-		if (compare(key, pool[x].key()))
+		if (compare(key, pool[x].key())) {
 			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
 			        static_cast<bool>(callback(pool[x])) and
 			        for_each(pool[x].kid[R], callback));
-		else
+		} else {
 			return foreach_since_upper_bound(pool[x].kid[R], key, callback);
+		}
 	}
 
 	template <class T, class Func>
