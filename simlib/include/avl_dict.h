@@ -2,6 +2,7 @@
 
 #include "debug.h"
 
+#include <cassert>
 #include <vector>
 
 template <class size_type>
