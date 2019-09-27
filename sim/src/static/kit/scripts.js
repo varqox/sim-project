@@ -1550,11 +1550,13 @@ ActionsToHTML.submission = function(submission_id, actions_str, submission_type,
 			res.push(a_view_button('/s/' + submission_id + '#source', 'Source',
 				'btn-small', view_submission.bind(null, true, submission_id, '#source')));
 
-		var a = document.createElement('a');
-		a.className = 'btn-small';
-		a.href = '/api/download/submission/' + submission_id;
-		a.innerText = 'Download';
-		res.push(a);
+		if (submission_view) {
+			var a = document.createElement('a');
+			a.className = 'btn-small';
+			a.href = '/api/download/submission/' + submission_id;
+			a.innerText = 'Download';
+			res.push(a);
+		}
 	}
 
 	if (actions_str.indexOf('C') !== -1)
