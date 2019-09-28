@@ -130,13 +130,13 @@ class CallInDtor {
 	bool make_call = true;
 
 public:
-	explicit CallInDtor(Func&& f) try : func(f) {
+	CallInDtor(Func&& f) try : func(f) {
 	} catch (...) {
 		f();
 		throw;
 	}
 
-	explicit CallInDtor(const Func& f) try : func(f) {
+	CallInDtor(const Func& f) try : func(f) {
 	} catch (...) {
 		f();
 		throw;
