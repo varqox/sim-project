@@ -781,6 +781,8 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
 		            ZIP_CREATE | ZIP_TRUNCATE);
 		zip_register_progress_callback_with_state(zip, 0.001, progress_callback,
 		                                          nullptr, nullptr);
+		zip.dir_add(dest_file); // Add master directory
+
 		sim::PackageContents pkg;
 		pkg.load_from_directory(".");
 		pkg.for_each_with_prefix("", [&](StringView path) {
