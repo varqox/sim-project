@@ -100,4 +100,4 @@ $(eval $(call add_executable, src/sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), 
 
 .PHONY: format
 format: src/lib/simlib/format
-format: $(shell find bin src | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')
+format: $(shell find bin src templates | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')

@@ -51,7 +51,12 @@ inline void checker_wrong(Args&&... message) {
 }
 
 constexpr char space = ' ', newline = '\n';
-struct EofType {} eof;
+struct EofType {
+} eof;
+struct IgnoreSpacesType {
+} ignore_spaces;
+struct IgnoreWsType {
+} ignore_ws; // Every whitespace
 
 constexpr auto newline_or_eof = optional(newline);
 
@@ -85,7 +90,12 @@ template <class... Opts>
 character(char&, Opts...)->character<sizeof...(Opts)>;
 
 class Scanner {
+public:
+	enum class Mode { STRICT, IGNORE_WS_BEFORE_EOF };
+
+private:
 	FILE* file_;
+	Mode mode_;
 	size_t line_ = 1;
 	bool eofed = false;
 
@@ -102,6 +112,7 @@ class Scanner {
 	void ungetchar(int ch) noexcept {
 		ungetc(ch, file_);
 		line_ -= (ch == '\n');
+		eofed = false;
 	}
 
 	template <class... Args>
@@ -180,9 +191,16 @@ class Scanner {
 	}
 
 public:
-	explicit Scanner(FILE* file) : file_(file) {}
+	explicit Scanner(FILE* file, Mode mode) : file_(file), mode_(mode) {}
 
-	~Scanner() { *this >> eof; }
+	~Scanner() {
+		switch (mode_) {
+		case Mode::STRICT: break;
+		case Mode::IGNORE_WS_BEFORE_EOF: *this >> ignore_ws; break;
+		}
+
+		*this >> eof;
+	}
 
 	Scanner& operator>>(const char& exp_ch) {
 		int ch;
@@ -257,6 +275,30 @@ public:
 		return *this;
 	}
 
+	Scanner& operator>>(IgnoreSpacesType) {
+		int ch;
+		while (getchar(ch)) {
+			if (ch != ' ') {
+				ungetchar(ch);
+				break;
+			}
+		}
+
+		return *this;
+	}
+
+	Scanner& operator>>(IgnoreWsType) {
+		int ch;
+		while (getchar(ch)) {
+			if (not isspace(ch)) {
+				ungetchar(ch);
+				break;
+			}
+		}
+
+		return *this;
+	}
+
 	// Does not omit white-spaces
 	Scanner& operator>>(string& str) {
 		int ch;
@@ -306,7 +348,7 @@ int main(int argc, char** argv) {
 
 	my_assert(argc == 4);
 	ifstream in(argv[1]), out(argv[2]);
-	Scanner scan(fopen(argv[3], "r"));
+	Scanner scan(fopen(argv[3], "r"), Scanner::Mode::IGNORE_WS_BEFORE_EOF);
 
 	return 0;
 }
