@@ -92,11 +92,11 @@ private:
 	          zip_int64_t len)
 	   : zsource_(zip_source_file(zip, fname, start, len)) {
 		STACK_UNWINDING_MARK;
-	   	struct stat st;
-	   	if (lstat(fname, &st))
-	   		THROW("lstat()", errmsg());
+		struct stat st;
+		if (lstat(fname, &st))
+			THROW("lstat()", errmsg());
 
-	   	set_file_permissions(st.st_mode);
+		set_file_permissions(st.st_mode);
 		if (zsource_ == nullptr)
 			THROW("zip_source_file() - ", zip_strerror(zip));
 	}
@@ -104,11 +104,11 @@ private:
 	ZipSource(zip_t* zip, FILE* file, zip_uint64_t start, zip_int64_t len)
 	   : zsource_(zip_source_filep(zip, file, start, len)) {
 		STACK_UNWINDING_MARK;
-	   	struct stat st;
-	   	if (fstat(fileno(file), &st))
-	   		THROW("lstat()", errmsg());
+		struct stat st;
+		if (fstat(fileno(file), &st))
+			THROW("lstat()", errmsg());
 
-	   	set_file_permissions(st.st_mode);
+		set_file_permissions(st.st_mode);
 		if (zsource_ == nullptr)
 			THROW("zip_source_filep() - ", zip_strerror(zip));
 	}
@@ -117,14 +117,16 @@ private:
 	          zip_flags_t flags, zip_uint64_t start, zip_int64_t len)
 	   : zsource_(zip_source_zip(zip, src_zip, srcidx, flags, start, len)) {
 		STACK_UNWINDING_MARK;
-	   	zip_uint8_t opsys;
-	   	zip_uint32_t attrs;
-	   	if (zip_file_get_external_attributes(src_zip, srcidx, 0, &opsys, &attrs)) {
-			THROW("zip_file_get_external_attributes() - ", zip_strerror(src_zip));
-	   	}
+		zip_uint8_t opsys;
+		zip_uint32_t attrs;
+		if (zip_file_get_external_attributes(src_zip, srcidx, 0, &opsys,
+		                                     &attrs)) {
+			THROW("zip_file_get_external_attributes() - ",
+			      zip_strerror(src_zip));
+		}
 
-	   	opsys_ = opsys;
-	   	external_attributes_ = attrs;
+		opsys_ = opsys;
+		external_attributes_ = attrs;
 
 		if (zsource_ == nullptr)
 			THROW("zip_source_zip() - ", zip_strerror(zip));
@@ -292,7 +294,8 @@ public:
 		}
 	}
 
-	void extract_to_file(index_t index, FilePath fpath, std::optional<mode_t> permissions = std::nullopt) {
+	void extract_to_file(index_t index, FilePath fpath,
+	                     std::optional<mode_t> permissions = std::nullopt) {
 		STACK_UNWINDING_MARK;
 		mode_t mode = [&]() -> mode_t {
 			if (permissions)
@@ -300,8 +303,10 @@ public:
 
 			zip_uint8_t opsys;
 			zip_uint32_t attrs;
-			if (zip_file_get_external_attributes(zip_, index, 0, &opsys, &attrs)) {
-				THROW("zip_file_get_external_attributes() - ", zip_strerror(zip_));
+			if (zip_file_get_external_attributes(zip_, index, 0, &opsys,
+			                                     &attrs)) {
+				THROW("zip_file_get_external_attributes() - ",
+				      zip_strerror(zip_));
 			}
 
 			if (opsys != ZIP_OPSYS_UNIX)
@@ -318,12 +323,15 @@ public:
 		return extract_to_fd(index, fd);
 	}
 
-	index_t dir_add(FilePath name, zip_flags_t flags = 0, mode_t permissions = S_0755) {
+	index_t dir_add(FilePath name, zip_flags_t flags = 0,
+	                mode_t permissions = S_0755) {
 		index_t idx = zip_dir_add(zip_, name, flags);
 		if (idx == -1)
 			THROW("zip_dir_add() - ", zip_strerror(zip_));
 
-		if (zip_file_set_external_attributes(zip_, idx, 0, ZIP_OPSYS_UNIX, (S_IFDIR | (permissions & ALLPERMS)) << 16)) {
+		if (zip_file_set_external_attributes(
+		       zip_, idx, 0, ZIP_OPSYS_UNIX,
+		       (S_IFDIR | (permissions & ALLPERMS)) << 16)) {
 			THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
 		}
 
@@ -390,7 +398,8 @@ public:
 
 		CallInDtor idx_deleter = [&] { (void)zip_delete(zip_, idx); };
 
-		if (zip_file_set_external_attributes(zip_, idx, 0, source.opsys_, source.external_attributes_)) {
+		if (zip_file_set_external_attributes(zip_, idx, 0, source.opsys_,
+		                                     source.external_attributes_)) {
 			THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
 		}
 
@@ -409,7 +418,8 @@ public:
 		if (zip_file_replace(zip_, index, source.zsource_, flags))
 			THROW("zip_file_replace() - ", zip_strerror(zip_));
 
-		if (zip_file_set_external_attributes(zip_, index, 0, source.opsys_, source.external_attributes_)) {
+		if (zip_file_set_external_attributes(zip_, index, 0, source.opsys_,
+		                                     source.external_attributes_)) {
 			THROW("zip_file_set_external_attributes() - ", zip_strerror(zip_));
 		}
 
