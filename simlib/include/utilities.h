@@ -582,7 +582,22 @@ public:
 
 	ValType int_val() const noexcept { return val_; }
 
-	explicit operator ValType() const noexcept { return val_; }
-
 	explicit operator ValType&() & noexcept { return val_; }
+
+	explicit operator const ValType&() const& noexcept { return val_; }
 };
+
+template <class T>
+class reverse_view {
+	T range_;
+
+public:
+	reverse_view(T&& range) : range_(std::forward<T>(range)) {}
+
+	auto begin() const { return range_.rbegin(); }
+
+	auto end() const { return range_.rend(); }
+};
+
+template <class T>
+reverse_view(T &&)->reverse_view<T>;
