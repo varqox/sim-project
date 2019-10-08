@@ -986,6 +986,11 @@ public:
 	// Do not allow to create StringView of a temporary object
 	operator StringView() const&& = delete;
 
+	// Do not allow to create StringBase<char> of a temporary object
+	operator StringBase<char>() & noexcept { return {data(), size}; }
+
+	operator StringBase<char>() && = delete;
+
 	std::string to_string() const { return {data(), size}; }
 
 	CStringView to_cstr() & {
@@ -1197,6 +1202,7 @@ public:
 	using InplaceBuffBase::resize;
 	using InplaceBuffBase::operator[];
 	using InplaceBuffBase::operator StringView;
+	using InplaceBuffBase::operator StringBase<char>;
 	using InplaceBuffBase::append;
 	using InplaceBuffBase::to_cstr;
 	using InplaceBuffBase::to_string;
