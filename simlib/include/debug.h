@@ -130,9 +130,8 @@ extern thread_local InplaceArray<InplaceBuff<1024>, 64> marks_collected;
 	stack_unwinding::Guard CONCAT(stack_unwind_mark, __COUNTER__)(             \
 	   [upper_func_name = __PRETTY_FUNCTION__] {                               \
 		   auto& marks = stack_unwinding::marks_collected;                     \
-		   marks.resize(marks.size() + 1);                                     \
-		   marks.back() = concat(upper_func_name,                              \
-		                         " at " __FILE__ ":" STRINGIZE(__LINE__));     \
+		   marks.emplace_back(concat(                                          \
+		      upper_func_name, " at " __FILE__ ":" STRINGIZE(__LINE__)));      \
 	   })
 
 } // namespace stack_unwinding
