@@ -1,5 +1,7 @@
 #include "sim.h"
 
+#include <sim/random.hh>
+
 void Sim::api_contest_entry_token() {
 	STACK_UNWINDING_MARK;
 

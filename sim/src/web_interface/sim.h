@@ -13,7 +13,6 @@
 // Every object is independent, objects can be used in multi-thread program
 // as long as one is not used by two threads simultaneously
 class Sim final {
-private:
 	/* ============================== General ============================== */
 
 	MySQL::Connection mysql;
@@ -53,15 +52,6 @@ private:
 		notifications.clear();
 #endif
 	}
-
-	/**
-	 * @brief Generates token of length @p length which consist of [a-zA-Z0-9]
-	 *
-	 * @param length the length of generated token
-	 *
-	 * @return generated token
-	 */
-	static std::string generate_random_token(uint length);
 
 	/* ================================ API ================================ */
 
