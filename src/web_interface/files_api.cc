@@ -1,6 +1,7 @@
 #include "sim.h"
 
 #include <sim/jobs.h>
+#include <sim/random.hh>
 #include <simlib/filesystem.h>
 
 Sim::FilePermissions

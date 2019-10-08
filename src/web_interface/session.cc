@@ -1,5 +1,7 @@
 #include "sim.h"
 
+#include <sim/random.hh>
+
 using std::string;
 
 bool Sim::session_open() {

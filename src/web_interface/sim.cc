@@ -207,18 +207,3 @@ void Sim::view_logs() {
 
 	append("<script>tab_logs_view($('body'))</script>");
 }
-
-string Sim::generate_random_token(uint length) {
-	STACK_UNWINDING_MARK;
-
-	constexpr char t[] =
-	   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	constexpr size_t len = sizeof(t) - 1;
-
-	// Generate random id of length SESSION_ID_LENGTH
-	string res(length, '0');
-	for (char& c : res)
-		c = t[getRandom<int>(0, len - 1)];
-
-	return res;
-}
