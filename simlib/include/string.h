@@ -218,6 +218,12 @@ public:
 	   : str(s.data() + std::min(beg, s.size())),
 	     len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
+	// Constructs StringView from substring [beg, beg + n) of string s
+	constexpr StringBase(std::string& s, size_type beg = 0,
+	                     size_type n = npos) noexcept
+	   : str(s.data() + std::min(beg, s.size())),
+	     len(std::min(n, s.size() - std::min(beg, s.size()))) {}
+
 	constexpr StringBase(const StringBase& s) noexcept
 	   : str(s.data()), len(s.size()) {}
 
