@@ -10,7 +10,7 @@ INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $
 endef
 
 .PHONY: all
-all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server
+all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server src/sim-merger
 	@printf "\033[32mBuild finished\033[0m\n"
 
 $(eval $(call include_makefile, src/lib/simlib/Makefile))
@@ -38,7 +38,7 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(MKDIR) $(abspath $(DESTDIR)/static/)
 	$(MKDIR) $(abspath $(DESTDIR)/internal_files/)
 	$(MKDIR) $(abspath $(DESTDIR)/logs/)
-	$(UPDATE) src/static src/sim-server src/job-server src/backup $(abspath $(DESTDIR))
+	$(UPDATE) src/static src/sim-server src/job-server src/backup src/sim-merger $(abspath $(DESTDIR))
 	# Do not override the config if it already exists
 	$(UPDATE) -n src/sim.conf $(abspath $(DESTDIR))
 	# $(UPDATE) src/static src/sim-server src/sim-server2 src/sim.conf src/job-server src/backup $(abspath $(DESTDIR))
@@ -141,6 +141,12 @@ $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/main.cc \
 	src/lib/sim.a \
 	src/lib/simlib/simlib.a \
+))
+
+$(eval $(call add_executable, src/sim-merger, $(SIM_FLAGS), \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
+	src/sim_merger/sim_merger.cc \
 ))
 
 $(eval $(call add_executable, src/killinstc, $(SIM_FLAGS), \
