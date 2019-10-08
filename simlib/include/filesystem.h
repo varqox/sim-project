@@ -527,6 +527,10 @@ inline int rename(FilePath source, FilePath destination) noexcept {
 	return rename(source.data(), destination.data());
 }
 
+inline int link(FilePath source, FilePath destination) noexcept {
+	return link(source.data(), destination.data());
+}
+
 /**
  * @brief Moves file from @p oldpath to @p newpath
  * @details First creates directory containing @p newpath
