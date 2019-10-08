@@ -15,7 +15,7 @@ constexpr uintmax_t MAX_UID = 4294967295;
 
 #define SIM_ROOT_UID "1"
 
-// user_type - strongly used -> do not change!
+// user type - strongly used -> do not change!
 enum class UserType : uint8_t { ADMIN = 0, TEACHER = 1, NORMAL = 2 };
 
 #define UTYPE_ADMIN_STR "0"
@@ -489,8 +489,8 @@ constexpr uint priority(JobType x) {
 	case JT::DELETE_CONTEST_ROUND: return 30;
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
 	case JT::MERGE_PROBLEMS: return 25;
-	case JT::EDIT_PROBLEM: return 20;
-	case JT::CHANGE_PROBLEM_STATEMENT: return 20;
+	case JT::EDIT_PROBLEM: return 25;
+	case JT::CHANGE_PROBLEM_STATEMENT: return 25;
 	case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION: return 20;
 	case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
 	case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: return 15;
