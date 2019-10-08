@@ -1,5 +1,6 @@
 #pragma once
 
+#include "debug.h"
 #include "string.h"
 
 #include <chrono>
@@ -42,6 +43,20 @@ bool isDatetime(CStringView str) noexcept;
  */
 time_t strToTime(CStringView str, CStringView format = CStringView {
                                      "%Y-%m-%d %H:%M:%S"}) noexcept;
+
+/**
+ * @brief Converts a @p str containing time in format @p format to time_point
+ * @errors The same that occur for strToTime() but thrown as exceptions
+ */
+inline std::chrono::system_clock::time_point
+strToTimePoint(CStringView str,
+               CStringView format = CStringView {"%Y-%m-%d %H:%M:%S"}) {
+	time_t t = strToTime(str, format);
+	if (t == -1)
+		THROW("strToTime()", errmsg());
+
+	return std::chrono::system_clock::from_time_t(t);
+}
 
 /**************************** timespec arithmetic ****************************/
 constexpr timespec operator+(timespec a, timespec b) noexcept {
@@ -257,6 +272,16 @@ InplaceBuff<N> toString(const std::chrono::duration<Rep, Period>& dur,
 	}
 
 	return res;
+}
+
+constexpr std::chrono::microseconds to_duration(const timeval& tv) noexcept {
+	return std::chrono::seconds(tv.tv_sec) +
+	       std::chrono::microseconds(tv.tv_usec);
+}
+
+constexpr std::chrono::nanoseconds to_duration(const timespec& ts) noexcept {
+	return std::chrono::seconds(ts.tv_sec) +
+	       std::chrono::nanoseconds(ts.tv_nsec);
 }
 
 // TODO: This works for positive durations - check it for negative
