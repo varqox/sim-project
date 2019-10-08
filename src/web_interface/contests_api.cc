@@ -291,7 +291,7 @@ void Sim::api_contest() {
 	stmt.bindAndExecute((session_is_open ? session_user_id : StringView()),
 	                    contests_cid);
 
-	bool is_public;
+	unsigned char is_public;
 	InplaceBuff<meta::max(CONTEST_NAME_MAX_LEN, CONTEST_ROUND_NAME_MAX_LEN,
 	                      CONTEST_PROBLEM_NAME_MAX_LEN)>
 	   name;
@@ -463,7 +463,7 @@ void Sim::api_contest_round() {
 	stmt.bindAndExecute((session_is_open ? session_user_id : StringView()),
 	                    contests_crid);
 
-	bool is_public;
+	unsigned char is_public;
 	InplaceBuff<20> ranking_exposure_str, begins_str, full_results_str,
 	   ends_str;
 	MySQL::Optional<EnumVal<CUM>> umode;
@@ -608,7 +608,7 @@ void Sim::api_contest_problem() {
 	else
 		stmt.bindAndExecute(nullptr, nullptr, nullptr, contests_cpid);
 
-	bool is_public;
+	unsigned char is_public;
 	InplaceBuff<20> rranking_exposure_str, rbegins_str, rfull_results_str,
 	   rends_str;
 	MySQL::Optional<EnumVal<CUM>> umode;
@@ -806,14 +806,11 @@ void Sim::api_contest_round_add() {
 	                          "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?,"
 	                          " ? "
 	                          "FROM contest_rounds WHERE contest_id=?");
-	stmt.bind(0, contests_cid);
-	stmt.bind(1, name);
-	stmt.bind_copy(2, inf_timestamp_to_InfDatetime(begins).to_str());
-	stmt.bind_copy(3, inf_timestamp_to_InfDatetime(ends).to_str());
-	stmt.bind_copy(4, inf_timestamp_to_InfDatetime(full_results).to_str());
-	stmt.bind_copy(5, inf_timestamp_to_InfDatetime(ranking_expo).to_str());
-	stmt.bind(6, contests_cid);
-	stmt.fixAndExecute();
+	stmt.bindAndExecute(
+	   contests_cid, name, inf_timestamp_to_InfDatetime(begins).to_str(),
+	   inf_timestamp_to_InfDatetime(ends).to_str(),
+	   inf_timestamp_to_InfDatetime(full_results).to_str(),
+	   inf_timestamp_to_InfDatetime(ranking_expo).to_str(), contests_cid);
 
 	append(stmt.insert_id());
 }
@@ -846,13 +843,11 @@ void Sim::api_contest_round_edit() {
 	                          "SET name=?, begins=?, ends=?, full_results=?,"
 	                          " ranking_exposure=? "
 	                          "WHERE id=?");
-	stmt.bind(0, name);
-	stmt.bind_copy(1, inf_timestamp_to_InfDatetime(begins).to_str());
-	stmt.bind_copy(2, inf_timestamp_to_InfDatetime(ends).to_str());
-	stmt.bind_copy(3, inf_timestamp_to_InfDatetime(full_results).to_str());
-	stmt.bind_copy(4, inf_timestamp_to_InfDatetime(ranking_expo).to_str());
-	stmt.bind(5, contests_crid);
-	stmt.fixAndExecute();
+	stmt.bindAndExecute(name, inf_timestamp_to_InfDatetime(begins).to_str(),
+	                    inf_timestamp_to_InfDatetime(ends).to_str(),
+	                    inf_timestamp_to_InfDatetime(full_results).to_str(),
+	                    inf_timestamp_to_InfDatetime(ranking_expo).to_str(),
+	                    contests_crid);
 }
 
 void Sim::api_contest_round_delete() {

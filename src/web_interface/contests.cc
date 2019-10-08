@@ -78,7 +78,7 @@ Sim::contests_get_permissions(StringView contest_id) {
 	else
 		stmt.bindAndExecute(nullptr, contest_id);
 
-	bool is_public;
+	unsigned char is_public;
 	MySQL::Optional<EnumVal<ContestUserMode>> cu_mode;
 
 	stmt.res_bind_all(is_public, cu_mode);
