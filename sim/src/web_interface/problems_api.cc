@@ -154,7 +154,7 @@ void Sim::api_problems() {
 
 	// Tags selector
 	uint64_t pid;
-	bool hidden;
+	unsigned char hidden;
 	InplaceBuff<PROBLEM_TAG_MAX_LEN> tag;
 	auto stmt = mysql.prepare("SELECT tag FROM problem_tags "
 	                          "WHERE problem_id=? AND hidden=? ORDER BY tag");
@@ -418,11 +418,10 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	   .prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
 	            " aux_id, info, data) "
 	            "VALUES(?,?,?,?," JSTATUS_PENDING_STR ",?,?,?,'')")
-	   .bindAndExecute(job_file_id, session_user_id, priority(jtype), jtype,
-	                   mysql_date(),
-	                   (reuploading ? std::optional<StringView>(problems_pid)
-	                                : std::nullopt),
-	                   ap_info.dump());
+	   .bindAndExecute(
+	      job_file_id, session_user_id, priority(jtype), jtype, mysql_date(),
+	      (reuploading ? std::optional(problems_pid) : std::nullopt),
+	      ap_info.dump());
 
 	auto job_id = mysql.insert_id(); // Has to be retrieved before commit
 

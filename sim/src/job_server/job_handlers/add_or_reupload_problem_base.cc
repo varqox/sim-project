@@ -17,7 +17,7 @@ void AddOrReuploadProblemBase::load_job_log_from_DB() {
 void AddOrReuploadProblemBase::assert_transaction_is_open() {
 	STACK_UNWINDING_MARK;
 
-	bool in_transaction;
+	unsigned char in_transaction;
 	auto stmt = mysql.prepare("SELECT @@in_transaction");
 	stmt.bindAndExecute();
 	stmt.res_bind_all(in_transaction);
@@ -278,7 +278,6 @@ void AddOrReuploadProblemBase::submit_solutions() {
 
 	job_log("Submitting solutions...");
 	const auto zero_date = mysql_date(0);
-	EnumVal<SubmissionLanguage> lang;
 	auto submission_inserter = mysql.prepare(
 	   "INSERT INTO submissions (file_id, owner, problem_id, "
 	   "contest_problem_id, contest_round_id, contest_id, type, language, "
@@ -286,9 +285,6 @@ void AddOrReuploadProblemBase::submit_solutions() {
 	   "initial_report, final_report) VALUES(?, NULL, ?, NULL, NULL, "
 	   "NULL, " STYPE_PROBLEM_SOLUTION_STR ", ?, " SSTATUS_PENDING_STR
 	   ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
-	uint64_t file_id;
-	submission_inserter.bind_all(file_id, problem_id_, lang, current_date_,
-	                             zero_date);
 
 	auto file_inserter = mysql.prepare("INSERT INTO internal_files VALUES()");
 
@@ -296,9 +292,10 @@ void AddOrReuploadProblemBase::submit_solutions() {
 		job_log("Submit: ", solution);
 
 		file_inserter.execute();
-		file_id = file_inserter.insert_id();
-		lang = filename_to_lang(solution);
-		submission_inserter.execute();
+		uint64_t file_id = file_inserter.insert_id();
+		EnumVal<SubmissionLanguage> lang = filename_to_lang(solution);
+		submission_inserter.bindAndExecute(file_id, problem_id_, lang,
+		                                   current_date_, zero_date);
 
 		// Save the submission source code
 		zip_.extract_to_file(zip_.get_index(concat(master_dir_, solution)),

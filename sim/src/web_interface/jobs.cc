@@ -133,7 +133,7 @@ Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	                          "WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submission_id);
 
-	MySQL::Optional<bool> is_public;
+	MySQL::Optional<unsigned char> is_public;
 	InplaceBuff<32> powner;
 	EnumVal<SubmissionType> stype;
 	EnumVal<ProblemType> ptype;

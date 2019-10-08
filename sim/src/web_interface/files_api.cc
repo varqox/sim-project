@@ -36,7 +36,7 @@ Sim::files_get_permissions(StringView file_id) {
 	else
 		stmt.bindAndExecute(nullptr, file_id);
 
-	bool is_public;
+	unsigned char is_public;
 	MySQL::Optional<EnumVal<ContestUserMode>> cu_mode;
 
 	stmt.res_bind_all(is_public, cu_mode);
@@ -315,13 +315,11 @@ void Sim::api_file_add() {
 	InplaceBuff<FILE_ID_LEN> file_id;
 	auto curr_date = mysql_date();
 	throw_assert(session_is_open);
-	stmt.bind_all(file_id, internal_file_id, contest_id, name, description,
-	              file_size, curr_date, session_user_id);
 
 	do {
 		file_id = generate_random_token(FILE_ID_LEN);
-		stmt.bind(0, file_id);
-		stmt.fixAndExecute();
+		stmt.bindAndExecute(file_id, internal_file_id, contest_id, name,
+		                    description, file_size, curr_date, session_user_id);
 	} while (stmt.affected_rows() == 0);
 
 	// Move file

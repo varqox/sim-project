@@ -325,7 +325,7 @@ void Sim::api_submissions() {
 					stmt.bindAndExecute(session_user_id, arg_id);
 
 					MySQL::Optional<EnumVal<CUM>> cu_mode;
-					bool is_public;
+					unsigned char is_public;
 					stmt.res_bind_all(cu_mode, is_public);
 					if (not stmt.next())
 						return set_empty_response();
@@ -680,7 +680,7 @@ void Sim::api_submission_add() {
 	StringView next_arg = url_args.extractNextArg();
 	// Load problem id and contest problem id (if specified)
 	StringView problem_id;
-	std::optional<StringView> contest_problem_id;
+	std::optional<InplaceBuff<32>> contest_problem_id;
 	for (; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		if (next_arg[0] == 'p' and isDigit(next_arg.substr(1)) and
 		    problem_id.empty()) {
@@ -730,7 +730,7 @@ void Sim::api_submission_add() {
 		stmt.bindAndExecute(session_user_id, contest_problem_id.value(),
 		                    problem_id);
 
-		bool is_public;
+		unsigned char is_public;
 		InplaceBuff<20> cr_begins_str, cr_ends_str;
 		MySQL::Optional<EnumVal<CUM>> umode;
 		stmt.res_bind_all(contest_id, is_public, contest_round_id,
