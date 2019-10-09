@@ -10,7 +10,7 @@ INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $
 endef
 
 .PHONY: all
-all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server src/sim-merger
+all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server src/sim-merger src/sim-upgrader
 	@printf "\033[32mBuild finished\033[0m\n"
 
 $(eval $(call include_makefile, src/lib/simlib/Makefile))
@@ -149,6 +149,12 @@ $(eval $(call add_executable, src/sim-merger, $(SIM_FLAGS), \
 	src/sim_merger/sim_merger.cc \
 ))
 
+$(eval $(call add_executable, src/sim-upgrader, $(SIM_FLAGS), \
+	src/lib/sim.a \
+	src/lib/simlib/simlib.a \
+	src/sim_upgrader.cc \
+))
+
 $(eval $(call add_executable, src/killinstc, $(SIM_FLAGS), \
 	src/killinstc.cc \
 	src/lib/simlib/simlib.a \
@@ -180,8 +186,8 @@ $(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
 	src/web_interface/contest_users_api.cc \
 	src/web_interface/contests.cc \
 	src/web_interface/contests_api.cc \
-	src/web_interface/files.cc \
-	src/web_interface/files_api.cc \
+	src/web_interface/contest_files.cc \
+	src/web_interface/contest_files_api.cc \
 	src/web_interface/http_request.cc \
 	src/web_interface/http_response.cc \
 	src/web_interface/jobs.cc \

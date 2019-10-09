@@ -190,7 +190,7 @@ void Sim::contests_contest() {
 		StringView arg = url_args.extractNextArg();
 		if (arg == "add") {
 			page_template("Add contest file", "body{padding-left:20px}");
-			append("<script>add_file(false, ", contests_cid,
+			append("<script>add_contest_file(false, ", contests_cid,
 			       ", window.location.hash);</script>");
 		} else
 			error404();
