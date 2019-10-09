@@ -214,4 +214,4 @@ $(eval $(call add_executable, test/cpp_syntax_highlighter/check, $(SIM_FLAGS), \
 
 .PHONY: format
 format: src/lib/simlib/format
-format: $(shell find bin importer scripts src test | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*|src/lib/sqlite(/.*|3.c))$$' | sed 's/$$/-make-format/')
+format: $(shell find bin scripts src test | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/include/others/.*|src/lib/sqlite(/.*|3.c))$$' | sed 's/$$/-make-format/')
