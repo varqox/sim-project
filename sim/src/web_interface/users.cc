@@ -44,7 +44,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	              (session_user_id != SIM_ROOT_UID);
 	if (session_user_id == user_id) {
 		constexpr UserPermissions perm[4] = {
-		   // SIM root
+		   // Sim root
 		   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN,
 		   // Admin
 		   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::MAKE_ADMIN |
@@ -62,8 +62,8 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	auto user = EnumVal<UserType>(utype).int_val() + (user_id != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
-	   {// SIM root
-	    // SIM root
+	   {// Sim root
+	    // Sim root
 	    PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS,
 	    // Admin
 	    PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
@@ -72,7 +72,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	    // Normal
 	    PERM_ADMIN | PERM::MAKE_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL},
 	   {// Admin
-	    PERM::VIEW, // SIM root
+	    PERM::VIEW, // Sim root
 	    PERM::VIEW, // Admin
 	                // Teacher
 	    PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL,
@@ -80,14 +80,14 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	    PERM_ADMIN | PERM::MAKE_TEACHER | PERM::MAKE_NORMAL},
 	   {
 	      // Teacher
-	      PERM::NONE, // SIM root
+	      PERM::NONE, // Sim root
 	      PERM::NONE, // Admin
 	      PERM::NONE, // Teacher
 	      PERM::NONE // Normal
 	   },
 	   {
 	      // Normal
-	      PERM::NONE, // SIM root
+	      PERM::NONE, // Sim root
 	      PERM::NONE, // Admin
 	      PERM::NONE, // Teacher
 	      PERM::NONE // Normal

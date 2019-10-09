@@ -82,8 +82,8 @@ Sim::jobs_get_permissions(std::optional<StringView> creator_id,
 	}
 
 	if (creator_id.has_value() and session_user_id == creator_id.value()) {
-		if (isOneOf(job_status, JS::PENDING, JS::NOTICED_PENDING,
-		            JS::IN_PROGRESS))
+		if (is_one_of(job_status, JS::PENDING, JS::NOTICED_PENDING,
+		              JS::IN_PROGRESS))
 			return overall_perms | type_perm | PERM::VIEW | PERM::CANCEL;
 		else
 			return overall_perms | type_perm | PERM::VIEW;
@@ -133,7 +133,7 @@ Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	                          "WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submission_id);
 
-	MySQL::Optional<bool> is_public;
+	MySQL::Optional<unsigned char> is_public;
 	InplaceBuff<32> powner;
 	EnumVal<SubmissionType> stype;
 	EnumVal<ProblemType> ptype;

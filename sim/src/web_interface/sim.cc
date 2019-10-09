@@ -156,7 +156,7 @@ void Sim::main_page() {
 	append("<div style=\"text-align: center\">"
 	       "<img src=\"/kit/img/sim-logo.png\" width=\"260\" height=\"336\" "
 	       "alt=\"\">"
-	       "<p style=\"font-size: 30px\">Welcome to SIM</p>"
+	       "<p style=\"font-size: 30px\">Welcome to Sim</p>"
 	       "<hr>"
 	       "<p>Sim is an open source platform for carrying out algorithmic "
 	       "contests</p>"
@@ -206,19 +206,4 @@ void Sim::view_logs() {
 	page_template("Logs", "body{padding-left:20px}");
 
 	append("<script>tab_logs_view($('body'))</script>");
-}
-
-string Sim::generate_random_token(uint length) {
-	STACK_UNWINDING_MARK;
-
-	constexpr char t[] =
-	   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	constexpr size_t len = sizeof(t) - 1;
-
-	// Generate random id of length SESSION_ID_LENGTH
-	string res(length, '0');
-	for (char& c : res)
-		c = t[getRandom<int>(0, len - 1)];
-
-	return res;
 }

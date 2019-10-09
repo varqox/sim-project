@@ -78,7 +78,7 @@ Sim::contests_get_permissions(StringView contest_id) {
 	else
 		stmt.bindAndExecute(nullptr, contest_id);
 
-	bool is_public;
+	unsigned char is_public;
 	MySQL::Optional<EnumVal<ContestUserMode>> cu_mode;
 
 	stmt.res_bind_all(is_public, cu_mode);
@@ -190,7 +190,7 @@ void Sim::contests_contest() {
 		StringView arg = url_args.extractNextArg();
 		if (arg == "add") {
 			page_template("Add contest file", "body{padding-left:20px}");
-			append("<script>add_file(false, ", contests_cid,
+			append("<script>add_contest_file(false, ", contests_cid,
 			       ", window.location.hash);</script>");
 		} else
 			error404();

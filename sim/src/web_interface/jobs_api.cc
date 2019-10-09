@@ -115,7 +115,7 @@ void Sim::api_jobs() {
 			return api_error400();
 
 		// conditional
-		if (isOneOf(cond, '<', '>') and ~mask & ID_COND) {
+		if (is_one_of(cond, '<', '>') and ~mask & ID_COND) {
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND j.id", arg);
 			mask |= ID_COND;
@@ -357,9 +357,9 @@ void Sim::api_jobs() {
 			append('r');
 		using JT = JobType;
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) and
-		    isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
-		            JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
-		            JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
+		    is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+		              JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
+		              JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
 			append('u'); // TODO: ^ that is very nasty
 		}
 		if (uint(perms & PERM::DOWNLOAD_UPLOADED_STATEMENT) and
@@ -495,9 +495,9 @@ void Sim::api_job_download_uploaded_package(std::optional<uint64_t> file_id,
 	using JT = JobType;
 
 	if (uint(~jobs_perms & PERM::DOWNLOAD_UPLOADED_PACKAGE) or
-	    not isOneOf(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
-	                JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
-	                JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
+	    not is_one_of(job_type, JT::ADD_PROBLEM, JT::REUPLOAD_PROBLEM,
+	                  JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION,
+	                  JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION)) {
 		return api_error403(); // TODO: ^ that is very nasty
 	}
 

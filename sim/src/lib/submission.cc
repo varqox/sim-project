@@ -67,13 +67,13 @@ static void update_contest_final(MySQL::Connection& mysql,
 	using SFSM = SubmissionFinalSelectingMethod;
 
 	// Get the final selecting method and whether the score is revealed
-	auto stmt = mysql.prepare("SELECT final_selecting_method, reveal_score "
+	auto stmt = mysql.prepare("SELECT final_selecting_method, score_revealing "
 	                          "FROM contest_problems WHERE id=?");
 	stmt.bindAndExecute(contest_problem_id);
 
 	EnumVal<SFSM> final_method;
-	bool reveal_score;
-	stmt.res_bind_all(final_method, reveal_score);
+	EnumVal<ScoreRevealingMode> score_revealing;
+	stmt.res_bind_all(final_method, score_revealing);
 	if (not stmt.next())
 		return; // Such contest problem does not exist (probably had just
 		        // been deleted)
@@ -142,7 +142,38 @@ static void update_contest_final(MySQL::Connection& mysql,
 		throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
 		// Choose the new initial final submission
-		if (reveal_score) {
+		switch (score_revealing) {
+		case ScoreRevealingMode::NONE: {
+			// Such index: (final_candidate, owner, contest_problem_id,
+			// initial_status, id DESC) is what we need, but MySQL does not
+			// support it, so the below workaround is used to select the initial
+			// final submission efficiently
+			EnumVal<SubmissionStatus> initial_status;
+			stmt = mysql.prepare("SELECT initial_status "
+			                     "FROM submissions USE INDEX(initial_final2) "
+			                     "WHERE final_candidate=1 AND owner=?"
+			                     " AND contest_problem_id=? "
+			                     "ORDER BY initial_status LIMIT 1");
+			stmt.bindAndExecute(submission_owner, contest_problem_id);
+			stmt.res_bind_all(initial_status);
+			throw_assert(
+			   stmt.next()); // Previous query succeeded, so this has to
+
+			stmt = mysql.prepare("SELECT id "
+			                     "FROM submissions USE INDEX(initial_final2) "
+			                     "WHERE final_candidate=1 AND owner=?"
+			                     " AND contest_problem_id=?"
+			                     " AND initial_status=? "
+			                     "ORDER BY id DESC LIMIT 1");
+			stmt.bindAndExecute(submission_owner, contest_problem_id,
+			                    initial_status);
+			stmt.res_bind_all(new_initial_final_id);
+			throw_assert(
+			   stmt.next()); // Previous query succeeded, so this has to
+			break;
+		}
+
+		case ScoreRevealingMode::ONLY_SCORE: {
 			// Such index: (final_candidate, owner, contest_problem_id,
 			// score DESC, initial_status, id DESC) is what we need, but MySQL
 			// does not support it, so the below workaround is used to select
@@ -170,34 +201,13 @@ static void update_contest_final(MySQL::Connection& mysql,
 			stmt.res_bind_all(new_initial_final_id);
 			throw_assert(
 			   stmt.next()); // Previous query succeeded, so this has to
+			break;
+		}
 
-		} else {
-			// Such index: (final_candidate, owner, contest_problem_id,
-			// initial_status, id DESC) is what we need, but MySQL does not
-			// support it, so the below workaround is used to select the initial
-			// final submission efficiently
-			EnumVal<SubmissionStatus> initial_status;
-			stmt = mysql.prepare("SELECT initial_status "
-			                     "FROM submissions USE INDEX(initial_final2) "
-			                     "WHERE final_candidate=1 AND owner=?"
-			                     " AND contest_problem_id=? "
-			                     "ORDER BY initial_status LIMIT 1");
-			stmt.bindAndExecute(submission_owner, contest_problem_id);
-			stmt.res_bind_all(initial_status);
-			throw_assert(
-			   stmt.next()); // Previous query succeeded, so this has to
-
-			stmt = mysql.prepare("SELECT id "
-			                     "FROM submissions USE INDEX(initial_final2) "
-			                     "WHERE final_candidate=1 AND owner=?"
-			                     " AND contest_problem_id=?"
-			                     " AND initial_status=? "
-			                     "ORDER BY id DESC LIMIT 1");
-			stmt.bindAndExecute(submission_owner, contest_problem_id,
-			                    initial_status);
-			stmt.res_bind_all(new_initial_final_id);
-			throw_assert(
-			   stmt.next()); // Previous query succeeded, so this has to
+		case ScoreRevealingMode::SCORE_AND_FULL_STATUS: {
+			new_initial_final_id = new_final_id;
+			break;
+		}
 		}
 
 		break;
