@@ -40,7 +40,7 @@ void DeleteContest::run() {
 	            " added, aux_id, info, data)"
 	            " SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
 	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
-	            " FROM files WHERE contest_id=?")
+	            " FROM contest_files WHERE contest_id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
 	                   contest_id_);
 

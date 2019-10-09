@@ -224,19 +224,19 @@ class Sim final {
 
 	void api_contest_entry_token_use_to_enter_contest(StringView contest_id);
 
-	// files_api.cc
+	// contest_files_api.cc
 
-	void api_files();
+	void api_contest_files();
 
-	void api_file();
+	void api_contest_file();
 
-	void api_file_add();
+	void api_contest_file_add();
 
-	void api_file_download();
+	void api_contest_file_download();
 
-	void api_file_edit();
+	void api_contest_file_edit();
 
-	void api_file_delete();
+	void api_contest_file_delete();
 
 	/* ============================== Session ============================== */
 
@@ -734,10 +734,10 @@ private:
 	// Pages
 	void submissions_handle();
 
-	/* =============================== Files =============================== */
+	/* =========================== Contest files =========================== */
 
 public:
-	enum class FilePermissions : uint {
+	enum class ContestFilePermissions : uint {
 		NONE = 0,
 		// Overall
 		ADD = 1,
@@ -750,20 +750,22 @@ public:
 	};
 
 private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(FilePermissions, ~);
-	friend DECLARE_ENUM_OPERATOR(FilePermissions, |);
-	friend DECLARE_ENUM_OPERATOR(FilePermissions, &);
+	friend DECLARE_ENUM_UNARY_OPERATOR(ContestFilePermissions, ~);
+	friend DECLARE_ENUM_OPERATOR(ContestFilePermissions, |);
+	friend DECLARE_ENUM_OPERATOR(ContestFilePermissions, &);
 
-	FilePermissions files_get_permissions(ContestPermissions cperms) noexcept;
+	ContestFilePermissions
+	contest_files_get_permissions(ContestPermissions cperms) noexcept;
 
-	// No value if the file does not exist
-	std::optional<FilePermissions> files_get_permissions(StringView file_id);
+	// No value if the contest file does not exist
+	std::optional<ContestFilePermissions>
+	contest_files_get_permissions(StringView contest_file_id);
 
-	FilePermissions files_perms;
-	StringView files_id;
+	ContestFilePermissions contest_files_perms;
+	StringView contest_files_id;
 
 	// Pages
-	void file_handle();
+	void contest_file_handle();
 
 	/* =============================== Other =============================== */
 

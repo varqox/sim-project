@@ -10,7 +10,7 @@ void Sim::api_handle() {
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "download") {
 		next_arg = url_args.extractNextArg();
-		if (is_one_of(next_arg, "submission", "problem", "file")) {
+		if (is_one_of(next_arg, "submission", "problem", "contest_file")) {
 			auto id = url_args.extractNextArg();
 			request.target =
 			   concat_tostr("/api/", next_arg, '/', id, "/download");
@@ -50,16 +50,16 @@ void Sim::api_handle() {
 		return api_contest();
 	else if (next_arg == "contest_entry_token")
 		return api_contest_entry_token();
+	else if (next_arg == "contest_file")
+		return api_contest_file();
+	else if (next_arg == "contest_files")
+		return api_contest_files();
 	else if (next_arg == "contest_user")
 		return api_contest_user();
 	else if (next_arg == "contest_users")
 		return api_contest_users();
 	else if (next_arg == "contests")
 		return api_contests();
-	else if (next_arg == "file")
-		return api_file();
-	else if (next_arg == "files")
-		return api_files();
 	else if (next_arg == "job")
 		return api_job();
 	else if (next_arg == "jobs")

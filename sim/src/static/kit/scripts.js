@@ -1694,32 +1694,32 @@ ActionsToHTML.contest_users = function(contest_id, overall_actions_str) {
 	return [];
 };
 
-ActionsToHTML.file = function(file_id, actions_str) {
+ActionsToHTML.contest_file = function(contest_file_id, actions_str) {
 	var res = [];
 
 	if (actions_str.indexOf('O') !== -1) {
 		var a = document.createElement('a');
 		a.className = 'btn-small';
-		a.href = '/api/download/file/' + file_id;
+		a.href = '/api/download/contest_file/' + contest_file_id;
 		a.innerText = 'Download';
 		res.push(a);
 	}
 
 	if (actions_str.indexOf('E') !== -1)
-		res.push(a_view_button('/file/' + file_id + '/edit',
-			'Edit', 'btn-small blue', edit_file.bind(null, true, file_id)));
+		res.push(a_view_button('/contest_file/' + contest_file_id + '/edit',
+			'Edit', 'btn-small blue', edit_contest_file.bind(null, true, contest_file_id)));
 
 	if (actions_str.indexOf('D') !== -1)
-		res.push(a_view_button('/file/' + file_id + '/delete',
-			'Delete', 'btn-small red', delete_file.bind(null, true, file_id)));
+		res.push(a_view_button('/contest_file/' + contest_file_id + '/delete',
+			'Delete', 'btn-small red', delete_contest_file.bind(null, true, contest_file_id)));
 
 	return res;
 };
 
-ActionsToHTML.files = function(contest_id, overall_actions_str) {
+ActionsToHTML.contest_files = function(contest_id, overall_actions_str) {
 	if (overall_actions_str.indexOf('A') !== -1)
 		return a_view_button('/c/c' + contest_id + '/files/add',
-			'Add file', 'btn', add_file.bind(null, true, contest_id));
+			'Add file', 'btn', add_contest_file.bind(null, true, contest_id));
 
 	return [];
 };
@@ -4517,8 +4517,8 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 			});
 
 		tabs.push('Files', function() {
-			var table = $('<table class="files stripped"></table>').appendTo($('<div>').appendTo(elem));
-			new FilesLister(table, '/c' + contest.id).monitor_scroll();
+			var table = $('<table class="contest-files stripped"></table>').appendTo($('<div>').appendTo(elem));
+			new ContestFilesLister(table, '/c' + contest.id).monitor_scroll();
 		});
 
 		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
@@ -5123,14 +5123,14 @@ function expel_contest_user(as_modal, contest_id, user_id) {
 	}, '/c/c' + contest_id + '/contest_user/' + user_id + '/expel');
 }
 
-/* ================================= Files ================================= */
-function FilesLister(elem, query_suffix /*= ''*/) {
+/* ============================= Contest files ============================= */
+function ContestFilesLister(elem, query_suffix /*= ''*/) {
 	var this_ = this;
 	if (query_suffix === undefined)
 		query_suffix = '';
 
 	Lister.call(this, elem);
-	this.query_url = '/api/files' + query_suffix;
+	this.query_url = '/api/contest_files' + query_suffix;
 	this.query_suffix = '';
 
 	var x = query_suffix.indexOf('/c');
@@ -5142,12 +5142,11 @@ function FilesLister(elem, query_suffix /*= ''*/) {
 		if (this_.elem.children('thead').length === 0) {
 			// Overall actions
 			elem.prev('.tabmenu').prevAll().remove();
-			this_.elem.parent().prepend(ActionsToHTML.files(this_.contest_id, data.overall_actions));
+			this_.elem.parent().prepend(ActionsToHTML.contest_files(this_.contest_id, data.overall_actions));
 
 			if (data.rows.length == 0) {
 				this_.elem.parent().append($('<center>', {
-					class: 'files always_in_view',
-					// class: 'files',
+					class: 'contest-files always_in_view',
 					html: '<p>There are no files to show...</p>'
 				}));
 				remove_loader(this_.elem.parent());
@@ -5186,7 +5185,7 @@ function FilesLister(elem, query_suffix /*= ''*/) {
 				text: x.modified
 			})));
 			row.append($('<td>', {html: $('<a>', {
-				href: '/api/download/file/' + x.id,
+				href: '/api/download/contest_file/' + x.id,
 				text: x.name
 			})}));
 			row.append($('<td>', {text: humanizeFileSize(x.file_size)}));
@@ -5195,7 +5194,7 @@ function FilesLister(elem, query_suffix /*= ''*/) {
 
 			// Actions
 			row.append($('<td>', {
-				html: ActionsToHTML.file(x.id, x.actions)
+				html: ActionsToHTML.contest_file(x.id, x.actions)
 			}));
 
 			this_.elem.children('tbody').append(row);
@@ -5204,8 +5203,8 @@ function FilesLister(elem, query_suffix /*= ''*/) {
 
 	this.fetch_more();
 }
-function add_file(as_modal, contest_id) {
-	view_ajax(as_modal, '/api/files/c' + contest_id, function(data) {
+function add_contest_file(as_modal, contest_id) {
+	view_ajax(as_modal, '/api/contest_files/c' + contest_id, function(data) {
 		if (data.overall_actions === undefined)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5218,12 +5217,12 @@ function add_file(as_modal, contest_id) {
 					statusText: 'Not Allowed'
 				});
 
-		this.append(ajax_form((contest_id === null ? 'Add file' : 'Add contest file'),
-			'/api/file/add/c' + contest_id, Form.field_group('File name', {
+		this.append(ajax_form('Add contest file',
+			'/api/contest_file/add/c' + contest_id, Form.field_group('File name', {
 				type: 'text',
 				name: 'name',
 				size: 24,
-				placeholder: 'The same as name of uploaded file'
+				placeholder: 'The same as name of the uploaded file'
 				// maxlength: 'TODO...'
 			}).add(Form.field_group('File', {
 				type: 'file',
@@ -5245,8 +5244,8 @@ function add_file(as_modal, contest_id) {
 
 	}, '/c/c' + contest_id + '/files/add');
 }
-function edit_file(as_modal, file_id) {
-	view_ajax(as_modal, '/api/files/=' + file_id, function(data) {
+function edit_contest_file(as_modal, contest_file_id) {
+	view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5260,8 +5259,8 @@ function edit_file(as_modal, file_id) {
 					statusText: 'Not Allowed'
 				});
 
-		this.append(ajax_form((file.contest_id === null ? 'Edit file' : 'Edit contest file'),
-			'/api/file/' + file_id + '/edit', Form.field_group('File name', {
+		this.append(ajax_form('Edit contest file',
+			'/api/contest_file/' + contest_file_id + '/edit', Form.field_group('File name', {
 				type: 'text',
 				name: 'name',
 				value: file.name,
@@ -5293,10 +5292,10 @@ function edit_file(as_modal, file_id) {
 			})
 		));
 
-	}, '/file/' + file_id + '/edit');
+	}, '/contest_file/' + contest_file_id + '/edit');
 }
-function delete_file(as_modal, file_id) {
-	view_ajax(as_modal, '/api/files/=' + file_id, function(data) {
+function delete_contest_file(as_modal, contest_file_id) {
+	view_ajax(as_modal, '/api/contest_files/=' + contest_file_id, function(data) {
 		if (data.rows === undefined || data.rows.length === 0)
 			return show_error_via_loader(this, {
 				status: '404',
@@ -5310,14 +5309,14 @@ function delete_file(as_modal, file_id) {
 					statusText: 'Not Allowed'
 				});
 
-		this.append(ajax_form((file.contest_id === null ? 'Delete file' : 'Delete contest file'),
-			'/api/file/' + file_id + '/delete', $('<center>', {
+		this.append(ajax_form('Delete contest file',
+			'/api/contest_file/' + contest_file_id + '/delete', $('<center>', {
 			html: [
 				$('<label>', {
 					html: [
-						'Do you really want to delete the ' + (file.contest_id === null ? 'file' : 'contest file') + ' ',
-						a_view_button('/file/' + file_id + '/edit', file.name,
-							undefined, edit_file.bind(null, true, file_id)),
+						'Do you really want to delete the contest file ',
+						a_view_button('/contest_file/' + contest_file_id + '/edit', file.name,
+							undefined, edit_contest_file.bind(null, true, contest_file_id)),
 						'?'
 					]
 				}),
@@ -5345,7 +5344,7 @@ function delete_file(as_modal, file_id) {
 			]
 		})));
 
-	}, '/file/' + file_id + '/delete');
+	}, '/contest_file/' + contest_file_id + '/delete');
 }
 
 /* ============================ Contest's users ============================ */

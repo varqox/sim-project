@@ -93,7 +93,7 @@ public:
 					THROW("link(", src, ", ", dest, ')', errmsg());
 				}
 			} else {
-				// copy other's files
+				// Copy other's files
 				throw_assert(not new_record.other_ids.empty());
 				auto src = concat(other_sim_build, "internal_files/",
 				                  new_record.other_ids.front());

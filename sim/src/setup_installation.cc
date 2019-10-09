@@ -63,11 +63,11 @@ static void parseOptions(int& argc, char** argv) {
 
 constexpr array<meta::string, 13> tables {{
    {"contest_entry_tokens"},
+   {"contest_files"},
    {"contest_problems"},
    {"contest_rounds"},
    {"contest_users"},
    {"contests"},
-   {"files"},
    {"internal_files"},
    {"jobs"},
    {"problem_tags"},
@@ -303,9 +303,8 @@ int main(int argc, char** argv) {
 	// clang-format on
 
 	// clang-format off
-	// TODO: rename to contest_files
-	try_to_create_table("files", intentionalUnsafeStringView(concat(
-		"CREATE TABLE IF NOT EXISTS `files` ("
+	try_to_create_table("contest_files", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `contest_files` ("
 			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
 			"`file_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
