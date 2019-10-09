@@ -58,7 +58,8 @@ static void print_help(const char* program_name) {
 	errlog("Usage: ", program_name,
 	       " [options] <sim_build> <other_sim_build_backup>\n"
 	       "  Where sim_build is a path to build directory of a Sim to which "
-	       "Sim with backup of build is placed in sim_other_backup_build path\n"
+	       "merged will be Sim with a backup of build placed in "
+	       "sim_other_backup_build path\n"
 	       "\n"
 	       "Options:\n"
 	       "  -h, --help            Display this information\n"
@@ -331,7 +332,6 @@ static int true_main(int argc, char** argv) {
 	return 0;
 }
 
-// TODO: reset added problems time limits
 int main(int argc, char** argv) {
 	try {
 		return true_main(argc, argv);
