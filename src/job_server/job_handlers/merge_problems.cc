@@ -9,6 +9,24 @@ namespace job_handlers {
 void MergeProblems::run() {
 	STACK_UNWINDING_MARK;
 
+	for (;;) {
+		try {
+			run_impl();
+			break;
+		} catch (const std::exception& e) {
+			if (hasPrefix(e.what(), "Deadlock found when trying to get lock; "
+			                        "try restarting transaction")) {
+				continue;
+			}
+
+			throw;
+		}
+	}
+}
+
+void MergeProblems::run_impl() {
+	STACK_UNWINDING_MARK;
+
 	auto transaction = mysql.start_transaction();
 
 	// Assure that both problems exist

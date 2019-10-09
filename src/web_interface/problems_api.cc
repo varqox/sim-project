@@ -98,7 +98,8 @@ void Sim::api_problems() {
 		} else if (not isDigit(arg_id)) {
 			return api_error400();
 
-		} else if (isOneOf(cond, '<', '>') and ~mask & ID_COND) { // Conditional
+		} else if (is_one_of(cond, '<', '>') and
+		           ~mask & ID_COND) { // Conditional
 			rows_limit = API_OTHER_QUERY_ROWS_LIMIT;
 			qwhere.append(" AND p.id", arg);
 			mask |= ID_COND;
@@ -153,7 +154,7 @@ void Sim::api_problems() {
 
 	// Tags selector
 	uint64_t pid;
-	bool hidden;
+	unsigned char hidden;
 	InplaceBuff<PROBLEM_TAG_MAX_LEN> tag;
 	auto stmt = mysql.prepare("SELECT tag FROM problem_tags "
 	                          "WHERE problem_id=? AND hidden=? ORDER BY tag");
@@ -417,11 +418,10 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 	   .prepare("INSERT jobs(file_id, creator, priority, type, status, added,"
 	            " aux_id, info, data) "
 	            "VALUES(?,?,?,?," JSTATUS_PENDING_STR ",?,?,?,'')")
-	   .bindAndExecute(job_file_id, session_user_id, priority(jtype), jtype,
-	                   mysql_date(),
-	                   (reuploading ? std::optional<StringView>(problems_pid)
-	                                : std::nullopt),
-	                   ap_info.dump());
+	   .bindAndExecute(
+	      job_file_id, session_user_id, priority(jtype), jtype, mysql_date(),
+	      (reuploading ? std::optional(problems_pid) : std::nullopt),
+	      ap_info.dump());
 
 	auto job_id = mysql.insert_id(); // Has to be retrieved before commit
 
@@ -806,7 +806,7 @@ void Sim::api_problem_attaching_contest_problems() {
 			return api_error400();
 
 		// ID condition
-		if (isOneOf(cond, '<', '>', '=')) {
+		if (is_one_of(cond, '<', '>', '=')) {
 			if (id_condition_occurred)
 				return api_error400("ID condition specified more than once");
 

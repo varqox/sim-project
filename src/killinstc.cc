@@ -34,9 +34,8 @@ int main(int argc, char** argv) {
 	}
 
 	bool parameters_error = false;
-	uint64_t kill_after = 0; // in usec
-	int64_t wait_interval = 0; // in usec
-	bool wait = false;
+	std::optional<std::chrono::duration<double>> wait_timeout;
+	bool kill_after_waiting = false;
 
 	// Parse arguments
 	for (int old_argc = argc, i = argc = 1; i < old_argc; ++i) {
@@ -51,21 +50,23 @@ int main(int argc, char** argv) {
 		arg.removePrefix(1); // remove '-'
 		if (arg == "-wait") {
 			// Wait
-			wait = true;
+			wait_timeout = std::nullopt;
+			kill_after_waiting = false;
 
 		} else if (hasPrefix(arg, "-wait=")) {
 			// Wait no longer than
-			wait = true;
-			wait_interval = atof(arg.data() + 6) * 1e6;
-			if (wait_interval <= 0) {
+			wait_timeout = std::chrono::duration<double>(atof(arg.data() + 6));
+			kill_after_waiting = false;
+			if (*wait_timeout <= std::chrono::seconds(0)) {
 				errlog("Too small value in option --wait=");
 				parameters_error = true;
 			}
 
-		} else if (hasPrefix(arg, "-kill-after=")) {
+		} else if (hasPrefix(arg, "-kill-after")) {
 			// Kill after
-			kill_after = atof(arg.data() + 12) * 1e6;
-			if (kill_after == 0) {
+			wait_timeout = std::chrono::duration<double>(atof(arg.data() + 12));
+			kill_after_waiting = true;
+			if (*wait_timeout <= std::chrono::seconds(0)) {
 				errlog("Too small value in option --kill-after=");
 				parameters_error = true;
 			}
@@ -87,102 +88,15 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	constexpr uint START_TIME_FID =
-	   21; // Number of the field in /proc/[pid]/stat that contains process
-	       // start time
+	vector<std::string> exec_set;
+	for (int i = 1; i < argc; ++i)
+		exec_set.emplace_back(argv[i]);
 
-	try {
-		// Collect pids
-		using Victim = pair<pid_t, string>;
-		vector<Victim> victims;
-		{
-			vector<std::string> exec_set;
-			for (int i = 1; i < argc; ++i)
-				exec_set.emplace_back(argv[i]);
+	auto victims = findProcessesByExec(exec_set);
+	for (auto pid : victims)
+		stdlog("Killing ", pid);
 
-			auto x = findProcessesByExec(std::move(exec_set), false);
-			for (pid_t pid : x) {
-				try {
-					victims.emplace_back(pid, getProcStat(pid, START_TIME_FID));
-				} catch (const std::runtime_error& e) {
-					errlog(e.what());
-				}
-			}
-		}
-
-		if (victims.empty())
-			return 0;
-
-		if (wait || kill_after) {
-			// If one of the processes has just appeared, wait for a clock tick
-			// to distinguish it from a process that may appear (just after
-			// killing) with the same pid
-			Victim& oldest =
-			   *std::max_element(victims.begin(), victims.end(),
-			                     [](const Victim& a, const Victim& b) {
-				                     return StrNumCompare()(a.second, b.second);
-			                     });
-			if (oldest.second == getProcStat(getpid(), START_TIME_FID))
-				usleep(ceil(1.0e6 / sysconf(_SC_CLK_TCK))); // Wait for a tick
-		}
-
-		// Send signals
-		for (int i = 0; i < (int)victims.size(); ++i) {
-			auto&& vic = victims[i];
-			stdlog(vic.first, " <- SIGTERM");
-
-			if (kill(vic.first, SIGTERM) == -1) {
-				// Unsuccessful kill
-				if (errno != ESRCH)
-					errlog("kill(", vic.first, ")", errmsg());
-
-				swap(victims[i--], victims.back());
-				victims.pop_back();
-			}
-		}
-
-		if (kill_after)
-			wait_interval = kill_after;
-
-		wait = (wait && wait_interval ==
-		                   0); // Wait now tells whether to wait indefinitely
-		uint sleep_interval = 0.25e6; // 0.25 s
-		while (victims.size() && (wait || wait_interval > 0)) {
-			if (!wait) {
-				sleep_interval = meta::min(wait_interval, 0.1e6); // 0.1 s
-				wait_interval -= sleep_interval;
-			}
-
-			usleep(sleep_interval);
-
-			// Remove dead processes (victims)
-			for (int i = 0; i < (int)victims.size(); ++i) {
-				auto&& vic = victims[i];
-
-				try {
-					if (vic.second == getProcStat(vic.first, START_TIME_FID))
-						continue; // Process is still not dead
-
-				} catch (std::runtime_error const&) {
-				}
-
-				// Process has died
-				swap(victims[i--], victims.back());
-				victims.pop_back();
-			}
-		}
-
-		// Kill remaining processes (victims)
-		if (kill_after)
-			for (auto vic : victims) {
-				stdlog(vic.first, " <- SIGKILL");
-				(void)kill(vic.first, SIGKILL);
-			}
-
-	} catch (const std::exception& e) {
-		errlog(e.what());
-		return 1;
-	}
-
+	kill_processes_by_exec(std::move(exec_set), wait_timeout,
+	                       kill_after_waiting);
 	return 0;
 }
