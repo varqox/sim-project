@@ -432,36 +432,29 @@ void Sim::api_submissions() {
 			if (not contest_submission) {
 				subtype_to_show = problem_final_to_subtype();
 			} else {
+				auto full_results_subtype = [&] {
+					if (is_contest_final)
+						return FINAL;
+					if (selecting_contest_submissions)
+						return NORMAL;
+
+					return problem_final_to_subtype();
+				};
+
 				if (selecting_problem_submissions) {
 					subtype_to_show = problem_final_to_subtype();
+				} else if (show_full_results) {
+					subtype_to_show = full_results_subtype();
 				} else {
 					switch (score_revealing) {
-					case ScoreRevealingMode::NONE: {
+					case ScoreRevealingMode::NONE:
+					case ScoreRevealingMode::ONLY_SCORE: {
 						subtype_to_show =
 						   (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
 						break;
 					}
-					case ScoreRevealingMode::ONLY_SCORE: {
-						if (show_full_results) {
-							subtype_to_show =
-							   (is_contest_final
-							       ? FINAL
-							       : selecting_contest_submissions
-							            ? NORMAL
-							            : problem_final_to_subtype());
-						} else {
-							subtype_to_show =
-							   (is_contest_initial_final ? INITIAL_FINAL
-							                             : NORMAL);
-						}
-						break;
-					}
 					case ScoreRevealingMode::SCORE_AND_FULL_STATUS: {
-						subtype_to_show =
-						   (is_contest_final ? FINAL
-						                     : selecting_problem_submissions
-						                          ? NORMAL
-						                          : problem_final_to_subtype());
+						subtype_to_show = full_results_subtype();
 						break;
 					}
 					}
@@ -470,10 +463,11 @@ void Sim::api_submissions() {
 
 			if (subtype_to_show != FINAL and
 			    subtype_to_show != PROBLEM_FINAL and selecting_finals) {
-				if (not select_one)
+				if (not select_one) {
 					THROW("Cannot show final while selecting finals - this is "
 					      "a bug in the query or the restricting access (URL: ",
 					      request.target, ')');
+				}
 
 				return set_empty_response();
 			}
