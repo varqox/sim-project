@@ -20,6 +20,8 @@
 
 # Others
 build/
+*.sublime-project
+*.sublime-workspace
 
 # Coverity
 cov-int/
