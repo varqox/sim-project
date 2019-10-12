@@ -1097,7 +1097,7 @@ function Lister(elem) {
 	this.monitor_scroll = function() {
 		var scres_handler;
 		var elem_to_listen_on_scroll;
-		var scres_unhandle = function() {
+		var scres_unhandle_if_detatched = function() {
 			if (!$.contains(document.documentElement, this_.elem[0])) {
 				elem_to_listen_on_scroll.off('scroll', scres_handler);
 				$(window).off('resize', scres_handler);
@@ -1108,7 +1108,7 @@ function Lister(elem) {
 		if (modal_parent.length === 1) {
 			elem_to_listen_on_scroll = modal_parent;
 			scres_handler = function() {
-				scres_unhandle();
+				scres_unhandle_if_detatched();
 				var height = $(this).children('div').height();
 				var scroll_top = $(this).scrollTop();
 				if (height - $(window).height() - scroll_top <= 300)
@@ -1118,7 +1118,7 @@ function Lister(elem) {
 		} else {
 			elem_to_listen_on_scroll = $(document);
 			scres_handler = function() {
-				scres_unhandle();
+				scres_unhandle_if_detatched();
 				var x = $(document);
 				if (x.height() - $(window).height() - x.scrollTop() <= 300)
 					this_.fetch_more();
@@ -1322,9 +1322,10 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var curr_height = content[0].scrollHeight;
 		content.scrollTop(curr_height - prev);
 
-		// Load more logs if scrolling up did not become possible
+		lock = false;
+
+		// Load more logs unless scrolling up became impossible
 		if (offset > 0) {
-			lock = false;
 			if (content.innerHeight() >= curr_height || prev_height == curr_height) {
 				// avoid recursion
 				setTimeout(this_.fetch_more, 0);
@@ -1395,7 +1396,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		var elem = content[0];
 		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight &&
-			auto_refresh_checkbox.is(':checked'))
+			auto_refresh_checkbox.prop('checked'))
 		{
 			this_.try_fetching_newest();
 		}
@@ -1403,7 +1404,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 	this.monitor_scroll = function() {
 		var scres_handler;
-		var scres_unhandle = function() {
+		var scres_unhandle_if_detatched = function() {
 			if (!$.contains(document.documentElement, this_.elem[0])) {
 				content.off('scroll', scres_handler);
 				$(window).off('resize', scres_handler);
@@ -1412,7 +1413,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		};
 
 		scres_handler = function() {
-			scres_unhandle();
+			scres_unhandle_if_detatched();
 			if (content.scrollTop() <= 300)
 				this_.fetch_more();
 		};
@@ -5788,7 +5789,6 @@ function open_calendar_on(time, text_input, hidden_input) {
 			if (datetime_info_input.is(':focus')) {
 				setTimeout(function() {
 					var miliseconds_dt = Date.parse(datetime_info_input.val());
-					console.log(e.key, ' ', miliseconds_dt);
 					if (isNaN(miliseconds_dt)) {
 						datetime_info_input.css('background-color', '#ff9393');
 					} else {
