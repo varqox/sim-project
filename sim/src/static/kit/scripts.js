@@ -826,6 +826,10 @@ function default_tabmenu_attacher(x) {
 	x.on('tabmenuTabHasChanged', function() { x.nextAll().remove(); });
 	x.appendTo(this);
 }
+function tabmenu_attacher_with_change_callback(tabmenu_changed_callback, x) {
+	x.on('tabmenuTabHasChanged', tabmenu_changed_callback);
+	default_tabmenu_attacher.call(this, x);
+}
 /// Triggers 'tabmenuTabHasChanged' event on the result every time an active tab is changed
 function tabmenu(attacher, tabs) {
 	var res = $('<div>', {class: 'tabmenu'});
@@ -4522,7 +4526,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 			new ContestFilesLister(table, '/c' + contest.id).monitor_scroll();
 		});
 
-		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
+		var header_links_updater = function(_, active_elem) {
 			// Add / replace hashes in links in the contest-path
 			elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
 				var xx = $(this);
@@ -4532,9 +4536,9 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					href = href.substring(0, pos);
 				xx.attr('href', href + window.location.hash);
 			});
-		});
+		};
 
-		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
+		tabmenu(tabmenu_attacher_with_change_callback.bind(elem, header_links_updater), tabs);
 
 	}, '/c/' + id_for_api + (opt_hash === undefined ? '' : opt_hash));
 }
