@@ -2403,13 +2403,13 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 					}).add('<option>', {
 						value: 'cpp11',
 						text: 'C++11',
-						selected: true
 					}).add('<option>', {
 						value: 'cpp14',
 						text: 'C++14'
 					}).add('<option>', {
 						value: 'cpp17',
-						text: 'C++17'
+						text: 'C++17',
+						selected: true
 					}).add('<option>', {
 						value: 'pascal',
 						text: 'PASCAL'
