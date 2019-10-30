@@ -1063,7 +1063,7 @@ private:
 	using InplaceBuffBase::is_allocated;
 
 public:
-	using InplaceBuffBase::size;
+	static constexpr size_t max_static_size = N;
 
 	constexpr InplaceBuff() noexcept : InplaceBuffBase(0, N, nullptr) {
 		p_ = &a_[0];
@@ -1189,6 +1189,7 @@ public:
 		return assign_move_impl(std::move(ibuff));
 	}
 
+	using InplaceBuffBase::append;
 	using InplaceBuffBase::back;
 	using InplaceBuffBase::begin;
 	using InplaceBuffBase::cbegin;
@@ -1199,11 +1200,11 @@ public:
 	using InplaceBuffBase::front;
 	using InplaceBuffBase::lossy_resize;
 	using InplaceBuffBase::max_size;
-	using InplaceBuffBase::resize;
-	using InplaceBuffBase::operator[];
-	using InplaceBuffBase::operator StringView;
 	using InplaceBuffBase::operator StringBase<char>;
-	using InplaceBuffBase::append;
+	using InplaceBuffBase::operator StringView;
+	using InplaceBuffBase::operator[];
+	using InplaceBuffBase::resize;
+	using InplaceBuffBase::size;
 	using InplaceBuffBase::to_cstr;
 	using InplaceBuffBase::to_string;
 };
