@@ -4,52 +4,11 @@
 #include <sim/random.hh>
 #include <simlib/filesystem.h>
 
-Sim::ContestFilePermissions
-Sim::contest_files_get_permissions(ContestPermissions cperms) noexcept {
-	STACK_UNWINDING_MARK;
-	using PERM = ContestFilePermissions;
-	using CPERM = ContestPermissions;
-
-	if (uint(cperms & CPERM::ADMIN)) {
-		return PERM::ADD | PERM::VIEW | PERM::DOWNLOAD | PERM::EDIT |
-		       PERM::DELETE | PERM::VIEW_CREATOR;
-	}
-
-	if (uint(cperms & CPERM::VIEW))
-		return PERM::VIEW | PERM::DOWNLOAD;
-
-	return PERM::NONE;
-}
-
-std::optional<Sim::ContestFilePermissions>
-Sim::contest_files_get_permissions(StringView contest_file_id) {
-	STACK_UNWINDING_MARK;
-
-	auto stmt = mysql.prepare("SELECT c.is_public, cu.mode "
-	                          "FROM contest_files cf "
-	                          "LEFT JOIN contests c ON c.id=cf.contest_id "
-	                          "LEFT JOIN contest_users cu"
-	                          " ON cu.contest_id=cf.contest_id"
-	                          " AND cu.user_id=? "
-	                          "WHERE cf.id=?");
-	if (session_is_open)
-		stmt.bindAndExecute(session_user_id, contest_file_id);
-	else
-		stmt.bindAndExecute(nullptr, contest_file_id);
-
-	unsigned char is_public;
-	MySQL::Optional<EnumVal<ContestUserMode>> cu_mode;
-
-	stmt.res_bind_all(is_public, cu_mode);
-	if (not stmt.next())
-		return std::nullopt;
-
-	return contest_files_get_permissions(
-	   contests_get_permissions(is_public, cu_mode));
-}
-
 void Sim::api_contest_files() {
 	STACK_UNWINDING_MARK;
+
+	using sim::contest_file::OverallPermissions;
+	using sim::contest_file::Permissions;
 
 	// We may read data several times (permission checking), so transaction is
 	// used to ensure data consistency
@@ -103,7 +62,8 @@ void Sim::api_contest_files() {
 
 	// Precess restrictions
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
-	ContestFilePermissions perms = ContestFilePermissions::NONE;
+	Permissions perms = Permissions::NONE;
+	OverallPermissions overall_perms = OverallPermissions::NONE;
 	{
 		bool id_condition_occurred = false;
 		bool contest_id_condition_occurred = false;
@@ -128,9 +88,14 @@ void Sim::api_contest_files() {
 				id_condition_occurred = true;
 
 				if (cond_c == '=' and not allow_access) {
-					perms = contest_files_get_permissions(arg_id).value_or(
-					   ContestFilePermissions::NONE);
-					allow_access = uint(perms & ContestFilePermissions::VIEW);
+					auto perms_opt = sim::contest_file::get_permissions(
+					   mysql, arg_id,
+					   (session_is_open ? std::optional {session_user_id}
+					                    : std::nullopt));
+					if (perms_opt)
+						std::tie(perms, overall_perms) = perms_opt.value();
+
+					allow_access = uint(perms & Permissions::VIEW);
 				}
 
 				query.append(" AND cf.id", cond_c, '\'', arg_id, '\'');
@@ -148,14 +113,19 @@ void Sim::api_contest_files() {
 				contest_id_condition_occurred = true;
 				query.append(" AND cf.contest_id=", arg_id);
 
-				auto cperms = contests_get_permissions(arg_id);
-				if (not cperms.has_value())
+				auto cperms = sim::contest::get_permissions(
+				   mysql, arg_id,
+				   (session_is_open ? std::optional {session_user_id}
+				                    : std::nullopt));
+				if (not cperms)
 					return set_empty_response(); // Do allow to query for
 					                             // contest existence (not
 					                             // api_error404())
 
-				perms = contest_files_get_permissions(cperms.value());
-				if (uint(perms & ContestFilePermissions::VIEW))
+				perms = sim::contest_file::get_permissions(cperms.value());
+				overall_perms =
+				   sim::contest_file::get_overall_permissions(cperms.value());
+				if (uint(perms & Permissions::VIEW))
 					allow_access = true;
 
 			} else {
@@ -175,9 +145,9 @@ void Sim::api_contest_files() {
 
 	// Overall actions
 	append(",\n\"");
-	if (uint(perms & ContestFilePermissions::ADD))
+	if (uint(overall_perms & OverallPermissions::ADD))
 		append('A');
-	if (uint(perms & ContestFilePermissions::VIEW_CREATOR))
+	if (uint(overall_perms & OverallPermissions::VIEW_CREATOR))
 		append('C');
 	append("\",[");
 
@@ -192,7 +162,7 @@ void Sim::api_contest_files() {
 		       res[MODIFIED], "\",", res[CONTEST_ID], ',');
 
 		// Permissions are already loaded
-		if (uint(perms & ContestFilePermissions::VIEW_CREATOR) and
+		if (uint(overall_perms & OverallPermissions::VIEW_CREATOR) and
 		    not res.is_null(CREATOR))
 			append(res[CREATOR], ',', jsonStringify(res[CUSERNAME]), ',');
 		else
@@ -200,11 +170,11 @@ void Sim::api_contest_files() {
 
 		// Actions
 		append("\"");
-		if (uint(perms & ContestFilePermissions::DOWNLOAD))
+		if (uint(perms & Permissions::DOWNLOAD))
 			append("O");
-		if (uint(perms & ContestFilePermissions::EDIT))
+		if (uint(perms & Permissions::EDIT))
 			append("E");
-		if (uint(perms & ContestFilePermissions::DELETE))
+		if (uint(perms & Permissions::DELETE))
 			append("D");
 		append("\"]");
 	}
@@ -215,40 +185,44 @@ void Sim::api_contest_files() {
 void Sim::api_contest_file() {
 	STACK_UNWINDING_MARK;
 
-	contest_files_id = url_args.extractNextArg();
-	if (contest_files_id == "add") {
+	StringView contest_file_id = url_args.extractNextArg();
+	if (contest_file_id == "add") {
 		return api_contest_file_add();
-	} else if (contest_files_id.empty())
+	} else if (contest_file_id.empty())
 		return api_error404();
 
+	sim::contest_file::Permissions perms;
 	{
-		auto file_perms_opt = contest_files_get_permissions(contest_files_id);
-		if (not file_perms_opt.has_value())
+		auto perms_opt = sim::contest_file::get_permissions(
+		   mysql, contest_file_id,
+		   (session_is_open ? std::optional {session_user_id} : std::nullopt));
+		if (not perms_opt)
 			return api_error404();
 
-		contest_files_perms = file_perms_opt.value();
+		perms = perms_opt.value().first;
 	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "download")
-		return api_contest_file_download();
+		return api_contest_file_download(contest_file_id, perms);
 	else if (next_arg == "edit")
-		return api_contest_file_edit();
+		return api_contest_file_edit(contest_file_id, perms);
 	else if (next_arg == "delete")
-		return api_contest_file_delete();
+		return api_contest_file_delete(contest_file_id, perms);
 	else if (not next_arg.empty())
 		return api_error400();
 }
 
-void Sim::api_contest_file_download() {
-	if (uint(~contest_files_perms & ContestFilePermissions::DOWNLOAD))
+void Sim::api_contest_file_download(StringView contest_file_id,
+                                    sim::contest_file::Permissions perms) {
+	if (uint(~perms & sim::contest_file::Permissions::DOWNLOAD))
 		return api_error403();
 
 	uint64_t internal_file_id;
 	InplaceBuff<FILE_NAME_MAX_LEN> filename;
 	auto stmt = mysql.prepare("SELECT file_id, name FROM contest_files "
 	                          "WHERE id=?");
-	stmt.bindAndExecute(contest_files_id);
+	stmt.bindAndExecute(contest_file_id);
 	stmt.res_bind_all(internal_file_id, filename);
 	if (not stmt.next())
 		return error404(); // Should not happen as the file existed a moment ago
@@ -266,9 +240,16 @@ void Sim::api_contest_file_add() {
 		return api_error400();
 	}
 
-	contest_files_perms = contest_files_get_permissions(
-	   contests_get_permissions(contest_id).value_or(ContestPermissions::NONE));
-	if (uint(~contest_files_perms & ContestFilePermissions::ADD))
+	auto cperms = sim::contest::get_permissions(
+	   mysql, contest_id,
+	   (session_is_open ? std::optional {session_user_id} : std::nullopt));
+	if (not cperms)
+		return api_error404(); // TODO: maybe too much information?
+
+	using sim::contest_file::OverallPermissions;
+	OverallPermissions overall_perms =
+	   sim::contest_file::get_overall_permissions(cperms.value());
+	if (uint(~overall_perms & OverallPermissions::ADD))
 		return api_error403();
 
 	CStringView name, description, file_tmp_path, user_filename;
@@ -335,8 +316,9 @@ void Sim::api_contest_file_add() {
 	append(file_id);
 }
 
-void Sim::api_contest_file_edit() {
-	if (uint(~contest_files_perms & ContestFilePermissions::EDIT))
+void Sim::api_contest_file_edit(StringView contest_file_id,
+                                sim::contest_file::Permissions perms) {
+	if (uint(~perms & sim::contest_file::Permissions::EDIT))
 		return api_error403();
 
 	CStringView name, description, file_tmp_path;
@@ -398,7 +380,7 @@ void Sim::api_contest_file_edit() {
 		            " " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
 		            "FROM contest_files WHERE id=?")
 		   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-		                   contest_files_id);
+		                   contest_file_id);
 	}
 
 	// Update file
@@ -409,7 +391,7 @@ void Sim::api_contest_file_edit() {
 	                          "WHERE id=?");
 	stmt.bindAndExecute(reuploading_file, internal_file_id, name, description,
 	                    reuploading_file, file_size, mysql_date(),
-	                    contest_files_id);
+	                    contest_file_id);
 
 	transaction.commit();
 	internal_file_remover.cancel();
@@ -417,8 +399,9 @@ void Sim::api_contest_file_edit() {
 		jobs::notify_job_server();
 }
 
-void Sim::api_contest_file_delete() {
-	if (uint(~contest_files_perms & ContestFilePermissions::DELETE))
+void Sim::api_contest_file_delete(StringView contest_file_id,
+                                  sim::contest_file::Permissions perms) {
+	if (uint(~perms & sim::contest_file::Permissions::DELETE))
 		return api_error403();
 
 	auto transaction = mysql.start_transaction();
@@ -430,10 +413,10 @@ void Sim::api_contest_file_delete() {
 	            " " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
 	            "FROM contest_files WHERE id=?")
 	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   contest_files_id);
+	                   contest_file_id);
 
 	mysql.prepare("DELETE FROM contest_files WHERE id=?")
-	   .bindAndExecute(contest_files_id);
+	   .bindAndExecute(contest_file_id);
 
 	transaction.commit();
 	jobs::notify_job_server();

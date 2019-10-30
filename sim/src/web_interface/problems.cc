@@ -1,69 +1,9 @@
 #include "sim.h"
 
-Sim::ProblemPermissions Sim::problems_get_overall_permissions() noexcept {
-	STACK_UNWINDING_MARK;
-	using PERM = ProblemPermissions;
+#include <sim/problem_permissions.hh>
 
-	if (not session_is_open)
-		return PERM::VIEW_TPUBLIC;
-
-	switch (session_user_type) {
-	case UserType::ADMIN:
-		return PERM::VIEW_ALL | PERM::ADD | PERM::VIEW_TPUBLIC |
-		       PERM::VIEW_TCONTEST_ONLY | PERM::SELECT_BY_OWNER;
-	case UserType::TEACHER:
-		return PERM::ADD | PERM::VIEW_TPUBLIC | PERM::VIEW_TCONTEST_ONLY |
-		       PERM::SELECT_BY_OWNER;
-	case UserType::NORMAL: return PERM::VIEW_TPUBLIC;
-	}
-
-	return PERM::NONE; // Shouldn't happen
-}
-
-Sim::ProblemPermissions
-Sim::problems_get_permissions(StringView owner_id, ProblemType ptype) noexcept {
-	STACK_UNWINDING_MARK;
-	using PERM = ProblemPermissions;
-
-	static_assert(uint(PERM::NONE) == 0, "Needed below");
-	constexpr PERM PERM_PROBLEM_ADMIN =
-	   PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_HIDDEN_TAGS |
-	   PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_SIMFILE |
-	   PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::VIEW_RELATED_JOBS |
-	   PERM::DOWNLOAD | PERM::SUBMIT | PERM::EDIT | PERM::SUBMIT_IGNORED |
-	   PERM::REUPLOAD | PERM::REJUDGE_ALL | PERM::RESET_TIME_LIMITS |
-	   PERM::EDIT_TAGS | PERM::EDIT_HIDDEN_TAGS | PERM::DELETE | PERM::MERGE |
-	   PERM::CHANGE_STATEMENT | PERM::VIEW_ATTACHING_CONTEST_PROBLEMS;
-
-	if (not session_is_open)
-		return (ptype == ProblemType::PUBLIC ? PERM::VIEW | PERM::VIEW_TAGS
-		                                     : PERM::NONE) |
-		       problems_get_overall_permissions();
-
-	// Session is open
-	if (session_user_type == UserType::ADMIN or session_user_id == owner_id)
-		return PERM_PROBLEM_ADMIN | problems_get_overall_permissions();
-
-	if (session_user_type == UserType::TEACHER) {
-		if (ptype == ProblemType::PUBLIC)
-			return PERM::VIEW_STATEMENT | PERM::VIEW_TAGS |
-			       PERM::VIEW_SOLUTIONS_AND_SUBMISSIONS | PERM::VIEW_SIMFILE |
-			       PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::DOWNLOAD |
-			       PERM::SUBMIT | problems_get_overall_permissions();
-
-		if (ptype == ProblemType::CONTEST_ONLY)
-			return PERM::VIEW_STATEMENT | PERM::VIEW_TAGS | PERM::VIEW_SIMFILE |
-			       PERM::VIEW_OWNER | PERM::VIEW_ADD_TIME | PERM::SUBMIT |
-			       problems_get_overall_permissions();
-
-		return problems_get_overall_permissions();
-	}
-
-	return (ptype == ProblemType::PUBLIC
-	           ? PERM::VIEW | PERM::VIEW_TAGS | PERM::SUBMIT
-	           : PERM::NONE) |
-	       problems_get_overall_permissions();
-}
+using sim::User;
+using std::optional;
 
 void Sim::problems_handle() {
 	STACK_UNWINDING_MARK;
@@ -73,8 +13,6 @@ void Sim::problems_handle() {
 		problems_pid = next_arg;
 		return problems_problem();
 	}
-
-	problems_perms = problems_get_overall_permissions();
 
 	if (next_arg == "add") { // Add problem
 		page_template("Add problem");

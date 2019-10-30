@@ -1,7 +1,11 @@
 #include "sim.h"
 
 #include <sim/jobs.h>
+#include <sim/problem_permissions.hh>
 
+using sim::Problem;
+using sim::User;
+using std::optional;
 using std::string;
 
 Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
@@ -12,9 +16,9 @@ Sim::JobPermissions Sim::jobs_get_overall_permissions() noexcept {
 		return PERM::NONE;
 
 	switch (session_user_type) {
-	case UserType::ADMIN: return PERM::VIEW_ALL;
-	case UserType::TEACHER:
-	case UserType::NORMAL: return PERM::NONE;
+	case User::Type::ADMIN: return PERM::VIEW_ALL;
+	case User::Type::TEACHER:
+	case User::Type::NORMAL: return PERM::NONE;
 	}
 
 	return PERM::NONE; // Shouldn't happen
@@ -62,7 +66,7 @@ Sim::jobs_get_permissions(std::optional<StringView> creator_id,
 		return PERM::NONE; // Shouldn't happen
 	}();
 
-	if (session_user_type == UserType::ADMIN) {
+	if (session_user_type == User::Type::ADMIN) {
 		switch (job_status) {
 		case JS::PENDING:
 		case JS::NOTICED_PENDING:
@@ -96,19 +100,20 @@ Sim::JobPermissions
 Sim::jobs_granted_permissions_problem(StringView problem_id) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
+	using P_PERMS = sim::problem::Permissions;
 
-	auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
-	stmt.bindAndExecute(problem_id);
+	auto problem_perms =
+	   sim::problem::get_permissions(
+	      mysql, problem_id,
+	      (session_is_open ? optional {strtoull(session_user_id)}
+	                       : std::nullopt),
+	      (session_is_open ? optional {session_user_type} : std::nullopt))
+	      .value_or(P_PERMS::NONE);
 
-	InplaceBuff<32> powner;
-	EnumVal<ProblemType> ptype;
-	stmt.res_bind_all(powner, ptype);
-	if (stmt.next()) {
-		auto pperms = problems_get_permissions(powner, ptype);
-		if (uint(pperms & ProblemPermissions::VIEW_RELATED_JOBS))
-			return PERM::VIEW | PERM::DOWNLOAD_LOG |
-			       PERM::DOWNLOAD_UPLOADED_PACKAGE |
-			       PERM::DOWNLOAD_UPLOADED_STATEMENT;
+	if (uint(problem_perms & P_PERMS::VIEW_RELATED_JOBS)) {
+		return PERM::VIEW | PERM::DOWNLOAD_LOG |
+		       PERM::DOWNLOAD_UPLOADED_PACKAGE |
+		       PERM::DOWNLOAD_UPLOADED_STATEMENT;
 	}
 
 	return PERM::NONE;
@@ -118,7 +123,6 @@ Sim::JobPermissions
 Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	STACK_UNWINDING_MARK;
 	using PERM = JobPermissions;
-	using CUM = ContestUserMode;
 
 	if (not session_is_open)
 		return PERM::NONE;
@@ -133,24 +137,31 @@ Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	                          "WHERE s.id=?");
 	stmt.bindAndExecute(session_user_id, submission_id);
 
-	MySQL::Optional<unsigned char> is_public;
-	InplaceBuff<32> powner;
 	EnumVal<SubmissionType> stype;
-	EnumVal<ProblemType> ptype;
-	MySQL::Optional<EnumVal<CUM>> cu_mode;
-	stmt.res_bind_all(stype, powner, ptype, cu_mode, is_public);
+	MySQL::Optional<decltype(Problem::owner)::value_type> problem_owner;
+	decltype(Problem::type) problem_type;
+	MySQL::Optional<decltype(sim::ContestUser::mode)> cu_mode;
+	MySQL::Optional<unsigned char> is_public;
+	stmt.res_bind_all(stype, problem_owner, problem_type, cu_mode, is_public);
 	if (stmt.next()) {
 		if (is_public.has_value() and // <-- contest exists
-		    uint(contests_get_permissions(is_public.value(), cu_mode) &
-		         ContestPermissions::ADMIN)) {
+		    uint(sim::contest::get_permissions(
+		            (session_is_open ? std::optional {session_user_type}
+		                             : std::nullopt),
+		            is_public.value(), cu_mode) &
+		         sim::contest::Permissions::ADMIN)) {
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;
 		}
 
 		// The below check has to be done as the last one because it gives the
 		// least permissions
-		auto pperms = problems_get_permissions(powner, ptype);
+		auto problem_perms = sim::problem::get_permissions(
+		   (session_is_open ? optional {strtoull(session_user_id)}
+		                    : std::nullopt),
+		   (session_is_open ? optional {session_user_type} : std::nullopt),
+		   problem_owner, problem_type);
 		// Give access to the problem's submissions' jobs to the problem's admin
-		if (bool(uint(pperms & ProblemPermissions::EDIT)))
+		if (bool(uint(problem_perms & sim::problem::Permissions::EDIT)))
 			return PERM::VIEW | PERM::DOWNLOAD_LOG;
 	}
 

@@ -4,7 +4,10 @@
 
 #include <chrono>
 #include <map>
+#include <sim/blob_field.hh>
 #include <sim/constants.h>
+#include <sim/contest_user.hh>
+#include <sim/datetime_field.hh>
 #include <sim/jobs.h>
 #include <simlib/time.h>
 
@@ -43,7 +46,7 @@ struct ProblemTagId {
 	InplaceBuff<PROBLEM_TAG_MAX_LEN> tag;
 };
 
-bool operator<(const ProblemTagId& a, const ProblemTagId& b) noexcept {
+inline bool operator<(const ProblemTagId& a, const ProblemTagId& b) noexcept {
 	return std::pair(a.problem_id, a.tag) < std::pair(b.problem_id, b.tag);
 }
 
@@ -51,20 +54,20 @@ inline auto stringify(ProblemTagId ptag) {
 	return concat("(problem: ", ptag.problem_id, " tag: ", ptag.tag, ')');
 }
 
-struct ContestUserId {
-	uintmax_t user_id;
-	uintmax_t contest_id;
-};
+namespace sim {
 
-bool operator<(const ContestUserId& a, const ContestUserId& b) noexcept {
+inline auto stringify(ContestUser::Id cuser) {
+	return concat("(user: ", cuser.user_id, " contest: ", cuser.contest_id,
+	              ')');
+}
+
+inline bool operator<(const ContestUser::Id& a,
+                      const ContestUser::Id& b) noexcept {
 	return std::pair(a.user_id, a.contest_id) <
 	       std::pair(b.user_id, b.contest_id);
 }
 
-inline auto stringify(ContestUserId cuser) {
-	return concat("(user: ", cuser.user_id, " contest: ", cuser.contest_id,
-	              ')');
-}
+} // namespace sim
 
 // Loads all information about ids from jobs
 struct IdsFromJobs {
@@ -76,7 +79,7 @@ struct IdsFromJobs {
 	IdsWithTime<uintmax_t> contests;
 	IdsWithTime<uintmax_t> contest_rounds;
 	IdsWithTime<uintmax_t> contest_problems;
-	IdsWithTime<ContestUserId> contest_users;
+	IdsWithTime<sim::ContestUser::Id> contest_users;
 	IdsWithTime<InplaceBuff<FILE_ID_LEN>> contest_files;
 	IdsWithTime<InplaceBuff<CONTEST_ENTRY_TOKEN_LEN>> contest_entry_tokens;
 	IdsWithTime<uintmax_t> submissions;
@@ -90,9 +93,9 @@ struct IdsFromJobs {
 		EnumVal<JobType> type;
 		MySQL::Optional<uintmax_t> file_id;
 		MySQL::Optional<uintmax_t> tmp_file_id;
-		InplaceBuff<24> added_str;
+		sim::DatetimeField added_str;
 		MySQL::Optional<uintmax_t> aux_id;
-		InplaceBuff<32> info;
+		sim::BlobField<32> info;
 
 		auto stmt = conn.prepare("SELECT id, creator, type, file_id, "
 		                         "tmp_file_id, added, aux_id, info FROM ",
@@ -101,7 +104,7 @@ struct IdsFromJobs {
 		stmt.res_bind_all(id, creator, type, file_id, tmp_file_id, added_str,
 		                  aux_id, info);
 		while (stmt.next()) {
-			auto added = strToTimePoint(added_str.to_string());
+			auto added = strToTimePoint(added_str.to_cstr());
 
 			// Process non-type-specific ids
 			jobs.add_id(id, added);

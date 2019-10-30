@@ -1,5 +1,8 @@
 #include "sim.h"
 
+using sim::ContestUser;
+using sim::User;
+
 Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 	using PERM = SubmissionPermissions;
 
@@ -7,20 +10,22 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 		return PERM::NONE;
 
 	switch (session_user_type) {
-	case UserType::ADMIN: return PERM::VIEW_ALL;
-	case UserType::TEACHER:
-	case UserType::NORMAL: return PERM::NONE;
+	case User::Type::ADMIN: return PERM::VIEW_ALL;
+	case User::Type::TEACHER:
+	case User::Type::NORMAL: return PERM::NONE;
 	}
 
 	return PERM::NONE; // Shouldn't happen
 }
 
-Sim::SubmissionPermissions Sim::submissions_get_permissions(
-   StringView submission_owner, SubmissionType stype,
-   std::optional<ContestUserMode> cu_mode, StringView problem_owner) noexcept {
+Sim::SubmissionPermissions
+Sim::submissions_get_permissions(StringView submission_owner,
+                                 SubmissionType stype,
+                                 std::optional<ContestUser::Mode> cu_mode,
+                                 StringView problem_owner) noexcept {
 	using PERM = SubmissionPermissions;
 	using STYPE = SubmissionType;
-	using CUM = ContestUserMode;
+	using CUM = ContestUser::Mode;
 
 	PERM overall_perms = submissions_get_overall_permissions();
 
@@ -35,7 +40,7 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	       ? PERM::CHANGE_TYPE | PERM::DELETE
 	       : PERM::NONE);
 
-	if (session_user_type == UserType::ADMIN or
+	if (session_user_type == User::Type::ADMIN or
 	    (cu_mode.has_value() and
 	     is_one_of(cu_mode.value(), CUM::MODERATOR, CUM::OWNER))) {
 		return overall_perms | PERM_SUBMISSION_ADMIN;

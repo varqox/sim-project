@@ -3,6 +3,8 @@
 #include <sim/jobs.h>
 #include <simlib/filesystem.h>
 
+using sim::Problem;
+
 static constexpr const char* job_type_str(JobType type) noexcept {
 	using JT = JobType;
 
@@ -249,11 +251,11 @@ void Sim::api_jobs() {
 		case JobType::REUPLOAD_PROBLEM:
 		case JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
 		case JobType::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION: {
-			auto ptype_to_str = [](ProblemType& ptype) {
+			auto ptype_to_str = [](Problem::Type& ptype) {
 				switch (ptype) {
-				case ProblemType::PUBLIC: return "public";
-				case ProblemType::PRIVATE: return "private";
-				case ProblemType::CONTEST_ONLY: return "contest only";
+				case Problem::Type::PUBLIC: return "public";
+				case Problem::Type::PRIVATE: return "private";
+				case Problem::Type::CONTEST_ONLY: return "contest only";
 				}
 				return "unknown";
 			};

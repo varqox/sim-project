@@ -4,21 +4,11 @@
 
 #include <sim/constants.h>
 #include <sim/submission.h>
-
-struct User {
-	uintmax_t id;
-	InplaceBuff<USERNAME_MAX_LEN> username;
-	InplaceBuff<USER_FIRST_NAME_MAX_LEN> first_name;
-	InplaceBuff<USER_LAST_NAME_MAX_LEN> last_name;
-	InplaceBuff<USER_EMAIL_MAX_LEN> email;
-	InplaceBuff<SALT_LEN> salt;
-	InplaceBuff<PASSWORD_HASH_LEN> password;
-	EnumVal<UserType> type;
-};
+#include <sim/user.hh>
 
 // Merges users by username
-class UsersMerger : public Merger<User> {
-	std::map<InplaceBuff<USERNAME_MAX_LEN>, size_t> username_to_new_table_idx_;
+class UsersMerger : public Merger<sim::User> {
+	std::map<decltype(sim::User::username), size_t> username_to_new_table_idx_;
 
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
@@ -33,7 +23,7 @@ class UsersMerger : public Merger<User> {
 			THROW("BUG");
 		}();
 
-		User user;
+		sim::User user;
 		auto stmt = conn.prepare("SELECT id, username, first_name, last_name, "
 		                         "email, salt, password, type FROM ",
 		                         record_set.sql_table_name);
@@ -48,7 +38,7 @@ class UsersMerger : public Merger<User> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const User& x, IdKind kind) -> NewRecord* {
+		Merger::merge([&](const sim::User& x, IdKind kind) -> NewRecord* {
 			auto it = username_to_new_table_idx_.find(x.username);
 			if (it != username_to_new_table_idx_.end()) {
 				NewRecord& res = new_table_[it->second];
@@ -75,7 +65,7 @@ public:
 		                         " salt, password, type) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 		for (const NewRecord& new_record : new_table_) {
-			const User& x = new_record.data;
+			const sim::User& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.username, x.first_name, x.last_name,
 			                    x.email, x.salt, x.password, x.type);
 		}

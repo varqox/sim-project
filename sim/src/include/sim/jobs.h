@@ -1,6 +1,8 @@
 #pragma once
 
-#include <sim/constants.h>
+#include "constants.h"
+#include "problem.hh"
+
 #include <simlib/mysql.h>
 #include <utime.h>
 
@@ -105,7 +107,7 @@ struct AddProblemInfo {
 	bool ignore_simfile = false;
 	bool seek_for_new_tests = false;
 	bool reset_scoring = false;
-	ProblemType problem_type = ProblemType::PRIVATE;
+	sim::Problem::Type problem_type = sim::Problem::Type::PRIVATE;
 	enum Stage : uint8_t {
 		FIRST = 0,
 		SECOND = 1
@@ -116,7 +118,7 @@ struct AddProblemInfo {
 	AddProblemInfo(const std::string& n, const std::string& l,
 	               std::optional<uint64_t> ml,
 	               std::optional<std::chrono::nanoseconds> gtl, bool rtl,
-	               bool is, bool sfnt, bool rs, ProblemType pt)
+	               bool is, bool sfnt, bool rs, sim::Problem::Type pt)
 	   : name(n), label(l), memory_limit(ml), global_time_limit(gtl),
 	     reset_time_limits(rtl), ignore_simfile(is), seek_for_new_tests(sfnt),
 	     reset_scoring(rs), problem_type(pt) {}
@@ -133,8 +135,8 @@ struct AddProblemInfo {
 		seek_for_new_tests = (mask & 4);
 		reset_scoring = (mask & 8);
 
-		problem_type = EnumVal<ProblemType>(
-		   extractDumpedInt<std::underlying_type_t<ProblemType>>(str));
+		problem_type = EnumVal<sim::Problem::Type>(
+		   extractDumpedInt<std::underlying_type_t<sim::Problem::Type>>(str));
 		stage =
 		   EnumVal<Stage>(extractDumpedInt<std::underlying_type_t<Stage>>(str));
 	}
@@ -151,7 +153,7 @@ struct AddProblemInfo {
 		               (int(reset_scoring) << 3);
 		appendDumped(res, mask);
 
-		appendDumped(res, std::underlying_type_t<ProblemType>(problem_type));
+		appendDumped(res, EnumVal(problem_type).int_val());
 		appendDumped<std::underlying_type_t<Stage>>(res, stage);
 		return res;
 	}

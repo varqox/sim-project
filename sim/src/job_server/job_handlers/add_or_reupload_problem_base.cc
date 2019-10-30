@@ -1,8 +1,11 @@
 #include "add_or_reupload_problem_base.h"
 #include "../main.h"
 
+#include <sim/problem.hh>
 #include <simlib/libzip.h>
 #include <simlib/sim/problem_package.h>
+
+using sim::Problem;
 
 namespace job_handlers {
 
@@ -66,15 +69,15 @@ void AddOrReuploadProblemBase::build_package() {
 	}
 
 	// Check problem's name's length
-	if (cr.simfile.name.size() > PROBLEM_NAME_MAX_LEN) {
+	if (cr.simfile.name.size() > decltype(Problem::name)::max_len) {
 		return set_failure("Problem's name is too long (max allowed length: ",
-		                   PROBLEM_NAME_MAX_LEN, ')');
+		                   decltype(Problem::name)::max_len, ')');
 	}
 
 	// Check problem's label's length
-	if (cr.simfile.label.size() > PROBLEM_LABEL_MAX_LEN) {
+	if (cr.simfile.label.size() > decltype(Problem::label)::max_len) {
 		return set_failure("Problem's label is too long (max allowed length: ",
-		                   PROBLEM_LABEL_MAX_LEN, ')');
+		                   decltype(Problem::label)::max_len, ')');
 	}
 
 	job_log(conver.report());
@@ -214,9 +217,9 @@ void AddOrReuploadProblemBase::add_problem_to_DB() {
 	                          " simfile, owner, added, last_edit) "
 	                          "VALUES(?,?,?,?,?,?,?,?)");
 	stmt.bindAndExecute(tmp_file_id_.value(),
-	                    EnumVal<ProblemType>(info_.problem_type), simfile_.name,
-	                    simfile_.label, simfile_str_, job_creator_,
-	                    current_date_, current_date_);
+	                    decltype(Problem::type)(info_.problem_type),
+	                    simfile_.name, simfile_.label, simfile_str_,
+	                    job_creator_, current_date_, current_date_);
 
 	tmp_file_id_ = std::nullopt;
 	problem_id_ = stmt.insert_id();
@@ -245,9 +248,9 @@ void AddOrReuploadProblemBase::replace_problem_in_DB() {
 	                          " simfile=?, last_edit=? "
 	                          "WHERE id=?");
 	stmt.bindAndExecute(tmp_file_id_.value(),
-	                    EnumVal<ProblemType>(info_.problem_type), simfile_.name,
-	                    simfile_.label, simfile_str_, current_date_,
-	                    problem_id_.value());
+	                    decltype(Problem::type)(info_.problem_type),
+	                    simfile_.name, simfile_.label, simfile_str_,
+	                    current_date_, problem_id_.value());
 
 	tmp_file_id_ = std::nullopt;
 

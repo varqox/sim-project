@@ -4,8 +4,12 @@
 #include "http_response.h"
 
 #include <sim/constants.h>
+#include <sim/contest_file_permissions.hh>
+#include <sim/contest_permissions.hh>
 #include <sim/cpp_syntax_highlighter.h>
 #include <sim/mysql.h>
+#include <sim/problem_permissions.hh>
+#include <sim/user.hh>
 #include <simlib/http/response.h>
 #include <simlib/parsers.h>
 #include <utime.h>
@@ -96,32 +100,35 @@ class Sim final {
 
 	void api_problem_add_or_reupload_impl(bool reuploading);
 
-	void api_problem_add();
+	void api_problem_add(sim::problem::OverallPermissions overall_perms);
 
 	void api_statement_impl(uint64_t problem_file_id, StringView problem_label,
 	                        StringView simfile);
 
-	void api_problem_statement(StringView problem_label, StringView simfile);
+	void api_problem_statement(StringView problem_label, StringView simfile,
+	                           sim::problem::Permissions perms);
 
-	void api_problem_download(StringView problem_label);
+	void api_problem_download(StringView problem_label,
+	                          sim::problem::Permissions perms);
 
-	void api_problem_rejudge_all_submissions();
+	void api_problem_rejudge_all_submissions(sim::problem::Permissions perms);
 
-	void api_problem_reset_time_limits();
+	void api_problem_reset_time_limits(sim::problem::Permissions perms);
 
-	void api_problem_reupload();
+	void api_problem_reupload(sim::problem::Permissions perms);
 
-	void api_problem_edit();
+	void api_problem_edit(sim::problem::Permissions perms);
 
-	void api_problem_edit_tags();
+	void api_problem_edit_tags(sim::problem::Permissions perms);
 
-	void api_problem_delete();
+	void api_problem_delete(sim::problem::Permissions perms);
 
-	void api_problem_merge_into_another();
+	void api_problem_merge_into_another(sim::problem::Permissions perms);
 
-	void api_problem_change_statement();
+	void api_problem_change_statement(sim::problem::Permissions perms);
 
-	void api_problem_attaching_contest_problems();
+	void
+	api_problem_attaching_contest_problems(sim::problem::Permissions perms);
 
 	// users_api.cc
 	void api_users();
@@ -158,40 +165,54 @@ class Sim final {
 	void api_submission_download();
 
 	// contests_api.cc
-	void append_contest_actions_str();
-
 	void api_contests();
 
 	void api_contest();
 
-	void api_contest_round();
+	void api_contest_round(StringView contest_round_id);
 
-	void api_contest_problem();
+	void api_contest_problem(StringView contest_problem_id);
 
-	void api_contest_add();
+	void api_contest_create(sim::contest::OverallPermissions overall_perms);
 
-	void api_contest_edit(bool is_public);
+	void api_contest_clone(sim::contest::OverallPermissions overall_perms);
 
-	void api_contest_delete();
+	void api_contest_edit(StringView contest_id,
+	                      sim::contest::Permissions perms, bool is_public);
 
-	void api_contest_round_add();
+	void api_contest_delete(StringView contest_id,
+	                        sim::contest::Permissions perms);
 
-	void api_contest_round_edit();
+	void api_contest_round_add(StringView contest_id,
+	                           sim::contest::Permissions perms);
 
-	void api_contest_round_delete();
+	void api_contest_round_edit(uintmax_t contest_round_id,
+	                            sim::contest::Permissions perms);
+
+	void api_contest_round_delete(uintmax_t contest_round_id,
+	                              sim::contest::Permissions perms);
 
 	void api_contest_problem_statement(StringView problem_id);
 
-	void api_contest_problem_add();
+	void api_contest_problem_add(uintmax_t contest_id,
+	                             uintmax_t contest_round_id,
+	                             sim::contest::Permissions perms);
 
-	void api_contest_problem_rejudge_all_submissions(StringView problem_id);
+	void
+	api_contest_problem_rejudge_all_submissions(StringView contest_problem_id,
+	                                            sim::contest::Permissions perms,
+	                                            StringView problem_id);
 
-	void api_contest_problem_edit();
+	void api_contest_problem_edit(StringView contest_problem_id,
+	                              sim::contest::Permissions perms);
 
-	void api_contest_problem_delete();
+	void api_contest_problem_delete(StringView contest_problem_id,
+	                                sim::contest::Permissions perms);
 
-	void api_contest_ranking(StringView submissions_query_id_name,
-	                         StringView query_id);
+	void api_contest_ranking(
+	   sim::contest::Permissions perms,
+	   StringView submissions_query_id_name, // TODO: change to id_kind
+	   StringView query_id);
 
 	// contest_users_api.cc
 
@@ -222,7 +243,7 @@ class Sim final {
 
 	void api_contest_entry_token_short_delete(StringView contest_id);
 
-	void api_contest_entry_token_use_to_enter_contest(StringView contest_id);
+	void api_contest_entry_token_use_to_enter_contest(uintmax_t contest_id);
 
 	// contest_files_api.cc
 
@@ -232,20 +253,23 @@ class Sim final {
 
 	void api_contest_file_add();
 
-	void api_contest_file_download();
+	void api_contest_file_download(StringView contest_file_id,
+	                               sim::contest_file::Permissions perms);
 
-	void api_contest_file_edit();
+	void api_contest_file_edit(StringView contest_file_id,
+	                           sim::contest_file::Permissions perms);
 
-	void api_contest_file_delete();
+	void api_contest_file_delete(StringView contest_file_id,
+	                             sim::contest_file::Permissions perms);
 
 	/* ============================== Session ============================== */
 
 	bool session_is_open = false;
-	UserType session_user_type = UserType::NORMAL;
+	sim::User::Type session_user_type = sim::User::Type::NORMAL;
 	InplaceBuff<SESSION_ID_LEN + 1> session_id;
 	InplaceBuff<SESSION_CSRF_TOKEN_LEN + 1> session_csrf_token;
 	InplaceBuff<32> session_user_id;
-	InplaceBuff<USERNAME_MAX_LEN + 1> session_username;
+	decltype(sim::User::username) session_username;
 	InplaceBuff<4096> session_data;
 
 	/**
@@ -492,7 +516,7 @@ private:
 	 * @return ORed permissions flags
 	 */
 	Sim::UserPermissions users_get_permissions(StringView user_id,
-	                                           UserType utype) noexcept;
+	                                           sim::User::Type utype) noexcept;
 
 	// Queries MySQL
 	UserPermissions users_get_permissions(StringView user_id);
@@ -555,51 +579,6 @@ private:
 	void jobs_handle();
 
 	/* ============================== Problems ============================== */
-public:
-	enum class ProblemPermissions : uint {
-		NONE = 0,
-		// Overall
-		ADD = 1,
-		VIEW_ALL = 2,
-		VIEW_TPUBLIC = 4,
-		VIEW_TCONTEST_ONLY = 8,
-		SELECT_BY_OWNER = 1 << 4,
-		// Problem specific
-		VIEW = 1 << 5,
-		VIEW_STATEMENT = VIEW,
-		VIEW_TAGS = VIEW,
-		VIEW_HIDDEN_TAGS = 1 << 6,
-		VIEW_SOLUTIONS_AND_SUBMISSIONS = 1 << 7,
-		VIEW_SIMFILE = 1 << 8,
-		VIEW_OWNER = 1 << 9,
-		VIEW_ADD_TIME = VIEW_OWNER,
-		VIEW_RELATED_JOBS = 1 << 10,
-		DOWNLOAD = 1 << 11,
-		SUBMIT = 1 << 12,
-		EDIT = 1 << 13,
-		SUBMIT_IGNORED = EDIT,
-		REUPLOAD = EDIT,
-		REJUDGE_ALL = EDIT,
-		RESET_TIME_LIMITS = EDIT,
-		EDIT_TAGS = 1 << 14,
-		EDIT_HIDDEN_TAGS = 1 << 15,
-		DELETE = EDIT,
-		MERGE = DELETE,
-		CHANGE_STATEMENT = EDIT,
-		VIEW_ATTACHING_CONTEST_PROBLEMS = DELETE,
-	};
-
-private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(ProblemPermissions, ~);
-	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, |);
-	friend DECLARE_ENUM_OPERATOR(ProblemPermissions, &);
-
-	ProblemPermissions problems_get_overall_permissions() noexcept;
-
-	ProblemPermissions problems_get_permissions(StringView owner_id,
-	                                            ProblemType ptype) noexcept;
-
-	ProblemPermissions problems_perms = ProblemPermissions::NONE;
 	InplaceBuff<32> problems_pid;
 	uint64_t problems_file_id;
 
@@ -609,52 +588,15 @@ private:
 	void problems_problem();
 
 	/* ============================== Contest ============================== */
-public:
-	enum class ContestPermissions : uint {
-		NONE = 0,
-		// Overall
-		VIEW_ALL = 1,
-		VIEW_PUBLIC = 2,
-		ADD_PRIVATE = 4,
-		ADD_PUBLIC = 1 << 3,
-		// Contest specific
-		VIEW = 1 << 4,
-		PARTICIPATE = 1 << 5,
-		ADMIN = 1 << 6,
-		DELETE = 1 << 7,
-		MAKE_PUBLIC = 1 << 8,
-		SELECT_FINAL_SUBMISSIONS = 1 << 9,
-		VIEW_ALL_CONTEST_SUBMISSIONS = 1 << 10,
-		MANAGE_CONTEST_ENTRY_TOKEN = 1 << 11
-	};
-
-private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(ContestPermissions, ~);
-	friend DECLARE_ENUM_OPERATOR(ContestPermissions, |);
-	friend DECLARE_ENUM_OPERATOR(ContestPermissions, &);
-
-	ContestPermissions contests_get_overall_permissions() noexcept;
-
-	ContestPermissions
-	contests_get_permissions(bool is_public,
-	                         std::optional<ContestUserMode> cu_mode) noexcept;
-
-	std::optional<ContestPermissions>
-	contests_get_permissions(StringView contest_id);
-
-	ContestPermissions contests_perms = ContestPermissions::NONE;
-	InplaceBuff<32> contests_cid;
-	InplaceBuff<32> contests_crid;
-	InplaceBuff<32> contests_cpid;
 
 	/// Main Contests handler
 	void contests_handle();
 
-	void contests_contest();
+	void contests_contest(StringView contest_id);
 
-	void contests_contest_round();
+	void contests_contest_round(StringView contest_round_id);
 
-	void contests_contest_problem();
+	void contests_contest_problem(StringView contest_problem_id);
 
 	void enter_contest();
 
@@ -681,19 +623,21 @@ private:
 
 	// Returns only the overall permissions
 	ContestUserPermissions contest_user_get_overall_permissions(
-	   std::optional<ContestUserMode> viewer_mode) noexcept;
+	   std::optional<sim::ContestUser::Mode> viewer_mode) noexcept;
 
 	ContestUserPermissions contest_user_get_permissions(
-	   std::optional<ContestUserMode> viewer_mode,
-	   std::optional<ContestUserMode> user_mode) noexcept;
+	   std::optional<sim::ContestUser::Mode> viewer_mode,
+	   std::optional<sim::ContestUser::Mode> user_mode) noexcept;
 
 	// Returns (viewer mode, perms), queries MySQL
-	std::pair<std::optional<ContestUserMode>, Sim::ContestUserPermissions>
+	std::pair<std::optional<sim::ContestUser::Mode>,
+	          Sim::ContestUserPermissions>
 	contest_user_get_overall_permissions(StringView contest_id);
 
 	// Returns (viewer mode, perms, user's mode), queries MySQL
-	std::tuple<std::optional<ContestUserMode>, Sim::ContestUserPermissions,
-	           std::optional<ContestUserMode>>
+	std::tuple<std::optional<sim::ContestUser::Mode>,
+	           Sim::ContestUserPermissions,
+	           std::optional<sim::ContestUser::Mode>>
 	contest_user_get_permissions(StringView contest_id, StringView user_id);
 
 	/* ============================= Submissions =============================
@@ -723,7 +667,7 @@ private:
 	SubmissionPermissions
 	submissions_get_permissions(StringView submission_owner,
 	                            SubmissionType stype,
-	                            std::optional<ContestUserMode> cu_mode,
+	                            std::optional<sim::ContestUser::Mode> cu_mode,
 	                            StringView problem_owner) noexcept;
 
 	StringView submissions_sid;
@@ -735,34 +679,6 @@ private:
 	void submissions_handle();
 
 	/* =========================== Contest files =========================== */
-
-public:
-	enum class ContestFilePermissions : uint {
-		NONE = 0,
-		// Overall
-		ADD = 1,
-		VIEW_CREATOR = 2,
-		// File specific
-		VIEW = 4,
-		DOWNLOAD = 8,
-		EDIT = 1 << 4,
-		DELETE = 1 << 5
-	};
-
-private:
-	friend DECLARE_ENUM_UNARY_OPERATOR(ContestFilePermissions, ~);
-	friend DECLARE_ENUM_OPERATOR(ContestFilePermissions, |);
-	friend DECLARE_ENUM_OPERATOR(ContestFilePermissions, &);
-
-	ContestFilePermissions
-	contest_files_get_permissions(ContestPermissions cperms) noexcept;
-
-	// No value if the contest file does not exist
-	std::optional<ContestFilePermissions>
-	contest_files_get_permissions(StringView contest_file_id);
-
-	ContestFilePermissions contest_files_perms;
-	StringView contest_files_id;
 
 	// Pages
 	void contest_file_handle();

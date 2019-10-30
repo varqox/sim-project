@@ -2,6 +2,8 @@
 
 #include <simlib/filesystem.h>
 
+using sim::User;
+
 void Sim::api_handle() {
 	STACK_UNWINDING_MARK;
 
@@ -85,7 +87,7 @@ void Sim::api_handle() {
 void Sim::api_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (not session_is_open || session_user_type != UserType::ADMIN)
+	if (not session_is_open || session_user_type != User::Type::ADMIN)
 		return api_error403();
 
 	StringView type = url_args.extractNextArg();

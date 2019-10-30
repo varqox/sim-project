@@ -2,12 +2,20 @@
 
 #include <functional>
 #include <optional>
+#include <sim/contest_problem.hh>
+#include <sim/inf_datetime.hh>
 #include <sim/jobs.h>
 #include <sim/submission.h>
 #include <sim/utilities.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
 
+using sim::ContestProblem;
+using sim::ContestUser;
+using sim::InfDatetime;
+using sim::Problem;
+using sim::User;
+using std::optional;
 using std::string;
 
 void Sim::append_submission_status(SubmissionStatus initial_status,
@@ -43,7 +51,6 @@ void Sim::append_submission_status(SubmissionStatus initial_status,
 void Sim::api_submissions() {
 	STACK_UNWINDING_MARK;
 	using PERM = SubmissionPermissions;
-	using CUM = ContestUserMode;
 
 	if (not session_is_open)
 		return api_error403();
@@ -104,13 +111,13 @@ void Sim::api_submissions() {
 		FINAL_REPORT
 	};
 
-	bool allow_access = (session_user_type == UserType::ADMIN);
+	bool allow_access = (session_user_type == User::Type::ADMIN);
 	bool select_one = false;
 	bool selecting_problem_submissions = false;
 	bool selecting_contest_submissions = false;
 
 	bool selecting_finals = false;
-	bool may_see_problem_final = (session_user_type == UserType::ADMIN);
+	bool may_see_problem_final = (session_user_type == User::Type::ADMIN);
 
 	auto append_column_names = [&] {
 		// clang-format off
@@ -156,8 +163,8 @@ void Sim::api_submissions() {
 	{
 		std::vector<std::function<void()>> after_checks;
 		// At most one perms optional will be set
-		std::optional<ContestPermissions> cperms;
-		std::optional<ProblemPermissions> pperms;
+		std::optional<sim::contest::Permissions> contest_perms;
+		std::optional<sim::problem::Permissions> problem_perms;
 
 		bool id_condition_occurred = false;
 		bool type_condition_occurred = false;
@@ -184,10 +191,10 @@ void Sim::api_submissions() {
 					selecting_finals = true;
 
 					after_checks.emplace_back([&] {
-						if (cperms.has_value() and
-						    uint(
-						       ~cperms.value() &
-						       ContestPermissions::SELECT_FINAL_SUBMISSIONS)) {
+						if (contest_perms.has_value() and
+						    uint(~contest_perms.value() &
+						         sim::contest::Permissions::
+						            SELECT_FINAL_SUBMISSIONS)) {
 							allow_access = false;
 						}
 
@@ -254,24 +261,24 @@ void Sim::api_submissions() {
 				round_or_problem_condition_occurred = true;
 				qwhere.append(" AND s.problem_id=", arg_id);
 
-				auto stmt =
-				   mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
-				stmt.bindAndExecute(arg_id);
-
-				InplaceBuff<32> p_owner;
-				EnumVal<ProblemType> p_type;
-				stmt.res_bind_all(p_owner, p_type);
-				if (not stmt.next())
+				problem_perms = sim::problem::get_permissions(
+				   mysql, arg_id,
+				   (session_is_open ? optional {strtoull(session_user_id)}
+				                    : std::nullopt),
+				   (session_is_open ? optional {session_user_type}
+				                    : std::nullopt));
+				if (not problem_perms)
 					return set_empty_response();
 
-				pperms = problems_get_permissions(p_owner, p_type);
-				if (uint(pperms.value() &
-				         ProblemPermissions::VIEW_SOLUTIONS_AND_SUBMISSIONS)) {
+				if (uint(problem_perms.value() &
+				         sim::problem::Permissions::
+				            VIEW_SOLUTIONS_AND_SUBMISSIONS)) {
 					allow_access = true;
 				}
 
-				if (uint(pperms.value() &
-				         ProblemPermissions::VIEW_SOLUTIONS_AND_SUBMISSIONS)) {
+				if (uint(problem_perms.value() &
+				         sim::problem::Permissions::
+				            VIEW_SOLUTIONS_AND_SUBMISSIONS)) {
 					may_see_problem_final = true;
 				}
 
@@ -324,16 +331,19 @@ void Sim::api_submissions() {
 					auto stmt = mysql.prepare(query);
 					stmt.bindAndExecute(session_user_id, arg_id);
 
-					MySQL::Optional<EnumVal<CUM>> cu_mode;
+					MySQL::Optional<decltype(sim::ContestUser::mode)> cu_mode;
 					unsigned char is_public;
 					stmt.res_bind_all(cu_mode, is_public);
 					if (not stmt.next())
 						return set_empty_response();
 
-					cperms = contests_get_permissions(is_public, cu_mode);
-					if (uint(
-					       cperms.value() &
-					       ContestPermissions::VIEW_ALL_CONTEST_SUBMISSIONS)) {
+					contest_perms = sim::contest::get_permissions(
+					   (session_is_open ? std::optional {session_user_type}
+					                    : std::nullopt),
+					   is_public, cu_mode);
+					if (uint(contest_perms.value() &
+					         sim::contest::Permissions::
+					            VIEW_ALL_CONTEST_SUBMISSIONS)) {
 						allow_access = true;
 					}
 				}
@@ -388,7 +398,7 @@ void Sim::api_submissions() {
 		   res[SOWNER], stype,
 		   (res.is_null(CUMODE)
 		       ? std::nullopt
-		       : std::optional<CUM>(CUM(strtoull(res[CUMODE])))),
+		       : std::optional {sim::ContestUser::Mode(strtoull(res[CUMODE]))}),
 		   res[POWNER]);
 
 		if (perms == PERM::NONE)
@@ -412,7 +422,7 @@ void Sim::api_submissions() {
 		// Submission id
 		append(",\n[", res[SID], ',');
 
-		EnumVal<ScoreRevealingMode> score_revealing(
+		decltype(sim::ContestProblem::score_revealing) score_revealing(
 		   strtoull(res[SCORE_REVEALING]));
 
 		// Type
@@ -447,13 +457,14 @@ void Sim::api_submissions() {
 					subtype_to_show = full_results_subtype();
 				} else {
 					switch (score_revealing) {
-					case ScoreRevealingMode::NONE:
-					case ScoreRevealingMode::ONLY_SCORE: {
+					case ContestProblem::ScoreRevealingMode::NONE:
+					case ContestProblem::ScoreRevealingMode::ONLY_SCORE: {
 						subtype_to_show =
 						   (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
 						break;
 					}
-					case ScoreRevealingMode::SCORE_AND_FULL_STATUS: {
+					case ContestProblem::ScoreRevealingMode::
+					   SCORE_AND_FULL_STATUS: {
 						subtype_to_show = full_results_subtype();
 						break;
 					}
@@ -532,9 +543,10 @@ void Sim::api_submissions() {
 
 		bool show_full_status = (show_full_results or [&] {
 			switch (score_revealing) {
-			case ScoreRevealingMode::NONE: return false;
-			case ScoreRevealingMode::ONLY_SCORE: return false;
-			case ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+			case ContestProblem::ScoreRevealingMode::NONE: return false;
+			case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return false;
+			case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+				return true;
 			}
 
 			return false;
@@ -542,9 +554,10 @@ void Sim::api_submissions() {
 
 		bool show_score = (show_full_results or [&] {
 			switch (score_revealing) {
-			case ScoreRevealingMode::NONE: return false;
-			case ScoreRevealingMode::ONLY_SCORE: return true;
-			case ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+			case ContestProblem::ScoreRevealingMode::NONE: return false;
+			case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return true;
+			case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+				return true;
 			}
 
 			return false;
@@ -610,7 +623,6 @@ void Sim::api_submissions() {
 
 void Sim::api_submission() {
 	STACK_UNWINDING_MARK;
-	using CUM = ContestUserMode;
 
 	if (not session_is_open)
 		return api_error403();
@@ -626,7 +638,7 @@ void Sim::api_submission() {
 	InplaceBuff<32> sowner, p_owner;
 	EnumVal<SubmissionType> stype;
 	EnumVal<SubmissionLanguage> slang;
-	MySQL::Optional<EnumVal<CUM>> cu_mode;
+	MySQL::Optional<decltype(sim::ContestUser::mode)> cu_mode;
 	auto stmt = mysql.prepare("SELECT s.file_id, s.owner, s.type, s.language,"
 	                          " cu.mode, p.owner "
 	                          "FROM submissions s "
@@ -693,23 +705,22 @@ void Sim::api_submission_add() {
 	MySQL::Optional<InplaceBuff<32>> contest_id, contest_round_id;
 	if (not contest_problem_id.has_value()) { // Problem submission
 		// Check permissions to the problem
-		auto stmt =
-		   mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
-		InplaceBuff<32> powner;
-		EnumVal<ProblemType> ptype;
-		stmt.bindAndExecute(problem_id);
-		stmt.res_bind_all(powner, ptype);
-		if (not stmt.next())
+		auto problem_perms_opt = sim::problem::get_permissions(
+		   mysql, problem_id,
+		   (session_is_open ? optional {strtoull(session_user_id)}
+		                    : std::nullopt),
+		   (session_is_open ? optional {session_user_type} : std::nullopt));
+		if (not problem_perms_opt)
 			return api_error404();
 
-		ProblemPermissions pperms = problems_get_permissions(powner, ptype);
-		if (uint(~pperms & ProblemPermissions::SUBMIT))
+		auto problem_perms = problem_perms_opt.value();
+		if (uint(~problem_perms & sim::problem::Permissions::SUBMIT))
 			return api_error403();
 
-		may_submit_ignored = uint(pperms & ProblemPermissions::SUBMIT_IGNORED);
+		may_submit_ignored =
+		   uint(problem_perms & sim::problem::Permissions::SUBMIT_IGNORED);
 
 	} else { // Contest submission
-		using CUM = ContestUserMode;
 		// Check permissions to the contest
 		auto stmt = mysql.prepare("SELECT c.id, c.is_public, cr.id, cr.begins,"
 		                          " cr.ends, cu.mode "
@@ -726,25 +737,27 @@ void Sim::api_submission_add() {
 
 		unsigned char is_public;
 		InplaceBuff<20> cr_begins_str, cr_ends_str;
-		MySQL::Optional<EnumVal<CUM>> umode;
+		MySQL::Optional<decltype(ContestUser::mode)> umode;
 		stmt.res_bind_all(contest_id, is_public, contest_round_id,
 		                  cr_begins_str, cr_ends_str, umode);
 		if (not stmt.next())
 			return api_error404();
 
-		auto cperms = contests_get_permissions(is_public, umode);
-
-		if (uint(~cperms & ContestPermissions::PARTICIPATE))
+		auto contest_perms = sim::contest::get_permissions(
+		   (session_is_open ? std::optional {session_user_type} : std::nullopt),
+		   is_public, umode);
+		if (uint(~contest_perms & sim::contest::Permissions::PARTICIPATE))
 			return api_error403(); // Could not participate
 
 		auto curr_date = mysql_date();
-		if (uint(~cperms & ContestPermissions::ADMIN) and
+		if (uint(~contest_perms & sim::contest::Permissions::ADMIN) and
 		    (curr_date < InfDatetime(cr_begins_str) or
 		     InfDatetime(cr_ends_str) <= curr_date)) {
 			return api_error403(); // Round has not begun jet or already ended
 		}
 
-		may_submit_ignored = uint(cperms & ContestPermissions::ADMIN);
+		may_submit_ignored =
+		   uint(contest_perms & sim::contest::Permissions::ADMIN);
 	}
 
 	// Validate fields

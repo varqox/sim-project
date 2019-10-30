@@ -3,19 +3,15 @@
 #include "merger.hh"
 
 #include <sim/constants.h>
+#include <sim/contest.hh>
+#include <sim/datetime_field.hh>
 
-struct Contest {
-	uintmax_t id;
-	InplaceBuff<CONTEST_NAME_MAX_LEN> name;
-	bool is_public;
-};
-
-class ContestsMerger : public Merger<Contest> {
+class ContestsMerger : public Merger<sim::Contest> {
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
 
-		Contest c;
-		MySQL::Optional<InplaceBuff<24>> earliest_submit_time;
+		sim::Contest c;
+		MySQL::Optional<sim::DatetimeField> earliest_submit_time;
 		unsigned char b_is_public;
 		auto stmt =
 		   conn.prepare("SELECT c.id, c.name, c.is_public, MIN(s.submit_time) "
@@ -39,7 +35,7 @@ class ContestsMerger : public Merger<Contest> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const Contest&) { return nullptr; });
+		Merger::merge([&](const sim::Contest&) { return nullptr; });
 	}
 
 public:
@@ -50,7 +46,7 @@ public:
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(id, name, is_public) VALUES(?, ?, ?)");
 		for (const NewRecord& new_record : new_table_) {
-			const Contest& x = new_record.data;
+			const sim::Contest& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.name, x.is_public);
 		}
 

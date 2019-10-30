@@ -610,10 +610,10 @@ Form.field_group = function(label_text_or_html_content, input_context_or_html_el
 	});
 };
 
-Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_parent)
+Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, loader_parent)
 {
-	if (success_msg === undefined)
-		success_msg = 'Success';
+	if (success_msg_or_handler === undefined)
+		success_msg_or_handler = 'Success';
 	if (loader_parent === undefined)
 		loader_parent = $(form);
 
@@ -628,10 +628,10 @@ Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_par
 		contentType: false,
 		data: new FormData(form[0]),
 		success: function(resp) {
-			if (typeof success_msg === "function") {
-				success_msg.call(form, resp, loader_parent);
+			if (typeof success_msg_or_handler === "function") {
+				success_msg_or_handler.call(form, resp, loader_parent);
 			} else
-				show_success_via_loader(loader_parent, success_msg);
+				show_success_via_loader(loader_parent, success_msg_or_handler);
 		},
 		error: function(resp, status) {
 			show_error_via_loader(loader_parent, resp, status);
@@ -640,7 +640,7 @@ Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_par
 	return false;
 };
 
-function ajax_form(title, target, html, success_msg, classes) {
+function ajax_form(title, target, html, success_msg_or_handler, classes) {
 	return $('<div>', {
 		class: 'form-container' + (classes === undefined ? '' : ' ' + classes),
 		html: $('<h1>', {text: title})
@@ -648,7 +648,7 @@ function ajax_form(title, target, html, success_msg, classes) {
 			method: 'post',
 			html: html
 		}).submit(function() {
-			return Form.send_via_ajax(this, target, success_msg);
+			return Form.send_via_ajax(this, target, success_msg_or_handler);
 		})
 	});
 }
@@ -3765,34 +3765,95 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 	this.fetch_more();
 }
 /* ================================ Contests ================================ */
-function add_contest(as_modal) {
-	view_base(as_modal, '/c/add', function() {
-		this.append(ajax_form('Add contest', '/api/contest/add',
-			Form.field_group("Contest's name", {
+function append_create_contest(elem, as_modal) {
+	elem.append(ajax_form('Create contest', '/api/contest/create',
+		Form.field_group("Contest's name", {
+			type: 'text',
+			name: 'name',
+			size: 24,
+			// maxlength: 'TODO...',
+			required: true
+		}).add(logged_user_is_admin() ? Form.field_group('Make public', {
+			type: 'checkbox',
+			name: 'public'
+		}) : $()).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Create'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Created');
+				view_contest(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/c' + resp;
+			}
+		})
+	);
+}
+function append_clone_contest(elem, as_modal) {
+	var source_contest_input = $('<input>', {
+		type: 'hidden',
+		name: 'source_contest'
+	});
+
+	elem.append(ajax_form('Clone contest', '/api/contest/clone',
+		Form.field_group("Contest's name", {
+			type: 'text',
+			name: 'name',
+			size: 24,
+			// maxlength: 'TODO...',
+		}).add(source_contest_input
+		).add(Form.field_group("Contest to clone (ID or URL)",
+			$('<input>', {
 				type: 'text',
-				name: 'name',
-				size: 24,
-				// maxlength: 'TODO...',
 				required: true
-			}).add(logged_user_is_admin() ? Form.field_group('Make public', {
-				type: 'checkbox',
-				name: 'public'
-			}) : $()).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Add'
-				})
-			}), function(resp) {
-				if (as_modal) {
-					show_success_via_loader(this, 'Added');
-					view_contest(true, resp);
+			}).on('input', function () {
+				var val = $(this).val();
+				if (!isNaN(val)) {
+					source_contest_input.val(val);
 				} else {
-					this.parent().remove();
-					window.location.href = '/c/c' + resp;
+					// Assume that input is an URL
+					var match = val.match(/\/c(\d+)\b/);
+					if (match != null)
+						source_contest_input.val(match[1]);
+					else
+						source_contest_input.val(''); // unset on invalid value
 				}
 			})
-		);
+		)).add(logged_user_is_admin() ? Form.field_group('Make public', {
+			type: 'checkbox',
+			name: 'public'
+		}) : $()).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Clone'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Cloned');
+				view_contest(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/c' + resp;
+			}
+		})
+	);
+}
+function add_contest(as_modal, opt_hash /*= undefined*/) {
+	view_base(as_modal, '/c/add' + (opt_hash === undefined ? '' : opt_hash), function() {
+		this.append($('<h1>', {
+			class: 'align-center',
+			text: 'Add contest'
+		}));
+
+		tabmenu(default_tabmenu_attacher.bind(this), [
+			'Create new', append_create_contest.bind(null, this, as_modal),
+			'Clone existing', append_clone_contest.bind(null, this, as_modal),
+		]);
 	});
 }
 function add_contest_round(as_modal, contest_id) {

@@ -1,5 +1,10 @@
 #include <sim/constants.h>
+#include <sim/contest.hh>
+#include <sim/contest_problem.hh>
+#include <sim/contest_round.hh>
+#include <sim/contest_user.hh>
 #include <sim/mysql.h>
+#include <sim/user.hh>
 #include <simlib/filesystem.h>
 #include <simlib/random.h>
 #include <simlib/sha.h>
@@ -157,16 +162,19 @@ int main(int argc, char** argv) {
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 	// clang-format on
 
+	using sim::User;
 	// clang-format off
 	try_to_create_table("users", intentionalUnsafeStringView(concat(
 		"CREATE TABLE IF NOT EXISTS `users` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`username` VARBINARY(", USERNAME_MAX_LEN, ") NOT NULL,"
-			"`first_name` VARBINARY(", USER_FIRST_NAME_MAX_LEN, ") NOT NULL,"
-			"`last_name` VARBINARY(", USER_LAST_NAME_MAX_LEN, ") NOT NULL,"
-			"`email` VARBINARY(", USER_EMAIL_MAX_LEN, ") NOT NULL,"
-			"`salt` BINARY(", SALT_LEN, ") NOT NULL,"
-			"`password` BINARY(", PASSWORD_HASH_LEN, ") NOT NULL,"
+			"`username` VARBINARY(", decltype(User::username)::max_len, ") NOT NULL,"
+			"`first_name` VARBINARY(", decltype(User::first_name)::max_len, ") NOT NULL,"
+			"`last_name` VARBINARY(", decltype(User::last_name)::max_len, ") NOT NULL,"
+			"`email` VARBINARY(", decltype(User::email)::max_len, ") NOT NULL,"
+			// TODO: rename to password_salt
+			"`salt` BINARY(", decltype(User::salt)::max_len, ") NOT NULL,"
+			// TODO: rename to password_hash
+			"`password` BINARY(", decltype(User::password)::max_len, ") NOT NULL,"
 			"`type` tinyint(1) unsigned NOT NULL DEFAULT " UTYPE_NORMAL_STR ","
 			"PRIMARY KEY (id),"
 			"UNIQUE KEY (username),"
@@ -174,7 +182,7 @@ int main(int argc, char** argv) {
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")),
 		[&] {
 			// Add default user sim with password sim
-			char salt_bin[SALT_LEN >> 1];
+			char salt_bin[decltype(sim::User::salt)::max_len >> 1];
 			fillRandomly(salt_bin, sizeof(salt_bin));
 			string salt = toHex(salt_bin, sizeof(salt_bin));
 
@@ -205,14 +213,15 @@ int main(int argc, char** argv) {
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;")));
 	// clang-format on
 
+	using sim::Problem;
 	// clang-format off
 	try_to_create_table("problems", intentionalUnsafeStringView(concat(
 		"CREATE TABLE IF NOT EXISTS `problems` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`file_id` int unsigned NOT NULL,"
 			"`type` TINYINT NOT NULL,"
-			"`name` VARBINARY(", PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
-			"`label` VARBINARY(", PROBLEM_LABEL_MAX_LEN, ") NOT NULL,"
+			"`name` VARBINARY(", decltype(Problem::name)::max_len, ") NOT NULL,"
+			"`label` VARBINARY(", decltype(Problem::label)::max_len, ") NOT NULL,"
 			"`simfile` mediumblob NOT NULL,"
 			"`owner` int unsigned NULL,"
 			"`added` datetime NOT NULL,"
@@ -237,28 +246,30 @@ int main(int argc, char** argv) {
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 	// clang-format on
 
+	using sim::Contest;
 	// clang-format off
 	try_to_create_table("contests", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contests` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
-			"`name` VARBINARY(", CONTEST_NAME_MAX_LEN, ") NOT NULL,"
+			"`name` VARBINARY(", decltype(Contest::name)::max_len, ") NOT NULL,"
 			"`is_public` BOOLEAN NOT NULL DEFAULT FALSE,"
 			"PRIMARY KEY (id),"
 			"KEY (is_public, id)"
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 	// clang-format on
 
+	using sim::ContestRound;
 	// clang-format off
 	try_to_create_table("contest_rounds", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_rounds` ("
 			"`id` int unsigned NOT NULL AUTO_INCREMENT,"
 			"`contest_id` int unsigned NOT NULL,"
-			"`name` VARBINARY(", CONTEST_ROUND_NAME_MAX_LEN, ") NOT NULL,"
+			"`name` VARBINARY(", decltype(ContestRound::name)::max_len, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
-			"`begins` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
-			"`ends` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
-			"`full_results` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
-			"`ranking_exposure` CHAR(", CONTEST_ROUND_DATETIME_LEN, ") NOT NULL,"
+			"`begins` CHAR(", decltype(ContestRound::begins)::max_len, ") NOT NULL,"
+			"`ends` CHAR(", decltype(ContestRound::ends)::max_len, ") NOT NULL,"
+			"`full_results` CHAR(", decltype(ContestRound::full_results)::max_len, ") NOT NULL,"
+			"`ranking_exposure` CHAR(", decltype(ContestRound::ranking_exposure)::max_len, ") NOT NULL,"
 			"PRIMARY KEY (id),"
 			"KEY (contest_id, ranking_exposure),"
 			"KEY (contest_id, begins),"
@@ -267,6 +278,7 @@ int main(int argc, char** argv) {
 		") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 	// clang-format on
 
+	using sim::ContestProblem;
 	// clang-format off
 	try_to_create_table("contest_problems", intentionalUnsafeStringView(
 		concat("CREATE TABLE IF NOT EXISTS `contest_problems` ("
@@ -274,7 +286,7 @@ int main(int argc, char** argv) {
 			"`contest_round_id` int unsigned NOT NULL,"
 			"`contest_id` int unsigned NOT NULL,"
 			"`problem_id` int unsigned NOT NULL,"
-			"`name` VARBINARY(", CONTEST_PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
+			"`name` VARBINARY(", decltype(ContestProblem::name)::max_len, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
 			"`final_selecting_method` TINYINT NOT NULL,"
 			"`score_revealing` TINYINT NOT NULL,"

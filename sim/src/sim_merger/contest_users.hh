@@ -3,19 +3,16 @@
 #include "contests.hh"
 #include "users.hh"
 
-struct ContestUser {
-	ContestUserId id;
-	EnumVal<ContestUserMode> mode;
-};
+#include <sim/contest_user.hh>
 
-class ContestUsersMerger : public Merger<ContestUser> {
+class ContestUsersMerger : public Merger<sim::ContestUser> {
 	const UsersMerger& users_;
 	const ContestsMerger& contests_;
 
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
 
-		ContestUser cu;
+		sim::ContestUser cu;
 		auto stmt = conn.prepare("SELECT user_id, contest_id, mode FROM ",
 		                         record_set.sql_table_name);
 		stmt.bindAndExecute();
@@ -32,11 +29,11 @@ class ContestUsersMerger : public Merger<ContestUser> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const ContestUser&) { return nullptr; });
+		Merger::merge([&](const sim::ContestUser&) { return nullptr; });
 	}
 
-	ContestUserId new_id_for_record_to_merge_into_new_records(
-	   const ContestUserId& record_id) override {
+	sim::ContestUser::Id new_id_for_record_to_merge_into_new_records(
+	   const sim::ContestUser::Id& record_id) override {
 		return record_id;
 	}
 
@@ -49,7 +46,7 @@ public:
 		                         "(user_id, contest_id, mode) "
 		                         "VALUES(?, ?, ?)");
 		for (const NewRecord& new_record : new_table_) {
-			const ContestUser& x = new_record.data;
+			const sim::ContestUser& x = new_record.data;
 			stmt.bindAndExecute(x.id.user_id, x.id.contest_id, x.mode);
 		}
 

@@ -10,7 +10,7 @@ INTERNAL_EXTRA_LD_FLAGS = -L '$(CURDIR)/src/lib' -L '$(CURDIR)/src/lib/others' $
 endef
 
 .PHONY: all
-all: src/killinstc src/setup-installation src/backup src/job-server src/sim-server src/sim-merger src/sim-upgrader
+all: src/killinstc src/setup-installation src/backup src/sim-merger src/job-server src/sim-server src/sim-upgrader
 	@printf "\033[32mBuild finished\033[0m\n"
 
 $(eval $(call include_makefile, src/lib/simlib/Makefile))
@@ -99,9 +99,12 @@ run: $(filter-out run, $(MAKECMDGOALS))
 	@printf "\033[;32mRunning finished\033[0m\n"
 
 $(eval $(call add_static_library, src/lib/sim.a, $(SIM_FLAGS), \
+	src/lib/contest_file_permissions.cc \
+	src/lib/contest_permissions.cc \
 	src/lib/cpp_syntax_highlighter.cc \
 	src/lib/jobs.cc \
 	src/lib/mysql.cc \
+	src/lib/problem_permissions.cc \
 	src/lib/random.cc \
 	src/lib/submission.cc \
 ))
