@@ -510,6 +510,7 @@ public:
 			                        // are references
 			execute();
 		}(transform_arg(std::forward<Args>(args))...);
+		(void)transform_arg; // Disable GCC warning
 	}
 
 	// res_bind() need to be called before next()
