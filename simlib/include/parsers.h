@@ -152,7 +152,7 @@ public:
 	CStringView extract_next() noexcept {
 		if (argc_ > 0) {
 			--argc_;
-			return CStringView(argv_++ [0]);
+			return CStringView(argv_++[0]);
 		} else {
 			return {};
 		}

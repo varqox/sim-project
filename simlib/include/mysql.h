@@ -19,8 +19,10 @@
 #if 0
 #warning "Before committing disable this debug"
 #define DEBUG_MYSQL(...) __VA_ARGS__
+#define NO_DEBUG_MYSQL(...)
 #else
 #define DEBUG_MYSQL(...)
+#define NO_DEBUG_MYSQL(...) __VA_ARGS__
 #endif
 
 template <class...>
@@ -51,7 +53,6 @@ class Optional {
 	StoredType value_; // This optional always need to contain value
 	my_bool has_no_value_;
 
-	template <size_t, size_t>
 	friend class Statement;
 
 public:
@@ -182,17 +183,17 @@ public:
 
 	my_ulonglong rows_num() noexcept { return mysql_num_rows(res_); }
 
-	bool is_null(unsigned idx) ND(noexcept) {
-		D(throw_assert(idx < fields_num());)
+	bool is_null(unsigned idx) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < fields_num());)
 		return (row_[idx] == nullptr);
 	}
 
-	StringView operator[](unsigned idx) ND(noexcept) {
-		D(throw_assert(idx < fields_num());)
+	StringView operator[](unsigned idx) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < fields_num());)
 		return {row_[idx], lengths_[idx]};
 	}
 
-	Optional<StringView> opt(unsigned idx) ND(noexcept) {
+	Optional<StringView> opt(unsigned idx) NO_DEBUG_MYSQL(noexcept) {
 		if (is_null(idx))
 			return {};
 
@@ -200,26 +201,47 @@ public:
 	}
 };
 
-template <size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16>
 class Statement {
 private:
 	friend Connection;
 
-	size_t* connection_referencing_objects_no_;
-	MYSQL_STMT* stmt_;
-	InplaceArray<MYSQL_BIND, STATIC_BINDS> params_;
-	InplaceArray<MYSQL_BIND, STATIC_RESULTS> res_;
+	size_t* connection_referencing_objects_no_ = nullptr;
+	MYSQL_STMT* stmt_ = nullptr;
+
+	size_t binds_size_ = 0;
+	// Needs to be allocated dynamically to keep binds valid after move
+	// construct / assignment
+	std::unique_ptr<MYSQL_BIND[]> binds_;
+
+	size_t res_binds_size_ = 0;
+	// Needs to be allocated dynamically to keep res binds valid after move
+	// construct / assignment
+	std::unique_ptr<MYSQL_BIND[]> res_binds_;
+
 	InplaceArray<std::unique_ptr<char[]>, 8> buffs_;
+
+	void clear_bind(unsigned idx) noexcept {
+		memset(&binds_[idx], 0, sizeof(binds_[idx]));
+	}
+
+	void clear_res_bind(unsigned idx) noexcept {
+		memset(&res_binds_[idx], 0, sizeof(res_binds_[idx]));
+		res_binds_[idx].error = &res_binds_[idx].error_value;
+		res_binds_[idx].is_null = &res_binds_[idx].is_null_value;
+	}
 
 	Statement(MYSQL_STMT* stmt, size_t& conn_ref_objs_no)
 	   : connection_referencing_objects_no_(&conn_ref_objs_no), stmt_(stmt),
-	     params_(mysql_stmt_param_count(stmt)),
-	     res_(mysql_stmt_field_count(stmt)) {
-		for (auto& x : params_)
-			memset(std::addressof(x), 0, sizeof(x));
-		for (auto& x : res_)
-			memset(std::addressof(x), 0, sizeof(x));
-		bind_res_errors_and_nulls();
+	     binds_size_(mysql_stmt_param_count(stmt)),
+	     binds_(std::make_unique<MYSQL_BIND[]>(binds_size_)),
+	     res_binds_size_(mysql_stmt_field_count(stmt)),
+	     res_binds_(std::make_unique<MYSQL_BIND[]>(res_binds_size_)) {
+
+		for (unsigned i = 0; i < binds_size_; ++i)
+			clear_bind(i);
+
+		for (unsigned i = 0; i < res_binds_size_; ++i)
+			clear_res_bind(i);
 
 		++conn_ref_objs_no;
 	}
@@ -227,27 +249,17 @@ private:
 	Statement(const Statement&) = delete;
 	Statement& operator=(const Statement&) = delete;
 
-	void bind_res_errors_and_nulls() noexcept {
-		// Bind errors
-		for (unsigned i = 0; i < res_.size(); ++i)
-			res_[i].error = &res_[i].error_value;
-		// Bind nulls
-		for (unsigned i = 0; i < res_.size(); ++i)
-			res_[i].is_null = &res_[i].is_null_value;
-	}
-
 public:
-	Statement()
-	   : connection_referencing_objects_no_(nullptr), stmt_(nullptr),
-	     params_(0), res_(0) {}
+	Statement() = default;
 
 	Statement(Statement&& s) noexcept
 	   : connection_referencing_objects_no_(
 	        std::exchange(s.connection_referencing_objects_no_, nullptr)),
-	     stmt_(std::exchange(s.stmt_, nullptr)), params_(std::move(s.params_)),
-	     res_(std::move(s.res_)) {
-		bind_res_errors_and_nulls();
-	}
+	     stmt_(std::exchange(s.stmt_, nullptr)),
+	     binds_size_(std::exchange(s.binds_size_, 0)),
+	     binds_(std::move(s.binds_)),
+	     res_binds_size_(std::exchange(s.res_binds_size_, 0)),
+	     res_binds_(std::move(s.res_binds_)) {}
 
 	Statement& operator=(Statement&& s) noexcept {
 		if (stmt_)
@@ -258,9 +270,10 @@ public:
 		connection_referencing_objects_no_ =
 		   std::exchange(s.connection_referencing_objects_no_, nullptr);
 		stmt_ = std::exchange(s.stmt_, nullptr);
-		params_ = std::move(s.params_);
-		res_ = std::move(s.res_);
-		bind_res_errors_and_nulls();
+		binds_size_ = std::exchange(s.binds_size_, 0);
+		binds_ = std::move(s.binds_);
+		res_binds_size_ = std::exchange(s.res_binds_size_, 0);
+		res_binds_ = std::move(s.res_binds_);
 
 		return *this;
 	}
@@ -279,164 +292,166 @@ public:
 
 	// bind() need to be called before execute()
 public:
-	void bind(unsigned idx, signed char& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_TINY;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = false;
+	void bind(unsigned idx, signed char& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_TINY;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned char& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_TINY;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = true;
+	void bind(unsigned idx, unsigned char& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_TINY;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, short& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_SHORT;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = false;
+	void bind(unsigned idx, short& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_SHORT;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned short& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_SHORT;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = true;
+	void bind(unsigned idx, unsigned short& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_SHORT;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, int& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_LONG;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = false;
+	void bind(unsigned idx, int& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_LONG;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned int& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_LONG;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = true;
+	void bind(unsigned idx, unsigned int& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_LONG;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, long long& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = false;
+	void bind(unsigned idx, long long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned long long& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = true;
+	void bind(unsigned idx, unsigned long long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = true;
 	}
 
-	void bind(unsigned idx, long& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
+	void bind(unsigned idx, long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
 		static_assert(sizeof(long) == sizeof(int) or
 		              sizeof(long) == sizeof(long long));
-		params_[idx].buffer_type =
+		binds_[idx].buffer_type =
 		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = false;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = false;
 	}
 
-	void bind(unsigned idx, unsigned long& x) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
+	void bind(unsigned idx, unsigned long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
 		static_assert(sizeof(long) == sizeof(int) or
 		              sizeof(long) == sizeof(long long));
-		params_[idx].buffer_type =
+		binds_[idx].buffer_type =
 		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
-		params_[idx].buffer = &x;
-		params_[idx].is_unsigned = true;
+		binds_[idx].buffer = &x;
+		binds_[idx].is_unsigned = true;
 	}
 
 	void bind(unsigned idx, char* str, size_t& length, size_t max_size)
-	   ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
-		params_[idx].buffer = str;
-		params_[idx].buffer_length = max_size;
-		params_[idx].length = &length;
+	   NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
+		binds_[idx].buffer = str;
+		binds_[idx].buffer_length = max_size;
+		binds_[idx].length = &length;
 	}
 
 private:
-	void bind(unsigned idx, char* str) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
+	void bind(unsigned idx, char* str) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
 		auto len = std::char_traits<char>::length(str);
-		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
-		params_[idx].buffer = str;
-		params_[idx].buffer_length = len;
-		params_[idx].length = nullptr;
-		params_[idx].length_value = len;
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
+		binds_[idx].buffer = str;
+		binds_[idx].buffer_length = len;
+		binds_[idx].length = nullptr;
+		binds_[idx].length_value = len;
 	}
 
 public:
-	void bind(unsigned idx, StringBase<char> str) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_BLOB;
-		params_[idx].buffer = str.data();
-		params_[idx].buffer_length = str.size();
-		params_[idx].length = nullptr;
-		params_[idx].length_value = str.size();
+	void bind(unsigned idx, StringBase<char> str) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
+		binds_[idx].buffer = str.data();
+		binds_[idx].buffer_length = str.size();
+		binds_[idx].length = nullptr;
+		binds_[idx].length_value = str.size();
 	}
 
 	// Like bind(StringView) but copies string into internal buffer - useful
 	// for temporary strings
-	void bind_copy(unsigned idx, StringView str) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		if (str.size()) {
-			auto ptr = std::make_unique<char[]>(str.size());
-			std::copy(str.begin(), str.end(), ptr.get());
-			str = StringView(ptr.get(), str.size());
-			buffs_.emplace_back(std::move(ptr));
-		}
+	void bind_copy(unsigned idx, StringView str) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		auto ptr = std::make_unique<char[]>(str.size() + str.empty());
+		//                            Avoid 0-size allocation ^
+		std::copy(str.begin(), str.end(), ptr.get());
+		StringBase<char> saved_str = {ptr.get(), str.size()};
+		buffs_.emplace_back(std::move(ptr));
 
-		bind(idx, str);
+		bind(idx, saved_str.data());
 	}
 
 	template <class T,
 	          std::enable_if_t<not std::is_lvalue_reference_v<T>, int> = 0>
 	void bind(unsigned idx, T&&) = delete; // Temporaries are NOT safe
 
-	void bind(unsigned idx, std::nullptr_t) ND(noexcept) { null_column(idx); }
-
-	void null_column(unsigned idx) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].buffer_type = MYSQL_TYPE_NULL;
-	}
-
-	template <class T,
-	          std::enable_if_t<not std::is_lvalue_reference_v<T>, int> = 0>
-	void bind_isnull(unsigned idx, T&&) = delete; // Temporaries are NOT safe
-
-	void bind_isnull(unsigned idx, my_bool& is_null) ND(noexcept) {
-		D(throw_assert(idx < params_.size());)
-		params_[idx].is_null = &is_null;
+	void bind(unsigned idx, std::nullptr_t) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < binds_size_);)
+		clear_bind(idx);
+		binds_[idx].buffer_type = MYSQL_TYPE_NULL;
 	}
 
 private: // For use only by bindAndExecute()
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
 	template <class T>
-	void bind(unsigned idx, std::optional<T>& x) ND(noexcept) {
+	void bind(unsigned idx, std::optional<T>& x) NO_DEBUG_MYSQL(noexcept) {
 		if (x.has_value())
 			bind(idx, *x);
 		else
-			null_column(idx);
+			bind(idx, nullptr);
 	}
 
 public:
 	template <class T>
-	void bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
+	void bind(unsigned idx, EnumVal<T>& x) NO_DEBUG_MYSQL(noexcept) {
 		bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
 	}
 
 	void fixBinds() {
-		if (mysql_stmt_bind_param(stmt_, params_.data()))
+		if (mysql_stmt_bind_param(stmt_, binds_.get()))
 			THROW(mysql_stmt_error(stmt_));
 	}
 
@@ -498,122 +513,128 @@ public:
 	}
 
 	// res_bind() need to be called before next()
-	void res_bind(unsigned idx, signed char& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_TINY;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = false;
+	void res_bind(unsigned idx, signed char& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_TINY;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = false;
 	}
 
-	void res_bind(unsigned idx, unsigned char& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_TINY;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = true;
+	void res_bind(unsigned idx, unsigned char& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_TINY;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = true;
 	}
 
-	void res_bind(unsigned idx, short& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_SHORT;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = false;
+	void res_bind(unsigned idx, short& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_SHORT;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = false;
 	}
 
-	void res_bind(unsigned idx, unsigned short& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_SHORT;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = true;
+	void res_bind(unsigned idx, unsigned short& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_SHORT;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = true;
 	}
 
-	void res_bind(unsigned idx, int& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_LONG;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = false;
+	void res_bind(unsigned idx, int& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_LONG;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = false;
 	}
 
-	void res_bind(unsigned idx, unsigned int& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_LONG;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = true;
+	void res_bind(unsigned idx, unsigned int& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_LONG;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = true;
 	}
 
-	void res_bind(unsigned idx, long long& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = false;
+	void res_bind(unsigned idx, long long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = false;
 	}
 
-	void res_bind(unsigned idx, unsigned long long& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = true;
+	void res_bind(unsigned idx, unsigned long long& x)
+	   NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_LONGLONG;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = true;
 	}
 
-	void res_bind(unsigned idx, long& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
+	void res_bind(unsigned idx, long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
 		static_assert(sizeof(long) == sizeof(int) or
 		              sizeof(long) == sizeof(long long));
-		res_[idx].buffer_type =
+		res_binds_[idx].buffer_type =
 		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = false;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = false;
 	}
 
-	void res_bind(unsigned idx, unsigned long& x) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
+	void res_bind(unsigned idx, unsigned long& x) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
 		static_assert(sizeof(long) == sizeof(int) or
 		              sizeof(long) == sizeof(long long));
-		res_[idx].buffer_type =
+		res_binds_[idx].buffer_type =
 		   (sizeof(x) == sizeof(int) ? MYSQL_TYPE_LONG : MYSQL_TYPE_LONGLONG);
-		res_[idx].buffer = &x;
-		res_[idx].is_unsigned = true;
+		res_binds_[idx].buffer = &x;
+		res_binds_[idx].is_unsigned = true;
 	}
 
 	template <size_t BUFF_SIZE>
-	void res_bind(unsigned idx, InplaceBuff<BUFF_SIZE>& buff) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
+	void res_bind(unsigned idx, InplaceBuff<BUFF_SIZE>& buff)
+	   NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
 		static_assert(
 		   std::is_base_of<InplaceBuffBase, InplaceBuff<BUFF_SIZE>>::value,
 		   "Needed by next()");
-		res_[idx].buffer_type = MYSQL_TYPE_BLOB;
-		res_[idx].buffer = buff.data();
-		res_[idx].buffer_length = buff.max_size();
-		res_[idx].length = &buff.size;
+		res_binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
+		res_binds_[idx].buffer = buff.data();
+		res_binds_[idx].buffer_length = buff.max_size();
+		res_binds_[idx].length = &buff.size;
 	}
 
-	void res_bind(unsigned idx, std::nullptr_t) ND(noexcept) {
-		res_null_column(idx);
-	}
-
-	void res_null_column(unsigned idx) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].buffer_type = MYSQL_TYPE_NULL;
-	}
-
-	void res_bind_isnull(unsigned idx, my_bool& is_null) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		res_[idx].is_null = &is_null;
+	void res_bind(unsigned idx, std::nullptr_t) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		clear_res_bind(idx);
+		res_binds_[idx].buffer_type = MYSQL_TYPE_NULL;
 	}
 
 	/// Binds optional value @p x - std::nullopt corresponds to NULL
 	template <class T>
-	void res_bind(unsigned idx, MySQL::Optional<T>& x) ND(noexcept) {
+	void res_bind(unsigned idx, MySQL::Optional<T>& x)
+	   NO_DEBUG_MYSQL(noexcept) {
 		res_bind(idx, x.value_);
-		res_bind_isnull(idx, x.has_no_value_);
+		res_binds_[idx].is_null = &x.has_no_value_;
 	}
 
 	template <class T>
-	void res_bind(unsigned idx, EnumVal<T>& x) ND(noexcept) {
+	void res_bind(unsigned idx, EnumVal<T>& x) NO_DEBUG_MYSQL(noexcept) {
 		res_bind(idx, static_cast<typename EnumVal<T>::ValType&>(x));
 	}
 
 	void resFixBinds() {
-		if (mysql_stmt_bind_result(stmt_, res_.data()))
+		if (mysql_stmt_bind_result(stmt_, res_binds_.get()))
 			THROW(mysql_stmt_error(stmt_));
 	}
 
@@ -624,15 +645,30 @@ public:
 		resFixBinds();
 	}
 
-	bool is_null(unsigned idx) ND(noexcept) {
-		D(throw_assert(idx < res_.size());)
-		return *res_[idx].is_null;
+	bool is_null(unsigned idx) NO_DEBUG_MYSQL(noexcept) {
+		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
+		if (res_binds_[idx].buffer_type == MYSQL_TYPE_NULL)
+			return true;
+
+		return (res_binds_[idx].is_null and *res_binds_[idx].is_null);
 	}
 
 	bool next() {
 		int rc = mysql_stmt_fetch(stmt_);
-		if (rc == 0)
+		if (rc == 0) {
+			// Check for unexpected nulls
+			for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
+				auto is_null = res_binds_[idx].is_null;
+				if (is_null and *is_null and
+				    is_null == &res_binds_[idx].is_null_value) {
+					THROW("Encountered NULL at column ", idx,
+					      " that did not expect nullable data");
+				}
+			}
+
 			return true;
+		}
+
 		if (rc == MYSQL_NO_DATA) {
 			mysql_stmt_free_result(stmt_);
 			return false;
@@ -642,21 +678,21 @@ public:
 			THROW(mysql_stmt_error(stmt_));
 
 		// Truncation occurred
-		for (unsigned i = 0; i < res_.size(); ++i) {
-			if (not*res_[i].error)
+		for (unsigned i = 0; i < res_binds_size_; ++i) {
+			if (not*res_binds_[i].error)
 				continue;
 
-			if (res_[i].buffer_type != MYSQL_TYPE_BLOB)
+			if (res_binds_[i].buffer_type != MYSQL_TYPE_BLOB)
 				THROW("Truncated data at column ", i);
 
 			InplaceBuffBase* buff = reinterpret_cast<InplaceBuffBase*>(
-			   (int8_t*)res_[i].length - offsetof(InplaceBuffBase, size));
+			   (int8_t*)res_binds_[i].length - offsetof(InplaceBuffBase, size));
 			buff->lossy_resize(buff->size);
 
-			res_[i].buffer = buff->data();
-			res_[i].buffer_length = buff->max_size();
+			res_binds_[i].buffer = buff->data();
+			res_binds_[i].buffer_length = buff->max_size();
 
-			if (mysql_stmt_fetch_column(stmt_, &res_[i], i, 0))
+			if (mysql_stmt_fetch_column(stmt_, &res_binds_[i], i, 0))
 				THROW(mysql_stmt_error(stmt_));
 		}
 
@@ -886,9 +922,8 @@ public:
 		                                   sql_str.data(), sql_str.size);
 	}
 
-	template <size_t STATIC_BINDS = 16, size_t STATIC_RESULTS = 16,
-	          class... Args>
-	Statement<STATIC_BINDS, STATIC_RESULTS> prepare(Args&&... sql) {
+	template <class... Args>
+	Statement prepare(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);
 		DEBUG_MYSQL(errlog("MySQL (connection ", connection_id,
