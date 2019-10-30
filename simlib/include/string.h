@@ -1099,13 +1099,13 @@ public:
 		}
 	}
 
-	template <size_t M>
+	template <size_t M, std::enable_if_t<M != N, int> = 0>
 	constexpr InplaceBuff(const InplaceBuff<M>& ibuff)
 	   : InplaceBuff(ibuff.size) {
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
-	template <size_t M>
+	template <size_t M, std::enable_if_t<M != N, int> = 0>
 	constexpr InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
 	   : InplaceBuffBase(ibuff.size, N, ibuff.p_) {
 		if (ibuff.size <= N) {
@@ -1146,7 +1146,7 @@ public:
 		return *this;
 	}
 
-	template <size_t M>
+	template <size_t M, std::enable_if_t<M != N, int> = 0>
 	constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
 		lossy_resize(ibuff.size);
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
@@ -1184,7 +1184,7 @@ public:
 		return assign_move_impl(std::move(ibuff));
 	}
 
-	template <size_t M>
+	template <size_t M, std::enable_if_t<M != N, int> = 0>
 	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
 		return assign_move_impl(std::move(ibuff));
 	}
