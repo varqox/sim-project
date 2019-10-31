@@ -439,7 +439,7 @@ void Sim::api_contest_round(StringView contest_round_id) {
 
 	auto& [contest, contest_perms] = contest_opt.value();
 	if (uint(~contest_perms & sim::contest::Permissions::VIEW))
-		return api_error403(); // Could not participate
+		return api_error403();
 
 	optional<ContestRound> contest_round_opt;
 	sim::contest_round::iterate(
@@ -447,8 +447,9 @@ void Sim::api_contest_round(StringView contest_round_id) {
 	   contest_round_id, contest_perms, curr_date,
 	   [&](const ContestRound& cr) { contest_round_opt = cr; });
 
-	if (not contest_round_opt)
-		return api_error403(); // User has no access to the round
+	if (not contest_round_opt) {
+		return error500(); // Contest round have to exist after successful sim::contest::get()
+	}
 
 	auto& contest_round = contest_round_opt.value();
 
@@ -514,7 +515,7 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 
 	auto& [contest, contest_perms] = contest_opt.value();
 	if (uint(~contest_perms & sim::contest::Permissions::VIEW))
-		return api_error403(); // Could not participate
+		return api_error403();
 
 	optional<pair<ContestProblem, sim::contest_problem::ExtraIterateData>>
 	   contest_problem_info;
@@ -529,8 +530,9 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 		   contest_problem_info.emplace(contest_problem, extra_data);
 	   });
 
-	if (not contest_problem_info)
-		return api_error403(); // User has no access to the problem
+	if (not contest_problem_info) {
+		return error500(); // Contest problem have to exist after successful sim::contest::get()
+	}
 
 	auto& [contest_problem, contest_problem_extra_data] =
 	   contest_problem_info.value();
@@ -651,17 +653,20 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	auto transaction = mysql.start_transaction();
 	auto curr_date = mysql_date();
 
-	auto contest_opt = sim::contest::get(
+	auto source_contest_opt = sim::contest::get(
 	   mysql, sim::contest::GetIdKind::CONTEST, source_contest_id,
 	   (session_is_open ? optional {session_user_id} : std::nullopt),
 	   curr_date);
-	if (not contest_opt)
-		return api_error404();
-
-	auto& [source_contest, source_contest_perms] = contest_opt.value();
-	if (uint(~source_contest_perms & sim::contest::Permissions::VIEW))
+	if (not source_contest_opt) {
 		return api_error404(
 		   "There is no contest with this id that you can clone");
+	}
+
+	auto& [source_contest, source_contest_perms] = source_contest_opt.value();
+	if (uint(~source_contest_perms & sim::contest::Permissions::VIEW)) {
+		return api_error404(
+		   "There is no contest with this id that you can clone");
+	}
 
 	// Collect contest rounds to clone
 	std::map<decltype(ContestRound::item), ContestRound> contest_rounds;
@@ -676,7 +681,7 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	         ContestProblem>
 	   contest_problems;
 
-	std::optional<ContestProblem> unclonable_contest_problem;
+	optional<ContestProblem> unclonable_contest_problem;
 	sim::contest_problem::iterate(
 	   mysql, sim::contest_problem::IterateIdKind::CONTEST, source_contest_id,
 	   source_contest_perms,
@@ -709,8 +714,8 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	{
 		decltype(ContestRound::item) new_item = 0;
 		for (auto& [item, cr] : contest_rounds) {
-			cr.contest_id = new_contest_id;
 			cr.item = new_item++;
+			cr.contest_id = new_contest_id;
 		}
 	}
 
