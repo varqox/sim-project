@@ -4309,7 +4309,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		// Problem buttons
 		else if (id_for_api[0] === 'p')
 			header.append($('<div>', {html: [
-				a_view_button('/p/' + problems[0].problem_id, 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0].problem_id)),
+				(problems[0].can_view_problem ? a_view_button('/p/' + problems[0].problem_id, 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0].problem_id)) : ''),
 				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0].id + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problems[0].id))),
 				(actions.indexOf('A') === -1 ? '' :
 					$('<a>', {

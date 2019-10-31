@@ -142,6 +142,7 @@ public:
 		              "\"id\","
 		              "\"round_id\","
 		              "\"problem_id\","
+		              "\"can_view_problem\","
 		              "\"problem_label\","
 		              "\"name\","
 		              "\"item\","
@@ -192,6 +193,7 @@ public:
 		   "\n[", cp.id, ',',
 		   cp.contest_round_id, ',',
 		   cp.problem_id, ',',
+		   (uint(extra_data.problem_perms & sim::problem::Permissions::VIEW) ? "true," : "false,"),
 		   jsonStringify(extra_data.problem_label), ',',
 		   jsonStringify(cp.name), ',',
 		   cp.item, ',',
