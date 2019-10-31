@@ -388,9 +388,12 @@ void Sim::api_contest() {
 	} else if (next_arg == "delete") {
 		transaction.rollback(); // We only read data...
 		return api_contest_delete(contest_id, contest_perms);
-	} else if (next_arg == "add_round") {
+	} else if (next_arg == "create_round") {
 		transaction.rollback(); // We only read data...
-		return api_contest_round_add(contest_id, contest_perms);
+		return api_contest_round_create(contest_id, contest_perms);
+	} else if (next_arg == "clone_round") {
+		transaction.rollback(); // We only read data...
+		return api_contest_round_clone(contest_id, contest_perms);
 	} else if (not next_arg.empty()) {
 		transaction.rollback(); // We only read data...
 		return api_error400();
@@ -448,7 +451,8 @@ void Sim::api_contest_round(StringView contest_round_id) {
 	   [&](const ContestRound& cr) { contest_round_opt = cr; });
 
 	if (not contest_round_opt) {
-		return error500(); // Contest round have to exist after successful sim::contest::get()
+		return error500(); // Contest round have to exist after successful
+		                   // sim::contest::get()
 	}
 
 	auto& contest_round = contest_round_opt.value();
@@ -531,7 +535,8 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 	   });
 
 	if (not contest_problem_info) {
-		return error500(); // Contest problem have to exist after successful sim::contest::get()
+		return error500(); // Contest problem have to exist after successful
+		                   // sim::contest::get()
 	}
 
 	auto& [contest_problem, contest_problem_extra_data] =
@@ -672,9 +677,8 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	std::map<decltype(ContestRound::item), ContestRound> contest_rounds;
 	sim::contest_round::iterate(
 	   mysql, sim::contest_round::IterateIdKind::CONTEST, source_contest_id,
-	   source_contest_perms, curr_date, [&](const ContestRound& cr) {
-		   contest_rounds.emplace(cr.item, cr);
-	   });
+	   source_contest_perms, curr_date,
+	   [&](const ContestRound& cr) { contest_rounds.emplace(cr.item, cr); });
 
 	// Collect contest problems to clone
 	std::map<pair<decltype(ContestRound::id), decltype(ContestProblem::item)>,
@@ -820,8 +824,8 @@ void Sim::api_contest_delete(StringView contest_id,
 	append(stmt.insert_id());
 }
 
-void Sim::api_contest_round_add(StringView contest_id,
-                                sim::contest::Permissions perms) {
+void Sim::api_contest_round_create(StringView contest_id,
+                                   sim::contest::Permissions perms) {
 	STACK_UNWINDING_MARK;
 
 	if (uint(~perms & sim::contest::Permissions::ADMIN))
@@ -856,6 +860,131 @@ void Sim::api_contest_round_add(StringView contest_id,
 	   inf_timestamp_to_InfDatetime(ranking_expo).to_str(), contest_id);
 
 	append(stmt.insert_id());
+}
+
+void Sim::api_contest_round_clone(StringView contest_id,
+                                  sim::contest::Permissions perms) {
+	STACK_UNWINDING_MARK;
+
+	if (uint(~perms & sim::contest::Permissions::ADMIN))
+		return api_error403();
+
+	// Validate fields
+	StringView source_contest_round_id;
+	form_validate_not_blank(source_contest_round_id, "source_contest_round",
+	                        "ID of the contest round to clone");
+
+	CStringView name, begins, ends, full_results, ranking_expo;
+	form_validate(name, "name", "Round's name",
+	              decltype(ContestRound::name)::max_len);
+	form_validate_not_blank(begins, "begins", "Begin time",
+	                        is_safe_inf_timestamp);
+	form_validate_not_blank(ends, "ends", "End time", is_safe_inf_timestamp);
+	form_validate_not_blank(full_results, "full_results", "Full results time",
+	                        is_safe_inf_timestamp);
+	form_validate_not_blank(ranking_expo, "ranking_expo", "Show ranking since",
+	                        is_safe_inf_timestamp);
+
+	if (notifications.size)
+		return api_error400(notifications);
+
+	auto transaction = mysql.start_transaction();
+	auto curr_date = mysql_date();
+
+	auto source_contest_opt = sim::contest::get(
+	   mysql, sim::contest::GetIdKind::CONTEST_ROUND, source_contest_round_id,
+	   (session_is_open ? optional {session_user_id} : std::nullopt),
+	   curr_date);
+	if (not source_contest_opt) {
+		return api_error404(
+		   "There is no contest round with this id that you can clone");
+	}
+
+	auto& [source_contest, source_contest_perms] = source_contest_opt.value();
+	if (uint(~source_contest_perms & sim::contest::Permissions::VIEW)) {
+		return api_error404(
+		   "There is no contest round with this id that you can clone");
+	}
+
+	optional<ContestRound> contest_round_opt;
+	sim::contest_round::iterate(
+	   mysql, sim::contest_round::IterateIdKind::CONTEST_ROUND,
+	   source_contest_round_id, source_contest_perms, curr_date,
+	   [&](const ContestRound& cr) { contest_round_opt = cr; });
+	if (not contest_round_opt) {
+		return error500(); // Contest round have to exist after successful
+		                   // sim::contest::get()
+	}
+
+	auto& contest_round = contest_round_opt.value();
+	contest_round.contest_id = strtoull(contest_id);
+	if (not name.empty())
+		contest_round.name = name;
+	contest_round.begins = inf_timestamp_to_InfDatetime(begins);
+	contest_round.ends = inf_timestamp_to_InfDatetime(ends);
+	contest_round.full_results = inf_timestamp_to_InfDatetime(full_results);
+	contest_round.ranking_exposure = inf_timestamp_to_InfDatetime(ranking_expo);
+
+	// Collect contest problems to clone
+	std::map<decltype(ContestProblem::item), ContestProblem> contest_problems;
+	optional<ContestProblem> unclonable_contest_problem;
+	sim::contest_problem::iterate(
+	   mysql, sim::contest_problem::IterateIdKind::CONTEST_ROUND,
+	   source_contest_round_id, source_contest_perms,
+	   (session_is_open ? optional {strtoull(session_user_id)} : std::nullopt),
+	   (session_is_open ? optional {session_user_type} : std::nullopt),
+	   curr_date,
+	   [&](const ContestProblem& cp,
+	       const sim::contest_problem::ExtraIterateData& extra_data) {
+		   contest_problems.emplace(cp.item, cp);
+		   if (uint(~extra_data.problem_perms &
+		            sim::problem::Permissions::VIEW)) {
+			   unclonable_contest_problem = cp;
+		   }
+	   });
+
+	if (unclonable_contest_problem) {
+		return api_error403(intentionalUnsafeStringView(concat(
+		   "You have no permissions to clone the contest problem with id ",
+		   unclonable_contest_problem->id,
+		   " because you have no permission to attach the problem with id ",
+		   unclonable_contest_problem->problem_id, " to a contest round")));
+	}
+
+	// Add contest round
+	auto stmt = mysql.prepare(
+	   "INSERT contest_rounds(contest_id, name, item, begins, ends,"
+	   " full_results, ranking_exposure) "
+	   "SELECT ?, ?, COALESCE(MAX(item)+1, 0), ?, ?, ?, ? "
+	   "FROM contest_rounds WHERE contest_id=?");
+	stmt.bindAndExecute(contest_id, contest_round.name, contest_round.begins,
+	                    contest_round.ends, contest_round.full_results,
+	                    contest_round.ranking_exposure, contest_id);
+	auto new_round_id = stmt.insert_id();
+
+	// Update contest problems to fit into new contest round
+	{
+		decltype(ContestProblem::item) new_item = 0;
+		for (auto& [item, cp] : contest_problems) {
+			cp.item = new_item++;
+			cp.contest_id = contest_round.contest_id;
+			cp.contest_round_id = new_round_id;
+		}
+	}
+
+	// Add contest problems to the new contest round
+	stmt = mysql.prepare(
+	   "INSERT contest_problems(contest_round_id, contest_id, problem_id, name,"
+	   " item, final_selecting_method, score_revealing) "
+	   "VALUES(?, ?, ?, ?, ?, ?, ?)");
+	for (auto& [key, cp] : contest_problems) {
+		stmt.bindAndExecute(cp.contest_round_id, cp.contest_id, cp.problem_id,
+		                    cp.name, cp.item, cp.final_selecting_method,
+		                    cp.score_revealing);
+	}
+
+	transaction.commit();
+	append(new_round_id);
 }
 
 void Sim::api_contest_round_edit(uintmax_t contest_round_id,

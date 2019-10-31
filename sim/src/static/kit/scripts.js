@@ -3856,39 +3856,106 @@ function add_contest(as_modal, opt_hash /*= undefined*/) {
 		]);
 	});
 }
-function add_contest_round(as_modal, contest_id) {
-	view_base(as_modal, '/c/c' + contest_id + '/add_round', function() {
-		this.append(ajax_form('Add round', '/api/contest/c' + contest_id + '/add_round',
-			Form.field_group("Round's name", {
+function append_create_contest_round(elem, as_modal, contest_id) {
+	elem.append(ajax_form('Create contest round', '/api/contest/c' + contest_id + '/create_round',
+		Form.field_group("Round's name", {
+			type: 'text',
+			name: 'name',
+			size: 25,
+			// maxlength: 'TODO...',
+			required: true
+		}).add(Form.field_group('Begin time',
+			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
+		)).add(Form.field_group('End time',
+			dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
+		)).add(Form.field_group('Full results time',
+			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
+		)).add(Form.field_group('Show ranking since',
+			dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
+		)).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Create'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Created');
+				view_contest_round(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/r' + resp;
+			}
+		})
+	);
+}
+function append_clone_contest_round(elem, as_modal, contest_id) {
+	var source_contest_round_input = $('<input>', {
+		type: 'hidden',
+		name: 'source_contest_round'
+	});
+
+	elem.append(ajax_form('Clone contest round', '/api/contest/c' + contest_id + '/clone_round',
+		Form.field_group("Round's name", {
+			type: 'text',
+			name: 'name',
+			size: 25,
+			// maxlength: 'TODO...',
+			placeholder: "The same as name of the cloned round"
+		}).add(source_contest_round_input
+		).add(Form.field_group("Contest round to clone (ID or URL)",
+			$('<input>', {
 				type: 'text',
-				name: 'name',
-				size: 25,
-				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Begin time',
-				dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
-			)).add(Form.field_group('End time',
-				dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
-			)).add(Form.field_group('Full results time',
-				dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
-			)).add(Form.field_group('Show ranking since',
-				dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
-			)).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Add'
-				})
-			}), function(resp) {
-				if (as_modal) {
-					show_success_via_loader(this, 'Added');
-					view_contest_round(true, resp);
+			}).on('input', function () {
+				var val = $(this).val();
+				if (!isNaN(val)) {
+					source_contest_round_input.val(val);
 				} else {
-					this.parent().remove();
-					window.location.href = '/c/r' + resp;
+					// Assume that input is an URL
+					var match = val.match(/\/r(\d+)\b/);
+					if (match != null)
+						source_contest_round_input.val(match[1]);
+					else
+						source_contest_round_input.val(''); // unset on invalid value
 				}
 			})
-		);
+		)).add(Form.field_group('Begin time',
+			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
+		)).add(Form.field_group('End time',
+			dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
+		)).add(Form.field_group('Full results time',
+			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
+		)).add(Form.field_group('Show ranking since',
+			dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
+		)).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Clone'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Cloned');
+				view_contest_round(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/r' + resp;
+			}
+		})
+	);
+}
+function add_contest_round(as_modal, contest_id, opt_hash /*= undefined*/) {
+	view_base(as_modal, '/c/c' + contest_id + '/add_round' + (opt_hash === undefined ? '' : opt_hash), function() {
+		this.append($('<h1>', {
+			class: 'align-center',
+			text: 'Add contest round'
+		}));
+
+		tabmenu(default_tabmenu_attacher.bind(this), [
+			'Create new', append_create_contest_round.bind(null, this, as_modal, contest_id),
+			'Clone existing', append_clone_contest_round.bind(null, this, as_modal, contest_id),
+		]);
 	});
 }
 function add_contest_problem(as_modal, contest_round_id) {

@@ -183,8 +183,11 @@ class Sim final {
 	void api_contest_delete(StringView contest_id,
 	                        sim::contest::Permissions perms);
 
-	void api_contest_round_add(StringView contest_id,
-	                           sim::contest::Permissions perms);
+	void api_contest_round_create(StringView contest_id,
+	                              sim::contest::Permissions perms);
+
+	void api_contest_round_clone(StringView contest_id,
+	                             sim::contest::Permissions perms);
 
 	void api_contest_round_edit(uintmax_t contest_round_id,
 	                            sim::contest::Permissions perms);
