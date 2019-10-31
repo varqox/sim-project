@@ -8,17 +8,37 @@ namespace sim {
 // Format: YYYY-mm-dd HH:MM:SS | # | @
 class InfDatetimeField : public VarcharField<19> {
 public:
-	using VarcharField::VarcharField;
+	InfDatetimeField() = default;
 
 	constexpr InfDatetimeField(const InfDatetimeField&) = default;
 
 	constexpr InfDatetimeField(InfDatetimeField&&) noexcept = default;
 
-	using VarcharField::operator=;
+	InfDatetimeField(const InfDatetime& dt) : VarcharField(dt.to_str()) {}
+
+	InfDatetimeField(InfDatetime&& dt) : VarcharField(dt.to_str()) {}
+
+	template<class T, std::enable_if_t<std::is_convertible_v<T, StringView>, int> = 0>
+	InfDatetimeField(T&& str) : InfDatetimeField(InfDatetime(std::forward<T>(str))) {}
 
 	InfDatetimeField& operator=(const InfDatetimeField&) = default;
 
 	InfDatetimeField& operator=(InfDatetimeField&&) noexcept = default;
+
+	InfDatetimeField& operator=(const InfDatetime& dt) {
+		VarcharField::operator=(dt.to_str());
+		return *this;
+	}
+
+	InfDatetimeField& operator=(InfDatetime&& dt) {
+		VarcharField::operator=(dt.to_str());
+		return *this;
+	}
+
+	template<class T, std::enable_if_t<std::is_convertible_v<T, StringView>, int> = 0>
+	InfDatetimeField& operator=(T&& str) {
+		return *this = InfDatetime(std::forward<T>(str));
+	}
 
 	InfDatetime as_inf_datetime() { return InfDatetime(to_cstr()); }
 
