@@ -668,7 +668,6 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	sim::contest_round::iterate(
 	   mysql, sim::contest_round::IterateIdKind::CONTEST, source_contest_id,
 	   source_contest_perms, curr_date, [&](const ContestRound& cr) {
-		   errlog("cr: ", cr.id, ' ', cr.begins);
 		   contest_rounds.emplace(cr.item, cr);
 	   });
 
@@ -686,7 +685,6 @@ void Sim::api_contest_clone(sim::contest::OverallPermissions overall_perms) {
 	   curr_date,
 	   [&](const ContestProblem& cp,
 	       const sim::contest_problem::ExtraIterateData& extra_data) {
-		   errlog("cp: ", cp.id, ' ', cp.contest_round_id);
 		   contest_problems.emplace(pair(cp.contest_round_id, cp.item), cp);
 		   if (uint(~extra_data.problem_perms &
 		            sim::problem::Permissions::VIEW)) {
