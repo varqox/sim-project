@@ -9,6 +9,7 @@
 #include <simlib/debug.h>
 #include <simlib/filesystem.h>
 #include <simlib/process.h>
+#include <thread>
 
 using std::string;
 
@@ -173,13 +174,36 @@ int main() {
 	}
 
 	// Bind
-	constexpr int TRIES = 8;
-	for (int try_no = 1; bind(socket_fd, (sockaddr*)&name, sizeof(name));) {
-		errlog("Failed to bind (try ", try_no, ')', errmsg());
-		if (++try_no > TRIES)
-			return 3;
+	constexpr int FAST_SILENT_TRIES = 40;
+	constexpr int SLOW_TRIES = 8;
+	int bound = [&] {
+		auto call_bind = [&] {
+			return bind(socket_fd, (sockaddr*)&name, sizeof(name));
+		};
+		for (int try_no = 1; try_no <= FAST_SILENT_TRIES; ++try_no) {
+			if (try_no > 1) {
+				std::this_thread::sleep_for(
+				   std::chrono::milliseconds(1000 / FAST_SILENT_TRIES));
+			}
 
-		usleep(800000);
+			if (call_bind() == 0)
+				return true;
+		}
+
+		for (int try_no = 1; try_no <= SLOW_TRIES; ++try_no) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(800));
+			if (call_bind() == 0)
+				return true;
+
+			errlog("Failed to bind (try ", try_no, ')', errmsg());
+		}
+
+		return false;
+	}();
+
+	if (not bound) {
+		errlog("Giving up");
+		return 3;
 	}
 
 	if (listen(socket_fd, 10)) {
