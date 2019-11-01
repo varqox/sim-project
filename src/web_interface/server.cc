@@ -80,6 +80,9 @@ int main() {
 		errlog("Failed to change working directory: ", e.what());
 	}
 
+	// Terminate older instances
+	kill_processes_by_exec({getExec(getpid())}, std::chrono::seconds(4), true);
+
 	// Loggers
 	// stdlog (like everything) writes to stderr, so redirect stdout and stderr
 	// to the log file

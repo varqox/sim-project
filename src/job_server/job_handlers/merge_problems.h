@@ -16,6 +16,9 @@ public:
 	   : JobHandler(job_id), problem_id_(problem_id), info_(info) {}
 
 	void run() override final;
+
+private:
+	void run_impl();
 };
 
 } // namespace job_handlers

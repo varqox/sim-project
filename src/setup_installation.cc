@@ -63,11 +63,11 @@ static void parseOptions(int& argc, char** argv) {
 
 constexpr array<meta::string, 13> tables {{
    {"contest_entry_tokens"},
+   {"contest_files"},
    {"contest_problems"},
    {"contest_rounds"},
    {"contest_users"},
    {"contests"},
-   {"files"},
    {"internal_files"},
    {"jobs"},
    {"problem_tags"},
@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
 			"`name` VARBINARY(", CONTEST_PROBLEM_NAME_MAX_LEN, ") NOT NULL,"
 			"`item` int unsigned NOT NULL,"
 			"`final_selecting_method` TINYINT NOT NULL,"
-			"`reveal_score` BOOLEAN NOT NULL,"
+			"`score_revealing` TINYINT NOT NULL,"
 			"PRIMARY KEY (id),"
 			"UNIQUE (contest_round_id, item),"
 			"KEY (contest_id),"
@@ -300,6 +300,40 @@ int main(int argc, char** argv) {
 			"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
 			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin");
+	// clang-format on
+
+	// clang-format off
+	try_to_create_table("contest_files", intentionalUnsafeStringView(concat(
+		"CREATE TABLE IF NOT EXISTS `contest_files` ("
+			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
+			"`file_id` int unsigned NOT NULL,"
+			"`contest_id` int unsigned NOT NULL,"
+			"`name` VARBINARY(", FILE_NAME_MAX_LEN, ") NOT NULL,"
+			"`description` VARBINARY(", FILE_DESCRIPTION_MAX_LEN, ") "
+				"NOT NULL,"
+			"`file_size` bigint unsigned NOT NULL,"
+			"`modified` datetime NOT NULL,"
+			"`creator` int unsigned NULL,"
+			"PRIMARY KEY (id),"
+			"KEY (contest_id, modified),"
+			"FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,"
+			"FOREIGN KEY (creator) REFERENCES users(id) ON DELETE SET NULL"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
+	// clang-format on
+
+	// clang-format off
+	try_to_create_table("contest_entry_tokens", intentionalUnsafeStringView(
+		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
+			"`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
+			"`contest_id` int unsigned NOT NULL,"
+			"`short_token` BINARY(", CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
+			"`short_token_expiration` datetime NULL,"
+			"PRIMARY KEY (token),"
+			"UNIQUE KEY (contest_id),"
+			"UNIQUE KEY (short_token),"
+			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
+		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 	// clang-format on
 
 	// clang-format off
@@ -400,41 +434,6 @@ int main(int argc, char** argv) {
 			"KEY (creator, aux_id, id DESC)"
 			// Foreign keys cannot be used as we want to preserve information
 			// about who created jobs and what the job referred to
-		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
-	// clang-format on
-
-	// clang-format off
-	// TODO: rename to contest_files
-	try_to_create_table("files", intentionalUnsafeStringView(concat(
-		"CREATE TABLE IF NOT EXISTS `files` ("
-			"`id` BINARY(", FILE_ID_LEN, ") NOT NULL,"
-			"`file_id` int unsigned NOT NULL,"
-			"`contest_id` int unsigned NOT NULL,"
-			"`name` VARBINARY(", FILE_NAME_MAX_LEN, ") NOT NULL,"
-			"`description` VARBINARY(", FILE_DESCRIPTION_MAX_LEN, ") "
-				"NOT NULL,"
-			"`file_size` bigint unsigned NOT NULL,"
-			"`modified` datetime NOT NULL,"
-			"`creator` int unsigned NULL,"
-			"PRIMARY KEY (id),"
-			"KEY (contest_id, modified),"
-			"FOREIGN KEY (file_id) REFERENCES internal_files(id) ON DELETE CASCADE,"
-			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE,"
-			"FOREIGN KEY (creator) REFERENCES users(id) ON DELETE SET NULL"
-		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
-	// clang-format on
-
-	// clang-format off
-	try_to_create_table("contest_entry_tokens", intentionalUnsafeStringView(
-		concat("CREATE TABLE IF NOT EXISTS `contest_entry_tokens` ("
-			"`token` BINARY(", CONTEST_ENTRY_TOKEN_LEN, ") NOT NULL,"
-			"`contest_id` int unsigned NOT NULL,"
-			"`short_token` BINARY(", CONTEST_ENTRY_SHORT_TOKEN_LEN, ") NULL,"
-			"`short_token_expiration` datetime NULL,"
-			"PRIMARY KEY (token),"
-			"UNIQUE KEY (contest_id),"
-			"UNIQUE KEY (short_token),"
-			"FOREIGN KEY (contest_id) REFERENCES contests(id) ON DELETE CASCADE"
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")));
 	// clang-format on
 

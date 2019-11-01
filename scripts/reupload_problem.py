@@ -87,7 +87,6 @@ def getproblemId(job_id : str):
             url = item['href']
             return url[url.rfind('/') + 1:] # Return the problem's id
 
-
 ##############################################
 args = [x for x in sys.argv if x[0] != '-']
 if len(args) < 2:
@@ -106,4 +105,3 @@ job_id = ReuploadProblem(problem_path, old_pid)
 
 assert waitJob(job_id) == JobStatus.DONE
 eprint("Done.")
-

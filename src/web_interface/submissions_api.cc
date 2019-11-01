@@ -55,7 +55,7 @@ void Sim::api_submissions() {
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
 	               " u.username, s.problem_id, p.name, s.contest_problem_id,"
-	               " cp.name, cp.final_selecting_method, cp.reveal_score,"
+	               " cp.name, cp.final_selecting_method, cp.score_revealing,"
 	               " s.contest_round_id, r.name, r.full_results, r.ends,"
 	               " s.contest_id, c.name, s.submit_time, s.problem_final,"
 	               " s.contest_final, s.contest_initial_final,"
@@ -84,7 +84,7 @@ void Sim::api_submissions() {
 		CPID,
 		CP_NAME,
 		CP_FSM,
-		REVEAL_SCORE,
+		SCORE_REVEALING,
 		CRID,
 		CR_NAME,
 		FULL_RES,
@@ -222,7 +222,7 @@ void Sim::api_submissions() {
 				                              // to be a valid ID
 				return api_error400();
 
-			} else if (isOneOf(cond_c, '<', '>')) {
+			} else if (is_one_of(cond_c, '<', '>')) {
 				if (id_condition_occurred)
 					return api_error400(
 					   "Submission ID condition specified more than once");
@@ -275,7 +275,7 @@ void Sim::api_submissions() {
 					may_see_problem_final = true;
 				}
 
-			} else if (isOneOf(cond_c, 'C', 'R', 'P')) { // Round's id
+			} else if (is_one_of(cond_c, 'C', 'R', 'P')) { // Round's id
 				if (round_or_problem_condition_occurred)
 					return api_error400("Round or problem ID condition is "
 					                    "specified more than once");
@@ -325,7 +325,7 @@ void Sim::api_submissions() {
 					stmt.bindAndExecute(session_user_id, arg_id);
 
 					MySQL::Optional<EnumVal<CUM>> cu_mode;
-					bool is_public;
+					unsigned char is_public;
 					stmt.res_bind_all(cu_mode, is_public);
 					if (not stmt.next())
 						return set_empty_response();
@@ -397,7 +397,7 @@ void Sim::api_submissions() {
 		bool contest_submission = not res.is_null(CID);
 
 		InfDatetime full_results;
-		if (not contest_submission) // The submission is not in the contest, so
+		if (not contest_submission) // The submission is not in a contest, so
 		                            // full results are visible immediately
 			full_results.set_neg_inf();
 		else
@@ -411,6 +411,9 @@ void Sim::api_submissions() {
 
 		// Submission id
 		append(",\n[", res[SID], ',');
+
+		EnumVal<ScoreRevealingMode> score_revealing(
+		   strtoull(res[SCORE_REVEALING]));
 
 		// Type
 		switch (stype) {
@@ -429,17 +432,40 @@ void Sim::api_submissions() {
 			if (not contest_submission) {
 				subtype_to_show = problem_final_to_subtype();
 			} else {
-				if (selecting_problem_submissions)
+				if (selecting_problem_submissions) {
 					subtype_to_show = problem_final_to_subtype();
-				else if (show_full_results)
-					subtype_to_show =
-					   (is_contest_final ? FINAL
-					                     : selecting_contest_submissions
-					                          ? NORMAL
-					                          : problem_final_to_subtype());
-				else
-					subtype_to_show =
-					   (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
+				} else {
+					switch (score_revealing) {
+					case ScoreRevealingMode::NONE: {
+						subtype_to_show =
+						   (is_contest_initial_final ? INITIAL_FINAL : NORMAL);
+						break;
+					}
+					case ScoreRevealingMode::ONLY_SCORE: {
+						if (show_full_results) {
+							subtype_to_show =
+							   (is_contest_final
+							       ? FINAL
+							       : selecting_contest_submissions
+							            ? NORMAL
+							            : problem_final_to_subtype());
+						} else {
+							subtype_to_show =
+							   (is_contest_initial_final ? INITIAL_FINAL
+							                             : NORMAL);
+						}
+						break;
+					}
+					case ScoreRevealingMode::SCORE_AND_FULL_STATUS: {
+						subtype_to_show =
+						   (is_contest_final ? FINAL
+						                     : selecting_problem_submissions
+						                          ? NORMAL
+						                          : problem_final_to_subtype());
+						break;
+					}
+					}
+				}
 			}
 
 			if (subtype_to_show != FINAL and
@@ -510,14 +536,33 @@ void Sim::api_submissions() {
 		// Submit time
 		append("\"", res[SUBMIT_TIME], "\",");
 
+		bool show_full_status = (show_full_results or [&] {
+			switch (score_revealing) {
+			case ScoreRevealingMode::NONE: return false;
+			case ScoreRevealingMode::ONLY_SCORE: return false;
+			case ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+			}
+
+			return false;
+		}());
+
+		bool show_score = (show_full_results or [&] {
+			switch (score_revealing) {
+			case ScoreRevealingMode::NONE: return false;
+			case ScoreRevealingMode::ONLY_SCORE: return true;
+			case ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+			}
+
+			return false;
+		}());
+
 		// Status: (CSS class, text)
 		append_submission_status(
 		   SubmissionStatus(strtoull(res[INITIAL_STATUS])),
-		   SubmissionStatus(strtoull(res[FINAL_STATUS])), show_full_results);
+		   SubmissionStatus(strtoull(res[FINAL_STATUS])), show_full_status);
 
 		// Score
-		bool reveal_score = strtoull(res[REVEAL_SCORE]);
-		if (not res.is_null(SCORE) and (show_full_results or reveal_score))
+		if (not res.is_null(SCORE) and show_score)
 			append(',', res[SCORE], ',');
 		else
 			append(",null,");
@@ -635,7 +680,7 @@ void Sim::api_submission_add() {
 	StringView next_arg = url_args.extractNextArg();
 	// Load problem id and contest problem id (if specified)
 	StringView problem_id;
-	std::optional<StringView> contest_problem_id;
+	std::optional<InplaceBuff<32>> contest_problem_id;
 	for (; next_arg.size(); next_arg = url_args.extractNextArg()) {
 		if (next_arg[0] == 'p' and isDigit(next_arg.substr(1)) and
 		    problem_id.empty()) {
@@ -685,7 +730,7 @@ void Sim::api_submission_add() {
 		stmt.bindAndExecute(session_user_id, contest_problem_id.value(),
 		                    problem_id);
 
-		bool is_public;
+		unsigned char is_public;
 		InplaceBuff<20> cr_begins_str, cr_ends_str;
 		MySQL::Optional<EnumVal<CUM>> umode;
 		stmt.res_bind_all(contest_id, is_public, contest_round_id,
@@ -717,6 +762,8 @@ void Sim::api_submission_add() {
 		slang = SubmissionLanguage::CPP11;
 	else if (slang_str == "cpp14")
 		slang = SubmissionLanguage::CPP14;
+	else if (slang_str == "cpp17")
+		slang = SubmissionLanguage::CPP17;
 	else if (slang_str == "pascal")
 		slang = SubmissionLanguage::PASCAL;
 	else

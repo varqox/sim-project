@@ -420,7 +420,7 @@ textarea {
   font: inherit; /* 2 */
 }
 
-/* ================================ SIM CSS ================================ */
+/* ================================ Sim CSS ================================ */
 @keyframes spin {
 	0% {
 		 webkit-transform: rotate(0deg);
@@ -437,7 +437,7 @@ textarea {
 .submissions th.time > sup,
 .problems th.added > sup,
 .jobs th.added > sup,
-.files th.time > sup */{
+.contest-files th.time > sup */{
 	width: 3.5em;
 	display: inline-block;
 	text-align: left;
@@ -1887,29 +1887,29 @@ table.contests tr > td:last-child {
 	white-space: pre;
 }
 
-/* Files */
-table.files th.time {
+/* Contest files */
+table.contest-files th.time {
 	min-width: 150px;
 }
-table.files th.name {
+table.contest-files th.name {
 	min-width: 100px;
 }
-table.files th.size {
+table.contest-files th.size {
 	min-width: 7em;
 }
-table.files th.description {
+table.contest-files th.description {
 	min-width: 100px;
 }
-table.files td:nth-child(4) {
+table.contest-files td:nth-child(4) {
 	max-width: 600px;
 	word-wrap: break-word;
 }
-table.files th {
+table.contest-files th {
 	text-align: center;
 	padding: 6px;
 	line-height: 20px;
 }
-table.files td {
+table.contest-files td {
 	padding: 4px 16px 4px 8px;
 	line-height: 20px;
 	border-top: 1px solid #bbb;
@@ -2261,4 +2261,12 @@ input.calendar-input {
 	border-width: 5px;
 	border-style: solid;
 	border-color: #555 transparent transparent transparent;
+}
+
+/* Statement preview */
+object.statement {
+	margin-top: 8px;
+	width: 100%;
+	height: 90vh; /* Fallback */
+	height: calc(100vh - 60px);
 }

@@ -1,5 +1,7 @@
 #include "sim.h"
 
+#include <sim/random.hh>
+
 using std::string;
 
 bool Sim::session_open() {
@@ -65,16 +67,10 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 	   (temporary_session ? TMP_SESSION_MAX_LIFETIME : SESSION_MAX_LIFETIME);
 	auto exp_datetime = mysql_date(exp_time);
 
-	stmt.bind(1, session_csrf_token);
-	stmt.bind(2, user_id);
-	stmt.bind(3, client_ip);
-	stmt.bind(4, user_agent);
-	stmt.bind(5, exp_datetime);
-
 	do {
 		session_id = generate_random_token(SESSION_ID_LEN);
-		stmt.bind(0, session_id);
-		stmt.fixAndExecute();
+		stmt.bindAndExecute(session_id, session_csrf_token, user_id, client_ip,
+		                    user_agent, exp_datetime);
 
 	} while (stmt.affected_rows() == 0);
 

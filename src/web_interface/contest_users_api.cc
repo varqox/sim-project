@@ -200,7 +200,7 @@ void Sim::api_contest_users() {
 				                              // to be a valid ID
 				return api_error400();
 
-			} else if (isOneOf(cond_c, '<', '>', '=')) { // User id
+			} else if (is_one_of(cond_c, '<', '>', '=')) { // User id
 				if (user_id_condition_occurred)
 					return api_error400(
 					   "User ID condition specified more than once");
