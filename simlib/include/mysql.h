@@ -188,8 +188,12 @@ public:
 		return (row_[idx] == nullptr);
 	}
 
-	StringView operator[](unsigned idx) NO_DEBUG_MYSQL(noexcept) {
+	StringView operator[](unsigned idx) {
+		STACK_UNWINDING_MARK;
 		DEBUG_MYSQL(throw_assert(idx < fields_num());)
+		if (is_null(idx))
+			THROW("Encountered NULL at column ", idx, " that did not expect nullable data");
+
 		return {row_[idx], lengths_[idx]};
 	}
 
@@ -655,6 +659,8 @@ public:
 	}
 
 	bool next() {
+		STACK_UNWINDING_MARK;
+
 		int rc = mysql_stmt_fetch(stmt_);
 		if (rc == 0) {
 			// Check for unexpected nulls
