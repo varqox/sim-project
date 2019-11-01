@@ -1,6 +1,7 @@
 #include "sim.h"
 
 using sim::ContestUser;
+using sim::Problem;
 using sim::User;
 
 Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
@@ -18,11 +19,10 @@ Sim::SubmissionPermissions Sim::submissions_get_overall_permissions() noexcept {
 	return PERM::NONE; // Shouldn't happen
 }
 
-Sim::SubmissionPermissions
-Sim::submissions_get_permissions(StringView submission_owner,
-                                 SubmissionType stype,
-                                 std::optional<ContestUser::Mode> cu_mode,
-                                 StringView problem_owner) noexcept {
+Sim::SubmissionPermissions Sim::submissions_get_permissions(
+   std::optional<uintmax_t> submission_owner, SubmissionType stype,
+   std::optional<ContestUser::Mode> cu_mode,
+   decltype(Problem::owner) problem_owner) noexcept {
 	using PERM = SubmissionPermissions;
 	using STYPE = SubmissionType;
 	using CUM = ContestUser::Mode;
@@ -48,22 +48,27 @@ Sim::submissions_get_permissions(StringView submission_owner,
 
 	// This check has to be done as the last one because it gives the least
 	// permissions
-	if (session_user_id == problem_owner) {
+	if (session_is_open and problem_owner and
+	    strtoull(session_user_id) == problem_owner.value()) {
 		if (stype == STYPE::PROBLEM_SOLUTION)
 			return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
 			       PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS |
 			       PERM::REJUDGE;
 
-		if (session_user_id == submission_owner)
+		if (submission_owner and
+		    strtoull(session_user_id) == submission_owner.value()) {
 			return overall_perms | PERM_SUBMISSION_ADMIN;
+		}
 
 		return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
 		       PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS |
 		       PERM::REJUDGE;
 	}
 
-	if (session_user_id == submission_owner)
+	if (session_is_open and submission_owner and
+	    strtoull(session_user_id) == submission_owner.value()) {
 		return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
+	}
 
 	return overall_perms;
 }

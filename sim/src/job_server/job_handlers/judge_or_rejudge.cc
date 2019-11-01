@@ -10,8 +10,8 @@ void JudgeOrRejudge::run() {
 
 	// Gather the needed information about the submission
 	auto stmt = mysql.prepare("SELECT s.file_id, s.language, s.owner,"
-	                          " contest_problem_id, problem_id, last_judgment,"
-	                          " p.file_id, p.last_edit "
+	                          " s.contest_problem_id, s.problem_id,"
+	                          " s.last_judgment, p.file_id, p.last_edit "
 	                          "FROM submissions s, problems p "
 	                          "WHERE p.id=problem_id AND s.id=?");
 	stmt.bindAndExecute(submission_id_);

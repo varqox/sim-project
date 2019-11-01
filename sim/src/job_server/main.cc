@@ -125,7 +125,7 @@ public:
 
 		uint64_t jid;
 		EnumVal<JobType> jtype;
-		uint64_t aux_id;
+		MySQL::Optional<uintmax_t> aux_id;
 		uint priority;
 		InplaceBuff<512> info;
 		// Select jobs
@@ -193,7 +193,7 @@ public:
 					break;
 
 				case JT::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION:
-					queue_job(judge_jobs, aux_id, true);
+					queue_job(judge_jobs, aux_id.value(), true);
 					break;
 
 				// Problem job
@@ -203,7 +203,7 @@ public:
 				case JT::MERGE_PROBLEMS:
 				case JT::CHANGE_PROBLEM_STATEMENT:
 				case JT::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION:
-					queue_job(problem_jobs, aux_id, true);
+					queue_job(problem_jobs, aux_id.value(), true);
 					break;
 
 				// Other job (local jobs that don't have associated problem)

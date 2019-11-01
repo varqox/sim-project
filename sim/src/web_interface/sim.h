@@ -667,11 +667,10 @@ private:
 
 	SubmissionPermissions submissions_get_overall_permissions() noexcept;
 
-	SubmissionPermissions
-	submissions_get_permissions(StringView submission_owner,
-	                            SubmissionType stype,
-	                            std::optional<sim::ContestUser::Mode> cu_mode,
-	                            StringView problem_owner) noexcept;
+	SubmissionPermissions submissions_get_permissions(
+	   std::optional<uintmax_t> submission_owner, SubmissionType stype,
+	   std::optional<sim::ContestUser::Mode> cu_mode,
+	   decltype(sim::Problem::owner) problem_owner) noexcept;
 
 	StringView submissions_sid;
 	uint64_t submissions_file_id;

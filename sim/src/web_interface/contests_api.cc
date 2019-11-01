@@ -1335,7 +1335,8 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 
 	// Gather submissions
 	bool first_owner = true;
-	uint64_t owner, prev_owner;
+	MySQL::Optional<uintmax_t> owner;
+	std::optional<uintmax_t> prev_owner;
 	uint64_t crid, cpid;
 	EnumVal<SubmissionStatus> initial_status, full_status;
 	int64_t score;
@@ -1386,9 +1387,11 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 	   (session_is_open ? strtoull(session_user_id) : 0);
 	bool show_id = false;
 	while (stmt.next()) {
+		throw_assert(owner.has_value() and
+		             (first_owner or prev_owner.has_value()));
 		// Owner changes
-		if (first_owner or owner != prev_owner) {
-			auto it = binaryFind(sowners, SubmissionOwner(owner));
+		if (first_owner or owner.value() != prev_owner.value()) {
+			auto it = binaryFind(sowners, SubmissionOwner(owner.value()));
 			if (it == sowners.end())
 				continue; // Ignore submission as there is no owner to bind it
 				          // to (this maybe a little race condition, but if the
@@ -1405,10 +1408,10 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 
 			prev_owner = owner;
 			show_id = (uint(perms & sim::contest::Permissions::ADMIN) or
-			           (session_is_open and session_uid == owner));
+			           (session_is_open and session_uid == owner.value()));
 			// Owner
 			if (show_id)
-				append(owner);
+				append(owner.value());
 			else
 				append("null");
 			// Owner name

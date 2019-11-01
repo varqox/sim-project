@@ -395,11 +395,14 @@ void Sim::api_submissions() {
 	while (res.next()) {
 		SubmissionType stype = SubmissionType(strtoull(res[STYPE]));
 		SubmissionPermissions perms = submissions_get_permissions(
-		   res[SOWNER], stype,
+		   (res.is_null(SOWNER) ? std::nullopt
+		                        : optional<uintmax_t> {strtoull(res[SOWNER])}),
+		   stype,
 		   (res.is_null(CUMODE)
 		       ? std::nullopt
 		       : std::optional {sim::ContestUser::Mode(strtoull(res[CUMODE]))}),
-		   res[POWNER]);
+		   (res.is_null(POWNER) ? std::nullopt
+		                        : optional<uintmax_t> {strtoull(res[POWNER])}));
 
 		if (perms == PERM::NONE)
 			return set_empty_response();
@@ -422,8 +425,10 @@ void Sim::api_submissions() {
 		// Submission id
 		append(",\n[", res[SID], ',');
 
-		decltype(sim::ContestProblem::score_revealing) score_revealing(
-		   strtoull(res[SCORE_REVEALING]));
+		optional<decltype(sim::ContestProblem::score_revealing)>
+		   score_revealing;
+		if (not res.is_null(SCORE_REVEALING))
+			score_revealing.emplace(strtoull(res[SCORE_REVEALING]));
 
 		// Type
 		switch (stype) {
@@ -456,7 +461,10 @@ void Sim::api_submissions() {
 				} else if (show_full_results) {
 					subtype_to_show = full_results_subtype();
 				} else {
-					switch (score_revealing) {
+					throw_assert(
+					   score_revealing
+					      .has_value()); // This is a contest submission
+					switch (score_revealing.value()) {
 					case ContestProblem::ScoreRevealingMode::NONE:
 					case ContestProblem::ScoreRevealingMode::ONLY_SCORE: {
 						subtype_to_show =
@@ -542,22 +550,28 @@ void Sim::api_submissions() {
 		append("\"", res[SUBMIT_TIME], "\",");
 
 		bool show_full_status = (show_full_results or [&] {
-			switch (score_revealing) {
-			case ContestProblem::ScoreRevealingMode::NONE: return false;
-			case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return false;
-			case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
-				return true;
+			if (score_revealing) {
+				switch (score_revealing.value()) {
+				case ContestProblem::ScoreRevealingMode::NONE: return false;
+				case ContestProblem::ScoreRevealingMode::ONLY_SCORE:
+					return false;
+				case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+					return true;
+				}
 			}
 
 			return false;
 		}());
 
 		bool show_score = (show_full_results or [&] {
-			switch (score_revealing) {
-			case ContestProblem::ScoreRevealingMode::NONE: return false;
-			case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return true;
-			case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
-				return true;
+			if (score_revealing) {
+				switch (score_revealing.value()) {
+				case ContestProblem::ScoreRevealingMode::NONE: return false;
+				case ContestProblem::ScoreRevealingMode::ONLY_SCORE:
+					return true;
+				case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
+					return true;
+				}
 			}
 
 			return false;
@@ -635,7 +649,8 @@ void Sim::api_submission() {
 
 	submissions_sid = next_arg;
 
-	InplaceBuff<32> sowner, p_owner;
+	MySQL::Optional<uintmax_t> sowner;
+	MySQL::Optional<decltype(Problem::owner)::value_type> p_owner;
 	EnumVal<SubmissionType> stype;
 	EnumVal<SubmissionLanguage> slang;
 	MySQL::Optional<decltype(sim::ContestUser::mode)> cu_mode;

@@ -126,7 +126,7 @@ void Sim::api_jobs() {
 			select_specified_job = true;
 			// Get job information to grant permissions
 			EnumVal<JobType> jtype;
-			InplaceBuff<32> aux_id;
+			MySQL::Optional<uintmax_t> aux_id;
 			auto stmt =
 			   mysql.prepare("SELECT type, aux_id FROM jobs WHERE id=?");
 			stmt.bindAndExecute(arg_id);
@@ -135,10 +135,13 @@ void Sim::api_jobs() {
 				return api_error404();
 
 			// Grant permissions if possible
-			if (is_problem_job(jtype))
-				granted_perms |= jobs_granted_permissions_problem(aux_id);
-			else if (is_submission_job(jtype))
-				granted_perms |= jobs_granted_permissions_submission(aux_id);
+			if (is_problem_job(jtype) and aux_id) {
+				granted_perms |= jobs_granted_permissions_problem(
+				   intentionalUnsafeStringView(concat(aux_id.value())));
+			} else if (is_submission_job(jtype) and aux_id) {
+				granted_perms |= jobs_granted_permissions_submission(
+				   intentionalUnsafeStringView(concat(aux_id.value())));
+			}
 			allow_access |= (granted_perms != PERM::NONE);
 
 			if (not allow_access) {
@@ -351,8 +354,8 @@ void Sim::api_jobs() {
 		// Append what buttons to show
 		append('"', actions);
 
-		auto perms = granted_perms |
-		             jobs_get_permissions(res[CREATOR], job_type, job_status);
+		auto perms = granted_perms | jobs_get_permissions(res.opt(CREATOR),
+		                                                  job_type, job_status);
 		if (uint(perms & PERM::VIEW))
 			append('v');
 		if (uint(perms & PERM::DOWNLOAD_LOG))
@@ -397,7 +400,7 @@ void Sim::api_job() {
 
 	MySQL::Optional<uint64_t> file_id;
 	MySQL::Optional<InplaceBuff<32>> jcreator;
-	InplaceBuff<32> aux_id;
+	MySQL::Optional<uintmax_t> aux_id;
 	InplaceBuff<256> jinfo;
 	EnumVal<JT> jtype;
 	EnumVal<JobStatus> jstatus;
@@ -417,10 +420,13 @@ void Sim::api_job() {
 		jobs_perms = jobs_get_permissions(creator, jtype, jstatus);
 	}
 	// Grant permissions if possible
-	if (is_problem_job(jtype))
-		jobs_perms |= jobs_granted_permissions_problem(aux_id);
-	else if (is_submission_job(jtype))
-		jobs_perms |= jobs_granted_permissions_submission(aux_id);
+	if (is_problem_job(jtype) and aux_id) {
+		jobs_perms |= jobs_granted_permissions_problem(
+		   intentionalUnsafeStringView(concat(aux_id.value())));
+	} else if (is_submission_job(jtype) and aux_id) {
+		jobs_perms |= jobs_granted_permissions_submission(
+		   intentionalUnsafeStringView(concat(aux_id.value())));
+	}
 
 	StringView next_arg = url_args.extractNextArg();
 	if (next_arg == "cancel")
