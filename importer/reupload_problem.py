@@ -16,7 +16,7 @@ def eprint(*args, **kwargs):
 global ses
 ses = Session()
 
-host = 'https://10.10.10.10'
+host = 'http://127.7.7.7:8080'
 username = 'sim'
 password = 'sim'
 
