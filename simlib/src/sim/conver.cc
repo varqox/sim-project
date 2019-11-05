@@ -1,10 +1,10 @@
-#include "../../include/sim/conver.h"
-#include "../../include/debug.h"
-#include "../../include/libzip.h"
-#include "../../include/sim/judge_worker.h"
-#include "../../include/sim/problem_package.h"
-#include "../../include/spawner.h"
-#include "../../include/utilities.h"
+#include "../../include/sim/conver.hh"
+#include "../../include/debug.hh"
+#include "../../include/libzip.hh"
+#include "../../include/sim/judge_worker.hh"
+#include "../../include/sim/problem_package.hh"
+#include "../../include/spawner.hh"
+#include "../../include/utilities.hh"
 
 using std::pair;
 using std::string;
@@ -37,7 +37,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	/* Load contents of the package */
 
 	PackageContents pc;
-	if (isDirectory(package_path_)) {
+	if (is_directory(package_path_)) {
 		throw_assert(package_path_.size() > 0);
 		if (package_path_.back() != '/')
 			package_path_ += '/';
@@ -50,13 +50,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	StringView master_dir = pc.master_dir(); // Find master directory if exists
 
 	auto exists_in_pkg = [&](StringView file) {
-		return (not file.empty() and pc.exists(intentionalUnsafeStringView(
+		return (not file.empty() and pc.exists(intentional_unsafe_string_view(
 		                                concat(master_dir, file))));
 	};
 
 	// "utils/" directory is ignored by Conver
 	pc.remove_with_prefix(
-	   intentionalUnsafeStringView(concat(master_dir, "utils/")));
+	   intentional_unsafe_string_view(concat(master_dir, "utils/")));
 
 	// Load the Simfile from the package
 	Simfile sf;
@@ -64,7 +64,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		try {
 			sf = Simfile([&] {
 				if (package_path_.back() == '/')
-					return getFileContents(
+					return get_file_contents(
 					   concat(package_path_, master_dir, "Simfile"));
 
 				ZipFile zip(package_path_, ZIP_RDONLY);
@@ -166,9 +166,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// Exclude check/ and checker/ directories from future searches
 	pc.remove_with_prefix(
-	   intentionalUnsafeStringView(concat(master_dir, "check/")));
+	   intentional_unsafe_string_view(concat(master_dir, "check/")));
 	pc.remove_with_prefix(
-	   intentionalUnsafeStringView(concat(master_dir, "checker/")));
+	   intentional_unsafe_string_view(concat(master_dir, "checker/")));
 
 	// Statement
 	try {
@@ -181,7 +181,8 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		               " Simfile - searching for one");
 
 		auto is_statement = [](StringView file) {
-			return hasSuffixIn(file, {".pdf", ".html", ".htm", ".md", ".txt"});
+			return has_one_of_suffixes(file, ".pdf", ".html", ".htm", ".md",
+			                           ".txt");
 		};
 
 		// Scan doc/ directory
@@ -204,8 +205,8 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			   x.front(),
 			   *std::min_element(x.begin(), x.end(), [](auto&& a, auto&& b) {
 				   return (
-				      pair<bool, size_t>(not hasSuffix(a, ".pdf"), a.size()) <
-				      pair<bool, size_t>(not hasSuffix(b, ".pdf"), b.size()));
+				      pair<bool, size_t>(not has_suffix(a, ".pdf"), a.size()) <
+				      pair<bool, size_t>(not has_suffix(b, ".pdf"), b.size()));
 			   }));
 
 			sf.statement = x.front().substr(master_dir.size()).to_string();
@@ -246,7 +247,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 		// Merge solutions
 		for (auto&& s : x) {
-			s.removePrefix(master_dir.size());
+			s.remove_prefix(master_dir.size());
 			if (solutions_set.emplace(s))
 				solutions.emplace_back(s.to_string());
 		}
@@ -294,12 +295,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	if (opts.seek_for_new_tests)
 		pc.for_each_with_prefix("", [&](StringView entry) {
-			if (hasSuffix(entry, ".in") or
-			    (not sf.interactive and hasSuffix(entry, ".out"))) {
-				entry.removeTrailing([](char c) { return (c != '.'); });
-				entry.removeSuffix(1);
+			if (has_suffix(entry, ".in") or
+			    (not sf.interactive and has_suffix(entry, ".out"))) {
+				entry.remove_trailing([](char c) { return (c != '.'); });
+				entry.remove_suffix(1);
 				StringView name =
-				   entry.extractTrailing([](char c) { return (c != '/'); });
+				   entry.extract_trailing([](char c) { return (c != '/'); });
 
 				tests[name].name = name;
 			}
@@ -307,11 +308,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// Match tests with the test files found in the package
 	pc.for_each_with_prefix("", [&](StringView input) {
-		if (hasSuffix(input, ".in")) {
+		if (has_suffix(input, ".in")) {
 			StringView tname = input;
-			tname.removeSuffix(3);
-			tname = tname.extractTrailing([](char c) { return (c != '/'); });
-			input.removePrefix(master_dir.size());
+			tname.remove_suffix(3);
+			tname = tname.extract_trailing([](char c) { return (c != '/'); });
+			input.remove_prefix(master_dir.size());
 
 			auto& test = tests[tname];
 			if (test.in.has_value()) {
@@ -327,12 +328,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	if (not sf.interactive) {
 		pc.for_each_with_prefix("", [&](StringView output) {
-			if (hasSuffix(output, ".out")) {
+			if (has_suffix(output, ".out")) {
 				StringView tname = output;
-				tname.removeSuffix(4);
+				tname.remove_suffix(4);
 				tname =
-				   tname.extractTrailing([](char c) { return (c != '/'); });
-				output.removePrefix(master_dir.size());
+				   tname.extract_trailing([](char c) { return (c != '/'); });
+				output.remove_prefix(master_dir.size());
 
 				auto& test = tests[tname];
 				if (test.out.has_value()) {
@@ -556,7 +557,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		// Group 0 always has score equal to 0
 		TestsGroup& first_group = tests_groups.front()->second;
 		StringView first_gid = first_group.name;
-		first_gid.removeLeading('0');
+		first_gid.remove_leading('0');
 		if (first_gid.empty() and not first_group.score.has_value()) {
 			first_group.score = 0;
 			--unscored_tests;

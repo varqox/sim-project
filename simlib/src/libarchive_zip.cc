@@ -1,6 +1,6 @@
-#include "../include/libarchive_zip.h"
-#include "../include/process.h"
-#include "../include/spawner.h"
+#include "../include/libarchive_zip.hh"
+#include "../include/process.hh"
+#include "../include/spawner.hh"
 
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
 
@@ -11,7 +11,7 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 	constexpr const char* command = "zip";
 
 	Spawner::ExitStat es;
-	FileDescriptor zip_output {openUnlinkedTmpFile(O_CLOEXEC)}; /* It isn't a
+	FileDescriptor zip_output {open_unlinked_tmp_file(O_CLOEXEC)}; /* It isn't a
 	    fatal error if zip_output is invalid, so it can be ignored */
 
 	if (easy_case) {
@@ -23,7 +23,7 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 	} else {
 		TemporaryDirectory tmpdir("/tmp/zip-update.XXXXXX");
 		// Secure new_filename
-		auto secured_filename = abspath(new_filename);
+		auto secured_filename = path_absolute(new_filename);
 		throw_assert(new_filename.size() > 0);
 
 		new_filename = StringView(secured_filename, 1); // Trim leading '/'
@@ -36,14 +36,14 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 		}
 
 		// Make a symlink
-		decltype(getCWD()) cwd;
+		decltype(get_cwd()) cwd;
 		apply_file(cwd, concat(tmpdir.path(), new_filename));
 
 		// Path to zip file is relative we have to make it absolute
 		throw_assert(zip_filename.size() > 0);
 		if (zip_filename[0] != '/') {
 			if (cwd.size == 0)
-				cwd = getCWD();
+				cwd = get_cwd();
 			cwd.append(zip_filename);
 			zip_filename = cwd;
 		}
@@ -64,7 +64,7 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {
 		(void)lseek(zip_output, 0, SEEK_SET);
 		THROW("Updating/adding file to zip error: ", es.message, "; ", command,
-		      "'s output:\n", getFileContents(zip_output));
+		      "'s output:\n", get_file_contents(zip_output));
 	}
 }
 
@@ -76,15 +76,15 @@ void update_add_file_to_zip(FilePath filename, StringView new_filename,
 
 	// Remove Trailing '/'
 	while (new_filename.size() > 1 and new_filename.back() == '/')
-		new_filename.removeSuffix(1);
+		new_filename.remove_suffix(1);
 
 	return update_add_file_to_zip_impl(
-	   [&](decltype(getCWD())& cwd, FilePath dest_file) {
+	   [&](decltype(get_cwd())& cwd, FilePath dest_file) {
 		   if (new_filename.back() != '/') {
 			   throw_assert(filename.size() > 0);
 			   // Make filename absolute
 			   if (filename[0] != '/') {
-				   cwd = getCWD();
+				   cwd = get_cwd();
 				   auto old_size = cwd.size;
 				   cwd.append(filename);
 				   filename = cwd;
@@ -102,9 +102,9 @@ void update_add_data_to_zip(StringView data, StringView new_filename,
                             FilePath zip_filename) {
 	throw_assert(new_filename.size() > 0);
 	return update_add_file_to_zip_impl(
-	   [&](decltype(getCWD())&, FilePath dest_file) {
+	   [&](decltype(get_cwd())&, FilePath dest_file) {
 		   if (CStringView(dest_file).back() != '/') // Dest file is a directory
-			   putFileContents(dest_file, data);
+			   put_file_contents(dest_file, data);
 	   },
 	   new_filename, zip_filename);
 }

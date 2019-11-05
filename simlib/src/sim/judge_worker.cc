@@ -1,10 +1,12 @@
-#include "../../include/sim/judge_worker.h"
-#include "../../include/libzip.h"
-#include "../../include/parsers.h"
-#include "../../include/sim/checker.h"
-#include "../../include/sim/problem_package.h"
+#include "../../include/sim/judge_worker.hh"
+#include "../../include/enum_val.hh"
+#include "../../include/libzip.hh"
+#include "../../include/sim/checker.hh"
+#include "../../include/sim/problem_package.hh"
+#include "../../include/simple_parser.hh"
 #include "default_checker_dump.h"
 
+#include <cmath>
 #include <future>
 #include <thread>
 
@@ -40,7 +42,7 @@ public:
 	}
 
 	std::string load_as_str(FilePath path) override {
-		return getFileContents(concat(pkg_root_, path));
+		return get_file_contents(concat(pkg_root_, path));
 	}
 
 	virtual ~DirPackageLoader() = default;
@@ -168,8 +170,8 @@ int JudgeWorker::compile_checker(
 		}
 
 		auto path = concat_tostr(tmp_dir.path(), "default_checker.c");
-		putFileContents(path, (const char*)default_checker_c,
-		                default_checker_c_len);
+		put_file_contents(path, (const char*)default_checker_c,
+		                  default_checker_c_len);
 
 		return {path, SolutionLanguage::C};
 	}();
@@ -183,7 +185,7 @@ void JudgeWorker::load_package(FilePath package_path,
                                std::optional<string> simfile) {
 	STACK_UNWINDING_MARK;
 
-	if (isDirectory(package_path)) {
+	if (is_directory(package_path)) {
 		package_loader = std::make_unique<DirPackageLoader>(package_path);
 	} else {
 		package_loader =
@@ -254,7 +256,7 @@ struct CheckerStatus {
 	std::string message;
 };
 
-} // anonymous namespace
+} // namespace
 
 static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
                                             const Sandbox::Options& opts,
@@ -262,11 +264,11 @@ static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
                                             const char* output_name) {
 	// Checker exited with 0
 	if (es.si.code == CLD_EXITED and es.si.status == 0) {
-		auto chout = sim::obtainCheckerOutput(output_fd, 512);
+		auto chout = sim::obtain_checker_output(output_fd, 512);
 		SimpleParser parser(chout);
 
-		StringView line1(parser.extractNext('\n')); // "OK" or "WRONG"
-		StringView line2(parser.extractNext('\n')); // percentage (real)
+		StringView line1(parser.extract_next('\n')); // "OK" or "WRONG"
+		StringView line2(parser.extract_next('\n')); // percentage (real)
 
 		auto wrong_second_line = [&]() -> CheckerStatus {
 			return {
@@ -278,7 +280,7 @@ static CheckerStatus exit_to_checker_status(const Sandbox::ExitStat& es,
 		};
 
 		// Second line has to be either empty or be a real number
-		if (line2.size() and (line2[0] == '-' or !isReal(line2))) {
+		if (line2.size() and (line2[0] == '-' or !is_real(line2))) {
 			wrong_second_line();
 		} else if (line1 == "OK") { // "OK" -> Checker: OK
 			CheckerStatus res;
@@ -464,7 +466,7 @@ JudgeReport JudgeWorker::judge_interactive(
 			STACK_UNWINDING_MARK;
 
 			// Setup
-			FileDescriptor output(openUnlinkedTmpFile());
+			FileDescriptor output(open_unlinked_tmp_file());
 			if (output < 0) // Needs to be done this way because constructing
 			                // exception may throw
 				THROW("Cannot create checker output file descriptor");
@@ -705,7 +707,7 @@ JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
 	// Checker STDOUT
-	FileDescriptor checker_stdout {openUnlinkedTmpFile(O_CLOEXEC)};
+	FileDescriptor checker_stdout {open_unlinked_tmp_file(O_CLOEXEC)};
 	if (checker_stdout < 0)
 		THROW("Failed to create unlinked temporary file", errmsg());
 

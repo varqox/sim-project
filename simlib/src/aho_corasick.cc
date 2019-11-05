@@ -1,4 +1,4 @@
-#include "../include/aho_corasick.h"
+#include "../include/aho_corasick.hh"
 
 using std::vector;
 
@@ -42,23 +42,25 @@ uint AhoCorasick::son(uint id, char c) {
 	return nodes[id].sons[beg].second;
 }
 
-void AhoCorasick::addPattern(StringView patt, uint id) {
+void AhoCorasick::add_pattern(StringView patt, uint id) {
 	uint curr = 0;
 	for (char c : patt)
 		curr = son(curr, c);
 	nodes[curr].patt_id = id;
 }
 
-uint AhoCorasick::findNode(StringView str) const {
+uint AhoCorasick::find_node(StringView str) const noexcept {
 	uint x = 0;
-	for (char c : str)
-		if ((x = nodes[x][c]) == 0)
+	for (char c : str) {
+		x = nodes[x][c];
+		if (x == 0)
 			return 0;
+	}
 
 	return x;
 }
 
-void AhoCorasick::buildFails() {
+void AhoCorasick::build_fail_edges() {
 	std::deque<uint> queue;
 	for (auto&& p : nodes[0].sons)
 		queue.emplace_back(p.second);
@@ -78,7 +80,7 @@ void AhoCorasick::buildFails() {
 	}
 }
 
-vector<uint> AhoCorasick::searchIn(StringView text) const {
+vector<uint> AhoCorasick::search_in(StringView text) const {
 	vector<uint> res(text.size());
 	uint curr = 0, x;
 	for (size_t i = 0; i < text.size(); ++i) {

@@ -1,6 +1,6 @@
-#include "../include/logger.h"
-#include "../include/debug.h"
-#include "../include/time.h"
+#include "../include/logger.hh"
+#include "../include/debug.hh"
+#include "../include/time.hh"
 
 using std::string;
 

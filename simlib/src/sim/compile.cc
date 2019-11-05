@@ -1,4 +1,4 @@
-#include "../../include/spawner.h"
+#include "../../include/spawner.hh"
 
 using std::string;
 using std::vector;
@@ -16,7 +16,7 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 
 	FileDescriptor cef;
 	if (c_errors) {
-		cef = openUnlinkedTmpFile(O_APPEND | O_CLOEXEC);
+		cef = open_unlinked_tmp_file(O_APPEND | O_CLOEXEC);
 		if (cef == -1)
 			THROW("Failed to open 'compile_errors'", errmsg());
 	}
@@ -61,7 +61,7 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 			*c_errors =
 			   (time_limit.has_value() and es.runtime >= time_limit.value()
 			       ? "Compilation time limit exceeded"
-			       : getFileContents(cef, 0, c_errors_max_len));
+			       : get_file_contents(cef, 0, c_errors_max_len));
 
 		return 2;
 	}

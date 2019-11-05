@@ -1,5 +1,7 @@
-#include "../include/spawner.h"
-#include "../include/time.h"
+#include "../include/spawner.hh"
+#include "../include/call_in_destructor.hh"
+#include "../include/string_transform.hh"
+#include "../include/time.hh"
 
 #include <sys/syscall.h>
 
@@ -170,8 +172,8 @@ void Spawner::CPUTimeMonitor::handler(int, siginfo_t* si, void*) noexcept {
 		// There is still time left
 		itimerspec its {
 		   {0, 0},
-		   meta::max(data.cpu_abs_time_limit - ts,
-		             timespec {0, (int)0.01e9}) // Min. wait duration: 0.01 s
+		   std::max(data.cpu_abs_time_limit - ts,
+		            timespec {0, (int)0.01e9}) // Min. wait duration: 0.01 s
 		};
 		timer_settime(data.timerid, 0, &its, nullptr);
 	}
@@ -292,7 +294,7 @@ Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
 	}
 
 	close(pfd[1]);
-	FileDescriptorCloser pipe0_closer(pfd[0]);
+	FileDescriptor pipe0_closer(pfd[0]);
 
 	// Wait for child to be ready
 	siginfo_t si;
@@ -454,27 +456,24 @@ void Spawner::run_child(FilePath exec,
 		if (dir == nullptr)
 			send_error_and_exit(errno, "opendir()");
 
-		auto fd_str = toStr(fd);
-		auto fd_cstr = fd_str.to_cstr().c_str();
+		array permitted_fds = {
+		   dirfd(dir),
+		   fd, // Needed in case of errors (it has FD_CLOEXEC flag set)
+		   (opts.new_stdin_fd < 0 ? fd : STDIN_FILENO),
+		   (opts.new_stdout_fd < 0 ? fd : STDOUT_FILENO),
+		   (opts.new_stderr_fd < 0 ? fd : STDERR_FILENO),
+		};
 
-		auto dir_fd = dirfd(dir);
-		auto dir_fd_str = (dir_fd < 0 ? fd_str : toStr(dir_fd));
-		auto dir_fd_cstr = dir_fd_str.to_cstr().c_str();
-
-		std::array<const char*, 5> permitted_fds {{
-		   dir_fd_cstr,
-		   fd_cstr, // Needed in case of errors (it has FD_CLOEXEC flag set)
-		   (opts.new_stdin_fd < 0 ? fd_cstr : meta::toStr<STDIN_FILENO>),
-		   (opts.new_stdout_fd < 0 ? fd_cstr : meta::toStr<STDOUT_FILENO>),
-		   (opts.new_stderr_fd < 0 ? fd_cstr : meta::toStr<STDERR_FILENO>),
-		}};
-
-		forEachDirComponent(
+		for_each_dir_component(
 		   dir,
 		   [&](dirent* file) {
-			   for (auto&& str : permitted_fds)
-				   if (strcmp(str, file->d_name) == 0)
-					   return;
+			   auto filename = str2num<int>(file->d_name);
+			   if (filename) {
+				   for (int fd_no : permitted_fds) {
+					   if (*filename == fd_no)
+						   return;
+				   }
+			   }
 
 			   close(atoi(file->d_name));
 		   },
@@ -496,12 +495,12 @@ void Spawner::run_child(FilePath exec,
 	// execvp() failed
 	if (exec.size() <= PATH_MAX) {
 		send_error_and_exit(errnum,
-		                    intentionalUnsafeCStringView(
+		                    intentional_unsafe_cstring_view(
 		                       concat<PATH_MAX + 20>("execvp('", exec, "')")));
 	} else {
 		send_error_and_exit(
 		   errnum,
-		   intentionalUnsafeCStringView(concat<PATH_MAX + 20>(
+		   intentional_unsafe_cstring_view(concat<PATH_MAX + 20>(
 		      "execvp('", exec.to_cstr().substring(0, PATH_MAX), "...')")));
 	}
 }

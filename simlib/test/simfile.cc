@@ -1,7 +1,7 @@
-#include "../include/sim/simfile.h"
-#include "../include/debug.h"
-#include "../include/filesystem.h"
-#include "../include/utilities.h"
+#include "../include/sim/simfile.hh"
+#include "../include/debug.hh"
+#include "../include/filesystem.hh"
+#include "../include/utilities.hh"
 
 #include <gtest/gtest.h>
 
@@ -128,7 +128,7 @@ TEST(Simfile, dump) {
 	          sf.dump());
 }
 
-TEST(Simfile, loadName) {
+TEST(Simfile, load_name) {
 	sim::Simfile sf {"name: Problem 1 2 3"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
@@ -145,7 +145,7 @@ TEST(Simfile, loadName) {
 	EXPECT_THROW(sf.load_name(), std::runtime_error);
 }
 
-TEST(Simfile, loadLabel) {
+TEST(Simfile, load_label) {
 	sim::Simfile sf {"label: Label 1 2 3"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
@@ -162,7 +162,7 @@ TEST(Simfile, loadLabel) {
 	EXPECT_THROW(sf.load_label(), std::runtime_error);
 }
 
-TEST(Simfile, loadInteractive) {
+TEST(Simfile, load_interactive) {
 	sim::Simfile sf {"interactive: true"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
@@ -203,7 +203,7 @@ TEST(Simfile, loadInteractive) {
 	EXPECT_THROW(sf.load_interactive(), std::runtime_error);
 }
 
-TEST(Simfile, loadChecker) {
+TEST(Simfile, load_checker) {
 	sim::Simfile sf {"checker: path/to/checker"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
@@ -237,7 +237,7 @@ TEST(Simfile, loadChecker) {
 	EXPECT_EQ("path/", sf.checker.value());
 }
 
-TEST(Simfile, loadStatement) {
+TEST(Simfile, load_statement) {
 	sim::Simfile sf {"statement: path/to/statement"};
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
@@ -265,7 +265,7 @@ TEST(Simfile, loadStatement) {
 	EXPECT_EQ("path/", sf.statement);
 }
 
-TEST(Simfile, loadSolutions) {
+TEST(Simfile, load_solutions) {
 	using VS = vector<string>;
 	sim::Simfile sf {"solutions: [sol1, sol/2]"};
 	// Load two times - make sure that it is safe
@@ -299,7 +299,7 @@ TEST(Simfile, loadSolutions) {
 	EXPECT_EQ((VS {"path/", "suspicious/path"}), sf.solutions);
 }
 
-TEST(Simfile, loadTests) {
+TEST(Simfile, load_tests) {
 	// Memory limit
 	sim::Simfile sf {"memory_limit: 123\nlimits: []"};
 	sf.load_tests();
@@ -487,7 +487,7 @@ TEST(Simfile, loadTests) {
 	EXPECT_THROW(sf.load_tests(), std::runtime_error);
 }
 
-TEST(Simfile, loadTests_With_Files) {
+TEST(Simfile, load_tests_with_files) {
 	sim::Simfile sf {"limits: [\n"
 	                 "  foo0 1 1\n"
 	                 "  foo1a 1 1\n"
@@ -548,7 +548,7 @@ TEST(Simfile, loadTests_With_Files) {
 	EXPECT_NO_THROW(sf.load_tests_with_files());
 }
 
-void create_file(const string& path) {
+void create_file_with_dirs(const string& path) {
 	// Extract containing directory
 	size_t pos = path.size();
 	while (pos && path[pos - 1] != '/')
@@ -557,7 +557,7 @@ void create_file(const string& path) {
 	(void)mkdir_r(path.substr(0, pos));
 
 	// Create file
-	if (createFile(path))
+	if (create_file(path))
 		THROW('`', path, '`', errmsg());
 }
 
@@ -566,7 +566,7 @@ void create_files_at(string dir, const vector<string>& v) {
 		dir += '/';
 
 	for (auto&& s : v)
-		create_file(dir + s);
+		create_file_with_dirs(dir + s);
 }
 
 TEST(Simfile, validate_files) {

@@ -1,5 +1,5 @@
-#include "../include/config_file.h"
-#include "../include/utilities.h"
+#include "../include/config_file.hh"
+#include "../include/utilities.hh"
 
 #include <gtest/gtest.h>
 
@@ -78,13 +78,13 @@ TEST(ConfigFile, is_string_literal) {
 		   << "p.first: " << p.first << endl;
 
 	auto is_beginning = [](char c) {
-		return !(isspace(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
+		return not (isspace(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
 	};
 	auto is_interior = [](char c) {
-		return !is_one_of(c, '\n', '#', ']', ',');
+		return not is_one_of(c, '\n', '#', ']', ',');
 	};
 	auto is_ending = [](char c) {
-		return !(isspace(c) || is_one_of(c, '#', ']', ','));
+		return not (isspace(c) || is_one_of(c, '#', ']', ','));
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};
@@ -267,7 +267,7 @@ TEST(ConfigFile, escape_to_double_quoted_string) {
 		EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(p.first), p.second)
 		   << "p.first: " << p.first << endl;
 		// Second version
-		EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(p.first, 0),
+		EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string(p.first),
 		          p.second)
 		   << "p.first: " << p.first << endl;
 	}
@@ -282,14 +282,14 @@ TEST(ConfigFile, escape_to_double_quoted_string) {
 	          R"===(" '\t\n' ś ")===");
 	// Escaping unprintable characters
 	EXPECT_EQ(
-	   ConfigFile::escape_to_double_quoted_string("\x07\x0e\n\x15\x1f", 0),
+	   ConfigFile::full_escape_to_double_quoted_string("\x07\x0e\n\x15\x1f"),
 	   R"===("\a\x0e\n\x15\x1f")===");
 	EXPECT_EQ(
-	   ConfigFile::escape_to_double_quoted_string("\x02\x03\tśćąłź\x11", 0),
+	   ConfigFile::full_escape_to_double_quoted_string("\x02\x03\tśćąłź\x11"),
 	   R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
-	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string("ś", 0),
+	EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string("ś"),
 	          R"===("\xc5\x9b")===");
-	EXPECT_EQ(ConfigFile::escape_to_double_quoted_string(" '\t\n' ś ", 0),
+	EXPECT_EQ(ConfigFile::full_escape_to_double_quoted_string(" '\t\n' ś "),
 	          R"===(" '\t\n' \xc5\x9b ")===");
 }
 
@@ -360,7 +360,7 @@ TEST(ConfigFile, escape_string) {
 		EXPECT_EQ(ConfigFile::escape_string(p.first), p.second)
 		   << "p.first: " << p.first << endl;
 		// Second version
-		EXPECT_EQ(ConfigFile::escape_string(p.first, 0), p.second)
+		EXPECT_EQ(ConfigFile::full_escape_string(p.first), p.second)
 		   << "p.first: " << p.first << endl;
 	}
 
@@ -374,18 +374,18 @@ TEST(ConfigFile, escape_string) {
 	EXPECT_EQ(ConfigFile::escape_string(" '\t\n' ś "), R"===(" '\t\n' ś ")===");
 
 	// Escaping unprintable characters
-	EXPECT_EQ(ConfigFile::escape_string("\x07\x0e\n\x15\x1f", 0),
+	EXPECT_EQ(ConfigFile::full_escape_string("\x07\x0e\n\x15\x1f"),
 	          R"===("\a\x0e\n\x15\x1f")===");
 	EXPECT_EQ(
-	   ConfigFile::escape_string("\x02\x03\tśćąłź\x11", 0),
+	   ConfigFile::full_escape_string("\x02\x03\tśćąłź\x11"),
 	   R"===("\x02\x03\t\xc5\x9b\xc4\x87\xc4\x85\xc5\x82\xc5\xba\x11")===");
 
-	EXPECT_EQ(ConfigFile::escape_string("ś", 0), R"===("\xc5\x9b")===");
-	EXPECT_EQ(ConfigFile::escape_string(" '\t\n' ś ", 0),
+	EXPECT_EQ(ConfigFile::full_escape_string("ś"), R"===("\xc5\x9b")===");
+	EXPECT_EQ(ConfigFile::full_escape_string(" '\t\n' ś "),
 	          R"===(" '\t\n' \xc5\x9b ")===");
 }
 
-string dumpConfig(const ConfigFile& cf) {
+string dump_config(const ConfigFile& cf) {
 	auto&& vars = cf.get_vars();
 	string res;
 	for (auto p : vars) {
@@ -393,19 +393,19 @@ string dumpConfig(const ConfigFile& cf) {
 			back_insert(res, p.first, ": [\n");
 			for (auto&& s : p.second.as_array())
 				back_insert(res, "  ",
-				            ConfigFile::escape_to_double_quoted_string(s, 0),
+				            ConfigFile::full_escape_to_double_quoted_string(s),
 				            '\n');
 			res += ']';
 
 		} else { // Other
 			back_insert(res, p.first, ": ",
-			            ConfigFile::escape_to_double_quoted_string(
-			               p.second.as_string(), 0));
+			            ConfigFile::full_escape_to_double_quoted_string(
+			               p.second.as_string()));
 		}
 
 		// Include the value position
-		back_insert(res, " # [", p.second.value_span.beg, ",",
-		            p.second.value_span.end, ")\n");
+		back_insert(res, " # [", p.second.value_span().beg, ",",
+		            p.second.value_span().end, ")\n");
 	};
 	return res;
 }
@@ -539,7 +539,7 @@ workers: "2" # [103,104)
 		ConfigFile cf;
 		cf.load_config_from_string(p.first, true);
 		RecordProperty("Case", i + 1);
-		EXPECT_EQ(dumpConfig(cf), p.second) << "Case: " << i + 1 << endl;
+		EXPECT_EQ(dump_config(cf), p.second) << "Case: " << i + 1 << endl;
 	}
 
 	ConfigFile cf; // It do not have to be cleaned - we watch only for

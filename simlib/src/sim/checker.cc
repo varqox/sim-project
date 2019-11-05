@@ -1,4 +1,4 @@
-#include "../../include/debug.h"
+#include "../../include/debug.hh"
 
 #include <unistd.h>
 
@@ -6,7 +6,7 @@ using std::string;
 
 namespace sim {
 
-string obtainCheckerOutput(int fd, size_t max_length) {
+string obtain_checker_output(int fd, size_t max_length) {
 	string res(max_length, '\0');
 
 	size_t pos = 0;

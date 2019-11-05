@@ -1,5 +1,5 @@
-#include "../../include/sim/problem_package.h"
-#include "../../include/libzip.h"
+#include "../../include/sim/problem_package.hh"
+#include "../../include/libzip.hh"
 
 using std::string;
 
@@ -8,7 +8,7 @@ namespace sim {
 void PackageContents::load_from_directory(StringView pkg_path,
                                           bool retain_pkg_path_prefix) {
 	throw_assert(pkg_path.size() > 0);
-	pkg_path.removeTrailing('/');
+	pkg_path.remove_trailing('/');
 
 	InplaceBuff<PATH_MAX> path;
 	auto recursive_impl = [&](auto&& self, StringView filename) -> void {
@@ -24,7 +24,7 @@ void PackageContents::load_from_directory(StringView pkg_path,
 			add_path_to_pc(); // do not add pkg_path as an entry
 
 		// Go through the directory entries
-		forEachDirComponent(path, [&](dirent* file) {
+		for_each_dir_component(path, [&](dirent* file) {
 			if (file->d_type == DT_DIR) {
 				self(self, file->d_name);
 			} else {
@@ -49,7 +49,8 @@ void PackageContents::load_from_zip(FilePath pkg_path) {
 	for (zip_int64_t i = 0; i < size; ++i) {
 		// Check if entry contains ".." component
 		StringView epath = zip.get_name(i);
-		if (hasPrefix(epath, "../") or epath.find("/../") != StringView::npos) {
+		if (has_prefix(epath, "../") or
+		    epath.find("/../") != StringView::npos) {
 			THROW("Found invalid component \"../\" - archive is not safe"
 			      " for the further processing as it may be disambiguating");
 		}
@@ -64,7 +65,8 @@ string zip_package_master_dir(ZipFile& zip) {
 	for (decltype(eno) i = 0; i < eno; ++i) {
 		StringView epath = zip.get_name(i);
 		// Check if entry contains ".." component
-		if (hasPrefix(epath, "../") or epath.find("/../") != StringView::npos) {
+		if (has_prefix(epath, "../") or
+		    epath.find("/../") != StringView::npos) {
 			THROW("Found invalid component \"../\" - archive is not safe"
 			      " for the further processing as it may be disambiguating");
 		}
@@ -78,7 +80,7 @@ string zip_package_master_dir(ZipFile& zip) {
 			continue;
 		}
 
-		if (not hasPrefix(epath, res))
+		if (not has_prefix(epath, res))
 			return "";
 	}
 

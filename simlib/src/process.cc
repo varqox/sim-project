@@ -1,9 +1,11 @@
-#include "../include/process.h"
-#include "../include/debug.h"
-#include "../include/logger.h"
-#include "../include/memory.h"
-#include "../include/parsers.h"
-#include "../include/utilities.h"
+#include "../include/process.hh"
+#include "../include/debug.hh"
+#include "../include/defer.hh"
+#include "../include/logger.hh"
+#include "../include/memory.hh"
+#include "../include/string_transform.hh"
+#include "../include/path.hh"
+#include "../include/proc_stat_file_contents.hh"
 
 #include <dirent.h>
 #include <thread>
@@ -16,13 +18,13 @@ using std::string;
 using std::vector;
 using std::chrono::duration;
 
-InplaceBuff<PATH_MAX> getCWD() {
+InplaceBuff<PATH_MAX> get_cwd() {
 	InplaceBuff<PATH_MAX> res;
 	char* x = get_current_dir_name();
 	if (!x)
 		THROW("Failed to get CWD", errmsg());
 
-	CallInDtor x_guard([x] { free(x); });
+	Defer x_guard([x] { free(x); });
 
 	if (x[0] != '/') {
 		errno = ENOENT;
@@ -36,7 +38,7 @@ InplaceBuff<PATH_MAX> getCWD() {
 	return res;
 }
 
-string getExec(pid_t pid) {
+string executable_path(pid_t pid) {
 	array<char, 4096> buff;
 	string path = concat_tostr("/proc/", pid, "/exe");
 
@@ -56,7 +58,8 @@ string getExec(pid_t pid) {
 	return string(buff.data(), rc);
 }
 
-vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
+vector<pid_t> find_processes_by_executable_path(vector<string> exec_set,
+                                                bool include_me) {
 	if (exec_set.empty())
 		return {};
 
@@ -65,16 +68,16 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	if (dir == nullptr)
 		THROW("Cannot open /proc directory", errmsg());
 
-	decltype(getCWD()) cwd;
+	decltype(get_cwd()) cwd;
 	for (auto& exec : exec_set) {
 		if (exec.front() != '/') {
 			if (cwd.size == 0) // cwd is not set
-				cwd = getCWD();
+				cwd = get_cwd();
 			exec = concat_tostr(cwd, exec);
 		}
 
 		// Make exec absolute
-		exec = abspath(exec);
+		exec = path_absolute(exec);
 	}
 
 	// Process with deleted exec will have " (deleted)" suffix in result of
@@ -82,7 +85,7 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	size_t buff_size = 0;
 	for (int i = 0, n = exec_set.size(); i < n; ++i) {
 		string deleted = concat_tostr(exec_set[i], " (deleted)");
-		buff_size = meta::max(buff_size, deleted.size());
+		buff_size = std::max(buff_size, deleted.size());
 		exec_set.emplace_back(std::move(deleted));
 	}
 
@@ -90,8 +93,8 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	++buff_size; // For a terminating null character
 
 	vector<pid_t> res;
-	forEachDirComponent(dir, [&](dirent* file) {
-		if (!isDigit(file->d_name))
+	for_each_dir_component(dir, [&](dirent* file) {
+		if (!is_digit(file->d_name))
 			return; // Not a process
 
 		pid = atoi(file->d_name);
@@ -116,76 +119,23 @@ vector<pid_t> findProcessesByExec(vector<string> exec_set, bool include_me) {
 	return res;
 }
 
-template <class...>
-constexpr bool always_false = false;
-
-// TODO: remove it
-// Converts whole @p str to @p T or returns std::nullopt on errors like value
-// represented in @p str is too big or invalid
-template <class T, std::enable_if_t<not std::is_integral_v<std::remove_cv_t<
-                                       std::remove_reference_t<T>>>,
-                                    int> = 0>
-std::optional<T> str2num(StringView str) noexcept {
-#if 0 // TODO: use it when std::from_chars for double becomes implemented in
-      // libstdc++ (also remove always false from the above and include
-      // <cstdlib>)
-	std::optional<T> res {std::in_place};
-	auto [ptr, ec] = std::from_chars(str.begin(), str.end(), &*res);
-	if (ptr != str.end() or ec != std::errc())
-		return std::nullopt;
-
-	return res;
-#else
-	static_assert(std::is_floating_point_v<T>);
-	if (str.empty() or isspace(str[0]))
-		return std::nullopt;
-
-	try {
-		InplaceBuff<4096> buff {str};
-		CStringView cstr = buff.to_cstr();
-		auto err = std::exchange(errno, 0);
-
-		char* ptr;
-		T res = [&] {
-			if constexpr (std::is_same_v<T, float>)
-				return ::strtof(cstr.data(), &ptr);
-			else if constexpr (std::is_same_v<T, double>)
-				return ::strtod(cstr.data(), &ptr);
-			else if constexpr (std::is_same_v<T, long double>)
-				return ::strtold(cstr.data(), &ptr);
-			else
-				static_assert(always_false<T>, "Cannot convert this type");
-		}();
-
-		std::swap(err, errno);
-		if (err or ptr != cstr.end())
-			return std::nullopt;
-
-		return res;
-
-	} catch (...) {
-		return std::nullopt;
-	}
-
-#endif
-}
-
 void kill_processes_by_exec(vector<string> exec_set,
                             optional<duration<double>> wait_timeout,
                             bool kill_after_waiting, int terminate_signal) {
 	STACK_UNWINDING_MARK;
-	// TODO: change every getProcStat() to open file by FileDescriptor and don't
-	// fail if the file does not exists -- it means that the process is already
-	// dead
+	// TODO: change every ProcStatFileContents::get() to open file by
+	// FileDescriptor and use ProcStatFileContents::from_proc_stat_contents()
+	// and don't fail if the file does not exists -- it means that the process
+	// is already dead
 	constexpr uint START_TIME_FID =
 	   21; // Number of the field in /proc/[pid]/stat that contains process
 	       // start time
 
 	using Victim = pair<pid_t, string>;
 	vector<Victim> victims;
-	for (pid_t pid : findProcessesByExec(std::move(exec_set))) {
+	for (pid_t pid : find_processes_by_executable_path(std::move(exec_set))) {
 		try {
-			victims.emplace_back(pid, getProcStat(pid, START_TIME_FID));
+			victims.emplace_back(pid, ProcStatFileContents::get(pid).field(START_TIME_FID).to_string());
 		} catch (...) {
 			// Ignore if process already died
 			if (kill(pid, 0) == 0 or errno != ESRCH)
@@ -208,9 +158,9 @@ void kill_processes_by_exec(vector<string> exec_set,
 			max_victim_start_time = start_time;
 	}
 
-	auto proc_uptime = getFileContents("/proc/uptime");
-	auto current_uptime = toString(
-	   str2num<double>(StringView(proc_uptime).extractLeading(not_fn(isspace)))
+	auto proc_uptime = get_file_contents("/proc/uptime");
+	auto current_uptime = to_string(
+	   str2num<double>(StringView(proc_uptime).extract_leading(not_fn(isspace)))
 	         .value() *
 	      ticks_per_second,
 	   0);
@@ -242,7 +192,8 @@ void kill_processes_by_exec(vector<string> exec_set,
 		for (size_t i = 0; i < victims.size(); ++i) {
 			auto& [pid, start_time] = victims[i];
 			try {
-				if (getProcStat(pid, START_TIME_FID) == start_time)
+				auto proc_stat = ProcStatFileContents::get(pid);
+				if (proc_stat.field(START_TIME_FID) == start_time)
 					continue; // Still alive
 			} catch (...) {
 				// Exception means that the process is dead
@@ -276,25 +227,14 @@ void kill_processes_by_exec(vector<string> exec_set,
 	}
 }
 
-string getExecDir(pid_t pid) {
-	string exec = getExec(pid);
-	// Erase file component
-	size_t slash = exec.rfind('/');
-	if (slash < exec.size())
-		exec.resize(slash + 1); // Erase filename
-
-	return exec;
-}
-
-string chdirToExecDir() {
-	string exec_dir = getExecDir(getpid());
-	if (chdir(exec_dir.c_str()))
+void chdir_to_executable_dirpath() {
+	InplaceBuff<PATH_MAX> exec_dir {
+	   path_dirpath(intentional_unsafe_string_view(executable_path(getpid())))};
+	if (chdir(exec_dir.to_cstr().c_str()))
 		THROW("chdir('", exec_dir, "')", errmsg());
-
-	return exec_dir;
 }
 
-int8_t detectArchitecture(pid_t pid) {
+int8_t detect_architecture(pid_t pid) {
 	auto filename = concat("/proc/", pid, "/exe");
 	FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
@@ -311,29 +251,4 @@ int8_t detectArchitecture(pid_t pid) {
 		return ARCH_x86_64;
 
 	THROW("Unsupported architecture");
-}
-
-string getProcStat(pid_t pid, uint field_no) {
-	string contents = getFileContents(concat("/proc/", pid, "/stat"));
-	SimpleParser sp {contents};
-
-	// [0] - Process pid
-	StringView val = sp.extractNextNonEmpty(isspace);
-	if (field_no == 0)
-		return val.to_string();
-
-	// [1] Executable filename
-	sp.removeLeading(isspace);
-	sp.removeLeading('(');
-	val = sp.extractPrefix(sp.rfind(')'));
-	if (field_no == 1)
-		return val.to_string();
-
-	sp.removeLeading(')');
-
-	// [2...]
-	for (field_no -= 1; field_no > 0; --field_no)
-		val = sp.extractNextNonEmpty(isspace);
-
-	return val.to_string();
 }

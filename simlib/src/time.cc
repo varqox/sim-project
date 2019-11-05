@@ -1,4 +1,4 @@
-#include "../include/debug.h"
+#include "../include/debug.hh"
 
 #include <algorithm>
 #include <ctime>
@@ -41,13 +41,13 @@ string localdate(CStringView format, time_t curr_time) {
 	return __date(format, curr_time, localtime_r);
 }
 
-bool isDatetime(CStringView str) noexcept {
+bool is_datetime(CStringView str) noexcept {
 	struct tm t;
 	return (str.size() == 19 &&
 	        strptime(str.c_str(), "%Y-%m-%d %H:%M:%S", &t) != nullptr);
 }
 
-time_t strToTime(CStringView str, CStringView format) noexcept {
+time_t str_to_time_t(CStringView str, CStringView format) noexcept {
 	struct tm t;
 	if (!strptime(str.c_str(), format.c_str(), &t))
 		return -1;

@@ -1,8 +1,8 @@
-#include "../include/config_file.h"
-#include "../include/debug.h"
-#include "../include/filesystem.h"
-#include "../include/parsers.h"
-#include "../include/utilities.h"
+#include "../include/config_file.hh"
+#include "../include/debug.hh"
+#include "../include/filesystem.hh"
+#include "../include/simple_parser.hh"
+#include "../include/utilities.hh"
 
 using std::string;
 using std::vector;
@@ -14,10 +14,8 @@ using std::vector;
 #define DEBUG_CF(...)
 #endif
 
-const ConfigFile::Variable ConfigFile::null_var;
-
 void ConfigFile::load_config_from_file(FilePath pathname, bool load_all) {
-	string contents = getFileContents(pathname);
+	string contents = get_file_contents(pathname);
 	load_config_from_string(contents, load_all);
 }
 
@@ -27,10 +25,10 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		it.second.unset();
 
 	// Checks whether c is a white-space but not a newline
-	auto isWs = [](int c) { return (c != '\n' && isspace(c)); };
+	auto is_ws = [](int c) { return (c != '\n' and isspace(c)); };
 	// Checks whether character is one of these [a-zA-Z0-9\-_.]
-	auto isName = [](int c) {
-		return (isalnum(c) || c == '-' || c == '_' || c == '.');
+	auto is_name = [](int c) {
+		return (isalnum(c) or c == '-' or c == '_' or c == '.');
 	};
 
 	DEBUG_CF(stdlog("Config file:\n", config);)
@@ -45,7 +43,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 	auto throw_parse_error = [&](auto&&... args) {
 		auto pos = curr_pos() - buff.empty();
 		auto x = pos; // Position of the last newline before pos
-		while (x && config[--x] != '\n') {
+		while (x and config[--x] != '\n') {
 		}
 
 		int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n');
@@ -60,8 +58,8 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				diags += c;
 			else {
 				diags += "\\x";
-				diags += dectohex(c >> 4);
-				diags += dectohex(c & 15);
+				diags += dec2hex(c >> 4);
+				diags += dec2hex(c & 15);
 			}
 		};
 
@@ -99,7 +97,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		diags.append(stress_len - 1, '~');
 
 		DEBUG_CF(
-		   stdlog("Throwing exception: ", pe.what(), "\n", pe.diagnostcs());)
+		   stdlog("Throwing exception: ", pe.what(), "\n", pe.diagnostics());)
 		throw pe;
 	};
 
@@ -112,7 +110,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				if (buff[i] == '\'') {
 					if (buff[i + 1] != '\'') { // Safe (newline is at the end
 						                       // of every line)
-						buff.removePrefix(i + 1);
+						buff.remove_prefix(i + 1);
 						return res;
 					}
 
@@ -120,7 +118,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				}
 				res += buff[i];
 			}
-			buff.removePrefix(i);
+			buff.remove_prefix(i);
 			throw_parse_error("Missing terminating ' character");
 		}
 
@@ -128,7 +126,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		if (buff[0] == '"') {
 			while (buff[++i] != '\n') {
 				if (buff[i] == '"') {
-					buff.removePrefix(i + 1);
+					buff.remove_prefix(i + 1);
 					return res;
 				}
 
@@ -153,33 +151,33 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				case 'x':
 					// i will not go out of the buffer - (guard = newline)
 					if (!isxdigit(buff[++i])) {
-						buff.removePrefix(i);
+						buff.remove_prefix(i);
 						throw_parse_error("Invalid hexadecimal digit: `",
 						                  buff[0], '`');
 					}
 					if (!isxdigit(buff[++i])) {
-						buff.removePrefix(i);
+						buff.remove_prefix(i);
 						throw_parse_error("Invalid hexadecimal digit: `",
 						                  buff[0], '`');
 					}
-					res += static_cast<char>((hextodec(buff[i - 1]) << 4) +
-					                         hextodec(buff[i]));
+					res += static_cast<char>((hex2dec(buff[i - 1]) << 4) +
+					                         hex2dec(buff[i]));
 					continue;
 				default:
-					buff.removePrefix(i);
+					buff.remove_prefix(i);
 					throw_parse_error("Unknown escape sequence: `\\", buff[0],
 					                  '`');
 				}
 			}
-			buff.removePrefix(i);
+			buff.remove_prefix(i);
 			throw_parse_error("Missing terminating \" character");
 		}
 
 		// String literal
 
 		// Check if the string literal begins
-		if (buff[0] == '[' ||
-		    (is_in_array && (buff[0] == ',' || buff[0] == ']'))) {
+		if (buff[0] == '[' or
+		    (is_in_array and (buff[0] == ',' or buff[0] == ']'))) {
 			throw_parse_error("Invalid beginning of the string literal: `",
 			                  buff[0], '`');
 		}
@@ -187,13 +185,13 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		// Beginning is ok
 		// Interior
 		if (is_in_array) // Value in an array
-			while (buff[i + 1] != '\n' && buff[i + 1] != '#' &&
-			       buff[i + 1] != ']' && buff[i + 1] != ',') {
+			while (buff[i + 1] != '\n' and buff[i + 1] != '#' and
+			       buff[i + 1] != ']' and buff[i + 1] != ',') {
 				++i;
 			}
 
 		else // Value of an ordinary variable
-			while (buff[i + 1] != '\n' && buff[i + 1] != '#')
+			while (buff[i + 1] != '\n' and buff[i + 1] != '#')
 				++i;
 
 		// Remove white-spaces from ending
@@ -201,44 +199,44 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 			--i;
 		res = buff.substring(0, ++i).to_string();
 
-		buff.removePrefix(i);
+		buff.remove_prefix(i);
 		return res;
 	};
 
 	while (buff.size()) {
 		auto skip_comment = [&] {
-			buff.removeLeading([](char c) { return (c != '\n'); });
+			buff.remove_leading([](char c) { return (c != '\n'); });
 		};
 
-		buff.removeLeading(isWs);
+		buff.remove_leading(is_ws);
 		// Newline
 		if (buff[0] == '\n') {
-			buff.removePrefix(1);
+			buff.remove_prefix(1);
 			continue;
 		}
 		// Comment
 		if (buff[0] == '#') {
 			skip_comment();
-			buff.removePrefix(1);
+			buff.remove_prefix(1);
 			continue;
 		}
 
 		/* Variable name */
-		StringView name = buff.extractLeading(isName);
+		StringView name = buff.extract_leading(is_name);
 		if (name.empty())
 			throw_parse_error("Invalid or missing variable's name");
 
 		DEBUG_CF(stdlog("Variable: ", name);)
 
 		/* Assignment operator */
-		buff.removeLeading(isWs);
-		if (buff[0] == '\n' || buff[0] == '#') // Newline or comment
+		buff.remove_leading(is_ws);
+		if (buff[0] == '\n' or buff[0] == '#') // Newline or comment
 			throw_parse_error("Incomplete directive: `", name, '`');
-		if (buff[0] != '=' && buff[0] != ':')
+		if (buff[0] != '=' and buff[0] != ':')
 			throw_parse_error("Invalid assignment operator: `", buff[0], '`');
 
-		buff.removePrefix(1); // Assignment operator
-		buff.removeLeading(isWs);
+		buff.remove_prefix(1); // Assignment operator
+		buff.remove_leading(is_ws);
 
 		/* Value */
 
@@ -254,30 +252,30 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		if (var.is_set())
 			var.unset();
 
-		var.flag = Variable::SET;
-		var.value_span.beg = curr_pos();
+		var.flag_ = Variable::SET;
+		var.value_span_.beg = curr_pos();
 
 		if (buff[0] != '[') { // Normal
-			if (buff[0] == '\n' || buff[0] == '#') // No value
-				var.s.clear();
+			if (buff[0] == '\n' or buff[0] == '#') // No value
+				var.str_.clear();
 			else
-				var.s = extract_value(false);
+				var.str_ = extract_value(false);
 			DEBUG_CF(
-			   stdlog("  value: ", escape_to_double_quoted_string(var.s));)
+			   stdlog("  value: ", escape_to_double_quoted_string(var.str_));)
 		} else { // Array
 			DEBUG_CF(stdlog("Array:");)
-			var.flag |= Variable::ARRAY;
-			buff.removePrefix(1); // Skip [
+			var.flag_ |= Variable::ARRAY;
+			buff.remove_prefix(1); // Skip [
 
 			for (;;) {
-				buff.removeLeading(isspace);
+				buff.remove_leading(isspace);
 				if (buff.empty()) {
 					throw_parse_error("Missing terminating ] character at the"
 					                  " end of an array");
 				}
 
 				if (buff[0] == ']') { // End of the array
-					buff.removePrefix(1);
+					buff.remove_prefix(1);
 					break;
 				}
 				if (buff[0] == '#') { // Comment
@@ -286,19 +284,19 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				}
 				// Ignore extra delimiters
 				if (buff[0] == ',') {
-					buff.removePrefix(1);
+					buff.remove_prefix(1);
 					continue;
 				}
 
 				// Value
-				var.a.emplace_back(extract_value(true));
-				DEBUG_CF(stdlog("->\t",
-				                escape_to_double_quoted_string(var.a.back()));)
+				var.arr_.emplace_back(extract_value(true));
+				DEBUG_CF(stdlog("->\t", escape_to_double_quoted_string(
+				                           var.arr_.back()));)
 
-				buff.removeLeading(isWs);
+				buff.remove_leading(is_ws);
 				// Delimiter
-				if (buff[0] == ',' || buff[0] == '\n') {
-					buff.removePrefix(1);
+				if (buff[0] == ',' or buff[0] == '\n') {
+					buff.remove_prefix(1);
 					continue;
 				}
 				// Comment
@@ -308,7 +306,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				}
 				// End of the array
 				if (buff[0] == ']') {
-					buff.removePrefix(1);
+					buff.remove_prefix(1);
 					break;
 				}
 
@@ -320,10 +318,10 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 
 		// It is not obvious that the below line is correct, but after the
 		// analysis of the above parsing it is correct (see the loop breaks)
-		var.value_span.end = curr_pos();
+		var.value_span_.end = curr_pos();
 
 		/* After the value */
-		buff.removeLeading(isWs);
+		buff.remove_leading(is_ws);
 		if (buff[0] == '#') {
 			skip_comment();
 			continue;
@@ -334,7 +332,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 			throw_parse_error("Unknown sequence after the value: `", buff[0],
 			                  '`');
 
-		buff.removePrefix(1); // Newline
+		buff.remove_prefix(1); // Newline
 	}
 
 	DEBUG_CF(stdlog("End of the config file.");)
@@ -345,7 +343,7 @@ bool ConfigFile::is_string_literal(StringView str) noexcept {
 		return false;
 
 	// Special check on the first and last character
-	if (is_one_of(str[0], '[', '\'', '"', '#') || isspace(str[0]) ||
+	if (is_one_of(str[0], '[', '\'', '"', '#') or isspace(str[0]) or
 	    isspace(str.back())) {
 		return false;
 	}
@@ -369,7 +367,7 @@ string ConfigFile::escape_to_single_quoted_string(StringView str) {
 }
 
 template <class Func>
-static string _escape_to_double_quoted_string(StringView str, Func&& func) {
+static string escape_to_double_quoted_string_impl(StringView str, Func&& func) {
 	string res {'"'};
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i)
@@ -388,8 +386,8 @@ static string _escape_to_double_quoted_string(StringView str, Func&& func) {
 		default:
 			if (func(str[i])) {
 				res += "\\x";
-				res += dectohex(static_cast<unsigned char>(str[i]) >> 4);
-				res += dectohex(static_cast<unsigned char>(str[i]) & 15);
+				res += dec2hex(static_cast<unsigned char>(str[i]) >> 4);
+				res += dec2hex(static_cast<unsigned char>(str[i]) & 15);
 			} else
 				res += str[i];
 		}
@@ -398,17 +396,17 @@ static string _escape_to_double_quoted_string(StringView str, Func&& func) {
 }
 
 string ConfigFile::escape_to_double_quoted_string(StringView str) {
-	return _escape_to_double_quoted_string(str, ::iscntrl);
+	return escape_to_double_quoted_string_impl(str, ::iscntrl);
 }
 
-string ConfigFile::escape_to_double_quoted_string(StringView str, int) {
-	return _escape_to_double_quoted_string(str,
-	                                       [](int x) { return !isprint(x); });
+string ConfigFile::full_escape_to_double_quoted_string(StringView str) {
+	return escape_to_double_quoted_string_impl(
+	   str, [](int x) { return !isprint(x); });
 }
 
 string ConfigFile::escape_string(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\'' || iscntrl(str[i]))
+		if (str[i] == '\'' or iscntrl(str[i]))
 			return escape_to_double_quoted_string(str);
 
 	if (is_string_literal(str))
@@ -417,10 +415,10 @@ string ConfigFile::escape_string(StringView str) {
 	return escape_to_single_quoted_string(str);
 }
 
-string ConfigFile::escape_string(StringView str, int) {
+string ConfigFile::full_escape_string(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\'' || !isprint(str[i]))
-			return escape_to_double_quoted_string(str, 0);
+		if (str[i] == '\'' or !isprint(str[i]))
+			return full_escape_to_double_quoted_string(str);
 
 	if (is_string_literal(str))
 		return str.to_string();

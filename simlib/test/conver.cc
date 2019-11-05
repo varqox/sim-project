@@ -1,8 +1,9 @@
-#include "../include/sim/conver.h"
-#include "../include/avl_dict.h"
-#include "../include/concurrent/job_processor.h"
-#include "../include/libzip.h"
-#include "../include/process.h"
+#include "../include/sim/conver.hh"
+#include "../include/avl_dict.hh"
+#include "../include/concurrent/job_processor.hh"
+#include "../include/libzip.hh"
+#include "../include/path.hh"
+#include "../include/process.hh"
 
 #include <gtest/gtest.h>
 #include <regex>
@@ -30,7 +31,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_uint64 = [&](StringView name) {
-		return get_var(name).as_int<uint64_t>();
+		return get_var(name).as<uint64_t>().value();
 	};
 
 	auto get_optional_uint64 = [&](StringView name) -> std::optional<uint64_t> {
@@ -41,7 +42,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_double = [&](StringView name) {
-		return get_var(name).as_double();
+		return get_var(name).as<double>().value();
 	};
 
 	auto get_duration = [&](StringView name) {
@@ -103,8 +104,8 @@ class TestingJudgeLogger : public sim::JudgeLogger {
 	template <class Func>
 	void log_test(StringView test_name, JudgeReport::Test test_report,
 	              Sandbox::ExitStat es, Func&& func) {
-		log("  ", paddedString(test_name, 8, LEFT), ' ',
-		    " [ TL: ", toString(floor_to_10ms(test_report.time_limit), false),
+		log("  ", padded_string(test_name, 8, LEFT), ' ',
+		    " [ TL: ", to_string(floor_to_10ms(test_report.time_limit), false),
 		    " s ML: ", test_report.memory_limit >> 10, " KiB ]  Status: ",
 		    JudgeReport::simple_span_status(test_report.status));
 
@@ -155,7 +156,7 @@ public:
 	void group_score(int64_t score, int64_t max_score,
 	                 double score_ratio) override {
 		log("Score: ", score, " / ", max_score,
-		    " (ratio: ", toStr(score_ratio, 4), ")\n");
+		    " (ratio: ", to_string(score_ratio, 4), ")\n");
 	}
 
 	void final_score(int64_t, int64_t) override {}
@@ -182,15 +183,15 @@ protected:
 
 private:
 	void collect_available_test_cases(std::vector<string>& test_cases) {
-		forEachDirComponent(tests_dir_, [&](dirent* file) {
+		for_each_dir_component(tests_dir_, [&](dirent* file) {
 			constexpr StringView suffix("package.zip");
 			constexpr StringView disabled_suffix("package.zip.disabled");
 			StringView filename(file->d_name);
-			if (hasSuffix(filename, suffix)) {
-				filename.removeSuffix(suffix.size());
+			if (has_suffix(filename, suffix)) {
+				filename.remove_suffix(suffix.size());
 				test_cases.emplace_back(filename.to_string());
-			} else if (hasSuffix(filename, disabled_suffix)) {
-				filename.removeSuffix(disabled_suffix.size());
+			} else if (has_suffix(filename, disabled_suffix)) {
+				filename.remove_suffix(disabled_suffix.size());
 				stdlog("WARNING: disabled test case: ", filename);
 			}
 		});
@@ -374,24 +375,26 @@ private:
 		}
 
 		void overwrite_pre_simfile_out() const {
-			putFileContents(concat_tostr(test_path_prefix_, "pre_simfile.out"),
-			                intentionalUnsafeStringView(pre_simfile_.dump()));
+			put_file_contents(
+			   concat_tostr(test_path_prefix_, "pre_simfile.out"),
+			   intentional_unsafe_string_view(pre_simfile_.dump()));
 		}
 
 		void overwrite_post_simfile_out() const {
-			putFileContents(concat_tostr(test_path_prefix_, "post_simfile.out"),
-			                intentionalUnsafeStringView(post_simfile_.dump()));
+			put_file_contents(
+			   concat_tostr(test_path_prefix_, "post_simfile.out"),
+			   intentional_unsafe_string_view(post_simfile_.dump()));
 		}
 
 		void overwrite_conver_log_out() const {
-			putFileContents(concat_tostr(test_path_prefix_, "conver_log.out"),
-			                report_);
+			put_file_contents(concat_tostr(test_path_prefix_, "conver_log.out"),
+			                  report_);
 		}
 
 		void overwrite_judge_log_out() const {
-			putFileContents(
+			put_file_contents(
 			   concat_tostr(test_path_prefix_, "judge_log.out"),
-			   intentionalUnsafeStringView(serialized_judge_log()));
+			   intentional_unsafe_string_view(serialized_judge_log()));
 		}
 
 		string serialized_judge_log() const {
@@ -407,28 +410,28 @@ private:
 		}
 
 		void check_result_with_pre_simfile_out() const {
-			EXPECT_EQ(getFileContents(
+			EXPECT_EQ(get_file_contents(
 			             concat_tostr(test_path_prefix_, "pre_simfile.out")),
 			          pre_simfile_.dump())
 			   << "^ test " << test_case_name_;
 		}
 
 		void check_result_with_post_simfile_out() const {
-			EXPECT_EQ(getFileContents(
+			EXPECT_EQ(get_file_contents(
 			             concat_tostr(test_path_prefix_, "post_simfile.out")),
 			          post_simfile_.dump())
 			   << "^ test " << test_case_name_;
 		}
 
 		void check_result_with_conver_log_out() const {
-			EXPECT_EQ(getFileContents(
+			EXPECT_EQ(get_file_contents(
 			             concat_tostr(test_path_prefix_, "conver_log.out")),
 			          report_)
 			   << "^ test " << test_case_name_;
 		}
 
 		void check_result_with_judge_log_out() const {
-			EXPECT_EQ(getFileContents(
+			EXPECT_EQ(get_file_contents(
 			             concat_tostr(test_path_prefix_, "judge_log.out")),
 			          serialized_judge_log())
 			   << "^ test " << test_case_name_;
@@ -436,9 +439,12 @@ private:
 	};
 };
 
-TEST(Conver, constructSimfile) {
+TEST(Conver, construct_simfile) {
 	stdlog.label(false);
 	stdlog.use(stdout);
-	ConverTestRunner(concat_tostr(getExecDir(getpid()), "conver_test_cases/"))
+
+	auto exec_path = executable_path(getpid());
+	ConverTestRunner(
+	   concat_tostr(path_dirpath(exec_path), "conver_test_cases/"))
 	   .run();
 }

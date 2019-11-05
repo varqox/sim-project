@@ -1,6 +1,7 @@
-#include "../include/sandbox.h"
-#include "../include/process.h"
-#include "../include/time.h"
+#include "../include/sandbox.hh"
+#include "../include/call_in_destructor.hh"
+#include "../include/process.hh"
+#include "../include/time.hh"
 
 #include <linux/version.h>
 #include <sys/ptrace.h>
@@ -227,10 +228,10 @@ struct X86_64SyscallRegisters : Registers<x86_64_user_regset> {
 template <class Func>
 class SyscallCallbackLambda : public SyscallCallback {
 	Func func;
-	DEBUG_SANDBOX(const meta::string name;)
+	DEBUG_SANDBOX(const StringView name;)
 
 public:
-	SyscallCallbackLambda(Func&& f DEBUG_SANDBOX(, meta::string callback_name))
+	SyscallCallbackLambda(Func&& f DEBUG_SANDBOX(, StringView callback_name))
 	   : func(f) DEBUG_SANDBOX(, name(callback_name)) {}
 
 	SyscallCallbackLambda(const SyscallCallbackLambda&) = delete;
@@ -247,7 +248,7 @@ public:
 
 template <class Func>
 inline auto
-syscall_callback_lambda(Func&& f DEBUG_SANDBOX(, meta::string callback_name)) {
+syscall_callback_lambda(Func&& f DEBUG_SANDBOX(, StringView callback_name)) {
 	return make_unique<SyscallCallbackLambda<Func>>(
 	   std::forward<Func>(f) DEBUG_SANDBOX(, callback_name));
 }
@@ -263,11 +264,10 @@ Sandbox::Sandbox() {
 		THROW("seccomp_init()", errmsg());
 	}
 
-	auto ctx_releaser = [&] {
+	CallInDtor ctx_releaser = [&] {
 		(void)seccomp_release(x86_ctx_);
 		(void)seccomp_release(x86_64_ctx_);
 	};
-	CallInDtor<decltype(ctx_releaser)> ctx_releaser_guard {ctx_releaser};
 
 	// Returns the callback id that can be used in the SCMP_ACT_TRACE()
 	auto add_unique_ptr_callback = [&](auto&& callback) {
@@ -277,7 +277,7 @@ Sandbox::Sandbox() {
 	};
 
 	// Returns the callback id that can be used in the SCMP_ACT_TRACE()
-	auto add_callback = [&](auto&& callback, meta::string callback_name) {
+	auto add_callback = [&](auto&& callback, StringView callback_name) {
 		(void)callback_name;
 		return add_unique_ptr_callback(
 		   syscall_callback_lambda(std::forward<decltype(callback)>(callback)
@@ -560,7 +560,7 @@ Sandbox::Sandbox() {
 			   }
 
 			   StringView path(buff, len);
-			   path = path.extractPrefix(path.find('\0'));
+			   path = path.extract_prefix(path.find('\0'));
 			   DEBUG_SANDBOX(auto tmplog =
 			                    stdlog("Trying to open: '", path, '\'');)
 			   if (path.size() == (size_t)len) {
@@ -747,7 +747,7 @@ Sandbox::Sandbox() {
 	// Allowed syscalls (x86_64 architecture)
 	// -------------------
 
-	ctx_releaser_guard.cancel();
+	ctx_releaser.cancel();
 }
 
 template <class... T>
@@ -781,7 +781,7 @@ uint64_t Sandbox::get_tracee_vm_size() {
 		vm_size = vm_size * 10 + buff[i] - '0';
 
 	DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] get_vm_size: -> ", vm_size, " (",
-	                     humanizeFileSize(vm_size * sysconf(_SC_PAGESIZE)),
+	                     humanize_file_size(vm_size * sysconf(_SC_PAGESIZE)),
 	                     ")");)
 	return vm_size;
 }
@@ -792,7 +792,8 @@ void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
 
 	DEBUG_SANDBOX(
 	   stdlog('[', tracee_pid_, "] tracee_vm_peak: -> ", tracee_vm_peak_, " (",
-	          humanizeFileSize(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)), ")");)
+	          humanize_file_size(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
+	          ")");)
 }
 
 Sandbox::ExitStat Sandbox::run(FilePath exec,
@@ -1050,7 +1051,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	}
 
 	close(pfd[1]);
-	FileDescriptorCloser close_pipe0(
+	FileDescriptor close_pipe0(
 	   pfd[0]); // Guard closing of the pipe's second end
 
 // Verbose debug messages have different color
@@ -1286,9 +1287,9 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				// Process terminated
 				get_cpu_time_and_wait_tracee(true);
 				DEBUG_SANDBOX_VERBOSE_LOG(
-				   "ENDED -> [ RT: ", toString(runtime, false),
-				   " ] [ CPU: ", toString(cpu_time, false), " ]  VmPeak: ",
-				   humanizeFileSize(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
+				   "ENDED -> [ RT: ", to_string(runtime, false),
+				   " ] [ CPU: ", to_string(cpu_time, false), " ]  VmPeak: ",
+				   humanize_file_size(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
 				   "   ", message_to_set_in_exit_stat_);
 
 				goto tracee_died;

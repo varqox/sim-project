@@ -1,4 +1,4 @@
-#include "../include/avl_dict.h"
+#include "../include/avl_dict.hh"
 
 #include <gtest/gtest.h>
 #include <set>
