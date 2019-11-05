@@ -17,7 +17,8 @@ public:
 	ProcStatFileContents& operator=(const ProcStatFileContents&) = delete;
 	ProcStatFileContents& operator=(ProcStatFileContents&&) noexcept = default;
 
-	static ProcStatFileContents from_proc_stat_contents(std::string stat_file_contents) {
+	static ProcStatFileContents
+	from_proc_stat_contents(std::string stat_file_contents) {
 		return ProcStatFileContents {stat_file_contents};
 	}
 

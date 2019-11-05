@@ -3,9 +3,9 @@
 #include "../include/defer.hh"
 #include "../include/logger.hh"
 #include "../include/memory.hh"
-#include "../include/string_transform.hh"
 #include "../include/path.hh"
 #include "../include/proc_stat_file_contents.hh"
+#include "../include/string_transform.hh"
 
 #include <dirent.h>
 #include <thread>
@@ -135,7 +135,9 @@ void kill_processes_by_exec(vector<string> exec_set,
 	vector<Victim> victims;
 	for (pid_t pid : find_processes_by_executable_path(std::move(exec_set))) {
 		try {
-			victims.emplace_back(pid, ProcStatFileContents::get(pid).field(START_TIME_FID).to_string());
+			victims.emplace_back(pid, ProcStatFileContents::get(pid)
+			                             .field(START_TIME_FID)
+			                             .to_string());
 		} catch (...) {
 			// Ignore if process already died
 			if (kill(pid, 0) == 0 or errno != ESRCH)

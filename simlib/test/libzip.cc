@@ -82,11 +82,9 @@ TEST(DISABLED_ZipSource, set_file_permissions) {
 	// TODO: implement it
 }
 
-
 TEST(DISABLED_ZipSource, get_file_mode) {
 	// TODO: implement it
 }
-
 
 TEST(DISABLED_ZipSource, get_file_permissions) {
 	// TODO: implement it

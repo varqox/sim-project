@@ -72,7 +72,7 @@ time_t str_to_time_t(CStringView str, CStringView format = CStringView {
  */
 inline std::chrono::system_clock::time_point
 str_to_time_point(CStringView str,
-               CStringView format = CStringView {"%Y-%m-%d %H:%M:%S"}) {
+                  CStringView format = CStringView {"%Y-%m-%d %H:%M:%S"}) {
 	time_t t = str_to_time_t(str, format);
 	if (t == -1)
 		THROW("str_to_time_t()", errmsg());

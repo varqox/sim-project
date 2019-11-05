@@ -379,7 +379,8 @@ public:
  *   false the lookup will break
  */
 template <class DirType, class Func, class ErrFunc>
-void for_each_dir_component(DirType&& dir, Func&& func, ErrFunc&& readdir_failed) {
+void for_each_dir_component(DirType&& dir, Func&& func,
+                            ErrFunc&& readdir_failed) {
 	static_assert(std::is_convertible_v<DirType, FilePath> or
 	              std::is_convertible_v<DirType, DIR*>);
 	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or
@@ -391,7 +392,7 @@ void for_each_dir_component(DirType&& dir, Func&& func, ErrFunc&& readdir_failed
 			THROW("opendir()", errmsg());
 
 		return for_each_dir_component(directory, std::forward<Func>(func),
-		                           std::forward<ErrFunc>(readdir_failed));
+		                              std::forward<ErrFunc>(readdir_failed));
 
 	} else {
 		dirent* file;
@@ -426,8 +427,8 @@ auto for_each_dir_component(DirType&& dir, Func&& func) {
 	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or
 	              std::is_invocable_v<Func, dirent*>);
 	return for_each_dir_component(std::forward<DirType>(dir),
-	                           std::forward<Func>(func),
-	                           [] { THROW("readdir()", errmsg()); });
+	                              std::forward<Func>(func),
+	                              [] { THROW("readdir()", errmsg()); });
 }
 
 /**
