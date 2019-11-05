@@ -47,7 +47,7 @@ public:
 		return *this;
 	}
 
-	constexpr FilePath& operator=(std::string& str) noexcept {
+	FilePath& operator=(std::string& str) noexcept {
 		str_ = str.c_str();
 		size_ = str.size();
 		return *this;

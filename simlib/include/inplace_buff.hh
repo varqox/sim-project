@@ -115,12 +115,14 @@ protected:
 	InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;
 	InplaceBuffBase& operator=(InplaceBuffBase&&) noexcept = default;
 
-	constexpr bool is_allocated() const noexcept {
+	bool is_allocated() const noexcept {
 		// This is not pretty but works...
-		return (p_ - (char*)&p_ != sizeof p_);
+		return (reinterpret_cast<const std::byte*>(p_) -
+		           reinterpret_cast<const std::byte*>(&p_) !=
+		        sizeof p_);
 	}
 
-	constexpr void deallocate() noexcept {
+	void deallocate() noexcept {
 		if (is_allocated())
 			delete[] p_;
 	}
@@ -138,6 +140,7 @@ public:
 				std::copy(::data(s), ::data(s) + sl, data() + k);
 				k += sl;
 			};
+			(void)append_impl; // Fix GCC warning
 			(append_impl(std::forward<decltype(str)>(str)), ...);
 		}(stringify(std::forward<Args>(args))...);
 
@@ -180,7 +183,7 @@ public:
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
-	constexpr InplaceBuff(InplaceBuff&& ibuff) noexcept
+	InplaceBuff(InplaceBuff&& ibuff) noexcept
 	   : InplaceBuffBase(ibuff.size, std::max(N, ibuff.max_size_), ibuff.p_) {
 		if (ibuff.is_allocated()) {
 			p_ = ibuff.p_;
@@ -219,7 +222,7 @@ public:
 	}
 
 	template <size_t M, std::enable_if_t<M != N, int> = 0>
-	constexpr InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
+	InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
 	   : InplaceBuffBase(ibuff.size, N, ibuff.p_) {
 		if (ibuff.size <= N) {
 			p_ = &a_[0];
@@ -268,7 +271,7 @@ public:
 
 private:
 	template <size_t M>
-	constexpr InplaceBuff& assign_move_impl(InplaceBuff<M>&& ibuff) {
+	InplaceBuff& assign_move_impl(InplaceBuff<M>&& ibuff) {
 		if (ibuff.is_allocated() and ibuff.max_size() >= max_size()) {
 			// Steal the allocated string
 			if (is_allocated())
