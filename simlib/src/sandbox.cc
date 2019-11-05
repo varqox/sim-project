@@ -547,7 +547,7 @@ Sandbox::Sandbox() {
 			   struct iovec local, remote;
 			   char buff[PATH_MAX + 1] = {};
 			   local.iov_base = buff;
-			   remote.iov_base = reinterpret_cast<void*>((size_t)path_arg);
+			   remote.iov_base = reinterpret_cast<void*>(path_arg);
 			   local.iov_len = remote.iov_len = PATH_MAX;
 
 			   ssize_t len =
