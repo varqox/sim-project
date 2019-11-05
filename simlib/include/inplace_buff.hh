@@ -106,10 +106,10 @@ public:
 	// Do not allow to create CStringView of a temporary object
 	constexpr CStringView to_cstr() && = delete;
 
-protected:
 	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
 	   : size(s), max_size_(max_s), p_(p) {}
 
+protected:
 	constexpr InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
 	constexpr InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
 	InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;

@@ -693,12 +693,15 @@ public:
 			if (res_binds_[i].buffer_type != MYSQL_TYPE_BLOB)
 				THROW("Truncated data at column ", i);
 
-			InplaceBuffBase* buff = reinterpret_cast<InplaceBuffBase*>(
-			   (int8_t*)res_binds_[i].length - offsetof(InplaceBuffBase, size));
-			buff->lossy_resize(buff->size);
+			InplaceBuffBase buff {0,0,nullptr};
+			auto size_offset = reinterpret_cast<std::byte*>(&buff.size) - reinterpret_cast<std::byte*>(&buff);
+			void* orig_buff_addr = reinterpret_cast<std::byte*>(res_binds_[i].length) - size_offset;
 
-			res_binds_[i].buffer = buff->data();
-			res_binds_[i].buffer_length = buff->max_size();
+			memcpy(&buff, orig_buff_addr, sizeof(buff));
+			buff.lossy_resize(buff.size);
+			res_binds_[i].buffer = buff.data();
+			res_binds_[i].buffer_length = buff.max_size();
+			memcpy(orig_buff_addr, &buff, sizeof(buff));
 
 			if (mysql_stmt_fetch_column(stmt_, &res_binds_[i], i, 0))
 				THROW(mysql_stmt_error(stmt_));
