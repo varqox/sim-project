@@ -39,7 +39,8 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 	            "-b", "/lib32",
 	            "-b", "/libx32",
 	            "-b", "/lib64",
-	            "-b", "/etc/alternatives/"});
+	            "-b", "/etc/alternatives/",
+	            "-b", "/etc/fpc.cfg"}); // TODO: make this a specific option for the FPC compiler
 	// clang-format on
 
 	args.insert(args.end(), compile_command.begin(), compile_command.end());
