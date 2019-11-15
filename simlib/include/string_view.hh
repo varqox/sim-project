@@ -547,8 +547,15 @@ public:
 		return StringView(*this).remove_trailing(std::forward<T>(arg));
 	}
 
-	using StringBase::substr;
-	using StringBase::substring;
+	template<class... Args>
+	StringView substr(Args&&... args) {
+		return StringBase::substr(std::forward<Args>(args)...);
+	}
+
+	template<class... Args>
+	StringView substring(Args&&... args) {
+		return StringBase::substring(std::forward<Args>(args)...);
+	}
 };
 
 inline std::string& operator+=(std::string& str, StringView s) {
