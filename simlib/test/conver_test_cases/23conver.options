@@ -1,5 +1,5 @@
-name:
-label:
+name: null
+label: null
 interactive: true
 memory_limit: null
 global_time_limit: null

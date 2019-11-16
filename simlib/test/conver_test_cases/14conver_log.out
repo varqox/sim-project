@@ -4,7 +4,7 @@ Problem's label is not specified in options - loading it from Simfile
   label generated from name: tes
 Missing checker in the package's Simfile - searching for one
 No checker was found - the default checker will be used
-Missing / invalid statement specified in the package's Simfile - searching for one
+Missing statement specified in the package's Simfile - searching for one
 Chosen statement: foo.txt
 Auto-scoring: score of the group with id `0` set to 0
 Auto-scoring: score of the group with id `1` set to 33

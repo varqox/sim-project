@@ -5,7 +5,7 @@ Problem's label is not specified in options - loading it from Simfile
   label generated from name: tes
 Missing checker in the package's Simfile - searching for one
 Chosen checker: check/checker.c
-Missing / invalid statement specified in the package's Simfile - searching for one
+Missing statement specified in the package's Simfile - searching for one
 Chosen statement: foo.txt
 Global memory limit not specified in options - loading it from Simfile
 [1;35mwarning[m: "scoring": ignoring score of the group with id `42` because no test belongs to it

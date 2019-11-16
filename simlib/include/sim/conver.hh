@@ -55,10 +55,10 @@ public:
 	};
 
 	struct Options {
-		// Leave empty to detect it from the Simfile in the package
-		std::string name;
-		// Leave empty to detect it from the Simfile in the package
-		std::string label;
+		// Leave unset to detect it from the Simfile in the package
+		std::optional<std::string> name;
+		// Leave unset to detect it from the Simfile in the package
+		std::optional<std::string> label;
 		// Whether the problem is interactive or not, leave unset to detect it
 		// from Simfile in the package
 		std::optional<bool> interactive;

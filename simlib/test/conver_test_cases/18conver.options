@@ -1,5 +1,5 @@
 name: Test
-label:
+label: null
 interactive: false
 memory_limit: 32
 global_time_limit: null

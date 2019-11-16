@@ -13,6 +13,8 @@ using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::string;
 
+constexpr static bool REGENERATE_OUTS = false;
+
 static Conver::Options load_options_from_file(FilePath file) {
 	ConfigFile cf;
 	cf.load_config_from_file(file, true);
@@ -26,8 +28,16 @@ static Conver::Options load_options_from_file(FilePath file) {
 		return var;
 	};
 
-	auto get_string = [&](StringView name) -> decltype(auto) {
+	auto get_string = [&](StringView name) -> const std::string& {
 		return get_var(name).as_string();
+	};
+
+	auto get_optional_string =
+	   [&](StringView name) -> std::optional<std::string> {
+		if (get_var(name).as_string() == "null")
+			return std::nullopt;
+
+		return get_string(name);
 	};
 
 	auto get_uint64 = [&](StringView name) {
@@ -76,8 +86,8 @@ static Conver::Options load_options_from_file(FilePath file) {
 
 	Conver::Options opts;
 
-	opts.name = get_string("name");
-	opts.label = get_string("label");
+	opts.name = get_optional_string("name");
+	opts.label = get_optional_string("label");
 	opts.interactive = get_optional_bool("interactive");
 	opts.memory_limit = get_optional_uint64("memory_limit");
 	opts.global_time_limit = get_optional_duration("global_time_limit");
@@ -166,7 +176,6 @@ public:
 };
 
 class ConverTestRunner : public concurrent::JobProcessor<string> {
-	constexpr static bool REGENERATE_OUTS = false;
 	const string tests_dir_;
 
 public:

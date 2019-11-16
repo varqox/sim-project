@@ -5,7 +5,7 @@ Problem's label is not specified in options - loading it from Simfile
   label generated from name: tes
 Missing checker in the package's Simfile - searching for one
 No checker was found - the default checker will be used
-Missing / invalid statement specified in the package's Simfile - searching for one
+Missing statement specified in the package's Simfile - searching for one
 [1;35mwarning[m: no statement was found
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `aa`
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `44`

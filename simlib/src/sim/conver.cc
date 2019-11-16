@@ -77,34 +77,36 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 
 	// Name
-	if (opts.name.size()) {
-		sf.name = opts.name;
-		report_.append("Problem's name (specified in options): ", sf.name);
+	if (opts.name) {
+		sf.name = opts.name.value();
+		report_.append("Problem's name (specified in options): ",
+		               sf.name.value());
 	} else {
 		report_.append("Problem's name is not specified in options - loading it"
 		               " from Simfile");
 		sf.load_name();
-		report_.append("  name loaded from Simfile: ", sf.name);
+		report_.append("  name loaded from Simfile: ", sf.name.value());
 	}
 
 	// Label
-	if (opts.label.size()) {
-		sf.label = opts.label;
-		report_.append("Problem's label (specified in options): ", sf.label);
+	if (opts.label) {
+		sf.label = opts.label.value();
+		report_.append("Problem's label (specified in options): ",
+		               sf.label.value());
 	} else {
 		report_.append("Problem's label is not specified in options - loading"
 		               " it from Simfile");
 		try {
 			sf.load_label();
-			report_.append("  label loaded from Simfile: ", sf.label);
+			report_.append("  label loaded from Simfile: ", sf.label.value());
 
 		} catch (const std::exception& e) {
 			report_.append("  ", e.what(),
 			               " -> generating label from the"
 			               " problem's name");
 
-			sf.label = shorten_name(sf.name);
-			report_.append("  label generated from name: ", sf.label);
+			sf.label = shorten_name(sf.name.value());
+			report_.append("  label generated from name: ", sf.label.value());
 		}
 	}
 
@@ -176,9 +178,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	} catch (...) {
 	}
 
-	if (not exists_in_pkg(sf.statement)) {
-		report_.append("Missing / invalid statement specified in the package's"
-		               " Simfile - searching for one");
+	if (sf.statement and exists_in_pkg(sf.statement.value())) {
+		// OK
+	} else {
+		report_.append(
+		   (sf.statement ? "Invalid" : "Missing"),
+		   " statement specified in the package's Simfile - searching for one");
 
 		auto is_statement = [](StringView file) {
 			return has_one_of_suffixes(file, ".pdf", ".html", ".htm", ".md",
@@ -210,7 +215,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			   }));
 
 			sf.statement = x.front().substr(master_dir.size()).to_string();
-			report_.append("Chosen statement: ", sf.statement);
+			report_.append("Chosen statement: ", sf.statement.value());
 		}
 	}
 

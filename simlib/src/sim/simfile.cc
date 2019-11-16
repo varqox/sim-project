@@ -53,17 +53,17 @@ namespace sim {
 
 string Simfile::dump() const {
 	string res;
-	if (not name.empty())
-		back_insert(res, "name: ", ConfigFile::escape_string(name), '\n');
+	if (name)
+		back_insert(res, "name: ", ConfigFile::escape_string(*name), '\n');
 
-	if (not label.empty())
-		back_insert(res, "label: ", ConfigFile::escape_string(label), '\n');
+	if (label)
+		back_insert(res, "label: ", ConfigFile::escape_string(*label), '\n');
 
 	if (interactive)
 		back_insert(res, "interactive: ", interactive, '\n');
 
-	if (not statement.empty()) {
-		back_insert(res, "statement: ", ConfigFile::escape_string(statement),
+	if (statement) {
+		back_insert(res, "statement: ", ConfigFile::escape_string(*statement),
 		            '\n');
 	}
 
@@ -146,15 +146,19 @@ string Simfile::dump_limits_value() const {
 void Simfile::load_name() {
 	auto&& var = config["name"];
 	CHECK_IF_NOT_ARR(var, "name");
-	if ((name = var.as_string()).empty())
+	if (not var.is_set())
 		throw std::runtime_error {"Simfile: missing problem's name"};
+
+	name = var.as_string();
 }
 
 void Simfile::load_label() {
 	auto&& var = config["label"];
 	CHECK_IF_NOT_ARR(var, "label");
-	if ((label = var.as_string()).empty())
+	if (not var.is_set())
 		throw std::runtime_error {"Simfile: missing problem's label"};
+
+	label = var.as_string();
 }
 
 void Simfile::load_interactive() {
@@ -172,7 +176,7 @@ void Simfile::load_checker() {
 	auto&& var = config["checker"];
 	CHECK_IF_NOT_ARR(var, "checker");
 
-	if (var.as_string().empty()) {
+	if (not var.is_set() or var.as_string().empty()) {
 		if (interactive) {
 			throw std::runtime_error("Simfile: interactive problems require"
 			                         " checker (checker is not set)");
@@ -190,8 +194,10 @@ void Simfile::load_checker() {
 void Simfile::load_statement() {
 	auto&& var = config["statement"];
 	CHECK_IF_NOT_ARR(var, "statement");
-	if (var.as_string().empty())
+	if (not var.is_set())
 		throw std::runtime_error {"Simfile: missing statement"};
+	if (var.as_string().empty())
+		throw std::runtime_error {"Simfile: statement cannot be empty"};
 
 	// Secure path, so that it is not going outside the package
 	statement = path_absolute(var.as_string()).erase(0, 1); // Erase '/' from
@@ -525,10 +531,10 @@ void Simfile::validate_files(StringView package_path) const {
 	}
 
 	// Statement
-	if (statement.size() &&
-	    !is_regular_file(concat(package_path, '/', statement))) {
+	if (statement &&
+	    !is_regular_file(concat(package_path, '/', statement.value()))) {
 		throw std::runtime_error {
-		   concat_tostr("Simfile: invalid statement file `", statement, '`')};
+		   concat_tostr("Simfile: invalid statement file `", *statement, '`')};
 	}
 
 	// Solutions

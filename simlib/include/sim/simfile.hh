@@ -81,7 +81,9 @@ namespace sim {
  */
 class Simfile {
 public:
-	std::string name, label, statement;
+	std::optional<std::string> name; // Is unset only if not loaded
+	std::optional<std::string> label; // Is unset only if not loaded
+	std::optional<std::string> statement; // Is unset only if not loaded
 	bool interactive = false;
 	std::optional<std::string>
 	   checker; // std::nullopt if default checker should be used

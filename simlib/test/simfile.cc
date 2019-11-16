@@ -133,7 +133,7 @@ TEST(Simfile, load_name) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.load_name();
-		EXPECT_EQ("Problem 1 2 3", sf.name) << "iteration: " << i;
+		EXPECT_EQ("Problem 1 2 3", sf.name.value()) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -142,7 +142,8 @@ TEST(Simfile, load_name) {
 	sf = sim::Simfile {"name: []"};
 	EXPECT_THROW(sf.load_name(), std::runtime_error);
 	sf = sim::Simfile {"name:"};
-	EXPECT_THROW(sf.load_name(), std::runtime_error);
+	sf.load_name();
+	EXPECT_EQ(sf.name.value(), "");
 }
 
 TEST(Simfile, load_label) {
@@ -150,7 +151,7 @@ TEST(Simfile, load_label) {
 	// Load two times - make sure that it is safe
 	for (int i = 1; i <= 2; ++i) {
 		sf.load_label();
-		EXPECT_EQ("Label 1 2 3", sf.label) << "iteration: " << i;
+		EXPECT_EQ("Label 1 2 3", sf.label.value()) << "iteration: " << i;
 	}
 
 	// Exceptions
@@ -159,7 +160,8 @@ TEST(Simfile, load_label) {
 	sf = sim::Simfile {"label: []"};
 	EXPECT_THROW(sf.load_label(), std::runtime_error);
 	sf = sim::Simfile {"label:"};
-	EXPECT_THROW(sf.load_label(), std::runtime_error);
+	sf.load_label();
+	EXPECT_EQ(sf.label.value(), "");
 }
 
 TEST(Simfile, load_interactive) {
