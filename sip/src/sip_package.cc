@@ -8,9 +8,12 @@
 #include <fstream>
 #include <poll.h>
 #include <simlib/defer.hh>
+#include <simlib/directory.hh>
+#include <simlib/file_info.hh>
 #include <simlib/libzip.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
+#include <simlib/working_directory.hh>
 #include <sys/inotify.h>
 
 namespace {
@@ -208,10 +211,12 @@ void SipPackage::generate_test_input_files() {
 	});
 
 	CStringView in_dir;
-	if (is_directory("tests/"))
+	if (is_directory("tests/")) {
 		in_dir = "tests/";
-	else
-		mkdir(in_dir = "in/");
+	} else if (mkdir(in_dir = "in/") == -1 and errno != EEXIST) {
+		throw SipError("failed to create directory in/ (mkdir()", errmsg(),
+		               ')');
+	}
 
 	// Generate .in files
 	sipfile.gen_tests.for_each([&](const Sipfile::GenTest& test) {
@@ -291,7 +296,11 @@ void SipPackage::generate_test_output_files() {
 	// Create out/ dir if needed
 	tests_files.value().tests.for_each([&](auto&& p) {
 		if (has_prefix(p.second.in.value_or(""), "in/")) {
-			mkdir("out");
+			if (mkdir("out") == -1 and errno != EEXIST) {
+				throw SipError("failed to create directory out/ (mkdir()",
+				               errmsg(), ')');
+			}
+
 			return false;
 		}
 
@@ -638,8 +647,13 @@ static void compile_tex_file(StringView file) {
 		}
 	}
 
-	move(concat("utils/latex/", path_filename(file).without_suffix(3), "pdf"),
-	     concat(file.without_suffix(3), "pdf"));
+	auto src =
+	   concat("utils/latex/", path_filename(file).without_suffix(3), "pdf");
+	auto dest = concat(file.without_suffix(3), "pdf");
+	if (move(src, dest) == -1) {
+		throw SipError("failed to rename file ", src, " into ", dest,
+		               " (move()", errmsg(), ')');
+	}
 }
 
 static void watch_tex_files(const std::vector<std::string>& tex_files) {
@@ -759,7 +773,11 @@ void SipPackage::compile_tex_files(bool watch) {
 		return;
 	}
 
-	mkdir_r("utils/latex");
+	if (mkdir_r("utils/latex") == -1) {
+		throw SipError("failed to create directory utils/latex/ (mkdir_r()",
+		               errmsg(), ')');
+	}
+
 	for (auto const& file : tex_files)
 		compile_tex_file(file);
 

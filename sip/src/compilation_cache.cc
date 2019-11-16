@@ -3,6 +3,8 @@
 #include "proot_dump.h"
 #include "sip_error.hh"
 
+#include <simlib/file_info.hh>
+
 using std::string;
 
 namespace {
@@ -41,7 +43,9 @@ void cache_proot(FilePath dest_file) {
 	if (access(dest_file, F_OK) == 0)
 		return;
 
-	create_subdirectories(dest_file.to_cstr());
+	if (create_subdirectories(dest_file.to_cstr()) == -1)
+		throw SipError("create_subdirectories(", dest_file, ')', errmsg());
+
 	put_file_contents(dest_file, (const char*)proot_dump, proot_dump_len,
 	                  S_0700);
 }
@@ -70,7 +74,9 @@ decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
 
 	stdlog(" done.");
 	auto cached_exec = cached_path(source);
-	create_subdirectories(cached_exec);
+	if (create_subdirectories(cached_exec) == -1)
+		throw SipError("create_subdirectories(", cached_exec, ')', errmsg());
+
 	jworker.save_compiled_solution(cached_exec);
 	return cached_exec;
 }
@@ -103,7 +109,9 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 	stdlog(" done.");
 	auto cached_exec = (checker.has_value() ? cached_path(checker.value())
 	                                        : cached_default_checker);
-	create_subdirectories(cached_exec);
+	if (create_subdirectories(cached_exec) == -1)
+		throw SipError("create_subdirectories(", cached_exec, ')', errmsg());
+
 	jworker.save_compiled_checker(cached_exec);
 }
 

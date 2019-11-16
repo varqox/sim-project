@@ -5,6 +5,7 @@
 
 #include <bits/stdint-uintn.h>
 #include <optional>
+#include <simlib/file_info.hh>
 #include <simlib/path.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/sim/problem_package.hh>

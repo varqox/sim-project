@@ -1,8 +1,11 @@
 #include "templates.hh"
 
+#include <climits>
 #include <pwd.h>
 #include <simlib/debug.hh>
-#include <simlib/filesystem.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/string_traits.hh>
 #include <sys/types.h>
 #include <unistd.h>
 

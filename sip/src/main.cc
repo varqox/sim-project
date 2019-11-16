@@ -4,7 +4,6 @@
 
 #include <signal.h>
 #include <simlib/debug.hh>
-#include <simlib/filesystem.hh>
 #include <simlib/process.hh>
 
 /**

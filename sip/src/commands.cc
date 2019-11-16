@@ -3,8 +3,10 @@
 #include "sip_package.hh"
 #include "utils.hh"
 
+#include <simlib/file_info.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
+#include <simlib/working_directory.hh>
 
 namespace commands {
 
@@ -208,9 +210,10 @@ void init(ArgvParser args) {
 		throw SipError("missing directory argument - see -h for help");
 
 	auto specified_dir = args.extract_next();
-	if (mkdir_r(specified_dir.to_string()) == -1 and errno != EEXIST)
+	if (mkdir_r(specified_dir.to_string()) == -1 and errno != EEXIST) {
 		throw SipError("failed to create directory: ", specified_dir,
-		               "(mkdir_r()", errmsg(), ')');
+		               " (mkdir_r()", errmsg(), ')');
+	}
 
 	if (chdir(specified_dir.data()) == -1)
 		THROW("chdir()", errmsg());
@@ -235,8 +238,7 @@ void interactive(ArgvParser args) {
 	if (args.size() > 0) {
 		auto new_interactive = args.extract_next();
 		if (not is_one_of(new_interactive, "true", "false")) {
-			throw SipError(
-			   "interactive should have a value of true or false");
+			throw SipError("interactive should have a value of true or false");
 		}
 
 		sp.replace_variable_in_simfile("interactive", new_interactive);
