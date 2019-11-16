@@ -429,8 +429,6 @@ public:
 
 	~StringView() = default;
 
-	constexpr void clear() noexcept { len = 0; }
-
 	template <class... Args>
 	constexpr StringView substr(Args&&... args) const {
 		return StringBase::substr(std::forward<Args>(args)...);

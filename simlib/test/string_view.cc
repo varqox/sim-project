@@ -292,10 +292,6 @@ TEST(DISABLED_StringView, constructor_from_temporary) {
 	// TODO: implement it
 }
 
-TEST(DISABLED_StringView, clear) {
-	// TODO: implement it
-}
-
 TEST(DISABLED_StringView, remove_prefix) {
 	// TODO: implement it
 }

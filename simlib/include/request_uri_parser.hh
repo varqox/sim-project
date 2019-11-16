@@ -54,7 +54,7 @@ public:
 			return {};
 
 		StringView res {buff.substr(1)};
-		buff.clear();
+		buff = "";
 		return res;
 	}
 
