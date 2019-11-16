@@ -1,6 +1,6 @@
 #pragma once
 
-#include <simlib/string.h>
+#include <simlib/string_view.hh>
 
 inline bool is_subsequence(StringView sequence, StringView str) noexcept {
 	if (sequence.empty())

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <simlib/logger.h>
-#include <simlib/string.h>
+#include <simlib/logger.hh>
 
 template <class... Args>
 auto log_warning(Args&&... args) {

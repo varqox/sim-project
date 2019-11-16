@@ -1,8 +1,8 @@
 #include "templates.hh"
 
 #include <pwd.h>
-#include <simlib/debug.h>
-#include <simlib/filesystem.h>
+#include <simlib/debug.hh>
+#include <simlib/filesystem.hh>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -39,11 +39,11 @@ static string get_template(StringView template_name,
                            unsigned char* default_template,
                            unsigned default_template_len) {
 	static auto templates_dir = user_templates_dir();
-	FileDescriptor fd(intentionalUnsafeCStringView(
+	FileDescriptor fd(intentional_unsafe_cstring_view(
 	                     concat<PATH_MAX>(templates_dir, template_name)),
 	                  O_RDONLY);
-	if (fd.opened())
-		return getFileContents(fd);
+	if (fd.is_open())
+		return get_file_contents(fd);
 
 	return {(const char*)default_template, default_template_len};
 }
@@ -54,7 +54,7 @@ static string replace(StringView text, Subst&&... substitutions) {
 	for (size_t i = 0; i < text.size(); ++i) {
 		auto try_replace = [&](auto& substituton) {
 			auto& [pattern, subst] = substituton;
-			if (hasPrefix(text.substring(i), pattern)) {
+			if (has_prefix(text.substring(i), pattern)) {
 				res += subst;
 				i += string_length(pattern) - 1;
 				return true;

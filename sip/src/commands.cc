@@ -1,10 +1,10 @@
-#include "commands.h"
-#include "sip_error.h"
-#include "sip_package.h"
-#include "utils.h"
+#include "commands.hh"
+#include "sip_error.hh"
+#include "sip_package.hh"
+#include "utils.hh"
 
-#include <simlib/filesystem.h>
-#include <simlib/process.h>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
 
 namespace commands {
 
@@ -300,7 +300,7 @@ void mem(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto new_mem_limit = args.extract_next();
-		if (not isDigitNotLessThan<1>(new_mem_limit))
+		if (not is_digit_not_less_than<1>(new_mem_limit))
 			throw SipError("memory limit has to be a positive integer");
 
 		sp.replace_variable_in_simfile("memory_limit", new_mem_limit);
@@ -448,9 +448,9 @@ void zip(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	clean(args);
-	auto cwd = getCWD();
+	auto cwd = get_cwd();
 	--cwd.size;
-	SipPackage().archive_into_zip(filename(cwd.to_cstr()));
+	SipPackage().archive_into_zip(path_filename(cwd.to_cstr()));
 }
 
 } // namespace commands

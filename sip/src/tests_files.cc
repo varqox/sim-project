@@ -1,9 +1,9 @@
-#include "tests_files.h"
-#include "sip_error.h"
+#include "tests_files.hh"
+#include "sip_error.hh"
 
 static StringView get_test_name(StringView test_path) {
 	test_path = test_path.substring(0, test_path.rfind('.'));
-	return test_path.extractTrailing([](int c) { return c != '/'; });
+	return test_path.extract_trailing([](int c) { return c != '/'; });
 }
 
 TestsFiles::TestsFiles() {
@@ -13,7 +13,7 @@ TestsFiles::TestsFiles() {
 	pc.remove_with_prefix("utils/");
 
 	pc.for_each_with_prefix("", [&](StringView file) {
-		if (hasSuffix(file, ".in")) {
+		if (has_suffix(file, ".in")) {
 			auto test_name = get_test_name(file);
 			auto it = tests.find(test_name);
 			if (it == nullptr) {
@@ -26,7 +26,7 @@ TestsFiles::TestsFiles() {
 				it->second.in = file;
 			}
 
-		} else if (hasSuffix(file, ".out")) {
+		} else if (has_suffix(file, ".out")) {
 			auto test_name = get_test_name(file);
 			auto it = tests.find(test_name);
 			if (it == nullptr) {

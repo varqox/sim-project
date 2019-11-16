@@ -1,12 +1,14 @@
-#include "sipfile.h"
-#include "sip_error.h"
-#include "utils.h"
+#include "sipfile.hh"
+#include "lib/simlib/include/string_transform.hh"
+#include "sip_error.hh"
+#include "utils.hh"
 
+#include <bits/stdint-uintn.h>
 #include <optional>
-#include <simlib/filesystem.h>
-#include <simlib/sim/judge_worker.h>
-#include <simlib/sim/problem_package.h>
-#include <simlib/sim/simfile.h>
+#include <simlib/path.hh>
+#include <simlib/sim/judge_worker.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/sim/simfile.hh>
 
 // Macros because of string concentration in compile-time (in C++11 it is hard
 // to achieve in the other way and this macros are pretty more readable than
@@ -32,7 +34,7 @@ void Sipfile::load_default_time_limit() {
 	if (dtl.as_string().empty())
 		throw SipError("Sipfile: missing default_time_limit");
 
-	if (!isReal(dtl.as_string()))
+	if (!is_real(dtl.as_string()))
 		throw SipError("Sipfile: invalid default time limit");
 
 	double tl = stod(dtl.as_string());
@@ -86,21 +88,25 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 		}
 	}
 
-	if (not isDigitNotGreaterThan<ULLONG_MAX>(begin_test.gid)) {
+	auto begin_gid_opt = str2num<uint64_t>(begin_test.gid);
+	if (not begin_gid_opt) {
 		throw SipError("invalid test range (group id is too big): ",
 		               test_range);
 	}
 
-	unsigned long long begin_gid = strtoull(begin_test.gid);
-	unsigned long long end_gid;
+	uint64_t begin_gid = begin_gid_opt.value();
+	uint64_t end_gid;
 
 	if (end_test.gid.empty()) { // Allow e.g. 4a-d
 		end_gid = begin_gid;
-	} else if (not isDigitNotGreaterThan<ULLONG_MAX>(end_test.gid)) {
-		throw SipError("invalid test range (group id is too big): ",
-		               test_range);
 	} else {
-		end_gid = strtoull(end_test.gid);
+		auto end_gid_opt = str2num<uint64_t>(end_test.gid);
+		if (not end_gid_opt) {
+			throw SipError("invalid test range (group id is too big): ",
+			               test_range);
+		}
+
+		end_gid = end_gid_opt.value();
 	}
 
 	std::string begin_tid = tolower(begin_test.tid.to_string());
@@ -138,7 +144,7 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 
 	for (auto gid = begin_gid; gid <= end_gid; ++gid)
 		for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid))
-			callback(intentionalUnsafeStringView(concat(prefix, gid, tid)));
+			callback(intentional_unsafe_string_view(concat(prefix, gid, tid)));
 }
 
 void Sipfile::load_static_tests() {
@@ -149,9 +155,9 @@ void Sipfile::load_static_tests() {
 
 	static_tests.clear();
 	for (StringView entry : static_tests_var.as_array()) {
-		entry.extractLeading(isspace);
-		StringView test_range = entry.extractLeading(not_isspace);
-		entry.extractLeading(isspace);
+		entry.extract_leading(isspace);
+		StringView test_range = entry.extract_leading(not_isspace);
+		entry.extract_leading(isspace);
 		if (not entry.empty()) {
 			log_warning("Sipfile (static): ignoring invalid suffix: `", entry,
 			            "` of the entry with test range: ", test_range);
@@ -221,14 +227,14 @@ void Sipfile::load_gen_tests() {
 	gen_tests.clear();
 	for (StringView entry : gen_tests_var.as_array()) {
 		// Test range
-		entry.extractLeading(isspace);
-		StringView test_range = entry.extractLeading(not_isspace);
-		entry.extractLeading(isspace);
+		entry.extract_leading(isspace);
+		StringView test_range = entry.extract_leading(not_isspace);
+		entry.extract_leading(isspace);
 		// Generator
-		StringView specified_generator = entry.extractLeading(not_isspace);
-		entry.extractLeading(isspace);
+		StringView specified_generator = entry.extract_leading(not_isspace);
+		entry.extract_leading(isspace);
 		// Generator arguments
-		entry.extractTrailing(isspace);
+		entry.extract_trailing(isspace);
 		StringView generator_args = entry;
 
 		if (specified_generator.empty()) {
@@ -239,8 +245,8 @@ void Sipfile::load_gen_tests() {
 
 		// Match generator
 		InplaceBuff<32> generator;
-		if (hasPrefix(specified_generator, "sh:") or
-		    access(abspath(specified_generator), F_OK) == 0) {
+		if (has_prefix(specified_generator, "sh:") or
+		    access(path_absolute(specified_generator), F_OK) == 0) {
 			generator = specified_generator;
 		} else {
 			generator = matching_generator(specified_generator, pkg_contents);

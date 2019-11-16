@@ -1,7 +1,7 @@
-#include "compilation_cache.h"
-#include "constants.h"
+#include "compilation_cache.hh"
+#include "constants.hh"
 #include "proot_dump.h"
-#include "sip_error.h"
+#include "sip_error.hh"
 
 using std::string;
 
@@ -42,7 +42,8 @@ void cache_proot(FilePath dest_file) {
 		return;
 
 	create_subdirectories(dest_file.to_cstr());
-	putFileContents(dest_file, (const char*)proot_dump, proot_dump_len, S_0700);
+	put_file_contents(dest_file, (const char*)proot_dump, proot_dump_len,
+	                  S_0700);
 }
 
 decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {

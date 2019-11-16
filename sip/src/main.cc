@@ -1,12 +1,11 @@
-#include "commands.h"
-#include "sip_error.h"
-#include "sip_package.h"
+#include "commands.hh"
+#include "sip_error.hh"
+#include "sip_package.hh"
 
 #include <signal.h>
-#include <simlib/debug.h>
-#include <simlib/filesystem.h>
-#include <simlib/parsers.h>
-#include <simlib/process.h>
+#include <simlib/debug.hh>
+#include <simlib/filesystem.hh>
+#include <simlib/process.hh>
 
 /**
  * Parses options passed to Sip via arguments
@@ -91,7 +90,7 @@ static void kill_signal_handler(int signum) {
 				continue; // Ignore errors
 
 			path.size = rc;
-			if (hasPrefix(path, zip_path_prefix))
+			if (has_prefix(path, zip_path_prefix))
 				(void)unlink(path.to_cstr().data());
 		}
 	}

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "sip_judge_logger.h"
-#include "sipfile.h"
-#include "tests_files.h"
+#include "sip_judge_logger.hh"
+#include "sipfile.hh"
+#include "tests_files.hh"
 
 #include <functional>
 #include <optional>
-#include <simlib/sim/conver.h>
+#include <simlib/sim/conver.hh>
 
 class SipPackage {
 private:

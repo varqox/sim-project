@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <simlib/avl_dict.h>
-#include <simlib/config_file.h>
+#include <simlib/avl_dict.hh>
+#include <simlib/config_file.hh>
 
 /**
  * @brief Sipfile holds sip package configuration that does not fit into Simfile

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <simlib/avl_dict.h>
-#include <simlib/sim/judge_worker.h>
+#include "lib/simlib/include/time.hh"
+#include <simlib/avl_dict.hh>
+#include <simlib/enum_val.hh>
+#include <simlib/sim/judge_worker.hh>
 
 class SipJudgeLogger : public sim::JudgeLogger {
 	template <class... Args>
@@ -17,16 +19,17 @@ class SipJudgeLogger : public sim::JudgeLogger {
 	void log_test(StringView test_name, sim::JudgeReport::Test test_report,
 	              Sandbox::ExitStat es, Func&& func) {
 		++statistics_[test_report.status];
-		auto tmplog = log(
-		   "  ", paddedString(test_name, 8, LEFT), ' ',
-		   paddedString(intentionalUnsafeStringView(
-		                   toString(floor_to_10ms(test_report.runtime), false)),
-		                4),
-		   " / ", toString(floor_to_10ms(test_report.time_limit), false), " s ",
-		   paddedString(intentionalUnsafeStringView(
-		                   humanizeFileSize(test_report.memory_consumed)),
-		                7),
-		   " / ", humanizeFileSize(test_report.memory_limit), "  ");
+		auto tmplog =
+		   log("  ", padded_string(test_name, 8, LEFT), ' ',
+		       padded_string(intentional_unsafe_string_view(to_string(
+		                        floor_to_10ms(test_report.runtime), false)),
+		                     4),
+		       " / ", to_string(floor_to_10ms(test_report.time_limit), false),
+		       " s ",
+		       padded_string(intentional_unsafe_string_view(humanize_file_size(
+		                        test_report.memory_consumed)),
+		                     7),
+		       " / ", humanize_file_size(test_report.memory_limit), "  ");
 		// Status
 		switch (test_report.status) {
 		case sim::JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
@@ -46,7 +49,7 @@ class SipJudgeLogger : public sim::JudgeLogger {
 		}
 
 		// Rest
-		tmplog(" [ RT: ", toString(floor_to_10ms(es.runtime), false), " ]");
+		tmplog(" [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ]");
 
 		func(tmplog);
 	}
@@ -78,10 +81,10 @@ public:
 				return; // Checker was not run
 
 			tmplog(
-			   " [ RT: ", toString(floor_to_10ms(checker_es.runtime), false),
-			   " ] ", humanizeFileSize(checker_es.vm_peak));
+			   " [ RT: ", to_string(floor_to_10ms(checker_es.runtime), false),
+			   " ] ", humanize_file_size(checker_es.vm_peak));
 			if (checker_mem_limit.has_value())
-				tmplog(" / ", humanizeFileSize(checker_mem_limit.value()));
+				tmplog(" / ", humanize_file_size(checker_mem_limit.value()));
 		});
 	}
 
@@ -100,8 +103,8 @@ public:
 			using S = sim::JudgeReport::Test::Status;
 
 			statistics_.for_each([&](auto&& p) {
-				auto no = paddedString(
-				   intentionalUnsafeStringView(toStr(p.second)), 4);
+				auto no = padded_string(
+				   intentional_unsafe_string_view(to_string(p.second)), 4);
 				switch (p.first) {
 				case S::OK: log("\033[1;32mOK\033[m            ", no); break;
 				case S::WA: log("\033[1;31mWA\033[m            ", no); break;
