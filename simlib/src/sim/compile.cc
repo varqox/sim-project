@@ -1,3 +1,4 @@
+#include "../../include/sim/compile.hh"
 #include "../../include/spawner.hh"
 #include "../../include/unlinked_temporary_file.hh"
 

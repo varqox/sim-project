@@ -6,6 +6,7 @@
 #include "../include/time.hh"
 
 #include <sys/syscall.h>
+#include <vector>
 
 using std::array;
 using std::string;

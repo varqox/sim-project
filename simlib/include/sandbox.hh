@@ -4,6 +4,7 @@
 #include "spawner.hh"
 
 #include <seccomp.h>
+#include <vector>
 
 enum class OpenAccess {
 	NONE, // Yes, it is possible if the file is opened with O_WRONLY | O_RDWR

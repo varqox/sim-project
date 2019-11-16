@@ -8,6 +8,7 @@
 #include "../include/string_transform.hh"
 #include "../include/working_directory.hh"
 
+#include <functional>
 #include <thread>
 #include <unistd.h>
 
