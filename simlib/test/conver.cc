@@ -1,9 +1,12 @@
 #include "../include/sim/conver.hh"
 #include "../include/avl_dict.hh"
 #include "../include/concurrent/job_processor.hh"
+#include "../include/directory.hh"
 #include "../include/libzip.hh"
+#include "../include/opened_temporary_file.hh"
 #include "../include/path.hh"
 #include "../include/process.hh"
+#include "../include/temporary_file.hh"
 
 #include <gtest/gtest.h>
 #include <regex>
@@ -243,8 +246,8 @@ private:
 		     test_path_prefix_(concat(tests_dir, test_case_name_)),
 		     options_(load_options_from_file(
 		        concat_tostr(test_path_prefix_, "conver.options"))) {
-			copy(concat_tostr(test_path_prefix_, "package.zip"),
-			     package_copy_.path());
+			throw_assert(copy(concat_tostr(test_path_prefix_, "package.zip"),
+			                  package_copy_.path()) == 0);
 			conver_.package_path(package_copy_.path());
 		}
 

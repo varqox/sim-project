@@ -2,6 +2,7 @@
 #include "../include/concurrent/job_processor.hh"
 #include "../include/path.hh"
 #include "../include/process.hh"
+#include "../include/temporary_file.hh"
 
 #include <gtest/gtest.h>
 #include <iomanip>

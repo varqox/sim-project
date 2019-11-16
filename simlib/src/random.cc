@@ -1,6 +1,7 @@
 #include "../include/random.hh"
 #include "../include/debug.hh"
-#include "../include/filesystem.hh"
+#include "../include/file_contents.hh"
+#include "../include/file_descriptor.hh"
 #include "../include/logger.hh"
 
 #include <sys/syscall.h>

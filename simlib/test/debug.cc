@@ -1,6 +1,7 @@
 #include "../include/debug.hh"
 #include "../include/defer.hh"
-#include "../include/filesystem.hh"
+#include "../include/file_contents.hh"
+#include "../include/unlinked_temporary_file.hh"
 
 #include <gtest/gtest.h>
 
@@ -30,7 +31,7 @@ static std::string intercept_logger(Logger& logger,
 	std::unique_ptr<FILE, decltype(&fclose)> stream = {fdopen(fd, "r+"),
 	                                                   fclose};
 	throw_assert(stream);
-	fd.release(); // Now stream owns it
+	(void)fd.release(); // Now stream owns it
 
 	FILE* logger_stream = stream.get();
 	stream.reset(logger.exchange_log_stream(stream.release()));

@@ -4,6 +4,7 @@
 #include "string_traits.hh"
 
 #include <cstdlib>
+#include <optional>
 
 inline std::string tolower(std::string str) {
 	for (auto& c : str)

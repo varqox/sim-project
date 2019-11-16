@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../debug.hh"
-#include "../filesystem.hh"
+#include "../file_manip.hh"
 #include "../sandbox.hh"
+#include "../temporary_directory.hh"
 #include "../time.hh"
 #include "../utilities.hh"
 #include "compile.hh"

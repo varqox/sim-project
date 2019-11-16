@@ -1,8 +1,10 @@
 #include "../include/sandbox.hh"
 #include "../include/call_in_destructor.hh"
+#include "../include/defer.hh"
 #include "../include/process.hh"
 #include "../include/time.hh"
 
+#include <climits>
 #include <linux/version.h>
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
@@ -1098,7 +1100,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	if (tracee_statm_fd_ == -1)
 		THROW("open(/proc/{tracee_pid_ = ", tracee_pid_, "}/statm)", errmsg());
 
-	CallInDtor tracee_statm_fd_guard([&] { tracee_statm_fd_.close(); });
+	Defer tracee_statm_fd_guard([&] { (void)tracee_statm_fd_.close(); });
 
 	std::chrono::nanoseconds runtime {0};
 	std::chrono::nanoseconds cpu_time {0};

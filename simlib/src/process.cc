@@ -1,14 +1,15 @@
 #include "../include/process.hh"
 #include "../include/debug.hh"
-#include "../include/defer.hh"
-#include "../include/logger.hh"
-#include "../include/memory.hh"
+#include "../include/directory.hh"
+#include "../include/file_contents.hh"
 #include "../include/path.hh"
 #include "../include/proc_stat_file_contents.hh"
+#include "../include/string_traits.hh"
 #include "../include/string_transform.hh"
+#include "../include/working_directory.hh"
 
-#include <dirent.h>
 #include <thread>
+#include <unistd.h>
 
 using std::array;
 using std::not_fn;
@@ -17,26 +18,6 @@ using std::pair;
 using std::string;
 using std::vector;
 using std::chrono::duration;
-
-InplaceBuff<PATH_MAX> get_cwd() {
-	InplaceBuff<PATH_MAX> res;
-	char* x = get_current_dir_name();
-	if (!x)
-		THROW("Failed to get CWD", errmsg());
-
-	Defer x_guard([x] { free(x); });
-
-	if (x[0] != '/') {
-		errno = ENOENT;
-		THROW("Failed to get CWD", errmsg());
-	}
-
-	res.append(x);
-	if (res.back() != '/')
-		res.append('/');
-
-	return res;
-}
 
 string executable_path(pid_t pid) {
 	array<char, 4096> buff;
@@ -229,14 +210,7 @@ void kill_processes_by_exec(vector<string> exec_set,
 	}
 }
 
-void chdir_to_executable_dirpath() {
-	InplaceBuff<PATH_MAX> exec_dir {
-	   path_dirpath(intentional_unsafe_string_view(executable_path(getpid())))};
-	if (chdir(exec_dir.to_cstr().c_str()))
-		THROW("chdir('", exec_dir, "')", errmsg());
-}
-
-int8_t detect_architecture(pid_t pid) {
+ArchKind detect_architecture(pid_t pid) {
 	auto filename = concat("/proc/", pid, "/exe");
 	FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
@@ -248,9 +222,9 @@ int8_t detect_architecture(pid_t pid) {
 		THROW("pread()", errmsg());
 
 	if (c == 1)
-		return ARCH_i386;
+		return ArchKind::i386;
 	if (c == 2)
-		return ARCH_x86_64;
+		return ArchKind::x86_64;
 
 	THROW("Unsupported architecture");
 }

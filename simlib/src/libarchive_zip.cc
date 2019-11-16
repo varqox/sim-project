@@ -1,6 +1,10 @@
 #include "../include/libarchive_zip.hh"
+#include "../include/file_manip.hh"
 #include "../include/process.hh"
 #include "../include/spawner.hh"
+#include "../include/temporary_directory.hh"
+#include "../include/unlinked_temporary_file.hh"
+#include "../include/working_directory.hh"
 
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
 

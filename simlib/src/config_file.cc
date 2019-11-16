@@ -1,6 +1,6 @@
 #include "../include/config_file.hh"
 #include "../include/debug.hh"
-#include "../include/filesystem.hh"
+#include "../include/file_contents.hh"
 #include "../include/simple_parser.hh"
 #include "../include/utilities.hh"
 

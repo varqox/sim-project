@@ -1,6 +1,6 @@
 #include "../../include/sim/simfile.hh"
 #include "../../include/avl_dict.hh"
-#include "../../include/filesystem.hh"
+#include "../../include/file_info.hh"
 #include "../../include/path.hh"
 #include "../../include/simple_parser.hh"
 #include "../../include/time.hh"

@@ -2,6 +2,7 @@
 
 #include "semaphore.hh"
 
+#include <climits>
 #include <deque>
 #include <mutex>
 #include <type_traits>

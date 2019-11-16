@@ -79,6 +79,11 @@ public:
 	}
 };
 
+template <size_t N>
+std::string& operator+=(std::string& str, const StaticCStringBuff<N>& c_buff) {
+	return str.append(c_buff.data(), c_buff.size());
+}
+
 template <class T,
           std::enable_if_t<
              std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,

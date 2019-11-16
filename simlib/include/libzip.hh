@@ -1,9 +1,12 @@
 #pragma once
 
 #include "call_in_destructor.hh"
-#include "filesystem.hh"
+#include "file_contents.hh"
+#include "file_descriptor.hh"
+#include "string_traits.hh"
 
 #include <optional>
+#include <sys/stat.h>
 #include <zip.h>
 
 class ZipError {

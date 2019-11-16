@@ -1,6 +1,7 @@
 #include "../include/sim/simfile.hh"
 #include "../include/debug.hh"
-#include "../include/filesystem.hh"
+#include "../include/file_manip.hh"
+#include "../include/temporary_directory.hh"
 #include "../include/utilities.hh"
 
 #include <gtest/gtest.h>

@@ -1,9 +1,9 @@
 #include "../../include/sim/conver.hh"
 #include "../../include/debug.hh"
+#include "../../include/file_info.hh"
 #include "../../include/libzip.hh"
 #include "../../include/sim/judge_worker.hh"
 #include "../../include/sim/problem_package.hh"
-#include "../../include/spawner.hh"
 #include "../../include/utilities.hh"
 
 using std::pair;

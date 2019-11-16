@@ -1,9 +1,11 @@
 #include "../../include/sim/judge_worker.hh"
 #include "../../include/enum_val.hh"
+#include "../../include/file_info.hh"
 #include "../../include/libzip.hh"
 #include "../../include/sim/checker.hh"
 #include "../../include/sim/problem_package.hh"
 #include "../../include/simple_parser.hh"
+#include "../../include/unlinked_temporary_file.hh"
 #include "default_checker_dump.h"
 
 #include <cmath>
@@ -510,13 +512,13 @@ JudgeReport JudgeWorker::judge_interactive(
 					ces = sandbox.run(
 					   checker_path, {checker_path, job.test_in_path}, opts,
 					   {{job.test_in_path, OpenAccess::RDONLY}}, [&] {
-						   job.checker_stdin.close();
-						   job.checker_stdout.close();
+						   (void)job.checker_stdin.close();
+						   (void)job.checker_stdout.close();
 					   });
 
 					// Make sure the pipes are closed
-					job.checker_stdin.close();
-					job.checker_stdout.close();
+					(void)job.checker_stdin.close();
+					(void)job.checker_stdout.close();
 
 					checker_status_promise.set_value(
 					   exit_to_checker_status(ces, opts, output, "stderr"));
@@ -568,13 +570,13 @@ JudgeReport JudgeWorker::judge_interactive(
 		                       solution_real_time_limit, test.memory_limit,
 		                       test.time_limit},
 		                      {}, [&] {
-			                      solution_input.close();
-			                      solution_output.close();
+			                      (void)solution_input.close();
+			                      (void)solution_output.close();
 		                      }); // Allow exceptions to fly upper
 
 		// Make sure the pipes are closed
-		solution_input.close();
-		solution_output.close();
+		(void)solution_input.close();
+		(void)solution_output.close();
 
 		// Get checker status
 		auto checker_result = checker_status_promise.get_future().get();

@@ -2,13 +2,15 @@
 
 #include "debug.hh"
 #include "defer.hh"
-#include "filesystem.hh"
+#include "directory.hh"
+#include "file_descriptor.hh"
 #include "path.hh"
 
 #if __has_include(<archive.h>) and __has_include(<archive_entry.h>)
 
 #include <archive.h>
 #include <archive_entry.h>
+#include <climits>
 
 /**
  * @brief Runs @p entry_callback on every archive @p filename's entry

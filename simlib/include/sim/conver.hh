@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../filesystem.hh"
 #include "../utilities.hh"
 #include "judge_worker.hh"
 #include "simfile.hh"

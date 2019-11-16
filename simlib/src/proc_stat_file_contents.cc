@@ -1,5 +1,5 @@
 #include "../include/proc_stat_file_contents.hh"
-#include "../include/filesystem.hh"
+#include "../include/file_contents.hh"
 #include "../include/simple_parser.hh"
 
 using std::string;

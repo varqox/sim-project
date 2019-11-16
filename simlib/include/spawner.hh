@@ -1,12 +1,15 @@
 #pragma once
 
-#include "filesystem.hh"
+#include "file_contents.hh"
+#include "file_path.hh"
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <optional>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 class Spawner {
 protected:
@@ -115,7 +118,7 @@ public:
 protected:
 	// Sends @p str through @p fd and _exits with -1
 	static void send_error_message_and_exit(int fd, CStringView str) noexcept {
-		write_all(fd, str.data(), str.size());
+		(void)write_all(fd, str.data(), str.size());
 		_exit(-1);
 	};
 
@@ -123,10 +126,10 @@ protected:
 	// _exits with -1
 	static void send_error_message_and_exit(int fd, int errnum,
 	                                        CStringView str) noexcept {
-		write_all(fd, str.data(), str.size());
+		(void)write_all(fd, str.data(), str.size());
 
 		auto err = errmsg(errnum);
-		write_all(fd, err.data(), err.size);
+		(void)write_all(fd, err.data(), err.size);
 
 		_exit(-1);
 	};

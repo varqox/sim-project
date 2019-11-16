@@ -18,9 +18,11 @@ $(eval $(call add_static_library, $(PREFIX)gtest_main.a, $(GOOGLETEST_FLAGS), \
 $(eval $(call add_static_library, $(PREFIX)simlib.a,, \
 	$(PREFIX)src/aho_corasick.cc \
 	$(PREFIX)src/config_file.cc \
-	$(PREFIX)src/filesystem.cc \
+	$(PREFIX)src/file_contents.cc \
+	$(PREFIX)src/file_manip.cc \
 	$(PREFIX)src/http/response.cc \
 	$(PREFIX)src/http/server.cc \
+	$(PREFIX)src/humanize.cc \
 	$(PREFIX)src/libarchive_zip.cc \
 	$(PREFIX)src/logger.cc \
 	$(PREFIX)src/path.cc \
@@ -39,7 +41,10 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a,, \
 	$(PREFIX)src/sim/simfile.cc \
 	$(PREFIX)src/spawner.cc \
 	$(PREFIX)src/string_compare.cc \
+	$(PREFIX)src/temporary_directory.cc \
 	$(PREFIX)src/time.cc \
+	$(PREFIX)src/unlinked_temporary_file.cc \
+	$(PREFIX)src/working_directory.cc \
 ))
 
 $(eval $(call add_generated_target, $(PREFIX)src/sim/default_checker_dump.c, \
@@ -66,16 +71,22 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/debug.cc \
 	$(PREFIX)test/defer.cc \
 	$(PREFIX)test/defer.cc \
+	$(PREFIX)test/directory.cc \
 	$(PREFIX)test/enum_val.cc \
+	$(PREFIX)test/file_contents.cc \
+	$(PREFIX)test/file_descriptor.cc \
+	$(PREFIX)test/file_info.cc \
+	$(PREFIX)test/file_manip.cc \
 	$(PREFIX)test/file_path.cc \
-	$(PREFIX)test/filesystem.cc \
 	$(PREFIX)test/http/response.cc \
+	$(PREFIX)test/humanize.cc \
 	$(PREFIX)test/inplace_array.cc \
 	$(PREFIX)test/inplace_buff.cc \
 	$(PREFIX)test/libzip.cc \
 	$(PREFIX)test/logger.cc \
 	$(PREFIX)test/memory.cc \
 	$(PREFIX)test/mysql.cc \
+	$(PREFIX)test/opened_temporary_file.cc \
 	$(PREFIX)test/path.cc \
 	$(PREFIX)test/proc_stat_file_contents.cc \
 	$(PREFIX)test/process.cc \
@@ -84,6 +95,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/sandbox.cc \
 	$(PREFIX)test/sha.cc \
 	$(PREFIX)test/shared_function.cc \
+	$(PREFIX)test/signal_blocking.cc \
 	$(PREFIX)test/sim/problem_package.cc \
 	$(PREFIX)test/simfile.cc \
 	$(PREFIX)test/simple_parser.cc \
@@ -92,9 +104,13 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/string_traits.cc \
 	$(PREFIX)test/string_transform.cc \
 	$(PREFIX)test/string_view.cc \
+	$(PREFIX)test/temporary_directory.cc \
+	$(PREFIX)test/temporary_file.cc \
 	$(PREFIX)test/time.cc \
 	$(PREFIX)test/to_string.cc \
+	$(PREFIX)test/unlinked_temporary_file.cc \
 	$(PREFIX)test/utilities.cc \
+	$(PREFIX)test/working_directory.cc \
 ))
 
 .PHONY: $(PREFIX)test

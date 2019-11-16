@@ -1,5 +1,7 @@
 #include "../include/spawner.hh"
 #include "../include/call_in_destructor.hh"
+#include "../include/directory.hh"
+#include "../include/file_descriptor.hh"
 #include "../include/string_transform.hh"
 #include "../include/time.hh"
 
