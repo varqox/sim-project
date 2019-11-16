@@ -44,7 +44,8 @@ public:
 	PackageContents& operator=(const PackageContents&) = delete;
 	PackageContents& operator=(PackageContents&&) noexcept = default;
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	void add_entry(Args&&... args) {
 		auto prev_size = buff.size;
 		buff.append(std::forward<Args>(args)...);

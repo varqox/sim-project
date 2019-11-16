@@ -77,7 +77,8 @@ public:
 		InplaceBuff<512> description;
 		uintmax_t stamp = event_stamp++;
 
-		template <class... Args>
+		template <class... Args,
+		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		StackMark(Args&&... args)
 		   : description(std::in_place, std::forward<Args>(args)...) {}
 	};

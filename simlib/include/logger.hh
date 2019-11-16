@@ -88,7 +88,8 @@ public:
 
 		explicit Appender(Logger& logger) : logger_(logger) {}
 
-		template <class... Args>
+		template <class... Args,
+		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		explicit Appender(Logger& logger, Args&&... args)
 		   : logger_(logger), orig_label_(logger.label()), label_(orig_label_) {
 			operator()(std::forward<Args>(args)...);
@@ -116,7 +117,8 @@ public:
 			return operator()(std::forward<T>(x));
 		}
 
-		template <class... Args>
+		template <class... Args,
+		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		Appender& operator()(Args&&... args) {
 			buff_.append(std::forward<Args>(args)...);
 			flushed_ = false;
@@ -142,7 +144,8 @@ public:
 		return Appender(*this, std::forward<T>(x));
 	}
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	Appender operator()(Args&&... args) noexcept {
 		return Appender(*this, std::forward<Args>(args)...);
 	}
@@ -166,7 +169,8 @@ class DoubleAppender {
 	StrType& str_;
 
 public:
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	DoubleAppender(Logger& logger, StrType& str, Args&&... args)
 	   : app_(logger(args...)), str_(str) {
 		back_insert(str_, std::forward<Args>(args)...);
@@ -185,7 +189,8 @@ public:
 		return operator()(std::forward<T>(x));
 	}
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	DoubleAppender& operator()(Args&&... args) {
 		back_insert(str_, args...);
 		app_(std::forward<Args>(args)...);

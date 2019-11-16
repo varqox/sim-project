@@ -1,8 +1,11 @@
 #pragma once
 
+#include "meta.hh"
 #include "to_string.hh"
 
-template <class T>
+#include <type_traits>
+
+template <class T, std::enable_if_t<meta::has_method_size<const T&>, int> = 0>
 constexpr auto string_length(const T& str) noexcept {
 	return str.size();
 }
@@ -15,7 +18,7 @@ constexpr auto string_length(char* str) noexcept {
 	return std::char_traits<char>::length(str);
 }
 
-template <class T>
+template <class T, std::enable_if_t<meta::has_method_data<const T&>, int> = 0>
 constexpr auto data(const T& x) noexcept {
 	return x.data();
 }
@@ -33,3 +36,18 @@ constexpr decltype(auto) stringify(T&& x) {
 		return std::forward<T>(x);
 	}
 }
+
+namespace detail {
+
+template <class T, class = decltype(string_length(
+                      stringify(std::forward<T>(std::declval<T>()))))>
+constexpr auto is_string_argument(int) -> std::true_type;
+
+template <class>
+constexpr auto is_string_argument(...) -> std::false_type;
+
+} // namespace detail
+
+template <class T>
+constexpr bool is_string_argument =
+   decltype(detail::is_string_argument<T>(0))::value;

@@ -910,7 +910,8 @@ public:
 		        mysql_errno(conn_) == CR_SERVER_GONE_ERROR);
 	}
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	Result query(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);
@@ -924,7 +925,8 @@ public:
 		return {res, referencing_objects_no_};
 	}
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	void update(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);
@@ -934,7 +936,8 @@ public:
 		                                   sql_str.data(), sql_str.size);
 	}
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	Statement prepare(Args&&... sql) {
 		STACK_UNWINDING_MARK;
 		auto sql_str = concat(std::forward<Args>(sql)...);

@@ -126,7 +126,8 @@ inline std::string html_escape(T&& str) {
 	return res;
 }
 
-template <size_t N = 512, class... Args>
+template <size_t N = 512, class... Args,
+          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 constexpr InplaceBuff<N> json_stringify(Args&&... args) {
 	InplaceBuff<N> res;
 	auto safe_append = [&res](auto&& arg) {

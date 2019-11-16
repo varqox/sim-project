@@ -130,7 +130,8 @@ protected:
 public:
 	~InplaceBuffBase() { deallocate(); }
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	constexpr InplaceBuffBase& append(Args&&... args) {
 		[this](auto&&... str) {
 			size_t k = size, final_len = (size + ... + string_length(str));
@@ -200,7 +201,8 @@ public:
 
 	// Used to unify constructors, as constructor taking one argument is
 	// explicit
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	constexpr InplaceBuff(std::in_place_t, Args&&... args) : InplaceBuff() {
 		append(std::forward<Args>(args)...);
 	}
@@ -356,7 +358,8 @@ constexpr auto string_length(const InplaceBuff<T>& buff)
 	return buff.size;
 }
 
-template <size_t N, class... Args>
+template <size_t N, class... Args,
+          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 InplaceBuff<N>& back_insert(InplaceBuff<N>& buff, Args&&... args) {
 	buff.append(std::forward<Args>(args)...);
 	return buff;

@@ -5,6 +5,8 @@
 #include "judge_worker.hh"
 #include "simfile.hh"
 
+#include <type_traits>
+
 namespace sim {
 
 // Helps with converting a package to a Sim package
@@ -17,7 +19,8 @@ public:
 		ReportBuff(bool log_to_stdlog = false)
 		   : log_to_stdlog_(log_to_stdlog) {}
 
-		template <class... Args>
+		template <class... Args,
+		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		void append(Args&&... args) {
 			if (log_to_stdlog_)
 				stdlog(args...);

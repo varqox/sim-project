@@ -192,7 +192,8 @@ class VerboseJudgeLogger : public JudgeLogger {
 	InplaceBuff<8> last_gid;
 	bool final_;
 
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	auto log(Args&&... args) {
 		return DoubleAppender<decltype(log_)>(logger_, log_,
 		                                      std::forward<Args>(args)...);

@@ -56,6 +56,8 @@ constexpr intmax_t sum = x + sum<ints...>;
 template <intmax_t x>
 constexpr intmax_t sum<x> = x;
 
+namespace detail {
+
 template <size_t beg, size_t count, size_t... indexes>
 struct create_span_impl {
 	using type =
@@ -67,9 +69,35 @@ struct create_span_impl<beg, 0, indexes...> {
 	using type = std::index_sequence<indexes...>;
 };
 
+} // namespace detail
+
 // Equal to std::index_sequence<beg, beg + 1, ..., end - 1>
 template <size_t beg, size_t end>
-using span = typename create_span_impl<beg, end - beg>::type;
+using span = typename detail::create_span_impl<beg, end - beg>::type;
+
+namespace detail {
+
+template <class T, class = decltype(std::declval<T>().size())>
+constexpr auto has_method_size(int) -> std::true_type;
+template <class>
+constexpr auto has_method_size(...) -> std::false_type;
+
+} // namespace detail
+
+template <class T>
+constexpr bool has_method_size = decltype(detail::has_method_size<T>(0))::value;
+
+namespace detail {
+
+template <class T, class = decltype(std::declval<T>().data())>
+constexpr auto has_method_data(int) -> std::true_type;
+template <class>
+constexpr auto has_method_data(...) -> std::false_type;
+
+} // namespace detail
+
+template <class T>
+constexpr bool has_method_data = decltype(detail::has_method_data<T>(0))::value;
 
 } // namespace meta
 

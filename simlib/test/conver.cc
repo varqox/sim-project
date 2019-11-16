@@ -96,7 +96,8 @@ static Conver::Options load_options_from_file(FilePath file) {
 }
 
 class TestingJudgeLogger : public sim::JudgeLogger {
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	void log(Args&&... args) {
 		back_insert(log_, std::forward<Args>(args)...);
 	}
