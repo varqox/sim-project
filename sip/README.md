@@ -5,7 +5,7 @@ Sip is a tool for preparing and managing Sim problem packages
 ## How to build?
 
 ### Dependencies
-- gcc/g++ (with 32 bit support) with C++14 support
+- Clang/GCC with C++17 support
 - libseccomp
 - libzip
 - GNU/Make
