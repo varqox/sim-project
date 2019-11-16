@@ -431,6 +431,16 @@ public:
 
 	constexpr void clear() noexcept { len = 0; }
 
+	template <class... Args>
+	constexpr StringView substr(Args&&... args) const {
+		return StringBase::substr(std::forward<Args>(args)...);
+	}
+
+	template <class... Args>
+	constexpr StringView substring(Args&&... args) const noexcept {
+		return StringBase::substring(std::forward<Args>(args)...);
+	}
+
 	// Removes prefix of length n
 	constexpr StringView& remove_prefix(size_type n) noexcept {
 		if (n > len)
@@ -545,16 +555,6 @@ public:
 	template <class T>
 	constexpr StringView without_trailing(T&& arg) {
 		return StringView(*this).remove_trailing(std::forward<T>(arg));
-	}
-
-	template<class... Args>
-	StringView substr(Args&&... args) {
-		return StringBase::substr(std::forward<Args>(args)...);
-	}
-
-	template<class... Args>
-	StringView substring(Args&&... args) {
-		return StringBase::substring(std::forward<Args>(args)...);
 	}
 };
 
