@@ -983,7 +983,7 @@ void SipPackage::create_default_simfile(
    std::optional<CStringView> problem_name) {
 	STACK_UNWINDING_MARK;
 
-	stdlog("Creating Simfile...");
+	stdlog("Creating Simfile...").flush_no_nl();
 
 	auto package_dir_filename =
 	   path_filename(
@@ -1045,12 +1045,9 @@ void SipPackage::create_default_simfile(
 	}
 
 	reload_simfile_from_str(get_file_contents("Simfile"));
+
+	stdlog(" done.");
+
 	simfile.load_name();
 	simfile.load_global_memory_limit_only();
-
-	stdlog("name = ", simfile.name);
-	if (simfile.global_mem_limit)
-		stdlog("mem = ", *simfile.global_mem_limit >> 20, " MiB");
-	else
-		stdlog("mem is not set");
 }

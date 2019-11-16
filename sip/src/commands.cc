@@ -16,7 +16,7 @@ void checker(ArgvParser args) {
 	if (args.size() > 0) {
 		auto checker = args.extract_next();
 		if (not checker.empty() and access(checker, F_OK) != 0)
-			throw SipError("file: ", checker, " does not exist");
+			throw SipError("checker: ", checker, " does not exist");
 
 		sp.replace_variable_in_simfile("checker", checker);
 	}
@@ -223,6 +223,9 @@ void init(ArgvParser args) {
 		sp.create_default_simfile(args.extract_next());
 	else
 		sp.create_default_simfile(std::nullopt);
+
+	name({0, nullptr});
+	mem({0, nullptr});
 }
 
 void interactive(ArgvParser args) {
@@ -233,7 +236,7 @@ void interactive(ArgvParser args) {
 		auto new_interactive = args.extract_next();
 		if (not is_one_of(new_interactive, "true", "false")) {
 			throw SipError(
-			   "interactive has to be either \"true\" or \"false\"");
+			   "interactive should have a value of true or false");
 		}
 
 		sp.replace_variable_in_simfile("interactive", new_interactive);
@@ -265,7 +268,7 @@ void main_sol(ArgvParser args) {
 	if (args.size() > 0) {
 		auto new_main_sol = args.extract_next();
 		if (access(new_main_sol, F_OK) != 0)
-			throw SipError("file: ", new_main_sol, " does not exist");
+			throw SipError("solution: ", new_main_sol, " does not exist");
 
 		auto solutions = sp.simfile.config_file().get_var("solutions");
 		if (not solutions.is_set()) {
@@ -314,7 +317,7 @@ void mem(ArgvParser args) {
 	if (not sp.simfile.global_mem_limit.has_value())
 		stdlog("mem is not set");
 	else
-		stdlog("mem = ", sp.simfile.global_mem_limit.value() >> 20);
+		stdlog("mem = ", sp.simfile.global_mem_limit.value() >> 20, " MiB");
 }
 
 void name(ArgvParser args) {
@@ -402,7 +405,7 @@ void statement(ArgvParser args) {
 	if (args.size() > 0) {
 		auto statement = args.extract_next();
 		if (not statement.empty() and access(statement, F_OK) != 0)
-			throw SipError("file: ", statement, " does not exist");
+			throw SipError("statement: ", statement, " does not exist");
 
 		sp.replace_variable_in_simfile("statement", statement);
 	}
