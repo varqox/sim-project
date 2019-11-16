@@ -523,11 +523,11 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 			simfile.load_name();
 		} catch (...) {
 			log_warning("no problem name was specified in Simfile");
-			copts.name = "unknown";
+			copts.name = "";
 		}
 	} else {
 		copts.memory_limit = DEFAULT_MEMORY_LIMIT;
-		copts.name = "unknown";
+		copts.name = "";
 	}
 
 	using std::chrono_literals::operator""ns;
@@ -608,7 +608,7 @@ void SipPackage::save_template(StringView template_name) {
 		put_file_contents(
 		   "doc/statement.tex",
 		   intentional_unsafe_string_view(templates::statement_tex(
-		      simfile.name, simfile.global_mem_limit)));
+		      simfile.name.value(), simfile.global_mem_limit)));
 	} else if (template_name == "checker") {
 		(void)mkdir("check");
 		put_file_contents("check/checker.cc",

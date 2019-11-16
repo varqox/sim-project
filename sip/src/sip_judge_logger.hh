@@ -6,7 +6,8 @@
 #include <simlib/sim/judge_worker.hh>
 
 class SipJudgeLogger : public sim::JudgeLogger {
-	template <class... Args>
+	template <class... Args,
+	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	auto log(Args&&... args) {
 		return DoubleAppender<decltype(log_)>(stdlog, log_,
 		                                      std::forward<Args>(args)...);

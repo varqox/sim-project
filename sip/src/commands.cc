@@ -250,8 +250,12 @@ void label(ArgvParser args) {
 	if (args.size() > 0)
 		sp.replace_variable_in_simfile("label", args.extract_next());
 
-	sp.simfile.load_label();
-	stdlog("label = ", sp.simfile.label);
+	try {
+		sp.simfile.load_label();
+		stdlog("label = ", sp.simfile.label.value());
+	} catch (const std::exception& e) {
+		log_warning(e.what());
+	}
 }
 
 void main_sol(ArgvParser args) {
@@ -320,8 +324,12 @@ void name(ArgvParser args) {
 	if (args.size() > 0)
 		sp.replace_variable_in_simfile("name", args.extract_next());
 
-	sp.simfile.load_name();
-	stdlog("name = ", sp.simfile.name);
+	try {
+		sp.simfile.load_name();
+		stdlog("name = ", sp.simfile.name.value());
+	} catch (const std::exception& e) {
+		log_warning(e.what());
+	}
 }
 
 static AVLDictSet<StringView>
@@ -399,8 +407,12 @@ void statement(ArgvParser args) {
 		sp.replace_variable_in_simfile("statement", statement);
 	}
 
-	sp.simfile.load_statement();
-	stdlog("statement = ", sp.simfile.statement);
+	try {
+		sp.simfile.load_statement();
+		stdlog("statement = ", sp.simfile.statement.value());
+	} catch (const std::exception& e) {
+		log_warning(e.what());
+	}
 }
 
 void template_command(ArgvParser args) {
