@@ -3871,7 +3871,7 @@ function append_create_contest_round(elem, as_modal, contest_id) {
 		)).add(Form.field_group('Full results time',
 			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
 		)).add(Form.field_group('Show ranking since',
-			dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
+			dt_chooser_input('ranking_expo', true, true, -Infinity, 'The Big Bang', "Don't show")
 		)).add('<div>', {
 			html: $('<input>', {
 				class: 'btn blue',
@@ -3927,7 +3927,7 @@ function append_clone_contest_round(elem, as_modal, contest_id) {
 		)).add(Form.field_group('Full results time',
 			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
 		)).add(Form.field_group('Show ranking since',
-			dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
+			dt_chooser_input('ranking_expo', true, true, -Infinity, 'The Big Bang', "Don't show")
 		)).add('<div>', {
 			html: $('<input>', {
 				class: 'btn blue',
@@ -4086,7 +4086,7 @@ function edit_contest_round(as_modal, contest_round_id) {
 			)).add(Form.field_group('Full results time',
 				dt_chooser_input('full_results', true, true, utcdt_or_tm_to_Date(round.full_results), 'Immediately', 'Never')
 			)).add(Form.field_group('Show ranking since',
-				dt_chooser_input('ranking_expo', true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'Full results', "Don't show")
+				dt_chooser_input('ranking_expo', true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'The Big Bang', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -4404,7 +4404,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 											$('<tr>', {html: [
 												$('<td>', {text: "Ranking since"}),
 												infdatetime_to($('<td>'), round.ranking_exposure,
-													'full results', 'never')
+													'The Big Bang', 'never')
 											]}),
 										]}));
 
@@ -4691,13 +4691,12 @@ function contest_ranking(elem_, id_for_api) {
 		rounds.sort(function(a, b) { return b.item - a.item; });
 		// Map rounds (by id) to their items
 		var rid_to_item = new StaticMap();
+		var curr_time = new Date();
 		for (var i = 0; i < rounds.length; ++i) {
 			if (!is_admin) {
-				// Add only those rounds that have full results visible and the ranking_exposure point has passed
-				var curr_time = new Date();
-				var full_results = utcdt_or_tm_to_Date(rounds[i].full_results);
+				// Add only those rounds that have the ranking_exposure point has passed
 				var ranking_exposure = utcdt_or_tm_to_Date(rounds[i].ranking_exposure);
-				if (curr_time < full_results || curr_time < ranking_exposure)
+				if (curr_time < ranking_exposure)
 					continue; // Do not show the round
 			}
 
@@ -4807,9 +4806,11 @@ function contest_ranking(elem_, id_for_api) {
 				var total_score = 0;
 				// Count only valid problems (to fix potential discrepancies
 				// between ranking submissions and the contest structure)
-				for (j = 0; j < submissions.length; ++j)
-					if (problem_to_col_id.get(submissions[j].contest_problem_id) !== null)
+				for (j = 0; j < submissions.length; ++j) {
+					if (problem_to_col_id.get(submissions[j].contest_problem_id) !== null) {
 						total_score += submissions[j].score;
+					}
+				}
 
 				data[i].score = total_score;
 			}
@@ -4847,16 +4848,17 @@ function contest_ranking(elem_, id_for_api) {
 				for (j = 0; j < submissions.length; ++j) {
 					var x = problem_to_col_id.get(submissions[j].contest_problem_id);
 					if (x != null) {
-						if (submissions[j].id === null)
+						var score_text = (submissions[j].score != null ? submissions[j].score : '?');
+						if (submissions[j].id === null) {
 							row[x] = $('<td>', {
 								class: 'status ' + submissions[j].status.class,
-								text: submissions[j].score
+								text: score_text
 							});
-						else {
+						} else {
 							row[x] = $('<td>', {
 								class: 'status ' + submissions[j].status.class,
 								html: a_view_button('/s/' + submissions[j].id,
-									submissions[j].score, '',
+									score_text, '',
 									view_submission.bind(null, true, submissions[j].id))
 							});
 						}

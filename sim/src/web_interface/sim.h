@@ -146,7 +146,7 @@ class Sim final {
 	// submissions_api.cc
 	void append_submission_status(SubmissionStatus initial_status,
 	                              SubmissionStatus full_status,
-	                              bool show_full_results);
+	                              bool show_full_status);
 
 	void api_submissions();
 

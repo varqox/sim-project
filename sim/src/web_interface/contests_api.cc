@@ -1,9 +1,12 @@
 #include "sim.h"
 
+#include <cstdint>
 #include <map>
 #include <sim/contest.hh>
+#include <sim/contest_permissions.hh>
 #include <sim/contest_problem.hh>
 #include <sim/contest_round.hh>
+#include <sim/inf_datetime.hh>
 #include <sim/jobs.h>
 #include <sim/utilities.h>
 
@@ -20,6 +23,47 @@ using std::map;
 using std::optional;
 using std::pair;
 
+inline bool whether_to_show_full_status(
+   sim::contest::Permissions cperms, InfDatetime full_results,
+   const decltype(mysql_date())& curr_mysql_date,
+   ContestProblem::ScoreRevealingMode score_revealing) {
+	// TODO: check append_submission_status() for making it use the new function
+	if (uint(cperms & sim::contest::Permissions::ADMIN))
+		return true;
+
+	if (full_results <= curr_mysql_date)
+		return true;
+
+	switch (score_revealing) {
+	case ContestProblem::ScoreRevealingMode::NONE: return false;
+	case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return false;
+	case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+	}
+
+	__builtin_unreachable();
+}
+
+inline bool
+whether_to_show_score(sim::contest::Permissions cperms,
+                      InfDatetime full_results,
+                      const decltype(mysql_date())& curr_mysql_date,
+                      ContestProblem::ScoreRevealingMode score_revealing) {
+	// TODO: check append_submission_status() for making it use the new function
+	if (uint(cperms & sim::contest::Permissions::ADMIN))
+		return true;
+
+	if (full_results <= curr_mysql_date)
+		return true;
+
+	switch (score_revealing) {
+	case ContestProblem::ScoreRevealingMode::NONE: return false;
+	case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return true;
+	case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS: return true;
+	}
+
+	__builtin_unreachable();
+}
+
 inline static InplaceBuff<32>
 color_class_json(sim::contest::Permissions cperms, InfDatetime full_results,
                  const decltype(mysql_date())& curr_mysql_date,
@@ -27,22 +71,8 @@ color_class_json(sim::contest::Permissions cperms, InfDatetime full_results,
                  optional<SubmissionStatus> initial_status,
                  ContestProblem::ScoreRevealingMode score_revealing) {
 
-	// TODO: export this logic to some function and check
-	// append_submission_status() for making it use the new function
-	bool show_full_status =
-	   bool(cperms & sim::contest::Permissions::ADMIN) or
-	   full_results <= curr_mysql_date or [&] {
-		   switch (score_revealing) {
-		   case ContestProblem::ScoreRevealingMode::NONE: return false;
-		   case ContestProblem::ScoreRevealingMode::ONLY_SCORE: return false;
-		   case ContestProblem::ScoreRevealingMode::SCORE_AND_FULL_STATUS:
-			   return true;
-		   }
-
-		   return false; // For GCC
-	   }();
-
-	if (show_full_status) {
+	if (whether_to_show_full_status(cperms, full_results, curr_mysql_date,
+	                                score_revealing)) {
 		if (full_status.has_value())
 			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 	} else if (initial_status.has_value()) {
@@ -1324,46 +1354,60 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 	          "=? AND s.contest_final=1 GROUP BY (u.id) ORDER BY u.id")));
 	stmt.bindAndExecute(query_id);
 
-	uint64_t id;
+	uintmax_t u_id;
 	decltype(User::first_name) fname;
 	decltype(User::last_name) lname;
-	stmt.res_bind_all(id, fname, lname);
+	stmt.res_bind_all(u_id, fname, lname);
 
 	std::vector<SubmissionOwner> sowners;
 	while (stmt.next())
-		sowners.emplace_back(id, fname, ' ', lname);
+		sowners.emplace_back(u_id, fname, ' ', lname);
 
 	// Gather submissions
-	bool first_owner = true;
-	MySQL::Optional<uintmax_t> owner;
-	std::optional<uintmax_t> prev_owner;
-	uint64_t crid, cpid;
-	EnumVal<SubmissionStatus> initial_status, full_status;
-	int64_t score;
-	decltype(mysql_date()) curr_date;
+	decltype(ContestRound::id) cr_id;
+	decltype(ContestRound::full_results) cr_full_results;
+	decltype(ContestProblem::id) cp_id;
+	decltype(ContestProblem::score_revealing) cp_score_revealing;
+	uintmax_t s_owner;
+	uintmax_t sf_id;
+	EnumVal<SubmissionStatus> sf_full_status;
+	int64_t sf_score;
+	uintmax_t si_id;
+	EnumVal<SubmissionStatus> si_initial_status;
 
-	if (uint(perms & sim::contest::Permissions::ADMIN)) {
-		stmt = mysql.prepare(intentionalUnsafeStringView(
-		   concat("SELECT id, owner, contest_round_id, contest_problem_id, "
-		          "initial_status, full_status, score FROM submissions  WHERE ",
-		          submissions_query_id_name,
-		          "=? AND contest_final=1 ORDER BY owner")));
-		stmt.bindAndExecute(query_id);
-		stmt.res_bind_all(id, owner, crid, cpid, initial_status, full_status,
-		                  score);
+	// TODO: there is to much logic duplication (not only below) on whether to
+	// show full or initial status and show or not show the score
+	auto prepare_stmt = [&](auto&& extra_cr_sql, auto&&... extra_bind_params) {
+		// clang-format off
+		stmt = mysql.prepare(
+		   "SELECT cr.id, cr.full_results, cp.id, cp.score_revealing, sf.owner,"
+		   " sf.id, sf.full_status, sf.score, si.id, si.initial_status "
+		   "FROM submissions sf "
+		   "JOIN submissions si ON si.owner=sf.owner"
+		   " AND si.contest_problem_id=sf.contest_problem_id"
+		   " AND si.contest_initial_final=1 "
+		   "JOIN contest_rounds cr ON cr.id=sf.contest_round_id ",
+		      std::forward<decltype(extra_cr_sql)>(extra_cr_sql), " "
+		   "JOIN contest_problems cp ON cp.id=sf.contest_problem_id "
+		   "WHERE sf.", submissions_query_id_name, "=? AND sf.contest_final=1 "
+		   "ORDER BY sf.owner");
+		// clang-format on
+		stmt.bindAndExecute(
+		   std::forward<decltype(extra_bind_params)>(extra_bind_params)...,
+		   query_id);
+		stmt.res_bind_all(cr_id, cr_full_results, cp_id, cp_score_revealing,
+		                  s_owner, sf_id, sf_full_status, sf_score, si_id,
+		                  si_initial_status);
+	};
 
+	auto curr_date = mysql_date();
+
+	bool is_admin = uint(perms & sim::contest::Permissions::ADMIN);
+	if (is_admin) {
+		prepare_stmt("");
 	} else {
-		stmt = mysql.prepare(intentionalUnsafeStringView(concat(
-		   "SELECT s.id, s.owner, s.contest_round_id, s.contest_problem_id, "
-		   "s.initial_status, s.full_status, s.score FROM submissions s JOIN "
-		   "contest_rounds cr ON cr.id=s.contest_round_id AND cr.begins<=? AND "
-		   "cr.full_results<=? AND cr.ranking_exposure<=? WHERE s.",
-		   submissions_query_id_name,
-		   "=? AND s.contest_final=1 ORDER BY s.owner")));
-		curr_date = mysql_date();
-		stmt.bindAndExecute(curr_date, curr_date, curr_date, query_id);
-		stmt.res_bind_all(id, owner, crid, cpid, initial_status, full_status,
-		                  score);
+		prepare_stmt("AND cr.begins<=? AND cr.ranking_exposure<=?", curr_date,
+		             curr_date);
 	}
 
 	append('[');
@@ -1385,18 +1429,20 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 
 	const uint64_t session_uid =
 	   (session_is_open ? strtoull(session_user_id) : 0);
-	bool show_id = false;
+
+	bool first_owner = true;
+	std::optional<uintmax_t> prev_owner;
+	bool show_owner_and_submission_id = false;
+
 	while (stmt.next()) {
-		throw_assert(owner.has_value() and
-		             (first_owner or prev_owner.has_value()));
 		// Owner changes
-		if (first_owner or owner.value() != prev_owner.value()) {
-			auto it = binaryFind(sowners, SubmissionOwner(owner.value()));
+		if (first_owner or s_owner != prev_owner.value()) {
+			auto it = binaryFind(sowners, SubmissionOwner(s_owner));
 			if (it == sowners.end())
 				continue; // Ignore submission as there is no owner to bind it
 				          // to (this maybe a little race condition, but if the
-				          // user will query again it will surely not be the
-				          // case again (with the current owner))
+				          // user will query again it will not be the case (with
+				          // the current owner))
 
 			if (first_owner) {
 				append(",\n[");
@@ -1406,29 +1452,41 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 				append("\n]],[");
 			}
 
-			prev_owner = owner;
-			show_id = (uint(perms & sim::contest::Permissions::ADMIN) or
-			           (session_is_open and session_uid == owner.value()));
+			prev_owner = s_owner;
+			show_owner_and_submission_id =
+			   (is_admin or (session_is_open and session_uid == s_owner));
 			// Owner
-			if (show_id)
-				append(owner.value());
+			if (show_owner_and_submission_id)
+				append(s_owner);
 			else
 				append("null");
 			// Owner name
 			append(',', jsonStringify(it->name), ",[");
 		}
 
+		bool show_full_status = whether_to_show_full_status(
+		   perms, cr_full_results, curr_date, cp_score_revealing);
+
 		append("\n[");
-		if (show_id)
-			append(id, ',');
-		else
+		if (not show_owner_and_submission_id) {
 			append("null,");
+		} else if (show_full_status) {
+			append(sf_id, ',');
+		} else {
+			append(si_id, ',');
+		}
 
-		append(crid, ',', cpid, ',');
+		append(cr_id, ',', cp_id, ',');
+		append_submission_status(si_initial_status, sf_full_status,
+		                         show_full_status);
 
-		append_submission_status(initial_status, full_status, true);
-		// TODO: make score revealing work with the ranking
-		append(',', score, "],");
+		bool show_score = whether_to_show_score(perms, cr_full_results,
+		                                        curr_date, cp_score_revealing);
+		if (show_score) {
+			append(',', sf_score, "],");
+		} else {
+			append(",null],");
+		}
 	}
 
 	if (first_owner) // no submission was appended

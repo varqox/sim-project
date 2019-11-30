@@ -20,7 +20,7 @@ using std::string;
 
 void Sim::append_submission_status(SubmissionStatus initial_status,
                                    SubmissionStatus full_status,
-                                   bool show_full_results) {
+                                   bool show_full_status) {
 	STACK_UNWINDING_MARK;
 	using SS = SubmissionStatus;
 
@@ -41,7 +41,7 @@ void Sim::append_submission_status(SubmissionStatus initial_status,
 		return "\",\"Unknown\"]"; // Shouldn't happen
 	};
 
-	if (show_full_results)
+	if (show_full_status)
 		append("[\"", css_color_class(full_status), as_str(full_status));
 	else
 		append("[\"initial ", css_color_class(initial_status),
