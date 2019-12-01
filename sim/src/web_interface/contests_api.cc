@@ -76,7 +76,7 @@ color_class_json(sim::contest::Permissions cperms, InfDatetime full_results,
 		if (full_status.has_value())
 			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 	} else if (initial_status.has_value()) {
-		return concat<32>("\"", css_color_class(initial_status.value()), "\"");
+		return concat<32>("\"initial ", css_color_class(initial_status.value()), "\"");
 	}
 
 	return concat<32>("null");
@@ -231,7 +231,7 @@ public:
 		   to_json(cp.score_revealing), ',',
 		   color_class_json(
 		      contest_perms_, round_to_full_results_[cp.contest_round_id],
-		      curr_date_, extra_data.initial_final_submission_initial_status,
+		      curr_date_, extra_data.final_submission_full_status,
 		      extra_data.initial_final_submission_initial_status,
 		      cp.score_revealing),
 		   "],");
