@@ -15,14 +15,16 @@ Sim is an open source platform for carrying out algorithmic contests
 - MariaDB (Debian package: _mariadb-server_)
 - MariaDB client library (Debian packages: _libmariadbclient-dev_)
 - libseccomp (Debian package: _libseccomp-dev_)
-- GNU/Make (Debian package: _make_)
+- GNU/Make (Debian package: _make_ version >= 4.2.1)
 - libzip  (Debian package: _libzip-dev_)
 
-#### Debian / Ubuntu
+#### Debian
 
   ```sh
-  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev make
+  sudo apt-get install g++-multilib mariadb-server libmariadbclient-dev libseccomp-dev libzip-dev make libssl-dev
   ```
+  
+  Ubuntu is not officially supported, you may try it, it may (not) work. _Modern_ versions of some of the above packages are needed to build sim sucessfully.
 
 #### Arch Linux
 
