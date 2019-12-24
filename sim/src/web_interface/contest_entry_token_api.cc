@@ -1,6 +1,9 @@
 #include "sim.h"
 
+#include <sim/contest.hh>
 #include <sim/random.hh>
+
+using sim::Contest;
 
 void Sim::api_contest_entry_token() {
 	STACK_UNWINDING_MARK;
@@ -24,8 +27,8 @@ void Sim::api_contest_entry_token() {
 		                          " AND ?<=t.short_token_expiration)");
 		stmt.bindAndExecute(token, token, mysql_date());
 
-		decltype(contests_cid) contest_id;
-		InplaceBuff<CONTEST_NAME_MAX_LEN> contest_name;
+		decltype(Contest::id) contest_id;
+		decltype(Contest::name) contest_name;
 		stmt.res_bind_all(contest_id, contest_name);
 
 		if (not stmt.next())
@@ -45,9 +48,14 @@ void Sim::api_contest_entry_token() {
 
 	} else if (next_arg[0] == 'c') {
 		StringView contest_id = next_arg.substr(1);
-		ContestPermissions cperms = contests_get_permissions(contest_id)
-		                               .value_or(ContestPermissions::NONE);
-		if (uint(~cperms & ContestPermissions::MANAGE_CONTEST_ENTRY_TOKEN))
+		sim::contest::Permissions cperms =
+		   sim::contest::get_permissions(mysql, contest_id,
+		                                 (session_is_open
+		                                     ? std::optional {session_user_id}
+		                                     : std::nullopt))
+		      .value_or(sim::contest::Permissions::NONE);
+		if (uint(~cperms &
+		         sim::contest::Permissions::MANAGE_CONTEST_ENTRY_TOKEN))
 			return api_error404(); // To not reveal that the contest exists
 
 		next_arg = url_args.extractNextArg();
@@ -229,7 +237,7 @@ void Sim::api_contest_entry_token_short_delete(StringView contest_id) {
 	stmt.bindAndExecute(contest_id);
 }
 
-void Sim::api_contest_entry_token_use_to_enter_contest(StringView contest_id) {
+void Sim::api_contest_entry_token_use_to_enter_contest(uintmax_t contest_id) {
 	STACK_UNWINDING_MARK;
 
 	auto stmt =

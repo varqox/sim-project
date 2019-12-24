@@ -1,5 +1,7 @@
 #include "sim.h"
 
+using sim::User;
+
 #ifndef STYLES_CSS_HASH
 #define STYLES_CSS_HASH ""
 #endif
@@ -70,7 +72,7 @@ void Sim::page_template(StringView title, StringView styles,
 		if (uint(jobs_get_overall_permissions() & JobPermissions::VIEW_ALL))
 			append("<a href=\"/jobs\">Job queue</a>");
 
-		if (session_user_type == UserType::ADMIN)
+		if (session_user_type == User::Type::ADMIN)
 			append("<a href=\"/logs\">Logs</a>");
 	}
 
@@ -79,9 +81,9 @@ void Sim::page_template(StringView title, StringView styles,
 	if (session_is_open) {
 		char utype_c = '?';
 		switch (session_user_type) {
-		case UserType::NORMAL: utype_c = 'N'; break;
-		case UserType::TEACHER: utype_c = 'T'; break;
-		case UserType::ADMIN: utype_c = 'A'; break;
+		case User::Type::NORMAL: utype_c = 'N'; break;
+		case User::Type::TEACHER: utype_c = 'T'; break;
+		case User::Type::ADMIN: utype_c = 'A'; break;
 		}
 
 		// clang-format off

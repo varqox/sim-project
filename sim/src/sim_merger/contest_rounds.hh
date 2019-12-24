@@ -2,25 +2,17 @@
 
 #include "contests.hh"
 
-struct ContestRound {
-	uintmax_t id;
-	uintmax_t contest_id;
-	InplaceBuff<CONTEST_ROUND_NAME_MAX_LEN> name;
-	uintmax_t item;
-	InplaceBuff<CONTEST_ROUND_DATETIME_LEN> begins;
-	InplaceBuff<CONTEST_ROUND_DATETIME_LEN> ends;
-	InplaceBuff<CONTEST_ROUND_DATETIME_LEN> full_results;
-	InplaceBuff<CONTEST_ROUND_DATETIME_LEN> ranking_exposure;
-};
+#include <sim/contest_round.hh>
+#include <sim/datetime_field.hh>
 
-class ContestRoundsMerger : public Merger<ContestRound> {
+class ContestRoundsMerger : public Merger<sim::ContestRound> {
 	const ContestsMerger& contests_;
 
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
 
-		ContestRound cr;
-		MySQL::Optional<InplaceBuff<24>> earliest_submit_time;
+		sim::ContestRound cr;
+		MySQL::Optional<sim::DatetimeField> earliest_submit_time;
 		auto stmt =
 		   conn.prepare("SELECT cr.id, cr.contest_id, cr.name, cr.item,"
 		                " cr.begins, cr.ends, cr.full_results,"
@@ -47,7 +39,7 @@ class ContestRoundsMerger : public Merger<ContestRound> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const ContestRound&) { return nullptr; });
+		Merger::merge([&](const sim::ContestRound&) { return nullptr; });
 	}
 
 public:
@@ -60,7 +52,7 @@ public:
 		                         " full_results, ranking_exposure) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 		for (const NewRecord& new_record : new_table_) {
-			const ContestRound& x = new_record.data;
+			const sim::ContestRound& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.contest_id, x.name, x.item, x.begins,
 			                    x.ends, x.full_results, x.ranking_exposure);
 		}

@@ -1,3 +1,5 @@
+#include <sim/contest_round.hh>
+#include <sim/inf_datetime.hh>
 #include <sim/mysql.h>
 #include <simlib/defer.h>
 #include <simlib/process.h>
@@ -15,6 +17,19 @@ struct CmdOptions {
 };
 
 } // namespace
+
+static int perform_upgrade() {
+	STACK_UNWINDING_MARK;
+
+	conn
+	   .prepare(
+	      "UPDATE contest_rounds SET ranking_exposure=IF(ranking_exposure=?, "
+	      "full_results, ranking_exposure)")
+	   .bindAndExecute(sim::InfDatetime().set_neg_inf().to_str());
+
+	stdlog("\033[1;32mSim upgrading is complete\033[m");
+	return 0;
+}
 
 static void print_help(const char* program_name) {
 	if (not program_name)
@@ -58,15 +73,6 @@ static CmdOptions parse_cmd_options(int& argc, char** argv) {
 
 	argc = new_argc;
 	return cmd_options;
-}
-
-static int perform_upgrade() {
-	STACK_UNWINDING_MARK;
-
-	conn.update("RENAME TABLE files TO contest_files");
-
-	stdlog("\033[1;32mSim upgrading is complete\033[m");
-	return 0;
 }
 
 static int true_main(int argc, char** argv) {

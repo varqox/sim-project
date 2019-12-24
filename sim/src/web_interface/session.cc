@@ -2,6 +2,7 @@
 
 #include <sim/random.hh>
 
+using sim::User;
 using std::string;
 
 bool Sim::session_open() {
@@ -25,7 +26,7 @@ bool Sim::session_open() {
 
 		InplaceBuff<SESSION_IP_LEN + 1> session_ip;
 		InplaceBuff<4096> user_agent;
-		EnumVal<UserType> s_u_type;
+		decltype(User::type) s_u_type;
 		stmt.res_bind_all(session_csrf_token, session_user_id, session_data,
 		                  s_u_type, session_username, session_ip, user_agent);
 

@@ -4,6 +4,7 @@
 #include <simlib/random.h>
 #include <simlib/sha.h>
 
+using sim::User;
 using std::array;
 using std::string;
 
@@ -14,7 +15,7 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 		return PERM::NONE;
 
 	switch (session_user_type) {
-	case UserType::ADMIN:
+	case User::Type::ADMIN:
 		if (session_user_id == SIM_ROOT_UID) {
 			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN |
 			       PERM::ADD_TEACHER | PERM::ADD_NORMAL;
@@ -23,15 +24,15 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 			       PERM::ADD_NORMAL;
 		}
 
-	case UserType::TEACHER:
-	case UserType::NORMAL: return PERM::NONE;
+	case User::Type::TEACHER:
+	case User::Type::NORMAL: return PERM::NONE;
 	}
 
 	return PERM::NONE; // Should not happen
 }
 
 Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
-                                                UserType utype) noexcept {
+                                                User::Type utype) noexcept {
 	using PERM = UserPermissions;
 	constexpr UserPermissions PERM_ADMIN =
 	   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS |
@@ -40,8 +41,8 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	if (not session_is_open)
 		return PERM::NONE;
 
-	auto viewer = EnumVal<UserType>(session_user_type).int_val() +
-	              (session_user_id != SIM_ROOT_UID);
+	auto viewer =
+	   EnumVal(session_user_type).int_val() + (session_user_id != SIM_ROOT_UID);
 	if (session_user_id == user_id) {
 		constexpr UserPermissions perm[4] = {
 		   // Sim root
@@ -59,7 +60,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 		return perm[viewer] | users_get_overall_permissions();
 	}
 
-	auto user = EnumVal<UserType>(utype).int_val() + (user_id != SIM_ROOT_UID);
+	auto user = EnumVal(utype).int_val() + (user_id != SIM_ROOT_UID);
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
 	   {// Sim root
@@ -101,7 +102,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
 
 	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
 	stmt.bindAndExecute(user_id);
-	EnumVal<UserType> utype;
+	decltype(User::type) utype;
 	stmt.res_bind_all(utype);
 	if (not stmt.next())
 		return PERM::NONE;
@@ -116,8 +117,8 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
 	stmt.bindAndExecute(session_user_id);
 
-	InplaceBuff<SALT_LEN> salt;
-	InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
+	decltype(User::salt) salt;
+	decltype(User::password) passwd_hash;
 	stmt.res_bind_all(salt, passwd_hash);
 	throw_assert(stmt.next());
 
@@ -134,7 +135,7 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 void Sim::login() {
 	STACK_UNWINDING_MARK;
 
-	InplaceBuff<USERNAME_MAX_LEN> username;
+	decltype(User::username) username;
 	bool remember = false;
 	if (request.method == server::HttpRequest::POST) {
 		// Try to login
@@ -143,7 +144,7 @@ void Sim::login() {
 		form_validate_not_blank(
 		   username, "username", "Username", isUsername,
 		   "Username can only consist of characters [a-zA-Z0-9_-]",
-		   USERNAME_MAX_LEN);
+		   decltype(User::username)::max_len);
 
 		form_validate(password, "password", "Password");
 
@@ -157,8 +158,8 @@ void Sim::login() {
 			stmt.bindAndExecute(username);
 
 			InplaceBuff<32> uid;
-			InplaceBuff<SALT_LEN> salt;
-			InplaceBuff<PASSWORD_HASH_LEN> passwd_hash;
+			decltype(User::salt) salt;
+			decltype(User::password) passwd_hash;
 			stmt.res_bind_all(uid, salt, passwd_hash);
 
 			if (stmt.next() and slowEqual(intentionalUnsafeStringView(sha3_512(
@@ -193,7 +194,7 @@ void Sim::login() {
 	                   "<input type=\"text\" name=\"username\" "
 	                          "value=\"", htmlEscape(username), "\" "
 	                          "size=\"24\" "
-	                          "maxlength=\"", USERNAME_MAX_LEN, "\" required>"
+	                          "maxlength=\"", decltype(User::username)::max_len, "\" required>"
 	               "</div>"
 	               // Password
 	               "<div class=\"field-group\">"
@@ -226,22 +227,22 @@ void Sim::sign_up() {
 		return redirect("/");
 
 	InplaceBuff<4096> pass1, pass2;
-	InplaceBuff<USERNAME_MAX_LEN> username;
-	InplaceBuff<USER_FIRST_NAME_MAX_LEN> first_name;
-	InplaceBuff<USER_LAST_NAME_MAX_LEN> last_name;
-	InplaceBuff<USER_EMAIL_MAX_LEN> email;
+	decltype(User::username) username;
+	decltype(User::first_name) first_name;
+	decltype(User::last_name) last_name;
+	decltype(User::email) email;
 
 	if (request.method == server::HttpRequest::POST) {
 		// Validate all fields
 		form_validate_not_blank(
 		   username, "username", "Username", isUsername,
 		   "Username can only consist of characters [a-zA-Z0-9_-]",
-		   USERNAME_MAX_LEN);
+		   username.max_len);
 		form_validate_not_blank(first_name, "first_name", "First Name",
-		                        USER_FIRST_NAME_MAX_LEN);
+		                        first_name.max_len);
 		form_validate_not_blank(last_name, "last_name", "Last Name",
-		                        USER_LAST_NAME_MAX_LEN);
-		form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+		                        first_name.max_len);
+		form_validate_not_blank(email, "email", "Email", email.max_len);
 
 		if (form_validate(pass1, "password1", "Password") &&
 		    form_validate(pass2, "password2", "Password (repeat)") &&
@@ -253,7 +254,8 @@ void Sim::sign_up() {
 		if (not notifications.size) {
 			STACK_UNWINDING_MARK;
 
-			array<char, (SALT_LEN >> 1)> salt_bin;
+			static_assert(decltype(User::salt)::max_len % 2 == 0);
+			array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
 			fillRandomly(salt_bin.data(), salt_bin.size());
 			auto salt = toHex(salt_bin.data(), salt_bin.size());
 
@@ -291,7 +293,7 @@ void Sim::sign_up() {
 	                   "<input type=\"text\" name=\"username\" "
 	                          "value=\"", htmlEscape(username), "\" "
 	                          "size=\"24\" "
-	                          "maxlength=\"", USERNAME_MAX_LEN, "\" required>"
+	                          "maxlength=\"", decltype(User::username)::max_len, "\" required>"
 	               "</div>"
 	               // First Name
 	               "<div class=\"field-group\">"
@@ -299,7 +301,7 @@ void Sim::sign_up() {
 	                   "<input type=\"text\" name=\"first_name\" "
 	                          "value=\"", htmlEscape(first_name), "\" "
 	                          "size=\"24\" "
-	                          "maxlength=\"", USER_FIRST_NAME_MAX_LEN, "\" "
+	                          "maxlength=\"", decltype(User::first_name)::max_len, "\" "
 	                          "required>"
 	               "</div>"
 	               // Last name
@@ -308,7 +310,7 @@ void Sim::sign_up() {
 	                   "<input type=\"text\" name=\"last_name\" "
 	                          "value=\"", htmlEscape(last_name), "\" "
 	                          "size=\"24\" "
-	                          "maxlength=\"", USER_LAST_NAME_MAX_LEN, "\" "
+	                          "maxlength=\"", decltype(User::last_name)::max_len, "\" "
 	                          "required>"
 	               "</div>"
 	               // Email
@@ -316,7 +318,7 @@ void Sim::sign_up() {
 	                   "<label>Email</label>"
 	                   "<input type=\"email\" name=\"email\" "
 	                          "value=\"", htmlEscape(email), "\" size=\"24\" "
-	                          "maxlength=\"", USER_EMAIL_MAX_LEN, "\" required>"
+	                          "maxlength=\"", decltype(User::email)::max_len, "\" required>"
 	               "</div>"
 	               // Password
 	               "<div class=\"field-group\">"

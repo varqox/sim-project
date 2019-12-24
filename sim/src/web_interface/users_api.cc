@@ -5,6 +5,7 @@
 #include <simlib/random.h>
 #include <simlib/sha.h>
 
+using sim::User;
 using std::array;
 using std::string;
 
@@ -34,10 +35,10 @@ void Sim::api_users() {
 		}
 	};
 
-	if (session_user_type == UserType::TEACHER)
+	if (session_user_type == User::Type::TEACHER)
 		query_append("id=", session_user_id);
 	// query_append("id!=" SIM_ROOT_UID);
-	else if (session_user_type == UserType::NORMAL)
+	else if (session_user_type == User::Type::NORMAL)
 		query_append("id=", session_user_id);
 
 	// Process restrictions
@@ -101,11 +102,11 @@ void Sim::api_users() {
 		       jsonStringify(res[FNAME]), ',', jsonStringify(res[LNAME]), ',',
 		       jsonStringify(res[EMAIL]), ',');
 
-		UserType utype {UserType(strtoull(res[UTYPE]))};
+		User::Type utype = User::Type(strtoull(res[UTYPE]));
 		switch (utype) {
-		case UserType::ADMIN: append("\"Admin\","); break;
-		case UserType::TEACHER: append("\"Teacher\","); break;
-		case UserType::NORMAL: append("\"Normal\","); break;
+		case User::Type::ADMIN: append("\"Admin\","); break;
+		case User::Type::TEACHER: append("\"Teacher\","); break;
+		case User::Type::NORMAL: append("\"Normal\","); break;
 		}
 
 		// Allowed actions
@@ -186,27 +187,27 @@ void Sim::api_user_add() {
 	form_validate_not_blank(
 	   username, "username", "Username", isUsername,
 	   "Username can only consist of characters [a-zA-Z0-9_-]",
-	   USERNAME_MAX_LEN);
+	   decltype(User::username)::max_len);
 
 	// Validate user type
 	utype_str = request.form_data.get("type");
-	UserType utype /*= UserType::NORMAL*/;
+	User::Type utype /*= User::Type::NORMAL*/;
 	if (utype_str == "A") {
-		utype = UserType::ADMIN;
+		utype = User::Type::ADMIN;
 		if (uint(~users_perms & PERM::ADD_ADMIN)) {
 			add_notification(
 			   "error", "You have no permissions to make this user an admin");
 		}
 
 	} else if (utype_str == "T") {
-		utype = UserType::TEACHER;
+		utype = User::Type::TEACHER;
 		if (uint(~users_perms & PERM::ADD_TEACHER)) {
 			add_notification(
 			   "error", "You have no permissions to make this user a teacher");
 		}
 
 	} else if (utype_str == "N") {
-		utype = UserType::NORMAL;
+		utype = User::Type::NORMAL;
 		if (uint(~users_perms & PERM::ADD_NORMAL)) {
 			add_notification(
 			   "error",
@@ -218,18 +219,20 @@ void Sim::api_user_add() {
 	}
 
 	form_validate_not_blank(fname, "first_name", "First Name",
-	                        USER_FIRST_NAME_MAX_LEN);
+	                        decltype(User::first_name)::max_len);
 
 	form_validate_not_blank(lname, "last_name", "Last Name",
-	                        USER_LAST_NAME_MAX_LEN);
+	                        decltype(User::last_name)::max_len);
 
-	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+	form_validate_not_blank(email, "email", "Email",
+	                        decltype(User::email)::max_len);
 
 	if (notifications.size)
 		return api_error400(notifications);
 
 	// All fields are valid
-	array<char, (SALT_LEN >> 1)> salt_bin;
+	static_assert(decltype(User::salt)::max_len % 2 == 0);
+	array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
 	fillRandomly(salt_bin.data(), salt_bin.size());
 	auto salt = toHex(salt_bin.data(), salt_bin.size());
 
@@ -261,25 +264,25 @@ void Sim::api_user_edit() {
 	form_validate_not_blank(
 	   username, "username", "Username", isUsername,
 	   "Username can only consist of characters [a-zA-Z0-9_-]",
-	   USERNAME_MAX_LEN);
+	   decltype(User::username)::max_len);
 
 	// Validate user type
 	new_utype_str = request.form_data.get("type");
-	UserType new_utype = UserType::NORMAL;
+	User::Type new_utype = User::Type::NORMAL;
 	if (new_utype_str == "A") {
-		new_utype = UserType::ADMIN;
+		new_utype = User::Type::ADMIN;
 		if (uint(~users_perms & PERM::MAKE_ADMIN))
 			add_notification(
 			   "error", "You have no permissions to make this user an admin");
 
 	} else if (new_utype_str == "T") {
-		new_utype = UserType::TEACHER;
+		new_utype = User::Type::TEACHER;
 		if (uint(~users_perms & PERM::MAKE_TEACHER))
 			add_notification(
 			   "error", "You have no permissions to make this user a teacher");
 
 	} else if (new_utype_str == "N") {
-		new_utype = UserType::NORMAL;
+		new_utype = User::Type::NORMAL;
 		if (uint(~users_perms & PERM::MAKE_NORMAL))
 			add_notification(
 			   "error",
@@ -289,12 +292,13 @@ void Sim::api_user_edit() {
 		add_notification("error", "Invalid user's type");
 
 	form_validate_not_blank(fname, "first_name", "First Name",
-	                        USER_FIRST_NAME_MAX_LEN);
+	                        decltype(User::first_name)::max_len);
 
 	form_validate_not_blank(lname, "last_name", "Last Name",
-	                        USER_LAST_NAME_MAX_LEN);
+	                        decltype(User::last_name)::max_len);
 
-	form_validate_not_blank(email, "email", "Email", USER_EMAIL_MAX_LEN);
+	form_validate_not_blank(email, "email", "Email",
+	                        decltype(User::email)::max_len);
 
 	if (notifications.size)
 		return api_error400(notifications);
@@ -345,9 +349,11 @@ void Sim::api_user_change_password() {
 	}
 
 	// Commit password change
-	char salt_bin[SALT_LEN >> 1];
-	fillRandomly(salt_bin, sizeof(salt_bin));
-	InplaceBuff<SALT_LEN> salt(toHex(salt_bin, sizeof(salt_bin)));
+	static_assert(decltype(User::salt)::max_len % 2 == 0);
+	array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
+	fillRandomly(salt_bin.data(), salt_bin.size());
+	InplaceBuff<decltype(User::salt)::max_len> salt(
+	   toHex(salt_bin.data(), salt_bin.size()));
 
 	auto transaction = mysql.start_transaction();
 

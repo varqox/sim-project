@@ -130,10 +130,12 @@ protected:
 
 		auto try_merging_into_existing_new_record_wrapper =
 		   [&](const Record& x, IdKind kind) -> NewRecord* {
-			if constexpr (takes_two_arguments)
+			if constexpr (takes_two_arguments) {
 				return try_to_merge_into_an_existing_new_record(x, kind);
-			else
+			} else {
+				(void)kind; // Suppress GCC warning
 				return try_to_merge_into_an_existing_new_record(x);
+			}
 		};
 
 		using std::chrono::system_clock;
@@ -145,6 +147,8 @@ protected:
 					stdlog("Added ", id_info(id, record_set.kind),
 					       " with new id: ", new_id, "  ",
 					       mysql_date(system_clock::to_time_t(tp)));
+				} else {
+					(void)new_id; // Suppress GCC warning
 				}
 			};
 

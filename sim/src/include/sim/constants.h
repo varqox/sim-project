@@ -4,58 +4,6 @@
 #include <cstdint>
 #include <simlib/string.h>
 
-// User
-constexpr uint USERNAME_MAX_LEN = 30;
-constexpr uint USER_FIRST_NAME_MAX_LEN = 60;
-constexpr uint USER_LAST_NAME_MAX_LEN = 60;
-constexpr uint USER_EMAIL_MAX_LEN = 60;
-constexpr uint SALT_LEN = 64;
-constexpr uint PASSWORD_HASH_LEN = 128;
-constexpr uintmax_t MAX_UID = 4294967295;
-
-#define SIM_ROOT_UID "1"
-
-// user type - strongly used -> do not change!
-enum class UserType : uint8_t { ADMIN = 0, TEACHER = 1, NORMAL = 2 };
-
-#define UTYPE_ADMIN_STR "0"
-#define UTYPE_TEACHER_STR "1"
-#define UTYPE_NORMAL_STR "2"
-
-static_assert(meta::equal(UTYPE_ADMIN_STR,
-                          meta::ToString<(int)UserType::ADMIN>::value),
-              "Update the above #define");
-static_assert(meta::equal(UTYPE_TEACHER_STR,
-                          meta::ToString<(int)UserType::TEACHER>::value),
-              "Update the above #define");
-static_assert(meta::equal(UTYPE_NORMAL_STR,
-                          meta::ToString<(int)UserType::NORMAL>::value),
-              "Update the above #define");
-
-// Contest's users
-enum class ContestUserMode : uint8_t {
-	CONTESTANT = 0,
-	MODERATOR = 1,
-	OWNER = 2
-};
-
-#define CU_MODE_CONTESTANT_STR "0"
-static_assert(
-   meta::equal(CU_MODE_CONTESTANT_STR,
-               meta::ToString<(int)ContestUserMode::CONTESTANT>::value),
-   "Update the above #define");
-
-#define CU_MODE_MODERATOR_STR "1"
-static_assert(
-   meta::equal(CU_MODE_MODERATOR_STR,
-               meta::ToString<(int)ContestUserMode::MODERATOR>::value),
-   "Update the above #define");
-
-#define CU_MODE_OWNER_STR "2"
-static_assert(meta::equal(CU_MODE_OWNER_STR,
-                          meta::ToString<(int)ContestUserMode::OWNER>::value),
-              "Update the above #define");
-
 // Session
 constexpr uint SESSION_ID_LEN = 30;
 constexpr uint SESSION_CSRF_TOKEN_LEN = 20;
@@ -64,27 +12,10 @@ constexpr uint TMP_SESSION_MAX_LIFETIME = 60 * 60; // 1 hour [s]
 constexpr uint SESSION_MAX_LIFETIME = 30 * 24 * 60 * 60; // 30 days [s]
 
 // Problems
-constexpr uint PROBLEM_NAME_MAX_LEN = 128;
-constexpr uint PROBLEM_LABEL_MAX_LEN = 64;
 constexpr uint NEW_STATEMENT_MAX_SIZE = 10 << 20; // 10 MiB
 
 // Problems' tags
 constexpr uint PROBLEM_TAG_MAX_LEN = 128;
-
-// Contests
-constexpr uint CONTEST_NAME_MAX_LEN = 128;
-// Contest rounds
-constexpr uint CONTEST_ROUND_NAME_MAX_LEN = 128;
-constexpr uint CONTEST_ROUND_DATETIME_LEN = 19;
-// Contest problems
-constexpr uint CONTEST_PROBLEM_NAME_MAX_LEN =
-   meta::max(128, PROBLEM_NAME_MAX_LEN);
-
-enum class ScoreRevealingMode : uint8_t {
-	NONE = 0,
-	ONLY_SCORE = 1,
-	SCORE_AND_FULL_STATUS = 2,
-};
 
 // Contest entry tokens
 constexpr uint CONTEST_ENTRY_TOKEN_LEN = 48;
@@ -99,28 +30,6 @@ constexpr uint FILE_MAX_SIZE = 128 << 20; // 128 MiB
 
 // Submissions
 constexpr uint SOLUTION_MAX_SIZE = 100 << 10; // 100 Kib
-
-enum class ProblemType : uint8_t {
-	PUBLIC = 1,
-	PRIVATE = 2,
-	CONTEST_ONLY = 3,
-};
-
-#define PTYPE_PUBLIC_STR "1"
-static_assert(meta::equal(PTYPE_PUBLIC_STR,
-                          meta::ToString<(int)ProblemType::PUBLIC>::value),
-              "Update the above #define");
-
-#define PTYPE_PRIVATE_STR "2"
-static_assert(meta::equal(PTYPE_PRIVATE_STR,
-                          meta::ToString<(int)ProblemType::PRIVATE>::value),
-              "Update the above #define");
-
-#define PTYPE_CONTEST_ONLY_STR "3"
-static_assert(
-   meta::equal(PTYPE_CONTEST_ONLY_STR,
-               meta::ToString<(int)ProblemType::CONTEST_ONLY>::value),
-   "Update the above #define");
 
 enum class SubmissionType : uint8_t {
 	NORMAL = 0,
@@ -258,26 +167,6 @@ constexpr const char* css_color_class(SubmissionStatus status) noexcept {
 static_assert(
    meta::equal(SSTATUS_PENDING_STR,
                meta::ToString<(int)SubmissionStatus::PENDING>::value),
-   "Update the above #define");
-
-enum class SubmissionFinalSelectingMethod {
-	LAST_COMPILING = 0,
-	WITH_HIGHEST_SCORE = 1
-};
-
-#define SFSM_LAST_COMPILING "0"
-static_assert(
-   meta::equal(SFSM_LAST_COMPILING,
-               meta::ToString<
-                  (int)SubmissionFinalSelectingMethod::LAST_COMPILING>::value),
-   "Update the above #define");
-
-#define SFSM_WITH_HIGHEST_SCORE "1"
-static_assert(
-   meta::equal(
-      SFSM_WITH_HIGHEST_SCORE,
-      meta::ToString<
-         (int)SubmissionFinalSelectingMethod::WITH_HIGHEST_SCORE>::value),
    "Update the above #define");
 
 enum class JobType : uint8_t {

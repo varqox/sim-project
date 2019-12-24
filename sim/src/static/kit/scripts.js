@@ -610,10 +610,10 @@ Form.field_group = function(label_text_or_html_content, input_context_or_html_el
 	});
 };
 
-Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_parent)
+Form.send_via_ajax = function(form, url, success_msg_or_handler /*= 'Success'*/, loader_parent)
 {
-	if (success_msg === undefined)
-		success_msg = 'Success';
+	if (success_msg_or_handler === undefined)
+		success_msg_or_handler = 'Success';
 	if (loader_parent === undefined)
 		loader_parent = $(form);
 
@@ -628,10 +628,10 @@ Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_par
 		contentType: false,
 		data: new FormData(form[0]),
 		success: function(resp) {
-			if (typeof success_msg === "function") {
-				success_msg.call(form, resp, loader_parent);
+			if (typeof success_msg_or_handler === "function") {
+				success_msg_or_handler.call(form, resp, loader_parent);
 			} else
-				show_success_via_loader(loader_parent, success_msg);
+				show_success_via_loader(loader_parent, success_msg_or_handler);
 		},
 		error: function(resp, status) {
 			show_error_via_loader(loader_parent, resp, status);
@@ -640,7 +640,7 @@ Form.send_via_ajax = function(form, url, success_msg /*= 'Success'*/, loader_par
 	return false;
 };
 
-function ajax_form(title, target, html, success_msg, classes) {
+function ajax_form(title, target, html, success_msg_or_handler, classes) {
 	return $('<div>', {
 		class: 'form-container' + (classes === undefined ? '' : ' ' + classes),
 		html: $('<h1>', {text: title})
@@ -648,7 +648,7 @@ function ajax_form(title, target, html, success_msg, classes) {
 			method: 'post',
 			html: html
 		}).submit(function() {
-			return Form.send_via_ajax(this, target, success_msg);
+			return Form.send_via_ajax(this, target, success_msg_or_handler);
 		})
 	});
 }
@@ -825,6 +825,10 @@ function tabname_to_hash(tabname) {
 function default_tabmenu_attacher(x) {
 	x.on('tabmenuTabHasChanged', function() { x.nextAll().remove(); });
 	x.appendTo(this);
+}
+function tabmenu_attacher_with_change_callback(tabmenu_changed_callback, x) {
+	x.on('tabmenuTabHasChanged', tabmenu_changed_callback);
+	default_tabmenu_attacher.call(this, x);
 }
 /// Triggers 'tabmenuTabHasChanged' event on the result every time an active tab is changed
 function tabmenu(attacher, tabs) {
@@ -1097,7 +1101,7 @@ function Lister(elem) {
 	this.monitor_scroll = function() {
 		var scres_handler;
 		var elem_to_listen_on_scroll;
-		var scres_unhandle = function() {
+		var scres_unhandle_if_detatched = function() {
 			if (!$.contains(document.documentElement, this_.elem[0])) {
 				elem_to_listen_on_scroll.off('scroll', scres_handler);
 				$(window).off('resize', scres_handler);
@@ -1108,7 +1112,7 @@ function Lister(elem) {
 		if (modal_parent.length === 1) {
 			elem_to_listen_on_scroll = modal_parent;
 			scres_handler = function() {
-				scres_unhandle();
+				scres_unhandle_if_detatched();
 				var height = $(this).children('div').height();
 				var scroll_top = $(this).scrollTop();
 				if (height - $(window).height() - scroll_top <= 300)
@@ -1118,7 +1122,7 @@ function Lister(elem) {
 		} else {
 			elem_to_listen_on_scroll = $(document);
 			scres_handler = function() {
-				scres_unhandle();
+				scres_unhandle_if_detatched();
 				var x = $(document);
 				if (x.height() - $(window).height() - x.scrollTop() <= 300)
 					this_.fetch_more();
@@ -1322,9 +1326,10 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		var curr_height = content[0].scrollHeight;
 		content.scrollTop(curr_height - prev);
 
-		// Load more logs if scrolling up did not become possible
+		lock = false;
+
+		// Load more logs unless scrolling up became impossible
 		if (offset > 0) {
-			lock = false;
 			if (content.innerHeight() >= curr_height || prev_height == curr_height) {
 				// avoid recursion
 				setTimeout(this_.fetch_more, 0);
@@ -1395,7 +1400,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		var elem = content[0];
 		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight &&
-			auto_refresh_checkbox.is(':checked'))
+			auto_refresh_checkbox.prop('checked'))
 		{
 			this_.try_fetching_newest();
 		}
@@ -1403,7 +1408,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 	this.monitor_scroll = function() {
 		var scres_handler;
-		var scres_unhandle = function() {
+		var scres_unhandle_if_detatched = function() {
 			if (!$.contains(document.documentElement, this_.elem[0])) {
 				content.off('scroll', scres_handler);
 				$(window).off('resize', scres_handler);
@@ -1412,7 +1417,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		};
 
 		scres_handler = function() {
-			scres_unhandle();
+			scres_unhandle_if_detatched();
 			if (content.scrollTop() <= 300)
 				this_.fetch_more();
 		};
@@ -2398,13 +2403,13 @@ function add_submission_impl(as_modal, url, api_url, problem_field_elem, maybe_i
 					}).add('<option>', {
 						value: 'cpp11',
 						text: 'C++11',
-						selected: true
 					}).add('<option>', {
 						value: 'cpp14',
 						text: 'C++14'
 					}).add('<option>', {
 						value: 'cpp17',
-						text: 'C++17'
+						text: 'C++17',
+						selected: true
 					}).add('<option>', {
 						value: 'pascal',
 						text: 'PASCAL'
@@ -3760,69 +3765,197 @@ function AttachingContestProblemsLister(elem, problem_id, query_suffix /*= ''*/)
 	this.fetch_more();
 }
 /* ================================ Contests ================================ */
-function add_contest(as_modal) {
-	view_base(as_modal, '/c/add', function() {
-		this.append(ajax_form('Add contest', '/api/contest/add',
-			Form.field_group("Contest's name", {
+function append_create_contest(elem, as_modal) {
+	elem.append(ajax_form('Create contest', '/api/contest/create',
+		Form.field_group("Contest's name", {
+			type: 'text',
+			name: 'name',
+			size: 24,
+			// maxlength: 'TODO...',
+			required: true
+		}).add(logged_user_is_admin() ? Form.field_group('Make public', {
+			type: 'checkbox',
+			name: 'public'
+		}) : $()).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Create'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Created');
+				view_contest(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/c' + resp;
+			}
+		})
+	);
+}
+function append_clone_contest(elem, as_modal) {
+	var source_contest_input = $('<input>', {
+		type: 'hidden',
+		name: 'source_contest'
+	});
+
+	elem.append(ajax_form('Clone contest', '/api/contest/clone',
+		Form.field_group("Contest's name", {
+			type: 'text',
+			name: 'name',
+			size: 24,
+			// maxlength: 'TODO...',
+		}).add(source_contest_input
+		).add(Form.field_group("Contest to clone (ID or URL)",
+			$('<input>', {
 				type: 'text',
-				name: 'name',
-				size: 24,
-				// maxlength: 'TODO...',
 				required: true
-			}).add(logged_user_is_admin() ? Form.field_group('Make public', {
-				type: 'checkbox',
-				name: 'public'
-			}) : $()).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Add'
-				})
-			}), function(resp) {
-				if (as_modal) {
-					show_success_via_loader(this, 'Added');
-					view_contest(true, resp);
+			}).on('input', function () {
+				var val = $(this).val();
+				if (!isNaN(val)) {
+					source_contest_input.val(val);
 				} else {
-					this.parent().remove();
-					window.location.href = '/c/c' + resp;
+					// Assume that input is an URL
+					var match = val.match(/\/c(\d+)\b/);
+					if (match != null)
+						source_contest_input.val(match[1]);
+					else
+						source_contest_input.val(''); // unset on invalid value
 				}
 			})
-		);
+		)).add(logged_user_is_admin() ? Form.field_group('Make public', {
+			type: 'checkbox',
+			name: 'public'
+		}) : $()).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Clone'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Cloned');
+				view_contest(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/c' + resp;
+			}
+		})
+	);
+}
+function add_contest(as_modal, opt_hash /*= undefined*/) {
+	view_base(as_modal, '/c/add' + (opt_hash === undefined ? '' : opt_hash), function() {
+		this.append($('<h1>', {
+			class: 'align-center',
+			text: 'Add contest'
+		}));
+
+		tabmenu(default_tabmenu_attacher.bind(this), [
+			'Create new', append_create_contest.bind(null, this, as_modal),
+			'Clone existing', append_clone_contest.bind(null, this, as_modal),
+		]);
 	});
 }
-function add_contest_round(as_modal, contest_id) {
-	view_base(as_modal, '/c/c' + contest_id + '/add_round', function() {
-		this.append(ajax_form('Add round', '/api/contest/c' + contest_id + '/add_round',
-			Form.field_group("Round's name", {
+function append_create_contest_round(elem, as_modal, contest_id) {
+	elem.append(ajax_form('Create contest round', '/api/contest/c' + contest_id + '/create_round',
+		Form.field_group("Round's name", {
+			type: 'text',
+			name: 'name',
+			size: 25,
+			// maxlength: 'TODO...',
+			required: true
+		}).add(Form.field_group('Begin time',
+			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
+		)).add(Form.field_group('End time',
+			dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
+		)).add(Form.field_group('Full results time',
+			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
+		)).add(Form.field_group('Show ranking since',
+			dt_chooser_input('ranking_expo', true, true, -Infinity, 'The Big Bang', "Don't show")
+		)).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Create'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Created');
+				view_contest_round(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/r' + resp;
+			}
+		})
+	);
+}
+function append_clone_contest_round(elem, as_modal, contest_id) {
+	var source_contest_round_input = $('<input>', {
+		type: 'hidden',
+		name: 'source_contest_round'
+	});
+
+	elem.append(ajax_form('Clone contest round', '/api/contest/c' + contest_id + '/clone_round',
+		Form.field_group("Round's name", {
+			type: 'text',
+			name: 'name',
+			size: 25,
+			// maxlength: 'TODO...',
+			placeholder: "The same as name of the cloned round"
+		}).add(source_contest_round_input
+		).add(Form.field_group("Contest round to clone (ID or URL)",
+			$('<input>', {
 				type: 'text',
-				name: 'name',
-				size: 25,
-				// maxlength: 'TODO...',
 				required: true
-			}).add(Form.field_group('Begin time',
-				dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
-			)).add(Form.field_group('End time',
-				dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
-			)).add(Form.field_group('Full results time',
-				dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
-			)).add(Form.field_group('Show ranking since',
-				dt_chooser_input('ranking_expo', true, true, -Infinity, 'Full results', "Don't show")
-			)).add('<div>', {
-				html: $('<input>', {
-					class: 'btn blue',
-					type: 'submit',
-					value: 'Add'
-				})
-			}), function(resp) {
-				if (as_modal) {
-					show_success_via_loader(this, 'Added');
-					view_contest_round(true, resp);
+			}).on('input', function () {
+				var val = $(this).val();
+				if (!isNaN(val)) {
+					source_contest_round_input.val(val);
 				} else {
-					this.parent().remove();
-					window.location.href = '/c/r' + resp;
+					// Assume that input is an URL
+					var match = val.match(/\/r(\d+)\b/);
+					if (match != null)
+						source_contest_round_input.val(match[1]);
+					else
+						source_contest_round_input.val(''); // unset on invalid value
 				}
 			})
-		);
+		)).add(Form.field_group('Begin time',
+			dt_chooser_input('begins', true, true, undefined, 'The Big Bang', 'Never')
+		)).add(Form.field_group('End time',
+			dt_chooser_input('ends', true, true, Infinity, 'The Big Bang', 'Never')
+		)).add(Form.field_group('Full results time',
+			dt_chooser_input('full_results', true, true, -Infinity, 'Immediately', 'Never')
+		)).add(Form.field_group('Show ranking since',
+			dt_chooser_input('ranking_expo', true, true, -Infinity, 'The Big Bang', "Don't show")
+		)).add('<div>', {
+			html: $('<input>', {
+				class: 'btn blue',
+				type: 'submit',
+				value: 'Clone'
+			})
+		}), function(resp) {
+			if (as_modal) {
+				show_success_via_loader(this, 'Cloned');
+				view_contest_round(true, resp);
+			} else {
+				this.parent().remove();
+				window.location.href = '/c/r' + resp;
+			}
+		})
+	);
+}
+function add_contest_round(as_modal, contest_id, opt_hash /*= undefined*/) {
+	view_base(as_modal, '/c/c' + contest_id + '/add_round' + (opt_hash === undefined ? '' : opt_hash), function() {
+		this.append($('<h1>', {
+			class: 'align-center',
+			text: 'Add contest round'
+		}));
+
+		tabmenu(default_tabmenu_attacher.bind(this), [
+			'Create new', append_create_contest_round.bind(null, this, as_modal, contest_id),
+			'Clone existing', append_clone_contest_round.bind(null, this, as_modal, contest_id),
+		]);
 	});
 }
 function add_contest_problem(as_modal, contest_round_id) {
@@ -3953,7 +4086,7 @@ function edit_contest_round(as_modal, contest_round_id) {
 			)).add(Form.field_group('Full results time',
 				dt_chooser_input('full_results', true, true, utcdt_or_tm_to_Date(round.full_results), 'Immediately', 'Never')
 			)).add(Form.field_group('Show ranking since',
-				dt_chooser_input('ranking_expo', true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'Full results', "Don't show")
+				dt_chooser_input('ranking_expo', true, true, utcdt_or_tm_to_Date(round.ranking_exposure), 'The Big Bang', "Don't show")
 			)).add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
@@ -4176,7 +4309,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 		// Problem buttons
 		else if (id_for_api[0] === 'p')
 			header.append($('<div>', {html: [
-				a_view_button('/p/' + problems[0].problem_id, 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0].problem_id)),
+				(problems[0].can_view_problem ? a_view_button('/p/' + problems[0].problem_id, 'View in Problems', 'btn-small green', view_problem.bind(null, true, problems[0].problem_id)) : ''),
 				(actions.indexOf('A') === -1 ? '' : a_view_button('/c/p' + problems[0].id + '/edit', 'Edit', 'btn-small blue', edit_contest_problem.bind(null, true, problems[0].id))),
 				(actions.indexOf('A') === -1 ? '' :
 					$('<a>', {
@@ -4271,7 +4404,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 											$('<tr>', {html: [
 												$('<td>', {text: "Ranking since"}),
 												infdatetime_to($('<td>'), round.ranking_exposure,
-													'full results', 'never')
+													'The Big Bang', 'never')
 											]}),
 										]}));
 
@@ -4521,7 +4654,7 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 			new ContestFilesLister(table, '/c' + contest.id).monitor_scroll();
 		});
 
-		elem.on('tabmenuTabHasChanged', function(_, active_elem) {
+		var header_links_updater = function(_, active_elem) {
 			// Add / replace hashes in links in the contest-path
 			elem.find('.contest-path').children('a:not(.btn-small)').each(function() {
 				var xx = $(this);
@@ -4531,9 +4664,9 @@ function view_contest_impl(as_modal, id_for_api, opt_hash /*= ''*/) {
 					href = href.substring(0, pos);
 				xx.attr('href', href + window.location.hash);
 			});
-		});
+		};
 
-		tabmenu(default_tabmenu_attacher.bind(elem), tabs);
+		tabmenu(tabmenu_attacher_with_change_callback.bind(elem, header_links_updater), tabs);
 
 	}, '/c/' + id_for_api + (opt_hash === undefined ? '' : opt_hash));
 }
@@ -4558,13 +4691,12 @@ function contest_ranking(elem_, id_for_api) {
 		rounds.sort(function(a, b) { return b.item - a.item; });
 		// Map rounds (by id) to their items
 		var rid_to_item = new StaticMap();
+		var curr_time = new Date();
 		for (var i = 0; i < rounds.length; ++i) {
 			if (!is_admin) {
-				// Add only those rounds that have full results visible and the ranking_exposure point has passed
-				var curr_time = new Date();
-				var full_results = utcdt_or_tm_to_Date(rounds[i].full_results);
+				// Add only those rounds that have the ranking_exposure point has passed
 				var ranking_exposure = utcdt_or_tm_to_Date(rounds[i].ranking_exposure);
-				if (curr_time < full_results || curr_time < ranking_exposure)
+				if (curr_time < ranking_exposure)
 					continue; // Do not show the round
 			}
 
@@ -4674,9 +4806,11 @@ function contest_ranking(elem_, id_for_api) {
 				var total_score = 0;
 				// Count only valid problems (to fix potential discrepancies
 				// between ranking submissions and the contest structure)
-				for (j = 0; j < submissions.length; ++j)
-					if (problem_to_col_id.get(submissions[j].contest_problem_id) !== null)
+				for (j = 0; j < submissions.length; ++j) {
+					if (problem_to_col_id.get(submissions[j].contest_problem_id) !== null) {
 						total_score += submissions[j].score;
+					}
+				}
 
 				data[i].score = total_score;
 			}
@@ -4714,16 +4848,17 @@ function contest_ranking(elem_, id_for_api) {
 				for (j = 0; j < submissions.length; ++j) {
 					var x = problem_to_col_id.get(submissions[j].contest_problem_id);
 					if (x != null) {
-						if (submissions[j].id === null)
+						var score_text = (submissions[j].score != null ? submissions[j].score : '?');
+						if (submissions[j].id === null) {
 							row[x] = $('<td>', {
 								class: 'status ' + submissions[j].status.class,
-								text: submissions[j].score
+								text: score_text
 							});
-						else {
+						} else {
 							row[x] = $('<td>', {
 								class: 'status ' + submissions[j].status.class,
 								html: a_view_button('/s/' + submissions[j].id,
-									submissions[j].score, '',
+									score_text, '',
 									view_submission.bind(null, true, submissions[j].id))
 							});
 						}
@@ -5788,7 +5923,6 @@ function open_calendar_on(time, text_input, hidden_input) {
 			if (datetime_info_input.is(':focus')) {
 				setTimeout(function() {
 					var miliseconds_dt = Date.parse(datetime_info_input.val());
-					console.log(e.key, ' ', miliseconds_dt);
 					if (isNaN(miliseconds_dt)) {
 						datetime_info_input.css('background-color', '#ff9393');
 					} else {

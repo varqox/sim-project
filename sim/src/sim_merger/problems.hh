@@ -3,21 +3,10 @@
 #include "internal_files.hh"
 #include "users.hh"
 
+#include <sim/problem.hh>
 #include <simlib/libzip.h>
 #include <simlib/sim/problem_package.h>
 #include <simlib/sim/simfile.h>
-
-struct Problem {
-	uintmax_t id;
-	uintmax_t file_id;
-	EnumVal<ProblemType> type;
-	InplaceBuff<PROBLEM_NAME_MAX_LEN> name;
-	InplaceBuff<PROBLEM_LABEL_MAX_LEN> label;
-	InplaceBuff<4096> simfile;
-	std::optional<uintmax_t> owner;
-	InplaceBuff<24> added;
-	InplaceBuff<24> last_edit;
-};
 
 static std::pair<std::vector<std::string>, std::string>
 package_fingerprint(FilePath zip_file_path) {
@@ -38,7 +27,7 @@ package_fingerprint(FilePath zip_file_path) {
 	return {entries_list, statement_contents};
 }
 
-class ProblemsMerger : public Merger<Problem> {
+class ProblemsMerger : public Merger<sim::Problem> {
 	const InternalFilesMerger& internal_files_;
 	const UsersMerger& users_;
 	bool reset_new_problems_time_limits_;
@@ -48,7 +37,7 @@ class ProblemsMerger : public Merger<Problem> {
 
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
-		Problem prob;
+		sim::Problem prob;
 		MySQL::Optional<decltype(prob.owner)::value_type> m_owner;
 		auto stmt = conn.prepare("SELECT id, file_id, type, name, label, "
 		                         "simfile, owner, added, last_edit FROM ",
@@ -70,16 +59,16 @@ class ProblemsMerger : public Merger<Problem> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const Problem&) { return nullptr; });
+		Merger::merge([&](const sim::Problem&) { return nullptr; });
 
 		std::map<size_t, size_t> dsu; // (problem idx, target problem idx)
 		// Returns problem index to which problem of index @p idx will be merged
 		auto find = [&](size_t idx) {
-			auto impl = [&dsu](auto& self, size_t idx) -> size_t {
-				auto it = dsu.find(idx);
+			auto impl = [&dsu](auto& self, size_t x) -> size_t {
+				auto it = dsu.find(x);
 				throw_assert(it != dsu.end());
 				auto& dsu_idx = it->second;
-				return (idx == dsu_idx ? idx : dsu_idx = self(self, dsu_idx));
+				return (x == dsu_idx ? x : dsu_idx = self(self, dsu_idx));
 			};
 
 			return impl(impl, idx);
@@ -136,7 +125,7 @@ public:
 		                         " owner, added, last_edit) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		for (const NewRecord& new_record : new_table_) {
-			const Problem& x = new_record.data;
+			const sim::Problem& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.file_id, x.type, x.name, x.label,
 			                    x.simfile, x.owner, x.added, x.last_edit);
 		}
@@ -177,7 +166,7 @@ public:
 
 		if (reset_new_problems_time_limits_) {
 			for (auto& new_record : new_table_) {
-				const Problem& p = new_record.data;
+				const sim::Problem& p = new_record.data;
 				if (not new_record.other_ids.empty() and
 				    to_merge_.count(p.id) == 0) {
 					schedule_reseting_problem_time_limits(p.id);

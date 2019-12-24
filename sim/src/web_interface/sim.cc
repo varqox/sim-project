@@ -3,6 +3,7 @@
 #include <simlib/filesystem.h>
 #include <simlib/random.h>
 
+using sim::User;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -200,8 +201,15 @@ void Sim::static_file() {
 void Sim::view_logs() {
 	STACK_UNWINDING_MARK;
 
-	if (!session_is_open || session_user_type > UserType::ADMIN)
+	// TODO: convert it to some kind of permissions
+	if (!session_is_open)
 		return error403();
+
+	switch (session_user_type) {
+	case User::Type::ADMIN: break;
+	case User::Type::TEACHER: return error403();
+	case User::Type::NORMAL: return error403();
+	}
 
 	page_template("Logs", "body{padding-left:20px}");
 

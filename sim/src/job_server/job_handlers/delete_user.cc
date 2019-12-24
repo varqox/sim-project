@@ -3,6 +3,9 @@
 #include "../main.h"
 
 #include <sim/constants.h>
+#include <sim/user.hh>
+
+using sim::User;
 
 namespace job_handlers {
 
@@ -17,16 +20,16 @@ void DeleteUser::run() {
 		   mysql.prepare("SELECT username, type FROM users WHERE id=?");
 		stmt.bindAndExecute(user_id_);
 		InplaceBuff<32> username;
-		EnumVal<UserType> user_type;
+		decltype(User::type) user_type;
 		stmt.res_bind_all(username, user_type);
 		if (not stmt.next())
 			return set_failure("User with id: ", user_id_, " does not exist");
 
 		job_log("username: ", username);
 		switch (user_type) {
-		case UserType::ADMIN: job_log("type: admin"); break;
-		case UserType::TEACHER: job_log("type: teacher"); break;
-		case UserType::NORMAL: job_log("type: normal"); break;
+		case User::Type::ADMIN: job_log("type: admin"); break;
+		case User::Type::TEACHER: job_log("type: teacher"); break;
+		case User::Type::NORMAL: job_log("type: normal"); break;
 		}
 	}
 

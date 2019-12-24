@@ -3,18 +3,10 @@
 #include "contest_rounds.hh"
 #include "problems.hh"
 
-struct ContestProblem {
-	uintmax_t id;
-	uintmax_t contest_round_id;
-	uintmax_t contest_id;
-	uintmax_t problem_id;
-	InplaceBuff<CONTEST_PROBLEM_NAME_MAX_LEN> name;
-	uintmax_t item;
-	EnumVal<SubmissionFinalSelectingMethod> final_selecting_method;
-	EnumVal<ScoreRevealingMode> score_revealing;
-};
+#include <sim/contest_problem.hh>
+#include <sim/datetime_field.hh>
 
-class ContestProblemsMerger : public Merger<ContestProblem> {
+class ContestProblemsMerger : public Merger<sim::ContestProblem> {
 	const ContestRoundsMerger& contest_rounds_;
 	const ContestsMerger& contests_;
 	const ProblemsMerger& problems_;
@@ -22,8 +14,8 @@ class ContestProblemsMerger : public Merger<ContestProblem> {
 	void load(RecordSet& record_set) override {
 		STACK_UNWINDING_MARK;
 
-		ContestProblem cp;
-		MySQL::Optional<InplaceBuff<24>> earliest_submit_time;
+		sim::ContestProblem cp;
+		MySQL::Optional<sim::DatetimeField> earliest_submit_time;
 		auto stmt =
 		   conn.prepare("SELECT cp.id, cp.contest_round_id, cp.contest_id,"
 		                " cp.problem_id, cp.name, cp.item,"
@@ -56,7 +48,7 @@ class ContestProblemsMerger : public Merger<ContestProblem> {
 
 	void merge() override {
 		STACK_UNWINDING_MARK;
-		Merger::merge([&](const ContestProblem&) { return nullptr; });
+		Merger::merge([&](const sim::ContestProblem&) { return nullptr; });
 	}
 
 public:
@@ -70,7 +62,7 @@ public:
 		                         " final_selecting_method, score_revealing) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 		for (const NewRecord& new_record : new_table_) {
-			const ContestProblem& x = new_record.data;
+			const sim::ContestProblem& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.contest_round_id, x.contest_id,
 			                    x.problem_id, x.name, x.item,
 			                    x.final_selecting_method, x.score_revealing);
