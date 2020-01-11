@@ -2,6 +2,13 @@
 
 #include <gtest/gtest.h>
 
+using std::unique_ptr;
+
 TEST(DISABLED_memory, delete_using_free) {
-	// TODO: implement it
+	unique_ptr<char[], delete_using_free>((char*)malloc(42));
+
+	unique_ptr<struct stat, delete_using_free>(
+	   (struct stat*)malloc(sizeof(struct stat)));
+
+	// TODO: add some mocking
 }

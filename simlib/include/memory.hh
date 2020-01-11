@@ -2,8 +2,10 @@
 
 #include <cstdlib>
 
-// Deleter that uses free() to deallocate, useful with std::unique_ptr
-template <class T>
+// Deleter that uses free() to deallocate, useful with std::unique_ptr<>
 struct delete_using_free {
-	void operator()(T* p) const noexcept { free(p); }
+	template <class T>
+	void operator()(T* p) const noexcept {
+		free(p);
+	}
 };
