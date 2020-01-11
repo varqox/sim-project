@@ -453,7 +453,10 @@ protected:
 	}
 
 	/**
-	 * @brief Calls @p func on every element of subtree of @p x
+	 * @brief Calls @p func on every element
+	 * @details IMPORTANT: Adding or removing nodes within @p func is an
+	 *   undefined behavior  of subtree of @p x. For deleting traversed nodes
+	 * see filter()
 	 * @param x node representing subtree
 	 * @param func function to call on every element, it should take
 	 *   one argument of type Node&, if it return sth convertible to
@@ -490,7 +493,10 @@ protected:
 	}
 
 	/**
-	 * @brief Calls @p func on every element of subtree of @p x
+	 * @brief Calls @p func on every element
+	 * @details IMPORTANT: Adding or removing nodes within @p func is an
+	 *   undefined behavior  of subtree of @p x. For deleting traversed nodes
+	 * see filter()
 	 * @param x node representing subtree
 	 * @param func function to call on every element, it should take
 	 *   one argument of type Node&, if it return sth convertible to
@@ -526,9 +532,10 @@ protected:
 		return;
 	}
 
-public:
 	/**
 	 * @brief Calls @p func on every element
+	 * @details IMPORTANT: Adding or removing nodes within @p func is an
+	 *   undefined behavior. For deleting traversed nodes see filter()
 	 * @param func function to call on every element, it should take
 	 *   one argument of type Node&, if it return sth convertible to
 	 *   false the lookup will break
@@ -540,6 +547,8 @@ public:
 
 	/**
 	 * @brief Calls @p func on every element
+	 * @details IMPORTANT: Adding or removing nodes within @p func is an
+	 *   undefined behavior. For deleting traversed nodes see filter()
 	 * @param func function to call on every element, it should take
 	 *   one argument of type const Node&, if it return sth convertible
 	 *   to false the lookup will break
@@ -549,6 +558,35 @@ public:
 		for_each(root, std::forward<Func>(func));
 	}
 
+	/** @brief Calls @p condition on every element and removes it if
+	 *    @p condition returns true
+	 * @param condition function to call on every element do decide whether to
+	 *    remove it. It should take one argument of type Node&.
+	 * @complexity O(n + k log n) where n = size() and k = number of deleted
+	 * elements
+	 */
+	template <class Condition>
+	void filter(Condition&& condition) {
+		std::optional<typename Node::Key> key_opt;
+		auto processor = [&](Node& node) {
+			if (condition(node)) {
+				key_opt.emplace(node.key());
+				return false;
+			}
+
+			return true;
+		};
+
+		for_each(processor);
+		while (key_opt.has_value()) {
+			auto key = std::move(*key_opt);
+			key_opt = std::nullopt;
+			erase(key);
+			foreach_since_upper_bound(key, processor);
+		}
+	}
+
+public:
 	/// Returns a pointer to the found value or nullptr if there is
 	/// no such value
 	template <class T>
@@ -734,7 +772,7 @@ protected:
 		return {&pool[node_id], b};
 	}
 
-public:
+protected:
 	Node* front() noexcept { return dirmost(root, L); }
 
 	const Node* front() const noexcept { return dirmost(root, L); }
@@ -743,7 +781,6 @@ public:
 
 	const Node* back() const noexcept { return dirmost(root, R); }
 
-protected:
 	// return value - pulled out node; x is updated automatically
 	size_type pull_out_rightmost(size_type& x) {
 		if (pool[x].kid[R] == nil) {
@@ -1104,6 +1141,7 @@ protected:
 	using typename AVLBase::Node;
 
 public:
+	using value_type = typename Node::value_type;
 	using AVLBase::AVLBase;
 
 	typename Node::Data* front() {
@@ -1125,8 +1163,11 @@ public:
 		auto x = AVLBase::back();
 		return (x ? &x->data() : nullptr);
 	}
+
 	/**
 	 * @brief Calls @p func on every element
+	 * @details IMPORTANT: Adding or removing nodes within @p func is an
+	 *   undefined behavior. For deleting traversed nodes see filter()
 	 * @param func function to call on every element, it should take
 	 *   one argument of type Node::Data&, if it return sth convertible
 	 *   to false the lookup will break
@@ -1138,6 +1179,8 @@ public:
 
 	/**
 	 * @brief Calls @p func on every element
+	 * @details IMPORTANT: Adding or removing nodes within @p func is an
+	 *   undefined behavior. For deleting traversed nodes see filter()
 	 * @param func function to call on every element, it should take
 	 *   one argument of type const Node::Data&, if it return sth
 	 *   convertible to false the lookup will break
@@ -1148,6 +1191,22 @@ public:
 		   [&func](const Node& node) { return func(node.data()); });
 	}
 
+protected:
+	/**
+	 * @brief Calls @p condition on every element and removes it if
+	 *    @p condition returns true
+	 * @param condition function to call on every element do decide whether to
+	 *    remove it. It should take one argument of type Node&.
+	 * @complexity O(n + k log n) where n = size() and k = number of deleted
+	 * elements
+	 */
+	template <class Condition>
+	void filter(Condition&& condition) {
+		AVLBase::filter(
+		   [&condition](Node& node) { return condition(node.data()); });
+	}
+
+public:
 	/**
 	 * @brief Calls @p callback on every element since the first element
 	 *   >= @p k
@@ -1208,6 +1267,7 @@ public:
 	using Value = const Key;
 	using RealData = Key;
 	using Data = const Key;
+	using value_type = Key;
 
 	Key key_;
 
@@ -1238,6 +1298,7 @@ class AVLDictSet : public AVLDictContainer<AVLSetNode, Comp, size_type, Value> {
 public:
 	using ADC::ADC;
 	using ADC::operator=;
+	using ADC::filter;
 
 	/// Return value - a bool denoting whether the insertion took
 	/// place
@@ -1291,6 +1352,7 @@ public:
 	using Value = ValueT;
 	using RealData = std::pair<Key, Value>;
 	using Data = std::pair<const Key, Value>;
+	using value_type = std::pair<const Key, Value>;
 
 	union DataU {
 		RealData rdt;
@@ -1356,6 +1418,7 @@ class AVLDictMap
 public:
 	using ADC::ADC;
 	using ADC::operator=;
+	using ADC::filter;
 
 	/// Return value - a pair of a pointer to pair (key, value) and a
 	/// bool denoting whether the insertion took place (if false, the
