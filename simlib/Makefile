@@ -73,6 +73,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/defer.cc \
 	$(PREFIX)test/directory.cc \
 	$(PREFIX)test/enum_val.cc \
+	$(PREFIX)test/event_queue.cc \
 	$(PREFIX)test/file_contents.cc \
 	$(PREFIX)test/file_descriptor.cc \
 	$(PREFIX)test/file_info.cc \
