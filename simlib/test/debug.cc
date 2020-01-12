@@ -222,3 +222,47 @@ TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
 	test_errlog_catch_and_stack_unwinding_mark_normal_no_args();
 	test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level();
 }
+
+TEST(debug, WONT_THROW_MACRO_fail) {
+	ASSERT_DEATH(
+	   {
+		   std::vector<int> abc;
+		   errlog("BUG");
+		   WONT_THROW(abc.at(42));
+	   },
+	   "BUG");
+}
+
+TEST(debug, WONT_THROW_MACRO_lvalue_reference) {
+	{
+		int a = 42;
+		WONT_THROW(++a) = 42;
+		EXPECT_EQ(a, 42);
+	}
+	{
+		int a = 42;
+		int& x = WONT_THROW(++a);
+		++a;
+		EXPECT_EQ(x, 44);
+	}
+}
+
+TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
+	auto ptr = std::make_unique<int>(162);
+	std::unique_ptr<int> ptr2 = WONT_THROW(std::move(ptr));
+	EXPECT_EQ((bool)ptr, false);
+	EXPECT_EQ((bool)ptr2, true);
+}
+
+TEST(debug, WONT_THROW_MACRO_prvalue) {
+	std::unique_ptr<int> ptr = WONT_THROW(std::make_unique<int>(162));
+	EXPECT_EQ((bool)ptr, true);
+}
+
+TEST(debug, WONT_THROW_MACRO_rvalue) {
+	int a = 4, b = 7;
+	int c = WONT_THROW(a + b);
+	EXPECT_EQ(a, 4);
+	EXPECT_EQ(b, 7);
+	EXPECT_EQ(c, 11);
+}

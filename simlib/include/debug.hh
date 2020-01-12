@@ -5,6 +5,8 @@
 #include "inplace_array.hh"
 #include "logger.hh"
 
+#include <exception>
+
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
 #ifdef DEBUG
@@ -143,3 +145,22 @@ public:
 		tmplog.flush_no_nl();                                                  \
 		::stack_unwinding::StackGuard::marks_collected.clear();                \
 	} while (false)
+
+template <class Func>
+decltype(auto) throwing_is_bug(Func&& func) noexcept {
+	try {
+		return std::forward<Func>(func)();
+	} catch (const std::exception& e) {
+		ERRLOG_CATCH(e);
+		errlog("BUG: this was not expected to throw");
+		std::abort();
+	} catch (...) {
+		ERRLOG_CATCH();
+		errlog("BUG: this was not expected to throw");
+		std::abort();
+	}
+	__builtin_unreachable();
+}
+
+#define WONT_THROW(...)                                                        \
+	throwing_is_bug([&]() -> decltype(auto) { return (__VA_ARGS__); })
