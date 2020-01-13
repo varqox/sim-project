@@ -11,6 +11,7 @@
 #include <ratio>
 #include <set>
 #include <sys/poll.h>
+#include <thread>
 #include <variant>
 
 enum class FileEvent {
@@ -50,6 +51,10 @@ private:
 	std::vector<handler_id_t> poll_events_idx_to_hid_;
 
 	handler_id_t new_handler_id() noexcept { return next_handler_id_++; }
+
+	bool are_there_file_file_handlers() const noexcept {
+		return (handlers_.size() > timed_handlers_.size());
+	}
 
 public:
 	handler_id_t add_ready_handler(std::function<void()> handler) {
@@ -185,6 +190,7 @@ public:
 			auto file_handlers_quantum_start = std::chrono::system_clock::now();
 			size_t new_poll_events_size =
 			   0; // Expired events are removed and the array is compressed
+
 			// poll_events_ may get new elements as we process event handler,
 			// even get reallocated, we need to be careful about pointers and
 			// references to poll_events_ elements. Also we compress the whole
@@ -245,7 +251,7 @@ public:
 		};
 
 		while (not handlers_.empty()) {
-			const milliseconds timeout = [&] {
+			const auto timeout = [&]() -> std::chrono::system_clock::duration {
 				if (timed_handlers_.empty())
 					return milliseconds(-1);
 
@@ -254,12 +260,21 @@ public:
 				if (first_expiration < now)
 					return milliseconds(0);
 
-				return std::chrono::duration_cast<milliseconds>(
-				   first_expiration - now);
+				return first_expiration - now;
 			}();
 
-			const int ready =
-			   poll(poll_events_.data(), poll_events_.size(), timeout.count());
+			const int ready = [&] {
+				if (not are_there_file_file_handlers()) {
+					if (timeout > milliseconds(0))
+						std::this_thread::sleep_for(timeout);
+
+					return 0;
+				}
+
+				return poll(
+				   poll_events_.data(), poll_events_.size(),
+				   std::chrono::duration_cast<milliseconds>(timeout).count());
+			}();
 			if (ready == -1 and errno != EINTR)
 				THROW("poll()", errmsg());
 
