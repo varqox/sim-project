@@ -1,13 +1,14 @@
 #include "../include/event_queue.hh"
 #include "../include/file_descriptor.hh"
 
-#include <bits/stdint-uintn.h>
 #include <chrono>
 #include <cstdint>
 #include <fcntl.h>
 #include <gtest/gtest.h>
 #include <optional>
+#include <unistd.h>
 
+using std::array;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
 using std::chrono_literals::operator""ms;
@@ -229,9 +230,57 @@ TEST(EventQueue, full_fairness) {
 	EXPECT_GT(iters_a, 20);
 	EXPECT_GT(iters_b, 20);
 	EXPECT_NEAR(iters_a, iters_b, 1);
-	stdlog(looper_iters, ' ', iters_a, ' ', iters_b);
 }
 
-// TODO: test file that is not readable immediately
+TEST(EventQueue, file_unready_read_and_close_event) {
+	std::array<int, 2> pfd;
+	ASSERT_EQ(pipe2(pfd.data(), O_NONBLOCK), 0);
+	FileDescriptor rfd(pfd[0]), wfd(pfd[1]);
+	std::string buff(10, '\0');
+
+	EventQueue eq;
+	auto start = system_clock::now();
+	eq.add_time_handler(start + 2ms,
+	                    [&] { write(wfd, "Test", sizeof("Test")); });
+	eq.add_time_handler(start + 3ms, [&] { (void)wfd.close(); });
+
+	EXPECT_EQ(read(rfd, buff.data(), buff.size()), -1);
+	EXPECT_EQ(errno, EAGAIN);
+
+	EventQueue::handler_id_t hid;
+	int round = 0;
+	std::array expected_events = {FileEvent::READABLE, FileEvent::CLOSED};
+	hid = eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
+		EXPECT_EQ(events, expected_events[round++]);
+		if (events == FileEvent::CLOSED)
+			return eq.remove_handler(hid);
+
+		int rc = read(rfd, buff.data(), buff.size());
+		ASSERT_EQ(rc, sizeof("Test"));
+		buff.resize(rc - 1);
+		ASSERT_EQ(buff, "Test");
+	});
+
+	eq.run();
+	EXPECT_EQ(round, 2);
+}
+
+TEST(EventQueue, file_simultaneous_read_and_close_event) {
+	std::array<int, 2> pfd;
+	ASSERT_EQ(pipe2(pfd.data(), O_NONBLOCK), 0);
+	FileDescriptor rfd(pfd[0]), wfd(pfd[1]);
+	write(wfd, "Test", sizeof("Test"));
+	(void)wfd.close();
+
+	EventQueue eq;
+	EventQueue::handler_id_t hid;
+	hid = eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
+		EXPECT_EQ(events, FileEvent::READABLE | FileEvent::CLOSED);
+		eq.remove_handler(hid);
+	});
+
+	eq.run();
+}
+
 // TODO: test adding / removing handler when one is being run -- every case
 // where it can be done inside code handling running events
