@@ -97,7 +97,7 @@ private:
 			res = res | FileEvent::READABLE;
 		if (events & POLLOUT)
 			res = res | FileEvent::WRITEABLE;
-		if (events & POLLERR)
+		if (events & (POLLERR | POLLHUP))
 			res = res | FileEvent::CLOSED;
 		return res;
 	}
@@ -239,7 +239,7 @@ public:
 				}
 
 				// Unhandled event
-				if (revents & (POLLPRI | POLLRDHUP | POLLHUP))
+				if (revents & (POLLPRI | POLLRDHUP))
 					continue; // Ignore these events
 
 				THROW("pollfd.revents = ", revents,
