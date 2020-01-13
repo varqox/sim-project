@@ -160,9 +160,8 @@ TEST(EventQueue, time_file_fairness) {
 			return eq.remove_handler(hid);
 
 		if (system_clock::now() > start + 100ms) {
-			eq.remove_handler(hid);
 			FAIL();
-			return;
+			return eq.remove_handler(hid);
 		}
 
 		++file_iters;
@@ -186,9 +185,8 @@ TEST(EventQueue, full_fairness) {
 			return eq.remove_handler(file_a_hid);
 
 		if (system_clock::now() > start + 100ms) {
-			eq.remove_handler(file_a_hid);
 			FAIL();
-			return;
+			return eq.remove_handler(file_a_hid);
 		}
 
 		++iters_a;
@@ -202,9 +200,8 @@ TEST(EventQueue, full_fairness) {
 			   return eq.remove_handler(file_b_hid);
 
 		   if (system_clock::now() > start + 100ms) {
-			   eq.remove_handler(file_b_hid);
 			   FAIL();
-			   return;
+			   return eq.remove_handler(file_b_hid);
 		   }
 
 		   ++iters_b;
