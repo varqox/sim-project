@@ -152,11 +152,11 @@ decltype(auto) throwing_is_bug(Func&& func) noexcept {
 		return std::forward<Func>(func)();
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
-		errlog("BUG: this was not expected to throw");
+		errlog("BUG: this was expected to not throw");
 		std::abort();
 	} catch (...) {
 		ERRLOG_CATCH();
-		errlog("BUG: this was not expected to throw");
+		errlog("BUG: this was expected to not throw");
 		std::abort();
 	}
 	__builtin_unreachable();
