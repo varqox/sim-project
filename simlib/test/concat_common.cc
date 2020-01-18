@@ -20,8 +20,8 @@ TEST(concat_common, string_length_with_null) {
 }
 
 template <class Str>
-static StringView wrap(Str&& str) noexcept {
-	return {data(str), string_length(str)};
+static StringView wrap(const Str& str) noexcept {
+	return {::data(str), string_length(str)};
 }
 
 TEST(concat_common, data) {
