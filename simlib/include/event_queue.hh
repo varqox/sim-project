@@ -146,8 +146,8 @@ public:
 		               },
 		               [&](FileHandler& handler) {
 			               poll_events_[handler.poll_event_idx].fd =
-			                  -1; // Deactivate event, it will be removed while
-			                      // processing file events
+			                  -1; // Deactivate event. It will be removed while
+			                      // processing file events.
 		               }},
 		   WONT_THROW(handlers_.at(handler_id)));
 		handlers_.erase(handler_id);
@@ -176,7 +176,7 @@ public:
 				timed_handlers_.erase(timed_handlers_.begin());
 				const auto it = handlers_.find(handler_id);
 				assert(it != handlers_.end());
-				const auto handler =
+				auto handler =
 				   std::move(std::get<TimedHandler>(it->second).handler);
 				handlers_.erase(it);
 
@@ -213,6 +213,11 @@ public:
 					poll_events_[idx].fd = -1;
 				}
 
+				// No event
+				const auto revents = poll_events_[new_idx].revents;
+				if (revents == 0)
+					continue;
+
 				if (std::chrono::system_clock::now() >
 				    file_handlers_quantum_start + TIME_QUANTUM) {
 					// Needed to ensure low latency
@@ -227,11 +232,11 @@ public:
 				}
 
 				// Process event
-				const auto revents = poll_events_[new_idx].revents;
 				FileEvent events = poll_events_to_file_events(revents);
 				if (events != FileEvent(0)) {
 					auto handler_id =
 					   WONT_THROW(poll_events_idx_to_hid_.at(new_idx));
+
 					WONT_THROW(
 					   std::get<FileHandler>(handlers_.at(handler_id)).handler)
 					(events);
@@ -248,6 +253,7 @@ public:
 			}
 
 			poll_events_.resize(new_poll_events_size);
+			poll_events_idx_to_hid_.resize(new_poll_events_size);
 		};
 
 		while (not handlers_.empty()) {
@@ -263,7 +269,7 @@ public:
 				return first_expiration - now;
 			}();
 
-			const int ready = [&] {
+			const int ready_poll_events_num = [&] {
 				if (not are_there_file_file_handlers()) {
 					if (timeout > milliseconds(0))
 						std::this_thread::sleep_for(timeout);
@@ -275,13 +281,13 @@ public:
 				   poll_events_.data(), poll_events_.size(),
 				   std::chrono::duration_cast<milliseconds>(timeout).count());
 			}();
-			if (ready == -1 and errno != EINTR)
+			if (ready_poll_events_num == -1 and errno != EINTR)
 				THROW("poll()", errmsg());
 
 			process_timed_handlers(); // It is important to first process timed
 			                          // events, to not starve the timed events
 
-			if (ready > 0)
+			if (ready_poll_events_num > 0)
 				process_file_events();
 		}
 	}
