@@ -97,6 +97,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/sha.cc \
 	$(PREFIX)test/shared_function.cc \
 	$(PREFIX)test/signal_blocking.cc \
+	$(PREFIX)test/signal_handling.cc \
 	$(PREFIX)test/sim/problem_package.cc \
 	$(PREFIX)test/simfile.cc \
 	$(PREFIX)test/simple_parser.cc \
