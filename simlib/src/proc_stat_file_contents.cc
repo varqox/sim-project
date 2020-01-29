@@ -1,24 +1,31 @@
 #include "../include/proc_stat_file_contents.hh"
 #include "../include/file_contents.hh"
-#include "../include/simple_parser.hh"
+#include "../include/string_traits.hh"
+
+#include <cctype>
+#include <functional>
 
 using std::string;
 using std::vector;
 
 ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
    : contents_(std::move(stat_file_contents)) {
-	SimpleParser sp(contents_);
+	StringView str(contents_);
 
 	// [0] - Process pid
-	fields_.emplace_back(sp.extract_next_non_empty(isspace));
+	str.extract_leading(isspace);
+	fields_.emplace_back(str.extract_leading(std::not_fn(isspace)));
 	// [1] - Executable filename
-	sp.extract_next_non_empty('(');
-	sp.remove_leading('(');
-	fields_.emplace_back(sp.extract_prefix(sp.rfind(')')));
-	sp.remove_leading('(');
+	str.remove_leading([](int c) { return c != '('; });
+	assert(has_prefix(str, "("));
+	str.remove_prefix(1);
+	fields_.emplace_back(str.extract_prefix(str.rfind(')')));
+	assert(has_prefix(str, ")"));
+	str.remove_prefix(1);
 	// [>1]
 	for (;;) {
-		auto val = sp.extract_next_non_empty();
+		str.remove_leading(isspace);
+		auto val = str.extract_leading(std::not_fn(isspace));
 		if (val.empty())
 			break;
 

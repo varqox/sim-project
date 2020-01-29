@@ -2,6 +2,7 @@
 
 #include "string_view.hh"
 
+#include <cassert>
 #include <vector>
 
 struct ProcStatFileContents {
@@ -25,7 +26,10 @@ public:
 	// Returns ProcStatFileContents of /proc/@p pid/stat
 	static ProcStatFileContents get(pid_t pid);
 
-	StringView field(size_t no) const noexcept { return fields_[no]; }
-
 	auto fields_no() const noexcept { return fields_.size(); }
+
+	StringView field(size_t no) const noexcept {
+		assert(no < fields_no());
+		return fields_[no];
+	}
 };
