@@ -192,12 +192,12 @@ Sip package tree:
    main/                Main package folder
    |-- check/           Checker folder - holds checker
    |-- doc/             Documents folder - holds problem statement, elaboration,
-                          etc.
+   |                      etc.
    |-- prog/            Solutions folder - holds solutions
    |-- in/              Tests' input files folder - holds tests input files
    |-- out/             Tests' output files folder - holds tests output files
    |-- utils/           Utilities folder - holds test input generators, input
-                          verifiers and other files used by Sip
+   |                      verifiers and other files used by Sip
    |-- Simfile          Simfile - holds package primary config
    `-- Sipfile          Sip file - holds Sip configuration and rules for
                           generating test inputs)==");
