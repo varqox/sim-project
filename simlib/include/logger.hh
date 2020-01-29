@@ -159,8 +159,8 @@ public:
 };
 
 // By default both write to stderr
-extern Logger stdlog; // Standard (default) log
-extern Logger errlog; // Error log
+inline Logger stdlog(stderr); // Standard (default) log
+inline Logger errlog(stderr); // Error log
 
 // Logs to string and Logger simultaneously
 template <class StrType>

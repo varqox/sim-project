@@ -4,8 +4,6 @@
 
 using std::string;
 
-Logger stdlog(stderr), errlog(stderr);
-
 Logger::Logger(FilePath filename) : f_(fopen(filename, "abe")), opened_(true) {
 	if (f_ == nullptr)
 		THROW("fopen('", filename, "') failed", errmsg());
