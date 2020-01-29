@@ -76,10 +76,11 @@ vector<pid_t> find_processes_by_executable_path(vector<string> exec_set,
 
 	vector<pid_t> res;
 	for_each_dir_component(dir, [&](dirent* file) {
-		if (!is_digit(file->d_name))
+		auto pid_opt = str2num<pid_t>(file->d_name);
+		if (not pid_opt or *pid_opt < 1)
 			return; // Not a process
 
-		pid = atoi(file->d_name);
+		pid = *pid_opt;
 		if (pid == my_pid)
 			return; // Do not need to check myself
 
