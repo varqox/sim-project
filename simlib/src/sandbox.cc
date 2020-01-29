@@ -1,6 +1,7 @@
 #include "../include/sandbox.hh"
 #include "../include/call_in_destructor.hh"
 #include "../include/defer.hh"
+#include "../include/humanize.hh"
 #include "../include/process.hh"
 #include "../include/time.hh"
 
@@ -1302,8 +1303,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		// may happen when the tracee gets killed (e.g. by timeout) while we
 		// are doing something (e.g. inspecting syscall arguments).
 	} catch (const std::exception& e) {
-		DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] " __FILE__ ":",
-		                     meta::ToString<__LINE__> {},
+		DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] " __FILE__ ":", __LINE__,
 		                     ": Caught exception: ", e.what());)
 
 		// Exception after tracee is dead and waited
