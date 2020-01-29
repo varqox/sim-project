@@ -2,9 +2,28 @@
 #include "sip_error.hh"
 #include "sip_package.hh"
 
-#include <signal.h>
+#include <atomic>
+#include <cerrno>
+#include <climits>
+#include <csignal>
+#include <fcntl.h>
+#include <poll.h>
+#include <sched.h>
+#include <simlib/concat_tostr.hh>
 #include <simlib/debug.hh>
+#include <simlib/directory.hh>
+#include <simlib/file_contents.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/proc_stat_file_contents.hh>
 #include <simlib/process.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_transform.hh>
+#include <simlib/string_view.hh>
+#include <simlib/to_string.hh>
+#include <simlib/working_directory.hh>
+#include <sys/poll.h>
+#include <thread>
+#include <unistd.h>
 
 /**
  * Parses options passed to Sip via arguments
@@ -50,52 +69,6 @@ static void parseOptions(int& argc, char** argv) {
 	}
 
 	argc = new_argc;
-}
-
-static void kill_signal_handler(int signum) {
-	kill(0, signum); // Kill the whole process group
-
-	// print message: "Sip was just killed by signal %i - %s\n"
-	{
-		InplaceBuff<4096> buff("Sip was just killed by signal ");
-		buff.append(signum, " - ", sys_siglist[signum], '\n');
-		write(STDERR_FILENO, buff.data(), buff.size);
-	}
-
-	auto zip_path_prefix = [] {
-		InplaceBuff<PATH_MAX + 16> path;
-		ssize_t rc = readlink("/proc/self/cwd", path.data(), PATH_MAX);
-		if (rc == -1)
-			return path; // Cannot read CWD
-
-		path.size = rc;
-		path.append(".zip.");
-		return path;
-	}();
-
-	// Check for temporary zip file
-	if (zip_path_prefix.size > 0) {
-		// We don't touch stdin, stdout and stderr
-		for (uint i = 3; i < 100; ++i) {
-			InplaceBuff<64> src("/proc/self/fd/");
-			src.append(i);
-
-			constexpr size_t path_len =
-			   PATH_MAX + 1; // This 1 is for trailing null
-			InplaceBuff<path_len> path;
-			ssize_t rc =
-			   readlink(src.to_cstr().data(), path.data(), path_len - 1);
-			if (rc == -1)
-				continue; // Ignore errors
-
-			path.size = rc;
-			if (has_prefix(path, zip_path_prefix))
-				(void)unlink(path.to_cstr().data());
-		}
-	}
-
-	_exit(1); // exit() is not safe to call from signal handler see man
-	          // signal-safety
 }
 
 static void run_command(int argc, char** argv) {
@@ -157,22 +130,10 @@ static void run_command(int argc, char** argv) {
 	throw SipError("unknown command: ", command);
 }
 
-int main(int argc, char** argv) {
+int true_main(int argc, char** argv) {
 	stdlog.use(stdout);
 	stdlog.label(false);
 	errlog.label(false);
-
-	// Upon termination kill children processes
-	{
-		// Signal control
-		struct sigaction sa;
-		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = &kill_signal_handler;
-
-		(void)sigaction(SIGINT, &sa, nullptr);
-		(void)sigaction(SIGTERM, &sa, nullptr);
-		(void)sigaction(SIGQUIT, &sa, nullptr);
-	}
 
 	parseOptions(argc, argv);
 
@@ -195,4 +156,137 @@ int main(int argc, char** argv) {
 	}
 
 	return 0;
+}
+
+void kill_every_child_process() {
+	auto my_pid_str = to_string(getpid());
+	for_each_dir_component("/proc/", [&](dirent* file) {
+		auto pid_opt = str2num<pid_t>(file->d_name);
+		if (not pid_opt or *pid_opt < 1)
+			return; // Not a process
+		pid_t pid = *pid_opt;
+
+		auto proc_stat = ProcStatFileContents::get(pid);
+		constexpr uint PPID_FID = 3;
+		auto ppid_str = proc_stat.field(PPID_FID);
+		if (ppid_str == my_pid_str) {
+			stdlog("Killing child: ", pid);
+			(void)kill(pid, SIGTERM);
+		}
+	});
+}
+
+void delete_zip_file_that_is_being_created() {
+	auto zip_path_prefix = get_cwd();
+	--zip_path_prefix.size; // Trim trailing '/'
+	zip_path_prefix.append(".zip.");
+
+	// Find and delete temporary zip file
+	constexpr CStringView fd_dir = "/proc/self/fd/";
+	for_each_dir_component(fd_dir, [&](dirent* file) {
+		auto src = concat<64>(fd_dir, file->d_name);
+		InplaceBuff<PATH_MAX + 1> dest; // +1 for trailing null byte
+		auto rc =
+		   readlink(src.to_cstr().data(), dest.data(), dest.max_static_size);
+		if (rc == -1)
+			return; // Ignore errors, as nothing reasonable can be done
+		dest.size = rc;
+
+		if (has_prefix(dest, zip_path_prefix))
+			(void)unlink(dest.to_cstr());
+	});
+}
+
+void cleanup_before_getting_killed() {
+	try {
+		kill_every_child_process();
+	} catch (...) {
+	}
+
+	try {
+		delete_zip_file_that_is_being_created();
+	} catch (...) {
+	}
+}
+
+namespace {
+FileDescriptor signal_pipe_write_end;
+} // namespace
+
+static void signal_handler(int signum) {
+	(void)write(signal_pipe_write_end, &signum, sizeof(int));
+}
+
+int main(int argc, char** argv) {
+	// Prepare signal pipe
+	FileDescriptor signal_pipe_read_end;
+	{
+		std::array<int, 2> pfd;
+		if (pipe2(pfd.data(), O_CLOEXEC | O_NONBLOCK | O_DIRECT))
+			THROW("pipe2()", errmsg());
+
+		signal_pipe_read_end = pfd[0];
+		signal_pipe_write_end = pfd[1];
+	}
+
+	// Signal control
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = &signal_handler;
+	// Intercept SIGINT and SIGTERM, to allow a dedicated thread to consume them
+	if (sigaction(SIGINT, &sa, nullptr) or sigaction(SIGTERM, &sa, nullptr))
+		THROW("sigaction()", errmsg());
+
+	std::atomic_bool i_am_being_killed_by_signal = false;
+	// Spawn signal-handling thread
+	std::thread([&, signal_pipe_read_end = std::move(signal_pipe_read_end)] {
+		int signum;
+		// Wait for signal
+		pollfd pfd {signal_pipe_read_end, POLLIN, 0};
+		for (int rc;;) {
+			rc = poll(&pfd, 1, -1);
+			if (rc == 1)
+				break; // Signal arrived
+
+			assert(rc < 0);
+			if (errno != EINTR)
+				THROW("poll()");
+		}
+
+		if (pfd.revents & POLLHUP)
+			return; // The main thread died
+
+		i_am_being_killed_by_signal = true;
+		int rc = read(signal_pipe_read_end, &signum, sizeof(int));
+		assert(rc == sizeof(int));
+
+		// print message: "Sip was just killed by signal %i - %s\n"
+		{
+			InplaceBuff<4096> buff("\nSip was just killed by signal ");
+			buff.append(signum, " - ", sys_siglist[signum], '\n');
+			write(STDERR_FILENO, buff.data(), buff.size);
+			// Prevent other errors to show up in the console
+			close(STDIN_FILENO);
+			close(STDOUT_FILENO);
+			close(STDERR_FILENO);
+		}
+
+		try {
+			cleanup_before_getting_killed();
+		} catch (...) {
+		}
+
+		// Now kill the whole process group with the intercepted signal
+		memset(&sa, 0, sizeof(sa));
+		sa.sa_handler = SIG_DFL;
+		// First unblock the blocked signal, so that it will kill the process
+		(void)sigaction(signum, &sa, nullptr);
+		(void)kill(0, signum);
+	}).detach();
+
+	int rc = true_main(argc, argv);
+	if (not i_am_being_killed_by_signal)
+		return rc;
+
+	pause(); // Wait till the signal-handling thread kills the whole process
 }
