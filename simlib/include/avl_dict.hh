@@ -4,6 +4,7 @@
 #include "meta.hh"
 
 #include <cassert>
+#include <optional>
 #include <vector>
 
 template <class size_type>

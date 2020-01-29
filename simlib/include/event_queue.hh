@@ -13,6 +13,7 @@
 #include <sys/poll.h>
 #include <thread>
 #include <variant>
+#include <vector>
 
 enum class FileEvent {
 	READABLE = 1 << 0,
