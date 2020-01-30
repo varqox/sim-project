@@ -66,13 +66,16 @@ public:
 	}
 };
 
-extern RandomDevice random_generator;
+inline RandomDevice& get_random_generator() {
+	static RandomDevice random_generator;
+	return random_generator;
+}
 
 // Get random from [a, b]
 template <class T>
 constexpr T get_random(T&& a, T&& b) {
 	return std::uniform_int_distribution<T>(
-	   std::forward<T>(a), std::forward<T>(b))(random_generator);
+	   std::forward<T>(a), std::forward<T>(b))(get_random_generator());
 }
 
 template <class Iter>

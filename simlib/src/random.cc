@@ -6,8 +6,6 @@
 
 #include <sys/syscall.h>
 
-RandomDevice random_generator;
-
 void fill_randomly(void* dest, size_t bytes) {
 	while (bytes > 0) {
 		ssize_t len = syscall(SYS_getrandom, dest, bytes, 0);
