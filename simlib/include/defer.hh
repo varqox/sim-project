@@ -7,7 +7,11 @@ class Defer {
 	Func func_;
 
 public:
-	Defer(Func func) : func_(std::move(func)) {}
+	Defer(Func func) try : func_(std::move(func)) {
+	} catch (...) {
+		func();
+		throw;
+	}
 
 	Defer(const Defer&) = delete;
 	Defer(Defer&&) = delete;
