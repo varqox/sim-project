@@ -577,20 +577,32 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 	auto problem_id_str = toString(contest_problem.problem_id);
 
 	StringView next_arg = url_args.extractNextArg();
-	if (next_arg == "statement")
+	if (next_arg == "statement") {
+		transaction.rollback(); // We only read data...
 		return api_contest_problem_statement(problem_id_str);
-	else if (next_arg == "ranking")
+	}
+	else if (next_arg == "ranking") {
+		transaction.rollback(); // We only read data...
 		return api_contest_ranking(contest_perms, "contest_problem_id",
 		                           contest_problem_id);
-	else if (next_arg == "rejudge_all_submissions")
+	}
+	else if (next_arg == "rejudge_all_submissions") {
+		transaction.rollback(); // We only read data...
 		return api_contest_problem_rejudge_all_submissions(
 		   contest_problem_id, contest_perms, problem_id_str);
-	else if (next_arg == "edit")
+	}
+	else if (next_arg == "edit") {
+		transaction.rollback(); // We only read data...
 		return api_contest_problem_edit(contest_problem_id, contest_perms);
-	else if (next_arg == "delete")
+	}
+	else if (next_arg == "delete") {
+		transaction.rollback(); // We only read data...
 		return api_contest_problem_delete(contest_problem_id, contest_perms);
-	else if (not next_arg.empty())
+	}
+	else if (not next_arg.empty()) {
+		transaction.rollback(); // We only read data...
 		return api_error404();
+	}
 
 	auto contest_overall_perms = sim::contest::get_overall_permissions(
 	   (session_is_open ? optional(session_user_type) : std::nullopt));
@@ -1375,7 +1387,7 @@ void Sim::api_contest_ranking(sim::contest::Permissions perms,
 	uintmax_t si_id;
 	EnumVal<SubmissionStatus> si_initial_status;
 
-	// TODO: there is to much logic duplication (not only below) on whether to
+	// TODO: there is too much logic duplication (not only below) on whether to
 	// show full or initial status and show or not show the score
 	auto prepare_stmt = [&](auto&& extra_cr_sql, auto&&... extra_bind_params) {
 		// clang-format off
