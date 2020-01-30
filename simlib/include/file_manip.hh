@@ -110,20 +110,31 @@
  * @brief Copies (overrides) file @p src to @p dest relative to a directory
  *   file descriptor
  *
- * @param dirfd1 directory file descriptor
- * @param src source file (relative to @p dirfd1)
- * @param dirfd2 directory file descriptor
- * @param dest destination file (relative to @p dirfd2)
+ * @param src_dirfd directory file descriptor
+ * @param src source file (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination file (relative to @p dest_dirfd)
  * @param mode access mode of the destination file (will be set iff the file is
  *   created)
  *
- * @return 0 on success, -1 on error
- *
- * @errors The same that occur for openat(2), lseek(2), ftruncate(2),
- *   blast()
+ * @return 0 on success, -1 on error (errno is set respectively)
  */
-[[nodiscard]] int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest,
-                         mode_t mode = S_0644) noexcept;
+[[nodiscard]] int copyat(int src_dirfd, FilePath src, int dest_dirfd,
+                         FilePath dest, mode_t mode) noexcept;
+
+/**
+ * @brief Copies (overrides) file @p src to @p dest relative to a directory
+ *   file descriptor
+ *
+ * @param src_dirfd directory file descriptor
+ * @param src source file (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination file (relative to @p dest_dirfd)
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
+[[nodiscard]] int copyat(int src_dirfd, FilePath src, int dest_dirfd,
+                         FilePath dest) noexcept;
 
 /**
  * @brief Copies (overwrites) file from @p src to @p dest
@@ -134,30 +145,41 @@
  * @param mode access mode of the destination file (will be set iff the file is
  *   created)
  *
- * @return 0 on success, -1 on error
- *
- * @errors The same that occur for copyat()
+ * @return 0 on success, -1 on error (errno is set respectively)
  */
 [[nodiscard]] inline int copy(FilePath src, FilePath dest,
-                              mode_t mode = S_0644) noexcept {
+                              mode_t mode) noexcept {
 	return copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
+}
+
+/**
+ * @brief Copies (overwrites) file from @p src to @p dest
+ * @details Needs directory containing @p dest to exist
+ *
+ * @param src source file
+ * @param dest destination file
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
+[[nodiscard]] inline int copy(FilePath src, FilePath dest) noexcept {
+	return copyat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
 /**
  * @brief Copies (overrides) file/directory @p src to @p dest relative to a
  *   directory file descriptor
  *
- * @param dirfd1 directory file descriptor
- * @param src source file/directory (relative to @p dirfd1)
- * @param dirfd2 directory file descriptor
- * @param dest destination file/directory (relative to @p dirfd2)
+ * @param src_dirfd directory file descriptor
+ * @param src source file/directory (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination file/directory (relative to @p dest_dirfd)
  *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-[[nodiscard]] int copy_rat(int dirfd1, FilePath src, int dirfd2,
+[[nodiscard]] int copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
                            FilePath dest) noexcept;
 
 /**

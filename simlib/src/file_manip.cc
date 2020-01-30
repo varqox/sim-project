@@ -1,6 +1,8 @@
 #include "../include/file_manip.hh"
+#include "../include/call_in_destructor.hh"
 #include "../include/directory.hh"
 #include "../include/file_descriptor.hh"
+#include "../include/random.hh"
 
 using std::array;
 using std::string;
@@ -174,16 +176,58 @@ int blast(int infd, int outfd) noexcept {
 	return 0;
 }
 
-int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest,
+int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
            mode_t mode) noexcept {
-	FileDescriptor in(openat(dirfd1, src, O_RDONLY | O_CLOEXEC));
+	FileDescriptor in(openat(src_dirfd, src, O_RDONLY | O_CLOEXEC));
 	if (in == -1)
 		return -1;
 
-	FileDescriptor out(
-	   openat(dirfd2, dest, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode));
-	if (out == -1)
-		return -1;
+	FileDescriptor out(openat(dest_dirfd, dest,
+	                          O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode));
+	if (not out.is_open()) {
+		if (errno != ETXTBSY)
+			return -1;
+
+		// Try to construct temporary file and rename it to the destination file
+		try {
+			InplaceBuff<PATH_MAX> tmp_dest(std::in_place, dest, '.');
+			const auto tmp_dest_orig_size = tmp_dest.size;
+			constexpr uint SUFFIX_LEN = 10;
+			for (size_t iter = 0; iter < 128; ++iter) {
+				tmp_dest.size = tmp_dest_orig_size;
+				for (size_t i = 0; i < SUFFIX_LEN; ++i)
+					tmp_dest.append(get_random('a', 'z'));
+
+				out = openat(dest_dirfd, tmp_dest.to_cstr().data(),
+				             O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
+				if (not out.is_open()) {
+					if (errno == EEXIST)
+						continue;
+					return -1; // Other error occurred
+				}
+
+				CallInDtor tmp_file_remover = [&] {
+					(void)unlinkat(dest_dirfd, tmp_dest.to_cstr().data(), 0);
+				};
+				if (renameat(dest_dirfd, tmp_dest.to_cstr().data(), dest_dirfd,
+				             dest))
+					return -1;
+
+				// Success
+				tmp_file_remover.cancel();
+				break;
+			}
+		} catch (const std::bad_alloc&) {
+			errno = ENOMEM;
+			return -1;
+		} catch (...) {
+			errno = ETXTBSY; // Revert to the previous error
+			return -1;
+		}
+
+		if (not out.is_open())
+			return -1;
+	}
 
 	int res = blast(in, out);
 	off64_t offset = lseek64(out, 0, SEEK_CUR);
@@ -196,34 +240,43 @@ int copyat(int dirfd1, FilePath src, int dirfd2, FilePath dest,
 	return res;
 }
 
+int copyat(int src_dirfd, FilePath src, int dest_dirfd,
+           FilePath dest) noexcept {
+	struct stat64 sb;
+	if (fstatat64(src_dirfd, src, &sb, 0))
+		return -1;
+
+	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode & ACCESSPERMS);
+}
+
 /**
  * @brief Copies directory @p src to @p dest relative to the directory file
  *   descriptors
  *
- * @param dirfd1 directory file descriptor
- * @param src source directory (relative to dirfd1)
- * @param dirfd2 directory file descriptor
- * @param dest destination directory (relative to dirfd2)
+ * @param src_dirfd directory file descriptor
+ * @param src source directory (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination directory (relative to @p dest_dirfd)
  *
  * @return 0 on success, -1 on error
  *
  * @errors The same that occur for fstat64(2), openat(2), fdopendir(3),
  *   mkdirat(2), copyat()
  */
-static int __copy_rat(int dirfd1, FilePath src, int dirfd2,
+static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
                       FilePath dest) noexcept {
-	int src_fd = openat(dirfd1, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+	int src_fd = openat(src_dirfd, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (src_fd == -1) {
 		if (errno == ENOTDIR)
-			return copyat(dirfd1, src, dirfd2, dest);
+			return copyat(src_dirfd, src, dest_dirfd, dest);
 
 		return -1;
 	}
 
 	// Do not use src permissions
-	mkdirat(dirfd2, dest, S_0755);
+	mkdirat(dest_dirfd, dest, S_0755);
 
-	int dest_fd = openat(dirfd2, dest, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+	int dest_fd = openat(dest_dirfd, dest, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (dest_fd == -1) {
 		close(src_fd);
 		return -1;
@@ -275,15 +328,16 @@ static int __copy_rat(int dirfd1, FilePath src, int dirfd2,
 	return rc;
 }
 
-int copy_rat(int dirfd1, FilePath src, int dirfd2, FilePath dest) noexcept {
+int copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
+             FilePath dest) noexcept {
 	struct stat64 sb;
-	if (fstatat64(dirfd1, src, &sb, AT_SYMLINK_NOFOLLOW) == -1)
+	if (fstatat64(src_dirfd, src, &sb, 0) == -1)
 		return -1;
 
 	if (S_ISDIR(sb.st_mode))
-		return __copy_rat(dirfd1, src, dirfd2, dest);
+		return __copy_rat(src_dirfd, src, dest_dirfd, dest);
 
-	return copyat(dirfd1, src, dirfd2, dest);
+	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode & ACCESSPERMS);
 }
 
 int copy_r(FilePath src, FilePath dest, bool create_subdirs) noexcept {
