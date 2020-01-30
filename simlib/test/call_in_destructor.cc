@@ -2,11 +2,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(DISABLED_CallInDestructor, constructor_rvalue) {
-	// TODO: implement it
-}
-
-TEST(DISABLED_CallInDestructor, constructor_from_const_ref) {
+TEST(DISABLED_CallInDestructor, constructor) {
 	// TODO: implement it
 }
 
