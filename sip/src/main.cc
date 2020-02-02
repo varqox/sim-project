@@ -29,18 +29,18 @@ static void parseOptions(int& argc, char** argv) {
 				}
 
 			} else if (0 == strcmp(argv[i], "-h") or
-			           0 == strcmp(argv[i], "--help")) { // Help
+			           0 == strcmp(argv[i], "--help")) {
 				commands::help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 
-			} else if (0 == strcmp(argv[i], "-q") or
-			           0 == strcmp(argv[i], "--quiet")) { // Quiet mode
-				stdlog.open("/dev/null");
+			} else if (0 == strcmp(argv[i], "-v") or
+			           0 == strcmp(argv[i], "--version")) {
+				commands::version();
+				exit(0);
 
-				// } else if (0 == strcmp(argv[i], "-v") or
-				// 		0 == strcmp(argv[i], "--verbose")) { // Verbose mode
-				// 	stdlog.use(stdout);
-				// 	verbose = true;
+			} else if (0 == strcmp(argv[i], "-q") or
+			           0 == strcmp(argv[i], "--quiet")) {
+				stdlog.open("/dev/null");
 
 			} else { // Unknown
 				eprintf("Unknown option: '%s'\n", argv[i]);
@@ -106,6 +106,8 @@ static void run_command(int argc, char** argv) {
 		return commands::test(args);
 	if (command == "unset")
 		return commands::unset(args);
+	if (command == "version")
+		return commands::version();
 	if (command == "zip")
 		return commands::zip(args);
 

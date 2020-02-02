@@ -23,6 +23,10 @@ void regen(ArgvParser);
 // Displays help
 void help(const char* program_name);
 
+// Displays help
+// void version() noexcept;
+void version();
+
 void init(ArgvParser args);
 
 void interactive(ArgvParser args);

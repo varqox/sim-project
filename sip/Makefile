@@ -77,18 +77,22 @@ $(eval $(call add_generated_target, templates/statement.tex.dump.c, \
 ))
 
 SIP_SRCS := \
+	src/command_version.c \
 	src/commands.cc \
 	src/compilation_cache.cc \
 	src/lib/simlib/simlib.a \
 	src/main.cc \
 	src/proot_dump.c \
-	src/templates.cc \
 	src/sip_package.cc \
 	src/sipfile.cc \
+	src/templates.cc \
 	src/tests_files.cc \
 	templates/checker.cc.dump.c \
 	templates/interactive_checker.cc.dump.c \
 	templates/statement.tex.dump.c \
+
+src/command_version.o: .git/logs/HEAD
+src/command_version.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DCOMMIT="$(shell git rev-parse HEAD)"'
 
 $(eval $(call add_executable, src/sip, $(SIP_FLAGS), $(SIP_SRCS)))
 

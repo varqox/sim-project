@@ -134,6 +134,7 @@ Commands:
   genin                 Generate tests input files
   genout                Generate tests output files using the main solution
   gentests              Alias to command: gen
+  help                  Display this information
   init [directory] [name]
                         Initialize Sip package in [directory] (by default
                           current working directory) if [name] is specified, set
@@ -178,6 +179,7 @@ Commands:
                           solutions that have [sol] as a subsequence are used.
   unset <names...>      Remove variables names... form Simfile e.g.
                           sip unset label interactive
+  version               Display version
   zip [clean args...]   Run clean command with [clean args] and compress the
                           package into zip (named after the current directory)
                           within the upper directory.
@@ -186,6 +188,7 @@ Options:
   -C <directory>        Change working directory to <directory> before doing
                           anything
   -h, --help            Display this information
+  -v, --version         Display version
   -q, --quiet           Quiet mode
 
 Sip package tree:
