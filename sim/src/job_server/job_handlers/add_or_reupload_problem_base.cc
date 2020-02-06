@@ -302,7 +302,7 @@ void AddOrReuploadProblemBase::submit_solutions() {
 
 		// Save the submission source code
 		zip_.extract_to_file(zip_.get_index(concat(master_dir_, solution)),
-		                     internal_file_path(file_id));
+		                     internal_file_path(file_id), S_0600);
 	}
 
 	// Add jobs to judge the solutions
