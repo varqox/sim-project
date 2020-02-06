@@ -63,13 +63,13 @@ public:
 	     pkg_master_dir_(sim::zip_package_master_dir(zip_)) {}
 
 	std::string load_into_dest_file(FilePath path, FilePath dest) override {
-		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest);
+		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest, S_0600);
 		return dest.to_str();
 	}
 
 	std::string load_as_file(FilePath path, FilePath hint_name) override {
 		auto dest = concat_tostr(tmp_dir_.path(), "pkg_loader_", hint_name);
-		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest);
+		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest, S_0600);
 		return dest;
 	}
 
