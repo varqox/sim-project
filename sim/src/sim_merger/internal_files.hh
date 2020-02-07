@@ -84,7 +84,9 @@ public:
 		decltype(InternalFile::id) id;
 		stmt.bind_all(id);
 
+		ProgressBar progress_bar("Internal files saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const InternalFile& x = new_record.data;
 			id = x.id;
 			stmt.execute();

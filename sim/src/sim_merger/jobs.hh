@@ -144,7 +144,10 @@ public:
 		                "(id, file_id, tmp_file_id, creator, type, priority,"
 		                " status, added, aux_id, info, data) "
 		                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Jobs saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const Job& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.file_id, x.tmp_file_id, x.creator,
 			                    x.type, x.priority, x.status, x.added, x.aux_id,

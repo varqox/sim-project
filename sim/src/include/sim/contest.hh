@@ -4,6 +4,8 @@
 #include "inf_datetime_field.hh"
 #include "varchar_field.hh"
 
+#include <simlib/defer.h>
+
 namespace sim {
 
 struct Contest {

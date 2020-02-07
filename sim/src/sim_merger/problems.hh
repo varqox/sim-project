@@ -124,7 +124,10 @@ public:
 		                         "(id, file_id, type, name, label, simfile,"
 		                         " owner, added, last_edit) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Problems saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::Problem& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.file_id, x.type, x.name, x.label,
 			                    x.simfile, x.owner, x.added, x.last_edit);

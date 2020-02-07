@@ -74,7 +74,10 @@ public:
 		                         "(id, file_id, contest_id, name, description,"
 		                         " file_size, modified, creator) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Contest files saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const ContestFile& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.file_id, x.contest_id, x.name,
 			                    x.description, x.file_size, x.modified,

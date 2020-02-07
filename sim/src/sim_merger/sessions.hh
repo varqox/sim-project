@@ -70,7 +70,10 @@ public:
 		                         "(id, csrf_token, user_id, data, ip,"
 		                         " user_agent, expires) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Sessions saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const Session& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.csrf_token, x.user_id, x.data, x.ip,
 			                    x.user_agent, x.expires);

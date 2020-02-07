@@ -6,6 +6,32 @@
 #include <map>
 #include <vector>
 
+// TODO: export it to simlib after updating it to the current version
+class ProgressBar {
+	std::string header_;
+	size_t iter_ = 0;
+	size_t iters_num_;
+	size_t step_ = 0;
+
+public:
+	ProgressBar(std::string header, size_t iters_num, size_t step) : header_(std::move(header)), iters_num_(iters_num), step_(step) {
+		log();
+	}
+
+	void iter() {
+		++iter_;
+		if (iter_ % step_ == 0 or iter_ == iters_num_)
+			log();
+	}
+
+private:
+	void log() {
+		auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ", iters_num_, " = ", 100 * iter_ / iters_num_, "%");
+		if (iter_ < iters_num_)
+			tmplog.flush_no_nl();
+	}
+};
+
 template <class CollA, class CollB, class FuncA, class FuncB, class Compare>
 void merge(CollA&& collection_a, CollB&& collection_b, FuncA&& a_merge,
            FuncB&& b_merge, Compare&& is_left_lower) {

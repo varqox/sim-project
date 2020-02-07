@@ -45,7 +45,10 @@ public:
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(user_id, contest_id, mode) "
 		                         "VALUES(?, ?, ?)");
+
+		ProgressBar progress_bar("Contest users saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::ContestUser& x = new_record.data;
 			stmt.bindAndExecute(x.id.user_id, x.id.contest_id, x.mode);
 		}

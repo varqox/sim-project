@@ -45,7 +45,10 @@ public:
 		conn.update("TRUNCATE ", sql_table_name());
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(id, name, is_public) VALUES(?, ?, ?)");
+
+		ProgressBar progress_bar("Contests saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::Contest& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.name, x.is_public);
 		}

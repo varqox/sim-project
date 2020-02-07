@@ -61,7 +61,10 @@ public:
 		                         " problem_id, name, item,"
 		                         " final_selecting_method, score_revealing) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Contest problems saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::ContestProblem& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.contest_round_id, x.contest_id,
 			                    x.problem_id, x.name, x.item,

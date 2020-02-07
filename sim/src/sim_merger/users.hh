@@ -64,7 +64,10 @@ public:
 		                         "(id, username, first_name, last_name, email,"
 		                         " salt, password, type) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Users saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::User& x = new_record.data;
 			stmt.bindAndExecute(x.id, x.username, x.first_name, x.last_name,
 			                    x.email, x.salt, x.password, x.type);

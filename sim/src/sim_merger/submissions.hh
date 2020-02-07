@@ -117,7 +117,10 @@ public:
 		                " final_report) "
 		                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
 		                " ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Submissions saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const Submission& x = new_record.data;
 			stmt.bindAndExecute(
 			   x.id, x.file_id, x.owner, x.problem_id, x.contest_problem_id,

@@ -48,7 +48,10 @@ public:
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(problem_id, tag, hidden) "
 		                         "VALUES(?, ?, ?)");
+
+		ProgressBar progress_bar("Problem tags saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const ProblemTag& x = new_record.data;
 			stmt.bindAndExecute(x.id.problem_id, x.id.tag, x.hidden);
 		}
