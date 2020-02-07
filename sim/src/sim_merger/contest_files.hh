@@ -75,7 +75,8 @@ public:
 		                         " file_size, modified, creator) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 
-		ProgressBar progress_bar("Contest files saved:", new_table_.size(), 128);
+		ProgressBar progress_bar("Contest files saved:", new_table_.size(),
+		                         128);
 		for (const NewRecord& new_record : new_table_) {
 			Defer progressor = [&] { progress_bar.iter(); };
 			const ContestFile& x = new_record.data;

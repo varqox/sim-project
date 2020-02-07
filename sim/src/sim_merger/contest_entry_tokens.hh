@@ -90,7 +90,8 @@ public:
 		                         " short_token_expiration) "
 		                         "VALUES(?, ?, ?, ?)");
 
-		ProgressBar progress_bar("Contest entry tokens saved:", new_table_.size(), 128);
+		ProgressBar progress_bar(
+		   "Contest entry tokens saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
 			Defer progressor = [&] { progress_bar.iter(); };
 			const ContestEntryToken& x = new_record.data;

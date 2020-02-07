@@ -76,7 +76,8 @@ color_class_json(sim::contest::Permissions cperms, InfDatetime full_results,
 		if (full_status.has_value())
 			return concat<32>("\"", css_color_class(full_status.value()), "\"");
 	} else if (initial_status.has_value()) {
-		return concat<32>("\"initial ", css_color_class(initial_status.value()), "\"");
+		return concat<32>("\"initial ", css_color_class(initial_status.value()),
+		                  "\"");
 	}
 
 	return concat<32>("null");
@@ -580,26 +581,21 @@ void Sim::api_contest_problem(StringView contest_problem_id) {
 	if (next_arg == "statement") {
 		transaction.rollback(); // We only read data...
 		return api_contest_problem_statement(problem_id_str);
-	}
-	else if (next_arg == "ranking") {
+	} else if (next_arg == "ranking") {
 		transaction.rollback(); // We only read data...
 		return api_contest_ranking(contest_perms, "contest_problem_id",
 		                           contest_problem_id);
-	}
-	else if (next_arg == "rejudge_all_submissions") {
+	} else if (next_arg == "rejudge_all_submissions") {
 		transaction.rollback(); // We only read data...
 		return api_contest_problem_rejudge_all_submissions(
 		   contest_problem_id, contest_perms, problem_id_str);
-	}
-	else if (next_arg == "edit") {
+	} else if (next_arg == "edit") {
 		transaction.rollback(); // We only read data...
 		return api_contest_problem_edit(contest_problem_id, contest_perms);
-	}
-	else if (next_arg == "delete") {
+	} else if (next_arg == "delete") {
 		transaction.rollback(); // We only read data...
 		return api_contest_problem_delete(contest_problem_id, contest_perms);
-	}
-	else if (not next_arg.empty()) {
+	} else if (not next_arg.empty()) {
 		transaction.rollback(); // We only read data...
 		return api_error404();
 	}

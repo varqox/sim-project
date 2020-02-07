@@ -52,7 +52,8 @@ public:
 		                         " full_results, ranking_exposure) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
 
-		ProgressBar progress_bar("Contest rounds saved:", new_table_.size(), 128);
+		ProgressBar progress_bar("Contest rounds saved:", new_table_.size(),
+		                         128);
 		for (const NewRecord& new_record : new_table_) {
 			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::ContestRound& x = new_record.data;

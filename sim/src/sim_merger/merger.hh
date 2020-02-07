@@ -14,7 +14,8 @@ class ProgressBar {
 	size_t step_ = 0;
 
 public:
-	ProgressBar(std::string header, size_t iters_num, size_t step) : header_(std::move(header)), iters_num_(iters_num), step_(step) {
+	ProgressBar(std::string header, size_t iters_num, size_t step)
+	   : header_(std::move(header)), iters_num_(iters_num), step_(step) {
 		log();
 	}
 
@@ -26,7 +27,8 @@ public:
 
 private:
 	void log() {
-		auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ", iters_num_, " = ", 100 * iter_ / iters_num_, "%");
+		auto tmplog = stdlog("\033[2K\033[G", header_, ' ', iter_, " / ",
+		                     iters_num_, " = ", 100 * iter_ / iters_num_, "%");
 		if (iter_ < iters_num_)
 			tmplog.flush_no_nl();
 	}
