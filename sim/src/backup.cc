@@ -123,7 +123,6 @@ int main2(int argc, char** argv) {
 	   "mysqldump",
 	   "--defaults-file=" MYSQL_CNF,
 	   "--result-file=dump.sql",
-	   "--extended-insert=FALSE",
 	   "--single-transaction",
 	   conn.impl()->db,
 	});
