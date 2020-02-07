@@ -118,7 +118,6 @@ int main2(int argc, char** argv) {
 		transaction.commit();
 	}
 
-	FileRemover mysql_dump_guard {"dump.sql"};
 	run_command({
 	   "mysqldump",
 	   "--defaults-file=" MYSQL_CNF,
@@ -127,8 +126,12 @@ int main2(int argc, char** argv) {
 	   conn.impl()->db,
 	});
 
+	if (chmod("dump.sql", S_0600))
+		THROW("chmod()", errmsg());
+
 	run_command({"git", "init"});
 	run_command({"git", "config", "--local", "user.name", "Sim backuper"});
+	run_command({"git", "add", "--verbose", "sim.conf", ".db.config"});
 	run_command({"git", "add", "--verbose", "static"});
 	run_command({"git", "add", "--verbose", "dump.sql"});
 	run_command({"git", "add", "--verbose", "internal_files/"});
