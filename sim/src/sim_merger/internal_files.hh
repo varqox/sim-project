@@ -81,9 +81,13 @@ public:
 		if (mkdir(dest_path))
 			THROW("mkdir()", errmsg());
 
+		decltype(InternalFile::id) id;
+		stmt.bind_all(id);
+
 		for (const NewRecord& new_record : new_table_) {
 			const InternalFile& x = new_record.data;
-			stmt.bindAndExecute(x.id);
+			id = x.id;
+			stmt.execute();
 
 			if (not new_record.main_ids.empty()) {
 				// Hard link main's files
