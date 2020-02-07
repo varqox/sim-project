@@ -304,6 +304,8 @@ static int true_main(int argc, char** argv) {
 			merger->rollback_saving_merged_outside_database();
 	});
 
+	conn.update("SET AUTOCOMMIT=0");
+
 	stdlog("\033[1;36mSaving merged data:\033[m");
 	conn.update("SET FOREIGN_KEY_CHECKS=0");
 	for (MergerBase* merger : mergers) {
@@ -318,6 +320,9 @@ static int true_main(int argc, char** argv) {
 		stdlog("> \033[1;36m", merger->sql_table_name(), "\033[m...");
 		merger->run_after_saving_hooks();
 	}
+
+	conn.update("COMMIT");
+	conn.update("SET AUTOCOMMIT=1");
 
 	stdlog("\033[1;32mSim merging is complete\033[m");
 	saves_to_rollback.clear();
