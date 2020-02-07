@@ -6,6 +6,7 @@
 #include <sim/contest_permissions.hh>
 #include <sim/contest_problem.hh>
 #include <sim/contest_round.hh>
+#include <sim/contest_user.hh>
 #include <sim/inf_datetime.hh>
 #include <sim/jobs.h>
 #include <sim/utilities.h>
@@ -834,12 +835,29 @@ void Sim::api_contest_edit(StringView contest_id,
 		                 "You have no permissions to make this contest public");
 	}
 
+	bool make_submitters_contestants =
+	   (not will_be_public and
+	    request.form_data.exist("make_submitters_contestants"));
+
 	if (notifications.size)
 		return api_error400(notifications);
 
+	auto transaction = mysql.start_transaction();
 	// Update contest
 	mysql.prepare("UPDATE contests SET name=?, is_public=? WHERE id=?")
 	   .bindAndExecute(name, will_be_public, contest_id);
+
+	if (make_submitters_contestants) {
+		mysql
+		   .prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
+		            "SELECT owner, ?, ? FROM submissions "
+		            "WHERE contest_id=? GROUP BY owner")
+		   .bindAndExecute(contest_id,
+		                   EnumVal(sim::ContestUser::Mode::CONTESTANT),
+		                   contest_id);
+	}
+
+	transaction.commit();
 }
 
 void Sim::api_contest_delete(StringView contest_id,

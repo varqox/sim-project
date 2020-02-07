@@ -4038,6 +4038,15 @@ function edit_contest(as_modal, contest_id) {
 					statusText: 'Not Allowed'
 				});
 
+		var make_submitters_contestants = Form.field_group("Add users who submitted solutions as contestants", {
+			type: 'checkbox',
+			name: 'make_submitters_contestants',
+			checked: true,
+			disabled: data.is_public,
+		});
+		if (data.is_public)
+			make_submitters_contestants.hide(0);
+
 		this.append(ajax_form('Edit contest', '/api/contest/c' + contest_id + '/edit',
 			Form.field_group("Contest's name", {
 				type: 'text',
@@ -4050,8 +4059,17 @@ function edit_contest(as_modal, contest_id) {
 				type: 'checkbox',
 				name: 'public',
 				checked: data.is_public,
-				disabled: (data.is_public || actions.indexOf('M') !== -1 ? undefined : true)
-			})).add('<div>', {
+				disabled: (data.is_public || actions.indexOf('M') !== -1 ? undefined : true),
+				click: function () {
+					make_submitters_contestants.find('input').prop('disabled', this.checked);
+					if (this.checked) {
+						make_submitters_contestants.hide(0);
+					} else {
+						make_submitters_contestants.show(0);
+					}
+				}
+			})).add(make_submitters_contestants)
+			.add('<div>', {
 				html: $('<input>', {
 					class: 'btn blue',
 					type: 'submit',
