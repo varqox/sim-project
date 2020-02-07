@@ -86,7 +86,8 @@ public:
 	}
 
 	void run_after_saving_hooks() override {
-		// Reselect final submissions for users that are merged from one source
+		// Reselect final submissions for merged users originating from single
+		// source
 		auto transaction = conn.start_transaction();
 		for (auto const& user : new_table_) {
 			if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
@@ -106,6 +107,9 @@ public:
 				}
 			}
 		}
+		// Final submissions for problems do not have to be reselect, because
+		// problem are not merged during sim-merge -- they are merged using
+		// MERGE_PROBLEMS jobs and there final submissions are reselected.
 
 		transaction.commit();
 	}
