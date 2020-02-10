@@ -4,6 +4,7 @@
 #include "file_contents.hh"
 #include "file_descriptor.hh"
 #include "string_traits.hh"
+#include "string_view.hh"
 
 #include <optional>
 #include <sys/stat.h>
