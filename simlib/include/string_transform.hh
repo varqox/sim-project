@@ -176,8 +176,10 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 	if (not is_digit(str[0]))
 		return std::nullopt;
 
-	if constexpr (std::is_same_v<T, bool> and str[0] > '1')
-		return std::nullopt;
+	if constexpr (std::is_same_v<T, bool>) {
+		if (str[0] > '1')
+			return std::nullopt;
+	}
 
 	std::optional<T> res =
 	   (minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
