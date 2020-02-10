@@ -139,8 +139,7 @@ int JudgeWorker::compile_impl(
 	case SolutionLanguage::PASCAL: src_filename.append(".pas"); break;
 
 	case SolutionLanguage::UNKNOWN:
-		THROW("Invalid language: ",
-		      (int)EnumVal<SolutionLanguage>(lang).int_val());
+		THROW("Invalid language: ", EnumVal(lang).int_val());
 	}
 
 	if (copy(source, concat<PATH_MAX>(compilation_dir, src_filename)))
