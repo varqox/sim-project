@@ -20,7 +20,6 @@ public:
 
 		if (chdir(new_wd.data()) == -1) {
 			auto err = errno;
-			old_cwd.close();
 			THROW("chdir() failed", errmsg(err));
 		}
 	}
