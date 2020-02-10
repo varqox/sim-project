@@ -45,13 +45,14 @@ InplaceBuff<N> encode_uri(StringView str) {
 		array<bool, 256> res = {};
 		for (auto [beg, end] :
 		     array {array {'a', 'z'}, array {'A', 'Z'}, array {'0', '9'}}) {
-			for (int i = beg; i < end; ++i)
+			for (int i = beg; i <= end; ++i)
 				res[i] = true;
 		}
 
-		// for (int c : {'-', '_', '.', '~'})
-		for (int c : "-_.~")
+		for (int c : StringView("-_.~"))
 			res[c] = true;
+
+		return res;
 	}();
 
 	// TODO: remove it
