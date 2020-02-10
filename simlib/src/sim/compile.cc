@@ -56,7 +56,9 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 	                 time_limit,
 	                 1 << 30 /* 1 GiB */,
 	                 {},
-	                 (proot_path.empty() ? dir_to_chdir.to_string() : ".")});
+	                 (proot_path.empty()
+	                     ? intentional_unsafe_cstring_view(concat(dir_to_chdir))
+	                     : ".")});
 
 	// Check for errors
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {

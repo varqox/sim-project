@@ -76,7 +76,7 @@ void update_add_file_to_zip(FilePath filename, StringView new_filename,
                             FilePath zip_filename) {
 	if (new_filename.empty())
 		return update_add_file_to_zip_impl(
-		   [](auto&&, auto&&) {}, CStringView(filename), zip_filename, true);
+		   [](auto&&, auto&&) {}, StringView(filename), zip_filename, true);
 
 	// Remove Trailing '/'
 	while (new_filename.size() > 1 and new_filename.back() == '/')

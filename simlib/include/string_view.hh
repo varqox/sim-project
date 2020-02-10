@@ -3,7 +3,9 @@
 #include "to_string.hh"
 
 #include <cstring>
+#include <functional>
 #include <memory>
+#include <type_traits>
 
 #ifdef _GLIBCXX_DEBUG
 #include <cassert>
@@ -51,10 +53,6 @@ public:
 
 	constexpr StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
 
-	constexpr StringBase(std::string&&) noexcept = delete;
-
-	constexpr StringBase(const std::string&&) noexcept = delete;
-
 	// Constructs StringView from substring [beg, beg + n) of string s
 	constexpr StringBase(const std::string& s, size_type beg = 0,
 	                     size_type n = npos) noexcept
@@ -73,6 +71,10 @@ public:
 	constexpr StringBase(StringBase&& s) noexcept
 	   : str(s.data()), len(s.size()) {}
 
+	template <class T,
+	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+	StringBase(T&&) = delete; // Protect from assigning unsafe data
+
 	constexpr StringBase& operator=(StringBase&& s) noexcept {
 		str = s.data();
 		len = s.size();
@@ -86,6 +88,12 @@ public:
 	}
 
 	constexpr StringBase& operator=(std::nullptr_t) = delete;
+
+	template <class T,
+	          std::enable_if_t<std::is_rvalue_reference_v<T&&> and
+	                              not std::is_convertible_v<T&&, StringBase>,
+	                           int> = 0>
+	StringBase& operator=(T&&) = delete; // Protect from assigning unsafe data
 
 	~StringBase() = default;
 
@@ -412,20 +420,32 @@ public:
 	constexpr StringView(std::nullptr_t) noexcept = delete;
 
 	constexpr StringView(const StringView&) noexcept = default;
+
 	constexpr StringView(StringView&&) noexcept = default;
-	StringView& operator=(const StringView&) noexcept = default;
-	StringView& operator=(StringView&&) noexcept = default;
+
+	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
+
+	constexpr StringView(StringBase&& s) noexcept : StringBase(s) {}
+
+	template <class T,
+	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+	StringView(T&&) = delete; // Protect from assigning unsafe data
+
+	constexpr StringView& operator=(const StringView&) noexcept = default;
+
+	constexpr StringView& operator=(StringView&&) noexcept = default;
 
 	constexpr StringView& operator=(std::nullptr_t) noexcept = delete;
 
-	constexpr StringView operator=(pointer p) noexcept {
+	constexpr StringView& operator=(pointer p) noexcept {
 		return operator=(StringView {p});
 	}
 
-	template <class T, std::enable_if_t<std::is_rvalue_reference_v<T>, int> = 0>
+	template <class T,
+	          std::enable_if_t<std::is_rvalue_reference_v<T&&> and
+	                              not std::is_convertible_v<T&&, StringView>,
+	                           int> = 0>
 	StringView& operator=(T&&) = delete; // Protect from assigning unsafe data
-
-	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
 
 	~StringView() = default;
 
@@ -560,22 +580,14 @@ inline std::string& operator+=(std::string& str, StringView s) {
 	return str.append(s.data(), s.size());
 }
 
-inline StringView intentional_unsafe_string_view(const char* str) noexcept {
-	return {str};
-}
-
-inline StringView intentional_unsafe_string_view(StringView str) noexcept {
-	return str;
-}
-
-// This function allows std::string&& to be converted to StringView, but keep
-// in mind that if any StringView or alike value generated from the result of
-// this function cannot be saved to variable! - it would (and probably will)
-// cause using of the provided std::string's data that was already deallocated
-// = memory corruption
-inline StringView
-intentional_unsafe_string_view(const std::string&& str) noexcept {
-	return StringView(static_cast<const std::string&>(str));
+// This function allows @p str to be converted to StringView, but
+// keep in mind that if any StringView or alike value generated from the result
+// of this function cannot be saved to a variable! -- it would (and probably
+// will) cause use-after-free error, because @p str will be already deleted when
+// the initialization is done
+template <class T, std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+constexpr StringView intentional_unsafe_string_view(T&& str) noexcept {
+	return StringView(static_cast<const T&>(str));
 }
 
 // comparison operators
@@ -645,7 +657,24 @@ public:
 	constexpr CStringView& operator=(const CStringView&) noexcept = default;
 	constexpr CStringView& operator=(CStringView&&) noexcept = default;
 
-	constexpr operator StringView() const { return {data(), size()}; }
+	constexpr operator StringView() & { return {data(), size()}; }
+
+	constexpr operator StringView() const& { return {data(), size()}; }
+
+	// Allow converting rvalue CStringView to StringView, as checking for
+	// leaving a dangling pointer to a temporary string was made during
+	// construction of CStringView
+	constexpr operator StringView() && { return {data(), size()}; }
+
+	template <class T,
+	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+	CStringView(T&&) = delete; // Protect from assigning unsafe data
+
+	template <class T,
+	          std::enable_if_t<std::is_rvalue_reference_v<T&&> and
+	                              not std::is_convertible_v<T&&, CStringView>,
+	                           int> = 0>
+	CStringView& operator=(T&&) = delete; // Protect from assigning unsafe data
 
 	constexpr CStringView substr(size_type pos) const {
 		const auto x = StringBase::substr(pos);
@@ -664,6 +693,16 @@ public:
 
 	constexpr const_pointer c_str() const noexcept { return data(); }
 };
+
+// This function allows @p str to be converted to CStringView, but
+// keep in mind that if any StringView or alike value generated from the result
+// of this function cannot be saved to a variable! -- it would (and probably
+// will) cause use-after-free error, because @p str will be already deleted when
+// the initialization is done
+template <class T, std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+constexpr CStringView intentional_unsafe_cstring_view(T&& str) noexcept {
+	return CStringView(static_cast<const T&>(str));
+}
 
 constexpr StringView substring(StringView str, StringView::size_type beg,
                                StringView::size_type end = StringView::npos) {
