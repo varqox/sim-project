@@ -13,27 +13,29 @@ private:
 	ValType val_;
 
 public:
-	EnumVal() = default;
+	constexpr EnumVal() = default;
 
-	EnumVal(const EnumVal&) = default;
-	EnumVal(EnumVal&&) = default;
-	EnumVal& operator=(const EnumVal&) = default;
-	EnumVal& operator=(EnumVal&&) = default;
+	constexpr EnumVal(const EnumVal&) = default;
+	constexpr EnumVal(EnumVal&&) = default;
+	constexpr EnumVal& operator=(const EnumVal&) = default;
+	constexpr EnumVal& operator=(EnumVal&&) = default;
 
-	explicit EnumVal(ValType val) : val_(val) {}
+	constexpr explicit EnumVal(ValType val) : val_(val) {}
 
-	EnumVal(Enum val) : val_(static_cast<ValType>(val)) {}
+	constexpr EnumVal(Enum val) : val_(static_cast<ValType>(val)) {}
 
-	EnumVal& operator=(Enum val) {
+	constexpr EnumVal& operator=(Enum val) {
 		val_ = static_cast<ValType>(val);
 		return *this;
 	}
 
-	operator Enum() const noexcept { return Enum(val_); }
+	constexpr operator Enum() const noexcept { return Enum(val_); }
 
-	ValType int_val() const noexcept { return val_; }
+	constexpr ValType int_val() const noexcept { return val_; }
 
-	explicit operator ValType&() & noexcept { return val_; }
+	constexpr explicit operator ValType&() & noexcept { return val_; }
 
-	explicit operator const ValType&() const& noexcept { return val_; }
+	constexpr explicit operator const ValType&() const& noexcept {
+		return val_;
+	}
 };
