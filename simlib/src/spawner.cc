@@ -2,10 +2,16 @@
 #include "../include/call_in_destructor.hh"
 #include "../include/directory.hh"
 #include "../include/file_descriptor.hh"
+#include "../include/overloaded.hh"
 #include "../include/string_transform.hh"
 #include "../include/time.hh"
 
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <ctime>
 #include <sys/syscall.h>
+#include <variant>
 #include <vector>
 
 using std::array;
@@ -43,226 +49,115 @@ string Spawner::receive_error_message(const siginfo_t& si, int fd) {
 	return message;
 }
 
-void Spawner::Timer::handle_timeout(int, siginfo_t* si, void*) noexcept {
-	int errnum = errno;
-	Data& data = *(Data*)si->si_value.sival_ptr;
+timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
+	return std::visit(overloaded {[](const WithoutTimeout&) {
+		                              return timespec {0, 0};
+	                              },
+	                              [&](WithTimeout& state) {
+		                              if (not state.timer_is_active)
+			                              return timespec {0, 0};
+		                              state.timer_is_active = false;
+		                              // Disarm timer and check if it has
+		                              // expired
+		                              itimerspec new_its {{0, 0}, {0, 0}};
+		                              itimerspec old_its;
+		                              assert(timer_settime(state.timer_id, 0,
+		                                                   &new_its,
+		                                                   &old_its) == 0);
+		                              if (old_its.it_value == timespec {0, 0}) {
+			                              // timer is already disarmed => the
+			                              // signal handler was / is about to
+			                              // run => wait for it
+			                              while (not timeout_signal_was_sent())
+				                              pause();
+		                              }
 
-	static_assert(decltype(data.flag)::is_always_lock_free,
-	              "data::flag atomic has to be lock-free as it is used in a "
-	              "signal handler");
-	data.flag
-	   .load(); // Used to synchronize memory with the thread that created the
-	            // data object -- this handler may by called in a different
-	            // thread that the one that created the data object and that may
-	            // be the source of an inconsistency in the memory -- that is
-	            // why the atomic variable is used to synchronize memory
-
-	try {
-		data.timeouter(data.pid);
-	} catch (...) {
-	}
-	errno = errnum;
+		                              assert(timer_delete(state.timer_id) == 0);
+		                              return old_its.it_value;
+	                              }},
+	                  state_);
 }
 
-void Spawner::Timer::delete_timer() noexcept {
-	if (timer_is_active) {
-		timer_is_active = false;
-		(void)timer_delete(timerid);
-	}
-}
+Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
+                      clockid_t clock_id, int timeout_signal, int timer_signal)
+   : clock_id_(clock_id), state_([&]() -> decltype(state_) {
+	     STACK_UNWINDING_MARK;
+	     assert(time_limit >= decltype(time_limit)::zero());
+	     if (time_limit == std::chrono::nanoseconds::zero()) {
+		     timespec curr_clock_time;
+		     if (clock_gettime(clock_id, &curr_clock_time))
+			     THROW("clock_gettime()", errmsg());
+		     return WithoutTimeout {curr_clock_time};
+	     }
 
-Spawner::Timer::Timer(pid_t pid, std::chrono::nanoseconds time_limit,
-                      TimeoutHandler timeouter)
-   : data {pid, std::move(timeouter), {}}, tlimit(to_timespec(time_limit)) {
-	STACK_UNWINDING_MARK;
+	     return WithTimeout {to_timespec(time_limit),
+	                         {},
+	                         false,
+	                         {watched_pid, timeout_signal, false}};
+     }()) {
 
-	data.flag.store(
-	   0); // Used to synchronize memory with the thread that will execute the
-	       // signal handler -- the signal handler may by called in a different
-	       // thread (not the one that created the data object) and that may be
-	       // the source of an inconsistency in the memory -- that is why the
-	       // atomic variable is used to synchronize memory
+	if (std::holds_alternative<WithoutTimeout>(state_))
+		return; // Nothing more to do
 
-	throw_assert(time_limit >= decltype(time_limit)::zero());
-
-	if (time_limit == std::chrono::nanoseconds::zero()) {
-		if (clock_gettime(CLOCK_MONOTONIC, &begin_point))
-			THROW("clock_gettime()", errmsg());
-
-	} else {
-		const int USED_SIGNAL = SIGRTMIN;
-
-		// Install (timeout) signal handler
-		struct sigaction sa;
-		sa.sa_flags = SA_SIGINFO | SA_RESTART;
-		sa.sa_sigaction = handle_timeout;
-		if (sigaction(USED_SIGNAL, &sa, nullptr))
-			THROW("signaction()", errmsg());
-
-		// Prepare timer
-		sigevent sev;
-		memset(&sev, 0, sizeof(sev));
-		sev.sigev_notify = SIGEV_SIGNAL;
-		sev.sigev_signo = USED_SIGNAL;
-		sev.sigev_value.sival_ptr = &data;
-		if (timer_create(CLOCK_MONOTONIC, &sev, &timerid))
-			THROW("timer_create()", errmsg());
-
-		data.flag.store( // TODO: it looks like a race condition because the
-		                 // signal handler may be called just before, we
-		                 // synchronize via data.flag
-		   0); // Used to synchronize memory with the thread that will execute
-		       // the signal handler -- the signal handler may by called in a
-		       // different thread (not the one that created the data object)
-		       // and that may be the source of an inconsistency in the memory
-		       // -- that is why the atomic variable is used to synchronize
-		       // memory
-
-		timer_is_active = true;
-
-		// Arm timer
-		itimerspec its {{0, 0}, tlimit};
-		if (timer_settime(timerid, 0, &its, nullptr)) {
-			int errnum = errno;
-			delete_timer();
-			THROW("timer_settime()", errmsg(errnum));
+	auto& state = std::get<WithTimeout>(state_);
+	// It is OK to use static, since the class and constructor is not a template
+	static constexpr auto timeout_handler = [](int, siginfo_t* si,
+	                                           void*) noexcept {
+		if (si->si_code != SI_TIMER) {
+			return; // Ignore other signals
 		}
-	}
-}
 
-std::chrono::nanoseconds Spawner::Timer::stop_and_get_runtime() {
-	STACK_UNWINDING_MARK;
+		int errnum = errno;
+		SignalHandlerContext& context =
+		   *(SignalHandlerContext*)si->si_value.sival_ptr;
+		kill(context.watched_pid, context.timeout_signal); // signal safe
+		context.timeout_signal_was_sent = true;
+		errno = errnum;
+	};
 
-	if (tlimit.tv_sec == 0 and tlimit.tv_nsec == 0) {
-		timespec end_point;
-		if (clock_gettime(CLOCK_MONOTONIC, &end_point))
-			THROW("clock_gettime()", errmsg());
-		return to_nanoseconds(end_point - begin_point);
-	}
-
-	itimerspec its {{0, 0}, {0, 0}}, old;
-	if (timer_settime(timerid, 0, &its, &old))
-		THROW("timer_settime()", errmsg());
-
-	delete_timer();
-	return to_nanoseconds(tlimit - old.it_value);
-}
-
-void Spawner::CPUTimeMonitor::handler(int, siginfo_t* si, void*) noexcept {
-	int errnum = errno;
-	const Data& data = *(Data*)si->si_value.sival_ptr;
-
-	static_assert(decltype(data.flag)::is_always_lock_free,
-	              "data::flag atomic has to be lock-free as it is used in a "
-	              "signal handler");
-	data.flag
-	   .load(); // Used to synchronize memory with the thread that created the
-	            // data object -- this handler may by called in a different
-	            // thread that the one that created the data object and that may
-	            // be the source of an inconsistency in the memory -- that is
-	            // why the atomic variable is used to synchronize memory
-
-	timespec ts;
-	if (clock_gettime(data.cid, &ts) or ts >= data.cpu_abs_time_limit) {
-		// Failed to get time or cpu_time_limit expired
-		try {
-			data.timeouter(data.pid);
-		} catch (...) {
-		} // TODO: distinguish error and timeout e.g. saving error code in data
-		  // and throwing from get_cpu_runtime()
-
-	} else {
-		// There is still time left
-		itimerspec its {
-		   {0, 0},
-		   std::max(data.cpu_abs_time_limit - ts,
-		            timespec {0, (int)0.01e9}) // Min. wait duration: 0.01 s
-		};
-		timer_settime(data.timerid, 0, &its, nullptr);
-	}
-
-	errno = errnum;
-}
-
-Spawner::CPUTimeMonitor::CPUTimeMonitor(pid_t pid,
-                                        std::chrono::nanoseconds cpu_time_limit,
-                                        TimeoutHandler timeouter)
-   : data {pid, {}, to_timespec(cpu_time_limit), {}, {}, std::move(timeouter),
-           {}} {
-	STACK_UNWINDING_MARK;
-
-	throw_assert(cpu_time_limit >= decltype(cpu_time_limit)::zero());
-
-	if (clock_getcpuclockid(pid, &data.cid))
-		THROW("clock_getcpuclockid()", errmsg());
-
-	if (clock_gettime(data.cid, &data.cpu_time_at_start))
-		THROW("clock_gettime()", errmsg());
-
-	if (cpu_time_limit == std::chrono::nanoseconds::zero())
-		return; // No limit is set - nothing to do
-
-	// Update the cpu_abs_time_limit to reflect cpu_time_at_start
-	data.cpu_abs_time_limit += data.cpu_time_at_start;
-	data.flag.store(
-	   0); // Used to synchronize memory with the thread that will execute the
-	       // signal handler -- the signal handler may by called in a different
-	       // thread (not the one that created the data object) and that may be
-	       // the source of an inconsistency in the memory -- that is why the
-	       // atomic variable is used to synchronize memory
-
-	const int USED_SIGNAL = SIGRTMIN + 1;
-
+	// Install timeout signal handler
 	struct sigaction sa;
 	sa.sa_flags = SA_SIGINFO | SA_RESTART;
-	sa.sa_sigaction = handler;
-	sigfillset(&sa.sa_mask); // Prevent interrupting
-	if (sigaction(USED_SIGNAL, &sa, nullptr))
+	sa.sa_sigaction = timeout_handler;
+	if (sigaction(timer_signal, &sa, nullptr))
 		THROW("sigaction()", errmsg());
 
 	// Prepare timer
 	sigevent sev;
 	memset(&sev, 0, sizeof(sev));
-	sev.sigev_notify = SIGEV_SIGNAL;
-	sev.sigev_signo = USED_SIGNAL;
-	sev.sigev_value.sival_ptr = &data;
-	if (timer_create(CLOCK_MONOTONIC, &sev, &data.timerid))
+	sev.sigev_notify = SIGEV_THREAD_ID;
+	sev._sigev_un._tid = gettid(); // sigev_notify_thread_id
+	sev.sigev_signo = timer_signal;
+	sev.sigev_value.sival_ptr = &state.signal_handler_context;
+	if (timer_create(clock_id, &sev, &state.timer_id))
 		THROW("timer_create()", errmsg());
 
-	data.flag.store( // TODO: it looks like a race condition because the signal
-	                 // handler may be called just before, we synchronize via
-	                 // data.flag
-	   0); // Used to synchronize memory with the thread that will execute the
-	       // signal handler -- the signal handler may by called in a different
-	       // thread (not the one that created the data object) and that may be
-	       // the source of an inconsistency in the memory -- that is why the
-	       // atomic variable is used to synchronize memory
+	state.timer_is_active = true;
 
-	timer_is_active = true;
-
-	itimerspec its {{0, 0}, to_timespec(cpu_time_limit)};
-	if (timer_settime(data.timerid, 0, &its, nullptr)) {
+	// Arm timer
+	itimerspec its {{0, 0}, state.time_limit};
+	if (timer_settime(state.timer_id, 0, &its, nullptr)) {
 		int errnum = errno;
-		deactivate();
+		(void)delete_timer_and_get_remaning_time();
 		THROW("timer_settime()", errmsg(errnum));
 	}
 }
 
-void Spawner::CPUTimeMonitor::deactivate() noexcept {
-	if (timer_is_active) {
-		timer_is_active = false;
-		timer_delete(data.timerid);
-	}
-}
-
-std::chrono::nanoseconds Spawner::CPUTimeMonitor::get_cpu_runtime() {
-	STACK_UNWINDING_MARK;
-
-	timespec ts;
-	if (clock_gettime(data.cid, &ts))
-		THROW("clock_gettime()", errmsg());
-
-	return to_nanoseconds(ts - data.cpu_time_at_start);
+std::chrono::nanoseconds Spawner::Timer::deactivate_and_get_runtime() noexcept {
+	return std::visit(
+	   overloaded {
+	      [&](const WithoutTimeout& state) {
+		      timespec curr_clock_time;
+		      assert(clock_gettime(clock_id_, &curr_clock_time) == 0);
+		      return to_nanoseconds(curr_clock_time - state.start_clock_time);
+	      },
+	      [&](WithTimeout& state) {
+		      assert(state.timer_is_active and
+		             "You can call this function only once");
+		      return to_nanoseconds(state.time_limit -
+		                            delete_timer_and_get_remaning_time());
+	      }},
+	   state_);
 }
 
 Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
@@ -318,28 +213,31 @@ Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
 
 	do_after_fork();
 
+	clockid_t child_cpu_clock_id;
+	if (clock_getcpuclockid(cpid, &child_cpu_clock_id))
+		THROW("clock_getcpuclockid()", errmsg());
+
 	// Set up timers
-	Timer timer(cpid, opts.real_time_limit.value_or(0ns));
-	CPUTimeMonitor cpu_timer(cpid, opts.cpu_time_limit.value_or(0ns));
+	Timer timer(cpid, opts.real_time_limit.value_or(0ns), CLOCK_MONOTONIC);
+	Timer cpu_timer(cpid, opts.cpu_time_limit.value_or(0ns),
+	                child_cpu_clock_id);
 	kill(cpid, SIGCONT); // There is only one process now, so '-' is not needed
 
 	// Wait for death of the child
 	waitid(P_PID, cpid, &si, WEXITED | WNOWAIT);
 
-	// Get cpu_time
-	cpu_timer.deactivate();
-	auto cpu_time = cpu_timer.get_cpu_runtime();
+	// Get runtime and cpu runtime
+	auto runtime = timer.deactivate_and_get_runtime();
+	auto cpu_runtime = cpu_timer.deactivate_and_get_runtime();
 
 	kill_and_wait_child_guard.cancel();
 	syscall(SYS_waitid, P_PID, cpid, &si, WEXITED, &ru);
-	auto runtime = timer.stop_and_get_runtime(); // This have to be last
-	                                             // because it may throw
 
 	if (si.si_code != CLD_EXITED or si.si_status != 0)
-		return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru, 0,
+		return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru, 0,
 		                receive_error_message(si, pfd[0]));
 
-	return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru, 0);
+	return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru, 0);
 }
 
 void Spawner::run_child(FilePath exec,

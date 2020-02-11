@@ -1104,23 +1104,15 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	Defer tracee_statm_fd_guard([&] { (void)tracee_statm_fd_.close(); });
 
 	std::chrono::nanoseconds runtime {0};
-	std::chrono::nanoseconds cpu_time {0};
+	std::chrono::nanoseconds cpu_runtime {0};
 
 	// Set up timers
 	unique_ptr<Timer> timer;
-	unique_ptr<CPUTimeMonitor> cpu_timer;
+	unique_ptr<Timer> cpu_timer;
 
-	auto tracee_timeouted = std::make_shared<std::atomic_flag>();
-	tracee_timeouted->test_and_set();
-
-	// This signal handler may be executed in a different thread, so we need to
-	// use an atomic
-	auto timeouter = [tracee_timeouted](pid_t pid) {
-		tracee_timeouted->clear();
-		// Send SIGSTOP (SIGSTOP because it cannot be blocked and we can
-		// intercept it), so that it will be intercepted via ptrace (there we
-		// check for timeout, collect memory status and kill the process)
-		kill(-pid, SIGSTOP);
+	auto has_tracee_timeouted = [&]() noexcept {
+		return (timer and timer->timeout_signal_was_sent()) or
+		       (cpu_timer and cpu_timer->timeout_signal_was_sent());
 	};
 
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
@@ -1128,20 +1120,19 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		if (not is_waited)
 			waitid(P_PID, tracee_pid_, &si, WEXITED | WNOWAIT);
 
-		// Get cpu_time
+		// Get runtime
+		runtime = (timer ? timer->deactivate_and_get_runtime() : 0ns);
+		// Get cpu runtime
 		if (cpu_timer) {
-			cpu_timer->deactivate();
-			cpu_time = cpu_timer->get_cpu_runtime();
+			cpu_runtime = cpu_timer->deactivate_and_get_runtime();
 		} else { // The child did not execve() or the execve() failed
-			cpu_time = 0ns;
+			cpu_runtime = 0ns;
 			tracee_vm_peak_ =
-			   0; // It might contain the vm size from before execve()
+			   0; // It might contain the VM size from before execve()
 		}
 
 		kill_and_wait_tracee_guard.cancel(); // Tracee has died
 		syscall(SYS_waitid, P_PID, tracee_pid_, &si, WEXITED, &ru);
-		// This have to be the last because it may throw
-		runtime = (timer ? timer->stop_and_get_runtime() : 0ns);
 	};
 
 	static_assert(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0),
@@ -1211,13 +1202,21 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_EXEC << 8))) {
 					tracee_vm_peak_ = get_tracee_vm_size();
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (exec())");
-					// Fire timers
+					// Fire timers. SIGSTOP is used because it cannot be blocked
+					// and we can intercept it via ptrace(), where we will check
+					// for timeout and eventually collect memory status and kill
+					// the process
 					timer = make_unique<Timer>(
 					   tracee_pid_, opts.real_time_limit.value_or(0ns),
-					   timeouter);
-					cpu_timer = make_unique<CPUTimeMonitor>(
+					   CLOCK_MONOTONIC, SIGSTOP);
+
+					clockid_t tracee_cpu_clock_id;
+					if (clock_getcpuclockid(tracee_pid_, &tracee_cpu_clock_id))
+						THROW("clock_getcpuclockid()", errmsg());
+
+					cpu_timer = make_unique<Timer>(
 					   tracee_pid_, opts.cpu_time_limit.value_or(0ns),
-					   timeouter);
+					   tracee_cpu_clock_id, SIGSTOP);
 
 					continue; // Nothing more to do for the exec() event
 				}
@@ -1247,11 +1246,11 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				}
 
 				// Timeout handler was invoked
-				if (not tracee_timeouted->test_and_set()) {
+				if (has_tracee_timeouted()) {
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (TIMEOUT) - si_status: ",
 					                          si.si_status);
 					// Tracee will die, we have to update the vm_peak, as it
-					// will not be recoverable later (all this because stack
+					// will be unrecoverable later (all this because stack
 					// segment grows without any syscall)
 					update_tracee_vm_peak();
 
@@ -1291,7 +1290,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 				get_cpu_time_and_wait_tracee(true);
 				DEBUG_SANDBOX_VERBOSE_LOG(
 				   "ENDED -> [ RT: ", to_string(runtime, false),
-				   " ] [ CPU: ", to_string(cpu_time, false), " ]  VmPeak: ",
+				   " ] [ CPU: ", to_string(cpu_runtime, false), " ]  VmPeak: ",
 				   humanize_file_size(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
 				   "   ", message_to_set_in_exit_stat_);
 
@@ -1338,7 +1337,7 @@ tracee_died:
 		            ((opts.real_time_limit.has_value() and
 		              runtime >= opts.real_time_limit.value()) or
 		             (opts.cpu_time_limit.has_value() and
-		              cpu_time >= opts.cpu_time_limit.value())));
+		              cpu_runtime >= opts.cpu_time_limit.value())));
 		if (not tle) {
 			THROW(
 			   "The sandbox is somewhat insecure - readlink() as the mark of"
@@ -1349,19 +1348,19 @@ tracee_died:
 
 	// Message was set
 	if (not message_to_set_in_exit_stat_.empty()) {
-		return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
+		return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru,
 		                tracee_vm_peak_ * sysconf(_SC_PAGESIZE),
 		                message_to_set_in_exit_stat_);
 	}
 
 	// Excited abnormally - probably killed by some signal
 	if (si.si_code != CLD_EXITED or si.si_status != 0) {
-		return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
+		return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru,
 		                tracee_vm_peak_ * sysconf(_SC_PAGESIZE),
 		                receive_error_message(si, pfd[0]));
 	}
 
 	// Exited normally (maybe with some code != 0)
-	return ExitStat(runtime, cpu_time, si.si_code, si.si_status, ru,
+	return ExitStat(runtime, cpu_runtime, si.si_code, si.si_status, ru,
 	                tracee_vm_peak_ * sysconf(_SC_PAGESIZE));
 }

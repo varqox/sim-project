@@ -2,14 +2,20 @@
 
 #include "file_contents.hh"
 #include "file_path.hh"
+#include "overloaded.hh"
 
 #include <atomic>
 #include <chrono>
+#include <csignal>
+#include <ctime>
 #include <functional>
 #include <optional>
+#include <pthread.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <thread>
 #include <unistd.h>
+#include <variant>
 
 class Spawner {
 protected:
@@ -76,12 +82,11 @@ public:
 	 *   @p opts.time_limit and @p opts.memory_limit
 	 * @details @p exec is called via execvp()
 	 *   This function is thread-safe.
-	 *   IMPORTANT: To function properly this function uses internally signals
-	 *     SIGRTMIN and SIGRTMIN + 1 and installs handlers for them. So be
-	 *     aware that using these signals while this function runs (in any
-	 *     thread) is not safe. Moreover if your program installed handler for
-	 *     the above signals, it must install them again after the function
-	 *     returns in all threads.
+	 *   IMPORTANT: To function properly this function uses internally signal
+	 *     SIGRTMIN and installs handler for it. So be aware that using these
+	 *     signals while this function runs (in any thread) is not safe.
+	 *     Moreover if your program installed handler for the above signals, it
+	 *     must install them again after the function returns in all threads.
 	 *
 	 *
 	 * @param exec path to file will be executed
@@ -170,63 +175,64 @@ protected:
 	                      const Options& opts, int fd,
 	                      const std::function<void()>& do_before_exec) noexcept;
 
-	static void default_timeout_handler(pid_t pid) { kill(-pid, SIGKILL); };
-
 	class Timer {
-	public:
-		using TimeoutHandler = std::function<void(pid_t)>;
+		struct SignalHandlerContext {
+			const pid_t watched_pid;
+			const int timeout_signal;
+			volatile std::sig_atomic_t timeout_signal_was_sent;
+		};
 
-	private:
-		struct Data {
-			pid_t pid;
-			TimeoutHandler timeouter;
-			std::atomic_uint8_t flag;
-		} data;
-		timespec tlimit;
-		timespec begin_point; // used only if time_limit == {0, 0}
-		timer_t timerid; // used only if time_limit != {0, 0}
-		bool timer_is_active = false;
+		struct WithTimeout {
+			const timespec time_limit;
+			timer_t timer_id;
+			bool timer_is_active;
+			SignalHandlerContext signal_handler_context;
+		};
 
-		static void handle_timeout(int, siginfo_t* si, void*) noexcept;
+		struct WithoutTimeout {
+			const timespec start_clock_time;
+		};
 
-		void delete_timer() noexcept;
+		const clockid_t clock_id_;
+		std::variant<WithTimeout, WithoutTimeout> state_;
+		const std::thread::id creator_thread_id_ = std::this_thread::get_id();
 
-	public:
-		Timer(pid_t pid, std::chrono::nanoseconds time_limit,
-		      TimeoutHandler timeouter = default_timeout_handler);
-
-		std::chrono::nanoseconds stop_and_get_runtime();
-
-		~Timer() { delete_timer(); }
-	};
-
-	class CPUTimeMonitor {
-	public:
-		using TimeoutHandler = std::function<void(pid_t)>;
-
-	private:
-		struct Data {
-			pid_t pid;
-			clockid_t cid;
-			timespec cpu_abs_time_limit; // Counting from 0, not from
-			                             // cpu_time_at_start
-			timespec cpu_time_at_start;
-			timer_t timerid;
-			TimeoutHandler timeouter;
-			std::atomic_uint8_t flag;
-		} data;
-		bool timer_is_active = false;
-
-		static void handler(int, siginfo_t* si, void*) noexcept;
+		timespec delete_timer_and_get_remaning_time() noexcept;
 
 	public:
-		CPUTimeMonitor(pid_t pid, std::chrono::nanoseconds cpu_time_limit,
-		               TimeoutHandler timeouter = default_timeout_handler);
+		/**
+		 * @param watched_pid pid of the process to signal on timeout
+		 * @param time_limit if set to 0, then timeout handler is not installed,
+		 *thus @p timer_signal and @p timeout_signal are ignored
+		 * @param clock_id id of the clock to crate timer on
+		 * @param timeout_signal signal to send @p to watched_pid on timeout
+		 * @param timer_signal signal for which a timeout handler will be
+		 *installed
+		 **/
+		Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
+		      clockid_t clock_id, int timeout_signal = SIGKILL,
+		      int timer_signal = SIGRTMIN);
 
-		void deactivate() noexcept;
+		std::chrono::nanoseconds deactivate_and_get_runtime() noexcept;
 
-		std::chrono::nanoseconds get_cpu_runtime();
+		bool timeout_signal_was_sent() const noexcept {
+			// In case when other thread calls it, we may not detect this in the
+			// below assert every time due to the memory ordering phenomenon,
+			// but it should be sufficient. Atomic is of no help here, as the
+			// other thread might see see value of the atomic that was there
+			// before creation of the atomic itself...
+			assert(creator_thread_id_ == std::this_thread::get_id() and
+			       "This can only be used by the same thread that constructed "
+			       "this object");
+			return std::visit(
+			   overloaded {[&](const WithoutTimeout&) { return false; },
+			               [&](const WithTimeout& state) -> bool {
+				               return state.signal_handler_context
+				                  .timeout_signal_was_sent;
+			               }},
+			   state_);
+		}
 
-		~CPUTimeMonitor() { deactivate(); }
+		~Timer() { (void)delete_timer_and_get_remaning_time(); }
 	};
 };

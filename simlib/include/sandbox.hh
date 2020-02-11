@@ -84,12 +84,11 @@ public:
 	 * @details
 	 *   @p exec is called via execvp()
 	 *   This function is thread-safe.
-	 *   IMPORTANT: To function properly this function uses internally signals
-	 *     SIGRTMIN and SIGRTMIN + 1 and installs handlers for them. So be
-	 *     aware that using these signals while this function runs (in any
-	 *     thread) is not safe. Moreover if your program installed handler for
-	 *     the above signals, it must install them again after the function
-	 *     returns.
+	 *   IMPORTANT: To function properly this function uses internally signal
+	 *     SIGRTMIN and installs handler for it. So be aware that using these
+	 *     signals while this function runs (in any thread) is not safe.
+	 *     Moreover if your program installed handler for the above signals, it
+	 *     must install them again after the function returns.
 	 *
 	 * @param exec path to file will be executed
 	 * @param exec_args arguments passed to exec
