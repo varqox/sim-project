@@ -13,10 +13,8 @@ private:
 	std::atomic<bool> opened_ {false}, label_ {true};
 
 	void close() noexcept {
-		if (opened_.load()) {
-			opened_.store(false);
+		if (opened_.exchange(false))
 			fclose(f_);
-		}
 	}
 
 	// Lock the file
@@ -152,10 +150,7 @@ public:
 
 	Appender get_appender() noexcept { return Appender(*this); }
 
-	~Logger() {
-		if (opened_)
-			fclose(f_);
-	}
+	~Logger() { close(); }
 };
 
 // By default both write to stderr
