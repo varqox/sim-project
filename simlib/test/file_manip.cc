@@ -57,7 +57,6 @@ TEST(file_manip, remove_dir_contents) {
 	FileDescriptor(concat(tmp_dir.path(), "c"), O_CREAT);
 	FileDescriptor(concat(tmp_dir.path(), "abc"), O_CREAT);
 	FileDescriptor(concat(tmp_dir.path(), "xyz"), O_CREAT);
-	stdlog(mkdir_r(concat_tostr(tmp_dir.path(), "k/l/m/nn/")), errmsg());
 	EXPECT_EQ(mkdir_r(concat_tostr(tmp_dir.path(), "k/l/m/nn/")), 0);
 	FileDescriptor(concat(tmp_dir.path(), "k/l/m/nn/x"), O_CREAT);
 	FileDescriptor(concat(tmp_dir.path(), "k/l/m/x"), O_CREAT);
@@ -329,7 +328,6 @@ TEST(file_manip, copy_r) {
 	{
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
 		auto dest_path = concat(dest_dir.path(), "dest");
-		stdlog(copy_r(concat(tmp_dir.path(), "dir"), dest_path), errmsg());
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path), 0);
 		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
 		               __LINE__);
