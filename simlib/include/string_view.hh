@@ -657,14 +657,14 @@ public:
 	constexpr CStringView& operator=(const CStringView&) noexcept = default;
 	constexpr CStringView& operator=(CStringView&&) noexcept = default;
 
-	constexpr operator StringView() & { return {data(), size()}; }
+	constexpr operator StringView() & noexcept { return {data(), size()}; }
 
-	constexpr operator StringView() const& { return {data(), size()}; }
+	constexpr operator StringView() const& noexcept { return {data(), size()}; }
 
 	// Allow converting rvalue CStringView to StringView, as checking for
 	// leaving a dangling pointer to a temporary string was made during
 	// construction of CStringView
-	constexpr operator StringView() && { return {data(), size()}; }
+	constexpr operator StringView() &&  noexcept{ return {data(), size()}; }
 
 	template <class T,
 	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
