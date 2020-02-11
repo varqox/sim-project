@@ -18,3 +18,7 @@ TEST(DISABLED_handle_signals_while_running,
      try_to_run_two_times_simultaneously) {
 	// TODO: implement it
 }
+
+TEST(DISABLED_handle_signals_while_running, function_throws_exception) {
+	// TODO: implement it
+}

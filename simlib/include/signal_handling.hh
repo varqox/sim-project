@@ -60,56 +60,100 @@ int handle_signals_while_running(Main&& main_func,
 
 	Defer pipe_write_end_closer = [&] { (void)signal_pipe_write_end.close(); };
 
+	// Prepare pipe to signal that main_func has ended (needed because main
+	// could end because of signal handler being run (e.g. because of some
+	// EINTR), but after it is run, the signal-handling thread has no chance to
+	// process it (e.g. process scheduling misfortune), so the thread that runs
+	// main, should signal signal-handling thread that the main is complete and
+	// wait for its confirmation that no signal happened or handle the signal)
+	FileDescriptor main_func_ended_read_end;
+	FileDescriptor main_func_ended_write_end;
+	{
+		std::array<int, 2> pfd;
+		if (pipe2(pfd.data(), O_CLOEXEC | O_NONBLOCK))
+			THROW("pipe2()", errmsg());
+
+		main_func_ended_read_end = pfd[0];
+		main_func_ended_write_end = pfd[1];
+	}
+
+	// static constexpr to ensure only one instance is created per outer
+	// function instance
+	static constexpr auto signal_handler = [](int signum) noexcept {
+		int errnum = errno;
+		(void)write(signal_pipe_write_end, &signum, sizeof(int));
+		errno = errnum;
+	};
+
 	// Signal control
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = [](int signum) {
-		(void)write(signal_pipe_write_end, &signum, sizeof(int));
-	};
+	sa.sa_handler = signal_handler;
 	// Intercept signals, to allow a dedicated thread to consume them
 	if ((sigaction(signals, &sa, nullptr) or ...))
 		THROW("sigaction()", errmsg());
 
-	std::atomic_bool i_am_being_killed_by_signal = false;
 	// Spawn signal-handling thread
-	std::thread([&, signal_pipe_read_end = std::move(signal_pipe_read_end)] {
-		int signum;
-		// Wait for signal
-		pollfd pfd {signal_pipe_read_end, POLLIN, 0};
-		for (int rc;;) {
-			rc = poll(&pfd, 1, -1);
-			if (rc == 1)
-				break; // Signal arrived
+	std::thread signal_handling_thread(
+	   [&, signal_pipe_read_end = std::move(signal_pipe_read_end),
+	    main_func_ended_read_end = std::move(main_func_ended_read_end)] {
+		   int signum;
+		   // Wait for signal
+		   constexpr int signal_pipe_idx = 0;
+		   constexpr int main_func_ended_pipe_idx = 1;
+		   std::array<pollfd, 2> pfds {{
+		      {signal_pipe_read_end, POLLIN, 0},
+		      {main_func_ended_read_end, POLLIN, 0},
+		   }};
+		   for (int rc;;) {
+			   rc = poll(pfds.data(), 2, -1);
+			   if (rc >= 1)
+				   break; // Signal arrived or main has ended
 
-			assert(rc < 0);
-			if (errno != EINTR)
-				THROW("poll()");
-		}
+			   assert(rc < 0);
+			   if (errno != EINTR)
+				   THROW("poll()");
+		   }
 
-		if (pfd.revents & POLLHUP)
-			return; // The main thread died
+		   for (auto const& pfd : pfds)
+			   assert(not(pfd.revents & POLLHUP));
 
-		i_am_being_killed_by_signal = true;
-		int rc = read(signal_pipe_read_end, &signum, sizeof(int));
-		assert(rc == sizeof(int));
+		   if (pfds[signal_pipe_idx].revents & POLLIN) {
+			   int rc = read(signal_pipe_read_end, &signum, sizeof(int));
+			   assert(rc == sizeof(int));
 
-		try {
-			cleanup_before_getting_killed(signum);
-		} catch (...) {
-		}
+			   try {
+				   cleanup_before_getting_killed(signum);
+			   } catch (...) {
+			   }
 
-		// Now kill the whole process group with the intercepted signal
-		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = SIG_DFL;
-		// First unblock the blocked signal, so that it will kill the process
-		(void)sigaction(signum, &sa, nullptr);
-		(void)kill(0, signum);
-	}).detach();
+			   // Now kill the whole process group with the intercepted signal
+			   memset(&sa, 0, sizeof(sa));
+			   sa.sa_handler = SIG_DFL;
+			   // First unblock the blocked signal, so that it will kill the
+			   // process
+			   (void)sigaction(signum, &sa, nullptr);
+			   (void)kill(0, signum);
+			   // Wait for signal to kill the process (just in case), repeatedly
+			   // because other signals may happen in the meantime
+			   for (;;)
+				   pause();
+		   }
 
-	int rc = main_func();
-	if (not i_am_being_killed_by_signal)
-		return rc;
+		   assert((pfds[main_func_ended_pipe_idx].revents & POLLIN) and
+		          "There should be no other cases than the two handled here: "
+		          "signal or main_func ended");
+		   return; // Signal did not happen before the main has ended, so we are
+		           // done
+	   });
 
-	pause(); // Wait till the signal-handling thread kills the whole process
-	std::terminate(); // This should not happen
+	Defer before_return_or_exception = [&] {
+		// Signal signal-handling thread that main has ended (normally or
+		// abnormally)
+		assert(write(main_func_ended_write_end, "x", 1) == 1);
+		// Wait till the signal-handling thread kills the whole process or
+		// confirms that it is safe to proceed
+		signal_handling_thread.join();
+	};
+	return main_func();
 }
