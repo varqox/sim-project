@@ -11,6 +11,7 @@
 #include <exception>
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/eventfd.h>
 #include <thread>
 #include <type_traits>
 #include <unistd.h>
@@ -31,10 +32,10 @@
  *   does not return.
  */
 template <class Main, class Cleanup, class... Signals>
-int handle_signals_while_running(Main&& main_func,
-                                 Cleanup&& cleanup_before_getting_killed,
-                                 Signals... signals) {
-	static_assert(std::is_invocable_r_v<int, Main>,
+auto handle_signals_while_running(Main&& main_func,
+                                  Cleanup&& cleanup_before_getting_killed,
+                                  Signals... signals) {
+	static_assert(std::is_invocable_v<Main>,
 	              "main_func has to take no arguments");
 	static_assert(std::is_invocable_v<Cleanup, int>,
 	              "cleanup_before_getting_killed has to take one argument -- "
@@ -43,47 +44,47 @@ int handle_signals_while_running(Main&& main_func,
 	   (std::is_same_v<Signals, int> and ...),
 	   "signals parameters have to be from of SIGINT, SIGTERM, etc.");
 
-	static FileDescriptor signal_pipe_write_end;
-	assert(not signal_pipe_write_end.is_open() and
+	// Prepare signal eventfd
+	static FileDescriptor signal_eventfd;
+	assert(not signal_eventfd.is_open() and
 	       "Using this function simultaneously more than once is impossible");
+	signal_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+	if (not signal_eventfd.is_open())
+		THROW("eventfd()", errmsg());
 
-	// Prepare signal pipe
-	FileDescriptor signal_pipe_read_end;
-	{
-		std::array<int, 2> pfd;
-		if (pipe2(pfd.data(), O_CLOEXEC | O_NONBLOCK))
-			THROW("pipe2()", errmsg());
+	constexpr static auto pack_signum = [](int signum) -> uint64_t {
+		static_assert(sizeof(int) == 4,
+		              "Needed for the below hack to work properly");
+		uint32_t usignum = signum;
+		return (static_cast<uint64_t>(1) << 32 | usignum);
+	};
 
-		signal_pipe_read_end = pfd[0];
-		signal_pipe_write_end = pfd[1];
-	}
-
-	Defer pipe_write_end_closer = [&] { (void)signal_pipe_write_end.close(); };
-
-	// Prepare pipe to signal that main_func has ended (needed because main
-	// could end because of signal handler being run (e.g. because of some
-	// EINTR), but after it is run, the signal-handling thread has no chance to
-	// process it (e.g. process scheduling misfortune), so the thread that runs
-	// main, should signal signal-handling thread that the main is complete and
-	// wait for its confirmation that no signal happened or handle the signal)
-	FileDescriptor main_func_ended_read_end;
-	FileDescriptor main_func_ended_write_end;
-	{
-		std::array<int, 2> pfd;
-		if (pipe2(pfd.data(), O_CLOEXEC | O_NONBLOCK))
-			THROW("pipe2()", errmsg());
-
-		main_func_ended_read_end = pfd[0];
-		main_func_ended_write_end = pfd[1];
-	}
+	constexpr static auto unpack_signum = [](uint64_t packed_signum) -> int {
+		static_assert(sizeof(int) == 4,
+		              "Needed for the below hack to work properly");
+		return static_cast<uint32_t>(packed_signum &
+		                             ((static_cast<uint64_t>(1) << 32) - 1));
+	};
 
 	// static constexpr to ensure only one instance is created per outer
 	// function instance
 	static constexpr auto signal_handler = [](int signum) noexcept {
 		int errnum = errno;
-		(void)write(signal_pipe_write_end, &signum, sizeof(int));
+		uint64_t packed_signum = pack_signum(signum);
+		(void)write(signal_eventfd, &packed_signum, sizeof(packed_signum));
 		errno = errnum;
 	};
+
+	// Prepare eventfd to signal that main_func has ended (needed because main
+	// could end because of signal handler being run (e.g. because of some
+	// EINTR), but after it is run, the signal-handling thread has no chance to
+	// process it (e.g. process scheduling misfortune), so the thread that runs
+	// main, should signal signal-handling thread that the main is complete and
+	// wait for its confirmation that no signal happened or handle the signal)
+	FileDescriptor main_func_ended_eventfd {
+	   eventfd(0, O_CLOEXEC | EFD_NONBLOCK)};
+	if (not main_func_ended_eventfd.is_open())
+		THROW("eventfd()", errmsg());
 
 	// Signal control
 	struct sigaction sa;
@@ -94,63 +95,63 @@ int handle_signals_while_running(Main&& main_func,
 		THROW("sigaction()", errmsg());
 
 	// Spawn signal-handling thread
-	std::thread signal_handling_thread(
-	   [&, signal_pipe_read_end = std::move(signal_pipe_read_end),
-	    main_func_ended_read_end = std::move(main_func_ended_read_end)] {
-		   int signum;
-		   // Wait for signal
-		   constexpr int signal_pipe_idx = 0;
-		   constexpr int main_func_ended_pipe_idx = 1;
-		   std::array<pollfd, 2> pfds {{
-		      {signal_pipe_read_end, POLLIN, 0},
-		      {main_func_ended_read_end, POLLIN, 0},
-		   }};
-		   for (int rc;;) {
-			   rc = poll(pfds.data(), 2, -1);
-			   if (rc >= 1)
-				   break; // Signal arrived or main has ended
+	std::thread signal_handling_thread([&] {
+		// Wait for signal
+		constexpr int signal_efd_idx = 0;
+		constexpr int main_func_ended_efd_idx = 1;
+		std::array<pollfd, 2> pfds {{
+		   {signal_eventfd, POLLIN, 0},
+		   {main_func_ended_eventfd, POLLIN, 0},
+		}};
+		for (int rc;;) {
+			rc = poll(pfds.data(), 2, -1);
+			if (rc >= 1)
+				break; // Signal arrived or main has ended
 
-			   assert(rc < 0);
-			   if (errno != EINTR)
-				   THROW("poll()");
-		   }
+			assert(rc < 0);
+			if (errno != EINTR)
+				THROW("poll()");
+		}
 
-		   for (auto const& pfd : pfds)
-			   assert(not(pfd.revents & POLLHUP));
+		for (auto const& pfd : pfds)
+			assert(not(pfd.revents & (POLLHUP | POLLERR)));
 
-		   if (pfds[signal_pipe_idx].revents & POLLIN) {
-			   int rc = read(signal_pipe_read_end, &signum, sizeof(int));
-			   assert(rc == sizeof(int));
+		if (pfds[signal_efd_idx].revents & POLLIN) {
+			uint64_t packed_signum;
+			assert(read(signal_eventfd, &packed_signum,
+			            sizeof(packed_signum)) == sizeof(packed_signum));
+			int signum = unpack_signum(packed_signum);
 
-			   try {
-				   cleanup_before_getting_killed(signum);
-			   } catch (...) {
-			   }
+			try {
+				cleanup_before_getting_killed(signum);
+			} catch (...) {
+			}
 
-			   // Now kill the whole process group with the intercepted signal
-			   memset(&sa, 0, sizeof(sa));
-			   sa.sa_handler = SIG_DFL;
-			   // First unblock the blocked signal, so that it will kill the
-			   // process
-			   (void)sigaction(signum, &sa, nullptr);
-			   (void)kill(0, signum);
-			   // Wait for signal to kill the process (just in case), repeatedly
-			   // because other signals may happen in the meantime
-			   for (;;)
-				   pause();
-		   }
+			// Now kill the whole process group with the intercepted signal
+			memset(&sa, 0, sizeof(sa));
+			sa.sa_handler = SIG_DFL;
+			// First unblock the blocked signal, so that it will kill the
+			// process
+			(void)sigaction(signum, &sa, nullptr);
+			(void)kill(0, signum);
+			// Wait for signal to kill the process (just in case), repeatedly
+			// because other signals may happen in the meantime
+			for (;;)
+				pause();
+		}
 
-		   assert((pfds[main_func_ended_pipe_idx].revents & POLLIN) and
-		          "There should be no other cases than the two handled here: "
-		          "signal or main_func ended");
-		   return; // Signal did not happen before the main has ended, so we are
-		           // done
-	   });
+		assert((pfds[main_func_ended_efd_idx].revents & POLLIN) and
+		       "There should be no other cases than the two handled here: "
+		       "signal or main_func ended");
+		return; // Signal did not happen before the main has ended, so we are
+		        // done
+	});
 
 	Defer before_return_or_exception = [&] {
 		// Signal signal-handling thread that main has ended (normally or
 		// abnormally)
-		assert(write(main_func_ended_write_end, "x", 1) == 1);
+		uint64_t one = 1;
+		assert(write(main_func_ended_eventfd, &one, sizeof(one)) == 8);
 		// Wait till the signal-handling thread kills the whole process or
 		// confirms that it is safe to proceed
 		signal_handling_thread.join();
