@@ -664,7 +664,7 @@ public:
 	// Allow converting rvalue CStringView to StringView, as checking for
 	// leaving a dangling pointer to a temporary string was made during
 	// construction of CStringView
-	constexpr operator StringView() &&  noexcept{ return {data(), size()}; }
+	constexpr operator StringView() && noexcept { return {data(), size()}; }
 
 	template <class T,
 	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
