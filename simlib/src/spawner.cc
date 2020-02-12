@@ -11,7 +11,6 @@
 #include <csignal>
 #include <ctime>
 #include <sys/syscall.h>
-#include <sys/types.h>
 #include <variant>
 #include <vector>
 
@@ -127,7 +126,7 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
 	sigevent sev;
 	memset(&sev, 0, sizeof(sev));
 	sev.sigev_notify = SIGEV_THREAD_ID;
-	sev._sigev_un._tid = gettid(); // sigev_notify_thread_id
+	sev._sigev_un._tid = syscall(SYS_gettid); // sigev_notify_thread_id
 	sev.sigev_signo = timer_signal;
 	sev.sigev_value.sival_ptr = &state.signal_handler_context;
 	if (timer_create(clock_id, &sev, &state.timer_id))
