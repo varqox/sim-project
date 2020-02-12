@@ -49,7 +49,7 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a,, \
 
 $(eval $(call add_generated_target, $(PREFIX)src/sim/default_checker_dump.c, \
 	xxd -i $$< | sed 's@\w*default_checker_c@default_checker_c@g' > $$@, \
-	$(PREFIX)src/sim/default_checker.c $(PREFIX)Makefile \
+	$(PREFIX)src/sim/default_checker.c \
 ))
 
 define SIMLIB_TEST_FLAGS =
@@ -69,7 +69,6 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/config_file.cc \
 	$(PREFIX)test/conver.cc \
 	$(PREFIX)test/debug.cc \
-	$(PREFIX)test/defer.cc \
 	$(PREFIX)test/defer.cc \
 	$(PREFIX)test/directory.cc \
 	$(PREFIX)test/enum_val.cc \
@@ -96,6 +95,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/sandbox.cc \
 	$(PREFIX)test/sha.cc \
 	$(PREFIX)test/shared_function.cc \
+	$(PREFIX)test/shared_memory_segment.cc \
 	$(PREFIX)test/signal_blocking.cc \
 	$(PREFIX)test/signal_handling.cc \
 	$(PREFIX)test/sim/problem_package.cc \
