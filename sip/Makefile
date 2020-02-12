@@ -91,9 +91,6 @@ SIP_SRCS := \
 	templates/interactive_checker.cc.dump.c \
 	templates/statement.tex.dump.c \
 
-src/command_version.o: .git/logs/HEAD
-src/command_version.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DCOMMIT="$(shell git rev-parse HEAD)"'
-
 $(eval $(call add_executable, src/sip, $(SIP_FLAGS), $(SIP_SRCS)))
 
 define SIP_STATIC_FLAGS =
@@ -101,6 +98,9 @@ INTERNAL_EXTRA_LD_FLAGS += -static -lzip -lseccomp -lrt -lz -Wl,--whole-archive 
 endef
 
 $(eval $(call add_executable, src/sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), $(SIP_SRCS)))
+
+src/command_version.o: .git/logs/HEAD
+src/command_version.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DCOMMIT="$(shell git rev-parse HEAD)"'
 
 .PHONY: format
 format: src/lib/simlib/format
