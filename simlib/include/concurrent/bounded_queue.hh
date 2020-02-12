@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mutexed_value.hh"
 #include "semaphore.hh"
 
 #include <climits>
@@ -12,54 +13,53 @@ namespace concurrent {
 template <class Elem>
 class BoundedQueue {
 private:
-	Semaphore elems_limit_;
+	Semaphore free_slots_;
 	Semaphore queued_elems_ {0};
-	std::mutex lock_;
-	std::atomic_bool no_more_elems_ = false;
-	std::deque<Elem> elems_;
+	MutexedValue<std::deque<Elem>> elems_;
 
-	Elem pop_elem() {
+	Elem pop_elem(typename decltype(elems_)::value_type& elems) {
 		auto elem = [&] {
 			if constexpr (std::is_move_constructible_v<Elem>)
-				return std::move(elems_.front());
+				return std::move(elems.front());
 			else
-				return elems_.front();
+				return elems.front();
 		}();
 
-		elems_.pop_front();
-		elems_limit_.post();
+		elems.pop_front();
+		free_slots_.post();
 		return elem;
 	}
 
 	Elem extract_elem() {
-		std::lock_guard<std::mutex> guard(lock_);
-		if (not elems_.empty())
-			return pop_elem();
+		return elems_.perform([&](auto& elems) {
+			if (not elems.empty())
+				return pop_elem(elems);
 
-		queued_elems_.post();
-		throw NoMoreElems();
+			queued_elems_.post();
+			throw NoMoreElems();
+		});
 	}
 
 	std::optional<Elem> extract_elem_opt() {
-		std::lock_guard<std::mutex> guard(lock_);
-		if (not elems_.empty())
-			return pop_elem();
+		return elems_.perform([&](auto& elems) -> std::optional<Elem> {
+			if (not elems.empty())
+				return pop_elem(elems);
 
-		queued_elems_.post();
-		return std::nullopt;
+			queued_elems_.post();
+			return std::nullopt;
+		});
 	}
 
 public:
 	struct NoMoreElems {};
 
-	explicit BoundedQueue(unsigned size = SEM_VALUE_MAX) : elems_limit_(size) {}
+	explicit BoundedQueue(unsigned max_size = SEM_VALUE_MAX)
+	   : free_slots_(max_size) {}
 
 	BoundedQueue(const BoundedQueue&) = delete;
 	BoundedQueue(BoundedQueue&&) = delete;
 	BoundedQueue& operator=(const BoundedQueue&) = delete;
 	BoundedQueue& operator=(BoundedQueue&&) = delete;
-
-	bool signaled_no_more_elems() const noexcept { return no_more_elems_; }
 
 	// Throws NoMoreElements iff there are no more elements and
 	// signal_no_more_elements() was called
@@ -75,9 +75,11 @@ public:
 		return extract_elem_opt();
 	}
 
-	// Gets the element or returns std::nullopt immediately. Throws
-	// NoMoreElements if there are no more jobs and signal_no_more_elems() has
-	// been called.
+	// Gets the element or returns std::nullopt immediately. If NoMoreElements
+	// is thrown, then there are no more jobs and signal_no_more_elems() has
+	// been called. Notice that this does not mean that this function will not
+	// return std::nullopt after signal_no_more_elements() is called -- this
+	// case is entirely possible and you must prepare for it.
 	std::optional<Elem> try_pop() {
 		if (queued_elems_.try_wait())
 			return extract_elem();
@@ -85,34 +87,21 @@ public:
 		return std::nullopt;
 	}
 
-	// Gets the element or returns std::nullopt immediately. Returns
-	// std::nullopt if there are no more jobs and signal_no_more_elems() has
-	// been called. To determine which case happened on std::nullopt,
-	// signaled_no_more_elems() should be used.
-	std::optional<Elem> try_pop_opt() {
-		if (queued_elems_.try_wait())
-			return extract_elem_opt();
-
-		return std::nullopt;
-	}
-
 	void push(Elem elem) {
-		elems_limit_.wait();
-		std::lock_guard<std::mutex> guard(lock_);
-		elems_.emplace_back(std::move(elem));
-		queued_elems_.post();
+		free_slots_.wait();
+		elems_.perform([&](auto& elems) {
+			elems.emplace_back(std::move(elem));
+			queued_elems_.post();
+		});
 	}
 
-	// Calling push() after this method is forbidden. Can be called more
-	// than once
-	void signal_no_more_elems() {
-		no_more_elems_ = true;
-		queued_elems_.post();
-	}
+	// Calling push() after this method is forbidden. This method may be called
+	// more than once
+	void signal_no_more_elems() { queued_elems_.post(); }
 
 	void increment_queue_size(size_t times = 1) {
 		while (times) {
-			elems_limit_.post();
+			free_slots_.post();
 			--times;
 		}
 	}
