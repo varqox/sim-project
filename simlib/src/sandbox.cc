@@ -804,6 +804,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
                                const Options& opts,
                                const std::vector<AllowedFile>& allowed_files,
                                const std::function<void()>& do_after_fork) {
+	STACK_UNWINDING_MARK;
 	using std::chrono_literals::operator""ns;
 
 	if (opts.real_time_limit.has_value() and
@@ -1085,6 +1086,8 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 		waitid(P_PID, tracee_pid_, &si, WEXITED);
 	});
 
+	STACK_UNWINDING_MARK;
+
 	do_after_fork();
 
 	// Set up ptrace options
@@ -1138,6 +1141,7 @@ Sandbox::ExitStat Sandbox::run(FilePath exec,
 	static_assert(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0),
 	              "Needed by the seccomp(2) features used below");
 
+	STACK_UNWINDING_MARK;
 	try {
 		for (;;) {
 			// The last arg is the signal number to deliver
