@@ -11,6 +11,7 @@
 #include <csignal>
 #include <ctime>
 #include <sys/syscall.h>
+#include <unistd.h>
 #include <variant>
 #include <vector>
 
@@ -80,7 +81,8 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
 
 Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
                       clockid_t clock_id, int timeout_signal, int timer_signal)
-   : clock_id_(clock_id), state_([&]() -> decltype(state_) {
+   : clock_id_(clock_id), creator_thread_id_(syscall(SYS_gettid)),
+     state_([&]() -> decltype(state_) {
 	     STACK_UNWINDING_MARK;
 	     assert(time_limit >= decltype(time_limit)::zero());
 	     if (time_limit == std::chrono::nanoseconds::zero()) {
@@ -156,6 +158,24 @@ std::chrono::nanoseconds Spawner::Timer::deactivate_and_get_runtime() noexcept {
 		             "You can call this function only once");
 		      return to_nanoseconds(state.time_limit -
 		                            delete_timer_and_get_remaning_time());
+	      }},
+	   state_);
+}
+
+bool Spawner::Timer::timeout_signal_was_sent() const noexcept {
+	// In case when other thread calls it, we may not detect this in the below
+	// assert every time due to the memory ordering phenomenon, but it should be
+	// sufficient. Atomic is of no help here, as the other thread might see see
+	// value of the atomic that was there before creation of the atomic
+	// itself...
+	assert(creator_thread_id_ == syscall(SYS_gettid) and
+	       "This can only be used by the same thread that constructed "
+	       "this object");
+	return std::visit(
+	   overloaded {
+	      [&](const WithoutTimeout&) { return false; },
+	      [&](const WithTimeout& state) -> bool {
+		      return state.signal_handler_context.timeout_signal_was_sent;
 	      }},
 	   state_);
 }

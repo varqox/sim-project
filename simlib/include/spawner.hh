@@ -12,6 +12,7 @@
 #include <optional>
 #include <pthread.h>
 #include <sys/resource.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -194,8 +195,8 @@ protected:
 		};
 
 		const clockid_t clock_id_;
+		const pid_t creator_thread_id_;
 		std::variant<WithTimeout, WithoutTimeout> state_;
-		const std::thread::id creator_thread_id_ = std::this_thread::get_id();
 
 		timespec delete_timer_and_get_remaning_time() noexcept;
 
@@ -215,23 +216,7 @@ protected:
 
 		std::chrono::nanoseconds deactivate_and_get_runtime() noexcept;
 
-		bool timeout_signal_was_sent() const noexcept {
-			// In case when other thread calls it, we may not detect this in the
-			// below assert every time due to the memory ordering phenomenon,
-			// but it should be sufficient. Atomic is of no help here, as the
-			// other thread might see see value of the atomic that was there
-			// before creation of the atomic itself...
-			assert(creator_thread_id_ == std::this_thread::get_id() and
-			       "This can only be used by the same thread that constructed "
-			       "this object");
-			return std::visit(
-			   overloaded {[&](const WithoutTimeout&) { return false; },
-			               [&](const WithTimeout& state) -> bool {
-				               return state.signal_handler_context
-				                  .timeout_signal_was_sent;
-			               }},
-			   state_);
-		}
+		bool timeout_signal_was_sent() const noexcept;
 
 		~Timer() { (void)delete_timer_and_get_remaning_time(); }
 	};
