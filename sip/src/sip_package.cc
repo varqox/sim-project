@@ -226,7 +226,8 @@ void SipPackage::generate_test_input_files() {
 			                         intentional_unsafe_cstring_view(
 			                            concat(in_dir, test.name, ".in")));
 		} else {
-			generate_test_input_file(test, intentional_unsafe_cstring_view(concat(it->second.in.value())));
+			generate_test_input_file(test, intentional_unsafe_cstring_view(
+			                                  concat(it->second.in.value())));
 		}
 	});
 

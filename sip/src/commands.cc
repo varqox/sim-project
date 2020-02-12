@@ -256,7 +256,8 @@ void label(ArgvParser args) {
 
 	SipPackage sp;
 	if (args.size() > 0) {
-		sp.replace_variable_in_simfile("label", args.extract_next().operator StringView());
+		sp.replace_variable_in_simfile(
+		   "label", args.extract_next().operator StringView());
 	}
 
 	try {
@@ -330,8 +331,10 @@ void name(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
-	if (args.size() > 0)
-		sp.replace_variable_in_simfile("name", args.extract_next().operator StringView());
+	if (args.size() > 0) {
+		sp.replace_variable_in_simfile(
+		   "name", args.extract_next().operator StringView());
+	}
 
 	try {
 		sp.simfile.load_name();
