@@ -111,7 +111,7 @@ Spawner::Timer::Timer(pid_t watched_pid, std::chrono::nanoseconds time_limit,
 
 		int errnum = errno;
 		SignalHandlerContext& context =
-		   *(SignalHandlerContext*)si->si_value.sival_ptr;
+		   *static_cast<SignalHandlerContext*>(si->si_value.sival_ptr);
 		kill(context.watched_pid, context.timeout_signal); // signal safe
 		context.timeout_signal_was_sent = true;
 		errno = errnum;
