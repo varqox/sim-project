@@ -145,7 +145,7 @@ constexpr InplaceBuff<N> json_stringify(Args&&... args) {
 			else if (iscntrl(c))
 				res.append("\\u00", dec2hex(c >> 4), dec2hex(c & 15));
 			else
-				res.template append<char>(c);
+				res.append(static_cast<char>(c));
 		}
 	};
 
@@ -162,41 +162,44 @@ template <class T,
              std::is_integral_v<std::remove_cv_t<std::remove_reference_t<T>>>,
              int> = 0>
 constexpr std::optional<T> str2num(StringView str) noexcept {
-	if (str.empty())
-		return std::nullopt;
+	if constexpr (std::is_same_v<T, bool>) {
+		auto opt = str2num<uint8_t>(str);
+		if (opt and *opt <= 1)
+			return *opt;
 
-	bool minus = false;
-	if (not std::is_unsigned_v<T> and str[0] == '-') {
-		minus = true;
-		str.remove_prefix(1);
+		return std::nullopt;
+	} else {
 		if (str.empty())
 			return std::nullopt;
+
+		bool minus = false;
+		if (not std::is_unsigned_v<T> and str[0] == '-') {
+			minus = true;
+			str.remove_prefix(1);
+			if (str.empty())
+				return std::nullopt;
+		}
+
+		if (not is_digit(str[0]))
+			return std::nullopt;
+
+		std::optional<T> res =
+		   (minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
+		str.remove_prefix(1);
+
+		for (int c : str) {
+			if (not is_digit(c))
+				return std::nullopt;
+
+			if (__builtin_mul_overflow(*res, 10, &*res))
+				return std::nullopt;
+
+			if (__builtin_add_overflow(*res, (minus ? '0' - c : c - '0'), &*res))
+				return std::nullopt;
+		}
+
+		return res;
 	}
-
-	if (not is_digit(str[0]))
-		return std::nullopt;
-
-	if constexpr (std::is_same_v<T, bool>) {
-		if (str[0] > '1')
-			return std::nullopt;
-	}
-
-	std::optional<T> res =
-	   (minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
-	str.remove_prefix(1);
-
-	for (int c : str) {
-		if (not is_digit(c))
-			return std::nullopt;
-
-		if (__builtin_mul_overflow(*res, 10, &*res))
-			return std::nullopt;
-
-		if (__builtin_add_overflow(*res, (minus ? '0' - c : c - '0'), &*res))
-			return std::nullopt;
-	}
-
-	return res;
 }
 
 template <class...>
