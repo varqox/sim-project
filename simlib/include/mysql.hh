@@ -81,7 +81,7 @@ public:
 	}
 
 	std::optional<T> opt() const {
-		return has_no_value_ ? std::optional<T>() : value_;
+		return (has_no_value_ ? std::nullopt : std::optional<T>(value_));
 	}
 
 	constexpr explicit operator bool() const noexcept {
@@ -844,10 +844,11 @@ private:
 
 public:
 	Connection() {
-		static std::mutex mysql_protector;
-		mysql_protector.lock();
-		conn_ = mysql_init(nullptr);
-		mysql_protector.unlock();
+		static std::mutex construction_serializer;
+		{
+			std::lock_guard guard(construction_serializer);
+			conn_ = mysql_init(nullptr);
+		}
 		if (not conn_)
 			THROW("mysql_init() failed - not enough memory is available");
 	}
