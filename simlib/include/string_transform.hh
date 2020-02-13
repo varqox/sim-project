@@ -194,8 +194,10 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 			if (__builtin_mul_overflow(*res, 10, &*res))
 				return std::nullopt;
 
-			if (__builtin_add_overflow(*res, (minus ? '0' - c : c - '0'), &*res))
+			if (__builtin_add_overflow(*res, (minus ? '0' - c : c - '0'),
+			                           &*res)) {
 				return std::nullopt;
+			}
 		}
 
 		return res;
