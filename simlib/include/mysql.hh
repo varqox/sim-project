@@ -2,6 +2,7 @@
 
 #include "debug.hh"
 #include "enum_val.hh"
+#include "inplace_buff.hh"
 
 #include <atomic>
 #include <cstddef>
@@ -222,6 +223,7 @@ private:
 	// Needs to be allocated dynamically to keep res binds valid after move
 	// construct / assignment
 	std::unique_ptr<MYSQL_BIND[]> res_binds_;
+	std::unique_ptr<InplaceBuffBase*[]> inplace_buffs_;
 
 	InplaceArray<std::unique_ptr<char[]>, 8> buffs_;
 
@@ -240,7 +242,8 @@ private:
 	     binds_size_(mysql_stmt_param_count(stmt)),
 	     binds_(std::make_unique<MYSQL_BIND[]>(binds_size_)),
 	     res_binds_size_(mysql_stmt_field_count(stmt)),
-	     res_binds_(std::make_unique<MYSQL_BIND[]>(res_binds_size_)) {
+	     res_binds_(std::make_unique<MYSQL_BIND[]>(res_binds_size_)),
+	     inplace_buffs_(std::make_unique<InplaceBuffBase*[]>(res_binds_size_)) {
 
 		for (unsigned i = 0; i < binds_size_; ++i)
 			clear_bind(i);
@@ -264,7 +267,8 @@ public:
 	     binds_size_(std::exchange(s.binds_size_, 0)),
 	     binds_(std::move(s.binds_)),
 	     res_binds_size_(std::exchange(s.res_binds_size_, 0)),
-	     res_binds_(std::move(s.res_binds_)) {}
+	     res_binds_(std::move(s.res_binds_)),
+	     inplace_buffs_(std::move(s.inplace_buffs_)) {}
 
 	Statement& operator=(Statement&& s) noexcept {
 		if (stmt_)
@@ -279,6 +283,7 @@ public:
 		binds_ = std::move(s.binds_);
 		res_binds_size_ = std::exchange(s.res_binds_size_, 0);
 		res_binds_ = std::move(s.res_binds_);
+		inplace_buffs_ = std::move(s.inplace_buffs_);
 
 		return *this;
 	}
@@ -606,18 +611,15 @@ public:
 		res_binds_[idx].is_unsigned = true;
 	}
 
-	template <size_t BUFF_SIZE>
-	void res_bind(unsigned idx, InplaceBuff<BUFF_SIZE>& buff)
+	void res_bind(unsigned idx, InplaceBuffBase& buff)
 	   NO_DEBUG_MYSQL(noexcept) {
 		DEBUG_MYSQL(throw_assert(idx < res_binds_size_);)
 		clear_res_bind(idx);
-		static_assert(
-		   std::is_base_of<InplaceBuffBase, InplaceBuff<BUFF_SIZE>>::value,
-		   "Needed by next()");
 		res_binds_[idx].buffer_type = MYSQL_TYPE_BLOB;
 		res_binds_[idx].buffer = buff.data();
 		res_binds_[idx].buffer_length = buff.max_size();
 		res_binds_[idx].length = &buff.size;
+		inplace_buffs_[idx] = &buff;
 	}
 
 	void res_bind(unsigned idx, std::nullptr_t) NO_DEBUG_MYSQL(noexcept) {
@@ -686,26 +688,19 @@ public:
 			THROW(mysql_stmt_error(stmt_));
 
 		// Truncation occurred
-		for (unsigned i = 0; i < res_binds_size_; ++i) {
-			if (not*res_binds_[i].error)
+		for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
+			if (not*res_binds_[idx].error)
 				continue;
 
-			if (res_binds_[i].buffer_type != MYSQL_TYPE_BLOB)
-				THROW("Truncated data at column ", i);
+			if (res_binds_[idx].buffer_type != MYSQL_TYPE_BLOB)
+				THROW("Truncated data at column ", idx);
 
-			InplaceBuffBase buff {0, 0, nullptr};
-			auto size_offset = reinterpret_cast<std::byte*>(&buff.size) -
-			                   reinterpret_cast<std::byte*>(&buff);
-			void* orig_buff_addr =
-			   reinterpret_cast<std::byte*>(res_binds_[i].length) - size_offset;
-
-			memcpy(&buff, orig_buff_addr, sizeof(buff));
+			auto& buff = *inplace_buffs_[idx];
 			buff.lossy_resize(buff.size);
-			res_binds_[i].buffer = buff.data();
-			res_binds_[i].buffer_length = buff.max_size();
-			memcpy(orig_buff_addr, &buff, sizeof(buff));
+			res_binds_[idx].buffer = buff.data();
+			res_binds_[idx].buffer_length = buff.max_size();
 
-			if (mysql_stmt_fetch_column(stmt_, &res_binds_[i], i, 0))
+			if (mysql_stmt_fetch_column(stmt_, &res_binds_[idx], idx, 0))
 				THROW(mysql_stmt_error(stmt_));
 		}
 
