@@ -10,6 +10,7 @@ public:
 protected:
 	size_t max_size_;
 	char* p_;
+	char* p_value_when_unallocated_;
 
 public:
 	/**
@@ -106,20 +107,19 @@ public:
 	// Do not allow to create CStringView of a temporary object
 	constexpr CStringView to_cstr() && = delete;
 
-	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p) noexcept
-	   : size(s), max_size_(max_s), p_(p) {}
-
 protected:
+	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p,
+	                          char* p_value_when_unallocated) noexcept
+	   : size(s), max_size_(max_s), p_(p),
+	     p_value_when_unallocated_(p_value_when_unallocated) {}
+
 	constexpr InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
 	constexpr InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
 	InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;
 	InplaceBuffBase& operator=(InplaceBuffBase&&) noexcept = default;
 
 	bool is_allocated() const noexcept {
-		// This is not pretty but works...
-		return (reinterpret_cast<const std::byte*>(p_) -
-		           reinterpret_cast<const std::byte*>(&p_) !=
-		        sizeof p_);
+		return (p_ != p_value_when_unallocated_);
 	}
 
 	void deallocate() noexcept {
@@ -128,7 +128,7 @@ protected:
 	}
 
 public:
-	~InplaceBuffBase() { deallocate(); }
+	virtual ~InplaceBuffBase() { deallocate(); }
 
 	template <class... Args,
 	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
@@ -150,7 +150,7 @@ public:
 };
 
 template <size_t N>
-class InplaceBuff : protected InplaceBuffBase {
+class InplaceBuff : public InplaceBuffBase {
 private:
 	std::array<char, N> a_;
 
@@ -159,25 +159,18 @@ private:
 
 	static_assert(N > 0, "Needed for accessing the array's 0-th element");
 
-	using InplaceBuffBase::is_allocated;
-
 public:
 	static constexpr size_t max_static_size = N;
 
-	constexpr InplaceBuff() noexcept : InplaceBuffBase(0, N, nullptr) {
-		p_ = &a_[0];
+	constexpr InplaceBuff() noexcept : InplaceBuffBase(0, N, nullptr, nullptr) {
+		p_ = a_.data();
+		p_value_when_unallocated_ = a_.data();
 	}
 
 	constexpr explicit InplaceBuff(size_t n)
-	   : InplaceBuffBase(n, std::max(N, n), nullptr) {
-		p_ = (n <= N ? &a_[0] : new char[n]);
-	}
-
-	template <class T, std::enable_if_t<not std::is_integral_v<std::remove_cv_t<
-	                                       std::remove_reference_t<T>>>,
-	                                    int> = 0>
-	constexpr explicit InplaceBuff(T&& str) : InplaceBuff(string_length(str)) {
-		std::copy(::data(str), ::data(str) + size, p_);
+	   : InplaceBuffBase(n, std::max(N, n), nullptr, nullptr) {
+		p_ = (n <= N ? a_.data() : new char[n]);
+		p_value_when_unallocated_ = a_.data();
 	}
 
 	constexpr InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
@@ -185,18 +178,27 @@ public:
 	}
 
 	InplaceBuff(InplaceBuff&& ibuff) noexcept
-	   : InplaceBuffBase(ibuff.size, std::max(N, ibuff.max_size_), ibuff.p_) {
+	   : InplaceBuffBase(ibuff.size, std::max(N, ibuff.max_size_), ibuff.p_,
+	                     nullptr) {
+		p_value_when_unallocated_ = a_.data();
 		if (ibuff.is_allocated()) {
 			p_ = ibuff.p_;
 			ibuff.size = 0;
 			ibuff.max_size_ = N;
-			ibuff.p_ = &ibuff.a_[0];
+			ibuff.p_ = ibuff.a_.data();
 
 		} else {
-			p_ = &a_[0];
+			p_ = a_.data();
 			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
 			ibuff.size = 0;
 		}
+	}
+
+	template <class T, std::enable_if_t<not std::is_integral_v<std::remove_cv_t<
+	                                       std::remove_reference_t<T>>>,
+	                                    int> = 0>
+	constexpr explicit InplaceBuff(T&& str) : InplaceBuff(string_length(str)) {
+		std::copy(::data(str), ::data(str) + size, p_);
 	}
 
 	// Used to unify constructors, as constructor taking one argument is
@@ -225,9 +227,10 @@ public:
 
 	template <size_t M, std::enable_if_t<M != N, int> = 0>
 	InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
-	   : InplaceBuffBase(ibuff.size, N, ibuff.p_) {
+	   : InplaceBuffBase(ibuff.size, N, ibuff.p_, nullptr) {
+		p_value_when_unallocated_ = a_.data();
 		if (ibuff.size <= N) {
-			p_ = &a_[0];
+			p_ = a_.data();
 			// max_size_ = N;
 			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
 			// Deallocate ibuff memory
@@ -247,7 +250,19 @@ public:
 		// Take care of the ibuff's state
 		ibuff.size = 0;
 		ibuff.max_size_ = M;
-		ibuff.p_ = &ibuff.a_[0];
+		ibuff.p_ = ibuff.a_.data();
+	}
+
+	~InplaceBuff() { assert(p_value_when_unallocated_ == a_.data()); }
+
+	constexpr InplaceBuff& operator=(const InplaceBuff& ibuff) {
+		lossy_resize(ibuff.size);
+		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
+		return *this;
+	}
+
+	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) noexcept {
+		return assign_move_impl(std::move(ibuff));
 	}
 
 	template <class T>
@@ -258,17 +273,16 @@ public:
 		return *this;
 	}
 
-	constexpr InplaceBuff& operator=(const InplaceBuff& ibuff) {
+	template <size_t M, std::enable_if_t<M != N, int> = 0>
+	constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
 		lossy_resize(ibuff.size);
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 		return *this;
 	}
 
 	template <size_t M, std::enable_if_t<M != N, int> = 0>
-	constexpr InplaceBuff& operator=(const InplaceBuff<M>& ibuff) {
-		lossy_resize(ibuff.size);
-		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
-		return *this;
+	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
+		return assign_move_impl(std::move(ibuff));
 	}
 
 private:
@@ -290,41 +304,12 @@ private:
 		}
 
 		// Take care of the ibuff's state
-		ibuff.p_ = &ibuff.a_[0];
+		ibuff.p_ = ibuff.a_.data();
 		ibuff.size = 0;
 		ibuff.max_size_ = M;
 
 		return *this;
 	}
-
-public:
-	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) noexcept {
-		return assign_move_impl(std::move(ibuff));
-	}
-
-	template <size_t M, std::enable_if_t<M != N, int> = 0>
-	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
-		return assign_move_impl(std::move(ibuff));
-	}
-
-	using InplaceBuffBase::append;
-	using InplaceBuffBase::back;
-	using InplaceBuffBase::begin;
-	using InplaceBuffBase::cbegin;
-	using InplaceBuffBase::cend;
-	using InplaceBuffBase::clear;
-	using InplaceBuffBase::data;
-	using InplaceBuffBase::end;
-	using InplaceBuffBase::front;
-	using InplaceBuffBase::lossy_resize;
-	using InplaceBuffBase::max_size;
-	using InplaceBuffBase::operator StringBase<char>;
-	using InplaceBuffBase::operator StringView;
-	using InplaceBuffBase::operator[];
-	using InplaceBuffBase::resize;
-	using InplaceBuffBase::size;
-	using InplaceBuffBase::to_cstr;
-	using InplaceBuffBase::to_string;
 };
 
 template <size_t N>
