@@ -312,7 +312,7 @@ TEST(EventQueue, file_handler_removing_itself) {
 TEST(EventQueue, time_handler_removing_file_handler_simple) {
 	FileDescriptor fd("/dev/null", O_RDONLY);
 	EventQueue eq;
-	int iters;
+	int iters = 0;
 	auto hid = eq.add_file_handler(fd, FileEvent::READABLE, [&] { ++iters; });
 
 	eq.add_time_handler(system_clock::now() + 1ms,
