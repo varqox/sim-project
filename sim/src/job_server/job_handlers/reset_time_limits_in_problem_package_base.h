@@ -13,9 +13,6 @@ protected:
 
 	// Sets new_simfile to the new simfile's dump
 	void reset_package_time_limits(FilePath package_path);
-
-public:
-	~ResetTimeLimitsInProblemPackageBase() = default;
 };
 
 } // namespace job_handlers

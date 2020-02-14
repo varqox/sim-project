@@ -140,7 +140,6 @@ class ConnectionSet : private std::set<Connection, ConnectionCompare> {
 
 public:
 	ConnectionSet() = default;
-	~ConnectionSet() = default;
 
 	ConnectionSet(const ConnectionSet&) = delete;
 	ConnectionSet(ConnectionSet&&) = delete;
