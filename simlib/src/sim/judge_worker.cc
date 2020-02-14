@@ -68,7 +68,7 @@ public:
 	}
 
 	std::string load_as_file(FilePath path, FilePath hint_name) override {
-		auto dest = concat_tostr(tmp_dir_.path(), "pkg_loader_", hint_name);
+		auto dest = concat_tostr(tmp_dir_.path(), "from_zip_pgk:", hint_name);
 		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest, S_0600);
 		return dest;
 	}
