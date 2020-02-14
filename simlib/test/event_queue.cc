@@ -282,7 +282,7 @@ TEST(EventQueue, file_simultaneous_read_and_close_event) {
 	eq.run();
 }
 
-TEST(EventQueue, time_handler_removing_itself) {
+TEST(EventQueueDeathTest, time_handler_removing_itself) {
 	auto start = system_clock::now();
 	EventQueue eq;
 	int iters = 0;

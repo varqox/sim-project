@@ -223,7 +223,7 @@ TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
 	test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level();
 }
 
-TEST(debug, WONT_THROW_MACRO_fail) {
+TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
 	ASSERT_DEATH(
 	   {
 		   std::vector<int> abc;
