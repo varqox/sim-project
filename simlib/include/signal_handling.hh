@@ -37,7 +37,7 @@ auto handle_signals_while_running(Main&& main_func,
                                   Signals... signals);
 
 class HandleSignalsWhileRunning {
-	inline static FileDescriptor signal_eventfd;
+	inline static FileDescriptor signal_eventfd {};
 
 	static uint64_t pack_signum(int signum) noexcept {
 		static_assert(sizeof(int) == 4,
@@ -76,16 +76,19 @@ public:
 		   (std::is_same_v<Signals, int> and ...),
 		   "signals parameters have to be from of SIGINT, SIGTERM, etc.");
 
-		assert(not signal_eventfd.is_open() and
+		assert(not HandleSignalsWhileRunning::signal_eventfd.is_open() and
 		       "This function is already running, using this function "
 		       "simultaneously is impossible");
 
 		// Prepare signal eventfd
-		signal_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-		if (not signal_eventfd.is_open())
+		HandleSignalsWhileRunning::signal_eventfd =
+		   eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+		if (not HandleSignalsWhileRunning::signal_eventfd.is_open())
 			THROW("eventfd()", errmsg());
 
-		Defer signal_eventfd_closer = [] { (void)signal_eventfd.close(); };
+		Defer signal_eventfd_closer = [] {
+			(void)HandleSignalsWhileRunning::signal_eventfd.close();
+		};
 
 		// Prepare eventfd to signal that main_func has ended (needed because
 		// main could end because of signal handler being run (e.g. because of
@@ -102,7 +105,7 @@ public:
 		// Signal control
 		struct sigaction sa;
 		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = signal_handler;
+		sa.sa_handler = HandleSignalsWhileRunning::signal_handler;
 		// Intercept signals, to allow a dedicated thread to consume them
 		if ((sigaction(signals, &sa, nullptr) or ...))
 			THROW("sigaction()", errmsg());
@@ -113,7 +116,7 @@ public:
 			constexpr int signal_efd_idx = 0;
 			constexpr int main_func_ended_efd_idx = 1;
 			std::array<pollfd, 2> pfds {{
-			   {signal_eventfd, POLLIN, 0},
+			   {HandleSignalsWhileRunning::signal_eventfd, POLLIN, 0},
 			   {main_func_ended_eventfd, POLLIN, 0},
 			}};
 			for (int rc;;) {
@@ -131,9 +134,11 @@ public:
 
 			if (pfds[signal_efd_idx].revents & POLLIN) {
 				uint64_t packed_signum;
-				assert(read(signal_eventfd, &packed_signum,
+				assert(read(HandleSignalsWhileRunning::signal_eventfd,
+				            &packed_signum,
 				            sizeof(packed_signum)) == sizeof(packed_signum));
-				int signum = unpack_signum(packed_signum);
+				int signum =
+				   HandleSignalsWhileRunning::unpack_signum(packed_signum);
 
 				try {
 					cleanup_before_getting_killed(signum);

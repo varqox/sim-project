@@ -381,8 +381,10 @@ void Simfile::load_tests() {
 		int total_score = 100;
 
 		tests_groups.for_each([&](auto&& git) {
-			if (git.first != "0")
+			if (git.first != "0") {
+				assert(groups_no > 0);
 				total_score -= (git.second.score = total_score / groups_no--);
+			}
 		});
 
 	} else { // Check and implement defined scoring
