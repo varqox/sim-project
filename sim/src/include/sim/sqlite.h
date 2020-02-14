@@ -1,7 +1,7 @@
 #pragma once
 
-#include <simlib/debug.h>
-#include <simlib/string.h>
+#include <simlib/debug.hh>
+#include <simlib/string.hh>
 #include <sqlite3.h>
 
 #define THROW_SQLITE_ERROR(db, ...)                                            \

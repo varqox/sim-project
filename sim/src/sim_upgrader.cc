@@ -1,9 +1,10 @@
+#include <climits>
 #include <sim/contest_round.hh>
 #include <sim/inf_datetime.hh>
 #include <sim/mysql.h>
-#include <simlib/defer.h>
-#include <simlib/process.h>
-#include <simlib/spawner.h>
+#include <simlib/defer.hh>
+#include <simlib/process.hh>
+#include <simlib/spawner.hh>
 
 using std::vector;
 
@@ -25,7 +26,7 @@ static int perform_upgrade() {
 	   .prepare(
 	      "UPDATE contest_rounds SET ranking_exposure=IF(ranking_exposure=?, "
 	      "full_results, ranking_exposure)")
-	   .bindAndExecute(sim::InfDatetime().set_neg_inf().to_str());
+	   .bind_and_execute(sim::InfDatetime().set_neg_inf().to_str());
 
 	stdlog("\033[1;32mSim upgrading is complete\033[m");
 	return 0;
@@ -98,7 +99,7 @@ static int true_main(int argc, char** argv) {
 	}
 
 	sim_build.append(argv[1]);
-	if (not hasSuffix(sim_build, "/"))
+	if (not has_suffix(sim_build, "/"))
 		sim_build.append('/');
 
 	try {

@@ -2,7 +2,6 @@
 #include "../main.h"
 
 #include <sim/constants.h>
-#include <simlib/filesystem.h>
 
 namespace job_handlers {
 
@@ -15,7 +14,7 @@ void DeleteInternalFile::run() {
 	auto transaction = mysql.start_transaction();
 	// The internal_file may already be deleted
 	mysql.prepare("DELETE FROM internal_files WHERE id=?")
-	   .bindAndExecute(internal_file_id_);
+	   .bind_and_execute(internal_file_id_);
 
 	job_done();
 

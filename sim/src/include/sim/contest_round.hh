@@ -48,9 +48,9 @@ void iterate(MySQL::Connection& mysql, IterateIdKind id_kind, T&& id,
 	   id_part_sql, (show_all ? "" : " AND begins<=?"));
 
 	if (show_all)
-		stmt.bindAndExecute(id);
+		stmt.bind_and_execute(id);
 	else
-		stmt.bindAndExecute(id, curr_date);
+		stmt.bind_and_execute(id, curr_date);
 
 	ContestRound cr;
 	stmt.res_bind_all(cr.id, cr.contest_id, cr.name, cr.item, cr.begins,

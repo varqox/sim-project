@@ -14,10 +14,13 @@
 
 #include <iostream>
 #include <sim/mysql.h>
-#include <simlib/config_file.h>
-#include <simlib/defer.h>
-#include <simlib/process.h>
-#include <simlib/spawner.h>
+#include <simlib/config_file.hh>
+#include <simlib/defer.hh>
+#include <simlib/file_info.hh>
+#include <simlib/path.hh>
+#include <simlib/process.hh>
+#include <simlib/spawner.hh>
+#include <simlib/working_directory.hh>
 
 using std::vector;
 
@@ -29,7 +32,7 @@ static void load_tables_from_other_sim_backup() {
 	cf.load_config_from_file(concat(main_sim_build, ".db.config"));
 
 	FileDescriptor fd(concat(other_sim_build, "dump.sql"), O_RDONLY);
-	if (not fd.opened())
+	if (not fd.is_open())
 		THROW("Failed to open ", other_sim_build, "dump.sql");
 
 	Spawner::Options opts = {fd, STDOUT_FILENO, STDERR_FILENO};
@@ -125,15 +128,15 @@ static int true_main(int argc, char** argv) {
 	}
 
 	main_sim_build.append(argv[1]);
-	if (not hasSuffix(main_sim_build, "/"))
+	if (not has_suffix(main_sim_build, "/"))
 		main_sim_build.append('/');
 
 	other_sim_build.append(argv[2]);
-	if (not hasSuffix(other_sim_build, "/"))
+	if (not has_suffix(other_sim_build, "/"))
 		other_sim_build.append('/');
 
-	if (abspath(main_sim_build, getCWD().to_string()) ==
-	    abspath(other_sim_build, getCWD().to_string())) {
+	if (path_absolute(main_sim_build, get_cwd().to_string()) ==
+	    path_absolute(other_sim_build, get_cwd().to_string())) {
 		errlog.label(false);
 		errlog("sim_build and other_sim_build_backup cannot refer to the same "
 		       "directory");

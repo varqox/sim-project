@@ -34,7 +34,7 @@ class ContestFilesMerger : public Merger<ContestFile> {
 		   conn.prepare("SELECT id, file_id, contest_id, name, description, "
 		                "file_size, modified, creator FROM ",
 		                record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(cf.id, cf.file_id, cf.contest_id, cf.name,
 		                  cf.description, cf.file_size, cf.modified, m_creator);
 		while (stmt.next()) {
@@ -80,9 +80,9 @@ public:
 		for (const NewRecord& new_record : new_table_) {
 			Defer progressor = [&] { progress_bar.iter(); };
 			const ContestFile& x = new_record.data;
-			stmt.bindAndExecute(x.id, x.file_id, x.contest_id, x.name,
-			                    x.description, x.file_size, x.modified,
-			                    x.creator);
+			stmt.bind_and_execute(x.id, x.file_id, x.contest_id, x.name,
+			                      x.description, x.file_size, x.modified,
+			                      x.creator);
 		}
 
 		transaction.commit();

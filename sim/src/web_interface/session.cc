@@ -1,6 +1,7 @@
 #include "sim.h"
 
 #include <sim/random.hh>
+#include <simlib/debug.hh>
 
 using sim::User;
 using std::string;
@@ -16,31 +17,26 @@ bool Sim::session_open() {
 	if (session_id.size == 0)
 		return false;
 
-	try {
-		auto stmt = mysql.prepare("SELECT csrf_token, user_id, data, type,"
-		                          " username, ip, user_agent "
-		                          "FROM session s, users u "
-		                          "WHERE s.id=? AND expires>=?"
-		                          " AND u.id=s.user_id");
-		stmt.bindAndExecute(session_id, mysql_date());
+	auto stmt = mysql.prepare("SELECT csrf_token, user_id, data, type,"
+	                          " username, ip, user_agent "
+	                          "FROM session s, users u "
+	                          "WHERE s.id=? AND expires>=?"
+	                          " AND u.id=s.user_id");
+	stmt.bind_and_execute(session_id, mysql_date());
 
-		InplaceBuff<SESSION_IP_LEN + 1> session_ip;
-		InplaceBuff<4096> user_agent;
-		decltype(User::type) s_u_type;
-		stmt.res_bind_all(session_csrf_token, session_user_id, session_data,
-		                  s_u_type, session_username, session_ip, user_agent);
+	InplaceBuff<SESSION_IP_LEN + 1> session_ip;
+	InplaceBuff<4096> user_agent;
+	decltype(User::type) s_u_type;
+	stmt.res_bind_all(session_csrf_token, session_user_id, session_data,
+	                  s_u_type, session_username, session_ip, user_agent);
 
-		if (stmt.next()) {
-			session_user_type = s_u_type;
-			// If no session injection
-			if (client_ip == session_ip &&
-			    request.headers.isEqualTo("User-Agent", user_agent)) {
-				return (session_is_open = true);
-			}
+	if (stmt.next()) {
+		session_user_type = s_u_type;
+		// If no session injection
+		if (client_ip == session_ip &&
+		    request.headers.isEqualTo("User-Agent", user_agent)) {
+			return (session_is_open = true);
 		}
-
-	} catch (...) {
-		ERRLOG_AND_FORWARD();
 	}
 
 	resp.setCookie("session", "", 0); // Delete cookie
@@ -54,7 +50,7 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 
 	// Remove obsolete sessions
 	mysql.prepare("DELETE FROM session WHERE expires<?")
-	   .bindAndExecute(mysql_date());
+	   .bind_and_execute(mysql_date());
 
 	// Create a record in database
 	auto stmt = mysql.prepare("INSERT IGNORE session(id, csrf_token, user_id,"
@@ -70,8 +66,8 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 
 	do {
 		session_id = generate_random_token(SESSION_ID_LEN);
-		stmt.bindAndExecute(session_id, session_csrf_token, user_id, client_ip,
-		                    user_agent, exp_datetime);
+		stmt.bind_and_execute(session_id, session_csrf_token, user_id,
+		                      client_ip, user_agent, exp_datetime);
 
 	} while (stmt.affected_rows() == 0);
 
@@ -79,7 +75,7 @@ void Sim::session_create_and_open(StringView user_id, bool temporary_session) {
 		exp_time = -1; // -1 causes setCookie() to not set Expire= field
 
 	// There is no better method than looking on the referer
-	bool is_https = hasPrefix(request.headers["referer"], "https://");
+	bool is_https = has_prefix(request.headers["referer"], "https://");
 	resp.setCookie("csrf_token", session_csrf_token.to_string(), exp_time, "/",
 	               "", false, is_https);
 	resp.setCookie("session", session_id.to_string(), exp_time, "/", "", true,
@@ -95,7 +91,7 @@ void Sim::session_destroy() {
 
 	try {
 		mysql.prepare("DELETE FROM session WHERE id=?")
-		   .bindAndExecute(session_id);
+		   .bind_and_execute(session_id);
 	} catch (const std::exception& e) {
 		ERRLOG_CATCH(e);
 	}
@@ -112,12 +108,7 @@ void Sim::session_close() {
 		return;
 
 	session_is_open = false;
-	try {
-		// TODO: add a marker of a change used to omit unnecessary updates
-		auto stmt = mysql.prepare("UPDATE session SET data=? WHERE id=?");
-		stmt.bindAndExecute(session_data, session_id);
-
-	} catch (...) {
-		ERRLOG_AND_FORWARD();
-	}
+	// TODO: add a marker of a change used to omit unnecessary updates
+	auto stmt = mysql.prepare("UPDATE session SET data=? WHERE id=?");
+	stmt.bind_and_execute(session_data, session_id);
 }

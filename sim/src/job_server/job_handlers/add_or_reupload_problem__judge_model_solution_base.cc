@@ -1,6 +1,6 @@
 #include "add_or_reupload_problem__judge_model_solution_base.h"
 
-#include <simlib/sim/problem_package.h>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_handlers {
 

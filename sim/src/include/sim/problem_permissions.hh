@@ -3,7 +3,7 @@
 #include "problem.hh"
 #include "user.hh"
 
-#include <simlib/meta.h>
+#include <simlib/meta.hh>
 
 namespace sim::problem {
 
@@ -64,7 +64,7 @@ get_permissions(MySQL::Connection& mysql, T&& problem_id,
                 std::optional<decltype(User::id)> user_id,
                 std::optional<User::Type> user_type) {
 	auto stmt = mysql.prepare("SELECT owner, type FROM problems WHERE id=?");
-	stmt.bindAndExecute(problem_id);
+	stmt.bind_and_execute(problem_id);
 
 	MySQL::Optional<decltype(Problem::owner)::value_type> problem_owner;
 	decltype(Problem::type) problem_type;

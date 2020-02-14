@@ -41,7 +41,6 @@ install: $(filter-out install run, $(MAKECMDGOALS))
 	$(UPDATE) src/static src/sim-server src/job-server src/backup src/sim-merger $(abspath $(DESTDIR))
 	# Do not override the config if it already exists
 	$(UPDATE) -n src/sim.conf $(abspath $(DESTDIR))
-	# $(UPDATE) src/static src/sim-server src/sim-server2 src/sim.conf src/job-server src/backup $(abspath $(DESTDIR))
 
 	# Install PRoot
 ifeq ($(shell uname -m), x86_64)
@@ -175,11 +174,6 @@ $(eval $(call add_executable, src/backup, $(SIM_FLAGS), \
 	src/lib/simlib/simlib.a \
 ))
 
-# Technique used to force browsers to always keep up-to-date version of the files below
-src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
-src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
-src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
-
 $(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
 	src/lib/sim.a \
 	src/lib/simlib/simlib.a \
@@ -206,6 +200,11 @@ $(eval $(call add_executable, src/sim-server, $(SIM_FLAGS), \
 	src/web_interface/users.cc \
 	src/web_interface/users_api.cc \
 ))
+
+# Technique used to force browsers to always keep up-to-date version of the files below
+src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DSTYLES_CSS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/styles.css))"'
+src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DJQUERY_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/jquery.js))"'
+src/web_interface/template.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DSCRIPTS_JS_HASH="$(shell printf '%x' $$(stat -c '%Y' src/static/kit/scripts.js))"'
 
 $(eval $(call add_executable, test/exec, $(SIM_FLAGS), \
 	src/lib/sim.a \

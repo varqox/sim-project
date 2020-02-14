@@ -3,9 +3,9 @@
 
 #include <arpa/inet.h>
 #include <set>
-#include <simlib/config_file.h>
-#include <simlib/debug.h>
-#include <simlib/process.h>
+#include <simlib/config_file.hh>
+#include <simlib/debug.hh>
+#include <simlib/process.hh>
 #include <sys/epoll.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -338,7 +338,7 @@ bool Connection::constructHeaders(StringView& data) {
 
 		// Put it into correct place
 		if (lower_equal(name, "content-length")) {
-			if (!isDigit(value)) {
+			if (!is_digit(value)) {
 				// TODO: error 400
 				return true;
 			}

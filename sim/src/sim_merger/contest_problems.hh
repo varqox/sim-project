@@ -26,7 +26,7 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
 		                record_set.sql_table_prefix,
 		                "submissions s "
 		                "ON s.contest_problem_id=cp.id GROUP BY cp.id");
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(cp.id, cp.contest_round_id, cp.contest_id,
 		                  cp.problem_id, cp.name, cp.item,
 		                  cp.final_selecting_method, cp.score_revealing,
@@ -40,7 +40,8 @@ class ContestProblemsMerger : public Merger<sim::ContestProblem> {
 			cp.problem_id = problems_.new_id(cp.problem_id, record_set.kind);
 
 			auto time = (earliest_submit_time.has_value()
-			                ? strToTimePoint(earliest_submit_time->to_string())
+			                ? str_to_time_point(intentional_unsafe_cstring_view(
+			                     earliest_submit_time->to_string()))
 			                : curr_time);
 			record_set.add_record(cp, time);
 		}
@@ -67,9 +68,9 @@ public:
 		for (const NewRecord& new_record : new_table_) {
 			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::ContestProblem& x = new_record.data;
-			stmt.bindAndExecute(x.id, x.contest_round_id, x.contest_id,
-			                    x.problem_id, x.name, x.item,
-			                    x.final_selecting_method, x.score_revealing);
+			stmt.bind_and_execute(x.id, x.contest_round_id, x.contest_id,
+			                      x.problem_id, x.name, x.item,
+			                      x.final_selecting_method, x.score_revealing);
 		}
 
 		conn.update("ALTER TABLE ", sql_table_name(),

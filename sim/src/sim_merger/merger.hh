@@ -252,7 +252,7 @@ protected:
 	             std::move(other_ids)} {
 		STACK_UNWINDING_MARK;
 
-		static_assert(meta::is_sorted(tables));
+		static_assert(is_sorted(tables));
 		throw_assert(binary_search(tables, orig_sql_table_name));
 	}
 

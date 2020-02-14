@@ -1,6 +1,10 @@
-#include <simlib/debug.h>
-#include <simlib/logger.h>
-#include <simlib/process.h>
+#include <chrono>
+#include <cstring>
+#include <simlib/debug.hh>
+#include <simlib/logger.hh>
+#include <simlib/process.hh>
+#include <simlib/string_traits.hh>
+#include <thread>
 #include <unistd.h>
 
 using std::pair;
@@ -41,19 +45,19 @@ int main(int argc, char** argv) {
 	for (int old_argc = argc, i = argc = 1; i < old_argc; ++i) {
 		StringView arg(argv[i]);
 		// Not an option
-		if (!hasPrefix(arg, "-")) {
+		if (!has_prefix(arg, "-")) {
 			argv[argc++] = argv[i];
 			continue;
 		}
 
 		// Options
-		arg.removePrefix(1); // remove '-'
+		arg.remove_prefix(1); // remove '-'
 		if (arg == "-wait") {
 			// Wait
 			wait_timeout = std::nullopt;
 			kill_after_waiting = false;
 
-		} else if (hasPrefix(arg, "-wait=")) {
+		} else if (has_prefix(arg, "-wait=")) {
 			// Wait no longer than
 			wait_timeout = std::chrono::duration<double>(atof(arg.data() + 6));
 			kill_after_waiting = false;
@@ -62,7 +66,7 @@ int main(int argc, char** argv) {
 				parameters_error = true;
 			}
 
-		} else if (hasPrefix(arg, "-kill-after")) {
+		} else if (has_prefix(arg, "-kill-after")) {
 			// Kill after
 			wait_timeout = std::chrono::duration<double>(atof(arg.data() + 12));
 			kill_after_waiting = true;
@@ -92,7 +96,7 @@ int main(int argc, char** argv) {
 	for (int i = 1; i < argc; ++i)
 		exec_set.emplace_back(argv[i]);
 
-	auto victims = findProcessesByExec(exec_set);
+	auto victims = find_processes_by_executable_path(exec_set);
 	for (auto pid : victims)
 		stdlog("Killing ", pid);
 

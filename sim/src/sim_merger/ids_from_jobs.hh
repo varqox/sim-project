@@ -9,7 +9,7 @@
 #include <sim/contest_user.hh>
 #include <sim/datetime_field.hh>
 #include <sim/jobs.h>
-#include <simlib/time.h>
+#include <simlib/time.hh>
 
 // For each id, we keep the first date that it appeared with
 template <class IdType>
@@ -100,11 +100,11 @@ struct IdsFromJobs {
 		auto stmt = conn.prepare("SELECT id, creator, type, file_id, "
 		                         "tmp_file_id, added, aux_id, info FROM ",
 		                         job_table_name, " ORDER BY id");
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(id, creator, type, file_id, tmp_file_id, added_str,
 		                  aux_id, info);
 		while (stmt.next()) {
-			auto added = strToTimePoint(added_str.to_cstr());
+			auto added = str_to_time_point(added_str.to_cstr());
 
 			// Process non-type-specific ids
 			jobs.add_id(id, added);
@@ -176,6 +176,6 @@ struct IdsFromJobs {
 
 struct IdsFromMainAndOtherJobs {
 	IdsFromJobs main {
-	   intentionalUnsafeStringView(concat(main_sim_table_prefix, "jobs"))};
+	   intentional_unsafe_string_view(concat(main_sim_table_prefix, "jobs"))};
 	IdsFromJobs other {"jobs"};
 };

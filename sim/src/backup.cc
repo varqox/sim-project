@@ -1,10 +1,11 @@
 #include <sim/constants.h>
 #include <sim/mysql.h>
-#include <simlib/filesystem.h>
-#include <simlib/process.h>
-#include <simlib/sim/problem_package.h>
-#include <simlib/spawner.h>
-#include <simlib/time.h>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/spawner.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 
 using std::string;
 using std::vector;
@@ -26,7 +27,7 @@ int main2(int argc, char** argv) {
 		return 1;
 	}
 
-	chdirToExecDir();
+	chdir_to_executable_dirpath();
 
 #define MYSQL_CNF ".mysql.cnf"
 	FileRemover mysql_cnf_guard;
@@ -42,10 +43,10 @@ int main2(int argc, char** argv) {
 	}
 
 	mysql_cnf_guard.reset(MYSQL_CNF);
-	writeAll_throw(fd, intentionalUnsafeStringView(
-	                      concat("[client]\nuser=", conn.impl()->user,
-	                             "\npassword=", conn.impl()->passwd,
-	                             "\nuser=", conn.impl()->user, "\n")));
+	write_all_throw(fd, intentional_unsafe_string_view(
+	                       concat("[client]\nuser=", conn.impl()->user,
+	                              "\npassword=", conn.impl()->passwd,
+	                              "\nuser=", conn.impl()->user, "\n")));
 
 	auto run_command = [](vector<string> args) {
 		auto es = Spawner::run(args[0], args);
@@ -63,11 +64,12 @@ int main2(int argc, char** argv) {
 		using namespace std::chrono_literals;
 
 		auto transaction = conn.start_transaction();
-		auto stmt = conn.prepare(
-		   "SELECT tmp_file_id FROM jobs "
-		   "WHERE tmp_file_id IS NOT NULL AND status IN (" JSTATUS_DONE_STR
-		   "," JSTATUS_FAILED_STR "," JSTATUS_CANCELED_STR ")");
-		stmt.bindAndExecute();
+		auto stmt =
+		   conn.prepare("SELECT tmp_file_id FROM jobs "
+		                "WHERE tmp_file_id IS NOT NULL AND status IN (?,?,?)");
+		stmt.bind_and_execute(EnumVal(JobStatus::DONE),
+		                      EnumVal(JobStatus::FAILED),
+		                      EnumVal(JobStatus::CANCELED));
 		uint64_t tmp_file_id;
 		stmt.res_bind_all(tmp_file_id);
 
@@ -77,7 +79,7 @@ int main2(int argc, char** argv) {
 			auto file_path = internal_file_path(tmp_file_id);
 			if (access(file_path, F_OK) == 0 and
 			    system_clock::now() - get_modification_time(file_path) > 2h) {
-				deleter.bindAndExecute(tmp_file_id);
+				deleter.bind_and_execute(tmp_file_id);
 				(void)unlink(file_path);
 			}
 		}
@@ -91,7 +93,7 @@ int main2(int argc, char** argv) {
 		});
 
 		stmt = conn.prepare("SELECT id FROM internal_files");
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		InplaceBuff<32> file_id;
 		stmt.res_bind_all(file_id);
 		while (stmt.next())

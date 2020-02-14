@@ -10,8 +10,8 @@
 #include <sim/mysql.h>
 #include <sim/problem_permissions.hh>
 #include <sim/user.hh>
-#include <simlib/http/response.h>
-#include <simlib/parsers.h>
+#include <simlib/http/response.hh>
+#include <simlib/request_uri_parser.hh>
 #include <utime.h>
 
 // Every object is independent, objects can be used in multi-thread program
@@ -23,7 +23,7 @@ class Sim final {
 	CStringView client_ip; // TODO: put in request?
 	server::HttpRequest request;
 	server::HttpResponse resp;
-	RequestURIParser url_args {""};
+	RequestUriParser url_args {""};
 	CppSyntaxHighlighter cpp_syntax_highlighter;
 
 	/**
@@ -360,12 +360,12 @@ class Sim final {
 		auto it = form.find(name);
 		if (not it) {
 			form_validation_error = true;
-			add_notification("error", "Invalid ", htmlEscape(name_to_print));
+			add_notification("error", "Invalid ", html_escape(name_to_print));
 			return false;
 
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
-			add_notification("error", htmlEscape(name_to_print),
+			add_notification("error", html_escape(name_to_print),
 			                 " cannot be longer than ", max_size, " bytes");
 			return false;
 		}
@@ -391,9 +391,9 @@ class Sim final {
 			if (error_msg.empty()) {
 				add_notification(
 				   "error",
-				   htmlEscape(concat(name_to_print, " validation error")));
+				   html_escape(concat(name_to_print, " validation error")));
 			} else {
-				add_notification("error", htmlEscape(error_msg));
+				add_notification("error", html_escape(error_msg));
 			}
 		}
 
@@ -411,18 +411,18 @@ class Sim final {
 		auto it = form.find(name);
 		if (not it) {
 			form_validation_error = true;
-			add_notification("error", "Invalid ", htmlEscape(name_to_print));
+			add_notification("error", "Invalid ", html_escape(name_to_print));
 			return false;
 
 		} else if (it->second.empty()) {
 			form_validation_error = true;
-			add_notification("error", htmlEscape(name_to_print),
+			add_notification("error", html_escape(name_to_print),
 			                 " cannot be blank");
 			return false;
 
 		} else if (it->second.size() > max_size) {
 			form_validation_error = true;
-			add_notification("error", htmlEscape(name_to_print),
+			add_notification("error", html_escape(name_to_print),
 			                 " cannot be longer than ", max_size, " bytes");
 			return false;
 		}
@@ -449,9 +449,9 @@ class Sim final {
 			if (error_msg.empty()) {
 				add_notification(
 				   "error",
-				   htmlEscape(concat(name_to_print, ": invalid value")));
+				   html_escape(concat(name_to_print, ": invalid value")));
 			} else {
-				add_notification("error", htmlEscape(error_msg));
+				add_notification("error", html_escape(error_msg));
 			}
 		}
 
@@ -470,7 +470,7 @@ class Sim final {
 		auto it = form.find(name);
 		if (not it) {
 			form_validation_error = true;
-			add_notification("error", htmlEscape(name_to_print),
+			add_notification("error", html_escape(name_to_print),
 			                 " has to be submitted as a file");
 			return false;
 		}

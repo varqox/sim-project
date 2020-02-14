@@ -1,9 +1,10 @@
 #include "add_or_reupload_problem_base.h"
 #include "../main.h"
+#include "sim/constants.h"
 
 #include <sim/problem.hh>
-#include <simlib/libzip.h>
-#include <simlib/sim/problem_package.h>
+#include <simlib/libzip.hh>
+#include <simlib/sim/problem_package.hh>
 
 using sim::Problem;
 
@@ -12,7 +13,7 @@ namespace job_handlers {
 void AddOrReuploadProblemBase::load_job_log_from_DB() {
 	STACK_UNWINDING_MARK;
 	auto stmt = mysql.prepare("SELECT data FROM jobs WHERE id=?");
-	stmt.bindAndExecute(job_id_);
+	stmt.bind_and_execute(job_id_);
 	stmt.res_bind_all(job_log_holder_);
 	stmt.next();
 }
@@ -22,7 +23,7 @@ void AddOrReuploadProblemBase::assert_transaction_is_open() {
 
 	unsigned char in_transaction;
 	auto stmt = mysql.prepare("SELECT @@in_transaction");
-	stmt.bindAndExecute();
+	stmt.bind_and_execute();
 	stmt.res_bind_all(in_transaction);
 	throw_assert(stmt.next() and in_transaction);
 }
@@ -69,13 +70,15 @@ void AddOrReuploadProblemBase::build_package() {
 	}
 
 	// Check problem's name's length
-	if (cr.simfile.name.size() > decltype(Problem::name)::max_len) {
+	if (WONT_THROW(cr.simfile.name.value()).size() >
+	    decltype(Problem::name)::max_len) {
 		return set_failure("Problem's name is too long (max allowed length: ",
 		                   decltype(Problem::name)::max_len, ')');
 	}
 
 	// Check problem's label's length
-	if (cr.simfile.label.size() > decltype(Problem::label)::max_len) {
+	if (WONT_THROW(cr.simfile.label.value()).size() >
+	    decltype(Problem::label)::max_len) {
 		return set_failure("Problem's label is too long (max allowed length: ",
 		                   decltype(Problem::label)::max_len, ')');
 	}
@@ -86,7 +89,7 @@ void AddOrReuploadProblemBase::build_package() {
 
 	// Update job record
 	mysql.prepare("UPDATE jobs SET tmp_file_id=? WHERE id=?")
-	   .bindAndExecute(tmp_file_id_.value(), job_id_);
+	   .bind_and_execute(tmp_file_id_.value(), job_id_);
 	auto tmp_package = internal_file_path(tmp_file_id_.value());
 	// Copy source_package to tmp_package, substituting Simfile in the fly
 	{
@@ -164,9 +167,10 @@ void AddOrReuploadProblemBase::job_done(bool& job_was_canceled) {
 	auto stmt = mysql.prepare("UPDATE jobs "
 	                          "SET tmp_file_id=?, type=?, priority=?,"
 	                          " status=?, aux_id=?, info=?, data=? "
-	                          "WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
-	stmt.bindAndExecute(tmp_file_id_, type, priority(type), status, problem_id_,
-	                    info_.dump(), get_log(), job_id_);
+	                          "WHERE id=? AND status!=?");
+	stmt.bind_and_execute(tmp_file_id_, type, priority(type), status,
+	                      problem_id_, info_.dump(), get_log(), job_id_,
+	                      EnumVal(JobStatus::CANCELED));
 	job_was_canceled = (stmt.affected_rows() == 0);
 }
 
@@ -216,10 +220,10 @@ void AddOrReuploadProblemBase::add_problem_to_DB() {
 	auto stmt = mysql.prepare("INSERT INTO problems(file_id, type, name, label,"
 	                          " simfile, owner, added, last_edit) "
 	                          "VALUES(?,?,?,?,?,?,?,?)");
-	stmt.bindAndExecute(tmp_file_id_.value(),
-	                    decltype(Problem::type)(info_.problem_type),
-	                    simfile_.name, simfile_.label, simfile_str_,
-	                    job_creator_, current_date_, current_date_);
+	stmt.bind_and_execute(tmp_file_id_.value(),
+	                      decltype(Problem::type)(info_.problem_type),
+	                      simfile_.name, simfile_.label, simfile_str_,
+	                      job_creator_, current_date_, current_date_);
 
 	tmp_file_id_ = std::nullopt;
 	problem_id_ = stmt.insert_id();
@@ -236,21 +240,21 @@ void AddOrReuploadProblemBase::replace_problem_in_DB() {
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data) "
-	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
-	            ", ?, " JSTATUS_PENDING_STR
-	            ", ?, NULL, '', '' FROM problems WHERE id=?")
-	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date_,
-	                   problem_id_.value());
+	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
+	            "FROM problems WHERE id=?")
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), current_date_, problem_id_.value());
 
 	// Update problem
 	auto stmt = mysql.prepare("UPDATE problems "
 	                          "SET file_id=?, type=?, name=?, label=?,"
 	                          " simfile=?, last_edit=? "
 	                          "WHERE id=?");
-	stmt.bindAndExecute(tmp_file_id_.value(),
-	                    decltype(Problem::type)(info_.problem_type),
-	                    simfile_.name, simfile_.label, simfile_str_,
-	                    current_date_, problem_id_.value());
+	stmt.bind_and_execute(tmp_file_id_.value(),
+	                      decltype(Problem::type)(info_.problem_type),
+	                      simfile_.name, simfile_.label, simfile_str_,
+	                      current_date_, problem_id_.value());
 
 	tmp_file_id_ = std::nullopt;
 
@@ -258,18 +262,20 @@ void AddOrReuploadProblemBase::replace_problem_in_DB() {
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data) "
-	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
-	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
+	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
 	            "FROM submissions "
-	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
-	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date_,
-	                   problem_id_);
+	            "WHERE problem_id=? AND type=?")
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), current_date_, problem_id_,
+	      EnumVal(SubmissionType::PROBLEM_SOLUTION));
 
 	// Delete old solution submissions
 	mysql
 	   .prepare("DELETE FROM submissions "
-	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR)
-	   .bindAndExecute(problem_id_);
+	            "WHERE problem_id=? AND type=?")
+	   .bind_and_execute(problem_id_,
+	                     EnumVal(SubmissionType::PROBLEM_SOLUTION));
 }
 
 void AddOrReuploadProblemBase::submit_solutions() {
@@ -286,8 +292,7 @@ void AddOrReuploadProblemBase::submit_solutions() {
 	   "contest_problem_id, contest_round_id, contest_id, type, language, "
 	   "initial_status, full_status, submit_time, last_judgment, "
 	   "initial_report, final_report) VALUES(?, NULL, ?, NULL, NULL, "
-	   "NULL, " STYPE_PROBLEM_SOLUTION_STR ", ?, " SSTATUS_PENDING_STR
-	   ", " SSTATUS_PENDING_STR ", ?, ?, '', '')");
+	   "NULL, ?, ?, ?, ?, ?, ?, '', '')");
 
 	auto file_inserter = mysql.prepare("INSERT INTO internal_files VALUES()");
 
@@ -297,8 +302,10 @@ void AddOrReuploadProblemBase::submit_solutions() {
 		file_inserter.execute();
 		uint64_t file_id = file_inserter.insert_id();
 		EnumVal<SubmissionLanguage> lang = filename_to_lang(solution);
-		submission_inserter.bindAndExecute(file_id, problem_id_, lang,
-		                                   current_date_, zero_date);
+		submission_inserter.bind_and_execute(
+		   file_id, problem_id_, EnumVal(SubmissionType::PROBLEM_SOLUTION),
+		   lang, EnumVal(SubmissionStatus::PENDING),
+		   EnumVal(SubmissionStatus::PENDING), current_date_, zero_date);
 
 		// Save the submission source code
 		zip_.extract_to_file(zip_.get_index(concat(master_dir_, solution)),
@@ -309,16 +316,17 @@ void AddOrReuploadProblemBase::submit_solutions() {
 	mysql
 	   .prepare("INSERT INTO jobs(creator, type, priority, status, added,"
 	            " aux_id, info, data) "
-	            "SELECT NULL, " JTYPE_JUDGE_SUBMISSION_STR
-	            ", ?, " JSTATUS_PENDING_STR ", ?, id, ?, '' "
+	            "SELECT NULL, ?, ?, ?, ?, id, ?, '' "
 	            "FROM submissions "
-	            "WHERE problem_id=? AND type=" STYPE_PROBLEM_SOLUTION_STR
-	            " ORDER BY id")
+	            "WHERE problem_id=? AND type=? ORDER BY id")
 	   // Problem's solutions are more important than the ordinary submissions
-	   .bindAndExecute(priority(JobType::JUDGE_SUBMISSION) + 1, current_date_,
-	                   jobs::dumpString(intentionalUnsafeStringView(
-	                      toStr(problem_id_.value()))),
-	                   problem_id_.value());
+	   .bind_and_execute(EnumVal(JobType::JUDGE_SUBMISSION),
+	                     priority(JobType::JUDGE_SUBMISSION) + 1,
+	                     EnumVal(JobStatus::PENDING), current_date_,
+	                     jobs::dumpString(intentional_unsafe_string_view(
+	                        to_string(problem_id_.value()))),
+	                     problem_id_.value(),
+	                     EnumVal(SubmissionType::PROBLEM_SOLUTION));
 
 	job_log("Done.");
 }

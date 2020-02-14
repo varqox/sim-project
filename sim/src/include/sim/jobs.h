@@ -3,7 +3,7 @@
 #include "constants.h"
 #include "problem.hh"
 
-#include <simlib/mysql.h>
+#include <simlib/mysql.hh>
 #include <utime.h>
 
 namespace jobs {
@@ -24,7 +24,7 @@ extractDumpedInt(StringView& dumped_str) {
 	Integer x = 0;
 	for (int i = sizeof(x) - 1, shift = 0; i >= 0; --i, shift += 8)
 		x |= ((static_cast<Integer>((uint8_t)dumped_str[i])) << shift);
-	dumped_str.removePrefix(sizeof(x));
+	dumped_str.remove_prefix(sizeof(x));
 	return x;
 }
 
@@ -90,7 +90,7 @@ inline std::string extractDumpedString(StringView& dumped_str) {
 	uint32_t size;
 	extractDumped(size, dumped_str);
 	throw_assert(dumped_str.size() >= size);
-	return dumped_str.extractPrefix(size).to_string();
+	return dumped_str.extract_prefix(size).to_string();
 }
 
 inline std::string extractDumpedString(StringView&& dumped_str) {

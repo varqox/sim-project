@@ -1,6 +1,8 @@
 #pragma once
 
-#include <simlib/avl_dict.h>
+#include <simlib/avl_dict.hh>
+#include <simlib/string_compare.hh>
+#include <simlib/string_transform.hh>
 
 namespace server {
 

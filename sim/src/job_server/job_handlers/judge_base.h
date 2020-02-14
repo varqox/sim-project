@@ -3,7 +3,7 @@
 #include "job_handler.h"
 
 #include <sim/constants.h>
-#include <simlib/sim/judge_worker.h>
+#include <simlib/sim/judge_worker.hh>
 
 namespace job_handlers {
 

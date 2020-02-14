@@ -1,6 +1,6 @@
 #pragma once
 
-#include <simlib/string.h>
+#include <simlib/inplace_buff.hh>
 
 namespace sim {
 

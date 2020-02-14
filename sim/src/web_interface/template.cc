@@ -30,7 +30,7 @@ void Sim::page_template(StringView title, StringView styles,
 	    "<html lang=\"en\">"
 	        "<head>"
 	            "<meta charset=\"utf-8\">"
-	            "<title>", htmlEscape(title), "</title>"
+	            "<title>", html_escape(title), "</title>"
 	            "<link rel=\"stylesheet\" type=\"text/css\" "
 	                  "href=\"/kit/styles.css?" STYLES_CSS_HASH "\">"
 	            "<script src=\"/kit/jquery.js?" JQUERY_JS_HASH "\"></script>"
@@ -89,7 +89,7 @@ void Sim::page_template(StringView title, StringView styles,
 		// clang-format off
         append("<div class=\"dropmenu down\">"
                 "<a class=\"user dropmenu-toggle\" user-type=\"", utype_c, "\">"
-                    "<strong>", htmlEscape(session_username), "</strong>"
+                    "<strong>", html_escape(session_username), "</strong>"
                 "</a>"
                 "<ul>"
                     "<a href=\"/u/", session_user_id, "\">My profile</a>"

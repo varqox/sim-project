@@ -2,9 +2,11 @@
 
 #include <iostream>
 #include <poll.h>
-#include <simlib/debug.h>
-#include <simlib/filesystem.h>
-#include <simlib/logger.h>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/logger.hh>
+#include <unistd.h>
 
 using std::cerr;
 using std::endl;
@@ -94,10 +96,12 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 void Connection::readPOST(HttpRequest& req) {
 	size_t content_length = 0;
 	{
-		auto&& cl = req.headers["Content-Length"];
-		// TODO: handle overflows
-		if (strtou(cl, content_length) != (int)cl.size())
+		auto opt =
+		   str2num<decltype(content_length)>(req.headers["Content-Length"]);
+		if (not opt)
 			return error400();
+
+		content_length = *opt;
 	}
 
 	int c = '\0';
@@ -106,7 +110,7 @@ void Connection::readPOST(HttpRequest& req) {
 	string& con_type = req.headers["Content-Type"];
 	LimitedReader reader(*this, content_length);
 
-	if (hasPrefix(con_type, "text/plain")) {
+	if (has_prefix(con_type, "text/plain")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -132,7 +136,7 @@ void Connection::readPOST(HttpRequest& req) {
 			req.form_data[field_name] = field_content;
 		}
 
-	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
+	} else if (has_prefix(con_type, "application/x-www-form-urlencoded")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -152,11 +156,11 @@ void Connection::readPOST(HttpRequest& req) {
 			if (state_ == CLOSED)
 				return;
 
-			req.form_data[decodeURI(field_name).to_string()] =
-			   decodeURI(field_content).to_string();
+			req.form_data[decode_uri(field_name).to_string()] =
+			   decode_uri(field_content).to_string();
 		}
 
-	} else if (hasPrefix(con_type, "multipart/form-data")) {
+	} else if (has_prefix(con_type, "multipart/form-data")) {
 		size_t beg = con_type.find("boundary=");
 		if (beg == string::npos || beg + 9 >= con_type.size()) {
 			error400();
@@ -617,12 +621,13 @@ HttpRequest Connection::getRequest() {
 	}
 
 	{
-		auto&& cl = req.headers["Content-Length"];
-		// TODO: handle overflows
-		if (strtou(cl, end) != (int)cl.size()) {
+		auto opt = str2num<decltype(end)>(req.headers["Content-Length"]);
+		if (not opt) {
 			error400();
 			return req;
 		}
+
+		end = *opt;
 	}
 
 	if (end > 0) {
@@ -716,7 +721,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 	switch (res.content_type) {
 	case HttpResponse::TEXT:
 		str += "Content-Length: ";
-		str += toStr(res.content.size);
+		str += to_string(res.content.size);
 		str += "\r\n\r\n";
 		str += res.content;
 		send(str);
@@ -750,7 +755,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
-		str += toStr<uint64_t>(fsize);
+		str += to_string(fsize);
 		str += "\r\n\r\n";
 
 		constexpr size_t buff_length = 1 << 20;

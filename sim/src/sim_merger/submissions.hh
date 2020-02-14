@@ -57,7 +57,7 @@ class SubmissionsMerger : public Merger<Submission> {
 		                " initial_report, final_report "
 		                "FROM ",
 		                record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(s.id, s.file_id, m_owner, s.problem_id,
 		                  m_contest_problem_id, m_contest_round_id,
 		                  m_contest_id, s.type, s.language, b_final_candidate,
@@ -93,7 +93,9 @@ class SubmissionsMerger : public Merger<Submission> {
 				   contests_.new_id(s.contest_id.value(), record_set.kind);
 			}
 
-			record_set.add_record(s, strToTimePoint(s.submit_time.to_string()));
+			record_set.add_record(
+			   s, str_to_time_point(intentional_unsafe_cstring_view(
+			         s.submit_time.to_string())));
 		}
 	}
 
@@ -122,7 +124,7 @@ public:
 		for (const NewRecord& new_record : new_table_) {
 			Defer progressor = [&] { progress_bar.iter(); };
 			const Submission& x = new_record.data;
-			stmt.bindAndExecute(
+			stmt.bind_and_execute(
 			   x.id, x.file_id, x.owner, x.problem_id, x.contest_problem_id,
 			   x.contest_round_id, x.contest_id, x.type, x.language,
 			   x.final_candidate, x.problem_final, x.contest_final,

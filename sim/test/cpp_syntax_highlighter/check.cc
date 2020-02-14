@@ -1,9 +1,11 @@
 #include <cmath>
 #include <dirent.h>
 #include <sim/cpp_syntax_highlighter.h>
-#include <simlib/process.h>
-#include <simlib/spawner.h>
-#include <simlib/utilities.h>
+#include <simlib/directory.hh>
+#include <simlib/spawner.hh>
+#include <simlib/string_compare.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/working_directory.hh>
 
 using std::string;
 using std::vector;
@@ -21,9 +23,9 @@ vector<string> findTests(string path = "tests") {
 
 	dirent* file;
 	while ((file = readdir(dir)))
-		if (hasSuffix(file->d_name, ".in")) {
+		if (has_suffix(file->d_name, ".in")) {
 			in.emplace_back(file->d_name, __builtin_strlen(file->d_name) - 3);
-		} else if (hasSuffix(file->d_name, ".out")) {
+		} else if (has_suffix(file->d_name, ".out")) {
 			out.emplace_back(file->d_name, __builtin_strlen(file->d_name) - 4);
 		}
 
@@ -46,16 +48,17 @@ uint check(const vector<string>& tests, bool show_diff = false) {
 		printf("%6s: ", test.c_str());
 		string in_fname = concat_tostr("tests/", test, ".in");
 		string out_fname = concat_tostr("tests/", test, ".out");
-		string ans = csh(getFileContents(in_fname));
+		string ans =
+		   csh(intentional_unsafe_cstring_view(get_file_contents(in_fname)));
 
-		if (ans == getFileContents(out_fname)) { // OK
+		if (ans == get_file_contents(out_fname)) { // OK
 			++passed;
 			puts("\033[1;32mOK\033[m");
 
 		} else { // WRONG
 			puts("\033[1;31mWRONG\033[m");
 			string ans_fname = concat_tostr("tests/", test, ".ans");
-			putFileContents(ans_fname, ans);
+			put_file_contents(ans_fname, ans);
 			if (show_diff) {
 				(void)Spawner::run("git",
 				                   {"git", "--no-pager", "diff", "--no-index",
@@ -81,8 +84,9 @@ void regenerate(const vector<string>& tests) {
 	for (auto&& test : tests) {
 		string in_fname = concat_tostr("tests/", test, ".in");
 		string out_fname = concat_tostr("tests/", test, ".out");
-		putFileContents(out_fname, intentionalUnsafeStringView(
-		                              csh(getFileContents(in_fname))));
+		put_file_contents(out_fname, intentional_unsafe_string_view(
+		                                csh(intentional_unsafe_cstring_view(
+		                                   get_file_contents(in_fname)))));
 	}
 }
 
@@ -104,7 +108,7 @@ int main(int argc, char** argv) {
 				arg_tests.emplace_back(argv[i]);
 		}
 
-		chdirToExecDir();
+		chdir_to_executable_dirpath();
 		vector<string> tests = findTests();
 
 		if (regen) {

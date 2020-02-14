@@ -1,7 +1,7 @@
 #include "http_response.h"
 
 #include <ctime>
-#include <simlib/debug.h>
+#include <simlib/debug.hh>
 
 using std::string;
 

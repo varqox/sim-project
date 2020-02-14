@@ -1,8 +1,11 @@
+#include <limits>
 #include <sim/cpp_syntax_highlighter.h>
-#include <simlib/debug.h>
-#include <simlib/logger.h>
-#include <simlib/meta.h>
-#include <simlib/utilities.h>
+#include <simlib/debug.hh>
+#include <simlib/logger.hh>
+#include <simlib/meta.hh>
+#include <simlib/string_transform.hh>
+#include <simlib/string_view.hh>
+#include <simlib/utilities.hh>
 
 using std::array;
 using std::string;
@@ -46,18 +49,18 @@ struct Word {
 	   : str(s), size(N - 1), style(stl) {}
 };
 
-constexpr array<meta::string, 11> begin_style {{
-   {"<span style=\"color:#00a000\">"},
-   {"<span style=\"color:#a0a0a0\">"},
-   {"<span style=\"color:#0000ff;font-weight:bold\">"},
-   {"<span style=\"color:#c90049;font-weight:bold;\">"},
-   {"<span style=\"color:#ff0000\">"},
-   {"<span style=\"color:#e0a000\">"},
-   {"<span style=\"color:#d923e9\">"},
-   {"<span style=\"color:#d923e9\">"},
-   {"<span style=\"color:#a800ff\">"},
-   {"<span style=\"color:#0086b3\">"},
-   {"<span style=\"color:#515125\">"},
+constexpr array<CStringView, 11> begin_style {{
+   "<span style=\"color:#00a000\">",
+   "<span style=\"color:#a0a0a0\">",
+   "<span style=\"color:#0000ff;font-weight:bold\">",
+   "<span style=\"color:#c90049;font-weight:bold;\">",
+   "<span style=\"color:#ff0000\">",
+   "<span style=\"color:#e0a000\">",
+   "<span style=\"color:#d923e9\">",
+   "<span style=\"color:#d923e9\">",
+   "<span style=\"color:#a800ff\">",
+   "<span style=\"color:#0086b3\">",
+   "<span style=\"color:#515125\">",
 }};
 
 constexpr CStringView end_style = "</span>";
@@ -201,25 +204,24 @@ constexpr uint count_keywords(const array<Word, N>& arr, size_t idx = 0) {
 }
 
 template <size_t N, size_t... Idx>
-constexpr array<meta::string, N>
-extract_keywords_from_append(const array<meta::string, N>& base, meta::string x,
+constexpr array<CStringView, N>
+extract_keywords_from_append(const array<CStringView, N>& base, CStringView x,
                              std::integer_sequence<size_t, Idx...>) {
 	return {{base[Idx]..., x}};
 }
 
 template <size_t N, size_t RES_N, size_t RES_END>
-constexpr std::enable_if_t<RES_END >= RES_N, array<meta::string, RES_N>>
+constexpr std::enable_if_t<RES_END >= RES_N, array<CStringView, RES_N>>
 extract_keywords_from(const array<Word, N>&,
-                      const array<meta::string, RES_N>& res = {}, size_t = 0) {
+                      const array<CStringView, RES_N>& res = {}, size_t = 0) {
 	return res;
 }
 
 template <size_t N, size_t RES_N, size_t RES_END = 0>
    constexpr std::enable_if_t <
-   RES_END<RES_N, array<meta::string, RES_N>>
+   RES_END<RES_N, array<CStringView, RES_N>>
    extract_keywords_from(const array<Word, N>& arr,
-                         const array<meta::string, RES_N>& res,
-                         size_t idx = 0) {
+                         const array<CStringView, RES_N>& res, size_t idx = 0) {
 	return (
 	   idx == N
 	      ? res
@@ -237,7 +239,7 @@ static constexpr auto cpp_keywords =
    extract_keywords_from<words.size(), count_keywords(words)>(words, {});
 
 // Important: elements have to be sorted!
-static_assert(meta::is_sorted(cpp_keywords),
+static_assert(is_sorted(cpp_keywords),
               "cpp_keywords has to be sorted, fields in words with style "
               "KEYWORD are probably unsorted");
 
@@ -246,9 +248,9 @@ CppSyntaxHighlighter::CppSyntaxHighlighter() {
 	              "First (zero) element of words is a guard - because "
 	              "Aho-Corasick implementation takes only positive IDs");
 	for (uint i = 1; i < words.size(); ++i)
-		aho.addPattern({words[i].str, words[i].size}, i);
+		aho.add_pattern({words[i].str, words[i].size}, i);
 
-	aho.buildFails();
+	aho.build_fail_edges();
 }
 
 string CppSyntaxHighlighter::operator()(CStringView input) const {
@@ -271,8 +273,10 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	constexpr char GUARD_CHARACTER = '\0';
 
 	// Make sure we can use int
-	if (input.size() + BEGIN_GUARDS + END_GUARDS > INT_MAX)
+	if (input.size() + BEGIN_GUARDS + END_GUARDS >
+	    static_cast<size_t>(std::numeric_limits<int>::max())) {
 		THROW("Input string is too long");
+	}
 
 	/* Remove "\\\n" sequences */
 	int end = input.size();
@@ -627,10 +631,10 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 		if (beg >= endi)
 			return;
 
-		auto aho_res = aho.searchIn(substring(str, beg, endi));
+		auto aho_res = aho.search_in(substring(str, beg, endi));
 		// Handle last one to eliminate right boundary checks
 		for (int i = endi - 1; i >= beg;) {
-			int k = aho.pattId(aho_res[i - beg]), j;
+			int k = aho.pattern_id(aho_res[i - beg]), j;
 
 			static_assert(BEGIN_GUARDS > 0, "");
 			static_assert(END_GUARDS > 0, "");
@@ -685,7 +689,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	for (int i = BEGIN, j = 0, line = 1; i < end; ++i, ++j) {
 		// End styles
 		if (ends[i]) {
-			appendHtmlEscaped(res, substring(str, first_unescaped, i));
+			append_as_html_escaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			// Leave the last (top) style and try to elide it
@@ -708,7 +712,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 		// Handle erased "\\\n" sequences
 		if (str[i] != input[j]) {
-			appendHtmlEscaped(res, substring(str, first_unescaped, i));
+			append_as_html_escaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
@@ -718,15 +722,15 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				throw_assert(input[j] == '\\' && j + 1 < (int)input.size() &&
 				             input[j + 1] == '\n');
 
-				auto line_str = toStr(++line);
+				++line;
 				// When we were ending styles (somewhere above), there can be
 				// an opportunity to elide style OPERATOR (only in the first
 				// iteration of this loop) but it's not worth that, as it's a
 				// very rare situation and gives little profit at the expense of
 				// a not pretty if statement
 				back_insert(res, begin_style[OPERATOR], '\\', end_style,
-				            "\n</td></tr><tr><td id=\"L", line_str,
-				            "\" line=\"", line_str, "\"></td><td>");
+				            "\n</td></tr><tr><td id=\"L", line, "\" line=\"",
+				            line, "\"></td><td>");
 			} while (str[i] != input[j += 2]);
 
 			// Restore styles
@@ -736,15 +740,15 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 		// Line ending
 		if (str[i] == '\n') {
-			appendHtmlEscaped(res, substring(str, first_unescaped, i));
+			append_as_html_escaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i + 1;
 			// End styles
 			for (int k = style_stack.size(); k > 0; --k)
 				res += end_style;
 			// Break the line
-			auto line_str = toStr(++line);
-			back_insert(res, "\n</td></tr><tr><td id=\"L", line_str,
-			            "\" line=\"", line_str, "\"></td><td>");
+			++line;
+			back_insert(res, "\n</td></tr><tr><td id=\"L", line, "\" line=\"",
+			            line, "\"></td><td>");
 			// Restore styles
 			for (StyleType style : style_stack)
 				res += begin_style[style];
@@ -752,7 +756,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 		// Begin style
 		if (begs[i] != -1) {
-			appendHtmlEscaped(res, substring(str, first_unescaped, i));
+			append_as_html_escaped(res, substring(str, first_unescaped, i));
 			first_unescaped = i;
 
 			style_stack.emplace_back(begs[i]);
@@ -761,7 +765,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 	}
 
 	// Ending
-	appendHtmlEscaped(res, substring(str, first_unescaped, end));
+	append_as_html_escaped(res, substring(str, first_unescaped, end));
 	// End styles
 	for (uint i = end; i < ends.size(); ++i)
 		while (ends[i]--)

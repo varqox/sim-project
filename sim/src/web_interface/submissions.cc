@@ -49,14 +49,16 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	// This check has to be done as the last one because it gives the least
 	// permissions
 	if (session_is_open and problem_owner and
-	    strtoull(session_user_id) == problem_owner.value()) {
+	    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
+	       problem_owner.value()) {
 		if (stype == STYPE::PROBLEM_SOLUTION)
 			return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE |
 			       PERM::VIEW_FINAL_REPORT | PERM::VIEW_RELATED_JOBS |
 			       PERM::REJUDGE;
 
 		if (submission_owner and
-		    strtoull(session_user_id) == submission_owner.value()) {
+		    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
+		       submission_owner.value()) {
 			return overall_perms | PERM_SUBMISSION_ADMIN;
 		}
 
@@ -66,7 +68,8 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 	}
 
 	if (session_is_open and submission_owner and
-	    strtoull(session_user_id) == submission_owner.value()) {
+	    WONT_THROW(str2num<uintmax_t>(session_user_id).value()) ==
+	       submission_owner.value()) {
 		return overall_perms | PERM::VIEW | PERM::VIEW_SOURCE;
 	}
 
@@ -76,10 +79,10 @@ Sim::SubmissionPermissions Sim::submissions_get_permissions(
 void Sim::submissions_handle() {
 	STACK_UNWINDING_MARK;
 
-	StringView next_arg = url_args.extractNextArg();
-	if (isDigit(next_arg)) { // View submission
+	StringView next_arg = url_args.extract_next_arg();
+	if (is_digit(next_arg)) { // View submission
 		page_template(
-		   intentionalUnsafeStringView(concat("Submission ", next_arg)),
+		   intentional_unsafe_string_view(concat("Submission ", next_arg)),
 		   "body{padding-left:20px}");
 		append("<script>view_submission(false, ", next_arg,
 		       ", window.location.hash);</script>");

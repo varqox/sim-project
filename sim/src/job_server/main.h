@@ -1,5 +1,5 @@
 #pragma once
 
-#include <simlib/mysql.h>
+#include <simlib/mysql.hh>
 
 extern thread_local MySQL::Connection mysql;

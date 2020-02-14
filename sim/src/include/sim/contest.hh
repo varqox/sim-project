@@ -4,7 +4,7 @@
 #include "inf_datetime_field.hh"
 #include "varchar_field.hh"
 
-#include <simlib/defer.h>
+#include <simlib/defer.hh>
 
 namespace sim {
 
@@ -66,14 +66,14 @@ get(MySQL::Connection& mysql, GetIdKind id_kind, T&& id,
 		                     "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
 		                     " AND cu.user_id=u.id ",
 		                     id_part_sql);
-		stmt.bindAndExecute(user_id.value(), id);
+		stmt.bind_and_execute(user_id.value(), id);
 		stmt.res_bind_all(contest.id, contest.name, is_public, round_begins,
 		                  user_type, cu_mode);
 
 	} else {
 		stmt =
 		   mysql.prepare("SELECT ", fields, " FROM contests c ", id_part_sql);
-		stmt.bindAndExecute(id);
+		stmt.bind_and_execute(id);
 		stmt.res_bind_all(contest.id, contest.name, is_public, round_begins);
 	}
 

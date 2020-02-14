@@ -15,7 +15,7 @@ void ReselectFinalSubmissionsInContestProblem::run() {
 	   "FROM submissions WHERE contest_problem_id=? AND final_candidate=1 "
 	   "ORDER by id"); // Order is important so that if the two such jobs are
 	                   // running, one would block until the other finishes
-	stmt.bindAndExecute(contest_problem_id_);
+	stmt.bind_and_execute(contest_problem_id_);
 
 	MySQL::Optional<uint64_t> sowner;
 	uint64_t problem_id;

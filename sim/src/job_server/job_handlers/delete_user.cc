@@ -18,7 +18,7 @@ void DeleteUser::run() {
 	{
 		auto stmt =
 		   mysql.prepare("SELECT username, type FROM users WHERE id=?");
-		stmt.bindAndExecute(user_id_);
+		stmt.bind_and_execute(user_id_);
 		InplaceBuff<32> username;
 		decltype(User::type) user_type;
 		stmt.res_bind_all(username, user_type);
@@ -37,14 +37,15 @@ void DeleteUser::run() {
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data) "
-	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
-	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
+	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
 	            " FROM submissions WHERE owner=?")
-	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(), user_id_);
+	   .bind_and_execute(EnumVal(JobType::DELETE_FILE),
+	                     priority(JobType::DELETE_FILE),
+	                     EnumVal(JobStatus::PENDING), mysql_date(), user_id_);
 
 	// Delete user (all necessary actions will take place thanks to foreign key
 	// constrains)
-	mysql.prepare("DELETE FROM users WHERE id=?").bindAndExecute(user_id_);
+	mysql.prepare("DELETE FROM users WHERE id=?").bind_and_execute(user_id_);
 
 	job_done();
 

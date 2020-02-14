@@ -2,9 +2,9 @@
 
 #include "varchar_field.hh"
 
-#include <simlib/meta.h>
-#include <simlib/mysql.h>
-#include <simlib/string.h>
+#include <cstdint>
+#include <simlib/meta.hh>
+#include <simlib/mysql.hh>
 
 namespace sim {
 
@@ -21,20 +21,6 @@ struct User {
 	EnumVal<Type> type;
 };
 
-#define SIM_ROOT_UID "1"
-
-#define UTYPE_ADMIN_STR "0"
-#define UTYPE_TEACHER_STR "1"
-#define UTYPE_NORMAL_STR "2"
-
-static_assert(meta::equal(UTYPE_ADMIN_STR,
-                          meta::ToString<(int)User::Type::ADMIN>::value),
-              "Update the above #define");
-static_assert(meta::equal(UTYPE_TEACHER_STR,
-                          meta::ToString<(int)User::Type::TEACHER>::value),
-              "Update the above #define");
-static_assert(meta::equal(UTYPE_NORMAL_STR,
-                          meta::ToString<(int)User::Type::NORMAL>::value),
-              "Update the above #define");
+constexpr uintmax_t SIM_ROOT_UID = 1;
 
 } // namespace sim

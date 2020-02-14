@@ -46,9 +46,8 @@ void job_dispatcher(uint64_t job_id, JobType jtype,
 		case JT::EDIT_PROBLEM:
 			// TODO: implement it (editing Simfile for now)
 			std::this_thread::sleep_for(std::chrono::seconds(1));
-			mysql.update(intentionalUnsafeStringView(concat(
-			   "UPDATE jobs SET status=" JSTATUS_CANCELED_STR " WHERE id=",
-			   job_id)));
+			mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
+			   .bind_and_execute(EnumVal(JobStatus::CANCELED), job_id);
 			return;
 
 		case JT::DELETE_PROBLEM:
@@ -120,10 +119,9 @@ void job_dispatcher(uint64_t job_id, JobType jtype,
 		throw_assert(job_handler);
 		job_handler->run();
 		if (job_handler->failed()) {
-			mysql
-			   .prepare("UPDATE jobs"
-			            " SET status=" JSTATUS_FAILED_STR ", data=? WHERE id=?")
-			   .bindAndExecute(job_handler->get_log(), job_id);
+			mysql.prepare("UPDATE jobs SET status=?, data=? WHERE id=?")
+			   .bind_and_execute(EnumVal(JobStatus::FAILED),
+			                     job_handler->get_log(), job_id);
 		}
 
 	} catch (const std::exception& e) {
@@ -134,23 +132,25 @@ void job_dispatcher(uint64_t job_id, JobType jtype,
 		auto stmt = mysql.prepare(
 		   "INSERT INTO jobs(file_id, creator, type,"
 		   " priority, status, added, aux_id, info, data) "
-		   "SELECT tmp_file_id, NULL, " JTYPE_DELETE_FILE_STR
-		   ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM jobs"
+		   "SELECT tmp_file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM jobs"
 		   " WHERE id=? AND tmp_file_id IS NOT NULL");
-		stmt.bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-		                    job_id);
+		stmt.bind_and_execute(
+		   EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+		   EnumVal(JobStatus::PENDING), mysql_date(), job_id);
 
 		// Fail job
-		stmt = mysql.prepare("UPDATE jobs "
-		                     "SET tmp_file_id=NULL, status=" JSTATUS_FAILED_STR
-		                     ", data=? WHERE id=?");
+		stmt =
+		   mysql.prepare("UPDATE jobs SET tmp_file_id=NULL, status=?, data=? "
+		                 "WHERE id=?");
 		if (job_handler) {
-			stmt.bindAndExecute(
+			stmt.bind_and_execute(
+			   EnumVal(JobStatus::FAILED),
 			   concat(job_handler->get_log(), "\nCaught exception: ", e.what()),
 			   job_id);
 		} else {
-			stmt.bindAndExecute(concat("\nCaught exception: ", e.what()),
-			                    job_id);
+			stmt.bind_and_execute(EnumVal(JobStatus::FAILED),
+			                      concat("\nCaught exception: ", e.what()),
+			                      job_id);
 		}
 
 		transaction.commit();

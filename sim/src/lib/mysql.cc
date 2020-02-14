@@ -1,5 +1,5 @@
 #include <sim/mysql.h>
-#include <simlib/config_file.h>
+#include <simlib/config_file.hh>
 
 namespace MySQL {
 

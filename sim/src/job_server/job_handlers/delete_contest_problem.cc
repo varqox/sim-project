@@ -20,7 +20,7 @@ void DeleteContestProblem::run() {
 		                 "JOIN contests c ON c.id=cp.contest_id "
 		                 "JOIN problems p ON p.id=cp.problem_id "
 		                 "WHERE cp.id=?");
-		stmt.bindAndExecute(contest_problem_id_);
+		stmt.bind_and_execute(contest_problem_id_);
 		InplaceBuff<32> cname, cid, rname, rid, cpname, pname, pid;
 		stmt.res_bind_all(cname, cid, rname, rid, cpname, pname, pid);
 		if (not stmt.next()) {
@@ -40,16 +40,16 @@ void DeleteContestProblem::run() {
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data) "
-	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
-	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', ''"
+	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', ''"
 	            " FROM submissions WHERE contest_problem_id=?")
-	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   contest_problem_id_);
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), mysql_date(), contest_problem_id_);
 
 	// Delete contest problem (all necessary actions will take place thanks to
 	// foreign key constrains)
 	mysql.prepare("DELETE FROM contest_problems WHERE id=?")
-	   .bindAndExecute(contest_problem_id_);
+	   .bind_and_execute(contest_problem_id_);
 
 	job_done();
 
