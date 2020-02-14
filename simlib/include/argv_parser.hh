@@ -15,8 +15,6 @@ public:
 	ArgvParser& operator=(const ArgvParser&) = default;
 	ArgvParser& operator=(ArgvParser&&) noexcept = default;
 
-	~ArgvParser() = default;
-
 	uint size() const noexcept { return argc_; }
 
 	CStringView operator[](uint n) const noexcept {

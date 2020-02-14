@@ -27,10 +27,8 @@ public:
 
 	constexpr RequestUriParser(const RequestUriParser&) noexcept = default;
 	constexpr RequestUriParser(RequestUriParser&&) noexcept = default;
-	RequestUriParser& operator=(const RequestUriParser&) noexcept = default;
-	RequestUriParser& operator=(RequestUriParser&&) noexcept = default;
-
-	~RequestUriParser() = default;
+	constexpr RequestUriParser& operator=(const RequestUriParser&) noexcept = default;
+	constexpr RequestUriParser& operator=(RequestUriParser&&) noexcept = default;
 
 	/// @brief Extracts next URL argument
 	StringView extract_next_arg() {

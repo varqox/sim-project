@@ -145,8 +145,6 @@ public:
 	Simfile& operator=(const Simfile&) = default;
 	Simfile& operator=(Simfile&&) = default;
 
-	~Simfile() = default;
-
 	const ConfigFile& config_file() const { return config; }
 	/**
 	 * @brief Dumps object to string

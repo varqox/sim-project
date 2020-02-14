@@ -95,8 +95,6 @@ public:
 	                           int> = 0>
 	StringBase& operator=(T&&) = delete; // Protect from assigning unsafe data
 
-	~StringBase() = default;
-
 	// Returns whether the StringBase is empty (size() == 0)
 	constexpr bool empty() const noexcept { return (len == 0); }
 
@@ -446,8 +444,6 @@ public:
 	                              not std::is_convertible_v<T&&, StringView>,
 	                           int> = 0>
 	StringView& operator=(T&&) = delete; // Protect from assigning unsafe data
-
-	~StringView() = default;
 
 	template <class... Args>
 	constexpr StringView substr(Args&&... args) const {
