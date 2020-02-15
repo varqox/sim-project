@@ -123,8 +123,12 @@ class TestingJudgeLogger : public sim::JudgeLogger {
 		    " s ML: ", test_report.memory_limit >> 10, " KiB ]  Status: ",
 		    JudgeReport::simple_span_status(test_report.status));
 
-		if (test_report.status == JudgeReport::Test::RTE)
-			log(" (", es.message, ')');
+		if (test_report.status == JudgeReport::Test::RTE) {
+			log(" (",
+			    std::regex_replace(es.message, std::regex("killed and dumped"),
+			                       "killed"),
+			    ')');
+		}
 
 		func();
 
