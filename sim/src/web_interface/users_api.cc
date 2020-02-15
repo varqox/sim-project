@@ -196,7 +196,7 @@ void Sim::api_user_add() {
 
 	// Validate user type
 	utype_str = request.form_data.get("type");
-	User::Type utype /*= User::Type::NORMAL*/;
+	User::Type utype = User::Type::NORMAL; // Silence GCC warning
 	if (utype_str == "A") {
 		utype = User::Type::ADMIN;
 		if (uint(~users_perms & PERM::ADD_ADMIN)) {

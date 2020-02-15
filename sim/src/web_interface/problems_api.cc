@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <sim/constants.h>
 #include <sim/jobs.h>
+#include <sim/problem.hh>
 #include <sim/problem_permissions.hh>
 #include <simlib/config_file.hh>
 #include <simlib/file_info.hh>
@@ -427,7 +428,7 @@ void Sim::api_problem_add_or_reupload_impl(bool reuploading) {
 
 	// Validate problem type
 	StringView ptype_str = request.form_data.get("type");
-	Problem::Type ptype;
+	Problem::Type ptype = Problem::Type::PRIVATE; // Silence GCC warning
 	if (ptype_str == "PRI")
 		ptype = Problem::Type::PRIVATE;
 	else if (ptype_str == "PUB")

@@ -385,7 +385,7 @@ void Sim::api_contest_user_change_mode(StringView contest_id,
 	StringView mode_s = request.form_data.get("mode");
 
 	decltype(ContestUser::mode) new_mode;
-	PERMS needed_perm;
+	PERMS needed_perm = PERMS::NONE; // Silence GCC warning
 	if (mode_s == "C") {
 		new_mode = CUM::CONTESTANT;
 		needed_perm = PERMS::MAKE_CONTESTANT;

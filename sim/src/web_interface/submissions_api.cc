@@ -459,7 +459,7 @@ void Sim::api_submissions() {
 				FINAL,
 				PROBLEM_FINAL,
 				INITIAL_FINAL
-			} subtype_to_show;
+			} subtype_to_show = NORMAL; // Silence GCC warning
 			auto problem_final_to_subtype = [&] {
 				return (is_problem_final and may_see_problem_final
 				           ? PROBLEM_FINAL
@@ -802,7 +802,7 @@ void Sim::api_submission_add() {
 	}
 
 	// Validate fields
-	SubmissionLanguage slang;
+	SubmissionLanguage slang = SubmissionLanguage::C11; // Silence GCC warning
 	auto slang_str = request.form_data.get("language");
 	if (slang_str == "c11")
 		slang = SubmissionLanguage::C11;

@@ -1258,8 +1258,9 @@ void Sim::api_contest_problem_edit(StringView contest_problem_id,
 
 	// Validate final_selecting_method
 	auto fsm_str = request.form_data.get("final_selecting_method");
-	decltype(ContestProblem::final_selecting_method) final_selecting_method;
 	using FSSM = ContestProblem::FinalSubmissionSelectingMethod;
+	decltype(ContestProblem::final_selecting_method) final_selecting_method =
+	   FSSM::LAST_COMPILING; // Silence warning about uninitialized value
 	if (fsm_str == "LC")
 		final_selecting_method = FSSM::LAST_COMPILING;
 	else if (fsm_str == "WHS")
