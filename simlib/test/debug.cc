@@ -290,7 +290,7 @@ TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
 		X& operator=(const X&) = delete;
 	};
 
-	X(X(WONT_THROW(X(X(42)))));
+	(void)X(X(WONT_THROW(X(X(42)))));
 }
 
 TEST(debug, WONT_THROW_MACRO_rvalue) {
