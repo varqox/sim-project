@@ -224,13 +224,15 @@ TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
 }
 
 TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
-	ASSERT_DEATH(
+	EXPECT_EXIT(
 	   {
+		   errlog.label(false);
 		   std::vector<int> abc;
 		   errlog("BUG");
 		   WONT_THROW(abc.at(42));
 	   },
-	   "BUG");
+	   ::testing::KilledBySignal(SIGABRT),
+	   "^BUG\nBUG: this was expected to not throw\n$");
 }
 
 TEST(debug, WONT_THROW_MACRO_lvalue_reference) {
@@ -254,9 +256,41 @@ TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
 	EXPECT_EQ((bool)ptr2, true);
 }
 
+TEST(debug, WONT_THROW_MACRO_xvalue) {
+	struct A {
+		std::string& str;
+		A(std::string& s) : str(s) { str += "+A"; }
+		~A() { str += "-A"; }
+	};
+	struct B {
+		A a;
+		B(std::string& str) : a(str) {}
+		A&& get() && noexcept { return std::move(a); }
+	};
+	struct C {
+		std::string& str;
+		C(std::string& s, const A&) : str(s) { str += "+C"; }
+		~C() { str += "-C"; }
+	};
+
+	std::string str;
+	{ C val(str, WONT_THROW(B(str).get())); }
+	EXPECT_EQ(str, "+A+C-A-C");
+}
+
 TEST(debug, WONT_THROW_MACRO_prvalue) {
 	std::unique_ptr<int> ptr = WONT_THROW(std::make_unique<int>(162));
 	EXPECT_EQ((bool)ptr, true);
+}
+
+TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
+	struct X {
+		X(int) {}
+		X(const X&) = delete;
+		X& operator=(const X&) = delete;
+	};
+
+	X(X(WONT_THROW(X(X(42)))));
 }
 
 TEST(debug, WONT_THROW_MACRO_rvalue) {

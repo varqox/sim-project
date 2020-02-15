@@ -5,6 +5,7 @@
 #include "inplace_array.hh"
 #include "logger.hh"
 
+#include <cstdlib>
 #include <exception>
 
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)
@@ -146,21 +147,16 @@ public:
 		::stack_unwinding::StackGuard::marks_collected.clear();                \
 	} while (false)
 
-template <class Func>
-decltype(auto) throwing_is_bug(Func&& func) noexcept {
-	try {
-		return std::forward<Func>(func)();
-	} catch (const std::exception& e) {
-		ERRLOG_CATCH(e);
-		errlog("BUG: this was expected to not throw");
-		std::abort();
-	} catch (...) {
-		ERRLOG_CATCH();
-		errlog("BUG: this was expected to not throw");
-		std::abort();
-	}
-	__builtin_unreachable();
-}
+class ThrowingIsBug {
+	int uncaught_exceptions_ = std::uncaught_exceptions();
 
-#define WONT_THROW(...)                                                        \
-	throwing_is_bug([&]() -> decltype(auto) { return (__VA_ARGS__); })
+public:
+	~ThrowingIsBug() {
+		if (uncaught_exceptions_ != std::uncaught_exceptions()) {
+			errlog("BUG: this was expected to not throw");
+			std::abort();
+		}
+	}
+};
+
+#define WONT_THROW(...) (ThrowingIsBug(), __VA_ARGS__)
