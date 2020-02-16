@@ -28,10 +28,9 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 	 * unwanted files)
 	 */
 	vector<string> args =
-	   (proot_path.empty()
-	       ? std::initializer_list<string> {}
-	       : std::initializer_list<string> {
-	            // clang-format off
+	   (proot_path.empty() ? std::initializer_list<string> {}
+	                       : std::initializer_list<string> {
+	                            // clang-format off
 	            proot_path,
 	            "-v", "-1",
 	            "-r", dir_to_chdir.to_string(),
