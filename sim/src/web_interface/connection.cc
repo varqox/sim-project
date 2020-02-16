@@ -83,11 +83,11 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 	string ret = header.substr(0, beg);
 	// Erase leading white space
 	end = header.size();
-	while (isspace(header[end - 1]))
+	while (is_space(header[end - 1]))
 		--end;
 
 	// Erase trailing white space
-	while (++beg < header.size() && isspace(header[beg])) {
+	while (++beg < header.size() && is_space(header[beg])) {
 	}
 
 	return make_pair(ret, header.substr(beg, end - beg));
@@ -272,7 +272,7 @@ void Connection::readPOST(HttpRequest& req) {
 					if (state_ != OK) // Something went wrong
 						goto safe_return;
 
-					if (tolower(header.first) == "content-disposition") {
+					if (to_lower(header.first) == "content-disposition") {
 						// extract all needed information
 						size_t st = 0, last = 0;
 						field_name = "";
@@ -283,12 +283,12 @@ void Connection::readPOST(HttpRequest& req) {
 						// extract all variables from header content
 						while ((last = header.second.find(';', st)) !=
 						       string::npos) {
-							while (isblank(header.second[st]))
+							while (is_blank(header.second[st]))
 								++st;
 
 							var_name = var_val = "";
 							// extract var_name
-							while (st < last && !isblank(header.second[st]) &&
+							while (st < last && !is_blank(header.second[st]) &&
 							       header.second[st] != '=') {
 								var_name += header.second[st++];
 							}
@@ -309,7 +309,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 								else
 									while (st < last &&
-									       !isblank(header.second[st])) {
+									       !is_blank(header.second[st])) {
 										var_val += header.second[st++];
 									}
 							}
@@ -552,7 +552,7 @@ HttpRequest Connection::getRequest() {
 	// Extract method
 	size_t beg = 0, end = 0;
 
-	while (end < request_line.size() && !isspace(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end]))
 		++end;
 
 	if (request_line.compare(0, end, "GET") == 0)
@@ -568,10 +568,10 @@ HttpRequest Connection::getRequest() {
 	}
 
 	// Extract target
-	while (end < request_line.size() && isspace(request_line[end]))
+	while (end < request_line.size() && is_space(request_line[end]))
 		++end;
 	beg = end;
-	while (end < request_line.size() && !isspace(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end]))
 		++end;
 
 	req.target = request_line.substr(beg, end - beg);
@@ -581,10 +581,10 @@ HttpRequest Connection::getRequest() {
 	}
 
 	// Extract http version
-	while (end < request_line.size() && isspace(request_line[end]))
+	while (end < request_line.size() && is_space(request_line[end]))
 		++end;
 	beg = end;
-	while (end < request_line.size() && !isspace(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end]))
 		++end;
 
 	req.http_version = request_line.substr(beg, end - beg);
@@ -708,7 +708,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		   stdlog("\033[36mRESPONSE: ", substring(str, 0, pos), "\033[m");
 
 		StringView rest = substring(str, pos + 1); // omit '\r'
-		for (char c : rest) {
+		for (auto c : rest) {
 			if (c == '\r')
 				continue;
 			if (c == '\n')

@@ -21,7 +21,7 @@ public:
 	}
 
 	bool isEqualTo(StringView key, StringView val) const noexcept {
-		auto it = find(tolower(key.to_string()));
+		auto it = find(to_lower(key.to_string()));
 		return (it and it->second == val);
 	}
 

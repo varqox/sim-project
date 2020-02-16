@@ -42,7 +42,7 @@ struct Headers {
 		decltype(other.begin()) beg = other.begin(), end = other.end(), mid;
 		while (beg < end) {
 			mid = beg + ((end - beg) >> 1);
-			if (special_less<int(int)>(mid->first, name, tolower))
+			if (special_less<int(int)>(mid->first, name, to_lower))
 				beg = ++mid;
 			else
 				end = mid;
@@ -201,8 +201,8 @@ bool Connection::parseHeader(StringView str, StringView& name,
 	}
 
 	str.removePrefix(name.size() + 1);
-	str.removeLeading(isspace);
-	str.removeTrailing(isspace);
+	str.removeLeading(is_space);
+	str.removeTrailing(is_space);
 	value = str;
 	return false;
 }
@@ -265,7 +265,7 @@ bool Connection::constructHeaders(StringView& data) {
 
 			// Method
 			size_t pos = 0;
-			for (; pos < header.size() && !isspace(header[pos]); ++pos) {
+			for (; pos < header.size() && !is_space(header[pos]); ++pos) {
 			}
 
 			if (header.substr(0, pos) == "GET")
@@ -280,14 +280,15 @@ bool Connection::constructHeaders(StringView& data) {
 			header.removePrefix(pos);
 
 			// Target
-			header.removeLeading(isspace);
-			for (pos = 0; pos < header.size() && !isspace(header[pos]); ++pos) {
+			header.removeLeading(is_space);
+			for (pos = 0; pos < header.size() && !is_space(header[pos]);
+			     ++pos) {
 			}
 			req_.target = header.substr(0, pos);
 			header.removePrefix(pos);
 
 			// HTTP version
-			header.removeLeading(isspace);
+			header.removeLeading(is_space);
 			if (header != "HTTP/1.0" && header != "HTTP/1.1") {
 				// TODO: error 400
 				return true;

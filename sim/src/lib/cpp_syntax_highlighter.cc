@@ -343,9 +343,9 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				begs[i++] = ESCAPED_CHARACTER;
 
 				// Octals
-				if (isdigit(str[i])) {
-					i += (isdigit(str[i + 1]) ? 1 + bool(isdigit(str[i + 2]))
-					                          : 0);
+				if (is_digit(str[i])) {
+					i += (is_digit(str[i + 1]) ? 1 + bool(is_digit(str[i + 2]))
+					                           : 0);
 				}
 				// Hexadecimal
 				else if (str[i] == 'x')
@@ -375,7 +375,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				++line;
 			}
 			auto tmplog = stdlog(i, " (line ", line, "): '");
-			if (isprint(str[i]))
+			if (is_print(str[i]))
 				tmplog(str[i], "'   ");
 			else if (str[i] == '\n')
 				tmplog("\\n'  ");
@@ -415,7 +415,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 	DEBUG_CSH(dump_begs_ends();)
 
-	auto isName = [](int c) { return (c == '_' || c == '$' || isalnum(c)); };
+	auto is_name = [](auto c) { return (c == '_' || c == '$' || is_alnum(c)); };
 
 	/* Mark preprocessor, functions and numbers */
 
@@ -443,7 +443,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			int k = i - 1;
 			// Omit white-spaces between function name and '('
 			static_assert(BEGIN_GUARDS > 0, "Need for unguarded search");
-			while (isspace(str[k]))
+			while (is_space(str[k]))
 				--k;
 
 			int name_end = k + 1;
@@ -454,7 +454,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				static_assert(BEGIN_GUARDS > 0, "");
 				if (str[k] == ':' && str[k - 1] == ':' && str[k + 1] != ':')
 					--k;
-				else if (!isName(str[k]))
+				else if (!is_name(str[k]))
 					break;
 
 				--k;
@@ -462,7 +462,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			++k;
 
 			// Function name can neither be blank nor begin with a digit
-			if (k < name_end && !isdigit(str[k])) {
+			if (k < name_end && !is_digit(str[k])) {
 				StringView function_name = substring(str, k, name_end);
 				// It is important that function_name is taken as StringView
 				// below!
@@ -473,15 +473,15 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				++ends[name_end];
 			}
 
-		} else if (isdigit(str[i])) { // Digits - numeric literals
+		} else if (is_digit(str[i])) { // Digits - numeric literals
 			static_assert(BEGIN_GUARDS > 0, "");
 			// Ignore digits in names
-			if (isName(str[i - 1]))
+			if (is_name(str[i - 1]))
 				continue;
 			// Floating points may begin with '.', but inhibit highlighting
 			// the whole number 111.2.3
 			static_assert(GUARD_CHARACTER != '.', "");
-			if (str[i - 1] == '.' && isdigit(str[i - 2]))
+			if (str[i - 1] == '.' && is_digit(str[i - 2]))
 				continue;
 
 			// Number begins with dot
@@ -494,19 +494,20 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 				begs[i] = DIGIT;
 
 			int k = i + 1;
-			auto is_digit = isdigit;
+			auto curr_is_digit = is_digit<char>;
 			char exp_sign = 'e';
 
 			// Hexadecimal
-			if (str[i] == '0' && tolower(str[k]) == 'x' && !dot_appeared) {
-				is_digit = isxdigit;
+			if (str[i] == '0' && to_lower(str[k]) == 'x' && !dot_appeared) {
+				curr_is_digit = is_xdigit<char>;
 				exp_sign = 'p';
 				++k;
 				if (str[k] == '.') {
 					dot_as_beginning = dot_appeared = true;
 					++k;
 
-				} else if (!is_digit(str[k])) { // Disallow numeric literal "0x"
+				} else if (!curr_is_digit(
+				              str[k])) { // Disallow numeric literal "0x"
 					begs[i - dot_as_beginning] = -1;
 					i = k - 1;
 					continue;
@@ -516,7 +517,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			// Now the main part of the numeric literal (digits + exponent)
 			for (; k < end; ++k) {
 				// Digits are always valid
-				if (is_digit(str[k]))
+				if (curr_is_digit(str[k]))
 					continue;
 
 				if (str[k] == '.') { // Dot
@@ -526,7 +527,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 
 					dot_appeared = true;
 
-				} else if (tolower(str[k]) == exp_sign) { // Exponent
+				} else if (to_lower(str[k]) == exp_sign) { // Exponent
 					// Do not allow cases like: 0.1e1e or .e2
 					if (exponent_appeared ||
 					    (str[k - 1] == '.' && dot_as_beginning)) {
@@ -550,7 +551,7 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			    // In floating-point hexadecimals exponent has to appear
 			    (exp_sign == 'p' && dot_appeared && !exponent_appeared) ||
 			    // Allow literals like: "111."
-			    (str[k - 1] != '.' && !is_digit(str[k - 1]))) {
+			    (str[k - 1] != '.' && !curr_is_digit(str[k - 1]))) {
 			kill_try:
 				// dot_as_beginning does not imply beg[i - 1] in hexadecimals
 				begs[i - (dot_as_beginning && exp_sign == 'e')] = -1;
@@ -639,8 +640,8 @@ string CppSyntaxHighlighter::operator()(CStringView input) const {
 			static_assert(BEGIN_GUARDS > 0, "");
 			static_assert(END_GUARDS > 0, "");
 			// Found a word
-			if (k && !isName(str[i + 1]) &&
-			    !isName(str[j = i - words[k].size])) {
+			if (k && !is_name(str[i + 1]) &&
+			    !is_name(str[j = i - words[k].size])) {
 				DEBUG_CSH(stdlog("aho: ", j + 1, ": ", words[k].str);)
 				begs[j + 1] = words[k].style;
 				++ends[i + 1];
