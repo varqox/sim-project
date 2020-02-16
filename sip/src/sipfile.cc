@@ -11,6 +11,8 @@
 #include <simlib/sim/problem_package.hh>
 #include <simlib/sim/simfile.hh>
 
+using std::not_fn;
+
 // Macros because of string concentration in compile-time (in C++11 it is hard
 // to achieve in the other way and this macros are pretty more readable than
 // some template meta-programming code that concentrates string literals. Also,
@@ -110,8 +112,8 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 		end_gid = end_gid_opt.value();
 	}
 
-	std::string begin_tid = tolower(begin_test.tid.to_string());
-	std::string end_tid = tolower(end_test.tid.to_string());
+	std::string begin_tid = to_lower(begin_test.tid.to_string());
+	std::string end_tid = to_lower(end_test.tid.to_string());
 
 	// Allow e.g. 4-8c
 	if (begin_tid.empty())
@@ -156,9 +158,9 @@ void Sipfile::load_static_tests() {
 
 	static_tests.clear();
 	for (StringView entry : static_tests_var.as_array()) {
-		entry.extract_leading(isspace);
-		StringView test_range = entry.extract_leading(not_isspace);
-		entry.extract_leading(isspace);
+		entry.extract_leading(is_space<char>);
+		StringView test_range = entry.extract_leading(not_fn(is_space<char>));
+		entry.extract_leading(is_space<char>);
 		if (not entry.empty()) {
 			log_warning("Sipfile (static): ignoring invalid suffix: `", entry,
 			            "` of the entry with test range: ", test_range);
@@ -228,14 +230,14 @@ void Sipfile::load_gen_tests() {
 	gen_tests.clear();
 	for (StringView entry : gen_tests_var.as_array()) {
 		// Test range
-		entry.extract_leading(isspace);
-		StringView test_range = entry.extract_leading(not_isspace);
-		entry.extract_leading(isspace);
+		entry.extract_leading(is_space<char>);
+		StringView test_range = entry.extract_leading(not_fn(is_space<char>));
+		entry.extract_leading(is_space<char>);
 		// Generator
-		StringView specified_generator = entry.extract_leading(not_isspace);
-		entry.extract_leading(isspace);
+		StringView specified_generator = entry.extract_leading(not_fn(is_space<char>));
+		entry.extract_leading(is_space<char>);
 		// Generator arguments
-		entry.extract_trailing(isspace);
+		entry.extract_trailing(is_space<char>);
 		StringView generator_args = entry;
 
 		if (specified_generator.empty()) {

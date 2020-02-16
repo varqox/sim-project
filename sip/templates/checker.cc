@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 using namespace std;
@@ -25,11 +26,10 @@ inline void checker_ok() {
 }
 
 template <class Arg1, class... Args>
-inline std::enable_if_t<not std::is_convertible<Arg1, double>::value, void>
+inline std::enable_if_t<not std::is_convertible_v<Arg1, double>, void>
 checker_ok(Arg1&& message_p1, Args&&... message_p2) {
 	cout << "OK\n\n" << std::forward<Arg1>(message_p1);
-	(void)initializer_list<int> {
-	   (cout << std::forward<Args>(message_p2), 0)...};
+	(cout << ... << std::forward<Args>(message_p2));
 	cout << '\n';
 	exit(0);
 }
@@ -37,7 +37,7 @@ checker_ok(Arg1&& message_p1, Args&&... message_p2) {
 template <class... Args>
 inline void checker_ok(double score, Args&&... message) {
 	cout << "OK\n" << score << '\n';
-	(void)initializer_list<int> {(cout << std::forward<Args>(message), 0)...};
+	(cout << ... << std::forward<Args>(message));
 	cout << '\n';
 	exit(0);
 }
@@ -45,7 +45,7 @@ inline void checker_ok(double score, Args&&... message) {
 template <class... Args>
 inline void checker_wrong(Args&&... message) {
 	cout << "WRONG\n\n";
-	(void)initializer_list<int> {(cout << std::forward<Args>(message), 0)...};
+	(cout << ... << std::forward<Args>(message));
 	cout << '\n';
 	exit(0);
 }
@@ -121,7 +121,7 @@ private:
 	}
 
 	static string char_description(int ch) {
-		if (isgraph(ch))
+		if (std::isgraph(ch))
 			return {'\'', (char)ch, '\''};
 
 		if (ch == ' ')
@@ -151,7 +151,8 @@ private:
 		return *this;
 	}
 
-	static bool is_digit(int ch) noexcept { return ('0' <= ch and ch <= '9'); }
+	template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+	static bool is_digit(T ch) noexcept { return ('0' <= ch and ch <= '9'); }
 
 	template <class T>
 	void scan_integer(T& val) {
@@ -160,7 +161,7 @@ private:
 			fatal("Read EOF, expected a number");
 
 		bool minus = false;
-		if (not std::is_unsigned<T>::value and ch == '-') {
+		if (not std::is_unsigned_v<T> and ch == '-') {
 			minus = true;
 			if (not getchar(ch))
 				fatal("Read EOF, expected a number");
@@ -228,7 +229,7 @@ public:
 	}
 
 private:
-	static string space_char_description(char ch) {
+	static string space_char_description(unsigned char ch) {
 		return ' ' + char_description(ch);
 	}
 

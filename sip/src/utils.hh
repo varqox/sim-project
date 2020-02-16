@@ -1,14 +1,16 @@
 #pragma once
 
 #include <simlib/string_view.hh>
+#include <type_traits>
 
-inline bool is_subsequence(StringView sequence, StringView str) noexcept {
-	if (sequence.empty())
+template<class T, class U>
+inline bool is_subsequence(T&& subseqence, U&& sequence) noexcept {
+	if (subseqence.empty())
 		return true;
 
 	size_t i = 0;
-	for (char c : str)
-		if (c == sequence[i] and ++i == sequence.size())
+	for (auto const& x : sequence)
+		if (x == subseqence[i] and ++i == subseqence.size())
 			return true;
 
 	return false;
@@ -26,5 +28,3 @@ inline bool matches_pattern(StringView pattern, StringView str) noexcept {
 
 	return is_subsequence(pattern, str.substring(0, pos));
 }
-
-inline bool not_isspace(int c) noexcept { return not isspace(c); }
