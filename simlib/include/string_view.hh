@@ -264,7 +264,7 @@ public:
 		   s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type find(char c, size_type beg = 0) const noexcept {
+	constexpr size_type find(Char c, size_type beg = 0) const noexcept {
 		for (; beg < len; ++beg)
 			if (str[beg] == c)
 				return beg;
@@ -272,7 +272,7 @@ public:
 		return npos;
 	}
 
-	constexpr size_type find(char c, size_type beg, size_type endi) const
+	constexpr size_type find(Char c, size_type beg, size_type endi) const
 	   noexcept {
 		if (endi > len)
 			endi = len;
@@ -347,7 +347,7 @@ public:
 		   s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type rfind(char c, size_type beg = 0) const noexcept {
+	constexpr size_type rfind(Char c, size_type beg = 0) const noexcept {
 		for (size_type endi = len; endi > beg;)
 			if (str[--endi] == c)
 				return endi;
@@ -355,7 +355,7 @@ public:
 		return npos;
 	}
 
-	constexpr size_type rfind(char c, size_type beg, size_type endi) const
+	constexpr size_type rfind(Char c, size_type beg, size_type endi) const
 	   noexcept {
 		if (endi > len)
 			endi = len;
