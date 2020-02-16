@@ -1,6 +1,7 @@
 #include "sim.h"
 
-#include <simlib/filesystem.h>
+#include <simlib/file_contents.hh>
+#include <simlib/file_descriptor.hh>
 
 using sim::User;
 
@@ -9,26 +10,26 @@ void Sim::api_handle() {
 
 	resp.headers["Content-type"] = "text/plain; charset=utf-8";
 	// Allow download queries to pass without POST
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg == "download") {
-		next_arg = url_args.extractNextArg();
+		next_arg = url_args.extract_next_arg();
 		if (is_one_of(next_arg, "submission", "problem", "contest_file")) {
-			auto id = url_args.extractNextArg();
+			auto id = url_args.extract_next_arg();
 			request.target =
 			   concat_tostr("/api/", next_arg, '/', id, "/download");
 
 		} else if (next_arg == "statement") {
-			next_arg = url_args.extractNextArg();
+			next_arg = url_args.extract_next_arg();
 			if (is_one_of(next_arg, "problem", "contest")) {
-				auto id = url_args.extractNextArg();
+				auto id = url_args.extract_next_arg();
 				request.target =
 				   concat_tostr("/api/", next_arg, '/', id, "/statement");
 			} else
 				return api_error404();
 
 		} else if (next_arg == "job") {
-			auto job_id = url_args.extractNextArg();
-			next_arg = url_args.extractNextArg();
+			auto job_id = url_args.extract_next_arg();
+			next_arg = url_args.extract_next_arg();
 			if (is_one_of(next_arg, "log", "uploaded-package",
 			              "uploaded-statement")) {
 				request.target =
@@ -41,9 +42,9 @@ void Sim::api_handle() {
 			return api_error404();
 
 		// Update url_args to reflect the changed URL
-		url_args = RequestURIParser(request.target);
-		url_args.extractNextArg(); // extract "/api"
-		next_arg = url_args.extractNextArg();
+		url_args = RequestUriParser(request.target);
+		url_args.extract_next_arg(); // extract "/api"
+		next_arg = url_args.extract_next_arg();
 
 	} else if (request.method != server::HttpRequest::POST)
 		return api_error403("To access API you have to use POST");
@@ -90,7 +91,7 @@ void Sim::api_logs() {
 	if (not session_is_open || session_user_type != User::Type::ADMIN)
 		return api_error403();
 
-	StringView type = url_args.extractNextArg();
+	StringView type = url_args.extract_next_arg();
 	CStringView filename;
 	if (type == "web")
 		filename = SERVER_LOG;
@@ -104,20 +105,21 @@ void Sim::api_logs() {
 		return api_error404();
 
 	off64_t end_offset = 0;
-	StringView que = url_args.extractQuery();
+	StringView query = url_args.extract_query();
 	uint chunk_max_len = LOGS_FIRST_CHUNK_MAX_LEN;
-	if (que.size()) {
-		if (not isDigitNotGreaterThan<std::numeric_limits<off64_t>::max()>(que))
+	if (query.size()) {
+		auto opt = str2num<off64_t>(query);
+		if (not opt or *opt < 0)
 			return api_error400();
 
-		(void)strtou(que, end_offset);
+		end_offset = *opt;
 		chunk_max_len = LOGS_OTHER_CHUNK_MAX_LEN;
 	}
 
 	FileDescriptor fd(filename, O_RDONLY | O_CLOEXEC);
 	off64_t fsize = lseek64(fd, 0, SEEK_END);
 	throw_assert(fsize >= 0);
-	if (que.empty())
+	if (query.empty())
 		end_offset = fsize;
 	else if (end_offset > fsize)
 		end_offset = fsize;
@@ -137,13 +139,12 @@ void Sim::api_logs() {
 	// Read the data
 	InplaceBuff<meta::max(LOGS_FIRST_CHUNK_MAX_LEN, LOGS_OTHER_CHUNK_MAX_LEN)>
 	   buff(len);
-	auto ret = readAll(fd, buff.data(), len);
-	// TODO: readAll() and writeAll() - support offset argument - p(write|read)
-	// TODO: getFileContents() - support offset argument - pread()
-	// TODO: putFileContents() - support offset argument - pwrite()
+	auto ret = read_all(fd, buff.data(), len);
+	// TODO: read_all() and write_all() - support offset argument -
+	// p(write|read)
 	if (ret != len)
 		THROW("read()", errmsg());
 
 	append(end_offset - len, '\n'); // New offset
-	append(toHex(buff)); // Data
+	append(to_hex(buff)); // Data
 }

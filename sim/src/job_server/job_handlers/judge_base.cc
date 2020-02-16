@@ -1,5 +1,8 @@
 #include "judge_base.h"
 
+#include <sim/constants.h>
+#include <simlib/enum_val.hh>
+
 namespace job_handlers {
 
 JudgeBase::JudgeBase() {
@@ -19,8 +22,7 @@ sim::SolutionLanguage JudgeBase::to_sol_lang(SubmissionLanguage lang) {
 	case SubmissionLanguage::PASCAL: return sim::SolutionLanguage::PASCAL;
 	}
 
-	THROW("Invalid Language: ",
-	      (int)EnumVal<SubmissionLanguage>(lang).int_val());
+	THROW("Invalid Language: ", (int)EnumVal(lang).int_val());
 }
 
 InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
@@ -73,15 +75,15 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 			throw_assert(false); // We shouldn't get here
 		};
 
-		report.append("<td>", htmlEscape(test.name), "</td>",
+		report.append("<td>", html_escape(test.name), "</td>",
 		              asTdString(test.status), "<td>");
 
 		if (test.status == JudgeReport::Test::SKIPPED)
 			report.append('?');
 		else
-			report.append(toString(floor_to_10ms(test.runtime), false));
+			report.append(to_string(floor_to_10ms(test.runtime), false));
 
-		report.append(" / ", toString(floor_to_10ms(test.time_limit), false),
+		report.append(" / ", to_string(floor_to_10ms(test.time_limit), false),
 		              "</td><td>");
 
 		if (test.status == JudgeReport::Test::SKIPPED)
@@ -121,8 +123,8 @@ InplaceBuff<65536> JudgeBase::construct_report(const sim::JudgeReport& jr,
 			for (auto&& test : group.tests) {
 				if (test.comment.size()) {
 					report.append("<li><span class=\"test-id\">",
-					              htmlEscape(test.name), "</span>",
-					              htmlEscape(test.comment), "</li>");
+					              html_escape(test.name), "</span>",
+					              html_escape(test.comment), "</li>");
 				}
 			}
 		}

@@ -105,7 +105,8 @@ Sim::jobs_granted_permissions_problem(StringView problem_id) {
 	auto problem_perms =
 	   sim::problem::get_permissions(
 	      mysql, problem_id,
-	      (session_is_open ? optional {strtoull(session_user_id)}
+	      (session_is_open ? optional {WONT_THROW(
+	                            str2num<uintmax_t>(session_user_id).value())}
 	                       : std::nullopt),
 	      (session_is_open ? optional {session_user_type} : std::nullopt))
 	      .value_or(P_PERMS::NONE);
@@ -135,7 +136,7 @@ Sim::jobs_granted_permissions_submission(StringView submission_id) {
 	                          "LEFT JOIN contest_users cu ON cu.user_id=?"
 	                          " AND cu.contest_id=s.contest_id "
 	                          "WHERE s.id=?");
-	stmt.bindAndExecute(session_user_id, submission_id);
+	stmt.bind_and_execute(session_user_id, submission_id);
 
 	EnumVal<SubmissionType> stype;
 	MySQL::Optional<decltype(Problem::owner)::value_type> problem_owner;
@@ -156,7 +157,8 @@ Sim::jobs_granted_permissions_submission(StringView submission_id) {
 		// The below check has to be done as the last one because it gives the
 		// least permissions
 		auto problem_perms = sim::problem::get_permissions(
-		   (session_is_open ? optional {strtoull(session_user_id)}
+		   (session_is_open ? optional {WONT_THROW(
+		                         str2num<uintmax_t>(session_user_id).value())}
 		                    : std::nullopt),
 		   (session_is_open ? optional {session_user_type} : std::nullopt),
 		   problem_owner, problem_type);
@@ -174,11 +176,11 @@ void Sim::jobs_handle() {
 	if (not session_is_open)
 		return redirect("/login?" + request.target);
 
-	StringView next_arg = url_args.extractNextArg();
-	if (isDigit(next_arg)) {
+	StringView next_arg = url_args.extract_next_arg();
+	if (is_digit(next_arg)) {
 		jobs_jid = next_arg;
 
-		page_template(intentionalUnsafeStringView(concat("Job ", jobs_jid)),
+		page_template(intentional_unsafe_string_view(concat("Job ", jobs_jid)),
 		              "body{padding-left:20px}");
 		append("<script>view_job(false, ", jobs_jid,
 		       ", window.location.hash);</script>");

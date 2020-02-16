@@ -15,7 +15,7 @@ class ContestUsersMerger : public Merger<sim::ContestUser> {
 		sim::ContestUser cu;
 		auto stmt = conn.prepare("SELECT user_id, contest_id, mode FROM ",
 		                         record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(cu.id.user_id, cu.id.contest_id, cu.mode);
 		while (stmt.next()) {
 			cu.id.user_id = users_.new_id(cu.id.user_id, record_set.kind);
@@ -45,9 +45,13 @@ public:
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(user_id, contest_id, mode) "
 		                         "VALUES(?, ?, ?)");
+
+		ProgressBar progress_bar("Contest users saved:", new_table_.size(),
+		                         128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::ContestUser& x = new_record.data;
-			stmt.bindAndExecute(x.id.user_id, x.id.contest_id, x.mode);
+			stmt.bind_and_execute(x.id.user_id, x.id.contest_id, x.mode);
 		}
 
 		transaction.commit();

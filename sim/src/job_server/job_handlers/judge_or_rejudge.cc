@@ -14,7 +14,7 @@ void JudgeOrRejudge::run() {
 	                          " s.last_judgment, p.file_id, p.last_edit "
 	                          "FROM submissions s, problems p "
 	                          "WHERE p.id=problem_id AND s.id=?");
-	stmt.bindAndExecute(submission_id_);
+	stmt.bind_and_execute(submission_id_);
 	uint64_t submission_file_id, problem_file_id;
 	uint64_t problem_id;
 	MySQL::Optional<uint64_t> sowner, contest_problem_id;
@@ -56,7 +56,7 @@ void JudgeOrRejudge::run() {
 			using ST = SubmissionType;
 			// Get the submission's ACTUAL type
 			stmt = mysql.prepare("SELECT type FROM submissions WHERE id=?");
-			stmt.bindAndExecute(submission_id_);
+			stmt.bind_and_execute(submission_id_);
 			EnumVal<ST> stype;
 			stmt.res_bind_all(stype);
 			if (not stmt.next())
@@ -70,14 +70,14 @@ void JudgeOrRejudge::run() {
 			                     "WHERE id=?");
 
 			if (is_fatal(full_status)) {
-				stmt.bindAndExecute(
+				stmt.bind_and_execute(
 				   false, (uint)initial_status, (uint)full_status, nullptr,
 				   judging_began, initial_report, final_report, submission_id_);
 			} else {
-				stmt.bindAndExecute((stype == ST::NORMAL and score.has_value()),
-				                    (uint)initial_status, (uint)full_status,
-				                    score, judging_began, initial_report,
-				                    final_report, submission_id_);
+				stmt.bind_and_execute(
+				   (stype == ST::NORMAL and score.has_value()),
+				   (uint)initial_status, (uint)full_status, score,
+				   judging_began, initial_report, final_report, submission_id_);
 			}
 
 			submission::update_final(mysql, sowner, problem_id,
@@ -93,7 +93,7 @@ void JudgeOrRejudge::run() {
 		update_submission(SubmissionStatus::COMPILATION_ERROR,
 		                  SubmissionStatus::COMPILATION_ERROR, std::nullopt,
 		                  concat("<pre class=\"compilation-errors\">",
-		                         htmlEscape(compilation_errors.value()),
+		                         html_escape(compilation_errors.value()),
 		                         "</pre>"),
 		                  "");
 
@@ -131,7 +131,7 @@ void JudgeOrRejudge::run() {
 		        "udge report: ", jreport.judge_log);
 
 		stmt = mysql.prepare("UPDATE jobs SET data=? WHERE id=?");
-		stmt.bindAndExecute(get_log(), job_id_);
+		stmt.bind_and_execute(get_log(), job_id_);
 		if (partial)
 			job_log_holder_.size = job_log_len;
 
@@ -184,10 +184,10 @@ void JudgeOrRejudge::run() {
 		for (auto&& rep : {initial_jrep, final_jrep}) {
 			for (auto&& group : rep.groups) {
 				for (auto&& test : group.tests) {
-					if (hasPrefixIn(test.comment,
-					                {"Runtime error (Error: ",
-					                 "Runtime error (failed to get syscall",
-					                 "Runtime error (forbidden syscall"})) {
+					if (has_one_of_prefixes(
+					       test.comment, "Runtime error (Error: ",
+					       "Runtime error (failed to get syscall",
+					       "Runtime error (forbidden syscall")) {
 						errlog("Submission ", submission_id_, " (problem ",
 						       problem_id, "): ", test.name, " -> ",
 						       test.comment);

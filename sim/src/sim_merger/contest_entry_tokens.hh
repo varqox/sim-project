@@ -39,7 +39,7 @@ class ContestEntryTokensMerger
 		                         " short_token_expiration "
 		                         "FROM ",
 		                         record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(cet.token, cet.contest_id, m_short_token,
 		                  m_short_token_expiration);
 		while (stmt.next()) {
@@ -89,10 +89,14 @@ public:
 		                         "(token, contest_id, short_token,"
 		                         " short_token_expiration) "
 		                         "VALUES(?, ?, ?, ?)");
+
+		ProgressBar progress_bar(
+		   "Contest entry tokens saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const ContestEntryToken& x = new_record.data;
-			stmt.bindAndExecute(x.token, x.contest_id, x.short_token,
-			                    x.short_token_expiration);
+			stmt.bind_and_execute(x.token, x.contest_id, x.short_token,
+			                      x.short_token_expiration);
 		}
 
 		transaction.commit();

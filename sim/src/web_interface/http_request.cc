@@ -1,6 +1,6 @@
 #include "http_request.h"
 
-#include <simlib/debug.h>
+#include <simlib/debug.hh>
 #include <unistd.h>
 
 using std::string;

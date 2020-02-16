@@ -2,7 +2,10 @@
 
 #include <chrono>
 #include <cstdint>
-#include <simlib/string.h>
+#include <simlib/concat.hh>
+#include <simlib/meta.hh>
+
+using uint = unsigned;
 
 // Session
 constexpr uint SESSION_ID_LEN = 30;
@@ -37,23 +40,7 @@ enum class SubmissionType : uint8_t {
 	PROBLEM_SOLUTION = 3,
 };
 
-#define STYPE_NORMAL_STR "0"
-static_assert(meta::equal(STYPE_NORMAL_STR,
-                          meta::ToString<(int)SubmissionType::NORMAL>::value),
-              "Update the above #define");
-
-#define STYPE_IGNORED_STR "2"
-static_assert(meta::equal(STYPE_IGNORED_STR,
-                          meta::ToString<(int)SubmissionType::IGNORED>::value),
-              "Update the above #define");
-
-#define STYPE_PROBLEM_SOLUTION_STR "3"
-static_assert(
-   meta::equal(STYPE_PROBLEM_SOLUTION_STR,
-               meta::ToString<(int)SubmissionType::PROBLEM_SOLUTION>::value),
-   "Update the above #define");
-
-constexpr const char* toString(SubmissionType x) {
+constexpr const char* to_string(SubmissionType x) {
 	switch (x) {
 	case SubmissionType::NORMAL: return "Normal";
 	case SubmissionType::IGNORED: return "Ignored";
@@ -70,7 +57,7 @@ enum class SubmissionLanguage : uint8_t {
 	CPP17 = 4,
 };
 
-constexpr const char* toString(SubmissionLanguage x) {
+constexpr const char* to_string(SubmissionLanguage x) {
 	switch (x) {
 	case SubmissionLanguage::C11: return "C11";
 	case SubmissionLanguage::CPP11: return "C++11";
@@ -163,12 +150,6 @@ constexpr const char* css_color_class(SubmissionStatus status) noexcept {
 	return ""; // Shouldn't happen
 }
 
-#define SSTATUS_PENDING_STR "8"
-static_assert(
-   meta::equal(SSTATUS_PENDING_STR,
-               meta::ToString<(int)SubmissionStatus::PENDING>::value),
-   "Update the above #define");
-
 enum class JobType : uint8_t {
 	JUDGE_SUBMISSION = 1,
 	ADD_PROBLEM = 2,
@@ -189,108 +170,7 @@ enum class JobType : uint8_t {
 	CHANGE_PROBLEM_STATEMENT = 17,
 };
 
-#define JTYPE_JUDGE_SUBMISSION_STR "1"
-static_assert(
-   meta::equal(JTYPE_JUDGE_SUBMISSION_STR,
-               meta::ToString<(int)JobType::JUDGE_SUBMISSION>::value),
-   "Update the above #define");
-
-#define JTYPE_ADD_PROBLEM_STR "2"
-static_assert(meta::equal(JTYPE_ADD_PROBLEM_STR,
-                          meta::ToString<(int)JobType::ADD_PROBLEM>::value),
-              "Update the above #define");
-
-#define JTYPE_REUPLOAD_PROBLEM_STR "3"
-static_assert(
-   meta::equal(JTYPE_REUPLOAD_PROBLEM_STR,
-               meta::ToString<(int)JobType::REUPLOAD_PROBLEM>::value),
-   "Update the above #define");
-
-#define JTYPE_ADD_PROBLEM__JUDGE_MODEL_SOLUTION_STR "4"
-static_assert(
-   meta::equal(
-      JTYPE_ADD_PROBLEM__JUDGE_MODEL_SOLUTION_STR,
-      meta::ToString<(int)JobType::ADD_PROBLEM__JUDGE_MODEL_SOLUTION>::value),
-   "Update the above #define");
-
-#define JTYPE_REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION_STR "5"
-static_assert(
-   meta::equal(JTYPE_REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION_STR,
-               meta::ToString<
-                  (int)JobType::REUPLOAD_PROBLEM__JUDGE_MODEL_SOLUTION>::value),
-   "Update the above #define");
-
-#define JTYPE_EDIT_PROBLEM_STR "6"
-static_assert(meta::equal(JTYPE_EDIT_PROBLEM_STR,
-                          meta::ToString<(int)JobType::EDIT_PROBLEM>::value),
-              "Update the above #define");
-
-#define JTYPE_DELETE_PROBLEM_STR "7"
-static_assert(meta::equal(JTYPE_DELETE_PROBLEM_STR,
-                          meta::ToString<(int)JobType::DELETE_PROBLEM>::value),
-              "Update the above #define");
-
-#define JTYPE_RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM_STR "8"
-static_assert(
-   meta::equal(
-      JTYPE_RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM_STR,
-      meta::ToString<
-         (int)JobType::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM>::value),
-   "Update the above #define");
-
-#define JTYPE_DELETE_USER_STR "9"
-static_assert(meta::equal(JTYPE_DELETE_USER_STR,
-                          meta::ToString<(int)JobType::DELETE_USER>::value),
-              "Update the above #define");
-
-#define JTYPE_DELETE_CONTEST_STR "10"
-static_assert(meta::equal(JTYPE_DELETE_CONTEST_STR,
-                          meta::ToString<(int)JobType::DELETE_CONTEST>::value),
-              "Update the above #define");
-
-#define JTYPE_DELETE_CONTEST_ROUND_STR "11"
-static_assert(
-   meta::equal(JTYPE_DELETE_CONTEST_ROUND_STR,
-               meta::ToString<(int)JobType::DELETE_CONTEST_ROUND>::value),
-   "Update the above #define");
-
-#define JTYPE_DELETE_CONTEST_PROBLEM_STR "12"
-static_assert(
-   meta::equal(JTYPE_DELETE_CONTEST_PROBLEM_STR,
-               meta::ToString<(int)JobType::DELETE_CONTEST_PROBLEM>::value),
-   "Update the above #define");
-
-#define JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR "13"
-static_assert(
-   meta::equal(
-      JTYPE_RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION_STR,
-      meta::ToString<
-         (int)JobType::RESET_PROBLEM_TIME_LIMITS_USING_MODEL_SOLUTION>::value),
-   "Update the above #define");
-
-#define JTYPE_MERGE_PROBLEMS_STR "14"
-static_assert(meta::equal(JTYPE_MERGE_PROBLEMS_STR,
-                          meta::ToString<(int)JobType::MERGE_PROBLEMS>::value),
-              "Update the above #define");
-
-#define JTYPE_REJUDGE_SUBMISSION_STR "15"
-static_assert(
-   meta::equal(JTYPE_REJUDGE_SUBMISSION_STR,
-               meta::ToString<(int)JobType::REJUDGE_SUBMISSION>::value),
-   "Update the above #define");
-
-#define JTYPE_DELETE_FILE_STR "16"
-static_assert(meta::equal(JTYPE_DELETE_FILE_STR,
-                          meta::ToString<(int)JobType::DELETE_FILE>::value),
-              "Update the above #define");
-
-#define JTYPE_CHANGE_PROBLEM_STATEMENT_STR "17"
-static_assert(
-   meta::equal(JTYPE_CHANGE_PROBLEM_STATEMENT_STR,
-               meta::ToString<(int)JobType::CHANGE_PROBLEM_STATEMENT>::value),
-   "Update the above #define");
-
-constexpr const char* toString(JobType x) {
+constexpr const char* to_string(JobType x) {
 	using JT = JobType;
 	switch (x) {
 	case JT::JUDGE_SUBMISSION: return "JUDGE_SUBMISSION";
@@ -400,38 +280,7 @@ enum class JobStatus : uint8_t {
 	CANCELED = 6
 };
 
-#define JSTATUS_PENDING_STR "1"
-static_assert(meta::equal(JSTATUS_PENDING_STR,
-                          meta::ToString<(int)JobStatus::PENDING>::value),
-              "Update the above #define");
-
-#define JSTATUS_NOTICED_PENDING_STR "2"
-static_assert(
-   meta::equal(JSTATUS_NOTICED_PENDING_STR,
-               meta::ToString<(int)JobStatus::NOTICED_PENDING>::value),
-   "Update the above #define");
-
-#define JSTATUS_IN_PROGRESS_STR "3"
-static_assert(meta::equal(JSTATUS_IN_PROGRESS_STR,
-                          meta::ToString<(int)JobStatus::IN_PROGRESS>::value),
-              "Update the above #define");
-
-#define JSTATUS_DONE_STR "4"
-static_assert(meta::equal(JSTATUS_DONE_STR,
-                          meta::ToString<(int)JobStatus::DONE>::value),
-              "Update the above #define");
-
-#define JSTATUS_FAILED_STR "5"
-static_assert(meta::equal(JSTATUS_FAILED_STR,
-                          meta::ToString<(int)JobStatus::FAILED>::value),
-              "Update the above #define");
-
-#define JSTATUS_CANCELED_STR "6"
-static_assert(meta::equal(JSTATUS_CANCELED_STR,
-                          meta::ToString<(int)JobStatus::CANCELED>::value),
-              "Update the above #define");
-
-constexpr const char* toString(JobStatus x) {
+constexpr const char* to_string(JobStatus x) {
 	switch (x) {
 	case JobStatus::PENDING: return "Pending";
 	case JobStatus::NOTICED_PENDING: return "Pending";

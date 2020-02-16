@@ -1,6 +1,7 @@
 #include "sim.h"
 
 #include <sim/contest.hh>
+#include <sim/contest_user.hh>
 #include <sim/random.hh>
 
 using sim::Contest;
@@ -11,7 +12,7 @@ void Sim::api_contest_entry_token() {
 	if (not session_is_open)
 		return api_error403();
 
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg.empty()) {
 		return api_error404();
 	} else if (next_arg[0] == '=') {
@@ -25,7 +26,7 @@ void Sim::api_contest_entry_token() {
 		                          "WHERE t.token=?"
 		                          " OR (t.short_token=?"
 		                          " AND ?<=t.short_token_expiration)");
-		stmt.bindAndExecute(token, token, mysql_date());
+		stmt.bind_and_execute(token, token, mysql_date());
 
 		decltype(Contest::id) contest_id;
 		decltype(Contest::name) contest_name;
@@ -34,7 +35,7 @@ void Sim::api_contest_entry_token() {
 		if (not stmt.next())
 			return api_error404();
 
-		next_arg = url_args.extractNextArg();
+		next_arg = url_args.extract_next_arg();
 		if (next_arg == "use") {
 			return api_contest_entry_token_use_to_enter_contest(contest_id);
 		} else if (not next_arg.empty())
@@ -44,7 +45,7 @@ void Sim::api_contest_entry_token() {
 		       "\"contest_id\","
 		       "\"contest_name\""
 		       "]},\n",
-		       contest_id, ',', jsonStringify(contest_name), ']');
+		       contest_id, ',', json_stringify(contest_name), ']');
 
 	} else if (next_arg[0] == 'c') {
 		StringView contest_id = next_arg.substr(1);
@@ -58,7 +59,7 @@ void Sim::api_contest_entry_token() {
 		         sim::contest::Permissions::MANAGE_CONTEST_ENTRY_TOKEN))
 			return api_error404(); // To not reveal that the contest exists
 
-		next_arg = url_args.extractNextArg();
+		next_arg = url_args.extract_next_arg();
 		if (next_arg == "add")
 			return api_contest_entry_token_add(contest_id);
 		else if (next_arg == "add_short")
@@ -77,7 +78,7 @@ void Sim::api_contest_entry_token() {
 		auto stmt =
 		   mysql.prepare("SELECT token, short_token, short_token_expiration "
 		                 "FROM contest_entry_tokens WHERE contest_id=?");
-		stmt.bindAndExecute(contest_id);
+		stmt.bind_and_execute(contest_id);
 
 		InplaceBuff<CONTEST_ENTRY_TOKEN_LEN> token;
 		MySQL::Optional<InplaceBuff<CONTEST_ENTRY_SHORT_TOKEN_LEN>> short_token;
@@ -91,15 +92,15 @@ void Sim::api_contest_entry_token() {
 		       "]},\n");
 
 		if (stmt.next()) {
-			append(jsonStringify(token), ',');
+			append(json_stringify(token), ',');
 
 			if (not short_token.has_value() or
 			    not short_token_expiration.has_value() or
 			    short_token_expiration.value() <
-			       intentionalUnsafeStringView(mysql_date())) {
+			       intentional_unsafe_string_view(mysql_date())) {
 				append("null,null]");
 			} else {
-				append(jsonStringify(short_token.value()), ",\"",
+				append(json_stringify(short_token.value()), ",\"",
 				       short_token_expiration.value(), "\"]");
 			}
 
@@ -119,7 +120,7 @@ void Sim::api_contest_entry_token_add(StringView contest_id) {
 
 	auto stmt =
 	   mysql.prepare("SELECT 1 FROM contest_entry_tokens WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	stmt.bind_and_execute(contest_id);
 	if (stmt.next())
 		return api_error400("Contest already has an entry token");
 
@@ -129,7 +130,7 @@ void Sim::api_contest_entry_token_add(StringView contest_id) {
 	std::string token;
 	do {
 		token = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
-		stmt.bindAndExecute(token, contest_id);
+		stmt.bind_and_execute(token, contest_id);
 	} while (stmt.affected_rows() == 0);
 
 	transaction.commit();
@@ -142,7 +143,7 @@ void Sim::api_contest_entry_token_regen(StringView contest_id) {
 
 	auto stmt =
 	   mysql.prepare("SELECT 1 FROM contest_entry_tokens WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	stmt.bind_and_execute(contest_id);
 	if (not stmt.next())
 		return api_error400("Contest does not have an entry token");
 
@@ -151,7 +152,7 @@ void Sim::api_contest_entry_token_regen(StringView contest_id) {
 	std::string new_token;
 	do {
 		new_token = generate_random_token(CONTEST_ENTRY_TOKEN_LEN);
-		stmt.bindAndExecute(new_token, contest_id);
+		stmt.bind_and_execute(new_token, contest_id);
 	} while (stmt.affected_rows() == 0);
 
 	transaction.commit();
@@ -161,7 +162,7 @@ void Sim::api_contest_entry_token_delete(StringView contest_id) {
 	STACK_UNWINDING_MARK;
 
 	mysql.prepare("DELETE FROM contest_entry_tokens WHERE contest_id=?")
-	   .bindAndExecute(contest_id);
+	   .bind_and_execute(contest_id);
 }
 
 void Sim::api_contest_entry_token_short_add(StringView contest_id) {
@@ -171,7 +172,7 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 
 	auto stmt = mysql.prepare("SELECT short_token_expiration FROM "
 	                          "contest_entry_tokens WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	stmt.bind_and_execute(contest_id);
 
 	MySQL::Optional<InplaceBuff<20>> short_token_expiration;
 	stmt.res_bind_all(short_token_expiration);
@@ -179,7 +180,7 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 		return api_error400("Contest does not have an entry token");
 	if (short_token_expiration.has_value() and
 	    short_token_expiration.value() >
-	       intentionalUnsafeStringView(mysql_date()))
+	       intentional_unsafe_string_view(mysql_date()))
 		return api_error400("Contest already has a short entry token");
 
 	stmt =
@@ -190,7 +191,7 @@ void Sim::api_contest_entry_token_short_add(StringView contest_id) {
 	   mysql_date(time(nullptr) + CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME);
 	do {
 		new_token = generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
-		stmt.bindAndExecute(new_token, exp_date, contest_id);
+		stmt.bind_and_execute(new_token, exp_date, contest_id);
 	} while (stmt.affected_rows() == 0);
 
 	transaction.commit();
@@ -203,7 +204,7 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 
 	auto stmt = mysql.prepare("SELECT short_token_expiration FROM "
 	                          "contest_entry_tokens WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	stmt.bind_and_execute(contest_id);
 
 	MySQL::Optional<InplaceBuff<20>> short_token_expiration;
 	stmt.res_bind_all(short_token_expiration);
@@ -211,7 +212,7 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 		return api_error400("Contest does not have an entry token");
 	if (not short_token_expiration.has_value() or
 	    short_token_expiration.value() <=
-	       intentionalUnsafeStringView(mysql_date()))
+	       intentional_unsafe_string_view(mysql_date()))
 		return api_error400("Contest does not have a short entry token");
 
 	stmt =
@@ -222,7 +223,7 @@ void Sim::api_contest_entry_token_short_regen(StringView contest_id) {
 	   mysql_date(time(nullptr) + CONTEST_ENTRY_SHORT_TOKEN_MAX_LIFETIME);
 	do {
 		new_token = generate_random_token(CONTEST_ENTRY_SHORT_TOKEN_LEN);
-		stmt.bindAndExecute(new_token, exp_date, contest_id);
+		stmt.bind_and_execute(new_token, exp_date, contest_id);
 	} while (stmt.affected_rows() == 0);
 
 	transaction.commit();
@@ -234,7 +235,7 @@ void Sim::api_contest_entry_token_short_delete(StringView contest_id) {
 	auto stmt =
 	   mysql.prepare("UPDATE contest_entry_tokens SET short_token=NULL, "
 	                 "short_token_expiration=NULL WHERE contest_id=?");
-	stmt.bindAndExecute(contest_id);
+	stmt.bind_and_execute(contest_id);
 }
 
 void Sim::api_contest_entry_token_use_to_enter_contest(uintmax_t contest_id) {
@@ -242,8 +243,9 @@ void Sim::api_contest_entry_token_use_to_enter_contest(uintmax_t contest_id) {
 
 	auto stmt =
 	   mysql.prepare("INSERT IGNORE contest_users(user_id, contest_id, mode) "
-	                 "VALUES(?, ?, " CU_MODE_CONTESTANT_STR ")");
-	stmt.bindAndExecute(session_user_id, contest_id);
+	                 "VALUES(?, ?, ?)");
+	stmt.bind_and_execute(session_user_id, contest_id,
+	                      EnumVal(sim::ContestUser::Mode::CONTESTANT));
 	if (stmt.affected_rows() == 0)
 		return api_error400("You already participate in the contest");
 }

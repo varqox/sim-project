@@ -51,10 +51,11 @@ get_permissions(MySQL::Connection& mysql, T&& contest_file_id,
 	            : ""),
 	   "WHERE cf.id=?");
 	if (user_id) {
-		stmt.bindAndExecute(user_id.value(), user_id.value(), contest_file_id);
+		stmt.bind_and_execute(user_id.value(), user_id.value(),
+		                      contest_file_id);
 		stmt.res_bind_all(is_public, cu_mode, user_type);
 	} else {
-		stmt.bindAndExecute(contest_file_id);
+		stmt.bind_and_execute(contest_file_id);
 		stmt.res_bind_all(is_public);
 	}
 

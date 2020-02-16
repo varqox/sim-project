@@ -8,8 +8,8 @@ using std::optional;
 void Sim::problems_handle() {
 	STACK_UNWINDING_MARK;
 
-	StringView next_arg = url_args.extractNextArg();
-	if (isDigit(next_arg)) {
+	StringView next_arg = url_args.extract_next_arg();
+	if (is_digit(next_arg)) {
 		problems_pid = next_arg;
 		return problems_problem();
 	}
@@ -29,45 +29,45 @@ void Sim::problems_handle() {
 void Sim::problems_problem() {
 	STACK_UNWINDING_MARK;
 
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg.empty()) {
 		page_template(
-		   intentionalUnsafeStringView(concat("Problem ", problems_pid)),
+		   intentional_unsafe_string_view(concat("Problem ", problems_pid)),
 		   "body{padding-left:20px}");
 		append("<script>view_problem(false, ", problems_pid,
 		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "submit") {
-		page_template(intentionalUnsafeStringView(
+		page_template(intentional_unsafe_string_view(
 		   concat("Submit solution to the problem ", problems_pid)));
 		append("<script>add_problem_submission(false, {id:", problems_pid,
 		       "})</script>");
 
 	} else if (next_arg == "edit") {
-		page_template(
-		   intentionalUnsafeStringView(concat("Edit problem ", problems_pid)));
+		page_template(intentional_unsafe_string_view(
+		   concat("Edit problem ", problems_pid)));
 		append("<script>edit_problem(false, ", problems_pid,
 		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "reupload") {
-		page_template(intentionalUnsafeStringView(
+		page_template(intentional_unsafe_string_view(
 		   concat("Reupload problem ", problems_pid)));
 		append("<script>reupload_problem(false, ", problems_pid, ");</script>");
 
 	} else if (next_arg == "reset_time_limits") {
-		page_template(intentionalUnsafeStringView(
+		page_template(intentional_unsafe_string_view(
 		   concat("Reset problem time limits ", problems_pid)));
 		append("<script>reset_problem_time_limits(false, ", problems_pid,
 		       ");</script>");
 
 	} else if (next_arg == "delete") {
-		page_template(intentionalUnsafeStringView(
+		page_template(intentional_unsafe_string_view(
 		   concat("Delete problem ", problems_pid)));
 		append("<script>delete_problem(false, ", problems_pid, ");</script>");
 
 	} else if (next_arg == "merge") {
-		page_template(
-		   intentionalUnsafeStringView(concat("Merge problem ", problems_pid)));
+		page_template(intentional_unsafe_string_view(
+		   concat("Merge problem ", problems_pid)));
 		append("<script>merge_problem(false, ", problems_pid, ");</script>");
 
 	} else {

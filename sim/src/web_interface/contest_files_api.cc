@@ -1,8 +1,12 @@
 #include "sim.h"
 
+#include <sim/constants.h>
 #include <sim/jobs.h>
 #include <sim/random.hh>
-#include <simlib/filesystem.h>
+#include <simlib/call_in_destructor.hh>
+#include <simlib/file_info.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/humanize.hh>
 
 void Sim::api_contest_files() {
 	STACK_UNWINDING_MARK;
@@ -68,15 +72,15 @@ void Sim::api_contest_files() {
 		bool id_condition_occurred = false;
 		bool contest_id_condition_occurred = false;
 
-		for (StringView next_arg = url_args.extractNextArg();
-		     not next_arg.empty(); next_arg = url_args.extractNextArg()) {
-			auto arg = decodeURI(next_arg);
+		for (StringView next_arg = url_args.extract_next_arg();
+		     not next_arg.empty(); next_arg = url_args.extract_next_arg()) {
+			auto arg = decode_uri(next_arg);
 			char cond_c = arg[0];
 			StringView arg_id = StringView(arg).substr(1);
 
 			// Contest file ID
 			if (is_one_of(cond_c, '<', '>', '=')) {
-				if (not isAlnum(arg_id))
+				if (not is_alnum(arg_id))
 					return api_error400("Invalid Contest file ID");
 
 				if (id_condition_occurred) {
@@ -100,8 +104,8 @@ void Sim::api_contest_files() {
 
 				query.append(" AND cf.id", cond_c, '\'', arg_id, '\'');
 
-			} else if (not isDigit(arg_id)) { // Next conditions require arg_id
-				                              // to be a valid (digital) ID
+			} else if (not is_digit(arg_id)) { // Next conditions require arg_id
+				                               // to be a valid (digital) ID
 				return api_error400();
 
 			} else if (cond_c == 'c') { // Contest id
@@ -138,7 +142,7 @@ void Sim::api_contest_files() {
 		return set_empty_response();
 
 	// Execute query
-	auto res = mysql.query(intentionalUnsafeStringView(
+	auto res = mysql.query(intentional_unsafe_string_view(
 	   concat(query, " ORDER BY cf.id DESC LIMIT ", rows_limit)));
 
 	append_column_names();
@@ -157,14 +161,14 @@ void Sim::api_contest_files() {
 		else
 			append(',');
 
-		append("\n[", jsonStringify(res[FID]), ',', jsonStringify(res[FNAME]),
-		       ',', jsonStringify(res[DESCRIPTION]), ',', res[FSIZE], ",\"",
+		append("\n[", json_stringify(res[FID]), ',', json_stringify(res[FNAME]),
+		       ',', json_stringify(res[DESCRIPTION]), ',', res[FSIZE], ",\"",
 		       res[MODIFIED], "\",", res[CONTEST_ID], ',');
 
 		// Permissions are already loaded
 		if (uint(overall_perms & OverallPermissions::VIEW_CREATOR) and
 		    not res.is_null(CREATOR))
-			append(res[CREATOR], ',', jsonStringify(res[CUSERNAME]), ',');
+			append(res[CREATOR], ',', json_stringify(res[CUSERNAME]), ',');
 		else
 			append("null,null,");
 
@@ -185,7 +189,7 @@ void Sim::api_contest_files() {
 void Sim::api_contest_file() {
 	STACK_UNWINDING_MARK;
 
-	StringView contest_file_id = url_args.extractNextArg();
+	StringView contest_file_id = url_args.extract_next_arg();
 	if (contest_file_id == "add") {
 		return api_contest_file_add();
 	} else if (contest_file_id.empty())
@@ -202,7 +206,7 @@ void Sim::api_contest_file() {
 		perms = perms_opt.value().first;
 	}
 
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg == "download")
 		return api_contest_file_download(contest_file_id, perms);
 	else if (next_arg == "edit")
@@ -222,7 +226,7 @@ void Sim::api_contest_file_download(StringView contest_file_id,
 	InplaceBuff<FILE_NAME_MAX_LEN> filename;
 	auto stmt = mysql.prepare("SELECT file_id, name FROM contest_files "
 	                          "WHERE id=?");
-	stmt.bindAndExecute(contest_file_id);
+	stmt.bind_and_execute(contest_file_id);
 	stmt.res_bind_all(internal_file_id, filename);
 	if (not stmt.next())
 		return error404(); // Should not happen as the file existed a moment ago
@@ -234,9 +238,9 @@ void Sim::api_contest_file_download(StringView contest_file_id,
 }
 
 void Sim::api_contest_file_add() {
-	StringView contest_id = url_args.extractNextArg();
+	StringView contest_id = url_args.extract_next_arg();
 	if (contest_id.empty() or contest_id[0] != 'c' or
-	    not isDigit(contest_id = contest_id.substr(1))) {
+	    not is_digit(contest_id = contest_id.substr(1))) {
 		return api_error400();
 	}
 
@@ -275,7 +279,7 @@ void Sim::api_contest_file_add() {
 	if (file_size > FILE_MAX_SIZE) {
 		add_notification(
 		   "error", "File is too big (maximum allowed size: ", FILE_MAX_SIZE,
-		   " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
+		   " bytes = ", humanize_file_size(FILE_MAX_SIZE), ')');
 		return api_error400(notifications);
 	}
 
@@ -286,6 +290,7 @@ void Sim::api_contest_file_add() {
 
 	mysql.update("INSERT INTO internal_files VALUES()");
 	auto internal_file_id = mysql.insert_id();
+
 	CallInDtor internal_file_remover([internal_file_id] {
 		(void)unlink(internal_file_path(internal_file_id));
 	});
@@ -302,8 +307,9 @@ void Sim::api_contest_file_add() {
 
 	do {
 		file_id = generate_random_token(FILE_ID_LEN);
-		stmt.bindAndExecute(file_id, internal_file_id, contest_id, name,
-		                    description, file_size, curr_date, session_user_id);
+		stmt.bind_and_execute(file_id, internal_file_id, contest_id, name,
+		                      description, file_size, curr_date,
+		                      session_user_id);
 	} while (stmt.affected_rows() == 0);
 
 	// Move file
@@ -350,7 +356,7 @@ void Sim::api_contest_file_edit(StringView contest_file_id,
 	if (file_size > FILE_MAX_SIZE) {
 		add_notification(
 		   "error", "File is too big (maximum allowed size: ", FILE_MAX_SIZE,
-		   " bytes = ", humanizeFileSize(FILE_MAX_SIZE), ')');
+		   " bytes = ", humanize_file_size(FILE_MAX_SIZE), ')');
 		return api_error400(notifications);
 	}
 
@@ -376,11 +382,11 @@ void Sim::api_contest_file_edit(StringView contest_file_id,
 		mysql
 		   .prepare("INSERT INTO jobs(file_id, creator, type, priority,"
 		            " status, added, aux_id, info, data) "
-		            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?,"
-		            " " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
+		            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
 		            "FROM contest_files WHERE id=?")
-		   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-		                   contest_file_id);
+		   .bind_and_execute(
+		      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+		      EnumVal(JobStatus::PENDING), mysql_date(), contest_file_id);
 	}
 
 	// Update file
@@ -389,9 +395,9 @@ void Sim::api_contest_file_edit(StringView contest_file_id,
 	                          " description=?, file_size=IF(?, ?, file_size),"
 	                          " modified=? "
 	                          "WHERE id=?");
-	stmt.bindAndExecute(reuploading_file, internal_file_id, name, description,
-	                    reuploading_file, file_size, mysql_date(),
-	                    contest_file_id);
+	stmt.bind_and_execute(reuploading_file, internal_file_id, name, description,
+	                      reuploading_file, file_size, mysql_date(),
+	                      contest_file_id);
 
 	transaction.commit();
 	internal_file_remover.cancel();
@@ -409,14 +415,14 @@ void Sim::api_contest_file_delete(StringView contest_file_id,
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data) "
-	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR ", ?,"
-	            " " JSTATUS_PENDING_STR ", ?, NULL, '', '' "
+	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
 	            "FROM contest_files WHERE id=?")
-	   .bindAndExecute(priority(JobType::DELETE_FILE), mysql_date(),
-	                   contest_file_id);
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), mysql_date(), contest_file_id);
 
 	mysql.prepare("DELETE FROM contest_files WHERE id=?")
-	   .bindAndExecute(contest_file_id);
+	   .bind_and_execute(contest_file_id);
 
 	transaction.commit();
 	jobs::notify_job_server();

@@ -4,8 +4,8 @@
 #include "user.hh"
 
 #include <optional>
-#include <simlib/meta.h>
-#include <simlib/mysql.h>
+#include <simlib/meta.hh>
+#include <simlib/mysql.hh>
 
 namespace sim::contest {
 
@@ -62,11 +62,11 @@ std::optional<Permissions> get_permissions(MySQL::Connection& mysql,
 		                 "LEFT JOIN contest_users cu ON cu.contest_id=c.id"
 		                 " AND cu.user_id=u.id "
 		                 "WHERE c.id=?");
-		stmt.bindAndExecute(user_id.value(), contest_id);
+		stmt.bind_and_execute(user_id.value(), contest_id);
 		stmt.res_bind_all(is_public, user_type, cu_mode);
 	} else {
 		stmt = mysql.prepare("SELECT is_public FROM contests WHERE id=?");
-		stmt.bindAndExecute(contest_id);
+		stmt.bind_and_execute(contest_id);
 		stmt.res_bind_all(is_public);
 	}
 

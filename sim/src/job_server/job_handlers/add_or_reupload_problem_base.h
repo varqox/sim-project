@@ -3,7 +3,7 @@
 #include "job_handler.h"
 
 #include <sim/jobs.h>
-#include <simlib/libzip.h>
+#include <simlib/libzip.hh>
 
 namespace job_handlers {
 

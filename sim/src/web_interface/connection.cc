@@ -2,9 +2,11 @@
 
 #include <iostream>
 #include <poll.h>
-#include <simlib/debug.h>
-#include <simlib/filesystem.h>
-#include <simlib/logger.h>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/logger.hh>
+#include <unistd.h>
 
 using std::cerr;
 using std::endl;
@@ -81,11 +83,11 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 	string ret = header.substr(0, beg);
 	// Erase leading white space
 	end = header.size();
-	while (isspace(header[end - 1]))
+	while (is_space(header[end - 1]))
 		--end;
 
 	// Erase trailing white space
-	while (++beg < header.size() && isspace(header[beg])) {
+	while (++beg < header.size() && is_space(header[beg])) {
 	}
 
 	return make_pair(ret, header.substr(beg, end - beg));
@@ -94,10 +96,12 @@ pair<string, string> Connection::parseHeaderline(const string& header) {
 void Connection::readPOST(HttpRequest& req) {
 	size_t content_length = 0;
 	{
-		auto&& cl = req.headers["Content-Length"];
-		// TODO: handle overflows
-		if (strtou(cl, content_length) != (int)cl.size())
+		auto opt =
+		   str2num<decltype(content_length)>(req.headers["Content-Length"]);
+		if (not opt)
 			return error400();
+
+		content_length = *opt;
 	}
 
 	int c = '\0';
@@ -106,7 +110,7 @@ void Connection::readPOST(HttpRequest& req) {
 	string& con_type = req.headers["Content-Type"];
 	LimitedReader reader(*this, content_length);
 
-	if (hasPrefix(con_type, "text/plain")) {
+	if (has_prefix(con_type, "text/plain")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -132,7 +136,7 @@ void Connection::readPOST(HttpRequest& req) {
 			req.form_data[field_name] = field_content;
 		}
 
-	} else if (hasPrefix(con_type, "application/x-www-form-urlencoded")) {
+	} else if (has_prefix(con_type, "application/x-www-form-urlencoded")) {
 		for (; c != -1;) {
 			// Clear all variables
 			field_name = field_content = "";
@@ -152,11 +156,11 @@ void Connection::readPOST(HttpRequest& req) {
 			if (state_ == CLOSED)
 				return;
 
-			req.form_data[decodeURI(field_name).to_string()] =
-			   decodeURI(field_content).to_string();
+			req.form_data[decode_uri(field_name).to_string()] =
+			   decode_uri(field_content).to_string();
 		}
 
-	} else if (hasPrefix(con_type, "multipart/form-data")) {
+	} else if (has_prefix(con_type, "multipart/form-data")) {
 		size_t beg = con_type.find("boundary=");
 		if (beg == string::npos || beg + 9 >= con_type.size()) {
 			error400();
@@ -268,7 +272,7 @@ void Connection::readPOST(HttpRequest& req) {
 					if (state_ != OK) // Something went wrong
 						goto safe_return;
 
-					if (tolower(header.first) == "content-disposition") {
+					if (to_lower(header.first) == "content-disposition") {
 						// extract all needed information
 						size_t st = 0, last = 0;
 						field_name = "";
@@ -279,12 +283,12 @@ void Connection::readPOST(HttpRequest& req) {
 						// extract all variables from header content
 						while ((last = header.second.find(';', st)) !=
 						       string::npos) {
-							while (isblank(header.second[st]))
+							while (is_blank(header.second[st]))
 								++st;
 
 							var_name = var_val = "";
 							// extract var_name
-							while (st < last && !isblank(header.second[st]) &&
+							while (st < last && !is_blank(header.second[st]) &&
 							       header.second[st] != '=') {
 								var_name += header.second[st++];
 							}
@@ -305,7 +309,7 @@ void Connection::readPOST(HttpRequest& req) {
 
 								else
 									while (st < last &&
-									       !isblank(header.second[st])) {
+									       !is_blank(header.second[st])) {
 										var_val += header.second[st++];
 									}
 							}
@@ -548,7 +552,7 @@ HttpRequest Connection::getRequest() {
 	// Extract method
 	size_t beg = 0, end = 0;
 
-	while (end < request_line.size() && !isspace(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end]))
 		++end;
 
 	if (request_line.compare(0, end, "GET") == 0)
@@ -564,10 +568,10 @@ HttpRequest Connection::getRequest() {
 	}
 
 	// Extract target
-	while (end < request_line.size() && isspace(request_line[end]))
+	while (end < request_line.size() && is_space(request_line[end]))
 		++end;
 	beg = end;
-	while (end < request_line.size() && !isspace(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end]))
 		++end;
 
 	req.target = request_line.substr(beg, end - beg);
@@ -577,10 +581,10 @@ HttpRequest Connection::getRequest() {
 	}
 
 	// Extract http version
-	while (end < request_line.size() && isspace(request_line[end]))
+	while (end < request_line.size() && is_space(request_line[end]))
 		++end;
 	beg = end;
-	while (end < request_line.size() && !isspace(request_line[end]))
+	while (end < request_line.size() && !is_space(request_line[end]))
 		++end;
 
 	req.http_version = request_line.substr(beg, end - beg);
@@ -617,12 +621,13 @@ HttpRequest Connection::getRequest() {
 	}
 
 	{
-		auto&& cl = req.headers["Content-Length"];
-		// TODO: handle overflows
-		if (strtou(cl, end) != (int)cl.size()) {
+		auto opt = str2num<decltype(end)>(req.headers["Content-Length"]);
+		if (not opt) {
 			error400();
 			return req;
 		}
+
+		end = *opt;
 	}
 
 	if (end > 0) {
@@ -703,7 +708,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		   stdlog("\033[36mRESPONSE: ", substring(str, 0, pos), "\033[m");
 
 		StringView rest = substring(str, pos + 1); // omit '\r'
-		for (char c : rest) {
+		for (auto c : rest) {
 			if (c == '\r')
 				continue;
 			if (c == '\n')
@@ -716,7 +721,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 	switch (res.content_type) {
 	case HttpResponse::TEXT:
 		str += "Content-Length: ";
-		str += toStr(res.content.size);
+		str += to_string(res.content.size);
 		str += "\r\n\r\n";
 		str += res.content;
 		send(str);
@@ -750,7 +755,7 @@ void Connection::sendResponse(const HttpResponse& res) {
 		off64_t fsize = sb.st_size;
 		str += "Accept-Ranges: none\r\n"; // Not supported yet, change to: bytes
 		str += "Content-Length: ";
-		str += toStr<uint64_t>(fsize);
+		str += to_string(fsize);
 		str += "\r\n\r\n";
 
 		constexpr size_t buff_length = 1 << 20;

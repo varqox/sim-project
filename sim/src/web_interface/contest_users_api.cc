@@ -1,5 +1,8 @@
 #include "sim.h"
 
+#include <sim/contest_user.hh>
+#include <type_traits>
+
 using sim::ContestUser;
 using sim::User;
 using std::pair;
@@ -86,7 +89,7 @@ Sim::contest_user_get_overall_permissions(StringView contest_id) {
 	auto stmt =
 	   mysql.prepare("SELECT cu.mode FROM contests c LEFT JOIN contest_users "
 	                 "cu ON cu.user_id=? AND cu.contest_id=c.id WHERE c.id=?");
-	stmt.bindAndExecute(session_user_id, contest_id);
+	stmt.bind_and_execute(session_user_id, contest_id);
 
 	MySQL::Optional<decltype(ContestUser::mode)> cu_mode;
 	stmt.res_bind_all(cu_mode);
@@ -112,7 +115,7 @@ Sim::contest_user_get_permissions(StringView contest_id, StringView user_id) {
 	                          "LEFT JOIN contest_users u ON u.user_id=?"
 	                          " AND u.contest_id=c.id "
 	                          "WHERE c.id=?");
-	stmt.bindAndExecute(session_user_id, user_id, contest_id);
+	stmt.bind_and_execute(session_user_id, user_id, contest_id);
 
 	MySQL::Optional<decltype(ContestUser::mode)> v_mode;
 	MySQL::Optional<decltype(ContestUser::mode)> u_mode;
@@ -176,9 +179,9 @@ void Sim::api_contest_users() {
 		bool user_id_condition_occurred = false;
 		bool contest_id_condition_occurred = false;
 
-		for (StringView next_arg = url_args.extractNextArg();
-		     not next_arg.empty(); next_arg = url_args.extractNextArg()) {
-			auto arg = decodeURI(next_arg);
+		for (StringView next_arg = url_args.extract_next_arg();
+		     not next_arg.empty(); next_arg = url_args.extract_next_arg()) {
+			auto arg = decode_uri(next_arg);
 			char cond_c = arg[0];
 			StringView arg_id = StringView(arg).substr(1);
 
@@ -189,17 +192,22 @@ void Sim::api_contest_users() {
 				mode_condition_occurred = true;
 
 				if (arg_id == "O")
-					qwhere.append(" AND cu.mode=" CU_MODE_OWNER_STR);
+					qwhere.append(" AND cu.mode=",
+					              EnumVal(ContestUser::Mode::OWNER).int_val());
 				else if (arg_id == "M")
-					qwhere.append(" AND cu.mode=" CU_MODE_MODERATOR_STR);
+					qwhere.append(
+					   " AND cu.mode=",
+					   EnumVal(ContestUser::Mode::MODERATOR).int_val());
 				else if (arg_id == "C")
-					qwhere.append(" AND cu.mode=" CU_MODE_CONTESTANT_STR);
+					qwhere.append(
+					   " AND cu.mode=",
+					   EnumVal(ContestUser::Mode::CONTESTANT).int_val());
 				else
-					return api_error400(intentionalUnsafeStringView(
+					return api_error400(intentional_unsafe_string_view(
 					   concat("Invalid user mode: ", arg_id)));
 
-			} else if (not isDigit(arg_id)) { // Next conditions require arg_id
-				                              // to be a valid ID
+			} else if (not is_digit(arg_id)) { // Next conditions require arg_id
+				                               // to be a valid ID
 				return api_error400();
 
 			} else if (is_one_of(cond_c, '<', '>', '=')) { // User id
@@ -235,8 +243,8 @@ void Sim::api_contest_users() {
 		return set_empty_response();
 
 	// Execute query
-	auto res = mysql.query(intentionalUnsafeStringView(concat(
-	   qfields, qwhere, " ORDER BY cu.user_id DESC LIMIT ", rows_limit)));
+	auto res = mysql.query(qfields, qwhere, " ORDER BY cu.user_id DESC LIMIT ",
+	                       rows_limit);
 
 	append_column_names();
 
@@ -258,11 +266,13 @@ void Sim::api_contest_users() {
 			append(',');
 
 		// User id, username, first name, last name
-		append("\n[", res[UID], ',', jsonStringify(res[USERNAME]), ',',
-		       jsonStringify(res[FNAME]), ',', jsonStringify(res[LNAME]), ',');
+		append("\n[", res[UID], ',', json_stringify(res[USERNAME]), ',',
+		       json_stringify(res[FNAME]), ',', json_stringify(res[LNAME]),
+		       ',');
 
 		// Mode
-		CUM mode = CUM(strtoull(res[MODE]));
+		EnumVal<CUM> mode(
+		   WONT_THROW(str2num<std::underlying_type_t<CUM>>(res[MODE]).value()));
 		switch (mode) {
 		// TODO: change to lower case
 		case CUM::CONTESTANT: append("\"Contestant\","); break;
@@ -293,23 +303,23 @@ void Sim::api_contest_user() {
 	if (not session_is_open)
 		return api_error403();
 
-	StringView contest_id = url_args.extractNextArg();
+	StringView contest_id = url_args.extract_next_arg();
 	if (contest_id.empty())
 		return api_error400("Missing contest id");
-	if (contest_id[0] != 'c' or not isDigit(contest_id = contest_id.substr(1)))
+	if (contest_id[0] != 'c' or not is_digit(contest_id = contest_id.substr(1)))
 		return api_error400("Invalid contest id");
 
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg == "add")
 		return api_contest_user_add(contest_id);
 
 	StringView user_id = next_arg;
 	if (user_id.empty())
 		return api_error400("Missing user id");
-	if (user_id[0] != 'u' or not isDigit(user_id = user_id.substr(1)))
+	if (user_id[0] != 'u' or not is_digit(user_id = user_id.substr(1)))
 		return api_error400("Invalid user id");
 
-	next_arg = url_args.extractNextArg();
+	next_arg = url_args.extract_next_arg();
 	if (next_arg == "change_mode")
 		return api_contest_user_change_mode(contest_id, user_id);
 	else if (next_arg == "expel")
@@ -342,7 +352,7 @@ void Sim::api_contest_user_add(StringView contest_id) {
 	}
 
 	StringView user_id;
-	form_validate(user_id, "user_id", "User ID", isDigit,
+	form_validate(user_id, "user_id", "User ID", (bool (*)(StringView))is_digit,
 	              "User ID: invalid value");
 
 	if (notifications.size)
@@ -359,7 +369,7 @@ void Sim::api_contest_user_add(StringView contest_id) {
 
 	auto stmt = mysql.prepare("INSERT IGNORE contest_users(contest_id, "
 	                          "user_id, mode) VALUES(?, ?, ?)");
-	stmt.bindAndExecute(contest_id, user_id, mode);
+	stmt.bind_and_execute(contest_id, user_id, mode);
 	if (stmt.affected_rows() == 0)
 		return api_error400("Specified user is already in the contest");
 }
@@ -375,7 +385,7 @@ void Sim::api_contest_user_change_mode(StringView contest_id,
 	StringView mode_s = request.form_data.get("mode");
 
 	decltype(ContestUser::mode) new_mode;
-	PERMS needed_perm;
+	PERMS needed_perm = PERMS::NONE; // Silence GCC warning
 	if (mode_s == "C") {
 		new_mode = CUM::CONTESTANT;
 		needed_perm = PERMS::MAKE_CONTESTANT;
@@ -399,7 +409,7 @@ void Sim::api_contest_user_change_mode(StringView contest_id,
 	mysql
 	   .prepare(
 	      "UPDATE contest_users SET mode=? WHERE contest_id=? AND user_id=?")
-	   .bindAndExecute(new_mode, contest_id, user_id);
+	   .bind_and_execute(new_mode, contest_id, user_id);
 }
 
 void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
@@ -412,5 +422,5 @@ void Sim::api_contest_user_expel(StringView contest_id, StringView user_id) {
 		return api_error403();
 
 	mysql.prepare("DELETE FROM contest_users WHERE contest_id=? AND user_id=?")
-	   .bindAndExecute(contest_id, user_id);
+	   .bind_and_execute(contest_id, user_id);
 }

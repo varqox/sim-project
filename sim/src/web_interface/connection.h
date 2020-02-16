@@ -3,6 +3,8 @@
 #include "http_request.h"
 #include "http_response.h"
 
+#include <simlib/likely.hh>
+
 namespace server {
 
 class Connection {

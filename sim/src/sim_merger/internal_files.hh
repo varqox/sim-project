@@ -2,9 +2,9 @@
 
 #include "merger.hh"
 
-#include <simlib/defer.h>
-#include <simlib/filesystem.h>
-#include <simlib/time.h>
+#include <simlib/defer.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/time.hh>
 
 static std::chrono::system_clock::time_point file_mtime(FilePath path) {
 	struct stat st;
@@ -23,7 +23,7 @@ class InternalFilesMerger : public Merger<InternalFile> {
 		STACK_UNWINDING_MARK;
 		InternalFile file;
 		auto stmt = conn.prepare("SELECT id FROM ", record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(file.id);
 		while (stmt.next()) {
 			auto mtime = file_mtime(
@@ -81,9 +81,16 @@ public:
 		if (mkdir(dest_path))
 			THROW("mkdir()", errmsg());
 
+		decltype(InternalFile::id) id;
+		stmt.bind_all(id);
+
+		ProgressBar progress_bar("Internal files saved:", new_table_.size(),
+		                         128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const InternalFile& x = new_record.data;
-			stmt.bindAndExecute(x.id);
+			id = x.id;
+			stmt.execute();
 
 			if (not new_record.main_ids.empty()) {
 				// Hard link main's files

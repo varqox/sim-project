@@ -1,11 +1,14 @@
 #pragma once
 
-#include <simlib/time.h>
+#include <cstdint>
+#include <simlib/string_transform.hh>
+#include <simlib/time.hh>
 
 namespace sim {
 
 constexpr bool is_safe_timestamp(StringView str) noexcept {
-	return isDigitNotGreaterThan<std::numeric_limits<time_t>::max()>(str);
+	return (str <= intentional_unsafe_string_view(
+	                  to_string(std::numeric_limits<time_t>::max())));
 }
 
 constexpr bool is_safe_inf_timestamp(StringView str) noexcept {
@@ -61,7 +64,7 @@ public:
 	}
 
 	InfDatetime& set_datetime(CStringView datetime) {
-		if (isDatetime(datetime)) {
+		if (is_datetime(datetime)) {
 			type = Type::DATE;
 			date = datetime;
 		} else {
@@ -162,12 +165,14 @@ public:
 
 inline InfDatetime inf_timestamp_to_InfDatetime(StringView str) {
 	InfDatetime res;
-	if (str == "+inf")
+	if (str == "+inf") {
 		res.set_inf();
-	else if (str == "-inf")
+	} else if (str == "-inf") {
 		res.set_neg_inf();
-	else
-		res.set_datetime(mysql_date(strtoull(str)));
+	} else {
+		res.set_datetime(intentional_unsafe_cstring_view(
+		   mysql_date(WONT_THROW(str2num<uintmax_t>(str).value()))));
+	}
 
 	return res;
 }

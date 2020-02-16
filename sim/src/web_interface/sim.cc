@@ -1,7 +1,8 @@
 #include "sim.h"
 
-#include <simlib/filesystem.h>
-#include <simlib/random.h>
+#include <simlib/path.hh>
+#include <simlib/random.hh>
+#include <sys/stat.h>
 
 using sim::User;
 using std::string;
@@ -38,8 +39,8 @@ server::HttpResponse Sim::handle(CStringView client_ip_addr,
 		try {
 			STACK_UNWINDING_MARK;
 
-			url_args = RequestURIParser {request.target};
-			StringView next_arg = url_args.extractNextArg();
+			url_args = RequestUriParser {request.target};
+			StringView next_arg = url_args.extract_next_arg();
 
 			// Reset state
 			page_template_began = false;
@@ -168,7 +169,7 @@ void Sim::static_file() {
 	STACK_UNWINDING_MARK;
 
 	string file_path = concat_tostr(
-	   "static", abspath(intentionalUnsafeStringView(decodeURI(
+	   "static", path_absolute(intentional_unsafe_string_view(decode_uri(
 	                substring(request.target, 1, request.target.find('?'))))));
 	// Extract path (ignore query)
 	D(stdlog(file_path);)

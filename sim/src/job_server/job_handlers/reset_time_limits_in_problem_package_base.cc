@@ -1,7 +1,7 @@
 #include "reset_time_limits_in_problem_package_base.h"
 #include "../main.h"
 
-#include <simlib/sim/problem_package.h>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_handlers {
 

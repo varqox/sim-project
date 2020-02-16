@@ -40,7 +40,7 @@ class JobsMerger : public Merger<Job> {
 		                " priority, status, added, aux_id, info, data "
 		                "FROM ",
 		                record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(job.id, m_file_id, m_tmp_file_id, m_creator, job.type,
 		                  job.priority, job.status, job.added, m_aux_id,
 		                  job.info, job.data);
@@ -125,7 +125,9 @@ class JobsMerger : public Merger<Job> {
 			case JobType::EDIT_PROBLEM: THROW("TODO");
 			}
 
-			record_set.add_record(job, strToTimePoint(job.added.to_string()));
+			record_set.add_record(
+			   job, str_to_time_point(
+			           intentional_unsafe_cstring_view(job.added.to_string())));
 		}
 	}
 
@@ -144,11 +146,14 @@ public:
 		                "(id, file_id, tmp_file_id, creator, type, priority,"
 		                " status, added, aux_id, info, data) "
 		                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Jobs saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const Job& x = new_record.data;
-			stmt.bindAndExecute(x.id, x.file_id, x.tmp_file_id, x.creator,
-			                    x.type, x.priority, x.status, x.added, x.aux_id,
-			                    x.info, x.data);
+			stmt.bind_and_execute(x.id, x.file_id, x.tmp_file_id, x.creator,
+			                      x.type, x.priority, x.status, x.added,
+			                      x.aux_id, x.info, x.data);
 		}
 
 		conn.update("ALTER TABLE ", sql_table_name(),

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <simlib/mysql.h>
+#include <simlib/mysql.hh>
 
 namespace MySQL {
 

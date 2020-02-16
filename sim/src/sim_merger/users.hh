@@ -27,7 +27,7 @@ class UsersMerger : public Merger<sim::User> {
 		auto stmt = conn.prepare("SELECT id, username, first_name, last_name, "
 		                         "email, salt, password, type FROM ",
 		                         record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(user.id, user.username, user.first_name,
 		                  user.last_name, user.email, user.salt, user.password,
 		                  user.type);
@@ -64,10 +64,13 @@ public:
 		                         "(id, username, first_name, last_name, email,"
 		                         " salt, password, type) "
 		                         "VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+
+		ProgressBar progress_bar("Users saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::User& x = new_record.data;
-			stmt.bindAndExecute(x.id, x.username, x.first_name, x.last_name,
-			                    x.email, x.salt, x.password, x.type);
+			stmt.bind_and_execute(x.id, x.username, x.first_name, x.last_name,
+			                      x.email, x.salt, x.password, x.type);
 		}
 
 		conn.update("ALTER TABLE ", sql_table_name(),
@@ -83,7 +86,8 @@ public:
 	}
 
 	void run_after_saving_hooks() override {
-		// Reselect final submissions for users that are merged from one source
+		// Reselect final submissions for merged users originating from single
+		// source
 		auto transaction = conn.start_transaction();
 		for (auto const& user : new_table_) {
 			if (user.main_ids.size() > 1 or user.other_ids.size() > 1) {
@@ -95,7 +99,7 @@ public:
 				                "FROM submissions "
 				                "WHERE owner=? "
 				                "GROUP BY problem_id, contest_problem_id");
-				stmt.bindAndExecute(user.data.id);
+				stmt.bind_and_execute(user.data.id);
 				stmt.res_bind_all(problem_id, contest_problem_id);
 				while (stmt.next()) {
 					submission::update_final(conn, user.data.id, problem_id,
@@ -103,6 +107,9 @@ public:
 				}
 			}
 		}
+		// Final submissions for problems do not have to be reselect, because
+		// problem are not merged during sim-merge -- they are merged using
+		// MERGE_PROBLEMS jobs and there final submissions are reselected.
 
 		transaction.commit();
 	}

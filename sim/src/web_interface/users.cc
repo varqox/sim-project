@@ -1,8 +1,11 @@
 #include "sim.h"
 
+#include <sim/constants.h>
+#include <sim/user.hh>
 #include <sim/utilities.h>
-#include <simlib/random.h>
-#include <simlib/sha.h>
+#include <simlib/random.hh>
+#include <simlib/sha.hh>
+#include <simlib/string_transform.hh>
 
 using sim::User;
 using std::array;
@@ -16,7 +19,8 @@ Sim::UserPermissions Sim::users_get_overall_permissions() noexcept {
 
 	switch (session_user_type) {
 	case User::Type::ADMIN:
-		if (session_user_id == SIM_ROOT_UID) {
+		if (session_user_id ==
+		    intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID))) {
 			return PERM::VIEW_ALL | PERM::ADD_USER | PERM::ADD_ADMIN |
 			       PERM::ADD_TEACHER | PERM::ADD_NORMAL;
 		} else {
@@ -41,8 +45,9 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	if (not session_is_open)
 		return PERM::NONE;
 
-	auto viewer =
-	   EnumVal(session_user_type).int_val() + (session_user_id != SIM_ROOT_UID);
+	auto viewer = EnumVal(session_user_type).int_val() +
+	              (session_user_id != intentional_unsafe_string_view(
+	                                     to_string(sim::SIM_ROOT_UID)));
 	if (session_user_id == user_id) {
 		constexpr UserPermissions perm[4] = {
 		   // Sim root
@@ -60,7 +65,9 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 		return perm[viewer] | users_get_overall_permissions();
 	}
 
-	auto user = EnumVal(utype).int_val() + (user_id != SIM_ROOT_UID);
+	auto user = EnumVal(utype).int_val() +
+	            (user_id !=
+	             intentional_unsafe_string_view(to_string(sim::SIM_ROOT_UID)));
 	// Permission table [ viewer ][ user ]
 	constexpr UserPermissions perm[4][4] = {
 	   {// Sim root
@@ -101,7 +108,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id) {
 	using PERM = UserPermissions;
 
 	auto stmt = mysql.prepare("SELECT type FROM users WHERE id=?");
-	stmt.bindAndExecute(user_id);
+	stmt.bind_and_execute(user_id);
 	decltype(User::type) utype;
 	stmt.res_bind_all(utype);
 	if (not stmt.next())
@@ -115,16 +122,17 @@ bool Sim::check_submitted_password(StringView password_field_name) {
 		return false;
 
 	auto stmt = mysql.prepare("SELECT salt, password FROM users WHERE id=?");
-	stmt.bindAndExecute(session_user_id);
+	stmt.bind_and_execute(session_user_id);
 
 	decltype(User::salt) salt;
 	decltype(User::password) passwd_hash;
 	stmt.res_bind_all(salt, passwd_hash);
 	throw_assert(stmt.next());
 
-	if (not slowEqual(
-	       intentionalUnsafeStringView(sha3_512(intentionalUnsafeStringView(
-	          concat(salt, request.form_data.get(password_field_name))))),
+	if (not slow_equal(
+	       intentional_unsafe_string_view(
+	          sha3_512(intentional_unsafe_string_view(
+	             concat(salt, request.form_data.get(password_field_name))))),
 	       passwd_hash)) {
 		return false;
 	}
@@ -155,17 +163,18 @@ void Sim::login() {
 
 			auto stmt = mysql.prepare(
 			   "SELECT id, salt, password FROM users WHERE username=?");
-			stmt.bindAndExecute(username);
+			stmt.bind_and_execute(username);
 
 			InplaceBuff<32> uid;
 			decltype(User::salt) salt;
 			decltype(User::password) passwd_hash;
 			stmt.res_bind_all(uid, salt, passwd_hash);
 
-			if (stmt.next() and slowEqual(intentionalUnsafeStringView(sha3_512(
-			                                 intentionalUnsafeStringView(
-			                                    concat(salt, password)))),
-			                              passwd_hash)) {
+			if (stmt.next() and
+			    slow_equal(
+			       intentional_unsafe_string_view(sha3_512(
+			          intentional_unsafe_string_view(concat(salt, password)))),
+			       passwd_hash)) {
 				// Delete old session
 				if (session_is_open)
 					session_destroy();
@@ -174,7 +183,7 @@ void Sim::login() {
 				session_create_and_open(uid, not remember);
 
 				// If there is a redirection string, redirect to it
-				InplaceBuff<4096> location {url_args.extractQuery()};
+				InplaceBuff<4096> location {url_args.extract_query()};
 				return redirect(location.size == 0 ? "/"
 				                                   : location.to_string());
 			}
@@ -192,7 +201,7 @@ void Sim::login() {
 	               "<div class=\"field-group\">"
 	                   "<label>Username</label>"
 	                   "<input type=\"text\" name=\"username\" "
-	                          "value=\"", htmlEscape(username), "\" "
+	                          "value=\"", html_escape(username), "\" "
 	                          "size=\"24\" "
 	                          "maxlength=\"", decltype(User::username)::max_len, "\" required>"
 	               "</div>"
@@ -256,21 +265,21 @@ void Sim::sign_up() {
 
 			static_assert(decltype(User::salt)::max_len % 2 == 0);
 			array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
-			fillRandomly(salt_bin.data(), salt_bin.size());
-			auto salt = toHex(salt_bin.data(), salt_bin.size());
+			fill_randomly(salt_bin.data(), salt_bin.size());
+			auto salt = to_hex({salt_bin.data(), salt_bin.size()});
 
 			auto stmt = mysql.prepare("INSERT IGNORE `users` (username,"
 			                          " first_name, last_name, email, salt,"
 			                          " password) "
 			                          "VALUES(?, ?, ?, ?, ?, ?)");
 
-			stmt.bindAndExecute(
+			stmt.bind_and_execute(
 			   username, first_name, last_name, email, salt,
-			   sha3_512(intentionalUnsafeStringView(concat(salt, pass1))));
+			   sha3_512(intentional_unsafe_string_view(concat(salt, pass1))));
 
 			// User account successfully created
 			if (stmt.affected_rows() == 1) {
-				auto new_uid = toStr(stmt.insert_id());
+				auto new_uid = to_string(stmt.insert_id());
 
 				session_create_and_open(new_uid, true);
 				stdlog("New user: ", new_uid, " -> `", username, '`');
@@ -291,7 +300,7 @@ void Sim::sign_up() {
 	               "<div class=\"field-group\">"
 	                   "<label>Username</label>"
 	                   "<input type=\"text\" name=\"username\" "
-	                          "value=\"", htmlEscape(username), "\" "
+	                          "value=\"", html_escape(username), "\" "
 	                          "size=\"24\" "
 	                          "maxlength=\"", decltype(User::username)::max_len, "\" required>"
 	               "</div>"
@@ -299,7 +308,7 @@ void Sim::sign_up() {
 	               "<div class=\"field-group\">"
 	                   "<label>First name</label>"
 	                   "<input type=\"text\" name=\"first_name\" "
-	                          "value=\"", htmlEscape(first_name), "\" "
+	                          "value=\"", html_escape(first_name), "\" "
 	                          "size=\"24\" "
 	                          "maxlength=\"", decltype(User::first_name)::max_len, "\" "
 	                          "required>"
@@ -308,7 +317,7 @@ void Sim::sign_up() {
 	               "<div class=\"field-group\">"
 	                   "<label>Last name</label>"
 	                   "<input type=\"text\" name=\"last_name\" "
-	                          "value=\"", htmlEscape(last_name), "\" "
+	                          "value=\"", html_escape(last_name), "\" "
 	                          "size=\"24\" "
 	                          "maxlength=\"", decltype(User::last_name)::max_len, "\" "
 	                          "required>"
@@ -317,7 +326,7 @@ void Sim::sign_up() {
 	               "<div class=\"field-group\">"
 	                   "<label>Email</label>"
 	                   "<input type=\"email\" name=\"email\" "
-	                          "value=\"", htmlEscape(email), "\" size=\"24\" "
+	                          "value=\"", html_escape(email), "\" size=\"24\" "
 	                          "maxlength=\"", decltype(User::email)::max_len, "\" required>"
 	               "</div>"
 	               // Password
@@ -345,8 +354,8 @@ void Sim::users_handle() {
 	if (not session_is_open)
 		return redirect(concat_tostr("/login?", request.target));
 
-	StringView next_arg = url_args.extractNextArg();
-	if (isDigit(next_arg)) {
+	StringView next_arg = url_args.extract_next_arg();
+	if (is_digit(next_arg)) {
 		users_uid = next_arg;
 		return users_user();
 	}
@@ -355,7 +364,7 @@ void Sim::users_handle() {
 		page_template("Add user");
 		append("<script>add_user(false);</script>");
 
-	} else if (isDigit(next_arg)) { // View user
+	} else if (is_digit(next_arg)) { // View user
 		users_uid = next_arg;
 		return users_user();
 
@@ -371,25 +380,26 @@ void Sim::users_handle() {
 void Sim::users_user() {
 	STACK_UNWINDING_MARK;
 
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg.empty()) {
-		page_template(intentionalUnsafeStringView(concat("User ", users_uid)),
-		              "body{padding-left:20px}");
+		page_template(
+		   intentional_unsafe_string_view(concat("User ", users_uid)),
+		   "body{padding-left:20px}");
 		append("<script>view_user(false, ", users_uid,
 		       ", window.location.hash);</script>");
 
 	} else if (next_arg == "edit") {
 		page_template(
-		   intentionalUnsafeStringView(concat("Edit user ", users_uid)));
+		   intentional_unsafe_string_view(concat("Edit user ", users_uid)));
 		append("<script>edit_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "delete") {
 		page_template(
-		   intentionalUnsafeStringView(concat("Delete user ", users_uid)));
+		   intentional_unsafe_string_view(concat("Delete user ", users_uid)));
 		append("<script>delete_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "change-password") {
-		page_template(intentionalUnsafeStringView(
+		page_template(intentional_unsafe_string_view(
 		   concat("Change password of the user ", users_uid)));
 		append("<script>change_user_password(false, ", users_uid,
 		       ");</script>");

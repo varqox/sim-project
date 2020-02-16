@@ -1,8 +1,7 @@
 #include <sim/constants.h>
 #include <sim/contest_problem.hh>
 #include <sim/submission.h>
-#include <simlib/filesystem.h>
-#include <simlib/time.h>
+#include <simlib/time.hh>
 
 using sim::ContestProblem;
 
@@ -18,7 +17,7 @@ static void update_problem_final(MySQL::Connection& mysql,
 	                          "WHERE final_candidate=1 AND owner=?"
 	                          " AND problem_id=? "
 	                          "ORDER BY score DESC LIMIT 1");
-	stmt.bindAndExecute(submission_owner, problem_id);
+	stmt.bind_and_execute(submission_owner, problem_id);
 
 	int64_t final_score;
 	stmt.res_bind_all(final_score);
@@ -28,7 +27,7 @@ static void update_problem_final(MySQL::Connection& mysql,
 		mysql
 		   .prepare("UPDATE submissions SET problem_final=0 "
 		            "WHERE owner=? AND problem_id=? AND problem_final=1")
-		   .bindAndExecute(submission_owner, problem_id);
+		   .bind_and_execute(submission_owner, problem_id);
 		return; // Nothing more to be done
 	}
 
@@ -38,7 +37,7 @@ static void update_problem_final(MySQL::Connection& mysql,
 	                     "WHERE final_candidate=1 AND owner=? AND problem_id=?"
 	                     " AND score=? "
 	                     "ORDER BY full_status LIMIT 1");
-	stmt.bindAndExecute(submission_owner, problem_id, final_score);
+	stmt.bind_and_execute(submission_owner, problem_id, final_score);
 	stmt.res_bind_all(full_status);
 	throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
@@ -47,7 +46,8 @@ static void update_problem_final(MySQL::Connection& mysql,
 	                     "WHERE final_candidate=1 AND owner=? AND problem_id=?"
 	                     " AND score=? AND full_status=? "
 	                     "ORDER BY id DESC LIMIT 1");
-	stmt.bindAndExecute(submission_owner, problem_id, final_score, full_status);
+	stmt.bind_and_execute(submission_owner, problem_id, final_score,
+	                      full_status);
 
 	uint64_t new_final_id;
 	stmt.res_bind_all(new_final_id);
@@ -57,8 +57,8 @@ static void update_problem_final(MySQL::Connection& mysql,
 	mysql
 	   .prepare("UPDATE submissions SET problem_final=IF(id=?, 1, 0) "
 	            "WHERE owner=? AND problem_id=? AND (problem_final=1 OR id=?)")
-	   .bindAndExecute(new_final_id, submission_owner, problem_id,
-	                   new_final_id);
+	   .bind_and_execute(new_final_id, submission_owner, problem_id,
+	                     new_final_id);
 }
 
 static void update_contest_final(MySQL::Connection& mysql,
@@ -71,7 +71,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 	// Get the final selecting method and whether the score is revealed
 	auto stmt = mysql.prepare("SELECT final_selecting_method, score_revealing "
 	                          "FROM contest_problems WHERE id=?");
-	stmt.bindAndExecute(contest_problem_id);
+	stmt.bind_and_execute(contest_problem_id);
 
 	decltype(ContestProblem::final_selecting_method) final_selecting_method;
 	decltype(ContestProblem::score_revealing) score_revealing;
@@ -88,7 +88,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 		            "SET contest_final=0, contest_initial_final=0 "
 		            "WHERE owner=? AND contest_problem_id=?"
 		            " AND (contest_final=1 OR contest_initial_final=1)")
-		   .bindAndExecute(submission_owner, contest_problem_id);
+		   .bind_and_execute(submission_owner, contest_problem_id);
 	};
 
 	uint64_t new_final_id, new_initial_final_id;
@@ -100,7 +100,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 		                     "WHERE owner=? AND contest_problem_id=?"
 		                     " AND final_candidate=1 "
 		                     "ORDER BY id DESC LIMIT 1");
-		stmt.bindAndExecute(submission_owner, contest_problem_id);
+		stmt.bind_and_execute(submission_owner, contest_problem_id);
 		stmt.res_bind_all(new_final_id);
 		if (not stmt.next()) // Nothing to do (no submission that may be final)
 			return unset_all_finals();
@@ -118,7 +118,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 		                     "WHERE final_candidate=1 AND owner=?"
 		                     " AND contest_problem_id=? "
 		                     "ORDER BY score DESC LIMIT 1");
-		stmt.bindAndExecute(submission_owner, contest_problem_id);
+		stmt.bind_and_execute(submission_owner, contest_problem_id);
 		stmt.res_bind_all(final_score);
 		if (not stmt.next()) // Nothing to do (no submission that may be final)
 			return unset_all_finals();
@@ -129,7 +129,8 @@ static void update_contest_final(MySQL::Connection& mysql,
 		                     "WHERE final_candidate=1 AND owner=?"
 		                     " AND contest_problem_id=? AND score=? "
 		                     "ORDER BY full_status LIMIT 1");
-		stmt.bindAndExecute(submission_owner, contest_problem_id, final_score);
+		stmt.bind_and_execute(submission_owner, contest_problem_id,
+		                      final_score);
 		stmt.res_bind_all(full_status);
 		throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
@@ -139,8 +140,8 @@ static void update_contest_final(MySQL::Connection& mysql,
 		                     " AND contest_problem_id=? AND score=?"
 		                     " AND full_status=? "
 		                     "ORDER BY id DESC LIMIT 1");
-		stmt.bindAndExecute(submission_owner, contest_problem_id, final_score,
-		                    full_status);
+		stmt.bind_and_execute(submission_owner, contest_problem_id, final_score,
+		                      full_status);
 		stmt.res_bind_all(new_final_id);
 		throw_assert(stmt.next()); // Previous query succeeded, so this has to
 
@@ -157,7 +158,7 @@ static void update_contest_final(MySQL::Connection& mysql,
 			                     "WHERE final_candidate=1 AND owner=?"
 			                     " AND contest_problem_id=? "
 			                     "ORDER BY initial_status LIMIT 1");
-			stmt.bindAndExecute(submission_owner, contest_problem_id);
+			stmt.bind_and_execute(submission_owner, contest_problem_id);
 			stmt.res_bind_all(initial_status);
 			throw_assert(
 			   stmt.next()); // Previous query succeeded, so this has to
@@ -168,8 +169,8 @@ static void update_contest_final(MySQL::Connection& mysql,
 			                     " AND contest_problem_id=?"
 			                     " AND initial_status=? "
 			                     "ORDER BY id DESC LIMIT 1");
-			stmt.bindAndExecute(submission_owner, contest_problem_id,
-			                    initial_status);
+			stmt.bind_and_execute(submission_owner, contest_problem_id,
+			                      initial_status);
 			stmt.res_bind_all(new_initial_final_id);
 			throw_assert(
 			   stmt.next()); // Previous query succeeded, so this has to
@@ -187,8 +188,8 @@ static void update_contest_final(MySQL::Connection& mysql,
 			                     "WHERE final_candidate=1 AND owner=?"
 			                     " AND contest_problem_id=? AND score=? "
 			                     "ORDER BY initial_status LIMIT 1");
-			stmt.bindAndExecute(submission_owner, contest_problem_id,
-			                    final_score);
+			stmt.bind_and_execute(submission_owner, contest_problem_id,
+			                      final_score);
 			stmt.res_bind_all(initial_status);
 			throw_assert(
 			   stmt.next()); // Previous query succeeded, so this has to
@@ -199,8 +200,8 @@ static void update_contest_final(MySQL::Connection& mysql,
 			                     " AND contest_problem_id=? AND score=?"
 			                     " AND initial_status=? "
 			                     "ORDER BY id DESC LIMIT 1");
-			stmt.bindAndExecute(submission_owner, contest_problem_id,
-			                    final_score, initial_status);
+			stmt.bind_and_execute(submission_owner, contest_problem_id,
+			                      final_score, initial_status);
 			stmt.res_bind_all(new_initial_final_id);
 			throw_assert(
 			   stmt.next()); // Previous query succeeded, so this has to
@@ -222,16 +223,16 @@ static void update_contest_final(MySQL::Connection& mysql,
 	   .prepare("UPDATE submissions SET contest_final=IF(id=?, 1, 0) "
 	            "WHERE id=?"
 	            " OR (owner=? AND contest_problem_id=? AND contest_final=1)")
-	   .bindAndExecute(new_final_id, new_final_id, submission_owner,
-	                   contest_problem_id);
+	   .bind_and_execute(new_final_id, new_final_id, submission_owner,
+	                     contest_problem_id);
 
 	// Update initial finals
 	mysql
 	   .prepare("UPDATE submissions SET contest_initial_final=IF(id=?, 1, 0) "
 	            "WHERE id=? OR (owner=? AND contest_problem_id=?"
 	            " AND contest_initial_final=1)")
-	   .bindAndExecute(new_initial_final_id, new_initial_final_id,
-	                   submission_owner, contest_problem_id);
+	   .bind_and_execute(new_initial_final_id, new_initial_final_id,
+	                     submission_owner, contest_problem_id);
 }
 
 namespace submission {
@@ -246,7 +247,7 @@ void update_final_lock(MySQL::Connection& mysql,
 	mysql
 	   .prepare("UPDATE submissions SET id=id "
 	            "WHERE owner=? AND problem_id=? ORDER BY id LIMIT 1")
-	   .bindAndExecute(submission_owner, problem_id);
+	   .bind_and_execute(submission_owner, problem_id);
 }
 
 void update_final(MySQL::Connection& mysql,

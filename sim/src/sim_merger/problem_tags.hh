@@ -17,7 +17,7 @@ class ProblemTagsMerger : public Merger<ProblemTag> {
 		unsigned char b_hidden;
 		auto stmt = conn.prepare("SELECT problem_id, tag, hidden FROM ",
 		                         record_set.sql_table_name);
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(ptag.id.problem_id, ptag.id.tag, b_hidden);
 		while (stmt.next()) {
 			ptag.hidden = b_hidden;
@@ -48,9 +48,12 @@ public:
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(problem_id, tag, hidden) "
 		                         "VALUES(?, ?, ?)");
+
+		ProgressBar progress_bar("Problem tags saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const ProblemTag& x = new_record.data;
-			stmt.bindAndExecute(x.id.problem_id, x.id.tag, x.hidden);
+			stmt.bind_and_execute(x.id.problem_id, x.id.tag, x.hidden);
 		}
 
 		transaction.commit();

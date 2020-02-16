@@ -1,19 +1,25 @@
 #include "dispatcher.h"
 
+#include <climits>
+#include <cstdint>
 #include <future>
 #include <map>
 #include <poll.h>
 #include <queue>
+#include <sim/constants.h>
 #include <sim/jobs.h>
 #include <sim/mysql.h>
 #include <sim/submission.h>
-#include <simlib/avl_dict.h>
-#include <simlib/config_file.h>
-#include <simlib/filesystem.h>
-#include <simlib/process.h>
-#include <simlib/time.h>
+#include <simlib/avl_dict.hh>
+#include <simlib/config_file.hh>
+#include <simlib/file_manip.hh>
+#include <simlib/process.hh>
+#include <simlib/shared_function.hh>
+#include <simlib/time.hh>
+#include <simlib/working_directory.hh>
 #include <sys/eventfd.h>
 #include <sys/inotify.h>
+#include <unistd.h>
 
 #if 0
 #define DEBUG_JOB_SERVER(...) __VA_ARGS__
@@ -131,16 +137,18 @@ public:
 		// Select jobs
 		auto stmt = mysql.prepare("SELECT id, type, priority, aux_id, info "
 		                          "FROM jobs "
-		                          "WHERE status=" JSTATUS_PENDING_STR " "
+		                          "WHERE status=? "
 		                          "ORDER BY priority DESC, id ASC LIMIT 4");
 		stmt.res_bind_all(jid, jtype, priority, aux_id, info);
 		// Sets job's status to NOTICED_PENDING
-		auto mark_stmt = mysql.prepare(
-		   "UPDATE jobs SET status=" JSTATUS_NOTICED_PENDING_STR " WHERE id=?");
-		mark_stmt.bind_all(jid);
+		auto mark_stmt = mysql.prepare("UPDATE jobs SET status=? WHERE id=?");
 		// Add jobs to internal queue
 		using JT = JobType;
-		for (stmt.execute(); stmt.next(); stmt.execute())
+		for (;;) {
+			stmt.bind_and_execute(EnumVal(JobStatus::PENDING));
+			if (not stmt.next())
+				break;
+
 			do {
 				DEBUG_JOB_SERVER(stdlog("DEBUG: Fetched from DB: job ", jid);)
 				auto queue_job = [&jid, &priority](auto& job_category,
@@ -181,12 +189,15 @@ public:
 				// Assign job to its category
 				switch (jtype) {
 				case JT::JUDGE_SUBMISSION:
-				case JT::REJUDGE_SUBMISSION:
-					queue_job(judge_jobs,
-					          strtoull(intentionalUnsafeStringView(
-					             jobs::extractDumpedString(info))),
-					          false);
+				case JT::REJUDGE_SUBMISSION: {
+					auto opt = str2num<uint64_t>(intentional_unsafe_string_view(
+					   jobs::extractDumpedString(info)));
+					if (not opt)
+						THROW("Corrupted job's info field");
+
+					queue_job(judge_jobs, opt.value(), false);
 					break;
+				}
 
 				case JT::ADD_PROBLEM__JUDGE_MODEL_SOLUTION:
 					queue_job(judge_jobs, 0, false);
@@ -217,8 +228,10 @@ public:
 					other_jobs.insert({jid, priority, false});
 					break;
 				}
-				mark_stmt.execute();
+				mark_stmt.bind_and_execute(EnumVal(JobStatus::NOTICED_PENDING),
+				                           jid);
 			} while (stmt.next());
+		}
 
 		DEBUG_JOB_SERVER(
 		   stdlog(__FILE__ ":", __LINE__, ": ", __FUNCTION__, "()");)
@@ -658,19 +671,18 @@ static void process_job(const WorkersPool::NextJob& job) {
 	{
 		auto stmt = mysql.prepare(
 		   "SELECT file_id, tmp_file_id, creator, added, type, aux_id, info "
-		   "FROM jobs WHERE id=? AND status!=" JSTATUS_CANCELED_STR);
+		   "FROM jobs WHERE id=? AND status!=?");
+		stmt.bind_and_execute(job.id, EnumVal(JobStatus::CANCELED));
 		stmt.res_bind_all(file_id, tmp_file_id, creator, added, jtype, aux_id,
 		                  info);
-		stmt.bindAndExecute(job.id);
 
 		if (not stmt.next()) // Job has been probably canceled
 			return exit_procedures();
 	}
 
 	// Mark as in progress
-	mysql.update(intentionalUnsafeStringView(
-	   concat("UPDATE jobs SET status=" JSTATUS_IN_PROGRESS_STR " WHERE id=",
-	          job.id)));
+	mysql.prepare("UPDATE jobs SET status=? WHERE id=?")
+	   .bind_and_execute(EnumVal(JobStatus::IN_PROGRESS), job.id);
 
 	stdlog("Processing job ", job.id, "...");
 
@@ -715,7 +727,8 @@ static WorkersPool local_workers(
 			   jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
 		   jobs::restart_job(
-		      mysql, intentionalUnsafeStringView(toStr(winfo.next_job.id)),
+		      mysql,
+		      intentional_unsafe_string_view(to_string(winfo.next_job.id)),
 		      false);
 	   }
 
@@ -732,7 +745,8 @@ static WorkersPool judge_workers(
 			   jobs_queue.unlock_problem(winfo.next_job.problem_id);
 
 		   jobs::restart_job(
-		      mysql, intentionalUnsafeStringView(toStr(winfo.next_job.id)),
+		      mysql,
+		      intentional_unsafe_string_view(to_string(winfo.next_job.id)),
 		      false);
 	   }
 
@@ -840,14 +854,14 @@ static void eventsLoop() noexcept {
 			struct inotify_event* event = (struct inotify_event*)inotify_buff;
 			if (event->mask & IN_MOVE_SELF) {
 				// If notify file has been moved
-				(void)createFile(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+				(void)create_file(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
 				inotify_rm_watch(inotify_fd, inotify_wd);
 				inotify_wd = -1;
 				return false;
 
 			} else if (event->mask & IN_IGNORED) {
 				// If notify file has disappeared
-				(void)createFile(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+				(void)create_file(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
 				inotify_wd = -1;
 				return false;
 			}
@@ -879,7 +893,7 @@ static void eventsLoop() noexcept {
 				inotify_partially_works:
 					// Ensure that notify-file exists
 					if (access(JOB_SERVER_NOTIFYING_FILE, F_OK) == -1)
-						(void)createFile(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
+						(void)create_file(JOB_SERVER_NOTIFYING_FILE, S_IRUSR);
 
 					inotify_wd =
 					   inotify_add_watch(inotify_fd, JOB_SERVER_NOTIFYING_FILE,
@@ -1032,15 +1046,23 @@ static void cleanUpDB() {
 		auto transaction = mysql.start_transaction();
 
 		// Fix jobs that are in progress after the job-server died
-		auto res = mysql.query("SELECT id, type, info FROM jobs WHERE "
-		                       "status=" JSTATUS_IN_PROGRESS_STR);
-		while (res.next())
-			jobs::restart_job(mysql, res[0], JobType(strtoull(res[1])), res[2],
-			                  false);
+		auto stmt = mysql.prepare("SELECT id, type, info FROM jobs WHERE "
+		                          "status=?");
+		stmt.bind_and_execute(EnumVal(JobStatus::IN_PROGRESS));
+
+		uintmax_t job_id;
+		EnumVal<JobType> job_type;
+		InplaceBuff<128> job_info;
+		stmt.res_bind_all(job_id, job_type, job_info);
+		while (stmt.next())
+			jobs::restart_job(mysql,
+			                  intentional_unsafe_string_view(to_string(job_id)),
+			                  job_type, job_info, false);
 
 		// Fix jobs that are noticed [ending] after the job-server died
-		mysql.update("UPDATE jobs SET status=" JSTATUS_PENDING_STR
-		             " WHERE status=" JSTATUS_NOTICED_PENDING_STR);
+		mysql.prepare("UPDATE jobs SET status=? WHERE status=?")
+		   .bind_and_execute(EnumVal(JobStatus::PENDING),
+		                     EnumVal(JobStatus::NOTICED_PENDING));
 		transaction.commit();
 
 	} catch (const std::exception& e) {
@@ -1050,15 +1072,15 @@ static void cleanUpDB() {
 
 int main() {
 	// Change directory to process executable directory
-	string cwd;
 	try {
-		cwd = chdirToExecDir();
+		chdir_to_executable_dirpath();
 	} catch (const std::exception& e) {
 		errlog("Failed to change working directory: ", e.what());
 	}
 
 	// Terminate older instances
-	kill_processes_by_exec({getExec(getpid())}, std::chrono::seconds(4), true);
+	kill_processes_by_exec({executable_path(getpid())}, std::chrono::seconds(4),
+	                       true);
 
 	// Loggers
 	// stdlog, like everything, writes to stderr, so redirect stdout and stderr
@@ -1093,13 +1115,15 @@ int main() {
 		cf.add_vars("js_local_workers", "js_judge_workers");
 		cf.load_config_from_file("sim.conf");
 
-		int lworkers_no = cf["js_local_workers"].as_int();
+		size_t lworkers_no = cf["js_local_workers"].as<size_t>().value_or(0);
 		if (lworkers_no < 1)
-			THROW("sim.conf: js_local_workers cannot be lower than 1");
+			THROW("sim.conf: js_local_workers has to be an integer greater "
+			      "than 0");
 
-		int jworkers_no = cf["js_judge_workers"].as_int();
+		size_t jworkers_no = cf["js_judge_workers"].as<size_t>().value_or(0);
 		if (jworkers_no < 1)
-			THROW("sim.conf: js_judge_workers cannot be lower than 1");
+			THROW("sim.conf: js_judge_workers has to be an integer greater "
+			      "than 0");
 
 		// clang-format off
 		stdlog("\n=================== Job server launched ==================="
@@ -1108,10 +1132,10 @@ int main() {
 		       "\njudge workers: ", jworkers_no);
 		// clang-format on
 
-		for (int i = 0; i < lworkers_no; ++i)
+		for (size_t i = 0; i < lworkers_no; ++i)
 			spawn_worker(local_workers);
 
-		for (int i = 0; i < jworkers_no; ++i)
+		for (size_t i = 0; i < jworkers_no; ++i)
 			spawn_worker(judge_workers);
 
 	} catch (const std::exception& e) {

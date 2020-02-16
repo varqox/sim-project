@@ -1,6 +1,8 @@
 #pragma once
 
-#include <simlib/avl_dict.h>
+#include <simlib/avl_dict.hh>
+#include <simlib/string_compare.hh>
+#include <simlib/string_transform.hh>
 
 namespace server {
 
@@ -19,7 +21,7 @@ public:
 	}
 
 	bool isEqualTo(StringView key, StringView val) const noexcept {
-		auto it = find(tolower(key.to_string()));
+		auto it = find(to_lower(key.to_string()));
 		return (it and it->second == val);
 	}
 

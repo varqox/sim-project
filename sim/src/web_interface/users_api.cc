@@ -1,9 +1,12 @@
 #include "sim.h"
 
+#include <sim/constants.h>
 #include <sim/jobs.h>
+#include <sim/user.hh>
 #include <sim/utilities.h>
-#include <simlib/random.h>
-#include <simlib/sha.h>
+#include <simlib/random.hh>
+#include <simlib/sha.hh>
+#include <type_traits>
 
 using sim::User;
 using std::array;
@@ -43,29 +46,30 @@ void Sim::api_users() {
 
 	// Process restrictions
 	auto rows_limit = API_FIRST_QUERY_ROWS_LIMIT;
-	StringView next_arg = url_args.extractNextArg();
-	for (uint mask = 0; next_arg.size(); next_arg = url_args.extractNextArg()) {
+	StringView next_arg = url_args.extract_next_arg();
+	for (uint mask = 0; next_arg.size();
+	     next_arg = url_args.extract_next_arg()) {
 		constexpr uint ID_COND = 1;
 		constexpr uint UTYPE_COND = 2;
 
-		auto arg = decodeURI(next_arg);
+		auto arg = decode_uri(next_arg);
 		char cond = arg[0];
 		StringView arg_id = StringView(arg).substr(1);
 
 		if (cond == 't' and ~mask & UTYPE_COND) { // User type
 			if (arg_id == "A")
-				query_append("type=" UTYPE_ADMIN_STR);
+				query_append("type=", EnumVal(User::Type::ADMIN).int_val());
 			else if (arg_id == "T")
-				query_append("type=" UTYPE_TEACHER_STR);
+				query_append("type=", EnumVal(User::Type::TEACHER).int_val());
 			else if (arg_id == "N")
-				query_append("type=" UTYPE_NORMAL_STR);
+				query_append("type=", EnumVal(User::Type::NORMAL).int_val());
 			else
-				return api_error400(intentionalUnsafeStringView(
+				return api_error400(intentional_unsafe_string_view(
 				   concat("Invalid user type: ", arg_id)));
 
 			mask |= UTYPE_COND;
 
-		} else if (not isDigit(arg_id)) {
+		} else if (not is_digit(arg_id)) {
 			return api_error400();
 
 		} else if (is_one_of(cond, '<', '>') and ~mask & ID_COND) {
@@ -99,10 +103,11 @@ void Sim::api_users() {
 
 	while (res.next()) {
 		append(",\n[", res[UID], ",\"", res[USERNAME], "\",",
-		       jsonStringify(res[FNAME]), ',', jsonStringify(res[LNAME]), ',',
-		       jsonStringify(res[EMAIL]), ',');
+		       json_stringify(res[FNAME]), ',', json_stringify(res[LNAME]), ',',
+		       json_stringify(res[EMAIL]), ',');
 
-		User::Type utype = User::Type(strtoull(res[UTYPE]));
+		EnumVal<User::Type> utype {WONT_THROW(
+		   str2num<std::underlying_type_t<User::Type>>(res[UTYPE]).value())};
 		switch (utype) {
 		case User::Type::ADMIN: append("\"Admin\","); break;
 		case User::Type::TEACHER: append("\"Teacher\","); break;
@@ -142,12 +147,12 @@ void Sim::api_user() {
 	if (not session_is_open)
 		return api_error403();
 
-	StringView next_arg = url_args.extractNextArg();
+	StringView next_arg = url_args.extract_next_arg();
 	if (next_arg == "add") {
 		users_perms = users_get_overall_permissions();
 		return api_user_add();
 
-	} else if (not isDigit(next_arg) or
+	} else if (not is_digit(next_arg) or
 	           request.method != server::HttpRequest::POST) {
 		return api_error400();
 	}
@@ -157,7 +162,7 @@ void Sim::api_user() {
 	if (users_perms == UserPermissions::NONE)
 		return api_error404();
 
-	next_arg = url_args.extractNextArg();
+	next_arg = url_args.extract_next_arg();
 	if (next_arg == "edit")
 		return api_user_edit();
 	else if (next_arg == "delete")
@@ -191,7 +196,7 @@ void Sim::api_user_add() {
 
 	// Validate user type
 	utype_str = request.form_data.get("type");
-	User::Type utype /*= User::Type::NORMAL*/;
+	User::Type utype = User::Type::NORMAL; // Silence GCC warning
 	if (utype_str == "A") {
 		utype = User::Type::ADMIN;
 		if (uint(~users_perms & PERM::ADD_ADMIN)) {
@@ -233,16 +238,16 @@ void Sim::api_user_add() {
 	// All fields are valid
 	static_assert(decltype(User::salt)::max_len % 2 == 0);
 	array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
-	fillRandomly(salt_bin.data(), salt_bin.size());
-	auto salt = toHex(salt_bin.data(), salt_bin.size());
+	fill_randomly(salt_bin.data(), salt_bin.size());
+	auto salt = to_hex({salt_bin.data(), salt_bin.size()});
 
 	auto stmt = mysql.prepare("INSERT IGNORE users (username, type,"
 	                          " first_name, last_name, email, salt, password) "
 	                          "VALUES(?, ?, ?, ?, ?, ?, ?)");
 
-	stmt.bindAndExecute(
+	stmt.bind_and_execute(
 	   username, uint(utype), fname, lname, email, salt,
-	   sha3_512(intentionalUnsafeStringView(concat(salt, pass))));
+	   sha3_512(intentional_unsafe_string_view(concat(salt, pass))));
 
 	// User account successfully created
 	if (stmt.affected_rows() != 1)
@@ -306,24 +311,24 @@ void Sim::api_user_edit() {
 	auto transaction = mysql.start_transaction();
 
 	auto stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id!=?");
-	stmt.bindAndExecute(username, users_uid);
+	stmt.bind_and_execute(username, users_uid);
 	if (stmt.next())
 		return api_error400("Username is already taken");
 
 	// If username changes, remove other sessions (for security reasons)
 	stmt = mysql.prepare("SELECT 1 FROM users WHERE username=? AND id=?");
-	stmt.bindAndExecute(username, users_uid);
+	stmt.bind_and_execute(username, users_uid);
 	if (not stmt.next()) {
 		mysql.prepare("DELETE FROM session WHERE user_id=? AND id!=?")
-		   .bindAndExecute(users_uid, session_id);
+		   .bind_and_execute(users_uid, session_id);
 	}
 
 	mysql
 	   .prepare("UPDATE IGNORE users "
 	            "SET username=?, first_name=?, last_name=?, email=?, type=? "
 	            "WHERE id=?")
-	   .bindAndExecute(username, fname, lname, email, uint(new_utype),
-	                   users_uid);
+	   .bind_and_execute(username, fname, lname, email, uint(new_utype),
+	                     users_uid);
 
 	transaction.commit();
 }
@@ -351,20 +356,21 @@ void Sim::api_user_change_password() {
 	// Commit password change
 	static_assert(decltype(User::salt)::max_len % 2 == 0);
 	array<char, (decltype(User::salt)::max_len >> 1)> salt_bin;
-	fillRandomly(salt_bin.data(), salt_bin.size());
+	fill_randomly(salt_bin.data(), salt_bin.size());
 	InplaceBuff<decltype(User::salt)::max_len> salt(
-	   toHex(salt_bin.data(), salt_bin.size()));
+	   to_hex({salt_bin.data(), salt_bin.size()}));
 
 	auto transaction = mysql.start_transaction();
 
 	mysql.prepare("UPDATE users SET salt=?, password=? WHERE id=?")
-	   .bindAndExecute(
-	      salt, sha3_512(intentionalUnsafeStringView(concat(salt, new_pass))),
+	   .bind_and_execute(
+	      salt,
+	      sha3_512(intentional_unsafe_string_view(concat(salt, new_pass))),
 	      users_uid);
 
 	// Remove other sessions (for security reasons)
 	mysql.prepare("DELETE FROM session WHERE user_id=? AND id!=?")
-	   .bindAndExecute(users_uid, session_id);
+	   .bind_and_execute(users_uid, session_id);
 
 	transaction.commit();
 }
@@ -382,10 +388,11 @@ void Sim::api_user_delete() {
 	// Queue deleting job
 	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
 	                          " added, aux_id, info, data)"
-	                          "VALUES(?, " JSTATUS_PENDING_STR ", ?,"
-	                          " " JTYPE_DELETE_USER_STR ", ?, ?, '', '')");
-	stmt.bindAndExecute(session_user_id, priority(JobType::DELETE_USER),
-	                    mysql_date(), users_uid);
+	                          "VALUES(?, ?, ?, ?, ?, ?, '', '')");
+	stmt.bind_and_execute(session_user_id, EnumVal(JobStatus::PENDING),
+	                      priority(JobType::DELETE_USER),
+	                      EnumVal(JobType::DELETE_USER), mysql_date(),
+	                      users_uid);
 
 	jobs::notify_job_server();
 	append(stmt.insert_id());

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <simlib/aho_corasick.h>
+#include <simlib/aho_corasick.hh>
 
 class CppSyntaxHighlighter {
 	AhoCorasick aho;

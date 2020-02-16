@@ -2,7 +2,8 @@
 #include "../main.h"
 
 #include <sim/constants.h>
-#include <simlib/sim/problem_package.h>
+#include <simlib/path.hh>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_handlers {
 
@@ -16,7 +17,7 @@ void ChangeProblemStatement::run() {
 	{
 		auto stmt = mysql.prepare("SELECT file_id, simfile FROM problems"
 		                          " WHERE id=?");
-		stmt.bindAndExecute(problem_id_);
+		stmt.bind_and_execute(problem_id_);
 		InplaceBuff<1> simfile_str;
 		stmt.res_bind_all(problem_file_id, simfile_str);
 		if (not stmt.next()) {
@@ -37,15 +38,17 @@ void ChangeProblemStatement::run() {
 	// Replace old statement with new statement
 
 	// Escape info.new_statement_path
-	if (info_.new_statement_path.empty())
-		info_.new_statement_path = simfile.statement;
-	else
+	if (info_.new_statement_path.empty()) {
+		info_.new_statement_path = WONT_THROW(simfile.statement.value());
+	} else {
 		info_.new_statement_path =
-		   abspath(info_.new_statement_path).erase(0, 1);
+		   path_absolute(info_.new_statement_path).erase(0, 1);
+	}
 
 	ZipFile src_zip(pkg_path, ZIP_RDONLY);
 	auto master_dir = sim::zip_package_master_dir(src_zip);
-	auto old_statement_path = concat(master_dir, simfile.statement);
+	auto old_statement_path =
+	   concat(master_dir, WONT_THROW(simfile.statement.value()));
 	auto new_statement_path = concat(master_dir, info_.new_statement_path);
 	auto simfile_path = concat(master_dir, "Simfile");
 	if (new_statement_path == simfile_path) {
@@ -80,19 +83,19 @@ void ChangeProblemStatement::run() {
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data)"
-	            " SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
-	            ", ?, " JSTATUS_PENDING_STR ", ?, NULL, '', '' FROM problems"
+	            " SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems"
 	            " WHERE id=?")
-	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date,
-	                   problem_id_);
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), current_date, problem_id_);
 
 	// Use new package as problem file
 	mysql
 	   .prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=?"
 	            " WHERE id=?")
-	   .bindAndExecute(new_file_id, simfile_str, current_date, problem_id_);
+	   .bind_and_execute(new_file_id, simfile_str, current_date, problem_id_);
 
-	job_done(intentionalUnsafeStringView(info_.dump()));
+	job_done(intentional_unsafe_string_view(info_.dump()));
 
 	transaction.commit();
 	new_pkg_remover.cancel();

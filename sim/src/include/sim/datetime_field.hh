@@ -11,7 +11,7 @@ public:
 
 	constexpr DatetimeField(const DatetimeField&) = default;
 
-	constexpr DatetimeField(DatetimeField&&) noexcept = default;
+	DatetimeField(DatetimeField&&) noexcept = default;
 
 	template <class T,
 	          std::enable_if_t<std::is_convertible_v<T, StringView>, int> = 0>

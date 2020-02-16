@@ -20,14 +20,15 @@ class ContestsMerger : public Merger<sim::Contest> {
 		                record_set.sql_table_prefix,
 		                "submissions s "
 		                "ON s.contest_id=c.id GROUP BY c.id");
-		stmt.bindAndExecute();
+		stmt.bind_and_execute();
 		stmt.res_bind_all(c.id, c.name, b_is_public, earliest_submit_time);
 
 		auto curr_time = std::chrono::system_clock::now();
 		while (stmt.next()) {
 			c.is_public = b_is_public;
 			auto time = (earliest_submit_time.has_value()
-			                ? strToTimePoint(earliest_submit_time->to_string())
+			                ? str_to_time_point(intentional_unsafe_cstring_view(
+			                     earliest_submit_time->to_string()))
 			                : curr_time);
 			record_set.add_record(c, time);
 		}
@@ -45,9 +46,12 @@ public:
 		conn.update("TRUNCATE ", sql_table_name());
 		auto stmt = conn.prepare("INSERT INTO ", sql_table_name(),
 		                         "(id, name, is_public) VALUES(?, ?, ?)");
+
+		ProgressBar progress_bar("Contests saved:", new_table_.size(), 128);
 		for (const NewRecord& new_record : new_table_) {
+			Defer progressor = [&] { progress_bar.iter(); };
 			const sim::Contest& x = new_record.data;
-			stmt.bindAndExecute(x.id, x.name, x.is_public);
+			stmt.bind_and_execute(x.id, x.name, x.is_public);
 		}
 
 		conn.update("ALTER TABLE ", sql_table_name(),

@@ -4,11 +4,13 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
+#include <netinet/in.h>
 #include <pthread.h>
-#include <simlib/config_file.h>
-#include <simlib/debug.h>
-#include <simlib/filesystem.h>
-#include <simlib/process.h>
+#include <simlib/config_file.hh>
+#include <simlib/debug.hh>
+#include <simlib/file_descriptor.hh>
+#include <simlib/process.hh>
+#include <simlib/working_directory.hh>
 #include <thread>
 
 using std::string;
@@ -27,9 +29,8 @@ static void* worker(void*) {
 
 		for (;;) {
 			// accept the connection
-			int client_socket_fd = accept4(socket_fd, (sockaddr*)&name,
-			                               &client_name_len, SOCK_CLOEXEC);
-			FileDescriptorCloser closer(client_socket_fd);
+			FileDescriptor client_socket_fd {accept4(
+			   socket_fd, (sockaddr*)&name, &client_name_len, SOCK_CLOEXEC)};
 			if (client_socket_fd == -1)
 				continue;
 
@@ -48,14 +49,14 @@ static void* worker(void*) {
 
 				auto microdur =
 				   duration_cast<microseconds>(steady_clock::now() - beg);
-				stdlog("Response generated in ", toString(microdur * 1000),
+				stdlog("Response generated in ", to_string(microdur * 1000),
 				       " ms.");
 
 				conn.sendResponse(std::move(resp));
 			}
 
 			stdlog("Closing...");
-			closer.close();
+			(void)client_socket_fd.close();
 			stdlog("Closed");
 		}
 
@@ -74,15 +75,15 @@ static void* worker(void*) {
 int main() {
 	// Init server
 	// Change directory to process executable directory
-	string cwd;
 	try {
-		cwd = chdirToExecDir();
+		chdir_to_executable_dirpath();
 	} catch (const std::exception& e) {
 		errlog("Failed to change working directory: ", e.what());
 	}
 
 	// Terminate older instances
-	kill_processes_by_exec({getExec(getpid())}, std::chrono::seconds(4), true);
+	kill_processes_by_exec({executable_path(getpid())}, std::chrono::seconds(4),
+	                       true);
 
 	// Loggers
 	// stdlog (like everything) writes to stderr, so redirect stdout and stderr
@@ -117,8 +118,8 @@ int main() {
 		return 5;
 	}
 
-	string address = config["address"].as_string();
-	int workers = config["workers"].as_int();
+	string full_address = config["address"].as_string();
+	size_t workers = config["workers"].as<size_t>().value_or(0);
 
 	if (workers < 1) {
 		errlog("sim.conf: Number of workers cannot be lower than 1");
@@ -130,26 +131,33 @@ int main() {
 	memset(name.sin_zero, 0, sizeof(name.sin_zero));
 
 	// Extract port from address
-	unsigned port = 80; // server port
-	size_t colon_pos = address.find(':');
-	// Colon has been found
-	if (colon_pos < address.size()) {
-		if (strtou(address, port, colon_pos + 1) !=
-		    static_cast<int>(address.size() - colon_pos - 1)) {
+	in_port_t port = 80; // server port
+	CStringView address_str;
+	if (size_t colon_pos = full_address.find(':');
+	    colon_pos != full_address.npos) {
+		full_address[colon_pos] = '\0';
+		address_str = CStringView(full_address.data(), colon_pos);
+
+		auto port_opt =
+		   str2num<decltype(port)>(substring(full_address, colon_pos + 1));
+		if (not port_opt) {
 			errlog("sim.config: incorrect port number");
 			return 7;
 		}
-		address[colon_pos] = '\0'; // need to extract IPv4 address
-	} else
-		address += '\0'; // need to extract IPv4 address
+
+		port = *port_opt;
+	} else {
+		address_str = full_address;
+	}
+
 	// Set server port
 	name.sin_port = htons(port);
 
 	// Extract IPv4 address
-	if (0 == strcmp(address.data(), "*")) // strcmp because of '\0' in address
+	if (address_str == "*") {
 		name.sin_addr.s_addr = htonl(INADDR_ANY); // server address
-	else if (address.empty() ||
-	         inet_aton(address.data(), &name.sin_addr) == 0) {
+	} else if (address_str.empty() ||
+	           inet_aton(address_str.data(), &name.sin_addr) == 0) {
 		errlog("sim.config: incorrect IPv4 address");
 		return 8;
 	}
@@ -158,7 +166,7 @@ int main() {
 	stdlog("\n=================== Server launched ==================="
 	       "\nPID: ", getpid(),
 	       "\nworkers: ", workers,
-	       "\naddress: ", address.data(), ':', port);
+	       "\naddress: ", address_str, ':', port);
 	// clang-format on
 
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP)) <
@@ -221,7 +229,7 @@ int main() {
 	}
 
 	std::vector<pthread_t> threads(workers);
-	for (int i = 1; i < workers; ++i) {
+	for (size_t i = 1; i < workers; ++i) {
 		pthread_create(&threads[i], &attr, server::worker,
 		               nullptr); // TODO: errors...
 	}

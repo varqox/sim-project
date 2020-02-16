@@ -1,7 +1,8 @@
 #include "reset_problem_time_limits.h"
 #include "../main.h"
 
-#include <simlib/sim/problem_package.h>
+#include <sim/constants.h>
+#include <simlib/sim/problem_package.hh>
 
 namespace job_handlers {
 
@@ -11,7 +12,7 @@ void ResetProblemTimeLimits::run() {
 	uint64_t problem_file_id;
 	{
 		auto stmt = mysql.prepare("SELECT file_id FROM problems WHERE id=?");
-		stmt.bindAndExecute(problem_id_);
+		stmt.bind_and_execute(problem_id_);
 		stmt.res_bind_all(problem_file_id);
 		if (not stmt.next())
 			return set_failure("Problem with ID = ", problem_id_,
@@ -55,17 +56,17 @@ void ResetProblemTimeLimits::run() {
 	mysql
 	   .prepare("INSERT INTO jobs(file_id, creator, type, priority, status,"
 	            " added, aux_id, info, data) "
-	            "SELECT file_id, NULL, " JTYPE_DELETE_FILE_STR
-	            ", ?, " JSTATUS_PENDING_STR
-	            ", ?, NULL, '', '' FROM problems WHERE id=?")
-	   .bindAndExecute(priority(JobType::DELETE_FILE), current_date,
-	                   problem_id_);
+	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' FROM problems "
+	            "WHERE id=?")
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), current_date, problem_id_);
 
 	// Use new package as problem file
 	mysql
 	   .prepare("UPDATE problems SET file_id=?, simfile=?, last_edit=? "
 	            "WHERE id=?")
-	   .bindAndExecute(new_file_id, new_simfile_, current_date, problem_id_);
+	   .bind_and_execute(new_file_id, new_simfile_, current_date, problem_id_);
 
 	job_done();
 

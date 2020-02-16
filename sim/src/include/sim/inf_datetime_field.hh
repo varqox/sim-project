@@ -12,7 +12,7 @@ public:
 
 	constexpr InfDatetimeField(const InfDatetimeField&) = default;
 
-	constexpr InfDatetimeField(InfDatetimeField&&) noexcept = default;
+	InfDatetimeField(InfDatetimeField&&) noexcept = default;
 
 	InfDatetimeField(const InfDatetime& dt) : VarcharField(dt.to_str()) {}
 
