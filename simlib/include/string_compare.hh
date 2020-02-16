@@ -30,7 +30,7 @@ constexpr bool special_equal(StringView a, StringView b, Func&& f) {
 
 // Checks whether lowered @p a is equal to lowered @p b
 constexpr bool lower_equal(StringView a, StringView b) noexcept {
-	return special_equal<int(int)>(a, b, tolower);
+	return special_equal<int(int)>(a, b, to_lower);
 }
 
 /**
@@ -59,7 +59,7 @@ public:
 };
 
 struct LowerStrCompare : public SpecialStrCompare<int (*)(int)> {
-	LowerStrCompare() : SpecialStrCompare(tolower) {}
+	LowerStrCompare() : SpecialStrCompare(to_lower) {}
 };
 
 // Compares two strings: @p str[beg, end) and @p s

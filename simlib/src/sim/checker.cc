@@ -1,3 +1,4 @@
+#include "../../include/ctype.hh"
 #include "../../include/debug.hh"
 
 #include <unistd.h>
@@ -20,7 +21,7 @@ string obtain_checker_output(int fd, size_t max_length) {
 			// We have read whole checker output
 			res.resize(pos);
 			// Remove trailing white characters
-			while (res.size() and isspace(res.back()))
+			while (res.size() and is_space(res.back()))
 				res.pop_back();
 
 			return res;

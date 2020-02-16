@@ -12,10 +12,10 @@ extern "C" {
 #include <string.h>
 
 int are_equal(char* s1, size_t l1, char* s2, size_t l2) {
-	while (l1 && isspace(s1[l1 - 1]))
+	while (l1 && isspace((unsigned char)s1[l1 - 1]))
 		--l1;
 
-	while (l2 && isspace(s2[l2 - 1]))
+	while (l2 && isspace((unsigned char)s2[l2 - 1]))
 		--l2;
 
 	s1[l1] = s2[l2] = '\0';

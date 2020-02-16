@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../config_file.hh"
+#include "../ctype.hh"
 
 #include <chrono>
 #include <optional>
@@ -342,8 +343,8 @@ public:
 		 */
 		static inline SplitResult split(StringView test_name) noexcept {
 			SplitResult res;
-			res.tid = test_name.extract_trailing(::isalpha);
-			res.gid = test_name.extract_trailing(::isdigit);
+			res.tid = test_name.extract_trailing(is_alpha<char>);
+			res.gid = test_name.extract_trailing(is_digit<char>);
 			return res;
 		}
 
@@ -371,7 +372,7 @@ public:
 /**
  * @brief Makes an label from @p str
  * @details Sbbreviation is made of lowered 3 (at most) first characters of
- *   @p str for which isgraph(3) != 0
+ *   @p str for which is_graph(3) != 0
  *
  * @param str string to make the label
  *
@@ -379,8 +380,8 @@ public:
  */
 inline std::string shorten_name(StringView str) {
 	std::string label;
-	for (char c : str)
-		if (isgraph(c) && (label += ::tolower(c)).size() == 3)
+	for (auto c : str)
+		if (is_graph(c) && (label += to_lower(c)).size() == 3)
 			break;
 	return label;
 }

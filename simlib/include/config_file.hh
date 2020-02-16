@@ -170,7 +170,7 @@ public:
 	/**
 	 * @brief Escapes unsafe sequences in str
 	 * @details Escapes '\"' with "\\\"" and characters for which
-	 *   iscntrl(3) != 0 with "\\xnn" sequence where n is a hexadecimal digit.
+	 *   is_cntrl(3) != 0 with "\\xnn" sequence where n is a hexadecimal digit.
 	 *
 	 * @param str input string
 	 *
@@ -181,7 +181,7 @@ public:
 	/**
 	 * @brief Escapes unsafe sequences in str
 	 * @details Escapes '\"' with "\\\"" and characters for which
-	 *   isprint(3) == 0 with "\\xnn" sequence where n is a hexadecimal digit.
+	 *   is_print(3) == 0 with "\\xnn" sequence where n is a hexadecimal digit.
 	 *
 	 *   The difference between escape_to_double_quoted_string() and this
 	 *   function is that characters (bytes) not from interval [0, 127] are also
@@ -223,7 +223,7 @@ public:
 	 * @brief Converts string @p str so that it can be safely placed in config
 	 *   file
 	 * @details Possible cases:
-	 *   1) @p str contains '\'' or character for which isprint(3) == 0:
+	 *   1) @p str contains '\'' or character for which is_print(3) == 0:
 	 *     Escaped @p str via full_escape_to_double_quoted_string() will be
 	 *     returned.
 	 *   2) Otherwise if @p str is string literal (is_string_literal(@p str)):

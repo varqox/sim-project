@@ -1,4 +1,5 @@
 #include "../include/config_file.hh"
+#include "../include/ctype.hh"
 #include "../include/debug.hh"
 #include "../include/file_contents.hh"
 #include "../include/simple_parser.hh"
@@ -25,10 +26,10 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		it.second.unset();
 
 	// Checks whether c is a white-space but not a newline
-	auto is_ws = [](int c) { return (c != '\n' and isspace(c)); };
+	auto is_ws = [](auto c) { return (c != '\n' and is_space(c)); };
 	// Checks whether character is one of these [a-zA-Z0-9\-_.]
-	auto is_name = [](int c) {
-		return (isalnum(c) or c == '-' or c == '_' or c == '.');
+	auto is_name = [](auto c) {
+		return (is_alnum(c) or c == '-' or c == '_' or c == '.');
 	};
 
 	DEBUG_CF(stdlog("Config file:\n", config);)
@@ -54,7 +55,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		// Construct diagnostics
 		auto& diags = pe.diagnostics_;
 		auto append_char = [&](unsigned char c) {
-			if (isprint(c))
+			if (is_print(c))
 				diags += c;
 			else {
 				diags += "\\x";
@@ -150,12 +151,12 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				case 'v': res += '\v'; continue;
 				case 'x':
 					// i will not go out of the buffer - (guard = newline)
-					if (!isxdigit(buff[++i])) {
+					if (!is_xdigit(buff[++i])) {
 						buff.remove_prefix(i);
 						throw_parse_error("Invalid hexadecimal digit: `",
 						                  buff[0], '`');
 					}
-					if (!isxdigit(buff[++i])) {
+					if (!is_xdigit(buff[++i])) {
 						buff.remove_prefix(i);
 						throw_parse_error("Invalid hexadecimal digit: `",
 						                  buff[0], '`');
@@ -195,7 +196,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 				++i;
 
 		// Remove white-spaces from ending
-		while (isspace(buff[i]))
+		while (is_space(buff[i]))
 			--i;
 		res = buff.substring(0, ++i).to_string();
 
@@ -268,7 +269,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 			buff.remove_prefix(1); // Skip [
 
 			for (;;) {
-				buff.remove_leading(isspace);
+				buff.remove_leading(is_space<char>);
 				if (buff.empty()) {
 					throw_parse_error("Missing terminating ] character at the"
 					                  " end of an array");
@@ -343,12 +344,12 @@ bool ConfigFile::is_string_literal(StringView str) noexcept {
 		return false;
 
 	// Special check on the first and last character
-	if (is_one_of(str[0], '[', '\'', '"', '#') or isspace(str[0]) or
-	    isspace(str.back())) {
+	if (is_one_of(str[0], '[', '\'', '"', '#') or is_space(str[0]) or
+	    is_space(str.back())) {
 		return false;
 	}
 
-	for (char c : str)
+	for (auto c : str)
 		if (is_one_of(c, '\n', ']', ',', '#'))
 			return false;
 
@@ -396,17 +397,17 @@ static string escape_to_double_quoted_string_impl(StringView str, Func&& func) {
 }
 
 string ConfigFile::escape_to_double_quoted_string(StringView str) {
-	return escape_to_double_quoted_string_impl(str, ::iscntrl);
+	return escape_to_double_quoted_string_impl(str, is_cntrl<char>);
 }
 
 string ConfigFile::full_escape_to_double_quoted_string(StringView str) {
 	return escape_to_double_quoted_string_impl(
-	   str, [](int x) { return !isprint(x); });
+	   str, [](int x) { return !is_print(x); });
 }
 
 string ConfigFile::escape_string(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\'' or iscntrl(str[i]))
+		if (str[i] == '\'' or is_cntrl(str[i]))
 			return escape_to_double_quoted_string(str);
 
 	if (is_string_literal(str))
@@ -417,7 +418,7 @@ string ConfigFile::escape_string(StringView str) {
 
 string ConfigFile::full_escape_string(StringView str) {
 	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\'' or !isprint(str[i]))
+		if (str[i] == '\'' or !is_print(str[i]))
 			return full_escape_to_double_quoted_string(str);
 
 	if (is_string_literal(str))

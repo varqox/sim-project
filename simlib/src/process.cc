@@ -145,7 +145,8 @@ void kill_processes_by_exec(vector<string> exec_set,
 
 	auto proc_uptime = get_file_contents("/proc/uptime");
 	auto current_uptime = to_string(
-	   str2num<double>(StringView(proc_uptime).extract_leading(not_fn(isspace)))
+	   str2num<double>(
+	      StringView(proc_uptime).extract_leading(not_fn(is_space<char>)))
 	         .value() *
 	      ticks_per_second,
 	   0);

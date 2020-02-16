@@ -1,4 +1,5 @@
 #include "../../include/http/response.hh"
+#include "../../include/ctype.hh"
 
 using std::string;
 
@@ -8,8 +9,8 @@ string quote(StringView str) {
 	string res;
 	res.reserve(str.size() + 10);
 	res += '"';
-	for (char c : str) {
-		if (isprint(c) && c != '"')
+	for (auto c : str) {
+		if (is_print(c) && c != '"')
 			res += c;
 		else
 			(res += '\\') += c;

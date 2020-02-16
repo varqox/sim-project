@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ctype.hh"
 #include "string_view.hh"
 
 constexpr bool has_prefix(StringView str, StringView prefix) noexcept {
@@ -22,13 +23,11 @@ constexpr bool has_one_of_suffixes(StringView str, T&&... suffixes) noexcept {
 	return (... or has_suffix(str, std::forward<T>(suffixes)));
 }
 
-constexpr bool is_digit(int c) noexcept { return ('0' <= c and c <= '9'); }
-
 constexpr bool is_digit(StringView str) noexcept {
 	if (str.empty())
 		return false;
 
-	for (char c : str) {
+	for (auto c : str) {
 		if (not is_digit(c))
 			return false;
 	}
@@ -36,15 +35,11 @@ constexpr bool is_digit(StringView str) noexcept {
 	return true;
 }
 
-constexpr bool is_alpha(int c) noexcept {
-	return (('A' <= c and c <= 'Z') or ('a' <= c and c <= 'z'));
-}
-
 constexpr bool is_alpha(StringView str) noexcept {
 	if (str.empty())
 		return false;
 
-	for (char c : str) {
+	for (auto c : str) {
 		if (not is_alpha(c))
 			return false;
 	}
@@ -52,13 +47,11 @@ constexpr bool is_alpha(StringView str) noexcept {
 	return true;
 }
 
-constexpr bool is_alnum(int c) noexcept { return (is_alpha(c) or is_digit(c)); }
-
 constexpr bool is_alnum(StringView str) noexcept {
 	if (str.empty())
 		return false;
 
-	for (char c : str) {
+	for (auto c : str) {
 		if (not is_alnum(c))
 			return false;
 	}
@@ -66,7 +59,8 @@ constexpr bool is_alnum(StringView str) noexcept {
 	return true;
 }
 
-constexpr bool is_word(int c) noexcept {
+template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+constexpr bool is_word(T c) noexcept {
 	return (is_alnum(c) or c == '_' or c == '-');
 }
 
@@ -74,7 +68,7 @@ constexpr bool is_word(StringView str) noexcept {
 	if (str.empty())
 		return false;
 
-	for (char c : str) {
+	for (auto c : str) {
 		if (not is_word(c))
 			return false;
 	}

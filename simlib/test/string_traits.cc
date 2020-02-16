@@ -51,15 +51,6 @@ TEST(string_traits, has_one_of_suffixes) {
 }
 
 TEST(string_traits, is_digit) {
-	for (int c = 0; c < '0'; ++c)
-		EXPECT_EQ(false, is_digit(c));
-
-	for (int c = '0'; c <= '9'; ++c)
-		EXPECT_EQ(true, is_digit(c));
-
-	for (int c = '9' + 1; c < 256; ++c)
-		EXPECT_EQ(false, is_digit(c));
-
 	EXPECT_EQ(true, is_digit("0"));
 	EXPECT_EQ(true, is_digit("01"));
 	EXPECT_EQ(true, is_digit("0123456789"));
@@ -74,9 +65,6 @@ TEST(string_traits, is_digit) {
 }
 
 TEST(string_traits, is_alpha) {
-	for (int c = 0; c < 256; ++c)
-		EXPECT_EQ(bool(isalpha(c)), is_alpha(c));
-
 	EXPECT_EQ(true,
 	          is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
@@ -90,9 +78,6 @@ TEST(string_traits, is_alpha) {
 }
 
 TEST(string_traits, is_alnum) {
-	for (int c = 0; c < 256; ++c)
-		EXPECT_EQ(bool(isalnum(c)), is_alnum(c));
-
 	EXPECT_EQ(
 	   true,
 	   is_alnum(
@@ -111,7 +96,7 @@ TEST(string_traits, is_alnum) {
 
 TEST(string_traits, is_word) {
 	for (int c = 0; c < 256; ++c)
-		EXPECT_EQ(bool(isalnum(c) or c == '-' or c == '_'), is_word(c));
+		EXPECT_EQ(bool(is_alnum(c) or c == '-' or c == '_'), is_word(c));
 
 	EXPECT_EQ(
 	   true,

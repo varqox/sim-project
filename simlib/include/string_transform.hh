@@ -7,21 +7,25 @@
 #include <cstdlib>
 #include <optional>
 
-inline std::string tolower(std::string str) {
+inline std::string to_lower(std::string str) {
 	for (auto& c : str)
-		c = tolower(c);
+		c = to_lower(c);
 	return str;
 }
 
-constexpr int hex2dec(int c) noexcept {
+template <class T>
+constexpr int hex2dec(T c) noexcept {
+	assert(is_xdigit(c));
 	return (c < 'A' ? c - '0' : 10 + c - (c >= 'a' ? 'a' : 'A'));
 }
 
 constexpr char dec2Hex(int x) noexcept {
+	assert(0 <= x and x <= 15);
 	return (x > 9 ? 'A' - 10 + x : x + '0');
 }
 
 constexpr char dec2hex(int x) noexcept {
+	assert(0 <= x and x <= 15);
 	return (x > 9 ? 'a' - 10 + x : x + '0');
 }
 
@@ -30,11 +34,12 @@ template <size_t N = 64>
 InplaceBuff<N> to_hex(StringView str) {
 	InplaceBuff<N> res(str.size() << 1);
 	size_t i = 0;
-	for (int c : str) {
+	for (unsigned char c : str) {
 		res[i++] = dec2hex(c >> 4);
 		res[i++] = dec2hex(c & 15);
 	}
 
+	res.size = i;
 	return res;
 }
 
@@ -50,13 +55,12 @@ InplaceBuff<N> encode_uri(StringView str) {
 				res[i] = true;
 		}
 
-		for (int c : StringView("-_.~"))
+		for (unsigned char c : StringView("-_.~"))
 			res[c] = true;
 
 		return res;
 	}();
 
-	// TODO: remove it
 	static_assert(is_safe['a']);
 	static_assert(is_safe['z']);
 	static_assert(is_safe['A']);
@@ -70,7 +74,7 @@ InplaceBuff<N> encode_uri(StringView str) {
 	static_assert(not is_safe['\0']);
 
 	InplaceBuff<N> res;
-	for (int c : str) {
+	for (unsigned char c : str) {
 		if (is_safe[c])
 			res.append(c);
 		else
@@ -86,8 +90,8 @@ InplaceBuff<N> decode_uri(StringView str) {
 	InplaceBuff<N> res;
 	for (size_t i = 0; i < str.size(); ++i) {
 		char c;
-		if (str[i] == '%' and i + 2 < str.size() and isxdigit(str[i + 1]) and
-		    isxdigit(str[i + 2])) {
+		if (str[i] == '%' and i + 2 < str.size() and is_xdigit(str[i + 1]) and
+		    is_xdigit(str[i + 2])) {
 			c = (hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2]);
 			i += 2;
 		} else if (str[i] == '+') {
@@ -117,7 +121,7 @@ inline void append_as_html_escaped(std::string& str, char c) {
 
 // Escapes HTML unsafe character sequences and appends them to @p str
 inline void append_as_html_escaped(std::string& str, StringView s) {
-	for (char c : s)
+	for (auto c : s)
 		append_as_html_escaped(str, c);
 }
 
@@ -143,7 +147,7 @@ constexpr InplaceBuff<N> json_stringify(Args&&... args) {
 				res.append("\\n");
 			else if (c == '\\')
 				res.append("\\\\");
-			else if (iscntrl(c))
+			else if (is_cntrl(c))
 				res.append("\\u00", dec2hex(c >> 4), dec2hex(c & 15));
 			else
 				res.append(static_cast<char>(c));
@@ -188,7 +192,7 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 		   (minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
 		str.remove_prefix(1);
 
-		for (int c : str) {
+		for (unsigned char c : str) {
 			if (not is_digit(c))
 				return std::nullopt;
 
@@ -222,7 +226,7 @@ std::optional<T> str2num(StringView str) noexcept {
 	return res;
 #else
 	static_assert(std::is_floating_point_v<T>);
-	if (str.empty() or isspace(str[0]))
+	if (str.empty() or is_space(str[0]))
 		return std::nullopt;
 
 	try {

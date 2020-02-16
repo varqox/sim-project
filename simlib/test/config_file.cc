@@ -77,14 +77,14 @@ TEST(ConfigFile, is_string_literal) {
 		EXPECT_EQ(ConfigFile::is_string_literal(p.first), p.second)
 		   << "p.first: " << p.first << endl;
 
-	auto is_beginning = [](char c) {
-		return not(isspace(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
+	auto is_beginning = [](auto c) {
+		return not(is_space(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
 	};
-	auto is_interior = [](char c) {
+	auto is_interior = [](auto c) {
 		return not is_one_of(c, '\n', '#', ']', ',');
 	};
-	auto is_ending = [](char c) {
-		return not(isspace(c) || is_one_of(c, '#', ']', ','));
+	auto is_ending = [](auto c) {
+		return not(is_space(c) || is_one_of(c, '#', ']', ','));
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
 		char t[3] = {(char)a, (char)b, (char)c};

@@ -1,8 +1,8 @@
 #include "../include/proc_stat_file_contents.hh"
+#include "../include/ctype.hh"
 #include "../include/file_contents.hh"
 #include "../include/string_traits.hh"
 
-#include <cctype>
 #include <functional>
 
 using std::string;
@@ -13,8 +13,8 @@ ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
 	StringView str(contents_);
 
 	// [0] - Process pid
-	str.extract_leading(isspace);
-	fields_.emplace_back(str.extract_leading(std::not_fn(isspace)));
+	str.extract_leading(is_space<char>);
+	fields_.emplace_back(str.extract_leading(std::not_fn(is_space<char>)));
 	// [1] - Executable filename
 	str.remove_leading([](int c) { return c != '('; });
 	assert(has_prefix(str, "("));
@@ -24,8 +24,8 @@ ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
 	str.remove_prefix(1);
 	// [>1]
 	for (;;) {
-		str.remove_leading(isspace);
-		auto val = str.extract_leading(std::not_fn(isspace));
+		str.remove_leading(is_space<char>);
+		auto val = str.extract_leading(std::not_fn(is_space<char>));
 		if (val.empty())
 			break;
 

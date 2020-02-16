@@ -256,9 +256,9 @@ std::tuple<StringView, std::chrono::nanoseconds, std::optional<uint64_t>>
 Simfile::parse_limits_item(StringView item) {
 	SimpleParser sp(item);
 	// Test name
-	StringView test_name {sp.extract_next_non_empty(isspace)};
+	StringView test_name {sp.extract_next_non_empty(is_space<char>)};
 	// Time limit
-	StringView x {sp.extract_next_non_empty(isspace)};
+	StringView x {sp.extract_next_non_empty(is_space<char>)};
 	if (!is_real(x))
 		throw std::runtime_error {concat_tostr(
 		   "Simfile: invalid time limit for the test `", test_name, '`')};
@@ -284,7 +284,7 @@ Simfile::parse_limits_item(StringView item) {
 	}
 
 	// Memory limit
-	sp.remove_leading(isspace);
+	sp.remove_leading(is_space<char>);
 	if (sp.empty())
 		return {test_name, time_limit, std::nullopt};
 
@@ -306,14 +306,14 @@ Simfile::parse_limits_item(StringView item) {
 
 std::tuple<StringView, int64_t> Simfile::parse_scoring_item(StringView item) {
 	SimpleParser sp(item);
-	StringView gid = sp.extract_next_non_empty(isspace);
+	StringView gid = sp.extract_next_non_empty(is_space<char>);
 	if (!is_digit(gid)) {
 		throw std::runtime_error {
 		   concat_tostr("Simfile: scoring of the invalid group `", gid,
 		                "` - it has to be a positive integer")};
 	}
 
-	sp.remove_leading(isspace);
+	sp.remove_leading(is_space<char>);
 	auto score = str2num<int64_t>(sp);
 	if (not score) {
 		throw std::runtime_error {concat_tostr(
@@ -437,11 +437,11 @@ void Simfile::load_tests() {
 std::tuple<StringView, StringView, StringView>
 Simfile::parse_test_files_item(StringView item) {
 	SimpleParser sp(item);
-	StringView name = sp.extract_next_non_empty(isspace);
-	StringView input = sp.extract_next_non_empty(isspace);
-	StringView output = sp.extract_next_non_empty(isspace);
+	StringView name = sp.extract_next_non_empty(is_space<char>);
+	StringView input = sp.extract_next_non_empty(is_space<char>);
+	StringView output = sp.extract_next_non_empty(is_space<char>);
 
-	sp.remove_leading(isspace);
+	sp.remove_leading(is_space<char>);
 	if (not sp.empty()) {
 		throw std::runtime_error {concat_tostr(
 		   "Simfile: `tests_files`: invalid format of entry for test `", name,
