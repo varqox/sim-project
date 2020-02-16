@@ -1,8 +1,10 @@
 #include "../include/sandbox.hh"
 #include "../include/call_in_destructor.hh"
+#include "../include/ctype.hh"
 #include "../include/defer.hh"
 #include "../include/humanize.hh"
 #include "../include/process.hh"
+#include "../include/string_transform.hh"
 #include "../include/time.hh"
 
 #include <climits>
@@ -771,18 +773,22 @@ inline void Sandbox::reset_callbacks() noexcept {
 }
 
 uint64_t Sandbox::get_tracee_vm_size() {
-	std::array<char, 32> buff;
-	ssize_t rc = pread(tracee_statm_fd_, buff.data(), buff.size() - 1, 0);
+	InplaceBuff<32> buff(32);
+	ssize_t rc = pread(tracee_statm_fd_, buff.data(), buff.size, 0);
 	if (rc <= 0)
 		THROW("pread()", errmsg());
 
-	buff[rc] = '\0';
+	buff.size = rc;
+	if (auto space_pos = StringView(buff).find(' ');
+	    space_pos != StringView::npos)
+		buff.size = space_pos;
 
 	// Obtain value
-	uint64_t vm_size = 0;
-	for (int i = 0; i < 32 && isdigit(buff[i]); ++i)
-		vm_size = vm_size * 10 + buff[i] - '0';
+	auto opt = str2num<uint64_t>(buff);
+	if (not opt)
+		THROW("Read invalid VmSize from /proc/tracee_pid/statm: \"", buff, '"');
 
+	uint64_t vm_size = *opt;
 	DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] get_vm_size: -> ", vm_size, " (",
 	                     humanize_file_size(vm_size * sysconf(_SC_PAGESIZE)),
 	                     ")");)
