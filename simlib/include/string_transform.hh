@@ -1,5 +1,6 @@
 #pragma once
 
+#include "always_false.hh"
 #include "inplace_buff.hh"
 #include "string_traits.hh"
 
@@ -203,9 +204,6 @@ constexpr std::optional<T> str2num(StringView str) noexcept {
 		return res;
 	}
 }
-
-template <class...>
-constexpr bool always_false = false;
 
 // Converts whole @p str to @p T or returns std::nullopt on errors like value
 // represented in @p str is too big or invalid
