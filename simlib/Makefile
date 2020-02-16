@@ -68,6 +68,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/concat_tostr.cc \
 	$(PREFIX)test/config_file.cc \
 	$(PREFIX)test/conver.cc \
+	$(PREFIX)test/ctype.cc \
 	$(PREFIX)test/debug.cc \
 	$(PREFIX)test/defer.cc \
 	$(PREFIX)test/directory.cc \
