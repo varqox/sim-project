@@ -18,9 +18,18 @@ void Sim::page_template(StringView title, StringView styles,
 
 	// Protect from clickjacking
 	resp.headers["X-Frame-Options"] = "DENY";
-	resp.headers["Content-Security-Policy"] = "frame-ancestors 'none'";
-	// Protect from XSS attack
-	resp.headers["X-XSS-Protection"] = "1; mode=block";
+	resp.headers["x-content-type-options"] = "nosniff";
+	resp.headers["Content-Security-Policy"] =
+	   "default-src 'none'; "
+	   "style-src 'self' 'unsafe-inline'; "
+	   "script-src 'self' 'unsafe-inline'; "
+	   "connect-src 'self'; "
+	   "object-src 'self'; "
+	   "frame-src 'self'; "
+	   "img-src 'self'; ";
+
+	resp.headers["X-XSS-Protection"] =
+	   "0"; // Disable this, as it may be used to misbehave the whole website
 
 	resp.headers["Content-Type"] = "text/html; charset=utf-8";
 	resp.content = "";

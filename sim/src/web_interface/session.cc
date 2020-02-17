@@ -32,11 +32,7 @@ bool Sim::session_open() {
 
 	if (stmt.next()) {
 		session_user_type = s_u_type;
-		// If no session injection
-		if (client_ip == session_ip &&
-		    request.headers.isEqualTo("User-Agent", user_agent)) {
-			return (session_is_open = true);
-		}
+		return (session_is_open = true);
 	}
 
 	resp.setCookie("session", "", 0); // Delete cookie

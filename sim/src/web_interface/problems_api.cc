@@ -503,9 +503,6 @@ void Sim::api_statement_impl(uint64_t problem_file_id, StringView problem_label,
 	if (has_suffix(statement, ".pdf")) {
 		ext = ".pdf";
 		resp.headers["Content-type"] = "application/pdf";
-	} else if (has_one_of_suffixes(statement, ".html", ".htm")) {
-		ext = ".html";
-		resp.headers["Content-type"] = "text/html";
 	} else if (has_one_of_suffixes(statement, ".txt", ".md")) {
 		ext = ".md";
 		resp.headers["Content-type"] = "text/markdown; charset=utf-8";
