@@ -186,8 +186,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		   " statement specified in the package's Simfile - searching for one");
 
 		auto is_statement = [](StringView file) {
-			return has_one_of_suffixes(file, ".pdf", ".html", ".htm", ".md",
-			                           ".txt");
+			return has_one_of_suffixes(file, ".pdf", ".md", ".txt");
 		};
 
 		// Scan doc/ directory
