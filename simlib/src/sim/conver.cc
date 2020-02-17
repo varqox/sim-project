@@ -178,16 +178,17 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	} catch (...) {
 	}
 
-	if (sf.statement and exists_in_pkg(sf.statement.value())) {
+	auto is_statement = [](StringView file) {
+		return has_one_of_suffixes(file, ".pdf", ".md", ".txt");
+	};
+
+	if (sf.statement and exists_in_pkg(sf.statement.value()) and
+	    is_statement(sf.statement.value())) {
 		// OK
 	} else {
 		report_.append(
 		   (sf.statement ? "Invalid" : "Missing"),
 		   " statement specified in the package's Simfile - searching for one");
-
-		auto is_statement = [](StringView file) {
-			return has_one_of_suffixes(file, ".pdf", ".md", ".txt");
-		};
 
 		// Scan doc/ directory
 		auto x = collect_files(concat(master_dir, "doc/"), is_statement);
@@ -196,11 +197,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 		// If there is no statement
 		if (x.empty()) {
-			if (opts.require_statement)
-				THROW("No statement was found");
-			else
-				report_.append(
-				   "\033[1;35mwarning\033[m: no statement was found");
+			if (opts.require_statement) {
+				THROW("No statement was found (recognized extensions: pdf, md, "
+				      "txt)");
+			} else {
+				report_.append("\033[1;35mwarning\033[m: no statement was "
+				               "found (recognized extensions: pdf, md, txt)");
+			}
 
 		} else {
 			// Prefer PDF to other formats, then the shorter paths

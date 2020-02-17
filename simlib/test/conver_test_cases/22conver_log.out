@@ -6,7 +6,7 @@ Problem's label is not specified in options - loading it from Simfile
 Missing checker in the package's Simfile - searching for one
 No checker was found - the default checker will be used
 Missing statement specified in the package's Simfile - searching for one
-[1;35mwarning[m: no statement was found
+[1;35mwarning[m: no statement was found (recognized extensions: pdf, md, txt)
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `aa`
 [1;35mwarning[m: "limits": ignoring unparsable item -> Simfile: invalid time limit for the test `44`
 [1;35mwarning[m: "limits": ignoring test `ttt` because it has no group id in its name
