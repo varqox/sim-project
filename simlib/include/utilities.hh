@@ -97,7 +97,7 @@ inline void sort(A& a, Func&& func) {
 }
 
 template <class T>
-constexpr bool is_sorted(T& collection) {
+constexpr bool is_sorted(const T& collection) {
 	auto b = begin(collection);
 	auto e = end(collection);
 	if (b == e)
