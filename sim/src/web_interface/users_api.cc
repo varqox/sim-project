@@ -377,9 +377,8 @@ void Sim::api_user_change_password() {
 
 void Sim::api_user_delete() {
 	STACK_UNWINDING_MARK;
-	using PERM = UserPermissions;
 
-	if (uint(~users_perms & PERM::DELETE))
+	if (uint(~users_perms & UserPermissions::DELETE))
 		return api_error403();
 
 	if (not check_submitted_password())

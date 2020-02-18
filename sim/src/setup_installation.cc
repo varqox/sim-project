@@ -443,7 +443,7 @@ int main(int argc, char** argv) {
 			"KEY (creator, type, aux_id, id DESC),"
 			"KEY (creator, aux_id, id DESC)"
 			// Foreign keys cannot be used as we want to preserve information
-			// about who created jobs and what the job referred to
+			// about who created job and what the job was doing specifically
 		") ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"));
 	// clang-format on
 

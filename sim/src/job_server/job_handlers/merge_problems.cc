@@ -33,7 +33,7 @@ void MergeProblems::run_impl() {
 	// Assure that both problems exist
 	{
 		auto stmt = mysql.prepare("SELECT simfile FROM problems WHERE id=?");
-		stmt.bind_and_execute(problem_id_);
+		stmt.bind_and_execute(donor_problem_id_);
 		InplaceBuff<1> simfile;
 		stmt.res_bind_all(simfile);
 		if (not stmt.next())
@@ -49,7 +49,7 @@ void MergeProblems::run_impl() {
 
 	// Transfer contest problems
 	mysql.prepare("UPDATE contest_problems SET problem_id=? WHERE problem_id=?")
-	   .bind_and_execute(info_.target_problem_id, problem_id_);
+	   .bind_and_execute(info_.target_problem_id, donor_problem_id_);
 
 	// Add job to delete problem file
 	mysql
@@ -59,7 +59,7 @@ void MergeProblems::run_impl() {
 	            "FROM problems WHERE id=?")
 	   .bind_and_execute(
 	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
-	      EnumVal(JobStatus::PENDING), mysql_date(), problem_id_);
+	      EnumVal(JobStatus::PENDING), mysql_date(), donor_problem_id_);
 
 	// Add jobs to delete problem solutions' files
 	mysql
@@ -68,26 +68,30 @@ void MergeProblems::run_impl() {
 	            "SELECT file_id, NULL, ?, ?, ?, ?, NULL, '', '' "
 	            "FROM submissions WHERE problem_id=? AND "
 	            "type=?")
-	   .bind_and_execute(EnumVal(JobType::DELETE_FILE),
-	                     priority(JobType::DELETE_FILE),
-	                     EnumVal(JobStatus::PENDING), mysql_date(), problem_id_,
-	                     EnumVal(SubmissionType::PROBLEM_SOLUTION));
+	   .bind_and_execute(
+	      EnumVal(JobType::DELETE_FILE), priority(JobType::DELETE_FILE),
+	      EnumVal(JobStatus::PENDING), mysql_date(), donor_problem_id_,
+	      EnumVal(SubmissionType::PROBLEM_SOLUTION));
 
 	// Delete problem solutions
 	mysql
 	   .prepare("DELETE FROM submissions "
 	            "WHERE problem_id=? AND type=?")
-	   .bind_and_execute(problem_id_,
+	   .bind_and_execute(donor_problem_id_,
 	                     EnumVal(SubmissionType::PROBLEM_SOLUTION));
 
 	// Collect update finals
-	std::deque<std::array<MySQL::Optional<uint64_t>, 2>> finals_to_update;
+	struct FTU {
+		MySQL::Optional<uint64_t> owner;
+		MySQL::Optional<uint64_t> contest_problem_id;
+	};
+	std::deque<FTU> finals_to_update;
 	{
 		auto stmt = mysql.prepare("SELECT DISTINCT owner, contest_problem_id "
 		                          "FROM submissions WHERE problem_id=?");
-		stmt.bind_and_execute(problem_id_);
-		std::array<MySQL::Optional<uint64_t>, 2> ftu_elem {};
-		stmt.res_bind_all(ftu_elem[0], ftu_elem[1]);
+		stmt.bind_and_execute(donor_problem_id_);
+		FTU ftu_elem;
+		stmt.res_bind_all(ftu_elem.owner, ftu_elem.contest_problem_id);
 		while (stmt.next())
 			finals_to_update.emplace_back(ftu_elem);
 	}
@@ -104,19 +108,19 @@ void MergeProblems::run_impl() {
 		                     EnumVal(JobType::REJUDGE_SUBMISSION), mysql_date(),
 		                     jobs::dumpString(intentional_unsafe_string_view(
 		                        to_string(info_.target_problem_id))),
-		                     problem_id_);
+		                     donor_problem_id_);
 	}
 
 	// Transfer problem submissions that are not problem solutions
 	mysql.prepare("UPDATE submissions SET problem_id=? WHERE problem_id=?")
-	   .bind_and_execute(info_.target_problem_id, problem_id_);
+	   .bind_and_execute(info_.target_problem_id, donor_problem_id_);
 
-	// Update finals
+	// Update finals (both contest and problem finals are being taken care of)
 	for (auto const& ftu_elem : finals_to_update) {
-		submission::update_final_lock(mysql, ftu_elem[0],
+		submission::update_final_lock(mysql, ftu_elem.owner,
 		                              info_.target_problem_id);
-		submission::update_final(mysql, ftu_elem[0], info_.target_problem_id,
-		                         ftu_elem[1], false);
+		submission::update_final(mysql, ftu_elem.owner, info_.target_problem_id,
+		                         ftu_elem.contest_problem_id, false);
 	}
 
 	// Transfer problem tags (duplicates will not be transferred - they will be
@@ -124,15 +128,14 @@ void MergeProblems::run_impl() {
 	mysql
 	   .prepare(
 	      "UPDATE IGNORE problem_tags SET problem_id=? WHERE problem_id=?")
-	   .bind_and_execute(info_.target_problem_id, problem_id_);
+	   .bind_and_execute(info_.target_problem_id, donor_problem_id_);
 
-	// Finally, delete the problem (solution and remaining tags will be deleted
-	// automatically thanks to foreign key constraints)
+	// Finally, delete the donor problem (solution and remaining tags will be
+	// deleted automatically thanks to foreign key constraints)
 	mysql.prepare("DELETE FROM problems WHERE id=?")
-	   .bind_and_execute(problem_id_);
+	   .bind_and_execute(donor_problem_id_);
 
 	job_done();
-
 	transaction.commit();
 }
 
