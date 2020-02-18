@@ -49,8 +49,8 @@ void AddOrReuploadProblemBase::build_package() {
 
 	// Set Conver options
 	sim::Conver::Options copts;
-	copts.name = info_.name;
-	copts.label = info_.label;
+	copts.name = (info_.name.empty() ? std::nullopt : std::optional(info_.name));
+	copts.label = (info_.label.empty() ? std::nullopt : std::optional(info_.label));
 	copts.memory_limit = info_.memory_limit;
 	copts.global_time_limit = info_.global_time_limit;
 	copts.max_time_limit = MAX_TIME_LIMIT;

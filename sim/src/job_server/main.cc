@@ -220,6 +220,7 @@ public:
 				// Other job (local jobs that don't have associated problem)
 				case JT::ADD_PROBLEM:
 				case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+				case JT::MERGE_USERS:
 				case JT::DELETE_USER:
 				case JT::DELETE_CONTEST:
 				case JT::DELETE_CONTEST_ROUND:

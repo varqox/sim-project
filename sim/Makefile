@@ -136,6 +136,7 @@ $(eval $(call add_executable, src/job-server, $(SIM_FLAGS), \
 	src/job_server/job_handlers/judge_base.cc \
 	src/job_server/job_handlers/judge_or_rejudge.cc \
 	src/job_server/job_handlers/merge_problems.cc \
+	src/job_server/job_handlers/merge_users.cc \
 	src/job_server/job_handlers/reselect_final_submissions_in_contest_problem.cc \
 	src/job_server/job_handlers/reset_problem_time_limits.cc \
 	src/job_server/job_handlers/reset_time_limits_in_problem_package_base.cc \

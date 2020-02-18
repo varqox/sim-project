@@ -617,11 +617,11 @@ void Sim::api_problem_merge_into_another(sim::problem::Permissions perms) {
 	   is_digit_not_greater_than<std::numeric_limits<decltype(
 	      jobs::MergeProblemsInfo::target_problem_id)>::max()>);
 
-	if (problems_pid == target_problem_id)
-		return api_error400("You cannot merge problem with itself");
-
 	if (notifications.size)
 		return api_error400(notifications);
+
+	if (problems_pid == target_problem_id)
+		return api_error400("You cannot merge problem with itself");
 
 	auto tp_perms_opt = sim::problem::get_permissions(
 	   mysql, target_problem_id,
@@ -641,7 +641,7 @@ void Sim::api_problem_merge_into_another(sim::problem::Permissions perms) {
 	if (not check_submitted_password())
 		return api_error403("Invalid password");
 
-	// Queue deleting job
+	// Queue merging job
 	mysql
 	   .prepare("INSERT jobs (creator, status, priority, type, added, aux_id,"
 	            " info, data) "

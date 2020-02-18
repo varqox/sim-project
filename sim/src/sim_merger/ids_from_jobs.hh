@@ -144,6 +144,11 @@ struct IdsFromJobs {
 				users.add_id(aux_id.value(), added);
 				break;
 
+			case JobType::MERGE_USERS:
+				users.add_id(aux_id.value(), added);
+				users.add_id(jobs::MergeUsersInfo(info).target_user_id, added);
+				break;
+
 			case JobType::DELETE_CONTEST:
 				contests.add_id(aux_id.value(), added);
 				break;

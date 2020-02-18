@@ -1,5 +1,7 @@
 #include "sim.h"
 
+#include <cstdint>
+#include <limits>
 #include <sim/constants.h>
 #include <sim/jobs.h>
 #include <sim/user.hh>
@@ -128,6 +130,8 @@ void Sim::api_users() {
 			append('P');
 		if (uint(perms & PERM::DELETE))
 			append('D');
+		if (uint(perms & PERM::MERGE))
+			append('M');
 		if (uint(perms & PERM::MAKE_ADMIN))
 			append('A');
 		if (uint(perms & PERM::MAKE_TEACHER))
@@ -167,6 +171,8 @@ void Sim::api_user() {
 		return api_user_edit();
 	else if (next_arg == "delete")
 		return api_user_delete();
+	else if (next_arg == "merge_into_another")
+		return api_user_merge_into_another();
 	else if (next_arg == "change-password")
 		return api_user_change_password();
 	else
@@ -377,9 +383,8 @@ void Sim::api_user_change_password() {
 
 void Sim::api_user_delete() {
 	STACK_UNWINDING_MARK;
-	using PERM = UserPermissions;
 
-	if (uint(~users_perms & PERM::DELETE))
+	if (uint(~users_perms & UserPermissions::DELETE))
 		return api_error403();
 
 	if (not check_submitted_password())
@@ -393,6 +398,50 @@ void Sim::api_user_delete() {
 	                      priority(JobType::DELETE_USER),
 	                      EnumVal(JobType::DELETE_USER), mysql_date(),
 	                      users_uid);
+
+	jobs::notify_job_server();
+	append(stmt.insert_id());
+}
+
+void Sim::api_user_merge_into_another() {
+	STACK_UNWINDING_MARK;
+
+	auto donor_user_id = users_uid;
+	if (uint(~users_perms & UserPermissions::MERGE))
+		return api_error403();
+
+	InplaceBuff<32> target_user_id;
+	form_validate_not_blank(
+	   target_user_id, "target_user", "Target user ID",
+	   is_digit_not_greater_than<std::numeric_limits<decltype(
+	      jobs::MergeUsersInfo::target_user_id)>::max()>);
+
+	if (notifications.size)
+		return api_error400(notifications);
+
+	if (donor_user_id == target_user_id)
+		return api_error400("You cannot merge user with themselves");
+
+	auto target_user_perms = users_get_permissions(target_user_id);
+	if (uint(~target_user_perms & UserPermissions::MERGE)) {
+		return api_error403(
+		   "You do not have permission to merge to the target user");
+	}
+
+	if (not check_submitted_password())
+		return api_error403("Invalid password");
+
+	// Queue merging job
+	auto stmt = mysql.prepare("INSERT jobs (creator, status, priority, type,"
+	                          " added, aux_id, info, data)"
+	                          "VALUES(?, ?, ?, ?, ?, ?, ?, '')");
+	stmt.bind_and_execute(
+	   session_user_id, EnumVal(JobStatus::PENDING),
+	   priority(JobType::MERGE_USERS), EnumVal(JobType::MERGE_USERS),
+	   mysql_date(), donor_user_id,
+	   jobs::MergeUsersInfo(
+	      WONT_THROW(str2num<uintmax_t>(target_user_id).value()))
+	      .dump());
 
 	jobs::notify_job_server();
 	append(stmt.insert_id());

@@ -196,6 +196,22 @@ struct ChangeProblemStatementInfo {
 	std::string dump() { return new_statement_path; }
 };
 
+struct MergeUsersInfo {
+	uint64_t target_user_id;
+
+	MergeUsersInfo() = default;
+
+	MergeUsersInfo(uint64_t target_uid) noexcept : target_user_id(target_uid) {}
+
+	MergeUsersInfo(StringView str) { extractDumped(target_user_id, str); }
+
+	std::string dump() {
+		std::string res;
+		appendDumped(res, target_user_id);
+		return res;
+	}
+};
+
 void restart_job(MySQL::Connection& mysql, StringView job_id, JobType job_type,
                  StringView job_info, bool notify_job_server);
 

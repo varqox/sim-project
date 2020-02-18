@@ -1,6 +1,8 @@
 #pragma once
 
 #include "internal_files.hh"
+#include "sim/constants.h"
+#include "sim/jobs.h"
 #include "submissions.hh"
 #include "users.hh"
 
@@ -90,6 +92,15 @@ class JobsMerger : public Merger<Job> {
 				auto info = jobs::MergeProblemsInfo(job.info);
 				info.target_problem_id =
 				   problems_.new_id(info.target_problem_id, record_set.kind);
+				job.info = info.dump();
+				break;
+			}
+
+			case JobType::MERGE_USERS: {
+				job.aux_id = users_.new_id(job.aux_id.value(), record_set.kind);
+				auto info = jobs::MergeUsersInfo(job.info);
+				info.target_user_id =
+				   users_.new_id(info.target_user_id, record_set.kind);
 				job.info = info.dump();
 				break;
 			}

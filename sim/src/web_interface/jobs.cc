@@ -55,6 +55,7 @@ Sim::jobs_get_permissions(std::optional<StringView> creator_id,
 		case JT::DELETE_PROBLEM:
 		case JT::MERGE_PROBLEMS:
 		case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:
+		case JT::MERGE_USERS:
 		case JT::DELETE_USER:
 		case JT::DELETE_CONTEST:
 		case JT::DELETE_CONTEST_ROUND:

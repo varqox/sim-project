@@ -40,7 +40,7 @@ Sim::UserPermissions Sim::users_get_permissions(StringView user_id,
 	using PERM = UserPermissions;
 	constexpr UserPermissions PERM_ADMIN =
 	   PERM::VIEW | PERM::EDIT | PERM::CHANGE_PASS | PERM::ADMIN_CHANGE_PASS |
-	   PERM::DELETE;
+	   PERM::DELETE | PERM::MERGE;
 
 	if (not session_is_open)
 		return PERM::NONE;
@@ -397,6 +397,11 @@ void Sim::users_user() {
 		page_template(
 		   intentional_unsafe_string_view(concat("Delete user ", users_uid)));
 		append("<script>delete_user(false, ", users_uid, ");</script>");
+
+	} else if (next_arg == "merge") {
+		page_template(
+		   intentional_unsafe_string_view(concat("Merge user ", users_uid)));
+		append("<script>merge_user(false, ", users_uid, ");</script>");
 
 	} else if (next_arg == "change-password") {
 		page_template(intentional_unsafe_string_view(
