@@ -141,6 +141,8 @@ class Sim final {
 
 	void api_user_delete();
 
+	void api_user_merge_into_another();
+
 	void api_user_change_password();
 
 	// submissions_api.cc
@@ -483,20 +485,21 @@ class Sim final {
 public:
 	enum class UserPermissions : uint {
 		NONE = 0,
-		VIEW = 1,
-		EDIT = 2,
-		CHANGE_PASS = 4,
-		ADMIN_CHANGE_PASS = 8,
-		MAKE_ADMIN = 16,
-		MAKE_TEACHER = 32,
-		MAKE_NORMAL = 64,
-		DELETE = 128,
+		VIEW = 1 << 0,
+		EDIT = 1 << 1,
+		CHANGE_PASS = 1 << 2,
+		ADMIN_CHANGE_PASS = 1 << 3,
+		MAKE_ADMIN = 1 << 4,
+		MAKE_TEACHER = 1 << 5,
+		MAKE_NORMAL = 1 << 6,
+		DELETE = 1 << 7,
+		MERGE = 1 << 8,
 		// Overall
-		VIEW_ALL = 256,
-		ADD_USER = 512,
-		ADD_ADMIN = 1 << 10,
-		ADD_TEACHER = 1 << 11,
-		ADD_NORMAL = 1 << 12
+		VIEW_ALL = 1 << 9,
+		ADD_USER = 1 << 10,
+		ADD_ADMIN = 1 << 11,
+		ADD_TEACHER = 1 << 12,
+		ADD_NORMAL = 1 << 13
 	};
 
 private:

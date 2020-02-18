@@ -10,6 +10,7 @@
 #include "job_handlers/job_handler.h"
 #include "job_handlers/judge_or_rejudge.h"
 #include "job_handlers/merge_problems.h"
+#include "job_handlers/merge_users.hh"
 #include "job_handlers/reselect_final_submissions_in_contest_problem.h"
 #include "job_handlers/reset_problem_time_limits.h"
 #include "job_handlers/reupload_problem.h"
@@ -61,6 +62,11 @@ void job_dispatcher(uint64_t job_id, JobType jtype,
 
 		case JT::DELETE_USER:
 			job_handler = make_unique<DeleteUser>(job_id, aux_id.value());
+			break;
+
+		case JT::MERGE_USERS:
+			job_handler = make_unique<MergeUsers>(job_id, aux_id.value(),
+			                                      jobs::MergeUsersInfo(info));
 			break;
 
 		case JT::RESELECT_FINAL_SUBMISSIONS_IN_CONTEST_PROBLEM:

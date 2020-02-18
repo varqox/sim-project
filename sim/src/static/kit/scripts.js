@@ -1533,6 +1533,11 @@ ActionsToHTML.user = function(user_id, actions_str, user_view /*= false*/) {
 		res.push(a_view_button('/u/' + user_id + '/delete', 'Delete',
 			'btn-small red', delete_user.bind(null, true, user_id)));
 
+	if (actions_str.indexOf('M') !== -1)
+		res.push(a_view_button('/u/' + user_id + '/merge_into_another',
+			'Merge', 'btn-small red',
+			merge_user.bind(null, true, user_id)));
+
 	if (actions_str.indexOf('P') !== -1 || actions_str.indexOf('p') !== -1)
 		res.push(a_view_button('/u/' + user_id + '/change-password',
 			'Change password', 'btn-small orange',
@@ -1976,6 +1981,37 @@ function delete_user(as_modal, user_id) {
 			], (user_id == logged_user_id() ? 'Delete account' : 'Delete user'));
 	}, '/u/' + user_id + "/delete");
 }
+function merge_user(as_modal, user_id) {
+	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
+		if (data.length === 0)
+			return show_error_via_loader(this, {
+					status: '404',
+					statusText: 'Not Found'
+				});
+
+		var user = data[0];
+		if (user.actions.indexOf('M') === -1)
+			return show_error_via_loader(this, {
+					status: '403',
+					statusText: 'Not Allowed'
+				});
+
+		api_request_with_password_to_job(this, 'Merge into another user',
+			'/api/user/' + user_id + '/merge_into_another', [
+				'The user ',
+				a_view_button('/u/' + user.id, user.username,
+					undefined, view_user.bind(null, true, user.id)),
+				' is going to be deleted. All their problems, submissions, jobs and accesses to contests will be transfered to the target user.',
+				'<br>',
+				'As this cannot be undone, you have to confirm this with your password.'
+			], 'Merge user', 'Merging has been scheduled.',
+			Form.field_group('Target user ID', {
+				type: 'text',
+				name: 'target_user',
+				size: 6
+			}));
+	}, '/u/' + user_id + '/merge');
+}
 function change_user_password(as_modal, user_id) {
 	view_ajax(as_modal, '/api/users/=' + user_id, function(data) {
 		if (data.length === 0)
@@ -2133,7 +2169,7 @@ function view_job(as_modal, job_id, opt_hash /*= ''*/) {
 				if (name == "submission")
 					td.append(a_view_button('/s/' + info[name], info[name],
 						undefined, view_submission.bind(null, true, info[name])));
-				else if (name == "user")
+				else if (name == "user" || name == "deleted user" || name == "target user")
 					td.append(a_view_button('/u/' + info[name], info[name],
 						undefined, view_user.bind(null, true, info[name])));
 				else if (name == "problem" || name == "deleted problem" || name == "target problem")
@@ -2312,6 +2348,18 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 						a_view_button('/u/' + info.user,
 							info.user, undefined,
 							view_user.bind(null, true, info.user)));
+
+				if (info["deleted user"] !== undefined)
+					append_tag('deleted user',
+						a_view_button('/u/' + info["deleted user"],
+							info["deleted user"], undefined,
+							view_user.bind(null, true, info["deleted user"])));
+
+				if (info["target user"] !== undefined)
+					append_tag('target user',
+						a_view_button('/u/' + info["target user"],
+							info["target user"], undefined,
+							view_user.bind(null, true, info["target user"])));
 
 				if (info.problem !== undefined)
 					append_tag('problem',

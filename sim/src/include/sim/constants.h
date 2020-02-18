@@ -168,6 +168,7 @@ enum class JobType : uint8_t {
 	REJUDGE_SUBMISSION = 15,
 	DELETE_FILE = 16,
 	CHANGE_PROBLEM_STATEMENT = 17,
+	MERGE_USERS = 18,
 };
 
 constexpr const char* to_string(JobType x) {
@@ -194,6 +195,7 @@ constexpr const char* to_string(JobType x) {
 	case JT::REJUDGE_SUBMISSION: return "REJUDGE_SUBMISSION";
 	case JT::DELETE_FILE: return "DELETE_FILE";
 	case JT::CHANGE_PROBLEM_STATEMENT: return "CHANGE_PROBLEM_STATEMENT";
+	case JT::MERGE_USERS: return "MERGE_USERS";
 	}
 	return "Unknown";
 }
@@ -218,6 +220,7 @@ constexpr bool is_problem_job(JobType x) {
 	case JT::DELETE_CONTEST_ROUND: return false;
 	case JT::DELETE_CONTEST_PROBLEM: return false;
 	case JT::DELETE_FILE: return false;
+	case JT::MERGE_USERS: return false;
 	}
 	return false;
 }
@@ -242,6 +245,7 @@ constexpr bool is_submission_job(JobType x) {
 	case JT::MERGE_PROBLEMS: return false;
 	case JT::DELETE_FILE: return false;
 	case JT::CHANGE_PROBLEM_STATEMENT: return false;
+	case JT::MERGE_USERS: return false;
 	}
 	return false;
 }
@@ -257,6 +261,7 @@ constexpr uint priority(JobType x) {
 	case JT::DELETE_CONTEST: return 30;
 	case JT::DELETE_CONTEST_ROUND: return 30;
 	case JT::DELETE_CONTEST_PROBLEM: return 30;
+	case JT::MERGE_USERS: return 25;
 	case JT::MERGE_PROBLEMS: return 25;
 	case JT::EDIT_PROBLEM: return 25;
 	case JT::CHANGE_PROBLEM_STATEMENT: return 25;
