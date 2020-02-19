@@ -1660,16 +1660,16 @@ table.jobs th.added {
 	min-width: 100px;
 }
 table.jobs th.type {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.jobs th.status {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.jobs th.owner {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.jobs th.info {
-	min-width: 200px;
+	/*min-width: 200px;*/
 }
 table.jobs td.status {
 	padding-left: 16px;
