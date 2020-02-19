@@ -1611,7 +1611,7 @@ table.problems td .btn-small {
 	margin: 0 2px;
 }
 table.problems tr > td:last-child {
-	white-space: pre;
+	/*white-space: pre;*/
 }
 table.problems .name-and-tags,
 .problem-info .tags-row {
@@ -1688,7 +1688,7 @@ table.jobs tr > td:first-child {
 	text-align: right;
 }
 table.jobs tr > td:last-child {
-	white-space: pre;
+	/*white-space: pre;*/
 }
 
 /* Tags */
@@ -1753,7 +1753,7 @@ table.tags-edit td .btn-small {
 	margin: 0 2px;
 }
 table.tags-edit tr > td:last-child {
-	white-space: pre;
+	/*white-space: pre;*/
 }
 
 /* Users & Contest users*/
@@ -1797,7 +1797,7 @@ table.contest-users tr > td:first-child {
 }
 table.users tr > td:last-child,
 table.contest-users tr > td:last-child {
-	white-space: pre;
+	/*white-space: pre;*/
 }
 
 /* User-info, problem-info */
@@ -1883,7 +1883,7 @@ table.contests td .btn-small {
 	margin: 0 2px;
 }
 table.contests tr > td:last-child {
-	white-space: pre;
+	/*white-space: pre;*/
 }
 
 /* Contest files */
