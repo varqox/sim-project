@@ -66,8 +66,9 @@ void Sim::api_submissions() {
 
 	InplaceBuff<512> qfields, qwhere;
 	qfields.append("SELECT s.id, s.type, s.language, s.owner, cu.mode, p.owner,"
-	               " u.username, s.problem_id, p.name, s.contest_problem_id,"
-	               " cp.name, cp.final_selecting_method, cp.score_revealing,"
+	               " u.username, u.first_name, u.last_name, s.problem_id,"
+	               " p.name, s.contest_problem_id, cp.name,"
+	               " cp.final_selecting_method, cp.score_revealing,"
 	               " s.contest_round_id, r.name, r.full_results, r.ends,"
 	               " s.contest_id, c.name, s.submit_time, s.problem_final,"
 	               " s.contest_final, s.contest_initial_final,"
@@ -91,6 +92,8 @@ void Sim::api_submissions() {
 		CUMODE,
 		POWNER,
 		SOWN_USERNAME,
+		SOWN_FNAME,
+		SOWN_LNAME,
 		PROB_ID,
 		PNAME,
 		CPID,
@@ -110,8 +113,6 @@ void Sim::api_submissions() {
 		INITIAL_STATUS,
 		FINAL_STATUS,
 		SCORE,
-		SOWN_FNAME,
-		SOWN_LNAME,
 		INIT_REPORT,
 		FINAL_REPORT
 	};
@@ -132,6 +133,8 @@ void Sim::api_submissions() {
 		           "\"language\","
 		           "\"owner_id\","
 		           "\"owner_username\","
+		           "\"owner_first_name\","
+		           "\"owner_last_name\","
 		           "\"problem_id\","
 		           "\"problem_name\","
 		           "\"contest_problem_id\","
@@ -147,9 +150,7 @@ void Sim::api_submissions() {
 		// clang-format on
 
 		if (select_one) {
-			append(",\"owner_first_name\","
-			       "\"owner_last_name\","
-			       "\"initial_report\","
+			append(",\"initial_report\","
 			       "\"final_report\","
 			       "\"full_results\"");
 		}
@@ -257,8 +258,7 @@ void Sim::api_submissions() {
 				allow_access =
 				   true; // Permissions will be checked while fetching the data
 
-				qfields.append(", u.first_name, u.last_name,"
-				               " s.initial_report, s.final_report");
+				qfields.append(", s.initial_report, s.final_report");
 				qwhere.append(" AND s.id", arg);
 
 			} else if (cond_c == 'p') { // Problem's id
@@ -543,6 +543,18 @@ void Sim::api_submissions() {
 		else
 			append("\"", res[SOWN_USERNAME], "\",");
 
+		// Onwer's first name
+		if (res.is_null(SOWN_FNAME))
+			append("null,");
+		else
+			append(json_stringify(res[SOWN_FNAME]), ',');
+
+		// Onwer's last name
+		if (res.is_null(SOWN_LNAME))
+			append("null,");
+		else
+			append(json_stringify(res[SOWN_LNAME]), ',');
+
 		// Problem (id, name)
 		if (res.is_null(PNAME))
 			append("null,null,");
@@ -637,14 +649,6 @@ void Sim::api_submissions() {
 
 		// Append
 		if (select_one) {
-			// User first and last name
-			if (res.is_null(SOWN_FNAME)) {
-				append(",null,null");
-			} else {
-				append(',', json_stringify(res[SOWN_FNAME]), ',',
-				       json_stringify(res[SOWN_LNAME]));
-			}
-
 			// Reports (and round full results time if full report isn't shown)
 			append(',', json_stringify(res[INIT_REPORT]));
 			if (show_full_results)

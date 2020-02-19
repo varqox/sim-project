@@ -1529,32 +1529,32 @@ table.submissions th {
 	padding: 6px;
 	line-height: 20px;
 }
-table.submissions th.username {
-	min-width: 60px;
+table.submissions th.user {
+	/*min-width: 60px;*/
 }
 table.submissions th.full-name {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.submissions th.time {
 	min-width: 100px;
 }
 table.submissions th.problem {
-	min-width: 135px;
+	/*min-width: 135px;*/
 }
 table.submissions th.status {
-	min-width: 190px;
+	/*min-width: 190px;*/
 }
 table.submissions th.score {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.submissions th.type {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.submissions tr > td:first-child {
 	text-align: right;
 }
 table.submissions td > a {
-	white-space: nowrap;
+	/*white-space: nowrap;*/
 }
 table.submissions tr.ignored,
 .submission-info table tr.ignored {
@@ -1567,15 +1567,15 @@ table.submissions td {
 	border-top: 1px solid #bbb;
 }
 table.submissions td.status {
-	padding-left: 16px;
-	padding-right: 16px;
+	padding-left: 20px;
+	padding-right: 20px;
 	text-align: center;
 }
 table.submissions td .btn-small {
 	margin: 0 2px;
 }
 table.submissions tr > td:last-child {
-	white-space: pre;
+	/*white-space: pre;*/
 }
 
 /* Problems */
@@ -1588,13 +1588,13 @@ table.problems th {
 	line-height: 20px;
 }
 table.problems th.name {
-	min-width: 80px;
+	/*min-width: 80px;*/
 }
 table.problems th.label {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.problems th.owner {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.problems th.added {
 	min-width: 100px;
@@ -1660,16 +1660,16 @@ table.jobs th.added {
 	min-width: 100px;
 }
 table.jobs th.type {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.jobs th.status {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.jobs th.owner {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.jobs th.info {
-	min-width: 200px;
+	/*min-width: 200px;*/
 }
 table.jobs td.status {
 	padding-left: 16px;
@@ -1759,27 +1759,26 @@ table.tags-edit tr > td:last-child {
 /* Users & Contest users*/
 table.users,
 table.contest-users {
-	/*display: inline-table;*/
 	margin: 6px 0;
 }
 table.users th.username,
 table.contest-users th.username {
-	min-width: 90px;
+	/*min-width: 90px;*/
 }
 table.users th.first-name,
 table.users th.last-name,
 table.contest-users th.first-name,
 table.contest-users th.last-name {
-	min-width: 100px;
+	/*min-width: 100px;*/
 }
 table.users th.email {
-	min-width: 120px;
+	/*min-width: 120px;*/
 }
 table.users th.type {
-	min-width: 90px;
+	/*min-width: 90px;*/
 }
 table.contest-users th.mode {
-	min-width: 110px;
+	/*min-width: 110px;*/
 }
 table.users th,
 table.contest-users th {
@@ -1870,7 +1869,7 @@ table.contests th {
 	line-height: 20px;
 }
 table.contests th.name {
-	min-width: 80px;
+	/*min-width: 80px;*/
 }
 /*table.contests tr > td:nth-last-child(3) {
 	text-align: right;
@@ -1888,17 +1887,17 @@ table.contests tr > td:last-child {
 }
 
 /* Contest files */
-table.contest-files th.time {
-	min-width: 150px;
+table.contest-files th.modified {
+	min-width: 100px;
 }
 table.contest-files th.name {
 	min-width: 100px;
 }
 table.contest-files th.size {
-	min-width: 7em;
+	min-width: 6em;
 }
 table.contest-files th.description {
-	min-width: 100px;
+	/*min-width: 100px;*/
 }
 table.contest-files td:nth-child(4) {
 	max-width: 600px;

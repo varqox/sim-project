@@ -2804,7 +2804,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 			this.elem[0].innerHTML = '<thead><tr>' +
 					'<th>Id</th>' +
 					'<th>Lang</th>' +
-					(this_.show_user ? '<th class="username">Username</th>' : '') +
+					(this_.show_user ? '<th class="user">User</th>' : '') +
 					'<th class="time">Added</th>' +
 					'<th class="problem">Problem</th>' +
 					'<th class="status">Status</th>' +
@@ -2834,11 +2834,11 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 			if (this_.show_user) {
 				if (x.owner_id === null)
 					row.appendChild(elem_with_text('td', 'System'));
-				else if (x.owner_username === null)
+				else if (x.owner_first_name === null || x.owner_last_name === null)
 					row.appendChild(elem_with_text('td', x.owner_id));
 				else {
 					td = document.createElement('td');
-					td.appendChild(a_view_button('/u/' + x.owner_id, x.owner_username, undefined,
+					td.appendChild(a_view_button('/u/' + x.owner_id, x.owner_first_name + ' ' + x.owner_last_name, undefined,
 							view_user.bind(null, true, x.owner_id)));
 					row.appendChild(td);
 				}
