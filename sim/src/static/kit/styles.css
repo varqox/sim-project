@@ -1588,13 +1588,13 @@ table.problems th {
 	line-height: 20px;
 }
 table.problems th.name {
-	min-width: 80px;
+	/*min-width: 80px;*/
 }
 table.problems th.label {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.problems th.owner {
-	min-width: 60px;
+	/*min-width: 60px;*/
 }
 table.problems th.added {
 	min-width: 100px;
