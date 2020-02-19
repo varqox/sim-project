@@ -1869,7 +1869,7 @@ table.contests th {
 	line-height: 20px;
 }
 table.contests th.name {
-	min-width: 80px;
+	/*min-width: 80px;*/
 }
 /*table.contests tr > td:nth-last-child(3) {
 	text-align: right;
