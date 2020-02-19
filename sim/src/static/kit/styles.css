@@ -1887,17 +1887,17 @@ table.contests tr > td:last-child {
 }
 
 /* Contest files */
-table.contest-files th.time {
-	min-width: 150px;
+table.contest-files th.modified {
+	min-width: 100px;
 }
 table.contest-files th.name {
 	min-width: 100px;
 }
 table.contest-files th.size {
-	min-width: 7em;
+	min-width: 6em;
 }
 table.contest-files th.description {
-	min-width: 100px;
+	/*min-width: 100px;*/
 }
 table.contest-files td:nth-child(4) {
 	max-width: 600px;
