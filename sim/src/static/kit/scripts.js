@@ -2804,7 +2804,7 @@ function SubmissionsLister(elem, query_suffix /*= ''*/, show_submission /*= func
 			this.elem[0].innerHTML = '<thead><tr>' +
 					'<th>Id</th>' +
 					'<th>Lang</th>' +
-					(this_.show_user ? '<th class="username">User</th>' : '') +
+					(this_.show_user ? '<th class="user">User</th>' : '') +
 					'<th class="time">Added</th>' +
 					'<th class="problem">Problem</th>' +
 					'<th class="status">Status</th>' +
