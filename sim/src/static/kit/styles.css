@@ -1759,27 +1759,26 @@ table.tags-edit tr > td:last-child {
 /* Users & Contest users*/
 table.users,
 table.contest-users {
-	/*display: inline-table;*/
 	margin: 6px 0;
 }
 table.users th.username,
 table.contest-users th.username {
-	min-width: 90px;
+	/*min-width: 90px;*/
 }
 table.users th.first-name,
 table.users th.last-name,
 table.contest-users th.first-name,
 table.contest-users th.last-name {
-	min-width: 100px;
+	/*min-width: 100px;*/
 }
 table.users th.email {
-	min-width: 120px;
+	/*min-width: 120px;*/
 }
 table.users th.type {
-	min-width: 90px;
+	/*min-width: 90px;*/
 }
 table.contest-users th.mode {
-	min-width: 110px;
+	/*min-width: 110px;*/
 }
 table.users th,
 table.contest-users th {
