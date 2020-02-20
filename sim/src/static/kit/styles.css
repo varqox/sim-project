@@ -1681,6 +1681,10 @@ table.jobs td {
 	line-height: 20px;
 	border-top: 1px solid #bbb;
 }
+table.jobs td div.info {
+	display: flex;
+	flex-flow: row wrap;
+}
 table.jobs td .btn-small {
 	margin: 0 2px;
 }

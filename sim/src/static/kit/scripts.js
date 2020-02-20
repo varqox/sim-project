@@ -2332,9 +2332,12 @@ function JobsLister(elem, query_suffix /*= ''*/) {
 			{
 				/* jshint loopfunc: true */
 				var td = $('<td>');
+				var div = $('<div>', {
+					class: 'info'
+				}).appendTo(td);
 				var append_tag = function(name, val) {
-					td.append($('<label>', {text: name}));
-					td.append(val);
+					div.append($('<label>', {text: name}));
+					div.append(val);
 				};
 
 				if (info.submission !== undefined)
