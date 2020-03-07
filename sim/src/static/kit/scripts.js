@@ -38,6 +38,22 @@ function logged_user_is_teacher_or_admin() {
 	return logged_user_is_teacher() || logged_user_is_admin();
 }
 
+// Scroll: overflowed elements
+function is_overflowed_elem_scrolled_down(elem) {
+	var scroll_distance_to_bottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight;
+	return scroll_distance_to_bottom <= 1; // As of time of writing I managed to get value 1 in firefox with 80% zoom
+}
+function is_overflowed_elem_scrolled_up(elem) {
+	return elem.scrollTop === 0;
+}
+// Scroll: relative to viewport
+function how_much_is_viewport_top_above_elem_top(elem) {
+	return elem.getBoundingClientRect().top;
+}
+function how_much_is_viewport_bottom_above_elem_bottom(elem) {
+	return elem.getBoundingClientRect().bottom - document.documentElement.clientHeight;
+}
+
 // Dropdowns
 $(document).ready(function(){
 	$(document).click(function(event) {
@@ -1056,6 +1072,11 @@ function Lister(elem) {
 	this.elem = $(elem);
 	var lock = false;
 
+	this.need_to_fetch_more = function () {
+		// Iff scrolling down is (almost) not possible, true is returned
+		return how_much_is_viewport_bottom_above_elem_bottom(this_.elem[0]) <= 300;
+	}
+
 	this.fetch_more = function() {
 		if (lock || !$.contains(document.documentElement, this_.elem[0]))
 			return;
@@ -1083,8 +1104,7 @@ function Lister(elem) {
 					return; // No more data to load
 
 				lock = false;
-				if (this_.elem.height() - $(window).height() <= 300) {
-					// Load more if scrolling down did not become possible
+				if (this_.need_to_fetch_more()) {
 					setTimeout(this_.fetch_more, 0); // avoid recursion
 				}
 			},
@@ -1109,25 +1129,13 @@ function Lister(elem) {
 			}
 		};
 		var modal_parent = this_.elem.closest('.modal');
-		if (modal_parent.length === 1) {
-			elem_to_listen_on_scroll = modal_parent;
-			scres_handler = function() {
-				scres_unhandle_if_detatched();
-				var height = $(this).children('div').height();
-				var scroll_top = $(this).scrollTop();
-				if (height - $(window).height() - scroll_top <= 300)
-					this_.fetch_more();
-			};
+		elem_to_listen_on_scroll = (modal_parent.length === 1 ? modal_parent : $(document));
 
-		} else {
-			elem_to_listen_on_scroll = $(document);
-			scres_handler = function() {
-				scres_unhandle_if_detatched();
-				var x = $(document);
-				if (x.height() - $(window).height() - x.scrollTop() <= 300)
-					this_.fetch_more();
-			};
-		}
+		scres_handler = function() {
+			scres_unhandle_if_detatched();
+			if (this_.need_to_fetch_more())
+				this_.fetch_more();
+		};
 
 		elem_to_listen_on_scroll.on('scroll', scres_handler);
 		$(window).on('resize', scres_handler);
@@ -1318,22 +1326,20 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		data = hex_parser.feed(data[1]);
 
 		var prev_height = content[0].scrollHeight;
-		var prev = prev_height - content.scrollTop();
+		var bottom_dist = prev_height - content[0].scrollTop;
 
 		remove_loader(this_.elem);
 		var html_data = text_to_safe_html(data);
 		content.html(colorize(html_data + content.html(), html_data.length + 2000));
 		var curr_height = content[0].scrollHeight;
-		content.scrollTop(curr_height - prev);
+		content.scrollTop(curr_height - bottom_dist);
 
 		lock = false;
 
 		// Load more logs unless scrolling up became impossible
-		if (offset > 0) {
-			if (content.innerHeight() >= curr_height || prev_height == curr_height) {
-				// avoid recursion
-				setTimeout(this_.fetch_more, 0);
-			}
+		if (offset > 0 && (content.innerHeight() >= curr_height || prev_height == curr_height)) {
+			// avoid recursion
+			setTimeout(this_.fetch_more, 0);
 		}
 	};
 
@@ -1399,9 +1405,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 		}
 
 		var elem = content[0];
-		if (elem.scrollHeight - elem.scrollTop === elem.clientHeight &&
-			auto_refresh_checkbox.prop('checked'))
-		{
+		if (is_overflowed_elem_scrolled_down(elem) && auto_refresh_checkbox.prop('checked')) {
 			this_.try_fetching_newest();
 		}
 	}, 2000);
@@ -1418,7 +1422,7 @@ function Logs(type, elem, auto_refresh_checkbox) {
 
 		scres_handler = function() {
 			scres_unhandle_if_detatched();
-			if (content.scrollTop() <= 300)
+			if (content[0].scrollTop <= 300)
 				this_.fetch_more();
 		};
 
