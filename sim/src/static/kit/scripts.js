@@ -38,6 +38,25 @@ function logged_user_is_teacher_or_admin() {
 	return logged_user_is_teacher() || logged_user_is_admin();
 }
 
+// Viewport
+function get_viewport_dimensions() {
+	// document.documentElement.client(Height|Width) is not enough -- see: https://stackoverflow.com/a/37113430
+	// window.inner(Height|Width) includes scrollbars, but they reduce viewport
+	var viewport_prober = document.createElement('span');
+	viewport_prober.style.visibility = 'hidden';
+	viewport_prober.style.position = 'fixed';
+	viewport_prober.style.top = '0';
+	viewport_prober.style.bottom = '0';
+	viewport_prober.style.left = '0';
+	viewport_prober.style.right = '0';
+	document.documentElement.appendChild(viewport_prober);
+	var res = {
+		height: viewport_prober.clientHeight,
+		width: viewport_prober.clientWidth,
+	};
+	viewport_prober.remove();
+	return res;
+}
 // Scroll: overflowed elements
 function is_overflowed_elem_scrolled_down(elem) {
 	var scroll_distance_to_bottom = elem.scrollHeight - elem.scrollTop - elem.clientHeight;
@@ -51,7 +70,7 @@ function how_much_is_viewport_top_above_elem_top(elem) {
 	return elem.getBoundingClientRect().top;
 }
 function how_much_is_viewport_bottom_above_elem_bottom(elem) {
-	return elem.getBoundingClientRect().bottom - document.documentElement.clientHeight;
+	return elem.getBoundingClientRect().bottom - get_viewport_dimensions().height;
 }
 
 // Dropdowns
