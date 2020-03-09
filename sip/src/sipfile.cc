@@ -234,7 +234,8 @@ void Sipfile::load_gen_tests() {
 		StringView test_range = entry.extract_leading(not_fn(is_space<char>));
 		entry.extract_leading(is_space<char>);
 		// Generator
-		StringView specified_generator = entry.extract_leading(not_fn(is_space<char>));
+		StringView specified_generator =
+		   entry.extract_leading(not_fn(is_space<char>));
 		entry.extract_leading(is_space<char>);
 		// Generator arguments
 		entry.extract_trailing(is_space<char>);

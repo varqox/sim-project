@@ -3,7 +3,7 @@
 #include <simlib/string_view.hh>
 #include <type_traits>
 
-template<class T, class U>
+template <class T, class U>
 inline bool is_subsequence(T&& subseqence, U&& sequence) noexcept {
 	if (subseqence.empty())
 		return true;

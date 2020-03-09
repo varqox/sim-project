@@ -269,7 +269,8 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 	auto const& limits = simfile.config_file().get_var("limits").as_array();
 	std::vector<std::string> new_limits;
 	for (auto const& entry : limits) {
-		StringView test_name = StringView(entry).extract_leading(std::not_fn(is_space<char>));
+		StringView test_name =
+		   StringView(entry).extract_leading(std::not_fn(is_space<char>));
 		auto it = tests_files->tests.find(test_name);
 		if (not it or not it->second.in.has_value())
 			continue;
