@@ -9,8 +9,11 @@
 #include "default_checker_dump.h"
 
 #include <cmath>
+#include <cstdio>
+#include <fcntl.h>
 #include <future>
 #include <thread>
+#include <unistd.h>
 
 using std::promise;
 using std::string;
@@ -226,14 +229,14 @@ JudgeWorker::run_solution(FilePath input_file, FilePath output_file,
 	// Solution STDOUT
 	FileDescriptor solution_stdout(output_file,
 	                               O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
-	if (solution_stdout < 0)
+	if (not solution_stdout.is_open())
 		THROW("Failed to open file `", output_file, '`', errmsg());
 
 	Sandbox sandbox;
 	string solution_path(concat_tostr(tmp_dir.path(), SOLUTION_FILENAME));
 
 	FileDescriptor test_in(input_file, O_RDONLY | O_CLOEXEC);
-	if (test_in < 0)
+	if (not test_in.is_open())
 		THROW("Failed to open file `", input_file, '`', errmsg());
 
 	std::optional<std::chrono::nanoseconds> real_time_limit;
@@ -468,8 +471,8 @@ JudgeReport JudgeWorker::judge_interactive(
 
 			// Setup
 			FileDescriptor output(open_unlinked_tmp_file());
-			if (output < 0) // Needs to be done this way because constructing
-			                // exception may throw
+			if (not output.is_open()) // Needs to be done this way because
+			                          // constructing exception may throw
 				THROW("Cannot create checker output file descriptor");
 
 			Sandbox sandbox;
@@ -707,24 +710,27 @@ JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		                         std::move(partial_report_callback));
 
 	string sol_stdout_path {tmp_dir.path() + "sol_stdout"};
-	// Checker STDOUT
-	FileDescriptor checker_stdout {open_unlinked_tmp_file(O_CLOEXEC)};
-	if (checker_stdout < 0)
+	// Checker output
+	FileDescriptor checker_stderr {open_unlinked_tmp_file(O_CLOEXEC)};
+	FileDescriptor checker_stdout {
+	   open_unlinked_tmp_file(O_CLOEXEC)}; // backward compatibility
+	if (not checker_stderr.is_open() or not checker_stdout.is_open())
 		THROW("Failed to create unlinked temporary file", errmsg());
 
 	// Solution STDOUT
 	FileDescriptor solution_stdout(sol_stdout_path,
 	                               O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC);
-	if (solution_stdout < 0)
+	if (not solution_stdout.is_open())
 		THROW("Failed to open file `", sol_stdout_path, '`', errmsg());
 
 	FileRemover solution_stdout_remover {sol_stdout_path}; // Save disk space
 
 	// Checker parameters
-	Sandbox::Options checker_opts = {-1, // STDIN is ignored
-	                                 checker_stdout, // STDOUT
-	                                 -1, // STDERR is ignored
-	                                 checker_time_limit, checker_memory_limit};
+	Sandbox::Options checker_opts = {
+	   -1, // STDIN is ignored
+	   checker_stdout, // STDOUT (backward compatibility)
+	   checker_stderr, // STDERR
+	   checker_time_limit, checker_memory_limit};
 
 	Sandbox sandbox;
 
@@ -746,7 +752,7 @@ JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		   package_loader->load_as_file(test.out.value(), "test.out");
 
 		FileDescriptor test_in(test_in_path, O_RDONLY | O_CLOEXEC);
-		if (test_in < 0)
+		if (not test_in.is_open())
 			THROW("Failed to open file `", test_in_path, '`', errmsg());
 
 		// Run solution on the test
@@ -806,6 +812,8 @@ JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		/* Checking solution output with checker */
 
 		// Prepare checker fds
+		(void)ftruncate(checker_stderr, 0);
+		(void)lseek(checker_stderr, 0, SEEK_SET);
 		(void)ftruncate(checker_stdout, 0);
 		(void)lseek(checker_stdout, 0, SEEK_SET);
 
@@ -819,8 +827,21 @@ JudgeWorker::judge(bool final, JudgeLogger& judge_log,
 		    {sol_stdout_path,
 		     OpenAccess::RDONLY}}); // Allow exceptions to fly higher
 
-		auto checker_result =
-		   exit_to_checker_status(ces, checker_opts, checker_stdout, "stdout");
+		auto checker_result = [&] {
+			auto checker_stderr_pos = lseek(checker_stderr, 0, SEEK_CUR);
+			assert(checker_stderr_pos != -1);
+			auto checker_stdout_pos = lseek(checker_stdout, 0, SEEK_CUR);
+			assert(checker_stdout_pos != -1);
+
+			if (checker_stderr_pos == 0 and checker_stdout_pos > 0) {
+				// Backward compatibility
+				return exit_to_checker_status(ces, checker_opts, checker_stdout,
+				                              "stdout");
+			}
+
+			return exit_to_checker_status(ces, checker_opts, checker_stderr,
+			                              "stderr");
+		}();
 
 		// Update group_score_ratio
 		group_score_ratio = std::min(group_score_ratio, checker_result.ratio);

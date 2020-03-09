@@ -29,7 +29,7 @@ int are_equal(char* s1, size_t l1, char* s2, size_t l2) {
 	((expr) ? (void)0                                                          \
 	        : (fprintf(stderr, "%s:%i %s: Assertion `%s' failed.\n", __FILE__, \
 	                   __LINE__, __PRETTY_FUNCTION__, #expr),                  \
-	           exit(-1)))
+	           exit(1)))
 #endif
 
 int main(int argc, char** argv) {
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 	// argv[2] test_out (right answer)
 	// argv[3] answer to check
 	//
-	// Output:
+	// Output (to stderr):
 	// Line 1: "OK" or "WRONG"
 	// Line 2 (optional; ignored if line 1 == "WRONG" - score is set to 0
 	// anyway):
@@ -60,9 +60,11 @@ int main(int argc, char** argv) {
 		++line;
 
 		if (0 != are_equal(lout, read1, lans, read2)) {
-			printf("WRONG\n0\nLine %zu: read: '%.77s%s', expected: '%.77s%s'\n",
-			       line, lans, (strlen(lans) > 77 ? "..." : ""), lout,
-			       (strlen(lout) > 77 ? "..." : ""));
+			fprintf(
+			   stderr,
+			   "WRONG\n0\nLine %zu: read: '%.77s%s', expected: '%.77s%s'\n",
+			   line, lans, (strlen(lans) > 77 ? "..." : ""), lout,
+			   (strlen(lout) > 77 ? "..." : ""));
 			return 0;
 		}
 	}
@@ -71,8 +73,9 @@ int main(int argc, char** argv) {
 		++line;
 
 		if (0 != are_equal(lout, read1, lans, 0)) {
-			printf("WRONG\n0\nLine %zu: read: EOF, expected: '%.157s%s'\n",
-			       line, lout, (strlen(lout) > 157 ? "..." : ""));
+			fprintf(stderr,
+			        "WRONG\n0\nLine %zu: read: EOF, expected: '%.157s%s'\n",
+			        line, lout, (strlen(lout) > 157 ? "..." : ""));
 			return 0;
 		}
 
@@ -83,15 +86,16 @@ int main(int argc, char** argv) {
 		++line;
 
 		if (0 != are_equal(lans, read2, lout, 0)) {
-			printf("WRONG\n0\nLine %zu: read: '%.157s%s', expected: EOF\n",
-			       line, lans, (strlen(lans) > 157 ? "..." : ""));
+			fprintf(stderr,
+			        "WRONG\n0\nLine %zu: read: '%.157s%s', expected: EOF\n",
+			        line, lans, (strlen(lans) > 157 ? "..." : ""));
 			return 0;
 		}
 
 		read2 = getline(&lans, &len2, fans);
 	}
 
-	puts("OK");
+	fprintf(stderr, "OK\n");
 	return 0;
 }
 
