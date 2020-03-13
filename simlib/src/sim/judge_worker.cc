@@ -8,6 +8,7 @@
 #include "../../include/unlinked_temporary_file.hh"
 #include "default_checker_dump.h"
 
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <fcntl.h>
@@ -463,6 +464,8 @@ JudgeReport JudgeWorker::judge_interactive(
 	std::promise<void> checker_supervisor_ready; // Used to pass exceptions
 	std::promise<std::optional<NextJob>> next_job_promise;
 	std::promise<CheckerStatus> checker_status_promise;
+	std::atomic_bool checker_finished {false};
+	std::promise<std::optional<pid_t>> solution_pid_promise;
 	Sandbox::ExitStat ces;
 
 	auto checker_supervisor = [&] {
@@ -485,45 +488,57 @@ JudgeReport JudgeWorker::judge_interactive(
 
 				auto job_opt = next_job_promise.get_future().get();
 				next_job_promise = {}; // reset promise
-				checker_supervisor_ready
-				   .set_value(); // Notify solution supervisor that we received
-				                 // the job
 				if (not job_opt.has_value())
 					return;
 
 				auto& job = job_opt.value();
 
+				STACK_UNWINDING_MARK;
+
+				auto rtl = checker_time_limit;
+				if (rtl.has_value())
+					rtl.value() += job.solution_real_time_limit;
+
+				// Checker parameters
+				Sandbox::Options opts = {job.checker_stdin, job.checker_stdout,
+				                         output, // STDERR
+				                         rtl, checker_memory_limit};
+
+				// Prepare checker fds
+				(void)ftruncate(output, 0);
+				(void)lseek(output, 0, SEEK_SET);
+
+				checker_finished.store(false, std::memory_order_seq_cst);
+
+				checker_supervisor_ready
+				   .set_value(); // Notify solution supervisor that we are ready
+				                 // to run checker
+
 				try {
-					STACK_UNWINDING_MARK;
-
-					auto rtl = checker_time_limit;
-					if (rtl.has_value())
-						rtl.value() += job.solution_real_time_limit;
-
-					// Checker parameters
-					Sandbox::Options opts = {job.checker_stdin,
-					                         job.checker_stdout,
-					                         output, // STDERR
-					                         rtl, checker_memory_limit};
-
-					// Prepare checker fds
-					(void)ftruncate(output, 0);
-					(void)lseek(output, 0, SEEK_SET);
-
 					// Run checker
-					ces = sandbox.run(
-					   checker_path, {checker_path, job.test_in_path}, opts,
-					   {{job.test_in_path, OpenAccess::RDONLY}}, [&] {
-						   (void)job.checker_stdin.close();
-						   (void)job.checker_stdout.close();
-					   });
+					ces = sandbox.run(checker_path,
+					                  {checker_path, job.test_in_path}, opts,
+					                  {{job.test_in_path, OpenAccess::RDONLY}});
 
-					// Make sure the pipes are closed
-					(void)job.checker_stdin.close();
-					(void)job.checker_stdout.close();
+					checker_finished.store(true, std::memory_order_seq_cst);
+					(void)job.checker_stdin
+					   .close(); // This may kill solution with SIGPIPE
+					(void)job.checker_stdout
+					   .close(); // This allows solution to continue if it waits
+					             // on read()
 
-					checker_status_promise.set_value(
-					   exit_to_checker_status(ces, opts, output, "stderr"));
+					CheckerStatus cs =
+					   exit_to_checker_status(ces, opts, output, "stderr");
+					// Since checker exited, killing solution will protect from
+					// unnecessary TLE
+					auto sol_pid_opt = solution_pid_promise.get_future().get();
+					solution_pid_promise = {}; // reset promise
+					if (sol_pid_opt and
+					    (cs.status != CheckerStatus::OK or cs.ratio < 1)) {
+						kill(sol_pid_opt.value(), SIGKILL);
+					}
+
+					checker_status_promise.set_value(std::move(cs));
 
 				} catch (...) {
 					ERRLOG_CATCH();
@@ -567,16 +582,33 @@ JudgeReport JudgeWorker::judge_interactive(
 		checker_supervisor_ready = {}; // reset promise
 
 		// Run solution
-		auto es = sandbox.run(solution_path, {},
-		                      {solution_input, solution_output, -1,
-		                       solution_real_time_limit, test.memory_limit,
-		                       test.time_limit},
-		                      {}, [&] {
-			                      (void)solution_input.close();
-			                      (void)solution_output.close();
-		                      }); // Allow exceptions to fly upper
+		Sandbox::ExitStat es;
+		bool solution_pid_was_set = false;
+		try {
+			es = sandbox.run(solution_path, {},
+			                 {solution_input, solution_output, -1,
+			                  solution_real_time_limit, test.memory_limit,
+			                  test.time_limit},
+			                 {}, [&](pid_t pid) {
+				                 solution_pid_promise.set_value(pid);
+				                 solution_pid_was_set = true;
+			                 }); // Allow exceptions to fly upper
+		} catch (...) {
+			if (not solution_pid_was_set)
+				solution_pid_promise.set_value(std::nullopt);
+			throw;
+		}
 
-		// Make sure the pipes are closed
+		bool checker_finished_before_solution =
+		   checker_finished.load(std::memory_order_seq_cst);
+		// Pipes are closed after solution has finished and we checked if
+		// checker finished because of a potential race condition:
+		// 1. solution crashes e.g. SIGABRT
+		// 2. checker reads unexpected EOF and ends
+		// 3. checker_finished is set to true
+		// 4. we read checker_finished == true
+		// After that it seems as if checker caused the solution to fail because
+		// it exited first but in fact, it is the opposite
 		(void)solution_input.close();
 		(void)solution_output.close();
 
@@ -601,15 +633,17 @@ JudgeReport JudgeWorker::judge_interactive(
 
 		case CheckerStatus::OK:
 		case CheckerStatus::WRONG:
-			break; // This way to make the compiler warning on development
+			break; // This way, the compiler will warn if new option is added
 		}
 
-		// Solution: OK or killed by SIGPIPE and checker returned WRONG
+		// Solution: OK or (checker didn't give 100% OK and solution didn't TLE)
 		if ((es.si.code == CLD_EXITED and es.si.status == 0 and
 		     test_report.runtime <= test_report.time_limit) or
-		    (is_one_of(es.si.code, CLD_KILLED, CLD_DUMPED) and
-		     es.si.status == SIGPIPE and
-		     checker_result.status == CheckerStatus::WRONG)) {
+		    (checker_finished_before_solution and
+		     (checker_result.status != CheckerStatus::OK or
+		      checker_result.ratio < 1) and
+		     test_report.runtime < test_report.time_limit and
+		     es.runtime < test.time_limit)) {
 			switch (checker_result.status) {
 			case CheckerStatus::OK:
 				// Test status is already set to OK
