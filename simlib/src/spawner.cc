@@ -180,9 +180,10 @@ bool Spawner::Timer::timeout_signal_was_sent() const noexcept {
 	   state_);
 }
 
-Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
-                               const Spawner::Options& opts,
-                               const std::function<void()>& do_after_fork) {
+Spawner::ExitStat
+Spawner::run(FilePath exec, const vector<string>& exec_args,
+             const Spawner::Options& opts,
+             const std::function<void(pid_t)>& parent_do_after_fork) {
 	STACK_UNWINDING_MARK;
 
 	using std::chrono_literals::operator""ns;
@@ -231,7 +232,7 @@ Spawner::ExitStat Spawner::run(FilePath exec, const vector<string>& exec_args,
 		waitid(P_PID, cpid, &si, WEXITED);
 	});
 
-	do_after_fork();
+	parent_do_after_fork(cpid);
 
 	clockid_t child_cpu_clock_id;
 	if (clock_getcpuclockid(cpid, &child_cpu_clock_id))

@@ -100,8 +100,9 @@ public:
 	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working
 	 *   directory)
-	 * @param do_after_fork function that will be called in the parent process
-	 *   just after fork() - useful for closing pipe ends
+	 * @param parent_do_after_fork function taking child's pid as an argument
+	 *   that will be called in the parent process just after fork() -- useful
+	 *   for closing pipe ends
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - runtime: in timespec structure {sec, nsec}
@@ -119,7 +120,7 @@ public:
 	static ExitStat run(
 	   FilePath exec, const std::vector<std::string>& exec_args,
 	   const Options& opts = Options(),
-	   const std::function<void()>& do_after_fork = [] {});
+	   const std::function<void(pid_t)>& parent_do_after_fork = [](pid_t) {});
 
 protected:
 	// Sends @p str through @p fd and _exits with -1

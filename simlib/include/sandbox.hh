@@ -102,8 +102,9 @@ public:
 	 *   directory)
 	 * @param allowed_files list of files (with access modes) that the
 	 *   sandboxed program is allowed to open
-	 * @param do_after_fork function that will be called in the parent process
-	 *   just after fork() - useful for closing pipe ends
+	 * @param parent_do_after_fork function taking child's pid as an argument
+	 *   that will be called in the parent process just after fork() -- useful
+	 *   for closing pipe ends
 	 *
 	 * @return Returns ExitStat structure with fields:
 	 *   - runtime: in timespec structure {sec, nsec}
@@ -122,5 +123,5 @@ public:
 	   FilePath exec, const std::vector<std::string>& exec_args,
 	   const Options& opts = Options(),
 	   const std::vector<AllowedFile>& allowed_files = {},
-	   const std::function<void()>& do_after_fork = [] {});
+	   const std::function<void(pid_t)>& parent_do_after_fork = [](pid_t) {});
 };
