@@ -621,6 +621,7 @@ void SipPackage::save_template(StringView template_name) {
 		   intentional_unsafe_string_view(templates::statement_tex(
 		      simfile.name.value(), simfile.global_mem_limit)));
 	} else if (template_name == "checker") {
+		simfile.load_interactive();
 		(void)mkdir("check");
 		put_file_contents("check/checker.cc",
 		                  intentional_unsafe_string_view(
