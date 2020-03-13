@@ -10,4 +10,4 @@ seek_for_new_tests: true
 reset_scoring: false
 require_statement: false
 min_time_limit: 0.2
-solution_rutnime_coefficient: 1.5
+solution_runtime_coefficient: 1.5

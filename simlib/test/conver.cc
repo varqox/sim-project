@@ -103,7 +103,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	opts.require_statement = get_bool("require_statement");
 	opts.rtl_opts.min_time_limit = get_duration("min_time_limit");
 	opts.rtl_opts.solution_runtime_coefficient =
-	   get_double("solution_rutnime_coefficient");
+	   get_double("solution_runtime_coefficient");
 
 	return opts;
 }
