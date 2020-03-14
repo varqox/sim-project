@@ -139,9 +139,10 @@ void watch_files_for_modification(const std::vector<std::string>& files,
 			decltype(inotify_event::mask) mask;
 			// decltype(inotify_event::cookie) cookie; // ignored
 			decltype(inotify_event::len) len;
-			memcpy(&wd, ptr + offsetof(inotify_event, wd), sizeof(wd));
-			memcpy(&mask, ptr + offsetof(inotify_event, mask), sizeof(mask));
-			memcpy(&len, ptr + offsetof(inotify_event, len), sizeof(len));
+			std::memcpy(&wd, ptr + offsetof(inotify_event, wd), sizeof(wd));
+			std::memcpy(&mask, ptr + offsetof(inotify_event, mask),
+			            sizeof(mask));
+			std::memcpy(&len, ptr + offsetof(inotify_event, len), sizeof(len));
 			StringView name(ptr + offsetof(inotify_event, name));
 			static_assert(offsetof(inotify_event, name) ==
 			              sizeof(inotify_event));

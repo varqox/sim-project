@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 inline void eputs(const char* str) noexcept {
-	write(STDERR_FILENO, str, strlen(str));
+	write(STDERR_FILENO, str, std::strlen(str));
 }
 
 TEST(handle_signals_while_running_DeathTest, no_signal_occurred) {

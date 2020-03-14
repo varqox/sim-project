@@ -12,7 +12,7 @@ TemporaryDirectory::TemporaryDirectory(FilePath templ) {
 
 		name_.reset(new char[size + 2]);
 
-		memcpy(name_.get(), templ, size);
+		std::memcpy(name_.get(), templ, size);
 		name_.get()[size] = name_.get()[size + 1] = '\0';
 
 		// Create directory with permissions (mode: 0700/rwx------)
