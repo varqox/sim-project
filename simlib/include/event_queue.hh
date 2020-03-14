@@ -3,6 +3,7 @@
 #include "debug.hh"
 #include "meta.hh"
 #include "overloaded.hh"
+#include "time.hh"
 
 #include <chrono>
 #include <functional>
@@ -29,7 +30,7 @@ DECLARE_ENUM_OPERATOR(FileEvent, &)
 class EventQueue {
 public:
 	using time_point = std::chrono::system_clock::time_point;
-	using milliseconds = std::chrono::milliseconds;
+	using nanoseconds = std::chrono::nanoseconds;
 	using handler_id_t = size_t;
 
 private:
@@ -275,30 +276,38 @@ public:
 		while (not handlers_.empty()) {
 			const auto timeout = [&]() -> std::chrono::system_clock::duration {
 				if (timed_handlers_.empty())
-					return milliseconds(-1);
+					return nanoseconds(-1);
 
 				time_point first_expiration = timed_handlers_.begin()->first;
 				time_point now = std::chrono::system_clock::now();
 				if (first_expiration < now)
-					return milliseconds(0);
+					return nanoseconds(0);
 
 				return first_expiration - now;
 			}();
 
 			const int ready_poll_events_num = [&] {
 				if (not are_there_file_file_handlers()) {
-					if (timeout > milliseconds(0))
+					if (timeout > nanoseconds(0))
 						std::this_thread::sleep_for(timeout);
 
 					return 0;
 				}
 
-				return poll(
-				   poll_events_.data(), poll_events_.size(),
-				   std::chrono::duration_cast<milliseconds>(timeout).count());
+				timespec ts;
+				timespec* tmo_p;
+				if (timeout < nanoseconds(0)) {
+					tmo_p = nullptr;
+				} else {
+					tmo_p = &ts;
+					ts = to_timespec(timeout);
+				}
+
+				return ppoll(poll_events_.data(), poll_events_.size(), tmo_p,
+				             nullptr);
 			}();
 			if (ready_poll_events_num == -1 and errno != EINTR)
-				THROW("poll()", errmsg());
+				THROW("ppoll()", errmsg());
 
 			process_timed_handlers(); // It is important to first process timed
 			                          // events, to not starve the timed events
