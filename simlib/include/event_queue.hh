@@ -60,7 +60,8 @@ private:
 
 public:
 	handler_id_t add_ready_handler(std::function<void()> handler) {
-		return add_time_handler({}, std::move(handler));
+		return add_time_handler_impl(std::chrono::system_clock::now(),
+		                             std::move(handler));
 	}
 
 	handler_id_t add_time_handler(time_point tp,
@@ -68,8 +69,22 @@ public:
 		STACK_UNWINDING_MARK;
 		const auto now = std::chrono::system_clock::now();
 		if (tp < now)
-			tp = now;
+			tp = now; // Disallow potential starvation of other handlers
 
+		return add_time_handler_impl(tp, std::move(handler));
+	}
+
+	handler_id_t add_time_handler(time_point::duration duration,
+	                              std::function<void()> handler) {
+		STACK_UNWINDING_MARK;
+		assert(duration >= decltype(duration)::zero());
+		return add_time_handler_impl(
+		   std::chrono::system_clock::now() + duration, std::move(handler));
+	}
+
+private:
+	handler_id_t add_time_handler_impl(time_point tp,
+	                                   std::function<void()> handler) {
 		const auto handler_id = new_handler_id();
 		handlers_.emplace(handler_id, TimedHandler {tp, std::move(handler)});
 		try {
@@ -81,7 +96,6 @@ public:
 		}
 	}
 
-private:
 	static decltype(pollfd::events)
 	file_events_to_poll_events(FileEvent events) noexcept {
 		decltype(pollfd::events) res = 0;

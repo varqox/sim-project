@@ -17,7 +17,7 @@ using std::chrono_literals::operator""ms;
 using std::function;
 using std::string;
 
-TEST(EventQueue, add_time_handler) {
+TEST(EventQueue, add_time_handler_time_point) {
 	auto start = system_clock::now();
 	string order;
 
@@ -49,6 +49,60 @@ TEST(EventQueue, add_time_handler) {
 
 	eq.run();
 	EXPECT_EQ(order, "23456");
+}
+
+TEST(EventQueue, add_time_handler_duration) {
+	auto start = system_clock::now();
+	string order;
+
+	EventQueue eq;
+	eq.add_time_handler(3ms, [&] {
+		EXPECT_LE(start + 3ms, system_clock::now());
+		order += "3";
+
+		eq.add_time_handler(3ms, [&] {
+			EXPECT_LE(start + 6ms, system_clock::now());
+			order += "6";
+		});
+	});
+
+	eq.add_time_handler(2ms, [&] {
+		EXPECT_LE(start + 2ms, system_clock::now());
+		order += "2";
+
+		eq.add_time_handler(2ms, [&] {
+			EXPECT_LE(start + 4ms, system_clock::now());
+			order += "4";
+		});
+	});
+
+	eq.add_time_handler(5ms, [&] {
+		EXPECT_LE(start + 5ms, system_clock::now());
+		order += "5";
+	});
+
+	eq.run();
+	EXPECT_EQ(order, "23456");
+}
+
+TEST(EventQueue, add_ready_handler) {
+	auto start = system_clock::now();
+	string order;
+
+	EventQueue eq;
+	eq.add_ready_handler([&] { order += "0"; });
+
+	eq.add_time_handler(1ms, [&] {
+		EXPECT_LE(start + 1ms, system_clock::now());
+		order += "1";
+	});
+
+	eq.add_ready_handler([&] {
+		order += "0"; // Order of handlers on the same time_point is undefined
+	});
+
+	eq.run();
+	EXPECT_EQ(order, "001");
 }
 
 TEST(EventQueue, remove_time_handler) {
