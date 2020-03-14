@@ -12,6 +12,7 @@
 #include <set>
 #include <sys/poll.h>
 #include <thread>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -104,38 +105,38 @@ private:
 	}
 
 public:
-	template <class Handler,
-	          std::enable_if_t<std::is_invocable_r_v<void, Handler, FileEvent>,
-	                           int> = 0>
+	template <class Handler>
 	handler_id_t add_file_handler(int fd, FileEvent events, Handler&& handler) {
+		static_assert(std::is_invocable_r_v<void, Handler, FileEvent> or
+		              std::is_invocable_r_v<void, Handler>);
+
 		STACK_UNWINDING_MARK;
-		auto handler_id = new_handler_id();
-		handlers_.emplace(handler_id, FileHandler {std::move(handler), events,
-		                                           poll_events_.size()});
-		try {
-			poll_events_idx_to_hid_.emplace_back(handler_id);
+		if constexpr (not std::is_invocable_r_v<void, Handler, FileEvent>) {
+			STACK_UNWINDING_MARK;
+			return add_file_handler(fd, events,
+			                        [handler = std::forward<Handler>(handler)](
+			                           FileEvent) { handler(); });
+
+		} else {
+			auto handler_id = new_handler_id();
+			handlers_.emplace(
+			   handler_id,
+			   FileHandler {std::move(handler), events, poll_events_.size()});
 			try {
-				poll_events_.push_back(
-				   {fd, file_events_to_poll_events(events), 0});
-				return handler_id;
+				poll_events_idx_to_hid_.emplace_back(handler_id);
+				try {
+					poll_events_.push_back(
+					   {fd, file_events_to_poll_events(events), 0});
+					return handler_id;
+				} catch (...) {
+					poll_events_idx_to_hid_.pop_back();
+					throw;
+				}
 			} catch (...) {
-				poll_events_idx_to_hid_.pop_back();
+				handlers_.erase(handler_id);
 				throw;
 			}
-		} catch (...) {
-			handlers_.erase(handler_id);
-			throw;
 		}
-	}
-
-	template <class Handler,
-	          std::enable_if_t<std::is_invocable_r_v<void, Handler>, int> = 0>
-	handler_id_t add_file_handler(int fd, FileEvent events, Handler&& handler) {
-		STACK_UNWINDING_MARK;
-		return add_file_handler(
-		   fd, events, [handler = std::forward<Handler>(handler)](FileEvent) {
-			   handler();
-		   });
 	}
 
 	void remove_handler(handler_id_t handler_id) {
