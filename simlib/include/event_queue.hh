@@ -3,6 +3,7 @@
 #include "debug.hh"
 #include "meta.hh"
 #include "overloaded.hh"
+#include "shared_function.hh"
 #include "time.hh"
 
 #include <chrono>
@@ -81,6 +82,25 @@ public:
 		assert(duration >= decltype(duration)::zero());
 		return add_time_handler_impl(
 		   std::chrono::system_clock::now() + duration, std::move(handler));
+	}
+
+	// Will repeat @p handler with pauses of @p interval until it @p handler
+	// returns false.
+	void add_repeating_handler(time_point::duration interval,
+	                           std::function<bool()> handler) {
+		STACK_UNWINDING_MARK;
+		assert(interval >= decltype(interval)::zero());
+		auto impl = [this, interval,
+		             handler =
+		                shared_function(std::move(handler))](auto& self) {
+			if (not handler())
+				return;
+
+			// Continue repeating
+			add_time_handler(interval, [self] { self(self); });
+		};
+
+		add_time_handler(interval, [impl = std::move(impl)] { impl(impl); });
 	}
 
 private:

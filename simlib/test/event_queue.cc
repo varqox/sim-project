@@ -14,6 +14,8 @@ using std::array;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
 using std::chrono_literals::operator""ms;
+using std::chrono_literals::operator""us;
+using std::chrono_literals::operator""ns;
 using std::function;
 using std::string;
 
@@ -103,6 +105,33 @@ TEST(EventQueue, add_ready_handler) {
 
 	eq.run();
 	EXPECT_EQ(order, "001");
+}
+
+TEST(EventQueue, add_repeating_handler) {
+	auto start = system_clock::now();
+	string order;
+
+	EventQueue eq;
+	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
+		++iter;
+		order += char('a' + iter);
+
+		EXPECT_LE(start + iter * 100us, system_clock::now());
+		return (iter != 10);
+	});
+
+	eq.add_time_handler(50us, [&] {
+		EXPECT_LE(start + 50us, system_clock::now());
+		order += "1";
+	});
+
+	eq.add_time_handler(150us, [&] {
+		EXPECT_LE(start + 150us, system_clock::now());
+		order += "2";
+	});
+
+	eq.run();
+	EXPECT_EQ(order, "1b2cdefghijk");
 }
 
 TEST(EventQueue, remove_time_handler) {
