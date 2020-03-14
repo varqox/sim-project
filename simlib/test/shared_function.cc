@@ -25,7 +25,3 @@ TEST(DISABLED_shared_function, move_assignment) {
 TEST(DISABLED_shared_function, operator_invoke) {
 	// TODO: implement it
 }
-
-TEST(DISABLED_shared_function, make_shared_function) {
-	// TODO: implement it
-}

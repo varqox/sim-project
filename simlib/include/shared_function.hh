@@ -15,8 +15,3 @@ public:
 		return (*func_)(std::forward<Args>(args)...);
 	}
 };
-
-template <class Func>
-auto make_shared_function(Func&& func) {
-	return shared_function<Func>(std::forward<Func>(func));
-}
