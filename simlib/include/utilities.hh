@@ -139,3 +139,18 @@ public:
 
 template <class T>
 reverse_view(T &&)->reverse_view<T>;
+
+// Be aware that it will be slow for containers like std::string or std::vector
+// where erase() is slow (use std::remove_if() there), but for std::set or
+// std::map it is fast
+template <class Container, class Predicate>
+void filter(Container&& container, Predicate&& pred) {
+	auto it = container.begin();
+	while (it != container.end()) {
+		if (not pred(*it)) {
+			container.erase(it++);
+		} else {
+			++it;
+		}
+	}
+}
