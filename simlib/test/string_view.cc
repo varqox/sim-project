@@ -441,6 +441,10 @@ TEST(DISABLED_CStringView, constructor_from_const_char_ptr) {
 	// TODO: implement it
 }
 
+TEST(DISABLED_CStringView, constructor_from_char_ptr) {
+	// TODO: implement it
+}
+
 TEST(DISABLED_CStringView, constructor_from_const_char_ptr_with_size) {
 	// TODO: implement it
 }

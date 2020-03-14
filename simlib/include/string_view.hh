@@ -641,6 +641,10 @@ public:
 	}
 
 	// Be careful with the constructor below! @p s cannot be null
+	constexpr explicit CStringView(char* s) noexcept
+	   : CStringView(static_cast<pointer>(s)) {}
+
+	// Be careful with the constructor below! @p s cannot be null
 	constexpr CStringView(pointer s, size_type n) noexcept : StringBase(s, n) {
 #ifdef _GLIBCXX_DEBUG
 		assert(s);
