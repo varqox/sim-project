@@ -148,15 +148,22 @@ public:
 	} while (false)
 
 class ThrowingIsBug {
-	int uncaught_exceptions_ = std::uncaught_exceptions();
+	bool thrown = true;
 
 public:
+	template <class T>
+	decltype(auto) evaluate(T&& expr) noexcept {
+		thrown = false;
+		return std::forward<T>(expr);
+	}
+
 	~ThrowingIsBug() {
-		if (uncaught_exceptions_ != std::uncaught_exceptions()) {
+		if (thrown) {
 			errlog("BUG: this was expected to not throw");
 			std::abort();
 		}
 	}
 };
 
-#define WONT_THROW(...) (ThrowingIsBug(), __VA_ARGS__)
+// Sadly it won't preserve prvalue-ness, a prvalue will become an xvalue
+#define WONT_THROW(...) (ThrowingIsBug().evaluate(__VA_ARGS__))

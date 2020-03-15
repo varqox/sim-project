@@ -3,7 +3,9 @@
 #include "../include/file_contents.hh"
 #include "../include/unlinked_temporary_file.hh"
 
+#include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
+#include <type_traits>
 
 using std::string;
 
@@ -229,7 +231,7 @@ TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
 		   errlog.label(false);
 		   std::vector<int> abc;
 		   errlog("BUG");
-		   WONT_THROW(abc.at(42));
+		   (void)WONT_THROW(abc.at(42));
 	   },
 	   ::testing::KilledBySignal(SIGABRT),
 	   "^BUG\nBUG: this was expected to not throw\n$");
@@ -259,16 +261,19 @@ TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
 TEST(debug, WONT_THROW_MACRO_xvalue) {
 	struct A {
 		std::string& str;
+		A(const A&) = delete;
 		A(std::string& s) : str(s) { str += "+A"; }
 		~A() { str += "-A"; }
 	};
 	struct B {
 		A a;
+		B(const B&) = delete;
 		B(std::string& str) : a(str) {}
 		A&& get() && noexcept { return std::move(a); }
 	};
 	struct C {
 		std::string& str;
+		C(const C&) = delete;
 		C(std::string& s, const A&) : str(s) { str += "+C"; }
 		~C() { str += "-C"; }
 	};
@@ -283,6 +288,16 @@ TEST(debug, WONT_THROW_MACRO_prvalue) {
 	EXPECT_EQ((bool)ptr, true);
 }
 
+template <class T, class = decltype(T(WONT_THROW(T(42))))>
+constexpr auto double_construct_with_WONT_THROW_impl(int) -> std::true_type;
+
+template <class>
+constexpr auto double_construct_with_WONT_THROW_impl(...) -> std::false_type;
+
+template <class T>
+constexpr bool double_construct_with_WONT_THROW =
+   decltype(double_construct_with_WONT_THROW_impl<T>(0))::value;
+
 TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
 	struct X {
 		X(int) {}
@@ -290,7 +305,16 @@ TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
 		X& operator=(const X&) = delete;
 	};
 
-	(void)X(X(WONT_THROW(X(X(42)))));
+	struct Y {
+		Y(int) {}
+		Y(const Y&) = delete;
+		Y(Y&&) = default;
+	};
+
+	// Sadly WONT_THROW() does not work with prvalues
+	static_assert(double_construct_with_WONT_THROW<X> == false);
+	// But works with x-values
+	static_assert(double_construct_with_WONT_THROW<Y> == true);
 }
 
 TEST(debug, WONT_THROW_MACRO_rvalue) {
@@ -299,4 +323,15 @@ TEST(debug, WONT_THROW_MACRO_rvalue) {
 	EXPECT_EQ(a, 4);
 	EXPECT_EQ(b, 7);
 	EXPECT_EQ(c, 11);
+}
+
+TEST(debug_DeathTest,
+     WONT_THROW_MACRO_throw_in_the_same_statement_after_WONT_THROW_MACRO) {
+	try {
+		auto factory = [] { return [] { throw 42; }; };
+		WONT_THROW(factory())();
+		FAIL() << "should have thrown";
+	} catch (int x) {
+		EXPECT_EQ(x, 42);
+	}
 }
