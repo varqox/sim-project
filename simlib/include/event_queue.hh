@@ -150,7 +150,7 @@ public:
 			STACK_UNWINDING_MARK;
 			return add_file_handler(fd, events,
 			                        [handler = std::forward<Handler>(handler)](
-			                           FileEvent) { handler(); });
+			                           FileEvent) mutable { handler(); });
 
 		} else {
 			auto handler_id = new_handler_id();

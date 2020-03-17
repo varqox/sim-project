@@ -134,6 +134,44 @@ TEST(EventQueue, add_repeating_handler) {
 	EXPECT_EQ(order, "1b2cdefghijk");
 }
 
+TEST(EventQueue, adding_mutable_handler) {
+	EventQueue eq;
+	size_t times = 0;
+
+	eq.add_ready_handler([&, x = 0]() mutable {
+		++x;
+		++times;
+	});
+
+	eq.add_time_handler(0ns, [&, x = 0]() mutable {
+		++x;
+		++times;
+	});
+
+	eq.add_time_handler(system_clock::now(), [&, x = 0]() mutable {
+		++x;
+		++times;
+	});
+
+	eq.add_repeating_handler(0ns, [&, x = 0]() mutable {
+		++x;
+		++times;
+		return false;
+	});
+
+	FileDescriptor fd("/dev/null", O_WRONLY);
+	assert(fd.is_open());
+	EventQueue::handler_id_t hid;
+	hid = eq.add_file_handler(fd, FileEvent::READABLE, [&, x = 0]() mutable {
+		++x;
+		++times;
+		eq.remove_handler(hid);
+	});
+
+	eq.run();
+	EXPECT_EQ(times, 5);
+}
+
 TEST(EventQueue, remove_time_handler) {
 	auto start = system_clock::now();
 	string order;
