@@ -1,9 +1,12 @@
 #include "../include/temporary_directory.hh"
 #include "../include/file_manip.hh"
 #include "../include/path.hh"
+#include "../include/string_traits.hh"
 #include "../include/working_directory.hh"
 
 TemporaryDirectory::TemporaryDirectory(FilePath templ) {
+	assert(has_suffix(StringView(templ), "XXXXXX"));
+
 	size_t size = templ.size();
 	if (size > 0) {
 		// Fill name_

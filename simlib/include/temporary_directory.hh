@@ -13,6 +13,7 @@ private:
 public:
 	TemporaryDirectory() = default; // Does NOT create a temporary directory
 
+	// @p templ has to end with "XXXXXX" (6 characters 'X')
 	explicit TemporaryDirectory(FilePath templ);
 
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
