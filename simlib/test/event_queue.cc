@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <fcntl.h>
+#include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>
 #include <memory>
 #include <optional>
@@ -197,6 +198,38 @@ TEST(EventQueue, remove_time_handler) {
 
 	eq.run();
 	EXPECT_EQ(order, "2r4");
+}
+
+TEST(EventQueue_DeathTest, time_handler_removes_itself) {
+	EXPECT_EXIT(
+	   {
+		   EventQueue eq;
+		   EventQueue::handler_id_t hid;
+		   hid = eq.add_time_handler(system_clock::now(),
+		                             [&] { eq.remove_handler(hid); });
+		   eq.run();
+	   },
+	   ::testing::KilledBySignal(SIGABRT), "BUG");
+
+	EXPECT_EXIT(
+	   {
+		   EventQueue eq;
+		   EventQueue::handler_id_t hid;
+		   hid = eq.add_time_handler(0ns, [&] { eq.remove_handler(hid); });
+		   eq.run();
+	   },
+	   ::testing::KilledBySignal(SIGABRT), "BUG");
+}
+
+TEST(EventQueue_DeathTest, ready_handler_removes_itself) {
+	EXPECT_EXIT(
+	   {
+		   EventQueue eq;
+		   EventQueue::handler_id_t hid;
+		   hid = eq.add_ready_handler([&] { eq.remove_handler(hid); });
+		   eq.run();
+	   },
+	   ::testing::KilledBySignal(SIGABRT), "BUG");
 }
 
 TEST(EventQueue, time_only_fairness) {

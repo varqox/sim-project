@@ -9,6 +9,7 @@
 #include <chrono>
 #include <functional>
 #include <map>
+#include <memory>
 #include <poll.h>
 #include <ratio>
 #include <set>
@@ -41,7 +42,7 @@ private:
 	};
 
 	struct FileHandler {
-		std::function<void(FileEvent)> handler;
+		std::shared_ptr<std::function<void(FileEvent)>> handler;
 		FileEvent events;
 		size_t poll_event_idx;
 	};
@@ -156,7 +157,9 @@ public:
 			auto handler_id = new_handler_id();
 			handlers_.emplace(
 			   handler_id,
-			   FileHandler {std::move(handler), events, poll_events_.size()});
+			   FileHandler {std::make_shared<std::function<void(FileEvent)>>(
+			                   std::move(handler)),
+			                events, poll_events_.size()});
 			try {
 				poll_events_idx_to_hid_.emplace_back(handler_id);
 				try {
@@ -174,6 +177,8 @@ public:
 		}
 	}
 
+	// Removing handler within itself is undefined behavior except for file
+	// handlers
 	void remove_handler(handler_id_t handler_id) {
 		STACK_UNWINDING_MARK;
 
@@ -274,9 +279,9 @@ public:
 					auto handler_id =
 					   WONT_THROW(poll_events_idx_to_hid_.at(new_idx));
 
-					WONT_THROW(
-					   std::get<FileHandler>(handlers_.at(handler_id)).handler)
-					(events);
+					auto handler_shr_ptr = WONT_THROW(
+					   std::get<FileHandler>(handlers_.at(handler_id)).handler);
+					(*handler_shr_ptr)(events);
 					continue;
 				}
 
