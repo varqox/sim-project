@@ -1,18 +1,22 @@
 #pragma once
 
 #include "debug.hh"
+#include "file_descriptor.hh"
 #include "meta.hh"
 #include "overloaded.hh"
 #include "shared_function.hh"
 #include "time.hh"
 
+#include <atomic>
 #include <chrono>
+#include <fcntl.h>
 #include <functional>
 #include <map>
 #include <memory>
 #include <poll.h>
 #include <ratio>
 #include <set>
+#include <sys/eventfd.h>
 #include <sys/poll.h>
 #include <thread>
 #include <type_traits>
@@ -55,10 +59,42 @@ private:
 	std::vector<pollfd> poll_events_;
 	std::vector<handler_id_t> poll_events_idx_to_hid_;
 
+	std::atomic_bool immediate_stop_;
+	FileDescriptor immediate_stop_fd_;
+
 	handler_id_t new_handler_id() noexcept { return next_handler_id_++; }
 
 	bool are_there_file_file_handlers() const noexcept {
 		return (handlers_.size() > timed_handlers_.size());
+	}
+
+public:
+	EventQueue() : immediate_stop_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {
+		if (not immediate_stop_fd_.is_open())
+			THROW("eventfd()", errmsg());
+
+		// Add handler to make ppoll() wake if an immediate stop is requested
+		add_file_handler(immediate_stop_fd_, FileEvent::READABLE, [this] {
+			// If this happens before the memory is synchronized with thread
+			// requesting stop  thread, be sure to set this flag, so that it is
+			// indeed an *immediate* stop
+			immediate_stop_.store(true, std::memory_order_release);
+		});
+	}
+
+	// Stops processing of events immediately. It is safe to call it from other
+	// threads.
+	void stop_immediately() noexcept {
+		(void)immediate_stop_.exchange(true, std::memory_order_acq_rel);
+		int fd = immediate_stop_fd_;
+		assert(fd >= 0); // Make sure memory ordering "acquire" worked
+		uint64_t x = 1;
+		(void)write(fd, &x, sizeof(x));
+	}
+
+private:
+	bool immediate_stop_was_requested() const noexcept {
+		return immediate_stop_.load(std::memory_order_acquire);
 	}
 
 public:
@@ -195,14 +231,24 @@ public:
 		handlers_.erase(handler_id);
 	}
 
+	// After an immediate stop it may be called again to continue running as if
+	// the immediate stop did not happen
 	void run() {
 		STACK_UNWINDING_MARK;
+
+		// Reset stopping
+		immediate_stop_.store(false, std::memory_order_release);
+		{
+			// Reset immediate_stop_fd_
+			uint64_t x;
+			(void)read(immediate_stop_fd_, &x, sizeof(x)); // It is nonblocking
+		}
 
 		constexpr auto TIME_QUANTUM = std::chrono::microseconds(6);
 		auto process_timed_handlers = [&] {
 			STACK_UNWINDING_MARK;
 
-			if (timed_handlers_.empty())
+			if (timed_handlers_.empty() or immediate_stop_was_requested())
 				return;
 
 			const auto start = std::chrono::system_clock::now();
@@ -223,12 +269,17 @@ public:
 				handlers_.erase(it);
 
 				handler(); // It is ok if it throws
+				if (immediate_stop_was_requested())
+					return;
 			} while ((now = std::chrono::system_clock::now()) <=
 			         start + TIME_QUANTUM);
 		};
 
 		auto process_file_events = [&] {
 			STACK_UNWINDING_MARK;
+			if (immediate_stop_was_requested())
+				return;
+
 			auto file_handlers_quantum_start = std::chrono::system_clock::now();
 			size_t new_poll_events_size =
 			   0; // Expired events are removed and the array is compressed
@@ -251,7 +302,7 @@ public:
 					poll_events_idx_to_hid_[new_idx] = handler_id;
 					WONT_THROW(std::get<FileHandler>(handlers_.at(handler_id))
 					              .poll_event_idx) = new_idx;
-					// Disable old entry (in case something below throw)
+					// Disable old entry (in case something below throws)
 					poll_events_[idx].fd = -1;
 				}
 
@@ -264,6 +315,9 @@ public:
 				    file_handlers_quantum_start + TIME_QUANTUM) {
 					// Needed to ensure low latency
 					process_timed_handlers();
+					if (immediate_stop_was_requested())
+						return;
+
 					file_handlers_quantum_start =
 					   std::chrono::system_clock::now();
 					if (poll_events_[new_idx].fd < 0) {
@@ -282,6 +336,9 @@ public:
 					auto handler_shr_ptr = WONT_THROW(
 					   std::get<FileHandler>(handlers_.at(handler_id)).handler);
 					(*handler_shr_ptr)(events);
+					if (immediate_stop_was_requested())
+						return;
+
 					continue;
 				}
 
@@ -298,7 +355,8 @@ public:
 			poll_events_idx_to_hid_.resize(new_poll_events_size);
 		};
 
-		while (not handlers_.empty()) {
+		// There is always a handler for immediate_stop_fd_
+		while (handlers_.size() > 1 and not immediate_stop_was_requested()) {
 			const auto timeout = [&]() -> std::chrono::system_clock::duration {
 				if (timed_handlers_.empty())
 					return nanoseconds(-1);

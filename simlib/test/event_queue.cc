@@ -1,7 +1,10 @@
 #include "../include/event_queue.hh"
+#include "../include/concurrent/semaphore.hh"
+#include "../include/defer.hh"
 #include "../include/file_descriptor.hh"
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <fcntl.h>
 #include <gtest/gtest-death-test.h>
@@ -9,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <thread>
+#include <type_traits>
 #include <unistd.h>
 
 using std::array;
@@ -173,6 +177,245 @@ TEST(EventQueue, adding_mutable_handler) {
 	EXPECT_EQ(times, 5);
 }
 
+template <class Stopper>
+static void stop_immediately_from_handler(Stopper&& stopper_installer) {
+	static_assert(std::is_invocable_v<Stopper, EventQueue&, size_t&>);
+
+	EventQueue eq;
+	size_t times = 0;
+
+	auto handler_impl = [&](auto& self) -> void {
+		++times;
+		eq.add_ready_handler([&self] { self(self); });
+	};
+
+	eq.add_ready_handler([&] { handler_impl(handler_impl); });
+
+	FileDescriptor fd("/dev/null", O_WRONLY);
+	assert(fd.is_open());
+	eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] { ++times; });
+
+	eq.add_repeating_handler(0ns, [&] {
+		++times;
+		return true;
+	});
+
+	stopper_installer(eq, times);
+
+	eq.run();
+	EXPECT_EQ(times, 0);
+}
+
+TEST(EventQueue, stop_immediately_from_time_handler) {
+	stop_immediately_from_handler([](EventQueue& eq, size_t& times) {
+		eq.add_time_handler(100us, [&] {
+			times = 0;
+			eq.stop_immediately();
+		});
+	});
+}
+
+TEST(EventQueue, stop_immediately_from_repeating_handler) {
+	stop_immediately_from_handler([](EventQueue& eq, size_t& times) {
+		eq.add_repeating_handler(8us, [&, iter = 0]() mutable {
+			if (++iter == 10) {
+				times = 0;
+				eq.stop_immediately();
+			}
+			return true;
+		});
+	});
+}
+
+TEST(EventQueue, stop_immediately_from_file_handler) {
+	FileDescriptor fd("/dev/null", O_WRONLY);
+	stop_immediately_from_handler([&](EventQueue& eq, size_t& times) {
+		eq.add_file_handler(fd, FileEvent::WRITEABLE, [&, iter = 0]() mutable {
+			if (++iter == 4) {
+				times = 0;
+				eq.stop_immediately();
+			}
+			return true;
+		});
+	});
+}
+
+TEST(EventQueue,
+     stop_immediately_from_other_thread_while_running_time_handlers) {
+	EventQueue eq;
+	size_t times = 0;
+
+	auto handler_impl = [&](auto& self) -> void {
+		++times;
+		eq.add_ready_handler([&self] { self(self); });
+	};
+
+	eq.add_ready_handler([&] { handler_impl(handler_impl); });
+
+	concurrent::Semaphore sem(0);
+	eq.add_ready_handler([&] { sem.post(); });
+
+	std::thread other([&] {
+		sem.wait();
+		std::this_thread::sleep_for(8us);
+		eq.stop_immediately();
+	});
+
+	eq.run();
+	other.join();
+
+	EXPECT_GT(times, 0);
+}
+
+TEST(EventQueue,
+     stop_immediately_from_other_thread_while_running_repeating_handler) {
+	EventQueue eq;
+	size_t times = 0;
+
+	eq.add_repeating_handler(0ns, [&] {
+		++times;
+		return true;
+	});
+
+	concurrent::Semaphore sem(0);
+	eq.add_ready_handler([&] { sem.post(); });
+
+	std::thread other([&] {
+		sem.wait();
+		std::this_thread::sleep_for(8us);
+		eq.stop_immediately();
+	});
+
+	eq.run();
+	other.join();
+
+	EXPECT_GT(times, 0);
+}
+
+TEST(EventQueue,
+     stop_immediately_from_other_thread_while_running_file_handlers) {
+	EventQueue eq;
+	size_t writes = 0;
+
+	FileDescriptor fd("/dev/null", O_WRONLY);
+	assert(fd.is_open());
+	eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] { ++writes; });
+
+	concurrent::Semaphore sem(0);
+	eq.add_ready_handler([&] { sem.post(); });
+
+	std::thread other([&] {
+		sem.wait();
+		std::this_thread::sleep_for(8us);
+		eq.stop_immediately();
+	});
+
+	eq.run();
+	other.join();
+
+	EXPECT_GT(writes, 0);
+}
+
+TEST(EventQueue, stop_immediately_from_other_thread_while_waiting) {
+	EventQueue eq;
+	string order;
+
+	std::array<int, 2> pfd;
+	if (pipe2(pfd.data(), O_CLOEXEC))
+		THROW("pipe2()", errmsg());
+
+	Defer guard = [&pfd] {
+		for (int fd : pfd)
+			(void)close(fd);
+	};
+
+	eq.add_file_handler(pfd[0], FileEvent::READABLE, [&] { order += "R"; });
+
+	concurrent::Semaphore sem(0);
+	eq.add_ready_handler([&] {
+		order += "P";
+		sem.post();
+	});
+
+	std::thread other([&] {
+		sem.wait();
+		std::this_thread::sleep_for(8us);
+		eq.stop_immediately();
+	});
+
+	eq.run();
+	other.join();
+
+	EXPECT_EQ(order, "P");
+}
+
+TEST(EventQueue, stop_immediately_before_run_is_noop) {
+	EventQueue eq;
+	string order;
+
+	eq.stop_immediately();
+	eq.add_ready_handler([&] { order += "x"; });
+	eq.add_ready_handler([&] { order += "x"; });
+	eq.stop_immediately();
+
+	eq.run();
+	EXPECT_EQ(order, "xx");
+}
+
+TEST(EventQueue, stop_immediately_and_run_again) {
+	EventQueue eq;
+	std::string order;
+
+	eq.add_time_handler(1us, [&] {
+		eq.stop_immediately();
+		order += "1";
+		eq.stop_immediately();
+	});
+
+	eq.add_time_handler(2us, [&] {
+		eq.stop_immediately();
+		order += "2";
+		eq.stop_immediately();
+	});
+
+	eq.run();
+	EXPECT_EQ(order, "1");
+	eq.run();
+	EXPECT_EQ(order, "12");
+	eq.run();
+	EXPECT_EQ(order, "12");
+}
+
+TEST(EventQueue, stop_immediately_and_run_again_loop) {
+	EventQueue eq;
+	std::string order;
+
+	eq.add_repeating_handler(0ns, [&, iter = 0]() mutable {
+		eq.stop_immediately();
+		order += static_cast<char>(++iter + '0');
+		return true;
+	});
+
+	eq.run();
+	EXPECT_EQ(order, "1");
+	eq.run();
+	EXPECT_EQ(order, "12");
+	eq.run();
+	EXPECT_EQ(order, "123");
+	eq.run();
+	EXPECT_EQ(order, "1234");
+	eq.run();
+	EXPECT_EQ(order, "12345");
+	eq.run();
+	EXPECT_EQ(order, "123456");
+	eq.run();
+	EXPECT_EQ(order, "1234567");
+	eq.run();
+	EXPECT_EQ(order, "12345678");
+	eq.run();
+	EXPECT_EQ(order, "123456789");
+}
+
 TEST(EventQueue, remove_time_handler) {
 	auto start = system_clock::now();
 	string order;
@@ -230,6 +473,35 @@ TEST(EventQueue_DeathTest, ready_handler_removes_itself) {
 		   eq.run();
 	   },
 	   ::testing::KilledBySignal(SIGABRT), "BUG");
+}
+
+TEST(EventQueue, compaction_of_file_handlers_edge_case) {
+	EventQueue eq;
+	string order;
+
+	FileDescriptor fd("/dev/null", O_WRONLY);
+	EventQueue::handler_id_t hid1, hid2;
+	hid1 = eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] {
+		eq.remove_handler(hid1);
+		order += "1";
+
+		hid2 = eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] {
+			// Now compaction removes the previous handler
+			eq.remove_handler(hid2);
+			order += "2";
+			eq.stop_immediately();
+
+			eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] {
+				order += "3";
+				eq.stop_immediately();
+			});
+		});
+	});
+
+	eq.run();
+	EXPECT_EQ(order, "12");
+	eq.run();
+	EXPECT_EQ(order, "123");
 }
 
 TEST(EventQueue, time_only_fairness) {
