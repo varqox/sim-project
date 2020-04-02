@@ -92,6 +92,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/proc_stat_file_contents.cc \
 	$(PREFIX)test/process.cc \
 	$(PREFIX)test/random.cc \
+	$(PREFIX)test/ranges.cc \
 	$(PREFIX)test/request_uri_parser.cc \
 	$(PREFIX)test/sandbox.cc \
 	$(PREFIX)test/sha.cc \
