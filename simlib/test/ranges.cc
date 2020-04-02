@@ -2,8 +2,10 @@
 
 #include <gtest/gtest.h>
 
+using std::vector;
+
 TEST(ranges, reverse_view_empty) {
-	std::vector<int> a, b;
+	vector<int> a, b;
 	for (int x : reverse_view(a))
 		b.emplace_back(x);
 
@@ -11,14 +13,14 @@ TEST(ranges, reverse_view_empty) {
 }
 
 TEST(ranges, reverse_view_lvalue) {
-	std::vector a = {1, 2, 3, 4, 5};
-	std::vector<int> b;
+	vector a = {1, 2, 3, 4, 5};
+	vector<int> b;
 	for (int x : reverse_view(a))
 		b.emplace_back(x);
 
-	EXPECT_EQ(b, (std::vector {5, 4, 3, 2, 1}));
+	EXPECT_EQ(b, (vector {5, 4, 3, 2, 1}));
 
-	std::vector<int> v {1};
+	vector<int> v {1};
 	for (int x : reverse_view(v))
 		EXPECT_NE(&v[0], &x);
 	for (auto& x : reverse_view(v))
@@ -30,14 +32,14 @@ TEST(ranges, reverse_view_lvalue) {
 }
 
 TEST(ranges, reverse_view_double_lvalue) {
-	std::vector<int> a {1, 2, 3, 4, 5};
-	std::vector<int> b;
+	vector<int> a {1, 2, 3, 4, 5};
+	vector<int> b;
 	for (int x : reverse_view(reverse_view(a)))
 		b.emplace_back(x);
 
-	EXPECT_EQ(b, (std::vector {1, 2, 3, 4, 5}));
+	EXPECT_EQ(b, (vector {1, 2, 3, 4, 5}));
 
-	std::vector<int> v {1};
+	vector<int> v {1};
 	for (int x : reverse_view(reverse_view(v)))
 		EXPECT_NE(&v[0], &x);
 	for (auto& x : reverse_view(reverse_view(v)))
@@ -49,19 +51,19 @@ TEST(ranges, reverse_view_double_lvalue) {
 }
 
 TEST(ranges, reverse_view_simple_xvalue) {
-	std::vector<int> b;
-	for (int x : reverse_view(std::vector {1, 2, 3, 4, 5}))
+	vector<int> b;
+	for (int x : reverse_view(vector {1, 2, 3, 4, 5}))
 		b.emplace_back(x);
 
-	EXPECT_EQ(b, (std::vector {5, 4, 3, 2, 1}));
+	EXPECT_EQ(b, (vector {5, 4, 3, 2, 1}));
 }
 
 TEST(ranges, reverse_view_double_xvalue) {
-	std::vector<int> b;
-	for (int x : reverse_view(reverse_view(std::vector {1, 2, 3, 4, 5})))
+	vector<int> b;
+	for (int x : reverse_view(reverse_view(vector {1, 2, 3, 4, 5})))
 		b.emplace_back(x);
 
-	EXPECT_EQ(b, (std::vector {1, 2, 3, 4, 5}));
+	EXPECT_EQ(b, (vector {1, 2, 3, 4, 5}));
 }
 
 namespace {
@@ -91,9 +93,17 @@ TEST(ranges, reverse_view_double_on_xvalue_lifetime) {
 	EXPECT_EQ(dead, 2);
 }
 
+TEST(ranges, reverse_view_c_array) {
+	int arr[] = {1, 2, 3};
+	vector<int> res;
+	for (int x : reverse_view(arr))
+		res.emplace_back(x);
+	EXPECT_EQ(res, (vector {3, 2, 1}));
+}
+
 TEST(ranges, reverse_view_and_sort) {
-	std::vector v {4, 2, 5, 3, 1};
+	vector v {4, 2, 5, 3, 1};
 	auto rv = reverse_view(v);
 	std::sort(rv.begin(), rv.end());
-	EXPECT_EQ(v, (std::vector {5, 4, 3, 2, 1}));
+	EXPECT_EQ(v, (vector {5, 4, 3, 2, 1}));
 }

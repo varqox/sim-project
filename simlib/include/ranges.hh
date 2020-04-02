@@ -8,10 +8,10 @@ struct reverse_view_impl {
 	   [[maybe_unused]]; // Used to allow reverse_view(reverse_view(...))
 	T range_;
 
-	constexpr auto begin() { return range_.rbegin(); }
-	constexpr auto end() { return range_.rend(); }
-	constexpr auto rbegin() { return range_.begin(); }
-	constexpr auto rend() { return range_.end(); }
+	constexpr auto begin() { return std::rbegin(range_); }
+	constexpr auto end() { return std::rend(range_); }
+	constexpr auto rbegin() { return std::begin(range_); }
+	constexpr auto rend() { return std::end(range_); }
 };
 
 template <class T>
