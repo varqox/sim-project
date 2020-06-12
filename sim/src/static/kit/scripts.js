@@ -5789,6 +5789,10 @@ function open_calendar_on(time, text_input, hidden_input) {
 								type: 'text',
 								maxlength: 2,
 								click: function() { this.select(); },
+								prop: {
+									seconds_per_unit: [3600, 60, 1][idx],
+									jump_seconds_per_unit: [21600,600,10][idx],
+								}
 							}).on('focusout', function() {
 								var val = parseInt($(this).val());
 								if (isNaN(val) || val < 0)
@@ -6012,12 +6016,15 @@ function open_calendar_on(time, text_input, hidden_input) {
 		]
 	}), function(modal_elem) {
 		var keystorke_update = function(e) {
+			// Editing combined datetime input field
 			if (datetime_info_input.is(':focus')) {
 				setTimeout(function() {
+					// Dotetime validation
 					var miliseconds_dt = Date.parse(datetime_info_input.val());
 					if (isNaN(miliseconds_dt)) {
 						datetime_info_input.css('background-color', '#ff9393');
 					} else {
+						// Propagate new datetime to the rest of calendar
 						time = new Date(miliseconds_dt);
 						datetime_info_input.css('background-color', 'initial');
 						update_calendar(false);
@@ -6027,6 +6034,20 @@ function open_calendar_on(time, text_input, hidden_input) {
 						}
 					}
 				});
+
+				return;
+			}
+
+			// Time input field
+			if (e.target.tagName === 'INPUT' && e.target.seconds_per_unit != null) {
+				var sec_delta = (e.shiftKey ? e.target.jump_seconds_per_unit : e.target.seconds_per_unit);
+				if (e.key === 'ArrowUp') {
+					change_second(sec_delta);
+					update_calendar();
+				} else if (e.key === 'ArrowDown') {
+					change_second(-sec_delta);
+					update_calendar();
+				}
 
 				return;
 			}
