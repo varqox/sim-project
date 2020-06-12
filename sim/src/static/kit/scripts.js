@@ -5785,32 +5785,46 @@ function open_calendar_on(time, text_input, hidden_input) {
 					})
 				}), $('<tr>', {
 					html: [23,59,59].map(function(max_val, idx) {
-						return $('<td>', {html: $('<input>', {
-								type: 'text',
-								maxlength: 2,
-								click: function() { this.select(); },
-								prop: {
-									seconds_per_unit: [3600, 60, 1][idx],
-									jump_seconds_per_unit: [21600,600,10][idx],
-								}
-							}).on('focusout', function() {
-								var val = parseInt($(this).val());
-								if (isNaN(val) || val < 0)
-									val = '00';
-								else if (val > max_val)
-									val = max_val;
-								else if (val < 10)
-									val = '0' + val;
-
-								$(this).val(val);
-								if (idx === 0)
-									time.setHours(val);
-								else if (idx === 1)
-									time.setMinutes(val);
-								else if (idx === 2)
-									time.setSeconds(val);
-							})
+						var input = $('<input>', {
+							type: 'text',
+							maxlength: 2,
+							prop: {
+								seconds_per_unit: [3600, 60, 1][idx],
+								jump_seconds_per_unit: [21600,600,10][idx],
+							}
 						});
+						var input_value_change = function() {
+							var val = parseInt(input.val());
+							if (isNaN(val) || val < 0 || val > max_val) {
+								input.css('background-color', '#ff9393');
+								return;
+							}
+							input.css('background-color', 'initial');
+
+							if (idx === 0)
+								time.setHours(val);
+							else if (idx === 1)
+								time.setMinutes(val);
+							else if (idx === 2)
+								time.setSeconds(val);
+
+							update_calendar(true, false);
+						};
+						// Event handlers
+						input.on('input', input_value_change);
+						input.on('focusout', function() {
+							var val = parseInt($(this).val());
+							if (isNaN(val) || val < 0)
+								val = '00';
+							else if (val > max_val)
+								val = max_val;
+							else if (val < 10)
+								val = '0' + val;
+							input.val(val);
+							input_value_change();
+						});
+
+						return $('<td>', {html: input});
 					})
 				}), $('<tr>', {
 					html: [3600,60,1].map(function(diff) {
@@ -5869,16 +5883,18 @@ function open_calendar_on(time, text_input, hidden_input) {
 	var tbody, tbody_date = new Date(time);
 	tbody_date.setDate(0); // Change month; this variable is used to skip
 	                       // regenerating the whole table when it is unnecessary
-	function update_calendar(update_input) {
-		if (update_input !== false)
+	function update_calendar(update_datetime_input, update_time_inputs) {
+		if (update_datetime_input !== false)
 			$(datetime_info_input).val(date_to_datetime_str(time));
 
 		// Time chooser
-		var x = time_chooser.find('input');
-		var foo = function(x) { return x < 10 ? '0' + x : x; };
-		x.eq(0).val(foo(time.getHours()));
-		x.eq(1).val(foo(time.getMinutes()));
-		x.eq(2).val(foo(time.getSeconds()));
+		if (update_time_inputs !== false) {
+			var x = time_chooser.find('input');
+			var foo = function(x) { return x < 10 ? '0' + x : x; };
+			x.eq(0).val(foo(time.getHours()));
+			x.eq(1).val(foo(time.getMinutes()));
+			x.eq(2).val(foo(time.getSeconds()));
+		}
 		// Header
 		header.text(months[time.getMonth()] + ' ' + time.getFullYear());
 		// Tbody
