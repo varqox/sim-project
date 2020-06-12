@@ -5850,32 +5850,19 @@ function open_calendar_on(time, text_input, hidden_input) {
 			]
 		})
 	});
-	// Wheel handlers on time_chooser
-	time_chooser.find('td:first-child').on('wheel', function(e) {
+	// Wheel handler on time_chooser
+	time_chooser.find('tbody').on('wheel', function(e) {
 		e.preventDefault();
-		var coeff = $(this).parent().is(':first-child, :last-child') ? 6 : 1;
+		var tr = this.childNodes[2];
+		var td = tr.childNodes[$(e.target).closest('td', this).index()];
+		var input = td.childNodes[0];
+
+		var sec_delta = (e.shiftKey ? input.jump_seconds_per_unit : input.seconds_per_unit);
 		if (e.originalEvent.deltaY > 0)
-			change_second(-3600 * coeff);
+			change_second(-sec_delta);
 		else if (e.originalEvent.deltaY < 0)
-			change_second(+3600 * coeff);
-		update_calendar();
-	});
-	time_chooser.find('td:nth-child(2)').on('wheel', function(e) {
-		e.preventDefault();
-		var coeff = $(this).parent().is(':first-child, :last-child') ? 10 : 1;
-		if (e.originalEvent.deltaY > 0)
-			change_second(-60 * coeff);
-		else if (e.originalEvent.deltaY < 0)
-			change_second(+60 * coeff);
-		update_calendar();
-	});
-	time_chooser.find('td:last-child').on('wheel', function(e) {
-		e.preventDefault();
-		var coeff = $(this).parent().is(':first-child, :last-child') ? 10 : 1;
-		if (e.originalEvent.deltaY > 0)
-			change_second(-1 * coeff);
-		else if (e.originalEvent.deltaY < 0)
-			change_second(+1 * coeff);
+			change_second(sec_delta);
+
 		update_calendar();
 	});
 
