@@ -4,6 +4,7 @@
 #include "file_descriptor.hh"
 #include "meta.hh"
 #include "overloaded.hh"
+#include "repeating.hh"
 #include "shared_function.hh"
 #include "time.hh"
 
@@ -149,15 +150,15 @@ public:
 	}
 
 	// Will repeat @p handler with pauses of @p interval until it @p handler
-	// returns false.
+	// returns repeating::STOP.
 	void add_repeating_handler(time_point::duration interval,
-	                           std::function<bool()> handler) {
+	                           std::function<repeating()> handler) {
 		STACK_UNWINDING_MARK;
 		assert(interval >= decltype(interval)::zero());
 		auto impl = [this, interval,
 		             handler =
 		                shared_function(std::move(handler))](auto& self) {
-			if (not handler())
+			if (handler() == stop_repeating)
 				return;
 
 			// Continue repeating

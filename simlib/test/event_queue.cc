@@ -123,7 +123,7 @@ TEST(EventQueue, add_repeating_handler) {
 		++iter;
 
 		EXPECT_LE(start + iter * 100us, system_clock::now());
-		return (iter != 10);
+		return iter == 10 ? stop_repeating : continue_repeating;
 	});
 
 	eq.add_time_handler(50us, [&] {
@@ -162,7 +162,7 @@ TEST(EventQueue, adding_mutable_handler) {
 	eq.add_repeating_handler(0ns, [&, x = 0]() mutable {
 		++x;
 		++times;
-		return false;
+		return stop_repeating;
 	});
 
 	FileDescriptor fd("/dev/null", O_RDONLY);
@@ -198,7 +198,7 @@ static void pause_immediately_from_handler(Stopper&& stopper_installer) {
 
 	eq.add_repeating_handler(0ns, [&] {
 		++times;
-		return true;
+		return continue_repeating;
 	});
 
 	stopper_installer(eq, times);
@@ -223,7 +223,7 @@ TEST(EventQueue, pause_immediately_from_repeating_handler) {
 				times = 0;
 				eq.pause_immediately();
 			}
-			return true;
+			return continue_repeating;
 		});
 	});
 }
@@ -275,7 +275,7 @@ TEST(EventQueue,
 
 	eq.add_repeating_handler(0ns, [&] {
 		++times;
-		return true;
+		return continue_repeating;
 	});
 
 	concurrent::Semaphore sem(0);
@@ -394,7 +394,7 @@ TEST(EventQueue, pause_immediately_and_run_again_loop) {
 	eq.add_repeating_handler(0ns, [&, iter = 0]() mutable {
 		eq.pause_immediately();
 		order += static_cast<char>(++iter + '0');
-		return true;
+		return continue_repeating;
 	});
 
 	eq.run();
@@ -850,7 +850,7 @@ TEST(EventQueue, move_constructor_and_move_operator) {
 	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
 		order += '1';
 		++iter;
-		return (iter != 5);
+		return iter == 5 ? stop_repeating : continue_repeating;
 	});
 	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
 		order += '2';
@@ -860,7 +860,7 @@ TEST(EventQueue, move_constructor_and_move_operator) {
 			eq.pause_immediately();
 			eq.add_ready_handler([&] { order += 'r'; });
 		}
-		return (iter != 3);
+		return iter == 3 ? stop_repeating : continue_repeating;
 	});
 
 	int times_pipe_was_read = 0;
