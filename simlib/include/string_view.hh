@@ -5,6 +5,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 
 #ifdef _GLIBCXX_DEBUG
@@ -272,8 +273,8 @@ public:
 		return npos;
 	}
 
-	constexpr size_type find(Char c, size_type beg, size_type endi) const
-	   noexcept {
+	constexpr size_type find(Char c, size_type beg,
+	                         size_type endi) const noexcept {
 		if (endi > len)
 			endi = len;
 
@@ -355,8 +356,8 @@ public:
 		return npos;
 	}
 
-	constexpr size_type rfind(Char c, size_type beg, size_type endi) const
-	   noexcept {
+	constexpr size_type rfind(Char c, size_type beg,
+	                          size_type endi) const noexcept {
 		if (endi > len)
 			endi = len;
 

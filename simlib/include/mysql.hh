@@ -689,7 +689,7 @@ public:
 
 		// Truncation occurred
 		for (unsigned idx = 0; idx < res_binds_size_; ++idx) {
-			if (not*res_binds_[idx].error)
+			if (not *res_binds_[idx].error)
 				continue;
 
 			if (res_binds_[idx].buffer_type != MYSQL_TYPE_BLOB)

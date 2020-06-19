@@ -9,6 +9,7 @@
 
 #include <climits>
 #include <linux/version.h>
+#include <stdexcept>
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>

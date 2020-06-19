@@ -18,7 +18,7 @@ struct reverse_view_impl {
 };
 
 template <class T>
-reverse_view_impl(int, T &&)->reverse_view_impl<T&&>;
+reverse_view_impl(int, T &&) -> reverse_view_impl<T&&>;
 
 } // namespace detail
 
@@ -117,7 +117,7 @@ struct enumerate_view_struct {
 };
 
 template <class T>
-enumerate_view_struct(int, T &&)->enumerate_view_struct<T&&>;
+enumerate_view_struct(int, T &&) -> enumerate_view_struct<T&&>;
 
 } // namespace detail
 
