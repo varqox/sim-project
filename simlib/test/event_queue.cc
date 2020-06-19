@@ -178,7 +178,7 @@ TEST(EventQueue, adding_mutable_handler) {
 }
 
 template <class Stopper>
-static void stop_immediately_from_handler(Stopper&& stopper_installer) {
+static void pause_immediately_from_handler(Stopper&& stopper_installer) {
 	static_assert(std::is_invocable_v<Stopper, EventQueue&, size_t&>);
 
 	EventQueue eq;
@@ -206,34 +206,34 @@ static void stop_immediately_from_handler(Stopper&& stopper_installer) {
 	EXPECT_EQ(times, 0);
 }
 
-TEST(EventQueue, stop_immediately_from_time_handler) {
-	stop_immediately_from_handler([](EventQueue& eq, size_t& times) {
+TEST(EventQueue, pause_immediately_from_time_handler) {
+	pause_immediately_from_handler([](EventQueue& eq, size_t& times) {
 		eq.add_time_handler(100us, [&] {
 			times = 0;
-			eq.stop_immediately();
+			eq.pause_immediately();
 		});
 	});
 }
 
-TEST(EventQueue, stop_immediately_from_repeating_handler) {
-	stop_immediately_from_handler([](EventQueue& eq, size_t& times) {
+TEST(EventQueue, pause_immediately_from_repeating_handler) {
+	pause_immediately_from_handler([](EventQueue& eq, size_t& times) {
 		eq.add_repeating_handler(8us, [&, iter = 0]() mutable {
 			if (++iter == 10) {
 				times = 0;
-				eq.stop_immediately();
+				eq.pause_immediately();
 			}
 			return true;
 		});
 	});
 }
 
-TEST(EventQueue, stop_immediately_from_file_handler) {
+TEST(EventQueue, pause_immediately_from_file_handler) {
 	FileDescriptor fd("/dev/null", O_WRONLY);
-	stop_immediately_from_handler([&](EventQueue& eq, size_t& times) {
+	pause_immediately_from_handler([&](EventQueue& eq, size_t& times) {
 		eq.add_file_handler(fd, FileEvent::WRITEABLE, [&, iter = 0]() mutable {
 			if (++iter == 4) {
 				times = 0;
-				eq.stop_immediately();
+				eq.pause_immediately();
 			}
 			return true;
 		});
@@ -241,7 +241,7 @@ TEST(EventQueue, stop_immediately_from_file_handler) {
 }
 
 TEST(EventQueue,
-     stop_immediately_from_other_thread_while_running_time_handlers) {
+     pause_immediately_from_other_thread_while_running_time_handlers) {
 	EventQueue eq;
 	size_t times = 0;
 
@@ -258,7 +258,7 @@ TEST(EventQueue,
 	std::thread other([&] {
 		sem.wait();
 		std::this_thread::sleep_for(8us);
-		eq.stop_immediately();
+		eq.pause_immediately();
 	});
 
 	eq.run();
@@ -268,7 +268,7 @@ TEST(EventQueue,
 }
 
 TEST(EventQueue,
-     stop_immediately_from_other_thread_while_running_repeating_handler) {
+     pause_immediately_from_other_thread_while_running_repeating_handler) {
 	EventQueue eq;
 	size_t times = 0;
 
@@ -283,7 +283,7 @@ TEST(EventQueue,
 	std::thread other([&] {
 		sem.wait();
 		std::this_thread::sleep_for(8us);
-		eq.stop_immediately();
+		eq.pause_immediately();
 	});
 
 	eq.run();
@@ -293,7 +293,7 @@ TEST(EventQueue,
 }
 
 TEST(EventQueue,
-     stop_immediately_from_other_thread_while_running_file_handlers) {
+     pause_immediately_from_other_thread_while_running_file_handlers) {
 	EventQueue eq;
 	size_t writes = 0;
 
@@ -307,7 +307,7 @@ TEST(EventQueue,
 	std::thread other([&] {
 		sem.wait();
 		std::this_thread::sleep_for(8us);
-		eq.stop_immediately();
+		eq.pause_immediately();
 	});
 
 	eq.run();
@@ -316,7 +316,7 @@ TEST(EventQueue,
 	EXPECT_GT(writes, 0);
 }
 
-TEST(EventQueue, stop_immediately_from_other_thread_while_waiting) {
+TEST(EventQueue, pause_immediately_from_other_thread_while_waiting) {
 	EventQueue eq;
 	string order;
 
@@ -340,7 +340,7 @@ TEST(EventQueue, stop_immediately_from_other_thread_while_waiting) {
 	std::thread other([&] {
 		sem.wait();
 		std::this_thread::sleep_for(8us);
-		eq.stop_immediately();
+		eq.pause_immediately();
 	});
 
 	eq.run();
@@ -349,33 +349,33 @@ TEST(EventQueue, stop_immediately_from_other_thread_while_waiting) {
 	EXPECT_EQ(order, "P");
 }
 
-TEST(EventQueue, stop_immediately_before_run_is_noop) {
+TEST(EventQueue, pause_immediately_before_run_is_noop) {
 	EventQueue eq;
 	string order;
 
-	eq.stop_immediately();
+	eq.pause_immediately();
 	eq.add_ready_handler([&] { order += "x"; });
 	eq.add_ready_handler([&] { order += "x"; });
-	eq.stop_immediately();
+	eq.pause_immediately();
 
 	eq.run();
 	EXPECT_EQ(order, "xx");
 }
 
-TEST(EventQueue, stop_immediately_and_run_again) {
+TEST(EventQueue, pause_immediately_and_run_again) {
 	EventQueue eq;
 	std::string order;
 
 	eq.add_time_handler(1us, [&] {
-		eq.stop_immediately();
+		eq.pause_immediately();
 		order += "1";
-		eq.stop_immediately();
+		eq.pause_immediately();
 	});
 
 	eq.add_time_handler(2us, [&] {
-		eq.stop_immediately();
+		eq.pause_immediately();
 		order += "2";
-		eq.stop_immediately();
+		eq.pause_immediately();
 	});
 
 	eq.run();
@@ -386,12 +386,12 @@ TEST(EventQueue, stop_immediately_and_run_again) {
 	EXPECT_EQ(order, "12");
 }
 
-TEST(EventQueue, stop_immediately_and_run_again_loop) {
+TEST(EventQueue, pause_immediately_and_run_again_loop) {
 	EventQueue eq;
 	std::string order;
 
 	eq.add_repeating_handler(0ns, [&, iter = 0]() mutable {
-		eq.stop_immediately();
+		eq.pause_immediately();
 		order += static_cast<char>(++iter + '0');
 		return true;
 	});
@@ -489,11 +489,11 @@ TEST(EventQueue, compaction_of_file_handlers_edge_case) {
 			// Now compaction removes the previous handler
 			eq.remove_handler(hid2);
 			order += "2";
-			eq.stop_immediately();
+			eq.pause_immediately();
 
 			eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] {
 				order += "3";
-				eq.stop_immediately();
+				eq.pause_immediately();
 			});
 		});
 	});
