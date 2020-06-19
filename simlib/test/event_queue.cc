@@ -23,6 +23,7 @@ using std::chrono_literals::operator""us;
 using std::chrono_literals::operator""ns;
 using std::function;
 using std::string;
+using std::vector;
 
 TEST(EventQueue, add_time_handler_time_point) {
 	auto start = system_clock::now();
@@ -118,8 +119,8 @@ TEST(EventQueue, add_repeating_handler) {
 
 	EventQueue eq;
 	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
-		++iter;
 		order += char('a' + iter);
+		++iter;
 
 		EXPECT_LE(start + iter * 100us, system_clock::now());
 		return (iter != 10);
@@ -136,7 +137,7 @@ TEST(EventQueue, add_repeating_handler) {
 	});
 
 	eq.run();
-	EXPECT_EQ(order, "1b2cdefghijk");
+	EXPECT_EQ(order, "1a2bcdefghij");
 }
 
 TEST(EventQueue, adding_mutable_handler) {
@@ -164,7 +165,7 @@ TEST(EventQueue, adding_mutable_handler) {
 		return false;
 	});
 
-	FileDescriptor fd("/dev/null", O_WRONLY);
+	FileDescriptor fd("/dev/null", O_RDONLY);
 	assert(fd.is_open());
 	EventQueue::handler_id_t hid;
 	hid = eq.add_file_handler(fd, FileEvent::READABLE, [&, x = 0]() mutable {
@@ -816,8 +817,8 @@ TEST(EventQueue, file_handler_removing_other_file_handler) {
 
 TEST(EventQueue, test_adding_new_file_handlers_after_removing_old_ones) {
 	FileDescriptor fd("/dev/null", O_RDONLY);
-	std::vector<EventQueue::handler_id_t> hids;
-	std::vector<int> iters;
+	vector<EventQueue::handler_id_t> hids;
+	vector<int> iters;
 
 	EventQueue eq;
 	for (int i = 0; i < 100; ++i) {
@@ -841,4 +842,54 @@ TEST(EventQueue, test_adding_new_file_handlers_after_removing_old_ones) {
 	assert(size(iters) == size(hids));
 	for (size_t i = 0; i < size(iters); ++i)
 		EXPECT_EQ(iters[i], 1) << "i: " << i;
+}
+
+TEST(EventQueue, move_constructor_and_move_operator) {
+	EventQueue eq;
+	string order;
+	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
+		order += '1';
+		++iter;
+		return (iter != 5);
+	});
+	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
+		order += '2';
+		++iter;
+		if (iter == 2) {
+			order += 'S';
+			eq.pause_immediately();
+			eq.add_ready_handler([&] { order += 'r'; });
+		}
+		return (iter != 3);
+	});
+
+	int times_pipe_was_read = 0;
+	std::array<int, 2> pfd;
+	if (pipe2(pfd.data(), O_CLOEXEC))
+		THROW("pipe2()", errmsg());
+	Defer guard = [&pfd] {
+		for (int fd : pfd)
+			(void)close(fd);
+	};
+	// File handler that will read twice: before and after pause
+	EventQueue::handler_id_t fhid;
+	fhid = eq.add_file_handler(pfd[0], FileEvent::READABLE, [&]() {
+		std::array<char, 2> buf;
+		assert(read(pfd[0], buf.data(), buf.size()) == 1);
+		if (++times_pipe_was_read == 2)
+			eq.remove_handler(fhid);
+	});
+	assert(write(pfd[1], "x", 1) == 1);
+
+	eq.run();
+	EXPECT_EQ(times_pipe_was_read, 1);
+
+	EventQueue other = std::move(eq);
+	other.add_ready_handler([&] { order += 'r'; });
+	eq = std::move(other);
+
+	assert(write(pfd[1], "y", 1) == 1);
+	eq.run();
+	EXPECT_EQ(times_pipe_was_read, 2);
+	EXPECT_EQ(order, "1212Srr1211");
 }

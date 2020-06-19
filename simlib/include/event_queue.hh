@@ -82,6 +82,33 @@ public:
 		});
 	}
 
+	EventQueue(const EventQueue&) = delete;
+
+	EventQueue(EventQueue&& other) noexcept
+	   : next_handler_id_(std::move(other.next_handler_id_)),
+	     handlers_(std::move(other.handlers_)),
+	     timed_handlers_(std::move(other.timed_handlers_)),
+	     poll_events_(std::move(other.poll_events_)),
+	     poll_events_idx_to_hid_(std::move(other.poll_events_idx_to_hid_)),
+	     immediate_pause_(
+	        other.immediate_pause_.load(std::memory_order_acquire)),
+	     immediate_pause_fd_(std::move(other.immediate_pause_fd_)) {}
+
+	EventQueue& operator=(const EventQueue&) = delete;
+
+	EventQueue& operator=(EventQueue&& other) {
+		next_handler_id_ = std::move(other.next_handler_id_);
+		handlers_ = std::move(other.handlers_);
+		timed_handlers_ = std::move(other.timed_handlers_);
+		poll_events_ = std::move(other.poll_events_);
+		poll_events_idx_to_hid_ = std::move(other.poll_events_idx_to_hid_);
+		immediate_pause_.store(
+		   other.immediate_pause_.load(std::memory_order_acquire),
+		   std::memory_order_release);
+		immediate_pause_fd_ = std::move(other.immediate_pause_fd_);
+		return *this;
+	}
+
 	// Stops processing of events immediately. It is safe to call it from other
 	// threads.
 	void pause_immediately() noexcept {
