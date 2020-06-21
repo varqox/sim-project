@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdlib.h>
 
 #define ARR_SIZE 10 << 20
@@ -20,6 +19,7 @@ int foo() {
 }
 
 int main() {
-	assert(foo() > 0);
+	if (foo() <= 0)
+		abort();
 	return 0;
 }

@@ -1,12 +1,13 @@
 #define _GNU_SOURCE
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 int main() {
 	int fd = open("/dev/null", O_RDONLY);
-	assert(fd != -1);
+	if (fd == -1)
+		abort();
 
 	if (dup2(fd, STDIN_FILENO) == -1)
 		return __LINE__;

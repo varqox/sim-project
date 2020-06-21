@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <signal.h>
 #include <stdlib.h>
 
@@ -22,9 +21,12 @@ int foo() {
 
 int main() {
 	sigset_t set;
-	assert(0 == sigfillset(&set));
-	assert(0 == sigprocmask(SIG_BLOCK, &set, NULL));
-	assert(foo() > 0);
+	if (sigfillset(&set))
+		abort();
+	if (sigprocmask(SIG_BLOCK, &set, NULL))
+		abort();
+	if (foo() <= 0)
+		abort();
 
 	for (;;) {
 	}

@@ -1,10 +1,11 @@
-#include <assert.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 int main() {
 	int fd = open("/tmp", O_RDONLY);
-	assert(fd != -1);
+	if (fd == -1)
+		abort();
 	close(fd);
 
 	return 0;

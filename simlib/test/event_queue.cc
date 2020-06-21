@@ -875,11 +875,13 @@ TEST(EventQueue, move_constructor_and_move_operator) {
 	EventQueue::handler_id_t fhid;
 	fhid = eq.add_file_handler(pfd[0], FileEvent::READABLE, [&]() {
 		std::array<char, 2> buf;
-		assert(read(pfd[0], buf.data(), buf.size()) == 1);
+		int rc = read(pfd[0], buf.data(), buf.size());
+		assert(rc == 1);
 		if (++times_pipe_was_read == 2)
 			eq.remove_handler(fhid);
 	});
-	assert(write(pfd[1], "x", 1) == 1);
+	int rc = write(pfd[1], "x", 1);
+	assert(rc == 1);
 
 	eq.run();
 	EXPECT_EQ(times_pipe_was_read, 1);
@@ -888,7 +890,8 @@ TEST(EventQueue, move_constructor_and_move_operator) {
 	other.add_ready_handler([&] { order += 'r'; });
 	eq = std::move(other);
 
-	assert(write(pfd[1], "y", 1) == 1);
+	rc = write(pfd[1], "y", 1);
+	assert(rc == 1);
 	eq.run();
 	EXPECT_EQ(times_pipe_was_read, 2);
 	EXPECT_EQ(order, "1212Srr1211");

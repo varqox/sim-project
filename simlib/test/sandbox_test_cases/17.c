@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdlib.h>
 
 #define ARR_SIZE 1000
@@ -23,6 +22,7 @@ int foo(int n) {
 }
 
 int main() {
-	assert(foo(1000000) > 0); // Cause stack overflow
+	if (foo(1000000) <= 0)
+		abort();
 	return 0;
 }

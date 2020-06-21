@@ -62,9 +62,9 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
 		                              // expired
 		                              itimerspec new_its {{0, 0}, {0, 0}};
 		                              itimerspec old_its;
-		                              assert(timer_settime(state.timer_id, 0,
-		                                                   &new_its,
-		                                                   &old_its) == 0);
+		                              int rc = timer_settime(
+		                                 state.timer_id, 0, &new_its, &old_its);
+		                              assert(rc == 0);
 		                              if (old_its.it_value == timespec {0, 0}) {
 			                              // timer is already disarmed => the
 			                              // signal handler was / is about to
@@ -73,7 +73,8 @@ timespec Spawner::Timer::delete_timer_and_get_remaning_time() noexcept {
 				                              pause();
 		                              }
 
-		                              assert(timer_delete(state.timer_id) == 0);
+		                              rc = timer_delete(state.timer_id);
+		                              assert(rc == 0);
 		                              return old_its.it_value;
 	                              }},
 	                  state_);
@@ -150,7 +151,8 @@ std::chrono::nanoseconds Spawner::Timer::deactivate_and_get_runtime() noexcept {
 	   overloaded {
 	      [&](const WithoutTimeout& state) {
 		      timespec curr_clock_time;
-		      assert(clock_gettime(clock_id_, &curr_clock_time) == 0);
+		      int rc = clock_gettime(clock_id_, &curr_clock_time);
+		      assert(rc == 0);
 		      return to_nanoseconds(curr_clock_time - state.start_clock_time);
 	      },
 	      [&](WithTimeout& state) {

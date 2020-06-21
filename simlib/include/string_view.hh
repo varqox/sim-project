@@ -2,15 +2,12 @@
 
 #include "to_string.hh"
 
+#include <cassert>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
-
-#ifdef _GLIBCXX_DEBUG
-#include <cassert>
-#endif
 
 template <class Char>
 class StringBase {
@@ -137,19 +134,15 @@ public:
 
 	// Returns reference to n-th element
 	constexpr reference operator[](size_type n) noexcept {
-#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
-#endif
 		return str[n];
 	}
 
 	// Returns const_reference to n-th element
 	constexpr const_reference operator[](size_type n) const noexcept {
-#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
-#endif
 		return str[n];
 	}
 
@@ -158,10 +151,8 @@ public:
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
-#ifdef _GLIBCXX_DEBUG
 		assert(n >= 0);
 		assert(n < len);
-#endif
 		return str[n];
 	}
 
@@ -636,9 +627,7 @@ public:
 
 	// Be careful with the constructor below! @p s cannot be null
 	constexpr explicit CStringView(pointer s) noexcept : StringBase(s) {
-#ifdef _GLIBCXX_DEBUG
 		assert(s);
-#endif
 	}
 
 	// Be careful with the constructor below! @p s cannot be null
@@ -647,10 +636,8 @@ public:
 
 	// Be careful with the constructor below! @p s cannot be null
 	constexpr CStringView(pointer s, size_type n) noexcept : StringBase(s, n) {
-#ifdef _GLIBCXX_DEBUG
 		assert(s);
 		assert(s[n] == '\0');
-#endif
 	}
 
 	constexpr CStringView(const CStringView&) noexcept = default;

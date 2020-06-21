@@ -134,9 +134,10 @@ public:
 
 			if (pfds[signal_efd_idx].revents & POLLIN) {
 				uint64_t packed_signum;
-				assert(read(HandleSignalsWhileRunning::signal_eventfd,
-				            &packed_signum,
-				            sizeof(packed_signum)) == sizeof(packed_signum));
+				auto read_bytes =
+				   read(HandleSignalsWhileRunning::signal_eventfd,
+				        &packed_signum, sizeof(packed_signum));
+				assert(read_bytes == sizeof(packed_signum));
 				int signum =
 				   HandleSignalsWhileRunning::unpack_signum(packed_signum);
 
@@ -169,7 +170,9 @@ public:
 			// Signal signal-handling thread that main has ended (normally or
 			// abnormally)
 			uint64_t one = 1;
-			assert(write(main_func_ended_eventfd, &one, sizeof(one)) == 8);
+			auto written_bytes =
+			   write(main_func_ended_eventfd, &one, sizeof(one));
+			assert(written_bytes == 8);
 			// Wait till the signal-handling thread kills the whole process or
 			// confirms that it is safe to proceed
 			signal_handling_thread.join();

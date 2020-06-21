@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -22,7 +21,8 @@ int foo() {
 }
 
 int main() {
-	assert(foo() > 0);
+	if (foo() <= 0)
+		abort();
 	syscall(SYS_exit, 11);
 	return 0;
 }

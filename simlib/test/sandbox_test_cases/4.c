@@ -1,7 +1,7 @@
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -15,14 +15,18 @@ int main() {
 		ptr[i] = 'x';
 
 	char* fake_name = ptr + page_size - 10;
-	assert(syscall(SYS_open, fake_name, O_RDONLY) == -1 &&
-	       errno == ENAMETOOLONG);
-	assert(syscall(SYS_open, NULL, O_RDONLY) == -1 && errno == EFAULT);
-	assert(syscall(SYS_open, "exec", O_RDONLY) == -1 && errno == EPERM);
+	if (syscall(SYS_open, fake_name, O_RDONLY) != -1 || errno != ENAMETOOLONG)
+		abort();
+	if (syscall(SYS_open, NULL, O_RDONLY) != -1 || errno != EFAULT)
+		abort();
+	if (syscall(SYS_open, "exec", O_RDONLY) != -1 || errno != EPERM)
+		abort();
 
 	sigset_t set;
-	assert(0 == sigfillset(&set));
-	assert(0 == sigprocmask(SIG_BLOCK, &set, NULL));
+	if (sigfillset(&set))
+		abort();
+	if (sigprocmask(SIG_BLOCK, &set, NULL))
+		abort();
 	syscall(SYS_socket, 0, 0, 0);
 
 	return 0;
