@@ -10,7 +10,7 @@ size_t read_all(int fd, void* buf, size_t count) noexcept {
 	ssize_t k;
 	size_t pos = 0;
 	uint8_t* buff = static_cast<uint8_t*>(buf);
-	do {
+	while (pos < count) {
 		k = read(fd, buff + pos, count - pos);
 		if (k > 0)
 			pos += k;
@@ -20,8 +20,7 @@ size_t read_all(int fd, void* buf, size_t count) noexcept {
 
 		} else if (errno != EINTR)
 			return pos; // Error
-
-	} while (pos < count);
+	}
 
 	errno = 0; // No error
 	return count;
@@ -32,14 +31,13 @@ size_t write_all(int fd, const void* buf, size_t count) noexcept {
 	size_t pos = 0;
 	const uint8_t* buff = static_cast<const uint8_t*>(buf);
 	errno = 0;
-	do {
+	while (pos < count) {
 		k = write(fd, buff + pos, count - pos);
 		if (k >= 0)
 			pos += k;
 		else if (errno != EINTR)
 			return pos; // Error
-
-	} while (pos < count);
+	}
 
 	errno = 0; // No error (need to set again because errno may equal to EINTR)
 	return count;
