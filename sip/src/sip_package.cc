@@ -5,11 +5,14 @@
 #include "templates.hh"
 #include "utils.hh"
 
+#include <chrono>
 #include <fstream>
+#include <memory>
 #include <poll.h>
 #include <simlib/defer.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_info.hh>
+#include <simlib/inotify.hh>
 #include <simlib/libzip.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
@@ -297,7 +300,7 @@ void SipPackage::generate_test_output_files() {
 	prepare_tests_files();
 	// Create out/ dir if needed
 	tests_files.value().tests.for_each([&](auto&& p) {
-		if (has_prefix(p.second.in.value_or(""), "in/")) {
+		if (p.second.in.has_value() and has_prefix(*p.second.in, "in/")) {
 			if (mkdir("out") == -1 and errno != EEXIST) {
 				throw SipError("failed to create directory out/ (mkdir()",
 				               errmsg(), ')');
@@ -646,117 +649,51 @@ static void compile_tex_file(StringView file) {
 
 		if (es.si.code != CLD_EXITED or es.si.status != 0) {
 			// During watching it is not intended to stop on compilation error
-			errlog("\033[1;31mCompilation failed.\033[m");
+			errlog("\033[1m", file, ": \033[1;31mcompilation failed\033[m");
+			return; // Second iteration makes no sense on compilation error
 		}
 	}
 
 	auto src =
 	   concat("utils/latex/", path_filename(file).without_suffix(3), "pdf");
 	auto dest = concat(file.without_suffix(3), "pdf");
-	if (move(src, dest) == -1) {
+	if (move(src, dest) == -1 and errno != ENOENT) {
 		throw SipError("failed to rename file ", src, " into ", dest,
 		               " (move()", errmsg(), ')');
 	}
+
+	stdlog("\033[1m", file, ": \033[1;32mcompilation complete\033[m");
 }
+
+
+class SipWatchingLog : public WatchingLog {
+public:
+	void could_not_watch(const std::string& path, int errnum) override {
+		log_warning("could not watch ", path, ": inotify_add_watch()",
+		       errmsg(errnum));
+	}
+
+	void read_failed(int errnum) override {
+		log_warning("read()", errmsg(errnum));
+	}
+
+	void started_watching(const std::string& file) override {
+		stdlog("\033[1mStarted watching ", file, "\033[m");
+	}
+};
 
 static void watch_tex_files(const std::vector<std::string>& tex_files) {
 	STACK_UNWINDING_MARK;
+	using namespace std::chrono_literals;
 
-	FileDescriptor ino_fd(inotify_init());
-	if (ino_fd == -1)
-		THROW("inotify_init()", errmsg());
+	FileModificationMonitor monitor;
+	for (auto& path : tex_files)
+		monitor.add_path(std::move(path), 10ms);
 
-	AVLDictSet<CStringView> unwatched_files;
-	for (CStringView file : tex_files)
-		unwatched_files.emplace(file);
-
-	AVLDictMap<FileDescriptor, CStringView> watched_files; // fd => file
-	auto process_unwatched_files = [&] {
-		for (auto it = unwatched_files.front(); it;) {
-			CStringView file = *it;
-			FileDescriptor fd(inotify_add_watch(ino_fd, file.data(),
-			                                    IN_MODIFY | IN_MOVE_SELF));
-			if (fd == -1) {
-				log_warning("could not watch file ", file,
-				            ": inotify_add_watch()", errmsg());
-
-				it = unwatched_files.upper_bound(file);
-				continue;
-			}
-
-			// File is now watched
-			stdlog("\033[1mStarted watching ", file, "\033[m");
-			watched_files.emplace(std::move(fd), file);
-			it = unwatched_files.upper_bound(file);
-			unwatched_files.erase(file);
-		}
-	};
-
-	using std::chrono::milliseconds;
-	using std::chrono_literals::operator""ms;
-	constexpr milliseconds STILNESS_THRESHOLD = 10ms;
-
-	// Inotify buffer
-	// WARNING: this assumes that no directory is watched
-	std::string inotify_buf(sizeof(inotify_event) * tex_files.size(), '\0');
-	for (AVLDictSet<CStringView> files_to_recompile;;) {
-		process_unwatched_files();
-
-		// Several normal events on the same file may occur in a quick
-		// succession and running latex compiler while the file is still
-		// changing is not a good idea. So we collect the events till a
-		// stillness moment occurs and then we compile them. It is not an ideal
-		// solution (waiting for stillness on every file), but works well in
-		// practice and it seems there is no need to implement move
-		// sophisticated one (monitoring stillness on each file individually)
-
-		// Wait for notification
-		pollfd pfd = {ino_fd, POLLIN, 0};
-		int rc = poll(&pfd, 1, milliseconds(STILNESS_THRESHOLD).count());
-		if (rc == 0) {
-			// Stillness happened -> safe to recompile files that changed
-			files_to_recompile.for_each(compile_tex_file);
-			files_to_recompile.clear();
-			rc = poll(&pfd, 1, -1); // Wait indefinitely for new events
-		}
-
-		if (rc < 0) // Handles error of the first or the second poll
-			THROW("poll()", errmsg());
-
-		ssize_t len = read(ino_fd, inotify_buf.data(), inotify_buf.size());
-		if (len < 1) {
-			log_warning("read()", errmsg());
-			continue;
-		}
-
-		struct inotify_event* event;
-		// Process files for which an event occurred
-		for (char* ptr = inotify_buf.data(); ptr < inotify_buf.data() + len;
-		     ptr += sizeof(inotify_event)) { // WARNING: if you want to watch
-			                                 // directories, add + events->len
-			event = (struct inotify_event*)ptr;
-			CStringView file = watched_files.find(event->wd)->second;
-			auto unwatch_file = [&] {
-				unwatched_files.emplace(file);
-				watched_files.erase(event->wd);
-			};
-
-			if (event->mask & IN_MOVE_SELF) {
-				// File was moved -- stop watching it
-				if (inotify_rm_watch(ino_fd, event->wd))
-					THROW("inotify_rm_watch()", errmsg());
-				unwatch_file();
-
-			} else if (event->mask & IN_IGNORED) {
-				// File has disappeared -- stop watching it
-				unwatch_file();
-
-			} else {
-				// Other (normal) event occurred
-				files_to_recompile.emplace(file);
-			}
-		}
-	}
+	monitor.set_add_missing_files_retry_period(50ms);
+	monitor.set_watching_log(std::make_unique<SipWatchingLog>());
+	monitor.set_event_handler(compile_tex_file);
+	monitor.watch();
 }
 
 void SipPackage::compile_tex_files(bool watch) {

@@ -122,7 +122,7 @@ struct character {
 };
 
 template <class... Opts>
-character(char&, Opts...)->character<sizeof...(Opts)>;
+character(char&, Opts...) -> character<sizeof...(Opts)>;
 
 class Scanner {
 public:
