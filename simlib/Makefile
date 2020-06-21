@@ -23,6 +23,7 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a,, \
 	$(PREFIX)src/http/response.cc \
 	$(PREFIX)src/http/server.cc \
 	$(PREFIX)src/humanize.cc \
+	$(PREFIX)src/inotify.cc \
 	$(PREFIX)src/libarchive_zip.cc \
 	$(PREFIX)src/logger.cc \
 	$(PREFIX)src/path.cc \
@@ -81,6 +82,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/file_path.cc \
 	$(PREFIX)test/http/response.cc \
 	$(PREFIX)test/humanize.cc \
+	$(PREFIX)test/inotify.cc \
 	$(PREFIX)test/inplace_array.cc \
 	$(PREFIX)test/inplace_buff.cc \
 	$(PREFIX)test/libzip.cc \

@@ -1,186 +1,176 @@
 #pragma once
 
-#include "avl_dict.hh"
-#include "concat.hh"
+#include "concat_tostr.hh"
 #include "debug.hh"
+#include "event_queue.hh"
 #include "file_descriptor.hh"
-#include "inplace_buff.hh"
 #include "logger.hh"
-#include "memory.hh"
 #include "string_traits.hh"
 #include "string_view.hh"
+#include "utilities.hh"
 
-#include <bits/stdint-uintn.h>
 #include <chrono>
-#include <cstddef>
 #include <cstdlib>
 #include <linux/limits.h>
-#include <string_view>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
 #include <sys/inotify.h>
-#include <sys/poll.h>
 #include <type_traits>
-#include <vector>
 
-class SimpleWatchingLog {
+class WatchingLog {
 public:
-	template <class... Args>
-	void warning(Args&&... args) {
-		stdlog("warning: ", std::forward<Args>(args)...);
+	virtual void could_not_watch(const std::string& path, int errnum) = 0;
+	virtual void read_failed(int errnum) = 0;
+	virtual void started_watching(const std::string& file) = 0;
+	virtual ~WatchingLog() = default;
+};
+
+class SilentWatchingLog : public WatchingLog {
+public:
+	void could_not_watch(const std::string&, int) override {}
+	void read_failed(int) override {}
+	void started_watching(const std::string&) override {}
+};
+
+class SimpleWatchingLog : public WatchingLog {
+public:
+	void could_not_watch(const std::string& path, int errnum) override {
+		stdlog("warning: could not watch ", path, ": inotify_add_watch()",
+		       errmsg(errnum));
 	}
 
-	void started_watching(CStringView file) {
+	void read_failed(int errnum) override {
+		stdlog("warning: read()", errmsg(errnum));
+	}
+
+	void started_watching(const std::string& file) override {
 		stdlog("Started watching: ", file);
 	}
 };
 
-class SilentWatchingLog {
-public:
-	template <class... Args>
-	void warning(Args&&...) {}
+class FileModificationMonitor {
+	using milliseconds = std::chrono::milliseconds;
+	using nanoseconds = std::chrono::nanoseconds;
+	using time_point = std::chrono::system_clock::time_point;
 
-	void started_watching(CStringView) {}
-};
+	struct FileInfo {
+		std::string path;
+		nanoseconds stillness_threshold;
 
-/**
- * @brief Watches files and directories specified as @p files and calls
- *   @p event_handler for every creation / modification (excluding rename
- *   and deletion) event on watched files or files directly inside
- *   watched directories
- *
- * @param files path of files and directories to watch (it is not recursive)
- * @param watching_log logger for warnings and start-watching events
- * @param event_handler callback to run on every modification / creation
- *   (excluding rename or deletion) event on watched files. It should accept
- *   CStringView as an argument that denotes a path of file corresponding to
- *   this event. This path will end with '/' iff the corresponding file is
- *   a directory.
- *
- * @errors will be thrown as std::runtime_exception with appropriate message.
- */
-template <class Handler, class WatchingLog>
-void watch_files_for_modification(const std::vector<std::string>& files,
-                                  WatchingLog&& watching_log,
-                                  Handler&& event_handler) {
-	STACK_UNWINDING_MARK;
-	static_assert(std::is_invocable_v<Handler, CStringView>);
-	FileDescriptor ino_fd(inotify_init());
-	if (ino_fd == -1)
-		THROW("inotify_init()", errmsg());
-
-	AVLDictSet<CStringView> unwatched_files;
-	for (CStringView file : files)
-		unwatched_files.emplace(file);
-
-	constexpr auto events_requiring_handler = IN_MODIFY | // modification
-	                                          IN_CREATE |
-	                                          IN_MOVED_TO; // file creation
-
-	constexpr auto all_events = events_requiring_handler |
-	                            IN_MOVE_SELF | // deletion
-	                            IN_EXCL_UNLINK; // do not monitor unlinked files
-
-	AVLDictMap<int, CStringView> watched_files; // wd => file path
-	bool starting_watching_is_a_modification = false;
-	auto process_unwatched_files = [&] {
-		unwatched_files.filter([&](CStringView file) {
-			int wd = inotify_add_watch(ino_fd, file.data(), all_events);
-			if (wd == -1) {
-				watching_log.warning("could not watch file ", file,
-				                     ": inotify_add_watch()", errmsg());
-				return false;
-			}
-
-			// File is now watched
-			watching_log.started_watching(file);
-			watched_files.emplace(wd, file);
-			if (starting_watching_is_a_modification)
-				event_handler(file);
-
-			return true;
-		});
+		friend bool operator<(const FileInfo& a, const FileInfo& b) noexcept {
+			return a.path < b.path;
+		}
 	};
 
-	process_unwatched_files();
-	starting_watching_is_a_modification = false;
+	std::set<FileInfo> added_files_;
 
-	using std::chrono::milliseconds;
-	constexpr auto DONT_TRY_TO_WATCH_UNWATCHED_FILES_TIMEOUT = milliseconds(50);
-	constexpr size_t inotify_buff_len =
-	   (sizeof(inotify_event) + PATH_MAX + 1) * 16;
-	std::unique_ptr<char[], delete_using_free> inotify_buff(
-	   (char*)std::aligned_alloc(sizeof(inotify_event), inotify_buff_len));
-	for (;;) {
-		// Wait for notification
-		pollfd pfd = {ino_fd, POLLIN, 0};
-		int rc =
-		   poll(&pfd, 1,
-		        (unwatched_files.empty()
-		            ? -1
-		            : milliseconds(DONT_TRY_TO_WATCH_UNWATCHED_FILES_TIMEOUT)
-		                 .count()));
-		if (rc < 0)
-			THROW("poll()", errmsg());
+	std::set<const FileInfo*> unwatched_files_;
+	std::map<int, const FileInfo*> watched_files_; // wd => FileInfo
+	bool processing_unwatched_files_is_scheduled_ = false;
 
-		if (rc == 0) { // Timeouted
-			process_unwatched_files();
-			continue;
-		}
+	static constexpr auto events_requiring_handler =
+	   IN_MODIFY | // modification
+	   IN_CREATE | IN_MOVED_TO; // file creation
 
-		assert(rc == 1);
-		ssize_t read_len = read(ino_fd, inotify_buff.get(), inotify_buff_len);
-		if (read_len < 1) {
-			watching_log.warning("read()", errmsg());
-			continue;
-		}
+	static constexpr auto all_events =
+	   events_requiring_handler | IN_MOVE_SELF | // deletion
+	   IN_EXCL_UNLINK; // do not monitor unlinked files
 
-		char* ptr = inotify_buff.get();
-		while (ptr < inotify_buff.get() + read_len) {
-			decltype(inotify_event::wd) wd;
-			decltype(inotify_event::mask) mask;
-			// decltype(inotify_event::cookie) cookie; // ignored
-			decltype(inotify_event::len) len;
-			std::memcpy(&wd, ptr + offsetof(inotify_event, wd), sizeof(wd));
-			std::memcpy(&mask, ptr + offsetof(inotify_event, mask),
-			            sizeof(mask));
-			std::memcpy(&len, ptr + offsetof(inotify_event, len), sizeof(len));
-			StringView name(ptr + offsetof(inotify_event, name));
-			static_assert(offsetof(inotify_event, name) ==
-			              sizeof(inotify_event));
-			ptr += sizeof(inotify_event) + len;
+	struct simlib_inotify_event {
+		decltype(inotify_event::wd) wd;
+		decltype(inotify_event::mask) mask;
+		decltype(inotify_event::cookie) cookie;
+		std::optional<CStringView> file_name;
+	};
 
-			// Process event
-			bool file_inside_dir = (len > 0);
-			CStringView wd_name = watched_files.find(wd)->second;
+	EventQueue eq_;
+	FileDescriptor intfy_fd_;
+	std::unique_ptr<char[]> intfy_buff_;
+	std::map<std::string, EventQueue::handler_id_t>
+	   deferred_modification_handlers_;
+	std::unique_ptr<WatchingLog> watching_log_ =
+	   std::make_unique<SilentWatchingLog>();
+	std::function<void(const std::string&)> event_handler_;
+	nanoseconds add_missing_files_retry_period_ = milliseconds(50);
 
-			stdlog(wd, ": ", wd_name, ": mask = ", mask);
+public:
+	/**
+	 * @brief Adds @p path to a file or directory to watch
+	 *
+	 * @param path path to a file or directory to watch (it is not recursive)
+	 * @param stillness_threshold the event handler will be called just after
+	 *   @p stillness_threshold time duration without modification events
+	 *   happening (it is useful, as saving file often takes several writes and
+	 *   you would want one event for that)
+	 */
+	void add_path(std::string path,
+	              nanoseconds stillness_threshold = nanoseconds(0)) {
+		STACK_UNWINDING_MARK;
 
-			if (mask & IN_IGNORED) {
-				// File is no longer being watched
-				watched_files.erase(wd);
-				unwatched_files.emplace(wd_name);
-			} else if (mask & IN_MOVE_SELF) {
-				// File has disappeared -- stop watching it
-				if (inotify_rm_watch(ino_fd, wd))
-					THROW("inotify_rm_watch()", errmsg());
-				// After removing watch an IN_IGNORED event will be generated,
-				// so the file will be unwatched in cache on that event
-			} else if (mask & events_requiring_handler) {
-				if (not file_inside_dir) {
-					if ((~mask & IN_ISDIR) or has_suffix(wd_name, "/")) {
-						event_handler(wd_name);
-					} else {
-						auto path = concat(wd_name, '/');
-						event_handler(path.to_cstr());
-					}
-				} else {
-					auto path =
-					   concat(wd_name, (has_suffix(wd_name, "/") ? "" : "/"),
-					          name, (mask & IN_ISDIR ? "/" : ""));
-					event_handler(path.to_cstr());
-				}
-			} else {
-				THROW("read unknown event for ", wd_name, ": mask = ", mask);
-			}
+		assert(stillness_threshold >= nanoseconds(0));
+		auto [it, inserted] =
+		   added_files_.insert({std::move(path), stillness_threshold});
+		assert(inserted and "Path added more than once");
+		try {
+			unwatched_files_.emplace(&*it);
+		} catch (...) {
+			added_files_.erase(it);
 		}
 	}
-}
+
+	EventQueue& event_queue() noexcept { return eq_; }
+
+	// @param watching_log logger for warnings and start-watching events
+	void set_watching_log(std::unique_ptr<WatchingLog> watching_log) {
+		watching_log_ = std::move(watching_log);
+	}
+
+	/**
+	 * @brief Installs @p event_handler that will be called on every
+	 *   modification / creation (excluding rename or deletion) event on watched
+	 *   files. It should accept const std::string& as an argument that denotes
+	 *   a path of the file correlated with this event.
+	 */
+	void
+	set_event_handler(std::function<void(const std::string&)> event_handler) {
+		event_handler_ = std::move(event_handler);
+	}
+
+	void set_add_missing_files_retry_period(nanoseconds val) {
+		add_missing_files_retry_period_ = val;
+	}
+
+	/**
+	 * @brief Watches files and directories specified via add_path() and calls
+	 *   set event handler for every creation / modification (excluding rename
+	 *   and deletion) event on watched files or files directly inside
+	 *   watched directories
+	 *
+	 * @errors will be thrown as std::runtime_exception with an appropriate
+	 *   message.
+	 */
+	void watch() {
+		STACK_UNWINDING_MARK;
+		if (not intfy_fd_.is_open())
+			init_watching();
+		eq_.run();
+	}
+
+	// Stops processing of events immediately. It is safe to call it from other
+	// threads.
+	void pause_immediately() noexcept { return eq_.pause_immediately(); }
+
+private:
+	void init_watching();
+
+	void process_event(const simlib_inotify_event& event);
+
+	void schedule_processing_unwatched_files();
+
+	void process_unwatched_files(bool run_modification_handler_on_success);
+
+	template <class String>
+	void run_modification_handler(const FileInfo* finfo, String&& file_path);
+};
