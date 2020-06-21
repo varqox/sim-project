@@ -244,7 +244,7 @@ void SipPackage::generate_test_input_files() {
 	tests_files = std::nullopt; // Probably new .in files were just created
 }
 
-static auto test_output_file(StringView test_input_file) {
+[[maybe_unused]] static auto test_output_file(StringView test_input_file) {
 	STACK_UNWINDING_MARK;
 
 	if (has_prefix(test_input_file, "in/")) {
