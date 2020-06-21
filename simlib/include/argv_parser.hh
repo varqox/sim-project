@@ -4,11 +4,11 @@
 
 class ArgvParser {
 	uint argc_;
-	char** argv_;
+	const char* const* argv_;
 
 public:
-	ArgvParser(int argc, char** argv)
-	   : argc_(std::max(argc - 1, 0)), argv_(argv + 1) {}
+	ArgvParser(int argc, const char* const* argv)
+	   : argc_(std::max(argc, 0)), argv_(argv) {}
 
 	ArgvParser(const ArgvParser&) = default;
 	ArgvParser(ArgvParser&&) noexcept = default;
