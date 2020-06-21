@@ -129,7 +129,7 @@ constexpr bool is_pair<std::pair<A, B>> = true;
 // where erase() is slow (use std::remove_if() there), but for std::set or
 // std::map it is fast
 template <class Container, class Predicate>
-void filter(Container&& container, Predicate&& pred) {
+Container filter(Container&& container, Predicate&& pred) {
 	auto it = container.begin();
 	while (it != container.end()) {
 		if (not pred(*it)) {
@@ -138,4 +138,6 @@ void filter(Container&& container, Predicate&& pred) {
 			++it;
 		}
 	}
+
+	return std::forward<Container>(container);
 }

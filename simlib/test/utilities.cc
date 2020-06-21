@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include <set>
 
+using std::set;
+
 TEST(DISABLED_utilities, back_insert) {
 	// TODO: implement it
 }
@@ -56,19 +58,40 @@ TEST(DISABLED_utilities, is_pair) {
 }
 
 TEST(utilities, filter) {
-	std::set s = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+	set s = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 	filter(s, [](int) { return true; });
-	EXPECT_EQ(s, (std::set {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+	EXPECT_EQ(s, (set {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
 	filter(s, [](int x) { return (x % 2 != 0); });
-	EXPECT_EQ(s, (std::set {1, 3, 5, 7, 9}));
+	EXPECT_EQ(s, (set {1, 3, 5, 7, 9}));
 	filter(s, [](int x) { return (x % 5 != 0); });
-	EXPECT_EQ(s, (std::set {1, 3, 7, 9}));
+	EXPECT_EQ(s, (set {1, 3, 7, 9}));
 	filter(s, [](int x) { return (x % 5 != 0); });
-	EXPECT_EQ(s, (std::set {1, 3, 7, 9}));
+	EXPECT_EQ(s, (set {1, 3, 7, 9}));
 	filter(s, [](int x) { return (x % 3 != 0); });
-	EXPECT_EQ(s, (std::set {1, 7}));
+	EXPECT_EQ(s, (set {1, 7}));
 	filter(s, [](int) { return false; });
-	EXPECT_EQ(s, (std::set<int> {}));
+	EXPECT_EQ(s, (set<int> {}));
 	filter(s, [](int) { return true; });
-	EXPECT_EQ(s, (std::set<int> {}));
+	EXPECT_EQ(s, (set<int> {}));
+}
+
+TEST(utilities, filter_return_type) {
+	set<int> s;
+	// lvalue
+	auto true_pred = [](int) { return true; };
+	static_assert(std::is_same_v<set<int>&, decltype(filter(s, true_pred))>);
+	// xvalue
+	static_assert(
+	   std::is_same_v<set<int>, decltype(filter(set<int> {}, true_pred))>);
+	// Check move only type
+	struct Foo {
+		Foo() = default;
+		Foo(const Foo&) = delete;
+		Foo(Foo&&) = default;
+
+		int* begin() noexcept { return nullptr; }
+		int* end() noexcept { return nullptr; }
+		void erase(int*) noexcept {}
+	};
+	(void)Foo(filter(Foo(), [](int) { return true; }));
 }
