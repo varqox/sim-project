@@ -44,17 +44,15 @@ void clean(ArgvParser args) {
 void doc(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
-	bool watch = false;
-	while (args.size() > 0) {
-		auto arg = args.extract_next();
-		if (arg == "watch")
-			watch = true;
-		else
-			throw SipError("clean: unrecognized argument: ", arg);
-	}
+	SipPackage sp;
+	sp.compile_tex_files(std::move(args), false);
+}
+
+void docwatch(ArgvParser args) {
+	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
-	sp.compile_tex_files(watch);
+	sp.compile_tex_files(std::move(args), true);
 }
 
 void genin(ArgvParser) {
@@ -127,9 +125,11 @@ Commands:
                           (compiled programs, latex logs, etc.).
                         Allowed args:
                           tests - remove all generated tests files
-  doc [watch]           Compile latex statements (if there are any). If watch is
-                          specified as an argument, then all statement files
-                          will be watched and recompiled on any change
+  doc [pattern...]      Compile latex statements (if there are any) matching
+                          [pattern...] (see Patterns section). No pattern means
+                          all TeX files.
+  docwatch [pattern...] Like command doc, but watch the files for modification
+                          and recompile on any change.
   gen                   Generate tests input and output files
   genin                 Generate tests input files
   genout                Generate tests output files using the main solution
@@ -149,8 +149,8 @@ Commands:
                           [value] MiB. Otherwise print its current value
   name [value]          If [value] is specified: set name to [value]. Otherwise
                           print its current value
-  prog [sol...]         Compile solutions [sol...] (all solutions by default).
-                          [sol] has the same meaning as in command 'test'
+  prog [pattern...]     Compile solutions matching [pattern...]
+                          (see Patterns section). No pattern means all solutions.
   regen                 Remove test files that don't belong to either static or
                           generated tests. Then generate tests input and output
                           files
@@ -173,10 +173,9 @@ Commands:
                           should have names: statement.tex, checker.cc,
                           interactive_checker.cc. Default templates can be found
                           here: https://github.com/varqox/sip/tree/master/templates
-  test [sol...]         Run solutions [sol...] on tests (only main solution by
-                          default) (compile solutions if necessary). If [sol] is
-                          a path to a solution then it is used, otherwise all
-                          solutions that have [sol] as a subsequence are used.
+  test [pattern...]     Run solutions matching [pattern...]
+                          (see Patterns section) on tests. No pattern means only
+                          main solution. Compiles solutions if necessary.
   unset <names...>      Remove variables names... form Simfile e.g.
                           sip unset label interactive
   version               Display version
@@ -190,6 +189,17 @@ Options:
   -h, --help            Display this information
   -v, --version         Display version
   -q, --quiet           Quiet mode
+
+Patterns:
+  If pattern is a path to file, then only this file matches the pattern.
+  Otherwise if the pattern does not contain . (dot) sign then it matches file
+  if it is a subsequence of the file's path without extension.
+  Otherwise patterns matches file if it is a subsequence of the file's path.
+  Examples:
+    - "foo/abc" matches "foo/abc", "foo/abc.xyz" but not "foo/ab.c"
+    - "cc" matches "foo/collect.c", "abcabc.xyz" but not "abc.c" or "xyz.cc"
+    - "a.x" matches "foo/abc.xyz" but not "foo/abcxyz.c" or "by.abcxyz"
+    - "o.c" matches "foo/x.c" and "bar/o.c"
 
 Sip package tree:
    main/                Main package folder
@@ -348,26 +358,12 @@ static AVLDictSet<StringView>
 parse_args_to_solutions(const sim::Simfile& simfile, ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
-	if (args.size() == 0)
-		return {};
-
+	std::set matched_files = files_matching_patterns(args);
 	AVLDictSet<StringView> choosen_solutions;
-	do {
-		auto arg = args.extract_next();
-		// If a path to solution was provided then choose it
-		auto it =
-		   std::find(simfile.solutions.begin(), simfile.solutions.end(), arg);
-		if (it != simfile.solutions.end()) {
-			choosen_solutions.emplace(*it);
-		} else {
-			// There is no solution with path equal to the provided path, so
-			// choose all that contain arg as a subsequence
-			for (auto const& solution : simfile.solutions)
-				if (matches_pattern(arg, solution))
-					choosen_solutions.emplace(solution);
-		}
-	} while (args.size() > 0);
-
+	for (auto& solution : simfile.solutions) {
+		if (matched_files.find(solution) != matched_files.end())
+			choosen_solutions.emplace(solution);
+	}
 	return choosen_solutions;
 }
 

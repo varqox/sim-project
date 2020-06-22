@@ -10,6 +10,8 @@ void clean(ArgvParser args);
 
 void doc(ArgvParser args);
 
+void docwatch(ArgvParser args);
+
 void genin(ArgvParser args);
 
 void genout(ArgvParser args);

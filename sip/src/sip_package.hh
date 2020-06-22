@@ -1,5 +1,6 @@
 #pragma once
 
+#include "simlib/argv_parser.hh"
 #include "sip_judge_logger.hh"
 #include "sipfile.hh"
 #include "tests_files.hh"
@@ -101,9 +102,10 @@ public:
 	// Saves specified template to its corresponding location in the package
 	void save_template(StringView template_name);
 
-	// Compiles all .tex files found in the package, if watch is true, then
-	// every .tex file will be recompiled on any change
-	void compile_tex_files(bool watch);
+	// Compiles all .tex files matching patterns specified in @p args or all
+	// found in the package if @p args is empty. If watch is true, then  every
+	// .tex file will be recompiled on any change.
+	void compile_tex_files(ArgvParser args, bool watch);
 
 	// Archives package contents into the file @p dest_file using .zip
 	void archive_into_zip(CStringView dest_file);

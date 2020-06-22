@@ -87,6 +87,7 @@ SIP_SRCS := \
 	src/sipfile.cc \
 	src/templates.cc \
 	src/tests_files.cc \
+	src/utils.cc \
 	templates/checker.cc.dump.c \
 	templates/interactive_checker.cc.dump.c \
 	templates/statement.tex.dump.c \

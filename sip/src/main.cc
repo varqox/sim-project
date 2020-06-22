@@ -56,7 +56,7 @@ static void parseOptions(int& argc, char** argv) {
 static void run_command(int argc, char** argv) {
 	STACK_UNWINDING_MARK;
 
-	ArgvParser args(argc, argv);
+	ArgvParser args(argc - 1, argv + 1);
 	StringView command = args.extract_next();
 
 	// Commands
@@ -66,6 +66,8 @@ static void run_command(int argc, char** argv) {
 		return commands::clean(args);
 	if (command == "doc")
 		return commands::doc(args);
+	if (command == "docwatch")
+		return commands::docwatch(args);
 	if (command == "gen")
 		return commands::gen(args);
 	if (command == "genin")

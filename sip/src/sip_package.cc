@@ -9,6 +9,7 @@
 #include <fstream>
 #include <memory>
 #include <poll.h>
+#include <simlib/argv_parser.hh>
 #include <simlib/defer.hh>
 #include <simlib/directory.hh>
 #include <simlib/file_info.hh>
@@ -16,8 +17,16 @@
 #include <simlib/libzip.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
+#include <simlib/sim/problem_package.hh>
+#include <simlib/string_traits.hh>
+#include <simlib/string_view.hh>
+#include <simlib/utilities.hh>
 #include <simlib/working_directory.hh>
 #include <sys/inotify.h>
+
+using std::set;
+using std::string;
+using std::vector;
 
 namespace {
 constexpr std::chrono::nanoseconds DEFAULT_TIME_LIMIT = std::chrono::seconds(5);
@@ -122,7 +131,7 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
 
 	sim::JudgeReport::Test res(test.name, sim::JudgeReport::Test::OK,
 	                           es.cpu_runtime, test.time_limit, es.vm_peak,
-	                           test.memory_limit, std::string {});
+	                           test.memory_limit, string {});
 
 	if (es.si.code == CLD_EXITED and es.si.status == 0 and
 	    res.runtime <= res.time_limit) {
@@ -154,7 +163,7 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
 	return res;
 }
 
-void SipPackage::reload_simfile_from_str(std::string contents) {
+void SipPackage::reload_simfile_from_str(string contents) {
 	try {
 		simfile = sim::Simfile(std::move(contents));
 	} catch (const std::exception& e) {
@@ -162,7 +171,7 @@ void SipPackage::reload_simfile_from_str(std::string contents) {
 	}
 }
 
-void SipPackage::reload_sipfile_from_str(std::string contents) {
+void SipPackage::reload_sipfile_from_str(string contents) {
 	try {
 		sipfile = Sipfile(std::move(contents));
 	} catch (const std::exception& e) {
@@ -270,7 +279,7 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 
 	// Remove tests that have no corresponding input file
 	auto const& limits = simfile.config_file().get_var("limits").as_array();
-	std::vector<std::string> new_limits;
+	vector<string> new_limits;
 	for (auto const& entry : limits) {
 		StringView test_name =
 		   StringView(entry).extract_leading(std::not_fn(is_space<char>));
@@ -665,24 +674,23 @@ static void compile_tex_file(StringView file) {
 	stdlog("\033[1m", file, ": \033[1;32mcompilation complete\033[m");
 }
 
-
 class SipWatchingLog : public WatchingLog {
 public:
-	void could_not_watch(const std::string& path, int errnum) override {
+	void could_not_watch(const string& path, int errnum) override {
 		log_warning("could not watch ", path, ": inotify_add_watch()",
-		       errmsg(errnum));
+		            errmsg(errnum));
 	}
 
 	void read_failed(int errnum) override {
 		log_warning("read()", errmsg(errnum));
 	}
 
-	void started_watching(const std::string& file) override {
+	void started_watching(const string& file) override {
 		stdlog("\033[1mStarted watching ", file, "\033[m");
 	}
 };
 
-static void watch_tex_files(const std::vector<std::string>& tex_files) {
+static void watch_tex_files(const set<string>& tex_files) {
 	STACK_UNWINDING_MARK;
 	using namespace std::chrono_literals;
 
@@ -696,20 +704,19 @@ static void watch_tex_files(const std::vector<std::string>& tex_files) {
 	monitor.watch();
 }
 
-void SipPackage::compile_tex_files(bool watch) {
+void SipPackage::compile_tex_files(ArgvParser args, bool watch) {
 	STACK_UNWINDING_MARK;
 
-	sim::PackageContents pc;
-	pc.load_from_directory(".");
-
-	std::vector<std::string> tex_files;
-	pc.for_each_with_prefix("", [&](StringView file) {
-		if (has_suffix(file, ".tex"))
-			tex_files.emplace_back(file.to_string());
-	});
+	const char* empty_str = "";
+	set tex_files =
+	   filter(files_matching_patterns(
+	             args.size() > 0 ? args : ArgvParser(1, &empty_str)),
+	          [&](StringView str) { return has_suffix(str, ".tex"); });
 
 	if (tex_files.empty()) {
-		log_warning("no .tex file was found");
+		log_warning("no .tex file ",
+		            args.size() > 0 ? "matching specified patterns " : "",
+		            "was found");
 		return;
 	}
 
@@ -813,7 +820,7 @@ void SipPackage::replace_variable_in_configfile(
 void SipPackage::replace_variable_in_configfile(
    const ConfigFile& cf, FilePath configfile_path,
    StringView configfile_contents, StringView var_name,
-   const std::vector<std::string>& replacement) {
+   const vector<string>& replacement) {
 	STACK_UNWINDING_MARK;
 
 	std::ofstream out(configfile_path.data());
@@ -862,7 +869,7 @@ void SipPackage::replace_variable_in_simfile(
 }
 
 void SipPackage::replace_variable_in_simfile(
-   StringView var_name, const std::vector<std::string>& replacement) {
+   StringView var_name, const vector<string>& replacement) {
 	STACK_UNWINDING_MARK;
 
 	replace_variable_in_configfile(simfile.config_file(), "Simfile",
@@ -884,7 +891,7 @@ void SipPackage::replace_variable_in_sipfile(StringView var_name,
 }
 
 void SipPackage::replace_variable_in_sipfile(
-   StringView var_name, const std::vector<std::string>& replacement) {
+   StringView var_name, const vector<string>& replacement) {
 	STACK_UNWINDING_MARK;
 
 	replace_variable_in_configfile(sipfile.config_file(), "Sipfile",
