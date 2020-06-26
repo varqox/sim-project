@@ -7,8 +7,7 @@ namespace detail {
 
 template <class T>
 struct reverse_view_impl {
-	int prevent_copy_elision_
-	   [[maybe_unused]]; // Used to allow reverse_view(reverse_view(...))
+	int prevent_copy_elision_; // Used to allow reverse_view(reverse_view(...))
 	T range;
 
 	constexpr auto begin() { return std::rbegin(range); }
@@ -102,8 +101,7 @@ namespace detail {
 
 template <class T>
 struct enumerate_view_struct {
-	int prevent_copy_elision_
-	   [[maybe_unused]]; // Used to allow reverse_view(reverse_view(...))
+	int prevent_copy_elision_; // Used to allow reverse_view(reverse_view(...))
 	T range;
 
 	constexpr auto begin() {

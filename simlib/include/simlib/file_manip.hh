@@ -257,7 +257,7 @@ public:
 
 	~RemoverBase() {
 		if (name.size != 0)
-			func(name);
+			(void)func(name);
 	}
 
 	void cancel() noexcept { name.size = 0; }

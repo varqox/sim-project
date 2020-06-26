@@ -134,14 +134,16 @@ public:
 
 	// Returns reference to n-th element
 	constexpr reference operator[](size_type n) noexcept {
-		assert(n >= 0);
+		if constexpr (not std::is_unsigned_v<decltype(n)>)
+			assert(n >= 0);
 		assert(n < len);
 		return str[n];
 	}
 
 	// Returns const_reference to n-th element
 	constexpr const_reference operator[](size_type n) const noexcept {
-		assert(n >= 0);
+		if constexpr (not std::is_unsigned_v<decltype(n)>)
+			assert(n >= 0);
 		assert(n < len);
 		return str[n];
 	}
@@ -151,7 +153,8 @@ public:
 		if (n >= len)
 			throw std::out_of_range("StringBase::at");
 
-		assert(n >= 0);
+		if constexpr (not std::is_unsigned_v<decltype(n)>)
+			assert(n >= 0);
 		assert(n < len);
 		return str[n];
 	}

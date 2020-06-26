@@ -90,7 +90,7 @@ void FileModificationMonitor::schedule_processing_unwatched_files() {
 		return stop_repeating;
 	});
 	processing_unwatched_files_is_scheduled_ = true;
-};
+}
 
 void FileModificationMonitor::process_unwatched_files(
    bool run_modification_handler_on_success) {
