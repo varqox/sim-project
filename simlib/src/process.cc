@@ -1,12 +1,12 @@
-#include "../include/process.hh"
-#include "../include/debug.hh"
-#include "../include/directory.hh"
-#include "../include/file_contents.hh"
-#include "../include/path.hh"
-#include "../include/proc_stat_file_contents.hh"
-#include "../include/string_traits.hh"
-#include "../include/string_transform.hh"
-#include "../include/working_directory.hh"
+#include "simlib/process.hh"
+#include "simlib/debug.hh"
+#include "simlib/directory.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/path.hh"
+#include "simlib/proc_stat_file_contents.hh"
+#include "simlib/string_traits.hh"
+#include "simlib/string_transform.hh"
+#include "simlib/working_directory.hh"
 
 #include <functional>
 #include <thread>

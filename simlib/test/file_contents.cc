@@ -1,4 +1,4 @@
-#include "../include/file_contents.hh"
+#include "simlib/file_contents.hh"
 
 #include <gtest/gtest.h>
 

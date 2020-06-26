@@ -1,4 +1,4 @@
-#include "../include/inplace_array.hh"
+#include "simlib/inplace_array.hh"
 
 #include <gtest/gtest.h>
 

@@ -1,4 +1,4 @@
-#include "../include/logger.hh"
+#include "simlib/logger.hh"
 
 #include <gtest/gtest.h>
 

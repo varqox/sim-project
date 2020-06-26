@@ -1,9 +1,9 @@
-#include "../include/config_file.hh"
-#include "../include/ctype.hh"
-#include "../include/debug.hh"
-#include "../include/file_contents.hh"
-#include "../include/simple_parser.hh"
-#include "../include/utilities.hh"
+#include "simlib/config_file.hh"
+#include "simlib/ctype.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/simple_parser.hh"
+#include "simlib/utilities.hh"
 
 using std::string;
 using std::vector;

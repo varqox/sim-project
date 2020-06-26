@@ -1,11 +1,11 @@
-#include "../include/sandbox.hh"
-#include "../include/call_in_destructor.hh"
-#include "../include/ctype.hh"
-#include "../include/defer.hh"
-#include "../include/humanize.hh"
-#include "../include/process.hh"
-#include "../include/string_transform.hh"
-#include "../include/time.hh"
+#include "simlib/sandbox.hh"
+#include "simlib/call_in_destructor.hh"
+#include "simlib/ctype.hh"
+#include "simlib/defer.hh"
+#include "simlib/humanize.hh"
+#include "simlib/process.hh"
+#include "simlib/string_transform.hh"
+#include "simlib/time.hh"
 
 #include <climits>
 #include <linux/version.h>

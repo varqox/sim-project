@@ -1,4 +1,4 @@
-#include "../include/time.hh"
+#include "simlib/time.hh"
 
 #include <gtest/gtest.h>
 

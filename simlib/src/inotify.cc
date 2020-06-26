@@ -1,4 +1,4 @@
-#include "../include/inotify.hh"
+#include "simlib/inotify.hh"
 
 #include <sys/inotify.h>
 

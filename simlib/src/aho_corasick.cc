@@ -1,4 +1,4 @@
-#include "../include/aho_corasick.hh"
+#include "simlib/aho_corasick.hh"
 
 using std::vector;
 

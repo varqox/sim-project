@@ -1,4 +1,4 @@
-#include "../include/memory.hh"
+#include "simlib/memory.hh"
 
 #include <gtest/gtest.h>
 

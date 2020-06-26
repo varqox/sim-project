@@ -1,6 +1,6 @@
-#include "../../include/sim/compile.hh"
-#include "../../include/spawner.hh"
-#include "../../include/unlinked_temporary_file.hh"
+#include "simlib/sim/compile.hh"
+#include "simlib/spawner.hh"
+#include "simlib/unlinked_temporary_file.hh"
 
 using std::string;
 using std::vector;

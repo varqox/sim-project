@@ -1,5 +1,5 @@
-#include "../include/config_file.hh"
-#include "../include/utilities.hh"
+#include "simlib/config_file.hh"
+#include "simlib/utilities.hh"
 
 #include <gtest/gtest.h>
 

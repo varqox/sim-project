@@ -1,4 +1,4 @@
-#include "../../include/sim/problem_package.hh"
+#include "simlib/sim/problem_package.hh"
 
 #include <gtest/gtest.h>
 

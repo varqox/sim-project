@@ -1,4 +1,4 @@
-#include "../include/string_compare.hh"
+#include "simlib/string_compare.hh"
 
 #include <gtest/gtest.h>
 

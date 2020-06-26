@@ -1,5 +1,5 @@
-#include "../include/temporary_file.hh"
-#include "../include/file_info.hh"
+#include "simlib/temporary_file.hh"
+#include "simlib/file_info.hh"
 
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>

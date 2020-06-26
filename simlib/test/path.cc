@@ -1,4 +1,4 @@
-#include "../include/path.hh"
+#include "simlib/path.hh"
 
 #include <gtest/gtest.h>
 

@@ -1,10 +1,10 @@
-#include "../../include/sim/conver.hh"
-#include "../../include/debug.hh"
-#include "../../include/file_info.hh"
-#include "../../include/libzip.hh"
-#include "../../include/sim/judge_worker.hh"
-#include "../../include/sim/problem_package.hh"
-#include "../../include/utilities.hh"
+#include "simlib/sim/conver.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_info.hh"
+#include "simlib/libzip.hh"
+#include "simlib/sim/judge_worker.hh"
+#include "simlib/sim/problem_package.hh"
+#include "simlib/utilities.hh"
 
 using std::pair;
 using std::string;

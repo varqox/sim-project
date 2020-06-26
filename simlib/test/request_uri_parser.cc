@@ -1,4 +1,4 @@
-#include "../include/request_uri_parser.hh"
+#include "simlib/request_uri_parser.hh"
 
 #include <gtest/gtest.h>
 

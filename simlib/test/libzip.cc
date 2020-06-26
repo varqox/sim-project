@@ -1,4 +1,4 @@
-#include "../include/libzip.hh"
+#include "simlib/libzip.hh"
 
 #include <gtest/gtest.h>
 

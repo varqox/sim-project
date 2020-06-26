@@ -1,8 +1,8 @@
-#include "../include/sim/simfile.hh"
-#include "../include/debug.hh"
-#include "../include/file_manip.hh"
-#include "../include/temporary_directory.hh"
-#include "../include/utilities.hh"
+#include "simlib/sim/simfile.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/temporary_directory.hh"
+#include "simlib/utilities.hh"
 
 #include <gtest/gtest.h>
 

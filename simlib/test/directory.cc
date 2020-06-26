@@ -1,6 +1,6 @@
-#include "../include/directory.hh"
-#include "../include/file_descriptor.hh"
-#include "../include/temporary_directory.hh"
+#include "simlib/directory.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/temporary_directory.hh"
 
 #include <gtest/gtest.h>
 

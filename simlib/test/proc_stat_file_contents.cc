@@ -1,4 +1,4 @@
-#include "../include/proc_stat_file_contents.hh"
+#include "simlib/proc_stat_file_contents.hh"
 
 #include <gtest/gtest.h>
 

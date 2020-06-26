@@ -1,6 +1,6 @@
-#include "../include/concat_tostr.hh"
-#include "../include/meta.hh"
-#include "../include/string_view.hh"
+#include "simlib/concat_tostr.hh"
+#include "simlib/meta.hh"
+#include "simlib/string_view.hh"
 
 #include <gtest/gtest.h>
 #include <utility>

@@ -1,5 +1,5 @@
-#include "../include/signal_handling.hh"
-#include "../include/concurrent/semaphore.hh"
+#include "simlib/signal_handling.hh"
+#include "simlib/concurrent/semaphore.hh"
 
 #include <chrono>
 #include <csignal>

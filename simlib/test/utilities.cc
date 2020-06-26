@@ -1,4 +1,4 @@
-#include "../include/utilities.hh"
+#include "simlib/utilities.hh"
 
 #include <gtest/gtest.h>
 #include <set>

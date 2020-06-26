@@ -1,4 +1,4 @@
-#include "../include/simple_parser.hh"
+#include "simlib/simple_parser.hh"
 
 #include <gtest/gtest.h>
 

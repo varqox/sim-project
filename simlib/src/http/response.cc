@@ -1,5 +1,5 @@
-#include "../../include/http/response.hh"
-#include "../../include/ctype.hh"
+#include "simlib/http/response.hh"
+#include "simlib/ctype.hh"
 
 using std::string;
 

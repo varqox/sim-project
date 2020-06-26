@@ -1,4 +1,4 @@
-#include "../include/humanize.hh"
+#include "simlib/humanize.hh"
 
 #include <gtest/gtest.h>
 

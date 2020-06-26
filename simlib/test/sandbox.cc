@@ -1,8 +1,8 @@
-#include "../include/sandbox.hh"
-#include "../include/concurrent/job_processor.hh"
-#include "../include/path.hh"
-#include "../include/process.hh"
-#include "../include/temporary_file.hh"
+#include "simlib/sandbox.hh"
+#include "simlib/concurrent/job_processor.hh"
+#include "simlib/path.hh"
+#include "simlib/process.hh"
+#include "simlib/temporary_file.hh"
 
 #include <gtest/gtest.h>
 #include <iomanip>
@@ -558,7 +558,5 @@ protected:
 TEST(Sandbox, run) {
 	stdlog.label(false);
 	auto exec_path = executable_path(getpid());
-	SandboxTestRunner(
-	   concat_tostr(path_dirpath(exec_path), "sandbox_test_cases/"))
-	   .run();
+	SandboxTestRunner("sandbox_test_cases/").run();
 }

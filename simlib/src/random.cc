@@ -1,8 +1,8 @@
-#include "../include/random.hh"
-#include "../include/debug.hh"
-#include "../include/file_contents.hh"
-#include "../include/file_descriptor.hh"
-#include "../include/logger.hh"
+#include "simlib/random.hh"
+#include "simlib/debug.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/logger.hh"
 
 #include <sys/syscall.h>
 

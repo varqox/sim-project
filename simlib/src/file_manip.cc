@@ -1,8 +1,8 @@
-#include "../include/file_manip.hh"
-#include "../include/call_in_destructor.hh"
-#include "../include/directory.hh"
-#include "../include/file_descriptor.hh"
-#include "../include/random.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/call_in_destructor.hh"
+#include "simlib/directory.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/random.hh"
 
 using std::array;
 using std::string;

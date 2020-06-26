@@ -1,6 +1,6 @@
-#include "../include/logger.hh"
-#include "../include/debug.hh"
-#include "../include/time.hh"
+#include "simlib/logger.hh"
+#include "simlib/debug.hh"
+#include "simlib/time.hh"
 
 using std::string;
 

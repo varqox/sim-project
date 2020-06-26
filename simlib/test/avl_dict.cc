@@ -1,5 +1,5 @@
-#include "../include/avl_dict.hh"
-#include "../include/random.hh"
+#include "simlib/avl_dict.hh"
+#include "simlib/random.hh"
 
 #include <gtest/gtest.h>
 #include <set>

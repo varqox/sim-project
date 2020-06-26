@@ -1,7 +1,7 @@
-#include "../include/event_queue.hh"
-#include "../include/concurrent/semaphore.hh"
-#include "../include/defer.hh"
-#include "../include/file_descriptor.hh"
+#include "simlib/event_queue.hh"
+#include "simlib/concurrent/semaphore.hh"
+#include "simlib/defer.hh"
+#include "simlib/file_descriptor.hh"
 
 #include <chrono>
 #include <cstddef>

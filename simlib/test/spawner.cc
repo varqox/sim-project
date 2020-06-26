@@ -1,4 +1,4 @@
-#include "../include/spawner.hh"
+#include "simlib/spawner.hh"
 
 #include <gtest/gtest.h>
 

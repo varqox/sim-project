@@ -1,6 +1,6 @@
-#include "../../include/sim/problem_package.hh"
-#include "../../include/directory.hh"
-#include "../../include/libzip.hh"
+#include "simlib/sim/problem_package.hh"
+#include "simlib/directory.hh"
+#include "simlib/libzip.hh"
 
 using std::string;
 

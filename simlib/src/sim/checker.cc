@@ -1,5 +1,5 @@
-#include "../../include/ctype.hh"
-#include "../../include/debug.hh"
+#include "simlib/ctype.hh"
+#include "simlib/debug.hh"
 
 #include <unistd.h>
 

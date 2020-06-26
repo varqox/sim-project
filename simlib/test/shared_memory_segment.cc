@@ -1,4 +1,4 @@
-#include "../include/shared_memory_segment.hh"
+#include "simlib/shared_memory_segment.hh"
 
 #include <gtest/gtest.h>
 

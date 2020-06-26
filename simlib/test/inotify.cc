@@ -1,9 +1,9 @@
-#include "../include/inotify.hh"
-#include "../include/concurrent/semaphore.hh"
-#include "../include/file_contents.hh"
-#include "../include/file_manip.hh"
-#include "../include/temporary_directory.hh"
-#include "../include/temporary_file.hh"
+#include "simlib/inotify.hh"
+#include "simlib/concurrent/semaphore.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/temporary_directory.hh"
+#include "simlib/temporary_file.hh"
 
 #include <gtest/gtest.h>
 

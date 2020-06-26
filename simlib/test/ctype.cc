@@ -1,4 +1,4 @@
-#include "../include/ctype.hh"
+#include "simlib/ctype.hh"
 
 #include <gtest/gtest.h>
 

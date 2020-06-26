@@ -1,7 +1,7 @@
-#include "../include/opened_temporary_file.hh"
-#include "../include/file_contents.hh"
-#include "../include/file_info.hh"
+#include "simlib/opened_temporary_file.hh"
 #include "file_descriptor_exists.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_info.hh"
 
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>

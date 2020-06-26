@@ -1,4 +1,4 @@
-#include "../include/debug.hh"
+#include "simlib/debug.hh"
 
 #include <algorithm>
 #include <ctime>

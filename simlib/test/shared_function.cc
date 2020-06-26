@@ -1,4 +1,4 @@
-#include "../include/shared_function.hh"
+#include "simlib/shared_function.hh"
 
 #include <gtest/gtest.h>
 

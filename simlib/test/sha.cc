@@ -1,4 +1,4 @@
-#include "../include/sha.hh"
+#include "simlib/sha.hh"
 
 #include <gtest/gtest.h>
 

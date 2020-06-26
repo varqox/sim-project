@@ -1,5 +1,5 @@
-#include "../include/humanize.hh"
-#include "../include/concat_tostr.hh"
+#include "simlib/humanize.hh"
+#include "simlib/concat_tostr.hh"
 
 using std::string;
 

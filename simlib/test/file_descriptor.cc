@@ -1,7 +1,7 @@
-#include "../include/file_descriptor.hh"
-#include "../include/file_info.hh"
-#include "../include/temporary_directory.hh"
+#include "simlib/file_descriptor.hh"
 #include "file_descriptor_exists.hh"
+#include "simlib/file_info.hh"
+#include "simlib/temporary_directory.hh"
 
 #include <gtest/gtest.h>
 

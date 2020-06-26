@@ -1,4 +1,4 @@
-#include "../include/signal_blocking.hh"
+#include "simlib/signal_blocking.hh"
 
 #include <gtest/gtest.h>
 

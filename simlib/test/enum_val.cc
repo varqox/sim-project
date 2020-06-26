@@ -1,4 +1,4 @@
-#include "../include/enum_val.hh"
+#include "simlib/enum_val.hh"
 
 #include <gtest/gtest.h>
 

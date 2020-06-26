@@ -1,4 +1,4 @@
-#include "../include/random.hh"
+#include "simlib/random.hh"
 
 #include <gtest/gtest.h>
 

@@ -1,5 +1,5 @@
-#include "../include/sha.hh"
-#include "../include/string_transform.hh"
+#include "simlib/sha.hh"
+#include "simlib/string_transform.hh"
 
 InplaceBuff<56> sha3_224(StringView str) {
 	unsigned char out[28];

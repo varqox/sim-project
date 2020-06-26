@@ -1,4 +1,4 @@
-#include "../include/inplace_buff.hh"
+#include "simlib/inplace_buff.hh"
 
 #include <gtest/gtest.h>
 

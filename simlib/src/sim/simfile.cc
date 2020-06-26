@@ -1,10 +1,10 @@
-#include "../../include/sim/simfile.hh"
-#include "../../include/avl_dict.hh"
-#include "../../include/file_info.hh"
-#include "../../include/path.hh"
-#include "../../include/simple_parser.hh"
-#include "../../include/time.hh"
-#include "../../include/utilities.hh"
+#include "simlib/sim/simfile.hh"
+#include "simlib/avl_dict.hh"
+#include "simlib/file_info.hh"
+#include "simlib/path.hh"
+#include "simlib/simple_parser.hh"
+#include "simlib/time.hh"
+#include "simlib/utilities.hh"
 
 #include <cmath>
 

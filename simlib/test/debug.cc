@@ -1,7 +1,7 @@
-#include "../include/debug.hh"
-#include "../include/defer.hh"
-#include "../include/file_contents.hh"
-#include "../include/unlinked_temporary_file.hh"
+#include "simlib/debug.hh"
+#include "simlib/defer.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/unlinked_temporary_file.hh"
 
 #include <gtest/gtest-death-test.h>
 #include <gtest/gtest.h>

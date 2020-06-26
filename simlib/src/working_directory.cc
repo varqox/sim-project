@@ -1,7 +1,7 @@
-#include "../include/working_directory.hh"
-#include "../include/defer.hh"
-#include "../include/path.hh"
-#include "../include/process.hh"
+#include "simlib/working_directory.hh"
+#include "simlib/defer.hh"
+#include "simlib/path.hh"
+#include "simlib/process.hh"
 
 using std::array;
 using std::string;

@@ -1,5 +1,5 @@
-#include "../include/working_directory.hh"
-#include "../include/temporary_directory.hh"
+#include "simlib/working_directory.hh"
+#include "simlib/temporary_directory.hh"
 
 #include <gtest/gtest.h>
 

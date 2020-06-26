@@ -1,12 +1,12 @@
-#include "../include/file_manip.hh"
-#include "../include/defer.hh"
-#include "../include/directory.hh"
-#include "../include/file_contents.hh"
-#include "../include/file_descriptor.hh"
-#include "../include/file_info.hh"
-#include "../include/opened_temporary_file.hh"
-#include "../include/random.hh"
-#include "../include/temporary_directory.hh"
+#include "simlib/file_manip.hh"
+#include "simlib/defer.hh"
+#include "simlib/directory.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/file_info.hh"
+#include "simlib/opened_temporary_file.hh"
+#include "simlib/random.hh"
+#include "simlib/temporary_directory.hh"
 
 #include <gtest/gtest.h>
 

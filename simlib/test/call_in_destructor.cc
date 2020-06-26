@@ -1,4 +1,4 @@
-#include "../include/call_in_destructor.hh"
+#include "simlib/call_in_destructor.hh"
 
 #include <gtest/gtest.h>
 

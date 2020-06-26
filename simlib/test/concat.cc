@@ -1,4 +1,4 @@
-#include "../include/concat.hh"
+#include "simlib/concat.hh"
 
 #include <gtest/gtest.h>
 

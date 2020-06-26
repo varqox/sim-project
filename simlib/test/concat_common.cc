@@ -1,5 +1,5 @@
-#include "../include/concat_common.hh"
-#include "../include/string_view.hh"
+#include "simlib/concat_common.hh"
+#include "simlib/string_view.hh"
 
 #include <gtest/gtest.h>
 

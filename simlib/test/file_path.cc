@@ -1,5 +1,5 @@
-#include "../include/file_path.hh"
-#include "../include/inplace_buff.hh"
+#include "simlib/file_path.hh"
+#include "simlib/inplace_buff.hh"
 
 #include <gtest/gtest.h>
 

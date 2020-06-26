@@ -1,12 +1,12 @@
-#include "../include/sim/conver.hh"
-#include "../include/avl_dict.hh"
-#include "../include/concurrent/job_processor.hh"
-#include "../include/directory.hh"
-#include "../include/libzip.hh"
-#include "../include/opened_temporary_file.hh"
-#include "../include/path.hh"
-#include "../include/process.hh"
-#include "../include/temporary_file.hh"
+#include "simlib/sim/conver.hh"
+#include "simlib/avl_dict.hh"
+#include "simlib/concurrent/job_processor.hh"
+#include "simlib/directory.hh"
+#include "simlib/libzip.hh"
+#include "simlib/opened_temporary_file.hh"
+#include "simlib/path.hh"
+#include "simlib/process.hh"
+#include "simlib/temporary_file.hh"
 
 #include <gtest/gtest.h>
 #include <regex>
@@ -461,7 +461,5 @@ TEST(Conver, construct_simfile) {
 	stdlog.use(stdout);
 
 	auto exec_path = executable_path(getpid());
-	ConverTestRunner(
-	   concat_tostr(path_dirpath(exec_path), "conver_test_cases/"))
-	   .run();
+	ConverTestRunner("conver_test_cases/").run();
 }

@@ -4,6 +4,12 @@ include $(PREFIX)makefile-utils/Makefile.config
 $(PREFIX)all: $(PREFIX)gtest_main.a $(PREFIX)simlib.a
 	@printf "\033[32mBuild finished\033[0m\n"
 
+SIMLIB_INCLUDES_FLAGS = -I '$(CURDIR)/include'
+
+define SIMLIB_FLAGS
+INTERNAL_EXTRA_CXX_FLAGS := $(SIMLIB_INCLUDES_FLAGS)
+endef
+
 define GOOGLETEST_FLAGS =
 INTERNAL_EXTRA_CXX_FLAGS = -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -I '$(CURDIR)/$(PREFIX)googletest/googletest' -pthread
 endef
@@ -15,7 +21,7 @@ $(eval $(call add_static_library, $(PREFIX)gtest_main.a, $(GOOGLETEST_FLAGS), \
 	$(PREFIX)googletest/googletest/src/gtest_main.cc \
 ))
 
-$(eval $(call add_static_library, $(PREFIX)simlib.a,, \
+$(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/aho_corasick.cc \
 	$(PREFIX)src/config_file.cc \
 	$(PREFIX)src/file_contents.cc \
@@ -54,7 +60,7 @@ $(eval $(call add_generated_target, $(PREFIX)src/sim/default_checker_dump.c, \
 ))
 
 define SIMLIB_TEST_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS = -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -isystem '$(CURDIR)/$(PREFIX)googletest/googlemock/include'
+INTERNAL_EXTRA_CXX_FLAGS = -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -isystem '$(CURDIR)/$(PREFIX)googletest/googlemock/include' $(SIMLIB_INCLUDES_FLAGS)
 INTERNAL_EXTRA_LD_FLAGS = -lrt -pthread -lseccomp -lzip
 endef
 
@@ -121,7 +127,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 
 .PHONY: $(PREFIX)test
 $(PREFIX)test: $(PREFIX)test/exec
-	$(PREFIX)test/exec
+	cd $(PREFIX)test && ./exec
 
 .PHONY: $(PREFIX)format
 $(PREFIX)format: $(shell find $(PREFIX)include $(PREFIX)src $(PREFIX)test $(PREFIX)doc | grep -E '\.(cc?|hh?)$$' | grep -vE '^($(PREFIX)src/sha3.c|$(PREFIX)src/sim/default_checker_dump.c)$$' | sed 's/$$/-make-format/')

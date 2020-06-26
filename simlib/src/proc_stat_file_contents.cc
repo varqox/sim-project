@@ -1,7 +1,7 @@
-#include "../include/proc_stat_file_contents.hh"
-#include "../include/ctype.hh"
-#include "../include/file_contents.hh"
-#include "../include/string_traits.hh"
+#include "simlib/proc_stat_file_contents.hh"
+#include "simlib/ctype.hh"
+#include "simlib/file_contents.hh"
+#include "simlib/string_traits.hh"
 
 #include <functional>
 

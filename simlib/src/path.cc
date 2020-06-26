@@ -1,6 +1,6 @@
-#include "../include/path.hh"
-#include "../include/concat_tostr.hh"
-#include "../include/string_traits.hh"
+#include "simlib/path.hh"
+#include "simlib/concat_tostr.hh"
+#include "simlib/string_traits.hh"
 
 using std::string;
 
