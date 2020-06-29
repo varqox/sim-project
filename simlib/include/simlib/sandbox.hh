@@ -15,6 +15,13 @@ enum class OpenAccess {
 
 class SyscallCallback {
 public:
+	SyscallCallback() = default;
+
+	SyscallCallback(const SyscallCallback&) = delete;
+	SyscallCallback(SyscallCallback&&) = delete;
+	SyscallCallback& operator=(const SyscallCallback&) = delete;
+	SyscallCallback& operator=(SyscallCallback&&) = delete;
+
 	// Resets the state of the Callback to state just after creation
 	virtual void reset() noexcept {}
 
@@ -29,9 +36,9 @@ public:
 	using AllowedFile = std::pair<std::string, OpenAccess>;
 
 private:
-	pid_t tracee_pid_;
+	pid_t tracee_pid_{};
 	std::vector<std::unique_ptr<SyscallCallback>> callbacks_;
-	const std::vector<AllowedFile>* allowed_files_;
+	const std::vector<AllowedFile>* allowed_files_{};
 
 	scmp_filter_ctx x86_ctx_;
 	scmp_filter_ctx x86_64_ctx_;
@@ -41,7 +48,7 @@ private:
 
 	FileDescriptor
 	   tracee_statm_fd_; // For tracking vm_peak (vm stands for virtual memory)
-	uint64_t tracee_vm_peak_; // In pages
+	uint64_t tracee_vm_peak_{}; // In pages
 
 	// Needed by the mechanism that allows more syscalls to be used during the
 	// initialization of glibc in the traced process
@@ -68,6 +75,11 @@ private:
 
 public:
 	Sandbox();
+
+	Sandbox(const Sandbox&) = delete;
+	Sandbox(Sandbox&&) = delete;
+	Sandbox& operator=(const Sandbox&) = delete;
+	Sandbox& operator=(Sandbox&&) = delete;
 
 	~Sandbox() {
 		seccomp_release(x86_64_ctx_);
@@ -102,7 +114,7 @@ public:
 	 *   directory)
 	 * @param allowed_files list of files (with access modes) that the
 	 *   sandboxed program is allowed to open
-	 * @param parent_do_after_fork function taking child's pid as an argument
+	 * @param do_in_parent_after_fork function taking child's pid as an argument
 	 *   that will be called in the parent process just after fork() -- useful
 	 *   for closing pipe ends
 	 *
@@ -123,5 +135,6 @@ public:
 	   FilePath exec, const std::vector<std::string>& exec_args,
 	   const Options& opts = Options(),
 	   const std::vector<AllowedFile>& allowed_files = {},
-	   const std::function<void(pid_t)>& parent_do_after_fork = [](pid_t) {});
+	   const std::function<void(pid_t)>& do_in_parent_after_fork =
+	      [](pid_t /*unused*/) {});
 };

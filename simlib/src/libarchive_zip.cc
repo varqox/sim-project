@@ -15,8 +15,8 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 	constexpr const char* command = "zip";
 
 	Spawner::ExitStat es;
-	FileDescriptor zip_output {open_unlinked_tmp_file(O_CLOEXEC)}; /* It isn't a
-	    fatal error if zip_output is invalid, so it can be ignored */
+	FileDescriptor zip_output{open_unlinked_tmp_file(O_CLOEXEC)}; /* It isn't a
+	   fatal error if zip_output is invalid, so it can be ignored */
 
 	if (easy_case) {
 		std::vector<std::string> zip_args;
@@ -28,14 +28,15 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 		TemporaryDirectory tmpdir("/tmp/zip-update.XXXXXX");
 		// Secure new_filename
 		auto secured_filename = path_absolute(new_filename);
-		throw_assert(new_filename.size() > 0);
+		throw_assert(!new_filename.empty());
 
 		new_filename = StringView(secured_filename, 1); // Trim leading '/'
 
 		auto pos = new_filename.rfind('/');
 		// If we have to create directories first
 		if (pos != StringView::npos and
-		    mkdir_r(concat_tostr(tmpdir.path(), new_filename.substr(0, pos)))) {
+		    mkdir_r(concat_tostr(tmpdir.path(), new_filename.substr(0, pos))))
+		{
 			THROW("mkdir() failed", errmsg());
 		}
 
@@ -46,8 +47,9 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 		// Path to zip file is relative we have to make it absolute
 		throw_assert(zip_filename.size() > 0);
 		if (zip_filename[0] != '/') {
-			if (cwd.size == 0)
+			if (cwd.size == 0) {
 				cwd = get_cwd();
+			}
 			cwd.append(zip_filename);
 			zip_filename = cwd;
 		}
@@ -74,13 +76,16 @@ update_add_file_to_zip_impl(Func&& apply_file, StringView new_filename,
 
 void update_add_file_to_zip(FilePath filename, StringView new_filename,
                             FilePath zip_filename) {
-	if (new_filename.empty())
+	if (new_filename.empty()) {
 		return update_add_file_to_zip_impl(
-		   [](auto&&, auto&&) {}, StringView(filename), zip_filename, true);
+		   [](auto&& /*unused*/, auto&& /*unused*/) {}, StringView(filename),
+		   zip_filename, true);
+	}
 
 	// Remove Trailing '/'
-	while (new_filename.size() > 1 and new_filename.back() == '/')
+	while (new_filename.size() > 1 and new_filename.back() == '/') {
 		new_filename.remove_suffix(1);
+	}
 
 	return update_add_file_to_zip_impl(
 	   [&](decltype(get_cwd())& cwd, FilePath dest_file) {
@@ -95,20 +100,23 @@ void update_add_file_to_zip(FilePath filename, StringView new_filename,
 				   cwd.size = old_size; // Restore cwd to contain only CWD
 			   }
 
-			   if (symlink(filename, dest_file))
+			   if (symlink(filename, dest_file)) {
 				   THROW("symlink() failed", errmsg());
+			   }
 		   }
 	   },
 	   new_filename, zip_filename);
 }
 
-void update_add_data_to_zip(StringView data, StringView new_filename,
+void update_add_data_to_zip(StringView data, const StringView& new_filename,
                             FilePath zip_filename) {
-	throw_assert(new_filename.size() > 0);
+	throw_assert(!new_filename.empty());
 	return update_add_file_to_zip_impl(
-	   [&](decltype(get_cwd())&, FilePath dest_file) {
-		   if (CStringView(dest_file).back() != '/') // Dest file is a directory
+	   [&](decltype(get_cwd())& /*unused*/, FilePath dest_file) {
+		   if (CStringView(dest_file).back() != '/')
+		   { // Dest file is a directory
 			   put_file_contents(dest_file, data);
+		   }
 	   },
 	   new_filename, zip_filename);
 }

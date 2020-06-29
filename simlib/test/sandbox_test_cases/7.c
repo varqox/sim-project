@@ -24,6 +24,8 @@ int main() {
 		return __LINE__;
 
 	int fd2 = open("/dev/null", O_RDONLY);
+	if (fd2 == -1)
+		abort();
 
 	if (dup2(fd2, STDIN_FILENO) == -1)
 		return __LINE__;

@@ -49,5 +49,5 @@ constexpr auto is_string_argument(...) -> std::false_type;
 } // namespace detail
 
 template <class T>
-constexpr bool is_string_argument =
+constexpr inline bool is_string_argument =
    decltype(detail::is_string_argument<T>(0))::value;

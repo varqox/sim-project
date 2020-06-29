@@ -8,7 +8,9 @@ class CallInDtor {
 	bool make_call_ = true;
 
 public:
-	CallInDtor(Func func) try : func_(std::move(func)) {
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	CallInDtor(Func func) try : func_(std::move(func))
+	{
 	} catch (...) {
 		func();
 		throw;
@@ -17,15 +19,18 @@ public:
 	CallInDtor(const CallInDtor&) = delete;
 	CallInDtor& operator=(const CallInDtor&) = delete;
 
-	CallInDtor(CallInDtor&& cid) : func_(std::move(cid.func_)) { cid.cancel(); }
+	CallInDtor(CallInDtor&& cid) noexcept
+	: func_(std::move(cid.func_)) {
+		cid.cancel();
+	}
 
-	CallInDtor& operator=(CallInDtor&& cid) {
+	CallInDtor& operator=(CallInDtor&& cid) noexcept {
 		func_ = std::move(cid.func_);
 		cid.cancel();
 		return *this;
 	}
 
-	bool active() const noexcept { return make_call_; }
+	[[nodiscard]] bool active() const noexcept { return make_call_; }
 
 	void cancel() noexcept { make_call_ = false; }
 

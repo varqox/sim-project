@@ -14,15 +14,16 @@ template <class Elem>
 class BoundedQueue {
 private:
 	Semaphore free_slots_;
-	Semaphore queued_elems_ {0};
+	Semaphore queued_elems_{0};
 	MutexedValue<std::deque<Elem>> elems_;
 
 	Elem pop_elem(typename decltype(elems_)::value_type& elems) {
 		auto elem = [&] {
-			if constexpr (std::is_move_constructible_v<Elem>)
+			if constexpr (std::is_move_constructible_v<Elem>) {
 				return std::move(elems.front());
-			else
+			} else {
 				return elems.front();
+			}
 		}();
 
 		elems.pop_front();
@@ -32,8 +33,9 @@ private:
 
 	Elem extract_elem() {
 		return elems_.perform([&](auto& elems) {
-			if (not elems.empty())
+			if (not elems.empty()) {
 				return pop_elem(elems);
+			}
 
 			queued_elems_.post();
 			throw NoMoreElems();
@@ -42,8 +44,9 @@ private:
 
 	std::optional<Elem> extract_elem_opt() {
 		return elems_.perform([&](auto& elems) -> std::optional<Elem> {
-			if (not elems.empty())
+			if (not elems.empty()) {
 				return pop_elem(elems);
+			}
 
 			queued_elems_.post();
 			return std::nullopt;
@@ -54,12 +57,14 @@ public:
 	struct NoMoreElems {};
 
 	explicit BoundedQueue(unsigned max_size = SEM_VALUE_MAX)
-	   : free_slots_(max_size) {}
+	: free_slots_(max_size) {}
 
 	BoundedQueue(const BoundedQueue&) = delete;
 	BoundedQueue(BoundedQueue&&) = delete;
 	BoundedQueue& operator=(const BoundedQueue&) = delete;
 	BoundedQueue& operator=(BoundedQueue&&) = delete;
+
+	~BoundedQueue() = default;
 
 	// Throws NoMoreElements iff there are no more elements and
 	// signal_no_more_elements() was called
@@ -81,8 +86,9 @@ public:
 	// return std::nullopt after signal_no_more_elements() is called -- this
 	// case is entirely possible and you must prepare for it.
 	std::optional<Elem> try_pop() {
-		if (queued_elems_.try_wait())
+		if (queued_elems_.try_wait()) {
 			return extract_elem();
+		}
 
 		return std::nullopt;
 	}

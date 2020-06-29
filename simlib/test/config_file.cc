@@ -9,9 +9,10 @@ using std::pair;
 using std::string;
 using std::vector;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(ConfigFile, is_string_literal) {
 	// (input, output)
-	vector<pair<string, bool>> cases {
+	vector<pair<string, bool>> cases{
 	   {"", false},
 	   {R"===(foo-bar)===", true},
 	   {"line: 1\nab d E\n", false},
@@ -73,9 +74,10 @@ TEST(ConfigFile, is_string_literal) {
 	};
 
 	// Hardcoded tests
-	for (auto&& p : cases)
+	for (auto&& p : cases) {
 		EXPECT_EQ(ConfigFile::is_string_literal(p.first), p.second)
 		   << "p.first: " << p.first << endl;
+	}
 
 	auto is_beginning = [](auto c) {
 		return not(is_space(c) || is_one_of(c, '[', ',', ']', '#', '\'', '"'));
@@ -87,31 +89,36 @@ TEST(ConfigFile, is_string_literal) {
 		return not(is_space(c) || is_one_of(c, '#', ']', ','));
 	};
 	auto dump = [](int a, int b = -1, int c = -1) {
-		char t[3] = {(char)a, (char)b, (char)c};
+		char t[3] = {static_cast<char>(a), static_cast<char>(b),
+		             static_cast<char>(c)};
 		return concat_tostr("(a, b, c): ", a, ' ', b, ' ', c, "\n  -> \"",
 		                    StringView(t, 3));
 	};
 
 	// Generated tests (all words of length not greater than 3)
-	array<char, 4> t;
-	for (int a = t[0] = 0; a < 256; t[0] = ++a) {
+	array<char, 4> t{};
+	t[0] = '\0';
+	for (int a = 0; a < 256; t[0] = ++a) {
 		// One character
 		EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 1}),
 		          is_beginning(t[0]) && is_ending(t[0]))
 		   << dump(a) << endl;
 
-		for (int b = t[1] = 0; b < 256; t[1] = ++b) {
+		t[1] = '\0';
+		for (int b = 0; b < 256; t[1] = ++b) {
 			// Two characters
 			EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 2}),
 			          is_beginning(t[0]) && is_ending(t[1]))
 			   << dump(a, b) << endl;
 
 			bool cached_res = is_beginning(t[0]) && is_interior(t[1]);
-			for (int c = t[2] = 0; c < 256; t[2] = ++c) {
+			t[2] = '\0';
+			for (int c = 0; c < 256; t[2] = ++c) {
 				// Three characters
 				if (ConfigFile::is_string_literal({t.data(), 3}) !=
 				       cached_res &&
-				    is_ending(t[2])) {
+				    is_ending(t[2]))
+				{
 					EXPECT_EQ(ConfigFile::is_string_literal({t.data(), 3}),
 					          is_beginning(t[0]) && is_interior(t[1]) &&
 					             is_ending(t[2]))
@@ -122,19 +129,21 @@ TEST(ConfigFile, is_string_literal) {
 	}
 
 	// Special test cases: ". #." <-- such a sequence cannot appear in a string
-	for (int a = 0; a < 256; ++a)
+	for (int a = 0; a < 256; ++a) {
 		for (int b = 0; b < 256; ++b) {
-			t = {{(char)a, ' ', '#', (char)b}};
+			t = {{static_cast<char>(a), ' ', '#', static_cast<char>(b)}};
 			EXPECT_EQ(ConfigFile::is_string_literal(StringView(t.data(), 4)),
 			          false)
 			   << "a: " << a << " b: " << b
 			   << " str: " << StringView(t.data(), 4) << endl;
 		}
+	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(ConfigFile, escape_to_single_quoted_string) {
 	// (input, output)
-	vector<pair<string, string>> cases {
+	vector<pair<string, string>> cases{
 	   {"", "''"},
 	   {R"===(foo-bar)===", R"===('foo-bar')==="},
 	   {"line: 1\nab d E\n", "'line: 1\nab d E\n'"},
@@ -195,14 +204,16 @@ TEST(ConfigFile, escape_to_single_quoted_string) {
 	   {" #aa", "' #aa'"},
 	};
 
-	for (auto&& p : cases)
+	for (auto&& p : cases) {
 		EXPECT_EQ(ConfigFile::escape_to_single_quoted_string(p.first), p.second)
 		   << "p.first: " << p.first << endl;
+	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(ConfigFile, escape_to_double_quoted_string) {
 	// (input, output)
-	vector<pair<string, string>> cases {
+	vector<pair<string, string>> cases{
 	   {"", R"===("")==="},
 	   {R"===(foo-bar)===", R"===("foo-bar")==="},
 	   {"line: 1\nab d E\n", R"===("line: 1\nab d E\n")==="},
@@ -293,9 +304,10 @@ TEST(ConfigFile, escape_to_double_quoted_string) {
 	          R"===(" '\t\n' \xc5\x9b ")===");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(ConfigFile, escape_string) {
 	// (input, output)
-	vector<pair<string, string>> cases {
+	vector<pair<string, string>> cases{
 	   {"", "''"},
 	   {R"===(foo-bar)===", R"===(foo-bar)==="},
 	   {"line: 1\nab d E\n", R"===("line: 1\nab d E\n")==="},
@@ -388,13 +400,14 @@ TEST(ConfigFile, escape_string) {
 string dump_config(const ConfigFile& cf) {
 	auto&& vars = cf.get_vars();
 	string res;
-	for (auto p : vars) {
+	for (const auto& p : vars) {
 		if (p.second.is_array()) { // Array
 			back_insert(res, p.first, ": [\n");
-			for (auto&& s : p.second.as_array())
+			for (auto&& s : p.second.as_array()) {
 				back_insert(res, "  ",
 				            ConfigFile::full_escape_to_double_quoted_string(s),
 				            '\n');
+			}
 			res += ']';
 
 		} else { // Other
@@ -410,9 +423,10 @@ string dump_config(const ConfigFile& cf) {
 	return res;
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(ConfigFile, load_config_from_string) {
 	// (input, dumped config)
-	vector<pair<string, string>> cases {
+	vector<pair<string, string>> cases{
 	   /*  1 */ {R"===()===", ""},
 	   /*  2 */ {"    a  = 1234", "a: \"1234\" # [9,13)\n"},
 	   /*  3 */ {" a : eee \t\n ", "a: \"eee\" # [5,8)\n"},
@@ -533,7 +547,7 @@ workers: "2" # [103,104)
 )==="},
 	};
 
-	for (size_t i = 0; i < cases.size(); ++i) {
+	for (int i = 0; i < static_cast<int>(cases.size()); ++i) {
 		auto&& p = cases[i];
 
 		ConfigFile cf;

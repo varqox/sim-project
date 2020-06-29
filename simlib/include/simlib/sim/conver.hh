@@ -15,14 +15,15 @@ public:
 		std::string str;
 		bool log_to_stdlog_;
 
-		ReportBuff(bool log_to_stdlog = false)
-		   : log_to_stdlog_(log_to_stdlog) {}
+		explicit ReportBuff(bool log_to_stdlog = false)
+		: log_to_stdlog_(log_to_stdlog) {}
 
 		template <class... Args,
 		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		void append(Args&&... args) {
-			if (log_to_stdlog_)
+			if (log_to_stdlog_) {
 				stdlog(args...);
+			}
 
 			back_insert(str, std::forward<Args>(args)..., '\n');
 		}
@@ -33,12 +34,16 @@ private:
 	std::string package_path_;
 
 public:
-	const std::string& package_path() const noexcept { return package_path_; }
+	[[nodiscard]] const std::string& package_path() const noexcept {
+		return package_path_;
+	}
 
 	// @p path may point to a directory as well as a zip-package
 	void package_path(std::string path) { package_path_ = std::move(path); }
 
-	const std::string& report() const noexcept { return report_.str; }
+	[[nodiscard]] const std::string& report() const noexcept {
+		return report_.str;
+	}
 
 	struct ResetTimeLimitsOptions {
 		// Minimum allowed time limit
@@ -156,8 +161,9 @@ public:
 			                             DS(x), solution_runtime_coefficient,
 			                             min_time_limit))
 			               .count();
-			if (-1e-9 < fx and fx < 1e-9)
+			if (-1e-9 < fx and fx < 1e-9) {
 				return DS(x);
+			}
 
 			double dfx =
 			   -solution_runtime_coefficient +
@@ -170,9 +176,11 @@ private:
 	// Rounds time limits to 0.01 s
 	static void normalize_time_limits(Simfile& sf) {
 		using namespace std::chrono_literals;
-		for (auto&& g : sf.tgroups)
-			for (auto&& t : g.tests)
+		for (auto&& g : sf.tgroups) {
+			for (auto&& t : g.tests) {
 				t.time_limit = floor_to_10ms(t.time_limit + 5ms);
+			}
+		}
 	};
 };
 

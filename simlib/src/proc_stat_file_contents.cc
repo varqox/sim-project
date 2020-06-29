@@ -6,10 +6,9 @@
 #include <functional>
 
 using std::string;
-using std::vector;
 
 ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
-   : contents_(std::move(stat_file_contents)) {
+: contents_(std::move(stat_file_contents)) {
 	StringView str(contents_);
 
 	// [0] - Process pid
@@ -26,8 +25,9 @@ ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
 	for (;;) {
 		str.remove_leading(is_space<char>);
 		auto val = str.extract_leading(std::not_fn(is_space<char>));
-		if (val.empty())
+		if (val.empty()) {
 			break;
+		}
 
 		fields_.emplace_back(val);
 	}
@@ -35,5 +35,5 @@ ProcStatFileContents::ProcStatFileContents(string stat_file_contents)
 
 ProcStatFileContents ProcStatFileContents::get(pid_t pid) {
 	string contents = get_file_contents(concat("/proc/", pid, "/stat"));
-	return ProcStatFileContents {contents};
+	return ProcStatFileContents{contents};
 }

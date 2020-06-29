@@ -8,30 +8,31 @@
 #include <optional>
 
 inline std::string to_lower(std::string str) {
-	for (auto& c : str)
+	for (auto& c : str) {
 		c = to_lower(c);
+	}
 	return str;
 }
 
 template <class T>
-constexpr int hex2dec(T c) noexcept {
+constexpr unsigned char hex2dec(T c) noexcept {
 	assert(is_xdigit(c));
 	return (c < 'A' ? c - '0' : 10 + c - (c >= 'a' ? 'a' : 'A'));
 }
 
 constexpr char dec2Hex(int x) noexcept {
 	assert(0 <= x and x <= 15);
-	return (x > 9 ? 'A' - 10 + x : x + '0');
+	return static_cast<char>(x > 9 ? 'A' - 10 + x : x + '0');
 }
 
 constexpr char dec2hex(int x) noexcept {
 	assert(0 <= x and x <= 15);
-	return (x > 9 ? 'a' - 10 + x : x + '0');
+	return static_cast<char>(x > 9 ? 'a' - 10 + x : x + '0');
 }
 
 /// Converts each byte of @p str to two hex digits using dec2hex()
 template <size_t N = 64>
-InplaceBuff<N> to_hex(StringView str) {
+InplaceBuff<N> to_hex(const StringView& str) {
 	InplaceBuff<N> res(str.size() << 1);
 	size_t i = 0;
 	for (unsigned char c : str) {
@@ -45,18 +46,20 @@ InplaceBuff<N> to_hex(StringView str) {
 
 // Encodes as URI
 template <size_t N = 256>
-InplaceBuff<N> encode_uri(StringView str) {
+InplaceBuff<N> encode_uri(const StringView& str) {
 	using std::array;
 	constexpr auto is_safe = [] {
 		array<bool, 256> res = {};
 		for (auto [beg, end] :
-		     array {array {'a', 'z'}, array {'A', 'Z'}, array {'0', '9'}}) {
-			for (int i = beg; i <= end; ++i)
+		     array{array{'a', 'z'}, array{'A', 'Z'}, array{'0', '9'}}) {
+			for (unsigned char i = beg; i <= end; ++i) {
 				res[i] = true;
+			}
 		}
 
-		for (unsigned char c : StringView("-_.~"))
+		for (unsigned char c : StringView("-_.~")) {
 			res[c] = true;
+		}
 
 		return res;
 	}();
@@ -75,10 +78,11 @@ InplaceBuff<N> encode_uri(StringView str) {
 
 	InplaceBuff<N> res;
 	for (unsigned char c : str) {
-		if (is_safe[c])
+		if (is_safe[c]) {
 			res.append(c);
-		else
+		} else {
 			res.append('%', dec2Hex(c >> 4), dec2Hex(c & 15));
+		}
 	}
 
 	return res;
@@ -89,10 +93,12 @@ template <size_t N = 256>
 InplaceBuff<N> decode_uri(StringView str) {
 	InplaceBuff<N> res;
 	for (size_t i = 0; i < str.size(); ++i) {
-		char c;
+		char c = 0;
 		if (str[i] == '%' and i + 2 < str.size() and is_xdigit(str[i + 1]) and
-		    is_xdigit(str[i + 2])) {
-			c = (hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2]);
+		    is_xdigit(str[i + 2]))
+		{
+			c = static_cast<char>(static_cast<unsigned char>(
+			   (hex2dec(str[i + 1]) << 4) | hex2dec(str[i + 2])));
 			i += 2;
 		} else if (str[i] == '+') {
 			c = ' ';
@@ -120,9 +126,10 @@ inline void append_as_html_escaped(std::string& str, char c) {
 }
 
 // Escapes HTML unsafe character sequences and appends them to @p str
-inline void append_as_html_escaped(std::string& str, StringView s) {
-	for (auto c : s)
+inline void append_as_html_escaped(std::string& str, const StringView& s) {
+	for (auto c : s) {
 		append_as_html_escaped(str, c);
+	}
 }
 
 // Escapes HTML unsafe character sequences
@@ -141,16 +148,17 @@ constexpr InplaceBuff<N> json_stringify(Args&&... args) {
 		auto p = ::data(arg);
 		for (size_t i = 0, len = string_length(arg); i < len; ++i) {
 			unsigned char c = p[i];
-			if (c == '\"')
+			if (c == '\"') {
 				res.append("\\\"");
-			else if (c == '\n')
+			} else if (c == '\n') {
 				res.append("\\n");
-			else if (c == '\\')
+			} else if (c == '\\') {
 				res.append("\\\\");
-			else if (is_cntrl(c))
+			} else if (is_cntrl(c)) {
 				res.append("\\u00", dec2hex(c >> 4), dec2hex(c & 15));
-			else
+			} else {
 				res.append(static_cast<char>(c));
+			}
 		}
 	};
 
@@ -169,35 +177,41 @@ template <class T,
 constexpr std::optional<T> str2num(StringView str) noexcept {
 	if constexpr (std::is_same_v<T, bool>) {
 		auto opt = str2num<uint8_t>(str);
-		if (opt and *opt <= 1)
+		if (opt and *opt <= 1) {
 			return *opt;
+		}
 
 		return std::nullopt;
 	} else {
-		if (str.empty())
+		if (str.empty()) {
 			return std::nullopt;
+		}
 
 		bool minus = false;
 		if (not std::is_unsigned_v<T> and str[0] == '-') {
 			minus = true;
 			str.remove_prefix(1);
-			if (str.empty())
+			if (str.empty()) {
 				return std::nullopt;
+			}
 		}
 
-		if (not is_digit(str[0]))
+		if (not is_digit(str[0])) {
 			return std::nullopt;
+		}
 
 		std::optional<T> res =
 		   (minus ? '0' - str[0] : str[0] - '0'); // Will not overflow
 		str.remove_prefix(1);
 
 		for (unsigned char c : str) {
-			if (not is_digit(c))
+			if (not is_digit(c)) {
 				return std::nullopt;
+			}
 
-			if (__builtin_mul_overflow(*res, 10, &*res))
+			if (__builtin_mul_overflow(*res, 10, &*res)) {
 				return std::nullopt;
+			}
 
 			if (__builtin_add_overflow(*res, (minus ? '0' - c : c - '0'),
 			                           &*res)) {
@@ -226,29 +240,32 @@ std::optional<T> str2num(StringView str) noexcept {
 	return res;
 #else
 	static_assert(std::is_floating_point_v<T>);
-	if (str.empty() or is_space(str[0]))
+	if (str.empty() or is_space(str[0])) {
 		return std::nullopt;
+	}
 
 	try {
-		InplaceBuff<4096> buff {str};
+		InplaceBuff<4096> buff{str};
 		CStringView cstr = buff.to_cstr();
 		auto err = std::exchange(errno, 0);
 
-		char* ptr;
+		char* ptr = nullptr;
 		T res = [&] {
-			if constexpr (std::is_same_v<T, float>)
+			if constexpr (std::is_same_v<T, float>) {
 				return ::strtof(cstr.data(), &ptr);
-			else if constexpr (std::is_same_v<T, double>)
+			} else if constexpr (std::is_same_v<T, double>) {
 				return ::strtod(cstr.data(), &ptr);
-			else if constexpr (std::is_same_v<T, long double>)
+			} else if constexpr (std::is_same_v<T, long double>) {
 				return ::strtold(cstr.data(), &ptr);
-			else
+			} else {
 				static_assert(always_false<T>, "Cannot convert this type");
+			}
 		}();
 
 		std::swap(err, errno);
-		if (err or ptr != cstr.end())
+		if (err or ptr != cstr.end()) {
 			return std::nullopt;
+		}
 
 		return res;
 
@@ -265,8 +282,9 @@ std::optional<T> str2num(StringView str) noexcept {
 template <class T>
 constexpr std::optional<T> str2num(StringView str, T min_val, T max_val) {
 	auto res = str2num<T>(str);
-	if (not res or *res < min_val or *res > max_val)
+	if (not res or *res < min_val or *res > max_val) {
 		return std::nullopt;
+	}
 
 	return res;
 }
@@ -292,8 +310,9 @@ enum Adjustment : uint8_t { LEFT, RIGHT };
 template <size_t N = 32>
 InplaceBuff<N> padded_string(StringView str, size_t len, Adjustment adj = RIGHT,
                              char filler = ' ') {
-	if (len <= str.size())
+	if (len <= str.size()) {
 		return InplaceBuff<N>(str);
+	}
 
 	if (adj == LEFT) {
 		auto res = InplaceBuff<N>(str);
@@ -302,7 +321,7 @@ InplaceBuff<N> padded_string(StringView str, size_t len, Adjustment adj = RIGHT,
 		return res;
 	}
 
-	InplaceBuff<N> res {len - str.size()};
+	InplaceBuff<N> res{len - str.size()};
 	std::fill(res.begin(), res.end(), filler);
 	res.append(str);
 	return res;

@@ -10,8 +10,9 @@ TemporaryDirectory::TemporaryDirectory(FilePath templ) {
 	size_t size = templ.size();
 	if (size > 0) {
 		// Fill name_
-		while (size && templ[size - 1] == '/')
+		while (size && templ[size - 1] == '/') {
 			--size;
+		}
 
 		name_.reset(new char[size + 2]);
 
@@ -19,8 +20,9 @@ TemporaryDirectory::TemporaryDirectory(FilePath templ) {
 		name_.get()[size] = name_.get()[size + 1] = '\0';
 
 		// Create directory with permissions (mode: 0700/rwx------)
-		if (mkdtemp(name_.get()) == nullptr)
+		if (mkdtemp(name_.get()) == nullptr) {
 			THROW("Cannot create temporary directory");
+		}
 
 		if (name_.get()[0] == '/') { // name_ is absolute
 			path_ = name();
@@ -30,16 +32,19 @@ TemporaryDirectory::TemporaryDirectory(FilePath templ) {
 
 		// Make path_ absolute
 		path_ = path_absolute(path_);
-		if (path_.back() != '/')
+		if (path_.back() != '/') {
 			path_ += '/';
+		}
 
 		name_.get()[size] = '/';
 	}
 }
 
+// NOLINTNEXTLINE(performance-noexcept-move-constructor): it throws
 TemporaryDirectory& TemporaryDirectory::operator=(TemporaryDirectory&& td) {
-	if (exists() && remove_r(path_) == -1)
+	if (exists() && remove_r(path_) == -1) {
 		THROW("remove_r() failed", errmsg());
+	}
 
 	path_ = std::move(td.path_);
 	name_ = std::move(td.name_);
@@ -53,9 +58,10 @@ TemporaryDirectory::~TemporaryDirectory() {
 		                                       // throwing from the destructor
 		                                       // is (may be) UB
 #else
-	if (exists())
+	if (exists()) {
 		(void)remove_r(path_); // Return value is ignored, we cannot throw
-		                       // (because throwing from destructor is (may be)
-		                       //   UB), logging it is also not so good
+	}
+	// (because throwing from destructor is (may be)
+	//   UB), logging it is also not so good
 #endif
 }

@@ -19,20 +19,20 @@ public:
 	TemporaryDirectory(const TemporaryDirectory&) = delete;
 	TemporaryDirectory(TemporaryDirectory&&) noexcept = default;
 	TemporaryDirectory& operator=(const TemporaryDirectory&) = delete;
-
+	// NOLINTNEXTLINE(performance-noexcept-move-constructor)
 	TemporaryDirectory& operator=(TemporaryDirectory&& td);
 
 	~TemporaryDirectory();
 
 	// Returns true if object holds a real temporary directory
-	bool exists() const noexcept { return (name_.get() != nullptr); }
+	[[nodiscard]] bool exists() const noexcept { return (name_ != nullptr); }
 
 	// Directory name (from constructor parameter) with trailing '/'
-	const char* name() const noexcept { return name_.get(); }
+	[[nodiscard]] const char* name() const noexcept { return name_.get(); }
 
 	// Directory name (from constructor parameter) with trailing '/'
-	std::string sname() const { return name_.get(); }
+	[[nodiscard]] std::string sname() const { return name_.get(); }
 
 	// Directory absolute path with trailing '/'
-	const std::string& path() const noexcept { return path_; }
+	[[nodiscard]] const std::string& path() const noexcept { return path_; }
 };

@@ -37,7 +37,7 @@ auto handle_signals_while_running(Main&& main_func,
                                   Signals... signals);
 
 class HandleSignalsWhileRunning {
-	inline static FileDescriptor signal_eventfd {};
+	inline static FileDescriptor signal_eventfd{};
 
 	static uint64_t pack_signum(int signum) noexcept {
 		static_assert(sizeof(int) == 4,
@@ -83,8 +83,9 @@ public:
 		// Prepare signal eventfd
 		HandleSignalsWhileRunning::signal_eventfd =
 		   eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-		if (not HandleSignalsWhileRunning::signal_eventfd.is_open())
+		if (not HandleSignalsWhileRunning::signal_eventfd.is_open()) {
 			THROW("eventfd()", errmsg());
+		}
 
 		Defer signal_eventfd_closer = [] {
 			(void)HandleSignalsWhileRunning::signal_eventfd.close();
@@ -97,43 +98,48 @@ public:
 		// thread that runs main, should signal signal-handling thread that the
 		// main is complete and wait for its confirmation that no signal
 		// happened or handle the signal)
-		FileDescriptor main_func_ended_eventfd {
+		FileDescriptor main_func_ended_eventfd{
 		   eventfd(0, O_CLOEXEC | EFD_NONBLOCK)};
-		if (not main_func_ended_eventfd.is_open())
+		if (not main_func_ended_eventfd.is_open()) {
 			THROW("eventfd()", errmsg());
+		}
 
 		// Signal control
-		struct sigaction sa;
+		struct sigaction sa {};
 		memset(&sa, 0, sizeof(sa));
 		sa.sa_handler = HandleSignalsWhileRunning::signal_handler;
 		// Intercept signals, to allow a dedicated thread to consume them
-		if ((sigaction(signals, &sa, nullptr) or ...))
+		if ((sigaction(signals, &sa, nullptr) or ...)) {
 			THROW("sigaction()", errmsg());
+		}
 
 		// Spawn signal-handling thread
 		std::thread signal_handling_thread([&] {
 			// Wait for signal
 			constexpr int signal_efd_idx = 0;
 			constexpr int main_func_ended_efd_idx = 1;
-			std::array<pollfd, 2> pfds {{
+			std::array<pollfd, 2> pfds{{
 			   {HandleSignalsWhileRunning::signal_eventfd, POLLIN, 0},
 			   {main_func_ended_eventfd, POLLIN, 0},
 			}};
-			for (int rc;;) {
+			for (int rc = 0;;) {
 				rc = poll(pfds.data(), 2, -1);
-				if (rc >= 1)
+				if (rc >= 1) {
 					break; // Signal arrived or main has ended
+				}
 
 				assert(rc < 0);
-				if (errno != EINTR)
+				if (errno != EINTR) {
 					THROW("poll()");
+				}
 			}
 
-			for (auto const& pfd : pfds)
+			for (auto const& pfd : pfds) {
 				assert(not(pfd.revents & (POLLHUP | POLLERR)));
+			}
 
 			if (pfds[signal_efd_idx].revents & POLLIN) {
-				uint64_t packed_signum;
+				uint64_t packed_signum = 0;
 				auto read_bytes =
 				   read(HandleSignalsWhileRunning::signal_eventfd,
 				        &packed_signum, sizeof(packed_signum));
@@ -155,15 +161,15 @@ public:
 				(void)kill(getpid(), signum);
 				// Wait for signal to kill the process (just in case),
 				// repeatedly because other signals may happen in the meantime
-				for (;;)
+				for (;;) {
 					pause();
+				}
 			}
 
 			assert((pfds[main_func_ended_efd_idx].revents & POLLIN) and
 			       "There should be no other cases than the two handled here: "
 			       "signal or main_func ended");
-			return; // Signal did not happen before the main has ended, so we
-			        // are done
+			// Signal did not happen before the main has ended, so we are done
 		});
 
 		Defer before_return_or_exception = [&] {

@@ -10,15 +10,17 @@ class FileDescriptor {
 	int fd_;
 
 public:
-	explicit FileDescriptor(int fd = -1) noexcept : fd_(fd) {}
+	explicit FileDescriptor(int fd = -1) noexcept
+	: fd_(fd) {}
 
 	explicit FileDescriptor(FilePath filename, int flags,
 	                        mode_t mode = S_0644) noexcept
-	   : fd_(::open(filename, flags, mode)) {}
+	: fd_(::open(filename, flags, mode)) {}
 
 	FileDescriptor(const FileDescriptor&) = delete;
 
-	FileDescriptor(FileDescriptor&& fd) noexcept : fd_(fd.release()) {}
+	FileDescriptor(FileDescriptor&& fd) noexcept
+	: fd_(fd.release()) {}
 
 	FileDescriptor& operator=(const FileDescriptor&) = delete;
 
@@ -32,11 +34,12 @@ public:
 		return *this;
 	}
 
-	bool is_open() const noexcept { return (fd_ >= 0); }
+	[[nodiscard]] bool is_open() const noexcept { return (fd_ >= 0); }
 
 	// To check for validity opened() should be used
 	explicit operator bool() const noexcept = delete;
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	operator int() const noexcept { return fd_; }
 
 	[[nodiscard]] int release() noexcept {
@@ -46,8 +49,9 @@ public:
 	}
 
 	void reset(int fd) noexcept {
-		if (fd_ >= 0)
+		if (fd_ >= 0) {
 			(void)::close(fd_);
+		}
 		fd_ = fd;
 	}
 
@@ -60,8 +64,9 @@ public:
 	}
 
 	[[nodiscard]] int close() noexcept {
-		if (fd_ < 0)
+		if (fd_ < 0) {
 			return 0;
+		}
 
 		int rc = ::close(fd_);
 		fd_ = -1;
@@ -69,7 +74,8 @@ public:
 	}
 
 	~FileDescriptor() {
-		if (fd_ >= 0)
+		if (fd_ >= 0) {
 			(void)::close(fd_);
+		}
 	}
 };

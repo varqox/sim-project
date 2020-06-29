@@ -1,8 +1,11 @@
 #pragma once
 
+#include "simlib/inplace_buff.hh"
+
 #include <algorithm>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 #if 0 // Clang does not support std::launder yet
 #if __cplusplus > 201402L
@@ -13,14 +16,17 @@
 
 template <class T, size_t N>
 class InplaceArray {
-	size_t size_, max_size_;
+	size_t size_{0}, max_size_{};
 	using Elem = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
 	Elem a_[N];
 	Elem* p_;
 
+	[[nodiscard]] bool is_allocated() const noexcept { return p_ != a_; }
+
 	void deallocate() noexcept {
-		if (p_ != a_)
+		if (is_allocated()) {
 			delete[] p_;
+		}
 	}
 
 	void destruct_and_deallocate() noexcept {
@@ -29,32 +35,50 @@ class InplaceArray {
 	}
 
 public:
-	InplaceArray() : size_(0), max_size_(N), p_(a_) {}
+	InplaceArray()
+	: max_size_(N)
+	, p_(a_) {}
 
 	explicit InplaceArray(size_t n)
-	   : size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_) {
+	: size_(n)
+	, max_size_(std::max(n, N))
+	, p_(n > N ? new Elem[n] : a_) {
 		std::uninitialized_default_construct(begin(), end());
 	}
 
 	InplaceArray(size_t n, const T& val)
-	   : size_(n), max_size_(std::max(n, N)), p_(n > N ? new Elem[n] : a_) {
+	: size_(n)
+	, max_size_(std::max(n, N))
+	, p_(n > N ? new Elem[n] : a_) {
 		std::uninitialized_fill(begin(), end(), val);
 	}
 
+private:
 	template <size_t N1>
-	InplaceArray(const InplaceArray<T, N1>& a)
-	   : size_(a.size_), max_size_(std::max(size_, N)),
-	     p_(size_ > N ? new Elem[size_] : a_) {
+	InplaceArray(std::in_place_t /*unused*/, const InplaceArray<T, N1>& a)
+	: size_(a.size_)
+	, max_size_(std::max(size_, N))
+	, p_(size_ > N ? new Elem[size_] : a_) {
 		std::uninitialized_copy(a.begin(), a.end(), begin());
 	}
 
+public:
 	template <size_t N1>
-	InplaceArray(InplaceArray<T, N1>&& a)
-	   : size_(a.size_), max_size_(std::max(size_, N)) {
+	explicit InplaceArray(const InplaceArray<T, N1>& a)
+	: InplaceArray(std::in_place, a) {}
+
+	InplaceArray(const InplaceArray& a)
+	: InplaceArray(std::in_place, a) {}
+
+private:
+	template <size_t N1>
+	explicit InplaceArray(std::in_place_t /*unused*/, InplaceArray<T, N1>&& a)
+	: size_(a.size_)
+	, max_size_(std::max(size_, N)) {
 		if (size_ <= N) {
 			std::uninitialized_move(a.begin(), a.end(), begin());
 
-		} else if (a.p_ != a.a_) { // move the pointer
+		} else if (a.is_allocated()) { // move the pointer
 			p_ = a.p_;
 			a.p_ = a.a_;
 			a.max_size_ = N1;
@@ -66,6 +90,14 @@ public:
 
 		a.size_ = 0;
 	}
+
+public:
+	template <size_t N1>
+	explicit InplaceArray(InplaceArray<T, N1>&& a)
+	: InplaceArray(std::in_place, std::move(a)) {}
+
+	InplaceArray(InplaceArray&& a) noexcept
+	: InplaceArray(std::in_place, std::move(a)) {}
 
 	template <size_t N1>
 	InplaceArray& operator=(const InplaceArray<T, N1>& a) {
@@ -108,8 +140,14 @@ public:
 		return *this;
 	}
 
+	InplaceArray& operator=(const InplaceArray& a) {
+		*this = InplaceArray(a);
+		return *this;
+	}
+
+private:
 	template <size_t N1>
-	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
+	InplaceArray& assign(InplaceArray<T, N1>&& a) {
 		if (a.size_ <= N) {
 			destruct_and_deallocate();
 			p_ = a_;
@@ -121,7 +159,7 @@ public:
 				size_ = 0;
 				throw;
 			}
-		} else if (a.p_ != a.a_) {
+		} else if (a.is_allocated()) {
 			destruct_and_deallocate();
 			p_ = a.p_;
 			size_ = a.size_;
@@ -151,6 +189,21 @@ public:
 		}
 
 		a.size_ = 0;
+		return *this;
+	}
+
+public:
+	template <size_t N1>
+	InplaceArray& operator=(InplaceArray<T, N1>&& a) {
+		assign(std::in_place, std::move(a));
+		return *this;
+	}
+
+	// NOLINTNEXTLINE(performance-noexcept-move-constructor)
+	InplaceArray& operator=(InplaceArray&& a) {
+		if (&a != this) {
+			assign(std::in_place, std::move(a));
+		}
 		return *this;
 	}
 
@@ -208,10 +261,11 @@ public:
 	void resize(size_t n, const T& val) {
 		reserve_for(n);
 
-		if (n < size_)
+		if (n < size_) {
 			std::destroy(begin() + n, end());
-		else
+		} else {
 			std::uninitialized_fill(end(), begin() + n, val);
+		}
 	}
 
 	template <class... Args>
@@ -223,7 +277,7 @@ public:
 
 	void clear() noexcept { size_ = 0; }
 
-	size_t size() const noexcept { return size_; }
+	[[nodiscard]] size_t size() const noexcept { return size_; }
 
 private:
 	template <class Type>
@@ -238,7 +292,8 @@ private:
 	private:
 		Elem* p = nullptr;
 
-		Iterator(Elem* x) : p(x) {}
+		explicit Iterator(Elem* x)
+		: p(x) {}
 
 		friend class InplaceArray;
 
@@ -256,14 +311,16 @@ private:
 			return *this;
 		}
 
-		Iterator operator++(int) noexcept { return Iterator(p++); }
+		// NOLINTNEXTLINE(readability-const-return-type)
+		const Iterator operator++(int) noexcept { return Iterator(p++); }
 
 		Iterator& operator--() noexcept {
 			--p;
 			return *this;
 		}
 
-		Iterator operator--(int) noexcept { return Iterator(p++); }
+		// NOLINTNEXTLINE(readability-const-return-type)
+		const Iterator operator--(int) noexcept { return Iterator(p++); }
 
 		reference operator[](difference_type n) const noexcept {
 			return *reinterpret_cast<T*>(p + n);
@@ -327,23 +384,29 @@ public:
 	static_assert(sizeof(Elem) == sizeof(T), "Needed by data()");
 	T* data() noexcept { return std::addressof(front()); }
 
-	const T* data() const noexcept { return std::addressof(front()); }
+	[[nodiscard]] const T* data() const noexcept {
+		return std::addressof(front());
+	}
 
 	iterator begin() noexcept { return iterator(p_); }
 
-	const_iterator begin() const noexcept { return const_iterator(p_); }
+	[[nodiscard]] const_iterator begin() const noexcept {
+		return const_iterator(p_);
+	}
 
 	iterator end() noexcept { return iterator(p_ + size_); }
 
-	const_iterator end() const noexcept { return const_iterator(p_ + size_); }
+	[[nodiscard]] const_iterator end() const noexcept {
+		return const_iterator(p_ + size_);
+	}
 
 	T& front() noexcept { return begin()[0]; }
 
-	const T& front() const noexcept { return begin()[0]; }
+	[[nodiscard]] const T& front() const noexcept { return begin()[0]; }
 
 	T& back() noexcept { return end()[-1]; }
 
-	const T& back() const noexcept { return end()[-1]; }
+	[[nodiscard]] const T& back() const noexcept { return end()[-1]; }
 
 	T& operator[](size_t i) noexcept { return begin()[i]; }
 

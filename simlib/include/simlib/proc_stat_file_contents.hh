@@ -3,6 +3,7 @@
 #include "simlib/string_view.hh"
 
 #include <cassert>
+#include <utility>
 #include <vector>
 
 struct ProcStatFileContents {
@@ -18,17 +19,19 @@ public:
 	ProcStatFileContents& operator=(const ProcStatFileContents&) = delete;
 	ProcStatFileContents& operator=(ProcStatFileContents&&) noexcept = default;
 
+	~ProcStatFileContents() = default;
+
 	static ProcStatFileContents
 	from_proc_stat_contents(std::string stat_file_contents) {
-		return ProcStatFileContents {stat_file_contents};
+		return ProcStatFileContents{std::move(stat_file_contents)};
 	}
 
 	// Returns ProcStatFileContents of /proc/@p pid/stat
 	static ProcStatFileContents get(pid_t pid);
 
-	auto fields_no() const noexcept { return fields_.size(); }
+	[[nodiscard]] auto fields_no() const noexcept { return fields_.size(); }
 
-	StringView field(size_t no) const noexcept {
+	[[nodiscard]] StringView field(size_t no) const noexcept {
 		assert(no < fields_no());
 		return fields_[no];
 	}

@@ -13,14 +13,16 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
             const string& proot_path) {
 	using std::chrono_literals::operator""ns;
 
-	if (time_limit.has_value() and time_limit.value() <= 0ns)
+	if (time_limit.has_value() and time_limit.value() <= 0ns) {
 		THROW("If set, time_limit has to be greater than 0");
+	}
 
 	FileDescriptor cef;
 	if (c_errors) {
 		cef = open_unlinked_tmp_file(O_APPEND | O_CLOEXEC);
-		if (not cef.is_open())
+		if (not cef.is_open()) {
 			THROW("Failed to open 'compile_errors'", errmsg());
+		}
 	}
 
 	/*
@@ -28,8 +30,8 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 	 * unwanted files)
 	 */
 	vector<string> args =
-	   (proot_path.empty() ? std::initializer_list<string> {}
-	                       : std::initializer_list<string> {
+	   (proot_path.empty() ? std::initializer_list<string>{}
+	                       : std::initializer_list<string>{
 	                            // clang-format off
 	            proot_path,
 	            "-v", "-1",
@@ -61,17 +63,19 @@ int compile(StringView dir_to_chdir, vector<string> compile_command,
 
 	// Check for errors
 	if (es.si.code != CLD_EXITED or es.si.status != 0) {
-		if (c_errors)
+		if (c_errors) {
 			*c_errors =
 			   (time_limit.has_value() and es.runtime >= time_limit.value()
 			       ? "Compilation time limit exceeded"
 			       : get_file_contents(cef, 0, c_errors_max_len));
+		}
 
 		return 2;
 	}
 
-	if (c_errors)
+	if (c_errors) {
 		*c_errors = "";
+	}
 
 	return 0;
 }

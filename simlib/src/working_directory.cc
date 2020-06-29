@@ -3,16 +3,18 @@
 #include "simlib/path.hh"
 #include "simlib/process.hh"
 
-using std::array;
 using std::string;
 
 InplaceBuff<PATH_MAX> get_cwd() {
 	InplaceBuff<PATH_MAX> res;
 	char* x = get_current_dir_name();
-	if (!x)
+	if (!x) {
 		THROW("Failed to get CWD", errmsg());
+	}
 
-	Defer x_guard([x] { free(x); });
+	Defer x_guard([x] {
+		free(x); // NOLINT(cppcoreguidelines-no-malloc)
+	});
 
 	if (x[0] != '/') {
 		errno = ENOENT;
@@ -20,15 +22,17 @@ InplaceBuff<PATH_MAX> get_cwd() {
 	}
 
 	res.append(x);
-	if (res.back() != '/')
+	if (res.back() != '/') {
 		res.append('/');
+	}
 
 	return res;
 }
 
 void chdir_to_executable_dirpath() {
-	InplaceBuff<PATH_MAX> exec_dir {
+	InplaceBuff<PATH_MAX> exec_dir{
 	   path_dirpath(intentional_unsafe_string_view(executable_path(getpid())))};
-	if (chdir(exec_dir.to_cstr().c_str()))
+	if (chdir(exec_dir.to_cstr().c_str())) {
 		THROW("chdir('", exec_dir, "')", errmsg());
+	}
 }

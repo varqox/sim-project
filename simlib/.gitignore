@@ -21,3 +21,6 @@
 # Generated files
 
 # Others
+.clangd/
+build/
+compile_commands.json

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, has_prefix) {
 	EXPECT_EQ(true, has_prefix("", ""));
 	EXPECT_EQ(true, has_prefix("abc", ""));
@@ -16,6 +17,7 @@ TEST(string_traits, has_prefix) {
 	EXPECT_EQ(false, has_prefix("", "a"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, has_one_of_prefixes) {
 	EXPECT_EQ(true, has_one_of_prefixes("", "abc", "b", ""));
 	EXPECT_EQ(true, has_one_of_prefixes("abc", "bc", "b", "", "c", "ac"));
@@ -26,6 +28,7 @@ TEST(string_traits, has_one_of_prefixes) {
 	EXPECT_EQ(false, has_one_of_prefixes("abc", "bc", "b", "c", "ac"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, has_suffix) {
 	EXPECT_EQ(true, has_suffix("", ""));
 	EXPECT_EQ(true, has_suffix("cba", ""));
@@ -40,6 +43,7 @@ TEST(string_traits, has_suffix) {
 	EXPECT_EQ(false, has_suffix("", "a"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, has_one_of_suffixes) {
 	EXPECT_EQ(true, has_one_of_suffixes("", "cba", "b", ""));
 	EXPECT_EQ(true, has_one_of_suffixes("cba", "cb", "b", "", "c", "ca"));
@@ -50,6 +54,7 @@ TEST(string_traits, has_one_of_suffixes) {
 	EXPECT_EQ(false, has_one_of_suffixes("cba", "cb", "b", "c", "ca"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_digit) {
 	EXPECT_EQ(true, is_digit("0"));
 	EXPECT_EQ(true, is_digit("01"));
@@ -64,6 +69,7 @@ TEST(string_traits, is_digit) {
 	EXPECT_EQ(false, is_digit("-12345a6789"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_alpha) {
 	EXPECT_EQ(true,
 	          is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"));
@@ -77,6 +83,7 @@ TEST(string_traits, is_alpha) {
 	   is_alpha("abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0LMNOPQRSTUVWXYZ"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_alnum) {
 	EXPECT_EQ(
 	   true,
@@ -94,9 +101,11 @@ TEST(string_traits, is_alnum) {
 	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG#IJKLMNOPQRSTUVWXYZ"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_word) {
-	for (int c = 0; c < 256; ++c)
+	for (int c = 0; c < 256; ++c) {
 		EXPECT_EQ(bool(is_alnum(c) or c == '-' or c == '_'), is_word(c));
+	}
 
 	EXPECT_EQ(
 	   true,
@@ -118,6 +127,7 @@ TEST(string_traits, is_word) {
 	      "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ`KLMNOPQRSTUVWXYZ-_"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_integer) {
 	EXPECT_EQ(true, is_integer("-1234567890"));
 	EXPECT_EQ(true, is_integer("0"));
@@ -131,6 +141,7 @@ TEST(string_traits, is_integer) {
 	EXPECT_EQ(false, is_integer("-12345a67890"));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(string_traits, is_real) {
 	EXPECT_EQ(true, is_real("-1234567890"));
 	EXPECT_EQ(true, is_real("0"));

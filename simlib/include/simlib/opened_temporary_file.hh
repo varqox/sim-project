@@ -20,8 +20,9 @@ public:
 		throw_assert(has_suffix(templ, "XXXXXX") &&
 		             "this is needed by mkstemp");
 		fd_ = mkstemp(templ.data());
-		if (not fd_.is_open())
+		if (not fd_.is_open()) {
 			THROW("mkstemp() failed", errmsg());
+		}
 		path_ = std::move(templ);
 	}
 
@@ -30,8 +31,9 @@ public:
 	OpenedTemporaryFile(OpenedTemporaryFile&&) noexcept = default;
 
 	OpenedTemporaryFile& operator=(OpenedTemporaryFile&& tf) noexcept {
-		if (is_open())
+		if (is_open()) {
 			unlink(path_.c_str());
+		}
 
 		path_ = std::move(tf.path_);
 		fd_ = std::move(tf.fd_);
@@ -40,15 +42,18 @@ public:
 	}
 
 	~OpenedTemporaryFile() {
-		if (is_open())
+		if (is_open()) {
 			unlink(path_.c_str());
+		}
 	}
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	operator const FileDescriptor&() const { return fd_; }
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	operator int() const { return fd_; }
 
-	bool is_open() const noexcept { return fd_.is_open(); }
+	[[nodiscard]] bool is_open() const noexcept { return fd_.is_open(); }
 
-	const std::string& path() const noexcept { return path_; }
+	[[nodiscard]] const std::string& path() const noexcept { return path_; }
 };

@@ -7,6 +7,7 @@
 
 using std::string;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(concat_tostr, concat_tostr) {
 	EXPECT_EQ("", concat_tostr(""));
 	EXPECT_EQ("", concat_tostr("", "", "", ""));
@@ -27,9 +28,10 @@ TEST(concat_tostr, concat_tostr) {
 }
 
 template <size_t... Idx1, size_t... Idx2, class... Args>
-static string concat_and_back_insert_impl(std::tuple<Args&&...> args,
-                                          std::index_sequence<Idx1...>,
-                                          std::index_sequence<Idx2...>) {
+static string
+concat_and_back_insert_impl(std::tuple<Args&&...> args,
+                            std::index_sequence<Idx1...> /*unused*/,
+                            std::index_sequence<Idx2...> /*unused*/) {
 	string str = concat_tostr(std::get<Idx1>(args)...);
 	back_insert(str, std::get<Idx2>(args)...);
 	return str;
@@ -52,10 +54,12 @@ static void test_back_insert_on(int line, T&& expected, Args&&... args) {
 	EXPECT_EQ(expected, concat_and_back_insert<LEFT_ARGS_NO>(args...))
 	   << "line: " << line;
 
-	if constexpr (LEFT_ARGS_NO < sizeof...(args))
+	if constexpr (LEFT_ARGS_NO < sizeof...(args)) {
 		test_back_insert_on<LEFT_ARGS_NO + 1>(line, expected, args...);
+	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(concat_tostr, back_insert) {
 	test_back_insert_on(__LINE__, "", "");
 	test_back_insert_on(__LINE__, "", "", "", "", "");

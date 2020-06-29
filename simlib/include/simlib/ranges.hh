@@ -52,7 +52,7 @@ struct enumerate_view_iter {
 	}
 
 	template <size_t I, std::enable_if_t<I == 0, int> = 0>
-	size_t get() const noexcept {
+	[[nodiscard]] size_t get() const noexcept {
 		return idx;
 	}
 
@@ -62,7 +62,8 @@ struct enumerate_view_iter {
 	}
 
 	template <size_t I, std::enable_if_t<I == 1, int> = 0>
-	const typename IterTraits::reference get() const& {
+	// NOLINTNEXTLINE(readability-const-return-type)
+	[[nodiscard]] const typename IterTraits::reference get() const& {
 		return *iter;
 	}
 
@@ -78,7 +79,7 @@ namespace std {
 
 template <class Iter, class ContainerT>
 struct tuple_size<detail::enumerate_view_iter<Iter, ContainerT>>
-   : std::integral_constant<size_t, 2> {};
+: std::integral_constant<size_t, 2> {};
 
 template <class Iter, class ContainerT>
 struct tuple_element<0, detail::enumerate_view_iter<Iter, ContainerT>> {
@@ -105,11 +106,11 @@ struct enumerate_view_struct {
 	T range;
 
 	constexpr auto begin() {
-		return enumerate_view_iter<decltype(std::begin(range)), T> {
+		return enumerate_view_iter<decltype(std::begin(range)), T>{
 		   0, std::begin(range)};
 	}
 	constexpr auto end() {
-		return enumerate_view_iter<decltype(std::begin(range)), T> {
+		return enumerate_view_iter<decltype(std::begin(range)), T>{
 		   0, std::end(range)};
 	}
 };

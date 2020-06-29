@@ -56,7 +56,8 @@ class Optional {
 	friend class Statement;
 
 public:
-	Optional() : has_no_value_(true) {}
+	Optional()
+	: has_no_value_(true) {}
 
 	Optional(const Optional&) = default;
 	Optional(Optional&&) = default;
@@ -68,9 +69,13 @@ public:
 	Optional& operator=(const Optional&) = delete;
 	Optional& operator=(Optional&&) = delete;
 
-	Optional(const T& value) : value_(value), has_no_value_(false) {}
+	Optional(const T& value)
+	: value_(value)
+	, has_no_value_(false) {}
 
-	Optional(T&& value) : value_(std::move(value)), has_no_value_(false) {}
+	Optional(T&& value)
+	: value_(std::move(value))
+	, has_no_value_(false) {}
 
 	operator std::optional<T>() const { return opt(); }
 
@@ -121,11 +126,12 @@ private:
 
 	size_t* connection_referencing_objects_no_;
 	MYSQL_RES* res_;
-	MYSQL_ROW row_ {};
-	unsigned long* lengths_ {};
+	MYSQL_ROW row_{};
+	unsigned long* lengths_{};
 
 	Result(MYSQL_RES* res, size_t& conn_ref_objs_no)
-	   : connection_referencing_objects_no_(&conn_ref_objs_no), res_(res) {
+	: connection_referencing_objects_no_(&conn_ref_objs_no)
+	, res_(res) {
 		++conn_ref_objs_no;
 	}
 
@@ -134,10 +140,11 @@ private:
 
 public:
 	Result(Result&& r) noexcept
-	   : connection_referencing_objects_no_(
-	        std::exchange(r.connection_referencing_objects_no_, nullptr)),
-	     res_(std::exchange(r.res_, nullptr)), row_(std::move(r.row_)),
-	     lengths_(r.lengths_) {
+	: connection_referencing_objects_no_(
+	     std::exchange(r.connection_referencing_objects_no_, nullptr))
+	, res_(std::exchange(r.res_, nullptr))
+	, row_(std::move(r.row_))
+	, lengths_(r.lengths_) {
 		// r.row_ = {};
 		// r.lengths_ does not have to be changed
 	}
@@ -238,12 +245,13 @@ private:
 	}
 
 	Statement(MYSQL_STMT* stmt, size_t& conn_ref_objs_no)
-	   : connection_referencing_objects_no_(&conn_ref_objs_no), stmt_(stmt),
-	     binds_size_(mysql_stmt_param_count(stmt)),
-	     binds_(std::make_unique<MYSQL_BIND[]>(binds_size_)),
-	     res_binds_size_(mysql_stmt_field_count(stmt)),
-	     res_binds_(std::make_unique<MYSQL_BIND[]>(res_binds_size_)),
-	     inplace_buffs_(std::make_unique<InplaceBuffBase*[]>(res_binds_size_)) {
+	: connection_referencing_objects_no_(&conn_ref_objs_no)
+	, stmt_(stmt)
+	, binds_size_(mysql_stmt_param_count(stmt))
+	, binds_(std::make_unique<MYSQL_BIND[]>(binds_size_))
+	, res_binds_size_(mysql_stmt_field_count(stmt))
+	, res_binds_(std::make_unique<MYSQL_BIND[]>(res_binds_size_))
+	, inplace_buffs_(std::make_unique<InplaceBuffBase*[]>(res_binds_size_)) {
 
 		for (unsigned i = 0; i < binds_size_; ++i)
 			clear_bind(i);
@@ -261,14 +269,14 @@ public:
 	Statement() = default;
 
 	Statement(Statement&& s) noexcept
-	   : connection_referencing_objects_no_(
-	        std::exchange(s.connection_referencing_objects_no_, nullptr)),
-	     stmt_(std::exchange(s.stmt_, nullptr)),
-	     binds_size_(std::exchange(s.binds_size_, 0)),
-	     binds_(std::move(s.binds_)),
-	     res_binds_size_(std::exchange(s.res_binds_size_, 0)),
-	     res_binds_(std::move(s.res_binds_)),
-	     inplace_buffs_(std::move(s.inplace_buffs_)) {}
+	: connection_referencing_objects_no_(
+	     std::exchange(s.connection_referencing_objects_no_, nullptr))
+	, stmt_(std::exchange(s.stmt_, nullptr))
+	, binds_size_(std::exchange(s.binds_size_, 0))
+	, binds_(std::move(s.binds_))
+	, res_binds_size_(std::exchange(s.res_binds_size_, 0))
+	, res_binds_(std::move(s.res_binds_))
+	, inplace_buffs_(std::move(s.inplace_buffs_)) {}
 
 	Statement& operator=(Statement&& s) noexcept {
 		if (stmt_)
@@ -495,10 +503,12 @@ public:
 			if constexpr (std::is_same_v<TypeNoRefNoCV, bool>) {
 				return (unsigned char)(arg);
 			} else if constexpr (std::is_pointer_v<Type> and
-			                     std::is_same_v<TypeNoRef, const char*>) {
+			                     std::is_same_v<TypeNoRef, const char*>)
+			{
 				return InplaceBuff<inplace_buff_size>(arg);
 			} else if constexpr (std::is_array_v<TypeNoRef> and
-			                     std::is_same_v<ArrayType, const char>) {
+			                     std::is_same_v<ArrayType, const char>)
+			{
 				return InplaceBuff<inplace_buff_size>(arg);
 			} else if constexpr (std::is_base_of_v<StringBase<const char>,
 			                                       TypeNoRefNoCV>) {
@@ -733,13 +743,14 @@ class Transaction {
 	Transaction(Connection& conn);
 
 public:
-	Transaction() : conn_(nullptr) {}
+	Transaction()
+	: conn_(nullptr) {}
 
 	Transaction(const Transaction&) = delete;
 	Transaction& operator=(const Transaction&) = delete;
 
 	Transaction(Transaction&& trans) noexcept
-	   : conn_(std::exchange(trans.conn_, nullptr)) {}
+	: conn_(std::exchange(trans.conn_, nullptr)) {}
 
 	Transaction& operator=(Transaction&& trans) {
 		rollback();
@@ -854,9 +865,9 @@ public:
 	}
 
 	Connection(Connection&& c)
-	   : conn_(std::exchange(c.conn_, nullptr)),
-	     referencing_objects_no_(c.referencing_objects_no_)
-	        DEBUG_MYSQL(, connection_id(c.connection_id)) {}
+	: conn_(std::exchange(c.conn_, nullptr))
+	, referencing_objects_no_(c.referencing_objects_no_)
+	     DEBUG_MYSQL(, connection_id(c.connection_id)) {}
 
 	Connection& operator=(Connection&& c) {
 		close();
@@ -979,7 +990,8 @@ public:
 	}
 };
 
-inline Transaction::Transaction(Connection& conn) : conn_(&conn) {
+inline Transaction::Transaction(Connection& conn)
+: conn_(&conn) {
 	conn_->update("START TRANSACTION");
 	// This have to be done last because of potential exceptions
 	++conn_->referencing_objects_no_;
@@ -1011,7 +1023,8 @@ inline Transaction::~Transaction() {
 	try {
 		rollback();
 	} catch (...) {
-	} // There is nothing we can do with exceptions
+		// There is nothing we can do with exceptions
+	}
 	// If the exception was thrown the counter may have not been decremented
 	if (conn_)
 		--conn_->referencing_objects_no_;

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(http, quote) {
 	using http::quote;
 

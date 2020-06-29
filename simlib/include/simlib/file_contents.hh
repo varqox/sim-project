@@ -43,8 +43,9 @@
  * @errors If any error occurs then an exception is thrown
  */
 inline void write_all_throw(int fd, const void* buff, size_t count) {
-	if (write_all(fd, buff, count) != count)
+	if (write_all(fd, buff, count) != count) {
 		THROW("write()", errmsg());
+	}
 }
 
 /**

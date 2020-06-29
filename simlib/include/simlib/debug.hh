@@ -41,7 +41,7 @@ namespace simlib_debug {
 constexpr bool is_VA_empty() { return true; }
 
 template <class T1, class... T>
-constexpr bool is_VA_empty(T1&&, T&&...) {
+constexpr bool is_VA_empty(T1&& /*unused*/, T&&... /*unused*/) {
 	return false;
 }
 
@@ -56,7 +56,7 @@ inline InplaceBuff<4096> errmsg(int errnum) noexcept {
 	   to_string(std::numeric_limits<decltype(errnum)>::max()).size() + 1 <
 	      90, // +1 for minus a sign
 	   "Needed to fit error message in the returned buffer");
-	std::array<char, 4000> buff;
+	std::array<char, 4000> buff{};
 	return concat<4096>(" - ", errnum, ": ",
 	                    strerror_r(errnum, buff.data(), buff.size()));
 }
@@ -68,7 +68,7 @@ namespace stack_unwinding {
 class StackGuard {
 	static inline thread_local uintmax_t event_stamp;
 
-	bool inside_catch_ = (bool)std::current_exception();
+	bool inside_catch_ = static_cast<bool>(std::current_exception());
 	int uncaught_counter_ = std::uncaught_exceptions();
 	uintmax_t creation_stamp_ = event_stamp++;
 	const char* file_;
@@ -82,16 +82,17 @@ public:
 
 		template <class... Args,
 		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
-		StackMark(Args&&... args)
-		   : description(std::in_place, std::forward<Args>(args)...) {}
+		explicit StackMark(Args&&... args)
+		: description(std::in_place, std::forward<Args>(args)...) {}
 	};
 
 	static inline thread_local InplaceArray<StackMark, 128> marks_collected;
 
-public:
 	StackGuard(const char* file, size_t line,
 	           const char* pretty_function) noexcept
-	   : file_(file), line_(line), pretty_func_(pretty_function) {}
+	: file_(file)
+	, line_(line)
+	, pretty_func_(pretty_function) {}
 
 	StackGuard(const StackGuard&) = delete;
 	StackGuard(StackGuard&&) = delete;
@@ -100,15 +101,18 @@ public:
 
 	~StackGuard() {
 		if (std::uncaught_exceptions() == 1 and uncaught_counter_ == 0 and
-		    not inside_catch_) {
+		    not inside_catch_)
+		{
 			// Remove stack marks that are from earlier exceptions
 			if (marks_collected.size() > 0 and
-			    marks_collected.back().stamp < creation_stamp_) {
+			    marks_collected.back().stamp < creation_stamp_)
+			{
 				marks_collected.clear();
 			}
 
 			try {
-				StackMark a, b;
+				StackMark a;
+				StackMark b;
 				assert(a.stamp + 1 == b.stamp);
 				marks_collected.emplace_back(pretty_func_, " at ", file_, ':',
 				                             line_);
@@ -156,6 +160,13 @@ public:
 		thrown = false;
 		return std::forward<T>(expr);
 	}
+
+	ThrowingIsBug() = default;
+
+	ThrowingIsBug(const ThrowingIsBug&) = delete;
+	ThrowingIsBug(ThrowingIsBug&&) = delete;
+	ThrowingIsBug& operator=(const ThrowingIsBug&) = delete;
+	ThrowingIsBug& operator=(ThrowingIsBug&&) = delete;
 
 	~ThrowingIsBug() {
 		if (thrown) {

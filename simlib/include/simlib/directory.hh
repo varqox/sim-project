@@ -10,13 +10,16 @@ class Directory {
 	DIR* dir_;
 
 public:
-	explicit Directory(DIR* dir = nullptr) noexcept : dir_(dir) {}
+	explicit Directory(DIR* dir = nullptr) noexcept
+	: dir_(dir) {}
 
-	explicit Directory(FilePath pathname) noexcept : dir_(opendir(pathname)) {}
+	explicit Directory(FilePath pathname) noexcept
+	: dir_(opendir(pathname)) {}
 
 	Directory(const Directory&) = delete;
 
-	Directory(Directory&& d) noexcept : dir_(d.release()) {}
+	Directory(Directory&& d) noexcept
+	: dir_(d.release()) {}
 
 	Directory& operator=(const Directory&) = delete;
 
@@ -30,13 +33,15 @@ public:
 		return *this;
 	}
 
-	bool is_open() const noexcept { return (dir_ != nullptr); }
+	[[nodiscard]] bool is_open() const noexcept { return (dir_ != nullptr); }
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	operator DIR*() const noexcept { return dir_; }
 
 	void rewind() noexcept {
-		if (is_open())
+		if (is_open()) {
 			rewinddir(dir_);
+		}
 	}
 
 	[[nodiscard]] DIR* release() noexcept {
@@ -46,8 +51,9 @@ public:
 	}
 
 	void reset(DIR* d) noexcept {
-		if (dir_)
+		if (dir_) {
 			(void)closedir(dir_);
+		}
 		dir_ = d;
 	}
 
@@ -64,8 +70,9 @@ public:
 	}
 
 	~Directory() {
-		if (dir_)
+		if (dir_) {
 			(void)closedir(dir_);
+		}
 	}
 };
 
@@ -89,31 +96,35 @@ void for_each_dir_component(DirType&& dir, Func&& func,
 	              std::is_invocable_v<Func, dirent*>);
 
 	if constexpr (not std::is_convertible_v<DirType, DIR*>) {
-		Directory directory {dir};
-		if (!directory)
+		Directory directory{dir};
+		if (!directory.is_open()) {
 			THROW("opendir()", errmsg());
+		}
 
 		return for_each_dir_component(directory, std::forward<Func>(func),
 		                              std::forward<ErrFunc>(readdir_failed));
 
 	} else {
-		dirent* file;
+		dirent* file = nullptr;
 		for (;;) {
 			errno = 0;
 			file = readdir(dir);
 			if (file == nullptr) {
-				if (errno == 0)
+				if (errno == 0) {
 					return; // No more entries
+				}
 
 				readdir_failed();
 				return;
 			}
 
-			if (strcmp(file->d_name, ".") and strcmp(file->d_name, "..")) {
+			if (strcmp(file->d_name, ".") != 0 and
+			    strcmp(file->d_name, "..") != 0) {
 				if constexpr (std::is_constructible_v<decltype(func(file)),
 				                                      bool>) {
-					if (not func(file))
+					if (not func(file)) {
 						return;
+					}
 				} else {
 					func(file);
 				}

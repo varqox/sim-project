@@ -1,10 +1,14 @@
 #include "simlib/sim/conver.hh"
+#include "simlib/avl_dict.hh"
 #include "simlib/debug.hh"
 #include "simlib/file_info.hh"
 #include "simlib/libzip.hh"
 #include "simlib/sim/judge_worker.hh"
 #include "simlib/sim/problem_package.hh"
 #include "simlib/utilities.hh"
+
+#include <chrono>
+#include <utility>
 
 using std::pair;
 using std::string;
@@ -18,17 +22,23 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	using std::chrono_literals::operator""ns;
 
-	if (opts.memory_limit.has_value() and opts.memory_limit.value() <= 0)
+	if (opts.memory_limit.has_value() and opts.memory_limit.value() <= 0) {
 		THROW("If set, memory_limit has to be greater than 0");
+	}
 	if (opts.global_time_limit.has_value() and
 	    opts.global_time_limit.value() <= 0ns)
+	{
 		THROW("If set, global_time_limit has to be greater than 0");
-	if (opts.max_time_limit <= 0ns)
+	}
+	if (opts.max_time_limit <= 0ns) {
 		THROW("max_time_limit has to be greater than 0");
-	if (opts.rtl_opts.min_time_limit < 0ns)
+	}
+	if (opts.rtl_opts.min_time_limit < 0ns) {
 		THROW("min_time_limit has to be non-negative");
-	if (opts.rtl_opts.solution_runtime_coefficient < 0)
+	}
+	if (opts.rtl_opts.solution_runtime_coefficient < 0) {
 		THROW("solution_runtime_coefficient has to be non-negative");
+	}
 
 	// Reset report_
 	report_.str.clear();
@@ -38,14 +48,16 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	PackageContents pc;
 	if (is_directory(package_path_)) {
-		throw_assert(package_path_.size() > 0);
-		if (package_path_.back() != '/')
+		throw_assert(!package_path_.empty());
+		if (package_path_.back() != '/') {
 			package_path_ += '/';
+		}
 		// From now on, package_path_ has trailing '/' iff it is a directory
 		pc.load_from_directory(package_path_);
 
-	} else
+	} else {
 		pc.load_from_zip(package_path_);
+	}
 
 	StringView master_dir = pc.master_dir(); // Find master directory if exists
 
@@ -63,9 +75,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	if (not opts.ignore_simfile and exists_in_pkg("Simfile")) {
 		try {
 			sf = Simfile([&] {
-				if (package_path_.back() == '/')
+				if (package_path_.back() == '/') {
 					return get_file_contents(
 					   concat(package_path_, master_dir, "Simfile"));
+				}
 
 				ZipFile zip(package_path_, ZIP_RDONLY);
 				return zip.extract_to_str(
@@ -113,8 +126,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	auto collect_files = [&pc](auto&& prefix, auto&& cond) {
 		vector<StringView> res;
 		pc.for_each_with_prefix(prefix, [&](StringView file) {
-			if (cond(file))
+			if (cond(file)) {
 				res.emplace_back(file);
+			}
 		});
 		return res;
 	};
@@ -136,8 +150,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 
 	// Interactive
-	if (opts.interactive.has_value())
+	if (opts.interactive.has_value()) {
 		sf.interactive = opts.interactive.value();
+	}
 
 	if (not sf.checker.has_value()) {
 		// Scan check/ and checker/ directory
@@ -146,7 +161,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			auto y = collect_files(concat(master_dir, "checker/"), is_source);
 			x.insert(x.end(), y.begin(), y.end());
 		}
-		if (x.size()) {
+		if (!x.empty()) {
 			// Choose the one with the shortest path to be the checker
 			std::swap(x.front(), *std::min_element(
 			                        x.begin(), x.end(), [](auto&& a, auto&& b) {
@@ -179,11 +194,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 
 	auto is_statement = [](StringView file) {
-		return has_one_of_suffixes(file, ".pdf", ".md", ".txt");
+		return has_one_of_suffixes(std::move(file), ".pdf", ".md", ".txt");
 	};
 
 	if (sf.statement and exists_in_pkg(sf.statement.value()) and
-	    is_statement(sf.statement.value())) {
+	    is_statement(sf.statement.value()))
+	{
 		// OK
 	} else {
 		report_.append(
@@ -192,18 +208,18 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 		// Scan doc/ directory
 		auto x = collect_files(concat(master_dir, "doc/"), is_statement);
-		if (x.empty())
+		if (x.empty()) {
 			x = collect_files("", is_statement); // Scan whole directory tree
+		}
 
 		// If there is no statement
 		if (x.empty()) {
 			if (opts.require_statement) {
 				THROW("No statement was found (recognized extensions: pdf, md, "
 				      "txt)");
-			} else {
-				report_.append("\033[1;35mwarning\033[m: no statement was "
-				               "found (recognized extensions: pdf, md, txt)");
 			}
+			report_.append("\033[1;35mwarning\033[m: no statement was "
+			               "found (recognized extensions: pdf, md, txt)");
 
 		} else {
 			// Prefer PDF to other formats, then the shorter paths
@@ -234,16 +250,18 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			if (exists_in_pkg(sol) and not solutions_set.find(sol)) {
 				solutions.emplace_back(sol);
 				solutions_set.emplace(sol);
-			} else
+			} else {
 				report_.append("\033[1;35mwarning\033[m: ignoring invalid"
 				               " solution: `",
 				               sol, '`');
+			}
 		}
 
 		auto x = collect_files("", is_source);
 		if (solutions.empty()) { // The main solution has to be set
-			if (x.empty())
+			if (x.empty()) {
 				THROW("No solution was found");
+			}
 
 			// Choose the one with the shortest path to be the model solution
 			std::swap(x.front(), *std::min_element(
@@ -255,8 +273,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		// Merge solutions
 		for (auto&& s : x) {
 			s.remove_prefix(master_dir.size());
-			if (solutions_set.emplace(s))
+			if (solutions_set.emplace(s)) {
 				solutions.emplace_back(s.to_string());
+			}
 		}
 
 		// Put the solutions into the Simfile
@@ -275,7 +294,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// Load tests and limits form variable "limits"
 	auto const& limits = sf.config["limits"];
-	if (not opts.ignore_simfile and limits.is_set() and limits.is_array())
+	if (not opts.ignore_simfile and limits.is_set() and limits.is_array()) {
 		for (auto const& str : limits.as_array()) {
 			Test test;
 			try {
@@ -299,11 +318,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			tests.emplace(test.name,
 			              std::move(test)); // Replace on redefinition
 		}
+	}
 
-	if (opts.seek_for_new_tests)
+	if (opts.seek_for_new_tests) {
 		pc.for_each_with_prefix("", [&](StringView entry) {
 			if (has_suffix(entry, ".in") or
-			    (not sf.interactive and has_suffix(entry, ".out"))) {
+			    (not sf.interactive and has_suffix(entry, ".out")))
+			{
 				entry.remove_trailing([](char c) { return (c != '.'); });
 				entry.remove_suffix(1);
 				StringView name =
@@ -312,6 +333,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				tests[name].name = name;
 			}
 		});
+	}
 
 	// Match tests with the test files found in the package
 	pc.for_each_with_prefix("", [&](StringView input) {
@@ -362,7 +384,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Load test files (this one may overwrite the files form previous step)
 	auto const& tests_files = sf.config["tests_files"];
 	if (not opts.ignore_simfile and tests_files.is_set() and
-	    tests_files.is_array())
+	    tests_files.is_array()) {
 		for (auto const& str : tests_files.as_array()) {
 			StringView tname;
 			std::optional<StringView> input;
@@ -377,8 +399,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				continue;
 			}
 
-			if (tname.empty())
+			if (tname.empty()) {
 				continue; // Ignore empty entries
+			}
 
 			if (input.value().empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
@@ -422,8 +445,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				output = std::nullopt;
 			}
 
-			if (opts.seek_for_new_tests)
+			if (opts.seek_for_new_tests) {
 				tests[tname].name = tname; // Add test if it does not exist
+			}
 
 			auto it = tests.find(tname);
 			if (not it) {
@@ -435,24 +459,29 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			Test& test = it->second;
-			if (input.has_value())
+			if (input.has_value()) {
 				test.in = input;
+			}
 
-			if (output.has_value())
+			if (output.has_value()) {
 				test.out = output;
+			}
 		}
+	}
 
 	// Remove tests that have at most one file set
 	for (auto it = tests.front(); it; it = tests.upper_bound(it->first)) {
 		auto const& test = it->second;
 		// Warn if the test was loaded from "limits"
-		if (not test.in.has_value() and test.time_limit.has_value())
+		if (not test.in.has_value() and test.time_limit.has_value()) {
 			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
 			               test.name,
 			               "` because it has no corresponding input file");
+		}
 		// Warn if the test was loaded from "limits"
 		if (not sf.interactive and not test.out.has_value() and
-		    test.time_limit.has_value()) {
+		    test.time_limit.has_value())
+		{
 			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
 			               test.name,
 			               "` because it has no corresponding output file");
@@ -460,13 +489,16 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 		if (not test.in.has_value() or
 		    (not sf.interactive and not test.out.has_value()))
+		{
 			tests.erase(test.name);
+		}
 	}
 
 	if (not opts.memory_limit.has_value()) {
-		if (opts.ignore_simfile)
+		if (opts.ignore_simfile) {
 			THROW("Missing memory limit - global memory limit not specified in"
 			      " options and simfile is ignored");
+		}
 
 		report_.append("Global memory limit not specified in options - loading"
 		               " it from Simfile");
@@ -490,9 +522,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		     // limit
 		tests.for_each([&](auto& keyval) {
 			if (not keyval.second.memory_limit.has_value()) {
-				if (not sf.global_mem_limit.has_value())
+				if (not sf.global_mem_limit.has_value()) {
 					THROW("Memory limit is not specified for test `",
 					      keyval.first, "` and no global memory limit is set");
+				}
 
 				keyval.second.memory_limit = sf.global_mem_limit;
 			}
@@ -510,11 +543,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	tests.for_each([&](auto& keyval) {
 		Test& test = keyval.second;
 		auto sr = Simfile::TestNameComparator::split(test.name);
-		if (sr.gid.empty())
+		if (sr.gid.empty()) {
 			return; // Ignore the tests with no group id
+		}
 
-		if (sr.tid == "ocen")
+		if (sr.tid == "ocen") {
 			sr.gid = "0";
+		}
 
 		auto& group = tests_groups[sr.gid];
 		group.name = sr.gid;
@@ -524,10 +559,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Load scoring
 	auto const& scoring = sf.config["scoring"];
 	if (not opts.ignore_simfile and not opts.reset_scoring and
-	    scoring.is_set() and scoring.is_array()) {
+	    scoring.is_set() and scoring.is_array())
+	{
 		for (auto const& str : scoring.as_array()) {
 			StringView gid;
-			int64_t score;
+			int64_t score = 0;
 			try {
 				std::tie(gid, score) = Simfile::parse_scoring_item(str);
 			} catch (const std::exception& e) {
@@ -538,9 +574,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			auto it = tests_groups.find(gid);
-			if (it)
+			if (it) {
 				it->second.score = score;
-			else {
+			} else {
 				report_.append("\033[1;35mwarning\033[m: \"scoring\": ignoring"
 				               " score of the group with id `",
 				               gid, "` because no test belongs to it");
@@ -604,10 +640,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			   test.time_limit.value_or(std::chrono::nanoseconds(0)),
 			   test.memory_limit.value());
 			t.in = test.in.value().to_string();
-			if (sf.interactive)
+			if (sf.interactive) {
 				t.out = std::nullopt;
-			else
+			} else {
 				t.out = test.out.value().to_string();
+			}
 
 			tg.tests.emplace_back(std::move(t));
 		}
@@ -618,31 +655,33 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Override the time limits
 	if (opts.global_time_limit.has_value()) {
 		run_model_solution = opts.reset_time_limits_using_model_solution;
-		for (auto&& g : sf.tgroups)
-			for (auto&& t : g.tests)
+		for (auto&& g : sf.tgroups) {
+			for (auto&& t : g.tests) {
 				t.time_limit = opts.global_time_limit.value();
+			}
+		}
 	}
 
 	if (not run_model_solution) {
 		normalize_time_limits(sf);
 		// Nothing more to do
 		return {Status::COMPLETE, std::move(sf), master_dir.to_string()};
-
-	} else { // The model solution's judge report is needed
-		// Set the time limits for the model solution
-		auto sol_time_limit =
-		   std::chrono::duration_cast<std::chrono::milliseconds>(
-		      time_limit_to_solution_runtime(
-		         opts.max_time_limit,
-		         opts.rtl_opts.solution_runtime_coefficient,
-		         opts.rtl_opts.min_time_limit));
-		for (auto&& g : sf.tgroups)
-			for (auto&& t : g.tests)
-				t.time_limit = sol_time_limit;
-
-		return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
-		        master_dir.to_string()};
 	}
+
+	// The model solution's judge report is needed
+	// Set the time limits for the model solution
+	auto sol_time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(
+	   time_limit_to_solution_runtime(
+	      opts.max_time_limit, opts.rtl_opts.solution_runtime_coefficient,
+	      opts.rtl_opts.min_time_limit));
+	for (auto&& g : sf.tgroups) {
+		for (auto&& t : g.tests) {
+			t.time_limit = sol_time_limit;
+		}
+	}
+
+	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
+	        master_dir.to_string()};
 }
 
 void Conver::reset_time_limits_using_jugde_reports(
@@ -650,19 +689,21 @@ void Conver::reset_time_limits_using_jugde_reports(
    const ResetTimeLimitsOptions& opts) {
 	STACK_UNWINDING_MARK;
 
-	using namespace std::chrono;
+	using std::chrono::nanoseconds;
 	using std::chrono_literals::operator""ns;
 
-	if (opts.min_time_limit < 0ns)
+	if (opts.min_time_limit < 0ns) {
 		THROW("min_time_limit has to be non-negative");
-	if (opts.solution_runtime_coefficient < 0)
+	}
+	if (opts.solution_runtime_coefficient < 0) {
 		THROW("solution_runtime_coefficient has to be non-negative");
+	}
 
 	// Map every test to its time limit
 	AVLDictMap<StringView, nanoseconds> tls; // test name => time limit
 	for (auto ptr : {&jrep1, &jrep2}) {
 		auto&& rep = *ptr;
-		for (auto&& g : rep.groups)
+		for (auto&& g : rep.groups) {
 			for (auto&& t : g.tests) {
 				// Only allow OK and WA to pass through
 				if (not is_one_of(t.status, JudgeReport::Test::OK,
@@ -675,12 +716,15 @@ void Conver::reset_time_limits_using_jugde_reports(
 				   t.runtime, opts.solution_runtime_coefficient,
 				   opts.min_time_limit));
 			}
+		}
 	}
 
 	// Assign time limits to the tests
-	for (auto&& tg : sf.tgroups)
-		for (auto&& t : tg.tests)
+	for (auto&& tg : sf.tgroups) {
+		for (auto&& t : tg.tests) {
 			t.time_limit = tls[t.name];
+		}
+	}
 
 	normalize_time_limits(sf);
 }

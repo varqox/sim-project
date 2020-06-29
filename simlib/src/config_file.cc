@@ -5,8 +5,9 @@
 #include "simlib/simple_parser.hh"
 #include "simlib/utilities.hh"
 
+#include <utility>
+
 using std::string;
-using std::vector;
 
 #if 0
 #warning "Before committing disable this debug"
@@ -22,8 +23,9 @@ void ConfigFile::load_config_from_file(FilePath pathname, bool load_all) {
 
 void ConfigFile::load_config_from_string(string config, bool load_all) {
 	// Set all variables as unused
-	for (auto it : vars)
+	for (auto it : vars) {
 		it.second.unset();
+	}
 
 	// Checks whether c is a white-space but not a newline
 	auto is_ws = [](auto c) { return (c != '\n' and is_space(c)); };
@@ -35,7 +37,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 	DEBUG_CF(stdlog("Config file:\n", config);)
 
 	config += '\n'; // Now each line ends with a newline character
-	SimpleParser buff {config};
+	SimpleParser buff{config};
 
 	Variable tmp; // Used for ignored variables
 	auto buff_beg = buff.data();
@@ -47,7 +49,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		while (x and config[--x] != '\n') {
 		}
 
-		int line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n');
+		auto line = 1 + std::count(buff_beg, buff_beg + x + 1, '\n');
 		size_t col = pos - x + (line == 1); // Indexed from 1
 
 		ParseError pe(line, col, std::forward<decltype(args)>(args)...);
@@ -55,9 +57,9 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		// Construct diagnostics
 		auto& diags = pe.diagnostics_;
 		auto append_char = [&](unsigned char c) {
-			if (is_print(c))
+			if (is_print(c)) {
 				diags += c;
-			else {
+			} else {
 				diags += "\\x";
 				diags += dec2hex(c >> 4);
 				diags += dec2hex(c & 15);
@@ -67,12 +69,14 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		// Left part
 		constexpr uint CONTEXT = 32;
 		if (col <= CONTEXT + 1) {
-			for (size_t k = x; k < pos; ++k)
+			for (size_t k = x; k < pos; ++k) {
 				append_char(config[k]);
+			}
 		} else {
 			diags += "...";
-			for (size_t k = pos - CONTEXT; k < pos; ++k)
+			for (size_t k = pos - CONTEXT; k < pos; ++k) {
 				append_char(config[k]);
+			}
 		}
 
 		// Faulty position
@@ -84,11 +88,13 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 
 			// Right part
 			size_t k = pos + 1;
-			for (; config[k] != '\n' and k <= pos + CONTEXT; ++k)
+			for (; config[k] != '\n' and k <= pos + CONTEXT; ++k) {
 				append_char(config[k]);
+			}
 
-			if (config[k] != '\n')
+			if (config[k] != '\n') {
 				diags += "...";
+			}
 		}
 
 		// Diagnostics's second line - stress
@@ -99,7 +105,7 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 
 		DEBUG_CF(
 		   stdlog("Throwing exception: ", pe.what(), "\n", pe.diagnostics());)
-		throw pe;
+		throw std::move(pe);
 	};
 
 	auto extract_value = [&](bool is_in_array) {
@@ -185,26 +191,30 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 
 		// Beginning is ok
 		// Interior
-		if (is_in_array) // Value in an array
+		if (is_in_array) { // Value in an array
 			while (buff[i + 1] != '\n' and buff[i + 1] != '#' and
-			       buff[i + 1] != ']' and buff[i + 1] != ',') {
+			       buff[i + 1] != ']' and buff[i + 1] != ',')
+			{
 				++i;
 			}
 
-		else // Value of an ordinary variable
-			while (buff[i + 1] != '\n' and buff[i + 1] != '#')
+		} else { // Value of an ordinary variable
+			while (buff[i + 1] != '\n' and buff[i + 1] != '#') {
 				++i;
+			}
+		}
 
 		// Remove white-spaces from ending
-		while (is_space(buff[i]))
+		while (is_space(buff[i])) {
 			--i;
+		}
 		res = buff.substring(0, ++i).to_string();
 
 		buff.remove_prefix(i);
 		return res;
 	};
 
-	while (buff.size()) {
+	while (!buff.empty()) {
 		auto skip_comment = [&] {
 			buff.remove_leading([](char c) { return (c != '\n'); });
 		};
@@ -224,43 +234,48 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 
 		/* Variable name */
 		StringView name = buff.extract_leading(is_name);
-		if (name.empty())
+		if (name.empty()) {
 			throw_parse_error("Invalid or missing variable's name");
+		}
 
 		DEBUG_CF(stdlog("Variable: ", name);)
 
 		/* Assignment operator */
 		buff.remove_leading(is_ws);
-		if (buff[0] == '\n' or buff[0] == '#') // Newline or comment
+		if (buff[0] == '\n' or buff[0] == '#') { // Newline or comment
 			throw_parse_error("Incomplete directive: `", name, '`');
-		if (buff[0] != '=' and buff[0] != ':')
+		}
+		if (buff[0] != '=' and buff[0] != ':') {
 			throw_parse_error("Invalid assignment operator: `", buff[0], '`');
+		}
 
 		buff.remove_prefix(1); // Assignment operator
 		buff.remove_leading(is_ws);
 
 		/* Value */
 
-		Variable* varp; // It is safe to take a pointer to a value in vars, as
-		                // vars is not modified after that
-		if (load_all)
+		Variable* varp = nullptr; // It is safe to take a pointer to a value in
+		                          // vars, as vars is not modified after that
+		if (load_all) {
 			varp = &vars[name.to_string()];
-		else {
+		} else {
 			auto it = vars.find(name.to_string());
 			varp = (it != vars.end() ? &it->second : &tmp);
 		}
 		Variable& var = *varp;
-		if (var.is_set())
+		if (var.is_set()) {
 			var.unset();
+		}
 
 		var.flag_ = Variable::SET;
 		var.value_span_.beg = curr_pos();
 
 		if (buff[0] != '[') { // Normal
-			if (buff[0] == '\n' or buff[0] == '#') // No value
+			if (buff[0] == '\n' or buff[0] == '#') { // No value
 				var.str_.clear();
-			else
+			} else {
 				var.str_ = extract_value(false);
+			}
 			DEBUG_CF(
 			   stdlog("  value: ", escape_to_double_quoted_string(var.str_));)
 		} else { // Array
@@ -329,9 +344,10 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 		}
 
 		// Error - unknown sequence after the value
-		if (buff[0] != '\n')
+		if (buff[0] != '\n') {
 			throw_parse_error("Unknown sequence after the value: `", buff[0],
 			                  '`');
+		}
 
 		buff.remove_prefix(1); // Newline
 	}
@@ -340,38 +356,43 @@ void ConfigFile::load_config_from_string(string config, bool load_all) {
 }
 
 bool ConfigFile::is_string_literal(StringView str) noexcept {
-	if (str.empty())
-		return false;
-
-	// Special check on the first and last character
-	if (is_one_of(str[0], '[', '\'', '"', '#') or is_space(str[0]) or
-	    is_space(str.back())) {
+	if (str.empty()) {
 		return false;
 	}
 
-	for (auto c : str)
-		if (is_one_of(c, '\n', ']', ',', '#'))
+	// Special check on the first and last character
+	if (is_one_of(str[0], '[', '\'', '"', '#') or is_space(str[0]) or
+	    is_space(str.back()))
+	{
+		return false;
+	}
+
+	for (auto c : str) {
+		if (is_one_of(c, '\n', ']', ',', '#')) {
 			return false;
+		}
+	}
 
 	return true;
 }
 
 string ConfigFile::escape_to_single_quoted_string(StringView str) {
-	string res {'\''};
+	string res{'\''};
 	res.reserve(str.size());
 	for (size_t i = 0; i < str.size(); ++i) {
 		res += str[i];
-		if (str[i] == '\'')
+		if (str[i] == '\'') {
 			res += '\'';
+		}
 	}
 	return (res += '\'');
 }
 
 template <class Func>
 static string escape_to_double_quoted_string_impl(StringView str, Func&& func) {
-	string res {'"'};
+	string res{'"'};
 	res.reserve(str.size());
-	for (size_t i = 0; i < str.size(); ++i)
+	for (size_t i = 0; i < str.size(); ++i) {
 		switch (str[i]) {
 		case '\\': res += "\\\\"; break;
 		case '\0': res += "\\0"; break;
@@ -389,40 +410,48 @@ static string escape_to_double_quoted_string_impl(StringView str, Func&& func) {
 				res += "\\x";
 				res += dec2hex(static_cast<unsigned char>(str[i]) >> 4);
 				res += dec2hex(static_cast<unsigned char>(str[i]) & 15);
-			} else
+			} else {
 				res += str[i];
+			}
 		}
+	}
 
 	return (res += '"');
 }
 
 string ConfigFile::escape_to_double_quoted_string(StringView str) {
-	return escape_to_double_quoted_string_impl(str, is_cntrl<char>);
+	return escape_to_double_quoted_string_impl(std::move(str), is_cntrl<char>);
 }
 
 string ConfigFile::full_escape_to_double_quoted_string(StringView str) {
 	return escape_to_double_quoted_string_impl(
-	   str, [](int x) { return !is_print(x); });
+	   std::move(str), [](int x) { return !is_print(x); });
 }
 
 string ConfigFile::escape_string(StringView str) {
-	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\'' or is_cntrl(str[i]))
+	for (size_t i = 0; i < str.size(); ++i) {
+		if (str[i] == '\'' or is_cntrl(str[i])) {
 			return escape_to_double_quoted_string(str);
+		}
+	}
 
-	if (is_string_literal(str))
+	if (is_string_literal(str)) {
 		return str.to_string();
+	}
 
 	return escape_to_single_quoted_string(str);
 }
 
 string ConfigFile::full_escape_string(StringView str) {
-	for (size_t i = 0; i < str.size(); ++i)
-		if (str[i] == '\'' or !is_print(str[i]))
+	for (size_t i = 0; i < str.size(); ++i) {
+		if (str[i] == '\'' or !is_print(str[i])) {
 			return full_escape_to_double_quoted_string(str);
+		}
+	}
 
-	if (is_string_literal(str))
+	if (is_string_literal(str)) {
 		return str.to_string();
+	}
 
 	return escape_to_single_quoted_string(str);
 }

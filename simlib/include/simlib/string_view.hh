@@ -26,51 +26,69 @@ public:
 
 protected:
 	pointer str;
-	size_type len;
+	size_type len{0};
 
 public:
-	constexpr StringBase() noexcept : str(""), len(0) {}
+	constexpr StringBase() noexcept
+	: str("") {}
 
 	constexpr StringBase(std::nullptr_t) = delete;
 
 	template <size_t N>
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(const char (&s)[N])
-	   : str(s), len(std::char_traits<char>::length(s)) {}
+	: str(s)
+	, len(std::char_traits<char>::length(s)) {}
 
 	// Do not treat as possible string literal
 	template <size_t N>
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(char (&s)[N])
-	   : str(s), len(std::char_traits<char>::length(s)) {}
+	: str(s)
+	, len(std::char_traits<char>::length(s)) {}
 
 	template <size_t N>
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(const StaticCStringBuff<N>& s) noexcept
-	   : str(s.data()), len(s.size()) {}
+	: str(s.data())
+	, len(s.size()) {}
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(pointer s) noexcept
-	   : str(s), len(std::char_traits<char>::length(s)) {}
+	: str(s)
+	, len(std::char_traits<char>::length(s)) {}
 
-	constexpr StringBase(pointer s, size_type n) noexcept : str(s), len(n) {}
+	constexpr StringBase(pointer s, size_type n) noexcept
+	: str(s)
+	, len(n) {}
 
 	// Constructs StringView from substring [beg, beg + n) of string s
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(const std::string& s, size_type beg = 0,
 	                     size_type n = npos) noexcept
-	   : str(s.data() + std::min(beg, s.size())),
-	     len(std::min(n, s.size() - std::min(beg, s.size()))) {}
+	: str(s.data() + std::min(beg, s.size()))
+	, len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	// Constructs StringBase from substring [beg, beg + n) of string s
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(std::string& s, size_type beg = 0,
 	                     size_type n = npos) noexcept
-	   : str(s.data() + std::min(beg, s.size())),
-	     len(std::min(n, s.size() - std::min(beg, s.size()))) {}
+	: str(s.data() + std::min(beg, s.size()))
+	, len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
 	constexpr StringBase(const StringBase& s) noexcept
-	   : str(s.data()), len(s.size()) {}
+	: str(s.data())
+	, len(s.size()) {}
 
 	constexpr StringBase(StringBase&& s) noexcept
-	   : str(s.data()), len(s.size()) {}
+	: str(s.data())
+	, len(s.size()) {}
 
-	template <class T,
-	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+	template <class T, std::enable_if_t<
+	                      std::is_rvalue_reference_v<T&&> and
+	                         not std::is_same_v<std::decay_t<T>, StringBase>,
+	                      int> = 0>
+	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
 	StringBase(T&&) = delete; // Protect from assigning unsafe data
 
 	constexpr StringBase& operator=(StringBase&& s) noexcept {
@@ -80,8 +98,7 @@ public:
 	}
 
 	constexpr StringBase& operator=(const StringBase& s) noexcept {
-		str = s.data();
-		len = s.size();
+		*this = StringBase(s);
 		return *this;
 	}
 
@@ -93,76 +110,95 @@ public:
 	                           int> = 0>
 	StringBase& operator=(T&&) = delete; // Protect from assigning unsafe data
 
+	~StringBase() = default;
+
 	// Returns whether the StringBase is empty (size() == 0)
-	constexpr bool empty() const noexcept { return (len == 0); }
+	[[nodiscard]] constexpr bool empty() const noexcept { return (len == 0); }
 
 	// Returns the number of characters in the StringBase
-	constexpr size_type size() const noexcept { return len; }
+	[[nodiscard]] constexpr size_type size() const noexcept { return len; }
 
 	// Returns the number of characters in the StringBase
-	constexpr size_type length() const noexcept { return len; }
+	[[nodiscard]] constexpr size_type length() const noexcept { return len; }
 
 	// Returns a pointer to the underlying character array
 	constexpr pointer data() noexcept { return str; }
 
 	// Returns a const pointer to the underlying character array
-	constexpr const_pointer data() const noexcept { return str; }
+	[[nodiscard]] constexpr const_pointer data() const noexcept { return str; }
 
 	constexpr iterator begin() noexcept { return str; }
 
 	constexpr iterator end() noexcept { return str + len; }
 
-	constexpr const_iterator begin() const noexcept { return str; }
+	[[nodiscard]] constexpr const_iterator begin() const noexcept {
+		return str;
+	}
 
-	constexpr const_iterator end() const noexcept { return str + len; }
+	[[nodiscard]] constexpr const_iterator end() const noexcept {
+		return str + len;
+	}
 
-	constexpr const_iterator cbegin() const noexcept { return str; }
+	[[nodiscard]] constexpr const_iterator cbegin() const noexcept {
+		return str;
+	}
 
-	constexpr const_iterator cend() const noexcept { return str + len; }
+	[[nodiscard]] constexpr const_iterator cend() const noexcept {
+		return str + len;
+	}
 
 	// Returns reference to first element
 	constexpr reference front() noexcept { return str[0]; }
 
 	// Returns const_reference to first element
-	constexpr const_reference front() const noexcept { return str[0]; }
+	[[nodiscard]] constexpr const_reference front() const noexcept {
+		return str[0];
+	}
 
 	// Returns reference to last element
 	constexpr reference back() noexcept { return str[len - 1]; }
 
 	// Returns const_reference to last element
-	constexpr const_reference back() const noexcept { return str[len - 1]; }
+	[[nodiscard]] constexpr const_reference back() const noexcept {
+		return str[len - 1];
+	}
 
 	// Returns reference to n-th element
 	constexpr reference operator[](size_type n) noexcept {
-		if constexpr (not std::is_unsigned_v<decltype(n)>)
+		if constexpr (not std::is_unsigned_v<decltype(n)>) {
 			assert(n >= 0);
+		}
 		assert(n < len);
 		return str[n];
 	}
 
 	// Returns const_reference to n-th element
 	constexpr const_reference operator[](size_type n) const noexcept {
-		if constexpr (not std::is_unsigned_v<decltype(n)>)
+		if constexpr (not std::is_unsigned_v<decltype(n)>) {
 			assert(n >= 0);
+		}
 		assert(n < len);
 		return str[n];
 	}
 
 	// Like operator[] but throws exception if n >= size()
 	constexpr reference at(size_type n) {
-		if (n >= len)
+		if (n >= len) {
 			throw std::out_of_range("StringBase::at");
+		}
 
-		if constexpr (not std::is_unsigned_v<decltype(n)>)
+		if constexpr (not std::is_unsigned_v<decltype(n)>) {
 			assert(n >= 0);
+		}
 		assert(n < len);
 		return str[n];
 	}
 
 	// Like operator[] but throws exception if n >= size()
-	constexpr const_reference at(size_type n) const {
-		if (n >= len)
+	[[nodiscard]] constexpr const_reference at(size_type n) const {
+		if (n >= len) {
 			throw std::out_of_range("StringBase::at");
+		}
 
 		return str[n];
 	}
@@ -186,211 +222,250 @@ public:
 	 *
 	 * @return <0 - this < @p s, 0 - equal, >0 - this > @p s
 	 */
-	constexpr int compare(const StringBase& s) const noexcept {
+	[[nodiscard]] constexpr int compare(const StringBase& s) const noexcept {
 		size_type clen = std::min(len, s.len);
 		int rc = std::char_traits<Char>::compare(str, s.str, clen);
 		return rc != 0 ? rc : (len == s.len ? 0 : ((len < s.len) ? -1 : 1));
 	}
 
-	constexpr int compare(size_type pos, size_type count,
-	                      const StringBase& s) const {
+	[[nodiscard]] constexpr int compare(size_type pos, size_type count,
+	                                    const StringBase& s) const {
 		return substr(pos, count).compare(s);
 	}
 
 	// Returns position of the first character of the first substring equal to
 	// the given character sequence, or npos if no such substring is found
-	size_type find(const StringBase& s) const noexcept {
-		if (s.len == 0)
+	[[nodiscard]] size_type find(const StringBase& s) const noexcept {
+		if (s.len == 0) {
 			return 0;
+		}
 
 		// KMP algorithm
 		auto p = std::make_unique<size_type[]>(s.len);
 		size_type k = p[0] = 0;
 		// Fill p
 		for (size_type i = 1; i < s.len; ++i) {
-			while (k > 0 && s[i] != s[k])
+			while (k > 0 && s[i] != s[k]) {
 				k = p[k - 1];
-			if (s[i] == s[k])
+			}
+			if (s[i] == s[k]) {
 				++k;
+			}
 			p[i] = k;
 		}
 
 		k = 0;
 		for (size_type i = 0; i < len; ++i) {
-			while (k > 0 && str[i] != s[k])
+			while (k > 0 && str[i] != s[k]) {
 				k = p[k - 1];
+			}
 			if (str[i] == s[k]) {
 				++k;
-				if (k == s.len)
+				if (k == s.len) {
 					return i - s.len + 1;
+				}
 			}
 		}
 
 		return npos;
 	}
 
-	constexpr size_type find(const StringBase& s, size_type beg1) const {
+	[[nodiscard]] constexpr size_type find(const StringBase& s,
+	                                       size_type beg1) const {
 		return find(s.substr(beg1));
 	}
 
-	constexpr size_type find(const StringBase& s, size_type beg1,
-	                         size_type endi1) const {
+	[[nodiscard]] constexpr size_type find(const StringBase& s, size_type beg1,
+	                                       size_type endi1) const {
 		return find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type find(size_type beg, const StringBase& s,
-	                         size_type beg1 = 0) const {
+	[[nodiscard]] constexpr size_type find(size_type beg, const StringBase& s,
+	                                       size_type beg1 = 0) const {
 		return substr(beg).find(s.substr(beg1, len - beg1));
 	}
 
-	constexpr size_type find(size_type beg, const StringBase& s, size_type beg1,
-	                         size_type endi1) const {
+	[[nodiscard]] constexpr size_type find(size_type beg, const StringBase& s,
+	                                       size_type beg1,
+	                                       size_type endi1) const {
 		return substr(beg).find(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
-	                         size_type beg1 = 0) const {
+	[[nodiscard]] constexpr size_type find(size_type beg, size_type endi,
+	                                       const StringBase& s,
+	                                       size_type beg1 = 0) const {
 		return substr(beg, endi).find(s.substr(beg1, len - beg1));
 	}
 
-	constexpr size_type find(size_type beg, size_type endi, const StringBase& s,
-	                         size_type beg1, size_type endi1) const {
+	[[nodiscard]] constexpr size_type find(size_type beg, size_type endi,
+	                                       const StringBase& s, size_type beg1,
+	                                       size_type endi1) const {
 		return substr(beg, endi).find(
 		   s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type find(Char c, size_type beg = 0) const noexcept {
-		for (; beg < len; ++beg)
-			if (str[beg] == c)
+	[[nodiscard]] constexpr size_type find(Char c,
+	                                       size_type beg = 0) const noexcept {
+		for (; beg < len; ++beg) {
+			if (str[beg] == c) {
 				return beg;
+			}
+		}
 
 		return npos;
 	}
 
-	constexpr size_type find(Char c, size_type beg,
-	                         size_type endi) const noexcept {
-		if (endi > len)
+	[[nodiscard]] constexpr size_type find(Char c, size_type beg,
+	                                       size_type endi) const noexcept {
+		if (endi > len) {
 			endi = len;
+		}
 
-		for (; beg < endi; ++beg)
-			if (str[beg] == c)
+		for (; beg < endi; ++beg) {
+			if (str[beg] == c) {
 				return beg;
+			}
+		}
 
 		return npos;
 	}
 
 	// Returns position of the first character of the last substring equal to
 	// the given character sequence, or npos if no such substring is found
-	size_type rfind(const StringBase& s) const noexcept {
-		if (s.len == 0)
+	[[nodiscard]] size_type rfind(const StringBase& s) const noexcept {
+		if (s.len == 0) {
 			return 0;
+		}
 
 		// KMP algorithm
 		auto p = std::make_unique<size_type[]>(s.len);
-		size_type slen1 = s.len - 1, k = p[slen1] = slen1;
+		size_type slen1 = s.len - 1;
+		size_type k = p[slen1] = slen1;
 		// Fill p
 		for (size_type i = slen1 - 1; i != npos; --i) {
-			while (k < slen1 && s[i] != s[k])
+			while (k < slen1 && s[i] != s[k]) {
 				k = p[k + 1];
-			if (s[i] == s[k])
+			}
+			if (s[i] == s[k]) {
 				--k;
+			}
 			p[i] = k;
 		}
 
 		k = slen1;
 		for (size_type i = len - 1; i != npos; --i) {
-			while (k < slen1 && str[i] != s[k])
+			while (k < slen1 && str[i] != s[k]) {
 				k = p[k + 1];
+			}
 			if (str[i] == s[k]) {
 				--k;
-				if (k == npos)
+				if (k == npos) {
 					return i;
+				}
 			}
 		}
 
 		return npos;
 	}
 
-	constexpr size_type rfind(const StringBase& s, size_type beg1) const {
+	[[nodiscard]] constexpr size_type rfind(const StringBase& s,
+	                                        size_type beg1) const {
 		return rfind(s.substr(beg1, len - beg1));
 	}
 
-	constexpr size_type rfind(const StringBase& s, size_type beg1,
-	                          size_type endi1) const {
+	[[nodiscard]] constexpr size_type rfind(const StringBase& s, size_type beg1,
+	                                        size_type endi1) const {
 		return rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type rfind(size_type beg, const StringBase& s,
-	                          size_type beg1 = 0) const {
+	[[nodiscard]] constexpr size_type rfind(size_type beg, const StringBase& s,
+	                                        size_type beg1 = 0) const {
 		return substr(beg).rfind(s.substr(beg1, len - beg1));
 	}
 
-	constexpr size_type rfind(size_type beg, const StringBase& s,
-	                          size_type beg1, size_type endi1) const {
+	[[nodiscard]] constexpr size_type rfind(size_type beg, const StringBase& s,
+	                                        size_type beg1,
+	                                        size_type endi1) const {
 		return substr(beg).rfind(s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type rfind(size_type beg, size_type endi,
-	                          const StringBase& s, size_type beg1 = 0) const {
+	[[nodiscard]] constexpr size_type rfind(size_type beg, size_type endi,
+	                                        const StringBase& s,
+	                                        size_type beg1 = 0) const {
 		return substr(beg, endi).rfind(s.substr(beg1, len - beg1));
 	}
 
-	constexpr size_type rfind(size_type beg, size_type endi,
-	                          const StringBase& s, size_type beg1,
-	                          size_type endi1) const {
+	[[nodiscard]] constexpr size_type rfind(size_type beg, size_type endi,
+	                                        const StringBase& s, size_type beg1,
+	                                        size_type endi1) const {
 		return substr(beg, endi).rfind(
 		   s.substr(beg1, std::min(endi1, len) - beg1));
 	}
 
-	constexpr size_type rfind(Char c, size_type beg = 0) const noexcept {
-		for (size_type endi = len; endi > beg;)
-			if (str[--endi] == c)
+	[[nodiscard]] constexpr size_type rfind(Char c,
+	                                        size_type beg = 0) const noexcept {
+		for (size_type endi = len; endi > beg;) {
+			if (str[--endi] == c) {
 				return endi;
+			}
+		}
 
 		return npos;
 	}
 
-	constexpr size_type rfind(Char c, size_type beg,
-	                          size_type endi) const noexcept {
-		if (endi > len)
+	[[nodiscard]] constexpr size_type rfind(Char c, size_type beg,
+	                                        size_type endi) const noexcept {
+		if (endi > len) {
 			endi = len;
+		}
 
-		for (; endi > beg;)
-			if (str[--endi] == c)
+		for (; endi > beg;) {
+			if (str[--endi] == c) {
 				return endi;
+			}
+		}
 
 		return npos;
 	}
 
 protected:
 	// Returns a StringBase of the substring [pos, ...)
-	constexpr StringBase substr(size_type pos) const {
-		if (pos > len)
+	[[nodiscard]] constexpr StringBase substr(size_type pos) const {
+		if (pos > len) {
 			throw std::out_of_range("StringBase::substr");
+		}
 
 		return StringBase(str + pos, len - pos);
 	}
 
 	// Returns a StringBase of the substring [pos, pos + count)
-	constexpr StringBase substr(size_type pos, size_type count) const {
-		if (pos > len)
+	[[nodiscard]] constexpr StringBase substr(size_type pos,
+	                                          size_type count) const {
+		if (pos > len) {
 			throw std::out_of_range("StringBase::substr");
+		}
 
 		return StringBase(str + pos, std::min(count, len - pos));
 	}
 
 	// Returns a StringBase of the substring [beg, ...)
-	constexpr StringBase substring(size_type beg) const { return substr(beg); }
+	[[nodiscard]] constexpr StringBase substring(size_type beg) const {
+		return substr(beg);
+	}
 
-	constexpr StringBase substring(size_type beg, size_type endi) const {
-		if (beg > endi || beg > len)
+	[[nodiscard]] constexpr StringBase substring(size_type beg,
+	                                             size_type endi) const {
+		if (beg > endi || beg > len) {
 			throw std::out_of_range("StringBase::substring");
+		}
 
 		return StringBase(str + beg, std::min(len, endi) - beg);
 	}
 
 public:
-	std::string to_string() const { return std::string(str, len); }
+	[[nodiscard]] std::string to_string() const {
+		return std::string(str, len);
+	}
 };
 
 template <class Char>
@@ -408,7 +483,8 @@ class StringView : public StringBase<const char> {
 public:
 	using StringBase::StringBase;
 
-	constexpr StringView() noexcept : StringBase("", 0) {}
+	constexpr StringView() noexcept
+	: StringBase("", 0) {}
 
 	constexpr StringView(std::nullptr_t) noexcept = delete;
 
@@ -416,12 +492,19 @@ public:
 
 	constexpr StringView(StringView&&) noexcept = default;
 
-	constexpr StringView(const StringBase& s) noexcept : StringBase(s) {}
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	constexpr StringView(const StringBase& s) noexcept
+	: StringBase(s) {}
 
-	constexpr StringView(StringBase&& s) noexcept : StringBase(s) {}
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	constexpr StringView(StringBase&& s) noexcept
+	: StringBase(s) {}
 
-	template <class T,
-	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+	template <class T, std::enable_if_t<
+	                      std::is_rvalue_reference_v<T&&> and
+	                         not std::is_same_v<std::decay_t<T>, StringView>,
+	                      int> = 0>
+	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
 	StringView(T&&) = delete; // Protect from assigning unsafe data
 
 	constexpr StringView& operator=(const StringView&) noexcept = default;
@@ -431,7 +514,8 @@ public:
 	constexpr StringView& operator=(std::nullptr_t) noexcept = delete;
 
 	constexpr StringView& operator=(pointer p) noexcept {
-		return operator=(StringView {p});
+		operator=(StringView{p});
+		return *this;
 	}
 
 	template <class T,
@@ -439,6 +523,8 @@ public:
 	                              not std::is_convertible_v<T&&, StringView>,
 	                           int> = 0>
 	StringView& operator=(T&&) = delete; // Protect from assigning unsafe data
+
+	~StringView() = default;
 
 	template <class... Args>
 	constexpr StringView substr(Args&&... args) const {
@@ -452,8 +538,9 @@ public:
 
 	// Removes prefix of length n
 	constexpr StringView& remove_prefix(size_type n) noexcept {
-		if (n > len)
+		if (n > len) {
 			n = len;
+		}
 		str += n;
 		len -= n;
 		return *this;
@@ -461,17 +548,19 @@ public:
 
 	// Removes suffix of length n
 	constexpr StringView& remove_suffix(size_type n) noexcept {
-		if (n > len)
+		if (n > len) {
 			len = 0;
-		else
+		} else {
 			len -= n;
+		}
 		return *this;
 	}
 
 	// Extracts prefix of length n
 	constexpr StringView extract_prefix(size_type n) noexcept {
-		if (n > len)
+		if (n > len) {
 			n = len;
+		}
 
 		StringView res = substring(0, n);
 		str += n;
@@ -481,8 +570,9 @@ public:
 
 	// Extracts suffix of length n
 	constexpr StringView extract_suffix(size_type n) noexcept {
-		if (n > len)
+		if (n > len) {
 			len = n;
+		}
 		len -= n;
 		return {data() + len, n};
 	}
@@ -510,14 +600,16 @@ public:
 	// Removes trailing characters for which f() returns true
 	template <class Func>
 	constexpr StringView& remove_trailing(Func&& f) {
-		while (len > 0 && f(back()))
+		while (len > 0 && f(back())) {
 			--len;
+		}
 		return *this;
 	}
 
 	constexpr StringView& remove_trailing(char c) noexcept {
-		while (len > 0 and back() == c)
+		while (len > 0 and back() == c) {
 			--len;
+		}
 		return *this;
 	}
 
@@ -592,53 +684,64 @@ constexpr bool operator!=(StringView a, StringView b) noexcept {
 	        std::char_traits<char>::compare(a.data(), b.data(), a.size()) != 0);
 }
 
-constexpr bool operator<(StringView a, StringView b) noexcept {
+constexpr bool operator<(const StringView& a, const StringView& b) noexcept {
 	return (a.compare(b) < 0);
 }
 
-constexpr bool operator>(StringView a, StringView b) noexcept {
+constexpr bool operator>(const StringView& a, const StringView& b) noexcept {
 	return (a.compare(b) > 0);
 }
 
-constexpr bool operator<=(StringView a, StringView b) noexcept {
+constexpr bool operator<=(const StringView& a, const StringView& b) noexcept {
 	return (a.compare(b) <= 0);
 }
 
-constexpr bool operator>=(StringView a, StringView b) noexcept {
+constexpr bool operator>=(const StringView& a, const StringView& b) noexcept {
 	return (a.compare(b) >= 0);
 }
 
 class CStringView : public StringBase<const char> {
 public:
-	constexpr CStringView() : StringBase("", 0) {}
+	constexpr CStringView()
+	: StringBase("", 0) {}
 
-	constexpr CStringView(std::nullptr_t) : CStringView() {}
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	constexpr CStringView(std::nullptr_t)
+	: CStringView() {}
 
 	template <size_t N>
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr CStringView(const char (&s)[N])
-	   : StringBase(s, std::char_traits<char>::length(s)) {}
+	: StringBase(s, std::char_traits<char>::length(s)) {}
 
 	// Do not treat as possible string literal
 	template <size_t N>
-	constexpr CStringView(char (&s)[N]) : StringBase(s) {}
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	constexpr CStringView(char (&s)[N])
+	: StringBase(s) {}
 
 	template <size_t N>
-	constexpr CStringView(const StaticCStringBuff<N>& s) : StringBase(s) {}
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	constexpr CStringView(const StaticCStringBuff<N>& s)
+	: StringBase(s) {}
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	CStringView(const std::string& s) noexcept
-	   : StringBase(s.data(), s.size()) {}
+	: StringBase(s.data(), s.size()) {}
 
 	// Be careful with the constructor below! @p s cannot be null
-	constexpr explicit CStringView(pointer s) noexcept : StringBase(s) {
+	constexpr explicit CStringView(pointer s) noexcept
+	: StringBase(s) {
 		assert(s);
 	}
 
 	// Be careful with the constructor below! @p s cannot be null
 	constexpr explicit CStringView(char* s) noexcept
-	   : CStringView(static_cast<pointer>(s)) {}
+	: CStringView(static_cast<pointer>(s)) {}
 
 	// Be careful with the constructor below! @p s cannot be null
-	constexpr CStringView(pointer s, size_type n) noexcept : StringBase(s, n) {
+	constexpr CStringView(pointer s, size_type n) noexcept
+	: StringBase(s, n) {
 		assert(s);
 		assert(s[n] == '\0');
 	}
@@ -648,18 +751,26 @@ public:
 	constexpr CStringView& operator=(const CStringView&) noexcept = default;
 	constexpr CStringView& operator=(CStringView&&) noexcept = default;
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr operator StringView() & noexcept { return {data(), size()}; }
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr operator StringView() const& noexcept { return {data(), size()}; }
 
 	// Allow converting rvalue CStringView to StringView, as checking for
 	// leaving a dangling pointer to a temporary string was made during
 	// construction of CStringView
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr operator StringView() && noexcept { return {data(), size()}; }
 
-	template <class T,
-	          std::enable_if_t<std::is_rvalue_reference_v<T&&>, int> = 0>
+	template <class T, std::enable_if_t<
+	                      std::is_rvalue_reference_v<T&&> and
+	                         not std::is_same_v<std::decay_t<T>, CStringView>,
+	                      int> = 0>
+	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
 	CStringView(T&&) = delete; // Protect from assigning unsafe data
+
+	~CStringView() = default;
 
 	template <class T,
 	          std::enable_if_t<std::is_rvalue_reference_v<T&&> and
@@ -667,22 +778,28 @@ public:
 	                           int> = 0>
 	CStringView& operator=(T&&) = delete; // Protect from assigning unsafe data
 
-	constexpr CStringView substr(size_type pos) const {
+	[[nodiscard]] constexpr CStringView substr(size_type pos) const {
 		const auto x = StringBase::substr(pos);
-		return CStringView {x.data(), x.size()};
+		return CStringView{x.data(), x.size()};
 	}
 
-	constexpr StringView substr(size_type pos, size_type count) const {
+	[[nodiscard]] constexpr StringView substr(size_type pos,
+	                                          size_type count) const {
 		return StringBase::substr(pos, count);
 	}
 
-	constexpr CStringView substring(size_type beg) const { return substr(beg); }
+	[[nodiscard]] constexpr CStringView substring(size_type beg) const {
+		return substr(beg);
+	}
 
-	constexpr StringView substring(size_type beg, size_type end) const {
+	[[nodiscard]] constexpr StringView substring(size_type beg,
+	                                             size_type end) const {
 		return StringBase::substring(beg, end);
 	}
 
-	constexpr const_pointer c_str() const noexcept { return data(); }
+	[[nodiscard]] constexpr const_pointer c_str() const noexcept {
+		return data();
+	}
 };
 
 // This function allows @p str to be converted to CStringView, but
@@ -695,18 +812,18 @@ constexpr CStringView intentional_unsafe_cstring_view(T&& str) noexcept {
 	return CStringView(static_cast<const T&>(str));
 }
 
-constexpr StringView substring(StringView str, StringView::size_type beg,
+constexpr StringView substring(const StringView& str, StringView::size_type beg,
                                StringView::size_type end = StringView::npos) {
 	return str.substring(beg, end);
 }
 
 // Like string::find() but searches in [beg, end)
-constexpr size_t find(StringView str, char c, size_t beg = 0) {
+constexpr size_t find(const StringView& str, char c, size_t beg = 0) {
 	return str.find(c, beg);
 }
 
 // Like string::find() but searches in [beg, end)
-constexpr size_t find(StringView str, char c, size_t beg, size_t end) {
+constexpr size_t find(const StringView& str, char c, size_t beg, size_t end) {
 	return str.find(c, beg, end);
 }
 
@@ -714,11 +831,12 @@ constexpr size_t find(StringView str, char c, size_t beg, size_t end) {
 template <class Func>
 void remove_trailing(std::string& str, Func&& f) {
 	auto it = str.end();
-	while (it != str.begin())
+	while (it != str.begin()) {
 		if (!f(*--it)) {
 			++it;
 			break;
 		}
+	}
 	str.erase(it, str.end());
 }
 

@@ -238,26 +238,30 @@ template <int (*func)(FilePath)>
 class RemoverBase {
 	InplaceBuff<PATH_MAX> name;
 
+public:
+	RemoverBase() = default;
+
 	RemoverBase(const RemoverBase&) = delete;
 	RemoverBase& operator=(const RemoverBase&) = delete;
 	RemoverBase(const RemoverBase&&) = delete;
 	RemoverBase& operator=(const RemoverBase&&) = delete;
 
-public:
-	RemoverBase() : name() {}
-
-	explicit RemoverBase(FilePath str) : RemoverBase(str.data(), str.size()) {}
+	explicit RemoverBase(FilePath str)
+	: RemoverBase(str.data(), str.size()) {}
 
 	/// If @p str is null then @p len is ignored
-	RemoverBase(const char* str, size_t len) : name(len + 1) {
-		if (len != 0)
+	RemoverBase(const char* str, size_t len)
+	: name(len + 1) {
+		if (len != 0) {
 			strncpy(name.data(), str, len + 1);
+		}
 		name.size = len;
 	}
 
 	~RemoverBase() {
-		if (name.size != 0)
+		if (name.size != 0) {
 			(void)func(name);
+		}
 	}
 
 	void cancel() noexcept { name.size = 0; }
@@ -274,8 +278,9 @@ public:
 	}
 
 	[[nodiscard]] int remove_target() noexcept {
-		if (name.size == 0)
+		if (name.size == 0) {
 			return 0;
+		}
 
 		int rc = 0;
 		rc = func(name);
@@ -284,5 +289,5 @@ public:
 	}
 };
 
-typedef RemoverBase<unlink> FileRemover;
-typedef RemoverBase<remove_r> DirectoryRemover;
+using FileRemover = RemoverBase<unlink>;
+using DirectoryRemover = RemoverBase<remove_r>;

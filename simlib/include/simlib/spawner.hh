@@ -16,6 +16,7 @@
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
+#include <utility>
 #include <variant>
 
 class Spawner {
@@ -24,12 +25,12 @@ protected:
 
 public:
 	struct ExitStat {
-		std::chrono::nanoseconds runtime {0};
-		std::chrono::nanoseconds cpu_runtime {0};
+		std::chrono::nanoseconds runtime{0};
+		std::chrono::nanoseconds cpu_runtime{0};
 		struct {
 			int code; // si_code field from siginfo_t from waitid(2)
 			int status; // si_status field from siginfo_t from waitid(2)
-		} si {};
+		} si{};
 		struct rusage rusage = {}; // resource information
 		uint64_t vm_peak = 0; // peak virtual memory size (in bytes)
 		std::string message;
@@ -38,14 +39,20 @@ public:
 
 		ExitStat(std::chrono::nanoseconds rt, std::chrono::nanoseconds cpu_time,
 		         int sic, int sis, const struct rusage& rus, uint64_t vp,
-		         const std::string& msg = {})
-		   : runtime(rt), cpu_runtime(cpu_time), si {sic, sis}, rusage(rus),
-		     vm_peak(vp), message(msg) {}
+		         std::string msg = {})
+		: runtime(rt)
+		, cpu_runtime(cpu_time)
+		, si{sic, sis}
+		, rusage(rus)
+		, vm_peak(vp)
+		, message(std::move(msg)) {}
 
 		ExitStat(const ExitStat&) = default;
 		ExitStat(ExitStat&&) noexcept = default;
 		ExitStat& operator=(const ExitStat&) = default;
 		ExitStat& operator=(ExitStat&&) = default;
+
+		~ExitStat() = default;
 	};
 
 	struct Options {
@@ -61,11 +68,13 @@ public:
 		CStringView working_dir; // directory at which program will be run
 
 		constexpr Options()
-		   : Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO) {}
+		: Options(STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO) {}
 
 		constexpr Options(int ifd, int ofd, int efd, CStringView wd)
-		   : new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
-		     working_dir(std::move(wd)) {}
+		: new_stdin_fd(ifd)
+		, new_stdout_fd(ofd)
+		, new_stderr_fd(efd)
+		, working_dir(std::move(wd)) {}
 
 		constexpr Options(
 		   int ifd, int ofd, int efd,
@@ -73,9 +82,13 @@ public:
 		   std::optional<uint64_t> ml = std::nullopt,
 		   std::optional<std::chrono::nanoseconds> ctl = std::nullopt,
 		   CStringView wd = CStringView("."))
-		   : new_stdin_fd(ifd), new_stdout_fd(ofd), new_stderr_fd(efd),
-		     real_time_limit(rtl), memory_limit(ml), cpu_time_limit(ctl),
-		     working_dir(std::move(wd)) {}
+		: new_stdin_fd(ifd)
+		, new_stdout_fd(ofd)
+		, new_stderr_fd(efd)
+		, real_time_limit(rtl)
+		, memory_limit(ml)
+		, cpu_time_limit(ctl)
+		, working_dir(std::move(wd)) {}
 	};
 
 	/**
@@ -100,7 +113,7 @@ public:
 	 *   memory_limit set to std::nullopt disables memory limit;
 	 *   working_dir set to "", "." or "./" disables changing working
 	 *   directory)
-	 * @param parent_do_after_fork function taking child's pid as an argument
+	 * @param do_in_parent_after_fork function taking child's pid as an argument
 	 *   that will be called in the parent process just after fork() -- useful
 	 *   for closing pipe ends
 	 *
@@ -120,7 +133,8 @@ public:
 	static ExitStat run(
 	   FilePath exec, const std::vector<std::string>& exec_args,
 	   const Options& opts = Options(),
-	   const std::function<void(pid_t)>& parent_do_after_fork = [](pid_t) {});
+	   const std::function<void(pid_t)>& do_in_parent_after_fork =
+	      [](pid_t /*unused*/) {});
 
 protected:
 	// Sends @p str through @p fd and _exits with -1
@@ -215,9 +229,14 @@ protected:
 		      clockid_t clock_id, int timeout_signal = SIGKILL,
 		      int timer_signal = SIGRTMIN);
 
+		Timer(const Timer&) = delete;
+		Timer(Timer&&) = delete;
+		Timer& operator=(const Timer&) = delete;
+		Timer& operator=(Timer&&) = delete;
+
 		std::chrono::nanoseconds deactivate_and_get_runtime() noexcept;
 
-		bool timeout_signal_was_sent() const noexcept;
+		[[nodiscard]] bool timeout_signal_was_sent() const noexcept;
 
 		~Timer() { (void)delete_timer_and_get_remaning_time(); }
 	};

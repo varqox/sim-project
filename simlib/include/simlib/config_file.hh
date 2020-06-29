@@ -6,6 +6,7 @@
 #include "simlib/string_transform.hh"
 
 #include <map>
+#include <utility>
 #include <vector>
 
 class ConfigFile {
@@ -14,13 +15,14 @@ public:
 		std::string diagnostics_;
 
 	public:
-		explicit ParseError(const std::string& msg) : runtime_error(msg) {}
+		explicit ParseError(const std::string& msg)
+		: runtime_error(msg) {}
 
 		template <class... Args,
 		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		ParseError(size_t line, size_t pos, Args&&... msg)
-		   : runtime_error(concat_tostr("line ", line, ':', pos, ": ",
-		                                std::forward<Args>(msg)...)) {}
+		: runtime_error(concat_tostr("line ", line, ':', pos, ": ",
+		                             std::forward<Args>(msg)...)) {}
 
 		ParseError(const ParseError& pe) = default;
 		ParseError(ParseError&&) noexcept = default;
@@ -29,9 +31,11 @@ public:
 
 		using runtime_error::what;
 
-		const std::string& diagnostics() const noexcept { return diagnostics_; }
+		[[nodiscard]] const std::string& diagnostics() const noexcept {
+			return diagnostics_;
+		}
 
-		virtual ~ParseError() noexcept {}
+		~ParseError() noexcept override = default;
 
 		friend class ConfigFile;
 	};
@@ -48,7 +52,7 @@ public:
 		};
 
 	private:
-		uint8_t flag_;
+		uint8_t flag_ = 0;
 		std::string str_;
 		std::vector<std::string> arr_;
 		ValueSpan value_span_; // value occupies [beg, end) range of the file
@@ -60,33 +64,38 @@ public:
 		}
 
 	public:
-		Variable() : flag_(0) {}
+		Variable() {} // NOLINT(modernize-use-equals-default): compiler bug
 
-		bool is_set() const noexcept { return flag_ & SET; }
+		[[nodiscard]] bool is_set() const noexcept { return flag_ & SET; }
 
-		bool is_array() const noexcept { return flag_ & ARRAY; }
+		[[nodiscard]] bool is_array() const noexcept { return flag_ & ARRAY; }
 
 		// Returns value as bool or false on error
-		bool as_bool() const noexcept {
+		[[nodiscard]] bool as_bool() const noexcept {
 			return (str_ == "1" || lower_equal(str_, "on") ||
 			        lower_equal(str_, "true"));
 		}
 
 		template <class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
-		std::optional<T> as() const noexcept {
+		[[nodiscard]] std::optional<T> as() const noexcept {
 			return str2num<T>(str_);
 		}
 
 		// Returns value as string (empty if not a string or variable isn't
 		// set)
-		const std::string& as_string() const noexcept { return str_; }
+		[[nodiscard]] const std::string& as_string() const noexcept {
+			return str_;
+		}
 
 		// Returns value as array (empty if not an array or variable isn't set)
-		const std::vector<std::string>& as_array() const noexcept {
+		[[nodiscard]] const std::vector<std::string>&
+		as_array() const noexcept {
 			return arr_;
 		}
 
-		ValueSpan value_span() const noexcept { return value_span_; }
+		[[nodiscard]] ValueSpan value_span() const noexcept {
+			return value_span_;
+		}
 
 		friend class ConfigFile;
 	};
@@ -94,7 +103,7 @@ public:
 private:
 	std::map<std::string, Variable, std::less<>> vars; // (name => value)
 	// TODO: ^ maybe StringView would be better?
-	static inline const Variable null_var {};
+	static inline const Variable null_var{};
 
 public:
 	ConfigFile() = default;
@@ -104,13 +113,12 @@ public:
 	ConfigFile& operator=(const ConfigFile&) = default;
 	ConfigFile& operator=(ConfigFile&&) noexcept = default;
 
-	~ConfigFile() {}
+	~ConfigFile() = default;
 
 	// Adds variables @p names to variable set, ignores duplications
 	template <class... Args>
 	void add_vars(Args&&... names) {
-		int t[] = {
-		   (vars.emplace(std::forward<Args>(names), Variable {}), 0)...};
+		int t[] = {(vars.emplace(std::forward<Args>(names), Variable{}), 0)...};
 		(void)t;
 	}
 
@@ -119,16 +127,17 @@ public:
 
 	// Returns a reference to a variable @p name from variable set or to a
 	// null_var
-	const Variable& get_var(StringView name) const noexcept {
+	[[nodiscard]] const Variable&
+	get_var(const StringView& name) const noexcept {
 		return (*this)[name];
 	}
 
-	const Variable& operator[](StringView name) const noexcept {
+	const Variable& operator[](const StringView& name) const noexcept {
 		auto it = vars.find(name);
 		return (it != vars.end() ? it->second : null_var);
 	}
 
-	const decltype(vars)& get_vars() const { return vars; }
+	[[nodiscard]] const decltype(vars)& get_vars() const { return vars; }
 
 	/**
 	 * @brief Loads config (variables) form file @p pathname

@@ -1,4 +1,4 @@
 #pragma once
 
 template <class...>
-constexpr bool always_false = false;
+constexpr inline bool always_false = false;

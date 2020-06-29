@@ -2,14 +2,18 @@
 
 #include "simlib/string_traits.hh"
 
+#include <utility>
+
 // Compares two StringView, but before comparing two characters modifies them
 // with f()
 template <class Func>
 constexpr bool special_less(StringView a, StringView b, Func&& f) {
 	size_t len = std::min(a.size(), b.size());
-	for (size_t i = 0; i < len; ++i)
-		if (f(a[i]) != f(b[i]))
+	for (size_t i = 0; i < len; ++i) {
+		if (f(a[i]) != f(b[i])) {
 			return f(a[i]) < f(b[i]);
+		}
+	}
 
 	return (b.size() > len);
 }
@@ -18,19 +22,22 @@ constexpr bool special_less(StringView a, StringView b, Func&& f) {
 // modifies them with f()
 template <class Func>
 constexpr bool special_equal(StringView a, StringView b, Func&& f) {
-	if (a.size() != b.size())
+	if (a.size() != b.size()) {
 		return false;
+	}
 
-	for (size_t i = 0; i < a.size(); ++i)
-		if (f(a[i]) != f(b[i]))
+	for (size_t i = 0; i < a.size(); ++i) {
+		if (f(a[i]) != f(b[i])) {
 			return false;
+		}
+	}
 
 	return true;
 }
 
 // Checks whether lowered @p a is equal to lowered @p b
 constexpr bool lower_equal(StringView a, StringView b) noexcept {
-	return special_equal<int(int)>(a, b, to_lower);
+	return special_equal<int(int)>(std::move(a), std::move(b), to_lower);
 }
 
 /**
@@ -50,7 +57,8 @@ class SpecialStrCompare {
 	Func func;
 
 public:
-	SpecialStrCompare(Func f = {}) : func(std::move(f)) {}
+	explicit SpecialStrCompare(Func f)
+	: func(std::move(f)) {}
 
 	template <class A, class B>
 	bool operator()(A&& a, B&& b) const {
@@ -59,23 +67,26 @@ public:
 };
 
 struct LowerStrCompare : public SpecialStrCompare<int (*)(int)> {
-	LowerStrCompare() : SpecialStrCompare(to_lower) {}
+	LowerStrCompare()
+	: SpecialStrCompare(to_lower) {}
 };
 
 // Compares two strings: @p str[beg, end) and @p s
-constexpr int compare(StringView str, size_t beg, size_t end,
-                      StringView s) noexcept {
-	if (end > str.size())
+constexpr int compare(const StringView& str, size_t beg, size_t end,
+                      const StringView& s) noexcept {
+	if (end > str.size()) {
 		end = str.size();
-	if (beg > end)
+	}
+	if (beg > end) {
 		beg = end;
+	}
 
 	return str.compare(beg, end - beg, s);
 }
 
 // Compares @p str[pos, str.find(c, pos)) and @p s
-constexpr int compare_to(StringView str, size_t pos, char c,
-                         StringView s) noexcept {
+constexpr int compare_to(const StringView& str, size_t pos, char c,
+                         const StringView& s) noexcept {
 	return compare(str, pos, str.find(c, pos), s);
 }
 
@@ -93,7 +104,7 @@ inline bool slow_equal(StringView str1, StringView str2) noexcept {
 /// Checks whether string @p s consist only of digits and is not greater than
 /// @p MAX_VAL
 template <uintmax_t MAX_VAL>
-constexpr bool is_digit_not_greater_than(StringView s) noexcept {
+constexpr bool is_digit_not_greater_than(const StringView& s) noexcept {
 	constexpr auto x = to_string(MAX_VAL);
 	return (is_digit(s) and not StrNumCompare()(x, s));
 }
@@ -101,7 +112,7 @@ constexpr bool is_digit_not_greater_than(StringView s) noexcept {
 /// Checks whether string @p s consist only of digits and is not less than
 /// @p MIN_VAL
 template <uintmax_t MIN_VAL>
-constexpr bool is_digit_not_less_than(StringView s) noexcept {
+constexpr bool is_digit_not_less_than(const StringView& s) noexcept {
 	constexpr auto x = to_string(MIN_VAL);
 	return (is_digit(s) and not StrNumCompare()(s, x));
 }

@@ -5,8 +5,9 @@
 
 #include <chrono>
 #include <sys/time.h>
+#include <utility>
 
-long long microtime() noexcept;
+int64_t microtime() noexcept;
 
 // Returns UTC date in format of @p format (format like in strftime(3)), if
 // @p curr_time >= 0 uses @p curr_time, otherwise uses the current time
@@ -15,7 +16,7 @@ std::string date(CStringView format, time_t curr_time = -1);
 // Returns UTC date @p tp in format of @p format (format like in strftime(3))
 inline std::string date(CStringView format,
                         std::chrono::system_clock::time_point tp) {
-	return date(format, std::chrono::system_clock::to_time_t(tp));
+	return date(std::move(format), std::chrono::system_clock::to_time_t(tp));
 }
 
 // Returns UTC date in format of "%Y-%m-%d %H:%M:%S" (see strftime(3)), if
@@ -36,7 +37,8 @@ std::string localdate(CStringView format, time_t curr_time = -1);
 // Returns local date @p tp in format of @p format (format like in strftime(3))
 inline std::string localdate(CStringView format,
                              std::chrono::system_clock::time_point tp) {
-	return localdate(format, std::chrono::system_clock::to_time_t(tp));
+	return localdate(std::move(format),
+	                 std::chrono::system_clock::to_time_t(tp));
 }
 
 // Returns local date in format of "%Y-%m-%d %H:%M:%S" (see strftime(3)), if
@@ -63,7 +65,7 @@ bool is_datetime(CStringView str) noexcept;
  *
  * @errors The same that occur for strptime(3) and timegm(3)
  */
-time_t str_to_time_t(CStringView str, CStringView format = CStringView {
+time_t str_to_time_t(CStringView str, CStringView format = CStringView{
                                          "%Y-%m-%d %H:%M:%S"}) noexcept;
 
 /**
@@ -72,17 +74,18 @@ time_t str_to_time_t(CStringView str, CStringView format = CStringView {
  */
 inline std::chrono::system_clock::time_point
 str_to_time_point(CStringView str,
-                  CStringView format = CStringView {"%Y-%m-%d %H:%M:%S"}) {
-	time_t t = str_to_time_t(str, format);
-	if (t == -1)
+                  CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
+	time_t t = str_to_time_t(std::move(str), std::move(format));
+	if (t == -1) {
 		THROW("str_to_time_t()", errmsg());
+	}
 
 	return std::chrono::system_clock::from_time_t(t);
 }
 
 /**************************** timespec arithmetic ****************************/
 constexpr timespec operator+(timespec a, timespec b) noexcept {
-	timespec res {a.tv_sec + b.tv_sec, a.tv_nsec + b.tv_nsec};
+	timespec res{a.tv_sec + b.tv_sec, a.tv_nsec + b.tv_nsec};
 	if (res.tv_nsec >= 1'000'000'000) {
 		++res.tv_sec;
 		res.tv_nsec -= 1'000'000'000;
@@ -92,7 +95,7 @@ constexpr timespec operator+(timespec a, timespec b) noexcept {
 }
 
 constexpr timespec operator-(timespec a, timespec b) noexcept {
-	timespec res {a.tv_sec - b.tv_sec, a.tv_nsec - b.tv_nsec};
+	timespec res{a.tv_sec - b.tv_sec, a.tv_nsec - b.tv_nsec};
 	if (res.tv_nsec < 0) {
 		--res.tv_sec;
 		res.tv_nsec += 1'000'000'000;
@@ -133,7 +136,7 @@ constexpr bool operator>=(timespec a, timespec b) noexcept { return b <= a; }
 
 /**************************** timeval arithmetic ****************************/
 constexpr timeval operator+(timeval a, timeval b) noexcept {
-	timeval res {a.tv_sec + b.tv_sec, a.tv_usec + b.tv_usec};
+	timeval res{a.tv_sec + b.tv_sec, a.tv_usec + b.tv_usec};
 	if (res.tv_usec >= 1'000'000) {
 		++res.tv_sec;
 		res.tv_usec -= 1'000'000;
@@ -143,7 +146,7 @@ constexpr timeval operator+(timeval a, timeval b) noexcept {
 }
 
 constexpr timeval operator-(timeval a, timeval b) noexcept {
-	timeval res {a.tv_sec - b.tv_sec, a.tv_usec - b.tv_usec};
+	timeval res{a.tv_sec - b.tv_sec, a.tv_usec - b.tv_usec};
 	if (res.tv_usec < 0) {
 		--res.tv_sec;
 		res.tv_usec += 1'000'000;
@@ -197,14 +200,17 @@ timespec_to_string(timespec x, uint prec, bool trim_zeros = true) noexcept {
 	// Truncate trailing zeros
 	unsigned i = res.len_ + std::min(8, int(prec) - 1);
 	// i will point to the last character of the result
-	if (trim_zeros)
-		while (i >= res.len_ && res[i] == '0')
+	if (trim_zeros) {
+		while (i >= res.len_ && res[i] == '0') {
 			--i;
+		}
+	}
 
-	if (i == res.len_ - 1)
+	if (i == res.len_ - 1) {
 		res.len_ = i; // Trim trailing '.'
-	else
+	} else {
 		res.len_ = ++i;
+	}
 
 	*res.end() = '\0';
 	return res;
@@ -226,14 +232,17 @@ timeval_to_string(timeval x, uint prec, bool trim_zeros = true) noexcept {
 	// Truncate trailing zeros
 	unsigned i = res.len_ + std::min(5, int(prec) - 1);
 	// i will point to the last character of the result
-	if (trim_zeros)
-		while (i >= res.len_ && res[i] == '0')
+	if (trim_zeros) {
+		while (i >= res.len_ && res[i] == '0') {
 			--i;
+		}
+	}
 
-	if (i == res.len_ - 1)
+	if (i == res.len_ - 1) {
 		res.len_ = i; // Trim trailing '.'
-	else
+	} else {
 		res.len_ = ++i;
+	}
 
 	*res.end() = '\0';
 	return res;
@@ -241,12 +250,14 @@ timeval_to_string(timeval x, uint prec, bool trim_zeros = true) noexcept {
 
 template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 constexpr bool is_power_of_10(T x) noexcept {
-	if (x <= 0)
+	if (x <= 0) {
 		return false;
+	}
 
 	while (x > 1) {
-		if (x % 10 != 0)
+		if (x % 10 != 0) {
 			return false;
+		}
 		x /= 10;
 	}
 
@@ -285,13 +296,15 @@ to_string(const std::chrono::duration<Rep, Period>& dur,
 		// Truncate trailing zeros
 		auto i = res.len_ + prec - 1;
 		// i will point to the last character of the result
-		while (i >= res.len_ and res[i] == '0')
+		while (i >= res.len_ and res[i] == '0') {
 			--i;
+		}
 
-		if (i == res.len_ - 1)
+		if (i == res.len_ - 1) {
 			res.len_ = i; // Trim trailing '.'
-		else
+		} else {
 			res.len_ = i + 1;
+		}
 	} else {
 		res.len_ += prec;
 	}

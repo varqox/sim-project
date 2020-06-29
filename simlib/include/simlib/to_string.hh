@@ -9,7 +9,7 @@
 template <size_t N>
 class StaticCStringBuff {
 private:
-	std::array<char, N + 1> str_ {'\0'};
+	std::array<char, N + 1> str_{'\0'};
 
 public:
 	size_t len_ = 0;
@@ -17,10 +17,11 @@ public:
 	constexpr StaticCStringBuff() = default;
 
 	constexpr StaticCStringBuff(const std::array<char, N + 1>& str, size_t len)
-	   : str_(str), len_(len) {}
+	: str_(str)
+	, len_(len) {}
 
 	explicit constexpr StaticCStringBuff(const std::array<char, N + 1>& str)
-	   : StaticCStringBuff(str, std::char_traits<char>::length(str.data())) {}
+	: StaticCStringBuff(str, std::char_traits<char>::length(str.data())) {}
 
 private:
 	template <size_t M>
@@ -42,11 +43,13 @@ public:
 	constexpr StaticCStringBuff(StaticCStringBuff&&) noexcept = default;
 
 	template <size_t M, std::enable_if_t<M <= N, int> = 0>
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StaticCStringBuff(const StaticCStringBuff<M>& other) noexcept
-	   : len_(other.len_) {
+	: len_(other.len_) {
 		assert(*other.end() == '\0');
-		for (size_t i = 0; i < len_; ++i)
+		for (size_t i = 0; i < len_; ++i) {
 			str_[i] = other[i];
+		}
 		str_[len_] = '\0';
 	}
 
@@ -56,21 +59,27 @@ public:
 	constexpr StaticCStringBuff&
 	operator=(StaticCStringBuff&&) noexcept = default;
 
-	constexpr size_t size() const noexcept { return len_; }
+	~StaticCStringBuff() = default;
+
+	[[nodiscard]] constexpr size_t size() const noexcept { return len_; }
 
 	constexpr char* data() noexcept { return str_.data(); }
 
-	constexpr const char* data() const noexcept { return str_.data(); }
+	[[nodiscard]] constexpr const char* data() const noexcept {
+		return str_.data();
+	}
 
-	constexpr const char* c_str() const noexcept { return data(); }
+	[[nodiscard]] constexpr const char* c_str() const noexcept {
+		return data();
+	}
 
 	constexpr auto begin() noexcept { return str_.begin(); }
 
-	constexpr auto begin() const noexcept { return str_.begin(); }
+	[[nodiscard]] constexpr auto begin() const noexcept { return str_.begin(); }
 
 	constexpr auto end() noexcept { return begin() + len_; }
 
-	constexpr auto end() const noexcept { return begin() + len_; }
+	[[nodiscard]] constexpr auto end() const noexcept { return begin() + len_; }
 
 	constexpr char& operator[](size_t n) noexcept { return str_[n]; }
 
@@ -141,10 +150,11 @@ constexpr auto to_string(char c) noexcept {
 	return StaticCStringBuff<1>({c, '\0'}, 1);
 }
 
-// If you want convert bool to 0 or 1 use to_string<int>()
+// If you want to convert bool to 0 or 1, use to_string<int>()
 constexpr auto to_string(bool x) noexcept {
-	if (x)
+	if (x) {
 		return StaticCStringBuff<5>("true");
+	}
 
 	return StaticCStringBuff<5>("false");
 }
@@ -154,8 +164,9 @@ template <class T, std::enable_if_t<not std::is_arithmetic_v<std::remove_cv_t<
                                     int> = 0>
 std::string to_string(T x) {
 	const auto zero = std::remove_cv_t<std::remove_reference_t<T>>();
-	if (x == zero)
+	if (x == zero) {
 		return {'0'};
+	}
 
 	std::string res;
 	if (x < zero) {
@@ -197,12 +208,12 @@ std::string to_string(T x, int precision = 6) {
 	}
 #else
 	std::string res(STEP, '\0');
-	int len =
-	   std::snprintf(res.data(), STEP - 1, "%.*Lf", precision, (long double)x);
+	int len = std::snprintf(res.data(), STEP - 1, "%.*Lf", precision,
+	                        static_cast<long double>(x));
 	if (len >= STEP) {
 		res.resize(len + 1, '\0');
 		(void)std::snprintf(res.data(), res.size() - 1, "%.*Lf", precision,
-		                    (long double)x);
+		                    static_cast<long double>(x));
 	}
 
 	res.resize(len);

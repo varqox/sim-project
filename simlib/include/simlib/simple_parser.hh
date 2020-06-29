@@ -2,6 +2,8 @@
 
 #include "simlib/string_compare.hh"
 
+#include <utility>
+
 #if 0
 #warning "Before committing disable this debug"
 #include "simlib/logger.hh"
@@ -12,14 +14,18 @@
 
 class SimpleParser : public StringView {
 public:
-	constexpr explicit SimpleParser(StringView s) : StringView(std::move(s)) {}
+	constexpr explicit SimpleParser(StringView s)
+	: StringView(std::move(s)) {}
 
 	constexpr SimpleParser(const SimpleParser&) noexcept = default;
 	constexpr SimpleParser(SimpleParser&&) noexcept = default;
 	SimpleParser& operator=(const SimpleParser&) noexcept = default;
 	SimpleParser& operator=(SimpleParser&&) noexcept = default;
 
-	bool is_next(StringView s, char delimiter = '/') const noexcept {
+	~SimpleParser() = default;
+
+	[[nodiscard]] bool is_next(const StringView& s,
+	                           char delimiter = '/') const noexcept {
 		DEBUG_PARSER(stdlog('\'', *this, "' -> compared with: '", s, "' -> ",
 		                    compare_to(*this, 0, delimiter, s));)
 		return (compare_to(*this, 0, delimiter, s) == 0);
@@ -36,10 +42,11 @@ public:
 	template <class Func>
 	StringView extract_next(Func&& is_delimiter) {
 		size_t pos = 0;
-		while (pos < size() and not is_delimiter((*this)[pos]))
+		while (pos < size() and not is_delimiter((*this)[pos])) {
 			++pos;
+		}
 
-		StringView res {substr(0, pos)};
+		StringView res{substr(0, pos)};
 		remove_prefix(
 		   pos + 1); // Safe because pos + 1 is cut down to size() if needed
 		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res);)

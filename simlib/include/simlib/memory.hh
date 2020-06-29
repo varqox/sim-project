@@ -6,6 +6,6 @@
 struct delete_using_free {
 	template <class T>
 	void operator()(T* p) const noexcept {
-		free(p);
+		free(p); // NOLINT(cppcoreguidelines-no-malloc)
 	}
 };

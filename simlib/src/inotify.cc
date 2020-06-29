@@ -4,8 +4,9 @@
 
 void FileModificationMonitor::init_watching() {
 	intfy_fd_ = inotify_init1(IN_CLOEXEC);
-	if (not intfy_fd_.is_open())
+	if (not intfy_fd_.is_open()) {
 		THROW("inotify_init1()", errmsg());
+	}
 
 	constexpr size_t intfy_buff_len =
 	   (sizeof(inotify_event) + PATH_MAX + 1) * 16;
@@ -27,11 +28,12 @@ void FileModificationMonitor::init_watching() {
 			std::memcpy(&event.cookie, ptr + offsetof(inotify_event, cookie),
 			            sizeof(event.cookie));
 			// event.file_name
-			decltype(inotify_event::len) len;
+			decltype(inotify_event::len) len = 0;
 			std::memcpy(&len, ptr + offsetof(inotify_event, len), sizeof(len));
-			if (len > 0)
+			if (len > 0) {
 				event.file_name =
 				   CStringView(ptr + offsetof(inotify_event, name));
+			}
 			ptr += sizeof(inotify_event) + len;
 
 			process_event(event);
@@ -55,8 +57,9 @@ void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
 
 	if (event.mask & IN_MOVE_SELF) {
 		// File has disappeared -- stop watching it
-		if (inotify_rm_watch(intfy_fd_, event.wd))
+		if (inotify_rm_watch(intfy_fd_, event.wd)) {
 			THROW("inotify_rm_watch()", errmsg());
+		}
 		// After removing watch IN_IGNORED event will be generated,
 		// so the file's watching state will become unwatched on that event
 		return;
@@ -78,13 +81,15 @@ void FileModificationMonitor::process_event(const simlib_inotify_event& event) {
 	}
 }
 void FileModificationMonitor::schedule_processing_unwatched_files() {
-	if (processing_unwatched_files_is_scheduled_ or unwatched_files_.empty())
+	if (processing_unwatched_files_is_scheduled_ or unwatched_files_.empty()) {
 		return;
+	}
 
 	eq_.add_repeating_handler(add_missing_files_retry_period_, [&] {
 		process_unwatched_files(true);
-		if (not unwatched_files_.empty())
+		if (not unwatched_files_.empty()) {
 			return continue_repeating;
+		}
 
 		processing_unwatched_files_is_scheduled_ = false;
 		return stop_repeating;
@@ -104,8 +109,9 @@ void FileModificationMonitor::process_unwatched_files(
 		// File is now watched
 		watching_log_->started_watching(finfo->path);
 		watched_files_.emplace(wd, finfo);
-		if (run_modification_handler_on_success)
+		if (run_modification_handler_on_success) {
 			run_modification_handler(finfo, finfo->path);
+		}
 
 		return false;
 	});
@@ -122,7 +128,8 @@ void FileModificationMonitor::run_modification_handler(const FileInfo* finfo,
 	// Defer handling but remove previous deferred handling if it exists
 	std::string file_path_to_use;
 	if (auto node = deferred_modification_handlers_.extract(file_path);
-	    node.empty()) {
+	    node.empty())
+	{
 		file_path_to_use = std::forward<String>(file_path);
 	} else {
 		file_path_to_use = std::move(node.key());

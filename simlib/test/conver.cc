@@ -8,8 +8,10 @@
 #include "simlib/process.hh"
 #include "simlib/temporary_file.hh"
 
+#include <chrono>
 #include <gtest/gtest.h>
 #include <regex>
+#include <utility>
 
 using sim::Conver;
 using sim::JudgeReport;
@@ -24,65 +26,78 @@ static Conver::Options load_options_from_file(FilePath file) {
 
 	auto get_var = [&](StringView name) -> decltype(auto) {
 		auto const& var = cf[name];
-		if (not var.is_set())
+		if (not var.is_set()) {
 			THROW("Variable \"", name, "\" is not set");
-		if (var.is_array())
+		}
+		if (var.is_array()) {
 			THROW("Variable \"", name, "\" is an array");
+		}
 		return var;
 	};
 
 	auto get_string = [&](StringView name) -> const std::string& {
-		return get_var(name).as_string();
+		return get_var(std::move(name)).as_string();
 	};
 
 	auto get_optional_string =
-	   [&](StringView name) -> std::optional<std::string> {
-		if (get_var(name).as_string() == "null")
+	   [&](const StringView& name) -> std::optional<std::string> {
+		if (get_var(name).as_string() == "null") {
 			return std::nullopt;
+		}
 
 		return get_string(name);
 	};
 
 	auto get_uint64 = [&](StringView name) {
-		return get_var(name).as<uint64_t>().value();
+		return get_var(std::move(name)).as<uint64_t>().value();
 	};
 
-	auto get_optional_uint64 = [&](StringView name) -> std::optional<uint64_t> {
-		if (get_var(name).as_string() == "null")
+	auto get_optional_uint64 =
+	   [&](const StringView& name) -> std::optional<uint64_t> {
+		if (get_var(name).as_string() == "null") {
 			return std::nullopt;
+		}
 
 		return get_uint64(name);
 	};
 
 	auto get_double = [&](StringView name) {
-		return get_var(name).as<double>().value();
+		return get_var(std::move(name)).as<double>().value();
 	};
 
 	auto get_duration = [&](StringView name) {
-		using namespace std::chrono;
-		return duration_cast<nanoseconds>(duration<double>(get_double(name)));
+		using std::chrono::nanoseconds;
+		using std::chrono::duration;
+		using std::chrono::duration_cast;
+		return duration_cast<nanoseconds>(
+		   duration<double>(get_double(std::move(name))));
 	};
 
 	auto get_optional_duration =
-	   [&](StringView name) -> std::optional<std::chrono::nanoseconds> {
-		if (get_var(name).as_string() == "null")
+	   [&](const StringView& name) -> std::optional<std::chrono::nanoseconds> {
+		if (get_var(name).as_string() == "null") {
 			return std::nullopt;
+		}
 
 		return get_duration(name);
 	};
 
 	auto get_bool = [&](StringView name) {
 		StringView str = get_string(name);
-		if (str == "true")
+		if (str == "true") {
 			return true;
-		if (str == "false")
+		}
+		if (str == "false") {
 			return false;
+		}
 		THROW("variable \"", name, "\" is not a bool: ", str);
 	};
 
-	auto get_optional_bool = [&](StringView name) -> std::optional<bool> {
-		if (get_var(name).as_string() == "null")
+	auto get_optional_bool =
+	   [&](const StringView& name) -> std::optional<bool> {
+		if (get_var(name).as_string() == "null") {
 			return std::nullopt;
+		}
 
 		return get_bool(name);
 	};
@@ -116,9 +131,9 @@ class TestingJudgeLogger : public sim::JudgeLogger {
 	}
 
 	template <class Func>
-	void log_test(StringView test_name, JudgeReport::Test test_report,
-	              Sandbox::ExitStat es, Func&& func) {
-		log("  ", padded_string(test_name, 8, LEFT), ' ',
+	void log_test(StringView test_name, const JudgeReport::Test& test_report,
+	              const Sandbox::ExitStat& es, Func&& func) {
+		log("  ", padded_string(std::move(test_name), 8, LEFT), ' ',
 		    " [ TL: ", to_string(floor_to_10ms(test_report.time_limit), false),
 		    " s ML: ", test_report.memory_limit >> 10, " KiB ]  Status: ",
 		    JudgeReport::simple_span_status(test_report.status));
@@ -149,7 +164,7 @@ public:
 	}
 
 	void test(StringView test_name, JudgeReport::Test test_report,
-	          Sandbox::ExitStat es, Sandbox::ExitStat,
+	          Sandbox::ExitStat es, Sandbox::ExitStat /*checker_es*/,
 	          std::optional<uint64_t> checker_mem_limit,
 	          StringView checker_error_str) override {
 		log_test(test_name, test_report, es, [&]() {
@@ -166,8 +181,9 @@ public:
 				return; // Checker was not run
 			}
 
-			if (checker_mem_limit.has_value())
+			if (checker_mem_limit.has_value()) {
 				log(" [ ML: ", checker_mem_limit.value() >> 10, " KiB ]");
+			}
 		});
 	}
 
@@ -177,7 +193,7 @@ public:
 		    " (ratio: ", to_string(score_ratio, 4), ")\n");
 	}
 
-	void final_score(int64_t, int64_t) override {}
+	void final_score(int64_t /*score*/, int64_t /*max_score*/) override {}
 
 	void end() override { log("}\n"); }
 };
@@ -186,16 +202,18 @@ class ConverTestRunner : public concurrent::JobProcessor<string> {
 	const string tests_dir_;
 
 public:
-	ConverTestRunner(string tests_dir) : tests_dir_(std::move(tests_dir)) {}
+	explicit ConverTestRunner(string tests_dir)
+	: tests_dir_(std::move(tests_dir)) {}
 
 protected:
-	void produce_jobs() override final {
+	void produce_jobs() final {
 		std::vector<string> test_cases;
 		collect_available_test_cases(test_cases);
 		sort(test_cases.begin(), test_cases.end(),
 		     [&](auto& a, auto& b) { return StrNumCompare()(b, a); });
-		for (auto& test_case_name : test_cases)
+		for (auto& test_case_name : test_cases) {
 			add_job(std::move(test_case_name));
+		}
 	}
 
 private:
@@ -215,7 +233,7 @@ private:
 	}
 
 protected:
-	void process_job(string test_case_name) override final {
+	void process_job(string test_case_name) final {
 		try {
 			run_test_case(std::move(test_case_name));
 		} catch (const std::exception& e) {
@@ -230,10 +248,10 @@ private:
 	}
 
 	class TestCaseRunner {
-		static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT {5};
+		static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{5};
 		static constexpr size_t COMPILATION_ERRORS_MAX_LENGTH = 4096;
 
-		const TemporaryFile package_copy_ {"/tmp/conver_test.XXXXXX"};
+		const TemporaryFile package_copy_{"/tmp/conver_test.XXXXXX"};
 		const string test_case_name_;
 		const InplaceBuff<PATH_MAX> test_path_prefix_;
 		const Conver::Options options_;
@@ -246,10 +264,10 @@ private:
 
 	public:
 		TestCaseRunner(const string& tests_dir, string&& test_case_name)
-		   : test_case_name_(std::move(test_case_name)),
-		     test_path_prefix_(concat(tests_dir, test_case_name_)),
-		     options_(load_options_from_file(
-		        concat_tostr(test_path_prefix_, "conver.options"))) {
+		: test_case_name_(std::move(test_case_name))
+		, test_path_prefix_(concat(tests_dir, test_case_name_))
+		, options_(load_options_from_file(
+		     concat_tostr(test_path_prefix_, "conver.options"))) {
 			throw_assert(copy(concat_tostr(test_path_prefix_, "package.zip"),
 			                  package_copy_.path()) == 0);
 			conver_.package_path(package_copy_.path());
@@ -268,7 +286,7 @@ private:
 				case Conver::Status::COMPLETE: break;
 				case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT:
 					judge_model_solution_and_finish_constructing_post_simfile(
-					   std::move(cres));
+					   cres);
 					break;
 				}
 			} catch (const std::exception& e) {
@@ -291,7 +309,7 @@ private:
 		}
 
 		void judge_model_solution_and_finish_constructing_post_simfile(
-		   sim::Conver::ConstructionResult cres) {
+		   const sim::Conver::ConstructionResult& cres) {
 			ModelSolutionRunner model_solution_runner(
 			   package_copy_.path(), post_simfile_, cres.pkg_master_dir);
 			std::tie(initial_judge_report, final_judge_report) =
@@ -312,8 +330,9 @@ private:
 			ModelSolutionRunner(const string& package_path,
 			                    sim::Simfile& simfile,
 			                    const string& pkg_master_dir)
-			   : simfile_(simfile), package_path_(package_path),
-			     pkg_master_dir_(pkg_master_dir) {
+			: simfile_(simfile)
+			, package_path_(package_path)
+			, pkg_master_dir_(pkg_master_dir) {
 				jworker_.load_package(package_path_, simfile_.dump());
 			}
 
@@ -330,9 +349,10 @@ private:
 		private:
 			void compile_checker() {
 				string compilation_errors;
-				if (jworker_.compile_checker(
-				       COMPILATION_TIME_LIMIT, &compilation_errors,
-				       COMPILATION_ERRORS_MAX_LENGTH, "")) {
+				if (jworker_.compile_checker(COMPILATION_TIME_LIMIT,
+				                             &compilation_errors,
+				                             COMPILATION_ERRORS_MAX_LENGTH, ""))
+				{
 					THROW("failed to compile checker: \n", compilation_errors);
 				}
 			}
@@ -354,7 +374,8 @@ private:
 				       solution_source_code.path(),
 				       sim::filename_to_lang(simfile_.solutions[0]),
 				       COMPILATION_TIME_LIMIT, &compilation_errors,
-				       COMPILATION_ERRORS_MAX_LENGTH, "")) {
+				       COMPILATION_ERRORS_MAX_LENGTH, ""))
+				{
 					THROW("failed to compile solution: \n", compilation_errors);
 				}
 			}
@@ -362,8 +383,9 @@ private:
 
 		void check_result() {
 			round_post_simfile_time_limits_to_whole_seconds();
-			if (REGENERATE_OUTS)
+			if (REGENERATE_OUTS) {
 				overwrite_test_output_files();
+			}
 
 			check_result_with_output_files();
 		}
@@ -414,7 +436,7 @@ private:
 			   intentional_unsafe_string_view(serialized_judge_log()));
 		}
 
-		string serialized_judge_log() const {
+		[[nodiscard]] string serialized_judge_log() const {
 			return initial_judge_report.judge_log +
 			       final_judge_report.judge_log;
 		}
@@ -456,6 +478,7 @@ private:
 	};
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(Conver, construct_simfile) {
 	stdlog.label(false);
 	stdlog.use(stdout);

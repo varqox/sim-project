@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_descriptor, FileDescriptor) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 	static_assert(not std::is_convertible_v<int, FileDescriptor>);
@@ -36,7 +37,7 @@ TEST(file_descriptor, FileDescriptor) {
 
 		fd_a = std::move(fd_b);
 		EXPECT_TRUE(fd_a.is_open());
-		EXPECT_FALSE(fd_b.is_open());
+		EXPECT_FALSE(fd_b.is_open()); // NOLINT(bugprone-use-after-move)
 
 		EXPECT_TRUE(file_descriptor_exists(fd));
 		fd_b.reset(fd_a.release());

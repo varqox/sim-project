@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <optional>
+#include <utility>
 
 /// # Simfile - Sim package configuration file
 /// Simfile is a ConfigFile file, so the syntax is the same as in the
@@ -102,10 +103,12 @@ public:
 		std::chrono::nanoseconds time_limit;
 		uint64_t memory_limit; // in bytes
 
-		explicit Test(const std::string& n = "",
+		explicit Test(std::string n = "",
 		              std::chrono::nanoseconds tl = std::chrono::nanoseconds(0),
 		              uint64_t ml = 0)
-		   : name(n), time_limit(tl), memory_limit(ml) {}
+		: name(std::move(n))
+		, time_limit(tl)
+		, memory_limit(ml) {}
 	};
 
 	/**
@@ -114,7 +117,7 @@ public:
 	 */
 	struct TestGroup {
 		std::vector<Test> tests;
-		int64_t score;
+		int64_t score{};
 	};
 
 	std::vector<TestGroup> tgroups; // Sorted by gid
@@ -146,13 +149,15 @@ public:
 	Simfile& operator=(const Simfile&) = default;
 	Simfile& operator=(Simfile&&) = default;
 
-	const ConfigFile& config_file() const { return config; }
+	~Simfile() = default;
+
+	[[nodiscard]] const ConfigFile& config_file() const { return config; }
 	/**
 	 * @brief Dumps object to string
 	 *
 	 * @return dumped config (which can be placed in a file)
 	 */
-	std::string dump() const;
+	[[nodiscard]] std::string dump() const;
 
 	/**
 	 * @brief Dumps value of scoring variable to string
@@ -160,7 +165,7 @@ public:
 	 * @return dumped value of scoring variable (which can be placed in config
 	 *   file as scoring value)
 	 */
-	std::string dump_scoring_value() const;
+	[[nodiscard]] std::string dump_scoring_value() const;
 
 	/**
 	 * @brief Dumps value of limits variable to string
@@ -168,7 +173,7 @@ public:
 	 * @return dumped value of limits variable (which can be placed in config
 	 *   file as limits value)
 	 */
-	std::string dump_limits_value() const;
+	[[nodiscard]] std::string dump_limits_value() const;
 
 	/**
 	 * @brief Loads problem's name
@@ -349,11 +354,13 @@ public:
 		}
 
 		bool operator()(StringView a, StringView b) const {
-			auto x = split(std::move(a)), y = split(std::move(b));
+			auto x = split(std::move(a));
+			auto y = split(std::move(b));
 			// tid == "ocen" behaves the same as gid == "0"
 			if (x.tid == "ocen") {
-				if (y.tid == "ocen")
+				if (y.tid == "ocen") {
 					return StrNumCompare()(x.gid, y.gid);
+				}
 
 				y.gid.remove_leading('0');
 				return (not y.gid.empty()); // true iff y.gid was not equal to 0
@@ -378,11 +385,13 @@ public:
  *
  * @return label
  */
-inline std::string shorten_name(StringView str) {
+inline std::string shorten_name(const StringView& str) {
 	std::string label;
-	for (auto c : str)
-		if (is_graph(c) && (label += to_lower(c)).size() == 3)
+	for (auto c : str) {
+		if (is_graph(c) && (label += to_lower(c)).size() == 3) {
 			break;
+		}
+	}
 	return label;
 }
 

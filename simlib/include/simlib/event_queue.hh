@@ -60,19 +60,21 @@ private:
 	std::vector<pollfd> poll_events_;
 	std::vector<handler_id_t> poll_events_idx_to_hid_;
 
-	std::atomic_bool immediate_pause_;
+	std::atomic_bool immediate_pause_{};
 	FileDescriptor immediate_pause_fd_;
 
 	handler_id_t new_handler_id() noexcept { return next_handler_id_++; }
 
-	bool are_there_file_file_handlers() const noexcept {
+	[[nodiscard]] bool are_there_file_file_handlers() const noexcept {
 		return (handlers_.size() > timed_handlers_.size());
 	}
 
 public:
-	EventQueue() : immediate_pause_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {
-		if (not immediate_pause_fd_.is_open())
+	EventQueue()
+	: immediate_pause_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)) {
+		if (not immediate_pause_fd_.is_open()) {
 			THROW("eventfd()", errmsg());
+		}
 
 		// Add handler to make ppoll() wake if an immediate pause is requested
 		add_file_handler(immediate_pause_fd_, FileEvent::READABLE, [this] {
@@ -86,19 +88,18 @@ public:
 	EventQueue(const EventQueue&) = delete;
 
 	EventQueue(EventQueue&& other) noexcept
-	   : next_handler_id_(std::move(other.next_handler_id_)),
-	     handlers_(std::move(other.handlers_)),
-	     timed_handlers_(std::move(other.timed_handlers_)),
-	     poll_events_(std::move(other.poll_events_)),
-	     poll_events_idx_to_hid_(std::move(other.poll_events_idx_to_hid_)),
-	     immediate_pause_(
-	        other.immediate_pause_.load(std::memory_order_acquire)),
-	     immediate_pause_fd_(std::move(other.immediate_pause_fd_)) {}
+	: next_handler_id_(other.next_handler_id_)
+	, handlers_(std::move(other.handlers_))
+	, timed_handlers_(std::move(other.timed_handlers_))
+	, poll_events_(std::move(other.poll_events_))
+	, poll_events_idx_to_hid_(std::move(other.poll_events_idx_to_hid_))
+	, immediate_pause_(other.immediate_pause_.load(std::memory_order_acquire))
+	, immediate_pause_fd_(std::move(other.immediate_pause_fd_)) {}
 
 	EventQueue& operator=(const EventQueue&) = delete;
 
-	EventQueue& operator=(EventQueue&& other) {
-		next_handler_id_ = std::move(other.next_handler_id_);
+	EventQueue& operator=(EventQueue&& other) noexcept {
+		next_handler_id_ = other.next_handler_id_;
 		handlers_ = std::move(other.handlers_);
 		timed_handlers_ = std::move(other.timed_handlers_);
 		poll_events_ = std::move(other.poll_events_);
@@ -109,6 +110,8 @@ public:
 		immediate_pause_fd_ = std::move(other.immediate_pause_fd_);
 		return *this;
 	}
+
+	~EventQueue() = default;
 
 	// Stops processing of events immediately. It is safe to call it from other
 	// threads.
@@ -121,7 +124,7 @@ public:
 	}
 
 private:
-	bool immediate_pause_was_requested() const noexcept {
+	[[nodiscard]] bool immediate_pause_was_requested() const noexcept {
 		return immediate_pause_.load(std::memory_order_acquire);
 	}
 
@@ -135,8 +138,9 @@ public:
 	                              std::function<void()> handler) {
 		STACK_UNWINDING_MARK;
 		const auto now = std::chrono::system_clock::now();
-		if (tp < now)
+		if (tp < now) {
 			tp = now; // Disallow potential starvation of other handlers
+		}
 
 		return add_time_handler_impl(tp, std::move(handler));
 	}
@@ -158,8 +162,9 @@ public:
 		auto impl = [this, interval,
 		             handler =
 		                shared_function(std::move(handler))](auto& self) {
-			if (handler() == stop_repeating)
+			if (handler() == stop_repeating) {
 				return;
+			}
 
 			// Continue repeating
 			add_time_handler(interval, [self] { self(self); });
@@ -172,7 +177,7 @@ private:
 	handler_id_t add_time_handler_impl(time_point tp,
 	                                   std::function<void()> handler) {
 		const auto handler_id = new_handler_id();
-		handlers_.emplace(handler_id, TimedHandler {tp, std::move(handler)});
+		handlers_.emplace(handler_id, TimedHandler{tp, std::move(handler)});
 		try {
 			timed_handlers_.emplace(tp, handler_id);
 			return handler_id;
@@ -185,22 +190,27 @@ private:
 	static decltype(pollfd::events)
 	file_events_to_poll_events(FileEvent events) noexcept {
 		decltype(pollfd::events) res = 0;
-		if (uint(events & FileEvent::READABLE))
+		if (uint(events & FileEvent::READABLE)) {
 			res |= POLLIN;
-		if (uint(events & FileEvent::WRITEABLE))
+		}
+		if (uint(events & FileEvent::WRITEABLE)) {
 			res |= POLLOUT;
+		}
 		return res;
 	}
 
 	static FileEvent
 	poll_events_to_file_events(decltype(pollfd::revents) events) noexcept {
-		FileEvent res = FileEvent(0);
-		if (events & POLLIN)
+		auto res = FileEvent(0);
+		if (events & POLLIN) {
 			res = res | FileEvent::READABLE;
-		if (events & POLLOUT)
+		}
+		if (events & POLLOUT) {
 			res = res | FileEvent::WRITEABLE;
-		if (events & (POLLERR | POLLHUP))
+		}
+		if (events & (POLLERR | POLLHUP)) {
 			res = res | FileEvent::CLOSED;
+		}
 		return res;
 	}
 
@@ -213,17 +223,18 @@ public:
 		STACK_UNWINDING_MARK;
 		if constexpr (not std::is_invocable_r_v<void, Handler, FileEvent>) {
 			STACK_UNWINDING_MARK;
-			return add_file_handler(fd, events,
-			                        [handler = std::forward<Handler>(handler)](
-			                           FileEvent) mutable { handler(); });
+			return add_file_handler(
+			   fd, events,
+			   [handler = std::forward<Handler>(handler)](
+			      FileEvent /*unused*/) mutable { handler(); });
 
 		} else {
 			auto handler_id = new_handler_id();
 			handlers_.emplace(
 			   handler_id,
-			   FileHandler {std::make_shared<std::function<void(FileEvent)>>(
-			                   std::move(handler)),
-			                events, poll_events_.size()});
+			   FileHandler{std::make_shared<std::function<void(FileEvent)>>(
+			                  std::forward<Handler>(handler)),
+			               events, poll_events_.size()});
 			try {
 				poll_events_idx_to_hid_.emplace_back(handler_id);
 				try {
@@ -247,14 +258,14 @@ public:
 		STACK_UNWINDING_MARK;
 
 		std::visit(
-		   overloaded {[&](TimedHandler& handler) {
-			               timed_handlers_.erase({handler.time, handler_id});
-		               },
-		               [&](FileHandler& handler) {
-			               poll_events_[handler.poll_event_idx].fd =
-			                  -1; // Deactivate event. It will be removed while
-			                      // processing file events.
-		               }},
+		   overloaded{[&](TimedHandler& handler) {
+			              timed_handlers_.erase({handler.time, handler_id});
+		              },
+		              [&](FileHandler& handler) {
+			              poll_events_[handler.poll_event_idx].fd =
+			                 -1; // Deactivate event. It will be removed while
+			                     // processing file events.
+		              }},
 		   WONT_THROW(handlers_.at(handler_id)));
 		handlers_.erase(handler_id);
 	}
@@ -268,7 +279,7 @@ public:
 		immediate_pause_.store(false, std::memory_order_release);
 		{
 			// Reset immediate_pause_fd_
-			uint64_t x;
+			uint64_t x = 0;
 			(void)read(immediate_pause_fd_, &x, sizeof(x)); // It is nonblocking
 		}
 
@@ -276,18 +287,21 @@ public:
 		auto process_timed_handlers = [&] {
 			STACK_UNWINDING_MARK;
 
-			if (timed_handlers_.empty() or immediate_pause_was_requested())
+			if (timed_handlers_.empty() or immediate_pause_was_requested()) {
 				return;
+			}
 
 			const auto start = std::chrono::system_clock::now();
 			auto now = start;
 			do {
-				if (timed_handlers_.empty())
+				if (timed_handlers_.empty()) {
 					break;
+				}
 
 				const auto [tp, handler_id] = *timed_handlers_.begin();
-				if (tp > now)
+				if (tp > now) {
 					break;
+				}
 
 				timed_handlers_.erase(timed_handlers_.begin());
 				const auto it = handlers_.find(handler_id);
@@ -297,16 +311,18 @@ public:
 				handlers_.erase(it);
 
 				handler(); // It is ok if it throws
-				if (immediate_pause_was_requested())
+				if (immediate_pause_was_requested()) {
 					return;
+				}
 			} while ((now = std::chrono::system_clock::now()) <=
 			         start + TIME_QUANTUM);
 		};
 
 		auto process_file_events = [&] {
 			STACK_UNWINDING_MARK;
-			if (immediate_pause_was_requested())
+			if (immediate_pause_was_requested()) {
 				return;
+			}
 
 			auto file_handlers_quantum_start = std::chrono::system_clock::now();
 			size_t new_poll_events_size =
@@ -318,8 +334,9 @@ public:
 			// array, so we need to process even the new elements that were
 			// nonexistent at the start
 			for (size_t idx = 0; idx < poll_events_.size(); ++idx) {
-				if (poll_events_[idx].fd < 0)
+				if (poll_events_[idx].fd < 0) {
 					continue;
+				}
 
 				const size_t new_idx = new_poll_events_size++;
 				if (new_idx != idx) {
@@ -336,15 +353,18 @@ public:
 
 				// No event
 				const auto revents = poll_events_[new_idx].revents;
-				if (revents == 0)
+				if (revents == 0) {
 					continue;
+				}
 
 				if (std::chrono::system_clock::now() >
-				    file_handlers_quantum_start + TIME_QUANTUM) {
+				    file_handlers_quantum_start + TIME_QUANTUM)
+				{
 					// Needed to ensure low latency
 					process_timed_handlers();
-					if (immediate_pause_was_requested())
+					if (immediate_pause_was_requested()) {
 						return;
+					}
 
 					file_handlers_quantum_start =
 					   std::chrono::system_clock::now();
@@ -364,15 +384,17 @@ public:
 					auto handler_shr_ptr = WONT_THROW(
 					   std::get<FileHandler>(handlers_.at(handler_id)).handler);
 					(*handler_shr_ptr)(events);
-					if (immediate_pause_was_requested())
+					if (immediate_pause_was_requested()) {
 						return;
+					}
 
 					continue;
 				}
 
 				// Unhandled event
-				if (revents & (POLLPRI | POLLRDHUP))
+				if (revents & (POLLPRI | POLLRDHUP)) {
 					continue; // Ignore these events
+				}
 
 				THROW("pollfd.revents = ", revents,
 				      " is an invalid event (at the moment of implementing "
@@ -386,27 +408,30 @@ public:
 		// There is always a handler for immediate_pause_fd_
 		while (handlers_.size() > 1 and not immediate_pause_was_requested()) {
 			const auto timeout = [&]() -> std::chrono::system_clock::duration {
-				if (timed_handlers_.empty())
+				if (timed_handlers_.empty()) {
 					return nanoseconds(-1);
+				}
 
 				time_point first_expiration = timed_handlers_.begin()->first;
 				time_point now = std::chrono::system_clock::now();
-				if (first_expiration < now)
+				if (first_expiration < now) {
 					return nanoseconds(0);
+				}
 
 				return first_expiration - now;
 			}();
 
 			const int ready_poll_events_num = [&] {
 				if (not are_there_file_file_handlers()) {
-					if (timeout > nanoseconds(0))
+					if (timeout > nanoseconds(0)) {
 						std::this_thread::sleep_for(timeout);
+					}
 
 					return 0;
 				}
 
-				timespec ts;
-				timespec* tmo_p;
+				timespec ts{};
+				timespec* tmo_p = nullptr;
 				if (timeout < nanoseconds(0)) {
 					tmo_p = nullptr;
 				} else {
@@ -417,14 +442,16 @@ public:
 				return ppoll(poll_events_.data(), poll_events_.size(), tmo_p,
 				             nullptr);
 			}();
-			if (ready_poll_events_num == -1 and errno != EINTR)
+			if (ready_poll_events_num == -1 and errno != EINTR) {
 				THROW("ppoll()", errmsg());
+			}
 
 			process_timed_handlers(); // It is important to first process timed
 			                          // events, to not starve the timed events
 
-			if (ready_poll_events_num > 0)
+			if (ready_poll_events_num > 0) {
 				process_file_events();
+			}
 		}
 	}
 };

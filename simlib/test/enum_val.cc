@@ -23,6 +23,7 @@ static void test_constructor_from_enum() {
 	EXPECT_NE(a, Enum::B);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, constructor_from_enum) {
 	test_constructor_from_enum<IntEnum>();
 	test_constructor_from_enum<Uint64Enum>();
@@ -31,7 +32,7 @@ TEST(EnumVal, constructor_from_enum) {
 template <class Enum>
 static void test_constructor_from_val_type() {
 	using UT = typename EnumVal<Enum>::ValType;
-	EnumVal<Enum> a((UT)Enum::A);
+	EnumVal<Enum> a(static_cast<UT>(Enum::A));
 	static_assert(not std::is_convertible_v<UT, decltype(a)>,
 	              "Implicit conversion is disallowed");
 	static_assert(std::is_same_v<typename decltype(a)::ValType, UT>);
@@ -39,6 +40,7 @@ static void test_constructor_from_val_type() {
 	EXPECT_NE(a, Enum::B);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, constructor_value) {
 	test_constructor_from_val_type<IntEnum>();
 	test_constructor_from_val_type<Uint64Enum>();
@@ -52,6 +54,7 @@ static void test_assignment_operator_from_enum() {
 	EXPECT_NE(a, Enum::A);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, test_assignment_operator_from_enum) {
 	test_assignment_operator_from_enum<IntEnum>();
 	test_assignment_operator_from_enum<Uint64Enum>();
@@ -61,11 +64,12 @@ template <class Enum>
 static void test_assignment_operator_from_val_type() {
 	EnumVal a = Enum::A;
 	using UT = typename decltype(a)::ValType;
-	a = EnumVal<Enum>((UT)Enum::C);
+	a = EnumVal<Enum>(static_cast<UT>(Enum::C));
 	EXPECT_EQ(a, Enum::C);
 	EXPECT_NE(a, Enum::A);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, assignment_operator_from_val_type) {
 	test_assignment_operator_from_val_type<IntEnum>();
 	test_assignment_operator_from_val_type<Uint64Enum>();
@@ -80,6 +84,7 @@ static void test_int_val() {
 	EXPECT_NE(a.int_val(), (int)Enum::C);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, int_val) {
 	test_int_val<IntEnum>();
 	test_int_val<Uint64Enum>();
@@ -98,6 +103,7 @@ static void test_implicit_const_conversion() {
 	EXPECT_NE((const UT&)a, (UT)Enum::C);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, operator_ValType_const) {
 	test_implicit_const_conversion<IntEnum>();
 	test_implicit_const_conversion<Uint64Enum>();
@@ -116,6 +122,7 @@ static void test_implicit_conversion() {
 	EXPECT_NE((UT&)a, (UT)Enum::C);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EnumVal, operator_ValType) {
 	test_implicit_conversion<IntEnum>();
 	test_implicit_conversion<Uint64Enum>();

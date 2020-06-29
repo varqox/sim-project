@@ -7,12 +7,17 @@
 template <int (*func)(int, const sigset_t*, sigset_t*)>
 class SignalBlockerBase {
 private:
-	sigset_t old_mask;
+	sigset_t old_mask{};
 
 public:
 	const static sigset_t empty_mask, full_mask;
 
 	SignalBlockerBase() noexcept { block(); }
+
+	SignalBlockerBase(const SignalBlockerBase&) = delete;
+	SignalBlockerBase(SignalBlockerBase&&) = delete;
+	SignalBlockerBase& operator=(const SignalBlockerBase&) = delete;
+	SignalBlockerBase& operator=(SignalBlockerBase&&) = delete;
 
 	[[nodiscard]] int block() noexcept {
 		return func(SIG_SETMASK, &full_mask, &old_mask);
@@ -25,13 +30,13 @@ public:
 	~SignalBlockerBase() noexcept { unblock(); }
 
 private:
-	static sigset_t empty_mask_val() {
+	static sigset_t empty_mask_val() noexcept {
 		sigset_t mask;
 		sigemptyset(&mask);
 		return mask;
 	};
 
-	static sigset_t full_mask_val() {
+	static sigset_t full_mask_val() noexcept {
 		sigset_t mask;
 		sigfillset(&mask);
 		return mask;
@@ -46,8 +51,8 @@ template <int (*func)(int, const sigset_t*, sigset_t*)>
 const sigset_t SignalBlockerBase<func>::full_mask =
    SignalBlockerBase<func>::full_mask_val();
 
-typedef SignalBlockerBase<sigprocmask> SignalBlocker;
-typedef SignalBlockerBase<pthread_sigmask> ThreadSignalBlocker;
+using SignalBlocker = SignalBlockerBase<sigprocmask>;
+using ThreadSignalBlocker = SignalBlockerBase<pthread_sigmask>;
 
 // Block all signals when function @p f is called
 template <class F, class... Args>

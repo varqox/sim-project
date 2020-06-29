@@ -8,12 +8,12 @@
 #include <gtest/gtest.h>
 
 using std::string;
-using std::thread;
 using std::vector;
 using VS = vector<string>;
 using namespace std::chrono_literals;
 
-TEST(inotify_FileModificationMonitor, simple) {
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(inotify_FileModificationMonitor /*unused*/, simple /*unused*/) {
 	TemporaryDirectory tmp_dir("/tmp/inotify_test.XXXXXX");
 	TemporaryFile tmp_file("/tmp/inotify_test.XXXXXX");
 	FileModificationMonitor monitor;
@@ -33,12 +33,13 @@ TEST(inotify_FileModificationMonitor, simple) {
 	   concat_tostr(tmp_dir.path(), "abc"),
 	};
 
-	monitor.event_queue().add_repeating_handler(100us, [&, i = 0u]() mutable {
+	monitor.event_queue().add_repeating_handler(100us, [&, i = 0U]() mutable {
 		order.emplace_back(concat_tostr(i));
-		if (has_suffix(paths[i], "dirdir"))
+		if (has_suffix(paths[i], "dirdir")) {
 			EXPECT_EQ(mkdir(paths[i].data(), S_0755), 0);
-		else
+		} else {
 			put_file_contents(paths[i], "abc");
+		}
 
 		if (++i == paths.size()) {
 			monitor.event_queue().add_time_handler(
@@ -49,7 +50,7 @@ TEST(inotify_FileModificationMonitor, simple) {
 	});
 
 	monitor.watch();
-	EXPECT_EQ(order, (VS {
+	EXPECT_EQ(order, (VS{
 	                    "0",
 	                    paths[0],
 	                    "1",
@@ -63,7 +64,9 @@ TEST(inotify_FileModificationMonitor, simple) {
 	                 }));
 }
 
-TEST(inotify_FileModificationMonitor, remove_is_not_an_event) {
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(inotify_FileModificationMonitor /*unused*/,
+     remove_is_not_an_event /*unused*/) {
 	TemporaryDirectory tmp_dir("/tmp/inotify_test.XXXXXX");
 	TemporaryFile tmp_file("/tmp/inotify_test.XXXXXX");
 	FileModificationMonitor monitor;
@@ -107,7 +110,7 @@ TEST(inotify_FileModificationMonitor, remove_is_not_an_event) {
 	});
 
 	monitor.watch();
-	EXPECT_EQ(order, (VS {
+	EXPECT_EQ(order, (VS{
 	                    "+abc",
 	                    dir_abc_path,
 	                    "+dirdir",
@@ -121,7 +124,9 @@ TEST(inotify_FileModificationMonitor, remove_is_not_an_event) {
 	                 }));
 }
 
-TEST(inotify_FileModificationMonitor, stillness_threshold) {
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(inotify_FileModificationMonitor /*unused*/,
+     stillness_threshold /*unused*/) {
 	TemporaryDirectory tmp_dir("/tmp/inotify_test.XXXXXX");
 	TemporaryFile tmp_file("/tmp/inotify_test.XXXXXX");
 	FileModificationMonitor monitor;
@@ -136,7 +141,7 @@ TEST(inotify_FileModificationMonitor, stillness_threshold) {
 	auto dir_abc_path = concat_tostr(tmp_dir.path(), "abc");
 	put_file_contents(dir_abc_path, ""); // create file
 
-	monitor.event_queue().add_repeating_handler(100us, [&, i = 0u]() mutable {
+	monitor.event_queue().add_repeating_handler(100us, [&, i = 0U]() mutable {
 		order.emplace_back("write");
 		put_file_contents(dir_abc_path, "xxx");
 		put_file_contents(tmp_file.path(), "xxx");
@@ -150,7 +155,7 @@ TEST(inotify_FileModificationMonitor, stillness_threshold) {
 	});
 
 	monitor.watch();
-	EXPECT_EQ(order, (VS {
+	EXPECT_EQ(order, (VS{
 	                    "write",
 	                    dir_abc_path,
 	                    "write",
@@ -161,7 +166,9 @@ TEST(inotify_FileModificationMonitor, stillness_threshold) {
 	                 }));
 }
 
-TEST(inotify_FileModificationMonitor, rewatch_after_remove) {
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(inotify_FileModificationMonitor /*unused*/,
+     rewatch_after_remove /*unused*/) {
 	TemporaryDirectory tmp_dir("/tmp/inotify_test.XXXXXX");
 	TemporaryFile tmp_file("/tmp/inotify_test.XXXXXX");
 	FileModificationMonitor monitor;
@@ -201,7 +208,7 @@ TEST(inotify_FileModificationMonitor, rewatch_after_remove) {
 
 	monitor.set_add_missing_files_retry_period(1ms);
 	monitor.watch();
-	EXPECT_EQ(order, (VS {
+	EXPECT_EQ(order, (VS{
 	                    "+",
 	                    tmp_file.path(),
 	                    "+",

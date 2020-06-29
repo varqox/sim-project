@@ -21,6 +21,12 @@
 
 class WatchingLog {
 public:
+	WatchingLog() = default;
+	WatchingLog(const WatchingLog&) = default;
+	WatchingLog(WatchingLog&&) = default;
+	WatchingLog& operator=(const WatchingLog&) = default;
+	WatchingLog& operator=(WatchingLog&&) = default;
+
 	virtual void could_not_watch(const std::string& path, int errnum) = 0;
 	virtual void read_failed(int errnum) = 0;
 	virtual void started_watching(const std::string& file) = 0;
@@ -29,9 +35,10 @@ public:
 
 class SilentWatchingLog : public WatchingLog {
 public:
-	void could_not_watch(const std::string&, int) override {}
-	void read_failed(int) override {}
-	void started_watching(const std::string&) override {}
+	void could_not_watch(const std::string& /*path*/, int /*errnum*/) override {
+	}
+	void read_failed(int /*errnum*/) override {}
+	void started_watching(const std::string& /*file*/) override {}
 };
 
 class SimpleWatchingLog : public WatchingLog {
@@ -79,9 +86,9 @@ class FileModificationMonitor {
 	   IN_EXCL_UNLINK; // do not monitor unlinked files
 
 	struct simlib_inotify_event {
-		decltype(inotify_event::wd) wd;
-		decltype(inotify_event::mask) mask;
-		decltype(inotify_event::cookie) cookie;
+		decltype(inotify_event::wd) wd{};
+		decltype(inotify_event::mask) mask{};
+		decltype(inotify_event::cookie) cookie{};
 		std::optional<CStringView> file_name;
 	};
 
@@ -153,8 +160,9 @@ public:
 	 */
 	void watch() {
 		STACK_UNWINDING_MARK;
-		if (not intfy_fd_.is_open())
+		if (not intfy_fd_.is_open()) {
 			init_watching();
+		}
 		eq_.run();
 	}
 

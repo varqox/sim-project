@@ -1,8 +1,9 @@
 #pragma once
 
-#include "simlib/avl_dict.hh"
 #include "simlib/inplace_buff.hh"
 #include "simlib/libzip.hh"
+
+#include <set>
 
 namespace sim {
 
@@ -14,13 +15,16 @@ class PackageContents {
 
 	InplaceBuff<1> buff;
 	struct Comparer {
+		struct is_transparent {};
+
 		decltype(buff)* buff_ref;
 
-		Comparer(decltype(buff)& br) : buff_ref(&br) {}
+		explicit Comparer(decltype(buff)& br)
+		: buff_ref(&br) {}
 
 		static StringView to_str(StringView str) noexcept { return str; }
 
-		StringView to_str(Span x) const {
+		[[nodiscard]] StringView to_str(Span x) const {
 			return {buff_ref->data() + x.begin, x.end - x.begin};
 		}
 
@@ -30,9 +34,9 @@ class PackageContents {
 		}
 	};
 
-	AVLDictSet<Span, Comparer> entries {Comparer(buff)};
+	std::set<Span, Comparer> entries{Comparer(buff)};
 
-	StringView to_str(Span x) const {
+	[[nodiscard]] StringView to_str(Span x) const {
 		return {buff.data() + x.begin, x.end - x.begin};
 	}
 
@@ -44,6 +48,8 @@ public:
 	PackageContents& operator=(const PackageContents&) = delete;
 	PackageContents& operator=(PackageContents&&) noexcept = default;
 
+	~PackageContents() = default;
+
 	template <class... Args,
 	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	void add_entry(Args&&... args) {
@@ -52,57 +58,62 @@ public:
 		entries.insert({prev_size, buff.size});
 	}
 
-	bool remove(StringView entry) { return entries.erase(entry); }
+	// Returns bool denoting whether the erasing took place
+	bool remove(const StringView& entry) {
+		auto it = entries.find(entry);
+		if (it == entries.end()) {
+			return false;
+		}
+		entries.erase(it);
+		return true;
+	}
 
-	void remove_with_prefix(StringView prefix) {
-		const Span* s = entries.lower_bound(prefix);
-		while (s and has_prefix(to_str(*s), prefix)) {
-			entries.erase(*s);
-			s = entries.lower_bound(prefix);
+	void remove_with_prefix(const StringView& prefix) {
+		auto it = entries.lower_bound(prefix);
+		while (it != entries.end() and has_prefix(to_str(*it), prefix)) {
+			entries.erase(it++);
 		}
 	}
 
 	/// @p callback should take one argument of type StringView - it will
 	/// contain the entry's path
 	template <class Func>
-	void for_each_with_prefix(StringView prefix, Func&& callback) const {
-		entries.foreach_since_lower_bound(prefix, [&](Span s) {
-			StringView entry = to_str(s);
-			if (not has_prefix(entry, prefix))
-				return false;
+	void for_each_with_prefix(const StringView& prefix, Func&& callback) const {
+		auto it = entries.lower_bound(prefix);
+		while (it != entries.end()) {
+			StringView entry = to_str(*it);
+			if (not has_prefix(entry, prefix)) {
+				break;
+			}
 
 			callback(entry);
-			return true;
-		});
+			++it;
+		}
 	}
 
-	bool exists(StringView entry) const {
-		return (entries.find(entry) != nullptr);
+	[[nodiscard]] bool exists(const StringView& entry) const {
+		return entries.find(entry) != entries.end();
 	}
 
 	/// Finds master directory (with trailing '/') if such does not exist "" is
 	/// returned
-	StringView master_dir() const {
-		if (entries.empty())
+	[[nodiscard]] StringView master_dir() const {
+		if (entries.empty()) {
 			return "";
+		}
 
-		StringView candidate = to_str(*entries.front());
+		StringView candidate = to_str(*entries.begin());
 		{
 			auto pos = candidate.find('/');
-			if (pos == StringView::npos)
+			if (pos == StringView::npos) {
 				return ""; // There is no master dir
+			}
 			candidate = candidate.substr(0, pos + 1);
 		}
 
-		entries.for_each([&](Span s) {
-			if (not has_prefix(to_str(s), candidate)) {
-				candidate = ""; // There is no master dir
-				return false;
-			}
-
-			return true;
-		});
-
+		if (not has_prefix(to_str(*entries.rbegin()), candidate)) {
+			return ""; // There is no master dir
+		}
 		return candidate;
 	}
 

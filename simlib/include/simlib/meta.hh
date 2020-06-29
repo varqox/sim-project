@@ -51,10 +51,10 @@ constexpr typename std::common_type<T, Args...>::type min(T&& x,
 }
 
 template <intmax_t x, intmax_t... ints>
-constexpr intmax_t sum = x + sum<ints...>;
+constexpr inline intmax_t sum = x + sum<ints...>;
 
 template <intmax_t x>
-constexpr intmax_t sum<x> = x;
+constexpr inline intmax_t sum<x> = x;
 
 namespace detail {
 
@@ -85,7 +85,8 @@ constexpr auto has_method_size(...) -> std::false_type;
 } // namespace detail
 
 template <class T>
-constexpr bool has_method_size = decltype(detail::has_method_size<T>(0))::value;
+constexpr inline bool has_method_size =
+   decltype(detail::has_method_size<T>(0))::value;
 
 namespace detail {
 
@@ -97,17 +98,21 @@ constexpr auto has_method_data(...) -> std::false_type;
 } // namespace detail
 
 template <class T>
-constexpr bool has_method_data = decltype(detail::has_method_data<T>(0))::value;
+constexpr inline bool has_method_data =
+   decltype(detail::has_method_data<T>(0))::value;
 
 } // namespace meta
 
 #define DECLARE_ENUM_OPERATOR(enu, oper)                                       \
+	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                           \
 	constexpr enu operator oper(enu a, enu b) {                                \
 		using UT = std::underlying_type<enu>::type;                            \
+		/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                       \
 		return static_cast<enu>(static_cast<UT>(a) oper static_cast<UT>(b));   \
 	}
 
 #define DECLARE_ENUM_ASSIGN_OPERATOR(enu, oper)                                \
+	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                           \
 	constexpr enu& operator oper(enu& a, enu b) {                              \
 		using UT = std::underlying_type<enu>::type;                            \
 		UT x = static_cast<UT>(a);                                             \
@@ -115,8 +120,10 @@ constexpr bool has_method_data = decltype(detail::has_method_data<T>(0))::value;
 	}
 
 #define DECLARE_ENUM_UNARY_OPERATOR(enu, oper)                                 \
+	/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                           \
 	constexpr enu operator oper(enu a) {                                       \
 		using UT = std::underlying_type<enu>::type;                            \
+		/* NOLINTNEXTLINE(bugprone-macro-parentheses) */                       \
 		return static_cast<enu>(oper static_cast<UT>(a));                      \
 	}
 

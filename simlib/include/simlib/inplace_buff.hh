@@ -26,7 +26,7 @@ public:
 			try {
 				p_ = new char[max_size_];
 			} catch (...) {
-				p_ = (char*)&p_ + sizeof(p_);
+				p_ = reinterpret_cast<char*>(&p_) + sizeof(p_);
 				max_size_ = 0;
 				throw;
 			}
@@ -58,45 +58,59 @@ public:
 
 	constexpr char* begin() noexcept { return data(); }
 
-	constexpr const char* begin() const noexcept { return data(); }
+	[[nodiscard]] constexpr const char* begin() const noexcept {
+		return data();
+	}
 
 	constexpr char* end() noexcept { return data() + size; }
 
-	constexpr const char* end() const noexcept { return data() + size; }
+	[[nodiscard]] constexpr const char* end() const noexcept {
+		return data() + size;
+	}
 
-	constexpr const char* cbegin() const noexcept { return data(); }
+	[[nodiscard]] constexpr const char* cbegin() const noexcept {
+		return data();
+	}
 
-	constexpr const char* cend() const noexcept { return data() + size; }
+	[[nodiscard]] constexpr const char* cend() const noexcept {
+		return data() + size;
+	}
 
 	constexpr char* data() noexcept { return p_; }
 
-	constexpr const char* data() const noexcept { return p_; }
+	[[nodiscard]] constexpr const char* data() const noexcept { return p_; }
 
-	constexpr size_t max_size() const noexcept { return max_size_; }
+	[[nodiscard]] constexpr size_t max_size() const noexcept {
+		return max_size_;
+	}
 
 	constexpr char& front() noexcept { return (*this)[0]; }
 
-	constexpr char front() const noexcept { return (*this)[0]; }
+	[[nodiscard]] constexpr char front() const noexcept { return (*this)[0]; }
 
 	constexpr char& back() noexcept { return (*this)[size - 1]; }
 
-	constexpr char back() const noexcept { return (*this)[size - 1]; }
+	[[nodiscard]] constexpr char back() const noexcept {
+		return (*this)[size - 1];
+	}
 
 	constexpr char& operator[](size_t i) noexcept { return p_[i]; }
 
 	constexpr char operator[](size_t i) const noexcept { return p_[i]; }
 
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr operator StringView() const& noexcept { return {data(), size}; }
 
 	// Do not allow to create StringView from a temporary object
 	constexpr operator StringView() const&& = delete;
 
 	// Do not allow to create StringBase<char> from a temporary object
+	// NOLINTNEXTLINE(google-explicit-constructor)
 	operator StringBase<char>() & noexcept { return {data(), size}; }
 
 	operator StringBase<char>() && = delete;
 
-	std::string to_string() const { return {data(), size}; }
+	[[nodiscard]] std::string to_string() const { return {data(), size}; }
 
 	constexpr CStringView to_cstr() & {
 		resize(size + 1);
@@ -110,21 +124,24 @@ public:
 protected:
 	constexpr InplaceBuffBase(size_t s, size_t max_s, char* p,
 	                          char* p_value_when_unallocated) noexcept
-	   : size(s), max_size_(max_s), p_(p),
-	     p_value_when_unallocated_(p_value_when_unallocated) {}
+	: size(s)
+	, max_size_(max_s)
+	, p_(p)
+	, p_value_when_unallocated_(p_value_when_unallocated) {}
 
 	constexpr InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
 	constexpr InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
 	InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;
 	InplaceBuffBase& operator=(InplaceBuffBase&&) noexcept = default;
 
-	bool is_allocated() const noexcept {
+	[[nodiscard]] bool is_allocated() const noexcept {
 		return (p_ != p_value_when_unallocated_);
 	}
 
 	void deallocate() noexcept {
-		if (is_allocated())
+		if (is_allocated()) {
 			delete[] p_;
+		}
 	}
 
 public:
@@ -134,7 +151,8 @@ public:
 	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	constexpr InplaceBuffBase& append(Args&&... args) {
 		[this](auto&&... str) {
-			size_t k = size, final_len = (size + ... + string_length(str));
+			size_t k = size;
+			size_t final_len = (size + ... + string_length(str));
 			resize(final_len);
 			auto append_impl = [&](auto&& s) {
 				auto sl = string_length(s);
@@ -162,24 +180,26 @@ private:
 public:
 	static constexpr size_t max_static_size = N;
 
-	constexpr InplaceBuff() noexcept : InplaceBuffBase(0, N, nullptr, nullptr) {
+	constexpr InplaceBuff() noexcept
+	: InplaceBuffBase(0, N, nullptr, nullptr) {
 		p_ = a_.data();
 		p_value_when_unallocated_ = a_.data();
 	}
 
 	constexpr explicit InplaceBuff(size_t n)
-	   : InplaceBuffBase(n, std::max(N, n), nullptr, nullptr) {
+	: InplaceBuffBase(n, std::max(N, n), nullptr, nullptr) {
 		p_ = (n <= N ? a_.data() : new char[n]);
 		p_value_when_unallocated_ = a_.data();
 	}
 
-	constexpr InplaceBuff(const InplaceBuff& ibuff) : InplaceBuff(ibuff.size) {
+	constexpr InplaceBuff(const InplaceBuff& ibuff)
+	: InplaceBuff(ibuff.size) {
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
 	InplaceBuff(InplaceBuff&& ibuff) noexcept
-	   : InplaceBuffBase(ibuff.size, std::max(N, ibuff.max_size_), ibuff.p_,
-	                     nullptr) {
+	: InplaceBuffBase(ibuff.size, std::max(N, ibuff.max_size_), ibuff.p_,
+	                  nullptr) {
 		p_value_when_unallocated_ = a_.data();
 		if (ibuff.is_allocated()) {
 			p_ = ibuff.p_;
@@ -194,10 +214,13 @@ public:
 		}
 	}
 
-	template <class T, std::enable_if_t<not std::is_integral_v<std::remove_cv_t<
-	                                       std::remove_reference_t<T>>>,
-	                                    int> = 0>
-	constexpr explicit InplaceBuff(T&& str) : InplaceBuff(string_length(str)) {
+	template <class T, std::enable_if_t<
+	                      not std::is_integral_v<std::decay_t<T>> and
+	                         not std::is_same_v<std::decay_t<T>, InplaceBuff>,
+	                      int> = 0>
+	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload): see enable_if
+	constexpr explicit InplaceBuff(T&& str)
+	: InplaceBuff(string_length(str)) {
 		std::copy(::data(str), ::data(str) + size, p_);
 	}
 
@@ -205,7 +228,8 @@ public:
 	// explicit
 	template <class... Args,
 	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
-	constexpr InplaceBuff(std::in_place_t, Args&&... args) : InplaceBuff() {
+	constexpr explicit InplaceBuff(std::in_place_t /*unused*/, Args&&... args)
+	: InplaceBuff() {
 		append(std::forward<Args>(args)...);
 	}
 
@@ -216,26 +240,27 @@ public:
 	                         std::in_place_t>,
 	      int> = 0>
 	constexpr InplaceBuff(Arg1&& arg1, Arg2&& arg2, Args&&... args)
-	   : InplaceBuff(std::in_place, std::forward<Arg1>(arg1),
-	                 std::forward<Arg2>(arg2), std::forward<Args>(args)...) {}
+	: InplaceBuff(std::in_place, std::forward<Arg1>(arg1),
+	              std::forward<Arg2>(arg2), std::forward<Args>(args)...) {}
 
 	template <size_t M, std::enable_if_t<M != N, int> = 0>
-	constexpr InplaceBuff(const InplaceBuff<M>& ibuff)
-	   : InplaceBuff(ibuff.size) {
+	constexpr explicit InplaceBuff(const InplaceBuff<M>& ibuff)
+	: InplaceBuff(ibuff.size) {
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 	}
 
 	template <size_t M, std::enable_if_t<M != N, int> = 0>
-	InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
-	   : InplaceBuffBase(ibuff.size, N, ibuff.p_, nullptr) {
+	explicit InplaceBuff(InplaceBuff<M>&& ibuff) noexcept
+	: InplaceBuffBase(ibuff.size, N, ibuff.p_, nullptr) {
 		p_value_when_unallocated_ = a_.data();
 		if (ibuff.size <= N) {
 			p_ = a_.data();
 			// max_size_ = N;
 			std::copy(ibuff.data(), ibuff.data() + ibuff.size, p_);
 			// Deallocate ibuff memory
-			if (ibuff.is_allocated())
+			if (ibuff.is_allocated()) {
 				delete[] std::exchange(ibuff.p_, nullptr);
+			}
 
 		} else if (ibuff.is_allocated()) {
 			p_ = ibuff.p_; // Steal the allocated string
@@ -253,19 +278,26 @@ public:
 		ibuff.p_ = ibuff.a_.data();
 	}
 
-	~InplaceBuff() { assert(p_value_when_unallocated_ == a_.data()); }
+	~InplaceBuff() override { assert(p_value_when_unallocated_ == a_.data()); }
 
 	constexpr InplaceBuff& operator=(const InplaceBuff& ibuff) {
+		if (this == &ibuff) {
+			return *this;
+		}
 		lossy_resize(ibuff.size);
 		std::copy(ibuff.data(), ibuff.data() + ibuff.size, data());
 		return *this;
 	}
 
 	constexpr InplaceBuff& operator=(InplaceBuff&& ibuff) noexcept {
-		return assign_move_impl(std::move(ibuff));
+		assign_move_impl(std::move(ibuff));
+		return *this;
 	}
 
-	template <class T>
+	template <class T,
+	          std::enable_if_t<not std::is_same_v<std::decay_t<T>, InplaceBuff>,
+	                           int> = 0>
+	// NOLINTNEXTLINE(misc-unconventional-assign-operator)
 	constexpr InplaceBuff& operator=(T&& str) {
 		auto len = string_length(str);
 		lossy_resize(len);
@@ -282,7 +314,8 @@ public:
 
 	template <size_t M, std::enable_if_t<M != N, int> = 0>
 	constexpr InplaceBuff& operator=(InplaceBuff<M>&& ibuff) noexcept {
-		return assign_move_impl(std::move(ibuff));
+		assign_move_impl(std::move(ibuff));
+		return *this;
 	}
 
 private:
@@ -290,8 +323,9 @@ private:
 	InplaceBuff& assign_move_impl(InplaceBuff<M>&& ibuff) {
 		if (ibuff.is_allocated() and ibuff.max_size() >= max_size()) {
 			// Steal the allocated string
-			if (is_allocated())
+			if (is_allocated()) {
 				delete[] p_;
+			}
 
 			p_ = ibuff.p_;
 			size = ibuff.size;
@@ -299,8 +333,9 @@ private:
 
 		} else {
 			*this = ibuff; // Copy data
-			if (ibuff.is_allocated())
+			if (ibuff.is_allocated()) {
 				delete[] ibuff.p_;
+			}
 		}
 
 		// Take care of the ibuff's state

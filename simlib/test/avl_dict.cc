@@ -23,11 +23,14 @@ template <class T, decltype(std::declval<T>().begin(), 0) = 0>
 auto elements(const T& stl_container) {
 	static_assert(not std::is_const_v<typename T::value_type>);
 	std::vector<typename T::value_type> res;
-	for (auto& elem : stl_container)
+	res.reserve(stl_container.size());
+	for (auto& elem : stl_container) {
 		res.emplace_back(elem);
+	}
 	return res;
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(AvlDictContainer, foreach_since_lower_bound) {
 	AVLDictMultiset<int> avl;
 	std::multiset<int> rbt;
@@ -36,23 +39,27 @@ TEST(AvlDictContainer, foreach_since_lower_bound) {
 	// foreach_since_lower_bound
 	for (int beg = 0; beg < 22; ++beg) {
 		for (int end = 0; end < 22; ++end) {
-			std::vector<int> a, r;
+			std::vector<int> a;
+			std::vector<int> r;
 			avl.foreach_since_lower_bound(beg, [&](auto x) {
-				if (x > end)
+				if (x > end) {
 					return false;
+				}
 				a.emplace_back(x);
 				return true;
 			});
 
 			auto it = rbt.lower_bound(beg);
-			while (it != rbt.end() and *it <= end)
+			while (it != rbt.end() and *it <= end) {
 				r.emplace_back(*it++);
+			}
 
 			EXPECT_EQ(a, r) << "beg: " << beg << "end: " << end;
 		}
 	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(AvlDictContainer, foreach_since_upper_bound) {
 	AVLDictMultiset<int> avl;
 	std::multiset<int> rbt;
@@ -61,17 +68,20 @@ TEST(AvlDictContainer, foreach_since_upper_bound) {
 	// foreach_since_upper_bound
 	for (int beg = 0; beg < 22; ++beg) {
 		for (int end = 0; end < 22; ++end) {
-			std::vector<int> a, r;
+			std::vector<int> a;
+			std::vector<int> r;
 			avl.foreach_since_upper_bound(beg, [&](auto x) {
-				if (x > end)
+				if (x > end) {
 					return false;
+				}
 				a.emplace_back(x);
 				return true;
 			});
 
 			auto it = rbt.upper_bound(beg);
-			while (it != rbt.end() and *it <= end)
+			while (it != rbt.end() and *it <= end) {
 				r.emplace_back(*it++);
+			}
 
 			EXPECT_EQ(a, r) << "beg: " << beg << "end: " << end;
 		}
@@ -82,13 +92,15 @@ template <class T, class Cond>
 static void set_filter(std::set<T>& set, Cond&& cond) {
 	auto it = set.begin();
 	while (it != set.end()) {
-		if (cond(*it))
+		if (cond(*it)) {
 			it = set.erase(it);
-		else
+		} else {
 			++it;
+		}
 	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(AvlDictContainer, filter) {
 	AVLDictSet<int> avl;
 	std::set<int> rbt;
@@ -106,8 +118,9 @@ TEST(AvlDictContainer, filter) {
 		rbt.clear();
 
 		int elems_num = get_random(0, 32);
-		while (elems_num--)
+		while (elems_num--) {
 			bulk_insert(avl, rbt, get_random(0, 32));
+		}
 
 		avl.filter(cond);
 		set_filter(rbt, cond);

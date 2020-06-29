@@ -2,7 +2,6 @@
 #include "simlib/defer.hh"
 #include "simlib/directory.hh"
 #include "simlib/file_contents.hh"
-#include "simlib/file_descriptor.hh"
 #include "simlib/file_info.hh"
 #include "simlib/opened_temporary_file.hh"
 #include "simlib/random.hh"
@@ -11,12 +10,11 @@
 #include <gtest/gtest.h>
 
 using std::max;
-using std::pair;
 using std::string;
 using std::vector;
 
 static mode_t get_file_permissions(FilePath path) {
-	struct stat64 st;
+	struct stat64 st {};
 	EXPECT_EQ(stat64(path, &st), 0);
 	return st.st_mode & ACCESSPERMS;
 }
@@ -27,9 +25,11 @@ static string some_random_data(size_t len) {
 	return data;
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_file_manip, remove_r) { // TODO:
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, mkdir) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 	EXPECT_EQ(mkdir(concat(tmp_dir.path(), "a")), 0);
@@ -42,6 +42,7 @@ TEST(file_manip, mkdir) {
 	EXPECT_FALSE(is_directory(concat(tmp_dir.path(), "x")));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, mkdir_r) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 	EXPECT_EQ(mkdir_r(concat_tostr(tmp_dir.path(), "x/d")), 0);
@@ -49,19 +50,20 @@ TEST(file_manip, mkdir_r) {
 	EXPECT_TRUE(is_directory(concat(tmp_dir.path(), "x/d")));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, remove_dir_contents) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 
-	FileDescriptor(concat(tmp_dir.path(), "a"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "b"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "c"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "abc"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "xyz"), O_CREAT);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "a")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "b")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "c")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "abc")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "xyz")), 0);
 	EXPECT_EQ(mkdir_r(concat_tostr(tmp_dir.path(), "k/l/m/nn/")), 0);
-	FileDescriptor(concat(tmp_dir.path(), "k/l/m/nn/x"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "k/l/m/x"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "k/l/x"), O_CREAT);
-	FileDescriptor(concat(tmp_dir.path(), "k/x"), O_CREAT);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "k/l/m/nn/x")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "k/l/m/x")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "k/l/x")), 0);
+	EXPECT_EQ(create_file(concat(tmp_dir.path(), "k/x")), 0);
 
 	EXPECT_EQ(remove_dir_contents(tmp_dir.path()), 0);
 
@@ -69,6 +71,7 @@ TEST(file_manip, remove_dir_contents) {
 	                       [](dirent* f) { ADD_FAILURE() << f->d_name; });
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, create_subdirectories) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 
@@ -88,6 +91,7 @@ TEST(file_manip, create_subdirectories) {
 	                       [](dirent* f) { ADD_FAILURE() << f->d_name; });
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, blast) {
 	OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
 	OpenedTemporaryFile b("/tmp/filesystem-test.XXXXXX");
@@ -135,6 +139,7 @@ TEST(file_manip, blast) {
 	EXPECT_EQ(get_file_size(b.path()), data.size());
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, copy) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 	OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
@@ -196,6 +201,7 @@ TEST(file_manip, copy) {
 	check_allowed_files(__LINE__);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, copy_r) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 
@@ -204,7 +210,7 @@ TEST(file_manip, copy_r) {
 		string data;
 
 		bool operator<(const FileInfo& fi) const {
-			return pair(path, data) < pair(fi.path, fi.data);
+			return std::pair(path, data) < std::pair(fi.path, fi.data);
 		}
 
 		bool operator==(const FileInfo& fi) const {
@@ -284,11 +290,12 @@ TEST(file_manip, copy_r) {
 		return res;
 	};
 
-	auto orig_files_slice = [&](StringView prefix) {
+	auto orig_files_slice = [&](const StringView& prefix) {
 		vector<FileInfo> res;
 		for (auto& [path, data] : orig_files) {
-			if (has_prefix(path, prefix))
+			if (has_prefix(path, prefix)) {
 				res.push_back({path.substr(prefix.size()), data});
+			}
 		}
 
 		return res;
@@ -299,13 +306,15 @@ TEST(file_manip, copy_r) {
 		size_t len = max(fir.size(), sec.size());
 		for (size_t i = 0; i < len; ++i) {
 			if (i < fir.size() and i < sec.size()) {
-				if (not(fir[i] == sec[i]))
+				if (not(fir[i] == sec[i])) {
 					ADD_FAILURE_AT(__FILE__, line)
 					   << "Unequal files:\t" << fir[i].path << "\t"
 					   << sec[i].path;
+				}
 
 				continue;
-			} else if (i < fir.size()) {
+			}
+			if (i < fir.size()) {
 				ADD_FAILURE_AT(__FILE__, line)
 				   << "Extra file in fir:\t" << fir[i].path;
 			} else {
@@ -336,7 +345,7 @@ TEST(file_manip, copy_r) {
 	// Typical into existing
 	{
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
-		auto dest_path = dest_dir.path();
+		const auto& dest_path = dest_dir.path();
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path), 0);
 		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
 		               __LINE__);
@@ -345,7 +354,7 @@ TEST(file_manip, copy_r) {
 	// Without creating subdirs into existing
 	{
 		TemporaryDirectory dest_dir("/tmp/filesystem-test.XXXXXX");
-		auto dest_path = dest_dir.path();
+		const auto& dest_path = dest_dir.path();
 		EXPECT_EQ(copy_r(concat(tmp_dir.path(), "dir"), dest_path, false), 0);
 		check_equality(dump_files(dest_path), orig_files_slice("dir/"),
 		               __LINE__);
@@ -371,14 +380,18 @@ TEST(file_manip, copy_r) {
 	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_file_manip, move) { // TODO:
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_file_manip, create_file) { // TODO:
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_file_manip, FileRemover) { // TODO:
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_file_manip, DirectoryRemover) { // TODO:
 }

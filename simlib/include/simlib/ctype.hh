@@ -9,9 +9,7 @@
 // std::is_digit() or std::tolower()
 template <class T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 constexpr int safe_char(T c) {
-	if constexpr (std::is_same_v<T, char>) {
-		return static_cast<unsigned char>(c);
-	} else if constexpr (std::is_same_v<T, signed char>) {
+	if constexpr (std::is_same_v<T, char> or std::is_same_v<T, signed char>) {
 		return static_cast<unsigned char>(c);
 	} else if constexpr (std::is_same_v<T, unsigned char>) {
 		return c;

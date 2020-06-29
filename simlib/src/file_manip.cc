@@ -14,17 +14,20 @@ int mkdir_r(string path, mode_t mode) noexcept {
 	}
 
 	// Add ending slash (if not exists)
-	if (path.empty() || path.back() != '/')
+	if (path.empty() || path.back() != '/') {
 		path += '/';
+	}
 
 	size_t end = 1; // If there is a leading slash, it will be omitted
 	while (end < path.size()) {
-		while (path[end] != '/')
+		while (path[end] != '/') {
 			++end;
+		}
 
 		path[end] = '\0'; // Separate subpath
-		if (mkdir(path.data(), mode) == -1 && errno != EEXIST)
+		if (mkdir(path.data(), mode) == -1 && errno != EEXIST) {
 			return -1;
+		}
 
 		path[end++] = '/';
 	}
@@ -47,8 +50,9 @@ int mkdir_r(string path, mode_t mode) noexcept {
 static int __remove_rat(int dirfd, FilePath path) noexcept {
 	int fd =
 	   openat(dirfd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-	if (fd == -1)
+	if (fd == -1) {
 		return unlinkat(dirfd, path, 0);
+	}
 
 	DIR* dir = fdopendir(fd);
 	if (dir == nullptr) {
@@ -56,7 +60,8 @@ static int __remove_rat(int dirfd, FilePath path) noexcept {
 		return unlinkat(dirfd, path, AT_REMOVEDIR);
 	}
 
-	int ec, rc = 0;
+	int ec = 0;
+	int rc = 0;
 	for_each_dir_component(
 	   dir,
 	   [&](dirent* file) -> bool {
@@ -100,8 +105,9 @@ int remove_rat(int dirfd, FilePath path) noexcept {
 int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 	int fd =
 	   openat(dirfd, pathname, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-	if (fd == -1)
+	if (fd == -1) {
 		return -1;
+	}
 
 	DIR* dir = fdopendir(fd);
 	if (dir == nullptr) {
@@ -111,7 +117,8 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 		return -1;
 	}
 
-	int ec, rc = 0;
+	int ec = 0;
+	int rc = 0;
 	for_each_dir_component(
 	   dir,
 	   [&](dirent* file) -> bool {
@@ -140,8 +147,9 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 
 	(void)closedir(dir);
 
-	if (rc == -1)
+	if (rc == -1) {
 		errno = ec;
+	}
 
 	return rc;
 }
@@ -149,29 +157,34 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 int create_subdirectories(FilePath file) noexcept {
 	StringView path(file);
 	path.remove_trailing([](char c) { return (c != '/'); });
-	if (path.empty())
+	if (path.empty()) {
 		return 0;
+	}
 
 	return mkdir_r(path.to_string());
 }
 
 int blast(int infd, int outfd) noexcept {
-	array<char, 65536> buff;
-	ssize_t len, written;
+	array<char, 65536> buff{};
+	ssize_t len = 0;
+	ssize_t written = 0;
 	while (len = read(infd, buff.data(), buff.size()),
-	       len > 0 || (len == -1 && errno == EINTR)) {
+	       len > 0 || (len == -1 && errno == EINTR))
+	{
 		ssize_t pos = 0;
 		while (pos < len) {
 			written = write(outfd, buff.data() + pos, len - pos);
-			if (written > 0)
+			if (written > 0) {
 				pos += written;
-			else if (errno != EINTR)
+			} else if (errno != EINTR) {
 				return -1;
+			}
 		}
 	}
 
-	if (len == -1)
+	if (len == -1) {
 		return -1;
+	}
 
 	return 0;
 }
@@ -179,14 +192,16 @@ int blast(int infd, int outfd) noexcept {
 int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
            mode_t mode) noexcept {
 	FileDescriptor in(openat(src_dirfd, src, O_RDONLY | O_CLOEXEC));
-	if (in == -1)
+	if (in == -1) {
 		return -1;
+	}
 
 	FileDescriptor out(openat(dest_dirfd, dest,
 	                          O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode));
 	if (not out.is_open()) {
-		if (errno != ETXTBSY)
+		if (errno != ETXTBSY) {
 			return -1;
+		}
 
 		// Try to construct temporary file and rename it to the destination file
 		try {
@@ -195,14 +210,16 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
 			constexpr uint SUFFIX_LEN = 10;
 			for (size_t iter = 0; iter < 128; ++iter) {
 				tmp_dest.size = tmp_dest_orig_size;
-				for (size_t i = 0; i < SUFFIX_LEN; ++i)
+				for (size_t i = 0; i < SUFFIX_LEN; ++i) {
 					tmp_dest.append(get_random('a', 'z'));
+				}
 
 				out = openat(dest_dirfd, tmp_dest.to_cstr().data(),
 				             O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
 				if (not out.is_open()) {
-					if (errno == EEXIST)
+					if (errno == EEXIST) {
 						continue;
+					}
 					return -1; // Other error occurred
 				}
 
@@ -210,8 +227,9 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
 					(void)unlinkat(dest_dirfd, tmp_dest.to_cstr().data(), 0);
 				};
 				if (renameat(dest_dirfd, tmp_dest.to_cstr().data(), dest_dirfd,
-				             dest))
+				             dest)) {
 					return -1;
+				}
 
 				// Success
 				tmp_file_remover.cancel();
@@ -225,26 +243,30 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
 			return -1;
 		}
 
-		if (not out.is_open())
+		if (not out.is_open()) {
 			return -1;
+		}
 	}
 
 	int res = blast(in, out);
 	off64_t offset = lseek64(out, 0, SEEK_CUR);
-	if (offset == static_cast<decltype(offset)>(-1))
+	if (offset == static_cast<decltype(offset)>(-1)) {
 		return -1;
+	}
 
-	if (ftruncate64(out, offset))
+	if (ftruncate64(out, offset)) {
 		return -1;
+	}
 
 	return res;
 }
 
 int copyat(int src_dirfd, FilePath src, int dest_dirfd,
            FilePath dest) noexcept {
-	struct stat64 sb;
-	if (fstatat64(src_dirfd, src, &sb, 0))
+	struct stat64 sb {};
+	if (fstatat64(src_dirfd, src, &sb, 0)) {
 		return -1;
+	}
 
 	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode & ACCESSPERMS);
 }
@@ -267,8 +289,9 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
                       FilePath dest) noexcept {
 	int src_fd = openat(src_dirfd, src, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 	if (src_fd == -1) {
-		if (errno == ENOTDIR)
+		if (errno == ENOTDIR) {
 			return copyat(src_dirfd, src, dest_dirfd, dest);
+		}
 
 		return -1;
 	}
@@ -289,7 +312,8 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
 		return -1;
 	}
 
-	int ec, rc = 0;
+	int ec = 0;
+	int rc = 0;
 	for_each_dir_component(
 	   src_dir,
 	   [&](dirent* file) -> bool {
@@ -322,38 +346,44 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
 	closedir(src_dir);
 	close(dest_fd);
 
-	if (rc == -1)
+	if (rc == -1) {
 		errno = ec;
+	}
 
 	return rc;
 }
 
 int copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
              FilePath dest) noexcept {
-	struct stat64 sb;
-	if (fstatat64(src_dirfd, src, &sb, 0) == -1)
+	struct stat64 sb {};
+	if (fstatat64(src_dirfd, src, &sb, 0) == -1) {
 		return -1;
+	}
 
-	if (S_ISDIR(sb.st_mode))
+	if (S_ISDIR(sb.st_mode)) {
 		return __copy_rat(src_dirfd, src, dest_dirfd, dest);
+	}
 
 	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode & ACCESSPERMS);
 }
 
 int copy_r(FilePath src, FilePath dest, bool create_subdirs) noexcept {
-	if (create_subdirs and create_subdirectories(CStringView(dest)) == -1)
+	if (create_subdirs and create_subdirectories(CStringView(dest)) == -1) {
 		return -1;
+	}
 
 	return copy_rat(AT_FDCWD, src, AT_FDCWD, dest);
 }
 
 int move(FilePath oldpath, FilePath newpath, bool create_subdirs) noexcept {
-	if (create_subdirs and create_subdirectories(CStringView(newpath)) == -1)
+	if (create_subdirs and create_subdirectories(CStringView(newpath)) == -1) {
 		return -1;
+	}
 
 	if (rename(oldpath, newpath) == -1) {
-		if (errno == EXDEV && copy_r(oldpath, newpath, false) == 0)
+		if (errno == EXDEV && copy_r(oldpath, newpath, false) == 0) {
 			return remove_r(oldpath);
+		}
 
 		return -1;
 	}
@@ -362,9 +392,10 @@ int move(FilePath oldpath, FilePath newpath, bool create_subdirs) noexcept {
 }
 
 int create_file(FilePath pathname, mode_t mode) noexcept {
-	int fd = creat(pathname, mode);
-	if (fd == -1)
+	int fd = open(pathname, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode);
+	if (fd == -1) {
 		return -1;
+	}
 
 	return close(fd);
 }

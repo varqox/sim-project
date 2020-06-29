@@ -7,6 +7,7 @@
 using std::string;
 using ::testing::MatchesRegex;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(temporary_file, TemporaryFile) {
 	string path;
 	{

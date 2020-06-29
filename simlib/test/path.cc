@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(path, path_absolute) {
 	EXPECT_EQ(path_absolute("/foo/bar/"), "/foo/bar/");
 	EXPECT_EQ(path_absolute("/foo/bar/////"), "/foo/bar/");
@@ -38,6 +39,7 @@ TEST(path, path_absolute) {
 	EXPECT_EQ(path_absolute("gg", "foo/bar"), "foo/bar/gg");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(path, path_filename) {
 	EXPECT_EQ(path_filename("/my/path/foo.bar"), "foo.bar");
 	EXPECT_EQ(path_filename("/my/path/"), "");
@@ -55,6 +57,7 @@ TEST(path, path_filename) {
 	EXPECT_EQ(path_filename("../"), "");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(path, path_extension) {
 	EXPECT_EQ(path_extension("/my/path/foo.bar"), "bar");
 	EXPECT_EQ(path_extension("/my/path/"), "");
@@ -107,6 +110,7 @@ TEST(path, path_extension) {
 	EXPECT_EQ(path_extension("/../.foobar/"), "");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(path, path_dirpath) {
 	EXPECT_EQ(path_dirpath("/my/path/foo.bar"), "/my/path/");
 	EXPECT_EQ(path_dirpath("/my/path/"), "/my/path/");

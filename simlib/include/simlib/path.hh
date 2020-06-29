@@ -34,14 +34,16 @@ constexpr auto path_extension(T&& path) noexcept {
 
 	RetType path_str(std::forward<T>(path));
 	size_t start_pos = path_str.rfind('/');
-	if (start_pos == path_str.npos)
+	if (start_pos == path_str.npos) {
 		start_pos = 0;
-	else
+	} else {
 		++start_pos;
+	}
 
 	size_t x = path_str.rfind('.', start_pos);
-	if (x == path_str.npos)
-		return RetType {}; // No extension
+	if (x == path_str.npos) {
+		return RetType{}; // No extension
+	}
 
 	return path_str.substr(x + 1);
 }
@@ -56,7 +58,7 @@ constexpr auto path_extension(T&& path) noexcept {
  *   "/my/path/.." -> "/my/path/"
  *   "foo" -> ""
  */
-constexpr inline StringView path_dirpath(StringView path) noexcept {
+constexpr inline StringView path_dirpath(const StringView& path) noexcept {
 	auto pos = path.rfind('/');
-	return path.substring(0, pos == path.npos ? 0 : pos + 1);
+	return path.substring(0, pos == StringView::npos ? 0 : pos + 1);
 }

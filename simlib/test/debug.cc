@@ -9,6 +9,7 @@
 
 using std::string;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, throw_assert) {
 	constexpr int var = 123;
 	try {
@@ -28,7 +29,7 @@ TEST(debug, throw_assert) {
 template <class LoggingFunc>
 static std::string intercept_logger(Logger& logger,
                                     LoggingFunc&& logging_func) {
-	FileDescriptor fd {open_unlinked_tmp_file()};
+	FileDescriptor fd{open_unlinked_tmp_file()};
 	throw_assert(fd.is_open());
 	std::unique_ptr<FILE, decltype(&fclose)> stream = {fdopen(fd, "r+"),
 	                                                   fclose};
@@ -50,6 +51,7 @@ static std::string intercept_logger(Logger& logger,
 	return get_file_contents(fileno(logger_stream));
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, LOG_LINE_MARCO) {
 	auto logged_line = intercept_logger(stdlog, [] { LOG_LINE; });
 	EXPECT_EQ(concat_tostr(__FILE__, ':', __LINE__ - 1, '\n'), logged_line);
@@ -57,6 +59,7 @@ TEST(debug, LOG_LINE_MARCO) {
 	EXPECT_EQ(concat_tostr(__FILE__, ':', __LINE__ - 1, '\n'), logged_line2);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, THROW_MACRO) {
 	try {
 		THROW("a ", 1, -42, "c", '.', false, ";");
@@ -71,6 +74,7 @@ TEST(debug, THROW_MACRO) {
 	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, errmsg) {
 	EXPECT_EQ(concat(" - ", EPERM, ": Operation not permitted"), errmsg(EPERM));
 	EXPECT_EQ(concat(" - ", ENOENT, ": No such file or directory"),
@@ -89,8 +93,9 @@ constexpr auto foo_thrown_msg = "abc";
 
 static void foo(bool throw_exception) {
 	STACK_UNWINDING_MARK;
-	if (throw_exception)
+	if (throw_exception) {
 		throw std::runtime_error(foo_thrown_msg);
+	}
 }
 
 static void leave_stack_unwinding_mark() {
@@ -180,6 +185,13 @@ static void test_errlog_catch_and_stack_unwinding_mark_ignoring_older_marks() {
 static void test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level() {
 	// Second level stack unwinding marks should not be saved
 	struct SecondLevel {
+		SecondLevel() = default;
+
+		SecondLevel(const SecondLevel&) = delete;
+		SecondLevel(SecondLevel&&) = delete;
+		SecondLevel& operator=(const SecondLevel&) = delete;
+		SecondLevel& operator=(SecondLevel&&) = delete;
+
 		~SecondLevel() {
 			try {
 				foo(true);
@@ -213,9 +225,12 @@ static void test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level() {
 	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
 	STACK_UNWINDING_MARK;
-	{ STACK_UNWINDING_MARK; }
+	{
+		STACK_UNWINDING_MARK;
+	}
 
 	EXPECT_NO_THROW(foo(false));
 
@@ -225,6 +240,7 @@ TEST(debug, ERRLOG_CATCH_AND_STACK_UNWINDING_MARK_MACROS) {
 	test_errlog_catch_and_stack_unwinding_mark_ignoring_second_level();
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
 	EXPECT_EXIT(
 	   {
@@ -237,6 +253,7 @@ TEST(debug_DeathTest, WONT_THROW_MACRO_fail) {
 	   "^BUG\nBUG: this was expected to not throw\n$");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_lvalue_reference) {
 	{
 		int a = 42;
@@ -251,6 +268,7 @@ TEST(debug, WONT_THROW_MACRO_lvalue_reference) {
 	}
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
 	auto ptr = std::make_unique<int>(162);
 	std::unique_ptr<int> ptr2 = WONT_THROW(std::move(ptr));
@@ -258,80 +276,112 @@ TEST(debug, WONT_THROW_MACRO_rvalue_reference) {
 	EXPECT_EQ((bool)ptr2, true);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_xvalue) {
 	struct A {
 		std::string& str;
 		A(const A&) = delete;
-		A(std::string& s) : str(s) { str += "+A"; }
+		A(A&&) = delete;
+		A& operator=(const A&) = delete;
+		A& operator=(A&&) = delete;
+		explicit A(std::string& s)
+		: str(s) {
+			str += "+A";
+		}
 		~A() { str += "-A"; }
 	};
 	struct B {
 		A a;
 		B(const B&) = delete;
-		B(std::string& str) : a(str) {}
+		B(B&&) = delete;
+		B& operator=(const B&) = delete;
+		B& operator=(B&&) = delete;
+		~B() = default;
+		explicit B(std::string& str)
+		: a(str) {}
 		A&& get() && noexcept { return std::move(a); }
 	};
 	struct C {
 		std::string& str;
 		C(const C&) = delete;
-		C(std::string& s, const A&) : str(s) { str += "+C"; }
+		C(C&&) = delete;
+		C& operator=(const C&) = delete;
+		C& operator=(C&&) = delete;
+		C(std::string& s, const A& /*unused*/)
+		: str(s) {
+			str += "+C";
+		}
 		~C() { str += "-C"; }
 	};
 
 	std::string str;
-	{ C val(str, WONT_THROW(B(str).get())); }
+	{
+		C val(str, WONT_THROW(B(str).get()));
+	}
 	EXPECT_EQ(str, "+A+C-A-C");
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_prvalue) {
 	std::unique_ptr<int> ptr = WONT_THROW(std::make_unique<int>(162));
 	EXPECT_EQ((bool)ptr, true);
 }
 
 template <class T, class = decltype(T(WONT_THROW(T(42))))>
-constexpr auto double_construct_with_WONT_THROW_impl(int) -> std::true_type;
+constexpr std::true_type double_construct_with_WONT_THROW_impl(int);
 
 template <class>
-constexpr auto double_construct_with_WONT_THROW_impl(...) -> std::false_type;
+constexpr std::false_type double_construct_with_WONT_THROW_impl(...);
 
 template <class T>
 constexpr bool double_construct_with_WONT_THROW =
    decltype(double_construct_with_WONT_THROW_impl<T>(0))::value;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_prvalue_copy_elision) {
 	struct X {
-		X(int) {}
+		explicit X(int /*unused*/) {}
 		X(const X&) = delete;
+		X(X&&) = delete;
 		X& operator=(const X&) = delete;
+		X& operator=(X&&) = delete;
+		~X() = default;
 	};
 
 	struct Y {
-		Y(int) {}
+		explicit Y(int /*unused*/) {}
 		Y(const Y&) = delete;
 		Y(Y&&) = default;
+		Y& operator=(const Y&) = delete;
+		Y& operator=(Y&&) = default;
+		~Y() = default;
 	};
 
 	// Sadly WONT_THROW() does not work with prvalues
-	static_assert(double_construct_with_WONT_THROW<X> == false);
+	static_assert(not double_construct_with_WONT_THROW<X>);
 	// But works with x-values
-	static_assert(double_construct_with_WONT_THROW<Y> == true);
+	static_assert(double_construct_with_WONT_THROW<Y>);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug, WONT_THROW_MACRO_rvalue) {
-	int a = 4, b = 7;
+	int a = 4;
+	int b = 7;
 	int c = WONT_THROW(a + b);
 	EXPECT_EQ(a, 4);
 	EXPECT_EQ(b, 7);
 	EXPECT_EQ(c, 11);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(debug_DeathTest,
      WONT_THROW_MACRO_throw_in_the_same_statement_after_WONT_THROW_MACRO) {
 	try {
+		// NOLINTNEXTLINE(hicpp-exception-baseclass)
 		auto factory = [] { return [] { throw 42; }; };
 		WONT_THROW(factory())();
 		FAIL() << "should have thrown";
-	} catch (int x) {
+	} catch (int x) { // NOLINT(cppcoreguidelines-init-variables)
 		EXPECT_EQ(x, 42);
 	}
 }

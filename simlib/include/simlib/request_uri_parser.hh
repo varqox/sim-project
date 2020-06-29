@@ -23,7 +23,7 @@ class RequestUriParser {
 
 public:
 	constexpr explicit RequestUriParser(StringView str)
-	   : buff(std::move(str)) {}
+	: buff(std::move(str)) {}
 
 	constexpr RequestUriParser(const RequestUriParser&) noexcept = default;
 	constexpr RequestUriParser(RequestUriParser&&) noexcept = default;
@@ -32,16 +32,20 @@ public:
 	constexpr RequestUriParser&
 	operator=(RequestUriParser&&) noexcept = default;
 
+	~RequestUriParser() = default;
+
 	/// @brief Extracts next URL argument
 	StringView extract_next_arg() {
-		if (buff.empty() || buff.front() != '/')
+		if (buff.empty() || buff.front() != '/') {
 			return {};
+		}
 
 		size_t pos = 1;
-		while (pos < buff.size() && buff[pos] != '/' && buff[pos] != '?')
+		while (pos < buff.size() && buff[pos] != '/' && buff[pos] != '?') {
 			++pos;
+		}
 
-		StringView res {buff.substr(1, pos - 1)};
+		StringView res{buff.substr(1, pos - 1)};
 		buff.remove_prefix(pos);
 		DEBUG_PARSER(stdlog(__PRETTY_FUNCTION__, " -> extracted: ", res,
 		                    " \tleft: ", buff);)
@@ -50,17 +54,20 @@ public:
 
 	/// Extracts URL Query (iff all arguments were extracted before)
 	StringView extract_query() {
-		if (buff.empty() || buff.front() != '?')
+		if (buff.empty() || buff.front() != '?') {
 			return {};
+		}
 
-		StringView res {buff.substr(1)};
+		StringView res{buff.substr(1)};
 		buff = "";
 		return res;
 	}
 
 	StringView& data() noexcept { return buff; }
 
-	constexpr const StringView& data() const noexcept { return buff; }
+	[[nodiscard]] constexpr const StringView& data() const noexcept {
+		return buff;
+	}
 
-	constexpr StringView remnant() const noexcept { return buff; }
+	[[nodiscard]] constexpr StringView remnant() const noexcept { return buff; }
 };

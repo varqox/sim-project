@@ -14,9 +14,10 @@ public:
 	DirectoryChanger() = default;
 
 	explicit DirectoryChanger(FilePath new_wd)
-	   : old_cwd(".", O_RDONLY | O_CLOEXEC) {
-		if (old_cwd == -1)
+	: old_cwd(".", O_RDONLY | O_CLOEXEC) {
+		if (old_cwd == -1) {
 			THROW("open() failed", errmsg());
+		}
 
 		if (chdir(new_wd.data()) == -1) {
 			auto err = errno;
@@ -30,8 +31,9 @@ public:
 	DirectoryChanger& operator=(DirectoryChanger&&) noexcept = default;
 
 	~DirectoryChanger() {
-		if (old_cwd >= 0)
+		if (old_cwd >= 0) {
 			(void)fchdir(old_cwd);
+		}
 	}
 };
 

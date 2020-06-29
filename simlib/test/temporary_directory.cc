@@ -7,6 +7,7 @@
 using std::string;
 using ::testing::MatchesRegex;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(temporary_directory, TemporaryDirectory) {
 	TemporaryDirectory tmp_dir;
 	EXPECT_EQ(tmp_dir.path(), "");
@@ -36,7 +37,7 @@ TEST(temporary_directory, TemporaryDirectory) {
 		                                       const TemporaryDirectory&>);
 
 		EXPECT_EQ(tmp_dir.exists(), true);
-		EXPECT_EQ(other.exists(), false);
+		EXPECT_EQ(other.exists(), false); // NOLINT(bugprone-use-after-move)
 		EXPECT_EQ(is_directory(path), false);
 		EXPECT_EQ(is_directory(other_path), true);
 
@@ -49,7 +50,7 @@ TEST(temporary_directory, TemporaryDirectory) {
 		path_to_test = std::move(other_path);
 		EXPECT_EQ(other.exists(), true);
 		EXPECT_EQ(is_directory(path_to_test), true);
-		EXPECT_EQ(tmp_dir.exists(), false);
+		EXPECT_EQ(tmp_dir.exists(), false); // NOLINT(bugprone-use-after-move)
 	}
 
 	EXPECT_EQ(is_directory(path_to_test), false);

@@ -19,8 +19,10 @@ InplaceBuff<128> sha3_512(StringView str);
 extern "C" {
 
 void Keccak(unsigned int rate, unsigned int capacity,
+            // NOLINTNEXTLINE(google-runtime-int)
             const unsigned char* input, unsigned long long int inputByteLen,
             unsigned char delimitedSuffix, unsigned char* output,
+            // NOLINTNEXTLINE(google-runtime-int)
             unsigned long long int outputByteLen);
 
 } // extern C

@@ -10,17 +10,19 @@
 class Logger {
 private:
 	FILE* f_;
-	std::atomic<bool> opened_ {false}, label_ {true};
+	std::atomic<bool> opened_{false}, label_{true};
 
 	void close() noexcept {
-		if (opened_.exchange(false))
+		if (opened_.exchange(false)) {
 			fclose(f_);
+		}
 	}
 
 	// Lock the file
 	bool lock() noexcept {
-		if (f_ == nullptr)
+		if (f_ == nullptr) {
 			return false;
+		}
 
 		flockfile(f_);
 		return true;
@@ -34,10 +36,13 @@ public:
 	explicit Logger(FilePath filename);
 
 	// Like use(), it accept nullptr for which a dummy logger is created
-	explicit Logger(FILE* stream) noexcept : f_(stream) {}
+	explicit Logger(FILE* stream) noexcept
+	: f_(stream) {}
 
 	Logger(const Logger&) = delete;
+	Logger(Logger&&) = delete;
 	Logger& operator=(const Logger&) = delete;
+	Logger& operator=(Logger&&) = delete;
 
 	/**
 	 * @brief Opens file @p filename in append mode as log file, if fopen()
@@ -64,9 +69,9 @@ public:
 
 	/// Returns file descriptor which is used internally by Logger (to log to
 	/// it)
-	int fileno() const noexcept { return ::fileno(f_); }
+	[[nodiscard]] int fileno() const noexcept { return ::fileno(f_); }
 
-	bool label() const noexcept {
+	[[nodiscard]] bool label() const noexcept {
 		return label_.load(std::memory_order_relaxed);
 	}
 
@@ -80,16 +85,19 @@ public:
 		bool flushed_ = true;
 		// *label_ are useful with flush_no_nl() to avoid adding label in the
 		// middle of the line
-		bool orig_label_;
-		bool label_;
+		bool orig_label_{};
+		bool label_{};
 		InplaceBuff<8192> buff_;
 
-		explicit Appender(Logger& logger) : logger_(logger) {}
+		explicit Appender(Logger& logger)
+		: logger_(logger) {}
 
 		template <class... Args,
 		          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 		explicit Appender(Logger& logger, Args&&... args)
-		   : logger_(logger), orig_label_(logger.label()), label_(orig_label_) {
+		: logger_(logger)
+		, orig_label_(logger.label())
+		, label_(orig_label_) {
 			operator()(std::forward<Args>(args)...);
 		}
 
@@ -100,10 +108,12 @@ public:
 	public:
 		Appender(const Appender&) = delete;
 
-		Appender(Appender&& app)
-		   : logger_(app.logger_), flushed_(app.flushed_),
-		     orig_label_(app.orig_label_), label_(app.label_),
-		     buff_(std::move(app.buff_)) {
+		Appender(Appender&& app) noexcept
+		: logger_(app.logger_)
+		, flushed_(app.flushed_)
+		, orig_label_(app.orig_label_)
+		, label_(app.label_)
+		, buff_(std::move(app.buff_)) {
 			app.flushed_ = true;
 		}
 
@@ -167,14 +177,16 @@ public:
 	template <class... Args,
 	          std::enable_if_t<(is_string_argument<Args> and ...), int> = 0>
 	DoubleAppender(Logger& logger, StrType& str, Args&&... args)
-	   : app_(logger(args...)), str_(str) {
+	: app_(logger(args...))
+	, str_(str) {
 		back_insert(str_, std::forward<Args>(args)...);
 	}
 
 	DoubleAppender(const DoubleAppender&) = delete;
 
-	DoubleAppender(DoubleAppender&& dl)
-	   : app_(std::move(dl.app_)), str_(dl.str_) {}
+	DoubleAppender(DoubleAppender&& dl) noexcept
+	: app_(std::move(dl.app_))
+	, str_(dl.str_) {}
 
 	DoubleAppender& operator=(const DoubleAppender&) = delete;
 	DoubleAppender& operator=(DoubleAppender&&) = delete;

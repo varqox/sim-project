@@ -2,6 +2,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <random>
 
 // Fills @p bytes bytes of @p dest with random values
@@ -31,7 +32,7 @@ void read_from_dev_urandom(void* dest, size_t bytes);
 
 class RandomDevice {
 public:
-	using result_type = unsigned long long;
+	using result_type = uint64_t;
 
 	constexpr static result_type min() noexcept {
 		return std::numeric_limits<result_type>::min();
@@ -42,7 +43,7 @@ public:
 	}
 
 private:
-	std::array<result_type, 256 / sizeof(result_type)> buff;
+	std::array<result_type, 256 / sizeof(result_type)> buff{};
 	size_t pos = buff.size();
 
 	void fill_buff() {
@@ -58,10 +59,12 @@ public:
 	RandomDevice& operator=(const RandomDevice&) = delete;
 	RandomDevice& operator=(RandomDevice&&) noexcept = default;
 
-	result_type operator()() {
-		if (pos == buff.size())
-			fill_buff();
+	~RandomDevice() = default;
 
+	result_type operator()() {
+		if (pos == buff.size()) {
+			fill_buff();
+		}
 		return buff[pos++];
 	}
 };
@@ -80,6 +83,7 @@ constexpr T get_random(T&& a, T&& b) {
 
 template <class Iter>
 void random_shuffle(Iter begin, Iter end) {
-	for (auto n = end - begin, i = n - 1; i > 0; --i)
+	for (auto n = end - begin, i = n - 1; i > 0; --i) {
 		std::swap(begin[i], begin[get_random(0, i)]);
+	}
 }

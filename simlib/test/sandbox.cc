@@ -19,15 +19,15 @@ class SandboxTests {
 	// really slow)
 	static constexpr std::chrono::nanoseconds REAL_TIME_LIMIT = 3s;
 	static constexpr std::chrono::nanoseconds CPU_TIME_LIMIT = 200ms;
-	static constexpr Sandbox::Options SANDBOX_OPTIONS {
+	static constexpr Sandbox::Options SANDBOX_OPTIONS{
 	   -1, -1, -1, REAL_TIME_LIMIT, MEM_LIMIT, CPU_TIME_LIMIT};
 
 	const string& test_cases_dir_;
-	TemporaryFile executable_ {"/tmp/simlib.test.sandbox.XXXXXX"};
+	TemporaryFile executable_{"/tmp/simlib.test.sandbox.XXXXXX"};
 
 public:
-	SandboxTests(const string& test_cases_dir)
-	   : test_cases_dir_(test_cases_dir) {}
+	explicit SandboxTests(const string& test_cases_dir)
+	: test_cases_dir_(test_cases_dir) {}
 
 private:
 	template <class... Flags>
@@ -446,7 +446,8 @@ public:
 	}
 
 private:
-	std::pair<FileDescriptor, Sandbox::Options> dev_null_as_std_in_out_err() {
+	static std::pair<FileDescriptor, Sandbox::Options>
+	dev_null_as_std_in_out_err() {
 		FileDescriptor dev_null("/dev/null", O_RDWR | O_CLOEXEC);
 		throw_assert(dev_null != -1);
 		return {std::move(dev_null),
@@ -515,21 +516,21 @@ public:
 };
 
 class SandboxTestRunner
-   : public concurrent::JobProcessor<void (SandboxTests::*)()> {
+: public concurrent::JobProcessor<void (SandboxTests::*)()> {
 	const string test_cases_dir_;
-	std::atomic_size_t test_ran {0};
+	std::atomic_size_t test_ran{0};
 
 public:
-	SandboxTestRunner(string test_cases_dir)
-	   : test_cases_dir_(std::move(test_cases_dir)) {}
+	explicit SandboxTestRunner(string test_cases_dir)
+	: test_cases_dir_(std::move(test_cases_dir)) {}
 
 protected:
-	void process_job(void (SandboxTests::*test_case)()) override final {
+	void process_job(void (SandboxTests::*test_case)()) final {
 		stdlog("Running test: ", ++test_ran);
 		std::invoke(test_case, SandboxTests(test_cases_dir_));
 	}
 
-	void produce_jobs() override final {
+	void produce_jobs() final {
 		add_job(&SandboxTests::test_1);
 		add_job(&SandboxTests::test_2);
 		add_job(&SandboxTests::test_3);
@@ -555,6 +556,7 @@ protected:
 	}
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(Sandbox, run) {
 	stdlog.label(false);
 	auto exec_path = executable_path(getpid());

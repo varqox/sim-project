@@ -53,7 +53,7 @@ constexpr static scmp_arg_cmp
 SCMP_CMP64(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
            decltype(scmp_arg_cmp::datum_a) datum_a,
            decltype(scmp_arg_cmp::datum_b) datum_b = {}) {
-	return scmp_arg_cmp {arg, op, datum_a, datum_b};
+	return scmp_arg_cmp{arg, op, datum_a, datum_b};
 }
 
 #else
@@ -63,7 +63,7 @@ constexpr static scmp_arg_cmp
 SCMP_CMP(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
          decltype(scmp_arg_cmp::datum_a) datum_a,
          decltype(scmp_arg_cmp::datum_b) datum_b = {}) {
-	return (scmp_arg_cmp) {arg, op, datum_a, datum_b};
+	return (scmp_arg_cmp){arg, op, datum_a, datum_b};
 }
 
 #endif
@@ -71,36 +71,41 @@ SCMP_CMP(decltype(scmp_arg_cmp::arg) arg, decltype(scmp_arg_cmp::op) op,
 template <class... Arg>
 static inline void seccomp_rule_add_throw(Arg&&... args) {
 	int errnum = seccomp_rule_add(std::forward<Arg>(args)...);
-	if (errnum)
+	if (errnum) {
 		THROW("seccomp_rule_add_throw()", errmsg(-errnum));
+	}
 }
 
 template <class... Arg>
 static inline void seccomp_arch_add_throw(Arg&&... args) {
 	int errnum = seccomp_arch_add(std::forward<Arg>(args)...);
-	if (errnum)
+	if (errnum) {
 		THROW("seccomp_arch_add()", errmsg(-errnum));
+	}
 }
 
 template <class... Arg>
 static inline void seccomp_arch_remove_throw(Arg&&... args) {
 	int errnum = seccomp_arch_remove(std::forward<Arg>(args)...);
-	if (errnum)
+	if (errnum) {
 		THROW("seccomp_arch_remove()", errmsg(-errnum));
+	}
 }
 
 template <class... Arg>
 static inline void seccomp_attr_set_throw(Arg&&... args) {
 	int errnum = seccomp_attr_set(std::forward<Arg>(args)...);
-	if (errnum)
+	if (errnum) {
 		THROW("seccomp_attr_set()", errmsg(-errnum));
+	}
 }
 
 template <class... Arg>
 static inline void seccomp_syscall_priority_throw(Arg&&... args) {
 	int errnum = seccomp_syscall_priority(std::forward<Arg>(args)...);
-	if (errnum)
+	if (errnum) {
 		THROW("seccomp_syscall_priority()", errmsg(-errnum));
+	}
 }
 
 struct x86_user_regset {
@@ -159,19 +164,21 @@ struct Registers {
 
 	Registers() = default;
 
-	Registers(pid_t pid) { get_regs(pid); }
+	explicit Registers(pid_t pid) { get_regs(pid); }
 
 	void get_regs(pid_t pid) {
 		struct iovec ivo = {&uregs, sizeof(uregs)};
-		if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &ivo) == -1)
+		if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, &ivo) == -1) {
 			THROW("ptrace(PTRACE_GETREGS)", errmsg());
+		}
 	}
 
 	void set_regs(pid_t pid) {
 		struct iovec ivo = {&uregs, sizeof(uregs)};
 		// Update traced process registers
-		if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &ivo) == -1)
+		if (ptrace(PTRACE_SETREGSET, pid, NT_PRSTATUS, &ivo) == -1) {
 			THROW("ptrace(PTRACE_SETREGS)", errmsg());
+		}
 	}
 };
 
@@ -179,56 +186,60 @@ struct X86SyscallRegisters : Registers<x86_user_regset> {
 	using Registers::Registers;
 
 	auto& syscall() noexcept { return uregs.orig_eax; }
-	const auto& syscall() const noexcept { return uregs.orig_eax; }
+	[[nodiscard]] const auto& syscall() const noexcept {
+		return uregs.orig_eax;
+	}
 
 	auto& res() noexcept { return uregs.eax; }
-	const auto& res() const noexcept { return uregs.eax; }
+	[[nodiscard]] const auto& res() const noexcept { return uregs.eax; }
 
 	auto& arg1() noexcept { return uregs.ebx; }
-	const auto& arg1() const noexcept { return uregs.ebx; }
+	[[nodiscard]] const auto& arg1() const noexcept { return uregs.ebx; }
 
 	auto& arg2() noexcept { return uregs.ecx; }
-	const auto& arg2() const noexcept { return uregs.ecx; }
+	[[nodiscard]] const auto& arg2() const noexcept { return uregs.ecx; }
 
 	auto& arg3() noexcept { return uregs.edx; }
-	const auto& arg3() const noexcept { return uregs.edx; }
+	[[nodiscard]] const auto& arg3() const noexcept { return uregs.edx; }
 
 	auto& arg4() noexcept { return uregs.esi; }
-	const auto& arg4() const noexcept { return uregs.esi; }
+	[[nodiscard]] const auto& arg4() const noexcept { return uregs.esi; }
 
 	auto& arg5() noexcept { return uregs.edi; }
-	const auto& arg5() const noexcept { return uregs.edi; }
+	[[nodiscard]] const auto& arg5() const noexcept { return uregs.edi; }
 
 	auto& arg6() noexcept { return uregs.ebp; }
-	const auto& arg6() const noexcept { return uregs.ebp; }
+	[[nodiscard]] const auto& arg6() const noexcept { return uregs.ebp; }
 };
 
 struct X86_64SyscallRegisters : Registers<x86_64_user_regset> {
 	using Registers::Registers;
 
 	auto& syscall() noexcept { return uregs.orig_rax; }
-	const auto& syscall() const noexcept { return uregs.orig_rax; }
+	[[nodiscard]] const auto& syscall() const noexcept {
+		return uregs.orig_rax;
+	}
 
 	auto& res() noexcept { return uregs.rax; }
-	const auto& res() const noexcept { return uregs.rax; }
+	[[nodiscard]] const auto& res() const noexcept { return uregs.rax; }
 
 	auto& arg1() noexcept { return uregs.rdi; }
-	const auto& arg1() const noexcept { return uregs.rdi; }
+	[[nodiscard]] const auto& arg1() const noexcept { return uregs.rdi; }
 
 	auto& arg2() noexcept { return uregs.rsi; }
-	const auto& arg2() const noexcept { return uregs.rsi; }
+	[[nodiscard]] const auto& arg2() const noexcept { return uregs.rsi; }
 
 	auto& arg3() noexcept { return uregs.rdx; }
-	const auto& arg3() const noexcept { return uregs.rdx; }
+	[[nodiscard]] const auto& arg3() const noexcept { return uregs.rdx; }
 
 	auto& arg4() noexcept { return uregs.r10; }
-	const auto& arg4() const noexcept { return uregs.r10; }
+	[[nodiscard]] const auto& arg4() const noexcept { return uregs.r10; }
 
 	auto& arg5() noexcept { return uregs.r8; }
-	const auto& arg5() const noexcept { return uregs.r8; }
+	[[nodiscard]] const auto& arg5() const noexcept { return uregs.r8; }
 
 	auto& arg6() noexcept { return uregs.r9; }
-	const auto& arg6() const noexcept { return uregs.r9; }
+	[[nodiscard]] const auto& arg6() const noexcept { return uregs.r9; }
 };
 
 template <class Func>
@@ -237,14 +248,18 @@ class SyscallCallbackLambda : public SyscallCallback {
 	DEBUG_SANDBOX(const StringView name;)
 
 public:
-	SyscallCallbackLambda(Func&& f DEBUG_SANDBOX(, StringView callback_name))
-	   : func(f) DEBUG_SANDBOX(, name(callback_name)) {}
+	explicit SyscallCallbackLambda(
+	   Func&& f DEBUG_SANDBOX(, StringView callback_name))
+	: func(f) DEBUG_SANDBOX(, name(callback_name)) {}
 
 	SyscallCallbackLambda(const SyscallCallbackLambda&) = delete;
 	SyscallCallbackLambda(SyscallCallbackLambda&&) noexcept = default;
 	SyscallCallbackLambda& operator=(const SyscallCallbackLambda&) = delete;
+
 	SyscallCallbackLambda&
 	operator=(SyscallCallbackLambda&&) noexcept = default;
+
+	~SyscallCallbackLambda() override = default;
 
 	bool operator()() final {
 		DEBUG_SANDBOX(stdlog("callback name: \"", name, '"'));
@@ -261,8 +276,9 @@ syscall_callback_lambda(Func&& f DEBUG_SANDBOX(, StringView callback_name)) {
 
 Sandbox::Sandbox() {
 	x86_ctx_ = seccomp_init(SCMP_ACT_TRAP);
-	if (not x86_ctx_)
+	if (not x86_ctx_) {
 		THROW("seccomp_init()", errmsg());
+	}
 
 	x86_64_ctx_ = seccomp_init(SCMP_ACT_TRAP);
 	if (not x86_64_ctx_) {
@@ -283,7 +299,7 @@ Sandbox::Sandbox() {
 	};
 
 	// Returns the callback id that can be used in the SCMP_ACT_TRACE()
-	auto add_callback = [&](auto&& callback, StringView callback_name) {
+	auto add_callback = [&](auto&& callback, const StringView& callback_name) {
 		(void)callback_name;
 		return add_unique_ptr_callback(
 		   syscall_callback_lambda(std::forward<decltype(callback)>(callback)
@@ -346,17 +362,20 @@ Sandbox::Sandbox() {
 	public:
 		SyscallCallbackLimiting(Sandbox& sandbox, uint limit,
 		                        const char* syscall_name)
-		   : sandbox_(sandbox), limit_(limit), counter_(limit),
-		     syscall_name_(syscall_name) {}
+		: sandbox_(sandbox)
+		, limit_(limit)
+		, counter_(limit)
+		, syscall_name_(syscall_name) {}
 
-		void reset() noexcept { counter_ = limit_; }
+		void reset() noexcept override { counter_ = limit_; }
 
-		bool operator()() {
+		bool operator()() override {
 			DEBUG_SANDBOX(stdlog("limiting callback name: \"", syscall_name_,
 			                     "\", current limit: ", counter_));
-			if (counter_ == 0)
+			if (counter_ == 0) {
 				return sandbox_.set_message_callback("forbidden syscall: ",
 				                                     syscall_name_);
+			}
 
 			--counter_;
 			return false;
@@ -474,21 +493,22 @@ Sandbox::Sandbox() {
 			uint fail_counter_ = 0;
 
 		public:
-			SyscallCallbackVmPeakUpdater(Sandbox& sandbox)
-			   : sandbox_(sandbox) {}
+			explicit SyscallCallbackVmPeakUpdater(Sandbox& sandbox)
+			: sandbox_(sandbox) {}
 
-			void reset() noexcept { fail_counter_ = 0; }
+			void reset() noexcept override { fail_counter_ = 0; }
 
-			bool operator()() {
+			bool operator()() override {
 				DEBUG_SANDBOX(stdlog("callback name: \"vm_peak updater\""));
 				// Advance to the syscall exit
 				(void)ptrace(PTRACE_SYSCALL, sandbox_.tracee_pid_, 0, 0);
 				siginfo_t si;
 				waitid(P_PID, sandbox_.tracee_pid_, &si,
 				       WSTOPPED | WEXITED | WNOWAIT);
-				if (si.si_status !=
-				    (SIGTRAP | 0x80)) // Something other e.g. a signal (ignore)
+				if (si.si_status != (SIGTRAP | 0x80))
+				{ // Something other e.g. a signal (ignore)
 					return false; // Allow the signal to get to the tracee
+				}
 
 				auto vm_size = sandbox_.get_tracee_vm_size();
 				if (vm_size == sandbox_.tracee_vm_peak_) {
@@ -550,7 +570,8 @@ Sandbox::Sandbox() {
 			   // This (getting the filename) was tested against malicious
 			   // pointers passed to open near the page boundary and it worked
 			   // well
-			   struct iovec local, remote;
+			   struct iovec local {};
+			   struct iovec remote {};
 			   char buff[PATH_MAX + 1] = {};
 			   local.iov_base = buff;
 			   remote.iov_base = reinterpret_cast<void*>(path_arg);
@@ -569,7 +590,7 @@ Sandbox::Sandbox() {
 			   path = path.extract_prefix(path.find('\0'));
 			   DEBUG_SANDBOX(auto tmplog =
 			                    stdlog("Trying to open: '", path, '\'');)
-			   if (path.size() == (size_t)len) {
+			   if (path.size() == static_cast<size_t>(len)) {
 				   syscall_reg = -1;
 				   res_reg = -ENAMETOOLONG;
 				   registers.set_regs(tracee_pid);
@@ -586,12 +607,13 @@ Sandbox::Sandbox() {
 			   auto perm = flags_arg & O_ACCMODE;
 
 			   OpenAccess op = OpenAccess::NONE;
-			   if (perm == O_RDONLY)
+			   if (perm == O_RDONLY) {
 				   op = OpenAccess::RDONLY;
-			   else if (perm == O_WRONLY)
+			   } else if (perm == O_WRONLY) {
 				   op = OpenAccess::WRONLY;
-			   else if (perm == O_RDWR)
+			   } else if (perm == O_RDWR) {
 				   op = OpenAccess::RDWR;
+			   }
 
 			   DEBUG_SANDBOX(switch (op) {
 			       case OpenAccess::NONE: tmplog(" NONE"); break;
@@ -600,7 +622,7 @@ Sandbox::Sandbox() {
 			       case OpenAccess::RDWR: tmplog(" RDWR"); break;
 			   })
 
-			   for (AllowedFile const& af : allowed_files)
+			   for (AllowedFile const& af : allowed_files) {
 				   if (af.first == path) {
 					   if (op == af.second) {
 						   DEBUG_SANDBOX(tmplog(" - ok");)
@@ -609,6 +631,7 @@ Sandbox::Sandbox() {
 
 					   break; // Invalid opening mode -> disallow
 				   }
+			   }
 
 			   // File is not allowed to be opened
 			   syscall_reg = -1;
@@ -624,7 +647,7 @@ Sandbox::Sandbox() {
 		      const vector<AllowedFile>& allowed_files) {
 			   // Currently opening at directory fd other than AT_FDCWD is not
 			   // allowed
-			   if ((int)regs.arg1() != AT_FDCWD) {
+			   if (static_cast<int>(regs.arg1()) != AT_FDCWD) {
 				   DEBUG_SANDBOX(stdlog("Trying to openat at: ", regs.arg1(),
 				                        " - disallowed");)
 
@@ -769,25 +792,29 @@ inline bool Sandbox::set_message_callback(T&&... args) {
 }
 
 inline void Sandbox::reset_callbacks() noexcept {
-	for (auto& p : callbacks_)
-		p.get()->reset();
+	for (auto& p : callbacks_) {
+		p->reset();
+	}
 }
 
 uint64_t Sandbox::get_tracee_vm_size() {
 	InplaceBuff<32> buff(32);
 	ssize_t rc = pread(tracee_statm_fd_, buff.data(), buff.size, 0);
-	if (rc <= 0)
+	if (rc <= 0) {
 		THROW("pread()", errmsg());
+	}
 
 	buff.size = rc;
 	if (auto space_pos = StringView(buff).find(' ');
-	    space_pos != StringView::npos)
+	    space_pos != StringView::npos) {
 		buff.size = space_pos;
+	}
 
 	// Obtain value
 	auto opt = str2num<uint64_t>(buff);
-	if (not opt)
+	if (not opt) {
 		THROW("Read invalid VmSize from /proc/tracee_pid/statm: \"", buff, '"');
+	}
 
 	uint64_t vm_size = *opt;
 	DEBUG_SANDBOX(stdlog('[', tracee_pid_, "] get_vm_size: -> ", vm_size, " (",
@@ -797,8 +824,9 @@ uint64_t Sandbox::get_tracee_vm_size() {
 }
 
 void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
-	if (curr_vm_size > tracee_vm_peak_)
+	if (curr_vm_size > tracee_vm_peak_) {
 		tracee_vm_peak_ = curr_vm_size;
+	}
 
 	DEBUG_SANDBOX(
 	   stdlog('[', tracee_pid_, "] tracee_vm_peak: -> ", tracee_vm_peak_, " (",
@@ -809,19 +837,23 @@ void Sandbox::update_tracee_vm_peak(uint64_t curr_vm_size) {
 Sandbox::ExitStat
 Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
              const Options& opts, const std::vector<AllowedFile>& allowed_files,
-             const std::function<void(pid_t)>& parent_do_after_fork) {
+             const std::function<void(pid_t)>& do_in_parent_after_fork) {
 	STACK_UNWINDING_MARK;
 	using std::chrono_literals::operator""ns;
 
 	if (opts.real_time_limit.has_value() and
-	    opts.real_time_limit.value() <= 0ns)
+	    opts.real_time_limit.value() <= 0ns) {
 		THROW("If set, real_time_limit has to be greater than 0");
+	}
 
 	if (opts.cpu_time_limit.has_value() and opts.cpu_time_limit.value() <= 0ns)
+	{
 		THROW("If set, cpu_time_limit has to be greater than 0");
+	}
 
-	if (opts.memory_limit.has_value() and opts.memory_limit.value() <= 0)
+	if (opts.memory_limit.has_value() and opts.memory_limit.value() <= 0) {
 		THROW("If set, memory_limit has to be greater than 0");
+	}
 
 	// Reset the state
 	reset_callbacks();
@@ -832,14 +864,15 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 	// Set up error stream from tracee (and wait_for_syscall()) via pipe
 	int pfd[2];
-	if (pipe2(pfd, O_CLOEXEC) == -1)
+	if (pipe2(pfd, O_CLOEXEC) == -1) {
 		THROW("pipe()", errmsg());
+	}
 
 	tracee_pid_ = fork();
-	if (tracee_pid_ == -1)
+	if (tracee_pid_ == -1) {
 		THROW("fork()", errmsg());
-
-	else if (tracee_pid_ == 0) { // Child = tracee
+	}
+	if (tracee_pid_ == 0) { // Child = tracee
 		close(pfd[0]);
 
 		auto send_error_and_exit = [&](auto&&... args) {
@@ -971,9 +1004,9 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 		}
 
 		// Merge filters for both architectures into one filter
-		if (int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_))
+		if (int errnum = seccomp_merge(x86_ctx_, x86_64_ctx_)) {
 			send_error_and_exit(-errnum, "seccomp_merge()");
-
+		}
 		auto& ctx = x86_ctx_;
 
 		// Dump filter rules
@@ -1003,24 +1036,28 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 			// Set max core dump size to 0 in order to avoid creating redundant
 			// core dumps
 			{
-				struct rlimit limit;
+				struct rlimit limit {};
 				limit.rlim_max = limit.rlim_cur = 0;
-				if (setrlimit(RLIMIT_CORE, &limit))
+				if (setrlimit(RLIMIT_CORE, &limit)) {
 					send_error_and_exit(errno, "setrlimit(RLIMIT_CORE)");
+				}
 			}
 
-			if (ptrace(PTRACE_TRACEME, 0, 0, 0))
+			if (ptrace(PTRACE_TRACEME, 0, 0, 0)) {
 				send_error_and_exit(errno, "ptrace(PTRACE_TRACEME)");
+			}
 
 			// Reset blocked signals
 			sigset_t sigset;
-			if (sigemptyset(&sigset))
+			if (sigemptyset(&sigset)) {
 				send_error_and_exit(errno, "sigemptyset()");
-			if (sigprocmask(SIG_SETMASK, &sigset, nullptr))
+			}
+			if (sigprocmask(SIG_SETMASK, &sigset, nullptr)) {
 				send_error_and_exit(errno, "sigprocmask()");
+			}
 
 			// SIGPIPE may be used to kill the process e.g. in interactive task
-			struct sigaction sa;
+			struct sigaction sa {};
 			memset(&sa, 0, sizeof(sa));
 			sa.sa_handler = SIG_DFL;
 			(void)sigaction(SIGPIPE, &sa, nullptr);
@@ -1037,17 +1074,20 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 			kill(getpid(), SIGSTOP);
 
 			// Load filter into the kernel
-			if (int errnum = seccomp_load(ctx))
+			if (int errnum = seccomp_load(ctx)) {
 				send_error_and_exit(-errnum, "seccomp_load()");
+			}
 
 			// Set virtual memory and stack size limit (to the same value)
 			if (opts.memory_limit.has_value()) {
-				struct rlimit limit;
+				struct rlimit limit {};
 				limit.rlim_max = limit.rlim_cur = opts.memory_limit.value();
-				if (prlimit(getpid(), RLIMIT_AS, &limit, nullptr))
+				if (prlimit(getpid(), RLIMIT_AS, &limit, nullptr)) {
 					send_error_and_exit(errno, "prlimit(RLIMIT_AS)");
-				if (prlimit(getpid(), RLIMIT_STACK, &limit, nullptr))
+				}
+				if (prlimit(getpid(), RLIMIT_STACK, &limit, nullptr)) {
 					send_error_and_exit(errno, "prlimit(RLIMIT_STACK)");
+				}
 
 				// Exhaust the limit of calling prlimit64(2) syscall so that
 				// the sandboxed process cannot call it
@@ -1066,14 +1106,14 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 // Verbose debug messages have different color
 #define DEBUG_SANDBOX_VERBOSE_LOG(...)                                         \
-	DEBUG_SANDBOX(                                                             \
-	   stdlog("\033[1;30m[", tracee_pid_, "] ", __VA_ARGS__, "\033[m"))
+	DEBUG_SANDBOX(stdlog("\033[2m[", tracee_pid_, "] ", __VA_ARGS__, "\033[m"))
 
 	// Wait for tracee to be ready
 	siginfo_t si;
-	rusage ru;
-	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED) == -1)
+	rusage ru{};
+	if (waitid(P_PID, tracee_pid_, &si, WSTOPPED | WEXITED) == -1) {
 		THROW("waitid()", errmsg());
+	}
 
 	DEBUG_SANDBOX_VERBOSE_LOG(
 	   "waitid(): code: ", si.si_code, " status: ", si.si_status,
@@ -1094,12 +1134,13 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 	STACK_UNWINDING_MARK;
 
-	parent_do_after_fork(tracee_pid_);
+	do_in_parent_after_fork(tracee_pid_);
 
 	// Set up ptrace options
 	if (ptrace(PTRACE_SETOPTIONS, tracee_pid_, 0,
 	           PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEEXEC |
-	              PTRACE_O_TRACESECCOMP | PTRACE_O_EXITKILL)) {
+	              PTRACE_O_TRACESECCOMP | PTRACE_O_EXITKILL))
+	{
 		THROW("ptrace(PTRACE_SETOPTIONS)", errmsg());
 	}
 
@@ -1107,13 +1148,14 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 	// virtual memory)
 	tracee_statm_fd_.open(concat("/proc/", tracee_pid_, "/statm"),
 	                      O_RDONLY | O_CLOEXEC);
-	if (tracee_statm_fd_ == -1)
+	if (tracee_statm_fd_ == -1) {
 		THROW("open(/proc/{tracee_pid_ = ", tracee_pid_, "}/statm)", errmsg());
+	}
 
 	Defer tracee_statm_fd_guard([&] { (void)tracee_statm_fd_.close(); });
 
-	std::chrono::nanoseconds runtime {0};
-	std::chrono::nanoseconds cpu_runtime {0};
+	std::chrono::nanoseconds runtime{0};
+	std::chrono::nanoseconds cpu_runtime{0};
 
 	// Set up timers
 	unique_ptr<Timer> timer;
@@ -1126,8 +1168,9 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 	auto get_cpu_time_and_wait_tracee = [&](bool is_waited = false) {
 		// Wait tracee_pid_ so that the CPU runtime will be accurate
-		if (not is_waited)
+		if (not is_waited) {
 			waitid(P_PID, tracee_pid_, &si, WEXITED | WNOWAIT);
+		}
 
 		// Get runtime
 		runtime = (timer ? timer->deactivate_and_get_runtime() : 0ns);
@@ -1168,8 +1211,9 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 				if (si.si_status == SIGSYS) {
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (SIGSYS)");
 					siginfo_t sii;
-					if (ptrace(PTRACE_GETSIGINFO, tracee_pid_, 0, &sii))
+					if (ptrace(PTRACE_GETSIGINFO, tracee_pid_, 0, &sii)) {
 						THROW("ptrace(PTRACE_GETSIGINFO)", errmsg());
+					}
 
 					DEBUG_SANDBOX_VERBOSE_LOG(
 					   "siginfo: code: ", sii.si_code,
@@ -1178,7 +1222,7 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 					   " syscall: ", sii.si_syscall, " arch: ", sii.si_arch);
 
 					if (sii.si_code == SYS_SECCOMP) {
-						unique_ptr<char, decltype(free)*> syscall_name {
+						unique_ptr<char, decltype(free)*> syscall_name{
 						   seccomp_syscall_resolve_num_arch(sii.si_arch,
 						                                    sii.si_syscall),
 						   free};
@@ -1220,9 +1264,11 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 					   tracee_pid_, opts.real_time_limit.value_or(0ns),
 					   CLOCK_MONOTONIC, SIGSTOP);
 
-					clockid_t tracee_cpu_clock_id;
+					clockid_t tracee_cpu_clock_id = 0;
 					if (clock_getcpuclockid(tracee_pid_, &tracee_cpu_clock_id))
+					{
 						THROW("clock_getcpuclockid()", errmsg());
+					}
 
 					cpu_timer = make_unique<Timer>(
 					   tracee_pid_, opts.cpu_time_limit.value_or(0ns),
@@ -1233,9 +1279,11 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 				if (si.si_status == (SIGTRAP | (PTRACE_EVENT_SECCOMP << 8))) {
 					DEBUG_SANDBOX_VERBOSE_LOG("TRAPPED (SECCOMP_EVENT)");
-					unsigned long msg;
-					if (ptrace(PTRACE_GETEVENTMSG, tracee_pid_, 0, &msg))
+					unsigned long msg = 0; // NOLINT(google-runtime-int): it is
+					                       // a ptrace parameter type
+					if (ptrace(PTRACE_GETEVENTMSG, tracee_pid_, 0, &msg)) {
 						THROW("ptrace(PTRACE_GETEVENTMSG)", errmsg());
+					}
 
 					DEBUG_SANDBOX_VERBOSE_LOG("callback id: ", msg);
 					if (callbacks_[msg].get()->operator()()) {
@@ -1304,7 +1352,7 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 				   humanize_file_size(tracee_vm_peak_ * sysconf(_SC_PAGESIZE)),
 				   "   ", message_to_set_in_exit_stat_);
 
-				goto tracee_died;
+				goto tracee_died; // NOLINT
 			}
 		}
 
@@ -1316,8 +1364,9 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 		                     ": Caught exception: ", e.what());)
 
 		// Exception after tracee is dead and waited
-		if (not kill_and_wait_tracee_guard.active())
+		if (not kill_and_wait_tracee_guard.active()) {
 			throw;
+		}
 
 		// Check whether the tracee is still controllable - may not become
 		// a zombie in a moment (yes kernel has a minimal delay between
@@ -1333,7 +1382,7 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 			get_cpu_time_and_wait_tracee(false);
 
 			// Return sandboxing results
-			goto tracee_died;
+			goto tracee_died; // NOLINT
 		}
 
 		// Tracee is controllable and other kind of error has occurred

@@ -14,16 +14,18 @@ class JobProcessor {
 	void worker() {
 		for (;;) {
 			auto job = jobs_.pop_opt();
-			if (not job.has_value())
+			if (not job.has_value()) {
 				return;
+			}
 
 			process_job(job.value());
 		}
 	}
 
 	void spawn_workers(std::vector<std::thread>& workers) {
-		for (std::thread& thr : workers)
+		for (std::thread& thr : workers) {
 			thr = std::thread([&] { worker(); });
+		}
 	}
 
 	void generate_jobs_and_signal_no_more() {
@@ -41,15 +43,23 @@ protected:
 public:
 	void run() {
 		const int workers_no = std::max(
-		   (int)std::thread::hardware_concurrency() - 1,
+		   static_cast<int>(std::thread::hardware_concurrency()) - 1,
 		   1); // One has to remain to prevent deadlock if queue gets full
 		std::vector<std::thread> workers(workers_no);
 		spawn_workers(workers);
 		generate_jobs_and_signal_no_more();
 		worker(); // Use current thread to process remaining jobs
-		for (std::thread& thr : workers)
+		for (std::thread& thr : workers) {
 			thr.join();
+		}
 	}
+
+	JobProcessor() = default;
+
+	JobProcessor(const JobProcessor&) = delete;
+	JobProcessor(JobProcessor&&) noexcept = delete;
+	JobProcessor& operator=(const JobProcessor&) = delete;
+	JobProcessor& operator=(JobProcessor&&) noexcept = delete;
 
 	virtual ~JobProcessor() = default;
 };

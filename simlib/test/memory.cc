@@ -4,11 +4,13 @@
 
 using std::unique_ptr;
 
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_memory, delete_using_free) {
-	unique_ptr<char[], delete_using_free>((char*)malloc(42));
+	(void)unique_ptr<char[], delete_using_free>(
+	   static_cast<char*>(malloc(42))); // NOLINT(cppcoreguidelines-no-malloc)
 
-	unique_ptr<struct stat, delete_using_free>(
-	   (struct stat*)malloc(sizeof(struct stat)));
+	(void)unique_ptr<struct stat, delete_using_free>(static_cast<struct stat*>(
+	   malloc(sizeof(struct stat)))); // NOLINT(cppcoreguidelines-no-malloc)
 
 	// TODO: add some mocking
 }
