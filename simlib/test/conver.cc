@@ -484,5 +484,10 @@ TEST(Conver, construct_simfile) {
 	stdlog.use(stdout);
 
 	auto exec_path = executable_path(getpid());
-	ConverTestRunner("conver_test_cases/").run();
+	auto tests_dir_opt =
+	   deepest_ancestor_dir_with_subpath(exec_path, "test/conver_test_cases/");
+	if (not tests_dir_opt) {
+		FAIL() << "could not find tests directory";
+	}
+	ConverTestRunner(*tests_dir_opt).run();
 }

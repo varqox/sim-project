@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <linux/version.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 using namespace std::chrono_literals;
 
@@ -560,5 +561,10 @@ protected:
 TEST(Sandbox, run) {
 	stdlog.label(false);
 	auto exec_path = executable_path(getpid());
-	SandboxTestRunner("sandbox_test_cases/").run();
+	auto tests_dir_opt =
+	   deepest_ancestor_dir_with_subpath(exec_path, "test/sandbox_test_cases/");
+	if (not tests_dir_opt) {
+		FAIL() << "could not find tests directory";
+	}
+	SandboxTestRunner(*tests_dir_opt).run();
 }
