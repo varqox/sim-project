@@ -56,9 +56,28 @@ constexpr auto path_extension(T&& path) noexcept {
  *   "/" -> "/"
  *   "/my/path/." -> "/my/path/"
  *   "/my/path/.." -> "/my/path/"
+ *   "abc/efg" -> "abc/"
  *   "foo" -> ""
  */
 constexpr inline StringView path_dirpath(const StringView& path) noexcept {
 	auto pos = path.rfind('/');
 	return path.substring(0, pos == StringView::npos ? 0 : pos + 1);
 }
+
+/**
+ * @brief Checks every ancestor (parent) directory of @p path if it has @p
+ *   subpath and if true returns path of @p subpath in ancestor directory
+ * @details Examples:
+ *   1) @p path == "a/b/c/file", @p subpath == "/x/y/z", tried paths will be:
+ *     "a/b/c/x/y/z"
+ *     "a/b/x/y/z"
+ *     "a/x/y/z"
+ *     "x/y/z"
+ *   2) @p path == "/a/b/c/", @p subpath == "x/y/", tried paths will be:
+ *     "/a/b/c/x/y/"
+ *     "/a/b/x/y/"
+ *     "/a/x/y/"
+ *     "/x/y/"
+ */
+std::optional<std::string>
+deepest_ancestor_dir_with_subpath(std::string path, StringView subpath);

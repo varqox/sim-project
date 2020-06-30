@@ -1,5 +1,6 @@
 #include "simlib/path.hh"
 #include "simlib/concat_tostr.hh"
+#include "simlib/file_info.hh"
 #include "simlib/string_traits.hh"
 
 using std::string;
@@ -60,4 +61,24 @@ string path_absolute(StringView path, string curr_dir) {
 	}
 
 	return curr_path;
+}
+
+std::optional<std::string>
+deepest_ancestor_dir_with_subpath(std::string path, StringView subpath) {
+	subpath.remove_leading('/');
+	while (true) {
+		size_t path_len = path_dirpath(path).size();
+		path.resize(path_len);
+		bool end = path_len < 2;
+		assert(!end or path.empty() or path == "/");
+
+		path.append(subpath.begin(), subpath.end());
+		if (path_exists(path)) {
+			return path;
+		}
+		if (end) {
+			return std::nullopt;
+		}
+		path.resize(path_len - 1);
+	}
 }
