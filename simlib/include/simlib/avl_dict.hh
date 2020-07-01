@@ -2,6 +2,7 @@
 
 #include "simlib/debug.hh"
 #include "simlib/meta.hh"
+#include "simlib/repeating.hh"
 
 #include <cassert>
 #include <optional>
@@ -510,27 +511,28 @@ protected:
 	 *   one argument of type Node&, if it return sth convertible to
 	 *   false the lookup will break
 	 */
-	template <class Func>
-	std::enable_if_t<
-	   std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   bool>
-	for_each(size_type x, Func&& func) {
+	template <class Func,
+	          std::enable_if_t<
+	             std::is_same_v<repeating, std::invoke_result_t<Func, Node&>>,
+	             int> = 0>
+	repeating for_each(size_type x, Func&& func) {
 		if (x == nil) {
-			return true;
+			return continue_repeating;
 		}
 
-		return (for_each(pool[x].kid[L], func) and
-		        static_cast<bool>(func(pool[x])) and
-		        for_each(pool[x].kid[R], func));
+		if (for_each(pool[x].kid[L], func) == stop_repeating or
+		    func(pool[x]) == stop_repeating)
+		{
+			return stop_repeating;
+		}
+		return for_each(pool[x].kid[R], func);
 	}
 
-	template <class Func>
-	std::enable_if_t<
-	   !std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	for_each(size_type x, Func&& func) {
+	template <
+	   class Func,
+	   std::enable_if_t<std::is_same_v<void, std::invoke_result_t<Func, Node&>>,
+	                    int> = 0>
+	void for_each(size_type x, Func&& func) {
 		if (x == nil) {
 			return;
 		}
@@ -550,27 +552,29 @@ protected:
 	 *   one argument of type Node&, if it return sth convertible to
 	 *   false the lookup will break
 	 */
-	template <class Func>
-	std::enable_if_t<std::is_convertible<decltype(std::declval<Func>()(
-	                                        std::declval<const Node&>())),
-	                                     bool>::value,
-	                 bool>
-	for_each(size_type x, Func&& func) const {
+	template <
+	   class Func,
+	   std::enable_if_t<
+	      std::is_same_v<repeating, std::invoke_result_t<Func, const Node&>>,
+	      int> = 0>
+	repeating for_each(size_type x, Func&& func) const {
 		if (x == nil) {
-			return true;
+			return continue_repeating;
 		}
 
-		return (for_each(pool[x].kid[L], func) and
-		        static_cast<bool>(func(pool[x])) and
-		        for_each(pool[x].kid[R], func));
+		if (for_each(pool[x].kid[L], func) == stop_repeating or
+		    func(pool[x]) == stop_repeating)
+		{
+			return stop_repeating;
+		}
+		return for_each(pool[x].kid[R], func);
 	}
 
-	template <class Func>
-	std::enable_if_t<!std::is_convertible<decltype(std::declval<Func>()(
-	                                         std::declval<const Node&>())),
-	                                      bool>::value,
-	                 void>
-	for_each(size_type x, Func&& func) const {
+	template <class Func,
+	          std::enable_if_t<
+	             std::is_same_v<void, std::invoke_result_t<Func, const Node&>>,
+	             int> = 0>
+	void for_each(size_type x, Func&& func) const {
 		if (x == nil) {
 			return;
 		}
@@ -588,7 +592,11 @@ protected:
 	 *   one argument of type Node&, if it return sth convertible to
 	 *   false the lookup will break
 	 */
-	template <class Func>
+	template <
+	   class Func,
+	   std::enable_if_t<
+	      meta::is_one_of<std::invoke_result_t<Func, Node&>, void, repeating>,
+	      int> = 0>
 	void for_each(Func&& func) {
 		for_each(root, std::forward<Func>(func));
 	}
@@ -601,7 +609,11 @@ protected:
 	 *   one argument of type const Node&, if it return sth convertible
 	 *   to false the lookup will break
 	 */
-	template <class Func>
+	template <
+	   class Func,
+	   std::enable_if_t<meta::is_one_of<std::invoke_result_t<Func, const Node&>,
+	                                    void, repeating>,
+	                    int> = 0>
 	void for_each(Func&& func) const {
 		for_each(root, std::forward<Func>(func));
 	}
@@ -613,16 +625,19 @@ protected:
 	 * @complexity O(n + k log n) where n = size() and k = number of deleted
 	 * elements
 	 */
-	template <class Condition>
+	template <class Condition,
+	          std::enable_if_t<
+	             std::is_same_v<bool, std::invoke_result_t<Condition, Node&>>,
+	             int> = 0>
 	void filter(Condition&& condition) {
 		std::optional<typename Node::Key> key_opt;
 		auto processor = [&](Node& node) {
 			if (condition(node)) {
 				key_opt.emplace(node.key());
-				return false;
+				return stop_repeating;
 			}
 
-			return true;
+			return continue_repeating;
 		};
 
 		for_each(processor);
@@ -855,7 +870,7 @@ protected:
 
 	template <class T, class FuncIdxToRetVal>
 	std::result_of_t<FuncIdxToRetVal(size_type)>
-	erase_impl(size_type& x, T&& key, FuncIdxToRetVal&& to_ret_val = {}) {
+	erase_impl(size_type& x, T&& key, FuncIdxToRetVal&& to_ret_val) {
 		if (x == nil) {
 			return to_ret_val();
 		}
@@ -1009,159 +1024,185 @@ public:
 	}
 
 protected:
-	template <class T, class Func>
-	bool foreach_since_lower_bound(size_type x, T&& key, Func&& callback) {
+	template <class T, class Func,
+	          std::enable_if_t<
+	             std::is_same_v<repeating, std::invoke_result_t<Func, Node&>>,
+	             int> = 0>
+	repeating foreach_since_lower_bound(size_type x, T&& key, Func&& callback) {
 		if (x == nil) {
-			return true;
+			return continue_repeating;
 		}
 
 		if (compare(pool[x].key(), key)) {
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
 		}
-		return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
-		        static_cast<bool>(callback(pool[x])) and
-		        for_each(pool[x].kid[R], callback));
+
+		if (foreach_since_lower_bound(pool[x].kid[L], key, callback) ==
+		       stop_repeating or
+		    callback(pool[x]) == stop_repeating)
+		{
+			return stop_repeating;
+		}
+		return for_each(pool[x].kid[R], callback);
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   !std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_lower_bound(T&& key, Func&& callback) {
+	template <
+	   class T, class Func,
+	   std::enable_if_t<std::is_same_v<void, std::invoke_result_t<Func, Node&>>,
+	                    int> = 0>
+	void foreach_since_lower_bound(T&& key, Func&& callback) {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, [&](Node& n) {
 			callback(n);
-			return true;
+			return continue_repeating;
 		});
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_lower_bound(T&& key, Func&& callback) {
+	template <class T, class Func,
+	          std::enable_if_t<
+	             std::is_same_v<repeating, std::invoke_result_t<Func, Node&>>,
+	             int> = 0>
+	void foreach_since_lower_bound(T&& key, Func&& callback) {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, callback);
 	}
 
-	template <class T, class Func>
-	bool foreach_since_upper_bound(size_type x, T&& key, Func&& callback) {
+	template <class T, class Func,
+	          std::enable_if_t<
+	             std::is_same_v<repeating, std::invoke_result_t<Func, Node&>>,
+	             int> = 0>
+	repeating foreach_since_upper_bound(size_type x, T&& key, Func&& callback) {
 		if (x == nil) {
-			return true;
+			return continue_repeating;
 		}
 
 		if (compare(key, pool[x].key())) {
-			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
-			        static_cast<bool>(callback(pool[x])) and
-			        for_each(pool[x].kid[R], callback));
+			if (foreach_since_upper_bound(pool[x].kid[L], key, callback) ==
+			       stop_repeating or
+			    callback(pool[x]) == stop_repeating)
+			{
+				return stop_repeating;
+			}
+			return for_each(pool[x].kid[R], callback);
 		}
 		return foreach_since_upper_bound(pool[x].kid[R], key, callback);
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   !std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_upper_bound(T&& key, Func&& callback) {
+	template <
+	   class T, class Func,
+	   std::enable_if_t<std::is_same_v<void, std::invoke_result_t<Func, Node&>>,
+	                    int> = 0>
+	void foreach_since_upper_bound(T&& key, Func&& callback) {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, [&](Node& n) {
 			callback(n);
-			return true;
+			return continue_repeating;
 		});
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_upper_bound(T&& key, Func&& callback) {
+	template <class T, class Func,
+	          std::enable_if_t<
+	             std::is_same_v<repeating, std::invoke_result_t<Func, Node&>>,
+	             int> = 0>
+	void foreach_since_upper_bound(T&& key, Func&& callback) {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, callback);
 	}
 
-	template <class T, class Func>
-	bool foreach_since_lower_bound(size_type x, T&& key,
-	                               Func&& callback) const {
+	template <
+	   class T, class Func,
+	   std::enable_if_t<
+	      std::is_same_v<repeating, std::invoke_result_t<Func, const Node&>>,
+	      int> = 0>
+	repeating foreach_since_lower_bound(size_type x, T&& key,
+	                                    Func&& callback) const {
 		if (x == nil) {
-			return true;
+			return continue_repeating;
 		}
 
 		if (compare(pool[x].key(), key)) {
 			return foreach_since_lower_bound(pool[x].kid[R], key, callback);
 		}
-		return (foreach_since_lower_bound(pool[x].kid[L], key, callback) and
-		        static_cast<bool>(callback(pool[x])) and
-		        for_each(pool[x].kid[R], callback));
+
+		if (foreach_since_lower_bound(pool[x].kid[L], key, callback) ==
+		       stop_repeating or
+		    callback(pool[x]) == stop_repeating)
+		{
+			return stop_repeating;
+		}
+		return for_each(pool[x].kid[R], callback);
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   !std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_lower_bound(T&& key, Func&& callback) const {
+	template <class T, class Func,
+	          std::enable_if_t<
+	             std::is_same_v<void, std::invoke_result_t<Func, const Node&>>,
+	             int> = 0>
+	void foreach_since_lower_bound(T&& key, Func&& callback) const {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, [&](Node& n) {
 			callback(n);
-			return true;
+			return continue_repeating;
 		});
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_lower_bound(T&& key, Func&& callback) const {
+	template <
+	   class T, class Func,
+	   std::enable_if_t<
+	      std::is_same_v<repeating, std::invoke_result_t<Func, const Node&>>,
+	      int> = 0>
+	void foreach_since_lower_bound(T&& key, Func&& callback) const {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_lower_bound(root, key, callback);
 	}
 
-	template <class T, class Func>
-	bool foreach_since_upper_bound(size_type x, T&& key,
-	                               Func&& callback) const {
+	template <
+	   class T, class Func,
+	   std::enable_if_t<
+	      std::is_same_v<repeating, std::invoke_result_t<Func, const Node&>>,
+	      int> = 0>
+	repeating foreach_since_upper_bound(size_type x, T&& key,
+	                                    Func&& callback) const {
 		if (x == nil) {
-			return true;
+			return continue_repeating;
 		}
 
 		if (compare(key, pool[x].key())) {
-			return (foreach_since_upper_bound(pool[x].kid[L], key, callback) and
-			        static_cast<bool>(callback(pool[x])) and
-			        for_each(pool[x].kid[R], callback));
+			if (foreach_since_upper_bound(pool[x].kid[L], key, callback) ==
+			       stop_repeating or
+			    callback(pool[x]) == stop_repeating)
+			{
+				return stop_repeating;
+			}
+			return for_each(pool[x].kid[R], callback);
 		}
 		return foreach_since_upper_bound(pool[x].kid[R], key, callback);
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   !std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_upper_bound(T&& key, Func&& callback) const {
+	template <class T, class Func,
+	          std::enable_if_t<
+	             std::is_same_v<void, std::invoke_result_t<Func, const Node&>>,
+	             int> = 0>
+	void foreach_since_upper_bound(T&& key, Func&& callback) const {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, [&](Node& n) {
 			callback(n);
-			return true;
+			return continue_repeating;
 		});
 	}
 
-	template <class T, class Func>
-	std::enable_if_t<
-	   std::is_convertible<
-	      decltype(std::declval<Func>()(std::declval<Node&>())), bool>::value,
-	   void>
-	foreach_since_upper_bound(T&& key, Func&& callback) const {
+	template <
+	   class T, class Func,
+	   std::enable_if_t<
+	      std::is_same_v<repeating, std::invoke_result_t<Func, const Node&>>,
+	      int> = 0>
+	void foreach_since_upper_bound(T&& key, Func&& callback) const {
 		// std::forward omitted intentionally as the callback will be
 		// taken by a (maybe const) reference
 		foreach_since_upper_bound(root, key, callback);
@@ -1232,11 +1273,14 @@ public:
 	 * @details IMPORTANT: Adding or removing nodes within @p func is an
 	 *   undefined behavior. For deleting traversed nodes see filter()
 	 * @param func function to call on every element, it should take
-	 *   one argument of type Node::Data&, if it return sth convertible
-	 *   to false the lookup will break
+	 *   one argument of type Node::Data&.
+	 *   It should return void or something convertible to repeating.
 	 */
 	template <class Func>
 	void for_each(Func&& func) {
+		static_assert(
+		   meta::is_one_of<std::invoke_result_t<Func, typename Node::Data&>,
+		                   void, repeating>);
 		AVLBase::for_each([&func](Node& node) { return func(node.data()); });
 	}
 
@@ -1245,11 +1289,14 @@ public:
 	 * @details IMPORTANT: Adding or removing nodes within @p func is an
 	 *   undefined behavior. For deleting traversed nodes see filter()
 	 * @param func function to call on every element, it should take
-	 *   one argument of type const Node::Data&, if it return sth
-	 *   convertible to false the lookup will break
+	 *   one argument of type const Node::Data&.
+	 *   It should return void or something convertible to repeating.
 	 */
 	template <class Func>
 	void for_each(Func&& func) const {
+		static_assert(meta::is_one_of<
+		              std::invoke_result_t<Func, const typename Node::Data&>,
+		              void, repeating>);
 		AVLBase::for_each(
 		   [&func](const Node& node) { return func(node.data()); });
 	}
@@ -1263,7 +1310,11 @@ protected:
 	 * @complexity O(n + k log n) where n = size() and k = number of deleted
 	 * elements
 	 */
-	template <class Condition>
+	template <class Condition,
+	          std::enable_if_t<
+	             std::is_same_v<bool, std::invoke_result_t<
+	                                     Condition, typename Node::Data&>>,
+	             int> = 0>
 	void filter(Condition&& condition) {
 		AVLBase::filter(
 		   [&condition](Node& node) { return condition(node.data()); });
@@ -1274,11 +1325,14 @@ public:
 	 * @brief Calls @p callback on every element since the first element
 	 *   >= @p k
 	 * @param callback function to call on every element, it should take
-	 *   one argument of type Node::Data&, if it return sth convertible
-	 *   to false the lookup will break
+	 *   one argument of type Node::Data&.
+	 *   It should return void or something convertible to repeating.
 	 */
 	template <class T, class Func>
 	void foreach_since_lower_bound(T&& key, Func&& callback) {
+		static_assert(
+		   meta::is_one_of<std::invoke_result_t<Func, typename Node::Data&>,
+		                   void, repeating>);
 		AVLBase::foreach_since_lower_bound(
 		   key, [&](Node& node) { return callback(node.data()); });
 	}
@@ -1287,11 +1341,14 @@ public:
 	 * @brief Calls @p callback on every element since the first element
 	 *   >= @p k
 	 * @param callback function to call on every element, it should take
-	 *   one argument of type const Node::Data&, if it return sth
-	 *   convertible to false the lookup will break
+	 *   one argument of type const Node::Data&.
+	 *   It should return void or something convertible to repeating.
 	 */
 	template <class T, class Func>
 	void foreach_since_lower_bound(T&& key, Func&& callback) const {
+		static_assert(meta::is_one_of<
+		              std::invoke_result_t<Func, const typename Node::Data&>,
+		              void, repeating>);
 		AVLBase::foreach_since_lower_bound(
 		   key, [&](const Node& node) { return callback(node.data()); });
 	}
@@ -1300,11 +1357,14 @@ public:
 	 * @brief Calls @p callback on every element since the first element
 	 *   > @p k
 	 * @param callback function to call on every element, it should take
-	 *   one argument of type Node::Data&, if it return sth convertible
-	 *   to false the lookup will break
+	 *   one argument of type Node::Data&.
+	 *   It should return void or something convertible to repeating.
 	 */
 	template <class T, class Func>
 	void foreach_since_upper_bound(T&& key, Func&& callback) {
+		static_assert(
+		   meta::is_one_of<std::invoke_result_t<Func, typename Node::Data&>,
+		                   void, repeating>);
 		AVLBase::foreach_since_upper_bound(
 		   key, [&](Node& node) { return callback(node.data()); });
 	}
@@ -1313,11 +1373,14 @@ public:
 	 * @brief Calls @p callback on every element since the first element
 	 *   > @p k
 	 * @param callback function to call on every element, it should take
-	 *   one argument of type const Node::Data&, if it return sth
-	 *   convertible to false the lookup will break
+	 *   one argument of type const Node::Data&.
+	 *   It should return void or something convertible to repeating.
 	 */
 	template <class T, class Func>
 	void foreach_since_upper_bound(T&& key, Func&& callback) const {
+		static_assert(meta::is_one_of<
+		              std::invoke_result_t<Func, const typename Node::Data&>,
+		              void, repeating>);
 		AVLBase::foreach_since_upper_bound(
 		   key, [&](const Node& node) { return callback(node.data()); });
 	}

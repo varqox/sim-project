@@ -1,5 +1,6 @@
 #include "simlib/avl_dict.hh"
 #include "simlib/random.hh"
+#include "simlib/repeating.hh"
 
 #include <gtest/gtest.h>
 #include <set>
@@ -43,10 +44,10 @@ TEST(AvlDictContainer, foreach_since_lower_bound) {
 			std::vector<int> r;
 			avl.foreach_since_lower_bound(beg, [&](auto x) {
 				if (x > end) {
-					return false;
+					return stop_repeating;
 				}
 				a.emplace_back(x);
-				return true;
+				return continue_repeating;
 			});
 
 			auto it = rbt.lower_bound(beg);
@@ -72,10 +73,10 @@ TEST(AvlDictContainer, foreach_since_upper_bound) {
 			std::vector<int> r;
 			avl.foreach_since_upper_bound(beg, [&](auto x) {
 				if (x > end) {
-					return false;
+					return stop_repeating;
 				}
 				a.emplace_back(x);
-				return true;
+				return continue_repeating;
 			});
 
 			auto it = rbt.upper_bound(beg);
