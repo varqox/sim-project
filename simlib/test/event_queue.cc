@@ -447,7 +447,7 @@ TEST(EventQueue, remove_time_handler) {
 		order += "2";
 		eq.remove_handler(hid);
 
-		eq.add_time_handler(start + 4ms, [&] {
+		eq.add_time_handler(4ms, [&] {
 			EXPECT_LE(start + 4ms, system_clock::now());
 			order += "4";
 		});
