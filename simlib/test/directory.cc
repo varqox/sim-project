@@ -1,5 +1,6 @@
 #include "simlib/directory.hh"
 #include "simlib/file_manip.hh"
+#include "simlib/repeating.hh"
 #include "simlib/temporary_directory.hh"
 
 #include <gtest/gtest.h>
@@ -33,15 +34,15 @@ TEST(directory, for_each_dir_component) {
 	dir.rewind();
 	for_each_dir_component(dir, [&, iters = 2](dirent* /*unused*/) mutable {
 		++k;
-		return (--iters > 0);
+		return --iters > 0 ? continue_repeating : stop_repeating;
 	});
 	EXPECT_EQ(k, 2);
 
 	k = 0;
-	for_each_dir_component(tmp_dir.path(),
-	                       [&, iters = 2](dirent* /*unused*/) mutable {
-		                       ++k;
-		                       return (--iters > 0);
-	                       });
+	for_each_dir_component(
+	   tmp_dir.path(), [&, iters = 2](dirent* /*unused*/) mutable {
+		   ++k;
+		   return --iters > 0 ? continue_repeating : stop_repeating;
+	   });
 	EXPECT_EQ(k, 2);
 }

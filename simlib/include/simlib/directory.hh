@@ -2,8 +2,10 @@
 
 #include "simlib/debug.hh"
 #include "simlib/file_path.hh"
+#include "simlib/repeating.hh"
 
 #include <dirent.h>
+#include <type_traits>
 
 // Encapsulates directory object DIR
 class Directory {
@@ -87,13 +89,14 @@ public:
  *   it should take one argument - dirent*, if it return sth convertible to
  *   false the lookup will break
  */
-template <class DirType, class Func, class ErrFunc>
+template <class DirType, class Func, class ErrFunc,
+          std::enable_if_t<meta::is_one_of<std::invoke_result_t<Func, dirent*>,
+                                           void, repeating>,
+                           int> = 0>
 void for_each_dir_component(DirType&& dir, Func&& func,
                             ErrFunc&& readdir_failed) {
 	static_assert(std::is_convertible_v<DirType, FilePath> or
 	              std::is_convertible_v<DirType, DIR*>);
-	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or
-	              std::is_invocable_v<Func, dirent*>);
 
 	if constexpr (not std::is_convertible_v<DirType, DIR*>) {
 		Directory directory{dir};
@@ -121,8 +124,8 @@ void for_each_dir_component(DirType&& dir, Func&& func,
 			if (strcmp(file->d_name, ".") != 0 and
 			    strcmp(file->d_name, "..") != 0) {
 				if constexpr (std::is_constructible_v<decltype(func(file)),
-				                                      bool>) {
-					if (not func(file)) {
+				                                      repeating>) {
+					if (func(file) == stop_repeating) {
 						return;
 					}
 				} else {
@@ -137,7 +140,7 @@ template <class DirType, class Func>
 auto for_each_dir_component(DirType&& dir, Func&& func) {
 	static_assert(std::is_convertible_v<DirType, FilePath> or
 	              std::is_convertible_v<DirType, DIR*>);
-	static_assert(std::is_invocable_r_v<bool, Func, dirent*> or
+	static_assert(std::is_invocable_r_v<repeating, Func, dirent*> or
 	              std::is_invocable_v<Func, dirent*>);
 	return for_each_dir_component(std::forward<DirType>(dir),
 	                              std::forward<Func>(func),

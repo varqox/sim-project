@@ -3,6 +3,7 @@
 #include "simlib/directory.hh"
 #include "simlib/file_descriptor.hh"
 #include "simlib/random.hh"
+#include "simlib/repeating.hh"
 
 using std::array;
 using std::string;
@@ -64,24 +65,24 @@ static int __remove_rat(int dirfd, FilePath path) noexcept {
 	int rc = 0;
 	for_each_dir_component(
 	   dir,
-	   [&](dirent* file) -> bool {
+	   [&](dirent* file) -> repeating {
 #ifdef _DIRENT_HAVE_D_TYPE
 		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
 			   if (__remove_rat(fd, file->d_name)) {
 				   ec = errno;
 				   rc = -1;
-				   return false;
+				   return stop_repeating;
 			   }
 #ifdef _DIRENT_HAVE_D_TYPE
 		   } else if (unlinkat(fd, file->d_name, 0)) {
 			   ec = errno;
 			   rc = -1;
-			   return false;
+			   return stop_repeating;
 		   }
 #endif
 
-		   return true;
+		   return continue_repeating;
 	   },
 	   [&] {
 		   ec = errno;
@@ -121,24 +122,24 @@ int remove_dir_contents_at(int dirfd, FilePath pathname) noexcept {
 	int rc = 0;
 	for_each_dir_component(
 	   dir,
-	   [&](dirent* file) -> bool {
+	   [&](dirent* file) -> repeating {
 #ifdef _DIRENT_HAVE_D_TYPE
 		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
 			   if (__remove_rat(fd, file->d_name)) {
 				   ec = errno;
 				   rc = -1;
-				   return false;
+				   return stop_repeating;
 			   }
 #ifdef _DIRENT_HAVE_D_TYPE
 		   } else if (unlinkat(fd, file->d_name, 0)) {
 			   ec = errno;
 			   rc = -1;
-			   return false;
+			   return stop_repeating;
 		   }
 #endif
 
-		   return true;
+		   return continue_repeating;
 	   },
 	   [&] {
 		   ec = errno;
@@ -316,14 +317,14 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
 	int rc = 0;
 	for_each_dir_component(
 	   src_dir,
-	   [&](dirent* file) -> bool {
+	   [&](dirent* file) -> repeating {
 #ifdef _DIRENT_HAVE_D_TYPE
 		   if (file->d_type == DT_DIR || file->d_type == DT_UNKNOWN) {
 #endif
 			   if (__copy_rat(src_fd, file->d_name, dest_fd, file->d_name)) {
 				   ec = errno;
 				   rc = -1;
-				   return false;
+				   return stop_repeating;
 			   }
 
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -331,12 +332,12 @@ static int __copy_rat(int src_dirfd, FilePath src, int dest_dirfd,
 			   if (copyat(src_fd, file->d_name, dest_fd, file->d_name)) {
 				   ec = errno;
 				   rc = -1;
-				   return false;
+				   return stop_repeating;
 			   }
 		   }
 #endif
 
-		   return true;
+		   return continue_repeating;
 	   },
 	   [&] {
 		   ec = errno;

@@ -101,6 +101,9 @@ template <class T>
 constexpr inline bool has_method_data =
    decltype(detail::has_method_data<T>(0))::value;
 
+template <class T, class... Options>
+constexpr inline bool is_one_of = (std::is_same_v<T, Options> or ...);
+
 } // namespace meta
 
 #define DECLARE_ENUM_OPERATOR(enu, oper)                                       \
