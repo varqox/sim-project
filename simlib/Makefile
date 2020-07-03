@@ -7,11 +7,12 @@ $(PREFIX)all: $(PREFIX)gtest_main.a $(PREFIX)simlib.a
 SIMLIB_INCLUDES_FLAGS = -I '$(CURDIR)/include'
 
 define SIMLIB_FLAGS
-INTERNAL_EXTRA_CXX_FLAGS := $(SIMLIB_INCLUDES_FLAGS)
+INTERNAL_EXTRA_CXX_FLAGS := $(SIMLIB_INCLUDES_FLAGS) -isystem '$(CURDIR)/$(PREFIX)3rdparty'
 endef
 
 define GOOGLETEST_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS = -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -I '$(CURDIR)/$(PREFIX)googletest/googletest' -pthread
+INTERNAL_EXTRA_CXX_FLAGS = -isystem '$(CURDIR)/$(PREFIX)googletest/googletest/include' -I '$(CURDIR)/$(PREFIX)googletest/googletest'
+INTERNAL_EXTRA_LD_FLAGS = -pthread
 endef
 
 $(PREFIX)simlib.a $(PREFIX)test/exec: override CXXSTD_FLAG = -std=c++17
@@ -38,7 +39,6 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/random.cc \
 	$(PREFIX)src/sandbox.cc \
 	$(PREFIX)src/sha.cc \
-	$(PREFIX)src/sha3.c \
 	$(PREFIX)src/sim/checker.cc \
 	$(PREFIX)src/sim/compile.cc \
 	$(PREFIX)src/sim/conver.cc \

@@ -1,6 +1,10 @@
 #include "simlib/sha.hh"
 #include "simlib/string_transform.hh"
 
+extern "C" {
+#include <3rdparty/sha3.c>
+}
+
 InplaceBuff<56> sha3_224(StringView str) {
 	unsigned char out[28];
 	FIPS202_SHA3_224(reinterpret_cast<const unsigned char*>(str.data()),
