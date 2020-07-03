@@ -13,11 +13,11 @@ private:
 	ValType val_;
 
 public:
-	constexpr EnumVal() = default;
-	constexpr EnumVal(const EnumVal&) = default;
-	constexpr EnumVal(EnumVal&&) noexcept = default;
-	constexpr EnumVal& operator=(const EnumVal&) = default;
-	constexpr EnumVal& operator=(EnumVal&&) noexcept = default;
+	EnumVal() = default;
+	EnumVal(const EnumVal&) = default;
+	EnumVal(EnumVal&&) noexcept = default;
+	EnumVal& operator=(const EnumVal&) = default;
+	EnumVal& operator=(EnumVal&&) noexcept = default;
 
 	~EnumVal() = default;
 

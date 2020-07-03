@@ -14,7 +14,7 @@ private:
 public:
 	size_t len_ = 0;
 
-	constexpr StaticCStringBuff() = default;
+	StaticCStringBuff() = default;
 
 	constexpr StaticCStringBuff(const std::array<char, N + 1>& str, size_t len)
 	: str_(str)
@@ -39,8 +39,8 @@ public:
 		assert(len_ <= M);
 	}
 
-	constexpr StaticCStringBuff(const StaticCStringBuff&) noexcept = default;
-	constexpr StaticCStringBuff(StaticCStringBuff&&) noexcept = default;
+	StaticCStringBuff(const StaticCStringBuff&) noexcept = default;
+	StaticCStringBuff(StaticCStringBuff&&) noexcept = default;
 
 	template <size_t M, std::enable_if_t<M <= N, int> = 0>
 	// NOLINTNEXTLINE(google-explicit-constructor)
@@ -53,11 +53,9 @@ public:
 		str_[len_] = '\0';
 	}
 
-	constexpr StaticCStringBuff&
-	operator=(const StaticCStringBuff&) noexcept = default;
+	StaticCStringBuff& operator=(const StaticCStringBuff&) noexcept = default;
 
-	constexpr StaticCStringBuff&
-	operator=(StaticCStringBuff&&) noexcept = default;
+	StaticCStringBuff& operator=(StaticCStringBuff&&) noexcept = default;
 
 	~StaticCStringBuff() = default;
 

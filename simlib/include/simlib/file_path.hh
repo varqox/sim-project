@@ -11,8 +11,8 @@ class FilePath {
 	size_t size_;
 
 public:
-	constexpr FilePath(const FilePath&) noexcept = default;
-	constexpr FilePath(FilePath&&) noexcept = default;
+	FilePath(const FilePath&) noexcept = default;
+	FilePath(FilePath&&) noexcept = default;
 
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr FilePath(const char* str) noexcept
@@ -44,7 +44,7 @@ public:
 	constexpr FilePath& operator=(const FilePath&) noexcept = delete;
 	constexpr FilePath& operator=(FilePath&&) noexcept = delete;
 	// NOLINTNEXTLINE(misc-unconventional-assign-operator)
-	constexpr FilePath& operator=(FilePath&) noexcept = default;
+	FilePath& operator=(FilePath&) noexcept = default;
 
 	constexpr FilePath& operator=(const char* str) noexcept {
 		str_ = str;

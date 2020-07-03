@@ -253,11 +253,12 @@ public:
 	: func(f) DEBUG_SANDBOX(, name(callback_name)) {}
 
 	SyscallCallbackLambda(const SyscallCallbackLambda&) = delete;
-	SyscallCallbackLambda(SyscallCallbackLambda&&) noexcept = default;
+	// NOLINTNEXTLINE(performance-noexcept-move-constructor): needed for clang-8
+	SyscallCallbackLambda(SyscallCallbackLambda&&) = default;
 	SyscallCallbackLambda& operator=(const SyscallCallbackLambda&) = delete;
 
-	SyscallCallbackLambda&
-	operator=(SyscallCallbackLambda&&) noexcept = default;
+	// NOLINTNEXTLINE(performance-noexcept-move-constructor): needed for clang-8
+	SyscallCallbackLambda& operator=(SyscallCallbackLambda&&) = default;
 
 	~SyscallCallbackLambda() override = default;
 

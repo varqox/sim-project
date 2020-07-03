@@ -25,12 +25,10 @@ public:
 	constexpr explicit RequestUriParser(StringView str)
 	: buff(std::move(str)) {}
 
-	constexpr RequestUriParser(const RequestUriParser&) noexcept = default;
-	constexpr RequestUriParser(RequestUriParser&&) noexcept = default;
-	constexpr RequestUriParser&
-	operator=(const RequestUriParser&) noexcept = default;
-	constexpr RequestUriParser&
-	operator=(RequestUriParser&&) noexcept = default;
+	RequestUriParser(const RequestUriParser&) noexcept = default;
+	RequestUriParser(RequestUriParser&&) noexcept = default;
+	RequestUriParser& operator=(const RequestUriParser&) noexcept = default;
+	RequestUriParser& operator=(RequestUriParser&&) noexcept = default;
 
 	~RequestUriParser() = default;
 

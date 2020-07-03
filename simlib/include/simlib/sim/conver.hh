@@ -55,7 +55,7 @@ public:
 		// on minimum_time_limit.
 		double solution_runtime_coefficient = 3;
 
-		constexpr ResetTimeLimitsOptions() = default;
+		ResetTimeLimitsOptions() = default;
 	};
 
 	struct Options {

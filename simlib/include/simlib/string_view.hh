@@ -486,11 +486,10 @@ public:
 	constexpr StringView() noexcept
 	: StringBase("", 0) {}
 
-	constexpr StringView(std::nullptr_t) noexcept = delete;
+	StringView(std::nullptr_t) noexcept = delete;
 
-	constexpr StringView(const StringView&) noexcept = default;
-
-	constexpr StringView(StringView&&) noexcept = default;
+	StringView(const StringView&) noexcept = default;
+	StringView(StringView&&) noexcept = default;
 
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringView(const StringBase& s) noexcept
@@ -507,11 +506,10 @@ public:
 	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
 	StringView(T&&) = delete; // Protect from assigning unsafe data
 
-	constexpr StringView& operator=(const StringView&) noexcept = default;
+	StringView& operator=(const StringView&) noexcept = default;
+	StringView& operator=(StringView&&) noexcept = default;
 
-	constexpr StringView& operator=(StringView&&) noexcept = default;
-
-	constexpr StringView& operator=(std::nullptr_t) noexcept = delete;
+	StringView& operator=(std::nullptr_t) noexcept = delete;
 
 	constexpr StringView& operator=(pointer p) noexcept {
 		operator=(StringView{p});
@@ -746,10 +744,10 @@ public:
 		assert(s[n] == '\0');
 	}
 
-	constexpr CStringView(const CStringView&) noexcept = default;
-	constexpr CStringView(CStringView&&) noexcept = default;
-	constexpr CStringView& operator=(const CStringView&) noexcept = default;
-	constexpr CStringView& operator=(CStringView&&) noexcept = default;
+	CStringView(const CStringView&) noexcept = default;
+	CStringView(CStringView&&) noexcept = default;
+	CStringView& operator=(const CStringView&) noexcept = default;
+	CStringView& operator=(CStringView&&) noexcept = default;
 
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr operator StringView() & noexcept { return {data(), size()}; }

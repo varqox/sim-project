@@ -17,8 +17,8 @@ public:
 	constexpr explicit SimpleParser(StringView s)
 	: StringView(std::move(s)) {}
 
-	constexpr SimpleParser(const SimpleParser&) noexcept = default;
-	constexpr SimpleParser(SimpleParser&&) noexcept = default;
+	SimpleParser(const SimpleParser&) noexcept = default;
+	SimpleParser(SimpleParser&&) noexcept = default;
 	SimpleParser& operator=(const SimpleParser&) noexcept = default;
 	SimpleParser& operator=(SimpleParser&&) noexcept = default;
 

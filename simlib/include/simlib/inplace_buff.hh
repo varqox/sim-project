@@ -129,8 +129,8 @@ protected:
 	, p_(p)
 	, p_value_when_unallocated_(p_value_when_unallocated) {}
 
-	constexpr InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
-	constexpr InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
+	InplaceBuffBase(const InplaceBuffBase&) noexcept = default;
+	InplaceBuffBase(InplaceBuffBase&&) noexcept = default;
 	InplaceBuffBase& operator=(const InplaceBuffBase&) noexcept = default;
 	InplaceBuffBase& operator=(InplaceBuffBase&&) noexcept = default;
 
