@@ -25,36 +25,29 @@ public:
 	static constexpr size_type npos = -1;
 
 protected:
-	pointer str;
-	size_type len{0};
+	pointer str = nullptr;
+	size_type len = 0;
 
 public:
-	constexpr StringBase() noexcept
-	: str("") {}
+	constexpr StringBase() noexcept = default;
 
-	constexpr StringBase(std::nullptr_t) = delete;
-
-	template <size_t N>
-	// NOLINTNEXTLINE(google-explicit-constructor)
-	constexpr StringBase(const char (&s)[N])
-	: str(s)
-	, len(std::char_traits<char>::length(s)) {}
-
-	// Do not treat as possible string literal
-	template <size_t N>
-	// NOLINTNEXTLINE(google-explicit-constructor)
-	constexpr StringBase(char (&s)[N])
-	: str(s)
-	, len(std::char_traits<char>::length(s)) {}
-
-	template <size_t N>
+	template <size_t N, typename T = Char,
+	          std::enable_if_t<std::is_const_v<T>, int> = 0>
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(const StaticCStringBuff<N>& s) noexcept
 	: str(s.data())
 	, len(s.size()) {}
 
+	constexpr StringBase(std::nullptr_t) = delete;
+
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(pointer s) noexcept
+	: str(s)
+	, len(std::char_traits<char>::length(s)) {}
+
+	template <typename T = Char, std::enable_if_t<std::is_const_v<T>, int> = 0>
+	// NOLINTNEXTLINE(google-explicit-constructor)
+	constexpr StringBase(std::remove_const_t<Char>* s) noexcept
 	: str(s)
 	, len(std::char_traits<char>::length(s)) {}
 
@@ -62,7 +55,14 @@ public:
 	: str(s)
 	, len(n) {}
 
+	template <typename T = Char, std::enable_if_t<std::is_const_v<T>, int> = 0>
+	constexpr StringBase(const std::remove_const_t<Char>* s,
+	                     size_type n) noexcept
+	: str(s)
+	, len(n) {}
+
 	// Constructs StringView from substring [beg, beg + n) of string s
+	template <typename T = Char, std::enable_if_t<std::is_const_v<T>, int> = 0>
 	// NOLINTNEXTLINE(google-explicit-constructor)
 	constexpr StringBase(const std::string& s, size_type beg = 0,
 	                     size_type n = npos) noexcept
@@ -76,13 +76,8 @@ public:
 	: str(s.data() + std::min(beg, s.size()))
 	, len(std::min(n, s.size() - std::min(beg, s.size()))) {}
 
-	constexpr StringBase(const StringBase& s) noexcept
-	: str(s.data())
-	, len(s.size()) {}
-
-	constexpr StringBase(StringBase&& s) noexcept
-	: str(s.data())
-	, len(s.size()) {}
+	constexpr StringBase(const StringBase&) noexcept = default;
+	constexpr StringBase(StringBase&&) noexcept = default;
 
 	template <class T, std::enable_if_t<
 	                      std::is_rvalue_reference_v<T&&> and
@@ -91,16 +86,8 @@ public:
 	// NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
 	StringBase(T&&) = delete; // Protect from assigning unsafe data
 
-	constexpr StringBase& operator=(StringBase&& s) noexcept {
-		str = s.data();
-		len = s.size();
-		return *this;
-	}
-
-	constexpr StringBase& operator=(const StringBase& s) noexcept {
-		*this = StringBase(s);
-		return *this;
-	}
+	constexpr StringBase& operator=(const StringBase&) noexcept = default;
+	constexpr StringBase& operator=(StringBase&&) noexcept = default;
 
 	constexpr StringBase& operator=(std::nullptr_t) = delete;
 
@@ -483,10 +470,7 @@ class StringView : public StringBase<const char> {
 public:
 	using StringBase::StringBase;
 
-	constexpr StringView() noexcept
-	: StringBase("", 0) {}
-
-	StringView(std::nullptr_t) noexcept = delete;
+	constexpr StringView() noexcept = default;
 
 	StringView(const StringView&) noexcept = default;
 	StringView(StringView&&) noexcept = default;

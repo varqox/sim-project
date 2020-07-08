@@ -87,6 +87,11 @@ public:
 };
 
 template <size_t N>
+StaticCStringBuff(const char (&str)[N]) -> StaticCStringBuff<N>;
+template <size_t N>
+StaticCStringBuff(char (&str)[N]) -> StaticCStringBuff<N>;
+
+template <size_t N>
 std::string& operator+=(std::string& str, const StaticCStringBuff<N>& c_buff) {
 	return str.append(c_buff.data(), c_buff.size());
 }
