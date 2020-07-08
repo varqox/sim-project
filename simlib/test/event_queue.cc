@@ -2,6 +2,7 @@
 #include "simlib/concurrent/semaphore.hh"
 #include "simlib/defer.hh"
 #include "simlib/file_descriptor.hh"
+#include "simlib/repeating.hh"
 
 #include <chrono>
 #include <cstddef>
@@ -19,8 +20,9 @@ using std::array;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
 using std::chrono_literals::operator""ms;
-using std::chrono_literals::operator""us;
 using std::chrono_literals::operator""ns;
+using std::chrono_literals::operator""us;
+using std::chrono_literals::operator""s;
 using std::function;
 using std::string;
 using std::vector;
@@ -28,71 +30,71 @@ using std::vector;
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EventQueue, add_time_handler_time_point) {
 	auto start = system_clock::now();
-	string order;
-
+	int times = 0;
 	EventQueue eq;
-	eq.add_time_handler(start + 3ms, [&] {
-		EXPECT_LE(start + 3ms, system_clock::now());
-		order += "3";
+	eq.add_time_handler(start + 30us, [&] {
+		++times;
+		EXPECT_LE(start + 30us, system_clock::now());
 
-		eq.add_time_handler(start + 6ms, [&] {
-			EXPECT_LE(start + 6ms, system_clock::now());
-			order += "6";
+		eq.add_time_handler(start + 60us, [&] {
+			++times;
+			EXPECT_LE(start + 60us, system_clock::now());
 		});
 	});
 
-	eq.add_time_handler(start + 2ms, [&] {
-		EXPECT_LE(start + 2ms, system_clock::now());
-		order += "2";
+	eq.add_time_handler(start + 20us, [&] {
+		++times;
+		EXPECT_LE(start + 20us, system_clock::now());
 
-		eq.add_time_handler(start + 4ms, [&] {
-			EXPECT_LE(start + 4ms, system_clock::now());
-			order += "4";
+		eq.add_time_handler(start + 40us, [&] {
+			++times;
+			EXPECT_LE(start + 40us, system_clock::now());
 		});
 	});
 
-	eq.add_time_handler(start + 5ms, [&] {
-		EXPECT_LE(start + 5ms, system_clock::now());
-		order += "5";
+	eq.add_time_handler(start + 50us, [&] {
+		++times;
+		EXPECT_LE(start + 50us, system_clock::now());
 	});
 
+	EXPECT_EQ(times, 0);
 	eq.run();
-	EXPECT_EQ(order, "23456");
+	EXPECT_EQ(times, 5);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EventQueue, add_time_handler_duration) {
 	auto start = system_clock::now();
-	string order;
-
+	int times = 0;
 	EventQueue eq;
-	eq.add_time_handler(3ms, [&] {
-		EXPECT_LE(start + 3ms, system_clock::now());
-		order += "3";
+	eq.add_time_handler(30us, [&] {
+		++times;
+		EXPECT_LE(start + 30us, system_clock::now());
 
-		eq.add_time_handler(3ms, [&] {
-			EXPECT_LE(start + 6ms, system_clock::now());
-			order += "6";
+		eq.add_time_handler(30us, [&] {
+			++times;
+			EXPECT_LE(start + 60us, system_clock::now());
 		});
 	});
 
-	eq.add_time_handler(2ms, [&] {
-		EXPECT_LE(start + 2ms, system_clock::now());
-		order += "2";
+	eq.add_time_handler(20us, [&] {
+		++times;
+		EXPECT_LE(start + 20us, system_clock::now());
 
-		eq.add_time_handler(2ms, [&] {
-			EXPECT_LE(start + 4ms, system_clock::now());
-			order += "4";
+		eq.add_time_handler(20us, [&] {
+			++times;
+			EXPECT_LE(start + 40us, system_clock::now());
 		});
 	});
 
-	eq.add_time_handler(5ms, [&] {
-		EXPECT_LE(start + 5ms, system_clock::now());
-		order += "5";
+	eq.add_time_handler(50us, [&] {
+		++times;
+		EXPECT_LE(start + 50us, system_clock::now());
 	});
 
+	EXPECT_EQ(times, 0);
 	eq.run();
-	EXPECT_EQ(order, "23456");
+	EXPECT_EQ(times, 5);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -103,17 +105,14 @@ TEST(EventQueue, add_ready_handler) {
 	EventQueue eq;
 	eq.add_ready_handler([&] { order += "0"; });
 
-	eq.add_time_handler(1ms, [&] {
-		EXPECT_LE(start + 1ms, system_clock::now());
+	eq.add_time_handler(10us, [&] {
+		EXPECT_LE(start + 10us, system_clock::now());
 		order += "1";
 	});
 
-	eq.add_ready_handler([&] {
-		order += "0"; // Order of handlers on the same time_point is undefined
-	});
-
+	EXPECT_EQ(order, "");
 	eq.run();
-	EXPECT_EQ(order, "001");
+	EXPECT_EQ(order, "01");
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -122,26 +121,17 @@ TEST(EventQueue, add_repeating_handler) {
 	string order;
 
 	EventQueue eq;
-	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
+	eq.add_repeating_handler(20us, [&, iter = 0]() mutable {
 		order += char('a' + iter);
 		++iter;
 
-		EXPECT_LE(start + iter * 100us, system_clock::now());
+		EXPECT_LE(start + iter * 20us, system_clock::now());
 		return iter == 10 ? stop_repeating : continue_repeating;
 	});
 
-	eq.add_time_handler(50us, [&] {
-		EXPECT_LE(start + 50us, system_clock::now());
-		order += "1";
-	});
-
-	eq.add_time_handler(150us, [&] {
-		EXPECT_LE(start + 150us, system_clock::now());
-		order += "2";
-	});
-
+	EXPECT_EQ(order, "");
 	eq.run();
-	EXPECT_EQ(order, "1a2bcdefghij");
+	EXPECT_EQ(order, "abcdefghij");
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -171,22 +161,21 @@ TEST(EventQueue, adding_mutable_handler) {
 	});
 
 	FileDescriptor fd("/dev/null", O_RDONLY);
-	assert(fd.is_open());
-	EventQueue::handler_id_t hid = 0;
-	hid = eq.add_file_handler(fd, FileEvent::READABLE, [&, x = 0]() mutable {
-		++x;
-		++times;
-		eq.remove_handler(hid);
-	});
+	ASSERT_TRUE(fd.is_open());
+	EventQueue::handler_id_t hid =
+	   eq.add_file_handler(fd, FileEvent::READABLE, [&, x = 0]() mutable {
+		   ++x;
+		   ++times;
+		   eq.remove_handler(hid);
+	   });
 
+	EXPECT_EQ(times, 0);
 	eq.run();
 	EXPECT_EQ(times, 5);
 }
 
-template <class Stopper>
-static void pause_immediately_from_handler(Stopper&& stopper_installer) {
-	static_assert(std::is_invocable_v<Stopper, EventQueue&, size_t&>);
-
+static void pause_immediately_from_handler(
+   const std::function<void(EventQueue&, size_t&)>& stopper_installer) {
 	EventQueue eq;
 	size_t times = 0;
 
@@ -198,7 +187,7 @@ static void pause_immediately_from_handler(Stopper&& stopper_installer) {
 	eq.add_ready_handler([&] { handler_impl(handler_impl); });
 
 	FileDescriptor fd("/dev/null", O_WRONLY);
-	assert(fd.is_open());
+	ASSERT_TRUE(fd.is_open());
 	eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] { ++times; });
 
 	eq.add_repeating_handler(0ns, [&] {
@@ -254,16 +243,16 @@ TEST(EventQueue,
      pause_immediately_from_other_thread_while_running_time_handlers) {
 	EventQueue eq;
 	size_t times = 0;
+	concurrent::Semaphore sem(0);
 
 	auto handler_impl = [&](auto& self) -> void {
-		++times;
+		if (++times > 4) {
+			sem.post();
+		}
 		eq.add_ready_handler([&self] { self(self); });
 	};
 
 	eq.add_ready_handler([&] { handler_impl(handler_impl); });
-
-	concurrent::Semaphore sem(0);
-	eq.add_ready_handler([&] { sem.post(); });
 
 	std::thread other([&] {
 		sem.wait();
@@ -271,10 +260,10 @@ TEST(EventQueue,
 		eq.pause_immediately();
 	});
 
+	EXPECT_EQ(times, 0);
 	eq.run();
 	other.join();
-
-	EXPECT_GT(times, 0);
+	EXPECT_GT(times, 4);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -282,14 +271,14 @@ TEST(EventQueue,
      pause_immediately_from_other_thread_while_running_repeating_handler) {
 	EventQueue eq;
 	size_t times = 0;
+	concurrent::Semaphore sem(0);
 
 	eq.add_repeating_handler(0ns, [&] {
-		++times;
+		if (++times > 4) {
+			sem.post();
+		}
 		return continue_repeating;
 	});
-
-	concurrent::Semaphore sem(0);
-	eq.add_ready_handler([&] { sem.post(); });
 
 	std::thread other([&] {
 		sem.wait();
@@ -297,10 +286,10 @@ TEST(EventQueue,
 		eq.pause_immediately();
 	});
 
+	EXPECT_EQ(times, 0);
 	eq.run();
 	other.join();
-
-	EXPECT_GT(times, 0);
+	EXPECT_GT(times, 4);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -308,13 +297,15 @@ TEST(EventQueue,
      pause_immediately_from_other_thread_while_running_file_handlers) {
 	EventQueue eq;
 	size_t writes = 0;
+	concurrent::Semaphore sem(0);
 
 	FileDescriptor fd("/dev/null", O_WRONLY);
-	assert(fd.is_open());
-	eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] { ++writes; });
-
-	concurrent::Semaphore sem(0);
-	eq.add_ready_handler([&] { sem.post(); });
+	ASSERT_TRUE(fd.is_open());
+	eq.add_file_handler(fd, FileEvent::WRITEABLE, [&] {
+		if (++writes > 4) {
+			sem.post();
+		}
+	});
 
 	std::thread other([&] {
 		sem.wait();
@@ -322,50 +313,49 @@ TEST(EventQueue,
 		eq.pause_immediately();
 	});
 
+	EXPECT_EQ(writes, 0);
 	eq.run();
 	other.join();
 
-	EXPECT_GT(writes, 0);
+	EXPECT_GT(writes, 4);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EventQueue, pause_immediately_from_other_thread_while_waiting) {
 	EventQueue eq;
-	string order;
+	int times = 0;
 
 	std::array<int, 2> pfd{};
-	if (pipe2(pfd.data(), O_CLOEXEC)) {
-		THROW("pipe2()", errmsg());
-	}
-
+	ASSERT_EQ(pipe2(pfd.data(), O_CLOEXEC), 0);
 	Defer guard = [&pfd] {
 		for (int fd : pfd) {
 			(void)close(fd);
 		}
 	};
 
-	eq.add_file_handler(pfd[0], FileEvent::READABLE, [&] { order += "R"; });
+	eq.add_file_handler(pfd[0], FileEvent::READABLE, [&] { ++times; });
 
 	concurrent::Semaphore sem(0);
 	eq.add_ready_handler([&] {
-		order += "P";
+		++times;
 		sem.post();
 	});
 
 	std::thread other([&] {
 		sem.wait();
-		std::this_thread::sleep_for(8us);
+		std::this_thread::sleep_for(80us);
 		eq.pause_immediately();
 	});
 
+	EXPECT_EQ(times, 0);
 	eq.run();
 	other.join();
 
-	EXPECT_EQ(order, "P");
+	EXPECT_EQ(times, 1);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(EventQueue, pause_immediately_before_run_is_noop) {
+TEST(EventQueue, pause_immediately_before_run_is_no_op) {
 	EventQueue eq;
 	string order;
 
@@ -374,6 +364,7 @@ TEST(EventQueue, pause_immediately_before_run_is_noop) {
 	eq.add_ready_handler([&] { order += "x"; });
 	eq.pause_immediately();
 
+	EXPECT_EQ(order, "");
 	eq.run();
 	EXPECT_EQ(order, "xx");
 }
@@ -395,6 +386,7 @@ TEST(EventQueue, pause_immediately_and_run_again) {
 		eq.pause_immediately();
 	});
 
+	EXPECT_EQ(order, "");
 	eq.run();
 	EXPECT_EQ(order, "1");
 	eq.run();
@@ -414,6 +406,7 @@ TEST(EventQueue, pause_immediately_and_run_again_loop) {
 		return continue_repeating;
 	});
 
+	EXPECT_EQ(order, "");
 	eq.run();
 	EXPECT_EQ(order, "1");
 	eq.run();
@@ -437,29 +430,34 @@ TEST(EventQueue, pause_immediately_and_run_again_loop) {
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EventQueue, remove_time_handler) {
 	auto start = system_clock::now();
-	string order;
+	int times = 0;
 
 	EventQueue eq;
-	auto hid = eq.add_time_handler(start + 3ms, [&] { FAIL(); });
-
-	eq.add_time_handler(start + 2ms, [&] {
-		EXPECT_LE(start + 2ms, system_clock::now());
-		order += "2";
+	EventQueue::handler_id_t hid = 0;
+	eq.add_time_handler(start + 20us, [&] {
+		++times;
+		EXPECT_LE(start + 20us, system_clock::now());
 		eq.remove_handler(hid);
 
-		eq.add_time_handler(4ms, [&] {
-			EXPECT_LE(start + 4ms, system_clock::now());
-			order += "4";
+		eq.add_time_handler(40us, [&] {
+			++times;
+			EXPECT_LE(start + 40us, system_clock::now());
 		});
 
 		eq.add_ready_handler([&] {
-			EXPECT_LE(start + 2ms, system_clock::now());
-			order += "r";
+			++times;
+			EXPECT_LE(start + 20us, system_clock::now());
 		});
 	});
 
+	hid = eq.add_time_handler(start + 30us, [&] {
+		++times;
+		FAIL();
+	});
+
+	EXPECT_EQ(times, 0);
 	eq.run();
-	EXPECT_EQ(order, "2r4");
+	EXPECT_EQ(times, 3);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -497,7 +495,7 @@ TEST(EventQueue_DeathTest, ready_handler_removes_itself) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(EventQueue, compaction_of_file_handlers_edge_case) {
+TEST(EventQueue, compaction_of_file_handlers_edge_case_regression_test) {
 	EventQueue eq;
 	string order;
 
@@ -521,6 +519,7 @@ TEST(EventQueue, compaction_of_file_handlers_edge_case) {
 		});
 	});
 
+	EXPECT_EQ(order, "");
 	eq.run();
 	EXPECT_EQ(order, "12");
 	eq.run();
@@ -530,22 +529,22 @@ TEST(EventQueue, compaction_of_file_handlers_edge_case) {
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(EventQueue, time_only_fairness) {
 	auto start = system_clock::now();
-	bool stop = false;
+	bool time_handler_run = false;
 
 	EventQueue eq;
-	eq.add_time_handler(start + 2ms, [&] {
-		EXPECT_LE(start + 2ms, system_clock::now());
-		stop = true;
+	eq.add_time_handler(start + 20us, [&] {
+		EXPECT_LE(start + 20us, system_clock::now());
+		time_handler_run = true;
 	});
 
 	uint64_t looper_iters = 0;
 	auto looper = [&](auto&& self) {
-		if (stop) {
+		if (looper_iters > 4 and time_handler_run) {
 			return;
 		}
 
 		++looper_iters;
-		if (system_clock::now() > start + 100ms) {
+		if (system_clock::now() > start + 10s) {
 			FAIL();
 		}
 
@@ -554,8 +553,11 @@ TEST(EventQueue, time_only_fairness) {
 
 	eq.add_ready_handler([&] { looper(looper); });
 
+	EXPECT_EQ(looper_iters, 0);
+	EXPECT_EQ(time_handler_run, false);
 	eq.run();
-	EXPECT_GT(looper_iters, 10);
+	EXPECT_GT(looper_iters, 4);
+	EXPECT_EQ(time_handler_run, true);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -584,6 +586,8 @@ TEST(EventQueue, file_only_fairness) {
 		   ++iters_b;
 	   });
 
+	EXPECT_EQ(iters_a, 0);
+	EXPECT_EQ(iters_b, 0);
 	eq.run();
 	EXPECT_EQ(iters_a, iters_b);
 }
@@ -601,16 +605,17 @@ TEST(EventQueue, time_file_fairness) {
 		}
 
 		++looper_iters;
-		if (system_clock::now() > start + 100ms) {
+		if (system_clock::now() > start + 10s) {
 			FAIL();
 		}
 
 		eq.add_ready_handler(looper);
 	};
 	eq.add_ready_handler(looper);
-	eq.add_time_handler(start + 2ms, [&] {
-		EXPECT_LE(start + 2ms, system_clock::now());
-		stop = true;
+	bool time_handler_run = false;
+	eq.add_time_handler(start + 20us, [&] {
+		EXPECT_LE(start + 20us, system_clock::now());
+		time_handler_run = true;
 	});
 
 	FileDescriptor fd("/dev/zero", O_RDONLY);
@@ -621,7 +626,7 @@ TEST(EventQueue, time_file_fairness) {
 			   return eq.remove_handler(hid);
 		   }
 
-		   if (system_clock::now() > start + 100ms) {
+		   if (system_clock::now() > start + 10s) {
 			   FAIL();
 			   return eq.remove_handler(hid);
 		   }
@@ -629,9 +634,21 @@ TEST(EventQueue, time_file_fairness) {
 		   ++file_iters;
 	   });
 
+	eq.add_repeating_handler(10us, [&] {
+		if (looper_iters > 4 and file_iters > 4 and time_handler_run) {
+			stop = true;
+			return stop_repeating;
+		}
+		return continue_repeating;
+	});
+
+	EXPECT_EQ(looper_iters, 0);
+	EXPECT_EQ(file_iters, 0);
+	EXPECT_EQ(time_handler_run, false);
 	eq.run();
-	EXPECT_GT(looper_iters, 10);
+	EXPECT_GT(looper_iters, 4);
 	EXPECT_GT(file_iters, 4);
+	EXPECT_EQ(time_handler_run, true);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -649,7 +666,7 @@ TEST(EventQueue, full_fairness) {
 			   return eq.remove_handler(file_a_hid);
 		   }
 
-		   if (system_clock::now() > start + 100ms) {
+		   if (system_clock::now() > start + 10s) {
 			   FAIL();
 			   return eq.remove_handler(file_a_hid);
 		   }
@@ -664,7 +681,7 @@ TEST(EventQueue, full_fairness) {
 			   return eq.remove_handler(file_b_hid);
 		   }
 
-		   if (system_clock::now() > start + 100ms) {
+		   if (system_clock::now() > start + 10s) {
 			   FAIL();
 			   return eq.remove_handler(file_b_hid);
 		   }
@@ -679,23 +696,37 @@ TEST(EventQueue, full_fairness) {
 		}
 
 		++looper_iters;
-		if (system_clock::now() > start + 100ms) {
+		if (system_clock::now() > start + 10s) {
 			FAIL();
 		}
 
 		eq.add_ready_handler(looper);
 	};
 	eq.add_ready_handler(looper);
-	eq.add_time_handler(start + 2ms, [&] {
-		EXPECT_LE(start + 2ms, system_clock::now());
-		stop = true;
+	bool time_handler_run = false;
+	eq.add_time_handler(start + 20us, [&] {
+		EXPECT_LE(start + 20us, system_clock::now());
+		time_handler_run = true;
+	});
+	eq.add_repeating_handler(10us, [&] {
+		if (looper_iters > 4 and iters_a > 4 and iters_b > 4 and
+		    time_handler_run) {
+			stop = true;
+			return stop_repeating;
+		}
+		return continue_repeating;
 	});
 
+	EXPECT_EQ(looper_iters, 0);
+	EXPECT_EQ(iters_a, 0);
+	EXPECT_EQ(iters_b, 0);
+	EXPECT_EQ(time_handler_run, false);
 	eq.run();
-	EXPECT_GT(looper_iters, 10);
-	EXPECT_GT(iters_a, 10);
-	EXPECT_GT(iters_b, 10);
+	EXPECT_GT(looper_iters, 4);
+	EXPECT_GT(iters_a, 4);
+	EXPECT_GT(iters_b, 4);
 	EXPECT_NEAR(iters_a, iters_b, 1);
+	EXPECT_EQ(time_handler_run, true);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -708,9 +739,8 @@ TEST(EventQueue, file_unready_read_and_close_event) {
 
 	EventQueue eq;
 	auto start = system_clock::now();
-	eq.add_time_handler(start + 2ms,
+	eq.add_time_handler(start + 20us,
 	                    [&] { write(wfd, "Test", sizeof("Test")); });
-	eq.add_time_handler(start + 3ms, [&] { (void)wfd.close(); });
 
 	EXPECT_EQ(read(rfd, buff.data(), buff.size()), -1);
 	EXPECT_EQ(errno, EAGAIN);
@@ -719,6 +749,7 @@ TEST(EventQueue, file_unready_read_and_close_event) {
 	std::array expected_events = {FileEvent::READABLE, FileEvent::CLOSED};
 	EventQueue::handler_id_t hid =
 	   eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
+		   eq.add_ready_handler([&] { (void)wfd.close(); });
 		   EXPECT_EQ(events, expected_events[round++]);
 		   if (events == FileEvent::CLOSED) {
 			   return eq.remove_handler(hid);
@@ -730,6 +761,7 @@ TEST(EventQueue, file_unready_read_and_close_event) {
 		   ASSERT_EQ(buff, "Test");
 	   });
 
+	EXPECT_EQ(round, 0);
 	eq.run();
 	EXPECT_EQ(round, 2);
 }
@@ -743,14 +775,18 @@ TEST(EventQueue, file_simultaneous_read_and_close_event) {
 	write(wfd, "Test", sizeof("Test"));
 	(void)wfd.close();
 
+	int times = 0;
 	EventQueue eq;
 	EventQueue::handler_id_t hid =
 	   eq.add_file_handler(rfd, FileEvent::READABLE, [&](FileEvent events) {
+		   ++times;
 		   EXPECT_EQ(events, FileEvent::READABLE | FileEvent::CLOSED);
 		   eq.remove_handler(hid);
 	   });
 
+	EXPECT_EQ(times, 0);
 	eq.run();
+	EXPECT_EQ(times, 1);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -758,11 +794,12 @@ TEST(EventQueueDeathTest, time_handler_removing_itself) {
 	auto start = system_clock::now();
 	EventQueue eq;
 	int iters = 0;
-	EventQueue::handler_id_t hid = eq.add_time_handler(start + 1ms, [&] {
+	EventQueue::handler_id_t hid = eq.add_time_handler(start + 10us, [&] {
 		++iters;
 		ASSERT_DEATH({ eq.remove_handler(hid); }, "");
 	});
 
+	EXPECT_EQ(iters, 0);
 	eq.run();
 	EXPECT_EQ(iters, 1);
 }
@@ -778,22 +815,29 @@ TEST(EventQueue, file_handler_removing_itself) {
 		   eq.remove_handler(hid);
 	   });
 
+	EXPECT_EQ(iters, 0);
 	eq.run();
 	EXPECT_EQ(iters, 1);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(EventQueue, time_handler_removing_file_handler_simple) {
+TEST(EventQueue, time_handler_removing_file_handler) {
 	FileDescriptor fd("/dev/null", O_RDONLY);
 	EventQueue eq;
 	int iters = 0;
 	auto hid = eq.add_file_handler(fd, FileEvent::READABLE, [&] { ++iters; });
 
-	eq.add_time_handler(system_clock::now() + 1ms,
-	                    [&] { eq.remove_handler(hid); });
+	eq.add_repeating_handler(10us, [&] {
+		if (iters > 4) {
+			eq.remove_handler(hid);
+			return stop_repeating;
+		}
+		return continue_repeating;
+	});
 
+	EXPECT_EQ(iters, 0);
 	eq.run();
-	EXPECT_GT(iters, 10);
+	EXPECT_GT(iters, 4);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -812,7 +856,9 @@ TEST(EventQueue,
 			eq.remove_handler(hid_b);
 		});
 
-		std::this_thread::sleep_for(1ms);
+		std::this_thread::sleep_for(
+		   1ms); // Makes the time quantum of file handlers expire, so that time
+		         // handlers are processed just after this handler finishes
 		eq.remove_handler(hid_a);
 	});
 
@@ -821,6 +867,8 @@ TEST(EventQueue,
 		eq.remove_handler(hid_b); // In case of error
 	});
 
+	EXPECT_EQ(iters_a, 0);
+	EXPECT_EQ(iters_b, 0);
 	eq.run();
 	EXPECT_EQ(iters_a, 1);
 	EXPECT_EQ(iters_b, 0);
@@ -847,35 +895,39 @@ TEST(EventQueue, file_handler_removing_other_file_handler) {
 
 	hid_b = eq.add_file_handler(fd, FileEvent::READABLE, [&] {
 		++iters_b;
-		assert(iters_b < 1000); // In case of error
+		ASSERT_LT(iters_b, 1000); // In case of error
 	});
 
 	hid_c = eq.add_file_handler(fd, FileEvent::READABLE, [&] {
 		++iters_c;
-		assert(iters_c < 1000); // In case of error
+		ASSERT_LT(iters_c, 1000); // In case of error
 	});
 
 	hid_d = eq.add_file_handler(fd, FileEvent::READABLE, [&] {
 		++iters_d;
 		if (iters_d == 1) {
 			eq.remove_handler(hid_c);
+		} else if (iters_d == 2) {
+			eq.add_ready_handler([&] {
+				eq.remove_handler(hid_a);
+				eq.remove_handler(hid_d);
+			});
 		}
 	});
 
-	eq.add_time_handler(system_clock::now() + 1ms, [&] {
-		eq.remove_handler(hid_a);
-		eq.remove_handler(hid_d);
-	});
-
+	EXPECT_EQ(iters_a, 0);
+	EXPECT_EQ(iters_b, 0);
+	EXPECT_EQ(iters_c, 0);
+	EXPECT_EQ(iters_d, 0);
 	eq.run();
-	EXPECT_GT(iters_a, 4);
+	EXPECT_GT(iters_a, 1);
 	EXPECT_EQ(iters_b, 0);
 	EXPECT_EQ(iters_c, 1);
-	EXPECT_GT(iters_d, 4);
+	EXPECT_GE(iters_d, 2);
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(EventQueue, test_adding_new_file_handlers_after_removing_old_ones) {
+TEST(EventQueue, adding_new_file_handlers_after_removing_old_ones) {
 	FileDescriptor fd("/dev/null", O_RDONLY);
 	vector<EventQueue::handler_id_t> hids;
 	vector<int> iters;
@@ -898,8 +950,10 @@ TEST(EventQueue, test_adding_new_file_handlers_after_removing_old_ones) {
 		});
 	}
 
+	EXPECT_EQ(size(iters), 0);
+	EXPECT_EQ(size(hids), 0);
 	eq.run();
-	assert(size(iters) == size(hids));
+	EXPECT_EQ(size(iters), size(hids));
 	for (size_t i = 0; i < size(iters); ++i) {
 		EXPECT_EQ(iters[i], 1) << "i: " << i;
 	}
@@ -909,55 +963,65 @@ TEST(EventQueue, test_adding_new_file_handlers_after_removing_old_ones) {
 TEST(EventQueue, move_constructor_and_move_operator) {
 	EventQueue eq;
 	string order;
-	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
-		order += '1';
-		++iter;
-		return iter == 5 ? stop_repeating : continue_repeating;
+	int run = 0;
+	array iters_a = {0, 0};
+	array iters_b = {0, 0};
+	eq.add_repeating_handler(10us, [&] {
+		++iters_a[run];
+		return iters_a[1] == 5 ? stop_repeating : continue_repeating;
 	});
-	eq.add_repeating_handler(100us, [&, iter = 0]() mutable {
-		order += '2';
-		++iter;
-		if (iter == 2) {
-			order += 'S';
-			eq.pause_immediately();
-			eq.add_ready_handler([&] { order += 'r'; });
-		}
-		return iter == 3 ? stop_repeating : continue_repeating;
+	eq.add_repeating_handler(20us, [&] {
+		++iters_b[run];
+		return iters_b[1] == 3 ? stop_repeating : continue_repeating;
 	});
 
 	int times_pipe_was_read = 0;
 	std::array<int, 2> pfd{};
-	if (pipe2(pfd.data(), O_CLOEXEC)) {
-		THROW("pipe2()", errmsg());
-	}
+	ASSERT_EQ(pipe2(pfd.data(), O_CLOEXEC), 0);
 	Defer guard = [&pfd] {
 		for (int fd : pfd) {
 			(void)close(fd);
 		}
 	};
-	// File handler that will read twice: before and after pause
+	// File handler that will read twice: before and after the pause
 	EventQueue::handler_id_t fhid = 0;
 	fhid = eq.add_file_handler(pfd[0], FileEvent::READABLE, [&]() {
 		std::array<char, 2> buf{};
-		int rc = read(pfd[0], buf.data(), buf.size());
-		assert(rc == 1);
+		ASSERT_EQ(read(pfd[0], buf.data(), buf.size()), 1);
 		if (++times_pipe_was_read == 2) {
 			eq.remove_handler(fhid);
 		}
 	});
-	int rc = write(pfd[1], "x", 1);
-	assert(rc == 1);
+	ASSERT_EQ(write(pfd[1], "x", 1), 1);
 
+	eq.add_repeating_handler(100us, [&] {
+		if (iters_a[0] > 5 and iters_b[0] > 3 and times_pipe_was_read > 0) {
+			eq.pause_immediately();
+			return stop_repeating;
+		}
+		return continue_repeating;
+	});
+
+	EXPECT_EQ(iters_a, (array{0, 0}));
+	EXPECT_EQ(iters_b, (array{0, 0}));
 	eq.run();
+	EXPECT_GT(iters_a[0], 5);
+	EXPECT_GT(iters_b[0], 3);
 	EXPECT_EQ(times_pipe_was_read, 1);
-
+	// Move eq around
+	bool r1 = false;
+	bool r2 = false;
+	eq.add_ready_handler([&] { r1 = true; });
 	EventQueue other = std::move(eq);
-	other.add_ready_handler([&] { order += 'r'; });
+	other.add_ready_handler([&] { r2 = true; });
 	eq = std::move(other);
-
-	rc = write(pfd[1], "y", 1);
-	assert(rc == 1);
+	// Second run
+	ASSERT_EQ(write(pfd[1], "y", 1), 1);
+	run = 1;
 	eq.run();
+	EXPECT_EQ(iters_a[1], 5);
+	EXPECT_EQ(iters_b[1], 3);
 	EXPECT_EQ(times_pipe_was_read, 2);
-	EXPECT_EQ(order, "1212Srr1211");
+	EXPECT_EQ(r1, true);
+	EXPECT_EQ(r2, true);
 }
