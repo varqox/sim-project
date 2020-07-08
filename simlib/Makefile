@@ -25,6 +25,7 @@ $(eval $(call add_static_library, $(PREFIX)gtest_main.a, $(GOOGLETEST_FLAGS), \
 $(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/aho_corasick.cc \
 	$(PREFIX)src/config_file.cc \
+	$(PREFIX)src/event_queue.c \
 	$(PREFIX)src/file_contents.cc \
 	$(PREFIX)src/file_manip.cc \
 	$(PREFIX)src/http/response.cc \
