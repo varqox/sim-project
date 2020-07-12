@@ -9,7 +9,7 @@
  */
 class Sipfile {
 public:
-	std::chrono::nanoseconds default_time_limit;
+	std::chrono::nanoseconds default_time_limit{};
 
 	struct GenTest {
 		InplaceBuff<16> name;
@@ -39,7 +39,7 @@ public:
 	 *
 	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
-	Sipfile(std::string sipfile_contents) {
+	explicit Sipfile(std::string sipfile_contents) {
 		config.add_vars("default_time_limit", "static", "gen");
 		config.load_config_from_string(std::move(sipfile_contents));
 	}

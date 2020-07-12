@@ -17,12 +17,12 @@ using std::not_fn;
 // some template meta-programming code that concentrates string literals. Also,
 // the macros are used only locally, so after all, they are not so evil...)
 #define CHECK_IF_ARR(var, name)                                                \
-	if (!var.is_array() && var.is_set()) {                                     \
+	if (!(var).is_array() && (var).is_set()) {                                 \
 		throw SipError("Sipfile: variable `" name "` has to be"                \
 		               " specified as an array");                              \
 	}
 #define CHECK_IF_NOT_ARR(var, name)                                            \
-	if (var.is_array()) {                                                      \
+	if ((var).is_array()) {                                                    \
 		throw SipError("Sipfile: variable `" name "` cannot be"                \
 		               " specified as an array");                              \
 	}
@@ -33,15 +33,18 @@ void Sipfile::load_default_time_limit() {
 	auto&& dtl = config["default_time_limit"];
 	CHECK_IF_NOT_ARR(dtl, "default_time_limit");
 
-	if (dtl.as_string().empty())
+	if (dtl.as_string().empty()) {
 		throw SipError("Sipfile: missing default_time_limit");
+	}
 
-	if (!is_real(dtl.as_string()))
+	if (!is_real(dtl.as_string())) {
 		throw SipError("Sipfile: invalid default time limit");
+	}
 
 	double tl = stod(dtl.as_string());
-	if (tl <= 0)
+	if (tl <= 0) {
 		throw SipError("Sipfile: default time limit has to be grater than 0");
+	}
 
 	using std::chrono::duration;
 	using std::chrono::duration_cast;
@@ -67,8 +70,9 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 		return;
 	}
 
-	if (hypen + 1 == test_range.size())
+	if (hypen + 1 == test_range.size()) {
 		throw SipError("invalid test range (trailing hypen): ", test_range);
+	}
 
 	StringView begin = test_range.substring(0, hypen);
 	StringView end = test_range.substring(hypen + 1);
@@ -97,7 +101,7 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 	}
 
 	uint64_t begin_gid = begin_gid_opt.value();
-	uint64_t end_gid;
+	uint64_t end_gid = 0;
 
 	if (end_test.gid.empty()) { // Allow e.g. 4a-d
 		end_gid = begin_gid;
@@ -115,8 +119,9 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 	std::string end_tid = to_lower(end_test.tid.to_string());
 
 	// Allow e.g. 4-8c
-	if (begin_tid.empty())
+	if (begin_tid.empty()) {
 		begin_tid = end_tid;
+	}
 
 	if (begin_tid.size() != end_tid.size()) {
 		throw SipError("invalid test range (test IDs have different length): ",
@@ -144,9 +149,11 @@ static void for_each_test_in_range(StringView test_range, Func&& callback) {
 		}
 	};
 
-	for (auto gid = begin_gid; gid <= end_gid; ++gid)
-		for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid))
+	for (auto gid = begin_gid; gid <= end_gid; ++gid) {
+		for (InplaceBuff<8> tid(begin_tid); tid <= end_tid; inc_tid(tid)) {
 			callback(intentional_unsafe_string_view(concat(prefix, gid, tid)));
+		}
+	}
 }
 
 void Sipfile::load_static_tests() {
@@ -184,8 +191,9 @@ matching_generator(StringView pattern,
 	STACK_UNWINDING_MARK;
 
 	// Generators specified by path always match
-	if (pkg_contents.exists(pattern))
+	if (pkg_contents.exists(pattern)) {
 		return InplaceBuff<32>(pattern);
+	}
 
 	std::optional<StringView> res;
 	pkg_contents.for_each_with_prefix("utils/", [&](StringView file) {
@@ -200,8 +208,9 @@ matching_generator(StringView pattern,
 		}
 	});
 
-	if (res.has_value())
+	if (res.has_value()) {
 		return InplaceBuff<32>(*res);
+	}
 
 	log_warning(
 	   "Sipfile (gen): no file in utils/ matches specified generator: `",

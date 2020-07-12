@@ -49,8 +49,9 @@ std::chrono::nanoseconds SipPackage::get_default_time_limit() {
 void SipPackage::prepare_tests_files() {
 	STACK_UNWINDING_MARK;
 
-	if (tests_files.has_value())
+	if (tests_files.has_value()) {
 		return;
+	}
 
 	tests_files = TestsFiles();
 }
@@ -58,8 +59,9 @@ void SipPackage::prepare_tests_files() {
 void SipPackage::prepare_judge_worker() {
 	STACK_UNWINDING_MARK;
 
-	if (jworker.has_value())
+	if (jworker.has_value()) {
 		return;
+	}
 
 	jworker = sim::JudgeWorker();
 	jworker.value().checker_time_limit = CHECKER_TIME_LIMIT;
@@ -74,8 +76,9 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
 	STACK_UNWINDING_MARK;
 
 	auto generator([&] {
-		if (has_prefix(test.generator, "sh:"))
+		if (has_prefix(test.generator, "sh:")) {
 			return concat(substring(test.generator, 3));
+		}
 
 		if (sim::filename_to_lang(test.generator) ==
 		    sim::SolutionLanguage::UNKNOWN) {
@@ -155,8 +158,9 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
 		// RTE
 		res.status = sim::JudgeReport::Test::RTE;
 		res.comment = "Runtime error";
-		if (es.message.size())
+		if (!es.message.empty()) {
 			back_insert(res.comment, " (", es.message, ')');
+		}
 	}
 
 	// Move cursor back to the beginning of the line
@@ -200,18 +204,20 @@ void SipPackage::generate_test_input_files() {
 
 	stdlog("\033[1;36mGenerating input files...\033[m");
 
-	if (access("Sipfile", F_OK) != 0)
+	if (access("Sipfile", F_OK) != 0) {
 		throw SipError("No Sipfile was found");
+	}
 
 	sipfile.load_static_tests();
 	sipfile.load_gen_tests();
 
 	// Check for tests that are both static and generated
 	sipfile.static_tests.for_each([&](StringView test) {
-		if (sipfile.gen_tests.find(test))
+		if (sipfile.gen_tests.find(test)) {
 			log_warning("test `", test,
 			            "` is specified as static and as generated - treating "
 			            "it as generated");
+		}
 	});
 
 	prepare_tests_files();
@@ -276,8 +282,9 @@ void SipPackage::generate_test_input_files() {
 void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 	STACK_UNWINDING_MARK;
 
-	if (access("Simfile", F_OK) != 0)
+	if (access("Simfile", F_OK) != 0) {
 		return; // Nothing to do (no Simfile)
+	}
 
 	prepare_tests_files();
 
@@ -288,8 +295,9 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 		StringView test_name =
 		   StringView(entry).extract_leading(std::not_fn(is_space<char>));
 		auto it = tests_files->tests.find(test_name);
-		if (not it or not it->second.in.has_value())
+		if (not it or not it->second.in.has_value()) {
 			continue;
+		}
 
 		new_limits.emplace_back(entry);
 	}
@@ -343,19 +351,22 @@ void SipPackage::generate_test_output_files() {
 	tests_files = std::nullopt; // New .out files may have been created
 
 	rebuild_full_simfile(true);
-	if (full_simfile.solutions.empty())
+	if (full_simfile.solutions.empty()) {
 		throw SipError("no main solution was found");
+	}
 
 	compile_solution(full_simfile.solutions.front());
 
 	// Generate .out files and construct judge reports for adjusting time limits
-	sim::JudgeReport jrep1, jrep2;
+	sim::JudgeReport jrep1;
+	sim::JudgeReport jrep2;
 	SipJudgeLogger logger;
 	logger.begin(false);
 	for (auto const& group : full_simfile.tgroups) {
 		auto p = sim::Simfile::TestNameComparator::split(group.tests[0].name);
-		if (p.gid != "0")
+		if (p.gid != "0") {
 			logger.begin(true); // Assumption: initial tests come as first
+		}
 
 		auto& rep = (p.gid != "0" ? jrep2 : jrep1);
 		rep.groups.emplace_back();
@@ -382,9 +393,11 @@ void SipPackage::judge_solution(StringView solution) {
 	// For the main solution, default time limits are used
 	if (solution == full_simfile.solutions.front()) {
 		auto default_time_limit = get_default_time_limit();
-		for (auto& tgroup : full_simfile.tgroups)
-			for (auto& test : tgroup.tests)
+		for (auto& tgroup : full_simfile.tgroups) {
+			for (auto& test : tgroup.tests) {
 				test.time_limit = default_time_limit;
+			}
+		}
 
 		jworker = std::nullopt; // Time limits have changed
 	}
@@ -413,8 +426,9 @@ void SipPackage::compile_solution(StringView solution) {
 
 	prepare_judge_worker();
 	stdlog("\033[1;34m", solution, "\033[m:");
-	if (CompilationCache::is_cached(solution))
+	if (CompilationCache::is_cached(solution)) {
 		stdlog("Solution is already compiled.");
+	}
 
 	CompilationCache::load_solution(jworker.value(), solution);
 }
@@ -428,8 +442,9 @@ void SipPackage::compile_checker() {
 
 static bool is_elf_file(FilePath path) noexcept {
 	FileDescriptor fd(path, O_RDONLY);
-	if (not fd.is_open())
+	if (not fd.is_open()) {
 		return false;
+	}
 
 	constexpr StringView ELF_MAGIC = "\x7F"
 	                                 "ELF";
@@ -451,8 +466,9 @@ static void remove_elf_files_and_empty_dirs() {
 			if (is_dir) {
 				path.append('/');
 				bool empty = self(self);
-				if (not empty != 0 or rmdir(FilePath(path)))
+				if (not empty != 0 or rmdir(FilePath(path))) {
 					is_curr_dir_empty = false;
+				}
 			} else if (not is_elf_file(path) or unlink(path)) {
 				is_curr_dir_empty = false;
 			}
@@ -470,8 +486,9 @@ void SipPackage::clean() {
 	stdlog("Cleaning...").flush_no_nl();
 
 	CompilationCache::clear();
-	if (remove_r("utils/latex/") and errno != ENOENT)
+	if (remove_r("utils/latex/") and errno != ENOENT) {
 		THROW("remove_r()", errmsg());
+	}
 
 	remove_elf_files_and_empty_dirs();
 	stdlog(" done.");
@@ -487,14 +504,16 @@ void SipPackage::remove_generated_test_files() {
 	// Remove generated .in files
 	sipfile.gen_tests.for_each([&](auto const& test) {
 		auto it = tests_files->tests.find(test.name);
-		if (it and it->second.in.has_value())
+		if (it and it->second.in.has_value()) {
 			(void)remove(it->second.in.value().to_string());
+		}
 	});
 
 	// Remove generated .out files
 	tests_files->tests.for_each([](auto const& p) {
-		if (p.second.in.has_value() and p.second.out.has_value())
+		if (p.second.in.has_value() and p.second.out.has_value()) {
 			(void)remove(p.second.out.value().to_string());
+		}
 	});
 
 	stdlog(" done.");
@@ -503,8 +522,9 @@ void SipPackage::remove_generated_test_files() {
 void SipPackage::remove_test_files_not_specified_in_sipfile() {
 	STACK_UNWINDING_MARK;
 
-	if (access("Sipfile", F_OK) != 0)
+	if (access("Sipfile", F_OK) != 0) {
 		throw SipError("No Sipfile was found");
+	}
 
 	sipfile.load_static_tests();
 	sipfile.load_gen_tests();
@@ -517,13 +537,16 @@ void SipPackage::remove_test_files_not_specified_in_sipfile() {
 	tests_files->tests.for_each([&](auto const& p) {
 		bool is_static = sipfile.static_tests.find(p.first);
 		bool is_generated = sipfile.gen_tests.find(p.first);
-		if (is_static or is_generated)
+		if (is_static or is_generated) {
 			return;
+		}
 
-		if (p.second.in.has_value())
+		if (p.second.in.has_value()) {
 			(void)remove(concat(p.second.in.value()));
-		if (p.second.out.has_value())
+		}
+		if (p.second.out.has_value()) {
 			(void)remove(concat(p.second.out.value()));
+		}
 	});
 
 	tests_files = std::nullopt; // Probably some test files were just removed
@@ -577,19 +600,23 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 
 	// Filter out every line except warnings
 	StringView report = conver.report();
-	size_t line_beg = 0, line_end = report.find('\n');
+	size_t line_beg = 0;
+	size_t line_end = report.find('\n');
 	size_t next_warning = report.find("warning");
 	while (next_warning != StringView::npos) {
-		if (next_warning < line_end)
+		if (next_warning < line_end) {
 			stdlog(report.substring(line_beg, line_end));
+		}
 
-		if (line_end == StringView::npos or line_end + 1 == report.size())
+		if (line_end == StringView::npos or line_end + 1 == report.size()) {
 			break;
+		}
 
 		line_beg = line_end + 1;
 		line_end = report.find('\n', line_beg);
-		if (next_warning < line_beg)
+		if (next_warning < line_beg) {
 			next_warning = report.find(line_beg, "warning");
+		}
 	}
 
 	// Ignore the need for the model solution to set the time limits - the
@@ -697,8 +724,9 @@ static void watch_tex_files(const set<string>& tex_files) {
 	using namespace std::chrono_literals;
 
 	FileModificationMonitor monitor;
-	for (auto& path : tex_files)
-		monitor.add_path(std::move(path), 10ms);
+	for (auto& path : tex_files) {
+		monitor.add_path(path, 10ms);
+	}
 
 	monitor.set_add_missing_files_retry_period(50ms);
 	monitor.set_watching_log(std::make_unique<SipWatchingLog>());
@@ -727,15 +755,17 @@ void SipPackage::compile_tex_files(ArgvParser args, bool watch) {
 		               errmsg(), ')');
 	}
 
-	for (auto const& file : tex_files)
+	for (auto const& file : tex_files) {
 		compile_tex_file(file);
+	}
 
-	if (watch)
+	if (watch) {
 		watch_tex_files(tex_files);
+	}
 }
 
-void progress_callback(zip_t*, double p, void*) {
-	using namespace std::chrono;
+void progress_callback(zip_t* /*unused*/, double p, void* /*unused*/) {
+	using std::chrono::duration;
 	stdlog("\033[2K\033[GZipping... Progress: ",
 	       to_string(duration<int, std::deci>(int(p * 1e3)), false), '%')
 	   .flush_no_nl();
@@ -758,10 +788,11 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
 		pkg.load_from_directory(".");
 		pkg.for_each_with_prefix("", [&](StringView path) {
 			auto name = concat(dest_file, '/', path);
-			if (name.back() == '/')
+			if (name.back() == '/') {
 				zip.dir_add(name);
-			else
+			} else {
 				zip.file_add(name, zip.source_file(concat(path)));
+			}
 		});
 
 		zip.close();
@@ -777,7 +808,7 @@ void SipPackage::replace_variable_in_configfile(
 	STACK_UNWINDING_MARK;
 
 	std::ofstream out(configfile_path.data());
-	auto var = cf.get_var(var_name);
+	const auto& var = cf.get_var(var_name);
 	if (var.is_set()) {
 		auto val_span = var.value_span();
 		StringView before = configfile_contents.substring(0, val_span.beg);
@@ -787,35 +818,40 @@ void SipPackage::replace_variable_in_configfile(
 			// Remove remaining variable declaration
 			before.remove_trailing([](char c) { return (c != '\n'); });
 			// Remove line if empty
-			if (has_prefix(after, "\n"))
+			if (has_prefix(after, "\n")) {
 				after.extract_prefix(1);
+			}
 
 			out << before << after;
 			return;
 		}
 
 		// Replace current variable value
-		if (escape_replacement)
+		if (escape_replacement) {
 			out << before << ConfigFile::escape_string(*replacement) << after;
-		else
+		} else {
 			out << before << *replacement << after;
+		}
 
 		return;
 	}
 
 	// New variable
 	out << configfile_contents;
-	if (not replacement)
+	if (not replacement) {
 		return;
+	}
 
-	if (not has_suffix(configfile_contents, "\n"))
+	if (not has_suffix(configfile_contents, "\n")) {
 		out << '\n';
+	}
 
 	out << var_name << ": ";
-	if (escape_replacement)
+	if (escape_replacement) {
 		out << ConfigFile::escape_string(*replacement);
-	else
+	} else {
 		out << *replacement;
+	}
 	out << '\n';
 }
 
@@ -830,14 +866,15 @@ void SipPackage::replace_variable_in_configfile(
 		out << "[";
 		if (not replacement.empty()) {
 			out << "\n\t" << ConfigFile::escape_string(replacement[0]);
-			for (uint i = 1; i < replacement.size(); ++i)
+			for (uint i = 1; i < replacement.size(); ++i) {
 				out << ",\n\t" << ConfigFile::escape_string(replacement[i]);
+			}
 			out << '\n';
 		}
 		out << ']';
 	};
 
-	auto var = cf.get_var(var_name);
+	const auto& var = cf.get_var(var_name);
 	if (var.is_set()) {
 		auto val_span = var.value_span();
 		StringView before = configfile_contents.substring(0, val_span.beg);
@@ -849,8 +886,9 @@ void SipPackage::replace_variable_in_configfile(
 
 	} else {
 		out << configfile_contents;
-		if (not has_suffix(configfile_contents, "\n"))
+		if (not has_suffix(configfile_contents, "\n")) {
 			out << '\n';
+		}
 
 		out << var_name << ": ";
 		print_replacement();
@@ -988,10 +1026,11 @@ void SipPackage::create_default_simfile(
 
 		// Memory limit
 		constexpr char mem_limit_var_name[] = "memory_limit";
-		if (not simfile.config_file().get_var(mem_limit_var_name).is_set())
+		if (not simfile.config_file().get_var(mem_limit_var_name).is_set()) {
 			replace_variable_in_simfile(
 			   mem_limit_var_name,
 			   intentional_unsafe_string_view(to_string(DEFAULT_MEMORY_LIMIT)));
+		}
 
 	} else if (problem_name.has_value()) {
 		put_file_contents(

@@ -10,21 +10,21 @@
 #include <unistd.h>
 
 static auto user_templates_dir() {
-	std::array<char, 1 << 16> buff;
-	struct passwd store;
-	struct passwd* pw;
-	if (getpwuid_r(getuid(), &store, buff.data(), buff.size(), &pw))
+	std::array<char, 1 << 16> buff{};
+	struct passwd store {};
+	struct passwd* pw = nullptr;
+	if (getpwuid_r(getuid(), &store, buff.data(), buff.size(), &pw)) {
 		THROW("getpwuid_r()", errmsg());
+	}
 
-	if (not pw)
+	if (not pw) {
 		THROW("getpwuid_r() says you have no passwd record");
+	}
 
 	return concat<PATH_MAX>(pw->pw_dir, "/.config/sip/templates/");
 }
 
-using std::get;
 using std::optional;
-using std::pair;
 using std::string;
 
 extern "C" {
@@ -45,10 +45,12 @@ static string get_template(StringView template_name,
 	FileDescriptor fd(intentional_unsafe_cstring_view(
 	                     concat<PATH_MAX>(templates_dir, template_name)),
 	                  O_RDONLY);
-	if (fd.is_open())
+	if (fd.is_open()) {
 		return get_file_contents(fd);
+	}
 
-	return {(const char*)default_template, default_template_len};
+	return {reinterpret_cast<const char*>(default_template),
+	        default_template_len};
 }
 
 template <class... Subst>
@@ -66,8 +68,9 @@ static string replace(StringView text, Subst&&... substitutions) {
 			return false;
 		};
 
-		if (not(try_replace(substitutions) or ...))
+		if (not(try_replace(substitutions) or ...)) {
 			res += text[i];
+		}
 	}
 
 	return res;
@@ -78,10 +81,10 @@ namespace templates {
 string statement_tex(StringView problem_name, optional<uint64_t> memory_limit) {
 	string full_template_str =
 	   get_template("statement.tex", ::statement_tex, statement_tex_len);
-	return replace(
-	   full_template_str, pair("<<<name>>>", problem_name),
-	   pair("<<<mem>>>",
-	        (memory_limit ? concat(*memory_limit >> 20, " MiB") : concat())));
+	return replace(full_template_str, std::pair("<<<name>>>", problem_name),
+	               std::pair("<<<mem>>>",
+	                         (memory_limit ? concat(*memory_limit >> 20, " MiB")
+	                                       : concat())));
 }
 
 string checker_cc() {

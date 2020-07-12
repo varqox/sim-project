@@ -15,16 +15,19 @@ constexpr const char DEFAULT_CHECKER_PATH[] = "default_checker";
 bool SipPackage::CompilationCache::is_cached(StringView path) {
 	STACK_UNWINDING_MARK;
 
-	struct stat64 path_stat, cached_stat;
+	struct stat64 path_stat {};
+	struct stat64 cached_stat {};
 	if (stat64(FilePath(cached_path(path)), &cached_stat)) {
-		if (errno == ENOENT)
+		if (errno == ENOENT) {
 			return false; // File does not exist
+		}
 
 		THROW("stat64()", errmsg());
 	}
 
-	if (stat64(FilePath(concat(path)), &path_stat))
+	if (stat64(FilePath(concat(path)), &path_stat)) {
 		THROW("stat64()", errmsg());
+	}
 
 	// The cached file cannot be older than the source file
 	return (path_stat.st_mtime <= cached_stat.st_mtime);
@@ -33,28 +36,32 @@ bool SipPackage::CompilationCache::is_cached(StringView path) {
 void SipPackage::CompilationCache::clear() {
 	STACK_UNWINDING_MARK;
 
-	if (remove_r("utils/cache/") and errno != ENOENT)
+	if (remove_r("utils/cache/") and errno != ENOENT) {
 		THROW("remove_r()", errmsg());
+	}
 }
 
 void cache_proot(FilePath dest_file) {
 	STACK_UNWINDING_MARK;
 
-	if (access(dest_file, F_OK) == 0)
+	if (access(dest_file, F_OK) == 0) {
 		return;
+	}
 
-	if (create_subdirectories(dest_file.to_cstr()) == -1)
+	if (create_subdirectories(dest_file.to_cstr()) == -1) {
 		throw SipError("create_subdirectories(", dest_file, ')', errmsg());
+	}
 
-	put_file_contents(dest_file, (const char*)proot_dump, proot_dump_len,
-	                  S_0700);
+	put_file_contents(dest_file, reinterpret_cast<const char*>(proot_dump),
+	                  proot_dump_len, S_0700);
 }
 
 decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
 	STACK_UNWINDING_MARK;
 
-	if (is_cached(source))
+	if (is_cached(source)) {
 		return cached_path(source);
+	}
 
 	cache_proot(cached_path(PROOT_PATH));
 
@@ -74,8 +81,9 @@ decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
 
 	stdlog(" done.");
 	auto cached_exec = cached_path(source);
-	if (create_subdirectories(cached_exec) == -1)
+	if (create_subdirectories(cached_exec) == -1) {
 		throw SipError("create_subdirectories(", cached_exec, ')', errmsg());
+	}
 
 	jworker.save_compiled_solution(cached_exec);
 	return cached_exec;
@@ -86,11 +94,13 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 
 	auto cached_default_checker = cached_path(DEFAULT_CHECKER_PATH);
 	auto const& checker = jworker.simfile().checker;
-	if (not checker.has_value() and access(cached_default_checker, F_OK) == 0)
+	if (not checker.has_value() and access(cached_default_checker, F_OK) == 0) {
 		return jworker.load_compiled_checker(cached_default_checker);
+	}
 
-	if (checker.has_value() and is_cached(checker.value()))
+	if (checker.has_value() and is_cached(checker.value())) {
 		return jworker.load_compiled_checker(cached_path(checker.value()));
+	}
 
 	cache_proot(cached_path(PROOT_PATH));
 
@@ -109,8 +119,9 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 	stdlog(" done.");
 	auto cached_exec = (checker.has_value() ? cached_path(checker.value())
 	                                        : cached_default_checker);
-	if (create_subdirectories(cached_exec) == -1)
+	if (create_subdirectories(cached_exec) == -1) {
 		throw SipError("create_subdirectories(", cached_exec, ')', errmsg());
+	}
 
 	jworker.save_compiled_checker(cached_exec);
 }

@@ -17,8 +17,9 @@ void checker(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto checker = args.extract_next();
-		if (not checker.empty() and access(checker, F_OK) != 0)
+		if (not checker.empty() and access(checker, F_OK) != 0) {
 			throw SipError("checker: ", checker, " does not exist");
+		}
 
 		sp.replace_variable_in_simfile("checker", checker);
 	}
@@ -29,64 +30,64 @@ void checker(ArgvParser args) {
 
 void clean(ArgvParser args) {
 	STACK_UNWINDING_MARK;
-	SipPackage sp;
-	sp.clean();
+	SipPackage::clean();
 
+	SipPackage sp;
 	while (args.size() > 0) {
 		auto arg = args.extract_next();
-		if (arg == "tests")
+		if (arg == "tests") {
 			sp.remove_generated_test_files();
-		else
+		} else {
 			throw SipError("clean: unrecognized argument: ", arg);
+		}
 	}
 }
 
 void doc(ArgvParser args) {
 	STACK_UNWINDING_MARK;
-
-	SipPackage sp;
-	sp.compile_tex_files(std::move(args), false);
+	SipPackage::compile_tex_files(args, false);
 }
 
 void docwatch(ArgvParser args) {
 	STACK_UNWINDING_MARK;
-
-	SipPackage sp;
-	sp.compile_tex_files(std::move(args), true);
+	SipPackage::compile_tex_files(args, true);
 }
 
-void genin(ArgvParser) {
+void genin(ArgvParser /*unused*/) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
 	sp.generate_test_input_files();
 }
 
-void genout(ArgvParser) {
+void genout(ArgvParser /*unused*/) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
 	sp.generate_test_output_files();
 
-	if (access("Simfile", F_OK) == 0)
+	if (access("Simfile", F_OK) == 0) {
 		sp.save_limits();
+	}
 }
 
-void gen(ArgvParser) {
+void gen(ArgvParser /*unused*/) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
 	sp.generate_test_input_files();
 
 	sp.simfile.load_interactive();
-	if (not sp.simfile.interactive)
+	if (not sp.simfile.interactive) {
 		sp.generate_test_output_files();
+	}
 
-	if (access("Simfile", F_OK) == 0)
+	if (access("Simfile", F_OK) == 0) {
 		sp.save_limits();
+	}
 }
 
-void regenin(ArgvParser) {
+void regenin(ArgvParser /*unused*/) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -94,7 +95,7 @@ void regenin(ArgvParser) {
 	sp.generate_test_input_files();
 }
 
-void regen(ArgvParser) {
+void regen(ArgvParser /*unused*/) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -102,18 +103,21 @@ void regen(ArgvParser) {
 	sp.generate_test_input_files();
 
 	sp.simfile.load_interactive();
-	if (not sp.simfile.interactive)
+	if (not sp.simfile.interactive) {
 		sp.generate_test_output_files();
+	}
 
-	if (access("Simfile", F_OK) == 0)
+	if (access("Simfile", F_OK) == 0) {
 		sp.save_limits();
+	}
 }
 
 void help(const char* program_name) {
 	STACK_UNWINDING_MARK;
 
-	if (program_name == nullptr)
+	if (program_name == nullptr) {
 		program_name = "sip";
+	}
 
 	printf("Usage: %s [options] <command> [<command args>]\n", program_name);
 	puts(R"==(Sip is a tool for preparing and managing Sim problem packages
@@ -219,8 +223,9 @@ Sip package tree:
 void init(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
-	if (args.size() == 0)
+	if (args.size() == 0) {
 		throw SipError("missing directory argument - see -h for help");
+	}
 
 	auto specified_dir = args.extract_next();
 	if (mkdir_r(specified_dir.to_string()) == -1 and errno != EEXIST) {
@@ -228,17 +233,19 @@ void init(ArgvParser args) {
 		               " (mkdir_r()", errmsg(), ')');
 	}
 
-	if (chdir(specified_dir.data()) == -1)
+	if (chdir(specified_dir.data()) == -1) {
 		THROW("chdir()", errmsg());
+	}
 
+	SipPackage::create_default_directory_structure();
 	SipPackage sp;
-	sp.create_default_directory_structure();
 	sp.create_default_sipfile();
 
-	if (args.size() > 0)
+	if (args.size() > 0) {
 		sp.create_default_simfile(args.extract_next());
-	else
+	} else {
 		sp.create_default_simfile(std::nullopt);
+	}
 
 	name({0, nullptr});
 	mem({0, nullptr});
@@ -284,8 +291,9 @@ void main_sol(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto new_main_sol = args.extract_next();
-		if (access(new_main_sol, F_OK) != 0)
+		if (access(new_main_sol, F_OK) != 0) {
 			throw SipError("solution: ", new_main_sol, " does not exist");
+		}
 
 		auto solutions = sp.simfile.config_file().get_var("solutions");
 		if (not solutions.is_set()) {
@@ -296,8 +304,9 @@ void main_sol(ArgvParser args) {
 				sp.simfile.load_solutions();
 				auto& sols = sp.simfile.solutions;
 				auto it = std::find(sols.begin(), sols.end(), new_main_sol);
-				if (it != sols.end())
+				if (it != sols.end()) {
 					sols.erase(it);
+				}
 
 				sols.insert(sols.begin(), new_main_sol.to_string());
 				sp.replace_variable_in_simfile("solutions", sols);
@@ -311,10 +320,11 @@ void main_sol(ArgvParser args) {
 	}
 
 	sp.simfile.load_solutions();
-	if (sp.simfile.solutions.empty())
+	if (sp.simfile.solutions.empty()) {
 		stdlog("no solution is set");
-	else
+	} else {
 		stdlog("main solution = ", sp.simfile.solutions.front());
+	}
 }
 
 void mem(ArgvParser args) {
@@ -323,17 +333,19 @@ void mem(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto new_mem_limit = args.extract_next();
-		if (not is_digit_not_less_than<1>(new_mem_limit))
+		if (not is_digit_not_less_than<1>(new_mem_limit)) {
 			throw SipError("memory limit has to be a positive integer");
+		}
 
 		sp.replace_variable_in_simfile("memory_limit", new_mem_limit);
 	}
 
 	sp.simfile.load_global_memory_limit_only();
-	if (not sp.simfile.global_mem_limit.has_value())
+	if (not sp.simfile.global_mem_limit.has_value()) {
 		stdlog("mem is not set");
-	else
+	} else {
 		stdlog("mem = ", sp.simfile.global_mem_limit.value() >> 20, " MiB");
+	}
 }
 
 void name(ArgvParser args) {
@@ -360,8 +372,9 @@ parse_args_to_solutions(const sim::Simfile& simfile, ArgvParser args) {
 	std::set matched_files = files_matching_patterns(args);
 	AVLDictSet<StringView> choosen_solutions;
 	for (auto& solution : simfile.solutions) {
-		if (matched_files.find(solution) != matched_files.end())
+		if (matched_files.find(solution) != matched_files.end()) {
 			choosen_solutions.emplace(solution);
+		}
 	}
 	return choosen_solutions;
 }
@@ -376,8 +389,9 @@ void prog(ArgvParser args) {
 	if (args.size() > 0) {
 		solutions_to_compile = parse_args_to_solutions(sp.full_simfile, args);
 	} else {
-		for (auto const& sol : sp.full_simfile.solutions)
+		for (auto const& sol : sp.full_simfile.solutions) {
 			solutions_to_compile.emplace(sol);
+		}
 	}
 
 	solutions_to_compile.for_each(
@@ -388,8 +402,9 @@ void save(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
-	if (args.size() == 0)
+	if (args.size() == 0) {
 		throw SipError("nothing to save");
+	}
 
 	while (args.size()) {
 		auto arg = args.extract_next();
@@ -408,8 +423,9 @@ void statement(ArgvParser args) {
 	SipPackage sp;
 	if (args.size() > 0) {
 		auto statement = args.extract_next();
-		if (not statement.empty() and access(statement, F_OK) != 0)
+		if (not statement.empty() and access(statement, F_OK) != 0) {
 			throw SipError("statement: ", statement, " does not exist");
+		}
 
 		sp.replace_variable_in_simfile("statement", statement);
 	}
@@ -426,8 +442,9 @@ void template_command(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
-	while (args.size() > 0)
+	while (args.size() > 0) {
 		sp.save_template(args.extract_next());
+	}
 }
 
 void test(ArgvParser args) {
@@ -435,14 +452,16 @@ void test(ArgvParser args) {
 
 	SipPackage sp;
 	sp.rebuild_full_simfile();
-	if (sp.full_simfile.solutions.empty())
+	if (sp.full_simfile.solutions.empty()) {
 		throw SipError("no solution was found");
+	}
 
 	AVLDictSet<StringView> solutions_to_test;
-	if (args.size() > 0)
+	if (args.size() > 0) {
 		solutions_to_test = parse_args_to_solutions(sp.full_simfile, args);
-	else
+	} else {
 		solutions_to_test.emplace(sp.full_simfile.solutions.front());
+	}
 
 	solutions_to_test.for_each([&](StringView solution) {
 		sp.judge_solution(solution);
@@ -460,8 +479,9 @@ void unset(ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
-	while (args.size() > 0)
+	while (args.size() > 0) {
 		sp.replace_variable_in_simfile(args.extract_next(), std::nullopt);
+	}
 }
 
 void zip(ArgvParser args) {
@@ -470,7 +490,7 @@ void zip(ArgvParser args) {
 	clean(args);
 	auto cwd = get_cwd();
 	--cwd.size;
-	SipPackage().archive_into_zip(path_filename(cwd.to_cstr()));
+	SipPackage::archive_into_zip(path_filename(cwd.to_cstr()));
 }
 
 } // namespace commands

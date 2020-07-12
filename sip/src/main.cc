@@ -46,8 +46,9 @@ static void parseOptions(int& argc, char** argv) {
 				eprintf("Unknown option: '%s'\n", argv[i]);
 			}
 
-		} else
+		} else {
 			argv[new_argc++] = argv[i];
+		}
 	}
 
 	argc = new_argc;
@@ -60,58 +61,84 @@ static void run_command(int argc, char** argv) {
 	StringView command = args.extract_next();
 
 	// Commands
-	if (command == "checker")
+	if (command == "checker") {
 		return commands::checker(args);
-	if (command == "clean")
+	}
+	if (command == "clean") {
 		return commands::clean(args);
-	if (command == "doc")
+	}
+	if (command == "doc") {
 		return commands::doc(args);
-	if (command == "docwatch")
+	}
+	if (command == "docwatch") {
 		return commands::docwatch(args);
-	if (command == "gen")
+	}
+	if (command == "gen") {
 		return commands::gen(args);
-	if (command == "genin")
+	}
+	if (command == "genin") {
 		return commands::genin(args);
-	if (command == "genout")
+	}
+	if (command == "genout") {
 		return commands::genout(args);
-	if (command == "gentests")
+	}
+	if (command == "gentests") {
 		return commands::gen(args);
-	if (command == "help")
+	}
+	if (command == "help") {
 		return commands::help(argv[0]);
-	if (command == "init")
+	}
+	if (command == "init") {
 		return commands::init(args);
-	if (command == "interactive")
+	}
+	if (command == "interactive") {
 		return commands::interactive(args);
-	if (command == "label")
+	}
+	if (command == "label") {
 		return commands::label(args);
-	if (command == "main-sol")
+	}
+	if (command == "main-sol") {
 		return commands::main_sol(args);
-	if (command == "mem")
+	}
+	if (command == "mem") {
 		return commands::mem(args);
-	if (command == "name")
+	}
+	if (command == "name") {
 		return commands::name(args);
-	if (command == "prog")
+	}
+	if (command == "prog") {
 		return commands::prog(args);
-	if (command == "regen")
+	}
+	if (command == "regen") {
 		return commands::regen(args);
-	if (command == "regenin")
+	}
+	if (command == "regenin") {
 		return commands::regenin(args);
-	if (command == "save")
+	}
+	if (command == "save") {
 		return commands::save(args);
-	if (command == "statement")
+	}
+	if (command == "statement") {
 		return commands::statement(args);
-	if (command == "templ")
+	}
+	if (command == "templ") {
 		return commands::template_command(args);
-	if (command == "template")
+	}
+	if (command == "template") {
 		return commands::template_command(args);
-	if (command == "test")
+	}
+	if (command == "test") {
 		return commands::test(args);
-	if (command == "unset")
+	}
+	if (command == "unset") {
 		return commands::unset(args);
-	if (command == "version")
+	}
+	if (command == "version") {
 		return commands::version();
-	if (command == "zip")
+	}
+	if (command == "zip") {
 		return commands::zip(args);
+	}
 
 	throw SipError("unknown command: ", command);
 }
@@ -148,8 +175,9 @@ void kill_every_child_process() {
 	auto my_pid_str = to_string(getpid());
 	for_each_dir_component("/proc/", [&](dirent* file) {
 		auto pid_opt = str2num<pid_t>(file->d_name);
-		if (not pid_opt or *pid_opt < 1)
+		if (not pid_opt or *pid_opt < 1) {
 			return; // Not a process
+		}
 		pid_t pid = *pid_opt;
 
 		auto proc_stat = ProcStatFileContents::get(pid);
@@ -172,14 +200,16 @@ void delete_zip_file_that_is_being_created() {
 	for_each_dir_component(fd_dir, [&](dirent* file) {
 		auto src = concat<64>(fd_dir, file->d_name);
 		InplaceBuff<PATH_MAX + 1> dest; // +1 for trailing null byte
-		auto rc =
-		   readlink(src.to_cstr().data(), dest.data(), dest.max_static_size);
-		if (rc == -1)
+		auto rc = readlink(src.to_cstr().data(), dest.data(),
+		                   decltype(dest)::max_static_size);
+		if (rc == -1) {
 			return; // Ignore errors, as nothing reasonable can be done
+		}
 		dest.size = rc;
 
-		if (has_prefix(dest, zip_path_prefix))
+		if (has_prefix(dest, zip_path_prefix)) {
 			(void)unlink(dest.to_cstr());
+		}
 	});
 }
 

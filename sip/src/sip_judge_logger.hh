@@ -18,7 +18,8 @@ class SipJudgeLogger : public sim::JudgeLogger {
 	bool final_;
 
 	template <class Func>
-	void log_test(StringView test_name, sim::JudgeReport::Test test_report,
+	void log_test(StringView test_name,
+	              const sim::JudgeReport::Test& test_report,
 	              Sandbox::ExitStat es, Func&& func) {
 		++statistics_[test_report.status];
 		auto tmplog =
@@ -61,7 +62,7 @@ public:
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
 	          Sandbox::ExitStat es) override {
-		log_test(test_name, test_report, es, [](auto&) {});
+		log_test(test_name, test_report, es, [](auto& /*unused*/) {});
 	}
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
@@ -72,31 +73,35 @@ public:
 			tmplog("  Checker: ");
 
 			// Checker status
-			if (test_report.status == sim::JudgeReport::Test::OK)
+			if (test_report.status == sim::JudgeReport::Test::OK) {
 				tmplog("\033[1;32mOK\033[m ", test_report.comment);
-			else if (test_report.status == sim::JudgeReport::Test::WA)
+			} else if (test_report.status == sim::JudgeReport::Test::WA) {
 				tmplog("\033[1;31mWA\033[m ", test_report.comment);
-			else if (test_report.status ==
-			         sim::JudgeReport::Test::CHECKER_ERROR)
+			} else if (test_report.status ==
+			           sim::JudgeReport::Test::CHECKER_ERROR) {
 				tmplog("\033[1;35mERROR\033[m ", checker_error_str);
-			else
+			} else {
 				return; // Checker was not run
+			}
 
 			tmplog(
 			   " [ RT: ", to_string(floor_to_10ms(checker_es.runtime), false),
 			   " ] ", humanize_file_size(checker_es.vm_peak));
-			if (checker_mem_limit.has_value())
+			if (checker_mem_limit.has_value()) {
 				tmplog(" / ", humanize_file_size(checker_mem_limit.value()));
+			}
 		});
 	}
 
-	void group_score(int64_t score, int64_t max_score, double) override {
+	void group_score(int64_t score, int64_t max_score,
+	                 double /*score_ratio*/) override {
 		log("Score: ", score, " / ", max_score);
 	}
 
 	void final_score(int64_t total_score, int64_t max_score) override {
-		if (final_ and (total_score != 0 or max_score != 0))
+		if (final_ and (total_score != 0 or max_score != 0)) {
 			log("Total score: ", total_score, " / ", max_score);
+		}
 	}
 
 	void end() override {

@@ -37,8 +37,8 @@ private:
 	void prepare_judge_worker();
 
 	// Runs @p test.generator and places its output in the @p in_file
-	void generate_test_input_file(const Sipfile::GenTest& test,
-	                              CStringView in_file);
+	static void generate_test_input_file(const Sipfile::GenTest& test,
+	                                     CStringView in_file);
 
 	// Runs model solution on @p test.in and places the output in the
 	// @p test.out file
@@ -82,7 +82,7 @@ public:
 	void compile_checker();
 
 	// Removes compiled files, latex logs
-	void clean();
+	static void clean();
 
 	// Removes test files that may be generated
 	void remove_generated_test_files();
@@ -105,10 +105,10 @@ public:
 	// Compiles all .tex files matching patterns specified in @p args or all
 	// found in the package if @p args is empty. If watch is true, then  every
 	// .tex file will be recompiled on any change.
-	void compile_tex_files(ArgvParser args, bool watch);
+	static void compile_tex_files(ArgvParser args, bool watch);
 
 	// Archives package contents into the file @p dest_file using .zip
-	void archive_into_zip(CStringView dest_file);
+	static void archive_into_zip(CStringView dest_file);
 
 	// Replaces or creates variable in the specified config file
 	// (deletes variable if @p replacement is not set)
@@ -146,7 +146,7 @@ public:
 	                            const std::vector<std::string>& replacement);
 
 	// Creates the directory structure of a Sip package in the current directory
-	void create_default_directory_structure();
+	static void create_default_directory_structure();
 
 	// Creates the default Sipfile
 	void create_default_sipfile();
