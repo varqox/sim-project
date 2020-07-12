@@ -1,27 +1,27 @@
-include src/lib/simlib/makefile-utils/Makefile.config
+include subprojects/simlib/makefile-utils/Makefile.config
 
 DESTDIR := /usr/local/bin
 
 define SIP_FLAGS =
-INTERNAL_EXTRA_CXX_FLAGS := -I '$(CURDIR)/src/include'
+INTERNAL_EXTRA_CXX_FLAGS := -I '$(CURDIR)/subprojects/simlib/include'
 INTERNAL_EXTRA_LD_FLAGS := -L '$(CURDIR)/src/lib' -lsupc++ -lrt -lzip -lseccomp -pthread
 endef
 
 .PHONY: all
-all: src/sip
+all: sip
 	@printf "\033[32mBuild finished\033[0m\n"
 
 .PHONY: static
-static: src/sip-static
+static: sip-static
 
-$(eval $(call include_makefile, src/lib/simlib/Makefile))
+$(eval $(call include_makefile, subprojects/simlib/Makefile))
 
 .PHONY: test
 test: test-sip test-simlib
 	@printf "\033[1;32mAll tests passed\033[0m\n"
 
 .PHONY: test-simlib
-test-simlib: src/lib/simlib/test
+test-simlib: subprojects/simlib/test
 
 .PHONY: test-sip
 test-sip:
@@ -33,7 +33,7 @@ install: $(filter-out install, $(MAKECMDGOALS))
 	@printf "DESTDIR = \033[01;34m$(abspath $(DESTDIR))\033[0m\n"
 
 	# Installation
-	$(UPDATE) src/sip $(abspath $(DESTDIR))
+	$(UPDATE) sip $(abspath $(DESTDIR))
 
 	# Set owner, group and permission bits
 	chmod +x $(abspath $(DESTDIR)/sip)
@@ -77,10 +77,9 @@ $(eval $(call add_generated_target, templates/statement.tex.dump.c, \
 ))
 
 SIP_SRCS := \
-	src/command_version.c \
+	src/command_version.cc \
 	src/commands.cc \
 	src/compilation_cache.cc \
-	src/lib/simlib/simlib.a \
 	src/main.cc \
 	src/proot_dump.c \
 	src/sip_package.cc \
@@ -88,21 +87,24 @@ SIP_SRCS := \
 	src/templates.cc \
 	src/tests_files.cc \
 	src/utils.cc \
+	subprojects/simlib/simlib.a \
 	templates/checker.cc.dump.c \
 	templates/interactive_checker.cc.dump.c \
 	templates/statement.tex.dump.c \
 
-$(eval $(call add_executable, src/sip, $(SIP_FLAGS), $(SIP_SRCS)))
+$(eval $(call add_executable, sip, $(SIP_FLAGS), $(SIP_SRCS)))
 
 define SIP_STATIC_FLAGS =
 INTERNAL_EXTRA_LD_FLAGS += -static -lzip -lseccomp -lrt -lz -Wl,--whole-archive -lpthread -Wl,--no-whole-archive -Wl,--unresolved-symbols=ignore-in-object-files
 endef
 
-$(eval $(call add_executable, src/sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), $(SIP_SRCS)))
+$(eval $(call add_executable, sip-static, $(SIP_FLAGS) $(SIP_STATIC_FLAGS), $(SIP_SRCS)))
 
-src/command_version.o: .git/logs/HEAD
-src/command_version.o: override INTERNAL_EXTRA_CXX_FLAGS += '-DCOMMIT="$(shell git rev-parse HEAD)"'
+BUILD_ARTIFACTS += src/git_commit.hh
+src/command_version.o: src/git_commit.hh
+src/git_commit.hh: .git/logs/HEAD
+	src/gen_git_commit_hh.py > $@
 
 .PHONY: format
-format: src/lib/simlib/format
-format: $(shell find bin src templates | grep -E '\.(cc?|hh?)$$' | grep -vE '^(src/lib/simlib/.*|src/proot_dump.c)$$' | sed 's/$$/-make-format/')
+format: subprojects/simlib/format
+format: $(shell find bin src templates | grep -E '\.(cc?|hh?)$$' | grep -vE '^(subprojects/simlib/.*|src/proot_dump.c|src/git_commit.hh)$$' | sed 's/$$/-make-format/')

@@ -1,6 +1,7 @@
 #include "sip_package.hh"
 #include "compilation_cache.hh"
 #include "constants.hh"
+#include "simlib/repeating.hh"
 #include "sip_error.hh"
 #include "templates.hh"
 #include "utils.hh"
@@ -31,7 +32,7 @@ using std::vector;
 namespace {
 constexpr std::chrono::nanoseconds DEFAULT_TIME_LIMIT = std::chrono::seconds(5);
 constexpr uint64_t DEFAULT_MEMORY_LIMIT = 512; // In MiB
-} // anonymous namespace
+} // namespace
 
 std::chrono::nanoseconds SipPackage::get_default_time_limit() {
 	STACK_UNWINDING_MARK;
@@ -72,9 +73,9 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
                                           CStringView in_file) {
 	STACK_UNWINDING_MARK;
 
-	InplaceBuff<32> generator([&]() -> InplaceBuff<32> {
+	auto generator([&] {
 		if (has_prefix(test.generator, "sh:"))
-			return InplaceBuff<32>(substring(test.generator, 3));
+			return concat(substring(test.generator, 3));
 
 		if (sim::filename_to_lang(test.generator) ==
 		    sim::SolutionLanguage::UNKNOWN) {
@@ -91,7 +92,7 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
 			   "    3. If it is a shell command or a binary file, prefix the "
 			   "generator with sh: in Sipfile - e.g. sh:echo");
 
-			return test.generator;
+			return concat(test.generator);
 		}
 
 		return CompilationCache::compile(test.generator);
@@ -314,11 +315,9 @@ void SipPackage::generate_test_output_files() {
 				throw SipError("failed to create directory out/ (mkdir()",
 				               errmsg(), ')');
 			}
-
-			return false;
+			return stop_repeating;
 		}
-
-		return true;
+		return continue_repeating;
 	});
 
 	// We need to remove invalid entries from limits as Conver will give
@@ -486,13 +485,13 @@ void SipPackage::remove_generated_test_files() {
 	sipfile.gen_tests.for_each([&](auto const& test) {
 		auto it = tests_files->tests.find(test.name);
 		if (it and it->second.in.has_value())
-			remove(it->second.in.value().to_string());
+			(void)remove(it->second.in.value().to_string());
 	});
 
 	// Remove generated .out files
 	tests_files->tests.for_each([](auto const& p) {
 		if (p.second.in.has_value() and p.second.out.has_value())
-			remove(p.second.out.value().to_string());
+			(void)remove(p.second.out.value().to_string());
 	});
 
 	stdlog(" done.");
@@ -519,9 +518,9 @@ void SipPackage::remove_test_files_not_specified_in_sipfile() {
 			return;
 
 		if (p.second.in.has_value())
-			remove(concat(p.second.in.value()));
+			(void)remove(concat(p.second.in.value()));
 		if (p.second.out.has_value())
-			remove(concat(p.second.out.value()));
+			(void)remove(concat(p.second.out.value()));
 	});
 
 	tests_files = std::nullopt; // Probably some test files were just removed
@@ -750,7 +749,7 @@ void SipPackage::archive_into_zip(CStringView dest_file) {
 		            ZIP_CREATE | ZIP_TRUNCATE);
 		zip_register_progress_callback_with_state(zip, 0.001, progress_callback,
 		                                          nullptr, nullptr);
-		zip.dir_add(dest_file); // Add master directory
+		zip.dir_add(dest_file); // Add main directory
 
 		sim::PackageContents pkg;
 		pkg.load_from_directory(".");

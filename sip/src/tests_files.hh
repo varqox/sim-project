@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <simlib/avl_dict.hh>
 #include <simlib/sim/problem_package.hh>
 
 struct TestsFiles {

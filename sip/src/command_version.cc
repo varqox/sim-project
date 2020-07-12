@@ -1,3 +1,5 @@
+#include "git_commit.hh"
+
 #include <cstdio>
 
 namespace commands {

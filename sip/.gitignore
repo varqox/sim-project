@@ -19,3 +19,8 @@
 *.deps
 
 # Others
+.clangd/
+*build/
+compile_commands.json
+sip
+sip-static

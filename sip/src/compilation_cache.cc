@@ -10,7 +10,7 @@ using std::string;
 namespace {
 constexpr const char PROOT_PATH[] = "proot";
 constexpr const char DEFAULT_CHECKER_PATH[] = "default_checker";
-} // anonymous namespace
+} // namespace
 
 bool SipPackage::CompilationCache::is_cached(StringView path) {
 	STACK_UNWINDING_MARK;
