@@ -560,11 +560,15 @@ protected:
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(Sandbox, run) {
 	stdlog.label(false);
-	auto exec_path = executable_path(getpid());
-	auto tests_dir_opt =
-	   deepest_ancestor_dir_with_subpath(exec_path, "test/sandbox_test_cases/");
-	if (not tests_dir_opt) {
-		FAIL() << "could not find tests directory";
+
+	for (auto path : {string{"."}, executable_path(getpid())}) {
+		auto tests_dir_opt =
+		   deepest_ancestor_dir_with_subpath(path, "test/sandbox_test_cases/");
+		if (tests_dir_opt) {
+			SandboxTestRunner(*tests_dir_opt).run();
+			return;
+		}
 	}
-	SandboxTestRunner(*tests_dir_opt).run();
+
+	FAIL() << "could not find tests directory";
 }
