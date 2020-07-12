@@ -4,7 +4,7 @@ include $(PREFIX)makefile-utils/Makefile.config
 $(PREFIX)all: $(PREFIX)gtest_main.a $(PREFIX)simlib.a
 	@printf "\033[32mBuild finished\033[0m\n"
 
-SIMLIB_INCLUDES_FLAGS = -I '$(CURDIR)/include'
+SIMLIB_INCLUDES_FLAGS = -I '$(CURDIR)/$(PREFIX)/include'
 
 define SIMLIB_FLAGS
 INTERNAL_EXTRA_CXX_FLAGS := $(SIMLIB_INCLUDES_FLAGS) -isystem '$(CURDIR)/$(PREFIX)3rdparty'
