@@ -84,7 +84,7 @@ struct Verdict {
 	}
 } verdict;
 
-constexpr char space = ' ', newline = '\n';
+constexpr inline char space = ' ', newline = '\n';
 struct EofType {
 } eof;
 struct IgnoreSpacesType {
@@ -92,7 +92,7 @@ struct IgnoreSpacesType {
 struct IgnoreWsType {
 } ignore_ws; // Every whitespace
 
-constexpr auto newline_or_eof = optional(newline);
+constexpr inline auto newline_or_eof = optional(newline);
 
 template <class T>
 struct integer {
@@ -117,7 +117,7 @@ struct character {
 	array<char, N> options;
 
 	template <class... Opts>
-	constexpr character(char& c, Opts... opts)
+	constexpr explicit character(char& c, Opts... opts)
 	: val(c)
 	, options{opts...} {
 		static_assert((std::is_same_v<Opts, char> and ...));
@@ -138,8 +138,9 @@ private:
 	bool eofed = false;
 
 	bool getchar(int& ch) noexcept {
-		if (eofed)
+		if (eofed) {
 			return false;
+		}
 
 		ch = fgetc_unlocked(file_);
 		eofed = (ch == EOF);
@@ -159,28 +160,35 @@ private:
 	}
 
 	static string char_description(int ch) {
-		if (std::isgraph(ch))
-			return {'\'', (char)ch, '\''};
+		if (std::isgraph(ch)) {
+			return {'\'', static_cast<char>(ch), '\''};
+		}
 
-		if (ch == ' ')
+		if (ch == ' ') {
 			return "space";
-		if (ch == '\n')
+		}
+		if (ch == '\n') {
 			return "'\\n'";
-		if (ch == '\r')
+		}
+		if (ch == '\r') {
 			return "'\\r'";
-		if (ch == '\t')
+		}
+		if (ch == '\t') {
 			return "'\\t'";
-		if (ch == '\0')
+		}
+		if (ch == '\0') {
 			return "'\\0'";
+		}
 
 		constexpr char digits[] = "0123456789abcdef";
 		return {'\'', '\\', 'x', digits[ch >> 4], digits[ch & 15], '\''};
 	}
 
 	Scanner& scan_char(char exp_ch) {
-		int ch;
-		if (not getchar(ch))
+		int ch = 0;
+		if (not getchar(ch)) {
 			fatal("Read EOF, expected ", char_description(ch));
+		}
 		if (ch != exp_ch) {
 			fatal("Read ", char_description(ch), ", expected ",
 			      char_description(exp_ch));
@@ -196,47 +204,59 @@ private:
 
 	template <class T>
 	void scan_integer(T& val) {
-		int ch;
-		if (not getchar(ch))
+		int ch = 0;
+		if (not getchar(ch)) {
 			fatal("Read EOF, expected a number");
+		}
 
 		bool minus = false;
 		if (not std::is_unsigned_v<T> and ch == '-') {
 			minus = true;
-			if (not getchar(ch))
+			if (not getchar(ch)) {
 				fatal("Read EOF, expected a number");
+			}
 		}
 
-		if (not is_digit(ch))
+		if (not is_digit(ch)) {
 			fatal("Read ", char_description(ch), ", expected a number");
+		}
 
 		val = (minus ? '0' - ch : ch - '0'); // Will not overflow
 		for (;;) {
-			if (not getchar(ch))
+			if (not getchar(ch)) {
 				break;
+			}
 
 			if (not isdigit(ch)) {
 				ungetchar(ch);
 				break;
 			}
 
-			if (__builtin_mul_overflow(val, 10, &val))
+			if (__builtin_mul_overflow(val, 10, &val)) {
 				fatal("Integer value out of range");
+			}
 
-			if (not minus and __builtin_add_overflow(val, ch - '0', &val))
+			if (not minus and __builtin_add_overflow(val, ch - '0', &val)) {
 				fatal("Integer value out of range");
+			}
 
-			if (minus and __builtin_sub_overflow(val, ch - '0', &val))
+			if (minus and __builtin_sub_overflow(val, ch - '0', &val)) {
 				fatal("Integer value out of range");
+			}
 		}
 	}
 
 public:
-	explicit Scanner(FILE* file, Mode mode)
+	Scanner(FILE* file, Mode mode)
 	: file_(file)
 	, mode_(mode) {
-		my_assert(file != NULL);
+		my_assert(file != nullptr);
 	}
+
+	Scanner(const Scanner&) = delete;
+	Scanner(Scanner&&) = delete;
+	Scanner& operator=(const Scanner&) = delete;
+	Scanner& operator=(Scanner&&) = delete;
 
 	~Scanner() {
 		switch (mode_) {
@@ -248,9 +268,10 @@ public:
 	}
 
 	Scanner& operator>>(const char& exp_ch) {
-		int ch;
-		if (not getchar(ch))
+		int ch = 0;
+		if (not getchar(ch)) {
 			fatal("Read EOF, expected ", char_description(ch));
+		}
 		if (ch != exp_ch) {
 			fatal("Read ", char_description(ch), ", expected ",
 			      char_description(exp_ch));
@@ -260,9 +281,10 @@ public:
 	}
 
 	Scanner& operator>>(const optional<char>& exp_ch) {
-		int ch;
-		if (not getchar(ch))
+		int ch = 0;
+		if (not getchar(ch)) {
 			return *this;
+		}
 
 		if (exp_ch and ch != *exp_ch) {
 			fatal("Read ", char_description(ch), ", expected EOF or ",
@@ -278,9 +300,10 @@ private:
 	}
 
 	template <size_t N, size_t... Idx>
-	void read_character(character<N> c, std::index_sequence<Idx...>) {
+	void read_character(character<N> c,
+	                    std::index_sequence<Idx...> /*unused*/) {
 		static_assert(N == sizeof...(Idx));
-		int ch;
+		int ch = 0;
 		if (not getchar(ch)) {
 			fatal("Read EOF, expected one of characters:",
 			      space_char_description(c.options[Idx])...);
@@ -304,24 +327,26 @@ public:
 	}
 
 	Scanner& operator>>(char& c) {
-		int ch;
-		if (not getchar(ch))
+		int ch = 0;
+		if (not getchar(ch)) {
 			fatal("Read EOF, expected a character");
+		}
 
-		c = ch;
+		c = static_cast<char>(ch);
 		return *this;
 	}
 
-	Scanner& operator>>(EofType) {
-		int ch;
-		if (getchar(ch))
+	Scanner& operator>>(EofType /*unused*/) {
+		int ch = 0;
+		if (getchar(ch)) {
 			fatal("Read ", char_description(ch), ", expected EOF");
+		}
 
 		return *this;
 	}
 
-	Scanner& operator>>(IgnoreSpacesType) {
-		int ch;
+	Scanner& operator>>(IgnoreSpacesType /*unused*/) {
+		int ch = 0;
 		while (getchar(ch)) {
 			if (ch != ' ') {
 				ungetchar(ch);
@@ -332,8 +357,8 @@ public:
 		return *this;
 	}
 
-	Scanner& operator>>(IgnoreWsType) {
-		int ch;
+	Scanner& operator>>(IgnoreWsType /*unused*/) {
+		int ch = 0;
 		while (getchar(ch)) {
 			if (not isspace(ch)) {
 				ungetchar(ch);
@@ -346,7 +371,7 @@ public:
 
 	// Does not omit white-spaces
 	Scanner& operator>>(string& str) {
-		int ch;
+		int ch = 0;
 		str.clear();
 		while (getchar(ch)) {
 			if (isspace(ch)) {
@@ -354,7 +379,7 @@ public:
 				break;
 			}
 
-			str += ch;
+			str += static_cast<char>(ch);
 		}
 
 		return *this;
@@ -397,7 +422,7 @@ int main(int argc, char** argv) {
 	my_assert(in.is_open());
 	ifstream out(argv[2]); // You can comment it out if you don't use it
 	my_assert(out.is_open());
-	Scanner scan(fopen(argv[3], "r"), Scanner::Mode::IGNORE_WS_BEFORE_EOF);
+	Scanner scan(fopen(argv[3], "re"), Scanner::Mode::IGNORE_WS_BEFORE_EOF);
 
 	// Do checking here...
 	verdict.wrong("Not implemented");
