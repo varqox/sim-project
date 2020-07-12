@@ -16,7 +16,7 @@ std::string date(CStringView format, time_t curr_time = -1);
 // Returns UTC date @p tp in format of @p format (format like in strftime(3))
 inline std::string date(CStringView format,
                         std::chrono::system_clock::time_point tp) {
-	return date(std::move(format), std::chrono::system_clock::to_time_t(tp));
+	return date(format, std::chrono::system_clock::to_time_t(tp));
 }
 
 // Returns UTC date in format of "%Y-%m-%d %H:%M:%S" (see strftime(3)), if
@@ -37,8 +37,7 @@ std::string localdate(CStringView format, time_t curr_time = -1);
 // Returns local date @p tp in format of @p format (format like in strftime(3))
 inline std::string localdate(CStringView format,
                              std::chrono::system_clock::time_point tp) {
-	return localdate(std::move(format),
-	                 std::chrono::system_clock::to_time_t(tp));
+	return localdate(format, std::chrono::system_clock::to_time_t(tp));
 }
 
 // Returns local date in format of "%Y-%m-%d %H:%M:%S" (see strftime(3)), if
@@ -75,7 +74,7 @@ time_t str_to_time_t(CStringView str, CStringView format = CStringView{
 inline std::chrono::system_clock::time_point
 str_to_time_point(CStringView str,
                   CStringView format = CStringView{"%Y-%m-%d %H:%M:%S"}) {
-	time_t t = str_to_time_t(std::move(str), std::move(format));
+	time_t t = str_to_time_t(str, format);
 	if (t == -1) {
 		THROW("str_to_time_t()", errmsg());
 	}

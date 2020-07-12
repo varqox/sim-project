@@ -36,7 +36,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_string = [&](StringView name) -> const std::string& {
-		return get_var(std::move(name)).as_string();
+		return get_var(name).as_string();
 	};
 
 	auto get_optional_string =
@@ -49,7 +49,7 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_uint64 = [&](StringView name) {
-		return get_var(std::move(name)).as<uint64_t>().value();
+		return get_var(name).as<uint64_t>().value();
 	};
 
 	auto get_optional_uint64 =
@@ -62,15 +62,14 @@ static Conver::Options load_options_from_file(FilePath file) {
 	};
 
 	auto get_double = [&](StringView name) {
-		return get_var(std::move(name)).as<double>().value();
+		return get_var(name).as<double>().value();
 	};
 
 	auto get_duration = [&](StringView name) {
 		using std::chrono::nanoseconds;
 		using std::chrono::duration;
 		using std::chrono::duration_cast;
-		return duration_cast<nanoseconds>(
-		   duration<double>(get_double(std::move(name))));
+		return duration_cast<nanoseconds>(duration<double>(get_double(name)));
 	};
 
 	auto get_optional_duration =
@@ -133,7 +132,7 @@ class TestingJudgeLogger : public sim::JudgeLogger {
 	template <class Func>
 	void log_test(StringView test_name, const JudgeReport::Test& test_report,
 	              const Sandbox::ExitStat& es, Func&& func) {
-		log("  ", padded_string(std::move(test_name), 8, LEFT), ' ',
+		log("  ", padded_string(test_name, 8, LEFT), ' ',
 		    " [ TL: ", to_string(floor_to_10ms(test_report.time_limit), false),
 		    " s ML: ", test_report.memory_limit >> 10, " KiB ]  Status: ",
 		    JudgeReport::simple_span_status(test_report.status));
@@ -483,7 +482,7 @@ TEST(Conver, construct_simfile) {
 	stdlog.label(false);
 	stdlog.use(stdout);
 
-	for (auto path : {string{"."}, executable_path(getpid())}) {
+	for (const auto& path : {string{"."}, executable_path(getpid())}) {
 		auto tests_dir_opt =
 		   deepest_ancestor_dir_with_subpath(path, "test/conver_test_cases/");
 		if (tests_dir_opt) {

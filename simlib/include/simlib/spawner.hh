@@ -74,7 +74,7 @@ public:
 		: new_stdin_fd(ifd)
 		, new_stdout_fd(ofd)
 		, new_stderr_fd(efd)
-		, working_dir(std::move(wd)) {}
+		, working_dir(wd) {}
 
 		constexpr Options(
 		   int ifd, int ofd, int efd,
@@ -88,7 +88,7 @@ public:
 		, real_time_limit(rtl)
 		, memory_limit(ml)
 		, cpu_time_limit(ctl)
-		, working_dir(std::move(wd)) {}
+		, working_dir(wd) {}
 	};
 
 	/**

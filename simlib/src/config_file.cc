@@ -420,12 +420,12 @@ static string escape_to_double_quoted_string_impl(StringView str, Func&& func) {
 }
 
 string ConfigFile::escape_to_double_quoted_string(StringView str) {
-	return escape_to_double_quoted_string_impl(std::move(str), is_cntrl<char>);
+	return escape_to_double_quoted_string_impl(str, is_cntrl<char>);
 }
 
 string ConfigFile::full_escape_to_double_quoted_string(StringView str) {
 	return escape_to_double_quoted_string_impl(
-	   std::move(str), [](int x) { return !is_print(x); });
+	   str, [](int x) { return !is_print(x); });
 }
 
 string ConfigFile::escape_string(StringView str) {

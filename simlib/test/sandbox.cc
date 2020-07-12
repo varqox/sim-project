@@ -561,7 +561,7 @@ protected:
 TEST(Sandbox, run) {
 	stdlog.label(false);
 
-	for (auto path : {string{"."}, executable_path(getpid())}) {
+	for (const auto& path : {string{"."}, executable_path(getpid())}) {
 		auto tests_dir_opt =
 		   deepest_ancestor_dir_with_subpath(path, "test/sandbox_test_cases/");
 		if (tests_dir_opt) {

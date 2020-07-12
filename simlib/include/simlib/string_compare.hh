@@ -37,7 +37,7 @@ constexpr bool special_equal(StringView a, StringView b, Func&& f) {
 
 // Checks whether lowered @p a is equal to lowered @p b
 constexpr bool lower_equal(StringView a, StringView b) noexcept {
-	return special_equal<int(int)>(std::move(a), std::move(b), to_lower);
+	return special_equal<int(int)>(a, b, to_lower);
 }
 
 /**

@@ -194,7 +194,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 
 	auto is_statement = [](StringView file) {
-		return has_one_of_suffixes(std::move(file), ".pdf", ".md", ".txt");
+		return has_one_of_suffixes(file, ".pdf", ".md", ".txt");
 	};
 
 	if (sf.statement and exists_in_pkg(sf.statement.value()) and
@@ -316,7 +316,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			tests.emplace(test.name,
-			              std::move(test)); // Replace on redefinition
+			              test); // Replace on redefinition
 		}
 	}
 
@@ -553,7 +553,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 		auto& group = tests_groups[sr.gid];
 		group.name = sr.gid;
-		group.tests.emplace_back(std::move(test));
+		group.tests.emplace_back(test);
 	});
 
 	// Load scoring

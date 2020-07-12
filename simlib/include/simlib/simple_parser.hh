@@ -15,7 +15,7 @@
 class SimpleParser : public StringView {
 public:
 	constexpr explicit SimpleParser(StringView s)
-	: StringView(std::move(s)) {}
+	: StringView(s) {}
 
 	SimpleParser(const SimpleParser&) noexcept = default;
 	SimpleParser(SimpleParser&&) noexcept = default;

@@ -354,8 +354,8 @@ public:
 		}
 
 		bool operator()(StringView a, StringView b) const {
-			auto x = split(std::move(a));
-			auto y = split(std::move(b));
+			auto x = split(a);
+			auto y = split(b);
 			// tid == "ocen" behaves the same as gid == "0"
 			if (x.tid == "ocen") {
 				if (y.tid == "ocen") {

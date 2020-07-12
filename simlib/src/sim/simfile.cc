@@ -276,7 +276,7 @@ void Simfile::load_global_memory_limit_only() {
 
 std::tuple<StringView, std::chrono::nanoseconds, std::optional<uint64_t>>
 Simfile::parse_limits_item(StringView item) {
-	SimpleParser sp(std::move(item));
+	SimpleParser sp(item);
 	// Test name
 	StringView test_name{sp.extract_next_non_empty(is_space<char>)};
 	// Time limit
@@ -329,7 +329,7 @@ Simfile::parse_limits_item(StringView item) {
 }
 
 std::tuple<StringView, int64_t> Simfile::parse_scoring_item(StringView item) {
-	SimpleParser sp(std::move(item));
+	SimpleParser sp(item);
 	StringView gid = sp.extract_next_non_empty(is_space<char>);
 	if (!is_digit(gid)) {
 		throw std::runtime_error{
@@ -461,7 +461,7 @@ void Simfile::load_tests() {
 
 std::tuple<StringView, StringView, StringView>
 Simfile::parse_test_files_item(StringView item) {
-	SimpleParser sp(std::move(item));
+	SimpleParser sp(item);
 	StringView name = sp.extract_next_non_empty(is_space<char>);
 	StringView input = sp.extract_next_non_empty(is_space<char>);
 	StringView output = sp.extract_next_non_empty(is_space<char>);

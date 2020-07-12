@@ -23,7 +23,7 @@ class RequestUriParser {
 
 public:
 	constexpr explicit RequestUriParser(StringView str)
-	: buff(std::move(str)) {}
+	: buff(str) {}
 
 	RequestUriParser(const RequestUriParser&) noexcept = default;
 	RequestUriParser(RequestUriParser&&) noexcept = default;

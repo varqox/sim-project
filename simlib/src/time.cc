@@ -37,11 +37,11 @@ static string __date(CStringView format, time_t curr_time, F func) {
 }
 
 string date(CStringView format, time_t curr_time) {
-	return __date(std::move(format), curr_time, gmtime_r);
+	return __date(format, curr_time, gmtime_r);
 }
 
 string localdate(CStringView format, time_t curr_time) {
-	return __date(std::move(format), curr_time, localtime_r);
+	return __date(format, curr_time, localtime_r);
 }
 
 bool is_datetime(const CStringView& str) noexcept {

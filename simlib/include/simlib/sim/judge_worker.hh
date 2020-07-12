@@ -141,8 +141,7 @@ enum class SolutionLanguage {
 };
 
 inline bool is_source(StringView file) noexcept {
-	return has_one_of_suffixes(std::move(file), ".c", ".cc", ".cpp", ".cxx",
-	                           ".pas");
+	return has_one_of_suffixes(file, ".c", ".cc", ".cpp", ".cxx", ".pas");
 }
 
 inline SolutionLanguage filename_to_lang(const StringView& filename) {

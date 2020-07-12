@@ -289,7 +289,7 @@ void Spawner::run_child(FilePath exec,
 	STACK_UNWINDING_MARK;
 	// Sends error to parent
 	auto send_error_and_exit = [fd](int errnum, CStringView str) {
-		send_error_message_and_exit(fd, errnum, std::move(str));
+		send_error_message_and_exit(fd, errnum, str);
 	};
 
 	// Create new process group (useful for killing the whole process group)

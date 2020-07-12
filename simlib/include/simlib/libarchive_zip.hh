@@ -302,8 +302,7 @@ inline std::string extract_file_from_zip(int zip_fd,
 /// Extract @p pathname from the zip archive @p zip_file
 inline std::string extract_file_from_zip(FilePath zip_file,
                                          StringView pathname) {
-	return extract_file(zip_file, archive_read_support_format_zip,
-	                    std::move(pathname));
+	return extract_file(zip_file, archive_read_support_format_zip, pathname);
 }
 
 // Extracts zip, for details see extract() documentation
@@ -322,8 +321,7 @@ inline void extract_zip(int zip_fd, int flags, UnaryFunc&& extract_entry,
 inline void extract_zip(int zip_fd, int flags = ARCHIVE_EXTRACT_TIME,
                         StringView dest_dir = ".") {
 	return extract_zip(
-	   zip_fd, flags, [](archive_entry* /*unused*/) { return true; },
-	   std::move(dest_dir));
+	   zip_fd, flags, [](archive_entry* /*unused*/) { return true; }, dest_dir);
 }
 
 // Extracts zip, for details see extract() documentation
@@ -343,7 +341,7 @@ inline void extract_zip(FilePath filename, int flags = ARCHIVE_EXTRACT_TIME,
                         StringView dest_dir = ".") {
 	return extract_zip(
 	   filename, flags, [](archive_entry* /*unused*/) { return true; },
-	   std::move(dest_dir));
+	   dest_dir);
 }
 
 /**
