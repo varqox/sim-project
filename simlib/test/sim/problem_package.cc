@@ -53,7 +53,7 @@ TEST(DISABLED_sim_PackageContents, exists) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(DISABLED_sim_PackageContents, master_dir) {
+TEST(DISABLED_sim_PackageContents, main_dir) {
 	// TODO: implement it
 }
 
@@ -68,11 +68,11 @@ TEST(DISABLED_sim_PackageContents, load_from_zip) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(DISABLED_problem_package, zip_package_master_dir_with_zip) {
+TEST(DISABLED_problem_package, zip_package_main_dir_with_zip) {
 	// TODO: implement it
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(DISABLED_problem_package, zip_package_master_dir_with_path) {
+TEST(DISABLED_problem_package, zip_package_main_dir_with_path) {
 	// TODO: implement it
 }

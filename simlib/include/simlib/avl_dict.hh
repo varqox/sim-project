@@ -341,9 +341,11 @@ protected:
 	Comp compare;
 
 public:
-	explicit AVLDictionary(size_type reserve_n = 1, Comp cmp = {})
-	: pool(reserve_n)
-	, compare(std::move(cmp)) {
+	AVLDictionary()
+	: AVLDictionary(1) {}
+
+	explicit AVLDictionary(size_type reserve_n)
+	: pool(reserve_n) {
 		throw_assert(nil == 0);
 		pool[nil].kid[L] = nil;
 		pool[nil].kid[R] = nil;
@@ -352,6 +354,15 @@ public:
 
 	explicit AVLDictionary(Comp cmp)
 	: AVLDictionary(1, std::move(cmp)) {}
+
+	AVLDictionary(size_type reserve_n, Comp cmp)
+	: pool(reserve_n)
+	, compare(std::move(cmp)) {
+		throw_assert(nil == 0);
+		pool[nil].kid[L] = nil;
+		pool[nil].kid[R] = nil;
+		pool[nil].h = 0;
+	}
 
 	AVLDictionary(const AVLDictionary&) = default;
 	AVLDictionary& operator=(const AVLDictionary&) = default;

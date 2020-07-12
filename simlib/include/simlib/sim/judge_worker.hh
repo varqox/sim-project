@@ -340,7 +340,7 @@ public:
 	/**
 	 * @brief Loads file with path @p path from package to file @p dest
 	 *
-	 * @param path path to file in package. If master dir == "foo/" and
+	 * @param path path to file in package. If main dir == "foo/" and
 	 *   desired file has path "foo/bar/test", then @p path should be
 	 *   "bar/test"
 	 * @param dest path of the destination file
@@ -352,7 +352,7 @@ public:
 	/**
 	 * @brief Loads file with path @p path from package to a file
 	 *
-	 * @param path path to file in package. If master dir == "foo/" and
+	 * @param path path to file in package. If main dir == "foo/" and
 	 *   desired file has path "foo/bar/test", then @p path should be
 	 *   "bar/test"
 	 * @param hint_name A proposition of the file name if a new file is created
@@ -364,7 +364,7 @@ public:
 	/**
 	 * @brief Loads file with path @p path from package to a file
 	 *
-	 * @param path path to file in package. If master dir == "foo/" and
+	 * @param path path to file in package. If main dir == "foo/" and
 	 *   desired file has path "foo/bar/test", then @p path should be
 	 *   "bar/test"
 	 *
@@ -453,7 +453,7 @@ public:
 	}
 
 	/// Compiles solution (using sim::compile())
-	/// @p source should be a path in package master dir e.g. If master dir ==
+	/// @p source should be a path in package main dir e.g. If main dir ==
 	/// "foo/" and solution has path "foo/bar/test", then @p source should be
 	/// "bar/test"
 	int compile_solution_from_package(

@@ -59,15 +59,15 @@ public:
 class ZipPackageLoader : public PackageLoader {
 	TemporaryDirectory& tmp_dir_;
 	ZipFile zip_;
-	std::string pkg_master_dir_;
+	std::string pkg_main_dir_;
 
-	auto as_pkg_path(FilePath path) { return concat(pkg_master_dir_, path); }
+	auto as_pkg_path(FilePath path) { return concat(pkg_main_dir_, path); }
 
 public:
 	ZipPackageLoader(TemporaryDirectory& tmp_dir, FilePath pkg_path)
 	: tmp_dir_(tmp_dir)
 	, zip_(pkg_path, ZIP_RDONLY)
-	, pkg_master_dir_(sim::zip_package_master_dir(zip_)) {}
+	, pkg_main_dir_(sim::zip_package_main_dir(zip_)) {}
 
 	std::string load_into_dest_file(FilePath path, FilePath dest) override {
 		zip_.extract_to_file(zip_.get_index(as_pkg_path(path)), dest, S_0600);

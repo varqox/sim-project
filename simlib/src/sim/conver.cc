@@ -59,16 +59,16 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		pc.load_from_zip(package_path_);
 	}
 
-	StringView master_dir = pc.master_dir(); // Find master directory if exists
+	StringView main_dir = pc.main_dir(); // Find main directory if exists
 
 	auto exists_in_pkg = [&](StringView file) {
 		return (not file.empty() and pc.exists(intentional_unsafe_string_view(
-		                                concat(master_dir, file))));
+		                                concat(main_dir, file))));
 	};
 
 	// "utils/" directory is ignored by Conver
 	pc.remove_with_prefix(
-	   intentional_unsafe_string_view(concat(master_dir, "utils/")));
+	   intentional_unsafe_string_view(concat(main_dir, "utils/")));
 
 	// Load the Simfile from the package
 	Simfile sf;
@@ -77,12 +77,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			sf = Simfile([&] {
 				if (package_path_.back() == '/') {
 					return get_file_contents(
-					   concat(package_path_, master_dir, "Simfile"));
+					   concat(package_path_, main_dir, "Simfile"));
 				}
 
 				ZipFile zip(package_path_, ZIP_RDONLY);
 				return zip.extract_to_str(
-				   zip.get_index(concat(master_dir, "Simfile")));
+				   zip.get_index(concat(main_dir, "Simfile")));
 			}());
 		} catch (const ConfigFile::ParseError& e) {
 			THROW(concat_tostr("(Simfile) ", e.what(), '\n', e.diagnostics()));
@@ -156,9 +156,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	if (not sf.checker.has_value()) {
 		// Scan check/ and checker/ directory
-		auto x = collect_files(concat(master_dir, "check/"), is_source);
+		auto x = collect_files(concat(main_dir, "check/"), is_source);
 		{
-			auto y = collect_files(concat(master_dir, "checker/"), is_source);
+			auto y = collect_files(concat(main_dir, "checker/"), is_source);
 			x.insert(x.end(), y.begin(), y.end());
 		}
 		if (!x.empty()) {
@@ -168,7 +168,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				                        return a.size() < b.size();
 			                        }));
 
-			sf.checker = x.front().substr(master_dir.size()).to_string();
+			sf.checker = x.front().substr(main_dir.size()).to_string();
 			report_.append("Chosen checker: ", sf.checker.value());
 
 		} else if (sf.interactive) {
@@ -183,9 +183,9 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// Exclude check/ and checker/ directories from future searches
 	pc.remove_with_prefix(
-	   intentional_unsafe_string_view(concat(master_dir, "check/")));
+	   intentional_unsafe_string_view(concat(main_dir, "check/")));
 	pc.remove_with_prefix(
-	   intentional_unsafe_string_view(concat(master_dir, "checker/")));
+	   intentional_unsafe_string_view(concat(main_dir, "checker/")));
 
 	// Statement
 	try {
@@ -207,7 +207,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		   " statement specified in the package's Simfile - searching for one");
 
 		// Scan doc/ directory
-		auto x = collect_files(concat(master_dir, "doc/"), is_statement);
+		auto x = collect_files(concat(main_dir, "doc/"), is_statement);
 		if (x.empty()) {
 			x = collect_files("", is_statement); // Scan whole directory tree
 		}
@@ -232,7 +232,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				      pair<bool, size_t>(not has_suffix(b, ".pdf"), b.size()));
 			   }));
 
-			sf.statement = x.front().substr(master_dir.size()).to_string();
+			sf.statement = x.front().substr(main_dir.size()).to_string();
 			report_.append("Chosen statement: ", sf.statement.value());
 		}
 	}
@@ -272,7 +272,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 		// Merge solutions
 		for (auto&& s : x) {
-			s.remove_prefix(master_dir.size());
+			s.remove_prefix(main_dir.size());
 			if (solutions_set.emplace(s)) {
 				solutions.emplace_back(s.to_string());
 			}
@@ -341,7 +341,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			StringView tname = input;
 			tname.remove_suffix(3);
 			tname = tname.extract_trailing([](char c) { return (c != '/'); });
-			input.remove_prefix(master_dir.size());
+			input.remove_prefix(main_dir.size());
 
 			auto& test = tests[tname];
 			if (test.in.has_value()) {
@@ -362,7 +362,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				tname.remove_suffix(4);
 				tname =
 				   tname.extract_trailing([](char c) { return (c != '/'); });
-				output.remove_prefix(master_dir.size());
+				output.remove_prefix(main_dir.size());
 
 				auto& test = tests[tname];
 				if (test.out.has_value()) {
@@ -412,7 +412,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				continue; // Nothing more to do
 			}
 
-			auto path = concat(master_dir, input.value());
+			auto path = concat(main_dir, input.value());
 			if (not pc.exists(path)) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\": test"
 				               " input file: `",
@@ -420,7 +420,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				input = std::nullopt;
 			}
 
-			path = concat(master_dir, output.value());
+			path = concat(main_dir, output.value());
 			if (sf.interactive) {
 				if (not output.value().empty()) {
 					report_.append(
@@ -665,7 +665,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	if (not run_model_solution) {
 		normalize_time_limits(sf);
 		// Nothing more to do
-		return {Status::COMPLETE, std::move(sf), master_dir.to_string()};
+		return {Status::COMPLETE, std::move(sf), main_dir.to_string()};
 	}
 
 	// The model solution's judge report is needed
@@ -681,7 +681,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 
 	return {Status::NEED_MODEL_SOLUTION_JUDGE_REPORT, std::move(sf),
-	        master_dir.to_string()};
+	        main_dir.to_string()};
 }
 
 void Conver::reset_time_limits_using_jugde_reports(

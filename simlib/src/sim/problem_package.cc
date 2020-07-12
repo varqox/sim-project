@@ -62,7 +62,7 @@ void PackageContents::load_from_zip(FilePath pkg_path) {
 	}
 }
 
-string zip_package_master_dir(ZipFile& zip) {
+string zip_package_main_dir(ZipFile& zip) {
 	string res;
 	auto eno = zip.entries_no();
 	for (decltype(eno) i = 0; i < eno; ++i) {

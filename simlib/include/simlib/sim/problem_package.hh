@@ -95,9 +95,9 @@ public:
 		return entries.find(entry) != entries.end();
 	}
 
-	/// Finds master directory (with trailing '/') if such does not exist "" is
+	/// Finds main directory (with trailing '/') if such does not exist "" is
 	/// returned
-	[[nodiscard]] StringView master_dir() const {
+	[[nodiscard]] StringView main_dir() const {
 		if (entries.empty()) {
 			return "";
 		}
@@ -106,13 +106,13 @@ public:
 		{
 			auto pos = candidate.find('/');
 			if (pos == StringView::npos) {
-				return ""; // There is no master dir
+				return ""; // There is no main dir
 			}
 			candidate = candidate.substr(0, pos + 1);
 		}
 
 		if (not has_prefix(to_str(*entries.rbegin()), candidate)) {
-			return ""; // There is no master dir
+			return ""; // There is no main dir
 		}
 		return candidate;
 	}
@@ -123,15 +123,15 @@ public:
 	void load_from_zip(FilePath pkg_path);
 };
 
-/// Finds master directory (with trailing '/') in @p pkg_path if such does not
+/// Finds main directory (with trailing '/') in @p pkg_path if such does not
 /// exist "" is returned
-std::string zip_package_master_dir(ZipFile& zip);
+std::string zip_package_main_dir(ZipFile& zip);
 
-/// Finds master directory (with trailing '/') in @p pkg_path if such does not
+/// Finds main directory (with trailing '/') in @p pkg_path if such does not
 /// exist "" is returned
-inline std::string zip_package_master_dir(FilePath pkg_path) {
+inline std::string zip_package_main_dir(FilePath pkg_path) {
 	ZipFile zip(pkg_path, ZIP_RDONLY);
-	return zip_package_master_dir(zip);
+	return zip_package_main_dir(zip);
 }
 
 } // namespace sim

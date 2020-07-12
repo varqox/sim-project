@@ -311,7 +311,7 @@ private:
 		void judge_model_solution_and_finish_constructing_post_simfile(
 		   const sim::Conver::ConstructionResult& cres) {
 			ModelSolutionRunner model_solution_runner(
-			   package_copy_.path(), post_simfile_, cres.pkg_master_dir);
+			   package_copy_.path(), post_simfile_, cres.pkg_main_dir);
 			std::tie(initial_judge_report, final_judge_report) =
 			   model_solution_runner.judge();
 
@@ -324,15 +324,15 @@ private:
 			JudgeWorker jworker_;
 			sim::Simfile& simfile_;
 			const string& package_path_;
-			const string& pkg_master_dir_;
+			const string& pkg_main_dir_;
 
 		public:
 			ModelSolutionRunner(const string& package_path,
 			                    sim::Simfile& simfile,
-			                    const string& pkg_master_dir)
+			                    const string& pkg_main_dir)
 			: simfile_(simfile)
 			, package_path_(package_path)
-			, pkg_master_dir_(pkg_master_dir) {
+			, pkg_main_dir_(pkg_main_dir) {
 				jworker_.load_package(package_path_, simfile_.dump());
 			}
 
@@ -361,9 +361,9 @@ private:
 				OpenedTemporaryFile solution_source_code(
 				   "/tmp/problem_solution.XXXXXX");
 				ZipFile zip(package_path_);
-				zip.extract_to_fd(zip.get_index(concat(pkg_master_dir_,
-				                                       simfile_.solutions[0])),
-				                  solution_source_code);
+				zip.extract_to_fd(
+				   zip.get_index(concat(pkg_main_dir_, simfile_.solutions[0])),
+				   solution_source_code);
 
 				return solution_source_code;
 			}

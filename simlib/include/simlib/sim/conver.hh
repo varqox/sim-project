@@ -96,7 +96,7 @@ public:
 	struct ConstructionResult {
 		Status status;
 		Simfile simfile;
-		std::string pkg_master_dir;
+		std::string pkg_main_dir;
 	};
 
 	/**
