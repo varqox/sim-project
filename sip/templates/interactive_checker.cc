@@ -38,7 +38,7 @@ struct Verdict {
 	// ...
 	// // Give partial points, even if the rest of the answer will be invalid:
 	// verdict.wrong_override = Verdict::OK {50, "First line is correct\n"};
-	std::variant<OK, WRONG> wrong_override = WRONG {};
+	std::variant<OK, WRONG> wrong_override = WRONG{};
 
 	// 100% points
 	[[noreturn]] void ok() {
@@ -101,13 +101,14 @@ struct integer {
 
 	template <class T1, class T2>
 	constexpr integer(T& val, T1 min_val, T2 max_val)
-	   : val([&]() -> T& {
-		     my_assert(numeric_limits<T>::min() <= min_val);
-		     my_assert(min_val <= max_val);
-		     my_assert(max_val <= numeric_limits<T>::max());
-		     return val;
-	     }()),
-	     min_val(min_val), max_val(max_val) {}
+	: val([&]() -> T& {
+		my_assert(numeric_limits<T>::min() <= min_val);
+		my_assert(min_val <= max_val);
+		my_assert(max_val <= numeric_limits<T>::max());
+		return val;
+	}())
+	, min_val(min_val)
+	, max_val(max_val) {}
 };
 
 template <size_t N>
@@ -116,7 +117,9 @@ struct character {
 	array<char, N> options;
 
 	template <class... Opts>
-	constexpr character(char& c, Opts... opts) : val(c), options {opts...} {
+	constexpr character(char& c, Opts... opts)
+	: val(c)
+	, options{opts...} {
 		static_assert((std::is_same_v<Opts, char> and ...));
 	}
 };
@@ -229,7 +232,9 @@ private:
 	}
 
 public:
-	explicit Scanner(FILE* file, Mode mode) : file_(file), mode_(mode) {
+	explicit Scanner(FILE* file, Mode mode)
+	: file_(file)
+	, mode_(mode) {
 		my_assert(file != NULL);
 	}
 

@@ -132,10 +132,11 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
 
 	sim::JudgeReport::Test res(test.name, sim::JudgeReport::Test::OK,
 	                           es.cpu_runtime, test.time_limit, es.vm_peak,
-	                           test.memory_limit, string {});
+	                           test.memory_limit, string{});
 
 	if (es.si.code == CLD_EXITED and es.si.status == 0 and
-	    res.runtime <= res.time_limit) {
+	    res.runtime <= res.time_limit)
+	{
 		// OK
 
 	} else if (res.runtime >= res.time_limit or es.runtime >= res.time_limit) {
@@ -144,7 +145,8 @@ SipPackage::generate_test_output_file(const sim::Simfile::Test& test,
 		res.comment = "Time limit exceeded";
 
 	} else if (es.message == "Memory limit exceeded" or
-	           res.memory_consumed > res.memory_limit) {
+	           res.memory_consumed > res.memory_limit)
+	{
 		// MLE
 		res.status = sim::JudgeReport::Test::MLE;
 		res.comment = "Memory limit exceeded";
@@ -248,7 +250,8 @@ void SipPackage::generate_test_input_files() {
 	tests_files->tests.for_each([&](auto&& p) {
 		if (p.second.in.has_value() and
 		    not sipfile.static_tests.find(p.first) and
-		    not sipfile.gen_tests.find(p.first)) {
+		    not sipfile.gen_tests.find(p.first))
+		{
 			log_warning("test `", p.first, "` (file: ", p.second.in.value(),
 			            ") is neither specified as static nor as generated");
 		}
@@ -909,7 +912,8 @@ void SipPackage::create_default_directory_structure() {
 	    (mkdir("in") == -1 and errno != EEXIST) or
 	    (mkdir("out") == -1 and errno != EEXIST) or
 	    (mkdir("prog") == -1 and errno != EEXIST) or
-	    (mkdir("utils") == -1 and errno != EEXIST)) {
+	    (mkdir("utils") == -1 and errno != EEXIST))
+	{
 		THROW("mkdir()", errmsg());
 	}
 

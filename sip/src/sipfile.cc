@@ -249,7 +249,8 @@ void Sipfile::load_gen_tests() {
 		// Match generator
 		InplaceBuff<32> generator;
 		if (has_prefix(specified_generator, "sh:") or
-		    access(path_absolute(specified_generator), F_OK) == 0) {
+		    access(path_absolute(specified_generator), F_OK) == 0)
+		{
 			generator = specified_generator;
 		} else {
 			generator = matching_generator(specified_generator, pkg_contents);

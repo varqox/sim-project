@@ -21,8 +21,8 @@ static void parseOptions(int& argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 
 		if (argv[i][0] == '-') {
-			if (0 == strcmp(argv[i], "-C") and
-			    i + 1 < argc) { // Working directory
+			if (0 == strcmp(argv[i], "-C") and i + 1 < argc) {
+				// Working directory
 				if (chdir(argv[++i]) == -1) {
 					eprintf("Error: chdir() - %s\n", strerror(errno));
 					exit(1);

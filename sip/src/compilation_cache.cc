@@ -62,11 +62,11 @@ decltype(concat()) SipPackage::CompilationCache::compile(StringView source) {
 	string compilation_errors;
 	stdlog("Compiling ", source, "...").flush_no_nl();
 
-	if (jworker.compile_solution(concat(source), sim::filename_to_lang(source),
-	                             SOLUTION_COMPILATION_TIME_LIMIT,
-	                             &compilation_errors,
-	                             COMPILATION_ERRORS_MAX_LENGTH,
-	                             cached_path(PROOT_PATH).to_string())) {
+	if (jworker.compile_solution(
+	       concat(source), sim::filename_to_lang(source),
+	       SOLUTION_COMPILATION_TIME_LIMIT, &compilation_errors,
+	       COMPILATION_ERRORS_MAX_LENGTH, cached_path(PROOT_PATH).to_string()))
+	{
 		stdlog(" \033[1;31mfailed\033[m.");
 		errlog(compilation_errors);
 		throw SipError(source, " compilation failed");
@@ -97,10 +97,10 @@ void SipPackage::CompilationCache::load_checker(sim::JudgeWorker& jworker) {
 	string compilation_errors;
 	stdlog("Compiling checker...").flush_no_nl();
 
-	if (jworker.compile_checker(CHECKER_COMPILATION_TIME_LIMIT,
-	                            &compilation_errors,
-	                            COMPILATION_ERRORS_MAX_LENGTH,
-	                            cached_path(PROOT_PATH).to_string())) {
+	if (jworker.compile_checker(
+	       CHECKER_COMPILATION_TIME_LIMIT, &compilation_errors,
+	       COMPILATION_ERRORS_MAX_LENGTH, cached_path(PROOT_PATH).to_string()))
+	{
 		stdlog(" \033[1;31mfailed\033[m.");
 		errlog(compilation_errors);
 		throw SipError("checker compilation failed");

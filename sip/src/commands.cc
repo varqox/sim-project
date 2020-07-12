@@ -290,8 +290,7 @@ void main_sol(ArgvParser args) {
 		auto solutions = sp.simfile.config_file().get_var("solutions");
 		if (not solutions.is_set()) {
 			sp.replace_variable_in_simfile(
-			   "solutions",
-			   std::vector<std::string> {new_main_sol.to_string()});
+			   "solutions", std::vector<std::string>{new_main_sol.to_string()});
 		} else {
 			try {
 				sp.simfile.load_solutions();
@@ -306,7 +305,7 @@ void main_sol(ArgvParser args) {
 			} catch (...) {
 				sp.replace_variable_in_simfile(
 				   "solutions",
-				   std::vector<std::string> {new_main_sol.to_string()});
+				   std::vector<std::string>{new_main_sol.to_string()});
 			}
 		}
 	}
@@ -450,7 +449,8 @@ void test(ArgvParser args) {
 		// Save limits only if Simfile is already created (because if it creates
 		// a Simfile without memory limit it causes sip to fail in the next run)
 		if (solution == sp.full_simfile.solutions.front() and
-		    access("Simfile", F_OK) == 0) {
+		    access("Simfile", F_OK) == 0)
+		{
 			sp.save_limits();
 		}
 	});
