@@ -18,9 +18,14 @@
 # GNU Make dependences
 *.deps
 
+# Python
+__pycache__/
+
+# Build targets
+sip
+sip-static
+
 # Others
 .clangd/
 *build/
 compile_commands.json
-sip
-sip-static

@@ -106,5 +106,5 @@ src/git_commit.hh: .git/logs/HEAD
 	src/gen_git_commit_hh.py > $@
 
 .PHONY: format
-format: subprojects/simlib/format
-format: $(shell find bin src templates | grep -E '\.(cc?|hh?)$$' | grep -vE '^(subprojects/simlib/.*|src/proot_dump.c|src/git_commit.hh)$$' | sed 's/$$/-make-format/')
+format:
+	python3 format.py .
