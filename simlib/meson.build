@@ -42,7 +42,7 @@ dump_file_as_c_array = generator(find_program('dump_file_as_c_array.py'),
 )
 
 libseccomp_dep = dependency('libseccomp', kwargs : static_kwargs)
-libzip_dep = dependency('libzip', version : '>=1.3.0',  kwargs : static_kwargs)
+libzip_dep = dependency('libzip', version : '>=1.3.0', kwargs : static_kwargs)
 rt_dep = cpp.find_library('rt', kwargs : static_kwargs)
 
 threads_dep = dependency('threads', kwargs : static_kwargs)
