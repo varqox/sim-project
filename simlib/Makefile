@@ -131,4 +131,5 @@ $(PREFIX)test: $(PREFIX)test/exec
 	$(PREFIX)test/exec
 
 .PHONY: $(PREFIX)format
-$(PREFIX)format: $(shell find $(PREFIX)include $(PREFIX)src $(PREFIX)test $(PREFIX)doc | grep -E '\.(cc?|hh?)$$' | grep -vE '^($(PREFIX)src/sha3.c|$(PREFIX)src/sim/default_checker_dump.c)$$' | sed 's/$$/-make-format/')
+$(PREFIX)format:
+	python3 $(PREFIX)format.py $(PREFIX)./
