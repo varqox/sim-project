@@ -117,8 +117,8 @@ run_target('tidy', command : [find_program('tidy.sh')], depends : simlib)
 
 #################################### Tests ####################################
 
-gtest_main_dep = dependency('gtest', main : true, version : '>=1.10', required : false)
-gmock_dep = dependency('gmock', main : false, version : '>=1.10', required : false)
+gtest_main_dep = dependency('gtest', main : true, required : false, method : 'system')
+gmock_dep = dependency('gmock', main : false, required : false, method : 'system')
 
 if not gtest_main_dep.found() or not gmock_dep.found()
     gtest = subproject('gtest')
