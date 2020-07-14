@@ -4,7 +4,7 @@ DESTDIR := /usr/local/bin
 
 define SIP_FLAGS =
 INTERNAL_EXTRA_CXX_FLAGS := -I '$(CURDIR)/subprojects/simlib/include'
-INTERNAL_EXTRA_LD_FLAGS := -L '$(CURDIR)/src/lib' -lsupc++ -lrt -lzip -lseccomp -pthread
+INTERNAL_EXTRA_LD_FLAGS := -L '$(CURDIR)/src/lib' -lsupc++ -lrt -lzip -lz -lseccomp -pthread
 endef
 
 .PHONY: all
