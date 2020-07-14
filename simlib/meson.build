@@ -47,7 +47,10 @@ rt_dep = cpp.find_library('rt', kwargs : static_kwargs)
 
 threads_dep = dependency('threads', kwargs : static_kwargs)
 if get_option('static')
-    threads_dep = declare_dependency(link_args : ['-Wl,--whole-archive', '-lpthread', '-Wl,--no-whole-archive'])
+    threads_dep = declare_dependency(
+        compile_args : '-pthread',
+        link_args : ['-Wl,--whole-archive', '-lpthread', '-Wl,--no-whole-archive']
+    )
 endif
 
 simlib_dependencies = [
