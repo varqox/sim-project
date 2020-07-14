@@ -172,6 +172,7 @@ tests = [
     ['test/inplace_buff.cc', [], {}],
     ['test/libzip.cc', [], {}],
     ['test/logger.cc', [], {}],
+    ['test/member_comparator.cc', [], {}],
     ['test/memory.cc', [], {}],
     ['test/mysql.cc', [], {}],
     ['test/opened_temporary_file.cc', [gmock_dep], {}],

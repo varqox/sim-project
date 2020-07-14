@@ -1697,30 +1697,3 @@ public:
 		return true;
 	}
 };
-
-template <class T, class Class, T Class::*member, class Comp = std::less<>>
-class MemberComparator {
-	Comp compare;
-
-	static const T& value(const Class& x) noexcept { return x.*member; }
-
-	static const T& value(Class&& x) noexcept { return x.*member; }
-
-	template <class A>
-	static A value(A&& a) noexcept {
-		return a;
-	}
-
-public:
-	template <class... Args>
-	explicit MemberComparator(Args&&... args)
-	: compare(std::forward<Args>(args)...) {}
-
-	template <class A, class B>
-	bool operator()(A&& a, B&& b) {
-		return compare(value(std::forward<A>(a)), value(std::forward<B>(b)));
-	}
-};
-
-#define MEMBER_COMPARATOR(Class, member)                                       \
-	MemberComparator<decltype(Class::member), Class, &Class::member>

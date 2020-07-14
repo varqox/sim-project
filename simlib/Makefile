@@ -94,6 +94,7 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)test/inplace_buff.cc \
 	$(PREFIX)test/libzip.cc \
 	$(PREFIX)test/logger.cc \
+	$(PREFIX)test/member_comparator.cc \
 	$(PREFIX)test/memory.cc \
 	$(PREFIX)test/mysql.cc \
 	$(PREFIX)test/opened_temporary_file.cc \
