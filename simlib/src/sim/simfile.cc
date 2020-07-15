@@ -1,5 +1,4 @@
 #include "simlib/sim/simfile.hh"
-#include "simlib/avl_dict.hh"
 #include "simlib/file_info.hh"
 #include "simlib/path.hh"
 #include "simlib/simple_parser.hh"
@@ -7,6 +6,7 @@
 #include "simlib/utilities.hh"
 
 #include <cmath>
+#include <map>
 #include <utility>
 
 using std::pair;
@@ -362,7 +362,8 @@ void Simfile::load_tests() {
 		throw std::runtime_error{"Simfile: missing limits array"};
 	}
 
-	AVLDictMap<StringView, TestGroup, StrNumCompare> tests_groups;
+	// group id => test group
+	std::map<StringView, TestGroup, StrNumCompare> tests_groups;
 	// StringView may be used as Key because it will point to a string in
 	// limits.as_array() which is a const reference to vector inside the
 	// `limits` variable which will be valid as long as config is not changed
@@ -403,28 +404,29 @@ void Simfile::load_tests() {
 	auto&& scoring = config["scoring"];
 	CHECK_IF_ARR(scoring, "scoring");
 	if (!scoring.is_set()) { // Calculate scoring automatically
-		auto groups_no = tests_groups.size() - bool(tests_groups.find("0"));
+		auto groups_no = tests_groups.size() - tests_groups.count("0");
 		int total_score = 100;
 
-		tests_groups.for_each([&](auto&& git) {
-			if (git.first != "0") {
+		for (auto& [gid, group] : tests_groups) {
+			if (gid != "0") {
 				assert(groups_no > 0);
-				total_score -= (git.second.score = total_score / groups_no--);
+				group.score = total_score / groups_no--;
+				total_score -= group.score;
 			}
-		});
+		}
 
 	} else { // Check and implement defined scoring
-		AVLDictMap<StringView, int64_t> sm; // (gid, score)
+		std::map<StringView, int64_t> gid_to_score;
 		for (const string& str : scoring.as_array()) {
 			auto [gid, score] = parse_scoring_item(str);
 
-			if (not tests_groups.find(gid)) {
+			if (tests_groups.find(gid) == tests_groups.end()) {
 				throw std::runtime_error{concat_tostr(
 				   "Simfile: scoring of the invalid group `", gid,
 				   "` - there is no test belonging to this group")};
 			}
 
-			auto&& it = sm.emplace(gid, 0);
+			auto&& it = gid_to_score.emplace(gid, 0);
 			if (!it.second) {
 				throw std::runtime_error{concat_tostr(
 				   "Simfile: redefined scoring of the group `", gid, '`')};
@@ -434,22 +436,23 @@ void Simfile::load_tests() {
 		}
 
 		// Assign scoring to each group
-		tests_groups.for_each([&](auto&& git) {
-			auto it = sm.find(git.first);
-			if (not it) {
+		for (auto& [gid, group] : tests_groups) {
+			auto it = gid_to_score.find(gid);
+			if (it == gid_to_score.end()) {
 				throw std::runtime_error{concat_tostr(
-				   "Simfile: missing scoring of the group `", git.first, '`')};
+				   "Simfile: missing scoring of the group `", gid, '`')};
 			}
 
-			git.second.score = it->second;
-		});
+			group.score = it->second;
+		}
 	}
 
 	// Move limits from tests_groups to tgroups
 	tgroups.clear();
 	tgroups.reserve(tests_groups.size());
-	tests_groups.for_each(
-	   [&](auto&& git) { tgroups.emplace_back(std::move(git.second)); });
+	for (auto& [_, group] : tests_groups) {
+		tgroups.emplace_back(std::move(group));
+	}
 
 	// Sort tests in groups
 	for (auto& group : tgroups) {
@@ -486,8 +489,8 @@ void Simfile::load_tests_files() {
 		throw std::runtime_error{"Simfile: missing tests_files array"};
 	}
 
-	AVLDictMap<StringView, pair<StringView, StringView>> files; // test =>
-	                                                            // (in, out)
+	std::map<StringView, pair<StringView, StringView>>
+	   files; // test => (in, out)
 	// StringView can be used because it will point to the config variable
 	// "tests_files" member, which becomes unchanged
 	for (const string& str : tests_files.as_array()) {
@@ -531,7 +534,7 @@ void Simfile::load_tests_files() {
 	for (TestGroup& group : tgroups) {
 		for (Test& test : group.tests) {
 			auto it = files.find(test.name);
-			if (not it) {
+			if (it == files.end()) {
 				throw std::runtime_error{
 				   concat_tostr("Simfile: no files specified for the test `",
 				                test.name, '`')};
