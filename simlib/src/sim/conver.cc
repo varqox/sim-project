@@ -1,13 +1,16 @@
 #include "simlib/sim/conver.hh"
-#include "simlib/avl_dict.hh"
 #include "simlib/debug.hh"
 #include "simlib/file_info.hh"
 #include "simlib/libzip.hh"
+#include "simlib/member_comparator.hh"
 #include "simlib/sim/judge_worker.hh"
 #include "simlib/sim/problem_package.hh"
+#include "simlib/string_compare.hh"
 #include "simlib/utilities.hh"
 
 #include <chrono>
+#include <map>
+#include <set>
 #include <utility>
 
 using std::pair;
@@ -244,10 +247,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 	{
 		vector<std::string> solutions;
-		AVLDictSet<StringView> solutions_set; // Used to detect and eliminate
-		                                      // solutions duplication
+		std::set<StringView> solutions_set; // Used to detect and eliminate
+		                                    // solutions duplication
 		for (auto&& sol : sf.solutions) {
-			if (exists_in_pkg(sol) and not solutions_set.find(sol)) {
+			if (exists_in_pkg(sol) and
+			    solutions_set.find(sol) == solutions_set.end()) {
 				solutions.emplace_back(sol);
 				solutions_set.emplace(sol);
 			} else {
@@ -271,9 +275,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		}
 
 		// Merge solutions
-		for (auto&& s : x) {
+		for (StringView s : x) {
 			s.remove_prefix(main_dir.size());
-			if (solutions_set.emplace(s)) {
+			auto [_, inserted] = solutions_set.emplace(s);
+			if (inserted) {
 				solutions.emplace_back(s.to_string());
 			}
 		}
@@ -282,23 +287,23 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		sf.solutions = std::move(solutions);
 	}
 
-	struct Test {
-		StringView name;
+	struct TestProperties {
 		std::optional<StringView> in;
 		std::optional<StringView> out;
 		std::optional<std::chrono::nanoseconds> time_limit;
 		std::optional<uint64_t> memory_limit;
 	};
 
-	AVLDictMap<StringView, Test> tests;
+	std::map<StringView, TestProperties> tests; // test name => test props
 
 	// Load tests and limits form variable "limits"
 	auto const& limits = sf.config["limits"];
 	if (not opts.ignore_simfile and limits.is_set() and limits.is_array()) {
 		for (auto const& str : limits.as_array()) {
-			Test test;
+			StringView test_name;
+			TestProperties test;
 			try {
-				std::tie(test.name, test.time_limit, test.memory_limit) =
+				std::tie(test_name, test.time_limit, test.memory_limit) =
 				   Simfile::parse_limits_item(str);
 			} catch (const std::exception& e) {
 				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
@@ -307,16 +312,16 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				continue;
 			}
 
-			if (Simfile::TestNameComparator::split(test.name).gid.empty()) {
+			if (Simfile::TestNameComparator::split(test_name).gid.empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"limits\": ignoring"
 				               " test `",
-				               test.name,
+				               test_name,
 				               "` because it has no group id in its name");
 				continue;
 			}
 
-			tests.emplace(test.name,
-			              test); // Replace on redefinition
+			// Replace on redefinition
+			tests.insert_or_assign(test_name, test);
 		}
 	}
 
@@ -327,10 +332,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			{
 				entry.remove_trailing([](char c) { return (c != '.'); });
 				entry.remove_suffix(1);
-				StringView name =
+				StringView test_name =
 				   entry.extract_trailing([](char c) { return (c != '/'); });
 
-				tests[name].name = name;
+				tests.try_emplace(test_name);
 			}
 		});
 	}
@@ -343,14 +348,18 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			tname = tname.extract_trailing([](char c) { return (c != '/'); });
 			input.remove_prefix(main_dir.size());
 
-			auto& test = tests[tname];
+			auto it = tests.find(tname);
+			if (it == tests.end()) {
+				return; // There is no such test
+			}
+			auto& test = it->second;
+
 			if (test.in.has_value()) {
 				report_.append(
 				   "\033[1;35mwarning\033[m: input file for test `", tname,
 				   "` was found in more than one location: `", test.in.value(),
 				   "` and `", input, "` - choosing the later");
 			}
-
 			test.in = input;
 		}
 	});
@@ -364,7 +373,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				   tname.extract_trailing([](char c) { return (c != '/'); });
 				output.remove_prefix(main_dir.size());
 
-				auto& test = tests[tname];
+				auto it = tests.find(tname);
+				if (it == tests.end()) {
+					return; // There is no such test
+				}
+				auto& test = it->second;
+
 				if (test.out.has_value()) {
 					report_.append("\033[1;35mwarning\033[m: output file for"
 					               " test `",
@@ -375,7 +389,6 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 					               "`"
 					               " - choosing the later");
 				}
-
 				test.out = output;
 			}
 		});
@@ -386,11 +399,11 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	if (not opts.ignore_simfile and tests_files.is_set() and
 	    tests_files.is_array()) {
 		for (auto const& str : tests_files.as_array()) {
-			StringView tname;
+			StringView test_name;
 			std::optional<StringView> input;
 			std::optional<StringView> output;
 			try {
-				std::tie(tname, input, output) =
+				std::tie(test_name, input, output) =
 				   Simfile::parse_test_files_item(str);
 			} catch (const std::exception& e) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
@@ -399,14 +412,14 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				continue;
 			}
 
-			if (tname.empty()) {
+			if (test_name.empty()) {
 				continue; // Ignore empty entries
 			}
 
 			if (input.value().empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
 				               " missing test input file for test `",
-				               tname, "` - ignoring");
+				               test_name, "` - ignoring");
 
 				throw_assert(output.value().empty());
 				continue; // Nothing more to do
@@ -435,7 +448,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			} else if (output.value().empty()) {
 				report_.append("\033[1;35mwarning\033[m: \"tests_files\":"
 				               " missing test output file for test `",
-				               tname, "` - ignoring");
+				               test_name, "` - ignoring");
 				output = std::nullopt;
 
 			} else if (not pc.exists(path)) {
@@ -446,19 +459,20 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			if (opts.seek_for_new_tests) {
-				tests[tname].name = tname; // Add test if it does not exist
+				tests.try_emplace(test_name); // Add test if it does not exist
 			}
 
-			auto it = tests.find(tname);
-			if (not it) {
+			auto it = tests.find(test_name);
+			if (it == tests.end()) {
 				report_.append(
 				   "\033[1;35mwarning\033[m: \"tests_files\": ignoring files "
 				   "for test `",
-				   tname, "` because no such test is specified in \"limits\"");
+				   test_name,
+				   "` because no such test is specified in \"limits\"");
 				continue;
 			}
 
-			Test& test = it->second;
+			TestProperties& test = it->second;
 			if (input.has_value()) {
 				test.in = input;
 			}
@@ -470,12 +484,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	}
 
 	// Remove tests that have at most one file set
-	for (auto it = tests.front(); it; it = tests.upper_bound(it->first)) {
-		auto const& test = it->second;
+	filter(tests, [&](auto const& p) {
+		auto const& [test_name, test] = p;
 		// Warn if the test was loaded from "limits"
 		if (not test.in.has_value() and test.time_limit.has_value()) {
 			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
-			               test.name,
+			               test_name,
 			               "` because it has no corresponding input file");
 		}
 		// Warn if the test was loaded from "limits"
@@ -483,16 +497,12 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		    test.time_limit.has_value())
 		{
 			report_.append("\033[1;35mwarning\033[m: limits: ignoring test `",
-			               test.name,
+			               test_name,
 			               "` because it has no corresponding output file");
 		}
 
-		if (not test.in.has_value() or
-		    (not sf.interactive and not test.out.has_value()))
-		{
-			tests.erase(test.name);
-		}
-	}
+		return test.in.has_value() and (sf.interactive or test.out.has_value());
+	});
 
 	if (not opts.memory_limit.has_value()) {
 		if (opts.ignore_simfile) {
@@ -515,46 +525,46 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	if (opts.memory_limit.has_value()) {
 		// Convert from MiB to bytes
 		sf.global_mem_limit = opts.memory_limit.value() << 20;
-		tests.for_each([&](auto& keyval) {
-			keyval.second.memory_limit = sf.global_mem_limit;
-		});
+		for (auto& [_, test] : tests) {
+			test.memory_limit = sf.global_mem_limit;
+		}
 	} else { // Give tests without specified memory limit the global memory
 		     // limit
-		tests.for_each([&](auto& keyval) {
-			if (not keyval.second.memory_limit.has_value()) {
+		for (auto& [test_name, test] : tests) {
+			if (not test.memory_limit.has_value()) {
 				if (not sf.global_mem_limit.has_value()) {
-					THROW("Memory limit is not specified for test `",
-					      keyval.first, "` and no global memory limit is set");
+					THROW("Memory limit is not specified for test `", test_name,
+					      "` and no global memory limit is set");
 				}
-
-				keyval.second.memory_limit = sf.global_mem_limit;
+				test.memory_limit = sf.global_mem_limit;
 			}
-		});
+		}
 	}
 
 	struct TestsGroup {
-		StringView name;
 		std::optional<int64_t> score;
-		vector<Test> tests;
+		// test name => test props
+		std::multimap<StringView, TestProperties, Simfile::TestNameComparator>
+		   tests;
 	};
 
-	AVLDictMap<StringView, TestsGroup, StrNumCompare> tests_groups;
+	std::map<StringView, TestsGroup, StrNumCompare>
+	   tests_groups; // group name => test group
 	// Fill tests_groups
-	tests.for_each([&](auto& keyval) {
-		Test& test = keyval.second;
-		auto sr = Simfile::TestNameComparator::split(test.name);
+	for (auto const& [test_name, test] : tests) {
+		auto sr = Simfile::TestNameComparator::split(test_name);
 		if (sr.gid.empty()) {
-			return; // Ignore the tests with no group id
+			continue; // Ignore the tests with no group id
 		}
 
 		if (sr.tid == "ocen") {
 			sr.gid = "0";
 		}
 
-		auto& group = tests_groups[sr.gid];
-		group.name = sr.gid;
-		group.tests.emplace_back(test);
-	});
+		auto [it, _] = tests_groups.try_emplace(sr.gid);
+		auto& group = it->second;
+		group.tests.emplace(test_name, test);
+	}
 
 	// Load scoring
 	auto const& scoring = sf.config["scoring"];
@@ -574,7 +584,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 			}
 
 			auto it = tests_groups.find(gid);
-			if (it) {
+			if (it != tests_groups.end()) {
 				it->second.score = score;
 			} else {
 				report_.append("\033[1;35mwarning\033[m: \"scoring\": ignoring"
@@ -587,10 +597,10 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	// Sum positive scores
 	uint64_t max_score = 0;
 	size_t unscored_tests = 0;
-	tests_groups.for_each([&](auto const& keyval) {
-		max_score += meta::max(keyval.second.score.value_or(0), 0);
-		unscored_tests += not keyval.second.score.has_value();
-	});
+	for (auto const& [_, group] : tests_groups) {
+		max_score += meta::max(group.score.value_or(0), 0);
+		unscored_tests += not group.score.has_value();
+	}
 
 	// Distribute score among tests with no score set
 	if (unscored_tests > 0) {
@@ -598,45 +608,40 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		max_score = (max_score > 100 ? 0 : 100 - max_score);
 
 		// Group 0 always has score equal to 0
-		TestsGroup& first_group = tests_groups.front()->second;
-		StringView first_gid = first_group.name;
-		first_gid.remove_leading('0');
-		if (first_gid.empty() and not first_group.score.has_value()) {
+		TestsGroup& first_group = tests_groups.begin()->second;
+		StringView first_gid = tests_groups.begin()->first;
+		if (first_gid.without_leading('0').empty() and
+		    not first_group.score.has_value())
+		{
 			first_group.score = 0;
 			--unscored_tests;
 			report_.append("Auto-scoring: score of the group with id `",
-			               first_group.name, "` set to 0");
+			               first_gid, "` set to 0");
 		}
 
 		// Distribute scoring
-		tests_groups.for_each([&](auto& keyval) {
-			auto& score = keyval.second.score;
-			if (not score.has_value()) {
-				max_score -= (score = max_score / unscored_tests--).value();
+		for (auto& [gid, group] : tests_groups) {
+			if (not group.score.has_value()) {
+				max_score -=
+				   (group.score = max_score / unscored_tests--).value();
 				report_.append("Auto-scoring: score of the group with id `",
-				               keyval.second.name, "` set to ", score.value());
+				               gid, "` set to ", group.score.value());
 			}
-		});
+		}
 	}
 
 	bool run_model_solution = opts.reset_time_limits_using_model_solution;
 
 	// Export tests to the Simfile
 	sf.tgroups.clear();
-	tests_groups.for_each([&](auto& keyval) {
-		auto& group = keyval.second;
-		// Sort tests in group
-		sort(group.tests, [](const Test& a, const Test& b) {
-			return Simfile::TestNameComparator()(a.name, b.name);
-		});
-
+	for (auto const& [_, group] : tests_groups) {
 		Simfile::TestGroup tg;
 		tg.score = group.score.value();
-		for (auto const& test : group.tests) {
+		for (auto const& [test_name, test] : group.tests) {
 			run_model_solution |= not test.time_limit.has_value();
 
 			Simfile::Test t(
-			   test.name.to_string(),
+			   test_name.to_string(),
 			   test.time_limit.value_or(std::chrono::nanoseconds(0)),
 			   test.memory_limit.value());
 			t.in = test.in.value().to_string();
@@ -650,7 +655,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		}
 
 		sf.tgroups.emplace_back(std::move(tg));
-	});
+	}
 
 	// Override the time limits
 	if (opts.global_time_limit.has_value()) {
@@ -700,7 +705,7 @@ void Conver::reset_time_limits_using_jugde_reports(
 	}
 
 	// Map every test to its time limit
-	AVLDictMap<StringView, nanoseconds> tls; // test name => time limit
+	std::map<StringView, nanoseconds> tls; // test name => time limit
 	for (auto ptr : {&jrep1, &jrep2}) {
 		auto&& rep = *ptr;
 		for (auto&& g : rep.groups) {
@@ -722,7 +727,7 @@ void Conver::reset_time_limits_using_jugde_reports(
 	// Assign time limits to the tests
 	for (auto&& tg : sf.tgroups) {
 		for (auto&& t : tg.tests) {
-			t.time_limit = tls[t.name];
+			t.time_limit = WONT_THROW(tls.at(t.name));
 		}
 	}
 

@@ -18,7 +18,7 @@ Chosen statement: foo.txt
 [1;35mwarning[m: limits: ignoring test `8888` because it has no corresponding input file
 [1;35mwarning[m: limits: ignoring test `8888` because it has no corresponding output file
 Global memory limit not specified in options - loading it from Simfile
-Auto-scoring: score of the group with id `0` set to 0
+Auto-scoring: score of the group with id `000` set to 0
 Auto-scoring: score of the group with id `1` set to 33
 Auto-scoring: score of the group with id `3` set to 33
 Auto-scoring: score of the group with id `5` set to 34

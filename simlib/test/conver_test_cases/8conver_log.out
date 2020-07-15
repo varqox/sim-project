@@ -14,6 +14,7 @@ Chosen statement: foo.txt
 [1;35mwarning[m: "tests_files": test output file: `nothing` not found - ignoring file
 [1;35mwarning[m: "tests_files": ignoring files for test `2file` because no such test is specified in "limits"
 [1;35mwarning[m: "tests_files": test output file: `nothing` not found - ignoring file
+[1;35mwarning[m: "tests_files": ignoring files for test `3file` because no such test is specified in "limits"
 [1;35mwarning[m: "tests_files": ignoring unparsable item -> Simfile: `tests_files`: invalid format of entry for test `ttt` - excess part: hhh
 [1;35mwarning[m: "tests_files": test input file: `444` not found - ignoring file
 [1;35mwarning[m: "tests_files": test output file: `hhh` not found - ignoring file
