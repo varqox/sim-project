@@ -5,6 +5,8 @@
 #include "simlib/opened_temporary_file.hh"
 #include "simlib/path.hh"
 #include "simlib/process.hh"
+#include "simlib/sim/judge_worker.hh"
+#include "simlib/string_compare.hh"
 #include "simlib/temporary_file.hh"
 
 #include <chrono>
@@ -142,9 +144,7 @@ class TestingJudgeLogger : public sim::JudgeLogger {
 			                       "killed"),
 			    ')');
 		}
-
 		func();
-
 		log('\n');
 	}
 
@@ -196,30 +196,161 @@ public:
 	void end() override { log("}\n"); }
 };
 
-class ConverTestRunner : public concurrent::JobProcessor<string> {
+class ConverTestCaseRunner {
+	static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{5};
+	static constexpr size_t COMPILATION_ERRORS_MAX_LENGTH = 4096;
+
+	const TemporaryFile package_copy_{"/tmp/conver_test.XXXXXX"};
+	const string test_case_name_;
+	const InplaceBuff<PATH_MAX> test_path_prefix_;
+	const Conver::Options options_;
+
+	Conver conver_;
+	string report_;
+	sim::Simfile pre_simfile_;
+	sim::Simfile post_simfile_;
+	JudgeReport initial_judge_report_, final_judge_report_;
+
+public:
+	ConverTestCaseRunner(const string& tests_dir, string&& test_case_name)
+	: test_case_name_(std::move(test_case_name))
+	, test_path_prefix_(concat(tests_dir, test_case_name_))
+	, options_(load_options_from_file(
+	     concat_tostr(test_path_prefix_, "conver.options"))) {
+		throw_assert(copy(concat_tostr(test_path_prefix_, "package.zip"),
+		                  package_copy_.path()) == 0);
+		conver_.package_path(package_copy_.path());
+	}
+
+	void run() {
+		try {
+			generate_result();
+		} catch (const std::exception& e) {
+			report_ = conver_.report();
+			back_insert(report_, "\n>>>> Exception caught <<<<\n",
+			            std::regex_replace(
+			               e.what(),
+			               std::regex(R"=(\(thrown at (\w|\.|/)+:\d+\))="),
+			               "(thrown at ...)"));
+		}
+
+		check_result();
+	}
+
+private:
+	void generate_result() {
+		auto cres = conver_.construct_simfile(options_);
+		pre_simfile_ = cres.simfile;
+		post_simfile_ = cres.simfile;
+		report_ = conver_.report();
+
+		switch (cres.status) {
+		case Conver::Status::COMPLETE: return; // Nothing more to do
+		case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: break;
+		}
+
+		string compilation_errors;
+		JudgeWorker jworker;
+		jworker.load_package(package_copy_.path(), post_simfile_.dump());
+		// Checker
+		if (jworker.compile_checker(COMPILATION_TIME_LIMIT, &compilation_errors,
+		                            COMPILATION_ERRORS_MAX_LENGTH, ""))
+		{
+			THROW("failed to compile checker: \n", compilation_errors);
+		}
+		// Solution
+		auto const& main_solution = post_simfile_.solutions[0];
+		if (jworker.compile_solution_from_package(
+		       main_solution, sim::filename_to_lang(main_solution),
+		       COMPILATION_TIME_LIMIT, &compilation_errors,
+		       COMPILATION_ERRORS_MAX_LENGTH, ""))
+		{
+			THROW("failed to compile solution: \n", compilation_errors);
+		}
+
+		TestingJudgeLogger judge_logger;
+		initial_judge_report_ = jworker.judge(false, judge_logger),
+		final_judge_report_ = jworker.judge(true, judge_logger);
+
+		Conver::reset_time_limits_using_jugde_reports(
+		   post_simfile_, initial_judge_report_, final_judge_report_,
+		   options_.rtl_opts);
+	}
+
+	void round_post_simfile_time_limits_to_whole_seconds() {
+		using std::chrono_literals::operator""s;
+		// This should remove the problem with random time limit if they
+		// were set using the model solution.
+		for (auto& group : post_simfile_.tgroups) {
+			for (auto& test : group.tests) {
+				// Time limits should not have been set to 0
+				EXPECT_GT(test.time_limit, 0s) << "^ test " << test_case_name_;
+				test.time_limit =
+				   std::chrono::duration_cast<std::chrono::seconds>(
+				      test.time_limit + 0.5s);
+			}
+		}
+	}
+
+	void check_result() {
+		round_post_simfile_time_limits_to_whole_seconds();
+		if (REGENERATE_OUTS) {
+			overwrite_test_output_files();
+		}
+
+		EXPECT_EQ(get_file_contents(
+		             concat_tostr(test_path_prefix_, "pre_simfile.out")),
+		          pre_simfile_.dump())
+		   << "^ test " << test_case_name_;
+		EXPECT_EQ(get_file_contents(
+		             concat_tostr(test_path_prefix_, "post_simfile.out")),
+		          post_simfile_.dump())
+		   << "^ test " << test_case_name_;
+		EXPECT_EQ(
+		   get_file_contents(concat_tostr(test_path_prefix_, "conver_log.out")),
+		   report_)
+		   << "^ test " << test_case_name_;
+		EXPECT_EQ(
+		   get_file_contents(concat_tostr(test_path_prefix_, "judge_log.out")),
+		   serialized_judge_log())
+		   << "^ test " << test_case_name_;
+	}
+
+	[[nodiscard]] string serialized_judge_log() const {
+		return initial_judge_report_.judge_log + final_judge_report_.judge_log;
+	}
+
+	void overwrite_test_output_files() const {
+		put_file_contents(concat_tostr(test_path_prefix_, "pre_simfile.out"),
+		                  intentional_unsafe_string_view(pre_simfile_.dump()));
+
+		put_file_contents(concat_tostr(test_path_prefix_, "post_simfile.out"),
+		                  intentional_unsafe_string_view(post_simfile_.dump()));
+
+		put_file_contents(concat_tostr(test_path_prefix_, "conver_log.out"),
+		                  report_);
+
+		put_file_contents(
+		   concat_tostr(test_path_prefix_, "judge_log.out"),
+		   intentional_unsafe_string_view(serialized_judge_log()));
+	}
+};
+
+class ConverTestsRunner : public concurrent::JobProcessor<string> {
 	const string tests_dir_;
 
 public:
-	explicit ConverTestRunner(string tests_dir)
+	explicit ConverTestsRunner(string tests_dir)
 	: tests_dir_(std::move(tests_dir)) {}
 
 protected:
 	void produce_jobs() final {
 		std::vector<string> test_cases;
-		collect_available_test_cases(test_cases);
-		sort(test_cases.begin(), test_cases.end(),
-		     [&](auto& a, auto& b) { return StrNumCompare()(b, a); });
-		for (auto& test_case_name : test_cases) {
-			add_job(std::move(test_case_name));
-		}
-	}
-
-private:
-	void collect_available_test_cases(std::vector<string>& test_cases) {
+		constexpr StringView suffix("package.zip");
+		constexpr StringView disabled_suffix("package.zip.disabled");
+		// Collect available test cases
 		for_each_dir_component(tests_dir_, [&](dirent* file) {
-			constexpr StringView suffix("package.zip");
-			constexpr StringView disabled_suffix("package.zip.disabled");
-			StringView filename(file->d_name);
+			StringView filename = file->d_name;
 			if (has_suffix(filename, suffix)) {
 				filename.remove_suffix(suffix.size());
 				test_cases.emplace_back(filename.to_string());
@@ -228,252 +359,21 @@ private:
 				stdlog("WARNING: disabled test case: ", filename);
 			}
 		});
+		sort(test_cases.begin(), test_cases.end(), StrNumCompare{});
+		reverse(test_cases.begin(), test_cases.end());
+		for (auto& test_case_name : test_cases) {
+			add_job(std::move(test_case_name));
+		}
 	}
 
-protected:
 	void process_job(string test_case_name) final {
 		try {
-			run_test_case(std::move(test_case_name));
+			stdlog("Running test case: ", test_case_name);
+			ConverTestCaseRunner(tests_dir_, std::move(test_case_name)).run();
 		} catch (const std::exception& e) {
 			FAIL() << "Unexpected exception -> " << e.what();
 		}
 	}
-
-private:
-	void run_test_case(string&& test_case_name) const {
-		stdlog("Running test case: ", test_case_name);
-		TestCaseRunner(tests_dir_, std::move(test_case_name)).run();
-	}
-
-	class TestCaseRunner {
-		static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{5};
-		static constexpr size_t COMPILATION_ERRORS_MAX_LENGTH = 4096;
-
-		const TemporaryFile package_copy_{"/tmp/conver_test.XXXXXX"};
-		const string test_case_name_;
-		const InplaceBuff<PATH_MAX> test_path_prefix_;
-		const Conver::Options options_;
-
-		Conver conver_;
-		string report_;
-		sim::Simfile pre_simfile_;
-		sim::Simfile post_simfile_;
-		JudgeReport initial_judge_report, final_judge_report;
-
-	public:
-		TestCaseRunner(const string& tests_dir, string&& test_case_name)
-		: test_case_name_(std::move(test_case_name))
-		, test_path_prefix_(concat(tests_dir, test_case_name_))
-		, options_(load_options_from_file(
-		     concat_tostr(test_path_prefix_, "conver.options"))) {
-			throw_assert(copy(concat_tostr(test_path_prefix_, "package.zip"),
-			                  package_copy_.path()) == 0);
-			conver_.package_path(package_copy_.path());
-		}
-
-		void run() {
-			generate_result();
-			check_result();
-		}
-
-	private:
-		void generate_result() {
-			try {
-				auto cres = construct_simfiles();
-				switch (cres.status) {
-				case Conver::Status::COMPLETE: break;
-				case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT:
-					judge_model_solution_and_finish_constructing_post_simfile(
-					   cres);
-					break;
-				}
-			} catch (const std::exception& e) {
-				report_ = conver_.report();
-				back_insert(report_, "\n>>>> Exception caught <<<<\n",
-				            std::regex_replace(
-				               e.what(),
-				               std::regex(R"=(\(thrown at (\w|\.|/)+:\d+\))="),
-				               "(thrown at ...)"));
-			}
-		}
-
-		sim::Conver::ConstructionResult construct_simfiles() {
-			auto cres = conver_.construct_simfile(options_);
-			pre_simfile_ = cres.simfile;
-			post_simfile_ = cres.simfile;
-			report_ = conver_.report();
-
-			return cres;
-		}
-
-		void judge_model_solution_and_finish_constructing_post_simfile(
-		   const sim::Conver::ConstructionResult& cres) {
-			ModelSolutionRunner model_solution_runner(
-			   package_copy_.path(), post_simfile_, cres.pkg_main_dir);
-			std::tie(initial_judge_report, final_judge_report) =
-			   model_solution_runner.judge();
-
-			Conver::reset_time_limits_using_jugde_reports(
-			   post_simfile_, initial_judge_report, final_judge_report,
-			   options_.rtl_opts);
-		}
-
-		class ModelSolutionRunner {
-			JudgeWorker jworker_;
-			sim::Simfile& simfile_;
-			const string& package_path_;
-			const string& pkg_main_dir_;
-
-		public:
-			ModelSolutionRunner(const string& package_path,
-			                    sim::Simfile& simfile,
-			                    const string& pkg_main_dir)
-			: simfile_(simfile)
-			, package_path_(package_path)
-			, pkg_main_dir_(pkg_main_dir) {
-				jworker_.load_package(package_path_, simfile_.dump());
-			}
-
-			// Returns (initial report, final report)
-			std::pair<JudgeReport, JudgeReport> judge() {
-				compile_checker();
-				compile_solution(extract_solution());
-
-				TestingJudgeLogger judge_logger;
-				return {jworker_.judge(false, judge_logger),
-				        jworker_.judge(true, judge_logger)};
-			}
-
-		private:
-			void compile_checker() {
-				string compilation_errors;
-				if (jworker_.compile_checker(COMPILATION_TIME_LIMIT,
-				                             &compilation_errors,
-				                             COMPILATION_ERRORS_MAX_LENGTH, ""))
-				{
-					THROW("failed to compile checker: \n", compilation_errors);
-				}
-			}
-
-			OpenedTemporaryFile extract_solution() {
-				OpenedTemporaryFile solution_source_code(
-				   "/tmp/problem_solution.XXXXXX");
-				ZipFile zip(package_path_);
-				zip.extract_to_fd(
-				   zip.get_index(concat(pkg_main_dir_, simfile_.solutions[0])),
-				   solution_source_code);
-
-				return solution_source_code;
-			}
-
-			void compile_solution(OpenedTemporaryFile&& solution_source_code) {
-				string compilation_errors;
-				if (jworker_.compile_solution(
-				       solution_source_code.path(),
-				       sim::filename_to_lang(simfile_.solutions[0]),
-				       COMPILATION_TIME_LIMIT, &compilation_errors,
-				       COMPILATION_ERRORS_MAX_LENGTH, ""))
-				{
-					THROW("failed to compile solution: \n", compilation_errors);
-				}
-			}
-		};
-
-		void check_result() {
-			round_post_simfile_time_limits_to_whole_seconds();
-			if (REGENERATE_OUTS) {
-				overwrite_test_output_files();
-			}
-
-			check_result_with_output_files();
-		}
-
-		void round_post_simfile_time_limits_to_whole_seconds() {
-			using std::chrono_literals::operator""s;
-			// This should remove the problem with random time limit if they
-			// were set using the model solution.
-			for (auto& group : post_simfile_.tgroups) {
-				for (auto& test : group.tests) {
-					// Time limits should not have been set to 0
-					EXPECT_GT(test.time_limit, 0s)
-					   << "^ test " << test_case_name_;
-					test.time_limit =
-					   std::chrono::duration_cast<std::chrono::seconds>(
-					      test.time_limit + 0.5s);
-				}
-			}
-		}
-
-		void overwrite_test_output_files() const {
-			overwrite_pre_simfile_out();
-			overwrite_post_simfile_out();
-			overwrite_conver_log_out();
-			overwrite_judge_log_out();
-		}
-
-		void overwrite_pre_simfile_out() const {
-			put_file_contents(
-			   concat_tostr(test_path_prefix_, "pre_simfile.out"),
-			   intentional_unsafe_string_view(pre_simfile_.dump()));
-		}
-
-		void overwrite_post_simfile_out() const {
-			put_file_contents(
-			   concat_tostr(test_path_prefix_, "post_simfile.out"),
-			   intentional_unsafe_string_view(post_simfile_.dump()));
-		}
-
-		void overwrite_conver_log_out() const {
-			put_file_contents(concat_tostr(test_path_prefix_, "conver_log.out"),
-			                  report_);
-		}
-
-		void overwrite_judge_log_out() const {
-			put_file_contents(
-			   concat_tostr(test_path_prefix_, "judge_log.out"),
-			   intentional_unsafe_string_view(serialized_judge_log()));
-		}
-
-		[[nodiscard]] string serialized_judge_log() const {
-			return initial_judge_report.judge_log +
-			       final_judge_report.judge_log;
-		}
-
-		void check_result_with_output_files() const {
-			check_result_with_pre_simfile_out();
-			check_result_with_post_simfile_out();
-			check_result_with_conver_log_out();
-			check_result_with_judge_log_out();
-		}
-
-		void check_result_with_pre_simfile_out() const {
-			EXPECT_EQ(get_file_contents(
-			             concat_tostr(test_path_prefix_, "pre_simfile.out")),
-			          pre_simfile_.dump())
-			   << "^ test " << test_case_name_;
-		}
-
-		void check_result_with_post_simfile_out() const {
-			EXPECT_EQ(get_file_contents(
-			             concat_tostr(test_path_prefix_, "post_simfile.out")),
-			          post_simfile_.dump())
-			   << "^ test " << test_case_name_;
-		}
-
-		void check_result_with_conver_log_out() const {
-			EXPECT_EQ(get_file_contents(
-			             concat_tostr(test_path_prefix_, "conver_log.out")),
-			          report_)
-			   << "^ test " << test_case_name_;
-		}
-
-		void check_result_with_judge_log_out() const {
-			EXPECT_EQ(get_file_contents(
-			             concat_tostr(test_path_prefix_, "judge_log.out")),
-			          serialized_judge_log())
-			   << "^ test " << test_case_name_;
-		}
-	};
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -485,7 +385,7 @@ TEST(Conver, construct_simfile) {
 		auto tests_dir_opt =
 		   deepest_ancestor_dir_with_subpath(path, "test/conver_test_cases/");
 		if (tests_dir_opt) {
-			ConverTestRunner(*tests_dir_opt).run();
+			ConverTestsRunner(*tests_dir_opt).run();
 			return;
 		}
 	}
