@@ -6,6 +6,8 @@
 #include "simlib/sim/judge_worker.hh"
 #include "simlib/sim/problem_package.hh"
 #include "simlib/string_compare.hh"
+#include "simlib/string_traits.hh"
+#include "simlib/string_view.hh"
 #include "simlib/utilities.hh"
 
 #include <chrono>
@@ -325,74 +327,50 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		}
 	}
 
-	if (opts.seek_for_new_tests) {
-		pc.for_each_with_prefix("", [&](StringView entry) {
-			if (has_suffix(entry, ".in") or
-			    (not sf.interactive and has_suffix(entry, ".out")))
-			{
-				entry.remove_trailing([](char c) { return (c != '.'); });
-				entry.remove_suffix(1);
-				StringView test_name =
-				   entry.extract_trailing([](char c) { return (c != '/'); });
+	// Process test files found in the package
+	pc.for_each_with_prefix("", [&](StringView path) {
+		assert(has_prefix(path, main_dir));
+		path.remove_prefix(main_dir.size());
 
-				tests.try_emplace(test_name);
-			}
-		});
-	}
+		if (not(has_suffix(path, ".in") or
+		        (has_suffix(path, ".out") and not sf.interactive)))
+		{
+			return;
+		}
 
-	// Match tests with the test files found in the package
-	pc.for_each_with_prefix("", [&](StringView input) {
-		if (has_suffix(input, ".in")) {
-			StringView tname = input;
-			tname.remove_suffix(3);
-			tname = tname.extract_trailing([](char c) { return (c != '/'); });
-			input.remove_prefix(main_dir.size());
+		StringView test_name =
+		   path.substr(0, path.rfind('.')).extract_trailing([](char c) {
+			   return c != '/';
+		   });
 
-			auto it = tests.find(tname);
-			if (it == tests.end()) {
-				return; // There is no such test
-			}
-			auto& test = it->second;
+		auto it = opts.seek_for_new_tests ? tests.try_emplace(test_name).first
+		                                  : tests.find(test_name);
+		if (it == tests.end()) {
+			return; // There is no such test
+		}
+		auto& test = it->second;
 
+		// Match test file with the test
+		if (has_suffix(path, ".in")) { // Input file
 			if (test.in.has_value()) {
 				report_.append(
-				   "\033[1;35mwarning\033[m: input file for test `", tname,
+				   "\033[1;35mwarning\033[m: input file for test `", test_name,
 				   "` was found in more than one location: `", test.in.value(),
-				   "` and `", input, "` - choosing the later");
+				   "` and `", path, "`, choosing the latter");
 			}
-			test.in = input;
+			test.in = path;
+		} else { // Output file
+			assert(has_suffix(path, ".out"));
+			assert(not sf.interactive);
+			if (test.out.has_value()) {
+				report_.append(
+				   "\033[1;35mwarning\033[m: output file for test `", test_name,
+				   "` was found in more than one location: `", test.out.value(),
+				   "` and `", path, "`, choosing the latter");
+			}
+			test.out = path;
 		}
 	});
-
-	if (not sf.interactive) {
-		pc.for_each_with_prefix("", [&](StringView output) {
-			if (has_suffix(output, ".out")) {
-				StringView tname = output;
-				tname.remove_suffix(4);
-				tname =
-				   tname.extract_trailing([](char c) { return (c != '/'); });
-				output.remove_prefix(main_dir.size());
-
-				auto it = tests.find(tname);
-				if (it == tests.end()) {
-					return; // There is no such test
-				}
-				auto& test = it->second;
-
-				if (test.out.has_value()) {
-					report_.append("\033[1;35mwarning\033[m: output file for"
-					               " test `",
-					               tname,
-					               "` was found in more than one"
-					               " location: `",
-					               test.out.value(), "` and `", output,
-					               "`"
-					               " - choosing the later");
-				}
-				test.out = output;
-			}
-		});
-	}
 
 	// Load test files (this one may overwrite the files form previous step)
 	auto const& tests_files = sf.config["tests_files"];
