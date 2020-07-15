@@ -1,6 +1,6 @@
 #pragma once
 
-#include <simlib/avl_dict.hh>
+#include <map>
 #include <simlib/enum_val.hh>
 #include <simlib/humanize.hh>
 #include <simlib/sim/judge_worker.hh>
@@ -14,14 +14,14 @@ class SipJudgeLogger : public sim::JudgeLogger {
 		                                      std::forward<Args>(args)...);
 	}
 
-	AVLDictMap<EnumVal<sim::JudgeReport::Test::Status>, uint> statistics_;
+	std::map<EnumVal<sim::JudgeReport::Test::Status>, uint> status_count_;
 	bool final_;
 
 	template <class Func>
 	void log_test(StringView test_name,
 	              const sim::JudgeReport::Test& test_report,
 	              Sandbox::ExitStat es, Func&& func) {
-		++statistics_[test_report.status];
+		++status_count_[test_report.status];
 		auto tmplog =
 		   log("  ", padded_string(test_name, 8, LEFT), ' ',
 		       padded_string(intentional_unsafe_string_view(to_string(
@@ -109,23 +109,23 @@ public:
 			log("------------------");
 			using S = sim::JudgeReport::Test::Status;
 
-			statistics_.for_each([&](auto&& p) {
-				auto no = padded_string(
-				   intentional_unsafe_string_view(to_string(p.second)), 4);
-				switch (p.first) {
-				case S::OK: log("\033[1;32mOK\033[m            ", no); break;
-				case S::WA: log("\033[1;31mWA\033[m            ", no); break;
-				case S::TLE: log("\033[1;33mTLE\033[m           ", no); break;
-				case S::MLE: log("\033[1;33mMLE\033[m           ", no); break;
-				case S::RTE: log("\033[1;31mRTE\033[m           ", no); break;
+			for (auto const& [status, count] : status_count_) {
+				auto num = padded_string(
+				   intentional_unsafe_string_view(to_string(count)), 4);
+				switch (status) {
+				case S::OK: log("\033[1;32mOK\033[m            ", num); break;
+				case S::WA: log("\033[1;31mWA\033[m            ", num); break;
+				case S::TLE: log("\033[1;33mTLE\033[m           ", num); break;
+				case S::MLE: log("\033[1;33mMLE\033[m           ", num); break;
+				case S::RTE: log("\033[1;31mRTE\033[m           ", num); break;
 				case S::CHECKER_ERROR:
-					log("\033[1;35mCHECKER_ERROR\033[m ", no);
+					log("\033[1;35mCHECKER_ERROR\033[m ", num);
 					break;
 				case S::SKIPPED:
-					log("\033[1;36mSKIPPED\033[m       ", no);
+					log("\033[1;36mSKIPPED\033[m       ", num);
 					break;
 				}
-			});
+			}
 			log("------------------");
 		}
 	}

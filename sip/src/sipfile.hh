@@ -1,8 +1,9 @@
 #pragma once
 
 #include <chrono>
-#include <simlib/avl_dict.hh>
+#include <set>
 #include <simlib/config_file.hh>
+#include <simlib/member_comparator.hh>
 
 /**
  * @brief Sipfile holds sip package configuration that does not fit into Simfile
@@ -22,8 +23,8 @@ public:
 		, generator_args(ga) {}
 	};
 
-	AVLDictSet<InplaceBuff<16>> static_tests;
-	AVLDictSet<GenTest, MEMBER_COMPARATOR(GenTest, name)> gen_tests;
+	std::set<InplaceBuff<16>, std::less<>> static_tests;
+	std::set<GenTest, TRANSPARENT_MEMBER_COMPARATOR(GenTest, name)> gen_tests;
 
 private:
 	ConfigFile config;

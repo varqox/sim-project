@@ -365,12 +365,12 @@ void name(ArgvParser args) {
 	}
 }
 
-static AVLDictSet<StringView>
-parse_args_to_solutions(const sim::Simfile& simfile, ArgvParser args) {
+static std::set<StringView> parse_args_to_solutions(const sim::Simfile& simfile,
+                                                    ArgvParser args) {
 	STACK_UNWINDING_MARK;
 
 	std::set matched_files = files_matching_patterns(args);
-	AVLDictSet<StringView> choosen_solutions;
+	std::set<StringView> choosen_solutions;
 	for (auto& solution : simfile.solutions) {
 		if (matched_files.find(solution) != matched_files.end()) {
 			choosen_solutions.emplace(solution);
@@ -385,7 +385,7 @@ void prog(ArgvParser args) {
 	SipPackage sp;
 	sp.rebuild_full_simfile();
 
-	AVLDictSet<StringView> solutions_to_compile;
+	std::set<StringView> solutions_to_compile;
 	if (args.size() > 0) {
 		solutions_to_compile = parse_args_to_solutions(sp.full_simfile, args);
 	} else {
@@ -394,8 +394,9 @@ void prog(ArgvParser args) {
 		}
 	}
 
-	solutions_to_compile.for_each(
-	   [&](StringView solution) { sp.compile_solution(solution); });
+	for (auto const& solution : solutions_to_compile) {
+		sp.compile_solution(solution);
+	}
 }
 
 void save(ArgvParser args) {
@@ -456,14 +457,14 @@ void test(ArgvParser args) {
 		throw SipError("no solution was found");
 	}
 
-	AVLDictSet<StringView> solutions_to_test;
+	std::set<StringView> solutions_to_test;
 	if (args.size() > 0) {
 		solutions_to_test = parse_args_to_solutions(sp.full_simfile, args);
 	} else {
 		solutions_to_test.emplace(sp.full_simfile.solutions.front());
 	}
 
-	solutions_to_test.for_each([&](StringView solution) {
+	for (auto const& solution : solutions_to_test) {
 		sp.judge_solution(solution);
 		// Save limits only if Simfile is already created (because if it creates
 		// a Simfile without memory limit it causes sip to fail in the next run)
@@ -472,7 +473,7 @@ void test(ArgvParser args) {
 		{
 			sp.save_limits();
 		}
-	});
+	}
 }
 
 void unset(ArgvParser args) {

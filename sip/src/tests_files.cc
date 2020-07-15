@@ -16,7 +16,7 @@ TestsFiles::TestsFiles() {
 		if (has_suffix(file, ".in")) {
 			auto test_name = get_test_name(file);
 			auto it = tests.find(test_name);
-			if (it == nullptr) {
+			if (it == tests.end()) {
 				tests.emplace(test_name, file);
 			} else if (it->second.in.has_value()) {
 				throw SipError("input file of test ", it->first,
@@ -29,7 +29,7 @@ TestsFiles::TestsFiles() {
 		} else if (has_suffix(file, ".out")) {
 			auto test_name = get_test_name(file);
 			auto it = tests.find(test_name);
-			if (it == nullptr) {
+			if (it == tests.end()) {
 				tests.emplace(test_name, file);
 			} else if (it->second.out.has_value()) {
 				throw SipError("output file of test ", it->first,

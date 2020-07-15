@@ -173,7 +173,7 @@ void Sipfile::load_static_tests() {
 		}
 
 		for_each_test_in_range(test_range, [&](StringView test) {
-			bool inserted = static_tests.emplace(test);
+			auto [_, inserted] = static_tests.emplace(test);
 			if (not inserted) {
 				log_warning("Sipfile (static): test `", test,
 				            "` is specified"
@@ -266,7 +266,8 @@ void Sipfile::load_gen_tests() {
 		}
 
 		for_each_test_in_range(test_range, [&](StringView test) {
-			bool inserted = gen_tests.emplace(test, generator, generator_args);
+			auto [_, inserted] =
+			   gen_tests.emplace(test, generator, generator_args);
 			if (not inserted) {
 				throw SipError("Sipfile (gen): test `", test,
 				               "` is specified in more than one test range");

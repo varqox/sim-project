@@ -212,24 +212,24 @@ void SipPackage::generate_test_input_files() {
 	sipfile.load_gen_tests();
 
 	// Check for tests that are both static and generated
-	sipfile.static_tests.for_each([&](StringView test) {
-		if (sipfile.gen_tests.find(test)) {
+	for (StringView test : sipfile.static_tests) {
+		if (sipfile.gen_tests.find(test) != sipfile.gen_tests.end()) {
 			log_warning("test `", test,
 			            "` is specified as static and as generated - treating "
 			            "it as generated");
 		}
-	});
+	}
 
 	prepare_tests_files();
 
 	// Ensure that static tests have their .in files
-	sipfile.static_tests.for_each([&](StringView test) {
+	for (StringView test : sipfile.static_tests) {
 		auto it = tests_files->tests.find(test);
-		if (not it or not it->second.in.has_value()) {
+		if (it == tests_files->tests.end() or not it->second.in.has_value()) {
 			throw SipError("static test `", test,
 			               "` does not have a corresponding input file");
 		}
-	});
+	};
 
 	CStringView in_dir;
 	if (is_directory("tests/")) {
@@ -240,9 +240,9 @@ void SipPackage::generate_test_input_files() {
 	}
 
 	// Generate .in files
-	sipfile.gen_tests.for_each([&](const Sipfile::GenTest& test) {
+	for (auto const& test : sipfile.gen_tests) {
 		auto it = tests_files->tests.find(test.name);
-		if (not it or not it->second.in.has_value()) {
+		if (it == tests_files->tests.end() or not it->second.in.has_value()) {
 			generate_test_input_file(test,
 			                         intentional_unsafe_cstring_view(
 			                            concat(in_dir, test.name, ".in")));
@@ -250,18 +250,19 @@ void SipPackage::generate_test_input_files() {
 			generate_test_input_file(test, intentional_unsafe_cstring_view(
 			                                  concat(it->second.in.value())));
 		}
-	});
+	}
 
 	// Warn about files that are not specified as static or generated
-	tests_files->tests.for_each([&](auto&& p) {
-		if (p.second.in.has_value() and
-		    not sipfile.static_tests.find(p.first) and
-		    not sipfile.gen_tests.find(p.first))
+	for (auto const& [test_name, test] : tests_files->tests) {
+		if (test.in.has_value() and
+		    sipfile.static_tests.find(test_name) ==
+		       sipfile.static_tests.end() and
+		    sipfile.gen_tests.find(test_name) == sipfile.gen_tests.end())
 		{
-			log_warning("test `", p.first, "` (file: ", p.second.in.value(),
+			log_warning("test `", test_name, "` (file: ", test.in.value(),
 			            ") is neither specified as static nor as generated");
 		}
-	});
+	}
 
 	tests_files = std::nullopt; // Probably new .in files were just created
 }
@@ -295,7 +296,7 @@ void SipPackage::remove_tests_with_no_input_file_from_limits_in_simfile() {
 		StringView test_name =
 		   StringView(entry).extract_leading(std::not_fn(is_space<char>));
 		auto it = tests_files->tests.find(test_name);
-		if (not it or not it->second.in.has_value()) {
+		if (it == tests_files->tests.end() or not it->second.in.has_value()) {
 			continue;
 		}
 
@@ -320,34 +321,33 @@ void SipPackage::generate_test_output_files() {
 
 	prepare_tests_files();
 	// Create out/ dir if needed
-	tests_files.value().tests.for_each([&](auto&& p) {
-		if (p.second.in.has_value() and has_prefix(*p.second.in, "in/")) {
+	for (auto const& [_, test] : tests_files->tests) {
+		if (test.in.has_value() and has_prefix(*test.in, "in/")) {
 			if (mkdir("out") == -1 and errno != EEXIST) {
 				throw SipError("failed to create directory out/ (mkdir()",
 				               errmsg(), ')');
 			}
-			return stop_repeating;
+			break;
 		}
-		return continue_repeating;
-	});
+	}
 
 	// We need to remove invalid entries from limits as Conver will give
 	// warnings about them
 	remove_tests_with_no_input_file_from_limits_in_simfile();
 
 	// Touch .out files and give warnings
-	tests_files.value().tests.for_each([&](auto&& p) {
-		if (not p.second.in.has_value()) {
-			log_warning("orphaned test out file: ", p.second.out.value());
-			return;
+	for (auto const& [_, test] : tests_files->tests) {
+		if (not test.in.has_value()) {
+			log_warning("orphaned test out file: ", test.out.value());
+			continue;
 		}
 
-		if (p.second.out.has_value()) {
-			put_file_contents(concat(p.second.out.value()), "");
+		if (test.out.has_value()) {
+			put_file_contents(concat(test.out.value()), "");
 		} else {
-			put_file_contents(test_output_file(p.second.in.value()), "");
+			put_file_contents(test_output_file(test.in.value()), "");
 		}
-	});
+	}
 	tests_files = std::nullopt; // New .out files may have been created
 
 	rebuild_full_simfile(true);
@@ -502,19 +502,19 @@ void SipPackage::remove_generated_test_files() {
 
 	stdlog("Removing generated test files...").flush_no_nl();
 	// Remove generated .in files
-	sipfile.gen_tests.for_each([&](auto const& test) {
+	for (auto const& test : sipfile.gen_tests) {
 		auto it = tests_files->tests.find(test.name);
-		if (it and it->second.in.has_value()) {
+		if (it != tests_files->tests.end() and it->second.in.has_value()) {
 			(void)remove(it->second.in.value().to_string());
 		}
-	});
+	}
 
 	// Remove generated .out files
-	tests_files->tests.for_each([](auto const& p) {
-		if (p.second.in.has_value() and p.second.out.has_value()) {
-			(void)remove(p.second.out.value().to_string());
+	for (auto const& [_, test] : tests_files->tests) {
+		if (test.in.has_value() and test.out.has_value()) {
+			(void)remove(test.out.value().to_string());
 		}
-	});
+	}
 
 	stdlog(" done.");
 }
@@ -534,20 +534,22 @@ void SipPackage::remove_test_files_not_specified_in_sipfile() {
 	       " static...")
 	   .flush_no_nl();
 
-	tests_files->tests.for_each([&](auto const& p) {
-		bool is_static = sipfile.static_tests.find(p.first);
-		bool is_generated = sipfile.gen_tests.find(p.first);
+	for (auto const& [test_name, test] : tests_files->tests) {
+		bool is_static =
+		   sipfile.static_tests.find(test_name) != sipfile.static_tests.end();
+		bool is_generated =
+		   sipfile.gen_tests.find(test_name) != sipfile.gen_tests.end();
 		if (is_static or is_generated) {
-			return;
+			continue;
 		}
 
-		if (p.second.in.has_value()) {
-			(void)remove(concat(p.second.in.value()));
+		if (test.in.has_value()) {
+			(void)remove(concat(test.in.value()));
 		}
-		if (p.second.out.has_value()) {
-			(void)remove(concat(p.second.out.value()));
+		if (test.out.has_value()) {
+			(void)remove(concat(test.out.value()));
 		}
-	});
+	}
 
 	tests_files = std::nullopt; // Probably some test files were just removed
 	stdlog(" done.");

@@ -1,7 +1,7 @@
 #pragma once
 
+#include <map>
 #include <optional>
-#include <simlib/avl_dict.hh>
 #include <simlib/sim/problem_package.hh>
 
 struct TestsFiles {
@@ -17,7 +17,7 @@ struct TestsFiles {
 	};
 
 	sim::PackageContents pc;
-	AVLDictMap<StringView, Test> tests;
+	std::map<StringView, Test> tests;
 
 	TestsFiles();
 };
