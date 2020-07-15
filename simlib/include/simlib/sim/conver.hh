@@ -69,13 +69,13 @@ public:
 		// In MiB. If set, overrides memory limit of every test
 		std::optional<uint64_t> memory_limit;
 		// If set, overrides time limit of every test (has lower precedence
-		// than reset_time_limits_using_model_solution)
+		// than reset_time_limits_using_main_solution)
 		std::optional<std::chrono::nanoseconds> global_time_limit;
 		// Maximum allowed time limit on the test. If global_time_limit is set
 		// this option is ignored
 		std::chrono::nanoseconds max_time_limit = std::chrono::seconds(60);
 		// If global_time_limit is set this option is ignored
-		bool reset_time_limits_using_model_solution = false;
+		bool reset_time_limits_using_main_solution = false;
 		// If true, Simfile in the package will be ignored
 		bool ignore_simfile = false;
 		// Whether to seek for new tests in the package
@@ -110,7 +110,7 @@ public:
 	 * @return Status and a valid Simfile; If status == COMPLETE then Simfile
 	 *   is fully constructed - conver has finished its job. Otherwise it is
 	 *   necessary to run reset_time_limits_using_jugde_reports() method with
-	 *   the returned Simfile and a judge report of the model solution on the
+	 *   the returned Simfile and a judge report of the main solution on the
 	 *   returned Simfile.
 	 *
 	 * @errors If any error is encountered then an exception of type
@@ -122,13 +122,13 @@ public:
 	/**
 	 * @brief Finishes constructing the Simfile partially constructed by the
 	 *   construct_simfile() method
-	 * @details Sets the time limits based on the model solution's judge report
+	 * @details Sets the time limits based on the main solution's judge report
 	 *
 	 * @param sf Simfile to update (returned by construct_simfile())
-	 * @param jrep1 Initial judge report of the model solution, based on the
+	 * @param jrep1 Initial judge report of the main solution, based on the
 	 *   @p sf. Passing @p jrep1 that is not based on the @p sf is
 	 *   undefined-behavior.
-	 * @param jrep2 Final judge report of the model solution, based on the
+	 * @param jrep2 Final judge report of the main solution, based on the
 	 *   @p sf. Passing @p jrep2 that is not based on the @p sf is
 	 *   undefined-behavior.
 	 * @param opts options that parameterize calculating time limits
@@ -140,11 +140,11 @@ public:
 
 	static constexpr std::chrono::duration<double>
 	solution_runtime_to_time_limit(
-	   std::chrono::duration<double> model_solution_runtime,
+	   std::chrono::duration<double> main_solution_runtime,
 	   double solution_runtime_coefficient,
 	   std::chrono::duration<double> min_time_limit) noexcept {
-		double x = model_solution_runtime.count();
-		return solution_runtime_coefficient * model_solution_runtime +
+		double x = main_solution_runtime.count();
+		return solution_runtime_coefficient * main_solution_runtime +
 		       min_time_limit * 2 / (x * x + 2);
 	}
 

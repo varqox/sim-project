@@ -4,7 +4,7 @@ interactive: true
 memory_limit: null
 global_time_limit: null
 max_time_limit: 0.65
-reset_time_limits_using_model_solution: true
+reset_time_limits_using_main_solution: true
 ignore_simfile: false
 seek_for_new_tests: true
 reset_scoring: false

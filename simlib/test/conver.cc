@@ -108,8 +108,8 @@ static Conver::Options load_options_from_file(FilePath file) {
 	opts.memory_limit = get_optional_uint64("memory_limit");
 	opts.global_time_limit = get_optional_duration("global_time_limit");
 	opts.max_time_limit = get_duration("max_time_limit");
-	opts.reset_time_limits_using_model_solution =
-	   get_bool("reset_time_limits_using_model_solution");
+	opts.reset_time_limits_using_main_solution =
+	   get_bool("reset_time_limits_using_main_solution");
 	opts.ignore_simfile = get_bool("ignore_simfile");
 	opts.seek_for_new_tests = get_bool("seek_for_new_tests");
 	opts.reset_scoring = get_bool("reset_scoring");

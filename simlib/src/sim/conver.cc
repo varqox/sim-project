@@ -269,7 +269,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 				THROW("No solution was found");
 			}
 
-			// Choose the one with the shortest path to be the model solution
+			// Choose the one with the shortest path to be the main solution
 			std::swap(x.front(), *std::min_element(
 			                        x.begin(), x.end(), [](auto&& a, auto&& b) {
 				                        return a.size() < b.size();
@@ -608,7 +608,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		}
 	}
 
-	bool run_model_solution = opts.reset_time_limits_using_model_solution;
+	bool run_main_solution = opts.reset_time_limits_using_main_solution;
 
 	// Export tests to the Simfile
 	sf.tgroups.clear();
@@ -616,7 +616,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		Simfile::TestGroup tg;
 		tg.score = group.score.value();
 		for (auto const& [test_name, test] : group.tests) {
-			run_model_solution |= not test.time_limit.has_value();
+			run_main_solution |= not test.time_limit.has_value();
 
 			Simfile::Test t(
 			   test_name.to_string(),
@@ -637,7 +637,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 
 	// Override the time limits
 	if (opts.global_time_limit.has_value()) {
-		run_model_solution = opts.reset_time_limits_using_model_solution;
+		run_main_solution = opts.reset_time_limits_using_main_solution;
 		for (auto&& g : sf.tgroups) {
 			for (auto&& t : g.tests) {
 				t.time_limit = opts.global_time_limit.value();
@@ -645,14 +645,13 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 		}
 	}
 
-	if (not run_model_solution) {
+	if (not run_main_solution) {
 		normalize_time_limits(sf);
 		// Nothing more to do
 		return {Status::COMPLETE, std::move(sf), main_dir.to_string()};
 	}
 
-	// The model solution's judge report is needed
-	// Set the time limits for the model solution
+	// The main solution's judge report is needed => set the time limits for it
 	auto sol_time_limit = std::chrono::duration_cast<std::chrono::milliseconds>(
 	   time_limit_to_solution_runtime(
 	      opts.max_time_limit, opts.rtl_opts.solution_runtime_coefficient,
