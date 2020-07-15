@@ -147,7 +147,6 @@ endif
 
 tests = [
     ['test/argv_parser.cc', [], {}],
-    ['test/avl_dict.cc', [], {}],
     ['test/call_in_destructor.cc', [], {}],
     ['test/concat.cc', [], {}],
     ['test/concat_common.cc', [], {}],

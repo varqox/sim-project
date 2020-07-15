@@ -69,7 +69,6 @@ $(eval $(call add_executable, $(PREFIX)test/exec, $(SIMLIB_TEST_FLAGS), \
 	$(PREFIX)gtest_main.a \
 	$(PREFIX)simlib.a \
 	$(PREFIX)test/argv_parser.cc \
-	$(PREFIX)test/avl_dict.cc \
 	$(PREFIX)test/call_in_destructor.cc \
 	$(PREFIX)test/concat.cc \
 	$(PREFIX)test/concat_common.cc \
