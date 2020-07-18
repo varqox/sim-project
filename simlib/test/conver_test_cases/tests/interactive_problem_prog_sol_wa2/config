@@ -1,0 +1,16 @@
+package: interactive_problem/
+override_main_solution_with: prog/sol_wa2.cc
+
+name: null
+label: null
+interactive: null
+memory_limit: null
+global_time_limit: null
+max_time_limit: 0.65
+reset_time_limits_using_main_solution: true
+ignore_simfile: false
+seek_for_new_tests: true
+reset_scoring: false
+require_statement: false
+min_time_limit: 0.2
+solution_runtime_coefficient: 1.5

@@ -1,0 +1,15 @@
+package: for_name_label_tests/
+
+name: null
+label: some label
+interactive: false
+memory_limit: null
+global_time_limit: null
+max_time_limit: 44.444
+reset_time_limits_using_main_solution: true
+ignore_simfile: false
+seek_for_new_tests: true
+reset_scoring: false
+require_statement: true
+min_time_limit: 4.2
+solution_runtime_coefficient: 7.3

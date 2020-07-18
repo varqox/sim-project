@@ -52,6 +52,7 @@ Conver::ConstructionResult Conver::construct_simfile(const Options& opts,
 	/* Load contents of the package */
 
 	PackageContents pc;
+	assert(path_exists(package_path_));
 	if (is_directory(package_path_)) {
 		throw_assert(!package_path_.empty());
 		if (package_path_.back() != '/') {

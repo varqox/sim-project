@@ -1,0 +1,6 @@
+name: test
+memory_limit: 512
+interactive: true
+limits: [
+	1 0.3
+]

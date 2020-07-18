@@ -1,0 +1,20 @@
+default_time_limit: 5
+static: [
+	# Here provide tests that are "hard-coded"
+	# Syntax: <test-range>
+  0
+]
+gen: [
+	# Here provide rules to generate tests
+	# Syntax: <test-range> <generator> [generator arguments]
+  1 gen 1 1 -1000000000000000000 1000000000000000000
+
+  2a gen 2 2 -1000000000000000000 1000000000000000000
+  2b gen 2 2 456567012918403747 456567012918403747
+
+  3a gen 3 3 -1000000000000000000 1000000000000000000
+  3b gen 3 3 642365 642365
+
+  4a gen 900 1000 -1000000000000000000 1000000000000000000
+  4b gen 900 1000 2222 2300
+]
