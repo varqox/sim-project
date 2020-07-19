@@ -2,8 +2,19 @@
 #include "simlib/call_in_destructor.hh"
 #include "simlib/directory.hh"
 #include "simlib/file_descriptor.hh"
+#include "simlib/file_path.hh"
+#include "simlib/inplace_buff.hh"
 #include "simlib/random.hh"
 #include "simlib/repeating.hh"
+
+#include <cstddef>
+#include <cstdio>
+#include <fcntl.h>
+#include <linux/limits.h>
+#include <new>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <utility>
 
 using std::array;
 using std::string;
@@ -190,76 +201,91 @@ int blast(int infd, int outfd) noexcept {
 	return 0;
 }
 
-int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
-           mode_t mode) noexcept {
-	FileDescriptor in(openat(src_dirfd, src, O_RDONLY | O_CLOEXEC));
-	if (in == -1) {
+int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
+                        FilePath dest, mode_t mode) noexcept {
+	FileDescriptor src_fd{openat(src_dirfd, src, O_RDONLY | O_CLOEXEC)};
+	if (not src_fd.is_open()) {
 		return -1;
 	}
 
+	try {
+		constexpr uint suffix_len = 10;
+		InplaceBuff<PATH_MAX> tmp_dest{std::in_place, dest, '.'};
+		tmp_dest.resize(tmp_dest.size + suffix_len + 1); // +1 for trailing '\0'
+		--tmp_dest.size;
+		FileDescriptor dest_fd;
+		for (size_t try_num = 0; try_num < 128; ++try_num) {
+			for (size_t i = tmp_dest.size - suffix_len; i < tmp_dest.size; ++i)
+			{
+				tmp_dest[i] = get_random('a', 'z');
+			}
+
+			dest_fd = openat(dest_dirfd, tmp_dest.to_cstr().data(),
+			                 O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
+			if (dest_fd.is_open()) {
+				break;
+			}
+			if (errno == EEXIST) {
+				continue;
+			}
+			return -1; // Other error occurred
+		}
+
+		CallInDtor tmp_dest_remover = [&] {
+			(void)unlinkat(dest_dirfd, tmp_dest.to_cstr().data(), 0);
+		};
+
+		if (blast(src_fd, dest_fd)) {
+			return -1;
+		}
+		if (renameat(dest_dirfd, tmp_dest.to_cstr().data(), dest_dirfd, dest)) {
+			return -1;
+		}
+		// Success
+		tmp_dest_remover.cancel();
+		return 0;
+	} catch (...) {
+		errno = ENOMEM;
+		return -1;
+	}
+}
+
+int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
+           mode_t mode) noexcept {
 	FileDescriptor out(openat(dest_dirfd, dest,
 	                          O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode));
 	if (not out.is_open()) {
 		if (errno != ETXTBSY) {
 			return -1;
 		}
-
-		// Try to construct temporary file and rename it to the destination file
-		try {
-			InplaceBuff<PATH_MAX> tmp_dest(std::in_place, dest, '.');
-			const auto tmp_dest_orig_size = tmp_dest.size;
-			constexpr uint SUFFIX_LEN = 10;
-			for (size_t iter = 0; iter < 128; ++iter) {
-				tmp_dest.size = tmp_dest_orig_size;
-				for (size_t i = 0; i < SUFFIX_LEN; ++i) {
-					tmp_dest.append(get_random('a', 'z'));
-				}
-
-				out = openat(dest_dirfd, tmp_dest.to_cstr().data(),
-				             O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
-				if (not out.is_open()) {
-					if (errno == EEXIST) {
-						continue;
-					}
-					return -1; // Other error occurred
-				}
-
-				CallInDtor tmp_file_remover = [&] {
-					(void)unlinkat(dest_dirfd, tmp_dest.to_cstr().data(), 0);
-				};
-				if (renameat(dest_dirfd, tmp_dest.to_cstr().data(), dest_dirfd,
-				             dest)) {
-					return -1;
-				}
-
-				// Success
-				tmp_file_remover.cancel();
-				break;
-			}
-		} catch (const std::bad_alloc&) {
-			errno = ENOMEM;
-			return -1;
-		} catch (...) {
-			errno = ETXTBSY; // Revert to the previous error
-			return -1;
-		}
-
-		if (not out.is_open()) {
-			return -1;
-		}
+		return copyat_using_rename(src_dirfd, src, dest_dirfd, dest, mode);
 	}
 
-	int res = blast(in, out);
+	FileDescriptor in(openat(src_dirfd, src, O_RDONLY | O_CLOEXEC));
+	if (not in.is_open()) {
+		return -1;
+	}
+	if (blast(in, out)) {
+		return -1;
+	}
+
 	off64_t offset = lseek64(out, 0, SEEK_CUR);
 	if (offset == static_cast<decltype(offset)>(-1)) {
 		return -1;
 	}
-
 	if (ftruncate64(out, offset)) {
 		return -1;
 	}
+	return 0;
+}
 
-	return res;
+int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
+                        FilePath dest) noexcept {
+	struct stat64 sb {};
+	if (fstatat64(src_dirfd, src, &sb, 0)) {
+		return -1;
+	}
+	return copyat_using_rename(src_dirfd, src, dest_dirfd, dest, sb.st_mode);
 }
 
 int copyat(int src_dirfd, FilePath src, int dest_dirfd,
@@ -269,7 +295,7 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd,
 		return -1;
 	}
 
-	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode & ACCESSPERMS);
+	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode);
 }
 
 /**

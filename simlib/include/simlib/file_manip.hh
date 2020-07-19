@@ -114,8 +114,24 @@
  * @param src source file (relative to @p src_dirfd)
  * @param dest_dirfd directory file descriptor
  * @param dest destination file (relative to @p dest_dirfd)
- * @param mode access mode of the destination file (will be set iff the file is
- *   created)
+ * @param mode access mode to set for the destination file
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
+[[nodiscard]] int copyat_using_rename(int src_dirfd, FilePath src,
+                                      int dest_dirfd, FilePath dest,
+                                      mode_t mode) noexcept;
+
+/**
+ * @brief Copies (overrides) file @p src to @p dest relative to a directory
+ *   file descriptor
+ *
+ * @param src_dirfd directory file descriptor
+ * @param src source file (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination file (relative to @p dest_dirfd)
+ * @param mode access mode to set for the destination file (will be set iff
+ *   the file is created)
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
@@ -133,8 +149,49 @@
  *
  * @return 0 on success, -1 on error (errno is set respectively)
  */
+[[nodiscard]] int copyat_using_rename(int src_dirfd, FilePath src,
+                                      int dest_dirfd, FilePath dest) noexcept;
+
+/**
+ * @brief Copies (overrides) file @p src to @p dest relative to a directory
+ *   file descriptor
+ *
+ * @param src_dirfd directory file descriptor
+ * @param src source file (relative to @p src_dirfd)
+ * @param dest_dirfd directory file descriptor
+ * @param dest destination file (relative to @p dest_dirfd)
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
 [[nodiscard]] int copyat(int src_dirfd, FilePath src, int dest_dirfd,
                          FilePath dest) noexcept;
+
+/**
+ * @brief Copies (overwrites) file from @p src to @p dest
+ *
+ * @param src source file
+ * @param dest destination file
+ * @param mode access mode to set for the destination file
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
+[[nodiscard]] inline int copy_using_rename(FilePath src, FilePath dest,
+                                           mode_t mode) noexcept {
+	return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest, mode);
+}
+
+/**
+ * @brief Copies (overwrites) file from @p src to @p dest
+ *
+ * @param src source file
+ * @param dest destination file
+ *
+ * @return 0 on success, -1 on error (errno is set respectively)
+ */
+[[nodiscard]] inline int copy_using_rename(FilePath src,
+                                           FilePath dest) noexcept {
+	return copyat_using_rename(AT_FDCWD, src, AT_FDCWD, dest);
+}
 
 /**
  * @brief Copies (overwrites) file from @p src to @p dest

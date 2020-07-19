@@ -2,6 +2,7 @@
 
 #include "simlib/debug.hh"
 #include "simlib/file_manip.hh"
+#include "simlib/file_path.hh"
 #include "simlib/sandbox.hh"
 #include "simlib/sim/compile.hh"
 #include "simlib/sim/simfile.hh"
