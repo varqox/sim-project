@@ -486,18 +486,18 @@ public:
 		}
 	}
 
-	void save_compiled_checker(FilePath destination) {
+	void save_compiled_checker(FilePath destination, int(*copy_fn)(FilePath, FilePath, mode_t) = copy) const {
 		STACK_UNWINDING_MARK;
-		if (copy(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
+		if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME),
 		         destination, S_0755))
 		{
 			THROW("copy()", errmsg());
 		}
 	}
 
-	void save_compiled_solution(FilePath destination) {
+	void save_compiled_solution(FilePath destination, int(*copy_fn)(FilePath, FilePath, mode_t) = copy) const {
 		STACK_UNWINDING_MARK;
-		if (copy(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME),
+		if (copy_fn(concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME),
 		         destination, S_0755))
 		{
 			THROW("copy()", errmsg());

@@ -1,7 +1,10 @@
 #include "simlib/sim/conver.hh"
+#include "compilation_cache.hh"
+#include "simlib/concat.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/concurrent/job_processor.hh"
 #include "simlib/config_file.hh"
+#include "simlib/debug.hh"
 #include "simlib/directory.hh"
 #include "simlib/file_info.hh"
 #include "simlib/file_path.hh"
@@ -13,6 +16,7 @@
 #include "simlib/sim/judge_worker.hh"
 #include "simlib/string_compare.hh"
 #include "simlib/temporary_file.hh"
+#include "simlib/time.hh"
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -24,6 +28,7 @@ using sim::Conver;
 using sim::JudgeReport;
 using sim::JudgeWorker;
 using std::optional;
+using std::pair; // NOLINT(misc-unused-using-decls)
 using std::string;
 
 constexpr static bool regenerate_outs = false;
@@ -231,6 +236,7 @@ class ConverTestCaseRunner {
 	static constexpr std::chrono::seconds COMPILATION_TIME_LIMIT{5};
 	static constexpr size_t COMPILATION_ERRORS_MAX_LENGTH = 4096;
 
+	const string& tests_dir_;
 	const string test_case_name_;
 	const InplaceBuff<PATH_MAX> test_case_dir_;
 	const TestConfig conf_;
@@ -243,7 +249,8 @@ class ConverTestCaseRunner {
 
 public:
 	ConverTestCaseRunner(const string& tests_dir, string&& test_case_name)
-	: test_case_name_(std::move(test_case_name))
+	: tests_dir_(tests_dir)
+	, test_case_name_(std::move(test_case_name))
 	, test_case_dir_(concat(tests_dir, test_cases_subdir, test_case_name_, '/'))
 	, conf_(load_config_from_file(
 	     concat(test_case_dir_, test_filenames::config))) {
@@ -285,25 +292,10 @@ private:
 		case Conver::Status::NEED_MODEL_SOLUTION_JUDGE_REPORT: break;
 		}
 
-		string compilation_errors;
 		JudgeWorker jworker;
 		jworker.load_package(conver_.package_path(),
 		                     post_judge_simfile_.dump());
-		// Checker
-		if (jworker.compile_checker(COMPILATION_TIME_LIMIT, &compilation_errors,
-		                            COMPILATION_ERRORS_MAX_LENGTH, ""))
-		{
-			THROW("failed to compile checker: \n", compilation_errors);
-		}
-		// Solution
-		auto const& main_solution = post_judge_simfile_.solutions[0];
-		if (jworker.compile_solution_from_package(
-		       main_solution, sim::filename_to_lang(main_solution),
-		       COMPILATION_TIME_LIMIT, &compilation_errors,
-		       COMPILATION_ERRORS_MAX_LENGTH, ""))
-		{
-			THROW("failed to compile solution: \n", compilation_errors);
-		}
+		compile_checker_and_solution(jworker);
 
 		TestingJudgeLogger judge_logger;
 		initial_judge_report_ = jworker.judge(false, judge_logger),
@@ -312,6 +304,73 @@ private:
 		Conver::reset_time_limits_using_jugde_reports(
 		   post_judge_simfile_, initial_judge_report_, final_judge_report_,
 		   conf_.opts.rtl_opts);
+	}
+
+	void compile_checker_and_solution(JudgeWorker& jworker) {
+		using time_point = std::chrono::system_clock::time_point;
+		CompilationCache ccache = {"/tmp/simlib-conver-test-compilation-cache/",
+		                           std::chrono::hours(24)};
+		string compilation_errors;
+		// Checker
+		auto [checker_cache_path, checker_mtime] = [&] {
+			string path;
+			time_point tp;
+			if (not pre_judge_simfile_.checker) {
+				path = "default_checker";
+				tp = get_modification_time(
+				   concat(tests_dir_, "../../src/sim/default_checker.c"));
+			} else if (is_directory(conver_.package_path())) {
+				path = concat_tostr(conver_.package_path(),
+				                    *pre_judge_simfile_.checker);
+				tp = get_modification_time(path);
+			} else {
+				path = concat_tostr(conver_.package_path(), '/',
+				                    *pre_judge_simfile_.checker);
+				tp = get_modification_time(conver_.package_path());
+			}
+			return pair{path, tp};
+		}();
+
+		if (ccache.is_cached(checker_cache_path, checker_mtime)) {
+			jworker.load_compiled_checker(
+			   ccache.cached_path(checker_cache_path));
+		} else {
+			if (jworker.compile_checker(COMPILATION_TIME_LIMIT,
+			                            &compilation_errors,
+			                            COMPILATION_ERRORS_MAX_LENGTH, ""))
+			{
+				THROW("failed to compile checker: \n", compilation_errors);
+			}
+			ccache.cache_compiled_checker(checker_cache_path, jworker);
+		}
+
+		// Solution
+		auto const& main_solution = post_judge_simfile_.solutions[0];
+		auto [sol_cache_path, sol_mtime] = [&] {
+			string path;
+			time_point tp;
+			if (is_directory(conver_.package_path())) {
+				path = concat_tostr(conver_.package_path(), main_solution);
+				tp = get_modification_time(path);
+			} else {
+				path = concat_tostr(conver_.package_path(), '/', main_solution);
+				tp = get_modification_time(conver_.package_path());
+			}
+			return pair{path, tp};
+		}();
+
+		if (ccache.is_cached(sol_cache_path, sol_mtime)) {
+			jworker.load_compiled_solution(ccache.cached_path(sol_cache_path));
+		} else {
+			if (jworker.compile_solution_from_package(
+			       main_solution, sim::filename_to_lang(main_solution),
+			       COMPILATION_TIME_LIMIT, &compilation_errors,
+			       COMPILATION_ERRORS_MAX_LENGTH, ""))
+			{
+				THROW("failed to compile solution: \n", compilation_errors);
+			}
+			ccache.cache_compiled_solution(sol_cache_path, jworker);
+		}
 	}
 
 	void round_post_judge_simfile_time_limits_to_whole_seconds() {
