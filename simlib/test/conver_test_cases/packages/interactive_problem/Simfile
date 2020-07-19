@@ -3,16 +3,5 @@ memory_limit: 32
 interactive: true
 solutions: [prog/sol.cc]
 limits: [
-	0 0.3
-
-	1 0.3
-
-	2a 0.3
-	2b 0.3
-
-	3a 0.3
-	3b 0.3
-
 	4a 0.3
-	4b 0.3
 ]

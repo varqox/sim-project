@@ -1,15 +1,15 @@
 package: interactive_problem/
-override_main_solution_with: prog/sol_tle1.cc
+override_main_solution_with: prog/sol_rte1.cc
 
 name: null
 label: null
 interactive: null
 memory_limit: null
 global_time_limit: null
-max_time_limit: 0.65
+max_time_limit: 5
 reset_time_limits_using_main_solution: true
 ignore_simfile: false
-seek_for_new_tests: true
+seek_for_new_tests: false
 reset_scoring: false
 require_statement: false
 min_time_limit: 0.2

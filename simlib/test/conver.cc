@@ -390,7 +390,7 @@ protected:
 		for_each_dir_component(
 		   concat(tests_dir_, test_cases_subdir),
 		   [&](dirent* file) { test_cases.emplace_back(file->d_name); });
-		sort(test_cases.begin(), test_cases.end(), StrNumCompare{});
+		sort(test_cases.begin(), test_cases.end(), StrVersionCompare{});
 		reverse(test_cases.begin(), test_cases.end());
 		for (auto& test_case_name : test_cases) {
 			add_job(std::move(test_case_name));

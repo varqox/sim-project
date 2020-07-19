@@ -5,33 +5,11 @@ checker: checker/checker.cc
 solutions: [prog/tle2.cc, prog/sol.cc, prog/rte1.cc, prog/sol_rte1.cc, prog/sol_slow1.cc, prog/sol_slow2.cc, prog/sol_slow_wa.cc, prog/sol_tle1.cc, prog/sol_tle2.cc, prog/sol_wa1.cc, prog/sol_wa2.cc, prog/sol_wa3.cc, prog/tle1.cc, prog/wa1.cc, prog/wa2.cc, prog/wa3.cc, prog/wa4.cc, prog/wa5.cc]
 memory_limit: 32
 limits: [
-	0 0.305
-
-	1 0.305
-
-	2a 0.305
-	2b 0.305
-
-	3a 0.305
-	3b 0.305
-
 	4a 0.305
-	4b 0.305
 ]
 scoring: [
-	0 0
-	1 25
-	2 25
-	3 25
-	4 25
+	4 100
 ]
 tests_files: [
-	0 in/0.in
-	1 in/1.in
-	2a in/2a.in
-	2b in/2b.in
-	3a in/3a.in
-	3b in/3b.in
 	4a in/4a.in
-	4b in/4b.in
 ]
