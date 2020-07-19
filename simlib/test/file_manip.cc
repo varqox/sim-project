@@ -4,6 +4,7 @@
 #include "simlib/directory.hh"
 #include "simlib/file_contents.hh"
 #include "simlib/file_info.hh"
+#include "simlib/file_path.hh"
 #include "simlib/opened_temporary_file.hh"
 #include "simlib/random.hh"
 #include "simlib/temporary_directory.hh"
@@ -140,8 +141,7 @@ TEST(file_manip, blast) {
 	EXPECT_EQ(get_file_size(b.path()), data.size());
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(file_manip, copy) {
+void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 	OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
 
@@ -169,76 +169,7 @@ TEST(file_manip, copy) {
 
 	string b_path = concat_tostr(tmp_dir.path(), "bbb");
 	allowed_files.emplace(b_path);
-	EXPECT_EQ(::copy(a.path(), b_path, S_0644), 0);
-	EXPECT_EQ(get_file_size(b_path), data.size());
-	EXPECT_TRUE(get_file_contents(b_path) == data);
-	EXPECT_EQ(get_file_permissions(b_path), S_0644);
-	check_allowed_files(__LINE__);
-
-	string c_path = concat_tostr(tmp_dir.path(), "ccc");
-	allowed_files.emplace(c_path);
-	EXPECT_EQ(::copy(a.path(), c_path, S_0755), 0);
-	EXPECT_EQ(get_file_size(c_path), data.size());
-	EXPECT_TRUE(get_file_contents(c_path) == data);
-	EXPECT_EQ(get_file_permissions(c_path), S_0755);
-	check_allowed_files(__LINE__);
-
-	EXPECT_EQ(lseek(a, 0, SEEK_SET), 0);
-	write_all_throw(a, bigger_data);
-	EXPECT_EQ(::copy(a.path(), b_path, S_0755), 0);
-	EXPECT_EQ(get_file_size(b_path), bigger_data.size());
-	EXPECT_TRUE(get_file_contents(b_path) == bigger_data);
-	EXPECT_EQ(get_file_permissions(b_path), S_0644);
-	check_allowed_files(__LINE__);
-
-	EXPECT_EQ(lseek(a, 0, SEEK_SET), 0);
-	write_all_throw(a, smaller_data);
-	EXPECT_EQ(ftruncate(a, smaller_data.size()), 0);
-
-	EXPECT_EQ(::copy(a.path(), c_path, S_0644), 0);
-	EXPECT_EQ(get_file_size(c_path), smaller_data.size());
-	EXPECT_TRUE(get_file_contents(c_path) == smaller_data);
-	EXPECT_EQ(get_file_permissions(c_path), S_0755);
-	check_allowed_files(__LINE__);
-
-	EXPECT_EQ(remove(c_path), 0);
-	EXPECT_EQ(::copy(a.path(), c_path, S_IRUSR), 0);
-	EXPECT_EQ(get_file_size(c_path), smaller_data.size());
-	EXPECT_TRUE(get_file_contents(c_path) == smaller_data);
-	EXPECT_EQ(get_file_permissions(c_path), S_IRUSR);
-	check_allowed_files(__LINE__);
-}
-
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(file_manip, copy_using_rename) {
-	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
-	OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
-
-	string data = some_random_data(1 << 18);
-	write_all_throw(a, data);
-
-	string bigger_data = some_random_data(1 << 19);
-	string smaller_data = some_random_data(1 << 17);
-
-	std::set<string> allowed_files;
-	auto check_allowed_files = [&](size_t line) {
-		size_t k = 0;
-		for_each_dir_component(tmp_dir.path(), [&](dirent* f) {
-			++k;
-			if (allowed_files.count(concat_tostr(tmp_dir.path(), f->d_name)) ==
-			    0) {
-				ADD_FAILURE() << f->d_name << " (at line: " << line << ')';
-			}
-		});
-		EXPECT_EQ(k, allowed_files.size()) << " (at line: " << line << ')';
-	};
-
-	EXPECT_EQ(get_file_size(a.path()), data.size());
-	check_allowed_files(__LINE__);
-
-	string b_path = concat_tostr(tmp_dir.path(), "bbb");
-	allowed_files.emplace(b_path);
-	auto x = ::copy_using_rename(a.path(), b_path, S_0644);
+	auto x = copy_fn(a.path(), b_path, S_0644);
 	EXPECT_EQ(x, 0);
 	EXPECT_EQ(get_file_size(b_path), data.size());
 	EXPECT_TRUE(get_file_contents(b_path) == data);
@@ -247,7 +178,7 @@ TEST(file_manip, copy_using_rename) {
 
 	string c_path = concat_tostr(tmp_dir.path(), "ccc");
 	allowed_files.emplace(c_path);
-	EXPECT_EQ(::copy_using_rename(a.path(), c_path, S_0755), 0);
+	EXPECT_EQ(copy_fn(a.path(), c_path, S_0755), 0);
 	EXPECT_EQ(get_file_size(c_path), data.size());
 	EXPECT_TRUE(get_file_contents(c_path) == data);
 	EXPECT_EQ(get_file_permissions(c_path), S_0755);
@@ -255,7 +186,7 @@ TEST(file_manip, copy_using_rename) {
 
 	EXPECT_EQ(lseek(a, 0, SEEK_SET), 0);
 	write_all_throw(a, bigger_data);
-	EXPECT_EQ(::copy_using_rename(a.path(), b_path, S_0755), 0);
+	EXPECT_EQ(copy_fn(a.path(), b_path, S_0755), 0);
 	EXPECT_EQ(get_file_size(b_path), bigger_data.size());
 	EXPECT_TRUE(get_file_contents(b_path) == bigger_data);
 	EXPECT_EQ(get_file_permissions(b_path), S_0755);
@@ -265,19 +196,25 @@ TEST(file_manip, copy_using_rename) {
 	write_all_throw(a, smaller_data);
 	EXPECT_EQ(ftruncate(a, smaller_data.size()), 0);
 
-	EXPECT_EQ(::copy_using_rename(a.path(), c_path, S_0644), 0);
+	EXPECT_EQ(copy_fn(a.path(), c_path, S_0644), 0);
 	EXPECT_EQ(get_file_size(c_path), smaller_data.size());
 	EXPECT_TRUE(get_file_contents(c_path) == smaller_data);
 	EXPECT_EQ(get_file_permissions(c_path), S_0644);
 	check_allowed_files(__LINE__);
 
 	EXPECT_EQ(remove(c_path), 0);
-	EXPECT_EQ(::copy_using_rename(a.path(), c_path, S_IRUSR), 0);
+	EXPECT_EQ(copy_fn(a.path(), c_path, S_IRUSR), 0);
 	EXPECT_EQ(get_file_size(c_path), smaller_data.size());
 	EXPECT_TRUE(get_file_contents(c_path) == smaller_data);
 	EXPECT_EQ(get_file_permissions(c_path), S_IRUSR);
 	check_allowed_files(__LINE__);
 }
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(file_manip, copy) { copy_test(::copy); }
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(file_manip, copy_using_rename) { copy_test(::copy_using_rename); }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, copy_r) {

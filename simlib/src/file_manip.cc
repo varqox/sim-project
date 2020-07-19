@@ -252,8 +252,14 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 
 int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
            mode_t mode) noexcept {
-	FileDescriptor out(openat(dest_dirfd, dest,
-	                          O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode));
+	constexpr auto open_flags = O_WRONLY | O_TRUNC | O_CLOEXEC;
+	FileDescriptor out(
+	   openat(dest_dirfd, dest, open_flags | O_CREAT | O_EXCL, mode));
+	bool file_created = true;
+	if (not out.is_open() and errno == EEXIST) {
+		file_created = false;
+		out = openat(dest_dirfd, dest, open_flags);
+	}
 	if (not out.is_open()) {
 		if (errno != ETXTBSY) {
 			return -1;
@@ -269,12 +275,17 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd, FilePath dest,
 		return -1;
 	}
 
-	off64_t offset = lseek64(out, 0, SEEK_CUR);
-	if (offset == static_cast<decltype(offset)>(-1)) {
-		return -1;
-	}
-	if (ftruncate64(out, offset)) {
-		return -1;
+	if (not file_created) {
+		off64_t offset = lseek64(out, 0, SEEK_CUR);
+		if (offset == static_cast<decltype(offset)>(-1)) {
+			return -1;
+		}
+		if (ftruncate64(out, offset)) {
+			return -1;
+		}
+		if (fchmod(out, mode)) {
+			return -1;
+		}
 	}
 	return 0;
 }
