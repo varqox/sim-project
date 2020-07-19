@@ -70,7 +70,7 @@ public:
 };
 
 inline RandomDevice& get_random_generator() {
-	static RandomDevice random_generator;
+	static thread_local RandomDevice random_generator;
 	return random_generator;
 }
 
