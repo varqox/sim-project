@@ -1,13 +1,16 @@
 #include "simlib/sandbox.hh"
+#include "compilation_cache.hh"
 #include "simlib/concurrent/job_processor.hh"
 #include "simlib/path.hh"
 #include "simlib/process.hh"
 #include "simlib/temporary_file.hh"
 
+#include <chrono>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <linux/version.h>
 #include <sys/syscall.h>
+#include <thread>
 #include <unistd.h>
 
 using namespace std::chrono_literals;
@@ -33,14 +36,25 @@ public:
 private:
 	template <class... Flags>
 	void compile_test_case(StringView test_case_filename, Flags&&... cc_flags) {
-		Spawner::ExitStat es = Spawner::run(
-		   "cc",
-		   {"cc", "-o2", concat_tostr(test_cases_dir_, test_case_filename),
-		    "-o", executable_.path(), "-static",
-		    std::forward<Flags>(cc_flags)...},
-		   {-1, STDOUT_FILENO, STDERR_FILENO});
+		CompilationCache ccache = {
+		   "/tmp/simlib-sandbox-test-compilation-cache/",
+		   std::chrono::hours(24)};
+		auto path = concat_tostr(test_cases_dir_, test_case_filename);
+		if (ccache.is_cached(path, path)) {
+			if (::copy(ccache.cached_path(path), executable_.path())) {
+				THROW("copy()", errmsg());
+			}
+			return;
+		}
+
+		Spawner::ExitStat es =
+		   Spawner::run("cc",
+		                {"cc", "-O2", path, "-o", executable_.path(), "-static",
+		                 std::forward<Flags>(cc_flags)...},
+		                {-1, STDOUT_FILENO, STDERR_FILENO});
 		// compilation must be successful
 		throw_assert(es.si.code == CLD_EXITED and es.si.status == 0);
+		ccache.cache_file(path, executable_.path());
 	}
 
 	using ExitStatSiCode = decltype(std::declval<Sandbox::ExitStat>().si.code);
