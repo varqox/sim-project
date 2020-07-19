@@ -2,6 +2,7 @@
 
 #include "simlib/debug.hh"
 #include "simlib/file_path.hh"
+#include "simlib/time.hh"
 
 #include <chrono>
 #include <sys/stat.h>
@@ -53,7 +54,7 @@ inline uint64_t get_file_size(FilePath file) {
 // Returns file modification time (with second precision) as a time_point
 inline std::chrono::system_clock::time_point
 get_modification_time(const struct stat64& st) noexcept {
-	return std::chrono::system_clock::from_time_t(st.st_mtime);
+	return std::chrono::system_clock::time_point(to_duration(st.st_mtim));
 }
 
 // Returns file modification time (with second precision) as a time_point
