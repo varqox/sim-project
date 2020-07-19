@@ -1,6 +1,7 @@
 #pragma once
 
 #include "simlib/string_traits.hh"
+#include "simlib/string_view.hh"
 
 #include <utility>
 
@@ -49,6 +50,64 @@ struct StrNumCompare {
 		a.remove_leading('0');
 		b.remove_leading('0');
 		return (a.size() == b.size() ? a < b : a.size() < b.size());
+	}
+};
+
+/**
+ * @brief Works almost like strverscmp(3)
+ */
+struct StrVersionCompare {
+	constexpr bool operator()(StringView a, StringView b) const {
+		size_t pf = 0;
+		while (pf < a.size() and pf < b.size() and a[pf] == b[pf]) {
+			++pf;
+		}
+
+		bool adigit = pf < a.size() and is_digit(a[pf]);
+		bool bdigit = pf < b.size() and is_digit(b[pf]);
+		if (not adigit and not bdigit) {
+			return a.substring(pf) < b.substring(pf);
+		}
+
+		size_t beg = pf;
+		while (beg > 0 and is_digit(a[beg - 1])) {
+			--beg;
+		}
+		StringView numa = a.substring(beg).extract_leading(is_digit<char>);
+		StringView numb = b.substring(beg).extract_leading(is_digit<char>);
+
+		// Digit is lower than any non-digit even empty string
+		if (numa.empty() or numb.empty()) {
+			return a.substring(pf) < b.substring(pf);
+		}
+
+		auto remove_leading_zeros = [](StringView& str) {
+			size_t res = str.size();
+			while (not str.empty() and str.front() == '0' and str != "0") {
+				str.remove_prefix(1);
+			}
+			return res - str.size();
+		};
+		size_t a_leading_zeros = remove_leading_zeros(numa);
+		size_t b_leading_zeros = remove_leading_zeros(numb);
+
+		if (a_leading_zeros == 0 and b_leading_zeros == 0) {
+			// Normal numbers -- compare as such
+			return numa.size() == numb.size() ? numa < numb
+			                                  : numa.size() < numb.size();
+		}
+		if (a_leading_zeros == 0) {
+			assert(b_leading_zeros > 0);
+			return false;
+		}
+		if (b_leading_zeros == 0) {
+			assert(a_leading_zeros > 0);
+			return true;
+		}
+
+		return a_leading_zeros == b_leading_zeros
+		          ? numa < numb
+		          : a_leading_zeros > b_leading_zeros;
 	}
 };
 
