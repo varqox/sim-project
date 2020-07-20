@@ -238,6 +238,9 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 		if (blast(src_fd, dest_fd)) {
 			return -1;
 		}
+		(void)dest_fd.close(); // Close file descriptor before renaming to avoid
+		                       // racy ETXTBSY if someone will try execute it
+		                       // before we close dest_fd
 		if (renameat(dest_dirfd, tmp_dest.to_cstr().data(), dest_dirfd, dest)) {
 			return -1;
 		}
