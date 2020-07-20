@@ -1135,8 +1135,6 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 	STACK_UNWINDING_MARK;
 
-	do_in_parent_after_fork(tracee_pid_);
-
 	// Set up ptrace options
 	if (ptrace(PTRACE_SETOPTIONS, tracee_pid_, 0,
 	           PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEEXEC |
@@ -1190,6 +1188,8 @@ Sandbox::run(FilePath exec, const std::vector<std::string>& exec_args,
 
 	static_assert(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0),
 	              "Needed by the seccomp(2) features used below");
+
+	do_in_parent_after_fork(tracee_pid_); // This may kill tracee
 
 	STACK_UNWINDING_MARK;
 	try {
