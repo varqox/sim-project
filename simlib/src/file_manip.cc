@@ -4,15 +4,21 @@
 #include "simlib/file_descriptor.hh"
 #include "simlib/file_path.hh"
 #include "simlib/inplace_buff.hh"
+#include "simlib/proc_stat_file_contents.hh"
 #include "simlib/random.hh"
 #include "simlib/repeating.hh"
+#include "simlib/string_transform.hh"
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <new>
+#include <sys/eventfd.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
 
@@ -310,6 +316,60 @@ int copyat(int src_dirfd, FilePath src, int dest_dirfd,
 	}
 
 	return copyat(src_dirfd, src, dest_dirfd, dest, sb.st_mode);
+}
+
+static uint current_process_threads_num() {
+	auto opt = str2num<uint>(ProcStatFileContents::get(getpid()).field(19));
+	assert(opt.has_value());
+	return *opt;
+}
+
+void thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd,
+                             FilePath dest, mode_t mode) {
+	STACK_UNWINDING_MARK;
+	if (current_process_threads_num() == 1) {
+		if (copyat(src_dirfd, src, dest_dirfd, dest, mode)) {
+			THROW("copyat()", errmsg());
+		}
+		return;
+	}
+
+	FileDescriptor efd{eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)};
+	if (not efd.is_open()) {
+		THROW("eventfd()", errmsg());
+	}
+
+	pid_t child = fork();
+	if (child == -1) {
+		THROW("fork()", errmsg());
+	}
+	if (child == 0) {
+		if (copyat(src_dirfd, src, dest_dirfd, dest, mode)) {
+			uint64_t data = errno;
+			if (write(efd, &data, sizeof(data)) != sizeof(data)) {
+				_exit(2);
+			}
+			_exit(1);
+		}
+		_exit(0);
+	}
+	// Parent process
+	siginfo_t si;
+	if (syscall(SYS_waitid, P_PID, child, &si, WEXITED, nullptr) == -1) {
+		THROW("waitid()", errmsg());
+	}
+	if (si.si_code != CLD_EXITED or (si.si_status | 1) != 1) {
+		THROW("copying within child process failed");
+	}
+	if (si.si_status == 0) {
+		return; // Success
+	}
+
+	uint64_t data{};
+	if (read(efd, &data, sizeof(data)) != sizeof(data)) {
+		THROW("read()", errmsg());
+	}
+	THROW("copy()", errmsg(data));
 }
 
 /**

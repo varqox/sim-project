@@ -470,20 +470,14 @@ public:
 
 	void load_compiled_checker(FilePath compiled_checker) {
 		STACK_UNWINDING_MARK;
-		if (copy(compiled_checker,
-		         concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755))
-		{
-			THROW("copy()", errmsg());
-		}
+		thread_fork_safe_copy(compiled_checker,
+		         concat<PATH_MAX>(tmp_dir.path(), CHECKER_FILENAME), S_0755);
 	}
 
 	void load_compiled_solution(FilePath compiled_solution) {
 		STACK_UNWINDING_MARK;
-		if (copy(compiled_solution,
-		         concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755))
-		{
-			THROW("copy()", errmsg());
-		}
+		thread_fork_safe_copy(compiled_solution,
+		         concat<PATH_MAX>(tmp_dir.path(), SOLUTION_FILENAME), S_0755);
 	}
 
 	void save_compiled_checker(FilePath destination, int(*copy_fn)(FilePath, FilePath, mode_t) = copy) const {

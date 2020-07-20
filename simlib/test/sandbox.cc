@@ -1,6 +1,7 @@
 #include "simlib/sandbox.hh"
 #include "compilation_cache.hh"
 #include "simlib/concurrent/job_processor.hh"
+#include "simlib/file_manip.hh"
 #include "simlib/path.hh"
 #include "simlib/process.hh"
 #include "simlib/temporary_file.hh"
@@ -41,9 +42,8 @@ private:
 		   std::chrono::hours(24)};
 		auto path = concat_tostr(test_cases_dir_, test_case_filename);
 		if (ccache.is_cached(path, path)) {
-			if (::copy(ccache.cached_path(path), executable_.path())) {
-				THROW("copy()", errmsg());
-			}
+			thread_fork_safe_copy(ccache.cached_path(path), executable_.path(),
+			                      S_0755);
 			return;
 		}
 

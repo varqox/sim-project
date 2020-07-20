@@ -5,6 +5,7 @@
 #include "simlib/file_perms.hh"
 
 #include <climits>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -220,6 +221,39 @@
  */
 [[nodiscard]] inline int copy(FilePath src, FilePath dest) noexcept {
 	return copyat(AT_FDCWD, src, AT_FDCWD, dest);
+}
+
+/**
+ * Copy function that protects from a nasty race condition that may result when
+ * running in a multi-threaded program that uses fork(). Race scenario is as
+ * follows:
+ * - [thread 1] open file X for writing
+ * - [thread 2] fork()
+ * - [thread 1] close file X
+ * - [thread 1] execve(file X) results in ETXTBSY, because [new process from
+ *              thread 2] holds the file X open for writing
+ * - [new process from thread 2] exit
+ * This function avoids this problem by opening the file X in a child process,
+ * thus preventing the race.
+ */
+void thread_fork_safe_copyat(int src_dirfd, FilePath src, int dest_dirfd,
+                             FilePath dest, mode_t mode);
+
+/**
+ * Copy function that protects from a nasty race condition that may result when
+ * running in a multi-threaded program that uses fork(). Race scenario is as
+ * follows:
+ * - [thread 1] open file X for writing
+ * - [thread 2] fork()
+ * - [thread 1] close file X
+ * - [thread 1] execve(file X) results in ETXTBSY, because [new process from
+ *              thread 2] holds the file X open for writing
+ * - [new process from thread 2] exit
+ * This function avoids this problem by opening the file X in a child process,
+ * thus preventing the race.
+ */
+inline void thread_fork_safe_copy(FilePath src, FilePath dest, mode_t mode) {
+	return thread_fork_safe_copyat(AT_FDCWD, src, AT_FDCWD, dest, mode);
 }
 
 /**

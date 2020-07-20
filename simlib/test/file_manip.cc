@@ -141,7 +141,7 @@ TEST(file_manip, blast) {
 	EXPECT_EQ(get_file_size(b.path()), data.size());
 }
 
-void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
+void copy_test(void (*copy_fn)(FilePath, FilePath, mode_t)) {
 	TemporaryDirectory tmp_dir("/tmp/filesystem-test.XXXXXX");
 	OpenedTemporaryFile a("/tmp/filesystem-test.XXXXXX");
 
@@ -169,8 +169,7 @@ void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
 
 	string b_path = concat_tostr(tmp_dir.path(), "bbb");
 	allowed_files.emplace(b_path);
-	auto x = copy_fn(a.path(), b_path, S_0644);
-	EXPECT_EQ(x, 0);
+	copy_fn(a.path(), b_path, S_0644);
 	EXPECT_EQ(get_file_size(b_path), data.size());
 	EXPECT_TRUE(get_file_contents(b_path) == data);
 	EXPECT_EQ(get_file_permissions(b_path), S_0644);
@@ -178,7 +177,7 @@ void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
 
 	string c_path = concat_tostr(tmp_dir.path(), "ccc");
 	allowed_files.emplace(c_path);
-	EXPECT_EQ(copy_fn(a.path(), c_path, S_0755), 0);
+	copy_fn(a.path(), c_path, S_0755);
 	EXPECT_EQ(get_file_size(c_path), data.size());
 	EXPECT_TRUE(get_file_contents(c_path) == data);
 	EXPECT_EQ(get_file_permissions(c_path), S_0755);
@@ -186,7 +185,7 @@ void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
 
 	EXPECT_EQ(lseek(a, 0, SEEK_SET), 0);
 	write_all_throw(a, bigger_data);
-	EXPECT_EQ(copy_fn(a.path(), b_path, S_0755), 0);
+	copy_fn(a.path(), b_path, S_0755);
 	EXPECT_EQ(get_file_size(b_path), bigger_data.size());
 	EXPECT_TRUE(get_file_contents(b_path) == bigger_data);
 	EXPECT_EQ(get_file_permissions(b_path), S_0755);
@@ -196,14 +195,14 @@ void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
 	write_all_throw(a, smaller_data);
 	EXPECT_EQ(ftruncate(a, smaller_data.size()), 0);
 
-	EXPECT_EQ(copy_fn(a.path(), c_path, S_0644), 0);
+	copy_fn(a.path(), c_path, S_0644);
 	EXPECT_EQ(get_file_size(c_path), smaller_data.size());
 	EXPECT_TRUE(get_file_contents(c_path) == smaller_data);
 	EXPECT_EQ(get_file_permissions(c_path), S_0644);
 	check_allowed_files(__LINE__);
 
 	EXPECT_EQ(remove(c_path), 0);
-	EXPECT_EQ(copy_fn(a.path(), c_path, S_IRUSR), 0);
+	copy_fn(a.path(), c_path, S_IRUSR);
 	EXPECT_EQ(get_file_size(c_path), smaller_data.size());
 	EXPECT_TRUE(get_file_contents(c_path) == smaller_data);
 	EXPECT_EQ(get_file_permissions(c_path), S_IRUSR);
@@ -211,10 +210,21 @@ void copy_test(int (*copy_fn)(FilePath, FilePath, mode_t)) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(file_manip, copy) { copy_test(::copy); }
+TEST(file_manip, copy) {
+	copy_test([](FilePath src, FilePath dest, mode_t mode) {
+		EXPECT_EQ(::copy(src, dest, mode), 0);
+	});
+}
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-TEST(file_manip, copy_using_rename) { copy_test(::copy_using_rename); }
+TEST(file_manip, copy_using_rename) {
+	copy_test([](FilePath src, FilePath dest, mode_t mode) {
+		EXPECT_EQ(::copy_using_rename(src, dest, mode), 0);
+	});
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(file_manip, thread_fork_safe_copy) { copy_test(::thread_fork_safe_copy); }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(file_manip, copy_r) {
