@@ -50,6 +50,7 @@ $(eval $(call add_static_library, $(PREFIX)simlib.a, $(SIMLIB_FLAGS), \
 	$(PREFIX)src/spawner.cc \
 	$(PREFIX)src/string_compare.cc \
 	$(PREFIX)src/temporary_directory.cc \
+	$(PREFIX)src/temporary_file.cc \
 	$(PREFIX)src/time.cc \
 	$(PREFIX)src/unlinked_temporary_file.cc \
 	$(PREFIX)src/working_directory.cc \

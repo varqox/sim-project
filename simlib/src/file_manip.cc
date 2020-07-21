@@ -8,6 +8,7 @@
 #include "simlib/random.hh"
 #include "simlib/repeating.hh"
 #include "simlib/string_transform.hh"
+#include "simlib/temporary_file.hh"
 
 #include <cstddef>
 #include <cstdint>
@@ -218,25 +219,15 @@ int copyat_using_rename(int src_dirfd, FilePath src, int dest_dirfd,
 		constexpr uint suffix_len = 10;
 		InplaceBuff<PATH_MAX> tmp_dest{std::in_place, dest, '.'};
 		tmp_dest.resize(tmp_dest.size + suffix_len + 1); // +1 for trailing '\0'
-		--tmp_dest.size;
-		FileDescriptor dest_fd;
-		for (size_t try_num = 0; try_num < 128; ++try_num) {
-			for (size_t i = tmp_dest.size - suffix_len; i < tmp_dest.size; ++i)
-			{
-				tmp_dest[i] = get_random('a', 'z');
-			}
-
-			dest_fd = openat(dest_dirfd, tmp_dest.to_cstr().data(),
-			                 O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
-			if (dest_fd.is_open()) {
-				break;
-			}
-			if (errno == EEXIST) {
-				continue;
-			}
-			return -1; // Other error occurred
+		tmp_dest[--tmp_dest.size] = '\0';
+		auto opt_fd =
+		   create_unique_file(dest_dirfd, tmp_dest.data(), tmp_dest.size,
+		                      suffix_len, O_WRONLY | O_CLOEXEC, mode);
+		if (not opt_fd) {
+			return -1; // errno is already set
 		}
 
+		FileDescriptor& dest_fd = *opt_fd;
 		CallInDtor tmp_dest_remover = [&] {
 			(void)unlinkat(dest_dirfd, tmp_dest.to_cstr().data(), 0);
 		};

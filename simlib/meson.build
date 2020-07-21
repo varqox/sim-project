@@ -91,6 +91,7 @@ simlib_libsources = files([
     'src/spawner.cc',
     'src/string_compare.cc',
     'src/temporary_directory.cc',
+    'src/temporary_file.cc',
     'src/time.cc',
     'src/unlinked_temporary_file.cc',
     'src/working_directory.cc',
