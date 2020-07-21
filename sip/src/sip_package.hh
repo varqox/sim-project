@@ -40,8 +40,8 @@ private:
 	static void generate_test_input_file(const Sipfile::GenTest& test,
 	                                     CStringView in_file);
 
-	// Runs model solution on @p test.in and places the output in the
-	// @p test.out file
+	// Runs main solution on @p test.in and places the output in the @p test.out
+	// file
 	sim::JudgeReport::Test
 	generate_test_output_file(const sim::Simfile::Test& test,
 	                          SipJudgeLogger& logger);

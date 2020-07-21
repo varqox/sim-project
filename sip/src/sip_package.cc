@@ -411,7 +411,7 @@ void SipPackage::judge_solution(StringView solution) {
 	auto jrep1 = jworker.value().judge(false, jlogger);
 	auto jrep2 = jworker.value().judge(true, jlogger);
 
-	// Adjust time limits according to the model solution judge times
+	// Adjust time limits according to the main solution judge times
 	if (solution == full_simfile.solutions.front()) {
 		sim::Conver::reset_time_limits_using_jugde_reports(
 		   full_simfile, jrep1, jrep2, conver_options(false).rtl_opts);
@@ -559,7 +559,7 @@ sim::Conver::Options SipPackage::conver_options(bool set_default_time_limits) {
 	STACK_UNWINDING_MARK;
 
 	sim::Conver::Options copts;
-	copts.reset_time_limits_using_model_solution = set_default_time_limits;
+	copts.reset_time_limits_using_main_solution = set_default_time_limits;
 	copts.ignore_simfile = false;
 	copts.seek_for_new_tests = true;
 	copts.reset_scoring = false;
@@ -621,7 +621,7 @@ void SipPackage::rebuild_full_simfile(bool set_default_time_limits) {
 		}
 	}
 
-	// Ignore the need for the model solution to set the time limits - the
+	// Ignore the need for the main solution to set the time limits - the
 	// time limits will be set to max_time_limit
 	// throw_assert(cr.status == sim::Conver::Status::COMPLETE);
 

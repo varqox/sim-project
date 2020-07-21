@@ -21,7 +21,6 @@ bool SipPackage::CompilationCache::is_cached(StringView path) {
 		if (errno == ENOENT) {
 			return false; // File does not exist
 		}
-
 		THROW("stat64()", errmsg());
 	}
 
