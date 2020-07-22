@@ -1,4 +1,5 @@
 #include "simlib/file_manip.hh"
+#include "get_file_permissions.hh"
 #include "simlib/debug.hh"
 #include "simlib/defer.hh"
 #include "simlib/directory.hh"
@@ -14,12 +15,6 @@
 using std::max;
 using std::string;
 using std::vector;
-
-static mode_t get_file_permissions(FilePath path) {
-	struct stat64 st {};
-	EXPECT_EQ(stat64(path, &st), 0);
-	return st.st_mode & ACCESSPERMS;
-}
 
 static string some_random_data(size_t len) {
 	string data(len, '0');
