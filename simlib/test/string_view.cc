@@ -239,6 +239,26 @@ TEST(DISABLED_StringBase, cend) {
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(DISABLED_StringBase, rbegin) {
+	// TODO: implement it
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(DISABLED_StringBase, rend) {
+	// TODO: implement it
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(DISABLED_StringBase, crbegin) {
+	// TODO: implement it
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
+TEST(DISABLED_StringBase, crend) {
+	// TODO: implement it
+}
+
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
 TEST(DISABLED_StringBase, front) {
 	// TODO: implement it
 }

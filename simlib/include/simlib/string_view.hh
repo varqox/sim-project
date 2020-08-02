@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstring>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -20,9 +21,11 @@ public:
 	using const_pointer = const Char*;
 	using const_iterator = const_pointer;
 	using iterator = const_iterator;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 	using size_type = size_t;
 
-	static constexpr size_type npos = -1;
+	static constexpr size_type npos = std::numeric_limits<size_type>::max();
 
 protected:
 	pointer str = nullptr;
@@ -132,6 +135,26 @@ public:
 
 	[[nodiscard]] constexpr const_iterator cend() const noexcept {
 		return str + len;
+	}
+
+	constexpr auto rbegin() noexcept { return reverse_iterator(end()); }
+
+	constexpr auto rend() noexcept { return reverse_iterator(begin()); }
+
+	[[nodiscard]] constexpr auto rbegin() const noexcept {
+		return const_reverse_iterator(end());
+	}
+
+	[[nodiscard]] constexpr auto rend() const noexcept {
+		return const_reverse_iterator(begin());
+	}
+
+	[[nodiscard]] constexpr auto crbegin() const noexcept {
+		return const_reverse_iterator(cend());
+	}
+
+	[[nodiscard]] constexpr auto crend() const noexcept {
+		return const_reverse_iterator(cbegin());
 	}
 
 	// Returns reference to first element
