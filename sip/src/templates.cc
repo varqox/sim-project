@@ -36,6 +36,9 @@ extern unsigned interactive_checker_cc_len;
 
 extern unsigned char statement_tex[];
 extern unsigned statement_tex_len;
+
+extern unsigned char gen_cc[];
+extern unsigned gen_cc_len;
 }
 
 static string get_template(StringView template_name,
@@ -78,6 +81,15 @@ static string replace(StringView text, Subst&&... substitutions) {
 
 namespace templates {
 
+string checker_cc() {
+	return get_template("checker.cc", ::checker_cc, checker_cc_len);
+}
+
+string interactive_checker_cc() {
+	return get_template("interactive_checker.cc", ::interactive_checker_cc,
+	                    interactive_checker_cc_len);
+}
+
 string statement_tex(StringView problem_name, optional<uint64_t> memory_limit) {
 	string full_template_str =
 	   get_template("statement.tex", ::statement_tex, statement_tex_len);
@@ -87,13 +99,6 @@ string statement_tex(StringView problem_name, optional<uint64_t> memory_limit) {
 	                                       : concat())));
 }
 
-string checker_cc() {
-	return get_template("checker.cc", ::checker_cc, checker_cc_len);
-}
-
-string interactive_checker_cc() {
-	return get_template("interactive_checker.cc", ::interactive_checker_cc,
-	                    interactive_checker_cc_len);
-}
+string gen_cc() { return get_template("gen.cc", ::gen_cc, gen_cc_len); }
 
 } // namespace templates

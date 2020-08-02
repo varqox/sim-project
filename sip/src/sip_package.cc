@@ -2,6 +2,7 @@
 #include "compilation_cache.hh"
 #include "constants.hh"
 #include "simlib/concat_tostr.hh"
+#include "simlib/file_contents.hh"
 #include "simlib/random.hh"
 #include "simlib/ranges.hh"
 #include "simlib/repeating.hh"
@@ -699,6 +700,16 @@ void SipPackage::save_template(StringView template_name) {
 		                     simfile.interactive
 		                        ? templates::interactive_checker_cc()
 		                        : templates::checker_cc()));
+	} else if (template_name == "gen") {
+		(void)mkdir("utils");
+		constexpr CStringView gen_path = "utils/gen.cc";
+		if (path_exists(gen_path)) {
+			throw SipError("File ", gen_path,
+			               " exists, to replace it with a default generator "
+			               "template, remove the file and try again");
+		}
+		put_file_contents(gen_path,
+		                  intentional_unsafe_string_view(templates::gen_cc()));
 	} else {
 		throw SipError("Unrecognized template name: ", template_name);
 	}

@@ -76,6 +76,11 @@ $(eval $(call add_generated_target, templates/statement.tex.dump.c, \
 	templates/statement.tex Makefile \
 ))
 
+$(eval $(call add_generated_target, templates/gen.cc.dump.c, \
+	xxd -i $$< | sed 's@\w*gen_cc@gen_cc@g' > $$@, \
+	templates/gen.cc Makefile \
+))
+
 SIP_SRCS := \
 	src/command_version.cc \
 	src/commands.cc \
@@ -89,6 +94,7 @@ SIP_SRCS := \
 	src/utils.cc \
 	subprojects/simlib/simlib.a \
 	templates/checker.cc.dump.c \
+	templates/gen.cc.dump.c \
 	templates/interactive_checker.cc.dump.c \
 	templates/statement.tex.dump.c \
 

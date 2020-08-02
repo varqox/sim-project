@@ -82,6 +82,10 @@ sip = executable('sip', sources : [
             'templates/statement.tex',
             extra_args : 'statement_tex'
         ),
+        dump_file_as_c_array.process(
+            'templates/gen.cc',
+            extra_args : 'gen_cc'
+        ),
         custom_target('git_commit.hh',
             command : find_program('src/gen_git_commit_hh.py'),
             depend_files : '.git/logs/HEAD',

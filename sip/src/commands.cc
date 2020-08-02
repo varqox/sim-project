@@ -196,9 +196,11 @@ Commands:
   template [names...]   Save templates of names. Available templates:
                           - statement -- saved to doc/statement.tex
                           - checker -- saved to check/checker.cc
-                            There are two checker templates: for interactive and
-                            non-interactive problems -- it will be chosen based
-                            on 'interactive' property from Simfile.
+                              There are two checker templates: for interactive
+                              and non-interactive problems -- it will be chosen based
+                              on 'interactive' property from Simfile.
+                          - gen -- saved to utils/gen.cc -- Test generator
+                              template.
                           Sip will search for templates in
                           ~/.config/sip/templates/ but if specified template is
                           not there, it will use the default one. Template files
