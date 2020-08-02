@@ -32,18 +32,26 @@ void checker(ArgvParser args) {
 	stdlog("checker = ", sp.simfile.checker.value_or(""));
 }
 
-void clean(ArgvParser args) {
+void clean() {
 	STACK_UNWINDING_MARK;
 	SipPackage::clean();
+}
 
-	SipPackage sp;
-	while (args.size() > 0) {
-		auto arg = args.extract_next();
-		if (arg == "tests") {
-			sp.remove_generated_test_files();
-		} else {
-			throw SipError("clean: unrecognized argument: ", arg);
-		}
+void devclean() {
+	STACK_UNWINDING_MARK;
+	bool recreate_tests_dir = false;
+	if (is_directory("tests/")) {
+		recreate_tests_dir = true;
+		// If tests/ becomes empty, then it will be removed and regenerated
+		// tests will be placed inside in/, out/ directories. To prevent it we
+		// need to retain this directory
+	}
+
+	SipPackage{}.remove_generated_test_files();
+	SipPackage::clean();
+
+	if (recreate_tests_dir) {
+		(void)mkdir("tests/");
 	}
 }
 
@@ -57,14 +65,14 @@ void docwatch(ArgvParser args) {
 	SipPackage::compile_tex_files(args, true);
 }
 
-void genin(ArgvParser /*unused*/) {
+void genin() {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
 	sp.generate_test_input_files();
 }
 
-void genout(ArgvParser /*unused*/) {
+void genout() {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -75,7 +83,7 @@ void genout(ArgvParser /*unused*/) {
 	}
 }
 
-void gen(ArgvParser /*unused*/) {
+void gen() {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -91,7 +99,7 @@ void gen(ArgvParser /*unused*/) {
 	}
 }
 
-void regenin(ArgvParser /*unused*/) {
+void regenin() {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -99,7 +107,7 @@ void regenin(ArgvParser /*unused*/) {
 	sp.generate_test_input_files();
 }
 
-void regen(ArgvParser /*unused*/) {
+void regen() {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -116,7 +124,7 @@ void regen(ArgvParser /*unused*/) {
 	}
 }
 
-void reseed(ArgvParser /*unused*/) {
+void reseed() {
 	STACK_UNWINDING_MARK;
 
 	SipPackage sp;
@@ -151,11 +159,14 @@ void help(const char* program_name) {
 
 Commands:
   checker [value]       If [value] is specified: set checker to [value].
-                          Otherwise print its current value
-  clean [arg...]        Prepare package to archiving: remove unnecessary files
+                          Otherwise print its current value.
+  clean                 Prepare package to archiving: remove unnecessary files
                           (compiled programs, latex logs, etc.).
-                        Allowed args:
-                          tests - remove all generated tests files
+  devclean              Same as command clean, but also remove all generated
+                          tests files.
+  devzip                Run devclean command and compress the package into zip
+                          (named after the current directory with suffix "-dev")
+                          within the upper directory.
   doc [pattern...]      Compile latex statements (if there are any) matching
                           [pattern...] (see Patterns section). No pattern means
                           all TeX files.
@@ -213,9 +224,9 @@ Commands:
   unset <names...>      Remove variables names... form Simfile e.g.
                           sip unset label interactive
   version               Display version
-  zip [clean args...]   Run clean command with [clean args] and compress the
-                          package into zip (named after the current directory)
-                          within the upper directory.
+  zip                   Run clean command and compress the package into zip
+                          (named after the current directory) within the upper
+                          directory.
 
 Options:
   -C <directory>        Change working directory to <directory> before doing
@@ -515,12 +526,20 @@ void unset(ArgvParser args) {
 	}
 }
 
-void zip(ArgvParser args) {
+void zip() {
 	STACK_UNWINDING_MARK;
-
-	clean(args);
+	clean();
 	auto cwd = get_cwd();
 	--cwd.size;
+	SipPackage::archive_into_zip(path_filename(cwd.to_cstr()));
+}
+
+void devzip() {
+	STACK_UNWINDING_MARK;
+	devclean();
+	auto cwd = get_cwd();
+	--cwd.size;
+	cwd.append("-dev");
 	SipPackage::archive_into_zip(path_filename(cwd.to_cstr()));
 }
 

@@ -65,7 +65,13 @@ static void run_command(int argc, char** argv) {
 		return commands::checker(args);
 	}
 	if (command == "clean") {
-		return commands::clean(args);
+		return commands::clean();
+	}
+	if (command == "devclean") {
+		return commands::devclean();
+	}
+	if (command == "devzip") {
+		return commands::devzip();
 	}
 	if (command == "doc") {
 		return commands::doc(args);
@@ -74,16 +80,16 @@ static void run_command(int argc, char** argv) {
 		return commands::docwatch(args);
 	}
 	if (command == "gen") {
-		return commands::gen(args);
+		return commands::gen();
 	}
 	if (command == "genin") {
-		return commands::genin(args);
+		return commands::genin();
 	}
 	if (command == "genout") {
-		return commands::genout(args);
+		return commands::genout();
 	}
 	if (command == "gentests") {
-		return commands::gen(args);
+		return commands::gen();
 	}
 	if (command == "help") {
 		return commands::help(argv[0]);
@@ -110,13 +116,13 @@ static void run_command(int argc, char** argv) {
 		return commands::prog(args);
 	}
 	if (command == "regen") {
-		return commands::regen(args);
+		return commands::regen();
 	}
 	if (command == "regenin") {
-		return commands::regenin(args);
+		return commands::regenin();
 	}
 	if (command == "reseed") {
-		return commands::reseed(args);
+		return commands::reseed();
 	}
 	if (command == "save") {
 		return commands::save(args);
@@ -140,7 +146,7 @@ static void run_command(int argc, char** argv) {
 		return commands::version();
 	}
 	if (command == "zip") {
-		return commands::zip(args);
+		return commands::zip();
 	}
 
 	throw SipError("unknown command: ", command);

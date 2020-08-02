@@ -6,30 +6,31 @@ namespace commands {
 
 void checker(ArgvParser args);
 
-void clean(ArgvParser args);
+void clean();
+
+void devclean();
 
 void doc(ArgvParser args);
 
 void docwatch(ArgvParser args);
 
-void genin(ArgvParser args);
+void genin();
 
-void genout(ArgvParser args);
+void genout();
 
-void gen(ArgvParser args);
+void gen();
 
-void regenin(ArgvParser);
+void regenin();
 
-void regen(ArgvParser);
+void regen();
 
-void reseed(ArgvParser);
+void reseed();
 
 // Displays help
 void help(const char* program_name);
 
-// Displays help
-// void version() noexcept;
-void version();
+// Displays version
+void version() noexcept;
 
 void init(ArgvParser args);
 
@@ -55,6 +56,8 @@ void test(ArgvParser args);
 
 void unset(ArgvParser args);
 
-void zip(ArgvParser args);
+void zip();
+
+void devzip();
 
 } // namespace commands
