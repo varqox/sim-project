@@ -1,11 +1,15 @@
 #include "commands.hh"
+#include "simlib/string_view.hh"
+#include "simlib/time.hh"
 #include "sip_error.hh"
 #include "sip_package.hh"
 #include "utils.hh"
 
+#include <limits>
 #include <simlib/file_info.hh>
 #include <simlib/path.hh>
 #include <simlib/process.hh>
+#include <simlib/random.hh>
 #include <simlib/working_directory.hh>
 
 namespace commands {
@@ -112,6 +116,29 @@ void regen(ArgvParser /*unused*/) {
 	}
 }
 
+void reseed(ArgvParser /*unused*/) {
+	STACK_UNWINDING_MARK;
+
+	SipPackage sp;
+	try {
+		sp.sipfile.load_base_seed(false);
+	} catch (...) {
+		// Ignore errors
+	}
+
+	while (true) {
+		using nl = std::numeric_limits<decltype(sp.sipfile.base_seed)>;
+		auto new_seed = get_random(nl::min(), nl::max());
+		if (new_seed != sp.sipfile.base_seed) {
+			sp.sipfile.base_seed = new_seed;
+			break;
+		}
+	}
+	sp.replace_variable_in_sipfile(
+	   "base_seed",
+	   intentional_unsafe_string_view(to_string(sp.sipfile.base_seed)));
+}
+
 void help(const char* program_name) {
 	STACK_UNWINDING_MARK;
 
@@ -160,6 +187,7 @@ Commands:
                           files
   regenin               Remove test files that don't belong to either static or
                           generated tests. Then generate tests input files
+  reseed                Changes base_seed in Sipfile, to a new random value.
   save <args...>        Saves args... Allowed args:
                           scoring - saves scoring to Simfile
   statement [value]     If [value] is specified: set statement to [value].

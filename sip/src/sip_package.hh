@@ -37,8 +37,8 @@ private:
 	void prepare_judge_worker();
 
 	// Runs @p test.generator and places its output in the @p in_file
-	static void generate_test_input_file(const Sipfile::GenTest& test,
-	                                     CStringView in_file);
+	void generate_test_input_file(const Sipfile::GenTest& test,
+	                              CStringView in_file) const;
 
 	// Runs main solution on @p test.in and places the output in the @p test.out
 	// file

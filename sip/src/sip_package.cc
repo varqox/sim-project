@@ -1,13 +1,20 @@
 #include "sip_package.hh"
 #include "compilation_cache.hh"
 #include "constants.hh"
+#include "simlib/concat_tostr.hh"
+#include "simlib/random.hh"
+#include "simlib/ranges.hh"
 #include "simlib/repeating.hh"
+#include "simlib/time.hh"
 #include "sip_error.hh"
+#include "sipfile.hh"
 #include "templates.hh"
 #include "utils.hh"
 
 #include <chrono>
+#include <cstdint>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <poll.h>
 #include <simlib/argv_parser.hh>
@@ -23,6 +30,7 @@
 #include <simlib/string_view.hh>
 #include <simlib/utilities.hh>
 #include <simlib/working_directory.hh>
+#include <string>
 #include <sys/inotify.h>
 
 using std::set;
@@ -71,11 +79,19 @@ void SipPackage::prepare_judge_worker() {
 	jworker.value().load_package(".", full_simfile.dump());
 }
 
+static uint64_t test_name_hash(StringView test_name) {
+	uint64_t hash = 0;
+	for (unsigned char c : reverse_view(test_name)) {
+		hash = (hash * 257 + c) % 71'777'214'294'589'669;
+	}
+	return hash;
+}
+
 void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
-                                          CStringView in_file) {
+                                          CStringView in_file) const {
 	STACK_UNWINDING_MARK;
 
-	auto generator([&] {
+	auto generator = [&] {
 		if (has_prefix(test.generator, "sh:")) {
 			return concat(substring(test.generator, 3));
 		}
@@ -99,9 +115,18 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
 		}
 
 		return CompilationCache::compile(test.generator);
-	}());
+	}();
 
 	stdlog("generating ", test.name, ".in...").flush_no_nl();
+	// Prepare environment
+	if (setenv("SIP_TEST_NAME", test.name.to_string().data(), true)) {
+		throw SipError("setenv()", errmsg());
+	}
+	auto seed = test_name_hash(test.name) ^ sipfile.base_seed;
+	if (setenv("SIP_TEST_SEED", to_string(seed).data(), true)) {
+		throw SipError("setenv()", errmsg());
+	}
+	// Run generator
 	auto es = Spawner::run(
 	   "sh", {"sh", "-c", concat_tostr(generator, ' ', test.generator_args)},
 	   Spawner::Options(-1,
@@ -119,7 +144,7 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
 		       " [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ] (",
 		       es.message, ')');
 
-		throw SipError("failed to generate test: ", test.name);
+		throw SipError("failed to generate test: ", test.name, " seed: ", seed);
 	}
 }
 
@@ -240,6 +265,9 @@ void SipPackage::generate_test_input_files() {
 	}
 
 	// Generate .in files
+	if (not sipfile.gen_tests.empty()) {
+		sipfile.load_base_seed();
+	}
 	for (auto const& test : sipfile.gen_tests) {
 		auto it = tests_files->tests.find(test.name);
 		if (it == tests_files->tests.end() or not it->second.in.has_value()) {
@@ -968,6 +996,9 @@ void SipPackage::create_default_sipfile() {
 		return;
 	}
 
+	using nl = std::numeric_limits<decltype(Sipfile::base_seed)>;
+	auto base_seed = get_random(nl::min(), nl::max());
+
 	stdlog("Creating Sipfile...").flush_no_nl();
 	// clang-format off
 	const auto default_sipfile_contents = concat_tostr(
@@ -975,7 +1006,9 @@ void SipPackage::create_default_sipfile() {
 	   "static: [\n"
 	       "\t# Here provide tests that are \"hard-coded\"\n"
 	       "\t# Syntax: <test-range>\n"
-	   "]\ngen: [\n"
+	   "]\n",
+	   "base_seed: ", to_string(base_seed), "\n"
+	   "gen: [\n"
 	       "\t# Here provide rules to generate tests\n"
 	       "\t# Syntax: <test-range> <generator> [generator arguments]\n"
 	   "]\n");

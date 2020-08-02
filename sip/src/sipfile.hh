@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <set>
 #include <simlib/config_file.hh>
 #include <simlib/member_comparator.hh>
@@ -11,6 +12,7 @@
 class Sipfile {
 public:
 	std::chrono::nanoseconds default_time_limit{};
+	uint64_t base_seed{};
 
 	struct GenTest {
 		InplaceBuff<16> name;
@@ -41,7 +43,7 @@ public:
 	 * @errors May throw from ConfigFile::loadConfigFromString()
 	 */
 	explicit Sipfile(std::string sipfile_contents) {
-		config.add_vars("default_time_limit", "static", "gen");
+		config.add_vars("default_time_limit", "base_seed", "static", "gen");
 		config.load_config_from_string(std::move(sipfile_contents));
 	}
 
@@ -63,6 +65,18 @@ public:
 	 *   validation error occurs
 	 */
 	void load_default_time_limit();
+
+	/**
+	 * @brief Loads the base seed
+	 * @details Fields:
+	 *   - base_seed
+	 *
+	 * @param warn whether to warn if the base_seed field is missing
+	 *
+	 * @errors Throws an exception of type std::runtime_error if any
+	 *   validation error occurs
+	 */
+	void load_base_seed(bool warn = true);
 
 	/**
 	 * @brief Loads non-generated test rules (variable "static")

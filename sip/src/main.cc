@@ -115,6 +115,9 @@ static void run_command(int argc, char** argv) {
 	if (command == "regenin") {
 		return commands::regenin(args);
 	}
+	if (command == "reseed") {
+		return commands::reseed(args);
+	}
 	if (command == "save") {
 		return commands::save(args);
 	}

@@ -22,6 +22,8 @@ void regenin(ArgvParser);
 
 void regen(ArgvParser);
 
+void reseed(ArgvParser);
+
 // Displays help
 void help(const char* program_name);
 

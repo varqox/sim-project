@@ -30,19 +30,18 @@ using std::not_fn;
 void Sipfile::load_default_time_limit() {
 	STACK_UNWINDING_MARK;
 
-	auto&& dtl = config["default_time_limit"];
-	CHECK_IF_NOT_ARR(dtl, "default_time_limit");
+	auto&& var = config["default_time_limit"];
+	CHECK_IF_NOT_ARR(var, "default_time_limit");
 
-	if (dtl.as_string().empty()) {
+	if (var.as_string().empty()) {
 		throw SipError("Sipfile: missing default_time_limit");
 	}
 
-	if (!is_real(dtl.as_string())) {
+	auto opt = str2num<double>(var.as_string());
+	if (not opt) {
 		throw SipError("Sipfile: invalid default time limit");
 	}
-
-	double tl = stod(dtl.as_string());
-	if (tl <= 0) {
+	if (*opt <= 0) {
 		throw SipError("Sipfile: default time limit has to be grater than 0");
 	}
 
@@ -52,12 +51,34 @@ void Sipfile::load_default_time_limit() {
 	using std::chrono::nanoseconds;
 
 	default_time_limit =
-	   duration_cast<nanoseconds>(duration<double>(tl) + 0.5ns);
+	   duration_cast<nanoseconds>(duration<double>(*opt) + 0.5ns);
 	if (default_time_limit == 0ns) {
 		throw SipError(
 		   "Sipfile: default time limit is to small - after rounding it is "
 		   "equal to 0 nanoseconds, but it has to be at least 1 nanosecond");
 	}
+}
+
+void Sipfile::load_base_seed(bool warn) {
+	STACK_UNWINDING_MARK;
+
+	auto&& var = config["base_seed"];
+	CHECK_IF_NOT_ARR(var, "base_seed");
+
+	if (var.as_string().empty()) {
+		if (warn) {
+			log_warning("Sipfile: missing base_seed -> setting it to 0. To "
+			            "change the base seed run: sip reseed");
+		}
+		base_seed = 0;
+		return;
+	}
+
+	auto opt = str2num<decltype(base_seed)>(var.as_string());
+	if (not opt) {
+		throw SipError("Sipfile: invalid base seed");
+	}
+	base_seed = *opt;
 }
 
 template <class Func>
