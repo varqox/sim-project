@@ -1,15 +1,4 @@
-#include <cassert>
-#include <cerrno>
-#include <charconv>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <random>
-#include <string_view>
-#include <system_error>
-#include <type_traits>
+#include <bits/stdc++.h>
 using namespace std;
 
 constexpr inline char nl = '\n';
@@ -28,16 +17,26 @@ T arg(int n) {
 		exit(1);
 	}
 	auto argn = args_parser::argv[n];
+	auto argn_end = argn + strlen(argn);
 	if constexpr (std::is_integral_v<T>) {
 		T res;
-		if (auto [p, ec] = from_chars(argn, argn + strlen(argn), res);
-		    ec != std::errc())
+		if (auto [p, ec] = from_chars(argn, argn_end, res);
+		    ec == std::errc() and p == argn_end)
 		{
-			fprintf(stderr,
-			        "Invalid argument no %i: cannot convert to integer\n", n);
-			exit(1);
+			return res;
 		}
-		return res;
+	}
+	// If integer conversion failed, try a floating one
+	if constexpr (std::is_arithmetic_v<T>) {
+		errno = 0;
+		char* ptr = nullptr;
+		long double res = ::strtold(argn, &ptr);
+		if (errno == 0 and ptr != argn and ptr == argn_end) {
+			return res;
+		}
+		fprintf(stderr, "Invalid argument no %i: cannot convert to %s\n", n,
+		        std::is_integral_v<T> ? "integer" : "floating point number");
+		exit(1);
 	} else {
 		return T{argn};
 	}
