@@ -119,16 +119,20 @@ public:
 	          std::optional<uint64_t> checker_mem_limit,
 	          StringView checker_error_str) override {
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
-			tmplog(" CHK: ");
-
 			// Checker status
 			if (test_report.status == sim::JudgeReport::Test::OK) {
-				tmplog("\033[1;32mOK\033[m ", test_report.comment);
+				if (sip_verbose) {
+					tmplog(" Checker: \033[1;32mOK\033[m");
+				}
+				tmplog(' ', test_report.comment);
 			} else if (test_report.status == sim::JudgeReport::Test::WA) {
-				tmplog("\033[1;31mWA\033[m ", test_report.comment);
+				if (sip_verbose) {
+					tmplog(" Checker: \033[1;31mWA\033[m");
+				}
+				tmplog(' ', test_report.comment);
 			} else if (test_report.status ==
 			           sim::JudgeReport::Test::CHECKER_ERROR) {
-				tmplog("\033[1;35mERROR\033[m ", checker_error_str);
+				tmplog(" Checker: \033[1;35mERROR\033[m ", checker_error_str);
 			} else {
 				return; // Checker was not run
 			}
