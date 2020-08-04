@@ -3,10 +3,13 @@
 #include "constants.hh"
 #include "simlib/concat_tostr.hh"
 #include "simlib/file_contents.hh"
+#include "simlib/file_descriptor.hh"
+#include "simlib/file_manip.hh"
 #include "simlib/random.hh"
 #include "simlib/ranges.hh"
 #include "simlib/repeating.hh"
 #include "simlib/time.hh"
+#include "simlib/unlinked_temporary_file.hh"
 #include "sip_error.hh"
 #include "sipfile.hh"
 #include "templates.hh"
@@ -14,6 +17,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -33,6 +37,7 @@
 #include <simlib/working_directory.hh>
 #include <string>
 #include <sys/inotify.h>
+#include <unistd.h>
 
 using std::set;
 using std::string;
@@ -127,24 +132,45 @@ void SipPackage::generate_test_input_file(const Sipfile::GenTest& test,
 	if (setenv("SIP_TEST_SEED", to_string(seed).data(), true)) {
 		throw SipError("setenv()", errmsg());
 	}
+
 	// Run generator
+	FileDescriptor errfd = open_unlinked_tmp_file();
+	auto print_errfd = [&] {
+		auto offset = lseek64(errfd, 0, SEEK_CUR);
+		if (offset == 0) {
+			return;
+		}
+		// Check if the output ends with newline
+		(void)lseek64(errfd, -1, SEEK_CUR);
+		char c = 0;
+		if (read(errfd, &c, 1) != 1) {
+			throw SipError("read()", errmsg());
+		}
+		// Print errfd to stderr
+		(void)lseek(errfd, 0, SEEK_SET);
+		if (blast(errfd, STDERR_FILENO)) {
+			throw SipError("blast()", errmsg());
+		}
+		if (c != '\n') {
+			fputc('\n', stderr);
+		}
+	};
 	auto es = Spawner::run(
 	   "sh", {"sh", "-c", concat_tostr(generator, ' ', test.generator_args)},
-	   Spawner::Options(-1,
-	                    FileDescriptor(in_file, O_WRONLY | O_CREAT | O_TRUNC),
-	                    STDERR_FILENO));
+	   Spawner::Options(
+	      -1, FileDescriptor(in_file, O_WRONLY | O_CREAT | O_TRUNC), errfd));
 
 	if (es.si.code == CLD_EXITED and es.si.status == 0) { // OK
 		stdlog(" \033[1;32mdone\033[m in ",
 		       to_string(floor_to_10ms(es.cpu_runtime), false),
 		       " [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ]");
-
+		print_errfd();
 	} else { // RTE
 		stdlog(" \033[1;31mfailed\033[m in ",
 		       to_string(floor_to_10ms(es.cpu_runtime), false),
 		       " [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ] (",
 		       es.message, ')');
-
+		print_errfd();
 		throw SipError("failed to generate test: ", test.name, " seed: ", seed);
 	}
 }
