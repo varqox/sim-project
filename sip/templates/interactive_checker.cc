@@ -428,6 +428,8 @@ int main(int argc, char** argv) {
 	//   means that the test will get no more than x percent of its maximal
 	//   score.
 	// Line 3 and next (optional): A checker comment
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
 
 	my_assert(argc == 2);
 

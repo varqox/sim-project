@@ -83,8 +83,9 @@ int main(int main_argc, const char** main_argv) {
 	args_parser::argv = main_argv;
 	// main_argv[0] command (ignored)
 	// main_argv[1..] generator arguments
-	//
 	// stdout = a valid test input for solution
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
 
 	int n = rd(arg(1), arg(2));
 	cout << n << nl;
