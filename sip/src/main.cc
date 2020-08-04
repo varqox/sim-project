@@ -7,6 +7,8 @@
 #include <simlib/signal_handling.hh>
 #include <simlib/working_directory.hh>
 
+bool sip_verbose = false;
+
 /**
  * Parses options passed to Sip via arguments
  * @param argc like in main (will be modified to hold the number of non-option
@@ -33,10 +35,14 @@ static void parseOptions(int& argc, char** argv) {
 				commands::help(argv[0]); // argv[0] is valid (argc > 1)
 				exit(0);
 
-			} else if (0 == strcmp(argv[i], "-v") or
+			} else if (0 == strcmp(argv[i], "-V") or
 			           0 == strcmp(argv[i], "--version")) {
 				commands::version();
 				exit(0);
+
+			} else if (0 == strcmp(argv[i], "-v") or
+			           0 == strcmp(argv[i], "--sip_verbose")) {
+				sip_verbose = true;
 
 			} else if (0 == strcmp(argv[i], "-q") or
 			           0 == strcmp(argv[i], "--quiet")) {
@@ -59,6 +65,9 @@ static void run_command(int argc, char** argv) {
 
 	ArgvParser args(argc - 1, argv + 1);
 	StringView command = args.extract_next();
+	if (sip_verbose) {
+		commands::version();
+	}
 
 	// Commands
 	if (command == "checker") {

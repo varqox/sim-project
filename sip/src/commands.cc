@@ -232,7 +232,8 @@ Options:
   -C <directory>        Change working directory to <directory> before doing
                           anything
   -h, --help            Display this information
-  -v, --version         Display version
+  -V, --version         Display version
+  -v, --verbose         Verbose mode
   -q, --quiet           Quiet mode
 
 Patterns:

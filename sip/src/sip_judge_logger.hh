@@ -1,10 +1,19 @@
 #pragma once
 
+#include "simlib/sim/simfile.hh"
+#include "simlib/string_traits.hh"
+#include "simlib/string_transform.hh"
+#include "simlib/string_view.hh"
+
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <simlib/enum_val.hh>
 #include <simlib/humanize.hh>
 #include <simlib/sim/judge_worker.hh>
 #include <simlib/time.hh>
+
+extern bool sip_verbose;
 
 class SipJudgeLogger : public sim::JudgeLogger {
 	template <class... Args,
@@ -14,25 +23,53 @@ class SipJudgeLogger : public sim::JudgeLogger {
 		                                      std::forward<Args>(args)...);
 	}
 
+	size_t test_name_max_len_ = 0;
 	std::map<EnumVal<sim::JudgeReport::Test::Status>, uint> status_count_;
-	bool final_;
+	bool final_ = false;
+	std::optional<std::pair<int64_t, int64_t>> total_and_max_score_;
+
+	static std::string mem_to_str(uint64_t bytes, bool pad = true) {
+		auto str = humanize_file_size(bytes);
+		// Padding
+		if (pad) {
+			str = padded_string(str, 8, RIGHT).to_string();
+		}
+		if (not sip_verbose) {
+			// Shorten unit suffixes
+			if (has_suffix(str, "iB")) {
+				str.erase(str.end() - 2, str.end());
+			} else if (has_suffix(str, "bytes")) {
+				str.erase(str.end() - 4, str.end());
+			} else if (has_suffix(str, "byte")) {
+				str.erase(str.end() - 3, str.end());
+			}
+
+			// Add coloring
+			if (str.size() >= 2 and str.end()[-2] == ' ') {
+				auto c = str.back();
+				str.resize(str.size() - 2);
+				str += "\033[2m";
+				str += to_lower(c);
+				str += "\033[m";
+			}
+		}
+		return str;
+	}
 
 	template <class Func>
 	void log_test(StringView test_name,
 	              const sim::JudgeReport::Test& test_report,
 	              Sandbox::ExitStat es, Func&& func) {
+		assert(test_name.size() <= test_name_max_len_);
 		++status_count_[test_report.status];
 		auto tmplog =
-		   log("  ", padded_string(test_name, 8, LEFT), ' ',
+		   log(' ', padded_string(test_name, test_name_max_len_, LEFT), "  ",
 		       padded_string(intentional_unsafe_string_view(to_string(
 		                        floor_to_10ms(test_report.runtime), false)),
 		                     4),
 		       " / ", to_string(floor_to_10ms(test_report.time_limit), false),
-		       " s ",
-		       padded_string(intentional_unsafe_string_view(humanize_file_size(
-		                        test_report.memory_consumed)),
-		                     7),
-		       " / ", humanize_file_size(test_report.memory_limit), "  ");
+		       "\033[2ms\033[m ", mem_to_str(test_report.memory_consumed),
+		       " / ", mem_to_str(test_report.memory_limit, false), ' ');
 		// Status
 		switch (test_report.status) {
 		case sim::JudgeReport::Test::TLE: tmplog("\033[1;33mTLE\033[m"); break;
@@ -52,12 +89,24 @@ class SipJudgeLogger : public sim::JudgeLogger {
 		}
 
 		// Rest
-		tmplog(" [ RT: ", to_string(floor_to_10ms(es.runtime), false), " ]");
+		if (test_report.status != sim::JudgeReport::Test::OK or sip_verbose) {
+			tmplog(" \033[2m[RT: ", to_string(floor_to_10ms(es.runtime), false),
+			       "]\033[m");
+		}
 
 		func(tmplog);
 	}
 
 public:
+	explicit SipJudgeLogger(const sim::Simfile& simfile) {
+		for (auto const& tg : simfile.tgroups) {
+			for (auto const& test : tg.tests) {
+				test_name_max_len_ =
+				   std::max(test_name_max_len_, test.name.size());
+			}
+		}
+	}
+
 	void begin(bool final) override { final_ = final; }
 
 	void test(StringView test_name, sim::JudgeReport::Test test_report,
@@ -70,7 +119,7 @@ public:
 	          std::optional<uint64_t> checker_mem_limit,
 	          StringView checker_error_str) override {
 		log_test(test_name, test_report, es, [&](auto& tmplog) {
-			tmplog("  Checker: ");
+			tmplog(" CHK: ");
 
 			// Checker status
 			if (test_report.status == sim::JudgeReport::Test::OK) {
@@ -84,11 +133,14 @@ public:
 				return; // Checker was not run
 			}
 
-			tmplog(
-			   " [ RT: ", to_string(floor_to_10ms(checker_es.runtime), false),
-			   " ] ", humanize_file_size(checker_es.vm_peak));
-			if (checker_mem_limit.has_value()) {
-				tmplog(" / ", humanize_file_size(checker_mem_limit.value()));
+			if (test_report.status == sim::JudgeReport::Test::CHECKER_ERROR or
+			    sip_verbose) {
+				tmplog(" \033[2m[RT: ",
+				       to_string(floor_to_10ms(checker_es.runtime), false),
+				       "]\033[m ", mem_to_str(checker_es.vm_peak));
+				if (checker_mem_limit.has_value()) {
+					tmplog(" / ", mem_to_str(checker_mem_limit.value(), false));
+				}
 			}
 		});
 	}
@@ -100,7 +152,7 @@ public:
 
 	void final_score(int64_t total_score, int64_t max_score) override {
 		if (final_ and (total_score != 0 or max_score != 0)) {
-			log("Total score: ", total_score, " / ", max_score);
+			total_and_max_score_ = {total_score, max_score};
 		}
 	}
 
@@ -127,6 +179,11 @@ public:
 				}
 			}
 			log("------------------");
+			if (total_and_max_score_) {
+				auto const& [total_score, max_score] = *total_and_max_score_;
+				log("Total score: \033[1m", total_score, " / ", max_score,
+				    "\033[m");
+			}
 		}
 	}
 };

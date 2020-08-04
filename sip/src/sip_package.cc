@@ -389,7 +389,7 @@ void SipPackage::generate_test_output_files() {
 	// Generate .out files and construct judge reports for adjusting time limits
 	sim::JudgeReport jrep1;
 	sim::JudgeReport jrep2;
-	SipJudgeLogger logger;
+	SipJudgeLogger logger{full_simfile};
 	logger.begin(false);
 	for (auto const& group : full_simfile.tgroups) {
 		auto p = sim::Simfile::TestNameComparator::split(group.tests[0].name);
@@ -436,7 +436,7 @@ void SipPackage::judge_solution(StringView solution) {
 	stdlog('{');
 	CompilationCache::load_solution(jworker.value(), solution);
 	CompilationCache::load_checker(jworker.value());
-	SipJudgeLogger jlogger;
+	SipJudgeLogger jlogger{full_simfile};
 	auto jrep1 = jworker.value().judge(false, jlogger);
 	auto jrep2 = jworker.value().judge(true, jlogger);
 
