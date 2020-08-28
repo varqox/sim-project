@@ -52,7 +52,7 @@ inline std::string mysql_localdate(std::chrono::system_clock::time_point tp) {
 }
 
 // Checks if format is "%Y-%m-%d %H:%M:%S"
-bool is_datetime(CStringView str) noexcept;
+bool is_datetime(const CStringView& str) noexcept;
 
 /**
  * @brief Converts a string containing time to time_t
