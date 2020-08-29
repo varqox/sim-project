@@ -15,7 +15,7 @@ int64_t microtime() noexcept {
 }
 
 template <class F>
-static string __date(CStringView format, time_t curr_time, F func) {
+static string date_impl(CStringView format, time_t curr_time, F func) {
 	if (curr_time < 0) {
 		time(&curr_time);
 	}
@@ -37,11 +37,11 @@ static string __date(CStringView format, time_t curr_time, F func) {
 }
 
 string date(CStringView format, time_t curr_time) {
-	return __date(format, curr_time, gmtime_r);
+	return date_impl(format, curr_time, gmtime_r);
 }
 
 string localdate(CStringView format, time_t curr_time) {
-	return __date(format, curr_time, localtime_r);
+	return date_impl(format, curr_time, localtime_r);
 }
 
 bool is_datetime(const CStringView& str) noexcept {
