@@ -20,14 +20,14 @@ constexpr unsigned char hex2dec(T c) noexcept {
 	return (c < 'A' ? c - '0' : 10 + c - (c >= 'a' ? 'a' : 'A'));
 }
 
-constexpr char dec2Hex(int x) noexcept {
-	assert(0 <= x and x <= 15);
-	return static_cast<char>(x > 9 ? 'A' - 10 + x : x + '0');
-}
-
 constexpr char dec2hex(int x) noexcept {
 	assert(0 <= x and x <= 15);
 	return static_cast<char>(x > 9 ? 'a' - 10 + x : x + '0');
+}
+
+constexpr char dec2Hex(int x) noexcept {
+	assert(0 <= x and x <= 15);
+	return static_cast<char>(x > 9 ? 'A' - 10 + x : x + '0');
 }
 
 /// Converts each byte of @p str to two hex digits using dec2hex()

@@ -38,10 +38,10 @@
 
 namespace simlib_debug {
 
-constexpr bool is_VA_empty() { return true; }
+constexpr bool is_va_empty() { return true; }
 
 template <class T1, class... T>
-constexpr bool is_VA_empty(T1&& /*unused*/, T&&... /*unused*/) {
+constexpr bool is_va_empty(T1&& /*unused*/, T&&... /*unused*/) {
 	return false;
 }
 
@@ -138,7 +138,7 @@ public:
 	do {                                                                       \
 		auto tmplog =                                                          \
 		   errlog(__FILE__ ":" STRINGIZE(__LINE__) ": Caught exception",       \
-		          ::simlib_debug::is_VA_empty(__VA_ARGS__) ? "" : " -> ",      \
+		          ::simlib_debug::is_va_empty(__VA_ARGS__) ? "" : " -> ",      \
 		          ::simlib_debug::what_of(__VA_ARGS__),                        \
 		          "\nStack unwinding marks:\n");                               \
                                                                                \
